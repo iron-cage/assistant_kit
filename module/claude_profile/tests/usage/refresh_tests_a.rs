@@ -42,6 +42,7 @@ fn test_apply_refresh_429_not_retried()
   let mut accounts = vec![
     AccountQuota
     {
+      fallback_reason : None,
       name          : "test-acct".to_string(),
       is_current    : false,
       is_active             : false,
@@ -82,6 +83,7 @@ fn test_apply_refresh_ok_result_unchanged()
   let mut accounts = vec![
     AccountQuota
     {
+      fallback_reason : None,
       name          : "ok-acct".to_string(),
       is_current    : false,
       is_active             : false,
@@ -114,6 +116,7 @@ fn test_apply_refresh_generic_error_unchanged()
   let mut accounts = vec![
     AccountQuota
     {
+      fallback_reason : None,
       name          : "net-acct".to_string(),
       is_current    : false,
       is_active             : false,
@@ -162,6 +165,7 @@ fn test_apply_refresh_401_no_cred_file()
   let mut accounts = vec![
     AccountQuota
     {
+      fallback_reason : None,
       name          : "ghost@example.com".to_string(),
       is_current    : false,
       is_active             : false,
@@ -199,6 +203,7 @@ fn test_apply_refresh_403_no_cred_file()
   let mut accounts = vec![
     AccountQuota
     {
+      fallback_reason : None,
       name          : "ghost@example.com".to_string(),
       is_current    : false,
       is_active             : false,
@@ -241,6 +246,7 @@ fn test_apply_refresh_mixed_accounts()
   let mut accounts = vec![
     AccountQuota
     {
+      fallback_reason : None,
       name          : "a@ok.com".to_string(),
       is_current    : false,
       is_active             : false,
@@ -258,6 +264,7 @@ fn test_apply_refresh_mixed_accounts()
     },
     AccountQuota
     {
+      fallback_reason : None,
       name          : "b@ratelimited.com".to_string(),
       is_current    : false,
       is_active             : false,
@@ -275,6 +282,7 @@ fn test_apply_refresh_mixed_accounts()
     },
     AccountQuota
     {
+      fallback_reason : None,
       name          : "c@expired.com".to_string(),
       is_current    : false,
       is_active             : false,
@@ -292,6 +300,7 @@ fn test_apply_refresh_mixed_accounts()
     },
     AccountQuota
     {
+      fallback_reason : None,
       name          : "d@network.com".to_string(),
       is_current    : false,
       is_active             : false,
@@ -341,6 +350,7 @@ fn test_apply_refresh_trace_does_not_panic()
   let mut accounts = vec![
     AccountQuota
     {
+      fallback_reason : None,
       name          : "trace@test.com".to_string(),
       is_current    : false,
       is_active             : false,
@@ -398,6 +408,7 @@ fn test_apply_refresh_lifecycle_switch_fails_result_unchanged()
   let mut accounts = vec![
     AccountQuota
     {
+      fallback_reason : None,
       name          : "alice@example.com".to_string(),
       is_current    : false,
       is_active             : false,
@@ -482,6 +493,7 @@ fn test_apply_refresh_lifecycle_active_marker_unchanged()
   let mut accounts = vec![
     AccountQuota
     {
+      fallback_reason : None,
       name          : "bob@example.com".to_string(),
       is_current    : false,
       is_active             : false,
@@ -529,6 +541,7 @@ fn test_apply_refresh_lifecycle_429_expired_switch_fails_unchanged()
   let mut accounts = vec![
     AccountQuota
     {
+      fallback_reason : None,
       name          : "alice@example.com".to_string(),
       is_current    : false,
       is_active             : false,
@@ -573,6 +586,7 @@ fn test_apply_refresh_lifecycle_ft3_403_no_cred_result_unchanged()
   let mut accounts = vec![
     AccountQuota
     {
+      fallback_reason : None,
       name          : "alice@example.com".to_string(),
       is_current    : false,
       is_active             : false,
@@ -623,6 +637,7 @@ fn test_apply_refresh_lifecycle_copy_fails_no_dot_claude_dir()
   let mut accounts = vec![
     AccountQuota
     {
+      fallback_reason : None,
       name          : "alice@example.com".to_string(),
       is_current    : false,
       is_active             : false,
@@ -683,6 +698,7 @@ fn test_apply_refresh_lifecycle_trace_switch_fails_no_panic()
   let mut accounts = vec![
     AccountQuota
     {
+      fallback_reason : None,
       name          : "trace@example.com".to_string(),
       is_current    : false,
       is_active             : false,
@@ -810,6 +826,7 @@ fn test_apply_refresh_lifecycle_l10_trace_run_isolated_invoked_no_panic()
   let mut accounts = vec![
     AccountQuota
     {
+      fallback_reason : None,
       name          : "alice@example.com".to_string(),
       is_current    : false,
       is_active             : false,

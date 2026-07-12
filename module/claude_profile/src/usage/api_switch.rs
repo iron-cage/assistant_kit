@@ -107,6 +107,7 @@ pub fn attempt_expired_token_refresh(
   // result=Err("401") drives auto model selection to Opus (conservative when no quota data).
   let aq        = AccountQuota
   {
+    fallback_reason : None,
     name                 : name.to_string(),
     is_current           : false,
     is_active            : false,
@@ -338,6 +339,7 @@ pub fn apply_post_switch_touch(
   // Build a minimal AccountQuota to reuse the existing resolve_model() path.
   let aq = AccountQuota
   {
+    fallback_reason : None,
     name                 : name.to_string(),
     is_current           : false,
     is_active            : false,

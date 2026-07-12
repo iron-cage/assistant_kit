@@ -22,6 +22,7 @@ fn test_ft29_009_footer_session_effort_display()
     vec![
       AccountQuota
       {
+        fallback_reason : None,
         name                  : "cur@x.com".to_string(),
         is_current            : true,
         is_active             : false,
@@ -44,6 +45,7 @@ fn test_ft29_009_footer_session_effort_display()
       },
       AccountQuota
       {
+        fallback_reason : None,
         name                  : "a@x.com".to_string(),
         is_current            : false,
         is_active             : false,
@@ -66,6 +68,7 @@ fn test_ft29_009_footer_session_effort_display()
       },
       AccountQuota
       {
+        fallback_reason : None,
         name                  : "b@x.com".to_string(),
         is_current            : false,
         is_active             : false,
@@ -462,6 +465,7 @@ fn cc_no_current_account_uses_legacy_footer()
   {
     AccountQuota
     {
+      fallback_reason : None,
       name                  : name.to_string(),
       is_current            : false,
       is_active             : false,
@@ -510,6 +514,7 @@ fn cc_effort_only_footer_shows_effort_without_model()
   {
     AccountQuota
     {
+      fallback_reason : None,
       name                  : name.to_string(),
       is_current            : cur,
       is_active             : false,

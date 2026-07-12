@@ -270,6 +270,7 @@ fn test_mre_bug218_fetch_all_quota_no_duplicate_synthetic_row()
   //   when synthetic_name == "i6@wbox.pro" which already exists, count becomes 2.
   let stored_row = AccountQuota
   {
+    fallback_reason : None,
     name                 : "i6@wbox.pro".to_string(),
     is_current           : false,
     is_active            : false,
@@ -289,6 +290,7 @@ fn test_mre_bug218_fetch_all_quota_no_duplicate_synthetic_row()
 
   let synthetic = AccountQuota
   {
+    fallback_reason : None,
     name                 : "i6@wbox.pro".to_string(),
     is_current           : true,
     is_active            : false,
@@ -346,7 +348,7 @@ fn test_mre_bug218_fetch_all_quota_no_duplicate_synthetic_row()
 ///
 /// # Fix Applied
 /// Fix(BUG-296): match guard `Err( ref e ) if !e.contains("401") && !e.contains("403")`.
-/// Auth errors fall through to `Err( _ ) => ( result, false, None )` — `cached=false`,
+/// Auth errors fall through to `Err( _ ) => ( result, false, None, None )` — `cached=false`,
 /// `aq.result` remains `Err`, enabling `should_refresh()` to trigger credential refresh.
 ///
 /// # Prevention
@@ -375,8 +377,10 @@ fn mre_bug296_cached_non_expired_401_no_refresh()
      guard must precede read_cached_quota in the cache fallback arm",
   );
   // Confirm catch-all arm propagates auth errors without cache substitution.
+  // Tuple grew 3→4 elements under BUG-335 (added trailing fallback_reason slot);
+  // this arm's new element stays None since a propagated Err carries no fallback reason.
   assert!(
-    src.contains( "Err( _ ) => ( result, false, None )" ),
+    src.contains( "Err( _ ) => ( result, false, None, None )" ),
     "BUG-296: catch-all Err arm missing in cache fallback match — \
      auth errors must propagate as Err with cached=false",
   );

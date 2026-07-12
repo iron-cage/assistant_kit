@@ -22,7 +22,7 @@
 | FT-10 | AC-10 | Cached+expired account triggers `should_refresh()` | `mre_bug255_cache_defeats_refresh` |
 | FT-11 | AC-11 | After retry OK, `cached` flag cleared and cache file written with fresh data | `mre_bug256_retry_ok_stale_cached_metadata` |
 | FT-12 | AC-12 | HTTP 401 / 403 auth errors bypass cache fallback — `Err` propagates | `mre_bug296_cached_non_expired_401_no_refresh` |
-| FT-14 | AC-14 | Cache-fallback row preserves the original failure reason and surfaces it via `shorten_error()` in text, TSV, and JSON render formats | *(planned — not yet implemented; MRE for BUG-335)* |
+| FT-14 | AC-14 | Cache-fallback row preserves the original failure reason and surfaces it via `shorten_error()` in text, TSV, and JSON render formats (text combines it with the AC-03 age suffix; TSV has no age suffix to combine with, so it stands alone) | `mre_bug335_cache_fallback_reason_surfaced_on_all_render_surfaces` |
 
 ### Notes
 
@@ -32,7 +32,7 @@
 - FT-10 is implemented as a unit test in `src/usage/refresh_predicate.rs` `#[cfg(test)]` module. MRE for BUG-255.
 - FT-11 is a unit test in `tests/usage/refresh_tests_b.rs`. Verifies the retry OK arm clears `aq.cached`/`aq.cache_age_secs` and writes the quota cache file. MRE for BUG-256.
 - FT-12 is a unit test in `tests/usage/fetch_tests.rs`. Verifies that the cache fallback match guard `Err( ref e ) if !e.contains("401") && !e.contains("403")` is present, and that a catch-all `Err` arm propagates auth errors without cache conversion. MRE for BUG-296.
-- FT-14 is not yet implemented — no test currently exercises the display-layer round trip from a cache-fallback-substituted `Ok` row through to its rendered failure-reason visibility (confirmed gap: `grep -n "shorten_error" src/usage/render.rs` shows exactly one call site, inside `Err(reason)` only). Planned across `tests/usage/fetch_tests.rs` (fallback_reason population on the `AccountQuota`) and `tests/usage/render_tests_a.rs` / `render_tests_b.rs` (text/TSV/JSON surfacing). MRE for BUG-335.
+- FT-14 is implemented as a single integration test in `tests/usage/render_tests_a.rs` exercising `render_text`/`render_tsv`/`render_json` together against one `AccountQuota` with `fallback_reason: Some(...)`. **Correction (found during implementation):** `render_tsv.rs` has no pre-existing cache-age-suffix mechanism (unlike `render.rs`) — the original AC-03/AC-14 wording implying TSV combines the reason with an age label was inaccurate; TSV's shortened reason renders as its own standalone parenthetical, e.g. `alice (rate limited (429))`, vs. text's combined `alice (2h ago, rate limited (429))`. MRE for BUG-335.
 
 ---
 
@@ -166,3 +166,15 @@
 - **Source fn:** `mre_bug296_cached_non_expired_401_no_refresh` (in `tests/usage/fetch_tests.rs`)
 - **Note:** Fix for BUG-296. Auth-error guard: `Err( ref e ) if !e.contains("401") && !e.contains("403") =>` on the cache fallback arm; a catch-all `Err( _ ) =>` arm propagates auth errors unchanged. Only transient errors (429, network, timeout) trigger cache fallback.
 - **Source:** [033_quota_cache.md AC-12](../../../docs/feature/033_quota_cache.md)
+
+---
+
+### FT-14: Cache-fallback row surfaces the original failure reason on all 3 render formats
+
+- **Given:** An `AccountQuota` with `cached: true`, `cache_age_secs: 7200`, and `fallback_reason: Some("HTTP transport error: HTTP 429 Too Many Requests")` — the reason a cache-fallback `Err→Ok` conversion carried forward.
+- **When:** The row is rendered as text, TSV, and JSON output.
+- **Then:** Text combines the shortened reason with the existing age suffix in one NAME-cell parenthetical: `alice (2h ago, rate limited (429))`. TSV — which has no pre-existing age-suffix mechanism — appends the shortened reason as its own standalone parenthetical: `alice (rate limited (429))`. JSON emits a new field: `"fallback_reason":"rate limited (429)"`.
+- **Exit:** all 3 rendered outputs contain the shortened reason `rate limited (429)`
+- **Source fn:** `mre_bug335_cache_fallback_reason_surfaced_on_all_render_surfaces` (in `tests/usage/render_tests_a.rs`)
+- **Note:** Fix for BUG-335. `shorten_error()` shortens raw reasons starting with `"HTTP transport error: HTTP 429"` to `"rate limited (429)"` (see `src/usage/format.rs`). Text and TSV diverge in combination strategy solely because TSV never had an age-suffix mechanism to begin with — this is not an inconsistency to reconcile, it reflects each format's actual pre-existing capability.
+- **Source:** [033_quota_cache.md AC-14](../../../docs/feature/033_quota_cache.md)

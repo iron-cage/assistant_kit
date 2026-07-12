@@ -11,6 +11,7 @@ fn test_should_refresh_401_triggers()
 {
   let aq = AccountQuota
   {
+    fallback_reason : None,
     name          : "a@test.com".to_string(),
     is_current    : false,
     is_active             : false,
@@ -35,6 +36,7 @@ fn test_should_refresh_403_triggers()
 {
   let aq = AccountQuota
   {
+    fallback_reason : None,
     name          : "a@test.com".to_string(),
     is_current    : false,
     is_active             : false,
@@ -63,6 +65,7 @@ fn test_should_refresh_mre_bug156_429_expired_triggers()
 {
   let aq = AccountQuota
   {
+    fallback_reason : None,
     name          : "a@test.com".to_string(),
     is_current    : false,
     is_active             : false,
@@ -93,6 +96,7 @@ fn test_should_refresh_429_valid_token_no_trigger()
 {
   let aq = AccountQuota
   {
+    fallback_reason : None,
     name          : "a@test.com".to_string(),
     is_current    : false,
     is_active             : false,
@@ -120,6 +124,7 @@ fn test_should_refresh_429_exact_boundary_expired_triggers()
 {
   let aq = AccountQuota
   {
+    fallback_reason : None,
     name          : "a@test.com".to_string(),
     is_current    : false,
     is_active             : false,
@@ -147,6 +152,7 @@ fn test_should_refresh_429_one_sec_future_no_trigger()
 {
   let aq = AccountQuota
   {
+    fallback_reason : None,
     name          : "a@test.com".to_string(),
     is_current    : false,
     is_active             : false,
@@ -175,6 +181,7 @@ fn test_should_refresh_ok_no_trigger()
   let quota = claude_quota::OauthUsageData { five_hour : None, seven_day : None, seven_day_sonnet : None };
   let aq = AccountQuota
   {
+    fallback_reason : None,
     name          : "a@test.com".to_string(),
     is_current    : false,
     is_active             : false,
@@ -199,6 +206,7 @@ fn test_should_refresh_generic_error_no_trigger()
 {
   let aq = AccountQuota
   {
+    fallback_reason : None,
     name          : "a@test.com".to_string(),
     is_current    : false,
     is_active             : false,
@@ -252,6 +260,7 @@ fn mre_bug235_locally_expired_triggers_should_refresh()
 {
   let aq = AccountQuota
   {
+    fallback_reason : None,
     name          : "i11@wbox.pro".to_string(),
     is_current    : false,
     is_active             : false,
@@ -308,6 +317,7 @@ fn mre_bug255_cache_defeats_refresh()
   let quota = claude_quota::OauthUsageData { five_hour : None, seven_day : None, seven_day_sonnet : None };
   let aq = AccountQuota
   {
+    fallback_reason : None,
     name                  : "alice@example.com".to_string(),
     is_current            : false,
     is_active             : false,
@@ -337,6 +347,7 @@ fn test_should_refresh_cached_valid_token_no_trigger()
   let quota = claude_quota::OauthUsageData { five_hour : None, seven_day : None, seven_day_sonnet : None };
   let aq = AccountQuota
   {
+    fallback_reason : None,
     name                  : "alice@example.com".to_string(),
     is_current            : false,
     is_active             : false,
@@ -369,6 +380,7 @@ fn ft06_should_refresh_false_when_not_owned()
 {
   let aq_401 = AccountQuota
   {
+    fallback_reason : None,
     name                  : "alice@test.com".to_string(),
     is_current            : false,
     is_active             : false,
@@ -391,6 +403,7 @@ fn ft06_should_refresh_false_when_not_owned()
 
   let aq_expired = AccountQuota
   {
+    fallback_reason : None,
     name                  : "alice@test.com".to_string(),
     is_current            : false,
     is_active             : false,
@@ -413,6 +426,7 @@ fn ft06_should_refresh_false_when_not_owned()
 
   let aq_429_expired = AccountQuota
   {
+    fallback_reason : None,
     name                  : "alice@test.com".to_string(),
     is_current            : false,
     is_active             : false,
@@ -435,6 +449,7 @@ fn ft06_should_refresh_false_when_not_owned()
 
   let aq_cached_expired = AccountQuota
   {
+    fallback_reason : None,
     name                  : "alice@test.com".to_string(),
     is_current            : false,
     is_active             : false,
@@ -486,6 +501,7 @@ fn sr11_approaching_expiry_must_not_trigger_refresh()
   let now_secs : u64 = 100_000;
   let aq = AccountQuota
   {
+    fallback_reason : None,
     name                  : "a@test.com".to_string(),
     is_current            : false,
     is_active             : false,
@@ -531,6 +547,7 @@ fn mre_bug303_should_refresh_false_for_occupied_elsewhere()
 {
   let aq = AccountQuota
   {
+    fallback_reason : None,
     name                  : "alice@example.com".to_string(),
     is_current            : false,
     is_active             : false,

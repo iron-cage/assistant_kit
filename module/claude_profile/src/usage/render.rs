@@ -161,9 +161,21 @@ pub fn render_text(
           ren_est.unwrap_or( false ),
         );
 
+        // Fix(BUG-335): cache-fallback rows showed only the age suffix with no indication of
+        //   why the row is stale — the original fetch-failure reason was silently discarded.
+        //   Root cause: AccountQuota had no field to carry the reason forward from fetch.rs's
+        //   Err→Ok cache-fallback conversion; render had nothing to append.
+        //   Pitfall: append alongside cache_age_label()'s existing suffix (AC-03), never replace
+        //   it — cache_age_label() itself stays untouched.
         let name_display = if aq.cached
         {
-          format!( "{} {}", aq.name, cache_age_label( aq.cache_age_secs.unwrap_or( 0 ) ) )
+          let age = cache_age_label( aq.cache_age_secs.unwrap_or( 0 ) );
+          let suffix = match &aq.fallback_reason
+          {
+            Some( reason ) => format!( "{}, {})", &age[ ..age.len() - 1 ], shorten_error( reason ) ),
+            None           => age,
+          };
+          format!( "{} {}", aq.name, suffix )
         }
         else
         {
