@@ -16,7 +16,7 @@ to override or `--no-effort-max` (Runner Control) to suppress entirely.
 
 ### Semantic Coherence Test
 
-"Is this flag consumed by the claude subprocess?" — YES for all 13.
+"Is this flag consumed by the claude subprocess?" — YES for all 14.
 
 ### Why NOT X
 
@@ -47,8 +47,8 @@ clr -p "Fix bug" --model sonnet --verbose
 
 | # | Command | Membership | Excluded Params | Notes |
 |---|---------|------------|-----------------|-------|
-| 1 | [`run`](../command/01_run.md) | Full | — | All 13 params apply; default command |
-| 5 | [`ask`](../command/05_ask.md) | Full | — | All 13 params apply; only defaults differ |
+| 1 | [`run`](../command/01_run.md) | Full | — | All 14 params apply; default command |
+| 5 | [`ask`](../command/05_ask.md) | Full | — | All 14 params apply; only defaults differ |
 
 ### Referenced Parameters
 
@@ -61,6 +61,7 @@ clr -p "Fix bug" --model sonnet --verbose
 | [`--json-schema`](../param/023_json_schema.md) | [`JsonSchemaText`](../type/10_json_schema_text.md) | — | Output structure constraint | JSON Schema for structured output |
 | [`--mcp-config`](../param/024_mcp_config.md) | [`McpConfigPath`](../type/11_mcp_config_path.md) | — | Tool server config | MCP server config (repeatable) |
 | [`--output-format`](../param/061_output_format.md) | enum | — | Output format selector | Output format (`text`/`json`/`stream-json`) |
+| [`--input-format`](../param/081_input_format.md) | enum | — | Input format selector | Input format (`text`/`stream-json`) |
 | [`--max-turns`](../param/062_max_turns.md) | u32 | — | Turn limiter | Max agentic turns |
 | [`--allowed-tools`](../param/063_allowed_tools.md) | string | — | Tool whitelist | Restrict to specified tools |
 | [`--disallowed-tools`](../param/064_disallowed_tools.md) | string | — | Tool blacklist | Block specified tools |

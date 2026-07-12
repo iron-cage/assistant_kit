@@ -233,6 +233,10 @@ pub( crate ) fn build_claude_command( cli : &CliArgs ) -> ( ClaudeCommand, Optio
       builder = builder.with_arg( "--output-format" ).with_arg( "json" );
     }
   }
+  if let Some( fmt ) = cli.input_format
+  {
+    builder = builder.with_input_format( fmt );
+  }
   if let Some( ref turns ) = cli.max_turns
   {
     builder = builder.with_arg( "--max-turns" ).with_arg( turns.as_str() );

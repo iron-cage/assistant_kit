@@ -61,6 +61,8 @@ clr ask --dir ~/project "What is the entry point?"
 
 `ask` is a pure semantic alias for `run` — identical parameter set, identical execution path, identical defaults. The distinction is documentation only: `ask` communicates that the invocation is a question, not a task.
 
+`--output-format stream-json` streaming behavior is identical to `run` — see [`run`'s Notes](01_run.md#notes) for details (bypasses retry/`--expect`/summary rendering; NDJSON events print live, flushed as they arrive).
+
 ### Related Commands
 
 | # | Command | Relationship |

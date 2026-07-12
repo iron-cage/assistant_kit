@@ -119,6 +119,7 @@ fn claude_code_option_group() -> cli_fmt::help::OptionGroup
       OptionEntry { name : "--max-tokens <N>".into(),                desc : "Max output tokens (default: 200000)".into() },
       OptionEntry { name : "--effort <LEVEL>".into(),                desc : "Reasoning effort: low, medium, high, max (default: max)".into() },
       OptionEntry { name : "--output-format <FMT>".into(),           desc : "Output format: text, json, stream-json".into() },
+      OptionEntry { name : "--input-format <FMT>".into(),            desc : "Input format: text, stream-json".into() },
       OptionEntry { name : "--max-turns <N>".into(),                 desc : "Max agentic turns (0 = unlimited)".into() },
       OptionEntry { name : "--allowed-tools <TOOLS>".into(),         desc : "Comma-separated tool whitelist (e.g. \"Read,Edit\")".into() },
       OptionEntry { name : "--disallowed-tools <TOOLS>".into(),      desc : "Comma-separated tool blacklist".into() },
