@@ -185,7 +185,7 @@ unless the caller explicitly configures it.
 | 52 | [telemetry](053_telemetry.md) | `CLAUDE_CODE_TELEMETRY` | `false` | `true` | `with_telemetry()` |
 | 40 | [chrome](015_chrome.md) | `--chrome` / `--no-chrome` | on | off | `with_chrome()` |
 | 61 | [compact_window](071_compact_window.md) | `CLAUDE_CODE_AUTO_COMPACT_WINDOW` | `300000` | unset — model native (`200000` standard / `1000000` extended) | `with_compact_window()` |
-| 62 | [print_bg_wait_ceiling_ms](072_print_bg_wait_ceiling_ms.md) | `CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS` | `0` (exit immediately) | `600000` (10 min) | `with_print_bg_wait_ceiling_ms()` |
+| 62 | [print_bg_wait_ceiling_ms](072_print_bg_wait_ceiling_ms.md) | `CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS` | `0` (wait indefinitely) | `600000` (10 min) | `with_print_bg_wait_ceiling_ms()` |
 
 Two of these (`compact_window`, `chrome`) expose an explicit disable path
 (`with_compact_window(None)`, `with_chrome(None)`) that suppresses the env
@@ -193,11 +193,11 @@ var/flag entirely, deferring to the binary's own default. The rest
 (`max_output_tokens`, `bash_timeout`, `bash_max_timeout`, `auto_continue`,
 `telemetry`, `print_bg_wait_ceiling_ms`) can only be overridden to a
 different value — there is no way to fully unset them via the builder API.
-Unlike the other five, `print_bg_wait_ceiling_ms`'s default (`0`) is not a
-more generous value than the binary's own — it's the opposite: `clr` hands
-off all background-task wait behavior to its own wrapper-level
-`gate_poll_secs`/`gate_max_attempts` polling instead of the binary's internal
-ceiling, so `claude` itself should never wait.
+Like the other five, `print_bg_wait_ceiling_ms`'s default (`0` — wait
+indefinitely, not "exit immediately"; see
+[072_print_bg_wait_ceiling_ms.md](072_print_bg_wait_ceiling_ms.md)) is more
+generous than the binary's own bounded 10-minute default, not a "hands-off"
+delegation to a separate mechanism.
 
 ### Cross-Layer Default Consistency Analysis
 
@@ -216,24 +216,36 @@ same invocation sets `bash_max_timeout` (row 50) to `7200000` ms (2 hr) on the
 legitimately uses the full 2-hour ceiling `clr` granted it will be killed by
 `clr`'s own 1-hour outer watchdog an hour early.
 
-**Finding 2 — the `print_bg_wait_ceiling_ms=0` rationale above rests on a
-mechanism that does not do what the rationale claims.** Per
-`module/claude_runner/docs/invariant/012_gate_slot_atomicity.md`, the
-`gate_poll_secs`/`gate_max_attempts` mechanism governs only `--max-sessions`
-concurrency admission control — how many concurrent `clr`/`claude` processes
-may run at once, host-wide. It has no relationship to waiting for a specific
-session's own backgrounded work (Bash `run_in_background`, subagents,
-workflows) to finish before that session's `clr` process exits; no
-wrapper-level mechanism in `module/claude_runner/src` waits for a session's
-own background tasks to complete. Setting `CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS=0`
-may cause `clr` print-mode invocations to exit while the `claude` subprocess
-still has genuinely outstanding background work — the failure this default
-was intended to avoid.
+**Finding 2 (corrected) — the `print_bg_wait_ceiling_ms=0` rationale cites
+the wrong mechanism, but the default value itself is not the problem.** `0`
+does not mean "exit immediately" — it means "wait indefinitely" (the
+`ra > 0` guard gating the ceiling-based forced-sweep path is permanently
+false at `0`, disabling that path rather than shortening it; empirically
+confirmed by causal testing against a live process — see
+[072_print_bg_wait_ceiling_ms.md](072_print_bg_wait_ceiling_ms.md)). An
+earlier version of this analysis relied on the opposite, retracted reading
+and has been corrected here. Under the corrected reading, `0` is the *most*
+generous value on this axis, not a "hands-off, exit-immediately" one, so it
+does not cause a premature-kill failure.
+
+What the corrected reading does surface: the rationale text this default was
+originally justified by — "`clr` already owns background-task waiting at the
+wrapper level via its own `gate_poll_secs`/`gate_max_attempts` polling" — is
+wrong regardless of which reading of `0` is used. Per
+`module/claude_runner/docs/invariant/012_gate_slot_atomicity.md`, that
+mechanism governs only `--max-sessions` concurrency admission control, not
+waiting for a session's own backgrounded work. The actual backstop bounding
+total wait time under `print_bg_wait_ceiling_ms=0` is `clr`'s own outer
+`--timeout` watchdog (Finding 1, above) — a coherent design (one enforced
+boundary instead of two overlapping ones) provided Finding 1's gap is
+closed, since an under-sized outer watchdog is then the sole bound on both
+Bash timeout headroom and indefinite Agent/Workflow background-wait
+exposure.
 
 | # | Parameter | Current Default | Issue | Recommended |
 |---|-----------|-----------------|-------|-------------|
-| — | `clr`'s own `--timeout` (print mode, `execution.rs:578`) | `3600` s (1 hr) | Lower than `bash_max_timeout` (2 hr) granted to the child | Raise to ≥ 2 hr + margin, or lower `bash_max_timeout_ms` to ≤ 1 hr, so the outer watchdog never fires before the inner ceiling it promises |
-| 62 | `print_bg_wait_ceiling_ms` | `0` (exit immediately) | Rationale cites the `--max-sessions` gate/slot mechanism, which does not wait for a session's own background tasks | Implement a genuine wrapper-level background-task-completion wait, or set a bounded non-zero ceiling (e.g. matching the binary's own `600000` ms) as a safety net, or document this as a deliberately accepted risk rather than a mitigated one |
+| — | `clr`'s own `--timeout` (print mode, `execution.rs:578`) | `3600` s (1 hr) | Lower than `bash_max_timeout` (2 hr) granted to the child; also the sole bound on indefinite Agent/Workflow background-wait exposure (`print_bg_wait_ceiling_ms=0`, Finding 2) | Raise to ≥ 2 hr + margin — preferred over lowering `bash_max_timeout_ms`, since a lower inner ceiling would not reduce the unbounded Agent/Workflow exposure this same watchdog also has to cover |
+| 62 | `print_bg_wait_ceiling_ms` | `0` (wait indefinitely) | Doc rationale cites the `--max-sessions` gate/slot mechanism, which does not wait for a session's own background tasks — `clr`'s own outer `--timeout` is the real backstop | Correct the rationale text to cite `clr`'s own outer `--timeout` (not gate/slot) as the backstop; no default-value change needed once Finding 1 is fixed |
 
 **Status:** analysis only — not yet filed as a bug or applied as a fix.
 
