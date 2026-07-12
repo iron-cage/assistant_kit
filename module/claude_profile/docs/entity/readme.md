@@ -12,11 +12,11 @@
 | `cli/command_noun/` | Domain noun documentation (account, token, credentials) | [cli/command_noun/readme.md](../cli/command_noun/readme.md) | 3 |
 | `cli/command_verb/` | Domain verb documentation (save, use, delete, limits, relogin, rotate, renewal, inspect, status) — 006 rotate DEPRECATED (Feature 038); 009 assign and 011 unclaim REMOVED | [cli/command_verb/readme.md](../cli/command_verb/readme.md) | 11 |
 | `cli/format/` | CLI output format specifications | [cli/format/readme.md](../cli/format/readme.md) | 3 |
-| `cli/param/` | CLI parameter specifications | [cli/param/readme.md](../cli/param/readme.md) | 66 |
+| `cli/param/` | CLI parameter specifications | [cli/param/readme.md](../cli/param/readme.md) | 68 |
 | `cli/param_group/` | CLI parameter group definitions | [cli/param_group/readme.md](../cli/param_group/readme.md) | 6 |
 | `cli/type/` | CLI type definitions | [cli/type/readme.md](../cli/type/readme.md) | 4 |
 | `cli/user_story/` | Canonical user stories mapping personas and goals to commands | [cli/user_story/readme.md](../cli/user_story/readme.md) | 5 |
-| `feature/` | Functional requirements for claude_profile capabilities | [readme.md](../feature/readme.md) | 47 |
+| `feature/` | Functional requirements for claude_profile capabilities | [readme.md](../feature/readme.md) | 48 |
 | `invariant/` | Measurable constraints and architectural guarantees | [invariant/readme.md](../invariant/readme.md) | 12 |
 | `pattern/` | Reusable design solutions applied at more than one call site | [pattern/readme.md](../pattern/readme.md) | 1 |
 | `pitfall/` | Systemic pitfall catalog — recurring design traps revealed by bug history | [pitfall/readme.md](../pitfall/readme.md) | 7 |
@@ -92,6 +92,7 @@
 | feature | 067 | Trace Timestamp Prefix | [feature/067_trace_timestamps.md](../feature/067_trace_timestamps.md) |
 | feature | 068 | Models List Command | [feature/068_models_list_command.md](../feature/068_models_list_command.md) |
 | feature | 069 | Model Select Command | [feature/069_model_select_command.md](../feature/069_model_select_command.md) |
+| feature | 070 | Account Claim and Reservation Control | [feature/070_account_claim_and_reservation_control.md](../feature/070_account_claim_and_reservation_control.md) |
 | cli | 001 | Config Parameters | [cli/001_config_param.md](../cli/001_config_param.md) |
 | cli | 002 | Dictionary | [cli/002_dictionary.md](../cli/002_dictionary.md) |
 | cli | 003 | Environment Parameters | [cli/003_env_param.md](../cli/003_env_param.md) |
@@ -170,6 +171,8 @@
 | param | 064 | `id::` (full model ID to pin for subprocess) | [cli/param/064_id.md](../cli/param/064_id.md) |
 | param | 065 | `offline::` (static model catalog vs live API) | [cli/param/065_offline.md](../cli/param/065_offline.md) |
 | param | 066 | `reset::` (remove subprocess_model preference) | [cli/param/066_reset.md](../cli/param/066_reset.md) |
+| param | 067 | `lock::` (set/clear claim_lock; ungated write) | [cli/param/067_lock.md](../cli/param/067_lock.md) |
+| param | 068 | `reserve::` (set/clear reserve; ungated write) | [cli/param/068_reserve.md](../cli/param/068_reserve.md) |
 | param_group | 001 | Output Control | [cli/param_group/001_output_control.md](../cli/param_group/001_output_control.md) |
 | param_group | 002 | Field Presence | [cli/param_group/002_field_presence.md](../cli/param_group/002_field_presence.md) |
 | param_group | 003 | Fetch Behavior | [cli/param_group/003_fetch_behavior.md](../cli/param_group/003_fetch_behavior.md) |

@@ -6,10 +6,10 @@ Account management commands: list, save, use, delete, limits, and relogin.
 
 ### Command: 3. `.accounts`
 
-List all saved accounts (identity view) or run per-account mutations (`assignee::USER@MACHINE`, `owner::0`, `owner::USER@MACHINE`). Without `name::`: shows all accounts; with `name::EMAIL`: shows that account only. Column visibility controlled via `cols::` (modifies from default identity set: Account, Owner, Active, Current, Sub, Tier, Expires, Email). When data-source params are active (`refresh::1`, `touch::1`), fetches live quota using the same pipeline as `.usage` — defaults to local-only read with no HTTP fetch.
+List all saved accounts (identity view) or run per-account mutations (`assignee::USER@MACHINE`, `owner::0`, `owner::USER@MACHINE`, `lock::0`/`lock::1`, `reserve::0`/`reserve::1`). Without `name::`: shows all accounts; with `name::EMAIL`: shows that account only. Column visibility controlled via `cols::` (modifies from default identity set: Account, Owner, Active, Current, Sub, Tier, Expires, Email). When data-source params are active (`refresh::1`, `touch::1`), fetches live quota using the same pipeline as `.usage` — defaults to local-only read with no HTTP fetch.
 
--- **Parameters:** [`name::`](../param/001_name.md) *(optional)*, [`cols::`](../param/033_cols.md), [`assignee::`](../param/063_assignee.md), [`owner::`](../param/062_owner.md), [`force::`](../param/058_force.md), [`dry::`](../param/004_dry.md), [`set_model::`](../param/054_set_model.md), [`refresh::`](../param/019_refresh.md), [`touch::`](../param/034_touch.md), [`imodel::`](../param/035_imodel.md), [`effort::`](../param/036_effort.md), [`sort::`](../param/025_sort.md), [`desc::`](../param/026_desc.md), [`prefer::`](../param/027_prefer.md), [`count::`](../param/037_count.md), [`offset::`](../param/038_offset.md), [`only_active::`](../param/039_only_active.md), [`only_next::`](../param/040_only_next.md), [`min_5h::`](../param/041_min_5h.md), [`min_7d::`](../param/042_min_7d.md), [`only_valid::`](../param/043_only_valid.md), [`exclude_exhausted::`](../param/044_exclude_exhausted.md), [`get::`](../param/045_get.md), [`abs::`](../param/046_abs.md), [`no_color::`](../param/047_no_color.md), [`live::`](../param/020_live.md), [`interval::`](../param/021_interval.md), [`jitter::`](../param/022_jitter.md), [`format::`](../param/002_format.md), [`trace::`](../param/023_trace.md)
--- **Exit:** 0 (success) | 1 (usage: invalid `name::` chars, legacy field-toggle param used, unknown `cols::` id, REMOVED_TOGGLE param used (`assign::`, `for::`, `unclaim::`, `active::`) — exits 1 with migration message, G8 ownership violation on `owner::0` or `owner::USER@MACHINE`) | 2 (runtime: account not found or credential store unreadable)
+-- **Parameters:** [`name::`](../param/001_name.md) *(optional)*, [`cols::`](../param/033_cols.md), [`assignee::`](../param/063_assignee.md), [`owner::`](../param/062_owner.md), [`lock::`](../param/067_lock.md), [`reserve::`](../param/068_reserve.md), [`force::`](../param/058_force.md), [`dry::`](../param/004_dry.md), [`set_model::`](../param/054_set_model.md), [`refresh::`](../param/019_refresh.md), [`touch::`](../param/034_touch.md), [`imodel::`](../param/035_imodel.md), [`effort::`](../param/036_effort.md), [`sort::`](../param/025_sort.md), [`desc::`](../param/026_desc.md), [`prefer::`](../param/027_prefer.md), [`count::`](../param/037_count.md), [`offset::`](../param/038_offset.md), [`only_active::`](../param/039_only_active.md), [`only_next::`](../param/040_only_next.md), [`min_5h::`](../param/041_min_5h.md), [`min_7d::`](../param/042_min_7d.md), [`only_valid::`](../param/043_only_valid.md), [`exclude_exhausted::`](../param/044_exclude_exhausted.md), [`get::`](../param/045_get.md), [`abs::`](../param/046_abs.md), [`no_color::`](../param/047_no_color.md), [`live::`](../param/020_live.md), [`interval::`](../param/021_interval.md), [`jitter::`](../param/022_jitter.md), [`format::`](../param/002_format.md), [`trace::`](../param/023_trace.md)
+-- **Exit:** 0 (success) | 1 (usage: invalid `name::` chars, legacy field-toggle param used, unknown `cols::` id, REMOVED_TOGGLE param used (`assign::`, `for::`, `unclaim::`, `active::`) — exits 1 with migration message, G8 ownership violation on `owner::0` or `owner::USER@MACHINE`, G9 claim-lock violation on `assignee::` target-side) | 2 (runtime: account not found or credential store unreadable)
 
 **Syntax:**
 
@@ -27,6 +27,10 @@ clp .accounts assignee::0                                # unassign current mach
 clp .accounts owner::0 name::alice@acme.com            # clear ownership (G8 gate)
 clp .accounts owner::0 name::alice@acme.com force::1   # bypass G8
 clp .accounts owner::user1@w003 name::alice@acme.com   # set ownership
+clp .accounts lock::1 name::alice@acme.com             # claim-lock: block auto-selection and .account.use/assignee::
+clp .accounts lock::0 name::alice@acme.com             # clear claim-lock
+clp .accounts reserve::1 name::alice@acme.com          # deprioritize for rotation (soft — still selectable as last resort)
+clp .accounts reserve::0 name::alice@acme.com          # clear reservation
 clp .accounts refresh::1                              # fetch live quota (HTTP)
 clp .accounts refresh::1 sort::renew                 # sorted by renewal, live data
 clp .accounts format::json
@@ -39,7 +43,9 @@ clp .accounts format::table
 | `cols::` | `string` | `""` | Column visibility modifiers: comma-separated `+col_id` / `-col_id` relative to identity default set (`account`, `owner`, `active`, `current`, `sub`, `tier`, `expires`, `email`); opt-in: `display_name`, `host`, `role`, `billing`, `model`, `uuid`, `capabilities`, `org_uuid`, `org_name` |
 | `assignee::` | `string` (`USER@MACHINE` or `0`) | *(omit)* | When `name::` present: write per-machine marker `_active_{machine}_{user}` = `{name}`. When `name::` absent: clear marker for the given identity. Value `"0"` expands to `$USER@$HOSTNAME` (current machine). Value sanitized per `active_marker_filename()` rules (Feature 065; renamed from `active::`) |
 | `owner::` | `string` | *(omit)* | `owner::0`: clear ownership via `write_owner(name, store, "")`; G8 gate runs before write even when `dry::1`; when `name::` absent, batch-clears all owned accounts in filtered set. `owner::USER@MACHINE`: set owner; G8 gate; `name::` required (comma-list `X,Y,Z` supported). Feature 063/064. |
-| `force::` | `bool` | `0` | Bypass G8 ownership gate on `owner::0` and `owner::USER@MACHINE`; allows any identity to modify ownership; ignored without `owner::` |
+| `lock::` | `bool` | `0` | Set/clear `claim_lock` in `{name}.json`; ungated write (no ownership check); comma-list `name::X,Y,Z` batch; absent `name::` batch-applies to filtered set. Gates Gate 9 (eligibility, unconditional) and G9 (`.account.use`/`assignee::` target-side, `force::1`-bypassable). Feature 070. |
+| `reserve::` | `bool` | `0` | Set/clear `reserve` in `{name}.json`; ungated write (no ownership check); comma-list `name::X,Y,Z` batch; absent `name::` batch-applies to filtered set. Leading sort key in `find_next_for_strategy()` — deprioritizes without excluding. Feature 070. |
+| `force::` | `bool` | `0` | Bypass G8 ownership gate on `owner::0`/`owner::USER@MACHINE` and G9 claim-lock gate on `assignee::` target-side; allows any identity to modify ownership or override a lock; no effect on `lock::`/`reserve::` writes themselves (ungated) |
 | `dry::` | `bool` | `0` | Preview mutations without writing; G8 gate still runs on `owner::0 name::X dry::1` (Feature 064) |
 | `set_model::` | `enum` | *(omit)* | Write session model to `settings.json`: `opus`, `sonnet`, `haiku`, `default` |
 | `refresh::` | `bool` | **`0`** | Attempt OAuth token refresh via subprocess (default `0`; differs from `.usage` default of `1`) |
@@ -69,7 +75,7 @@ clp .accounts format::table
 **Algorithm (5 steps):**
 1. Resolve credential store; graceful degradation on unavailability (returns `(no accounts configured)` with exit 0)
 2. List all accounts; resolve and filter by `name::` when provided
-3. **Mutation dispatch:** `assignee::USER@MACHINE name::X` (or `assignee::0 name::X` for current machine) → write per-machine marker; `assignee::` (no `name::`) → clear per-machine marker; `owner::0` → G8 gate then write `owner: ""` (or batch-clear all owned when `name::` absent); `owner::USER@MACHINE` → G8 gate then write owner identity (comma-list `name::` supported); REMOVED_TOGGLE param present (`assign::`, `for::`, `unclaim::`, `active::`) → exit 1 with migration message; legacy field-toggle param present → exit 1 with `cols::` migration hint
+3. **Mutation dispatch:** `assignee::USER@MACHINE name::X` (or `assignee::0 name::X` for current machine) → G9 claim-lock check on target `X` (unless `force::1`) then write per-machine marker; `assignee::` (no `name::`) → clear per-machine marker (no G9 check — nothing to target); `owner::0` → G8 gate then write `owner: ""` (or batch-clear all owned when `name::` absent); `owner::USER@MACHINE` → G8 gate then write owner identity (comma-list `name::` supported); `lock::0`/`lock::1` → write `claim_lock` (ungated; comma-list or batch when `name::` absent); `reserve::0`/`reserve::1` → write `reserve` (ungated; comma-list or batch when `name::` absent); REMOVED_TOGGLE param present (`assign::`, `for::`, `unclaim::`, `active::`) → exit 1 with migration message; legacy field-toggle param present → exit 1 with `cols::` migration hint
 4. Parse `cols::` modifiers; read `owner` from `{name}.json` per account (when `cols.owner`); detect current account via token comparison (when `cols.current`)
 5. Apply sort/filter; render in `format::`
 
@@ -106,24 +112,25 @@ clp .accounts assignee::bob@laptop name::alice@acme.com
 - `format::json` always includes all fields regardless of `cols::`.
 - `format::table` columns: flag, Account, Owner (when enabled), Active, Sub, Tier, Expires.
 - Data-source params (`refresh::`, `touch::`) default to `0` — `.accounts` is local-only by default; set to `1` to activate the same live pipeline as `.usage`.
-- `assignee::` and `owner::` are also available on `.usage` (same behavior, unified param set). `assign::`, `unclaim::`, `for::`, and `active::` are REMOVED_TOGGLE params — any invocation exits 1 with a migration message. See [Feature 065](../../feature/065_assignee_param_redesign.md) and [Feature 064](../../feature/064_active_marker_and_owner_redesign.md).
+- `assignee::`, `owner::`, `lock::`, and `reserve::` are also available on `.usage` (same behavior, unified param set). `assign::`, `unclaim::`, `for::`, and `active::` are REMOVED_TOGGLE params — any invocation exits 1 with a migration message. See [Feature 065](../../feature/065_assignee_param_redesign.md) and [Feature 064](../../feature/064_active_marker_and_owner_redesign.md).
 - G8 ownership gate evaluates BEFORE `dry::1` on `owner::0 name::X` (Feature 064) — a non-owner gets exit 1 even in dry-run mode.
 - `current::` field (in text mode) shows `Current: yes` for the account whose `accessToken` matches `~/.claude/.credentials.json`. See [feature/016_current_account_awareness.md](../../feature/016_current_account_awareness.md).
+- `lock::` and `reserve::` writes are ungated (no ownership check) — any caller may lock/unlock or reserve/unreserve any account. `claim_lock` gates selection elsewhere (Gate 9 in `find_next_for_strategy()`, unconditional; G9 on `.account.use`/`assignee::` target-side, `force::1`-bypassable); `reserve` only reorders (leading sort key), never excludes. See [Feature 070](../../feature/070_account_claim_and_reservation_control.md).
 
 **Help Rendering Scheme:**
 
-`.accounts.help` renders the 30 parameters above as 6 presentation groups — a command-specific rendering taxonomy, distinct from the 4 `param_group/` cross-command semantic groups referenced below (see [pattern/001_grouped_help_rendering.md](../../pattern/001_grouped_help_rendering.md) for why these differ):
+`.accounts.help` renders the 32 parameters above as 6 presentation groups — a command-specific rendering taxonomy, distinct from the 4 `param_group/` cross-command semantic groups referenced below (see [pattern/001_grouped_help_rendering.md](../../pattern/001_grouped_help_rendering.md) for why these differ):
 
 | Group | Parameters |
 |-------|-----------|
 | Core | `name::`, `format::`, `dry::` |
-| Account Ownership | `owner::`, `assignee::`, `force::` |
+| Account Ownership | `owner::`, `assignee::`, `lock::`, `reserve::`, `force::` |
 | Sort Control | `sort::`, `desc::`, `prefer::` |
 | Row Filtering & Pagination | `cols::`, `count::`, `offset::`, `only_active::`, `only_next::`, `only_valid::`, `exclude_exhausted::`, `min_5h::`, `min_7d::` |
 | Display Rendering | `abs::`, `no_color::`, `get::` |
 | Refresh & Subprocess Control | `trace::`, `refresh::`, `touch::`, `imodel::`, `effort::`, `set_model::`, `live::`, `interval::`, `jitter::` |
 
-Each group header renders bold/colored with no bracket punctuation on a TTY, falling back to a single trailing colon (e.g. `Core:`) in plain text. Every boolean parameter's signature is shown bare (`dry::0`, never `dry::0|1`); accepted values and the default are stated once in a blanket line rather than per row. Enum-valued parameters (`imodel::`, `effort::`, `set_model::`, `format::`, `sort::`, `prefer::`) show an uppercase placeholder in the signature (e.g. `imodel::MODEL`) with actual values spelled out in the description column. The name / `::` / value signature sub-columns are independently padded so the `::` delimiter aligns vertically across all 30 rows. No version banner and no information about REMOVED parameters appear in `.accounts.help` output — the REMOVED_TOGGLE stubs (`assign::`, `for::`, `unclaim::`, `active::`) keep their existing runtime redirect-error behavior (see Notes above); they are simply invisible from `.help` text. Full rationale and general rendering rules: [pattern/001_grouped_help_rendering.md](../../pattern/001_grouped_help_rendering.md).
+Each group header renders bold/colored with no bracket punctuation on a TTY, falling back to a single trailing colon (e.g. `Core:`) in plain text. Every boolean parameter's signature is shown bare (`dry::0`, never `dry::0|1`); accepted values and the default are stated once in a blanket line rather than per row. Enum-valued parameters (`imodel::`, `effort::`, `set_model::`, `format::`, `sort::`, `prefer::`) show an uppercase placeholder in the signature (e.g. `imodel::MODEL`) with actual values spelled out in the description column. The name / `::` / value signature sub-columns are independently padded so the `::` delimiter aligns vertically across all 32 rows. No version banner and no information about REMOVED parameters appear in `.accounts.help` output — the REMOVED_TOGGLE stubs (`assign::`, `for::`, `unclaim::`, `active::`) keep their existing runtime redirect-error behavior (see Notes above); they are simply invisible from `.help` text. Full rationale and general rendering rules: [pattern/001_grouped_help_rendering.md](../../pattern/001_grouped_help_rendering.md).
 
 ### Referenced Parameters
 
@@ -133,32 +140,34 @@ Each group header renders bold/colored with no bracket punctuation on a TTY, fal
 | 2 | [`cols::`](../param/033_cols.md) | Column visibility modifiers |
 | 3 | [`assignee::`](../param/063_assignee.md) | Write per-machine active-account marker |
 | 4 | [`owner::`](../param/062_owner.md) | Set or release account ownership |
-| 5 | [`force::`](../param/058_force.md) | Bypass G8 ownership gate |
-| 6 | [`dry::`](../param/004_dry.md) | Preview mutation without writing |
-| 7 | [`set_model::`](../param/054_set_model.md) | Write session model after operation |
-| 8 | [`refresh::`](../param/019_refresh.md) | Force token refresh |
-| 9 | [`touch::`](../param/034_touch.md) | Activate idle 5h session window |
-| 10 | [`imodel::`](../param/035_imodel.md) | Model for post-switch subprocess |
-| 11 | [`effort::`](../param/036_effort.md) | Effort for post-switch subprocess |
-| 12 | [`sort::`](../param/025_sort.md) | Row ordering strategy |
-| 13 | [`desc::`](../param/026_desc.md) | Reverse sort direction |
-| 14 | [`prefer::`](../param/027_prefer.md) | Tiebreaker sort strategy |
-| 15 | [`count::`](../param/037_count.md) | Limit row count after filtering |
-| 16 | [`offset::`](../param/038_offset.md) | Skip first N rows |
-| 17 | [`only_active::`](../param/039_only_active.md) | Keep only active account row |
-| 18 | [`only_next::`](../param/040_only_next.md) | Keep only recommended next account row |
-| 19 | [`min_5h::`](../param/041_min_5h.md) | Keep rows with 5h quota ≥ N% |
-| 20 | [`min_7d::`](../param/042_min_7d.md) | Keep rows with 7d quota ≥ N% |
-| 21 | [`only_valid::`](../param/043_only_valid.md) | Keep non-exhausted non-expired rows |
-| 22 | [`exclude_exhausted::`](../param/044_exclude_exhausted.md) | Remove exhausted rows |
-| 23 | [`get::`](../param/045_get.md) | Extract bare field value from first row |
-| 24 | [`abs::`](../param/046_abs.md) | Show absolute token counts |
-| 25 | [`no_color::`](../param/047_no_color.md) | Strip emoji and ANSI sequences |
-| 26 | [`live::`](../param/020_live.md) | Continuous monitor mode |
-| 27 | [`interval::`](../param/021_interval.md) | Seconds between live refresh cycles |
-| 28 | [`jitter::`](../param/022_jitter.md) | Random jitter added to interval |
-| 29 | [`format::`](../param/002_format.md) | Output serialization format |
-| 30 | [`trace::`](../param/023_trace.md) | Diagnostic trace output |
+| 5 | [`lock::`](../param/067_lock.md) | Set or clear `claim_lock` |
+| 6 | [`reserve::`](../param/068_reserve.md) | Set or clear `reserve` |
+| 7 | [`force::`](../param/058_force.md) | Bypass G8 ownership gate and G9 claim-lock gate |
+| 8 | [`dry::`](../param/004_dry.md) | Preview mutation without writing |
+| 9 | [`set_model::`](../param/054_set_model.md) | Write session model after operation |
+| 10 | [`refresh::`](../param/019_refresh.md) | Force token refresh |
+| 11 | [`touch::`](../param/034_touch.md) | Activate idle 5h session window |
+| 12 | [`imodel::`](../param/035_imodel.md) | Model for post-switch subprocess |
+| 13 | [`effort::`](../param/036_effort.md) | Effort for post-switch subprocess |
+| 14 | [`sort::`](../param/025_sort.md) | Row ordering strategy |
+| 15 | [`desc::`](../param/026_desc.md) | Reverse sort direction |
+| 16 | [`prefer::`](../param/027_prefer.md) | Tiebreaker sort strategy |
+| 17 | [`count::`](../param/037_count.md) | Limit row count after filtering |
+| 18 | [`offset::`](../param/038_offset.md) | Skip first N rows |
+| 19 | [`only_active::`](../param/039_only_active.md) | Keep only active account row |
+| 20 | [`only_next::`](../param/040_only_next.md) | Keep only recommended next account row |
+| 21 | [`min_5h::`](../param/041_min_5h.md) | Keep rows with 5h quota ≥ N% |
+| 22 | [`min_7d::`](../param/042_min_7d.md) | Keep rows with 7d quota ≥ N% |
+| 23 | [`only_valid::`](../param/043_only_valid.md) | Keep non-exhausted non-expired rows |
+| 24 | [`exclude_exhausted::`](../param/044_exclude_exhausted.md) | Remove exhausted rows |
+| 25 | [`get::`](../param/045_get.md) | Extract bare field value from first row |
+| 26 | [`abs::`](../param/046_abs.md) | Show absolute token counts |
+| 27 | [`no_color::`](../param/047_no_color.md) | Strip emoji and ANSI sequences |
+| 28 | [`live::`](../param/020_live.md) | Continuous monitor mode |
+| 29 | [`interval::`](../param/021_interval.md) | Seconds between live refresh cycles |
+| 30 | [`jitter::`](../param/022_jitter.md) | Random jitter added to interval |
+| 31 | [`format::`](../param/002_format.md) | Output serialization format |
+| 32 | [`trace::`](../param/023_trace.md) | Diagnostic trace output |
 
 ### Referenced Features
 
@@ -175,6 +184,7 @@ Each group header renders bold/colored with no bracket punctuation on a TTY, fal
 | 9 | [Accounts/Usage Param Unification](../../feature/037_accounts_usage_param_unification.md) | 32-param unified interface; `cols::` replacing field toggles; mutation params |
 | 10 | [Active Marker and Owner Param Redesign](../../feature/064_active_marker_and_owner_redesign.md) | `active::` introduced as `Kind::String` mutation param (superseded by Feature 065); `owner::0` sentinel; REMOVED_TOGGLE stubs |
 | 11 | [Assignee Param Redesign](../../feature/065_assignee_param_redesign.md) | `assignee::` rename from `active::`; `assignee::0` current-machine sentinel; `active::` REMOVED_TOGGLE |
+| 12 | [Account Claim And Reservation Control](../../feature/070_account_claim_and_reservation_control.md) | `lock::`/`reserve::` mutation params; Gate 9 and G9 `claim_lock` gates; `reserve` leading sort key |
 
 ### Referenced User Stories
 
@@ -289,10 +299,10 @@ clp .account.save host::workstation role::work
 
 ### Command: 5. `.account.use`
 
-Atomically overwrites `~/.claude/.credentials.json` with the named account's credentials (write-then-rename), updates the active marker (`_active_{hostname}_{user}`), and best-effort patches `~/.claude.json["oauthAccount"]` from the saved snapshot — preserving all machine-global keys untouched. When `touch::1` (default), fetches quota for the target account and spawns an isolated subprocess to activate its idle 5h session window if `five_hour.resets_at` is absent.
+Atomically overwrites `~/.claude/.credentials.json` with the named account's credentials (write-then-rename), updates the active marker (`_active_{hostname}_{user}`), and best-effort patches `~/.claude.json["oauthAccount"]` from the saved snapshot — preserving all machine-global keys untouched. When `touch::1` (default), fetches quota for the target account and spawns an isolated subprocess to activate its idle 5h session window if `five_hour.resets_at` is absent. Guarded by G5 (ownership) and G9 (`claim_lock`) — both bypassable via `force::1`.
 
--- **Parameters:** [`name::`](../param/001_name.md) **(required)**, [`dry::`](../param/004_dry.md), [`touch::`](../param/034_touch.md), [`refresh::`](../param/019_refresh.md), [`imodel::`](../param/035_imodel.md), [`effort::`](../param/036_effort.md), [`trace::`](../param/023_trace.md), [`set_model::`](../param/054_set_model.md)
--- **Exit:** 0 (success) | 1 (usage: invalid name or invalid `imodel::`/`effort::`/`trace::`/`set_model::` value) | 2 (runtime: account not found or HOME unset) | 3 (account credentials expired — `touch::1` + fetch failed + `expiresAt` in the past, AND refresh failed or `refresh::0`)
+-- **Parameters:** [`name::`](../param/001_name.md) **(required)**, [`dry::`](../param/004_dry.md), [`touch::`](../param/034_touch.md), [`refresh::`](../param/019_refresh.md), [`imodel::`](../param/035_imodel.md), [`effort::`](../param/036_effort.md), [`trace::`](../param/023_trace.md), [`set_model::`](../param/054_set_model.md), [`force::`](../param/058_force.md)
+-- **Exit:** 0 (success) | 1 (usage: invalid name or invalid `imodel::`/`effort::`/`trace::`/`set_model::` value; G5 ownership violation unless `force::1`; G9 claim-lock violation unless `force::1`) | 2 (runtime: account not found or HOME unset) | 3 (account credentials expired — `touch::1` + fetch failed + `expiresAt` in the past, AND refresh failed or `refresh::0`)
 
 **Syntax:**
 
@@ -308,6 +318,7 @@ clp .account.use name::alice@home.com imodel::opus effort::max
 clp .account.use name::alice@home.com trace::1
 clp .account.use name::alice@home.com set_model::opus
 clp .account.use name::alice@home.com set_model::default
+clp .account.use name::alice@home.com force::1        # bypass G5 (ownership) and G9 (claim-lock)
 ```
 
 | Parameter | Type | Default | Purpose |
@@ -320,9 +331,10 @@ clp .account.use name::alice@home.com set_model::default
 | `effort::` | `enum` | `auto` | Effort for post-switch subprocess: `auto` (`low` for any model; no flag for haiku/keep), `low`, `normal`, `high`, `max` |
 | `trace::` | `bool` | `0` | Print timestamped `account.use` diagnostic lines to stderr: credential read, quota fetch, model resolution, subprocess dispatch |
 | `set_model::` | `enum` | *(omit)* | Explicitly write session model to `settings.json`: `opus` (`claude-opus-4-8`), `sonnet` (`claude-sonnet-5`), `haiku` (`claude-haiku-4-5-20251001`), `default` (removes override); takes precedence over automatic `apply_model_override()` |
+| `force::` | `bool` | `0` | Bypass G5 (ownership) unless owned or unclaimed; bypass G9 (`claim_lock`) unless clear. Each gate is bypassed independently — one `force::1` satisfies both |
 
 **Algorithm (7 steps):**
-1. Resolve `name::` via `AccountSelector`; load `{name}.credentials.json`
+1. Resolve `name::` via `AccountSelector`; load `{name}.credentials.json`; G5 ownership check (unless `force::1`); G9 `claim_lock` check (unless `force::1`) — either failing exits 1 before any write
 2. `(when dry::0)` Atomically overwrite `~/.claude/.credentials.json` via write-then-rename
 3. `(when dry::0)` Write `_active_{hostname}_{user}` = `{name}` (active marker)
 4. `(when dry::0)` Best-effort patch `~/.claude.json["oauthAccount"]` from saved snapshot (preserves machine-global keys)
@@ -358,7 +370,8 @@ clp .account.use name::alice@home.com trace::1
 - `imodel::` and `effort::` follow the same resolution logic as `.usage` (Feature 026): `imodel::auto` always selects Haiku (sufficient for keep-alive pings); `resolve_effort()` maps Haiku and keep → no `--effort` flag, other models → `low`. See [feature/026](../../feature/026_subprocess_model_effort.md).
 - `set_model::`: when provided, `set_session_model()` writes the requested model to `settings.json` last (after any `apply_post_switch_touch()` or `apply_model_override()`), ensuring it takes precedence. `default` removes the `model` key entirely.
 - `trace::1` only produces output when `touch::1`; with `touch::0` there are no fetch operations to trace.
-- See [feature/027_account_use_post_switch_touch.md](../../feature/027_account_use_post_switch_touch.md) for full execution sequence and acceptance criteria.
+- G5 and G9 are checked before any file is written, including in `dry::1` mode — a non-owned or claim-locked target exits 1 even during a dry-run preview (mirrors G5–G8's existing dry-run interaction, see [feature/036](../../feature/036_account_ownership.md)).
+- See [feature/027_account_use_post_switch_touch.md](../../feature/027_account_use_post_switch_touch.md) for full execution sequence and acceptance criteria; see [feature/070_account_claim_and_reservation_control.md](../../feature/070_account_claim_and_reservation_control.md) for G9 and `claim_lock` design.
 
 ### Referenced Features
 
@@ -369,6 +382,8 @@ clp .account.use name::alice@home.com trace::1
 | 3 | [Session Touch](../../feature/024_session_touch.md) | Idle 5h window activation after switch |
 | 4 | [Subprocess Model/Effort](../../feature/026_subprocess_model_effort.md) | Model and effort selection for post-switch subprocess |
 | 5 | [Post-Switch Touch](../../feature/027_account_use_post_switch_touch.md) | Full execution sequence with touch and model override |
+| 6 | [Account Ownership](../../feature/036_account_ownership.md) | G5 ownership gate; `force::1` bypass and dry-run interaction pattern |
+| 7 | [Account Claim And Reservation Control](../../feature/070_account_claim_and_reservation_control.md) | G9 `claim_lock` gate; `force::1` bypass |
 
 ### Referenced User Stories
 
