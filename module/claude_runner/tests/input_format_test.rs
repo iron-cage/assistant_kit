@@ -10,7 +10,7 @@ use cli_binary_test_helpers::{ run_cli, fake_claude_dir, run_with_path };
 use std::io::{ BufRead, BufReader };
 use std::process::Stdio;
 use std::sync::mpsc;
-use std::time::Duration;
+use core::time::Duration;
 
 fn assert_container()
 {

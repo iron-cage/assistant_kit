@@ -199,6 +199,7 @@ fn parse_u32_flag( raw : &str, flag_name : &str, hint : &str ) -> Result< u32 >
 /// following value was consumed into `parsed`. Returns `false` when `token`
 /// is not a known value-consuming flag (caller decides whether to treat it
 /// as unknown). `next` is the index of the token immediately after `token`.
+#[ allow( clippy::too_many_lines ) ] // mechanical dispatch — one arm per CLI flag token
 fn parse_value_flag(
   token  : &str,
   tokens : &[ String ],
