@@ -42,6 +42,9 @@
 //! | TC-527 | pinned install, `minimumVersion` drifted → flagged mismatch | P | 0 |
 //! | TC-528 | pinned install, `env.DISABLE_AUTOUPDATER` drifted → flagged mismatch | P | 0 |
 //! | TC-529 | pinned install, `env.DISABLE_UPDATES` drifted → flagged mismatch | P | 0 |
+//! | TC-530 | install interrupted after lock applied but before preference stored → all 6 rows report TRUE mismatch, none UNVERIFIABLE | P | 0 |
+//! | TC-531 | unpinned install, `autoUpdates` explicit `"true"` → compliant, no mismatch | P | 0 |
+//! | TC-532 | unpinned install, `autoUpdates` drifted to `"false"` → flagged mismatch | P | 0 |
 
 use tempfile::TempDir;
 
@@ -648,4 +651,94 @@ fn tc529_status_lock_disable_updates_drift_flagged()
   let line = text.lines().find( | l | l.contains( "env.DISABLE_UPDATES:" ) )
     .unwrap_or_else( || panic!( "no env.DISABLE_UPDATES line in output: {text}" ) );
   assert!( line.contains( "MISMATCH" ), "env.DISABLE_UPDATES line must show MISMATCH when drifted: {line}" );
+}
+
+// TC-530 (regression, MAAV-found B1): hand-constructs the on-disk state left by
+// a crash during `perform_install()` after `store_preferred_version()` already
+// ran (the corrected call order — see `Fix(MAAV-found)` in `commands/version.rs`)
+// but before `lock_version()` applied the mechanism, and verifies `status.rs`
+// classifies it correctly. `preferredVersionSpec`/`preferredVersionResolved` are
+// recorded while every lock-mechanism key is still absent and the versions dir
+// is still at its unpinned default mode. Must report a MISMATCH on every row (a
+// TRUE one: the recorded intent genuinely isn't enforced yet), never silently
+// `Compliant` and never `UNVERIFIABLE` (settings.json is fully valid and
+// readable here).
+//
+// Scope note (MAAV Round 5, A9): this test only proves `status.rs` classifies
+// this fixture correctly — the identical fixture is also reachable via the
+// unrelated idempotency-skip branch regardless of whether the reorder fix is
+// present, so it does NOT by itself prove `version_install_routine` actually
+// produces this state via the corrected call order. TC-533 (in
+// `mutation_version_install_test.rs`) supplies that missing evidence by
+// invoking the real `.version.install` command and observing the reordered
+// write path directly.
+#[ cfg( unix ) ]
+#[ test ]
+fn tc530_status_lock_interrupted_install_reports_true_mismatch()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_settings( dir.path(), &[
+    ( "preferredVersionSpec", "stable" ),
+    ( "preferredVersionResolved", "2.1.78" ),
+  ] );
+  write_versions_dir( dir.path(), 0o755 ); // mechanism not yet applied — still unpinned default
+
+  let out = run_clv_with_env( &[ ".status", "v::2" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( !text.contains( "UNVERIFIABLE" ), "settings.json is fully readable; no row should be UNVERIFIABLE: {text}" );
+  for key in [ "autoUpdates", "autoUpdatesChannel", "minimumVersion", "env.DISABLE_AUTOUPDATER", "env.DISABLE_UPDATES", "chmod" ]
+  {
+    let line = text.lines().find( | l | l.contains( &format!( "{key}:" ) ) )
+      .unwrap_or_else( || panic!( "no {key} line in output: {text}" ) );
+    assert!(
+      line.contains( "MISMATCH" ),
+      "{key} line must report a true MISMATCH for an interrupted install (mechanism not yet applied): {line}"
+    );
+  }
+}
+
+// TC-531 (regression, MAAV-found A8): the unpinned `autoUpdates` comparison
+// (`status.rs:126`) is `actual.is_none() || actual == Some("true")` — a
+// two-way OR. TC-518 only exercises the `is_none()` disjunct (empty
+// settings). Without this test, deleting the `== Some("true")` disjunct
+// entirely would not fail any existing test, since no test ever sets
+// `autoUpdates` to the literal string `"true"` while unpinned.
+#[ cfg( unix ) ]
+#[ test ]
+fn tc531_status_lock_unpinned_autoupdates_explicit_true_compliant()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_settings( dir.path(), &[ ( "autoUpdates", "true" ) ] );
+  write_versions_dir( dir.path(), 0o755 );
+
+  let out = run_clv_with_env( &[ ".status", "v::2" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  let line = text.lines().find( | l | l.contains( "autoUpdates:" ) )
+    .unwrap_or_else( || panic!( "no autoUpdates line in output: {text}" ) );
+  assert!( !line.contains( "MISMATCH" ), "autoUpdates=true while unpinned must be compliant, not MISMATCH: {line}" );
+}
+
+// TC-532 (regression, MAAV-found A8): companion to TC-531 — a genuine
+// unpinned drift (`autoUpdates` flipped to `"false"` with no preference
+// stored) must still be flagged, confirming the OR's `is_none()` disjunct
+// doesn't accidentally swallow every value.
+#[ cfg( unix ) ]
+#[ test ]
+fn tc532_status_lock_unpinned_autoupdates_false_drift_flagged()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_settings( dir.path(), &[ ( "autoUpdates", "false" ) ] );
+  write_versions_dir( dir.path(), 0o755 );
+
+  let out = run_clv_with_env( &[ ".status", "v::2" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  let line = text.lines().find( | l | l.contains( "autoUpdates:" ) )
+    .unwrap_or_else( || panic!( "no autoUpdates line in output: {text}" ) );
+  assert!( line.contains( "MISMATCH" ), "autoUpdates=false while unpinned must be flagged MISMATCH: {line}" );
 }

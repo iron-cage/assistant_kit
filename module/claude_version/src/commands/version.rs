@@ -133,9 +133,22 @@ pub fn version_install_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
     }
   }
 
-  perform_install( resolved, is_latest )
-    .map_err( | e | ErrorData::new( ErrorCode::InternalError, e.to_string() ) )?;
+  // Fix(MAAV-found, Task 314 Round 4 Fresh Challenger): preference must be
+  // recorded BEFORE the lock mechanism is applied, not after.
+  // Root cause: `perform_install()` (which ends by calling `lock_version()` —
+  // setting autoUpdates/chmod/etc.) previously ran before `store_preferred_version()`.
+  // A crash/kill in the window between the two left the mechanism genuinely
+  // locked but `preferredVersionSpec` unset, so `is_pinned` read `false` and
+  // `.status` reported a false MISMATCH on all 6 rows despite the install
+  // having actually succeeded.
+  // Pitfall: with this order, a crash during `perform_install()` itself now
+  // leaves the preference recorded but the mechanism not yet (fully) applied —
+  // `.status` will report a MISMATCH in that case too, but it is a TRUE one
+  // (the user's recorded intent genuinely isn't enforced yet), not a false
+  // positive — this is the correct signal, not a regression.
   store_preferred_version( &version_spec, resolved, is_latest )
+    .map_err( | e | ErrorData::new( ErrorCode::InternalError, e.to_string() ) )?;
+  perform_install( resolved, is_latest )
     .map_err( | e | ErrorData::new( ErrorCode::InternalError, e.to_string() ) )?;
 
   let pref_label = if is_latest { version_spec.clone() } else { format!( "{version_spec} (v{resolved})" ) };
