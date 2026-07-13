@@ -529,3 +529,263 @@ impl ExecutionOutput
     Some( ErrorKind::Unknown )
   }
 }
+
+// ============================================================================
+// Control Protocol Types (Agent SDK `Query` interface parity, task 415)
+// ============================================================================
+//
+// Request-parameter and response-payload types for the 25 `Query` control
+// methods `crate::control::ControlSession` implements. Field names, casing,
+// and shapes are evidenced directly against a captured real-SDK wire trace —
+// see `tests/fixtures/sdk_control_capture/` (task 415 Phase 0) — not inferred
+// solely from the SDK's TypeScript type definitions. Genuinely large/dynamic
+// payloads (slash-command lists, model lists, context-usage breakdowns) are
+// left as `serde_json::Value` rather than fully modeled: this task's scope is
+// the 25-method control surface, not a full mirror of the SDK's own internal
+// type system.
+
+/// Per-MCP-server permission override, for [`crate::control::ControlSession::set_mcp_permission_mode_override`].
+///
+/// Wire values confirmed against `tests/fixtures/sdk_control_capture/wire_stdin.ndjson`
+/// (`set_mcp_permission_mode_override` request, `mode` field).
+#[derive( Debug, Clone, Copy, PartialEq, Eq, serde::Serialize )]
+#[ serde( rename_all = "lowercase" ) ]
+pub enum McpPermissionOverrideMode
+{
+  /// Restore default per-tool permission prompting for this MCP server.
+  Default,
+  /// Auto-approve all tool calls from this MCP server.
+  Auto,
+}
+
+impl McpPermissionOverrideMode
+{
+  /// Convert to wire string value.
+  #[ inline ]
+  #[ must_use ]
+  pub fn as_str( self ) -> &'static str
+  {
+    match self
+    {
+      Self::Default => "default",
+      Self::Auto => "auto",
+    }
+  }
+}
+
+/// File-read encoding, for [`crate::control::ControlSession::read_file`].
+///
+/// Wire value confirmed against `sdk.d.ts`'s `readFile(path, options?: { encoding?: 'utf-8' | 'base64' })`.
+#[derive( Debug, Clone, Copy, PartialEq, Eq, serde::Serialize )]
+pub enum ReadFileEncoding
+{
+  /// UTF-8 text encoding (default when omitted).
+  #[ serde( rename = "utf-8" ) ]
+  Utf8,
+  /// Base64-encoded binary content.
+  #[ serde( rename = "base64" ) ]
+  Base64,
+}
+
+impl ReadFileEncoding
+{
+  /// Convert to wire string value.
+  #[ inline ]
+  #[ must_use ]
+  pub fn as_str( self ) -> &'static str
+  {
+    match self
+    {
+      Self::Utf8 => "utf-8",
+      Self::Base64 => "base64",
+    }
+  }
+}
+
+/// Thinking-token display mode, for [`crate::control::ControlSession::set_max_thinking_tokens`].
+///
+/// Wire value confirmed against `sdk.d.ts`'s deprecated `setMaxThinkingTokens(n, thinkingDisplay?)`.
+#[derive( Debug, Clone, Copy, PartialEq, Eq, serde::Serialize )]
+#[ serde( rename_all = "lowercase" ) ]
+pub enum ThinkingDisplay
+{
+  /// Show a summarized form of the model's thinking.
+  Summarized,
+  /// Omit thinking display entirely.
+  Omitted,
+}
+
+impl ThinkingDisplay
+{
+  /// Convert to wire string value.
+  #[ inline ]
+  #[ must_use ]
+  pub fn as_str( self ) -> &'static str
+  {
+    match self
+    {
+      Self::Summarized => "summarized",
+      Self::Omitted => "omitted",
+    }
+  }
+}
+
+/// Result of [`crate::control::ControlSession::rewind_files`].
+///
+/// Shape confirmed against a captured `rewind_files` response:
+/// `{"canRewind":false,"error":"No file checkpoint found for this message."}`
+/// (`tests/fixtures/sdk_control_capture/wire_stdout.ndjson`).
+#[derive( Debug, Clone, PartialEq, Eq, serde::Deserialize ) ]
+pub struct RewindFilesResult
+{
+  /// Whether the rewind can be (or was, for a non-dry-run) applied.
+  #[ serde( rename = "canRewind" ) ]
+  pub can_rewind : bool,
+  /// Present when `can_rewind` is `false`, explaining why.
+  pub error : Option< String >,
+}
+
+/// Result of [`crate::control::ControlSession::set_mcp_permission_mode_override`].
+///
+/// Wire response omits the `response` object entirely on a clean override (no `warning`
+/// key at all) — confirmed against the captured trace's `set_mcp_permission_mode_override`
+/// response. `#[serde(default)]` treats a missing `response` object as `warning: None`.
+#[derive( Debug, Clone, Default, PartialEq, Eq, serde::Deserialize ) ]
+pub struct SetMcpPermissionModeOverrideResult
+{
+  /// Set when `serverName` matched no currently-known MCP server.
+  #[ serde( default ) ]
+  pub warning : Option< String >,
+}
+
+/// Result of [`crate::control::ControlSession::initialization_result`] and
+/// [`crate::control::ControlSession::reinitialize`].
+///
+/// Top-level keys confirmed against the captured `initialize` `control_response`; nested
+/// shapes (slash commands, model list, account info, etc.) are intentionally left as
+/// `serde_json::Value` — modeling the SDK's full internal type system is out of this
+/// task's scope (see `types.rs` § Control Protocol Types module doc above).
+#[derive( Debug, Clone, PartialEq, serde::Deserialize ) ]
+pub struct InitializeResult
+{
+  /// Available slash commands.
+  pub commands : serde_json::Value,
+  /// Available subagents.
+  pub agents : serde_json::Value,
+  /// Currently active output style.
+  pub output_style : serde_json::Value,
+  /// All output styles the session supports.
+  pub available_output_styles : serde_json::Value,
+  /// Available models.
+  pub models : serde_json::Value,
+  /// Account information (see also [`AccountInfo`], the typed accessor's own view of this field).
+  pub account : serde_json::Value,
+  /// Claude Code subprocess PID.
+  pub pid : serde_json::Value,
+  /// Feedback survey configuration.
+  pub feedback_survey_config : serde_json::Value,
+}
+
+/// One entry in [`crate::control::ControlSession::mcp_server_status`]'s returned list.
+///
+/// Shape confirmed against the captured `mcp_status` response:
+/// `{"mcpServers":[{"name":"phase0probe","status":"connected","scope":"dynamic","tools":[]}]}`.
+#[derive( Debug, Clone, PartialEq, serde::Deserialize ) ]
+pub struct McpServerStatusEntry
+{
+  /// Server name as registered with the session.
+  pub name : String,
+  /// Connection status (e.g. `"connected"`).
+  pub status : String,
+  /// Registration scope (e.g. `"dynamic"`).
+  pub scope : String,
+  /// Tools this server currently exposes.
+  pub tools : Vec< serde_json::Value >,
+}
+
+/// Result of [`crate::control::ControlSession::read_file`].
+///
+/// Shape confirmed against the captured `read_file` response:
+/// `{"contents":"line one\nline two\n","absPath":"/tmp/-phase0-scratch/sample.txt"}`.
+#[derive( Debug, Clone, PartialEq, Eq, serde::Deserialize ) ]
+pub struct ReadFileResult
+{
+  /// File contents (UTF-8 text, or base64 when `ReadFileEncoding::Base64` was requested).
+  pub contents : String,
+  /// Absolute resolved path of the file that was read.
+  #[ serde( rename = "absPath" ) ]
+  pub abs_path : String,
+}
+
+/// Result of [`crate::control::ControlSession::reload_plugins`].
+///
+/// Shape confirmed against the captured `reload_plugins` response (`commands`, `agents`,
+/// `plugins`, `mcpServers`, `error_count` keys); nested contents left as `serde_json::Value`.
+#[derive( Debug, Clone, PartialEq, serde::Deserialize ) ]
+pub struct ReloadPluginsResult
+{
+  /// Refreshed slash-command list.
+  pub commands : serde_json::Value,
+  /// Refreshed subagent list.
+  pub agents : serde_json::Value,
+  /// Refreshed plugin list.
+  pub plugins : serde_json::Value,
+  /// Refreshed MCP server list.
+  #[ serde( rename = "mcpServers" ) ]
+  pub mcp_servers : serde_json::Value,
+  /// Number of errors encountered while reloading.
+  pub error_count : u32,
+}
+
+/// Result of [`crate::control::ControlSession::reload_skills`].
+///
+/// Shape confirmed against the captured `reload_skills` response (`skills` key only).
+#[derive( Debug, Clone, PartialEq, serde::Deserialize ) ]
+pub struct ReloadSkillsResult
+{
+  /// Refreshed skill list.
+  pub skills : serde_json::Value,
+}
+
+/// Result of [`crate::control::ControlSession::account_info`].
+///
+/// Shape confirmed against the captured (PII-redacted) `initialize` response's `account`
+/// field: `{"email":"...","organization":"...","subscriptionType":"...","apiProvider":"..."}`.
+#[derive( Debug, Clone, PartialEq, Eq, serde::Deserialize ) ]
+pub struct AccountInfo
+{
+  /// Account email address.
+  pub email : String,
+  /// Organization display name.
+  pub organization : String,
+  /// Subscription tier (e.g. `"Claude Max"`).
+  #[ serde( rename = "subscriptionType" ) ]
+  pub subscription_type : String,
+  /// API provider (e.g. `"firstParty"`).
+  #[ serde( rename = "apiProvider" ) ]
+  pub api_provider : String,
+}
+
+/// Result of [`crate::control::ControlSession::set_mcp_servers`].
+///
+/// Shape confirmed against the captured `mcp_set_servers` response:
+/// `{"added":[],"removed":[],"errors":{}}`.
+#[derive( Debug, Clone, Default, PartialEq, Eq, serde::Deserialize ) ]
+pub struct SetMcpServersResult
+{
+  /// Server names successfully added.
+  pub added : Vec< String >,
+  /// Server names successfully removed.
+  pub removed : Vec< String >,
+  /// Server name → error message, for servers that failed to apply.
+  pub errors : std::collections::HashMap< String, String >,
+}
+
+/// Result of [`crate::control::ControlSession::get_context_usage`].
+///
+/// Left as `serde_json::Value`: the captured `get_context_usage` response has 16 top-level
+/// keys (`categories`, `totalTokens`, `maxTokens`, `rawMaxTokens`, `autocompactSource`,
+/// `percentage`, `gridRows`, `model`, `memoryFiles`, `mcpTools`, `agents`, `slashCommands`,
+/// `skills`, `autoCompactThreshold`, `isAutoCompactEnabled`, `messageBreakdown`, `apiUsage`),
+/// several deeply nested — fully modeling this is out of this task's scope.
+pub type ContextUsageResult = serde_json::Value;

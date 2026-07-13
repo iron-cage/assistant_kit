@@ -1,0 +1,13 @@
+{
+  "argv0": "/home/user1/.local/bin/claude",
+  "args": [
+    "--output-format",
+    "stream-json",
+    "--verbose",
+    "--input-format",
+    "stream-json",
+    "--permission-mode",
+    "bypassPermissions"
+  ],
+  "cwd": "/tmp/-phase0-scratch"
+}

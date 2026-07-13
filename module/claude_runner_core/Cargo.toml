@@ -19,11 +19,13 @@ workspace = true
 [features]
 default = [ "enabled" ]
 full = [ "enabled" ]
-enabled = [ "dep:error_tools", "error_tools/enabled", "error_tools/error_untyped" ]
+enabled = [ "dep:error_tools", "error_tools/enabled", "error_tools/error_untyped", "dep:serde", "dep:serde_json" ]
 
 [dependencies]
 claude_core = { workspace = true }
 error_tools   = { workspace = true, optional = true }
+serde         = { workspace = true, optional = true, features = [ "std", "derive" ] }
+serde_json    = { workspace = true, optional = true }
 
 [dev-dependencies]
 test_tools = { workspace = true, features = [ "full" ] }

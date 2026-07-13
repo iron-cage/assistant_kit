@@ -1,0 +1,24 @@
+{"request_id":"vzltn6kl91g","type":"control_request","request":{"subtype":"initialize","sdkMcpServers":["phase0probe"],"systemPrompt":[""]}}
+{"type":"user","message":{"role":"user","content":"Read the file /tmp/-phase0-scratch/sample.txt with the Read tool. Then use the Edit tool to append a line \"appended by phase0\" to it. Then run the bash command \"sleep 45\" (not in background, just run it normally)."},"parent_tool_use_id":null}
+{"type":"control_response","response":{"subtype":"success","request_id":"c7492934-7471-4c78-aa16-4e72c3006ce1","response":{"mcp_response":{"result":{"protocolVersion":"2025-11-25","capabilities":{},"serverInfo":{"name":"phase0probe","version":"1.0.0"}},"jsonrpc":"2.0","id":0}}}}
+{"type":"control_response","response":{"subtype":"success","request_id":"4f32c421-b101-4582-8be0-df6b39c5cb7b","response":{"mcp_response":{"jsonrpc":"2.0","result":{},"id":0}}}}
+{"request_id":"xsbrb1wcjja","type":"control_request","request":{"subtype":"mcp_status"}}
+{"request_id":"1334clsej3u","type":"control_request","request":{"subtype":"get_context_usage"}}
+{"request_id":"935ocx792v","type":"control_request","request":{"subtype":"read_file","path":"/tmp/-phase0-scratch/sample.txt"}}
+{"request_id":"fgfj6nx2s5","type":"control_request","request":{"subtype":"seed_read_state","path":"/tmp/-phase0-scratch/sample.txt","mtime":1783903847360}}
+{"request_id":"dnjsddvq75i","type":"control_request","request":{"subtype":"set_permission_mode","mode":"default"}}
+{"request_id":"19vp9pdn923","type":"control_request","request":{"subtype":"set_mcp_permission_mode_override","serverName":"phase0probe","mode":"auto"}}
+{"request_id":"78ujcznzi68","type":"control_request","request":{"subtype":"set_model"}}
+{"request_id":"4rx1bgl80st","type":"control_request","request":{"subtype":"set_max_thinking_tokens","max_thinking_tokens":0,"thinking_display":null}}
+{"request_id":"h6e504v4mud","type":"control_request","request":{"subtype":"apply_flag_settings","settings":{}}}
+{"request_id":"ijkl6e5pxek","type":"control_request","request":{"subtype":"mcp_reconnect","serverName":"phase0probe"}}
+{"request_id":"59eg0x2cxug","type":"control_request","request":{"subtype":"mcp_toggle","serverName":"phase0probe","enabled":true}}
+{"request_id":"wryjucdrq9l","type":"control_request","request":{"subtype":"mcp_set_servers","servers":{"phase0probe":{"type":"sdk","name":"phase0probe"}}}}
+{"request_id":"k3ngu1hyf6p","type":"control_request","request":{"subtype":"reload_plugins"}}
+{"request_id":"8n62pqlu1l2","type":"control_request","request":{"subtype":"reload_skills"}}
+{"request_id":"sad3o0v4gsa","type":"control_request","request":{"subtype":"initialize","sdkMcpServers":["phase0probe"],"systemPrompt":[""]}}
+{"request_id":"7j7h6lp68l","type":"control_request","request":{"subtype":"background_tasks"}}
+{"request_id":"mrm7qapuz2","type":"control_request","request":{"subtype":"stop_task","task_id":"phase0-nonexistent-task-id"}}
+{"request_id":"a3qt9evhh77","type":"control_request","request":{"subtype":"rewind_files","user_message_id":"b8ebc041-8273-46e0-ab09-1d063d25f31f","dry_run":true}}
+{"type":"user","message":{"role":"user","content":"(phase0 streamInput probe message, no-op)"},"parent_tool_use_id":null}
+{"request_id":"vrgy8zzwara","type":"control_request","request":{"subtype":"interrupt"}}
