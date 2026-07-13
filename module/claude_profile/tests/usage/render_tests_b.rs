@@ -42,6 +42,7 @@ fn test_ft29_009_footer_session_effort_display()
         cache_age_secs        : None,
         is_owned              : true,
         owner                 : String::new(),
+              org_created_at : None,
       },
       AccountQuota
       {
@@ -65,6 +66,7 @@ fn test_ft29_009_footer_session_effort_display()
         cache_age_secs        : None,
         is_owned              : true,
         owner                 : String::new(),
+              org_created_at : None,
       },
       AccountQuota
       {
@@ -88,6 +90,7 @@ fn test_ft29_009_footer_session_effort_display()
         cache_age_secs        : None,
         is_owned              : true,
         owner                 : String::new(),
+              org_created_at : None,
       },
     ]
   }
@@ -485,6 +488,7 @@ fn cc_no_current_account_uses_legacy_footer()
       cache_age_secs        : None,
       is_owned              : true,
       owner                 : String::new(),
+          org_created_at : None,
     }
   };
   let accounts = vec![ mk( "a@x.com" ), mk( "b@x.com" ) ];
@@ -534,6 +538,7 @@ fn cc_effort_only_footer_shows_effort_without_model()
       cache_age_secs        : None,
       is_owned              : true,
       owner                 : String::new(),
+          org_created_at : None,
     }
   };
   let accounts = vec![ mk( "cur@x.com", true ), mk( "a@x.com", false ), mk( "b@x.com", false ) ];

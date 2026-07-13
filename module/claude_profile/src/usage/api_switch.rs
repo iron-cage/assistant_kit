@@ -120,6 +120,7 @@ pub fn attempt_expired_token_refresh(
     renewal_at           : None,
     cached               : false,
     cache_age_secs       : None,
+    org_created_at       : None,
     is_owned             : true,
     owner                : String::new(),
   };
@@ -352,6 +353,7 @@ pub fn apply_post_switch_touch(
     renewal_at           : None,
     cached               : false,
     cache_age_secs       : None,
+    org_created_at       : None,
     is_owned             : true,
     owner                : String::new(),
   };

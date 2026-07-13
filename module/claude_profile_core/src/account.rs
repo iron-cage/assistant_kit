@@ -1529,6 +1529,15 @@ pub struct QuotaCacheEntry
   pub last_touch_at     : Option< String >,
   /// Whether the account is idle (no active 5h window).
   pub touch_idle        : Option< bool >,
+  // Fix(BUG-327): QuotaCacheEntry had no field to carry org_created_at, so the 3
+  //   non-live branches (G1-not-owned, cache-first, approximate_quota) could never
+  //   populate renews_label()'s org_created_at_opt — ~Renews always showed "?".
+  //   Root cause: org_created_at lived only on AccountQuota.account (live-fetch only);
+  //   no field existed to persist/restore it across a cache round-trip.
+  //   Pitfall: independent of `account: Option<OauthAccountData>` — never reconstruct
+  //   a fake OauthAccountData to backfill it (risks BUG-232 regression).
+  /// Org creation timestamp (UTC ISO-8601), persisted so cache-only reads can compute renewal dates.
+  pub org_created_at    : Option< String >,
 }
 
 /// Write quota cache to `{name}.json` using read-merge-write.
@@ -1576,6 +1585,12 @@ pub fn write_quota_cache(
         if let Some( v ) = prev.get( "last_touch_at" )  { co.insert( "last_touch_at".into(), v.clone() ); }
         if let Some( v ) = prev.get( "touch_idle" )     { co.insert( "touch_idle".into(), v.clone() ); }
         if let Some( v ) = prev.get( "history" )        { co.insert( "history".into(), v.clone() ); }
+        // Fix(BUG-327): org_created_at is written via write_cache_string() at fetch.rs's
+        //   live-fetch success site — a sibling call independent of this function's own
+        //   five_hour/seven_day/seven_day_sonnet args — so it must be preserve-forwarded
+        //   here too, or every OTHER write_quota_cache() caller (api_switch.rs, touch.rs,
+        //   refresh.rs) would silently erase it on their next cache write.
+        if let Some( v ) = prev.get( "org_created_at" ) { co.insert( "org_created_at".into(), v.clone() ); }
       }
     }
     obj.insert( "cache".to_string(), cache );
@@ -1603,6 +1618,9 @@ pub fn read_quota_cache( credential_store : &std::path::Path, name : &str ) -> O
     model_override   : cache.get( "model_override" ).and_then( |v| v.as_str() ).map( str::to_string ),
     last_touch_at    : cache.get( "last_touch_at" ).and_then( |v| v.as_str() ).map( str::to_string ),
     touch_idle       : cache.get( "touch_idle" ).and_then( serde_json::Value::as_bool ),
+    // Fix(BUG-327): read back org_created_at written by write_cache_string(); defaults to
+    //   None gracefully for pre-existing cache entries that predate this field (T06).
+    org_created_at   : cache.get( "org_created_at" ).and_then( |v| v.as_str() ).map( str::to_string ),
   } )
 }
 

@@ -215,6 +215,17 @@ pub struct AccountQuota
   pub is_owned              : bool,
   /// Raw owner identity string from `{name}.json`; empty when unset.
   pub owner                 : String,
+  // Fix(BUG-327): the 3 non-live branches (G1-not-owned, cache-first, approximate_quota)
+  //   set `account: None`, so `renews_label()` never received `org_created_at` on those
+  //   paths — `~Renews` showed "?" even with a warm cache holding a successful prior fetch.
+  //   Root cause: `org_created_at` was only reachable via `account.as_ref().map(...)`,
+  //   which is `None` whenever the live account-details fetch didn't run this cycle.
+  //   Pitfall: independent of `account` — only THIS field gains cache-backed availability;
+  //   `account` itself must stay `None` on non-live branches exactly as before (no fake
+  //   `OauthAccountData` reconstruction, which would risk a BUG-232 regression).
+  /// Org creation timestamp, sourced from the live account fetch OR the quota cache.
+  /// `None` when neither a live fetch nor a cache entry has ever recorded it.
+  pub org_created_at        : Option< String >,
 }
 
 impl AccountQuota

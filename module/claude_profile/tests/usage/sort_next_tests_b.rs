@@ -108,6 +108,7 @@ fn mre_bug229_strategy_metric_renew_exact_sub_shows_both_timers()
     renewal_at    : Some( reset_iso_at( now, 3600 ) ),  // exact sub renewal in 1h
     cached        : false,
     cache_age_secs : None,
+    org_created_at : None,
     is_owned      : true,
     owner                : String::new(),
   };
@@ -167,6 +168,7 @@ fn mre_bug229_strategy_metric_renew_no_sub_shows_7d_only()
     renewal_at    : None,  // no subscription data
     cached        : false,
     cache_age_secs : None,
+    org_created_at : None,
     is_owned      : true,
     owner                : String::new(),
   };
@@ -608,15 +610,20 @@ fn test_cc_gate7_boundary_exactly_5pct_skipped_in_eligibility()
   }
 }
 
-/// CC — Gate 7 just above boundary: `seven_day_left = 5.01` → account ELIGIBLE.
+/// CC — Gate 7 just above boundary: `seven_day_left = 5.5` (rounds to 6) → account ELIGIBLE.
 ///
-/// `seven_day_util = 94.99` → `seven_day_left = 100.0 - 94.99 = 5.01`.
-/// Gate 7: `5.01 > 5.0 = true` → gate does NOT fire → eligible.
+/// `seven_day_util = 94.5` → `seven_day_left = 100.0 - 94.5 = 5.5` (exact tie-break value).
+/// Gate 7: `round(5.5) = 6.0` (round-half-away-from-zero), `6.0 > 5.0 = true` → eligible.
+///
+/// Fix(BUG-336): originally used `seven_day_util=94.99` (`left=5.01`) — once `seven_day_left()`
+///   rounds its return value (this file's own BUG-336 fix), 5.01 rounds DOWN to 5.0 (the
+///   threshold), no longer demonstrating "just above". Recalibrated to the new narrowest
+///   above-threshold margin: 94.5 (left=5.5), the exact tie-break point that rounds up to 6.
 #[ test ]
 fn test_cc_gate7_just_above_boundary_eligible()
 {
   let now = 0u64;
-  let target = mk_aq_sort_weekly( "aaa_target@test.com", 0.0, 94.99, 0.0 );
+  let target = mk_aq_sort_weekly( "aaa_target@test.com", 0.0, 94.5, 0.0 );
   let mut current = mk_aq_sort( "zzz_current@test.com", 20.0, FAR_FUTURE_MS );
   current.is_current = true;
   let accounts = vec![ target, current ];
@@ -626,23 +633,28 @@ fn test_cc_gate7_just_above_boundary_eligible()
     let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, false );
     assert_eq!(
       result, Some( 0 ),
-      "{strategy:?}: seven_day_left=5.01 (just above threshold) must be ELIGIBLE; got: {result:?}",
+      "{strategy:?}: seven_day_left=5.5 (rounds to 6, just above threshold) must be ELIGIBLE; got: {result:?}",
     );
   }
 }
 
-/// CC — BUG-324 class at narrowest margin: `seven_day_left = 5.01`, `seven_day_sonnet_left = 0%`.
+/// CC — BUG-324 class at narrowest margin: `seven_day_left = 5.5` (rounds to 6), `seven_day_sonnet_left = 0%`.
 ///
-/// `seven_day_util = 94.99` → `seven_day_left = 5.01` (just above threshold).
+/// `seven_day_util = 94.5` → `seven_day_left = 5.5` → rounds to 6.0 (above threshold).
 /// `seven_day_sonnet_util = 100.0` → `seven_day_sonnet_left = 0.0`.
-/// `prefer_weekly(Any) = min(5.01, 0.0) = 0.0` — pre-fix: blocked (`0.0 ≤ 5.0`).
-/// `seven_day_left = 5.01` — post-fix: eligible (`5.01 > 5.0`).
-/// Narrowest margin where BUG-324 fix changes behavior.
+/// `prefer_weekly(Any) = min(6.0, 0.0) = 0.0` — pre-BUG-324-fix: blocked (`0.0 ≤ 5.0`).
+/// `seven_day_left = 5.5` (rounds to 6.0) — post-BUG-324-fix: eligible (`6.0 > 5.0`).
+///
+/// Fix(BUG-336): originally used `seven_day_util=94.99` (`left=5.01`) — once `seven_day_left()`
+///   rounds its return value (this file's own BUG-336 fix), 5.01 rounds DOWN to 5.0 (the
+///   threshold), which would incorrectly re-block this account and no longer exercise the
+///   BUG-324 divergence this test targets. Recalibrated to 94.5 (left=5.5, the exact tie-break
+///   that rounds up to 6) to keep the BUG-324 regression margin clear of the BUG-336 boundary.
 #[ test ]
 fn test_cc_bug324_divergent_at_boundary_eligible()
 {
   let now = 0u64;
-  let target = mk_aq_sort_weekly( "aaa_target@test.com", 0.0, 94.99, 100.0 );
+  let target = mk_aq_sort_weekly( "aaa_target@test.com", 0.0, 94.5, 100.0 );
   let mut current = mk_aq_sort( "zzz_current@test.com", 20.0, FAR_FUTURE_MS );
   current.is_current = true;
   let accounts = vec![ target, current ];
@@ -654,7 +666,7 @@ fn test_cc_bug324_divergent_at_boundary_eligible()
       let result = find_next_for_strategy( &accounts, strategy, prefer, now, false );
       assert_eq!(
         result, Some( 0 ),
-        "BUG-324 boundary: {strategy:?}/{prefer:?} — seven_day_left=5.01, 7d_son_left=0% \
+        "BUG-324 boundary: {strategy:?}/{prefer:?} — seven_day_left=5.5 (rounds to 6), 7d_son_left=0% \
          must be ELIGIBLE; got: {result:?}",
       );
     }

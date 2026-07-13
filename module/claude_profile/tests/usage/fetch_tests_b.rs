@@ -273,7 +273,7 @@ fn test_read_cached_quota_no_history_returns_raw()
     serde_json::to_string_pretty( &meta ).unwrap() + "\n",
   ).unwrap();
 
-  let ( data, _ ) = read_cached_quota( store.path(), "alice@test.com", now_secs )
+  let ( data, _, _ ) = read_cached_quota( store.path(), "alice@test.com", now_secs )
     .expect( "FT-15: cache present → must return Some" );
   let h5 = data.five_hour.expect( "FT-15: five_hour must be Some" );
   assert!(
@@ -308,7 +308,7 @@ fn test_read_cached_quota_one_history_returns_raw()
     serde_json::to_string_pretty( &meta ).unwrap() + "\n",
   ).unwrap();
 
-  let ( data, _ ) = read_cached_quota( store.path(), "alice@test.com", now_secs )
+  let ( data, _, _ ) = read_cached_quota( store.path(), "alice@test.com", now_secs )
     .expect( "FT-16: cache present → must return Some" );
   let h5 = data.five_hour.expect( "FT-16: five_hour must be Some" );
   assert!(
@@ -353,7 +353,7 @@ fn test_read_cached_quota_applies_approximation()
     serde_json::to_string_pretty( &meta ).unwrap() + "\n",
   ).unwrap();
 
-  let ( data, _ ) = read_cached_quota( store.path(), "alice@test.com", now_secs )
+  let ( data, _, _ ) = read_cached_quota( store.path(), "alice@test.com", now_secs )
     .expect( "FT-17: cache present → must return Some" );
   let h5 = data.five_hour.expect( "FT-17: five_hour must be Some" );
   // Linear trend 10→25→40 with slope=15/3600 per second; at +1h after t2: 40 + 15 = 55.0.
@@ -395,7 +395,7 @@ fn test_read_cached_quota_expired_window_returns_zero()
   ).unwrap();
 
   let now_secs = 1_748_900_000_u64; // well after resets_at 1748768400
-  let ( data, _ ) = read_cached_quota( store.path(), "alice@test.com", now_secs )
+  let ( data, _, _ ) = read_cached_quota( store.path(), "alice@test.com", now_secs )
     .expect( "FT-18: cache present → must return Some" );
   let h5 = data.five_hour.expect( "FT-18: five_hour must be Some" );
   assert!(
@@ -455,7 +455,7 @@ fn cc08_read_cached_quota_two_history_entries_applies_linear()
     serde_json::to_string_pretty( &meta ).unwrap() + "\n",
   ).unwrap();
 
-  let ( data, _ ) = read_cached_quota( store.path(), "alice@test.com", now_secs )
+  let ( data, _, _ ) = read_cached_quota( store.path(), "alice@test.com", now_secs )
     .expect( "CC-08: cache present → must return Some" );
   let h5 = data.five_hour.expect( "CC-08: five_hour must be Some" );
 

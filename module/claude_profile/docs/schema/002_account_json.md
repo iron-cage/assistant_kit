@@ -51,6 +51,7 @@
 | `cache.model_override` | string | `apply_model_override()` decision | `write_cache_string()` | Model override restore on next run | [033](../feature/033_quota_cache.md) |
 | `cache.last_touch_at` | string (ISO 8601) | Touch subprocess completion time | `write_cache_field()` after touch | Touch lifecycle state | [024](../feature/024_session_touch.md), [033](../feature/033_quota_cache.md) |
 | `cache.touch_idle` | bool | Touch subprocess idle determination | `write_cache_field()` after touch | Touch lifecycle gating | [024](../feature/024_session_touch.md), [033](../feature/033_quota_cache.md) |
+| `cache.org_created_at` | string (ISO 8601) | Live `fetch_oauth_account` response `org_created_at` field | `write_quota_cache()` after successful account fetch | Non-live-fetch branches → `AccountQuota.org_created_at` → `~Renews` Estimate (AC-15) | [033](../feature/033_quota_cache.md) |
 | `history` | array of objects | Successful API measurements | `fetch.rs` after every successful `fetch_oauth_usage()` call | `approximate_quota()` in `approx.rs` | [040](../feature/040_quota_measurement_history.md) |
 | `history[*].ts` | number (unix secs) | Measurement timestamp | history append | Polynomial fitting | [040](../feature/040_quota_measurement_history.md) |
 | `history[*].five_hour` | number (%) | `five_hour.utilization` at measurement time | history append | Polynomial fitting | [040](../feature/040_quota_measurement_history.md) |
@@ -100,7 +101,8 @@ These fields are written by one caller and never touched by others (preserved vi
     "seven_day_sonnet": null,
     "model_override": "opus",
     "last_touch_at": "2026-06-23T06:30:00Z",
-    "touch_idle": false
+    "touch_idle": false,
+    "org_created_at": "2026-01-01T00:00:00Z"
   },
   "history": [
     { "ts": 1749900000, "five_hour": 10.0, "seven_day": 20.0, "seven_day_sonnet": null,

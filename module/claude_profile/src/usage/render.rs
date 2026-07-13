@@ -113,7 +113,7 @@ pub fn render_text(
     {
       renews_label(
         aq.renewal_at.as_deref(),
-        aq.account.as_ref().map( |a| a.org_created_at.as_str() ),
+        aq.org_created_at.as_deref(),
         now_secs,
       )
     };
@@ -150,7 +150,7 @@ pub fn render_text(
         };
         let ( ren_secs, ren_est ) = renewal_secs(
           aq.renewal_at.as_deref(),
-          aq.account.as_ref().map( |a| a.org_created_at.as_str() ),
+          aq.org_created_at.as_deref(),
           now_secs,
         ).unzip();
         let next_cell    = next_event_label(
@@ -391,7 +391,7 @@ pub( crate ) fn extract_get_field( aq : &AccountQuota, field : GetField, now_sec
     {
       renews_label(
         aq.renewal_at.as_deref(),
-        aq.account.as_ref().map( |a| a.org_created_at.as_str() ),
+        aq.org_created_at.as_deref(),
         now_secs,
       )
     },
@@ -405,7 +405,7 @@ pub( crate ) fn extract_get_field( aq : &AccountQuota, field : GetField, now_sec
           .and_then( claude_quota::iso_to_unix_secs ).map( |t| t.saturating_sub( now_secs ) );
         let ren_pair = renewal_secs(
           aq.renewal_at.as_deref(),
-          aq.account.as_ref().map( |a| a.org_created_at.as_str() ),
+          aq.org_created_at.as_deref(),
           now_secs,
         );
         match next_event_raw(

@@ -66,6 +66,13 @@ fn mre_bug_220_renews_preserved_for_429_accounts()
     renewal_at    : None,
     cached        : false,
     cache_age_secs : None,
+    // Fix(BUG-327): mirrors account.org_created_at above, matching what fetch.rs's
+    //   live-fetch path actually derives (account.as_ref().map(|a| a.org_created_at.clone())).
+    // Root cause: -add_org_created_at.py blindly inserted None into every AccountQuota
+    //   literal missing the field, without syncing it to an already-populated account field.
+    // Pitfall: this literal bypasses fetch.rs entirely, so nothing else keeps the two
+    //   fields consistent — a literal with `account: Some(..)` must set this by hand.
+    org_created_at : Some( "1970-01-15T00:00:00Z".to_string() ),
     is_owned      : true,
     owner                : String::new(),
   };
@@ -141,6 +148,7 @@ fn test_ft21_009_occupied_elsewhere_at_flag()
       cache_age_secs        : None,
       is_owned              : true,
       owner                : String::new(),
+          org_created_at : None,
     }
   };
 
@@ -236,6 +244,7 @@ fn ft03_033_render_text_cached_shows_tilde_prefix()
     cache_age_secs        : Some( 300 ),
     is_owned              : true,
     owner                : String::new(),
+      org_created_at : None,
   };
   let accounts = vec![ aq ];
   let cols     = ColsVisibility::default_set();
@@ -296,6 +305,7 @@ fn ft09_033_render_json_cached_includes_fields()
     cache_age_secs        : Some( 720 ),
     is_owned              : true,
     owner                : String::new(),
+      org_created_at : None,
   };
   let accounts = vec![ aq ];
   let json = render_json( &accounts );
@@ -342,6 +352,7 @@ fn ft03_033_cached_sonnet_reset_shows_tilde()
     cache_age_secs        : Some( 600 ),
     is_owned              : true,
     owner                : String::new(),
+      org_created_at : None,
   };
   let accounts = vec![ aq ];
   let mut cols = ColsVisibility::default_set();
@@ -413,6 +424,7 @@ fn test_ft23_009_renews_dash_for_cancelled_subscription()
     renewal_at            : None,
     cached                : false,
     cache_age_secs        : None,
+    org_created_at        : None,
     is_owned              : true,
     owner                : String::new(),
   };
@@ -513,6 +525,7 @@ fn mre_bug332_renews_shown_for_billing_none_with_ok_result()
     renewal_at            : None,
     cached                : false,
     cache_age_secs        : None,
+    org_created_at        : None,
     is_owned              : true,
     owner                 : String::new(),
   };
@@ -582,6 +595,7 @@ fn ft05_non_owned_display_tilde_or_dashes()
     cache_age_secs        : Some( 600 ),
     is_owned              : false,
     owner                : String::new(),
+      org_created_at : None,
   };
   let text_a = render_text(
     &[ aq_cached ],
@@ -611,6 +625,7 @@ fn ft05_non_owned_display_tilde_or_dashes()
     cache_age_secs        : None,
     is_owned              : false,
     owner                : String::new(),
+      org_created_at : None,
   };
   let text_b = render_text(
     &[ aq_no_cache ],
@@ -657,6 +672,7 @@ fn ft12_json_output_includes_is_owned()
     cache_age_secs        : None,
     is_owned              : true,
     owner                : String::new(),
+      org_created_at : None,
   };
   let not_owned = AccountQuota
   {
@@ -675,6 +691,7 @@ fn ft12_json_output_includes_is_owned()
     cache_age_secs        : None,
     is_owned              : false,
     owner                : String::new(),
+      org_created_at : None,
   };
 
   let json = render_json( &[ owned, not_owned ] );
@@ -723,6 +740,7 @@ fn test_render_footer_model_label_at_10pct_no_override()
     cache_age_secs        : None,
     is_owned              : true,
     owner                 : String::new(),
+      org_created_at : None,
   };
   // b@x.com: second valid account required for footer (≥ 2 valid triggers footer display).
   let aq_b = AccountQuota
@@ -747,6 +765,7 @@ fn test_render_footer_model_label_at_10pct_no_override()
     cache_age_secs        : None,
     is_owned              : true,
     owner                 : String::new(),
+      org_created_at : None,
   };
   // cur@x.com: is_current=true — triggers 2-line `·`-delimited footer so the model label appears.
   let aq_cur = AccountQuota
@@ -771,6 +790,7 @@ fn test_render_footer_model_label_at_10pct_no_override()
     cache_age_secs        : None,
     is_owned              : true,
     owner                 : String::new(),
+      org_created_at : None,
   };
   let output = render_text(
     &[ aq_cur, aq_a, aq_b ], SortStrategy::Name, None, PreferStrategy::Any,
@@ -783,18 +803,23 @@ fn test_render_footer_model_label_at_10pct_no_override()
   );
 }
 
-/// FT-28 boundary — footer shows `model: opus` when `seven_day_sonnet` utilization = 90.1
-/// (~9.9% left, strictly below the 10% threshold).
+/// FT-28 boundary — footer shows `model: opus` when `seven_day_sonnet` utilization = 91.0
+/// (9.0% left, below the 10% threshold).
 ///
-/// Regression guard: both old (`< 20.0`) and new (`< 10.0`) code fire at 9.9% — opus must
-/// appear before and after the fix. Ensures the fix doesn't break below-threshold behaviour.
+/// Regression guard: both old (`< 20.0`) and new (`< 10.0`) code fire at 9.0% left — opus
+/// must appear before and after the fix. Ensures the fix doesn't break below-threshold behaviour.
+///
+/// Fix(BUG-336): originally used utilization=90.1 (left≈9.9) — once `recommended_model()`
+///   rounds its comparison input (this file's own BUG-336 fix), 9.9 rounds UP to 10 (the
+///   threshold), no longer demonstrating "below threshold". Recalibrated to 91.0 (left=9.0,
+///   an exact integer, unambiguously below threshold both before and after rounding).
 ///
 /// Spec: [`tests/docs/feature/09_token_usage.md` FT-28]
 #[ test ]
 fn test_render_footer_model_label_below_10pct_opus()
 {
   // a@x.com: non-current, alphabetically first → footer winner with sort::Name.
-  // son_util = 90.1 → sonnet_left ≈ 9.9% — strictly below 10% threshold.
+  // son_util = 91.0 → sonnet_left = 9.0% — below 10% threshold.
   let aq_a = AccountQuota
   {
     fallback_reason : None,
@@ -807,7 +832,7 @@ fn test_render_footer_model_label_below_10pct_opus()
     {
       five_hour        : Some( claude_quota::PeriodUsage { utilization : 10.0, resets_at : None } ),
       seven_day        : Some( claude_quota::PeriodUsage { utilization : 10.0, resets_at : None } ),
-      seven_day_sonnet : Some( claude_quota::PeriodUsage { utilization : 90.1, resets_at : None } ),
+      seven_day_sonnet : Some( claude_quota::PeriodUsage { utilization : 91.0, resets_at : None } ),
     } ),
     account               : None,
     host                  : String::new(),
@@ -817,6 +842,7 @@ fn test_render_footer_model_label_below_10pct_opus()
     cache_age_secs        : None,
     is_owned              : true,
     owner                 : String::new(),
+      org_created_at : None,
   };
   // b@x.com: second valid account required for footer (≥ 2 valid triggers footer display).
   let aq_b = AccountQuota
@@ -841,6 +867,7 @@ fn test_render_footer_model_label_below_10pct_opus()
     cache_age_secs        : None,
     is_owned              : true,
     owner                 : String::new(),
+      org_created_at : None,
   };
   // cur@x.com: is_current=true — triggers 2-line `·`-delimited footer so the model label appears.
   let aq_cur = AccountQuota
@@ -865,15 +892,16 @@ fn test_render_footer_model_label_below_10pct_opus()
     cache_age_secs        : None,
     is_owned              : true,
     owner                 : String::new(),
+      org_created_at : None,
   };
   let output = render_text(
     &[ aq_cur, aq_a, aq_b ], SortStrategy::Name, None, PreferStrategy::Any,
     &ColsVisibility::default_set(), None, None, None, None, false,
   );
-  // Footer line 2: `Next (name) · a@x.com · opus · {metric}` — 9.9% left IS < 10%.
+  // Footer line 2: `Next (name) · a@x.com · opus · {metric}` — 9.0% left IS < 10%.
   assert!(
     output.contains( "· opus" ),
-    "FT-28 boundary: footer line 2 must show '· opus' when sonnet_left ≈ 9.9% (< 10%); got:\n{output}",
+    "FT-28 boundary: footer line 2 must show '· opus' when sonnet_left = 9.0% (< 10%); got:\n{output}",
   );
 }
 
@@ -937,6 +965,7 @@ fn mre_bug335_cache_fallback_reason_surfaced_on_all_render_surfaces()
     cache_age_secs        : Some( 7200 ),
     is_owned              : true,
     owner                 : String::new(),
+      org_created_at : None,
   };
   let accounts = vec![ aq ];
   let cols     = ColsVisibility::default_set();

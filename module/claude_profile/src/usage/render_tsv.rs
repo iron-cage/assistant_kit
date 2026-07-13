@@ -77,7 +77,7 @@ pub fn render_tsv(
     {
       renews_label(
         aq.renewal_at.as_deref(),
-        aq.account.as_ref().map( |a| a.org_created_at.as_str() ),
+        aq.org_created_at.as_deref(),
         now_secs,
       )
     };
@@ -118,7 +118,7 @@ pub fn render_tsv(
 
         let ( ren_secs, ren_est ) = renewal_secs(
           aq.renewal_at.as_deref(),
-          aq.account.as_ref().map( |a| a.org_created_at.as_str() ),
+          aq.org_created_at.as_deref(),
           now_secs,
         ).unzip();
         let next_str = next_event_label(

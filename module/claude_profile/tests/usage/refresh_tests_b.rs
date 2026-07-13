@@ -34,6 +34,7 @@ fn test_apply_refresh_ft4_429_valid_token_not_retried()
       cache_age_secs : None,
       is_owned       : true,
       owner                : String::new(),
+          org_created_at : None,
     },
   ];
 
@@ -77,6 +78,7 @@ fn test_apply_refresh_ft5_429_expired_refresh_path_entered_no_cred()
       cache_age_secs : None,
       is_owned       : true,
       owner                : String::new(),
+          org_created_at : None,
     },
   ];
 
@@ -203,6 +205,7 @@ fn test_apply_refresh_mre_bug208_restore_trace_emitted()
       cache_age_secs : None,
       is_owned       : true,
       owner                : String::new(),
+          org_created_at : None,
     },
   ];
 
@@ -354,6 +357,7 @@ fn mre_bug295_apply_refresh_trace_reason_not_owned()
     cache_age_secs        : Some( 120 ),
     is_owned              : false,
     owner                 : "other@remote".to_string(),
+      org_created_at : None,
   };
 
   let reason = claude_profile::usage::test_bridge::reason_label( &aq, 0 );
@@ -420,6 +424,7 @@ fn mre_bug297_refresh_none_sets_aq_result_err()
       cache_age_secs        : Some( 7200 ),
       is_owned              : true, // required: non-owned accounts are skipped by should_refresh
       owner                 : String::new(),
+          org_created_at : None,
     },
   ];
 
@@ -489,6 +494,7 @@ fn apply_touch_skips_after_refresh_none()
       cache_age_secs        : Some( 7200 ),
       is_owned              : true,
       owner                 : String::new(),
+          org_created_at : None,
     },
   ];
 
@@ -579,6 +585,7 @@ fn mre_bug298_apply_refresh_trace_reason_cached_expired()
     cache_age_secs        : Some( 7200 ),
     is_owned              : true,  // required: non-owned skips with "not owned"
     owner                 : String::new(),
+      org_created_at : None,
   };
 
   let reason = claude_profile::usage::test_bridge::reason_label( &aq, 1 );
@@ -618,6 +625,7 @@ fn ec7_solo_gate_skips_non_current_with_trace()
     cache_age_secs        : None,
     is_owned              : true,
     owner                 : String::new(),
+      org_created_at : None,
   } ];
 
   // solo=true: solo gate fires for is_current=false → account skipped → result unchanged.
@@ -665,6 +673,7 @@ fn mre_bug_gap20_refresh_trace_reason_ok_owned_non_cached_ok()
     cache_age_secs        : None,
     is_owned              : true,   // owned → not "not owned"
     owner                 : String::new(),
+      org_created_at : None,
   };
 
   // GAP-20: healthy owned+non-cached+Ok path must produce "ok" reason —
@@ -726,6 +735,7 @@ fn mre_bug306_refresh_trace_reason_occupied_elsewhere()
     cache_age_secs        : None,
     is_owned              : true,
     owner                 : String::new(),
+      org_created_at : None,
   };
   assert_eq!( claude_profile::usage::test_bridge::reason_label( &aq, 0 ), "occupied elsewhere" );
 }
@@ -779,6 +789,7 @@ fn mre_bug333_occupied_elsewhere_not_masked_by_cached()
     cache_age_secs        : Some( 999 ),
     is_owned              : true,
     owner                 : String::new(),
+      org_created_at : None,
   };
   assert_eq!(
     claude_profile::usage::test_bridge::reason_label( &aq, 1 ),
@@ -801,6 +812,7 @@ fn reason_label_not_owned()
     account : None, host : String::new(), role : String::new(),
     renewal_at : None, cached : false, cache_age_secs : None,
     is_owned : false, owner : String::new(),
+      org_created_at : None,
   };
   assert_eq!( claude_profile::usage::test_bridge::reason_label( &aq, 0 ), "not owned" );
 }
@@ -818,6 +830,7 @@ fn reason_label_cached_expired()
     account : None, host : String::new(), role : String::new(),
     renewal_at : None, cached : true, cache_age_secs : Some( 999 ),
     is_owned : true, owner : String::new(),
+      org_created_at : None,
   };
   assert_eq!( claude_profile::usage::test_bridge::reason_label( &aq, 1 ), "cached-expired" );
 }
@@ -838,6 +851,7 @@ fn reason_label_cached_valid()
     account : None, host : String::new(), role : String::new(),
     renewal_at : None, cached : true, cache_age_secs : Some( 60 ),
     is_owned : true, owner : String::new(),
+      org_created_at : None,
   };
   assert_eq!( claude_profile::usage::test_bridge::reason_label( &aq, 9_999 ), "cached" );
 }
@@ -855,6 +869,7 @@ fn reason_label_ok()
     account : None, host : String::new(), role : String::new(),
     renewal_at : None, cached : false, cache_age_secs : None,
     is_owned : true, owner : String::new(),
+      org_created_at : None,
   };
   assert_eq!( claude_profile::usage::test_bridge::reason_label( &aq, 0 ), "ok" );
 }
@@ -872,6 +887,7 @@ fn reason_label_err()
     account : None, host : String::new(), role : String::new(),
     renewal_at : None, cached : false, cache_age_secs : None,
     is_owned : true, owner : String::new(),
+      org_created_at : None,
   };
   assert_eq!( claude_profile::usage::test_bridge::reason_label( &aq, 0 ), "HTTP 401 Unauthorized" );
 }

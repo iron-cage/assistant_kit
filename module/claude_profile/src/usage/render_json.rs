@@ -49,7 +49,7 @@ pub fn render_json( accounts : &[ AccountQuota ] ) -> String
       .map_or( "null", |a| if a.has_max { "true" } else { "false" } );
     let ren_pair                                       = renewal_secs(
       aq.renewal_at.as_deref(),
-      aq.account.as_ref().map( |a| a.org_created_at.as_str() ),
+      aq.org_created_at.as_deref(),
       now_secs,
     );
     let ( renewal_secs_str, renewal_is_estimate_str ) = match ren_pair

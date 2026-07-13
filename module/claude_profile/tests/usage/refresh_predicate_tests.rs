@@ -24,6 +24,7 @@ fn test_should_refresh_401_triggers()
     renewal_at    : None,
     cached        : false,
     cache_age_secs : None,
+    org_created_at : None,
     is_owned      : true,
     owner                : String::new(),
   };
@@ -49,6 +50,7 @@ fn test_should_refresh_403_triggers()
     renewal_at    : None,
     cached        : false,
     cache_age_secs : None,
+    org_created_at : None,
     is_owned      : true,
     owner                : String::new(),
   };
@@ -78,6 +80,7 @@ fn test_should_refresh_mre_bug156_429_expired_triggers()
     renewal_at    : None,
     cached        : false,
     cache_age_secs : None,
+    org_created_at : None,
     is_owned      : true,
     owner                : String::new(),
   };
@@ -109,6 +112,7 @@ fn test_should_refresh_429_valid_token_no_trigger()
     renewal_at    : None,
     cached        : false,
     cache_age_secs : None,
+    org_created_at : None,
     is_owned      : true,
     owner                : String::new(),
   };
@@ -137,6 +141,7 @@ fn test_should_refresh_429_exact_boundary_expired_triggers()
     renewal_at    : None,
     cached        : false,
     cache_age_secs : None,
+    org_created_at : None,
     is_owned      : true,
     owner                : String::new(),
   };
@@ -165,6 +170,7 @@ fn test_should_refresh_429_one_sec_future_no_trigger()
     renewal_at    : None,
     cached        : false,
     cache_age_secs : None,
+    org_created_at : None,
     is_owned      : true,
     owner                : String::new(),
   };
@@ -194,6 +200,7 @@ fn test_should_refresh_ok_no_trigger()
     renewal_at    : None,
     cached        : false,
     cache_age_secs : None,
+    org_created_at : None,
     is_owned      : true,
     owner                : String::new(),
   };
@@ -219,6 +226,7 @@ fn test_should_refresh_generic_error_no_trigger()
     renewal_at    : None,
     cached        : false,
     cache_age_secs : None,
+    org_created_at : None,
     is_owned      : true,
     owner                : String::new(),
   };
@@ -273,6 +281,7 @@ fn mre_bug235_locally_expired_triggers_should_refresh()
     renewal_at    : None,
     cached        : false,
     cache_age_secs : None,
+    org_created_at : None,
     is_owned      : true,
     owner                : String::new(),
   };
@@ -330,6 +339,7 @@ fn mre_bug255_cache_defeats_refresh()
     renewal_at            : None,
     cached                : true,
     cache_age_secs        : Some( 3600 ),
+    org_created_at        : None,
     is_owned              : true,
     owner                : String::new(),
   };
@@ -360,6 +370,7 @@ fn test_should_refresh_cached_valid_token_no_trigger()
     renewal_at            : None,
     cached                : true,
     cache_age_secs        : Some( 60 ),
+    org_created_at        : None,
     is_owned              : true,
     owner                : String::new(),
   };
@@ -393,6 +404,7 @@ fn ft06_should_refresh_false_when_not_owned()
     renewal_at            : None,
     cached                : false,
     cache_age_secs        : None,
+    org_created_at        : None,
     is_owned              : false,
     owner                : String::new(),
   };
@@ -416,6 +428,7 @@ fn ft06_should_refresh_false_when_not_owned()
     renewal_at            : None,
     cached                : false,
     cache_age_secs        : None,
+    org_created_at        : None,
     is_owned              : false,
     owner                : String::new(),
   };
@@ -439,6 +452,7 @@ fn ft06_should_refresh_false_when_not_owned()
     renewal_at            : None,
     cached                : false,
     cache_age_secs        : None,
+    org_created_at        : None,
     is_owned              : false,
     owner                : String::new(),
   };
@@ -467,6 +481,7 @@ fn ft06_should_refresh_false_when_not_owned()
     renewal_at            : None,
     cached                : true,
     cache_age_secs        : Some( 300 ),
+    org_created_at        : None,
     is_owned              : false,
     owner                : String::new(),
   };
@@ -514,6 +529,7 @@ fn sr11_approaching_expiry_must_not_trigger_refresh()
     renewal_at            : None,
     cached                : false,
     cache_age_secs        : None,
+    org_created_at        : None,
     is_owned              : true,
     owner                 : String::new(),
   };
@@ -560,6 +576,7 @@ fn mre_bug303_should_refresh_false_for_occupied_elsewhere()
     renewal_at            : None,
     cached                : false,
     cache_age_secs        : None,
+    org_created_at        : None,
     is_owned              : true,
     owner                 : String::new(),
   };

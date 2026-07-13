@@ -35,14 +35,23 @@ fn cache_age_from_fetched_at( fetched_at : &str ) -> u64
 ///   duplicated the ~50-line approximation block, creating divergence risk.
 /// Pitfall: `read_quota_cache()` remains available for metadata-only reads (`touch_idle`,
 ///   age hints); this function is only for paths that need utilization values.
+///
+/// # Fix(BUG-327)
+/// Return tuple grew a 3rd element (`org_created_at`) so all 3 callers of this function
+/// can populate `renews_label()`'s `org_created_at_opt` from cache — previously always
+/// `None` on these paths, making `~Renews` show `"?"` even with a warm cache.
+/// Root cause: `QuotaCacheEntry` had no field to carry it; see that struct's doc comment.
+/// Pitfall: `entry.org_created_at` must be extracted BEFORE `entry.five_hour`/`seven_day`/
+/// `seven_day_sonnet` are moved out via `.map()` below — read it first to avoid a partial-move order issue.
 pub fn read_cached_quota(
   credential_store : &std::path::Path,
   name             : &str,
   now_secs         : u64,
-) -> Option< ( claude_quota::OauthUsageData, u64 /* cache_age_secs */ ) >
+) -> Option< ( claude_quota::OauthUsageData, u64 /* cache_age_secs */, Option< String > /* org_created_at */ ) >
 {
   let entry = claude_profile_core::account::read_quota_cache( credential_store, name )?;
-  let age   = cache_age_from_fetched_at( &entry.fetched_at );
+  let age            = cache_age_from_fetched_at( &entry.fetched_at );
+  let org_created_at = entry.org_created_at;
   let mut data = claude_quota::OauthUsageData
   {
     five_hour        : entry.five_hour.map( |( u, r )| claude_quota::PeriodUsage { utilization : u, resets_at : r } ),
@@ -92,5 +101,5 @@ pub fn read_cached_quota(
       }
     }
   }
-  Some( ( data, age ) )
+  Some( ( data, age, org_created_at ) )
 }

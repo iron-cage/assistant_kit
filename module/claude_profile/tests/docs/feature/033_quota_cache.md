@@ -4,7 +4,7 @@
 
 - **Purpose**: Test cases for quota cache fallback behavior — write-on-success, read-on-failure, staleness display, and side-effect persistence.
 - **Source**: `docs/feature/033_quota_cache.md`
-- **Covers**: AC-01 through AC-14
+- **Covers**: AC-01 through AC-15
 
 ### Test Cases
 
@@ -23,6 +23,7 @@
 | FT-11 | AC-11 | After retry OK, `cached` flag cleared and cache file written with fresh data | `mre_bug256_retry_ok_stale_cached_metadata` |
 | FT-12 | AC-12 | HTTP 401 / 403 auth errors bypass cache fallback — `Err` propagates | `mre_bug296_cached_non_expired_401_no_refresh` |
 | FT-14 | AC-14 | Cache-fallback row preserves the original failure reason and surfaces it via `shorten_error()` in text, TSV, and JSON render formats (text combines it with the AC-03 age suffix; TSV has no age suffix to combine with, so it stands alone) | `mre_bug335_cache_fallback_reason_surfaced_on_all_render_surfaces` |
+| FT-15 | AC-15 | Non-live-fetch branch (cache-first, G1-not-owned, or `approximate_quota()`) surfaces a cached `org_created_at` through `AccountQuota.org_created_at`, producing a real `~Renews` Estimate value instead of `"?"`; absent/pre-migration cache gracefully falls back to `None` | `mre_bug327_org_created_at_surfaced_from_cache_on_non_live_branches` |
 
 ### Notes
 
@@ -33,6 +34,7 @@
 - FT-11 is a unit test in `tests/usage/refresh_tests_b.rs`. Verifies the retry OK arm clears `aq.cached`/`aq.cache_age_secs` and writes the quota cache file. MRE for BUG-256.
 - FT-12 is a unit test in `tests/usage/fetch_tests.rs`. Verifies that the cache fallback match guard `Err( ref e ) if !e.contains("401") && !e.contains("403")` is present, and that a catch-all `Err` arm propagates auth errors without cache conversion. MRE for BUG-296.
 - FT-14 is implemented as a single integration test in `tests/usage/render_tests_a.rs` exercising `render_text`/`render_tsv`/`render_json` together against one `AccountQuota` with `fallback_reason: Some(...)`. **Correction (found during implementation):** `render_tsv.rs` has no pre-existing cache-age-suffix mechanism (unlike `render.rs`) — the original AC-03/AC-14 wording implying TSV combines the reason with an age label was inaccurate; TSV's shortened reason renders as its own standalone parenthetical, e.g. `alice (rate limited (429))`, vs. text's combined `alice (2h ago, rate limited (429))`. MRE for BUG-335.
+- FT-15 is not yet implemented — tracked as an implementation gap for BUG-327's fix task. Expected location: a unit test in `claude_profile_core/tests/account_test.rs` covering `write_quota_cache()`/`read_quota_cache()` round-tripping the new `org_created_at` field, plus an integration test in `tests/usage/fetch_tests.rs` (or nearest existing fetch test file) constructing a cache-first/G1-not-owned/`approximate_quota()` scenario and asserting `AccountQuota.org_created_at` is `Some` when the cache carries the field and `None` when it does not.
 
 ---
 
@@ -178,3 +180,15 @@
 - **Source fn:** `mre_bug335_cache_fallback_reason_surfaced_on_all_render_surfaces` (in `tests/usage/render_tests_a.rs`)
 - **Note:** Fix for BUG-335. `shorten_error()` shortens raw reasons starting with `"HTTP transport error: HTTP 429"` to `"rate limited (429)"` (see `src/usage/format.rs`). Text and TSV diverge in combination strategy solely because TSV never had an age-suffix mechanism to begin with — this is not an inconsistency to reconcile, it reflects each format's actual pre-existing capability.
 - **Source:** [033_quota_cache.md AC-14](../../../docs/feature/033_quota_cache.md)
+
+---
+
+### FT-15: Cached `org_created_at` surfaces through non-live-fetch branches
+
+- **Given:** Account `alice` has a `cache` sub-object in `alice.json` containing `org_created_at: "2026-01-01T00:00:00Z"` from a prior live `fetch_oauth_account` call. A `.usage` invocation takes a non-live-fetch branch for `alice` (cache-first: cache age ≤30s; or G1-not-owned; or `approximate_quota()` under `solo::1`) with no `_renewal_at` override set.
+- **When:** The branch constructs `alice`'s `AccountQuota` and the row is rendered.
+- **Then:** `AccountQuota.org_created_at` is `Some("2026-01-01T00:00:00Z")` (read back from `cache.org_created_at`, independent of `AccountQuota.account` which remains `None` on these branches); `renews_label()` computes a real `~Renews` Estimate value from it instead of returning `"?"`.
+- **Exit:** `aq.org_created_at == Some("2026-01-01T00:00:00Z")`; rendered `~Renews` cell is not `"?"`
+- **Source fn:** `mre_bug327_org_created_at_surfaced_from_cache_on_non_live_branches` (expected location: `tests/usage/fetch_tests.rs`)
+- **Note:** Fix for BUG-327. A second scenario in the same test (or a sibling test) must cover the absent-cache / pre-migration-cache case: no `org_created_at` key present → `AccountQuota.org_created_at` is `None` → `~Renews` renders `"?"` unchanged (no regression, AC-15's graceful-fallback clause). A `claude_profile_core/tests/account_test.rs` unit test must separately cover `write_quota_cache()`/`read_quota_cache()` round-tripping the new field.
+- **Source:** [033_quota_cache.md AC-15](../../../docs/feature/033_quota_cache.md)
