@@ -95,6 +95,7 @@ fn mre_bug229_strategy_metric_renew_exact_sub_shows_both_timers()
   };
   let aq = AccountQuota
   {
+    fallback_reason : None,
     name          : "test@example.com".to_string(),
     is_current    : false,
     is_active             : false,
@@ -153,6 +154,7 @@ fn mre_bug229_strategy_metric_renew_no_sub_shows_7d_only()
   };
   let aq = AccountQuota
   {
+    fallback_reason : None,
     name          : "test@example.com".to_string(),
     is_current    : false,
     is_active             : false,

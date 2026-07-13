@@ -40,6 +40,7 @@ fn mre_bug_220_renews_preserved_for_429_accounts()
 {
   let aq = AccountQuota
   {
+    fallback_reason : None,
     name          : "i11@test.com".to_string(),
     is_current    : false,
     is_active             : false,
@@ -120,6 +121,7 @@ fn test_ft21_009_occupied_elsewhere_at_flag()
   {
     AccountQuota
     {
+      fallback_reason : None,
       name                  : name.to_string(),
       is_current,
       is_active,
@@ -214,6 +216,7 @@ fn ft03_033_render_text_cached_shows_tilde_prefix()
 {
   let aq = AccountQuota
   {
+    fallback_reason : None,
     name                  : "cached@example.com".to_string(),
     is_current            : false,
     is_active             : false,
@@ -273,6 +276,7 @@ fn ft09_033_render_json_cached_includes_fields()
 {
   let aq = AccountQuota
   {
+    fallback_reason : None,
     name                  : "cached@example.com".to_string(),
     is_current            : false,
     is_active             : false,
@@ -314,6 +318,7 @@ fn ft03_033_cached_sonnet_reset_shows_tilde()
 {
   let aq = AccountQuota
   {
+    fallback_reason : None,
     name                  : "cached@example.com".to_string(),
     is_current            : false,
     is_active             : false,
@@ -382,6 +387,7 @@ fn test_ft23_009_renews_dash_for_cancelled_subscription()
 {
   let aq = AccountQuota
   {
+    fallback_reason : None,
     name                  : "cancelled@test.com".to_string(),
     is_current            : false,
     is_active             : false,
@@ -476,6 +482,7 @@ fn mre_bug332_renews_shown_for_billing_none_with_ok_result()
 {
   let aq = AccountQuota
   {
+    fallback_reason : None,
     name                  : "live@test.com".to_string(),
     is_current            : false,
     is_active             : false,
@@ -555,6 +562,7 @@ fn ft05_non_owned_display_tilde_or_dashes()
   // Case A: non-owned + cache present → tilde prefix on quota cells (same as any cached row).
   let aq_cached = AccountQuota
   {
+    fallback_reason : None,
     name                  : "alice@test.com".to_string(),
     is_current            : false,
     is_active             : false,
@@ -588,6 +596,7 @@ fn ft05_non_owned_display_tilde_or_dashes()
   // Case B: non-owned + no cache → Err result; no tilde; error indicator shown.
   let aq_no_cache = AccountQuota
   {
+    fallback_reason : None,
     name                  : "bob@test.com".to_string(),
     is_current            : false,
     is_active             : false,
@@ -628,6 +637,7 @@ fn ft12_json_output_includes_is_owned()
 {
   let owned = AccountQuota
   {
+    fallback_reason : None,
     name                  : "alice@test.com".to_string(),
     is_current            : false,
     is_active             : false,
@@ -650,6 +660,7 @@ fn ft12_json_output_includes_is_owned()
   };
   let not_owned = AccountQuota
   {
+    fallback_reason : None,
     name                  : "bob@test.com".to_string(),
     is_current            : false,
     is_active             : false,
@@ -692,6 +703,7 @@ fn test_render_footer_model_label_at_10pct_no_override()
   // son_util = 90.0 → sonnet_left = 10.0% — exactly at the 10% threshold.
   let aq_a = AccountQuota
   {
+    fallback_reason : None,
     name                  : "a@x.com".to_string(),
     is_current            : false,
     is_active             : false,
@@ -715,6 +727,7 @@ fn test_render_footer_model_label_at_10pct_no_override()
   // b@x.com: second valid account required for footer (≥ 2 valid triggers footer display).
   let aq_b = AccountQuota
   {
+    fallback_reason : None,
     name                  : "b@x.com".to_string(),
     is_current            : false,
     is_active             : false,
@@ -738,6 +751,7 @@ fn test_render_footer_model_label_at_10pct_no_override()
   // cur@x.com: is_current=true — triggers 2-line `·`-delimited footer so the model label appears.
   let aq_cur = AccountQuota
   {
+    fallback_reason : None,
     name                  : "cur@x.com".to_string(),
     is_current            : true,
     is_active             : false,
@@ -783,6 +797,7 @@ fn test_render_footer_model_label_below_10pct_opus()
   // son_util = 90.1 → sonnet_left ≈ 9.9% — strictly below 10% threshold.
   let aq_a = AccountQuota
   {
+    fallback_reason : None,
     name                  : "a@x.com".to_string(),
     is_current            : false,
     is_active             : false,
@@ -806,6 +821,7 @@ fn test_render_footer_model_label_below_10pct_opus()
   // b@x.com: second valid account required for footer (≥ 2 valid triggers footer display).
   let aq_b = AccountQuota
   {
+    fallback_reason : None,
     name                  : "b@x.com".to_string(),
     is_current            : false,
     is_active             : false,
@@ -829,6 +845,7 @@ fn test_render_footer_model_label_below_10pct_opus()
   // cur@x.com: is_current=true — triggers 2-line `·`-delimited footer so the model label appears.
   let aq_cur = AccountQuota
   {
+    fallback_reason : None,
     name                  : "cur@x.com".to_string(),
     is_current            : true,
     is_active             : false,
@@ -857,6 +874,106 @@ fn test_render_footer_model_label_below_10pct_opus()
   assert!(
     output.contains( "· opus" ),
     "FT-28 boundary: footer line 2 must show '· opus' when sonnet_left ≈ 9.9% (< 10%); got:\n{output}",
+  );
+}
+
+/// FT-14/033 — cache-fallback rows must surface the original fetch-failure reason on all 3
+/// render surfaces (text, TSV, JSON), not just the pre-existing cache-age suffix (AC-03).
+///
+/// # Root Cause
+/// `AccountQuota` had no field to carry a cache-fallback `Err→Ok` conversion's original reason
+/// forward from `fetch.rs` to any render layer — `fetch.rs`'s cache-fallback conversion arm
+/// discarded `e` entirely once `read_cached_quota` returned cached data, so cache-fallback rows
+/// always rendered as if they were ordinary successes with only an age suffix, no indication of
+/// why the row is stale.
+///
+/// # Why Not Caught
+/// No prior test constructed a cache-fallback scenario (`cached: true` with a populated failure
+/// reason) — every existing `cached: true` test used the only value that could exist before this
+/// fix (`fallback_reason` did not exist as a field), so the missing-reason gap was structurally
+/// invisible to every prior assertion.
+///
+/// # Fix Applied
+/// Added `AccountQuota.fallback_reason : Option<String>`, populated with `Some(e.clone())` only
+/// in `fetch.rs`'s cache-fallback conversion arm; `None` everywhere else (103 construction sites
+/// across the crate). `render_text` combines it with `cache_age_label()`'s existing suffix via
+/// `shorten_error()`; `render_tsv` (which has no pre-existing age-suffix mechanism) appends it as
+/// a standalone parenthetical; `render_json` emits it as a new `"fallback_reason"` key.
+///
+/// # Prevention
+/// Any new `AccountQuota` render surface must explicitly decide how to surface
+/// `fallback_reason` — it is `Some` only on true cache-fallback rows and must never be silently
+/// dropped the way the original bug dropped `e`.
+///
+/// # Pitfall
+/// `render_tsv`'s NAME cell has NO pre-existing age-suffix mechanism (unlike `render_text`) — do
+/// not assume the two formats combine `fallback_reason` identically; TSV's shortened reason is
+/// the cell's only staleness indicator, standing alone with no age label to pair with.
+///
+/// Spec: [`docs/feature/033_quota_cache.md` AC-14]
+#[ doc = "bug_reproducer(BUG-335)" ]
+#[ test ]
+fn mre_bug335_cache_fallback_reason_surfaced_on_all_render_surfaces()
+{
+  let aq = AccountQuota
+  {
+    fallback_reason : Some( "HTTP transport error: HTTP 429 Too Many Requests".to_string() ),
+    name                  : "alice".to_string(),
+    is_current            : false,
+    is_active             : false,
+    is_occupied_elsewhere : false,
+    expires_at_ms         : FAR_FUTURE_MS,
+    result                : Ok( claude_quota::OauthUsageData
+    {
+      five_hour        : Some( claude_quota::PeriodUsage { utilization : 50.0, resets_at : None } ),
+      seven_day        : None,
+      seven_day_sonnet : None,
+    } ),
+    account               : None,
+    host                  : String::new(),
+    role                  : String::new(),
+    renewal_at            : None,
+    cached                : true,
+    cache_age_secs        : Some( 7200 ),
+    is_owned              : true,
+    owner                 : String::new(),
+  };
+  let accounts = vec![ aq ];
+  let cols     = ColsVisibility::default_set();
+
+  // T03: text table combines cache_age_label()'s existing suffix (AC-03) with the shortened
+  // fallback reason (AC-14) in ONE parenthetical.
+  let text = render_text(
+    &accounts, SortStrategy::Name, None, PreferStrategy::Any, &cols, None, None, None, None, false,
+  );
+  assert!(
+    text.contains( "alice (2h ago, rate limited (429))" ),
+    "BUG-335: text table must combine the age suffix and shortened fallback reason in one \
+     parenthetical; got:\n{text}",
+  );
+
+  // T04: TSV NAME cell has no pre-existing age-suffix mechanism — the shortened reason stands
+  // alone as the cell's only staleness indicator.
+  let tsv       = render_tsv( &accounts, SortStrategy::Name, None, PreferStrategy::Any, &cols );
+  let mut lines = tsv.lines();
+  let header    = lines.next().expect( "TSV must have a header row" );
+  let data_row  = lines.next().expect( "TSV must have a data row" );
+  let headers   : Vec< &str > = header.split( '\t' ).collect();
+  let fields    : Vec< &str > = data_row.split( '\t' ).collect();
+  let name_idx  = headers.iter().position( |h| *h == "account" )
+    .expect( "account column must be present in TSV header" );
+  let name_cell = fields.get( name_idx ).copied().unwrap_or( "" );
+  assert_eq!(
+    name_cell, "alice (rate limited (429))",
+    "BUG-335: TSV NAME cell must append the shortened fallback reason standalone (no age \
+     mechanism exists in this format); got {name_cell:?}",
+  );
+
+  // T05: JSON emits the shortened reason as its own field.
+  let json = render_json( &accounts );
+  assert!(
+    json.contains( "\"fallback_reason\":\"rate limited (429)\"" ),
+    "BUG-335: JSON must emit a \"fallback_reason\" field with the shortened reason; got:\n{json}",
   );
 }
 

@@ -125,6 +125,7 @@ fn test_render_json_error_account()
   let accounts = vec![
     AccountQuota
     {
+      fallback_reason : None,
       name : "fail@test.com".to_string(), is_current : false, is_active : false, is_occupied_elsewhere : false,
       expires_at_ms : 0, result : Err( "auth failed".to_string() ), account : None,
       host : String::new(), role : String::new(), renewal_at : None,
@@ -143,6 +144,7 @@ fn test_render_json_escapes_quotes_in_name()
   let accounts = vec![
     AccountQuota
     {
+      fallback_reason : None,
       name : "test\"@evil.com".to_string(), is_current : false, is_active : false, is_occupied_elsewhere : false,
       expires_at_ms : 0, result : Err( "fail".to_string() ), account : None,
       host : String::new(), role : String::new(), renewal_at : None,
@@ -170,6 +172,7 @@ fn test_render_json_ft8_mixed_ok_and_err_both_present()
   let mut accounts = vec![
     AccountQuota
     {
+      fallback_reason : None,
       name          : "ok@example.com".to_string(),
       is_current    : false,
       is_active             : false,
@@ -187,6 +190,7 @@ fn test_render_json_ft8_mixed_ok_and_err_both_present()
     },
     AccountQuota
     {
+      fallback_reason : None,
       name          : "err@example.com".to_string(),
       is_current    : false,
       is_active             : false,

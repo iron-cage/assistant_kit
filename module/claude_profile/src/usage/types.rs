@@ -201,6 +201,15 @@ pub struct AccountQuota
   pub cached                : bool,
   /// Seconds since last successful fetch; present only when `cached == true`.
   pub cache_age_secs        : Option< u64 >,
+  // Fix(BUG-335): cache-fallback Ok row had no field to carry the original fetch-failure
+  //   reason forward, so all 3 render surfaces showed a stale row with zero indication of why.
+  //   Root cause: fetch.rs's Err→Ok cache-fallback conversion (fetch.rs:306-313) discarded `e`.
+  //   Pitfall: only populate this in that one conversion arm — every other construction site
+  //   (live success, auth errors, primary cache reads) must set it to `None`.
+  /// Raw (unshortened) fetch-failure reason that triggered a cache-fallback `Ok` conversion.
+  /// `Some` only when `fetch.rs`'s cache-fallback arm converted a transient `Err` to `Ok`;
+  /// `None` on live-fetch success, auth errors, and all non-fallback cache reads.
+  pub fallback_reason       : Option< String >,
   /// `true` when `owner` in `{name}.json` is empty or matches `current_identity()`.
   /// `false` for accounts owned by a different machine — G1–G7 enforcement gates apply.
   pub is_owned              : bool,

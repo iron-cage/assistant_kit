@@ -43,7 +43,8 @@ When the usage API (`GET /api/oauth/usage`) returns an error for an account, the
 - Quota percentages are prefixed with `~` to indicate stale data: `~86%` instead of `86%`
 - The `5h Reset` / `7d Reset` columns show the cached `resets_at` countdown (which may be in the past if stale — display `(stale)` when computed countdown is negative)
 - The composite status emoji `●` is computed from cached values (same thresholds as live)
-- A row-level age indicator shows time since last successful fetch: `(12m ago)` appended to the error reason column
+- A row-level age indicator shows time since last successful fetch: `(12m ago)` appended to the account name in the NAME cell (not an error-reason position — see AC-03)
+- When the display originates from a cache-fallback conversion (a transient fetch error substituted with cached data — AC-02), the original failure reason is also preserved on the in-memory result and surfaced via `shorten_error()` in every render format (text table, TSV, JSON) — see AC-14. The text table combines it with the existing NAME-cell age suffix in one parenthetical; TSV has no pre-existing age-suffix mechanism, so it appends the shortened reason as its own standalone parenthetical instead. Live successes never carry a failure reason and render unchanged.
 
 **Non-owned accounts (Feature 036 interaction):** When account ownership is enabled, non-owned accounts use the quota cache as their **primary** fetch source (G1 gate in Feature 036), not as a fallback. The cache read path, staleness display, and `~` prefix are identical to the error-fallback path — the distinction is only in how the cache-read was triggered. This means `write_quota_cache()` calls by the owning machine populate the cache that non-owner machines then read. Non-owned accounts where no cache exists show `—` for quota columns (same as no-cache graceful degradation).
 
@@ -57,7 +58,7 @@ When the usage API (`GET /api/oauth/usage`) returns an error for an account, the
 
 - **AC-01**: On successful `fetch_oauth_usage`, the `"cache"` key in `{name}.json` is written with `fetched_at`, `status`, and all quota fields.
 - **AC-02**: On transient fetch error (429, timeout, network), if `{name}.json` contains a valid `"cache"` object, quota columns display cached values with `~` prefix. HTTP 401 and HTTP 403 errors are excluded from cache fallback.
-- **AC-03**: When cached data is displayed, an age indicator (`(Nm ago)` or `(Nh ago)`) appears in the error reason position.
+- **AC-03**: When cached data is displayed, an age indicator (`(Nm ago)` or `(Nh ago)`) is appended to the account name in the NAME cell (not an error-reason position — see AC-14 for the separate fallback-reason indicator).
 - **AC-04**: When no cache exists (fresh account, never fetched), display remains `—` (no regression from current behavior).
 - **AC-05**: The `model_override` field is written to cache after `apply_model_override` executes.
 - **AC-06**: The `last_touch_at` and `touch_idle` fields are written to cache after touch subprocess completion.
@@ -68,6 +69,7 @@ When the usage API (`GET /api/oauth/usage`) returns an error for an account, the
 - **AC-11**: After `apply_refresh()` executes a successful token refresh and quota retry (`retry OK`), `aq.cached` is reset to `false` and `aq.cache_age_secs` is cleared to `None` on the in-memory `AccountQuota`, and the fresh data is written to `{name}.json` via `write_quota_cache()`. The row no longer shows `~` prefix or `(Xh ago)` label, and the next run reads fresh cache data.
 - **AC-12**: HTTP 401 and HTTP 403 auth errors from `fetch_oauth_usage` bypass cache fallback — `fetch_all_quota` returns `Err` (not `Ok(cached_data)`) for these error types. The `Err` propagates to `should_refresh()`, which triggers a token refresh attempt. Auth errors must not be masked by cache. Fix for BUG-296.
 - **AC-13**: When `fetch_quota_for_list()` checks an owned, non-solo, non-occupied-elsewhere account and finds a cache entry ≤30 seconds old, the live API call (`GET /api/oauth/usage`) is skipped entirely; the cached data is served directly (`cached: true`, `cache_age_secs: N`). This cache-first guard fires after the G1/G1b/solo gates and after `is_current` is resolved, but before the local token-expiry check. Prevents API burst flooding from rapid-succession `.usage` invocations (test suites, polling scripts). The 30 s window is a constant `CACHE_FRESH_SECS` in `fetch.rs`.
+- **AC-14**: When cache fallback converts a fetch error to `Ok(cached_data)` (AC-02 path), the original failure reason is preserved on the in-memory account result (`fallback_reason: Option<String>` field, populated only on this arm) and surfaced via `shorten_error()` in every render format: the text table appends the shortened reason alongside the existing NAME-cell age suffix (AC-03) in one parenthetical; the TSV format has no pre-existing age-suffix mechanism, so it appends the shortened reason as its own standalone NAME-cell parenthetical instead; JSON output emits a `"fallback_reason":"<shortened_reason>"` field alongside `"cached"`/`"cache_age_secs"` (AC-09). Live successes (`cached=false`) never populate `fallback_reason` and render unchanged. Auth errors (401/403) never reach the cache-fallback arm (AC-12), so `fallback_reason` is never populated from an auth rejection. Fix for BUG-335.
 
 ### Bugs
 
@@ -79,6 +81,7 @@ When the usage API (`GET /api/oauth/usage`) returns an error for an account, the
 | BUG-296 🟢 Fixed (TSK-306) | Auth-error guard added: `fetch.rs:235` changes fallback arm to `Err( ref e ) if !e.contains("401") && !e.contains("403")` — auth errors propagate as `Err`; transient errors still fall back to cache; fix = AC-12 |
 | BUG-304 🟢 Fixed (TSK-316) | Three independent cache-read paths reconstructed `OauthUsageData` for utilization; G1 (non-owned) applied no approximation, HTTP-error fallback and `approximate_quota()` each inlined 40–55 lines of duplicated approximation. Fixed: centralized `read_cached_quota()` function |
 | BUG-327 🔴 Open | `QuotaCacheEntry` (`claude_profile_core/src/account.rs:1506-1522`) has no `org_created_at` field — every non-live-fetch branch in `fetch.rs` hardcodes `account: None`, so `~Renews` shows `?` for 15/18 accounts. Root cause: false premise at this doc's own Out of Scope line (identity data was never persisted anywhere, despite this file previously claiming otherwise). Two accounts escape via the fully-decoupled `_renewal_at` manual override. |
+| BUG-335 🟢 Fixed (TSK-416) | Cache-fallback `Ok(data)` render row never called `shorten_error()` — the original fetch-failure reason (e.g. HTTP 429) was discarded once the fallback arm converted `Err` to `Ok(cached_data)`, so text/TSV/JSON render paths showed only the `~` prefix and age suffix with zero trace of why the row was stale. Fixed via new `AccountQuota.fallback_reason` field, populated only in `fetch.rs`'s cache-fallback arm; fix = AC-14 |
 
 ### Features
 
@@ -98,7 +101,10 @@ When the usage API (`GET /api/oauth/usage`) returns an error for an account, the
 |------|--------------|
 | `src/usage/fetch.rs` | Cache write on fetch success (`write_quota_cache`); cache read on fetch error (`read_quota_cache`) |
 | `src/usage/refresh.rs` | `apply_refresh()` retry cache write — clears `aq.cached`/`aq.cache_age_secs` and calls `write_quota_cache()` after `retry OK` (AC-11); `should_refresh()` `cached + expired` guard (AC-10) |
-| `src/usage/render.rs` | Staleness display — `~` prefix via `prefix_tilde()`, `(Nm ago)` age label, `(stale)` markers, `cache_json_fields()` |
+| `src/usage/render.rs` | Staleness display (text table) — `~` prefix via `prefix_tilde()`, `(Nm ago)` age label, `(stale)` markers; NAME-cell fallback-reason suffix (AC-14) |
+| `src/usage/render_tsv.rs` | Staleness display (TSV format) — same `~` prefix surfacing as `render.rs`, TSV-encoded; NAME-cell fallback-reason suffix (AC-14) is a standalone parenthetical — this format has no age-suffix mechanism to combine it with |
+| `src/usage/render_json.rs` | Staleness display (JSON format) — `cache_json_fields()` emits `"cached"`/`"cache_age_secs"` (AC-09); `"fallback_reason"` field (AC-14) |
+| `src/usage/format.rs` | `shorten_error()` — failure-reason shortening shared by all three render formats (AC-03/AC-14); `cache_age_label()` — age-suffix formatting (AC-03); `status_emoji()` — threshold-based status coloring, cache-blind by design |
 | `src/usage/api.rs` | Side-effect cache — `write_cache_string()` (model_override, AC-05) and `write_cache_bool()` (touch_idle, AC-06) |
 | `claude_profile_core/src/account.rs` | Storage layer — `QuotaCacheEntry`, `read_quota_cache()`, `write_quota_cache()`, `write_cache_field()` |
 

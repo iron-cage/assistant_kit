@@ -111,6 +111,7 @@ pub fn fetch_quota_for_list(
       };
       results.push( AccountQuota
       {
+        fallback_reason : None,
         name                  : acct.name.clone(),
         is_current            : false,
         is_active             : acct.is_active,
@@ -182,6 +183,7 @@ pub fn fetch_quota_for_list(
       let renewal_at     = read_renewal_at( credential_store, &acct.name );
       results.push( AccountQuota
       {
+        fallback_reason : None,
         name                  : acct.name.clone(),
         is_current,
         is_active             : acct.is_active,
@@ -277,7 +279,13 @@ pub fn fetch_quota_for_list(
     let ( host, role ) = read_profile_metadata( credential_store, &acct.name );
     let renewal_at = read_renewal_at( credential_store, &acct.name );
     // Cache write on success; cache read on failure (Feature 033).
-    let ( result, cached, cache_age_secs ) = match result
+    // Fix(BUG-335): cache-fallback Ok conversion (the `Some((data,age))` arm below) discarded
+    //   `e`, leaving no way for any render surface to show why a row is stale.
+    //   Root cause: the tuple carried (result, cached, cache_age_secs) only — no field existed
+    //   to carry the pre-conversion error reason forward.
+    //   Pitfall: only THIS arm populates `Some(reason)` — live success and the no-cache-available
+    //   sub-arm must stay `None`, since no fallback actually occurred on those paths.
+    let ( result, cached, cache_age_secs, fallback_reason ) = match result
     {
       Ok( ref data ) =>
       {
@@ -295,7 +303,7 @@ pub fn fetch_quota_for_list(
           let hsn = data.seven_day_sonnet.as_ref().map( |p| ( p.utilization, p.resets_at.as_deref().unwrap_or( "" ) ) );
           claude_profile_core::account::write_history_entry( credential_store, &acct.name, now_secs, hh5, hd7, hsn );
         }
-        ( result, false, None )
+        ( result, false, None, None )
       }
       // Fix(BUG-296): auth errors (401, 403) must not fall back to cache — they indicate
       //   credential rejection and must remain Err so should_refresh() can trigger refresh.
@@ -307,17 +315,18 @@ pub fn fetch_quota_for_list(
       {
         match read_cached_quota( credential_store, &acct.name, now_secs )
         {
-          Some( ( data, age ) ) => ( Ok( data ), true, Some( age ) ),
-          None                  => ( result, false, None ),
+          Some( ( data, age ) ) => ( Ok( data ), true, Some( age ), Some( e.clone() ) ),
+          None                  => ( result, false, None, None ),
         }
       }
-      Err( _ ) => ( result, false, None ),
+      Err( _ ) => ( result, false, None, None ),
     };
     results.push( AccountQuota
     {
       name                  : acct.name.clone(),
       is_current,
       is_active             : acct.is_active,
+      fallback_reason,
       is_occupied_elsewhere : occupied_elsewhere.contains( &acct.name ),
       expires_at_ms         : acct.expires_at_ms,
       result,
@@ -384,6 +393,7 @@ fn inject_synthetic_row_if_needed(
   let account       = claude_quota::fetch_oauth_account( &token ).ok();
   inject_synthetic_if_new( results, AccountQuota
   {
+    fallback_reason : None,
     name                  : synthetic_name,
     is_current            : true,
     is_active             : false,
@@ -430,6 +440,7 @@ fn approximate_quota(
   };
   AccountQuota
   {
+    fallback_reason : None,
     name                  : acct.name.clone(),
     is_current,
     is_active             : acct.is_active,
