@@ -47,6 +47,7 @@ use claude_core::ClaudePaths;
 
 /// Metadata for a saved Claude Code account credential snapshot.
 #[ derive( Debug, Clone ) ]
+#[ allow( clippy::struct_excessive_bools ) ]
 pub struct Account
 {
   /// Account name — the email address used as the credential filename stem.
@@ -105,6 +106,12 @@ pub struct Account
   pub owner : String,
   /// `true` when `owner` is empty (unowned) or matches `current_identity()` (owned by this machine).
   pub is_owned : bool,
+  /// Claim-lock from saved `{name}.json` `claim_lock`; `false` when unset — see Feature 070.
+  /// `true` excludes this account from unattended rotation (Gate 9 / G9).
+  pub claim_lock : bool,
+  /// Reserve marker from saved `{name}.json` `reserve`; `false` when unset — see Feature 070.
+  /// `true` deprioritizes (does not exclude) this account in sort-based selection.
+  pub reserve : bool,
   /// Renewal override from saved `{name}.json` `_renewal_at`; `None` when unset — see Feature 030.
   pub renewal_at : Option< String >,
 }
@@ -160,6 +167,8 @@ pub fn list( credential_store : &Path ) -> Result< Vec< Account >, std::io::Erro
     let role         = parse_string_field( &meta_json, "role"       ).unwrap_or_default();
     let owner        = parse_string_field( &meta_json, "owner"      ).unwrap_or_default();
     let is_owned     = owner.is_empty() || owner == identity;
+    let claim_lock   = parse_bool_field( &meta_json, "claim_lock" ).unwrap_or( false );
+    let reserve      = parse_bool_field( &meta_json, "reserve" ).unwrap_or( false );
     let renewal_at   = parse_string_field( &meta_json, "_renewal_at" );
 
     accounts.push( Account
@@ -185,6 +194,8 @@ pub fn list( credential_store : &Path ) -> Result< Vec< Account >, std::io::Erro
       role,
       owner,
       is_owned,
+      claim_lock,
+      reserve,
       renewal_at,
     } );
   }
@@ -1073,6 +1084,20 @@ pub fn read_owner( credential_store : &Path, name : &str ) -> String
     .unwrap_or_default()
 }
 
+/// Read the `claim_lock` field from `{name}.json` in `credential_store`.
+///
+/// Returns `false` when the file is absent, unparseable, or the `claim_lock`
+/// field is missing — identical behaviour to "not locked" (G9 passes).
+#[ inline ]
+#[ must_use ]
+pub fn read_claim_lock( credential_store : &Path, name : &str ) -> bool
+{
+  let path = credential_store.join( format!( "{name}.json" ) );
+  std::fs::read_to_string( &path ).ok()
+    .and_then( |s| parse_bool_field( &s, "claim_lock" ) )
+    .unwrap_or( false )
+}
+
 /// Return `true` when `owner` represents "no enforcement" for the current machine.
 ///
 /// - Empty string → unowned (all gates pass).
@@ -1110,6 +1135,66 @@ pub fn write_owner(
     .and_then( |v| v.as_object().cloned() )
     .unwrap_or_default();
   map.insert( "owner".to_string(), serde_json::Value::String( owner.to_string() ) );
+  let json = serde_json::to_string_pretty( &serde_json::Value::Object( map ) )
+    .map( | s | s + "\n" )
+    .map_err( |e| std::io::Error::new( std::io::ErrorKind::InvalidData, e ) )?;
+  std::fs::write( &path, json )
+}
+
+/// Write the `claim_lock` field to `{name}.json` via read-merge.
+///
+/// Reads the existing `{name}.json` (if any), sets `claim_lock` to the given value,
+/// and writes back. All other fields are preserved. Ungated — no ownership check;
+/// see Feature 070 AC-02.
+///
+/// # Errors
+///
+/// Returns `std::io::Error` if the JSON file cannot be written.
+#[ inline ]
+#[ allow( clippy::std_instead_of_core ) ]
+pub fn write_claim_lock(
+  name             : &str,
+  credential_store : &Path,
+  value            : bool,
+) -> Result< (), std::io::Error >
+{
+  let path = credential_store.join( format!( "{name}.json" ) );
+  let mut map = std::fs::read_to_string( &path )
+    .ok()
+    .and_then( |s| serde_json::from_str::< serde_json::Value >( &s ).ok() )
+    .and_then( |v| v.as_object().cloned() )
+    .unwrap_or_default();
+  map.insert( "claim_lock".to_string(), serde_json::Value::Bool( value ) );
+  let json = serde_json::to_string_pretty( &serde_json::Value::Object( map ) )
+    .map( | s | s + "\n" )
+    .map_err( |e| std::io::Error::new( std::io::ErrorKind::InvalidData, e ) )?;
+  std::fs::write( &path, json )
+}
+
+/// Write the `reserve` field to `{name}.json` via read-merge.
+///
+/// Reads the existing `{name}.json` (if any), sets `reserve` to the given value,
+/// and writes back. All other fields are preserved. Ungated — no ownership check;
+/// see Feature 070 AC-02.
+///
+/// # Errors
+///
+/// Returns `std::io::Error` if the JSON file cannot be written.
+#[ inline ]
+#[ allow( clippy::std_instead_of_core ) ]
+pub fn write_reserve(
+  name             : &str,
+  credential_store : &Path,
+  value            : bool,
+) -> Result< (), std::io::Error >
+{
+  let path = credential_store.join( format!( "{name}.json" ) );
+  let mut map = std::fs::read_to_string( &path )
+    .ok()
+    .and_then( |s| serde_json::from_str::< serde_json::Value >( &s ).ok() )
+    .and_then( |v| v.as_object().cloned() )
+    .unwrap_or_default();
+  map.insert( "reserve".to_string(), serde_json::Value::Bool( value ) );
   let json = serde_json::to_string_pretty( &serde_json::Value::Object( map ) )
     .map( | s | s + "\n" )
     .map_err( |e| std::io::Error::new( std::io::ErrorKind::InvalidData, e ) )?;
@@ -1452,6 +1537,23 @@ pub fn parse_u64_field( json : &str, key : &str ) -> Option< u64 >
     .unwrap_or( rest.len() );
   if end == 0 { return None; }
   rest[ ..end ].parse().ok()
+}
+
+/// Extract a boolean field from a JSON blob without external dependencies.
+///
+/// Handles optional whitespace after the colon. Returns `None` when the key is
+/// absent or the value is not literally `true` or `false`.
+#[ doc( hidden ) ]
+#[ must_use ]
+#[ inline ]
+pub fn parse_bool_field( json : &str, key : &str ) -> Option< bool >
+{
+  let search = format!( "\"{key}\":" );
+  let colon_end = json.find( &search )? + search.len();
+  let rest = json[ colon_end.. ].trim_start();
+  if rest.starts_with( "true" ) { return Some( true ); }
+  if rest.starts_with( "false" ) { return Some( false ); }
+  None
 }
 
 /// Extract a string array field from a JSON blob without external dependencies.

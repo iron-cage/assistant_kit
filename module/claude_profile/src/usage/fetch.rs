@@ -130,6 +130,8 @@ pub fn fetch_quota_for_list(
         org_created_at,
         is_owned              : false,
         owner                 : owner.clone(),
+        claim_lock            : acct.claim_lock,
+        reserve               : acct.reserve,
       } );
       continue;
     }
@@ -206,6 +208,8 @@ pub fn fetch_quota_for_list(
         org_created_at,
         is_owned              : true,
         owner,
+        claim_lock            : acct.claim_lock,
+        reserve               : acct.reserve,
       } );
       continue;
     }
@@ -369,6 +373,8 @@ pub fn fetch_quota_for_list(
       org_created_at,
       is_owned              : true,
       owner,
+      claim_lock            : acct.claim_lock,
+      reserve               : acct.reserve,
     } );
   }
 
@@ -442,6 +448,8 @@ fn inject_synthetic_row_if_needed(
     org_created_at,
     is_owned              : true,
     owner                 : String::new(),
+    claim_lock            : false,
+    reserve               : false,
   } );
 }
 
@@ -492,6 +500,8 @@ fn approximate_quota(
     org_created_at,
     is_owned              : true,
     owner,
+    claim_lock            : acct.claim_lock,
+    reserve               : acct.reserve,
   }
 }
 

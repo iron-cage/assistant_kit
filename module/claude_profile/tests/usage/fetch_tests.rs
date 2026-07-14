@@ -285,6 +285,7 @@ fn test_mre_bug218_fetch_all_quota_no_duplicate_synthetic_row()
     cache_age_secs       : None,
     is_owned             : true,
     owner                : String::new(),
+    claim_lock : false, reserve : false,
     org_created_at       : None,
   };
   let mut results = vec![ stored_row ];
@@ -306,6 +307,7 @@ fn test_mre_bug218_fetch_all_quota_no_duplicate_synthetic_row()
     cache_age_secs       : None,
     is_owned             : true,
     owner                : String::new(),
+    claim_lock : false, reserve : false,
     org_created_at       : None,
   };
 
@@ -549,6 +551,8 @@ fn ft04_non_owned_uses_cache_not_http()
     role              : String::new(),
     owner             : String::new(),
     is_owned          : true,
+    claim_lock        : false,
+    reserve           : false,
     renewal_at        : None,
   } ];
 
@@ -665,6 +669,8 @@ fn mre_bug327_cache_first_surfaces_org_created_at()
     role              : String::new(),
     owner             : String::new(),
     is_owned          : true,
+    claim_lock        : false,
+    reserve           : false,
     renewal_at        : None,
   } ];
 

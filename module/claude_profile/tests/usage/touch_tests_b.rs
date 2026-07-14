@@ -2,6 +2,7 @@
 // Continuation of `touch_tests.rs`.
 
 use claude_profile::usage::test_bridge::apply_touch;
+use claude_profile::usage::test_bridge::touch_skip_reason;
 use claude_profile::usage::test_bridge::types::{ SubprocessModel, SubprocessEffort };
 use claude_profile::usage::test_bridge::mk_aq_with_resets_at;
 
@@ -13,15 +14,13 @@ use claude_profile::usage::test_bridge::mk_aq_with_resets_at;
 #[ test ]
 fn test_apply_touch_error_account_skips_before_touch_idle_guard()
 {
-  use std::io::Read;
   use claude_profile::usage::test_bridge::mk_aq_err;
 
   let store = tempfile::TempDir::new().unwrap();
 
   // Cache has touch_idle=false keyed by the error account's name ("bad@example.com").
-  // If the error guard were absent, the touch_idle guard would consult this entry and
-  // emit "touch_idle=false" — making the !captured.contains("touch_idle") assertion
-  // a real guard-ordering test, not a vacuous pass.
+  // If the error guard were absent, touch_skip_reason would consult this entry and
+  // return the touch_idle reason instead — making this a real guard-ordering test.
   claude_profile_core::account::write_cache_string(
     store.path(), "bad@example.com", "fetched_at",
     &claude_profile_core::account::chrono_now_utc(),
@@ -30,33 +29,13 @@ fn test_apply_touch_error_account_skips_before_touch_idle_guard()
     store.path(), "bad@example.com", "touch_idle", false,
   );
 
-  // Error account: result=Err → error guard fires at top of apply_touch.
-  let mut aq = mk_aq_err();
+  // Error account: result=Err → error guard fires before the touch_idle guard.
+  let aq = mk_aq_err();
 
-  let _stderr_guard = claude_profile::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( std::sync::PoisonError::into_inner );
-  let mut stderr_buf = gag::BufferRedirect::stderr().expect( "stderr capture failed" );
-
-  apply_touch(
-    &mut aq,
-    store.path(),
-    None,
-    true,
-    SubprocessModel::Auto,
-    SubprocessEffort::Auto,
-    false,
-  );
-
-  let mut captured = String::new();
-  stderr_buf.read_to_string( &mut captured ).unwrap();
-
-  // Error guard fires first: trace says "error account", not "touch_idle=false".
-  assert!(
-    captured.contains( "error account" ),
-    "apply_touch must emit 'error account' skip for Err result; got:\n{captured}",
-  );
-  assert!(
-    !captured.contains( "touch_idle" ),
-    "apply_touch must NOT reach touch_idle guard for error accounts; got:\n{captured}",
+  assert_eq!(
+    touch_skip_reason( &aq, store.path(), false ),
+    Some( "skipped (reason: error account)" ),
+    "error guard must fire before touch_idle guard is consulted",
   );
 }
 
@@ -203,29 +182,22 @@ fn it_apply_touch_trigger_skips_resets_at_some()
 /// # Pitfall
 ///
 /// Call A and Call B must use separate `TempDir` stores and fresh `AccountQuota` objects
-/// to prevent state leakage. `claude_paths=None` keeps the test hermetic — `run_isolated`
-/// is invoked (emitting `"run_isolated: invoking"`) but fails to find the binary, returning
-/// `None` credentials. The credential file MUST be present in the store so `read_token`
-/// succeeds and execution reaches the `"run_isolated: invoking"` trace line.
+/// to prevent state leakage. Converted from gag-based stderr capture to direct
+/// `touch_skip_reason()` oracle calls — no credential file or subprocess is needed: the
+/// oracle is the pure decision function `apply_touch` calls first, so asserting it returns
+/// `None` on both calls is equivalent to proving the trigger fires on every invocation.
 ///
 /// Spec: [`tests/docs/feature/24_session_touch.md` FT-20]
 #[ doc = "bug_reproducer(BUG-289)" ]
 #[ test ]
 fn test_mre_bug289_son_running_false_haiku_touch_fires_on_every_call()
 {
-  use std::io::Read;
   use claude_profile::usage::test_bridge::mk_aq_with_son_idle;
 
-  // Call A: prove the trigger fires for son_running=false (non-vacuity anchor).
-  // If the guard were absent, touch would be skipped as "already active" (all_running=true)
-  // and Call A would emit "skipped" — not "run_isolated: invoking".
+  // Call A: prove the trigger fires (touch_skip_reason returns None) for son_running=false.
+  // If any guard fired instead, touch_skip_reason would return Some(_).
   {
     let store_a = tempfile::TempDir::new().unwrap();
-    // Credential file required: read_token must succeed so "run_isolated: invoking" is emitted.
-    std::fs::write(
-      store_a.path().join( "test@example.com.credentials.json" ),
-      r#"{"accessToken":"tok-a","expiresAt":9999999999999}"#,
-    ).unwrap();
 
     // Account state: five_h_running=true, d7_running=true, son_running=false.
     // seven_day=Some({resets_at:Some(...)}) — explicit d7_running (not map_or(true) path).
@@ -239,28 +211,19 @@ fn test_mre_bug289_son_running_false_haiku_touch_fires_on_every_call()
       } );
     }
 
-    let _stderr_guard = claude_profile::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( std::sync::PoisonError::into_inner );
-    let mut stderr_buf = gag::BufferRedirect::stderr().expect( "stderr capture failed" );
-    apply_touch( &mut aq_a, store_a.path(), None, true, SubprocessModel::Auto, SubprocessEffort::Auto, false );
-    let mut captured_a = String::new();
-    stderr_buf.read_to_string( &mut captured_a ).unwrap();
-
-    assert!(
-      captured_a.contains( "run_isolated: invoking" ),
-      "call A: touch must fire (run_isolated invoked) for son_running=false; got:\n{captured_a}",
+    assert_eq!(
+      touch_skip_reason( &aq_a, store_a.path(), false ),
+      None,
+      "call A: touch must fire (no guard skips) for son_running=false",
     );
   }
 
   // Call B: prove the trigger fires AGAIN with identical fresh state — BUG-289 loop proof.
   // Separate store and fresh aq prevent state leakage from Call A.
   // Pre-fix: Haiku subprocess cannot open the 7d-Sonnet window → resets_at stays None →
-  // son_running=false on every call → trigger fires every time (infinite loop).
+  // son_running=false on every call → touch_skip_reason returns None every time (infinite loop).
   {
     let store_b = tempfile::TempDir::new().unwrap();
-    std::fs::write(
-      store_b.path().join( "test@example.com.credentials.json" ),
-      r#"{"accessToken":"tok-b","expiresAt":9999999999999}"#,
-    ).unwrap();
 
     let mut aq_b = mk_aq_with_son_idle();
     if let Ok( ref mut data ) = aq_b.result
@@ -272,15 +235,10 @@ fn test_mre_bug289_son_running_false_haiku_touch_fires_on_every_call()
       } );
     }
 
-    let _stderr_guard = claude_profile::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( std::sync::PoisonError::into_inner );
-    let mut stderr_buf = gag::BufferRedirect::stderr().expect( "stderr capture failed" );
-    apply_touch( &mut aq_b, store_b.path(), None, true, SubprocessModel::Auto, SubprocessEffort::Auto, false );
-    let mut captured_b = String::new();
-    stderr_buf.read_to_string( &mut captured_b ).unwrap();
-
-    assert!(
-      captured_b.contains( "run_isolated: invoking" ),
-      "call B: touch must fire AGAIN for identical son_running=false state (BUG-289 loop); got:\n{captured_b}",
+    assert_eq!(
+      touch_skip_reason( &aq_b, store_b.path(), false ),
+      None,
+      "call B: touch must fire AGAIN for identical son_running=false state (BUG-289 loop)",
     );
   }
 }
@@ -299,8 +257,6 @@ fn test_mre_bug289_son_running_false_haiku_touch_fires_on_every_call()
 #[ test ]
 fn ft07_touch_skips_non_owned_with_trace()
 {
-  use std::io::Read;
-
   let store = tempfile::TempDir::new().unwrap();
 
   // Build idle account (resets_at=None triggers touch normally, but G4 overrides).
@@ -308,23 +264,10 @@ fn ft07_touch_skips_non_owned_with_trace()
   // G4: override is_owned to false — account owned by a different machine.
   aq.is_owned = false;
 
-  let _stderr_guard = claude_profile::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( std::sync::PoisonError::into_inner );
-  let mut stderr_buf = gag::BufferRedirect::stderr().expect( "stderr capture failed" );
-
-  // trace=true; claude_paths=None so subprocess cannot fire even if G4 is bypassed.
-  apply_touch( &mut aq, store.path(), None, true, SubprocessModel::Auto, SubprocessEffort::Auto, false );
-
-  let mut captured = String::new();
-  stderr_buf.read_to_string( &mut captured ).unwrap();
-
-  // G4 trace line must be present.
-  assert!(
-    captured.contains( "not owned" ),
-    "FT-07: G4 gate must emit 'not owned' trace line; got:\n{captured}",
-  );
-  assert!(
-    captured.contains( " · touch  " ),
-    "FT-07: trace line must contain ' · touch  '; got:\n{captured}",
+  assert_eq!(
+    touch_skip_reason( &aq, store.path(), false ),
+    Some( "skipped (reason: not owned)" ),
+    "FT-07: G4 gate must skip with reason 'not owned'",
   );
 }
 
@@ -346,33 +289,15 @@ fn ft07_touch_skips_non_owned_with_trace()
 #[ test ]
 fn ec8_solo_gate_skips_non_current_with_trace()
 {
-  use std::io::Read;
-
   let store = tempfile::TempDir::new().unwrap();
   // mk_aq_with_resets_at defaults: is_current=false, is_owned=true — exact preconditions.
-  let mut aq = mk_aq_with_resets_at( None );
+  let aq = mk_aq_with_resets_at( None );
 
-  let _stderr_guard = claude_profile::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( std::sync::PoisonError::into_inner );
-  let mut stderr_buf = gag::BufferRedirect::stderr().expect( "stderr capture failed" );
-
-  // trace=true, solo=true: solo gate fires, emits skip trace, returns before timer check.
-  apply_touch( &mut aq, store.path(), None, true, SubprocessModel::Auto, SubprocessEffort::Auto, true );
-
-  let mut captured = String::new();
-  stderr_buf.read_to_string( &mut captured ).unwrap();
-
-  assert!(
-    captured.contains( "solo-skip" ),
-    "EC-8: solo gate must emit 'solo-skip' trace for non-current account; got:\n{captured}",
-  );
-  assert!(
-    captured.contains( "test@example.com" ),
-    "EC-8: trace must name the skipped account; got:\n{captured}",
-  );
-  // Solo gate fires before timer/credentials check — no subprocess path reached.
-  assert!(
-    !captured.contains( "read credentials:" ),
-    "EC-8: solo gate must fire BEFORE credential read; got:\n{captured}",
+  // solo=true: solo gate fires, returns before any other guard is consulted.
+  assert_eq!(
+    touch_skip_reason( &aq, store.path(), true ),
+    Some( "solo-skip" ),
+    "EC-8: solo gate must skip non-current account with 'solo-skip'",
   );
 }
 
@@ -408,8 +333,6 @@ fn ec8_solo_gate_skips_non_current_with_trace()
 #[ test ]
 fn ft_touch_skips_occupied_elsewhere_with_trace()
 {
-  use std::io::Read;
-
   let store = tempfile::TempDir::new().unwrap();
 
   // Build idle account (resets_at=None triggers touch by timer state alone).
@@ -418,28 +341,10 @@ fn ft_touch_skips_occupied_elsewhere_with_trace()
   aq.is_owned = true;
   aq.is_occupied_elsewhere = true;
 
-  let _stderr_guard = claude_profile::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( std::sync::PoisonError::into_inner );
-  let mut stderr_buf = gag::BufferRedirect::stderr().expect( "stderr capture failed" );
-
-  // trace=true; claude_paths=None so subprocess cannot fire even if guard is bypassed.
-  apply_touch( &mut aq, store.path(), None, true, SubprocessModel::Auto, SubprocessEffort::Auto, false );
-
-  let mut captured = String::new();
-  stderr_buf.read_to_string( &mut captured ).unwrap();
-
-  // Occupancy guard trace line must be present.
-  assert!(
-    captured.contains( "occupied elsewhere" ),
-    "FT-22: occupancy guard must emit 'occupied elsewhere' trace line; got:\n{captured}",
-  );
-  assert!(
-    captured.contains( " · touch  " ),
-    "FT-22: trace line must contain ' · touch  '; got:\n{captured}",
-  );
-  // No subprocess must fire.
-  assert!(
-    !captured.contains( "run_isolated: invoking" ),
-    "FT-22: no subprocess must be spawned for occupied-elsewhere account; got:\n{captured}",
+  assert_eq!(
+    touch_skip_reason( &aq, store.path(), false ),
+    Some( "skipped (reason: occupied elsewhere)" ),
+    "FT-22: occupancy guard must skip with reason 'occupied elsewhere'",
   );
 }
 

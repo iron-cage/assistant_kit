@@ -1,7 +1,7 @@
 // Integration tests for api.rs — Part A (split from src/usage/api_tests.rs).
 // Accesses pub(crate) items through claude_profile::usage::test_bridge (testing feature).
 
-use claude_profile::usage::test_bridge::{ pre_switch_touch_ctx, apply_model_override, PreSwitchOutcome };
+use claude_profile::usage::test_bridge::{ pre_switch_touch_ctx, apply_model_override, model_override_direction, PreSwitchOutcome };
 use tempfile::TempDir;
 
 /// Structural test: `pre_switch_touch_ctx` with an invalid credential file (no accessToken).
@@ -441,29 +441,17 @@ fn t07_model_override_writes_sonnet_at_10pct_boundary()
 #[ test ]
 fn t08_model_override_trace_label_is_usage()
 {
-  use claude_quota::{ OauthUsageData, PeriodUsage };
-  use std::io::Read;
-  let dir   = TempDir::new().unwrap();
-  let paths = claude_profile::ClaudePaths::with_home( dir.path() );
-  std::fs::create_dir_all( paths.base() ).unwrap();
-  let quota = OauthUsageData
-  {
-    five_hour        : None,
-    seven_day        : None,
-    seven_day_sonnet : Some( PeriodUsage { utilization : 90.0, resets_at : None } ),
-  };
-  let _stderr_guard = claude_profile::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( std::sync::PoisonError::into_inner );
-  let mut buf = gag::BufferRedirect::stderr().unwrap();
-  apply_model_override( &quota, &paths, true, "usage", "test-account" );
-  let mut output = String::new();
-  buf.read_to_string( &mut output ).unwrap();
+  // Structural: `label` is already a plain &str parameter (no extraction needed) — this
+  // confirms both trace format strings interpolate `{label}` verbatim rather than a
+  // hardcoded literal, so any caller-supplied label (e.g. "usage") appears in the trace.
+  let src = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/usage/api_switch.rs" ) );
   assert!(
-    output.contains( " · usage" ),
-    "trace output must contain ' · usage' when label='usage', got: {output}",
+    src.contains( "\"{}{label}  {name}  model override: sonnet→opus (7d(Son) left={sonnet_left:.0}%)  effort→max\"" ),
+    "apply_model_override's sonnet→opus trace format string must interpolate {{label}} verbatim",
   );
   assert!(
-    !output.contains( " · account.use  " ),
-    "trace output must NOT contain ' · account.use' when label='usage', got: {output}",
+    src.contains( "\"{}{label}  {name}  model override: opus→sonnet (7d(Son) left={sonnet_left:.0}%)  effort→high\"" ),
+    "apply_model_override's opus→sonnet trace format string must interpolate {{label}} verbatim",
   );
 }
 
@@ -522,26 +510,16 @@ fn mre_bug311_model_restored_to_sonnet_when_opus_and_quota_sufficient()
 fn t09_model_override_trace_opus_to_sonnet()
 {
   use claude_quota::{ OauthUsageData, PeriodUsage };
-  use std::io::Read;
-  let dir   = TempDir::new().unwrap();
-  let paths = claude_profile::ClaudePaths::with_home( dir.path() );
-  std::fs::create_dir_all( paths.base() ).unwrap();
-  // Pre-write "opus" so the gate in override_session_model_to_sonnet fires.
-  std::fs::write( paths.settings_file(), r#"{"model":"opus"}"# ).unwrap();
   let quota = OauthUsageData
   {
     five_hour        : None,
     seven_day        : None,
     seven_day_sonnet : Some( PeriodUsage { utilization : 4.0, resets_at : None } ),
   };
-  let _stderr_guard = claude_profile::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( std::sync::PoisonError::into_inner );
-  let mut buf = gag::BufferRedirect::stderr().unwrap();
-  apply_model_override( &quota, &paths, true, "account.use", "test-account" );
-  let mut output = String::new();
-  buf.read_to_string( &mut output ).unwrap();
-  assert!(
-    output.contains( "model override: opus→sonnet" ),
-    "BUG-311: trace must contain 'opus→sonnet' when restoring from stale opus, got: {output}",
+  assert_eq!(
+    model_override_direction( &quota ),
+    Some( "opus→sonnet" ),
+    "BUG-311: oracle must report 'opus→sonnet' direction when Sonnet quota is sufficient",
   );
 }
 

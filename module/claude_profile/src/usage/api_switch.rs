@@ -123,6 +123,8 @@ pub fn attempt_expired_token_refresh(
     org_created_at       : None,
     is_owned             : true,
     owner                : String::new(),
+    claim_lock           : false,
+    reserve              : false,
   };
   let model     = super::subprocess::resolve_model( &aq, imodel );
   let pre_args  = super::subprocess::effort_pre_args( &model, effort );
@@ -207,6 +209,27 @@ pub fn pre_switch_touch_ctx(
   // Pitfall: idempotent subprocess is always safe to spawn; the guard to remove was wrong-level.
   if trace { eprintln!( "{}account.use  {name}  subprocess: scheduled (idle check removed)", trace_ts() ) }
   PreSwitchOutcome::NeedTouch( TouchCtx { quota } )
+}
+
+/// Determine which model-override direction, if any, [`apply_model_override`] would take for `quota`.
+///
+/// Pure decision function mirroring `refresh.rs`'s `reason_label` template — borrows the quota,
+/// performs no mutation, and returns the same `sonnet_left` comparison `apply_model_override` uses.
+/// `None` when `seven_day_sonnet` is absent — matches `apply_model_override`'s tier-absent branch,
+/// which writes "sonnet" conservatively but never emits a direction trace line.
+#[ allow( clippy::missing_inline_in_public_items, clippy::must_use_candidate ) ]
+pub fn model_override_direction( quota : &OauthUsageData ) -> Option< &'static str >
+{
+  let sonnet = quota.seven_day_sonnet.as_ref()?;
+  let sonnet_left = ( 100.0 - sonnet.utilization ).round();
+  if sonnet_left < OPUS_OVERRIDE_THRESHOLD
+  {
+    Some( "sonnet→opus" )
+  }
+  else
+  {
+    Some( "opus→sonnet" )
+  }
 }
 
 /// Apply the Sonnet→Opus (or Opus→Sonnet) session model override based on quota utilization.
@@ -356,6 +379,8 @@ pub fn apply_post_switch_touch(
     org_created_at       : None,
     is_owned             : true,
     owner                : String::new(),
+    claim_lock           : false,
+    reserve              : false,
   };
   let model        = resolve_model( &aq, imodel );
   let effort_val   = resolve_effort( &model, effort );

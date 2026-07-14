@@ -27,6 +27,7 @@ fn test_should_refresh_401_triggers()
     org_created_at : None,
     is_owned      : true,
     owner                : String::new(),
+      claim_lock : false, reserve : false,
   };
   assert!( should_refresh( &aq, 0 ), "401 must trigger refresh" );
 }
@@ -53,6 +54,7 @@ fn test_should_refresh_403_triggers()
     org_created_at : None,
     is_owned      : true,
     owner                : String::new(),
+      claim_lock : false, reserve : false,
   };
   assert!( should_refresh( &aq, 0 ), "403 must trigger refresh" );
 }
@@ -83,6 +85,7 @@ fn test_should_refresh_mre_bug156_429_expired_triggers()
     org_created_at : None,
     is_owned      : true,
     owner                : String::new(),
+      claim_lock : false, reserve : false,
   };
   assert!(
     should_refresh( &aq, 9_999 ),
@@ -115,6 +118,7 @@ fn test_should_refresh_429_valid_token_no_trigger()
     org_created_at : None,
     is_owned      : true,
     owner                : String::new(),
+      claim_lock : false, reserve : false,
   };
   assert!(
     !should_refresh( &aq, 0 ),
@@ -144,6 +148,7 @@ fn test_should_refresh_429_exact_boundary_expired_triggers()
     org_created_at : None,
     is_owned      : true,
     owner                : String::new(),
+      claim_lock : false, reserve : false,
   };
   assert!(
     should_refresh( &aq, 5 ),
@@ -173,6 +178,7 @@ fn test_should_refresh_429_one_sec_future_no_trigger()
     org_created_at : None,
     is_owned      : true,
     owner                : String::new(),
+      claim_lock : false, reserve : false,
   };
   assert!(
     !should_refresh( &aq, 5 ),
@@ -203,6 +209,7 @@ fn test_should_refresh_ok_no_trigger()
     org_created_at : None,
     is_owned      : true,
     owner                : String::new(),
+      claim_lock : false, reserve : false,
   };
   assert!( !should_refresh( &aq, 9_999 ), "Ok result must not trigger refresh" );
 }
@@ -229,6 +236,7 @@ fn test_should_refresh_generic_error_no_trigger()
     org_created_at : None,
     is_owned      : true,
     owner                : String::new(),
+      claim_lock : false, reserve : false,
   };
   assert!( !should_refresh( &aq, 9_999 ), "generic error must not trigger refresh" );
 }
@@ -284,6 +292,7 @@ fn mre_bug235_locally_expired_triggers_should_refresh()
     org_created_at : None,
     is_owned      : true,
     owner                : String::new(),
+      claim_lock : false, reserve : false,
   };
   assert!(
     should_refresh( &aq, 9_999 ),
@@ -342,6 +351,7 @@ fn mre_bug255_cache_defeats_refresh()
     org_created_at        : None,
     is_owned              : true,
     owner                : String::new(),
+      claim_lock : false, reserve : false,
   };
   assert!(
     should_refresh( &aq, 9_999 ),
@@ -373,6 +383,7 @@ fn test_should_refresh_cached_valid_token_no_trigger()
     org_created_at        : None,
     is_owned              : true,
     owner                : String::new(),
+      claim_lock : false, reserve : false,
   };
   assert!(
     !should_refresh( &aq, 9_999 ),
@@ -387,6 +398,7 @@ fn test_should_refresh_cached_valid_token_no_trigger()
 /// G2 gate fires before any other check — ownership enforcement is the first guard.
 /// Even a 401 or locally-expired non-owned account must not trigger refresh.
 #[ test ]
+#[ allow( clippy::too_many_lines ) ]
 fn ft06_should_refresh_false_when_not_owned()
 {
   let aq_401 = AccountQuota
@@ -407,6 +419,7 @@ fn ft06_should_refresh_false_when_not_owned()
     org_created_at        : None,
     is_owned              : false,
     owner                : String::new(),
+      claim_lock : false, reserve : false,
   };
   assert!(
     !should_refresh( &aq_401, 9_999 ),
@@ -431,6 +444,7 @@ fn ft06_should_refresh_false_when_not_owned()
     org_created_at        : None,
     is_owned              : false,
     owner                : String::new(),
+      claim_lock : false, reserve : false,
   };
   assert!(
     !should_refresh( &aq_expired, 9_999 ),
@@ -455,6 +469,7 @@ fn ft06_should_refresh_false_when_not_owned()
     org_created_at        : None,
     is_owned              : false,
     owner                : String::new(),
+      claim_lock : false, reserve : false,
   };
   assert!(
     !should_refresh( &aq_429_expired, 9_999 ),
@@ -484,6 +499,7 @@ fn ft06_should_refresh_false_when_not_owned()
     org_created_at        : None,
     is_owned              : false,
     owner                : String::new(),
+      claim_lock : false, reserve : false,
   };
   assert!(
     !should_refresh( &aq_cached_expired, 9_999 ),
@@ -532,6 +548,7 @@ fn sr11_approaching_expiry_must_not_trigger_refresh()
     org_created_at        : None,
     is_owned              : true,
     owner                 : String::new(),
+      claim_lock : false, reserve : false,
   };
   assert!(
     !should_refresh( &aq, now_secs ),
@@ -579,6 +596,7 @@ fn mre_bug303_should_refresh_false_for_occupied_elsewhere()
     org_created_at        : None,
     is_owned              : true,
     owner                 : String::new(),
+      claim_lock : false, reserve : false,
   };
   assert!(
     !should_refresh( &aq, 9_999 ),

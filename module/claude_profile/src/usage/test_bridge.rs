@@ -33,7 +33,7 @@ pub use super::render::{ render_text, render_tsv, render_json };
 pub use super::refresh::{ apply_refresh, reason_label };
 
 // ── Touch ─────────────────────────────────────────────────────────────────
-pub use super::touch::apply_touch;
+pub use super::touch::{ apply_touch, touch_skip_reason };
 
 // ── Format ────────────────────────────────────────────────────────────────
 pub use super::format::{
@@ -45,7 +45,7 @@ pub use super::format::{
 
 // ── API ───────────────────────────────────────────────────────────────────
 pub use super::api::{ pre_switch_touch_ctx, apply_post_switch_touch, PreSwitchOutcome };
-pub use super::api_switch::{ apply_model_override, TouchCtx };
+pub use super::api_switch::{ apply_model_override, TouchCtx, model_override_direction };
 
 // ── Params ────────────────────────────────────────────────────────────────
 pub use super::params::parse_usage_params;

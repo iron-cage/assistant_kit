@@ -42,6 +42,8 @@ fn test_ft29_009_footer_session_effort_display()
         cache_age_secs        : None,
         is_owned              : true,
         owner                 : String::new(),
+        claim_lock            : false,
+        reserve               : false,
               org_created_at : None,
       },
       AccountQuota
@@ -66,6 +68,8 @@ fn test_ft29_009_footer_session_effort_display()
         cache_age_secs        : None,
         is_owned              : true,
         owner                 : String::new(),
+        claim_lock            : false,
+        reserve               : false,
               org_created_at : None,
       },
       AccountQuota
@@ -90,6 +94,8 @@ fn test_ft29_009_footer_session_effort_display()
         cache_age_secs        : None,
         is_owned              : true,
         owner                 : String::new(),
+        claim_lock            : false,
+        reserve               : false,
               org_created_at : None,
       },
     ]
@@ -488,6 +494,8 @@ fn cc_no_current_account_uses_legacy_footer()
       cache_age_secs        : None,
       is_owned              : true,
       owner                 : String::new(),
+      claim_lock            : false,
+      reserve               : false,
           org_created_at : None,
     }
   };
@@ -538,6 +546,8 @@ fn cc_effort_only_footer_shows_effort_without_model()
       cache_age_secs        : None,
       is_owned              : true,
       owner                 : String::new(),
+      claim_lock            : false,
+      reserve               : false,
           org_created_at : None,
     }
   };

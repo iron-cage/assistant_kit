@@ -215,6 +215,12 @@ pub struct AccountQuota
   pub is_owned              : bool,
   /// Raw owner identity string from `{name}.json`; empty when unset.
   pub owner                 : String,
+  /// `claim_lock` from `{name}.json`; `false` when unset — see Feature 070.
+  /// `true` excludes this account from unattended rotation (Gate 9).
+  pub claim_lock            : bool,
+  /// `reserve` from `{name}.json`; `false` when unset — see Feature 070.
+  /// `true` deprioritizes (does not exclude) this account in sort-based selection.
+  pub reserve               : bool,
   // Fix(BUG-327): the 3 non-live branches (G1-not-owned, cache-first, approximate_quota)
   //   set `account: None`, so `renews_label()` never received `org_created_at` on those
   //   paths — `~Renews` showed "?" even with a warm cache holding a successful prior fetch.

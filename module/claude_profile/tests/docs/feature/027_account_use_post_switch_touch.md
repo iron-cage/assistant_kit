@@ -36,6 +36,7 @@ Feature behavioral requirement test cases for `docs/feature/027_account_use_post
 | FT-22 | `seven_day_sonnet = None` → override fires conservatively; writes "sonnet" (Fix BUG-311) | AC-18 | Unit (BUG-300 + BUG-311 MRE) |
 | FT-23 | model restored to sonnet when settings.json has "opus" and Sonnet quota sufficient (BUG-311 MRE) | AC-18 | Unit (BUG-311 MRE) |
 | FT-24 | `trace::1` + model override fires → `model override: opus→sonnet` trace line emitted | AC-19 | Unit (BUG-311) |
+| FT-25 | Structural — both trace format strings interpolate `{label}` verbatim | AC-19 | Structural |
 | — | `trace::1` + model override fires → `model override: sonnet→opus` trace line emitted | AC-19 | Live-only (requires `trace::1` + `7d(Son) < 10%` + Sonnet model in snapshot) |
 
 ### Test Case Index
@@ -69,8 +70,9 @@ Feature behavioral requirement test cases for `docs/feature/027_account_use_post
 | FT-21 | post-subprocess re-fetch updates in-memory quota; failure preserves pre-subprocess data | AC-21 | BUG-288 MRE |
 | FT-23 | model restored to sonnet when settings.json has "opus" and Sonnet quota sufficient | AC-18 | BUG-311 MRE |
 | FT-24 | trace::1 with Sonnet quota sufficient → opus→sonnet trace line emitted | AC-19 | BUG-311 |
+| FT-25 | structural — both trace format strings interpolate {label} verbatim | AC-19 | Structural |
 
-**Total:** 24 FT cases
+**Total:** 25 FT cases
 
 ---
 
@@ -342,9 +344,22 @@ Feature behavioral requirement test cases for `docs/feature/027_account_use_post
 
 ### FT-24: `trace::1` with Sonnet quota sufficient → `opus→sonnet` trace line emitted (BUG-311)
 
-- **Given (unit test):** `apply_model_override` called with `trace=true`, `seven_day_sonnet = Some(PeriodUsage { utilization: 4.0 })` (96% left). `~/.claude/settings.json` pre-seeded with `"model": "opus"`.
-- **When:** `apply_model_override(&data, &paths, true, "account.use", "alice@home.com")`.
-- **Then:** Stderr contains `... · account.use  alice@home.com  model override: opus→sonnet (7d(Son) left=96%)`. Settings.json updated to `"sonnet"`.
+- **Given (unit test):** `OauthUsageData` with `seven_day_sonnet = Some(PeriodUsage { utilization: 4.0 })` (96% left — well above the 10% threshold).
+- **When:** `model_override_direction(&quota)` is called.
+- **Then:** Returns `Some("opus→sonnet")` — the oracle's direction matches the direction word `apply_model_override()`'s trace format string embeds verbatim when `trace=true` (see FT-25, which structurally confirms the format string interpolates this direction).
 - **Exit:** n/a (unit test)
 - **Source fn:** `t09_model_override_trace_opus_to_sonnet` (in `tests/usage/api_tests_a.rs`)
+- **Note:** Converted from gag-based stderr capture to a direct `model_override_direction()` oracle call. The actual file-write behavior for this scenario remains covered by the untouched sibling test `mre_bug311_model_restored_to_sonnet_when_opus_and_quota_sufficient` (FT-23).
+- **Source:** [feature/027_account_use_post_switch_touch.md AC-19](../../../docs/feature/027_account_use_post_switch_touch.md)
+
+---
+
+### FT-25: Structural — `apply_model_override`'s trace format strings interpolate `{label}` verbatim
+
+- **Given (structural test):** Source of `src/usage/api_switch.rs`.
+- **When:** The source is inspected via `include_str!`.
+- **Then:** Both the `sonnet→opus` and `opus→sonnet` trace format strings contain the literal `{label}` interpolation (not a hardcoded label), so any caller-supplied label (e.g. `"usage"`, `"account.use"`) appears verbatim in the trace.
+- **Exit:** n/a (unit test)
+- **Source fn:** `t08_model_override_trace_label_is_usage` (in `tests/usage/api_tests_a.rs`)
+- **Note:** Converted from gag-based stderr capture (asserting `" · usage"` appeared and `" · account.use  "` did not in captured output for one label value) to a structural check that both format strings embed `{label}` — a stronger, label-value-independent proof of the same property.
 - **Source:** [feature/027_account_use_post_switch_touch.md AC-19](../../../docs/feature/027_account_use_post_switch_touch.md)

@@ -206,6 +206,16 @@ pub fn accounts_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Res
           format!( "account '{name_arg}' not found in credential store" ),
         ) );
       }
+      // G9: Claim-lock guard — locked accounts cannot become the assignee:: target.
+      // force::1 bypasses the guard (Feature 070 AC-04).
+      let force = crate::output::parse_int_flag( &cmd, "force", 0 )? != 0;
+      if !force && crate::account::read_claim_lock( &credential_store, &name_arg )
+      {
+        return Err( ErrorData::new(
+          ErrorCode::ArgumentTypeMismatch,
+          format!( "claim-lock violation: {name_arg} is claim-locked" ),
+        ) );
+      }
       if is_dry( &cmd )
       {
         return Ok( OutputData::new(
@@ -273,6 +283,26 @@ pub fn accounts_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Res
     }
 
     return crate::owner_dispatch::owner_named_dispatch( trace, force, is_dry_run, is_sentinel, ov, &raw_name, &name_arg, &credential_store, "accounts" );
+  }
+
+  // ── lock:: / reserve:: boolean field dispatch (Feature 070) ───────────────────
+  // Ungated (AC-02) — unlike owner::, both batch directions are valid (Test Matrix T04).
+  for ( param_name, writer ) in
+  [
+    ( "lock",    crate::account::write_claim_lock as fn( &str, &std::path::Path, bool ) -> Result< (), std::io::Error > ),
+    ( "reserve", crate::account::write_reserve    as fn( &str, &std::path::Path, bool ) -> Result< (), std::io::Error > ),
+  ]
+  {
+    if let Some( Value::String( v ) ) = cmd.arguments.get( param_name )
+    {
+      let value      = v == "1";
+      let is_dry_run = is_dry( &cmd );
+      if raw_name.is_empty()
+      {
+        return crate::owner_dispatch::bool_field_batch_set( trace, is_dry_run, value, &all_accounts, &credential_store, "accounts", param_name, writer );
+      }
+      return crate::owner_dispatch::bool_field_named_dispatch( trace, is_dry_run, value, &raw_name, &name_arg, &credential_store, "accounts", param_name, writer );
+    }
   }
 
   // ── Legacy field-toggle rejection (Feature 037 — removed; use cols:: instead) ─

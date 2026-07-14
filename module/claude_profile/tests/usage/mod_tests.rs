@@ -133,7 +133,7 @@ fn test_render_json_error_account()
       name : "fail@test.com".to_string(), is_current : false, is_active : false, is_occupied_elsewhere : false,
       expires_at_ms : 0, result : Err( "auth failed".to_string() ), account : None,
       host : String::new(), role : String::new(), renewal_at : None,
-      cached : false, cache_age_secs : None, is_owned : true, owner : String::new(),
+      cached : false, cache_age_secs : None, is_owned : true, owner : String::new(), claim_lock : false, reserve : false,
           org_created_at : None,
     },
   ];
@@ -153,7 +153,7 @@ fn test_render_json_escapes_quotes_in_name()
       name : "test\"@evil.com".to_string(), is_current : false, is_active : false, is_occupied_elsewhere : false,
       expires_at_ms : 0, result : Err( "fail".to_string() ), account : None,
       host : String::new(), role : String::new(), renewal_at : None,
-      cached : false, cache_age_secs : None, is_owned : true, owner : String::new(),
+      cached : false, cache_age_secs : None, is_owned : true, owner : String::new(), claim_lock : false, reserve : false,
           org_created_at : None,
     },
   ];
@@ -193,6 +193,8 @@ fn test_render_json_ft8_mixed_ok_and_err_both_present()
       cache_age_secs : None,
       is_owned       : true,
       owner                : String::new(),
+      claim_lock           : false,
+      reserve              : false,
           org_created_at : None,
     },
     AccountQuota
@@ -212,6 +214,8 @@ fn test_render_json_ft8_mixed_ok_and_err_both_present()
       cache_age_secs : None,
       is_owned       : true,
       owner                : String::new(),
+      claim_lock           : false,
+      reserve              : false,
           org_created_at : None,
     },
   ];

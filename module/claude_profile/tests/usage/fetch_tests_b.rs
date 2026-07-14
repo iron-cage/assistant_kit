@@ -47,6 +47,7 @@ fn cc7_non_owned_no_cache()
     host              : String::new(),
     role              : String::new(),
     owner             : String::new(),
+    claim_lock        : false, reserve : false,
     is_owned          : true,
     renewal_at        : None,
   } ];
@@ -129,6 +130,7 @@ fn ft03_history_skips_cached_fallback()
     host              : String::new(),
     role              : String::new(),
     owner             : String::new(),
+    claim_lock        : false, reserve : false,
     is_owned          : true,
     renewal_at        : None,
   } ];
@@ -210,6 +212,7 @@ fn ft05_approx_independent_periods_absent_sn_unaffected()
     host              : String::new(),
     role              : String::new(),
     owner             : String::new(),
+    claim_lock        : false, reserve : false,
     is_owned          : true,
     renewal_at        : None,
   } ];
@@ -536,6 +539,7 @@ fn ft23_g1_non_owned_applies_approximation()
     host              : String::new(),
     role              : String::new(),
     owner             : String::new(),
+    claim_lock        : false, reserve : false,
     is_owned          : true,
     renewal_at        : None,
   } ];
@@ -613,6 +617,7 @@ fn ft12_history_non_owned_skips_append()
     host              : String::new(),
     role              : String::new(),
     owner             : String::new(),
+    claim_lock        : false, reserve : false,
     is_owned          : true,
     renewal_at        : None,
   } ];

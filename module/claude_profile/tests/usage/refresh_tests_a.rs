@@ -57,6 +57,7 @@ fn test_apply_refresh_429_not_retried()
       cache_age_secs : None,
       is_owned       : true,
       owner                : String::new(),
+      claim_lock : false, reserve : false,
           org_created_at : None,
     },
   ];
@@ -99,6 +100,7 @@ fn test_apply_refresh_ok_result_unchanged()
       cache_age_secs : None,
       is_owned       : true,
       owner                : String::new(),
+      claim_lock : false, reserve : false,
           org_created_at : None,
     },
   ];
@@ -133,6 +135,7 @@ fn test_apply_refresh_generic_error_unchanged()
       cache_age_secs : None,
       is_owned       : true,
       owner                : String::new(),
+      claim_lock : false, reserve : false,
           org_created_at : None,
     },
   ];
@@ -183,6 +186,7 @@ fn test_apply_refresh_401_no_cred_file()
       cache_age_secs : None,
       is_owned       : true,
       owner                : String::new(),
+      claim_lock : false, reserve : false,
           org_created_at : None,
     },
   ];
@@ -222,6 +226,7 @@ fn test_apply_refresh_403_no_cred_file()
       cache_age_secs : None,
       is_owned       : true,
       owner                : String::new(),
+      claim_lock : false, reserve : false,
           org_created_at : None,
     },
   ];
@@ -266,6 +271,7 @@ fn test_apply_refresh_mixed_accounts()
       cache_age_secs : None,
       is_owned       : true,
       owner                : String::new(),
+      claim_lock : false, reserve : false,
           org_created_at : None,
     },
     AccountQuota
@@ -285,6 +291,7 @@ fn test_apply_refresh_mixed_accounts()
       cache_age_secs : None,
       is_owned       : true,
       owner                : String::new(),
+      claim_lock : false, reserve : false,
           org_created_at : None,
     },
     AccountQuota
@@ -304,6 +311,7 @@ fn test_apply_refresh_mixed_accounts()
       cache_age_secs : None,
       is_owned       : true,
       owner                : String::new(),
+      claim_lock : false, reserve : false,
           org_created_at : None,
     },
     AccountQuota
@@ -323,6 +331,7 @@ fn test_apply_refresh_mixed_accounts()
       cache_age_secs : None,
       is_owned       : true,
       owner                : String::new(),
+      claim_lock : false, reserve : false,
           org_created_at : None,
     },
   ];
@@ -374,6 +383,7 @@ fn test_apply_refresh_trace_does_not_panic()
       cache_age_secs : None,
       is_owned       : true,
       owner                : String::new(),
+      claim_lock : false, reserve : false,
           org_created_at : None,
     },
   ];
@@ -433,6 +443,7 @@ fn test_apply_refresh_lifecycle_switch_fails_result_unchanged()
       cache_age_secs : None,
       is_owned       : true,
       owner                : String::new(),
+      claim_lock : false, reserve : false,
           org_created_at : None,
     },
   ];
@@ -519,6 +530,7 @@ fn test_apply_refresh_lifecycle_active_marker_unchanged()
       cache_age_secs : None,
       is_owned       : true,
       owner                : String::new(),
+      claim_lock : false, reserve : false,
           org_created_at : None,
     },
   ];
@@ -568,6 +580,7 @@ fn test_apply_refresh_lifecycle_429_expired_switch_fails_unchanged()
       cache_age_secs : None,
       is_owned       : true,
       owner                : String::new(),
+      claim_lock : false, reserve : false,
           org_created_at : None,
     },
   ];
@@ -614,6 +627,7 @@ fn test_apply_refresh_lifecycle_ft3_403_no_cred_result_unchanged()
       cache_age_secs : None,
       is_owned       : true,
       owner                : String::new(),
+      claim_lock : false, reserve : false,
           org_created_at : None,
     },
   ];
@@ -666,6 +680,7 @@ fn test_apply_refresh_lifecycle_copy_fails_no_dot_claude_dir()
       cache_age_secs : None,
       is_owned       : true,
       owner                : String::new(),
+      claim_lock : false, reserve : false,
           org_created_at : None,
     },
   ];
@@ -728,6 +743,7 @@ fn test_apply_refresh_lifecycle_trace_switch_fails_no_panic()
       cache_age_secs : None,
       is_owned       : true,
       owner                : String::new(),
+      claim_lock : false, reserve : false,
           org_created_at : None,
     },
   ];
@@ -857,6 +873,7 @@ fn test_apply_refresh_lifecycle_l10_trace_run_isolated_invoked_no_panic()
       cache_age_secs : None,
       is_owned       : true,
       owner                : String::new(),
+      claim_lock : false, reserve : false,
           org_created_at : None,
     },
   ];
