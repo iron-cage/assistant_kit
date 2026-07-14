@@ -682,8 +682,11 @@ pub struct InitializeResult
   pub account : serde_json::Value,
   /// Claude Code subprocess PID.
   pub pid : serde_json::Value,
-  /// Feedback survey configuration.
-  pub feedback_survey_config : serde_json::Value,
+  /// Feedback survey configuration. Present in the Phase 0 capture but confirmed absent
+  /// entirely on some live sessions (likely survey-eligibility-gated) — `#[serde(default)]`
+  /// treats a missing field as `None` rather than a deserialize error.
+  #[ serde( default ) ]
+  pub feedback_survey_config : Option< serde_json::Value >,
 }
 
 /// One entry in [`crate::control::ControlSession::mcp_server_status`]'s returned list.
@@ -751,13 +754,21 @@ pub struct ReloadSkillsResult
 ///
 /// Shape confirmed against the captured (PII-redacted) `initialize` response's `account`
 /// field: `{"email":"...","organization":"...","subscriptionType":"...","apiProvider":"..."}`.
+/// `email` and `organization` are confirmed absent together on an API-key-authenticated live
+/// session (vs. present together on the Phase 0 OAuth/subscription capture) — the account shape
+/// varies by auth mode. `#[serde(default)]` on each treats a missing field as `None` rather than
+/// a deserialize error.
 #[derive( Debug, Clone, PartialEq, Eq, serde::Deserialize ) ]
 pub struct AccountInfo
 {
-  /// Account email address.
-  pub email : String,
-  /// Organization display name.
-  pub organization : String,
+  /// Account email address. Present for OAuth/subscription-authenticated sessions; confirmed
+  /// absent entirely on API-key-authenticated live sessions.
+  #[ serde( default ) ]
+  pub email : Option< String >,
+  /// Organization display name. Present for OAuth/subscription-authenticated sessions;
+  /// confirmed absent entirely on API-key-authenticated live sessions.
+  #[ serde( default ) ]
+  pub organization : Option< String >,
   /// Subscription tier (e.g. `"Claude Max"`).
   #[ serde( rename = "subscriptionType" ) ]
   pub subscription_type : String,

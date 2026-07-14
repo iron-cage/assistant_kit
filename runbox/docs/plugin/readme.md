@@ -26,3 +26,4 @@ Plugins have lifecycle management — their absence changes the execution shape,
 | [004](004_build_cache_persistence.md) | Build cache persistence | 🔧 | Build Infrastructure | Named volume seeded on `.build`; mounted for `.test.offline` and `.shell` | `target` dir | `cache_dir:` in `runbox.yml` | no | `.build` `.test.offline` `.shell` |
 | [005](005_test_lister.md) | Test lister | ✅ | Test Runner | List command for `.list` sub-command | `cargo nextest list` | `_plugin_list_cmd()` in `plugins.sh` | no | `.list` |
 | [006](006_offline_runner.md) | Offline runner | 🔧 | Test Runner | Baked image `CMD` executed by `.test.offline` | `cargo nextest run` | `dockerfile:` in `runbox.yml` | yes | `.test.offline` |
+| [007](007_bin_mount.md) | `bin_mount` | ✅ | Binary Injection | Host binary mounted `ro` into container, no working volume | inactive | `bin_mount` in `runbox.yml` | no | `.test` |
