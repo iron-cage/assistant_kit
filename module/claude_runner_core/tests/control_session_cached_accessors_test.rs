@@ -89,6 +89,15 @@ fn it_21_account_info_reads_the_cached_account_field()
 
   session.reinitialize().expect( "reinitialize() must succeed" );
   let account = session.account_info().expect( "account_info() must succeed once cached" );
-  assert!( !account.email.is_empty(), "email must be non-empty" );
+  // email and organization are absent for API-key-authenticated sessions (only present for
+  // OAuth/subscription auth); when present they must be non-empty, not blank strings.
+  if let Some( email ) = &account.email
+  {
+    assert!( !email.is_empty(), "email, when present, must be non-empty" );
+  }
+  if let Some( organization ) = &account.organization
+  {
+    assert!( !organization.is_empty(), "organization, when present, must be non-empty" );
+  }
   assert!( !account.subscription_type.is_empty(), "subscription_type must be non-empty" );
 }
