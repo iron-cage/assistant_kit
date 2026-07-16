@@ -47,7 +47,7 @@
 | Expect output validation (T01–T17) | `expect_validation_test.rs` | `--expect`/`--expect-strategy`/`--retry-on-validation` validation loop |
 | Bug reproducers BUG-247 | `bug_reproducers_247_test.rs` | Stdout-to-stderr forwarding on subprocess failure |
 | Bug reproducers BUG-248 | `bug_reproducers_248_test.rs` | `--keep-claudecode` warning when CLAUDECODE present |
-| Bug reproducer BUG-008 | `bug_reproducers_008_test.rs` | `clp .model.select` pin honored by `dispatch_run()`; 4-tier precedence: CLI flag > CLR_MODEL > prefs.json > default |
+| Bug reproducer BUG-008 (superseded by task 408) | `bug_reproducers_008_test.rs` | `dispatch_run()` model resolution; 4-tier precedence: CLI flag > JSON config > CLR_MODEL > config.toml; prefs.json no longer read |
 | Retry on Transient (EC-1–EC-10, EC-1–EC-7) | `retry_transient_test.rs` | `--retry-on-transient` and `--transient-delay` parse, env var, retry, exhaustion, quota exclusion |
 | CLR-layer exit codes (EC-1–EC-3) | `exit_code_contract_test.rs` | timeout→exit 4, expect mismatch→exit 3, gate bypass→exit 0 |
 | Retry on Service (EC-1–EC-10, EC-1–EC-7) | `retry_service_test.rs` | `--retry-on-service` and `--service-delay` parse, env var, retry, exhaustion, quota exclusion |
@@ -133,7 +133,7 @@
 | `expect_validation_test.rs` | `--expect`/`--expect-strategy`/`--retry-on-validation` validation loop: match, mismatch, retry, default (T01–T17). |
 | `bug_reproducers_247_test.rs` | Bug reproducer BUG-247: stdout forwarded to stderr on subprocess failure. |
 | `bug_reproducers_248_test.rs` | Bug reproducer BUG-248: `--keep-claudecode` warning when CLAUDECODE is set in env. |
-| `bug_reproducers_008_test.rs` | Bug reproducer BUG-008: `dispatch_run()` injects pinned model from `~/.clr/prefs.json`; 4-tier precedence verified (CLI flag > CLR_MODEL > prefs.json > default). |
+| `bug_reproducers_008_test.rs` | Bug reproducer BUG-008 (superseded by task 408): `dispatch_run()` model resolution is exactly 4 tiers (CLI flag > JSON config > CLR_MODEL > config.toml); `~/.clr/prefs.json` is no longer read — the redundant tier was removed since config.toml resolves earlier in the same sequence. |
 | `exit_code_contract_test.rs` | CLR-layer exit code contract: timeout→exit 4 (EC-1), expect mismatch→exit 3 (EC-2), gate bypass→exit 0 (EC-3). |
 | `retry_transient_test.rs` | `--retry-on-transient` and `--transient-delay` integration: parse, env var, CLI-wins, fake-subprocess retry/exhaustion/quota-excluded, old-flag rejected (EC-1–EC-10 param 34, EC-1–EC-7 param 35). |
 | `retry_service_test.rs` | `--retry-on-service` and `--service-delay` integration: parse, env var, CLI-wins, fake-subprocess retry/exhaustion/quota-excluded, old-flag rejected (EC-1–EC-10 param 44, EC-1–EC-7 param 45). |

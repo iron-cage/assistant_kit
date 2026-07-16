@@ -265,9 +265,11 @@ pub( super ) fn dispatch_run( tokens : &[ String ] ) -> !
     eprintln!( "Error: {e}" );
     std::process::exit( 1 );
   }
-  // Config-file tier 4: `.clr.toml` (project) / `~/.clr/config.toml` (user), applied
-  // AFTER CLR_* env vars (tier 3) but BEFORE the BUG-008 model-pref fallback below —
-  // apply_config_defaults' is_none() / !bool checks ensure higher tiers are never overwritten.
+  // Config-file tier 4 (final tier): `.clr.toml` (project) / `~/.clr/config.toml` (user),
+  // applied AFTER CLR_* env vars (tier 3) — apply_config_defaults' is_none() / !bool checks
+  // ensure higher tiers are never overwritten. Task 408 removed the BUG-008 prefs.json
+  // fallback that previously ran after this tier, since it was a no-op for anyone using
+  // config.toml's `model` key (set on `parsed.model` right here).
   match config::load_config()
   {
     Ok( config ) =>
@@ -279,17 +281,6 @@ pub( super ) fn dispatch_run( tokens : &[ String ] ) -> !
       }
     }
     Err( e ) => { eprintln!( "Error: {e}" ); std::process::exit( 1 ); }
-  }
-
-  // Fix(BUG-008): read subprocess model preference when no explicit --model / CLR_MODEL given.
-  // Root cause: read_subprocess_model_pref() was only wired into run_isolated_ext();
-  //   dispatch_run() and dispatch_ask() never read ~/.clr/prefs.json.
-  // Pitfall: when a preference-reading function is added to one dispatch path, all other
-  //   paths honoring the same preference must be updated in the same change.
-  #[ cfg( feature = "enabled" ) ]
-  if cli.model.is_none()
-  {
-    cli.model = claude_runner_core::read_subprocess_model_pref();
   }
 
   if cli.help

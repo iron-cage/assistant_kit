@@ -1,9 +1,9 @@
 meta:
   description: Cross-reference graph for feature/ and invariant/ doc instances in claude_profile
-  node_count: 59
-  edge_count: 256
+  node_count: 60
+  edge_count: 268
   component_count: 2
-  generated: 2026-07-04
+  generated: 2026-07-16
   scope_note: >
     Covers feature/ and invariant/ cross-references only. CLI entities
     (command, param, param_group, type, format, workflow_scenario) and
@@ -249,6 +249,11 @@ nodes:
   - id: feature/069
     file: feature/069_model_select_command.md
     label: Model Select Command
+    entity: feature
+
+  - id: feature/070
+    file: feature/070_account_claim_and_reservation_control.md
+    label: Account Claim And Reservation Control
     entity: feature
 
   - id: invariant/001
@@ -616,6 +621,22 @@ edges:
   - {from: feature/069, to: feature/035, label: "complementary — manages settings.json model (interactive session)"}
   - {from: feature/069, to: feature/026, label: "imodel:: — per-invocation touch/refresh subprocess model (intentionally separate)"}
 
+  # ── feature/070: Account Claim And Reservation Control ─────────────────────
+
+  - {from: feature/070, to: feature/020, label: "prepends reserve as a leading sort key ahead of this feature's strategy comparator"}
+  - {from: feature/070, to: feature/036, label: "claim_lock/reserve are orthogonal, non-ownership fields; contrast with owner/is_owned"}
+  - {from: feature/070, to: feature/037, label: "lock::/reserve:: follow the same .accounts/.usage availability as owner::/assignee::"}
+  - {from: feature/070, to: feature/038, label: "rotate::1 shares find_next_for_strategy() with footer recommendation — Gate 9 must preserve"}
+  - {from: feature/070, to: feature/063, label: "owner:: is structural precedent for lock::/reserve:: — comma-list batch, dry::1"}
+  - {from: feature/070, to: feature/065, label: "assignee:: is structural precedent for lock::/reserve::'s ungated write path"}
+
+  - {from: feature/020, to: feature/070, label: "reserve leading sort key prepended by claim_lock/reserve feature"}
+  - {from: feature/036, to: feature/070, label: "contrast: claim_lock/reserve orthogonal non-ownership fields introduced here"}
+  - {from: feature/037, to: feature/070, label: "lock::/reserve:: extend the unified param set with the same .accounts/.usage availability"}
+  - {from: feature/038, to: feature/070, label: "Gate 9 (claim_lock exclusion) inside find_first_eligible() must be preserved by rotation"}
+  - {from: feature/063, to: feature/070, label: "structural precedent for lock::/reserve:: mutation params (comma-list batch, dry::1)"}
+  - {from: feature/065, to: feature/070, label: "structural precedent for lock::/reserve::'s ungated write path (force:: without effect)"}
+
   # ── invariant/007: JSON Storage Format ─────────────────────────────────────
 
   - {from: invariant/007, to: feature/010, label: "credential store path where serde_json::to_string_pretty JSON files are written"}
@@ -796,7 +817,7 @@ edges:
 
 components:
   - id: 1
-    size: 58
+    size: 59
     isolated: false
     nodes:
       - feature/001
@@ -845,6 +866,7 @@ components:
       - feature/067
       - feature/068
       - feature/069
+      - feature/070
       - invariant/001
       - invariant/002
       - invariant/003

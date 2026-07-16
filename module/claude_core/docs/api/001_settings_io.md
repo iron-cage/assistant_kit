@@ -9,7 +9,7 @@
 
 ### Abstract
 
-`claude_core::settings_io` is the shared Layer 0 primitive for reading and writing Claude Code's flat-JSON settings files (`settings.json`, `~/.clr/prefs.json`, and similar). It hand-rolls its own JSON parsing to avoid extra dependencies, infers scalar JSON types (`Bool`/`Number`/`Str`) from raw string input, preserves nested objects/arrays verbatim as opaque raw text across round-trips, and writes atomically (temp file + rename) to prevent partial-write corruption. Originally implemented in `claude_version_core`, relocated here so `claude_profile` and `claude_runner_core` can depend on the same engine without a workspace-crate dependency.
+`claude_core::settings_io` is the shared Layer 0 primitive for reading and writing Claude Code's flat-JSON settings files (`~/.claude/settings.json` and similar). It hand-rolls its own JSON parsing to avoid extra dependencies, infers scalar JSON types (`Bool`/`Number`/`Str`) from raw string input, preserves nested objects/arrays verbatim as opaque raw text across round-trips, and writes atomically (temp file + rename) to prevent partial-write corruption. Originally implemented in `claude_version_core`, relocated here so `claude_profile` and `claude_runner_core` can depend on the same engine without a workspace-crate dependency. `claude_profile`'s `.model.select` command was the other original caller, targeting `~/.clr/prefs.json` — task 410 migrated it onto `claude_core::toml_io`'s `~/.clr/config.toml` instead, so `settings_io` now serves only `claude_version`/`claude_version_core`'s `~/.claude/settings.json` reads/writes.
 
 ### Operations
 

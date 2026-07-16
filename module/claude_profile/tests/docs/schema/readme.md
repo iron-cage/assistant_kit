@@ -19,15 +19,16 @@ surface (see `tests/docs/readme.md` Surface Index). Min 4 SC- cases per spec.
 | `005_active_marker.md` | `_active_{host}_{user}` — per-machine marker | SC-1 through SC-5 |
 | `006_settings_json.md` | `~/.claude/settings.json` — clp-managed fields | SC-1 through SC-5 |
 | `007_claude_json.md` | `~/.claude.json` — read-only OAuth state | SC-1 through SC-4 |
-| `008_clr_prefs_json.md` | `~/.clr/prefs.json` — subprocess model preference | SC-1 through SC-4 |
+| `008_clr_prefs_json.md` | `~/.clr/prefs.json` — subprocess model preference *(deprecated; task 410)* | SC-1 through SC-4 (N/A) |
 
 ### Coverage Summary
 
 | Schema Files | Total SC- Cases |
 |-------------|-----------------|
-| 8 | 37 (5+6+4+4+5+5+4+4) |
+| 8 | 37 (5+6+4+4+5+5+4+4) — 4 suspended N/A (schema 008) |
 
 ### See Also
 
 - [docs/schema/](../../../docs/schema/readme.md) — schema source docs
 - [docs/invariant/007_json_storage_format.md](../../../docs/invariant/007_json_storage_format.md) — JSON encoding invariant
+- [claude_core/docs/api/002_toml_io.md](../../../../claude_core/docs/api/002_toml_io.md) — superseding `~/.clr/config.toml` format for deprecated schema 008

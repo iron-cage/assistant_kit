@@ -197,7 +197,7 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
       fmt(),
     ],
     Box::new( models_routine ) );
-  reg_cmd( registry, ".model.select", "Get or pin the clr subprocess model preference in ~/.clr/prefs.json",
+  reg_cmd( registry, ".model.select", "Get or pin the clr subprocess model preference in ~/.clr/config.toml",
     vec![
       reg_arg_opt( "id",    Kind::String  ).with_description( "Full model ID to pin (e.g. claude-opus-4-8); use .models to list available IDs" ),
       reg_arg_opt( "reset", Kind::Integer ).with_description( "Remove the subprocess_model preference and revert to ISOLATED_DEFAULT_MODEL (1 = reset)" ),

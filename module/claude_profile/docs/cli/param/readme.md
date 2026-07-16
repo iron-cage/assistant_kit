@@ -67,9 +67,9 @@ All `clp` CLI parameters with type, default, and command coverage.
 | [061_who.md](061_who.md) | `who::` — sessions table visibility in `.usage` (auto: shown when >1 active marker) |
 | [062_owner.md](062_owner.md) | `owner::` — ownership set (`USER@MACHINE`) or release (`owner::0`); batch via comma-list `name::` |
 | [063_assignee.md](063_assignee.md) | `assignee::` — `USER@MACHINE` (or sentinel `0` = current machine) mutation param: assign/unassign active-account marker (Feature 065) |
-| [064_id.md](064_id.md) | `id::` — full model ID to pin as subprocess model via `~/.clr/prefs.json`; activates set mode on `.model.select` |
+| [064_id.md](064_id.md) | `id::` — full model ID to pin as subprocess model via `~/.clr/config.toml`; activates set mode on `.model.select` |
 | [065_offline.md](065_offline.md) | `offline::` — use static embedded model catalog instead of live `GET /v1/models`; no credentials required |
-| [066_reset.md](066_reset.md) | `reset::` — remove `subprocess_model` from `~/.clr/prefs.json`; idempotent; mutually exclusive with `id::` on `.model.select` |
+| [066_reset.md](066_reset.md) | `reset::` — remove `model` from `~/.clr/config.toml`'s user tier; idempotent; mutually exclusive with `id::` on `.model.select` |
 | [067_lock.md](067_lock.md) | `lock::` — set/clear `claim_lock` on an account; ungated write; batch via comma-list `name::` |
 | [068_reserve.md](068_reserve.md) | `reserve::` — set/clear `reserve` on an account; ungated write; batch via comma-list `name::` |
 
@@ -142,9 +142,9 @@ All `clp` CLI parameters with type, default, and command coverage.
 | 61 | `who::` | `bool` | `auto` | `0` (hide), `1` (show); omit = auto | Sessions table visibility in `.usage` output | `.usage` |
 | 62 | `owner::` | `string` | *(omit)* | `USER@MACHINE`, `0` (release) | Set ownership (`USER@MACHINE`) or release (`0`); batch via comma-list `name::` | `.accounts`, `.usage` |
 | 63 | `assignee::` | `string` | *(omit)* | `USER@MACHINE`, `0` (current machine) | Assign/unassign active-account marker; `0` sentinel expands to `$USER@$HOSTNAME` (Feature 065) | `.accounts`, `.usage` |
-| 64 | `id::` | `string` | *(omit)* | Any non-empty model ID string | Pin subprocess model to `~/.clr/prefs.json`; activates set mode when present | `.model.select` |
+| 64 | `id::` | `string` | *(omit)* | Any non-empty model ID string | Pin subprocess model to `~/.clr/config.toml`; activates set mode when present | `.model.select` |
 | 65 | `offline::` | `bool` | `0` | `0`, `1`, `false`, `true` | Use static embedded model catalog instead of live API; no network call made | `.models` |
-| 66 | `reset::` | `bool` | `0` | `0`, `1`, `false`, `true` | Remove `subprocess_model` from `~/.clr/prefs.json`; idempotent; mutually exclusive with `id::` | `.model.select` |
+| 66 | `reset::` | `bool` | `0` | `0`, `1`, `false`, `true` | Remove `model` from `~/.clr/config.toml`'s user tier; idempotent; mutually exclusive with `id::` | `.model.select` |
 | 67 | `lock::` | `bool` | *(omit)* | `0`, `1`, `false`, `true` | Set/clear `claim_lock`; ungated write; batch via comma-list `name::` | `.accounts`, `.usage` |
 | 68 | `reserve::` | `bool` | *(omit)* | `0`, `1`, `false`, `true` | Set/clear `reserve`; ungated write; batch via comma-list `name::` | `.accounts`, `.usage` |
 

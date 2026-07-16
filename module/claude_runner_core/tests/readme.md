@@ -38,6 +38,7 @@ This directory contains all functional tests for the `claude_runner_core` crate,
 | `terminal_ide_params_test.rs` | Test terminal and IDE parameter builder methods (TSK-079) |
 | `pattern_e_empty_and_edge_cases_test.rs` | Test Pattern E empty-iterator bug fix and float edge cases |
 | `isolated_test.rs` | Test IsolatedRunResult fields and RunnerError Display (T01–T08) |
+| `isolated_model_resolution_test.rs` | Test `resolve_isolated_default_model()` tiered config.toml resolution + prefs.json regression guard (tasks 407/410, T4–T7) |
 | `classify_error_test.rs` | Test classify_error() and ErrorKind variants (T01–T12, BUG-037) |
 | `bug_243_test.rs` | BUG-243 reproducer: timeout with partial stdout preserved |
 | `control_session_common/` | Shared real-`claude`-spawn helper for control-session tests (not a test binary) |

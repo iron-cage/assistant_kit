@@ -86,6 +86,7 @@ The identity set (`.accounts` default) includes: Account, Owner, Active, Current
 | [034_explicit_session_model_override.md](034_explicit_session_model_override.md) | `set_model::` available on both `.accounts` and `.usage` |
 | [064_active_marker_and_owner_redesign.md](064_active_marker_and_owner_redesign.md) | Feature 064 — `assign::1`/`for::` removed → `active::USER@MACHINE`; `unclaim::1` removed → `owner::0` |
 | [065_assignee_param_redesign.md](065_assignee_param_redesign.md) | Feature 065 — `active::` REMOVED → `assignee::USER@MACHINE`; `assignee::0` current-machine sentinel |
+| [070_account_claim_and_reservation_control.md](070_account_claim_and_reservation_control.md) | `lock::`/`reserve::` — new mutation params following the same `.accounts`/`.usage` availability as `owner::`/`assignee::` |
 
 ### Commands
 

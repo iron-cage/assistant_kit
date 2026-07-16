@@ -60,8 +60,8 @@
 | 066 | [Dual-Source OAuth Quota Parsing](066_dual_source_quota_parsing.md) | Maintain correct per-model quota data when Anthropic API format changes by parsing both named-field and `limits`-array formats | ✅ |
 | 067 | [Trace Timestamp Prefix](067_trace_timestamps.md) | Replace `[trace]` prefix with UTC timestamp on all diagnostic trace output; enables watchdog log correlation | ✅ |
 | 068 | [Models List Command](068_models_list_command.md) | `.models` command: list available Claude models via live API or static offline catalog; `name::` filter; `format::` output | ✅ |
-| 069 | [Model Select Command](069_model_select_command.md) | `.model.select` command: get/set/reset subprocess model preference in `~/.clr/prefs.json` for `clr run/ask/isolated/refresh` | ✅ |
-| 070 | [Account Claim and Reservation Control](070_account_claim_and_reservation_control.md) | `claim_lock` (Gate 9 unconditional exclusion + G9 bypassable explicit-command gate) and `reserve` (leading sort key, soft deprioritization) account properties; `lock::`/`reserve::` params | 🔄 |
+| 069 | [Model Select Command](069_model_select_command.md) | `.model.select` command: get/set/reset subprocess model preference in `~/.clr/config.toml` for `clr run/ask/isolated/refresh` | ✅ |
+| 070 | [Account Claim and Reservation Control](070_account_claim_and_reservation_control.md) | `claim_lock` (Gate 9 unconditional exclusion + G9 bypassable explicit-command gate) and `reserve` (leading sort key, soft deprioritization) account properties; `lock::`/`reserve::` params | ✅ |
 
 ### Organization
 

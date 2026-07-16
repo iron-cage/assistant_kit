@@ -86,16 +86,24 @@ pub fn touch_skip_reason(
   //   the missing quota window.
   // Pitfall: map_or(true, ...) for 7d/7d-Son — field absent means no weekly tracking on
   //   the plan; treat as "running" to avoid spurious touch for dimensions that don't exist.
+  // Fix(TSK-418): h-exhausted threshold changed from `<= 15.0` (borrowed from the
+  //   display/sort H_EXHAUSTED_THRESHOLD, TSK-190) to `<= 0.0` (true/full exhaustion) —
+  //   matching the already-correct `d7_left <= 0.0` sibling pattern.
+  // Root cause: TSK-196 (BUG-177/BUG-178) reused H_EXHAUSTED_THRESHOLD by false analogy;
+  //   a touch subprocess still succeeds and extends the window at any nonzero remaining quota.
+  // Pitfall: do not reintroduce a shared threshold with the display/sort classification —
+  //   "is a touch worth firing" and "should a human be warned" are different questions that
+  //   only happened to share a constant by historical accident.
   let five_h_running = data.five_hour.as_ref().and_then( |p| p.resets_at.as_deref() ).is_some();
   let d7_running     = data.seven_day.as_ref().map_or( true, |p| p.resets_at.is_some() );
   let son_running    = data.seven_day_sonnet.as_ref().map_or( true, |p| p.resets_at.is_some() );
   let all_running    = five_h_running && d7_running && son_running;
   let h_left  = five_hour_left( aq );
   let d7_left = seven_day_left( aq );
-  if all_running || h_left <= 15.0 || d7_left <= 0.0
+  if all_running || h_left <= 0.0 || d7_left <= 0.0
   {
     return Some( if all_running    { "skipped (reason: already active)" }
-      else if h_left  <= 15.0     { "skipped (reason: h-exhausted)"    }
+      else if h_left  <= 0.0      { "skipped (reason: h-exhausted)"    }
       else                         { "skipped (reason: 7d-exhausted)"   } );
   }
 
