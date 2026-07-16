@@ -17,6 +17,8 @@ pub( crate ) fn print_help()
     "clr scope [--dir <PATH>]".to_string(),
     "clr isolated [OPTIONS]".to_string(),
     "clr refresh [OPTIONS]".to_string(),
+    "clr query \"<MSG>\" [--dir <PATH>]".to_string(),
+    "clr query <PID> <METHOD> [ARGS...]".to_string(),
   ];
   data.groups          = vec!
   [
@@ -32,6 +34,7 @@ pub( crate ) fn print_help()
         CommandEntry { name : "ps".to_string(),       desc : "List running Claude Code sessions".to_string() },
         CommandEntry { name : "kill".to_string(),     desc : "Terminate a Claude Code session by PID".to_string() },
         CommandEntry { name : "scope".to_string(),    desc : "Print all 6 CLAUDE_* path variables for a directory".to_string() },
+        CommandEntry { name : "query".to_string(),    desc : "Start or control a PID-addressed control session".to_string() },
         CommandEntry { name : "tools".to_string(),    desc : "List all Claude Code built-in tools".to_string() },
         CommandEntry { name : "help".to_string(),     desc : "Print this help and exit".to_string() },
       ],
@@ -266,6 +269,46 @@ pub( crate ) fn print_ps_help() -> !
   println!( "  CLR_PS_ANCIENT_SECS                Seconds threshold for 🕰 Ancient flag (default: 28800)" );
   println!( "  CLR_PS_HIGH_RAM_MB                 RAM-MB threshold for 🐘 High RAM flag (default: 400)" );
   println!( "  CLR_GATE_DIR                       Directory for CLR gate state files (default: /tmp/clr-gate)" );
+  std::process::exit( 0 );
+}
+
+/// Print help for the `tools` subcommand and exit 0.
+pub( crate ) fn print_tools_help() -> !
+{
+  println!( "clr tools — List all Claude Code built-in tools" );
+  println!();
+  println!( "USAGE:" );
+  println!( "  clr tools [OPTIONS]" );
+  println!();
+  println!( "Prints a table of all Claude Code built-in tools with name, category," );
+  println!( "and description.  Supports filtering, column projection, single-value" );
+  println!( "extraction, and a key:value inspect format." );
+  println!();
+  println!( "OPTIONS:" );
+  println!( "      --name <SUBSTRING>              Filter by tool name (case-insensitive substring)" );
+  println!( "      --category <SUBSTRING>          Filter by category (case-insensitive substring)" );
+  println!( "      --columns <KEYS>                Comma-separated column keys to display" );
+  println!( "      --value <KEY>                   Print only the named column's bare value, one per line" );
+  println!( "      --inspect                       Show all 4 attributes per tool in key:value format" );
+  println!( "  -h, --help                          Show this help and exit" );
+  println!();
+  println!( "COLUMN KEYS (for --columns/--value):" );
+  println!( "  idx        #              Visible row number after filtering (1-based)" );
+  println!( "  name       Tool           Tool name" );
+  println!( "  category   Category       Tool category" );
+  println!( "  desc       Description    Tool description" );
+  println!();
+  println!( "DEFAULT COLUMNS: idx, name, category, desc" );
+  println!();
+  println!( "COMBINING RULES:" );
+  println!( "  --name and --category combine with AND logic (both must match)" );
+  println!( "  --value and --inspect are mutually exclusive (specifying both is an error)" );
+  println!( "  --columns is ignored when --value or --inspect is active" );
+  println!( "  Zero matching tools after filtering is not an error (exit 0)" );
+  println!();
+  println!( "EXIT CODES:" );
+  println!( "  0    Success (table, bare values, or inspect blocks printed — including zero matches)" );
+  println!( "  1    Error (unexpected argument, unknown --columns/--value key, or --value + --inspect combined)" );
   std::process::exit( 0 );
 }
 

@@ -11,6 +11,7 @@ mod ps;
 mod kill;
 mod tools;
 mod scope;
+mod query;
 mod summary;
 mod json_config;
 mod config;
@@ -24,6 +25,11 @@ pub use summary::{ render_summary, resolve_fields, extract_session_id };
 // Same false-positive unused_imports rationale as the summary re-export above.
 #[ allow( unused_imports ) ]
 pub use gate::gate_max_attempts_from;
+
+// tools_command_test.rs (external test) imports TOOLS via the public API for the
+// sync-guard tests (BUG-409). Same false-positive unused_imports rationale as above.
+#[ allow( unused_imports ) ]
+pub use tools::TOOLS;
 
 use claude_runner_core::{ ClaudeCommand, EffortLevel, IsolatedModel };
 use claude_storage_core::SessionId;
@@ -43,6 +49,7 @@ pub( super ) use ps::dispatch_ps;
 pub( super ) use kill::dispatch_kill;
 pub( super ) use tools::dispatch_tools;
 pub( crate ) use scope::dispatch_scope;
+pub( super ) use query::{ dispatch_query, run_query_daemon };
 
 pub( super ) use parse::parse_args;
 pub( super ) use env::apply_env_vars;
@@ -64,7 +71,7 @@ pub( super ) fn handle_dry_run( builder : &ClaudeCommand )
 // Fix(BUG-212): `run` was absent; typing `clr running` produced no helpful error.
 // Root cause: list was never updated when `run` became an explicit subcommand.
 // Pitfall: update both this list and the dispatch match in lib.rs when adding a subcommand.
-const KNOWN_SUBCOMMANDS : &[ &str ] = &[ "run", "ask", "isolated", "refresh", "help", "ps", "kill", "tools", "scope" ];
+const KNOWN_SUBCOMMANDS : &[ &str ] = &[ "run", "ask", "isolated", "refresh", "help", "ps", "kill", "tools", "scope", "query" ];
 
 // Fix(BUG-225): Guard against typos/truncations of known subcommand names.
 // Root cause: `run_cli()` dispatched subcommands by exact string match only — any
