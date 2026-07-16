@@ -45,6 +45,9 @@
 //! | TC-530 | install interrupted after lock applied but before preference stored → all 6 rows report TRUE mismatch, none UNVERIFIABLE | P | 0 |
 //! | TC-531 | unpinned install, `autoUpdates` explicit `"true"` → compliant, no mismatch | P | 0 |
 //! | TC-532 | unpinned install, `autoUpdates` drifted to `"false"` → flagged mismatch | P | 0 |
+//! | TC-534 | `format::json`, pinned, real `autoUpdates` drift → `"compliant":false` | P | 0 |
+//! | TC-535 | settings.json genuinely absent (not even `{}`) at `v::2` → not treated as unreadable | P | 0 |
+//! | TC-536 | versions dir chmod 700 (anomalous), pinned → `chmod` flagged mismatch | P | 0 |
 
 use tempfile::TempDir;
 
@@ -741,4 +744,83 @@ fn tc532_status_lock_unpinned_autoupdates_false_drift_flagged()
   let line = text.lines().find( | l | l.contains( "autoUpdates:" ) )
     .unwrap_or_else( || panic!( "no autoUpdates line in output: {text}" ) );
   assert!( line.contains( "MISMATCH" ), "autoUpdates=false while unpinned must be flagged MISMATCH: {line}" );
+}
+
+// TC-534 (MAAV Round 6 fresh-challenger finding): format::json variant of a
+// real drift — render_lock_json's `Mismatch => "false"` arm (status.rs:216)
+// had zero test coverage. The only 2 pre-existing JSON-format lock tests
+// (TC-521, TC-524) never produce an actual Mismatch row: TC-521 is fully
+// compliant, TC-524 is fully Unverifiable. Mutating that arm to always
+// return `"true"` would fail no existing test.
+#[ cfg( unix ) ]
+#[ test ]
+fn tc534_status_lock_json_mismatch_compliant_false()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_pinned_settings( dir.path(), "2.1.78", "true" ); // drifted — pinned expects false
+  write_versions_dir( dir.path(), 0o555 );
+
+  let out = run_clv_with_env( &[ ".status", "format::json" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  let entry = lock_json_entry( &text, "autoUpdates" );
+  assert!(
+    entry.contains( "\"compliant\":false" ),
+    "autoUpdates entry must report compliant:false for a real drift, got: {entry}"
+  );
+}
+
+// TC-535 (MAAV Round 6 fresh-challenger finding): a genuinely-absent
+// `settings.json` (no `write_settings( .. )` call at all — not even an empty
+// `{}`) at `v::2` — proves the `NotFound` exclusion (status.rs:100-102)
+// doesn't cascade into the Unverifiable path. Every pre-existing `v::2`+ test
+// writes a settings.json file (TC-518/TC-522 write an explicit empty `{}`);
+// the one truly-absent-settings test (TC-096) runs at default verbosity and
+// never reaches `compute_lock_rows`.
+#[ cfg( unix ) ]
+#[ test ]
+fn tc535_status_lock_settings_file_genuinely_absent_not_unverifiable()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  // Deliberately no write_settings( .. ) call — settings.json does not exist.
+  write_versions_dir( dir.path(), 0o755 );
+
+  let out = run_clv_with_env( &[ ".status", "v::2" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "Lock:" ), "missing Lock: section: {text}" );
+  assert!(
+    !text.contains( "could not be read" ),
+    "a genuinely-missing settings.json must not be treated as unreadable: {text}"
+  );
+  assert!( !text.contains( "UNVERIFIABLE" ), "genuinely-missing settings.json must not show UNVERIFIABLE: {text}" );
+  assert!( !text.contains( "MISMATCH" ), "expected no mismatch for a fresh install with no settings.json: {text}" );
+}
+
+// TC-536 (MAAV Round 6 fresh-challenger finding): versions dir chmod'd to an
+// anomalous mode (700 — neither 555 nor 755) on a pinned install →
+// `VersionsDirLockMode::Unknown` must still fall through to the normal
+// comparison and be flagged MISMATCH, per the source's own doc comment claim
+// at status.rs:148-150. Previously untested — only `Locked`(555)/`Unlocked`(755)
+// modes were ever exercised.
+#[ cfg( unix ) ]
+#[ test ]
+fn tc536_status_lock_chmod_unknown_mode_flagged_mismatch()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_pinned_settings( dir.path(), "2.1.78", "false" );
+  write_versions_dir( dir.path(), 0o700 ); // anomalous — neither 555 nor 755
+
+  let out = run_clv_with_env( &[ ".status", "v::2" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  let chmod_line = text.lines().find( | l | l.contains( "chmod" ) )
+    .unwrap_or_else( || panic!( "no chmod line in output: {text}" ) );
+  assert!(
+    chmod_line.contains( "unknown" ) && chmod_line.contains( "MISMATCH" ),
+    "chmod line must show actual 'unknown' and MISMATCH for an anomalous mode: {chmod_line}"
+  );
 }

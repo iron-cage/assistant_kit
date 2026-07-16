@@ -81,6 +81,8 @@ Boundary set: 0, 1, 2, 3 (out-of-range).
 | install interrupted (preference recorded, mechanism not yet applied) | `preferredVersionSpec`/`preferredVersionResolved` are set but the lock-mechanism keys and `chmod` are still at unpinned defaults | True mismatch flagged on all 6 rows — never `UNVERIFIABLE` (settings.json is fully readable) and never silently `Compliant` |
 | unpinned, `autoUpdates` explicit `"true"` | Value is `true` (not absent) while unpinned | No mismatch — exercises the OR's second disjunct, not just the absent-value case |
 | unpinned, `autoUpdates` drifted to `"false"` | Value is `false` while unpinned (expects `true`/absent) | Mismatch flagged |
+| settings.json genuinely absent (file does not exist at all) | No `settings.json` file on disk — distinct from an empty `{}` file | No mismatch, never treated as unreadable (`NotFound` exclusion) |
+| versions dir chmod anomalous (e.g. `700`) | Mode is neither `555` nor `755` (`VersionsDirLockMode::Unknown`) on a pinned install | Mismatch flagged — `Unknown` still falls through to the normal comparison |
 
 ---
 
@@ -116,6 +118,9 @@ Boundary set: 0, 1, 2, 3 (out-of-range).
 | IT-28 | `.status v::2` install interrupted after preference stored but before mechanism applied → all 6 rows report TRUE mismatch, none `UNVERIFIABLE` | P | 0 | F7=install interrupted | [read_status_test.rs] |
 | IT-29 | `.status v::2` unpinned, `autoUpdates` explicit `"true"` → compliant, no mismatch | P | 0 | F7=autoUpdates unpinned explicit true | [read_status_test.rs] |
 | IT-30 | `.status v::2` unpinned, `autoUpdates` drifted to `"false"` → mismatch flagged | P | 0 | F7=autoUpdates unpinned drifted | [read_status_test.rs] |
+| IT-31 | `.status format::json` pinned, real `autoUpdates` drift → `"compliant":false` | P | 0 | F2=json, F7=autoUpdates drifted | [read_status_test.rs] |
+| IT-32 | `.status v::2` settings.json genuinely absent (no file at all) → not treated as unreadable, no mismatch | P | 0 | F7=settings genuinely absent | [read_status_test.rs] |
+| IT-33 | `.status v::2` pinned, versions dir chmod anomalous (700) → `chmod` mismatch flagged | P | 0 | F7=chmod anomalous mode | [read_status_test.rs] |
 
 ### Negative Tests
 
@@ -128,11 +133,11 @@ Boundary set: 0, 1, 2, 3 (out-of-range).
 
 ### Summary
 
-- **Total:** 30 tests (26 positive, 4 negative)
-- **Negative ratio:** 13.3% (command-specific only) — below ≥40% threshold; 4 additional cross-cutting tests in `read_status_test.rs` also apply to `.status` among other commands: 3 negative (`tc242_unknown_format_exits_1`, `tc243_uppercase_format_exits_1`, `tc244_empty_format_exits_1`) and 1 positive (`tc245_last_occurrence_wins_for_verbosity` — exit 0, verifies last-`v::`-wins precedence, not an error case)
+- **Total:** 33 tests (29 positive, 4 negative)
+- **Negative ratio:** 12.1% (command-specific only) — below ≥40% threshold; 4 additional cross-cutting tests in `read_status_test.rs` also apply to `.status` among other commands: 3 negative (`tc242_unknown_format_exits_1`, `tc243_uppercase_format_exits_1`, `tc244_empty_format_exits_1`) and 1 positive (`tc245_last_occurrence_wins_for_verbosity` — exit 0, verifies last-`v::`-wins precedence, not an error case)
 - **Existing cross-cutting negatives applying to `.status`:** `tc242` (`format::xml`), `tc243` (`format::JSON`), `tc244` (`format::`)
-- **Combined negative count (command-specific + cross-cutting):** 7/34 = 20.6% ❌ (below ≥40% threshold; informational metric only, not a blocking gate for this spec)
-- **TC range:** IT-1 to IT-30
+- **Combined negative count (command-specific + cross-cutting):** 7/37 = 18.9% ❌ (below ≥40% threshold; informational metric only, not a blocking gate for this spec)
+- **TC range:** IT-1 to IT-33
 
 ---
 
@@ -142,7 +147,7 @@ Boundary set: 0, 1, 2, 3 (out-of-range).
 
 | Exit Code | Meaning | Tests |
 |-----------|---------|-------|
-| 0 | Success (always — .status never errors) | IT-1 through IT-9, IT-13 through IT-18, IT-20 through IT-30 |
+| 0 | Success (always — .status never errors) | IT-1 through IT-9, IT-13 through IT-18, IT-20 through IT-33 |
 | 1 | Invalid arguments | IT-10 through IT-12, IT-19 |
 | 2 | Not applicable (.status always exits 0 for any valid state) | — |
 
@@ -165,7 +170,7 @@ guessing at a possibly-wrong compliance verdict (IT-21 through IT-23).
 | F4 (HOME) | IT-1 (set), IT-7 (empty) | — |
 | F5 (preference) | IT-8 (absent), IT-9 (set) | — |
 | F6 (unknown params) | — | IT-12 |
-| F7 (lock-state) | IT-13 (pinned compliant), IT-14 (chmod drift), IT-15 (autoUpdates drift), IT-16 (unpinned compliant), IT-18 (json), IT-20 (dir absent), IT-21 (settings corrupted), IT-22 (settings corrupted, json), IT-23 (settings permission-denied), IT-24 (autoUpdatesChannel drift), IT-25 (minimumVersion drift), IT-26 (env.DISABLE_AUTOUPDATER drift), IT-27 (env.DISABLE_UPDATES drift), IT-28 (install interrupted), IT-29 (autoUpdates unpinned explicit true), IT-30 (autoUpdates unpinned drift) | — |
+| F7 (lock-state) | IT-13 (pinned compliant), IT-14 (chmod drift), IT-15 (autoUpdates drift), IT-16 (unpinned compliant), IT-18 (json), IT-20 (dir absent), IT-21 (settings corrupted), IT-22 (settings corrupted, json), IT-23 (settings permission-denied), IT-24 (autoUpdatesChannel drift), IT-25 (minimumVersion drift), IT-26 (env.DISABLE_AUTOUPDATER drift), IT-27 (env.DISABLE_UPDATES drift), IT-28 (install interrupted), IT-29 (autoUpdates unpinned explicit true), IT-30 (autoUpdates unpinned drift), IT-31 (autoUpdates drift, json), IT-32 (settings genuinely absent), IT-33 (chmod anomalous mode) | — |
 
 ---
 
@@ -448,6 +453,71 @@ evidence by invoking the real `.version.install` command and observing the reord
 
 ---
 
+### IT-29: Unpinned, `autoUpdates` explicit `"true"` → compliant, no mismatch
+
+MAAV-found coverage gap (Round 5, A8): the unpinned `autoUpdates` comparison (`status.rs:126`) is a
+two-way OR — `actual.is_none() || actual == Some("true")`. IT-16 only ever exercised the `is_none()`
+disjunct (empty settings); no prior test set `autoUpdates` to the literal string `"true"` while unpinned,
+so deleting the `== Some("true")` disjunct entirely would not have failed any existing test.
+
+- **Given:** `HOME=<tmp>`; `settings.json` has `autoUpdates: "true"`, no preference set; versions dir `chmod 755`.
+- **When:** `clv .status v::2`
+- **Then:** exit 0; `autoUpdates` line shows no `MISMATCH`
+
+---
+
+### IT-30: Unpinned, `autoUpdates` drifted to `"false"` → mismatch flagged
+
+Companion to IT-29 (MAAV-found, Round 5, A8): a genuine unpinned drift (`autoUpdates` explicitly `"false"`
+with no preference stored) must still be flagged, confirming the OR's `is_none()` disjunct doesn't
+accidentally swallow every value.
+
+- **Given:** `HOME=<tmp>`; `settings.json` has `autoUpdates: "false"`, no preference set; versions dir `chmod 755`.
+- **When:** `clv .status v::2`
+- **Then:** exit 0; `autoUpdates` line shows `MISMATCH`
+
+---
+
+### IT-31: `format::json` variant — real `autoUpdates` drift → `"compliant":false`
+
+MAAV-found coverage gap (Round 6 Fresh Challenger, on A3): `render_lock_json`'s `Mismatch => "false"` arm
+(`status.rs:216`) had zero test coverage. The only 2 pre-existing JSON-format lock tests (IT-18/tc521,
+IT-22/tc524) never produce an actual Mismatch row — IT-18 is fully compliant, IT-22 is fully
+`Unverifiable`. Mutating that arm to always return `"true"` would have failed no existing test.
+
+- **Given:** `HOME=<tmp>`; pinned install; `autoUpdates` is `"true"` instead of the pinned `"false"`; versions dir `chmod 555`.
+- **When:** `clv .status format::json`
+- **Then:** exit 0; the `autoUpdates` JSON entry shows `"compliant":false`
+
+---
+
+### IT-32: settings.json genuinely absent (no file at all) → not treated as unreadable, no mismatch
+
+MAAV-found coverage gap (Round 6 Fresh Challenger, on A3): every pre-existing `v::2`+ test writes a
+`settings.json` file, even when empty (IT-16/tc518 and IT-20/tc522 both write an explicit empty `{}`) —
+none ever left the file genuinely absent. The one truly-absent-settings test (IT-2/tc096) runs at default
+verbosity and never reaches `compute_lock_rows`, so the `NotFound` exclusion (`status.rs:100-102`) was
+never proven not to cascade into the `Unverifiable` path at `v::2`+.
+
+- **Given:** `HOME=<tmp>`; no `settings.json` file written at all; versions dir `chmod 755`.
+- **When:** `clv .status v::2`
+- **Then:** exit 0; `Lock:` section present; no "could not be read" note; no row shows `UNVERIFIABLE`; no row shows `MISMATCH`
+
+---
+
+### IT-33: Pinned, versions dir chmod anomalous (700) → `chmod` mismatch flagged
+
+MAAV-found coverage gap (Round 6 Fresh Challenger, on A3): `chmod_status`'s fallthrough arm
+(`status.rs:151-155`) was only ever exercised with `Locked`(555)/`Unlocked`(755) modes. The source's own
+doc comment explicitly claims a genuinely wrong mode on an existing directory (`VersionsDirLockMode::Unknown`)
+"still falls through to the normal comparison and is correctly flagged" — an untested claim prior to this case.
+
+- **Given:** `HOME=<tmp>`; pinned install, otherwise fully compliant; versions dir `chmod 700` (neither 555 nor 755).
+- **When:** `clv .status v::2`
+- **Then:** exit 0; `chmod` line shows actual `unknown` and `MISMATCH`
+
+---
+
 ### Source Functions
 
 | Function | File |
@@ -478,6 +548,11 @@ evidence by invoking the real `.version.install` command and observing the reord
 | `tc528_status_lock_disable_autoupdater_drift_flagged` | `tests/cli/read_status_test.rs` |
 | `tc529_status_lock_disable_updates_drift_flagged` | `tests/cli/read_status_test.rs` |
 | `tc530_status_lock_interrupted_install_reports_true_mismatch` | `tests/cli/read_status_test.rs` |
+| `tc531_status_lock_unpinned_autoupdates_explicit_true_compliant` | `tests/cli/read_status_test.rs` |
+| `tc532_status_lock_unpinned_autoupdates_false_drift_flagged` | `tests/cli/read_status_test.rs` |
+| `tc534_status_lock_json_mismatch_compliant_false` | `tests/cli/read_status_test.rs` |
+| `tc535_status_lock_settings_file_genuinely_absent_not_unverifiable` | `tests/cli/read_status_test.rs` |
+| `tc536_status_lock_chmod_unknown_mode_flagged_mismatch` | `tests/cli/read_status_test.rs` |
 | `tc242_unknown_format_exits_1` | `tests/cli/read_status_test.rs` |
 | `tc243_uppercase_format_exits_1` | `tests/cli/read_status_test.rs` |
 | `tc244_empty_format_exits_1` | `tests/cli/read_status_test.rs` |
