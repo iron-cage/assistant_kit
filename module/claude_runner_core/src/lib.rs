@@ -113,11 +113,11 @@ pub use crate::isolated::run_isolated;
 #[ cfg( feature = "enabled" ) ]
 pub use crate::isolated::run_isolated_ext;
 
-/// Re-export of [`crate::isolated::read_subprocess_model_pref`].
+/// Re-export of [`crate::isolated::resolve_isolated_default_model`].
 ///
-/// Reads `subprocess_model` from `~/.clr/prefs.json`.
-/// Returns `None` if the file is absent, unreadable, or the key is missing/empty.
-/// Used by `dispatch_run()` to apply the pinned model preference when no `--model` flag
-/// or `CLR_MODEL` env var is set.
+/// Resolves `IsolatedModel::Default`'s model preference across both tiers:
+/// project `.clr.toml` → user `~/.clr/config.toml`.
+/// Returns `None` if nothing is set at either tier. Used by `run_isolated_ext()`'s
+/// `IsolatedModel::Default` match arm.
 #[ cfg( feature = "enabled" ) ]
-pub use crate::isolated::read_subprocess_model_pref;
+pub use crate::isolated::resolve_isolated_default_model;

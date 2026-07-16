@@ -95,7 +95,7 @@ clp .model set::bad
 
 ### Command: 20. `.model.select`
 
-Get, set, or reset the subprocess model preference in `~/.clr/prefs.json`. Subprocess model controls which Claude model `clr run`, `clr ask`, `clr isolated`, and `clr refresh` use. Without parameters, prints the current pinned model. With `id::`, writes the preference. With `reset::1`, removes it.
+Get, set, or reset the subprocess model preference in `~/.clr/config.toml`. Subprocess model controls which Claude model `clr run`, `clr ask`, `clr isolated`, and `clr refresh` use. Without parameters, prints the current pinned model. With `id::`, writes the preference. With `reset::1`, removes it.
 
 -- **Parameters:** [`id::`](../param/064_id.md), [`reset::`](../param/066_reset.md), [`format::`](../param/002_format.md)
 -- **Exit:** 0 (success) | 1 (usage: empty `id::`, or `id::` and `reset::1` together) | 2 (runtime: HOME not set)
@@ -111,30 +111,30 @@ clp .model.select reset::1                # reset to ISOLATED_DEFAULT_MODEL
 | Parameter | Type | Default | Purpose |
 |-----------|------|---------|---------|
 | `id::` | `string` | *(omit)* | Full model ID to pin; activates set mode; non-empty required |
-| `reset::` | `bool` | `0` | Remove `subprocess_model` key from `~/.clr/prefs.json`; idempotent |
+| `reset::` | `bool` | `0` | Remove `model` key from `~/.clr/config.toml`'s user tier; idempotent |
 | `format::` | [`OutputFormat`](../type/002_output_format.md) | `text` | Output format (get mode only) |
 
 **Mode dispatch:**
 
 | `id::` | `reset::` | Mode |
 |--------|-----------|------|
-| absent | `0` (default) | get — read `subprocess_model` from `~/.clr/prefs.json` |
-| present | `0` (default) | set — validate non-empty, write to `~/.clr/prefs.json` |
-| absent | `1` | reset — remove `subprocess_model` key; create or preserve file |
+| absent | `0` (default) | get — read `model` from `~/.clr/config.toml`'s user tier |
+| present | `0` (default) | set — validate non-empty, write to `~/.clr/config.toml`'s user tier |
+| absent | `1` | reset — remove `model` key; create or preserve file |
 | present | `1` | error — exit 1; stderr: `id:: and reset::1 are mutually exclusive` |
 
 **Algorithm (get, 2 steps):**
-1. Read `~/.clr/prefs.json`; extract `subprocess_model` field; returns `None` when absent or file missing
-2. Render `"model.select: VALUE"` (or `"model.select: (unset)"`) in requested `format::`
+1. Read `~/.clr/config.toml`'s user tier; extract `model` key; returns `None` when absent or file missing
+2. Render `"model.select: VALUE"` (or `"model.select: (unset)"`) in requested `format::` — JSON output always uses the `subprocess_model` key, independent of the `model` backing-store key name
 
 **Algorithm (set, 3 steps):**
 1. Validate `id::VALUE` is non-empty — exit 1 on empty with `id:: must be a non-empty model ID` in stderr
-2. Read `~/.clr/prefs.json` (or start with `{}`); set `subprocess_model = VALUE`; write back (create dir if needed)
+2. Create `~/.clr/config.toml`'s parent `.clr` directory if absent; set `model = VALUE` in the file's user tier; write back (preserves other keys)
 3. Print `"model.select: VALUE (pinned)"` to stdout; exit 0
 
 **Algorithm (reset, 3 steps):**
-1. If `~/.clr/prefs.json` absent — print `"model.select: (reset to default)"` and exit 0 (idempotent)
-2. Read file; remove `subprocess_model` key; preserve all other keys; write back
+1. If `~/.clr/config.toml` absent — print `"model.select: (reset to default)"` and exit 0 (idempotent)
+2. Read file; remove `model` key; preserve all other keys; write back
 3. Print `"model.select: (reset to default)"` to stdout; exit 0
 
 **Examples:**
@@ -175,7 +175,7 @@ clp .model.select id::claude-opus-4-8 reset::1
 
 | # | Schema | Role |
 |---|--------|------|
-| 1 | [CLR Preferences (`~/.clr/prefs.json`)](../../schema/008_clr_prefs_json.md) | Storage for `subprocess_model` preference |
+| 1 | [claude_core toml_io (`~/.clr/config.toml`)](../../../../claude_core/docs/api/002_toml_io.md) | Flat-TOML format storing the `model` preference |
 
 ### Referenced Formats
 

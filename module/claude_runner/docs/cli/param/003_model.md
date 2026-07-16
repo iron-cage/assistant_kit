@@ -4,7 +4,7 @@ Select the Claude model for this invocation.
 
 - **Type:** [`ModelName`](../type/04_model_name.md)
 - **Default:** — (Claude Code default)
-- **Fallback:** when `--model` is absent and `CLR_MODEL` is unset: `model` from `.clr.toml` (project) / `~/.clr/config.toml` (user, project overrides user) if set; otherwise `subprocess_model` from `~/.clr/prefs.json` (set via `clp .model.select`); falls through to the Claude Code binary default when neither preference is set.
+- **Fallback:** when `--model` is absent and `CLR_MODEL` is unset: `model` from `.clr.toml` (project) / `~/.clr/config.toml` (user, project overrides user) if set; falls through to the Claude Code binary default when neither config-file tier sets a value.
 - **Command:** [`run`](../command/01_run.md)
 - **Group:** [Claude-Native Flags](../param_group/01_claude_native_flags.md)
 - **Validation:** requires a value; `--model` at end of argv → error

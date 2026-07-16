@@ -19,17 +19,28 @@
 //!
 //! ## Fix Applied
 //!
-//! `read_subprocess_model_pref()` exposed as `pub fn` and re-exported from `claude_runner_core`.
-//! `dispatch_run()` now reads the preference after `apply_env_vars()`, guarded by
-//! `cli.model.is_none()` so an explicit `--model` flag or `CLR_MODEL` env var always wins.
-//! `dispatch_ask()` is a pure alias calling `dispatch_run()` — fixed automatically.
+//! Originally, `read_subprocess_model_pref()` was exposed as `pub fn`, re-exported from
+//! `claude_runner_core`, and read directly by `dispatch_run()` after `apply_env_vars()` as a
+//! 5th resolution tier, guarded by `cli.model.is_none()`. Task 408 removed that direct read:
+//! `apply_config_defaults()` (`config.rs:140`) already fills `cli.model` from `config.toml`
+//! earlier in the same `dispatch_run()`/`dispatch_ask()` sequence, making the `prefs.json` read
+//! a no-op for anyone using `config.toml`. Task 408 carried forward any existing `prefs.json`
+//! pin into `config.toml`'s user tier once (a one-time data-preservation step, not shipped code)
+//! so `.model.select` pins predating this change keep working — then deleted the now-redundant
+//! read. `dispatch_run()`'s resolution is now exactly 4 tiers: `--model` flag → JSON config →
+//! `CLR_MODEL` env → `config.toml`. `dispatch_ask()` is a pure alias calling `dispatch_run()` —
+//! updated automatically.
 //!
 //! ## Prevention
 //!
 //! When a preference-reading function is added to one dispatch path, all other paths honoring
 //! the same preference must be updated in the same change — otherwise partial implementation
 //! creates a misleading success message with no actual effect on the uncovered paths.
-//! See fix comment in `module/claude_runner/src/cli/mod.rs` `dispatch_run()`.
+//! Conversely, when a second, earlier-resolving tier for the same preference is introduced
+//! (as `config.toml` was for `prefs.json` here), the older/redundant tier must be either
+//! removed or clearly justified as intentionally distinct — a silently-redundant tier is dead
+//! logic wearing a live test suite. See fix comment in `module/claude_runner/src/cli/mod.rs`
+//! `dispatch_run()`.
 //!
 //! ## Pitfall
 //!
@@ -40,18 +51,27 @@
 //! that only see the one wired path. When adding preference-reading or environment-reading
 //! behavior to any dispatch path, explicitly audit all other executing dispatch paths
 //! (`dispatch_run`, `dispatch_ask`, `run_isolated_ext`) for the same wiring in the same PR.
+//! Symmetrically: when two tiers end up resolving the same preference because a newer tier's
+//! own earlier-in-sequence application makes an older tier's check a no-op, that redundancy is
+//! easy to miss precisely because the older tier's tests still pass — they just no longer
+//! exercise the code path they believe they do once the newer tier is also set.
 
 mod cli_binary_test_helpers;
 use cli_binary_test_helpers::run_cli_with_env;
 
-// ── BUG-008-1: prefs.json pin injected as --model when no explicit --model ────
+// ── BUG-008-1 (superseded by task 408): prefs.json alone no longer injects a model ──
 
-/// BUG-008: `dispatch_run_uses_pinned_model_from_prefs_json`
+/// BUG-008 (superseded): `dispatch_run_prefs_json_alone_no_longer_injects_model`
 ///
-/// Without `--model` flag, the model stored in `~/.clr/prefs.json` under
-/// `subprocess_model` is injected as `--model` in the assembled command.
+/// Supersedes the original `dispatch_run_uses_pinned_model_from_prefs_json` (Test
+/// Matrix T5, task 408). `dispatch_run()` no longer reads `~/.clr/prefs.json` at
+/// all — `config.toml`'s `model` field already resolves earlier in the same
+/// dispatch sequence via `apply_config_defaults()`, making the direct `prefs.json`
+/// read redundant. With only `prefs.json`'s `subprocess_model` set (no `--model`
+/// flag, no `CLR_MODEL` env, no `config.toml` `model` key), no `--model` flag is
+/// injected — the Claude binary's own default model applies.
 #[ test ]
-fn dispatch_run_uses_pinned_model_from_prefs_json()
+fn dispatch_run_prefs_json_alone_no_longer_injects_model()
 {
   let home_dir = tempfile::TempDir::new().expect( "failed to create temp HOME dir" );
   let clr_dir  = home_dir.path().join( ".clr" );
@@ -67,21 +87,21 @@ fn dispatch_run_uses_pinned_model_from_prefs_json()
   assert!( out.status.success(), "exit must be 0: {out:?}" );
   let stdout   = String::from_utf8_lossy( &out.stdout );
   assert!(
-    stdout.contains( "--model" ),
-    "assembled command must contain --model when prefs.json pins a model. Got:\n{stdout}"
-  );
-  assert!(
-    stdout.contains( "claude-opus-4-6" ),
-    "assembled command must contain the pinned model value. Got:\n{stdout}"
+    !stdout.contains( "--model" ),
+    "prefs.json alone must no longer inject --model — the redundant fallback tier \
+     was removed by task 408 (config.toml resolves earlier in the same sequence). Got:\n{stdout}"
   );
 }
 
-// ── BUG-008-2: explicit --model flag wins over prefs.json ─────────────────────
+// ── BUG-008-2: explicit --model flag resolves regardless of prefs.json content ─
 
 /// BUG-008: explicit `--model` CLI flag wins over `~/.clr/prefs.json` pin.
 ///
-/// The `cli.model.is_none()` guard ensures `apply_env_vars()` / CLI flag values
-/// always take precedence over the preference file.
+/// Since task 408, `dispatch_run()` never reads `prefs.json` at all, so this
+/// holds trivially rather than via an `is_none()` guard racing prefs.json — the
+/// explicit flag is set directly by `parse_args()` before `config.rs`/`prefs.json`
+/// tiers are even consulted. `prefs.json` is written here only to prove its
+/// content has zero effect on the outcome, not because it is read and overridden.
 #[ test ]
 fn dispatch_run_explicit_model_flag_wins_over_pref()
 {
@@ -111,12 +131,15 @@ fn dispatch_run_explicit_model_flag_wins_over_pref()
   );
 }
 
-// ── BUG-008-4: CLR_MODEL env var (tier 3) beats prefs.json pin (tier 4) ───────
+// ── BUG-008-4: CLR_MODEL env var resolves regardless of prefs.json content ────
 
 /// BUG-008: `CLR_MODEL` env var wins over `~/.clr/prefs.json` pin.
 ///
-/// Precedence: CLI flag > `CLR_MODEL` > `prefs.json`. `apply_env_vars()` sets `cli.model` from
-/// `CLR_MODEL` before the prefs-read block fires; the `is_none()` guard then skips prefs.
+/// Precedence is now exactly: CLI flag > JSON config > `CLR_MODEL` > `config.toml`
+/// (task 408 removed the `prefs.json` tier entirely). `apply_env_vars()` sets
+/// `cli.model` from `CLR_MODEL`; `dispatch_run()` never reaches `prefs.json`
+/// afterward because that read no longer exists. `prefs.json` is written here
+/// only to prove its content has zero effect, not because it is read and beaten.
 #[ test ]
 fn dispatch_run_clr_model_env_var_beats_prefs_json()
 {
@@ -146,12 +169,15 @@ fn dispatch_run_clr_model_env_var_beats_prefs_json()
   );
 }
 
-// ── BUG-008-3: no --model injected when prefs.json absent ─────────────────────
+// ── BUG-008-3: no --model injected when nothing is configured anywhere ────────
 
-/// BUG-008: without `prefs.json`, no `--model` flag is injected.
+/// BUG-008: without `prefs.json`, `config.toml`, `CLR_MODEL`, or `--model`, no
+/// `--model` flag is injected (Test Matrix T6, task 408 — unchanged behavior).
 ///
-/// `read_subprocess_model_pref()` returns `None` when `~/.clr/prefs.json` is absent —
-/// the assembled command must not include `--model`.
+/// Since task 408, `dispatch_run()` no longer reads `prefs.json` at all, so its
+/// absence here is incidental rather than the operative condition — the same
+/// temp `HOME` also has no `config.toml`, so this is the "nothing set anywhere"
+/// case: the assembled command must not include `--model`.
 #[ test ]
 fn dispatch_run_no_model_injected_when_prefs_absent()
 {

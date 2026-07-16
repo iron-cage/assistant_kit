@@ -13,6 +13,7 @@ including model-capability constraints and touch trigger conditions.
 | AC-3 | `active` (resets_at=Some) — all windows running, touch skips | Transition | ✅ |
 | AC-4 | `exhausted` (7d) — account skipped from touch | Boundary | ✅ |
 | AC-5 | Model-capability constraint — Haiku cannot activate 7d-Sonnet window (BUG-289) | Invariant | ✅ |
+| AC-6 | `exhausted` (5h) — account skipped from touch, full exhaustion only (TSK-418) | Boundary | ✅ |
 
 ---
 
@@ -47,7 +48,7 @@ including model-capability constraints and touch trigger conditions.
 - **Given:** An account where all quota windows have `resets_at = Some(timestamp)` (all windows
   in `active` state, none idle).
 - **When:** `apply_touch()` evaluates the idle-window predicate.
-- **Then:** Touch does NOT fire. The `reason: all_running` skip-reason is emitted in trace mode.
+- **Then:** Touch does NOT fire. The `reason: already active` skip-reason is emitted in trace mode.
   All windows are `active` — no window needs to be opened.
 - **Source fn:** `it_apply_touch_trigger_skips_resets_at_some` in
   `tests/usage/touch_tests.rs`
@@ -60,7 +61,7 @@ including model-capability constraints and touch trigger conditions.
 - **Given:** An account with `seven_day_left ≤ 0.0%` (7d window exhausted). Even if the 5h
   window is idle, the account has negligible remaining capacity.
 - **When:** `apply_touch()` evaluates the weekly-exhausted gate.
-- **Then:** Account is skipped. Touch does NOT fire. `reason: weekly-exhausted` is emitted.
+- **Then:** Account is skipped. Touch does NOT fire. `reason: 7d-exhausted` is emitted.
   Opening a new session window on an exhausted account would consume remaining headroom
   without benefit.
 - **Source fn:** `test_mre_bug214_apply_touch_skips_7d_exhausted_account` in
@@ -80,5 +81,22 @@ including model-capability constraints and touch trigger conditions.
   Fix: `resolve_model(Auto)` selects Sonnet when `son_idle=true`. Sonnet-family API calls
   are the ONLY mechanism that can transition the 7d-Sonnet window from `idle` to `active`.
 - **Source fn:** `test_mre_bug289_son_running_false_haiku_touch_fires_on_every_call` in
+  `tests/usage/touch_tests.rs`
+- **Source:** [state_machine/003_session_window_lifecycle.md](../../../docs/state_machine/003_session_window_lifecycle.md)
+
+---
+
+### AC-6: `exhausted` (5h) — account skipped from touch, full exhaustion only (TSK-418)
+
+- **Given:** An account with `five_hour_left ≤ 0.0%` (5h window fully exhausted — utilization
+  100%). Even if the 5h `resets_at` is absent (idle) or another window is idle, full 5h
+  exhaustion overrides.
+- **When:** `apply_touch()` evaluates the h-exhausted gate.
+- **Then:** Account is skipped. Touch does NOT fire. `reason: h-exhausted` is emitted. The
+  threshold is full/literal exhaustion (`≤ 0.0%`) — NOT the 15%-remaining
+  `H_EXHAUSTED_THRESHOLD` used for display/sort classification (TSK-190). A partially-exhausted
+  account (e.g. 11% remaining) is NOT skipped and still qualifies for touch; TSK-418 corrects
+  BUG-178/TSK-196's original over-broad reuse of the display threshold.
+- **Source fn:** `test_tsk418_apply_touch_fires_at_partial_exhaustion_skips_at_full_exhaustion` in
   `tests/usage/touch_tests.rs`
 - **Source:** [state_machine/003_session_window_lifecycle.md](../../../docs/state_machine/003_session_window_lifecycle.md)

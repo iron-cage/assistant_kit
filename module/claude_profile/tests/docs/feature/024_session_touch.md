@@ -4,7 +4,7 @@
 
 - **Purpose**: Test cases for session touch via isolated subprocess.
 - **Source**: `docs/feature/024_session_touch.md`
-- **Covers**: AC-01 through AC-18
+- **Covers**: AC-01 through AC-19
 
 Feature behavioral requirement test cases for `docs/feature/024_session_touch.md`. Each FT case maps to one acceptance criterion. Parameter edge cases are in [cli/param/034_touch.md](../cli/param/34_touch.md). Command-level tests (IT-N) are in [cli/command/009_usage.md](../cli/command/09_usage.md).
 
@@ -35,6 +35,7 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 | FT-21 | Non-owned account (`aq.is_owned == false`) skipped by `apply_touch`; trace line emitted when `trace::1` | AC-17 | G4 Ownership Gate |
 | FT-22 | Owned account with `is_occupied_elsewhere == true` skipped by `apply_touch`; trace line emitted when `trace::1` | AC-17 | G4 Occupancy Guard |
 | FT-23 | `apply_touch` re-fetch block writes cache and clears cached metadata (BUG-309 MRE) | AC-18 | BUG-309 MRE |
+| FT-24 | 5h-exhaustion skip guard fires only at full exhaustion (`five_hour_left <= 0.0%`); partial exhaustion (11%) fires touch, not skipped | AC-19 | TSK-418 MRE |
 
 ### Test Case Index
 
@@ -63,8 +64,9 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 | FT-21 | Non-owned account skipped by apply_touch; trace line emitted (G4 ownership gate) | AC-17 | G4 Ownership Gate |
 | FT-22 | Owned account occupied elsewhere skipped by apply_touch; trace line emitted (G4 occupancy guard) | AC-17 | G4 Occupancy Guard |
 | FT-23 | apply_touch re-fetch writes cache + clears cached flag (BUG-309 structural) | AC-18 | BUG-309 MRE |
+| FT-24 | h-exhausted guard threshold is 0.0% (full exhaustion), not 15%; 11%-remaining account fires touch | AC-19 | TSK-418 MRE |
 
-**Total:** 23 FT cases
+**Total:** 24 FT cases
 
 ---
 
@@ -221,7 +223,7 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 
 ### FT-14: Skip trace line emitted for each account not qualifying for touch
 
-- **Given:** Two accounts: one with `resets_at` present (already active — skip reason: "already active 5h window"); one with errored quota (no valid data — skip reason: Err). `touch::1 trace::1`.
+- **Given:** Two accounts: one with `resets_at` present (already active — skip reason: "already active"); one with errored quota (no valid data — skip reason: error account). `touch::1 trace::1`.
 - **When:** `clp .usage touch::1 trace::1`
 - **Then:** Stderr contains timestamped `... · touch  <name>  skipped (reason: ...)` lines for each non-qualifying account. The `resets_at` present case and the errored case each produce a diagnostically distinct skip-reason line. No subprocess spawned for either account.
 - **Exit:** 0
@@ -336,3 +338,15 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 - **Source fn:** `mre_bug309_apply_touch_refetch_writes_cache_and_clears_cached_flag` (in `tests/usage/touch_tests.rs`)
 - **Note:** BUG-309 MRE. Structural guard ensuring the three post-fetch mutations are never accidentally dropped by a refactor or merge conflict. Mirrors `mre_bug256_retry_ok_stale_cached_metadata` in `refresh_tests.rs` for the `apply_touch` code path.
 - **Source:** [feature/024_session_touch.md AC-18](../../../docs/feature/024_session_touch.md)
+
+---
+
+### FT-24: 5h-exhaustion skip guard fires only at full exhaustion (`five_hour_left <= 0.0%`), not partial exhaustion
+
+- **Given:** Two accounts, both idle (`five_hour.resets_at = None` — qualifies for touch by timer state). Account A: `five_hour.utilization = 89.0` (`five_hour_left = 11.0`, matching the real-world i16@wbox.pro scenario). Account B: `five_hour.utilization = 100.0` (`five_hour_left = 0.0`, fully exhausted).
+- **When:** `touch_skip_reason(&aq, store.path(), false)` is evaluated for each account.
+- **Then:** Account A (11% remaining) returns `None` — touch fires; a partially-exhausted account still benefits from a touch subprocess and is not skipped. Account B (0% remaining) returns `Some("skipped (reason: h-exhausted)")` — a fully-exhausted account gains nothing from a subprocess spawn and is skipped. `H_EXHAUSTED_THRESHOLD = 15.0` (the human-facing display/sort classification constant, TSK-190) is NOT referenced by this guard.
+- **Exit:** N/A (unit test — no exit code)
+- **Source fn:** `test_tsk418_apply_touch_fires_at_partial_exhaustion_skips_at_full_exhaustion` (in `tests/usage/touch_tests.rs`)
+- **Note:** TSK-418 corrective MRE. BUG-178/TSK-196 originally added the h-exhausted guard by reusing `H_EXHAUSTED_THRESHOLD = 15.0`, over-broadly skipping touch for any account ≤15% remaining rather than only fully-exhausted (0%) ones — never covered by a dedicated FT (see `touch_tests.rs` BUG-214 MRE doc comment: "the h-exhausted guard was added in isolation without extending the test surface"). This test closes that gap.
+- **Source:** [feature/024_session_touch.md AC-19](../../../docs/feature/024_session_touch.md)

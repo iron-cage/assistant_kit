@@ -69,7 +69,7 @@ fn assert_container()
 /// instead, which adds those vars explicitly.
 ///
 /// `HOME` is set to a fixed, empty-by-design path (`/tmp/clr-isolated-home`) so that
-/// a host `~/.clr/prefs.json` cannot inject `--model` or other preference values into
+/// a host `~/.clr/config.toml` cannot inject `--model` or other preference values into
 /// tests that assert a clean default state (Fix(BUG-008) isolation guard). Tests that
 /// need a populated `HOME` (e.g., pref-reading tests) use `run_cli_with_env` with an
 /// explicit `("HOME", temp_dir)` pair.
