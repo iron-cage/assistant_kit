@@ -119,3 +119,9 @@
 | `claude_profile_core/src/account.rs` | `Account` struct — new `claim_lock`/`reserve` fields; `save()` — new `Option<bool>`-preserve-on-`None` params for both, mirroring the existing `owner: Option<&str>` pattern; new `write_claim_lock()`/`write_reserve()` functions mirroring `write_owner()` |
 | `src/commands/accounts.rs` | New `lock::`/`reserve::` mutation dispatch (comma-list batch, `dry::1`), alongside existing `owner::`/`assignee::` dispatch; new G9 check in the `assignee::` target-side path |
 | `src/commands/account_ops.rs` | `account_use_routine()` — new G9 `claim_lock` check alongside the existing G5 ownership check |
+
+### Tests
+
+| File | Relationship |
+|------|--------------|
+| `tests/cli/account_claim_lock_reserve_test.rs` | t01–t17 — lock::/reserve:: set/clear/batch, Gate 9 (footer + rotate, force-unbypassable), G9 (.account.use + assignee:: on both .accounts/.usage, force-bypassable), reserve sort/fallback, ungated write, read-side non-effect, dry-run preview |

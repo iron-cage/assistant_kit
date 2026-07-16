@@ -277,6 +277,91 @@ fn test_mre_bug288_apply_touch_skips_touch_idle_false()
   );
 }
 
+/// TSK-418: `apply_touch`'s h-exhausted skip guard fires only at true/full 5h exhaustion.
+///
+/// # Root Cause
+///
+/// TSK-196 (BUG-177/BUG-178) added the h-exhausted guard by reusing
+/// `H_EXHAUSTED_THRESHOLD = 15.0` (`types.rs`) — a constant TSK-190 had just raised from
+/// 5% to 15% one day earlier, for the unrelated purpose of giving humans early warning in
+/// display/sort classification. `touch_skip_reason()` borrowed this same 15% cutoff, so
+/// accounts with 1%-15% of their 5h quota remaining (e.g. utilization=89.0, the real-world
+/// i16@wbox.pro case) were skipped even though a touch subprocess still succeeds and extends
+/// the account's usable window at any nonzero remaining quota.
+///
+/// # Why Not Caught
+///
+/// BUG-214's own MRE doc comment flagged this gap: "the h-exhausted guard was added in
+/// isolation without extending the test surface" — no test asserted boundary behavior at
+/// partial exhaustion, only presence/absence of the guard category.
+///
+/// # Fix Applied
+///
+/// TSK-418: changed both `h_left <= 15.0` occurrences in `touch_skip_reason()` to
+/// `h_left <= 0.0`, matching the already-correct sibling `d7_left <= 0.0` pattern used
+/// for the 7d-exhausted leg of the same guard.
+///
+/// # Prevention
+///
+/// A constant's scope (its own doc comment, TSK-190) must be checked before reuse at a new
+/// call site — `H_EXHAUSTED_THRESHOLD` remains correctly scoped to its original 3 display/sort
+/// consumers; `apply_touch` needed a different, function-appropriate threshold.
+///
+/// # Pitfall
+///
+/// `five_hour_left()` already `.round()`s its output (pre-existing Fix(BUG-336)), so `h_left`
+/// is always a whole number at this call site — no fractional-boundary ambiguity at `0.0`.
+#[ doc = "bug_reproducer(TSK-418)" ]
+#[ test ]
+fn test_tsk418_apply_touch_fires_at_partial_exhaustion_skips_at_full_exhaustion()
+{
+  let store = tempfile::TempDir::new().unwrap();
+
+  // T01: 11% remaining (utilization=89.0, the real-world i16@wbox.pro case).
+  // Old threshold (15.0) would have skipped this — new threshold (0.0) must NOT.
+  {
+    let mut aq = mk_aq_with_resets_at( None );
+    if let Ok( ref mut data ) = aq.result
+    {
+      data.five_hour = Some( claude_quota::PeriodUsage { utilization : 89.0, resets_at : None } );
+    }
+    assert_eq!(
+      touch_skip_reason( &aq, store.path(), false ),
+      None,
+      "TSK-418: 11%-remaining account must NOT be skipped — touch fires",
+    );
+  }
+
+  // T02: 0% remaining (utilization=100.0, fully exhausted) — guard must still fire.
+  {
+    let mut aq = mk_aq_with_resets_at( None );
+    if let Ok( ref mut data ) = aq.result
+    {
+      data.five_hour = Some( claude_quota::PeriodUsage { utilization : 100.0, resets_at : None } );
+    }
+    assert_eq!(
+      touch_skip_reason( &aq, store.path(), false ),
+      Some( "skipped (reason: h-exhausted)" ),
+      "TSK-418: 0%-remaining (fully exhausted) account must be skipped",
+    );
+  }
+
+  // T03: 15% remaining (utilization=85.0) — the OLD threshold boundary. Regression guard
+  // against reverting to TSK-196's value.
+  {
+    let mut aq = mk_aq_with_resets_at( None );
+    if let Ok( ref mut data ) = aq.result
+    {
+      data.five_hour = Some( claude_quota::PeriodUsage { utilization : 85.0, resets_at : None } );
+    }
+    assert_eq!(
+      touch_skip_reason( &aq, store.path(), false ),
+      None,
+      "TSK-418: 15%-remaining account (old threshold boundary) must NOT be skipped",
+    );
+  }
+}
+
 // ── Fix B guard precision corner cases ───────────────────────────────────
 
 /// CC-B2: `touch_idle=Some(true)` does NOT trigger the skip guard.
