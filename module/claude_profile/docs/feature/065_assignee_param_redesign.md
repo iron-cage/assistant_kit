@@ -89,6 +89,7 @@ assignee::0                               # clear current machine's marker
 | [036_account_ownership.md](036_account_ownership.md) | Ownership model; `owner` field; `write_owner()`; nine enforcement gates — `assignee::` bypasses all (no gate) |
 | [063_explicit_ownership_claim.md](063_explicit_ownership_claim.md) | `owner::USER@MACHINE` set path; G8 gate shared with `owner::0` |
 | [064_active_marker_and_owner_redesign.md](064_active_marker_and_owner_redesign.md) | Predecessor: introduced `active::KIND::String`; this feature renames `active::` → `assignee::` and adds `assignee::0` sentinel |
+| [070_account_claim_and_reservation_control.md](070_account_claim_and_reservation_control.md) | `assignee::` is the structural precedent for `lock::`/`reserve::`'s ungated write path (`force::` without effect); G9 also gates `assignee::` target-side |
 
 ### Parameters
 

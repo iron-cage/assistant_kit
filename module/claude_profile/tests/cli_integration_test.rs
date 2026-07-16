@@ -104,6 +104,9 @@ mod account_ownership_test;
 #[ path = "cli/account_owner_param_test.rs" ]
 mod account_owner_param_test;
 
+#[ path = "cli/account_claim_lock_reserve_test.rs" ]
+mod account_claim_lock_reserve_test;
+
 #[ path = "cli/token_paths_test.rs" ]
 mod token_paths_test;
 

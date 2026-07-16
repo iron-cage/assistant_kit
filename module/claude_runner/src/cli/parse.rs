@@ -1,4 +1,4 @@
-use claude_runner_core::EffortLevel;
+use claude_runner_core::{ EffortLevel, InputFormat };
 use error_tools::{ Error, Result };
 
 /// Strategy for `--expect` output validation.
@@ -95,6 +95,7 @@ pub( crate ) struct CliArgs
   pub( crate ) retry_default           : Option< u8 >,
   pub( crate ) retry_default_delay     : Option< u32 >,
   pub( crate ) output_format           : Option< String >,
+  pub( crate ) input_format            : Option< InputFormat >,
   pub( crate ) max_turns               : Option< String >,
   pub( crate ) allowed_tools           : Option< String >,
   pub( crate ) disallowed_tools        : Option< String >,
@@ -147,6 +148,22 @@ fn parse_expect_strategy( raw : &str ) -> Result< ExpectStrategy >
   raw.parse::< ExpectStrategy >().map_err( Error::msg )
 }
 
+/// Parse a raw string as an `InputFormat` with a clear error message.
+///
+/// `claude_runner_core::InputFormat` has no `FromStr` impl, so this validates
+/// directly against its two CLI string values instead of delegating.
+fn parse_input_format( raw : &str ) -> Result< InputFormat >
+{
+  match raw
+  {
+    "text" => Ok( InputFormat::Text ),
+    "stream-json" => Ok( InputFormat::StreamJson ),
+    _ => Err( Error::msg( format!(
+      "invalid --input-format value: {raw}\nExpected: text or stream-json"
+    ) ) ),
+  }
+}
+
 /// Parse a raw string as a bounded u8 (0–255) with a labeled error message.
 ///
 /// Used for retry count flags like `--retry-on-transient` and `--retry-on-service`.
@@ -182,6 +199,7 @@ fn parse_u32_flag( raw : &str, flag_name : &str, hint : &str ) -> Result< u32 >
 /// following value was consumed into `parsed`. Returns `false` when `token`
 /// is not a known value-consuming flag (caller decides whether to treat it
 /// as unknown). `next` is the index of the token immediately after `token`.
+#[ allow( clippy::too_many_lines ) ] // mechanical dispatch — one arm per CLI flag token
 fn parse_value_flag(
   token  : &str,
   tokens : &[ String ],
@@ -259,6 +277,12 @@ fn parse_value_flag(
     "--output-format" =>
     {
       parsed.output_format = Some( next_value( tokens, next, "--output-format" )?.to_string() );
+    }
+    "--input-format" =>
+    {
+      parsed.input_format = Some(
+        parse_input_format( next_value( tokens, next, "--input-format" )? )?
+      );
     }
     "--max-turns" =>
     {
@@ -577,6 +601,7 @@ pub( crate ) fn parse_args( tokens : &[ String ] ) -> Result< CliArgs >
       retry_default           : None,
       retry_default_delay     : None,
       output_format           : None,
+      input_format            : None,
       max_turns               : None,
       allowed_tools           : None,
       disallowed_tools        : None,

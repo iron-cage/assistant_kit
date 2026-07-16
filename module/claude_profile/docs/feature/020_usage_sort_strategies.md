@@ -86,6 +86,7 @@ Alphabetical by account name, ascending. Stable positional layout across refresh
 | [018_live_monitor.md](018_live_monitor.md) | `live::1` continuous mode |
 | [024_session_touch.md](024_session_touch.md) | Session touch — activates idle accounts |
 | [062_unified_session_config.md](062_unified_session_config.md) | Adds `/{session_effort}` suffix to the footer `Next` line recommendation display |
+| [070_account_claim_and_reservation_control.md](070_account_claim_and_reservation_control.md) | Prepends `reserve` as a leading sort key ahead of this feature's strategy comparator |
 
 ### Parameters
 

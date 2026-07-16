@@ -81,6 +81,16 @@ pub fn account_use_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> 
     ) );
   }
 
+  // G9: Claim-lock guard — locked accounts cannot be switched to as an explicit target.
+  // Runs before dry::1, mirroring G5. force::1 bypasses the guard (Feature 070 AC-04).
+  if !force && crate::account::read_claim_lock( &credential_store, &name )
+  {
+    return Err( ErrorData::new(
+      ErrorCode::ArgumentTypeMismatch,
+      format!( "claim-lock violation: {name} is claim-locked" ),
+    ) );
+  }
+
   if is_dry( &cmd )
   {
     return Ok( OutputData::new( format!( "[dry-run] would switch to '{name}'\n" ), "text" ) );

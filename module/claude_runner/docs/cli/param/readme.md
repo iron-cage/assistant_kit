@@ -80,6 +80,7 @@
 | 078_name.md | `--name` parameter spec (tools name filter) |
 | 079_category.md | `--category` parameter spec (tools category filter) |
 | 080_value.md | `--value` parameter spec (tools single-column bare output) |
+| 081_input_format.md | `--input-format` parameter spec (Claude-Native, text/stream-json) |
 
 ### Retired Parameter IDs
 
@@ -92,7 +93,7 @@ These parameter IDs exist in the sequence but have no corresponding file. The ID
 | 038 | Retired — parameter removed; gap predates current tracking |
 | 039 | Retired — parameter removed; gap predates current tracking |
 
-### All Parameters (75 total)
+### All Parameters (77 total)
 
 | # | Parameter | Type | Default | Valid Values | Description | Used In |
 |---|-----------|------|---------|--------------|-------------|---------|
@@ -172,10 +173,11 @@ These parameter IDs exist in the sequence but have no corresponding file. The ID
 | 78 | `--name` | string | — | Any substring | Filter `clr tools` by tool name (case-insensitive substring) | 1 cmd |
 | 79 | `--category` | string | — | Any substring | Filter `clr tools` by category (case-insensitive substring) | 1 cmd |
 | 80 | `--value` | string | — | `idx`/`name`/`category`/`desc` | Print only the named column's value for each matching tool, one per line | 1 cmd |
+| 81 | `--input-format` | enum | — | `text`/`stream-json` | Input format for Claude Code subprocess stdin | 2 cmds |
 
 **Total:** 75 parameters (param 12 deprecated → replaced by 74; net count unchanged for that swap; params 75–77 added; params 78–80 added for the `clr tools` filter/projection redesign)
 
-**Groups:** Parameters 2–4, 17, 23, 24, and 61–67 form [Claude-Native Flags](../param_group/01_claude_native_flags.md). Parameters 5–11, 13, 14, 18, 21, 22, 25–36, 40–57, 70–76 form [Runner Control](../param_group/02_runner_control.md). Parameters 15–16 form [System Prompt](../param_group/03_system_prompt.md). Parameters 19–20 form [Credential Operations](../param_group/04_credential_operations.md). Parameters 58–60, 68–69 form [Session Listing](../param_group/05_session_listing.md). Parameter 77 (and `--timeout`, `--trace`, `--dry-run`, `--journal`, `--journal-dir`) form [Running Commands](../param_group/06_running_commands.md). Parameters 78–80 (plus shared members 59 `--columns` and 69 `--inspect`) form [Tool Listing](../param_group/07_tool_listing.md).
+**Groups:** Parameters 2–4, 17, 23, 24, 61–67, and 81 form [Claude-Native Flags](../param_group/01_claude_native_flags.md). Parameters 5–11, 13, 14, 18, 21, 22, 25–36, 40–57, 70–76 form [Runner Control](../param_group/02_runner_control.md). Parameters 15–16 form [System Prompt](../param_group/03_system_prompt.md). Parameters 19–20 form [Credential Operations](../param_group/04_credential_operations.md). Parameters 58–60, 68–69 form [Session Listing](../param_group/05_session_listing.md). Parameter 77 (and `--timeout`, `--trace`, `--dry-run`, `--journal`, `--journal-dir`) form [Running Commands](../param_group/06_running_commands.md). Parameters 78–80 (plus shared members 59 `--columns` and 69 `--inspect`) form [Tool Listing](../param_group/07_tool_listing.md).
 
 ### Navigation
 
@@ -255,6 +257,7 @@ These parameter IDs exist in the sequence but have no corresponding file. The ID
 - [`--name`](078_name.md)
 - [`--category`](079_category.md)
 - [`--value`](080_value.md)
+- [`--input-format`](081_input_format.md)
 
 ### Quick Reference
 

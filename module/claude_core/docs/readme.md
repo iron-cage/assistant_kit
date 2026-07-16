@@ -10,4 +10,4 @@
 
 | File | Responsibility |
 |------|----------------|
-| `api/` | Public library API contracts (`settings_io` atomic JSON KV engine) |
+| `api/` | Public library API contracts (`settings_io` atomic JSON KV engine, `toml_io` tiered TOML KV engine) |

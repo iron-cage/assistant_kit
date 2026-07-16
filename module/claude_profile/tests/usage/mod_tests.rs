@@ -51,22 +51,26 @@ fn test_status_emoji_yellow()
 }
 
 /// SE-4 — Boundary: 15% exactly (util=85.0) → 🟡 (inclusive at 15% for 5h).
-/// SE-4b — Boundary: 15.1% (util=84.9) → 🟢.
+/// SE-4b — Boundary: 15.5% (util=84.5, rounds away-from-zero to 16) → 🟢.
+///
+/// Fix(BUG-336): SE-4b originally used util=84.9 (left=15.1) — once `status_emoji()` rounds
+///   its comparison inputs, 15.1 rounds DOWN to 15 (the threshold), no longer demonstrating
+///   "just above". Recalibrated to 84.5 (left=15.5), the exact tie-break that rounds up to 16.
 #[ test ]
 fn test_status_emoji_boundary()
 {
   let aq_15pct   = mk_aq_ok( 85.0 );
-  let aq_15_1pct = mk_aq_ok( 84.9 );
+  let aq_15_5pct = mk_aq_ok( 84.5 );
   let out_15   = render_text(
     &[ aq_15pct ], SortStrategy::Name, None, PreferStrategy::Any,
     &ColsVisibility::default_set(), None, None, None, None, false,
   );
-  let out_15_1 = render_text(
-    &[ aq_15_1pct ], SortStrategy::Name, None, PreferStrategy::Any,
+  let out_15_5 = render_text(
+    &[ aq_15_5pct ], SortStrategy::Name, None, PreferStrategy::Any,
     &ColsVisibility::default_set(), None, None, None, None, false,
   );
   assert!( out_15.contains( "🟡" ),   "exactly 15% left must show 🟡. Got:\n{out_15}" );
-  assert!( out_15_1.contains( "🟢" ), "15.1% left must show 🟢. Got:\n{out_15_1}" );
+  assert!( out_15_5.contains( "🟢" ), "15.5% left (rounds to 16) must show 🟢. Got:\n{out_15_5}" );
 }
 
 /// SE-5 — Synthetic current-session row (`is_current=true`) shows correct emoji.
@@ -125,10 +129,12 @@ fn test_render_json_error_account()
   let accounts = vec![
     AccountQuota
     {
+      fallback_reason : None,
       name : "fail@test.com".to_string(), is_current : false, is_active : false, is_occupied_elsewhere : false,
       expires_at_ms : 0, result : Err( "auth failed".to_string() ), account : None,
       host : String::new(), role : String::new(), renewal_at : None,
-      cached : false, cache_age_secs : None, is_owned : true, owner : String::new(),
+      cached : false, cache_age_secs : None, is_owned : true, owner : String::new(), claim_lock : false, reserve : false,
+          org_created_at : None,
     },
   ];
   let result = render_json( &accounts );
@@ -143,10 +149,12 @@ fn test_render_json_escapes_quotes_in_name()
   let accounts = vec![
     AccountQuota
     {
+      fallback_reason : None,
       name : "test\"@evil.com".to_string(), is_current : false, is_active : false, is_occupied_elsewhere : false,
       expires_at_ms : 0, result : Err( "fail".to_string() ), account : None,
       host : String::new(), role : String::new(), renewal_at : None,
-      cached : false, cache_age_secs : None, is_owned : true, owner : String::new(),
+      cached : false, cache_age_secs : None, is_owned : true, owner : String::new(), claim_lock : false, reserve : false,
+          org_created_at : None,
     },
   ];
   let result = render_json( &accounts );
@@ -170,6 +178,7 @@ fn test_render_json_ft8_mixed_ok_and_err_both_present()
   let mut accounts = vec![
     AccountQuota
     {
+      fallback_reason : None,
       name          : "ok@example.com".to_string(),
       is_current    : false,
       is_active             : false,
@@ -184,9 +193,13 @@ fn test_render_json_ft8_mixed_ok_and_err_both_present()
       cache_age_secs : None,
       is_owned       : true,
       owner                : String::new(),
+      claim_lock           : false,
+      reserve              : false,
+          org_created_at : None,
     },
     AccountQuota
     {
+      fallback_reason : None,
       name          : "err@example.com".to_string(),
       is_current    : false,
       is_active             : false,
@@ -201,6 +214,9 @@ fn test_render_json_ft8_mixed_ok_and_err_both_present()
       cache_age_secs : None,
       is_owned       : true,
       owner                : String::new(),
+      claim_lock           : false,
+      reserve              : false,
+          org_created_at : None,
     },
   ];
 

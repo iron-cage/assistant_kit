@@ -4,7 +4,7 @@
 
 Execute Claude Code as a subprocess with configurable flags — the default command invoked whenever no explicit subcommand is given. Use `clr` for interactive REPL sessions or `clr "message"` for single-turn print-mode execution with automatic session continuation.
 
--- **Parameters:** `[MESSAGE]`, `--print`, `--model`, `--verbose`, `--no-skip-permissions`, `--interactive`, `--new-session`, `--dir`, `--subdir`, `--max-tokens`, `--session-dir`, `--dry-run`, `--quiet`, `--trace`, `--no-ultrathink`, `--system-prompt`, `--append-system-prompt`, `--effort`, `--no-effort-max`, `--no-chrome`, `--no-persist`, `--json-schema`, `--mcp-config`, `--file`, `--strip-fences`, `--keep-claudecode`, `--output-file`, `--expect`, `--expect-strategy`, `--max-sessions`, and retry/output flags
+-- **Parameters:** `[MESSAGE]`, `--print`, `--model`, `--verbose`, `--no-skip-permissions`, `--interactive`, `--new-session`, `--dir`, `--subdir`, `--max-tokens`, `--session-dir`, `--dry-run`, `--quiet`, `--trace`, `--no-ultrathink`, `--system-prompt`, `--append-system-prompt`, `--effort`, `--no-effort-max`, `--no-chrome`, `--no-persist`, `--json-schema`, `--mcp-config`, `--file`, `--strip-fences`, `--keep-claudecode`, `--output-file`, `--expect`, `--expect-strategy`, `--max-sessions`, and retry/input/output flags
 -- **Exit Codes:** 0 (success) | 1 (error) | 2 (rate-limit/transient) | 3 (expect mismatch) | 4 (timeout) | N (subprocess passthrough) | 128+signal (signal)
 -- **Modes:** interactive, print, dry-run, trace
 
@@ -77,6 +77,7 @@ The `run` token is optional — both forms are equivalent. When `run` appears as
 | [`--journal`](../param/072_journal.md) | enum | `full` | Journal level: `full` (stdout+stderr ≤1MB each), `meta` (metadata only), `off` (disabled) |
 | [`--journal-dir`](../param/073_journal_dir.md) | path | `~/.clr/journal/` | Directory for journal JSONL files; overrides `CLR_JOURNAL_DIR` |
 | [`--output-format`](../param/061_output_format.md) | enum | — | Output format (`text`/`json`/`stream-json`) |
+| [`--input-format`](../param/081_input_format.md) | enum | — | Input format (`text`/`stream-json`) |
 | [`--max-turns`](../param/062_max_turns.md) | u32 | — | Max agentic turns before stopping; unset = unlimited |
 | [`--allowed-tools`](../param/063_allowed_tools.md) | string | — | Restrict Claude to specified tools only |
 | [`--disallowed-tools`](../param/064_disallowed_tools.md) | string | — | Prevent Claude from using specified tools |
@@ -86,12 +87,12 @@ The `run` token is optional — both forms are equivalent. When `run` appears as
 | [`--args-file`](../param/075_args_file.md) | [`FilePath`](../type/12_file_path.md) | — | Load clr params from JSON config file; stdin JSON auto-detected when no TTY |
 
 **Algorithm (7 steps):**
-1. Parse flags; apply JSON config (from `--args-file`/`CLR_ARGS_FILE`/stdin) for unset parameters; apply CLR_* env var fallbacks for still-unset parameters; apply config-file defaults (project `.clr.toml` overriding user `~/.clr/config.toml`) for still-unset parameters; if `--model` is still unset, read `subprocess_model` from `~/.clr/prefs.json` via `read_subprocess_model_pref()` (prefs.json applies to `--model` only — all other parameters stop at the config-file tier).
+1. Parse flags; apply JSON config (from `--args-file`/`CLR_ARGS_FILE`/stdin) for unset parameters; apply CLR_* env var fallbacks for still-unset parameters; apply config-file defaults (project `.clr.toml` overriding user `~/.clr/config.toml`) for still-unset parameters — this is the final tier for every parameter including `--model`.
 2. If invocation is non-interactive (print mode) and `--max-sessions > 0`, count active non-interactive `claude` processes; block in 30-second polling loop until slot available or 1000-attempt limit reached (exit 1 on limit). Interactive invocations skip this step entirely.
 3. If `--dry-run`, render command preview via `describe()` / `describe_env()`; emit to stdout; exit 0.
 4. Resolve execution directory (`--dir` + `--subdir`); create `/-NAME` subdirectory if `--subdir` set and not `"."`.
 5. Assemble subprocess command with injected defaults (`--dangerously-skip-permissions`, `--effort max`, `ultrathink` suffix, `-c` continuation unless `--new-session`).
-6. Execute subprocess (`execute()` for print mode with `--timeout` watchdog, `execute_interactive()` for REPL).
+6. Execute subprocess (`execute()` for print mode with `--timeout` watchdog, `execute_interactive()` for REPL) — except when `--output-format stream-json` is set, which takes a dedicated live-streaming path (see Notes) instead of steps 6–7 below.
 7. Post-process output: strip fences if `--strip-fences`; validate against `--expect` if set; tee to `--output-file` if set; propagate subprocess exit code.
 
 ### Execution Modes
@@ -151,6 +152,8 @@ clr --dry-run "Run tests" --max-tokens 50000
 ### Notes
 
 `--dry-run` takes precedence over execution regardless of other flags. If present, no subprocess is launched.
+
+`--output-format stream-json` streams NDJSON events to stdout live, as they arrive from the subprocess — each line is printed and flushed immediately rather than buffered until exit. This bypasses the retry hierarchy, `--expect` validation, and `--output-style`/summary rendering entirely: none of that post-processing applies to a raw event stream, since it assumes one accumulated response. `--input-format stream-json` is independent — it only changes how `clr` labels the outbound stdin stream to `claude` and does not by itself enable streaming output.
 
 ### Related Commands
 

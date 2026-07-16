@@ -16,6 +16,100 @@ use claude_profile_core::account::trace_ts;
 
 // ── Touch ─────────────────────────────────────────────────────────────────────
 
+/// Compute the skip reason for `apply_touch`, or `None` if the account should proceed.
+///
+/// Pure decision function — mirrors, in order, the 6 guards inlined in `apply_touch`:
+/// solo-skip → G4 not-owned → occupied-elsewhere → error-account → `touch_idle=false`
+/// (cache) → already-active/h-exhausted/7d-exhausted. `credential_store` is required
+/// because the `touch_idle` guard reads `claude_profile_core::account::read_quota_cache`,
+/// keyed by account name — that guard's outcome is not derivable from `aq` alone.
+pub fn touch_skip_reason(
+  aq               : &AccountQuota,
+  credential_store : &std::path::Path,
+  solo             : bool,
+) -> Option< &'static str >
+{
+  // Solo gate: non-current accounts are never touched when solo::1.
+  // Fires before G4 — avoids credential reads for solo-skipped accounts.
+  if solo && !aq.is_current
+  {
+    return Some( "solo-skip" );
+  }
+
+  // G4: Non-owned accounts are never touched — subprocess spawning on foreign credentials forbidden.
+  if !aq.is_owned
+  {
+    return Some( "skipped (reason: not owned)" );
+  }
+
+  // Fix(BUG-302): occupancy guard — owned accounts in use on another machine must not be touched.
+  // Root cause: G4 was written when is_occupied_elsewhere was not yet available (Feature 036).
+  // Pitfall: is_owned and is_occupied_elsewhere are independent — an owned account can also be
+  //   occupied; both guards must fire independently, not as a combined condition.
+  if aq.is_occupied_elsewhere
+  {
+    return Some( "skipped (reason: occupied elsewhere)" );
+  }
+
+  // Guard: errored accounts are never touched; trigger requires valid quota data.
+  // Fix(BUG-202): bare return produced no trace for error-tier accounts.
+  // Root cause: error guard preceded all trace emission points (lines 1506-1510).
+  // Pitfall: multiple early-return guards each need their own trace emission.
+  let Ok( ref data ) = aq.result else
+  {
+    return Some( "skipped (reason: error account)" );
+  };
+
+  // Fix(BUG-288-FixB): read touch_idle flag written by apply_post_switch_touch.
+  //   When touch_idle=false, a subprocess already activated this account — skip as
+  //   defense-in-depth for API propagation lag (resets_at may not yet reflect the
+  //   new session at the quota endpoint even after Fix A's re-fetch).
+  // Root cause: api.rs:330-332 writes touch_idle=false with zero read sites — dead write.
+  // Pitfall: server-side quota propagation can lag; local cache flag is the only
+  //   coordination signal not subject to that lag.
+  if let Some( cache ) = claude_profile_core::account::read_quota_cache( credential_store, &aq.name )
+  {
+    if cache.touch_idle == Some( false )
+    {
+      return Some( "skipped (reason: touch_idle=false)" );
+    }
+  }
+
+  // Guard: skip accounts with all timers running, h-exhausted, or 7d-exhausted.
+  // AC-02: trigger fires when ANY quota timer is absent and quota is valid (not exhausted).
+  // Fix(BUG-214): d7_left guard skips 7d-weekly-exhausted accounts (seven_day_left <= 0%).
+  // Root cause(BUG-214): guard lacked seven_day_left check; 7d-exhausted accounts fired
+  //   subprocess that received HTTP 429 (~2.3s penalty, no session opened).
+  // Fix(BUG-215): replace is_idle (single 5h timer) with all_running (3-timer check).
+  // Root cause(BUG-215): is_idle only checked five_hour.resets_at; accounts with 5h active
+  //   but 7d/7d-Son timer absent were skipped as "already active" — touch never started
+  //   the missing quota window.
+  // Pitfall: map_or(true, ...) for 7d/7d-Son — field absent means no weekly tracking on
+  //   the plan; treat as "running" to avoid spurious touch for dimensions that don't exist.
+  // Fix(TSK-418): h-exhausted threshold changed from `<= 15.0` (borrowed from the
+  //   display/sort H_EXHAUSTED_THRESHOLD, TSK-190) to `<= 0.0` (true/full exhaustion) —
+  //   matching the already-correct `d7_left <= 0.0` sibling pattern.
+  // Root cause: TSK-196 (BUG-177/BUG-178) reused H_EXHAUSTED_THRESHOLD by false analogy;
+  //   a touch subprocess still succeeds and extends the window at any nonzero remaining quota.
+  // Pitfall: do not reintroduce a shared threshold with the display/sort classification —
+  //   "is a touch worth firing" and "should a human be warned" are different questions that
+  //   only happened to share a constant by historical accident.
+  let five_h_running = data.five_hour.as_ref().and_then( |p| p.resets_at.as_deref() ).is_some();
+  let d7_running     = data.seven_day.as_ref().map_or( true, |p| p.resets_at.is_some() );
+  let son_running    = data.seven_day_sonnet.as_ref().map_or( true, |p| p.resets_at.is_some() );
+  let all_running    = five_h_running && d7_running && son_running;
+  let h_left  = five_hour_left( aq );
+  let d7_left = seven_day_left( aq );
+  if all_running || h_left <= 0.0 || d7_left <= 0.0
+  {
+    return Some( if all_running    { "skipped (reason: already active)" }
+      else if h_left  <= 0.0      { "skipped (reason: h-exhausted)"    }
+      else                         { "skipped (reason: 7d-exhausted)"   } );
+  }
+
+  None
+}
+
 /// Activate an idle 5h session window for `aq` by spawning an isolated subprocess.
 ///
 /// The trigger requires both conditions:
@@ -46,83 +140,9 @@ pub fn apply_touch(
   solo             : bool,
 )
 {
-  // Solo gate: non-current accounts are never touched when solo::1.
-  // Fires before G4 — avoids credential reads for solo-skipped accounts.
-  if solo && !aq.is_current
+  if let Some( reason ) = touch_skip_reason( aq, credential_store, solo )
   {
-    if trace { let _ = writeln!( std::io::stderr(), "{}touch  {}  solo-skip", trace_ts(), aq.name ); }
-    return;
-  }
-
-  // G4: Non-owned accounts are never touched — subprocess spawning on foreign credentials forbidden.
-  if !aq.is_owned
-  {
-    if trace { let _ = writeln!( std::io::stderr(), "{}touch  {}  skipped (reason: not owned)", trace_ts(), aq.name ); }
-    return;
-  }
-
-  // Fix(BUG-302): occupancy guard — owned accounts in use on another machine must not be touched.
-  // Root cause: G4 was written when is_occupied_elsewhere was not yet available (Feature 036).
-  // Pitfall: is_owned and is_occupied_elsewhere are independent — an owned account can also be
-  //   occupied; both guards must fire independently, not as a combined condition.
-  if aq.is_occupied_elsewhere
-  {
-    if trace { let _ = writeln!( std::io::stderr(), "{}touch  {}  skipped (reason: occupied elsewhere)", trace_ts(), aq.name ); }
-    return;
-  }
-
-  // Guard: errored accounts are never touched; trigger requires valid quota data.
-  // Fix(BUG-202): bare return produced no trace for error-tier accounts.
-  // Root cause: error guard preceded all trace emission points (lines 1506-1510).
-  // Pitfall: multiple early-return guards each need their own trace emission.
-  let Ok( ref data ) = aq.result else
-  {
-    if trace { let _ = writeln!( std::io::stderr(), "{}touch  {}  skipped (reason: error account)", trace_ts(), aq.name ); }
-    return;
-  };
-
-  // Fix(BUG-288-FixB): read touch_idle flag written by apply_post_switch_touch.
-  //   When touch_idle=false, a subprocess already activated this account — skip as
-  //   defense-in-depth for API propagation lag (resets_at may not yet reflect the
-  //   new session at the quota endpoint even after Fix A's re-fetch).
-  // Root cause: api.rs:330-332 writes touch_idle=false with zero read sites — dead write.
-  // Pitfall: server-side quota propagation can lag; local cache flag is the only
-  //   coordination signal not subject to that lag.
-  if let Some( cache ) = claude_profile_core::account::read_quota_cache( credential_store, &aq.name )
-  {
-    if cache.touch_idle == Some( false )
-    {
-      if trace { let _ = writeln!( std::io::stderr(), "{}touch  {}  skipped (reason: touch_idle=false)", trace_ts(), aq.name ); }
-      return;
-    }
-  }
-
-  // Guard: skip accounts with all timers running, h-exhausted, or 7d-exhausted.
-  // AC-02: trigger fires when ANY quota timer is absent and quota is valid (not exhausted).
-  // Fix(BUG-214): d7_left guard skips 7d-weekly-exhausted accounts (seven_day_left <= 0%).
-  // Root cause(BUG-214): guard lacked seven_day_left check; 7d-exhausted accounts fired
-  //   subprocess that received HTTP 429 (~2.3s penalty, no session opened).
-  // Fix(BUG-215): replace is_idle (single 5h timer) with all_running (3-timer check).
-  // Root cause(BUG-215): is_idle only checked five_hour.resets_at; accounts with 5h active
-  //   but 7d/7d-Son timer absent were skipped as "already active" — touch never started
-  //   the missing quota window.
-  // Pitfall: map_or(true, ...) for 7d/7d-Son — field absent means no weekly tracking on
-  //   the plan; treat as "running" to avoid spurious touch for dimensions that don't exist.
-  let five_h_running = data.five_hour.as_ref().and_then( |p| p.resets_at.as_deref() ).is_some();
-  let d7_running     = data.seven_day.as_ref().map_or( true, |p| p.resets_at.is_some() );
-  let son_running    = data.seven_day_sonnet.as_ref().map_or( true, |p| p.resets_at.is_some() );
-  let all_running    = five_h_running && d7_running && son_running;
-  let h_left  = five_hour_left( aq );
-  let d7_left = seven_day_left( aq );
-  if all_running || h_left <= 15.0 || d7_left <= 0.0
-  {
-    if trace
-    {
-      let reason = if all_running    { "already active" }
-        else if h_left  <= 15.0     { "h-exhausted"    }
-        else                         { "7d-exhausted"   };
-      let _ = writeln!( std::io::stderr(), "{}touch  {}  skipped (reason: {})", trace_ts(), aq.name, reason );
-    }
+    if trace { let _ = writeln!( std::io::stderr(), "{}touch  {}  {}", trace_ts(), aq.name, reason ); }
     return;
   }
 

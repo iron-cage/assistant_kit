@@ -39,7 +39,7 @@ if touch_param == 1:
         if account_quota.result is Err:
             // Skip: no valid quota
             if trace:
-                emit "... · touch  <name>  skipped (reason: Err)"
+                emit "... · touch  <name>  skipped (reason: error account)"
             continue
 
         // Fix(BUG-288-FixB): defense-in-depth — read local touch_idle cache flag before timer checks
@@ -50,9 +50,9 @@ if touch_param == 1:
             continue
 
         if all_running
-           OR five_hour_left(account_quota) <= 15.0%
+           OR five_hour_left(account_quota) <= 0.0%
            OR seven_day_left(account_quota) <= 0.0%:
-            // Skip: all timers running; h-exhausted; or 7d-exhausted
+            // Skip: all timers running; h-exhausted (fully exhausted only, TSK-418); or 7d-exhausted
             if trace:
                 emit "... · touch  <name>  skipped (reason: ...)"
             continue
@@ -70,6 +70,8 @@ if touch_param == 1:
 
 render results as table
 ```
+
+**5h-exhaustion threshold is touch-specific, not shared with display/sort (TSK-418):** The skip guard's `five_hour_left(account_quota) <= 0.0%` condition is a full/literal-exhaustion check — deliberately distinct from `H_EXHAUSTED_THRESHOLD = 15.0` (`types.rs`), which governs the human-facing 5h-exhaustion classification used by `pct_emoji`, `status_emoji`, and `status_group_of` (display/sort grouping, TSK-190). The two concerns are semantically different: an operator benefits from an early (15%-remaining) warning to plan account rotation before a session window closes; an automated subprocess gains nothing from skipping a spawn until the account is truly out of 5h quota, since a touch at, say, 11% remaining still succeeds and extends the account's usable window. TSK-196 (fixing BUG-178) originally introduced this guard by reusing `H_EXHAUSTED_THRESHOLD`, which over-broadly skipped touch for any account ≤15% remaining; TSK-418 corrects the threshold to `0.0%`, matching the already-correct sibling pattern used by the 7d-exhausted leg of the same guard (`seven_day_left(account_quota) <= 0.0%`, unchanged since TSK-217).
 
 **Ordering with `refresh::`:** When both `refresh::1` and `touch::1` are active, refresh runs first (it retries auth errors from the initial fetch). Touch runs second on the post-refresh results — an account that was refreshed and now shows valid quota with no `resets_at` (idle) will be touched. An account that failed refresh (still errored) will not be touched. An account whose refresh subprocess already started a session (making `resets_at` present) is skipped by touch — refresh already activated it.
 
@@ -92,7 +94,7 @@ render results as table
 - **AC-07**: If the touch subprocess fails, the account's row shows its original quota data unchanged (touch failure is non-aborting).
 - **AC-08**: `touch::` does not affect `format::json` output structure — touched accounts appear as normal data objects with their re-fetched quota.
 - **AC-09**: When `trace=true`, every account processed by `apply_touch` emits a timestamped `touch` diagnostic line: touched accounts show subprocess lifecycle steps (`read credentials`, `run_isolated` with elapsed time, `write credentials`, `save`); accounts skipped because they do not qualify (already active, or errored) emit a `... · touch  <name>  skipped (reason: ...)` line.
-- **AC-12**: When `trace=true`, accounts skipped by the touch trigger emit a timestamped skip-reason diagnostic line covering all skip cases: all three timers running (already active — skip), h-exhausted (skip), 7d-exhausted (skip), `touch_idle=false` (subprocess already activated — Fix B, BUG-288, see AC-16), Err result (no valid quota), `not owned` (G4 ownership gate — Feature 036), and `occupied elsewhere` (G4 occupancy guard — BUG-302 fix). All skip cases are diagnostically distinct and produce a trace line.
+- **AC-12**: When `trace=true`, accounts skipped by the touch trigger emit a timestamped skip-reason diagnostic line covering all skip cases: all three timers running (already active — skip), h-exhausted (`five_hour_left(aq) <= 0.0%` — fully exhausted only; deliberately distinct from the 15%-remaining `H_EXHAUSTED_THRESHOLD` used for display/sort classification, see AC-19/TSK-418), 7d-exhausted (`seven_day_left(aq) <= 0.0%`), `touch_idle=false` (subprocess already activated — Fix B, BUG-288, see AC-16), Err result (no valid quota), `not owned` (G4 ownership gate — Feature 036), and `occupied elsewhere` (G4 occupancy guard — BUG-302 fix). All skip cases are diagnostically distinct and produce a trace line.
 - **AC-17**: `apply_touch()` skips accounts where `aq.is_owned == false` (G4 ownership gate, Feature 036 AC-07) OR `aq.is_occupied_elsewhere == true` (G4 occupancy guard — BUG-302 fix). When `trace::1`, emits `... · touch  <name>  skipped (reason: not owned)` or `... · touch  <name>  skipped (reason: occupied elsewhere)` respectively. No subprocess is spawned for non-owned or currently-occupied accounts.
 - **AC-10**: `touch::` parameter appears in `.usage --help` output with its default value (`1`).
 - **AC-11**: In `live::1` mode with `touch::1` active, touch runs on every cycle. For each cycle where any quota timer is absent (any session window lapsed since last cycle), the touch trigger fires and a new session is started. The trigger does not fire for accounts where all three timers are present (all windows still active).
@@ -101,11 +103,13 @@ render results as table
 - **AC-14**: Accounts with 7d weekly quota fully exhausted (`seven_day_left <= 0%`) are skipped by `apply_touch` even when idle (`five_hour.resets_at` absent) and 5h budget is non-zero. The Anthropic API does not open a new 5h session when the 7d budget is exhausted — spawning a subprocess for such accounts wastes wall time (~2.3s per account for a 429 rejection) and produces misleading `run_isolated: OK credentials=None` trace without establishing a session. Fixed in TSK-217 (Docker L3 ✅).
 - **AC-16**: `apply_touch` reads the quota cache (via `read_quota_cache`) after the error-account skip guard and before the `all_running` timer check. If the cache entry has `touch_idle = Some(false)` — the flag written by `apply_post_switch_touch` at `api.rs:330-332` after its subprocess activated the account — `apply_touch` skips that account without spawning a subprocess and emits `... · touch  <name>  skipped (reason: touch_idle=false)` when trace is enabled. Defense-in-depth for server-side quota propagation lag: even when Fix A's post-subprocess re-fetch returns `resets_at = None` (API hasn't propagated the new session yet), the local `touch_idle=false` flag prevents a redundant subprocess spawn. The `api.rs:330-332` write is no longer a dead write (zero read sites). Fix(BUG-288-FixB), TSK-291.
 - **AC-18**: After `fetch_oauth_usage` succeeds in the `apply_touch` re-fetch block, `write_quota_cache()` is called to persist fresh quota data to `{name}.json`, `aq.cached` is set to `false`, and `aq.cache_age_secs` is set to `None`. These three mutations must appear before `aq.result = Ok(new_data)` — h5/d7/sn are extracted from `new_data` by reference before it is moved. Fix(BUG-309). Mirrors AC-03 of Feature 033 and the equivalent Fix(BUG-256) in `apply_refresh`.
+- **AC-19**: The 5h-exhaustion skip guard uses a threshold of `five_hour_left(account_quota) <= 0.0%` (fully/literally exhausted) — NOT `H_EXHAUSTED_THRESHOLD = 15.0` (the human-facing display/sort classification boundary, TSK-190). An account with `5h Left` anywhere in `(0.0%, 100.0%]` — including the 1%–15% partial-exhaustion range — is NOT skipped by this guard and IS touched if it otherwise qualifies (at least one timer absent, valid quota, not owned/occupied-elsewhere, `touch_idle` not `false`). Rationale: a touch subprocess still succeeds and extends the usable window for a partially-exhausted account; only a truly empty account (0% remaining) gains nothing from the spawn. Corrects TSK-196's original reuse of `H_EXHAUSTED_THRESHOLD`, which over-broadly skipped touch for any account ≤15% remaining (TSK-418).
 
 ### Bugs
 
 | File | Relationship |
 |------|--------------|
+| BUG-178 | BUG-178 (TSK-196, ✅ Fixed 2026-05-25; threshold corrected by TSK-418): `apply_touch` fired subprocess for literal-0%-quota accounts (i1@wbox.pro, i2@wbox.pro). TSK-196's fix added the h-exhausted guard but reused the human-facing `H_EXHAUSTED_THRESHOLD = 15.0` (TSK-190) rather than a true-exhaustion threshold, over-broadly skipping touch for any account ≤15% remaining instead of only fully-exhausted ones. See AC-19, TSK-418. |
 | BUG-208 | BUG-208 (Closed): restore `switch_account` calls wrapped in `let _ = ...` — silent error discard; superseded by BUG-211 (restore removed from `apply_touch`) |
 | BUG-211 | BUG-211 (Fixed): snapshot+restore removed from `apply_touch`; `save(update_marker=false)` suppresses `_active` writes during per-account cycling |
 | BUG-214 | BUG-214 (TSK-217, ✅ Fixed): `apply_touch` fired subprocess for 7d-exhausted accounts — fixed via `seven_day_left()` guard |

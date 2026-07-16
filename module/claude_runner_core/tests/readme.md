@@ -38,11 +38,19 @@ This directory contains all functional tests for the `claude_runner_core` crate,
 | `terminal_ide_params_test.rs` | Test terminal and IDE parameter builder methods (TSK-079) |
 | `pattern_e_empty_and_edge_cases_test.rs` | Test Pattern E empty-iterator bug fix and float edge cases |
 | `isolated_test.rs` | Test IsolatedRunResult fields and RunnerError Display (T01–T08) |
+| `isolated_model_resolution_test.rs` | Test `resolve_isolated_default_model()` tiered config.toml resolution + prefs.json regression guard (tasks 407/410, T4–T7) |
 | `classify_error_test.rs` | Test classify_error() and ErrorKind variants (T01–T12, BUG-037) |
 | `bug_243_test.rs` | BUG-243 reproducer: timeout with partial stdout preserved |
+| `control_session_common/` | Shared real-`claude`-spawn helper for control-session tests (not a test binary) |
+| `control_session_lifecycle_test.rs` | Test P0-1 fixture integrity + interrupt/timeout/crash/stopTask/backgroundTasks (task 415) |
+| `control_session_settings_test.rs` | Test live session-config control methods: permission mode, model, thinking tokens, flags, stream input (task 415) |
+| `control_session_cached_accessors_test.rs` | Test the 5 cached-accessor control methods (task 415) |
+| `control_session_mcp_test.rs` | Test MCP-server control methods: status, reconnect, toggle, set servers, permission override (task 415) |
+| `control_session_file_task_test.rs` | Test file/session-state control methods: rewind, context usage, read file, reload, seed read state (task 415) |
 | `docs/` | Test surface spec files (feature behavioral requirement cases) |
+| `fixtures/sdk_control_capture/` | Real captured Agent SDK wire evidence for the 25 `Query` control methods (task 415 Phase 0) |
 
-## Organization (34 test files)
+## Organization (40 test files)
 
 Tests organized by functional domain and architectural principles (see Responsibility Table above).
 
@@ -77,11 +85,18 @@ This test suite covers the claude_runner_core crate's builder pattern API for Cl
   - issue-token-limit-default: Migration from factory pattern didnt preserve 200K default
   - Root Cause, Why Not Caught Initially, Fix Applied, Prevention, Pitfall documented
 - Test organization: Test Matrix cataloging, Lessons Learned documentation, Cross-references in Out of Scope
+- Bidirectional control protocol (5 test files, 28 Test Matrix rows, task 415):
+  - Real `claude` subprocess spawned via `spawn_control_session()` for every test — no mocking
+  - Lifecycle/fault handling: `interrupt`, request timeout, subprocess crash, `stopTask`, `backgroundTasks`
+  - Live session config: `setPermissionMode`, `setModel`, `setMaxThinkingTokens`, `applyFlagSettings`, `streamInput`
+  - Cached accessors: `initializationResult`, `reinitialize`, `supportedCommands`/`Models`/`Agents`, `accountInfo`
+  - MCP control: `mcpServerStatus`, `reconnectMcpServer`, `toggleMcpServer`, `setMcpServers`, `setMcpPermissionModeOverride`
+  - File/session state: `rewindFiles`, `getContextUsage`, `readFile`, `reloadPlugins`, `reloadSkills`, `seedReadState`
 
 **Out of Scope:**
 - Session lifecycle management (→ claude_profile crate)
 - Context injection from consumer_runner (→ dream_agent crate)
-- Actual process execution (→ dream_agent crate)
+- Actual process execution of `execute()`/`spawn_piped()`/`spawn_tty()` non-interactive/interactive runs (→ dream_agent crate) — **exception:** `spawn_control_session()`'s bidirectional control protocol IS tested here via real `claude` subprocesses (task 415; see `control_session_*_test.rs` and `fixtures/sdk_control_capture/`), since the wire protocol itself is this crate's own responsibility
 - Interactive terminal UI (→ terminal-based tools)
 - Configuration hierarchy (→ config_hierarchy crate)
 

@@ -3,8 +3,9 @@
 Interaction tests for Group 1 (Claude-Native Flags): `--print`, `--model`, `--verbose`,
 `--effort`, `--no-persist`, `--json-schema`, `--mcp-config`, plus 7 new passthrough params
 `--output-format`, `--max-turns`, `--allowed-tools`, `--disallowed-tools`, `--max-budget-usd`,
-`--add-dir`, `--fallback-model`. Tests validate these flags coexist correctly and are forwarded
-to the claude subprocess.
+`--add-dir`, `--fallback-model`, and `--input-format` (14th member; per-parameter coverage in
+[081_input_format.md](../param/081_input_format.md), no combined-forwarding corner case yet).
+Tests validate these flags coexist correctly and are forwarded to the claude subprocess.
 
 **Source:** [param_group/01_claude_native_flags.md](../../../../docs/cli/param_group/01_claude_native_flags.md)
 

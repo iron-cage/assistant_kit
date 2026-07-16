@@ -44,7 +44,7 @@
 - FT-04 is a unit test in `tests/usage/fetch_tests.rs` — mock-free: verify no `read_token()` call path was exercised and cache JSON is the returned value.
 - FT-05 is a render test in `tests/usage/render_tests_a.rs` — uses `AccountQuota { is_owned: false, cached: true, ... }` and asserts `~` prefix; also tests `cached: false, is_owned: false` giving dashes.
 - FT-06 is a unit test in `src/usage/refresh_predicate.rs` `#[cfg(test)]` module.
-- FT-07 is a unit test in `tests/usage/touch_tests.rs` using `gag::BufferRedirect::stderr()` for trace capture.
+- FT-07 is a unit test in `tests/usage/touch_tests_b.rs` — calls `touch_skip_reason()` directly (converted from gag-based stderr capture).
 - FT-08 through FT-10 are integration tests via `verb/test` — verify exit code 1 and message text.
 - FT-11 is a unit test in `claude_profile_core/tests/account_test.rs` — `{name}.json` with no `owner` key reads as `is_owned = true`.
 - FT-12 is a render test in `tests/usage/render_tests_a.rs` — verifies `"is_owned": true`/`"is_owned": false` in JSON object.
@@ -143,7 +143,7 @@
 - **Then (case B):** No subprocess spawned. Stderr contains a timestamped diagnostic line `... · touch  alice  skipped (reason: occupied elsewhere)`.
 - **Exit:** Ok(()) with no subprocess; matching trace line emitted per case
 - **Source fn:** `ft07_touch_skips_non_owned_with_trace`
-- **Note:** Gate condition: `!aq.is_owned || aq.is_occupied_elsewhere`. The trace reason mirrors the specific gate that fired.
+- **Note:** Gate condition: `!aq.is_owned || aq.is_occupied_elsewhere`. The trace reason mirrors the specific gate that fired. Converted from gag-based stderr capture to a direct `touch_skip_reason()` call — `apply_touch()`'s trace line embeds this same reason string verbatim, so asserting the oracle's return value is equivalent to asserting the captured trace content.
 - **Source:** [036_account_ownership.md AC-07](../../../docs/feature/036_account_ownership.md)
 
 ---

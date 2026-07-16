@@ -49,7 +49,6 @@ claude_quota          = { workspace = true, optional = true, features = [ "enabl
 data_fmt              = { workspace = true, optional = true }
 
 [dev-dependencies]
-gag                = { workspace = true }
 serde_json.workspace = true
 tempfile.workspace = true
 claude_quota       = { workspace = true, features = [ "enabled" ] }

@@ -7,7 +7,7 @@ use claude_profile::usage::test_bridge::types::{ SortStrategy, PreferStrategy };
 use claude_profile::usage::test_bridge::
 {
   FAR_FUTURE_MS,
-  mk_aq_sort, mk_aq_with_7d_reset,
+  mk_aq_sort, mk_aq_with_7d_reset, mk_aq_sort_weekly,
   reset_iso_at,
 };
 
@@ -520,5 +520,61 @@ fn mre_bug229_sort_renew_subscription_sooner_than_7d_ranks_first()
     accounts[ indices[ 1 ] ].name, "a@test.com",
     "BUG-229: sort::renew must rank a second; got: {}",
     accounts[ indices[ 1 ] ].name,
+  );
+}
+
+// ── BUG-336: seven_day_left() rounding propagates to the eligibility gate ──
+
+/// `bug_reproducer(BUG-336)` — `find_next_for_strategy`'s eligibility gate
+/// (`sort_next.rs:67,85,90`, `seven_day_left(aq) > WEEKLY_EXHAUSTION_THRESHOLD`) must
+/// exclude an account whose raw `7d Left` lands in the one-point disagreement band
+/// `(5.0, 5.5)` once `seven_day_left()` rounds — matching what the account's own `7d Left`
+/// cell already displays (🟡, exhausted-looking) rather than recommending it as "next".
+///
+/// # Root Cause
+/// `seven_day_left()` (`format.rs:346-350`) returned the raw, unrounded `100.0 - utilization`.
+/// `find_next_for_strategy`'s eligibility closures (`sort_next.rs:67,85,90`) compare that raw
+/// value directly against `WEEKLY_EXHAUSTION_THRESHOLD`. For `util=94.6` (raw `left=5.4`), the
+/// raw comparison `5.4 > 5.0` passed (eligible), even though the same account's `7d Left` cell
+/// (via `pct_emoji`, fixed under BUG-331) already rounds to `5.0` and renders 🟡 — an account
+/// that visually reads as weekly-exhausted was still being recommended as the next account to
+/// rotate into.
+///
+/// # Why Not Caught
+/// No existing `sort_next` eligibility test used a utilization value inside the one-point band
+/// `(5.0, 5.5)`; all prior eligibility-gate tests used values several points away from the
+/// threshold on either side, where raw and rounded comparisons always agree.
+///
+/// # Fix Applied
+/// `seven_day_left()` now rounds its return value once — `( 100.0 - u ).round()` — before
+/// returning; `find_next_for_strategy`'s eligibility closures consume the helper directly, so
+/// this single change propagates to all three call sites (`sort_next.rs:67,85,90`) with no
+/// direct edit needed there (re-audited per BUG-336 Delivery Requirements).
+///
+/// # Prevention
+/// This test locks in that an account whose `7d Left` cell displays 🟡 (rounds to the
+/// threshold or below) is never recommended as "next" — eligibility must always agree with
+/// the displayed classification for the same account.
+///
+/// # Pitfall
+/// This is a deliberate, intentional behavior shift (not a regression) — before this fix, an
+/// account in the one-point band was eligible; after, it is excluded. Any future audit of
+/// `find_next_for_strategy` must treat this exclusion as correct, not investigate it as a bug.
+#[ doc = "bug_reproducer(BUG-336)" ]
+#[ test ]
+fn mre_bug336_find_next_excludes_account_in_one_point_weekly_band()
+{
+  let now = 0u64;
+  // a: 7d util=94.6 → raw left=5.4, in (5.0,5.5) disagreement band — must be excluded post-fix.
+  let a = mk_aq_sort_weekly( "a@test.com", 10.0, 94.6, 10.0 );
+  // b: 7d util=10.0 → left=90.0, unambiguously eligible — the expected winner post-fix.
+  let b = mk_aq_sort_weekly( "b@test.com", 10.0, 10.0, 10.0 );
+  let accounts = vec![ a, b ];
+
+  let winner = find_next_for_strategy( &accounts, SortStrategy::Name, PreferStrategy::Any, now, false );
+  assert_eq!(
+    winner, Some( 1 ),
+    "post-fix: account 'a' (7d util=94.6, rounds to left=5.0) must be excluded as weekly-exhausted; \
+     winner must be 'b' (index 1), got {winner:?}",
   );
 }

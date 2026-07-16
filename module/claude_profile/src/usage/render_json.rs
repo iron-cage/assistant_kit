@@ -4,7 +4,7 @@
 
 use crate::output::json_escape;
 use super::types::AccountQuota;
-use super::format::{ renewal_secs, next_event_raw };
+use super::format::{ renewal_secs, next_event_raw, shorten_error };
 
 /// Produce the `"cached":bool,"cache_age_secs":N|null` JSON fragment.
 fn cache_json_fields( cached : bool, age : Option< u64 > ) -> String
@@ -49,7 +49,7 @@ pub fn render_json( accounts : &[ AccountQuota ] ) -> String
       .map_or( "null", |a| if a.has_max { "true" } else { "false" } );
     let ren_pair                                       = renewal_secs(
       aq.renewal_at.as_deref(),
-      aq.account.as_ref().map( |a| a.org_created_at.as_str() ),
+      aq.org_created_at.as_deref(),
       now_secs,
     );
     let ( renewal_secs_str, renewal_is_estimate_str ) = match ren_pair
@@ -91,6 +91,13 @@ pub fn render_json( accounts : &[ AccountQuota ] ) -> String
             ( format!( "\"{}\"", prefix.trim_start_matches( '+' ).trim_start_matches( '$' ) ),
               secs.to_string() ),
         };
+        // Fix(BUG-335): Ok-branch JSON never surfaced the cache-fallback failure reason.
+        //   Root cause: AccountQuota had no field to carry the reason forward from fetch.rs's
+        //   Err→Ok cache-fallback conversion; render_json had nothing to emit.
+        //   Pitfall: use shorten_error() here (matching AC-14), unlike the Err-branch "error"
+        //   field below which intentionally emits the raw reason via json_escape() alone.
+        let fallback_reason_json = aq.fallback_reason.as_deref()
+          .map_or_else( || "null".to_string(), |r| format!( "\"{}\"", json_escape( shorten_error( r ) ) ) );
         format!(
           "{{\"account\":\"{name_esc}\",\"is_current\":{is_current_str},\"is_active\":{is_active_str},\
 \"is_occupied_elsewhere\":{is_occupied_elsewhere_str},\"is_owned\":{is_owned_str},\
@@ -100,7 +107,7 @@ pub fn render_json( accounts : &[ AccountQuota ] ) -> String
 \"next_event_type\":{next_type_str},\"next_event_secs\":{next_secs_str},\
 \"session_5h_left_pct\":{session_pct},\"session_5h_resets_in_secs\":{session_reset},\
 \"weekly_7d_left_pct\":{weekly_pct},\"weekly_7d_sonnet_left_pct\":{sonnet_pct},\
-\"weekly_7d_resets_in_secs\":{weekly_reset},{cached_json}}}",
+\"weekly_7d_resets_in_secs\":{weekly_reset},\"fallback_reason\":{fallback_reason_json},{cached_json}}}",
           cached_json = cache_json_fields( aq.cached, aq.cache_age_secs ),
         )
       }

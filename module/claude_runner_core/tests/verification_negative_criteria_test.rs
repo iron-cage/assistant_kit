@@ -300,7 +300,12 @@ fn test_no_code_duplication()
   // Root cause: Each new enum contributes one `default()` and one `as_str()` duplicate,
   //   adding 8 new duplicate occurrences (4 enums × 2 methods) beyond the original 5 headroom
   // Pitfall: This threshold must be updated each time new enums with standard trait impls are added
-  let duplication_threshold = 15;
+  //
+  // Fix(task-415-control-protocol): Raised from 15 to 18 after adding control.rs (task 415 Phase 2)
+  // Root cause: 3 new enums (McpPermissionOverrideMode, ReadFileEncoding, ThinkingDisplay) each
+  //   contribute one `as_str()` duplicate (+3), and ControlSession's manual `Debug` impl
+  //   contributes one more `fmt()` duplicate (+1) — 4 new duplicate occurrences, no headroom added
+  let duplication_threshold = 18;
   let duplicates = function_count.saturating_sub( unique_count );
 
   assert!

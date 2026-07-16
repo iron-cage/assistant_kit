@@ -99,6 +99,7 @@ The former `.account.rotate` used `max_by_key(expires_at_ms)` — the account wi
 | [008_auto_rotate.md](008_auto_rotate.md) | **DEPRECATED** predecessor; this feature replaces it |
 | [061_solo_token_conservation.md](061_solo_token_conservation.md) | `rotate::1` is mutually exclusive with `solo::1` — both present exits 1 before fetch |
 | [062_unified_session_config.md](062_unified_session_config.md) | Rotation dispatcher updated: calls `apply_model_override()` for the winner after switch — owns all effort writes (carry-forward removed TSK-335) |
+| [070_account_claim_and_reservation_control.md](070_account_claim_and_reservation_control.md) | Gate 9 (`claim_lock` exclusion) and `reserve` leading sort key — both inside `find_next_for_strategy()`, shared with rotation |
 
 ### Sources
 

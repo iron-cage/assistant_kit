@@ -11,6 +11,7 @@ mod ps;
 mod kill;
 mod tools;
 mod scope;
+mod query;
 mod summary;
 mod json_config;
 mod config;
@@ -24,6 +25,11 @@ pub use summary::{ render_summary, resolve_fields, extract_session_id };
 // Same false-positive unused_imports rationale as the summary re-export above.
 #[ allow( unused_imports ) ]
 pub use gate::gate_max_attempts_from;
+
+// tools_command_test.rs (external test) imports TOOLS via the public API for the
+// sync-guard tests (BUG-409). Same false-positive unused_imports rationale as above.
+#[ allow( unused_imports ) ]
+pub use tools::TOOLS;
 
 use claude_runner_core::{ ClaudeCommand, EffortLevel, IsolatedModel };
 use claude_storage_core::SessionId;
@@ -43,6 +49,7 @@ pub( super ) use ps::dispatch_ps;
 pub( super ) use kill::dispatch_kill;
 pub( super ) use tools::dispatch_tools;
 pub( crate ) use scope::dispatch_scope;
+pub( super ) use query::{ dispatch_query, run_query_daemon };
 
 pub( super ) use parse::parse_args;
 pub( super ) use env::apply_env_vars;
@@ -64,7 +71,7 @@ pub( super ) fn handle_dry_run( builder : &ClaudeCommand )
 // Fix(BUG-212): `run` was absent; typing `clr running` produced no helpful error.
 // Root cause: list was never updated when `run` became an explicit subcommand.
 // Pitfall: update both this list and the dispatch match in lib.rs when adding a subcommand.
-const KNOWN_SUBCOMMANDS : &[ &str ] = &[ "run", "ask", "isolated", "refresh", "help", "ps", "kill", "tools", "scope" ];
+const KNOWN_SUBCOMMANDS : &[ &str ] = &[ "run", "ask", "isolated", "refresh", "help", "ps", "kill", "tools", "scope", "query" ];
 
 // Fix(BUG-225): Guard against typos/truncations of known subcommand names.
 // Root cause: `run_cli()` dispatched subcommands by exact string match only — any
@@ -258,9 +265,11 @@ pub( super ) fn dispatch_run( tokens : &[ String ] ) -> !
     eprintln!( "Error: {e}" );
     std::process::exit( 1 );
   }
-  // Config-file tier 4: `.clr.toml` (project) / `~/.clr/config.toml` (user), applied
-  // AFTER CLR_* env vars (tier 3) but BEFORE the BUG-008 model-pref fallback below —
-  // apply_config_defaults' is_none() / !bool checks ensure higher tiers are never overwritten.
+  // Config-file tier 4 (final tier): `.clr.toml` (project) / `~/.clr/config.toml` (user),
+  // applied AFTER CLR_* env vars (tier 3) — apply_config_defaults' is_none() / !bool checks
+  // ensure higher tiers are never overwritten. Task 408 removed the BUG-008 prefs.json
+  // fallback that previously ran after this tier, since it was a no-op for anyone using
+  // config.toml's `model` key (set on `parsed.model` right here).
   match config::load_config()
   {
     Ok( config ) =>
@@ -272,17 +281,6 @@ pub( super ) fn dispatch_run( tokens : &[ String ] ) -> !
       }
     }
     Err( e ) => { eprintln!( "Error: {e}" ); std::process::exit( 1 ); }
-  }
-
-  // Fix(BUG-008): read subprocess model preference when no explicit --model / CLR_MODEL given.
-  // Root cause: read_subprocess_model_pref() was only wired into run_isolated_ext();
-  //   dispatch_run() and dispatch_ask() never read ~/.clr/prefs.json.
-  // Pitfall: when a preference-reading function is added to one dispatch path, all other
-  //   paths honoring the same preference must be updated in the same change.
-  #[ cfg( feature = "enabled" ) ]
-  if cli.model.is_none()
-  {
-    cli.model = claude_runner_core::read_subprocess_model_pref();
   }
 
   if cli.help

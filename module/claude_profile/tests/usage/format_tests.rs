@@ -6,9 +6,11 @@ use claude_profile::usage::test_bridge::{
   shorten_error, relevant_quotas,
   recommended_model, quota_text_cells, status_emoji,
   renewal_secs, unix_to_date,
+  status_group_of, StatusGroup, apply_model_override,
 };
 use claude_profile::usage::test_bridge::{ FAR_FUTURE_MS, mk_aq_ok_both, mk_aq_sort, mk_aq_sort_weekly, mk_aq_err, mk_aq_cancelled };
 use claude_profile::usage::test_bridge::types::{ AccountQuota, PreferStrategy };
+use tempfile::TempDir;
 
 // ── shorten_error ──────────────────────────────────────────────────────────
 
@@ -278,18 +280,23 @@ fn test_status_emoji_and_both_at_threshold_red()
 /// Composite AND: `5h_left > 15.0%` AND `7d_left > 5.0%` required for 🟢.
 ///
 /// - A: `h5_util=85.0` (`5h_left=15.0`%, at threshold) → 🟡; 7d is ample.
-/// - B: `h5_util=84.9` (`5h_left=15.1`%, just above) → 🟢; 7d is ample.
+/// - B: `h5_util=84.5` (`5h_left=15.5%`, rounds away-from-zero to 16, just above) → 🟢; 7d is ample.
 /// - C: `d7_util=95.0` (`7d_left=5.0`%, at threshold) → 🟡; 5h is ample.
+///
+/// Fix(BUG-336): case B was originally `h5_util=84.9` (`5h_left=15.1`) — once `status_emoji()`
+///   rounds its comparison inputs (this file's own BUG-336 fix), 15.1 rounds DOWN to 15 (the
+///   threshold), no longer demonstrating "just above". Recalibrated to the new narrowest
+///   above-threshold margin: 84.5 (left=15.5), the exact tie-break point that rounds up to 16.
 ///
 /// Source: [`009_token_usage.md` AC-19](../../docs/feature/009_token_usage.md)
 #[ test ]
 fn it151_status_emoji_boundary_precision()
 {
   let aq_a = mk_aq_ok_both( 85.0, 50.0 );
-  let aq_b = mk_aq_ok_both( 84.9, 50.0 );
+  let aq_b = mk_aq_ok_both( 84.5, 50.0 );
   let aq_c = mk_aq_ok_both( 50.0, 95.0 );
   assert_eq!( status_emoji( &aq_a ), "🟡", "A: 5h=15.0% (at threshold) → 🟡" );
-  assert_eq!( status_emoji( &aq_b ), "🟢", "B: 5h=15.1% (just above) → 🟢" );
+  assert_eq!( status_emoji( &aq_b ), "🟢", "B: 5h=15.5% (rounds to 16, just above) → 🟢" );
   assert_eq!( status_emoji( &aq_c ), "🟡", "C: 7d=5.0% (at threshold) → 🟡" );
 }
 
@@ -309,6 +316,7 @@ fn test_status_emoji_five_hour_none_is_green()
   };
   let aq = AccountQuota
   {
+    fallback_reason : None,
     name                  : String::new(),
     is_current            : false,
     is_active             : false,
@@ -321,8 +329,10 @@ fn test_status_emoji_five_hour_none_is_green()
     renewal_at            : None,
     cached                : false,
     cache_age_secs        : None,
+    org_created_at        : None,
     is_owned              : true,
     owner                 : String::new(),
+    claim_lock : false, reserve : false,
   };
   assert_eq!(
     status_emoji( &aq ), "🟢",
@@ -583,6 +593,195 @@ fn mre_bug331_pct_emoji_color_matches_rounded_display_at_threshold_boundary()
     cells_over[ 2 ], cells_under[ 2 ],
   );
   assert_eq!( cells_over[ 2 ], "🟡 5%", "post-fix: both round to left=5.0, which is NOT > threshold 5.0 → 🟡" );
+}
+
+// ── BUG-336: status_emoji / status_group_of / recommended_model rounding ──
+
+/// `bug_reproducer(BUG-336)` — `status_emoji` must not diverge from `pct_emoji`'s color
+/// when the raw `7d Left` value lands in the one-percentage-point band `(5.0, 5.5)` — a raw
+/// value that reads as "available" under `status_emoji`'s raw `>` comparison but rounds down
+/// to exactly the threshold, which `pct_emoji` (fixed under BUG-331) already renders as 🟡.
+///
+/// # Root Cause
+/// `status_emoji` computed `d7_left = 100.0 - u` and compared the RAW value against
+/// `WEEKLY_EXHAUSTION_THRESHOLD` (`format.rs:502,513`), while `pct_emoji` (inside
+/// `quota_text_cells`, fixed under BUG-331) rounds `left` once before both its own color
+/// decision and its display text. `util = 94.6` gives raw `d7_left = 5.4`: `5.4 > 5.0` is
+/// true under `status_emoji`'s raw comparison (🟢), but `pct_emoji` rounds `5.4` to `5.0`
+/// first, and `5.0 > 5.0` is false (🟡) — the same account's Status dot and `7d Left` cell
+/// disagree in the same table row.
+///
+/// # Why Not Caught
+/// BUG-331's own regression test (`mre_bug331_pct_emoji_color_matches_rounded_display_at_threshold_boundary`)
+/// only exercised `pct_emoji` in isolation against sub-percent floating-point noise; it never
+/// compared `pct_emoji`'s output against `status_emoji`'s independent raw computation over the
+/// same underlying data, so the one-point-wide disagreement band this fix creates went unnoticed.
+///
+/// # Fix Applied
+/// `status_emoji` now rounds `h5_left`/`d7_left` once — `( 100.0 - u ).round()` — before the
+/// threshold comparison, matching `pct_emoji`'s already-rounded basis.
+///
+/// # Prevention
+/// This test locks in that `status_emoji` and `pct_emoji` (via `quota_text_cells`) must always
+/// agree on pass/fail classification for the same underlying data, not just on displayed text.
+///
+/// # Pitfall
+/// The disagreement band is `(threshold, threshold+0.5)` — a full percentage point wide, unlike
+/// BUG-331's sub-percent-noise band — so it is far more likely to occur in production; any new
+/// classification function added over these fields must round once before comparing, never
+/// compare a raw float against a threshold that a sibling function already rounds for display.
+#[ doc = "bug_reproducer(BUG-336)" ]
+#[ test ]
+fn mre_bug336_status_emoji_matches_pct_emoji_at_one_point_band_util_94_6()
+{
+  // 5h deep green (not under test); 7d raw left=5.4, in the (5.0,5.5) disagreement band.
+  let aq    = mk_aq_ok_both( 10.0, 94.6 );
+  let data  = aq.result.as_ref().unwrap();
+  let cells = quota_text_cells( data, 0 );
+
+  assert_eq!( cells[ 2 ], "🟡 5%", "pct_emoji must round left to 5.0 (NOT > threshold 5.0) → 🟡" );
+  assert_eq!(
+    status_emoji( &aq ), "🟡",
+    "status_emoji must agree with pct_emoji's 🟡 classification for util=94.6 (raw left=5.4); \
+     pct_emoji cell={:?}",
+    cells[ 2 ],
+  );
+}
+
+/// Property-style cross-function agreement test (BUG-336 In Scope item 5): for any
+/// `AccountQuota` with `result = Ok(...)`, `pct_emoji`'s implied per-dimension color
+/// (via `quota_text_cells`) must agree with `status_emoji`'s combined classification
+/// and `status_group_of`'s Green/non-Green boundary, across a spread of 5h/7d inputs
+/// including both the exact-integer boundary and the one-point disagreement band.
+///
+/// # Root Cause
+/// Same raw-vs-rounded mechanism as
+/// `mre_bug336_status_emoji_matches_pct_emoji_at_one_point_band_util_94_6`, generalized here
+/// across both dimensions and all four `(h5_ok, d7_ok)` combinations rather than a single
+/// fixed input.
+///
+/// # Why Not Caught
+/// No existing test iterated a table of inputs checking all three functions (`pct_emoji`,
+/// `status_emoji`, `status_group_of`) against each other simultaneously; each function had
+/// isolated boundary tests but never a cross-function comparison.
+///
+/// # Fix Applied
+/// `status_emoji`'s `h5_left`/`d7_left` and the `five_hour_left`/`seven_day_left` helpers
+/// consumed by `status_group_of` now round once before comparison, matching `pct_emoji`.
+///
+/// # Prevention
+/// Any future change to one of these three functions' threshold comparisons must keep this
+/// table green — it is the single place all three are checked together.
+///
+/// # Pitfall
+/// `status_group_of`'s `WeeklyExhausted` arm is `(_, false)` — it fires whenever `d7_ok` is
+/// false regardless of `h5_ok` (BUG-321: both-exhausted is G3, not G4/Red). The expected-group
+/// derivation below mirrors that `(_, false)` precedence, not a naive four-way match.
+#[ test ]
+fn test_bug336_cross_function_agreement_pct_emoji_status_emoji_status_group()
+{
+  // (h5_util, d7_util, description)
+  let cases : [ ( f64, f64, &str ); 7 ] =
+  [
+    ( 10.0, 10.0, "both deep green" ),
+    ( 97.0, 10.0, "5h deep yellow, 7d deep green" ),
+    ( 10.0, 97.0, "5h deep green, 7d deep yellow" ),
+    ( 97.0, 97.0, "both deep yellow (BUG-321 both-exhausted)" ),
+    ( 84.7, 10.0, "5h in one-point band (15.3→15.0), 7d deep green" ),
+    ( 10.0, 94.6, "5h deep green, 7d in one-point band (5.4→5.0)" ),
+    ( 85.0, 95.0, "both at exact-integer boundary (15.0 / 5.0)" ),
+  ];
+
+  for ( h5_util, d7_util, desc ) in cases
+  {
+    let aq    = mk_aq_ok_both( h5_util, d7_util );
+    let data  = aq.result.as_ref().unwrap();
+    let cells = quota_text_cells( data, 0 );
+
+    let h5_ok = cells[ 0 ].starts_with( '🟢' );
+    let d7_ok = cells[ 2 ].starts_with( '🟢' );
+
+    let expected_status = if h5_ok && d7_ok { "🟢" } else { "🟡" };
+    assert_eq!(
+      status_emoji( &aq ), expected_status,
+      "[{desc}] status_emoji must match pct_emoji-derived (h5_ok={h5_ok}, d7_ok={d7_ok}); cells={cells:?}",
+    );
+
+    let expected_group = match ( h5_ok, d7_ok )
+    {
+      ( true,  true  ) => StatusGroup::Green,
+      ( false, true  ) => StatusGroup::HExhausted,
+      ( _,     false ) => StatusGroup::WeeklyExhausted,
+    };
+    assert_eq!(
+      status_group_of( &aq ), expected_group,
+      "[{desc}] status_group_of must match pct_emoji-derived (h5_ok={h5_ok}, d7_ok={d7_ok}); cells={cells:?}",
+    );
+  }
+}
+
+/// `bug_reproducer(BUG-336)` — `recommended_model()` must agree with `apply_model_override()`
+/// (already fixed under BUG-331) when `seven_day_sonnet.utilization` lands raw `sonnet_left`
+/// in the disagreement band just below `OPUS_OVERRIDE_THRESHOLD` that rounds UP to the
+/// threshold.
+///
+/// # Root Cause
+/// `recommended_model()` compared `100.0 - s.utilization` (raw) against `OPUS_OVERRIDE_THRESHOLD`
+/// (`format.rs:421`), while `apply_model_override()` (fixed under BUG-331, `api_switch.rs:253`)
+/// rounds `sonnet_left` once before its own comparison. `utilization = 90.4` gives raw
+/// `sonnet_left = 9.6`: `9.6 < 10.0` is true under `recommended_model`'s raw comparison
+/// ("opus"), but `apply_model_override` rounds `9.6` to `10.0` first, and `10.0 < 10.0` is
+/// false ("sonnet") — the footer's recommended model would name a different model than the
+/// one `apply_model_override` actually selects on rotation into that account.
+///
+/// # Why Not Caught
+/// No test compared `recommended_model()`'s output against `apply_model_override()`'s actual
+/// classification for the same input — each had isolated tests but was never cross-checked
+/// against the other, despite `recommended_model`'s own doc comment asserting it "mirrors"
+/// `apply_model_override`.
+///
+/// # Fix Applied
+/// `recommended_model()` now rounds the comparison —
+/// `( 100.0 - s.utilization ).round() < OPUS_OVERRIDE_THRESHOLD` — restoring agreement with
+/// `apply_model_override()`.
+///
+/// # Prevention
+/// This test locks in the "mirrors `apply_model_override()`" relationship `recommended_model`'s
+/// own doc comment asserts, using the real `apply_model_override()` function (via an isolated
+/// temp `ClaudePaths` home) rather than re-deriving its logic inline.
+///
+/// # Pitfall
+/// `apply_model_override` has real filesystem side effects (writes `settings.json`) — it must
+/// only ever be exercised against an isolated `ClaudePaths::with_home(tempdir)`, never a real
+/// `~/.claude/` home. Pre-seed `settings.json` with `{"model":"opus"}` before the call so the
+/// post-call content unambiguously reveals which branch fired, regardless of whether the
+/// sonnet-restore branch would otherwise no-op on an absent file.
+#[ doc = "bug_reproducer(BUG-336)" ]
+#[ test ]
+fn mre_bug336_recommended_model_agrees_with_apply_model_override_at_opus_threshold_band()
+{
+  let dir   = TempDir::new().unwrap();
+  let paths = claude_profile::ClaudePaths::with_home( dir.path() );
+  std::fs::create_dir_all( paths.base() ).unwrap();
+  // Pre-write "opus" so the post-call file content unambiguously reveals which branch fired.
+  std::fs::write( paths.settings_file(), r#"{"model":"opus"}"# ).unwrap();
+
+  // raw sonnet_left = 9.6 (util=90.4), rounds to 10.0 — band just below OPUS_OVERRIDE_THRESHOLD.
+  let aq   = mk_aq_sort_weekly( "test@example.com", 10.0, 10.0, 90.4 );
+  let data = aq.result.as_ref().unwrap();
+
+  apply_model_override( data, &paths, false, "test", "test@example.com" );
+  let settings = std::fs::read_to_string( paths.settings_file() ).unwrap();
+  let override_picked_sonnet = settings.contains( "\"sonnet\"" );
+
+  assert_eq!(
+    recommended_model( &aq ) == "sonnet", override_picked_sonnet,
+    "recommended_model()={:?} must agree with apply_model_override's actual write \
+     (settings.json now sonnet={override_picked_sonnet}) for utilization=90.4 (raw sonnet_left=9.6)",
+    recommended_model( &aq ),
+  );
+  assert_eq!( recommended_model( &aq ), "sonnet", "post-fix: rounds to 10.0, NOT < threshold 10.0 → sonnet" );
+  assert!( override_picked_sonnet, "post-fix: apply_model_override must restore sonnet (not keep opus)" );
 }
 
 // ── renews_label (Phase 3 RED gate — TSK-227) ─────────────────────────────

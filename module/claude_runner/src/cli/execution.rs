@@ -600,6 +600,89 @@ fn default_print_timeout() -> u32
     .unwrap_or( DEFAULT_PRINT_TIMEOUT_SECS )
 }
 
+/// Execute in non-interactive print mode with live NDJSON streaming.
+///
+/// Activated only from `run_print_mode()` when `--output-format stream-json`
+/// is set. Spawns via `spawn_piped()` and prints each stdout line as it
+/// arrives, flushed immediately — unlike `execute_print_attempt()`'s timeout
+/// path, which also drains via a background thread but only returns one
+/// accumulated `ExecutionOutput` after the subprocess exits.
+///
+/// Deliberately bypasses the retry hierarchy, `--expect` validation, and
+/// summary rendering: all three assume one accumulated response blob, which
+/// does not apply to a raw NDJSON event stream — a stream-json caller wants
+/// the events verbatim and live, not retried/validated/summarized.
+fn run_print_mode_streaming(
+  builder : &ClaudeCommand,
+  cli     : &CliArgs,
+  journal : Option< &JournalWriter >,
+)
+{
+  use std::io::{ BufRead, BufReader, Write };
+
+  let mut child = match builder.spawn_piped()
+  {
+    Ok( c )  => c,
+    Err( e ) =>
+    {
+      let msg = if e.kind() == std::io::ErrorKind::NotFound
+      {
+        "claude binary not found in PATH — install with: npm i -g @anthropic-ai/claude-code".to_string()
+      }
+      else
+      {
+        format!( "Failed to execute Claude Code: {e}" )
+      };
+      eprintln!( "Error: {msg}" );
+      std::process::exit( 1 );
+    }
+  };
+
+  let stdout_pipe = child.stdout.take().expect( "stdout piped by spawn_piped" );
+  let stderr_pipe = child.stderr.take().expect( "stderr piped by spawn_piped" );
+
+  // Drain stderr on a background thread while stdout is read line-by-line on this
+  // thread — without it, a subprocess that fills the stderr pipe buffer (64 KiB)
+  // while this thread blocks reading stdout would deadlock (same rationale as
+  // execute_print_attempt()'s timeout path above).
+  let stderr_t = std::thread::spawn( move || -> Vec< u8 >
+  {
+    use std::io::Read as _;
+    let mut buf = Vec::new();
+    let _ = { let mut r = stderr_pipe; r.read_to_end( &mut buf ) };
+    buf
+  } );
+
+  let mut collected_stdout = String::new();
+  let reader = BufReader::new( stdout_pipe );
+  let mut out = std::io::stdout().lock();
+  for line in reader.lines()
+  {
+    let Ok( line ) = line else { break };
+    collected_stdout.push_str( &line );
+    collected_stdout.push( '\n' );
+    // Explicit flush is required: stdout is block-buffered (not line-buffered)
+    // when piped rather than attached to a terminal, so without this a caller
+    // reading clr's own stdout incrementally would still see nothing until exit.
+    let _ = writeln!( out, "{line}" );
+    let _ = out.flush();
+  }
+  drop( out );
+
+  let status = child.wait().unwrap_or_else( | e |
+  {
+    eprintln!( "Error: failed to wait for Claude Code subprocess: {e}" );
+    std::process::exit( 1 );
+  } );
+  let stderr_bytes = stderr_t.join().unwrap_or_default();
+  let stderr = String::from_utf8_lossy( &stderr_bytes ).to_string();
+  if !stderr.is_empty() { eprint!( "{stderr}" ); }
+
+  let exit_code = signal_exit_code( &status );
+  emit_execution( journal, cli, &collected_stdout, &stderr, exit_code, None );
+  std::process::exit( exit_code );
+}
+
 /// Execute in non-interactive print mode (captures output).
 ///
 /// Both `--print` (passed to claude) and output capture are required:
@@ -632,6 +715,16 @@ pub( super ) fn run_print_mode(
       eprintln!( "Error: cannot open stdin file '{file_path}': {e}" );
       std::process::exit( 1 );
     }
+  }
+
+  // stream-json output is a raw NDJSON event stream, not a one-shot response —
+  // the retry hierarchy, --expect validation, and summary rendering below all
+  // assume one accumulated response blob, so none of them apply here. Delegate
+  // to the dedicated streaming path and never fall through to the batched loop.
+  if cli.output_format.as_deref() == Some( "stream-json" )
+  {
+    run_print_mode_streaming( builder, cli, journal );
+    return;
   }
   // Per-class attempt counters: [Transient, Account, Auth, Service, Process, Unknown]
   let mut attempts = [ 0usize; 6 ];

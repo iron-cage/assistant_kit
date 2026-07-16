@@ -199,10 +199,10 @@ fn us_06_queued_clr_shows_queued_headers()
 
 /// US-7 (AC-010): when ≥1 session is active, `clr ps` prefixes the table with
 /// a titled caption rule containing "Active Sessions · N running (I interactive,
-/// P print)" above the column headers, under the default `--mode all`.
+/// P print, Q query)" above the column headers, under the default `--mode all`.
 ///
 /// The heading is emitted by `Heading::new("Active Sessions").with_field(...)`.
-/// This test confirms the caption text — including the interactive/print
+/// This test confirms the caption text — including the interactive/print/query
 /// breakdown — is present in the rendered output so that AC-010 is
 /// machine-verifiable.
 ///
@@ -235,8 +235,8 @@ fn us_07_active_table_caption()
     .parse().unwrap_or_else( |e| panic!( "US-7: N not numeric ({e}):\n{caption}" ) );
   assert_eq!( n, 1, "US-7: expected exactly 1 running. Got:\n{caption}" );
   assert!(
-    caption.contains( "(1 interactive, 0 print)" ),
-    "US-7: active table caption must contain the interactive/print breakdown, got: {caption}"
+    caption.contains( "(1 interactive, 0 print, 0 query)" ),
+    "US-7: active table caption must contain the interactive/print/query breakdown, got: {caption}"
   );
 }
 

@@ -119,7 +119,11 @@ pub fn sort_indices(
     {
       for group in &mut groups
       {
-        group.sort_by( |&a, &b| accounts[ a ].name.cmp( &accounts[ b ].name ) );
+        // reserve leading key (Feature 070): non-reserved accounts sort first.
+        group.sort_by( |&a, &b|
+          accounts[ a ].reserve.cmp( &accounts[ b ].reserve )
+            .then_with( || accounts[ a ].name.cmp( &accounts[ b ].name ) )
+        );
         if reversed { group.reverse(); }
       }
     }
@@ -153,7 +157,9 @@ pub fn sort_indices(
       {
         group.sort_by( |&a, &b|
         {
-          renewal_event_secs( a ).cmp( &renewal_event_secs( b ) )
+          // reserve leading key (Feature 070): non-reserved accounts sort first.
+          accounts[ a ].reserve.cmp( &accounts[ b ].reserve )
+            .then_with( || renewal_event_secs( a ).cmp( &renewal_event_secs( b ) ) )
             .then_with( ||
             {
               let wa = prefer_weekly( &accounts[ a ], prefer );
@@ -183,7 +189,9 @@ pub fn sort_indices(
       for group in &mut groups
       {
         group.sort_by( |&a, &b|
-          renews_secs_of( a ).cmp( &renews_secs_of( b ) )
+          // reserve leading key (Feature 070): non-reserved accounts sort first.
+          accounts[ a ].reserve.cmp( &accounts[ b ].reserve )
+            .then_with( || renews_secs_of( a ).cmp( &renews_secs_of( b ) ) )
             .then_with( || accounts[ a ].name.cmp( &accounts[ b ].name ) )
         );
         if reversed { group.reverse(); }

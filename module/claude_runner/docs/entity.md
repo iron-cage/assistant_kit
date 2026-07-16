@@ -6,7 +6,7 @@
 |--------|---------|-------------|----------:|
 | `algorithm/` | Path computation algorithm specifications | [algorithm/readme.md](algorithm/readme.md) | 3 |
 | `api/` | Public API contract for the runner crate | [api/readme.md](api/readme.md) | 1 |
-| `cli/command/` | CLI command specifications | [cli/command/readme.md](cli/command/readme.md) | 9 |
+| `cli/command/` | CLI command specifications | [cli/command/readme.md](cli/command/readme.md) | 10 |
 | `cli/param/` | CLI parameter specifications | [cli/param/readme.md](cli/param/readme.md) | 72 |
 | `cli/param_group/` | CLI parameter group definitions | [cli/param_group/readme.md](cli/param_group/readme.md) | 6 |
 | `cli/parity/` | Cross-command behavioral parity comparison docs | [cli/parity/readme.md](cli/parity/readme.md) | 2 |
@@ -17,7 +17,7 @@
 | `variable/` | Output variable definitions for the six CLAUDE_* paths | [variable/readme.md](variable/readme.md) | 6 |
 | `tests/docs/api/` | Per-API test case specifications | [../tests/docs/api/readme.md](../tests/docs/api/readme.md) | 1 |
 | `tests/docs/feature/` | Per-feature test case specifications | [../tests/docs/feature/readme.md](../tests/docs/feature/readme.md) | 5 |
-| `tests/docs/cli/command/` | Per-command integration test case specifications | [../tests/docs/cli/command/readme.md](../tests/docs/cli/command/readme.md) | 9 |
+| `tests/docs/cli/command/` | Per-command integration test case specifications | [../tests/docs/cli/command/readme.md](../tests/docs/cli/command/readme.md) | 10 |
 | `tests/docs/cli/env_param/` | Per-env-parameter edge case test specifications | [../tests/docs/cli/env_param/readme.md](../tests/docs/cli/env_param/readme.md) | 2 |
 | `tests/docs/cli/param/` | Per-parameter edge case test specifications | [../tests/docs/cli/param/readme.md](../tests/docs/cli/param/readme.md) | 72 |
 | `tests/docs/cli/param_group/` | Per-parameter-group interaction test specifications | [../tests/docs/cli/param_group/readme.md](../tests/docs/cli/param_group/readme.md) | 6 |

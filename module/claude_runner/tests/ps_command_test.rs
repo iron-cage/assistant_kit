@@ -50,7 +50,7 @@ use cli_binary_test_helpers::{ run_cli, run_cli_with_env, stderr_str, stdout_str
 #[ cfg( unix ) ]
 use cli_binary_test_helpers::{
   fake_claude_binary_dir, make_proc_dir, run_clr_ps_proc,
-  spawn_fake_claude, spawn_print_claude,
+  spawn_fake_claude, spawn_print_claude, spawn_query_claude,
 };
 
 // ── IT-1: 0 sessions ──────────────────────────────────────────────────────────
@@ -349,7 +349,7 @@ fn it_11_no_gate_files_no_queued_table()
 
 /// IT-12: with a fake `claude` process running, the active sessions table output
 /// contains the titled caption rule line ("Active Sessions · N running (I interactive,
-/// P print)") above the column headers, under the default `--mode all`.
+/// P print, Q query)") above the column headers, under the default `--mode all`.
 ///
 /// The heading is rendered by `Heading::new("Active Sessions").with_field(...)` via
 /// `data_fmt`; this test confirms end-to-end that the heading text — including the
@@ -375,8 +375,8 @@ fn it_12_active_table_has_caption()
     "IT-12: active table caption must contain 'Active Sessions', got: {stdout}"
   );
   assert!(
-    stdout.contains( "1 running (1 interactive, 0 print)" ),
-    "IT-12: active table caption must contain the interactive/print breakdown, got: {stdout}"
+    stdout.contains( "1 running (1 interactive, 0 print, 0 query)" ),
+    "IT-12: active table caption must contain the interactive/print/query breakdown, got: {stdout}"
   );
 }
 
@@ -1157,9 +1157,11 @@ fn parse_running_count( stdout : &str ) -> usize
     .parse().unwrap_or_else( |e| panic!( "N not numeric ({e}):\n{line}" ) )
 }
 
-/// Parse `"Active Sessions · N running (I interactive, P print)"` from `stdout`,
-/// returning `(N, I, P)`. Panics with the full `stdout` on any parse failure so
-/// assertion failures are self-diagnosing.
+/// Parse `"Active Sessions · N running (I interactive, P print, Q query)"` from
+/// `stdout`, returning `(N, I, P)` — the trailing `Q query` segment is present
+/// in the rendered caption but intentionally not parsed here (callers only
+/// assert the interactive/print split). Panics with the full `stdout` on any
+/// parse failure so assertion failures are self-diagnosing.
 #[ cfg( unix ) ]
 fn parse_breakdown_counts( stdout : &str ) -> ( usize, usize, usize )
 {
@@ -1180,8 +1182,8 @@ fn parse_breakdown_counts( stdout : &str ) -> ( usize, usize, usize )
 // ── IT-30 (T01): `--mode all`, 1 interactive + 1 print → breakdown ─────────────
 
 /// IT-30 (T01): 2 active sessions (1 interactive + 1 print), `--mode all` (default)
-/// → caption reads "2 running (1 interactive, 1 print)". AF1: `I + P == N` is
-/// checked by parsing the rendered caption, not just substring matching.
+/// → caption reads "2 running (1 interactive, 1 print, 0 query)". AF1: `I + P == N`
+/// is checked by parsing the rendered caption, not just substring matching.
 #[ cfg( unix ) ]
 #[ test ]
 fn it_30_mode_all_breakdown_mixed_interactive_and_print()
@@ -1208,7 +1210,7 @@ fn it_30_mode_all_breakdown_mixed_interactive_and_print()
 // ── IT-31 (T02): `--mode all`, all interactive → breakdown ─────────────────────
 
 /// IT-31 (T02): 3 active sessions, all interactive, `--mode all` (default) →
-/// caption reads "3 running (3 interactive, 0 print)".
+/// caption reads "3 running (3 interactive, 0 print, 0 query)".
 #[ cfg( unix ) ]
 #[ test ]
 fn it_31_mode_all_breakdown_all_interactive()
@@ -1232,7 +1234,7 @@ fn it_31_mode_all_breakdown_all_interactive()
 // ── IT-32 (T03): `--mode all`, all print → breakdown ────────────────────────────
 
 /// IT-32 (T03): 3 active sessions, all print, `--mode all` (default) → caption
-/// reads "3 running (0 interactive, 3 print)".
+/// reads "3 running (0 interactive, 3 print, 0 query)".
 #[ cfg( unix ) ]
 #[ test ]
 fn it_32_mode_all_breakdown_all_print()
@@ -1319,6 +1321,44 @@ fn it_34_mode_print_caption_has_no_breakdown()
   assert_eq!( parse_running_count( &stdout ), 1, "IT-34: expected exactly 1 running. Got:\n{stdout}" );
   let caption = caption_line( &stdout );
   assert!( !caption.contains( '(' ), "IT-34: caption must NOT contain a breakdown. Got: {caption}" );
+}
+
+// ── IT-38: `--mode query`, mixed set → filters to query row, plain caption ─────
+
+/// IT-38 (task 418): 2 active sessions (1 print + 1 query), `--mode query` →
+/// only the query row is shown (proves `classify_mode()`'s query branch is
+/// actually reachable through `clr ps`'s mode filter, not just through
+/// `clr query`'s own dispatch, which TSK-418's QT-2 already covers); caption
+/// reads plain "1 running" with no breakdown parentheses, matching the
+/// interactive/print precedent (IT-33/IT-34).
+#[ cfg( unix ) ]
+#[ test ]
+fn it_38_mode_query_filter_and_caption()
+{
+  let ( _dir, path_val ) = fake_claude_binary_dir();
+  let mut bg_print = spawn_print_claude( &path_val );
+  let mut bg_query = spawn_query_claude( &path_val );
+  let proc = make_proc_dir( &[ bg_print.id(), bg_query.id() ] );
+
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = std::process::Command::new( bin )
+    .args( [ "ps", "--mode", "query" ] )
+    .env( "PATH", &path_val )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
+    .output()
+    .expect( "run clr ps --mode query" );
+
+  let _ = bg_print.kill();
+  let _ = bg_print.wait();
+  let _ = bg_query.kill();
+  let _ = bg_query.wait();
+
+  let stdout = stdout_str( &out );
+  assert!( out.status.success(), "IT-38: exit 0 expected, got {:?}", out.status.code() );
+  assert_eq!( parse_running_count( &stdout ), 1, "IT-38: expected exactly 1 running. Got:\n{stdout}" );
+  assert!( stdout.contains( "query" ), "IT-38: Mode column must show 'query'. Got:\n{stdout}" );
+  let caption = caption_line( &stdout );
+  assert!( !caption.contains( '(' ), "IT-38: caption must NOT contain a breakdown. Got: {caption}" );
 }
 
 // ── IT-35: slot reservation file survives a `clr ps` scan (BUG-387 follow-up) ──

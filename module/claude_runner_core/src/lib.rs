@@ -72,6 +72,7 @@
 //! See [spec.md](../spec.md) for complete documentation.
 
 mod command;
+mod control;
 mod exit_code;
 mod isolated;
 mod types;
@@ -79,9 +80,16 @@ pub mod process;
 pub mod session_dir;
 
 pub use crate::command::{ ClaudeCommand, claude_version, DEFAULT_COMPACT_WINDOW };
+pub use crate::control::ControlSession;
 pub use crate::exit_code::signal_exit_code;
 pub use crate::isolated::{ IsolatedModel, IsolatedRunResult, RunnerError, ISOLATED_DEFAULT_MODEL, ISOLATED_CLAUDE_MD, REFRESH_DEFAULT_MODEL };
-pub use crate::types::{ ActionMode, EffortLevel, ErrorKind, ExecutionOutput, InputFormat, LogLevel, OutputFormat, PermissionMode };
+pub use crate::types::{
+  AccountInfo, ActionMode, ContextUsageResult, EffortLevel, ErrorKind, ExecutionOutput,
+  InitializeResult, InputFormat, LogLevel, McpPermissionOverrideMode, McpServerStatusEntry,
+  OutputFormat, PermissionMode, ReadFileEncoding, ReadFileResult, ReloadPluginsResult,
+  ReloadSkillsResult, RewindFilesResult, SetMcpPermissionModeOverrideResult, SetMcpServersResult,
+  ThinkingDisplay,
+};
 pub use crate::session_dir::{ SessionManager, Strategy };
 
 /// Re-export of [`crate::isolated::run_isolated`].
@@ -105,11 +113,11 @@ pub use crate::isolated::run_isolated;
 #[ cfg( feature = "enabled" ) ]
 pub use crate::isolated::run_isolated_ext;
 
-/// Re-export of [`crate::isolated::read_subprocess_model_pref`].
+/// Re-export of [`crate::isolated::resolve_isolated_default_model`].
 ///
-/// Reads `subprocess_model` from `~/.clr/prefs.json`.
-/// Returns `None` if the file is absent, unreadable, or the key is missing/empty.
-/// Used by `dispatch_run()` to apply the pinned model preference when no `--model` flag
-/// or `CLR_MODEL` env var is set.
+/// Resolves `IsolatedModel::Default`'s model preference across both tiers:
+/// project `.clr.toml` → user `~/.clr/config.toml`.
+/// Returns `None` if nothing is set at either tier. Used by `run_isolated_ext()`'s
+/// `IsolatedModel::Default` match arm.
 #[ cfg( feature = "enabled" ) ]
-pub use crate::isolated::read_subprocess_model_pref;
+pub use crate::isolated::resolve_isolated_default_model;

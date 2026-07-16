@@ -270,6 +270,7 @@ fn test_mre_bug218_fetch_all_quota_no_duplicate_synthetic_row()
   //   when synthetic_name == "i6@wbox.pro" which already exists, count becomes 2.
   let stored_row = AccountQuota
   {
+    fallback_reason : None,
     name                 : "i6@wbox.pro".to_string(),
     is_current           : false,
     is_active            : false,
@@ -284,11 +285,14 @@ fn test_mre_bug218_fetch_all_quota_no_duplicate_synthetic_row()
     cache_age_secs       : None,
     is_owned             : true,
     owner                : String::new(),
+    claim_lock : false, reserve : false,
+    org_created_at       : None,
   };
   let mut results = vec![ stored_row ];
 
   let synthetic = AccountQuota
   {
+    fallback_reason : None,
     name                 : "i6@wbox.pro".to_string(),
     is_current           : true,
     is_active            : false,
@@ -303,6 +307,8 @@ fn test_mre_bug218_fetch_all_quota_no_duplicate_synthetic_row()
     cache_age_secs       : None,
     is_owned             : true,
     owner                : String::new(),
+    claim_lock : false, reserve : false,
+    org_created_at       : None,
   };
 
   // Fix(BUG-218): guarded injection — only insert when name is absent from results.
@@ -346,7 +352,7 @@ fn test_mre_bug218_fetch_all_quota_no_duplicate_synthetic_row()
 ///
 /// # Fix Applied
 /// Fix(BUG-296): match guard `Err( ref e ) if !e.contains("401") && !e.contains("403")`.
-/// Auth errors fall through to `Err( _ ) => ( result, false, None )` — `cached=false`,
+/// Auth errors fall through to `Err( _ ) => ( result, false, None, None )` — `cached=false`,
 /// `aq.result` remains `Err`, enabling `should_refresh()` to trigger credential refresh.
 ///
 /// # Prevention
@@ -375,8 +381,11 @@ fn mre_bug296_cached_non_expired_401_no_refresh()
      guard must precede read_cached_quota in the cache fallback arm",
   );
   // Confirm catch-all arm propagates auth errors without cache substitution.
+  // Tuple grew 3→4 elements under BUG-335 (trailing fallback_reason slot), then 4→5
+  // under BUG-327 (trailing cache_org_created_at slot); this arm's new element stays
+  // None since a propagated Err carries no cache-sourced org_created_at either.
   assert!(
-    src.contains( "Err( _ ) => ( result, false, None )" ),
+    src.contains( "Err( _ ) => ( result, false, None, None, None )" ),
     "BUG-296: catch-all Err arm missing in cache fallback match — \
      auth errors must propagate as Err with cached=false",
   );
@@ -542,6 +551,8 @@ fn ft04_non_owned_uses_cache_not_http()
     role              : String::new(),
     owner             : String::new(),
     is_owned          : true,
+    claim_lock        : false,
+    reserve           : false,
     renewal_at        : None,
   } ];
 
@@ -564,5 +575,137 @@ fn ft04_non_owned_uses_cache_not_http()
   assert!(
     aq.result.is_ok(),
     "FT-04: G1 gate must return Ok(cache_data) when cache present; got: {:?}", aq.result,
+  );
+}
+
+/// FT-15/033 — the cache-first branch (`fetch.rs`'s `CACHE_FRESH_SECS` guard) must surface
+/// a cache-persisted `org_created_at` on the returned `AccountQuota`, so `renews_label()` can
+/// compute an estimated renewal date instead of falling back to "?" (AC-15).
+///
+/// # Root Cause
+/// `AccountQuota` had no field to carry `org_created_at` forward from a cache read — the 3
+/// non-live branches (G1-not-owned, cache-first, `approximate_quota`) all set `account: None`
+/// (no live account-details fetch occurs on these paths), and `org_created_at` was reachable
+/// only via `account.as_ref().map(|a| a.org_created_at.clone())`. A warm cache holding a
+/// previously-fetched `org_created_at` was therefore silently discarded on every subsequent
+/// cache-first read, and `renews_label(None, None, _)` always returned "?" even though the
+/// data needed to compute an estimate was sitting in the cache the whole time.
+///
+/// # Why Not Caught
+/// No prior test constructed a cache-first scenario (`is_owned: true`, cache age within
+/// `CACHE_FRESH_SECS`) with `org_created_at` present in the cache — every existing cache-first
+/// test asserted on `cached`/`result` only, never on `org_created_at`, so the field's silent
+/// loss on this branch was structurally invisible to every prior assertion.
+///
+/// # Fix Applied
+/// Added `AccountQuota.org_created_at : Option<String>` and `QuotaCacheEntry.org_created_at`
+/// (persisted via a dedicated `write_cache_string(..., "org_created_at", ...)` call at
+/// `fetch.rs`'s live-fetch success site, sibling to `write_quota_cache`). `read_cached_quota()`
+/// now returns a 3-tuple `(data, age, org_created_at)`; all 4 non-live-account call sites
+/// (G1-not-owned, cache-first, the live-fetch's own internal cache-fallback arm, and
+/// `approximate_quota`) plumb the 3rd element into their `AccountQuota` push instead of
+/// discarding it. `account` itself stays `None` on these branches exactly as before — no fake
+/// `OauthAccountData` is reconstructed (would risk a BUG-232 regression).
+///
+/// # Prevention
+/// Any new non-live `AccountQuota` construction site that calls `read_cached_quota()` must
+/// plumb its 3rd tuple element into `org_created_at` — silently discarding it (e.g. via a `_`
+/// binding) reintroduces this exact gap on that branch.
+///
+/// # Pitfall
+/// `write_quota_cache()`'s read-merge-write must preserve-forward `org_created_at` from the
+/// prior cache object, since it is written by a *separate* `write_cache_string()` call, not by
+/// `write_quota_cache()`'s own `five_hour`/`seven_day`/`seven_day_sonnet` args — every OTHER
+/// `write_quota_cache()` caller (`api_switch.rs`, touch.rs, refresh.rs) would otherwise silently
+/// erase it on its next cache write.
+///
+/// Spec: [`tests/docs/feature/033_quota_cache.md` FT-15]
+#[ doc = "bug_reproducer(BUG-327)" ]
+#[ test ]
+fn mre_bug327_cache_first_surfaces_org_created_at()
+{
+  use claude_profile::usage::test_bridge::renews_label;
+
+  let store = tempfile::TempDir::new().unwrap();
+  let name  = "cachefirst@test.com";
+
+  // Real production write path — the same two-call sequence fetch.rs's own live-fetch
+  // success site uses: write_quota_cache() for the quota numbers (creates {name}.json with
+  // a fresh fetched_at, no "owner" key → is_owned=true), then write_cache_string() for
+  // org_created_at as a sibling call. No hand-crafted JSON — exercises the real read-merge-write.
+  claude_profile_core::account::write_quota_cache(
+    store.path(), name, Some( ( 30.0, None ) ), None, None,
+  );
+  claude_profile_core::account::write_cache_string(
+    store.path(), name, "org_created_at", "2024-01-01T00:00:00Z",
+  );
+
+  // Credentials file must exist for the account struct to be valid.
+  std::fs::write(
+    store.path().join( format!( "{name}.credentials.json" ) ),
+    r#"{"accessToken":"tok","expiresAt":9999999999999}"#,
+  ).unwrap();
+
+  let accounts = vec![ claude_profile::account::Account
+  {
+    name              : name.to_string(),
+    subscription_type : "pro".to_string(),
+    rate_limit_tier   : String::new(),
+    expires_at_ms     : u64::MAX / 2,
+    is_active         : false,
+    email             : String::new(),
+    display_name      : String::new(),
+    billing           : String::new(),
+    model             : String::new(),
+    tagged_id         : String::new(),
+    uuid              : String::new(),
+    capabilities      : Vec::new(),
+    organization_uuid : String::new(),
+    organization_name : String::new(),
+    org_role          : String::new(),
+    workspace_uuid    : String::new(),
+    workspace_name    : String::new(),
+    host              : String::new(),
+    role              : String::new(),
+    owner             : String::new(),
+    is_owned          : true,
+    claim_lock        : false,
+    reserve           : false,
+    renewal_at        : None,
+  } ];
+
+  // live_creds_file absent → is_current=false, but cache-first fires before any HTTP path.
+  let absent_live = store.path().join( ".absent_credentials.json" );
+
+  let results = fetch_quota_for_list( &accounts, store.path(), &absent_live, false, false, false );
+
+  assert_eq!( results.len(), 1, "FT-15: must return exactly 1 AccountQuota for 1 account" );
+  let aq = &results[ 0 ];
+  assert!(
+    aq.is_owned,
+    "FT-15: cache-first branch must set is_owned=true for an owned account; got: {:?}", aq.is_owned,
+  );
+  assert!(
+    aq.cached,
+    "FT-15: cache-first branch must read cache (cached=true) within CACHE_FRESH_SECS; got: {:?}", aq.cached,
+  );
+  assert!(
+    aq.result.is_ok(),
+    "FT-15: cache-first branch must return Ok(cache_data); got: {:?}", aq.result,
+  );
+  assert_eq!(
+    aq.org_created_at, Some( "2024-01-01T00:00:00Z".to_string() ),
+    "FT-15: cache-first branch must surface cache-persisted org_created_at; got: {:?}", aq.org_created_at,
+  );
+
+  // End-to-end proof this is user-visible: renews_label() must compute an estimate, not "?".
+  let now_secs = std::time::SystemTime::now()
+    .duration_since( std::time::UNIX_EPOCH )
+    .unwrap_or_default()
+    .as_secs();
+  let label = renews_label( aq.renewal_at.as_deref(), aq.org_created_at.as_deref(), now_secs );
+  assert!(
+    label.starts_with( "~in " ),
+    "FT-15: renews_label() must render an estimate from cache-sourced org_created_at, not '?'; got: {label:?}",
   );
 }

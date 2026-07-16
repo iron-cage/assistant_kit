@@ -201,11 +201,37 @@ pub struct AccountQuota
   pub cached                : bool,
   /// Seconds since last successful fetch; present only when `cached == true`.
   pub cache_age_secs        : Option< u64 >,
+  // Fix(BUG-335): cache-fallback Ok row had no field to carry the original fetch-failure
+  //   reason forward, so all 3 render surfaces showed a stale row with zero indication of why.
+  //   Root cause: fetch.rs's Err→Ok cache-fallback conversion (fetch.rs:306-313) discarded `e`.
+  //   Pitfall: only populate this in that one conversion arm — every other construction site
+  //   (live success, auth errors, primary cache reads) must set it to `None`.
+  /// Raw (unshortened) fetch-failure reason that triggered a cache-fallback `Ok` conversion.
+  /// `Some` only when `fetch.rs`'s cache-fallback arm converted a transient `Err` to `Ok`;
+  /// `None` on live-fetch success, auth errors, and all non-fallback cache reads.
+  pub fallback_reason       : Option< String >,
   /// `true` when `owner` in `{name}.json` is empty or matches `current_identity()`.
   /// `false` for accounts owned by a different machine — G1–G7 enforcement gates apply.
   pub is_owned              : bool,
   /// Raw owner identity string from `{name}.json`; empty when unset.
   pub owner                 : String,
+  /// `claim_lock` from `{name}.json`; `false` when unset — see Feature 070.
+  /// `true` excludes this account from unattended rotation (Gate 9).
+  pub claim_lock            : bool,
+  /// `reserve` from `{name}.json`; `false` when unset — see Feature 070.
+  /// `true` deprioritizes (does not exclude) this account in sort-based selection.
+  pub reserve               : bool,
+  // Fix(BUG-327): the 3 non-live branches (G1-not-owned, cache-first, approximate_quota)
+  //   set `account: None`, so `renews_label()` never received `org_created_at` on those
+  //   paths — `~Renews` showed "?" even with a warm cache holding a successful prior fetch.
+  //   Root cause: `org_created_at` was only reachable via `account.as_ref().map(...)`,
+  //   which is `None` whenever the live account-details fetch didn't run this cycle.
+  //   Pitfall: independent of `account` — only THIS field gains cache-backed availability;
+  //   `account` itself must stay `None` on non-live branches exactly as before (no fake
+  //   `OauthAccountData` reconstruction, which would risk a BUG-232 regression).
+  /// Org creation timestamp, sourced from the live account fetch OR the quota cache.
+  /// `None` when neither a live fetch nor a cache entry has ever recorded it.
+  pub org_created_at        : Option< String >,
 }
 
 impl AccountQuota

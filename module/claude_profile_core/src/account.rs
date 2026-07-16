@@ -47,6 +47,7 @@ use claude_core::ClaudePaths;
 
 /// Metadata for a saved Claude Code account credential snapshot.
 #[ derive( Debug, Clone ) ]
+#[ allow( clippy::struct_excessive_bools ) ]
 pub struct Account
 {
   /// Account name — the email address used as the credential filename stem.
@@ -105,6 +106,12 @@ pub struct Account
   pub owner : String,
   /// `true` when `owner` is empty (unowned) or matches `current_identity()` (owned by this machine).
   pub is_owned : bool,
+  /// Claim-lock from saved `{name}.json` `claim_lock`; `false` when unset — see Feature 070.
+  /// `true` excludes this account from unattended rotation (Gate 9 / G9).
+  pub claim_lock : bool,
+  /// Reserve marker from saved `{name}.json` `reserve`; `false` when unset — see Feature 070.
+  /// `true` deprioritizes (does not exclude) this account in sort-based selection.
+  pub reserve : bool,
   /// Renewal override from saved `{name}.json` `_renewal_at`; `None` when unset — see Feature 030.
   pub renewal_at : Option< String >,
 }
@@ -160,6 +167,8 @@ pub fn list( credential_store : &Path ) -> Result< Vec< Account >, std::io::Erro
     let role         = parse_string_field( &meta_json, "role"       ).unwrap_or_default();
     let owner        = parse_string_field( &meta_json, "owner"      ).unwrap_or_default();
     let is_owned     = owner.is_empty() || owner == identity;
+    let claim_lock   = parse_bool_field( &meta_json, "claim_lock" ).unwrap_or( false );
+    let reserve      = parse_bool_field( &meta_json, "reserve" ).unwrap_or( false );
     let renewal_at   = parse_string_field( &meta_json, "_renewal_at" );
 
     accounts.push( Account
@@ -185,6 +194,8 @@ pub fn list( credential_store : &Path ) -> Result< Vec< Account >, std::io::Erro
       role,
       owner,
       is_owned,
+      claim_lock,
+      reserve,
       renewal_at,
     } );
   }
@@ -1073,6 +1084,20 @@ pub fn read_owner( credential_store : &Path, name : &str ) -> String
     .unwrap_or_default()
 }
 
+/// Read the `claim_lock` field from `{name}.json` in `credential_store`.
+///
+/// Returns `false` when the file is absent, unparseable, or the `claim_lock`
+/// field is missing — identical behaviour to "not locked" (G9 passes).
+#[ inline ]
+#[ must_use ]
+pub fn read_claim_lock( credential_store : &Path, name : &str ) -> bool
+{
+  let path = credential_store.join( format!( "{name}.json" ) );
+  std::fs::read_to_string( &path ).ok()
+    .and_then( |s| parse_bool_field( &s, "claim_lock" ) )
+    .unwrap_or( false )
+}
+
 /// Return `true` when `owner` represents "no enforcement" for the current machine.
 ///
 /// - Empty string → unowned (all gates pass).
@@ -1110,6 +1135,66 @@ pub fn write_owner(
     .and_then( |v| v.as_object().cloned() )
     .unwrap_or_default();
   map.insert( "owner".to_string(), serde_json::Value::String( owner.to_string() ) );
+  let json = serde_json::to_string_pretty( &serde_json::Value::Object( map ) )
+    .map( | s | s + "\n" )
+    .map_err( |e| std::io::Error::new( std::io::ErrorKind::InvalidData, e ) )?;
+  std::fs::write( &path, json )
+}
+
+/// Write the `claim_lock` field to `{name}.json` via read-merge.
+///
+/// Reads the existing `{name}.json` (if any), sets `claim_lock` to the given value,
+/// and writes back. All other fields are preserved. Ungated — no ownership check;
+/// see Feature 070 AC-02.
+///
+/// # Errors
+///
+/// Returns `std::io::Error` if the JSON file cannot be written.
+#[ inline ]
+#[ allow( clippy::std_instead_of_core ) ]
+pub fn write_claim_lock(
+  name             : &str,
+  credential_store : &Path,
+  value            : bool,
+) -> Result< (), std::io::Error >
+{
+  let path = credential_store.join( format!( "{name}.json" ) );
+  let mut map = std::fs::read_to_string( &path )
+    .ok()
+    .and_then( |s| serde_json::from_str::< serde_json::Value >( &s ).ok() )
+    .and_then( |v| v.as_object().cloned() )
+    .unwrap_or_default();
+  map.insert( "claim_lock".to_string(), serde_json::Value::Bool( value ) );
+  let json = serde_json::to_string_pretty( &serde_json::Value::Object( map ) )
+    .map( | s | s + "\n" )
+    .map_err( |e| std::io::Error::new( std::io::ErrorKind::InvalidData, e ) )?;
+  std::fs::write( &path, json )
+}
+
+/// Write the `reserve` field to `{name}.json` via read-merge.
+///
+/// Reads the existing `{name}.json` (if any), sets `reserve` to the given value,
+/// and writes back. All other fields are preserved. Ungated — no ownership check;
+/// see Feature 070 AC-02.
+///
+/// # Errors
+///
+/// Returns `std::io::Error` if the JSON file cannot be written.
+#[ inline ]
+#[ allow( clippy::std_instead_of_core ) ]
+pub fn write_reserve(
+  name             : &str,
+  credential_store : &Path,
+  value            : bool,
+) -> Result< (), std::io::Error >
+{
+  let path = credential_store.join( format!( "{name}.json" ) );
+  let mut map = std::fs::read_to_string( &path )
+    .ok()
+    .and_then( |s| serde_json::from_str::< serde_json::Value >( &s ).ok() )
+    .and_then( |v| v.as_object().cloned() )
+    .unwrap_or_default();
+  map.insert( "reserve".to_string(), serde_json::Value::Bool( value ) );
   let json = serde_json::to_string_pretty( &serde_json::Value::Object( map ) )
     .map( | s | s + "\n" )
     .map_err( |e| std::io::Error::new( std::io::ErrorKind::InvalidData, e ) )?;
@@ -1454,6 +1539,23 @@ pub fn parse_u64_field( json : &str, key : &str ) -> Option< u64 >
   rest[ ..end ].parse().ok()
 }
 
+/// Extract a boolean field from a JSON blob without external dependencies.
+///
+/// Handles optional whitespace after the colon. Returns `None` when the key is
+/// absent or the value is not literally `true` or `false`.
+#[ doc( hidden ) ]
+#[ must_use ]
+#[ inline ]
+pub fn parse_bool_field( json : &str, key : &str ) -> Option< bool >
+{
+  let search = format!( "\"{key}\":" );
+  let colon_end = json.find( &search )? + search.len();
+  let rest = json[ colon_end.. ].trim_start();
+  if rest.starts_with( "true" ) { return Some( true ); }
+  if rest.starts_with( "false" ) { return Some( false ); }
+  None
+}
+
 /// Extract a string array field from a JSON blob without external dependencies.
 ///
 /// Handles optional whitespace after the colon. Returns an empty `Vec` when
@@ -1529,6 +1631,15 @@ pub struct QuotaCacheEntry
   pub last_touch_at     : Option< String >,
   /// Whether the account is idle (no active 5h window).
   pub touch_idle        : Option< bool >,
+  // Fix(BUG-327): QuotaCacheEntry had no field to carry org_created_at, so the 3
+  //   non-live branches (G1-not-owned, cache-first, approximate_quota) could never
+  //   populate renews_label()'s org_created_at_opt — ~Renews always showed "?".
+  //   Root cause: org_created_at lived only on AccountQuota.account (live-fetch only);
+  //   no field existed to persist/restore it across a cache round-trip.
+  //   Pitfall: independent of `account: Option<OauthAccountData>` — never reconstruct
+  //   a fake OauthAccountData to backfill it (risks BUG-232 regression).
+  /// Org creation timestamp (UTC ISO-8601), persisted so cache-only reads can compute renewal dates.
+  pub org_created_at    : Option< String >,
 }
 
 /// Write quota cache to `{name}.json` using read-merge-write.
@@ -1576,6 +1687,12 @@ pub fn write_quota_cache(
         if let Some( v ) = prev.get( "last_touch_at" )  { co.insert( "last_touch_at".into(), v.clone() ); }
         if let Some( v ) = prev.get( "touch_idle" )     { co.insert( "touch_idle".into(), v.clone() ); }
         if let Some( v ) = prev.get( "history" )        { co.insert( "history".into(), v.clone() ); }
+        // Fix(BUG-327): org_created_at is written via write_cache_string() at fetch.rs's
+        //   live-fetch success site — a sibling call independent of this function's own
+        //   five_hour/seven_day/seven_day_sonnet args — so it must be preserve-forwarded
+        //   here too, or every OTHER write_quota_cache() caller (api_switch.rs, touch.rs,
+        //   refresh.rs) would silently erase it on their next cache write.
+        if let Some( v ) = prev.get( "org_created_at" ) { co.insert( "org_created_at".into(), v.clone() ); }
       }
     }
     obj.insert( "cache".to_string(), cache );
@@ -1603,6 +1720,9 @@ pub fn read_quota_cache( credential_store : &std::path::Path, name : &str ) -> O
     model_override   : cache.get( "model_override" ).and_then( |v| v.as_str() ).map( str::to_string ),
     last_touch_at    : cache.get( "last_touch_at" ).and_then( |v| v.as_str() ).map( str::to_string ),
     touch_idle       : cache.get( "touch_idle" ).and_then( serde_json::Value::as_bool ),
+    // Fix(BUG-327): read back org_created_at written by write_cache_string(); defaults to
+    //   None gracefully for pre-existing cache entries that predate this field (T06).
+    org_created_at   : cache.get( "org_created_at" ).and_then( |v| v.as_str() ).map( str::to_string ),
   } )
 }
 

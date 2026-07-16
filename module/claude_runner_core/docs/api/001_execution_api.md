@@ -3,8 +3,8 @@
 ### Scope
 
 - **Purpose**: Document the programmatic contracts for executing Claude Code processes via claude_runner_core.
-- **Responsibility**: Specify execute(), execute_interactive(), ExecutionOutput, read_subprocess_model_pref(), error handling, and method parameter contracts.
-- **In Scope**: execute() non-interactive execution, execute_interactive() TTY mode, ExecutionOutput fields, read_subprocess_model_pref() preference reader, error contracts, dry-run behavior.
+- **Responsibility**: Specify execute(), execute_interactive(), ExecutionOutput, error handling, and method parameter contracts.
+- **In Scope**: execute() non-interactive execution, execute_interactive() TTY mode, ExecutionOutput fields, error contracts, dry-run behavior.
 - **Out of Scope**: Builder pattern design (→ `pattern/`), enum type definitions (→ `data_structure/`), describe/dry-run feature semantics (→ `feature/`).
 
 ### Abstract
@@ -53,16 +53,6 @@ Runs `claude --version` and returns the trimmed stdout string. Returns `None` if
 #### `build_command_for_test() -> std::process::Command`
 
 Exposes the constructed `std::process::Command` for assertion in tests. Not for production use. This method and `claude_version()` are the only two locations permitted to call `Command::new("claude")` in the workspace.
-
-#### `read_subprocess_model_pref() -> Option<String>`
-
-Reads the `subprocess_model` field from `~/.clr/prefs.json`. Returns `Some(model_id)` when the
-file exists, is valid JSON, and the key is a non-empty string. Returns `None` when the file is
-absent, unreadable, malformed, or the key is missing or empty.
-
-Re-exported from `claude_runner_core` (defined in `src/isolated.rs`). Gated by
-`#[cfg(feature = "enabled")]`. Used by `dispatch_run()` in `claude_runner` to apply a pinned
-model preference when no `--model` flag or `CLR_MODEL` env var is set (set via `clp .model.select`).
 
 ### Error Handling
 
