@@ -31,6 +31,8 @@ impl Storage
   /// # Errors
   ///
   /// Returns error if the `HOME` environment variable is not set.
+  // core::io::ErrorKind requires the unstable `core_io` feature (rust-lang/rust#154046) — not usable on stable.
+  #[ allow( clippy::std_instead_of_core ) ]
   #[inline]
   pub fn new() -> Result< Self >
   {

@@ -401,7 +401,14 @@ impl ClaudeCommand {
     }
     else if let Some( ref content ) = self.stdin_content
     {
-      parts.push( format!( "< <piped stdin, {} bytes>", content.len() ) );
+      // Fix(regression from BUG-424): detect_stdin_json() documents returning Some(Raw(bytes))
+      //   "whenever stdin is actually read" — including a genuinely empty pipe (0 bytes). That
+      //   contract is correct for forwarding, but describe() is display-only: an empty pipe carries
+      //   nothing to show, so omit the annotation entirely rather than rendering "0 bytes".
+      if !content.is_empty()
+      {
+        parts.push( format!( "< <piped stdin, {} bytes>", content.len() ) );
+      }
     }
 
     lines.push( parts.join( " " ) );
@@ -515,6 +522,12 @@ impl ClaudeCommand {
         .map_err( | e | Error::msg( format!( "cannot open stdin file '{}': {e}", path.display() ) ) )?;
       cmd.stdin( std::process::Stdio::from( file ) );
     }
+    else if let Some( ref content ) = self.stdin_content
+    {
+      let file = materialize_stdin_content( content )
+        .map_err( | e | Error::msg( format!( "cannot prepare piped stdin content: {e}" ) ) )?;
+      cmd.stdin( std::process::Stdio::from( file ) );
+    }
 
     // Fix(BUG-241): map NotFound to an actionable install hint.
     // Root cause: Command::output() on a missing binary returns io::ErrorKind::NotFound
@@ -597,6 +610,12 @@ impl ClaudeCommand {
         .map_err( | e | Error::msg( format!( "cannot open stdin file '{}': {e}", path.display() ) ) )?;
       cmd.stdin( std::process::Stdio::from( file ) );
     }
+    else if let Some( ref content ) = self.stdin_content
+    {
+      let file = materialize_stdin_content( content )
+        .map_err( | e | Error::msg( format!( "cannot prepare piped stdin content: {e}" ) ) )?;
+      cmd.stdin( std::process::Stdio::from( file ) );
+    }
 
     // Fix(BUG-241): map NotFound to install hint (mirrors the fix in execute()).
     // Root cause: same as execute() — Command::status() on a missing binary emits
@@ -657,6 +676,24 @@ impl ClaudeCommand {
 
     cmd
   }
+}
+
+/// Materialize in-memory stdin content as an anonymous temp file positioned at offset 0,
+/// so it can be handed to `Stdio::from` exactly like `stdin_file` is.
+// Fix(BUG-424): give piped (non-`--file`) stdin content a real file descriptor to attach to.
+// Root cause: no code path existed to hand a `Vec<u8>` to a child's stdin without an on-disk
+//   path (`stdin_file`) or a live pipe; a tempfile is the minimal bridge, and it sidesteps the
+//   parent-writes/child-reads pipe deadlock a `Stdio::piped()` + threaded write would risk.
+// Pitfall: must seek back to `SeekFrom::Start(0)` after writing — the cursor is left at EOF
+//   post-write, and a child reading from EOF sees empty stdin, not the content.
+#[ inline ]
+fn materialize_stdin_content( content : &[ u8 ] ) -> std::io::Result< std::fs::File >
+{
+  use std::io::{ Seek, SeekFrom, Write };
+  let mut file = tempfile::tempfile()?;
+  file.write_all( content )?;
+  file.seek( SeekFrom::Start( 0 ) )?;
+  Ok( file )
 }
 
 /// Query installed Claude Code version.
@@ -738,6 +775,10 @@ impl ClaudeCommand {
       let file = std::fs::File::open( path )?;
       cmd.stdin( Stdio::from( file ) );
     }
+    else if let Some( ref content ) = self.stdin_content
+    {
+      cmd.stdin( Stdio::from( materialize_stdin_content( content )? ) );
+    }
     else
     {
       cmd.stdin( Stdio::null() );
@@ -772,6 +813,10 @@ impl ClaudeCommand {
     {
       let file = std::fs::File::open( path )?;
       cmd.stdin( Stdio::from( file ) );
+    }
+    else if let Some( ref content ) = self.stdin_content
+    {
+      cmd.stdin( Stdio::from( materialize_stdin_content( content )? ) );
     }
     // stdout and stderr inherit from parent (TTY passthrough) — no redirection needed.
     cmd.spawn()

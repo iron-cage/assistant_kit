@@ -170,6 +170,10 @@ pub( crate ) fn build_claude_command( cli : &CliArgs ) -> ( ClaudeCommand, Optio
   {
     builder = builder.with_stdin_file( std::path::PathBuf::from( path ) );
   }
+  else if let Some( ref bytes ) = cli.stdin_content
+  {
+    builder = builder.with_stdin_content( bytes.clone() );
+  }
   if cli.keep_claudecode
   {
     builder = builder.with_unset_claudecode( false );

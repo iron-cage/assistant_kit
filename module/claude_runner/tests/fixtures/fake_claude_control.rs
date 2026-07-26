@@ -3,7 +3,7 @@
 //! Built as a permanent `[[bin]]` Cargo target (not a shebang script) because
 //! `find_claude_processes()` (`claude_core::process`) discovers live sessions by reading
 //! `/proc/{pid}/cmdline` and matching `args[0]`'s basename against `"claude"` — the kernel's
-//! binfmt_script handler rewrites a `/bin/sh`-shebang script's argv[0] to the interpreter path
+//! `binfmt_script` handler rewrites a `/bin/sh`-shebang script's argv[0] to the interpreter path
 //! at exec time, so a shell script named "claude" is invisible to that scan. A real compiled
 //! ELF binary, symlinked to a temp-dir path named `claude`, preserves the basename and is
 //! discoverable exactly like the real thing.

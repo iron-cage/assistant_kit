@@ -114,6 +114,8 @@ impl Project
   /// Helper to iterate session files with filtering
   ///
   /// Returns true to continue iteration, false to stop early.
+  // core::io::ErrorKind requires the unstable `core_io` feature (rust-lang/rust#154046) — not usable on stable.
+  #[ allow( clippy::std_instead_of_core ) ]
   fn iter_session_files< F >( &self, include_agents : bool, mut action : F ) -> Result< () >
   where
     F : FnMut( PathBuf ) -> Result< bool >,

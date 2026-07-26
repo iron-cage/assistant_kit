@@ -10,7 +10,7 @@
 //!
 //! Method tokens are camelCase, matching the SDK's own spelling (see
 //! `contract/sdk/docs/api/004_query_control_object.md`) rather than `ControlSession`'s Rust
-//! snake_case method names — this module is the translation layer between the two.
+//! `snake_case` method names — this module is the translation layer between the two.
 //!
 //! # Why a detached daemon, not a direct `ControlSession` hold
 //!
@@ -248,28 +248,20 @@ fn dispatch_call( pid : u32, method : &str, args : &[ String ] ) -> !
   }
 
   let socket_path = socket_path_for( pid );
-  let stream = match UnixStream::connect( &socket_path )
+  let Ok( stream ) = UnixStream::connect( &socket_path ) else
   {
-    Ok( s ) => s,
-    Err( _ ) =>
-    {
-      eprintln!(
-        "Error: PID {pid} is not a running Claude Code session.\n\
-         Use 'clr ps' to list active sessions."
-      );
-      std::process::exit( 1 );
-    }
+    eprintln!(
+      "Error: PID {pid} is not a running Claude Code session.\n\
+       Use 'clr ps' to list active sessions."
+    );
+    std::process::exit( 1 );
   };
 
   let request = serde_json::json!( { "method" : method, "args" : args } );
-  let mut write_stream = match stream.try_clone()
+  let Ok( mut write_stream ) = stream.try_clone() else
   {
-    Ok( s ) => s,
-    Err( _ ) =>
-    {
-      eprintln!( "Error: failed to prepare request to PID {pid}" );
-      std::process::exit( 1 );
-    }
+    eprintln!( "Error: failed to prepare request to PID {pid}" );
+    std::process::exit( 1 );
   };
   if writeln!( write_stream, "{request}" ).is_err() || write_stream.flush().is_err()
   {
@@ -419,7 +411,7 @@ fn spawn_liveness_watchdog( claude_pid : u32, socket_path : std::path::PathBuf )
   {
     loop
     {
-      std::thread::sleep( std::time::Duration::from_millis( 500 ) );
+      std::thread::sleep( core::time::Duration::from_millis( 500 ) );
       if !find_claude_processes().into_iter().any( | p | p.pid == claude_pid )
       {
         let _ = std::fs::remove_file( &socket_path );
@@ -464,7 +456,7 @@ fn handle_connection( session : &ControlSession, stream : UnixStream )
 }
 
 /// Dispatch one camelCase method token against `session`, translating to the matching
-/// snake_case `ControlSession` method (task 418 In-Scope bullet 3) with minimal default
+/// `snake_case` `ControlSession` method (task 418 In-Scope bullet 3) with minimal default
 /// parameter values grounded in TSK-415's Phase 0/Phase 2 artifacts (C17) — exact per-method
 /// argument shapes beyond the bare token are explicitly deferred by this task's own scope.
 #[ allow( clippy::too_many_lines ) ] // mechanical one-arm-per-method dispatch table (mirrors ps.rs::dispatch_ps)
@@ -479,14 +471,14 @@ fn dispatch_method( session : &ControlSession, method : &str, args : &[ String ]
     }
     "rewindFiles" =>
     {
-      let user_message_id = args.first().map( String::as_str ).unwrap_or( "" );
+      let user_message_id = args.first().map_or( "", String::as_str );
       let dry_run = args.get( 1 ).map_or( true, | s | s != "false" );
       let r = session.rewind_files( user_message_id, dry_run )?;
       Ok( serde_json::json!( { "canRewind" : r.can_rewind, "error" : r.error } ) )
     }
     "setPermissionMode" =>
     {
-      let mode = parse_permission_mode( args.first().map( String::as_str ).unwrap_or( "default" ) )?;
+      let mode = parse_permission_mode( args.first().map_or( "default", String::as_str ) )?;
       session.set_permission_mode( mode )?;
       Ok( serde_json::Value::Null )
     }
@@ -524,7 +516,7 @@ fn dispatch_method( session : &ControlSession, method : &str, args : &[ String ]
     "getContextUsage" => session.get_context_usage(),
     "readFile" =>
     {
-      let path = args.first().map( String::as_str ).unwrap_or( "" );
+      let path = args.first().map_or( "", String::as_str );
       let max_bytes = args.get( 1 ).and_then( | s | s.parse::< u64 >().ok() );
       match session.read_file( path, max_bytes, None )?
       {
@@ -559,19 +551,19 @@ fn dispatch_method( session : &ControlSession, method : &str, args : &[ String ]
     }
     "seedReadState" =>
     {
-      let path = args.first().map( String::as_str ).unwrap_or( "" );
+      let path = args.first().map_or( "", String::as_str );
       let mtime = args.get( 1 ).and_then( | s | s.parse::< u64 >().ok() ).unwrap_or( 0 );
       session.seed_read_state( path, mtime )?;
       Ok( serde_json::Value::Null )
     }
     "reconnectMcpServer" =>
     {
-      session.reconnect_mcp_server( args.first().map( String::as_str ).unwrap_or( "" ) )?;
+      session.reconnect_mcp_server( args.first().map_or( "", String::as_str ) )?;
       Ok( serde_json::Value::Null )
     }
     "toggleMcpServer" =>
     {
-      let name = args.first().map( String::as_str ).unwrap_or( "" );
+      let name = args.first().map_or( "", String::as_str );
       let enabled = args.get( 1 ).map_or( true, | s | s != "false" );
       session.toggle_mcp_server( name, enabled )?;
       Ok( serde_json::Value::Null )
@@ -586,17 +578,17 @@ fn dispatch_method( session : &ControlSession, method : &str, args : &[ String ]
     }
     "streamInput" =>
     {
-      session.stream_input( args.first().map( String::as_str ).unwrap_or( "" ) )?;
+      session.stream_input( args.first().map_or( "", String::as_str ) )?;
       Ok( serde_json::Value::Null )
     }
     "stopTask" =>
     {
-      session.stop_task( args.first().map( String::as_str ).unwrap_or( "" ) )?;
+      session.stop_task( args.first().map_or( "", String::as_str ) )?;
       Ok( serde_json::Value::Null )
     }
     "setMcpPermissionModeOverride" =>
     {
-      let server_name = args.first().map( String::as_str ).unwrap_or( "" );
+      let server_name = args.first().map_or( "", String::as_str );
       let mode = match args.get( 1 ).map( String::as_str )
       {
         Some( "auto" ) => Some( McpPermissionOverrideMode::Auto ),

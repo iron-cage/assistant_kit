@@ -318,6 +318,9 @@ fn run_isolated_with_stdin_file
     .with_stdin_file( std::path::PathBuf::from( file_path ) )
     .with_args( full_args );
 
+  // clippy::std_instead_of_core's suggested `core::io::ErrorKind` does not exist on this
+  // toolchain (`io` is std-only) — its machine-applicable fix does not compile.
+  #[ allow( clippy::std_instead_of_core ) ]
   let mut child = cmd.spawn_piped().map_err( | e |
   {
     if e.kind() == std::io::ErrorKind::NotFound
@@ -388,10 +391,7 @@ fn run_isolated_with_stdin_file
 
   let credentials = std::fs::read_to_string( &creds_path )
     .ok()
-    .and_then( | new |
-    {
-      if new.as_bytes() == credentials_json.as_bytes() { None } else { Some( new ) }
-    } );
+    .filter( | new | new.as_bytes() != credentials_json.as_bytes() );
 
   let _ = std::fs::remove_dir_all( &temp_dir );
 

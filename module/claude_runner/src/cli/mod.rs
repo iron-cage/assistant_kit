@@ -234,11 +234,20 @@ pub( super ) fn dispatch_run( tokens : &[ String ] ) -> !
 {
   // JSON config tier 2: detect stdin JSON BEFORE parse_args so stdin is consumed once.
   // Ordering: detect_stdin_json reads stdin; parse_args reads only argv — no conflict.
-  let stdin_json = env::detect_stdin_json( tokens );
+  let stdin_payload = env::detect_stdin_json( tokens );
   let mut cli = match parse_args( tokens )
   {
     Ok( c )  => c,
     Err( e ) => { eprintln!( "Error: {e}" ); std::process::exit( 1 ); }
+  };
+  // BUG-424: non-JSON piped stdin forwards to the subprocess instead of being discarded.
+  // Destructure here (once) rather than downstream — stdin_payload is consumed exactly
+  // once, and the JSON branch below still expects the old `Option<String>` shape.
+  let stdin_json = match stdin_payload
+  {
+    Some( env::StdinPayload::Raw( bytes ) ) => { cli.stdin_content = Some( bytes ); None }
+    Some( env::StdinPayload::Json( src ) )  => Some( src ),
+    None => None,
   };
   // JSON config: apply file-based or stdin-based params AFTER CLI parse (tier 1 already set)
   // but BEFORE apply_env_vars (tier 3). apply_json_config's is_none() / !bool checks ensure

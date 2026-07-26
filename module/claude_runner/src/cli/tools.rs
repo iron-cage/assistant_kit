@@ -120,9 +120,9 @@ fn validate_value_key( key : &str ) -> Result< &'static str, String >
 
 // Case-insensitive substring match; `lower_filter` is already lowercased by the caller.
 // `None` filter matches everything.
-fn matches_filter( haystack : &str, lower_filter : &Option< String > ) -> bool
+fn matches_filter( haystack : &str, lower_filter : Option< &String > ) -> bool
 {
-  lower_filter.as_ref().map_or( true, | f | haystack.to_lowercase().contains( f.as_str() ) )
+  lower_filter.map_or( true, | f | haystack.to_lowercase().contains( f.as_str() ) )
 }
 
 // Apply --name/--category filters (AND logic) to TOOLS, preserving array order.
@@ -132,7 +132,7 @@ fn filter_tools( config : &ToolsConfig ) -> Vec< &'static ( &'static str, &'stat
   let category_filter = config.category.as_ref().map( | s | s.to_lowercase() );
   TOOLS
     .iter()
-    .filter( | ( name, cat, _ ) | matches_filter( name, &name_filter ) && matches_filter( cat, &category_filter ) )
+    .filter( | ( name, cat, _ ) | matches_filter( name, name_filter.as_ref() ) && matches_filter( cat, category_filter.as_ref() ) )
     .collect()
 }
 

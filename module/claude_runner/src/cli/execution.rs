@@ -140,6 +140,9 @@ fn emit_interactive(
 //   `classify_error()` logic but never inserted into the human-facing message.
 // Pitfall: spawn errors bypass the normal `ExecutionOutput`-based classification path;
 //   the `[Runner]` label must be injected here, at message construction time.
+// clippy::std_instead_of_core's suggested `core::io::ErrorKind` does not exist on this
+// toolchain (`io` is std-only) — its machine-applicable fix does not compile.
+#[ allow( clippy::std_instead_of_core ) ]
 fn spawn_error_msg( e : &std::io::Error ) -> String
 {
   if e.kind() == std::io::ErrorKind::NotFound
@@ -450,6 +453,9 @@ fn execute_print_attempt( builder : &ClaudeCommand, timeout_secs : u32 )
     Ok( c )  => c,
     Err( e ) =>
     {
+      // clippy::std_instead_of_core's suggested `core::io::ErrorKind` does not exist on this
+      // toolchain (`io` is std-only) — its machine-applicable fix does not compile.
+      #[ allow( clippy::std_instead_of_core ) ]
       let msg = if e.kind() == std::io::ErrorKind::NotFound
       {
         "claude binary not found in PATH — install with: npm i -g @anthropic-ai/claude-code".to_string()
@@ -625,6 +631,9 @@ fn run_print_mode_streaming(
     Ok( c )  => c,
     Err( e ) =>
     {
+      // clippy::std_instead_of_core's suggested `core::io::ErrorKind` does not exist on this
+      // toolchain (`io` is std-only) — its machine-applicable fix does not compile.
+      #[ allow( clippy::std_instead_of_core ) ]
       let msg = if e.kind() == std::io::ErrorKind::NotFound
       {
         "claude binary not found in PATH — install with: npm i -g @anthropic-ai/claude-code".to_string()

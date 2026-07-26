@@ -1,7 +1,7 @@
 //! Integration tests for `clr query` (task 418): PID-addressed control-session dispatch.
 //!
 //! Covers QT-1 through QT-32 from task 418's Test Matrix. Uses `fake_claude_control`
-//! (tests/fixtures/fake_claude_control.rs) as the `claude` stand-in — a compiled ELF
+//! (`tests/fixtures/fake_claude_control.rs`) as the `claude` stand-in — a compiled ELF
 //! binary (not a shell script) speaking the real bidirectional control-session wire
 //! protocol, so `find_claude_processes()` can discover it and `query.rs`'s daemon can
 //! complete a real `spawn_control_session()` handshake against it.
@@ -45,7 +45,7 @@ fn start_query_session() -> ( tempfile::TempDir, tempfile::TempDir, String )
   for _ in 0..50
   {
     if socket_path.exists() { break; }
-    std::thread::sleep( std::time::Duration::from_millis( 20 ) );
+    std::thread::sleep( core::time::Duration::from_millis( 20 ) );
   }
   assert!( socket_path.exists(), "query socket never appeared at {}", socket_path.display() );
 
@@ -124,7 +124,7 @@ fn qt5_kill_terminates_query_session()
   assert_eq!( exit_code( &out ), 0, "clr kill failed: {}", stderr_str( &out ) );
 
   // Give the OS a moment to reap the signaled process before checking `clr ps`.
-  std::thread::sleep( std::time::Duration::from_millis( 200 ) );
+  std::thread::sleep( core::time::Duration::from_millis( 200 ) );
   let ps_out = run_cli( &[ "ps", "--pid", &pid ] );
   let stdout = stdout_str( &ps_out );
   assert!(
