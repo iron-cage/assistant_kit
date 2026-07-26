@@ -75,6 +75,7 @@ pub struct ClaudeCommand {
 
   // Stdin piping
   pub(super) stdin_file: Option< PathBuf >,
+  pub(super) stdin_content: Option< Vec< u8 > >,
 
   // Subprocess environment control
   pub(super) unset_claudecode: bool,
@@ -162,6 +163,7 @@ impl ClaudeCommand {
       home_override: None,
 
       stdin_file: None,
+      stdin_content: None,
       unset_claudecode: true,
     }
   }
@@ -396,6 +398,10 @@ impl ClaudeCommand {
     if let Some( ref path ) = self.stdin_file
     {
       parts.push( format!( "< {}", path.display() ) );
+    }
+    else if let Some( ref content ) = self.stdin_content
+    {
+      parts.push( format!( "< <piped stdin, {} bytes>", content.len() ) );
     }
 
     lines.push( parts.join( " " ) );

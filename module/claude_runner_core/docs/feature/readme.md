@@ -15,6 +15,6 @@
 | 002 | [Dry Run](002_dry_run.md) | Command preview without process execution | ✅ |
 | 003 | [Describe](003_describe.md) | Human-readable command inspection output | ✅ |
 | 004 | [Isolated Subprocess Execution](004_run_isolated.md) | `run_isolated()` — temp-HOME subprocess spawn for OAuth token refresh; `IsolatedRunResult`, `RunnerError` types | ✅ |
-| 005 | [Stdin File Piping](005_stdin_file.md) | `stdin_file` field — pipes file content as subprocess stdin via `with_stdin_file()` | ✅ |
+| 005 | [Stdin File Piping](005_stdin_file.md) | `stdin_file`/`stdin_content` fields — pipe file or raw-byte content as subprocess stdin via `with_stdin_file()`/`with_stdin_content()` | ✅ |
 | 006 | [CLAUDECODE Unsetting](006_unset_claudecode.md) | `unset_claudecode` field — removes `CLAUDECODE` env var before spawning (default-on) | ✅ |
 | — | [procedure.md](procedure.md) | Workflow for creating and updating feature doc instances | ✅ |

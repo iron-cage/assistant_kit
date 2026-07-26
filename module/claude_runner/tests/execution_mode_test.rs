@@ -41,7 +41,7 @@
 use std::process::Command;
 
 mod cli_binary_test_helpers;
-use cli_binary_test_helpers::{ fake_claude, fake_claude_dir, make_session_dir, run_with_path };
+use cli_binary_test_helpers::{ fake_claude, fake_claude_dir, make_session_dir, run_with_path, run_with_path_stdin };
 
 // E01: Interactive mode: binary not found exits 1 with error on stderr.
 #[ test ]
@@ -411,5 +411,30 @@ fn s80_file_nonexistent_path_errors()
   assert!(
     stderr.contains( "/tmp/nonexistent_99999.txt" ),
     "stderr must contain the file path. Got: {stderr}",
+  );
+}
+
+// BUG-424: plain pipe (no --file) must forward non-JSON stdin to the subprocess.
+// test_kind: bug_reproducer(BUG-424)
+//
+// A shell pipeline like `cat notes.txt | clr run "prompt"` pipes raw content on stdin
+// with no `--file` flag involved. `detect_stdin_json()` drains stdin looking for a
+// leading `{` (JSON config sniffing); non-JSON content was previously discarded
+// outright instead of being forwarded to the `claude` subprocess's stdin.
+#[ test ]
+fn bug_reproducer_424_plain_pipe_content_forwarded_to_stdin()
+{
+  let script = "#!/bin/sh\ncat\n";
+  let ( _tmp, path ) = fake_claude( script );
+  let out = run_with_path_stdin(
+    &[ "--no-ultrathink", "--max-sessions", "0", "t" ],
+    &path,
+    b"piped_content_bug424",
+  );
+  assert!( out.status.success(), "must exit 0. stderr: {}", String::from_utf8_lossy( &out.stderr ) );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  assert!(
+    stdout.contains( "piped_content_bug424" ),
+    "plain pipe (no --file) must forward stdin content to subprocess stdin. Got:\n{stdout}",
   );
 }

@@ -22,11 +22,15 @@ When `with_dry_run(true)` is set, `execute()` returns an `ExecutionOutput` with:
 - `stderr`: empty string
 - `exit_code`: 0
 
-No process is spawned in dry-run mode. No stdin file is opened in dry-run mode.
+No process is spawned in dry-run mode. No stdin file is opened and no `stdin_content` is materialized in dry-run mode.
 
 **Stdin file (`with_stdin_file`):**
 
 When a `stdin_file` path is set, `execute()` opens the file for reading and attaches it as the subprocess's standard input before spawning. If the file cannot be opened, `execute()` returns `Err(...)` with a message including the path and OS error. See [feature/005_stdin_file.md](../feature/005_stdin_file.md).
+
+**Stdin content (`with_stdin_content`):**
+
+When `stdin_file` is absent and `stdin_content` bytes are set, `execute()` materializes the bytes into an anonymous temp file and attaches it as the subprocess's standard input, identically to `stdin_file`. `stdin_file` always takes priority when both are set. See [feature/005_stdin_file.md](../feature/005_stdin_file.md).
 
 **CLAUDECODE removal (`with_unset_claudecode`):**
 
@@ -81,10 +85,10 @@ Non-zero exit codes are not converted to errors — callers receive `ExecutionOu
 | doc | [pattern/001_command_builder.md](../pattern/001_command_builder.md) | Fluent builder pattern for constructing the command |
 | doc | [feature/001_execution_control.md](../feature/001_execution_control.md) | Interactive vs non-interactive execution mode design |
 | doc | [feature/002_dry_run.md](../feature/002_dry_run.md) | Dry-run mode semantics and describe_compact() output |
-| doc | [feature/005_stdin_file.md](../feature/005_stdin_file.md) | stdin_file field — file opened and attached at execute() time |
+| doc | [feature/005_stdin_file.md](../feature/005_stdin_file.md) | stdin_file/stdin_content fields — opened/materialized and attached at spawn time |
 | doc | [feature/006_unset_claudecode.md](../feature/006_unset_claudecode.md) | unset_claudecode field — CLAUDECODE removal before spawn |
 | doc | [invariant/001_single_execution_point.md](../invariant/001_single_execution_point.md) | All Command::new("claude") calls centralized here |
-| source | `../../src/command.rs` | execute(), execute_interactive(), build_command() implementation |
+| source | `../../src/command/mod.rs` | execute(), execute_interactive(), build_command() implementation |
 | source | `../../src/types.rs` | ExecutionOutput struct definition |
 
 ### Sources

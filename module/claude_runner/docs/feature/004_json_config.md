@@ -31,6 +31,15 @@ echo '{"model":"claude-haiku-4-5-20251001","max-sessions":3}' | clr "Summarize t
 
 Stdin JSON is only consumed when `--file` is not also specified; `--file` takes priority over stdin JSON detection. When stdin is a TTY, no JSON detection occurs.
 
+**Stdin raw-content forwarding (`run`/`ask` only):** When standard input is not a TTY, is non-empty, and does not begin with `{` (so it is not consumed as a JSON parameter source above), its raw bytes are forwarded verbatim to the `claude` subprocess's own stdin for the `run` and `ask` subcommands — the same mechanism `--file` uses, without requiring the flag:
+
+```sh
+some_tool | clr -p "Review this output"
+git diff | clr -p "Write a commit message for this diff"
+```
+
+This closes the gap where piping arbitrary tool output into `clr` would otherwise be silently discarded. `--file` always takes priority when both are present; an empty stdin stream (EOF with zero bytes) forwards nothing, matching the pre-existing no-`--file` default. The `isolated` and `refresh` subcommands use a separate, unconstrained stdin-JSON-detection path and are unaffected by this behavior.
+
 **Precedence (highest to lowest):**
 
 1. **CLI flags** — explicit `--flag value` on the command line; always win
@@ -50,7 +59,7 @@ When both `--args-file` and a CLR_* env var cover the same parameter, the JSON s
 
 **Error handling:** A non-existent or unreadable `--args-file` path causes `clr` to exit 1 with a file-not-found error on stderr before any subprocess is spawned. Invalid JSON (malformed, non-object root value) also causes exit 1 with a parse error message on stderr. These errors occur before any CLR_* env var or built-in default resolution.
 
-**Subcommand coverage:** JSON config loading applies to all four executing subcommands: `run`, `ask`, `isolated`, `refresh`. Parameters that are only valid for a specific subcommand are ignored when the active subcommand does not support them (consistent with the existing unknown-flag handling behavior).
+**Subcommand coverage:** JSON config loading applies to all four executing subcommands: `run`, `ask`, `isolated`, `refresh`. Parameters that are only valid for a specific subcommand are ignored when the active subcommand does not support them (consistent with the existing unknown-flag handling behavior). Raw-content forwarding (above) is narrower — it applies only to `run` and `ask`; `isolated` and `refresh` retain their pre-existing, separately-implemented stdin handling.
 
 **Dry-run inspection:** `--dry-run` combined with `--args-file` prints the merged parameter set (CLI + JSON) in the command preview, making JSON config inspection transparent.
 
@@ -68,6 +77,7 @@ When both `--args-file` and a CLR_* env var cover the same parameter, the JSON s
 | AC-008 | Boolean flag `"dry-run": true` in JSON is treated as flag presence; `"dry-run": false` is ignored |
 | AC-009 | Unknown JSON key is silently ignored; no error; other keys are applied normally |
 | AC-010 | JSON config applies to `run`, `ask`, `isolated`, and `refresh` subcommands |
+| AC-011 | `some_tool \| clr -p "task"` (non-JSON, non-empty piped content, no `--file`, `run`/`ask` only) forwards the raw content verbatim to the subprocess stdin |
 
 ### Features
 
@@ -258,12 +268,16 @@ The following parameters cannot appear in a JSON config file:
 
 | File | Relationship |
 |------|--------------|
-| `../../src/cli/mod.rs` | Stdin JSON pipe detection; early arg injection before subcommand dispatch |
-| `../../src/cli/env.rs` | `CLR_ARGS_FILE` loading; JSON source injected at env-var resolution point |
+| `../../src/cli/mod.rs` | Stdin JSON pipe detection; early arg injection before subcommand dispatch; raw-content forwarding for `run`/`ask` |
+| `../../src/cli/env.rs` | `CLR_ARGS_FILE` loading; JSON source injected at env-var resolution point; stdin classification (JSON vs. raw vs. none) |
 | `../../src/cli/parse.rs` | JSON key-to-`CliArgs` field mapping; boolean flag handling |
+| `../../src/cli/builder.rs` | Wires raw stdin content into `ClaudeCommand` when `--file` is absent |
+| `../../../claude_runner_core/src/command/mod.rs` | Materializes `stdin_content` into subprocess stdin across all spawn methods |
+| `../../../claude_runner_core/src/command/params_core.rs` | `with_stdin_content()` builder method |
 
 ### Tests
 
 | File | Relationship |
 |------|--------------|
 | `../../tests/json_config_test.rs` | EC tests for JSON file loading, stdin pipe, precedence, error cases |
+| `../../tests/execution_mode_test.rs` | `bug_reproducer_424_plain_pipe_content_forwarded_to_stdin` — regression coverage for raw-content forwarding |

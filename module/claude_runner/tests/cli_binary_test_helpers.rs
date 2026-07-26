@@ -16,6 +16,7 @@
 //! | `fake_claude_binary_dir` (unix) | `ps_command_test`, `user_story_ps_test`, `kill_command_test`, `user_story_kill_test`, `ps_mode_test`, `ps_columns_test`, `ps_wide_test`, `ps_flags_test`, `config_file_test` |
 //! | `fake_claude` (unix) | `execution_mode_test`, `expect_validation_test` |
 //! | `run_with_path` | `execution_mode_test`, `expect_validation_test`, `exit_code_contract_test`, `output_format_test` |
+//! | `run_with_path_stdin` | `execution_mode_test` |
 //! | `run_with_path_proc` (unix) | `expect_validation_test` |
 //! | `make_proc_dir` (unix) | `kill_command_test`, `expect_validation_test`, `config_file_test` |
 //! | `run_dry` | `user_story_test`, `user_story_creds_isolated_test`, `user_story_output_test`, `dry_run_test` |
@@ -666,6 +667,42 @@ pub fn run_with_path( args : &[ &str ], path : &str ) -> std::process::Output
     .env( "PATH", path )
     .output()
     .expect( "Failed to invoke clr binary" )
+}
+
+/// Invoke `clr` binary with `args`, a custom `PATH`, and piped `stdin` content; return raw `Output`.
+///
+/// Mirrors `run_with_path` but additionally writes `stdin` to the child's stdin pipe before
+/// collecting output — reproduces a shell pipeline (`cat notes.txt | clr run "prompt"`) under
+/// `Command`'s piped-stdin API, since the test harness's own inherited stdin cannot be
+/// repointed at literal bytes from within a `#[test]` function.
+///
+/// `stdin` must stay well under the OS pipe buffer size (commonly 64KiB on Linux) — the
+/// write happens before `wait_with_output()` drains the child's stdout/stderr pipes, so a
+/// larger payload risks the classic parent-writes-while-child-blocks-on-stdout deadlock.
+/// Fine for the small fixed strings used in stdin-forwarding regression tests.
+///
+/// # Panics
+///
+/// Panics if the `clr` binary cannot be spawned, its stdin pipe cannot be written to, or the
+/// process cannot be waited on.
+#[must_use]
+#[inline]
+#[allow(dead_code)]
+pub fn run_with_path_stdin( args : &[ &str ], path : &str, stdin : &[ u8 ] ) -> std::process::Output
+{
+  use std::io::Write as _;
+  assert_container();
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let mut child = Command::new( bin )
+    .args( args )
+    .env( "PATH", path )
+    .stdin( std::process::Stdio::piped() )
+    .stdout( std::process::Stdio::piped() )
+    .stderr( std::process::Stdio::piped() )
+    .spawn()
+    .expect( "Failed to spawn clr binary" );
+  child.stdin.take().expect( "child stdin handle" ).write_all( stdin ).expect( "write stdin" );
+  child.wait_with_output().expect( "Failed to wait on clr binary" )
 }
 
 /// Invoke `clr` binary with `args`, a custom `PATH`, and `CLR_PROC_DIR` proc isolation.
