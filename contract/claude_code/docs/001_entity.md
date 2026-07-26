@@ -4,7 +4,7 @@
 
 | Type | Purpose | Master File | Instances |
 |------|---------|-------------|----------:|
-| `behavior` | Observed external behaviors of the `claude` binary (B1–B35 + B16h) | [behavior/readme.md](behavior/readme.md) | 36 |
+| `behavior` | Observed external behaviors of the `claude` binary (B1–B37 + B16h) | [behavior/readme.md](behavior/readme.md) | 38 |
 | `storage` | `~/.claude/` storage architecture: projects dir, support dirs, root files | [storage/readme.md](storage/readme.md) | 3 |
 | `filesystem` | Runtime filesystem paths accessed by claude_version | [filesystem/readme.md](filesystem/readme.md) | 4 |
 | `jsonl` | Session JSONL entry format: common fields, entry types, content blocks, usage, threading, sidechain | [jsonl/readme.md](jsonl/readme.md) | 10 |
@@ -24,7 +24,7 @@
 
 ## Master Doc Instances Table
 
-### behavior/ (36 instances)
+### behavior/ (38 instances)
 
 | ID | Name | File |
 |----|------|------|
@@ -64,6 +64,8 @@
 | B33 | claudemd Loading Limits | [behavior/033_b33_claudemd_loading_limits.md](behavior/033_b33_claudemd_loading_limits.md) |
 | B34 | claudemd Content Pipeline | [behavior/034_b34_claudemd_content_pipeline.md](behavior/034_b34_claudemd_content_pipeline.md) |
 | B35 | Automemory Search Context Flag | [behavior/035_b35_automemory_search_context_flag.md](behavior/035_b35_automemory_search_context_flag.md) |
+| B36 | Background Task Lifecycle | [behavior/036_b36_background_task_lifecycle.md](behavior/036_b36_background_task_lifecycle.md) |
+| B37 | Subagent Cache Isolation and 5-Minute TTL | [behavior/037_b37_subagent_cache_ttl.md](behavior/037_b37_subagent_cache_ttl.md) |
 
 ### storage/ (3 instances)
 
