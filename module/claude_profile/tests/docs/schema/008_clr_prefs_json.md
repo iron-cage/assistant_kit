@@ -1,5 +1,7 @@
 # Schema 008: CLR Preferences — `~/.clr/prefs.json`
 
+> Deprecated: task 410 retired `~/.clr/prefs.json` — `.model.select` now stores the subprocess model preference as the `model` key in `~/.clr/config.toml`. Current CLI-level coverage lives in [tests/docs/cli/command/20_model_select.md](../cli/command/20_model_select.md); schema-level coverage for the new format lives in `claude_core/docs/api/002_toml_io.md`. Cases below are suspended per `l1_imp_surface.rulebook.md § Spec : NA Case Protocol` — preserved for historical reference only.
+
 SC test cases for `docs/schema/008_clr_prefs_json.md`. Verifies the `prefs.json`
 write contract: `subprocess_model` field write/read semantics, auto-creation on
 first write, graceful absent-file/absent-field fallback, and preservation of
@@ -11,14 +13,17 @@ unrelated keys across write and reset operations.
 
 | ID | Short Name | Category | Status |
 |----|------------|----------|--------|
-| SC-1 | `id::VALUE` writes `subprocess_model` and pins the model | Field Semantics | ✅ |
-| SC-2 | Absent file / absent field is graceful — treated as unset | Error Path | ✅ |
-| SC-3 | `prefs.json` created automatically on first write when `~/.clr/` exists but file is absent | Write Semantics | ✅ |
-| SC-4 | `reset::1` removes only `subprocess_model`, preserves other keys and the file itself | Write Isolation | ✅ |
+| SC-1 | `id::VALUE` writes `subprocess_model` and pins the model | Field Semantics | N/A |
+| SC-2 | Absent file / absent field is graceful — treated as unset | Error Path | N/A |
+| SC-3 | `prefs.json` created automatically on first write when `~/.clr/` exists but file is absent | Write Semantics | N/A |
+| SC-4 | `reset::1` removes only `subprocess_model`, preserves other keys and the file itself | Write Isolation | N/A |
 
 ---
 
 ### SC-1: `id::VALUE` writes `subprocess_model` and pins the model
+
+> **N/A** — `~/.clr/prefs.json` is no longer written or read by any code path; task 410 migrated `.model.select` onto `~/.clr/config.toml`.
+> Becomes testable when: no committed task.
 
 - **Given:** No preference pinned, or an existing `subprocess_model` value in `~/.clr/prefs.json`
 - **When:** `clp .model.select id::claude-opus-4-8` is invoked
@@ -30,6 +35,9 @@ unrelated keys across write and reset operations.
 
 ### SC-2: Absent file / absent field is graceful — treated as unset
 
+> **N/A** — `~/.clr/prefs.json` is no longer written or read by any code path; task 410 migrated `.model.select` onto `~/.clr/config.toml`.
+> Becomes testable when: no committed task.
+
 - **Given:** No `~/.clr/prefs.json` exists, or the file exists without a `subprocess_model` key
 - **When:** `clp .model.select` (get form) is invoked, or `claude_runner_core/src/isolated.rs` resolves the subprocess model
 - **Then:** The preference is treated as no preference — `clp .model.select` reports `(unset)`; readers fall back to `ISOLATED_DEFAULT_MODEL`. No error, no panic.
@@ -40,6 +48,9 @@ unrelated keys across write and reset operations.
 
 ### SC-3: `prefs.json` created automatically on first write when `~/.clr/` exists but file is absent
 
+> **N/A** — `~/.clr/prefs.json` is no longer written or read by any code path; task 410 migrated `.model.select` onto `~/.clr/config.toml`.
+> Becomes testable when: no committed task.
+
 - **Given:** `~/.clr/` directory exists (already created by clr for the journal) but `prefs.json` does not
 - **When:** `clp .model.select id::VALUE` is invoked
 - **Then:** `~/.clr/prefs.json` is created containing the written `subprocess_model` value — no error occurs due to the missing file, and `~/.clr/` itself is not re-created (clr already owns it)
@@ -49,6 +60,9 @@ unrelated keys across write and reset operations.
 ---
 
 ### SC-4: `reset::1` removes only `subprocess_model`, preserves other keys and the file itself
+
+> **N/A** — `~/.clr/prefs.json` is no longer written or read by any code path; task 410 migrated `.model.select` onto `~/.clr/config.toml`.
+> Becomes testable when: no committed task.
 
 - **Given:** `~/.clr/prefs.json` contains `subprocess_model` alongside at least one unrelated key
 - **When:** `clp .model.select reset::1` is invoked

@@ -1,9 +1,6 @@
 //! Command registration: argument definitions and routines for the `claude_profile` CLI.
 
-use unilang::data::{ Kind, ErrorData, ErrorCode };
-use unilang::data::OutputData;
-use unilang::interpreter::ExecutionContext;
-use unilang::semantic::VerifiedCommand;
+use unilang::data::Kind;
 use crate::commands::
 {
   credentials_status_routine,
@@ -23,45 +20,9 @@ use crate::commands::
   usage_routine,
 };
 
-/// DEPRECATED redirector: `.account.rotate` exits 1 with migration notice.
-///
-/// Rotation moved to `.usage rotate::1` (Feature 038). This function satisfies
-/// the `CommandRoutine` type signature while always returning a descriptive error.
-fn account_rotate_redirector( _cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
-{
-  Err( ErrorData::new(
-    ErrorCode::ArgumentTypeMismatch,
-    "'.account.rotate' is deprecated — use '.usage rotate::1' instead".to_string(),
-  ) )
-}
-
-/// REMOVED redirector: `.account.assign` exits 1 with migration notice.
-///
-/// Assignment moved to `assignee::USER@MACHINE name::X` on `.accounts`/`.usage` (Feature 065).
-fn account_assign_redirector( _cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
-{
-  Err( ErrorData::new(
-    ErrorCode::ArgumentTypeMismatch,
-    "'.account.assign' is removed — use 'assignee::USER@MACHINE name::X' (or 'assignee::0 name::X' for current machine) on '.accounts' or '.usage' instead".to_string(),
-  ) )
-}
-
-/// REMOVED redirector: `.account.unclaim` exits 1 with migration notice.
-///
-/// Unclaim moved to `owner::0 name::X` on `.accounts`/`.usage` (Feature 063/037).
-fn account_unclaim_redirector( _cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
-{
-  Err( ErrorData::new(
-    ErrorCode::ArgumentTypeMismatch,
-    "'.account.unclaim' is removed — use 'owner::0 name::X' (or 'owner::0' alone to batch-clear) on '.accounts' or '.usage' instead".to_string(),
-  ) )
-}
-
 /// Register all `claude_profile` commands into an existing registry.
 ///
-/// Registers 18 commands (credentials status, account management including limits, relogin, renewal, and inspect, model get/set/select, models discovery, token status, paths, usage).
-/// `.account.rotate` is registered as a deprecated redirector (always exits 1 with migration notice).
-/// `.account.assign` and `.account.unclaim` are registered as removed redirectors (always exits 1 with migration notice pointing to Feature 065/037 replacements).
+/// Registers 15 commands (credentials status, account management including limits, relogin, renewal, and inspect, model get/set/select, models discovery, token status, paths, usage).
 /// The `.` (dot) hidden command and `.help` are binary-specific — they are NOT
 /// included here.
 ///
@@ -121,6 +82,8 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
       bfd( "unclaim", "REMOVED — use owner::0 name::X instead (or owner::0 alone to batch-clear)" ),
       reg_arg_opt( "owner", Kind::String ).with_description( "Set or clear account ownership: USER@MACHINE identity to set; sentinel value \"0\" clears ownership (owner::0)" ),
       bfs( "force",   "Bypass G8 ownership gate on owner:: (default 0)" ),
+      bfs( "lock",    "Set (\"1\") or clear (\"0\") claim-lock: excludes from unattended rotation and explicit-switch targets; ungated (Feature 070)" ),
+      bfs( "reserve", "Set (\"1\") or clear (\"0\") reserve marker: deprioritizes (does not exclude) in sort-based selection; ungated (Feature 070)" ),
       reg_arg_opt( "cols", Kind::String ).with_description( "Column visibility modifiers (comma-separated `+col_id`/`-col_id`); default set: account, owner, active, current, sub, tier, expires, email" ),
       bfs( "for",     "REMOVED — use assignee::USER@MACHINE name::X (or assignee::0 name::X for current machine)" ),
       bfs( "active",  "REMOVED — use assignee::USER@MACHINE name::X (or assignee::0 name::X for current machine)" ),
@@ -213,9 +176,6 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
       trc(),
     ],
     Box::new( account_renewal_routine ) );
-  reg_cmd( registry, ".account.rotate",  "DEPRECATED — use '.usage rotate::1' for strategy-driven account rotation",                                          vec![], Box::new( account_rotate_redirector  ) );
-  reg_cmd( registry, ".account.assign",  "REMOVED — use 'assignee::USER@MACHINE name::X' on '.accounts' or '.usage' instead (Feature 065)",                 vec![ nam(), dry(), trc() ], Box::new( account_assign_redirector  ) );
-  reg_cmd( registry, ".account.unclaim", "REMOVED — use 'owner::0 name::X' (or 'owner::0' alone to batch-clear) on '.accounts' or '.usage' instead",        vec![ nam(), dry(), trc() ], Box::new( account_unclaim_redirector ) );
   reg_cmd( registry, ".account.inspect", "Show identity, subscription, and org fields for one account via live endpoints",
     vec![
       nam(),
@@ -237,7 +197,7 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
       fmt(),
     ],
     Box::new( models_routine ) );
-  reg_cmd( registry, ".model.select", "Get or pin the clr subprocess model preference in ~/.clr/prefs.json",
+  reg_cmd( registry, ".model.select", "Get or pin the clr subprocess model preference in ~/.clr/config.toml",
     vec![
       reg_arg_opt( "id",    Kind::String  ).with_description( "Full model ID to pin (e.g. claude-opus-4-8); use .models to list available IDs" ),
       reg_arg_opt( "reset", Kind::Integer ).with_description( "Remove the subprocess_model preference and revert to ISOLATED_DEFAULT_MODEL (1 = reset)" ),
@@ -289,6 +249,8 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
       bfd( "unclaim", "REMOVED — use owner::0 name::X instead (or owner::0 alone to batch-clear)" ),
       reg_arg_opt( "owner", Kind::String ).with_description( "Set or clear account ownership: USER@MACHINE identity to set; sentinel value \"0\" clears ownership (owner::0)" ),
       bfs( "force",   "Bypass G8 ownership gate on owner:: (default 0)" ),
+      bfs( "lock",    "Set (\"1\") or clear (\"0\") claim-lock: excludes from unattended rotation and explicit-switch targets; ungated (Feature 070)" ),
+      bfs( "reserve", "Set (\"1\") or clear (\"0\") reserve marker: deprioritizes (does not exclude) in sort-based selection; ungated (Feature 070)" ),
       bfs( "for",     "REMOVED — use assignee::USER@MACHINE name::X (or assignee::0 name::X for current machine)" ),
       bfs( "active",  "REMOVED — use assignee::USER@MACHINE name::X (or assignee::0 name::X for current machine)" ),
       reg_arg_opt( "assignee", Kind::String ).with_description( "USER@MACHINE (or sentinel \"0\" = $USER@$HOSTNAME) assign/unassign active-account marker; Feature 065" ),

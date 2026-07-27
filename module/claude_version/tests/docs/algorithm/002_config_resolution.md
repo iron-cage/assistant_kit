@@ -84,8 +84,8 @@ Test surface for `claude_version_core::config_resolve`. See [algorithm/002_confi
 
 - **Given:** `CLAUDE_MODEL` env var absent; `home_dir` parameter has no `.claude/settings.json`; no `.claude/settings.json` in cwd or any ancestor directory
 - **When:** `resolve("theme", home_dir, cwd, catalog)`
-- **Then:** `ResolvedValue { value: Some("system"), source: Default }`
-- **Note:** `resolve()` reads user config from `home_dir/.claude/settings.json` (parameter, not `HOME` env var). When that file is absent, Step 3 produces no value and Step 4 returns the catalog default (`"system"` for `theme`). CLI layer is responsible for deriving `home_dir` from `HOME` before calling `resolve()`.
+- **Then:** `ResolvedValue { value: Some("dark"), source: Default }`
+- **Note:** `resolve()` reads user config from `home_dir/.claude/settings.json` (parameter, not `HOME` env var). When that file is absent, Step 3 produces no value and Step 4 returns the catalog default (`"dark"` for `theme`). CLI layer is responsible for deriving `home_dir` from `HOME` before calling `resolve()`.
 
 ---
 

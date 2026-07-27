@@ -5,8 +5,10 @@
 # Provides NEXTEST_FILTER pass-through for targeted single-test execution
 # (verb/test_only).  When NEXTEST_FILTER is set, overrides TEST_SCRIPT to
 # verb/test_only.d/l1 and injects the filter as a container env var.
-# The w3 binary plugin and .claude mount are skipped for targeted runs;
-# cargo uses the pre-seeded /workspace/target volume for fast first-run.
+# The w3 binary plugin is skipped for targeted runs (cargo uses the pre-seeded
+# /workspace/target volume for fast first-run) but plugin_mount (.claude) and
+# bin_mount (claude binary) still apply — real-subprocess control tests need
+# both even in a filtered single-test run.
 
 # ── Compose with workspace _plugin_test_args ──────────────────────────────────
 # Rename workspace function before redefining so the normal full-suite path
@@ -28,9 +30,11 @@ _plugin_test_args()
   fi
   # Targeted single-test path:
   #   - redirect TEST_SCRIPT to test_only.d/l1 (reads $NEXTEST_FILTER inside container)
-  #   - skip the w3 binary plugin and .claude mount (not needed for unit tests)
+  #   - skip the w3 binary plugin (not needed for unit tests)
   #   - use /workspace/target (pre-seeded from image) for fast incremental builds
+  #   - still apply plugin_mount/bin_mount — real-subprocess tests need them even filtered
   TEST_SCRIPT="module/claude_runner_core/verb/test_only.d/l1"
   bin_args=( -e "NEXTEST_FILTER=$NEXTEST_FILTER" )
   mount_args=()
+  _apply_data_mounts
 }

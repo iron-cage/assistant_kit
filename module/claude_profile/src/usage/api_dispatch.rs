@@ -76,6 +76,16 @@ fn dispatch_assignee_param(
         format!( "account '{name_arg}' not found in credential store" ),
       ) );
     }
+    // G9: Claim-lock guard — locked accounts cannot become the assignee:: target.
+    // force::1 bypasses the guard (Feature 070 AC-04).
+    let force = crate::output::parse_int_flag( cmd, "force", 0 )? != 0;
+    if !force && claude_profile_core::account::read_claim_lock( credential_store, &name_arg )
+    {
+      return Err( ErrorData::new(
+        ErrorCode::ArgumentTypeMismatch,
+        format!( "claim-lock violation: {name_arg} is claim-locked" ),
+      ) );
+    }
     if is_dry( cmd )
     {
       return Ok( Some( OutputData::new(
@@ -177,6 +187,19 @@ pub( crate ) fn handle_mutation_dispatch(
     return dispatch_owner( cmd, trace, force, credential_store, ov );
   }
 
+  // lock:: / reserve:: — ungated boolean field dispatch (Feature 070 AC-02).
+  for ( param_name, writer ) in
+  [
+    ( "lock",    claude_profile_core::account::write_claim_lock as fn( &str, &std::path::Path, bool ) -> Result< (), std::io::Error > ),
+    ( "reserve", claude_profile_core::account::write_reserve    as fn( &str, &std::path::Path, bool ) -> Result< (), std::io::Error > ),
+  ]
+  {
+    if let Some( Value::String( v ) ) = cmd.arguments.get( param_name )
+    {
+      return dispatch_bool_field( cmd, trace, credential_store, param_name, v == "1", writer ).map( Some );
+    }
+  }
+
   Ok( None )
 }
 
@@ -245,4 +268,44 @@ fn dispatch_owner(
   }
 
   crate::owner_dispatch::owner_named_dispatch( trace, force, is_dry_run, is_sentinel, ov, &raw_name, &name_arg, credential_store, "usage" ).map( Some )
+}
+
+// ── lock:: / reserve:: dispatch (Feature 070) ─────────────────────────────────
+
+fn dispatch_bool_field(
+  cmd              : &VerifiedCommand,
+  trace            : bool,
+  credential_store : &std::path::Path,
+  field_name       : &str,
+  value            : bool,
+  writer           : fn( &str, &std::path::Path, bool ) -> Result< (), std::io::Error >,
+) -> Result< OutputData, ErrorData >
+{
+  let is_dry_run = is_dry( cmd );
+
+  let raw_name = match cmd.arguments.get( "name" )
+  {
+    Some( Value::String( s ) ) => s.clone(),
+    _ => String::new(),
+  };
+  let name_arg = if raw_name.is_empty() || raw_name.contains( ',' )
+  {
+    raw_name.clone()
+  }
+  else
+  {
+    resolve_account_name( &raw_name, credential_store )?
+  };
+
+  if raw_name.is_empty()
+  {
+    let all_accounts = crate::account::list( credential_store )
+      .map_err( |e| ErrorData::new(
+        ErrorCode::InternalError,
+        format!( "cannot read credential store: {e}" ),
+      ) )?;
+    return crate::owner_dispatch::bool_field_batch_set( trace, is_dry_run, value, &all_accounts, credential_store, "usage", field_name, writer );
+  }
+
+  crate::owner_dispatch::bool_field_named_dispatch( trace, is_dry_run, value, &raw_name, &name_arg, credential_store, "usage", field_name, writer )
 }

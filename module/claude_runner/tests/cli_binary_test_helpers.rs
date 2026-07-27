@@ -16,6 +16,7 @@
 //! | `fake_claude_binary_dir` (unix) | `ps_command_test`, `user_story_ps_test`, `kill_command_test`, `user_story_kill_test`, `ps_mode_test`, `ps_columns_test`, `ps_wide_test`, `ps_flags_test`, `config_file_test` |
 //! | `fake_claude` (unix) | `execution_mode_test`, `expect_validation_test` |
 //! | `run_with_path` | `execution_mode_test`, `expect_validation_test`, `exit_code_contract_test`, `output_format_test` |
+//! | `run_with_path_stdin` | `execution_mode_test` |
 //! | `run_with_path_proc` (unix) | `expect_validation_test` |
 //! | `make_proc_dir` (unix) | `kill_command_test`, `expect_validation_test`, `config_file_test` |
 //! | `run_dry` | `user_story_test`, `user_story_creds_isolated_test`, `user_story_output_test`, `dry_run_test` |
@@ -69,7 +70,7 @@ fn assert_container()
 /// instead, which adds those vars explicitly.
 ///
 /// `HOME` is set to a fixed, empty-by-design path (`/tmp/clr-isolated-home`) so that
-/// a host `~/.clr/prefs.json` cannot inject `--model` or other preference values into
+/// a host `~/.clr/config.toml` cannot inject `--model` or other preference values into
 /// tests that assert a clean default state (Fix(BUG-008) isolation guard). Tests that
 /// need a populated `HOME` (e.g., pref-reading tests) use `run_cli_with_env` with an
 /// explicit `("HOME", temp_dir)` pair.
@@ -282,6 +283,39 @@ pub fn fake_claude_binary_dir() -> ( tempfile::TempDir, String )
   ( dir, path_val )
 }
 
+/// Build a temp dir containing a `claude` symlink to the `fake_claude_control` ELF
+/// binary (a compiled Cargo `[[bin]]` target, not a shell script — see that binary's
+/// own module doc comment for why a real ELF is required for process discoverability)
+/// and return `(TempDir, PATH value)` for use as `clr query`'s spawned session.
+///
+/// Unlike `fake_claude_binary_dir()` (which symlinks `/bin/sleep` for plain liveness
+/// tests), this fixture speaks the bidirectional control-session wire protocol —
+/// required for `clr query`'s daemon, which sends `control_request` envelopes over
+/// stdin and expects matching `control_response` envelopes on stdout.
+///
+/// The caller must keep the `TempDir` alive for as long as any spawned session using it.
+///
+/// # Panics
+///
+/// Panics if the temp directory cannot be created or the symlink cannot be made.
+#[cfg(unix)]
+#[inline]
+#[must_use]
+#[allow(dead_code)]
+pub fn fake_claude_control_binary_dir() -> ( tempfile::TempDir, String )
+{
+  let dir  = tempfile::TempDir::new().expect( "tmpdir" );
+  let dest = dir.path().join( "claude" );
+  std::os::unix::fs::symlink( env!( "CARGO_BIN_EXE_fake_claude_control" ), &dest )
+    .expect( "symlink fake_claude_control as claude" );
+  let path_val = format!(
+    "{}:{}",
+    dir.path().display(),
+    std::env::var( "PATH" ).unwrap_or_default(),
+  );
+  ( dir, path_val )
+}
+
 /// Spawn a fake `claude` ELF process using the given PATH env; return the `Child` handle.
 ///
 /// Requires `fake_claude_binary_dir()` to have been called first — the PATH must contain
@@ -393,6 +427,53 @@ pub fn spawn_print_claude_for( path_val : &str, secs : u64 ) -> std::process::Ch
 pub fn spawn_print_claude( path_val : &str ) -> std::process::Child
 {
   spawn_print_claude_for( path_val, 30 )
+}
+
+/// Spawn a query-mode fake `claude` process that sleeps 30 seconds (argv contains
+/// `--input-format stream-json --output-format stream-json --verbose`, task 418).
+///
+/// Uses `/bin/sh` with `arg0` set to `"claude"`, same compound-list technique as
+/// [`spawn_print_claude_for`] (prevents exec-replacing the shell with `sleep`).
+/// The resulting `/proc/{pid}/cmdline` is:
+///
+/// ```text
+/// ["claude", "-c", "sleep 30; :", "--input-format", "stream-json", "--output-format", "stream-json", "--verbose"]
+/// ```
+///
+/// `classify_mode()` finds the adjacent `--input-format`/`stream-json` and
+/// `--output-format`/`stream-json` pairs plus a standalone `--verbose` token and
+/// returns `"query"` — the exact three-flag shape `clr query`'s dispatch spawns
+/// the real subprocess with (see `query.rs`).
+///
+/// The caller must `kill()` + `wait()` the returned child to avoid leaks.
+///
+/// # Panics
+///
+/// Panics if the subprocess cannot be spawned.
+#[ cfg( unix ) ]
+#[ inline ]
+#[ must_use ]
+#[ allow( dead_code ) ]
+pub fn spawn_query_claude( path_val : &str ) -> std::process::Child
+{
+  assert_container();
+  use std::os::unix::process::CommandExt as _;
+  let child = std::process::Command::new( "/bin/sh" )
+    .arg0( "claude" )
+    .arg( "-c" )
+    .arg( "sleep 30; :" )
+    .arg( "--input-format" )
+    .arg( "stream-json" )
+    .arg( "--output-format" )
+    .arg( "stream-json" )
+    .arg( "--verbose" )
+    .env( "PATH", path_val )
+    .stdout( std::process::Stdio::null() )
+    .stderr( std::process::Stdio::null() )
+    .spawn()
+    .expect( "spawn query-mode fake claude" );
+  std::thread::sleep( core::time::Duration::from_millis( 200 ) );
+  child
 }
 
 /// Build a proc isolation dir for `CLR_PROC_DIR`: one `/proc/{pid}` symlink per PID.
@@ -586,6 +667,42 @@ pub fn run_with_path( args : &[ &str ], path : &str ) -> std::process::Output
     .env( "PATH", path )
     .output()
     .expect( "Failed to invoke clr binary" )
+}
+
+/// Invoke `clr` binary with `args`, a custom `PATH`, and piped `stdin` content; return raw `Output`.
+///
+/// Mirrors `run_with_path` but additionally writes `stdin` to the child's stdin pipe before
+/// collecting output — reproduces a shell pipeline (`cat notes.txt | clr run "prompt"`) under
+/// `Command`'s piped-stdin API, since the test harness's own inherited stdin cannot be
+/// repointed at literal bytes from within a `#[test]` function.
+///
+/// `stdin` must stay well under the OS pipe buffer size (commonly 64KiB on Linux) — the
+/// write happens before `wait_with_output()` drains the child's stdout/stderr pipes, so a
+/// larger payload risks the classic parent-writes-while-child-blocks-on-stdout deadlock.
+/// Fine for the small fixed strings used in stdin-forwarding regression tests.
+///
+/// # Panics
+///
+/// Panics if the `clr` binary cannot be spawned, its stdin pipe cannot be written to, or the
+/// process cannot be waited on.
+#[must_use]
+#[inline]
+#[allow(dead_code)]
+pub fn run_with_path_stdin( args : &[ &str ], path : &str, stdin : &[ u8 ] ) -> std::process::Output
+{
+  use std::io::Write as _;
+  assert_container();
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let mut child = Command::new( bin )
+    .args( args )
+    .env( "PATH", path )
+    .stdin( std::process::Stdio::piped() )
+    .stdout( std::process::Stdio::piped() )
+    .stderr( std::process::Stdio::piped() )
+    .spawn()
+    .expect( "Failed to spawn clr binary" );
+  child.stdin.take().expect( "child stdin handle" ).write_all( stdin ).expect( "write stdin" );
+  child.wait_with_output().expect( "Failed to wait on clr binary" )
 }
 
 /// Invoke `clr` binary with `args`, a custom `PATH`, and `CLR_PROC_DIR` proc isolation.

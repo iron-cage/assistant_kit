@@ -46,9 +46,9 @@ use tempfile::TempDir;
 ///
 /// Structural assertion: `.account.save.help` does NOT list `unclaim` (param removed)
 /// and does NOT list `owner::` (ownership is not user-specified). The former
-/// `.account.assign` and `.account.unclaim` standalone commands are registered as removed
-/// redirectors (Feature 037) — they exit 1 with migration hints pointing to
-/// `assignee::USER@MACHINE` and `owner::0` on `.accounts`/`.usage`.
+/// `.account.assign` and `.account.unclaim` standalone commands have been removed
+/// entirely (Feature 037) — real functionality lives at `assignee::USER@MACHINE`
+/// and `owner::0` on `.accounts`/`.usage`.
 ///
 /// Spec: [`tests/docs/feature/36_account_ownership.md` FT-03]
 #[ test ]
@@ -65,34 +65,6 @@ fn ft03_unclaim_param_placement()
   assert!(
     !save_text.contains( "owner::" ),
     "FT-03: .account.save help must NOT list `owner::` parameter; got:\n{save_text}",
-  );
-
-  // Case B: .account.unclaim and .account.assign are registered as removed redirectors —
-  // exit 1 with targeted migration hints (Feature 037 redirect stubs).
-  let out_unclaim = run_cs( &[ ".account.unclaim", "name::alice@acme.com" ] );
-  assert_exit( &out_unclaim, 1 );
-  let unclaim_err = stderr( &out_unclaim );
-  assert!(
-    !unclaim_err.is_empty(),
-    "FT-03 case B: .account.unclaim must produce a non-empty error; got empty stderr",
-  );
-  // Stub must name the replacement (owner::0), not the removed param (unclaim::1).
-  assert!(
-    unclaim_err.contains( "owner::0" ),
-    "FT-03 case B: .account.unclaim error must reference 'owner::0' migration hint; got:\n{unclaim_err}",
-  );
-
-  let out_assign = run_cs( &[ ".account.assign", "name::alice@acme.com" ] );
-  assert_exit( &out_assign, 1 );
-  let assign_err = stderr( &out_assign );
-  assert!(
-    !assign_err.is_empty(),
-    "FT-03 case B: .account.assign must produce a non-empty error; got empty stderr",
-  );
-  // Stub must name the replacement (assignee::), not the removed param (assign::1).
-  assert!(
-    assign_err.contains( "assignee::" ),
-    "FT-03 case B: .account.assign error must reference 'assignee::' migration hint; got:\n{assign_err}",
   );
 }
 

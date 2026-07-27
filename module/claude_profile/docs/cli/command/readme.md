@@ -38,7 +38,7 @@
 | 17 | `.account.unclaim` | **REMOVED** (Feature 037; absorbed param further REMOVED Feature 064) — releases account ownership; use `.accounts owner::0 name::X` | 0 | `clp .account.unclaim name::alice@acme.com` |
 | 18 | `.model` | Get or set the Claude Code session model in `~/.claude/settings.json` | 2 | `clp .model set::opus` |
 | 19 | `.models` | List available Claude models via live API or static offline catalog | 3 | `clp .models offline::1` |
-| 20 | `.model.select` | Get/set/reset subprocess model preference in `~/.clr/prefs.json` | 3 | `clp .model.select id::claude-opus-4-8` |
+| 20 | `.model.select` | Get/set/reset subprocess model preference in `~/.clr/config.toml` | 3 | `clp .model.select id::claude-opus-4-8` |
 
 ### Quick Reference
 

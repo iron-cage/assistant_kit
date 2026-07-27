@@ -134,6 +134,13 @@ See `-corner_cases_exhaustive.md` for complete corner case analysis.
 ### Not Yet Tested ⚠️
 - execute_interactive() TTY mode (requires real terminal)
 - Claude binary not in PATH (requires PATH manipulation)
+
+<!-- BUG-002 task/claude_runner_core/bug/002_ac_claims_unreachable_zero_failures.md — this
+directory's own stated prerequisite ("Claude Code binary must be in PATH") is the pre-existing,
+unused design slot the 5 control_session_*_test.rs files structurally belong in (Fix Location
+Option A), rather than the offline Container-Only automated sweep. -->
+- Bidirectional control-session integration tests (`control_session_*_test.rs`) requiring a
+  real, authenticated `claude` binary — see BUG-002 for routing recommendation
 - Continuation flag with missing/corrupted session
 - API key with invalid values (security sensitive)
 - Very large output (>1GB) - impractical

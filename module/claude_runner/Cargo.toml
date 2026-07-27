@@ -34,6 +34,11 @@ name = "c"
 path = "src/bin/c.rs"
 required-features = [ "enabled" ]
 
+[[bin]]
+name = "fake_claude_control"
+path = "tests/fixtures/fake_claude_control.rs"
+required-features = [ "enabled" ]
+
 [features]
 default = [ "enabled" ]
 enabled = [

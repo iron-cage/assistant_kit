@@ -38,7 +38,7 @@
 //! | `remove_setting_missing_file_is_noop` | absent file → no-op, no error |
 //! | `set_env_var_and_remove_env_var_round_trip` | env sub-object round-trip |
 
-use claude_version_core::settings_io::{
+use claude_core::settings_io::{
   infer_type, json_escape, set_setting, get_setting, read_all_settings, remove_setting,
   set_env_var, remove_env_var, StoredAs,
 };

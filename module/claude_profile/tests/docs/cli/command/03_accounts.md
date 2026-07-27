@@ -55,6 +55,23 @@ Integration test planning for the `.accounts` command. See [command/namespace.md
 | IT-47 | `format::json` emits correct `owner`, `is_owned`, `renewal_at` values | TSK-324 — JSON value correctness |
 | IT-48 | `format::json` emits `is_owned: false` when owner is a foreign identity | TSK-324 — JSON value correctness |
 | IT-49 | `format::json` emits correct `host`, `role`, `organization_role` values | TSK-324 — JSON value correctness |
+| IT-50 | `.accounts.help` shows all 6 group headers in documented order | Grouped Help — Structure |
+| IT-51 | `.accounts.help` shows all 30 parameters under their correct documented group | Grouped Help — Structure |
+| IT-52 | `.accounts.help` `::` delimiter aligns at the same offset across all 30 rows, spanning group boundaries | Grouped Help — Alignment |
+| IT-53 | `.accounts.help` boolean parameters render bare `name::0`, never `name::0\|1` | Grouped Help — Signature Conventions |
+| IT-54 | `.accounts.help` enum parameters show an uppercase value placeholder | Grouped Help — Signature Conventions |
+| IT-55 | `.accounts.help` output contains no version/build banner | Grouped Help — Minimal Content |
+| IT-56 | `.accounts.help` output contains no REMOVED parameter mentions | Grouped Help — Minimal Content |
+| IT-57 | `.accounts.help` piped output uses plain-text group header fallback, no brackets/ANSI | Grouped Help — TTY Fallback |
+| IT-58 | REMOVED_TOGGLE runtime rejection unaffected by grouped-help rendering | Grouped Help — Regression |
+| IT-59 | Longest parameter name (`exclude_exhausted`) sets the shared `::` column even for the shortest name (`dry`) in a different group | Grouped Help — Alignment |
+| IT-60 | Every rendered parameter belongs to exactly one group; rendered row count equals registered parameter count | Grouped Help — Exhaustiveness |
+| IT-61 | Trailing `key::value` token after `.accounts.help` is silently ignored; help still renders | Grouped Help — Argv Interaction |
+| IT-62 | Trailing bare (non-`::`) token after `.accounts.help` causes a usage error; help does not render | Grouped Help — Argv Interaction |
+| IT-63 | Literal `.help`/`help` token elsewhere in argv takes precedence over `.accounts.help` | Grouped Help — Argv Interaction |
+| IT-64 | `.accounts.help` is absent from `.help`'s own command listing | Grouped Help — Dispatch Scope |
+| IT-65 | `.accounts.help` literal-token match is case-sensitive | Grouped Help — Dispatch Scope |
+| IT-66 | (N/A) empty-`PARAMS` width fallback is structurally unreachable | Grouped Help — Defensive Path |
 
 ### Test Coverage Summary
 
@@ -84,8 +101,18 @@ Integration test planning for the `.accounts` command. See [command/namespace.md
 - Feature 037 — unclaim mutation: 2 tests (IT-44, IT-45)
 - Feature 037 — force bypass: 1 test (IT-46)
 - TSK-324 — JSON value correctness: 3 tests (IT-47, IT-48, IT-49)
+- Grouped Help — Structure: 2 tests (IT-50, IT-51)
+- Grouped Help — Alignment: 2 tests (IT-52, IT-59)
+- Grouped Help — Signature Conventions: 2 tests (IT-53, IT-54)
+- Grouped Help — Minimal Content: 2 tests (IT-55, IT-56)
+- Grouped Help — TTY Fallback: 1 test (IT-57)
+- Grouped Help — Regression: 1 test (IT-58)
+- Grouped Help — Exhaustiveness: 1 test (IT-60)
+- Grouped Help — Argv Interaction: 3 tests (IT-61, IT-62, IT-63)
+- Grouped Help — Dispatch Scope: 2 tests (IT-64, IT-65)
+- Grouped Help — Defensive Path: 1 test (IT-66, N/A)
 
-**Total:** 49 integration tests
+**Total:** 66 integration tests (65 active + 1 N/A)
 
 ---
 
@@ -576,3 +603,182 @@ Integration test planning for the `.accounts` command. See [command/namespace.md
 - **Then:** JSON object has `host: "work-laptop"`, `role: "developer"`, `organization_role: "admin"`.
 - **Exit:** 0
 - **Source:** [feature/003_account_list.md AC-12](../../../../docs/feature/003_account_list.md)
+
+---
+
+## Grouped `.accounts.help` Rendering (Task 413)
+
+Test cases below cover the grouped, `::`-aligned `.accounts.help` rendering scheme — a presentation-layer variant of the `.accounts` command's help output, dispatched via a literal first-token bypass in `src/cli.rs` before unilang's normal registry/parser pipeline runs. See [pattern/001_grouped_help_rendering.md](../../../../docs/pattern/001_grouped_help_rendering.md) and [command/001_account.md § Help Rendering Scheme](../../../../docs/cli/command/001_account.md#command-3-accounts) for specification.
+
+---
+
+### IT-50: `.accounts.help` shows all 6 group headers in documented order
+
+- **Given:** clean environment, `clp` on PATH
+- **When:** `clp .accounts.help`
+- **Then:** stdout contains all 6 group headers — `Core`, `Account Ownership`, `Sort Control`, `Row Filtering & Pagination`, `Display Rendering`, `Refresh & Subprocess Control` — with each header's first character offset strictly increasing (documented order, not alphabetical or registration order).
+- **Exit:** 0
+- **Source:** [pattern/001_grouped_help_rendering.md](../../../../docs/pattern/001_grouped_help_rendering.md), [command/001_account.md § Help Rendering Scheme](../../../../docs/cli/command/001_account.md#command-3-accounts)
+
+---
+
+### IT-51: `.accounts.help` shows all 30 parameters under their correct documented group
+
+- **Given:** clean environment, `clp` on PATH
+- **When:** `clp .accounts.help`
+- **Then:** within each group header's text slice (from that header to the next header or end of output), every parameter documented under that group in `001_account.md § Help Rendering Scheme` appears as a line beginning with that parameter's name — e.g. `sort`, `desc`, `prefer` all appear within the `Sort Control` slice and nowhere else.
+- **Exit:** 0
+- **Source:** [command/001_account.md § Help Rendering Scheme](../../../../docs/cli/command/001_account.md#command-3-accounts)
+
+---
+
+### IT-52: `::` delimiter aligns at the same offset across all 30 rows
+
+- **Given:** clean environment
+- **When:** `clp .accounts.help`
+- **Then:** the `::` delimiter appears at the identical character offset on all 30 parameter rows, including rows in different group blocks — the alignment column is computed once, globally, not reset per group.
+- **Exit:** 0
+- **Source:** [pattern/001_grouped_help_rendering.md](../../../../docs/pattern/001_grouped_help_rendering.md) (Solution point 3)
+
+---
+
+### IT-53: boolean parameters render bare (`name::0`, never `name::0|1`)
+
+- **Given:** clean environment
+- **When:** `clp .accounts.help`
+- **Then:** every boolean parameter (`dry`, `trace`, `force`, `refresh`, `touch`, `desc`, `only_active`, `only_next`, `only_valid`, `exclude_exhausted`, `abs`, `no_color`, `live`) renders its signature as `name::0`; stdout contains no `0|1` alternation anywhere.
+- **Exit:** 0
+- **Source:** [pattern/001_grouped_help_rendering.md](../../../../docs/pattern/001_grouped_help_rendering.md) (Solution point 4)
+
+---
+
+### IT-54: enum parameters show an uppercase value placeholder
+
+- **Given:** clean environment
+- **When:** `clp .accounts.help`
+- **Then:** `imodel::MODEL`, `effort::EFFORT`, `set_model::MODEL`, `format::FORMAT`, `sort::SORT`, `prefer::PREFER` each appear verbatim in the signature column; actual enum values (e.g. `opus`, `sonnet`) appear only in the description column, never in the signature.
+- **Exit:** 0
+- **Source:** [pattern/001_grouped_help_rendering.md](../../../../docs/pattern/001_grouped_help_rendering.md) (Solution point 5)
+
+---
+
+### IT-55: no version/build banner
+
+- **Given:** clean environment
+- **When:** `clp .accounts.help`
+- **Then:** stdout contains no case-insensitive occurrence of `version`.
+- **Exit:** 0
+- **Source:** [pattern/001_grouped_help_rendering.md](../../../../docs/pattern/001_grouped_help_rendering.md) (Solution point 6)
+
+---
+
+### IT-56: no mention of REMOVED parameters
+
+- **Given:** clean environment
+- **When:** `clp .accounts.help`
+- **Then:** stdout contains none of `assign::`, `for::`, `unclaim::`, `active::` — no footer count, no reveal flag; removed parameters are simply invisible from `.help` text.
+- **Exit:** 0
+- **Source:** [command/001_account.md § Help Rendering Scheme](../../../../docs/cli/command/001_account.md#command-3-accounts)
+
+---
+
+### IT-57: piped output uses plain-text group header fallback
+
+- **Given:** stdout is piped (non-TTY), clean environment
+- **When:** `clp .accounts.help | cat`
+- **Then:** group headers render as plain text with a single trailing colon (e.g. `Core:`); output contains no `[`/`]` bracket punctuation and no ANSI escape sequences.
+- **Exit:** 0
+- **Source:** [pattern/001_grouped_help_rendering.md](../../../../docs/pattern/001_grouped_help_rendering.md) (Solution point 2)
+
+---
+
+### IT-58: REMOVED_TOGGLE runtime rejection unaffected by grouped-help rendering
+
+- **Given:** clean environment
+- **When:** `clp .account.rotate` and, separately, `clp .accounts active::0`
+- **Then:** both still exit 1 with their existing deprecation/migration error text — the grouped-help rendering change is presentation-only and did not alter runtime dispatch for removed or deprecated tokens.
+- **Exit:** 1
+- **Source:** [feature/037_accounts_usage_param_unification.md](../../../../docs/feature/037_accounts_usage_param_unification.md)
+
+---
+
+### IT-59: longest parameter name sets the shared alignment column (boundary)
+
+- **Given:** clean environment. Among the 30 rendered parameters, `exclude_exhausted` (17 characters) is the longest name and renders under `Row Filtering & Pagination`; `dry` (3 characters) is one of the shortest and renders under the unrelated `Core` group.
+- **When:** `clp .accounts.help`
+- **Then:** the `::` offset on the `dry` row equals the `::` offset on the `exclude_exhausted` row — the single longest name across all 30 parameters sets the shared alignment column, even for the shortest name in a different group.
+- **Exit:** 0
+- **Source:** `src/commands/accounts_help.rs` (`let width = PARAMS.iter().map(|p| p.name.len()).max()...`, computed once before per-group rendering) — the global-vs-per-group boundary itself is not a standalone claim in `001_account.md`, only implied by "aligned across all 32 rows".
+
+---
+
+### IT-60: every rendered parameter belongs to exactly one group; row count matches the registry
+
+- **Given:** clean environment. `.accounts`'s registered parameter set (per `src/registry.rs`) is the ground truth for what `.accounts.help` must render.
+- **When:** `clp .accounts.help`
+- **Then:** every rendered parameter name maps to exactly one of the 6 documented groups (no line appears outside any group block); the count of rendered parameter rows equals the count of currently-registered `.accounts` parameters — not a value hardcoded independently of the registry.
+- **Exit:** 0
+- **Source:** [command/001_account.md § Help Rendering Scheme](../../../../docs/cli/command/001_account.md#command-3-accounts), `src/registry.rs`
+
+---
+
+### IT-61: trailing `key::value` token after `.accounts.help` is silently ignored
+
+- **Given:** clean environment
+- **When:** `clp .accounts.help name::alice@acme.com`
+- **Then:** stdout is byte-identical to bare `clp .accounts.help` — the trailing `name::value` token is silently ignored because `.accounts.help` is matched as the literal first token before unilang parsing or registry dispatch begins.
+- **Exit:** 0
+- **Source:** `src/cli.rs` (`tokens.first().map(String::as_str) == Some(".accounts.help")` precedes parser/registry dispatch)
+
+---
+
+### IT-62: trailing bare (non-`::`) token after `.accounts.help` errors
+
+- **Given:** clean environment
+- **When:** `clp .accounts.help foo`
+- **Then:** exits 1 with an `expected param::value syntax, got: 'foo'` error; the grouped help text does NOT render — `.accounts.help` is not a member of `POSITIONAL_NAME_COMMANDS`, so a bare trailing token is rejected by the adapter before the literal-token dispatch is ever reached.
+- **Exit:** 1
+- **Source:** `src/adapter.rs` (`POSITIONAL_NAME_COMMANDS`, `split_first_colons` rejection path)
+
+---
+
+### IT-63: a literal `.help`/`help` token elsewhere in argv takes precedence
+
+- **Given:** clean environment
+- **When:** `clp .accounts.help .help` — and, separately, `clp .help .accounts.help`
+- **Then:** the generic flat `.help` listing renders (identical to bare `clp .help`), NOT the grouped `.accounts.help` rendering, regardless of token order — `needs_help` detection (`.help` or bare `help` anywhere in argv) is evaluated before the `.accounts.help` first-token check and returns early.
+- **Exit:** 0
+- **Source:** `src/adapter.rs` (Step 1b: `argv.iter().any(|a| a == ".help" || a == "help")`), `src/cli.rs` (`needs_help` short-circuit precedes the `.accounts.help` check)
+
+---
+
+### IT-64: `.accounts.help` is absent from `.help`'s own command listing
+
+- **Given:** clean environment
+- **When:** `clp .help`
+- **Then:** stdout does not list `.accounts.help` as a command entry — it is a pre-registry dispatch bypass in `cli.rs`, never passed to `build_registry()`, so it cannot appear in unilang's auto-generated command listing.
+- **Exit:** 0
+- **Source:** `src/cli.rs`; [02_help.md IT-1](02_help.md), [02_help.md IT-2](02_help.md)
+
+---
+
+### IT-65: `.accounts.help` literal-token match is case-sensitive
+
+- **Given:** clean environment
+- **When:** `clp .Accounts.Help`
+- **Then:** does not match the `.accounts.help` literal-token check (Rust `==` string comparison is case-sensitive); falls through to normal unilang dispatch and is rejected as an unrecognized command.
+- **Exit:** 1
+- **Source:** `src/cli.rs` (`tokens.first().map(String::as_str) == Some(".accounts.help")`)
+
+---
+
+### IT-66: empty-`PARAMS` width fallback (`unwrap_or(0)`) is structurally unreachable
+
+> **N/A** — `PARAMS` is a fixed 30-entry compile-time `const` array in `src/commands/accounts_help.rs`; no CLI invocation can produce an empty parameter set for `print_accounts_help()` to render, so the `.max().unwrap_or(0)` fallback on the width computation can never actually execute from any observable CLI entry point.
+> Becomes testable when: no committed task — would require exposing the width computation as a unit-testable function parameterized over an arbitrary parameter slice, which is out of this feature's scope.
+
+- **Given:** `print_accounts_help()`'s width computation would need `PARAMS` to be empty for the `unwrap_or(0)` branch to execute.
+- **When:** N/A — `PARAMS` cannot be empty; it is a hardcoded compile-time const with 30 literal entries, not a runtime-populated collection.
+- **Then:** N/A — no observable CLI behavior exercises this branch.
+- **Exit:** N/A
+- **Source:** `src/commands/accounts_help.rs` (`const PARAMS : [ ParamSpec ; 30 ]`)

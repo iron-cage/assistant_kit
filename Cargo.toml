@@ -28,7 +28,7 @@ members = [
   "module/assistant",
   "module/runbox",
 ]
-exclude = [ "-*", "contract/claude_code" ]
+exclude = [ "-*", "contract/claude_code", "contract/sdk" ]
 
 [workspace.package]
 version = "1.2.0"

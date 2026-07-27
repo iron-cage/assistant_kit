@@ -1,16 +1,20 @@
 //! `.model.select` command handler — pin or clear the subprocess model preference.
 //!
-//! Manages `subprocess_model` in `~/.clr/prefs.json` (Schema 008).
+//! Manages the `model` key in `~/.clr/config.toml`'s user tier — the same
+//! key `--model`'s own config-file resolution tier reads (task 410). The
+//! `format::json` output shape is unchanged: still keyed `subprocess_model`,
+//! this command's own CLI-visible JSON contract, independent of the backing
+//! store's key name.
 //! Three modes: get (no `id::`, no `reset::`), set (`id::VALUE`), reset (`reset::1`).
 
 use unilang::data::{ ErrorCode, ErrorData, OutputData };
 use unilang::interpreter::ExecutionContext;
 use unilang::semantic::VerifiedCommand;
 use unilang::types::Value;
-use claude_core::settings_io::{ get_setting, remove_setting, set_setting };
+use claude_core::toml_io::{ get_tiered, remove_user_tier, set_user_tier };
 use crate::output::{ OutputFormat, OutputOptions };
 
-const PREFS_KEY : &str = "subprocess_model";
+const MODEL_KEY : &str = "model";
 
 // ── Handler ───────────────────────────────────────────────────────────────────
 
@@ -19,11 +23,11 @@ const PREFS_KEY : &str = "subprocess_model";
 /// **Get mode** (no `id::`, no `reset::1`): prints `model.select: VALUE` or
 /// `model.select: (unset)`. Exit 0.
 ///
-/// **Set mode** (`id::VALUE`): writes `subprocess_model` to `~/.clr/prefs.json`,
-/// creates the file and parent directory when absent. Prints
+/// **Set mode** (`id::VALUE`): writes `model` to `~/.clr/config.toml`'s user
+/// tier, creates the file and parent directory when absent. Prints
 /// `model.select: VALUE (pinned)`. Exit 0.
 ///
-/// **Reset mode** (`reset::1`): removes `subprocess_model` key; preserves other
+/// **Reset mode** (`reset::1`): removes the `model` key; preserves other
 /// keys. Prints `model.select: (reset to default)`. Exit 0. Idempotent when
 /// file is absent.
 ///
@@ -66,24 +70,24 @@ pub fn model_select_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) ->
     }
   }
 
-  let prefs_path = resolve_prefs_path()?;
+  let config_path = resolve_config_path()?;
 
   if let Some( ref model_id ) = id_val
   {
     // Set mode
-    set_prefs_model( &prefs_path, model_id )?;
+    set_config_model( &config_path, model_id )?;
     Ok( OutputData::new( format!( "model.select: {model_id} (pinned)\n" ), "text" ) )
   }
   else if reset_val
   {
     // Reset mode
-    remove_prefs_model( &prefs_path )?;
+    remove_config_model( &config_path )?;
     Ok( OutputData::new( "model.select: (reset to default)\n".to_string(), "text" ) )
   }
   else
   {
     // Get mode
-    let current = read_prefs_model( &prefs_path );
+    let current = read_config_model( &config_path );
     let text = match opts.format
     {
       OutputFormat::Json =>
@@ -109,22 +113,23 @@ pub fn model_select_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) ->
 
 // ── Private helpers ───────────────────────────────────────────────────────────
 
-/// Resolve `~/.clr/prefs.json` path.
-fn resolve_prefs_path() -> Result< std::path::PathBuf, ErrorData >
+/// Resolve `~/.clr/config.toml` path (user tier; no project-tier merge for
+/// this command's get/set/reset semantics).
+fn resolve_config_path() -> Result< std::path::PathBuf, ErrorData >
 {
   let home = std::env::var( "HOME" )
     .map_err( |_| ErrorData::new( ErrorCode::InternalError, "HOME environment variable not set".to_string() ) )?;
-  Ok( std::path::PathBuf::from( home ).join( ".clr" ).join( "prefs.json" ) )
+  Ok( std::path::PathBuf::from( home ).join( ".clr" ).join( "config.toml" ) )
 }
 
-/// Read `subprocess_model` from `prefs.json`; `None` when absent or file missing.
-fn read_prefs_model( path : &std::path::Path ) -> Option< String >
+/// Read `model` from `config.toml`'s user tier; `None` when absent or file missing.
+fn read_config_model( path : &std::path::Path ) -> Option< String >
 {
-  get_setting( path, PREFS_KEY ).ok().flatten()
+  get_tiered( None, path, MODEL_KEY )
 }
 
-/// Write or update `subprocess_model` in `prefs.json`, creating dir + file as needed.
-fn set_prefs_model( path : &std::path::Path, model_id : &str ) -> Result< (), ErrorData >
+/// Write or update `model` in `config.toml`'s user tier, creating dir + file as needed.
+fn set_config_model( path : &std::path::Path, model_id : &str ) -> Result< (), ErrorData >
 {
   if let Some( parent ) = path.parent()
   {
@@ -133,17 +138,17 @@ fn set_prefs_model( path : &std::path::Path, model_id : &str ) -> Result< (), Er
       format!( "failed to create .clr directory: {e}" ),
     ) )?;
   }
-  set_setting( path, PREFS_KEY, model_id ).map( | _ | () ).map_err( | e | ErrorData::new(
+  set_user_tier( path, MODEL_KEY, model_id ).map_err( | e | ErrorData::new(
     ErrorCode::InternalError,
-    format!( "failed to write prefs.json: {e}" ),
+    format!( "failed to write config.toml: {e}" ),
   ) )
 }
 
-/// Remove `subprocess_model` from `prefs.json`; no-op if file absent.
-fn remove_prefs_model( path : &std::path::Path ) -> Result< (), ErrorData >
+/// Remove `model` from `config.toml`'s user tier; no-op if file absent.
+fn remove_config_model( path : &std::path::Path ) -> Result< (), ErrorData >
 {
-  remove_setting( path, PREFS_KEY ).map_err( | e | ErrorData::new(
+  remove_user_tier( path, MODEL_KEY ).map_err( | e | ErrorData::new(
     ErrorCode::InternalError,
-    format!( "failed to write prefs.json: {e}" ),
+    format!( "failed to write config.toml: {e}" ),
   ) )
 }

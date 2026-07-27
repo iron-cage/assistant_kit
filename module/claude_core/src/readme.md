@@ -10,3 +10,4 @@ Source code for the `claude_core` crate.
 | `paths.rs` | `ClaudePaths`: all canonical `~/.claude/` paths derived from `HOME` |
 | `process.rs` | `/proc`-based Claude process enumeration and signal sending |
 | `settings_io.rs` | Atomic read/write of flat-JSON key-value files; type inference |
+| `toml_io.rs` | Tiered (project + user) atomic read/write of flat-TOML key-value files |

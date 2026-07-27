@@ -3,7 +3,7 @@
 ### Scope
 
 - **Purpose**: Define semantically coherent parameter clusters by runner responsibility.
-- **Responsibility**: Define 6 parameter groups: 5 semantic categories by consumption pattern (claude-native, runner-consumed, system-prompt, credential-ops, session-listing) and 1 cross-command reference (running commands).
+- **Responsibility**: Define 7 parameter groups: 6 semantic categories by consumption pattern (claude-native, runner-consumed, system-prompt, credential-ops, session-listing, tool-listing) and 1 cross-command reference (running commands).
 - **In Scope**: Group membership, coherence tests, invariants, and cross-references to commands/params/tests/user stories.
 - **Out of Scope**: Individual parameter semantics (-> `../param/`), type constraints (-> `../type/`).
 
@@ -17,16 +17,18 @@
 | 04_credential_operations.md | Group spec: credential-isolated execution configuration |
 | 05_session_listing.md | Group spec: `clr ps` output display controls |
 | 06_running_commands.md | Cross-command comparison: all 4 subprocess-invoking commands |
+| 07_tool_listing.md | Group spec: `clr tools` output display controls |
 
-### All Groups (6 total)
+### All Groups (7 total)
 
 | # | Group | Parameters | Purpose |
 |---|-------|------------|---------|
-| 1 | Claude-Native Flags | 13 | Pass selected `claude` binary flags through without runner modification |
+| 1 | Claude-Native Flags | 14 | Pass selected `claude` binary flags through without runner modification |
 | 2 | Runner Control | 47 | Control runner execution behavior -- before, during, or instead of subprocess invocation |
 | 3 | System Prompt | 2 | Inject or extend the behavioral system context sent to the `claude` subprocess |
 | 4 | Credential Operations | 3 | Configure credential-isolated execution for `clr isolated` and `clr refresh` |
 | 5 | Session Listing | 5 | Control `clr ps` session listing display — row filtering, PID filtering, column selection, and inspect output |
 | 6 | Running Commands | — | Cross-command comparison: all 4 subprocess-invoking commands (`run`, `ask`, `isolated`, `refresh`) |
+| 7 | Tool Listing | 5 | Control `clr tools` tool listing display — name/category filtering, column selection, value extraction, and inspect output |
 
-**Total:** 6 groups
+**Total:** 7 groups (`--columns` and `--inspect` are shared members of both Session Listing and Tool Listing; parameter-count columns above count each such shared parameter once per group)

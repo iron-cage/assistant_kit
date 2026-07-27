@@ -22,6 +22,7 @@ fn test_ft29_009_footer_session_effort_display()
     vec![
       AccountQuota
       {
+        fallback_reason : None,
         name                  : "cur@x.com".to_string(),
         is_current            : true,
         is_active             : false,
@@ -41,9 +42,13 @@ fn test_ft29_009_footer_session_effort_display()
         cache_age_secs        : None,
         is_owned              : true,
         owner                 : String::new(),
+        claim_lock            : false,
+        reserve               : false,
+              org_created_at : None,
       },
       AccountQuota
       {
+        fallback_reason : None,
         name                  : "a@x.com".to_string(),
         is_current            : false,
         is_active             : false,
@@ -63,9 +68,13 @@ fn test_ft29_009_footer_session_effort_display()
         cache_age_secs        : None,
         is_owned              : true,
         owner                 : String::new(),
+        claim_lock            : false,
+        reserve               : false,
+              org_created_at : None,
       },
       AccountQuota
       {
+        fallback_reason : None,
         name                  : "b@x.com".to_string(),
         is_current            : false,
         is_active             : false,
@@ -85,6 +94,9 @@ fn test_ft29_009_footer_session_effort_display()
         cache_age_secs        : None,
         is_owned              : true,
         owner                 : String::new(),
+        claim_lock            : false,
+        reserve               : false,
+              org_created_at : None,
       },
     ]
   }
@@ -462,6 +474,7 @@ fn cc_no_current_account_uses_legacy_footer()
   {
     AccountQuota
     {
+      fallback_reason : None,
       name                  : name.to_string(),
       is_current            : false,
       is_active             : false,
@@ -481,6 +494,9 @@ fn cc_no_current_account_uses_legacy_footer()
       cache_age_secs        : None,
       is_owned              : true,
       owner                 : String::new(),
+      claim_lock            : false,
+      reserve               : false,
+          org_created_at : None,
     }
   };
   let accounts = vec![ mk( "a@x.com" ), mk( "b@x.com" ) ];
@@ -510,6 +526,7 @@ fn cc_effort_only_footer_shows_effort_without_model()
   {
     AccountQuota
     {
+      fallback_reason : None,
       name                  : name.to_string(),
       is_current            : cur,
       is_active             : false,
@@ -529,6 +546,9 @@ fn cc_effort_only_footer_shows_effort_without_model()
       cache_age_secs        : None,
       is_owned              : true,
       owner                 : String::new(),
+      claim_lock            : false,
+      reserve               : false,
+          org_created_at : None,
     }
   };
   let accounts = vec![ mk( "cur@x.com", true ), mk( "a@x.com", false ), mk( "b@x.com", false ) ];

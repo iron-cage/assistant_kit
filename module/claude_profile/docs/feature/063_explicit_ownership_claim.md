@@ -58,6 +58,7 @@ This matches the G8 pattern used by `owner::0` (Feature 064).
 | [036_account_ownership.md](036_account_ownership.md) | Core ownership model — `owner` field, `write_owner()`, G1–G8 gates, `is_owned()` predicate |
 | [032_account_assign.md](032_account_assign.md) | `.accounts assignee::USER@MACHINE` is marker-only — does NOT set owner (contrast point; `active::` REMOVED — Feature 065) |
 | [037_accounts_usage_param_unification.md](037_accounts_usage_param_unification.md) | Unified param set — `owner::` registered on both `.accounts` and `.usage` |
+| [070_account_claim_and_reservation_control.md](070_account_claim_and_reservation_control.md) | `owner::` is the structural precedent for `lock::`/`reserve::` — comma-list batch, `dry::1` preview |
 
 ### Parameters
 

@@ -75,6 +75,7 @@ pub struct ClaudeCommand {
 
   // Stdin piping
   pub(super) stdin_file: Option< PathBuf >,
+  pub(super) stdin_content: Option< Vec< u8 > >,
 
   // Subprocess environment control
   pub(super) unset_claudecode: bool,
@@ -162,6 +163,7 @@ impl ClaudeCommand {
       home_override: None,
 
       stdin_file: None,
+      stdin_content: None,
       unset_claudecode: true,
     }
   }
@@ -397,6 +399,17 @@ impl ClaudeCommand {
     {
       parts.push( format!( "< {}", path.display() ) );
     }
+    else if let Some( ref content ) = self.stdin_content
+    {
+      // Fix(regression from BUG-424): detect_stdin_json() documents returning Some(Raw(bytes))
+      //   "whenever stdin is actually read" — including a genuinely empty pipe (0 bytes). That
+      //   contract is correct for forwarding, but describe() is display-only: an empty pipe carries
+      //   nothing to show, so omit the annotation entirely rather than rendering "0 bytes".
+      if !content.is_empty()
+      {
+        parts.push( format!( "< <piped stdin, {} bytes>", content.len() ) );
+      }
+    }
 
     lines.push( parts.join( " " ) );
     lines.join( "\n" )
@@ -489,6 +502,8 @@ impl ClaudeCommand {
   /// println!( "{}", result.stdout );
   /// # Ok::<(), Box<dyn std::error::Error>>(())
   /// ```
+  // core::io::ErrorKind requires the unstable `core_io` feature (rust-lang/rust#154046) — not usable on stable.
+  #[ allow( clippy::std_instead_of_core ) ]
   #[inline]
   pub fn execute( &self ) -> Result< crate::types::ExecutionOutput > {
     if self.dry_run {
@@ -505,6 +520,12 @@ impl ClaudeCommand {
     {
       let file = std::fs::File::open( path )
         .map_err( | e | Error::msg( format!( "cannot open stdin file '{}': {e}", path.display() ) ) )?;
+      cmd.stdin( std::process::Stdio::from( file ) );
+    }
+    else if let Some( ref content ) = self.stdin_content
+    {
+      let file = materialize_stdin_content( content )
+        .map_err( | e | Error::msg( format!( "cannot prepare piped stdin content: {e}" ) ) )?;
       cmd.stdin( std::process::Stdio::from( file ) );
     }
 
@@ -560,6 +581,8 @@ impl ClaudeCommand {
   ///   .execute_interactive()?;
   /// # Ok::<(), Box<dyn std::error::Error>>(())
   /// ```
+  // core::io::ErrorKind requires the unstable `core_io` feature (rust-lang/rust#154046) — not usable on stable.
+  #[ allow( clippy::std_instead_of_core ) ]
   #[inline]
   pub fn execute_interactive( &self ) -> Result< std::process::ExitStatus > {
     if self.dry_run {
@@ -585,6 +608,12 @@ impl ClaudeCommand {
     {
       let file = std::fs::File::open( path )
         .map_err( | e | Error::msg( format!( "cannot open stdin file '{}': {e}", path.display() ) ) )?;
+      cmd.stdin( std::process::Stdio::from( file ) );
+    }
+    else if let Some( ref content ) = self.stdin_content
+    {
+      let file = materialize_stdin_content( content )
+        .map_err( | e | Error::msg( format!( "cannot prepare piped stdin content: {e}" ) ) )?;
       cmd.stdin( std::process::Stdio::from( file ) );
     }
 
@@ -647,6 +676,24 @@ impl ClaudeCommand {
 
     cmd
   }
+}
+
+/// Materialize in-memory stdin content as an anonymous temp file positioned at offset 0,
+/// so it can be handed to `Stdio::from` exactly like `stdin_file` is.
+// Fix(BUG-424): give piped (non-`--file`) stdin content a real file descriptor to attach to.
+// Root cause: no code path existed to hand a `Vec<u8>` to a child's stdin without an on-disk
+//   path (`stdin_file`) or a live pipe; a tempfile is the minimal bridge, and it sidesteps the
+//   parent-writes/child-reads pipe deadlock a `Stdio::piped()` + threaded write would risk.
+// Pitfall: must seek back to `SeekFrom::Start(0)` after writing — the cursor is left at EOF
+//   post-write, and a child reading from EOF sees empty stdin, not the content.
+#[ inline ]
+fn materialize_stdin_content( content : &[ u8 ] ) -> std::io::Result< std::fs::File >
+{
+  use std::io::{ Seek, SeekFrom, Write };
+  let mut file = tempfile::tempfile()?;
+  file.write_all( content )?;
+  file.seek( SeekFrom::Start( 0 ) )?;
+  Ok( file )
 }
 
 /// Query installed Claude Code version.
@@ -728,6 +775,10 @@ impl ClaudeCommand {
       let file = std::fs::File::open( path )?;
       cmd.stdin( Stdio::from( file ) );
     }
+    else if let Some( ref content ) = self.stdin_content
+    {
+      cmd.stdin( Stdio::from( materialize_stdin_content( content )? ) );
+    }
     else
     {
       cmd.stdin( Stdio::null() );
@@ -763,8 +814,104 @@ impl ClaudeCommand {
       let file = std::fs::File::open( path )?;
       cmd.stdin( Stdio::from( file ) );
     }
+    else if let Some( ref content ) = self.stdin_content
+    {
+      cmd.stdin( Stdio::from( materialize_stdin_content( content )? ) );
+    }
     // stdout and stderr inherit from parent (TTY passthrough) — no redirection needed.
     cmd.spawn()
+  }
+
+  /// Spawn the Claude Code process with a live, held-open bidirectional control channel.
+  ///
+  /// Unlike [`spawn_piped`](Self::spawn_piped) (write-once/read-at-exit) and
+  /// [`spawn_tty`](Self::spawn_tty) (TTY passthrough), this method keeps stdin open for the
+  /// lifetime of the returned [`crate::control::ControlSession`], enabling the Agent SDK's
+  /// `stream-json` control protocol: mid-session `interrupt`, `setPermissionMode`, and the
+  /// other 23 `Query` control methods (task 415).
+  ///
+  /// # Required configuration
+  ///
+  /// The control protocol only exists when Claude Code is talking `stream-json` both
+  /// directions. Confirmed empirically against a real SDK session (see
+  /// `tests/fixtures/sdk_control_capture/argv.json` — task 415 Phase 0): the caller must
+  /// configure, before calling this method:
+  /// - [`with_input_format`](Self::with_input_format)`( InputFormat::StreamJson )`
+  /// - [`with_output_format`](Self::with_output_format)`( OutputFormat::StreamJson )`
+  /// - [`with_verbose`](Self::with_verbose)`( true )`
+  ///
+  /// This method validates their presence and returns a clear error rather than spawning a
+  /// process that silently can't speak the control protocol.
+  ///
+  /// # Errors
+  ///
+  /// Returns an error if the required flags above are missing, or if the subprocess fails
+  /// to spawn (missing `claude` binary, etc.).
+  ///
+  /// # Example
+  ///
+  /// ```no_run
+  /// use claude_runner_core::{ ClaudeCommand, InputFormat, OutputFormat };
+  ///
+  /// let session = ClaudeCommand::new()
+  ///   .with_input_format( InputFormat::StreamJson )
+  ///   .with_output_format( OutputFormat::StreamJson )
+  ///   .with_verbose( true )
+  ///   .spawn_control_session()?;
+  /// session.stream_input( "hello" )?;
+  /// # Ok::<(), Box<dyn std::error::Error>>(())
+  /// ```
+  // core::io::ErrorKind requires the unstable `core_io` feature (rust-lang/rust#154046) — not usable on stable.
+  #[ allow( clippy::std_instead_of_core ) ]
+  #[ inline ]
+  pub fn spawn_control_session( &self ) -> Result< crate::control::ControlSession >
+  {
+    let has_flag_pair = | flag: &str, value: &str |
+    {
+      self.args.windows( 2 ).any( | w | w[ 0 ] == flag && w[ 1 ] == value )
+    };
+
+    if !has_flag_pair( "--input-format", crate::types::InputFormat::StreamJson.as_str() )
+    {
+      return Err( Error::msg(
+        "spawn_control_session() requires with_input_format( InputFormat::StreamJson ) — \
+         the control protocol only works over streaming stdin (see tests/fixtures/sdk_control_capture/)"
+      ) );
+    }
+    if !has_flag_pair( "--output-format", crate::types::OutputFormat::StreamJson.as_str() )
+    {
+      return Err( Error::msg(
+        "spawn_control_session() requires with_output_format( OutputFormat::StreamJson ) — \
+         control responses are only emitted in stream-json output mode"
+      ) );
+    }
+    if !self.args.iter().any( | a | a == "--verbose" )
+    {
+      return Err( Error::msg(
+        "spawn_control_session() requires with_verbose( true ) — matches the exact flag \
+         combination confirmed working against a real subprocess in Phase 0's capture"
+      ) );
+    }
+
+    use std::process::Stdio;
+    let mut cmd = self.build_command();
+    cmd.stdin( Stdio::piped() );
+    cmd.stdout( Stdio::piped() );
+    cmd.stderr( Stdio::piped() );
+
+    let child = cmd.spawn().map_err( | e |
+    {
+      if e.kind() == std::io::ErrorKind::NotFound
+      {
+        Error::msg( "claude binary not found in PATH — install with: npm i -g @anthropic-ai/claude-code" )
+      }
+      else
+      {
+        Error::msg( format!( "Failed to spawn control session: {e}" ) )
+      }
+    } )?;
+
+    crate::control::ControlSession::from_child( child )
   }
 }
 

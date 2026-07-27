@@ -15,6 +15,7 @@ pub( crate ) mod cmd_context;
 mod credentials;
 mod accounts;
 mod accounts_render;
+mod accounts_help;
 mod account_ops;
 mod account_relogin;
 mod account_renewal;
@@ -29,6 +30,7 @@ mod dot;
 
 pub use credentials::credentials_status_routine;
 pub use accounts::accounts_routine;
+pub use accounts_help::print_accounts_help;
 pub use account_ops::{
   account_use_routine,
   account_save_routine,

@@ -102,6 +102,8 @@ impl PersistPaths
     std::fs::create_dir_all( &self.base )
   }
 
+  // core::io::ErrorKind requires the unstable `core_io` feature (rust-lang/rust#154046) — not usable on stable.
+  #[ allow( clippy::std_instead_of_core ) ]
   fn resolve_root() -> Result< PathBuf, std::io::Error >
   {
     // Fix(BUG-263):

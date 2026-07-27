@@ -170,7 +170,7 @@ fn ac07_002_home_unset_skips_user_config()
   std::env::remove_var( "CLAUDE_MODEL" );
   let r = resolve( "theme", home_dir.path(), cwd.path(), config_catalog::catalog() );
   assert_eq!( r.source, Layer::Default,                "absent user config must fall through to Default: got {:?}", r.source );
-  assert_eq!( r.value,  Some( "system".to_string() ),  "catalog default for 'theme' must be \"system\": {:?}", r.value );
+  assert_eq!( r.value,  Some( "dark".to_string() ),    "catalog default for 'theme' must be \"dark\": {:?}", r.value );
 }
 
 // AC-8: project config found in ancestor directory

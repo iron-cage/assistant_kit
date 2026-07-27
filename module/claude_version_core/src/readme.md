@@ -11,5 +11,4 @@ Source code for the `claude_version_core` crate.
 | `config_resolve.rs` | 4-layer config resolution: env var → project config → user config → catalog default |
 | `params_catalog.rs` | Claude Code parameter catalog: CLI/env/config forms plus catalog defaults |
 | `paths.rs` | `ClaudeVersionPaths` struct — composed path resolution for clv-known filesystem locations |
-| `settings_io.rs` | Re-exports `claude_core::settings_io` (relocated shared implementation) |
 | `version.rs` | Version detection, alias resolution, install, and spec validation |

@@ -28,27 +28,59 @@ pub( super ) fn resolve_args_file_path( cli_path : Option< &str > ) -> Option< S
   cli_path.map( ToString::to_string ).or_else( || env_str( "CLR_ARGS_FILE" ) )
 }
 
-/// Detect and read a JSON config object piped to stdin.
+/// The result of reading piped stdin: either a JSON config object candidate, or arbitrary
+/// content to forward verbatim to the subprocess's own stdin.
+pub( super ) enum StdinPayload
+{
+  /// Content whose first non-whitespace byte is `{` — a JSON object candidate.
+  Json( String ),
+  /// Content that is not a JSON object — forwarded byte-for-byte, never UTF-8-validated.
+  Raw( Vec< u8 > ),
+}
+
+/// Detect and read stdin piped to the CLI, distinguishing a JSON config object from
+/// arbitrary content to forward.
 ///
-/// Returns `Some(json_string)` when ALL three conditions hold:
-/// - `--file` is absent from `tokens` (raw scan; `--file` gates out stdin JSON detection
+/// Returns `Some(StdinPayload::Json(_))` or `Some(StdinPayload::Raw(_))` whenever stdin is
+/// actually read — i.e. when both of these hold:
+/// - `--file` is absent from `tokens` (raw scan; `--file` gates out stdin detection
 ///   for `run`/`ask` because `--file` already reserves stdin/file content for the message)
 /// - stdin is not attached to a TTY (i.e. it is a pipe or redirect)
-/// - The first non-whitespace byte of stdin content is `{` (JSON object opener)
 ///
-/// Returns `None` in any other case. Consumes stdin — must be called before any other
-/// operation that reads from stdin.
-pub( super ) fn detect_stdin_json( tokens : &[ String ] ) -> Option< String >
+/// Which variant depends on the first non-whitespace byte: `{` selects `Json`, anything
+/// else selects `Raw`. Returns `None` only when a gate blocks the read entirely — stdin is
+/// left untouched in that case. Consumes stdin — must be called before any other operation
+/// that reads from stdin.
+// Fix(BUG-424): forward non-JSON piped stdin instead of silently discarding it.
+// Root cause: read_to_string() discarded `src` on the non-JSON branch, and separately could
+//   never succeed at all for non-UTF-8 (binary) stdin content, losing both cases outright.
+// Pitfall: read_to_end()/Vec<u8> is required, not just a return-type change — a lossy
+//   String round-trip (e.g. from_utf8_lossy) would corrupt binary content before the sniff
+//   check ever ran, reintroducing a narrower version of the same bug.
+pub( super ) fn detect_stdin_json( tokens : &[ String ] ) -> Option< StdinPayload >
 {
-  // Gate 1: --file bypasses stdin JSON detection for run/ask.
+  // Gate 1: --file bypasses stdin detection for run/ask.
   if tokens.iter().any( | t | t == "--file" ) { return None; }
-  // Gate 2: TTY stdin is interactive — not a config pipe.
+  // Gate 2: TTY stdin is interactive — not a pipe.
   if std::io::stdin().is_terminal() { return None; }
-  // Read stdin content.
-  let mut src = String::new();
-  std::io::Read::read_to_string( &mut std::io::stdin().lock(), &mut src ).ok();
-  // Gate 3: JSON object detection — must open with `{`.
-  if src.trim_start().starts_with( '{' ) { Some( src ) } else { None }
+  // Read raw stdin bytes — byte-safe, no UTF-8 validation, so binary content survives intact.
+  let mut src = Vec::new();
+  std::io::Read::read_to_end( &mut std::io::stdin().lock(), &mut src ).ok();
+  // Gate 3: JSON object detection — must open with `{` (leading ASCII whitespace skipped,
+  // mirroring the previous String::trim_start() check, now at the byte level).
+  let first_non_ws = src.iter().find( | & & b | !b.is_ascii_whitespace() );
+  if first_non_ws == Some( &b'{' )
+  {
+    match String::from_utf8( src )
+    {
+      Ok( text ) => Some( StdinPayload::Json( text ) ),
+      Err( e )   => Some( StdinPayload::Raw( e.into_bytes() ) ),
+    }
+  }
+  else
+  {
+    Some( StdinPayload::Raw( src ) )
+  }
 }
 
 /// Detect and read a JSON config object piped to stdin, without any token gating.

@@ -25,7 +25,7 @@ An account is submitted for touch when ALL of the following are true:
 | `five_hour.resets_at == None` | 5h window not started |
 | OR `seven_day` present AND `seven_day.resets_at == None` | 7d window not started |
 | OR `seven_day_sonnet` present AND `seven_day_sonnet.resets_at == None` | 7d-Sonnet window not started |
-| `five_hour_left(aq) > 15.0%` | Skip h-exhausted accounts |
+| `five_hour_left(aq) > 0.0%` | Skip h-exhausted accounts (fully exhausted only — distinct from the 15%-remaining `H_EXHAUSTED_THRESHOLD` used for display/sort classification; TSK-190/TSK-418) |
 | `seven_day_left(aq) > 0.0%` | Skip weekly-exhausted accounts |
 
 Source: `src/usage/touch.rs`
@@ -34,14 +34,16 @@ Source: `src/usage/touch.rs`
 
 | Reason | Condition |
 |--------|-----------|
-| `reason: Err` | `aq.result` is `Err` |
+| `reason: error account` | `aq.result` is `Err` |
 | `reason: touch_idle=false` | Cache flag indicates already activated |
-| `reason: all_running` | All three timers have active windows |
-| `reason: h-exhausted` | `five_hour_left ≤ 15.0%` |
-| `reason: weekly-exhausted` | `seven_day_left ≤ 0.0%` |
+| `reason: already active` | All three timers have active windows |
+| `reason: h-exhausted` | `five_hour_left ≤ 0.0%` (fully exhausted only, TSK-418 — NOT the 15%-remaining `H_EXHAUSTED_THRESHOLD` display/sort constant) |
+| `reason: 7d-exhausted` | `seven_day_left ≤ 0.0%` |
 | `reason: not owned` | `is_owned = false` |
 | `reason: occupied elsewhere` | `is_occupied_elsewhere = true` |
 | `reason: solo-skip` | `solo::1` and not current account |
+
+Trace strings are the exact `&'static str` literals returned by `touch_skip_reason()` (`src/usage/touch.rs`); this table previously used shorthand labels (`Err`, `all_running`, `weekly-exhausted`) that did not match the source strings — corrected here to the literal text.
 
 ### Invocation
 

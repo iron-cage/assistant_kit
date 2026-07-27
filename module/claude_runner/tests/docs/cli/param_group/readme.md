@@ -4,7 +4,7 @@
 
 - **Purpose**: Document interaction tests for clr parameter groups.
 - **Responsibility**: Index of per-parameter-group interaction test files covering group-level behavior.
-- **In Scope**: All 6 clr parameter group test files.
+- **In Scope**: All 7 clr parameter group test files.
 - **Out of Scope**: Per-command tests (→ `command/`), per-parameter edge cases (→ `param/`).
 
 Per-group interaction test indices for `clr`. See [param_group/readme.md](../../../../docs/cli/param_group/readme.md) for specification.
@@ -19,3 +19,4 @@ Per-group interaction test indices for `clr`. See [param_group/readme.md](../../
 | `04_credential_operations.md` | Interaction tests for Group 4 (Credential Operations) | ✅ |
 | `05_session_listing.md` | Interaction tests for Group 5 (Session Listing) | ✅ |
 | `06_running_commands.md` | Cross-command and interaction tests for Group 6 (Running Commands) | ✅ |
+| `07_tool_listing.md` | Interaction tests for Group 7 (Tool Listing) | ⏳ |

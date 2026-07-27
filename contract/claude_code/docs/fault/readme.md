@@ -30,6 +30,7 @@
 | F2 | Diagnostic on Stdout | 1 | Error text on stdout instead of stderr | stderr-only readers miss all context | Scan both `stdout` and `stderr` for patterns | `classify_error()` scans both channels; `run_print_mode()` forwards stdout to stderr on non-zero exit (BUG-247 ✅) | [failure_mode/002](../../../../module/claude_runner_core/docs/failure_mode/002_diagnostic_on_stdout.md) |
 | F3 | CLAUDECODE Env Leak | 0 | No signal — child claude silently changes behavior | Non-deterministic behavior across invocation contexts | Check if `CLAUDECODE` env var is inherited | `ClaudeCommand` defaults `unset_claudecode: true`; warning emitted when `--keep-claudecode` disables protection (BUG-248 ✅) | [failure_mode/003](../../../../module/claude_runner_core/docs/failure_mode/003_claudecode_env_leak.md) |
 | F4 | Exit 1 Ambiguity | 1 | Exit 1 means rate-limit OR auth OR API OR unknown | Generic `exit != 0` handler conflates 4 distinct failures | Pattern-priority scan of stdout+stderr before exit code | `classify_error()` with ordered pattern matching | [failure_mode/004](../../../../module/claude_runner_core/docs/failure_mode/004_exit_1_ambiguity.md) |
+| F5 | Subagent API-Key Billing Misroute | 0 | No signal — subagent requests silently bill the metered API key while the main conversation bills the subscription | Unbounded dollar spend on the metered API while the subscription sits unused; upstream reports of $152–$1,800+ surprise bills | `ANTHROPIC_API_KEY` present in env while authenticated via subscription; cross-check metered usage in the provider console | Unset `ANTHROPIC_API_KEY` (see E2 recovery); no `clr` guard yet | upstream [#39903](https://github.com/anthropics/claude-code/issues/39903), [#37686](https://github.com/anthropics/claude-code/issues/37686) |
 
 #### Category C — Behavioral Quirks (not errors, but surprising)
 
@@ -42,6 +43,7 @@
 | Q5 | Autocompact thrash | Large tool output immediately refills context after compaction | Session becomes unusable; `/clear` required | [error/003](../../../../docs/error/003_context_limit_reached.md) |
 | Q6 | `$VAR`/`%VAR%` @-reference prefixes silently rejected | Environment variable syntax in CLAUDE.md `@`-references yields 0 tokens — no warning, no error; `@$GENAI/…`, `@$PRO/…`, `@%PATH%/…` all silently discarded | Referenced rulebook or config absent from context without any explanation | [behavior/B32](../behavior/032_b32_claudemd_at_ref_path_filter.md) |
 | Q7 | `tengu_paper_halyard` Statsig flag silently suppresses all Project/Local CLAUDE.md files | Server-side feature flag can zero out all project instructions with no UI notification; project CLAUDE.md appears syntactically correct but contributes 0 tokens | Project rules and vocabulary entirely absent from model context while source file looks fine | [behavior/B34](../behavior/034_b34_claudemd_content_pipeline.md) |
+| Q8 | Subagent cache: isolated prefix + 5-minute TTL | Every subagent rebuilds the full context prefix at cache-write rates (≈12.5x a warm cached turn per context token) and its cache expires after any >5-minute gap between its API calls — the main conversation gets a 1-hour TTL on subscription | Silent token-budget amplification (2.6x–5.9x measured per fan-out); stall-heavy subagents (test suites, builds, polls) re-bill the entire prefix per gap; no expiry signal exists | [behavior/B37](../behavior/037_b37_subagent_cache_ttl.md) |
 
 ---
 
@@ -83,5 +85,5 @@ When `claude` exits non-zero, detection MUST follow this priority order (higher 
 |------|------|----------------|
 | collection | [`../../../../docs/error/readme.md`](../../../../docs/error/readme.md) | Error collection — 6 terminal error instances |
 | collection | [`../../../../module/claude_runner_core/docs/failure_mode/readme.md`](../../../../module/claude_runner_core/docs/failure_mode/readme.md) | Failure mode collection — 4 silent failure instances |
-| collection | [`../behavior/readme.md`](../behavior/readme.md) | Behavior collection — 27 observed behaviors (B1-B26 + B16h) |
+| collection | [`../behavior/readme.md`](../behavior/readme.md) | Behavior collection — 38 behavior instances (B1–B37 + B16h) |
 | source | `../../../../module/claude_runner_core/src/types.rs` | `ErrorKind` enum, `classify_error()` implementation |

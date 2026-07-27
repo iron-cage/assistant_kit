@@ -326,11 +326,17 @@ pub fn shorten_error( reason : &str ) -> &str
 ///
 /// Returns `100.0 - five_hour.utilization` for `Ok` accounts, or `-1.0` for `Err`
 /// accounts (treated as below-exhausted for drain/reset floor sinking).
+// Fix(BUG-336): raw `left` returned unrounded, so callers comparing it against threshold
+//   constants could disagree with pct_emoji()'s BUG-331-rounded display for the same account.
+// Root cause: pct_emoji() (BUG-331) rounds before comparing/displaying, but this helper's
+//   raw return let every consumer's own threshold check run at full float precision.
+// Pitfall: round exactly once here, at the source — never let a raw float feed a threshold
+//   check while a sibling function classifies/displays a rounded value from the same measurement.
 pub fn five_hour_left( aq : &AccountQuota ) -> f64
 {
   if let Ok( data ) = &aq.result
   {
-    100.0 - data.five_hour.as_ref().map_or( 0.0, |p| p.utilization )
+    ( 100.0 - data.five_hour.as_ref().map_or( 0.0, |p| p.utilization ) ).round()
   }
   else
   {
@@ -343,10 +349,16 @@ pub fn five_hour_left( aq : &AccountQuota ) -> f64
 /// Returns `100.0 - seven_day.utilization` for `Ok` accounts with `seven_day` data,
 /// `100.0` for `Ok` accounts where `seven_day` is absent (absent data ≠ exhausted),
 /// or `0.0` for `Err` accounts (treated as fully exhausted — no touch beneficial).
+// Fix(BUG-336): same raw-vs-rounded disagreement as five_hour_left() above — this helper's
+//   unrounded return let status_group_of()/sort_next.rs threshold checks diverge from
+//   pct_emoji()'s rounded display for the same account.
+// Root cause: helper returned raw float; every caller's threshold comparison ran unrounded.
+// Pitfall: round once here and reuse — do not let callers each apply their own rounding
+//   (or none), since that reintroduces the same cross-function disagreement this fixes.
 pub fn seven_day_left( aq : &AccountQuota ) -> f64
 {
   let Ok( ref data ) = aq.result else { return 0.0; };
-  100.0 - data.seven_day.as_ref().map_or( 0.0, |p| p.utilization )
+  ( 100.0 - data.seven_day.as_ref().map_or( 0.0, |p| p.utilization ) ).round()
 }
 
 /// Return `(five_hour_left, relevant_7d_left)` for a given `prefer` strategy.
@@ -418,7 +430,14 @@ pub fn recommended_model( aq : &AccountQuota ) -> &'static str
   {
     Ok( data ) => match &data.seven_day_sonnet
     {
-      Some( s ) if 100.0 - s.utilization < OPUS_OVERRIDE_THRESHOLD => "opus",
+      // Fix(BUG-336): raw `100.0 - s.utilization` compared directly against
+      //   OPUS_OVERRIDE_THRESHOLD, while apply_model_override() (BUG-331) already rounds
+      //   before the identical comparison — could recommend the opposite model it would select.
+      // Root cause: this function's doc comment asserts it "mirrors apply_model_override()"
+      //   but only the latter received BUG-331's round-before-compare fix.
+      // Pitfall: any future change to apply_model_override()'s comparison basis must be
+      //   mirrored here too — the doc-asserted relationship is not compiler-enforced.
+      Some( s ) if ( 100.0 - s.utilization ).round() < OPUS_OVERRIDE_THRESHOLD => "opus",
       _ => "sonnet",
     },
     Err( _ ) => "sonnet",
@@ -498,8 +517,17 @@ pub fn status_emoji( aq : &AccountQuota ) -> &'static str
   //   functions; cancelled accounts are dead regardless of their quota readings.
   if aq.account.as_ref().is_some_and( |a| a.billing_type == "none" ) { return "🔴"; }
   let Ok( data ) = &aq.result else { unreachable!() };
-  let h5_left = 100.0 - data.five_hour.as_ref().map_or( 0.0, |p| p.utilization );
-  let d7_left = 100.0 - data.seven_day.as_ref().map_or( 0.0, |p| p.utilization );
+  // Fix(BUG-336): h5_left/d7_left compared raw against threshold constants, while
+  //   pct_emoji() (BUG-331) already rounds the identical measurement before its own
+  //   comparison/display — the Status dot and the 5h/7d Left cell could disagree for the
+  //   same account in the same table row (e.g. raw left=5.4 rounds to 5, flipping the verdict).
+  // Root cause: status_emoji() computed its own threshold inputs independently of
+  //   pct_emoji(), and only pct_emoji() received BUG-331's round-before-compare fix.
+  // Pitfall: round exactly once here and reuse the rounded value for the match below —
+  //   never compare a raw float against a threshold that a sibling display function
+  //   already rounds before comparing against the identical constant.
+  let h5_left = ( 100.0 - data.five_hour.as_ref().map_or( 0.0, |p| p.utilization ) ).round();
+  let d7_left = ( 100.0 - data.seven_day.as_ref().map_or( 0.0, |p| p.utilization ) ).round();
   // Fix(BUG-321): both-exhausted (h5 ≤ 15% AND d7 ≤ 5%) → 🟡 (G3 weekly-exhausted), not 🔴.
   // BUG-319's fix used `(false,false)→🔴` as a proxy for "dead" — premise-incorrect.
   // Both quota dimensions depleted with result=Ok is recoverable (7d reset restores both).

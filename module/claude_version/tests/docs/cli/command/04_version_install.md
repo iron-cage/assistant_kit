@@ -68,6 +68,7 @@ Boundary set: `0.0.0`, `latest`, two-part, leading-zeros.
 | Successful install | `preferredVersionSpec` + `preferredVersionResolved` written |
 | `dry::1` | Preference keys NOT written |
 | Idempotent skip | Preference still written |
+| Real install attempted, target nonexistent (network/curl failure) | Preference still written — recorded before `perform_install()` is attempted, not after (MAAV-found A9: proves the write-path call order, not just `status.rs`'s classification of a hand-built fixture) |
 
 ### Factor 7: Unknown parameters
 
@@ -118,6 +119,7 @@ Boundary set: `0.0.0`, `latest`, two-part, leading-zeros.
 | IT-21 | `version::stable dry::1` → output includes purge line | P | 0 | F2=1, F5=layer4 | [mutation_version_install_test.rs] |
 | IT-22 | `version::latest dry::1` → output does NOT contain "purge" | P | 0 | F1=latest, F2=1, F5=unlock | [mutation_version_install_test.rs] |
 | IT-6 | `dry::1 format::json` → JSON object output, exit 0 | P | 0 | F2=1, F9=json | [mutation_version_install_test.rs] |
+| IT-26 | `version::9.9.9` (nonexistent, real install attempted) → preference recorded before `perform_install()` runs, regardless of outcome | P | untested (soft-assertion, like IT-20) | F1=semver (nonexistent), F6=real-install-failure | [mutation_version_install_test.rs] |
 
 ### Negative Tests
 
@@ -134,10 +136,10 @@ Boundary set: `0.0.0`, `latest`, two-part, leading-zeros.
 
 ### Summary
 
-- **Total:** 25 tests (17 positive, 8 negative)
-- **Negative ratio:** 32.0% — supplemented by cross-cutting `tc242_unknown_format_exits_1`, `tc243_uppercase_format_exits_1`, `tc244_empty_format_exits_1`, `tc261_version_install_format_json_accepted` in `read_status_test.rs` / `cross_cutting_test.rs`
-- **Combined with cross-cutting:** 11/26 = 42.3% ✅
-- **IT range:** IT-1 to IT-25
+- **Total:** 26 tests (18 positive, 8 negative)
+- **Negative ratio:** 30.8% — supplemented by cross-cutting `tc242_unknown_format_exits_1`, `tc243_uppercase_format_exits_1`, `tc244_empty_format_exits_1`, `tc261_version_install_format_json_accepted` in `read_status_test.rs` / `cross_cutting_test.rs`
+- **Combined with cross-cutting:** 11/27 = 40.7% ✅
+- **IT range:** IT-1 to IT-26
 
 ---
 
@@ -149,7 +151,7 @@ Boundary set: `0.0.0`, `latest`, two-part, leading-zeros.
 |-----------|---------|-------|
 | 0 | Success (dry-run or real) | IT-1 through IT-2, IT-6, IT-9 through IT-22 |
 | 1 | Invalid arguments | IT-3, IT-4, IT-5, IT-7, IT-8, IT-23, IT-24, IT-25 |
-| 2 | Runtime error (install failure) | Real-install tests only (not in automated suite) |
+| 2 | Runtime error (install failure) | Not asserted directly by any automated test — IT-26 exercises a real failing install but soft-asserts on the resulting preference-storage side effect only (like IT-20), not on a specific exit code, to avoid coupling to network failure mode/timing |
 
 ### Dry-Run Parity Requirement (FR-05)
 
@@ -172,6 +174,7 @@ IT-19 verifies dry-run has zero side effects on settings.
 | dry::1 | No | IT-19 |
 | real install (idempotent skip) | Yes | IT-20 |
 | dry::1 (preview mentions storage) | Preview only | IT-18 |
+| real install attempted, target nonexistent (network/curl failure) | Yes — before `perform_install()` is attempted | IT-26 |
 
 ---
 
@@ -429,6 +432,30 @@ IT-19 verifies dry-run has zero side effects on settings.
 
 ---
 
+### IT-26: `version::9.9.9` (nonexistent) → preference recorded before install attempt, regardless of outcome
+
+MAAV Round 5 finding (A9, adversarial pairing on the B1/install-atomicity dimension): the original
+regression test for the store-before-install reorder fix (`tc530` in `read_status_test.rs`) never
+actually invoked `version_install_routine` — it only hand-constructed a fixture and checked
+`status.rs`'s classification of it, which is independently reachable via the unrelated
+idempotency-skip branch regardless of whether the reorder fix is present. This test closes that gap
+by invoking the real `.version.install` command with a syntactically valid but certainly-nonexistent
+version, forcing execution through the actual reordered write path (`store_preferred_version()` then
+`perform_install()` — the idempotent-skip branch cannot fire, since `9.9.9` can never already be
+installed). `perform_install()` makes a real, unmocked curl call with no injectable seam; whatever its
+specific failure mode, the recorded preference must already be on disk by the time it happens.
+Soft-asserts on the preference-storage side effect only — not on a specific exit code or failure
+mode/timing — mirroring `IT-20`'s (`tc358`'s) tolerance of real-network non-determinism, to avoid
+flakiness.
+
+- **Given:** `HOME=<tmp>`; `settings.json` starts empty.
+- **When:** `clv .version.install version::9.9.9`
+- **Then:** stdout does not contain "already at" (idempotent-skip branch never fires for a nonexistent version); `settings.json` contains `preferredVersionSpec` and `9.9.9`, regardless of whether the install attempt itself succeeded or failed
+- **Exit:** untested (soft-assertion; see Exit Status Coverage)
+- **Source:** `commands/version.rs` `Fix(MAAV-found, Task 314 Round 4 Fresh Challenger)` comment (~line 136)
+
+---
+
 ### Source Functions
 
 | Function | File |
@@ -456,4 +483,5 @@ IT-19 verifies dry-run has zero side effects on settings.
 | `tc360_version_install_dry_latest_no_purge_line` | `tests/cli/mutation_version_install_test.rs` |
 | `tc361_version_install_dry_format_json` | `tests/cli/mutation_version_install_test.rs` |
 | `tc362_version_install_format_uppercase_rejected` | `tests/cli/mutation_version_install_test.rs` |
+| `tc533_version_install_call_order_preference_survives_failed_install` | `tests/cli/mutation_version_install_test.rs` |
 | `tc510_version_install_wrong_case_error` | `tests/cli/error_messages_test.rs` |

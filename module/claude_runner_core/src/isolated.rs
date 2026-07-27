@@ -204,25 +204,23 @@ pub fn run_isolated
   run_isolated_ext( credentials_json, args, timeout_secs, model, Some( crate::DEFAULT_COMPACT_WINDOW ) )
 }
 
-/// Read `subprocess_model` from `~/.clr/prefs.json`, if present and non-empty.
+/// Resolve `IsolatedModel::Default`'s model preference across both tiers, in order:
+/// project `.clr.toml` → user `~/.clr/config.toml`. Returns `None` if nothing is
+/// set at either tier — callers fall back to [`ISOLATED_DEFAULT_MODEL`] via
+/// `IsolatedModel::model_id()`, unchanged from today's behavior.
 ///
-/// Returns `Some(id)` when a pinned model is stored as a JSON string; `None`
-/// when the file is absent, unreadable, or the key is missing, empty, or not
-/// a JSON string (a number/bool/null/object/array is treated as "no
-/// preference" rather than coerced to a string).  Called by
-/// `run_isolated_ext()` to override `IsolatedModel::Default` without requiring
-/// the caller to read prefs directly.
+/// Task 410 retired the prior `~/.clr/prefs.json` fallback tier (and the
+/// `read_subprocess_model_pref()` function that read it) once `.model.select`
+/// migrated onto this same `config.toml` `model` key.
 #[ cfg( feature = "enabled" ) ]
 #[ must_use ]
 #[ inline ]
-pub fn read_subprocess_model_pref() -> Option< String >
+pub fn resolve_isolated_default_model() -> Option< String >
 {
-  let home  = std::env::var( "HOME" ).ok()?;
-  let prefs = std::path::Path::new( &home ).join( ".clr" ).join( "prefs.json" );
-  claude_core::settings_io::get_string_setting( &prefs, "subprocess_model" )
-    .ok()
-    .flatten()
-    .filter( |v| !v.is_empty() )
+  let home         = std::env::var( "HOME" ).ok()?;
+  let user_path    = std::path::Path::new( &home ).join( ".clr" ).join( "config.toml" );
+  let project_path = std::path::Path::new( ".clr.toml" );
+  claude_core::toml_io::get_tiered( Some( project_path ), &user_path, "model" )
 }
 
 /// Spawn Claude in an isolated `HOME` with an explicit compact-window override.
@@ -245,6 +243,8 @@ pub fn read_subprocess_model_pref() -> Option< String >
 #[ cfg( feature = "enabled" ) ]
 #[ inline ]
 #[ allow( clippy::too_many_lines ) ]
+// core::io::ErrorKind requires the unstable `core_io` feature (rust-lang/rust#154046) — not usable on stable.
+#[ allow( clippy::std_instead_of_core ) ]
 pub fn run_isolated_ext
 (
   credentials_json : &str,
@@ -278,11 +278,11 @@ pub fn run_isolated_ext
 
   // Step 3: Build command — prepend --model flag then user args
   //
-  // When IsolatedModel::Default, check ~/.clr/prefs.json for a pinned
-  // `subprocess_model` preference before falling back to ISOLATED_DEFAULT_MODEL.
+  // When IsolatedModel::Default, check project `.clr.toml` / user `~/.clr/config.toml`
+  // for a pinned model preference before falling back to ISOLATED_DEFAULT_MODEL.
   let pref_override = match &model
   {
-    IsolatedModel::Default => read_subprocess_model_pref(),
+    IsolatedModel::Default => resolve_isolated_default_model(),
     _                      => None,
   };
   let mut full_args = Vec::with_capacity( args.len() + 2 );
@@ -375,10 +375,7 @@ pub fn run_isolated_ext
   //          may have been written before the subprocess started blocking.
   let credentials = std::fs::read_to_string( &creds_path )
     .ok()
-    .and_then( |new|
-    {
-      if new.as_bytes() == credentials_json.as_bytes() { None } else { Some( new ) }
-    } );
+    .filter( |new| new.as_bytes() != credentials_json.as_bytes() );
 
   // Step 7: Unconditional cleanup — no early return may appear before this line.
   let _ = std::fs::remove_dir_all( &temp_dir );

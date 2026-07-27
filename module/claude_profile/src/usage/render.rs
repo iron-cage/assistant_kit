@@ -113,7 +113,7 @@ pub fn render_text(
     {
       renews_label(
         aq.renewal_at.as_deref(),
-        aq.account.as_ref().map( |a| a.org_created_at.as_str() ),
+        aq.org_created_at.as_deref(),
         now_secs,
       )
     };
@@ -150,7 +150,7 @@ pub fn render_text(
         };
         let ( ren_secs, ren_est ) = renewal_secs(
           aq.renewal_at.as_deref(),
-          aq.account.as_ref().map( |a| a.org_created_at.as_str() ),
+          aq.org_created_at.as_deref(),
           now_secs,
         ).unzip();
         let next_cell    = next_event_label(
@@ -161,9 +161,21 @@ pub fn render_text(
           ren_est.unwrap_or( false ),
         );
 
+        // Fix(BUG-335): cache-fallback rows showed only the age suffix with no indication of
+        //   why the row is stale — the original fetch-failure reason was silently discarded.
+        //   Root cause: AccountQuota had no field to carry the reason forward from fetch.rs's
+        //   Err→Ok cache-fallback conversion; render had nothing to append.
+        //   Pitfall: append alongside cache_age_label()'s existing suffix (AC-03), never replace
+        //   it — cache_age_label() itself stays untouched.
         let name_display = if aq.cached
         {
-          format!( "{} {}", aq.name, cache_age_label( aq.cache_age_secs.unwrap_or( 0 ) ) )
+          let age = cache_age_label( aq.cache_age_secs.unwrap_or( 0 ) );
+          let suffix = match &aq.fallback_reason
+          {
+            Some( reason ) => format!( "{}, {})", &age[ ..age.len() - 1 ], shorten_error( reason ) ),
+            None           => age,
+          };
+          format!( "{} {}", aq.name, suffix )
         }
         else
         {
@@ -379,7 +391,7 @@ pub( crate ) fn extract_get_field( aq : &AccountQuota, field : GetField, now_sec
     {
       renews_label(
         aq.renewal_at.as_deref(),
-        aq.account.as_ref().map( |a| a.org_created_at.as_str() ),
+        aq.org_created_at.as_deref(),
         now_secs,
       )
     },
@@ -393,7 +405,7 @@ pub( crate ) fn extract_get_field( aq : &AccountQuota, field : GetField, now_sec
           .and_then( claude_quota::iso_to_unix_secs ).map( |t| t.saturating_sub( now_secs ) );
         let ren_pair = renewal_secs(
           aq.renewal_at.as_deref(),
-          aq.account.as_ref().map( |a| a.org_created_at.as_str() ),
+          aq.org_created_at.as_deref(),
           now_secs,
         );
         match next_event_raw(

@@ -25,6 +25,7 @@
 //! | 360 | `version::latest dry::1` → output does NOT contain "purge" | P | 0 |
 //! | 361 | `dry::1 format::json` → JSON output, exit 0 | P | 0 |
 //! | 362 | `format::JSON` (uppercase) → exit 1 | N | 1 |
+//! | 533 | `version::9.9.9` (nonexistent) → preference recorded before perform_install() attempted, regardless of outcome | P | 0 |
 
 use tempfile::TempDir;
 
@@ -324,6 +325,48 @@ fn tc358_version_install_idempotent_stores_preference()
       out.status.code()
     );
   }
+}
+
+// TC-533 (regression, MAAV-found A9): "9.9.9" is a syntactically valid but
+// certainly-nonexistent version, so the idempotent-skip guard (which tc358
+// exercises) never fires here — this forces the real, reordered write path
+// (store_preferred_version() then perform_install()) at version.rs:149-152.
+// perform_install() makes a real curl call (no injectable seam; mocking is
+// against project convention) that will fail for this version regardless of
+// network availability. Whatever the specific failure mode, the preference
+// must already be on disk by the time it happens — proving the store call
+// ran before the (failing) install attempt, not after. Soft-asserts like
+// tc358 to avoid coupling to a specific network failure mode/timing.
+#[ test ]
+fn tc533_version_install_call_order_preference_survives_failed_install()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_settings( dir.path(), &[] );
+
+  let out = run_clv_with_env(
+    &[ ".version.install", "version::9.9.9" ],
+    &[ ( "HOME", home ) ],
+  );
+  let text = stdout( &out );
+
+  // "9.9.9" cannot already be installed, so the idempotent-skip branch
+  // cannot fire here — this always exercises the reordered write path.
+  assert!(
+    !text.contains( "already at" ),
+    "9.9.9 must never match an already-installed version: {text}"
+  );
+
+  // Whatever perform_install()'s outcome (a network failure is expected but
+  // not asserted on directly — see tc358's rationale for the same choice),
+  // the preference must already be recorded, proving store_preferred_version()
+  // ran before perform_install() under the corrected call order.
+  let content = std::fs::read_to_string( dir.path().join( ".claude/settings.json" ) ).unwrap();
+  assert!(
+    content.contains( "preferredVersionSpec" ) && content.contains( "9.9.9" ),
+    "preference must be recorded before perform_install() is attempted, \
+     regardless of install outcome: {content}"
+  );
 }
 
 // TC-359: version::stable dry::1 → output includes Layer 4 purge line

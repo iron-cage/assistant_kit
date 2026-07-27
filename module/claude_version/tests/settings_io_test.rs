@@ -62,7 +62,6 @@
 //! | TC-082 | `set_env_var` updates existing `env` block, preserves other vars | env | P |
 
 use std::fs;
-use std::io::ErrorKind;
 
 use claude_version::settings_io::{ infer_type, StoredAs, get_setting, set_setting, set_env_var, remove_env_var, read_all_settings };
 use tempfile::TempDir;
@@ -427,6 +426,8 @@ fn tc052_get_setting_returns_none_for_missing_key()
 }
 
 // TC-053
+// core::io::ErrorKind requires the unstable `core_io` feature (rust-lang/rust#154046) — not usable on stable.
+#[ allow( clippy::std_instead_of_core ) ]
 #[ test ]
 fn tc053_get_setting_on_missing_file_returns_not_found()
 {
@@ -436,7 +437,7 @@ fn tc053_get_setting_on_missing_file_returns_not_found()
   assert!( result.is_err() );
   assert_eq!(
     result.unwrap_err().kind(),
-    ErrorKind::NotFound,
+    std::io::ErrorKind::NotFound,
     "missing file must return NotFound error"
   );
 }
@@ -469,6 +470,8 @@ fn tc055_read_all_settings_returns_all_key_value_pairs()
 }
 
 // TC-056
+// core::io::ErrorKind requires the unstable `core_io` feature (rust-lang/rust#154046) — not usable on stable.
+#[ allow( clippy::std_instead_of_core ) ]
 #[ test ]
 fn tc056_read_all_settings_missing_file_returns_not_found()
 {
@@ -476,7 +479,7 @@ fn tc056_read_all_settings_missing_file_returns_not_found()
   let path = dir.path().join( "no_such.json" );
   let result = read_all_settings( &path );
   assert!( result.is_err() );
-  assert_eq!( result.unwrap_err().kind(), ErrorKind::NotFound );
+  assert_eq!( result.unwrap_err().kind(), std::io::ErrorKind::NotFound );
 }
 
 // TC-057

@@ -426,6 +426,24 @@ pub fn write_account_owner( home : &std::path::Path, name : &str, owner : &str )
   merge_account_meta( home, name, serde_json::json!({ "owner": owner }) );
 }
 
+/// Write `claim_lock` field into `{credential_store}/{name}.json`.
+///
+/// Used to pre-populate claim-lock metadata for Gate 9 tests (Feature 070).
+#[ inline ]
+pub fn write_account_claim_lock( home : &std::path::Path, name : &str, claim_lock : bool )
+{
+  merge_account_meta( home, name, serde_json::json!({ "claim_lock": claim_lock }) );
+}
+
+/// Write `reserve` field into `{credential_store}/{name}.json`.
+///
+/// Used to pre-populate reserve metadata for sort-key tests (Feature 070).
+#[ inline ]
+pub fn write_account_reserve( home : &std::path::Path, name : &str, reserve : bool )
+{
+  merge_account_meta( home, name, serde_json::json!({ "reserve": reserve }) );
+}
+
 /// Check whether an account credential file exists.
 #[ inline ]
 #[ must_use ]
@@ -433,6 +451,24 @@ pub fn account_exists( home : &std::path::Path, name : &str ) -> bool
 {
   home.join( ".persistent" ).join( "claude" ).join( "credential" )
     .join( format!( "{name}.credentials.json" ) ).exists()
+}
+
+/// Read and parse `{credential_store}/{name}.json` as a [`serde_json::Value`].
+///
+/// Returns `serde_json::json!({})` when the file is absent (unset fields default `false`).
+///
+/// # Panics
+///
+/// Panics if the file exists but is not valid JSON.
+#[ inline ]
+#[ must_use ]
+pub fn read_account_meta( home : &std::path::Path, name : &str ) -> serde_json::Value
+{
+  let meta_path = home.join( ".persistent" ).join( "claude" ).join( "credential" )
+    .join( format!( "{name}.json" ) );
+  std::fs::read_to_string( &meta_path )
+    .ok()
+    .map_or_else( || serde_json::json!( {} ), | s | serde_json::from_str( &s ).expect( "account meta must be valid JSON" ) )
 }
 
 /// Far-future timestamp (year ~2286) for "valid" tokens.

@@ -22,6 +22,9 @@ Edge case tests for the output format parameter. Tests validate value forwarding
 | EC-12 | `CLR_OUTPUT_FORMAT=summary` env var → `--output-format json` in assembled command | Summary Variant |
 | EC-13 | CLR envelope with `is_error: true` → error status visible in summary header | Summary Variant |
 | EC-14 | Claude exits non-zero with `summary` → raw output preserved, no JSON parse | Summary Variant |
+| IT-4 | `--output-format stream-json` → NDJSON events consumed live, before subprocess exit | Streaming Behavior |
+| IT-5 | `--output-format stream-json` → NDJSON events observed in emission order | Streaming Behavior |
+| IT-6 | Without `stream-json` → output still delivered via unchanged batched path | Streaming Behavior |
 
 ## Test Coverage Summary
 
@@ -31,8 +34,9 @@ Edge case tests for the output format parameter. Tests validate value forwarding
 - Documentation: 1 test (EC-6)
 - Env Var: 1 test (EC-8)
 - Summary Variant: 6 tests (EC-9, EC-10, EC-11, EC-12, EC-13, EC-14)
+- Streaming Behavior: 3 tests (IT-4, IT-5, IT-6)
 
-**Total:** 14 edge cases
+**Total:** 17 edge cases
 
 ## Test Cases
 ---
@@ -173,5 +177,35 @@ Edge case tests for the output format parameter. Tests validate value forwarding
 - **When:** `clr --output-format summary "msg"`
 - **Then:** `Error: rate limit` appears in stderr; no summary header in stdout; no JSON parse error in output
 - **Exit:** 2
+- **Source:** [061_output_format.md](../../../../docs/cli/param/061_output_format.md)
+- **Commands:** run, ask
+---
+
+### IT-4: `--output-format stream-json` → NDJSON events consumed live, before subprocess exit
+
+- **Given:** Fake claude binary emitting 3 NDJSON lines (`seq:1`, `seq:2`, `seq:3`) separated by `sleep 2` delays (~4s total runtime)
+- **When:** `clr --output-format stream-json --max-sessions 0 "hi"` (stdout piped, read incrementally)
+- **Then:** First event arrives within 1800ms, second within a further 2200ms — both well before the fake process's ~4s total runtime; `child.try_wait()` returns `None` (still running) immediately after the second event is received, proving incremental (not batched) consumption
+- **Exit:** 0
+- **Source:** [061_output_format.md](../../../../docs/cli/param/061_output_format.md)
+- **Commands:** run, ask
+---
+
+### IT-5: `--output-format stream-json` → NDJSON events observed in emission order
+
+- **Given:** Fake claude binary emitting 3 NDJSON lines (`seq:1`, `seq:2`, `seq:3`) separated by `sleep 1` delays
+- **When:** `clr --output-format stream-json --max-sessions 0 "hi"` (stdout read live, one event at a time, each checked against its own arrival deadline)
+- **Then:** Events are observed in strict emission order (`seq:1` then `seq:2` then `seq:3`); each arrives within its own deadline rather than only after full subprocess completion
+- **Exit:** 0
+- **Source:** [061_output_format.md](../../../../docs/cli/param/061_output_format.md)
+- **Commands:** run, ask
+---
+
+### IT-6: Without `stream-json` → output still delivered via unchanged batched path
+
+- **Given:** Fake claude binary that echoes `plain claude output`
+- **When:** `clr --output-format json --output-style raw --max-sessions 0 "hi"`
+- **Then:** Stdout is exactly `plain claude output` — regression guard confirming the pre-existing batched path is unchanged for non-`stream-json` output formats
+- **Exit:** 0
 - **Source:** [061_output_format.md](../../../../docs/cli/param/061_output_format.md)
 - **Commands:** run, ask

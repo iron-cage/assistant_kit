@@ -50,7 +50,7 @@ match output.classify_error()
 
 `ErrorKind` and `classify_error()` are defined in `claude_runner_core::types`. Classification priority: pattern match in stderr/stdout first (pattern `"You've hit your limit"` → `QuotaExhausted`; `"Your organization does not have access"` → `AuthError`; `"API Error: "` → `ApiError`), then exit code semantics (exit `2` → `RateLimit`; exit `> 128` → `Signal`). When `output.exit_code == 0`, `classify_error()` always returns `None`.
 
-`RateLimit` and `QuotaExhausted` require different consumer responses: rate limits are transient (seconds) and safe to retry; quota exhaustion is a period-boundary condition (hours to days) — retrying wastes resources. Use `clp .account.assign` to switch to an account with remaining quota.
+`RateLimit` and `QuotaExhausted` require different consumer responses: rate limits are transient (seconds) and safe to retry; quota exhaustion is a period-boundary condition (hours to days) — retrying wastes resources. Use `clp .usage rotate::1` to switch to an account with remaining quota.
 
 ### Error Handling
 

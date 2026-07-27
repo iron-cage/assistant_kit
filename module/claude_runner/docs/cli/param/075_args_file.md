@@ -36,7 +36,7 @@ clr --args-file fast.json --dry-run "task"       # inspect merged params
 
 **Error handling:** Non-existent path exits 1 with file-not-found error. Invalid JSON exits 1 with parse error. Both errors emit to stderr before any subprocess is spawned.
 
-**Stdin pipe:** When stdin is not a TTY and begins with `{`, clr auto-detects stdin as a JSON parameter source (equivalent to `--args-file`). `--file` takes priority over stdin JSON detection when both are present.
+**Stdin pipe:** When stdin is not a TTY and begins with `{`, clr auto-detects stdin as a JSON parameter source (equivalent to `--args-file`). `--file` takes priority over stdin JSON detection when both are present. When stdin is piped but does not begin with `{` (`run`/`ask` only), the raw content is forwarded to the subprocess's own stdin instead — see [--file](025_file.md).
 
 ### Since
 

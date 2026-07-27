@@ -127,6 +127,8 @@ fn save_overwrites_existing_entry()
 }
 
 #[ test ]
+// core::io::ErrorKind requires the unstable `core_io` feature (rust-lang/rust#154046) — not usable on stable.
+#[ allow( clippy::std_instead_of_core ) ]
 fn save_rejects_empty_name()
 {
   let ( _dir, credential_store ) = setup_home( CREDENTIALS );
@@ -136,6 +138,8 @@ fn save_rejects_empty_name()
 }
 
 #[ test ]
+// core::io::ErrorKind requires the unstable `core_io` feature (rust-lang/rust#154046) — not usable on stable.
+#[ allow( clippy::std_instead_of_core ) ]
 fn save_rejects_name_with_slash()
 {
   let ( _dir, credential_store ) = setup_home( CREDENTIALS );
@@ -255,6 +259,8 @@ fn switch_account_updates_active_marker()
 }
 
 #[ test ]
+// core::io::ErrorKind requires the unstable `core_io` feature (rust-lang/rust#154046) — not usable on stable.
+#[ allow( clippy::std_instead_of_core ) ]
 fn switch_account_returns_not_found_for_missing_account()
 {
   //! FR-9: switching to an account that doesn't exist must fail with `NotFound`.
@@ -319,6 +325,8 @@ fn delete_active_account_succeeds()
 }
 
 #[ test ]
+// core::io::ErrorKind requires the unstable `core_io` feature (rust-lang/rust#154046) — not usable on stable.
+#[ allow( clippy::std_instead_of_core ) ]
 fn delete_returns_not_found_for_missing_account()
 {
   //! FR-10: deleting an account that was never saved fails with `NotFound`.
@@ -420,6 +428,8 @@ fn validate_name_valid()
 }
 
 #[ test ]
+// core::io::ErrorKind requires the unstable `core_io` feature (rust-lang/rust#154046) — not usable on stable.
+#[ allow( clippy::std_instead_of_core ) ]
 fn validate_name_must_be_email()
 {
   let err = validate_name( "notanemail" ).expect_err( "non-email name must fail" );

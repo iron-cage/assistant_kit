@@ -13,7 +13,7 @@ Feature behavioral requirement test cases for `docs/feature/067_trace_timestamps
 | FT | Criterion | AC |
 |----|-----------|-----|
 | FT-01 | `trace_ts()` is `pub fn` in production code, not `#[cfg(test)]`-gated | AC-01 |
-| FT-02 | `trace_ts()` returns string matching `YYYY-MM-DD · HH:MM:SS · ` format | AC-02 |
+| FT-02 | `trace_ts()` returns string matching `YYYY-MM-DD · HH:MM:SS UTC · ` format (BUG-338) | AC-02 |
 | FT-03 | All integration trace assertions use ` · ` sentinel — no `[trace]` strings remain | AC-03 |
 | FT-04 | `trace_ts()` body contains no trace-flag check — always returns timestamp | AC-04 |
 | FT-05 | Touch skip trace line contains ` · touch  ` sentinel (not `[trace] touch`) | AC-03, AC-05 |
@@ -45,8 +45,8 @@ Feature behavioral requirement test cases for `docs/feature/067_trace_timestamps
 
 - **Given:** `trace_ts()` is called at any point during a `.usage trace::1` run.
 - **When:** The return value is captured via stderr output or direct call.
-- **Then:** Return value matches `"YYYY-MM-DD · HH:MM:SS · "`: 10 date digits, space-dot-space separator, 8 time digits, trailing space-dot-space. Each trace line in stderr begins with this pattern.
-- **Source fn:** structural/regex assertions in `tests/usage/touch_tests.rs`, `tests/usage/api_tests_a.rs`
+- **Then:** Return value matches `"YYYY-MM-DD · HH:MM:SS UTC · "`: 10 date digits, space-dot-space separator, 8 time digits, space, literal `UTC` marker, trailing space-dot-space. Each trace line in stderr begins with this pattern. (Fixed per BUG-338 — `UTC` marker disambiguates from other timestamp sources sharing the same shape.)
+- **Source fn:** structural/regex assertions in `tests/usage/touch_tests.rs`, `tests/usage/api_tests_a.rs`; new unit assertion `trace_ts_returns_utc_marked_timestamp` in `claude_profile_core/tests/account_test.rs` (TSK-419, see BUG-338 Refs: tests/)
 
 ---
 

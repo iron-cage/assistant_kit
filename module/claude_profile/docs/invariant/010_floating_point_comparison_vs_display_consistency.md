@@ -49,7 +49,7 @@ The defect is the absence of a shared rounding step between the comparison and t
 
 ### Enforcement
 
-**Current status:** Not yet enforced in code — BUG-331 (`task/claude_profile/bug/331_pct_raw_vs_rounded_mismatch.md`, state 🎯 Verified) documents this invariant's violation at both confirmed call sites; the fix (round once, derive both `classify()` and the display string from the single rounded value) is described but not applied as of this writing (see algorithm/011 § Rounding-Boundary Hazard for the fix sketch).
+**Current status:** Enforced in code since 2026-07-08 — BUG-331 (`task/claude_profile/bug/331_pct_raw_vs_rounded_mismatch.md`, state 🎯 Verified, fix applied 2026-07-08) documented this invariant's violation at both confirmed call sites; the fix (round once, derive both `classify()` and the display string from the single rounded value) is now live at both sites (see algorithm/011 § Rounding-Boundary Hazard for the applied fix).
 
 **Required fix pattern (once applied):**
 
@@ -61,7 +61,7 @@ format!( "{emoji} {left:.0}%" )                    // display the SAME rounded v
 
 **Detection layer:** No automated lint currently exists for this pattern in this codebase. Prevention is currently procedural: any new closure/function that both branches on and formats the same floating-point value must be reviewed against this invariant before merge (see algorithm/011 § Rounding-Boundary Hazard : Prevention for the full sweep recommendation).
 
-**Test coverage:** `tests/usage/format_tests.rs:502-526` (`test_ft11_009_per_column_emoji_prefix_three_cases`) covers the exact-integer-boundary case (`util=85.0` → `left=15.0` exactly) but does not cover values merely near a boundary without landing on it exactly — this is the specific gap BUG-331 exposes. A property-style test asserting the formal statement above, plus the focused regression case from BUG-331's Minimum Reproducible Example (`util=94.999999999999716` vs. `util=95.000000000000510`), are the recommended additions (not yet implemented).
+**Test coverage:** `tests/usage/format_tests.rs:502-526` (`test_ft11_009_per_column_emoji_prefix_three_cases`) covers the exact-integer-boundary case (`util=85.0` → `left=15.0` exactly) but does not cover values merely near a boundary without landing on it exactly — this is the specific gap BUG-331 exposes. The focused regression case from BUG-331's Minimum Reproducible Example (`util=94.999999999999716` vs. `util=95.000000000000510`) is implemented as `mre_bug331_pct_emoji_color_matches_rounded_display_at_threshold_boundary` (`tests/usage/format_tests.rs:563`); the broader property-style test asserting the formal statement above remains a recommended addition.
 
 ### Related Invariants
 
@@ -81,4 +81,4 @@ format!( "{emoji} {left:.0}%" )                    // display the SAME rounded v
 
 | File | Relationship |
 |------|--------------|
-| `tests/usage/format_tests.rs` | `test_ft11_009_per_column_emoji_prefix_three_cases` covers the exact-boundary case only; property-style and near-boundary regression tests described in BUG-331 § Prevention are not yet implemented |
+| `tests/usage/format_tests.rs` | `test_ft11_009_per_column_emoji_prefix_three_cases` covers the exact-boundary case only; the near-boundary regression test described in BUG-331 § Prevention is implemented as `mre_bug331_pct_emoji_color_matches_rounded_display_at_threshold_boundary` (line 563); the broader property-style test remains a recommended addition |

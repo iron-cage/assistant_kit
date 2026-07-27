@@ -25,6 +25,8 @@ All accounts are partitioned into 4 status groups in fixed order: Green → h-ex
 
 #### Step 2 — Sort within Green by strategy
 
+Every strategy below is additionally prefixed with a **leading `reserve` key** (non-reserved before reserved) ahead of its own primary key — see [algorithm/007](007_sort_strategies.md). The table shows each strategy's own keys only; the `reserve` prefix applies uniformly to all three and is omitted here to avoid duplicating algorithm/007's table.
+
 | Strategy | Primary key | Direction | Secondary key | Direction | Tertiary |
 |---|---|---|---|---|---|
 | `sort::name` | account name | ascending (A→Z) | — | — | — |
@@ -38,7 +40,7 @@ Key definitions:
 
 #### Step 3 — First eligible wins
 
-Walk the sorted list from position 0. The first account passing all 8 eligibility gates (see [algorithm/004](004_eligibility_gates.md)) is the winner — marked `→` in the table, shown in footer `Next` line. If no account passes, result is `None` (no recommendation; auto-switch returns error).
+Walk the sorted list from position 0. The first account passing all 9 eligibility gates (see [algorithm/004](004_eligibility_gates.md)) is the winner — marked `→` in the table, shown in footer `Next` line. If no account passes, result is `None` (no recommendation; auto-switch returns error). Because `reserve` is a leading sort key (Step 2) rather than a gate, a reserved account is only ever reached by this walk once every non-reserved candidate has already failed a gate — "first eligible wins" needs no change to produce "reserved accounts are picked only when nothing else qualifies."
 
 #### Why `sort::renew` uses ascending `prefer_weekly` as secondary key
 
@@ -51,6 +53,7 @@ Lower weekly capacity = account benefits most from the upcoming renewal event. A
 | [feature/039_decision_algorithms.md](../feature/039_decision_algorithms.md) | Table 5 (legacy reference) |
 | [feature/020_usage_sort_strategies.md](../feature/020_usage_sort_strategies.md) | `sort::`, `prefer::` parameters |
 | [feature/038_usage_strategy_rotate.md](../feature/038_usage_strategy_rotate.md) | Auto-switch uses this winner |
+| [feature/070_account_claim_and_reservation_control.md](../feature/070_account_claim_and_reservation_control.md) | Gate 9 (`claim_lock`) added to Step 3; `reserve` leading key added to Step 2 |
 
 ### Algorithms
 

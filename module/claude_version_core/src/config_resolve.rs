@@ -5,7 +5,7 @@
 
 use std::path::{ Path, PathBuf };
 use crate::config_catalog::SettingDef;
-use crate::settings_io::{ read_all_settings, json_parse_flat_object };
+use claude_core::settings_io::{ read_all_settings, json_parse_flat_object };
 
 /// The layer that supplied the resolved value for a settings key.
 ///
@@ -214,10 +214,6 @@ pub( crate ) fn find_project_config_file( cwd : &Path ) -> Option< PathBuf >
     }
 
     // Walk up one directory level.
-    match dir.parent()
-    {
-      Some( parent ) => dir = parent.to_path_buf(),
-      None           => return None,
-    }
+    dir = dir.parent()?.to_path_buf();
   }
 }

@@ -269,3 +269,189 @@ fn t14_stdin_file_interactive_dry_run_skips_open()
     "execute_interactive() with dry_run=true must return Ok even with nonexistent file"
   );
 }
+
+// ── BUG-424: stdin_content spawn-method wiring (FT-9 through FT-15) ────────────
+
+// Return a temp dir containing a fake `claude` shell script and the augmented PATH value.
+//
+// The returned `TempDir` must be kept alive for the duration of the test — dropping it
+// removes the directory and makes the fake binary inaccessible. Private per-file copy:
+// Rust compiles each `tests/*.rs` file as its own binary, so this ~15-line helper (already
+// proven in `bug_243_test.rs:40`) is duplicated locally rather than shared — not worth
+// extracting to a module for the 4 call sites below.
+#[ cfg( unix ) ]
+fn fake_claude_dir( body : &str ) -> ( tempfile::TempDir, String )
+{
+  use std::os::unix::fs::PermissionsExt as _;
+  let dir  = tempfile::TempDir::new().expect( "tmpdir" );
+  let path = dir.path().join( "claude" );
+  let script = format!( "#!/bin/sh\n{body}\n" );
+  std::fs::write( &path, script.as_bytes() ).expect( "write fake-claude" );
+  std::fs::set_permissions( &path, std::fs::Permissions::from_mode( 0o755 ) )
+    .expect( "chmod fake-claude" );
+  let path_val = format!(
+    "{}:{}",
+    dir.path().display(),
+    std::env::var( "PATH" ).unwrap_or_default(),
+  );
+  ( dir, path_val )
+}
+
+// T15 / FT-9: stdin_content in describe output
+#[ test ]
+fn t15_stdin_content_describe_output()
+{
+  let cmd = ClaudeCommand::new()
+    .with_stdin_content( b"hello".to_vec() )
+    .with_dry_run( true );
+  let output = cmd.execute().expect( "dry-run must succeed" );
+  assert!(
+    output.stdout.contains( "<piped stdin, 5 bytes>" ),
+    "describe output must show byte count. Got: {}", output.stdout
+  );
+}
+
+// T16 / FT-10: stdin_file takes priority over stdin_content in describe output
+#[ test ]
+fn t16_stdin_file_priority_over_stdin_content_describe()
+{
+  let cmd = ClaudeCommand::new()
+    .with_stdin_file( std::path::PathBuf::from( "/tmp/t16_stdin.txt" ) )
+    .with_stdin_content( b"ignored".to_vec() )
+    .with_dry_run( true );
+  let output = cmd.execute().expect( "dry-run must succeed" );
+  assert!(
+    output.stdout.contains( "< /tmp/t16_stdin.txt" ),
+    "describe output must show stdin_file path when both are set. Got: {}", output.stdout
+  );
+  assert!(
+    !output.stdout.contains( "piped stdin" ),
+    "describe output must NOT show piped-stdin byte count when stdin_file wins. Got: {}", output.stdout
+  );
+}
+
+// T17 / FT-11: execute() delivers stdin_content bytes to the real subprocess's stdin
+#[ cfg( unix ) ]
+#[ test ]
+#[ allow( unsafe_code ) ]
+fn t17_stdin_content_delivered_via_execute()
+{
+  let ( _dir, path_val ) = fake_claude_dir( "cat" );
+  let orig_path = std::env::var( "PATH" ).unwrap_or_default();
+  // SAFETY: single-threaded test binary (nextest isolates each test into its own process);
+  // no other test reads PATH concurrently.
+  unsafe { std::env::set_var( "PATH", &path_val ); }
+  let cmd = ClaudeCommand::new()
+    .with_stdin_content( b"t17_marker".to_vec() );
+  let result = cmd.execute();
+  // SAFETY: restoring the original PATH value; same invariant as the `set_var` above —
+  // single-threaded test binary, no concurrent PATH access.
+  unsafe { std::env::set_var( "PATH", &orig_path ); }
+  let output = result.expect( "execute must succeed with fake claude" );
+  assert!(
+    output.stdout.contains( "t17_marker" ),
+    "execute() must deliver stdin_content bytes to subprocess stdin. Got: {}", output.stdout
+  );
+}
+
+// T18 / FT-12: execute_interactive() delivers stdin_content bytes to the real subprocess's stdin
+//
+// execute_interactive() inherits the parent's stdout (TTY passthrough) instead of capturing
+// it, so the fake claude script redirects its own stdin echo to a temp file instead of stdout —
+// sidesteps the inherited-stdout problem entirely.
+#[ cfg( unix ) ]
+#[ test ]
+#[ allow( unsafe_code ) ]
+fn t18_stdin_content_delivered_via_execute_interactive()
+{
+  let out_file = tempfile::NamedTempFile::new().expect( "create output capture file" );
+  let out_path = out_file.path().display().to_string();
+  let ( _dir, path_val ) = fake_claude_dir( &format!( "cat > {out_path}" ) );
+  let orig_path = std::env::var( "PATH" ).unwrap_or_default();
+  // SAFETY: single-threaded test binary (nextest isolates each test into its own process);
+  // no other test reads PATH concurrently.
+  unsafe { std::env::set_var( "PATH", &path_val ); }
+  let cmd = ClaudeCommand::new()
+    .with_stdin_content( b"t18_marker".to_vec() );
+  let result = cmd.execute_interactive();
+  // SAFETY: restoring the original PATH value; same invariant as the `set_var` above —
+  // single-threaded test binary, no concurrent PATH access.
+  unsafe { std::env::set_var( "PATH", &orig_path ); }
+  assert!( result.is_ok(), "execute_interactive must succeed with fake claude" );
+  let received = std::fs::read_to_string( &out_path ).expect( "read captured output" );
+  assert!(
+    received.contains( "t18_marker" ),
+    "execute_interactive() must deliver stdin_content bytes to subprocess stdin. Got: {received}"
+  );
+}
+
+// T19 / FT-13: spawn_piped() delivers stdin_content bytes to the real subprocess's stdin
+#[ cfg( unix ) ]
+#[ test ]
+#[ allow( unsafe_code ) ]
+fn t19_stdin_content_delivered_via_spawn_piped()
+{
+  let ( _dir, path_val ) = fake_claude_dir( "cat" );
+  let orig_path = std::env::var( "PATH" ).unwrap_or_default();
+  // SAFETY: single-threaded test binary (nextest isolates each test into its own process);
+  // no other test reads PATH concurrently.
+  unsafe { std::env::set_var( "PATH", &path_val ); }
+  let cmd = ClaudeCommand::new()
+    .with_stdin_content( b"t19_marker".to_vec() );
+  let child = cmd.spawn_piped();
+  // SAFETY: restoring the original PATH value; same invariant as the `set_var` above —
+  // single-threaded test binary, no concurrent PATH access.
+  unsafe { std::env::set_var( "PATH", &orig_path ); }
+  let output = child.expect( "spawn_piped must succeed" )
+    .wait_with_output().expect( "wait for child" );
+  let stdout = String::from_utf8_lossy( &output.stdout );
+  assert!(
+    stdout.contains( "t19_marker" ),
+    "spawn_piped() must deliver stdin_content bytes to subprocess stdin. Got: {stdout}"
+  );
+}
+
+// T20 / FT-14: spawn_tty() delivers stdin_content bytes to the real subprocess's stdin
+//
+// spawn_tty() inherits the parent's stdout (TTY passthrough), so the fake claude script
+// redirects its stdin echo to a temp file — same technique as T18.
+#[ cfg( unix ) ]
+#[ test ]
+#[ allow( unsafe_code ) ]
+fn t20_stdin_content_delivered_via_spawn_tty()
+{
+  let out_file = tempfile::NamedTempFile::new().expect( "create output capture file" );
+  let out_path = out_file.path().display().to_string();
+  let ( _dir, path_val ) = fake_claude_dir( &format!( "cat > {out_path}" ) );
+  let orig_path = std::env::var( "PATH" ).unwrap_or_default();
+  // SAFETY: single-threaded test binary (nextest isolates each test into its own process);
+  // no other test reads PATH concurrently.
+  unsafe { std::env::set_var( "PATH", &path_val ); }
+  let cmd = ClaudeCommand::new()
+    .with_stdin_content( b"t20_marker".to_vec() );
+  let child = cmd.spawn_tty();
+  // SAFETY: restoring the original PATH value; same invariant as the `set_var` above —
+  // single-threaded test binary, no concurrent PATH access.
+  unsafe { std::env::set_var( "PATH", &orig_path ); }
+  let mut child = child.expect( "spawn_tty must succeed" );
+  child.wait().expect( "wait for child" );
+  let received = std::fs::read_to_string( &out_path ).expect( "read captured output" );
+  assert!(
+    received.contains( "t20_marker" ),
+    "spawn_tty() must deliver stdin_content bytes to subprocess stdin. Got: {received}"
+  );
+}
+
+// T21 / FT-15: dry-run skips tempfile materialization when stdin_content is set
+#[ test ]
+fn t21_stdin_content_dry_run_skips_materialization()
+{
+  let cmd = ClaudeCommand::new()
+    .with_stdin_content( b"unused".to_vec() )
+    .with_dry_run( true );
+  let result = cmd.execute();
+  assert!(
+    result.is_ok(),
+    "dry-run must return Ok even with stdin_content set (no tempfile materialization attempted)"
+  );
+}

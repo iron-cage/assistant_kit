@@ -2,46 +2,44 @@
 
 ### Scope
 
-- **Purpose**: Provide a `clp .model.select` command to get or pin the subprocess model used by `clr run`, `clr ask`, `clr isolated`, and `clr refresh` via a `subprocess_model` field in `~/.clr/prefs.json`.
-- **Responsibility**: Documents the `.model.select` command, its three operating modes (get/set/reset), the `id::`, `reset::`, and `format::` parameters, the `~/.clr/prefs.json` preference file schema (Schema 008), and the clr integration that reads the preference in `claude_runner_core/src/isolated.rs`.
-- **In Scope**: `.model.select` command; get mode (no `id::`, no `reset::`) reading `subprocess_model` from `~/.clr/prefs.json`; set mode (`id::VALUE`) writing `subprocess_model` to `~/.clr/prefs.json`; reset mode (`reset::1`) removing `subprocess_model` key; full model ID values only (no shorthand mapping — use `.models` output); `format::text` and `format::json` in get mode; `~/.clr/prefs.json` file creation when absent on first write; clr reading the preference in `isolated.rs` and using it in place of `ISOLATED_DEFAULT_MODEL` when set.
-- **Out of Scope**: Interactive session model in `settings.json` (→ Feature 035); touch/refresh subprocess model control (→ Feature 026 `imodel::` — intentionally separate, quota-adaptive); model discovery (→ Feature 068); subprocess effort level (→ algorithm/008).
+- **Purpose**: Provide a `clp .model.select` command to get or pin the subprocess model used by `clr run`, `clr ask`, `clr isolated`, and `clr refresh` via a `model` key in `~/.clr/config.toml`.
+- **Responsibility**: Documents the `.model.select` command, its three operating modes (get/set/reset), the `id::`, `reset::`, and `format::` parameters, the `~/.clr/config.toml` `model` key it manages (format: [claude_core/docs/api/002_toml_io.md](../../../claude_core/docs/api/002_toml_io.md)), and the clr integration that reads this same key from `claude_runner`'s CLI dispatch and from `claude_runner_core::resolve_isolated_default_model()`.
+- **In Scope**: `.model.select` command; get mode (no `id::`, no `reset::`) reading `model` from `~/.clr/config.toml`'s user tier; set mode (`id::VALUE`) writing `model` to `~/.clr/config.toml`'s user tier; reset mode (`reset::1`) removing the `model` key; full model ID values only (no shorthand mapping — use `.models` output); `format::text` and `format::json` in get mode (JSON output key stays `subprocess_model` — this command's own CLI-visible contract, independent of the backing store's key name); `~/.clr/config.toml` file and `.clr` directory creation when absent on first write; clr reading the `model` key via two independent consumers (`claude_runner`'s `--model` CLI resolution and `claude_runner_core::resolve_isolated_default_model()`) and using it in place of `ISOLATED_DEFAULT_MODEL`/hardcoded default when set.
+- **Out of Scope**: Interactive session model in `settings.json` (→ Feature 035); touch/refresh subprocess model control (→ Feature 026 `imodel::` — intentionally separate, quota-adaptive); model discovery (→ Feature 068); subprocess effort level (→ algorithm/008); project-tier `.clr.toml` reads/writes by `.model.select` itself (it manages only the user tier — the project tier is merged in separately by the two consumers described under "clr integration").
 
 ### Design
 
-`.model.select` manages the `subprocess_model` preference for clr task-execution subprocesses (`clr run`, `clr ask`, `clr isolated`, `clr refresh`). This preference adds a user-settable override layer above `ISOLATED_DEFAULT_MODEL` without affecting the existing `imodel::` mechanism for touch/refresh subprocesses.
+`.model.select` manages the `model` key in `~/.clr/config.toml`'s user tier for clr task-execution subprocesses (`clr run`, `clr ask`, `clr isolated`, `clr refresh`). This preference adds a user-settable override layer above `ISOLATED_DEFAULT_MODEL` without affecting the existing `imodel::` mechanism for touch/refresh subprocesses.
 
 **Preference storage:**
 
-`~/.clr/prefs.json` — a new JSON file in the clr runtime directory (Schema 008):
-```json
-{ "subprocess_model": "claude-opus-4-8" }
+`~/.clr/config.toml` — a flat TOML key=value file (parser/serializer and format documented in [claude_core/docs/api/002_toml_io.md](../../../claude_core/docs/api/002_toml_io.md)):
+```toml
+model = "claude-opus-4-8"
 ```
 
-The file is created on first set. When `subprocess_model` is absent or `~/.clr/prefs.json` does not exist, `clr` falls back to `ISOLATED_DEFAULT_MODEL`.
+`.model.select` reads and writes only this file's user tier — it never touches the project-level `.clr.toml` file itself (that file participates only in the two read-side consumers described below). The file and its parent `.clr` directory are created on first set. When `model` is absent or `~/.clr/config.toml` does not exist, `clr` falls back to `ISOLATED_DEFAULT_MODEL` or the hardcoded CLI default, depending on the consumer.
 
 **Get mode** (no `id::`, no `reset::1`):
 
-Reads `~/.clr/prefs.json`. Extracts `subprocess_model` field. Prints `model.select: claude-opus-4-8` or `model.select: (unset)` in text format; `{"subprocess_model":"claude-opus-4-8"}` or `{"subprocess_model":null}` in JSON format. Exits 0.
+Reads `~/.clr/config.toml`'s user tier. Extracts the `model` key. Prints `model.select: claude-opus-4-8` or `model.select: (unset)` in text format; `{"subprocess_model":"claude-opus-4-8"}` or `{"subprocess_model":null}` in JSON format — the JSON key is always `subprocess_model`, unchanged by the task 410 storage migration. Exits 0.
 
 **Set mode** (`id::VALUE`):
 
-Validates that `VALUE` is non-empty. Writes `subprocess_model` to `~/.clr/prefs.json` (creates file if absent; preserves any other keys). Prints `model.select: VALUE (pinned)`. Exits 0. No live API validation of the model ID — the user is expected to run `.models` first to obtain the correct full ID.
+Validates that `VALUE` is non-empty. Writes `model` to `~/.clr/config.toml`'s user tier (creates the file and `.clr` directory if absent; preserves any other keys already in the file). Prints `model.select: VALUE (pinned)`. Exits 0. No live API validation of the model ID — the user is expected to run `.models` first to obtain the correct full ID.
 
 **Reset mode** (`reset::1`):
 
-Removes `subprocess_model` key from `~/.clr/prefs.json`. Preserves other keys. Prints `model.select: (reset to default)`. Exits 0. If `~/.clr/prefs.json` does not exist, prints the same message and exits 0 (idempotent).
+Removes the `model` key from `~/.clr/config.toml`'s user tier. Preserves other keys. Prints `model.select: (reset to default)`. Exits 0. If `~/.clr/config.toml` does not exist, prints the same message and exits 0 (idempotent).
 
 **Mutual exclusion:** `id::` and `reset::1` together → exits 1 with stderr `model.select: id:: and reset::1 are mutually exclusive`.
 
 **clr integration:**
 
-`dispatch_run()` / `dispatch_ask()` (`claude_runner/src/cli/mod.rs`) and `run_isolated_ext()` (`claude_runner_core/src/isolated.rs`) all read the preference. After `apply_env_vars()` resolves CLI flags and `CLR_*` env vars, if `--model` is still unset:
-1. Try to read `~/.clr/prefs.json` → parse `subprocess_model` field.
-2. If present and non-empty: use this model ID instead of the command's default model.
-3. If absent, error, or empty: use the default model as before.
+The `model` key `.model.select` writes is read independently by two consumers, each with its own precedence chain — both resolve the same `~/.clr/config.toml` user-tier value when no higher tier overrides it:
 
-Precedence (highest to lowest): explicit `--model` flag → `CLR_MODEL` env var → `prefs.json` pin → built-in default.
+1. **`claude_runner`'s own `--model` CLI resolution** — `dispatch_run()` / `dispatch_ask()` (`claude_runner/src/cli/mod.rs`) call `config::load_config()` + `config::apply_config_defaults()` (`claude_runner/src/cli/config.rs`) as the 4th of 5 precedence tiers: explicit `--model` flag → `--args-file`/stdin JSON → `CLR_MODEL` env var → config-file tier → hardcoded default. The config-file tier merges project `.clr.toml` (higher precedence) over user `~/.clr/config.toml` (lower precedence) on the `model` key before filling in whichever `CliArgs` fields are still unset.
+2. **`claude_runner_core::resolve_isolated_default_model()`** (`claude_runner_core/src/isolated.rs`) — consulted by `run_isolated_ext()`'s `IsolatedModel::Default` match arm, which `dispatch_isolated()` (`clr isolated`) always passes (there is no `--model` CLI flag on `isolated`). A simpler, independent 2-tier lookup over the same `model` key: project `.clr.toml` → user `~/.clr/config.toml` → `None` if neither is set, in which case `IsolatedModel::model_id()` supplies `ISOLATED_DEFAULT_MODEL` (`"opus"`).
 
 The preference applies to `run`, `ask`, and `isolated`. `refresh` always uses `REFRESH_DEFAULT_MODEL`; see below.
 
@@ -53,14 +51,14 @@ Refresh (`clr refresh`) passes `IsolatedModel::Specific(REFRESH_DEFAULT_MODEL)` 
 
 ### Acceptance Criteria
 
-- **AC-01**: `clp .model.select` with no `~/.clr/prefs.json` → prints `model.select: (unset)`. Exits 0.
-- **AC-02**: `clp .model.select` with `~/.clr/prefs.json` containing `{"subprocess_model":"claude-opus-4-8"}` → prints `model.select: claude-opus-4-8`. Exits 0.
-- **AC-03**: `clp .model.select id::claude-opus-4-8` → `~/.clr/prefs.json` contains `"subprocess_model":"claude-opus-4-8"`. Stdout: `model.select: claude-opus-4-8 (pinned)`. Exits 0.
-- **AC-04**: `clp .model.select id::claude-sonnet-5` → `~/.clr/prefs.json` contains `"subprocess_model":"claude-sonnet-5"`. Exits 0.
-- **AC-05**: `clp .model.select reset::1` with preference set → `subprocess_model` key removed from `~/.clr/prefs.json`; other keys preserved. Prints `model.select: (reset to default)`. Exits 0.
-- **AC-06**: `clp .model.select reset::1` with no `~/.clr/prefs.json` → exits 0 idempotently; prints `model.select: (reset to default)`.
-- **AC-07**: `clp .model.select id::VALUE` creates `~/.clr/prefs.json` when absent. Exits 0.
-- **AC-08**: `clp .model.select id::VALUE` on existing `prefs.json` with other keys → other keys preserved. Exits 0.
+- **AC-01**: `clp .model.select` with no `~/.clr/config.toml` → prints `model.select: (unset)`. Exits 0.
+- **AC-02**: `clp .model.select` with `~/.clr/config.toml` containing `model = "claude-opus-4-8"` → prints `model.select: claude-opus-4-8`. Exits 0.
+- **AC-03**: `clp .model.select id::claude-opus-4-8` → `~/.clr/config.toml` contains `model = "claude-opus-4-8"`. Stdout: `model.select: claude-opus-4-8 (pinned)`. Exits 0.
+- **AC-04**: `clp .model.select id::claude-sonnet-5` → `~/.clr/config.toml` contains `model = "claude-sonnet-5"`. Exits 0.
+- **AC-05**: `clp .model.select reset::1` with preference set → `model` key removed from `~/.clr/config.toml`; other keys preserved. Prints `model.select: (reset to default)`. Exits 0.
+- **AC-06**: `clp .model.select reset::1` with no `~/.clr/config.toml` → exits 0 idempotently; prints `model.select: (reset to default)`.
+- **AC-07**: `clp .model.select id::VALUE` creates `~/.clr/config.toml` (and its parent `.clr` directory) when absent. Exits 0.
+- **AC-08**: `clp .model.select id::VALUE` on an existing `config.toml` with other keys → other keys preserved. Exits 0.
 - **AC-09**: `clp .model.select id::VALUE reset::1` → exits 1 with stderr containing `mutually exclusive`.
 - **AC-10**: `clp .model.select format::json` with preference set → prints `{"subprocess_model":"claude-opus-4-8"}`. Exits 0.
 - **AC-11**: `clp .model.select` is listed in `clp .help` output.
@@ -78,7 +76,7 @@ Refresh (`clr refresh`) passes `IsolatedModel::Specific(REFRESH_DEFAULT_MODEL)` 
 
 | File | Relationship |
 |------|--------------|
-| [schema/008_clr_prefs_json.md](../schema/008_clr_prefs_json.md) | `~/.clr/prefs.json` schema — `subprocess_model` field |
+| [claude_core/docs/api/002_toml_io.md](../../../claude_core/docs/api/002_toml_io.md) | `~/.clr/config.toml` flat-TOML format and `claude_core::toml_io` parser/serializer — `model` key |
 
 ### Sources
 
@@ -86,7 +84,8 @@ Refresh (`clr refresh`) passes `IsolatedModel::Specific(REFRESH_DEFAULT_MODEL)` 
 |------|--------------|
 | `src/commands/model_select.rs` | `.model.select` command handler |
 | `src/registry.rs` | Registration of `.model.select` command and parameters |
-| `module/claude_runner_core/src/isolated.rs` | clr subprocess integration — reads `subprocess_model` preference; falls back to `ISOLATED_DEFAULT_MODEL` |
+| `module/claude_runner_core/src/isolated.rs` | `resolve_isolated_default_model()` — reads the `model` key; falls back to `ISOLATED_DEFAULT_MODEL` |
+| `module/claude_runner/src/cli/config.rs` | `load_config()` / `apply_config_defaults()` — reads the `model` key as the CLI's config-file tier |
 
 ### Tests
 

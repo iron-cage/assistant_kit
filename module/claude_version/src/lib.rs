@@ -22,7 +22,7 @@ pub const COMMANDS_YAML : &str = concat!( env!( "CARGO_MANIFEST_DIR" ), "/unilan
 pub mod adapter;
 
 #[ cfg( feature = "enabled" ) ]
-pub use claude_version_core::settings_io;
+pub use claude_core::settings_io;
 
 #[ cfg( feature = "enabled" ) ]
 pub mod output;

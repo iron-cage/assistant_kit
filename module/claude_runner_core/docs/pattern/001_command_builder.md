@@ -52,7 +52,7 @@ This pattern does not apply when the command is simple (1–2 parameters) or whe
 ### Consequences
 
 **Benefits:**
-- Single `Command::new("claude")` location — all execution centralized in `command.rs`
+- Single `Command::new("claude")` location — all execution centralized in `command/mod.rs`
 - Callers chain only the parameters they need; unused parameters take safe defaults
 - New parameters added as `with_*()` methods without breaking existing callers
 - Deprecated factory method (`generate()`) is removed entirely — old API cannot compile
@@ -71,7 +71,17 @@ ClaudeCommand::new()
   .execute()
 ```
 
-Pipes the file's content as the subprocess's standard input. The file is opened at `execute()` time; open failure returns `Err`. See [feature/005_stdin_file.md](../feature/005_stdin_file.md) for full semantics.
+Pipes the file's content as the subprocess's standard input. The file is opened at execution time (any of the 4 spawn methods); open failure returns `Err`. See [feature/005_stdin_file.md](../feature/005_stdin_file.md) for full semantics.
+
+**Raw stdin content method (`with_stdin_content`):**
+
+```rust
+ClaudeCommand::new()
+  .with_stdin_content(b"piped content".to_vec())
+  .execute()
+```
+
+Pipes caller-supplied raw bytes as the subprocess's standard input, materialized into an anonymous temp file at spawn time. `stdin_file` always takes priority when both are set. See [feature/005_stdin_file.md](../feature/005_stdin_file.md) for full semantics.
 
 **CLAUDECODE unsetting method (`with_unset_claudecode`):**
 
@@ -90,7 +100,8 @@ Controls whether `CLAUDECODE` is removed from the subprocess environment. Defaul
 | doc | [api/001_execution_api.md](../api/001_execution_api.md) | execute() and execute_interactive() contracts |
 | doc | [data_structure/001_command_types.md](../data_structure/001_command_types.md) | Type-safe enum parameters accepted by with_*() methods |
 | doc | [feature/001_execution_control.md](../feature/001_execution_control.md) | Interactive vs non-interactive execution modes |
-| source | `../../src/command.rs` | ClaudeCommand builder implementation |
+| source | `../../src/command/mod.rs` | ClaudeCommand builder implementation |
+| source | `../../src/command/params_core.rs` | Tier 1 critical `with_*()` builder methods |
 
 ### Sources
 

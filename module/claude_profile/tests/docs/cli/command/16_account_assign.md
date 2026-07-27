@@ -1,96 +1,73 @@
 # Command :: 16. `.account.assign` — Redirect Stub
 
-`.account.assign` is registered as a **redirect stub** by Feature 037 (shipped).
-It exits 1 with a targeted migration hint pointing to `assignee::USER@MACHINE name::X`.
-All marker-write behavior is now in `.accounts assignee::USER@MACHINE name::X` (or `assignee::0 name::X` for current machine) (Feature 065 — `assign::1` and `active::` are both REMOVED) — see `03_accounts.md` IT-43 through IT-46.
+> **REMOVED** — `.account.assign` was a redirector (Feature 037) that always exited 1 with a migration message. Task 409 deleted the redirector function backing `.account.assign` and its registration entirely; marker-write behavior lives at `.accounts assignee::USER@MACHINE name::X` (or `assignee::0 name::X` for current machine) (Feature 065 — see `03_accounts.md` IT-43 through IT-46). `clp .account.assign` now fails at the CLI-parse stage with a generic unknown-command error, identical to any other unrecognized command name — none of the redirector-specific behavior IT-1 through IT-7 below documented is observable any longer.
 
 | # | Test | Conditions | Exit |
 |---|------|-----------|------|
-| IT-1 | Redirect stub — targeted `assignee::` migration hint | `clp .account.assign name::alice@acme.com`; stderr contains `"assignee::"` migration hint; does NOT produce a generic "unknown command" error | 1 |
-| IT-2 | No-args invocation — same targeted hint | `clp .account.assign` (no args); stderr contains `"assignee::"` migration hint, identical to IT-1 | 1 |
-| IT-3 | `dry::1` ignored — registered but unread parameter | `clp .account.assign name::alice@acme.com dry::1`; identical exit/message to IT-1 — routine never reads its arguments | 1 |
-| IT-4 | Exact migration message text | Full literal stderr string matches redirector message verbatim, not just the `assignee::` substring | 1 |
-| IT-5 | No account-store mutation | No `{name}.json`, marker file, or `.credentials.json` written or modified across the call | 1 |
-| IT-6 | Repeated invocation is idempotent | Two consecutive calls produce identical exit code, identical message, no state drift | 1 |
-| IT-7 | `name::` value does not affect outcome | Nonexistent/arbitrary account name produces the identical exit code and message as a known account name | 1 |
-| IT-8 | N/A — no further distinguishing surface | See N/A entry below | 1 |
+| IT-1 | N/A — redirector fully removed (Task 409) | See N/A entry below | — |
+| IT-2 | N/A — redirector fully removed (Task 409) | See N/A entry below | — |
+| IT-3 | N/A — redirector fully removed (Task 409) | See N/A entry below | — |
+| IT-4 | N/A — redirector fully removed (Task 409) | See N/A entry below | — |
+| IT-5 | N/A — redirector fully removed (Task 409) | See N/A entry below | — |
+| IT-6 | N/A — redirector fully removed (Task 409) | See N/A entry below | — |
+| IT-7 | N/A — redirector fully removed (Task 409) | See N/A entry below | — |
+| IT-8 | N/A — redirector fully removed (Task 409) | See N/A entry below | — |
 
 **Source:** [feature/037_accounts_usage_param_unification.md AC-12](../../../../docs/feature/037_accounts_usage_param_unification.md),
 [cli/command_verb/009_assign.md — Migration (Feature 037)](../../../../docs/cli/command_verb/009_assign.md#migration-feature-037-feature-064-feature-065)
 
 ---
 
-### IT-1: Redirect stub — targeted `assignee::` migration hint
+### IT-1: N/A — redirector fully removed (Task 409)
 
-- **Given:** No accounts required (command is REMOVED — always redirects)
-- **When:** `clp .account.assign name::alice@acme.com`
-- **Then:** Exits 1. stderr contains `"assignee::"` migration hint string. Does NOT produce a generic "unknown command" error — the message is targeted.
-- **Exit:** 1
-- **Source:** [feature/037_accounts_usage_param_unification.md](../../../../docs/feature/037_accounts_usage_param_unification.md) AC-12, [command_verb/009_assign.md](../../../../docs/cli/command_verb/009_assign.md)
+> **N/A** — This case verified the redirector exited 1 with a targeted `assignee::` migration hint. Task 409 deleted the redirector function backing `.account.assign` and its registration entirely; the command now fails at the CLI-parse stage with a generic unknown-command error before any command-specific code runs, so there is no targeted-hint behavior left to assert.
+> Becomes testable when: no committed task.
 
 ---
 
-### IT-2: No-args invocation — same targeted hint
+### IT-2: N/A — redirector fully removed (Task 409)
 
-- **Given:** No accounts required
-- **When:** `clp .account.assign` (no arguments at all)
-- **Then:** Exits 1. stderr contains the `"assignee::"` migration hint — identical to IT-1's output despite the missing `name::` argument; the redirect stub ignores all arguments unconditionally.
-- **Exit:** 1
-- **Source:** [command_verb/009_assign.md](../../../../docs/cli/command_verb/009_assign.md); proven by `ft12b_account_assign_no_args` in `tests/cli/accounts_ft_test.rs`
+> **N/A** — This case verified the no-args invocation produced the identical targeted hint as IT-1. The redirect stub that ignored arguments unconditionally no longer exists; the generic unknown-command error is framework-produced and does not vary by argument presence.
+> Becomes testable when: no committed task.
 
 ---
 
-### IT-3: `dry::1` ignored — registered but unread parameter
+### IT-3: N/A — redirector fully removed (Task 409)
 
-- **Given:** `.account.assign` is registered with `nam(), dry(), trc()` (`src/registry.rs` line 217) — `dry::` IS a recognized parameter, unlike `13_account_rotate.md`'s zero-param case
-- **When:** `clp .account.assign name::alice@acme.com dry::1`
-- **Then:** Exits 1 with the identical targeted `assignee::` hint as IT-1 — `dry::1` is accepted by argument validation (it is registered) but has zero observable effect because the routine (`account_assign_redirector`) never reads its `_cmd`/`_ctx` parameters.
-- **Exit:** 1
-- **Source:** `src/registry.rs` lines 41-47 (`_cmd`, `_ctx` unused in `account_assign_redirector`) and line 217 (`dry()` in the registered parameter list)
+> **N/A** — This case verified `dry::1` was accepted but ignored because the routine never read its `_cmd`/`_ctx` parameters. Registration itself is gone — `dry::1` is no longer a recognized parameter for a nonexistent command, and the CLI-parse-stage rejection does not distinguish between argument sets.
+> Becomes testable when: no committed task.
 
 ---
 
-### IT-4: Exact migration message text
+### IT-4: N/A — redirector fully removed (Task 409)
 
-- **Given:** Any invocation
-- **When:** `clp .account.assign name::alice@acme.com`
-- **Then:** Exits 1. stderr contains the complete literal message `'.account.assign' is removed — use 'assignee::USER@MACHINE name::X' (or 'assignee::0 name::X' for current machine) on '.accounts' or '.usage' instead` verbatim (not merely the `assignee::` substring already covered by IT-1).
-- **Exit:** 1
-- **Source:** `src/registry.rs` line 45 (`account_assign_redirector` — exact `ErrorData::new` message string)
+> **N/A** — This case verified the exact literal migration-hint message text. The redirector function that produced that exact string has been deleted from `src/registry.rs`; no code path in the crate emits that message any longer.
+> Becomes testable when: no committed task.
 
 ---
 
-### IT-5: No account-store mutation
+### IT-5: N/A — redirector fully removed (Task 409)
 
-- **Given:** One account saved (`alice@acme.com`), no marker files present
-- **When:** `clp .account.assign name::alice@acme.com`
-- **Then:** Exits 1. `{name}.json`, any `_active*` marker file, and `~/.claude/.credentials.json` are all unmodified — the routine cannot write any file since it never reads its inputs.
-- **Exit:** 1
-- **Source:** `src/registry.rs` lines 41-47 (`_cmd`, `_ctx` unused — routine has no filesystem access path); mirrors the no-mutation pattern already proven for `.account.rotate` in `13_account_rotate.md` IT-3
+> **N/A** — This case verified no account-store mutation occurred on the redirector's exit-1 path. With the command fully deregistered, the CLI-parse stage rejects the invocation before any command routine — redirector or otherwise — could run, so there is no command-specific code path left whose mutation behavior could be asserted.
+> Becomes testable when: no committed task.
 
 ---
 
-### IT-6: Repeated invocation is idempotent
+### IT-6: N/A — redirector fully removed (Task 409)
 
-- **Given:** One account saved
-- **When:** `clp .account.assign name::alice@acme.com` invoked twice in sequence
-- **Then:** Both calls exit 1 with the identical message; no marker file or `{name}.json` state drift between the two calls.
-- **Exit:** 1
-- **Source:** `src/registry.rs` lines 41-47 (routine ignores `_cmd`/`_ctx` entirely, so repetition cannot introduce state drift by construction)
+> **N/A** — This case verified repeated invocation produced identical output with no state drift. With no redirector code path remaining, there is no command-specific output or state to compare across repeated calls — only the framework's generic unknown-command error, already covered structurally by IT-1's former scope.
+> Becomes testable when: no committed task.
 
 ---
 
-### IT-7: `name::` value does not affect outcome
+### IT-7: N/A — redirector fully removed (Task 409)
 
-- **Given:** Credential store contains only `alice@acme.com`
-- **When:** `clp .account.assign name::ghost@nonexistent.example`
-- **Then:** Exits 1 with the identical `assignee::` migration hint as IT-1 (which used a real, known account name) — the redirect is unconditional regardless of whether the named account exists, because `name::`'s value is never read by the routine.
-- **Exit:** 1
-- **Source:** `src/registry.rs` lines 41-47 (`_cmd` — which carries the parsed `name::` value — is never read)
+> **N/A** — This case verified the redirect was unconditional regardless of whether the named account existed. There is no command-specific argument handling left to distinguish — every invocation now fails identically at the CLI-parse stage regardless of `name::`'s value.
+> Becomes testable when: no committed task.
 
 ---
 
-### IT-8: N/A — no further distinguishing surface
+### IT-8: N/A — redirector fully removed (Task 409)
 
-> **N/A** — The redirector is a pure, argument-independent function (`_cmd`/`_ctx` unused, always the same `Err`) already exercised by IT-1 through IT-7 (default invocation, no-args, ignored-parameter, exact message text, no-mutation, idempotency, and value-independence). No further genuinely distinguishable behavior exists to test without inventing an unsubstantiated claim (e.g., positional bare-argument routing to `name` was investigated via the shared `nam()` helper used elsewhere, but no direct test evidence exists for this specific command, so it is not asserted here).
+> **N/A** — This case was already N/A before Task 409 (the redirector was a pure, argument-independent function with no further distinguishable behavior beyond IT-1 through IT-7). Task 409 has since deleted the redirector itself, so the original reasoning is superseded by the same full-removal rationale as IT-1 through IT-7 above.
 > Becomes testable when: no committed task.

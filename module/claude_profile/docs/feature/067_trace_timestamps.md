@@ -3,7 +3,7 @@
 ### Scope
 
 - **Purpose**: Replace the `[trace]` bracket prefix on all diagnostic trace output with a UTC timestamp, enabling time-based correlation between `clp` trace lines and watchdog logs.
-- **Responsibility**: Every diagnostic line emitted when `trace::1` is active is prefixed with `trace_ts()`, a function in `claude_profile_core::account` that returns `"YYYY-MM-DD · HH:MM:SS · "` (UTC). All production source files that emit `trace::1` lines import and call `trace_ts()` in place of the former `"[trace] "` string literal.
+- **Responsibility**: Every diagnostic line emitted when `trace::1` is active is prefixed with `trace_ts()`, a function in `claude_profile_core::account` that returns `"YYYY-MM-DD · HH:MM:SS UTC · "`. All production source files that emit `trace::1` lines import and call `trace_ts()` in place of the former `"[trace] "` string literal.
 - **In Scope**: `trace_ts()` implementation in `claude_profile_core/src/account.rs`; all 13 production files that emit `trace::1` diagnostic lines (see Sources); removal of all `"[trace] "` string literals from production `eprintln!`/`writeln!( std::io::stderr(), ...)` calls; help-text updates in `src/registry.rs`; test assertion updates across 12 test files.
 - **Out of Scope**: Trace output content (message, label, account name, arguments) — only the prefix changes. The `trace::1` gate logic — `if trace { ... }` call-site guards are unchanged. The watchdog script or any external consumer of trace output.
 
@@ -19,11 +19,11 @@ All diagnostic trace lines previously began with the literal string `"[trace] "`
 pub fn trace_ts() -> String
 {
   let utc = chrono_now_utc();
-  format!( "{} · {} · ", &utc[..10], &utc[11..19] )
+  format!( "{} · {} UTC · ", &utc[..10], &utc[11..19] )
 }
 ```
 
-`chrono_now_utc()` returns an ISO-8601 string in `YYYY-MM-DDTHH:MM:SSZ` format. `trace_ts()` slices it to produce `"YYYY-MM-DD · HH:MM:SS · "` — the `T` separator becomes ` · ` and the trailing `Z` becomes ` · `.
+`chrono_now_utc()` returns an ISO-8601 string in `YYYY-MM-DDTHH:MM:SSZ` format. `trace_ts()` slices it to produce `"YYYY-MM-DD · HH:MM:SS UTC · "` — the `T` separator becomes ` · `, and a literal `UTC` marker replaces the trailing `Z` that the slice drops, so the rendered output stays distinguishable from any other timestamp source (e.g. local-clocked) sharing the same `"YYYY-MM-DD · HH:MM:SS · "` shape in a combined log/transcript stream (BUG-338).
 
 Each production file replaces its `"[trace] "` literal with a `trace_ts()` first argument:
 
@@ -46,7 +46,7 @@ The `#[inline]` attribute satisfies `clippy::missing_inline_in_public_items`. Th
 ### Acceptance Criteria
 
 - **AC-01**: `trace_ts()` is exported as `pub fn` from `claude_profile_core::account`. It is not gated with `#[cfg(test)]`, is not `pub(crate)`, and is unconditionally available to all callers at runtime.
-- **AC-02**: `trace_ts()` returns a string matching `"YYYY-MM-DD · HH:MM:SS · "` (UTC). The date portion is `chrono_now_utc()[..10]` and the time portion is `chrono_now_utc()[11..19]`, joined with ` · ` separators.
+- **AC-02**: `trace_ts()` returns a string matching `"YYYY-MM-DD · HH:MM:SS UTC · "`. The date portion is `chrono_now_utc()[..10]` and the time portion is `chrono_now_utc()[11..19]`, joined with ` · ` separators, followed by a literal `UTC` marker before the trailing ` · ` — disambiguates this UTC-clocked prefix from any other timestamp source (e.g. local-clocked) sharing the same shape in a combined log/transcript stream (BUG-338).
 - **AC-03**: No `"[trace] "` literal string remains in any production `eprintln!` or `writeln!( std::io::stderr(), ...)` call across the 13 affected source files. Every trace line passes `trace_ts()` as the first format argument.
 - **AC-04**: `trace_ts()` is unconditional — it does not inspect any trace flag internally. The `if trace { ... }` call-site guard is the gating mechanism; `trace_ts()` is only called inside that guard.
 - **AC-05**: All 13 production files use `use claude_profile_core::account::trace_ts` to resolve `trace_ts`. No inline path `claude_profile_core::account::trace_ts()` is used at call sites.
@@ -54,7 +54,9 @@ The `#[inline]` attribute satisfies `clippy::missing_inline_in_public_items`. Th
 
 ### Bugs
 
-_(none)_
+| Bug | Summary |
+|-----|---------|
+| BUG-338 🟢 Fixed (TSK-419) | `trace_ts()`'s rendered output carried no explicit timezone marker, visually indistinguishable from a differently-clocked timestamp source (e.g. a wrapper's local-time banner) sharing the same `"YYYY-MM-DD · HH:MM:SS · "` shape in a combined transcript. Fixed per AC-02: `trace_ts()` now appends a literal ` UTC` marker before the trailing separator, matching the Design section's target format above. |
 
 ### Dependencies
 
@@ -64,7 +66,7 @@ _(none — `trace_ts()` depends only on `chrono_now_utc()` which already exists 
 
 | File | Relationship |
 |------|-------------|
-| [cli/param/023_trace.md](../cli/param/023_trace.md) | `trace::` parameter — governs when trace output is emitted; documents the `YYYY-MM-DD · HH:MM:SS · ` prefix format and example trace sessions |
+| [cli/param/023_trace.md](../cli/param/023_trace.md) | `trace::` parameter — governs when trace output is emitted; documents the `YYYY-MM-DD · HH:MM:SS UTC · ` prefix format and example trace sessions |
 
 ### Features
 
