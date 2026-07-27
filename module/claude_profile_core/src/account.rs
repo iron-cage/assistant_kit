@@ -1832,16 +1832,23 @@ pub fn chrono_now_utc() -> String
 
 /// Return a UTC timestamp prefix string for diagnostic trace lines.
 ///
-/// Format: `"YYYY-MM-DD · HH:MM:SS · "` — two middle dots separate date, time, and body.
+/// Format: `"YYYY-MM-DD · HH:MM:SS UTC · "` — two middle dots separate date, time, and body.
 /// Use as first argument in `eprintln!( "{}label  name  ...", trace_ts() )` so the caller
 /// label and account name follow immediately after the space.
+///
+/// Fix(BUG-338)
+/// Root cause: prefix dropped the trailing `Z` (UTC marker) from `chrono_now_utc()`'s
+/// ISO-8601 output during slicing, leaving a timestamp shape indistinguishable from a
+/// differently-clocked source in a combined transcript.
+/// Pitfall: a bare `.contains("UTC")` check is insufficient — verify the marker's exact
+/// position (between time and trailer), not just its presence.
 #[ inline ]
 #[ must_use ]
 pub fn trace_ts() -> String
 {
   let utc = chrono_now_utc();
   // chrono_now_utc produces "YYYY-MM-DDTHH:MM:SSZ"; slice date and time parts.
-  format!( "{} · {} · ", &utc[ ..10 ], &utc[ 11..19 ] )
+  format!( "{} · {} UTC · ", &utc[ ..10 ], &utc[ 11..19 ] )
 }
 
 /// Parse an ISO-8601 UTC timestamp to seconds since epoch.
