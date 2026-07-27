@@ -37,6 +37,7 @@
 //! | `json_parse_flat_object_rejects_non_object` | `"not an object"` (no braces) → `Err(InvalidData)` |
 
 use claude_core::settings_io::{ get_string_setting, json_parse_flat_object, StoredAs };
+use std::io;
 
 fn write_settings( dir : &std::path::Path, raw_json : &str ) -> std::path::PathBuf
 {
@@ -107,7 +108,7 @@ fn get_string_setting_missing_file_returns_not_found()
   let dir  = tempfile::TempDir::new().expect( "temp dir" );
   let path = dir.path().join( "does_not_exist.json" );
   let err  = get_string_setting( &path, "subprocess_model" ).unwrap_err();
-  assert_eq!( err.kind(), std::io::ErrorKind::NotFound );
+  assert_eq!( err.kind(), io::ErrorKind::NotFound );
 }
 
 #[test]
@@ -116,7 +117,7 @@ fn get_string_setting_malformed_value_returns_invalid_data()
   let dir  = tempfile::TempDir::new().expect( "temp dir" );
   let path = write_settings( dir.path(), r#"{"subprocess_model": undefined}"# );
   let err  = get_string_setting( &path, "subprocess_model" ).unwrap_err();
-  assert_eq!( err.kind(), std::io::ErrorKind::InvalidData );
+  assert_eq!( err.kind(), io::ErrorKind::InvalidData );
 }
 
 #[test]
@@ -141,7 +142,7 @@ fn json_parse_flat_object_empty_object_returns_empty_vec()
 fn json_parse_flat_object_rejects_non_object()
 {
   let err = json_parse_flat_object( r#""not an object""# ).unwrap_err();
-  assert_eq!( err.kind(), std::io::ErrorKind::InvalidData );
+  assert_eq!( err.kind(), io::ErrorKind::InvalidData );
 }
 
 // ─── Parameter-trace structural guards (Task 313: T07-T10) ────────────────────
