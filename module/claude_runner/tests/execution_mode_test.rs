@@ -41,7 +41,7 @@
 use std::process::Command;
 
 mod cli_binary_test_helpers;
-use cli_binary_test_helpers::{ fake_claude, fake_claude_dir, make_session_dir, run_with_path };
+use cli_binary_test_helpers::{ fake_claude, fake_claude_dir, make_session_dir, run_with_path, run_with_path_stdin };
 
 // E01: Interactive mode: binary not found exits 1 with error on stderr.
 #[ test ]
@@ -411,5 +411,128 @@ fn s80_file_nonexistent_path_errors()
   assert!(
     stderr.contains( "/tmp/nonexistent_99999.txt" ),
     "stderr must contain the file path. Got: {stderr}",
+  );
+}
+
+// BUG-424: plain pipe (no --file) must forward non-JSON stdin to the subprocess.
+// test_kind: bug_reproducer(BUG-424)
+//
+// ## Root Cause
+// `detect_stdin_json()` read stdin via `Read::read_to_string` into a `String`, sniffed
+// for a leading `{`, and returned `Some(src)` on match or `None` (discarding `src`
+// entirely) otherwise — any piped content that wasn't a JSON config object vanished
+// with no code path left to recover or forward it.
+//
+// ## Why Not Caught
+// All existing stdin-pipe tests (JSON-config, no-stdin) either piped a valid JSON
+// object or piped nothing at all — no test exercised the "piped, non-JSON" case, which
+// is exactly the shape of a real `cat notes.txt | clr run "..."` invocation.
+//
+// ## Fix Applied
+// `detect_stdin_json()` now reads raw bytes (`read_to_end` into `Vec<u8>`) and returns
+// a `StdinPayload` enum: `Json(String)` on the leading-`{` match (unchanged JSON path),
+// `Raw(Vec<u8>)` otherwise. `dispatch_run()` threads `Raw` bytes into a new
+// `CliArgs::stdin_content` field; `builder.rs` calls `.with_stdin_content(bytes)` when
+// `--file` is absent, mirroring the existing `cli.file` → `.with_stdin_file(...)` wiring.
+//
+// ## Prevention
+// Any stdin-sniffing gate that discards on a non-match must be treated as a forwarding
+// bug until proven otherwise — "not what I'm looking for" is never the same as "safe
+// to drop."
+//
+// ## Pitfall
+// The read must be byte-safe (`read_to_end`/`Vec<u8>`), not `read_to_string`/`String` —
+// a lossy UTF-8 round-trip would corrupt binary content (see the binary-content test
+// below) even after the discard bug itself was fixed.
+#[ test ]
+fn bug_reproducer_424_plain_pipe_content_forwarded_to_stdin()
+{
+  let script = "#!/bin/sh\ncat\n";
+  let ( _tmp, path ) = fake_claude( script );
+  let out = run_with_path_stdin(
+    &[ "--no-ultrathink", "--max-sessions", "0", "t" ],
+    &path,
+    b"piped_content_bug424",
+  );
+  assert!( out.status.success(), "must exit 0. stderr: {}", String::from_utf8_lossy( &out.stderr ) );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  assert!(
+    stdout.contains( "piped_content_bug424" ),
+    "plain pipe (no --file) must forward stdin content to subprocess stdin. Got:\n{stdout}",
+  );
+}
+
+// BUG-424: same as above but via `clr ask` instead of `clr run`.
+// test_kind: bug_reproducer(BUG-424)
+#[ test ]
+fn bug_reproducer_424_ask_plain_pipe_content_forwarded_to_stdin()
+{
+  let script = "#!/bin/sh\ncat\n";
+  let ( _tmp, path ) = fake_claude( script );
+  let out = run_with_path_stdin(
+    &[ "--no-ultrathink", "--max-sessions", "0", "ask", "t" ],
+    &path,
+    b"piped_content_bug424_ask",
+  );
+  assert!( out.status.success(), "must exit 0. stderr: {}", String::from_utf8_lossy( &out.stderr ) );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  assert!(
+    stdout.contains( "piped_content_bug424_ask" ),
+    "ask: plain pipe must forward stdin content. Got:\n{stdout}",
+  );
+}
+
+// BUG-424: --file continues to win over piped stdin content at the CLI layer.
+// test_kind: bug_reproducer(BUG-424)
+#[ test ]
+fn bug_reproducer_424_file_wins_over_piped_stdin()
+{
+  let script = "#!/bin/sh\ncat\n";
+  let ( _tmp, path ) = fake_claude( script );
+  let input_file = tempfile::NamedTempFile::new().expect( "create temp" );
+  std::fs::write( input_file.path(), "from_file_not_pipe" ).expect( "write" );
+  let out = run_with_path_stdin(
+    &[ "--no-ultrathink", "--max-sessions", "0", "--file", input_file.path().to_str().unwrap(), "t" ],
+    &path,
+    b"piped_content_should_be_ignored",
+  );
+  assert!( out.status.success(), "must exit 0. stderr: {}", String::from_utf8_lossy( &out.stderr ) );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  assert!(
+    stdout.contains( "from_file_not_pipe" ),
+    "--file must win over piped stdin. Got:\n{stdout}",
+  );
+  assert!(
+    !stdout.contains( "piped_content_should_be_ignored" ),
+    "piped content must be ignored when --file is present. Got:\n{stdout}",
+  );
+}
+
+// BUG-424: binary (non-UTF-8) piped content forwards byte-for-byte, not lossily.
+// test_kind: bug_reproducer(BUG-424)
+//
+// Captures the subprocess's *own* stdin to a file rather than asserting on `out.stdout`:
+// clr's print-mode JSON-summary rendering lossily re-encodes the subprocess's stdout as
+// UTF-8 (pre-existing behavior in `execute()`/`execution.rs`, correct for real Claude JSON
+// output — unrelated to BUG-424's stdin-forwarding fix). Asserting on `out.stdout` would
+// test that unrelated lossy path instead of verifying stdin fidelity to the subprocess.
+#[ test ]
+fn bug_reproducer_424_binary_content_forwarded_verbatim()
+{
+  let out_file = tempfile::NamedTempFile::new().expect( "create temp" );
+  let out_path = out_file.path();
+  let script = format!( "#!/bin/sh\ncat > \"{}\"\n", out_path.display() );
+  let ( _tmp, path ) = fake_claude( &script );
+  let binary_content : &[ u8 ] = &[ 0xFF, 0xFE, 0x00, 0x01, b'{', 0x80, 0x81 ];
+  let out = run_with_path_stdin(
+    &[ "--no-ultrathink", "--max-sessions", "0", "t" ],
+    &path,
+    binary_content,
+  );
+  assert!( out.status.success(), "must exit 0. stderr: {}", String::from_utf8_lossy( &out.stderr ) );
+  let captured = std::fs::read( out_path ).expect( "read captured subprocess stdin" );
+  assert_eq!(
+    captured.as_slice(), binary_content,
+    "binary content must be forwarded byte-for-byte to subprocess stdin. Got: {captured:?}",
   );
 }

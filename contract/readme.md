@@ -9,3 +9,4 @@ the corresponding contract test goes RED.
 | Directory | Responsibility |
 |-----------|----------------|
 | `claude_code/` | Behavioral contract suite and documentation for the `claude` binary |
+| `sdk/` | Contract documentation for the Anthropic Agent SDK (TypeScript/Python) |

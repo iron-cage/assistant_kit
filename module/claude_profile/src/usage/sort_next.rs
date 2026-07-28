@@ -37,6 +37,9 @@ where F : Fn( &AccountQuota ) -> bool
     let Ok( data ) = &aq.result else { continue; };
     if data.five_hour.as_ref().is_some_and( |p| p.utilization >= 85.0 ) { continue; }
     if ( aq.expires_at_ms / 1000 ).saturating_sub( now_secs ) == 0 { continue; }
+    // Gate 9 (Claim-locked): unconditional — no force::1 bypass at the eligibility layer,
+    // unlike the force-bypassable G9 explicit-command gate on .account.use/assignee:: (Feature 070).
+    if aq.claim_lock { continue; }
     if !extra( aq ) { continue; }
     return Some( idx );
   }

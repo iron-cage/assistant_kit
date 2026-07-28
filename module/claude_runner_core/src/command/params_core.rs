@@ -237,6 +237,29 @@ impl ClaudeCommand {
     self
   }
 
+  /// Set raw bytes to be piped to the subprocess stdin
+  ///
+  /// When set (and `stdin_file` is absent), each spawn method materializes the
+  /// content into an anonymous temp file and attaches it to the subprocess's
+  /// standard input via `Stdio::from(file)`. `stdin_file` always takes priority
+  /// over `stdin_content` when both are set.
+  ///
+  /// # Example
+  ///
+  /// ```no_run
+  /// use claude_runner_core::ClaudeCommand;
+  ///
+  /// let cmd = ClaudeCommand::new()
+  ///   .with_stdin_content( b"piped content".to_vec() );
+  /// ```
+  #[ inline ]
+  #[ must_use ]
+  pub fn with_stdin_content( mut self, content : Vec< u8 > ) -> Self
+  {
+    self.stdin_content = Some( content );
+    self
+  }
+
   /// Control whether `CLAUDECODE` is removed from the subprocess environment
   ///
   /// Default: `true` (removes `CLAUDECODE`). Set to `false` to preserve

@@ -8,7 +8,7 @@ use unilang::types::Value;
 use crate::output::{ OutputFormat, OutputOptions, json_escape };
 use claude_version_core::config_catalog::catalog;
 use claude_version_core::config_resolve::{ resolve, resolve_all, ResolvedValue };
-use claude_version_core::settings_io::{ StoredAs, infer_type, remove_setting, set_setting };
+use claude_core::settings_io::{ StoredAs, infer_type, remove_setting, set_setting };
 
 /// `.config` — show, get, set, or unset Claude Code configuration settings
 /// with 4-layer effective-value resolution.

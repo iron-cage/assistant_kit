@@ -167,7 +167,7 @@ Precedence: CLI arg > env var > settings config.
 | 1 | [prompt](052_prompt.md) | `<message>` (positional) | — | — | string | — | pre-v1.0 | Message sent to Claude |
 | 2 | [print](051_print.md) | `-p` / `--print` | — | — | bool | off | pre-v1.0 | Print response and exit; skip TTY |
 | 3 | [continue](017_continue.md) | `-c` / `--continue` | — | — | bool | off | pre-v1.0 | Continue most recent session |
-| 4 | [model](042_model.md) | `--model <model>` | — | `model` | string | `claude-sonnet-4-6` | pre-v1.0 | Model alias or full ID |
+| 4 | [model](042_model.md) | `--model <model>` | — | `model` | string | `claude-sonnet-5` | pre-v1.0 | Model alias or full ID |
 | 5 | [verbose](071_verbose.md) | `--verbose` | — | — | bool | off | pre-v1.0 | Override verbose mode from config |
 | 6 | [api_key](007_api_key.md) | — | `ANTHROPIC_API_KEY` | — | string | — | pre-v1.0 | Anthropic API key (`--api-key` removed from CLI) |
 | 7 | [system_prompt](063_system_prompt.md) | `--system-prompt <prompt>` | — | — | string | — | pre-v1.0 | Replace default system prompt entirely |

@@ -6,7 +6,7 @@ without requiring a shell pipeline. The file is opened by the runner at
 subprocess spawn time — not by `claude` itself.
 
 - **Type:** [`FilePath`](../type/12_file_path.md)
-- **Default:** — (unset; subprocess receives no stdin)
+- **Default:** — (unset; subprocess receives no stdin unless raw content is piped — see Note below)
 - **Command:** [`run`](../command/01_run.md)
 - **Group:** [Runner Control](../param_group/02_runner_control.md)
 
@@ -26,6 +26,13 @@ any `--dir` change is applied).
 **Note:** `--file` is distinct from `--json-schema` — `--file` feeds raw
 file bytes to stdin; `--json-schema` injects a JSON Schema string as a
 structured-output constraint forwarded to `claude`.
+
+**Note:** For `run`/`ask`, when `--file` is absent but stdin is piped, non-empty,
+and not JSON (doesn't start with `{`), its raw bytes are forwarded to the
+subprocess stdin automatically — see
+[feature/004_json_config.md](../../feature/004_json_config.md) for the full
+stdin-classification design. `--file` always takes priority over this
+fallback when both are present.
 
 **Env var:** `CLR_FILE` — accepts a file path string; applied when `--file` is absent from
 the CLI. `CLR_FILE=/path/to/file clr "task"` is equivalent to `clr --file /path/to/file "task"`.

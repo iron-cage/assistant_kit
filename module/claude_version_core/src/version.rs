@@ -5,7 +5,7 @@
 
 use claude_core::ClaudePaths;
 use claude_core::process::find_claude_processes;
-use crate::settings_io::{ get_setting, set_setting, remove_setting, set_env_var, remove_env_var };
+use claude_core::settings_io::{ get_setting, set_setting, remove_setting, set_env_var, remove_env_var };
 use crate::CoreError;
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -244,6 +244,10 @@ impl core::fmt::Display for VersionsDirLockMode
 #[ inline ]
 #[ must_use ]
 #[ cfg( unix ) ]
+// `core` has no `io` module (OS error codes are inherently std-only), and this
+// whole function is already `std::fs`/`std::os::unix`-bound, so `std_instead_of_core`'s
+// suggested `core::` path does not exist for the `ErrorKind` match guard below.
+#[ allow( clippy::std_instead_of_core ) ]
 pub fn read_versions_dir_lock_mode() -> VersionsDirLockMode
 {
   use std::os::unix::fs::PermissionsExt;

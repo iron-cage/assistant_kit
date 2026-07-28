@@ -67,6 +67,12 @@ pub use cli::{ render_summary, resolve_fields, extract_session_id };
 #[ allow( unused_imports ) ]
 pub use cli::gate_max_attempts_from;
 
+// TOOLS is used by tests/tools_command_test.rs's sync-guard tests (BUG-409) — same rationale as above.
+#[ cfg( feature = "enabled" ) ]
+#[ doc( hidden ) ]
+#[ allow( unused_imports ) ]
+pub use cli::TOOLS;
+
 #[ cfg( feature = "enabled" ) ]
 /// Run the `clr`/`claude_runner` CLI.
 ///
@@ -77,7 +83,7 @@ pub fn run_cli()
   use cli::{
     print_help, dispatch_run,
     dispatch_ask, dispatch_isolated, dispatch_refresh, dispatch_ps, dispatch_kill,
-    dispatch_tools, dispatch_scope, guard_unknown_subcommand,
+    dispatch_tools, dispatch_scope, dispatch_query, run_query_daemon, guard_unknown_subcommand,
   };
 
   let tokens : Vec< String > = std::env::args().skip( 1 ).collect();
@@ -119,6 +125,8 @@ pub fn run_cli()
     Some( "kill" )     => dispatch_kill( &tokens ),
     Some( "tools" )    => dispatch_tools( &tokens ),
     Some( "scope" )    => dispatch_scope( &tokens ),
+    Some( "query" )    => dispatch_query( &tokens ),
+    Some( "__query_daemon" ) => run_query_daemon( &tokens ),
     _                  => {}
   }
 

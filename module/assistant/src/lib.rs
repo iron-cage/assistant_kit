@@ -189,7 +189,6 @@ mod cli
             CommandEntry { name : ".account.delete".to_string(),     desc : "Remove an account".to_string() },
             CommandEntry { name : ".account.relogin".to_string(),    desc : "Re-authenticate an account".to_string() },
             CommandEntry { name : ".account.renewal".to_string(),    desc : "Show account renewal info".to_string() },
-            CommandEntry { name : ".account.rotate".to_string(),     desc : "Rotate credentials (DEPRECATED)".to_string() },
             CommandEntry { name : ".account.inspect".to_string(),    desc : "Inspect account details".to_string() },
           ],
         },

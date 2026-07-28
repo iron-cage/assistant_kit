@@ -40,6 +40,8 @@
 | `role` | string | `role::` CLI param at save time | `save()` when `role::` param given | `list()` → `role` metadata label (opt-in `cols::+role`) | [029](../feature/029_account_host_metadata.md) |
 | `_renewal_at` | string (ISO 8601) | `at::` or `from_now::` CLI param | `.account.renewal` command | `list()` → `~Renews` / `→ Next` columns | [030](../feature/030_account_renewal_override.md) |
 | `owner` | string | `owner::` CLI param or `current_identity()` | `.accounts owner::`, `.account.assign` (removed in F037) | `list()` → ownership gate checks; `current_identity()` comparison | [036](../feature/036_account_ownership.md), [063](../feature/063_explicit_ownership_claim.md) |
+| `claim_lock` | bool | `lock::` CLI param | `.accounts lock::` | Gate 9 (eligibility); G9 (explicit-command on `.account.use`/`assignee::`) | [070](../feature/070_account_claim_and_reservation_control.md) |
+| `reserve` | bool | `reserve::` CLI param | `.accounts reserve::` | `find_next_for_strategy()` leading sort key | [070](../feature/070_account_claim_and_reservation_control.md) |
 | `cache` | object | Live API response via `write_quota_cache()` | `apply_touch()` after touch; `apply_refresh()` after refresh; `fetch.rs` on successful fetch | `fetch.rs` cache fallback; `approximate_quota()` | [033](../feature/033_quota_cache.md) |
 | `cache.fetched_at` | string (ISO 8601) | Current time at cache write | `write_quota_cache()` | Cache age staleness indicator | [033](../feature/033_quota_cache.md) |
 | `cache.status` | string (always `"ok"`) | Hardcoded literal at cache write time | `write_quota_cache()` | Not read by any consumer — write-only | [033](../feature/033_quota_cache.md) |
@@ -49,6 +51,7 @@
 | `cache.model_override` | string | `apply_model_override()` decision | `write_cache_string()` | Model override restore on next run | [033](../feature/033_quota_cache.md) |
 | `cache.last_touch_at` | string (ISO 8601) | Touch subprocess completion time | `write_cache_field()` after touch | Touch lifecycle state | [024](../feature/024_session_touch.md), [033](../feature/033_quota_cache.md) |
 | `cache.touch_idle` | bool | Touch subprocess idle determination | `write_cache_field()` after touch | Touch lifecycle gating | [024](../feature/024_session_touch.md), [033](../feature/033_quota_cache.md) |
+| `cache.org_created_at` | string (ISO 8601) | Live `fetch_oauth_account` response `org_created_at` field | `write_quota_cache()` after successful account fetch | Non-live-fetch branches → `AccountQuota.org_created_at` → `~Renews` Estimate (AC-15) | [033](../feature/033_quota_cache.md) |
 | `history` | array of objects | Successful API measurements | `fetch.rs` after every successful `fetch_oauth_usage()` call | `approximate_quota()` in `approx.rs` | [040](../feature/040_quota_measurement_history.md) |
 | `history[*].ts` | number (unix secs) | Measurement timestamp | history append | Polynomial fitting | [040](../feature/040_quota_measurement_history.md) |
 | `history[*].five_hour` | number (%) | `five_hour.utilization` at measurement time | history append | Polynomial fitting | [040](../feature/040_quota_measurement_history.md) |
@@ -63,6 +66,7 @@ These fields are written by one caller and never touched by others (preserved vi
 
 - `_renewal_at` — written only by `.account.renewal`; never overwritten by `.account.save`
 - `owner` — written only by ownership operations; preserved by save
+- `claim_lock`, `reserve` — written only by `.accounts lock::`/`reserve::`; preserved by save; both default to `false` when absent
 - `host`, `role` — written at save time with explicit params; preserved on re-save without those params
 
 ### Example
@@ -87,6 +91,8 @@ These fields are written by one caller and never touched by others (preserved vi
   "role": "work",
   "_renewal_at": "2026-07-01T00:00:00Z",
   "owner": "user1@w003",
+  "claim_lock": false,
+  "reserve": false,
   "cache": {
     "fetched_at": "2026-06-23T12:00:00Z",
     "status": "ok",
@@ -95,7 +101,8 @@ These fields are written by one caller and never touched by others (preserved vi
     "seven_day_sonnet": null,
     "model_override": "opus",
     "last_touch_at": "2026-06-23T06:30:00Z",
-    "touch_idle": false
+    "touch_idle": false,
+    "org_created_at": "2026-01-01T00:00:00Z"
   },
   "history": [
     { "ts": 1749900000, "five_hour": 10.0, "seven_day": 20.0, "seven_day_sonnet": null,
@@ -124,6 +131,7 @@ These fields are written by one caller and never touched by others (preserved vi
 | [feature/036_account_ownership.md](../feature/036_account_ownership.md) | `owner` field |
 | [feature/040_quota_measurement_history.md](../feature/040_quota_measurement_history.md) | `history` array |
 | [feature/063_explicit_ownership_claim.md](../feature/063_explicit_ownership_claim.md) | `owner::` param write path |
+| [feature/070_account_claim_and_reservation_control.md](../feature/070_account_claim_and_reservation_control.md) | `claim_lock`, `reserve` fields |
 
 ### Invariants
 

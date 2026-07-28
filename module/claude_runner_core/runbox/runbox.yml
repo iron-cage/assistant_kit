@@ -23,6 +23,12 @@ bin_plugin_volume: /tmp/will_test_targets
 # .test mounts as required+rw; .shell mounts as optional+ro
 plugin_mount: ~/.claude:/workspace/.claude:directory
 
+# binary mount plugin: name:/container/path — bind-mounts the host's own `claude` CLI (resolved
+# via `which` at .test invocation time) read-only into the container, so real-subprocess control
+# tests run against whatever claude version/auth the host already has, with no separate install
+# or credentials baked into the image.
+bin_mount: claude:/usr/local/bin/claude
+
 
 # ── Formerly hardcoded parameters (now configurable) ─────────────────────────
 # base_image: rust:slim          # FROM for chef and test stages

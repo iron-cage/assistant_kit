@@ -17,13 +17,14 @@ post-touch cache write, refresh-before-touch ordering, and Sonnet model requirem
 | AC-7 | Post-touch refetch writes quota cache (BUG-309) | Post-touch | ✅ |
 | AC-8 | `refresh::` ordering — runs before `touch::` (structural) | Ordering | ✅ |
 | AC-9 | Sonnet model required when `son_idle=true` (BUG-289 fix) | Model | ✅ |
+| AC-10 | 5h-exhaustion skip guard fires only at full exhaustion, not 15%-remaining (TSK-418) | Predicate | ✅ |
 
 ---
 
 ### AC-1: Idle 7d window (`resets_at=None`) — touch fires
 
 - **Given:** An account with `seven_day.resets_at = None` (7d window not started). Account is
-  owned, not occupied elsewhere, not error, `five_hour_left > 15%`, `seven_day_left > 0%`.
+  owned, not occupied elsewhere, not error, `five_hour_left > 0%`, `seven_day_left > 0%`.
 - **When:** `apply_touch()` evaluates the idle-window predicate.
 - **Then:** Touch fires. `refresh_account_token()` is called to submit a `["--print", "."]`
   subprocess, transitioning the 7d window from `idle` to `active`.
@@ -38,7 +39,7 @@ post-touch cache write, refresh-before-touch ordering, and Sonnet model requirem
 - **Given:** An account where ALL three quota windows (5h, 7d, 7d-Sonnet) have
   `resets_at = Some(timestamp)` (all windows in `active` state).
 - **When:** `apply_touch()` evaluates the idle-window predicate.
-- **Then:** Touch does NOT fire. `reason: all_running` skip-reason emitted. No window needs
+- **Then:** Touch does NOT fire. `reason: already active` skip-reason emitted. No window needs
   to be opened — the touch invocation serves no purpose.
 - **Source fn:** `it_apply_touch_trigger_skips_resets_at_some` in
   `tests/usage/touch_tests.rs`
@@ -52,7 +53,7 @@ post-touch cache write, refresh-before-touch ordering, and Sonnet model requirem
   expired).
 - **When:** `apply_touch()` evaluates the error-early-exit predicate.
 - **Then:** Touch is skipped immediately, BEFORE the `touch_idle` cache guard is checked.
-  `reason: Err` is emitted. Only accounts with `Ok(data)` quota results are eligible for touch.
+  `reason: error account` is emitted. Only accounts with `Ok(data)` quota results are eligible for touch.
 - **Source fn:** `test_apply_touch_error_account_skips_before_touch_idle_guard` in
   `tests/usage/touch_tests.rs`
 - **Source:** [subprocess/004_session_touch_invocation.md](../../../docs/subprocess/004_session_touch_invocation.md)
@@ -137,5 +138,23 @@ post-touch cache write, refresh-before-touch ordering, and Sonnet model requirem
   `resolve_model(Auto)` logic selects Sonnet specifically when `son_idle=true` to ensure ALL
   quota windows can be activated in a single touch invocation.
 - **Source fn:** `test_mre_bug289_son_running_false_haiku_touch_fires_on_every_call` in
+  `tests/usage/touch_tests.rs`
+- **Source:** [subprocess/004_session_touch_invocation.md](../../../docs/subprocess/004_session_touch_invocation.md)
+
+---
+
+### AC-10: 5h-exhaustion skip guard fires only at full exhaustion (`five_hour_left ≤ 0.0%`)
+
+- **Given:** Two accounts, both idle. Account A: `five_hour.utilization = 89.0` (11% remaining,
+  matching the real-world i16@wbox.pro scenario). Account B: `five_hour.utilization = 100.0`
+  (0% remaining, fully exhausted).
+- **When:** `apply_touch()` evaluates the 5h-exhaustion skip guard for each account.
+- **Then:** Account A (11% remaining) is NOT skipped — touch fires. Account B (0% remaining)
+  IS skipped, `reason: h-exhausted`. The guard is deliberately decoupled from
+  `H_EXHAUSTED_THRESHOLD = 15.0` (the display/sort classification constant, TSK-190) — a
+  partially-exhausted account still benefits from a touch subprocess; only a fully-exhausted
+  account does not. Fix TSK-418 (corrects BUG-178/TSK-196's over-broad reuse of the display
+  threshold).
+- **Source fn:** `test_tsk418_apply_touch_fires_at_partial_exhaustion_skips_at_full_exhaustion` in
   `tests/usage/touch_tests.rs`
 - **Source:** [subprocess/004_session_touch_invocation.md](../../../docs/subprocess/004_session_touch_invocation.md)

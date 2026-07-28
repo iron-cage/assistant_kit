@@ -20,7 +20,7 @@ use unilang::types::Value;
 
 use crate::output::{ OutputFormat, OutputOptions, json_escape };
 use claude_version_core::params_catalog::{ ParamDef, lookup, params_catalog };
-use claude_version_core::settings_io::get_setting;
+use claude_core::settings_io::get_setting;
 
 /// `.params` — show params catalog with forms, current values, and source.
 ///

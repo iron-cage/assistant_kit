@@ -29,7 +29,7 @@ use std::path::Path;
 use tempfile::TempDir;
 use claude_version_core::config_catalog::catalog;
 use claude_version_core::config_resolve::{ resolve, Layer };
-use claude_version_core::settings_io::{ set_setting, set_env_var };
+use claude_core::settings_io::{ set_setting, set_env_var };
 
 // Helper: write a settings.json with a single key→value into {dir}/.claude/settings.json.
 fn write_settings( dir : &Path, key : &str, value : &str )

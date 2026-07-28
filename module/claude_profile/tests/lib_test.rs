@@ -49,7 +49,6 @@ mod enabled
       ".account.use",
       ".account.delete",
       ".account.relogin",
-      ".account.rotate",
       ".credentials.status",
       ".token.status",
       ".paths",

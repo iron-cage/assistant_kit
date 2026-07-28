@@ -191,7 +191,7 @@ pub fn account_inspect_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
       let now_secs = std::time::SystemTime::now()
         .duration_since( std::time::UNIX_EPOCH )
         .map_or( 0, |d| d.as_secs() );
-      if let Some( ( data, age ) ) = crate::usage::read_cached_quota( &credential_store, &name, now_secs )
+      if let Some( ( data, age, _oca ) ) = crate::usage::read_cached_quota( &credential_store, &name, now_secs )
       {
         if trace { eprintln!( "{}account.inspect  {name}  usage cache fallback ({age}s old)", trace_ts() ) }
         Ok( data )

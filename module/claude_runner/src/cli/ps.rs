@@ -12,7 +12,7 @@ use data_fmt::{ RowBuilder, TableFormatter, TableConfig, Heading, Format };
 #[ cfg_attr( not( target_os = "linux" ), allow( dead_code ) ) ]
 struct PsConfig
 {
-  /// Mode filter: `None` or `"all"` = no filter; `"print"` / `"interactive"` = filter rows.
+  /// Mode filter: `None` or `"all"` = no filter; `"print"` / `"interactive"` / `"query"` = filter rows.
   mode         : Option< String >,
   /// Comma-separated column keys from `--columns`; overrides `--wide` when present.
   columns      : Option< String >,
@@ -30,8 +30,12 @@ struct PsConfig
 
 // Classify a process's execution mode from its cmdline args.
 //
-// Returns `"print"` when `--print` or `-p` appears as a discrete argument
-// in `args[1..]`; returns `"interactive"` otherwise.
+// Returns `"query"` when the args carry the exact 3-condition control-session
+// signature `spawn_control_session()` itself validates (`--input-format stream-json`
+// + `--output-format stream-json` + `--verbose`) — task 418's `clr query` daemon is
+// currently the only caller of that method, so this signature is unique in practice.
+// Returns `"print"` when `--print` or `-p` appears as a discrete argument in `args[1..]`.
+// Returns `"interactive"` otherwise.
 //
 // Must use `args` (NUL-split) — NOT `cmdline` (space-joined) — because a path
 // component could contain the substring "--print" producing a false positive.
@@ -39,7 +43,13 @@ struct PsConfig
 // `pub(super)`: also called from `gate.rs` to count print-mode sessions only.
 pub( super ) fn classify_mode( args : &[ String ] ) -> &str
 {
-  if args.iter().any( | a | a == "--print" || a == "-p" )
+  if has_flag_pair( args, "--input-format", "stream-json" )
+    && has_flag_pair( args, "--output-format", "stream-json" )
+    && args.iter().any( | a | a == "--verbose" )
+  {
+    "query"
+  }
+  else if args.iter().any( | a | a == "--print" || a == "-p" )
   {
     "print"
   }
@@ -47,6 +57,13 @@ pub( super ) fn classify_mode( args : &[ String ] ) -> &str
   {
     "interactive"
   }
+}
+
+// Detect an adjacent `flag value` pair anywhere in `args` (order-sensitive, matching
+// `spawn_control_session()`'s own `has_flag_pair` validation shape in claude_runner_core).
+fn has_flag_pair( args : &[ String ], flag : &str, value : &str ) -> bool
+{
+  args.windows( 2 ).any( | w | w[ 0 ] == flag && w[ 1 ] == value )
 }
 
 /// Dispatch `clr ps`: list active Claude Code sessions and queued `clr` waiters
@@ -86,7 +103,7 @@ pub( crate ) fn dispatch_ps( tokens : &[ String ] ) -> !
         i += 1;
         if i >= tokens.len()
         {
-          eprintln!( "clr ps: `--mode` requires a value (all|interactive|print)" );
+          eprintln!( "clr ps: `--mode` requires a value (all|interactive|print|query)" );
           std::process::exit( 1 );
         }
         config.mode = Some( tokens[ i ].clone() );
@@ -146,10 +163,10 @@ pub( crate ) fn dispatch_ps( tokens : &[ String ] ) -> !
   // Validate mode (from CLI or env var) after all tokens are processed.
   if let Some( ref m ) = config.mode
   {
-    if !matches!( m.as_str(), "all" | "interactive" | "print" )
+    if !matches!( m.as_str(), "all" | "interactive" | "print" | "query" )
     {
       eprintln!(
-        "clr ps: invalid --mode value `{m}`; valid values: all, interactive, print"
+        "clr ps: invalid --mode value `{m}`; valid values: all, interactive, print, query"
       );
       std::process::exit( 1 );
     }
@@ -434,6 +451,7 @@ fn build_inspect_output( procs : &[ &ProcessInfo ] ) -> String
 const FLAG_LEGEND : &[ ( &str, &str ) ] = &[
   ( "👈", "This session" ),
   ( "🖨",  "Print mode"   ),
+  ( "🔌", "Query mode"   ),
   ( "⚡", "Active"       ),
   ( "🕰",  "Ancient"      ),
   ( "🐘", "High RAM"     ),
@@ -515,6 +533,9 @@ fn compute_flags(
 
   // 🖨 Print mode: cmdline contains --print or -p.
   if classify_mode( &proc.args ) == "print" { push_flag( &mut flags, '🖨' ); }
+
+  // 🔌 Query mode: PID-addressed control session (clr query), task 418.
+  if classify_mode( &proc.args ) == "query" { push_flag( &mut flags, '🔌' ); }
 
   // ⚡ Active: CPU delta >= 3 ticks in 1-second sample window.
   // Threshold separates active sessions (6-100 ticks) from BUG-304 timer noise (1-2 ticks).
@@ -676,8 +697,9 @@ fn build_active_table(
   let running_field = if mode == "all"
   {
     let interactive = sorted.iter().filter( | p | classify_mode( &p.args ) == "interactive" ).count();
-    let print       = sorted.len() - interactive;
-    format!( "{} running ({interactive} interactive, {print} print)", sorted.len() )
+    let query       = sorted.iter().filter( | p | classify_mode( &p.args ) == "query" ).count();
+    let print       = sorted.len() - interactive - query;
+    format!( "{} running ({interactive} interactive, {print} print, {query} query)", sorted.len() )
   }
   else
   {

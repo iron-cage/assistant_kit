@@ -21,7 +21,7 @@ Claude Code prints `You've hit your limit · resets [time]` when the account's u
 
 1. **Switch account**: Use `clp .account.use <other-account>` to switch to an account with remaining quota. The `.usage` table shows per-account quota status.
 2. **Wait for reset**: The error message includes the reset time. Session (5h) resets are shorter; weekly (7d) resets require hours to days.
-3. **Use account assignment**: Run `clp .account.assign` to automatically select the best available account based on quota strategy (renew/endurance/drain).
+3. **Use automatic rotation**: Run `clp .usage rotate::1` to automatically switch to the best available account based on quota strategy (default `sort::renew`; override with `sort::`).
 4. **Check quota status**: Run `clp .usage trace::1` to see all accounts' remaining quota and next reset times.
 
 ### CLR Detection
@@ -37,7 +37,7 @@ Downstream scripts can detect this:
 ```bash
 clr run "..." 2>err.txt; code=$?
 if grep -qF "quota exhausted" err.txt; then
-  clp .account.assign   # switch to available account
+  clp .usage rotate::1   # switch to available account
   retry
 fi
 ```
@@ -56,4 +56,4 @@ fi
 |------|--------------|
 | `../../module/claude_runner_core/src/types.rs` | `ErrorKind::QuotaExhausted` variant and `classify_error()` on `ExecutionOutput` |
 | `../../module/claude_profile/src/usage/api.rs` | `.usage` command showing per-account quota status and reset times |
-| `../../module/claude_profile/src/commands/account_ops.rs` | `.account.assign` command for automatic account rotation on quota exhaustion |
+| `../../module/claude_profile/src/usage/api.rs` | `.usage rotate::1` — automatic account rotation on quota exhaustion (Feature 038) |

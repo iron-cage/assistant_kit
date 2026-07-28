@@ -3,8 +3,8 @@
 ### Scope
 
 - **Purpose**: Catalog observed and confirmed external behaviors of the `claude` binary spanning session lifecycle, storage, runtime process model, subagent context, and tool availability.
-- **Responsibility**: Master file for the `behavior` collection — lists all 37 behavior instances (B1–B36 + B16h), provides the shared evidence table (E1–E66), and links to invalidation test files.
-- **In Scope**: Session continuation, flag semantics, agent layouts, entry threading, storage path encoding, cross-session relationship absence (conversation chain foundations); runtime process model (agent subagent identity, bash subprocess identity, env propagation); subagent context inheritance (CLAUDE.md injection, conversation absence, scope propagation); subagent tool availability per type (tool set differences, parent-exclusive tools); context loading (CLAUDE.md @-reference path filter, content pipeline transformations, silent failure and truncation modes); background task lifecycle (classifier model selection, idle-state reporting, exit-handoff survival, memory-pressure reaping, print-mode wait ceiling).
+- **Responsibility**: Master file for the `behavior` collection — lists all 38 behavior instances (B1–B37 + B16h), provides the shared evidence table (E1–E70), and links to invalidation test files.
+- **In Scope**: Session continuation, flag semantics, agent layouts, entry threading, storage path encoding, cross-session relationship absence (conversation chain foundations); runtime process model (agent subagent identity, bash subprocess identity, env propagation); subagent context inheritance (CLAUDE.md injection, conversation absence, scope propagation); subagent tool availability per type (tool set differences, parent-exclusive tools); context loading (CLAUDE.md @-reference path filter, content pipeline transformations, silent failure and truncation modes); background task lifecycle (classifier model selection, idle-state reporting, exit-handoff survival, memory-pressure reaping, print-mode wait ceiling); subagent cache economics (per-subagent isolated cache prefix, 5-minute vs 1-hour cache TTL tier asymmetry).
 - **Out of Scope**: Entry-level JSONL schema (→ [`../jsonl/`](../jsonl/readme.md)); storage directory architecture (→ [`../storage/`](../storage/readme.md)); filesystem paths (→ [`../filesystem/`](../filesystem/readme.md)); settings format (→ [`../settings/`](../settings/readme.md)); ancillary file formats (→ [`../format/`](../format/readme.md)); concept taxonomy (→ [`../taxonomy/`](../taxonomy/readme.md)).
 
 ### Overview Table
@@ -63,6 +63,7 @@ Adapted from hypothesis table format. Status reflects certainty of the observati
 | [B34](034_b34_claudemd_content_pipeline.md) | HTML comments stripped (`Kp6`), YAML frontmatter processed as conditional globs not injected as content, GFM disabled in @-ref lexer; `tengu_paper_halyard` Statsig flag silently drops all Project/Local CLAUDE.md; User type always bypasses external-include dialog | Context Loading | ✅ | 99% | UNVERIFIED | v2.1.74 | E60 |
 | [B35](035_b35_automemory_search_context_flag.md) | `tengu_coral_fern` Statsig flag (default false) gates a `## Searching past context` section in the auto-memory system prompt — provides grep commands for memory topic files and session JSONL transcripts; absent when flag is false | Auto-Memory | ✅ | 99% | UNVERIFIED | v2.1.74 | E61 |
 | [B36](036_b36_background_task_lifecycle.md) | Five env vars gate the background-task lifecycle: `CLAUDE_CODE_BG_CLASSIFIER_MODEL` (classifier model override), `CLAUDE_CODE_BG_TASKS_REPORT_RUNNING` (idle-state reporting), `CLAUDE_CODE_DISABLE_BG_EXIT_HANDOFF` (exit-survival, excludes `agentId`-bearing jobs from `shells`), `CLAUDE_CODE_DISABLE_BG_SHELL_PRESSURE_REAP` (memory-pressure reaping), `CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS` (print-mode wait ceiling, default 600000ms) | Background Tasks | ✅ | 85% | UNVERIFIED | ≤v2.1.197 | E62, E63, E64, E65, E66 |
+| [B37](037_b37_subagent_cache_ttl.md) | Subagent API requests write to the 5-minute prompt-cache tier (`ephemeral_5m_input_tokens`) while the main conversation writes to the 1-hour tier on subscription; each subagent builds an isolated cache prefix from zero — no cache hits on its first call | Cache | ✅ | 99% | VALIDATED | ≤v2.1.197 | E67, E68, E69, E70 |
 
 ---
 
@@ -138,6 +139,10 @@ Evidence items are shared across behaviors (M:N relationship). Each item may sup
 | E64 | B36 | Code | Binary analysis — same binary/method — this session (2026-07-07) | `strings`-output line 274061, functions `_Ha`/`bHa` | `function _Ha(e){if(!yi()\|\|!Fe.CLAUDE_JOB_DIR\|\|Fe.CLAUDE_CODE_DISABLE_BG_EXIT_HANDOFF)return{shells:[],workflows:[]};let t=nEe(e),n=Object.values(e);return{shells:n.filter((r)=>Tbo(r,t)&&r.agentId===void 0),workflows:n.filter((r)=>Ebo(r,t))}}function bHa({shells:e,workflows:t}){let n=Fe.CLAUDE_JOB_DIR;for(let o of t)o.abortController...` (truncated by strings extraction after `abortController`). Confirms `agentId===void 0` as an explicit filter condition on the `shells` survivor set. |
 | E65 | B36 | Code + Doc | Binary analysis (same method, this session, 2026-07-07) + official changelog `../version/091_v2_1_193.md` | `strings`-output line 277007, function `u0l`; changelog entry v2.1.193 | `function u0l(e,t,n,r,o,s){Pve(s,\`bash:${e}\`,n);let i;if(s===void 0&&!xr()&&!Fe.CLAUDE_CODE_DISABLE_BG_SHELL_PRESSURE_REAP){let a=()=>{let l=n.get(e);if(l?.status!=="running"\|\|l.notified\|\|Date.now()-NA()<Exm\|\|gEr()\|\|yKe(n.all()))return;Ie("task_local_shell_pressure_reap"),tYt(e,t,"killed",void 0,n,r,o,s),nve(e,n)};process.on("memoryPressure",a),i=()=>process.off("memory...` (truncated). Changelog: "Added automatic memory-pressure reaping for idle background shell commands (disable with `CLAUDE_CODE_DISABLE_BG_SHELL_PRESSURE_REAP=1`)" — the only one of the five vars officially documented. |
 | E66 | B36 | Code | Binary analysis — same binary/method — this session (2026-07-07) | `strings`-output line 296515/296542, functions `E3c`/`v3c`/`w3c`; constants `KFf`, `tZo` | `function E3c(){return Fe.CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS??KFf}` plus full `v3c()`/`w3c()` bodies (see [036_b36_background_task_lifecycle.md](036_b36_background_task_lifecycle.md)). Constants independently confirmed via `grep -aoP "(?<![a-zA-Z0-9_])KFf\s*=\s*[0-9]+"` → `KFf=600000`; same technique → `tZo=5000`. |
+| E67 | B37 | Doc | Official Claude Code documentation (code.claude.com/docs/en/prompt-caching) | "Subagents and the cache" section | "A subagent starts its own conversation with its own system prompt and tool set. It builds its own cache, starting with no cache hits on its first call." And: "Subagents use the five-minute TTL even on a subscription, since the automatic one-hour TTL applies to the main conversation." Forks are the documented exception — a fork inherits the parent conversation's cache. Timer semantics: "Each request that hits the cache resets the timer." |
+| E68 | B37 | Observation | Live session JSONL — session `3cf8fab1` (2026-07-25, v2.1.197) | Main session file vs `subagents/agent-*.jsonl` siblings | Main-conversation assistant entries: `"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":4908}` — 1-hour tier only. All 13 subagent transcripts from the same session (`isSidechain: true`): 5-minute tier only (`ephemeral_1h` = 0), per-agent first-call prefix writes of 42,884–72,407 tokens (769,900 cache-write tokens total for prefixes the parent already held cached). |
+| E69 | B37 | Doc | Anthropic platform documentation (docs.anthropic.com — prompt caching pricing) + code.claude.com/docs/en/costs | Pricing multipliers; TTL policy | Cache writes bill 1.25x base input (5-minute TTL) / 2x (1-hour TTL); cache reads bill 0.1x. Costs doc: the 1-hour TTL applies to the main conversation on subscription and drops to 5 minutes when drawing on extra usage credits; `/usage` attributes a distinct "subagents" category and flags "cache misses" when ≥10% of recent usage. |
+| E70 | B37 | Test | `../../tests/behavior/b37_subagent_cache_ttl.rs` | `b37_plain_agent_transcripts_never_write_1h_tier`, `b37_main_sessions_write_1h_tier_on_subscription` | Full-storage scan (2026-07-26): 12,861 plain-hex non-fork agent transcripts, 742,911 `cache_creation` entries, 740,976 five-minute writes, zero 1-hour writes — hard assert. Excluded 20 fork agents and 1,016 typed-prefix system sidechains, which inherit the parent conversation's tier (18 forks and 1,014 sidechains carry 1-hour writes). Main-session 1-hour write confirmed on the same machine. |
 
 ---
 
@@ -145,26 +150,26 @@ Evidence items are shared across behaviors (M:N relationship). Each item may sup
 
 | Status | Count | IDs |
 |--------|-------|-----|
-| ✅ Confirmed | 21 | B1, B2, B3, B6, B7, B9, B10, B12, B13, B14, B16, B27, B28, B29, B30, B31, B32, B33, B34, B35, B36 |
+| ✅ Confirmed | 22 | B1, B2, B3, B6, B7, B9, B10, B12, B13, B14, B16, B27, B28, B29, B30, B31, B32, B33, B34, B35, B36, B37 |
 | 🎯 Observed | 14 | B4, B5, B8, B11, B15, B18, B19, B20, B21, B22, B23, B24, B25, B26 |
 | ⚠️ Exception noted | 1 | B17 (self-contained except at context-compaction boundaries; < 0.2% violation rate) |
 | ❓ Uncertain | 1 | B16h |
 
-**Total behaviors:** 37 (B1–B36 + B16h sub-hypothesis; B16h shares B16's row index)
-**Confirmed (≥90% certainty):** 20 (B36 is Confirmed status at 85% certainty — below the 90% threshold, included in the Confirmed row above by evidence type but excluded from this ≥90% count)
+**Total behaviors:** 38 (B1–B37 + B16h sub-hypothesis; B16h shares B16's row index)
+**Confirmed (≥90% certainty):** 21 (B36 is Confirmed status at 85% certainty — below the 90% threshold, included in the Confirmed row above by evidence type but excluded from this ≥90% count)
 **Lowest certainty:** B5 (60% — current session selection mechanism)
 **Investigation priority:** B5 — can be confirmed by reading Claude Code changelog or source
 
 | Test Tier | Count | IDs |
 |-----------|-------|-----|
-| VALIDATED | 12 | B1, B2, B6, B7, B9, B10, B12, B13, B14, B15, B17, B18 |
+| VALIDATED | 13 | B1, B2, B6, B7, B9, B10, B12, B13, B14, B15, B17, B18, B37 |
 | VALIDATED† | 1 | B5 (distinct mtimes proven; mtime-as-selection-key unproven) |
 | FLAG-VFY | 8 | B3, B4, B16, B19, B20, B21, B22, B24 |
 | NEG-ONLY | 4 | B11, B23, B25, B26 |
 | UNVERIFIED | 11 | B8, B27, B28, B29, B30, B31, B32, B33, B34, B35, B36 |
 | MEASURE | 1 | B16h (lim_it; runs by default in container) |
 
-**Validation gap:** 12 of 37 behaviors are fully validated with behavioral assertions.
+**Validation gap:** 13 of 38 behaviors are fully validated with behavioral assertions.
 
 ---
 
@@ -211,6 +216,7 @@ Each behavior instance has a corresponding invalidation test in `contract/claude
 | `b34_claudemd_content_pipeline.rs` | B34 | UNVERIFIED (no automated test yet) |
 | `b35_automemory_search_context_flag.rs` | B35 | UNVERIFIED (no automated test yet) |
 | `b36_background_task_lifecycle.rs` | B36 | UNVERIFIED (no automated test yet) |
+| `b37_subagent_cache_ttl.rs` | B37 | VALIDATED |
 
 To run:
 ```bash

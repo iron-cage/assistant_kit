@@ -16,7 +16,7 @@ string
 
 ### Default
 
-`claude-sonnet-4-6`
+`claude-sonnet-5`
 
 ### Since
 
@@ -24,7 +24,7 @@ pre-v1.0 (unverified)
 
 ### Description
 
-Specifies the model to use for this session. Accepts short aliases (`sonnet`, `opus`, `haiku`) or full model IDs (e.g. `claude-sonnet-4-6`). The default resolves to the latest Sonnet model. When set as `model` in `~/.claude/settings.json`, persists the model preference across all sessions. CLI flag overrides the config key for the current session.
+Specifies the model to use for this session. Accepts short aliases (`sonnet`, `opus`, `haiku`) or full model IDs (e.g. `claude-sonnet-5`). The default resolves to the latest Sonnet model. When set as `model` in `~/.claude/settings.json`, persists the model preference across all sessions. CLI flag overrides the config key for the current session.
 
 ### Cross-References
 

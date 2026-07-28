@@ -197,6 +197,7 @@ Note: `rotate::1 solo::1` is rejected at parse time by `parse_usage_params()` (`
 | [040_quota_measurement_history.md](040_quota_measurement_history.md) | Non-owned accounts skip history append (G1 gate) |
 | [061_solo_token_conservation.md](061_solo_token_conservation.md) | Solo gate extends G1/G2/G4 with `is_current` check; non-current+owned accounts use `approximate_quota()` instead of live fetch |
 | [063_explicit_ownership_claim.md](063_explicit_ownership_claim.md) | `owner::` param — set path (`owner::USER@MACHINE`); G8 gate; `force::` bypass; `owner::0` release sentinel and batch comma-list via Feature 064 |
+| [070_account_claim_and_reservation_control.md](070_account_claim_and_reservation_control.md) | `claim_lock`/`reserve` — new orthogonal, non-ownership fields; contrast with `owner`/`is_owned` |
 
 ### Parameters
 

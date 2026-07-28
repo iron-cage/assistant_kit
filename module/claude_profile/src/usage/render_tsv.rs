@@ -77,14 +77,25 @@ pub fn render_tsv(
     {
       renews_label(
         aq.renewal_at.as_deref(),
-        aq.account.as_ref().map( |a| a.org_created_at.as_str() ),
+        aq.org_created_at.as_deref(),
         now_secs,
       )
     };
 
     let mut row = vec![ flag_cell.to_string() ];
     if cols.status { row.push( status_str.to_string() ); }
-    row.push( aq.name.clone() );
+    // Fix(BUG-335): NAME cell discarded the cache-fallback failure reason entirely.
+    //   Root cause: AccountQuota had no field to carry the reason forward from fetch.rs's
+    //   Err→Ok cache-fallback conversion; TSV render had nothing to append.
+    //   Pitfall: unlike render.rs's text table, this format has no pre-existing age-suffix
+    //   mechanism to append alongside (AC-03 does not apply here) — the shortened reason is
+    //   the cell's only staleness indicator; do not invent a new age label to pair it with.
+    let name_cell = match &aq.fallback_reason
+    {
+      Some( reason ) => format!( "{} ({})", aq.name, shorten_error( reason ) ),
+      None           => aq.name.clone(),
+    };
+    row.push( name_cell );
 
     match &aq.result
     {
@@ -107,7 +118,7 @@ pub fn render_tsv(
 
         let ( ren_secs, ren_est ) = renewal_secs(
           aq.renewal_at.as_deref(),
-          aq.account.as_ref().map( |a| a.org_created_at.as_str() ),
+          aq.org_created_at.as_deref(),
           now_secs,
         ).unzip();
         let next_str = next_event_label(

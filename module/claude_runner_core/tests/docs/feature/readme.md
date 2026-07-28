@@ -14,7 +14,7 @@ Per-feature behavioral test specs for `claude_runner_core`. See [docs/feature/re
 | File | Responsibility |
 |------|----------------|
 | 004_run_isolated.md | Behavioral cases for `run_isolated()` / `IsolatedModel` feature |
-| 005_stdin_file.md | Behavioral cases for `stdin_file` / `with_stdin_file()` feature |
+| 005_stdin_file.md | Behavioral cases for `stdin_file`/`stdin_content` piping features |
 | 006_unset_claudecode.md | Behavioral cases for `unset_claudecode` / `with_unset_claudecode()` feature |
 
 ### Index
@@ -22,5 +22,5 @@ Per-feature behavioral test specs for `claude_runner_core`. See [docs/feature/re
 | Feature | File | Tests | Status |
 |---------|------|-------|--------|
 | [Run Isolated](../../../docs/feature/004_run_isolated.md) | [004_run_isolated.md](004_run_isolated.md) | 6 FT | ✅ |
-| [Stdin File Piping](../../../docs/feature/005_stdin_file.md) | [005_stdin_file.md](005_stdin_file.md) | 8 FT | ✅ |
+| [Stdin File Piping](../../../docs/feature/005_stdin_file.md) | [005_stdin_file.md](005_stdin_file.md) | 15 FT | ✅ |
 | [CLAUDECODE Unsetting](../../../docs/feature/006_unset_claudecode.md) | [006_unset_claudecode.md](006_unset_claudecode.md) | 7 FT | ✅ |

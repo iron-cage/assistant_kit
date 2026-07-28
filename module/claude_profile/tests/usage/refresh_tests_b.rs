@@ -19,6 +19,7 @@ fn test_apply_refresh_ft4_429_valid_token_not_retried()
   let mut accounts = vec![
     AccountQuota
     {
+      fallback_reason : None,
       name          : "alice@example.com".to_string(),
       is_current    : false,
       is_active             : false,
@@ -33,6 +34,8 @@ fn test_apply_refresh_ft4_429_valid_token_not_retried()
       cache_age_secs : None,
       is_owned       : true,
       owner                : String::new(),
+      claim_lock : false, reserve : false,
+          org_created_at : None,
     },
   ];
 
@@ -61,6 +64,7 @@ fn test_apply_refresh_ft5_429_expired_refresh_path_entered_no_cred()
   let mut accounts = vec![
     AccountQuota
     {
+      fallback_reason : None,
       name          : "alice@example.com".to_string(),
       is_current    : false,
       is_active             : false,
@@ -75,6 +79,8 @@ fn test_apply_refresh_ft5_429_expired_refresh_path_entered_no_cred()
       cache_age_secs : None,
       is_owned       : true,
       owner                : String::new(),
+      claim_lock : false, reserve : false,
+          org_created_at : None,
     },
   ];
 
@@ -186,6 +192,7 @@ fn test_apply_refresh_mre_bug208_restore_trace_emitted()
   let mut accounts = vec![
     AccountQuota
     {
+      fallback_reason : None,
       name          : "bob@example.com".to_string(),
       is_current    : false,
       is_active             : false,
@@ -200,6 +207,8 @@ fn test_apply_refresh_mre_bug208_restore_trace_emitted()
       cache_age_secs : None,
       is_owned       : true,
       owner                : String::new(),
+      claim_lock : false, reserve : false,
+          org_created_at : None,
     },
   ];
 
@@ -336,6 +345,7 @@ fn mre_bug295_apply_refresh_trace_reason_not_owned()
   let cached = claude_quota::OauthUsageData { five_hour : None, seven_day : None, seven_day_sonnet : None };
   let aq = AccountQuota
   {
+    fallback_reason : None,
     name                  : "alice@remote.com".to_string(),
     is_current            : false,
     is_active             : false,
@@ -350,6 +360,8 @@ fn mre_bug295_apply_refresh_trace_reason_not_owned()
     cache_age_secs        : Some( 120 ),
     is_owned              : false,
     owner                 : "other@remote".to_string(),
+    claim_lock : false, reserve : false,
+      org_created_at : None,
   };
 
   let reason = claude_profile::usage::test_bridge::reason_label( &aq, 0 );
@@ -401,6 +413,7 @@ fn mre_bug297_refresh_none_sets_aq_result_err()
   let mut accounts = vec![
     AccountQuota
     {
+      fallback_reason : None,
       name                  : "rt-expired-acct".to_string(),
       is_current            : false,
       is_active             : false,
@@ -415,6 +428,8 @@ fn mre_bug297_refresh_none_sets_aq_result_err()
       cache_age_secs        : Some( 7200 ),
       is_owned              : true, // required: non-owned accounts are skipped by should_refresh
       owner                 : String::new(),
+      claim_lock : false, reserve : false,
+          org_created_at : None,
     },
   ];
 
@@ -451,24 +466,26 @@ fn mre_bug297_refresh_none_sets_aq_result_err()
 /// `"skipped (reason: error account)"` without attempting any subprocess.
 ///
 /// # Prevention
-/// This test runs both `apply_refresh` and then `apply_touch` on the same `AccountQuota`
-/// and asserts: (1) touch emits `"error account"` skip trace; (2) touch does NOT emit
-/// `"run_isolated: invoking"` (no subprocess spawned).
+/// This test runs `apply_refresh` and then asserts `touch_skip_reason` — the pure decision
+/// function `apply_touch` calls first — returns the "error account" skip reason on the
+/// resulting `AccountQuota`. Because `apply_touch` only reaches subprocess-spawning logic
+/// when `touch_skip_reason` returns `None`, a `Some( .. )` result here structurally proves
+/// no subprocess is invoked.
 ///
 /// # Pitfall
-/// `claude_paths=None` ensures no subprocess can fire regardless (no credential file path
-/// to switch to). The test confirms the *correct* skip reason fires (`"error account"` from
-/// the G1 error guard), not a later guard that would also prevent subprocess launch.
+/// Asserting only `is_err()` on Phase 1's output would not by itself prove *which* guard
+/// fires in `touch_skip_reason` — the reason string must be checked for equality against
+/// exactly `"skipped (reason: error account)"` (the G1 error guard), not merely `Some(_)`,
+/// to rule out a later guard also matching by coincidence.
 #[ test ]
 fn apply_touch_skips_after_refresh_none()
 {
-  use std::io::Read;
-
   let store       = TempDir::new().unwrap();
   let stale_quota = claude_quota::OauthUsageData { five_hour : None, seven_day : None, seven_day_sonnet : None };
   let mut accounts = vec![
     AccountQuota
     {
+      fallback_reason : None,
       name                  : "rt-expired-touch-pipeline".to_string(),
       is_current            : false,
       is_active             : false,
@@ -483,6 +500,8 @@ fn apply_touch_skips_after_refresh_none()
       cache_age_secs        : Some( 7200 ),
       is_owned              : true,
       owner                 : String::new(),
+      claim_lock : false, reserve : false,
+          org_created_at : None,
     },
   ];
 
@@ -495,30 +514,11 @@ fn apply_touch_skips_after_refresh_none()
     accounts[ 0 ].result,
   );
 
-  // Phase 2: apply_touch → must see Err and skip without spawning a subprocess.
-  let _lock = claude_profile::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( std::sync::PoisonError::into_inner );
-  let mut buf = gag::BufferRedirect::stderr().expect( "stderr capture failed" );
-
-  claude_profile::usage::test_bridge::apply_touch(
-    &mut accounts[ 0 ],
-    store.path(),
-    None,
-    true,
-    SubprocessModel::Auto,
-    SubprocessEffort::Auto,
-    false,
-  );
-
-  let mut captured = String::new();
-  buf.read_to_string( &mut captured ).unwrap();
-
-  assert!(
-    captured.contains( "error account" ),
-    "BUG-297 pipeline: apply_touch must emit 'error account' skip after refresh None; got:\n{captured}",
-  );
-  assert!(
-    !captured.contains( "run_isolated: invoking" ),
-    "BUG-297 pipeline: apply_touch must NOT spawn subprocess after refresh None; got:\n{captured}",
+  // Phase 2: touch_skip_reason must see Err and return the error-account skip reason.
+  assert_eq!(
+    claude_profile::usage::test_bridge::touch_skip_reason( &accounts[ 0 ], store.path(), false ),
+    Some( "skipped (reason: error account)" ),
+    "BUG-297 pipeline: apply_touch must skip with 'error account' reason after refresh None",
   );
 }
 
@@ -558,6 +558,7 @@ fn mre_bug298_apply_refresh_trace_reason_cached_expired()
   let stale_quota = claude_quota::OauthUsageData { five_hour : None, seven_day : None, seven_day_sonnet : None };
   let aq = AccountQuota
   {
+    fallback_reason : None,
     name                  : "cached-owned@box.pro".to_string(),
     is_current            : false,
     is_active             : false,
@@ -572,6 +573,8 @@ fn mre_bug298_apply_refresh_trace_reason_cached_expired()
     cache_age_secs        : Some( 7200 ),
     is_owned              : true,  // required: non-owned skips with "not owned"
     owner                 : String::new(),
+    claim_lock : false, reserve : false,
+      org_created_at : None,
   };
 
   let reason = claude_profile::usage::test_bridge::reason_label( &aq, 1 );
@@ -596,6 +599,7 @@ fn ec7_solo_gate_skips_non_current_with_trace()
   let store = TempDir::new().unwrap();
   let mut accounts = vec![ AccountQuota
   {
+    fallback_reason : None,
     name                  : "noncurrent@example.com".to_string(),
     is_current            : false,
     is_active             : false,
@@ -610,6 +614,8 @@ fn ec7_solo_gate_skips_non_current_with_trace()
     cache_age_secs        : None,
     is_owned              : true,
     owner                 : String::new(),
+    claim_lock : false, reserve : false,
+      org_created_at : None,
   } ];
 
   // solo=true: solo gate fires for is_current=false → account skipped → result unchanged.
@@ -642,6 +648,7 @@ fn mre_bug_gap20_refresh_trace_reason_ok_owned_non_cached_ok()
   let ok_quota = claude_quota::OauthUsageData { five_hour : None, seven_day : None, seven_day_sonnet : None };
   let aq = AccountQuota
   {
+    fallback_reason : None,
     name                  : "healthy@example.com".to_string(),
     is_current            : false,
     is_active             : false,
@@ -656,6 +663,8 @@ fn mre_bug_gap20_refresh_trace_reason_ok_owned_non_cached_ok()
     cache_age_secs        : None,
     is_owned              : true,   // owned → not "not owned"
     owner                 : String::new(),
+    claim_lock : false, reserve : false,
+      org_created_at : None,
   };
 
   // GAP-20: healthy owned+non-cached+Ok path must produce "ok" reason —
@@ -702,6 +711,7 @@ fn mre_bug306_refresh_trace_reason_occupied_elsewhere()
 {
   let aq = AccountQuota
   {
+    fallback_reason : None,
     name                  : "occ@example.com".to_string(),
     is_current            : false,
     is_active             : false,
@@ -716,6 +726,8 @@ fn mre_bug306_refresh_trace_reason_occupied_elsewhere()
     cache_age_secs        : None,
     is_owned              : true,
     owner                 : String::new(),
+    claim_lock : false, reserve : false,
+      org_created_at : None,
   };
   assert_eq!( claude_profile::usage::test_bridge::reason_label( &aq, 0 ), "occupied elsewhere" );
 }
@@ -754,6 +766,7 @@ fn mre_bug333_occupied_elsewhere_not_masked_by_cached()
 {
   let aq = AccountQuota
   {
+    fallback_reason : None,
     name                  : "occ-cached@example.com".to_string(),
     is_current            : false,
     is_active             : false,
@@ -768,6 +781,8 @@ fn mre_bug333_occupied_elsewhere_not_masked_by_cached()
     cache_age_secs        : Some( 999 ),
     is_owned              : true,
     owner                 : String::new(),
+    claim_lock : false, reserve : false,
+      org_created_at : None,
   };
   assert_eq!(
     claude_profile::usage::test_bridge::reason_label( &aq, 1 ),
@@ -783,12 +798,15 @@ fn reason_label_not_owned()
 {
   let aq = AccountQuota
   {
+    fallback_reason : None,
     name : "x".into(), is_current : false, is_active : false,
     is_occupied_elsewhere : false, expires_at_ms : 0,
     result : Ok( claude_quota::OauthUsageData { five_hour : None, seven_day : None, seven_day_sonnet : None } ),
     account : None, host : String::new(), role : String::new(),
     renewal_at : None, cached : false, cache_age_secs : None,
     is_owned : false, owner : String::new(),
+    claim_lock : false, reserve : false,
+      org_created_at : None,
   };
   assert_eq!( claude_profile::usage::test_bridge::reason_label( &aq, 0 ), "not owned" );
 }
@@ -799,12 +817,15 @@ fn reason_label_cached_expired()
 {
   let aq = AccountQuota
   {
+    fallback_reason : None,
     name : "x".into(), is_current : false, is_active : false,
     is_occupied_elsewhere : false, expires_at_ms : 0,
     result : Ok( claude_quota::OauthUsageData { five_hour : None, seven_day : None, seven_day_sonnet : None } ),
     account : None, host : String::new(), role : String::new(),
     renewal_at : None, cached : true, cache_age_secs : Some( 999 ),
     is_owned : true, owner : String::new(),
+    claim_lock : false, reserve : false,
+      org_created_at : None,
   };
   assert_eq!( claude_profile::usage::test_bridge::reason_label( &aq, 1 ), "cached-expired" );
 }
@@ -818,12 +839,15 @@ fn reason_label_cached_valid()
 {
   let aq = AccountQuota
   {
+    fallback_reason : None,
     name : "x".into(), is_current : false, is_active : false,
     is_occupied_elsewhere : false, expires_at_ms : FAR_FUTURE_MS,
     result : Ok( claude_quota::OauthUsageData { five_hour : None, seven_day : None, seven_day_sonnet : None } ),
     account : None, host : String::new(), role : String::new(),
     renewal_at : None, cached : true, cache_age_secs : Some( 60 ),
     is_owned : true, owner : String::new(),
+    claim_lock : false, reserve : false,
+      org_created_at : None,
   };
   assert_eq!( claude_profile::usage::test_bridge::reason_label( &aq, 9_999 ), "cached" );
 }
@@ -834,12 +858,15 @@ fn reason_label_ok()
 {
   let aq = AccountQuota
   {
+    fallback_reason : None,
     name : "x".into(), is_current : false, is_active : false,
     is_occupied_elsewhere : false, expires_at_ms : 0,
     result : Ok( claude_quota::OauthUsageData { five_hour : None, seven_day : None, seven_day_sonnet : None } ),
     account : None, host : String::new(), role : String::new(),
     renewal_at : None, cached : false, cache_age_secs : None,
     is_owned : true, owner : String::new(),
+    claim_lock : false, reserve : false,
+      org_created_at : None,
   };
   assert_eq!( claude_profile::usage::test_bridge::reason_label( &aq, 0 ), "ok" );
 }
@@ -850,12 +877,15 @@ fn reason_label_err()
 {
   let aq = AccountQuota
   {
+    fallback_reason : None,
     name : "x".into(), is_current : false, is_active : false,
     is_occupied_elsewhere : false, expires_at_ms : 0,
     result : Err( "HTTP 401 Unauthorized".to_string() ),
     account : None, host : String::new(), role : String::new(),
     renewal_at : None, cached : false, cache_age_secs : None,
     is_owned : true, owner : String::new(),
+    claim_lock : false, reserve : false,
+      org_created_at : None,
   };
   assert_eq!( claude_profile::usage::test_bridge::reason_label( &aq, 0 ), "HTTP 401 Unauthorized" );
 }

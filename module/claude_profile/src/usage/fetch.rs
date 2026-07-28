@@ -104,13 +104,14 @@ pub fn fetch_quota_for_list(
       if trace { eprintln!( "{}fetch  {}  skipped (reason: not owned)", trace_ts(), acct.name ); }
       let ( host, role )                        = read_profile_metadata( credential_store, &acct.name );
       let renewal_at                            = read_renewal_at( credential_store, &acct.name );
-      let ( result, cached, cache_age_secs ) = match read_cached_quota( credential_store, &acct.name, now_secs )
+      let ( result, cached, cache_age_secs, org_created_at ) = match read_cached_quota( credential_store, &acct.name, now_secs )
       {
-        Some( ( data, age ) ) => ( Ok( data ), true, Some( age ) ),
-        None                  => ( Err( "not owned".to_string() ), false, None ),
+        Some( ( data, age, oca ) ) => ( Ok( data ), true, Some( age ), oca ),
+        None                       => ( Err( "not owned".to_string() ), false, None, None ),
       };
       results.push( AccountQuota
       {
+        fallback_reason : None,
         name                  : acct.name.clone(),
         is_current            : false,
         is_active             : acct.is_active,
@@ -123,8 +124,14 @@ pub fn fetch_quota_for_list(
         renewal_at,
         cached,
         cache_age_secs,
+        // Fix(BUG-327): G1-not-owned branch surfaces cache-backed org_created_at.
+        //   Root cause: renews_label() had no non-live source for org_created_at.
+        //   Pitfall: `account` stays None exactly as before — no live account fetch here.
+        org_created_at,
         is_owned              : false,
         owner                 : owner.clone(),
+        claim_lock            : acct.claim_lock,
+        reserve               : acct.reserve,
       } );
       continue;
     }
@@ -174,14 +181,15 @@ pub fn fetch_quota_for_list(
     // Pitfall: cache-first fires AFTER the G1/G1b/solo gates, so non-owned and
     // occupied-elsewhere accounts are already handled above; `is_current` is resolved.
     const CACHE_FRESH_SECS : u64 = 30;
-    if let Some( ( data, age ) ) = read_cached_quota( credential_store, &acct.name, now_secs )
-      .filter( |( _, age )| *age <= CACHE_FRESH_SECS )
+    if let Some( ( data, age, org_created_at ) ) = read_cached_quota( credential_store, &acct.name, now_secs )
+      .filter( |( _, age, _ )| *age <= CACHE_FRESH_SECS )
     {
       if trace { eprintln!( "{}{}  cache-first ({}s old, skipping API)", trace_ts(), acct.name, age ); }
       let ( host, role ) = read_profile_metadata( credential_store, &acct.name );
       let renewal_at     = read_renewal_at( credential_store, &acct.name );
       results.push( AccountQuota
       {
+        fallback_reason : None,
         name                  : acct.name.clone(),
         is_current,
         is_active             : acct.is_active,
@@ -194,8 +202,14 @@ pub fn fetch_quota_for_list(
         renewal_at,
         cached                : true,
         cache_age_secs        : Some( age ),
+        // Fix(BUG-327): cache-first branch surfaces cache-backed org_created_at — this is
+        //   the primary MRE branch: a warm cache from a prior successful fetch previously
+        //   showed "~Renews = ?" despite holding usable countdown data.
+        org_created_at,
         is_owned              : true,
         owner,
+        claim_lock            : acct.claim_lock,
+        reserve               : acct.reserve,
       } );
       continue;
     }
@@ -277,7 +291,13 @@ pub fn fetch_quota_for_list(
     let ( host, role ) = read_profile_metadata( credential_store, &acct.name );
     let renewal_at = read_renewal_at( credential_store, &acct.name );
     // Cache write on success; cache read on failure (Feature 033).
-    let ( result, cached, cache_age_secs ) = match result
+    // Fix(BUG-335): cache-fallback Ok conversion (the `Some((data,age))` arm below) discarded
+    //   `e`, leaving no way for any render surface to show why a row is stale.
+    //   Root cause: the tuple carried (result, cached, cache_age_secs) only — no field existed
+    //   to carry the pre-conversion error reason forward.
+    //   Pitfall: only THIS arm populates `Some(reason)` — live success and the no-cache-available
+    //   sub-arm must stay `None`, since no fallback actually occurred on those paths.
+    let ( result, cached, cache_age_secs, fallback_reason, cache_org_created_at ) = match result
     {
       Ok( ref data ) =>
       {
@@ -285,6 +305,17 @@ pub fn fetch_quota_for_list(
         let d7 = data.seven_day.as_ref().map( |p| ( p.utilization, p.resets_at.as_deref() ) );
         let sn = data.seven_day_sonnet.as_ref().map( |p| ( p.utilization, p.resets_at.as_deref() ) );
         claude_profile_core::account::write_quota_cache( credential_store, &acct.name, h5, d7, sn );
+        // Fix(BUG-327): persist org_created_at alongside the quota cache write so the 3
+        //   non-live branches can surface it on later invocations without a fresh
+        //   account-details fetch. Root cause: no call site ever wrote this field to cache.
+        //   Pitfall: `ref acc` borrows `account` (does not move it) — the outer `account`
+        //   variable is still needed unmoved at this function's final AccountQuota push.
+        if let Some( ref acc ) = account
+        {
+          claude_profile_core::account::write_cache_string(
+            credential_store, &acct.name, "org_created_at", &acc.org_created_at,
+          );
+        }
         // Feature 040: append measurement to history ring buffer (AC-01).
         {
           let now_secs = std::time::SystemTime::now()
@@ -295,7 +326,7 @@ pub fn fetch_quota_for_list(
           let hsn = data.seven_day_sonnet.as_ref().map( |p| ( p.utilization, p.resets_at.as_deref().unwrap_or( "" ) ) );
           claude_profile_core::account::write_history_entry( credential_store, &acct.name, now_secs, hh5, hd7, hsn );
         }
-        ( result, false, None )
+        ( result, false, None, None, None )
       }
       // Fix(BUG-296): auth errors (401, 403) must not fall back to cache — they indicate
       //   credential rejection and must remain Err so should_refresh() can trigger refresh.
@@ -307,17 +338,29 @@ pub fn fetch_quota_for_list(
       {
         match read_cached_quota( credential_store, &acct.name, now_secs )
         {
-          Some( ( data, age ) ) => ( Ok( data ), true, Some( age ) ),
-          None                  => ( result, false, None ),
+          // Fix(BUG-327): cache-fallback-within-live-fetch branch surfaces cache-backed
+          //   org_created_at. Root cause: `account` stays None on this path (the live fetch
+          //   errored before any account data existed), so the post-match `account.as_ref()`
+          //   read below can never recover it — only the cache tuple carries it here.
+          //   Pitfall: merged with the Ok-branch's account-sourced value below via `.or()`,
+          //   since only one of the two sources is ever populated for a given account.
+          Some( ( data, age, oca ) ) => ( Ok( data ), true, Some( age ), Some( e.clone() ), oca ),
+          None                       => ( result, false, None, None, None ),
         }
       }
-      Err( _ ) => ( result, false, None ),
+      Err( _ ) => ( result, false, None, None, None ),
     };
+    // Fix(BUG-327): live-fetch branch populates org_created_at directly from the same
+    //   `account` the struct-literal field below consumes; computed BEFORE the literal
+    //   since `account` is moved by the `account,` shorthand field there. Merged with
+    //   `cache_org_created_at` for the Err-fallback sub-branch, where `account` stays None.
+    let org_created_at = account.as_ref().map( |a| a.org_created_at.clone() ).or( cache_org_created_at );
     results.push( AccountQuota
     {
       name                  : acct.name.clone(),
       is_current,
       is_active             : acct.is_active,
+      fallback_reason,
       is_occupied_elsewhere : occupied_elsewhere.contains( &acct.name ),
       expires_at_ms         : acct.expires_at_ms,
       result,
@@ -327,8 +370,11 @@ pub fn fetch_quota_for_list(
       renewal_at,
       cached,
       cache_age_secs,
+      org_created_at,
       is_owned              : true,
       owner,
+      claim_lock            : acct.claim_lock,
+      reserve               : acct.reserve,
     } );
   }
 
@@ -382,8 +428,11 @@ fn inject_synthetic_row_if_needed(
   let expires_at_ms = parse_u64_field( live_creds_file, "expiresAt" ).unwrap_or( 0 );
   let result        = claude_quota::fetch_oauth_usage( &token ).map_err( |e| e.to_string() );
   let account       = claude_quota::fetch_oauth_account( &token ).ok();
+  // Fix(BUG-327): synthetic-row live fetch populates org_created_at directly from `account`.
+  let org_created_at = account.as_ref().map( |a| a.org_created_at.clone() );
   inject_synthetic_if_new( results, AccountQuota
   {
+    fallback_reason : None,
     name                  : synthetic_name,
     is_current            : true,
     is_active             : false,
@@ -396,8 +445,11 @@ fn inject_synthetic_row_if_needed(
     renewal_at            : None,
     cached                : false,
     cache_age_secs        : None,
+    org_created_at,
     is_owned              : true,
     owner                 : String::new(),
+    claim_lock            : false,
+    reserve               : false,
   } );
 }
 
@@ -423,13 +475,14 @@ fn approximate_quota(
   let ( host, role ) = read_profile_metadata( credential_store, &acct.name );
   let renewal_at     = read_renewal_at( credential_store, &acct.name );
   let owner          = claude_profile_core::account::read_owner( credential_store, &acct.name );
-  let ( result, cached, cache_age_secs ) = match read_cached_quota( credential_store, &acct.name, now_secs )
+  let ( result, cached, cache_age_secs, org_created_at ) = match read_cached_quota( credential_store, &acct.name, now_secs )
   {
-    Some( ( data, age ) ) => ( Ok( data ), true, Some( age ) ),
-    None                  => ( Err( "no cache".to_string() ), false, None ),
+    Some( ( data, age, oca ) ) => ( Ok( data ), true, Some( age ), oca ),
+    None                       => ( Err( "no cache".to_string() ), false, None, None ),
   };
   AccountQuota
   {
+    fallback_reason : None,
     name                  : acct.name.clone(),
     is_current,
     is_active             : acct.is_active,
@@ -442,8 +495,13 @@ fn approximate_quota(
     renewal_at,
     cached,
     cache_age_secs,
+    // Fix(BUG-327): approximate_quota (solo-skip / G1b occupied-elsewhere) surfaces
+    //   cache-backed org_created_at.
+    org_created_at,
     is_owned              : true,
     owner,
+    claim_lock            : acct.claim_lock,
+    reserve               : acct.reserve,
   }
 }
 

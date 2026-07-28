@@ -11,6 +11,7 @@ fn test_should_refresh_401_triggers()
 {
   let aq = AccountQuota
   {
+    fallback_reason : None,
     name          : "a@test.com".to_string(),
     is_current    : false,
     is_active             : false,
@@ -23,8 +24,10 @@ fn test_should_refresh_401_triggers()
     renewal_at    : None,
     cached        : false,
     cache_age_secs : None,
+    org_created_at : None,
     is_owned      : true,
     owner                : String::new(),
+      claim_lock : false, reserve : false,
   };
   assert!( should_refresh( &aq, 0 ), "401 must trigger refresh" );
 }
@@ -35,6 +38,7 @@ fn test_should_refresh_403_triggers()
 {
   let aq = AccountQuota
   {
+    fallback_reason : None,
     name          : "a@test.com".to_string(),
     is_current    : false,
     is_active             : false,
@@ -47,8 +51,10 @@ fn test_should_refresh_403_triggers()
     renewal_at    : None,
     cached        : false,
     cache_age_secs : None,
+    org_created_at : None,
     is_owned      : true,
     owner                : String::new(),
+      claim_lock : false, reserve : false,
   };
   assert!( should_refresh( &aq, 0 ), "403 must trigger refresh" );
 }
@@ -63,6 +69,7 @@ fn test_should_refresh_mre_bug156_429_expired_triggers()
 {
   let aq = AccountQuota
   {
+    fallback_reason : None,
     name          : "a@test.com".to_string(),
     is_current    : false,
     is_active             : false,
@@ -75,8 +82,10 @@ fn test_should_refresh_mre_bug156_429_expired_triggers()
     renewal_at    : None,
     cached        : false,
     cache_age_secs : None,
+    org_created_at : None,
     is_owned      : true,
     owner                : String::new(),
+      claim_lock : false, reserve : false,
   };
   assert!(
     should_refresh( &aq, 9_999 ),
@@ -93,6 +102,7 @@ fn test_should_refresh_429_valid_token_no_trigger()
 {
   let aq = AccountQuota
   {
+    fallback_reason : None,
     name          : "a@test.com".to_string(),
     is_current    : false,
     is_active             : false,
@@ -105,8 +115,10 @@ fn test_should_refresh_429_valid_token_no_trigger()
     renewal_at    : None,
     cached        : false,
     cache_age_secs : None,
+    org_created_at : None,
     is_owned      : true,
     owner                : String::new(),
+      claim_lock : false, reserve : false,
   };
   assert!(
     !should_refresh( &aq, 0 ),
@@ -120,6 +132,7 @@ fn test_should_refresh_429_exact_boundary_expired_triggers()
 {
   let aq = AccountQuota
   {
+    fallback_reason : None,
     name          : "a@test.com".to_string(),
     is_current    : false,
     is_active             : false,
@@ -132,8 +145,10 @@ fn test_should_refresh_429_exact_boundary_expired_triggers()
     renewal_at    : None,
     cached        : false,
     cache_age_secs : None,
+    org_created_at : None,
     is_owned      : true,
     owner                : String::new(),
+      claim_lock : false, reserve : false,
   };
   assert!(
     should_refresh( &aq, 5 ),
@@ -147,6 +162,7 @@ fn test_should_refresh_429_one_sec_future_no_trigger()
 {
   let aq = AccountQuota
   {
+    fallback_reason : None,
     name          : "a@test.com".to_string(),
     is_current    : false,
     is_active             : false,
@@ -159,8 +175,10 @@ fn test_should_refresh_429_one_sec_future_no_trigger()
     renewal_at    : None,
     cached        : false,
     cache_age_secs : None,
+    org_created_at : None,
     is_owned      : true,
     owner                : String::new(),
+      claim_lock : false, reserve : false,
   };
   assert!(
     !should_refresh( &aq, 5 ),
@@ -175,6 +193,7 @@ fn test_should_refresh_ok_no_trigger()
   let quota = claude_quota::OauthUsageData { five_hour : None, seven_day : None, seven_day_sonnet : None };
   let aq = AccountQuota
   {
+    fallback_reason : None,
     name          : "a@test.com".to_string(),
     is_current    : false,
     is_active             : false,
@@ -187,8 +206,10 @@ fn test_should_refresh_ok_no_trigger()
     renewal_at    : None,
     cached        : false,
     cache_age_secs : None,
+    org_created_at : None,
     is_owned      : true,
     owner                : String::new(),
+      claim_lock : false, reserve : false,
   };
   assert!( !should_refresh( &aq, 9_999 ), "Ok result must not trigger refresh" );
 }
@@ -199,6 +220,7 @@ fn test_should_refresh_generic_error_no_trigger()
 {
   let aq = AccountQuota
   {
+    fallback_reason : None,
     name          : "a@test.com".to_string(),
     is_current    : false,
     is_active             : false,
@@ -211,8 +233,10 @@ fn test_should_refresh_generic_error_no_trigger()
     renewal_at    : None,
     cached        : false,
     cache_age_secs : None,
+    org_created_at : None,
     is_owned      : true,
     owner                : String::new(),
+      claim_lock : false, reserve : false,
   };
   assert!( !should_refresh( &aq, 9_999 ), "generic error must not trigger refresh" );
 }
@@ -252,6 +276,7 @@ fn mre_bug235_locally_expired_triggers_should_refresh()
 {
   let aq = AccountQuota
   {
+    fallback_reason : None,
     name          : "i11@wbox.pro".to_string(),
     is_current    : false,
     is_active             : false,
@@ -264,8 +289,10 @@ fn mre_bug235_locally_expired_triggers_should_refresh()
     renewal_at    : None,
     cached        : false,
     cache_age_secs : None,
+    org_created_at : None,
     is_owned      : true,
     owner                : String::new(),
+      claim_lock : false, reserve : false,
   };
   assert!(
     should_refresh( &aq, 9_999 ),
@@ -308,6 +335,7 @@ fn mre_bug255_cache_defeats_refresh()
   let quota = claude_quota::OauthUsageData { five_hour : None, seven_day : None, seven_day_sonnet : None };
   let aq = AccountQuota
   {
+    fallback_reason : None,
     name                  : "alice@example.com".to_string(),
     is_current            : false,
     is_active             : false,
@@ -320,8 +348,10 @@ fn mre_bug255_cache_defeats_refresh()
     renewal_at            : None,
     cached                : true,
     cache_age_secs        : Some( 3600 ),
+    org_created_at        : None,
     is_owned              : true,
     owner                : String::new(),
+      claim_lock : false, reserve : false,
   };
   assert!(
     should_refresh( &aq, 9_999 ),
@@ -337,6 +367,7 @@ fn test_should_refresh_cached_valid_token_no_trigger()
   let quota = claude_quota::OauthUsageData { five_hour : None, seven_day : None, seven_day_sonnet : None };
   let aq = AccountQuota
   {
+    fallback_reason : None,
     name                  : "alice@example.com".to_string(),
     is_current            : false,
     is_active             : false,
@@ -349,8 +380,10 @@ fn test_should_refresh_cached_valid_token_no_trigger()
     renewal_at            : None,
     cached                : true,
     cache_age_secs        : Some( 60 ),
+    org_created_at        : None,
     is_owned              : true,
     owner                : String::new(),
+      claim_lock : false, reserve : false,
   };
   assert!(
     !should_refresh( &aq, 9_999 ),
@@ -365,10 +398,12 @@ fn test_should_refresh_cached_valid_token_no_trigger()
 /// G2 gate fires before any other check — ownership enforcement is the first guard.
 /// Even a 401 or locally-expired non-owned account must not trigger refresh.
 #[ test ]
+#[ allow( clippy::too_many_lines ) ]
 fn ft06_should_refresh_false_when_not_owned()
 {
   let aq_401 = AccountQuota
   {
+    fallback_reason : None,
     name                  : "alice@test.com".to_string(),
     is_current            : false,
     is_active             : false,
@@ -381,8 +416,10 @@ fn ft06_should_refresh_false_when_not_owned()
     renewal_at            : None,
     cached                : false,
     cache_age_secs        : None,
+    org_created_at        : None,
     is_owned              : false,
     owner                : String::new(),
+      claim_lock : false, reserve : false,
   };
   assert!(
     !should_refresh( &aq_401, 9_999 ),
@@ -391,6 +428,7 @@ fn ft06_should_refresh_false_when_not_owned()
 
   let aq_expired = AccountQuota
   {
+    fallback_reason : None,
     name                  : "alice@test.com".to_string(),
     is_current            : false,
     is_active             : false,
@@ -403,8 +441,10 @@ fn ft06_should_refresh_false_when_not_owned()
     renewal_at            : None,
     cached                : false,
     cache_age_secs        : None,
+    org_created_at        : None,
     is_owned              : false,
     owner                : String::new(),
+      claim_lock : false, reserve : false,
   };
   assert!(
     !should_refresh( &aq_expired, 9_999 ),
@@ -413,6 +453,7 @@ fn ft06_should_refresh_false_when_not_owned()
 
   let aq_429_expired = AccountQuota
   {
+    fallback_reason : None,
     name                  : "alice@test.com".to_string(),
     is_current            : false,
     is_active             : false,
@@ -425,8 +466,10 @@ fn ft06_should_refresh_false_when_not_owned()
     renewal_at            : None,
     cached                : false,
     cache_age_secs        : None,
+    org_created_at        : None,
     is_owned              : false,
     owner                : String::new(),
+      claim_lock : false, reserve : false,
   };
   assert!(
     !should_refresh( &aq_429_expired, 9_999 ),
@@ -435,6 +478,7 @@ fn ft06_should_refresh_false_when_not_owned()
 
   let aq_cached_expired = AccountQuota
   {
+    fallback_reason : None,
     name                  : "alice@test.com".to_string(),
     is_current            : false,
     is_active             : false,
@@ -452,8 +496,10 @@ fn ft06_should_refresh_false_when_not_owned()
     renewal_at            : None,
     cached                : true,
     cache_age_secs        : Some( 300 ),
+    org_created_at        : None,
     is_owned              : false,
     owner                : String::new(),
+      claim_lock : false, reserve : false,
   };
   assert!(
     !should_refresh( &aq_cached_expired, 9_999 ),
@@ -486,6 +532,7 @@ fn sr11_approaching_expiry_must_not_trigger_refresh()
   let now_secs : u64 = 100_000;
   let aq = AccountQuota
   {
+    fallback_reason : None,
     name                  : "a@test.com".to_string(),
     is_current            : false,
     is_active             : false,
@@ -498,8 +545,10 @@ fn sr11_approaching_expiry_must_not_trigger_refresh()
     renewal_at            : None,
     cached                : false,
     cache_age_secs        : None,
+    org_created_at        : None,
     is_owned              : true,
     owner                 : String::new(),
+      claim_lock : false, reserve : false,
   };
   assert!(
     !should_refresh( &aq, now_secs ),
@@ -531,6 +580,7 @@ fn mre_bug303_should_refresh_false_for_occupied_elsewhere()
 {
   let aq = AccountQuota
   {
+    fallback_reason : None,
     name                  : "alice@example.com".to_string(),
     is_current            : false,
     is_active             : false,
@@ -543,8 +593,10 @@ fn mre_bug303_should_refresh_false_for_occupied_elsewhere()
     renewal_at            : None,
     cached                : false,
     cache_age_secs        : None,
+    org_created_at        : None,
     is_owned              : true,
     owner                 : String::new(),
+      claim_lock : false, reserve : false,
   };
   assert!(
     !should_refresh( &aq, 9_999 ),

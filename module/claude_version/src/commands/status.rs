@@ -9,7 +9,7 @@ use crate::output::{ OutputFormat, OutputOptions, json_escape };
 use claude_runner_core::process::find_claude_processes;
 use claude_version_core::config_catalog::catalog;
 use claude_version_core::config_resolve::resolve;
-use claude_version_core::settings_io::{ get_setting, read_all_settings };
+use claude_core::settings_io::{ get_setting, read_all_settings };
 use claude_version_core::version::{
   extract_semver, get_claude_version_raw, get_installed_version, read_preferred_version,
   read_versions_dir_lock_mode, VersionsDirLockMode,
@@ -90,6 +90,8 @@ fn lock_status( settings_unreadable : bool, compliant : impl FnOnce() -> bool ) 
 /// compared against the wrong (unpinned) expectation and misreport a false
 /// `MISMATCH`, regardless of which specific I/O error caused the
 /// degradation.
+// core::io::ErrorKind requires the unstable `core_io` feature (rust-lang/rust#154046) — not usable on stable.
+#[ allow( clippy::std_instead_of_core ) ]
 fn compute_lock_rows( is_pinned : bool, resolved_version : Option< &str > ) -> Vec< LockRow >
 {
   let settings_file = super::require_claude_paths().ok().map( | p | p.settings_file() );

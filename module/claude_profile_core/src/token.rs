@@ -84,6 +84,8 @@ pub fn status() -> Result< TokenStatus, std::io::Error >
 /// Returns an error if credentials cannot be read or `expiresAt` cannot
 /// be parsed from the credential file.
 #[ inline ]
+// core::io::ErrorKind requires the unstable `core_io` feature (rust-lang/rust#154046) — not usable on stable.
+#[ allow( clippy::std_instead_of_core ) ]
 pub fn status_with_threshold( warning_secs : u64 ) -> Result< TokenStatus, std::io::Error >
 {
   let paths = ClaudePaths::new()

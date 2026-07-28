@@ -4,20 +4,20 @@
 
 - **Purpose**: Document CLR_* environment variable fallbacks, runtime configuration overrides, and CLAUDE_CODE_* subprocess variables.
 - **Responsibility**: Specify env var names, corresponding CLI parameters, precedence rules, and type handling.
-- **In Scope**: CLR_* input vars for run/isolated/refresh, CLR_* runtime config overrides (`CLR_GATE_DIR`, `CLR_GATE_POLL_SECS`, `CLR_GATE_MAX_ATTEMPTS`, `CLR_GATE_STALE_SECS`, `CLR_CONFIG_DIR`), and the 5 `CLAUDE_CODE_*` subprocess variables `clr` injects by default (`CLAUDE_CODE_MAX_OUTPUT_TOKENS`, `CLAUDE_CODE_AUTO_COMPACT_WINDOW`, `CLAUDE_CODE_BASH_TIMEOUT`, `CLAUDE_CODE_BASH_MAX_TIMEOUT`, `CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS`), precedence, bool/parsed type semantics.
+- **In Scope**: CLR_* input vars for run/isolated/refresh, CLR_* runtime config overrides (`CLR_GATE_DIR`, `CLR_GATE_POLL_SECS`, `CLR_GATE_MAX_ATTEMPTS`, `CLR_GATE_STALE_SECS`, `CLR_CONFIG_DIR`, `CLR_QUERY_DIR`), and the 5 `CLAUDE_CODE_*` subprocess variables `clr` injects by default (`CLAUDE_CODE_MAX_OUTPUT_TOKENS`, `CLAUDE_CODE_AUTO_COMPACT_WINDOW`, `CLAUDE_CODE_BASH_TIMEOUT`, `CLAUDE_CODE_BASH_MAX_TIMEOUT`, `CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS`), precedence, bool/parsed type semantics.
 - **Out of Scope**: CLI parameter descriptions (→ param/), subprocess behavior beyond env injection, config-file TOML key reference (→ [config_param.md](config_param.md)).
 
-### All Env Parameters (89 total)
+### All Env Parameters (93 total)
 
 | Category | Count | Purpose |
 |----------|-------|---------|
 | Input (CLR_*) — `run` subcommand | 64 | Caller env fallbacks for `run` parameters |
 | Input (CLR_*) — `isolated` and `refresh` subcommands | 13 | Caller env fallbacks for credential operation parameters |
 | Input (CLR_*) — `ps` subcommand | 5 | Caller env fallbacks for session listing display and flag thresholds |
-| Runtime config (CLR_*) | 5 | Runtime configuration overrides (not CLI parameter fallbacks) |
+| Runtime config (CLR_*) | 6 | Runtime configuration overrides (not CLI parameter fallbacks) |
 | Subprocess (CLAUDE_CODE_*) — injected | 5 | Set by `clr` before spawning the `claude` subprocess |
 
-**Total:** 92 environment variables
+**Total:** 93 environment variables
 
 ---
 
@@ -427,6 +427,36 @@ expected to run background work past 1 hour, `--timeout 0` /
 [`invariant/007_print_mode_timeout.md`](../invariant/007_print_mode_timeout.md)
 — clr's own outer watchdog, the more likely cause of "background work
 dropped before finishing" for genuinely long-running tasks.
+
+### Env Param 11: `CLR_QUERY_DIR` — Query Session Socket Directory
+
+Runtime configuration override for the `clr query` command's Unix domain socket
+directory (`query.rs`). No corresponding CLI flag or `--args-file` JSON key —
+env-var-only, matching the `CLR_GATE_DIR` precedent (Env Param 5).
+
+| Variable | Default | Type | Notes |
+|----------|---------|------|-------|
+| `CLR_QUERY_DIR` | `<temp-dir>/clr-query` | path | Query session socket directory; read by `query_dir()` in `query.rs` |
+
+**`CLR_QUERY_DIR`:** Overrides the default directory where each query session's daemon
+binds its `<pid>.sock` Unix domain socket. A query session's start form
+(`clr query "<message>"`) creates the directory and binds the socket before printing the
+session's PID; the dispatch form (`clr query <pid> <method>`) connects to
+`$CLR_QUERY_DIR/<pid>.sock`. Primary use: test isolation — override in tests to point at
+a temp dir, preventing cross-test contamination from real query sockets in the default
+system temp directory.
+
+```sh
+CLR_QUERY_DIR=/tmp/my-test-query-dir clr query "task" &
+# daemon binds /tmp/my-test-query-dir/<pid>.sock instead of <temp-dir>/clr-query/<pid>.sock
+```
+
+**Commands affected:** `query` only (`query_dir()` is invoked only from `query.rs`'s start
+and dispatch forms, plus the liveness watchdog's socket cleanup).
+
+**No precedence rule** — always applied; there is no corresponding CLI flag or JSON key.
+
+---
 
 ### Provenance
 

@@ -19,6 +19,8 @@ use claude_profile_core::account::trace_ts;
 /// - Exit 2 (via `process::exit`): named account not found.
 #[ inline ]
 #[ allow( clippy::too_many_lines ) ]
+// core::io::ErrorKind requires the unstable `core_io` feature (rust-lang/rust#154046) — not usable on stable.
+#[ allow( clippy::std_instead_of_core ) ]
 pub fn account_renewal_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
   let dry      = is_dry( &cmd );

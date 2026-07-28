@@ -50,6 +50,12 @@ The current `clr kill` process itself cannot appear in the active session list (
 
 `clr kil` triggers the "Did you mean 'kill'?" typo guard and exits 1.
 
+`kill` terminates a `query` session (started via `clr query "<message>"`) the same way as
+any other session — it targets the underlying `claude` subprocess's PID, with no
+special-case handling. The query daemon's own liveness watchdog notices the subprocess is
+gone (within its 500ms poll interval) and exits on its own, removing its control socket —
+`kill` never needs to talk to the daemon directly.
+
 **Error messages:**
 - `Error: missing PID argument.` — No PID was provided.
 - `Error: invalid PID '<value>': must be a positive integer` — Non-numeric argument.
@@ -61,6 +67,7 @@ The current `clr kill` process itself cannot appear in the active session list (
 | # | Command | Relationship |
 |---|---------|--------------|
 | 1 | [`ps`](06_ps.md) | Discovers active session PIDs used as input to `kill` |
+| 2 | [`query`](10_query.md) | `kill` terminates a query session's subprocess the same way as any other session |
 
 ### Referenced Parameter Groups
 

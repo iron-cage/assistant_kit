@@ -15,15 +15,20 @@ Edge case coverage for the `--inspect` flag. See [069_inspect.md](../../../../do
 | EC-7 | Inspect mode suppresses Queued CLR Processes table | Behavioral |
 | EC-8 | `clr ps --inspect` with no active sessions shows empty-state message | Behavioral |
 | EC-9 | `clr ps --help` output contains `--inspect` | Documentation |
+| EC-10 | `clr tools --inspect` shows key:value blocks with `idx`/`name`/`category`/`desc` | Behavioral |
+| EC-11 | `clr tools --category Web --inspect` — inspect mode respects `--category` filter | Interaction |
+| EC-12 | `clr tools --columns name --inspect` — `--columns` ignored in tools inspect mode | Precedence |
+| EC-13 | `clr tools --value name --inspect` exits 1 (mutually exclusive) | Validation |
 
 ## Test Coverage Summary
 
-- Behavioral: 4 tests (EC-1, EC-2, EC-7, EC-8)
-- Interaction: 2 tests (EC-3, EC-4)
-- Precedence: 2 tests (EC-5, EC-6)
+- Behavioral: 5 tests (EC-1, EC-2, EC-7, EC-8, EC-10)
+- Interaction: 3 tests (EC-3, EC-4, EC-11)
+- Precedence: 3 tests (EC-5, EC-6, EC-12)
 - Documentation: 1 test (EC-9)
+- Validation: 1 test (EC-13)
 
-**Total:** 9 edge cases
+**Total:** 13 edge cases
 
 ---
 
@@ -112,4 +117,40 @@ Edge case coverage for the `--inspect` flag. See [069_inspect.md](../../../../do
 - **Command:** `clr ps --help`
 - **Expected behavior:** Exit 0; stdout contains `--inspect`
 - **Exit:** 0
+- **Source:** [069_inspect.md](../../../../docs/cli/param/069_inspect.md)
+
+---
+
+### EC-10: `tools` inspect mode produces key:value blocks
+
+- **Command:** `clr tools --inspect`
+- **Expected behavior:** Exit 0; stdout contains `idx:`, `name:`, `category:`, `desc:` key:value lines; stdout does NOT contain a table header row
+- **Exit:** 0
+- **Source:** [069_inspect.md](../../../../docs/cli/param/069_inspect.md)
+
+---
+
+### EC-11: `tools` inspect mode respects `--category` filter
+
+- **Command:** `clr tools --category Web --inspect`
+- **Expected behavior:** Exit 0; stdout shows inspect blocks only for `WebFetch`/`WebSearch`; stdout does NOT contain a `Bash` block
+- **Exit:** 0
+- **Source:** [069_inspect.md](../../../../docs/cli/param/069_inspect.md)
+
+---
+
+### EC-12: `tools` `--columns` is ignored in inspect mode
+
+- **Command:** `clr tools --columns name --inspect`
+- **Expected behavior:** Exit 0; stdout contains all 4 attribute keys (`idx:`, `name:`, `category:`, `desc:`); not only `name:`
+- **Exit:** 0
+- **Source:** [069_inspect.md](../../../../docs/cli/param/069_inspect.md)
+
+---
+
+### EC-13: `tools` `--value` and `--inspect` are mutually exclusive
+
+- **Command:** `clr tools --value name --inspect`
+- **Expected behavior:** Exit 1; stderr states the two flags cannot be combined
+- **Exit:** 1
 - **Source:** [069_inspect.md](../../../../docs/cli/param/069_inspect.md)

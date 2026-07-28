@@ -27,6 +27,8 @@ pub( crate ) fn is_dry( cmd : &VerifiedCommand ) -> bool
 ///
 /// - `InvalidInput` → `ArgumentTypeMismatch` (exit 1)
 /// - everything else → `InternalError` (exit 2)
+// core::io::ErrorKind requires the unstable `core_io` feature (rust-lang/rust#154046) — not usable on stable.
+#[ allow( clippy::std_instead_of_core ) ]
 pub( crate ) fn io_err_to_error_data( e : &std::io::Error, context : &str ) -> ErrorData
 {
   let code = match e.kind()

@@ -796,9 +796,9 @@ pub fn params_catalog() -> &'static [ ParamDef ]
     {
       name       : "model",
       cli_flag   : Some( "--model" ),
-      env_var    : None,
+      env_var    : Some( "CLAUDE_MODEL" ),
       config_key : Some( "model" ),
-      default    : Some( "claude-sonnet-4-6" ),
+      default    : Some( "claude-sonnet-5" ),
     },
     ParamDef
     {

@@ -108,7 +108,7 @@ approx.rs:49-76 approximate_utilization()  (dispatcher)
 
 The raw-value noise is not produced by `pct_emoji` or `apply_model_override` themselves — it is inherited from `quadratic_fit()`'s least-squares arithmetic (algorithm/006), which can differ from the "true" flat value by as little as the 13th-14th significant decimal digit. Neither classification function controls for this noise before comparing against its exact-integer threshold.
 
-**Fix pattern** (described in BUG-331 § Fix Location; not yet applied — see BUG-331 for current status):
+**Fix pattern** (described in BUG-331 § Fix Location; fix applied 2026-07-08 — see BUG-331 for current status):
 
 ```rust
 // pct_emoji, format.rs:443-451 — round once, derive both outputs from the rounded value:
@@ -171,4 +171,4 @@ Per BUG-331 § History (Step 6 — Search More Instances), the following thresho
 
 | File | Relationship |
 |------|--------------|
-| `tests/usage/format_tests.rs:502-526` | `test_ft11_009_per_column_emoji_prefix_three_cases` — covers the exact-integer-boundary case (`util=85.0` → `left=15.0` exactly) for `pct_emoji`; does not cover near-boundary floating-point-noise cases (the gap BUG-331 exposes). Property-style and MRE-derived regression tests described in BUG-331 § Prevention are not yet implemented. |
+| `tests/usage/format_tests.rs:502-526` | `test_ft11_009_per_column_emoji_prefix_three_cases` — covers the exact-integer-boundary case (`util=85.0` → `left=15.0` exactly) for `pct_emoji`; does not cover near-boundary floating-point-noise cases (the gap BUG-331 exposes). The near-boundary regression case described in BUG-331 § Prevention is implemented as `mre_bug331_pct_emoji_color_matches_rounded_display_at_threshold_boundary` (`tests/usage/format_tests.rs:563`). |

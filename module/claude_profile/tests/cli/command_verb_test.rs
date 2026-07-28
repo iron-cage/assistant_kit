@@ -1,7 +1,7 @@
 //! Integration tests: CLI command-verb behavioral contracts.
 //!
 //! Verifies idempotency, state-transition, and pre-condition semantics for each of the
-//! ten CLI verbs: save, use, delete, limits, relogin, rotate, renewal, inspect, assign, status.
+//! nine CLI verbs: save, use, delete, limits, relogin, renewal, inspect, assign, status.
 //!
 //! `lim_it` tests require a live Anthropic API token in `~/.claude/.credentials.json`.
 //! They are skipped automatically when credentials are absent or the API is rate-limited.
@@ -47,14 +47,6 @@
 //! | BV-1 | `relogin_bv1_lim_it_non_idempotent_oauth_flow` | OAuth non-idempotent (`lim_it` — skipped; needs TTY) | P |
 //! | BV-2 | `relogin_bv2_lim_it_updates_in_place_state_preserved` | in-place update (`lim_it` — skipped; needs TTY) | P |
 //! | BV-3 | `relogin_bv3_absent_account_exits_1` | absent account → exit 1 | N |
-//!
-//! ### `verb::rotate` (BV-1..3) — deprecated redirector
-//!
-//! | ID | Test Function | Condition | P/N |
-//! |----|---------------|-----------|-----|
-//! | BV-1 | `rotate_bv1_non_idempotent_outcome_changes_with_expiry` | deprecated → always exit 1 | N |
-//! | BV-2 | `rotate_bv2_activates_highest_expiry_inactive_account` | deprecated → message references `.usage rotate` | N |
-//! | BV-3 | `rotate_bv3_no_inactive_accounts_exits_2` | deprecated → always exit 1 (not exit 2) | N |
 //!
 //! ### `verb::renewal` (BV-1..3)
 //!
@@ -480,54 +472,6 @@ fn relogin_bv3_absent_account_exits_1()
     "relogin on absent account must exit non-zero; got 0\nstdout: {}\nstderr: {}",
     stdout( &out ), stderr( &out ),
   );
-}
-
-// ── verb::rotate ──────────────────────────────────────────────────────────────
-
-// BV-1: Second rotate picks different account once first account's token expires (non-idempotent)
-//
-// Setup: bob (active, lowest expiry), alice (inactive, highest), carol (inactive, middle).
-// BV-1: `.account.rotate` is deprecated — always exits 1 regardless of account state.
-#[ test ]
-fn rotate_bv1_non_idempotent_outcome_changes_with_expiry()
-{
-  let dir = TempDir::new().unwrap();
-  let home = dir.path().to_str().unwrap();
-  write_account( dir.path(), "alice@acme.com", "max", "default", FAR_FUTURE_MS, false );
-  write_account( dir.path(), "bob@acme.com",   "max", "default", FAR_FUTURE_MS, true  );
-
-  let out = run_cs_with_env( &[ ".account.rotate" ], &[ ( "HOME", home ) ] );
-  assert_exit( &out, 1 );
-}
-
-// BV-2: `.account.rotate` error message references `.usage rotate`.
-#[ test ]
-fn rotate_bv2_activates_highest_expiry_inactive_account()
-{
-  let dir = TempDir::new().unwrap();
-  let home = dir.path().to_str().unwrap();
-
-  let out = run_cs_with_env( &[ ".account.rotate" ], &[ ( "HOME", home ) ] );
-  assert_exit( &out, 1 );
-
-  let combined = format!( "{}{}", stdout( &out ), stderr( &out ) );
-  assert!(
-    combined.contains( ".usage rotate" ),
-    "deprecated `.account.rotate` must reference `.usage rotate`, got: {combined}",
-  );
-}
-
-// BV-3: `.account.rotate` exits 1 (not 2) even when no inactive accounts exist.
-#[ test ]
-fn rotate_bv3_no_inactive_accounts_exits_2()
-{
-  let dir = TempDir::new().unwrap();
-  let home = dir.path().to_str().unwrap();
-  write_account( dir.path(), "alice@acme.com", "max", "default", FAR_FUTURE_MS, true );
-
-  let out = run_cs_with_env( &[ ".account.rotate" ], &[ ( "HOME", home ) ] );
-  // Deprecated redirector always exits 1 — the "no inactive" condition is never evaluated.
-  assert_exit( &out, 1 );
 }
 
 // ── verb::renewal ─────────────────────────────────────────────────────────────

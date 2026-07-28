@@ -1161,6 +1161,44 @@ fn chrono_now_utc_parse_roundtrip()
   );
 }
 
+/// `trace_ts()` returns a UTC-marked timestamp prefix (BUG-338).
+///
+/// ## Fix Documentation — BUG-338
+///
+/// - **Root Cause:** `trace_ts()` sliced `chrono_now_utc()`'s ISO-8601 output into
+///   `"YYYY-MM-DD · HH:MM:SS · "`, dropping the trailing `Z` (UTC marker) entirely.
+///   The rendered prefix was visually indistinguishable from a differently-clocked
+///   (e.g. local-time) timestamp source sharing the same shape in a combined transcript.
+/// - **Why Not Caught:** No test asserted on `trace_ts()`'s own return value — only
+///   `chrono_now_utc()` (the function it wraps) had a round-trip test. The slicing
+///   step that drops the `Z` had no dedicated coverage.
+/// - **Fix Applied:** `format!` literal changed from `"{} · {} · "` to `"{} · {} UTC · "`,
+///   restoring an explicit timezone marker in place of the dropped `Z`.
+/// - **Prevention:** This test asserts both the substring and the full structural shape,
+///   so a future slicing change that drops the marker again fails immediately.
+/// - **Pitfall:** A bare `.contains("UTC")` check would pass even if `UTC` appeared in
+///   the wrong position (e.g. before the date) — the structural check below pins the
+///   exact position, ensuring the marker sits between time and trailer.
+#[ test ]
+fn trace_ts_returns_utc_marked_timestamp()
+{
+  let ts = claude_profile_core::account::trace_ts();
+
+  assert!( ts.contains( " UTC · " ), "must contain UTC marker substring: {ts}" );
+
+  // Structural check (AF1): validate the full shape, not just substring presence.
+  let mut parts = ts.splitn( 2, " · " );
+  let date_part = parts.next().expect( "date segment present" );
+  let rest       = parts.next().expect( "time+marker segment present" );
+
+  assert_eq!( date_part.len(), 10, "date segment must be YYYY-MM-DD: {date_part}" );
+  assert!( date_part.chars().enumerate().all( |( i, c )| if i == 4 || i == 7 { c == '-' } else { c.is_ascii_digit() } ), "date segment must be YYYY-MM-DD: {date_part}" );
+
+  assert_eq!( rest, format!( "{} UTC · ", &rest[ ..8 ] ), "time+marker segment must be HH:MM:SS UTC · : {rest}" );
+  let time_part = &rest[ ..8 ];
+  assert!( time_part.chars().enumerate().all( |( i, c )| if i == 2 || i == 5 { c == ':' } else { c.is_ascii_digit() } ), "time segment must be HH:MM:SS: {time_part}" );
+}
+
 /// `write_quota_cache` gracefully handles malformed existing `{name}.json`.
 ///
 /// When the file contains invalid JSON, `serde_json::from_str` returns Err
