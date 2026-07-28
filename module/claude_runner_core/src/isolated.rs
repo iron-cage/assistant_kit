@@ -16,6 +16,7 @@
 //! | `run_isolated()`        | Yes                |
 
 use core::fmt;
+use std::io;
 
 // ── Public types ─────────────────────────────────────────────────────────────
 
@@ -312,7 +313,7 @@ pub fn run_isolated_ext
   //   child.kill() + child.wait_with_output() can recover buffered data.
   let mut child = cmd.spawn_piped().map_err( |e|
   {
-    if e.kind() == std::io::ErrorKind::NotFound
+    if e.kind() == io::ErrorKind::NotFound
     {
       RunnerError::ClaudeNotFound
     }
@@ -375,10 +376,7 @@ pub fn run_isolated_ext
   //          may have been written before the subprocess started blocking.
   let credentials = std::fs::read_to_string( &creds_path )
     .ok()
-    .and_then( |new|
-    {
-      if new.as_bytes() == credentials_json.as_bytes() { None } else { Some( new ) }
-    } );
+    .filter( |new| new.as_bytes() != credentials_json.as_bytes() );
 
   // Step 7: Unconditional cleanup — no early return may appear before this line.
   let _ = std::fs::remove_dir_all( &temp_dir );

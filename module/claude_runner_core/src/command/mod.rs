@@ -12,6 +12,7 @@
 //! The distinction is critical: `.output()` captures process output which prevents Claude Code from
 //! accessing the terminal for interactive sessions. Interactive mode uses `.status()` to preserve TTY access.
 
+use std::io;
 use std::path::PathBuf;
 use error_tools::{ Result, Error };
 
@@ -517,7 +518,7 @@ impl ClaudeCommand {
     let output = cmd.output()
       .map_err( |e|
       {
-        if e.kind() == std::io::ErrorKind::NotFound
+        if e.kind() == io::ErrorKind::NotFound
         {
           Error::msg( "claude binary not found in PATH — install with: npm i -g @anthropic-ai/claude-code" )
         }
@@ -596,7 +597,7 @@ impl ClaudeCommand {
     let status = cmd.status()
       .map_err( |e|
       {
-        if e.kind() == std::io::ErrorKind::NotFound
+        if e.kind() == io::ErrorKind::NotFound
         {
           Error::msg( "claude binary not found in PATH — install with: npm i -g @anthropic-ai/claude-code" )
         }
