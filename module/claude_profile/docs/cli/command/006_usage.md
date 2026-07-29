@@ -6,7 +6,7 @@ Live quota utilization commands.
 
 ### Command: 9. `.usage`
 
-Fetches live quota utilization for every saved account via `claude_quota::fetch_oauth_usage()` (`GET /api/oauth/usage`) and account billing state via `claude_quota::fetch_oauth_account()` (`GET /api/oauth/account`, parallel thread). Renders results as a `data_fmt` table with a status emoji column (`●`: 🟢/🟡/🔴), plus 5h Left, 5h Reset, 7d Left, 7d(Son), 7d Reset, Expires, ~Renews, and → Next columns, and a footer recommendation line. `~Renews` shows a duration countdown (exact `in Xh Ym` when `_renewal_at` override is set, estimated `~in Xd` from `org_created_at`). `→ Next` shows the soonest strategic quota reset event (`+7d`/`$ren`); token expiry and 5h resets are not included since they are already shown in `Expires` and `5h Reset`. Supports optional token refresh on auth errors (`refresh::1`) and continuous live-monitor mode (`live::1`).
+Fetches live quota utilization for every saved account via `claude_quota::fetch_oauth_usage()` (`GET /api/oauth/usage`) and account billing state via `claude_quota::fetch_oauth_account()` (`GET /api/oauth/account`, parallel thread). Renders results as a `data_fmt` table with a status emoji column (`●`: 🟢/🟡/🔴), plus 5h Left, 5h Reset, 7d Left, 7d Reset, Expires, ~Renews, Owner, and → Next columns, and a footer recommendation line. `7d(Son)` is hidden by default (show via `cols::+7d_son`; see Notes). `~Renews` shows a duration countdown (exact `in Xh Ym` when `_renewal_at` override is set, estimated `~in Xd` from `org_created_at`). `→ Next` shows the soonest strategic quota reset event (`+7d`/`$ren`); token expiry and 5h resets are not included since they are already shown in `Expires` and `5h Reset`. Supports optional token refresh on auth errors (`refresh::1`) and continuous live-monitor mode (`live::1`).
 
 -- **Parameters:** [`name::`](../param/001_name.md) *(optional)*, [`format::`](../param/002_format.md), [`dry::`](../param/004_dry.md), [`refresh::`](../param/019_refresh.md), [`live::`](../param/020_live.md), [`interval::`](../param/021_interval.md), [`jitter::`](../param/022_jitter.md), [`trace::`](../param/023_trace.md), [`sort::`](../param/025_sort.md), [`desc::`](../param/026_desc.md), [`prefer::`](../param/027_prefer.md), [`cols::`](../param/033_cols.md), [`touch::`](../param/034_touch.md), [`imodel::`](../param/035_imodel.md), [`effort::`](../param/036_effort.md), [`count::`](../param/037_count.md), [`offset::`](../param/038_offset.md), [`only_active::`](../param/039_only_active.md), [`only_next::`](../param/040_only_next.md), [`min_5h::`](../param/041_min_5h.md), [`min_7d::`](../param/042_min_7d.md), [`only_valid::`](../param/043_only_valid.md), [`exclude_exhausted::`](../param/044_exclude_exhausted.md), [`get::`](../param/045_get.md), [`abs::`](../param/046_abs.md), [`no_color::`](../param/047_no_color.md), [`set_model::`](../param/054_set_model.md), [`assignee::`](../param/063_assignee.md), [`owner::`](../param/062_owner.md), [`lock::`](../param/067_lock.md), [`reserve::`](../param/068_reserve.md), [`force::`](../param/058_force.md), [`rotate::`](../param/059_rotate.md), [`solo::`](../param/060_solo.md), [`who::`](../param/061_who.md)
 -- **Exit:** 0 (success) | 1 (usage: invalid param combination; G9 claim-lock violation on `assignee::` target-side unless `force::1`) | 2 (runtime: credential store unreadable, HOME unset)
@@ -25,7 +25,8 @@ clp .usage sort::renew prefer::opus
 clp .usage sort::renews
 clp .usage sort::name desc::1
 clp .usage cols::+sub
-clp .usage cols::+sub,-7d_son
+clp .usage cols::+sub,+7d_son
+clp .usage cols::-owner
 clp .usage touch::0
 clp .usage touch::0 refresh::1 trace::1
 clp .usage imodel::sonnet
@@ -100,12 +101,12 @@ clp .usage solo::1 live::1 interval::60
 clp .usage
 # Quota
 #
-#   ●  Account              5h Left     5h Reset    7d Left  7d(Son)  7d Reset   Expires     ~Renews      → Next
-#   🟢 bob@example.com      🟢 100%    in 4h 58m  🟢 88%   28%      in 6d 14h  in 5h 02m   ~in 30d      in 6d 14h +7d
-# ✓ 🟢 alice@example.com    🟢 86%     in 3h 19m  🟢 65%   35%      in 4d 23h  in 7h 24m   ~in 6d       in 4d 23h +7d
-# @ 🟢 carol@example.com    🟢 91%     in 4h 12m  🟢 73%   41%      in 5d 8h   in 2h 30m   ~in 14d      in 5d 8h +7d
-#   🟡 frank@example.com    🟡 3%      in 0h 23m  🟢 52%   12%      in 2d 11h  in 1h 12m   ~in 8d       in 2d 11h +7d
-#   🔴 dave@example.com     —          —           —        —        —          EXPIRED      ?            —
+#   ●  Account              5h Left     5h Reset    7d Left  7d Reset   Expires     ~Renews      Owner        → Next
+#   🟢 bob@example.com      🟢 100%    in 4h 58m  🟢 88%   in 6d 14h  in 5h 02m   ~in 30d      —            in 6d 14h +7d
+# ✓ 🟢 alice@example.com    🟢 86%     in 3h 19m  🟢 65%   in 4d 23h  in 7h 24m   ~in 6d       alice@ws1    in 4d 23h +7d
+# @ 🟢 carol@example.com    🟢 91%     in 4h 12m  🟢 73%   in 5d 8h   in 2h 30m   ~in 14d      —            in 5d 8h +7d
+#   🟡 frank@example.com    🟡 3%      in 0h 23m  🟢 52%   in 2d 11h  in 1h 12m   ~in 8d       —            in 2d 11h +7d
+#   🔴 dave@example.com     —          —           —        —          EXPIRED      ?            —            —
 #
 # Current      · alice@example.com · sonnet/high · 4/5
 # Next (renew) · frank@example.com · opus/max    · in 2d 11h +7d
@@ -133,7 +134,8 @@ clp .usage live::1 interval::60 jitter::10
 - `refresh::1` triggers at most one retry per account per cycle. See [feature/017_token_refresh.md](../../feature/017_token_refresh.md).
 - `live::1 format::json` exits 1 before any fetch. See [feature/018_live_monitor.md](../../feature/018_live_monitor.md).
 - Four-group status partition (🟢 Green → 🟡 h-exhausted → 🟡 weekly-exhausted → 🔴 Dead) applied before sort strategy. Both-exhausted accounts (5h ≤ 15% AND 7d ≤ 5%) merge into G3 weekly-exhausted. Sort applies within each group only; `desc::1` reverses within groups but never changes group order. See [dictionary](../../cli/002_dictionary.md#status-groups).
-- `Sub` column hidden by default; show via `cols::+sub`. `7d Son Reset` column also hidden by default; show via `cols::+7d_son_reset`.
+- `Sub` column hidden by default; show via `cols::+sub`. `7d Son Reset` column also hidden by default; show via `cols::+7d_son_reset`. `7d(Son)` column hidden by default since BUG-334 (fixed 2026-07-08) — its `seven_day_sonnet` data source has been permanently `null` since Anthropic's 2026-06-25 API restructuring, so the column always rendered blank; show via `cols::+7d_son`. `Host` and `Role` columns also hidden by default; show via `cols::+host` / `cols::+role`.
+- `Owner` column shown by default (Feature 037, AC-19) — the `owner` field from `{name}.json`: `USER@MACHINE` identity when set via `.usage owner::USER@MACHINE`, `—` when unowned. Hide via `cols::-owner`.
 - Duration format (`format_duration_secs`) capped to 2 significant units (e.g., `1d 2h` not `1d 2h 45m`).
 - See [feature/009_token_usage.md](../../feature/009_token_usage.md) for the baseline algorithm and AC criteria.
 - See [feature/020_usage_sort_strategies.md](../../feature/020_usage_sort_strategies.md) for sort strategies and footer recommendation.
@@ -200,6 +202,7 @@ clp .usage live::1 interval::60 jitter::10
 | 11 | [Usage Strategy Rotate](../../feature/038_usage_strategy_rotate.md) | `rotate::1` — strategy-driven account rotation via `.usage` |
 | 12 | [Account Ownership](../../feature/036_account_ownership.md) | `solo::1` extends G1/G2/G4 ownership gates with current-account check |
 | 13 | [Account Claim and Reservation Control](../../feature/070_account_claim_and_reservation_control.md) | `lock::`/`reserve::` params; Gate 9/G9 claim-lock; `reserve` sort key |
+| 14 | [Accounts/Usage Parameter Set Unification](../../feature/037_accounts_usage_param_unification.md) | `Owner` column default-visible (AC-19); unified `cols::` default set shared with `.accounts` |
 
 ### Referenced User Stories
 
