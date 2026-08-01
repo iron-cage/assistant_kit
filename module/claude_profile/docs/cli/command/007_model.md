@@ -65,6 +65,10 @@ clp .model set::bad
 - `set_session_model()` is shared with the `set_model::` parameter on `.account.use` and `.usage` (Feature 034). No duplication in the write path.
 - `.model` appears in the "Status & info" group of `clp .help`.
 
+### Referenced Command Group
+
+Evaluated against `.account.use` and `.usage` under the strict [command_group](../command_group/readme.md) identity test (same dispatch function, same parameter set) — does not qualify. `model_routine()` (`src/commands/model.rs:25`) has zero cross-calls with `account_use_routine()` (`src/commands/account_ops.rs:19`) or `usage_routine()` (`src/usage/api.rs:62`). The "shared"/"no duplication" note above is accurate about the write primitive — `claude_profile_core::account::set_session_model()` (`../claude_profile_core/src/account.rs:586`) is called from `model_routine` (`src/commands/model.rs:51`), `account_use_routine` (`src/commands/account_ops.rs:149`), and `usage_routine` (`src/usage/api.rs:166`) — but that primitive lives in a different crate below the dispatch layer, alongside every other file I/O helper these commands use; it is not evidence of shared dispatch or a shared parameter set. `.model` has 2 params total (`set::`, `format::`) where `set::` is the only way to trigger a write; `.account.use` has 8 params where `set_model::` is one of many, applied as a side effect of switching accounts; `.usage` has 33 params where `set_model::` is likewise one of many, applied as a side effect of a quota-fetch cycle. `.model`'s `set::` and the other two commands' `set_model::` are different parameter names with different invocation semantics, not the same parameter under a different default. See [`command_group/readme.md`](../command_group/readme.md) Evaluated, Not Qualifying for the full analysis.
+
 ### Referenced Features
 
 | # | Feature | Role |

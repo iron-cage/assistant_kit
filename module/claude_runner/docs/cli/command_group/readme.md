@@ -9,19 +9,29 @@
 
 Every command in `command/` is evaluated against every other command using the Representation Absorption Test (see `01_run_ask.md` for the worked test) before a new command name is ever added — this is a mandatory design gate, not documentation-after-the-fact. A proposed new command that passes the test is a pre-configured alias of an existing command's handler, not a new command_group member requiring its own dispatch function.
 
+Every command belongs to exactly one group — including a command with no sibling, which still opens its own Singleton Group and still receives a row below; no command is ever left out of **All Groups**. Before adding a new command, this same evaluation also asks whether an existing group's handler could absorb it via a new parameter instead of a new dispatch function — see the groups-to-commands ratio in the summary below. (Per this workspace-group's shared rulebook, CLI Documentation: Command Group Total Partition and Command Group Minimization.)
+
 ### Responsibility Table
 
 | File | Responsibility |
 |------|----------------|
 | 01_run_ask.md | Group spec: `run`/`ask` — identical handler, identical parameter set, zero default divergence |
 
-### All Groups (1 total)
+### All Groups (9 total)
 
 | # | Group | Members | Shared Handler | Divergence |
 |---|-------|---------|-----------------|------------|
-| 1 | run / ask | 2 | `dispatch_run()` | None — pure alias |
+| 1 | run / ask | 2 | `dispatch_run()` (`src/cli/mod.rs:247`) | None — pure alias |
+| 2 | isolated | 1 | `dispatch_isolated()` (`src/cli/mod.rs:396`) | N/A — sole member |
+| 3 | refresh | 1 | `dispatch_refresh()` (`src/cli/mod.rs:500`) | N/A — sole member |
+| 4 | ps | 1 | `dispatch_ps()` (`src/cli/ps.rs:76`) | N/A — sole member |
+| 5 | kill | 1 | `dispatch_kill()` (`src/cli/kill.rs:41`) | N/A — sole member |
+| 6 | tools | 1 | `dispatch_tools()` (`src/cli/tools.rs:208`) | N/A — sole member |
+| 7 | scope | 1 | `dispatch_scope()` (`src/cli/scope.rs:13`) | N/A — sole member |
+| 8 | query | 1 | `dispatch_query()` (`src/cli/query.rs:90`) | N/A — sole member |
+| 9 | help | 1 | N/A — intercepted pre-dispatch in `src/lib.rs`; no dispatch function | N/A — sole member |
 
-**Total:** 1 group. All 10 claude_runner commands were evaluated pairwise under the Representation Absorption Test — every one of the 9 dispatch functions (`dispatch_run`, `dispatch_ask`, `dispatch_isolated`, `dispatch_refresh`, `dispatch_ps`, `dispatch_kill`, `dispatch_tools`, `dispatch_scope`, `dispatch_query`; `help` is intercepted pre-dispatch in `src/lib.rs` and calls none) is invoked from exactly one call site in `src/lib.rs`'s top-level match, confirmed via a direct grep sweep for cross-calls among all 9 — the only delegation found is `dispatch_ask() -> dispatch_run()`. `run`/`ask` is the only pair sharing both an identical parameter set and an identical dispatch function. See Evaluated, Not Qualifying below for the nearest misses.
+**Total:** 9 groups for 10 commands (1 pair + 8 singletons). All 10 claude_runner commands were evaluated pairwise under the Representation Absorption Test — every one of the 9 dispatch functions (`dispatch_run`, `dispatch_ask`, `dispatch_isolated`, `dispatch_refresh`, `dispatch_ps`, `dispatch_kill`, `dispatch_tools`, `dispatch_scope`, `dispatch_query`; `help` is intercepted pre-dispatch in `src/lib.rs` and calls none) is invoked from exactly one call site in `src/lib.rs`'s top-level match, confirmed via a direct grep sweep for cross-calls among all 9 — the only delegation found is `dispatch_ask() -> dispatch_run()`. `run`/`ask` is the only pair sharing both an identical parameter set and an identical dispatch function; every other command forms a Singleton Group. See Evaluated, Not Qualifying below for the nearest misses considered and rejected.
 
 ### Evaluated, Not Qualifying
 

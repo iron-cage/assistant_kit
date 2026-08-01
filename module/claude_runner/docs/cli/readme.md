@@ -26,7 +26,7 @@ clr <command> [OPTIONS] [MESSAGE]
 | `003_env_param.md` | CLR_* env var fallbacks, gate/query runtime config (dir/poll/attempts/config-dir/query-dir), and CLAUDE_CODE_* subprocess vars (93 vars) |
 | `config_param.md` | Config-file parameter tier: eligible parameters, TOML key reference, discovery/precedence |
 | `param_group/` | Logical parameter groupings (7 groups) |
-| `command_group/` | Commands sharing one handler function and parameter set, defaults-only divergence (1 group) |
+| `command_group/` | Every command partitioned into exactly one group (Total Partition); shared handler + parameter set when multi-member (9 groups: 1 pair + 8 singletons) |
 | `type/` | Semantic type definitions (13 active types; 1 deprecated) |
 | `param/` | Individual parameter reference docs (75 active; 1 deprecated) |
 | `user_story/` | User goal and usage pattern docs (29 user stories) |
@@ -41,7 +41,7 @@ clr <command> [OPTIONS] [MESSAGE]
 | 001_dictionary.md | ✅ | ✅ | ➖ | ➖ | ➖ | Complete |
 | type/ (14 instances; 1 deprecated) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
 | param_group/ (7 instances) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
-| command_group/ (1 instance) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
+| command_group/ (9 groups; 1 multi-member detail file) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
 | user_story/ (29 instances) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
 | 003_env_param.md | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
 | parity/ (2 instances) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
@@ -68,7 +68,7 @@ clr <command> [OPTIONS] [MESSAGE]
 - [Parameters](param/readme.md) — flag and argument reference (75 active; 1 deprecated)
 - [Types](type/readme.md) — semantic type definitions (13 active types; 1 deprecated)
 - [Parameter Groups](param_group/readme.md) — logical parameter groupings (7 groups)
-- [Command Groups](command_group/readme.md) — commands sharing one handler and parameter set (1 group)
+- [Command Groups](command_group/readme.md) — every command in exactly one group; shared handler + parameter set when multi-member (9 groups: 1 pair + 8 singletons)
 - [Dictionary](001_dictionary.md) — domain vocabulary
 - [User Stories](user_story/readme.md) — user goals and usage patterns (29 user stories)
 - [Env Parameters](003_env_param.md) — input, runtime config, and subprocess environment variables (93 variables)

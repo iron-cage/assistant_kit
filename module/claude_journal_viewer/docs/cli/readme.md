@@ -19,7 +19,7 @@ All commands use unilang `.command param::value` syntax. The binary is `clj` (st
 | `param_group/` | Per-group detail pages with membership and interaction rules |
 | `001_dictionary.md` | Domain vocabulary and term definitions |
 | `002_env_param.md` | Environment variable catalog with precedence rules |
-| `command_group/` | Commands sharing one handler function and parameter set (0 groups) |
+| `command_group/` | Every command partitioned into exactly one group (Total Partition); shared handler + parameter set when multi-member (8 groups, all singletons) |
 | `user_story/` | User story index covering persona goals and acceptance criteria |
 
 ### Completion Matrix
@@ -50,7 +50,7 @@ All commands use unilang `.command param::value` syntax. The binary is `clj` (st
 - [Parameters](param/readme.md) — What inputs control each command
 - [Types](type/readme.md) — Semantic type constraints and validation rules
 - [Parameter Groups](param_group/readme.md) — Related parameter sets and their coherence
-- [Command Groups](command_group/readme.md) — Commands sharing one handler and parameter set (0 groups)
+- [Command Groups](command_group/readme.md) — every command in exactly one group; 8 singleton groups, zero cross-calls found (Total Partition)
 - [Dictionary](001_dictionary.md) — Domain vocabulary
 - [Environment Parameters](002_env_param.md) — Environment variables and precedence rules
 - [User Stories](user_story/readme.md) — Persona goals, acceptance criteria, and workflows

@@ -161,6 +161,10 @@ clv.version.install version::latest
 | 4 | [`v::`](../param/04_v.md) |
 | 5 | [`format::`](../param/05_format.md) |
 
+### Referenced Command Group
+
+Evaluated against `.version.guard` (which invokes install logic on drift; see step 4 above) under the strict [command_group](../command_group/readme.md) identity test — does not qualify. `version_install_routine()` (`src/commands/version.rs:75`) and `version_guard_routine()` (`src/commands/version.rs:240`) never call each other directly; what they share is `perform_install()` and `validate_version_spec()`, both imported from the separate `claude_version_core` crate, not one routine calling the other. Parameter sets also differ (`.version.guard` adds `interval::` for watch mode, with no `.version.install` equivalent). See [`command_group/readme.md`](../command_group/readme.md) Evaluated, Not Qualifying for the full analysis.
+
 ### Related Commands
 
 | # | Command | Relationship |
@@ -288,6 +292,10 @@ clv.version.guard force::1
 | 4 | [`interval::`](../param/08_interval.md) |
 | 5 | [`v::`](../param/04_v.md) |
 | 6 | [`format::`](../param/05_format.md) |
+
+### Referenced Command Group
+
+Evaluated against `.version.install` (see step 4 above: "invoke `.version.install` logic for the preferred version") under the strict [command_group](../command_group/readme.md) identity test — does not qualify. `version_guard_routine()` (`src/commands/version.rs:240`) shares no routine with `version_install_routine()` (`src/commands/version.rs:75`); both call `perform_install()`/`validate_version_spec()` from the separate `claude_version_core` crate, which is external-library sharing, not one routine invoking the other. `.version.guard` also adds `interval::` (watch mode) with no `.version.install` equivalent. See [`command_group/readme.md`](../command_group/readme.md) Evaluated, Not Qualifying for the full analysis.
 
 ### Related Commands
 

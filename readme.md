@@ -32,6 +32,7 @@ ast .help                    # all ~40 commands in one place
 | `vision.md` | Project vision, design rationale, and open problems |
 | `../locales.md` | Locale and internationalisation notes |
 | `Cargo.toml` | Workspace manifest: members, lints, shared dependencies |
+| `rulebook.md` | Governance: CLI command documentation partitioning (command_group total partition + minimization) |
 
 ## Crates
 

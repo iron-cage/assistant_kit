@@ -74,6 +74,10 @@ claude_storage .tail path::/home/alice/projects/my-app tail::6
 | 17 | [`topic::`](../param/17_topic.md) | [`TopicName`](../type/12_topic_name.md) | optional |
 | 25 | [`tail::`](../param/25_tail.md) | Integer | optional |
 
+### Referenced Command Group
+
+Evaluated against `.status` under the strict [command_group](../command_group/readme.md) identity test (same dispatch function, same parameter set) — does not qualify. `tail_routine()` (`src/cli/tail.rs:32`) has zero cross-calls with `status_routine()` (`src/cli/status.rs:19`). The exit-2 "not found" convention noted in this doc's Notes section is, per `tail_routine()`'s own doc comment (`src/cli/tail.rs:23-24`), matched against `.status` — not `.show` as this doc's own Notes line states; `show_routine()` (`src/cli/show.rs:32`) never calls `std::process::exit(2)` at all, it returns `Err(ErrorData)` for its not-found case (`src/cli/show.rs:173`). `.tail` and `.status` are the only two routines in the crate that independently call `std::process::exit(2)` (`src/cli/status.rs:45`, `src/cli/tail.rs:61,71`) — two separately-written call sites, not a shared function. Parameter sets also differ (`.tail` adds `tail::`/`topic::`; `.status` adds `show_tokens::`). See [`command_group/readme.md`](../command_group/readme.md) Evaluated, Not Qualifying for the full analysis.
+
 ### Referenced User Stories
 
 | # | User Story | Persona |

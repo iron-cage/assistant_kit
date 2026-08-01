@@ -60,6 +60,10 @@ clv.processes format::json
 | 1 | [`v::`](../param/04_v.md) |
 | 2 | [`format::`](../param/05_format.md) |
 
+### Referenced Command Group
+
+Evaluated against `.processes.kill` (algorithm step 1 below notes "same discovery as `.processes`") under the strict [command_group](../command_group/readme.md) identity test — does not qualify. `processes_routine()` (`src/commands/process.rs:16`) shares no routine with `processes_kill_routine()` (`src/commands/process.rs:126`); both call `find_claude_processes()` from the separate `claude_runner_core` crate, which is external-library sharing (also used by a third, unrelated routine, `status_routine()`), not one routine invoking the other. `.processes.kill` also adds `dry::`/`force::` with no `.processes` equivalent. See [`command_group/readme.md`](../command_group/readme.md) Evaluated, Not Qualifying for the full analysis.
+
 ### Related Commands
 
 | # | Command | Relationship |
@@ -143,6 +147,10 @@ clv.processes.kill force::1  # SIGKILL immediately
 | 2 | [`force::`](../param/03_force.md) |
 | 3 | [`v::`](../param/04_v.md) |
 | 4 | [`format::`](../param/05_format.md) |
+
+### Referenced Command Group
+
+Evaluated against `.processes` (see step 1 above: "same discovery as `.processes`") under the strict [command_group](../command_group/readme.md) identity test — does not qualify. `processes_kill_routine()` (`src/commands/process.rs:126`) shares no routine with `processes_routine()` (`src/commands/process.rs:16`); the shared discovery call is to `find_claude_processes()` in the separate `claude_runner_core` crate, not a call from one routine into the other. `.processes.kill` also adds `dry::`/`force::` with no `.processes` equivalent, and the output shapes differ categorically (kill-confirmation vs. process listing). See [`command_group/readme.md`](../command_group/readme.md) Evaluated, Not Qualifying for the full analysis.
 
 ### Related Commands
 
