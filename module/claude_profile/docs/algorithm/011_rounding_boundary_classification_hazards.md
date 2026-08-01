@@ -34,7 +34,7 @@ Called twice, once per quota period column:
 | Call site | Line | Threshold arg | Column |
 |-----------|------|----------------|--------|
 | `pct_emoji( data.five_hour...utilization, H_EXHAUSTED_THRESHOLD )` | `format.rs:460` | `15.0` | 5h Left |
-| `pct_emoji( data.seven_day...utilization, WEEKLY_EXHAUSTION_THRESHOLD )` | `format.rs:462` | `5.0` | 7d Left |
+| `pct_emoji( data.seven_day...utilization, WEEKLY_EXHAUSTION_THRESHOLD )` | `format.rs:462` | `3.0` | 7d Left |
 
 #### `pct_emoji` Branch Logic
 
@@ -89,7 +89,7 @@ Both functions above share one defect class: a classification decision and a dis
 
 | Function | Threshold | Window | Symptom |
 |----------|-----------|--------|---------|
-| `pct_emoji` (7d Left) | `WEEKLY_EXHAUSTION_THRESHOLD = 5.0` | `(4.5, 5.5)` | Identical "5%" text, 🟢/🟡 split across rows (BUG-331 original symptom) |
+| `pct_emoji` (7d Left) | `WEEKLY_EXHAUSTION_THRESHOLD = 3.0` | `(2.5, 3.5)` | Identical "3%" text, 🟢/🟡 split across rows (same defect class as BUG-331, which originally exposed this at the prior 5.0 threshold) |
 | `pct_emoji` (5h Left) | `H_EXHAUSTED_THRESHOLD = 15.0` | `(14.5, 15.5)` | Same defect class, by generalization |
 | `apply_model_override` | `OPUS_OVERRIDE_THRESHOLD = 10.0` | `(9.5, 10.5)` | Same rounded trace percentage logged regardless of which override branch actually fired |
 
@@ -152,7 +152,7 @@ Per BUG-331 § History (Step 6 — Search More Instances), the following thresho
 |------|--------------|
 | `src/usage/format.rs:443-451` | `pct_emoji` closure — both confirmed violation call sites (`format.rs:460,462`) |
 | `src/usage/api_switch.rs:225-298` | `apply_model_override` — branch selection (`244-245`) and trace logging (`256,270`) |
-| `src/usage/types.rs:399,408,414` | `OPUS_OVERRIDE_THRESHOLD`, `H_EXHAUSTED_THRESHOLD`, `WEEKLY_EXHAUSTION_THRESHOLD` constant definitions |
+| `src/usage/types.rs:453,462,468` | `OPUS_OVERRIDE_THRESHOLD`, `H_EXHAUSTED_THRESHOLD`, `WEEKLY_EXHAUSTION_THRESHOLD` constant definitions |
 | `src/usage/approx.rs:100-176` | `quadratic_fit()` — upstream source of the floating-point noise that triggers this hazard (see algorithm/006) |
 
 ### Invariants

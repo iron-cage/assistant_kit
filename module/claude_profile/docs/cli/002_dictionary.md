@@ -18,7 +18,7 @@
 
 **5h quota** — The 5-hour sliding session usage window. Column header: `5h Left`. Exhaustion threshold: `≤ 15%`. Resets on a short cycle (hours). Canonical adjective for below-threshold: **h-exhausted**.
 
-**7d quota** — The 7-day rolling weekly usage quota. Column header: `7d Left`. Exhaustion threshold: `≤ 5%`. Resets on a long cycle (days). Canonical adjective for below-threshold: **weekly-exhausted**.
+**7d quota** — The 7-day rolling weekly usage quota. Column header: `7d Left`. Exhaustion threshold: `≤ 3%`. Resets on a long cycle (days). Canonical adjective for below-threshold: **weekly-exhausted**.
 
 ### Quota Status
 
@@ -26,9 +26,9 @@
 
 **exhausted** — A quota dimension at or below its exhaustion threshold (unusable until reset).
 
-**h-exhausted** — Account with `5h Left ≤ 15%` and `7d Left > 5%`; the 5h session window is at or below threshold but the weekly quota is still available. Status group 2.
+**h-exhausted** — Account with `5h Left ≤ 15%` and `7d Left > 3%`; the 5h session window is at or below threshold but the weekly quota is still available. Status group 2.
 
-**weekly-exhausted** — Account with `7d Left ≤ 5%`; the 7d weekly quota is at or below threshold. Status group 3. Covers any `7d Left ≤ 5%` account, including accounts where both quotas are exhausted — the 7d constraint is binding in both cases. Fix(BUG-321): the former code classified the both-exhausted case (`5h ≤ 15%` AND `7d ≤ 5%`) as Dead (🔴); the correct classification is weekly-exhausted (🟡) since both-exhausted accounts recover without external action.
+**weekly-exhausted** — Account with `7d Left ≤ 3%`; the 7d weekly quota is at or below threshold. Status group 3. Covers any `7d Left ≤ 3%` account, including accounts where both quotas are exhausted — the 7d constraint is binding in both cases. Fix(BUG-321): the former code classified the both-exhausted case (`5h ≤ 15%` AND `7d ≤ 3%`) as Dead (🔴); the correct classification is weekly-exhausted (🟡) since both-exhausted accounts recover without external action.
 
 ### Status Groups
 

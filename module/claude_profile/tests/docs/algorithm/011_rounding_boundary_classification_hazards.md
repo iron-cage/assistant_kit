@@ -17,9 +17,9 @@ AC test cases for `docs/algorithm/011_rounding_boundary_classification_hazards.m
 
 ### AC-1: `pct_emoji` well inside threshold selects green with matching rounded text
 
-- **Given:** `util = Some(56.0)` (44% left), `threshold = WEEKLY_EXHAUSTION_THRESHOLD (5.0)` — raw `left = 44.0`, far from the threshold and from any rounding boundary
+- **Given:** `util = Some(56.0)` (44% left), `threshold = WEEKLY_EXHAUSTION_THRESHOLD (3.0)` — raw `left = 44.0`, far from the threshold and from any rounding boundary
 - **When:** `pct_emoji(util, threshold)` is called
-- **Then:** Returns `"🟢 44%"` — `left.round() = 44.0 > 5.0`, so 🟢 is selected, and the identical rounded `left` is reused for the `{left:.0}%` display text
+- **Then:** Returns `"🟢 44%"` — `left.round() = 44.0 > 3.0`, so 🟢 is selected, and the identical rounded `left` is reused for the `{left:.0}%` display text
 
 ### AC-2: `pct_emoji` at the exact-integer threshold selects yellow (boundary inclusive)
 
@@ -37,7 +37,7 @@ AC test cases for `docs/algorithm/011_rounding_boundary_classification_hazards.m
 
 ### AC-4: `pct_emoji` with floating-point noise straddling the exact threshold produces consistent color for identical rounded text (BUG-331)
 
-- **Given:** Two `util` values differing only in the 13th-14th significant decimal digit, both landing within the rounding half-interval `(4.5, 5.5)` around `WEEKLY_EXHAUSTION_THRESHOLD (5.0)`: `util_a = 94.999999999999716` (raw `left = 5.000000000000284`) and `util_b = 95.000000000000510` (raw `left = 4.999999999999488`)
-- **When:** `pct_emoji(Some(util_a), 5.0)` and `pct_emoji(Some(util_b), 5.0)` are each called
-- **Then:** Both return `"🟡 5%"` — `left` is rounded once (`(100.0 - u).round()`) before the comparison, collapsing both raw values to the identical rounded `left = 5.0`, which fails `5.0 > 5.0`, so both select 🟡; the raw sub-percent divergence between `util_a` and `util_b` no longer affects the color, since the same rounded value now drives both the comparison and the display text
-- **Note:** BUG-331 regression — before the fix, `left` was compared raw and rounded only for display: `pct_emoji_buggy(94.999999999999716, 5.0)` returned `"🟢 5%"` while `pct_emoji_buggy(95.000000000000510, 5.0)` returned `"🟡 5%"` — identical displayed text, opposite colors, reproduced live as a 2-green/1-yellow split across three accounts with equivalent flat quota histories in the 7d-Left column. The same defect class and fix pattern applies to `apply_model_override`'s `sonnet_left` (`api_switch.rs:243-253`, now rounded once before both the branch comparison at line 253 and both trace `writeln!` calls at lines 264/278) — merged into BUG-331 as an additional instance (Step 6 Search More Instances) rather than filed separately.
+- **Given:** Two `util` values differing only in the 13th-14th significant decimal digit, both landing within the rounding half-interval `(2.5, 3.5)` around `WEEKLY_EXHAUSTION_THRESHOLD (3.0)`: `util_a = 96.9999999999993` (raw `left = 3.0000000000006963`) and `util_b = 97.0000000000007` (raw `left = 2.9999999999993037`)
+- **When:** `pct_emoji(Some(util_a), 3.0)` and `pct_emoji(Some(util_b), 3.0)` are each called
+- **Then:** Both return `"🟡 3%"` — `left` is rounded once (`(100.0 - u).round()`) before the comparison, collapsing both raw values to the identical rounded `left = 3.0`, which fails `3.0 > 3.0`, so both select 🟡; the raw sub-percent divergence between `util_a` and `util_b` no longer affects the color, since the same rounded value now drives both the comparison and the display text
+- **Note:** BUG-331 regression — before the fix, `left` was compared raw and rounded only for display: `pct_emoji_buggy(96.9999999999993, 3.0)` returned `"🟢 3%"` while `pct_emoji_buggy(97.0000000000007, 3.0)` returned `"🟡 3%"` — identical displayed text, opposite colors, reproduced live as a 2-green/1-yellow split across three accounts with equivalent flat quota histories in the 7d-Left column (observed at the prior 5.0 threshold; the underlying defect class is threshold-value-independent). The same defect class and fix pattern applies to `apply_model_override`'s `sonnet_left` (`api_switch.rs:243-253`, now rounded once before both the branch comparison at line 253 and both trace `writeln!` calls at lines 264/278) — merged into BUG-331 as an additional instance (Step 6 Search More Instances) rather than filed separately.

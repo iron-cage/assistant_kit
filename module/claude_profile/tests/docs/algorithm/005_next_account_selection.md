@@ -155,7 +155,7 @@ AC test cases for `docs/algorithm/005_next_account_selection.md`. Tests
 
 ### AC-12: `sort::renew` skips weekly-exhausted even with soonest renewal (BUG-292)
 
-- **Given:** An account with `seven_day_left ≤ 5%` (weekly-exhausted) has the soonest
+- **Given:** An account with `seven_day_left ≤ 3%` (weekly-exhausted) has the soonest
   `min(7d_reset, sub_renewal)` value.
 - **When:** `sort::renew` strategy runs.
 - **Then:** The weekly-exhausted account is skipped regardless of having the soonest renewal.
@@ -193,13 +193,13 @@ AC test cases for `docs/algorithm/005_next_account_selection.md`. Tests
 
 ### AC-15: BUG-324 fix — Gate 7 uses raw `seven_day_left`, not `prefer_weekly`
 
-- **Given:** Account with `seven_day_left = 31%` (> 5%) but `seven_day_sonnet = 0%` →
-  `prefer_weekly(any) = min(31, 0) = 0%` (≤ 5%).
+- **Given:** Account with `seven_day_left = 31%` (> 3%) but `seven_day_sonnet = 0%` →
+  `prefer_weekly(any) = min(31, 0) = 0%` (≤ 3%).
 - **When:** Gate 7 evaluates eligibility.
-- **Then:** Account passes Gate 7 — `seven_day_left(31%) > 5.0 = true`. Before Fix(BUG-324),
+- **Then:** Account passes Gate 7 — `seven_day_left(31%) > 3.0 = true`. Before Fix(BUG-324),
   `prefer_weekly = 0%` blocked this green account.
 - **Source fn:** `mre_bug324_green_account_eligible_when_7d_son_exhausted`,
   `test_cc_bug324_divergent_at_boundary_eligible`,
-  `test_cc_gate7_boundary_exactly_5pct_skipped_in_eligibility` in
+  `test_cc_gate7_boundary_exactly_3pct_skipped_in_eligibility` in
   `tests/usage/sort_next_tests.rs`
 - **Source:** [algorithm/005_next_account_selection.md](../../../docs/algorithm/005_next_account_selection.md)

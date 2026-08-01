@@ -6,9 +6,9 @@ Algorithm correctness test cases for `docs/algorithm/004_eligibility_gates.md`. 
 
 | AC | Gate | Condition | Notes |
 |----|------|-----------|-------|
-| AC-01 | G7 fires (raw 7d exhausted) | `seven_day_left = 4.0 ≤ 5.0` → skipped | Unit test |
-| AC-02 | G7 passes (divergent 7d/7d_son, BUG-324) | `seven_day_left = 31.0 > 5.0`, `7d_son_left = 0%` → eligible | BUG-324 fix |
-| AC-03 | G7 boundary | `seven_day_left = 5.0` exactly at threshold → skipped | Boundary |
+| AC-01 | G7 fires (raw 7d exhausted) | `seven_day_left = 2.0 ≤ 3.0` → skipped | Unit test |
+| AC-02 | G7 passes (divergent 7d/7d_son, BUG-324) | `seven_day_left = 31.0 > 3.0`, `7d_son_left = 0%` → eligible | BUG-324 fix |
+| AC-03 | G7 boundary | `seven_day_left = 3.0` exactly at threshold → skipped | Boundary |
 | AC-04 | G7 model-agnostic invariant | `prefer::any` and `prefer::opus` produce same gate result | Invariant |
 | AC-05 | G3b cancelled subscription | `billing_type = "none"` → skipped (BUG-317) | Unit test |
 | AC-06 | G8 foreign-owned (`gate_ownership=true`) | `is_owned = false` → skipped | Unit test |
@@ -20,7 +20,7 @@ Algorithm correctness test cases for `docs/algorithm/004_eligibility_gates.md`. 
 |----|-----------|------|----------|
 | AC-01 | G7 raw 7d exhausted → skipped | G7 | Weekly exhaustion |
 | AC-02 | G7 divergent 7d/7d_son passes (BUG-324) | G7 | Model-agnostic |
-| AC-03 | G7 boundary at 5.0% → skipped | G7 | Boundary |
+| AC-03 | G7 boundary at 3.0% → skipped | G7 | Boundary |
 | AC-04 | G7 same result under any/opus | G7 | Invariant |
 | AC-05 | G3b cancelled subscription skipped | G3b | Cancelled |
 | AC-06 | G8 foreign-owned skipped (gate_ownership=true) | G8 | Ownership |
@@ -32,9 +32,9 @@ Algorithm correctness test cases for `docs/algorithm/004_eligibility_gates.md`. 
 
 ### AC-01: Gate 7 — raw 7d exhausted, account skipped
 
-- **Given:** An `AccountQuota` with `seven_day_util=96%` → `seven_day_left = 4.0`. `seven_day_sonnet = None`. Non-current, non-active.
+- **Given:** An `AccountQuota` with `seven_day_util=98%` → `seven_day_left = 2.0`. `seven_day_sonnet = None`. Non-current, non-active.
 - **When:** Gate 7 evaluates `seven_day_left(aq) > WEEKLY_EXHAUSTION_THRESHOLD` in `find_next_for_strategy()`.
-- **Then:** `4.0 > 5.0 = false` → gate fires → account skipped. Weekly-exhausted accounts have negligible remaining capacity.
+- **Then:** `2.0 > 3.0 = false` → gate fires → account skipped. Weekly-exhausted accounts have negligible remaining capacity.
 - **Source fn:** `mre_bug292_renew_skips_weekly_exhausted_even_with_soonest_renewal` (in `tests/usage/sort_next_tests.rs`)
 - **Source:** [algorithm/004_eligibility_gates.md Gate 7](../../../docs/algorithm/004_eligibility_gates.md)
 
@@ -44,7 +44,7 @@ Algorithm correctness test cases for `docs/algorithm/004_eligibility_gates.md`. 
 
 - **Given:** An `AccountQuota` with `seven_day_util=69%` → `seven_day_left = 31.0`, `seven_day_sonnet_util=100%` → `7d_son_left = 0%`. `prefer::any` in effect. Non-current, non-active.
 - **When:** Gate 7 evaluates `seven_day_left(aq) > WEEKLY_EXHAUSTION_THRESHOLD`.
-- **Then:** `31.0 > 5.0 = true` → gate does NOT fire → account eligible. Before Fix(BUG-324): `prefer_weekly(aq, Any) = min(31.0, 0.0) = 0.0 ≤ 5.0` — gate would fire and block this green account.
+- **Then:** `31.0 > 3.0 = true` → gate does NOT fire → account eligible. Before Fix(BUG-324): `prefer_weekly(aq, Any) = min(31.0, 0.0) = 0.0 ≤ 5.0` — gate would fire and block this green account.
 - **Note:** Same class as BUG-299. Eligibility is model-agnostic; `apply_model_override()` handles model selection post-rotation.
 - **Source fn:** `mre_bug324_green_account_eligible_when_7d_son_exhausted` (in `tests/usage/sort_next_tests.rs`)
 - **Source:** [algorithm/004_eligibility_gates.md Gate 7](../../../docs/algorithm/004_eligibility_gates.md)
@@ -53,10 +53,10 @@ Algorithm correctness test cases for `docs/algorithm/004_eligibility_gates.md`. 
 
 ### AC-03: Gate 7 — boundary at exactly `WEEKLY_EXHAUSTION_THRESHOLD`, account skipped
 
-- **Given:** An `AccountQuota` with `seven_day_util=95%` → `seven_day_left = 5.0`. Non-current, non-active.
-- **When:** Gate 7 evaluates `seven_day_left(aq) > 5.0`.
-- **Then:** `5.0 > 5.0 = false` → gate fires → account skipped. At exactly the threshold the account is considered exhausted.
-- **Source fn:** `test_cc_gate7_boundary_exactly_5pct_skipped_in_eligibility` (in `tests/usage/sort_next_tests.rs`)
+- **Given:** An `AccountQuota` with `seven_day_util=97%` → `seven_day_left = 3.0`. Non-current, non-active.
+- **When:** Gate 7 evaluates `seven_day_left(aq) > 3.0`.
+- **Then:** `3.0 > 3.0 = false` → gate fires → account skipped. At exactly the threshold the account is considered exhausted.
+- **Source fn:** `test_cc_gate7_boundary_exactly_3pct_skipped_in_eligibility` (in `tests/usage/sort_next_tests.rs`)
 - **Source:** [algorithm/004_eligibility_gates.md Gate 7](../../../docs/algorithm/004_eligibility_gates.md)
 
 ---

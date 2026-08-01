@@ -496,8 +496,8 @@ pub fn quota_text_cells( data : &claude_quota::OauthUsageData, now_secs : u64 ) 
 ///
 /// - `"🔴"` — token is invalid or missing (`result` is `Err`), OR subscription is
 ///   cancelled (`billing_type="none"`).
-/// - `"🟡"` — token valid, subscription active, but `5h Left ≤ 15%` or `7d Left ≤ 5%`.
-/// - `"🟢"` — token valid, subscription active, `5h Left > 15%` AND `7d Left > 5%`.
+/// - `"🟡"` — token valid, subscription active, but `5h Left ≤ 15%` or `7d Left ≤ 3%`.
+/// - `"🟢"` — token valid, subscription active, `5h Left > 15%` AND `7d Left > 3%`.
 ///
 /// Absent period data is treated as fully available (conservative, 0% utilised).
 /// `account=None` (API fetch failed) is NOT classified 🔴 — absent data is ambiguous.
@@ -528,7 +528,7 @@ pub fn status_emoji( aq : &AccountQuota ) -> &'static str
   //   already rounds before comparing against the identical constant.
   let h5_left = ( 100.0 - data.five_hour.as_ref().map_or( 0.0, |p| p.utilization ) ).round();
   let d7_left = ( 100.0 - data.seven_day.as_ref().map_or( 0.0, |p| p.utilization ) ).round();
-  // Fix(BUG-321): both-exhausted (h5 ≤ 15% AND d7 ≤ 5%) → 🟡 (G3 weekly-exhausted), not 🔴.
+  // Fix(BUG-321): both-exhausted (h5 ≤ 15% AND d7 ≤ 3%) → 🟡 (G3 weekly-exhausted), not 🔴.
   // BUG-319's fix used `(false,false)→🔴` as a proxy for "dead" — premise-incorrect.
   // Both quota dimensions depleted with result=Ok is recoverable (7d reset restores both).
   // Root cause: BUG-319 fix assumed the (false,false) arm mapped to "dead" — it does not;

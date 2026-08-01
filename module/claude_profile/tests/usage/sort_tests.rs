@@ -156,7 +156,7 @@ fn mre_bug259_sort_renew_alphabetical_when_all_keys_tied()
 fn test_4group_h_exhausted_ranks_before_weekly_exhausted()
 {
   let accounts = vec![
-    mk_aq_sort_weekly( "weekly_exhausted@test.com", 50.0, 96.0, 96.0 ), // Group 3
+    mk_aq_sort_weekly( "weekly_exhausted@test.com", 50.0, 98.0, 96.0 ), // Group 3
     mk_aq_sort_weekly( "h_exhausted@test.com",      90.0, 50.0, 50.0 ), // Group 2
   ];
   let idx = sort_indices( &accounts, SortStrategy::Renew, None, PreferStrategy::Any, 0 );
@@ -193,10 +193,10 @@ fn test_4group_weekly_exhausted_ranks_before_red()
 {
   // G4 Dead: billing_type="none" (cancelled) — zzz@ sorts last alphabetically within G4
   let dead    = mk_aq_cancelled(   "zzz@test.com",             50.0, 20.0 );
-  // G3 WeeklyExhausted: 5h=50% (ok), 7d=4% left (≤ 5%) — only weekly-exhausted
-  let weekly  = mk_aq_sort_weekly( "weekly_only@test.com",     50.0, 96.0, 96.0 );
-  // G3 WeeklyExhausted: 5h=10% left (≤ 15%), 7d=4% left (≤ 5%) — both-exhausted, Fix(BUG-321)
-  let both_ex = mk_aq_sort_weekly( "weekly_both@test.com",     90.0, 96.0, 96.0 );
+  // G3 WeeklyExhausted: 5h=50% (ok), 7d=2% left (≤ 3%) — only weekly-exhausted
+  let weekly  = mk_aq_sort_weekly( "weekly_only@test.com",     50.0, 98.0, 96.0 );
+  // G3 WeeklyExhausted: 5h=10% left (≤ 15%), 7d=2% left (≤ 3%) — both-exhausted, Fix(BUG-321)
+  let both_ex = mk_aq_sort_weekly( "weekly_both@test.com",     90.0, 98.0, 96.0 );
   let accounts = vec![ dead, weekly, both_ex ];
   let idx = sort_indices( &accounts, SortStrategy::Name, None, PreferStrategy::Any, 0 );
   // Both G3 accounts must rank before G4 Dead regardless of alphabetical order
@@ -261,8 +261,8 @@ fn test_4group_desc1_preserves_group_order()
 fn mre_bug299_h_exhausted_misclassified_as_red_prefer_any()
 {
   let accounts = vec![
-    mk_aq_sort_weekly( "account-a",   100.0, 68.0, 95.0 ), // G2 HExhausted: 5h=0% ≤ 15%, 7d=32% > 5%
-    mk_aq_sort_weekly( "red-account", 100.0, 96.0, 96.0 ), // G3 WeeklyExhausted: both exhausted (Fix BUG-321)
+    mk_aq_sort_weekly( "account-a",   100.0, 68.0, 95.0 ), // G2 HExhausted: 5h=0% ≤ 15%, 7d=32% > 3%
+    mk_aq_sort_weekly( "red-account", 100.0, 98.0, 96.0 ), // G3 WeeklyExhausted: both exhausted (Fix BUG-321)
   ];
   let idx = sort_indices( &accounts, SortStrategy::Renew, None, PreferStrategy::Any, 0 );
   assert_eq!(
@@ -278,7 +278,7 @@ fn mre_bug299_h_exhausted_misclassified_as_red_prefer_any()
 /// GAP-7a — `status_group_of` assigns `HExhausted` when `five_hour.utilization = 85.0` exactly.
 ///
 /// `five_hour_left = 100.0 - 85.0 = 15.0`; guard is `> 15.0` (strict) → `h5_ok = false`.
-/// `seven_day = None` → `seven_day_left = 100.0 > 5.0` → `d7_ok = true`.
+/// `seven_day = None` → `seven_day_left = 100.0 > 3.0` → `d7_ok = true`.
 /// Result: `(false, true)` → `HExhausted`.
 #[ test ]
 fn mre_bug_gap7_status_group_of_h_exhausted_at_exactly_15_pct_left()
@@ -290,18 +290,18 @@ fn mre_bug_gap7_status_group_of_h_exhausted_at_exactly_15_pct_left()
   );
 }
 
-/// GAP-7b — `status_group_of` assigns `WeeklyExhausted` when `seven_day_left = 5.0` exactly.
+/// GAP-7b — `status_group_of` assigns `WeeklyExhausted` when `seven_day_left = 3.0` exactly.
 ///
-/// `seven_day.utilization = 95.0` → `seven_day_left = 5.0`; guard is `> 5.0` (strict) → `d7_ok = false`.
+/// `seven_day.utilization = 97.0` → `seven_day_left = 3.0`; guard is `> 3.0` (strict) → `d7_ok = false`.
 /// `five_hour.utilization = 0.0` → `five_hour_left = 100.0 > 15.0` → `h5_ok = true`.
 /// Result: `(true, false)` → `WeeklyExhausted`.
 #[ test ]
-fn mre_bug_gap7_status_group_of_weekly_exhausted_at_exactly_5_pct_left()
+fn mre_bug_gap7_status_group_of_weekly_exhausted_at_exactly_3_pct_left()
 {
-  let aq = mk_aq_sort_weekly( "test@x.com", 0.0, 95.0, 0.0 );  // seven_day_left = 5% exactly
+  let aq = mk_aq_sort_weekly( "test@x.com", 0.0, 97.0, 0.0 );  // seven_day_left = 3% exactly
   assert!(
     matches!( status_group_of( &aq ), StatusGroup::WeeklyExhausted ),
-    "seven_day.util=95.0 (5% left) must be WeeklyExhausted (strict > 5.0 guard; boundary is NOT green)",
+    "seven_day.util=97.0 (3% left) must be WeeklyExhausted (strict > 3.0 guard; boundary is NOT green)",
   );
 }
 
@@ -347,7 +347,7 @@ fn mre_bug317_cancelled_subscription_classified_red()
 #[ test ]
 fn mre_bug317_cancelled_ranks_after_weekly_exhausted()
 {
-  let weekly    = mk_aq_sort_weekly( "weekly@test.com", 0.0, 96.0, 0.0 );
+  let weekly    = mk_aq_sort_weekly( "weekly@test.com", 0.0, 98.0, 0.0 );
   let cancelled = mk_aq_cancelled( "cancelled@test.com", 50.0, 20.0 );
   let accounts  = vec![ cancelled, weekly ];
   let idx = sort_indices( &accounts, SortStrategy::Renew, None, PreferStrategy::Any, 0 );
@@ -378,7 +378,7 @@ fn mre_bug317_cancelled_ranks_after_weekly_exhausted()
 #[ test ]
 fn mre_bug321_both_exhausted_sorts_in_weekly_group()
 {
-  let both_exh = mk_aq_sort_weekly( "zzz@test.com", 94.0, 96.0, 0.0 );
+  let both_exh = mk_aq_sort_weekly( "zzz@test.com", 94.0, 98.0, 0.0 );
   let dead     = mk_aq_cancelled(   "aaa@test.com", 50.0, 20.0 );
   let accounts = vec![ dead, both_exh ];
   let idx = sort_indices( &accounts, SortStrategy::Name, None, PreferStrategy::Any, 0 );
@@ -412,7 +412,7 @@ fn mre_bug321_four_group_partition_order()
   let green      = mk_aq_sort_weekly( "green@test.com",      10.0, 10.0, 0.0 ); // G1
   let h_exh      = mk_aq_sort_weekly( "h_exh@test.com",      90.0, 10.0, 0.0 ); // G2
   let weekly_exh = mk_aq_sort_weekly( "weekly_exh@test.com", 10.0, 98.0, 0.0 ); // G3
-  let both_exh   = mk_aq_sort_weekly( "both_exh@test.com",   94.0, 96.0, 0.0 ); // G3 (Fix BUG-321)
+  let both_exh   = mk_aq_sort_weekly( "both_exh@test.com",   94.0, 98.0, 0.0 ); // G3 (Fix BUG-321)
   let dead       = mk_aq_cancelled(   "dead@test.com",        50.0, 20.0      ); // G4
   let accounts   = vec![ green, h_exh, weekly_exh, both_exh, dead ];
   let idx        = sort_indices( &accounts, SortStrategy::Name, None, PreferStrategy::Any, 0 );

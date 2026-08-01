@@ -108,8 +108,8 @@ Feature behavioral requirement test cases for `docs/feature/039_decision_algorit
 - **Given:** Five `AccountQuota` structs fed to `sort_indices` under `sort::name` (which would interleave alphabetically without group partitioning):
   - `green@x.com`: `five_hour_util=10%` (5h_left=90%), `seven_day_util=10%` (7d_left=90%) — both thresholds above → 🟢 G1 Green.
   - `h_exh@x.com`: `five_hour_util=90%` (5h_left=10% ≤ 15%), `seven_day_util=10%` (7d_left=90%) — 5h exhausted → 🟡 G2 h-exhausted.
-  - `weekly@x.com`: `five_hour_util=10%` (5h_left=90%), `seven_day_util=98%` (7d_left=2% ≤ 5%) — 7d exhausted → 🟡 G3 weekly-exhausted.
-  - `both@x.com`: `five_hour_util=94%` (5h_left=6% ≤ 15%), `seven_day_util=96%` (7d_left=4% ≤ 5%) — both exhausted → 🟡 G3 weekly-exhausted (7d is binding; Fix BUG-321).
+  - `weekly@x.com`: `five_hour_util=10%` (5h_left=90%), `seven_day_util=98%` (7d_left=2% ≤ 3%) — 7d exhausted → 🟡 G3 weekly-exhausted.
+  - `both@x.com`: `five_hour_util=94%` (5h_left=6% ≤ 15%), `seven_day_util=99%` (7d_left=1% ≤ 3%) — both exhausted → 🟡 G3 weekly-exhausted (7d is binding; Fix BUG-321).
   - `dead@x.com`: `result = Err(...)` → 🔴 G4 Dead.
 - **When:** `status_group_of(aq)` is evaluated per account via `sort_indices` (entry point: `sort.rs:31-48`).
 - **Then:** Group assignment: `green@x.com` → Green; `h_exh@x.com` → HExhausted; `weekly@x.com` → WeeklyExhausted; `both@x.com` → WeeklyExhausted (same G3 — `(false,false)` maps to `StatusGroup::WeeklyExhausted`); `dead@x.com` → Dead. Output row order: Green (G1) → h-exhausted (G2) → weekly-exhausted (G3, including `both@x.com`) → Dead (G4 🔴). `sort::name` alpha order is overridden by group partition.
@@ -120,9 +120,9 @@ Feature behavioral requirement test cases for `docs/feature/039_decision_algorit
 
 ### FT-06: Eligibility gate G7 — `seven_day_left ≤ WEEKLY_EXHAUSTION_THRESHOLD` skips account
 
-- **Given:** An `AccountQuota` with `seven_day_util=96%` (7d_left=4%) and `seven_day_sonnet = None`. `prefer::any` in effect.
+- **Given:** An `AccountQuota` with `seven_day_util=98%` (7d_left=2%) and `seven_day_sonnet = None`. `prefer::any` in effect.
 - **When:** The `extra` predicate in `find_next_for_strategy()` evaluates Gate 7 (`sort_next.rs:59`): `seven_day_left(aq) <= WEEKLY_EXHAUSTION_THRESHOLD`.
-- **Then:** `seven_day_left` returns `4.0` (raw 7d_left). `4.0 ≤ 5.0` → gate fires → account is skipped. No `->` marker assigned.
+- **Then:** `seven_day_left` returns `2.0` (raw 7d_left). `2.0 ≤ 3.0` → gate fires → account is skipped. No `->` marker assigned.
 - **Note:** Table 4 gate 7. Eligibility uses `seven_day_left` (model-agnostic raw 7d quota). `prefer_weekly` is used only for sort tiebreak (Fix BUG-324).
 - **Source fn:** `test_relevant_quotas_son_no_sonnet` (in `tests/usage/format_tests.rs`); `mre_bug292_renew_skips_weekly_exhausted_even_with_soonest_renewal` (in `tests/usage/sort_next_tests.rs`)
 - **Source:** [feature/039_decision_algorithms.md Table 4](../../../docs/feature/039_decision_algorithms.md)
@@ -133,7 +133,7 @@ Feature behavioral requirement test cases for `docs/feature/039_decision_algorit
 
 - **Given:** An `AccountQuota` with `seven_day_util=90%` (7d_left=10%) and `seven_day_sonnet = None`. `prefer::any` in effect. All other gates (G1–G6, G8) do not fire.
 - **When:** Gate 7 evaluates `seven_day_left(aq)`.
-- **Then:** Returns `10.0`. `10.0 > WEEKLY_EXHAUSTION_THRESHOLD (5.0)` → gate does NOT fire. Account remains eligible. `->` marker may be assigned if first in sorted order.
+- **Then:** Returns `10.0`. `10.0 > WEEKLY_EXHAUSTION_THRESHOLD (3.0)` → gate does NOT fire. Account remains eligible. `->` marker may be assigned if first in sorted order.
 - **Source fn:** `test_relevant_quotas_son_with_sonnet` (in `tests/usage/format_tests.rs`); `test_find_next_for_strategy_some_when_eligible_none_when_all_current` (in `tests/usage/sort_next_tests.rs`)
 - **Source:** [feature/039_decision_algorithms.md Table 4](../../../docs/feature/039_decision_algorithms.md)
 
@@ -189,7 +189,7 @@ Feature behavioral requirement test cases for `docs/feature/039_decision_algorit
   - `aaa_target@test.com`: `five_hour_util=0%`, `seven_day_util=69%` (7d_left=31%), `seven_day_sonnet_util=100%` (7d_son_left=0%). Non-current, non-active, non-occupied. `prefer::any` in effect.
   - `current@test.com`: `is_current=true` — forces selection.
 - **When:** Gate 7 evaluates eligibility in `find_next_for_strategy()` (entry: `sort_next.rs:59`).
-- **Then:** Account passes gate 7. Fix(BUG-324): gate uses `seven_day_left(aq) = 31.0 > WEEKLY_EXHAUSTION_THRESHOLD (5.0)` — model-agnostic. Before fix: `prefer_weekly(aq, Any) = min(31.0, 0.0) = 0.0 ≤ 5.0` — model-aware value blocked a green account from rotation.
+- **Then:** Account passes gate 7. Fix(BUG-324): gate uses `seven_day_left(aq) = 31.0 > WEEKLY_EXHAUSTION_THRESHOLD (3.0)` — model-agnostic. Before fix: `prefer_weekly(aq, Any) = min(31.0, 0.0) = 0.0 ≤ 5.0` — model-aware value blocked a green account from rotation.
 - **Note:** Table 4 gate 7. Existing FT-06/FT-07 test with `seven_day_sonnet = None` (no divergence possible). This case exercises the divergence path where `seven_day_sonnet` is present and differs from `seven_day`. Same class as BUG-299.
 - **Source fn:** `mre_bug324_green_account_eligible_when_7d_son_exhausted` (in `tests/usage/sort_next_tests.rs`)
 - **Source:** [feature/039_decision_algorithms.md Table 4](../../../docs/feature/039_decision_algorithms.md)

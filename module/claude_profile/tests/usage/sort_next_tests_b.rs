@@ -297,15 +297,15 @@ fn mre_bug260_renew_nondeterministic_when_fully_tied()
 
 /// # BUG-292 Reproducer
 ///
-/// `sort::renew` must skip weekly-exhausted accounts (`prefer_weekly` ≤ 5.0) even
+/// `sort::renew` must skip weekly-exhausted accounts (`prefer_weekly` ≤ 3.0) even
 /// when they have the soonest 7d reset event. Before this fix, a weekly-exhausted
 /// account with an imminent 7d reset was recommended because the `Renew` arm had no
-/// `prefer_weekly > 5.0` gate.
+/// `prefer_weekly > 3.0` gate.
 ///
 /// # Root Cause
 /// `find_next_for_strategy(Renew)` lacked the weekly-floor gate present in `Drain`
 /// (BUG-206) and `Endurance` (BUG-287). The renew arm's qualification predicate did
-/// not include `prefer_weekly > 5.0`, allowing exhausted accounts with a soonest reset
+/// not include `prefer_weekly > 3.0`, allowing exhausted accounts with a soonest reset
 /// to pass all filters and be recommended.
 ///
 /// # Why Not Caught
@@ -316,7 +316,7 @@ fn mre_bug260_renew_nondeterministic_when_fully_tied()
 ///
 /// # Fix Applied
 /// Replace the independent `.filter().min_by()` with `sort_indices(Renew)` +
-/// `find_first_eligible(extra=|aq| prefer_weekly(aq, prefer) > 5.0)`.
+/// `find_first_eligible(extra=|aq| prefer_weekly(aq, prefer) > 3.0)`.
 ///
 /// # Prevention
 /// Any new `find_first_eligible` call site must include a weekly-floor gate.
@@ -332,11 +332,11 @@ fn mre_bug260_renew_nondeterministic_when_fully_tied()
 fn mre_bug292_renew_skips_weekly_exhausted_even_with_soonest_renewal()
 {
   let now = 0u64;
-  // exhausted@test: seven_day_util=96.0 → prefer_weekly=4.0 (≤ 5.0, weekly-exhausted).
+  // exhausted@test: seven_day_util=98.0 → prefer_weekly=2.0 (≤ 3.0, weekly-exhausted).
   //   7d reset fires in 1h (SOONEST event) — before fix this account was recommended.
   //   five_hour_util=0.0 → five_hour_left=100% — NOT h-exhausted; passes all old filters.
-  let exhausted = mk_aq_with_7d_reset_util( "exhausted@test.com", 0.0, 96.0, now, 3_600 );
-  // healthy@test: seven_day_util=40.0 → prefer_weekly=60.0 (> 5.0, qualifies).
+  let exhausted = mk_aq_with_7d_reset_util( "exhausted@test.com", 0.0, 98.0, now, 3_600 );
+  // healthy@test: seven_day_util=40.0 → prefer_weekly=60.0 (> 3.0, qualifies).
   //   7d reset fires in 24h (later event) — must be selected after fix.
   let healthy   = mk_aq_with_7d_reset_util( "healthy@test.com",   0.0, 40.0, now, 86_400 );
 
@@ -344,7 +344,7 @@ fn mre_bug292_renew_skips_weekly_exhausted_even_with_soonest_renewal()
   assert!( idx.is_some(), "BUG-292: renew must find a candidate (healthy@test.com is eligible)" );
   assert_eq!(
     idx.unwrap(), 1,
-    "BUG-292: renew must skip exhausted@test.com (prefer_weekly=4.0 ≤ 5.0) and pick healthy@test.com (index 1); got {idx:?}",
+    "BUG-292: renew must skip exhausted@test.com (prefer_weekly=2.0 ≤ 3.0) and pick healthy@test.com (index 1); got {idx:?}",
   );
 }
 
@@ -510,8 +510,8 @@ fn mre_bug324_green_account_eligible_when_7d_son_exhausted()
 {
   let now = 0u64;
   // target: 5h_util=0.0 (5h Left=100%), 7d_util=69.0 (7d Left=31%), 7d_son_util=100.0 (7d(Son)=0%).
-  // prefer_weekly(any) = min(31%, 0%) = 0.0 ≤ 5.0 → BLOCKED before fix.
-  // seven_day_left    = 31.0 > 5.0          → ELIGIBLE after fix.
+  // prefer_weekly(any) = min(31%, 0%) = 0.0 ≤ 3.0 → BLOCKED before fix.
+  // seven_day_left    = 31.0 > 3.0          → ELIGIBLE after fix.
   let target = mk_aq_sort_weekly( "aaa_target@test.com", 0.0, 69.0, 100.0 );
   // current: force the engine to look past is_current accounts.
   let mut current = mk_aq_sort( "zzz_current@test.com", 20.0, FAR_FUTURE_MS );
@@ -548,7 +548,7 @@ fn mre_bug324_green_account_eligible_when_7d_son_exhausted()
 ///
 /// # Prevention
 /// Regression test confirms that having `seven_day_sonnet = Some({util: 100%})` on the only
-/// available account does NOT prevent rotation when `seven_day_left > 5%`.
+/// available account does NOT prevent rotation when `seven_day_left > 3%`.
 ///
 /// # Pitfall
 /// Missing Sonnet tier (`seven_day_sonnet = None`) never triggers the bug — `prefer_weekly(any)`
@@ -586,18 +586,18 @@ fn mre_bug324_sole_green_candidate_7d_son_zero_returns_some()
 
 // ── BUG-324 corner cases: gate 7 boundary + model-agnostic eligibility ────
 
-/// CC — Gate 7 boundary: `seven_day_left = 5.0` exactly → account SKIPPED in eligibility.
+/// CC — Gate 7 boundary: `seven_day_left = 3.0` exactly → account SKIPPED in eligibility.
 ///
-/// `seven_day_util = 95.0` → `seven_day_left = 100.0 - 95.0 = 5.0`.
-/// Gate 7: `5.0 > WEEKLY_EXHAUSTION_THRESHOLD (5.0) = false` → gate fires → skipped.
+/// `seven_day_util = 97.0` → `seven_day_left = 100.0 - 97.0 = 3.0`.
+/// Gate 7: `3.0 > WEEKLY_EXHAUSTION_THRESHOLD (3.0) = false` → gate fires → skipped.
 /// Strict `>` operator — exactly at threshold is exhausted, not eligible.
 /// Complements `sort.rs` GAP-7b (`status_group_of` boundary) with the eligibility-gate path.
 #[ test ]
-fn test_cc_gate7_boundary_exactly_5pct_skipped_in_eligibility()
+fn test_cc_gate7_boundary_exactly_3pct_skipped_in_eligibility()
 {
   let now = 0u64;
-  // seven_day_left = 5.0 exactly (boundary). seven_day_sonnet_util = 0.0 (no divergence).
-  let target = mk_aq_sort_weekly( "aaa_target@test.com", 0.0, 95.0, 0.0 );
+  // seven_day_left = 3.0 exactly (boundary). seven_day_sonnet_util = 0.0 (no divergence).
+  let target = mk_aq_sort_weekly( "aaa_target@test.com", 0.0, 97.0, 0.0 );
   let mut current = mk_aq_sort( "zzz_current@test.com", 20.0, FAR_FUTURE_MS );
   current.is_current = true;
   let accounts = vec![ target, current ];
@@ -607,25 +607,27 @@ fn test_cc_gate7_boundary_exactly_5pct_skipped_in_eligibility()
     let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, false );
     assert!(
       result.is_none(),
-      "{strategy:?}: seven_day_left=5.0 (exactly at threshold) must be SKIPPED (strict > 5.0); got: {result:?}",
+      "{strategy:?}: seven_day_left=3.0 (exactly at threshold) must be SKIPPED (strict > 3.0); got: {result:?}",
     );
   }
 }
 
-/// CC — Gate 7 just above boundary: `seven_day_left = 5.5` (rounds to 6) → account ELIGIBLE.
+/// CC — Gate 7 just above boundary: `seven_day_left = 3.5` (rounds to 4) → account ELIGIBLE.
 ///
-/// `seven_day_util = 94.5` → `seven_day_left = 100.0 - 94.5 = 5.5` (exact tie-break value).
-/// Gate 7: `round(5.5) = 6.0` (round-half-away-from-zero), `6.0 > 5.0 = true` → eligible.
+/// `seven_day_util = 96.5` → `seven_day_left = 100.0 - 96.5 = 3.5` (exact tie-break value).
+/// Gate 7: `round(3.5) = 4.0` (round-half-away-from-zero), `4.0 > 3.0 = true` → eligible.
 ///
 /// Fix(BUG-336): originally used `seven_day_util=94.99` (`left=5.01`) — once `seven_day_left()`
 ///   rounds its return value (this file's own BUG-336 fix), 5.01 rounds DOWN to 5.0 (the
-///   threshold), no longer demonstrating "just above". Recalibrated to the new narrowest
-///   above-threshold margin: 94.5 (left=5.5), the exact tie-break point that rounds up to 6.
+///   threshold), no longer demonstrating "just above". Recalibrated to the narrowest
+///   above-threshold margin under the original 5.0 threshold: 94.5 (left=5.5), the exact
+///   tie-break point that rounded up to 6. Threshold later lowered to 3.0 — recalibrated again
+///   to 96.5 (left=3.5), the new exact tie-break point that rounds up to 4.
 #[ test ]
 fn test_cc_gate7_just_above_boundary_eligible()
 {
   let now = 0u64;
-  let target = mk_aq_sort_weekly( "aaa_target@test.com", 0.0, 94.5, 0.0 );
+  let target = mk_aq_sort_weekly( "aaa_target@test.com", 0.0, 96.5, 0.0 );
   let mut current = mk_aq_sort( "zzz_current@test.com", 20.0, FAR_FUTURE_MS );
   current.is_current = true;
   let accounts = vec![ target, current ];
@@ -635,28 +637,29 @@ fn test_cc_gate7_just_above_boundary_eligible()
     let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, false );
     assert_eq!(
       result, Some( 0 ),
-      "{strategy:?}: seven_day_left=5.5 (rounds to 6, just above threshold) must be ELIGIBLE; got: {result:?}",
+      "{strategy:?}: seven_day_left=3.5 (rounds to 4, just above threshold) must be ELIGIBLE; got: {result:?}",
     );
   }
 }
 
-/// CC — BUG-324 class at narrowest margin: `seven_day_left = 5.5` (rounds to 6), `seven_day_sonnet_left = 0%`.
+/// CC — BUG-324 class at narrowest margin: `seven_day_left = 3.5` (rounds to 4), `seven_day_sonnet_left = 0%`.
 ///
-/// `seven_day_util = 94.5` → `seven_day_left = 5.5` → rounds to 6.0 (above threshold).
+/// `seven_day_util = 96.5` → `seven_day_left = 3.5` → rounds to 4.0 (above threshold).
 /// `seven_day_sonnet_util = 100.0` → `seven_day_sonnet_left = 0.0`.
-/// `prefer_weekly(Any) = min(6.0, 0.0) = 0.0` — pre-BUG-324-fix: blocked (`0.0 ≤ 5.0`).
-/// `seven_day_left = 5.5` (rounds to 6.0) — post-BUG-324-fix: eligible (`6.0 > 5.0`).
+/// `prefer_weekly(Any) = min(4.0, 0.0) = 0.0` — pre-BUG-324-fix: blocked (`0.0 ≤ 3.0`).
+/// `seven_day_left = 3.5` (rounds to 4.0) — post-BUG-324-fix: eligible (`4.0 > 3.0`).
 ///
 /// Fix(BUG-336): originally used `seven_day_util=94.99` (`left=5.01`) — once `seven_day_left()`
 ///   rounds its return value (this file's own BUG-336 fix), 5.01 rounds DOWN to 5.0 (the
 ///   threshold), which would incorrectly re-block this account and no longer exercise the
 ///   BUG-324 divergence this test targets. Recalibrated to 94.5 (left=5.5, the exact tie-break
-///   that rounds up to 6) to keep the BUG-324 regression margin clear of the BUG-336 boundary.
+///   that rounded up to 6) to keep the BUG-324 regression margin clear of the BUG-336 boundary.
+///   Threshold later lowered to 3.0 — recalibrated again to 96.5 (left=3.5, rounds up to 4).
 #[ test ]
 fn test_cc_bug324_divergent_at_boundary_eligible()
 {
   let now = 0u64;
-  let target = mk_aq_sort_weekly( "aaa_target@test.com", 0.0, 94.5, 100.0 );
+  let target = mk_aq_sort_weekly( "aaa_target@test.com", 0.0, 96.5, 100.0 );
   let mut current = mk_aq_sort( "zzz_current@test.com", 20.0, FAR_FUTURE_MS );
   current.is_current = true;
   let accounts = vec![ target, current ];
@@ -668,7 +671,7 @@ fn test_cc_bug324_divergent_at_boundary_eligible()
       let result = find_next_for_strategy( &accounts, strategy, prefer, now, false );
       assert_eq!(
         result, Some( 0 ),
-        "BUG-324 boundary: {strategy:?}/{prefer:?} — seven_day_left=5.5 (rounds to 6), 7d_son_left=0% \
+        "BUG-324 boundary: {strategy:?}/{prefer:?} — seven_day_left=3.5 (rounds to 4), 7d_son_left=0% \
          must be ELIGIBLE; got: {result:?}",
       );
     }
@@ -677,11 +680,11 @@ fn test_cc_bug324_divergent_at_boundary_eligible()
 
 /// CC — `prefer::sonnet` with absent Sonnet tier: account eligible via raw `seven_day_left`.
 ///
-/// `seven_day_util = 50.0` → `seven_day_left = 50.0` (well above 5%).
+/// `seven_day_util = 50.0` → `seven_day_left = 50.0` (well above 3%).
 /// `seven_day_sonnet = None` → `prefer_weekly(Sonnet) = 0.0` (absent = unknown = 0%).
-/// Pre-fix: `0.0 > 5.0 = false` → BLOCKED (any account without Sonnet tier ineligible
+/// Pre-fix: `0.0 > 3.0 = false` → BLOCKED (any account without Sonnet tier ineligible
 ///   under `prefer::sonnet`).
-/// Post-fix: `seven_day_left = 50.0 > 5.0 = true` → ELIGIBLE (model-agnostic gate).
+/// Post-fix: `seven_day_left = 50.0 > 3.0 = true` → ELIGIBLE (model-agnostic gate).
 #[ test ]
 fn test_cc_prefer_sonnet_absent_tier_eligible()
 {
@@ -698,7 +701,7 @@ fn test_cc_prefer_sonnet_absent_tier_eligible()
   );
   assert_eq!(
     result, Some( 0 ),
-    "prefer::sonnet + absent Sonnet tier: seven_day_left=50.0 > 5.0 must be ELIGIBLE; \
+    "prefer::sonnet + absent Sonnet tier: seven_day_left=50.0 > 3.0 must be ELIGIBLE; \
      pre-fix: prefer_weekly(Sonnet)=0.0 would block; got: {result:?}",
   );
 }
@@ -708,7 +711,7 @@ fn test_cc_prefer_sonnet_absent_tier_eligible()
 /// `seven_day_util = 50.0` → `seven_day_left = 50.0`.
 /// `seven_day_sonnet_util = 100.0` → `seven_day_sonnet_left = 0%`.
 /// `prefer_weekly(Sonnet) = 100.0 - 100.0 = 0.0` — pre-fix: blocked.
-/// `seven_day_left = 50.0 > 5.0` — post-fix: eligible.
+/// `seven_day_left = 50.0 > 3.0` — post-fix: eligible.
 #[ test ]
 fn test_cc_prefer_sonnet_exhausted_tier_eligible()
 {
@@ -723,7 +726,7 @@ fn test_cc_prefer_sonnet_exhausted_tier_eligible()
   );
   assert_eq!(
     result, Some( 0 ),
-    "prefer::sonnet + Sonnet exhausted (100%% util): seven_day_left=50.0 > 5.0 must be ELIGIBLE; \
+    "prefer::sonnet + Sonnet exhausted (100%% util): seven_day_left=50.0 > 3.0 must be ELIGIBLE; \
      pre-fix: prefer_weekly(Sonnet)=0.0 would block; got: {result:?}",
   );
 }

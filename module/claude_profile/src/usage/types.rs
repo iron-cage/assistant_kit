@@ -463,9 +463,9 @@ pub const H_EXHAUSTED_THRESHOLD : f64 = 15.0;
 
 /// 7-day weekly quota exhaustion boundary.
 ///
-/// An account is classified **weekly-exhausted** when `7d Left ≤ 5%`. All comparison
-/// sites must reference this constant; never duplicate the literal `5.0`.
-pub const WEEKLY_EXHAUSTION_THRESHOLD : f64 = 5.0;
+/// An account is classified **weekly-exhausted** when `7d Left ≤ 3%`. All comparison
+/// sites must reference this constant; never duplicate the literal `3.0`.
+pub const WEEKLY_EXHAUSTION_THRESHOLD : f64 = 3.0;
 
 /// Map a model shorthand to its full model ID.
 ///

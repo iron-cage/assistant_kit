@@ -22,7 +22,7 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 | FT-08 | Within 🟡: h-exhausted before weekly-exhausted; `desc::` doesn't swap sub-groups | AC-12 | Unit test |
 | FT-09 | `sort::renew` alphabetical when all numeric sort keys tied (BUG-259) | AC-01 | Tiebreaker |
 | FT-10 | `sort::renews` sorts by renewal timer ascending; no renewal data placed last | AC-02 | Unit test |
-| FT-11 | h-exhausted + `7d(Son) ≤ 5%` → HExhausted under `prefer::any` (BUG-299) | AC-12 | Group Boundary |
+| FT-11 | h-exhausted + `7d(Son) ≤ 3%` → HExhausted under `prefer::any` (BUG-299) | AC-12 | Group Boundary |
 | FT-12 | `prefer::son` + absent Sonnet tier → `prefer_weekly = 0.0` (not 100.0) | AC-05 | Absent-Sonnet fix |
 | FT-13 | `sort::` drives footer recommendation — top eligible shown in `Next (<strategy>)` line; footer uses `·`-delimited 2-line format | AC-09 | Recommendation + Footer |
 | FT-14 | Green account with divergent `7d/7d_son` passes eligibility gate — model-agnostic `seven_day_left` (BUG-324) | AC-09 | Eligibility + BUG-324 |
@@ -42,7 +42,7 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 | FT-08 | Within 🟡: h-exhausted before weekly-exhausted; sub-grouping not reversed by `desc::` | AC-12 | Yellow Sub-Grouping |
 | FT-09 | sort::renew alphabetical tiebreaker when all numeric keys tied | AC-01 | Tiebreaker |
 | FT-10 | sort::renews ascending; no renewal data last | AC-02 | Renews Sort |
-| FT-11 | h-exhausted account with 7d_son ≤ 5% lands in HExhausted (not Red) under prefer::any (BUG-299) | AC-12 | Group Boundary |
+| FT-11 | h-exhausted account with 7d_son ≤ 3% lands in HExhausted (not Red) under prefer::any (BUG-299) | AC-12 | Group Boundary |
 | FT-12 | prefer::son + absent Sonnet tier → prefer_weekly = 0.0 (not 100.0) | AC-05 | Absent-Sonnet fix |
 | FT-13 | sort:: drives footer recommendation — top eligible in Next line; `·`-delimited format | AC-09 | Recommendation + Footer |
 | FT-14 | Green account with divergent 7d/7d_son passes eligibility gate (BUG-324) | AC-09 | Eligibility + BUG-324 |
@@ -108,7 +108,7 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 
 ### FT-06: Four-group status partition: 🟢 above 🟡 h-exhausted above 🟡 weekly-exhausted (incl. both-exhausted) above 🔴 Dead
 
-- **Given:** Five `AccountQuota` structs: `green@test.com` (5h_left=80%, 7d_left=60% — both available, 🟢 G1), `h_exh@test.com` (5h_left=3%, 7d_left=50% — 5h exhausted, 🟡 G2), `weekly_exh@test.com` (5h_left=80%, 7d_left=2% — 7d exhausted, 🟡 G3), `both_exh@test.com` (5h_left=6%, 7d_left=4% — both exhausted, 🟡 G3 weekly-exhausted — 7d is binding), `dead@test.com` (result=Err — 🔴 G4). Any sort strategy.
+- **Given:** Five `AccountQuota` structs: `green@test.com` (5h_left=80%, 7d_left=60% — both available, 🟢 G1), `h_exh@test.com` (5h_left=3%, 7d_left=50% — 5h exhausted, 🟡 G2), `weekly_exh@test.com` (5h_left=80%, 7d_left=2% — 7d exhausted, 🟡 G3), `both_exh@test.com` (5h_left=6%, 7d_left=1% — both exhausted, 🟡 G3 weekly-exhausted — 7d is binding), `dead@test.com` (result=Err — 🔴 G4). Any sort strategy.
 - **When:** `sort_indices(&accounts, SortStrategy::Name, None, PreferStrategy::Any, 0)` — name sort would interleave groups alphabetically.
 - **Then:** Output order: `green@test.com` (🟢 G1), then G2 h-exhausted before G3 weekly-exhausted (both `weekly_exh` and `both_exh` — alphabetical within G3), then `dead@test.com` (🔴 G4). Four-group partition overrides alphabetical sort. Fix(BUG-321): `both_exh@test.com` sorts to G3 weekly-exhausted (🟡), not G4 Dead (🔴).
 - **Exit:** n/a (unit test)
@@ -166,13 +166,13 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 
 ---
 
-### FT-11: h-exhausted account with `7d(Son) ≤ 5%` lands in HExhausted (not Red) under `prefer::any` (BUG-299)
+### FT-11: h-exhausted account with `7d(Son) ≤ 3%` lands in HExhausted (not Red) under `prefer::any` (BUG-299)
 
 - **Given:** Two `AccountQuota` structs:
-  - `account-a`: `five_hour_util=100%` (5h_left=0%, h-exhausted), `seven_day_util=68%` (7d_left=32%), `seven_day_sonnet_util=95%` (7d_son_left=5%).
-  - `weekly-exh`: `five_hour_util=10%` (5h_left=90%), `seven_day_util=96%` (7d_left=4%, weekly-exhausted).
+  - `account-a`: `five_hour_util=100%` (5h_left=0%, h-exhausted), `seven_day_util=68%` (7d_left=32%), `seven_day_sonnet_util=97%` (7d_son_left=3%).
+  - `weekly-exh`: `five_hour_util=10%` (5h_left=90%), `seven_day_util=98%` (7d_left=2%, weekly-exhausted).
 - **When:** `sort_indices(&accounts, SortStrategy::Name, None, PreferStrategy::Any, 0)`
-- **Then:** `account-a` appears before `weekly-exh`. `account-a` is in HExhausted (group 2); `weekly-exh` is in WeeklyExhausted (group 3). Under `prefer::any`, `prefer_weekly(account-a) = min(32%, 5%) = 5.0` — the bug used this value and placed `account-a` in Red; the fix uses `seven_day_left = 32% > 5.0%` → HExhausted.
+- **Then:** `account-a` appears before `weekly-exh`. `account-a` is in HExhausted (group 2); `weekly-exh` is in WeeklyExhausted (group 3). Under `prefer::any`, `prefer_weekly(account-a) = min(32%, 3%) = 3.0` — the bug used this value and placed `account-a` in Red; the fix uses `seven_day_left = 32% > 3.0%` → HExhausted.
 - **Exit:** n/a (unit test — position assertion)
 - **Source fn:** `mre_bug299_h_exhausted_misclassified_as_red_prefer_any` (in `src/usage/sort.rs`)
 - **Source:** [feature/020_usage_sort_strategies.md AC-12](../../../docs/feature/020_usage_sort_strategies.md); BUG-299
@@ -207,7 +207,7 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
   - `aaa_target@test.com`: `five_hour_util=0%` (5h_left=100%), `seven_day_util=69%` (7d_left=31%), `seven_day_sonnet_util=100%` (7d_son_left=0%). Green (both quotas above status-group thresholds). Non-current, non-active.
   - `current@test.com`: `is_current=true` — forces selection of `aaa_target@test.com`.
 - **When:** `find_next_for_strategy(&accounts, SortStrategy::Renew, PreferStrategy::Any, now, false)` — gate 7 evaluates eligibility.
-- **Then:** Returns `Some(0)` — `aaa_target@test.com` is eligible. Gate 7 uses `seven_day_left(aq) = 31.0 > 5.0` (model-agnostic raw 7d quota). Before Fix(BUG-324): `prefer_weekly(aq, Any) = min(31.0, 0.0) = 0.0 ≤ 5.0` — gate would fire and block this green account.
+- **Then:** Returns `Some(0)` — `aaa_target@test.com` is eligible. Gate 7 uses `seven_day_left(aq) = 31.0 > 3.0` (model-agnostic raw 7d quota). Before Fix(BUG-324): `prefer_weekly(aq, Any) = min(31.0, 0.0) = 0.0 ≤ 5.0` — gate would fire and block this green account.
 - **Exit:** n/a (unit test — return value assertion)
 - **Note:** Same class as BUG-299 (fixed in `sort.rs` status groups, left in `sort_next.rs` eligibility gate). Eligibility is model-agnostic; `apply_model_override()` handles model selection post-rotation.
 - **Source fn:** `mre_bug324_green_account_eligible_when_7d_son_exhausted` (in `tests/usage/sort_next_tests.rs`)
