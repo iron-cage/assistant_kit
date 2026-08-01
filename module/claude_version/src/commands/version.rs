@@ -616,16 +616,72 @@ fn format_interval( secs : u64 ) -> String
   }
 }
 
-/// `.version.list` — list all named version aliases.
+/// The 2 list modes `.version.list` can render.
+///
+/// Not part of the crate's public API — reachable only within `commands::version`,
+/// since the declaring `mod version;` in `commands/mod.rs` is private.
+#[ derive( Debug, Clone, Copy, PartialEq, Eq ) ]
+enum ListMode
+{
+  /// Named version aliases (`stable`, `latest`, `month`) — default.
+  Aliases,
+  /// Full release history from the GitHub Releases API (or compiled-in fallback).
+  History,
+}
+
+impl ListMode
+{
+  /// Parse a `mode::` value; case-sensitive exact match against the 2 labels.
+  fn parse( s : &str ) -> Result< Self, String >
+  {
+    match s
+    {
+      "aliases" => Ok( Self::Aliases ),
+      "history" => Ok( Self::History ),
+      other => Err( format!( "unknown mode '{other}': expected aliases or history" ) ),
+    }
+  }
+}
+
+/// `.version.list` — list version aliases (`mode::aliases`, default) or release
+/// history from GitHub (`mode::history`).
 ///
 /// # Errors
 ///
-/// Returns `Err` if `format::` has an unrecognised value.
+/// Returns `Err(ArgumentTypeMismatch)` for an unrecognised or empty `mode::` value (exit 1),
+/// or if `format::` has an unrecognised value.
+/// Returns `Err(InternalError)` under `mode::history` when `HOME` is unset (exit 2).
 #[ allow( clippy::missing_inline_in_public_items ) ]
 pub fn version_list_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
+  let mode = match cmd.arguments.get( "mode" )
+  {
+    Some( Value::String( s ) ) if !s.is_empty() =>
+      ListMode::parse( s ).map_err( | e | ErrorData::new( ErrorCode::ArgumentTypeMismatch, e ) )?,
+    Some( Value::String( _ ) ) =>
+      return Err( ErrorData::new( ErrorCode::ArgumentTypeMismatch, "mode:: value cannot be empty".to_string() ) ),
+    _ => ListMode::Aliases,
+  };
   let opts = OutputOptions::from_cmd( &cmd )?;
 
+  match mode
+  {
+    ListMode::Aliases => Ok( render_aliases_mode( &opts ) ),
+    ListMode::History =>
+    {
+      let count = match cmd.arguments.get( "count" )
+      {
+        Some( Value::Integer( n ) ) => usize::try_from( *n ).unwrap_or( 10 ),
+        _                           => 10,
+      };
+      super::history::render_history_mode( count, &opts )
+    }
+  }
+}
+
+/// Render the `mode::aliases` output — the compile-time named-alias table.
+fn render_aliases_mode( opts : &OutputOptions ) -> OutputData
+{
   let content = match ( opts.format, opts.verbosity )
   {
     ( OutputFormat::Json, _ ) =>
@@ -667,5 +723,5 @@ pub fn version_list_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) ->
     }
   };
 
-  Ok( OutputData::new( content, "text" ) )
+  OutputData::new( content, "text" )
 }

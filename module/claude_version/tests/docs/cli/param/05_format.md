@@ -6,7 +6,7 @@ Edge case coverage for the `format::` parameter. See [param/05_format.md](../../
 
 - **Purpose**: Edge case tests for the `format::` parameter.
 - **Responsibility**: Boundary values, invalid inputs, type violations, and default behavior for `format::`.
-- **Commands:** `.status`, `.version.show`, `.version.install`, `.version.list`, `.version.guard`, `.version.history`, `.processes`, `.processes.kill`, `.settings.show`, `.settings.get`, `.config`, `.params`, `.paths`
+- **Commands:** `.status`, `.version.show`, `.version.install`, `.version.list`, `.version.guard`, `.processes`, `.processes.kill`, `.settings.show`, `.settings.get`, `.config`, `.params`, `.paths`
 - **In Scope**: Single-parameter edge cases, validation errors, type checking.
 - **Out of Scope**: Command integration (→ `../command/`), group interactions (→ `../param_group/`).
 
@@ -21,13 +21,13 @@ Edge case coverage for the `format::` parameter. See [param/05_format.md](../../
 | EC-15 | `.settings.show format::json` → JSON object | Explicit json |
 | EC-16 | `.settings.get format::json` → `{"key":..,"value":..}` | Explicit json |
 | EC-5 | `format::json` preserves bool/number types | Type Fidelity |
-| EC-17 | `.version.history format::json` → version/date/summary fields | Explicit json |
+| EC-17 | `.version.list mode::history format::json` → version/date/summary fields | Explicit json |
 | EC-1 | `.version.guard format::json dry::1` → JSON output, exit 0 | Explicit json |
 | EC-2 | `format::xml` → exit 1, unknown format | Invalid |
 | EC-3 | `format::JSON` (uppercase) → exit 1 | Invalid (case) |
 | EC-4 | `format::` (empty) → exit 1 | Empty Value |
-| EC-18 | `.version.history format::xml` → exit 1 | Invalid |
-| EC-19 | `.version.history format::JSON` → exit 1 | Invalid (case) |
+| EC-18 | `.version.list mode::history format::xml` → exit 1 | Invalid |
+| EC-19 | `.version.list mode::history format::JSON` → exit 1 | Invalid (case) |
 | EC-6 | Default (absent) → `format::text` | Default Behavior |
 | EC-7 | `format::text` explicit → same as absent | Explicit text |
 | EC-8 | `format::csv` → exit 1 | Invalid |
@@ -213,33 +213,33 @@ Edge case coverage for the `format::` parameter. See [param/05_format.md](../../
 
 ---
 
-### EC-17: `.version.history format::json` → version/date/summary fields
+### EC-17: `.version.list mode::history format::json` → version/date/summary fields
 
 - **Given:** network available
-- **When:** `clv .version.history format::json count::3`
+- **When:** `clv .version.list mode::history format::json count::3`
 - **Then:** exit 0; stdout is a valid JSON array; each element has at minimum `version`, `date`, and `summary` fields
 - **Exit:** 0
-- **Source:** [command/version.md — .version.history](../../../../docs/cli/command/version.md)
+- **Source:** [command/version.md — .version.list](../../../../docs/cli/command/version.md#command-6-versionlist)
 
 ---
 
-### EC-18: `.version.history format::xml` → exit 1
+### EC-18: `.version.list mode::history format::xml` → exit 1
 
 - **Given:** clean environment
-- **When:** `clv .version.history format::xml`
+- **When:** `clv .version.list mode::history format::xml`
 - **Then:** exit 1; error message references unknown format value
 - **Exit:** 1
-- **Source:** [command/version.md — .version.history](../../../../docs/cli/command/version.md)
+- **Source:** [command/version.md — .version.list](../../../../docs/cli/command/version.md#command-6-versionlist)
 
 ---
 
-### EC-19: `.version.history format::JSON` (uppercase) → exit 1
+### EC-19: `.version.list mode::history format::JSON` (uppercase) → exit 1
 
 - **Given:** clean environment
-- **When:** `clv .version.history format::JSON`
+- **When:** `clv .version.list mode::history format::JSON`
 - **Then:** exit 1; same error as unknown format; `format::` is case-sensitive
 - **Exit:** 1
-- **Source:** [command/version.md — .version.history](../../../../docs/cli/command/version.md)
+- **Source:** [command/version.md — .version.list](../../../../docs/cli/command/version.md#command-6-versionlist)
 
 ---
 

@@ -229,8 +229,8 @@
 
 - name: ".version.list"
   namespace: ""
-  description: "List all named version aliases"
-  hint: "List version aliases"
+  description: "Lists aliases or release history relevant to the installed version"
+  hint: "List version aliases or release history"
   version: "1.0.0"
   status: "stable"
   aliases: []
@@ -241,48 +241,19 @@
   http_method_hint: "GET"
 
   arguments:
-    - name: "verbosity"
-      kind: "Integer"
-      description: "Output detail level"
-      hint: "Output verbosity level"
-      optional: true
-      default: "1"
-      validation_rules: []
-      aliases: ["v"]
-      tags: []
-
-    - name: "format"
+    - name: "mode"
       kind: "String"
-      description: "Output format (text or json)"
-      hint: "Output format"
+      description: "Render mode: aliases (named version aliases) or history (GitHub release history)"
+      hint: "List mode"
       optional: true
-      default: "text"
+      default: "aliases"
       validation_rules: []
-      aliases: ["fmt"]
+      aliases: []
       tags: []
 
-  examples:
-    - ".version.list"
-    - ".version.list format::json"
-  auto_help_enabled: true
-
-- name: ".version.history"
-  namespace: ""
-  description: "Show release history with changelogs from GitHub"
-  hint: "Show release history"
-  version: "1.0.0"
-  status: "stable"
-  aliases: []
-  tags: ["manager", "version"]
-  permissions: []
-  idempotent: true
-  deprecation_message: ""
-  http_method_hint: "GET"
-
-  arguments:
     - name: "count"
       kind: "Integer"
-      description: "Number of releases to show"
+      description: "Number of releases to show (mode::history only)"
       hint: "Release count"
       optional: true
       default: "10"
@@ -311,8 +282,9 @@
       tags: []
 
   examples:
-    - ".version.history"
-    - ".version.history count::10 format::json"
+    - ".version.list"
+    - ".version.list format::json"
+    - ".version.list mode::history count::10 format::json"
   auto_help_enabled: true
 
 - name: ".processes"

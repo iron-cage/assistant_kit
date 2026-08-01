@@ -80,6 +80,10 @@ claude_storage .count target::sessions scope::relevant
 | 13 | [`session::`](../param/13_session.md) | [`SessionId`](../type/09_session_id.md) | optional |
 | 16 | [`target::`](../param/16_target.md) | [`TargetType`](../type/11_target_type.md) | optional |
 
+### Referenced Command Group
+
+Evaluated against `.show` under the strict [command_group](../command_group/readme.md) identity test (same dispatch function, same parameter set) — does not qualify. `count_routine()` (`src/cli/count.rs:24`) has zero cross-calls with `show_routine()` (`src/cli/show.rs:32`). The "matches `.show` default" language above (Algorithm step 1) refers to `count_routine()`'s own doc comment stating its zero-parameter default was deliberately engineered to reproduce `.show`'s CWD-detection default "for UX consistency" (`Fix(issue-003a)`, `src/cli/count.rs:27-34`) — a behavioral-parity design decision independently implemented in each routine (`count_routine()` calls `storage.load_project_for_cwd()` directly at dispatch time; `show_routine()` does the same via its own internal helper), not implementation sharing. Their parameter sets also differ (`target::`/`session::` vs `session_id::`/`show_entries::`/etc.). See [`command_group/readme.md`](../command_group/readme.md) Evaluated, Not Qualifying for the full analysis.
+
 ### Referenced User Stories
 
 | # | User Story | Persona |

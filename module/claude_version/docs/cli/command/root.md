@@ -168,7 +168,7 @@ Evaluated against [`.paths`](paths.md#command-16-paths) under the strict [comman
 
 | # | Command | Relationship |
 |---|---------|-------------|
-| 1 | [`.version.history`](version.md#command-12-versionhistory) | Creates the version history cache path enumerated here |
+| 1 | [`.version.list`](version.md#command-6-versionlist) | Creates the version history cache path enumerated here (`mode::history`) |
 
 ---
 

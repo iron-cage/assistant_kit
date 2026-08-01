@@ -6,7 +6,7 @@ Acceptance tests for User Story 002. See [user_story/002_version_upgrade.md](../
 
 - **Purpose**: Verify the version upgrade workflow from preview through install and verification.
 - **Responsibility**: Acceptance criteria coverage for the version upgrade scenario.
-- **Commands:** `.version.show`, `.version.install`, `.version.guard`, `.version.history`
+- **Commands:** `.version.show`, `.version.install`, `.version.guard`, `.version.list`
 - **In Scope**: Dry-run preview, install execution, version lock, post-install verification, history check.
 - **Out of Scope**: Process management (-> `03_process_lifecycle.md`), settings (-> `04_settings_management.md`).
 
@@ -18,7 +18,7 @@ Acceptance tests for User Story 002. See [user_story/002_version_upgrade.md](../
 | US-2 | Install applies version lock and exits 0 | Acceptance: install |
 | US-3 | Already-at-target is no-op unless force::1 | Acceptance: idempotency |
 | US-4 | `.version.show` after install prints new version | Acceptance: verification |
-| US-5 | `.version.history` shows recent releases | Acceptance: history |
+| US-5 | `.version.list mode::history` shows recent releases | Acceptance: history |
 | US-6 | `.version.guard` detects drift after install | Acceptance: guard |
 
 ## Test Coverage Summary
@@ -74,10 +74,10 @@ Acceptance tests for User Story 002. See [user_story/002_version_upgrade.md](../
 
 ---
 
-### US-5: `.version.history` shows recent releases
+### US-5: `.version.list mode::history` shows recent releases
 
 - **Given:** Claude Code installed; network available
-- **When:** `clv .version.history`
+- **When:** `clv .version.list mode::history`
 - **Then:** exit 0; output lists recent releases with summaries
 - **Exit:** 0
 - **Source:** [user_story/002 -- AC bullet 5](../../../../docs/cli/user_story/002_version_upgrade.md)

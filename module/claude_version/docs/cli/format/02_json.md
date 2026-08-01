@@ -10,7 +10,7 @@
 ### Rendering Rules
 
 - **Encoding:** Standard JSON; all strings properly escaped.
-- **Top-level shape:** Object `{}` for single-result commands; array `[]` for list commands (`.processes`, `.version.list`, `.version.history`, `.params` show-all mode). Note: `.params` uses array for show-all and object for single-param mode — shape is mode-dependent.
+- **Top-level shape:** Object `{}` for single-result commands; array `[]` for list commands (`.processes`, `.version.list`, `.params` show-all mode). Note: `.params` uses array for show-all and object for single-param mode; `.version.list` is array under both `mode::aliases` and `mode::history` — shape is mode-dependent for `.params`, mode-invariant for `.version.list`.
 - **Verbosity interaction:** `v::0` omits optional fields; `v::1` includes standard fields (default); `v::2` includes all available fields including diagnostics.
 - **Required keys not stripped:** Even at `v::0`, the primary payload key is always present.
 - **Case-sensitive:** The format value is `json` (lowercase only); `JSON` or `Json` are rejected with exit 1.
@@ -25,15 +25,15 @@ Field names are stable snake_case JSON keys. Common fields:
 | `.status` | `sessions` | number | Running process count |
 | `.status` | `account` | string \| null | Active account name |
 | `.version.show` | `version` | string | |
-| `.version.list` | `[].alias` | string | Array of alias objects |
-| `.version.list` | `[].version` | string | |
+| `.version.list` (`mode::aliases`) | `[].alias` | string | Array of alias objects |
+| `.version.list` (`mode::aliases`) | `[].version` | string | |
 | `.processes` | `[].pid` | number | Array of process objects |
 | `.processes` | `[].cwd` | string | |
 | `.settings.get` | `key` | string | |
 | `.settings.get` | `value` | any | JSON-typed value |
-| `.version.history` | `[].version` | string | Array of release objects |
-| `.version.history` | `[].date` | string | ISO 8601 |
-| `.version.history` | `[].summary` | string | One-line description |
+| `.version.list` (`mode::history`) | `[].version` | string | Array of release objects |
+| `.version.list` (`mode::history`) | `[].date` | string | ISO 8601 |
+| `.version.list` (`mode::history`) | `[].summary` | string | One-line description |
 | `.params` (show-all) | `[].name` | string | Array of param objects |
 | `.params` (show-all) | `[].cli` | string \| null | CLI flag form or null |
 | `.params` (show-all) | `[].env` | string \| null | Env var name or null |
@@ -61,9 +61,8 @@ Field names are stable snake_case JSON keys. Common fields:
 | 7 | [`.processes.kill`](../command/processes.md#command-8-processeskill) | Machine-readable structured output |
 | 8 | [`.settings.show`](../command/settings.md#command-9-settingsshow) | Machine-readable structured output |
 | 9 | [`.settings.get`](../command/settings.md#command-10-settingsget) | Machine-readable structured output |
-| 10 | [`.version.history`](../command/version.md#command-12-versionhistory) | Machine-readable structured output |
-| 11 | [`.config`](../command/config.md#command-13-config) | Machine-readable structured output |
-| 12 | [`.params`](../command/params.md#command-14-params) | Machine-readable structured output |
+| 10 | [`.config`](../command/config.md#command-13-config) | Machine-readable structured output |
+| 11 | [`.params`](../command/params.md#command-14-params) | Machine-readable structured output |
 
 ### Referenced User Stories
 
