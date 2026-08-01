@@ -39,8 +39,10 @@
 //! | `classify_ms_expired_for_past_timestamp` | past ms → Expired (no file I/O) |
 //! | `classify_ms_expiring_soon_within_threshold` | near future ms → ExpiringSoon |
 //! | `classify_ms_valid_far_from_expiry` | far future ms → Valid |
+//! | `token_status_static_variant_exists_and_is_distinct` | Feature 071: `TokenStatus::Static` exists, distinct from Valid/ExpiringSoon/Expired |
 
 use claude_profile_core::token::{ classify_ms, parse_expires_at, status_with_threshold, TokenStatus, WARNING_THRESHOLD_SECS };
+use core::time::Duration;
 use std::time::{ SystemTime, UNIX_EPOCH };
 
 // ─── parse_expires_at ────────────────────────────────────────────────────────
@@ -184,4 +186,19 @@ fn classify_ms_valid_far_from_expiry()
     matches!( classify_ms( far_ms, 60 ), TokenStatus::Valid { .. } ),
     "timestamp far from expiry must be Valid"
   );
+}
+
+// ─── TokenStatus::Static (Feature 071, task 433) ──────────────────────────────
+
+/// `TokenStatus::Static` exists and is distinct from `Valid`/`ExpiringSoon`/`Expired`.
+///
+/// A redirect-backend account's static API key never expires — it must classify
+/// as neither a valid-with-remaining-time OAuth token nor an expired one.
+#[test]
+fn token_status_static_variant_exists_and_is_distinct()
+{
+  let expires_in = Duration::from_secs( 100 );
+  assert_ne!( TokenStatus::Static, TokenStatus::Expired );
+  assert_ne!( TokenStatus::Static, TokenStatus::Valid { expires_in } );
+  assert_ne!( TokenStatus::Static, TokenStatus::ExpiringSoon { expires_in } );
 }

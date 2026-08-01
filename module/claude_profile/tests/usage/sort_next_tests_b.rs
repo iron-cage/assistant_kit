@@ -112,6 +112,7 @@ fn mre_bug229_strategy_metric_renew_exact_sub_shows_both_timers()
     is_owned      : true,
     owner                : String::new(),
       claim_lock : false, reserve : false,
+    inference_provider : String::new(),
   };
 
   let metric = strategy_metric( &aq, SortStrategy::Renew, PreferStrategy::Any, now);
@@ -173,6 +174,7 @@ fn mre_bug229_strategy_metric_renew_no_sub_shows_7d_only()
     is_owned      : true,
     owner                : String::new(),
       claim_lock : false, reserve : false,
+    inference_provider : String::new(),
   };
 
   let metric = strategy_metric( &aq, SortStrategy::Renew, PreferStrategy::Any, now);

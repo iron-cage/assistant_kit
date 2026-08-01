@@ -25,6 +25,7 @@ mod limits;
 mod model;
 mod models;
 mod model_select;
+mod provider_select;
 mod token_paths;
 mod dot;
 
@@ -43,6 +44,7 @@ pub use limits::account_limits_routine;
 pub use model::model_routine;
 pub use models::models_routine;
 pub use model_select::model_select_routine;
+pub use provider_select::provider_select_routine;
 pub use token_paths::paths_routine;
 pub use dot::dot_routine;
 pub use crate::usage::usage_routine;

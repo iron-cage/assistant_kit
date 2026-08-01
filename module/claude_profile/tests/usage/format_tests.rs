@@ -333,6 +333,7 @@ fn test_status_emoji_five_hour_none_is_green()
     is_owned              : true,
     owner                 : String::new(),
     claim_lock : false, reserve : false,
+    inference_provider    : String::new(),
   };
   assert_eq!(
     status_emoji( &aq ), "🟢",

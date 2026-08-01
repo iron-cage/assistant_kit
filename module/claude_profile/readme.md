@@ -66,6 +66,8 @@ match token::status().expect( "failed to read credentials" )
     eprintln!( "expires in {}m — consider switching accounts", expires_in.as_secs() / 60 ),
   token::TokenStatus::Expired =>
     eprintln!( "token expired — run: claude auth login" ),
+  token::TokenStatus::Static =>
+    println!( "static API key — no expiry" ),
 }
 
 // List all stored accounts
@@ -76,7 +78,10 @@ for acct in account::list( &credential_store ).expect( "failed to list accounts"
 }
 
 // Save current credentials as "work@acme.com"
-account::save( "work@acme.com", &credential_store, &claude, true, None, None, None, None ).expect( "failed to save account" );
+account::save(
+  "work@acme.com", &credential_store, &claude, true, None, None, None, None,
+  account::AccountBackend::Anthropic, None, None, None,
+).expect( "failed to save account" );
 
 // Switch to "personal@home.com"
 account::switch_account( "personal@home.com", &credential_store, &claude ).expect( "failed to switch" );

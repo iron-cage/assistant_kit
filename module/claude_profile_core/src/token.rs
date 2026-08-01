@@ -2,7 +2,8 @@
 //!
 //! Reads `expiresAt` from `~/.claude/.credentials.json` and classifies the
 //! token as [`TokenStatus::Valid`], [`TokenStatus::ExpiringSoon`], or
-//! [`TokenStatus::Expired`].
+//! [`TokenStatus::Expired`]. Redirect-backend accounts (Feature 071) classify
+//! as [`TokenStatus::Static`] instead — a static API key never expires.
 //!
 //! # Token vs Subscription Window
 //!
@@ -23,6 +24,8 @@
 //!     eprintln!( "expires in {}m — consider switching accounts", expires_in.as_secs() / 60 ),
 //!   token::TokenStatus::Expired =>
 //!     eprintln!( "token expired — run: claude auth login" ),
+//!   token::TokenStatus::Static =>
+//!     println!( "static API key — no expiry" ),
 //! }
 //! ```
 
@@ -52,6 +55,8 @@ pub enum TokenStatus
   },
   /// Token has expired.
   Expired,
+  /// Static API key (redirect-backend account, Feature 071) — never expires.
+  Static,
 }
 
 /// Read the active token status from `~/.claude/.credentials.json`.

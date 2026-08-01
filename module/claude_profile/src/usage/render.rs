@@ -20,6 +20,22 @@ use super::render_sessions::append_sessions_table;
 pub use super::render_json::render_json;
 pub use super::render_tsv::render_tsv;
 
+// ── Provider resolution ────────────────────────────────────────────────────────
+
+/// Resolve the globally selected inference provider from `~/.clr/config.toml`'s
+/// user tier for Gate 10 (Feature 072) — defaults to `"anthropic"` when unset,
+/// the file is absent, or `HOME` cannot be resolved. Reads directly via
+/// `claude_core::toml_io`, structurally independent of `.provider.select`'s
+/// own routine (`commands::provider_select`) — the sole write path for this key.
+fn resolve_selected_provider() -> String
+{
+  std::env::var( "HOME" )
+    .ok()
+    .map( |home| std::path::PathBuf::from( home ).join( ".clr" ).join( "config.toml" ) )
+    .and_then( |path| claude_core::toml_io::get_tiered( None, &path, "provider" ) )
+    .unwrap_or_else( || "anthropic".to_string() )
+}
+
 // ── Text renderer ─────────────────────────────────────────────────────────────
 
 /// Render quota results as a plain-text table using `data_fmt`.
@@ -260,7 +276,8 @@ pub fn render_text(
   //   account while auto-switch (gate_ownership=true) would skip it. Root cause: render_text
   //   had no gate_ownership param; false was hardcoded at the call site.
   // Pitfall: api.rs must pass params.rotate && !params.force; live.rs and mod.rs pass false.
-  let Some( idx ) = find_next_for_strategy( accounts, sort, prefer, now_secs, gate_ownership ) else
+  let selected_provider = resolve_selected_provider();
+  let Some( idx ) = find_next_for_strategy( accounts, sort, prefer, now_secs, gate_ownership, &selected_provider ) else
   {
     return append_sessions_table( body, store_path, who );
   };

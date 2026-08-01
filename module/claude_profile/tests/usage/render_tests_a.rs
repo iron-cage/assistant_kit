@@ -76,6 +76,7 @@ fn mre_bug_220_renews_preserved_for_429_accounts()
     is_owned      : true,
     owner                : String::new(),
     claim_lock : false, reserve : false,
+    inference_provider : String::new(),
   };
   let accounts = vec![ aq ];
   let cols     = ColsVisibility::default_set();
@@ -151,6 +152,7 @@ fn test_ft21_009_occupied_elsewhere_at_flag()
       owner                : String::new(),
       claim_lock : false, reserve : false,
           org_created_at : None,
+      inference_provider : String::new(),
     }
   };
 
@@ -248,6 +250,7 @@ fn ft03_033_render_text_cached_shows_tilde_prefix()
     owner                : String::new(),
     claim_lock : false, reserve : false,
       org_created_at : None,
+    inference_provider : String::new(),
   };
   let accounts = vec![ aq ];
   let cols     = ColsVisibility::default_set();
@@ -310,6 +313,7 @@ fn ft09_033_render_json_cached_includes_fields()
     owner                : String::new(),
     claim_lock : false, reserve : false,
       org_created_at : None,
+    inference_provider : String::new(),
   };
   let accounts = vec![ aq ];
   let json = render_json( &accounts );
@@ -358,6 +362,7 @@ fn ft03_033_cached_sonnet_reset_shows_tilde()
     owner                : String::new(),
     claim_lock : false, reserve : false,
       org_created_at : None,
+    inference_provider : String::new(),
   };
   let accounts = vec![ aq ];
   let mut cols = ColsVisibility::default_set();
@@ -433,6 +438,7 @@ fn test_ft23_009_renews_dash_for_cancelled_subscription()
     is_owned              : true,
     owner                : String::new(),
     claim_lock : false, reserve : false,
+    inference_provider : String::new(),
   };
   let accounts = vec![ aq ];
   let cols     = ColsVisibility::default_set();
@@ -535,6 +541,7 @@ fn mre_bug332_renews_shown_for_billing_none_with_ok_result()
     is_owned              : true,
     owner                 : String::new(),
     claim_lock : false, reserve : false,
+    inference_provider : String::new(),
   };
   let accounts = vec![ aq ];
   let cols     = ColsVisibility::default_set();
@@ -604,6 +611,7 @@ fn ft05_non_owned_display_tilde_or_dashes()
     owner                : String::new(),
     claim_lock : false, reserve : false,
       org_created_at : None,
+    inference_provider : String::new(),
   };
   let text_a = render_text(
     &[ aq_cached ],
@@ -635,6 +643,7 @@ fn ft05_non_owned_display_tilde_or_dashes()
     owner                : String::new(),
     claim_lock : false, reserve : false,
       org_created_at : None,
+    inference_provider : String::new(),
   };
   let text_b = render_text(
     &[ aq_no_cache ],
@@ -683,6 +692,7 @@ fn ft12_json_output_includes_is_owned()
     owner                : String::new(),
     claim_lock : false, reserve : false,
       org_created_at : None,
+    inference_provider : String::new(),
   };
   let not_owned = AccountQuota
   {
@@ -703,6 +713,7 @@ fn ft12_json_output_includes_is_owned()
     owner                : String::new(),
     claim_lock : false, reserve : false,
       org_created_at : None,
+    inference_provider : String::new(),
   };
 
   let json = render_json( &[ owned, not_owned ] );
@@ -753,6 +764,7 @@ fn test_render_footer_model_label_at_10pct_no_override()
     owner                 : String::new(),
     claim_lock : false, reserve : false,
       org_created_at : None,
+    inference_provider : String::new(),
   };
   // b@x.com: second valid account required for footer (≥ 2 valid triggers footer display).
   let aq_b = AccountQuota
@@ -779,6 +791,7 @@ fn test_render_footer_model_label_at_10pct_no_override()
     owner                 : String::new(),
     claim_lock : false, reserve : false,
       org_created_at : None,
+    inference_provider : String::new(),
   };
   // cur@x.com: is_current=true — triggers 2-line `·`-delimited footer so the model label appears.
   let aq_cur = AccountQuota
@@ -805,6 +818,7 @@ fn test_render_footer_model_label_at_10pct_no_override()
     owner                 : String::new(),
     claim_lock : false, reserve : false,
       org_created_at : None,
+    inference_provider : String::new(),
   };
   let output = render_text(
     &[ aq_cur, aq_a, aq_b ], SortStrategy::Name, None, PreferStrategy::Any,
@@ -858,6 +872,7 @@ fn test_render_footer_model_label_below_10pct_opus()
     owner                 : String::new(),
     claim_lock : false, reserve : false,
       org_created_at : None,
+    inference_provider : String::new(),
   };
   // b@x.com: second valid account required for footer (≥ 2 valid triggers footer display).
   let aq_b = AccountQuota
@@ -884,6 +899,7 @@ fn test_render_footer_model_label_below_10pct_opus()
     owner                 : String::new(),
     claim_lock : false, reserve : false,
       org_created_at : None,
+    inference_provider : String::new(),
   };
   // cur@x.com: is_current=true — triggers 2-line `·`-delimited footer so the model label appears.
   let aq_cur = AccountQuota
@@ -910,6 +926,7 @@ fn test_render_footer_model_label_below_10pct_opus()
     owner                 : String::new(),
     claim_lock : false, reserve : false,
       org_created_at : None,
+    inference_provider : String::new(),
   };
   let output = render_text(
     &[ aq_cur, aq_a, aq_b ], SortStrategy::Name, None, PreferStrategy::Any,
@@ -984,6 +1001,7 @@ fn mre_bug335_cache_fallback_reason_surfaced_on_all_render_surfaces()
     owner                 : String::new(),
     claim_lock : false, reserve : false,
       org_created_at : None,
+    inference_provider : String::new(),
   };
   let accounts = vec![ aq ];
   let cols     = ColsVisibility::default_set();

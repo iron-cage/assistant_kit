@@ -31,6 +31,8 @@
 //! | `ft22_manipulate_expires_at_called_before_run_isolated_structural` | structural | grep `account.rs` for `manipulate_expires_at(` before first `run_isolated(` | in order |
 //! | `ft23_live_sync_returns_live_creds_without_subprocess` | behavioral | live creds differ from stored → sync and return `Some(live)` without subprocess | `Some(live_json)` |
 //! | `ft24_some_paths_branch_reads_credentials_file_twice_structural` | structural | grep `account.rs` `Some(paths)` branch for ≥2 `credentials_file()` calls | ≥2 occurrences |
+//! | `ft25_071_refresh_redirect_bypass_checked_before_run_isolated_structural` | structural | Feature 071/AC-09: redirect-backend check appears before `run_isolated(` and before the `Some(paths)`/`None` branch dispatch | in order |
+//! | `ft26_071_refresh_redirect_account_returns_none_credentials_unchanged` | behavioral | Feature 071/AC-09: `refresh_account_token()` against a `backend: redirect` account | `None`; credential store file byte-for-byte unchanged |
 //!
 //! ## Pitfall: Consumer Feature Activation
 //!
@@ -271,7 +273,7 @@ fn mre_bug221_save_some_creds_writes_to_store_not_live_file()
   std::fs::write( &live_file, b"original_live_creds" ).unwrap();
   let paths      = ClaudePaths::with_home( fake_home.path() );
 
-  account::save( "acct@test.com", store.path(), &paths, false, Some( b"new_creds_bytes" ), None, None, None ).unwrap();
+  account::save( "acct@test.com", store.path(), &paths, false, Some( b"new_creds_bytes" ), None, None, None, account::AccountBackend::Anthropic, None, None, None ).unwrap();
 
   let store_file = store.path().join( "acct@test.com.credentials.json" );
   assert!( store_file.exists(), "save(Some(bytes)) must create the credential store file" );
@@ -305,7 +307,7 @@ fn mre_bug221_save_none_creds_copies_from_live_file()
   std::fs::write( &live_file, b"live_creds_content" ).unwrap();
   let paths      = ClaudePaths::with_home( fake_home.path() );
 
-  account::save( "acct@test.com", store.path(), &paths, false, None, None, None, None ).unwrap();
+  account::save( "acct@test.com", store.path(), &paths, false, None, None, None, None, account::AccountBackend::Anthropic, None, None, None ).unwrap();
 
   let store_file = store.path().join( "acct@test.com.credentials.json" );
   assert!( store_file.exists(), "save(None) must create the credential store file" );
@@ -782,4 +784,69 @@ fn mre_bug318_rotation_live_sync_structural()
     src.contains( "Fix(BUG-318)" ),
     "BUG-318 fix: `Fix(BUG-318)` annotation must appear at the live-sync write site in account.rs"
   );
+}
+
+// ── structural + behavioral (Feature 071 / AC-09) ──────────────────────────────
+
+/// T04/433/AC-09: `refresh_account_token()` checks `backend == Redirect` and returns
+/// early — before `args` is built and before either the `Some(paths)`/`None` branch can
+/// dispatch a subprocess — so a redirect account's refresh is a true no-op covering both
+/// branches. A black-box behavioral test cannot distinguish "bypassed" from "attempted and
+/// failed" in this sandboxed environment (no real `claude` binary — both return `None` with
+/// an unchanged store file), so this structural check is the actual AC-09 proof; the
+/// behavioral test below is a regression guard on the observable half only.
+#[ test ]
+fn ft25_071_refresh_redirect_bypass_checked_before_run_isolated_structural()
+{
+  let account_rs = std::path::Path::new( env!( "CARGO_MANIFEST_DIR" ) ).join( "src/account.rs" );
+  let content    = std::fs::read_to_string( &account_rs )
+    .unwrap_or_else( |e| panic!( "cannot read {}: {e}", account_rs.display() ) );
+
+  let fn_start = content.find( "pub fn refresh_account_token(" )
+    .expect( "refresh_account_token must exist in account.rs" );
+  let fn_body = &content[ fn_start.. ];
+
+  let bypass_pos = fn_body.find( "AccountBackend::Redirect" )
+    .expect( "AC-09: refresh_account_token must check AccountBackend::Redirect" );
+  let run_pos = fn_body.find( "run_isolated(" )
+    .expect( "run_isolated must still be reachable in refresh_account_token" );
+  let branch_pos = fn_body.find( "if let Some( p ) = paths" )
+    .expect( "refresh_account_token must still dispatch on the Some(paths)/None branches" );
+
+  assert!(
+    bypass_pos < run_pos,
+    "AC-09: the redirect-backend check must appear before run_isolated( in refresh_account_token \
+     (bypass_pos={bypass_pos}, run_pos={run_pos})",
+  );
+  assert!(
+    bypass_pos < branch_pos,
+    "AC-09: the redirect-backend check must appear before the Some(paths)/None branch dispatch, \
+     so both branches are covered (bypass_pos={bypass_pos}, branch_pos={branch_pos})",
+  );
+}
+
+/// T04/433/AC-09: `refresh_account_token()` against a `backend: redirect` account returns
+/// `None` and leaves the credential store file byte-for-byte unchanged.
+#[ cfg( feature = "enabled" ) ]
+#[ test ]
+fn ft26_071_refresh_redirect_account_returns_none_credentials_unchanged()
+{
+  let store = TempDir::new().unwrap();
+  std::fs::write(
+    store.path().join( "kimi@moonshot.ai.credentials.json" ),
+    r#"{"accessToken":"sk-foreign-key-abc123"}"#,
+  ).unwrap();
+  std::fs::write(
+    store.path().join( "kimi@moonshot.ai.json" ),
+    r#"{"backend":"redirect","base_url":"https://api.moonshot.ai/anthropic","redirect_model":"kimi-k3"}"#,
+  ).unwrap();
+  let before = std::fs::read_to_string( store.path().join( "kimi@moonshot.ai.credentials.json" ) ).unwrap();
+
+  let result = account::refresh_account_token(
+    "kimi@moonshot.ai", store.path(), None, false, "test", claude_runner_core::IsolatedModel::Default, &[],
+  );
+
+  assert_eq!( result, None, "AC-09: refresh against a redirect account must return None" );
+  let after = std::fs::read_to_string( store.path().join( "kimi@moonshot.ai.credentials.json" ) ).unwrap();
+  assert_eq!( before, after, "AC-09: refresh against a redirect account must not modify the credential store file" );
 }

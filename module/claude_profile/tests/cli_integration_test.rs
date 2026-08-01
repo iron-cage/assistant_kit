@@ -205,3 +205,9 @@ mod command_noun_test;
 
 #[ path = "cli/user_story_test.rs" ]
 mod user_story_test;
+
+#[ path = "cli/account_provider_test.rs" ]
+mod account_provider_test;
+
+#[ path = "cli/account_redirect_backend_test.rs" ]
+mod account_redirect_backend_test;

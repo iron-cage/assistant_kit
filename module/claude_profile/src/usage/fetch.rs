@@ -132,6 +132,7 @@ pub fn fetch_quota_for_list(
         owner                 : owner.clone(),
         claim_lock            : acct.claim_lock,
         reserve               : acct.reserve,
+        inference_provider    : acct.inference_provider.clone(),
       } );
       continue;
     }
@@ -210,6 +211,7 @@ pub fn fetch_quota_for_list(
         owner,
         claim_lock            : acct.claim_lock,
         reserve               : acct.reserve,
+        inference_provider    : acct.inference_provider.clone(),
       } );
       continue;
     }
@@ -375,6 +377,7 @@ pub fn fetch_quota_for_list(
       owner,
       claim_lock            : acct.claim_lock,
       reserve               : acct.reserve,
+      inference_provider    : acct.inference_provider.clone(),
     } );
   }
 
@@ -450,6 +453,7 @@ fn inject_synthetic_row_if_needed(
     owner                 : String::new(),
     claim_lock            : false,
     reserve               : false,
+    inference_provider    : String::new(),
   } );
 }
 
@@ -502,6 +506,7 @@ fn approximate_quota(
     owner,
     claim_lock            : acct.claim_lock,
     reserve               : acct.reserve,
+    inference_provider    : acct.inference_provider.clone(),
   }
 }
 

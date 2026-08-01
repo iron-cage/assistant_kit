@@ -50,6 +50,10 @@ fn cc7_non_owned_no_cache()
     claim_lock        : false, reserve : false,
     is_owned          : true,
     renewal_at        : None,
+    backend           : claude_profile::account::AccountBackend::Anthropic,
+    base_url          : None,
+    redirect_model    : None,
+    inference_provider : String::new(),
   } ];
 
   let absent_live = store.path().join( ".absent_credentials.json" );
@@ -133,6 +137,10 @@ fn ft03_history_skips_cached_fallback()
     claim_lock        : false, reserve : false,
     is_owned          : true,
     renewal_at        : None,
+    backend           : claude_profile::account::AccountBackend::Anthropic,
+    base_url          : None,
+    redirect_model    : None,
+    inference_provider : String::new(),
   } ];
 
   let absent_live = store.path().join( ".absent_credentials.json" );
@@ -215,6 +223,10 @@ fn ft05_approx_independent_periods_absent_sn_unaffected()
     claim_lock        : false, reserve : false,
     is_owned          : true,
     renewal_at        : None,
+    backend           : claude_profile::account::AccountBackend::Anthropic,
+    base_url          : None,
+    redirect_model    : None,
+    inference_provider : String::new(),
   } ];
 
   let absent_live = store.path().join( ".absent_credentials.json" );
@@ -542,6 +554,10 @@ fn ft23_g1_non_owned_applies_approximation()
     claim_lock        : false, reserve : false,
     is_owned          : true,
     renewal_at        : None,
+    backend           : claude_profile::account::AccountBackend::Anthropic,
+    base_url          : None,
+    redirect_model    : None,
+    inference_provider : String::new(),
   } ];
 
   let absent_live = store.path().join( ".absent_credentials.json" );
@@ -620,6 +636,10 @@ fn ft12_history_non_owned_skips_append()
     claim_lock        : false, reserve : false,
     is_owned          : true,
     renewal_at        : None,
+    backend           : claude_profile::account::AccountBackend::Anthropic,
+    base_url          : None,
+    redirect_model    : None,
+    inference_provider : String::new(),
   } ];
 
   let absent_live = store.path().join( ".absent_credentials.json" );

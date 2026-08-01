@@ -199,14 +199,14 @@ fn acc07_field_presence_suppresses_lines()
 fn acc08_all_fields_off_bare_names()
 {
   // IT-8: all default-on fields off → bare name per line, no indented fields.
-  // cols::-active,-owner,-current,-sub,-tier,-expires,-email suppresses the entire default set.
+  // cols::-active,-owner,-current,-sub,-tier,-expires,-email,-inference_provider suppresses the entire default set.
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account( dir.path(), "work@acme.com",     "max", "tier4",    FAR_FUTURE_MS, true  );
   write_account( dir.path(), "personal@home.com", "pro", "standard", FAR_FUTURE_MS, false );
 
   let out  = run_cs_with_env(
-    &[ ".accounts", "cols::-active,-owner,-current,-sub,-tier,-expires,-email" ],
+    &[ ".accounts", "cols::-active,-owner,-current,-sub,-tier,-expires,-email,-inference_provider" ],
     &[ ( "HOME", home ) ],
   );
   assert_exit( &out, 0 );
@@ -287,7 +287,7 @@ fn acc12_sorted_alphabetically()
   write_account( dir.path(), "mike@acme.com",  "pro", "standard", FAR_FUTURE_MS, false );
 
   let out  = run_cs_with_env(
-    &[ ".accounts", "cols::-active,-owner,-current,-sub,-tier,-expires,-email" ],
+    &[ ".accounts", "cols::-active,-owner,-current,-sub,-tier,-expires,-email,-inference_provider" ],
     &[ ( "HOME", home ) ],
   );
   assert_exit( &out, 0 );

@@ -45,6 +45,22 @@ fn apply_no_color( s : String ) -> String
 }
 
 
+// ── Provider resolution ────────────────────────────────────────────────────────
+
+/// Resolve the globally selected inference provider from `~/.clr/config.toml`'s
+/// user tier for Gate 10 (Feature 072) — defaults to `"anthropic"` when unset,
+/// the file is absent, or `HOME` cannot be resolved. Reads directly via
+/// `claude_core::toml_io`, structurally independent of `.provider.select`'s
+/// own routine (`commands::provider_select`) — the sole write path for this key.
+fn resolve_selected_provider() -> String
+{
+  std::env::var( "HOME" )
+    .ok()
+    .map( |home| std::path::PathBuf::from( home ).join( ".clr" ).join( "config.toml" ) )
+    .and_then( |path| claude_core::toml_io::get_tiered( None, &path, "provider" ) )
+    .unwrap_or_else( || "anthropic".to_string() )
+}
+
 // ── Main routine ──────────────────────────────────────────────────────────────
 
 /// `.usage` — show live quota utilization for all saved accounts.
@@ -185,7 +201,8 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
     // only_next: retain only the recommended next account.
     if params.only_next
     {
-      let best_opt = find_next_for_strategy( &accounts, params.sort, params.prefer, now_secs, params.rotate && !params.force );
+      let selected_provider = resolve_selected_provider();
+      let best_opt = find_next_for_strategy( &accounts, params.sort, params.prefer, now_secs, params.rotate && !params.force, &selected_provider );
       accounts = match best_opt
       {
         Some( i ) => { let w = accounts.swap_remove( i ); vec![ w ] }
@@ -287,7 +304,8 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
     let now_secs       = SystemTime::now().duration_since( UNIX_EPOCH ).unwrap_or_default().as_secs();
     // gate_ownership: true when rotate::1 without force::1 — G5 applies (AC-05).
     let gate_ownership = !params.force;
-    let winner_opt     = find_next_for_strategy( &accounts, params.sort, params.prefer, now_secs, gate_ownership );
+    let selected_provider = resolve_selected_provider();
+    let winner_opt     = find_next_for_strategy( &accounts, params.sort, params.prefer, now_secs, gate_ownership, &selected_provider );
     let Some( winner_idx ) = winner_opt
     else
     {

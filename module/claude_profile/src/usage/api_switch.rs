@@ -125,6 +125,7 @@ pub fn attempt_expired_token_refresh(
     owner                : String::new(),
     claim_lock           : false,
     reserve              : false,
+    inference_provider   : String::new(),
   };
   let model     = super::subprocess::resolve_model( &aq, imodel );
   let pre_args  = super::subprocess::effort_pre_args( &model, effort );
@@ -381,6 +382,7 @@ pub fn apply_post_switch_touch(
     owner                : String::new(),
     claim_lock           : false,
     reserve              : false,
+    inference_provider   : String::new(),
   };
   let model        = resolve_model( &aq, imodel );
   let effort_val   = resolve_effort( &model, effort );

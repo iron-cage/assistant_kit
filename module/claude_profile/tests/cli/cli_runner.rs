@@ -444,6 +444,15 @@ pub fn write_account_reserve( home : &std::path::Path, name : &str, reserve : bo
   merge_account_meta( home, name, serde_json::json!({ "reserve": reserve }) );
 }
 
+/// Write `inference_provider` field into `{credential_store}/{name}.json`.
+///
+/// Used to pre-populate provider metadata for `.accounts`/`.usage` read-path tests (Feature 072).
+#[ inline ]
+pub fn write_account_inference_provider( home : &std::path::Path, name : &str, inference_provider : &str )
+{
+  merge_account_meta( home, name, serde_json::json!({ "inference_provider": inference_provider }) );
+}
+
 /// Check whether an account credential file exists.
 #[ inline ]
 #[ must_use ]

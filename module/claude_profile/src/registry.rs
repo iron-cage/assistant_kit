@@ -15,13 +15,14 @@ use crate::commands::
   model_routine,
   models_routine,
   model_select_routine,
+  provider_select_routine,
   paths_routine,
   usage_routine,
 };
 
 /// Register all `claude_profile` commands into an existing registry.
 ///
-/// Registers 14 commands (credentials status, account management including limits, relogin, renewal, and inspect, model get/set/select, models discovery, paths, usage).
+/// Registers 14 commands (credentials status, account management including limits, relogin, renewal, and inspect, model get/set/select, models discovery, provider select, paths, usage).
 /// The `.` (dot) hidden command and `.help` are binary-specific — they are NOT
 /// included here.
 ///
@@ -84,7 +85,7 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
       bfs( "force",   "Bypass G8 ownership gate on owner:: (default 0)" ),
       bfs( "lock",    "Set (\"1\") or clear (\"0\") claim-lock: excludes from unattended rotation and explicit-switch targets; ungated (Feature 070)" ),
       bfs( "reserve", "Set (\"1\") or clear (\"0\") reserve marker: deprioritizes (does not exclude) in sort-based selection; ungated (Feature 070)" ),
-      reg_arg_opt( "cols", Kind::String ).with_description( "Column visibility modifiers (comma-separated `+col_id`/`-col_id`); default set: account, owner, active, current, sub, tier, expires, email" ),
+      reg_arg_opt( "cols", Kind::String ).with_description( "Column visibility modifiers (comma-separated `+col_id`/`-col_id`); default set: account, owner, active, current, sub, tier, expires, email, inference_provider" ),
       bfs( "for",     "REMOVED — use assignee::USER@MACHINE name::X (or assignee::0 name::X for current machine)" ),
       bfs( "active",  "REMOVED — use assignee::USER@MACHINE name::X (or assignee::0 name::X for current machine)" ),
       reg_arg_opt( "assignee", Kind::String ).with_description( "USER@MACHINE (or sentinel \"0\" = $USER@$HOSTNAME) assign/unassign active-account marker; Feature 065" ),
@@ -138,6 +139,11 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
       trc(),
       reg_arg_opt( "host",    Kind::String  ).with_description( "Machine label for this account (default: auto-capture `$USER@$HOSTNAME`); written to `{name}.json`" ),
       reg_arg_opt( "role",    Kind::String  ).with_description( "User-defined role tag (e.g. `work`, `personal`); written to `{name}.json`" ),
+      reg_arg_opt( "backend",        Kind::String ).with_description( "Backend for the new account: `anthropic` (default) or `redirect` (case-insensitive); see docs/cli/param/069_backend.md" ),
+      reg_arg_opt( "base_url",       Kind::String ).with_description( "Redirect target's API base URL; required with backend::redirect, rejected otherwise; written to `{name}.json` and env.ANTHROPIC_BASE_URL on use" ),
+      reg_arg_opt( "api_key",        Kind::String ).with_description( "Static API key for a redirect-backend account; required with backend::redirect, rejected otherwise; written to `{name}.credentials.json`" ),
+      reg_arg_opt( "redirect_model", Kind::String ).with_description( "Foreign provider's model identifier; required with backend::redirect, rejected otherwise; written to `{name}.json` and env.ANTHROPIC_MODEL on use" ),
+      reg_arg_opt( "inference_provider", Kind::String ).with_description( "Inference provider tag for this account (e.g. `kimi`, `moonshot`); written to `{name}.json`" ),
     ],
     Box::new( account_save_routine    ) );
   // Registered inline (not via reg_cmd) to add per-command examples — required by feature 015
@@ -204,6 +210,13 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
       fmt(),
     ],
     Box::new( model_select_routine ) );
+  reg_cmd( registry, ".provider.select", "Get or pin the global inference provider selection in ~/.clr/config.toml",
+    vec![
+      reg_arg_opt( "id",    Kind::String  ).with_description( "Provider name to select (e.g. kimi); free-form, no allow-list" ),
+      reg_arg_opt( "reset", Kind::Integer ).with_description( "Remove the provider preference and revert to the anthropic default (1 = reset)" ),
+      fmt(),
+    ],
+    Box::new( provider_select_routine ) );
   reg_cmd( registry, ".paths",          "Show all resolved ~/.claude/ canonical file paths",
     vec![
       fmt(),

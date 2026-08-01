@@ -46,7 +46,7 @@
 //! | `mre_bug_219_switch_account_stale_org_name` | switch_account() overrides org fields from {name}.json |
 //! | `bug_mre_bug222_switch_account_reads_settings_snapshot` | structural: `settings_file()` present in account.rs |
 //! | `mre_bug222_save_captures_model_to_settings_snapshot` | save() with model in settings.json → {name}.json has model |
-//! | `mre_bug222_save_no_model_does_not_write_settings_snapshot` | save() with no model in settings.json → {name}.json not created |
+//! | `mre_bug222_save_no_model_does_not_write_settings_snapshot` | save() with no model in settings.json → {name}.json has no "model" key (Feature 071: file itself is always created) |
 //! | `mre_bug222_switch_account_restores_model_from_settings_snapshot` | switch_account() installs model from {name}.json into live settings |
 //! | `mre_bug222_switch_account_clears_model_when_no_snapshot` | switch_account() absent snapshot → removes model from live settings |
 //! | `test_ft11_025_other_machines_active_returns_others` | other_machines_active() returns foreign accounts; own marker excluded |
@@ -73,6 +73,20 @@
 //! | `history_ring_buffer_evicts_oldest` | FT-02: 11th append evicts entry 0; length stays 10 |
 //! | `history_read_absent_key_returns_empty` | FT-11: absent history key → empty vec (AC-11 backward compat) |
 //! | `history_duplicate_timestamp_overwrites` | FT-13: same-second append overwrites last entry, not appends |
+//! | `ft01_071_backend_redirect_parses_to_redirect_variant` | Feature 071/T01: `"backend":"redirect"` + base_url/redirect_model round-trip via list() |
+//! | `ft02_071_absent_backend_key_defaults_to_anthropic` | Feature 071/AC-05: no `backend` key → `AccountBackend::Anthropic`, base_url/redirect_model None |
+//! | `ft03_071_unrecognized_backend_value_defaults_to_anthropic_not_error` | Feature 071/AC-05: `"backend":"bogus"` → `AccountBackend::Anthropic`, not an error |
+//! | `ft04_071_save_redirect_writes_minimal_credentials_and_metadata` | Feature 071/T01/AC-01: redirect save → {name}.credentials.json has only accessToken; {name}.json has backend/base_url/redirect_model |
+//! | `ft05_071_save_redirect_never_touches_live_credentials_file` | Feature 071/T01/AC-01: redirect save never reads/writes ~/.claude/.credentials.json |
+//! | `ft06_071_save_default_anthropic_writes_backend_field` | Feature 071/T02/AC-04: default (anthropic) save preserves live-file copy; writes backend:"anthropic" into {name}.json
+//! | `ft07_071_switch_to_redirect_writes_env_keys` | Feature 071/T03/AC-06: switch_account() to a redirect account writes env.ANTHROPIC_BASE_URL/AUTH_TOKEN/MODEL; unrelated fields survive |
+//! | `ft08_071_switch_to_anthropic_removes_env_keys_and_prunes_empty_env` | Feature 071/T03/AC-07: switch_account() to an anthropic account removes the 3 env keys and prunes `env` when empty |
+//! | `ft09_071_switch_to_anthropic_preserves_unrelated_env_subkey` | Feature 071/T03/AC-07: an unrelated pre-existing env.* sub-key survives a switch-away from redirect |
+//! | `ft01_072_save_some_inference_provider_writes_field` | Feature 072/T01/AC-01: save(inference_provider: Some("kimi")) on fresh account writes inference_provider:"kimi"
+//! | `ft02_072_save_none_inference_provider_preserves_existing` | Feature 072/T02/AC-02: save(inference_provider: None) preserves existing inference_provider unchanged
+//! | `ft03_072_save_none_inference_provider_no_prior_key_writes_no_key` | Feature 072/T03/AC-03/AF3: save(inference_provider: None) with no prior key writes no key at all (never "anthropic")
+//! | `ft04_072_list_reads_inference_provider_when_present` | Feature 072/T04/AC-04: list() reads inference_provider from {name}.json when present
+//! | `ft05_072_list_defaults_inference_provider_to_empty_when_absent` | Feature 072/T05/AC-05: list() defaults Account.inference_provider to "" when key absent |
 
 use tempfile::TempDir;
 use claude_profile_core::account;
@@ -186,7 +200,7 @@ fn test_mre_bug211_save_false_leaves_marker_unchanged()
 
   let paths = ClaudePaths::with_home( tmp.path() );
 
-  account::save( "alice@test.com", &store, &paths, false, None, None, None, None ).unwrap();
+  account::save( "alice@test.com", &store, &paths, false, None, None, None, None, account::AccountBackend::Anthropic, None, None, None ).unwrap();
 
   let marker = store.join( account::active_marker_filename() );
   assert!(
@@ -306,7 +320,7 @@ fn as_save_writes_active_marker()
 
   let paths = ClaudePaths::with_home( tmp.path() );
 
-  account::save( "alice@acme.com", &store, &paths, true, None, None, None, None ).unwrap();
+  account::save( "alice@acme.com", &store, &paths, true, None, None, None, None, account::AccountBackend::Anthropic, None, None, None ).unwrap();
 
   let marker_name = account::active_marker_filename();
   let active = std::fs::read_to_string( store.join( &marker_name ) )
@@ -368,7 +382,7 @@ fn mre_bug222_save_captures_model_to_settings_snapshot()
   std::fs::write( dot_claude.join( "settings.json" ), r#"{"model":"claude-opus-4-5","theme":"dark"}"# ).unwrap();
 
   let paths = ClaudePaths::with_home( tmp.path() );
-  account::save( "alice@test.com", &store, &paths, false, None, None, None, None ).unwrap();
+  account::save( "alice@test.com", &store, &paths, false, None, None, None, None, account::AccountBackend::Anthropic, None, None, None ).unwrap();
 
   let snap_path = store.join( "alice@test.com.json" );
   assert!( snap_path.exists(), "save() must create {{name}}.json when model is present in live settings" );
@@ -382,11 +396,14 @@ fn mre_bug222_save_captures_model_to_settings_snapshot()
 #[ test ]
 // Root Cause: (same — save() did not read settings.json at all before BUG-222 fix)
 // Why Not Caught: (same — no test exercised any save()/settings.json interaction)
-// Fix Applied: save() skips {name}.json creation when model is absent from
-//   ~/.claude/settings.json — avoids orphan files for accounts with no model preference.
-// Prevention: asserts {name}.json is NOT created when model key absent.
+// Fix Applied: save() skips writing a "model" key to {name}.json when model is absent from
+//   ~/.claude/settings.json — avoids a misleading model value for accounts with no preference.
+// Prevention: asserts {name}.json has no "model" key when the live settings model key is absent.
 // Pitfall: the skip applies when the model key is absent; other keys in settings.json
 //   are not captured — only model is a per-account preference (BUG-222 scope).
+// Feature 071/AC-04 amendment: {name}.json is now unconditionally created on every save
+// (it always carries at least `backend`) — this test's original assertion (no file at all)
+// predates that change; it now asserts the narrower, still-true claim: no "model" key.
 fn mre_bug222_save_no_model_does_not_write_settings_snapshot()
 {
   let tmp        = TempDir::new().unwrap();
@@ -399,12 +416,16 @@ fn mre_bug222_save_no_model_does_not_write_settings_snapshot()
   std::fs::write( dot_claude.join( "settings.json" ), r#"{"theme":"dark"}"# ).unwrap();
 
   let paths = ClaudePaths::with_home( tmp.path() );
-  account::save( "bob@test.com", &store, &paths, false, None, None, None, None ).unwrap();
+  account::save(
+    "bob@test.com", &store, &paths, false, None, None, None, None,
+    account::AccountBackend::Anthropic, None, None, None,
+  ).unwrap();
 
-  let snap_path = store.join( "bob@test.com.json" );
+  let snap_content = std::fs::read_to_string( store.join( "bob@test.com.json" ) )
+    .expect( "{name}.json must exist after save (Feature 071: backend is always written)" );
   assert!(
-    !snap_path.exists(),
-    "save() must NOT create {{name}}.json when model is absent from ~/.claude/settings.json",
+    !snap_content.contains( "\"model\"" ),
+    "save() must NOT write a 'model' key when absent from ~/.claude/settings.json; got: {snap_content}",
   );
 }
 
@@ -1354,12 +1375,12 @@ fn ft01_save_captures_owner()
   let store = home.join( "store" );
   std::fs::create_dir_all( &store ).unwrap();
 
-  account::save( "alice@test.com", &store, &paths, false, None, None, None, Some( "user@host1" ) ).unwrap();
+  account::save( "alice@test.com", &store, &paths, false, None, None, None, Some( "user@host1" ), account::AccountBackend::Anthropic, None, None, None ).unwrap();
   let owner = account::read_owner( &store, "alice@test.com" );
   assert_eq!( owner, "user@host1", "FT-01: save() must write owner to {{name}}.json; got: {owner:?}" );
 
   // Re-save from a different identity — owner must be overwritten.
-  account::save( "alice@test.com", &store, &paths, false, None, None, None, Some( "user@host2" ) ).unwrap();
+  account::save( "alice@test.com", &store, &paths, false, None, None, None, Some( "user@host2" ), account::AccountBackend::Anthropic, None, None, None ).unwrap();
   let owner2 = account::read_owner( &store, "alice@test.com" );
   assert_eq!( owner2, "user@host2", "FT-01: re-save must overwrite owner field; got: {owner2:?}" );
 }
@@ -1381,10 +1402,10 @@ fn ft02_unclaim_clears_owner()
   std::fs::create_dir_all( &store ).unwrap();
 
   // Set a non-local owner first.
-  account::save( "alice@test.com", &store, &paths, false, None, None, None, Some( "other@remote" ) ).unwrap();
+  account::save( "alice@test.com", &store, &paths, false, None, None, None, Some( "other@remote" ), account::AccountBackend::Anthropic, None, None, None ).unwrap();
 
   // Unclaim: write empty owner.
-  account::save( "alice@test.com", &store, &paths, false, None, None, None, Some( "" ) ).unwrap();
+  account::save( "alice@test.com", &store, &paths, false, None, None, None, Some( "" ), account::AccountBackend::Anthropic, None, None, None ).unwrap();
   let owner = account::read_owner( &store, "alice@test.com" );
   assert_eq!( owner, "", "FT-02: unclaim must write empty string as owner; got: {owner:?}" );
   assert!(
@@ -1434,10 +1455,10 @@ fn ft14_background_save_preserves_owner()
   std::fs::create_dir_all( &store ).unwrap();
 
   // Initial CLI save: set owner.
-  account::save( "alice@test.com", &store, &paths, false, None, None, None, Some( "alice@host1" ) ).unwrap();
+  account::save( "alice@test.com", &store, &paths, false, None, None, None, Some( "alice@host1" ), account::AccountBackend::Anthropic, None, None, None ).unwrap();
 
   // Background save with owner: None — simulates refresh_account_token() path.
-  account::save( "alice@test.com", &store, &paths, false, None, None, None, None ).unwrap();
+  account::save( "alice@test.com", &store, &paths, false, None, None, None, None, account::AccountBackend::Anthropic, None, None, None ).unwrap();
 
   let owner = account::read_owner( &store, "alice@test.com" );
   assert_eq!(
@@ -1463,7 +1484,7 @@ fn ec1_unclaim_writes_empty_owner()
   let store = home.join( "store" );
   std::fs::create_dir_all( &store ).unwrap();
 
-  account::save( "alice@test.com", &store, &paths, false, None, None, None, Some( "" ) ).unwrap();
+  account::save( "alice@test.com", &store, &paths, false, None, None, None, Some( "" ), account::AccountBackend::Anthropic, None, None, None ).unwrap();
   let owner = account::read_owner( &store, "alice@test.com" );
   assert_eq!( owner, "", "EC-1: unclaim must write empty string as owner; got: {owner:?}" );
   assert!( account::is_owned( &owner ), "EC-1: empty owner must pass all enforcement gates" );
@@ -1484,8 +1505,8 @@ fn ec2_unclaim_overwrites_existing_owner()
   let store = home.join( "store" );
   std::fs::create_dir_all( &store ).unwrap();
 
-  account::save( "alice@test.com", &store, &paths, false, None, None, None, Some( "alice@host1" ) ).unwrap();
-  account::save( "alice@test.com", &store, &paths, false, None, None, None, Some( "" ) ).unwrap();
+  account::save( "alice@test.com", &store, &paths, false, None, None, None, Some( "alice@host1" ), account::AccountBackend::Anthropic, None, None, None ).unwrap();
+  account::save( "alice@test.com", &store, &paths, false, None, None, None, Some( "" ), account::AccountBackend::Anthropic, None, None, None ).unwrap();
   let owner = account::read_owner( &store, "alice@test.com" );
   assert_eq!( owner, "", "EC-2: unclaim must overwrite existing non-empty owner; got: {owner:?}" );
 }
@@ -1510,7 +1531,7 @@ fn ec3_default_sets_owner_to_current_identity()
   std::fs::create_dir_all( &store ).unwrap();
 
   let identity = account::current_identity();
-  account::save( "alice@test.com", &store, &paths, false, None, None, None, Some( &identity ) ).unwrap();
+  account::save( "alice@test.com", &store, &paths, false, None, None, None, Some( &identity ), account::AccountBackend::Anthropic, None, None, None ).unwrap();
   let owner = account::read_owner( &store, "alice@test.com" );
   assert_eq!(
     owner, identity,
@@ -1542,7 +1563,7 @@ fn ec4_unclaim_preserves_other_fields()
   ).unwrap();
 
   // Unclaim — only owner should change.
-  account::save( "alice@test.com", &store, &paths, false, None, None, None, Some( "" ) ).unwrap();
+  account::save( "alice@test.com", &store, &paths, false, None, None, None, Some( "" ), account::AccountBackend::Anthropic, None, None, None ).unwrap();
 
   let content = std::fs::read_to_string( &meta ).unwrap();
   assert!(
@@ -1723,7 +1744,7 @@ fn cc6_background_save_new_account_no_owner()
   std::fs::create_dir_all( &store ).unwrap();
 
   // Background save: owner: None, no pre-existing {name}.json.
-  account::save( "new@test.com", &store, &paths, false, None, None, None, None ).unwrap();
+  account::save( "new@test.com", &store, &paths, false, None, None, None, None, account::AccountBackend::Anthropic, None, None, None ).unwrap();
 
   let owner = account::read_owner( &store, "new@test.com" );
   assert_eq!(
@@ -1948,5 +1969,467 @@ fn ft10_set_session_effort_creates_parent_dir_when_absent()
   assert!(
     content.contains( "\"effortLevel\"" ) && content.contains( "\"high\"" ),
     "FT-10: created settings.json must contain effortLevel=high; got: {content}",
+  );
+}
+
+// ── Feature 071 — AccountBackend domain type (Phase 1, task 433) ───────────────
+
+/// T01/433: a fixture with `"backend":"redirect"` parses to `AccountBackend::Redirect`;
+/// `base_url`/`redirect_model` round-trip through `list()`.
+#[ test ]
+fn ft01_071_backend_redirect_parses_to_redirect_variant()
+{
+  let tmp   = TempDir::new().unwrap();
+  let store = tmp.path();
+  let name  = "redirect@test.com";
+
+  write_credentials_file( store, name );
+  std::fs::write(
+    store.join( format!( "{name}.json" ) ),
+    r#"{"backend":"redirect","base_url":"https://foreign.example.com","redirect_model":"foreign-model-1"}"#,
+  ).unwrap();
+
+  let accounts = account::list( store ).unwrap();
+  let acct = accounts.iter().find( | a | a.name == name ).expect( "account must be listed" );
+  assert_eq!(
+    acct.backend, account::AccountBackend::Redirect,
+    "backend:\"redirect\" must parse to AccountBackend::Redirect",
+  );
+  assert_eq!(
+    acct.base_url.as_deref(), Some( "https://foreign.example.com" ),
+    "base_url must round-trip through list()",
+  );
+  assert_eq!(
+    acct.redirect_model.as_deref(), Some( "foreign-model-1" ),
+    "redirect_model must round-trip through list()",
+  );
+}
+
+/// Feature 071/AC-05 (domain-layer half): a legacy fixture with no `backend` key
+/// parses to `AccountBackend::Anthropic` — byte-for-byte unchanged classification
+/// for every account saved before Feature 071.
+#[ test ]
+fn ft02_071_absent_backend_key_defaults_to_anthropic()
+{
+  let tmp   = TempDir::new().unwrap();
+  let store = tmp.path();
+  let name  = "legacy@test.com";
+
+  write_credentials_file( store, name );
+  std::fs::write(
+    store.join( format!( "{name}.json" ) ),
+    r#"{"emailAddress":"legacy@test.com"}"#,
+  ).unwrap();
+
+  let accounts = account::list( store ).unwrap();
+  let acct = accounts.iter().find( | a | a.name == name ).expect( "account must be listed" );
+  assert_eq!(
+    acct.backend, account::AccountBackend::Anthropic,
+    "absent backend key must default to AccountBackend::Anthropic",
+  );
+  assert!( acct.base_url.is_none(), "base_url must be None when absent from JSON" );
+  assert!( acct.redirect_model.is_none(), "redirect_model must be None when absent from JSON" );
+}
+
+/// Feature 071/AC-05: an unrecognized `backend` value neither errors nor
+/// misclassifies — it defaults to `AccountBackend::Anthropic`, same as absent.
+#[ test ]
+fn ft03_071_unrecognized_backend_value_defaults_to_anthropic_not_error()
+{
+  let tmp   = TempDir::new().unwrap();
+  let store = tmp.path();
+  let name  = "bogus@test.com";
+
+  write_credentials_file( store, name );
+  std::fs::write(
+    store.join( format!( "{name}.json" ) ),
+    r#"{"backend":"bogus"}"#,
+  ).unwrap();
+
+  let accounts = account::list( store ).unwrap();
+  let acct = accounts.iter().find( | a | a.name == name )
+    .expect( "account must be listed — list() must not error on unrecognized backend value" );
+  assert_eq!(
+    acct.backend, account::AccountBackend::Anthropic,
+    "unrecognized backend value must default to AccountBackend::Anthropic, never error",
+  );
+}
+
+// ── Feature 071 — save()'s redirect write path (Phase 2, task 433) ────────────
+
+/// T01/433/AC-01: `save()` with `backend: Redirect` writes `{name}.credentials.json`
+/// containing exactly one key (`accessToken`, from the caller-supplied API key) and
+/// writes `backend`/`base_url`/`redirect_model` into `{name}.json`.
+#[ test ]
+fn ft04_071_save_redirect_writes_minimal_credentials_and_metadata()
+{
+  let tmp   = TempDir::new().unwrap();
+  let store = tmp.path().join( "store" );
+  std::fs::create_dir_all( &store ).unwrap();
+
+  let paths = ClaudePaths::with_home( tmp.path() );
+  account::save(
+    "redirect@foreign.com", &store, &paths, false,
+    Some( b"sk-foreign-key-abc123" ), None, None, None,
+    account::AccountBackend::Redirect, Some( "https://foreign.example.com" ), Some( "foreign-model-x" ), None,
+  ).unwrap();
+
+  let creds_content = std::fs::read_to_string( store.join( "redirect@foreign.com.credentials.json" ) )
+    .expect( "{name}.credentials.json must exist after redirect save" );
+  let creds_json : serde_json::Value = serde_json::from_str( &creds_content )
+    .expect( "{name}.credentials.json must be valid JSON" );
+  let creds_obj = creds_json.as_object().expect( "{name}.credentials.json must be a JSON object" );
+  assert_eq!(
+    creds_obj.len(), 1,
+    "redirect save's {{name}}.credentials.json must contain exactly 1 key (accessToken); got: {creds_content}",
+  );
+  assert_eq!(
+    creds_obj.get( "accessToken" ).and_then( | v | v.as_str() ), Some( "sk-foreign-key-abc123" ),
+    "redirect save must write the caller-supplied API key as accessToken",
+  );
+
+  let meta_content = std::fs::read_to_string( store.join( "redirect@foreign.com.json" ) )
+    .expect( "{name}.json must exist after redirect save" );
+  let meta_json : serde_json::Value = serde_json::from_str( &meta_content ).expect( "{name}.json must be valid JSON" );
+  assert_eq!( meta_json[ "backend" ].as_str(), Some( "redirect" ), "redirect save must write backend:\"redirect\"; got: {meta_content}" );
+  assert_eq!(
+    meta_json[ "base_url" ].as_str(), Some( "https://foreign.example.com" ),
+    "redirect save must write base_url to {{name}}.json; got: {meta_content}",
+  );
+  assert_eq!(
+    meta_json[ "redirect_model" ].as_str(), Some( "foreign-model-x" ),
+    "redirect save must write redirect_model to {{name}}.json; got: {meta_content}",
+  );
+}
+
+/// T01/433/AC-01: a redirect save never reads `~/.claude/.credentials.json` — the
+/// live Anthropic OAuth session file is left completely untouched.
+#[ test ]
+fn ft05_071_save_redirect_never_touches_live_credentials_file()
+{
+  let tmp        = TempDir::new().unwrap();
+  let store      = tmp.path().join( "store" );
+  let dot_claude = tmp.path().join( ".claude" );
+  std::fs::create_dir_all( &store ).unwrap();
+  std::fs::create_dir_all( &dot_claude ).unwrap();
+
+  // Distinct fixture value — a redirect save must never copy from or overwrite this.
+  let live_marker = r#"{"accessToken":"LIVE-SESSION-SENTINEL-DO-NOT-TOUCH","expiresAt":1}"#;
+  std::fs::write( dot_claude.join( ".credentials.json" ), live_marker ).unwrap();
+
+  let paths = ClaudePaths::with_home( tmp.path() );
+  account::save(
+    "redirect@foreign.com", &store, &paths, false,
+    Some( b"sk-foreign-key-abc123" ), None, None, None,
+    account::AccountBackend::Redirect, Some( "https://foreign.example.com" ), Some( "foreign-model-x" ), None,
+  ).unwrap();
+
+  let live_content = std::fs::read_to_string( dot_claude.join( ".credentials.json" ) )
+    .expect( "live ~/.claude/.credentials.json must still exist" );
+  assert_eq!(
+    live_content, live_marker,
+    "redirect save must never modify ~/.claude/.credentials.json",
+  );
+}
+
+/// T02/433/AC-04 (`docs/feature/071_redirect_backend_accounts.md`): `save()` with no
+/// explicit backend argument (i.e. `AccountBackend::Anthropic`) still copies
+/// `~/.claude/.credentials.json` exactly as before Feature 071, but now additionally
+/// writes `backend: "anthropic"` into `{name}.json` — this is an intentional Feature 071
+/// behavior addition (every account file becomes self-describing), not a regression.
+#[ test ]
+fn ft06_071_save_default_anthropic_writes_backend_field()
+{
+  let tmp        = TempDir::new().unwrap();
+  let store      = tmp.path().join( "store" );
+  let dot_claude = tmp.path().join( ".claude" );
+  std::fs::create_dir_all( &store ).unwrap();
+  std::fs::create_dir_all( &dot_claude ).unwrap();
+  std::fs::write( dot_claude.join( ".credentials.json" ), r#"{"accessToken":"tok","expiresAt":9999999999999}"# ).unwrap();
+
+  let paths = ClaudePaths::with_home( tmp.path() );
+  account::save(
+    "alice@test.com", &store, &paths, false, None, None, None, None,
+    account::AccountBackend::Anthropic, None, None, None,
+  ).unwrap();
+
+  let creds_content = std::fs::read_to_string( store.join( "alice@test.com.credentials.json" ) )
+    .expect( "{name}.credentials.json must exist after anthropic save" );
+  assert!(
+    creds_content.contains( "\"accessToken\"" ) && creds_content.contains( "\"expiresAt\"" ),
+    "anthropic save must still copy the full live credentials file unchanged; got: {creds_content}",
+  );
+
+  let meta_content = std::fs::read_to_string( store.join( "alice@test.com.json" ) )
+    .expect( "{name}.json must exist after anthropic save (Feature 071: backend is always written)" );
+  let meta_json : serde_json::Value = serde_json::from_str( &meta_content ).expect( "{name}.json must be valid JSON" );
+  assert_eq!(
+    meta_json[ "backend" ].as_str(), Some( "anthropic" ),
+    "AC-04: default/anthropic save must write backend:\"anthropic\" into {{name}}.json; got: {meta_content}",
+  );
+}
+
+// ── Feature 071 — switch_account()'s env.* responsibility (Phase 3, task 433) ─
+
+/// T03/433/AC-06: `switch_account()` to a `backend: redirect` account writes all three
+/// `env.ANTHROPIC_*` keys into `settings.json`, matching the target account's stored
+/// `base_url`/`accessToken`/`redirect_model` values; unrelated top-level fields survive.
+#[ test ]
+fn ft07_071_switch_to_redirect_writes_env_keys()
+{
+  let tmp        = TempDir::new().unwrap();
+  let store      = tmp.path().join( "store" );
+  let dot_claude = tmp.path().join( ".claude" );
+  std::fs::create_dir_all( &store ).unwrap();
+  std::fs::create_dir_all( &dot_claude ).unwrap();
+
+  std::fs::write(
+    store.join( "kimi@moonshot.ai.credentials.json" ),
+    r#"{"accessToken":"sk-foreign-key-abc123"}"#,
+  ).unwrap();
+  std::fs::write(
+    store.join( "kimi@moonshot.ai.json" ),
+    r#"{"backend":"redirect","base_url":"https://api.moonshot.ai/anthropic","redirect_model":"kimi-k3-0905-preview"}"#,
+  ).unwrap();
+  // Pre-existing unrelated top-level field — must survive the switch untouched (AC-06).
+  std::fs::write( dot_claude.join( "settings.json" ), r#"{"theme":"dark"}"# ).unwrap();
+
+  let paths = ClaudePaths::with_home( tmp.path() );
+  account::switch_account( "kimi@moonshot.ai", &store, &paths ).unwrap();
+
+  let live = std::fs::read_to_string( dot_claude.join( "settings.json" ) )
+    .expect( "~/.claude/settings.json must exist after switch_account" );
+  let live_json : serde_json::Value = serde_json::from_str( &live ).expect( "settings.json must be valid JSON" );
+  assert_eq!(
+    live_json[ "env" ][ "ANTHROPIC_BASE_URL" ].as_str(), Some( "https://api.moonshot.ai/anthropic" ),
+    "AC-06: switch to redirect must write env.ANTHROPIC_BASE_URL from the account's base_url; got: {live}",
+  );
+  assert_eq!(
+    live_json[ "env" ][ "ANTHROPIC_AUTH_TOKEN" ].as_str(), Some( "sk-foreign-key-abc123" ),
+    "AC-06: switch to redirect must write env.ANTHROPIC_AUTH_TOKEN from the account's accessToken; got: {live}",
+  );
+  assert_eq!(
+    live_json[ "env" ][ "ANTHROPIC_MODEL" ].as_str(), Some( "kimi-k3-0905-preview" ),
+    "AC-06: switch to redirect must write env.ANTHROPIC_MODEL from the account's redirect_model; got: {live}",
+  );
+  assert_eq!(
+    live_json[ "theme" ].as_str(), Some( "dark" ),
+    "AC-06: unrelated top-level settings.json fields must survive the switch; got: {live}",
+  );
+}
+
+/// T03/433/AC-07: `switch_account()` to a `backend: anthropic` account, after a prior
+/// redirect switch populated `env`, removes exactly the 3 `ANTHROPIC_*` keys and prunes
+/// the whole `env` object once it becomes empty as a result.
+#[ test ]
+fn ft08_071_switch_to_anthropic_removes_env_keys_and_prunes_empty_env()
+{
+  let tmp        = TempDir::new().unwrap();
+  let store      = tmp.path().join( "store" );
+  let dot_claude = tmp.path().join( ".claude" );
+  std::fs::create_dir_all( &store ).unwrap();
+  std::fs::create_dir_all( &dot_claude ).unwrap();
+
+  std::fs::write(
+    store.join( "alice@test.com.credentials.json" ),
+    r#"{"accessToken":"tok","expiresAt":9999999999999}"#,
+  ).unwrap();
+  // No {name}.json — an absent backend key defaults to Anthropic (AC-05).
+  // Live settings.json already has env populated by a prior switch-to-redirect.
+  std::fs::write(
+    dot_claude.join( "settings.json" ),
+    r#"{"env":{"ANTHROPIC_BASE_URL":"https://api.moonshot.ai/anthropic","ANTHROPIC_AUTH_TOKEN":"sk-foreign","ANTHROPIC_MODEL":"kimi-k3"},"theme":"dark"}"#,
+  ).unwrap();
+
+  let paths = ClaudePaths::with_home( tmp.path() );
+  account::switch_account( "alice@test.com", &store, &paths ).unwrap();
+
+  let live = std::fs::read_to_string( dot_claude.join( "settings.json" ) )
+    .expect( "~/.claude/settings.json must exist after switch_account" );
+  let live_json : serde_json::Value = serde_json::from_str( &live ).expect( "settings.json must be valid JSON" );
+  assert!(
+    live_json.get( "env" ).is_none(),
+    "AC-07: env must be removed entirely once its last ANTHROPIC_* sub-key is cleared; got: {live}",
+  );
+  assert_eq!(
+    live_json[ "theme" ].as_str(), Some( "dark" ),
+    "AC-07: unrelated top-level settings.json fields must survive the switch; got: {live}",
+  );
+}
+
+/// T03/433/AC-07: switching to an anthropic account preserves any unrelated `env.*`
+/// sub-key that was already present — only the 3 `ANTHROPIC_*` keys are removed.
+#[ test ]
+fn ft09_071_switch_to_anthropic_preserves_unrelated_env_subkey()
+{
+  let tmp        = TempDir::new().unwrap();
+  let store      = tmp.path().join( "store" );
+  let dot_claude = tmp.path().join( ".claude" );
+  std::fs::create_dir_all( &store ).unwrap();
+  std::fs::create_dir_all( &dot_claude ).unwrap();
+
+  std::fs::write(
+    store.join( "alice@test.com.credentials.json" ),
+    r#"{"accessToken":"tok","expiresAt":9999999999999}"#,
+  ).unwrap();
+  std::fs::write(
+    dot_claude.join( "settings.json" ),
+    r#"{"env":{"ANTHROPIC_BASE_URL":"https://api.moonshot.ai/anthropic","TZ":"Europe/Kyiv"}}"#,
+  ).unwrap();
+
+  let paths = ClaudePaths::with_home( tmp.path() );
+  account::switch_account( "alice@test.com", &store, &paths ).unwrap();
+
+  let live = std::fs::read_to_string( dot_claude.join( "settings.json" ) )
+    .expect( "~/.claude/settings.json must exist after switch_account" );
+  let live_json : serde_json::Value = serde_json::from_str( &live ).expect( "settings.json must be valid JSON" );
+  assert_eq!(
+    live_json[ "env" ][ "TZ" ].as_str(), Some( "Europe/Kyiv" ),
+    "AC-07: an unrelated env.* sub-key must survive a switch-away from redirect; got: {live}",
+  );
+  assert!(
+    live_json[ "env" ].get( "ANTHROPIC_BASE_URL" ).is_none(),
+    "AC-07: ANTHROPIC_BASE_URL must be removed on switch to anthropic; got: {live}",
+  );
+}
+
+// ── Feature 072 — inference_provider field (task 435) ──────────────────────────
+
+/// T01/435/AC-01: `save()` with `inference_provider: Some("kimi")` on a fresh account
+/// writes `"inference_provider": "kimi"` to `{name}.json`.
+#[ test ]
+fn ft01_072_save_some_inference_provider_writes_field()
+{
+  let tmp   = TempDir::new().unwrap();
+  let store = tmp.path().join( "store" );
+  std::fs::create_dir_all( &store ).unwrap();
+
+  let dot_claude = tmp.path().join( ".claude" );
+  std::fs::create_dir_all( &dot_claude ).unwrap();
+  std::fs::write( dot_claude.join( ".credentials.json" ), r#"{"accessToken":"tok"}"# ).unwrap();
+
+  let paths = ClaudePaths::with_home( tmp.path() );
+  account::save(
+    "alice@test.com", &store, &paths, false, None, None, None, None,
+    account::AccountBackend::Anthropic, None, None, Some( "kimi" ),
+  ).unwrap();
+
+  let meta_content = std::fs::read_to_string( store.join( "alice@test.com.json" ) )
+    .expect( "{name}.json must exist after save" );
+  let meta_json : serde_json::Value = serde_json::from_str( &meta_content ).expect( "{name}.json must be valid JSON" );
+  assert_eq!(
+    meta_json[ "inference_provider" ].as_str(), Some( "kimi" ),
+    "AC-01: save(inference_provider: Some(\"kimi\")) must write inference_provider:\"kimi\"; got: {meta_content}",
+  );
+}
+
+/// T02/435/AC-02: `save()` with `inference_provider: None` on an account whose
+/// `{name}.json` already has `"inference_provider": "kimi"` preserves it unchanged.
+#[ test ]
+fn ft02_072_save_none_inference_provider_preserves_existing()
+{
+  let tmp   = TempDir::new().unwrap();
+  let store = tmp.path().join( "store" );
+  std::fs::create_dir_all( &store ).unwrap();
+
+  let dot_claude = tmp.path().join( ".claude" );
+  std::fs::create_dir_all( &dot_claude ).unwrap();
+  std::fs::write( dot_claude.join( ".credentials.json" ), r#"{"accessToken":"tok"}"# ).unwrap();
+
+  let paths = ClaudePaths::with_home( tmp.path() );
+  account::save(
+    "alice@test.com", &store, &paths, false, None, None, None, None,
+    account::AccountBackend::Anthropic, None, None, Some( "kimi" ),
+  ).unwrap();
+
+  // Second save with inference_provider: None — must not clobber the existing value.
+  account::save(
+    "alice@test.com", &store, &paths, false, None, None, None, None,
+    account::AccountBackend::Anthropic, None, None, None,
+  ).unwrap();
+
+  let meta_content = std::fs::read_to_string( store.join( "alice@test.com.json" ) )
+    .expect( "{name}.json must exist after save" );
+  let meta_json : serde_json::Value = serde_json::from_str( &meta_content ).expect( "{name}.json must be valid JSON" );
+  assert_eq!(
+    meta_json[ "inference_provider" ].as_str(), Some( "kimi" ),
+    "AC-02: save(inference_provider: None) must preserve existing inference_provider unchanged; got: {meta_content}",
+  );
+}
+
+/// T03/435/AC-03/AF3: `save()` with `inference_provider: None` on an account with no
+/// pre-existing `inference_provider` key writes no such key at all — never the literal
+/// default `"anthropic"`. Checks literal key absence (`contains_key`), not merely an
+/// empty-string read, per AF3.
+#[ test ]
+fn ft03_072_save_none_inference_provider_no_prior_key_writes_no_key()
+{
+  let tmp   = TempDir::new().unwrap();
+  let store = tmp.path().join( "store" );
+  std::fs::create_dir_all( &store ).unwrap();
+
+  let dot_claude = tmp.path().join( ".claude" );
+  std::fs::create_dir_all( &dot_claude ).unwrap();
+  std::fs::write( dot_claude.join( ".credentials.json" ), r#"{"accessToken":"tok"}"# ).unwrap();
+
+  let paths = ClaudePaths::with_home( tmp.path() );
+  account::save(
+    "alice@test.com", &store, &paths, false, None, None, None, None,
+    account::AccountBackend::Anthropic, None, None, None,
+  ).unwrap();
+
+  let meta_content = std::fs::read_to_string( store.join( "alice@test.com.json" ) )
+    .expect( "{name}.json must exist after save" );
+  let meta_json : serde_json::Value = serde_json::from_str( &meta_content ).expect( "{name}.json must be valid JSON" );
+  let obj = meta_json.as_object().expect( "{name}.json must be a JSON object" );
+  assert!(
+    !obj.contains_key( "inference_provider" ),
+    "AC-03/AF3: save(inference_provider: None) with no prior key must write no inference_provider key at all (never \"anthropic\"); got: {meta_content}",
+  );
+}
+
+/// T04/435/AC-04: `list()` reads `inference_provider` from `{name}.json` into
+/// `Account.inference_provider` when the key is present.
+#[ test ]
+fn ft04_072_list_reads_inference_provider_when_present()
+{
+  let tmp   = TempDir::new().unwrap();
+  let store = tmp.path();
+  let name  = "moonshot@test.com";
+
+  write_credentials_file( store, name );
+  std::fs::write(
+    store.join( format!( "{name}.json" ) ),
+    r#"{"inference_provider":"moonshot"}"#,
+  ).unwrap();
+
+  let accounts = account::list( store ).unwrap();
+  let acct = accounts.iter().find( | a | a.name == name ).expect( "account must be listed" );
+  assert_eq!(
+    acct.inference_provider, "moonshot",
+    "AC-04: list() must read inference_provider from {{name}}.json into Account.inference_provider",
+  );
+}
+
+/// T05/435/AC-05: `list()` returns `Account.inference_provider == ""` when the key is
+/// absent from `{name}.json` (pre-existing account, or one saved before this feature).
+#[ test ]
+fn ft05_072_list_defaults_inference_provider_to_empty_when_absent()
+{
+  let tmp   = TempDir::new().unwrap();
+  let store = tmp.path();
+  let name  = "legacy_provider@test.com";
+
+  write_credentials_file( store, name );
+  std::fs::write(
+    store.join( format!( "{name}.json" ) ),
+    r#"{"emailAddress":"legacy_provider@test.com"}"#,
+  ).unwrap();
+
+  let accounts = account::list( store ).unwrap();
+  let acct = accounts.iter().find( | a | a.name == name ).expect( "account must be listed" );
+  assert_eq!(
+    acct.inference_provider, "",
+    "AC-05: list() must default Account.inference_provider to empty string when key absent; got: {:?}", acct.inference_provider,
   );
 }

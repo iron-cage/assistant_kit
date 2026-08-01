@@ -134,6 +134,7 @@ fn test_render_json_error_account()
       expires_at_ms : 0, result : Err( "auth failed".to_string() ), account : None,
       host : String::new(), role : String::new(), renewal_at : None,
       cached : false, cache_age_secs : None, is_owned : true, owner : String::new(), claim_lock : false, reserve : false,
+      inference_provider : String::new(),
           org_created_at : None,
     },
   ];
@@ -154,6 +155,7 @@ fn test_render_json_escapes_quotes_in_name()
       expires_at_ms : 0, result : Err( "fail".to_string() ), account : None,
       host : String::new(), role : String::new(), renewal_at : None,
       cached : false, cache_age_secs : None, is_owned : true, owner : String::new(), claim_lock : false, reserve : false,
+      inference_provider : String::new(),
           org_created_at : None,
     },
   ];
@@ -195,6 +197,7 @@ fn test_render_json_ft8_mixed_ok_and_err_both_present()
       owner                : String::new(),
       claim_lock           : false,
       reserve              : false,
+      inference_provider   : String::new(),
           org_created_at : None,
     },
     AccountQuota
@@ -216,6 +219,7 @@ fn test_render_json_ft8_mixed_ok_and_err_both_present()
       owner                : String::new(),
       claim_lock           : false,
       reserve              : false,
+      inference_provider   : String::new(),
           org_created_at : None,
     },
   ];

@@ -16,10 +16,11 @@ use super::format::{ seven_day_left, renewal_secs, next_event_raw };
 /// non-expired, `Ok`) account from a pre-sorted index slice that also satisfies `extra`,
 /// or `None` when none exist.
 fn find_first_eligible< F >(
-  accounts  : &[ AccountQuota ],
-  sorted    : &[ usize ],
-  now_secs  : u64,
-  extra     : F,
+  accounts          : &[ AccountQuota ],
+  sorted            : &[ usize ],
+  now_secs          : u64,
+  selected_provider : &str,
+  extra             : F,
 ) -> Option< usize >
 where F : Fn( &AccountQuota ) -> bool
 {
@@ -40,6 +41,11 @@ where F : Fn( &AccountQuota ) -> bool
     // Gate 9 (Claim-locked): unconditional — no force::1 bypass at the eligibility layer,
     // unlike the force-bypassable G9 explicit-command gate on .account.use/assignee:: (Feature 070).
     if aq.claim_lock { continue; }
+    // Gate 10 (Provider mismatch): unconditional — no force::1 bypass, mirroring Gate 9.
+    // Empty AccountQuota.inference_provider and a default-absent selected_provider both
+    // resolve to "anthropic" before comparing (never treated as a wildcard/always-match).
+    let effective = if aq.inference_provider.is_empty() { "anthropic" } else { &aq.inference_provider };
+    if effective != selected_provider { continue; }
     if !extra( aq ) { continue; }
     return Some( idx );
   }
@@ -55,11 +61,12 @@ where F : Fn( &AccountQuota ) -> bool
 /// the `extra` predicate — an exhausted account has negligible remaining capacity
 /// regardless of its renewal timing.
 pub fn find_next_for_strategy(
-  accounts       : &[ AccountQuota ],
-  strategy       : SortStrategy,
-  prefer         : PreferStrategy,
-  now_secs       : u64,
-  gate_ownership : bool,
+  accounts          : &[ AccountQuota ],
+  strategy          : SortStrategy,
+  prefer            : PreferStrategy,
+  now_secs          : u64,
+  gate_ownership    : bool,
+  selected_provider : &str,
 ) -> Option< usize >
 {
   match strategy
@@ -67,7 +74,7 @@ pub fn find_next_for_strategy(
     SortStrategy::Name =>
     {
       let sorted = sort_indices( accounts, SortStrategy::Name, None, prefer, now_secs );
-      find_first_eligible( accounts, &sorted, now_secs, |aq| seven_day_left( aq ) > WEEKLY_EXHAUSTION_THRESHOLD && ( !gate_ownership || aq.is_owned ) )
+      find_first_eligible( accounts, &sorted, now_secs, selected_provider, |aq| seven_day_left( aq ) > WEEKLY_EXHAUSTION_THRESHOLD && ( !gate_ownership || aq.is_owned ) )
     }
     SortStrategy::Renew =>
     {
@@ -85,12 +92,12 @@ pub fn find_next_for_strategy(
       // Pitfall: a weekly-exhausted account's imminent reset does not make it a useful target —
       //   skip it regardless of renewal timing.
       let sorted = sort_indices( accounts, SortStrategy::Renew, None, prefer, now_secs );
-      find_first_eligible( accounts, &sorted, now_secs, |aq| seven_day_left( aq ) > WEEKLY_EXHAUSTION_THRESHOLD && ( !gate_ownership || aq.is_owned ) )
+      find_first_eligible( accounts, &sorted, now_secs, selected_provider, |aq| seven_day_left( aq ) > WEEKLY_EXHAUSTION_THRESHOLD && ( !gate_ownership || aq.is_owned ) )
     }
     SortStrategy::Renews =>
     {
       let sorted = sort_indices( accounts, SortStrategy::Renews, None, prefer, now_secs );
-      find_first_eligible( accounts, &sorted, now_secs, |aq| seven_day_left( aq ) > WEEKLY_EXHAUSTION_THRESHOLD && ( !gate_ownership || aq.is_owned ) )
+      find_first_eligible( accounts, &sorted, now_secs, selected_provider, |aq| seven_day_left( aq ) > WEEKLY_EXHAUSTION_THRESHOLD && ( !gate_ownership || aq.is_owned ) )
     }
   }
 }

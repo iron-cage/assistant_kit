@@ -30,6 +30,8 @@
 //!     eprintln!( "expires in {}m", expires_in.as_secs() / 60 ),
 //!   token::TokenStatus::Expired =>
 //!     eprintln!( "token expired — run: claude auth login" ),
+//!   token::TokenStatus::Static =>
+//!     println!( "static API key — no expiry" ),
 //! }
 //! ```
 //!
