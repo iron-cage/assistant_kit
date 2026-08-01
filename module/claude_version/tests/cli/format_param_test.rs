@@ -85,11 +85,11 @@ fn format_ec16_settings_get_format_json_has_key_value()
     "settings.get json must have key/value fields: {text}" );
 }
 
-/// EC-17: `.version.history format::json` → JSON array with version/date/summary fields
+/// EC-17: `.version.list mode::history format::json` → JSON array with version/date/summary fields
 #[ test ]
 fn format_ec17_history_format_json_fields()
 {
-  let out = run_clv( &[ ".version.history", "format::json", "count::3" ] );
+  let out = run_clv( &[ ".version.list", "mode::history", "format::json", "count::3" ] );
   if out.status.code() == Some( 0 )
   {
     let text = stdout( &out );
@@ -98,19 +98,19 @@ fn format_ec17_history_format_json_fields()
   }
 }
 
-/// EC-18: `.version.history format::xml` → exit 1, unknown format
+/// EC-18: `.version.list mode::history format::xml` → exit 1, unknown format
 #[ test ]
 fn format_ec18_history_format_xml_exits_1()
 {
-  let out = run_clv( &[ ".version.history", "format::xml" ] );
+  let out = run_clv( &[ ".version.list", "mode::history", "format::xml" ] );
   assert_exit( &out, 1 );
 }
 
-/// EC-19: `.version.history format::JSON` (uppercase) → exit 1
+/// EC-19: `.version.list mode::history format::JSON` (uppercase) → exit 1
 #[ test ]
 fn format_ec19_history_format_json_uppercase_exits_1()
 {
-  let out = run_clv( &[ ".version.history", "format::JSON" ] );
+  let out = run_clv( &[ ".version.list", "mode::history", "format::JSON" ] );
   assert_exit( &out, 1 );
 }
 

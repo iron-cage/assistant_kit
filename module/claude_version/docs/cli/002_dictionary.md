@@ -16,8 +16,7 @@
 | `.version.show` | Print the currently installed Claude Code version |
 | `.version.install` | Install a Claude Code version via official installer (`curl -fsSL https://claude.ai/install.sh`) |
 | `.version.guard` | Check for version drift and restore preferred version; supports one-shot and watch-mode (`interval::N`) |
-| `.version.list` | List all named version aliases and their resolution targets |
-| `.version.history` | Fetch and display recent release history from GitHub Releases API; cached locally for 1 hour |
+| `.version.list` | List named version aliases and their resolution targets (`mode::aliases`, default), or recent release history from the GitHub Releases API (`mode::history`, cached locally for 1 hour) |
 | `.processes` | List running Claude Code processes detected by scanning `/proc` |
 | `.processes.kill` | Terminate processes: SIGTERM -> 2s -> SIGKILL (normal) or SIGKILL (force) |
 | `.settings.show` | Print all key-value pairs from `~/.claude/settings.json` |

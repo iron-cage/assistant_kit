@@ -33,9 +33,8 @@ clv.version.install .help    # still shows help, ignores install
 | 9 | [`.settings.show`](../command/settings.md#command-9-settingsshow) | false | Universal override |
 | 10 | [`.settings.get`](../command/settings.md#command-10-settingsget) | false | Universal override |
 | 11 | [`.settings.set`](../command/settings.md#command-11-settingsset) | false | Universal override |
-| 12 | [`.version.history`](../command/version.md#command-12-versionhistory) | false | Universal override |
-| 13 | [`.config`](../command/config.md#command-13-config) | false | Universal override |
-| 14 | [`.params`](../command/params.md#command-14-params) | false | Universal override |
+| 12 | [`.config`](../command/config.md#command-13-config) | false | Universal override |
+| 13 | [`.params`](../command/params.md#command-14-params) | false | Universal override |
 
 ### Referenced Type
 
