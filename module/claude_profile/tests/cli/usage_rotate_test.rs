@@ -488,7 +488,7 @@ fn cc01_rotate_offline_live_creds_replaced_by_winner()
   write_credentials( dir.path(), "max", "tier-current", FAR_FUTURE_MS );
   write_account( dir.path(), "current@test.com", "max", "tier-current", FAR_FUTURE_MS, true  );
   // Winner — no accessToken; has quota cache so cache-fallback yields Ok(data).
-  // h5_util=20.0 < 85.0 (passes Gate 4); d7 left = 70.0 > 5.0 (passes Gate 6).
+  // h5_util=20.0 < 85.0 (passes Gate 4); d7 left = 70.0 > 3.0 (passes Gate 6).
   write_account( dir.path(), "winner@test.com",  "max", "tier-winner",  FAR_FUTURE_MS, false );
   write_account_quota_cache( dir.path(), "winner@test.com", 20.0, 30.0, None );
 
