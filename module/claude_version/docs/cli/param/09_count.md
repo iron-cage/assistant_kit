@@ -1,9 +1,9 @@
 # Parameter :: 9. `count::`
 
--- **Summary:** Limit the number of releases shown by .version.history.
+-- **Summary:** Limit the number of releases shown by `.version.list mode::history`.
 -- **Type:** u64
 -- **Default:** 10
--- **Commands:** `.version.history`
+-- **Commands:** `.version.list` (`mode::history` only)
 -- **Group:** Output Control
 
 Default is 10, showing the most recent releases first. Values exceeding
@@ -14,16 +14,16 @@ available releases return all available.
 - **Validation:** must be a non-negative integer; values exceeding available releases return all available
 
 ```sh
-clv.version.history count::1       # most recent release only
-clv.version.history count::3       # 3 most recent releases
-clv.version.history count::0       # empty output (valid, exit 0)
+clv.version.list mode::history count::1       # most recent release only
+clv.version.list mode::history count::3       # 3 most recent releases
+clv.version.list mode::history count::0       # empty output (valid, exit 0)
 ```
 
 ### Referenced Commands
 
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
-| 1 | [`.version.history`](../command/version.md#command-12-versionhistory) | 10 | Values exceeding available releases return all available |
+| 1 | [`.version.list`](../command/version.md#command-6-versionlist) | 10 | Meaningful only under `mode::history`; ignored under `mode::aliases`. Values exceeding available releases return all available. |
 
 ### Referenced Type
 

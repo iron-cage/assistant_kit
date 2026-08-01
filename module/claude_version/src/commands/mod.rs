@@ -28,7 +28,6 @@ mod status;
 mod version;
 
 pub use config::config_routine;
-pub use history::version_history_routine;
 pub use params::params_routine;
 pub use paths::paths_routine;
 pub use runtime_files::runtime_files_routine;

@@ -142,7 +142,7 @@ fn description( key : PathKey ) -> &'static str
     PathKey::ProjectSettings     => "Nearest ancestor project settings.json; overrides user settings when present",
     PathKey::VersionsDir         => "Directory holding all installed Claude Code version binaries",
     PathKey::BinarySymlink       => "Hot-swap target; retargeted by .version.install to activate a version",
-    PathKey::VersionHistoryCache => "Cached GitHub release history for .version.history",
+    PathKey::VersionHistoryCache => "Cached GitHub release history for .version.list mode::history",
   }
 }
 

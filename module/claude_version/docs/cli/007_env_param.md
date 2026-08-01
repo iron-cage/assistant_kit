@@ -25,7 +25,7 @@ Standard Unix home directory path. clv uses this to resolve:
 
 If `HOME` is unset, commands that access settings or credentials exit with code 2.
 
-**Consumed by:** `.status`, `.version.install`, `.version.guard`, `.version.history`, `.settings.show`, `.settings.get`, `.settings.set`, `.config`, `.params`
+**Consumed by:** `.status`, `.version.install`, `.version.guard`, `.version.list mode::history`, `.settings.show`, `.settings.get`, `.settings.set`, `.config`, `.params`
 
 ---
 

@@ -26,6 +26,7 @@
 | 11_scope.md | `scope::` — write target: user or project |
 | 12_unset.md | `unset::` — delete key from target scope |
 | 13_kind.md | `kind::` — filter show-all to params of one kind |
+| 14_mode.md | `mode::` — select aliases or history listing for `.version.list` |
 
 ### All Parameters
 
@@ -39,11 +40,12 @@
 | 6 | [`key::`](06_key.md) | `SettingsKey` | — (opt. in .config) | Settings Identity, Config Identity | `.settings.get`, `.settings.set`, `.config`, `.params`, `.paths` |
 | 7 | [`value::`](07_value.md) | `SettingsValue` | — (opt. in .config) | Settings Identity, Config Identity | `.settings.set`, `.config` |
 | 8 | [`interval::`](08_interval.md) | u64 | 0 | — | `.version.guard` |
-| 9 | [`count::`](09_count.md) | u64 | 10 | Output Control | `.version.history` |
+| 9 | [`count::`](09_count.md) | u64 | 10 | Output Control | `.version.list` (`mode::history`) |
 | 10 | [`.help`](10_help.md) | bool | false | — | all commands |
 | 11 | [`scope::`](11_scope.md) | `ConfigScope` | user | Config Identity | `.config` |
 | 12 | [`unset::`](12_unset.md) | bool | false | Config Identity | `.config` |
 | 13 | [`kind::`](13_kind.md) | `ParamKind` | absent | — | `.params` |
+| 14 | [`mode::`](14_mode.md) | `ListMode` | aliases | — | `.version.list` |
 
 ### See Also
 

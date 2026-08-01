@@ -11,7 +11,7 @@
 - [ ] `clv .version.install version::X` installs, applies 8-layer version lock, and exits 0.
 - [ ] Already-at-target is a no-op (exits 0) unless `force::1` is set.
 - [ ] `clv .version.show` after install prints the newly installed version.
-- [ ] `clv .version.history` shows recent releases with summaries to aid version selection.
+- [ ] `clv .version.list mode::history` shows recent releases with summaries to aid version selection.
 - [ ] `clv .version.guard` after install detects drift and restores preferred version if needed.
 
 ### Referenced Commands
@@ -22,7 +22,7 @@
 | 2 | [`.version.show`](../command/version.md#command-3-versionshow) | Confirms installed version before and after install |
 | 3 | [`.version.install`](../command/version.md#command-4-versioninstall) | Installs target version with 8-layer lock |
 | 4 | [`.version.guard`](../command/version.md#command-5-versionguard) | Detects and restores preferred version on drift |
-| 5 | [`.version.history`](../command/version.md#command-12-versionhistory) | Lists recent releases for version selection |
+| 5 | [`.version.list`](../command/version.md#command-6-versionlist) | Lists recent releases for version selection (`mode::history`) |
 
 ### Referenced Formats
 
@@ -47,15 +47,16 @@
 | 3 | [`force::`](../param/03_force.md) | Overrides idempotency check to reinstall |
 | 4 | [`v::`](../param/04_v.md) | Controls diagnostic detail level |
 | 5 | [`format::`](../param/05_format.md) | Selects text or JSON rendering |
-| 6 | [`count::`](../param/09_count.md) | Limits number of history entries shown |
-| 7 | [`.help`](../param/10_help.md) | Universal help override for any command |
+| 6 | [`count::`](../param/09_count.md) | Limits number of history entries shown (`mode::history` only) |
+| 7 | [`mode::`](../param/14_mode.md) | Selects release-history listing over the default alias listing |
+| 8 | [`.help`](../param/10_help.md) | Universal help override for any command |
 
 ### Workflow Steps
 
 **Step 1 — Browse recent releases to select a target:**
 
 ```bash
-clv .version.history count::5
+clv .version.list mode::history count::5
 # 1.2.34  2024-01-15  Fixes tool-call streaming edge case
 # 1.2.33  2024-01-08  Improves context window utilization
 # 1.2.32  2024-01-01  Adds prompt caching support
