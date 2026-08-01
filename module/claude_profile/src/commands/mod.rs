@@ -43,6 +43,6 @@ pub use limits::account_limits_routine;
 pub use model::model_routine;
 pub use models::models_routine;
 pub use model_select::model_select_routine;
-pub use token_paths::{ token_status_routine, paths_routine };
+pub use token_paths::paths_routine;
 pub use dot::dot_routine;
 pub use crate::usage::usage_routine;

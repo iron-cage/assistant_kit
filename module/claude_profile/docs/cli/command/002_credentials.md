@@ -8,7 +8,7 @@ Credential metadata commands.
 
 Show live credential metadata by reading `~/.claude/.credentials.json` directly. Succeeds on any authenticated machine regardless of whether account store setup exists.
 
--- **Parameters:** [`format::`](../param/002_format.md), [`account::`](../param/005_account.md), [`sub::`](../param/006_sub.md), [`tier::`](../param/007_tier.md), [`token::`](../param/008_token.md), [`expires::`](../param/009_expires.md), [`email::`](../param/010_email.md), [`file::`](../param/011_file.md), [`saved::`](../param/012_saved.md), [`display_name::`](../param/014_display_name.md), [`role::`](../param/015_role.md), [`billing::`](../param/016_billing.md), [`model::`](../param/017_model.md), [`uuid::`](../param/028_uuid.md), [`capabilities::`](../param/029_capabilities.md), [`org_uuid::`](../param/030_org_uuid.md), [`org_name::`](../param/031_org_name.md), [`trace::`](../param/023_trace.md)
+-- **Parameters:** [`format::`](../param/002_format.md), [`account::`](../param/005_account.md), [`sub::`](../param/006_sub.md), [`tier::`](../param/007_tier.md), [`token::`](../param/008_token.md), [`expires::`](../param/009_expires.md), [`email::`](../param/010_email.md), [`file::`](../param/011_file.md), [`saved::`](../param/012_saved.md), [`display_name::`](../param/014_display_name.md), [`role::`](../param/015_role.md), [`billing::`](../param/016_billing.md), [`model::`](../param/017_model.md), [`uuid::`](../param/028_uuid.md), [`capabilities::`](../param/029_capabilities.md), [`org_uuid::`](../param/030_org_uuid.md), [`org_name::`](../param/031_org_name.md), [`threshold::`](../param/003_threshold.md), [`trace::`](../param/023_trace.md)
 -- **Exit:** 0 (success) | 2 (credential file absent or HOME unset)
 
 **Syntax:**
@@ -18,6 +18,7 @@ clp .credentials.status
 clp .credentials.status email::0
 clp .credentials.status file::1 saved::1
 clp .credentials.status display_name::1 role::1 billing::1 model::1
+clp .credentials.status threshold::1800
 clp .credentials.status format::json
 ```
 
@@ -40,11 +41,12 @@ clp .credentials.status format::json
 | `capabilities::` | `bool` | `0` | Show product capabilities list from `~/.claude.json` (opt-in) |
 | `org_uuid::` | `bool` | `0` | Show organisation UUID from active account's `{name}.json` snapshot (opt-in) |
 | `org_name::` | `bool` | `0` | Show organisation display name from active account's `{name}.json` snapshot (opt-in) |
+| `threshold::` | [`WarningThreshold`](../type/003_warning_threshold.md) | `3600` | ExpiringSoon classification boundary in seconds for the `Token:` line and JSON `token`/`expires_in_secs` fields |
 | `trace::` | `bool` | `0` | Print timestamped diagnostic lines to stderr for the credential file read and each supplementary snapshot read |
 
 **Algorithm (3 steps):**
 1. Read `~/.claude/.credentials.json`; read `_active_{hostname}_{user}` marker (best-effort)
-2. `(when snapshot fields enabled)` Read `~/.claude.json`, `~/.claude/settings.json`, and `{active_name}.json` per enabled field params (best-effort; missing files → `N/A`)
+2. `(when snapshot fields enabled)` Read `~/.claude.json`, `~/.claude/settings.json`, and `{active_name}.json` per enabled field params (best-effort; missing files → `N/A`); classify token expiry via `token::status_with_threshold(threshold::)` for the `Token:`/`Expires:` lines — for a `backend: redirect` active account, this classifies as `static` (no `expiresAt` to compare) rather than `valid`/`expiring_soon`/`expired`
 3. Render enabled fields in requested `format::`
 
 **Examples:**
@@ -76,6 +78,7 @@ clp .credentials.status format::json
 - Field-presence params only affect text output. `format::json` always includes all fields regardless of field-presence params.
 - `account::` reads the per-machine active marker; shows `N/A` on machines where no account has ever been saved.
 - `saved::` counts `*.credentials.json` files in the credential store; shows `0` when the credential store is absent.
+- **Redirect backend:** `Token: static` (never `valid`/`expiring_soon`/`expired`) signals a `backend: redirect` active account — no separate `backend` field is added to this command's output, since the `Token:` line already carries that signal for the single account this command describes. `Expires:` reports `N/A` (no `expiresAt` to compute a duration from). See [feature/071](../../feature/071_redirect_backend_accounts.md).
 
 ### Referenced Parameters
 
@@ -98,23 +101,26 @@ clp .credentials.status format::json
 | 15 | [capabilities::](../param/029_capabilities.md) | Show product capabilities |
 | 16 | [org_uuid::](../param/030_org_uuid.md) | Show organisation UUID |
 | 17 | [org_name::](../param/031_org_name.md) | Show organisation display name |
-| 18 | [trace::](../param/023_trace.md) | Diagnostic trace output |
+| 18 | [threshold::](../param/003_threshold.md) | ExpiringSoon classification boundary in seconds |
+| 19 | [trace::](../param/023_trace.md) | Diagnostic trace output |
 
 ### Referenced Features
 
 | # | Feature | Role |
 |---|---------|------|
 | 1 | [Live Credentials Status](../../feature/012_live_credentials_status.md) | Field set and read algorithm for live credential inspection |
-| 2 | [Rich Account Metadata](../../feature/014_rich_account_metadata.md) | Extended metadata fields surfaced by this command |
-| 3 | [Extended Snapshot Fields](../../feature/021_extended_snapshot_fields.md) | Opt-in snapshot fields (uuid, capabilities) |
-| 4 | [Org Identity Snapshot](../../feature/022_org_identity_snapshot.md) | Org identity fields (org_uuid, org_name) |
+| 2 | [Token Status](../../feature/006_token_status.md) | Token expiry classification algorithm powering the Token/Expires lines and `threshold::` |
+| 3 | [Rich Account Metadata](../../feature/014_rich_account_metadata.md) | Extended metadata fields surfaced by this command |
+| 4 | [Extended Snapshot Fields](../../feature/021_extended_snapshot_fields.md) | Opt-in snapshot fields (uuid, capabilities) |
+| 5 | [Org Identity Snapshot](../../feature/022_org_identity_snapshot.md) | Org identity fields (org_uuid, org_name) |
+| 6 | [Redirect Backend Accounts](../../feature/071_redirect_backend_accounts.md) | `static` token classification for `backend: redirect` accounts |
 
 ### Referenced User Stories
 
 | # | User Story | Persona |
 |---|------------|---------|
 | 1 | [Account Onboarding](../user_story/002_onboarding.md) | Verify live credential state during account setup |
-| 2 | [Credential Diagnostics](../user_story/005_credential_diagnostics.md) | Primary command for live credential inspection |
+| 2 | [Credential Diagnostics](../user_story/005_credential_diagnostics.md) | Primary command for live credential inspection and token expiry classification |
 
 ### Referenced Parameter Groups
 

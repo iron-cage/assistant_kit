@@ -16,7 +16,7 @@ Edge case coverage for the `format::` parameter. See [params.md](../../../../doc
 | EC-8 | `format::json` output parseable by `jq` | JSON Validity |
 | EC-9 | `fmt::json` alias produces JSON output (same as `format::json`) | Alias |
 | EC-10 | `format::table` on `.accounts` renders aligned one-row-per-account table | Valid Format / Table |
-| EC-11 | `format::table` on `.token.status` exits 1 (table not supported) | Format Restriction |
+| EC-11 | `format::table` on `.credentials.status` exits 1 (table not supported) | Format Restriction |
 
 ### Test Coverage Summary
 
@@ -118,8 +118,8 @@ Edge case coverage for the `format::` parameter. See [params.md](../../../../doc
 ### EC-9: Alias — `fmt::` accepted as `format::`
 
 - **Given:** Empty credential store (no accounts required).
-- **When:** `clp .accounts fmt::json` and `clp .token.status fmt::json` (with a valid credentials file for the latter)
-- **Then:** `.accounts` returns a JSON array starting with `[`; `.token.status` returns a JSON object starting with `{`. Exit 0 for both.; `fmt::` alias is expanded to `format::` at runtime — not rejected as an unknown parameter
+- **When:** `clp .accounts fmt::json` and `clp .credentials.status fmt::json` (with a valid credentials file for the latter)
+- **Then:** `.accounts` returns a JSON array starting with `[`; `.credentials.status` returns a JSON object starting with `{`. Exit 0 for both.; `fmt::` alias is expanded to `format::` at runtime — not rejected as an unknown parameter
 - **Exit:** 0
 - **Source:** `tests/cli/cross_cutting_test.rs (e11, e12)`
 
@@ -138,7 +138,7 @@ Edge case coverage for the `format::` parameter. See [params.md](../../../../doc
 ### EC-11: Table Format Rejected on Non-`.accounts` Commands
 
 - **Given:** Valid credentials file present.
-- **When:** `clp .token.status format::table`
+- **When:** `clp .credentials.status format::table`
 - **Then:** Exit 1; stderr contains an error message indicating `table` is not supported (or is an unknown format); no output on stdout.; `table` is rejected by commands that only accept `text` or `json`
 - **Exit:** 1
 - **Source:** [types.md -- OutputFormat](../../../../docs/cli/type/002_output_format.md)

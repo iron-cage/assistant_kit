@@ -50,6 +50,8 @@ When `trace::1` and `touch::0`: no timestamped `account.use` diagnostic lines (n
 
 **Layer assignment:** Quota fetch and subprocess call are added to `account_use_routine()` in `commands.rs`. Resolution functions (`resolve_model`, `resolve_effort`) are reused from `usage.rs` with no changes.
 
+**Redirect-backend accounts skip this entire feature:** when the target account is `backend: redirect`, `.account.use` skips the quota-fetch (step 2) and touch subprocess (steps 4b/5) entirely — `pre_switch_touch_ctx()` checks `backend` before any HTTP call and returns immediately, since no Anthropic quota endpoint exists for a foreign backend to touch. This is a hard, unconditional skip — not a fetch-then-fail — and is independent of the `touch::` parameter's own value. See [071_redirect_backend_accounts.md](071_redirect_backend_accounts.md).
+
 **Exit codes:**
 - 0: success (switch completed; subprocess spawned if fetch succeeded, skipped if fetch failed)
 - 1: usage error (invalid name format or invalid `imodel::`/`effort::` value)
@@ -79,6 +81,7 @@ When `trace::1` and `touch::0`: no timestamped `account.use` diagnostic lines (n
 - **AC-19**: When `trace::1` and the model override fires (AC-18): emits `... · account.use  {name}  model override: sonnet→opus (7d(Son) left={N}%)` before the `model:` line when upgrading to Opus. Emits `... · account.use  {name}  model override: opus→sonnet (7d(Son) left={N}%)` when restoring to Sonnet (Sonnet tier present and left >= 10%, Fix BUG-311). Omitted when no model change occurs (model already correct, tier absent, or quota fetch failed).
 - **AC-20**: When `touch::1` (default) and the quota fetch fails AND the target token is locally expired AND `refresh::0`: exits 3 immediately with `account credentials expired: {name} (expired {N}h {M}m ago)` on stderr; no refresh attempt is made. When `trace::1`: emits `expired({N}h {M}m ago) → refused (refresh::0)`. (Fix for BUG-230.)
 - **AC-21**: After the `run_isolated` subprocess completes, `apply_post_switch_touch` re-fetches quota for the switched-to account using its saved OAuth token (`fetch_oauth_usage`). The re-fetch is best-effort (non-aborting) — it fires regardless of whether the subprocess returned new credentials, and silently skips on any failure (unreadable credential file, missing `accessToken`, or HTTP error). On success, the in-memory quota result reflects the post-subprocess state, so any subsequent `.usage touch` call will see the active `resets_at` values and skip redundant subprocess spawning. On failure, the pre-subprocess quota data remains; the switch and subprocess are not rolled back. This mirrors `apply_touch` AC-03 in Feature 024. Fix(BUG-288): absence of this re-fetch caused `.usage touch` to see stale pre-subprocess quota (`resets_at = None`) and spawn a redundant second subprocess for the just-switched account.
+- **AC-22**: `clp .account.use name::kimi` (target `backend: redirect`, default `touch::1`) skips quota-fetch and the touch subprocess entirely — exits 0 with zero HTTP calls attempted; `pre_switch_touch_ctx()` returns before any of steps 2/4b/5 execute.
 - **Limitation (BUG-226)**: When the quota fetch returns 429 (rate-limited) or any other error, quota data is unavailable and the quota-aware model upgrade (AC-18) cannot fire. The snapshot model restored by `switch_account()` is installed as-is — potentially leaving the session on Sonnet even when Sonnet quota is exhausted. No workaround exists at the `.account.use` layer; the user must manually override via `imodel::opus`.
 
 ### Bugs
@@ -121,6 +124,7 @@ When `trace::1` and `touch::0`: no timestamped `account.use` diagnostic lines (n
 | [024_session_touch.md](024_session_touch.md) | Touch subprocess trigger conditions and idle-session semantics |
 | [026_subprocess_model_effort.md](026_subprocess_model_effort.md) | Model/effort resolution algorithm (`resolve_model`, `resolve_effort`) |
 | [034_explicit_session_model_override.md](034_explicit_session_model_override.md) | Explicit session model override — `set_model::` on `.account.use` bypasses `apply_model_override()` |
+| [071_redirect_backend_accounts.md](071_redirect_backend_accounts.md) | Redirect-backend targets skip quota-fetch/touch entirely via `pre_switch_touch_ctx()`'s backend check |
 
 ### Parameters
 
@@ -143,7 +147,7 @@ When `trace::1` and `touch::0`: no timestamped `account.use` diagnostic lines (n
 |------|--------------|
 | `src/commands/account_ops.rs` | `account_use_routine()` — adds quota fetch + subprocess call after credential rotation |
 | `src/lib.rs` | `touch::`, `imodel::`, `effort::`, `trace::` parameter registration on `.account.use` |
-| `src/usage/subprocess.rs`, `src/usage/api.rs` | `resolve_model()`, `resolve_effort()` reused from Feature 026; new: `TouchCtx`, `validate_imodel_str()`, `validate_effort_str()`, `pre_switch_touch_ctx()`, `apply_post_switch_touch()`, `apply_model_override()` |
+| `src/usage/subprocess.rs`, `src/usage/api.rs` | `resolve_model()`, `resolve_effort()` reused from Feature 026; new: `TouchCtx`, `validate_imodel_str()`, `validate_effort_str()`, `pre_switch_touch_ctx()` (gains a `backend` check — unconditional skip for `backend: redirect`, Feature 071), `apply_post_switch_touch()`, `apply_model_override()` |
 | `claude_profile_core/src/account.rs` | `refresh_account_token()` — invoked by `apply_post_switch_touch()` per Feature 017 AC-34 / invariant 008 |
 
 ### Algorithm Docs

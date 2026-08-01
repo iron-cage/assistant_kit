@@ -31,7 +31,7 @@ Integration test planning for the `.help` command. See [command/namespace.md](..
 
 - **Given:** clean environment, `clp` on PATH
 - **When:** `clp .help`
-- **Then:** stdout contains all 13 visible command names (`.accounts`, `.account.save`, `.account.use`, `.account.delete`, `.account.limits`, `.account.relogin`, `.account.renewal`, `.account.inspect`, `.credentials.status`, `.token.status`, `.paths`, `.usage`, `.model`); does NOT contain `.account.list`, `.account.status`, `.account.assign`, `.account.unclaim`, or `.account.rotate` (deprecated redirector)
+- **Then:** stdout contains all 12 visible command names (`.accounts`, `.account.save`, `.account.use`, `.account.delete`, `.account.limits`, `.account.relogin`, `.account.renewal`, `.account.inspect`, `.credentials.status`, `.paths`, `.usage`, `.model`); does NOT contain `.account.list`, `.account.status`, `.token.status`, `.account.assign`, `.account.unclaim`, or `.account.rotate` (deprecated redirector)
 - **Exit:** 0
 - **Source:** [commands.md — .help](../../../../docs/cli/command/003_meta.md#command-2-help)
 

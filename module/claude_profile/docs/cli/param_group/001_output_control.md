@@ -14,12 +14,11 @@
 | # | Command | Role |
 |---|---------|------|
 | 1 | [`.accounts`](../command/001_account.md#command-3-accounts) | `format::` |
-| 2 | [`.token.status`](../command/005_token.md#command-7-tokenstatus) | `format::` |
-| 3 | [`.paths`](../command/004_paths.md#command-8-paths) | `format::` |
-| 4 | [`.usage`](../command/006_usage.md#command-9-usage) | `format::`, `get::` |
-| 5 | [`.credentials.status`](../command/002_credentials.md#command-10-credentialsstatus) | `format::` |
-| 6 | [`.account.limits`](../command/001_account.md#command-11-accountlimits) | `format::` |
-| 7 | [`.account.inspect`](../command/001_account.md#command-15-accountinspect) | `format::` |
+| 2 | [`.paths`](../command/004_paths.md#command-8-paths) | `format::` |
+| 3 | [`.usage`](../command/006_usage.md#command-9-usage) | `format::`, `get::` |
+| 4 | [`.credentials.status`](../command/002_credentials.md#command-10-credentialsstatus) | `format::` |
+| 5 | [`.account.limits`](../command/001_account.md#command-11-accountlimits) | `format::` |
+| 6 | [`.account.inspect`](../command/001_account.md#command-15-accountinspect) | `format::` |
 
 **Typical Patterns:**
 
@@ -33,7 +32,7 @@ clp .usage only_next::1 get::7d_left      # → "65%"
 clp .usage only_active::1 get::account    # → "alice@example.com"
 
 # Interactive: default text for human reading
-clp .token.status
+clp .credentials.status
 clp .usage
 ```
 

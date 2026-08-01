@@ -8,15 +8,17 @@
 |------|---------|-------------|----------:|
 | `algorithm/` | Decision algorithm references (model selection, quota classification, sort, approximation) | [algorithm/readme.md](../algorithm/readme.md) | 12 |
 | `cli/` (standalone) | Cross-cutting CLI reference (config params, dictionary, env params, interactions) | [cli/readme.md](../cli/readme.md) | 4 |
-| `cli/command/` | CLI command specifications | [cli/command/readme.md](../cli/command/readme.md) | 8 |
+| `cli/command/` | CLI command specifications | [cli/command/readme.md](../cli/command/readme.md) | 9 |
+| `cli/command_group/` | Strict same-handler/same-parameter-set command identity groups | [cli/command_group/readme.md](../cli/command_group/readme.md) | 0 |
 | `cli/command_noun/` | Domain noun documentation (account, token, credentials) | [cli/command_noun/readme.md](../cli/command_noun/readme.md) | 3 |
 | `cli/command_verb/` | Domain verb documentation (save, use, delete, limits, relogin, rotate, renewal, inspect, status) — 006 rotate DEPRECATED (Feature 038); 009 assign and 011 unclaim REMOVED | [cli/command_verb/readme.md](../cli/command_verb/readme.md) | 11 |
 | `cli/format/` | CLI output format specifications | [cli/format/readme.md](../cli/format/readme.md) | 3 |
-| `cli/param/` | CLI parameter specifications | [cli/param/readme.md](../cli/param/readme.md) | 68 |
-| `cli/param_group/` | CLI parameter group definitions | [cli/param_group/readme.md](../cli/param_group/readme.md) | 6 |
-| `cli/type/` | CLI type definitions | [cli/type/readme.md](../cli/type/readme.md) | 4 |
+| `cli/param/` | CLI parameter specifications | [cli/param/readme.md](../cli/param/readme.md) | 73 |
+| `cli/param_group/` | CLI parameter group definitions | [cli/param_group/readme.md](../cli/param_group/readme.md) | 7 |
+| `cli/type/` | CLI type definitions | [cli/type/readme.md](../cli/type/readme.md) | 5 |
 | `cli/user_story/` | Canonical user stories mapping personas and goals to commands | [cli/user_story/readme.md](../cli/user_story/readme.md) | 5 |
-| `feature/` | Functional requirements for claude_profile capabilities | [readme.md](../feature/readme.md) | 48 |
+| `cli/workflow_scenario/` | **ELIMINATED** (`cli_doc.rulebook` v1.7) — all instances migrated to `cli/user_story/`; directory retained only as an archived migration map | [cli/workflow_scenario/readme.md](../cli/workflow_scenario/readme.md) | 0 |
+| `feature/` | Functional requirements for claude_profile capabilities | [readme.md](../feature/readme.md) | 50 |
 | `invariant/` | Measurable constraints and architectural guarantees | [invariant/readme.md](../invariant/readme.md) | 12 |
 | `pattern/` | Reusable design solutions applied at more than one call site | [pattern/readme.md](../pattern/readme.md) | 1 |
 | `pitfall/` | Systemic pitfall catalog — recurring design traps revealed by bug history | [pitfall/readme.md](../pitfall/readme.md) | 7 |
@@ -26,6 +28,7 @@
 | `subprocess/` | Isolated subprocess contract, credential write-back protocol, and invocation sites | [subprocess/readme.md](../subprocess/readme.md) | 5 |
 | `tests/docs/algorithm/` | Per-algorithm AC-N correctness test documentation | [tests/docs/algorithm/readme.md](../../tests/docs/algorithm/readme.md) | 10 |
 | `tests/docs/cli/command/` | Per-command integration test case documentation | [tests/docs/cli/command/readme.md](../../tests/docs/cli/command/readme.md) | 21 |
+| `tests/docs/cli/command_group/` | Structural-equivalence test index for command_group entities | [tests/docs/cli/command_group/readme.md](../../tests/docs/cli/command_group/readme.md) | 0 |
 | `tests/docs/cli/command_noun/` | Per-noun test case documentation | [tests/docs/cli/command_noun/readme.md](../../tests/docs/cli/command_noun/readme.md) | 3 |
 | `tests/docs/cli/command_verb/` | Per-verb test case documentation | [tests/docs/cli/command_verb/readme.md](../../tests/docs/cli/command_verb/readme.md) | 11 |
 | `tests/docs/cli/format/` | Per-format output structure test documentation | [tests/docs/cli/format/readme.md](../../tests/docs/cli/format/readme.md) | 3 |
@@ -93,6 +96,8 @@
 | feature | 068 | Models List Command | [feature/068_models_list_command.md](../feature/068_models_list_command.md) |
 | feature | 069 | Model Select Command | [feature/069_model_select_command.md](../feature/069_model_select_command.md) |
 | feature | 070 | Account Claim and Reservation Control | [feature/070_account_claim_and_reservation_control.md](../feature/070_account_claim_and_reservation_control.md) |
+| feature | 071 | Redirect Backend Accounts | [feature/071_redirect_backend_accounts.md](../feature/071_redirect_backend_accounts.md) |
+| feature | 072 | Inference Provider Selection | [feature/072_inference_provider_selection.md](../feature/072_inference_provider_selection.md) |
 | cli | 001 | Config Parameters | [cli/001_config_param.md](../cli/001_config_param.md) |
 | cli | 002 | Dictionary | [cli/002_dictionary.md](../cli/002_dictionary.md) |
 | cli | 003 | Environment Parameters | [cli/003_env_param.md](../cli/003_env_param.md) |
@@ -105,6 +110,7 @@
 | command | 006 | Usage Commands | [cli/command/006_usage.md](../cli/command/006_usage.md) |
 | command | 007 | Model Command | [cli/command/007_model.md](../cli/command/007_model.md) |
 | command | 008 | Models Command | [cli/command/008_models.md](../cli/command/008_models.md) |
+| command | 009 | Provider Command | [cli/command/009_provider.md](../cli/command/009_provider.md) |
 | param | 001 | `name::` | [cli/param/001_name.md](../cli/param/001_name.md) |
 | param | 002 | `format::` | [cli/param/002_format.md](../cli/param/002_format.md) |
 | param | 003 | `threshold::` | [cli/param/003_threshold.md](../cli/param/003_threshold.md) |
@@ -173,16 +179,23 @@
 | param | 066 | `reset::` (remove subprocess_model preference) | [cli/param/066_reset.md](../cli/param/066_reset.md) |
 | param | 067 | `lock::` (set/clear claim_lock; ungated write) | [cli/param/067_lock.md](../cli/param/067_lock.md) |
 | param | 068 | `reserve::` (set/clear reserve; ungated write) | [cli/param/068_reserve.md](../cli/param/068_reserve.md) |
+| param | 069 | `backend::` (discriminates `anthropic`/`redirect` at save time) | [cli/param/069_backend.md](../cli/param/069_backend.md) |
+| param | 070 | `base_url::` (redirect target's API base URL) | [cli/param/070_base_url.md](../cli/param/070_base_url.md) |
+| param | 071 | `api_key::` (redirect target's static API key) | [cli/param/071_api_key.md](../cli/param/071_api_key.md) |
+| param | 072 | `redirect_model::` (redirect target's own model identifier) | [cli/param/072_redirect_model.md](../cli/param/072_redirect_model.md) |
+| param | 073 | `inference_provider::` (metadata label) | [cli/param/073_inference_provider.md](../cli/param/073_inference_provider.md) |
 | param_group | 001 | Output Control | [cli/param_group/001_output_control.md](../cli/param_group/001_output_control.md) |
 | param_group | 002 | Field Presence | [cli/param_group/002_field_presence.md](../cli/param_group/002_field_presence.md) |
 | param_group | 003 | Fetch Behavior | [cli/param_group/003_fetch_behavior.md](../cli/param_group/003_fetch_behavior.md) |
 | param_group | 004 | Sort Control | [cli/param_group/004_sort_control.md](../cli/param_group/004_sort_control.md) |
 | param_group | 005 | Display Control | [cli/param_group/005_display_control.md](../cli/param_group/005_display_control.md) |
 | param_group | 006 | Account Targeting | [cli/param_group/006_account_targeting.md](../cli/param_group/006_account_targeting.md) |
+| param_group | 007 | Redirect Backend Config | [cli/param_group/007_redirect_backend_config.md](../cli/param_group/007_redirect_backend_config.md) |
 | type | 001 | AccountName | [cli/type/001_account_name.md](../cli/type/001_account_name.md) |
 | type | 002 | OutputFormat | [cli/type/002_output_format.md](../cli/type/002_output_format.md) |
 | type | 003 | WarningThreshold | [cli/type/003_warning_threshold.md](../cli/type/003_warning_threshold.md) |
 | type | 004 | AccountSelector | [cli/type/004_account_selector.md](../cli/type/004_account_selector.md) |
+| type | 005 | AccountBackend | [cli/type/005_account_backend.md](../cli/type/005_account_backend.md) |
 | format | 001 | text | [cli/format/001_text.md](../cli/format/001_text.md) |
 | format | 002 | json | [cli/format/002_json.md](../cli/format/002_json.md) |
 | format | 003 | table | [cli/format/003_table.md](../cli/format/003_table.md) |

@@ -18,10 +18,12 @@ Captures the current active session credentials as a named account profile in th
 - Named account profile exists in credential store (`{name}.credentials.json` + `{name}.json`)
 - `{name}.json` supplementary fields merged from any pre-existing file (existing fields preserved)
 - Active session credentials unchanged
+- When `backend::redirect`: `{name}.credentials.json` contains only `accessToken` (from `api_key::`) — no `refreshToken`/`expiresAt` keys; `{name}.json` carries `backend`, `base_url`, `redirect_model`
 
 **Side effects:**
 - Writes two files per account: `{name}.credentials.json` (credential snapshot) and `{name}.json` (supplementary metadata)
 - If `name::` resolves to an existing profile, existing `{name}.json` fields are preserved via read-merge (not overwritten)
+- When `backend::redirect`: does not read `~/.claude/.credentials.json` — no active OAuth session is captured for a foreign backend
 
 ### Idempotency
 
@@ -34,6 +36,10 @@ Captures the current active session credentials as a named account profile in th
 | `name::` | Account name (email); defaults to email from active credentials | No |
 | `host::` | Override store host label for multi-machine profiles | No |
 | `role::` | Annotate account with a role label (e.g. `work`, `personal`) | No |
+| `backend::` | Discriminate `anthropic` (default, OAuth capture) vs `redirect` (static API key) | No |
+| `base_url::` | Redirect target's API base URL | Conditional (`backend::redirect`) |
+| `api_key::` | Redirect target's static API key, written as `accessToken` | Conditional (`backend::redirect`) |
+| `redirect_model::` | Redirect target's own model identifier | Conditional (`backend::redirect`) |
 | `dry::` | Validate without writing files | No |
 | `trace::` | Emit diagnostic trace output | No |
 
@@ -54,6 +60,7 @@ Captures the current active session credentials as a named account profile in th
 | [feature/001_account_store_init.md](../../feature/001_account_store_init.md) | Credential store initialization before first save |
 | [feature/002_account_save.md](../../feature/002_account_save.md) | Save algorithm and `{name}.json` read-merge semantics |
 | [feature/036_account_ownership.md](../../feature/036_account_ownership.md) | Ownership model — `.account.save` is ownership-neutral (passes `owner: None`); `.accounts owner::0 name::X` clears ownership (Feature 064); `.accounts assignee::USER@MACHINE name::X` is marker-only (Feature 065) |
+| [feature/071_redirect_backend_accounts.md](../../feature/071_redirect_backend_accounts.md) | `backend::redirect` write path — static-credential capture via `base_url::`/`api_key::`/`redirect_model::`, no OAuth |
 
 ### Referenced Commands
 

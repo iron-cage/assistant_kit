@@ -1,25 +1,31 @@
-//! Integration tests: TS (Token Status), P (Paths).
+//! Integration tests: TS (Token Status regression coverage, retargeted to `.credentials.status`), P (Paths).
 //!
 //! Tests invoke the compiled `clp` binary as a subprocess via `CARGO_BIN_EXE_clp`.
 //!
 //! ## Test Matrix
 //!
-//! ### TS — Token Status
+//! ### TS — Token Status (retargeted to `.credentials.status` after `.token.status` removal)
+//!
+//! ts01/02/03 (text valid/expiring/expired), ts08 (missing creds exit 2), and ts12 (HOME unset
+//! exit 2) removed — fully superseded by `.credentials.status` coverage already present in
+//! `user_story_test.rs` (UA-2), `command_noun_test.rs` (NC-3), and `cross_cutting_test.rs` (e02).
+//! `it_trace_token_status_accepted` (EC-16) removed — superseded by `it_trace_credentials_status_accepted`
+//! (EC-8) in `credentials_test_b.rs`. Remaining rows retarget to `.credentials.status` with vocabulary
+//! and exit-code expectations corrected against verified source ground truth (`derive_token_state()` in
+//! `src/commands/cmd_context.rs`, `credentials_status_routine()` in `src/commands/credentials.rs`):
+//! JSON key is `token` (not `status`); a malformed-but-present credentials file degrades gracefully to
+//! `Token: unknown` at exit 0 (only a missing file exits 2) — this is a genuine behavior delta from the
+//! retired `.token.status`, which hard-failed at exit 2 for the same malformed-file case.
 //!
 //! | ID | Test Function | Condition | P/N |
 //! |----|---------------|-----------|-----|
-//! | ts01 | `ts01_token_valid_text_v1` | valid token → "valid — Nm remaining" output | P |
-//! | ts02 | `ts02_token_expiring_soon_text_v1` | near-expiry token → "expiring soon — Nm remaining" | P |
-//! | ts03 | `ts03_token_expired_text_v1` | expired token → "expired" | P |
-//! | ts06 | `ts06_token_valid_json` | valid token, `format::json` → JSON object | P |
-//! | ts07 | `ts07_token_expired_json` | expired token, `format::json` → JSON with status | P |
-//! | ts08 | `ts08_token_missing_creds_exits_2` | no credentials file → exit 2 | N |
-//! | ts09 | `ts09_token_malformed_creds_exits_2` | malformed JSON → exit 2 | N |
-//! | ts10 | `ts10_token_threshold_0_always_valid` | `threshold::0` + far-future → Valid | P |
-//! | ts11 | `ts11_token_threshold_86400_expiring_soon` | `threshold::86400` + 1h expiry → `ExpiringSoon` | P |
-//! | ts12 | `ts12_token_home_unset_exits_2` | HOME unset → exit 2 | N |
-//! | ts13 | `ts13_token_empty_creds_exits_2` | empty credentials file → exit 2 | N |
-//! | ts14 | `ts14_token_expiring_soon_json` | near-expiry token, `format::json` → JSON with status | P |
+//! | ts06 | `ts06_credentials_valid_json` | valid token, `format::json` → `"token":"valid"` | P |
+//! | ts07 | `ts07_credentials_expired_json` | expired token, `format::json` → `"token":"expired"` | P |
+//! | ts09 | `ts09_credentials_malformed_creds_shows_unknown` | malformed JSON, file present → `Token: unknown`, exit 0 | P |
+//! | ts10 | `ts10_credentials_threshold_0_always_valid` | `threshold::0` + near-future → Valid | P |
+//! | ts11 | `ts11_credentials_threshold_86400_expiring_soon` | `threshold::86400` + 2h expiry → `ExpiringSoon` | P |
+//! | ts13 | `ts13_credentials_empty_creds_shows_unknown` | empty credentials file, file present → `Token: unknown`, exit 0 | P |
+//! | ts14 | `ts14_credentials_expiring_soon_json` | near-expiry token, `format::json` → `"token":"expiring in...` | P |
 //!
 //! ### P — Paths
 //!
@@ -42,88 +48,41 @@ use crate::cli_runner::{
 };
 use tempfile::TempDir;
 
-// ── TS: Token Status ──────────────────────────────────────────────────────────
+// ── TS: Token Status (retargeted to `.credentials.status`) ─────────────────────
 
 #[ test ]
-fn ts01_token_valid_text_v1()
+fn ts06_credentials_valid_json()
 {
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
 
-  let out = run_cs_with_env( &[ ".token.status" ], &[ ( "HOME", home ) ] );
+  let out = run_cs_with_env( &[ ".credentials.status", "format::json" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
-  assert!( text.starts_with( "valid" ), "far-future token must be valid, got:\n{text}" );
-  assert!( text.contains( "remaining" ), "v::1 must show remaining time, got:\n{text}" );
-}
-
-#[ test ]
-fn ts02_token_expiring_soon_text_v1()
-{
-  let dir = TempDir::new().unwrap();
-  let home = dir.path().to_str().unwrap();
-  write_credentials( dir.path(), "pro", "standard", near_future_ms() );
-
-  let out = run_cs_with_env( &[ ".token.status" ], &[ ( "HOME", home ) ] );
-  assert_exit( &out, 0 );
-  let text = stdout( &out );
-  assert!( text.starts_with( "expiring soon" ), "near-future token must be expiring_soon, got:\n{text}" );
-}
-
-#[ test ]
-fn ts03_token_expired_text_v1()
-{
-  let dir = TempDir::new().unwrap();
-  let home = dir.path().to_str().unwrap();
-  write_credentials( dir.path(), "pro", "standard", PAST_MS );
-
-  let out = run_cs_with_env( &[ ".token.status" ], &[ ( "HOME", home ) ] );
-  assert_exit( &out, 0 );
-  let text = stdout( &out );
-  assert!( text.starts_with( "expired" ), "past token must be expired, got:\n{text}" );
-}
-
-#[ test ]
-fn ts06_token_valid_json()
-{
-  let dir = TempDir::new().unwrap();
-  let home = dir.path().to_str().unwrap();
-  write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
-
-  let out = run_cs_with_env( &[ ".token.status", "format::json" ], &[ ( "HOME", home ) ] );
-  assert_exit( &out, 0 );
-  let text = stdout( &out );
-  assert!( text.contains( "\"status\":\"valid\"" ), "JSON must contain status valid, got:\n{text}" );
+  assert!( text.contains( "\"token\":\"valid\"" ), "JSON must contain token valid, got:\n{text}" );
   assert!( text.contains( "\"expires_in_secs\":" ), "JSON must contain expires_in_secs, got:\n{text}" );
 }
 
 #[ test ]
-fn ts07_token_expired_json()
+fn ts07_credentials_expired_json()
 {
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_credentials( dir.path(), "pro", "standard", PAST_MS );
 
-  let out = run_cs_with_env( &[ ".token.status", "format::json" ], &[ ( "HOME", home ) ] );
+  let out = run_cs_with_env( &[ ".credentials.status", "format::json" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
-  assert!( text.contains( "\"status\":\"expired\"" ), "JSON must contain status expired, got:\n{text}" );
+  assert!( text.contains( "\"token\":\"expired\"" ), "JSON must contain token expired, got:\n{text}" );
 }
 
 #[ test ]
-fn ts08_token_missing_creds_exits_2()
-{
-  let dir = TempDir::new().unwrap();
-  let home = dir.path().to_str().unwrap();
-  std::fs::create_dir_all( dir.path().join( ".claude" ) ).unwrap();
-
-  let out = run_cs_with_env( &[ ".token.status" ], &[ ( "HOME", home ) ] );
-  assert_exit( &out, 2 );
-}
-
-#[ test ]
-fn ts09_token_malformed_creds_exits_2()
+// `.credentials.status` degrades gracefully for a malformed-but-present credentials file:
+// `derive_token_state()` maps the Err from `status_with_threshold()` to `Token: unknown` at
+// exit 0 — only a missing FILE (checked separately via `.exists()`) exits 2. This is a real
+// behavior delta from the retired `.token.status`, which hard-failed at exit 2 here.
+fn ts09_credentials_malformed_creds_shows_unknown()
 {
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -131,29 +90,39 @@ fn ts09_token_malformed_creds_exits_2()
   std::fs::create_dir_all( &claude_dir ).unwrap();
   std::fs::write( claude_dir.join( ".credentials.json" ), "{\"foo\":\"bar\"}" ).unwrap();
 
-  let out = run_cs_with_env( &[ ".token.status" ], &[ ( "HOME", home ) ] );
-  assert_exit( &out, 2 );
+  let out = run_cs_with_env( &[ ".credentials.status" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "Token:   unknown" ),
+    "malformed-but-present credentials file must show Token: unknown, got:\n{text}",
+  );
+  assert!(
+    text.contains( "Expires: (unavailable)" ),
+    "malformed-but-present credentials file must show Expires: (unavailable), got:\n{text}",
+  );
 }
 
 #[ test ]
-fn ts10_token_threshold_0_always_valid()
+fn ts10_credentials_threshold_0_always_valid()
 {
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   // Token expiring in 30 minutes — normally "expiring soon" with default threshold
   write_credentials( dir.path(), "pro", "standard", near_future_ms() );
 
-  let out = run_cs_with_env( &[ ".token.status", "threshold::0" ], &[ ( "HOME", home ) ] );
+  let out = run_cs_with_env( &[ ".credentials.status", "threshold::0" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
-  // With threshold 0, any non-expired token is "expiring soon" (0 < remaining)
-  // Actually with threshold 0: remaining > 0 means valid, not expiring_soon
-  // Wait — status_with_threshold(0): if remaining > 0 and remaining > threshold(0) → valid
-  assert!( text.starts_with( "valid" ), "threshold::0 with non-expired token should be valid, got:\n{text}" );
+  // status_with_threshold(0): remaining > 0 and remaining > threshold(0) → Valid
+  assert!(
+    text.contains( "Token:   valid" ),
+    "threshold::0 with non-expired token should be valid, got:\n{text}",
+  );
 }
 
 #[ test ]
-fn ts11_token_threshold_86400_expiring_soon()
+fn ts11_credentials_threshold_86400_expiring_soon()
 {
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -165,21 +134,19 @@ fn ts11_token_threshold_86400_expiring_soon()
     + 2 * 3600 * 1000;
   write_credentials( dir.path(), "pro", "standard", two_hours_ms );
 
-  let out = run_cs_with_env( &[ ".token.status", "threshold::86400" ], &[ ( "HOME", home ) ] );
+  let out = run_cs_with_env( &[ ".credentials.status", "threshold::86400" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
-  assert!( text.starts_with( "expiring soon" ), "2h remaining with 86400s threshold should be expiring_soon, got:\n{text}" );
+  assert!(
+    text.contains( "Token:   expiring in" ),
+    "2h remaining with 86400s threshold should be expiring_soon, got:\n{text}",
+  );
 }
 
 #[ test ]
-fn ts12_token_home_unset_exits_2()
-{
-  let out = run_cs_without_home( &[ ".token.status" ] );
-  assert_exit( &out, 2 );
-}
-
-#[ test ]
-fn ts13_token_empty_creds_exits_2()
+// `.credentials.status` degrades gracefully for a malformed-but-present credentials file — see
+// ts09's comment. An empty file is likewise present-but-unparseable, not missing.
+fn ts13_credentials_empty_creds_shows_unknown()
 {
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -187,21 +154,26 @@ fn ts13_token_empty_creds_exits_2()
   std::fs::create_dir_all( &claude_dir ).unwrap();
   std::fs::write( claude_dir.join( ".credentials.json" ), "" ).unwrap();
 
-  let out = run_cs_with_env( &[ ".token.status" ], &[ ( "HOME", home ) ] );
-  assert_exit( &out, 2 );
+  let out = run_cs_with_env( &[ ".credentials.status" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "Token:   unknown" ),
+    "empty-but-present credentials file must show Token: unknown, got:\n{text}",
+  );
 }
 
 #[ test ]
-fn ts14_token_expiring_soon_json()
+fn ts14_credentials_expiring_soon_json()
 {
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_credentials( dir.path(), "pro", "standard", near_future_ms() );
 
-  let out = run_cs_with_env( &[ ".token.status", "format::json" ], &[ ( "HOME", home ) ] );
+  let out = run_cs_with_env( &[ ".credentials.status", "format::json" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
-  assert!( text.contains( "\"status\":\"expiring_soon\"" ), "JSON must show expiring_soon, got:\n{text}" );
+  assert!( text.contains( "\"token\":\"expiring in" ), "JSON must show expiring in Xm, got:\n{text}" );
 }
 
 // ── P: Paths ──────────────────────────────────────────────────────────────────
@@ -353,28 +325,9 @@ fn p10_paths_field_unknown_exits_1()
 }
 
 // ── it_trace_token_status_accepted ────────────────────────────────────────────
-
-/// EC-16 (023): `trace::1` accepted by `.token.status` — no "Unknown parameter" error.
-/// TSK-210 RED gate: fails before `trace::` is registered (exit 1 + Unknown parameter).
-#[ test ]
-fn it_trace_token_status_accepted()
-{
-  let dir  = TempDir::new().unwrap();
-  let home = dir.path().to_str().unwrap();
-  write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
-
-  let out = run_cs_with_env( &[ ".token.status", "trace::1" ], &[ ( "HOME", home ) ] );
-  let err = stderr( &out );
-  assert!(
-    !err.contains( "Unknown parameter" ),
-    "trace::1 must be accepted by .token.status, got stderr:\n{err}",
-  );
-  assert_exit( &out, 0 );
-  assert!(
-    err.contains( " · " ),
-    "trace::1 must emit trace lines to stderr for .token.status, got:\n{err}",
-  );
-}
+//
+// EC-16 removed along with `.token.status` — `it_trace_credentials_status_accepted` (EC-8) in
+// credentials_test_b.rs already covers this exact scenario for the surviving `.credentials.status`.
 
 // ── it_trace_paths_accepted ───────────────────────────────────────────────────
 

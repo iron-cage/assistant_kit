@@ -410,14 +410,14 @@ fn automation_ua1_json_format_on_all_commands()
   write_credentials( dir.path(), "max", "default", FAR_FUTURE_MS );
   write_account( dir.path(), "alice@acme.com", "max", "default", FAR_FUTURE_MS, true );
 
-  // (a) .token.status format::json
+  // (a) .paths format::json
   let out_a = run_cs_with_env(
-    &[ ".token.status", "format::json" ],
+    &[ ".paths", "format::json" ],
     &[ ( "HOME", home ) ],
   );
   assert_exit( &out_a, 0 );
   serde_json::from_str::< serde_json::Value >( &stdout( &out_a ) )
-    .expect( ".token.status format::json must produce valid JSON" );
+    .expect( ".paths format::json must produce valid JSON" );
 
   // (b) .accounts format::json
   let out_b = run_cs_with_env(
@@ -478,7 +478,7 @@ fn automation_ua3_exit_codes_are_deterministic()
   write_account( dir.path(), "alice@acme.com", "max", "default", FAR_FUTURE_MS, true );
 
   // (a) Valid credentials → exit 0
-  let out_a = run_cs_with_env( &[ ".token.status" ], &[ ( "HOME", home ) ] );
+  let out_a = run_cs_with_env( &[ ".credentials.status" ], &[ ( "HOME", home ) ] );
   assert_exit( &out_a, 0 );
 
   // (b) Account not found → exit 2
@@ -567,7 +567,7 @@ fn diagnostics_ua1_credentials_status_shows_fields()
   );
 }
 
-// UA-2: .token.status classifies token as Valid / ExpiringSoon / Expired with exact duration
+// UA-2: .credentials.status classifies token as Valid / ExpiringSoon / Expired with exact duration
 #[ test ]
 fn diagnostics_ua2_token_classification_valid_expiring_expired()
 {
@@ -576,7 +576,7 @@ fn diagnostics_ua2_token_classification_valid_expiring_expired()
     let dir = TempDir::new().unwrap();
     let home = dir.path().to_str().unwrap();
     write_credentials( dir.path(), "max", "default", FAR_FUTURE_MS );
-    let out = run_cs_with_env( &[ ".token.status" ], &[ ( "HOME", home ) ] );
+    let out = run_cs_with_env( &[ ".credentials.status" ], &[ ( "HOME", home ) ] );
     assert_exit( &out, 0 );
     let out_text = stdout( &out ).to_ascii_lowercase();
     assert!( out_text.contains( "valid" ), "FAR_FUTURE_MS must produce Valid classification: {out_text}" );
@@ -588,7 +588,7 @@ fn diagnostics_ua2_token_classification_valid_expiring_expired()
     let home = dir.path().to_str().unwrap();
     let expiring_ms = near_future_ms();
     write_credentials( dir.path(), "max", "default", expiring_ms );
-    let out = run_cs_with_env( &[ ".token.status" ], &[ ( "HOME", home ) ] );
+    let out = run_cs_with_env( &[ ".credentials.status" ], &[ ( "HOME", home ) ] );
     assert_exit( &out, 0 );
     let out_text = stdout( &out ).to_ascii_lowercase();
     // Should be either ExpiringSoon or Valid depending on exact timing; accept both
@@ -603,7 +603,7 @@ fn diagnostics_ua2_token_classification_valid_expiring_expired()
     let dir = TempDir::new().unwrap();
     let home = dir.path().to_str().unwrap();
     write_credentials( dir.path(), "max", "default", PAST_MS );
-    let out = run_cs_with_env( &[ ".token.status" ], &[ ( "HOME", home ) ] );
+    let out = run_cs_with_env( &[ ".credentials.status" ], &[ ( "HOME", home ) ] );
     assert_exit( &out, 0 );
     let out_text = stdout( &out ).to_ascii_lowercase();
     assert!( out_text.contains( "expired" ), "PAST_MS must produce Expired classification: {out_text}" );

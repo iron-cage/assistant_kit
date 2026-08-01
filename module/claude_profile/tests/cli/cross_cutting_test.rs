@@ -11,9 +11,9 @@
 //! | x01 | `x01_accounts_idempotent` | .accounts called twice → identical output | P |
 //! | x02 | `x02_paths_idempotent` | paths called twice → identical output | P |
 //! | x03 | `x03_save_twice_same_result` | save same name twice → same file | P |
-//! | x04 | `x04_token_status_idempotent` | token.status called twice → identical output | P |
+//! | x04 | `x04_credentials_status_idempotent` | credentials.status called twice → identical output | P |
 //! | x05 | `x05_param_order_independence_list` | params reordered → same output | P |
-//! | x06 | `x06_param_order_independence_token` | params reordered → same output | P |
+//! | x06 | `x06_param_order_independence_credentials` | params reordered → same output | P |
 //! | x07 | `x07_read_commands_accept_format` | commands accepting `format::` | P |
 //! | x08 | `x08_mutation_commands_accept_name_and_dry` | mutation commands accept `name::` and `dry::` | P |
 //! | x09 | `x09_every_command_has_exit_0_path` | every command has at least one success path | P |
@@ -39,7 +39,7 @@
 //! | e09 | `e09_empty_name_value_exits_1` | name:: with empty value → exit 1 | N |
 //! | e10 | `e10_accounts_home_unset_exits_0` | HOME unset + .accounts → exit 0 advisory | P |
 //! | e11 | `e11_fmt_alias_accounts_json` | fmt::json → .accounts outputs JSON array | P |
-//! | e12 | `e12_fmt_alias_token_status_json` | fmt::json → .token.status outputs JSON object | P |
+//! | e12 | `e12_fmt_alias_credentials_status_json` | fmt::json → .credentials.status outputs JSON object | P |
 //! | e13 | `e13_verbosity_out_of_range_on_non_verbosity_cmd` | verbosity::3 on .credentials.status → "Unknown parameter" not "out of range" | N |
 
 use crate::cli_runner::{
@@ -97,15 +97,15 @@ fn x03_save_twice_same_result()
 }
 
 #[ test ]
-fn x04_token_status_idempotent()
+fn x04_credentials_status_idempotent()
 {
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
 
-  let out1 = run_cs_with_env( &[ ".token.status" ], &[ ( "HOME", home ) ] );
-  let out2 = run_cs_with_env( &[ ".token.status" ], &[ ( "HOME", home ) ] );
-  assert_eq!( stdout( &out1 ), stdout( &out2 ), "token status must be idempotent" );
+  let out1 = run_cs_with_env( &[ ".credentials.status" ], &[ ( "HOME", home ) ] );
+  let out2 = run_cs_with_env( &[ ".credentials.status" ], &[ ( "HOME", home ) ] );
+  assert_eq!( stdout( &out1 ), stdout( &out2 ), "credentials status must be idempotent" );
 }
 
 #[ test ]
@@ -121,14 +121,14 @@ fn x05_param_order_independence_list()
 }
 
 #[ test ]
-fn x06_param_order_independence_token()
+fn x06_param_order_independence_credentials()
 {
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
 
-  let a = run_cs_with_env( &[ ".token.status", "threshold::1800", "format::text" ], &[ ( "HOME", home ) ] );
-  let b = run_cs_with_env( &[ ".token.status", "format::text", "threshold::1800" ], &[ ( "HOME", home ) ] );
+  let a = run_cs_with_env( &[ ".credentials.status", "threshold::1800", "format::text" ], &[ ( "HOME", home ) ] );
+  let b = run_cs_with_env( &[ ".credentials.status", "format::text", "threshold::1800" ], &[ ( "HOME", home ) ] );
   assert_eq!( stdout( &a ), stdout( &b ), "param order must not matter" );
 }
 
@@ -143,11 +143,9 @@ fn x07_read_commands_accept_format()
   //   excluded here; their happy paths are covered by `x09_every_command_has_exit_0_path`.
   //   `.usage` excluded — requires stats-cache.json fixture (covered by usage_test.rs).
   //   `.account.limits` excluded — requires live HTTP call (covered by lim_it tests).
-  for cmd in &[ ".token.status", ".paths" ]
-  {
-    let out = run_cs_with_env( &[ cmd, "format::text" ], &[ ( "HOME", home ) ] );
-    assert_exit( &out, 0 );
-  }
+  //   `.token.status` removed along with the command itself.
+  let out = run_cs_with_env( &[ ".paths", "format::text" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
 }
 
 #[ test ]
@@ -185,7 +183,6 @@ fn x09_every_command_has_exit_0_path()
     vec![ ".account.save",   "name::target@example.com", "dry::1" ],
     vec![ ".account.use", "name::target@example.com", "dry::1" ],
     vec![ ".account.delete", "name::target@example.com", "dry::1" ],
-    vec![ ".token.status" ],
     vec![ ".paths" ],
     vec![ ".credentials.status" ],
   ];
@@ -250,14 +247,14 @@ fn e01_home_valid_normal_operation()
   let home = dir.path().to_str().unwrap();
   write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
 
-  let out = run_cs_with_env( &[ ".token.status" ], &[ ( "HOME", home ) ] );
+  let out = run_cs_with_env( &[ ".credentials.status" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
 }
 
 #[ test ]
 fn e02_home_unset_all_commands_exit_2()
 {
-  for cmd in &[ ".token.status", ".paths", ".credentials.status" ]
+  for cmd in &[ ".paths", ".credentials.status" ]
   {
     let out = run_cs_without_home( &[ cmd ] );
     assert_exit( &out, 2 );
@@ -344,7 +341,7 @@ fn e08_format_csv_exits_1()
   let home = dir.path().to_str().unwrap();
   write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
 
-  let out = run_cs_with_env( &[ ".token.status", "format::csv" ], &[ ( "HOME", home ) ] );
+  let out = run_cs_with_env( &[ ".credentials.status", "format::csv" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 1 );
 }
 
@@ -421,14 +418,14 @@ fn e11_fmt_alias_accounts_json()
 
 #[ doc = "bug_reproducer(BUG-261)" ]
 #[ test ]
-fn e12_fmt_alias_token_status_json()
+fn e12_fmt_alias_credentials_status_json()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
 
   // Must output JSON object, not "Unknown parameter 'fmt'"
-  let out = run_cs_with_env( &[ ".token.status", "fmt::json" ], &[ ( "HOME", home ) ] );
+  let out = run_cs_with_env( &[ ".credentials.status", "fmt::json" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!(

@@ -2,7 +2,7 @@
 
 - **ID:** F01
 - **Trigger:** `format::text` (default — used when `format::` is omitted)
-- **Scope:** All format-capable commands: `.accounts`, `.token.status`, `.paths`, `.usage`, `.credentials.status`, `.account.limits`
+- **Scope:** All format-capable commands: `.accounts`, `.paths`, `.usage`, `.credentials.status`, `.account.limits`
 
 ### Structure
 
@@ -46,9 +46,6 @@ clp .usage
 # Valid: 2 / 2   session: claude-sonnet-5  effort: low
 # Next (renew): bob@example.com  in 6d 14h +7d  model: sonnet
 
-clp .token.status
-# valid — 7h24m remaining
-
 clp .paths
 # Claude JSON:     /home/user/.claude.json
 # Credentials:     /home/user/.claude/.credentials.json
@@ -61,8 +58,7 @@ clp .paths
 | # | Command | Role |
 |---|---------|------|
 | 1 | [`.accounts`](../command/001_account.md#command-3-accounts) | Default — account list labeled output |
-| 2 | [`.token.status`](../command/005_token.md#command-7-tokenstatus) | Default — token classification labeled output |
-| 3 | [`.paths`](../command/004_paths.md#command-8-paths) | Default — path resolution labeled output |
+| 2 | [`.paths`](../command/004_paths.md#command-8-paths) | Default — path resolution labeled output |
 | 4 | [`.usage`](../command/006_usage.md#command-9-usage) | Default — multi-account quota table |
 | 5 | [`.credentials.status`](../command/002_credentials.md#command-10-credentialsstatus) | Default — credential metadata labeled output |
 | 6 | [`.account.limits`](../command/001_account.md#command-11-accountlimits) | Default — quota limits labeled output |

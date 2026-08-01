@@ -29,13 +29,12 @@ Integration and edge case coverage for the Output Control parameter group (`form
 
 - **Given:** Active credentials exist at `~/.claude/.credentials.json`.
 - **When:**
-  1. `clp .token.status format::json`
-  2. `clp .paths format::json`
-  3. `clp .usage format::json`
-  4. `clp .account.limits format::json`
-  5. `clp .accounts format::json`
-  6. `clp .credentials.status format::json`
-  7. `clp .account.inspect format::json`
+  1. `clp .paths format::json`
+  2. `clp .usage format::json`
+  3. `clp .account.limits format::json`
+  4. `clp .accounts format::json`
+  5. `clp .credentials.status format::json`
+  6. `clp .account.inspect format::json`
 - **Then:** Each produces a valid JSON object or array with all fields present. All exit 0.
 - **Exit:** 0
 - **Source:** [parameter_groups.md — Output Control](../../../../docs/cli/param_group/001_output_control.md)
@@ -46,7 +45,7 @@ Integration and edge case coverage for the Output Control parameter group (`form
 
 - **Given:** Active credentials exist at `~/.claude/.credentials.json`.
 - **When:**
-  1. `clp .token.status`
+  1. `clp .credentials.status`
   2. `clp .paths`
   3. `clp .usage`
 - **Then:** Each produces labeled text output. All exit 0.
@@ -93,7 +92,7 @@ Integration and edge case coverage for the Output Control parameter group (`form
 - **Given:** At least one saved account exists. Active credentials present.
 - **When:**
   1. `clp .accounts format::table`
-  2. `clp .token.status format::table`
-- **Then:** `.accounts format::table` exits 0 and produces a titled, aligned table with columns Account, Sub, Tier, Expires, Email (with flag column). `.token.status format::table` exits 1 with an error indicating table is not supported.
-- **Exit:** 0 (`.accounts`), 1 (`.token.status`)
+  2. `clp .credentials.status format::table`
+- **Then:** `.accounts format::table` exits 0 and produces a titled, aligned table with columns Account, Sub, Tier, Expires, Email (with flag column). `.credentials.status format::table` exits 1 with an error indicating table is not supported.
+- **Exit:** 0 (`.accounts`), 1 (`.credentials.status`)
 - **Source:** [commands.md — .accounts](../../../../docs/cli/command/001_account.md#command-3-accounts), [004_parameter_interactions.md — Interaction 3](../../../../docs/cli/004_parameter_interactions.md#interaction-3-formattable-ignores-field-presence-params)

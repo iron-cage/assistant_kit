@@ -23,7 +23,7 @@ Edge case tests for the `trace::` parameter. Tests validate boolean enforcement,
 | EC-13 | `.account.delete trace::1 dry::1` — accepted; timestamped diagnostic line emitted for store read | Acceptance: `.account.delete` |
 | EC-14 | `.account.relogin trace::1 dry::1` — accepted; timestamped diagnostic line emitted | Acceptance: `.account.relogin` |
 | EC-15 | DEPRECATED — `.account.rotate` removed; trace acceptance now covered by `.usage trace::1` (EC-1) | Acceptance: removed |
-| EC-16 | `.token.status trace::1` — accepted; timestamped diagnostic line emitted for credential read | Acceptance: `.token.status` |
+| EC-16 | REMOVED — `.token.status` removed; trace acceptance now covered by `.credentials.status trace::1` (EC-8) | Acceptance: removed |
 | EC-17 | `.paths trace::1` — accepted; timestamped diagnostic line emitted for path resolution | Acceptance: `.paths` |
 
 ## Test Coverage Summary
@@ -42,7 +42,7 @@ Edge case tests for the `trace::` parameter. Tests validate boolean enforcement,
 - Acceptance\: `.account.delete`: 1 test (EC-13)
 - Acceptance\: `.account.relogin`: 1 test (EC-14)
 - ~~Acceptance\: `.account.rotate`~~: DEPRECATED (EC-15 — command removed)
-- Acceptance\: `.token.status`: 1 test (EC-16)
+- ~~Acceptance\: `.token.status`~~: REMOVED (EC-16 — command removed)
 - Acceptance\: `.paths`: 1 test (EC-17)
 
 **Total:** 17 edge cases
@@ -207,14 +207,9 @@ Edge case tests for the `trace::` parameter. Tests validate boolean enforcement,
 
 ---
 
-### EC-16: `.token.status trace::1` — accepted; trace emitted for credential read
+### EC-16: REMOVED — `.token.status` removed
 
-- **Given:** Valid credentials file present.
-- **When:** `clp .token.status trace::1`
-- **Then:** Exits 0; stderr contains a timestamped diagnostic line for credential file read; no "Unknown parameter" error.
-- **Exit:** 0
-- **Source fn:** `it_trace_token_status_accepted` (in `tests/cli/token_paths_test.rs`)
-- **Source:** [params.md#parameter--23-trace](../../../../docs/cli/param/023_trace.md)
+> **REMOVED** — `.token.status` has been removed; its OAuth token expiry classification now lives under `.credentials.status`. Trace acceptance for credential reads is covered by EC-8 (`.credentials.status trace::1`). The corresponding test `it_trace_token_status_accepted` should be removed during implementation.
 
 ---
 

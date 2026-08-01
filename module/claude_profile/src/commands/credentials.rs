@@ -125,8 +125,14 @@ pub fn credentials_status_routine( cmd : VerifiedCommand, _ctx : ExecutionContex
   let show_org_uuid     = crate::output::parse_int_flag( &cmd, "org_uuid",     0 )? != 0;
   let show_org_name     = crate::output::parse_int_flag( &cmd, "org_name",     0 )? != 0;
 
+  let threshold_secs = match cmd.arguments.get( "threshold" )
+  {
+    Some( Value::Integer( n ) ) => u64::try_from( *n ).unwrap_or( crate::token::WARNING_THRESHOLD_SECS ),
+    _ => crate::token::WARNING_THRESHOLD_SECS,
+  };
+
   let ( tok, exp, exp_secs ) = derive_token_state(
-    &crate::token::status_with_threshold( crate::token::WARNING_THRESHOLD_SECS ),
+    &crate::token::status_with_threshold( threshold_secs ),
   );
 
   let ( sub, tier, email, display, role, billing ) = read_live_cred_meta( &paths );

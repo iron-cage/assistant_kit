@@ -11,7 +11,7 @@ Acceptance Criterion from
 | ID | Test Name | Acceptance Criterion |
 |----|-----------|---------------------|
 | UA-1 | `.credentials.status` shows subscription, tier, token validity, and expiry | AC-1 |
-| UA-2 | `.token.status` classifies token as Valid / ExpiringSoon / Expired with duration | AC-2 |
+| UA-2 | `.credentials.status` classifies token as Valid / ExpiringSoon / Expired with duration | AC-2 |
 | UA-3 | `.paths` resolves all canonical `~/.claude/` file paths | AC-3 |
 | UA-4 | `.account.inspect trace::1` shows live endpoint responses and membership selection | AC-4 |
 
@@ -30,21 +30,21 @@ Acceptance Criterion from
 
 - **Given:** `~/.claude/.credentials.json` exists with valid credentials. Credential store may be empty (no named accounts).
 - **When:** `clp .credentials.status`
-- **Then:** Exit 0. Output includes: subscription type (e.g., `max`), tier (e.g., `default_claude_max_20x`), token status (`valid` / `expiring_soon` / `expired`), and expiry duration (e.g., `~4h`). Succeeds without account store setup — pure read from `~/.claude/.credentials.json`.
+- **Then:** Exit 0. Output includes: subscription type (e.g., `max`), tier (e.g., `default_claude_max_20x`), token status (`valid` / `expiring in Xm` / `expired`), and expiry duration (e.g., `~4h`). Succeeds without account store setup — pure read from `~/.claude/.credentials.json`.
 - **Exit:** 0
 - **Source:** [005_credential_diagnostics.md — AC-1](../../../../docs/cli/user_story/005_credential_diagnostics.md)
 
 ---
 
-### UA-2: `.token.status` classifies token as Valid / ExpiringSoon / Expired with exact duration
+### UA-2: `.credentials.status` classifies token as Valid / ExpiringSoon / Expired with exact duration
 
 - **Given (valid):** `~/.claude/.credentials.json` with `expiresAt` = now + 2h.
 - **Given (expiring):** `~/.claude/.credentials.json` with `expiresAt` = now + 20min (within default threshold).
 - **Given (expired):** `~/.claude/.credentials.json` with `expiresAt` = now - 1h.
-- **When:** `clp .token.status` for each case
-- **Then (valid):** Exit 0. Status = `Valid`. Duration shown (e.g., `1h 59m`).
-- **Then (expiring):** Exit 0. Status = `ExpiringSoon`. Duration shown.
-- **Then (expired):** Exit 0. Status = `Expired`. Duration shown as negative or elapsed.
+- **When:** `clp .credentials.status` for each case
+- **Then (valid):** Exit 0. `Token:` line shows `valid`. `Expires:` line shows remaining duration (e.g., `in 1h 59m`).
+- **Then (expiring):** Exit 0. `Token:` line shows `expiring in Xm`. `Expires:` line shows remaining duration.
+- **Then (expired):** Exit 0. `Token:` line shows `expired`. `Expires:` line shows `expired`.
 - **Exit:** 0
 - **Source:** [005_credential_diagnostics.md — AC-2](../../../../docs/cli/user_story/005_credential_diagnostics.md)
 

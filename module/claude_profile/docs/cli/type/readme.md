@@ -8,8 +8,9 @@ Domain types used by `clp` CLI parameters and commands.
 | [002_output_format.md](002_output_format.md) | `OutputFormat` enum: text/json/table serialization selector |
 | [003_warning_threshold.md](003_warning_threshold.md) | `WarningThreshold` newtype: token expiry classification boundary |
 | [004_account_selector.md](004_account_selector.md) | `AccountSelector`: pre-resolution account identification forms |
+| [005_account_backend.md](005_account_backend.md) | `AccountBackend` enum: `anthropic`/`redirect` backend selector |
 
-**Total:** 4 types
+**Total:** 5 types
 
 ### Overview Table
 
@@ -19,6 +20,7 @@ Domain types used by `clp` CLI parameters and commands.
 | 2 | `OutputFormat` | `enum` | [`format::`](../param/002_format.md) | 6 cmds |
 | 3 | `WarningThreshold` | `u64` (newtype) | [`threshold::`](../param/003_threshold.md) | 1 cmd |
 | 4 | `AccountSelector` | logical (adapter-layer) | [`name::`](../param/001_name.md) | 4 cmds |
+| 5 | `AccountBackend` | `enum` | [`backend::`](../param/069_backend.md) | 1 cmd |
 
 ### See Also
 

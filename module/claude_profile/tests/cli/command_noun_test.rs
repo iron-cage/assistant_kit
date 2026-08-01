@@ -1,7 +1,7 @@
 //! Integration tests: CLI command-noun contracts.
 //!
 //! Verifies lifecycle correctness, JSON output schema fidelity, and error code
-//! contracts for the three CLI domain nouns: `account`, `token`, `credentials`.
+//! contracts for the CLI domain nouns: `account`, `credentials`.
 //!
 //! ## Test Matrix
 //!
@@ -13,13 +13,7 @@
 //! | NC-2 | `account_nc2_json_output_schema_valid` | `.accounts format::json` fields present | P |
 //! | NC-3 | `account_nc3_error_codes_match_documented` | exit 1/2 per trigger | N |
 //!
-//! ### `noun::token` (NC-1..3)
-//!
-//! | ID | Test Function | Condition | P/N |
-//! |----|---------------|-----------|-----|
-//! | NC-1 | `token_nc1_status_is_stateless` | no files written after .token.status | P |
-//! | NC-2 | `token_nc2_json_output_schema_valid` | `.token.status format::json` fields present | P |
-//! | NC-3 | `token_nc3_missing_credentials_exits_2` | absent .credentials.json → exit 2 | N |
+//! ### `noun::token` — removed with `.token.status`; superseded by `noun::credentials` below
 //!
 //! ### `noun::credentials` (NC-1..3)
 //!
@@ -32,7 +26,7 @@
 use tempfile::TempDir;
 use super::cli_runner::
 {
-  run_cs_with_env, assert_exit, stdout, stderr,
+  run_cs_with_env, assert_exit, stdout,
   write_credentials, write_account,
   FAR_FUTURE_MS,
 };
@@ -157,74 +151,11 @@ fn account_nc3_error_codes_match_documented()
 }
 
 // ── noun::token ───────────────────────────────────────────────────────────────
-
-// NC-1: Token status is stateless — no persistent state written
-#[ test ]
-fn token_nc1_status_is_stateless()
-{
-  let dir = TempDir::new().unwrap();
-  let home = dir.path().to_str().unwrap();
-  write_credentials( dir.path(), "max", "default", FAR_FUTURE_MS );
-
-  let creds_path = dir.path().join( ".claude" ).join( ".credentials.json" );
-  let mtime_before = mtime_ms( &creds_path );
-
-  let out = run_cs_with_env( &[ ".token.status" ], &[ ( "HOME", home ) ] );
-  assert_exit( &out, 0 );
-
-  assert_eq!(
-    mtime_before, mtime_ms( &creds_path ),
-    ".token.status must not modify ~/.claude/.credentials.json",
-  );
-
-  // No new files in credential store
-  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
-  let file_count = std::fs::read_dir( &store ).map_or( 0, core::iter::Iterator::count );
-  assert_eq!( file_count, 0, ".token.status must not create files in credential store" );
-}
-
-// NC-2: `.token.status format::json` output matches documented schema
-#[ test ]
-fn token_nc2_json_output_schema_valid()
-{
-  let dir = TempDir::new().unwrap();
-  let home = dir.path().to_str().unwrap();
-  write_credentials( dir.path(), "max", "default", FAR_FUTURE_MS );
-
-  let out = run_cs_with_env(
-    &[ ".token.status", "format::json" ],
-    &[ ( "HOME", home ) ],
-  );
-  assert_exit( &out, 0 );
-
-  let text = stdout( &out );
-  let parsed : serde_json::Value = serde_json::from_str( &text )
-    .expect( "`.token.status format::json` must produce valid JSON" );
-
-  let obj = parsed.as_object()
-    .expect( "`.token.status format::json` must produce a JSON object" );
-  assert!( obj.contains_key( "status" ), "output must have 'status' field" );
-  assert!( obj.contains_key( "expires_in_secs" ), "output must have 'expires_in_secs' field" );
-
-  let status_val = obj[ "status" ].as_str().expect( "status field must be a string" );
-  assert!(
-    [ "valid", "expiring_soon", "expired" ].contains( &status_val ),
-    "status must be one of: valid, expiring_soon, expired; got: {status_val}",
-  );
-}
-
-// NC-3: Missing credentials file exits 2
-#[ test ]
-fn token_nc3_missing_credentials_exits_2()
-{
-  let dir = TempDir::new().unwrap();
-  let home = dir.path().to_str().unwrap();
-  // No credentials file
-  let out = run_cs_with_env( &[ ".token.status" ], &[ ( "HOME", home ) ] );
-  assert_exit( &out, 2 );
-  let err_text = stderr( &out );
-  assert!( !err_text.is_empty(), "error message must be non-empty on missing credentials" );
-}
+//
+// Removed with `.token.status` — the noun::credentials block below already covers
+// the identical stateless/json-schema/missing-credentials scenarios for the
+// surviving `.credentials.status` command. See tests/docs/cli/command_noun/02_token.md
+// for the full N/A rationale per case.
 
 // ── noun::credentials ─────────────────────────────────────────────────────────
 
