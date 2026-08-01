@@ -6,7 +6,7 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 
 - **Purpose**: Document FT-N test cases for each feature behavioral requirement.
 - **Responsibility**: Index of per-feature test case planning files covering AC coverage.
-- **In Scope**: All 50 specs enumerated in the Responsibility Table below — the collection-level `000_doc_structure.md` (DT cases) plus per-feature FT specs for Features 001–040 and 061–069 (Feature 023 deprecated, absorbed into Feature 020). The Responsibility Table is the authoritative enumeration of covered elements; the Coverage Summary table below cross-references each entry to its source feature doc and case range.
+- **In Scope**: All 51 specs enumerated in the Responsibility Table below — the collection-level `000_doc_structure.md` (DT cases) plus per-feature FT specs for Features 001–040, 061–069, and 072 (Feature 023 deprecated, absorbed into Feature 020; Features 070–071 do not yet have FT specs — pending). The Responsibility Table is the authoritative enumeration of covered elements; the Coverage Summary table below cross-references each entry to its source feature doc and case range.
 - **Out of Scope**: CLI command tests (→ `cli/command/`), parameter edge cases (→ `cli/param/`), automated test implementations (→ `tests/cli/`).
 
 ### Responsibility Table
@@ -63,6 +63,7 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | 067_trace_timestamps.md | FT cases for Feature 067 — Trace Timestamp Prefix |
 | 068_models_list_command.md | FT cases for Feature 068 — Models List Command |
 | 069_model_select_command.md | FT cases for Feature 069 — Model Select Command |
+| 072_inference_provider_selection.md | FT cases for Feature 072 — Inference Provider Selection |
 
 ### Coverage Summary
 
@@ -118,8 +119,9 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | 067_trace_timestamps | [067_trace_timestamps.md](067_trace_timestamps.md) | FT-01 … FT-07 | ✅ |
 | 068_models_list_command | [068_models_list_command.md](068_models_list_command.md) | FT-01 … FT-10 | 🔲 |
 | 069_model_select_command | [069_model_select_command.md](069_model_select_command.md) | FT-01 … FT-12 | 🔲 |
+| 072_inference_provider_selection | [072_inference_provider_selection.md](072_inference_provider_selection.md) | FT-01 … FT-16 | 🔲 |
 
-**Total:** 50 specs — 49 per-feature FT specs (behavioral) + 1 collection-level DT spec (doc structure compliance).
+**Total:** 51 specs — 50 per-feature FT specs (behavioral) + 1 collection-level DT spec (doc structure compliance). Features 070–071 have `docs/feature/` instances but no FT spec yet (pre-existing gap, not introduced by Feature 072).
 
 ### Cross-Reference Depth
 

@@ -88,7 +88,7 @@
 | File | Relationship |
 |------|--------------|
 | [schema/002_account_json.md](../schema/002_account_json.md) | `inference_provider` field in `{name}.json` |
-| [../../claude_core/docs/api/002_toml_io.md](../../../../claude_core/docs/api/002_toml_io.md) | `~/.clr/config.toml`'s tiered flat-TOML format storing the `provider` key |
+| [../../claude_core/docs/api/002_toml_io.md](../../../claude_core/docs/api/002_toml_io.md) | `~/.clr/config.toml`'s tiered flat-TOML format storing the `provider` key |
 
 ### Sources
 

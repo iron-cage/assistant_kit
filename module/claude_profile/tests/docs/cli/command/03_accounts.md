@@ -72,6 +72,8 @@ Integration test planning for the `.accounts` command. See [command/namespace.md
 | IT-64 | `.accounts.help` is absent from `.help`'s own command listing | Grouped Help — Dispatch Scope |
 | IT-65 | `.accounts.help` literal-token match is case-sensitive | Grouped Help — Dispatch Scope |
 | IT-66 | (N/A) empty-`PARAMS` width fallback is structurally unreachable | Grouped Help — Defensive Path |
+| IT-67 | `Provider` column present by default; shows `anthropic` when `inference_provider` absent | Feature 072 — Provider Column |
+| IT-68 | `cols::-inference_provider` hides the `Provider` column | Feature 072 — Provider Column |
 
 ### Test Coverage Summary
 
@@ -111,8 +113,9 @@ Integration test planning for the `.accounts` command. See [command/namespace.md
 - Grouped Help — Argv Interaction: 3 tests (IT-61, IT-62, IT-63)
 - Grouped Help — Dispatch Scope: 2 tests (IT-64, IT-65)
 - Grouped Help — Defensive Path: 1 test (IT-66, N/A)
+- Feature 072 — Provider Column: 2 tests (IT-67, IT-68)
 
-**Total:** 66 integration tests (65 active + 1 N/A)
+**Total:** 68 integration tests (67 active + 1 N/A)
 
 ---
 
@@ -782,3 +785,31 @@ Test cases below cover the grouped, `::`-aligned `.accounts.help` rendering sche
 - **Then:** N/A — no observable CLI behavior exercises this branch.
 - **Exit:** N/A
 - **Source:** `src/commands/accounts_help.rs` (`const PARAMS : [ ParamSpec ; 30 ]`)
+
+---
+
+## Inference Provider Column (Feature 072)
+
+Test cases below cover the `inference_provider` default identity column added to `.accounts` — a `cols::`-controlled read-only display column, not a mutation parameter (see [feature/072_inference_provider_selection.md § Why `inference_provider` is a default-shown identity column but has no dedicated toggle parameter](../../../../docs/feature/072_inference_provider_selection.md)).
+
+---
+
+### IT-67: `Provider` column present by default; shows `anthropic` when `inference_provider` absent
+
+- **Given:** `alice@acme.com` with `alice.json` containing `"inference_provider": "kimi"`. `bob@acme.com` with `bob.json` containing no `inference_provider` key.
+- **When:** `clp .accounts`
+- **Then:** `alice@acme.com` block contains `Provider: kimi`. `bob@acme.com` block contains `Provider: anthropic`. `Provider` column is in the default identity set — no `cols::` modifier required.
+- **Exit:** 0
+- **Source fn:** *(planned — not yet implemented)*
+- **Source:** [feature/072_inference_provider_selection.md AC-04, AC-05](../../../../docs/feature/072_inference_provider_selection.md)
+
+---
+
+### IT-68: `cols::-inference_provider` hides the `Provider` column
+
+- **Given:** `alice@acme.com` with `alice.json` containing `"inference_provider": "kimi"`.
+- **When:** `clp .accounts cols::-inference_provider`
+- **Then:** Stdout does NOT contain `Provider:` line in any account block.
+- **Exit:** 0
+- **Source fn:** *(planned — not yet implemented)*
+- **Source:** [feature/072_inference_provider_selection.md AC-06](../../../../docs/feature/072_inference_provider_selection.md)
