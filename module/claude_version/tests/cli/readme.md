@@ -12,10 +12,9 @@ Module files for CLI tests, organised by domain. All files are included by `test
 | `framework_test.rs` | Pipeline smoke tests: `.help`, unknown command, exit codes |
 | `read_help_test.rs` | Integration tests for `.help` (E1) |
 | `read_status_test.rs` | Integration tests for `.status` and format edge cases (E2) |
-| `read_version_test.rs` | Integration tests for `.version.show` and `.version.list` (E3, E4) |
+| `read_version_test.rs` | Integration tests for `.version.show` and `.version.list` (E3, E4, E15) |
 | `read_processes_test.rs` | Integration tests for `.processes` (E6) |
 | `read_settings_test.rs` | Integration tests for `.settings.show` and `.settings.get` (E8, E9) |
-| `read_version_history_test.rs` | Integration tests for `.version.history` (E15) |
 | `mutation_version_install_test.rs` | Integration tests for `.version.install` (E5) |
 | `mutation_processes_kill_test.rs` | Integration tests for `.processes.kill` (E7) |
 | `mutation_version_guard_test.rs` | Integration tests for `.version.guard` (E14) |
@@ -46,3 +45,5 @@ Module files for CLI tests, organised by domain. All files are included by `test
 | `runtime_files_test.rs` | Integration tests for `.runtime_files` (IT-1..IT-9, FT-1..FT-5) |
 | `paths_test.rs` | Integration tests for `.paths` (IT-1..IT-11, FT-1..FT-7) |
 | `path_key_test.rs` | TC- type compliance tests for `PathKey` (TC-1..TC-9) |
+| `list_mode_test.rs` | TC- type compliance tests for `ListMode` (TC-1..TC-6) |
+| `mode_param_test.rs` | EC- edge case tests for the `mode::` parameter (EC-1..EC-7) |

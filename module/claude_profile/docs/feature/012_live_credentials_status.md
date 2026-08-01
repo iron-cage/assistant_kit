@@ -34,6 +34,10 @@ Each output line is independently controlled by a boolean param. All default to 
 | `billing::` | `0` | `Billing: {billingType_or_N/A}` (opt-in, from `~/.claude.json` oauthAccount) |
 | `model::` | `0` | `Model:   {model_or_N/A}` (opt-in, from `~/.claude/settings.json`) |
 
+**Threshold Parameter:**
+
+`threshold::` (default `3600` seconds) controls the Valid/ExpiringSoon classification boundary for the `Token:` line — delegates to `token::status_with_threshold()` (FR-11, see [006_token_status.md](006_token_status.md)). Tokens expiring within `threshold::` seconds are classified as `expiring in Xm` instead of `valid`.
+
 **`format::json`:** Returns all 12 fields regardless of field-presence params:
 `{"subscription":"…","tier":"…","token":"…","expires_in_secs":N,"email":"…","account":"…","file":"…","saved":N,"display_name":"…","role":"…","billing":"…","model":"…"}`.
 
@@ -45,6 +49,8 @@ Each output line is independently controlled by a boolean param. All default to 
 
 **Must NOT call:** `account::list()` or scan the credential store (reading the active marker is permitted for the `account::` line only).
 
+**Redirect-backend accounts:** `Token:` shows `static` (see [006_token_status.md](006_token_status.md)) rather than `valid`/`expiring in Xm`/`expired`; `Expires:` shows `N/A` since `expiresAt` is genuinely absent from a redirect account's credentials file. No separate `backend` field is added to this command's output — the `Token: static` classification is itself the backend signal. See [071_redirect_backend_accounts.md](071_redirect_backend_accounts.md).
+
 ### Acceptance Criteria
 
 - **AC-01**: `.credentials.status` exits 0 on a machine with only `~/.claude/.credentials.json` (no credential store).
@@ -54,6 +60,8 @@ Each output line is independently controlled by a boolean param. All default to 
 - **AC-05**: Missing or empty email and absent per-machine active marker → shown as `N/A`.
 - **AC-06**: `sub::0 tier::0 expires::0 email::0 account::0` → only Token line shown.
 - **AC-07**: `file::1 saved::1` → File and Saved lines appended after default-on fields.
+- **AC-08**: `threshold::1800` changes the Valid/ExpiringSoon classification boundary on the Token line to 30 minutes.
+- **AC-09**: `.credentials.status name::kimi` against a `backend: redirect` account shows `Token: static` and `Expires: N/A`; no separate `backend` field appears in the output (the `Token: static` classification is the backend signal).
 
 ### Commands
 
@@ -65,8 +73,10 @@ Each output line is independently controlled by a boolean param. All default to 
 
 | File | Relationship |
 |------|--------------|
+| [006_token_status.md](006_token_status.md) | Token expiry classification algorithm powering the Token/Expires lines and `threshold::` |
 | [011_account_status_by_name.md](011_account_status_by_name.md) | Related: account-store-aware status command |
 | [014_rich_account_metadata.md](014_rich_account_metadata.md) | Extends this command with opt-in rich metadata fields |
+| [071_redirect_backend_accounts.md](071_redirect_backend_accounts.md) | Redirect-backend accounts show `Token: static`/`Expires: N/A`; no separate `backend` field added |
 
 ### Referenced Commands
 

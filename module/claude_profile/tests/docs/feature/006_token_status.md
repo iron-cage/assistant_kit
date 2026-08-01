@@ -24,7 +24,7 @@ Feature behavioral requirement test cases for `docs/feature/006_token_status.md`
 | FT-01 | Far-future token → Valid; past token → Expired | AC-01 | Classification |
 | FT-02 | Token within 3600s threshold → ExpiringSoon | AC-02 | Classification |
 | FT-03 | Custom `threshold::1800` changes boundary to 30 min | AC-03 | Custom Threshold |
-| FT-04 | `format::json` returns `{"status":…,"expires_in_secs":N}` | AC-04 | JSON Format |
+| FT-04 | `format::json` returns `"token"`/`"expires_in_secs"` fields | AC-04 | JSON Format |
 
 **Total:** 4 FT cases
 
@@ -64,11 +64,11 @@ Feature behavioral requirement test cases for `docs/feature/006_token_status.md`
 
 ---
 
-### FT-04: `format::json` returns `{"status":…,"expires_in_secs":N}`
+### FT-04: `format::json` returns `"token"`/`"expires_in_secs"` fields
 
 - **Given:** A valid credentials file with a future `expiresAt`.
-- **When:** `clp .token.status format::json`
-- **Then:** Output is valid JSON containing `"status"` and `"expires_in_secs"` keys. `"status"` is one of `"valid"`, `"expiring_soon"`, `"expired"`. `"expires_in_secs"` is a non-negative integer.
+- **When:** `clp .credentials.status format::json`
+- **Then:** Output is valid JSON containing `"token"` and `"expires_in_secs"` keys (among the command's full 16-field object). `"token"` is one of `"valid"`, `"expiring in Xm"`, `"expired"`, `"unknown"`. `"expires_in_secs"` is a non-negative integer.
 - **Exit:** 0
-- **Source fn:** `ts06_token_valid_json`, `ts07_token_expired_json`, `ts14_token_expiring_soon_json`
+- **Source fn:** `cred_status_json_token_valid`, `cred_status_json_token_expired`, `cred_status_json_token_expiring_soon`
 - **Source:** [006_token_status.md AC-04](../../../docs/feature/006_token_status.md)

@@ -1,79 +1,12 @@
-//! `.token.status` and `.paths` command handlers.
+//! `.paths` command handler.
 
 use unilang::data::{ ErrorCode, ErrorData, OutputData };
 use unilang::interpreter::ExecutionContext;
 use unilang::semantic::VerifiedCommand;
 use unilang::types::Value;
 use crate::output::{ OutputFormat, OutputOptions, json_escape };
-use super::cmd_args::io_err_to_error_data;
 use super::cmd_context::{ require_claude_paths, require_credential_store };
 use claude_profile_core::account::trace_ts;
-
-/// `.token.status` — show active OAuth token expiry classification.
-///
-/// **CRITICAL:** Uses `status_with_threshold()`, NEVER bare function that
-/// matches the responsibility test grep pattern. See P1 in the plan.
-///
-/// # Errors
-///
-/// Returns `ErrorData` if HOME is unset, credentials are missing,
-/// or the `expiresAt` field is unparseable.
-#[ inline ]
-pub fn token_status_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
-{
-  let opts  = OutputOptions::from_cmd( &cmd )?;
-  if opts.is_table()
-  {
-    return Err( ErrorData::new(
-      ErrorCode::ArgumentTypeMismatch,
-      "format::table is only supported by .accounts".to_string(),
-    ) );
-  }
-  let trace = crate::output::parse_int_flag( &cmd, "trace", 0 )? != 0;
-  let paths = require_claude_paths()?;
-  if trace { eprintln!( "{}token.status  reading {}", trace_ts(), paths.credentials_file().display() ) }
-
-  let threshold_secs = match cmd.arguments.get( "threshold" )
-  {
-    Some( Value::Integer( n ) ) => u64::try_from( *n ).unwrap_or( crate::token::WARNING_THRESHOLD_SECS ),
-    _ => crate::token::WARNING_THRESHOLD_SECS,
-  };
-
-  let token_result = crate::token::status_with_threshold( threshold_secs )
-    .map_err( |e| io_err_to_error_data( &e, "token status" ) )?;
-
-  let content = match opts.format
-  {
-    OutputFormat::Json =>
-    {
-      match &token_result
-      {
-        crate::token::TokenStatus::Valid { expires_in } =>
-          format!( "{{\"status\":\"valid\",\"expires_in_secs\":{}}}\n", expires_in.as_secs() ),
-        crate::token::TokenStatus::ExpiringSoon { expires_in } =>
-          format!( "{{\"status\":\"expiring_soon\",\"expires_in_secs\":{}}}\n", expires_in.as_secs() ),
-        crate::token::TokenStatus::Expired =>
-          "{\"status\":\"expired\"}\n".to_string(),
-      }
-    }
-    OutputFormat::Text =>
-    {
-      match &token_result
-      {
-        crate::token::TokenStatus::Valid { expires_in } =>
-          format!( "valid — {}m remaining\n", expires_in.as_secs() / 60 ),
-        crate::token::TokenStatus::ExpiringSoon { expires_in } =>
-          format!( "expiring soon — {}m remaining\n", expires_in.as_secs() / 60 ),
-        crate::token::TokenStatus::Expired =>
-          "expired\n".to_string(),
-      }
-    }
-    // Table rejected above via is_table() guard; unreachable.
-    OutputFormat::Table => String::new(),
-  };
-
-  Ok( OutputData::new( content, "text" ) )
-}
 
 /// `.paths` — show all resolved `~/.claude/` canonical file paths.
 ///

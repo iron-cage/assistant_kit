@@ -19,8 +19,8 @@ Five canonical user stories covering the major personas and goals of the `clp` C
 | 1 | [Account Rotation](001_account_rotation.md) | SWE managing multiple Max accounts | `.usage rotate::1`, `.account.use`, `.accounts` |
 | 2 | [Account Onboarding](002_onboarding.md) | Developer adding or recovering an account | `.account.save`, `.accounts` (incl. `assignee::USER@MACHINE` marker path), `.account.delete`, `.account.relogin`, `.account.renewal` |
 | 3 | [Quota Monitoring](003_quota_monitoring.md) | Power user maximizing available quota | `.usage`, `.account.limits` |
-| 4 | [Scripted Automation](004_scripted_automation.md) | DevOps engineer in CI/CD pipelines | `.usage`, `.accounts`, `.token.status`, `.usage rotate::1` |
-| 5 | [Credential Diagnostics](005_credential_diagnostics.md) | Developer troubleshooting auth failures | `.credentials.status`, `.token.status`, `.paths`, `.account.inspect` |
+| 4 | [Scripted Automation](004_scripted_automation.md) | DevOps engineer in CI/CD pipelines | `.usage`, `.accounts`, `.credentials.status`, `.usage rotate::1` |
+| 5 | [Credential Diagnostics](005_credential_diagnostics.md) | Developer troubleshooting auth failures | `.credentials.status`, `.paths`, `.account.inspect` |
 
 ### See Also
 

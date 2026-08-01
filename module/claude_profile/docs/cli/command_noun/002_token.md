@@ -1,5 +1,7 @@
 # Noun: token
 
+> **DEPRECATED** — `.token.status` (the only command on this noun) has been removed. Token expiry classification is now exposed via `.credentials.status`'s `token`/`expires` fields. See [command_noun/003_credentials.md](003_credentials.md).
+
 The OAuth access token embedded in `~/.claude/.credentials.json` for the active Claude Code session. Represents the credential used to authenticate API requests; classified as `Valid`, `ExpiringSoon`, or `Expired` relative to a configurable warning threshold.
 
 ### Commands

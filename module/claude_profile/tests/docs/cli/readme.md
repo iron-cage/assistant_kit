@@ -45,7 +45,7 @@ Test case planning for clp CLI. Each file contains a Test Case Index with covera
 - [`.account.save`](command/04_account_save.md)
 - [`.account.use`](command/05_account_use.md)
 - [`.account.delete`](command/06_account_delete.md)
-- [`.token.status`](command/07_token_status.md)
+- [`.token.status` *(REMOVED)*](command/07_token_status.md)
 - [`.paths`](command/08_paths.md)
 - [`.usage`](command/09_usage.md)
 - [`.credentials.status`](command/10_credentials_status.md)

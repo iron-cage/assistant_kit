@@ -42,6 +42,155 @@ pub const VERSION_ALIASES : &[ VersionAlias ] = &[
   VersionAlias { name : "month",  value : "2.1.74", description : "~1 month old release for stability" },
 ];
 
+// ── Version history snapshot ──────────────────────────────────────────────────
+//
+// Compiled-in fallback for `.version.history` when the live GitHub Releases API
+// fetch and the local 1-hour cache both fail (e.g. no network). Generated from
+// the archived changelog table at `contract/claude_code/docs/version/readme.md`
+// (versions 2.1.74-2.1.220, newest first). `summary` reuses that table's
+// 47-character truncated Summary column verbatim -- regenerating this array means
+// re-deriving it from the same source, not writing fresh summaries.
+//
+// The 2.1.120 entry has `date : "unknown"` -- its GitHub release was retracted
+// after being archived; no fabricated date is used.
+//
+// Regeneration: re-fetch `https://api.github.com/repos/anthropics/claude-code/releases`,
+// update the doc archive's Overview Table (ID, Version, Date, Summary, Status),
+// then regenerate this array from the updated table, newest version first.
+
+/// A single compiled-in release-history record (version, date, one-line summary).
+#[ derive( Debug ) ]
+pub struct VersionRecord
+{
+  /// Semver string without a leading `v` (e.g. `"2.1.220"`).
+  pub version : &'static str,
+  /// Release date in `YYYY-MM-DD` form, or `"unknown"` if the source release was retracted.
+  pub date    : &'static str,
+  /// First changelog bullet, truncated to 47 characters with a trailing `...` if cut.
+  pub summary : &'static str,
+}
+
+/// Compiled-in release history, newest first. Fallback source for `.version.history`
+/// when live fetch and cache both fail; see module-level comment above for provenance.
+pub const VERSION_HISTORY : &[ VersionRecord ] = &[
+  VersionRecord { version : "2.1.220", date : "2026-07-25", summary : "Bug fixes and reliability improvements" },
+  VersionRecord { version : "2.1.219", date : "2026-07-24", summary : "Added Claude Opus 5 (`claude-opus-5`), now the ..." },
+  VersionRecord { version : "2.1.218", date : "2026-07-22", summary : "Changed `/code-review` to run as a background s..." },
+  VersionRecord { version : "2.1.217", date : "2026-07-21", summary : "Added emoji shortcode autocomplete in the promp..." },
+  VersionRecord { version : "2.1.216", date : "2026-07-20", summary : "Added `sandbox.filesystem.disabled` setting to ..." },
+  VersionRecord { version : "2.1.215", date : "2026-07-19", summary : "Claude no longer runs the `/verify` and `/code-..." },
+  VersionRecord { version : "2.1.214", date : "2026-07-18", summary : "Fixed single-segment `dir/**` allow rules like ..." },
+  VersionRecord { version : "2.1.212", date : "2026-07-17", summary : "`/fork` now copies your conversation into a new..." },
+  VersionRecord { version : "2.1.211", date : "2026-07-15", summary : "Added `--forward-subagent-text` flag and `CLAUD..." },
+  VersionRecord { version : "2.1.210", date : "2026-07-14", summary : "Added a live elapsed-time counter to the collap..." },
+  VersionRecord { version : "2.1.209", date : "2026-07-14", summary : "Fixed /model and other dialogs being blocked in..." },
+  VersionRecord { version : "2.1.208", date : "2026-07-14", summary : "Added screen reader mode: opt-in plain-text ren..." },
+  VersionRecord { version : "2.1.207", date : "2026-07-11", summary : "Auto mode is now available without `CLAUDE_CODE..." },
+  VersionRecord { version : "2.1.206", date : "2026-07-10", summary : "Added directory path suggestions to `/cd`, matc..." },
+  VersionRecord { version : "2.1.205", date : "2026-07-08", summary : "Added an auto mode rule that blocks tampering w..." },
+  VersionRecord { version : "2.1.204", date : "2026-07-08", summary : "Fixed hook events not streaming during SessionS..." },
+  VersionRecord { version : "2.1.203", date : "2026-07-07", summary : "Added a warning when your login is about to exp..." },
+  VersionRecord { version : "2.1.202", date : "2026-07-06", summary : "Added a \"Dynamic workflow size\" setting in `/co..." },
+  VersionRecord { version : "2.1.201", date : "2026-07-03", summary : "Claude Sonnet 5 sessions no longer use the mid-c..." },
+  VersionRecord { version : "2.1.200", date : "2026-07-03", summary : "Changed `AskUserQuestion` dialogs to no longer a..." },
+  VersionRecord { version : "2.1.199", date : "2026-07-02", summary : "Stacked slash-skill invocations like `/skill-a /..." },
+  VersionRecord { version : "2.1.198", date : "2026-07-01", summary : "Claude in Chrome is now generally available" },
+  VersionRecord { version : "2.1.197", date : "2026-06-30", summary : "Introducing Claude Sonnet 5: now the default mo..." },
+  VersionRecord { version : "2.1.196", date : "2026-06-29", summary : "Added support for organization default models —..." },
+  VersionRecord { version : "2.1.195", date : "2026-06-26", summary : "Added `CLAUDE_CODE_DISABLE_MOUSE_CLICKS` to dis..." },
+  VersionRecord { version : "2.1.193", date : "2026-06-25", summary : "Added `autoMode.classifyAllShell` setting to ro..." },
+  VersionRecord { version : "2.1.191", date : "2026-06-24", summary : "Added `/rewind` support for resuming a conversa..." },
+  VersionRecord { version : "2.1.190", date : "2026-06-24", summary : "Bug fixes and reliability improvements" },
+  VersionRecord { version : "2.1.187", date : "2026-06-23", summary : "Added `sandbox.credentials` setting to block sa..." },
+  VersionRecord { version : "2.1.186", date : "2026-06-22", summary : "Added `claude mcp login <name>` and `claude mcp..." },
+  VersionRecord { version : "2.1.185", date : "2026-06-20", summary : "The stream-stall hint now reads \"Waiting for AP..." },
+  VersionRecord { version : "2.1.183", date : "2026-06-19", summary : "Improved auto mode safety: destructive git comm..." },
+  VersionRecord { version : "2.1.181", date : "2026-06-17", summary : "Added `/config key=value` syntax to set any set..." },
+  VersionRecord { version : "2.1.179", date : "2026-06-16", summary : "Fixed mid-stream connection drops: partial resp..." },
+  VersionRecord { version : "2.1.178", date : "2026-06-15", summary : "Agent teams: removed the `TeamCreate` and `Team..." },
+  VersionRecord { version : "2.1.176", date : "2026-06-12", summary : "Session titles are now generated in the languag..." },
+  VersionRecord { version : "2.1.175", date : "2026-06-12", summary : "Added `enforceAvailableModels` managed setting ..." },
+  VersionRecord { version : "2.1.174", date : "2026-06-12", summary : "Added `wheelScrollAccelerationEnabled` setting ..." },
+  VersionRecord { version : "2.1.173", date : "2026-06-11", summary : "Fixed Fable 5 model names with a `[1m]` suffix ..." },
+  VersionRecord { version : "2.1.172", date : "2026-06-10", summary : "Sub-agents can now spawn their own sub-agents (..." },
+  VersionRecord { version : "2.1.170", date : "2026-06-09", summary : "Introducing Claude Fable 5: a Mythos-class mode..." },
+  VersionRecord { version : "2.1.169", date : "2026-06-08", summary : "Self-hosted runner: added a `post-session` life..." },
+  VersionRecord { version : "2.1.168", date : "2026-06-06", summary : "Bug fixes and reliability improvements" },
+  VersionRecord { version : "2.1.167", date : "2026-06-06", summary : "Bug fixes and reliability improvements" },
+  VersionRecord { version : "2.1.166", date : "2026-06-06", summary : "Added `fallbackModel` setting to configure up t..." },
+  VersionRecord { version : "2.1.165", date : "2026-06-05", summary : "Bug fixes and reliability improvements" },
+  VersionRecord { version : "2.1.163", date : "2026-06-04", summary : "Added `requiredMinimumVersion` and `requiredMax..." },
+  VersionRecord { version : "2.1.162", date : "2026-06-03", summary : "`claude agents --json` now includes `waitingFor..." },
+  VersionRecord { version : "2.1.161", date : "2026-06-02", summary : "`OTEL_RESOURCE_ATTRIBUTES` values are now inclu..." },
+  VersionRecord { version : "2.1.160", date : "2026-06-02", summary : "Added a prompt before writing to shell startup ..." },
+  VersionRecord { version : "2.1.159", date : "2026-05-31", summary : "Internal infrastructure improvements (no user-f..." },
+  VersionRecord { version : "2.1.158", date : "2026-05-30", summary : "Auto mode is now available on Bedrock, Vertex, ..." },
+  VersionRecord { version : "2.1.157", date : "2026-05-29", summary : "Plugins in `.claude/skills` directories are now..." },
+  VersionRecord { version : "2.1.156", date : "2026-05-29", summary : "Fixed an issue when using Opus 4.8 where thinki..." },
+  VersionRecord { version : "2.1.154", date : "2026-05-28", summary : "Opus 4.8 is here! Now defaults to high effort ·..." },
+  VersionRecord { version : "2.1.153", date : "2026-05-28", summary : "Added `skipLfs` option to `github`/`git` plugin..." },
+  VersionRecord { version : "2.1.152", date : "2026-05-27", summary : "`/code-review --fix` now applies review finding..." },
+  VersionRecord { version : "2.1.150", date : "2026-05-23", summary : "Internal infrastructure improvements (no user-f..." },
+  VersionRecord { version : "2.1.149", date : "2026-05-22", summary : "`/usage` now shows a per-category breakdown of ..." },
+  VersionRecord { version : "2.1.148", date : "2026-05-22", summary : "Fixed the Bash tool returning exit code 127 on ..." },
+  VersionRecord { version : "2.1.147", date : "2026-05-21", summary : "Pinned background sessions (`Ctrl+T` in `claude..." },
+  VersionRecord { version : "2.1.145", date : "2026-05-19", summary : "Added `claude agents --json` to list live Claud..." },
+  VersionRecord { version : "2.1.144", date : "2026-05-19", summary : "Added `/resume` support for background sessions..." },
+  VersionRecord { version : "2.1.143", date : "2026-05-15", summary : "Added plugin dependency enforcement: `claude pl..." },
+  VersionRecord { version : "2.1.142", date : "2026-05-14", summary : "Added new `claude agents` flags: `--add-dir`, `..." },
+  VersionRecord { version : "2.1.141", date : "2026-05-13", summary : "Added `terminalSequence` field to hook JSON out..." },
+  VersionRecord { version : "2.1.140", date : "2026-05-12", summary : "Improved Agent tool `subagent_type` matching to..." },
+  VersionRecord { version : "2.1.139", date : "2026-05-11", summary : "Added agent view (Research Preview): a single l..." },
+  VersionRecord { version : "2.1.138", date : "2026-05-09", summary : "Internal fixes" },
+  VersionRecord { version : "2.1.137", date : "2026-05-09", summary : "[VSCode] Fixed extension failing to activate on..." },
+  VersionRecord { version : "2.1.136", date : "2026-05-08", summary : "Added `CLAUDE_CODE_ENABLE_FEEDBACK_SURVEY_FOR_O..." },
+  VersionRecord { version : "2.1.133", date : "2026-05-07", summary : "Added `worktree.baseRef` setting (`fresh` | `he..." },
+  VersionRecord { version : "2.1.132", date : "2026-05-06", summary : "Added `CLAUDE_CODE_SESSION_ID` environment vari..." },
+  VersionRecord { version : "2.1.131", date : "2026-05-06", summary : "Fixed VS Code extension failing to activate on ..." },
+  VersionRecord { version : "2.1.129", date : "2026-05-06", summary : "Added `--plugin-url <url>` flag to fetch a plug..." },
+  VersionRecord { version : "2.1.128", date : "2026-05-04", summary : "Bare `/color` (no args) now picks a random sess..." },
+  VersionRecord { version : "2.1.126", date : "2026-05-01", summary : "The `/model` picker now lists models from your ..." },
+  VersionRecord { version : "2.1.123", date : "2026-04-29", summary : "Fixed OAuth authentication failing with a 401 r..." },
+  VersionRecord { version : "2.1.122", date : "2026-04-28", summary : "Added `ANTHROPIC_BEDROCK_SERVICE_TIER` environm..." },
+  VersionRecord { version : "2.1.121", date : "2026-04-28", summary : "Added `alwaysLoad` option to MCP server config ..." },
+  VersionRecord { version : "2.1.120", date : "unknown", summary : "Windows: Git for Windows (Git Bash) is no longe..." },
+  VersionRecord { version : "2.1.119", date : "2026-04-23", summary : "`/config` settings (theme, editor mode, verbose..." },
+  VersionRecord { version : "2.1.118", date : "2026-04-23", summary : "Added vim visual mode (`v`) and visual-line mod..." },
+  VersionRecord { version : "2.1.117", date : "2026-04-22", summary : "Forked subagents can now be enabled on external..." },
+  VersionRecord { version : "2.1.116", date : "2026-04-20", summary : "`/resume` on large sessions is significantly fa..." },
+  VersionRecord { version : "2.1.114", date : "2026-04-18", summary : "Fixed a crash in the permission dialog when an ..." },
+  VersionRecord { version : "2.1.113", date : "2026-04-17", summary : "Changed the CLI to spawn a native Claude Code b..." },
+  VersionRecord { version : "2.1.112", date : "2026-04-16", summary : "Fixed \"claude-opus-4-7 is temporarily unavailab..." },
+  VersionRecord { version : "2.1.111", date : "2026-04-16", summary : "Claude Opus 4.7 xhigh is now available! Use /ef..." },
+  VersionRecord { version : "2.1.110", date : "2026-04-15", summary : "Added `/tui` command and `tui` setting — run `/..." },
+  VersionRecord { version : "2.1.109", date : "2026-04-15", summary : "Improved the extended-thinking indicator with a..." },
+  VersionRecord { version : "2.1.108", date : "2026-04-14", summary : "Added `ENABLE_PROMPT_CACHING_1H` env var to opt..." },
+  VersionRecord { version : "2.1.107", date : "2026-04-14", summary : "Show thinking hints sooner during long operations" },
+  VersionRecord { version : "2.1.105", date : "2026-04-13", summary : "Added `path` parameter to the `EnterWorktree` t..." },
+  VersionRecord { version : "2.1.101", date : "2026-04-10", summary : "Added `/team-onboarding` command to generate a ..." },
+  VersionRecord { version : "2.1.98", date : "2026-04-09", summary : "Added interactive Google Vertex AI setup wizard..." },
+  VersionRecord { version : "2.1.97", date : "2026-04-08", summary : "Added focus view toggle (`Ctrl+O`) in `NO_FLICK..." },
+  VersionRecord { version : "2.1.96", date : "2026-04-08", summary : "Fixed Bedrock requests failing with `403 \"Autho..." },
+  VersionRecord { version : "2.1.94", date : "2026-04-07", summary : "Added support for Amazon Bedrock powered by Man..." },
+  VersionRecord { version : "2.1.92", date : "2026-04-04", summary : "Added `forceRemoteSettingsRefresh` policy setti..." },
+  VersionRecord { version : "2.1.91", date : "2026-04-02", summary : "Added MCP tool result persistence override via ..." },
+  VersionRecord { version : "2.1.90", date : "2026-04-01", summary : "Added `/powerup` — interactive lessons teaching..." },
+  VersionRecord { version : "2.1.89", date : "2026-04-01", summary : "Added `\"defer\"` permission decision to `PreTool..." },
+  VersionRecord { version : "2.1.87", date : "2026-03-29", summary : "Fixed messages in Cowork Dispatch not getting d..." },
+  VersionRecord { version : "2.1.86", date : "2026-03-27", summary : "Added `X-Claude-Code-Session-Id` header to API ..." },
+  VersionRecord { version : "2.1.85", date : "2026-03-26", summary : "Added `CLAUDE_CODE_MCP_SERVER_NAME` and `CLAUDE..." },
+  VersionRecord { version : "2.1.84", date : "2026-03-26", summary : "Added PowerShell tool for Windows as an opt-in ..." },
+  VersionRecord { version : "2.1.83", date : "2026-03-25", summary : "Added `managed-settings.d/` drop-in directory a..." },
+  VersionRecord { version : "2.1.81", date : "2026-03-20", summary : "Added `--bare` flag for scripted `-p` calls — s..." },
+  VersionRecord { version : "2.1.80", date : "2026-03-19", summary : "Added `rate_limits` field to statusline scripts..." },
+  VersionRecord { version : "2.1.79", date : "2026-03-18", summary : "Added `--console` flag to `claude auth login` f..." },
+  VersionRecord { version : "2.1.78", date : "2026-03-17", summary : "Added `StopFailure` hook event that fires when ..." },
+  VersionRecord { version : "2.1.77", date : "2026-03-17", summary : "Increased default maximum output token limits f..." },
+  VersionRecord { version : "2.1.76", date : "2026-03-14", summary : "Added MCP elicitation support — MCP servers can..." },
+  VersionRecord { version : "2.1.75", date : "2026-03-13", summary : "Added 1M context window for Opus 4.6 by default..." },
+  VersionRecord { version : "2.1.74", date : "2026-03-12", summary : "Added actionable suggestions to `/context` comm..." },
+];
+
 // ── Version detection ─────────────────────────────────────────────────────────
 
 /// Extract the semver token (digits and dots) from a raw version string.

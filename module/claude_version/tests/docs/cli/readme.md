@@ -4,7 +4,7 @@
 
 - **Purpose**: Document integration and edge case test plans for all clv commands, parameters, types, and parameter groups.
 - **Responsibility**: Index of per-command, per-parameter, per-type, per-group, and per-command-group test case planning files.
-- **In Scope**: All 16 clv commands, all 13 parameters, all 9 types, all 4 parameter groups, 0 qualifying command groups, all 8 user stories, and all 2 output formats.
+- **In Scope**: All 15 clv commands, all 14 parameters, all 10 types, all 4 parameter groups, 0 qualifying command groups, all 8 user stories, and all 2 output formats.
 - **Out of Scope**: Automated test implementations (→ `tests/` in crate), spec documentation (→ `docs/feature/`).
 
 7-tier testing organization for `claude_version` CLI, providing distinct audience focus at each level.
@@ -56,7 +56,6 @@
 - [`.settings.show`](command/09_settings_show.md)
 - [`.settings.get`](command/10_settings_get.md)
 - [`.settings.set`](command/11_settings_set.md)
-- [`.version.history`](command/12_version_history.md)
 - [`.config`](command/13_config.md)
 - [`.params`](command/14_params.md)
 - [`.runtime_files`](command/15_runtime_files.md)
@@ -76,6 +75,7 @@
 - [`scope::`](param/11_scope.md)
 - [`unset::`](param/12_unset.md)
 - [`kind::`](param/13_kind.md)
+- [`mode::`](param/14_mode.md)
 
 ### Types
 - [`VerbosityLevel`](type/01_verbosity_level.md)
@@ -87,6 +87,7 @@
 - [`ConfigKey`](type/07_config_key.md)
 - [`ParamKind`](type/08_param_kind.md)
 - [`PathKey`](type/09_path_key.md)
+- [`ListMode`](type/10_list_mode.md)
 
 ### Parameter Groups
 - [Output Control](param_group/01_output_control.md)

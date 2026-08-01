@@ -12,6 +12,7 @@ Performs a unified live account diagnostic — identity, subscription, org, and 
 
 **Pre-conditions:**
 - Named account (or active account if `name::` omitted) credentials accessible in credential store
+- Target account's `backend` is `anthropic` — `.account.inspect` hard-rejects a `backend: redirect` account (exit non-zero) since none of the three Anthropic-only endpoints exist for a foreign backend
 - Network reachable; all three API endpoints accessible
 - `$HOME` environment variable set
 
@@ -52,6 +53,7 @@ Performs a unified live account diagnostic — identity, subscription, org, and 
 | [feature/031_account_inspect.md](../../feature/031_account_inspect.md) | Unified account diagnostic — identity, subscription, org, and quota utilization |
 | [feature/013_account_limits.md](../../feature/013_account_limits.md) | Rate-limit utilization (merged — inspect now includes quota data from endpoint 001) |
 | [feature/017_token_refresh.md](../../feature/017_token_refresh.md) | Token refresh via isolated subprocess (when `refresh::1`) |
+| [feature/071_redirect_backend_accounts.md](../../feature/071_redirect_backend_accounts.md) | Anthropic-only hard-reject guard — `backend: redirect` accounts have none of the three diagnostic endpoints |
 
 ### Referenced Commands
 

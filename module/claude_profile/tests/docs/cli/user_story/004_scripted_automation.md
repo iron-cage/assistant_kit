@@ -29,7 +29,7 @@ to one Acceptance Criterion from
 ### UA-1: `format::json` on any format-capable command returns valid JSON
 
 - **Given:** Active credentials. At least one saved account.
-- **When (a):** `clp .token.status format::json`
+- **When (a):** `clp .paths format::json`
 - **When (b):** `clp .accounts format::json`
 - **When (c):** `clp .credentials.status format::json`
 - **Then (a):** Exit 0. Output is valid JSON object parseable by `jq .`.
@@ -53,7 +53,7 @@ to one Acceptance Criterion from
 ### UA-3: Exit codes are deterministic and match documented triggers
 
 - **Given:** Credential store configured with `alice@acme.com` saved.
-- **When (a):** `clp .token.status` with valid credentials → expect exit 0
+- **When (a):** `clp .credentials.status` with valid credentials → expect exit 0
 - **When (b):** `clp .account.use name::nobody@acme.com` → account not found → expect exit 2
 - **When (c):** `clp .account.save name::notanemail` → invalid format → expect exit 1
 - **Then:** Each command exits with exactly the documented code. Scripts that branch on `$?` receive consistent, predictable values across invocations and platforms.

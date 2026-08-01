@@ -76,8 +76,8 @@
 //! |----|---------------|-----------|-----|
 //! | phd01 | `phd01_mre_bug203_account_use_help_has_name_description` | `.account.use.help` → `name` has description | P |
 //! | phd02 | `phd02_mre_bug203_account_use_help_has_dry_description` | `.account.use.help` → `dry` has description | P |
-//! | phd03 | `phd03_mre_bug203_token_status_help_has_format_description` | `.token.status.help` → `format` has description | P |
-//! | phd04 | `phd04_mre_bug203_token_status_help_has_threshold_description` | `.token.status.help` → `threshold` has description | P |
+//! | phd03 | `phd03_mre_bug203_credentials_status_help_has_format_description` | `.credentials.status.help` → `format` has description | P |
+//! | phd04 | `phd04_mre_bug203_credentials_status_help_has_threshold_description` | `.credentials.status.help` → `threshold` has description | P |
 //! | pho01 | `pho01_mre_bug204_account_use_help_name_required` | `.account.use.help` → `name` shows `required` | P |
 //! | pho02 | `pho02_mre_bug204_account_delete_help_name_required` | `.account.delete.help` → `name` shows `required` | P |
 //! | pho03 | `pho03_bug204_account_relogin_help_name_optional` | `.account.relogin.help` → `name` still `optional` | P |
@@ -115,29 +115,29 @@ fn phd02_mre_bug203_account_use_help_has_dry_description()
   );
 }
 
-/// phd03: bug_reproducer(BUG-203) — `.token.status.help` shows description for `format`.
+/// phd03: bug_reproducer(BUG-203) — `.credentials.status.help` shows description for `format`.
 #[ test ]
-fn phd03_mre_bug203_token_status_help_has_format_description()
+fn phd03_mre_bug203_credentials_status_help_has_format_description()
 {
-  let out = run_cs( &[ ".token.status.help" ] );
+  let out = run_cs( &[ ".credentials.status.help" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!(
     text.contains( "Output format" ),
-    "`.token.status.help` must show description for `format`, got:\n{text}"
+    "`.credentials.status.help` must show description for `format`, got:\n{text}"
   );
 }
 
-/// phd04: bug_reproducer(BUG-203) — `.token.status.help` shows description for `threshold`.
+/// phd04: bug_reproducer(BUG-203) — `.credentials.status.help` shows description for `threshold`.
 #[ test ]
-fn phd04_mre_bug203_token_status_help_has_threshold_description()
+fn phd04_mre_bug203_credentials_status_help_has_threshold_description()
 {
-  let out = run_cs( &[ ".token.status.help" ] );
+  let out = run_cs( &[ ".credentials.status.help" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!(
     text.contains( "Token expiry warning threshold" ),
-    "`.token.status.help` must show description for `threshold`, got:\n{text}"
+    "`.credentials.status.help` must show description for `threshold`, got:\n{text}"
   );
 }
 

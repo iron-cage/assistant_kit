@@ -115,17 +115,17 @@ fn us04_002_version_show_exits_0()
   }
 }
 
-// US-5: .version.history shows recent releases; exit 0
+// US-5: .version.list mode::history shows recent releases; exit 0
 //
-// Guard pattern: .version.history exits 2 when GitHub is unreachable (offline
-// container), so we only check content when the command succeeds.
+// Always exits 0: falls back to the compiled-in VERSION_HISTORY snapshot when
+// GitHub is unreachable (offline container), with a stderr advisory.
 #[ test ]
 fn us05_002_version_history_exits_0()
 {
-  let out = run_clv_with_env( &[ ".version.history" ], &[] );
+  let out = run_clv_with_env( &[ ".version.list", "mode::history" ], &[] );
   if out.status.code() == Some( 0 )
   {
-    assert!( !stdout( &out ).is_empty(), ".version.history must produce output" );
+    assert!( !stdout( &out ).is_empty(), ".version.list mode::history must produce output" );
   }
 }
 

@@ -4,7 +4,7 @@
 
 - **Purpose**: Reference for version-namespace clv commands.
 - **Responsibility**: Command syntax, parameters, exit codes, and cross-references for all `.version.*` commands.
-- **In Scope**: `.version.show`, `.version.install`, `.version.guard`, `.version.list`, `.version.history`.
+- **In Scope**: `.version.show`, `.version.install`, `.version.guard`, `.version.list` (alias and release-history listing via `mode::`).
 - **Out of Scope**: Root commands (→ [root.md](root.md)), process commands (→ [processes.md](processes.md)), settings commands (→ [settings.md](settings.md)).
 
 ---
@@ -66,9 +66,8 @@ clv.version.show format::json
 |---|---------|-------------|
 | 1 | [`.version.install`](#command-4-versioninstall) | Installs the version currently displayed |
 | 2 | [`.version.guard`](#command-5-versionguard) | Restores preferred version if drift detected |
-| 3 | [`.version.list`](#command-6-versionlist) | Lists aliases that may resolve to installed version |
-| 4 | [`.version.history`](#command-12-versionhistory) | Shows release history for version selection |
-| 5 | [`.status`](root.md#command-2-status) | Includes version in broader environment snapshot |
+| 3 | [`.version.list`](#command-6-versionlist) | Lists aliases or release history relevant to the installed version |
+| 4 | [`.status`](root.md#command-2-status) | Includes version in broader environment snapshot |
 
 ### Referenced User Stories
 
@@ -161,14 +160,17 @@ clv.version.install version::latest
 | 4 | [`v::`](../param/04_v.md) |
 | 5 | [`format::`](../param/05_format.md) |
 
+### Referenced Command Group
+
+Evaluated against `.version.guard` (which invokes install logic on drift; see step 4 above) under the strict [command_group](../command_group/readme.md) identity test — does not qualify. `version_install_routine()` (`src/commands/version.rs:75`) and `version_guard_routine()` (`src/commands/version.rs:240`) never call each other directly; what they share is `perform_install()` and `validate_version_spec()`, both imported from the separate `claude_version_core` crate, not one routine calling the other. Parameter sets also differ (`.version.guard` adds `interval::` for watch mode, with no `.version.install` equivalent). See [`command_group/readme.md`](../command_group/readme.md) Evaluated, Not Qualifying for the full analysis.
+
 ### Related Commands
 
 | # | Command | Relationship |
 |---|---------|-------------|
 | 1 | [`.version.show`](#command-3-versionshow) | Verifies installed version after install |
 | 2 | [`.version.guard`](#command-5-versionguard) | Guards against drift from newly installed version |
-| 3 | [`.version.list`](#command-6-versionlist) | Lists version aliases before selecting a target |
-| 4 | [`.version.history`](#command-12-versionhistory) | Shows release history for version selection |
+| 3 | [`.version.list`](#command-6-versionlist) | Lists version aliases or release history before selecting a target |
 
 ### Referenced User Stories
 
@@ -289,6 +291,10 @@ clv.version.guard force::1
 | 5 | [`v::`](../param/04_v.md) |
 | 6 | [`format::`](../param/05_format.md) |
 
+### Referenced Command Group
+
+Evaluated against `.version.install` (see step 4 above: "invoke `.version.install` logic for the preferred version") under the strict [command_group](../command_group/readme.md) identity test — does not qualify. `version_guard_routine()` (`src/commands/version.rs:240`) shares no routine with `version_install_routine()` (`src/commands/version.rs:75`); both call `perform_install()`/`validate_version_spec()` from the separate `claude_version_core` crate, which is external-library sharing, not one routine invoking the other. `.version.guard` also adds `interval::` (watch mode) with no `.version.install` equivalent. See [`command_group/readme.md`](../command_group/readme.md) Evaluated, Not Qualifying for the full analysis.
+
 ### Related Commands
 
 | # | Command | Relationship |
@@ -316,122 +322,48 @@ clv.version.guard force::1
 
 ### Command :: 6. `.version.list`
 
-List all named version aliases (`stable`, `month`, `latest`) with their currently pinned values. These are compile-time constants; they do not query the network.
+List available version information: named version aliases with their pinned values (`mode::aliases`, default), or recent Claude Code release history from the GitHub Releases API (`mode::history`). Alias listing is a compile-time constant lookup — no network. History listing fetches from `anthropics/claude-code` releases (response cached locally for 1 hour). Use history mode to see what changed across recent versions, find when a specific fix landed, or review the full changelog for any release.
 
--- **Parameters:** v::, format::
--- **Exit Codes:** 0 (always)
+-- **Parameters:** mode::, count::, v::, format::
+-- **Exit Codes:** 0 (success, both modes — `mode::history` falls back to a compiled-in offline snapshot with a stderr advisory when the live fetch and cache both fail) | 2 (`mode::history`: HOME unset)
 
 **Syntax:**
 
 ```sh
-clv.version.list [v::N] [format::FMT]
+clv.version.list [mode::MODE] [count::N] [v::N] [format::FMT]
 ```
 
 **Parameters:**
 
 | Parameter | Type | Default | Required | Purpose |
 |-----------|------|---------|----------|---------|
+| [`mode::`](../param/14_mode.md) | [`ListMode`](../type/10_list_mode.md) | aliases | No | Select alias listing (local) or release-history listing (network) |
+| [`count::`](../param/09_count.md) | u64 | 10 | No | Number of recent releases to show (`mode::history` only; ignored under `mode::aliases`) |
 | [`v::`](../param/04_v.md) | [`VerbosityLevel`](../type/01_verbosity_level.md) | 1 | No | Output detail level |
 | [`format::`](../param/05_format.md) | [`OutputFormat`](../type/02_output_format.md) | text | No | Output format |
 
-**Algorithm (2 steps):**
+**Algorithm, `mode::aliases` (2 steps):**
 1. Load the compile-time version alias table (`stable`, `month`, `latest` → pinned semver values).
 2. Render the alias-to-version mapping in the requested format.
 
-**Examples:**
-
-```sh
-clv.version.list
-clv.version.list format::json
-```
-
-### Referenced Formats
-
-| # | Format | Role |
-|---|--------|------|
-| 1 | [text](../format/01_text.md) | Default human-readable output |
-| 2 | [json](../format/02_json.md) | Machine-readable structured output |
-
-### Referenced Parameter Groups
-
-| # | Group | Membership | Excluded Params |
-|---|-------|-----------|----------------|
-| 1 | [Output Control](../param_group/01_output_control.md) | Partial | `count::` |
-
-### Referenced Parameters
-
-| # | Parameter |
-|---|-----------|
-| 1 | [`v::`](../param/04_v.md) |
-| 2 | [`format::`](../param/05_format.md) |
-
-### Related Commands
-
-| # | Command | Relationship |
-|---|---------|-------------|
-| 1 | [`.version.show`](#command-3-versionshow) | Shows which alias is currently installed |
-| 2 | [`.version.install`](#command-4-versioninstall) | Installs one of the listed version aliases |
-| 3 | [`.version.guard`](#command-5-versionguard) | Guards against drift from a listed alias |
-
-### Referenced User Stories
-
-| # | User Story | Persona |
-|---|-----------|---------|
-| 1 | [005 Version Pinning](../user_story/005_version_pinning.md) | Team lead (version pinning) |
-
----
-
-**Category:** version
-**Complexity:** 2
-**API Requirement:** None
-**Idempotent:** Yes
-**Risk Level:** Low
-
----
-
-### Command :: 12. `.version.history`
-
-Fetch and display recent Claude Code release history from the GitHub Releases API (`anthropics/claude-code`). Use this to see what changed across recent versions, find when a specific fix landed, or review the full changelog for any release. Response is cached locally for 1 hour.
-
--- **Parameters:** count::, v::, format::
--- **Exit Codes:** 0 (success) | 2 (network failure or HOME unset)
-
-**Syntax:**
-
-```sh
-clv.version.history [count::N] [v::N] [format::FMT]
-```
-
-**Parameters:**
-
-| Parameter | Type | Default | Required | Purpose |
-|-----------|------|---------|----------|---------|
-| [`count::`](../param/09_count.md) | u64 | 10 | No | Number of recent releases to show |
-| [`v::`](../param/04_v.md) | [`VerbosityLevel`](../type/01_verbosity_level.md) | 1 | No | Output detail level |
-| [`format::`](../param/05_format.md) | [`OutputFormat`](../type/02_output_format.md) | text | No | Output format |
-
-**Algorithm (3 steps):**
-1. Check local 1-hour cache for GitHub Releases API response; fetch from `anthropics/claude-code` releases endpoint if stale or absent.
+**Algorithm, `mode::history` (3 steps):**
+1. Check local 1-hour cache for GitHub Releases API response; fetch from `anthropics/claude-code` releases endpoint if stale or absent. If both the cache and the live fetch fail, fall back to a compiled-in `VERSION_HISTORY` snapshot (versions 2.1.74-2.1.220) and print a stderr advisory — HOME being unset is the only condition that still exits non-zero.
 2. Select the `count::N` most recent releases from the response payload.
 3. Render each release (tag, date, changelog summary) in the requested format.
 
 **Examples:**
 
 ```sh
-# Default: 10 most recent releases with one-line summaries
-clv.version.history
+# Default: alias listing
+clv.version.list
+clv.version.list format::json
 
-# Show 3 most recent releases
-clv.version.history count::3
-
-# Minimal output: version and date only
-clv.version.history v::0
-
-# Full changelog per release
-clv.version.history count::1 v::2
-
-# JSON format for scripting
-clv.version.history format::json count::5
+# Release history
+clv.version.list mode::history
+clv.version.list mode::history count::3
+clv.version.list mode::history v::0
+clv.version.list mode::history count::1 v::2
+clv.version.list mode::history format::json count::5
 ```
 
 ### Referenced Formats
@@ -451,27 +383,36 @@ clv.version.history format::json count::5
 
 | # | Parameter |
 |---|-----------|
-| 1 | [`count::`](../param/09_count.md) |
-| 2 | [`v::`](../param/04_v.md) |
-| 3 | [`format::`](../param/05_format.md) |
+| 1 | [`mode::`](../param/14_mode.md) |
+| 2 | [`count::`](../param/09_count.md) |
+| 3 | [`v::`](../param/04_v.md) |
+| 4 | [`format::`](../param/05_format.md) |
 
 ### Related Commands
 
 | # | Command | Relationship |
 |---|---------|-------------|
-| 1 | [`.version.show`](#command-3-versionshow) | Checks which release from history is installed |
-| 2 | [`.version.install`](#command-4-versioninstall) | Installs a release from history |
+| 1 | [`.version.show`](#command-3-versionshow) | Shows which alias is currently installed |
+| 2 | [`.version.install`](#command-4-versioninstall) | Installs one of the listed aliases or a version found in history |
+| 3 | [`.version.guard`](#command-5-versionguard) | Guards against drift from a listed alias |
 
 ### Referenced User Stories
 
 | # | User Story | Persona |
 |---|-----------|---------|
 | 1 | [002 Version Upgrade](../user_story/002_version_upgrade.md) | Developer (version upgrade) |
+| 2 | [005 Version Pinning](../user_story/005_version_pinning.md) | Team lead (version pinning) |
 
 ---
 
 **Category:** version
-**Complexity:** 3
+**Complexity:** 4
 **API Requirement:** Read
 **Idempotent:** Yes
 **Risk Level:** Low
+
+---
+
+### Command :: 12. `.version.history` (retired)
+
+**Retired** — merged into [`.version.list`](#command-6-versionlist) as `mode::history`. All release-history behavior, parameters, and examples now live under Command 6. This entry is preserved only to keep the global command numbering stable; do not implement or reference `.version.history` as a standalone command.

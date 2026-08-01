@@ -1,6 +1,6 @@
 # Test: Account Targeting Parameter Group
 
-Interaction tests for Group 6 (Account Targeting: `host::`, `role::` on `.account.save`).
+Interaction tests for Group 6 (Account Targeting: `host::`, `role::`, `inference_provider::` on `.account.save`).
 See [param_group/006_account_targeting.md](../../../../docs/cli/param_group/006_account_targeting.md) for specification.
 
 ### Test Case Index
@@ -11,6 +11,7 @@ See [param_group/006_account_targeting.md](../../../../docs/cli/param_group/006_
 | CC-2 | Combined safe default — no `host::` or `role::` → auto-captured host, empty role | Behavioral Divergence |
 | CC-3 | Re-save with new `host::` overwrites `{name}.json` (idempotent) | Update Semantics |
 | CC-4 | `cols::+host,+role` shows both columns populated from `{name}.json` | Cross-Command Display |
+| CC-5 | `host::`, `role::`, `inference_provider::` all written together; `inference_provider` visible by default (no `cols::` needed) | Cross-Command Display |
 
 ---
 
@@ -58,3 +59,14 @@ See [param_group/006_account_targeting.md](../../../../docs/cli/param_group/006_
 - **Live:** yes
 - **Source fn:** `it240_lim_it_cols_host_role_shows_profile_data` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/029_account_host_metadata.md](../../../../docs/feature/029_account_host_metadata.md)
+
+---
+
+### CC-5: `host::`, `role::`, and `inference_provider::` combine independently; `inference_provider` shown by default
+
+- **Given:** No pre-existing account for `test@example.com`.
+- **When:** `clp .account.save name::test@example.com host::workbox role::dev inference_provider::kimi`
+- **Then:** Exits 0. `{name}.json` contains `"host": "workbox"`, `"role": "dev"`, and `"inference_provider": "kimi"` — three independent metadata fields, no interaction between them. A subsequent `clp .accounts name::test@example.com` (no `cols::`) shows the `Provider` column with `kimi` — unlike `host`/`role`, `inference_provider` is in the default identity set and needs no `cols::+` to appear.
+- **Exit:** 0
+- **Source fn:** *(planned — not yet implemented)*
+- **Source:** [feature/072_inference_provider_selection.md AC-01, AC-05](../../../../docs/feature/072_inference_provider_selection.md), [param_group/006_account_targeting.md](../../../../docs/cli/param_group/006_account_targeting.md)

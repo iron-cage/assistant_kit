@@ -20,7 +20,7 @@
 
 | Path | Owner | Created By |
 |------|-------|-----------|
-| `$HOME/.claude/.transient/version_history_cache.json` | `.version.history` | `fetch_releases_json()` |
+| `$HOME/.claude/.transient/version_history_cache.json` | `.version.list mode::history` | `fetch_releases_json()` |
 
 **Exit codes:** 0 (success) | 2 (HOME unset or I/O error)
 

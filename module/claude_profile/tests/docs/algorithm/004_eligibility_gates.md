@@ -13,6 +13,7 @@ Algorithm correctness test cases for `docs/algorithm/004_eligibility_gates.md`. 
 | AC-05 | G3b cancelled subscription | `billing_type = "none"` → skipped (BUG-317) | Unit test |
 | AC-06 | G8 foreign-owned (`gate_ownership=true`) | `is_owned = false` → skipped | Unit test |
 | AC-07 | G8 foreign-owned (`gate_ownership=false`) | `is_owned = false` → eligible | Unit test |
+| AC-08 | G10 fires (provider mismatch) | `inference_provider != selected_provider` → skipped | Unit test — planned |
 
 ### Test Case Index
 
@@ -25,8 +26,9 @@ Algorithm correctness test cases for `docs/algorithm/004_eligibility_gates.md`. 
 | AC-05 | G3b cancelled subscription skipped | G3b | Cancelled |
 | AC-06 | G8 foreign-owned skipped (gate_ownership=true) | G8 | Ownership |
 | AC-07 | G8 foreign-owned eligible (gate_ownership=false) | G8 | Ownership |
+| AC-08 | G10 provider mismatch → skipped, no force::1 bypass | G10 | Provider Selection |
 
-**Total:** 7 AC cases
+**Total:** 8 AC cases
 
 ---
 
@@ -100,3 +102,13 @@ Algorithm correctness test cases for `docs/algorithm/004_eligibility_gates.md`. 
 - **Note:** Footer recommendation uses `gate_ownership=false` — non-owned accounts appear as recommendations (BUG-320 fix).
 - **Source fn:** `test_gate_ownership_false_allows_non_owned` (in `tests/usage/sort_next_tests.rs`)
 - **Source:** [algorithm/004_eligibility_gates.md Gate 8](../../../docs/algorithm/004_eligibility_gates.md)
+
+---
+
+### AC-08: Gate 10 — provider mismatch skipped, no `force::1` bypass
+
+- **Given:** An `AccountQuota` with `inference_provider = "kimi"` (or empty, defaulting to `"anthropic"`). Global `provider` config (`.provider.select`) selected as `"anthropic"` (default or explicit). Non-current, non-active, all other gates pass.
+- **When:** Gate 10 evaluates the account's effective provider (`"anthropic"` when `inference_provider` is empty, else the literal value) against the selected provider, inside `find_first_eligible()`, including under `force::1`.
+- **Then:** `"kimi" != "anthropic" = true` → gate fires → account skipped, with or without `force::1`. Rotation never crosses inference provider boundaries; unlike Gate 9 (`claim_lock`), Gate 10 has no bypass at any layer.
+- **Source fn:** *(planned — not yet implemented; see [algorithm/004_eligibility_gates.md § Gate 10 Context](../../../docs/algorithm/004_eligibility_gates.md))*
+- **Source:** [algorithm/004_eligibility_gates.md Gate 10](../../../docs/algorithm/004_eligibility_gates.md), [feature/072_inference_provider_selection.md AC-14, AC-15](../../../docs/feature/072_inference_provider_selection.md)

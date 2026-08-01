@@ -26,6 +26,7 @@ Integration test planning for the `.account.save` command. See [command/namespac
 | IT-18 | Save succeeds even when endpoint 005 call fails — no org fields in `{name}.json`, no error | Org Identity Snapshot / Best-Effort |
 | IT-19 | Stale `_active` marker overridden by `oauthAccount.emailAddress` (BUG-212) | Name Inference / Regression |
 | IT-20 | Save does NOT modify `owner` field — passes `owner: None`; existing value preserved via read-merge | Ownership Neutral |
+| IT-21 | `inference_provider::kimi` writes field; omitted → absent (not `"anthropic"`); empty value exits 1 | Provider Metadata |
 
 ### Test Coverage Summary
 
@@ -45,8 +46,9 @@ Integration test planning for the `.account.save` command. See [command/namespac
 - Org Identity Snapshot / Best-Effort: 1 test
 - Name Inference / Regression: 1 test
 - Ownership Neutral: 1 test
+- Provider Metadata: 1 test
 
-**Total:** 20 integration tests
+**Total:** 21 integration tests
 
 ---
 
@@ -249,3 +251,15 @@ Integration test planning for the `.account.save` command. See [command/namespac
 - **Exit:** 0
 - **Source fn:** `as_save_does_not_modify_owner`
 - **Source:** [002_account_save.md AC-19](../../../../docs/feature/002_account_save.md)
+
+---
+
+### IT-21: `inference_provider::kimi` writes field; omitted → absent; empty value exits 1
+
+- **Given:** `~/.claude/.credentials.json` exists with valid credentials.
+- **When (a):** `clp .account.save name::kimi inference_provider::kimi` → `{credential_store}/kimi.json` contains `"inference_provider": "kimi"`.
+- **When (b):** `clp .account.save name::alice@acme.com` (no `inference_provider::`) → `{credential_store}/alice@acme.com.json` has no `inference_provider` key at all — never written as the literal default `"anthropic"`.
+- **When (c):** `clp .account.save name::kimi inference_provider::` (empty value) → exit 1, stderr names `inference_provider::` as requiring a non-empty value, no file written.
+- **Exit:** 0 (a, b) / 1 (c)
+- **Source fn:** *(planned — not yet implemented)*
+- **Source:** [command/001_account.md — .account.save](../../../../docs/cli/command/001_account.md#command-4-accountsave), [072_inference_provider_selection.md AC-01, AC-02, AC-03](../../../../docs/feature/072_inference_provider_selection.md)

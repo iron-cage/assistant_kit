@@ -19,7 +19,7 @@ Manage Claude Code account credentials: save, list, use, and delete named profil
 | [param/](param/readme.md) | Individual parameter specifications (61 active params, 66 files; 5 REMOVED: 013, 032, 053, 056, 057) |
 | [type/](type/readme.md) | CLI type definitions (AccountName, OutputFormat, WarningThreshold, AccountSelector) |
 | [param_group/](param_group/readme.md) | Parameter group semantics (Output Control, Field Presence, Fetch Behavior, Sort Control, Display Control, Account Targeting) |
-| [command_group/](command_group/readme.md) | Commands sharing one handler function and parameter set, defaults-only divergence (0 groups — mandatory entity, structurally empty) |
+| [command_group/](command_group/readme.md) | Every command partitioned into exactly one group (Total Partition); 4 non-routine/dead commands itemized outside it (16 groups, all singletons) |
 | [user_story/](user_story/readme.md) | Five canonical user stories mapping personas and goals to commands |
 | [workflow_scenario/](workflow_scenario/readme.md) | Legacy composed workflows (eliminated in rulebook v1.7; content migrated to user_story/) |
 | [command_noun/](command_noun/readme.md) | Domain noun documentation (account, token, credentials) |
@@ -39,7 +39,7 @@ Manage Claude Code account credentials: save, list, use, and delete named profil
 | param/ | ✅ | ✅ | ✅ | ✅ | ✅ | Complete |
 | type/ | ➖ | ➖ | ✅ | ✅ | ✅ | Complete |
 | param_group/ | ➖ | ➖ | ✅ | ✅ | ✅ | Complete |
-| command_group/ (0 instances) | ➖ | ➖ | ✅ | ➖ | ➖ | Complete — 0 groups qualify (documented) |
+| command_group/ (0 multi-member detail files) | ➖ | ➖ | ✅ | ➖ | ➖ | Complete — 16 singleton groups (Total Partition; 4 commands itemized outside it) |
 | user_story/ | ➖ | ➖ | ✅ | ✅ | ✅ | Complete |
 | workflow_scenario/ | ➖ | ➖ | ➖ | ➖ | ➖ | Eliminated (v1.7) — 0 instances |
 | command_noun/ | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
@@ -60,7 +60,7 @@ Manage Claude Code account credentials: save, list, use, and delete named profil
 - [Parameters](param/readme.md) — 61 active parameter specifications (66 files; 5 REMOVED: 013, 032, 053, 056, 057)
 - [Types](type/readme.md) — 4 CLI types (AccountName, OutputFormat, WarningThreshold, AccountSelector)
 - [Parameter Groups](param_group/readme.md) — 6 groups (Output Control, Field Presence, Fetch Behavior, Sort Control, Display Control, Account Targeting)
-- [Command Groups](command_group/readme.md) — 0 groups; all 15 live commands have distinct handler functions (mandatory entity, documented empty result)
+- [Command Groups](command_group/readme.md) — 16 singleton groups, one per command (Total Partition); 4 commands (`.help` + 3 dead DEPRECATED/REMOVED) itemized outside the partition
 - [User Stories](user_story/readme.md) — 5 user stories (Account Rotation, Onboarding, Quota Monitoring, Scripted Automation, Credential Diagnostics)
 - [Command Nouns](command_noun/readme.md) — 3 domain nouns (account, token, credentials)
 - [Command Verbs](command_verb/readme.md) — 8 active domain verbs (save, use, delete, limits, relogin, renewal, inspect, status; 1 DEPRECATED: rotate Feature 038; 2 REMOVED: assign Feature 037, unclaim Feature 064)

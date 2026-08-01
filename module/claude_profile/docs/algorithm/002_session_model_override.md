@@ -4,7 +4,7 @@
 
 - **Purpose**: Define the bidirectional session model override algorithm for `~/.claude/settings.json`.
 - **Responsibility**: Documents the model override decision table, thresholds, and `apply_model_override()` / `recommended_model()` entry points.
-- **In Scope**: `apply_model_override()` and `recommended_model()` decision logic; `OPUS_OVERRIDE_THRESHOLD`; effort coupling (Fix BUG-322, TSK-335).
+- **In Scope**: `apply_model_override()` and `recommended_model()` decision logic; `OPUS_OVERRIDE_THRESHOLD`; effort coupling (Fix BUG-322, TSK-335); the redirect-backend bypass (Feature 071).
 - **Out of Scope**: Session model get/set API (→ feature/034); subprocess model selection (→ algorithm/001).
 
 ### Abstract
@@ -18,9 +18,13 @@ Bidirectionally manage the interactive session model in `~/.claude/settings.json
 - `src/usage/api.rs` — `apply_model_override(quota, paths, trace, label, name)` (mutation; `quota: &OauthUsageData`)
 - `src/usage/format.rs` — `recommended_model(aq)` (read-only, for footer recommendation; `aq: &AccountQuota`)
 
+#### Redirect Backend Bypass (Feature 071)
+
+`apply_model_override()` checks `backend` first, before any Decision Table row: when the target account's `backend == "redirect"`, the function returns immediately as a no-op — it writes neither `model` nor `effortLevel`, and `recommended_model()` is not consulted for that account either. Rationale: the Decision Table's entire premise is Sonnet-vs-Opus quota tradeoff derived from `seven_day_sonnet` utilization — a concept meaningful only for the Anthropic backend's own quota system. A redirect account's `model` is fixed to its `redirect_model` value (written to `settings.json`'s `env.ANTHROPIC_MODEL` by `switch_account()` — see [schema/006](../schema/006_settings_json.md) and [feature/071](../feature/071_redirect_backend_accounts.md)), and there is no equivalent quota signal to threshold against.
+
 #### Decision Table
 
-Effort is written **unconditionally** on every call to `apply_model_override()`, regardless of whether the model actually changed (`overrode` value). This ensures effort always matches the model state even for stable sessions (TSK-335 — Fix H2).
+Effort is written **unconditionally** on every call to `apply_model_override()` for `backend == "anthropic"` accounts, regardless of whether the model actually changed (`overrode` value). This ensures effort always matches the model state even for stable sessions (TSK-335 — Fix H2).
 
 | `seven_day_sonnet` | Sonnet remaining (`100 - utilization`) | Current model | Action | Effort (unconditional write) |
 |---|---|---|---|---|
@@ -70,6 +74,7 @@ This is a **temporary blind spot** until Feature 066 (dual-source parsing) popul
 | [feature/034_explicit_session_model_override.md](../feature/034_explicit_session_model_override.md) | `set_session_model()` / `get_session_model()` |
 | [feature/062_unified_session_config.md](../feature/062_unified_session_config.md) | `recommended_model()` canonical entry point |
 | [feature/039_decision_algorithms.md](../feature/039_decision_algorithms.md) | Table 2 (legacy reference) |
+| [feature/071_redirect_backend_accounts.md](../feature/071_redirect_backend_accounts.md) | Redirect backend bypass — `apply_model_override()` no-op |
 
 ### Algorithms
 

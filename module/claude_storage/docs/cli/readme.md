@@ -18,7 +18,7 @@ Reference documentation for the `claude_storage` CLI binary — a tool for explo
 | `type/` | Per-type constraint and parsing reference (13 type pages) |
 | `001_dictionary.md` | Domain vocabulary and term definitions |
 | `param_group/` | Per-group detail pages with membership, examples, and cross-refs |
-| `command_group/` | Commands sharing one routine function and parameter set, defaults-only divergence (0 groups — evaluated and rejected) |
+| `command_group/` | Every command partitioned into exactly one group (Total Partition); shared handler + parameter set when multi-member (12 groups, all singletons) |
 | `003_workflows.md` | Usage scenarios, best practices, complexity matrix |
 | `format/` | Output format catalog for export rendering modes |
 | `002_env_param.md` | Environment variable catalog with precedence rules |
@@ -39,7 +39,7 @@ Reference documentation for the `claude_storage` CLI binary — a tool for explo
 | `type/*.md` (13 files) | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
 | `param_group/readme.md` | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
 | `param_group/*.md` (5 files) | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
-| `command_group/readme.md` (0 groups) | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
+| `command_group/readme.md` (12 singleton groups) | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
 | `003_workflows.md` | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
 | `format/readme.md` | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
 | `format/*.md` (3 files) | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
@@ -59,7 +59,7 @@ Reference documentation for the `claude_storage` CLI binary — a tool for explo
 - [Types](type/readme.md) — Semantic type constraints and validation rules
 - [Dictionary](001_dictionary.md) — Domain vocabulary
 - [Parameter Groups](param_group/readme.md) — Related parameter sets and their coherence
-- [Command Groups](command_group/readme.md) — Commands sharing one routine and parameter set (0 groups — evaluated and rejected)
+- [Command Groups](command_group/readme.md) — every command in exactly one group; 12 singleton groups, zero cross-calls found (Total Partition)
 - [Workflows](003_workflows.md) — Common usage patterns and best practices
 - [Formats](format/readme.md) — Export output format rendering specifications
 - [Environment Parameters](002_env_param.md) — Environment variables and precedence rules

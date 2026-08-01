@@ -15,14 +15,13 @@ use crate::commands::
   model_routine,
   models_routine,
   model_select_routine,
-  token_status_routine,
   paths_routine,
   usage_routine,
 };
 
 /// Register all `claude_profile` commands into an existing registry.
 ///
-/// Registers 15 commands (credentials status, account management including limits, relogin, renewal, and inspect, model get/set/select, models discovery, token status, paths, usage).
+/// Registers 14 commands (credentials status, account management including limits, relogin, renewal, and inspect, model get/set/select, models discovery, paths, usage).
 /// The `.` (dot) hidden command and `.help` are binary-specific — they are NOT
 /// included here.
 ///
@@ -68,6 +67,7 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
       bfs( "org_uuid",     "Show organisation UUID from active account's `{name}.json` snapshot (opt-in)"       ),
       bfs( "org_name",     "Show organisation display name from active account's `{name}.json` snapshot (opt-in)" ),
       reg_arg_opt( "get", Kind::String ).with_description( "Extract bare field value for scripting: `subscription`, `tier`, `token`, `expires_in_secs`, `email`, `account`, `file`" ),
+      thr(),
       trc(),
     ],
     Box::new( credentials_status_routine ) );
@@ -204,7 +204,6 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
       fmt(),
     ],
     Box::new( model_select_routine ) );
-  reg_cmd( registry, ".token.status",   "Show active OAuth token expiry classification",                  vec![ fmt(), thr(), trc() ], Box::new( token_status_routine   ) );
   reg_cmd( registry, ".paths",          "Show all resolved ~/.claude/ canonical file paths",
     vec![
       fmt(),

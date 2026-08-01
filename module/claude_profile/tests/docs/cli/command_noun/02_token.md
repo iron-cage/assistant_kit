@@ -1,5 +1,7 @@
 # Test: noun::token
 
+> **REMOVED** — `.token.status` (the only command on this noun) has been removed. Token expiry classification is now exposed via `.credentials.status`'s `token`/`expires` fields. See [docs/cli/command_noun/002_token.md](../../../../docs/cli/command_noun/002_token.md) (archived) and [docs/cli/command_noun/003_credentials.md](../../../../docs/cli/command_noun/003_credentials.md).
+
 Noun contract tests for the `token` domain noun. Verifies stateless read behavior,
 JSON output schema fidelity, and error code contract as defined in
 [docs/cli/command_noun/002_token.md](../../../../docs/cli/command_noun/002_token.md).
@@ -8,44 +10,29 @@ JSON output schema fidelity, and error code contract as defined in
 
 | ID | Test Name | Category |
 |----|-----------|----------|
-| NC-1 | Token status is stateless — no persistent state written | Lifecycle |
-| NC-2 | `.token.status format::json` output matches documented schema | Output Schema |
-| NC-3 | Missing credentials file exits 2 | Error Code Contract |
+| NC-1 | N/A — command removed | Lifecycle |
+| NC-2 | N/A — command removed | Output Schema |
+| NC-3 | N/A — command removed | Error Code Contract |
 
-### Test Coverage Summary
-
-- Lifecycle: 1 test
-- Output Schema: 1 test
-- Error Code Contract: 1 test
-
-**Total:** 3 noun contract tests
+**Total:** 0 noun contract tests (3 superseded — see per-case notes)
 
 ---
 
-### NC-1: Token status is stateless — no persistent state written
+### NC-1: N/A — command removed
 
-- **Given:** `~/.claude/.credentials.json` exists with valid `expiresAt`. Record mtime of `~/.claude/.credentials.json` and all credential store files.
-- **When:** `clp .token.status`
-- **Then:** Exit 0. mtime of `~/.claude/.credentials.json` unchanged. No files created or modified. Token classification printed to stdout. Confirms token noun is a pure read path — the token lifecycle is managed externally by the OAuth flow; `clp` never writes token state.
-- **Exit:** 0
-- **Source:** [002_token.md — Lifecycle](../../../../docs/cli/command_noun/002_token.md#lifecycle)
+> **N/A** — This case verified `.token.status` wrote no persistent state (mtime-stable, pure read). `.credentials.status` is documented as a pure read with the same guarantee (`docs/cli/command_verb/010_status.md` Post-conditions: "No files written or modified"; `tests/docs/cli/command/10_credentials_status.md` IT-8 confirms output stability across repeated invocations). No dedicated mtime-check case exists under the new noun; the property is covered structurally rather than by a standalone test.
+> Becomes testable when: no committed task.
 
 ---
 
-### NC-2: `.token.status format::json` output matches documented schema
+### NC-2: N/A — command removed
 
-- **Given:** `~/.claude/.credentials.json` exists with valid `expiresAt` in the future.
-- **When:** `clp .token.status format::json`
-- **Then:** Exit 0. Output is valid JSON object. Contains `status` field (string; one of `"valid"`, `"expiring_soon"`, `"expired"`) and `expires_in_secs` field (non-negative integer). No undocumented fields required.
-- **Exit:** 0
-- **Source:** [002_token.md — Output Schema](../../../../docs/cli/command_noun/002_token.md#output-schema)
+> **N/A** — This case verified `.token.status format::json`'s two-field schema (`status`, `expires_in_secs`). Superseded by `tests/docs/cli/command/10_credentials_status.md` IT-3/IT-14, which assert the same two fields (`token`, `expires_in_secs`) as part of `.credentials.status`'s full 16-field JSON object.
+> Becomes testable when: no committed task.
 
 ---
 
-### NC-3: Missing credentials file exits 2
+### NC-3: N/A — command removed
 
-- **Given:** `~/.claude/.credentials.json` does NOT exist.
-- **When:** `clp .token.status`
-- **Then:** Exit 2. Error message on stderr referencing absent or unreadable credentials file. No stdout output.
-- **Exit:** 2
-- **Source:** [002_token.md — Error Codes](../../../../docs/cli/command_noun/002_token.md#error-codes)
+> **N/A** — This case verified a missing credentials file exited 2 with no stdout. Superseded by `tests/docs/cli/command/10_credentials_status.md` IT-4 (identical file-absence contract).
+> Becomes testable when: no committed task.

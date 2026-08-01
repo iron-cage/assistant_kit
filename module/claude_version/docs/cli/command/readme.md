@@ -36,7 +36,7 @@
 | 9 | `.settings.show` | settings | [settings.md](settings.md) *(deprecated)* |
 | 10 | `.settings.get` | settings | [settings.md](settings.md) *(deprecated)* |
 | 11 | `.settings.set` | settings | [settings.md](settings.md) *(deprecated)* |
-| 12 | `.version.history` | version | [version.md](version.md) |
+| 12 | `.version.history` | version | [version.md](version.md) *(retired — merged into `.version.list`)* |
 | 13 | `.config` | config | [config.md](config.md) |
 | 14 | `.params` | params | [params.md](params.md) |
 | 15 | `.runtime_files` | root | [root.md](root.md) |
@@ -45,7 +45,7 @@
 ### Navigation
 
 - [Root Commands](root.md) — `.help`, `.status`, `.runtime_files`
-- [Version Commands](version.md) — `.version.show`, `.version.install`, `.version.guard`, `.version.list`, `.version.history`
+- [Version Commands](version.md) — `.version.show`, `.version.install`, `.version.guard`, `.version.list` (aliases + release history via `mode::`)
 - [Process Commands](processes.md) — `.processes`, `.processes.kill`
 - [Settings Commands](settings.md) — `.settings.show`, `.settings.get`, `.settings.set` *(deprecated)*
 - [Config Command](config.md) — `.config`

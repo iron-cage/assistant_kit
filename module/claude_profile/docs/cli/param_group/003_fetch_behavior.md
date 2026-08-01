@@ -31,7 +31,6 @@
 | 9 | [`.account.inspect`](../command/001_account.md#command-15-accountinspect) | `refresh::`, `trace::` |
 | 10 | [`.credentials.status`](../command/002_credentials.md#command-10-credentialsstatus) | `trace::` |
 | 11 | [`.paths`](../command/004_paths.md#command-8-paths) | `trace::` |
-| 12 | [`.token.status`](../command/005_token.md#command-7-tokenstatus) | `trace::` |
 
 **Typical Patterns:**
 

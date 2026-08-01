@@ -2,9 +2,9 @@
 
 ### Scope
 
-- **Purpose**: Type validation test cases for all 9 clv semantic types.
+- **Purpose**: Type validation test cases for all 10 clv semantic types.
 - **Responsibility**: Index of per-type test case files covering parsing, validation, and boundary behavior.
-- **In Scope**: All 9 clv types: VerbosityLevel, OutputFormat, VersionSpec, SettingsKey, SettingsValue, ConfigScope, ConfigKey, ParamKind, PathKey.
+- **In Scope**: All 10 clv types: VerbosityLevel, OutputFormat, VersionSpec, SettingsKey, SettingsValue, ConfigScope, ConfigKey, ParamKind, PathKey, ListMode.
 - **Out of Scope**: Command integration (→ `../command/`), parameter edge cases (→ `../param/`).
 
 ### Overview Table
@@ -20,6 +20,7 @@
 | 07_config_key.md | Type validation tests for `ConfigKey` (non-empty string + catalog) | ✅ |
 | 08_param_kind.md | Type validation tests for `ParamKind` (config\|env enum) | ✅ |
 | 09_path_key.md | Type validation tests for `PathKey` (5-variant enum) | ✅ |
+| 10_list_mode.md | Type validation tests for `ListMode` (aliases\|history enum) | ✅ |
 | procedure.md | Workflow for creating and updating type test specs | ✅ |
 
 ### Navigation
@@ -33,6 +34,7 @@
 - [ConfigKey](07_config_key.md) — non-empty string + catalog awareness
 - [ParamKind](08_param_kind.md) — config|env enum
 - [PathKey](09_path_key.md) — 5-variant path key enum
+- [ListMode](10_list_mode.md) — aliases|history enum
 
 ### See Also
 

@@ -1,8 +1,9 @@
 //! EC- edge-case tests for the `count::` parameter.
 //!
 //! Covers gap cases EC-9, EC-12 through EC-15 from `tests/docs/cli/param/09_count.md`.
-//! EC-1 through EC-5 are covered in `tests/cli/read_version_history_test.rs`;
-//! EC-6/EC-7 (overflow boundary) are covered in `cli_args_test/param_numeric_test.rs`.
+//! EC-1 through EC-5 are covered in `tests/cli/read_version_test.rs` (E15 section,
+//! `mode::history`); EC-6/EC-7 (overflow boundary) are covered in
+//! `cli_args_test/param_numeric_test.rs`.
 
 use crate::subprocess_helpers::{ assert_exit, run_clv, stdout, stderr };
 
@@ -10,7 +11,7 @@ use crate::subprocess_helpers::{ assert_exit, run_clv, stdout, stderr };
 #[ test ]
 fn count_ec12_count_3_at_most_3_entries()
 {
-  let out = run_clv( &[ ".version.history", "count::3" ] );
+  let out = run_clv( &[ ".version.list", "mode::history", "count::3" ] );
   if out.status.code() == Some( 0 )
   {
     let text  = stdout( &out );
@@ -24,7 +25,7 @@ fn count_ec12_count_3_at_most_3_entries()
 #[ test ]
 fn count_ec13_count_1_v0_exactly_one_line()
 {
-  let out = run_clv( &[ ".version.history", "count::1", "v::0" ] );
+  let out = run_clv( &[ ".version.list", "mode::history", "count::1", "v::0" ] );
   if out.status.code() == Some( 0 )
   {
     let text  = stdout( &out );
@@ -37,7 +38,7 @@ fn count_ec13_count_1_v0_exactly_one_line()
 #[ test ]
 fn count_ec14_count_0_json_empty_array()
 {
-  let out = run_clv( &[ ".version.history", "count::0", "format::json" ] );
+  let out = run_clv( &[ ".version.list", "mode::history", "count::0", "format::json" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out ).trim().to_string();
   assert_eq!( text, "[]", "count::0 format::json must produce exactly []: {text}" );
@@ -47,7 +48,7 @@ fn count_ec14_count_0_json_empty_array()
 #[ test ]
 fn count_ec15_v_abc_type_mismatch_exits_1()
 {
-  let out = run_clv( &[ ".version.history", "v::abc" ] );
+  let out = run_clv( &[ ".version.list", "mode::history", "v::abc" ] );
   assert_exit( &out, 1 );
 }
 
@@ -55,8 +56,19 @@ fn count_ec15_v_abc_type_mismatch_exits_1()
 #[ test ]
 fn count_ec9_empty_value_exits_1()
 {
-  let out = run_clv( &[ ".version.history", "count::" ] );
+  let out = run_clv( &[ ".version.list", "mode::history", "count::" ] );
   assert_exit( &out, 1 );
   let err = stderr( &out );
   assert!( err.contains( "count::" ), "error must mention count:: {err}" );
+}
+
+/// EC-10: `count::` accepted but inert outside `mode::history` — `mode::aliases count::3`
+/// produces output byte-identical to `mode::aliases` without `count::`.
+#[ test ]
+fn count_ec10_inert_under_aliases_mode()
+{
+  let with_count    = run_clv( &[ ".version.list", "mode::aliases", "count::3" ] );
+  let without_count = run_clv( &[ ".version.list", "mode::aliases" ] );
+  assert_exit( &with_count, 0 );
+  assert_eq!( stdout( &with_count ), stdout( &without_count ), "count:: must have no effect under mode::aliases" );
 }

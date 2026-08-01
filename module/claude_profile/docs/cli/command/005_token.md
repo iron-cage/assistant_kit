@@ -1,6 +1,8 @@
 # Commands: Token
 
-Token status commands.
+> **DEPRECATED** — `.token.status` (the only command in this file) has been removed. Token expiry classification is now exposed via `.credentials.status`'s `token`/`expires` fields (see [command/002_credentials.md](002_credentials.md#command-10-credentialsstatus)). The content below is preserved as historical record of the removed command.
+
+Token status commands. `.credentials.status` (see [command/002_credentials.md](002_credentials.md#command-10-credentialsstatus)) offers the same classification alongside broader account metadata — use `.token.status` when only the bare token classification is needed.
 
 ---
 
@@ -26,7 +28,7 @@ clp .token.status format::json
 | `trace::` | `bool` | `0` | Print timestamped diagnostic lines to stderr for the credential file read |
 
 **Algorithm (3 steps):**
-1. Read `expiresAt` from `~/.claude/.credentials.json`
+1. Read `expiresAt` from `~/.claude/.credentials.json`; absent (active account is `backend: redirect`) → classify `Static` immediately, skip step 2
 2. Classify: `Valid` (`expiresAt > now + threshold::`), `ExpiringSoon` (`now < expiresAt ≤ now + threshold::`), or `Expired` (`expiresAt ≤ now`)
 3. Render in requested `format::`
 
@@ -41,6 +43,9 @@ clp .token.status threshold::1800
 
 clp .token.status format::json
 # {"status":"valid","expires_in_secs":2820}
+
+clp .token.status
+# static   (redirect-backend account — no expiry)
 ```
 
 ### Referenced Parameters
@@ -51,12 +56,16 @@ clp .token.status format::json
 | 2 | [threshold::](../param/003_threshold.md) | ExpiringSoon threshold in seconds |
 | 3 | [trace::](../param/023_trace.md) | Diagnostic trace output |
 
+**Notes:**
+- **Redirect backend:** a `backend: redirect` active account always classifies `Static`, checked before any `threshold::` comparison — `expiresAt` is absent, never merely far away. See [feature/071](../../feature/071_redirect_backend_accounts.md).
+
 ### Referenced Features
 
 | # | Feature | Role |
 |---|---------|------|
 | 1 | [Token Status](../../feature/006_token_status.md) | Token expiry classification algorithm |
 | 2 | [Auto Rotate](../../feature/008_auto_rotate.md) | Token status drives auto-rotation trigger |
+| 3 | [Redirect Backend Accounts](../../feature/071_redirect_backend_accounts.md) | `Static` classification for `backend: redirect` accounts |
 
 ### Referenced User Stories
 

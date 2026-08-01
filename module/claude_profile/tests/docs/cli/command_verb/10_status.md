@@ -1,58 +1,50 @@
 # Test: verb::status
 
-Behavioral contract tests for the `status` verb. Verifies full idempotency, read-only
-behavior, and pre-condition enforcement for both nouns (`token` and `credentials`) as defined in
+Behavioral contract tests for the `status` verb. Verifies idempotency and read-only
+behavior for the `credentials` noun — the `token` noun's `.token.status` command has
+been removed (BV-1 through BV-3 below) — as defined in
 [docs/cli/command_verb/010_status.md](../../../../docs/cli/command_verb/010_status.md).
 
-**Idempotency:** Yes — both commands are pure reads; repeated calls return the same result for the same credential state.
-**State Pattern:** Reads state — no local files written for either noun.
+**Idempotency:** Yes — `.credentials.status` is a pure read; repeated calls return the same result for the same credential state.
+**State Pattern:** Reads state — no local files written.
 
 ### Test Case Index
 
 | ID | Test Name | Category |
 |----|-----------|----------|
-| BV-1 | `.token.status` called twice returns same classification | Idempotency |
-| BV-2 | `.token.status` read is purely non-mutating | State Transition |
-| BV-3 | `.token.status` with absent credentials file exits 2 | Pre-condition |
+| BV-1 | N/A — `.token.status` removed | Idempotency |
+| BV-2 | N/A — `.token.status` removed | State Transition |
+| BV-3 | N/A — `.token.status` removed | Pre-condition |
 | BV-4 | `.credentials.status` called twice returns same output | Idempotency |
 
 ### Test Coverage Summary
 
-- Idempotency: 2 tests (one per noun)
-- State Transition: 1 test
-- Pre-condition: 1 test
+- Idempotency: 1 test (BV-4; BV-1 superseded)
+- State Transition: 0 tests (BV-2 superseded)
+- Pre-condition: 0 tests (BV-3 superseded)
 
-**Total:** 4 behavioral contract tests
-
----
-
-### BV-1: `.token.status` called twice returns same classification
-
-- **Given:** `~/.claude/.credentials.json` exists with `expiresAt` field set to a time in the future (valid token). No time passes between calls.
-- **When:** `clp .token.status` called twice in immediate succession
-- **Then:** Both calls exit 0. Both calls return the same classification (`Valid` or `ExpiringSoon`). No files modified.
-- **Exit:** 0
-- **Source:** [010_status.md — Idempotency](../../../../docs/cli/command_verb/010_status.md#idempotency)
+**Total:** 1 behavioral contract test (3 superseded — see per-case notes)
 
 ---
 
-### BV-2: `.token.status` read is purely non-mutating
+### BV-1: N/A — `.token.status` removed
 
-- **Given:** `~/.claude/.credentials.json` exists with parseable `expiresAt`. Record mtime of `~/.claude/.credentials.json`.
-- **When:** `clp .token.status`
-- **Then:** Exit 0. mtime of `~/.claude/.credentials.json` unchanged. No new files created. Token classification reported on stdout.
-- **Exit:** 0
-- **Source:** [010_status.md — State Transition Pattern](../../../../docs/cli/command_verb/010_status.md#state-transition-pattern)
+> **N/A** — This case verified `.token.status` called twice returned the same classification. `.token.status` no longer exists; BV-4 covers the same idempotency guarantee for the surviving `.credentials.status` command with a strictly broader assertion (identical full output, which includes the `Token:`/`Expires:` classification).
+> Becomes testable when: no committed task.
 
 ---
 
-### BV-3: `.token.status` with absent credentials file exits 2
+### BV-2: N/A — `.token.status` removed
 
-- **Given:** `~/.claude/.credentials.json` does NOT exist.
-- **When:** `clp .token.status`
-- **Then:** Exit 2. Error message on stderr referencing absent or unreadable credentials file.
-- **Exit:** 2
-- **Source:** [010_status.md — Behavioral Contract](../../../../docs/cli/command_verb/010_status.md#behavioral-contract)
+> **N/A** — This case verified `.token.status` was purely non-mutating (mtime unchanged, no new files). `.credentials.status` carries the same read-only guarantee — documented in `docs/cli/command_verb/010_status.md` Post-conditions ("No files written or modified") and exercised indirectly by `tests/docs/cli/command/10_credentials_status.md` IT-8 (stable output across repeated invocations). No dedicated mtime-check case exists under the surviving command; the property is covered structurally rather than by a standalone test.
+> Becomes testable when: no committed task.
+
+---
+
+### BV-3: N/A — `.token.status` removed
+
+> **N/A** — This case verified a missing `~/.claude/.credentials.json` exited 2 under `.token.status`. Superseded by `tests/docs/cli/command/10_credentials_status.md` IT-4 (identical file-absence contract for the surviving `.credentials.status` command).
+> Becomes testable when: no committed task.
 
 ---
 

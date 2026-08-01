@@ -26,9 +26,6 @@ mod read_processes_test;
 #[ path = "cli/read_settings_test.rs" ]
 mod read_settings_test;
 
-#[ path = "cli/read_version_history_test.rs" ]
-mod read_version_history_test;
-
 #[ path = "cli/mutation_version_install_test.rs" ]
 mod mutation_version_install_test;
 
@@ -118,3 +115,9 @@ mod paths_test;
 
 #[ path = "cli/path_key_test.rs" ]
 mod path_key_test;
+
+#[ path = "cli/list_mode_test.rs" ]
+mod list_mode_test;
+
+#[ path = "cli/mode_param_test.rs" ]
+mod mode_param_test;

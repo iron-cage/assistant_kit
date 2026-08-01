@@ -5,7 +5,7 @@
 - **Purpose**: Expose the "current account" (the one whose credentials are live in `~/.claude/.credentials.json`) alongside the "active account" (per-machine active marker) in both `.accounts` and `.usage`, with a clear visual indicator when they diverge.
 - **Responsibility**: Documents the `is_current` field for `.accounts` and the `*` active-divergence marker for `.usage`, plus the shared token-matching algorithm.
 - **In Scope**: `current::` field-presence toggle and `Current:` line in `.accounts`; `*` flag for active-marker-but-not-current accounts in `.usage`; JSON field additions (`is_current` in both commands, `is_active` in `.usage`); graceful degradation when `~/.claude/.credentials.json` is unreadable.
-- **Out of Scope**: `.token.status` (reads live credentials but doesn't compare against saved accounts); `.account.limits` (single-account query, no divergence display); `.credentials.status` (live-only, no account store involved).
+- **Out of Scope**: `.account.limits` (single-account query, no divergence display); `.credentials.status` (live-only, no account store involved).
 
 ### Design
 

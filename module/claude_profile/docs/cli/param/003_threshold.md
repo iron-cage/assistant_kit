@@ -25,7 +25,7 @@ threshold::0      → never classify as ExpiringSoon (only Valid or Expired)
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.token.status`](../command/005_token.md#command-7-tokenstatus) | Applies warning threshold for expiry classification |
+| 1 | [`.credentials.status`](../command/002_credentials.md#command-10-credentialsstatus) | Applies warning threshold for expiry classification on the `Token:` line |
 
 ### Referenced User Stories
 

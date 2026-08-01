@@ -1,9 +1,7 @@
 //! `.version.history` — release history from GitHub Releases API with 1-hour cache.
 
+use claude_version_core::version::VERSION_HISTORY;
 use unilang::data::{ ErrorCode, ErrorData, OutputData };
-use unilang::interpreter::ExecutionContext;
-use unilang::semantic::VerifiedCommand;
-use unilang::types::Value;
 
 use crate::output::{ OutputFormat, OutputOptions, json_escape };
 
@@ -206,22 +204,40 @@ fn fetch_releases_json( base : &std::path::Path ) -> Result< String, ErrorData >
   Ok( response )
 }
 
-/// `.version.history` — show release history with changelogs from GitHub.
+/// Build release entries from the compiled-in `VERSION_HISTORY` snapshot.
+///
+/// Used when the live GitHub Releases API fetch and the local cache both fail
+/// (e.g. no network). `body` is reconstructed as a single bullet from `summary`
+/// — the compiled-in snapshot carries no full changelog text — so `v::2` output
+/// still renders a structurally valid, if abbreviated, changelog block.
+fn fallback_releases() -> Vec< ReleaseInfo >
+{
+  VERSION_HISTORY.iter()
+  .map( | r | ReleaseInfo
+  {
+    version : r.version.to_string(),
+    date    : r.date.to_string(),
+    summary : r.summary.to_string(),
+    body    : format!( "- {}", r.summary ),
+  } )
+  .collect()
+}
+
+/// `.version.list mode::history` — show release history with changelogs from GitHub.
+///
+/// Falls back to the compiled-in `VERSION_HISTORY` snapshot (a stderr warning is
+/// printed) when the live fetch and the local cache both fail; only a missing
+/// `HOME` still surfaces as an error, since the fallback needs no filesystem access.
+///
+/// `count` and `opts` are parsed by the caller (`version::version_list_routine`'s
+/// `mode::` dispatch), shared with `mode::aliases`'s own parameter parsing.
 ///
 /// # Errors
 ///
-/// Returns `Err(InternalError)` when HOME is missing or the network request fails.
-/// Returns `Err(ArgumentTypeMismatch)` when `format::` has an invalid value.
-#[ allow( clippy::missing_inline_in_public_items ) ]
-pub fn version_history_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
+/// Returns `Err(InternalError)` when HOME is missing.
+#[ allow( clippy::missing_inline_in_public_items, clippy::too_many_lines ) ]
+pub( super ) fn render_history_mode( count : usize, opts : &OutputOptions ) -> Result< OutputData, ErrorData >
 {
-  let opts  = OutputOptions::from_cmd( &cmd )?;
-  let count = match cmd.arguments.get( "count" )
-  {
-    Some( Value::Integer( n ) ) => usize::try_from( *n ).unwrap_or( 10 ),
-    _                           => 10,
-  };
-
   // count::0 needs no network call — return the appropriate empty response immediately.
   if count == 0
   {
@@ -234,8 +250,15 @@ pub fn version_history_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   }
 
   let paths = super::require_claude_paths()?;
-  let json  = fetch_releases_json( paths.base() )?;
-  let mut releases = extract_releases( &json );
+  let mut releases = if let Ok( json ) = fetch_releases_json( paths.base() )
+  {
+    extract_releases( &json )
+  }
+  else
+  {
+    eprintln!( "warning: .version.list mode::history could not reach the GitHub Releases API; showing compiled-in offline snapshot (versions 2.1.74-2.1.220)" );
+    fallback_releases()
+  };
   releases.truncate( count );
 
   let content = match ( opts.format, opts.verbosity )

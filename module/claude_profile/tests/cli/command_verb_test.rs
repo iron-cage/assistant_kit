@@ -73,13 +73,10 @@
 //! | BV-3 | `assign_bv3_nonexistent_account_exits_2` | missing account → exit 2 | N |
 //! | BV-4 | `assign_bv4_assign_1_removed_toggle_exits_1` | `assign::1` REMOVED → exit 1 + migration hint | N |
 //!
-//! ### `verb::status` (BV-1..4)
+//! ### `verb::status` (BV-4 only — BV-1..3 removed with `.token.status`)
 //!
 //! | ID | Test Function | Condition | P/N |
 //! |----|---------------|-----------|-----|
-//! | BV-1 | `status_bv1_token_status_twice_same_classification` | two calls → same result | P |
-//! | BV-2 | `status_bv2_token_status_non_mutating` | mtime unchanged after call | P |
-//! | BV-3 | `status_bv3_token_status_absent_creds_exits_2` | absent creds file → exit 2 | N |
 //! | BV-4 | `status_bv4_credentials_status_twice_same_output` | two calls → identical stdout | P |
 //!
 //! ### `verb::unclaim` (BV-1..4)
@@ -821,56 +818,11 @@ fn unclaim_bv4_unclaim_1_removed_toggle_exits_1()
 
 // ── verb::status ──────────────────────────────────────────────────────────────
 
-// BV-1: .token.status called twice returns same classification
-#[ test ]
-fn status_bv1_token_status_twice_same_classification()
-{
-  let dir = TempDir::new().unwrap();
-  let home = dir.path().to_str().unwrap();
-  write_credentials( dir.path(), "max", "default", FAR_FUTURE_MS );
-
-  let out1 = run_cs_with_env( &[ ".token.status" ], &[ ( "HOME", home ) ] );
-  assert_exit( &out1, 0 );
-
-  let out2 = run_cs_with_env( &[ ".token.status" ], &[ ( "HOME", home ) ] );
-  assert_exit( &out2, 0 );
-
-  // First line of each output must match (classification line)
-  let first1 = stdout( &out1 ).lines().next().unwrap_or( "" ).to_string();
-  let first2 = stdout( &out2 ).lines().next().unwrap_or( "" ).to_string();
-  assert_eq!( first1, first2, "classification must be identical across two calls" );
-}
-
-// BV-2: .token.status read is purely non-mutating
-#[ test ]
-fn status_bv2_token_status_non_mutating()
-{
-  let dir = TempDir::new().unwrap();
-  let home = dir.path().to_str().unwrap();
-  write_credentials( dir.path(), "max", "default", FAR_FUTURE_MS );
-
-  let creds_path = dir.path().join( ".claude" ).join( ".credentials.json" );
-  let mtime_before = mtime_ms( &creds_path );
-
-  let out = run_cs_with_env( &[ ".token.status" ], &[ ( "HOME", home ) ] );
-  assert_exit( &out, 0 );
-
-  assert_eq!(
-    mtime_before, mtime_ms( &creds_path ),
-    ".token.status must not modify ~/.claude/.credentials.json",
-  );
-}
-
-// BV-3: .token.status with absent credentials file exits 2
-#[ test ]
-fn status_bv3_token_status_absent_creds_exits_2()
-{
-  let dir = TempDir::new().unwrap();
-  let home = dir.path().to_str().unwrap();
-  // No credentials file written
-  let out = run_cs_with_env( &[ ".token.status" ], &[ ( "HOME", home ) ] );
-  assert_exit( &out, 2 );
-}
+// BV-1, BV-2, BV-3 (formerly .token.status idempotency/non-mutating/absent-creds cases):
+// removed along with `.token.status`. BV-4 below covers the same idempotency guarantee
+// for the surviving `.credentials.status` command with a strictly broader assertion
+// (identical full output, not just the classification line). See
+// tests/docs/cli/command_verb/10_status.md for the full N/A rationale per case.
 
 // BV-4: .credentials.status called twice returns same output
 #[ test ]
