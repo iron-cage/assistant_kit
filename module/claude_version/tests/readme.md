@@ -25,10 +25,9 @@ Unit and integration tests for `claude_version`.
 | `cli/framework_test.rs` | Pipeline smoke tests: help listing, exit codes |
 | `cli/read_help_test.rs` | Integration tests for `.help` (E1) |
 | `cli/read_status_test.rs` | Integration tests for `.status` and format edge cases (E2) |
-| `cli/read_version_test.rs` | Integration tests for `.version.show` and `.version.list` (E3, E4) |
+| `cli/read_version_test.rs` | Integration tests for `.version.show` and `.version.list` (E3, E4, E15) |
 | `cli/read_processes_test.rs` | Integration tests for `.processes` (E6) |
 | `cli/read_settings_test.rs` | Integration tests for `.settings.show` and `.settings.get` (E8, E9) |
-| `cli/read_version_history_test.rs` | Integration tests for `.version.history` (E15) |
 | `cli/mutation_version_install_test.rs` | Integration tests for `.version.install` (E5) |
 | `cli/mutation_processes_kill_test.rs` | Integration tests for `.processes.kill` (E7) |
 | `cli/mutation_version_guard_test.rs` | Integration tests for `.version.guard` (E14) |
@@ -57,6 +56,10 @@ Unit and integration tests for `claude_version`.
 | `cli/params_command_test.rs` | `.params` command integration tests |
 | `cli/kind_param_test.rs` | EC- edge case tests for the `kind::` parameter |
 | `cli/runtime_files_test.rs` | Integration tests for `.runtime_files` (IT-1..IT-9, FT-1..FT-5) |
+| `cli/paths_test.rs` | Integration tests for `.paths` (IT-1..IT-11, FT-1..FT-7) |
+| `cli/path_key_test.rs` | Type contract tests for `PathKey` validation (TC-1..TC-9) |
+| `cli/list_mode_test.rs` | Type contract tests for `ListMode` validation (TC-1..TC-6) |
+| `cli/mode_param_test.rs` | EC- edge case tests for the `mode::` parameter |
 
 ## Arg Parsing Test Modules (`cli_args_test/`)
 

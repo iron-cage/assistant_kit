@@ -24,3 +24,14 @@ pub mod routines;
 ///
 /// Used by `assistant/build.rs` for compile-time aggregation.
 pub const COMMANDS_YAML : &str = concat!( env!( "CARGO_MANIFEST_DIR" ), "/claude_journal.commands.yaml" );
+
+#[ cfg( feature = "routines" ) ]
+/// Register `claude_journal_viewer` commands into an existing registry.
+///
+/// `claude_journal_viewer` commands are defined in [`COMMANDS_YAML`] for compile-time
+/// aggregation (used by `assistant/build.rs`). This function is provided for API
+/// consistency with other Layer 2 crates; the body is intentionally empty because
+/// runtime registration of `.journal.*` commands is handled by the build-time YAML
+/// aggregation path in `assistant`.
+#[ inline ]
+pub fn register_commands( _registry : &mut unilang::registry::CommandRegistry ) {}

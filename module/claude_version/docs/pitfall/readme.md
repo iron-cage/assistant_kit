@@ -7,6 +7,15 @@
 - **In Scope**: Version lock side effects, auto-updater bypass vectors.
 - **Out of Scope**: Design pattern rationale (→ `pattern/`), feature behavior (→ `feature/`).
 
+### Responsibility Table
+
+| File | Responsibility |
+|------|---------------|
+| readme.md | Index and navigation for pitfall instances |
+| procedure.md | Steps for adding, updating, or removing pitfall instances |
+| 001_version_lock_chmod.md | chmod modifies symlink target permissions causing lock bypass |
+| 002_symlink_retarget.md | Auto-updater rewrites symlink, bypassing pinned version |
+
 ### Overview Table
 
 | ID | Name | Purpose | Status |

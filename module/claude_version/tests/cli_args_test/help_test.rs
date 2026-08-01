@@ -149,8 +149,8 @@ fn tc489_bare_help_after_command_routes_to_help()
 #[ test ]
 fn tc490_bare_help_after_params_routes_to_help()
 {
-  let out = run( &[ ".version.history", "count::3", "help" ] );
-  assert_eq!( code( &out ), 0, "`.version.history count::3 help` must exit 0" );
+  let out = run( &[ ".version.list", "mode::history", "count::3", "help" ] );
+  assert_eq!( code( &out ), 0, "`.version.list mode::history count::3 help` must exit 0" );
   let stdout = out_stdout( &out );
   assert!( stdout.contains( "Version Management" ), "must show help listing: {stdout}" );
 }

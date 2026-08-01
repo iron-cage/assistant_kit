@@ -681,3 +681,53 @@
   examples:
     - ".runtime_files"
   auto_help_enabled: true
+
+- name: ".paths"
+  namespace: ""
+  description: "Report filesystem paths clv reads from or writes to"
+  hint: "Show clv's filesystem paths"
+  version: "1.0.0"
+  status: "stable"
+  aliases: []
+  tags: ["manager", "info"]
+  permissions: []
+  idempotent: true
+  deprecation_message: ""
+  http_method_hint: "GET"
+
+  arguments:
+    - name: "key"
+      kind: "String"
+      description: "Path key: settings, project_settings, versions_dir, binary_symlink, or version_history_cache (absent = show all)"
+      hint: "Path key (absent = show all)"
+      optional: true
+      validation_rules: []
+      aliases: []
+      tags: []
+
+    - name: "format"
+      kind: "String"
+      description: "Output format (text or json)"
+      hint: "Output format"
+      optional: true
+      default: "text"
+      validation_rules: []
+      aliases: ["fmt"]
+      tags: []
+
+    - name: "verbosity"
+      kind: "Integer"
+      description: "Output detail level (0=path only, 1=label+path, 2=label+path+description)"
+      hint: "Output verbosity level"
+      optional: true
+      default: "1"
+      validation_rules: []
+      aliases: ["v"]
+      tags: []
+
+  examples:
+    - ".paths"
+    - ".paths key::settings"
+    - ".paths key::versions_dir format::json"
+    - ".paths key::binary_symlink v::2"
+  auto_help_enabled: true

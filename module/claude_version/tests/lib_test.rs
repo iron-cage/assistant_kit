@@ -5,10 +5,10 @@
 //! | TC | Description | P/N |
 //! |----|-------------|-----|
 //! | TC-001 | `register_commands()` is callable and adds commands to a registry | P |
-//! | TC-002 | all 13 explicitly-registered commands present (`.help` auto-registered = 14 total) | P |
+//! | TC-002 | all 14 explicitly-registered commands present (`.help` auto-registered = 15 total) | P |
 //! | TC-003 | `unilang.commands.yaml` file exists at `COMMANDS_YAML` path | P |
-//! | TC-004 | YAML contains exactly the 13 expected command names | P |
-//! | TC-005 | all 13 YAML command names are also registered programmatically (no drift) | P |
+//! | TC-004 | YAML contains exactly the 14 expected command names | P |
+//! | TC-005 | all 14 YAML command names are also registered programmatically (no drift) | P |
 
 /// Canonical command list — single source of truth for TC-002, TC-004, TC-005.
 const EXPECTED_COMMANDS : &[ &str ] = &[
@@ -25,6 +25,7 @@ const EXPECTED_COMMANDS : &[ &str ] = &[
   ".config",
   ".params",
   ".runtime_files",
+  ".paths",
 ];
 
 #[ cfg( feature = "enabled" ) ]

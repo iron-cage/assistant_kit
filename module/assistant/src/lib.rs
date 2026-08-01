@@ -151,8 +151,7 @@ mod cli
             CommandEntry { name : ".version.show".to_string(),    desc : "Show current Claude Code version".to_string() },
             CommandEntry { name : ".version.install".to_string(), desc : "Install a specific Claude Code version".to_string() },
             CommandEntry { name : ".version.guard".to_string(),   desc : "Guard minimum version requirement".to_string() },
-            CommandEntry { name : ".version.list".to_string(),    desc : "List available Claude Code versions".to_string() },
-            CommandEntry { name : ".version.history".to_string(), desc : "Show version installation history".to_string() },
+            CommandEntry { name : ".version.list".to_string(),    desc : "List version aliases or release history (mode::)".to_string() },
           ],
         },
         CommandGroup

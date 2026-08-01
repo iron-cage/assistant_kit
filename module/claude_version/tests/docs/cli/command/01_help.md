@@ -134,7 +134,7 @@ Integration test planning for help output triggers. See [command/readme.md](../.
 | Function | File |
 |----------|------|
 | `tc079_help_command_exits_0` | `tests/cli/framework_test.rs` |
-| `tc080_help_lists_12_commands` | `tests/cli/framework_test.rs` |
+| `tc080_help_lists_14_commands` | `tests/cli/framework_test.rs` |
 | `tc082_help_includes_available_commands_section` | `tests/cli/framework_test.rs` |
 | `tc091_unknown_command_exits_1` | `tests/cli/framework_test.rs` |
 | `tc093_empty_args_exits_0` | `tests/cli/framework_test.rs` |

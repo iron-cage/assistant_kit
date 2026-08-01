@@ -76,7 +76,7 @@ fn tc029_leading_zero_semver_rejected()
 #[ test ]
 fn tc487_count_u64_max_rejected_with_clear_error()
 {
-  let out = run( &[ ".version.history", "count::18446744073709551615" ] );
+  let out = run( &[ ".version.list", "mode::history", "count::18446744073709551615" ] );
   assert_eq!( code( &out ), 1, "count::u64_max must be rejected (exit 1)" );
   let err = out_stderr( &out );
   assert!(
@@ -95,9 +95,9 @@ fn tc487_count_u64_max_rejected_with_clear_error()
 fn tc488_count_i64_max_accepted()
 {
   // count::i64::MAX passes through the adapter without error.
-  // Use .version.history; it may fail at the network level (exit 2) but must NOT exit 1
-  // due to count:: validation error.
-  let out = run( &[ ".version.history", "count::9223372036854775807" ] );
+  // Use .version.list mode::history; the fallback snapshot means network state
+  // cannot cause exit 2 here, but this must NOT exit 1 due to count:: validation error.
+  let out = run( &[ ".version.list", "mode::history", "count::9223372036854775807" ] );
   // Must not exit 1 (which would indicate a count:: validation failure)
   assert_ne!( code( &out ), 1, "count::i64_max must not be rejected by adapter (exit must not be 1)" );
 }

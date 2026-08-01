@@ -7,6 +7,15 @@
 - **In Scope**: value:: type inference rules, precedence order, edge cases; 4-layer config resolution algorithm.
 - **Out of Scope**: Settings JSON I/O design (→ `feature/003_settings_management.md`), CLI parsing (→ `feature/005_cli_design.md`).
 
+### Responsibility Table
+
+| File | Responsibility |
+|------|---------------|
+| readme.md | Index and navigation for algorithm instances |
+| procedure.md | Steps for adding, updating, or removing algorithm instances |
+| 001_settings_type_inference.md | Type inference rules for `value::` parameter in `.settings.set` |
+| 002_config_resolution.md | 4-layer resolution: env → project → user → catalog default |
+
 ### Overview Table
 
 | ID | Name | Purpose | Status |
