@@ -156,7 +156,7 @@ fn mre_bug259_sort_renew_alphabetical_when_all_keys_tied()
 fn test_4group_h_exhausted_ranks_before_weekly_exhausted()
 {
   let accounts = vec![
-    mk_aq_sort_weekly( "weekly_exhausted@test.com", 50.0, 98.0, 96.0 ), // Group 3
+    mk_aq_sort_weekly( "weekly_exhausted@test.com", 50.0, 98.0, 98.0 ), // Group 3
     mk_aq_sort_weekly( "h_exhausted@test.com",      90.0, 50.0, 50.0 ), // Group 2
   ];
   let idx = sort_indices( &accounts, SortStrategy::Renew, None, PreferStrategy::Any, 0 );
@@ -194,9 +194,9 @@ fn test_4group_weekly_exhausted_ranks_before_red()
   // G4 Dead: billing_type="none" (cancelled) — zzz@ sorts last alphabetically within G4
   let dead    = mk_aq_cancelled(   "zzz@test.com",             50.0, 20.0 );
   // G3 WeeklyExhausted: 5h=50% (ok), 7d=2% left (≤ 3%) — only weekly-exhausted
-  let weekly  = mk_aq_sort_weekly( "weekly_only@test.com",     50.0, 98.0, 96.0 );
+  let weekly  = mk_aq_sort_weekly( "weekly_only@test.com",     50.0, 98.0, 98.0 );
   // G3 WeeklyExhausted: 5h=10% left (≤ 15%), 7d=2% left (≤ 3%) — both-exhausted, Fix(BUG-321)
-  let both_ex = mk_aq_sort_weekly( "weekly_both@test.com",     90.0, 98.0, 96.0 );
+  let both_ex = mk_aq_sort_weekly( "weekly_both@test.com",     90.0, 98.0, 98.0 );
   let accounts = vec![ dead, weekly, both_ex ];
   let idx = sort_indices( &accounts, SortStrategy::Name, None, PreferStrategy::Any, 0 );
   // Both G3 accounts must rank before G4 Dead regardless of alphabetical order
@@ -262,7 +262,7 @@ fn mre_bug299_h_exhausted_misclassified_as_red_prefer_any()
 {
   let accounts = vec![
     mk_aq_sort_weekly( "account-a",   100.0, 68.0, 95.0 ), // G2 HExhausted: 5h=0% ≤ 15%, 7d=32% > 3%
-    mk_aq_sort_weekly( "red-account", 100.0, 98.0, 96.0 ), // G3 WeeklyExhausted: both exhausted (Fix BUG-321)
+    mk_aq_sort_weekly( "red-account", 100.0, 98.0, 98.0 ), // G3 WeeklyExhausted: both exhausted (Fix BUG-321)
   ];
   let idx = sort_indices( &accounts, SortStrategy::Renew, None, PreferStrategy::Any, 0 );
   assert_eq!(

@@ -544,11 +544,14 @@ fn test_ft11_009_per_column_emoji_prefix_three_cases()
 /// # Root Cause
 /// `pct_emoji`'s closure computed `let left = 100.0 - u;` once, then used the RAW `left` for
 /// the `if left > threshold` color decision but only rounded `left` for the `{left:.0}%` display
-/// text. Two utilizations whose raw `left` straddles `5.0` by less than `1e-9` —
-/// `94.999999999999716` (`left≈5.000000000000284`, > 5.0 → 🟢) and `95.000000000000510`
-/// (`left≈4.999999999999489`, ≤ 5.0 → 🟡) — both format to the identical `"5%"` text but
-/// received opposite colors, confirmed in production via 3 accounts simultaneously showing
-/// `5%` with a 2-green/1-yellow split.
+/// text. Two utilizations whose raw `left` straddles `3.0` by less than `1e-9` —
+/// `96.9999999999993` (`left≈3.0000000000007`, > 3.0 → 🟢) and `97.0000000000007`
+/// (`left≈2.9999999999993`, ≤ 3.0 → 🟡) — both format to the identical `"3%"` text but
+/// would receive opposite colors under the pre-fix raw-comparison logic. The identical
+/// hazard was originally confirmed in production (3 accounts simultaneously showing `5%`
+/// with a 2-green/1-yellow split, back when `WEEKLY_EXHAUSTION_THRESHOLD` was `5.0`) — the
+/// pattern applies at whatever threshold is currently configured, which is why this MRE now
+/// targets `3.0` instead.
 ///
 /// # Why Not Caught
 /// No existing test constructed a near-boundary pair this close to a threshold; the only

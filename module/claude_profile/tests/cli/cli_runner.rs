@@ -384,7 +384,7 @@ pub fn write_account_renewal_json( home : &std::path::Path, name : &str, renewal
 /// triggering cache fallback.
 ///
 /// - `h5_util` : consumed 5h quota percent (0–100). Gate 4 rejects `>= 85.0`.
-/// - `d7_util` : consumed 7d quota percent (0–100). Gate 6 requires `100 - d7_util > 5.0`.
+/// - `d7_util` : consumed 7d quota percent (0–100). Gate 6 requires `100 - d7_util > 3.0`.
 /// - `d7_resets_at` : optional ISO-8601 reset timestamp for the 7d period.
 ///
 /// The cache uses the `left_pct` field (actual stored name per `account.rs:period_json`)
