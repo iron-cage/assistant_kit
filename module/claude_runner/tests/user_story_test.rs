@@ -44,9 +44,18 @@ use cli_binary_test_helpers::make_proc_dir;
 // ── US01: Interactive REPL ──────────────────────────────────────────────────
 // Source: tests/docs/cli/user_story/01_interactive_repl.md
 
-/// US-1: bare clr opens REPL — subprocess args include --dangerously-skip-permissions.
+/// US-1: bare clr under non-TTY stdin routes to print mode — subprocess args include
+/// --dangerously-skip-permissions.
 ///
-/// Validated via --dry-run (no message → REPL route). Print mode is NOT injected.
+/// Fix(BUG-425): retitled from asserting a REPL/no-`--print` route to asserting the
+///   post-fix print-mode-routed command — this test's own subprocess stdin is non-TTY
+///   (no PTY simulation in this harness), and BUG-425's fix makes non-TTY the deciding
+///   term for a bare invocation with no message and no `--interactive`.
+/// Root cause: this test predates BUG-425's TTY-check term, when "no message" alone
+///   meant the REPL route regardless of TTY presence.
+/// Pitfall: a genuine TTY (not reachable in this harness) would still route to
+///   `run_interactive()` for this same bare invocation — this test only covers the
+///   non-TTY case, matching every other subprocess-spawning test in this suite.
 /// Note: -c is NOT asserted here — the test cwd has no prior Claude session so
 /// `session_exists()` correctly returns `None`. Session continuation is tested
 /// separately in `us01_2` (which uses --session-dir with a dummy session file).
@@ -57,19 +66,31 @@ fn us01_1_bare_clr_repl_defaults()
   let output = run_dry( &[ "--session-dir", &session_path ] );
   assert!(
     output.contains( "--dangerously-skip-permissions" ),
-    "REPL mode must inject --dangerously-skip-permissions. Got:\n{output}"
+    "print mode must still inject --dangerously-skip-permissions. Got:\n{output}"
   );
   assert!(
-    !output.contains( "--print" ),
-    "REPL mode (no message) must NOT inject --print. Got:\n{output}"
+    output.contains( "--print" ),
+    "bare invocation under non-TTY stdin must route to print mode. Got:\n{output}"
   );
 }
 
-/// US-2: session continuation flag -c present when a prior session exists.
+/// US-2: -c is suppressed even when a prior session exists, because no message
+/// accompanies it.
 ///
-/// Uses --session-dir pointing to a non-empty temp dir so `session_exists()` returns `Some(SessionId)`.
+/// Fix(BUG-426): retitled from `us01_2_session_continuation_flag_present` and inverted
+///   the assertion — this test's own scenario is exactly Task 429's Test Matrix T07/T08
+///   (`--dry-run --session-dir <dir-with-prior-session>`, no message, no `--print`), whose
+///   fixed-code expected behavior is "`-c` is suppressed (no message/print-mode/file/
+///   stdin-content present)". The pre-fix assertion (`-c` must be present) was literally
+///   asserting BUG-426's own defect as correct — `-c` firing with nothing to accompany it.
+/// Root cause: this test predates BUG-426's fix, when an existing session alone (with no
+///   message-presence check) was assumed sufficient to justify `-c`.
+/// Pitfall: this scenario still composes a valid command — non-TTY stdin (Fix(BUG-425))
+///   routes it to print mode instead of erroring, so `--print` appears without `-c` or a
+///   message. Uses --session-dir pointing to a non-empty temp dir so `session_exists()`
+///   returns `Some(SessionId)`.
 #[ test ]
-fn us01_2_session_continuation_flag_present()
+fn us01_2_session_continuation_requires_message_to_inject_c()
 {
   let session_dir = tempfile::tempdir().expect( "create temp session dir" );
   std::fs::write( session_dir.path().join( "00000000-0000-0000-0000-000000000000.jsonl" ), b"{}" )
@@ -77,8 +98,8 @@ fn us01_2_session_continuation_flag_present()
   let session_dir_str = session_dir.path().to_str().expect( "session dir path is valid utf-8" );
   let output = run_dry( &[ "--session-dir", session_dir_str ] );
   assert!(
-    output.contains( " -c" ),
-    "non-empty --session-dir must inject -c. Got:\n{output}"
+    !output.contains( " -c" ),
+    "non-empty --session-dir without a message must NOT inject -c. Got:\n{output}"
   );
 }
 

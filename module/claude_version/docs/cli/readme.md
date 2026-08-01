@@ -23,6 +23,7 @@ Manage Claude Code installation: versions, processes, and settings.
 | param/ | Parameter reference files |
 | type/ | Semantic type definition files |
 | param_group/ | Parameter group files |
+| command_group/ | Commands sharing one routine function and parameter set, defaults-only divergence (0 groups) |
 | format/ | Output format specification files |
 | user_story/ | User story scenario files |
 
@@ -41,6 +42,7 @@ clv <.command> [param::value ...]
 | param/ | ✅ | ✅ | ✅ | ✅ | ✅ | Complete |
 | type/ | ✅ | ✅ | ✅ | ✅ | ✅ | Complete |
 | param_group/ | ✅ | ✅ | ✅ | ✅ | ✅ | Complete |
+| command_group/ | ✅ | ✅ | ✅ | ✅ | ✅ | Complete (0 groups qualify) |
 | 002_dictionary.md | ➖ | ✅ | ➖ | ➖ | ➖ | Complete |
 | 004_parameter_interactions.md | ➖ | ➖ | ✅ | ➖ | ➖ | L3 Entity |
 | procedure.md | ➖ | ➖ | ✅ | ➖ | ➖ | L3 Entity |
@@ -59,6 +61,7 @@ clv <.command> [param::value ...]
 - [Parameters](param/readme.md) — flag reference
 - [Types](type/readme.md) — semantic type definitions
 - [Parameter Groups](param_group/readme.md) — logical parameter groupings
+- [Command Groups](command_group/readme.md) — commands sharing one routine and parameter set (0 groups qualify)
 - [Parameter Interactions](004_parameter_interactions.md) — cross-parameter constraints
 - [Dictionary](002_dictionary.md) — domain vocabulary
 - [User Stories](user_story/readme.md) — persona-goal scenarios

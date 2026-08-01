@@ -1,5 +1,6 @@
 //! Command building: session continuity check and `ClaudeCommand` construction.
 
+use std::io::IsTerminal;
 use super::parse::CliArgs;
 use claude_runner_core::{ ClaudeCommand, EffortLevel };
 use claude_storage_core::{ SessionId, continuation };
@@ -124,7 +125,29 @@ pub( crate ) fn build_claude_command( cli : &CliArgs ) -> ( ClaudeCommand, Optio
       effective_working_dir.as_deref(),
     )
   };
+  // Fix(BUG-426): gate -c injection on message-presence (message, --print, --file,
+  //   stdin-content) OR cli.interactive — previously unconditional whenever a prior
+  //   session existed, regardless of whether anything would follow -c as the resumed
+  //   prompt.
+  // Root cause: with_continue_conversation( true ) fired solely from session_exists(),
+  //   with no check that a message/--print/--file/stdin-content would actually
+  //   accompany the resumed session.
+  // Pitfall: cli.interactive MUST remain in this condition even though it looks
+  //   redundant alongside the message-presence terms — an explicit --interactive
+  //   resume with no message is BUG-426's own excluded case (Test Matrix T09), not
+  //   part of the defect; dropping this term would regress a working resume path
+  //   while fixing a broken one.
+  // Pitfall: `cli.stdin_content` must be checked for non-emptiness, not bare
+  //   `.is_some()` — `detect_stdin_json()` (env.rs) returns `Some(vec![])`, never
+  //   `None`, for any non-TTY stdin that reads zero bytes, and `Command::output()`
+  //   defaults stdin to `Stdio::null()` whenever a caller doesn't set `.stdin(...)`
+  //   explicitly. A bare `.is_some()` here was therefore unconditionally true for
+  //   every non-interactive invocation (any script/CI/container context, and every
+  //   subprocess-spawning test helper except `run_with_path_stdin`), silently
+  //   reproducing BUG-426's original defect instead of fixing it.
   if expected_id.is_some()
+    && ( cli.message.is_some() || cli.print_mode || cli.file.is_some() || cli.interactive
+      || cli.stdin_content.as_ref().is_some_and( | v | !v.is_empty() ) )
   {
     builder = builder.with_continue_conversation( true );
   }
@@ -143,14 +166,37 @@ pub( crate ) fn build_claude_command( cli : &CliArgs ) -> ( ClaudeCommand, Optio
   //   producing raw TUI escape codes instead of clean text output in scripted contexts.
   // Root cause: print mode was only enabled by explicit -p/--print; no auto-detection.
   // Pitfall: `--interactive` must suppress this to allow prompted REPL sessions.
-  let use_print = cli.print_mode || ( cli.message.is_some() && !cli.interactive );
+  //
+  // Fix(BUG-425/427): mirrors `cli/mod.rs`'s dispatch-decision fix — this flag and
+  //   that decision must never disagree, since both describe the same invocation.
+  // Root cause: this formula lacked the same TTY and file/stdin-content terms that
+  //   the mod.rs dispatch decision lacked, before its own BUG-425/427 fix.
+  // Pitfall: an explicit --interactive must gate every inferred term here, not only
+  //   message-presence — gating message alone still forced print mode under
+  //   --interactive whenever stdin was non-TTY, which this test harness's spawned
+  //   subprocesses always are (no PTY simulation — see plan's Known Coverage Gap),
+  //   defeating the flag's purpose for every real invocation in the suite.
+  let is_tty = std::io::stdin().is_terminal();
+  let use_print = cli.print_mode
+    || ( !cli.interactive
+      && ( cli.message.is_some() || !is_tty || cli.file.is_some() || cli.stdin_content.is_some() ) );
   // Fix(BUG-304): suppress --chrome whenever print mode is active.
   //   Root cause: Node.js/libuv registers a ref-counted 1-second timerfd (Chrome CDP
   //   reconnect) that is never unref()'d after --print response flush; event loop cannot
   //   drain; clr's cmd.output() holds pipe read-ends open — both sides deadlocked.
   // Pitfall: cli.no_chrome is the explicit user opt-out; use_print is the automatic
   //   suppression that prevents the hang without requiring --no-chrome.
-  if cli.no_chrome || use_print
+  // Fix(BUG-425): added an independent !is_tty term — chrome suppression previously
+  //   fired only transitively through use_print's own formula, which happens to
+  //   include a TTY disjunct today but carries no guarantee of doing so after a
+  //   future edit to that formula.
+  // Root cause: non-TTY stdin was never itself a direct term in this condition,
+  //   only reachable indirectly through whatever shape use_print's formula took.
+  // Pitfall: keep this term explicit and independent of use_print — folding it back
+  //   into a single shared boolean would let a future use_print refactor silently
+  //   stop suppressing chrome for non-TTY invocations with no test at this call
+  //   site able to catch the regression.
+  if cli.no_chrome || use_print || !is_tty
   {
     builder = builder.with_chrome( None );
   }

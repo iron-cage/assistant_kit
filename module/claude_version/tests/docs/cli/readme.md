@@ -3,11 +3,11 @@
 ### Scope
 
 - **Purpose**: Document integration and edge case test plans for all clv commands, parameters, types, and parameter groups.
-- **Responsibility**: Index of per-command, per-parameter, per-type, and per-group test case planning files.
-- **In Scope**: All 16 clv commands, all 13 parameters, all 9 types, all 4 parameter groups, all 8 user stories, and all 2 output formats.
+- **Responsibility**: Index of per-command, per-parameter, per-type, per-group, and per-command-group test case planning files.
+- **In Scope**: All 16 clv commands, all 13 parameters, all 9 types, all 4 parameter groups, 0 qualifying command groups, all 8 user stories, and all 2 output formats.
 - **Out of Scope**: Automated test implementations (→ `tests/` in crate), spec documentation (→ `docs/feature/`).
 
-6-tier testing organization for `claude_version` CLI, providing distinct audience focus at each level.
+7-tier testing organization for `claude_version` CLI, providing distinct audience focus at each level.
 
 ### Responsibility Table
 
@@ -17,6 +17,7 @@
 | `param/` | Edge case tests per parameter |
 | `type/` | Type validation test cases per semantic type |
 | `param_group/` | Interaction tests per parameter group |
+| `command_group/` | Structural-equivalence test cases per command group (0 groups qualify) |
 | `format/` | Format rendering test cases per output format |
 | `user_story/` | User story acceptance tests per scenario |
 | `procedure.md` | Workflow for creating and updating CLI test tiers |
@@ -29,6 +30,7 @@
 | Type | `type/*.md` | Validate semantic type parsing, ranges, and inference | Developers | Type validation, boundary |
 | Group | `param_group/*.md` | Test parameter interactions within groups | Developers | Corner cases, dependencies |
 | Command | `command/*.md` | End-to-end command integration | QA / Users | Integration tests, workflows |
+| Command Group | `command_group/*.md` | Structural equivalence between commands sharing one routine (0 groups qualify) | Developers | Equivalence tests |
 | User Story | `user_story/*.md` | End-to-end workflow acceptance | QA / Users | Acceptance tests, scenarios |
 | Format | `format/*.md` | Output format rendering contract | Developers | Format shape, verbosity, case |
 
@@ -38,6 +40,7 @@
 - [Parameter Tests](param/) — Edge case tests per parameter
 - [Type Tests](type/) — Type validation tests per semantic type
 - [Parameter Group Tests](param_group/) — Interaction tests per group
+- [Command Group Tests](command_group/) — Structural-equivalence tests per command group (0 groups qualify)
 - [User Story Tests](user_story/) — Workflow acceptance tests per scenario
 - [Format Tests](format/) — Format rendering tests per output format
 
@@ -90,6 +93,9 @@
 - [Execution Control](param_group/02_execution_control.md)
 - [Settings Identity](param_group/03_settings_identity.md)
 - [Config Identity](param_group/04_config_identity.md)
+
+### Command Groups
+*(none — 0 command groups qualify under the strict identity test; see [`command_group/readme.md`](command_group/readme.md))*
 
 ### User Stories
 - [Environment Check](user_story/001_environment_check.md)

@@ -8,6 +8,7 @@
 //! | `run_cli_with_env` | `env_var_test`, `env_var_ext_test`, `invariant_trace_universality_test`, `param_trace_edge_cases_test`, `param_group_test`, `isolated_test`, `user_story_creds_isolated_test`, `user_story_output_test`, `bug_reproducers_239_244_test`, `error_classification_test`, `ps_command_test`, `user_story_ps_test`, `output_style_test`, `summary_fields_test`, `no_compact_window_test`, `json_config_test`, `config_file_test` |
 //! | `run_cli_in_dir` | `config_file_test` |
 //! | `make_session_dir` | `cli_args_test`, `ultrathink_args_test`, `user_story_test` |
+//! | `make_zero_turn_session_dir` | `execution_mode_test` |
 //! | `exit_code` | `refresh_test`, `bug_reproducers_239_244_test`, `user_story_test`, `user_story_creds_isolated_test`, `isolated_test`, `json_config_test`, `config_file_test` |
 //! | `stderr_str` | `refresh_test`, `bug_reproducers_239_244_test`, `invariant_trace_universality_test`, `error_classification_test`, `user_story_test`, `user_story_creds_isolated_test`, `isolated_correctness_test`, `isolated_test`, `ps_command_test`, `user_story_ps_test`, `kill_command_test`, `user_story_kill_test`, `ps_mode_test`, `ps_columns_test`, `output_format_test`, `no_compact_window_test`, `json_config_test`, `config_file_test` |
 //! | `stdout_str` | `refresh_test`, `isolated_correctness_test`, `isolated_test`, `dry_run_test`, `ps_command_test`, `user_story_ps_test`, `kill_command_test`, `user_story_kill_test`, `ps_mode_test`, `ps_columns_test`, `ps_wide_test`, `output_format_test`, `no_compact_window_test`, `json_config_test`, `config_file_test` |
@@ -171,6 +172,40 @@ pub fn make_session_dir() -> ( tempfile::TempDir, String )
   let dir = tempfile::TempDir::new().expect( "failed to create temp session dir" );
   std::fs::write( dir.path().join( "00000000-0000-0000-0000-000000000000.jsonl" ), b"{}" )
     .expect( "failed to write dummy session file" );
+  let path = dir.path().to_str().expect( "session dir path must be valid UTF-8" ).to_owned();
+  ( dir, path )
+}
+
+/// Create a temp session directory with one `.jsonl` file shaped like a zero-model-turn
+/// transcript (BUG-428): structurally qualifies as a resume candidate under
+/// `most_recent_session_in_dir()`'s 4 checks (correct extension, no `agent-` prefix,
+/// non-zero size, valid UTF-8 stem) but records no model turns — the exact shape claude's
+/// real `--resume` logic rejects with `"No conversation found to continue"`
+/// (`contract/claude_code/docs/version/088_v2_1_187.md:19`). Content mirrors BUG-428's own
+/// Minimum Reproducible Example (a lone `system`/`init` line, no `assistant` turn).
+///
+/// Distinct from `make_session_dir()`: that helper's placeholder `{}` content is never
+/// semantically inspected by its callers (only `session_exists()`'s structural checks
+/// matter to them) — this one specifically names and documents the zero-turn scenario for
+/// BUG-428's own reproducer tests, so a future reader does not have to re-derive why the
+/// content looks the way it does.
+///
+/// The caller must keep the returned `TempDir` alive for the duration of the test.
+///
+/// # Panics
+///
+/// Panics if the temp directory or the fixture file cannot be created.
+#[must_use]
+#[inline]
+#[allow(dead_code)]
+pub fn make_zero_turn_session_dir() -> ( tempfile::TempDir, String )
+{
+  let dir = tempfile::TempDir::new().expect( "failed to create temp session dir" );
+  std::fs::write(
+    dir.path().join( "00000000-0000-0000-0000-000000000001.jsonl" ),
+    b"{\"type\":\"system\",\"subtype\":\"init\"}\n",
+  )
+  .expect( "failed to write zero-turn session file" );
   let path = dir.path().to_str().expect( "session dir path must be valid UTF-8" ).to_owned();
   ( dir, path )
 }

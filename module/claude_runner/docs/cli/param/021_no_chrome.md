@@ -15,9 +15,10 @@ clr "Fix bug"               # no --chrome (print mode — BUG-304 suppression)
 clr --no-chrome "Fix bug"   # no --chrome (explicit opt-out)
 ```
 
-**Note:** `--chrome` is automatically suppressed in print mode (message given without
-`--interactive`) to prevent permanent session hang (BUG-304). Use `--no-chrome` explicitly
-in interactive/headless/CI environments where no Chrome instance is available.
+**Note:** `--chrome` is automatically suppressed whenever print mode is active — message
+given, stdin non-TTY, or `--file`/stdin content present, and `--interactive` not set — to
+prevent permanent session hang (BUG-304). Use `--no-chrome` explicitly in
+interactive/headless/CI environments where no Chrome instance is available.
 
 ### Referenced Type
 
@@ -36,7 +37,7 @@ in interactive/headless/CI environments where no Chrome instance is available.
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
 | 1 | [`run`](../command/01_run.md) | false | Chrome suppressed in print mode via `use_print` guard (BUG-304) |
-| 5 | [`ask`](../command/05_ask.md) | false | Chrome suppressed — ask is always print mode (BUG-304) |
+| 5 | [`ask`](../command/05_ask.md) | false | Chrome suppressed in print mode via the same `use_print` guard as `run` — not unconditional (BUG-304) |
 
 ### Referenced User Stories
 

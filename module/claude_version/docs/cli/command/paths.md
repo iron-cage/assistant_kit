@@ -119,6 +119,10 @@ binary_symlink:  /home/user/.local/bin/claude
 | 2 | [`format::`](../param/05_format.md) |
 | 3 | [`key::`](../param/06_key.md) |
 
+### Referenced Command Group
+
+Evaluated against `.runtime_files` under the strict [command_group](../command_group/readme.md) identity test (same routine function, same parameter set) — does not qualify. `paths_routine()` and `runtime_files_routine()` are separate functions with no call between them; `.paths` accepts 3 parameters (`key::, format::, v::`) while `.runtime_files` accepts none, so the parameter sets are not the same set differing only by default. See [`command_group/readme.md`](../command_group/readme.md) Evaluated, Not Qualifying for the full analysis.
+
 ### Related Commands
 
 | # | Command | Relationship |

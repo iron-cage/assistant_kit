@@ -16,7 +16,7 @@
 
 ### Design
 
-**Symmetric commands.** `.accounts` and `.usage` become two views of the same underlying account data, sharing an identical parameter interface. The only difference is defaults — `.accounts` is a local/identity view (no fetching, no touching, sorted by name), while `.usage` is a live/quota view (fetch + touch enabled, sorted by renewal).
+**Symmetric commands.** `.accounts` and `.usage` become two views of the same underlying account data, sharing a large common parameter core with mostly defaults-only divergence — `.accounts` is a local/identity view (no fetching, no touching, sorted by name), while `.usage` is a live/quota view (fetch + touch enabled, sorted by renewal). The parameter interface is not fully identical: `.usage` additionally registers `rotate::`, `who::`, and `solo::` (not present on `.accounts`), and `.accounts` additionally registers 14 legacy `REMOVED_TOGGLE` field-presence stubs (`current::`, `sub::`, `tier::`, `expires::`, `email::`, `display_name::`, `host::`, `role::`, `billing::`, `model::`, `uuid::`, `capabilities::`, `org_uuid::`, `org_name::`) kept only to emit a `cols::`-migration error, not live on `.usage`. The two commands are also dispatched by distinct handler functions (`accounts_routine` vs. `usage_routine`) that both delegate mutation handling to the same `owner_dispatch::*` helpers — see [`cli/command_group/readme.md`](../cli/command_group/readme.md) Evaluated, Not Qualifying for the full verified diff and why this pair does not meet the stricter `command_group` identity bar (same handler function, same parameter set) despite the shared design intent described here.
 
 **Unified parameter set:**
 

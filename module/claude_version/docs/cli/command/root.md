@@ -160,6 +160,10 @@ clv.runtime_files
 2. Compute all runtime file paths for the current configuration: `$HOME/.claude/.transient/version_history_cache.json`.
 3. Print each path as an absolute path, one per line, to stdout; exit 0.
 
+### Referenced Command Group
+
+Evaluated against [`.paths`](paths.md#command-16-paths) under the strict [command_group](../command_group/readme.md) identity test — does not qualify. `runtime_files_routine()` shares no routine with `paths_routine()`; `.runtime_files` takes zero parameters while `.paths` takes 3 (`key::, format::, v::`), so the sets are not the same set differing only by default. See [`command_group/readme.md`](../command_group/readme.md) Evaluated, Not Qualifying for the full analysis.
+
 ### Related Commands
 
 | # | Command | Relationship |

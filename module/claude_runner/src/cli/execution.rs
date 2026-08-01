@@ -1,3 +1,4 @@
+use std::io::IsTerminal;
 use claude_runner_core::{ ClaudeCommand, ErrorKind, ExecutionOutput, signal_exit_code };
 use super::parse::{ CliArgs, ExpectStrategy };
 use super::fence::strip_fences;
@@ -26,6 +27,8 @@ fn is_full_level( cli : &CliArgs ) -> bool
 //
 // `fallback_message` overrides `cli.message` in the journal when BUG-327's one-shot
 // fallback substitution fired for this attempt — Some(FALLBACK_MESSAGE) once set, else None.
+// BUG-428's resume-rejection fallback never sets this — it drops -c but preserves the
+// original message, so its fallback_note stays None (see FallbackReason in execution.rs).
 fn emit_execution(
   writer           : Option< &JournalWriter >,
   cli              : &CliArgs,
@@ -580,7 +583,8 @@ pub( super ) fn apply_runner_retry(
 }
 
 /// Default watchdog for print-mode when `--timeout` is absent and `CLR_TIMEOUT` is unset.
-/// Interactive mode retains `unwrap_or( 0 )` (unlimited) — `run_interactive()` must NOT adopt this constant.
+/// `run_interactive()` also adopts this constant (BUG-425), but only for non-TTY stdin —
+/// a genuine TTY-attached session keeps the unlimited `unwrap_or( 0 )` default.
 const DEFAULT_PRINT_TIMEOUT_SECS : u32 = 3600;
 
 /// Diagnostic Claude Code prints when a resumed session's deferred-tool marker is stale
@@ -591,6 +595,26 @@ const DEFERRED_TOOL_MARKER : &str = "No deferred tool marker found in the resume
 
 /// One-shot substitute message sent when `DEFERRED_TOOL_MARKER` fires (BUG-327).
 const FALLBACK_MESSAGE : &str = "Continue.";
+
+/// Message claude itself prints when `-c` was injected for a `.jsonl` transcript that
+/// structurally qualified as a resume candidate but recorded zero model turns (BUG-428).
+/// See `session_exists()`/`most_recent_session_in_dir()` (`builder.rs:25-45`,
+/// `claude_storage_core/src/continuation.rs:109-147`) for the qualification gap, and
+/// `contract/claude_code/docs/version/088_v2_1_187.md:19` for claude's own documented,
+/// content-aware `--resume` rejection this string reports.
+const RESUME_REJECTED_MARKER : &str = "No conversation found to continue";
+
+/// Distinguishes which one-shot fallback mechanism produced `fallback_builder`'s
+/// substitute command, so `fallback_note` (below) knows whether to substitute
+/// `FALLBACK_MESSAGE` when journaling (`DeferredToolMarker`, BUG-327) or preserve the
+/// original message unchanged (`ResumeRejected`, BUG-428 — the retry drops `-c` but
+/// never touches the message itself).
+#[ derive( Clone, Copy, PartialEq, Eq ) ]
+enum FallbackReason
+{
+  DeferredToolMarker,
+  ResumeRejected,
+}
 
 /// Resolve the default print-mode timeout.
 ///
@@ -713,7 +737,9 @@ pub( super ) fn run_print_mode(
 {
   // Fix(BUG-305): print-mode sessions had no default watchdog, leaving unattended sessions unbounded.
   // Root cause: unwrap_or( 0 ) treated absent --timeout as unlimited; print-mode should default to 1h.
-  // Pitfall: DEFAULT_PRINT_TIMEOUT_SECS applies ONLY here in run_print_mode(); run_interactive() must retain unwrap_or( 0 ) — it is user-attended.
+  // Pitfall: DEFAULT_PRINT_TIMEOUT_SECS applies here unconditionally; run_interactive() (BUG-425)
+  //   applies the same constant only for non-TTY stdin — a genuine TTY session there still
+  //   retains unwrap_or( 0 ), since it alone is truly user-attended.
   let timeout_secs = cli.timeout.unwrap_or( default_print_timeout() );
   // Validate stdin file before the retry loop — a missing file is a user error,
   // not a transient spawn failure; it must not trigger runner retry.
@@ -739,16 +765,22 @@ pub( super ) fn run_print_mode(
   let mut attempts = [ 0usize; 6 ];
   // Fix(BUG-299): Runner retry counter — tracks spawn failure attempts separately from class retries.
   let mut runner_attempt = 0u32;
-  // Fix(BUG-327): one-shot fallback builder — Some(..) once the deferred-tool marker has
-  // fired, substituting FALLBACK_MESSAGE for the original message on the next attempt.
-  let mut fallback_builder : Option< ClaudeCommand > = None;
+  // Fix(BUG-327): one-shot fallback builder — Some(..) once either the deferred-tool
+  // marker (BUG-327) or a resume-rejection (BUG-428) has fired. The paired FallbackReason
+  // records which mechanism fired so fallback_note (below) only substitutes
+  // FALLBACK_MESSAGE for the former — the latter drops -c but preserves cli.message.
+  let mut fallback_builder : Option< ( ClaudeCommand, FallbackReason ) > = None;
 
   loop
   {
-    let active = fallback_builder.as_ref().unwrap_or( builder );
+    let active = fallback_builder.as_ref().map_or( builder, | ( cmd, _ ) | cmd );
     // Fix(BUG-327): journaled message must reflect the fallback substitution, not the
-    // original cli.message, once fallback_builder is set — see emit_execution().
-    let fallback_note = fallback_builder.is_some().then_some( FALLBACK_MESSAGE );
+    // original cli.message, once the DeferredToolMarker fallback is set — see
+    // emit_execution(). Fix(BUG-428): ResumeRejected's fallback never substitutes the
+    // message, so it must not trigger this note.
+    let fallback_note = fallback_builder.as_ref().and_then(
+      | ( _, reason ) | ( *reason == FallbackReason::DeferredToolMarker ).then_some( FALLBACK_MESSAGE )
+    );
     // Fix(BUG-240): spawn errors always emitted regardless of verbosity (inside execute_print_attempt).
     // Root cause: Err(e) branch was guarded by verbosity check; verbosity 0 swallowed fatal spawn errors.
     // Pitfall: verbosity gates diagnostics only — fatal errors must surface regardless of verbosity level.
@@ -800,7 +832,28 @@ pub( super ) fn run_print_mode(
         }
         emit_retry( journal, "FallbackPrompt", 1, 2, 0, "deferred tool marker not found in resumed session" );
         let fallback = active.clone().with_message( FALLBACK_MESSAGE.to_string() );
-        fallback_builder = Some( fallback );
+        fallback_builder = Some( ( fallback, FallbackReason::DeferredToolMarker ) );
+        continue;
+      }
+
+      // Fix(BUG-428): resumed session structurally qualified (right extension, non-`agent-`
+      //   prefix, non-zero size, valid UTF-8 stem — session_exists()'s 4 checks) but recorded
+      //   zero model turns, so claude's own --resume logic rejects it content-aware
+      //   (contract/claude_code/docs/version/088_v2_1_187.md:19). clr had no reactive fallback
+      //   for this signature and surfaced the raw rejection misattributed as its own defect.
+      // Root cause: session_exists() validates structure only, never content — a qualifying
+      //   file with zero model turns still gets -c injected and claude then rejects it.
+      // Pitfall: .contains() is a substring match; a differently-contextualized message that
+      //   happens to embed this exact phrase (e.g., quoted inside a JSON envelope) would also
+      //   fire — same accepted tradeoff as DEFERRED_TOOL_MARKER, untested by design at this scope.
+      if fallback_builder.is_none()
+        && ( output.stdout.contains( RESUME_REJECTED_MARKER ) || output.stderr.contains( RESUME_REJECTED_MARKER ) )
+      {
+        eprintln!(
+          "clr: prior session was not resumable (claude rejected: \"{RESUME_REJECTED_MARKER}\") — starting a new session instead"
+        );
+        let fallback = active.clone().with_continue_conversation( false );
+        fallback_builder = Some( ( fallback, FallbackReason::ResumeRejected ) );
         continue;
       }
 
@@ -932,13 +985,25 @@ pub( super ) fn run_print_mode(
 /// When `timeout_secs == 0`, uses the blocking `execute_interactive()` path.
 /// When `timeout_secs > 0`, uses `spawn_tty()` + `try_wait()` polling so the
 /// subprocess can be killed after the deadline while still using the TTY.
+/// Default absent `--timeout`: unlimited (`0`) for a genuine TTY session;
+/// `DEFAULT_PRINT_TIMEOUT_SECS` for non-TTY stdin (BUG-425).
 pub( super ) fn run_interactive(
   builder : &ClaudeCommand,
   cli     : &CliArgs,
   journal : Option< &JournalWriter >,
 )
 {
-  let timeout_secs = cli.timeout.unwrap_or( 0 );
+  // Fix(BUG-425): default timeout now bounded when stdin is non-TTY.
+  // Root cause: unwrap_or( 0 ) was unconditional — a genuine TTY-attached REPL session
+  //   is user-attended and should stay unlimited, but explicit --interactive paired
+  //   with non-TTY stdin (piped/redirected) reaches this same function with no
+  //   attended terminal at all, reproducing BUG-425's original unbounded-hang risk
+  //   one level deeper than the mode-selection fix reaches.
+  // Pitfall: only the non-TTY branch's default changes — an explicit --timeout value
+  //   from the caller always wins via unwrap_or_else's fallback-only scope; a genuine
+  //   TTY session's default must remain 0 (unlimited), never bounded.
+  let is_tty = std::io::stdin().is_terminal();
+  let timeout_secs = cli.timeout.unwrap_or_else( || if is_tty { 0 } else { default_print_timeout() } );
 
   if timeout_secs == 0
   {

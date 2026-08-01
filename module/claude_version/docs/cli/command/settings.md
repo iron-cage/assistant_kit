@@ -62,6 +62,10 @@ clv.settings.show format::json
 | 1 | [`v::`](../param/04_v.md) |
 | 2 | [`format::`](../param/05_format.md) |
 
+### Referenced Command Group
+
+Evaluated against `.config` (its unified successor) under the strict [command_group](../command_group/readme.md) identity test — does not qualify. `settings_show_routine()` shares no routine with `config_routine()`, and the parameter sets differ (`.config` adds `scope::`/`unset::`/`value::`/`dry::` with no `.settings.show` equivalent). See [`command_group/readme.md`](../command_group/readme.md) Evaluated, Not Qualifying for the full analysis.
+
 ### Related Commands
 
 | # | Command | Relationship |
@@ -140,6 +144,10 @@ clv.settings.get key::autoUpdate format::json
 | 2 | [`v::`](../param/04_v.md) |
 | 3 | [`format::`](../param/05_format.md) |
 
+### Referenced Command Group
+
+Evaluated against `.config` (its unified successor, get mode) under the strict [command_group](../command_group/readme.md) identity test — does not qualify. `settings_get_routine()` shares no routine with `config_routine()`, and the parameter sets differ (`.config` adds `scope::`/`unset::`/`value::`/`dry::` with no `.settings.get` equivalent). See [`command_group/readme.md`](../command_group/readme.md) Evaluated, Not Qualifying for the full analysis.
+
 ### Related Commands
 
 | # | Command | Relationship |
@@ -213,6 +221,10 @@ clv.settings.set key::theme value::dark dry::1
 | 1 | [`key::`](../param/06_key.md) |
 | 2 | [`value::`](../param/07_value.md) |
 | 3 | [`dry::`](../param/02_dry.md) |
+
+### Referenced Command Group
+
+Evaluated against `.config` (its unified successor, set mode) under the strict [command_group](../command_group/readme.md) identity test — does not qualify. `settings_set_routine()` shares no routine with `config_routine()`, and the parameter sets differ (`.config` adds `scope::`/`unset::`/`v::`/`format::` with no `.settings.set` equivalent). See [`command_group/readme.md`](../command_group/readme.md) Evaluated, Not Qualifying for the full analysis.
 
 ### Related Commands
 

@@ -181,11 +181,21 @@ fn dir_with_spaces_produces_unquoted_cd_line()
   );
 }
 
-// No-message case: --dry-run with no message produces the bare command with all defaults
-// but WITHOUT -c because the session dir is empty → session_exists() returns `None`.
-// Fix(BUG-246): describe() now starts with "env -u CLAUDECODE" (default unset_claudecode=true).
+// No-message case: --dry-run with no message routes to print mode under this harness's
+// non-TTY subprocess stdin, but still WITHOUT -c because the session dir is empty →
+// session_exists() returns `None`. Fix(BUG-246): describe() now starts with
+// "env -u CLAUDECODE" (default unset_claudecode=true).
 // Do NOT use make_session_dir() here — that writes a dummy .jsonl making session_exists() return `Some(SessionId)`,
 // which would inject -c and break the "no -c" assertion.
+//
+// Fix(BUG-425): corrected from asserting a bare/no-`--print` command to asserting the
+//   post-fix print-mode-routed command — this test's own subprocess stdin is non-TTY
+//   (no PTY simulation in this harness), and BUG-425's fix makes non-TTY the deciding
+//   term for a bare invocation with no message and no `--interactive`.
+// Root cause: this test was written before BUG-425's TTY-check term existed, when
+//   "no message" alone meant the bare/interactive-REPL command shape.
+// Pitfall: `--chrome` also drops from the composed command here — print mode suppresses
+//   it unconditionally (Fix(BUG-304)), not just when explicitly requested via --no-chrome.
 #[ test ]
 fn dry_run_without_message_shows_bare_command()
 {
@@ -194,8 +204,8 @@ fn dry_run_without_message_shows_bare_command()
   let output = run_dry( &[ "--session-dir", session_path ] );
   let last_line = output.trim_end().lines().last().unwrap_or_default();
   assert_eq!(
-    last_line, "env -u CLAUDECODE claude --dangerously-skip-permissions --chrome --effort max",
-    "Bare --dry-run must end with default bypass and effort max (no message, no -c in empty session dir). Got:\n{output}"
+    last_line, "env -u CLAUDECODE claude --dangerously-skip-permissions --effort max --print --output-format json",
+    "Bare --dry-run under non-TTY stdin must route to print mode (no message, no -c in empty session dir). Got:\n{output}"
   );
 }
 
@@ -293,14 +303,22 @@ fn interactive_flag_suppresses_default_print()
   );
 }
 
-// Bare --dry-run (no message) does not add --print (no message = interactive REPL).
+// Fix(BUG-425): retitled from `bare_dry_run_no_message_has_no_print` and inverted the
+//   assertion — this test's subprocess stdin is non-TTY (no PTY simulation in this
+//   harness), and BUG-425's fix makes non-TTY the deciding term for a bare invocation
+//   with no message and no `--interactive`, same as a piped invocation.
+// Root cause: this test predates BUG-425's TTY-check term, when "no message" alone
+//   meant the bare/interactive-REPL command shape regardless of TTY presence.
+// Pitfall: a genuine TTY (not reachable in this harness) would still route to
+//   run_interactive() for this same bare invocation — this test only covers the
+//   non-TTY case, matching every other subprocess-spawning test in this suite.
 #[ test ]
-fn bare_dry_run_no_message_has_no_print()
+fn bare_dry_run_no_message_routes_to_print()
 {
   let output = run_dry( &[] );
   assert!(
-    !output.contains( "--print" ),
-    "bare --dry-run (no message) must not add --print. Got:\n{output}"
+    output.contains( "--print" ),
+    "bare --dry-run (no message) under non-TTY stdin must add --print. Got:\n{output}"
   );
 }
 
@@ -563,9 +581,14 @@ fn empty_positional_arg_produces_bare_command()
   assert!( out.status.success(), "empty positional arg must exit 0. stderr: {}", String::from_utf8_lossy( &out.stderr ) );
   let stdout = String::from_utf8_lossy( &out.stdout );
   let last_line = stdout.trim_end().lines().last().unwrap_or_default();
+  // Fix(BUG-425): "bare command" here means no message/-c content, not print-mode-free —
+  //   this subprocess's stdin is non-TTY (no PTY simulation in this harness), so BUG-425's
+  //   fix routes it to print mode same as any other bare invocation. The test's actual
+  //   differentiator (empty positional must not leak as a degenerate "ultrathink " message,
+  //   BUG-219) is the assertion immediately below, unaffected by this correction.
   assert_eq!(
-    last_line, "env -u CLAUDECODE claude --dangerously-skip-permissions --chrome --effort max",
-    "empty positional arg must produce bare command (no message, no -c in empty session dir). Got:\n{stdout}"
+    last_line, "env -u CLAUDECODE claude --dangerously-skip-permissions --effort max --print --output-format json",
+    "empty positional arg must produce no-message command (no -c in empty session dir). Got:\n{stdout}"
   );
   assert!(
     !stdout.contains( "\"ultrathink \"" ),

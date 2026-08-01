@@ -16,6 +16,7 @@ Test case planning for clp CLI. Each file contains a Test Case Index with covera
 | command/ | Per-command integration test case indices (IT-N entries) |
 | param/ | Per-parameter edge case indices (EC-N entries) |
 | param_group/ | Per-parameter-group interaction test indices |
+| command_group/ | Per-command-group structural-equivalence test indices (0 groups — documented empty) |
 | type/ | Per-type acceptance and boundary case indices (TC-N entries) |
 | command_verb/ | Per-verb behavioral contract specs (BV-N entries) |
 | command_noun/ | Per-noun lifecycle and schema contract specs (NC-N entries) |

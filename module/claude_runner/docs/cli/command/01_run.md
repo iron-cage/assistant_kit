@@ -22,11 +22,11 @@ The `run` token is optional — both forms are equivalent. When `run` appears as
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | [`[MESSAGE]`](../param/001_message.md) | [`MessageText`](../type/01_message_text.md) | — | Prompt text for Claude |
-| [`-p`/`--print`](../param/002_print.md) | bool | auto | Print mode (default when message given; explicit alias) |
+| [`-p`/`--print`](../param/002_print.md) | bool | auto | Print mode (default when message given, stdin is not a terminal, or `--file`/piped stdin content is present; explicit alias) |
 | [`--model`](../param/003_model.md) | [`ModelName`](../type/04_model_name.md) | — | Model to use |
 | [`--verbose`](../param/004_verbose.md) | bool | false | Enable Claude verbose output |
 | [`--no-skip-permissions`](../param/005_no_skip_permissions.md) | bool | false | Disable automatic permission bypass |
-| [`--interactive`](../param/006_interactive.md) | bool | false | Interactive TTY passthrough when message given |
+| [`--interactive`](../param/006_interactive.md) | bool | false | Forces TTY passthrough, overriding all auto-print triggers |
 | [`--new-session`](../param/007_new_session.md) | bool | false | Start fresh session (disables default continuation) |
 | [`--dir`](../param/008_dir.md) | [`DirectoryPath`](../type/02_directory_path.md) | cwd | Working directory |
 | [`--subdir`](../param/028_subdir.md) | string | `.` | Named subdirectory appended to `--dir` (`/-NAME`); `.` = identity |
@@ -117,7 +117,7 @@ Use `--new-session` to start fresh.
 | Code | Meaning |
 |------|---------|
 | 0 | Success |
-| 1 | Error (parse failure, print mode without message, execution error, binary not found) |
+| 1 | Error (parse failure, print mode requested with no message/`--file`/stdin content, execution error, binary not found) |
 | 2 | Rate-limit passthrough from claude (subprocess exited 2); or runner-generated: Transient retries exhausted |
 | 3 | Expect mismatch — output did not match `--expect` values after all retries |
 | 4 | CLR-layer watchdog timeout: subprocess exceeded `--timeout`; stderr contains "Error: timeout after Ns" |
@@ -170,6 +170,12 @@ clr --dry-run "Run tests" --max-tokens 50000
 | 1 | [Claude-Native Flags](../param_group/01_claude_native_flags.md) | Full | — |
 | 2 | [Runner Control](../param_group/02_runner_control.md) | Full | — |
 | 3 | [System Prompt](../param_group/03_system_prompt.md) | Full | — |
+
+### Referenced Command Group
+
+| # | Group | Role |
+|---|-------|------|
+| 1 | [run / ask](../command_group/01_run_ask.md) | Canonical — `ask` delegates to this command's handler |
 
 ### Referenced User Stories
 

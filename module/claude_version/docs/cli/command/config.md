@@ -109,6 +109,10 @@ clv.config key::theme unset::1
 | 6 | [`dry::`](../param/02_dry.md) |
 | 7 | [`unset::`](../param/12_unset.md) |
 
+### Referenced Command Group
+
+Evaluated against `.settings.show`/`.settings.get`/`.settings.set` under the strict [command_group](../command_group/readme.md) identity test (same routine function, same parameter set) — does not qualify. `config_routine()` is self-contained and shares no routine with `settings_show_routine()`/`settings_get_routine()`/`settings_set_routine()`; parameter sets also differ (`.config` adds `scope::`/`unset::` with no equivalent on the `.settings.*` side). "Deprecated predecessor" below is a product-history relationship, not a shared-dispatch one — see [`command_group/readme.md`](../command_group/readme.md) Evaluated, Not Qualifying for the full analysis.
+
 ### Related Commands
 
 | # | Command | Relationship |

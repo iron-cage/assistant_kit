@@ -26,6 +26,7 @@ If `uninstall()` were to silently unpin-then-uninstall, or offer an unpin-bypass
 | File | Relationship |
 |------|--------------|
 | [feature/001_patch_component_model.md](../feature/001_patch_component_model.md) | Full component model including pin/unpin semantics |
+| [claude_patch/docs/feature/001_patch_cli.md](../../../claude_patch/docs/feature/001_patch_cli.md) | CLI-level `.patch.uninstall`/`.patch.unpin` surface enforcing this constraint |
 
 ### Sources
 

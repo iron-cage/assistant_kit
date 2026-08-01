@@ -63,6 +63,15 @@ fn t37_multiple_positional_words_joined()
 }
 
 // T38: `--` as only arg (besides --dry-run) → no message
+//
+// Fix(BUG-425): corrected from asserting a bare/no-`--print` command to asserting the
+//   post-fix print-mode-routed command — this test's own subprocess stdin is non-TTY
+//   (no PTY simulation in this harness), and BUG-425's fix makes non-TTY the deciding
+//   term for `--` with no message and no `--interactive`, same as a piped invocation.
+// Root cause: this test was written before BUG-425's TTY-check term existed, when
+//   "no message" alone meant the bare/interactive-REPL command shape.
+// Pitfall: `--chrome` also drops from the composed command here — print mode suppresses
+//   it unconditionally (Fix(BUG-304)), not just when explicitly requested via --no-chrome.
 #[ test ]
 fn t38_double_dash_only_no_message()
 {
@@ -78,8 +87,8 @@ fn t38_double_dash_only_no_message()
   // Fix(BUG-246): describe() now starts with "env -u CLAUDECODE" (default unset_claudecode=true)
   assert_eq!(
     last_line,
-    "env -u CLAUDECODE claude --dangerously-skip-permissions --chrome --effort max",
-    "-- with nothing after must produce bare command (no -c in empty session dir). Got:\n{stdout}"
+    "env -u CLAUDECODE claude --dangerously-skip-permissions --effort max --print --output-format json",
+    "-- with nothing after, under non-TTY stdin, must route to print mode (no -c in empty session dir). Got:\n{stdout}"
   );
 }
 

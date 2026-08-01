@@ -31,6 +31,7 @@ pub use gate::gate_max_attempts_from;
 #[ allow( unused_imports ) ]
 pub use tools::TOOLS;
 
+use std::io::IsTerminal;
 use claude_runner_core::{ ClaudeCommand, EffortLevel, IsolatedModel };
 use claude_storage_core::SessionId;
 use parse::CliArgs;
@@ -200,7 +201,20 @@ pub( super ) fn run_built_command(
   // Print/interactive dispatch decision, computed once and reused for both the
   // concurrency gate (print-mode only — interactive sessions never contend for
   // a slot) and the dispatch branch below, so the two can never disagree.
-  let is_print_invocation = cli.print_mode || ( cli.message.is_some() && !cli.interactive );
+  //
+  // Fix(BUG-425/427): route to print mode whenever stdin has no TTY to interact
+  //   through, or file/stdin content is already available to serve as the prompt.
+  // Root cause: the formula only checked message presence, so a script/CI invocation
+  //   with no message hung on the interactive REPL despite stdin having no terminal
+  //   to interact with, and --file/piped content alone never triggered print mode.
+  // Pitfall: an explicit --interactive must gate every inferred term here, not only
+  //   message-presence — gating message alone still forced print mode under
+  //   --interactive whenever stdin was non-TTY, defeating the flag's purpose for the
+  //   ordinary case (piped/redirected stdin with no real TTY attached).
+  let is_tty = std::io::stdin().is_terminal();
+  let is_print_invocation = cli.print_mode
+    || ( !cli.interactive
+      && ( cli.message.is_some() || !is_tty || cli.file.is_some() || cli.stdin_content.is_some() ) );
 
   // Concurrency gate: block before subprocess launch when max active print-mode
   // sessions is reached. Default limit is 6; 0 = unlimited.  dry-run is bypassed
@@ -298,7 +312,21 @@ pub( super ) fn dispatch_run( tokens : &[ String ] ) -> !
     std::process::exit( 0 );
   }
 
-  if cli.print_mode && cli.message.is_none()
+  // Fix(BUG-427): extended from `cli.message.is_none()` alone so --file/piped-stdin
+  //   content satisfies --print's message requirement, not just a positional message.
+  // Root cause: the guard was blind to `cli.file`/`cli.stdin_content`, rejecting
+  //   `--print --file <path>` even though --file supplies the prompt content.
+  // Pitfall: this guard only fires when `cli.print_mode` is explicitly set — it does
+  //   not need the TTY term from `is_print_invocation`, since an explicit --print
+  //   already settled the mode-selection question.
+  // Pitfall: `cli.stdin_content` must be checked for non-emptiness, not bare
+  //   `.is_none()` — see the matching fix/comment on the `-c`-injection gate in
+  //   builder.rs. A bare `.is_none()` check let empty non-TTY stdin (the default for
+  //   this guard's whole scenario space) slip past this rejection and attempt a real
+  //   subprocess launch with no message, surfacing later as a 60s "binary not found,
+  //   retries exhausted" failure instead of this guard's own immediate, specific error.
+  let has_stdin_content = cli.stdin_content.as_ref().is_some_and( | v | !v.is_empty() );
+  if cli.print_mode && cli.message.is_none() && cli.file.is_none() && !has_stdin_content
   {
     eprintln!( "Error: --print requires a message argument" );
     eprintln!( "Run with --help for usage." );

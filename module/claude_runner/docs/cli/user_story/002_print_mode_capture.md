@@ -7,17 +7,17 @@
 
 ### Acceptance Criteria
 
-- Providing `[MESSAGE]` defaults to print mode; `-p`/`--print` is not required
+- Providing `[MESSAGE]` defaults to print mode (one of several auto-print triggers, alongside non-TTY stdin and `--file`/stdin content — see D11); `-p`/`--print` is not required
 - `-p`/`--print` is an explicit alias that works identically (backward compatibility)
 - Captured stdout is clean and pipeable: `result=$(clr "task")` and `clr "task" | grep X` work
 - `--strip-fences` removes the outermost code fence from stdout when bare code is needed
-- Print mode without a message exits with error code 1 and a clear error message
+- Requested print mode (`-p`/`--print`, `CLR_PRINT`, or JSON config) with no message, `--file`, or piped stdin content exits with error code 1 and a clear error message
 
 ### Referenced Commands
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`run`](../command/01_run.md) | Default command; message triggers print mode |
+| 1 | [`run`](../command/01_run.md) | Default command; message is one of several print-mode triggers |
 
 ### Referenced Parameter Groups
 
@@ -29,7 +29,7 @@
 
 | # | Parameter | Role |
 |---|-----------|------|
-| 1 | [`--message`](../param/001_message.md) | Prompt text; presence triggers print mode |
+| 1 | [`--message`](../param/001_message.md) | Prompt text; presence is one of several print-mode triggers |
 | 2 | [`--print`](../param/002_print.md) | Explicit print mode selector (alias) |
 | 3 | [`--model`](../param/003_model.md) | Select model for the response |
 | 26 | [`--strip-fences`](../param/026_strip_fences.md) | Remove outermost code fence from captured output |

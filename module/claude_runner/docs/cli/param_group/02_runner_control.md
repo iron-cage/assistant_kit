@@ -46,7 +46,7 @@ clr --trace "Fix bug" --dir /project
 | Parameter | Type | Default | Role in Group | Description |
 |-----------|------|---------|---------------|-------------|
 | [`--no-skip-permissions`](../param/005_no_skip_permissions.md) | bool | false | Injection suppressor | Disable automatic permission bypass |
-| [`--interactive`](../param/006_interactive.md) | bool | false | Mode selector | Interactive TTY passthrough when message given |
+| [`--interactive`](../param/006_interactive.md) | bool | false | Mode selector | Forces TTY passthrough, overriding all auto-print triggers |
 | [`--new-session`](../param/007_new_session.md) | bool | false | Session mode | Start fresh session (disable default continuation) |
 | [`--dir`](../param/008_dir.md) | [`DirectoryPath`](../type/02_directory_path.md) | cwd | Working directory | Working directory for subprocess (alias: `--to`) |
 | [`--subdir`](../param/028_subdir.md) | string | `.` | Named workspace | Named subdirectory appended to `--dir` (`/-NAME`); `.` = identity |

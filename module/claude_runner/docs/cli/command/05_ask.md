@@ -77,6 +77,12 @@ clr ask --dir ~/project "What is the entry point?"
 | 2 | [Runner Control](../param_group/02_runner_control.md) | Full | — |
 | 3 | [System Prompt](../param_group/03_system_prompt.md) | Full | — |
 
+### Referenced Command Group
+
+| # | Group | Role |
+|---|-------|------|
+| 1 | [run / ask](../command_group/01_run_ask.md) | Member — delegates to `run`'s handler |
+
 ### Referenced User Stories
 
 | # | User Story | Persona |

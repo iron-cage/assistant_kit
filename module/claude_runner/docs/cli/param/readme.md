@@ -98,11 +98,11 @@ These parameter IDs exist in the sequence but have no corresponding file. The ID
 | # | Parameter | Type | Default | Valid Values | Description | Used In |
 |---|-----------|------|---------|--------------|-------------|---------|
 | 1 | `[MESSAGE]` | [`MessageText`](../type/01_message_text.md) | — | Any text | Prompt text for Claude | 2 cmds |
-| 2 | `-p`/`--print` | bool | auto | present/absent | Explicit print mode (default when message given) | 1 cmd |
+| 2 | `-p`/`--print` | bool | auto | present/absent | Explicit print mode (auto-default: message, non-TTY stdin, or file/stdin content) | 1 cmd |
 | 3 | `--model` | [`ModelName`](../type/04_model_name.md) | — | Any model name | Claude model to use | 1 cmd |
 | 4 | `--verbose` | bool | false | present/absent | Enable Claude verbose output | 1 cmd |
 | 5 | `--no-skip-permissions` | bool | false | present/absent | Disable automatic permission bypass | 1 cmd |
-| 6 | `--interactive` | bool | false | present/absent | Interactive TTY passthrough when message given | 1 cmd |
+| 6 | `--interactive` | bool | false | present/absent | Forces TTY passthrough, overriding all auto-print triggers | 1 cmd |
 | 7 | `--new-session` | bool | false | present/absent | Start fresh session (disables default continuation) | 1 cmd |
 | 8 | `--dir` | [`DirectoryPath`](../type/02_directory_path.md) | cwd | Any path | Working directory | 1 cmd |
 | 9 | `--max-tokens` | [`TokenLimit`](../type/03_token_limit.md) | 200000 | 0 to 4294967295 | Max output tokens | 1 cmd |
