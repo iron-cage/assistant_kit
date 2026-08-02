@@ -77,23 +77,24 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
     settings_show_routine, settings_get_routine, settings_set_routine,
     config_routine, params_routine, runtime_files_routine, paths_routine,
   };
-  let v   = || reg_arg_opt( "verbosity", Kind::Integer );
-  let fmt = || reg_arg_opt( "format",    Kind::String  );
-  let dry = || reg_arg_opt( "dry",       Kind::Boolean );
-  let frc = || reg_arg_opt( "force",     Kind::Boolean );
-  let ver = || reg_arg_opt( "version",   Kind::String  );
-  let key = || reg_arg_opt( "key",       Kind::String  );
-  let val = || reg_arg_opt( "value",     Kind::String  );
-  let itv = || reg_arg_opt( "interval",  Kind::Integer );
-  let cnt = || reg_arg_opt( "count",     Kind::Integer );
-  let scp = || reg_arg_opt( "scope",     Kind::String  );
-  let uns = || reg_arg_opt( "unset",     Kind::Boolean );
-  let knd = || reg_arg_opt( "kind",      Kind::String  );
-  let md  = || reg_arg_opt( "mode",      Kind::String  );
+  let v   = || reg_arg_opt( "verbosity",   Kind::Integer );
+  let fmt = || reg_arg_opt( "format",      Kind::String  );
+  let dry = || reg_arg_opt( "dry",         Kind::Boolean );
+  let frc = || reg_arg_opt( "force",       Kind::Boolean );
+  let rec = || reg_arg_opt( "record_only", Kind::Boolean );
+  let ver = || reg_arg_opt( "version",     Kind::String  );
+  let key = || reg_arg_opt( "key",         Kind::String  );
+  let val = || reg_arg_opt( "value",       Kind::String  );
+  let itv = || reg_arg_opt( "interval",    Kind::Integer );
+  let cnt = || reg_arg_opt( "count",       Kind::Integer );
+  let scp = || reg_arg_opt( "scope",       Kind::String  );
+  let uns = || reg_arg_opt( "unset",       Kind::Boolean );
+  let knd = || reg_arg_opt( "kind",        Kind::String  );
+  let md  = || reg_arg_opt( "mode",        Kind::String  );
 
   reg_cmd( registry, ".status",          "Show installation state, process count, and active account", vec![ v(), fmt() ],                      Box::new( status_routine          ) );
   reg_cmd( registry, ".version.show",    "Print the currently installed Claude Code version",          vec![ v(), fmt() ],                      Box::new( version_show_routine    ) );
-  reg_cmd( registry, ".version.install", "Download and install a Claude Code version via installer",   vec![ ver(), dry(), frc(), v(), fmt() ], Box::new( version_install_routine ) );
+  reg_cmd( registry, ".version.install", "Download and install a Claude Code version via installer",   vec![ ver(), dry(), frc(), rec(), v(), fmt() ], Box::new( version_install_routine ) );
   reg_cmd( registry, ".version.guard",   "Check for version drift and restore preferred version",      vec![ ver(), dry(), frc(), itv(), v(), fmt() ], Box::new( version_guard_routine   ) );
   reg_cmd( registry, ".version.list",    "Lists aliases or release history relevant to the installed version", vec![ md(), cnt(), v(), fmt() ], Box::new( version_list_routine    ) );
   reg_cmd( registry, ".processes",       "List all running Claude Code processes",                     vec![ v(), fmt() ],                      Box::new( processes_routine       ) );
@@ -170,6 +171,7 @@ fn print_usage( binary : &str )
     OptionEntry { name : "format::text|json".to_string(), desc : "Output format (default: text)".to_string() },
     OptionEntry { name : "dry::bool".to_string(),       desc : "Dry-run preview (no changes)".to_string() },
     OptionEntry { name : "force::bool".to_string(),     desc : "Force operation (skip confirmations)".to_string() },
+    OptionEntry { name : "record_only::bool".to_string(), desc : "Record preference only, skip the actual install (.version.install)".to_string() },
     OptionEntry { name : "key::KEY".to_string(),        desc : "Setting key".to_string() },
     OptionEntry { name : "value::VALUE".to_string(),    desc : "Setting value".to_string() },
     OptionEntry { name : "interval::N".to_string(),     desc : "Polling interval in seconds".to_string() },

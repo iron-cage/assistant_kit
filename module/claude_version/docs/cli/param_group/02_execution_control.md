@@ -1,10 +1,10 @@
 # Group :: 2. Execution Control
 
 -- **Summary:** Parameters that control whether and how mutation commands execute.
--- **Parameters:** `dry::`, `force::`
+-- **Parameters:** `dry::`, `force::`, `record_only::`
 -- **Coherence Test:** "Does this parameter control mutation execution mode?"
 
-Both parameters modify the execution mode of destructive operations.
+All three parameters modify the execution mode of destructive operations.
 
 **Parameters:**
 
@@ -12,8 +12,9 @@ Both parameters modify the execution mode of destructive operations.
 |-----------|------|---------|
 | [`dry::`](../param/02_dry.md) | bool | Preview without executing |
 | [`force::`](../param/03_force.md) | bool | Bypass safety guards |
+| [`record_only::`](../param/15_record_only.md) | bool | Persist preference without installing |
 
-**Partial implementors:** `.settings.set` and `.config` implement `dry::` only (no `force::`).
+**Partial implementors:** `.settings.set` and `.config` implement `dry::` only (no `force::` or `record_only::`). `.version.guard` and `.processes.kill` implement `dry::`/`force::` but not `record_only::` (install-only concept — see `15_record_only.md`).
 
 **Why NOT in this group:**
 - `version::`: specifies *what* to install, not *whether* to install
@@ -25,6 +26,7 @@ Both parameters modify the execution mode of destructive operations.
 ```sh
 clv .version.install dry::1          # preview
 clv .version.install force::1        # bypass idempotency
+clv .version.install record_only::1  # persist preference, no install
 clv .version.guard dry::1 force::1   # preview forced guard
 clv .processes.kill dry::1 force::1  # preview forced kill
 ```
@@ -34,10 +36,10 @@ clv .processes.kill dry::1 force::1  # preview forced kill
 | # | Command | Membership | Excluded Params |
 |---|---------|-----------|----------------|
 | 1 | [`.version.install`](../command/version.md#command-4-versioninstall) | Full | — |
-| 2 | [`.version.guard`](../command/version.md#command-5-versionguard) | Full | — |
-| 3 | [`.processes.kill`](../command/processes.md#command-8-processeskill) | Full | — |
-| 4 | [`.settings.set`](../command/settings.md#command-11-settingsset) | Partial | `force::` |
-| 5 | [`.config`](../command/config.md#command-13-config) | Partial | `force::` |
+| 2 | [`.version.guard`](../command/version.md#command-5-versionguard) | Partial | `record_only::` |
+| 3 | [`.processes.kill`](../command/processes.md#command-8-processeskill) | Partial | `record_only::` |
+| 4 | [`.settings.set`](../command/settings.md#command-11-settingsset) | Partial | `force::`, `record_only::` |
+| 5 | [`.config`](../command/config.md#command-13-config) | Partial | `force::`, `record_only::` |
 
 ### Referenced Parameters
 
@@ -45,6 +47,7 @@ clv .processes.kill dry::1 force::1  # preview forced kill
 |---|-----------|------|---------|---------------|
 | 1 | [`dry::`](../param/02_dry.md) | bool | false | Preview without executing |
 | 2 | [`force::`](../param/03_force.md) | bool | false | Bypass safety guards |
+| 3 | [`record_only::`](../param/15_record_only.md) | bool | false | Persist preference without installing |
 
 ### Referenced User Stories
 

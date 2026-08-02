@@ -123,6 +123,16 @@
       aliases: []
       tags: []
 
+    - name: "record_only"
+      kind: "Boolean"
+      description: "Persist the preference without installing (1=record only); mutually exclusive with dry"
+      hint: "Record preference only"
+      optional: true
+      default: "0"
+      validation_rules: []
+      aliases: []
+      tags: []
+
     - name: "verbosity"
       kind: "Integer"
       description: "Output detail level"
@@ -146,6 +156,7 @@
   examples:
     - ".version.install version::2.1.0"
     - ".version.install version::latest dry::1"
+    - ".version.install version::stable record_only::1"
   auto_help_enabled: true
 
 - name: ".version.guard"

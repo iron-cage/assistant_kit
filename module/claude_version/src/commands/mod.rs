@@ -74,6 +74,13 @@ fn is_force( cmd : &VerifiedCommand ) -> bool
   matches!( cmd.arguments.get( "force" ), Some( Value::Boolean( true ) ) )
 }
 
+/// Return `true` when the command has `record_only::1`.
+#[ inline ]
+fn is_record_only( cmd : &VerifiedCommand ) -> bool
+{
+  matches!( cmd.arguments.get( "record_only" ), Some( Value::Boolean( true ) ) )
+}
+
 /// Validate HOME is non-empty and return a `ClaudePaths`.
 fn require_claude_paths() -> Result< claude_core::ClaudePaths, ErrorData >
 {

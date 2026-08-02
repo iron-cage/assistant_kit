@@ -11,6 +11,7 @@
 - [ ] `clv .version.install version::month dry::1` shows the install plan for the monthly baseline.
 - [ ] `clv .version.install version::month` installs and applies 8-layer lock.
 - [ ] If currently at the pinned version, install is a no-op (exits 0).
+- [ ] `clv .version.install version::month record_only::1` records the pinned preference without downloading/installing on this machine.
 - [ ] `clv .version.show` after install confirms the pinned version is active.
 - [ ] `clv .version.guard interval::N` watches for drift and restores the pinned version automatically.
 
@@ -48,6 +49,7 @@
 | 4 | [`v::`](../param/04_v.md) | Controls diagnostic detail level |
 | 5 | [`format::`](../param/05_format.md) | Selects text or JSON rendering |
 | 6 | [`interval::`](../param/08_interval.md) | Sets watch loop interval for continuous drift detection |
+| 7 | [`record_only::`](../param/15_record_only.md) | Records the pinned preference without triggering an install |
 
 ### Workflow Steps
 

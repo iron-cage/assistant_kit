@@ -88,15 +88,15 @@ clv.version.show format::json
 
 ### Command :: 4. `.version.install`
 
-Download and install a Claude Code version via the official installer (curl). Supports hot-swap and 8-layer version locking (Layers 1–4, 6, and 8 prevent unwanted version changes via auto-update, manual update, or channel drift; Layer 5 stores the preferred version as a recovery signal for `.version.guard`; Layer 7 enforces a minimum-version floor). Accepts named aliases (`stable`, `latest`, `month`) and semver strings. Already-at-target is a no-op (exit 0) unless `force::1` is set.
+Download and install a Claude Code version via the official installer (curl). Supports hot-swap and 8-layer version locking (Layers 1–4, 6, and 8 prevent unwanted version changes via auto-update, manual update, or channel drift; Layer 5 stores the preferred version as a recovery signal for `.version.guard`; Layer 7 enforces a minimum-version floor). Accepts named aliases (`stable`, `latest`, `month`) and semver strings. Already-at-target is a no-op (exit 0) unless `force::1` is set. `record_only::1` persists the resolved preference to `settings.json` without invoking the installer at all — see Algorithm below.
 
--- **Parameters:** version::, dry::, force::, v::, format::
--- **Exit Codes:** 0 (success) | 1 (invalid version spec) | 2 (installer failure)
+-- **Parameters:** version::, dry::, force::, record_only::, v::, format::
+-- **Exit Codes:** 0 (success) | 1 (invalid version spec, or `record_only::1`+`dry::1` both set) | 2 (installer failure)
 
 **Syntax:**
 
 ```sh
-clv.version.install [version::VER] [dry::1] [force::1] [v::N] [format::FMT]
+clv.version.install [version::VER] [dry::1] [force::1] [record_only::1] [v::N] [format::FMT]
 ```
 
 **Parameters:**
@@ -106,16 +106,24 @@ clv.version.install [version::VER] [dry::1] [force::1] [v::N] [format::FMT]
 | [`version::`](../param/01_version.md) | [`VersionSpec`](../type/03_version_spec.md) | stable | No | Version to install |
 | [`dry::`](../param/02_dry.md) | bool | false | No | Preview install command without executing |
 | [`force::`](../param/03_force.md) | bool | false | No | Bypass idempotency check |
+| [`record_only::`](../param/15_record_only.md) | bool | false | No | Persist preference only; skip the installer (mutually exclusive with `dry::`) |
 | [`v::`](../param/04_v.md) | [`VerbosityLevel`](../type/01_verbosity_level.md) | 1 | No | Output detail level |
 | [`format::`](../param/05_format.md) | [`OutputFormat`](../type/02_output_format.md) | text | No | Output format |
 
-**Algorithm (6 steps):**
+**Algorithm (7 steps):**
+0. If `record_only::1` and `dry::1` are both set, reject immediately (exit 1, `ArgumentMissing`) — the two are mutually exclusive.
 1. Resolve `version::` alias (`stable`, `latest`, `month`) or validate the semver string against known patterns.
 2. Compare resolved target against installed version; exit 0 (no-op) if equal and `force::0` — the preferred version is still stored on this path.
 3. Store the preferred version spec and resolved value in `settings.json`. Recorded before the lock mechanism is applied (step 6) so that a crash partway through install leaves a true, not false, mismatch signal in `.status`'s `Lock:` section — see `tests/docs/cli/command/02_status.md` IT-24–IT-27 and TC-530.
 4. Hot-swap the running binary if any Claude Code process is active, then unlock the versions directory so the installer can write to it.
 5. Execute the official curl installer for the resolved version; purge stale cached binaries afterward for pinned installs (skipped for `latest`, so version history remains available for rollback).
 6. Apply the lock mechanism for pinned installs — `autoUpdates`, `autoUpdatesChannel`, `minimumVersion`, `env.DISABLE_AUTOUPDATER`, `env.DISABLE_UPDATES`, and `chmod 555` on the versions directory — or leave unlocked (`autoUpdates` true, the other 4 keys removed, `chmod 755`) for `latest`.
+
+`record_only::1` short-circuits between steps 1 and 2: after resolving the version
+spec, it performs step 3's `settings.json` write directly — unconditionally,
+without the step 2 idempotency comparison — and returns. Steps 2, 4, 5, and 6
+never run: no hot-swap, no `curl`, no lock mechanism applied. `force::1` has
+nothing to bypass in this path and is silently ignored rather than rejected.
 
 **Examples:**
 
@@ -134,6 +142,12 @@ clv.version.install force::1
 
 # Install latest (no version pin — resolves dynamically)
 clv.version.install version::latest
+
+# Record "month" as preferred without downloading/installing
+clv.version.install version::month record_only::1
+
+# Rejected: record_only:: and dry:: are mutually exclusive
+clv.version.install version::month record_only::1 dry::1
 ```
 
 ### Referenced Formats
@@ -157,8 +171,9 @@ clv.version.install version::latest
 | 1 | [`version::`](../param/01_version.md) |
 | 2 | [`dry::`](../param/02_dry.md) |
 | 3 | [`force::`](../param/03_force.md) |
-| 4 | [`v::`](../param/04_v.md) |
-| 5 | [`format::`](../param/05_format.md) |
+| 4 | [`record_only::`](../param/15_record_only.md) |
+| 5 | [`v::`](../param/04_v.md) |
+| 6 | [`format::`](../param/05_format.md) |
 
 ### Referenced Command Group
 

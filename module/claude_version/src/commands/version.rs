@@ -67,14 +67,27 @@ pub fn version_show_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) ->
 
 /// `.version.install` — download and install a Claude Code version.
 ///
+/// `record_only::1` persists the resolved preference to `settings.json` without
+/// invoking `perform_install()` — lets a caller re-point `.version.show`/`.version.guard`
+/// at a new target without downloading/reinstalling `claude`.
+///
 /// # Errors
 ///
 /// Returns `Err(ArgumentTypeMismatch)` when the version spec or format is invalid.
-/// Returns `Err(InternalError)` when `curl` is not found or the install fails.
+/// Returns `Err(ArgumentMissing)` when `record_only::1` and `dry::1` are both set.
+/// Returns `Err(InternalError)` when `curl` is not found, the install fails, or
+/// (under `record_only::1`) the preference write fails.
 #[ allow( clippy::missing_inline_in_public_items ) ]
 pub fn version_install_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
   let opts = OutputOptions::from_cmd( &cmd )?;
+
+  if super::is_record_only( &cmd ) && super::is_dry( &cmd )
+  {
+    return Err( ErrorData::new( ErrorCode::ArgumentMissing,
+      "record_only:: and dry:: are mutually exclusive".to_string() ) );
+  }
+
   let version_spec = match cmd.arguments.get( "version" )
   {
     Some( Value::String( s ) ) => s.clone(),
@@ -97,6 +110,22 @@ pub fn version_install_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
     return Ok( OutputData::new( content, "text" ) );
   }
 
+  // record_only::1 — persist the preference only; never call perform_install().
+  // Unlike the idempotency guard below, this branch is unconditional: it fires
+  // regardless of whether `resolved` matches the currently-installed version,
+  // because the whole point of record_only is "just record it" — not "record it
+  // when convenient". force:: has no install to bypass here, so it's a silent
+  // no-op under record_only rather than an error (mirrors force:: being inert
+  // under dry::).
+  if super::is_record_only( &cmd )
+  {
+    store_preferred_version( &version_spec, resolved, is_latest )
+      .map_err( | e | ErrorData::new( ErrorCode::InternalError, e.to_string() ) )?;
+    let pref_label = if is_latest { version_spec.clone() } else { format!( "{version_spec} (v{resolved})" ) };
+    let content = install_recorded_content( &opts, &label, &pref_label );
+    return Ok( OutputData::new( content, "text" ) );
+  }
+
   // Idempotency guard: skip install if already at target version.
   // Fix(BUG-004): store preference even on idempotent skip
   // Root cause: early return bypassed store_preferred_version()
@@ -108,26 +137,7 @@ pub fn version_install_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
       if current == resolved
       {
         let _ = store_preferred_version( &version_spec, resolved, is_latest );
-        let content = match opts.format
-        {
-          OutputFormat::Json =>
-          {
-            let l = json_escape( &label );
-            format!( "{{\"installed\":false,\"label\":\"{l}\"}}\n" )
-          }
-          OutputFormat::Text =>
-          {
-            // v::0 = bare label only; v::1+ = labeled confirmation.
-            if opts.verbosity == 0
-            {
-              format!( "{label}\n" )
-            }
-            else
-            {
-              format!( "already at {label}\n" )
-            }
-          }
-        };
+        let content = install_skip_content( &opts, &label );
         return Ok( OutputData::new( content, "text" ) );
       }
     }
@@ -152,27 +162,7 @@ pub fn version_install_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
     .map_err( | e | ErrorData::new( ErrorCode::InternalError, e.to_string() ) )?;
 
   let pref_label = if is_latest { version_spec.clone() } else { format!( "{version_spec} (v{resolved})" ) };
-  let content = match opts.format
-  {
-    OutputFormat::Json =>
-    {
-      let l = json_escape( &label );
-      let p = json_escape( &pref_label );
-      format!( "{{\"installed\":true,\"label\":\"{l}\",\"auto_updates\":{auto_label},\"preferred\":\"{p}\"}}\n" )
-    }
-    OutputFormat::Text =>
-    {
-      // v::0 = bare label only; v::1+ = full labeled output.
-      if opts.verbosity == 0
-      {
-        format!( "{label}\n" )
-      }
-      else
-      {
-        format!( "installed {label}\nautoUpdates = {auto_label}\npreferred = {pref_label}\n" )
-      }
-    }
-  };
+  let content = install_installed_content( &opts, &label, auto_label, &pref_label );
   Ok( OutputData::new( content, "text" ) )
 }
 
@@ -221,6 +211,95 @@ fn install_dry_content(
            [dry-run] would purge stale cached binaries (keep v{resolved})\n\
            [dry-run] would store preferred version = {version_spec} (v{resolved})\n"
         )
+      }
+    }
+  }
+}
+
+/// Build success output for `version_install_routine`'s `record_only::1` branch.
+fn install_recorded_content(
+  opts       : &OutputOptions,
+  label      : &str,
+  pref_label : &str,
+) -> String
+{
+  match opts.format
+  {
+    OutputFormat::Json =>
+    {
+      let l = json_escape( label );
+      let p = json_escape( pref_label );
+      format!( "{{\"installed\":false,\"recorded\":true,\"label\":\"{l}\",\"preferred\":\"{p}\"}}\n" )
+    }
+    OutputFormat::Text =>
+    {
+      // v::0 = bare label only; v::1+ = labeled confirmation.
+      if opts.verbosity == 0
+      {
+        format!( "{label}\n" )
+      }
+      else
+      {
+        format!( "recorded {label}\npreferred = {pref_label}\n" )
+      }
+    }
+  }
+}
+
+/// Build output for `version_install_routine`'s idempotency-skip branch (already at target version).
+fn install_skip_content(
+  opts  : &OutputOptions,
+  label : &str,
+) -> String
+{
+  match opts.format
+  {
+    OutputFormat::Json =>
+    {
+      let l = json_escape( label );
+      format!( "{{\"installed\":false,\"label\":\"{l}\"}}\n" )
+    }
+    OutputFormat::Text =>
+    {
+      // v::0 = bare label only; v::1+ = labeled confirmation.
+      if opts.verbosity == 0
+      {
+        format!( "{label}\n" )
+      }
+      else
+      {
+        format!( "already at {label}\n" )
+      }
+    }
+  }
+}
+
+/// Build success output for `version_install_routine` after a real install completes.
+fn install_installed_content(
+  opts       : &OutputOptions,
+  label      : &str,
+  auto_label : &str,
+  pref_label : &str,
+) -> String
+{
+  match opts.format
+  {
+    OutputFormat::Json =>
+    {
+      let l = json_escape( label );
+      let p = json_escape( pref_label );
+      format!( "{{\"installed\":true,\"label\":\"{l}\",\"auto_updates\":{auto_label},\"preferred\":\"{p}\"}}\n" )
+    }
+    OutputFormat::Text =>
+    {
+      // v::0 = bare label only; v::1+ = full labeled output.
+      if opts.verbosity == 0
+      {
+        format!( "{label}\n" )
+      }
+      else
+      {
+        format!( "installed {label}\nautoUpdates = {auto_label}\npreferred = {pref_label}\n" )
       }
     }
   }

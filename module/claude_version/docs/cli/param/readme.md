@@ -27,6 +27,7 @@
 | 12_unset.md | `unset::` — delete key from target scope |
 | 13_kind.md | `kind::` — filter show-all to params of one kind |
 | 14_mode.md | `mode::` — select aliases or history listing for `.version.list` |
+| 15_record_only.md | `record_only::` — persist preference without installing |
 
 ### All Parameters
 
@@ -46,6 +47,7 @@
 | 12 | [`unset::`](12_unset.md) | bool | false | Config Identity | `.config` |
 | 13 | [`kind::`](13_kind.md) | `ParamKind` | absent | — | `.params` |
 | 14 | [`mode::`](14_mode.md) | `ListMode` | aliases | — | `.version.list` |
+| 15 | [`record_only::`](15_record_only.md) | bool | false | Execution Control | `.version.install` |
 
 ### See Also
 
