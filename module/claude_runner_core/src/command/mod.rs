@@ -29,7 +29,7 @@ mod params_extended;
 ///
 /// let result = ClaudeCommand::new()
 ///   .with_working_directory( "/home/user/project" )
-///   .with_max_output_tokens( 200_000 )
+///   .with_max_output_tokens( 128_000 )
 ///   .execute()?;
 /// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
@@ -114,6 +114,13 @@ impl ClaudeCommand {
     // Root cause: Migration from factory pattern didnt preserve correct default value
     // Pitfall: Always verify defaults match specification when refactoring APIs
 
+    // Fix(BUG-429): Default token limit corrected from 200K to 128K
+    // Root cause: 200K exceeded every current model's real max-output-token ceiling (128K on
+    //             Sonnet 5/Opus 4.8/Fable 5, the current tier — see contract/claude_code/docs/model/)
+    //             — context-window size was confused with output-token size at authoring time
+    // Pitfall: max_output_tokens must track the model's OUTPUT ceiling, not its CONTEXT window;
+    //          the two are unrelated axes and easy to conflate when picking a default value
+
     // Fix(issue-bash-timeout-default): Bash timeouts increased from 2min/10min to 1hr/2hr
     // Root cause: Standard 2min default causes premature timeout in real automation workflows
     // Pitfall: Always set explicit timeouts matching actual operation duration needs
@@ -133,7 +140,7 @@ impl ClaudeCommand {
 
     Self {
       working_directory: None,
-      max_output_tokens: Some( 200_000 ),
+      max_output_tokens: Some( 128_000 ),
       continue_conversation: false,
       message: None,
       args: Vec::new(),
@@ -439,7 +446,7 @@ impl ClaudeCommand {
   ///
   /// let env = ClaudeCommand::new().describe_env();
   ///
-  /// assert!( env.contains( "export CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000" ) );
+  /// assert!( env.contains( "export CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000" ) );
   /// assert!( env.contains( "export CLAUDE_CODE_BASH_TIMEOUT=3600000" ) );
   /// ```
   #[inline]
@@ -498,7 +505,7 @@ impl ClaudeCommand {
   /// use claude_runner_core::ClaudeCommand;
   ///
   /// let result = ClaudeCommand::new()
-  ///   .with_max_output_tokens( 200_000 )
+  ///   .with_max_output_tokens( 128_000 )
   ///   .execute()?;
   /// println!( "{}", result.stdout );
   /// # Ok::<(), Box<dyn std::error::Error>>(())
@@ -578,7 +585,7 @@ impl ClaudeCommand {
   /// use claude_runner_core::ClaudeCommand;
   ///
   /// let exit_status = ClaudeCommand::new()
-  ///   .with_max_output_tokens( 200_000 )
+  ///   .with_max_output_tokens( 128_000 )
   ///   .execute_interactive()?;
   /// # Ok::<(), Box<dyn std::error::Error>>(())
   /// ```

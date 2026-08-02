@@ -26,7 +26,7 @@ Claude Code process execution with builder pattern and single execution point.
 **Responsibility:**
 - Claude Code process execution (Command::new("claude"))
 - Builder pattern API (ClaudeCommand::new().with_*())
-- Token limit configuration (200K default)
+- Token limit configuration (128K default)
 - Process output capture (stdout/stderr)
 - Single execution point (duplication = 1x)
 
@@ -47,7 +47,7 @@ Claude Code process execution with builder pattern and single execution point.
 ## Features
 
 - **Builder Pattern**: Fluent API with method chaining (NO deprecated factories)
-- **Token Limit Fix**: Explicit 200K token default (prevents "exceeded maximum" errors)
+- **Token Limit Fix**: Explicit 128K token default (prevents "exceeded maximum" errors)
 - **Single Execution Point**: Consolidates duplicate Command::new("claude") calls
 - **Type Safety**: Builder pattern enforces correct configuration
 - **Minimal Dependencies**: Only error_tools + standard library
@@ -60,7 +60,7 @@ use claude_runner_core::ClaudeCommand;
 // Basic execution
 let result = ClaudeCommand::new()
   .with_working_directory("/home/user/project")
-  .with_max_output_tokens(200_000)
+  .with_max_output_tokens(128_000)
   .with_continue_conversation(true)
   .execute()?;
 
@@ -69,7 +69,7 @@ println!("Output: {}", result.stdout);
 // Advanced configuration
 let result = ClaudeCommand::new()
   .with_working_directory("/tmp/work")
-  .with_max_output_tokens(200_000)
+  .with_max_output_tokens(128_000)
   .with_model("claude-opus-4-5")
   .with_verbose(true)
   .with_system_prompt("You are a helpful coding assistant")
@@ -126,13 +126,13 @@ Command::new("claude")  // ONLY in claude_runner_core::build_command()
 
 **Problem:** Default Claude Code token limit is 32K, causing "exceeded maximum" errors
 
-**Solution:** Set explicit max_output_tokens to 200K:
+**Solution:** Set explicit max_output_tokens to 128K:
 
 ```rust,no_run
 use claude_runner_core::ClaudeCommand;
 
 let result = ClaudeCommand::new()
-  .with_max_output_tokens(200_000)  // Explicit token limit
+  .with_max_output_tokens(128_000)  // Explicit token limit
   .execute()?;
 
 # Ok::<(), Box<dyn std::error::Error>>(())

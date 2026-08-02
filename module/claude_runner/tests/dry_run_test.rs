@@ -14,7 +14,7 @@
 //!
 //! ## Corner Cases Covered
 //!
-//! - Default env vars appear (`CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000`)
+//! - Default env vars appear (`CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000`)
 //! - Default `-c` appears in dry-run output when session storage is non-empty (automatic session continuation)
 //! - Empty `--session-dir` suppresses `-c` even without `--new-session` (BUG-214 regression guard)
 //! - `--new-session` suppresses `-c` from dry-run output
@@ -48,8 +48,8 @@ fn default_env_vars_appear_in_output()
 {
   let output = run_dry( &[ "test" ] );
   assert!(
-    output.contains( "CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000" ),
-    "Default 200K token limit must appear in env output. Got:\n{output}"
+    output.contains( "CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000" ),
+    "Default 128K token limit must appear in env output. Got:\n{output}"
   );
 }
 
@@ -72,8 +72,8 @@ fn max_tokens_override_updates_env_var()
     "--max-tokens must override default. Got:\n{output}"
   );
   assert!(
-    !output.contains( "CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000" ),
-    "Default 200K must be replaced. Got:\n{output}"
+    !output.contains( "CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000" ),
+    "Default 128K must be replaced. Got:\n{output}"
   );
 }
 

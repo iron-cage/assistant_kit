@@ -35,7 +35,7 @@
 | `--chrome` | On (ClaudeCommand default) | Off (`--no-chrome` injected) |
 | `env -u CLAUDECODE` | Yes | Yes |
 | Minimal `CLAUDE.md` written to temp HOME | Yes (suppress interactive prompts) | Yes (same content) |
-| `CLAUDE_CODE_MAX_OUTPUT_TOKENS` | `200,000` | `200,000` |
+| `CLAUDE_CODE_MAX_OUTPUT_TOKENS` | `128,000` | `128,000` |
 | **--- Session ---** | | |
 | HOME directory | Fresh temp dir | Fresh temp dir |
 | Temp HOME cleanup | Yes (unconditional delete) | Yes (unconditional delete) |

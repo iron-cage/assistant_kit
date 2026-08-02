@@ -10,7 +10,7 @@ Edge case tests for the max tokens parameter. Tests validate numeric value forwa
 |----|-----------|----------|
 | EC-1 | `--max-tokens 100000` → forwarded to assembled command | Behavioral Divergence |
 | EC-2 | `--max-tokens` without value → exit 1 | Missing Value |
-| EC-3 | Default → `--max-tokens 200000` in assembled command | Behavioral Divergence |
+| EC-3 | Default → `--max-tokens 128000` in assembled command | Behavioral Divergence |
 | EC-4 | `--max-tokens 0` → accepted (zero is valid) | Boundary Values |
 | EC-5 | `--help` lists `--max-tokens` | Documentation |
 | EC-6 | `--max-tokens` with non-numeric value → exit 1 | Type Validation |
@@ -33,7 +33,7 @@ Edge case tests for the max tokens parameter. Tests validate numeric value forwa
 
 - **Given:** clean environment
 - **When:** `clr --dry-run --max-tokens 100000 "Fix bug"`
-- **Then:** Assembled command contains `--max-tokens 100000` (custom value, not the 200000 default)
+- **Then:** Assembled command contains `--max-tokens 100000` (custom value, not the 128000 default)
 - **Exit:** 0
 - **Source:** [009_max_tokens.md](../../../../docs/cli/param/009_max_tokens.md)
 - **Commands:** run, ask
@@ -49,11 +49,11 @@ Edge case tests for the max tokens parameter. Tests validate numeric value forwa
 - **Commands:** run, ask
 ---
 
-### EC-3: Default → `--max-tokens 200000` injected
+### EC-3: Default → `--max-tokens 128000` injected
 
 - **Given:** clean environment
 - **When:** `clr --dry-run "Fix bug"`
-- **Then:** Assembled command contains `--max-tokens 200000`
+- **Then:** Assembled command contains `--max-tokens 128000`
 - **Exit:** 0
 - **Source:** [009_max_tokens.md](../../../../docs/cli/param/009_max_tokens.md)
 - **Commands:** run, ask

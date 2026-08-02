@@ -8,7 +8,7 @@
 //!
 //! - Tier 1 parameters have different defaults (3.6M, 7.2M, true, false)
 //! - Tier 2 & 3 parameters have `None` defaults (inherit standard)
-//! - `max_output_tokens` has 200K default (not 32K)
+//! - `max_output_tokens` has 128K default (not 32K, not 200K — see BUG-429)
 //!
 //! ## Measurement
 //!
@@ -23,14 +23,16 @@
 use claude_runner_core::ClaudeCommand;
 
 #[test]
-fn default_max_output_tokens_is_200k() {
+fn default_max_output_tokens_is_128k() {
   // Fix(issue-token-limit-default): Must be 200K not 32K
+  // Fix(BUG-429): Must be 128K not 200K — 200K exceeded every current model's real
+  // max-output ceiling (128K on Sonnet 5/Opus 4.8/Fable 5); see contract/claude_code/docs/model/
   let cmd_builder = ClaudeCommand::new();
   let cmd = cmd_builder.build_command_for_test();
 
   let debug = format!( "{cmd:?}" );
   assert!( debug.contains( "CLAUDE_CODE_MAX_OUTPUT_TOKENS" ), "max_output_tokens not set" );
-  assert!( debug.contains( "200000" ), "Incorrect default: expected 200000" );
+  assert!( debug.contains( "128000" ), "Incorrect default: expected 128000" );
 }
 
 #[test]
@@ -89,11 +91,47 @@ fn default_chrome_is_on() {
   assert!( !debug.contains( "--no-chrome" ), "must not emit --no-chrome by default: {debug:?}" );
 }
 
+/// Validates that `print_bg_wait_ceiling_ms` defaults to `0`.
+///
+/// ## Root Cause
+///
+/// An earlier, untracked session corrected the standalone docs (`072_print_bg_wait_ceiling_ms.md`,
+/// `007_print_mode_timeout.md`, `131_print_bg_wait_ceiling_ms.md`) to state that `0` disables the
+/// ceiling-based forced-sweep path entirely (claude waits INDEFINITELY), but that correction never
+/// propagated back to this test's own comment or to `params_core.rs`'s doc comment — both still
+/// stated the inverted "exit immediately, no wait" claim.
+///
+/// ## Why Not Caught Initially
+///
+/// No test asserts on doc-comment *content*, only on env-var *values* — and the value (`0`) was
+/// never wrong. A content-level drift between source comments and standalone docs has no
+/// automated detection mechanism.
+///
+/// ## Fix Applied
+///
+/// Corrected this test's comment and `params_core.rs`'s `with_print_bg_wait_ceiling_ms()` doc
+/// comment to state the ceiling-disable/indefinite-wait behavior, referencing `clr`'s own outer
+/// watchdog (`run_print_mode()`'s `DEFAULT_PRINT_TIMEOUT_SECS`) as the actual bound. The assertion
+/// itself (env var literally equals `"0"`) is unchanged — it was never wrong.
+///
+/// ## Prevention
+///
+/// This test's comment now itself documents the correct behavior, so a future reader hits the
+/// accurate explanation at the same place they'd hit the assertion.
+///
+/// ## Pitfall to Avoid
+///
+/// Correcting a standalone doc file describing a parameter's behavior is not sufficient — grep
+/// the same crate's source tree for other comments referencing that same env var/parameter before
+/// considering the correction complete. A "default: X (meaning Y)" comment is a factual claim
+/// about runtime behavior, not just a value label, especially for double-negative/inverted-guard
+/// semantics (a "ceiling of 0" reads intuitively as "no time allowed," but here means "no ceiling
+/// enforced" — the opposite).
+// test_kind: bug_reproducer(BUG-430)
 #[test]
 fn default_print_bg_wait_ceiling_ms_is_zero() {
-  // print_bg_wait_ceiling_ms defaults to 0 (exit print mode immediately) — clr owns
-  // background-task waiting itself via gate_poll_secs/gate_max_attempts, so claude's
-  // own internal print-mode wait would duplicate that logic and is disabled by default.
+  // Fix(BUG-430): doc comment previously described 0 as "exit immediately" — corrected to
+  // "disables the ceiling-based forced-sweep path, so claude waits indefinitely"
   let cmd_builder = ClaudeCommand::new();
   let cmd = cmd_builder.build_command_for_test();
 
@@ -101,7 +139,7 @@ fn default_print_bg_wait_ceiling_ms_is_zero() {
   assert!( debug.contains( "CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS" ), "print_bg_wait_ceiling_ms not set" );
   assert!(
     debug.contains( "CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS=\"0\"" ),
-    "Incorrect default: expected 0 (immediate exit), got: {debug}"
+    "Incorrect default: expected 0 (disables the forced-sweep ceiling), got: {debug}"
   );
 }
 

@@ -4,7 +4,7 @@ Set the maximum number of output tokens for the Claude Code subprocess.
 Passed via the `CLAUDE_CODE_MAX_OUTPUT_TOKENS` environment variable.
 
 - **Type:** [`TokenLimit`](../type/03_token_limit.md)
-- **Default:** 200000
+- **Default:** 128000
 - **Command:** [`run`](../command/01_run.md)
 - **Group:** [Runner Control](../param_group/02_runner_control.md)
 - **Validation:** must be a valid u32 (0–4294967295); non-numeric → error
@@ -30,8 +30,8 @@ clr "Summarize" --max-tokens 50000
 
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
-| 1 | [`run`](../command/01_run.md) | 200000 | — |
-| 5 | [`ask`](../command/05_ask.md) | 200000 | Pure alias — same default as `run` |
+| 1 | [`run`](../command/01_run.md) | 128000 | — |
+| 5 | [`ask`](../command/05_ask.md) | 128000 | Pure alias — same default as `run` |
 
 ### Referenced User Stories
 

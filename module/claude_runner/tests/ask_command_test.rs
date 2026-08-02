@@ -19,7 +19,7 @@
 //! - T04: `clr ask --dry-run "X"` — does not force `--no-persist` (no `--no-session-persistence`)
 //! - T05: `clr ask --dry-run "X"` — ultrathink suffix injected (same as run)
 //! - T06: `clr ask --dry-run "X"` — uses `--effort max` (run default, not ask-specific high)
-//! - T07: `clr ask --dry-run "X"` — uses `CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000` (run default)
+//! - T07: `clr ask --dry-run "X"` — uses `CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000` (run default)
 //! - T08: `clr ask --new-session --dry-run "X"` — explicit flag respected (no `-c` in output)
 //! - T09: `clr ask --unknown-flag "X"` — unknown flag rejected (exit 1, stderr error)
 //! - T10: `clr ask --subdir NAME "X"` — effective dir ends with `/-NAME`
@@ -131,9 +131,9 @@ fn t06_ask_effort_defaults_to_max()
   );
 }
 
-// T07: ask uses CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000 (run default) — not 16384
+// T07: ask uses CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000 (run default) — not 16384
 #[ test ]
-fn t07_ask_max_tokens_defaults_to_200000()
+fn t07_ask_max_tokens_defaults_to_128000()
 {
   let output = run_ask_dry( &[ "What does X do?" ] );
   assert!(

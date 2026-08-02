@@ -40,7 +40,7 @@
 | `--no-session-persistence` | Via `--no-persist` flag | Via `--no-persist` | Always injected |
 | Default model injection | Reads `model` from config file (`.clr.toml`/`~/.clr/config.toml`) when set; uses claude binary default otherwise | Reads `model` from config file (`.clr.toml`/`~/.clr/config.toml`) when set; uses claude binary default otherwise | Reads `model` from config file (`.clr.toml`/`~/.clr/config.toml`) when set; else `opus` alias (`ISOLATED_DEFAULT_MODEL`) |
 | Minimal `CLAUDE.md` written to HOME | No | No | Yes (instructs: execute immediately, no clarifying questions, no confirmation) |
-| `CLAUDE_CODE_MAX_OUTPUT_TOKENS` | `200,000` | `200,000` | `200,000` |
+| `CLAUDE_CODE_MAX_OUTPUT_TOKENS` | `128,000` | `128,000` | `128,000` |
 | **--- Execution Modes ---** | | | |
 | No-message -> REPL | Yes — interactive | Yes — interactive | Yes — interactive (no `--dangerously-skip-permissions`) |
 | With-message -> print (auto) | Yes | Yes | Yes (+ `--dangerously-skip-permissions`) |

@@ -201,20 +201,20 @@ generate in a single turn.
 
 - **Source parameter:** [`--max-tokens`](param/009_max_tokens.md)
 - **Type:** u32 (serialized as decimal string)
-- **Default:** `200000`
+- **Default:** `128000`
 - **Mechanism:** injected via `std::process::Command::env("CLAUDE_CODE_MAX_OUTPUT_TOKENS", value.to_string())`
 - **Scope:** subprocess-only; not visible to or read by `clr` itself
 
 **Precedence:**
 
 1. Explicit `--max-tokens <N>` CLI value (overrides default)
-2. Built-in default `200000` (when `--max-tokens` is absent)
+2. Built-in default `128000` (when `--max-tokens` is absent)
 
 **Discovery:** Use `--dry-run` or `--trace` to see the current value in the
 assembled environment before subprocess invocation.
 
 ```sh
-clr --dry-run "test"                         # shows: CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000
+clr --dry-run "test"                         # shows: CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000
 clr --max-tokens 50000 --dry-run "test"      # shows: CLAUDE_CODE_MAX_OUTPUT_TOKENS=50000
 ```
 

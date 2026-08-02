@@ -26,7 +26,7 @@ Rows are parameters or behaviors. Columns are the four commands. Key: ✅ = acti
 | CLAUDE.md (global) | `~/.claude/CLAUDE.md` from user HOME | `~/.claude/CLAUDE.md` from user HOME | written to `<temp_home>/.claude/CLAUDE.md` | written to `<temp_home>/.claude/CLAUDE.md` |
 | `--chrome` | ON interactive / OFF print (BUG-304; `--no-chrome` opts out) | OFF (always print — BUG-304) | ON (ClaudeCommand default) | OFF (`--no-chrome` injected) |
 | `env -u CLAUDECODE` | ON (unless `--keep-claudecode`) | ON (unless `--keep-claudecode`) | ON (ClaudeCommand default) | ON (ClaudeCommand default) |
-| `CLAUDE_CODE_MAX_OUTPUT_TOKENS` | `200,000` | `200,000` | `200,000` | `200,000` |
+| `CLAUDE_CODE_MAX_OUTPUT_TOKENS` | `128,000` | `128,000` | `128,000` | `128,000` |
 | `CLAUDE_CODE_AUTO_COMPACT_WINDOW` | `300,000` (`--no-compact-window` opts out) | `300,000` (same) | `300,000` (same) | `300,000` (same) |
 | `CLAUDE_CODE_AUTO_CONTINUE` | `true` | `true` | `true` | `true` |
 | `CLAUDE_CODE_TELEMETRY` | `false` | `false` | `false` | `false` |

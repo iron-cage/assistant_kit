@@ -309,14 +309,16 @@ fn test_string_literals_replaced_with_enums()
 /// Verifies incorrect default values fixed.
 ///
 /// **Old Pattern**: Wrong defaults (`32_000` tokens, `120_000ms` timeout)
-/// **New Pattern**: Correct defaults (`200_000` tokens, `3_600_000ms` timeout)
+/// **New Pattern**: Correct defaults (`128_000` tokens, `3_600_000ms` timeout)
 ///
 /// **Why This Matters**: Wrong defaults caused production bugs (token limit exceeded).
+/// (BUG-429: the token limit was corrected a second time, from an intermediate `200_000`
+/// to `128_000` — `200_000` exceeded every current model's real output ceiling.)
 ///
 /// **Migration Evidence**:
 /// - No `32_000` (wrong token limit)
 /// - No `120_000` (wrong timeout)
-/// - Correct values: `200_000`, `3_600_000`, `7_200_000`
+/// - Correct values: `128_000`, `3_600_000`, `7_200_000`
 #[test]
 fn test_wrong_defaults_corrected()
 {
@@ -325,7 +327,7 @@ fn test_wrong_defaults_corrected()
   // Ignore lines with correct values, test code, or fix documentation
   let relevant_lines : Vec< &str > = content.lines()
     .filter( | line |
-      !line.contains( "200" ) &&
+      !line.contains( "128" ) &&
       !line.contains( "3600" ) &&
       !line.contains( "7200" ) &&
       !line.contains( "test" ) &&
@@ -343,7 +345,7 @@ fn test_wrong_defaults_corrected()
   assert_eq!( wrong_timeout_count, 0, "Found {wrong_timeout_count} occurrences of wrong default 120_000" );
 
   // Verify correct values exist
-  assert!( content.contains( "200_000" ), "Correct token limit 200_000 should exist" );
+  assert!( content.contains( "128_000" ), "Correct token limit 128_000 should exist" );
   assert!( content.contains( "3_600_000" ), "Correct timeout 3_600_000 should exist" );
 }
 

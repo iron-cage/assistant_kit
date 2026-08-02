@@ -363,7 +363,7 @@ fn builder_methods_comprehensive_coverage() {
      \n\
      Essential builder methods:\n\
      1. with_working_directory() - Set working directory\n\
-     2. with_max_output_tokens() - Token limit (fixes 32K→200K bug)\n\
+     2. with_max_output_tokens() - Token limit (fixes 32K→200K bug; BUG-429 later corrected 200K→128K)\n\
      3. with_continue_conversation() - Continuation flag\n\
      4. with_message() - Message content\n\
      5. with_arg() - Single custom argument\n\

@@ -41,8 +41,8 @@ fn it_01_run_trace_stderr_output()
   );
   let stderr = stderr_str( &out );
   assert!(
-    stderr.contains( "CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000" ),
-    "run --trace must emit CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000 on stderr. Got:\n{stderr}"
+    stderr.contains( "CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000" ),
+    "run --trace must emit CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000 on stderr. Got:\n{stderr}"
   );
   assert!(
     stderr.contains( "--dangerously-skip-permissions" ),
@@ -56,7 +56,7 @@ fn it_01_run_trace_stderr_output()
 /// Uses `PATH=/nonexistent` to prevent a real claude binary from running (mirrors IT-1 approach).
 ///
 /// `ask` is a pure semantic alias for `run` (task 013 removed ask-specific overrides), so the
-/// assembled command is identical to a `run` invocation: uses `CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000`
+/// assembled command is identical to a `run` invocation: uses `CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000`
 /// and `--effort max`, not the old ask-specific 16384/high defaults.
 ///
 /// Cross-invariant confirmation: verifies `ask` trace from the invariant test file's perspective.
@@ -82,8 +82,8 @@ fn it_02_ask_trace_stderr_output()
   );
   let stderr = stderr_str( &out );
   assert!(
-    stderr.contains( "CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000" ),
-    "ask --trace must emit CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000 on stderr. Got:\n{stderr}"
+    stderr.contains( "CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000" ),
+    "ask --trace must emit CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000 on stderr. Got:\n{stderr}"
   );
   assert!(
     stderr.contains( "--effort max" ),
@@ -150,8 +150,8 @@ fn it_04_refresh_trace_stderr_output()
     "refresh --trace must emit '# timeout: 45s' (default from parse_refresh_args) on stderr. Got:\n{stderr}"
   );
   assert!(
-    stderr.contains( "CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000" ),
-    "refresh --trace must emit env var block including CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000. Got:\n{stderr}"
+    stderr.contains( "CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000" ),
+    "refresh --trace must emit env var block including CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000. Got:\n{stderr}"
   );
   assert!(
     stderr.contains( "--model claude-sonnet-5" ),

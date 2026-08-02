@@ -19,13 +19,13 @@ What `--trace` shows depends on the command:
 ```sh
 # Trace on run
 clr --trace "Fix bug"
-# Stderr: CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000
+# Stderr: CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000
 # Stderr: claude --dangerously-skip-permissions --chrome -c --print "Fix bug\n\nultrathink"
 # Then: subprocess executes normally
 
 # Trace on ask (pure alias — identical output to run)
 clr ask --trace "What is X?"
-# Stderr: CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000
+# Stderr: CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000
 # Stderr: claude --dangerously-skip-permissions --chrome --effort max --print -c "What is X?\n\nultrathink"
 # Then: subprocess executes normally
 
@@ -34,7 +34,7 @@ clr isolated --creds creds.json --trace "Fix bug"
 # Stderr: # clr isolated
 # Stderr: # creds: /path/to/creds.json
 # Stderr: # timeout: 30s
-# Stderr: CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000
+# Stderr: CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000
 # Stderr: CLAUDE_CODE_BASH_TIMEOUT=3600000
 # Stderr: CLAUDE_CODE_BASH_MAX_TIMEOUT=7200000
 # Stderr: CLAUDE_CODE_AUTO_CONTINUE=true
@@ -47,7 +47,7 @@ clr refresh --creds creds.json --trace
 # Stderr: # clr refresh
 # Stderr: # creds: /path/to/creds.json
 # Stderr: # timeout: 45s
-# Stderr: CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000
+# Stderr: CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000
 # Stderr: CLAUDE_CODE_BASH_TIMEOUT=3600000
 # Stderr: CLAUDE_CODE_BASH_MAX_TIMEOUT=7200000
 # Stderr: CLAUDE_CODE_AUTO_CONTINUE=true

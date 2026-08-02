@@ -153,7 +153,7 @@ Fields: `loggedIn` (bool), `authMethod` ("claude.ai" | "apiKey" | unknown), `api
 
 | Variable | Effect |
 |----------|--------|
-| `CLAUDE_CODE_MAX_OUTPUT_TOKENS` | Max output tokens (default in builder: 200,000) |
+| `CLAUDE_CODE_MAX_OUTPUT_TOKENS` | Max output tokens (default in builder: 128,000) |
 | `CLAUDE_CODE_BASH_TIMEOUT` | Bash tool timeout ms (default: 3,600,000) |
 | `CLAUDE_CODE_BASH_MAX_TIMEOUT` | Bash max timeout ms (default: 7,200,000) |
 | `CLAUDE_CODE_AUTO_CONTINUE` | Auto-continue conversations (default: true) |

@@ -35,7 +35,7 @@ src/
 
 **In Scope:**
 - Builder pattern API for Claude Code command construction
-- Environment variable automation (tier 1 defaults: bash_timeout=3.6M, bash_max_timeout=7.2M, auto_continue=true, telemetry=false, max_output_tokens=200K)
+- Environment variable automation (tier 1 defaults: bash_timeout=3.6M, bash_max_timeout=7.2M, auto_continue=true, telemetry=false, max_output_tokens=128K)
 - Type safety via enums (ActionMode, LogLevel)
 - Private field encapsulation (prevents direct construction)
 - Single execution point (execute() method)

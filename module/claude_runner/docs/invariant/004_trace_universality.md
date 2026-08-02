@@ -43,7 +43,7 @@ If a subprocess-executing command does not support `--trace`:
 #### run / ask commands
 
 Emitted via `describe_env()` + `describe()`:
-- `CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000`
+- `CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000`
 - `CLAUDE_CODE_BASH_TIMEOUT=3600000`
 - `CLAUDE_CODE_BASH_MAX_TIMEOUT=7200000`
 - `CLAUDE_CODE_AUTO_CONTINUE=true`
@@ -56,7 +56,7 @@ Emitted via `emit_credential_trace()`:
 - `# clr {label}` (e.g., `# clr isolated`, `# clr refresh`)
 - `# creds: {path}`
 - `# timeout: {N}s` (isolated default: 30s; refresh default: 45s)
-- `describe_env()` block: `CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000`, `CLAUDE_CODE_BASH_TIMEOUT=3600000`, `CLAUDE_CODE_BASH_MAX_TIMEOUT=7200000`, `CLAUDE_CODE_AUTO_CONTINUE=true`, `CLAUDE_CODE_TELEMETRY=false`
+- `describe_env()` block: `CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000`, `CLAUDE_CODE_BASH_TIMEOUT=3600000`, `CLAUDE_CODE_BASH_MAX_TIMEOUT=7200000`, `CLAUDE_CODE_AUTO_CONTINUE=true`, `CLAUDE_CODE_TELEMETRY=false`
 - `describe()` block: `claude --model {model} [injected flags] [args]` (e.g., `--model claude-opus-4-8 --effort max --no-session-persistence --dangerously-skip-permissions --print "Fix bug"` for isolated; `--model claude-sonnet-5 --no-chrome --effort low --no-session-persistence --print "."` for refresh)
 
 ### Features

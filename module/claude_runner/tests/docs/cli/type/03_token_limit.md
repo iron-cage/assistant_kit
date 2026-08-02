@@ -13,7 +13,7 @@ Validation tests for the `TokenLimit` semantic type (u32, 0–4294967295). Tests
 | TC-3 | `4294967296` → exit 1 (u32 overflow) | Boundary |
 | TC-4 | `-1` → exit 1 (negative rejected) | Invalid Input |
 | TC-5 | `abc` → exit 1 (non-numeric rejected) | Type Validation |
-| TC-6 | Default `200000` applied when unset | Default |
+| TC-6 | Default `128000` applied when unset | Default |
 
 ## Test Coverage Summary
 
@@ -78,10 +78,10 @@ Validation tests for the `TokenLimit` semantic type (u32, 0–4294967295). Tests
 
 ---
 
-### TC-6: Default 200000 applied when unset
+### TC-6: Default 128000 applied when unset
 
 - **Given:** clean environment
 - **When:** `clr --dry-run "Fix bug"`
-- **Then:** Assembled command or env shows `200000` as the token limit default
+- **Then:** Assembled command or env shows `128000` as the token limit default
 - **Exit:** 0
 - **Source:** [type/03_token_limit.md](../../../../docs/cli/type/03_token_limit.md)

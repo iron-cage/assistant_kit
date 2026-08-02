@@ -9,7 +9,7 @@ Edge case tests for the `CLAUDE_CODE_MAX_OUTPUT_TOKENS` environment variable inj
 | ID | Test Name | Category |
 |----|-----------|----------|
 | EC-1 | `--max-tokens 50000` → env var value matches | Behavioral |
-| EC-2 | No `--max-tokens` → default 200000 injected | Default |
+| EC-2 | No `--max-tokens` → default 128000 injected | Default |
 | EC-3 | `--max-tokens 0` → env var is `0` | Boundary |
 | EC-4 | `--max-tokens 4294967295` → maximum u32 accepted | Boundary |
 | EC-5 | `--dry-run` shows env var in output | Discovery |
@@ -37,11 +37,11 @@ Edge case tests for the `CLAUDE_CODE_MAX_OUTPUT_TOKENS` environment variable inj
 
 ---
 
-### EC-2: No `--max-tokens` → default 200000 injected
+### EC-2: No `--max-tokens` → default 128000 injected
 
 - **Given:** clean environment
 - **When:** `clr --dry-run "test"`
-- **Then:** Output contains `CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000`
+- **Then:** Output contains `CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000`
 - **Exit:** 0
 - **Source:** [env_param.md](../../../../docs/cli/env_param.md)
 
@@ -71,7 +71,7 @@ Edge case tests for the `CLAUDE_CODE_MAX_OUTPUT_TOKENS` environment variable inj
 
 - **Given:** clean environment
 - **When:** `clr --dry-run "test"`
-- **Then:** `CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000` appears in the env section before the command line
+- **Then:** `CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000` appears in the env section before the command line
 - **Exit:** 0
 - **Source:** [env_param.md](../../../../docs/cli/env_param.md), [param/011_dry_run.md](../../../../docs/cli/param/011_dry_run.md)
 
@@ -81,6 +81,6 @@ Edge case tests for the `CLAUDE_CODE_MAX_OUTPUT_TOKENS` environment variable inj
 
 - **Given:** clean environment
 - **When:** `clr --trace "test"` (claude unavailable in test environment)
-- **Then:** Stderr contains `CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000` before the command line
+- **Then:** Stderr contains `CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000` before the command line
 - **Exit:** 1 (claude absent)
 - **Source:** [env_param.md](../../../../docs/cli/env_param.md), [param/013_trace.md](../../../../docs/cli/param/013_trace.md)

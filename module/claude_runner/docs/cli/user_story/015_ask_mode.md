@@ -12,7 +12,7 @@
 - No flags are forced or overridden by the `ask` subcommand — `--new-session`, `--no-chrome`,
   `--no-persist`, `--no-ultrathink`, `--effort`, `--max-tokens` are all at their `run` defaults
 - All 34 parameters from `run` are accepted by `ask` with identical defaults and behavior
-- `clr ask --effort high "..."`, `clr ask --max-tokens 200000 "..."`,
+- `clr ask --effort high "..."`, `clr ask --max-tokens 128000 "..."`,
   `clr ask --new-session "..."` all work exactly as they do under `run`
 
 ### Referenced Commands
@@ -35,7 +35,7 @@
 | 1 | [`--message`](../param/001_message.md) | Question text for Claude |
 | 2 | [`--print`](../param/002_print.md) | Auto-enabled when message given (same as run) |
 | 17 | [`--effort`](../param/017_effort.md) | Same default as run (max); overridable |
-| 9 | [`--max-tokens`](../param/009_max_tokens.md) | Same default as run (200000); overridable |
+| 9 | [`--max-tokens`](../param/009_max_tokens.md) | Same default as run (128000); overridable |
 | 28 | [`--subdir`](../param/028_subdir.md) | Named workspace isolation within ask |
 
 ### Workflow Steps

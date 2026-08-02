@@ -343,7 +343,7 @@ fn describe_env_shows_tier1_defaults()
 {
   let env = ClaudeCommand::new().describe_env();
 
-  assert!( env.contains( "CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000" ) );
+  assert!( env.contains( "CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000" ) );
   assert!( env.contains( "CLAUDE_CODE_BASH_TIMEOUT=3600000" ) );
   assert!( env.contains( "CLAUDE_CODE_BASH_MAX_TIMEOUT=7200000" ) );
   assert!( env.contains( "CLAUDE_CODE_AUTO_CONTINUE=true" ) );

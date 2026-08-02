@@ -12,7 +12,7 @@
 //!
 //! let cmd = ClaudeCommand::new()
 //!   .with_working_directory( "/tmp/work" )
-//!   .with_max_output_tokens( 200_000 );
+//!   .with_max_output_tokens( 128_000 );
 //!
 //! let output = cmd.execute()?;
 //! println!( "{}", output.stdout );
@@ -49,7 +49,7 @@
 //! // ERROR: fields are private
 //! let cmd = ClaudeCommand {
 //!   working_directory: Some(PathBuf::from("/tmp")),
-//!   max_output_tokens: Some(200_000),
+//!   max_output_tokens: Some(128_000),
 //!   continue_conversation: false,
 //!   message: None,
 //!   args: vec![],
@@ -64,7 +64,7 @@
 //! // the ONLY way to construct ClaudeCommand
 //! let output = ClaudeCommand::new()
 //!   .with_working_directory( "/tmp" )
-//!   .with_max_output_tokens( 200_000 )
+//!   .with_max_output_tokens( 128_000 )
 //!   .execute()?;
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```

@@ -30,7 +30,7 @@ These scenarios verify `ClaudeCommand` with real Claude binary execution. Use th
 
 **Core Functionality:**
 
-1. **Default 200K token limit** — verify command completes without "exceeded maximum" error:
+1. **Default 128K token limit** — verify command completes without "exceeded maximum" error:
    ```bash
    claude_runner --dir /tmp "What is 2+2? Reply with just the number."
    ```
@@ -103,7 +103,7 @@ See `-corner_cases_exhaustive.md` for complete corner case analysis.
 ## Corner Case Coverage
 
 ### Tested ✅
-- Default token limit (200K)
+- Default token limit (128K)
 - Token limit explicit override
 - Nonexistent working directory
 - Working directory with spaces

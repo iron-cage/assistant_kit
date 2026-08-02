@@ -25,7 +25,7 @@ Direct struct construction with 40+ fields is fragile, hard to read, and difficu
 ```
 ClaudeCommand::new()           // entry point, sets tier-1 automation defaults
   .with_working_directory(dir) // configuration via with_*() methods
-  .with_max_output_tokens(200_000)
+  .with_max_output_tokens(128_000)
   .with_continue_conversation(true)
   .execute()                   // terminal operation returning Result<ExecutionOutput>
 ```
@@ -33,7 +33,7 @@ ClaudeCommand::new()           // entry point, sets tier-1 automation defaults
 Each `with_*()` method takes `self` by move and returns `Self`, enabling method chaining without `&mut self`. The `execute()` call consumes the builder and spawns the process.
 
 `ClaudeCommand::new()` sets automation-safe tier-1 defaults:
-- `max_output_tokens`: 200,000 (prevents "exceeded maximum" errors)
+- `max_output_tokens`: 128,000 (prevents "exceeded maximum" errors)
 - `auto_continue`: true (enables programmatic automation)
 - `telemetry`: false (disables telemetry in automation)
 - `bash_timeout_ms`: 3,600,000ms (1 hour)

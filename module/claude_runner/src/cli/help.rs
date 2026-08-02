@@ -119,7 +119,7 @@ fn claude_code_option_group() -> cli_fmt::help::OptionGroup
     entries : vec!
     [
       OptionEntry { name : "--model <MODEL>".into(),                 desc : "Model to use".into() },
-      OptionEntry { name : "--max-tokens <N>".into(),                desc : "Max output tokens (default: 200000)".into() },
+      OptionEntry { name : "--max-tokens <N>".into(),                desc : "Max output tokens (default: 128000)".into() },
       OptionEntry { name : "--effort <LEVEL>".into(),                desc : "Reasoning effort: low, medium, high, max (default: max)".into() },
       OptionEntry { name : "--output-format <FMT>".into(),           desc : "Output format: text, json, stream-json".into() },
       OptionEntry { name : "--input-format <FMT>".into(),            desc : "Input format: text, stream-json".into() },
@@ -331,7 +331,7 @@ pub( crate ) fn print_ask_help() -> !
   println!( "OPTIONS:" );
   println!( "  -p, --print                        Non-interactive mode (capture and print output)" );
   println!( "  --effort <LEVEL>                   Reasoning effort: low, medium, high, max (default: max)" );
-  println!( "  --max-tokens <N>                   Max output tokens (default: 200000)" );
+  println!( "  --max-tokens <N>                   Max output tokens (default: 128000)" );
   println!( "  --model <MODEL>                    Model to use" );
   println!( "  --dry-run                          Print command without executing" );
   println!( "  --trace                            Print command to stderr then execute" );

@@ -60,7 +60,7 @@ Key: ✅ = supported, ⬜ = not injected/not applicable, ➖ = not accepted, `*`
 | `--retry-on-auth` / `--auth-delay` | ✅ | ✅ | ➖ | ➖ | run/ask only |
 | `--max-sessions` | ✅ | ✅ | ➖ | ➖ | concurrency gate; run/ask only |
 | **Injected subprocess env vars** | | | | | |
-| `CLAUDE_CODE_MAX_OUTPUT_TOKENS` | `200,000` | `200,000` | `200,000` | `200,000` | always injected; `--max-tokens` overrides |
+| `CLAUDE_CODE_MAX_OUTPUT_TOKENS` | `128,000` | `128,000` | `128,000` | `128,000` | always injected; `--max-tokens` overrides |
 | `CLAUDE_CODE_AUTO_COMPACT_WINDOW` | `300,000` | `300,000` | `300,000` | `300,000` | always injected; `--no-compact-window` suppresses |
 | `CLAUDE_CODE_AUTO_CONTINUE` | `true` | `true` | `true` | `true` | always injected |
 | `CLAUDE_CODE_TELEMETRY` | `false` | `false` | `false` | `false` | always injected |
@@ -81,7 +81,7 @@ These parameters apply identically across all 4 running commands:
 
 ### Invariants
 
-1. All 4 running commands inject `CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000` and `CLAUDE_CODE_AUTO_COMPACT_WINDOW=300000` (opt-out via `--no-compact-window`).
+1. All 4 running commands inject `CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000` and `CLAUDE_CODE_AUTO_COMPACT_WINDOW=300000` (opt-out via `--no-compact-window`).
 2. `--dry-run` and `--trace` use the same code path for all 4 commands — `emit_credential_trace` for `isolated`/`refresh`, `handle_dry_run` for `run`/`ask`. Both emit WYSIWYG output matching actual subprocess arguments.
 3. `run` and `ask` are functionally identical — `ask` is an alias for `run` with distinct help text. Formalized as a strict command_group (identical handler, identical parameter set) in [`command_group/01_run_ask.md`](../command_group/01_run_ask.md) — see that file for the Representation Absorption Test and default-divergence table backing this claim.
 4. `isolated` and `refresh` run in an isolated temp HOME; session persistence is always suppressed.

@@ -17,7 +17,7 @@ Returns a human-readable multi-line string showing the working directory change 
 
 ```
 cd /path/to/working/dir
-env -u CLAUDECODE claude --max-output-tokens 200000 --continue "the message"
+env -u CLAUDECODE claude --max-output-tokens 128000 --continue "the message"
 ```
 
 The `cd` line appears only when `working_directory` is set. The invocation line starts with `env -u CLAUDECODE claude` when `unset_claudecode` is true (the default set by `ClaudeCommand::new()`), or with plain `claude` when `unset_claudecode` is false (e.g. when `--keep-claudecode` is passed).

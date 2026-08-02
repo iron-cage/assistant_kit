@@ -24,7 +24,7 @@ impl ClaudeCommand {
     self
   }
 
-  /// Set maximum output tokens (default: 200,000)
+  /// Set maximum output tokens (default: 128,000)
   ///
   /// # Example
   ///
@@ -32,7 +32,7 @@ impl ClaudeCommand {
   /// use claude_runner_core::ClaudeCommand;
   ///
   /// let cmd = ClaudeCommand::new()
-  ///   .with_max_output_tokens(200_000);
+  ///   .with_max_output_tokens(128_000);
   /// ```
   #[inline]
   #[must_use]
@@ -325,15 +325,18 @@ impl ClaudeCommand {
 
   /// Set print-mode background-task wait ceiling in milliseconds
   ///
-  /// Default: `0` (exit immediately, no wait). Standard `claude` default:
-  /// 600,000 ms (10 minutes).
+  /// Default: `0`. Standard `claude` default: 600,000 ms (10 minutes).
   ///
-  /// Controls `CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS`. Bounds how long `-p`/`--print`
-  /// mode waits for outstanding background shells/agents/workflows before sweeping
-  /// them and exiting. `clr` defaults this to `0` because it already owns
-  /// background-task waiting at the wrapper level via its own `gate_poll_secs`/
-  /// `gate_max_attempts` polling — leaving `claude`'s own internal wait active
-  /// would duplicate that logic and delay `clr`'s own exit unnecessarily.
+  /// Controls `CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS`. This is a ceiling on the
+  /// forced-sweep path, not a wait duration: `0` disables that ceiling entirely,
+  /// so `claude`'s own process waits *indefinitely* for outstanding background
+  /// Agent/Workflow dispatches to finish rather than force-sweeping them after a
+  /// bound — the opposite of "exit immediately." Plain background Bash tasks are
+  /// unaffected (they use a separate, fixed ~5s grace period). `clr` defaults this
+  /// to `0` because it bounds total print-mode runtime itself, at the wrapper
+  /// level, via its own outer deadline+kill watchdog (`run_print_mode()`'s
+  /// `DEFAULT_PRINT_TIMEOUT_SECS`) — leaving the binary's own ceiling active would
+  /// just race a second, redundant bound against that outer watchdog.
   ///
   /// # Example
   ///
@@ -346,6 +349,13 @@ impl ClaudeCommand {
   #[inline]
   #[must_use]
   pub fn with_print_bg_wait_ceiling_ms( mut self, ceiling_ms: u32 ) -> Self {
+    // Fix(BUG-430): this doc comment previously described 0 as "exit immediately, no wait"
+    // Root cause: standalone docs (072_/007_/131_print_bg_wait_ceiling_ms.md) were corrected in
+    //             an earlier, untracked session, but the correction never propagated back to
+    //             this source-level comment
+    // Pitfall: a "default: X (meaning Y)" comment is a factual claim about runtime behavior, not
+    //          just a value label — verify double-negative/inverted-guard semantics against the
+    //          actual decompiled mechanism, not against what the previous comment said
     self.print_bg_wait_ceiling_ms = Some( ceiling_ms );
     self
   }

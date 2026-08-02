@@ -428,7 +428,7 @@ fn us15_2_ask_with_message_triggers_print_mode()
   );
 }
 
-/// US-3: ask uses run defaults — effort max, 200000 max tokens.
+/// US-3: ask uses run defaults — effort max, 128000 max tokens.
 #[ test ]
 fn us15_3_ask_uses_run_defaults()
 {
