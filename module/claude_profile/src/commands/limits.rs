@@ -8,7 +8,7 @@ use claude_quota::RateLimitData;
 use crate::output::{ OutputFormat, OutputOptions, json_escape, format_duration_secs };
 use super::cmd_args::{ io_err_to_error_data, resolve_account_name };
 use super::cmd_context::{ require_claude_paths, require_credential_store };
-use claude_profile_core::account::trace_ts;
+use claude_profile_core::account::{ trace_ts, read_backend, AccountBackend };
 
 // ── Single-consumer helpers ───────────────────────────────────────────────────
 
@@ -82,6 +82,7 @@ fn format_rate_limits_json( data : &RateLimitData ) -> String
 /// Returns `ErrorData` if:
 /// - HOME is unset (exit 2)
 /// - `name::` contains invalid characters (exit 1)
+/// - Target account uses `backend: redirect` (exit 1) — see Feature 071
 /// - Named account does not exist (exit 2)
 /// - No active credentials are configured (exit 2)
 /// - Credentials missing `accessToken` (exit 2)
@@ -110,19 +111,49 @@ pub fn account_limits_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) 
 
   let creds_path = if raw_name.is_empty()
   {
+    // Feature 071 (AC-11): the implicit active-account path must reject just as hard as an
+    // explicit name:: — resolve the active marker opportunistically and check its backend
+    // before any HTTP attempt, mirroring credentials_status_routine()'s is_redirect_active
+    // idiom. A missing/unreadable marker or a name with no saved backend both fall through
+    // to the pre-existing require_active_credentials() behavior unchanged.
+    if let Ok( active ) = std::fs::read_to_string( credential_store.join( crate::account::active_marker_filename() ) )
+    {
+      let active = active.trim();
+      if !active.is_empty() && read_backend( &credential_store, active ) == AccountBackend::Redirect
+      {
+        return Err( ErrorData::new(
+          ErrorCode::ArgumentTypeMismatch,
+          format!( "account '{active}' uses a redirect backend \u{2014} .account.limits is Anthropic-only" ),
+        ) );
+      }
+    }
     require_active_credentials( &paths )?
   }
   else
   {
     let name_arg = resolve_account_name( &raw_name, &credential_store )?;
-    crate::account::validate_name( &name_arg )
-      .map_err( | e | io_err_to_error_data( &e, "account limits" ) )?;
-    let path = credential_store.join( format!( "{name_arg}.credentials.json" ) );
+    let path     = credential_store.join( format!( "{name_arg}.credentials.json" ) );
     if !path.exists()
     {
+      // Feature 071: an already-existing account's own saved shape governs downstream
+      // validation (mirrors claude_profile_core::account::check_switch_preconditions) —
+      // only a genuinely non-existent name still needs the strict email-shape fast-fail,
+      // preserving lim04's exit-1 "invalid name" behavior for garbage input.
+      crate::account::validate_name( &name_arg )
+        .map_err( | e | io_err_to_error_data( &e, "account limits" ) )?;
       return Err( ErrorData::new(
         ErrorCode::InternalError,
         format!( "account '{name_arg}' not found" ),
+      ) );
+    }
+    // Feature 071 (AC-11): reject before any HTTP attempt — a redirect-backend account has
+    // no Anthropic rate-limit headers to fetch. ArgumentTypeMismatch (not InternalError) per
+    // docs/cli/command/001_account.md's documented exit 1 (usage) for this guard.
+    if read_backend( &credential_store, &name_arg ) == AccountBackend::Redirect
+    {
+      return Err( ErrorData::new(
+        ErrorCode::ArgumentTypeMismatch,
+        format!( "account '{name_arg}' uses a redirect backend \u{2014} .account.limits is Anthropic-only" ),
       ) );
     }
     path

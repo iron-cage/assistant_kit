@@ -286,18 +286,12 @@ pub fn account_save_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) ->
   let credential_store = require_credential_store()?;
   if trace { eprintln!( "{}account.save  reading {}", trace_ts(), paths.credentials_file().display() ) }
 
-  // Validate name before dry-run check so dry-run rejects invalid names
-  // instead of reporting "[dry-run] would save" for names that would fail.
-  crate::account::validate_name( &name )
-    .map_err( | e | io_err_to_error_data( &e, "account save" ) )?;
-
-  // Feature 071: parse backend::/base_url::/api_key::/redirect_model:: before the dry-run
-  // check, so validation failures reject even under dry::1 (mirrors validate_name()'s
-  // ordering above — dry-run must not mask a rejection a real run would hit).
-  // backend:: is matched case-insensitively here (CLI-input boundary, per
-  // docs/cli/param/069_backend.md's case-insensitive constraint) — AccountBackend::parse()
-  // itself stays exact-match, since its other callers read the always-canonical-lowercase
-  // stored `backend` field.
+  // Feature 071: parse backend:: before name validation, so redirect accounts can use an
+  // arbitrary label (validate_redirect_name()) instead of the email-shape validate_name()
+  // required for backend: anthropic. backend:: is matched case-insensitively here (CLI-input
+  // boundary, per docs/cli/param/069_backend.md's case-insensitive constraint) —
+  // AccountBackend::parse() itself stays exact-match, since its other callers read the
+  // always-canonical-lowercase stored `backend` field.
   let backend_raw = match cmd.arguments.get( "backend" )
   {
     Some( Value::String( s ) ) => s.clone(),
@@ -313,6 +307,16 @@ pub fn account_save_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) ->
     ) );
   }
   let backend = crate::account::AccountBackend::parse( &backend_raw.to_lowercase() );
+
+  // Validate name before dry-run check so dry-run rejects invalid names instead of reporting
+  // "[dry-run] would save" for names that would fail. AC-15: an already-saved account's name
+  // is not re-validated against a newly requested backend's stricter shape rule on re-save.
+  crate::account::validate_name_for_save( &name, backend, &credential_store )
+    .map_err( | e | io_err_to_error_data( &e, "account save" ) )?;
+
+  // Feature 071: parse base_url::/api_key::/redirect_model:: before the dry-run check, so
+  // validation failures reject even under dry::1 (mirrors validate_name()'s ordering above —
+  // dry-run must not mask a rejection a real run would hit).
   let base_url_val = match cmd.arguments.get( "base_url" )
   {
     Some( Value::String( s ) ) if !s.is_empty() => Some( s.clone() ),

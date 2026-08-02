@@ -47,7 +47,7 @@ fn mre_bug229_find_next_renew_picks_account_with_sooner_subscription()
   let acct_c = mk_aq_with_7d_reset( "c@test.com", 30.0, now, 3600 );
 
   let accounts = vec![ acct_a, acct_b, acct_c ];
-  let winner   = find_next_for_strategy( &accounts, SortStrategy::Renew, PreferStrategy::Any, now, false );
+  let winner   = find_next_for_strategy( &accounts, SortStrategy::Renew, PreferStrategy::Any, now, false, "anthropic" );
 
   assert_eq!(
     winner, Some( 1 ),
@@ -289,6 +289,7 @@ fn mre_bug260_renew_nondeterministic_when_fully_tied()
     PreferStrategy::Any,
     now_secs,
     false,
+    "anthropic",
   );
   assert_eq!(
     result,
@@ -342,7 +343,7 @@ fn mre_bug292_renew_skips_weekly_exhausted_even_with_soonest_renewal()
   //   7d reset fires in 24h (later event) — must be selected after fix.
   let healthy   = mk_aq_with_7d_reset_util( "healthy@test.com",   0.0, 40.0, now, 86_400 );
 
-  let idx = find_next_for_strategy( &[ exhausted, healthy ], SortStrategy::Renew, PreferStrategy::Any, now, false );
+  let idx = find_next_for_strategy( &[ exhausted, healthy ], SortStrategy::Renew, PreferStrategy::Any, now, false, "anthropic" );
   assert!( idx.is_some(), "BUG-292: renew must find a candidate (healthy@test.com is eligible)" );
   assert_eq!(
     idx.unwrap(), 1,
@@ -403,7 +404,7 @@ fn mre_bug291_renew_next_tiebreaker_matches_sort_indices()
   // Step 2: find_next_for_strategy(Renew) must agree with sort_indices — selects bob (index 1).
   let alice_n = mk_aq_with_7d_reset_util( "alice@test.com", 80.0, 10.0, now, 3_600 );
   let bob_n   = mk_aq_with_7d_reset_util( "bob@test.com",   20.0, 60.0, now, 3_600 );
-  let idx     = find_next_for_strategy( &[ alice_n, bob_n ], SortStrategy::Renew, PreferStrategy::Any, now, false );
+  let idx     = find_next_for_strategy( &[ alice_n, bob_n ], SortStrategy::Renew, PreferStrategy::Any, now, false, "anthropic" );
   assert_eq!(
     idx, Some( 1 ),
     "BUG-291: sort::renew tiebreaker must match sort_indices(Renew) — bob (prefer_weekly=40) must win, not alice; got {idx:?}",
@@ -449,7 +450,7 @@ fn mre_bug317_cancelled_not_recommended_by_find_next()
   let accounts  = vec![ cancelled ];
   for strategy in [ SortStrategy::Renew, SortStrategy::Name, SortStrategy::Renews ]
   {
-    let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, false );
+    let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, false, "anthropic" );
     assert!(
       result.is_none(),
       "BUG-317: {strategy:?} must not recommend cancelled account (billing_type='none'); got idx {result:?}",
@@ -470,7 +471,7 @@ fn mre_bug_gap8_find_first_eligible_at_exactly_85_utilization()
   let accounts = vec![ acct ];
   for strategy in [ SortStrategy::Renew, SortStrategy::Name, SortStrategy::Renews ]
   {
-    let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, false );
+    let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, false, "anthropic" );
     assert!(
       result.is_none(),
       "{strategy:?}: account with five_hour.utilization=85.0 must be skipped by gate 4 (>= 85.0); got: {result:?}",
@@ -524,7 +525,7 @@ fn mre_bug324_green_account_eligible_when_7d_son_exhausted()
   {
     for prefer in [ PreferStrategy::Any, PreferStrategy::Opus, PreferStrategy::Sonnet ]
     {
-      let result = find_next_for_strategy( &accounts, strategy, prefer, now, false );
+      let result = find_next_for_strategy( &accounts, strategy, prefer, now, false, "anthropic" );
       assert_eq!(
         result, Some( 0 ),
         "BUG-324: {strategy:?}/{prefer:?} — green account with 7d Left=31%, 7d(Son)=0% must be eligible (index 0); \
@@ -577,7 +578,7 @@ fn mre_bug324_sole_green_candidate_7d_son_zero_returns_some()
   let accounts = vec![ sole, b_current, b_active, b_expired, b_hexhausted ];
   for strategy in [ SortStrategy::Name, SortStrategy::Renew, SortStrategy::Renews ]
   {
-    let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, false );
+    let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, false, "anthropic" );
     assert_eq!(
       result, Some( 0 ),
       "BUG-324: {strategy:?} — sole green candidate with 7d(Son)=0% must be selected (index 0); \
@@ -606,7 +607,7 @@ fn test_cc_gate7_boundary_exactly_3pct_skipped_in_eligibility()
 
   for strategy in [ SortStrategy::Name, SortStrategy::Renew, SortStrategy::Renews ]
   {
-    let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, false );
+    let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, false, "anthropic" );
     assert!(
       result.is_none(),
       "{strategy:?}: seven_day_left=3.0 (exactly at threshold) must be SKIPPED (strict > 3.0); got: {result:?}",
@@ -636,7 +637,7 @@ fn test_cc_gate7_just_above_boundary_eligible()
 
   for strategy in [ SortStrategy::Name, SortStrategy::Renew, SortStrategy::Renews ]
   {
-    let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, false );
+    let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, false, "anthropic" );
     assert_eq!(
       result, Some( 0 ),
       "{strategy:?}: seven_day_left=3.5 (rounds to 4, just above threshold) must be ELIGIBLE; got: {result:?}",
@@ -670,7 +671,7 @@ fn test_cc_bug324_divergent_at_boundary_eligible()
   {
     for prefer in [ PreferStrategy::Any, PreferStrategy::Opus, PreferStrategy::Sonnet ]
     {
-      let result = find_next_for_strategy( &accounts, strategy, prefer, now, false );
+      let result = find_next_for_strategy( &accounts, strategy, prefer, now, false, "anthropic" );
       assert_eq!(
         result, Some( 0 ),
         "BUG-324 boundary: {strategy:?}/{prefer:?} — seven_day_left=3.5 (rounds to 4), 7d_son_left=0% \
@@ -699,7 +700,7 @@ fn test_cc_prefer_sonnet_absent_tier_eligible()
   let accounts = vec![ target, current ];
 
   let result = find_next_for_strategy(
-    &accounts, SortStrategy::Renew, PreferStrategy::Sonnet, now, false,
+    &accounts, SortStrategy::Renew, PreferStrategy::Sonnet, now, false, "anthropic",
   );
   assert_eq!(
     result, Some( 0 ),
@@ -724,11 +725,113 @@ fn test_cc_prefer_sonnet_exhausted_tier_eligible()
   let accounts = vec![ target, current ];
 
   let result = find_next_for_strategy(
-    &accounts, SortStrategy::Renew, PreferStrategy::Sonnet, now, false,
+    &accounts, SortStrategy::Renew, PreferStrategy::Sonnet, now, false, "anthropic",
   );
   assert_eq!(
     result, Some( 0 ),
     "prefer::sonnet + Sonnet exhausted (100%% util): seven_day_left=50.0 > 3.0 must be ELIGIBLE; \
      pre-fix: prefer_weekly(Sonnet)=0.0 would block; got: {result:?}",
+  );
+}
+
+// ── Feature 072: Gate 10 (provider mismatch) ──────────────────────────────
+
+/// T04 (Gate-10 half) — an account with no `inference_provider` key (empty string after
+/// parse) is never misclassified as provider-mismatched: Gate 10 normalizes empty to
+/// `"anthropic"` before comparing, so a default-absent selected provider never excludes it.
+#[ test ]
+fn test_cc_gate10_empty_inference_provider_treated_as_anthropic()
+{
+  let now = 0u64;
+  // mk_aq_sort defaults inference_provider to "" (no key present, matches a freshly-read
+  // account file predating Feature 072).
+  let acct = mk_aq_sort( "no_provider_key@test.com", 20.0, FAR_FUTURE_MS );
+  let accounts = vec![ acct ];
+  for strategy in [ SortStrategy::Name, SortStrategy::Renew, SortStrategy::Renews ]
+  {
+    let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, false, "anthropic" );
+    assert_eq!(
+      result, Some( 0 ),
+      "{strategy:?}: empty inference_provider (missing key) must be treated as \"anthropic\" \
+       and never misclassified as a provider mismatch; got: {result:?}",
+    );
+  }
+}
+
+/// T13 — Gate 10 excludes an account whose `inference_provider` does not match the
+/// selected provider from `find_first_eligible()`'s candidate pool, regardless of every
+/// other gate passing.
+#[ test ]
+fn test_cc_gate10_provider_mismatch_skips_account()
+{
+  let now = 0u64;
+  // matched: inference_provider="" (resolves to "anthropic") — eligible.
+  let matched = mk_aq_sort( "matched@test.com", 20.0, FAR_FUTURE_MS );
+  // mismatched: inference_provider="kimi" — passes every other gate but must be skipped.
+  let mut mismatched = mk_aq_sort( "mismatched@test.com", 20.0, FAR_FUTURE_MS );
+  mismatched.inference_provider = "kimi".to_string();
+  let accounts = vec![ matched, mismatched ];
+
+  for strategy in [ SortStrategy::Name, SortStrategy::Renew, SortStrategy::Renews ]
+  {
+    // gate_ownership=true mirrors a non-forced `rotate::1` call (params.rotate && !params.force).
+    let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, true, "anthropic" );
+    assert_eq!(
+      result, Some( 0 ),
+      "{strategy:?}: Gate 10 must skip mismatched@test.com (\"kimi\" != \"anthropic\") and \
+       select matched@test.com (index 0); got: {result:?}",
+    );
+  }
+}
+
+/// T14 (AF3) — Gate 10's exclusion is not bypassed by `force::1`. At the CLI layer
+/// `force::1` maps to `gate_ownership = params.rotate && !params.force` becoming `false`
+/// (`api.rs`) — this test passes `gate_ownership=false` (the force-bypassed value) against
+/// the identical T13 pool and asserts the mismatched account is still excluded, proving
+/// Gate 10 is structurally independent of the ownership-gate/force parameter.
+#[ doc = "`bug_reproducer(AF3)`" ]
+#[ test ]
+fn test_cc_gate10_mismatch_not_bypassed_by_force_equivalent()
+{
+  let now = 0u64;
+  let matched = mk_aq_sort( "matched@test.com", 20.0, FAR_FUTURE_MS );
+  let mut mismatched = mk_aq_sort( "mismatched@test.com", 20.0, FAR_FUTURE_MS );
+  mismatched.inference_provider = "kimi".to_string();
+  let accounts = vec![ matched, mismatched ];
+
+  for strategy in [ SortStrategy::Name, SortStrategy::Renew, SortStrategy::Renews ]
+  {
+    // gate_ownership=false mirrors force::1 (the ownership gate is bypassed) — Gate 10 has
+    // no such bypass and must still fire.
+    let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, false, "anthropic" );
+    assert_eq!(
+      result, Some( 0 ),
+      "{strategy:?}: force::1 (gate_ownership=false) must NOT bypass Gate 10 — \
+       mismatched@test.com must still be skipped; got: {result:?}",
+    );
+  }
+}
+
+/// T15 — both an empty `inference_provider` and an explicit `"anthropic"` value resolve to
+/// the identical effective provider, so an account is equally eligible under either
+/// representation when the selected provider is the default-absent `"anthropic"`.
+#[ test ]
+fn test_cc_gate10_empty_and_explicit_anthropic_are_equivalent()
+{
+  let now = 0u64;
+
+  let empty_provider = mk_aq_sort( "empty_provider@test.com", 20.0, FAR_FUTURE_MS );
+  let result_empty = find_next_for_strategy( &[ empty_provider ], SortStrategy::Name, PreferStrategy::Any, now, false, "anthropic" );
+  assert_eq!(
+    result_empty, Some( 0 ),
+    "T15: empty inference_provider must be eligible against selected_provider=\"anthropic\"; got: {result_empty:?}",
+  );
+
+  let mut explicit_provider = mk_aq_sort( "explicit_provider@test.com", 20.0, FAR_FUTURE_MS );
+  explicit_provider.inference_provider = "anthropic".to_string();
+  let result_explicit = find_next_for_strategy( &[ explicit_provider ], SortStrategy::Name, PreferStrategy::Any, now, false, "anthropic" );
+  assert_eq!(
+    result_explicit, Some( 0 ),
+    "T15: explicit inference_provider=\"anthropic\" must be eligible against selected_provider=\"anthropic\"; got: {result_explicit:?}",
   );
 }

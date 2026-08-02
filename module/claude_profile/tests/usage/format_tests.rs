@@ -774,7 +774,7 @@ fn mre_bug336_recommended_model_agrees_with_apply_model_override_at_opus_thresho
   let aq   = mk_aq_sort_weekly( "test@example.com", 10.0, 10.0, 90.4 );
   let data = aq.result.as_ref().unwrap();
 
-  apply_model_override( data, &paths, false, "test", "test@example.com" );
+  apply_model_override( data, &paths, false, "test", "test@example.com", claude_profile::account::AccountBackend::Anthropic );
   let settings = std::fs::read_to_string( paths.settings_file() ).unwrap();
   let override_picked_sonnet = settings.contains( "\"sonnet\"" );
 

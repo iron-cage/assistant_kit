@@ -245,6 +245,32 @@ fn test_apply_refresh_403_no_cred_file()
   );
 }
 
+/// Build an `AccountQuota` for FT-07 mixed-refresh testing: only `name`/`result` vary.
+fn mixed_account( name : &str, result : Result< claude_quota::OauthUsageData, String > ) -> AccountQuota
+{
+  AccountQuota
+  {
+    fallback_reason : None,
+    name          : name.to_string(),
+    is_current    : false,
+    is_active             : false,
+    is_occupied_elsewhere : false,
+    expires_at_ms : 0,
+    result,
+    account       : None,
+    host          : String::new(),
+    role          : String::new(),
+    renewal_at    : None,
+    cached        : false,
+    cache_age_secs : None,
+    is_owned       : true,
+    owner                : String::new(),
+    claim_lock : false, reserve : false,
+    org_created_at : None,
+    inference_provider : String::new(),
+  }
+}
+
 /// C4 / FT-07 — `apply_refresh` with mixed results: refresh failure does not affect siblings.
 ///
 /// Four accounts: Ok, 429+expired (`expires_at_ms=0`), 401, generic error.
@@ -259,90 +285,10 @@ fn test_apply_refresh_mixed_accounts()
   let store = TempDir::new().unwrap();
   let quota = claude_quota::OauthUsageData { five_hour : None, seven_day : None, seven_day_sonnet : None };
   let mut accounts = vec![
-    AccountQuota
-    {
-      fallback_reason : None,
-      name          : "a@ok.com".to_string(),
-      is_current    : false,
-      is_active             : false,
-      is_occupied_elsewhere : false,
-      expires_at_ms : 0,
-      result        : Ok( quota ),
-      account       : None,
-      host          : String::new(),
-      role          : String::new(),
-      renewal_at    : None,
-      cached        : false,
-      cache_age_secs : None,
-      is_owned       : true,
-      owner                : String::new(),
-      claim_lock : false, reserve : false,
-          org_created_at : None,
-      inference_provider : String::new(),
-    },
-    AccountQuota
-    {
-      fallback_reason : None,
-      name          : "b@ratelimited.com".to_string(),
-      is_current    : false,
-      is_active             : false,
-      is_occupied_elsewhere : false,
-      expires_at_ms : 0,
-      result        : Err( "HTTP transport error: HTTP 429".to_string() ),
-      account       : None,
-      host          : String::new(),
-      role          : String::new(),
-      renewal_at    : None,
-      cached        : false,
-      cache_age_secs : None,
-      is_owned       : true,
-      owner                : String::new(),
-      claim_lock : false, reserve : false,
-          org_created_at : None,
-      inference_provider : String::new(),
-    },
-    AccountQuota
-    {
-      fallback_reason : None,
-      name          : "c@expired.com".to_string(),
-      is_current    : false,
-      is_active             : false,
-      is_occupied_elsewhere : false,
-      expires_at_ms : 0,
-      result        : Err( "HTTP transport error: HTTP 401".to_string() ),
-      account       : None,
-      host          : String::new(),
-      role          : String::new(),
-      renewal_at    : None,
-      cached        : false,
-      cache_age_secs : None,
-      is_owned       : true,
-      owner                : String::new(),
-      claim_lock : false, reserve : false,
-          org_created_at : None,
-      inference_provider : String::new(),
-    },
-    AccountQuota
-    {
-      fallback_reason : None,
-      name          : "d@network.com".to_string(),
-      is_current    : false,
-      is_active             : false,
-      is_occupied_elsewhere : false,
-      expires_at_ms : 0,
-      result        : Err( "connection refused".to_string() ),
-      account       : None,
-      host          : String::new(),
-      role          : String::new(),
-      renewal_at    : None,
-      cached        : false,
-      cache_age_secs : None,
-      is_owned       : true,
-      owner                : String::new(),
-      claim_lock : false, reserve : false,
-          org_created_at : None,
-      inference_provider : String::new(),
-    },
+    mixed_account( "a@ok.com", Ok( quota ) ),
+    mixed_account( "b@ratelimited.com", Err( "HTTP transport error: HTTP 429".to_string() ) ),
+    mixed_account( "c@expired.com", Err( "HTTP transport error: HTTP 401".to_string() ) ),
+    mixed_account( "d@network.com", Err( "connection refused".to_string() ) ),
   ];
 
   apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto, false );

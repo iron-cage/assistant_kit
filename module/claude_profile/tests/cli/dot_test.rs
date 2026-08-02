@@ -88,7 +88,7 @@ fn dot03_dot_hidden_from_listing()
   );
 }
 
-// ── dot04 — all 14 visible commands present; truly-absent names absent ────────
+// ── dot04 — all 15 visible commands present; truly-absent names absent ────────
 
 #[ test ]
 fn dot04_all_visible_commands_present()
@@ -111,6 +111,7 @@ fn dot04_all_visible_commands_present()
     ".model",
     ".models",
     ".model.select",
+    ".provider.select",
   ];
   for name in &visible
   {
@@ -123,15 +124,15 @@ fn dot04_all_visible_commands_present()
   assert!( !text.contains( ".token.status"   ), ".token.status must not appear (removed)" );
 }
 
-// ── dot05 — exactly 14 command rows in listing ────────────────────────────────
+// ── dot05 — exactly 15 command rows in listing ────────────────────────────────
 
 #[ test ]
-fn dot05_exactly_fourteen_command_rows()
+fn dot05_exactly_fifteen_command_rows()
 {
   let out   = run_cs( &[ "." ] );
   let text  = stdout( &out );
   let count = text.lines().filter( |l| l.starts_with( "    ." ) ).count();
-  assert_eq!( count, 14, "expected 14 command rows starting with '    .', got {count}" );
+  assert_eq!( count, 15, "expected 15 command rows starting with '    .', got {count}" );
 }
 
 // ── dot06 — usage line includes `<command>` syntax ───────────────────────────

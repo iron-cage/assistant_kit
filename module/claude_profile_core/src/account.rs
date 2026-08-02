@@ -319,11 +319,7 @@ pub fn save(
   inference_provider : Option< &str >,
 ) -> Result< (), std::io::Error >
 {
-  match backend
-  {
-    AccountBackend::Redirect  => validate_redirect_name( name )?,
-    AccountBackend::Anthropic => validate_name( name )?,
-  }
+  validate_name_for_save( name, backend, credential_store )?;
   std::fs::create_dir_all( credential_store )?;
   let dest = credential_store.join( format!( "{name}.credentials.json" ) );
   if backend == AccountBackend::Redirect
@@ -465,22 +461,26 @@ pub fn save(
 #[ allow( clippy::std_instead_of_core ) ]
 pub fn check_switch_preconditions( name : &str, credential_store : &Path ) -> Result< (), std::io::Error >
 {
-  validate_name( name )?;
+  // Feature 071: an existing account's own saved shape governs switch-time validation, not
+  // the anthropic-only email requirement — a redirect account's arbitrary label (e.g. "kimi")
+  // must switch successfully. Mirrors validate_name_for_save()'s `already_exists` branch: any
+  // account already on disk (either backend) only needs the permissive filename-safety check.
+  // Non-existent names keep the original fast-fail email-shape rejection before the NotFound
+  // check below, unchanged from pre-071 behavior.
   let src = credential_store.join( format!( "{name}.credentials.json" ) );
-  if !src.exists()
+  if src.exists()
   {
-    return Err( std::io::Error::new(
-      std::io::ErrorKind::NotFound,
-      format!( "account '{name}' not found in {}", credential_store.display() ),
-    ) );
+    return validate_redirect_name( name );
   }
-  Ok( () )
+  validate_name( name )?;
+  Err( std::io::Error::new(
+    std::io::ErrorKind::NotFound,
+    format!( "account '{name}' not found in {}", credential_store.display() ),
+  ) )
 }
 
-/// Switch the active account by name.
-///
-/// Atomically overwrites the credentials file with the named account's
-/// credentials using write-then-rename, then updates `{credential_store}/_active`.
+/// Patch live `~/.claude.json` and `~/.claude/settings.json` from the unified `{name}.json`
+/// snapshot after a switch's credentials/marker write has already landed.
 ///
 /// Fix(BUG-254)
 /// Root cause: `emailAddress` patch was gated inside `if let Ok(saved_val)` which
@@ -490,6 +490,117 @@ pub fn check_switch_preconditions( name : &str, credential_store : &Path ) -> Re
 /// Pitfall: identity-critical updates (`emailAddress`, `_active` marker) must be
 /// unconditional. Non-critical data (model, org fields) can remain conditional on
 /// metadata file availability.
+fn patch_live_state_after_switch( name : &str, credential_store : &Path, paths : &ClaudePaths, src : &Path )
+{
+  // Unconditional emailAddress patch — must fire regardless of {name}.json state.
+  let live_path = paths.claude_json_file();
+  {
+    let mut live_val = std::fs::read_to_string( &live_path )
+      .ok()
+      .and_then( |s| serde_json::from_str::< serde_json::Value >( &s ).ok() )
+      .unwrap_or_else( || serde_json::json!( {} ) );
+    if let Some( obj ) = live_val.as_object_mut()
+    {
+      let oauth = obj.entry( "oauthAccount" )
+        .or_insert_with( || serde_json::json!( {} ) );
+      if let Some( oa_obj ) = oauth.as_object_mut()
+      {
+        oa_obj.insert( "emailAddress".to_string(), serde_json::Value::String( name.to_string() ) );
+      }
+    }
+    let _ = std::fs::write( &live_path, serde_json::to_string_pretty( &live_val ).map( | s | s + "\n" ).unwrap_or_default() );
+  }
+
+  let meta_path = credential_store.join( format!( "{name}.json" ) );
+  let meta_text = std::fs::read_to_string( &meta_path ).unwrap_or_default();
+
+  // Restore oauthAccount into live ~/.claude.json (surgical patch — preserves machine-global keys).
+  if let Ok( saved_val ) = serde_json::from_str::< serde_json::Value >( &meta_text )
+  {
+    if let Some( mut oauth ) = saved_val.get( "oauthAccount" ).cloned()
+    {
+      // Fix(BUG-217): enforce emailAddress == name — snapshot may contain stale email.
+      if let Some( oa_obj ) = oauth.as_object_mut()
+      {
+        oa_obj.insert( "emailAddress".to_string(), serde_json::Value::String( name.to_string() ) );
+        // Fix(BUG-219): override org-identity fields from saved roles data.
+        if let Some( org_name ) = parse_string_field( &meta_text, "organization_name" )
+        {
+          if !org_name.is_empty()
+          {
+            oa_obj.insert( "organizationName".to_string(), serde_json::Value::String( org_name ) );
+          }
+        }
+        if let Some( org_uuid ) = parse_string_field( &meta_text, "organization_uuid" )
+        {
+          if !org_uuid.is_empty()
+          {
+            oa_obj.insert( "organizationUuid".to_string(), serde_json::Value::String( org_uuid ) );
+          }
+        }
+      }
+      let live_path = paths.claude_json_file();
+      let mut live_val = std::fs::read_to_string( &live_path )
+        .ok()
+        .and_then( |s| serde_json::from_str::< serde_json::Value >( &s ).ok() )
+        .unwrap_or_else( || serde_json::json!( {} ) );
+      if let Some( obj ) = live_val.as_object_mut()
+      {
+        obj.insert( "oauthAccount".to_string(), oauth );
+      }
+      let _ = std::fs::write( live_path, serde_json::to_string_pretty( &live_val ).map( | s | s + "\n" ).unwrap_or_default() );
+    }
+  }
+
+  // Restore model preference into live ~/.claude/settings.json.
+  let model = parse_string_field( &meta_text, "model" );
+  let live_settings_path = paths.settings_file();
+  let mut live_settings = std::fs::read_to_string( &live_settings_path )
+    .ok()
+    .and_then( |s| serde_json::from_str::< serde_json::Value >( &s ).ok() )
+    .unwrap_or_else( || serde_json::json!( {} ) );
+  if let Some( obj ) = live_settings.as_object_mut()
+  {
+    match model
+    {
+      Some( m ) => { obj.insert( "model".to_string(), serde_json::Value::String( m ) ); }
+      None      => { obj.remove( "model" ); }
+    }
+  }
+  let _ = std::fs::write( &live_settings_path, serde_json::to_string_pretty( &live_settings ).map( | s | s + "\n" ).unwrap_or_default() );
+
+  // Feature 071 (AC-06/AC-07): sync env.ANTHROPIC_* to the switched-to account's backend.
+  // Redirect: writes BASE_URL/AUTH_TOKEN/MODEL from the account's own snapshot + credential
+  // file. Anthropic: removes all three, then prunes the whole `env` object if now empty —
+  // remove_env_var() alone leaves `"env": {}` behind; this composition lives here, not in
+  // the shared claude_core::settings_io formatter (see docs/feature/071 design note).
+  let backend = AccountBackend::parse( &parse_string_field( &meta_text, "backend" ).unwrap_or_default() );
+  if backend == AccountBackend::Redirect
+  {
+    let creds_text   = std::fs::read_to_string( src ).unwrap_or_default();
+    let access_token = parse_string_field( &creds_text, "accessToken" ).unwrap_or_default();
+    let base_url     = parse_string_field( &meta_text, "base_url" ).unwrap_or_default();
+    let model        = parse_string_field( &meta_text, "redirect_model" ).unwrap_or_default();
+    let _ = claude_core::settings_io::set_env_var( &live_settings_path, "ANTHROPIC_BASE_URL", &base_url );
+    let _ = claude_core::settings_io::set_env_var( &live_settings_path, "ANTHROPIC_AUTH_TOKEN", &access_token );
+    let _ = claude_core::settings_io::set_env_var( &live_settings_path, "ANTHROPIC_MODEL", &model );
+  }
+  else
+  {
+    let _ = claude_core::settings_io::remove_env_var( &live_settings_path, "ANTHROPIC_BASE_URL" );
+    let _ = claude_core::settings_io::remove_env_var( &live_settings_path, "ANTHROPIC_AUTH_TOKEN" );
+    let _ = claude_core::settings_io::remove_env_var( &live_settings_path, "ANTHROPIC_MODEL" );
+    if claude_core::settings_io::get_setting( &live_settings_path, "env" ).ok().flatten().as_deref() == Some( "{}" )
+    {
+      let _ = claude_core::settings_io::remove_setting( &live_settings_path, "env" );
+    }
+  }
+}
+
+/// Switch the active account by name.
+///
+/// Atomically overwrites the credentials file with the named account's
+/// credentials using write-then-rename, then updates `{credential_store}/_active`.
 ///
 /// # Errors
 ///
@@ -503,6 +614,11 @@ pub fn switch_account( name : &str, credential_store : &Path, paths : &ClaudePat
 
   // Atomic write: copy to adjacent temp file, then rename into place.
   let creds = paths.credentials_file();
+  // Feature 071: a redirect account can be saved and switched-to without `~/.claude/`
+  // ever existing (unlike anthropic accounts, whose save path always reads the live
+  // credentials file first, guaranteeing the directory). Same class of gap as BUG-258
+  // (see set_session_model's fix note below) — ensure the parent exists before writing.
+  if let Some( parent ) = creds.parent() { let _ = std::fs::create_dir_all( parent ); }
   let tmp = creds.with_extension( "json.tmp" );
   std::fs::copy( &src, &tmp )?;
   std::fs::rename( &tmp, &creds )?;
@@ -511,112 +627,7 @@ pub fn switch_account( name : &str, credential_store : &Path, paths : &ClaudePat
   let marker = credential_store.join( active_marker_filename() );
   std::fs::write( marker, name )?;
 
-  // Patch live ~/.claude.json and ~/.claude/settings.json from unified {name}.json.
-  {
-    // Unconditional emailAddress patch — must fire regardless of {name}.json state.
-    let live_path = paths.claude_json_file();
-    {
-      let mut live_val = std::fs::read_to_string( &live_path )
-        .ok()
-        .and_then( |s| serde_json::from_str::< serde_json::Value >( &s ).ok() )
-        .unwrap_or_else( || serde_json::json!( {} ) );
-      if let Some( obj ) = live_val.as_object_mut()
-      {
-        let oauth = obj.entry( "oauthAccount" )
-          .or_insert_with( || serde_json::json!( {} ) );
-        if let Some( oa_obj ) = oauth.as_object_mut()
-        {
-          oa_obj.insert( "emailAddress".to_string(), serde_json::Value::String( name.to_string() ) );
-        }
-      }
-      let _ = std::fs::write( &live_path, serde_json::to_string_pretty( &live_val ).map( | s | s + "\n" ).unwrap_or_default() );
-    }
-
-    let meta_path = credential_store.join( format!( "{name}.json" ) );
-    let meta_text = std::fs::read_to_string( &meta_path ).unwrap_or_default();
-
-    // Restore oauthAccount into live ~/.claude.json (surgical patch — preserves machine-global keys).
-    if let Ok( saved_val ) = serde_json::from_str::< serde_json::Value >( &meta_text )
-    {
-      if let Some( mut oauth ) = saved_val.get( "oauthAccount" ).cloned()
-      {
-        // Fix(BUG-217): enforce emailAddress == name — snapshot may contain stale email.
-        if let Some( oa_obj ) = oauth.as_object_mut()
-        {
-          oa_obj.insert( "emailAddress".to_string(), serde_json::Value::String( name.to_string() ) );
-          // Fix(BUG-219): override org-identity fields from saved roles data.
-          if let Some( org_name ) = parse_string_field( &meta_text, "organization_name" )
-          {
-            if !org_name.is_empty()
-            {
-              oa_obj.insert( "organizationName".to_string(), serde_json::Value::String( org_name ) );
-            }
-          }
-          if let Some( org_uuid ) = parse_string_field( &meta_text, "organization_uuid" )
-          {
-            if !org_uuid.is_empty()
-            {
-              oa_obj.insert( "organizationUuid".to_string(), serde_json::Value::String( org_uuid ) );
-            }
-          }
-        }
-        let live_path = paths.claude_json_file();
-        let mut live_val = std::fs::read_to_string( &live_path )
-          .ok()
-          .and_then( |s| serde_json::from_str::< serde_json::Value >( &s ).ok() )
-          .unwrap_or_else( || serde_json::json!( {} ) );
-        if let Some( obj ) = live_val.as_object_mut()
-        {
-          obj.insert( "oauthAccount".to_string(), oauth );
-        }
-        let _ = std::fs::write( live_path, serde_json::to_string_pretty( &live_val ).map( | s | s + "\n" ).unwrap_or_default() );
-      }
-    }
-
-    // Restore model preference into live ~/.claude/settings.json.
-    let model = parse_string_field( &meta_text, "model" );
-    let live_settings_path = paths.settings_file();
-    let mut live_settings = std::fs::read_to_string( &live_settings_path )
-      .ok()
-      .and_then( |s| serde_json::from_str::< serde_json::Value >( &s ).ok() )
-      .unwrap_or_else( || serde_json::json!( {} ) );
-    if let Some( obj ) = live_settings.as_object_mut()
-    {
-      match model
-      {
-        Some( m ) => { obj.insert( "model".to_string(), serde_json::Value::String( m ) ); }
-        None      => { obj.remove( "model" ); }
-      }
-    }
-    let _ = std::fs::write( &live_settings_path, serde_json::to_string_pretty( &live_settings ).map( | s | s + "\n" ).unwrap_or_default() );
-
-    // Feature 071 (AC-06/AC-07): sync env.ANTHROPIC_* to the switched-to account's backend.
-    // Redirect: writes BASE_URL/AUTH_TOKEN/MODEL from the account's own snapshot + credential
-    // file. Anthropic: removes all three, then prunes the whole `env` object if now empty —
-    // remove_env_var() alone leaves `"env": {}` behind; this composition lives here, not in
-    // the shared claude_core::settings_io formatter (see docs/feature/071 design note).
-    let backend = AccountBackend::parse( &parse_string_field( &meta_text, "backend" ).unwrap_or_default() );
-    if backend == AccountBackend::Redirect
-    {
-      let creds_text   = std::fs::read_to_string( &src ).unwrap_or_default();
-      let access_token = parse_string_field( &creds_text, "accessToken" ).unwrap_or_default();
-      let base_url     = parse_string_field( &meta_text, "base_url" ).unwrap_or_default();
-      let model        = parse_string_field( &meta_text, "redirect_model" ).unwrap_or_default();
-      let _ = claude_core::settings_io::set_env_var( &live_settings_path, "ANTHROPIC_BASE_URL", &base_url );
-      let _ = claude_core::settings_io::set_env_var( &live_settings_path, "ANTHROPIC_AUTH_TOKEN", &access_token );
-      let _ = claude_core::settings_io::set_env_var( &live_settings_path, "ANTHROPIC_MODEL", &model );
-    }
-    else
-    {
-      let _ = claude_core::settings_io::remove_env_var( &live_settings_path, "ANTHROPIC_BASE_URL" );
-      let _ = claude_core::settings_io::remove_env_var( &live_settings_path, "ANTHROPIC_AUTH_TOKEN" );
-      let _ = claude_core::settings_io::remove_env_var( &live_settings_path, "ANTHROPIC_MODEL" );
-      if claude_core::settings_io::get_setting( &live_settings_path, "env" ).ok().flatten().as_deref() == Some( "{}" )
-      {
-        let _ = claude_core::settings_io::remove_setting( &live_settings_path, "env" );
-      }
-    }
-  }
+  patch_live_state_after_switch( name, credential_store, paths, &src );
 
   Ok( () )
 }
@@ -1242,6 +1253,22 @@ pub fn read_owner( credential_store : &Path, name : &str ) -> String
     .unwrap_or_default()
 }
 
+/// Read the `backend` field from `{name}.json` in `credential_store` (Feature 071).
+///
+/// Returns `AccountBackend::Anthropic` when the file is absent, unparseable, or the
+/// `backend` field is missing or unrecognized — same default-on-failure convention as
+/// `AccountBackend::parse()`, mirroring `read_owner()`'s resilience contract.
+#[ inline ]
+#[ must_use ]
+pub fn read_backend( credential_store : &Path, name : &str ) -> AccountBackend
+{
+  let path = credential_store.join( format!( "{name}.json" ) );
+  let raw = std::fs::read_to_string( &path ).ok()
+    .and_then( |s| parse_string_field( &s, "backend" ) )
+    .unwrap_or_default();
+  AccountBackend::parse( &raw )
+}
+
 /// Read the `claim_lock` field from `{name}.json` in `credential_store`.
 ///
 /// Returns `false` when the file is absent, unparseable, or the `claim_lock`
@@ -1688,6 +1715,30 @@ pub fn validate_redirect_name( name : &str ) -> Result< (), std::io::Error >
     ) );
   }
   Ok( () )
+}
+
+/// Select and apply the correct `.account.save` name-validation rule (Feature 071, AC-15): a
+/// brand-new account name must satisfy its requested backend's shape rule
+/// (`validate_redirect_name()` for `redirect`, the stricter `validate_name()` for `anthropic`) —
+/// but once the account already has a saved credentials file in `credential_store`, the name is
+/// an already-established local identifier and is not re-validated against a newly requested
+/// backend's stricter rule ("the account name itself is not permanently locked to one backend");
+/// only the permissive `validate_redirect_name()` check applies to a re-save regardless of the
+/// new backend. Existence is checked via `{name}.credentials.json`, not `{name}.json` — the
+/// caller (`account_save_routine()`'s AC-15 rewrite-from-scratch step) may have already deleted
+/// the stale `{name}.json` before calling `save()` when the backend is changing, but always
+/// leaves `{name}.credentials.json` in place until `save()` itself overwrites it.
+#[ doc( hidden ) ]
+#[ inline ]
+pub fn validate_name_for_save( name : &str, backend : AccountBackend, credential_store : &Path ) -> Result< (), std::io::Error >
+{
+  let already_exists = credential_store.join( format!( "{name}.credentials.json" ) ).exists();
+  match backend
+  {
+    _ if already_exists       => validate_redirect_name( name ),
+    AccountBackend::Redirect  => validate_redirect_name( name ),
+    AccountBackend::Anthropic => validate_name( name ),
+  }
 }
 
 /// Extract a quoted string field from a JSON blob without external dependencies.

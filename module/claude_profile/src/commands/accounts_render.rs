@@ -11,11 +11,11 @@ use super::cmd_context::caps_to_json;
 /// Column visibility set for `.accounts` text/table output.
 ///
 /// Default set (default-on): account, owner, active, current, sub, tier, expires, email, `inference_provider`.
-/// Opt-in: `display_name`, host, role, billing, model, uuid, capabilities, `org_uuid`, `org_name`.
+/// Opt-in: `display_name`, host, role, billing, model, uuid, capabilities, `org_uuid`, `org_name`, `backend`.
 ///
 /// Constructed via [`IdentityCols::default_set()`] or parsed from a `cols::` modifier string
 /// (comma-separated `+col_id` / `-col_id` tokens) via [`IdentityCols::parse()`].
-// IdentityCols is a pure column-visibility bitfield; all 18 flags are intentional.
+// IdentityCols is a pure column-visibility bitfield; all 19 flags are intentional.
 #[ allow( clippy::struct_excessive_bools ) ]
 #[ derive( Clone, Debug ) ]
 pub( crate ) struct IdentityCols
@@ -39,6 +39,8 @@ pub( crate ) struct IdentityCols
   pub( crate ) capabilities : bool,
   pub( crate ) org_uuid     : bool,
   pub( crate ) org_name     : bool,
+  /// `Backend` column — `Account.backend` (`anthropic`/`redirect`). Feature 071.
+  pub( crate ) backend      : bool,
 }
 
 impl IdentityCols
@@ -65,6 +67,7 @@ impl IdentityCols
       capabilities : false,
       org_uuid     : false,
       org_name     : false,
+      backend      : false,
     }
   }
 
@@ -112,9 +115,10 @@ impl IdentityCols
         "capabilities" => cols.capabilities = flag,
         "org_uuid"     => cols.org_uuid     = flag,
         "org_name"     => cols.org_name     = flag,
+        "backend"      => cols.backend      = flag,
         _ => return Err( ErrorData::new(
           ErrorCode::ArgumentTypeMismatch,
-          format!( "unknown cols:: column id '{name}'; valid: account, owner, active, current, sub, tier, expires, email, inference_provider, display_name, host, role, billing, model, uuid, capabilities, org_uuid, org_name" ),
+          format!( "unknown cols:: column id '{name}'; valid: account, owner, active, current, sub, tier, expires, email, inference_provider, display_name, host, role, billing, model, uuid, capabilities, org_uuid, org_name, backend" ),
         ) ),
       }
     }
@@ -146,7 +150,7 @@ pub( crate ) fn render_accounts_text(
   let any_field = cols.owner || cols.active || emit_current || cols.sub || cols.tier
     || cols.expires || cols.email || cols.inference_provider || cols.display_name || cols.host || cols.role
     || cols.billing || cols.model || cols.uuid || cols.capabilities || cols.org_uuid
-    || cols.org_name;
+    || cols.org_name || cols.backend;
   let mut out  = String::new();
   let last_idx = accounts.len() - 1;
   for ( idx, a ) in accounts.iter().enumerate()
@@ -260,6 +264,10 @@ pub( crate ) fn render_accounts_text(
         let val = if a.organization_name.is_empty() { "N/A" } else { &a.organization_name };
         let _ = writeln!( out, "  Org:     {val}" );
       }
+      if cols.backend
+      {
+        let _ = writeln!( out, "  Backend: {}", a.backend.as_str() );
+      }
       if idx < last_idx { out.push( '\n' ); }
     }
   }
@@ -290,7 +298,8 @@ pub( crate ) fn render_accounts_json( accounts : &[ &crate::account::Account ], 
        \"tagged_id\":\"{}\",\"capabilities\":{},\
        \"organization_uuid\":\"{}\",\"organization_name\":\"{}\",\
        \"organization_role\":\"{}\",\"workspace_uuid\":\"{}\",\"workspace_name\":\"{}\",\
-       \"host\":\"{}\",\"owner\":\"{}\",\"is_owned\":{},\"renewal_at\":{},\"inference_provider\":\"{}\"}}",
+       \"host\":\"{}\",\"owner\":\"{}\",\"is_owned\":{},\"renewal_at\":{},\"inference_provider\":\"{}\",\
+       \"backend\":\"{}\"}}",
       json_escape( &a.name ),
       a.is_active,
       is_current,
@@ -314,6 +323,7 @@ pub( crate ) fn render_accounts_json( accounts : &[ &crate::account::Account ], 
       a.is_owned,
       renewal_at_json( a.renewal_at.as_deref() ),
       json_escape( if a.inference_provider.is_empty() { "anthropic" } else { &a.inference_provider } ),
+      a.backend.as_str(),
     )
   } ).collect();
   format!( "[{}]\n", entries.join( "," ) )
@@ -348,6 +358,7 @@ pub( crate ) fn render_accounts_table(
   headers.push( "Tier".to_string() );
   headers.push( "Expires".to_string() );
   if cols.inference_provider { headers.push( "Provider".to_string() ); }
+  if cols.backend { headers.push( "Backend".to_string() ); }
 
   let mut builder = RowBuilder::new( headers );
   for ( idx, acct ) in accounts.iter().enumerate()
@@ -383,6 +394,7 @@ pub( crate ) fn render_accounts_table(
       let provider = if acct.inference_provider.is_empty() { "anthropic" } else { &acct.inference_provider };
       row.push( provider.to_string().into() );
     }
+    if cols.backend { row.push( acct.backend.as_str().into() ); }
 
     builder = builder.add_row( row );
   }

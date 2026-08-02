@@ -584,6 +584,169 @@ fn ft04_non_owned_uses_cache_not_http()
   );
 }
 
+// ── R1: redirect-backend accounts bypass token + HTTP; placeholder row ──────
+
+/// T14/AC-17: R1 gate — a `backend: redirect` account produces a placeholder `AccountQuota`
+/// row (`result: Err("redirect backend — no Anthropic quota")`) with no HTTP call. The account
+/// here is OWNED (no `owner` key written) so G1's non-owned branch cannot be what produces
+/// the `Err` result — only R1 can, proving R1 is reached independently of G1.
+///
+/// Spec: `task/claude_profile/434_add_redirect_backend_cli_support.md` T14 (AC-17)
+#[ test ]
+fn ft14_071_redirect_backend_produces_placeholder_no_http()
+{
+  let store = tempfile::TempDir::new().unwrap();
+
+  // No "owner" key → owned by default; G1 must NOT fire for this account.
+  std::fs::write(
+    store.path().join( "kimi@moonshot.ai.json" ),
+    r#"{"backend":"redirect","base_url":"https://api.moonshot.ai/anthropic","redirect_model":"kimi-k3"}"#,
+  ).unwrap();
+  std::fs::write(
+    store.path().join( "kimi@moonshot.ai.credentials.json" ),
+    r#"{"accessToken":"sk-foreign-key-abc123"}"#,
+  ).unwrap();
+
+  let accounts = vec![ claude_profile::account::Account
+  {
+    name              : "kimi@moonshot.ai".to_string(),
+    subscription_type : String::new(),
+    rate_limit_tier   : String::new(),
+    expires_at_ms     : u64::MAX / 2,
+    is_active         : false,
+    email             : String::new(),
+    display_name      : String::new(),
+    billing           : String::new(),
+    model             : String::new(),
+    tagged_id         : String::new(),
+    uuid              : String::new(),
+    capabilities      : Vec::new(),
+    organization_uuid : String::new(),
+    organization_name : String::new(),
+    org_role          : String::new(),
+    workspace_uuid    : String::new(),
+    workspace_name    : String::new(),
+    host              : String::new(),
+    role              : String::new(),
+    owner             : String::new(),
+    is_owned          : true,
+    claim_lock        : false,
+    reserve           : false,
+    renewal_at        : None,
+    backend           : claude_profile::account::AccountBackend::Redirect,
+    base_url          : Some( "https://api.moonshot.ai/anthropic".to_string() ),
+    redirect_model    : Some( "kimi-k3".to_string() ),
+    inference_provider : String::new(),
+  } ];
+
+  // live_creds_file absent → graceful degradation; no bearing on the R1 gate itself.
+  let absent_live = store.path().join( ".absent_credentials.json" );
+
+  let results = fetch_quota_for_list( &accounts, store.path(), &absent_live, false, false, false );
+
+  assert_eq!( results.len(), 1, "T14: must return exactly 1 AccountQuota for 1 account" );
+  let aq = &results[ 0 ];
+  assert!(
+    aq.is_owned,
+    "T14: R1 gate must not mark the account as non-owned (that would mean G1 fired instead); got: {:?}", aq.is_owned,
+  );
+  match &aq.result
+  {
+    Err( reason ) => assert_eq!(
+      reason, "redirect backend — no Anthropic quota",
+      "T14/AC-17: R1 gate must produce the exact placeholder reason string; got: {reason}",
+    ),
+    Ok( _ ) => panic!( "T14/AC-17: R1 gate must produce an Err placeholder, got Ok" ),
+  }
+  assert!(
+    !aq.cached,
+    "T14: R1 gate must not read cache (that's G1's job); got cached={:?}", aq.cached,
+  );
+}
+
+/// C6 (task 434 Checklist): R1 (redirect) must run before G1 (non-owned) in
+/// `fetch_quota_for_list()`. An account that is BOTH `backend: redirect` AND not
+/// owned by this machine must get R1's placeholder, not G1's "not owned" handling —
+/// ownership gating exists to protect Anthropic quota from cross-machine races, which
+/// is moot for a backend with no Anthropic quota to protect in the first place.
+/// Distinct from `ft14`, which deliberately uses an OWNED account so it cannot tell
+/// the two gates' relative order apart; this test is the one that would fail if the
+/// gates were ever swapped back.
+///
+/// Spec: `task/claude_profile/434_add_redirect_backend_cli_support.md` Checklist C6
+#[ test ]
+fn ft14b_071_redirect_checked_before_not_owned_gate()
+{
+  let store = tempfile::TempDir::new().unwrap();
+
+  // "owner" != current_identity() → not owned by this machine (same pattern as ft04).
+  // No "cache" key: if G1 fired first, result would be Err("not owned"), not cached Ok.
+  std::fs::write(
+    store.path().join( "kimi@moonshot.ai.json" ),
+    r#"{"backend":"redirect","base_url":"https://api.moonshot.ai/anthropic","redirect_model":"kimi-k3","owner":"other@remote"}"#,
+  ).unwrap();
+  std::fs::write(
+    store.path().join( "kimi@moonshot.ai.credentials.json" ),
+    r#"{"accessToken":"sk-foreign-key-abc123"}"#,
+  ).unwrap();
+
+  let accounts = vec![ claude_profile::account::Account
+  {
+    name              : "kimi@moonshot.ai".to_string(),
+    subscription_type : String::new(),
+    rate_limit_tier   : String::new(),
+    expires_at_ms     : u64::MAX / 2,
+    is_active         : false,
+    email             : String::new(),
+    display_name      : String::new(),
+    billing           : String::new(),
+    model             : String::new(),
+    tagged_id         : String::new(),
+    uuid              : String::new(),
+    capabilities      : Vec::new(),
+    organization_uuid : String::new(),
+    organization_name : String::new(),
+    org_role          : String::new(),
+    workspace_uuid    : String::new(),
+    workspace_name    : String::new(),
+    host              : String::new(),
+    role              : String::new(),
+    owner             : String::new(),
+    is_owned          : true,
+    claim_lock        : false,
+    reserve           : false,
+    renewal_at        : None,
+    backend           : claude_profile::account::AccountBackend::Redirect,
+    base_url          : Some( "https://api.moonshot.ai/anthropic".to_string() ),
+    redirect_model    : Some( "kimi-k3".to_string() ),
+    inference_provider : String::new(),
+  } ];
+
+  let absent_live = store.path().join( ".absent_credentials.json" );
+
+  let results = fetch_quota_for_list( &accounts, store.path(), &absent_live, false, false, false );
+
+  assert_eq!( results.len(), 1, "C6: must return exactly 1 AccountQuota for 1 account" );
+  let aq = &results[ 0 ];
+  assert!(
+    aq.is_owned,
+    "C6: R1 must fire before G1 even for a not-owned account, so is_owned stays true \
+     (R1's hardcoded value); a false here means G1 fired first — gates are in the wrong order. Got: {:?}", aq.is_owned,
+  );
+  match &aq.result
+  {
+    Err( reason ) => assert_eq!(
+      reason, "redirect backend — no Anthropic quota",
+      "C6: R1's placeholder reason must win over G1's \"not owned\"; got: {reason}",
+    ),
+    Ok( _ ) => panic!( "C6: expected R1's Err placeholder, got Ok — G1 fired first and read cache/succeeded" ),
+  }
+  assert!(
+    !aq.cached,
+    "C6: R1 must not read cache (only G1 does); got cached={:?}", aq.cached,
+  );
+}
+
 /// FT-15/033 — the cache-first branch (`fetch.rs`'s `CACHE_FRESH_SECS` guard) must surface
 /// a cache-persisted `org_created_at` on the returned `AccountQuota`, so `renews_label()` can
 /// compute an estimated renewal date instead of falling back to "?" (AC-15).

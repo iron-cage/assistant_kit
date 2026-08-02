@@ -82,6 +82,9 @@
 //! | `ft07_071_switch_to_redirect_writes_env_keys` | Feature 071/T03/AC-06: switch_account() to a redirect account writes env.ANTHROPIC_BASE_URL/AUTH_TOKEN/MODEL; unrelated fields survive |
 //! | `ft08_071_switch_to_anthropic_removes_env_keys_and_prunes_empty_env` | Feature 071/T03/AC-07: switch_account() to an anthropic account removes the 3 env keys and prunes `env` when empty |
 //! | `ft09_071_switch_to_anthropic_preserves_unrelated_env_subkey` | Feature 071/T03/AC-07: an unrelated pre-existing env.* sub-key survives a switch-away from redirect |
+//! | `ft10_071_read_backend_missing_file_defaults_anthropic` | Feature 071/T14: read_backend() on missing {name}.json defaults to Anthropic |
+//! | `ft11_071_read_backend_redirect_value` | Feature 071/T14: read_backend() reads an explicit "backend":"redirect" field |
+//! | `ft12_071_read_backend_corrupt_content_defaults_anthropic` | Feature 071/T14: read_backend() on corrupt content defaults to Anthropic, no panic |
 //! | `ft01_072_save_some_inference_provider_writes_field` | Feature 072/T01/AC-01: save(inference_provider: Some("kimi")) on fresh account writes inference_provider:"kimi"
 //! | `ft02_072_save_none_inference_provider_preserves_existing` | Feature 072/T02/AC-02: save(inference_provider: None) preserves existing inference_provider unchanged
 //! | `ft03_072_save_none_inference_provider_no_prior_key_writes_no_key` | Feature 072/T03/AC-03/AF3: save(inference_provider: None) with no prior key writes no key at all (never "anthropic")
@@ -2290,6 +2293,48 @@ fn ft09_071_switch_to_anthropic_preserves_unrelated_env_subkey()
   assert!(
     live_json[ "env" ].get( "ANTHROPIC_BASE_URL" ).is_none(),
     "AC-07: ANTHROPIC_BASE_URL must be removed on switch to anthropic; got: {live}",
+  );
+}
+
+// ── Feature 071 — read_backend() helper (Phase 5, task 434) ────────────────────
+
+/// T14/434: `read_backend()` on a missing `{name}.json` defaults to `Anthropic`,
+/// mirroring `read_owner()`'s missing-file default-on-failure behaviour.
+#[ test ]
+fn ft10_071_read_backend_missing_file_defaults_anthropic()
+{
+  let tmp = TempDir::new().unwrap();
+  let backend = account::read_backend( tmp.path(), "nonexistent@test.com" );
+  assert_eq!(
+    backend, account::AccountBackend::Anthropic,
+    "read_backend on missing file must default to Anthropic; got: {backend:?}",
+  );
+}
+
+/// T14/434: `read_backend()` reads an explicit `"backend":"redirect"` field correctly.
+#[ test ]
+fn ft11_071_read_backend_redirect_value()
+{
+  let tmp = TempDir::new().unwrap();
+  std::fs::write( tmp.path().join( "kimi@moonshot.ai.json" ), r#"{"backend":"redirect"}"# ).unwrap();
+  let backend = account::read_backend( tmp.path(), "kimi@moonshot.ai" );
+  assert_eq!(
+    backend, account::AccountBackend::Redirect,
+    "read_backend must read an explicit redirect value; got: {backend:?}",
+  );
+}
+
+/// T14/434: `read_backend()` on corrupt (non-JSON) content defaults to `Anthropic` —
+/// must not panic, same resilience contract as `read_owner()`'s CC-3 case.
+#[ test ]
+fn ft12_071_read_backend_corrupt_content_defaults_anthropic()
+{
+  let tmp = TempDir::new().unwrap();
+  std::fs::write( tmp.path().join( "alice@test.com.json" ), "<<<not json at all>>>" ).unwrap();
+  let backend = account::read_backend( tmp.path(), "alice@test.com" );
+  assert_eq!(
+    backend, account::AccountBackend::Anthropic,
+    "read_backend on corrupt content must default to Anthropic; got: {backend:?}",
   );
 }
 

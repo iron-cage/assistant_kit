@@ -185,7 +185,7 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
       {
         if let Ok( ref data ) = current.result
         {
-          apply_model_override( data, claude_paths, params.trace, "usage", &current.name );
+          apply_model_override( data, claude_paths, params.trace, "usage", &current.name, claude_profile_core::account::read_backend( &credential_store, &current.name ) );
         }
       }
     }
@@ -338,7 +338,7 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
     //   call set_session_effort after it or the model-derived value will be clobbered.
     if let Ok( ref winner_data ) = accounts[ winner_idx ].result
     {
-      apply_model_override( winner_data, &claude_paths, params.trace, "usage rotate", &winner_name );
+      apply_model_override( winner_data, &claude_paths, params.trace, "usage rotate", &winner_name, claude_profile_core::account::read_backend( &credential_store, &winner_name ) );
     }
 
     apply_touch( &mut accounts[ winner_idx ], &credential_store, Some( &claude_paths ), params.trace, params.imodel, params.effort, params.solo );
