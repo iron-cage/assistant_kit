@@ -127,7 +127,7 @@ A `backend::redirect` account (see [feature/071](../feature/071_redirect_backend
 {
   "backend": "redirect",
   "base_url": "https://api.moonshot.ai/anthropic",
-  "redirect_model": "kimi-k3-0905-preview",
+  "redirect_model": "kimi-k3",
   "host": "w003",
   "role": "kimi"
 }

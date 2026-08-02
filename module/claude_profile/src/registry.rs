@@ -140,6 +140,7 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
       reg_arg_opt( "host",    Kind::String  ).with_description( "Machine label for this account (default: auto-capture `$USER@$HOSTNAME`); written to `{name}.json`" ),
       reg_arg_opt( "role",    Kind::String  ).with_description( "User-defined role tag (e.g. `work`, `personal`); written to `{name}.json`" ),
       reg_arg_opt( "backend",        Kind::String ).with_description( "Backend for the new account: `anthropic` (default) or `redirect` (case-insensitive); see docs/cli/param/069_backend.md" ),
+      reg_arg_opt( "preset",         Kind::String ).with_description( "Named provider preset pre-filling backend::/base_url::/inference_provider:: for a known foreign provider; explicit params always override the preset default. Only `kimi` is recognized today; see docs/cli/param/074_preset.md" ),
       reg_arg_opt( "base_url",       Kind::String ).with_description( "Redirect target's API base URL; required with backend::redirect, rejected otherwise; written to `{name}.json` and env.ANTHROPIC_BASE_URL on use" ),
       reg_arg_opt( "api_key",        Kind::String ).with_description( "Static API key for a redirect-backend account; required with backend::redirect, rejected otherwise; written to `{name}.credentials.json`" ),
       reg_arg_opt( "redirect_model", Kind::String ).with_description( "Foreign provider's model identifier; required with backend::redirect, rejected otherwise; written to `{name}.json` and env.ANTHROPIC_MODEL on use" ),

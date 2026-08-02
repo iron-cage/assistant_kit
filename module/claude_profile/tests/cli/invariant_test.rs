@@ -363,8 +363,10 @@ fn param_defaults_in1_active_account_used_without_name_arg()
 fn param_defaults_in2_require_nonempty_string_arg_only_in_use_delete()
 {
   let src_dir = Path::new( env!( "CARGO_MANIFEST_DIR" ) ).join( "src" );
+  // --include=*.rs: hyphen-prefixed temp files (e.g. longrun logs) are permitted anywhere
+  // under src/ per project convention and must not be mistaken for real call sites.
   let output = Command::new( "/usr/bin/grep" )
-    .args( [ "-rn", "require_nonempty_string_arg", src_dir.to_str().unwrap() ] )
+    .args( [ "-rn", "--include=*.rs", "require_nonempty_string_arg", src_dir.to_str().unwrap() ] )
     .output()
     .expect( "grep failed" );
 

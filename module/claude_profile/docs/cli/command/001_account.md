@@ -232,10 +232,10 @@ Evaluated against `.usage` under the strict [command_group](../command_group/rea
 
 ### Command: 4. `.account.save`
 
-Copies `~/.claude/.credentials.json` to `{credential_store}/{name}.credentials.json` and merges identity, model, roles, and profile metadata into the unified `{name}.json`. Machine-global state (`commands.*`, `mcpServers`, `projects`) is not captured. Use this to preserve account identity before switching. When `backend::redirect`, a different write path applies instead: no OAuth capture — `{name}.credentials.json` is written directly from `api_key::`, and `base_url`/`redirect_model` are stored in `{name}.json` alongside `backend` (see [feature/071](../../feature/071_redirect_backend_accounts.md)).
+Copies `~/.claude/.credentials.json` to `{credential_store}/{name}.credentials.json` and merges identity, model, roles, and profile metadata into the unified `{name}.json`. Machine-global state (`commands.*`, `mcpServers`, `projects`) is not captured. Use this to preserve account identity before switching. When `backend::redirect`, a different write path applies instead: no OAuth capture — `{name}.credentials.json` is written directly from `api_key::`, and `base_url`/`redirect_model` are stored in `{name}.json` alongside `backend` (see [feature/071](../../feature/071_redirect_backend_accounts.md)). `preset::kimi` pre-fills `backend::`/`base_url::`/`inference_provider::` for a Moonshot Kimi redirect account, so only `name::`, `api_key::`, and `redirect_model::` need to be given explicitly (see [feature/073](../../feature/073_kimi_provider_preset.md)).
 
--- **Parameters:** [`name::`](../param/001_name.md), [`dry::`](../param/004_dry.md), [`host::`](../param/048_host.md), [`role::`](../param/052_role.md), [`inference_provider::`](../param/073_inference_provider.md), [`trace::`](../param/023_trace.md), [`backend::`](../param/069_backend.md), [`base_url::`](../param/070_base_url.md), [`api_key::`](../param/071_api_key.md), [`redirect_model::`](../param/072_redirect_model.md)
--- **Exit:** 0 (success) | 1 (usage: invalid name or no active account set; empty `inference_provider::` value; invalid `backend::` value; `backend::redirect` missing one of `base_url::`/`api_key::`/`redirect_model::`; any of those three present with `backend::anthropic` or omitted `backend::`) | 2 (runtime: credentials unreadable)
+-- **Parameters:** [`name::`](../param/001_name.md), [`dry::`](../param/004_dry.md), [`host::`](../param/048_host.md), [`role::`](../param/052_role.md), [`inference_provider::`](../param/073_inference_provider.md), [`trace::`](../param/023_trace.md), [`backend::`](../param/069_backend.md), [`preset::`](../param/074_preset.md), [`base_url::`](../param/070_base_url.md), [`api_key::`](../param/071_api_key.md), [`redirect_model::`](../param/072_redirect_model.md)
+-- **Exit:** 0 (success) | 1 (usage: invalid name or no active account set; empty `inference_provider::` value; invalid `backend::` value; unrecognized `preset::` value (only `kimi` is recognized); `backend::redirect` missing one of `base_url::`/`api_key::`/`redirect_model::`; any of those three present with `backend::anthropic` or omitted `backend::`) | 2 (runtime: credentials unreadable)
 
 **Syntax:**
 
@@ -247,7 +247,9 @@ clp .account.save host::workstation                   # store host label in {nam
 clp .account.save role::work                          # store role label in {name}.json
 clp .account.save host::workstation role::personal    # both metadata fields
 clp .account.save inference_provider::kimi            # tag account with inference provider label
-clp .account.save name::kimi backend::redirect base_url::https://api.moonshot.ai/anthropic api_key::"$KIMI_API_KEY" redirect_model::kimi-k3-0905-preview inference_provider::kimi
+clp .account.save name::kimi backend::redirect base_url::https://api.moonshot.ai/anthropic api_key::"$KIMI_API_KEY" redirect_model::kimi-k3 inference_provider::kimi
+clp .account.save name::kimi preset::kimi api_key::"$KIMI_API_KEY" redirect_model::kimi-k3
+                                                        # same result — preset::kimi fills backend::/base_url::/inference_provider::
 ```
 
 | Parameter | Type | Default | Purpose |
@@ -259,9 +261,12 @@ clp .account.save name::kimi backend::redirect base_url::https://api.moonshot.ai
 | `inference_provider::` | `string` | `"anthropic"` (when omitted, field absent from `{name}.json`; `list()` treats absence as `"anthropic"`) | Inference provider label stored in `{name}.json`; non-empty when provided; governs Gate 10 rotation grouping (see [param 073](../param/073_inference_provider.md)) |
 | `trace::` | `bool` | `0` | Print timestamped diagnostic lines to stderr for credential read and file write steps |
 | `backend::` | [`AccountBackend`](../type/005_account_backend.md) | `anthropic` | Selects OAuth capture (`anthropic`) or the static-credential redirect path (`redirect`); see [param 069](../param/069_backend.md) |
+| `preset::` | `string` | *(omit)* | Named provider preset pre-filling `backend::`/`base_url::`/`inference_provider::` when omitted; only `kimi` recognized; see [param 074](../param/074_preset.md) |
 | `base_url::` | `string` | *(omit; required when `backend::redirect`)* | Redirect target's API base URL; see [param 070](../param/070_base_url.md) |
 | `api_key::` | `string` | *(omit; required when `backend::redirect`)* | Redirect target's static API key; see [param 071](../param/071_api_key.md) |
 | `redirect_model::` | `string` | *(omit; required when `backend::redirect`)* | Redirect target's own model identifier; see [param 072](../param/072_redirect_model.md) |
+
+**Preset resolution (before step 1):** `preset::kimi` is resolved first, before any other parameter validation. An unrecognized `preset::` value (anything but `kimi`) exits 1 immediately. Otherwise: `backend` defaults to `redirect` when `backend::` was omitted; then, using that resolved `backend` value, `base_url` defaults to `https://api.moonshot.ai/anthropic` and `inference_provider` defaults to `kimi` — each only when the corresponding parameter was omitted AND the resolved `backend` is `redirect`. Explicit `backend::`/`base_url::`/`inference_provider::` values always take precedence over these defaults. See [feature/073](../../feature/073_kimi_provider_preset.md).
 
 **Algorithm (5 steps for `backend::anthropic`; redirect branch below for `backend::redirect`):**
 1. Resolve `name::`: read `oauthAccount.emailAddress` from `~/.claude.json`; fall back to `_active_{hostname}_{user}` marker; exit 1 if neither present
@@ -270,7 +275,7 @@ clp .account.save name::kimi backend::redirect base_url::https://api.moonshot.ai
 4. `(when dry::0)` Write host, role, and inference provider into `{name}.json`: `host::` (auto-captured `$USER@$HOSTNAME` when omitted); `role::` via read-merge; `inference_provider::` via read-merge (field left absent when omitted — `list()` defaults absence to `"anthropic"`); `owner` field preserved unchanged via read-merge — `account_save_routine()` passes `owner: None` to `save()` (ownership-neutral)
 5. `(when dry::0)` Write `_active_{hostname}_{user}` = `{name}` (per-machine active marker)
 
-**Redirect branch** `(when backend::redirect)`: validates `base_url::`/`api_key::`/`redirect_model::` are all present (exit 1 naming any missing parameter); `(when dry::0)` writes `{name}.credentials.json` containing only `accessToken` (from `api_key::`) — no `refreshToken`/`expiresAt` keys; writes `backend: "redirect"`, `base_url`, `redirect_model` into `{name}.json`. Steps 2–4 above do not apply (no `~/.claude/.credentials.json` capture, no endpoint 005 call, no host/role merge — `base_url`/`redirect_model` serve as the redirect account's equivalent metadata). Step 5 (active marker) still applies unchanged. See [feature/071](../../feature/071_redirect_backend_accounts.md).
+**Redirect branch** `(when backend::redirect)`: validates `base_url::`/`api_key::`/`redirect_model::` are all present (exit 1 naming any missing parameter) — note that `base_url::` may already be filled by `preset::kimi`'s default per the preset resolution above, so this check runs against the resolved value, not the raw CLI argument; `(when dry::0)` writes `{name}.credentials.json` containing only `accessToken` (from `api_key::`) — no `refreshToken`/`expiresAt` keys; writes `backend: "redirect"`, `base_url`, `redirect_model` into `{name}.json`. Steps 2–4 above do not apply (no `~/.claude/.credentials.json` capture, no endpoint 005 call, no host/role merge — `base_url`/`redirect_model` serve as the redirect account's equivalent metadata). Step 5 (active marker) still applies unchanged. See [feature/071](../../feature/071_redirect_backend_accounts.md).
 
 **Examples:**
 
@@ -284,8 +289,14 @@ clp .account.save name::alice@acme.com dry::1
 clp .account.save host::workstation role::work
 # saved current credentials as 'alice@acme.com'   (host='workstation', role='work')
 
-clp .account.save name::kimi backend::redirect base_url::https://api.moonshot.ai/anthropic api_key::"$KIMI_API_KEY" redirect_model::kimi-k3-0905-preview
+clp .account.save name::kimi backend::redirect base_url::https://api.moonshot.ai/anthropic api_key::"$KIMI_API_KEY" redirect_model::kimi-k3
 # saved redirect-backend account 'kimi'   (backend='redirect', base_url='https://api.moonshot.ai/anthropic')
+
+clp .account.save name::kimi preset::kimi api_key::"$KIMI_API_KEY" redirect_model::kimi-k3
+# saved redirect-backend account 'kimi'   (backend='redirect', base_url='https://api.moonshot.ai/anthropic', inference_provider='kimi')
+
+clp .account.save name::kimi preset::bogus api_key::"$KIMI_API_KEY" redirect_model::kimi-k3
+# error: preset:: invalid value 'bogus' — valid values: kimi
 ```
 
 **Notes:**
@@ -295,6 +306,7 @@ clp .account.save name::kimi backend::redirect base_url::https://api.moonshot.ai
 - **Ownership-neutral save:** `.account.save` never writes to the `owner` field — `account_save_routine()` passes `owner: None` to `save()`, preserving any existing `owner` via read-merge. Background refresh callers also pass `owner: None`. To release ownership, use `clp .accounts owner::0 name::EMAIL`. See [Feature 036](../../feature/036_account_ownership.md).
 - **Redirect backend:** `backend` is fixed per save call — re-running `.account.save name::X` with a different `backend::` value rewrites the account from scratch per that backend's own path (not a partial update). Pre-existing accounts saved before Feature 071 have no `backend` key and are treated as `anthropic`. See [Feature 071](../../feature/071_redirect_backend_accounts.md).
 - **Inference provider tagging:** `inference_provider::` is independent of `backend::` — a `backend::redirect` account may still carry any `inference_provider` label (e.g., `kimi`, `moonshot`) for Gate 10 rotation grouping; the two fields serve different purposes (routing/credential mechanism vs. rotation grouping). Defaults to `"anthropic"` when never explicitly tagged. See [Feature 072](../../feature/072_inference_provider_selection.md).
+- **Kimi provider preset:** `preset::kimi` pre-fills `backend::redirect`, `base_url::https://api.moonshot.ai/anthropic`, and `inference_provider::kimi` — but only for fields the caller omitted, and only once `backend` resolves to `redirect`; pairing `preset::kimi` with an explicit `backend::anthropic` leaves the account on the ordinary OAuth-capture path with none of the redirect-only defaults applied. `api_key::`/`redirect_model::` are never defaulted by any preset. Tagging an account `inference_provider::kimi` (whether via the preset or explicitly) also drives `switch_account()`'s 7 additional Kimi-tier `settings.json` env vars on `.account.use` — see [Feature 073](../../feature/073_kimi_provider_preset.md).
 
 ### Referenced Features
 
@@ -308,6 +320,7 @@ clp .account.save name::kimi backend::redirect base_url::https://api.moonshot.ai
 | 6 | [Account Ownership](../../feature/036_account_ownership.md) | Ownership model — `.account.save` is ownership-neutral (passes `owner: None`); `.accounts owner::0 name::X` releases ownership (Feature 064); `.accounts assignee::USER@MACHINE` is marker-only (Feature 065) |
 | 7 | [Redirect Backend Accounts](../../feature/071_redirect_backend_accounts.md) | `backend::redirect` write path — static-credential accounts bypassing OAuth capture |
 | 8 | [Inference Provider Selection](../../feature/072_inference_provider_selection.md) | `inference_provider::` write path — tags account for Gate 10 rotation grouping |
+| 9 | [Kimi Provider Preset](../../feature/073_kimi_provider_preset.md) | `preset::kimi` convenience default-filling for `backend::`/`base_url::`/`inference_provider::` |
 
 ### Referenced User Stories
 
@@ -321,13 +334,13 @@ clp .account.save name::kimi backend::redirect base_url::https://api.moonshot.ai
 |---|-------|-----------------|
 | 1 | [Account Targeting](../param_group/006_account_targeting.md) | `host::`, `role::`, `inference_provider::` |
 | 2 | [Fetch Behavior](../param_group/003_fetch_behavior.md) | `trace::` |
-| 3 | [Redirect Backend Config](../param_group/007_redirect_backend_config.md) | `backend::`, `base_url::`, `api_key::`, `redirect_model::` |
+| 3 | [Redirect Backend Config](../param_group/007_redirect_backend_config.md) | `backend::`, `preset::`, `base_url::`, `api_key::`, `redirect_model::` |
 
 ---
 
 ### Command: 5. `.account.use`
 
-Atomically overwrites `~/.claude/.credentials.json` with the named account's credentials (write-then-rename), updates the active marker (`_active_{hostname}_{user}`), and best-effort patches `~/.claude.json["oauthAccount"]` from the saved snapshot — preserving all machine-global keys untouched. When `touch::1` (default), fetches quota for the target account and spawns an isolated subprocess to activate its idle 5h session window if `five_hour.resets_at` is absent. Guarded by G5 (ownership) and G9 (`claim_lock`) — both bypassable via `force::1`. When the target account is `backend: redirect`, this command additionally writes `settings.json`'s `env.ANTHROPIC_BASE_URL`/`env.ANTHROPIC_AUTH_TOKEN`/`env.ANTHROPIC_MODEL` (clearing those same keys when switching back to a `backend: anthropic` account instead), and skips the quota/touch step entirely — there is no Anthropic quota to fetch for a foreign backend (see [feature/071](../../feature/071_redirect_backend_accounts.md)).
+Atomically overwrites `~/.claude/.credentials.json` with the named account's credentials (write-then-rename), updates the active marker (`_active_{hostname}_{user}`), and best-effort patches `~/.claude.json["oauthAccount"]` from the saved snapshot — preserving all machine-global keys untouched. When `touch::1` (default), fetches quota for the target account and spawns an isolated subprocess to activate its idle 5h session window if `five_hour.resets_at` is absent. Guarded by G5 (ownership) and G9 (`claim_lock`) — both bypassable via `force::1`. When the target account is `backend: redirect`, this command additionally writes `settings.json`'s `env.ANTHROPIC_BASE_URL`/`env.ANTHROPIC_AUTH_TOKEN`/`env.ANTHROPIC_MODEL` (clearing those same keys when switching back to a `backend: anthropic` account instead), and skips the quota/touch step entirely — there is no Anthropic quota to fetch for a foreign backend (see [feature/071](../../feature/071_redirect_backend_accounts.md)). When the target account additionally carries `inference_provider: "kimi"`, 7 more Kimi-tier `env.*` variables are written alongside the three above (and all 10 are cleared together on switch-away) — see [feature/073](../../feature/073_kimi_provider_preset.md).
 
 -- **Parameters:** [`name::`](../param/001_name.md) **(required)**, [`dry::`](../param/004_dry.md), [`touch::`](../param/034_touch.md), [`refresh::`](../param/019_refresh.md), [`imodel::`](../param/035_imodel.md), [`effort::`](../param/036_effort.md), [`trace::`](../param/023_trace.md), [`set_model::`](../param/054_set_model.md), [`force::`](../param/058_force.md)
 -- **Exit:** 0 (success) | 1 (usage: invalid name or invalid `imodel::`/`effort::`/`trace::`/`set_model::` value; G5 ownership violation unless `force::1`; G9 claim-lock violation unless `force::1`) | 2 (runtime: account not found or HOME unset) | 3 (account credentials expired — `touch::1` + fetch failed + `expiresAt` in the past, AND refresh failed or `refresh::0`)
@@ -366,7 +379,7 @@ clp .account.use name::alice@home.com force::1        # bypass G5 (ownership) an
 2. `(when dry::0)` Atomically overwrite `~/.claude/.credentials.json` via write-then-rename
 3. `(when dry::0)` Write `_active_{hostname}_{user}` = `{name}` (active marker)
 4. `(when dry::0)` Best-effort patch `~/.claude.json["oauthAccount"]` from saved snapshot (preserves machine-global keys)
-5. `(when dry::0)` Write or clear `settings.json`'s `env.*` keys per target `backend`: `redirect` → write `env.ANTHROPIC_BASE_URL`/`env.ANTHROPIC_AUTH_TOKEN`/`env.ANTHROPIC_MODEL` from `base_url`/`accessToken`/`redirect_model`; `anthropic` → remove exactly those three keys (removing `env` entirely if it becomes empty), preserving any other `env`/`settings.json` key unchanged
+5. `(when dry::0)` Write or clear `settings.json`'s `env.*` keys per target `backend`: `redirect` → write `env.ANTHROPIC_BASE_URL`/`env.ANTHROPIC_AUTH_TOKEN`/`env.ANTHROPIC_MODEL` from `base_url`/`accessToken`/`redirect_model`, plus — when `inference_provider == "kimi"` — 7 more Kimi-tier vars (`ANTHROPIC_DEFAULT_OPUS_MODEL`/`_SONNET_MODEL`/`_HAIKU_MODEL`/`_FABLE_MODEL`/`CLAUDE_CODE_SUBAGENT_MODEL` mirroring `redirect_model`, `CLAUDE_CODE_EFFORT_LEVEL` fixed `"max"`, `CLAUDE_CODE_AUTO_COMPACT_WINDOW` sized by whether `redirect_model` starts with `kimi-k3`); `anthropic` → remove all 10 keys (the three base plus the 7 Kimi-tier, removing `env` entirely if it becomes empty), preserving any other `env`/`settings.json` key unchanged. See [feature/073](../../feature/073_kimi_provider_preset.md) and [schema/006](../../schema/006_settings_json.md).
 6. `(when touch::1 AND target backend == anthropic)` Fetch quota via `GET /api/oauth/usage`; `(when refresh::1 + locally expired)` call `refresh_account_token()` first; evaluate idle: `five_hour.resets_at` absent → idle. Skipped entirely for `backend: redirect` targets — no Anthropic quota to fetch
 7. `(when touch::1 + idle)` Resolve model+effort via `resolve_model()`/`resolve_effort()`; spawn isolated subprocess via `run_isolated()`
 8. Session-model override: `(when set_model:: provided)` write requested model via `set_session_model()`; `(otherwise, when target was already active + valid quota)` write resolved model via `apply_model_override()` — a no-op for `backend: redirect` targets (see [algorithm/002](../../algorithm/002_session_model_override.md)'s redirect bypass)
@@ -402,6 +415,7 @@ clp .account.use name::alice@home.com trace::1
 - G5 and G9 are checked before any file is written, including in `dry::1` mode — a non-owned or claim-locked target exits 1 even during a dry-run preview (mirrors G5–G8's existing dry-run interaction, see [feature/036](../../feature/036_account_ownership.md)).
 - See [feature/027_account_use_post_switch_touch.md](../../feature/027_account_use_post_switch_touch.md) for full execution sequence and acceptance criteria; see [feature/070_account_claim_and_reservation_control.md](../../feature/070_account_claim_and_reservation_control.md) for G9 and `claim_lock` design.
 - **Redirect backend:** exit 3 (credentials expired) never triggers for a `backend: redirect` target — there is no `expiresAt` to compare, so the expiry probe short-circuits to the `static` classification before any threshold check. See [feature/071](../../feature/071_redirect_backend_accounts.md) and [state_machine/002](../../state_machine/002_oauth_token_lifecycle.md)'s `static` state.
+- **Kimi-tier env vars:** a `backend: redirect` target tagged `inference_provider: "kimi"` (whether via explicit `inference_provider::kimi` or via `preset::kimi`, see [feature/073](../../feature/073_kimi_provider_preset.md)) gets 7 additional `env.*` variables beyond the 3 above; any other redirect target (including one with no `inference_provider` tag) gets only the 3. Switching away from a kimi target clears all 10, not just the 3 base vars.
 
 ### Referenced Command Group
 
@@ -419,6 +433,7 @@ Evaluated against `.usage` and `.model` under the strict [command_group](../comm
 | 6 | [Account Ownership](../../feature/036_account_ownership.md) | G5 ownership gate; `force::1` bypass and dry-run interaction pattern |
 | 7 | [Account Claim And Reservation Control](../../feature/070_account_claim_and_reservation_control.md) | G9 `claim_lock` gate; `force::1` bypass |
 | 8 | [Redirect Backend Accounts](../../feature/071_redirect_backend_accounts.md) | `env.*` write/clear in `settings.json`; touch/quota and model-override skip for redirect targets |
+| 9 | [Kimi Provider Preset](../../feature/073_kimi_provider_preset.md) | 7 additional Kimi-tier `env.*` vars written/cleared alongside the base 3, gated on `inference_provider == "kimi"` |
 
 ### Referenced User Stories
 

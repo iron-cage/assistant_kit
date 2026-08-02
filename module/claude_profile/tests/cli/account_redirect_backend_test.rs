@@ -15,6 +15,11 @@
 //! | T11 | `t11_accounts_backend_column_text_and_json`                | `.accounts` backend column — opt-in text, always-on json | P |
 //! | T12 | `t12_credentials_status_active_redirect_account_classifies_static` | `.credentials.status` on active redirect → `static` classification | P |
 //! | T13 | `t13_save_resave_different_backend_rewrites_from_scratch`  | re-save redirect→anthropic → stale fields cleared  | P   |
+//! | T14 | `t14_save_preset_kimi_fills_backend_base_url_and_inference_provider` | Feature 073: `preset::kimi` defaults backend/base_url/inference_provider | P |
+//! | T15 | `t15_save_preset_kimi_explicit_base_url_overrides_default`  | Feature 073: explicit `base_url::` wins over `preset::kimi`'s default | P |
+//! | T16 | `t16_save_preset_unrecognized_value_exits_1`                | Feature 073: `preset::` value other than `kimi` → exit 1 | N |
+//! | T17 | `t17_use_preset_kimi_account_writes_kimi_tier_env_vars`     | Feature 073: `.account.use` on a `preset::kimi` account writes all 7 Kimi-tier env vars | P |
+//! | T18 | `t18_save_preset_kimi_with_explicit_backend_anthropic_does_not_force_redirect_fields` | Feature 073: explicit `backend::anthropic` wins — preset does not force base_url/inference_provider | P |
 
 use crate::cli_runner::{
   run_cs_with_env,
@@ -39,7 +44,7 @@ fn t01_save_redirect_full_succeeds()
     &[
       ".account.save", "name::kimi", "backend::redirect",
       "base_url::https://api.moonshot.ai/anthropic", "api_key::sk-test",
-      "redirect_model::kimi-k3-0905-preview",
+      "redirect_model::kimi-k3",
     ],
     &[ ( "HOME", home ) ],
   );
@@ -48,7 +53,7 @@ fn t01_save_redirect_full_succeeds()
   let meta = read_account_meta( dir.path(), "kimi" );
   assert_eq!( meta[ "backend" ], serde_json::json!( "redirect" ), "T01: backend must be redirect, got:\n{meta}" );
   assert_eq!( meta[ "base_url" ], serde_json::json!( "https://api.moonshot.ai/anthropic" ), "T01: base_url mismatch, got:\n{meta}" );
-  assert_eq!( meta[ "redirect_model" ], serde_json::json!( "kimi-k3-0905-preview" ), "T01: redirect_model mismatch, got:\n{meta}" );
+  assert_eq!( meta[ "redirect_model" ], serde_json::json!( "kimi-k3" ), "T01: redirect_model mismatch, got:\n{meta}" );
 
   let creds_text = std::fs::read_to_string( credentials_path( dir.path(), "kimi" ) ).unwrap();
   let creds : serde_json::Value = serde_json::from_str( &creds_text ).unwrap();
@@ -65,7 +70,7 @@ fn t02_save_redirect_missing_required_param_exits_1()
   let out1 = run_cs_with_env(
     &[
       ".account.save", "name::kimi", "backend::redirect",
-      "api_key::sk-test", "redirect_model::kimi-k3-0905-preview",
+      "api_key::sk-test", "redirect_model::kimi-k3",
     ],
     &[ ( "HOME", home ) ],
   );
@@ -79,7 +84,7 @@ fn t02_save_redirect_missing_required_param_exits_1()
   let out2 = run_cs_with_env(
     &[
       ".account.save", "name::kimi", "backend::redirect",
-      "base_url::https://api.moonshot.ai/anthropic", "redirect_model::kimi-k3-0905-preview",
+      "base_url::https://api.moonshot.ai/anthropic", "redirect_model::kimi-k3",
     ],
     &[ ( "HOME", home ) ],
   );
@@ -179,7 +184,7 @@ fn t06_use_redirect_account_writes_env_vars_and_skips_touch()
     &[
       ".account.save", "name::kimi", "backend::redirect",
       "base_url::https://api.moonshot.ai/anthropic", "api_key::sk-test",
-      "redirect_model::kimi-k3-0905-preview",
+      "redirect_model::kimi-k3",
     ],
     &[ ( "HOME", home ) ],
   );
@@ -211,7 +216,7 @@ fn t06_use_redirect_account_writes_env_vars_and_skips_touch()
     "T06: ANTHROPIC_AUTH_TOKEN mismatch, got:\n{settings_text}",
   );
   assert_eq!(
-    env[ "ANTHROPIC_MODEL" ], serde_json::json!( "kimi-k3-0905-preview" ),
+    env[ "ANTHROPIC_MODEL" ], serde_json::json!( "kimi-k3" ),
     "T06: ANTHROPIC_MODEL mismatch, got:\n{settings_text}",
   );
 }
@@ -227,7 +232,7 @@ fn t07_use_anthropic_after_redirect_clears_env_vars()
     &[
       ".account.save", "name::kimi", "backend::redirect",
       "base_url::https://api.moonshot.ai/anthropic", "api_key::sk-test",
-      "redirect_model::kimi-k3-0905-preview",
+      "redirect_model::kimi-k3",
     ],
     &[ ( "HOME", home ) ],
   );
@@ -262,7 +267,7 @@ fn t07_use_anthropic_after_redirect_clears_env_vars()
     &[
       ".account.save", "name::kimi", "backend::redirect",
       "base_url::https://api.moonshot.ai/anthropic", "api_key::sk-test",
-      "redirect_model::kimi-k3-0905-preview",
+      "redirect_model::kimi-k3",
     ],
     &[ ( "HOME", home2 ) ],
   );
@@ -299,7 +304,7 @@ fn t10_limits_and_inspect_reject_redirect_account_exit_1()
     &[
       ".account.save", "name::kimi", "backend::redirect",
       "base_url::https://api.moonshot.ai/anthropic", "api_key::sk-test",
-      "redirect_model::kimi-k3-0905-preview",
+      "redirect_model::kimi-k3",
     ],
     &[ ( "HOME", home ) ],
   );
@@ -348,7 +353,7 @@ fn t11_accounts_backend_column_text_and_json()
     &[
       ".account.save", "name::kimi", "backend::redirect",
       "base_url::https://api.moonshot.ai/anthropic", "api_key::sk-test",
-      "redirect_model::kimi-k3-0905-preview",
+      "redirect_model::kimi-k3",
     ],
     &[ ( "HOME", home ) ],
   );
@@ -391,7 +396,7 @@ fn t12_credentials_status_active_redirect_account_classifies_static()
     &[
       ".account.save", "name::kimi", "backend::redirect",
       "base_url::https://api.moonshot.ai/anthropic", "api_key::sk-test",
-      "redirect_model::kimi-k3-0905-preview",
+      "redirect_model::kimi-k3",
     ],
     &[ ( "HOME", home ) ],
   );
@@ -424,7 +429,7 @@ fn t13_save_resave_different_backend_rewrites_from_scratch()
     &[
       ".account.save", "name::kimi", "backend::redirect",
       "base_url::https://api.moonshot.ai/anthropic", "api_key::sk-test",
-      "redirect_model::kimi-k3-0905-preview",
+      "redirect_model::kimi-k3",
     ],
     &[ ( "HOME", home ) ],
   );
@@ -442,4 +447,127 @@ fn t13_save_resave_different_backend_rewrites_from_scratch()
 
   let saved = std::fs::read_to_string( credentials_path( dir.path(), "kimi" ) ).unwrap();
   assert_eq!( saved, credential_json( "max", "tier4", FAR_FUTURE_MS ), "T13: must capture current live credentials, not the stale redirect payload" );
+}
+
+// ── Feature 073 — Kimi provider preset (`preset::kimi`) ─────────────────────────
+
+#[ test ]
+fn t14_save_preset_kimi_fills_backend_base_url_and_inference_provider()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  let out = run_cs_with_env(
+    &[
+      ".account.save", "name::kimi", "preset::kimi",
+      "api_key::sk-test", "redirect_model::kimi-k3",
+    ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let meta = read_account_meta( dir.path(), "kimi" );
+  assert_eq!( meta[ "backend" ], serde_json::json!( "redirect" ), "T14: preset::kimi must default backend to redirect, got:\n{meta}" );
+  assert_eq!(
+    meta[ "base_url" ], serde_json::json!( "https://api.moonshot.ai/anthropic" ),
+    "T14: preset::kimi must default base_url to Moonshot's endpoint, got:\n{meta}",
+  );
+  assert_eq!( meta[ "inference_provider" ], serde_json::json!( "kimi" ), "T14: preset::kimi must default inference_provider to kimi, got:\n{meta}" );
+  assert_eq!( meta[ "redirect_model" ], serde_json::json!( "kimi-k3" ), "T14: redirect_model must still come from the explicit param, got:\n{meta}" );
+
+  let creds_text = std::fs::read_to_string( credentials_path( dir.path(), "kimi" ) ).unwrap();
+  let creds : serde_json::Value = serde_json::from_str( &creds_text ).unwrap();
+  assert_eq!( creds[ "accessToken" ], serde_json::json!( "sk-test" ), "T14: accessToken mismatch, got:\n{creds_text}" );
+}
+
+#[ test ]
+fn t15_save_preset_kimi_explicit_base_url_overrides_default()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  let out = run_cs_with_env(
+    &[
+      ".account.save", "name::kimi", "preset::kimi",
+      "base_url::https://custom.mirror.example/anthropic",
+      "api_key::sk-test", "redirect_model::kimi-k3",
+    ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let meta = read_account_meta( dir.path(), "kimi" );
+  assert_eq!(
+    meta[ "base_url" ], serde_json::json!( "https://custom.mirror.example/anthropic" ),
+    "T15: an explicit base_url:: must override preset::kimi's default, got:\n{meta}",
+  );
+}
+
+#[ test ]
+fn t16_save_preset_unrecognized_value_exits_1()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  let out = run_cs_with_env(
+    &[ ".account.save", "name::kimi", "preset::openai", "api_key::sk-test", "redirect_model::gpt-5" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 1 );
+  assert!(
+    stderr( &out ).contains( "preset::" ) && stderr( &out ).contains( "kimi" ),
+    "T16: stderr must name preset:: and the one valid value (kimi), got:\n{}", stderr( &out ),
+  );
+  assert!( !account_exists( dir.path(), "kimi" ), "T16: rejected save must not write files" );
+}
+
+#[ test ]
+fn t17_use_preset_kimi_account_writes_kimi_tier_env_vars()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  let save_out = run_cs_with_env(
+    &[
+      ".account.save", "name::kimi", "preset::kimi",
+      "api_key::sk-test", "redirect_model::kimi-k3",
+    ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &save_out, 0 );
+
+  let use_out = run_cs_with_env( &[ ".account.use", "name::kimi" ], &[ ( "HOME", home ) ] );
+  assert_exit( &use_out, 0 );
+
+  let settings_text = std::fs::read_to_string( dir.path().join( ".claude" ).join( "settings.json" ) ).unwrap();
+  let settings : serde_json::Value = serde_json::from_str( &settings_text ).unwrap();
+  let env = settings.get( "env" ).expect( "T17: settings.json must gain an env object" );
+  for key in [ "ANTHROPIC_DEFAULT_OPUS_MODEL", "ANTHROPIC_DEFAULT_SONNET_MODEL", "ANTHROPIC_DEFAULT_HAIKU_MODEL", "ANTHROPIC_DEFAULT_FABLE_MODEL", "CLAUDE_CODE_SUBAGENT_MODEL" ]
+  {
+    assert_eq!( env[ key ], serde_json::json!( "kimi-k3" ), "T17: env.{key} must mirror redirect_model, got:\n{settings_text}" );
+  }
+  assert_eq!( env[ "CLAUDE_CODE_EFFORT_LEVEL" ], serde_json::json!( "max" ), "T17: env.CLAUDE_CODE_EFFORT_LEVEL mismatch, got:\n{settings_text}" );
+  assert_eq!(
+    env[ "CLAUDE_CODE_AUTO_COMPACT_WINDOW" ], serde_json::json!( "1048576" ),
+    "T17: kimi-k3 must get the 1M auto-compact window, got:\n{settings_text}",
+  );
+}
+
+#[ test ]
+fn t18_save_preset_kimi_with_explicit_backend_anthropic_does_not_force_redirect_fields()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
+
+  let out = run_cs_with_env(
+    &[ ".account.save", "name::alice@acme.com", "preset::kimi", "backend::anthropic" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let meta = read_account_meta( dir.path(), "alice@acme.com" );
+  assert_eq!( meta[ "backend" ], serde_json::json!( "anthropic" ), "T18: explicit backend::anthropic must win over preset::kimi, got:\n{meta}" );
+  assert!( meta.get( "base_url" ).is_none(), "T18: preset::kimi must not force base_url onto an anthropic-backend save, got:\n{meta}" );
+  assert!( meta.get( "inference_provider" ).is_none(), "T18: preset::kimi must not force inference_provider onto an anthropic-backend save, got:\n{meta}" );
 }

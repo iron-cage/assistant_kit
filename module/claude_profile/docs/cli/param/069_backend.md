@@ -19,7 +19,7 @@ Selects which backend a newly-saved account authenticates against: Anthropic's o
 
 ```bash
 clp .account.save name::alice@acme.com                                          # backend defaults to anthropic
-clp .account.save name::kimi backend::redirect base_url::https://api.moonshot.ai/anthropic api_key::sk-... redirect_model::kimi-k3-0905-preview
+clp .account.save name::kimi backend::redirect base_url::https://api.moonshot.ai/anthropic api_key::sk-... redirect_model::kimi-k3
 ```
 
 **Error cases:**

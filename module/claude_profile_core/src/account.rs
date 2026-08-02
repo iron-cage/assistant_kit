@@ -479,6 +479,56 @@ pub fn check_switch_preconditions( name : &str, credential_store : &Path ) -> Re
   ) )
 }
 
+/// Feature 073: Kimi-tier model-default env var names that mirror `redirect_model`'s
+/// value for a `backend: redirect`, `inference_provider: "kimi"` account. Distinct from
+/// the 3 original `ANTHROPIC_BASE_URL`/`_AUTH_TOKEN`/`_MODEL` vars Feature 071 writes.
+const KIMI_MODEL_TIER_ENV_VARS : [ &str ; 5 ] =
+[
+  "ANTHROPIC_DEFAULT_OPUS_MODEL",
+  "ANTHROPIC_DEFAULT_SONNET_MODEL",
+  "ANTHROPIC_DEFAULT_HAIKU_MODEL",
+  "ANTHROPIC_DEFAULT_FABLE_MODEL",
+  "CLAUDE_CODE_SUBAGENT_MODEL",
+];
+
+/// Feature 073: the auto-compact context window a Kimi `redirect_model` needs.
+/// `kimi-k3*` supports a 1M-token window; every other known/unknown Kimi model
+/// defaults to the narrower 256K value — under-sizing only costs more frequent
+/// compaction, while over-sizing risks a real context-overflow failure, so the
+/// narrower value is the safe default for anything not explicitly `kimi-k3*`.
+fn kimi_auto_compact_window( model : &str ) -> &'static str
+{
+  if model.starts_with( "kimi-k3" ) { "1048576" } else { "262144" }
+}
+
+/// Feature 073: write all 7 Kimi-tier env vars for a `backend: redirect`,
+/// `inference_provider: "kimi"` account — the 5 default-model vars (mirroring
+/// `redirect_model`), `CLAUDE_CODE_EFFORT_LEVEL` (always `"max"`), and
+/// `CLAUDE_CODE_AUTO_COMPACT_WINDOW` (sized via `kimi_auto_compact_window()`).
+fn write_kimi_tier_env_vars( live_settings_path : &Path, model : &str )
+{
+  for key in KIMI_MODEL_TIER_ENV_VARS
+  {
+    let _ = claude_core::settings_io::set_env_var( live_settings_path, key, model );
+  }
+  let _ = claude_core::settings_io::set_env_var( live_settings_path, "CLAUDE_CODE_EFFORT_LEVEL", "max" );
+  let _ = claude_core::settings_io::set_env_var( live_settings_path, "CLAUDE_CODE_AUTO_COMPACT_WINDOW", kimi_auto_compact_window( model ) );
+}
+
+/// Feature 073: remove all 7 Kimi-tier env vars — shared by both the
+/// "switched to a non-kimi redirect account" and "switched to an anthropic account"
+/// cleanup paths, so a stale Kimi-tier var from a prior kimi switch never survives
+/// into an unrelated account.
+fn clear_kimi_tier_env_vars( live_settings_path : &Path )
+{
+  for key in KIMI_MODEL_TIER_ENV_VARS
+  {
+    let _ = claude_core::settings_io::remove_env_var( live_settings_path, key );
+  }
+  let _ = claude_core::settings_io::remove_env_var( live_settings_path, "CLAUDE_CODE_EFFORT_LEVEL" );
+  let _ = claude_core::settings_io::remove_env_var( live_settings_path, "CLAUDE_CODE_AUTO_COMPACT_WINDOW" );
+}
+
 /// Patch live `~/.claude.json` and `~/.claude/settings.json` from the unified `{name}.json`
 /// snapshot after a switch's credentials/marker write has already landed.
 ///
@@ -584,12 +634,24 @@ fn patch_live_state_after_switch( name : &str, credential_store : &Path, paths :
     let _ = claude_core::settings_io::set_env_var( &live_settings_path, "ANTHROPIC_BASE_URL", &base_url );
     let _ = claude_core::settings_io::set_env_var( &live_settings_path, "ANTHROPIC_AUTH_TOKEN", &access_token );
     let _ = claude_core::settings_io::set_env_var( &live_settings_path, "ANTHROPIC_MODEL", &model );
+
+    // Feature 073: Kimi-tier vars ride alongside the 3 above for inference_provider:"kimi";
+    // any other redirect provider gets those 3 only, and stale Kimi-tier vars are cleared.
+    if parse_string_field( &meta_text, "inference_provider" ).as_deref() == Some( "kimi" )
+    {
+      write_kimi_tier_env_vars( &live_settings_path, &model );
+    }
+    else
+    {
+      clear_kimi_tier_env_vars( &live_settings_path );
+    }
   }
   else
   {
     let _ = claude_core::settings_io::remove_env_var( &live_settings_path, "ANTHROPIC_BASE_URL" );
     let _ = claude_core::settings_io::remove_env_var( &live_settings_path, "ANTHROPIC_AUTH_TOKEN" );
     let _ = claude_core::settings_io::remove_env_var( &live_settings_path, "ANTHROPIC_MODEL" );
+    clear_kimi_tier_env_vars( &live_settings_path );
     if claude_core::settings_io::get_setting( &live_settings_path, "env" ).ok().flatten().as_deref() == Some( "{}" )
     {
       let _ = claude_core::settings_io::remove_setting( &live_settings_path, "env" );

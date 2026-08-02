@@ -90,6 +90,11 @@
 //! | `ft03_072_save_none_inference_provider_no_prior_key_writes_no_key` | Feature 072/T03/AC-03/AF3: save(inference_provider: None) with no prior key writes no key at all (never "anthropic")
 //! | `ft04_072_list_reads_inference_provider_when_present` | Feature 072/T04/AC-04: list() reads inference_provider from {name}.json when present
 //! | `ft05_072_list_defaults_inference_provider_to_empty_when_absent` | Feature 072/T05/AC-05: list() defaults Account.inference_provider to "" when key absent |
+//! | `ft01_073_switch_to_kimi_redirect_writes_all_tier_env_vars` | Feature 073/AC-05: switch_account() to a redirect+kimi account writes all 5 default-model vars, CLAUDE_CODE_EFFORT_LEVEL, and a 1M CLAUDE_CODE_AUTO_COMPACT_WINDOW for a kimi-k3 model |
+//! | `ft02_073_switch_to_kimi_redirect_uses_narrow_compact_window_for_non_k3_model` | Feature 073/AC-06: kimi-k2.7-code redirect_model → CLAUDE_CODE_AUTO_COMPACT_WINDOW is the 256K value, not the 1M default |
+//! | `ft03_073_switch_to_redirect_non_kimi_provider_omits_tier_env_vars` | Feature 073/AC-08: a redirect account not tagged inference_provider:"kimi" gets only the original 3 env vars, none of the 7 Kimi-tier additions |
+//! | `ft04_073_switch_from_kimi_to_anthropic_clears_all_tier_env_vars` | Feature 073/AC-07: switching from a kimi redirect account to an anthropic account removes all 10 env vars, not just the original 3 |
+//! | `ft05_073_switch_from_kimi_to_other_redirect_clears_stale_tier_env_vars` | Feature 073/AC-07: switching from a kimi redirect account to a different, non-kimi redirect account also clears the 7 stale Kimi-tier vars |
 
 use tempfile::TempDir;
 use claude_profile_core::account;
@@ -2192,7 +2197,7 @@ fn ft07_071_switch_to_redirect_writes_env_keys()
   ).unwrap();
   std::fs::write(
     store.join( "kimi@moonshot.ai.json" ),
-    r#"{"backend":"redirect","base_url":"https://api.moonshot.ai/anthropic","redirect_model":"kimi-k3-0905-preview"}"#,
+    r#"{"backend":"redirect","base_url":"https://api.moonshot.ai/anthropic","redirect_model":"kimi-k3"}"#,
   ).unwrap();
   // Pre-existing unrelated top-level field — must survive the switch untouched (AC-06).
   std::fs::write( dot_claude.join( "settings.json" ), r#"{"theme":"dark"}"# ).unwrap();
@@ -2212,7 +2217,7 @@ fn ft07_071_switch_to_redirect_writes_env_keys()
     "AC-06: switch to redirect must write env.ANTHROPIC_AUTH_TOKEN from the account's accessToken; got: {live}",
   );
   assert_eq!(
-    live_json[ "env" ][ "ANTHROPIC_MODEL" ].as_str(), Some( "kimi-k3-0905-preview" ),
+    live_json[ "env" ][ "ANTHROPIC_MODEL" ].as_str(), Some( "kimi-k3" ),
     "AC-06: switch to redirect must write env.ANTHROPIC_MODEL from the account's redirect_model; got: {live}",
   );
   assert_eq!(
@@ -2476,5 +2481,199 @@ fn ft05_072_list_defaults_inference_provider_to_empty_when_absent()
   assert_eq!(
     acct.inference_provider, "",
     "AC-05: list() must default Account.inference_provider to empty string when key absent; got: {:?}", acct.inference_provider,
+  );
+}
+
+// ── Feature 073 — Kimi provider preset env vars ────────────────────────────────
+
+/// AC-05: `switch_account()` to a `backend: redirect`, `inference_provider: "kimi"`
+/// account writes the 5 default-model-tier vars + `CLAUDE_CODE_EFFORT_LEVEL` +
+/// `CLAUDE_CODE_AUTO_COMPACT_WINDOW` (1M for a `kimi-k3*` model), alongside the
+/// pre-existing 3 `ANTHROPIC_*` vars.
+#[ test ]
+fn ft01_073_switch_to_kimi_redirect_writes_all_tier_env_vars()
+{
+  let tmp        = TempDir::new().unwrap();
+  let store      = tmp.path().join( "store" );
+  let dot_claude = tmp.path().join( ".claude" );
+  std::fs::create_dir_all( &store ).unwrap();
+  std::fs::create_dir_all( &dot_claude ).unwrap();
+
+  std::fs::write(
+    store.join( "kimi.credentials.json" ),
+    r#"{"accessToken":"sk-kimi-abc123"}"#,
+  ).unwrap();
+  std::fs::write(
+    store.join( "kimi.json" ),
+    r#"{"backend":"redirect","base_url":"https://api.moonshot.ai/anthropic","redirect_model":"kimi-k3","inference_provider":"kimi"}"#,
+  ).unwrap();
+
+  let paths = ClaudePaths::with_home( tmp.path() );
+  account::switch_account( "kimi", &store, &paths ).unwrap();
+
+  let live = std::fs::read_to_string( dot_claude.join( "settings.json" ) )
+    .expect( "~/.claude/settings.json must exist after switch_account" );
+  let live_json : serde_json::Value = serde_json::from_str( &live ).expect( "settings.json must be valid JSON" );
+  for key in [ "ANTHROPIC_DEFAULT_OPUS_MODEL", "ANTHROPIC_DEFAULT_SONNET_MODEL", "ANTHROPIC_DEFAULT_HAIKU_MODEL", "ANTHROPIC_DEFAULT_FABLE_MODEL", "CLAUDE_CODE_SUBAGENT_MODEL" ]
+  {
+    assert_eq!(
+      live_json[ "env" ][ key ].as_str(), Some( "kimi-k3" ),
+      "AC-05: switch to a kimi redirect account must write env.{key} = redirect_model; got: {live}",
+    );
+  }
+  assert_eq!(
+    live_json[ "env" ][ "CLAUDE_CODE_EFFORT_LEVEL" ].as_str(), Some( "max" ),
+    "AC-05: switch to a kimi redirect account must write env.CLAUDE_CODE_EFFORT_LEVEL = \"max\"; got: {live}",
+  );
+  assert_eq!(
+    live_json[ "env" ][ "CLAUDE_CODE_AUTO_COMPACT_WINDOW" ].as_str(), Some( "1048576" ),
+    "AC-05: a kimi-k3 redirect_model must write the 1M auto-compact window; got: {live}",
+  );
+}
+
+/// AC-06: a `kimi-k2.7-code` `redirect_model` writes the narrower 256K
+/// `CLAUDE_CODE_AUTO_COMPACT_WINDOW`, not the 1M default used for `kimi-k3*`.
+#[ test ]
+fn ft02_073_switch_to_kimi_redirect_uses_narrow_compact_window_for_non_k3_model()
+{
+  let tmp        = TempDir::new().unwrap();
+  let store      = tmp.path().join( "store" );
+  let dot_claude = tmp.path().join( ".claude" );
+  std::fs::create_dir_all( &store ).unwrap();
+  std::fs::create_dir_all( &dot_claude ).unwrap();
+
+  std::fs::write(
+    store.join( "kimi-code.credentials.json" ),
+    r#"{"accessToken":"sk-kimi-code-abc123"}"#,
+  ).unwrap();
+  std::fs::write(
+    store.join( "kimi-code.json" ),
+    r#"{"backend":"redirect","base_url":"https://api.moonshot.ai/anthropic","redirect_model":"kimi-k2.7-code","inference_provider":"kimi"}"#,
+  ).unwrap();
+
+  let paths = ClaudePaths::with_home( tmp.path() );
+  account::switch_account( "kimi-code", &store, &paths ).unwrap();
+
+  let live = std::fs::read_to_string( dot_claude.join( "settings.json" ) ).unwrap();
+  let live_json : serde_json::Value = serde_json::from_str( &live ).unwrap();
+  assert_eq!(
+    live_json[ "env" ][ "CLAUDE_CODE_AUTO_COMPACT_WINDOW" ].as_str(), Some( "262144" ),
+    "AC-06: kimi-k2.7-code must write the 256K auto-compact window, not the kimi-k3 1M default; got: {live}",
+  );
+}
+
+/// AC-08: a `backend: redirect` account whose `inference_provider` is not `"kimi"`
+/// (here: absent, defaulting to `"anthropic"`) gets only the pre-existing 3
+/// `ANTHROPIC_*` vars — none of the 7 Kimi-tier additions.
+#[ test ]
+fn ft03_073_switch_to_redirect_non_kimi_provider_omits_tier_env_vars()
+{
+  let tmp        = TempDir::new().unwrap();
+  let store      = tmp.path().join( "store" );
+  let dot_claude = tmp.path().join( ".claude" );
+  std::fs::create_dir_all( &store ).unwrap();
+  std::fs::create_dir_all( &dot_claude ).unwrap();
+
+  std::fs::write(
+    store.join( "other@foreign.ai.credentials.json" ),
+    r#"{"accessToken":"sk-other-abc123"}"#,
+  ).unwrap();
+  std::fs::write(
+    store.join( "other@foreign.ai.json" ),
+    r#"{"backend":"redirect","base_url":"https://api.other.ai/anthropic","redirect_model":"other-model-1"}"#,
+  ).unwrap();
+
+  let paths = ClaudePaths::with_home( tmp.path() );
+  account::switch_account( "other@foreign.ai", &store, &paths ).unwrap();
+
+  let live = std::fs::read_to_string( dot_claude.join( "settings.json" ) ).unwrap();
+  let live_json : serde_json::Value = serde_json::from_str( &live ).unwrap();
+  assert_eq!(
+    live_json[ "env" ][ "ANTHROPIC_MODEL" ].as_str(), Some( "other-model-1" ),
+    "sanity: the pre-existing 3 vars must still be written; got: {live}",
+  );
+  for key in [ "ANTHROPIC_DEFAULT_OPUS_MODEL", "ANTHROPIC_DEFAULT_SONNET_MODEL", "ANTHROPIC_DEFAULT_HAIKU_MODEL", "ANTHROPIC_DEFAULT_FABLE_MODEL", "CLAUDE_CODE_SUBAGENT_MODEL", "CLAUDE_CODE_EFFORT_LEVEL", "CLAUDE_CODE_AUTO_COMPACT_WINDOW" ]
+  {
+    assert!(
+      live_json[ "env" ].get( key ).is_none(),
+      "AC-08: a non-kimi redirect account must not get the Kimi-tier env.{key}; got: {live}",
+    );
+  }
+}
+
+/// AC-07: switching from a `kimi` redirect account to a `backend: anthropic`
+/// account clears all 10 env vars (the 3 pre-existing `ANTHROPIC_*` plus the 7
+/// Kimi-tier additions) — not just the original 3.
+#[ test ]
+fn ft04_073_switch_from_kimi_to_anthropic_clears_all_tier_env_vars()
+{
+  let tmp        = TempDir::new().unwrap();
+  let store      = tmp.path().join( "store" );
+  let dot_claude = tmp.path().join( ".claude" );
+  std::fs::create_dir_all( &store ).unwrap();
+  std::fs::create_dir_all( &dot_claude ).unwrap();
+
+  std::fs::write(
+    store.join( "alice@test.com.credentials.json" ),
+    r#"{"accessToken":"tok","expiresAt":9999999999999}"#,
+  ).unwrap();
+  // Live settings.json already carries a full Kimi-tier env block from a prior switch.
+  std::fs::write(
+    dot_claude.join( "settings.json" ),
+    r#"{"env":{"ANTHROPIC_BASE_URL":"https://api.moonshot.ai/anthropic","ANTHROPIC_AUTH_TOKEN":"sk-foreign","ANTHROPIC_MODEL":"kimi-k3","ANTHROPIC_DEFAULT_OPUS_MODEL":"kimi-k3","ANTHROPIC_DEFAULT_SONNET_MODEL":"kimi-k3","ANTHROPIC_DEFAULT_HAIKU_MODEL":"kimi-k3","ANTHROPIC_DEFAULT_FABLE_MODEL":"kimi-k3","CLAUDE_CODE_SUBAGENT_MODEL":"kimi-k3","CLAUDE_CODE_EFFORT_LEVEL":"max","CLAUDE_CODE_AUTO_COMPACT_WINDOW":"1048576"}}"#,
+  ).unwrap();
+
+  let paths = ClaudePaths::with_home( tmp.path() );
+  account::switch_account( "alice@test.com", &store, &paths ).unwrap();
+
+  let live = std::fs::read_to_string( dot_claude.join( "settings.json" ) ).unwrap();
+  let live_json : serde_json::Value = serde_json::from_str( &live ).unwrap();
+  assert!(
+    live_json.get( "env" ).is_none(),
+    "AC-07: env must be removed entirely once every ANTHROPIC_*/CLAUDE_CODE_* sub-key is cleared; got: {live}",
+  );
+}
+
+/// AC-07: switching from a `kimi` redirect account to a *different*, non-kimi
+/// redirect account also clears the 7 stale Kimi-tier vars — this exercises the
+/// redirect-branch's own non-kimi cleanup path, distinct from the anthropic-branch
+/// cleanup `ft04_073` covers.
+#[ test ]
+fn ft05_073_switch_from_kimi_to_other_redirect_clears_stale_tier_env_vars()
+{
+  let tmp        = TempDir::new().unwrap();
+  let store      = tmp.path().join( "store" );
+  let dot_claude = tmp.path().join( ".claude" );
+  std::fs::create_dir_all( &store ).unwrap();
+  std::fs::create_dir_all( &dot_claude ).unwrap();
+
+  std::fs::write(
+    store.join( "other@foreign.ai.credentials.json" ),
+    r#"{"accessToken":"sk-other-abc123"}"#,
+  ).unwrap();
+  std::fs::write(
+    store.join( "other@foreign.ai.json" ),
+    r#"{"backend":"redirect","base_url":"https://api.other.ai/anthropic","redirect_model":"other-model-1"}"#,
+  ).unwrap();
+  std::fs::write(
+    dot_claude.join( "settings.json" ),
+    r#"{"env":{"ANTHROPIC_BASE_URL":"https://api.moonshot.ai/anthropic","ANTHROPIC_AUTH_TOKEN":"sk-foreign","ANTHROPIC_MODEL":"kimi-k3","ANTHROPIC_DEFAULT_OPUS_MODEL":"kimi-k3","CLAUDE_CODE_EFFORT_LEVEL":"max","CLAUDE_CODE_AUTO_COMPACT_WINDOW":"1048576"}}"#,
+  ).unwrap();
+
+  let paths = ClaudePaths::with_home( tmp.path() );
+  account::switch_account( "other@foreign.ai", &store, &paths ).unwrap();
+
+  let live = std::fs::read_to_string( dot_claude.join( "settings.json" ) ).unwrap();
+  let live_json : serde_json::Value = serde_json::from_str( &live ).unwrap();
+  for key in [ "ANTHROPIC_DEFAULT_OPUS_MODEL", "CLAUDE_CODE_EFFORT_LEVEL", "CLAUDE_CODE_AUTO_COMPACT_WINDOW" ]
+  {
+    assert!(
+      live_json[ "env" ].get( key ).is_none(),
+      "AC-07: switching to a non-kimi redirect account must clear stale Kimi-tier env.{key}; got: {live}",
+    );
+  }
+  assert_eq!(
+    live_json[ "env" ][ "ANTHROPIC_MODEL" ].as_str(), Some( "other-model-1" ),
+    "sanity: the new account's own ANTHROPIC_MODEL must still be written; got: {live}",
   );
 }

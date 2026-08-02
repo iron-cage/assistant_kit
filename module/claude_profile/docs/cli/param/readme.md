@@ -77,8 +77,9 @@ All `clp` CLI parameters with type, default, and command coverage.
 | [071_api_key.md](071_api_key.md) | `api_key::` — redirect target's static API key; redirect-only |
 | [072_redirect_model.md](072_redirect_model.md) | `redirect_model::` — redirect target's own model identifier; redirect-only |
 | [073_inference_provider.md](073_inference_provider.md) | `inference_provider::` — inference provider label written to `{name}.json` at account save; governs Gate 10 rotation grouping |
+| [074_preset.md](074_preset.md) | `preset::` — named provider preset pre-filling `backend::`/`base_url::`/`inference_provider::`; only `kimi` recognized today |
 
-**Total:** 68 active parameters (Feature 023 deprecated: param 032 `next::` REMOVED, absorbed into feature 020's `sort::`; Feature 065: param 013 `active::` REMOVED; param 063 `assignee::` added as replacement; Feature 064: params 053 `for::`, 056 `unclaim::`, 057 `assign::` REMOVED; param 062 `owner::` extended with `owner::0` sentinel + batch; Feature 070: params 067 `lock::`, 068 `reserve::` added; Feature 071: params 069 `backend::`, 070 `base_url::`, 071 `api_key::`, 072 `redirect_model::` added; Feature 072: param 073 `inference_provider::` added)
+**Total:** 69 active parameters (Feature 023 deprecated: param 032 `next::` REMOVED, absorbed into feature 020's `sort::`; Feature 065: param 013 `active::` REMOVED; param 063 `assignee::` added as replacement; Feature 064: params 053 `for::`, 056 `unclaim::`, 057 `assign::` REMOVED; param 062 `owner::` extended with `owner::0` sentinel + batch; Feature 070: params 067 `lock::`, 068 `reserve::` added; Feature 071: params 069 `backend::`, 070 `base_url::`, 071 `api_key::`, 072 `redirect_model::` added; Feature 072: param 073 `inference_provider::` added; Feature 073: param 074 `preset::` added)
 
 ### Overview Table
 
@@ -157,8 +158,9 @@ All `clp` CLI parameters with type, default, and command coverage.
 | 71 | `api_key::` | `string` | *(omit; required when `backend::redirect`)* | Non-empty string | Redirect target's static API key | `.account.save` |
 | 72 | `redirect_model::` | `string` | *(omit; required when `backend::redirect`)* | Non-empty string | Redirect target's own model identifier | `.account.save` |
 | 73 | `inference_provider::` | `string` | *(omit; field absent — reads as `"anthropic"`)* | Any non-empty string | Inference provider label at account save; governs Gate 10 rotation grouping | `.account.save` |
+| 74 | `preset::` | `string` | *(omit)* | `kimi` (only recognized value) | Named provider preset pre-filling `backend::`/`base_url::`/`inference_provider::` | `.account.save` |
 
-*Param 1 = cross-command account selector (no formal group); params 48, 52, 73 = Group 006 Account Targeting; params 49–51 = ungrouped (`.account.renewal`-specific); param 53 = ungrouped (`.account.assign`-specific); param 55 = ungrouped (`.model`-specific); param 56 = REMOVED; param 2 = Output Control group; params 5–18, 28–31 = Field Presence group; params 19–23, 34–36, 54, 60 = Fetch Behavior group; param 24 = ungrouped; params 25–27, 32 = Sort Control group; params 33, 37–47 = Display Control group (contains both display-toggle params and pipeline-coupled request-constraint row filters — see Pipeline Stage attribute in each param file); params 64, 66 = ungrouped (`.model.select`/`.provider.select`-specific); param 65 = ungrouped (`.models`-specific); params 69–72 = Group 007 Redirect Backend Config*
+*Param 1 = cross-command account selector (no formal group); params 48, 52, 73 = Group 006 Account Targeting; params 49–51 = ungrouped (`.account.renewal`-specific); param 53 = ungrouped (`.account.assign`-specific); param 55 = ungrouped (`.model`-specific); param 56 = REMOVED; param 2 = Output Control group; params 5–18, 28–31 = Field Presence group; params 19–23, 34–36, 54, 60 = Fetch Behavior group; param 24 = ungrouped; params 25–27, 32 = Sort Control group; params 33, 37–47 = Display Control group (contains both display-toggle params and pipeline-coupled request-constraint row filters — see Pipeline Stage attribute in each param file); params 64, 66 = ungrouped (`.model.select`/`.provider.select`-specific); param 65 = ungrouped (`.models`-specific); params 69–72, 74 = Group 007 Redirect Backend Config*
 
 ### See Also
 

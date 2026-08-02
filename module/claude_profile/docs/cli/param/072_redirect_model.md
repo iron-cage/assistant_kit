@@ -11,7 +11,7 @@ The foreign provider's own model identifier, stored in `{name}.json` and written
 **Examples:**
 
 ```bash
-clp .account.save name::kimi backend::redirect base_url::https://api.moonshot.ai/anthropic api_key::sk-... redirect_model::kimi-k3-0905-preview
+clp .account.save name::kimi backend::redirect base_url::https://api.moonshot.ai/anthropic api_key::sk-... redirect_model::kimi-k3
 ```
 
 **Error cases:**

@@ -43,7 +43,7 @@
 
 ### Acceptance Criteria
 
-- **AC-01**: `clp .account.save name::kimi backend::redirect base_url::https://api.moonshot.ai/anthropic api_key::sk-test redirect_model::kimi-k3-0905-preview` exits 0; writes `kimi.json` with `backend: "redirect"`, `base_url`, `redirect_model`; writes `kimi.credentials.json` containing only `accessToken: "sk-test"` — no `refreshToken`/`expiresAt` keys present at all.
+- **AC-01**: `clp .account.save name::kimi backend::redirect base_url::https://api.moonshot.ai/anthropic api_key::sk-test redirect_model::kimi-k3` exits 0; writes `kimi.json` with `backend: "redirect"`, `base_url`, `redirect_model`; writes `kimi.credentials.json` containing only `accessToken: "sk-test"` — no `refreshToken`/`expiresAt` keys present at all.
 - **AC-02**: The same command missing any one of `base_url::`/`api_key::`/`redirect_model::` exits 1, stderr names the specific missing parameter(s); no files written.
 - **AC-03**: `clp .account.save name::alice@acme.com base_url::https://x` (no `backend::redirect`) exits 1 — `base_url::` is redirect-only and rejected outside that context.
 - **AC-04**: `clp .account.save name::alice@acme.com` (no `backend::` at all) preserves existing behavior exactly — copies `~/.claude/.credentials.json`; writes `alice@acme.com.json` with `backend: "anthropic"`.

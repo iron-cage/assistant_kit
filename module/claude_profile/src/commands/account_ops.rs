@@ -297,6 +297,26 @@ pub fn account_save_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) ->
     Some( Value::String( s ) ) => s.clone(),
     _                          => String::new(),
   };
+
+  // Feature 073: preset:: is sugar for known-provider redirect accounts — pre-fills
+  // backend::/base_url::/inference_provider:: for anything the caller didn't already
+  // specify explicitly. Only "kimi" is a recognized value today (the user's own scope:
+  // a single supported provider, not a general multi-provider abstraction).
+  let preset_raw = match cmd.arguments.get( "preset" )
+  {
+    Some( Value::String( s ) ) => s.clone(),
+    _                          => String::new(),
+  };
+  if !preset_raw.is_empty() && !preset_raw.eq_ignore_ascii_case( "kimi" )
+  {
+    return Err( ErrorData::new(
+      ErrorCode::ArgumentTypeMismatch,
+      format!( "preset:: invalid value '{preset_raw}' — valid values: kimi" ),
+    ) );
+  }
+  let preset_is_kimi = preset_raw.eq_ignore_ascii_case( "kimi" );
+  let backend_raw    = if backend_raw.is_empty() && preset_is_kimi { "redirect".to_string() } else { backend_raw };
+
   if !backend_raw.is_empty()
     && !backend_raw.eq_ignore_ascii_case( "anthropic" )
     && !backend_raw.eq_ignore_ascii_case( "redirect" )
@@ -321,6 +341,18 @@ pub fn account_save_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) ->
   {
     Some( Value::String( s ) ) if !s.is_empty() => Some( s.clone() ),
     _                                           => None,
+  };
+  // Feature 073: preset::kimi fills base_url:: with Moonshot's fixed Anthropic-compatible
+  // endpoint when the caller didn't pass one explicitly. Gated on the resolved `backend`
+  // (not bare preset_is_kimi) so an explicit backend::anthropic paired with preset::kimi
+  // never forces a redirect-only field onto an anthropic-backend save.
+  let base_url_val = if base_url_val.is_none() && preset_is_kimi && backend == crate::account::AccountBackend::Redirect
+  {
+    Some( "https://api.moonshot.ai/anthropic".to_string() )
+  }
+  else
+  {
+    base_url_val
   };
   let api_key_val = match cmd.arguments.get( "api_key" )
   {
@@ -408,6 +440,18 @@ pub fn account_save_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) ->
       "inference_provider:: must be a non-empty value".to_string(),
     ) ),
     _ => None,
+  };
+  // Feature 073: preset::kimi fills inference_provider:: with "kimi" when the caller
+  // didn't pass one explicitly — this is what makes switch_account() write the
+  // Kimi-tier env vars (claude_profile_core::account::write_kimi_tier_env_vars()).
+  // Same resolved-backend gating as base_url_val above.
+  let inference_provider_val = if inference_provider_val.is_none() && preset_is_kimi && backend == crate::account::AccountBackend::Redirect
+  {
+    Some( "kimi".to_string() )
+  }
+  else
+  {
+    inference_provider_val
   };
   // AC-15/no-partial-update (Out of Scope note: claude_profile_core's save() merge logic is
   // task 433's and stays untouched) — save() read-merges the existing {name}.json, so a

@@ -4,7 +4,7 @@
 
 - **Purpose**: Defines the functional capabilities of `claude_profile` — account credential management and the `clp` CLI.
 - **Responsibility**: Documents all functional requirements with their design, acceptance criteria, and test references.
-- **In Scope**: feature/001 through feature/040, feature/061 through feature/072 — full functional capability set for claude_profile and the clp CLI.
+- **In Scope**: feature/001 through feature/040, feature/061 through feature/073 — full functional capability set for claude_profile and the clp CLI.
 - **Out of Scope**: Quality constraints (→ invariant/), CLI design (→ cli/).
 
 ### Overview Table
@@ -64,6 +64,7 @@
 | 070 | [Account Claim and Reservation Control](070_account_claim_and_reservation_control.md) | `claim_lock` (Gate 9 unconditional exclusion + G9 bypassable explicit-command gate) and `reserve` (leading sort key, soft deprioritization) account properties; `lock::`/`reserve::` params | ✅ |
 | 071 | [Redirect Backend Accounts](071_redirect_backend_accounts.md) | `backend`/`base_url`/`redirect_model` account fields; `.account.save backend::redirect` static-credential write path; `.account.use` writes/clears `settings.json`'s `env.*` keys; `apply_model_override()` redirect bypass | 🔄 |
 | 072 | [Inference Provider Selection](072_inference_provider_selection.md) | `inference_provider` account field; `.provider.select` global config command; Gate 10 unconditional rotation exclusion on provider mismatch | 🔄 |
+| 073 | [Kimi Provider Preset](073_kimi_provider_preset.md) | `preset::kimi` convenience param on `.account.save` (pre-fills `backend::`/`base_url::`/`inference_provider::`); 7 additional Kimi-tier `settings.json` env vars written by `switch_account()` when `inference_provider == "kimi"` | 🔄 |
 
 ### Organization
 
