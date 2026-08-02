@@ -24,7 +24,7 @@ Every Layer 2 crate that exposes CLI commands MUST satisfy both conditions when 
 | claude_profile | ✅ | ✅ | ✅ |
 | claude_runner | ✅ | ✅ | ✅ |
 | claude_storage | ✅ | ✅ | ✅ |
-| claude_journal_viewer | ❌ | ✅ | ❌ |
+| claude_journal_viewer | ✅ | ✅ | ✅ |
 
 ### Enforcement Mechanism
 

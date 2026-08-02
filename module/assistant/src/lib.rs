@@ -117,6 +117,7 @@ mod cli
     claude_profile::register_commands( &mut registry );
     claude_runner::register_commands( &mut registry );
     claude_storage::register_commands( &mut registry );
+    claude_journal_viewer::register_commands( &mut registry );
     register_static_commands( &mut registry );
     registry
   }

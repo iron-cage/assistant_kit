@@ -4,7 +4,7 @@
 //!
 //! Verify the behavioural requirements documented in:
 //! - `docs/feature/001_super_app_aggregation.md` (FT-1 .. FT-4)
-//! - `docs/invariant/001_aggregation_completeness.md` (IC-1, IC-2)
+//! - `docs/invariant/001_aggregation_completeness.md` (IC-1, IC-2, IC-3)
 //!
 //! ## Test Matrix
 //!
@@ -16,6 +16,7 @@
 //! | `ft4_claude_stub_prints_redirect` | FT-4 | `.claude` prints redirect, exit 0 |
 //! | `ic1_register_commands_contract` | IC-1 | all 5 crates satisfy register_commands() |
 //! | `ic2_no_orphan_yaml_commands` | IC-2 | every PHF-mapped command reachable |
+//! | `ic3_claude_journal_viewer_registered_in_build_registry` | IC-3 | claude_journal_viewer wired into build_registry() |
 //! | `unknown_command_exits_1` | — | exit-code-1 contract for unknown commands |
 
 fn assert_container()
@@ -190,6 +191,62 @@ fn ic2_no_orphan_yaml_commands()
       "IC-2: {label} must not exit 1 (orphan command); stderr: {stderr}",
     );
   }
+}
+
+/// IC-3: `claude_journal_viewer::register_commands` is called inside `build_registry()`,
+/// positioned after `claude_storage`'s call and before `register_static_commands()`.
+/// Source-inspection only — `build_registry()` panics unconditionally per pre-existing
+/// BUG-015 (`task/claude_version/bug/015_paths_command_collision_with_claude_profile.md`),
+/// so this never invokes it; live-dispatch proof remains blocked until that bug is fixed.
+#[test]
+fn ic3_claude_journal_viewer_registered_in_build_registry()
+{
+  let src = std::fs::read_to_string( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/lib.rs" ) )
+    .expect( "read src/lib.rs" );
+
+  // Isolate build_registry()'s own function body first — a whole-file search for
+  // "register_static_commands" would otherwise match that function's *definition*
+  // (earlier in the file) before reaching build_registry()'s call site.
+  let sig_pos = src.find( "fn build_registry" )
+    .expect( "build_registry() definition not found in src/lib.rs" );
+  let body_open = sig_pos + src[ sig_pos.. ].find( '{' ).expect( "build_registry() opening brace not found" );
+
+  let mut depth = 0i32;
+  let mut body_close = body_open;
+  for ( offset, ch ) in src[ body_open.. ].char_indices()
+  {
+    match ch
+    {
+      '{' => depth += 1,
+      '}' =>
+      {
+        depth -= 1;
+        if depth == 0
+        {
+          body_close = body_open + offset;
+          break;
+        }
+      },
+      _ => {},
+    }
+  }
+  let body = &src[ body_open..=body_close ];
+
+  let storage_pos = body.find( "claude_storage::register_commands" )
+    .expect( "claude_storage::register_commands call not found in build_registry() body" );
+  let journal_pos = body.find( "claude_journal_viewer::register_commands" )
+    .expect( "claude_journal_viewer::register_commands call not found in build_registry() body — Task 439 wiring missing" );
+  let static_pos = body.find( "register_static_commands(" )
+    .expect( "register_static_commands() call not found in build_registry() body" );
+
+  assert!(
+    storage_pos < journal_pos,
+    "IC-3: claude_journal_viewer::register_commands must be called after claude_storage::register_commands",
+  );
+  assert!(
+    journal_pos < static_pos,
+    "IC-3: claude_journal_viewer::register_commands must be called before register_static_commands()",
+  );
 }
 
 // ---------- Supplementary ----------
