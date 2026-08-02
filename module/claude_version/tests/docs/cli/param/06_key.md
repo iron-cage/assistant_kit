@@ -6,7 +6,7 @@ Edge case coverage for the `key::` parameter. See [param/readme.md](../../../../
 
 - **Purpose**: Edge case tests for the `key::` parameter.
 - **Responsibility**: Boundary values, invalid inputs, type violations, and default behavior for `key::`.
-- **Commands:** `.settings.get`, `.settings.set`, `.config`, `.params`, `.paths`
+- **Commands:** `.settings.get`, `.settings.set`, `.config`, `.params`, `.version.paths`
 - **In Scope**: Single-parameter edge cases, validation errors, type checking.
 - **Out of Scope**: Command integration (→ `../command/`), group interactions (→ `../param_group/`).
 

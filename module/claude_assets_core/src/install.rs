@@ -122,6 +122,8 @@ pub fn uninstall( paths : &AssetPaths, kind : ArtifactKind, name : &str ) -> Res
   let tgt_path = target_path( paths, kind, name );
 
   // symlink_metadata does not follow symlinks — correctly detects dangling symlinks.
+  // core::io::ErrorKind requires the unstable `core_io` feature (rust-lang/rust#154046) — not usable on stable.
+  #[ allow( clippy::std_instead_of_core ) ]
   let meta = match std::fs::symlink_metadata( &tgt_path )
   {
     Ok( m )                                    => m,

@@ -21,7 +21,7 @@
 | 006_config_command.md | Unified `.config` command with 4-layer resolution and catalog |
 | 007_params_command.md | `.params` command — full param catalog inspection with observable values |
 | 008_runtime_file_discovery.md | `.runtime_files` command — enumerate all clv-managed runtime file paths |
-| 009_path_discovery.md | `.paths` command — labeled path discovery with single-key lookup |
+| 009_path_discovery.md | `.version.paths` command — labeled path discovery with single-key lookup |
 
 ### Overview Table
 
@@ -35,4 +35,4 @@
 | 006 | [Config Command](006_config_command.md) | Unified `.config` command with 4-layer resolution and catalog | ✅ |
 | 007 | [Params Command](007_params_command.md) | `.params` command — full param catalog inspection with observable values | ✅ |
 | 008 | [Runtime File Discovery](008_runtime_file_discovery.md) | `.runtime_files` command — enumerate all clv-managed runtime file paths | ✅ |
-| 009 | [Path Discovery](009_path_discovery.md) | `.paths` command — labeled path discovery with single-key lookup | ✅ |
+| 009 | [Path Discovery](009_path_discovery.md) | `.version.paths` command — labeled path discovery with single-key lookup | ✅ |

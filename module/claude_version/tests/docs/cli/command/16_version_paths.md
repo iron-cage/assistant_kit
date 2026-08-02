@@ -1,13 +1,13 @@
-# Test: `.paths`
+# Test: `.version.paths`
 
 ### Scope
 
-- **Purpose**: Integration test cases for the `.paths` command.
+- **Purpose**: Integration test cases for the `.version.paths` command.
 - **Responsibility**: Test factor analysis, case index, and expected behavior for show-all, single-key, format, verbosity, and error modes.
 - **In Scope**: Mode dispatch, format, verbosity, unresolvable path handling, exit codes.
 - **Out of Scope**: `PathKey` unit-level edge cases (→ `../type/09_path_key.md`), `ClaudeVersionPaths` unit tests (→ coverage in `claude_version_core` crate tests).
 
-Integration test planning for `.paths`. See [command/paths.md](../../../../docs/cli/command/paths.md) for specification.
+Integration test planning for `.version.paths`. See [command/version.md](../../../../docs/cli/command/version.md#command-16-versionpaths) for specification.
 
 ## Test Factor Analysis
 
@@ -107,17 +107,17 @@ Integration test planning for `.paths`. See [command/paths.md](../../../../docs/
 ### IT-1: No key:: → show-all with all 5 keys
 
 - **Given:** `HOME=<tmp>`
-- **When:** `clv.paths`
+- **When:** `clv.version.paths`
 - **Then:** exit 0; stdout contains labeled lines for all 5 keys
 - **Exit:** 0
-- **Source:** [command/paths.md](../../../../docs/cli/command/paths.md)
+- **Source:** [command/version.md](../../../../docs/cli/command/version.md#command-16-versionpaths)
 
 ---
 
 ### IT-2: key::versions_dir → single path
 
 - **Given:** `HOME=<tmp>`
-- **When:** `clv.paths key::versions_dir`
+- **When:** `clv.version.paths key::versions_dir`
 - **Then:** exit 0; stdout is exactly the resolved versions directory path
 - **Exit:** 0
 
@@ -126,7 +126,7 @@ Integration test planning for `.paths`. See [command/paths.md](../../../../docs/
 ### IT-3: key::settings → single path
 
 - **Given:** `HOME=<tmp>`
-- **When:** `clv.paths key::settings`
+- **When:** `clv.version.paths key::settings`
 - **Then:** exit 0; stdout is exactly `<tmp>/.claude/settings.json`
 - **Exit:** 0
 
@@ -135,7 +135,7 @@ Integration test planning for `.paths`. See [command/paths.md](../../../../docs/
 ### IT-4: format::json → valid JSON object
 
 - **Given:** `HOME=<tmp>`
-- **When:** `clv.paths format::json`
+- **When:** `clv.version.paths format::json`
 - **Then:** exit 0; stdout is valid JSON parseable as an object; object has all 5 keys
 - **Exit:** 0
 
@@ -144,7 +144,7 @@ Integration test planning for `.paths`. See [command/paths.md](../../../../docs/
 ### IT-5: v::0 → plain unlabeled paths
 
 - **Given:** `HOME=<tmp>`
-- **When:** `clv.paths v::0`
+- **When:** `clv.version.paths v::0`
 - **Then:** exit 0; stdout lines contain no label prefixes
 - **Exit:** 0
 
@@ -153,7 +153,7 @@ Integration test planning for `.paths`. See [command/paths.md](../../../../docs/
 ### IT-6: v::0 with project_settings unresolved → key omitted
 
 - **Given:** `HOME=<tmp>`; no ancestor `.claude/settings.json`
-- **When:** `clv.paths v::0`
+- **When:** `clv.version.paths v::0`
 - **Then:** exit 0; stdout contains no line corresponding to `project_settings`
 - **Exit:** 0
 
@@ -162,7 +162,7 @@ Integration test planning for `.paths`. See [command/paths.md](../../../../docs/
 ### IT-7: v::1 with project_settings unresolved → placeholder shown
 
 - **Given:** `HOME=<tmp>`; no ancestor `.claude/settings.json`
-- **When:** `clv.paths`
+- **When:** `clv.version.paths`
 - **Then:** exit 0; stdout contains `project_settings:` followed by `(none found)`
 - **Exit:** 0
 
@@ -171,7 +171,7 @@ Integration test planning for `.paths`. See [command/paths.md](../../../../docs/
 ### IT-8: v::2 → labeled with description
 
 - **Given:** `HOME=<tmp>`
-- **When:** `clv.paths key::binary_symlink v::2`
+- **When:** `clv.version.paths key::binary_symlink v::2`
 - **Then:** exit 0; stdout contains the path and a one-line description
 - **Exit:** 0
 
@@ -180,7 +180,7 @@ Integration test planning for `.paths`. See [command/paths.md](../../../../docs/
 ### IT-9: HOME unset → exit 2
 
 - **Given:** `HOME` environment variable unset
-- **When:** `clv.paths`
+- **When:** `clv.version.paths`
 - **Then:** exit 2; no path output
 - **Exit:** 2
 
@@ -189,7 +189,7 @@ Integration test planning for `.paths`. See [command/paths.md](../../../../docs/
 ### IT-10: key::bogus → exit 1
 
 - **Given:** `HOME=<tmp>`
-- **When:** `clv.paths key::bogus`
+- **When:** `clv.version.paths key::bogus`
 - **Then:** exit 1; stderr names the invalid key
 - **Exit:** 1
 
@@ -198,7 +198,7 @@ Integration test planning for `.paths`. See [command/paths.md](../../../../docs/
 ### IT-11: key:: (empty) → exit 1
 
 - **Given:** `HOME=<tmp>`
-- **When:** `clv.paths key::`
+- **When:** `clv.version.paths key::`
 - **Then:** exit 1; error references `key::` or empty value
 - **Exit:** 1
 

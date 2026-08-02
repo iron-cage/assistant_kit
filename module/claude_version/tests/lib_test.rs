@@ -25,7 +25,7 @@ const EXPECTED_COMMANDS : &[ &str ] = &[
   ".config",
   ".params",
   ".runtime_files",
-  ".paths",
+  ".version.paths",
 ];
 
 #[ cfg( feature = "enabled" ) ]

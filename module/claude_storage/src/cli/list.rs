@@ -128,7 +128,7 @@ pub fn list_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
           ErrorData::new
           (
             ErrorCode::InternalError,
-            format!( "Failed to resolve path parameter '{}': {}", &param, e )
+            format!( "Failed to resolve path parameter '{param}': {e}" )
           )
         );
       }

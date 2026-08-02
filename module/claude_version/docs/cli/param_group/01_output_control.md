@@ -41,7 +41,7 @@ clv .processes format::json v::2
 | 9 | [`.settings.get`](../command/settings.md#command-10-settingsget) | Partial | `count::` |
 | 10 | [`.config`](../command/config.md#command-13-config) | Partial | `count::` |
 | 11 | [`.params`](../command/params.md#command-14-params) | Partial | `count::` |
-| 12 | [`.paths`](../command/paths.md#command-16-paths) | Partial | `count::` |
+| 12 | [`.version.paths`](../command/version.md#command-16-versionpaths) | Partial | `count::` |
 
 ### Referenced Parameters
 

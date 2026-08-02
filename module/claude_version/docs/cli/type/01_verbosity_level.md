@@ -44,7 +44,7 @@ clv .status v::3       # error: out of range
 | 9 | [`.settings.get`](../command/settings.md#command-10-settingsget) | `v::` |
 | 10 | [`.config`](../command/config.md#command-13-config) | `v::` |
 | 11 | [`.params`](../command/params.md#command-14-params) | `v::` |
-| 12 | [`.paths`](../command/paths.md#command-16-paths) | `v::` |
+| 12 | [`.version.paths`](../command/version.md#command-16-versionpaths) | `v::` |
 
 ### Referenced Parameters
 

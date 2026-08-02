@@ -5,7 +5,7 @@
 - **Purpose**: RF- test cases for the versions directory runtime file — path correctness, lifecycle triggers (create/purge/lock), and durability.
 - **Responsibility**: Verify the versions directory path spec, subdirectory creation/purge behavior, permission toggling, and recoverable durability classification.
 - **In Scope**: Path format, HOME expansion, creation via `.version.install`, purge via pinned install, chmod lock toggle, durability after deletion.
-- **Out of Scope**: Symlink retarget (→ `003_binary_symlink.md`), discovery command output (→ `../cli/command/16_paths.md`), chmod side effects on other processes (→ `../pitfall/001_version_lock_chmod.md`).
+- **Out of Scope**: Symlink retarget (→ `003_binary_symlink.md`), discovery command output (→ `../cli/command/16_version_paths.md`), chmod side effects on other processes (→ `../pitfall/001_version_lock_chmod.md`).
 
 Runtime file test surface for the versions directory. See [runtime_file/002_versions_directory.md](../../../docs/runtime_file/002_versions_directory.md) for specification.
 
@@ -39,7 +39,7 @@ Two `.version.install` invocations that produce different file system outcomes:
 ### RF-1: path matches spec — $HOME expansion
 
 - **Given:** `HOME=/tmp/rf_test_home`
-- **When:** `.paths key::versions_dir` output is examined
+- **When:** `.version.paths key::versions_dir` output is examined
 - **Then:** stdout contains exactly `/tmp/rf_test_home/.local/share/claude/versions`; path begins with HOME value; path ends with `.local/share/claude/versions`
 - **Exit:** 0
 - **Source:** [runtime_file/002_versions_directory.md — Path](../../../docs/runtime_file/002_versions_directory.md)

@@ -104,7 +104,7 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
   reg_cmd( registry, ".config",          "Show, get, set, or unset settings with 4-layer resolution",  vec![ key(), val(), scp(), uns(), dry(), v(), fmt() ], Box::new( config_routine ) );
   reg_cmd( registry, ".params",          "Inspect Claude Code params: forms, current values, defaults", vec![ key(), knd(), v(), fmt() ],       Box::new( params_routine          ) );
   reg_cmd( registry, ".runtime_files",   "List all paths managed by clv at runtime",                   vec![],                                  Box::new( runtime_files_routine   ) );
-  reg_cmd( registry, ".paths",           "Report filesystem paths clv reads from or writes to",        vec![ key(), fmt(), v() ],               Box::new( paths_routine           ) );
+  reg_cmd( registry, ".version.paths",           "Report filesystem paths clv reads from or writes to",        vec![ key(), fmt(), v() ],               Box::new( paths_routine           ) );
 }
 
 /// Render grouped help output via `cli_fmt::CliHelpTemplate`.
@@ -160,7 +160,7 @@ fn print_usage( binary : &str )
       [
         CommandEntry { name : ".status".to_string(),        desc : "Show installation state, process count, and active account".to_string() },
         CommandEntry { name : ".runtime_files".to_string(), desc : "List all paths managed by clv at runtime".to_string() },
-        CommandEntry { name : ".paths".to_string(),         desc : "Report filesystem paths clv reads from or writes to".to_string() },
+        CommandEntry { name : ".version.paths".to_string(),         desc : "Report filesystem paths clv reads from or writes to".to_string() },
       ],
     },
   ];

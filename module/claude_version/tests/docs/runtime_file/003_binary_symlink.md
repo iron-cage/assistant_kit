@@ -37,7 +37,7 @@ Two states of the symlink that produce different `.status` outcomes:
 ### RF-1: path matches spec — $HOME expansion
 
 - **Given:** `HOME=/tmp/rf_test_home`
-- **When:** `.paths key::binary_symlink` output is examined
+- **When:** `.version.paths key::binary_symlink` output is examined
 - **Then:** stdout contains exactly `/tmp/rf_test_home/.local/bin/claude`; path begins with HOME value; path ends with `.local/bin/claude`
 - **Exit:** 0
 - **Source:** [runtime_file/003_binary_symlink.md — Path](../../../docs/runtime_file/003_binary_symlink.md)

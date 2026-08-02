@@ -172,6 +172,34 @@ fn test_compatibility_with_existing_tests()
   assert_eq!( decoded, path );
 }
 
+// Bug Reproducer (BUG-366): this test's assertion diverged from
+// `encode_path()`'s corrected behavior.
+//
+// Root Cause: this test was authored 2026-05-24, before BUG-366's fix
+// (landed 2026-07-05) generalized `encode_path()`'s substitution from
+// `_`-only to the full non-alphanumeric character class. Its assertion
+// (`test-file.rs`, dot preserved) matched the pre-fix behavior and was
+// never updated.
+//
+// Why Not Caught: BUG-366's fix was verified via the sibling `claude_storage`
+// crate's suite (which depends on `claude_storage_core` transitively), not
+// via `claude_storage_core`'s own suite directly — this file's integration
+// tests were never executed by that verification run. Every other test in
+// this file uses a path with no dot component, so none of them surfaced the
+// divergence either.
+//
+// Fix Applied: updated the expected value from `test-file.rs` to
+// `test-file-rs`, matching `encode_path()`'s current (correct) behavior.
+//
+// Prevention: run `claude_storage_core`'s own suite directly (not only
+// transitively via a dependent crate) whenever `encode_path()`/`decode_path()`
+// changes.
+//
+// Pitfall: `encode_path()`'s current behavior is correct and already
+// covered by dedicated regression tests (`test_encode_dot_mid_component` in
+// `src/path.rs`) verified against the real Claude Code algorithm — do not
+// "fix" this test by reverting the encoder to preserve dots.
+// test_kind: bug_reproducer(BUG-366)
 #[ test ]
 fn test_underscore_in_deeply_nested_path()
 {
@@ -179,10 +207,10 @@ fn test_underscore_in_deeply_nested_path()
   let path = Path::new( "/home/alice/projects/consumer-app/module/my_agent/tests/test_file.rs" );
   let encoded = encode_path( path ).unwrap();
 
-  // All underscores replaced
+  // All non-alphanumeric characters replaced (underscores AND dots)
   assert_eq!
   (
     encoded,
-    "-home-alice-projects-consumer-app-module-my-agent-tests-test-file.rs"
+    "-home-alice-projects-consumer-app-module-my-agent-tests-test-file-rs"
   );
 }

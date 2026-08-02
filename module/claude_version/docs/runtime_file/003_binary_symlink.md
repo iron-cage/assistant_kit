@@ -47,7 +47,7 @@ A missing symlink breaks the `claude` command until repaired. Recovery is a sing
 | File | Relationship |
 |------|-------------|
 | [feature/001_version_management.md](../feature/001_version_management.md) | `.version.install`, `.version.guard` implement retarget/read |
-| [feature/009_path_discovery.md](../feature/009_path_discovery.md) | `.paths` command that reports this path |
+| [feature/009_path_discovery.md](../feature/009_path_discovery.md) | `.version.paths` command that reports this path |
 
 ### Pitfalls
 

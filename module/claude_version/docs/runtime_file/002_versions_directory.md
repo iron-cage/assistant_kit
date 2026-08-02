@@ -51,7 +51,7 @@ A missing or emptied versions directory does not lose user data — it only remo
 | File | Relationship |
 |------|-------------|
 | [feature/001_version_management.md](../feature/001_version_management.md) | `.version.install`, `.version.guard` create/purge/lock this directory |
-| [feature/009_path_discovery.md](../feature/009_path_discovery.md) | `.paths` command that reports this path |
+| [feature/009_path_discovery.md](../feature/009_path_discovery.md) | `.version.paths` command that reports this path |
 
 ### Patterns
 

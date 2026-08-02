@@ -1,4 +1,4 @@
-//! `.paths` — report filesystem paths clv reads from or writes to.
+//! `.version.paths` — report filesystem paths clv reads from or writes to.
 //!
 //! Complements `.runtime_files` (unlabeled, pipeline-only, version-history-cache
 //! path only) by adding labels, descriptions, and the settings, project-settings,
@@ -30,7 +30,7 @@ use unilang::types::Value;
 use crate::output::{ OutputFormat, OutputOptions, json_escape };
 use claude_version_core::paths::ClaudeVersionPaths;
 
-/// The 5 path keys `.paths` can report.
+/// The 5 path keys `.version.paths` can report.
 ///
 /// Not part of the crate's public API — reachable only within `commands::paths`,
 /// since the declaring `mod paths;` in `commands/mod.rs` is private.
@@ -84,7 +84,7 @@ impl PathKey
   }
 }
 
-/// `.paths` — show-all or single-key filesystem path lookup.
+/// `.version.paths` — show-all or single-key filesystem path lookup.
 ///
 /// Mode is determined by `key::`: absent shows all 5 known paths (labeled per
 /// `v::`); present shows the single resolved path for that key.

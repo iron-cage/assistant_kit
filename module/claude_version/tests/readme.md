@@ -56,7 +56,7 @@ Unit and integration tests for `claude_version`.
 | `cli/params_command_test.rs` | `.params` command integration tests |
 | `cli/kind_param_test.rs` | EC- edge case tests for the `kind::` parameter |
 | `cli/runtime_files_test.rs` | Integration tests for `.runtime_files` (IT-1..IT-9, FT-1..FT-5) |
-| `cli/paths_test.rs` | Integration tests for `.paths` (IT-1..IT-11, FT-1..FT-7) |
+| `cli/paths_test.rs` | Integration tests for `.version.paths` (IT-1..IT-11, FT-1..FT-7) |
 | `cli/path_key_test.rs` | Type contract tests for `PathKey` validation (TC-1..TC-9) |
 | `cli/list_mode_test.rs` | Type contract tests for `ListMode` validation (TC-1..TC-6) |
 | `cli/mode_param_test.rs` | EC- edge case tests for the `mode::` parameter |

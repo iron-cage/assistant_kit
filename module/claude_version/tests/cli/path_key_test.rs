@@ -26,7 +26,7 @@ fn path_key_tc1_settings_resolves()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  let out  = run_clv_with_env( &[ ".paths", "key::settings" ], &[ ( "HOME", home ) ] );
+  let out  = run_clv_with_env( &[ ".version.paths", "key::settings" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   assert_eq!( stdout( &out ), format!( "{home}/.claude/settings.json\n" ) );
 }
@@ -37,7 +37,7 @@ fn path_key_tc2_versions_dir_resolves()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  let out  = run_clv_with_env( &[ ".paths", "key::versions_dir" ], &[ ( "HOME", home ) ] );
+  let out  = run_clv_with_env( &[ ".version.paths", "key::versions_dir" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   assert_eq!( stdout( &out ), format!( "{home}/.local/share/claude/versions\n" ) );
 }
@@ -48,7 +48,7 @@ fn path_key_tc3_binary_symlink_resolves()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  let out  = run_clv_with_env( &[ ".paths", "key::binary_symlink" ], &[ ( "HOME", home ) ] );
+  let out  = run_clv_with_env( &[ ".version.paths", "key::binary_symlink" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   assert_eq!( stdout( &out ), format!( "{home}/.local/bin/claude\n" ) );
 }
@@ -59,7 +59,7 @@ fn path_key_tc4_version_history_cache_resolves()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  let out  = run_clv_with_env( &[ ".paths", "key::version_history_cache" ], &[ ( "HOME", home ) ] );
+  let out  = run_clv_with_env( &[ ".version.paths", "key::version_history_cache" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   assert_eq!( stdout( &out ), format!( "{home}/.claude/.transient/version_history_cache.json\n" ) );
 }
@@ -82,7 +82,7 @@ fn path_key_tc5_project_settings_resolves_or_placeholder()
 
   let bin = env!( "CARGO_BIN_EXE_claude_version" );
   let out = std::process::Command::new( bin )
-    .args( [ ".paths", "key::project_settings" ] )
+    .args( [ ".version.paths", "key::project_settings" ] )
     .env( "HOME", home )
     .current_dir( project_dir.path() )
     .output()
@@ -97,7 +97,7 @@ fn path_key_tc6_absent_shows_all_keys()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  let out  = run_clv_with_env( &[ ".paths" ], &[ ( "HOME", home ) ] );
+  let out  = run_clv_with_env( &[ ".version.paths" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   for label in [ "settings", "project_settings", "versions_dir", "binary_symlink", "version_history_cache" ]
@@ -112,7 +112,7 @@ fn path_key_tc7_mixed_case_exits_1()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  let out  = run_clv_with_env( &[ ".paths", "key::Settings" ], &[ ( "HOME", home ) ] );
+  let out  = run_clv_with_env( &[ ".version.paths", "key::Settings" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 1 );
   let err = stderr( &out );
   assert!( !err.is_empty(), "key::Settings rejection must produce an error message: {err}" );
@@ -124,7 +124,7 @@ fn path_key_tc8_unknown_variant_exits_1()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  let out  = run_clv_with_env( &[ ".paths", "key::bogus" ], &[ ( "HOME", home ) ] );
+  let out  = run_clv_with_env( &[ ".version.paths", "key::bogus" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 1 );
   let err = stderr( &out );
   assert!( err.contains( "bogus" ), "stderr must name the invalid key: {err}" );
@@ -137,7 +137,7 @@ fn path_key_tc9_empty_exits_1()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  let out  = run_clv_with_env( &[ ".paths", "key::" ], &[ ( "HOME", home ) ] );
+  let out  = run_clv_with_env( &[ ".version.paths", "key::" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 1 );
   let err = stderr( &out );
   assert!( err.contains( "key" ), "stderr must reference key:: or empty value: {err}" );

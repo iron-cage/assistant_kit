@@ -30,7 +30,7 @@ const VISIBLE_COMMANDS : &[ &str ] = &[
   ".config",
   ".params",
   ".runtime_files",
-  ".paths",
+  ".version.paths",
 ];
 
 // TC-079: .help exits 0

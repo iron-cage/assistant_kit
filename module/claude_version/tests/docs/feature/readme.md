@@ -19,5 +19,5 @@
 | 006_config_command.md | FT- test cases for `.config` command: show-all/get/set/unset/resolution/catalog | ✅ |
 | 007_params_command.md | FT- test cases for `.params` command: show-all/single/kind-filter/format/errors | ✅ |
 | 008_runtime_file_discovery.md | FT- test cases for `.runtime_files` command: path output, format, HOME dependency | ✅ |
-| 009_path_discovery.md | FT- test cases for `.paths` command: show-all, single-key, verbosity tiers, errors | ✅ |
+| 009_path_discovery.md | FT- test cases for `.version.paths` command: show-all, single-key, verbosity tiers, errors | ✅ |
 | procedure.md | Workflow for creating and updating feature test specs | ✅ |

@@ -32,7 +32,7 @@ clv.settings.show format::text
 | 9 | [`.settings.get`](../command/settings.md#command-10-settingsget) | text | |
 | 10 | [`.config`](../command/config.md#command-13-config) | text | |
 | 11 | [`.params`](../command/params.md#command-14-params) | text | |
-| 12 | [`.paths`](../command/paths.md#command-16-paths) | text | |
+| 12 | [`.version.paths`](../command/version.md#command-16-versionpaths) | text | |
 
 ### Referenced Parameter Groups
 

@@ -4,7 +4,7 @@
 
 - **Purpose**: Reference for version-namespace clv commands.
 - **Responsibility**: Command syntax, parameters, exit codes, and cross-references for all `.version.*` commands.
-- **In Scope**: `.version.show`, `.version.install`, `.version.guard`, `.version.list` (alias and release-history listing via `mode::`).
+- **In Scope**: `.version.show`, `.version.install`, `.version.guard`, `.version.list` (alias and release-history listing via `mode::`), `.version.paths` (filesystem path discovery).
 - **Out of Scope**: Root commands (→ [root.md](root.md)), process commands (→ [processes.md](processes.md)), settings commands (→ [settings.md](settings.md)).
 
 ---
@@ -416,3 +416,139 @@ clv.version.list mode::history format::json count::5
 ### Command :: 12. `.version.history` (retired)
 
 **Retired** — merged into [`.version.list`](#command-6-versionlist) as `mode::history`. All release-history behavior, parameters, and examples now live under Command 6. This entry is preserved only to keep the global command numbering stable; do not implement or reference `.version.history` as a standalone command.
+
+---
+
+### Command :: 16. `.version.paths`
+
+Report filesystem paths clv reads from or writes to: settings files, the versions directory, the binary symlink, and internal caches. Read-only — does not create, modify, or delete any file. Complements `.runtime_files` (unlabeled, pipeline-only, reports only the version-history-cache path) by adding labels and descriptions, plus the versions directory, binary symlink, and settings paths that `.runtime_files` does not report.
+
+The operating mode is determined by whether `key::` is provided:
+
+| Mode | Parameters | Behavior |
+|------|------------|----------|
+| show-all | (none) | All known paths, one per line, labeled |
+| single | `key::K` | One resolved path for the given key |
+
+-- **Parameters:** key::, format::, v::
+-- **Exit Codes:** 0 (success) | 1 (invalid `key::` value) | 2 (HOME unset)
+
+**Syntax:**
+
+```sh
+clv.version.paths [key::K] [format::FMT] [v::N]
+```
+
+**Parameters:**
+
+| Parameter | Type | Default | Required | Purpose |
+|-----------|------|---------|----------|---------|
+| [`key::`](../param/06_key.md) | [`PathKey`](../type/09_path_key.md) | — | No | Specific path key for single-path mode |
+| [`format::`](../param/05_format.md) | [`OutputFormat`](../type/02_output_format.md) | text | No | Output format |
+| [`v::`](../param/04_v.md) | [`VerbosityLevel`](../type/01_verbosity_level.md) | 1 | No | Detail level: 0=plain paths only; 1=labeled (show-all mode only — single-key mode stays plain until v::2); 2=labeled+description |
+
+**`key::` values:**
+
+| Value | Path |
+|-------|------|
+| absent | Show all paths |
+| `settings` | `~/.claude/settings.json` |
+| `project_settings` | `<cwd>/.claude/settings.json` (nearest project config) |
+| `versions_dir` | `~/.local/share/claude/versions` |
+| `binary_symlink` | `~/.local/bin/claude` |
+| `version_history_cache` | `~/.claude/.transient/version_history_cache.json` |
+
+**Algorithm (show-all, 3 steps):**
+1. Resolve all 5 known paths via `ClaudeVersionPaths`.
+2. Text format: at v::0, drop any path that did not resolve (e.g., no project config found for `project_settings`); at v::1/v::2, keep it with a "(none found)" placeholder. JSON format: always includes all 5 keys, using `null` for any unresolved path, regardless of `v::`.
+3. Render the path table in requested format and verbosity.
+
+**Algorithm (single-path, 3 steps):**
+1. Validate `key::K` against the `PathKey` enum; exit 1 if unrecognized.
+2. Resolve the requested path via `ClaudeVersionPaths`.
+3. Render the single path (or placeholder, per verbosity) in requested format.
+
+**Examples:**
+
+```sh
+# Show all known clv-managed paths
+clv.version.paths
+
+# Single path for scripting
+clv.version.paths key::versions_dir v::0
+
+# Machine-readable output
+clv.version.paths format::json
+clv.version.paths key::settings format::json
+
+# Verbose output with descriptions
+clv.version.paths v::2
+```
+
+**Sample text output (v::1, `clv.version.paths`):**
+
+```
+settings:               /home/user/.claude/settings.json
+project_settings:       (none found)
+versions_dir:           /home/user/.local/share/claude/versions
+binary_symlink:         /home/user/.local/bin/claude
+version_history_cache:  /home/user/.claude/.transient/version_history_cache.json
+```
+
+**Sample text output (v::0, `clv.version.paths key::versions_dir`):**
+
+```
+/home/user/.local/share/claude/versions
+```
+
+**Sample text output (v::2, `clv.version.paths key::binary_symlink`):**
+
+```
+binary_symlink:  /home/user/.local/bin/claude
+  Hot-swap target; retargeted by .version.install to activate a version
+```
+
+### Referenced Formats
+
+| # | Format | Role |
+|---|--------|------|
+| 1 | [text](../format/01_text.md) | Default human-readable output |
+| 2 | [json](../format/02_json.md) | Machine-readable structured output |
+
+### Referenced Parameter Groups
+
+| # | Group | Membership | Excluded Params |
+|---|-------|-----------|----------------|
+| 1 | [Output Control](../param_group/01_output_control.md) | Partial | `count::` |
+
+### Referenced Parameters
+
+| # | Parameter |
+|---|-----------|
+| 1 | [`v::`](../param/04_v.md) |
+| 2 | [`format::`](../param/05_format.md) |
+| 3 | [`key::`](../param/06_key.md) |
+
+### Referenced Command Group
+
+Evaluated against `.runtime_files` under the strict [command_group](../command_group/readme.md) identity test (same routine function, same parameter set) — does not qualify. `paths_routine()` and `runtime_files_routine()` are separate functions with no call between them; `.version.paths` accepts 3 parameters (`key::, format::, v::`) while `.runtime_files` accepts none, so the parameter sets are not the same set differing only by default. See [`command_group/readme.md`](../command_group/readme.md) Evaluated, Not Qualifying for the full analysis.
+
+### Related Commands
+
+| # | Command | Relationship |
+|---|---------|-------------|
+| 1 | [`.runtime_files`](root.md#command-15-runtime_files) | Unlabeled, pipeline-only; reports only the version-history-cache path (a subset of `.version.paths`'s 5) |
+
+### Referenced User Stories
+
+| # | User Story | Persona |
+|---|-----------|---------|
+| 1 | [008 Path Discovery](../user_story/008_path_discovery.md) | Developer (path discovery and scripting) |
+
+---
+
+**Category:** paths
+**Complexity:** 6
+**API Requirement:** None
+**Idempotent:** Yes
+**Risk Level:** None (read-only)

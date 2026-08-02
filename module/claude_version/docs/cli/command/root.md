@@ -162,7 +162,7 @@ clv.runtime_files
 
 ### Referenced Command Group
 
-Evaluated against [`.paths`](paths.md#command-16-paths) under the strict [command_group](../command_group/readme.md) identity test — does not qualify. `runtime_files_routine()` shares no routine with `paths_routine()`; `.runtime_files` takes zero parameters while `.paths` takes 3 (`key::, format::, v::`), so the sets are not the same set differing only by default. See [`command_group/readme.md`](../command_group/readme.md) Evaluated, Not Qualifying for the full analysis.
+Evaluated against [`.version.paths`](version.md#command-16-versionpaths) under the strict [command_group](../command_group/readme.md) identity test — does not qualify. `runtime_files_routine()` shares no routine with `paths_routine()`; `.runtime_files` takes zero parameters while `.version.paths` takes 3 (`key::, format::, v::`), so the sets are not the same set differing only by default. See [`command_group/readme.md`](../command_group/readme.md) Evaluated, Not Qualifying for the full analysis.
 
 ### Related Commands
 

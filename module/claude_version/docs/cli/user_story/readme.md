@@ -33,4 +33,4 @@
 | [005_version_pinning.md](005_version_pinning.md) | 005 | Version Pinning | team lead | `.version.list`, `.version.install`, `.version.show`, `.version.guard` |
 | [006_config_management.md](006_config_management.md) | 006 | Config Management | developer | `.config` |
 | [007_params_inspection.md](007_params_inspection.md) | 007 | Params Inspection | developer | `.params` |
-| [008_path_discovery.md](008_path_discovery.md) | 008 | Path Discovery | developer | `.paths` |
+| [008_path_discovery.md](008_path_discovery.md) | 008 | Path Discovery | developer | `.version.paths` |

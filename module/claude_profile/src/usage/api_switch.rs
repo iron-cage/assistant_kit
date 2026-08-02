@@ -227,6 +227,7 @@ pub fn pre_switch_touch_ctx(
 /// performs no mutation, and returns the same `sonnet_left` comparison `apply_model_override` uses.
 /// `None` when `seven_day_sonnet` is absent — matches `apply_model_override`'s tier-absent branch,
 /// which writes "sonnet" conservatively but never emits a direction trace line.
+#[ cfg( any( test, feature = "testing" ) ) ]
 #[ allow( clippy::missing_inline_in_public_items, clippy::must_use_candidate ) ]
 pub fn model_override_direction( quota : &OauthUsageData ) -> Option< &'static str >
 {

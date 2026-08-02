@@ -18,7 +18,7 @@
 | 005_version_pinning.md | US- acceptance tests for team-wide version pinning | ✅ |
 | 006_config_management.md | US- acceptance tests for config inspection/modification via `.config` | ✅ |
 | 007_params_inspection.md | US- acceptance tests for param inspection via `.params` | ✅ |
-| 008_path_discovery.md | US- acceptance tests for path discovery via `.paths` | ✅ |
+| 008_path_discovery.md | US- acceptance tests for path discovery via `.version.paths` | ✅ |
 | procedure.md | Workflow for creating and updating user story test specs | ✅ |
 
 ### Navigation
@@ -30,7 +30,7 @@
 - [Version Pinning](005_version_pinning.md) -- team version alignment
 - [Config Management](006_config_management.md) -- `.config` read/write workflow
 - [Params Inspection](007_params_inspection.md) -- `.params` parameter catalog
-- [Path Discovery](008_path_discovery.md) -- `.paths` filesystem path discovery
+- [Path Discovery](008_path_discovery.md) -- `.version.paths` filesystem path discovery
 
 ### See Also
 

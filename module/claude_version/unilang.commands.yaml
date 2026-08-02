@@ -682,7 +682,7 @@
     - ".runtime_files"
   auto_help_enabled: true
 
-- name: ".paths"
+- name: ".version.paths"
   namespace: ""
   description: "Report filesystem paths clv reads from or writes to"
   hint: "Show clv's filesystem paths"
@@ -726,8 +726,8 @@
       tags: []
 
   examples:
-    - ".paths"
-    - ".paths key::settings"
-    - ".paths key::versions_dir format::json"
-    - ".paths key::binary_symlink v::2"
+    - ".version.paths"
+    - ".version.paths key::settings"
+    - ".version.paths key::versions_dir format::json"
+    - ".version.paths key::binary_symlink v::2"
   auto_help_enabled: true

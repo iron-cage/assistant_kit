@@ -59,7 +59,7 @@
 - [`.config`](command/13_config.md)
 - [`.params`](command/14_params.md)
 - [`.runtime_files`](command/15_runtime_files.md)
-- [`.paths`](command/16_paths.md)
+- [`.version.paths`](command/16_version_paths.md)
 
 ### Parameters
 - [`version::`](param/01_version.md)
