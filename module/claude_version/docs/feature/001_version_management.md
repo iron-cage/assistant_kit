@@ -21,14 +21,16 @@
 | Alias | Pinned Value | Description |
 |-------|-------------|-------------|
 | `latest` | *(installer resolves)* | Most recent published release |
-| `stable` | `2.1.78` | Pinned recommended release |
+| `stable` | `2.1.220` | Pinned recommended release |
 | `month` | `2.1.74` | ~1 month old release |
 
 Aliases are resolved to their semver before passing to the installer. `latest` is passed as-is.
 
 **Idempotency:** `.version.install` skips re-installation if the installed version already matches the resolved semver. The guard compares against the resolved semver, not the alias name. Override with `force::1`. The guard is always skipped for `latest` (always re-install to get newest).
 
-**Hot-swap:** When Claude Code processes are running during `.version.install`, the old binary is removed before installation begins. Running sessions keep their open file descriptor (Unix semantics) and continue unaffected. New sessions use the newly installed binary.
+**Hot-swap:** When Claude Code processes are running during `.version.install`, the old binary is moved aside (to a `.preinstall` sidecar) before installation begins and settled afterward: discarded on verified success, restored on install failure. Running sessions keep their open file descriptor (Unix semantics) and continue unaffected. New sessions use the newly installed binary.
+
+**Install outcome verification:** the installer's exit code is not trusted as success — the official bootstrap exits 0 even when it refuses to install (e.g. when update-disabling settings from a previous pinned install are still present: "Updates are disabled by your administrator"). `.version.install` lifts those settings-level locks before invoking the installer, then verifies the requested version is actually detectable afterward; only a verified outcome proceeds to purge and re-lock. On failure the command exits 2, the hot-swapped binary is restored, and the lock stays lifted so `.version.guard`/`.status` report the drift truthfully.
 
 **Preferred version persistence:** After every successful `.version.install` (including idempotent early-return), two keys are written to `settings.json`:
 - `preferredVersionSpec` — the alias or semver requested

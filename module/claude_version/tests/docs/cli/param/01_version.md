@@ -44,7 +44,7 @@ Edge case coverage for the `version::` parameter. See [param/readme.md](../../..
 
 **Total:** 16 edge cases
 
-**Behavioral Divergence Pair:** EC-10 (`version::stable dry::1` → output contains "2.1.78", exit 0) ↔ EC-11 (`version::month dry::1` → output contains "2.1.74", exit 0)
+**Behavioral Divergence Pair:** EC-10 (`version::stable dry::1` → output contains "2.1.220", exit 0) ↔ EC-11 (`version::month dry::1` → output contains "2.1.74", exit 0)
 
 ---
 

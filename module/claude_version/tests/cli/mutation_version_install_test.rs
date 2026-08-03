@@ -216,8 +216,10 @@ fn tc514_version_install_dry_latest_shows_new_lock_key_removal()
 // Prevention: Include leading-zero variants in version-spec negative test matrix.
 //
 // Pitfall: The installer accepts and attempts to download leading-zero versions,
-// then fails with 404.  By that time, hot_swap_binary has already deleted the
-// old binary, leaving the user without any installed version.
+// then fails with 404.  Historically hot_swap_binary had already deleted the
+// old binary by that point, leaving no installed version at all; since
+// Fix(BUG-016) the launcher is moved aside and restored on failure, but
+// rejecting the spec up front remains the first line of defense.
 #[ test ]
 fn tc354_version_install_leading_zeros_exits_1()
 {

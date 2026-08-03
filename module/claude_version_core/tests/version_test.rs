@@ -14,7 +14,8 @@
 //! - `validate_version_spec` rejects empty strings and unknown inputs
 //! - `resolve_version_spec` resolves each alias to a pinned value or `"latest"`
 //! - `VERSION_ALIASES` table has consistent structure and required entries
-//! - `purge_stale_versions` deletes stale binaries, keeps pinned target, ignores non-version files, and is safe on missing dir
+//! - `purge_stale_versions` deletes stale binaries, keeps pinned target, ignores non-version files, is safe on missing dir, and refuses to run when the keep target is absent (BUG-016)
+//! - `verify_install_outcome` gates purge/lock on the requested version actually being present after install (BUG-016)
 //!
 //! ## Test Matrix
 //!
@@ -39,7 +40,11 @@
 //! | `purge_stale_versions_noop_on_missing_dir`                 | no panic when directory does not exist |
 //! | `purge_stale_versions_noop_on_empty_dir`                   | empty dir: read_dir ok, iterator empty, no-op |
 //! | `purge_stale_versions_skips_subdirectories`                | subdir with version name survives (remove_file fails silently) |
-//! | `purge_stale_versions_deletes_all_stale_when_keep_not_present` | keep file absent: all version files deleted, non-version survives |
+//! | `purge_stale_versions_noop_when_keep_absent` | keep file absent: purge refuses to delete anything (BUG-016 reproducer) |
+//! | `verify_install_outcome_pinned_match_passes` | pinned: detected == requested → pass |
+//! | `verify_install_outcome_pinned_mismatch_fails` | pinned: detected != requested → fail |
+//! | `verify_install_outcome_none_fails_even_for_latest` | no binary detectable → fail for pinned and latest (BUG-016 reproducer) |
+//! | `verify_install_outcome_latest_accepts_any_version` | latest: any detected version passes |
 //! | `lock_version_pin_writes_all_five_keys` | T01: pin writes autoUpdates/autoUpdatesChannel/minimumVersion/env.DISABLE_AUTOUPDATER/env.DISABLE_UPDATES |
 //! | `lock_version_unpin_removes_all_five_keys` | T02: unpin resets/removes all 5 keys |
 //! | `lock_version_repin_updates_minimum_version` | T03: re-pin to a different version updates minimumVersion, not stale |
@@ -48,7 +53,7 @@
 
 use claude_version_core::version::{
   extract_semver, validate_version_spec, resolve_version_spec, VERSION_ALIASES,
-  purge_stale_versions, lock_version,
+  purge_stale_versions, lock_version, verify_install_outcome,
 };
 use claude_core::settings_io::get_setting;
 use claude_version_core::config_resolve::{ resolve, Layer };
@@ -216,8 +221,8 @@ fn purge_stale_versions_noop_on_missing_dir()
 #[test]
 fn purge_stale_versions_noop_on_empty_dir()
 {
-  // read_dir succeeds but iterator yields nothing — different code path
-  // from missing dir (where read_dir itself fails).
+  // The keep target can never exist in an empty directory, so the BUG-016
+  // keep-guard returns before read_dir is even consulted — still a silent no-op.
   let dir = tempfile::tempdir().unwrap();
   purge_stale_versions( dir.path().to_str().unwrap(), "2.1.78" );
   // No panic, no error — function is a silent no-op.
@@ -237,21 +242,82 @@ fn purge_stale_versions_skips_subdirectories()
   assert!(  p.join( "2.1.73" ).is_dir(), "subdirectory must survive purge" );
 }
 
+// BUG-016 — purge must be a no-op when the keep target is absent.
+//
+// Root Cause: `purge_stale_versions` deleted every version-named file even
+// when `keep` was not present in the directory — combined with an installer
+// that refused to install yet exited 0, this destroyed the only working
+// binary on the host.
+// Why Not Caught: this test's previous incarnation
+// (`purge_stale_versions_deletes_all_stale_when_keep_not_present`) asserted
+// the deletion as CORRECT behavior; no test asked whether a purge without its
+// keep target should run at all, so every green run reconfirmed the data-loss
+// path.
+// Fix Applied: early return in `purge_stale_versions` when `versions_dir/keep`
+// does not exist, before the deletion loop.
+// Prevention: a cleanup parameterized as "keep X" must first prove X exists;
+// otherwise "keep X" silently degrades into "delete everything".
+// Pitfall: a test can cement a bug — renaming and inverting the pinning test
+// is the fix here, not adding a parallel test beside it.
+// test_kind: bug_reproducer(BUG-016)
 #[test]
-fn purge_stale_versions_deletes_all_stale_when_keep_not_present()
+fn purge_stale_versions_noop_when_keep_absent()
 {
-  // If the keep target is not in the directory (e.g., install placed it
-  // elsewhere), all version-named files are still deleted. Non-version
-  // files survive.
   let dir = tempfile::tempdir().unwrap();
   let p   = dir.path();
   std::fs::write( p.join( "2.1.73" ), b"elf" ).unwrap();
   std::fs::write( p.join( "2.1.74" ), b"elf" ).unwrap();
   std::fs::write( p.join( "lock"   ), b"x"   ).unwrap();
   purge_stale_versions( p.to_str().unwrap(), "2.1.78" );
-  assert!( !p.join( "2.1.73" ).exists(), "stale 2.1.73 deleted" );
-  assert!( !p.join( "2.1.74" ).exists(), "stale 2.1.74 deleted" );
-  assert!(  p.join( "lock"   ).exists(), "non-version file survives" );
+  assert!( p.join( "2.1.73" ).exists(), "2.1.73 must survive: keep target absent, purge must not run" );
+  assert!( p.join( "2.1.74" ).exists(), "2.1.74 must survive: keep target absent, purge must not run" );
+  assert!( p.join( "lock"   ).exists(), "non-version file survives" );
+}
+
+// ─── verify_install_outcome ───────────────────────────────────────────────────
+
+#[test]
+fn verify_install_outcome_pinned_match_passes()
+{
+  assert!( verify_install_outcome( "2.1.220", false, Some( "2.1.220" ) ) );
+}
+
+#[test]
+fn verify_install_outcome_pinned_mismatch_fails()
+{
+  assert!( !verify_install_outcome( "2.1.220", false, Some( "2.1.197" ) ) );
+}
+
+// BUG-016 — the refusal shape: installer exits 0, nothing installed.
+//
+// Root Cause: perform_install() gated purge/lock solely on the installer's
+// exit code; the official bootstrap exits 0 even when it refuses to install
+// (e.g. update-disabling settings left by a previous pinned install), so the
+// purge ran with its keep target never written and deleted every cached
+// binary.
+// Why Not Caught: no seam existed between "installer exited" and "purge/lock
+// ran" — success had no definition beyond the exit code, so no test could
+// even express "exited 0 but did not install".
+// Fix Applied: verify_install_outcome() is that seam — pure and testable —
+// and perform_install() now requires it to pass before purge/lock run.
+// Prevention: any subprocess known to exit 0 on refusal gets independent
+// outcome verification before destructive follow-up steps.
+// Pitfall: an installer's "✅ done" banner and exit code describe the script
+// finishing, not the install happening.
+// test_kind: bug_reproducer(BUG-016)
+#[test]
+fn verify_install_outcome_none_fails_even_for_latest()
+{
+  assert!( !verify_install_outcome( "2.1.220", false, None ) );
+  assert!( !verify_install_outcome( "latest", true, None ) );
+}
+
+#[test]
+fn verify_install_outcome_latest_accepts_any_version()
+{
+  // The installer chooses the concrete semver for `latest`, so any detected
+  // version passes; safe because the latest path never purges.
+  assert!( verify_install_outcome( "latest", true, Some( "9.9.9" ) ) );
 }
 
 // ─── lock_version ─────────────────────────────────────────────────────────────

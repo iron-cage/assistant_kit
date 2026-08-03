@@ -104,7 +104,7 @@ fn ft005_3_last_param_wins()
 
 // ─── Covered by existing tests (reference only) ──────────────────────────────
 //
-// FT-1 (feature/001_version_management.md): tc301 (stable→2.1.78)
+// FT-1 (feature/001_version_management.md): tc301 (stable→2.1.220)
 // FT-2 (feature/001_version_management.md): tc309 (month→2.1.74)
 // FT-3 (feature/001_version_management.md): tc400 (guard defaults to stable)
 // FT-4 (feature/001_version_management.md): tc403 (guard latest→no pin)

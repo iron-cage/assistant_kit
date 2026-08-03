@@ -36,7 +36,7 @@ Type compliance and validation tests for `VersionSpec`. See [type/03_version_spe
 
 **Total:** 10 tests
 
-**Behavioral Divergence Pair:** TC-1 (`version::stable dry::1` → output contains "2.1.78") ↔ TC-2 (`version::month dry::1` → output contains "2.1.74")
+**Behavioral Divergence Pair:** TC-1 (`version::stable dry::1` → output contains "2.1.220") ↔ TC-2 (`version::month dry::1` → output contains "2.1.74")
 
 ---
 
@@ -44,7 +44,7 @@ Type compliance and validation tests for `VersionSpec`. See [type/03_version_spe
 
 - **Given:** clean environment
 - **When:** `clv .version.install version::stable dry::1`
-- **Then:** exit 0; output contains "2.1.78" (stable pinned value); `[dry-run]` prefix present
+- **Then:** exit 0; output contains "2.1.220" (stable pinned value); `[dry-run]` prefix present
 - **Exit:** 0
 - **Source:** [type/03_version_spec.md — Named Aliases: stable](../../../../docs/cli/type/03_version_spec.md)
 
@@ -84,7 +84,7 @@ Type compliance and validation tests for `VersionSpec`. See [type/03_version_spe
 
 - **Given:** clean environment
 - **When:** `clv .version.install dry::1` (no `version::` parameter)
-- **Then:** output contains "stable" or "2.1.78" (stable default applied)
+- **Then:** output contains "stable" or "2.1.220" (stable default applied)
 - **Exit:** 0
 - **Source:** [type/03_version_spec.md — Default: stable](../../../../docs/cli/type/03_version_spec.md)
 

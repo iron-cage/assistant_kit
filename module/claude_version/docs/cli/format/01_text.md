@@ -23,7 +23,7 @@ Output fields differ per command. Common patterns:
 | Version string | `version: 2.1.78` |
 | PID list | `pid: 4821` (one per line) |
 | Key-value setting | `theme: dark` |
-| Named alias table | `stable   2.1.78` |
+| Named alias table | `stable   2.1.220` |
 | Status summary | `version: 2.1.78  sessions: 2  account: alice` |
 
 ### Referenced Commands

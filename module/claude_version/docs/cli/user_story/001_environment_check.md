@@ -45,7 +45,7 @@
 
 ```bash
 clv .status
-# Version:   2.1.78
+# Version:   2.1.220
 # Processes: 2
 # Account:   user@example.com
 ```
@@ -54,15 +54,15 @@ clv .status
 
 ```bash
 clv .status format::json
-# {"version":"2.1.78","processes":2,"account":"user@example.com","preferred":{"spec":"stable","resolved":"2.1.78"}}
+# {"version":"2.1.220","processes":2,"account":"user@example.com","preferred":{"spec":"stable","resolved":"2.1.220"}}
 ```
 
 **Step 3 — Show additional diagnostic context:**
 
 ```bash
 clv .status v::2
-# Version:   2.1.78
+# Version:   2.1.220
 # Processes: 2
 # Account:   user@example.com
-# Preferred: stable (v2.1.78)  (settings.json → preferredVersionSpec)
+# Preferred: stable (v2.1.220)  (settings.json → preferredVersionSpec)
 ```

@@ -26,15 +26,15 @@ A symlink (not a regular file) pointing at a binary inside `~/.local/share/claud
 ### Owner
 
 `module/claude_version_core/src/version.rs`:
-- `hot_swap_binary()` (line 179) retargets the symlink to point at a specific version's binary.
-- `get_version_from_symlink()` (line 78) reads the current symlink target to determine the active version.
+- `hot_swap_binary()` moves the symlink aside (to `~/.local/bin/claude.preinstall`) so the installer can lay down a fresh one; `restore_swapped_binary()` settles the sidecar afterward — restored on install failure, discarded on verified success (BUG-016).
+- `get_version_from_symlink()` reads the current symlink target to determine the active version.
 
 ### Lifecycle
 
-- **Created/retargeted:** On every successful `.version.install` or hot-swap operation, via `hot_swap_binary()`.
+- **Created/retargeted:** by the official installer during `.version.install`; when Claude Code processes are running, `hot_swap_binary()` first moves the existing symlink aside so the installer's write is clean.
 - **Read:** On `.status`, `.version.show`, and other commands that report the active version, via `get_version_from_symlink()`.
 - **Externally retargeted:** The Claude Code auto-updater can also retarget this symlink outside of clv's control — see `pitfall/002_symlink_retarget.md` for the resulting bypass vector.
-- **Never deleted by clv:** clv only retargets the symlink; it does not remove it.
+- **Moved aside during install, never left deleted (BUG-016):** during `.version.install`, clv renames the symlink to a `.preinstall` sidecar and either restores it (failed install) or deletes the sidecar (verified success) — a failed install no longer strands the host without a launcher.
 
 ### Durability
 

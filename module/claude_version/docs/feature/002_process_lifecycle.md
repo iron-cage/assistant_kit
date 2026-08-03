@@ -25,7 +25,7 @@
 
 Signal delivery uses `Command::new("kill")` (no `libc`, enforced by `unsafe-code = "deny"` workspace lint).
 
-**Kill isolation invariant:** Kill signals are delivered only when a user explicitly invokes `.processes.kill`. The `.version.guard` and `.version.install` flows interact with running processes exclusively via `hot_swap_binary()` (unlink of the binary path), which allows running sessions to continue from their open file descriptor. No automatic path — guard, install, daemon, or interval-watch mode — ever reaches `send_kill_signals()` or any `libc::kill` call.
+**Kill isolation invariant:** Kill signals are delivered only when a user explicitly invokes `.processes.kill`. The `.version.guard` and `.version.install` flows interact with running processes exclusively via `hot_swap_binary()` (moving the binary path aside), which allows running sessions to continue from their open file descriptor. No automatic path — guard, install, daemon, or interval-watch mode — ever reaches `send_kill_signals()` or any `libc::kill` call.
 
 **Post-kill verification:** After the kill sequence completes, the process list is re-scanned. Any surviving processes cause exit code 2. This verification applies to both normal and force kill modes.
 

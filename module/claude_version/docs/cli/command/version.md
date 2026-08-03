@@ -91,7 +91,7 @@ clv.version.show format::json
 Download and install a Claude Code version via the official installer (curl). Supports hot-swap and 8-layer version locking (Layers 1–4, 6, and 8 prevent unwanted version changes via auto-update, manual update, or channel drift; Layer 5 stores the preferred version as a recovery signal for `.version.guard`; Layer 7 enforces a minimum-version floor). Accepts named aliases (`stable`, `latest`, `month`) and semver strings. Already-at-target is a no-op (exit 0) unless `force::1` is set. `record_only::1` persists the resolved preference to `settings.json` without invoking the installer at all — see Algorithm below.
 
 -- **Parameters:** version::, dry::, force::, record_only::, v::, format::
--- **Exit Codes:** 0 (success) | 1 (invalid version spec, or `record_only::1`+`dry::1` both set) | 2 (installer failure)
+-- **Exit Codes:** 0 (success) | 1 (invalid version spec, or `record_only::1`+`dry::1` both set) | 2 (installer failure, or installer exited 0 without the requested version actually being installed — BUG-016)
 
 **Syntax:**
 
@@ -115,8 +115,8 @@ clv.version.install [version::VER] [dry::1] [force::1] [record_only::1] [v::N] [
 1. Resolve `version::` alias (`stable`, `latest`, `month`) or validate the semver string against known patterns.
 2. Compare resolved target against installed version; exit 0 (no-op) if equal and `force::0` — the preferred version is still stored on this path.
 3. Store the preferred version spec and resolved value in `settings.json`. Recorded before the lock mechanism is applied (step 6) so that a crash partway through install leaves a true, not false, mismatch signal in `.status`'s `Lock:` section — see `tests/docs/cli/command/02_status.md` IT-24–IT-27 and TC-530.
-4. Hot-swap the running binary if any Claude Code process is active, then unlock the versions directory so the installer can write to it.
-5. Execute the official curl installer for the resolved version; purge stale cached binaries afterward for pinned installs (skipped for `latest`, so version history remains available for rollback).
+4. Lift the settings-level update locks left by any previous pinned install (`autoUpdates`, `env.DISABLE_AUTOUPDATER`, `env.DISABLE_UPDATES`, `minimumVersion`) — the official installer honors them and would otherwise refuse while still exiting 0 (BUG-016). Hot-swap the running binary if any Claude Code process is active (moved aside to a `.preinstall` sidecar, restored if the install fails), then unlock the versions directory so the installer can write to it.
+5. Execute the official curl installer for the resolved version, then verify the outcome: the requested version must actually be detectable afterward — the installer's exit code alone is not trusted (BUG-016). On verification failure the command exits 2 and the purge/lock steps never run. On verified success, purge stale cached binaries for pinned installs (the purge itself refuses to run if the kept version file is absent; skipped entirely for `latest`, so version history remains available for rollback).
 6. Apply the lock mechanism for pinned installs — `autoUpdates`, `autoUpdatesChannel`, `minimumVersion`, `env.DISABLE_AUTOUPDATER`, `env.DISABLE_UPDATES`, and `chmod 555` on the versions directory — or leave unlocked (`autoUpdates` true, the other 4 keys removed, `chmod 755`) for `latest`.
 
 `record_only::1` short-circuits between steps 1 and 2: after resolving the version

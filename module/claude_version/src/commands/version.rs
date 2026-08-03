@@ -185,10 +185,18 @@ fn install_dry_content(
     }
     OutputFormat::Text =>
     {
+      // Fix(BUG-016): preview the settings-unlock and outcome-verification
+      // steps `perform_install()` now performs, per the output-parity
+      // requirement in docs/feature/004_dry_run.md.
+      // Root cause: the real install gained steps the preview did not mention.
+      // Pitfall: the `latest` branch must never contain the word "purge"
+      // (TC-360 asserts its absence — Layer 4 is pinned-only).
       if is_latest
       {
         format!(
           "[dry-run] would install {label}\n\
+           [dry-run] would lift settings update-locks before install\n\
+           [dry-run] would verify install outcome before applying changes\n\
            [dry-run] would set autoUpdates = {auto_label}\n\
            [dry-run] would remove env.DISABLE_AUTOUPDATER\n\
            [dry-run] would remove env.DISABLE_UPDATES\n\
@@ -202,6 +210,8 @@ fn install_dry_content(
       {
         format!(
           "[dry-run] would install {label}\n\
+           [dry-run] would lift settings update-locks before install\n\
+           [dry-run] would verify installed version = {resolved} before locking\n\
            [dry-run] would set autoUpdates = {auto_label}\n\
            [dry-run] would set env.DISABLE_AUTOUPDATER = 1\n\
            [dry-run] would set env.DISABLE_UPDATES = 1\n\

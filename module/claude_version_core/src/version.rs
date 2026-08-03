@@ -14,14 +14,23 @@ const INSTALL_URL : &str = "https://claude.ai/install.sh";
 
 // ── Version alias table ───────────────────────────────────────────────────────
 //
-// Maintenance: when bumping `month` (or any pinned alias value), update ALL
-// six locations atomically — a partial update silently breaks test assertions:
+// Maintenance: when bumping `stable`/`month` (or any pinned alias value),
+// grep the repo for the old literal (e.g. `2\.1\.78`) and update every
+// genuine hit — a partial update silently breaks doc/test consistency.
+// Known locations as of the 2.1.220 bump:
 //   1. module/claude_version_core/src/version.rs — this table (the canonical source)
-//   2. spec.md                  — FR table (§ Version Aliases)
-//   3. tests/integration/mutation_commands_test.rs — TC-309 + TC-410 assertions
-//   4. docs/cli/types.md        — alias resolution table
-//   5. docs/cli/workflows.md    — monthly baseline workflow examples (7 refs)
-//   6. docs/cli/testing/command/version_guard.md — TC-410 spec (3 refs)
+//   2. module/claude_version/docs/feature/001_version_management.md — alias table
+//   3. module/claude_version/docs/cli/user_story/001_environment_check.md — example walkthrough transcript
+//   4. module/claude_version/docs/cli/type/03_version_spec.md — named alias resolution table
+//   5. module/claude_version/docs/cli/format/01_text.md — named alias table format example
+//   6. module/claude_version/tests/docs/cli/type/03_version_spec.md — TC-1 test-planning spec
+//   7. module/claude_version/tests/docs/cli/param/01_version.md — EC-10 test-planning spec
+//   8. module/claude_version/tests/docs/feature/001_version_management.md — FT-1 test-planning spec
+//   9. module/claude_version/tests/cli/feature_surface_test.rs — FT-1 cross-reference comment
+// Not every file containing the literal string needs updating — most Rust
+// test fixtures use it as arbitrary-but-consistent fixture data (lock-state
+// drift detection, verbosity rendering) decoupled from this table, or derive
+// their expected value programmatically from VERSION_ALIASES itself.
 
 /// A named version alias that resolves to a specific semver or the literal `"latest"`.
 #[ derive( Debug ) ]
@@ -38,7 +47,7 @@ pub struct VersionAlias
 /// All known version aliases in display order.
 pub const VERSION_ALIASES : &[ VersionAlias ] = &[
   VersionAlias { name : "latest", value : "",       description : "Most recent published release" },
-  VersionAlias { name : "stable", value : "2.1.78", description : "Pinned stable release (recommended)" },
+  VersionAlias { name : "stable", value : "2.1.220", description : "Pinned stable release (recommended)" },
   VersionAlias { name : "month",  value : "2.1.74", description : "~1 month old release for stability" },
 ];
 
@@ -323,9 +332,24 @@ pub fn validate_version_spec( spec : &str ) -> Result< (), CoreError >
 
 // ── Installation helpers ──────────────────────────────────────────────────────
 
-/// Remove the existing `claude` binary so a new install replaces it cleanly.
+/// Move the existing `claude` binary aside so a new install replaces it cleanly.
+///
+/// The binary is renamed to a `.preinstall` sidecar rather than deleted, so a
+/// failed install can put it back. Returns the original binary path when a
+/// swap-out occurred; the caller settles the sidecar's fate afterward via
+/// `restore_swapped_binary()` (restore on failure, discard on success).
+/// Renaming preserves the inode, so running sessions are exactly as unaffected
+/// as they were by deletion (Unix open-file semantics).
+///
+/// Fix(BUG-016): rename aside instead of deleting outright.
+/// Root cause: `remove_file` here was irreversible — when the installer later
+/// refused to install (while still exiting 0), the launcher was already gone
+/// and nothing restored it.
+/// Pitfall: a destructive preparation step must stay reversible until the
+/// outcome it prepares for is confirmed.
 #[ inline ]
-pub fn hot_swap_binary()
+#[ must_use ]
+pub fn hot_swap_binary() -> Option< String >
 {
   eprintln!( "hot_swap_binary()" );
   let claude_path = std::process::Command::new( "which" )
@@ -340,7 +364,39 @@ pub fn hot_swap_binary()
 
   if std::path::Path::new( &claude_path ).exists()
   {
+    let backup = format!( "{claude_path}.preinstall" );
+    if std::fs::rename( &claude_path, &backup ).is_ok()
+    {
+      return Some( claude_path );
+    }
+    // Rename failed — fall back to plain removal so the installer can still
+    // write the new binary; there is nothing recoverable to return.
     let _ = std::fs::remove_file( &claude_path );
+  }
+  None
+}
+
+/// Settle the fate of a binary moved aside by `hot_swap_binary()`.
+///
+/// If the install wrote a fresh binary at `original`, the `.preinstall`
+/// sidecar is deleted; otherwise the sidecar is renamed back into place.
+/// Uses `symlink_metadata` (not `exists`) so a dangling symlink — the normal
+/// shape of the launcher whenever the versions directory changed underneath
+/// it — still counts as present.
+fn restore_swapped_binary( original : &str )
+{
+  let backup = format!( "{original}.preinstall" );
+  if std::fs::symlink_metadata( &backup ).is_err()
+  {
+    return;
+  }
+  if std::fs::symlink_metadata( original ).is_ok()
+  {
+    let _ = std::fs::remove_file( &backup );
+  }
+  else
+  {
+    let _ = std::fs::rename( &backup, original );
   }
 }
 
@@ -459,10 +515,23 @@ pub fn version_history_cache_path() -> String
 /// Called from `perform_install()` before `lock_version()` for pinned installs.
 /// The `versions_dir` parameter is explicit (not read from `HOME`) to allow
 /// test isolation without `std::env::set_var`, which is not thread-safe.
+///
+/// No-op when `versions_dir/keep` itself does not exist: a purge that cannot
+/// prove its keep target is actually present must not delete anything.
 #[ inline ]
 pub fn purge_stale_versions( versions_dir : &str, keep : &str )
 {
   eprintln!( "purge_stale_versions(versions_dir={versions_dir:?}, keep={keep:?})" );
+  // Fix(BUG-016): refuse to purge when the keep target is absent.
+  // Root cause: with the keep file never written (installer refused but exited
+  // 0), this loop deleted every cached version — including the only working
+  // binary the running sessions were started from.
+  // Pitfall: a cleanup that "keeps" something must first prove the kept thing
+  // exists; otherwise "keep X" degrades silently into "delete everything".
+  if !std::path::Path::new( versions_dir ).join( keep ).exists()
+  {
+    return;
+  }
   let Ok( entries ) = std::fs::read_dir( versions_dir ) else { return; };
   for entry in entries.flatten()
   {
@@ -538,27 +607,91 @@ pub fn lock_version( is_latest : bool, resolved : &str )
   }
 }
 
-/// Execute the install sequence: hot-swap → unlock → curl → purge → lock.
+/// Lift the settings-level update locks so the official installer can run.
+///
+/// The installer bootstrap honors update-disabling keys from Claude's own
+/// `settings.json` (`env.DISABLE_AUTOUPDATER`, `env.DISABLE_UPDATES`,
+/// `autoUpdates`, `minimumVersion`). Left in place from a PREVIOUS pinned
+/// install, they make it refuse with "Updates are disabled by your
+/// administrator" while still exiting 0. `lock_version()` re-applies the lock
+/// after the outcome is verified; on failure the lock stays lifted, which is
+/// the truthful state (`.version.guard` / `.status` then report drift).
+///
+/// Private helper — not one of the 10 traced public mutating functions
+/// (see `docs/pattern/002_parameter_trace.md`; private helpers are exempt).
+fn unlock_settings_for_install()
+{
+  if let Some( paths ) = ClaudePaths::new()
+  {
+    let settings_file = paths.settings_file();
+    let _ = set_setting( &settings_file, "autoUpdates", "true" );
+    let _ = remove_env_var( &settings_file, "DISABLE_AUTOUPDATER" );
+    let _ = remove_env_var( &settings_file, "DISABLE_UPDATES" );
+    let _ = remove_setting( &settings_file, "minimumVersion" );
+  }
+}
+
+/// Decide whether an installer run actually produced the requested outcome.
+///
+/// Pure decision function: `installed` is the version detected AFTER the
+/// installer ran (`None` when no binary is detectable at all). The official
+/// bootstrap can refuse to install while still exiting 0, so the exit code
+/// alone is never evidence of success — this check is what gates the
+/// destructive follow-ups (purge, lock) in `perform_install()`.
+///
+/// For pinned installs the detected version must equal `resolved` exactly.
+/// For `latest` any detectable version passes — the installer chooses the
+/// concrete semver, so a silent refusal that leaves a pre-existing binary in
+/// place is indistinguishable here; that is acceptable because the `latest`
+/// path never purges and so cannot destroy anything on a false pass.
+#[ inline ]
+#[ must_use ]
+pub fn verify_install_outcome( resolved : &str, is_latest : bool, installed : Option< &str > ) -> bool
+{
+  installed.is_some_and( | v | is_latest || v == resolved )
+}
+
+/// Execute the install sequence: settings-unlock → hot-swap → dir-unlock →
+/// curl → verify → purge → lock.
+///
+/// The installer's exit code alone is NOT trusted: the official bootstrap can
+/// refuse to install (e.g. "Updates are disabled by your administrator", from
+/// update-disabling keys in `settings.json`) while still exiting 0. The
+/// outcome is confirmed via `verify_install_outcome()` before any destructive
+/// follow-up (purge, lock) runs; on any failure the hot-swapped launcher is
+/// restored and the settings-level lock is left lifted so `.version.guard` /
+/// `.status` report the drift truthfully instead of re-asserting a lock over
+/// a version that was never installed.
 ///
 /// For pinned versions (`!is_latest`), `purge_stale_versions` runs after the
-/// curl install and BEFORE `lock_version` (which applies chmod 555). Purging
-/// after chmod 555 would silently fail. Purge is skipped for `latest` so the
-/// cached version history remains available for rollback.
+/// verified install and BEFORE `lock_version` (which applies chmod 555).
+/// Purging after chmod 555 would silently fail. Purge is skipped for `latest`
+/// so the cached version history remains available for rollback.
 ///
 /// `resolved` is the semver string or `"latest"`. `is_latest` controls
 /// whether auto-updates are enabled and the versions dir is left unlocked.
 ///
 /// # Errors
 ///
-/// Returns [`CoreError::ProcessError`] if the installer script fails.
+/// Returns [`CoreError::ProcessError`] if the installer script fails to run or
+/// exits non-zero, or if it exits 0 without the requested version actually
+/// being installed.
 #[ inline ]
 pub fn perform_install( resolved : &str, is_latest : bool ) -> Result< (), CoreError >
 {
   eprintln!( "perform_install(resolved={resolved:?}, is_latest={is_latest})" );
-  if !find_claude_processes().is_empty()
-  {
-    hot_swap_binary();
-  }
+
+  // Fix(BUG-016): lift the settings-level update locks before invoking the
+  // installer, not only the versions-dir chmod.
+  // Root cause: env.DISABLE_AUTOUPDATER / env.DISABLE_UPDATES / autoUpdates /
+  // minimumVersion persisted by the PREVIOUS pinned install made the official
+  // bootstrap refuse ("Updates are disabled by your administrator") while
+  // still exiting 0 — the lock blocked its own re-install path.
+  // Pitfall: every lock layer that can block the installer must be lifted
+  // pre-install and re-applied only after a verified outcome.
+  unlock_settings_for_install();
+
+  let swapped = if find_claude_processes().is_empty() { None } else { hot_swap_binary() };
 
   unlock_versions_dir();
 
@@ -571,15 +704,59 @@ pub fn perform_install( resolved : &str, is_latest : bool ) -> Result< (), CoreE
     format!( "curl -fsSL {INSTALL_URL} | bash -s -- {resolved}" )
   };
 
+  // Fix(BUG-016): strip inherited update-disabling env vars instead of
+  // injecting DISABLE_AUTOUPDATER=1 into the installer.
+  // Root cause: the injected flag (meant to stop the bootstrap self-updating
+  // mid-install) is one of the flags that make it refuse the requested install
+  // outright — and both flags also arrive inherited when run from a Claude
+  // session shell.
+  // Pitfall: a flag that suppresses a tool's self-update can suppress the very
+  // operation being requested; post-install `lock_version()` already provides
+  // the durable update block.
   let status = std::process::Command::new( "bash" )
   .args( [ "-c", &shell_cmd ] )
-  .env( "DISABLE_AUTOUPDATER", "1" )
-  .status()
-  .map_err( | e | CoreError::ProcessError( format!( "failed to run installer: {e}" ) ) )?;
+  .env_remove( "DISABLE_AUTOUPDATER" )
+  .env_remove( "DISABLE_UPDATES" )
+  .status();
 
-  if !status.success()
+  let status = match status
   {
-    return Err( CoreError::ProcessError( "install failed".to_string() ) );
+    Ok( s ) => s,
+    Err( e ) =>
+    {
+      if let Some( original ) = &swapped { restore_swapped_binary( original ); }
+      return Err( CoreError::ProcessError( format!( "failed to run installer: {e}" ) ) );
+    }
+  };
+
+  // Fix(BUG-016): verify the outcome — the exit code alone is not evidence.
+  // Root cause: `status.success()` was the sole gate before purge/lock; the
+  // bootstrap exits 0 even when it refuses to install, so the purge ran with
+  // its keep target never written and deleted every cached binary.
+  // Pitfall: never let destructive cleanup key off a subprocess exit code when
+  // that subprocess is known to exit 0 on refusal.
+  let installed = get_installed_version();
+  let ok = status.success() && verify_install_outcome( resolved, is_latest, installed.as_deref() );
+
+  // Settle the hot-swap sidecar either way: restore the old launcher on
+  // failure, discard the sidecar after a verified success.
+  if let Some( original ) = &swapped { restore_swapped_binary( original ); }
+
+  if !ok
+  {
+    let msg = if status.success()
+    {
+      match installed.as_deref()
+      {
+        None => format!( "install failed: installer exited 0 but did not install the requested {resolved} (no claude binary detectable) — check for update-disabling settings or environment" ),
+        Some( v ) => format!( "install failed: installer exited 0 but installed version is {v}, not the requested {resolved}" ),
+      }
+    }
+    else
+    {
+      "install failed".to_string()
+    };
+    return Err( CoreError::ProcessError( msg ) );
   }
 
   if !is_latest

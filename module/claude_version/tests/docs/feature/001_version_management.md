@@ -13,7 +13,7 @@ Feature test surface for version management. See [feature/001_version_management
 
 Two valid version aliases produce distinct output:
 
-- **Input A:** `clv .version.install version::stable dry::1` → output contains `"2.1.78"` (pinned stable semver)
+- **Input A:** `clv .version.install version::stable dry::1` → output contains `"2.1.220"` (pinned stable semver)
 - **Input B:** `clv .version.install version::month dry::1` → output contains `"2.1.74"` (pinned month semver)
 
 Both are valid invocations; the resolved semver strings differ.
@@ -22,7 +22,7 @@ Both are valid invocations; the resolved semver strings differ.
 
 | ID | Test Name | Category |
 |----|-----------|----------|
-| FT-1 | `version::stable dry::1` → output contains pinned semver `2.1.78` | Alias Resolution |
+| FT-1 | `version::stable dry::1` → output contains pinned semver `2.1.220` | Alias Resolution |
 | FT-2 | `version::month dry::1` → output contains pinned semver `2.1.74` | Alias Resolution |
 | FT-3 | Guard with no preference stored → defaults to `stable` | Guard Default |
 | FT-4 | Guard with `version::latest` preference → skips pin, shows "no version pin" | Guard Latest |
@@ -41,11 +41,11 @@ Both are valid invocations; the resolved semver strings differ.
 
 ---
 
-### FT-1: `version::stable dry::1` → output contains pinned semver `2.1.78`
+### FT-1: `version::stable dry::1` → output contains pinned semver `2.1.220`
 
 - **Given:** clean environment, no settings file
 - **When:** `clv .version.install version::stable dry::1`
-- **Then:** stdout contains `"2.1.78"`; exit 0
+- **Then:** stdout contains `"2.1.220"`; exit 0
 - **Exit:** 0
 - **Source:** [feature/001_version_management.md — Version aliases](../../../docs/feature/001_version_management.md)
 

@@ -19,7 +19,7 @@ zeros are rejected.
 
 | Alias | Resolution |
 |-------|-----------|
-| `stable` | Pinned stable release (2.1.78) |
+| `stable` | Pinned stable release (2.1.220) |
 | `month`  | ~1 month old release for stability (2.1.74) |
 | `latest` | Latest available release |
 
