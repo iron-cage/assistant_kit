@@ -100,6 +100,15 @@ pub( super ) fn run_isolated_command
   do_strip_fences   : bool,                     // strip markdown code fences from stdout before output
   output_style      : Option< &str >,           // e.g. "summary" — post-processes stdout before printing
   summary_fields    : Option< &str >,           // field list forwarded to summary rendering
+  no_effort_max     : bool,                     // suppresses the injected --effort flag entirely
+  system_prompt         : Option< &str >,       // injected as --system-prompt <value> when Some
+  append_system_prompt  : Option< &str >,       // injected as --append-system-prompt <value> when Some
+  json_schema           : Option< &str >,       // injected as --json-schema <value> when Some
+  mcp_config            : &[ String ],          // injected as repeated --mcp-config <value> pairs
+  allowed_tools         : Option< &str >,       // injected as --allowed-tools <value> when Some
+  disallowed_tools      : Option< &str >,       // injected as --disallowed-tools <value> when Some
+  max_budget_usd        : Option< &str >,       // injected as --max-budget-usd <value> when Some
+  max_turns             : Option< &str >,       // injected as --max-turns <value> when Some
 ) -> !
 {
   let compact_window : Option< u32 > = if no_compact_window { None } else { Some( DEFAULT_COMPACT_WINDOW ) };

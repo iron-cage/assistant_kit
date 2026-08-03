@@ -21,7 +21,7 @@
 | Exit Code | Class | Condition | Source |
 |-----------|-------|-----------|--------|
 | 0 | Success | Subprocess exited 0; expect validation passed (if set) | subprocess |
-| 1 | Runner Error | Binary not found, spawn OS error, session gate timed out, output file write failed | `execution.rs`, `gate.rs` |
+| 1 | Runner Error | Binary not found, spawn OS error, session gate timed out or unavailable (`/proc` unreadable), output file write failed | `execution.rs`, `gate.rs` |
 | 2 | Transient / Account | Subprocess rate-limited (exit 2, no text); or quota exhausted (exit 2 + text) | subprocess |
 | 3 | Validation | `--expect` pattern not matched within `--retry-on-validation` count | `execution.rs apply_expect_validation()` |
 | 4 | Timeout | CLR timeout watchdog killed subprocess after `--timeout` seconds | `execution.rs poll_timeout()` |
@@ -37,7 +37,7 @@
 
 **Rule 1 — Exit 0 means success:** `clr` exits 0 only when the subprocess exits 0 AND all post-processing steps (expect validation, output file write) succeed.
 
-**Rule 2 — Exit 1 means runner error:** Exit 1 is reserved for CLR-layer failures that occur before or after subprocess execution (binary not found, spawn error, gate timeout, output file write error). Subprocess output is not consulted.
+**Rule 2 — Exit 1 means runner error:** Exit 1 is reserved for CLR-layer failures that occur before or after subprocess execution (binary not found, spawn error, gate timeout or unavailable, output file write error). Subprocess output is not consulted.
 
 **Rule 3 — Exit 2 is subprocess-only:** Exit 2 is reserved for subprocess rate-limiting and quota exhaustion. Scripts disambiguate via output text: presence of `"You've hit your limit"` identifies quota exhaustion (Account class); absence of that text identifies a transient rate limit (Transient class).
 
@@ -67,7 +67,7 @@ Callers check for `"You've hit your limit"` in stdout/stderr to distinguish quot
 Four source components collaborate to enforce this contract:
 
 1. **`cli/execution.rs`** — `poll_timeout()` issues exit 4; `write_output_file()` issues exit 1 on write error; `apply_expect_validation()` issues exit 3 on expect mismatch; `spawn_error_msg()` issues exit 1 on spawn failure.
-2. **`cli/gate.rs`** — Session gate timeout issues exit 1 via the gate handler.
+2. **`cli/gate.rs`** — Session gate timeout, or gate unavailability (`/proc` unreadable, `GateUnavailable`), issues exit 1 via the gate handler.
 3. **`claude_runner_core/src/types.rs`** — `ErrorKind` enum and `classify_error()` map subprocess output to error classes (`RateLimit` → exit 2, `QuotaExhausted` → exit 2); unknown exit codes relay unchanged.
 4. **`claude_runner_core/src/exit_code.rs`** — `signal_exit_code(n)` computes `128 + n` for signal-killed subprocesses.
 

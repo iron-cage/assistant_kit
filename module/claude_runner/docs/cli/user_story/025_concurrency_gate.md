@@ -1,7 +1,7 @@
 # Gate new invocations when concurrent session limit is reached
 
 **Persona:** Developer or CI system that runs multiple automated `clr` invocations in parallel and needs to avoid hitting Claude API rate limits caused by too many concurrent sessions.
-**Goal:** Limit the number of concurrent non-interactive Claude Code sessions so that new `clr` invocations wait when the system already has `--max-sessions` active non-interactive sessions, reducing rate limit errors from parallel pipelines. Interactive invocations are never subject to this gate.
+**Goal:** Limit the number of concurrent non-interactive Claude Code sessions across `run`, `ask`, and `isolated` so that new `clr` invocations wait when the system already has `--max-sessions` active non-interactive sessions, reducing rate limit errors from parallel pipelines. Interactive invocations are never subject to this gate.
 **Benefit:** Prevents rate-limit errors from parallel automation by serializing new invocations when the session limit is reached.
 **Priority:** Medium
 
@@ -15,11 +15,13 @@
 - AC-006: In `--dry-run` mode, the gate is not triggered; the command preview is produced immediately
 - AC-007: Interactive invocations are never gated — they proceed immediately regardless of `--max-sessions` or the number of active sessions
 - AC-008: The active session count used for gating counts only non-interactive (print-mode) Claude processes; interactive sessions are excluded from the count
-- AC-009: `CLR_GATE_POLL_SECS`/`CLR_GATE_MAX_ATTEMPTS` override the gate's poll interval (default 30s) and attempt limit (default 1000) with no corresponding CLI flag or JSON key; invalid values silently fall back to the default
+- AC-009: For `run`/`ask`, `--gate-poll-secs`/`--gate-max-attempts`/`--gate-stale-secs` (equivalently `CLR_GATE_POLL_SECS`/`CLR_GATE_MAX_ATTEMPTS`/`CLR_GATE_STALE_SECS`, a `"gate-poll-secs"`/`"gate-max-attempts"`/`"gate-stale-secs"` JSON key, or a `gate_poll_secs`/`gate_max_attempts`/`gate_stale_secs` config-file key) override the gate's poll interval (default 30s), attempt limit (default 1000), and staleness reclaim threshold (default unset); invalid values silently fall back to the default. For `isolated`, these 3 knobs remain env-var-only — no CLI flag, JSON key, or config-file tier.
 - AC-010: `clr` sleeps between attempts but not after the final attempt, so an `N`-attempt sequence elapses `(N-1) * poll_secs` seconds before the gate-exhaustion path fires
 - AC-011: `--timeout` does not bound gate-wait duration — the gate's poll/attempt ceiling
   (`CLR_GATE_POLL_SECS`/`CLR_GATE_MAX_ATTEMPTS`, default ~8.3h) is fully independent of
   whatever `--timeout` value is set; see [036_timeout.md](../param/036_timeout.md)
+- AC-012: `clr isolated` is gated by `--max-sessions` through the same mechanism as `run`/`ask` (CLI flag + `CLR_MAX_SESSIONS` env var only — no JSON/config tier); `--dry-run` bypasses the gate for `isolated` exactly as it does for `run`/`ask`
+- AC-013: When the process scanner cannot read the process list (e.g. `/proc` unavailable), `clr` fails loudly with a `GateUnavailable` Runner-class error instead of silently proceeding as if the gate were disabled; `--max-sessions 0` bypasses this check entirely
 
 <!-- BUG-399 (task/claude_runner/bug/closed/399_timeout_gate_wait_undocumented.md) —
      --timeout does not bound this gate-wait phase, by design; this doc did not
@@ -31,6 +33,7 @@
 |---|---------|------|
 | 1 | [`run`](../command/01_run.md) | Primary command; gate applies before subprocess launch |
 | 5 | [`ask`](../command/05_ask.md) | Same behavior; pure alias for run |
+| 3 | [`isolated`](../command/03_isolated.md) | Same gate mechanism; CLI flag + `CLR_MAX_SESSIONS` env var only (no JSON/config tier) |
 
 ### Referenced Parameter Groups
 
@@ -52,6 +55,9 @@
 4. `clr --max-sessions 5 --dry-run "task"` — bypass the gate in dry-run mode
 5. `clr --interactive "task"` (20 non-interactive sessions active, `--max-sessions 10`) — interactive invocations bypass the gate entirely and proceed immediately, regardless of active count
 6. `CLR_GATE_POLL_SECS=5 CLR_GATE_MAX_ATTEMPTS=12 clr --max-sessions 1 --retry-override 0 "task"` — gate exhausts after ~55s (11 sleeps x 5s) instead of the ~29970s production default; `--retry-override 0` disables the runner-retry wrapper so exhaustion surfaces on the first pass
+7. `clr --gate-poll-secs 5 --gate-max-attempts 12 --max-sessions 1 --retry-override 0 "task"` — CLI-flag equivalent of step 6, for `run`/`ask` only (`isolated` has no `--gate-poll-secs`/`--gate-max-attempts` flags)
+8. `clr isolated --max-sessions 1 "task"` (1 non-interactive session already active) — `isolated` now waits for a slot exactly like `run`/`ask`, instead of bypassing the gate entirely
+9. `clr --max-sessions 5 "task"` with `/proc` unavailable — `clr` fails loudly with a `GateUnavailable` Runner-class error instead of silently proceeding as if the gate were disabled; `clr --max-sessions 0 "task"` still bypasses this check
 
 ### Related User Stories
 

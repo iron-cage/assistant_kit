@@ -104,7 +104,7 @@ Every clr parameter configurable via JSON config has three synonymous forms: CLI
 - **Repeatable flags** (`--mcp-config`, `--add-dir`): provide a single string value; multiple values require CLI flags
 - **Self-referential**: `"args-file"` key in a loaded JSON config is ignored — chaining is not performed
 
-### Complete Parity Table (74 active parameters)
+### Complete Parity Table (77 active parameters)
 
 Columns: JSON Key | CLI Flag | CLR_* Env Var | Type | Supported By
 
@@ -196,6 +196,14 @@ Columns: JSON Key | CLI Flag | CLR_* Env Var | Type | Supported By
 | JSON Key | CLI Flag | CLR_* Env Var | Type | Supported By |
 |----------|----------|---------------|------|--------------|
 | `"max-sessions"` | `--max-sessions` | `CLR_MAX_SESSIONS` | u32 (0 = unlimited) | run, ask |
+| `"gate-poll-secs"` | `--gate-poll-secs` | `CLR_GATE_POLL_SECS` | u64 (default 30) | run, ask |
+| `"gate-max-attempts"` | `--gate-max-attempts` | `CLR_GATE_MAX_ATTEMPTS` | u32 (default 1000) | run, ask |
+| `"gate-stale-secs"` | `--gate-stale-secs` | `CLR_GATE_STALE_SECS` | u64, optional (default unset) | run, ask |
+
+`isolated` is also gated by `--max-sessions`/`CLR_MAX_SESSIONS` (2-tier: CLI flag + env var), but
+does not support the `"max-sessions"` JSON key or any of the 3 gate-tuning JSON keys above — those
+resolve for `isolated` env-var-only, with no CLI flag or JSON key at all. See
+[cli/003_env_param.md § Env Param 5](../cli/003_env_param.md#env-param-5-gate-runtime-configuration).
 
 **Timeout**
 
@@ -261,7 +269,8 @@ The following parameters cannot appear in a JSON config file:
 | `--help` / `-h` | Meta-flag; exits before JSON loading |
 | `--mode`, `--columns`, `--pid`, `--wide`, `--inspect` | `ps` subcommand — not supported by `--args-file` |
 | `CLR_PS_*` env vars | `ps` subcommand only |
-| `CLR_GATE_DIR`, `CLR_GATE_POLL_SECS`, `CLR_GATE_MAX_ATTEMPTS` | Runtime config; no CLI flag equivalent |
+| `CLR_GATE_DIR` | Runtime config (test-injection point); no CLI flag or JSON key for any command |
+| `CLR_GATE_POLL_SECS`, `CLR_GATE_MAX_ATTEMPTS`, `CLR_GATE_STALE_SECS` (`isolated` only) | `isolated` resolves these env-var-only; `run`/`ask` have full JSON support — see Concurrency table above |
 | `CLAUDE_CODE_*` subprocess vars | Subprocess env vars, not clr params |
 
 ### Sources

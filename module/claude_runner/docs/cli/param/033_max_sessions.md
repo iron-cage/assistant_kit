@@ -9,8 +9,8 @@ for up to 1000 attempts, then exits with code 1. Setting `0` disables the gate e
 
 - **Type:** u32
 - **Default:** 6
-- **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md)
-- **JSON Key:** `"max-sessions"`
+- **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md), [`isolated`](../command/03_isolated.md)
+- **JSON Key:** `"max-sessions"` (run/ask only — `isolated` is CLI flag + env var, no JSON key)
 
 ```sh
 clr --max-sessions 5 "refactor module"      # block if >=5 Claude sessions active
@@ -32,11 +32,23 @@ opened), gate exhaustion is routed through the Runner-class retry wrapper (`appl
 on final exhaustion (no retries remaining, e.g. `--retry-override 0`) `clr` emits
 `"Error: [Runner] session gate timed out — {count} active sessions, max-sessions={max} — retries
 exhausted (exit 1)"` and exits with code 1; otherwise it emits a `[Runner] ... — retrying...`
-message and restarts the full `max_attempts`-poll sequence. Both `poll_secs` (default 30) and
-`max_attempts` (default 1000) are overridable via `CLR_GATE_POLL_SECS`/`CLR_GATE_MAX_ATTEMPTS`
-env vars (no CLI flag) — see [003_env_param.md](../003_env_param.md#env-param-5-gate-runtime-configuration).
-`clr` sleeps `poll_secs` between attempts but not after the final attempt, so an `N`-attempt
-sequence elapses `(N-1) * poll_secs` seconds before exhaustion fires.
+message and restarts the full `max_attempts`-poll sequence. For `run`/`ask`, `poll_secs` (default
+30), `max_attempts` (default 1000), and the opt-in staleness reclaim threshold (default unset) are
+tunable across the full 5-tier chain — `--gate-poll-secs`/`--gate-max-attempts`/`--gate-stale-secs`
+CLI flags, `"gate-poll-secs"`/`"gate-max-attempts"`/`"gate-stale-secs"` JSON keys,
+`CLR_GATE_POLL_SECS`/`CLR_GATE_MAX_ATTEMPTS`/`CLR_GATE_STALE_SECS` env vars, and
+`gate_poll_secs`/`gate_max_attempts`/`gate_stale_secs` config-file keys — see
+[003_env_param.md](../003_env_param.md#env-param-5-gate-runtime-configuration). `isolated` resolves
+these same 3 knobs env-var-only (no CLI flag, JSON key, or config-file tier), consistent with its
+narrower parameter surface elsewhere. `clr` sleeps `poll_secs` between attempts but not after the
+final attempt, so an `N`-attempt sequence elapses `(N-1) * poll_secs` seconds before exhaustion fires.
+
+**Note:** Before polling begins, `clr` verifies the process scanner can actually read the process
+list. If it cannot (e.g. `/proc` is unavailable, or `CLR_PROC_DIR` is misconfigured), `clr` fails
+loudly instead of silently proceeding as if the gate were disabled: `"Error: [Runner] session gate
+unavailable — process scanner cannot read the process list (--max-sessions requires working /proc;
+pass --max-sessions 0 to disable the gate) (exit 1)"`. This check is skipped entirely when
+`--max-sessions 0` — the disable escape hatch survives even a broken process scanner.
 
 <!-- BUG-399 (task/claude_runner/bug/closed/399_timeout_gate_wait_undocumented.md) —
      --timeout does not bound this gate-wait phase, by design; this doc did not
@@ -69,6 +81,7 @@ regardless of `--max-sessions` or the number of active sessions.
 |---|---------|---------|-------|
 | 1 | [`run`](../command/01_run.md) | 6 | Gate applied before subprocess launch; non-interactive only |
 | 5 | [`ask`](../command/05_ask.md) | 6 | Same behavior; pure alias for run |
+| 3 | [`isolated`](../command/03_isolated.md) | 6 | Same gate mechanism; CLI flag + `CLR_MAX_SESSIONS` only (no JSON/config tier); `--dry-run` bypasses exactly as for run/ask |
 
 ### Referenced User Stories
 

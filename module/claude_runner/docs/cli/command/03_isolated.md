@@ -4,7 +4,7 @@
 
 Run Claude in a credential-isolated subprocess with a temporary HOME containing only the provided credentials file. Use `clr isolated` when running Claude with alternate accounts, test tokens, or deployment-specific credentials without exposing the caller's real HOME, settings, or session history.
 
--- **Parameters:** `--creds`, `--timeout`, `--trace`, `--dry-run`, `--no-compact-window`, `--dir`, `--add-dir`, `--file`, `--expect`, `--expect-strategy`, `--journal`, `--journal-dir`, `--output-file`, `--strip-fences`, `--output-style`, `--summary-fields`, `--args-file`
+-- **Parameters:** `--creds`, `--timeout`, `--max-sessions`, `--trace`, `--dry-run`, `--no-compact-window`, `--dir`, `--add-dir`, `--file`, `--expect`, `--expect-strategy`, `--journal`, `--journal-dir`, `--output-file`, `--strip-fences`, `--output-style`, `--summary-fields`, `--args-file`
 -- **Exit Codes:** 0 (success) | 1 (error) | 2 (timeout) | 3 (expect mismatch) | N (subprocess passthrough) | 128+signal (signal)
 
 ### Syntax
@@ -20,6 +20,7 @@ clr isolated [--creds <FILE>] [--timeout <SECS>] [OPTIONS] [MESSAGE] [-- PASSTHR
 | [`[MESSAGE]`](../param/001_message.md) | [`MessageText`](../type/01_message_text.md) | — | Prompt forwarded to Claude |
 | [`--creds`](../param/019_creds.md) | [`CredentialsFilePath`](../type/08_credentials_file_path.md) | `~/.claude/.credentials.json` | Credentials JSON file path (optional; defaults to current account credentials) |
 | [`--timeout`](../param/020_timeout.md) | [`TimeoutSecs`](../type/09_timeout_secs.md) | 30 | Max seconds to wait for subprocess |
+| [`--max-sessions`](../param/033_max_sessions.md) | u32 | 6 | Max concurrent non-interactive sessions before blocking; `0` = unlimited (gate disabled); env: `CLR_MAX_SESSIONS`; no JSON/config tier |
 | [`--trace`](../param/013_trace.md) | bool | false | Print underlying call details to stderr then execute |
 | [`--dry-run`](../param/011_dry_run.md) | bool | false | Print subprocess env+command to stderr (same path as `--trace`); exit 0 without spawning |
 | [`--no-compact-window`](../param/077_no_compact_window.md) | bool | false | Suppress `CLAUDE_CODE_AUTO_COMPACT_WINDOW=300000` injection; env: `CLR_NO_COMPACT_WINDOW` |
@@ -37,20 +38,21 @@ clr isolated [--creds <FILE>] [--timeout <SECS>] [OPTIONS] [MESSAGE] [-- PASSTHR
 | [`--args-file`](../param/075_args_file.md) | [`FilePath`](../type/12_file_path.md) | — | Load clr params from JSON config file; stdin JSON auto-detected when no TTY; env: `CLR_ARGS_FILE` |
 | `-h`/`--help` | — | — | Print isolated subcommand help and exit 0 |
 
-**Algorithm (6 steps):**
-1. Resolve credentials path: `--creds` if given, else `$HOME/.claude/.credentials.json`; exit 1 if file not found.
-2. Create temporary HOME directory; write `.claude/.credentials.json` from resolved credentials.
-3. Write minimal `~/.claude/CLAUDE.md` to temp HOME to suppress interactive prompts.
-4. Build subprocess command with injected defaults (`--model` from project `.clr.toml` → user `~/.clr/config.toml`, first tier with a value wins, else `"opus"` alias; `--effort max`; `--no-session-persistence`; `--dangerously-skip-permissions` when message present); prepend before `--print` and message; passthrough args appended last for last-wins override.
-5. Spawn `claude` with `HOME=<temp>`; wait up to `--timeout` seconds (0 = unlimited).
-6. If credentials were refreshed at startup, write updated file back to `--creds`; delete temp HOME unconditionally; propagate subprocess exit code (or exit 2 on timeout without refresh).
+**Algorithm (7 steps):**
+1. Wait for a concurrency-gate slot per `--max-sessions` (default 6; same mechanism as `run`/`ask`); `--dry-run` bypasses this step entirely.
+2. Resolve credentials path: `--creds` if given, else `$HOME/.claude/.credentials.json`; exit 1 if file not found.
+3. Create temporary HOME directory; write `.claude/.credentials.json` from resolved credentials.
+4. Write minimal `~/.claude/CLAUDE.md` to temp HOME to suppress interactive prompts.
+5. Build subprocess command with injected defaults (`--model` from project `.clr.toml` → user `~/.clr/config.toml`, first tier with a value wins, else `"opus"` alias; `--effort max`; `--no-session-persistence`; `--dangerously-skip-permissions` when message present); prepend before `--print` and message; passthrough args appended last for last-wins override.
+6. Spawn `claude` with `HOME=<temp>`; wait up to `--timeout` seconds (0 = unlimited).
+7. If credentials were refreshed at startup, write updated file back to `--creds`; delete temp HOME unconditionally; propagate subprocess exit code (or exit 2 on timeout without refresh).
 
 ### Exit Codes
 
 | Code | Meaning |
 |------|---------|
 | 0 | Claude exited successfully (may have refreshed creds in-place) |
-| 1 | Error (creds file not found, claude not in PATH, I/O failure, unsupported `--expect-strategy retry`) |
+| 1 | Error (creds file not found, claude not in PATH, I/O failure, unsupported `--expect-strategy retry`, session gate timed out or unavailable) |
 | 2 | Timeout — subprocess did not finish within `--timeout` seconds; any partial stdout accumulated before the timeout is preserved in the error output |
 | 3 | `--expect` mismatch with `fail` strategy |
 | N | Passthrough from claude subprocess (non-zero) |
@@ -96,6 +98,18 @@ If the subprocess times out but already wrote refreshed credentials, `clr isolat
 
 `--timeout 0` disables the watchdog entirely (unlimited runtime), matching `run`/`ask` semantics.
 
+`--max-sessions` gates `isolated` through the same concurrency mechanism as `run`/`ask` (see
+[user_story/025_concurrency_gate.md](../user_story/025_concurrency_gate.md)), but only as a
+2-tier CLI-flag + `CLR_MAX_SESSIONS`-env-var pair — there is no JSON key or config-file tier for
+`isolated`. The 3 gate-tuning knobs (`CLR_GATE_POLL_SECS`, `CLR_GATE_MAX_ATTEMPTS`,
+`CLR_GATE_STALE_SECS`) also apply to `isolated` env-var-only — no `--gate-poll-secs`/
+`--gate-max-attempts`/`--gate-stale-secs` CLI flags exist for `isolated` (contrast `run`/`ask`,
+which have full 5-tier parity for these 3 — see
+[003_env_param.md](../003_env_param.md#env-param-5-gate-runtime-configuration)). If the process
+scanner cannot read the process list (e.g. `/proc` unavailable), `isolated` fails loudly with the
+same `GateUnavailable` Runner-class error as `run`/`ask`, rather than silently proceeding as if
+the gate were disabled — see [param/033_max_sessions.md](../param/033_max_sessions.md).
+
 ### Related Commands
 
 | # | Command | Relationship |
@@ -115,6 +129,7 @@ If the subprocess times out but already wrote refreshed credentials, `clr isolat
 |---|------------|---------|
 | 8 | [008_trace_execution.md](../user_story/008_trace_execution.md) | Developer |
 | 10 | [010_credential_isolated_execution.md](../user_story/010_credential_isolated_execution.md) | Developer |
+| 25 | [025_concurrency_gate.md](../user_story/025_concurrency_gate.md) | Developer |
 
 ---
 

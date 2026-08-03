@@ -40,7 +40,7 @@ All classes default to **retry = 2**, **delay = 30s** (Validation delay = 0s —
 
 **Validation** — Output did not match the `--expect` pattern within the allowed `--retry-on-validation` count. The CLR layer exits 3. Adjust the pattern or increase retry count.
 
-**Runner** — CLR infrastructure failure before or after subprocess execution: binary not found in PATH, OS spawn error, session gate timed out waiting for a slot, or output file write failure. All exit 1. Fix the environment rather than retrying.
+**Runner** — CLR infrastructure failure before or after subprocess execution: binary not found in PATH, OS spawn error, session gate timed out waiting for a slot, session gate unavailable (process scanner cannot read the process list), or output file write failure. All exit 1. Fix the environment rather than retrying.
 
 **Unknown** — Non-zero exit with no recognized pattern, exit code not 2, exit code ≤ 128. Automatic retry via `--retry-on-unknown N` with `--unknown-delay SECS` cooldown. Surface raw stdout/stderr; investigate subprocess logs.
 
@@ -139,16 +139,22 @@ clr run "task" --retry-on-service 5 --service-delay 10
 
 ### Configuration Tiers
 
-Current system uses 3 tiers. Target is 4 tiers with a config file layer.
+Retry/error-class parameters resolve through `clr`'s general parameter tier system — up to 5
+levels, highest to lowest:
 
-| Priority | Tier | Source | Status |
-|----------|------|--------|--------|
-| 1 (highest) | CLI parameter | `--flag value` on command line | Exists (67 params) |
-| 2 | Environment variable | `CLR_*` env vars | Exists (70 vars) |
-| 3 | Config file | TBD — `~/.config/clr/config.toml` or `$CLR_CONFIG` | Gap |
-| 4 (lowest) | Hardcoded default | Built into source code | Exists |
+| Priority | Tier | Source |
+|----------|------|--------|
+| 1 (highest) | CLI flag | `--flag value` on the command line |
+| 2 | JSON config | `--args-file` / `CLR_ARGS_FILE` / stdin JSON pipe — see [../../feature/004_json_config.md](../../feature/004_json_config.md) |
+| 3 | `CLR_*` env var | See [003_env_param.md](../003_env_param.md) |
+| 4 | Config file | Project `.clr.toml`, then user `~/.clr/config.toml` — see [config_param.md](../config_param.md) |
+| 5 (lowest) | Hardcoded default | Built into source code |
 
-**Config file gap:** No config file mechanism exists. Config keys would use `snake_case` matching CLI `--kebab-case` names (e.g., `retry_on_transient = 1`). All 67 parameters should be configurable at the config file tier.
+All 20 retry parameters (§ Strategy Configuration — 3-Tier Parameter Hierarchy above) are eligible
+at every tier. Not every `clr` parameter reaches all 5 tiers — the config-file tier (4) and JSON
+tier (2) each cover an explicitly enumerated subset; see [config_param.md](../config_param.md)
+(config-file eligible-parameter list) and [../../feature/004_json_config.md](../../feature/004_json_config.md)
+(JSON parity table) for the authoritative per-parameter reference.
 
 ### Console Output Format
 
@@ -241,6 +247,12 @@ Error: [Runner] failed to execute Claude Code: permission denied (os error 13) (
 ```
 Error: [Runner] session gate timed out — 30 active sessions, max-sessions=30 (exit 1)
 ```
+
+**Runner / GateUnavailable** (exit 1 — process scanner cannot read the process list, no subprocess):
+```
+Error: [Runner] session gate unavailable — process scanner cannot read the process list (--max-sessions requires working /proc; pass --max-sessions 0 to disable the gate) (exit 1)
+```
+Skipped entirely when `--max-sessions 0` — the disable escape hatch survives a broken process scanner. Applies to `run`, `ask`, and `isolated` (see [param/033_max_sessions.md](../param/033_max_sessions.md)).
 
 **Unknown** (non-zero, no recognized pattern, exit ≤ 128, exit ≠ 2):
 ```

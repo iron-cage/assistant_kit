@@ -72,7 +72,7 @@ clr <command> [OPTIONS] [MESSAGE]
 - [Dictionary](001_dictionary.md) — domain vocabulary
 - [User Stories](user_story/readme.md) — user goals and usage patterns (29 user stories)
 - [Env Parameters](003_env_param.md) — input, runtime config, and subprocess environment variables (93 variables)
-- [Config File Parameters](config_param.md) — TOML config-file parameter tier (38 eligible parameters)
+- [Config File Parameters](config_param.md) — TOML config-file parameter tier (41 eligible parameters)
 - [Parity](parity/readme.md) — cross-command behavioral parity comparisons (2 instances)
 
 ### See Also
