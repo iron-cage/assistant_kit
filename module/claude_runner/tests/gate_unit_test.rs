@@ -1,7 +1,8 @@
-//! Unit tests for `gate_max_attempts_from`.
+//! Unit tests for `gate_max_attempts_from`, `gate_poll_secs_from`, and `gate_stale_secs_from`.
 //!
-//! Tests the concurrency gate's attempt-limit fallback-parsing logic in isolation,
-//! without spawning a subprocess or waiting on a poll loop.
+//! Tests the concurrency gate's attempt-limit/poll-interval/staleness-threshold
+//! fallback-parsing logic in isolation, without spawning a subprocess or waiting
+//! on a poll loop.
 //!
 //! # Root Cause
 //! `t11_invalid_max_attempts_env_var_falls_back_to_default` in `concurrency_gate_test.rs`
@@ -29,7 +30,7 @@
 //! a pure function taking the raw value as a parameter instead.
 #![ cfg( feature = "enabled" ) ]
 
-use claude_runner::gate_max_attempts_from;
+use claude_runner::{ gate_max_attempts_from, gate_poll_secs_from, gate_stale_secs_from };
 
 #[ test ]
 fn gate_max_attempts_from_none_returns_1000()
@@ -47,4 +48,40 @@ fn gate_max_attempts_from_invalid_string_returns_1000()
 fn gate_max_attempts_from_valid_string_returns_parsed_value()
 {
   assert_eq!( gate_max_attempts_from( Some( "7" ) ), 7 );
+}
+
+#[ test ]
+fn gate_poll_secs_from_none_returns_30()
+{
+  assert_eq!( gate_poll_secs_from( None ), 30 );
+}
+
+#[ test ]
+fn gate_poll_secs_from_invalid_string_returns_30()
+{
+  assert_eq!( gate_poll_secs_from( Some( "notanumber" ) ), 30 );
+}
+
+#[ test ]
+fn gate_poll_secs_from_valid_string_returns_parsed_value()
+{
+  assert_eq!( gate_poll_secs_from( Some( "5" ) ), 5 );
+}
+
+#[ test ]
+fn gate_stale_secs_from_none_returns_none()
+{
+  assert_eq!( gate_stale_secs_from( None ), None );
+}
+
+#[ test ]
+fn gate_stale_secs_from_invalid_string_returns_none()
+{
+  assert_eq!( gate_stale_secs_from( Some( "notanumber" ) ), None );
+}
+
+#[ test ]
+fn gate_stale_secs_from_valid_string_returns_parsed_value()
+{
+  assert_eq!( gate_stale_secs_from( Some( "120" ) ), Some( 120 ) );
 }

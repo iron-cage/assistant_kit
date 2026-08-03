@@ -39,19 +39,6 @@ impl Drop for GateFile
   }
 }
 
-/// Return the gate poll interval in seconds.
-///
-/// Default: 30 seconds. `CLR_GATE_POLL_SECS` env var overrides — public,
-/// documented override, no CLI flag, no `--args-file` key. Invalid values fall
-/// back to 30 silently.
-fn gate_poll_secs() -> u64
-{
-  std::env::var( "CLR_GATE_POLL_SECS" )
-    .ok()
-    .and_then( | s | s.parse().ok() )
-    .unwrap_or( 30 )
-}
-
 /// Resolve the attempt-limit override from a raw env var string. Pure — no I/O —
 /// so the parse-or-default fallback can be unit-tested directly. This crate's
 /// tests never call `std::env::set_var` (see `tests/env_var_test.rs`); taking the raw
@@ -64,12 +51,32 @@ pub fn gate_max_attempts_from( raw : Option< &str > ) -> u32
   raw.and_then( | s | s.parse().ok() ).unwrap_or( 1000 )
 }
 
-/// Attempt limit override for the concurrency gate. Public, documented
-/// override — no CLI flag, no `--args-file` key. Invalid values fall
-/// back to 1000 silently.
-fn gate_max_attempts() -> u32
+/// Resolve the gate poll interval (seconds) from a raw env var string. Pure — no I/O.
+/// Default: 30 seconds. Sibling of [`gate_max_attempts_from`] — see its doc for why
+/// this takes the raw value as a parameter instead of reading the environment directly.
+///
+/// This is the one-shot resolver: `isolated` (which has no CLI flag or config-file tier
+/// for this knob) calls it directly against the raw env var. `run`/`ask` instead resolve
+/// `CliArgs.gate_poll_secs` through the full CLI > `--args-file` JSON > env var > config.toml
+/// tier chain in `apply_env_vars()`/`apply_config_defaults()` (src/cli/env.rs, src/cli/config.rs),
+/// falling back to this same 30s default only once every tier has been checked.
+#[ inline ]
+#[ must_use ]
+pub fn gate_poll_secs_from( raw : Option< &str > ) -> u64
 {
-  gate_max_attempts_from( std::env::var( "CLR_GATE_MAX_ATTEMPTS" ).ok().as_deref() )
+  raw.and_then( | s | s.parse().ok() ).unwrap_or( 30 )
+}
+
+/// Resolve the staleness threshold (seconds) from a raw env var string. Pure — no I/O.
+/// `None` (unset or invalid) disables staleness-based reclaim entirely — there is no
+/// safe numeric default (see the Fix(BUG-400) note below for why). Sibling of
+/// [`gate_max_attempts_from`]; same one-shot-vs-tiered split as [`gate_poll_secs_from`]
+/// applies — `isolated` calls this directly, `run`/`ask` resolve through the tier chain.
+#[ inline ]
+#[ must_use ]
+pub fn gate_stale_secs_from( raw : Option< &str > ) -> Option< u64 >
+{
+  raw.and_then( | s | s.parse().ok() )
 }
 
 // Fix(BUG-400): staleness threshold for reclaiming a live-but-stalled slot owner.
@@ -82,21 +89,12 @@ fn gate_max_attempts() -> u32
 // deterministically re-derived from the same live count every poll, making
 // the collision sticky rather than a one-off.
 //
-// Pitfall: unlike `gate_poll_secs()`/`gate_max_attempts()` above, unset or
-// invalid input must resolve to `None` (feature off), never a numeric
-// fallback — there is no safe default staleness threshold that would not
-// risk reclaiming a legitimately long-running session.
-
-/// Staleness threshold in seconds for reclaiming a live slot owner. Public,
-/// documented override — no CLI flag, no `--args-file` key. `None` (unset or
-/// invalid) disables staleness-based reclaim entirely, preserving prior
-/// behavior exactly.
-fn gate_stale_secs() -> Option< u64 >
-{
-  std::env::var( "CLR_GATE_STALE_SECS" )
-    .ok()
-    .and_then( | s | s.parse().ok() )
-}
+// Pitfall: unlike `poll_secs`/`max_attempts` (resolved upstream in
+// apply_env_vars()/apply_config_defaults(), see src/cli/env.rs), the
+// `stale_secs` parameter threaded through here must resolve to `None`
+// (feature off) whenever unset or invalid, never a numeric fallback — there
+// is no safe default staleness threshold that would not risk reclaiming a
+// legitimately long-running session.
 
 // Fix(BUG-387): fixed-index reservation slot backing the concurrency gate.
 //
@@ -381,7 +379,7 @@ enum SlotDenialCause
 // this cleanup only fires when the winner is confirmed to have never
 // completed admission, so no legitimate holder's ticket is ever disturbed
 // and the permanent-retention guarantee for SUCCESSFUL claims is unchanged.
-fn acquire_slot( dir : &Path, index : u32, pid : u32, since : u64 ) -> Result< (), SlotDenialCause >
+fn acquire_slot( dir : &Path, index : u32, pid : u32, since : u64, stale_secs : Option< u64 > ) -> Result< (), SlotDenialCause >
 {
   let path = slot_path( dir, index );
   if claim_slot_file( &path, pid, since )
@@ -408,9 +406,9 @@ fn acquire_slot( dir : &Path, index : u32, pid : u32, since : u64 ) -> Result< (
     return Err( SlotDenialCause::HeldByLive );
   };
   // Fix(BUG-400): a live owner is reclaim-eligible once also stale — see
-  // gate_stale_secs() above. Unset (default): is_stale is always false,
+  // stale_secs doc above. Unset (default): is_stale is always false,
   // preserving pre-fix behavior exactly (pid_alive(owner) alone gates).
-  let is_stale = gate_stale_secs()
+  let is_stale = stale_secs
     .is_some_and( | threshold | unix_now().saturating_sub( owner_since ) > threshold );
   if pid_alive( owner ) && !is_stale
   {
@@ -498,28 +496,51 @@ fn json_escape_str( s : &str ) -> String
   out
 }
 
-/// Block until fewer than `max` `claude` sessions are running, or until the 1000-attempt
-/// limit is exhausted.  `max == 0` means unlimited — returns immediately without checking.
+/// Block until fewer than `max` `claude` sessions are running, or until `max_attempts`
+/// is exhausted.  `max == 0` means unlimited — returns immediately without checking.
+///
+/// Exits the process immediately (loud failure) if the process scanner
+/// ([`claude_core::process::proc_scan_available`]) cannot read the process list —
+/// e.g. `/proc` missing on a non-Linux host, or a misconfigured `CLR_PROC_DIR` in
+/// tests. Silently proceeding would make [`claude_core::process::find_claude_processes`]'s
+/// deliberately-silent empty-`Vec` fallback look identical to "zero sessions running",
+/// letting the gate wave through unlimited concurrent sessions while believing it
+/// still enforces `max` — see `pid_alive()` below for why this module targets Linux
+/// hosts only.
 ///
 /// While waiting, writes a JSON state file to `$CLR_GATE_DIR/{pid}.json` so that
 /// `clr ps` can display this process in its "Queued CLR Processes" table.  The file
 /// is updated each polling iteration and removed automatically by the `GateFile` Drop
 /// guard on both normal and panic exit paths.
 ///
-/// When the 1000-attempt limit is reached, applies Runner-class retry via
-/// `apply_runner_retry()` — the entire 1000-attempt polling sequence is retried
-/// `--retry-on-runner N` times before giving up.
+/// When `max_attempts` is reached, calls `on_exhausted` with the timeout error instead
+/// of retrying internally — callers with Runner-class retry (`run`/`ask`, via
+/// `apply_runner_retry()`) retry the whole polling sequence from their closure; callers
+/// without it (`isolated`) report and exit from theirs. Either way, returning from the
+/// closure resumes the outer poll loop; a closure that exits the process never returns.
 pub( super ) fn wait_for_session_slot(
-  max   : u32,
-  quiet : bool,
-  cli   : &super::parse::CliArgs,
-  journal   : Option< &JournalWriter >,
+  max          : u32,
+  quiet        : bool,
+  poll_secs    : u64,
+  max_attempts : u32,
+  stale_secs   : Option< u64 >,
+  journal      : Option< &JournalWriter >,
+  on_exhausted : &mut dyn FnMut( &std::io::Error ),
 )
 {
   if max == 0 { return; }
-  let poll_secs    = gate_poll_secs();
-  let poll         = core::time::Duration::from_secs( poll_secs );
-  let max_attempts = gate_max_attempts();
+
+  // Fix: fail loudly instead of silently no-op'ing when the process scanner is
+  // unavailable — see doc comment above.
+  if !claude_core::process::proc_scan_available()
+  {
+    eprintln!(
+      "Error: [Runner] session gate unavailable — process scanner cannot read the process list (--max-sessions requires working /proc; pass --max-sessions 0 to disable the gate) (exit 1)"
+    );
+    std::process::exit( 1 );
+  }
+
+  let poll = core::time::Duration::from_secs( poll_secs );
 
   // Gate state file — best-effort; I/O failures must not abort the caller.
   let pid        = std::process::id();
@@ -545,12 +566,11 @@ pub( super ) fn wait_for_session_slot(
 
   // Drop guard ensures the gate file is removed on return, panic, or exit(1).
   let _guard         = GateFile( state_path.clone() );
-  let mut runner_attempt = 0u32;
   let wait_start     = std::time::Instant::now();
   let mut gate_emitted = false;
 
-  // Outer loop: each iteration is one full 1000-poll-attempt sequence.
-  // apply_runner_retry() either returns (retries the sequence) or exits.
+  // Outer loop: each iteration is one full max_attempts-poll sequence.
+  // on_exhausted() either returns (retries the sequence) or exits.
   loop
   {
     for attempt in 1..=max_attempts
@@ -586,13 +606,13 @@ pub( super ) fn wait_for_session_slot(
       // race — it only widens which single index this attempt can land on.
       let claim = if has_capacity
       {
-        let mut result = acquire_slot( &dir, count_u32, pid, since );
+        let mut result = acquire_slot( &dir, count_u32, pid, since, stale_secs );
         if result.is_err()
         {
           for candidate in 0..max
           {
             if candidate == count_u32 { continue; }
-            result = acquire_slot( &dir, candidate, pid, since );
+            result = acquire_slot( &dir, candidate, pid, since, stale_secs );
             if result.is_ok() { break; }
           }
         }
@@ -624,13 +644,15 @@ pub( super ) fn wait_for_session_slot(
         // Fix(BUG-298): add [Runner] prefix + correct message text to match 14_error_class.md.
         // Root cause: gate-timeout message lacked [Runner] class prefix; display showed no class label.
         // Pitfall: every message-construction site must inject the [Runner] prefix, not only spawn paths.
-        // Fix(BUG-299): wrap gate-timeout in apply_runner_retry() instead of unconditional exit(1).
+        // Fix(BUG-299): wrap gate-timeout in retry handling instead of unconditional exit(1).
         // Root cause: gate-timeout path called exit(1) directly; runner retry system not invoked here.
-        // Pitfall: every early-exit path (including gate timeouts) must route through apply_runner_retry().
+        // Pitfall: every early-exit path (including gate timeouts) must route through `on_exhausted` —
+        // the caller's closure decides retry-vs-exit (e.g. run/ask wraps apply_runner_retry(); isolated
+        // exits directly), rather than gate.rs hardcoding one policy for every caller.
         let e = std::io::Error::other(
           format!( "session gate timed out — {count} active sessions, max-sessions={max}" )
         );
-        super::execution::apply_runner_retry( cli, &e, &mut runner_attempt, journal );
+        on_exhausted( &e );
         break; // non-exhaustion path: restart outer poll loop
       }
       if !quiet

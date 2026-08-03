@@ -28,6 +28,13 @@
 //! | T20 | pre-seeded slot owned by a genuinely alive PID with `since=0` (maximally stale) → `CLR_GATE_STALE_SECS` unset denies reclaim (default/backward-compatible); set below elapsed duration, reclaim succeeds and the waiter is admitted immediately (BUG-400) | — |
 //! | T21 | pre-seeded dead-owner slot, no pre-existing ticket, forced one-time tmp-claim failure via `CLR_GATE_FORCE_TMP_CLAIM_FAIL_ONCE` → ticket winner that fails own admission still acquires the slot on retry, no permanent self-denial (BUG-405) | — |
 //! | T22 | three-generation orphaned reclaim-ticket chain (two dead claimants stacked before an unclaimed generation) → `acquire_slot()` walks past both, admitting a fresh caller (BUG-402 chain-walk depth) | — |
+//! | T25 | `CLR_PROC_DIR` points at a nonexistent path, `--max-sessions` unset (nonzero default) → hard exit 1 with the exact `GateUnavailable` message, no silent no-op (hardening fix 1) | — |
+//! | T26 | `CLR_PROC_DIR` points at a nonexistent path, `--max-sessions 0` → gate bypassed entirely, exit 0 (hardening fix 1 regression guard: the 0=disable escape hatch must survive the loud-failure change) | — |
+//! | T27 | `clr isolated`, 3 print-mode processes active, `--max-sessions 3` → gate triggers and reports 3/3, then releases once occupiers exit (hardening fix 2: isolated now contends for a slot like run/ask) | — |
+//! | T28 | `clr isolated`, 2 print-mode processes active, `--max-sessions 3` → gate does not trigger (hardening fix 2 parity with T02) | — |
+//! | T29 | `--gate-poll-secs 1 --gate-max-attempts 2` CLI flags (no env vars), 1 permanent occupier, `--max-sessions 1` → gate exhausts in ~2s using the CLI-flag values, not the 30s/1000-attempt hardcoded defaults (hardening fix 3, CLI-flag tier) | — |
+//! | T30 | `--gate-max-attempts abc` CLI flag → immediate parse-error exit before any subprocess spawn or gate wait, distinct from the env var's silent fallback (T10/T11) (hardening fix 3, CLI-flags-hard-error contract) | — |
+//! | T31 | `clr isolated`, `CLR_GATE_POLL_SECS=1 CLR_GATE_MAX_ATTEMPTS=2` env vars, 1 permanent occupier, `--max-sessions 1` → isolated's one-shot env-var-only resolution changes its real gate timing (hardening fix 3, isolated's env-var-only tier) | — |
 //!
 //! T05 (`clr --help` shows `default: 6`) is covered by
 //! `param_edge_cases_test.rs::ec9_max_sessions_help_shows_default_six`.
@@ -46,8 +53,8 @@
 mod cli_binary_test_helpers;
 use cli_binary_test_helpers::
 {
-  fake_claude_binary_dir, fake_claude_dir, make_proc_dir,
-  spawn_fake_claude, spawn_print_claude, spawn_print_claude_for,
+  fake_claude_binary_dir, fake_claude_dir, make_creds_file, make_proc_dir,
+  spawn_fake_claude, spawn_print_claude, spawn_print_claude_for, wait_bounded,
 };
 use std::process::Command;
 
@@ -650,22 +657,6 @@ fn t08_concurrent_clr_invocations_never_exceed_max_sessions()
 
 // ── T09-T11: `CLR_GATE_POLL_SECS`/`CLR_GATE_MAX_ATTEMPTS` env var overrides ────
 // task/claude_runner/389_gate_poll_secs_max_attempts_env_vars.md
-
-/// Poll `child` with `try_wait()` until it exits or `deadline` passes, sleeping
-/// 50ms between checks. Never blocks past `deadline` — unlike `.output()`
-/// (blocks until natural exit), this lets a test fail fast when the gate is
-/// still reading pre-rename hardcoded defaults instead of hanging for however
-/// long the real 30s/1000-attempt production values would otherwise take.
-/// Mirrors T08's existing `try_wait()` reap-loop pattern in this same file.
-fn wait_bounded( child : &mut std::process::Child, deadline : std::time::Instant ) -> Option< std::process::ExitStatus >
-{
-  while std::time::Instant::now() < deadline
-  {
-    if let Ok( Some( status ) ) = child.try_wait() { return Some( status ); }
-    std::thread::sleep( core::time::Duration::from_millis( 50 ) );
-  }
-  None
-}
 
 /// T09: `CLR_GATE_POLL_SECS=1` and `CLR_GATE_MAX_ATTEMPTS=2` together must change
 /// the gate's actual runtime behavior (not just documented intent). With one
@@ -2333,5 +2324,323 @@ fn t24_preexisting_empty_slot_file_remains_a_documented_residual()
      shifted and this test's doc comment / BUG-407's closure notes must be \
      updated to reflect the new behavior. Got exit {:?}, stderr:\n{stderr}",
     exited.and_then( |s| s.code() )
+  );
+}
+
+// ── T25/T26: proc scanner unavailable → loud failure, not a silent no-op (hardening fix 1) ──
+
+/// T25 (hardening fix 1): `CLR_PROC_DIR` points at a path that does not exist on
+/// disk (simulating a non-Linux host, or a broken/unreadable `/proc`), with
+/// `--max-sessions` left at its nonzero default. Before this fix,
+/// `find_claude_processes()` silently returned an empty list whenever its proc
+/// root was unreadable, so the gate always saw "0 active sessions" and admitted
+/// immediately — the concurrency guarantee silently evaporated with no signal
+/// to the operator. After the fix, `wait_for_session_slot()` checks
+/// `claude_core::process::proc_scan_available()` before entering the poll loop
+/// and exits loudly instead.
+#[ test ]
+fn t25_proc_scan_unavailable_fails_loudly_instead_of_silent_admit()
+{
+  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
+  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
+
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = Command::new( bin )
+    .args( [ "-p", "--journal", "off", "x" ] )
+    .env( "PATH", &script_path )
+    .env( "CLR_PROC_DIR", "/nonexistent/clr-t25-proc-dir" )
+    .env( "CLR_GATE_DIR", gate_dir.path() )
+    .output()
+    .expect( "invoke clr" );
+
+  assert_eq!(
+    out.status.code(), Some( 1 ),
+    "T25: exit must be 1 when the process scanner cannot read the process list. stderr: {}",
+    String::from_utf8_lossy( &out.stderr )
+  );
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert!(
+    stderr.contains(
+      "Error: [Runner] session gate unavailable — process scanner cannot read the process list \
+       (--max-sessions requires working /proc; pass --max-sessions 0 to disable the gate) (exit 1)"
+    ),
+    "T25: exact GateUnavailable message required. Got:\n{stderr}"
+  );
+}
+
+/// T26 (hardening fix 1 regression guard): the pre-existing `--max-sessions 0`
+/// escape hatch (T06) must survive the loud-failure change — `wait_for_session_slot()`
+/// returns before ever checking `proc_scan_available()` when `max == 0`, so a broken
+/// `CLR_PROC_DIR` must never surface the `GateUnavailable` error when the gate itself
+/// is explicitly disabled.
+#[ test ]
+fn t26_max_sessions_zero_bypasses_gate_even_when_proc_scan_unavailable()
+{
+  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
+
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = Command::new( bin )
+    .args( [ "-p", "--max-sessions", "0", "--journal", "off", "x" ] )
+    .env( "PATH", &script_path )
+    .env( "CLR_PROC_DIR", "/nonexistent/clr-t26-proc-dir" )
+    .output()
+    .expect( "invoke clr" );
+
+  assert!(
+    out.status.success(),
+    "T26: --max-sessions 0 must bypass the gate entirely, even with /proc unavailable. stderr: {}",
+    String::from_utf8_lossy( &out.stderr )
+  );
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert!(
+    !stderr.contains( "session gate unavailable" ),
+    "T26: GateUnavailable must never fire when --max-sessions 0 disables the gate. Got:\n{stderr}"
+  );
+}
+
+// ── T27/T28: `clr isolated` participates in the same concurrency gate as run/ask (hardening fix 2) ──
+
+/// T27 (hardening fix 2): unlike `refresh` (which always runs a fixed, throwaway
+/// prompt and discards the response), `isolated` can run arbitrarily long real
+/// user tasks, so it must contend for a gate slot exactly like `run`/`ask`.
+/// Mirrors T01's structure with `isolated` prepended and a real (if minimal)
+/// `--creds` file: 2 long-lived + 1 short-lived (self-expiring) print-mode
+/// occupiers, `--max-sessions 3` → gate triggers and reports "3/3 sessions
+/// active", then releases once the short-lived occupier self-expires.
+#[ test ]
+fn t27_isolated_gate_triggers_at_capacity()
+{
+  let ( _occupier_dir, occupier_path ) = fake_claude_binary_dir();
+  let mut long_lived : Vec< std::process::Child > =
+    ( 0..2 ).map( |_| spawn_print_claude( &occupier_path ) ).collect();
+  let mut short_lived = spawn_print_claude_for( &occupier_path, 5 );
+
+  let mut pids : Vec< u32 > = long_lived.iter().map( std::process::Child::id ).collect();
+  pids.push( short_lived.id() );
+  let proc = make_proc_dir( &pids );
+
+  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
+  let gate_dir   = tempfile::TempDir::new().expect( "gate dir" );
+  let creds      = make_creds_file( "{}" );
+  let creds_path = creds.path().to_str().expect( "creds path UTF-8" );
+
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = Command::new( bin )
+    .args( [ "isolated", "--creds", creds_path, "--max-sessions", "3", "--journal", "off", "x" ] )
+    .env( "PATH", &script_path )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
+    .env( "CLR_GATE_DIR", gate_dir.path() )
+    .env( "CLR_GATE_POLL_SECS", "1" )
+    .env_remove( "CLAUDECODE" )
+    .output()
+    .expect( "invoke clr isolated" );
+
+  for child in &mut long_lived { let _ = child.kill(); let _ = child.wait(); }
+  let _ = short_lived.kill();
+  let _ = short_lived.wait();
+
+  assert!(
+    out.status.success(),
+    "T27: exit must be 0 after gate releases. stderr: {}",
+    String::from_utf8_lossy( &out.stderr )
+  );
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert!(
+    stderr.contains( "Info: 3/3 sessions active; waiting" ),
+    "T27: isolated must participate in the gate and report 3/3 active. Got:\n{stderr}"
+  );
+}
+
+/// T28 (hardening fix 2, parity with T02): 2 print-mode processes active,
+/// `clr isolated --max-sessions 3` → gate does not trigger; isolated proceeds
+/// immediately with no wait message on stderr.
+#[ test ]
+fn t28_isolated_gate_does_not_trigger_below_capacity()
+{
+  let ( _occupier_dir, occupier_path ) = fake_claude_binary_dir();
+  let mut occupiers : Vec< std::process::Child > =
+    ( 0..2 ).map( |_| spawn_print_claude( &occupier_path ) ).collect();
+  let pids : Vec< u32 > = occupiers.iter().map( std::process::Child::id ).collect();
+  let proc = make_proc_dir( &pids );
+
+  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
+  let gate_dir   = tempfile::TempDir::new().expect( "gate dir" );
+  let creds      = make_creds_file( "{}" );
+  let creds_path = creds.path().to_str().expect( "creds path UTF-8" );
+
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = Command::new( bin )
+    .args( [ "isolated", "--creds", creds_path, "--max-sessions", "3", "--journal", "off", "x" ] )
+    .env( "PATH", &script_path )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
+    .env( "CLR_GATE_DIR", gate_dir.path() )
+    .env( "CLR_GATE_POLL_SECS", "1" )
+    .env_remove( "CLAUDECODE" )
+    .output()
+    .expect( "invoke clr isolated" );
+
+  for child in &mut occupiers { let _ = child.kill(); let _ = child.wait(); }
+
+  assert!(
+    out.status.success(),
+    "T28: exit must be 0. stderr: {}",
+    String::from_utf8_lossy( &out.stderr )
+  );
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert!(
+    !stderr.contains( "sessions active; waiting" ),
+    "T28: gate must not trigger below the limit for isolated. Got:\n{stderr}"
+  );
+}
+
+// ── T29/T30/T31: CLI-flag + isolated env-var-only parity for gate tuning (hardening fix 3) ──
+
+/// T29 (hardening fix 3, CLI-flag tier): `--gate-poll-secs 1 --gate-max-attempts 2`
+/// as CLI flags (deliberately no env vars set) must change the gate's actual
+/// runtime behavior for `run`/`ask`, exactly as `CLR_GATE_POLL_SECS`/
+/// `CLR_GATE_MAX_ATTEMPTS` already do via the env var tier (T09). With one
+/// print-mode occupier permanently holding the only `--max-sessions 1` slot and
+/// `--retry-override 0` disabling the outer Runner-retry wrapper, the gate must
+/// exhaust after exactly 2 polls at 1-second intervals (~2s), not the
+/// production default of 1000 attempts × 30s. Bounded to a 10s deadline.
+#[ test ]
+fn t29_gate_cli_flags_change_real_poll_timing()
+{
+  let ( _occupier_dir, occupier_path ) = fake_claude_binary_dir();
+  let mut occupier = spawn_print_claude_for( &occupier_path, 60 );
+  let proc = make_proc_dir( &[ occupier.id() ] );
+
+  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
+  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
+
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let mut child = Command::new( bin )
+    .args( [
+      "-p", "--max-sessions", "1", "--retry-override", "0",
+      "--gate-poll-secs", "1", "--gate-max-attempts", "2",
+      "--journal", "off", "x",
+    ] )
+    .env( "PATH", &script_path )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
+    .env( "CLR_GATE_DIR", gate_dir.path() )
+    .stdout( std::process::Stdio::null() )
+    .stderr( std::process::Stdio::piped() )
+    .spawn()
+    .expect( "spawn clr" );
+
+  let deadline = std::time::Instant::now() + core::time::Duration::from_secs( 10 );
+  let exited = wait_bounded( &mut child, deadline );
+  if exited.is_none() { let _ = child.kill(); }
+  let out = child.wait_with_output().expect( "reap clr" );
+
+  let _ = occupier.kill();
+  let _ = occupier.wait();
+
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert!(
+    exited.is_some(),
+    "T29: gate must exhaust within 10s when both CLI flags are active (2 attempts x 1s poll) \
+     — still running means the flags are not taking effect. stderr:\n{stderr}"
+  );
+  assert_eq!(
+    exited.and_then( |s| s.code() ), Some( 1 ),
+    "T29: exit must be 1 once the gate exhausts. stderr: {stderr}"
+  );
+  assert!(
+    stderr.contains(
+      "Error: [Runner] session gate timed out — 1 active sessions, max-sessions=1 — retries exhausted (exit 1)"
+    ),
+    "T29: exact exhaustion message required. Got:\n{stderr}"
+  );
+}
+
+/// T30 (hardening fix 3, CLI-flags-hard-error contract): `--gate-max-attempts abc`
+/// must be a hard parse error at argument-parsing time (exit 1, before any
+/// subprocess spawn or gate wait) — the deliberate asymmetry with the env var
+/// equivalent, which silently falls back to the default instead (T11). PATH is
+/// deliberately `/nonexistent`: parsing fails before any claude binary lookup
+/// is ever attempted, so no fake claude script is needed.
+#[ test ]
+fn t30_invalid_gate_max_attempts_cli_flag_is_a_hard_parse_error()
+{
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = Command::new( bin )
+    .args( [ "-p", "--gate-max-attempts", "abc", "--journal", "off", "x" ] )
+    .env( "PATH", "/nonexistent" )
+    .output()
+    .expect( "invoke clr" );
+
+  assert_eq!(
+    out.status.code(), Some( 1 ),
+    "T30: an invalid --gate-max-attempts value must be a hard parse error (exit 1), \
+     not a silent fallback like the env var equivalent (T11). stderr: {}",
+    String::from_utf8_lossy( &out.stderr )
+  );
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert!(
+    stderr.contains( "invalid --gate-max-attempts value: abc" ),
+    "T30: parse error must name the flag and the bad value. Got:\n{stderr}"
+  );
+}
+
+/// T31 (hardening fix 3, isolated's env-var-only tier): `clr isolated` has no
+/// CLI-flag or config-file tier for the 3 gate-tuning knobs (consistent with
+/// its other fields — see `gate_isolated_session`'s doc comment) but must still
+/// honor `CLR_GATE_POLL_SECS`/`CLR_GATE_MAX_ATTEMPTS` via its one-shot
+/// `gate_poll_secs_from`/`gate_max_attempts_from` resolution. Mirrors T09's
+/// exhaustion scenario for `run`, but dispatched via `isolated` — and asserts
+/// isolated's un-suffixed exhaustion message (its `on_exhausted` closure exits
+/// directly, with no `apply_runner_retry` wrapper, so no "— retries exhausted"
+/// suffix appears).
+#[ test ]
+fn t31_isolated_gate_env_vars_change_real_poll_timing()
+{
+  let ( _occupier_dir, occupier_path ) = fake_claude_binary_dir();
+  let mut occupier = spawn_print_claude_for( &occupier_path, 60 );
+  let proc = make_proc_dir( &[ occupier.id() ] );
+
+  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
+  let gate_dir   = tempfile::TempDir::new().expect( "gate dir" );
+  let creds      = make_creds_file( "{}" );
+  let creds_path = creds.path().to_str().expect( "creds path UTF-8" );
+
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let mut child = Command::new( bin )
+    .args( [ "isolated", "--creds", creds_path, "--max-sessions", "1", "--journal", "off", "x" ] )
+    .env( "PATH", &script_path )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
+    .env( "CLR_GATE_DIR", gate_dir.path() )
+    .env( "CLR_GATE_POLL_SECS", "1" )
+    .env( "CLR_GATE_MAX_ATTEMPTS", "2" )
+    .env_remove( "CLAUDECODE" )
+    .stdout( std::process::Stdio::null() )
+    .stderr( std::process::Stdio::piped() )
+    .spawn()
+    .expect( "spawn clr isolated" );
+
+  let deadline = std::time::Instant::now() + core::time::Duration::from_secs( 10 );
+  let exited = wait_bounded( &mut child, deadline );
+  if exited.is_none() { let _ = child.kill(); }
+  let out = child.wait_with_output().expect( "reap clr isolated" );
+
+  let _ = occupier.kill();
+  let _ = occupier.wait();
+
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert!(
+    exited.is_some(),
+    "T31: isolated's gate must exhaust within 10s when both env var overrides are active \
+     (2 attempts x 1s poll) — still running means isolated is not honoring them. stderr:\n{stderr}"
+  );
+  assert_eq!(
+    exited.and_then( |s| s.code() ), Some( 1 ),
+    "T31: exit must be 1 once the gate exhausts. stderr: {stderr}"
+  );
+  assert!(
+    stderr.contains(
+      "Error: [Runner] session gate timed out — 1 active sessions, max-sessions=1 (exit 1)"
+    ),
+    "T31: exact exhaustion message required (isolated's on_exhausted closure exits directly, \
+     no retry-exhausted suffix). Got:\n{stderr}"
   );
 }

@@ -21,10 +21,11 @@ mod config;
 #[ allow( unused_imports ) ]
 pub use summary::{ render_summary, resolve_fields, extract_session_id };
 
-// gate_unit_test.rs (external test) imports gate_max_attempts_from via the public API.
-// Same false-positive unused_imports rationale as the summary re-export above.
+// gate_unit_test.rs (external test) imports gate_max_attempts_from/gate_poll_secs_from/
+// gate_stale_secs_from via the public API. Same false-positive unused_imports rationale
+// as the summary re-export above.
 #[ allow( unused_imports ) ]
-pub use gate::gate_max_attempts_from;
+pub use gate::{ gate_max_attempts_from, gate_poll_secs_from, gate_stale_secs_from };
 
 // tools_command_test.rs (external test) imports TOOLS via the public API for the
 // sync-guard tests (BUG-409). Same false-positive unused_imports rationale as above.
@@ -36,6 +37,7 @@ use claude_runner_core::{ ClaudeCommand, EffortLevel, IsolatedModel };
 use claude_storage_core::SessionId;
 use parse::CliArgs;
 use cred_parse::{
+  IsolatedArgs,
   parse_isolated_args, parse_refresh_args,
   apply_isolated_env_vars, apply_refresh_env_vars,
 };
@@ -222,7 +224,16 @@ pub( super ) fn run_built_command(
   if is_print_invocation
   {
     let max_sessions = cli.max_sessions.unwrap_or( 6 );
-    wait_for_session_slot( max_sessions, cli.quiet, cli, journal );
+    let mut runner_attempt = 0u32;
+    wait_for_session_slot(
+      max_sessions,
+      cli.quiet,
+      cli.gate_poll_secs.unwrap_or( 30 ),
+      cli.gate_max_attempts.unwrap_or( 1000 ),
+      cli.gate_stale_secs,
+      journal,
+      &mut | e | { execution::apply_runner_retry( cli, e, &mut runner_attempt, journal ); },
+    );
   }
 
   if cli.trace
@@ -392,6 +403,31 @@ pub( super ) fn dispatch_ask( tokens : &[ String ] ) -> !
   dispatch_run( &tokens[ 1 .. ] );
 }
 
+/// Gate an isolated session through the same concurrency mechanism as run/ask.
+///
+/// Unlike refresh (which always runs a fixed, throwaway prompt and discards the
+/// response), isolated can run arbitrarily long real user tasks, so it must contend
+/// for a slot too. dry-run bypasses the gate, matching run/ask's own documented
+/// dry-run bypass. isolated has no --quiet flag, so progress messages always show
+/// (quiet=false); the 3 gate-tuning knobs are env-var-only here — isolated has no
+/// config.toml tier for any parameter, so these stay consistent with its other
+/// fields rather than gaining a CLI-flag/config tier run/ask alone has (see
+/// `gate_poll_secs_from()`/`gate_stale_secs_from()` doc for the one-shot-vs-tiered split).
+fn gate_isolated_session( cli : &IsolatedArgs, journal : Option< &claude_journal::JournalWriter > )
+{
+  if cli.dry_run { return; }
+  let max_sessions = cli.max_sessions.unwrap_or( 6 );
+  wait_for_session_slot(
+    max_sessions,
+    false,
+    gate::gate_poll_secs_from( env::env_str( "CLR_GATE_POLL_SECS" ).as_deref() ),
+    gate::gate_max_attempts_from( env::env_str( "CLR_GATE_MAX_ATTEMPTS" ).as_deref() ),
+    gate::gate_stale_secs_from( env::env_str( "CLR_GATE_STALE_SECS" ).as_deref() ),
+    journal,
+    &mut | e | { eprintln!( "Error: [Runner] {e} (exit 1)" ); std::process::exit( 1 ); },
+  );
+}
+
 /// Parse, validate, and execute the `isolated` subcommand.  Never returns.
 pub( super ) fn dispatch_isolated( tokens : &[ String ] ) -> !
 {
@@ -472,6 +508,8 @@ pub( super ) fn dispatch_isolated( tokens : &[ String ] ) -> !
   passthrough.extend_from_slice( &cli.passthrough_args );
 
   let journal = if cli.dry_run { None } else { resolve_journal_writer( cli.journal.as_deref(), cli.journal_dir.as_deref() ) };
+  gate_isolated_session( &cli, journal.as_ref() );
+
   run_isolated_command(
     "isolated",
     &cli.creds_path,

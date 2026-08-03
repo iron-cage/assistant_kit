@@ -308,6 +308,39 @@ pub( super ) fn apply_json_config( parsed : &mut CliArgs, map : &Map< String, Va
           }
         }
       }
+      "gate-poll-secs" =>
+      {
+        if parsed.gate_poll_secs.is_none()
+        {
+          if let Value::Number( n ) = v
+          {
+            if let Some( u ) = n.as_u64() { parsed.gate_poll_secs = Some( u ); }
+          }
+        }
+      }
+      "gate-max-attempts" =>
+      {
+        if parsed.gate_max_attempts.is_none()
+        {
+          if let Value::Number( n ) = v
+          {
+            if let Some( u ) = n.as_u64().and_then( | x | u32::try_from( x ).ok() )
+            {
+              parsed.gate_max_attempts = Some( u );
+            }
+          }
+        }
+      }
+      "gate-stale-secs" =>
+      {
+        if parsed.gate_stale_secs.is_none()
+        {
+          if let Value::Number( n ) = v
+          {
+            if let Some( u ) = n.as_u64() { parsed.gate_stale_secs = Some( u ); }
+          }
+        }
+      }
       "retry-on-transient" =>
       {
         if parsed.retry_on_transient.is_none()
@@ -836,6 +869,19 @@ pub( super ) fn apply_json_config_isolated(
         if parsed.creds_path.is_empty()
         {
           if let Value::String( s ) = v { parsed.creds_path = s.clone(); }
+        }
+      }
+      "max-sessions" =>
+      {
+        if parsed.max_sessions.is_none()
+        {
+          if let Value::Number( n ) = v
+          {
+            if let Some( u ) = n.as_u64().and_then( | x | u32::try_from( x ).ok() )
+            {
+              parsed.max_sessions = Some( u );
+            }
+          }
         }
       }
       // "args-file" is self-referential — silently skip.

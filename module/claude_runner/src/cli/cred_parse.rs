@@ -13,7 +13,7 @@
 
 use claude_core::paths::ClaudePaths;
 use error_tools::{ Error, Result };
-use super::parse::next_value;
+use super::parse::{ next_value, parse_u32_flag };
 use super::env::{ env_bool, env_str };
 
 /// Parsed arguments for the `isolated` subcommand.
@@ -40,6 +40,7 @@ pub( super ) struct IsolatedArgs
   pub( super ) summary_fields   : Option< String >,
   pub( super ) args_file         : Option< String >,
   pub( super ) no_compact_window : bool,
+  pub( super ) max_sessions      : Option< u32 >,
 }
 
 /// Parsed arguments for the `refresh` subcommand.
@@ -122,6 +123,7 @@ fn apply_cred_env_vars(
 /// Recognises `--creds <FILE>`, `--timeout <SECS>`, a positional `[MESSAGE]`,
 /// and `-- <PASSTHROUGH...>`. Everything after `--` is collected verbatim.
 /// Unknown flags (before `--`) are rejected with an error.
+#[ allow( clippy::too_many_lines ) ] // mechanical dispatch — one arm per CLI flag token
 pub( super ) fn parse_isolated_args( tokens : &[ String ] ) -> Result< IsolatedArgs >
 {
   let mut args          = IsolatedArgs { timeout_secs : 30, ..Default::default() };
@@ -207,6 +209,13 @@ pub( super ) fn parse_isolated_args( tokens : &[ String ] ) -> Result< IsolatedA
         args.args_file = Some( next_value( tokens, i + 1, "--args-file" )?.to_string() );
         i += 1;
       }
+      "--max-sessions" =>
+      {
+        args.max_sessions = Some(
+          parse_u32_flag( next_value( tokens, i + 1, "--max-sessions" )?, "--max-sessions", " (0 = unlimited)" )?
+        );
+        i += 1;
+      }
       // Fix(BUG-222): explicit --help arm prevents catch-all from swallowing help flags.
       // Root cause: no --help arm in subcommand parser; catch-all returned Err.
       // Pitfall: always add --help before the starts_with('-') catch-all.
@@ -232,7 +241,8 @@ pub( super ) fn parse_isolated_args( tokens : &[ String ] ) -> Result< IsolatedA
 
 /// Apply `CLR_CREDS`, `CLR_TIMEOUT`, `CLR_TRACE`, `CLR_DIR`, `CLR_ADD_DIR`,
 /// `CLR_JOURNAL`, `CLR_JOURNAL_DIR`, `CLR_OUTPUT_FILE`, `CLR_STRIP_FENCES`,
-/// `CLR_OUTPUT_STYLE`, and `CLR_SUMMARY_FIELDS` env var fallbacks for `isolated`.
+/// `CLR_OUTPUT_STYLE`, `CLR_SUMMARY_FIELDS`, and `CLR_MAX_SESSIONS` env var
+/// fallbacks for `isolated`.
 ///
 /// Delegates to [`apply_cred_env_vars`] with isolated's timeout sentinel (30).
 pub( super ) fn apply_isolated_env_vars( parsed : &mut IsolatedArgs ) -> Result< () >
@@ -262,6 +272,10 @@ pub( super ) fn apply_isolated_env_vars( parsed : &mut IsolatedArgs ) -> Result<
   if parsed.output_style.is_none() { parsed.output_style = env_str( "CLR_OUTPUT_STYLE" ); }
   if parsed.summary_fields.is_none() { parsed.summary_fields = env_str( "CLR_SUMMARY_FIELDS" ); }
   if !parsed.no_compact_window { parsed.no_compact_window = env_bool( "CLR_NO_COMPACT_WINDOW" ); }
+  if parsed.max_sessions.is_none()
+  {
+    if let Some( v ) = env_str( "CLR_MAX_SESSIONS" ) { parsed.max_sessions = v.parse::< u32 >().ok(); }
+  }
   Ok( () )
 }
 

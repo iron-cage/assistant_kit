@@ -817,3 +817,23 @@ pub fn run_isolated( args : &[ &str ] ) -> std::process::Output
   full.extend_from_slice( args );
   run_cli( &full )
 }
+
+/// Poll `child` with `try_wait()` until it exits or `deadline` passes, sleeping
+/// 50ms between checks. Never blocks past `deadline` — unlike `.output()`
+/// (blocks until natural exit), this lets a test fail fast when a gate-timing
+/// override (env var, CLI flag, or config-file key) is not actually taking
+/// effect, instead of hanging for however long the real production default
+/// (e.g. 30s x 1000 attempts) would otherwise take. Shared by
+/// `concurrency_gate_test` and `config_file_test` — both prove a gate-timing
+/// override changes real poll behavior via the same bounded-exhaustion pattern.
+#[ inline ]
+#[ allow( dead_code ) ]
+pub fn wait_bounded( child : &mut std::process::Child, deadline : std::time::Instant ) -> Option< std::process::ExitStatus >
+{
+  while std::time::Instant::now() < deadline
+  {
+    if let Ok( Some( status ) ) = child.try_wait() { return Some( status ); }
+    std::thread::sleep( core::time::Duration::from_millis( 50 ) );
+  }
+  None
+}

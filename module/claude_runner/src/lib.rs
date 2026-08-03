@@ -61,11 +61,12 @@ pub use cli::strip_fences;
 #[ allow( unused_imports ) ]
 pub use cli::{ render_summary, resolve_fields, extract_session_id };
 
-// gate_max_attempts_from is used by tests/gate_unit_test.rs — same rationale as above.
+// gate_max_attempts_from/gate_poll_secs_from/gate_stale_secs_from are used by
+// tests/gate_unit_test.rs — same rationale as above.
 #[ cfg( feature = "enabled" ) ]
 #[ doc( hidden ) ]
 #[ allow( unused_imports ) ]
-pub use cli::gate_max_attempts_from;
+pub use cli::{ gate_max_attempts_from, gate_poll_secs_from, gate_stale_secs_from };
 
 // TOOLS is used by tests/tools_command_test.rs's sync-guard tests (BUG-409) — same rationale as above.
 #[ cfg( feature = "enabled" ) ]

@@ -24,6 +24,9 @@ pub( crate ) struct ConfigDefaults
   pub( crate ) effort               : Option< String >,
   pub( crate ) no_effort_max        : bool,
   pub( crate ) max_sessions         : Option< u32 >,
+  pub( crate ) gate_poll_secs       : Option< u64 >,
+  pub( crate ) gate_max_attempts    : Option< u32 >,
+  pub( crate ) gate_stale_secs      : Option< u64 >,
   pub( crate ) retry_on_transient   : Option< u8 >,
   pub( crate ) transient_delay      : Option< u32 >,
   pub( crate ) retry_on_account     : Option< u8 >,
@@ -148,6 +151,9 @@ pub( crate ) fn apply_config_defaults( parsed : &mut CliArgs, config : &ConfigDe
   }
   if !parsed.no_effort_max { parsed.no_effort_max = config.no_effort_max; }
   if parsed.max_sessions.is_none() { parsed.max_sessions = config.max_sessions; }
+  if parsed.gate_poll_secs.is_none() { parsed.gate_poll_secs = config.gate_poll_secs; }
+  if parsed.gate_max_attempts.is_none() { parsed.gate_max_attempts = config.gate_max_attempts; }
+  if parsed.gate_stale_secs.is_none() { parsed.gate_stale_secs = config.gate_stale_secs; }
   if parsed.retry_on_transient.is_none() { parsed.retry_on_transient = config.retry_on_transient; }
   if parsed.transient_delay.is_none() { parsed.transient_delay = config.transient_delay; }
   if parsed.retry_on_account.is_none() { parsed.retry_on_account = config.retry_on_account; }

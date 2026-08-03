@@ -81,6 +81,9 @@ fn runner_option_group() -> cli_fmt::help::OptionGroup
       OptionEntry { name : "--expect <VALS>".into(),                 desc : "Pipe-separated expected values; mismatch → exit 3".into() },
       OptionEntry { name : "--expect-strategy <STRAT>".into(),       desc : "Mismatch handling: fail (default), retry, default:<VAL>".into() },
       OptionEntry { name : "--max-sessions <N>".into(),              desc : "Max concurrent sessions before blocking (0=unlimited, default: 6)".into() },
+      OptionEntry { name : "--gate-poll-secs <SECS>".into(),         desc : "Session gate poll interval (default: 30) [env: CLR_GATE_POLL_SECS]".into() },
+      OptionEntry { name : "--gate-max-attempts <N>".into(),         desc : "Session gate max poll attempts (default: 1000) [env: CLR_GATE_MAX_ATTEMPTS]".into() },
+      OptionEntry { name : "--gate-stale-secs <SECS>".into(),        desc : "Reclaim gate slots held by dead/stale PIDs after N seconds (unset = disabled) [env: CLR_GATE_STALE_SECS]".into() },
       OptionEntry { name : "--timeout <SECS>".into(),                desc : "Kill subprocess after N seconds (0 = unlimited, default: 3600)".into() },
       // Retry tier 1: override
       OptionEntry { name : "--retry-override <N>".into(),            desc : "Force retry count for all error classes (unset = per-class)".into() },
@@ -173,6 +176,7 @@ pub( crate ) fn print_isolated_help() -> !
   println!( "  --strip-fences                     Strip outermost markdown code fences from output [env: CLR_STRIP_FENCES]" );
   println!( "  --output-style <MODE>              Output rendering: raw (default), summary [env: CLR_OUTPUT_STYLE]" );
   println!( "  --summary-fields <PROFILE>         Summary field selection: full, standard, minimal, or comma-separated [env: CLR_SUMMARY_FIELDS]" );
+  println!( "  --max-sessions <N>                 Max concurrent sessions before blocking (0=unlimited, default: 6) [env: CLR_MAX_SESSIONS]" );
   println!();
   println!( "EXIT CODES:" );
   println!( "  0    Success" );
