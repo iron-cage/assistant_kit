@@ -79,6 +79,16 @@ These parameters apply identically across all 4 running commands:
 | `--journal` | Enable journaling (`full`/`meta`/`off`) |
 | `--journal-dir` | Override journal output directory |
 
+### Exclusive Parameters (asymmetric coverage)
+
+Complements Universal Params above by summarizing the opposite extreme — parameters confined to one command or one proper subset, rather than shared by all 4. See the Command Comparison matrix above for every partial-overlap case (e.g. params shared by `run`/`ask`/`isolated` but not `refresh`, such as `--file`, `--dir`, `--expect`).
+
+| Scope | Parameters | Notes |
+|-------|-----------|-------|
+| `isolated`-only | passthrough (`--`) | Sole route to `--effort`, `--no-effort-max`, `--output-format`, `--system-prompt`, `--append-system-prompt`, `--json-schema`, `--mcp-config`, `--allowed-tools`, `--disallowed-tools`, `--max-budget-usd`, `--max-turns`, `--chrome`/`--no-chrome`, `--model` override on `isolated` — none of these are native flags there; ergonomic gap only (last-wins arg order means passthrough already reaches all of them), not a functional one — see [`../parity/001_run_ask_isolated.md`](../parity/001_run_ask_isolated.md) Exclusion Rationale |
+| `isolated` + `refresh` only | `--creds` | Credential-isolated execution config; see [`04_credential_operations.md`](04_credential_operations.md) |
+| `run` + `ask` only | `--no-effort-max`, `--output-format`, `--subdir`, `--new-session`, `--session-dir`, `--retry-on-transient`/`--transient-delay`, `--retry-on-auth`/`--auth-delay`, `--max-sessions` | Session control, retries, and format negotiation — no passthrough equivalent exists for `isolated`/`refresh` since these configure the runner itself, not the `claude` subprocess |
+
 ### Invariants
 
 1. All 4 running commands inject `CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000` and `CLAUDE_CODE_AUTO_COMPACT_WINDOW=300000` (opt-out via `--no-compact-window`).
