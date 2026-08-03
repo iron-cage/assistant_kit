@@ -710,6 +710,8 @@ fn it_set_session_model_writes_and_removes()
   assert!( !content.contains( "\"model\"" ), "set_session_model None must remove model key; got: {content}" );
 }
 
+// BUG-341 task/bug/341_orphaned_marker_after_cross_machine_delete.md — this test's dual-HOSTNAME
+// simulation pattern is the prior art a cross-machine `delete()` regression test should follow.
 /// FT-11/025 — `other_machines_active()` returns other machines' account names,
 /// excludes own marker.
 ///
@@ -770,6 +772,60 @@ fn test_ft11_025_other_machines_active_returns_others()
   assert!(
     !result.contains( "own@test.com" ),
     "FT-11: own marker content must be excluded from the result; got {result:?}",
+  );
+}
+
+// test_kind: bug_reproducer(BUG-341)
+/// FT-14/025 — `delete()` clears a foreign-machine marker naming the deleted
+/// account, not only the calling machine's own marker.
+///
+/// ## Root Cause (AC-06 coverage)
+/// `delete()`'s marker-clear guard checked only `read_active_marker(store)`,
+/// which resolves via `active_marker_filename()` — bound to the CALLING
+/// machine's own hostname+user. A marker belonging to a different machine,
+/// even one naming the exact account being deleted, was structurally
+/// invisible to that check and survived the delete untouched.
+///
+/// ## Setup
+/// `TempDir` with the target account's `.credentials.json`, plus a
+/// hard-coded foreign marker (`_active_machine2_user1` — the same
+/// collision-free fixture name FT-11 already relies on) containing the
+/// target account's name.
+///
+/// ## Assert
+/// After `delete()`, the foreign marker no longer names the deleted account.
+///
+/// Spec: [`tests/docs/feature/025_per_machine_active_marker.md` FT-14]
+#[ test ]
+fn test_ft14_025_delete_clears_foreign_machine_marker()
+{
+  let tmp   = TempDir::new().unwrap();
+  let store = tmp.path();
+
+  let name           = "ghost@obox.systems";
+  let foreign_marker = "_active_machine2_user1";
+
+  // Sanity guard: foreign_marker must differ from this machine's own marker name
+  // (same guarantee FT-11 relies on), or this test would exercise the already-
+  // correct same-machine path instead of the cross-machine path under test.
+  let own_name = account::active_marker_filename();
+  assert!(
+    own_name != foreign_marker,
+    "FT-14: own_name '{own_name}' collides with the hard-coded foreign filename — \
+     update the test to use a different foreign name",
+  );
+
+  std::fs::write( store.join( format!( "{name}.credentials.json" ) ), "{}" ).unwrap();
+  std::fs::write( store.join( foreign_marker ), name ).unwrap();
+
+  account::delete( name, store ).unwrap();
+
+  let still_points_at_deleted = std::fs::read_to_string( store.join( foreign_marker ) )
+    .is_ok_and( | s | s.trim() == name );
+  assert!(
+    !still_points_at_deleted,
+    "FT-14: foreign marker '{foreign_marker}' must no longer name the deleted \
+     account '{name}' after delete(); marker survived unchanged",
   );
 }
 

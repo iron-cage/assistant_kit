@@ -917,9 +917,21 @@ pub fn delete( name : &str, credential_store : &Path ) -> Result< (), std::io::E
   let _ = std::fs::remove_file( credential_store.join( format!( "{name}.settings.json" ) ) );
   let _ = std::fs::remove_file( credential_store.join( format!( "{name}.roles.json" ) ) );
   let _ = std::fs::remove_file( credential_store.join( format!( "{name}.profile.json" ) ) );
-  if read_active_marker( credential_store ).as_deref() == Some( name )
+  // Fix(BUG-341): clear every `_active_*` marker naming this account, not only
+  // the calling machine's own marker.
+  // Root cause: the guard resolved a single path via `active_marker_filename()`
+  // (bound to the CALLING machine's own hostname+user) and compared only that
+  // one file's content, so a foreign machine's marker naming the same account
+  // was never inspected and survived the delete untouched.
+  // Pitfall: do not special-case the own marker again here — `all_marker_files()`
+  // already enumerates it alongside every foreign marker, so a single scan
+  // covers both without reintroducing the same one-marker blind spot.
+  for ( path, content ) in all_marker_files( credential_store )
   {
-    let _ = std::fs::remove_file( credential_store.join( active_marker_filename() ) );
+    if content == name
+    {
+      let _ = std::fs::remove_file( path );
+    }
   }
   Ok( () )
 }
@@ -1484,20 +1496,11 @@ pub fn active_marker_filename() -> String
 #[ must_use ]
 pub fn other_machines_active( credential_store : &Path ) -> std::collections::HashSet< String >
 {
-  let own = active_marker_filename();
-  std::fs::read_dir( credential_store )
-    .ok()
+  let own = credential_store.join( active_marker_filename() );
+  all_marker_files( credential_store )
     .into_iter()
-    .flatten()
-    .filter_map( Result::ok )
-    .filter( | e |
-    {
-      let name = e.file_name();
-      let n = name.to_string_lossy();
-      n.starts_with( "_active_" ) && n != own.as_str()
-    } )
-    .filter_map( | e | std::fs::read_to_string( e.path() ).ok() )
-    .map( | s | s.trim().to_string() )
+    .filter( | ( path, _ ) | *path != own )
+    .map( | ( _, content ) | content )
     .filter( | s | !s.is_empty() )
     .collect()
 }
@@ -1688,6 +1691,25 @@ fn read_active_marker( credential_store : &Path ) -> Option< String >
   std::fs::read_to_string( marker )
     .ok()
     .map( | s | s.trim().to_string() )
+}
+
+/// Returns every `_active_*` marker file in `credential_store` as
+/// `(path, trimmed_content)` pairs — the calling machine's own marker
+/// included. Missing or unreadable files are silently skipped.
+fn all_marker_files( credential_store : &Path ) -> Vec< ( std::path::PathBuf, String ) >
+{
+  std::fs::read_dir( credential_store )
+    .ok()
+    .into_iter()
+    .flatten()
+    .filter_map( Result::ok )
+    .filter( | e | e.file_name().to_string_lossy().starts_with( "_active_" ) )
+    .filter_map( | e |
+    {
+      let path = e.path();
+      std::fs::read_to_string( &path ).ok().map( | s | ( path, s.trim().to_string() ) )
+    } )
+    .collect()
 }
 
 /// Extract the account name from a `{name}.credentials.json` path.

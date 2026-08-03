@@ -33,7 +33,8 @@ pub( crate ) fn append_sessions_table(
 /// Read all `_active_*` markers from `store_path`, render as `{user}@{host} → account` table.
 ///
 /// Returns `(marker_count, table_string)`. `marker_count` includes the own marker.
-/// Own session receives `✓` appended to the Account column.
+/// Own session receives `✓` appended to the Account column; a marker naming an
+/// account no longer in the credential store receives `(stale)` appended.
 fn build_sessions_table( store_path : &std::path::Path ) -> ( usize, String )
 {
   use claude_profile_core::account::active_marker_filename;
@@ -70,14 +71,18 @@ fn build_sessions_table( store_path : &std::path::Path ) -> ( usize, String )
   let mut builder = RowBuilder::new( headers );
   for ( identity, account, is_own ) in &entries
   {
-    let account_cell = if *is_own
-    {
-      format!( "{account} ✓" )
-    }
-    else
-    {
-      account.clone()
-    };
+    // Fix(BUG-341): flag markers naming an account no longer in the credential
+    // store, so an orphaned marker reads as stale instead of a live session.
+    // Root cause: this table rendered marker content verbatim with no existence
+    // check, so a marker orphaned by `delete()`'s prior single-marker blind spot
+    // looked identical to a genuinely active session.
+    // Pitfall: skip the check for empty marker content — an unset marker isn't
+    // "stale", and `{}.credentials.json` is never a meaningful path to test.
+    let is_stale = !account.is_empty()
+      && !store_path.join( format!( "{account}.credentials.json" ) ).exists();
+    let mut account_cell = account.clone();
+    if *is_own { account_cell.push_str( " ✓" ); }
+    if is_stale { account_cell.push_str( " (stale)" ); }
     builder = builder.add_row( vec![ identity.clone().into(), account_cell.into() ] );
   }
   let view  = builder.build_view();

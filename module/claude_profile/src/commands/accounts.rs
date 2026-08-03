@@ -201,9 +201,16 @@ pub fn accounts_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Res
       let cred_path = credential_store.join( format!( "{name_arg}.credentials.json" ) );
       if !cred_path.exists()
       {
+        // Fix(BUG-342): name the source parameter in the error message.
+        // Root cause: name_arg derives exclusively from name:: (via resolve_account_name()),
+        // never from assignee::'s own value, but the message named only the failing value with
+        // no indication of which parameter supplied it — ambiguous when both are present.
+        // Pitfall: do not infer the source from whichever param is textually closer to the
+        // error site — name_arg's provenance is fixed (always name::), so the annotation is a
+        // constant string, not a runtime branch.
         return Err( ErrorData::new(
           ErrorCode::ArgumentTypeMismatch,
-          format!( "account '{name_arg}' not found in credential store" ),
+          format!( "account '{name_arg}' (from name::) not found in credential store" ),
         ) );
       }
       // G9: Claim-lock guard — locked accounts cannot become the assignee:: target.

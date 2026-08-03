@@ -196,7 +196,7 @@ Next (renew)     · alice@example.com   · sonnet/high · in 3h 47m $ren
 
 - **AC-32**: After the touch loop, `.usage` applies `apply_model_override()` for the **current** account (`is_current == true`): when the current account has valid quota data (`result` is `Ok`) and `seven_day_sonnet` remaining is below 10%, and the session model in `~/.claude/settings.json` is `"claude-sonnet-5"` (or empty), overwrites the session model with `"claude-opus-4-8"`. This ensures the interactive session switches to Opus when Sonnet quota is nearly exhausted, even without an `.account.use` switch event. When `trace::1`, emits a timestamped diagnostic line: `... · usage  {name}  model override: sonnet→opus (7d(Son) left={N}%)` to stderr when the override fires. Bidirectional (Fix BUG-311): when `seven_day_sonnet` is `Some` and `≥ 10%`, or when `seven_day_sonnet` is `None` (absent tier treated as unknown, not exhausted — Fix BUG-300), writes `"sonnet"` conservatively via `override_session_model_to_sonnet()`. Trace emits `opus→sonnet` when model changes. No-op when the current account has no quota data or when the session model already matches the target value. Effort tracking (Fix BUG-322, updated TSK-335): effort is written unconditionally (not gated on `overrode`) in every model branch — Opus branch: `set_session_effort(paths, "max")`; Sonnet branch and absent-tier path: `set_session_effort(paths, "high")`. BUG-312 init guard retained as unreachable safety fallback (writes `"high"` when `effortLevel` absent). The carry-forward `set_session_effort()` in the rotation dispatcher has been removed — `apply_model_override()` owns all effort writes. (Fix for BUG-244, BUG-311, BUG-322, TSK-335.)
 
-- **AC-33**: A sessions table is appended after the footer when >1 `_active_*` marker file exists in the credential store. The table has two columns: `Session` (`{user}@{host}`, derived by stripping the `_active_` prefix from the marker filename and splitting at the boundary between host and user) and `Account` (file content, trimmed). The current machine's own session receives `✓` appended to the Account value. Rendered via `data_fmt`. When only 1 marker exists, the sessions table is omitted by default.
+- **AC-33**: A sessions table is appended after the footer when >1 `_active_*` marker file exists in the credential store. The table has two columns: `Session` (`{user}@{host}`, derived by stripping the `_active_` prefix from the marker filename and splitting at the boundary between host and user) and `Account` (file content, trimmed). The current machine's own session receives `✓` appended to the Account value; a marker naming an account with no corresponding `{account}.credentials.json` in the credential store receives `(stale)` appended instead — empty marker content is never flagged, since it names no account to check for existence (BUG-341 fix). Rendered via `data_fmt`. When only 1 marker exists, the sessions table is omitted by default.
 - **AC-34**: `who::0` suppresses the sessions table unconditionally (even when >1 marker exists). `who::1` forces the sessions table on (even when ≤1 marker). Default behavior (omit parameter) is auto: shown when >1 marker, hidden when ≤1.
 - **AC-35**: `5h Left` and `7d Left` column values, and any session-model-override decision derived from `7d(Son)` utilization, MUST classify (color/branch) from the same rounded value shown/logged for that reading — never from the raw pre-rounding float while display text is rounded separately. Concretely: two rows (or two invocations) whose displayed percentage text is identical MUST show the identical color emoji (`🟢`/`🟡`) in `5h Left`/`7d Left`, and MUST select the identical sonnet↔opus override branch when their logged `7d(Son) left={N}%` trace text is identical. (Invariant: [invariant/010](../invariant/010_floating_point_comparison_vs_display_consistency.md); algorithm: [algorithm/011](../algorithm/011_rounding_boundary_classification_hazards.md); **BUG-331**, fix applied 2026-07-08, state 🎯 Verified pending independent validation.)
 
@@ -241,6 +241,12 @@ Next (renew)     · alice@example.com   · sonnet/high · in 3h 47m $ren
 | [036_account_ownership.md](036_account_ownership.md) | G1 gate: non-owned accounts bypass token read and HTTP; use cache as primary source; `is_owned` JSON field |
 | [066_dual_source_quota_parsing.md](066_dual_source_quota_parsing.md) | Dual-source parsing — restores `7d(Son)` column when Anthropic re-enables per-model `limits` array entries (Feature 066) |
 
+### Invariants
+
+| File | Relationship |
+|------|--------------|
+| [invariant/005_atomic_switching.md](../invariant/005_atomic_switching.md) | AC-33's `(stale)` flag is the defense-in-depth backstop for the permanent-staleness case this invariant's crash-only tolerance clause excludes |
+
 ### Parameters
 
 | File | Relationship |
@@ -269,6 +275,7 @@ Next (renew)     · alice@example.com   · sonnet/high · in 3h 47m $ren
 | File | Relationship |
 |------|--------------|
 | `tests/cli/usage_core_test.rs` | All-accounts quota table and JSON output tests |
+| `tests/usage/render_tests_b.rs` | FT-33: sessions table flags a marker naming a since-deleted account with `(stale)`, leaves a live account's marker unflagged (AC-33, BUG-341) |
 
 ### Algorithm Docs
 
