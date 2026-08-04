@@ -14,8 +14,8 @@ const INSTALL_URL : &str = "https://claude.ai/install.sh";
 
 // ── Version alias table ───────────────────────────────────────────────────────
 //
-// Maintenance: when bumping `stable`/`month` (or any pinned alias value),
-// grep the repo for the old literal (e.g. `2\.1\.78`) and update every
+// Maintenance: when bumping `stable` (or any pinned alias value),
+// grep the repo for the old literal (e.g. `2\.1\.220`) and update every
 // genuine hit — a partial update silently breaks doc/test consistency.
 // Known locations as of the 2.1.220 bump:
 //   1. module/claude_version_core/src/version.rs — this table (the canonical source)
@@ -36,7 +36,7 @@ const INSTALL_URL : &str = "https://claude.ai/install.sh";
 #[ derive( Debug ) ]
 pub struct VersionAlias
 {
-  /// Short alias name used on the CLI (e.g. `"stable"`, `"month"`, `"latest"`).
+  /// Short alias name used on the CLI (e.g. `"stable"`, `"latest"`).
   pub name        : &'static str,
   /// Resolved semver string, or empty string for the `latest` alias.
   pub value       : &'static str,
@@ -46,10 +46,276 @@ pub struct VersionAlias
 
 /// All known version aliases in display order.
 pub const VERSION_ALIASES : &[ VersionAlias ] = &[
-  VersionAlias { name : "latest", value : "",       description : "Most recent published release" },
+  VersionAlias { name : "latest", value : "",        description : "Most recent published release" },
   VersionAlias { name : "stable", value : "2.1.220", description : "Pinned stable release (recommended)" },
-  VersionAlias { name : "month",  value : "2.1.74", description : "~1 month old release for stability" },
 ];
+
+// ── Custom marker table ───────────────────────────────────────────────────────
+//
+// User-defined version aliases stored in `~/.claude/version-markers.json`.
+// Unlike the compile-time `VERSION_ALIASES`, custom markers are created and
+// deleted at runtime via `.version.mark`.  They always pin a concrete semver
+// (no dynamic `latest`-style values).
+
+/// A user-defined version alias stored in `~/.claude/version-markers.json`.
+#[ derive( Debug, Clone ) ]
+pub struct CustomMarker
+{
+  /// Name used on the CLI (e.g. `"production"`, `"team-pin"`).
+  pub name        : String,
+  /// Pinned semver value (never empty — custom markers cannot be dynamic).
+  pub value       : String,
+  /// Human-readable description shown in `.version.list` output.
+  pub description : String,
+}
+
+// ── Custom marker I/O helpers (private) ──────────────────────────────────────
+
+fn markers_path() -> Option< std::path::PathBuf >
+{
+  ClaudePaths::new().map( | p | p.markers_file() )
+}
+
+/// Escape a string for embedding in a JSON double-quoted value.
+fn escape_json( s : &str ) -> String
+{
+  let mut out = String::with_capacity( s.len() );
+  for c in s.chars()
+  {
+    match c
+    {
+      '"'  => out.push_str( "\\\"" ),
+      '\\' => out.push_str( "\\\\" ),
+      '\n' => out.push_str( "\\n" ),
+      '\t' => out.push_str( "\\t" ),
+      '\r' => out.push_str( "\\r" ),
+      c    => out.push( c ),
+    }
+  }
+  out
+}
+
+/// Extract the value of a JSON string field from a single-object JSON fragment.
+fn extract_str_field( obj : &str, key : &str ) -> Option< String >
+{
+  let pattern  = format!( "\"{key}\"" );
+  let key_pos  = obj.find( &pattern )? + pattern.len();
+  let after    = obj[ key_pos.. ].trim_start();
+  let after    = after.strip_prefix( ':' )?.trim_start();
+  let after    = after.strip_prefix( '"' )?;
+  let mut result = String::new();
+  let mut chars  = after.chars();
+  loop
+  {
+    match chars.next()?
+    {
+      '"'  => break,
+      '\\' =>
+      {
+        match chars.next()?
+        {
+          '"'  => result.push( '"' ),
+          '\\' => result.push( '\\' ),
+          'n'  => result.push( '\n' ),
+          't'  => result.push( '\t' ),
+          'r'  => result.push( '\r' ),
+          c    => { result.push( '\\' ); result.push( c ); }
+        }
+      }
+      c => result.push( c ),
+    }
+  }
+  Some( result )
+}
+
+/// Parse the markers array from the JSON file content.
+fn parse_markers_json( json : &str ) -> Vec< CustomMarker >
+{
+  let array_start = json
+    .find( "\"markers\"" )
+    .and_then( | i | json[ i.. ].find( '[' ).map( | j | i + j + 1 ) );
+  let Some( array_start ) = array_start else { return Vec::new() };
+  let array_content = &json[ array_start.. ];
+
+  let mut markers   = Vec::new();
+  let mut depth     = 0_usize;
+  let mut obj_start = None;
+  for ( i, ch ) in array_content.char_indices()
+  {
+    match ch
+    {
+      '{' =>
+      {
+        if depth == 0 { obj_start = Some( i ); }
+        depth += 1;
+      }
+      '}' if depth > 0 =>
+      {
+        depth -= 1;
+        if depth == 0
+        {
+          if let Some( start ) = obj_start
+          {
+            let obj = &array_content[ start..=i ];
+            if let Some( name ) = extract_str_field( obj, "name" )
+            {
+              let value       = extract_str_field( obj, "value"       ).unwrap_or_default();
+              let description = extract_str_field( obj, "description" ).unwrap_or_default();
+              markers.push( CustomMarker { name, value, description } );
+            }
+          }
+          obj_start = None;
+        }
+      }
+      _ => {}
+    }
+  }
+  markers
+}
+
+/// Serialize markers to JSON and write atomically to the markers file.
+fn write_markers( path : &std::path::Path, markers : &[ CustomMarker ] ) -> Result< (), CoreError >
+{
+  let json = if markers.is_empty()
+  {
+    "{\n  \"markers\": []\n}\n".to_string()
+  }
+  else
+  {
+    let entries : Vec< String > = markers.iter().map( | m |
+    {
+      let n = escape_json( &m.name );
+      let v = escape_json( &m.value );
+      let d = escape_json( &m.description );
+      format!( "    {{\"name\":\"{n}\",\"value\":\"{v}\",\"description\":\"{d}\"}}" )
+    } ).collect();
+    format!( "{{\n  \"markers\": [\n{}\n  ]\n}}\n", entries.join( ",\n" ) )
+  };
+  if let Some( parent ) = path.parent()
+  {
+    std::fs::create_dir_all( parent )?;
+  }
+  let tmp = path.with_extension( "tmp" );
+  std::fs::write( &tmp, &json )?;
+  std::fs::rename( &tmp, path )?;
+  Ok( () )
+}
+
+// ── Custom marker public API ──────────────────────────────────────────────────
+
+/// Load all user-defined custom markers from `~/.claude/version-markers.json`.
+///
+/// Returns an empty vector when the file does not exist or cannot be parsed —
+/// callers treat "no markers" and "unreadable markers" identically.
+#[ inline ]
+#[ must_use ]
+pub fn load_custom_markers() -> Vec< CustomMarker >
+{
+  let Some( path ) = markers_path() else { return Vec::new() };
+  let Ok( content ) = std::fs::read_to_string( &path ) else { return Vec::new() };
+  parse_markers_json( &content )
+}
+
+/// Validate a proposed custom marker name.
+///
+/// Valid names: start with a lowercase letter, contain only `[a-z0-9-]`,
+/// at most 32 characters, and must not shadow a built-in alias.
+///
+/// # Errors
+///
+/// Returns [`CoreError::ParseError`] when the name violates any rule.
+#[ inline ]
+pub fn validate_marker_name( name : &str ) -> Result< (), CoreError >
+{
+  if name.is_empty()
+  {
+    return Err( CoreError::ParseError( "marker name cannot be empty".to_string() ) );
+  }
+  if name.len() > 32
+  {
+    return Err( CoreError::ParseError( format!( "marker name too long (max 32 chars): '{name}'" ) ) );
+  }
+  if !name.chars().next().is_some_and( | c | c.is_ascii_lowercase() )
+  {
+    return Err( CoreError::ParseError( format!( "marker name must start with a lowercase letter: '{name}'" ) ) );
+  }
+  if !name.chars().all( | c | c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-' )
+  {
+    return Err( CoreError::ParseError( format!(
+      "marker name may only contain lowercase letters, digits, and hyphens: '{name}'"
+    ) ) );
+  }
+  if VERSION_ALIASES.iter().any( | a | a.name == name )
+  {
+    return Err( CoreError::ParseError( format!( "'{name}' is a reserved built-in alias name" ) ) );
+  }
+  Ok( () )
+}
+
+/// Create or update a custom marker in `~/.claude/version-markers.json`.
+///
+/// If a marker with the given name already exists its `value` and `description`
+/// are replaced; otherwise a new entry is appended.
+///
+/// # Errors
+///
+/// Returns [`CoreError::IoError`] if the file cannot be written.
+// `core::io::ErrorKind` is gated by `feature(core_io)` on the stable channel
+// used here (rustc 1.97.1); `std::io::ErrorKind` is the only stable path.
+#[ allow( clippy::std_instead_of_core ) ]
+#[ inline ]
+pub fn save_custom_marker( name : &str, value : &str, description : &str ) -> Result< (), CoreError >
+{
+  eprintln!( "save_custom_marker(name={name:?}, value={value:?})" );
+  let mut markers = load_custom_markers();
+  if let Some( existing ) = markers.iter_mut().find( | m | m.name == name )
+  {
+    existing.value       = value.to_string();
+    existing.description = description.to_string();
+  }
+  else
+  {
+    markers.push( CustomMarker
+    {
+      name        : name.to_string(),
+      value       : value.to_string(),
+      description : description.to_string(),
+    } );
+  }
+  let path = markers_path().ok_or_else( || CoreError::IoError(
+    std::io::Error::new( std::io::ErrorKind::NotFound, "HOME not set" )
+  ) )?;
+  write_markers( &path, &markers )
+}
+
+/// Remove a custom marker by name from `~/.claude/version-markers.json`.
+///
+/// Returns `true` when a marker was found and deleted, `false` when no marker
+/// with the given name existed (no-op on the file).
+///
+/// # Errors
+///
+/// Returns [`CoreError::IoError`] if the file exists but cannot be written.
+// `core::io::ErrorKind` is gated by `feature(core_io)` on the stable channel
+// used here (rustc 1.97.1); `std::io::ErrorKind` is the only stable path.
+#[ allow( clippy::std_instead_of_core ) ]
+#[ inline ]
+pub fn remove_custom_marker( name : &str ) -> Result< bool, CoreError >
+{
+  eprintln!( "remove_custom_marker(name={name:?})" );
+  let mut markers = load_custom_markers();
+  let before = markers.len();
+  markers.retain( | m | m.name != name );
+  let removed = markers.len() < before;
+  if removed
+  {
+    let path = markers_path().ok_or_else( || CoreError::IoError(
+      std::io::Error::new( std::io::ErrorKind::NotFound, "HOME not set" )
+    ) )?;
+    write_markers( &path, &markers )?;
+  }
+  Ok( removed )
+}
 
 // ── Version history snapshot ──────────────────────────────────────────────────
 //
@@ -283,24 +549,30 @@ pub fn get_installed_version() -> Option< String >
 
 /// Resolve a version spec to the value passed to the official installer.
 ///
-/// Aliases map to their pinned semver or `"latest"`. Unknown specs are returned
-/// unchanged (e.g. a raw `"1.2.3"` passes through as-is).
+/// Resolution order: built-in aliases first, then custom markers, then
+/// pass-through (e.g. a raw `"1.2.3"` returns as-is).
 #[ inline ]
 #[ must_use ]
-pub fn resolve_version_spec( spec : &str ) -> &str
+pub fn resolve_version_spec( spec : &str, custom : &[ CustomMarker ] ) -> String
 {
-  VERSION_ALIASES.iter()
-  .find( | a | a.name == spec )
-  .map_or( spec, | a | if a.value.is_empty() { a.name } else { a.value } )
+  if let Some( alias ) = VERSION_ALIASES.iter().find( | a | a.name == spec )
+  {
+    return if alias.value.is_empty() { alias.name.to_string() } else { alias.value.to_string() };
+  }
+  if let Some( marker ) = custom.iter().find( | m | m.name == spec )
+  {
+    return marker.value.clone();
+  }
+  spec.to_string()
 }
 
-/// Validate a version spec: must be a known alias or a 3-part semver.
+/// Validate a version spec: must be a known alias, a custom marker, or a 3-part semver.
 ///
 /// # Errors
 ///
 /// Returns [`CoreError::ParseError`] for empty or unrecognised specs.
 #[ inline ]
-pub fn validate_version_spec( spec : &str ) -> Result< (), CoreError >
+pub fn validate_version_spec( spec : &str, custom : &[ CustomMarker ] ) -> Result< (), CoreError >
 {
   if spec.is_empty()
   {
@@ -308,6 +580,11 @@ pub fn validate_version_spec( spec : &str ) -> Result< (), CoreError >
   }
 
   if VERSION_ALIASES.iter().any( | a | a.name == spec )
+  {
+    return Ok( () );
+  }
+
+  if custom.iter().any( | m | m.name == spec )
   {
     return Ok( () );
   }
@@ -325,8 +602,10 @@ pub fn validate_version_spec( spec : &str ) -> Result< (), CoreError >
     return Ok( () );
   }
 
+  let alias_names : Vec< &str > = VERSION_ALIASES.iter().map( | a | a.name ).collect();
   Err( CoreError::ParseError( format!(
-    "unknown version '{spec}': expected 'stable', 'latest', 'month', or semver like '1.2.3'"
+    "unknown version '{spec}': expected '{}', a custom marker name, or semver like '1.2.3'",
+    alias_names.join( "', '" )
   ) ) )
 }
 

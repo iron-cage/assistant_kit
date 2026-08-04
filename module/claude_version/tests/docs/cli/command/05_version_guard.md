@@ -219,9 +219,9 @@ Integration test planning for the `.version.guard` command. See [command/readme.
 
 ### IT-15: Stale `preferredVersionResolved` → guard re-resolves alias
 
-- **Given:** `preferredVersionSpec = "month"`, `preferredVersionResolved = "2.1.50"` (stale — current month is 2.1.74).
+- **Given:** `preferredVersionSpec = "stable"`, `preferredVersionResolved = "2.1.0"` (stale — current stable is 2.1.220).
 - **When:** `clv .version.guard dry::1`
-- **Then:** Output references `2.1.74` (current alias value), not `2.1.50` (stale stored value).; Guard uses re-resolved alias value, ignoring stale stored resolution
+- **Then:** Output references `2.1.220` (current alias value), not `2.1.0` (stale stored value); Guard uses re-resolved alias value, ignoring stale stored resolution
 - **Exit:** 0
 - **Source:** [commands/version.rs — guard_once() re-resolution fix](../../../../src/commands/version.rs)
 

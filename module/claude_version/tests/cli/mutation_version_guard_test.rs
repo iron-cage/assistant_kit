@@ -145,7 +145,7 @@ fn tc406_guard_dry_force_no_install()
 //
 // Root Cause
 //
-// After an alias bump (e.g. month 2.1.50 → 2.1.74) the stored
+// After a stable alias bump (e.g. 2.1.0 → 2.1.220) the stored
 // `preferredVersionResolved` in settings.json becomes stale.
 // `guard_once()` must re-resolve the alias through the current table
 // rather than blindly trusting the stored resolved value.
@@ -174,10 +174,10 @@ fn tc410_guard_reresoves_stale_alias()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  // Stale resolved value from a previous alias mapping.
+  // Stale resolved value from a previous stable alias mapping.
   let settings_json = r#"{
-  "preferredVersionSpec": "month",
-  "preferredVersionResolved": "2.1.50"
+  "preferredVersionSpec": "stable",
+  "preferredVersionResolved": "2.1.0"
 }"#;
   let claude_dir = dir.path().join( ".claude" );
   std::fs::create_dir_all( &claude_dir ).unwrap();
@@ -189,14 +189,14 @@ fn tc410_guard_reresoves_stale_alias()
   );
   assert_exit( &out, 0 );
   let text = stdout( &out );
-  // Must use re-resolved value (2.1.74), not stale stored value (2.1.50).
+  // Must use re-resolved value (2.1.220), not stale stored value (2.1.0).
   assert!(
-    text.contains( "2.1.74" ),
-    "guard must re-resolve alias to current value 2.1.74: {text}"
+    text.contains( "2.1.220" ),
+    "guard must re-resolve alias to current value 2.1.220: {text}"
   );
   assert!(
-    !text.contains( "2.1.50" ),
-    "guard must NOT use stale stored resolved 2.1.50: {text}"
+    !text.contains( "2.1.0" ),
+    "guard must NOT use stale stored resolved 2.1.0: {text}"
   );
 }
 

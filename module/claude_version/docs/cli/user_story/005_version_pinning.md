@@ -7,11 +7,11 @@
 
 ### Acceptance Criteria
 
-- [ ] `clv .version.list` shows stable, month, and latest aliases with their resolved versions.
-- [ ] `clv .version.install version::month dry::1` shows the install plan for the monthly baseline.
-- [ ] `clv .version.install version::month` installs and applies 8-layer lock.
+- [ ] `clv .version.list` shows stable, latest, and any custom aliases with their resolved versions.
+- [ ] `clv .version.install version::stable dry::1` shows the install plan for the stable baseline.
+- [ ] `clv .version.install version::stable` installs and applies 8-layer lock.
 - [ ] If currently at the pinned version, install is a no-op (exits 0).
-- [ ] `clv .version.install version::month record_only::1` records the pinned preference without downloading/installing on this machine.
+- [ ] `clv .version.install version::stable record_only::1` records the pinned preference without downloading/installing on this machine.
 - [ ] `clv .version.show` after install confirms the pinned version is active.
 - [ ] `clv .version.guard interval::N` watches for drift and restores the pinned version automatically.
 
@@ -57,24 +57,23 @@
 
 ```bash
 clv .version.list
-# stable   1.2.34
-# month    1.2.30
-# latest   1.2.34
+# stable   2.1.220
+# latest
 ```
 
 **Step 2 — Preview the team-baseline install:**
 
 ```bash
-clv .version.install version::month dry::1
-# [dry-run] Would install claude-code@1.2.30
+clv .version.install version::stable dry::1
+# [dry-run] Would install claude-code@2.1.220
 # [dry-run] autoUpdates = false   (version lock applied)
 ```
 
 **Step 3 — Install and lock the pinned version:**
 
 ```bash
-clv .version.install version::month
-# Installing claude-code@1.2.30 ...
+clv .version.install version::stable
+# Installing claude-code@2.1.220 ...
 # Version lock applied (autoUpdates = false)
 # Done.
 ```

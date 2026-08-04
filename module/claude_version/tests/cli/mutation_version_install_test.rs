@@ -11,7 +11,6 @@
 //! | 306 | `version::1.2` → two-part semver rejected | N | 1 |
 //! | 307 | `version::x` → unknown alias, exit 1 | N | 1 |
 //! | 308 | absent `version::` with `dry::1` → uses `stable` | P | 0 |
-//! | 309 | `version::month dry::1` → resolves to pinned semver | P | 0 |
 //! | 350 | `version::latest dry::1` → `autoUpdates = true` in preview | P | 0 |
 //! | 351 | `version::stable dry::1` → `autoUpdates = false` in preview | P | 0 |
 //! | 352 | `version::2.1.50 dry::1` → `autoUpdates = false` in preview | P | 0 |
@@ -123,16 +122,6 @@ fn tc308_version_install_absent_version_defaults_to_stable()
   assert!( text.contains( "stable" ), "default version must be stable: {text}" );
 }
 
-// TC-309: version::month dry::1 → resolves to pinned semver
-#[ test ]
-fn tc309_version_install_dry_month()
-{
-  let out = run_clv( &[ ".version.install", "version::month", "dry::1" ] );
-  assert_exit( &out, 0 );
-  let text = stdout( &out );
-  assert!( text.contains( "month" ), "must contain alias name 'month': {text}" );
-  assert!( text.contains( "2.1.74" ), "must contain resolved version 2.1.74: {text}" );
-}
 
 // TC-350: version::latest dry::1 → autoUpdates = true in preview
 #[ test ]

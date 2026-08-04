@@ -6,7 +6,7 @@
 -- **Commands:** `.version.install`, `.version.guard`
 -- **Group:** none
 
-Accepts named aliases (`stable`, `latest`, `month`) or semver strings (e.g., `1.2.3`).
+Accepts named aliases (`stable`, `latest`), custom marker names, or semver strings (e.g., `1.2.3`).
 On `.version.guard`, the value overrides the stored preference for a single invocation
 without writing to `settings.json`.
 
@@ -18,7 +18,7 @@ without writing to `settings.json`.
 clv.version.install version::stable
 clv.version.install version::1.2.3
 clv.version.guard version::stable dry::1
-clv.version.guard version::month
+clv.version.guard version::stable dry::1
 ```
 
 ### Referenced Commands

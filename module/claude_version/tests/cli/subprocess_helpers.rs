@@ -144,6 +144,30 @@ pub fn stderr( out : &std::process::Output ) -> String
   String::from_utf8_lossy( &out.stderr ).into_owned()
 }
 
+/// Write a `version-markers.json` inside `{home_dir}/.claude/`.
+///
+/// `entries` is a list of `(name, value)` pairs. `description` is left empty.
+///
+/// # Panics
+///
+/// Panics if the directory cannot be created or the file cannot be written.
+#[ inline ]
+pub fn write_markers(
+  home_dir : &std::path::Path,
+  entries  : &[ ( &str, &str ) ],
+)
+{
+  let dir = home_dir.join( ".claude" );
+  std::fs::create_dir_all( &dir ).unwrap();
+  let path = dir.join( "version-markers.json" );
+  let items : Vec< String > = entries
+    .iter()
+    .map( |( n, v ) | format!( "    {{\"name\":\"{n}\",\"value\":\"{v}\",\"description\":\"\"}}" ) )
+    .collect();
+  let json = format!( "{{\n  \"markers\": [\n{}\n  ]\n}}\n", items.join( ",\n" ) );
+  std::fs::write( &path, json ).unwrap();
+}
+
 /// Assert that the process exited with `expected` exit code.
 ///
 /// On failure, prints both stdout and stderr to help diagnose the problem.

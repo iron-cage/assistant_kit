@@ -16,7 +16,7 @@
 use crate::subprocess_helpers::{ assert_exit, run_clv, stderr, stdout };
 
 /// Alias names that only ever appear in `mode::aliases` output.
-const ALIAS_MARKERS : [ &str; 3 ] = [ "latest", "stable", "month" ];
+const ALIAS_MARKERS : [ &str; 2 ] = [ "latest", "stable" ];
 
 // TC-1: mode::aliases → alias table
 #[ test ]

@@ -47,3 +47,4 @@ Module files for CLI tests, organised by domain. All files are included by `test
 | `path_key_test.rs` | TC- type compliance tests for `PathKey` (TC-1..TC-9) |
 | `list_mode_test.rs` | TC- type compliance tests for `ListMode` (TC-1..TC-6) |
 | `mode_param_test.rs` | EC- edge case tests for the `mode::` parameter (EC-1..EC-7) |
+| `mutation_version_mark_test.rs` | Integration tests for `.version.mark` (IT-1..IT-17, FT-1..FT-5) |

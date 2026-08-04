@@ -16,15 +16,14 @@
 - `.version.install` — installs a specified version via the official Anthropic installer (`curl -fsSL https://claude.ai/install.sh | bash -s -- {version}`)
 - `.version.guard` — detects drift from the preferred version and reinstalls if needed
 
-**Version aliases:** Three named aliases with compile-time pinned semver values:
+**Version aliases:** Two built-in named aliases with compile-time pinned semver values; users can add custom aliases via `.version.mark`:
 
 | Alias | Pinned Value | Description |
 |-------|-------------|-------------|
 | `latest` | *(installer resolves)* | Most recent published release |
 | `stable` | `2.1.220` | Pinned recommended release |
-| `month` | `2.1.74` | ~1 month old release |
 
-Aliases are resolved to their semver before passing to the installer. `latest` is passed as-is.
+Aliases are resolved to their semver before passing to the installer. `latest` is passed as-is. Custom aliases resolve to their stored value.
 
 **Idempotency:** `.version.install` skips re-installation if the installed version already matches the resolved semver. The guard compares against the resolved semver, not the alias name. Override with `force::1`. The guard is always skipped for `latest` (always re-install to get newest).
 

@@ -68,8 +68,8 @@ Both are valid invocations; output length differs.
 ### FT-3: Repeated parameter → last occurrence wins
 
 - **Given:** clean environment
-- **When:** `clv .version.install version::stable version::month dry::1`
-- **Then:** stdout contains `"2.1.74"` (month resolution wins); exit 0
+- **When:** `clv .version.install version::latest version::stable dry::1`
+- **Then:** stdout contains `"2.1.220"` (stable resolution wins); exit 0
 - **Exit:** 0
 - **Source:** [feature/005_cli_design.md — Parameter rules: last occurrence wins](../../../docs/feature/005_cli_design.md)
 

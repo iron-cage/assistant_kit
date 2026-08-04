@@ -36,7 +36,7 @@ pub use settings::{ settings_get_routine, settings_set_routine, settings_show_ro
 pub use status::status_routine;
 pub use version::{
   version_guard_routine, version_install_routine,
-  version_list_routine, version_show_routine,
+  version_list_routine, version_mark_routine, version_show_routine,
 };
 
 use unilang::data::{ ErrorCode, ErrorData };

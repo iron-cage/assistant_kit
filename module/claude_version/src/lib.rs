@@ -72,7 +72,7 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
   use commands::
   {
     status_routine, version_show_routine, version_install_routine,
-    version_guard_routine, version_list_routine,
+    version_guard_routine, version_list_routine, version_mark_routine,
     processes_routine, processes_kill_routine,
     settings_show_routine, settings_get_routine, settings_set_routine,
     config_routine, params_routine, runtime_files_routine, paths_routine,
@@ -88,6 +88,8 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
   let itv = || reg_arg_opt( "interval",    Kind::Integer );
   let cnt = || reg_arg_opt( "count",       Kind::Integer );
   let scp = || reg_arg_opt( "scope",       Kind::String  );
+  let nme = || reg_arg_opt( "name",        Kind::String  );
+  let dsc = || reg_arg_opt( "description", Kind::String  );
   let uns = || reg_arg_opt( "unset",       Kind::Boolean );
   let knd = || reg_arg_opt( "kind",        Kind::String  );
   let md  = || reg_arg_opt( "mode",        Kind::String  );
@@ -97,6 +99,7 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
   reg_cmd( registry, ".version.install", "Download and install a Claude Code version via installer",   vec![ ver(), dry(), frc(), rec(), v(), fmt() ], Box::new( version_install_routine ) );
   reg_cmd( registry, ".version.guard",   "Check for version drift and restore preferred version",      vec![ ver(), dry(), frc(), itv(), v(), fmt() ], Box::new( version_guard_routine   ) );
   reg_cmd( registry, ".version.list",    "List named version aliases (mode::aliases) or recent release history (mode::history)", vec![ md(), cnt(), v(), fmt() ], Box::new( version_list_routine    ) );
+  reg_cmd( registry, ".version.mark",    "Create, update, or remove a custom version alias marker",                              vec![ nme(), ver(), dsc(), uns(), dry(), v(), fmt() ], Box::new( version_mark_routine ) );
   reg_cmd( registry, ".processes",       "List all running Claude Code processes",                     vec![ v(), fmt() ],                      Box::new( processes_routine       ) );
   reg_cmd( registry, ".processes.kill",  "Terminate all Claude Code processes",                        vec![ dry(), frc(), v(), fmt() ],        Box::new( processes_kill_routine  ) );
   reg_cmd( registry, ".settings.show",   "Print all settings from ~/.claude/settings.json",            vec![ v(), fmt() ],                      Box::new( settings_show_routine   ) );
@@ -131,6 +134,7 @@ fn print_usage( binary : &str )
         CommandEntry { name : ".version.install".to_string(), desc : "Download and install a Claude Code version via installer".to_string() },
         CommandEntry { name : ".version.guard".to_string(),   desc : "Check for version drift and restore preferred version".to_string() },
         CommandEntry { name : ".version.list".to_string(),    desc : "Lists aliases or release history relevant to the installed version".to_string() },
+        CommandEntry { name : ".version.mark".to_string(),    desc : "Create, update, or remove a custom version alias marker".to_string() },
       ],
     },
     CommandGroup

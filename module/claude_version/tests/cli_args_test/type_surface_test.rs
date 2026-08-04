@@ -22,7 +22,6 @@
 //! ## `VersionSpec`
 //! | Function | Category |
 //! |----------|----------|
-//! | `tc_version_spec_month_alias_accepted` | Named alias |
 //! | `tc_version_spec_latest_alias_accepted` | Named alias |
 //!
 //! ## `SettingsKey`
@@ -133,16 +132,6 @@ fn tc_output_format_empty_rejected()
 }
 
 // ─── Type Surface: VersionSpec ───────────────────────────────────────────────
-
-// Type test: version::month alias accepted by install
-#[ test ]
-fn tc_version_spec_month_alias_accepted()
-{
-  let out = run( &[ ".version.install", "version::month", "dry::1" ] );
-  assert_eq!( code( &out ), 0, "version::month must exit 0" );
-  let text = out_stdout( &out );
-  assert!( text.contains( "[dry-run]" ), "must show dry-run: {text}" );
-}
 
 // Type test: version::latest alias accepted by install
 #[ test ]

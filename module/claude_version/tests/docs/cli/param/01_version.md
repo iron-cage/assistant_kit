@@ -15,7 +15,6 @@ Edge case coverage for the `version::` parameter. See [param/readme.md](../../..
 | ID | Test Name | Category |
 |----|-----------|----------|
 | EC-10 | `version::stable dry::1` → resolves to stable alias | Named Alias |
-| EC-11 | `version::month dry::1` → resolves to pinned semver | Named Alias |
 | EC-12 | `version::latest dry::1` → no-lock unlock mode | Named Alias (special) |
 | EC-13 | `version::1.2.3 dry::1` → exact semver accepted | Valid Semver |
 | EC-14 | `version::2.1.50 dry::1` → older semver accepted | Valid Semver |
@@ -28,23 +27,22 @@ Edge case coverage for the `version::` parameter. See [param/readme.md](../../..
 | EC-5 | `version::01.02.03` → leading zeros, exit 1 | Invalid: format |
 | EC-6 | `version::1.2.3.4` (four-part) → exit 1 | Invalid: format |
 | EC-7 | `version::LATEST` → wrong case, exit 1 | Invalid: case |
-| EC-8 | `version::MONTH` → wrong case, exit 1 | Invalid: case |
 | EC-9 | `version::` only accepted by `.version.install` and `.version.guard` | Command Scope |
 
 ## Test Coverage Summary
 
-- Named Alias: 3 tests (stable, month, latest)
+- Named Alias: 2 tests (stable, latest)
 - Valid Semver: 2 tests (1.2.3, 2.1.50)
 - Boundary: 1 test (0.0.0)
 - Default Behavior: 1 test
-- Invalid (case): 3 tests
+- Invalid (case): 2 tests
 - Invalid (format): 3 tests
 - Invalid (unknown): 1 test
 - Command Scope: 1 test
 
-**Total:** 16 edge cases
+**Total:** 14 edge cases
 
-**Behavioral Divergence Pair:** EC-10 (`version::stable dry::1` → output contains "2.1.220", exit 0) ↔ EC-11 (`version::month dry::1` → output contains "2.1.74", exit 0)
+**Behavioral Divergence Pair:** EC-10 (`version::stable dry::1` → output contains "2.1.220", exit 0) ↔ EC-12 (`version::latest dry::1` → no-pin unlock mode, exit 0)
 
 ---
 
@@ -117,15 +115,6 @@ Edge case coverage for the `version::` parameter. See [param/readme.md](../../..
 
 ---
 
-### EC-8: `version::MONTH` → wrong case
-
-- **Given:** clean environment
-- **When:** `clv .version.install version::MONTH`
-- **Then:** exit code 1.
-- **Exit:** 1
-
----
-
 ### EC-9: `version::` only for `.version.install` and `.version.guard`
 
 - **Given:** clean environment
@@ -141,16 +130,6 @@ Edge case coverage for the `version::` parameter. See [param/readme.md](../../..
 - **Given:** clean environment
 - **When:** `clv .version.install version::stable dry::1`
 - **Then:** exit 0; output references the `stable` alias or its pinned semver; no actual install
-- **Exit:** 0
-- **Source:** [param/01_version.md](../../../../docs/cli/param/01_version.md)
-
----
-
-### EC-11: `version::month dry::1` → resolves to pinned semver
-
-- **Given:** clean environment
-- **When:** `clv .version.install version::month dry::1`
-- **Then:** exit 0; output references the `month` alias or its pinned semver value; no actual install
 - **Exit:** 0
 - **Source:** [param/01_version.md](../../../../docs/cli/param/01_version.md)
 
@@ -221,10 +200,8 @@ Edge case coverage for the `version::` parameter. See [param/readme.md](../../..
 | `tc028_four_part_semver_rejected` | `cli_args_test/param_numeric_test.rs` |
 | `tc029_leading_zero_semver_rejected` | `cli_args_test/param_numeric_test.rs` |
 | `version_ec7_latest_wrong_case_exits_1` | `tests/cli/version_param_test.rs` |
-| `version_ec8_month_wrong_case_exits_1` | `tests/cli/version_param_test.rs` |
 | `version_ec9_command_scope_rejects_on_processes` | `tests/cli/version_param_test.rs` |
 | `version_ec10_stable_alias_dry` | `tests/cli/version_param_test.rs` |
-| `version_ec11_month_alias_dry` | `tests/cli/version_param_test.rs` |
 | `version_ec12_latest_alias_dry` | `tests/cli/version_param_test.rs` |
 | `version_ec13_exact_semver_dry` | `tests/cli/version_param_test.rs` |
 | `version_ec14_older_semver_dry` | `tests/cli/version_param_test.rs` |

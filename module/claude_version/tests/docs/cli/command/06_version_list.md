@@ -115,7 +115,6 @@ Same two valid values and validation rules apply under both modes; JSON field sh
 | IT-11 | `v::1` → aliases with descriptions | P | 0 | F3=1 | [read_version_test.rs] |
 | IT-3 | Output is deterministic on two calls | P | 0 | F1=absent | [read_version_test.rs] |
 | IT-12 | `format::json` → valid JSON array or object | P | 0 | F5=json | [read_version_test.rs] |
-| IT-13 | Output includes "month" alias | P | 0 | F1=absent | [read_version_test.rs] |
 | IT-14 | `v::1` shows pinned versions in parens `(vX.Y.Z)` | P | 0 | F3=1 | [read_version_test.rs] |
 | IT-15 | `format::json` has `"value"` field | P | 0 | F5=json | [read_version_test.rs] |
 | IT-7 | `format::json` → valid JSON output | P | 0 | F5=json | [read_version_test.rs] |
@@ -180,8 +179,8 @@ Same two valid values and validation rules apply under both modes; JSON field sh
 
 ### Alias Completeness (`mode::aliases`)
 
-All three aliases must appear in output: `stable` (IT-9), `latest` (IT-10), `month` (IT-13).
-Pinned values for `stable` and `month` must appear in `v::1` output (IT-14).
+Both built-in aliases must appear in output: `stable` (IT-9), `latest` (IT-10).
+Pinned value for `stable` must appear in `v::1` output (IT-14); custom markers also appear when present.
 
 ### JSON Field Requirements
 
@@ -269,7 +268,7 @@ Pinned values for `stable` and `month` must appear in `v::1` output (IT-14).
 
 - **Given:** clean environment
 - **When:** `clv .version.list`
-- **Then:** exit 0; stdout contains 3 alias lines (`stable`, `latest`, `month`)
+- **Then:** exit 0; stdout contains the 2 built-in alias lines (`stable`, `latest`)
 - **Exit:** 0
 - **Source:** [command/version.md](../../../../docs/cli/command/version.md)
 
@@ -385,21 +384,11 @@ Pinned values for `stable` and `month` must appear in `v::1` output (IT-14).
 
 ---
 
-### IT-13: Output includes "month" alias
-
-- **Given:** clean environment
-- **When:** `clv .version.list`
-- **Then:** exit 0; stdout contains the string `month`
-- **Exit:** 0
-- **Source:** [command/version.md](../../../../docs/cli/command/version.md)
-
----
-
 ### IT-14: `v::1` shows pinned versions in parens `(vX.Y.Z)`
 
-- **Given:** clean environment; `stable` and `month` aliases have pinned semver values
+- **Given:** clean environment; `stable` alias has a pinned semver value
 - **When:** `clv .version.list v::1`
-- **Then:** exit 0; output for `stable` and/or `month` contains a parenthesized version string matching `(v\d+\.\d+\.\d+)`
+- **Then:** exit 0; output for `stable` contains a parenthesized version string matching `(v\d+\.\d+\.\d+)`
 - **Exit:** 0
 - **Source:** [command/version.md](../../../../docs/cli/command/version.md)
 
@@ -802,7 +791,6 @@ Tests requiring successful network fetch:
 | `tc119_version_list_v1_has_descriptions` | `tests/cli/read_version_test.rs` |
 | `tc120_version_list_is_idempotent` | `tests/cli/read_version_test.rs` |
 | `tc121_version_list_format_json_array` | `tests/cli/read_version_test.rs` |
-| `tc122_version_list_includes_month` | `tests/cli/read_version_test.rs` |
 | `tc123_version_list_v1_shows_pinned_versions` | `tests/cli/read_version_test.rs` |
 | `tc124_version_list_json_has_value_field` | `tests/cli/read_version_test.rs` |
 | `it04_version_list_bogus_param_exits_1` | `tests/cli/read_version_test.rs` |

@@ -18,7 +18,6 @@
 //! | TC-119 | `.version.list v::1` → aliases with descriptions | P | 0 |
 //! | TC-120 | `.version.list` output identical on two calls | P | 0 |
 //! | TC-121 | `.version.list format::json` → valid JSON array | P | 0 |
-//! | TC-122 | `.version.list` includes "month" alias | P | 0 |
 //! | TC-123 | `.version.list v::1` shows pinned version in parens | P | 0 |
 //! | TC-124 | `.version.list format::json` has "value" field | P | 0 |
 //! | IT-4 | `bogus::x` → exit 1, unknown parameter | N | 1 |
@@ -200,16 +199,7 @@ fn tc121_version_list_format_json_array()
   );
 }
 
-// TC-122: version list includes month alias
-#[ test ]
-fn tc122_version_list_includes_month()
-{
-  let out = run_clv( &[ ".version.list" ] );
-  assert_exit( &out, 0 );
-  assert!( stdout( &out ).contains( "month" ), "output must contain 'month'" );
-}
-
-// TC-123: .version.list v::1 shows pinned versions for stable and month
+// TC-123: .version.list v::1 shows pinned version in parens
 #[ test ]
 fn tc123_version_list_v1_shows_pinned_versions()
 {

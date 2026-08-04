@@ -22,6 +22,7 @@
 | 007_params_command.md | `.params` command — full param catalog inspection with observable values |
 | 008_runtime_file_discovery.md | `.runtime_files` command — enumerate all clv-managed runtime file paths |
 | 009_path_discovery.md | `.version.paths` command — labeled path discovery with single-key lookup |
+| 010_custom_markers.md | `.version.mark` command — custom version alias marker CRUD and resolution |
 
 ### Overview Table
 
@@ -36,3 +37,4 @@
 | 007 | [Params Command](007_params_command.md) | `.params` command — full param catalog inspection with observable values | ✅ |
 | 008 | [Runtime File Discovery](008_runtime_file_discovery.md) | `.runtime_files` command — enumerate all clv-managed runtime file paths | ✅ |
 | 009 | [Path Discovery](009_path_discovery.md) | `.version.paths` command — labeled path discovery with single-key lookup | ✅ |
+| 010 | [Custom Markers](010_custom_markers.md) | `.version.mark` command — custom version alias marker CRUD and resolution | ✅ |

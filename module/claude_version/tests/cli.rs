@@ -121,3 +121,6 @@ mod list_mode_test;
 
 #[ path = "cli/mode_param_test.rs" ]
 mod mode_param_test;
+
+#[ path = "cli/mutation_version_mark_test.rs" ]
+mod mutation_version_mark_test;

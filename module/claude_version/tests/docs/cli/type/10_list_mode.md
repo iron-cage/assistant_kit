@@ -39,7 +39,7 @@ Type compliance and validation tests for `ListMode`. See [type/10_list_mode.md](
 
 - **Given:** clean environment
 - **When:** `clv .version.list mode::aliases`
-- **Then:** exit 0; stdout contains the compile-time alias table (`stable`, `latest`, `month`); behavior is fully deterministic (no network access)
+- **Then:** exit 0; stdout contains the compile-time alias table (`stable`, `latest`) plus any custom markers; behavior is fully deterministic (no network access)
 - **Exit:** 0
 - **Source:** [type/10_list_mode.md — aliases variant](../../../../docs/cli/type/10_list_mode.md)
 

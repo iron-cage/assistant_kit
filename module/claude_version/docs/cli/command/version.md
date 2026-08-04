@@ -4,7 +4,7 @@
 
 - **Purpose**: Reference for version-namespace clv commands.
 - **Responsibility**: Command syntax, parameters, exit codes, and cross-references for all `.version.*` commands.
-- **In Scope**: `.version.show`, `.version.install`, `.version.guard`, `.version.list` (alias and release-history listing via `mode::`), `.version.paths` (filesystem path discovery).
+- **In Scope**: `.version.show`, `.version.install`, `.version.guard`, `.version.list` (alias and release-history listing via `mode::`), `.version.paths` (filesystem path discovery), `.version.mark` (custom marker CRUD).
 - **Out of Scope**: Root commands (→ [root.md](root.md)), process commands (→ [processes.md](processes.md)), settings commands (→ [settings.md](settings.md)).
 
 ---
@@ -88,7 +88,7 @@ clv.version.show format::json
 
 ### Command :: 4. `.version.install`
 
-Download and install a Claude Code version via the official installer (curl). Supports hot-swap and 8-layer version locking (Layers 1–4, 6, and 8 prevent unwanted version changes via auto-update, manual update, or channel drift; Layer 5 stores the preferred version as a recovery signal for `.version.guard`; Layer 7 enforces a minimum-version floor). Accepts named aliases (`stable`, `latest`, `month`) and semver strings. Already-at-target is a no-op (exit 0) unless `force::1` is set. `record_only::1` persists the resolved preference to `settings.json` without invoking the installer at all — see Algorithm below.
+Download and install a Claude Code version via the official installer (curl). Supports hot-swap and 8-layer version locking (Layers 1–4, 6, and 8 prevent unwanted version changes via auto-update, manual update, or channel drift; Layer 5 stores the preferred version as a recovery signal for `.version.guard`; Layer 7 enforces a minimum-version floor). Accepts named aliases (`stable`, `latest`) and semver strings. Already-at-target is a no-op (exit 0) unless `force::1` is set. `record_only::1` persists the resolved preference to `settings.json` without invoking the installer at all — see Algorithm below.
 
 -- **Parameters:** version::, dry::, force::, record_only::, v::, format::
 -- **Exit Codes:** 0 (success) | 1 (invalid version spec, or `record_only::1`+`dry::1` both set) | 2 (installer failure, or installer exited 0 without the requested version actually being installed — BUG-016)
@@ -112,7 +112,7 @@ clv.version.install [version::VER] [dry::1] [force::1] [record_only::1] [v::N] [
 
 **Algorithm (7 steps):**
 0. If `record_only::1` and `dry::1` are both set, reject immediately (exit 1, `ArgumentMissing`) — the two are mutually exclusive.
-1. Resolve `version::` alias (`stable`, `latest`, `month`) or validate the semver string against known patterns.
+1. Resolve `version::` alias (`stable`, `latest`, or custom marker) or validate the semver string against known patterns.
 2. Compare resolved target against installed version; exit 0 (no-op) if equal and `force::0` — the preferred version is still stored on this path.
 3. Store the preferred version spec and resolved value in `settings.json`. Recorded before the lock mechanism is applied (step 6) so that a crash partway through install leaves a true, not false, mismatch signal in `.status`'s `Lock:` section — see `tests/docs/cli/command/02_status.md` IT-24–IT-27 and TC-530.
 4. Lift the settings-level update locks left by any previous pinned install (`autoUpdates`, `env.DISABLE_AUTOUPDATER`, `env.DISABLE_UPDATES`, `minimumVersion`) — the official installer honors them and would otherwise refuse while still exiting 0 (BUG-016). Hot-swap the running binary if any Claude Code process is active (moved aside to a `.preinstall` sidecar, restored if the install fails), then unlock the versions directory so the installer can write to it.
@@ -143,11 +143,11 @@ clv.version.install force::1
 # Install latest (no version pin — resolves dynamically)
 clv.version.install version::latest
 
-# Record "month" as preferred without downloading/installing
-clv.version.install version::month record_only::1
+# Record "stable" as preferred without downloading/installing
+clv.version.install version::stable record_only::1
 
 # Rejected: record_only:: and dry:: are mutually exclusive
-clv.version.install version::month record_only::1 dry::1
+clv.version.install version::stable record_only::1 dry::1
 ```
 
 ### Referenced Formats
@@ -357,9 +357,10 @@ clv.version.list [mode::MODE] [count::N] [v::N] [format::FMT]
 | [`v::`](../param/04_v.md) | [`VerbosityLevel`](../type/01_verbosity_level.md) | 1 | No | Output detail level |
 | [`format::`](../param/05_format.md) | [`OutputFormat`](../type/02_output_format.md) | text | No | Output format |
 
-**Algorithm, `mode::aliases` (2 steps):**
-1. Load the compile-time version alias table (`stable`, `month`, `latest` → pinned semver values).
-2. Render the alias-to-version mapping in the requested format.
+**Algorithm, `mode::aliases` (3 steps):**
+1. Load the compile-time version alias table (`stable`, `latest` → pinned semver values).
+2. Load custom markers from `~/.claude/version-markers.json`.
+3. Render all aliases (built-in then custom) in the requested format.
 
 **Algorithm, `mode::history` (3 steps):**
 1. Check local 1-hour cache for GitHub Releases API response; fetch from `anthropics/claude-code` releases endpoint if stale or absent. If both the cache and the live fetch fail, fall back to a compiled-in `VERSION_HISTORY` snapshot (versions 2.1.74-2.1.220) and print a stderr advisory — HOME being unset is the only condition that still exits non-zero.
@@ -567,3 +568,113 @@ Evaluated against `.runtime_files` under the strict [command_group](../command_g
 **API Requirement:** None
 **Idempotent:** Yes
 **Risk Level:** None (read-only)
+
+---
+
+### Command :: 17. `.version.mark`
+
+Create, update, or remove a named custom version alias marker stored in `~/.claude/version-markers.json`. Custom markers extend the built-in alias set (`stable`, `latest`) with team- or user-specific names that resolve to arbitrary semver strings or other built-in aliases. They appear in `.version.list` output alongside built-in aliases and are accepted everywhere `version::` is accepted.
+
+-- **Parameters:** name::, version::, description::, unset::, dry::, v::, format::
+-- **Exit Codes:** 0 (success) | 1 (validation error: invalid name, shadowed name, invalid version spec, empty name/version on set path)
+
+**Syntax:**
+
+```sh
+# Create or update a marker
+clv.version.mark name::NAME version::VER [description::DESC] [dry::1] [v::N] [format::FMT]
+
+# Remove a marker
+clv.version.mark name::NAME unset::1 [dry::1] [v::N] [format::FMT]
+```
+
+**Parameters:**
+
+| Parameter | Type | Default | Required | Purpose |
+|-----------|------|---------|----------|---------|
+| `name::` | String | — | Yes | Marker name; `[a-z][a-z0-9-]*`, max 32 chars, must not shadow a built-in alias |
+| [`version::`](../param/01_version.md) | [`VersionSpec`](../type/03_version_spec.md) | — | Yes (set path) | Version spec the marker resolves to |
+| `description::` | String | `""` | No | Human-readable description stored with the marker |
+| [`unset::`](../param/12_unset.md) | bool | false | No | Remove the named marker instead of creating/updating |
+| [`dry::`](../param/02_dry.md) | bool | false | No | Preview without writing `version-markers.json` |
+| [`v::`](../param/04_v.md) | [`VerbosityLevel`](../type/01_verbosity_level.md) | 1 | No | Output detail level |
+| [`format::`](../param/05_format.md) | [`OutputFormat`](../type/02_output_format.md) | text | No | Output format |
+
+**Name constraints:**
+- Must match `[a-z][a-z0-9-]*` (lowercase letter start, then lowercase letters, digits, or hyphens)
+- Maximum 32 characters
+- Must not duplicate a built-in alias (`stable`, `latest`)
+
+**Algorithm, set path (4 steps):**
+1. Validate `name::` against naming constraints; reject if invalid.
+2. Validate `version::` as a valid VersionSpec (built-in alias or semver); reject if invalid.
+3. Load `~/.claude/version-markers.json` (create empty if absent); upsert the marker entry.
+4. Write atomically via temp-then-rename; report result.
+
+**Algorithm, unset path (3 steps):**
+1. Validate `name::` is non-empty; reject if missing.
+2. Load `~/.claude/version-markers.json`; remove the entry for `name::` (no-op if absent).
+3. Write atomically; report result.
+
+**`dry::1`** skips steps 3–4 (set) or 2–3 (unset) and prints what would have happened.
+
+**Examples:**
+
+```sh
+# Create a custom marker pinned to a specific semver
+clv.version.mark name::team-stable version::2.1.220 description::"Team-approved baseline"
+
+# Preview creation without writing
+clv.version.mark name::team-stable version::2.1.220 dry::1
+
+# Update an existing marker to a new version
+clv.version.mark name::team-stable version::2.1.250
+
+# Remove a custom marker
+clv.version.mark name::team-stable unset::1
+
+# Then use the marker in install/guard
+clv.version.install version::team-stable
+clv.version.guard version::team-stable dry::1
+```
+
+### Referenced Formats
+
+| # | Format | Role |
+|---|--------|------|
+| 1 | [text](../format/01_text.md) | Default human-readable output |
+| 2 | [json](../format/02_json.md) | Machine-readable structured output |
+
+### Referenced Parameters
+
+| # | Parameter |
+|---|-----------|
+| 1 | `name::` |
+| 2 | [`version::`](../param/01_version.md) |
+| 3 | `description::` |
+| 4 | [`unset::`](../param/12_unset.md) |
+| 5 | [`dry::`](../param/02_dry.md) |
+| 6 | [`v::`](../param/04_v.md) |
+| 7 | [`format::`](../param/05_format.md) |
+
+### Related Commands
+
+| # | Command | Relationship |
+|---|---------|-------------|
+| 1 | [`.version.list`](#command-6-versionlist) | Shows custom markers alongside built-in aliases |
+| 2 | [`.version.install`](#command-4-versioninstall) | Accepts custom marker names via `version::` |
+| 3 | [`.version.guard`](#command-5-versionguard) | Guards against drift from a custom-marker-resolved version |
+
+### Referenced User Stories
+
+| # | User Story | Persona |
+|---|-----------|---------|
+| 1 | [005 Version Pinning](../user_story/005_version_pinning.md) | Team lead (version pinning) |
+
+---
+
+**Category:** version
+**Complexity:** 3
+**API Requirement:** Write
+**Idempotent:** Yes
+**Risk Level:** Low

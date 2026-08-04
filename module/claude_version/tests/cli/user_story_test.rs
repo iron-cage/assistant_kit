@@ -345,12 +345,12 @@ fn us01_005_version_list_shows_aliases()
   assert!( text.contains( "stable" ), "version list must include the stable alias: {text}" );
 }
 
-// US-2: .version.install version::month dry::1 → shows install plan for monthly baseline; exit 0
+// US-2: .version.install version::stable dry::1 → shows install plan for stable; exit 0
 #[ test ]
-fn us02_005_version_install_month_dry()
+fn us02_005_version_install_stable_dry()
 {
   let out = run_clv_with_env(
-    &[ ".version.install", "version::month", "dry::1" ],
+    &[ ".version.install", "version::stable", "dry::1" ],
     &[],
   );
   assert_exit( &out, 0 );
@@ -358,23 +358,12 @@ fn us02_005_version_install_month_dry()
   assert!( text.contains( "[dry-run]" ), "dry-run must show [dry-run] prefix: {text}" );
 }
 
-// US-3: .version.install version::month → monthly baseline install plan accepted; exit 0
-#[ test ]
-fn us03_005_version_install_month_accepted()
-{
-  let out = run_clv_with_env(
-    &[ ".version.install", "version::month", "dry::1" ],
-    &[],
-  );
-  assert_exit( &out, 0 );
-}
-
 // US-4: already-at-pinned-version is a no-op; second install exits 0
 #[ test ]
 fn us04_005_version_install_idempotent()
 {
   let out = run_clv_with_env(
-    &[ ".version.install", "version::month", "dry::1" ],
+    &[ ".version.install", "version::stable", "dry::1" ],
     &[],
   );
   assert_exit( &out, 0 );

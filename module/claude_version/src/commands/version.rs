@@ -11,10 +11,13 @@ use crate::output::{ OutputFormat, OutputOptions, json_escape };
 use claude_core::settings_io::{ get_setting, set_setting };
 use claude_version_core::version::{
   VERSION_ALIASES,
+  CustomMarker,
   get_installed_version,
+  load_custom_markers,
   perform_install, read_preferred_version,
-  resolve_version_spec, store_preferred_version,
-  validate_version_spec,
+  remove_custom_marker,
+  resolve_version_spec, save_custom_marker, store_preferred_version,
+  validate_marker_name, validate_version_spec,
 };
 
 /// `.version.show` — print the currently installed Claude Code version.
@@ -93,10 +96,11 @@ pub fn version_install_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
     Some( Value::String( s ) ) => s.clone(),
     _                          => "stable".to_string(),
   };
-  validate_version_spec( &version_spec )
+  let custom = load_custom_markers();
+  validate_version_spec( &version_spec, &custom )
     .map_err( | e | ErrorData::new( ErrorCode::ArgumentTypeMismatch, e.to_string() ) )?;
 
-  let resolved   = resolve_version_spec( &version_spec );
+  let resolved   = resolve_version_spec( &version_spec, &custom );
   let is_latest  = resolved == "latest";
   let is_alias   = version_spec != resolved;
   let label      = if is_alias { format!( "{version_spec} (v{resolved})" ) }
@@ -106,7 +110,7 @@ pub fn version_install_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
 
   if super::is_dry( &cmd )
   {
-    let content = install_dry_content( &opts, &label, auto_label, is_latest, &version_spec, resolved );
+    let content = install_dry_content( &opts, &label, auto_label, is_latest, &version_spec, &resolved );
     return Ok( OutputData::new( content, "text" ) );
   }
 
@@ -119,7 +123,7 @@ pub fn version_install_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   // under dry::).
   if super::is_record_only( &cmd )
   {
-    store_preferred_version( &version_spec, resolved, is_latest )
+    store_preferred_version( &version_spec, &resolved, is_latest )
       .map_err( | e | ErrorData::new( ErrorCode::InternalError, e.to_string() ) )?;
     let pref_label = if is_latest { version_spec.clone() } else { format!( "{version_spec} (v{resolved})" ) };
     let content = install_recorded_content( &opts, &label, &pref_label );
@@ -136,7 +140,7 @@ pub fn version_install_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
     {
       if current == resolved
       {
-        let _ = store_preferred_version( &version_spec, resolved, is_latest );
+        let _ = store_preferred_version( &version_spec, &resolved, is_latest );
         let content = install_skip_content( &opts, &label );
         return Ok( OutputData::new( content, "text" ) );
       }
@@ -156,9 +160,9 @@ pub fn version_install_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   // `.status` will report a MISMATCH in that case too, but it is a TRUE one
   // (the user's recorded intent genuinely isn't enforced yet), not a false
   // positive — this is the correct signal, not a regression.
-  store_preferred_version( &version_spec, resolved, is_latest )
+  store_preferred_version( &version_spec, &resolved, is_latest )
     .map_err( | e | ErrorData::new( ErrorCode::InternalError, e.to_string() ) )?;
-  perform_install( resolved, is_latest )
+  perform_install( &resolved, is_latest )
     .map_err( | e | ErrorData::new( ErrorCode::InternalError, e.to_string() ) )?;
 
   let pref_label = if is_latest { version_spec.clone() } else { format!( "{version_spec} (v{resolved})" ) };
@@ -328,16 +332,17 @@ fn install_installed_content(
 #[ allow( clippy::missing_inline_in_public_items ) ]
 pub fn version_guard_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
-  let opts  = OutputOptions::from_cmd( &cmd )?;
-  let dry   = super::is_dry( &cmd );
-  let force = super::is_force( &cmd );
+  let opts   = OutputOptions::from_cmd( &cmd )?;
+  let dry    = super::is_dry( &cmd );
+  let force  = super::is_force( &cmd );
+  let custom = load_custom_markers();
   let version_override = match cmd.arguments.get( "version" )
   {
     Some( Value::String( s ) ) =>
     {
       // Reuse the same validator as .version.install so both commands accept/reject
       // identical specs (aliases, semver format, empty value).
-      validate_version_spec( s )
+      validate_version_spec( s, &custom )
         .map_err( | e | ErrorData::new( ErrorCode::ArgumentTypeMismatch, e.to_string() ) )?;
       Some( s.clone() )
     }
@@ -351,7 +356,7 @@ pub fn version_guard_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -
 
   if interval_secs == 0
   {
-    return guard_once( dry, force, version_override.as_deref(), opts.verbosity, opts.format );
+    return guard_once( dry, force, version_override.as_deref(), opts.verbosity, opts.format, &custom );
   }
 
   // Watch mode: loop until interrupted (Ctrl+C).
@@ -360,7 +365,7 @@ pub fn version_guard_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -
   loop
   {
     let ( date, time ) = current_date_time_parts();
-    let result = guard_once( dry, force, version_override.as_deref(), opts.verbosity, opts.format );
+    let result = guard_once( dry, force, version_override.as_deref(), opts.verbosity, opts.format, &custom );
 
     match result
     {
@@ -406,7 +411,7 @@ pub fn version_guard_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -
 /// Defaults to `stable` when no preference is stored.
 /// When `version_override` is `Some`, it replaces the stored preference for this invocation
 /// without writing to `settings.json`.
-fn guard_once( dry : bool, force : bool, version_override : Option< &str >, verbosity : u8, format : OutputFormat ) -> Result< OutputData, ErrorData >
+fn guard_once( dry : bool, force : bool, version_override : Option< &str >, verbosity : u8, format : OutputFormat, custom : &[ CustomMarker ] ) -> Result< OutputData, ErrorData >
 {
   // If HOME is unset or empty, installation would target "/.claude" (root)
   // which requires root permission.  Degrade gracefully rather than crashing.
@@ -434,21 +439,21 @@ fn guard_once( dry : bool, force : bool, version_override : Option< &str >, verb
   let ( spec, resolved ) = if let Some( ver ) = version_override
   {
     // Override: resolve alias immediately; do NOT read or write settings.json.
-    let resolved_ver = resolve_version_spec( ver );
-    let resolved_opt = if resolved_ver == ver { None } else { Some( resolved_ver.to_string() ) };
+    let resolved_ver = resolve_version_spec( ver, custom );
+    let resolved_opt = if resolved_ver == ver { None } else { Some( resolved_ver ) };
     ( ver.to_string(), resolved_opt.or_else( || Some( ver.to_string() ) ) )
   }
   else
   {
     read_preferred_version()
-      .unwrap_or_else( || ( "stable".to_string(), Some( resolve_version_spec( "stable" ).to_string() ) ) )
+      .unwrap_or_else( || ( "stable".to_string(), Some( resolve_version_spec( "stable", custom ) ) ) )
   };
 
   if spec == "latest" || resolved.is_none()
   {
     return guard_once_latest( dry, verbosity, format );
   }
-  guard_once_pinned( dry, force, &spec, resolved.as_deref().unwrap_or( &spec ), verbosity, format )
+  guard_once_pinned( dry, force, &spec, resolved.as_deref().unwrap_or( &spec ), verbosity, format, custom )
 }
 
 /// Guard path for `latest` preference: verify auto-update config, fix if wrong.
@@ -589,16 +594,16 @@ fn check_installed_guard(
 /// Guard path for pinned versions: compare installed vs preferred and restore on drift.
 ///
 /// `resolved` is the stored `preferredVersionResolved` value from settings.
-/// For alias specs (e.g. "stable", "month") it is advisory only — this function
+/// For alias specs (e.g. "stable", "latest") it is advisory only — this function
 /// re-resolves `spec` through [`resolve_version_spec()`] at call time and uses the
 /// fresh `resolved_now` as the install target. `resolved` is authoritative only
 /// when `spec` is a concrete semver string (where `resolve_version_spec` returns
 /// `spec` unchanged).
-fn guard_once_pinned( dry : bool, force : bool, spec : &str, resolved : &str, verbosity : u8, format : OutputFormat ) -> Result< OutputData, ErrorData >
+fn guard_once_pinned( dry : bool, force : bool, spec : &str, resolved : &str, verbosity : u8, format : OutputFormat, custom : &[ CustomMarker ] ) -> Result< OutputData, ErrorData >
 {
   // Re-resolve alias through current table so stale settings don't trigger false drift.
-  let resolved_now = resolve_version_spec( spec );
-  let target = if resolved_now == spec { resolved } else { resolved_now };
+  let resolved_now = resolve_version_spec( spec, custom );
+  let target = if resolved_now == spec { resolved } else { &resolved_now };
   let pref_label = if spec == target { format!( "v{target}" ) } else { format!( "{spec} (v{target})" ) };
 
   if !force
@@ -712,7 +717,7 @@ fn format_interval( secs : u64 ) -> String
 #[ derive( Debug, Clone, Copy, PartialEq, Eq ) ]
 enum ListMode
 {
-  /// Named version aliases (`stable`, `latest`, `month`) — default.
+  /// Named version aliases (`stable`, `latest`, plus any custom markers) — default.
   Aliases,
   /// Full release history from the GitHub Releases API (or compiled-in fallback).
   History,
@@ -768,34 +773,46 @@ pub fn version_list_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) ->
   }
 }
 
-/// Render the `mode::aliases` output — the compile-time named-alias table.
+/// Render the `mode::aliases` output — built-in aliases plus custom markers.
 fn render_aliases_mode( opts : &OutputOptions ) -> OutputData
 {
+  let custom  = load_custom_markers();
   let content = match ( opts.format, opts.verbosity )
   {
     ( OutputFormat::Json, _ ) =>
     {
-      let entries : Vec< String > = VERSION_ALIASES.iter().map( | a |
+      let mut entries : Vec< String > = VERSION_ALIASES.iter().map( | a |
       {
         if a.value.is_empty()
         {
-          format!( "  {{\"name\":\"{}\",\"description\":\"{}\"}}", a.name, a.description )
+          format!( "  {{\"name\":\"{}\",\"kind\":\"builtin\",\"description\":\"{}\"}}", a.name, a.description )
         }
         else
         {
-          format!( "  {{\"name\":\"{}\",\"value\":\"{}\",\"description\":\"{}\"}}", a.name, a.value, a.description )
+          format!(
+            "  {{\"name\":\"{}\",\"kind\":\"builtin\",\"value\":\"{}\",\"description\":\"{}\"}}",
+            a.name, a.value, a.description
+          )
         }
       } ).collect();
+      for m in &custom
+      {
+        entries.push( format!(
+          "  {{\"name\":\"{}\",\"kind\":\"custom\",\"value\":\"{}\",\"description\":\"{}\"}}",
+          json_escape( &m.name ), json_escape( &m.value ), json_escape( &m.description )
+        ) );
+      }
       format!( "[\n{}\n]\n", entries.join( ",\n" ) )
     }
     ( OutputFormat::Text, 0 ) =>
     {
-      let names : Vec< &str > = VERSION_ALIASES.iter().map( | a | a.name ).collect();
+      let mut names : Vec< String > = VERSION_ALIASES.iter().map( | a | a.name.to_string() ).collect();
+      for m in &custom { names.push( m.name.clone() ); }
       format!( "{}\n", names.join( "\n" ) )
     }
     ( OutputFormat::Text, _ ) =>
     {
-      let lines : Vec< String > = VERSION_ALIASES.iter()
+      let mut lines : Vec< String > = VERSION_ALIASES.iter()
       .map( | a |
       {
         if a.value.is_empty()
@@ -808,9 +825,109 @@ fn render_aliases_mode( opts : &OutputOptions ) -> OutputData
         }
       } )
       .collect();
+      for m in &custom
+      {
+        if m.description.is_empty()
+        {
+          lines.push( format!( "{} \u{2014} {} (custom)", m.name, m.value ) );
+        }
+        else
+        {
+          lines.push( format!( "{} \u{2014} {} — {} (custom)", m.name, m.value, m.description ) );
+        }
+      }
       format!( "{}\n", lines.join( "\n" ) )
     }
   };
 
   OutputData::new( content, "text" )
+}
+
+/// `.version.mark` — create, update, or remove a custom version marker.
+///
+/// # Errors
+///
+/// Returns `Err` on invalid name, invalid version spec, or I/O failures.
+#[ allow( clippy::missing_inline_in_public_items ) ]
+pub fn version_mark_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
+{
+  use super::{ is_dry, require_nonempty_string_arg };
+
+  let opts = OutputOptions::from_cmd( &cmd )?;
+  let name = require_nonempty_string_arg( &cmd, "name" )?;
+  let dry  = is_dry( &cmd );
+
+  // ── unset path ────────────────────────────────────────────────────────────
+  if matches!( cmd.arguments.get( "unset" ), Some( Value::Boolean( true ) ) )
+  {
+    if dry
+    {
+      let content = match opts.format
+      {
+        OutputFormat::Json => format!(
+          "{{\"action\":\"would-remove\",\"name\":\"{}\"}}\n",
+          json_escape( &name ),
+        ),
+        OutputFormat::Text => format!( "[dry] would remove marker '{name}'\n" ),
+      };
+      return Ok( OutputData::new( content, "text" ) );
+    }
+    let removed = remove_custom_marker( &name ).map_err( | e |
+      ErrorData::new( ErrorCode::InternalError, e.to_string() )
+    )?;
+    let content = match ( opts.format, removed )
+    {
+      ( OutputFormat::Json, true  ) =>
+        format!( "{{\"action\":\"removed\",\"name\":\"{}\"}}\n", json_escape( &name ) ),
+      ( OutputFormat::Json, false ) =>
+        format!( "{{\"action\":\"not-found\",\"name\":\"{}\"}}\n", json_escape( &name ) ),
+      ( OutputFormat::Text, true  ) => format!( "marker '{name}' removed\n" ),
+      ( OutputFormat::Text, false ) => format!( "marker '{name}' not found\n" ),
+    };
+    return Ok( OutputData::new( content, "text" ) );
+  }
+
+  // ── set path ──────────────────────────────────────────────────────────────
+  let version = require_nonempty_string_arg( &cmd, "version" )?;
+  let desc    = match cmd.arguments.get( "description" )
+  {
+    Some( Value::String( s ) ) => s.clone(),
+    _                          => String::new(),
+  };
+
+  validate_marker_name( &name ).map_err( | e |
+    ErrorData::new( ErrorCode::ValidationRuleFailed, e.to_string() )
+  )?;
+
+  let custom = load_custom_markers();
+  validate_version_spec( &version, &custom ).map_err( | e |
+    ErrorData::new( ErrorCode::ValidationRuleFailed, e.to_string() )
+  )?;
+
+  if dry
+  {
+    let content = match opts.format
+    {
+      OutputFormat::Json => format!(
+        "{{\"action\":\"would-set\",\"name\":\"{}\",\"version\":\"{}\"}}\n",
+        json_escape( &name ), json_escape( &version ),
+      ),
+      OutputFormat::Text => format!( "[dry] would set marker '{name}' → '{version}'\n" ),
+    };
+    return Ok( OutputData::new( content, "text" ) );
+  }
+
+  save_custom_marker( &name, &version, &desc ).map_err( | e |
+    ErrorData::new( ErrorCode::InternalError, e.to_string() )
+  )?;
+
+  let content = match opts.format
+  {
+    OutputFormat::Json => format!(
+      "{{\"action\":\"set\",\"name\":\"{}\",\"version\":\"{}\"}}\n",
+      json_escape( &name ), json_escape( &version ),
+    ),
+    OutputFormat::Text => format!( "marker '{name}' set to '{version}'\n" ),
+  };
+  Ok( OutputData::new( content, "text" ) )
 }

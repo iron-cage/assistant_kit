@@ -40,7 +40,7 @@
 | OutputFormat | Display encoding: `text` (human-readable) or `json` (machine-readable); case-sensitive |
 | SettingsKey | JSON object key in `~/.claude/settings.json`; dot is literal, not a path separator |
 | SettingsValue | Value auto-typed for JSON: `"true"`/`"false"` -> bool, numbers -> number, else -> string |
-| VersionSpec | Release target: `stable`, `month`, `latest`, or semver string (e.g., `1.2.3`) |
+| VersionSpec | Release target: `stable`, `latest`, a custom marker name, or semver string (e.g., `1.2.3`) |
 | VerbosityLevel | Output detail: 0=minimal, 1=normal (default), 2=verbose |
 
 ### Architecture
@@ -55,4 +55,4 @@
 | last-wins | When a parameter appears multiple times, the last occurrence takes effect |
 | signal sequence | Normal kill: SIGTERM -> 2 second wait -> SIGKILL survivors |
 | type inference | Settings value auto-typing: bool -> number -> string cascade |
-| version alias | Named reference (`stable`, `month`, `latest`) resolving to a specific version string |
+| version alias | Named reference (`stable`, `latest`, or a custom marker) resolving to a specific version string |

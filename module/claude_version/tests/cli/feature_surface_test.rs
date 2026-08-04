@@ -95,17 +95,17 @@ fn ft005_2_empty_bool_param_value_exits_1()
 #[ test ]
 fn ft005_3_last_param_wins()
 {
-  // stable is first, month is last → month (2.1.74) must win
-  let out = run_clv( &[ ".version.install", "version::stable", "version::month", "dry::1" ] );
+  // latest is first, stable is last → stable (2.1.220) must win
+  let out = run_clv( &[ ".version.install", "version::latest", "version::stable", "dry::1" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
-  assert!( text.contains( "2.1.74" ), "last version:: param (month=2.1.74) must win: {text}" );
+  assert!( text.contains( "2.1.220" ), "last version:: param (stable=2.1.220) must win: {text}" );
 }
 
 // ─── Covered by existing tests (reference only) ──────────────────────────────
 //
 // FT-1 (feature/001_version_management.md): tc301 (stable→2.1.220)
-// FT-2 (feature/001_version_management.md): tc309 (month→2.1.74)
+// FT-2 (feature/001_version_management.md): ft005_3 (last version:: wins)
 // FT-3 (feature/001_version_management.md): tc400 (guard defaults to stable)
 // FT-4 (feature/001_version_management.md): tc403 (guard latest→no pin)
 // FT-5 (feature/001_version_management.md): tc357 (dry::1 does not write prefs)

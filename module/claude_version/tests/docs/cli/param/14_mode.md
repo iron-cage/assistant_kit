@@ -41,7 +41,7 @@ Edge case coverage for the `mode::` parameter. See [param/14_mode.md](../../../.
 
 - **Given:** clean environment
 - **When:** `clv .version.list mode::aliases`
-- **Then:** exit 0; stdout contains the compile-time alias table (`stable`, `latest`, `month`)
+- **Then:** exit 0; stdout contains the compile-time alias table (`stable`, `latest`)
 - **Exit:** 0
 - **Source:** [param/14_mode.md](../../../../docs/cli/param/14_mode.md)
 
