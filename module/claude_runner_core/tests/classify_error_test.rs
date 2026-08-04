@@ -23,6 +23,8 @@
 //! | A2  | exit=1, stdout=`"...authentication_error..."` | `Some(AuthError)` — stdout scan path |
 //! | A3  | exit=1, stderr=`"AUTHENTICATION_ERROR..."` (uppercase) | `Some(Unknown)` — case-sensitive |
 //! | A4  | exit=1, stderr contains both quota pattern and `"authentication_error"` | `Some(QuotaExhausted)` — quota wins |
+//! | A5  | exit=1, stderr=`"Not logged in: ..."` | `Some(AuthError)` — TSK-453 |
+//! | A6  | exit=1, stdout=`"Please run /login to authenticate"` | `Some(AuthError)` — TSK-453 |
 //!
 //! # Root Cause (BUG-037)
 //!
@@ -446,6 +448,43 @@ fn classify_error_authentication_error_case_sensitive()
     out.classify_error(),
     Some( ErrorKind::Unknown ),
     "A3: uppercase AUTHENTICATION_ERROR must NOT match; pattern matching is case-sensitive"
+  );
+}
+
+// ── A5: "Not logged in" pattern → AuthError (TSK-453) ────────────────────────
+
+/// A5: `"Not logged in"` in stderr → `AuthError` (TSK-453).
+///
+/// claude emits this message when no auth token is present.  Without the
+/// `"Not logged in"` pattern in `ERROR_PATTERNS`, `classify_error()` falls
+/// through to `Unknown`, suppressing the `--retry-on-auth` retry path.
+/// Inserted before the `"API Error: "` catch-all, following BUG-314 precedent.
+#[ test ]
+fn classify_error_not_logged_in_is_auth_error()
+{
+  let out = make_output( "", "Not logged in: please authenticate first", 1 );
+  assert_eq!(
+    out.classify_error(),
+    Some( ErrorKind::AuthError ),
+    "A5: 'Not logged in' pattern must yield AuthError, not Unknown (TSK-453)"
+  );
+}
+
+// ── A6: "Please run /login" pattern → AuthError (TSK-453) ────────────────────
+
+/// A6: `"Please run /login"` in stdout → `AuthError` (TSK-453).
+///
+/// claude emits this message when credentials are expired or missing.
+/// Validates the stdout scan path for the new pattern, and that it is
+/// classified as `AuthError` rather than `Unknown` (the pre-TSK-453 result).
+#[ test ]
+fn classify_error_please_run_login_is_auth_error()
+{
+  let out = make_output( "Please run /login to authenticate", "", 1 );
+  assert_eq!(
+    out.classify_error(),
+    Some( ErrorKind::AuthError ),
+    "A6: 'Please run /login' pattern must yield AuthError, not Unknown (TSK-453)"
   );
 }
 

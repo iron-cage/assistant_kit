@@ -1009,17 +1009,17 @@ clr isolated --trace --creds /nonexistent "test"
 
 **Expected:** Trace printed to stderr first (`# clr isolated`, `# creds: /nonexistent`, command preview), THEN `Error: cannot read credentials file '/nonexistent'`. Exit 1. Trace fires before any I/O (from `emit_credential_trace` being called before `read_to_string`).
 
-### NC-12: Gate Waiting Message Format — `X/Y sessions active`
+### NC-12: Gate Waiting Message Format — `gate-wait  active=X/Y`
 
 **Precondition:** Requires ≥6 live claude sessions running on the host (or use `--max-sessions N` with N sessions already running). Gate-blocked: cannot be tested in container (0 sessions).
 
 **Expected:** When the gate is triggered, each polling cycle emits to stderr:
-`Info: {count}/{max} sessions active; waiting 30s for a slot... (attempt {attempt}/{max_attempts})`
+`{timestamp} · gate-wait  active={count}/{max} attempt={attempt}/{max_attempts} wait={poll_secs}s (reason: {cause})`
 
 Example with 6 sessions at default limit:
-`Info: 6/6 sessions active; waiting 30s for a slot... (attempt 1/1000)`
+`2026-08-04 · 12:00:00 UTC · gate-wait  active=6/6 attempt=1/1000 wait=30s (reason: [at capacity])`
 
-The old format `"X claude session(s) running (limit Y)"` is **not** emitted. The `X/Y` ratio format is the canonical output.
+The pre-TSK-452 format `"Info: X/Y print sessions active; waiting Xs..."` is **not** emitted. The structured `gate-wait  active=` prefix with `(reason: ...)` trailer is the canonical output.
 
 ### NC-13: Gate Exhaustion After 1000 Attempts
 

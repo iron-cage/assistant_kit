@@ -546,8 +546,8 @@ fn us25_5_interactive_bypasses_gate_regardless_of_count()
   );
   let stderr = String::from_utf8_lossy( &out.stderr );
   assert!(
-    !stderr.contains( "waiting" ) && !stderr.contains( "sessions active" ),
-    "US25-5: --interactive must skip the gate entirely — no wait messages. Got stderr:\n{stderr}"
+    !stderr.contains( "gate-wait" ),
+    "US25-5: --interactive must skip the gate entirely — no gate-wait messages. Got stderr:\n{stderr}"
   );
 }
 

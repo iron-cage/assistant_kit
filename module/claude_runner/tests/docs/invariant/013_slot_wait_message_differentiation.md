@@ -1,6 +1,6 @@
 # Test: Invariant — Slot-Wait Message Differentiation
 
-Test case planning for [invariant/013_slot_wait_message_differentiation.md](../../../docs/invariant/013_slot_wait_message_differentiation.md). Tests validate that `wait_for_session_slot()`'s poll-loop diagnostic names which of the three independent non-admission causes fired — `[at capacity]` when `has_capacity` was `false`; `[slot held by another session]` when `has_capacity` was `true` and `acquire_slot()` returned `Err(SlotDenialCause::HeldByLive)`; `[lost reservation race]` when `has_capacity` was `true` and `acquire_slot()` returned `Err(SlotDenialCause::LostReclaimRace)` — and that the pre-existing `"active; waiting"` substring is preserved unchanged.
+Test case planning for [invariant/013_slot_wait_message_differentiation.md](../../../docs/invariant/013_slot_wait_message_differentiation.md). Tests validate that `wait_for_session_slot()`'s poll-loop diagnostic names which of the three independent non-admission causes fired — `[at capacity]` when `has_capacity` was `false`; `[slot held by another session]` when `has_capacity` was `true` and `acquire_slot()` returned `Err(SlotDenialCause::HeldByLive)`; `[lost reservation race]` when `has_capacity` was `true` and `acquire_slot()` returned `Err(SlotDenialCause::LostReclaimRace)` — and that the TSK-452 structured prefix `"gate-wait  active="` is present in every diagnostic emission.
 
 **Source:** [invariant/013_slot_wait_message_differentiation.md](../../../docs/invariant/013_slot_wait_message_differentiation.md)
 **Related:** [invariant/012_gate_slot_atomicity.md](../../../docs/invariant/012_gate_slot_atomicity.md) (admission correctness for the same two false-branches this invariant's message must distinguish)
@@ -13,8 +13,8 @@ Test case planning for [invariant/013_slot_wait_message_differentiation.md](../.
 | IN-2 | Same race as IN-1 → neither racer's stderr names `"at capacity"` or `"lost reservation race"` | Invariant Hold |
 | IN-3 | 2 racers, `--max-sessions 1`, pre-seeded confirmed-dead owner → losing racer's first poll attempt names `"lost reservation race"` | Invariant Hold |
 | IN-4 | 1 long-running occupier already active, `--max-sessions 1`, second invocation polls → stderr names `"at capacity"`, not `"lost reservation race"` or `"slot held by another session"` | Invariant Boundary |
-| IN-5 | Any non-admission message → still contains the literal substring `"active; waiting"` unchanged (regression guard for the 7 pre-existing substring assertions) | Regression Guard |
-| IN-6 | Any non-admission message → contains the literal substring `"print sessions active"` (regression guard ensuring the mode qualifier is never silently dropped — BUG-431 fix) | Regression Guard |
+| IN-5 | Any non-admission message → contains the literal substring `"gate-wait  active="` (TSK-452 structured format; replaced pre-TSK-452 `"active; waiting"` regression guard) | Regression Guard |
+| IN-6 | Any non-admission message → contains the literal substring `"gate-wait  active="` (BUG-431 regression guard, updated to TSK-452 format; print-mode scope now architectural rather than label-encoded) | Regression Guard |
 
 ## Test Coverage Summary
 
@@ -26,7 +26,7 @@ Test case planning for [invariant/013_slot_wait_message_differentiation.md](../.
 
 ## Architectural Constraint
 
-All 5 cases are integration tests in `tests/concurrency_gate_test.rs` — the differentiation logic lives entirely inside `wait_for_session_slot()`'s poll loop and can only be observed by capturing a real racing `clr` subprocess's stderr (not `Stdio::null()`, the gap BUG-393's own `## Why Not Caught` identified in the pre-fix T08/T14 tests). IN-1 and IN-2 are the two assertions implemented by T15 (`t15_slot_wait_message_names_live_hold_when_owner_alive`) against a fresh-claim race fixture with no pre-existing dead owner — they are listed as separate IDs here because they assert two independent invariant directions (racer names the live-hold cause; racer does NOT name the exhaustion or reclaim-race causes) even though one test function covers both. IN-3 is implemented by T16 (`t16_slot_wait_message_names_genuine_reclaim_race_for_dead_owner`), added for BUG-396 to prove `"lost reservation race"` still fires for the one cause it is actually accurate for (a pre-seeded confirmed-dead owner, contended via an injected reclaim delay). IN-4 and IN-5 remain the coverage this invariant doc requires beyond T15/T16's existing scope: IN-4 needs a genuine-exhaustion fixture (not a race) to prove `"at capacity"` is reachable at all, and IN-5 is a substring-preservation regression guard.
+All 6 cases are integration tests in `tests/concurrency_gate_test.rs` — the differentiation logic lives entirely inside `wait_for_session_slot()`'s poll loop and can only be observed by capturing a real racing `clr` subprocess's stderr (not `Stdio::null()`, the gap BUG-393's own `## Why Not Caught` identified in the pre-fix T08/T14 tests). IN-1 and IN-2 are the two assertions implemented by T15 (`t15_slot_wait_message_names_live_hold_when_owner_alive`) against a fresh-claim race fixture with no pre-existing dead owner — they are listed as separate IDs here because they assert two independent invariant directions (racer names the live-hold cause; racer does NOT name the exhaustion or reclaim-race causes) even though one test function covers both. IN-3 is implemented by T16 (`t16_slot_wait_message_names_genuine_reclaim_race_for_dead_owner`), added for BUG-396 to prove `"lost reservation race"` still fires for the one cause it is actually accurate for (a pre-seeded confirmed-dead owner, contended via an injected reclaim delay). IN-4 is implemented by T33 (`t33_slot_wait_message_names_at_capacity_for_exhaustion`), providing a genuine-exhaustion fixture (not a race) to prove `"at capacity"` is reachable. IN-5 is implemented by T34 (`t34_non_admission_message_preserves_active_waiting_substring`), guarding the `"gate-wait  active="` prefix (TSK-452 format; function name retained for historical traceability). IN-6 is implemented by `t_gate_progress_message_names_print_sessions`, the BUG-431 regression guard ensuring the mode qualifier is never silently dropped.
 
 ## Implementation Notes
 
@@ -35,9 +35,9 @@ All 5 cases are integration tests in `tests/concurrency_gate_test.rs` — the di
 | IN-1 | `t15_slot_wait_message_names_live_hold_when_owner_alive` | `tests/concurrency_gate_test.rs` | ✅ |
 | IN-2 | `t15_slot_wait_message_names_live_hold_when_owner_alive` | `tests/concurrency_gate_test.rs` | ✅ |
 | IN-3 | `t16_slot_wait_message_names_genuine_reclaim_race_for_dead_owner` | `tests/concurrency_gate_test.rs` | ✅ |
-| IN-4 | *(not yet implemented)* | `tests/concurrency_gate_test.rs` | ⏳ |
-| IN-5 | *(not yet implemented)* | `tests/concurrency_gate_test.rs` | ⏳ |
-| IN-6 | *(not yet implemented)* | `tests/concurrency_gate_test.rs` | ⏳ |
+| IN-4 | `t33_slot_wait_message_names_at_capacity_for_exhaustion` | `tests/concurrency_gate_test.rs` | ✅ |
+| IN-5 | `t34_non_admission_message_preserves_active_waiting_substring` | `tests/concurrency_gate_test.rs` | ✅ |
+| IN-6 | `t_gate_progress_message_names_print_sessions` | `tests/concurrency_gate_test.rs` | ✅ |
 
 ---
 
@@ -81,20 +81,20 @@ All 5 cases are integration tests in `tests/concurrency_gate_test.rs` — the di
 
 ---
 
-### IN-5: Any non-admission message → preserves the literal substring `"active; waiting"` unchanged
+### IN-5: Any non-admission message → preserves the literal substring `"gate-wait  active="` (TSK-452 format)
 
 - **Given:** any fixture above (IN-1/IN-2's live-hold case, IN-3's reclaim-race case, or IN-4's exhaustion case) with stderr captured
 - **When:** the poll-loop diagnostic is emitted for any non-admission cause
-- **Then:** the message contains the unmodified literal substring `"active; waiting"` — the differentiating `[at capacity]` / `[slot held by another session]` / `[lost reservation race]` suffix is appended after this substring, never spliced into or replacing it
-- **Note:** regression guard for the 7 pre-existing assertions on this exact substring (`tests/config_file_test.rs` lines 96,149,198,250,299; `tests/concurrency_gate_test.rs` T01/T04 lines 220,377) that predate this invariant and must not be broken by any future change to this message
+- **Then:** the message contains the literal substring `"gate-wait  active="` — the TSK-452 structured prefix that replaced the pre-TSK-452 `"active; waiting"` body; the differentiating `[at capacity]` / `[slot held by another session]` / `[lost reservation race]` suffix appears in the `(reason: ...)` trailer at the end of the same line
+- **Note:** regression guard ensuring the `"gate-wait  active="` prefix is never silently dropped from the cause-labeled branch; pre-TSK-452, assertions pattern-matched `"active; waiting"` (5 in `config_file_test.rs`, T01/T04 here) — those have been updated to `"gate-wait  active="` by TSK-452
 - **Source:** [invariant/013_slot_wait_message_differentiation.md](../../../docs/invariant/013_slot_wait_message_differentiation.md) § Invariant Statement, "Preserved substring"
 
 ---
 
-### IN-6: Any non-admission message → contains the literal substring `"print sessions active"`
+### IN-6: Any non-admission message → contains the literal substring `"gate-wait  active="` (BUG-431 regression guard, TSK-452 format)
 
 - **Given:** any fixture above (IN-1/IN-2's live-hold case, IN-3's reclaim-race case, or IN-4's exhaustion case) with stderr captured
 - **When:** the poll-loop diagnostic is emitted for any non-admission cause
-- **Then:** the message contains the literal substring `"print sessions active"` — confirming the mode qualifier that scopes the count to print-mode processes only is present in every diagnostic emission and can never be silently dropped by a future format-string edit
-- **Note:** regression guard for the BUG-431 fix (`gate.rs:703` format string changed from `"sessions active"` to `"print sessions active"`); the fix is invisible to IN-5's `"active; waiting"` guard since that substring remains unchanged; a dedicated guard here closes the gap so the mode qualifier is independently asserted
+- **Then:** the message contains the literal substring `"gate-wait  active="` — TSK-452 replaced the BUG-431 `"print sessions active"` string with the structured `"gate-wait  active=X/Y"` prefix; the print-mode scope is now architectural (the count displayed is print-mode-only by construction) rather than encoded in the label text
+- **Note:** regression guard for the BUG-431 fix; TSK-452 updated the format from `"print sessions active; waiting"` to `"gate-wait  active=X/Y ..."`; this guard now provides a second fixture (different process lifecycle from IN-5/T34) asserting the same TSK-452 prefix is present — additional coverage breadth rather than an independent string check
 - **Source:** [invariant/013_slot_wait_message_differentiation.md](../../../docs/invariant/013_slot_wait_message_differentiation.md) § Enforcement Mechanism (`eprintln!` format string)

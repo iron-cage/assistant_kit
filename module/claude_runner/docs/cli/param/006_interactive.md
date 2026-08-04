@@ -24,6 +24,14 @@ mode instead (Fix(BUG-425)). `--interactive` forces the interactive/REPL route r
 of TTY state — it is the escape hatch for cases like resuming a prior session with no new
 message under non-TTY stdin, where print-mode routing would otherwise apply.
 
+**CWD-keyed session storage:** Claude Code stores sessions per working directory — sessions
+created from `docs/` live in a different project bucket than sessions created from the
+module root. If bare `clr` opens a fresh session despite prior history, check that your
+working directory matches the directory where those sessions were created. Workaround:
+`clr --session-from <dir>` (load sessions from that directory's bucket) or `clr --dir <dir>`
+(run as if CWD were that directory). BUG-435 tracks the companion issue that bare interactive
+`clr` also fails to inject `-c` even when the correct session is found.
+
 This override reaches only the three *inferred* print-mode triggers (message presence,
 non-TTY stdin, `--file`/stdin content) — it does not reach an explicitly requested print
 mode. `-p`/`--print`, `CLR_PRINT`, or JSON config `"print"` each settle the mode-selection

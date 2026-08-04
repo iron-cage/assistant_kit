@@ -26,6 +26,8 @@
 //! - T68: `--no-effort-max` with `--effort medium` → suppression wins, no effort forwarded
 //! - T69: repeated `--effort` flags — last value wins
 //! - T70: `--no-effort-max` suppresses `--effort` regardless of flag order
+//! - T71: interactive mode with no explicit `--effort` → no effort flag injected (BUG-434)
+//! - T72: interactive mode with explicit `--effort high` → `--effort high` forwarded (BUG-434)
 
 mod cli_binary_test_helpers;
 use cli_binary_test_helpers::run_cli;
@@ -256,5 +258,104 @@ fn t70_no_effort_max_order_independent()
   assert!(
     !stdout.contains( "--effort" ),
     "--no-effort-max must suppress --effort even when --effort precedes it. Got:\n{stdout}"
+  );
+}
+
+// T71: interactive mode with no explicit `--effort` → no effort flag injected
+//
+// ## Root Cause (BUG-434)
+//
+// `builder.rs:158-163` unconditionally injected `--effort max` for all invocations,
+// including interactive mode.  Claude v2.1.78 removed `"max"` as a valid effort level
+// in interactive mode and now exits with "Effort level 'max' is not available in
+// interactive mode" before the REPL opens.
+//
+// ## Why Not Caught
+//
+// T59 (default effort) ran in non-TTY subprocess context where `use_print=true`, which
+// satisfies the new condition `cli.effort.is_some() || use_print` — the test still passes
+// after the fix.  The interactive path (`use_print=false`, no explicit `--effort`) was
+// never covered, so the invalid injection went undetected.
+//
+// ## Fix Applied
+//
+// `builder.rs` effort injection condition changed to:
+// `if !cli.no_effort_max && (cli.effort.is_some() || use_print)`
+// When `use_print=false` (interactive) and no explicit `--effort` is set, no flag is
+// injected.
+//
+// ## Prevention
+//
+// Assert that `--interactive --dry-run` (no explicit `--effort`) produces no `--effort`
+// token in the assembled arg list.
+//
+// ## Pitfall
+//
+// In the test harness (cargo nextest), stdin is always non-TTY, so a bare `--dry-run`
+// without `--interactive` routes to print mode (`use_print=true`).  `--interactive` is
+// required here to force `use_print=false` and exercise the interactive-mode branch.
+// test_kind: bug_reproducer(BUG-434)
+#[ test ]
+fn t71_interactive_no_explicit_effort_injects_no_effort_flag()
+{
+  let out = run_cli( &[ "--dry-run", "--interactive" ] );
+  assert!(
+    out.status.success(),
+    "--interactive --dry-run must succeed. stderr: {}",
+    String::from_utf8_lossy( &out.stderr )
+  );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  assert!(
+    !stdout.contains( "--effort" ),
+    "--interactive without explicit --effort must inject no effort flag (BUG-434). Got:\n{stdout}"
+  );
+}
+
+// T72: interactive mode with explicit `--effort high` → `--effort high` forwarded
+//
+// ## Root Cause (BUG-434)
+//
+// See T71.  This companion test guards the positive path: the fix must suppress only the
+// default `EffortLevel::Max` injection, never an explicit caller-chosen level.
+//
+// ## Why Not Caught
+//
+// Explicit `--effort` override in interactive mode was never exercised.  Pre-existing
+// tests covered print-mode overrides; the interactive + explicit-effort combination
+// had no coverage.
+//
+// ## Fix Applied
+//
+// The condition `cli.effort.is_some() || use_print` allows injection when the caller
+// explicitly chose a level — `cli.effort.is_some()` is true regardless of mode.
+//
+// ## Prevention
+//
+// Assert that `--interactive --effort high` forwards `--effort high` even though the
+// default max injection is suppressed.
+//
+// ## Pitfall
+//
+// A naive fix that suppresses all effort in interactive mode (not just the `max` default)
+// would break explicit overrides.  The guard must be `cli.effort.is_some() || use_print`,
+// not merely `use_print`.
+// test_kind: bug_reproducer(BUG-434)
+#[ test ]
+fn t72_interactive_explicit_effort_high_forwarded()
+{
+  let out = run_cli( &[ "--dry-run", "--interactive", "--effort", "high" ] );
+  assert!(
+    out.status.success(),
+    "--interactive --effort high must be accepted. stderr: {}",
+    String::from_utf8_lossy( &out.stderr )
+  );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  assert!(
+    stdout.contains( "--effort high" ),
+    "--interactive --effort high must forward --effort high. Got:\n{stdout}"
+  );
+  assert!(
+    !stdout.contains( "--effort max" ),
+    "--interactive --effort high must not also inject --effort max. Got:\n{stdout}"
   );
 }

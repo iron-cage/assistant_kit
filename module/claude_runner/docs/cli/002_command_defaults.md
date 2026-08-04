@@ -18,9 +18,9 @@ Rows are parameters or behaviors. Columns are the four commands. Key: ✅ = acti
 | **mode** | print if message present; else interactive | print (always) | print (always) | print (always, message `"."`) |
 | **message** | user-supplied positional | user-supplied positional | user-supplied positional (optional) | `"."` hardcoded |
 | **model** | user-specified; none = claude binary default | user-specified; none = claude binary default | `"opus"` (`ISOLATED_DEFAULT_MODEL`) | `"claude-sonnet-5"` (`REFRESH_DEFAULT_MODEL`) |
-| `--effort` | `max` (default; `--no-effort-max` opts out; `--effort <level>` overrides) | `max` (same) | `max` (injected) | `low` (injected) |
+| `--effort` | print mode: `max` (default; `--no-effort-max` opts out; `--effort <level>` overrides); interactive mode: not injected unless explicitly set (BUG-434 — `"max"` rejected by claude v2.1.78+ in interactive mode) | `max` (always print — no interactive-mode issue) | `max` (injected) | `low` (injected) |
 | `ultrathink` suffix | appended to message (unless `--no-ultrathink` or already present) | appended | ➖ not injected | ➖ not injected |
-| `-c` (continue) | injected when session exists and not `--new-session` | injected when session exists | ➖ not injected | ➖ not injected |
+| `-c` (continue) | injected when session exists, not `--new-session`, and (message/print-mode/file/stdin present or explicit `--interactive` flag set) — bare interactive (no flags, no message) excluded by D-10; BUG-435 tracks this gap | injected when session exists | ➖ not injected | ➖ not injected |
 | `--dangerously-skip-permissions` | ON (unless `--no-skip-permissions`) | ON (unless `--no-skip-permissions`) | ON when message present | ➖ not applicable (no tool use) |
 | `--no-session-persistence` | opt-in via `--no-persist` | opt-in via `--no-persist` | always injected | always injected |
 | CLAUDE.md (global) | `~/.claude/CLAUDE.md` from user HOME | `~/.claude/CLAUDE.md` from user HOME | written to `<temp_home>/.claude/CLAUDE.md` | written to `<temp_home>/.claude/CLAUDE.md` |

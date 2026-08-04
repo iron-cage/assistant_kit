@@ -19,7 +19,7 @@ When `wait_for_session_slot()` does not admit a candidate on a given poll attemp
 
 **Distinguishing fields:** `has_capacity` is computed once, before the short-circuited `&&`, and separates exhaustion from the other two causes. Within the `has_capacity=true` branch, `acquire_slot()`'s `SlotDenialCause` return value (BUG-396) is the second field required to separate "an unrelated live session already holds this index" — not a race at all, since nothing was contended — from "the recorded owner was dead and I lost the reclaim-ticket race" — the only one of the three causes that is genuinely a race. Both fields must be captured at admission-check time; neither survives past that point unless deliberately threaded through to the message site.
 
-**Preserved substring:** The pre-existing `"active; waiting"` substring in the message text is preserved unchanged; the differentiating suffix is appended after it, not spliced into it. This substring is asserted by 7 pre-existing tests (`tests/config_file_test.rs` lines 96,149,198,250,299; `tests/concurrency_gate_test.rs` T01/T04 lines 220,377) that predate this invariant and are not this invariant's concern to modify, only to not break.
+**Preserved prefix (TSK-452):** Every gate-wait diagnostic line begins with the structured prefix `"gate-wait  active="` (double space between `gate-wait` and `active=`; TSK-452 replaced the pre-TSK-452 `"active; waiting"` body). The differentiating cause appears in the `(reason: ...)` trailer at the end of the same line. Assertions in `tests/config_file_test.rs` T01–T05 and `tests/concurrency_gate_test.rs` T01/T04/T27/T32/T34 all assert the new prefix.
 
 ### Boundary With Invariant 012 (Gate Slot Atomicity)
 
@@ -84,7 +84,8 @@ if !quiet
     None | Some( Ok( () ) )                          => "at capacity",
   };
   eprintln!(
-    "Info: {count}/{max} print sessions active; waiting {poll_secs}s for a slot... (attempt {attempt}/{max_attempts}) [{cause}]"
+    "{}gate-wait  active={display_count}/{max} attempt={attempt}/{effective_max_attempts} wait={poll_secs}s (reason: {cause})",
+    claude_core::trace_ts()
   );
 }
 ```

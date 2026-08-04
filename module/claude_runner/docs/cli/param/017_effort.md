@@ -24,6 +24,12 @@ own default (`medium`) is intentionally overridden here.
 **Note:** To suppress the `--effort` flag entirely (pass no effort flag to claude),
 use `--no-effort-max`.
 
+**Known Limitation (BUG-434 — Claude Code v2.1.78+):** `"max"` is not accepted by the
+`claude` binary in interactive mode. Bare `clr` (no message, interactive REPL) fails
+immediately with "Effort level 'max' is not available in interactive mode." Workaround:
+use `--no-effort-max` or `--effort high` until TSK-447 lands a mode-aware injection fix.
+`--effort max` in print mode (with a message) continues to work correctly.
+
 ### Referenced Type
 
 | Type | Kind | Fundamental | Key Constraint |

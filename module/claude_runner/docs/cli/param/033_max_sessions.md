@@ -25,17 +25,25 @@ whose basename is exactly `"claude"`, excluding the calling process, **counting 
 non-interactive (print-mode) processes**. The count reflects all running non-interactive
 Claude Code processes system-wide, not per-project.
 
-**Note:** When the gate waits, `clr` emits a message to stderr each polling cycle (unless `--quiet`):
-`"Info: {count}/{max} sessions active; waiting {poll_secs}s for a slot... (attempt {n}/{max_attempts})"`.
-When a slot opens, `clr` proceeds without a message. After `max_attempts` failed attempts (no slot
-opened), gate exhaustion is routed through the Runner-class retry wrapper (`apply_runner_retry()`):
-on final exhaustion (no retries remaining, e.g. `--retry-override 0`) `clr` emits
-`"Error: [Runner] session gate timed out — {count} active sessions, max-sessions={max} — retries
-exhausted (exit 1)"` and exits with code 1; otherwise it emits a `[Runner] ... — retrying...`
-message and restarts the full `max_attempts`-poll sequence. For `run`/`ask`, `poll_secs` (default
+**Note:** When the gate waits, `clr` emits a structured timestamp-prefixed message to stderr each
+polling cycle (unless `--quiet`) in the form:
+`"{ts}gate-wait  active={count}/{max} attempt={n}/{effective_max} wait={poll_secs}s (reason: {cause})"`,
+where `{ts}` is a `claude_core::trace_ts()` prefix (`"YYYY-MM-DD · HH:MM:SS UTC · "`), `{cause}` is
+one of `"at capacity"`, `"slot held by another session"`, or `"lost reservation race"` (INV-013),
+and `{effective_max}` reflects the `CLR_REMAINING_TIMEOUT_SECS` budget clamp if active (see
+[`085_gate_remaining_timeout_secs.md`](085_gate_remaining_timeout_secs.md)). When a slot opens,
+`clr` proceeds without a message. After `effective_max` failed attempts, gate exhaustion is routed
+through the Runner-class retry wrapper (`apply_runner_retry()`): on final exhaustion (e.g.
+`--retry-override 0`) `clr` emits `"Error: [Runner] session gate timed out — {count} print
+sessions, max-sessions={max} — retries exhausted (exit 1)"` and exits with code 1 (budget
+exhaustion emits `"gate-wait budget exhausted"` instead — see
+[`085_gate_remaining_timeout_secs.md`](085_gate_remaining_timeout_secs.md)); otherwise it emits a
+`[Runner] ... — retrying...` message and restarts the full attempt sequence. For `run`/`ask`, `poll_secs` (default
 30), `max_attempts` (default 1000), and the opt-in staleness reclaim threshold (default unset) are
 tunable across the full 5-tier chain — `--gate-poll-secs`/`--gate-max-attempts`/`--gate-stale-secs`
-CLI flags, `"gate-poll-secs"`/`"gate-max-attempts"`/`"gate-stale-secs"` JSON keys,
+CLI flags (see [`082_gate_poll_secs.md`](082_gate_poll_secs.md),
+[`083_gate_max_attempts.md`](083_gate_max_attempts.md),
+[`084_gate_stale_secs.md`](084_gate_stale_secs.md)), `"gate-poll-secs"`/`"gate-max-attempts"`/`"gate-stale-secs"` JSON keys,
 `CLR_GATE_POLL_SECS`/`CLR_GATE_MAX_ATTEMPTS`/`CLR_GATE_STALE_SECS` env vars, and
 `gate_poll_secs`/`gate_max_attempts`/`gate_stale_secs` config-file keys — see
 [003_env_param.md](../003_env_param.md#env-param-5-gate-runtime-configuration). `isolated` resolves
