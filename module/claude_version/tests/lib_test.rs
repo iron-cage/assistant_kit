@@ -9,6 +9,12 @@
 //! | TC-003 | `unilang.commands.yaml` file exists at `COMMANDS_YAML` path | P |
 //! | TC-004 | YAML contains exactly the 14 expected command names | P |
 //! | TC-005 | all 14 YAML command names are also registered programmatically (no drift) | P |
+//! | TC-006 | all registered args carry a non-empty description | P |
+//! | TC-007 | `verbosity` arg default is `"1"` | P |
+//! | TC-008 | `format` arg default is `"text"` | P |
+//! | TC-009 | `mode` arg on `.version.list` default is `"aliases"` | P |
+//! | TC-010 | `count` arg on `.version.list` default is `"10"` | P |
+//! | TC-011 | `key` arg on `.settings.get` has no default | P |
 
 /// Canonical command list — single source of truth for TC-002, TC-004, TC-005.
 const EXPECTED_COMMANDS : &[ &str ] = &[
@@ -129,5 +135,105 @@ mod enabled
         "Command '{name}' registered programmatically but absent from YAML — add to unilang.commands.yaml"
       );
     }
+  }
+
+  // TC-006: every argument on every registered command has a non-empty description.
+  #[ test ]
+  fn tc006_all_args_have_non_empty_descriptions()
+  {
+    let mut registry = CommandRegistry::new();
+    claude_version::register_commands( &mut registry );
+    for name in EXPECTED_COMMANDS
+    {
+      let cmd = registry.command( name ).expect( "command must be registered" );
+      for arg in cmd.arguments()
+      {
+        assert!(
+          !arg.description.is_empty(),
+          "arg '{}' of '{name}' has empty description — add it in reg_arg_opt call",
+          arg.name
+        );
+      }
+    }
+  }
+
+  // TC-007: verbosity default = "1".
+  #[ test ]
+  fn tc007_verbosity_default_is_1()
+  {
+    let mut registry = CommandRegistry::new();
+    claude_version::register_commands( &mut registry );
+    let cmd = registry.command( ".status" ).expect( ".status must be registered" );
+    let arg = cmd.arguments().iter()
+    .find( |a| a.name == "verbosity" )
+    .expect( "verbosity must be an arg of .status" );
+    assert_eq!(
+      arg.attributes.default.as_deref(), Some( "1" ),
+      "verbosity default must be \"1\", got {:?}", arg.attributes.default
+    );
+  }
+
+  // TC-008: format default = "text".
+  #[ test ]
+  fn tc008_format_default_is_text()
+  {
+    let mut registry = CommandRegistry::new();
+    claude_version::register_commands( &mut registry );
+    let cmd = registry.command( ".status" ).expect( ".status must be registered" );
+    let arg = cmd.arguments().iter()
+    .find( |a| a.name == "format" )
+    .expect( "format must be an arg of .status" );
+    assert_eq!(
+      arg.attributes.default.as_deref(), Some( "text" ),
+      "format default must be \"text\", got {:?}", arg.attributes.default
+    );
+  }
+
+  // TC-009: mode on .version.list default = "aliases".
+  #[ test ]
+  fn tc009_mode_default_is_aliases()
+  {
+    let mut registry = CommandRegistry::new();
+    claude_version::register_commands( &mut registry );
+    let cmd = registry.command( ".version.list" ).expect( ".version.list must be registered" );
+    let arg = cmd.arguments().iter()
+    .find( |a| a.name == "mode" )
+    .expect( "mode must be an arg of .version.list" );
+    assert_eq!(
+      arg.attributes.default.as_deref(), Some( "aliases" ),
+      "mode default must be \"aliases\", got {:?}", arg.attributes.default
+    );
+  }
+
+  // TC-010: count on .version.list default = "10".
+  #[ test ]
+  fn tc010_count_default_is_10()
+  {
+    let mut registry = CommandRegistry::new();
+    claude_version::register_commands( &mut registry );
+    let cmd = registry.command( ".version.list" ).expect( ".version.list must be registered" );
+    let arg = cmd.arguments().iter()
+    .find( |a| a.name == "count" )
+    .expect( "count must be an arg of .version.list" );
+    assert_eq!(
+      arg.attributes.default.as_deref(), Some( "10" ),
+      "count default must be \"10\", got {:?}", arg.attributes.default
+    );
+  }
+
+  // TC-011: key on .settings.get has no documented default (required arg).
+  #[ test ]
+  fn tc011_key_has_no_default()
+  {
+    let mut registry = CommandRegistry::new();
+    claude_version::register_commands( &mut registry );
+    let cmd = registry.command( ".settings.get" ).expect( ".settings.get must be registered" );
+    let arg = cmd.arguments().iter()
+    .find( |a| a.name == "key" )
+    .expect( "key must be an arg of .settings.get" );
+    assert!(
+      arg.attributes.default.is_none(),
+      "key must have no default, got {:?}", arg.attributes.default
+    );
   }
 }

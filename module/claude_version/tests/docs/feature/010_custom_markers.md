@@ -95,9 +95,13 @@ Both are valid invocations; the mutation direction differs.
 
 ### FT-6: Marker matching installed version → label shown by `.version.show`
 
-- **Given:** claude installed; isolated HOME with `version-markers.json` containing a marker whose `value` equals the installed semver (e.g. `{"name":"my-pin","value":"<installed>","description":""}`).
-- **When:** `clv .version.show v::1`
-- **Then:** exit 0; stdout contains `[my-pin]`
+- **Given:** claude installed; isolated HOME with `version-markers.json` containing two markers (`release-pin`, `team-dev`) whose `value` equals the installed semver.
+- **When:**
+  1. `clv .version.show v::1`
+  2. `clv .version.show format::json`
+- **Then:**
+  1. Exit 0; stdout contains `release-pin` and `team-dev` (both labels in brackets).
+  2. Exit 0; JSON output contains `"labels"` key and both names.
 - **Exit:** 0
 - **Source:** [feature/010_custom_markers.md](../../../docs/feature/010_custom_markers.md)
 
@@ -112,4 +116,4 @@ Both are valid invocations; the mutation direction differs.
 | `ft010_3_custom_marker_accepted_by_install` | `tests/cli/mutation_version_mark_test.rs` |
 | `ft010_4_invalid_name_exits_1` | `tests/cli/mutation_version_mark_test.rs` |
 | `ft010_5_dry_does_not_write_markers_file` | `tests/cli/mutation_version_mark_test.rs` |
-| `ft010_6_marker_label_shown_by_version_show` | `tests/cli/read_version_test.rs` |
+| `ft006_marker_label_shown_by_version_show` | `tests/cli/read_version_test.rs` |

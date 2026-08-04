@@ -30,7 +30,7 @@ mod token_paths;
 mod dot;
 
 pub use credentials::credentials_status_routine;
-pub use accounts::accounts_routine;
+pub use accounts::accounts_view_routine;
 pub use accounts_help::print_accounts_help;
 pub use account_ops::{
   account_use_routine,
@@ -47,4 +47,3 @@ pub use model_select::model_select_routine;
 pub use provider_select::provider_select_routine;
 pub use token_paths::paths_routine;
 pub use dot::dot_routine;
-pub use crate::usage::usage_routine;
