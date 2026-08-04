@@ -102,16 +102,30 @@ fn validate_non_neg_int( key : &str, raw_val : &str ) -> Result< String >
   Ok( raw_val.to_string() )
 }
 
+/// Signals which kind of help the adapter detected.
+#[ derive( Debug, Clone, PartialEq ) ]
+pub enum HelpMode
+{
+  /// No help requested; proceed with normal command execution.
+  None,
+  /// Global help requested (`"."`, `".help"`, `"--help"`, `-h`, or empty argv).
+  Global,
+  /// Per-command help requested; inner string is the command name (e.g. `".version.list"`).
+  Command( String ),
+}
+
 /// Convert raw argv (process args, NOT including argv\[0\]) into unilang token strings.
 ///
-/// Returns `(tokens, needs_help)` where `needs_help=true` signals that the adapter
-/// routed to `.help` (for informational purposes only; caller may ignore it).
+/// Returns `(tokens, help_mode)` where `help_mode` signals how the adapter routed
+/// the request — `HelpMode::None` for normal execution, `HelpMode::Global` for the
+/// global help screen, or `HelpMode::Command(name)` for per-command help.
 ///
 /// # Normalisation performed
 ///
-/// - Empty argv or `"."` → routes to `".help"`.
-/// - `".help"` token anywhere in argv → routes to `".help"` (FR-02).
-/// - `--help` / `-h` → routes to `".help"`.
+/// - Empty argv or `"."` → routes to `".help"` (`HelpMode::Global`).
+/// - First arg is `".CMD.help"` → per-command help (`HelpMode::Command(".CMD")`).
+/// - `".help"` token anywhere in argv → `HelpMode::Global` (FR-02).
+/// - `--help` / `-h` → `HelpMode::Global`.
 /// - `v::` → expanded to `verbosity::` (value validated as `0`–`2`).
 /// - `dry::` / `force::` — bool values normalised to `"0"` or `"1"`.
 /// - `interval::` / `count::` — must be non-negative integers.
@@ -127,15 +141,35 @@ fn validate_non_neg_int( key : &str, raw_val : &str ) -> Result< String >
 /// - `dry::` / `force::` value other than `0` or `1`; `true` and `false` are intentionally rejected.
 /// - `interval::` / `count::` value is not a non-negative integer.
 #[ inline ]
-pub fn argv_to_unilang_tokens( argv : &[ String ] ) -> Result< ( Vec< String >, bool ) >
+pub fn argv_to_unilang_tokens( argv : &[ String ] ) -> Result< ( Vec< String >, HelpMode ) >
 {
-  // Step 1: empty → help.
+  // Step 1: empty → global help.
   if argv.is_empty()
   {
-    return Ok( ( vec![ ".help".to_string() ], true ) );
+    return Ok( ( vec![], HelpMode::Global ) );
   }
 
-  // Step 1b: `.help` or bare `help` anywhere in argv → help (FR-02: help flag in any position).
+  // Step 1a: per-command help — first arg is a dot-prefixed command ending in `.help`.
+  // Example: `.version.list.help` → HelpMode::Command(".version.list").
+  // Must run before Step 1b so `.version.list.help` is not swallowed by the
+  // global `.help` check (which also matches tokens ending in `.help`).
+  // strip_suffix used instead of ends_with to avoid the case_sensitive_file_extension_comparisons
+  // clippy lint — this is a command suffix check, not a filesystem path check.
+  if let Some( first ) = argv.first()
+  {
+    if first.starts_with( '.' )
+    {
+      if let Some( base ) = first.strip_suffix( ".help" )
+      {
+        if !base.is_empty()
+        {
+          return Ok( ( vec![], HelpMode::Command( base.to_string() ) ) );
+        }
+      }
+    }
+  }
+
+  // Step 1b: `.help` or bare `help` anywhere in argv → global help (FR-02).
   // Must precede all other checks so `.status .help` shows help rather than
   // erroring on the missing `::` separator.
   // Bare `help` (without the dot) is treated as a synonym so users following the
@@ -143,19 +177,19 @@ pub fn argv_to_unilang_tokens( argv : &[ String ] ) -> Result< ( Vec< String >, 
   // rather than a confusing "expected param::value syntax" error.
   if argv.iter().any( |a| a == ".help" || a == "help" )
   {
-    return Ok( ( vec![ ".help".to_string() ], true ) );
+    return Ok( ( vec![ ".help".to_string() ], HelpMode::Global ) );
   }
 
-  // Step 2: --help / -h → help.
+  // Step 2: --help / -h → global help.
   if argv[ 0 ] == "--help" || argv[ 0 ] == "-h"
   {
-    return Ok( ( vec![ ".help".to_string() ], true ) );
+    return Ok( ( vec![ ".help".to_string() ], HelpMode::Global ) );
   }
 
-  // Step 3a: bare `.` → help.
+  // Step 3a: bare `.` → global help.
   if argv[ 0 ] == "."
   {
-    return Ok( ( vec![ ".help".to_string() ], true ) );
+    return Ok( ( vec![ ".help".to_string() ], HelpMode::Global ) );
   }
 
   // Step 3b: first arg must not be a param (must not contain `::`) — it's the command.
@@ -247,5 +281,5 @@ pub fn argv_to_unilang_tokens( argv : &[ String ] ) -> Result< ( Vec< String >, 
     tokens.push( format!( "{k}::{v}" ) );
   }
 
-  Ok( ( tokens, false ) )
+  Ok( ( tokens, HelpMode::None ) )
 }

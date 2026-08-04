@@ -22,6 +22,9 @@ Integration test planning for help output triggers. See [command/readme.md](../.
 | IT-7 | `.help` does not appear in its own command listing | Visibility |
 | IT-8 | Help output is stable across repeated invocations | Stability |
 | IT-9 | Help output contains grouped section headers | Structure |
+| IT-10 | `.version.list.help` → per-command help, exit 0 | Per-Command Help |
+| IT-11 | per-command help output does not show global command listing | Per-Command Help |
+| IT-12 | per-command help contains argument names for the target command | Per-Command Help |
 
 ## Test Coverage Summary
 
@@ -34,8 +37,9 @@ Integration test planning for help output triggers. See [command/readme.md](../.
 - Visibility: 1 test
 - Stability: 1 test
 - Structure: 1 test
+- Per-Command Help: 3 tests (IT-10, IT-11, IT-12)
 
-**Total:** 9 tests
+**Total:** 12 tests
 
 ---
 
@@ -129,6 +133,36 @@ Integration test planning for help output triggers. See [command/readme.md](../.
 
 ---
 
+### IT-10: `.version.list.help` → per-command help, exit 0
+
+- **Given:** clean environment
+- **When:** `clv .version.list.help`
+- **Then:** exit 0; stdout is non-empty and contains the command name `.version.list`
+- **Exit:** 0
+- **Source:** [feature/005_cli_design.md — D9](../../../../docs/feature/005_cli_design.md)
+
+---
+
+### IT-11: per-command help does not show global command listing
+
+- **Given:** clean environment
+- **When:** `clv .version.list.help`
+- **Then:** exit 0; stdout does NOT contain any of the global section headers ("Version Management", "Settings & Config", "Process Lifecycle", "Status"); the output is scoped to `.version.list` only
+- **Exit:** 0
+- **Source:** [feature/005_cli_design.md — D9](../../../../docs/feature/005_cli_design.md)
+
+---
+
+### IT-12: per-command help contains argument names for the target command
+
+- **Given:** clean environment
+- **When:** `clv .version.list.help`
+- **Then:** exit 0; stdout contains at least one argument name accepted by `.version.list` (e.g. `mode`, `count`); stdout contains `(default:` indicating defaults are rendered in-column
+- **Exit:** 0
+- **Source:** [feature/005_cli_design.md — D9](../../../../docs/feature/005_cli_design.md)
+
+---
+
 ### Source Functions
 
 | Function | File |
@@ -142,3 +176,6 @@ Integration test planning for help output triggers. See [command/readme.md](../.
 | `tc095_all_visible_commands_in_help` | `tests/cli/framework_test.rs` |
 | `tc01_dot_alias_shows_help` | `tests/cli/read_help_test.rs` |
 | `tc02_empty_argv_shows_help` | `tests/cli/read_help_test.rs` |
+| `it10_command_help_exits_0_contains_command_name` | `tests/cli/read_help_test.rs` |
+| `it11_command_help_omits_global_headers` | `tests/cli/read_help_test.rs` |
+| `it12_command_help_shows_arg_with_default` | `tests/cli/read_help_test.rs` |

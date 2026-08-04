@@ -19,7 +19,7 @@
 | `tests/docs/algorithm/` | Per-algorithm test case specifications | [../tests/docs/algorithm/readme.md](../tests/docs/algorithm/readme.md) | 2 |
 | `tests/docs/cli/command/` | Per-command test case specifications | [../tests/docs/cli/command/readme.md](../tests/docs/cli/command/readme.md) | 16 |
 | `tests/docs/cli/format/` | Per-format output rendering test specifications | [../tests/docs/cli/format/readme.md](../tests/docs/cli/format/readme.md) | 2 |
-| `tests/docs/cli/param/` | Per-parameter edge case test specifications | [../tests/docs/cli/param/readme.md](../tests/docs/cli/param/readme.md) | 14 |
+| `tests/docs/cli/param/` | Per-parameter edge case test specifications | [../tests/docs/cli/param/readme.md](../tests/docs/cli/param/readme.md) | 16 |
 | `tests/docs/cli/param_group/` | Per-group interaction test specifications | [../tests/docs/cli/param_group/readme.md](../tests/docs/cli/param_group/readme.md) | 4 |
 | `tests/docs/cli/type/` | Per-type test case specifications | [../tests/docs/cli/type/readme.md](../tests/docs/cli/type/readme.md) | 10 |
 | `tests/docs/cli/user_story/` | Per-user-story acceptance test specifications | [../tests/docs/cli/user_story/readme.md](../tests/docs/cli/user_story/readme.md) | 8 |
