@@ -84,7 +84,7 @@ if !quiet
     None | Some( Ok( () ) )                          => "at capacity",
   };
   eprintln!(
-    "Info: {count}/{max} sessions active; waiting {poll_secs}s for a slot... (attempt {attempt}/{max_attempts}) [{cause}]"
+    "Info: {count}/{max} print sessions active; waiting {poll_secs}s for a slot... (attempt {attempt}/{max_attempts}) [{cause}]"
   );
 }
 ```

@@ -36,7 +36,7 @@ Rows are parameters or behaviors. Columns are the four commands. Key: ✅ = acti
 | passthrough args (`--`) | ➖ not supported | ➖ not supported | ✅ collected verbatim after `--` | ➖ not supported |
 | `--output-file` | ✅ supported | ✅ supported | ➖ not supported | ➖ not supported |
 | `--expect` / `--expect-strategy` | ✅ supported | ✅ supported | ➖ not supported | ➖ not supported |
-| `--max-sessions` | ✅ supported | ✅ supported | ➖ not supported | ➖ not supported |
+| `--max-sessions` | ✅ supported | ✅ supported | ✅ supported (3-tier: CLI flag + `"max-sessions"` JSON key + `CLR_MAX_SESSIONS` env var; no config-file tier) | ➖ not supported |
 | `--retry-on-transient` / `--transient-delay` (+ all retry params) | ✅ supported | ✅ supported | ➖ not supported | ➖ not supported |
 | `--dir` / `--subdir` / `--session-dir` | ✅ supported | ✅ supported | ➖ not supported | ➖ not supported |
 | `--system-prompt` / `--append-system-prompt` | ✅ supported | ✅ supported | via passthrough only | ➖ not supported |

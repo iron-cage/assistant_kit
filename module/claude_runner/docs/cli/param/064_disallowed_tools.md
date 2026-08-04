@@ -26,3 +26,4 @@ clr --disallowed-tools "Write,Edit" "Analyze this"
 |---|---------|---------|-------|
 | 1 | [`run`](../command/01_run.md) | — | — |
 | 5 | [`ask`](../command/05_ask.md) | — | — |
+| 3 | [`isolated`](../command/03_isolated.md) | — | Forwarded to claude subprocess; env: `CLR_DISALLOWED_TOOLS` |

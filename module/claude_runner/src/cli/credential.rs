@@ -113,14 +113,30 @@ pub( super ) fn run_isolated_command
 {
   let compact_window : Option< u32 > = if no_compact_window { None } else { Some( DEFAULT_COMPACT_WINDOW ) };
   // Build the full arg list with all injected defaults prepended before --print.
-  // Order: [--no-chrome?] --effort <level> --no-session-persistence
-  //        [--dangerously-skip-permissions?] [--print <msg>] [passthrough]
+  // Order: [--no-chrome?] [--effort <level>?] --no-session-persistence [--dangerously-skip-permissions?]
+  //        [--system-prompt?] [--append-system-prompt?] [--json-schema?] [--allowed-tools?]
+  //        [--disallowed-tools?] [--max-budget-usd?] [--max-turns?] [--mcp-config <v>]* [--print <msg>] [passthrough]
   let mut args : Vec< String > = Vec::new();
   if no_chrome    { args.push( "--no-chrome".to_string() ); }
-  args.push( "--effort".to_string() );
-  args.push( effort.as_str().to_string() );
+  if !no_effort_max
+  {
+    args.push( "--effort".to_string() );
+    args.push( effort.as_str().to_string() );
+  }
   args.push( "--no-session-persistence".to_string() );
   if skip_perms   { args.push( "--dangerously-skip-permissions".to_string() ); }
+  if let Some( v ) = system_prompt        { args.push( "--system-prompt".to_string() );        args.push( v.to_string() ); }
+  if let Some( v ) = append_system_prompt { args.push( "--append-system-prompt".to_string() ); args.push( v.to_string() ); }
+  if let Some( v ) = json_schema          { args.push( "--json-schema".to_string() );          args.push( v.to_string() ); }
+  if let Some( v ) = allowed_tools        { args.push( "--allowed-tools".to_string() );         args.push( v.to_string() ); }
+  if let Some( v ) = disallowed_tools     { args.push( "--disallowed-tools".to_string() );      args.push( v.to_string() ); }
+  if let Some( v ) = max_budget_usd       { args.push( "--max-budget-usd".to_string() );        args.push( v.to_string() ); }
+  if let Some( v ) = max_turns            { args.push( "--max-turns".to_string() );             args.push( v.to_string() ); }
+  for m in mcp_config
+  {
+    args.push( "--mcp-config".to_string() );
+    args.push( m.clone() );
+  }
   if let Some( m ) = message
   {
     args.push( "--print".to_string() );
@@ -479,5 +495,14 @@ pub( super ) fn run_refresh_command
     false,  // no fence stripping for refresh
     None,   // no output style for refresh
     None,   // no summary fields for refresh
+    false,  // no_effort_max: refresh always sends --effort low (fixed injection, not user-configurable)
+    None,   // no system-prompt override for refresh
+    None,   // no append-system-prompt override for refresh
+    None,   // no json-schema for refresh
+    &[],    // no mcp-config for refresh
+    None,   // no allowed-tools override for refresh
+    None,   // no disallowed-tools override for refresh
+    None,   // no max-budget-usd override for refresh
+    None,   // no max-turns override for refresh
   );
 }

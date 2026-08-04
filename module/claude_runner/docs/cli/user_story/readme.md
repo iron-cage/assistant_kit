@@ -69,7 +69,7 @@
 | 022 | Session Isolation via Subdirectory | `--subdir` | `run`, `ask` |
 | 023 | Output File Capture | `--output-file` | `run`, `ask` |
 | 024 | Enum Output Validation | `--expect`, `--expect-strategy`, `--retry-on-validation` | `run`, `ask` |
-| 025 | Session Concurrency Gate | `--max-sessions` | `run`, `ask` |
+| 025 | Session Concurrency Gate | `--max-sessions` | `run`, `ask`, `isolated` |
 | 026 | Session Listing | (none) | `ps` |
 | 027 | Session Termination | `<PID>` | `kill` |
 | 028 | Session Cross-Loading | `--session-from`, `--from`, `--to` | `run`, `ask` |

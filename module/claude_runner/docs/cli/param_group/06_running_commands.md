@@ -32,9 +32,10 @@ Key: ✅ = supported, ⬜ = not injected/not applicable, ➖ = not accepted, `*`
 | `--trace` | ✅ | ✅ | ✅ | ✅ | emit env+command to stderr then execute |
 | `--no-compact-window` | ✅ | ✅ | ✅ | ✅ | suppress `CLAUDE_CODE_AUTO_COMPACT_WINDOW` injection |
 | **Model and effort** | | | | | |
-| `--model` | ✅ | ✅ | default: `"opus"` | default: `"sonnet"` | isolated/refresh use constants as default |
-| `--effort` | ✅ user sets | ✅ user sets | `max` * | `low` * | isolated/refresh inject effort; cannot override via flag |
-| `--no-effort-max` | ✅ | ✅ | ➖ | ➖ | suppresses default `--effort max` in run/ask |
+| `--model` | ✅ | ✅ | ✅ | default: `"sonnet"` | isolated default falls back to config tiers then `opus` alias; refresh uses `"sonnet"` constant |
+| `--effort` | ✅ user sets | ✅ user sets | ✅ user sets (default: `max`) | `low` * | refresh injects `low`; cannot override via flag |
+| `--no-effort-max` | ✅ | ✅ | ✅ | ➖ | suppresses default `--effort max`; not available for refresh (fixed by design) |
+| `--no-chrome` | ✅ | ✅ | ✅ | ➖ | suppresses `--chrome` injection; not available for refresh |
 | **Output** | | | | | |
 | `--output-style` | ✅ | ✅ | ✅ | ➖ | |
 | `--output-file` | ✅ | ✅ | ✅ | ➖ | |
@@ -52,13 +53,23 @@ Key: ✅ = supported, ⬜ = not injected/not applicable, ➖ = not accepted, `*`
 | **Validation** | | | | | |
 | `--expect` | ✅ | ✅ | ✅ | ➖ | |
 | `--expect-strategy` | ✅ | ✅ | ✅ | ➖ | |
+| **System prompt** | | | | | |
+| `--system-prompt` | ✅ | ✅ | ✅ | ➖ | forwarded to claude subprocess |
+| `--append-system-prompt` | ✅ | ✅ | ✅ | ➖ | forwarded to claude subprocess |
+| **Claude-native forwarded** | | | | | |
+| `--json-schema` | ✅ | ✅ | ✅ | ➖ | forwarded to claude subprocess |
+| `--mcp-config` | ✅ | ✅ | ✅ | ➖ | repeatable; forwarded to claude subprocess |
+| `--allowed-tools` | ✅ | ✅ | ✅ | ➖ | forwarded to claude subprocess |
+| `--disallowed-tools` | ✅ | ✅ | ✅ | ➖ | forwarded to claude subprocess |
+| `--max-budget-usd` | ✅ | ✅ | ✅ | ➖ | forwarded to claude subprocess |
+| `--max-turns` | ✅ | ✅ | ✅ | ➖ | forwarded to claude subprocess |
 | **Journaling** | | | | | |
 | `--journal` | ✅ | ✅ | ✅ | ✅ | |
 | `--journal-dir` | ✅ | ✅ | ✅ | ✅ | |
 | **Retries** | | | | | |
 | `--retry-on-transient` / `--transient-delay` | ✅ | ✅ | ➖ | ➖ | run/ask only |
 | `--retry-on-auth` / `--auth-delay` | ✅ | ✅ | ➖ | ➖ | run/ask only |
-| `--max-sessions` | ✅ | ✅ | ➖ | ➖ | concurrency gate; run/ask only |
+| `--max-sessions` | ✅ | ✅ | ✅ | ➖ | concurrency gate; `isolated` uses 3-tier (CLI flag + `"max-sessions"` JSON key + `CLR_MAX_SESSIONS` env var; no config-file tier) |
 | **Injected subprocess env vars** | | | | | |
 | `CLAUDE_CODE_MAX_OUTPUT_TOKENS` | `128,000` | `128,000` | `128,000` | `128,000` | always injected; `--max-tokens` overrides |
 | `CLAUDE_CODE_AUTO_COMPACT_WINDOW` | `300,000` | `300,000` | `300,000` | `300,000` | always injected; `--no-compact-window` suppresses |
@@ -85,9 +96,9 @@ Complements Universal Params above by summarizing the opposite extreme — param
 
 | Scope | Parameters | Notes |
 |-------|-----------|-------|
-| `isolated`-only | passthrough (`--`) | Sole route to `--effort`, `--no-effort-max`, `--output-format`, `--system-prompt`, `--append-system-prompt`, `--json-schema`, `--mcp-config`, `--allowed-tools`, `--disallowed-tools`, `--max-budget-usd`, `--max-turns`, `--chrome`/`--no-chrome`, `--model` override on `isolated` — none of these are native flags there; ergonomic gap only (last-wins arg order means passthrough already reaches all of them), not a functional one — see [`../parity/001_run_ask_isolated.md`](../parity/001_run_ask_isolated.md) Exclusion Rationale |
+| `isolated`-only | passthrough (`--`) | Sole route to `--output-format` on `isolated` — the only remaining native-flag gap after TSK-443 (all other formerly-passthrough-only params now have native flags); ergonomic gap only (last-wins arg order means passthrough already reaches it), not a functional one — see [`../parity/001_run_ask_isolated.md`](../parity/001_run_ask_isolated.md) Exclusion Rationale |
 | `isolated` + `refresh` only | `--creds` | Credential-isolated execution config; see [`04_credential_operations.md`](04_credential_operations.md) |
-| `run` + `ask` only | `--no-effort-max`, `--output-format`, `--subdir`, `--new-session`, `--session-dir`, `--retry-on-transient`/`--transient-delay`, `--retry-on-auth`/`--auth-delay`, `--max-sessions` | Session control, retries, and format negotiation — no passthrough equivalent exists for `isolated`/`refresh` since these configure the runner itself, not the `claude` subprocess |
+| `run` + `ask` only | `--output-format`, `--subdir`, `--new-session`, `--session-dir`, `--retry-on-transient`/`--transient-delay`, `--retry-on-auth`/`--auth-delay` | Session control, retries, and format negotiation — no passthrough equivalent exists for `isolated`/`refresh` since these configure the runner itself, not the `claude` subprocess |
 
 ### Invariants
 

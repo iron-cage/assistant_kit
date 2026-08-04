@@ -14,14 +14,15 @@ Test case planning for [invariant/013_slot_wait_message_differentiation.md](../.
 | IN-3 | 2 racers, `--max-sessions 1`, pre-seeded confirmed-dead owner → losing racer's first poll attempt names `"lost reservation race"` | Invariant Hold |
 | IN-4 | 1 long-running occupier already active, `--max-sessions 1`, second invocation polls → stderr names `"at capacity"`, not `"lost reservation race"` or `"slot held by another session"` | Invariant Boundary |
 | IN-5 | Any non-admission message → still contains the literal substring `"active; waiting"` unchanged (regression guard for the 7 pre-existing substring assertions) | Regression Guard |
+| IN-6 | Any non-admission message → contains the literal substring `"print sessions active"` (regression guard ensuring the mode qualifier is never silently dropped — BUG-431 fix) | Regression Guard |
 
 ## Test Coverage Summary
 
 - Invariant Hold: 3 tests (IN-1, IN-2, IN-3)
 - Invariant Boundary: 1 test (IN-4)
-- Regression Guard: 1 test (IN-5)
+- Regression Guard: 2 tests (IN-5, IN-6)
 
-**Total:** 5 invariant test cases (minimum for `invariant` doc type is 2; this spec exceeds it to cover all three message-differentiation directions plus the preserved-substring regression guard)
+**Total:** 6 invariant test cases (minimum for `invariant` doc type is 2; this spec exceeds it to cover all three message-differentiation directions, the preserved-substring regression guard, and the mode-qualifier regression guard)
 
 ## Architectural Constraint
 
@@ -36,6 +37,7 @@ All 5 cases are integration tests in `tests/concurrency_gate_test.rs` — the di
 | IN-3 | `t16_slot_wait_message_names_genuine_reclaim_race_for_dead_owner` | `tests/concurrency_gate_test.rs` | ✅ |
 | IN-4 | *(not yet implemented)* | `tests/concurrency_gate_test.rs` | ⏳ |
 | IN-5 | *(not yet implemented)* | `tests/concurrency_gate_test.rs` | ⏳ |
+| IN-6 | *(not yet implemented)* | `tests/concurrency_gate_test.rs` | ⏳ |
 
 ---
 
@@ -86,3 +88,13 @@ All 5 cases are integration tests in `tests/concurrency_gate_test.rs` — the di
 - **Then:** the message contains the unmodified literal substring `"active; waiting"` — the differentiating `[at capacity]` / `[slot held by another session]` / `[lost reservation race]` suffix is appended after this substring, never spliced into or replacing it
 - **Note:** regression guard for the 7 pre-existing assertions on this exact substring (`tests/config_file_test.rs` lines 96,149,198,250,299; `tests/concurrency_gate_test.rs` T01/T04 lines 220,377) that predate this invariant and must not be broken by any future change to this message
 - **Source:** [invariant/013_slot_wait_message_differentiation.md](../../../docs/invariant/013_slot_wait_message_differentiation.md) § Invariant Statement, "Preserved substring"
+
+---
+
+### IN-6: Any non-admission message → contains the literal substring `"print sessions active"`
+
+- **Given:** any fixture above (IN-1/IN-2's live-hold case, IN-3's reclaim-race case, or IN-4's exhaustion case) with stderr captured
+- **When:** the poll-loop diagnostic is emitted for any non-admission cause
+- **Then:** the message contains the literal substring `"print sessions active"` — confirming the mode qualifier that scopes the count to print-mode processes only is present in every diagnostic emission and can never be silently dropped by a future format-string edit
+- **Note:** regression guard for the BUG-431 fix (`gate.rs:703` format string changed from `"sessions active"` to `"print sessions active"`); the fix is invisible to IN-5's `"active; waiting"` guard since that substring remains unchanged; a dedicated guard here closes the gap so the mode qualifier is independently asserted
+- **Source:** [invariant/013_slot_wait_message_differentiation.md](../../../docs/invariant/013_slot_wait_message_differentiation.md) § Enforcement Mechanism (`eprintln!` format string)

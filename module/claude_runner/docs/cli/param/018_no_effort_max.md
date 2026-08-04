@@ -39,6 +39,7 @@ If `--no-effort-max` is set, any `--effort` value is ignored.
 |---|---------|---------|-------|
 | 1 | [`run`](../command/01_run.md) | false | — |
 | 5 | [`ask`](../command/05_ask.md) | false | — |
+| 3 | [`isolated`](../command/03_isolated.md) | false | Suppresses automatic `--effort max` injection; env: `CLR_NO_EFFORT_MAX` |
 
 ### Referenced User Stories
 

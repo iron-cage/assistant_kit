@@ -11,6 +11,7 @@
 //! | IT-8 | `clr refresh --help` → exit 0, help text shown | No |
 //! | IT-9 | `CLR_JOURNAL=bogus` → exit 1 with error message | No |
 //! | IT-10 | `clr refresh --creds <f> "message"` → exit 1, positional arg rejected | No |
+//! | RCT-1 | `clr refresh --trace` stderr contains `--effort low` | No (Unix) |
 //!
 //! Tests containing `lim_it` (not present in this file) would require a live
 //! OAuth-capable `claude` binary.  All tests here run without live credentials.
@@ -235,5 +236,57 @@ fn test_it10_refresh_rejects_positional_message()
   assert!(
     err.contains( "unexpected argument" ) || err.contains( "positional" ),
     "stderr must mention unexpected/positional argument; got: {err}"
+  );
+}
+
+// ── RCT-1: refresh trace confirms --effort low ────────────────────────────────
+
+/// RCT-1: `clr refresh --trace` stderr contains `--effort low`.
+///
+/// ## Root Cause
+///
+/// `run_refresh_command()` passes 9 refresh-safe defaults to the extended
+/// `run_isolated_command()` signature; `no_effort_max = false` means `--effort low`
+/// must appear in the injected args for any refresh invocation.
+///
+/// ## Why Not Caught
+///
+/// `cargo check` / compile-time verification cannot distinguish `false` from `true`
+/// across the 9 bool/Option defaults — a type-correct but value-wrong default would
+/// silently compile while injecting the wrong behavior.
+///
+/// ## Fix Applied
+///
+/// Plan 007 Phase 3 Step 9 adds this behavioral test to confirm the injected
+/// value at runtime, not just the type at compile time.
+///
+/// ## Prevention
+///
+/// Assert `clr refresh --trace` stderr contains `--effort low` — trace reflects
+/// the exact arg list that the subprocess would receive.
+///
+/// ## Pitfall
+///
+/// If `no_effort_max` is accidentally passed as `true`, the `--effort` flag is
+/// suppressed entirely and this test fails — `assert!(err.contains("--effort low"))`
+/// will not match a trace that has no `--effort` arg at all.
+#[ cfg( unix ) ]
+#[ test ]
+fn refresh_trace_confirms_effort_low()
+{
+  let creds = make_creds_file( "{}" );
+  let path  = creds.path().to_str().unwrap();
+
+  let out = std::process::Command::new( env!( "CARGO_BIN_EXE_clr" ) )
+    .args( [ "refresh", "--creds", path, "--trace" ] )
+    .env( "PATH", "/nonexistent" )
+    .env_remove( "CLAUDECODE" )
+    .output()
+    .expect( "invoke clr refresh" );
+
+  let err = stderr_str( &out );
+  assert!(
+    err.contains( "--effort low" ),
+    "refresh trace must contain --effort low (confirming refresh-safe default no_effort_max=false); got:\n{err}"
   );
 }

@@ -774,7 +774,17 @@ fn shorten_path( path : &str ) -> String
 {
   if let Ok( pro ) = std::env::var( "PRO" )
   {
-    if !pro.is_empty() && path.starts_with( pro.as_str() )
+    // Fix(BUG-432): raw `starts_with` treated sibling directories whose names share
+    // a prefix with `$PRO` (e.g. `$PROtools`) as if they were descendants of `$PRO`,
+    // producing garbled paths like `$PROtools`.
+    // Root cause: byte-sequence prefix match has no path-boundary awareness; a sibling
+    // `/a/pro` and `/a/protools` share the prefix `/a/pro` but are unrelated paths.
+    // Pitfall: always check that the remainder after stripping the prefix starts with '/'
+    // (or that the path equals PRO exactly); `strip_prefix + is_some_and` mirrors the
+    // boundary-aware pattern established for home-dir detection in BUG-383.
+    if !pro.is_empty()
+      && ( path == pro.as_str()
+        || path.strip_prefix( pro.as_str() ).is_some_and( | rest | rest.starts_with( '/' ) ) )
     {
       let rest = &path[ pro.len().. ];
       return format!( "$PRO{rest}" );

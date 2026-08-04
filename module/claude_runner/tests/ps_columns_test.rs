@@ -378,3 +378,87 @@ fn ec10_help_column_keys_match_column_keys_constant()
     "EC-10: 'command' must NOT appear as a column key in help (BUG-303 regression). Got:\n{stdout}"
   );
 }
+
+// ── t_shorten_path_does_not_mangle_sibling_prefix_path: BUG-432 regression guard ──
+
+/// BUG-432 regression guard: `shorten_path()` must not mangle a path that starts
+/// with the same byte sequence as `$PRO` but is a sibling directory (not a
+/// descendant).
+///
+/// Exercises the boundary-aware `strip_prefix` guard at `ps.rs`. Covers BUG-432.
+///
+/// # Root Cause
+///
+/// `shorten_path()` used `path.starts_with(pro.as_str())` which is a raw byte-sequence
+/// match with no path-boundary awareness.  When `$PRO=/tmp/x/pro` and the process CWD
+/// is `/tmp/x/protools`, the byte prefix `/tmp/x/pro` matches, so the remainder `tools`
+/// is appended to `$PRO` → `$PROtools`.  The same defect applied to any sibling whose
+/// name starts with the same characters as `pro`.
+///
+/// # Why Not Caught
+///
+/// All existing `shorten_path` coverage used paths that were genuine descendants of
+/// `$PRO` (e.g. `$PRO/subdir`).  No test exercised the sibling-prefix edge case.
+///
+/// # Fix Applied
+///
+/// `ps.rs` guard replaced with a boundary-aware check:
+/// `path == pro.as_str() || path.strip_prefix(pro).is_some_and(|rest| rest.starts_with('/'))`.
+/// This mirrors the pattern established for home-dir detection in BUG-383.
+///
+/// # Prevention
+///
+/// This test spawns a fake claude process with CWD set to a sibling directory
+/// (`<tmp>/protools` when `PRO=<tmp>/pro`), then verifies that `clr ps --columns path`
+/// does NOT produce `$PROtools` and DOES show the literal path.
+///
+/// # Pitfall
+///
+/// The exact-match branch (`path == pro.as_str()`) is required so that a process
+/// whose CWD IS `$PRO` exactly is still shortened to `$PRO` (no trailing slash).
+/// Omitting it would leave `$PRO` itself unshortened.
+#[ cfg( unix ) ]
+#[ test ]
+fn t_shorten_path_does_not_mangle_sibling_prefix_path()
+{
+  let base_dir = tempfile::TempDir::new().expect( "base dir" );
+  let pro_dir = base_dir.path().join( "pro" );
+  let protools_dir = base_dir.path().join( "protools" );
+  std::fs::create_dir_all( &pro_dir ).expect( "create pro dir" );
+  std::fs::create_dir_all( &protools_dir ).expect( "create protools dir" );
+
+  let ( _bin_dir, bin_path ) = fake_claude_binary_dir();
+
+  let mut bg = std::process::Command::new( "claude" )
+    .env( "PATH", &bin_path )
+    .arg( "30" )
+    .current_dir( &protools_dir )
+    .stdout( std::process::Stdio::null() )
+    .stderr( std::process::Stdio::null() )
+    .spawn()
+    .expect( "spawn fake claude in protools cwd" );
+
+  let proc = make_proc_dir( &[ bg.id() ] );
+
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = std::process::Command::new( bin )
+    .args( [ "ps", "--columns", "path" ] )
+    .env( "PRO", pro_dir.to_str().expect( "pro dir UTF-8" ) )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
+    .output()
+    .expect( "run clr ps --columns path" );
+
+  let _ = bg.kill();
+  let _ = bg.wait();
+
+  let stdout = stdout_str( &out );
+  let protools_str = protools_dir.to_str().expect( "protools dir UTF-8" );
+  assert!(
+    !stdout.contains( "$PROtools" ),
+    "BUG-432 regression: sibling prefix path must not be mangled to '$PROtools'. Got:\n{stdout}"
+  );
+  assert!(
+    stdout.contains( protools_str ),
+    "BUG-432 regression: protools path must appear as literal path (not shortened). Got:\n{stdout}"
+  );
+}

@@ -884,6 +884,104 @@ pub( super ) fn apply_json_config_isolated(
           }
         }
       }
+      "model" =>
+      {
+        if parsed.model.is_none()
+        {
+          if let Value::String( s ) = v { parsed.model = Some( s.clone() ); }
+        }
+      }
+      "effort" =>
+      {
+        if parsed.effort.is_none()
+        {
+          if let Value::String( s ) = v
+          {
+            if let Ok( level ) = s.parse::< EffortLevel >() { parsed.effort = Some( level ); }
+          }
+        }
+      }
+      "no-effort-max" =>
+      {
+        if !parsed.no_effort_max
+        {
+          if let Value::Bool( b ) = v { if *b { parsed.no_effort_max = true; } }
+        }
+      }
+      "system-prompt" =>
+      {
+        if parsed.system_prompt.is_none()
+        {
+          if let Value::String( s ) = v { parsed.system_prompt = Some( s.clone() ); }
+        }
+      }
+      "append-system-prompt" =>
+      {
+        if parsed.append_system_prompt.is_none()
+        {
+          if let Value::String( s ) = v { parsed.append_system_prompt = Some( s.clone() ); }
+        }
+      }
+      "json-schema" =>
+      {
+        if parsed.json_schema.is_none()
+        {
+          if let Value::String( s ) = v { parsed.json_schema = Some( s.clone() ); }
+        }
+      }
+      "mcp-config" =>
+      {
+        if parsed.mcp_config.is_empty()
+        {
+          match v
+          {
+            Value::String( s ) => parsed.mcp_config.push( s.clone() ),
+            Value::Array( arr ) =>
+            {
+              for item in arr
+              {
+                if let Value::String( s ) = item { parsed.mcp_config.push( s.clone() ); }
+              }
+            }
+            _ => {}
+          }
+        }
+      }
+      "allowed-tools" =>
+      {
+        if parsed.allowed_tools.is_none()
+        {
+          if let Value::String( s ) = v { parsed.allowed_tools = Some( s.clone() ); }
+        }
+      }
+      "disallowed-tools" =>
+      {
+        if parsed.disallowed_tools.is_none()
+        {
+          if let Value::String( s ) = v { parsed.disallowed_tools = Some( s.clone() ); }
+        }
+      }
+      "max-budget-usd" =>
+      {
+        if parsed.max_budget_usd.is_none()
+        {
+          if let Value::String( s ) = v { parsed.max_budget_usd = Some( s.clone() ); }
+        }
+      }
+      "max-turns" =>
+      {
+        if parsed.max_turns.is_none()
+        {
+          if let Value::String( s ) = v { parsed.max_turns = Some( s.clone() ); }
+        }
+      }
+      "no-chrome" =>
+      {
+        if !parsed.no_chrome
+        {
+          if let Value::Bool( b ) = v { if *b { parsed.no_chrome = true; } }
+        }
+      }
       // "args-file" is self-referential — silently skip.
       // Unknown keys are silently ignored.
       _ => {}

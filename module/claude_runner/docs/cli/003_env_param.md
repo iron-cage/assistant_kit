@@ -270,8 +270,8 @@ CLR_GATE_POLL_SECS=5 CLR_GATE_MAX_ATTEMPTS=12 clr --max-sessions 1 --retry-overr
 **`CLR_GATE_POLL_SECS` / `CLR_GATE_MAX_ATTEMPTS` — `isolated` (env-var-only):** `isolated`
 resolves these 2 variables one-shot via direct `gate_poll_secs_from()`/`gate_max_attempts_from()`
 calls inside `gate_isolated_session()` — no `--gate-poll-secs`/`--gate-max-attempts` CLI flag, no
-JSON key, no config-file tier. Only `--max-sessions`/`CLR_MAX_SESSIONS` itself has a CLI-flag +
-env-var pair for `isolated` (2-tier — see [param/033_max_sessions.md](param/033_max_sessions.md)).
+JSON key, no config-file tier. `--max-sessions` for `isolated` is a 3-tier chain (CLI flag + `"max-sessions"` JSON key via
+`--args-file` + `CLR_MAX_SESSIONS` env var — no config-file tier; see [param/033_max_sessions.md](param/033_max_sessions.md)).
 
 **`CLR_GATE_STALE_SECS`:** Opt-in staleness threshold for reclaiming a slot from a live-but-stalled
 owner (hung, deadlocked, or `SIGSTOP`ped — a process that never releases its slot but is not dead

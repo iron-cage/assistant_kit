@@ -94,7 +94,7 @@ fn t01_user_config_only_sets_max_sessions()
   );
   let stderr = String::from_utf8_lossy( &out.stderr );
   assert!(
-    stderr.contains( "Info: 5/5 sessions active; waiting" ),
+    stderr.contains( "Info: 5/5 print sessions active; waiting" ),
     "T01: config-supplied max_sessions=5 must be effective. Got:\n{stderr}"
   );
 }
@@ -147,7 +147,7 @@ fn t02_project_config_overrides_user_config()
   );
   let stderr = String::from_utf8_lossy( &out.stderr );
   assert!(
-    stderr.contains( "Info: 3/3 sessions active; waiting" ),
+    stderr.contains( "Info: 3/3 print sessions active; waiting" ),
     "T02: project .clr.toml (max_sessions=3) must override user config (max_sessions=5). Got:\n{stderr}"
   );
 }
@@ -196,7 +196,7 @@ fn t03_cli_overrides_config_max_sessions()
   );
   let stderr = String::from_utf8_lossy( &out.stderr );
   assert!(
-    stderr.contains( "Info: 7/7 sessions active; waiting" ),
+    stderr.contains( "Info: 7/7 print sessions active; waiting" ),
     "T03: CLI --max-sessions 7 must override config (max_sessions=5). Got:\n{stderr}"
   );
 }
@@ -248,7 +248,7 @@ fn t04_args_file_json_overrides_config_max_sessions()
   );
   let stderr = String::from_utf8_lossy( &out.stderr );
   assert!(
-    stderr.contains( "Info: 9/9 sessions active; waiting" ),
+    stderr.contains( "Info: 9/9 print sessions active; waiting" ),
     "T04: --args-file JSON (max-sessions=9) must override config (max_sessions=5). Got:\n{stderr}"
   );
 }
@@ -297,7 +297,7 @@ fn t05_env_var_overrides_config_max_sessions()
   );
   let stderr = String::from_utf8_lossy( &out.stderr );
   assert!(
-    stderr.contains( "Info: 2/2 sessions active; waiting" ),
+    stderr.contains( "Info: 2/2 print sessions active; waiting" ),
     "T05: CLR_MAX_SESSIONS=2 env var must override config (max_sessions=5). Got:\n{stderr}"
   );
 }
@@ -607,7 +607,7 @@ fn t16_config_only_sets_gate_poll_secs_and_max_attempts()
   );
   assert!(
     stderr.contains(
-      "Error: [Runner] session gate timed out — 1 active sessions, max-sessions=1 — retries exhausted (exit 1)"
+      "Error: [Runner] session gate timed out — 1 print sessions, max-sessions=1 — retries exhausted (exit 1)"
     ),
     "T16: exact exhaustion message required. Got:\n{stderr}"
   );

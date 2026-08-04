@@ -517,12 +517,12 @@ pub( super ) fn dispatch_isolated( tokens : &[ String ] ) -> !
     cli.trace,
     cli.dry_run,
     cli.no_compact_window,
-    IsolatedModel::Default,
-    EffortLevel::Max,
+    cli.model.clone().map_or( IsolatedModel::Default, IsolatedModel::Specific ),
+    cli.effort.unwrap_or( EffortLevel::Max ),
     cli.message.as_deref(),
     &passthrough,
     cli.message.is_some(), // skip-perms when a real task message is present
-    false,                 // chrome stays on for isolated tasks (may use browser tools)
+    cli.no_chrome,
     cli.file.as_deref(),
     cli.expect.as_deref(),
     cli.expect_strategy.as_deref(),
@@ -531,6 +531,15 @@ pub( super ) fn dispatch_isolated( tokens : &[ String ] ) -> !
     cli.strip_fences,
     cli.output_style.as_deref(),
     cli.summary_fields.as_deref(),
+    cli.no_effort_max,
+    cli.system_prompt.as_deref(),
+    cli.append_system_prompt.as_deref(),
+    cli.json_schema.as_deref(),
+    &cli.mcp_config,
+    cli.allowed_tools.as_deref(),
+    cli.disallowed_tools.as_deref(),
+    cli.max_budget_usd.as_deref(),
+    cli.max_turns.as_deref(),
   )
 }
 

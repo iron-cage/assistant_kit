@@ -20,7 +20,7 @@
 - AC-011: `--timeout` does not bound gate-wait duration — the gate's poll/attempt ceiling
   (`CLR_GATE_POLL_SECS`/`CLR_GATE_MAX_ATTEMPTS`, default ~8.3h) is fully independent of
   whatever `--timeout` value is set; see [036_timeout.md](../param/036_timeout.md)
-- AC-012: `clr isolated` is gated by `--max-sessions` through the same mechanism as `run`/`ask` (CLI flag + `CLR_MAX_SESSIONS` env var only — no JSON/config tier); `--dry-run` bypasses the gate for `isolated` exactly as it does for `run`/`ask`
+- AC-012: `clr isolated` is gated by `--max-sessions` through the same 3-tier chain as `run`/`ask` (CLI flag + `"max-sessions"` JSON key via `--args-file` + `CLR_MAX_SESSIONS` env var — no config-file tier); `--dry-run` bypasses the gate for `isolated` exactly as it does for `run`/`ask`
 - AC-013: When the process scanner cannot read the process list (e.g. `/proc` unavailable), `clr` fails loudly with a `GateUnavailable` Runner-class error instead of silently proceeding as if the gate were disabled; `--max-sessions 0` bypasses this check entirely
 
 <!-- BUG-399 (task/claude_runner/bug/closed/399_timeout_gate_wait_undocumented.md) —
@@ -33,7 +33,7 @@
 |---|---------|------|
 | 1 | [`run`](../command/01_run.md) | Primary command; gate applies before subprocess launch |
 | 5 | [`ask`](../command/05_ask.md) | Same behavior; pure alias for run |
-| 3 | [`isolated`](../command/03_isolated.md) | Same gate mechanism; CLI flag + `CLR_MAX_SESSIONS` env var only (no JSON/config tier) |
+| 3 | [`isolated`](../command/03_isolated.md) | Same gate mechanism; 3-tier (CLI flag + `"max-sessions"` JSON key via `--args-file` + `CLR_MAX_SESSIONS` env var; no config-file tier) |
 
 ### Referenced Parameter Groups
 

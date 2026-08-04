@@ -157,6 +157,7 @@ pub( crate ) fn print_isolated_help() -> !
   println!();
   println!( "CREDENTIAL OPTIONS:" );
   println!( "  --creds <FILE>                     Credentials JSON file (required) [env: CLR_CREDS]" );
+  println!( "  --model <MODEL>                    Model to use (default: claude's own default) [env: CLR_MODEL]" );
   println!( "  --timeout <SECS>                   Max seconds to wait for subprocess (default: 30) [env: CLR_TIMEOUT]" );
   println!( "  --trace                            Print underlying call details to stderr [env: CLR_TRACE]" );
   println!( "  --journal <LEVEL>                  Journal level: full (default), meta, or off [env: CLR_JOURNAL]" );
@@ -166,6 +167,9 @@ pub( crate ) fn print_isolated_help() -> !
   println!();
   println!( "ISOLATION OPTIONS:" );
   println!( "  --dry-run                          Print subprocess command without executing; exit 0" );
+  println!( "  --effort <LEVEL>                   Reasoning effort: low, medium, high, max (default: max) [env: CLR_EFFORT]" );
+  println!( "  --no-effort-max                    Suppress automatic --effort injection entirely [env: CLR_NO_EFFORT_MAX]" );
+  println!( "  --no-chrome                        Suppress --chrome injection (no browser context) [env: CLR_NO_CHROME]" );
   println!( "  --dir <PATH>                       Working directory for the subprocess [env: CLR_DIR]" );
   println!( "  --add-dir <PATH>                   Additional directory Claude may access (repeatable) [env: CLR_ADD_DIR]" );
   println!( "  --file <PATH>                      Pipe file content to subprocess stdin" );
@@ -177,6 +181,16 @@ pub( crate ) fn print_isolated_help() -> !
   println!( "  --output-style <MODE>              Output rendering: raw (default), summary [env: CLR_OUTPUT_STYLE]" );
   println!( "  --summary-fields <PROFILE>         Summary field selection: full, standard, minimal, or comma-separated [env: CLR_SUMMARY_FIELDS]" );
   println!( "  --max-sessions <N>                 Max concurrent sessions before blocking (0=unlimited, default: 6) [env: CLR_MAX_SESSIONS]" );
+  println!();
+  println!( "CLAUDE CODE OPTIONS (forwarded):" );
+  println!( "  --system-prompt <TEXT>             Set system prompt (replaces the default) [env: CLR_SYSTEM_PROMPT]" );
+  println!( "  --append-system-prompt <TEXT>      Append text to the default system prompt [env: CLR_APPEND_SYSTEM_PROMPT]" );
+  println!( "  --json-schema <SCHEMA>             JSON schema for structured output [env: CLR_JSON_SCHEMA]" );
+  println!( "  --mcp-config <PATH>                MCP server config file (repeatable) [env: CLR_MCP_CONFIG]" );
+  println!( "  --allowed-tools <TOOLS>            Comma-separated tool whitelist (e.g. \"Read,Edit\") [env: CLR_ALLOWED_TOOLS]" );
+  println!( "  --disallowed-tools <TOOLS>         Comma-separated tool blacklist [env: CLR_DISALLOWED_TOOLS]" );
+  println!( "  --max-budget-usd <AMOUNT>          Max API spend in USD for this session [env: CLR_MAX_BUDGET_USD]" );
+  println!( "  --max-turns <N>                    Max agentic turns (0 = unlimited) [env: CLR_MAX_TURNS]" );
   println!();
   println!( "EXIT CODES:" );
   println!( "  0    Success" );

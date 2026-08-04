@@ -195,14 +195,17 @@ Columns: JSON Key | CLI Flag | CLR_* Env Var | Type | Supported By
 
 | JSON Key | CLI Flag | CLR_* Env Var | Type | Supported By |
 |----------|----------|---------------|------|--------------|
-| `"max-sessions"` | `--max-sessions` | `CLR_MAX_SESSIONS` | u32 (0 = unlimited) | run, ask |
+| `"max-sessions"` | `--max-sessions` | `CLR_MAX_SESSIONS` | u32 (0 = unlimited) | run, ask, isolated |
 | `"gate-poll-secs"` | `--gate-poll-secs` | `CLR_GATE_POLL_SECS` | u64 (default 30) | run, ask |
 | `"gate-max-attempts"` | `--gate-max-attempts` | `CLR_GATE_MAX_ATTEMPTS` | u32 (default 1000) | run, ask |
 | `"gate-stale-secs"` | `--gate-stale-secs` | `CLR_GATE_STALE_SECS` | u64, optional (default unset) | run, ask |
 
-`isolated` is also gated by `--max-sessions`/`CLR_MAX_SESSIONS` (2-tier: CLI flag + env var), but
-does not support the `"max-sessions"` JSON key or any of the 3 gate-tuning JSON keys above — those
-resolve for `isolated` env-var-only, with no CLI flag or JSON key at all. See
+`isolated` is gated by the same `--max-sessions`/`"max-sessions"`/`CLR_MAX_SESSIONS` 3-tier chain as
+run/ask (CLI flag + JSON key + env var — `apply_json_config_isolated()` handles `"max-sessions"`
+identically to every other `IsolatedArgs` field), just with no config-file tier — `isolated` has no
+config-file tier for any parameter. The 3 gate-tuning keys above (`gate-poll-secs`/
+`gate-max-attempts`/`gate-stale-secs`) are the ones that stay env-var-only for `isolated`, with no
+CLI flag or JSON key. See
 [cli/003_env_param.md § Env Param 5](../cli/003_env_param.md#env-param-5-gate-runtime-configuration).
 
 **Timeout**

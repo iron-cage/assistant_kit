@@ -40,6 +40,7 @@ any `--dir` change is applied).
 |---|---------|---------|-------|
 | 1 | [`run`](../command/01_run.md) | — | Repeatable (0+) |
 | 5 | [`ask`](../command/05_ask.md) | — | Repeatable (0+) |
+| 3 | [`isolated`](../command/03_isolated.md) | — | Repeatable (0+); forwarded to claude subprocess; env: `CLR_MCP_CONFIG` |
 
 ### Referenced User Stories
 

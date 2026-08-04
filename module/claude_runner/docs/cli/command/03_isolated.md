@@ -4,7 +4,7 @@
 
 Run Claude in a credential-isolated subprocess with a temporary HOME containing only the provided credentials file. Use `clr isolated` when running Claude with alternate accounts, test tokens, or deployment-specific credentials without exposing the caller's real HOME, settings, or session history.
 
--- **Parameters:** `--creds`, `--timeout`, `--max-sessions`, `--trace`, `--dry-run`, `--no-compact-window`, `--dir`, `--add-dir`, `--file`, `--expect`, `--expect-strategy`, `--journal`, `--journal-dir`, `--output-file`, `--strip-fences`, `--output-style`, `--summary-fields`, `--args-file`
+-- **Parameters:** `--creds`, `--model`, `--timeout`, `--max-sessions`, `--trace`, `--dry-run`, `--effort`, `--no-effort-max`, `--no-chrome`, `--no-compact-window`, `--dir`, `--add-dir`, `--file`, `--expect`, `--expect-strategy`, `--journal`, `--journal-dir`, `--output-file`, `--strip-fences`, `--output-style`, `--summary-fields`, `--system-prompt`, `--append-system-prompt`, `--json-schema`, `--mcp-config`, `--allowed-tools`, `--disallowed-tools`, `--max-budget-usd`, `--max-turns`, `--args-file`
 -- **Exit Codes:** 0 (success) | 1 (error) | 2 (timeout) | 3 (expect mismatch) | N (subprocess passthrough) | 128+signal (signal)
 
 ### Syntax
@@ -19,10 +19,14 @@ clr isolated [--creds <FILE>] [--timeout <SECS>] [OPTIONS] [MESSAGE] [-- PASSTHR
 |-----------|------|---------|-------------|
 | [`[MESSAGE]`](../param/001_message.md) | [`MessageText`](../type/01_message_text.md) | — | Prompt forwarded to Claude |
 | [`--creds`](../param/019_creds.md) | [`CredentialsFilePath`](../type/08_credentials_file_path.md) | `~/.claude/.credentials.json` | Credentials JSON file path (optional; defaults to current account credentials) |
+| [`--model`](../param/003_model.md) | [`ModelName`](../type/04_model_name.md) | — | Model override; when absent falls back to project `.clr.toml` → user `~/.clr/config.toml` → `opus` alias; env: `CLR_MODEL` |
 | [`--timeout`](../param/020_timeout.md) | [`TimeoutSecs`](../type/09_timeout_secs.md) | 30 | Max seconds to wait for subprocess |
-| [`--max-sessions`](../param/033_max_sessions.md) | u32 | 6 | Max concurrent non-interactive sessions before blocking; `0` = unlimited (gate disabled); env: `CLR_MAX_SESSIONS`; no JSON/config tier |
+| [`--max-sessions`](../param/033_max_sessions.md) | u32 | 6 | Max concurrent non-interactive sessions before blocking; `0` = unlimited (gate disabled); JSON key: `"max-sessions"`; env: `CLR_MAX_SESSIONS`; no config-file tier |
 | [`--trace`](../param/013_trace.md) | bool | false | Print underlying call details to stderr then execute |
 | [`--dry-run`](../param/011_dry_run.md) | bool | false | Print subprocess env+command to stderr (same path as `--trace`); exit 0 without spawning |
+| [`--effort`](../param/017_effort.md) | [`EffortLevel`](../type/07_effort_level.md) | max | Reasoning effort: `low`, `medium`, `high`, `max`; default `max` injected when absent; env: `CLR_EFFORT` |
+| [`--no-effort-max`](../param/018_no_effort_max.md) | bool | false | Suppress automatic `--effort max` injection entirely; env: `CLR_NO_EFFORT_MAX` |
+| [`--no-chrome`](../param/021_no_chrome.md) | bool | false | Suppress automatic `--chrome` injection; env: `CLR_NO_CHROME` |
 | [`--no-compact-window`](../param/077_no_compact_window.md) | bool | false | Suppress `CLAUDE_CODE_AUTO_COMPACT_WINDOW=300000` injection; env: `CLR_NO_COMPACT_WINDOW` |
 | [`--dir`](../param/008_dir.md) | path | — | Working directory injected into subprocess command; validated to exist before spawn; env: `CLR_DIR` |
 | [`--add-dir`](../param/066_add_dir.md) | path (repeatable) | — | Additional directory Claude may access; injected per entry into subprocess command; env: `CLR_ADD_DIR` |
@@ -35,6 +39,14 @@ clr isolated [--creds <FILE>] [--timeout <SECS>] [OPTIONS] [MESSAGE] [-- PASSTHR
 | [`--strip-fences`](../param/026_strip_fences.md) | bool | false | Strip outermost markdown code fences from output; env: `CLR_STRIP_FENCES` |
 | [`--output-style`](../param/070_output_style.md) | enum | `raw` | Output rendering: `raw` (default), `summary`; env: `CLR_OUTPUT_STYLE` |
 | [`--summary-fields`](../param/071_summary_fields.md) | string | — | Summary field selection: `full`, `standard`, `minimal`, or comma-separated; env: `CLR_SUMMARY_FIELDS` |
+| [`--system-prompt`](../param/015_system_prompt.md) | [`SystemPromptText`](../type/06_system_prompt_text.md) | — | Replace the default system prompt; forwarded to claude subprocess; env: `CLR_SYSTEM_PROMPT` |
+| [`--append-system-prompt`](../param/016_append_system_prompt.md) | [`SystemPromptText`](../type/06_system_prompt_text.md) | — | Append text to the default system prompt; forwarded to claude subprocess; env: `CLR_APPEND_SYSTEM_PROMPT` |
+| [`--json-schema`](../param/023_json_schema.md) | [`JsonSchemaText`](../type/10_json_schema_text.md) | — | JSON schema for structured output; forwarded to claude subprocess; env: `CLR_JSON_SCHEMA` |
+| [`--mcp-config`](../param/024_mcp_config.md) | [`McpConfigPath`](../type/11_mcp_config_path.md) | — | MCP server config file (repeatable); forwarded to claude subprocess; env: `CLR_MCP_CONFIG` |
+| [`--allowed-tools`](../param/063_allowed_tools.md) | string | — | Comma-separated tool whitelist; forwarded to claude subprocess; env: `CLR_ALLOWED_TOOLS` |
+| [`--disallowed-tools`](../param/064_disallowed_tools.md) | string | — | Comma-separated tool blacklist; forwarded to claude subprocess; env: `CLR_DISALLOWED_TOOLS` |
+| [`--max-budget-usd`](../param/065_max_budget_usd.md) | string | — | Max API spend in USD; forwarded to claude subprocess; env: `CLR_MAX_BUDGET_USD` |
+| [`--max-turns`](../param/062_max_turns.md) | string | — | Max agentic turns; forwarded to claude subprocess; env: `CLR_MAX_TURNS` |
 | [`--args-file`](../param/075_args_file.md) | [`FilePath`](../type/12_file_path.md) | — | Load clr params from JSON config file; stdin JSON auto-detected when no TTY; env: `CLR_ARGS_FILE` |
 | `-h`/`--help` | — | — | Print isolated subcommand help and exit 0 |
 
@@ -43,7 +55,7 @@ clr isolated [--creds <FILE>] [--timeout <SECS>] [OPTIONS] [MESSAGE] [-- PASSTHR
 2. Resolve credentials path: `--creds` if given, else `$HOME/.claude/.credentials.json`; exit 1 if file not found.
 3. Create temporary HOME directory; write `.claude/.credentials.json` from resolved credentials.
 4. Write minimal `~/.claude/CLAUDE.md` to temp HOME to suppress interactive prompts.
-5. Build subprocess command with injected defaults (`--model` from project `.clr.toml` → user `~/.clr/config.toml`, first tier with a value wins, else `"opus"` alias; `--effort max`; `--no-session-persistence`; `--dangerously-skip-permissions` when message present); prepend before `--print` and message; passthrough args appended last for last-wins override.
+5. Build subprocess command: `--model` from native flag (if given) else project `.clr.toml` → user `~/.clr/config.toml` → `"opus"` alias; `--effort` from native flag else `max` unless `--no-effort-max` suppresses it entirely; `--no-session-persistence` always; `--dangerously-skip-permissions` when message present; `--chrome` unless `--no-chrome` is set; push `--system-prompt`, `--append-system-prompt`, `--json-schema`, `--mcp-config` (each entry), `--allowed-tools`, `--disallowed-tools`, `--max-budget-usd`, `--max-turns` when given; prepend all before `--print` and message; passthrough args appended last for last-wins override.
 6. Spawn `claude` with `HOME=<temp>`; wait up to `--timeout` seconds (0 = unlimited).
 7. If credentials were refreshed at startup, write updated file back to `--creds`; delete temp HOME unconditionally; propagate subprocess exit code (or exit 2 on timeout without refresh).
 
@@ -83,7 +95,7 @@ Subprocess injected defaults (see [`invariant/005_isolated_subprocess_defaults.m
 - `--effort max` (maximum reasoning effort)
 - `--no-session-persistence` (temp HOME is discarded after every run; session writes are waste)
 - `--dangerously-skip-permissions` — injected when `[MESSAGE]` is present; omitted in interactive mode (no message)
-- `--chrome` active (ClaudeCommand default; isolated tasks may use browser tools)
+- `--chrome` injected by default (isolated tasks may use browser tools); suppress with `--no-chrome`
 
 Injected flags are prepended before `--print` and message so passthrough args override via last-wins:
 
@@ -99,9 +111,9 @@ If the subprocess times out but already wrote refreshed credentials, `clr isolat
 `--timeout 0` disables the watchdog entirely (unlimited runtime), matching `run`/`ask` semantics.
 
 `--max-sessions` gates `isolated` through the same concurrency mechanism as `run`/`ask` (see
-[user_story/025_concurrency_gate.md](../user_story/025_concurrency_gate.md)), but only as a
-2-tier CLI-flag + `CLR_MAX_SESSIONS`-env-var pair — there is no JSON key or config-file tier for
-`isolated`. The 3 gate-tuning knobs (`CLR_GATE_POLL_SECS`, `CLR_GATE_MAX_ATTEMPTS`,
+[user_story/025_concurrency_gate.md](../user_story/025_concurrency_gate.md)) as a 3-tier chain:
+CLI flag + `"max-sessions"` JSON key (via `--args-file`) + `CLR_MAX_SESSIONS` env var —
+no config-file tier (consistent with `isolated` having no config-file tier for any parameter). The 3 gate-tuning knobs (`CLR_GATE_POLL_SECS`, `CLR_GATE_MAX_ATTEMPTS`,
 `CLR_GATE_STALE_SECS`) also apply to `isolated` env-var-only — no `--gate-poll-secs`/
 `--gate-max-attempts`/`--gate-stale-secs` CLI flags exist for `isolated` (contrast `run`/`ask`,
 which have full 5-tier parity for these 3 — see

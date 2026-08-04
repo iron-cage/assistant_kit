@@ -35,6 +35,7 @@
 //! | T29 | `--gate-poll-secs 1 --gate-max-attempts 2` CLI flags (no env vars), 1 permanent occupier, `--max-sessions 1` → gate exhausts in ~2s using the CLI-flag values, not the 30s/1000-attempt hardcoded defaults (hardening fix 3, CLI-flag tier) | — |
 //! | T30 | `--gate-max-attempts abc` CLI flag → immediate parse-error exit before any subprocess spawn or gate wait, distinct from the env var's silent fallback (T10/T11) (hardening fix 3, CLI-flags-hard-error contract) | — |
 //! | T31 | `clr isolated`, `CLR_GATE_POLL_SECS=1 CLR_GATE_MAX_ATTEMPTS=2` env vars, 1 permanent occupier, `--max-sessions 1` → isolated's one-shot env-var-only resolution changes its real gate timing (hardening fix 3, isolated's env-var-only tier) | — |
+//! | T32 | `clr isolated`, 3 print-mode processes active, `--args-file` JSON `{"max-sessions": 3}` (no CLI flag) → gate triggers and reports 3/3, proving `apply_json_config_isolated()`'s `"max-sessions"` arm actually changes isolated's resolved gate limit, not just its unused-default no-op | — |
 //!
 //! T05 (`clr --help` shows `default: 6`) is covered by
 //! `param_edge_cases_test.rs::ec9_max_sessions_help_shows_default_six`.
@@ -56,7 +57,9 @@ use cli_binary_test_helpers::
   fake_claude_binary_dir, fake_claude_dir, make_creds_file, make_proc_dir,
   spawn_fake_claude, spawn_print_claude, spawn_print_claude_for, wait_bounded,
 };
+use std::io::Write as _;
 use std::process::Command;
+use tempfile::NamedTempFile;
 
 // ── T07: gate state file stays valid JSON when cwd contains a quote (BUG-384) ──
 
@@ -232,7 +235,7 @@ fn t01_gate_triggers_at_six_print_mode_processes()
   assert!(
     // Anchored on "Info: " so a wrong larger count (e.g. "Info: 16/6") can never
     // false-positive match via the "6/6" tail — AF1.
-    stderr.contains( "Info: 6/6 sessions active; waiting" ),
+    stderr.contains( "Info: 6/6 print sessions active; waiting" ),
     "T01: gate must report 6/6 print-mode sessions active. Got:\n{stderr}"
   );
 }
@@ -389,7 +392,7 @@ fn t04_gate_counts_print_mode_only_excludes_interactive()
   assert!(
     // Anchored on "Info: " — "15/5" (unfiltered count) contains "5/5" as a bare
     // substring, which would false-positive an unanchored check. AF1.
-    stderr.contains( "Info: 5/5 sessions active; waiting" ),
+    stderr.contains( "Info: 5/5 print sessions active; waiting" ),
     "T04: gate must count print-mode processes only (5/5, not 15/5). Got:\n{stderr}"
   );
 }
@@ -715,7 +718,7 @@ fn t09_gate_env_var_overrides_change_real_poll_timing()
   );
   assert!(
     stderr.contains(
-      "Error: [Runner] session gate timed out — 1 active sessions, max-sessions=1 — retries exhausted (exit 1)"
+      "Error: [Runner] session gate timed out — 1 print sessions, max-sessions=1 — retries exhausted (exit 1)"
     ),
     "T09: exact exhaustion message required. Got:\n{stderr}"
   );
@@ -2446,7 +2449,7 @@ fn t27_isolated_gate_triggers_at_capacity()
   );
   let stderr = String::from_utf8_lossy( &out.stderr );
   assert!(
-    stderr.contains( "Info: 3/3 sessions active; waiting" ),
+    stderr.contains( "Info: 3/3 print sessions active; waiting" ),
     "T27: isolated must participate in the gate and report 3/3 active. Got:\n{stderr}"
   );
 }
@@ -2548,7 +2551,7 @@ fn t29_gate_cli_flags_change_real_poll_timing()
   );
   assert!(
     stderr.contains(
-      "Error: [Runner] session gate timed out — 1 active sessions, max-sessions=1 — retries exhausted (exit 1)"
+      "Error: [Runner] session gate timed out — 1 print sessions, max-sessions=1 — retries exhausted (exit 1)"
     ),
     "T29: exact exhaustion message required. Got:\n{stderr}"
   );
@@ -2638,9 +2641,134 @@ fn t31_isolated_gate_env_vars_change_real_poll_timing()
   );
   assert!(
     stderr.contains(
-      "Error: [Runner] session gate timed out — 1 active sessions, max-sessions=1 (exit 1)"
+      "Error: [Runner] session gate timed out — 1 print sessions, max-sessions=1 (exit 1)"
     ),
     "T31: exact exhaustion message required (isolated's on_exhausted closure exits directly, \
      no retry-exhausted suffix). Got:\n{stderr}"
+  );
+}
+
+// ── T32: isolated's `--max-sessions` JSON-key tier (`apply_json_config_isolated()`) ──
+
+/// T32: `clr isolated --args-file <json with "max-sessions": 3>`, 3 print-mode
+/// processes active, no `--max-sessions` CLI flag → gate must trigger and report
+/// 3/3 active. `isolated`'s default `--max-sessions` is 6, so 3 active occupiers
+/// would never trigger the gate under the default (see T28's below-capacity
+/// shape) — seeing the 3/3 wait message here is only possible if
+/// `apply_json_config_isolated()`'s `"max-sessions" =>` arm actually applied the
+/// JSON-supplied value of 3, not merely parsed-and-discarded it.
+#[ test ]
+fn t32_isolated_max_sessions_json_config_changes_real_gate_limit()
+{
+  let ( _occupier_dir, occupier_path ) = fake_claude_binary_dir();
+  let mut long_lived : Vec< std::process::Child > =
+    ( 0..2 ).map( |_| spawn_print_claude( &occupier_path ) ).collect();
+  let mut short_lived = spawn_print_claude_for( &occupier_path, 5 );
+
+  let mut pids : Vec< u32 > = long_lived.iter().map( std::process::Child::id ).collect();
+  pids.push( short_lived.id() );
+  let proc = make_proc_dir( &pids );
+
+  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
+  let gate_dir   = tempfile::TempDir::new().expect( "gate dir" );
+  let creds      = make_creds_file( "{}" );
+  let creds_path = creds.path().to_str().expect( "creds path UTF-8" );
+
+  let mut cfg = NamedTempFile::new().expect( "args-file" );
+  write!( cfg, r#"{{"max-sessions": 3}}"# ).expect( "write args-file JSON" );
+  let cfg_path = cfg.path().to_str().expect( "args-file path UTF-8" );
+
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = Command::new( bin )
+    .args( [ "isolated", "--creds", creds_path, "--args-file", cfg_path, "--journal", "off", "x" ] )
+    .env( "PATH", &script_path )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
+    .env( "CLR_GATE_DIR", gate_dir.path() )
+    .env( "CLR_GATE_POLL_SECS", "1" )
+    .env_remove( "CLAUDECODE" )
+    .output()
+    .expect( "invoke clr isolated" );
+
+  for child in &mut long_lived { let _ = child.kill(); let _ = child.wait(); }
+  let _ = short_lived.kill();
+  let _ = short_lived.wait();
+
+  assert!(
+    out.status.success(),
+    "T32: exit must be 0 after gate releases. stderr: {}",
+    String::from_utf8_lossy( &out.stderr )
+  );
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert!(
+    stderr.contains( "Info: 3/3 print sessions active; waiting" ),
+    "T32: --args-file \"max-sessions\": 3 must set the real gate limit to 3, proving the JSON \
+     key tier is functional for isolated (default is 6, which would never trigger at 3 active). \
+     Got:\n{stderr}"
+  );
+}
+
+// ── t_gate_progress_message_names_print_sessions: BUG-431 regression guard ──
+
+/// BUG-431 regression guard: gate progress message must include the "print" mode
+/// qualifier when counting print-mode-only occupiers.
+///
+/// Exercises the `eprintln!` at `gate.rs:703`. Covers IN-6 (INV-013).
+///
+/// # Root Cause
+///
+/// `count` in `gate.rs` is filtered to print-mode processes only, but the progress
+/// message said `"sessions active"` — indistinguishable from a total session count.
+/// A reader diagnosing capacity issues could not tell whether the number referred
+/// to all running claude sessions or only print-mode ones.
+///
+/// # Why Not Caught
+///
+/// The existing test assertions checked `!stderr.contains("sessions active; waiting")`
+/// (negative — ensuring the gate didn't trigger without occupiers) but no positive
+/// assertion required the `"print"` qualifier to be present in the message text.
+///
+/// # Fix Applied
+///
+/// `gate.rs:703` message changed from `"sessions active"` to `"print sessions active"`,
+/// making the mode qualifier explicit in every gate progress line.
+///
+/// # Prevention
+///
+/// This test asserts `stderr.contains("print sessions active")`.  Any future edit
+/// to the progress message format must preserve that substring.
+///
+/// # Pitfall
+///
+/// The four negative assertions `!stderr.contains("sessions active; waiting")` remain
+/// valid after the fix because `"print sessions active; waiting"` still contains
+/// `"sessions active; waiting"` as a substring — the negative guards are not broken.
+#[ test ]
+fn t_gate_progress_message_names_print_sessions()
+{
+  let ( _occupier_dir, occupier_path ) = fake_claude_binary_dir();
+  let mut occupier = spawn_print_claude( &occupier_path );
+  let proc = make_proc_dir( &[ occupier.id() ] );
+
+  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
+  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
+
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = Command::new( bin )
+    .args( [ "-p", "--max-sessions", "1", "--retry-override", "0", "--journal", "off", "x" ] )
+    .env( "PATH", &script_path )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
+    .env( "CLR_GATE_DIR", gate_dir.path() )
+    .env( "CLR_GATE_POLL_SECS", "1" )
+    .env( "CLR_GATE_MAX_ATTEMPTS", "2" )
+    .output()
+    .expect( "invoke clr" );
+
+  let _ = occupier.kill();
+  let _ = occupier.wait();
+
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert!(
+    stderr.contains( "print sessions active" ),
+    "BUG-431 regression: gate progress message must include 'print sessions active'. Got:\n{stderr}"
   );
 }

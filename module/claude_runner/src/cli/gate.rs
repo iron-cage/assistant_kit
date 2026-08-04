@@ -649,8 +649,13 @@ pub( super ) fn wait_for_session_slot(
         // Pitfall: every early-exit path (including gate timeouts) must route through `on_exhausted` —
         // the caller's closure decides retry-vs-exit (e.g. run/ask wraps apply_runner_retry(); isolated
         // exits directly), rather than gate.rs hardcoding one policy for every caller.
+        // Fix(BUG-433): gate timeout error omitted the "print" qualifier.
+        // Root cause: `count` counts only print-mode processes, but the error said
+        // "active sessions" — suggesting it counted all sessions (total occupancy).
+        // Pitfall: "print sessions" must not be changed back to "active sessions";
+        // t09/t29/t31/t16 timeout assertions guard the exact substring.
         let e = std::io::Error::other(
-          format!( "session gate timed out — {count} active sessions, max-sessions={max}" )
+          format!( "session gate timed out — {count} print sessions, max-sessions={max}" )
         );
         on_exhausted( &e );
         break; // non-exhaustion path: restart outer poll loop
@@ -699,8 +704,13 @@ pub( super ) fn wait_for_session_slot(
           // than duplicating it (clippy::match_same_arms).
           None | Some( Ok( () ) )                           => "at capacity",
         };
+        // Fix(BUG-431): gate progress message omitted the "print" qualifier.
+        // Root cause: `count` is filtered to print-mode processes only, but the message
+        // said "sessions active" — indistinguishable from a total count.
+        // Pitfall: any rewrite of this message must preserve the "print sessions active"
+        // phrasing; `t_gate_progress_message_names_print_sessions` guards the exact substring.
         eprintln!(
-          "Info: {count}/{max} sessions active; waiting {poll_secs}s for a slot... (attempt {attempt}/{max_attempts}) [{cause}]"
+          "Info: {count}/{max} print sessions active; waiting {poll_secs}s for a slot... (attempt {attempt}/{max_attempts}) [{cause}]"
         );
       }
       gate_emitted = true;

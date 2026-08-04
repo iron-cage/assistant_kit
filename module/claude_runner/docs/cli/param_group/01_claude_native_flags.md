@@ -49,6 +49,7 @@ clr -p "Fix bug" --model sonnet --verbose
 |---|---------|------------|-----------------|-------|
 | 1 | [`run`](../command/01_run.md) | Full | — | All 14 params apply; default command |
 | 5 | [`ask`](../command/05_ask.md) | Full | — | All 14 params apply; only defaults differ |
+| 3 | [`isolated`](../command/03_isolated.md) | Partial (9/14) | `--print` (auto-injected), `--verbose`, `--output-format`, `--input-format`, `--fallback-model` | `--model`, `--effort`, `--json-schema`, `--mcp-config`, `--max-turns`, `--allowed-tools`, `--disallowed-tools`, `--max-budget-usd`, `--add-dir` apply as native flags (TSK-443) |
 
 ### Referenced Parameters
 
