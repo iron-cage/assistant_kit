@@ -4,7 +4,7 @@ use unilang::data::Kind;
 use crate::commands::
 {
   credentials_status_routine,
-  accounts_routine,
+  accounts_view_routine,
   account_limits_routine,
   account_save_routine,
   account_use_routine,
@@ -17,7 +17,6 @@ use crate::commands::
   model_select_routine,
   provider_select_routine,
   paths_routine,
-  usage_routine,
 };
 
 /// Register all `claude_profile` commands into an existing registry.
@@ -113,6 +112,10 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
       reg_arg_opt( "live",              Kind::Integer ).with_description( "Continuous monitor mode (0 = off, default; 1 = on)" ),
       reg_arg_opt( "interval",          Kind::Integer ).with_description( "Seconds between live refreshes (minimum 30, default 30)" ),
       reg_arg_opt( "jitter",            Kind::Integer ).with_description( "Max random seconds added to interval (0 = none, default)" ),
+      // Shared with .usage (same command group, same handler — CV020/CV006).
+      reg_arg_opt( "rotate",            Kind::Integer ).with_description( "Switch to the → winner after rendering (0 = off, default; 1 = on); .usage only" ),
+      reg_arg_opt( "who",               Kind::Integer ).with_description( "Sessions table visibility: auto (default), 0 = suppress, 1 = force on; .usage only" ),
+      reg_arg_opt( "solo",              Kind::Integer ).with_description( "Token conservation: restrict fetch to current+owned account only (0 = off, default; 1 = on); .usage only" ),
       // Legacy field-toggle params (removed by Feature 037; kept registered so the routine
       // can emit a helpful cols:: migration message instead of a generic framework error).
       bfd( "current",      "REMOVED — use cols::-current instead"      ),
@@ -130,7 +133,7 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
       bfs( "org_uuid",     "REMOVED — use cols::+org_uuid instead"     ),
       bfs( "org_name",     "REMOVED — use cols::+org_name instead"     ),
     ],
-    Box::new( accounts_routine ) );
+    Box::new( accounts_view_routine ) );
   reg_cmd( registry, ".account.limits", "Show rate-limit utilization for the selected account (FR-18)", vec![ nam(), fmt(), trc() ], Box::new( account_limits_routine ) );
   reg_cmd( registry, ".account.save", "Save current credentials as a named account profile",
     vec![
@@ -274,7 +277,7 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
       // Token conservation (TSK-314)
       reg_arg_opt( "solo", Kind::Integer ).with_description( "token conservation: restrict fetch to current+owned account only (0 = off, default; 1 = on)" ),
     ],
-    Box::new( usage_routine          ) );
+    Box::new( accounts_view_routine   ) );
 }
 
 fn reg_arg_opt( name : &str, kind : unilang::data::Kind ) -> unilang::data::ArgumentDefinition
