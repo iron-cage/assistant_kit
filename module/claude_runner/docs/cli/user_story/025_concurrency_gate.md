@@ -23,7 +23,7 @@
 - AC-012: `clr isolated` is gated by `--max-sessions` through the same 3-tier chain as `run`/`ask` (CLI flag + `"max-sessions"` JSON key via `--args-file` + `CLR_MAX_SESSIONS` env var — no config-file tier); `--dry-run` bypasses the gate for `isolated` exactly as it does for `run`/`ask`
 - AC-013: When the process scanner cannot read the process list (e.g. `/proc` unavailable), `clr` fails loudly with a `GateUnavailable` Runner-class error instead of silently proceeding as if the gate were disabled; `--max-sessions 0` bypasses this check entirely
 
-<!-- BUG-399 (task/claude_runner/bug/closed/399_timeout_gate_wait_undocumented.md) —
+<!-- BUG-399 (task/claude_runner/bug/completed/399_timeout_gate_wait_undocumented.md) —
      --timeout does not bound this gate-wait phase, by design; this doc did not
      cross-reference that boundary. See 036_timeout.md and param/033_max_sessions.md. -->
 
