@@ -331,3 +331,125 @@ fn render_summary_result_field_unterminated_falls_back_to_empty()
      Got:\n{rendered}"
   );
 }
+
+// ── BUG-436/437/438: new SDK envelope regression tests ───────────────────────
+//
+// Newer Claude SDK envelopes omit the top-level `"type":"result"` field and include
+// `usage.iterations[]` objects that each carry `"type":"message"`.  The depth-unaware
+// `extract_str(json, "type")` call used in the old gate finds the nested field first,
+// causing all three gated functions to return `None` for these envelopes.
+// Fixed by gating on `"subtype"` presence — a field exclusive to the top-level envelope.
+
+// Envelope without top-level `"type":"result"` but with `usage.iterations[].type="message"`.
+const NEW_SDK_ENVELOPE : &str = r#"{"subtype":"success","session_id":"00000000-0000-0000-0000-000000000001","is_error":false,"duration_ms":100,"duration_api_ms":90,"num_turns":1,"result":"hello","stop_reason":"end_turn","total_cost_usd":0.001,"uuid":"00000000-0000-0000-0000-000000000002","fast_mode_state":"off","usage":{"input_tokens":3,"output_tokens":4,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"service_tier":"standard","speed":"standard","inference_geo":"","server_tool_use":{"web_search_requests":0,"web_fetch_requests":0},"cache_creation":{"ephemeral_1h_input_tokens":0,"ephemeral_5m_input_tokens":0},"iterations":[{"input_tokens":1,"output_tokens":2,"cache_read_input_tokens":0,"cache_creation_input_tokens":0,"type":"message"}]},"modelUsage":{"claude-opus-4-8":{"inputTokens":3,"outputTokens":4,"cacheReadInputTokens":0,"cacheCreationInputTokens":0,"webSearchRequests":0,"costUSD":0.001,"contextWindow":200000,"maxOutputTokens":32000}},"permission_denials":[]}"#;
+
+// Variant with empty `result` and `structured_output` — exercises the BUG-438 code path
+// inside `render_summary()` where `extract_structured_output()` is called for the body.
+const NEW_SDK_ENVELOPE_STRUCTURED : &str = r#"{"subtype":"success","session_id":"00000000-0000-0000-0000-000000000001","is_error":false,"duration_ms":100,"duration_api_ms":90,"num_turns":1,"result":"","structured_output":{"answer":"schema_data"},"stop_reason":"end_turn","total_cost_usd":0.001,"uuid":"00000000-0000-0000-0000-000000000002","fast_mode_state":"off","usage":{"input_tokens":3,"output_tokens":4,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"service_tier":"standard","speed":"standard","inference_geo":"","server_tool_use":{"web_search_requests":0,"web_fetch_requests":0},"cache_creation":{"ephemeral_1h_input_tokens":0,"ephemeral_5m_input_tokens":0},"iterations":[{"input_tokens":1,"output_tokens":2,"cache_read_input_tokens":0,"cache_creation_input_tokens":0,"type":"message"}]},"modelUsage":{"claude-opus-4-8":{"inputTokens":3,"outputTokens":4,"cacheReadInputTokens":0,"cacheCreationInputTokens":0,"webSearchRequests":0,"costUSD":0.001,"contextWindow":200000,"maxOutputTokens":32000}},"permission_denials":[]}"#;
+
+/// BUG-436 regression: `render_summary()` must return `Some` for new SDK envelope
+/// where `usage.iterations[].type = "message"` is the first `"type":` in the JSON.
+///
+/// # Root Cause
+/// `render_summary()` gated on `extract_str(json,"type") == "result"`.  The depth-unaware
+/// `s.find()` inside `extract_str` finds the nested `"type":"message"` inside
+/// `usage.iterations[0]` first (no top-level `"type":"result"` present), so the gate
+/// fires and `render_summary()` returns `None` for all new SDK envelopes.
+///
+/// # Why Not Caught
+/// All prior fixtures had `"type":"result"` at the top level.  No test used an envelope
+/// where `"type"` is absent from the top level and present only inside iterations.
+///
+/// # Fix Applied
+/// Gate changed to `extract_str(json,"subtype")?` — `"subtype"` is top-level-only,
+/// never present inside `usage.iterations[]` objects.
+///
+/// # Pitfall
+/// `extract_str` uses `s.find()` — any gate using it must target a key that is
+/// EXCLUSIVE to the top-level CLR envelope, not reused in nested objects.
+// test_kind: bug_reproducer(BUG-436)
+#[ test ]
+fn render_summary_with_nested_type_in_iterations_produces_summary()
+{
+  let result = render_summary( NEW_SDK_ENVELOPE, None );
+  assert!(
+    result.is_some(),
+    "render_summary must return Some for new SDK envelope where usage.iterations[].type \
+     = \"message\" is the first \"type:\" in the JSON; got None (old gate blocked by nested field)"
+  );
+  let s = result.unwrap();
+  assert!( s.contains( "hello" ), "result body must appear in rendered output. Got:\n{s}" );
+  assert!( s.contains( "---" ),   "separator must appear in rendered output. Got:\n{s}" );
+}
+
+/// BUG-437 regression: `extract_session_id()` must return the UUID for new SDK envelope
+/// where `usage.iterations[].type = "message"` is the first `"type":` in the JSON.
+///
+/// # Root Cause
+/// `extract_session_id()` applied the identical `"type":"result"` gate as `render_summary()`
+/// (BUG-436).  For new SDK envelopes the gate fired and `extract_session_id()` returned
+/// `None`, silently disabling BUG-320 session mismatch detection for all new-SDK invocations.
+///
+/// # Why Not Caught
+/// No test used a new-format envelope against `extract_session_id()`.  The bug is invisible:
+/// `None` from `extract_session_id()` produces no error — the BUG-320 warning simply does
+/// not appear, indistinguishable from "no mismatch occurred."
+///
+/// # Fix Applied
+/// Gate changed to `if extract_str(json,"subtype").is_none() { return None; }`.
+///
+/// # Pitfall
+/// Silent-failure gates (where `None` is also the "no event" path) must have explicit
+/// positive tests confirming they fire for the correct inputs.
+// test_kind: bug_reproducer(BUG-437)
+#[ test ]
+fn extract_session_id_returns_uuid_for_new_sdk_envelope()
+{
+  let result = extract_session_id( NEW_SDK_ENVELOPE );
+  assert_eq!(
+    result,
+    Some( "00000000-0000-0000-0000-000000000001".to_string() ),
+    "extract_session_id must return the UUID for new SDK envelope where \
+     usage.iterations[].type = \"message\" is the first \"type:\" in the JSON; \
+     got None (BUG-320 detection was disabled for all new SDK envelopes)"
+  );
+}
+
+/// BUG-438 regression: `render_summary()` body must contain `structured_output` content
+/// for new SDK envelopes when `result` is empty.
+///
+/// # Root Cause
+/// `extract_structured_output()` applied the same `"type":"result"` gate as BUG-436/437.
+/// For new SDK envelopes the gate returned `None`, so `render_summary()` fell back to `""`
+/// for the body — blank output for `--json-schema` sessions.  The bug was masked by
+/// BUG-436: both the outer gate and `extract_structured_output()`'s own gate failed for
+/// new SDK envelopes, so `render_summary()` returned `None` before reaching the body
+/// computation.  BUG-438 only becomes observable after BUG-436 is fixed.
+///
+/// # Why Not Caught
+/// No test exercised `extract_structured_output()` against a new SDK envelope.
+///
+/// # Fix Applied
+/// Gate in `extract_structured_output()` changed to
+/// `if extract_str(json,"subtype").is_none() { return None; }`.
+///
+/// # Pitfall
+/// A second gate hidden inside a call path masks its own failure when the outer gate also
+/// fails — both must be fixed together and verified with a test that reaches the inner call.
+// test_kind: bug_reproducer(BUG-438)
+#[ test ]
+fn render_summary_uses_structured_output_for_new_sdk_envelope()
+{
+  let result = render_summary( NEW_SDK_ENVELOPE_STRUCTURED, None );
+  assert!(
+    result.is_some(),
+    "render_summary must return Some for new SDK envelope with empty result; got None"
+  );
+  let s = result.unwrap();
+  assert!(
+    s.contains( "schema_data" ),
+    "render_summary body must contain the structured_output value when result is empty; \
+     got blank body (extract_structured_output returned None — BUG-438 gate not fixed). \
+     Got:\n{s}"
+  );
+}
