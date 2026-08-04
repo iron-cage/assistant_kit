@@ -3,7 +3,7 @@
 ### Scope
 
 **Responsibilities:** Shell scripts implementing the `do` protocol verbs for `claude_storage` (cargo ecosystem).
-**In Scope:** Canonical verbs (`build`, `test`, `lint`, `run`, `clean`, `verify`), layer dispatchers (`*.d/`), and meta verbs (`verbs`, `package_info`).
+**In Scope:** Canonical verbs (`build`, `test`, `test_only`, `lint`, `run`, `clean`, `verify`), layer dispatchers (`*.d/`), and meta verbs (`verbs`, `package_info`).
 **Out of Scope:** Source code (→ `src/`), test logic (→ `tests/`), documentation (→ `docs/`).
 
 ### Responsibility Table
@@ -11,9 +11,9 @@
 | File | Responsibility |
 |------|---------------|
 | `build` | Compile project artifacts via `cargo build`. |
-| `test` | Dispatcher: run full test suite; delegates to `test.d/` layer by `VERB_LAYER`. |
-| `test.d/` | Layer directory: `l0` (disabled — blocks host execution), `l1` (container-internal). |
-| `test_only` | Dispatcher: run single test by nextest filter; delegates to container via `NEXTEST_FILTER`. |
+| `test` | Run module suite in container: `runbox .live` with `test.d/l1` as payload. |
+| `test.d/` | Layer directory: `l0` (disabled hard-error stub), `l1` (container-internal). |
+| `test_only` | Run tests matching a filter in container: `runbox .live` with `test_only.d/l1 <filter>` as payload. |
 | `test_only.d/` | Layer directory: `l1` (container-internal targeted nextest run). |
 | `clean` | Remove generated artifacts and caches via `cargo clean`. |
 | `install` | Install crate binaries to `~/.cargo/bin` via `cargo install`. |

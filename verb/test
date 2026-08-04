@@ -1,8 +1,14 @@
 #!/usr/bin/env bash
-# test — run full test suite; dispatches by VERB_LAYER to test.d/ layer.
+# test — run the full workspace test suite inside the runbox container.
+# The engine is the globally-installed `runbox` (shipped by family_dev); it
+# discovers the owning config (runbox/runbox.yml) and runs its script:
+# verb/test.d/l1 — the workspace-wide gate.
 set -euo pipefail
-DIR="$(dirname "${BASH_SOURCE[0]}")/test.d"
-LAYER="${VERB_LAYER:-}"
-[[ -n "$LAYER" && -f "$DIR/$LAYER" ]] && exec "$DIR/$LAYER" "$@"
-if [[ "${1:-}" == "--dry-run" ]]; then echo "./runbox/runbox .test"; exit 0; fi
-exec "$(dirname "${BASH_SOURCE[0]}")/../runbox/runbox" .test "$@"
+if [[ -n "${VERB_LAYER:-}" ]]; then
+  echo "ERROR: VERB_LAYER is not valid on the host side." >&2
+  echo "Standard invocation: ./verb/test" >&2
+  exit 1
+fi
+if [[ "${1:-}" == "--dry-run" ]]; then echo "runbox .live"; exit 0; fi
+ROOT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
+cd "$ROOT_DIR" && exec runbox .live

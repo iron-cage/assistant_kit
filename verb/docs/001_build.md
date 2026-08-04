@@ -16,7 +16,7 @@ Scoped to the target module with `-p`. Binary modules produce their binary artif
 
 `cd "$SCRIPT_DIR/.."` positions the shell at the module root before invoking cargo, ensuring the correct workspace context. The `-p` scope prevents cargo from building unrelated workspace members.
 
-`--dry-run` emits the exact command and exits 0 — no compilation occurs. Used by tooling (CI, runbox, `verbs`) to discover what `build` would do without side effects.
+`--dry-run` emits the exact command and exits 0 — no compilation occurs. Used by tooling (CI, `verbs`) to discover what `build` would do without side effects.
 
 ### Example
 

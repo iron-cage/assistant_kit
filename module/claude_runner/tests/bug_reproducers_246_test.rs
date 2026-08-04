@@ -16,21 +16,26 @@
 //!
 //! # Fix Applied
 //!
-//! `describe()` now starts with `env -u CLAUDECODE claude ...` when `unset_claudecode`
-//! is true (the default). When `--keep-claudecode` is passed, `unset_claudecode` is
-//! set to false and `describe()` starts with plain `claude ...`.
+//! `describe()` now starts with `env -u CLAUDECODE -u CLAUDE_CODE_CHILD_SESSION claude ...`
+//! when `unset_claudecode` is true (the default). When `--keep-claudecode` is passed,
+//! `unset_claudecode` is false and `describe()` starts with
+//! `env -u CLAUDE_CODE_CHILD_SESSION claude ...` — `CLAUDE_CODE_CHILD_SESSION` is always
+//! stripped regardless of `--keep-claudecode`.
+//!
+//! `removed_vars()` is the single source of truth for all removals: both `build_command()`
+//! and `describe()` iterate it, so any new removal added there propagates to both
+//! automatically — a second call site to forget is impossible by construction.
 //!
 //! # Prevention
 //!
-//! Every `env_remove()` call in `build_command()` must be reflected in `describe()`.
-//! The two methods must remain in sync — `describe()` is the WYSIWYG contract for
-//! all trace/dry-run output.
+//! Add new `env_remove()` requirements to `removed_vars()` — not inline in `build_command()`
+//! or `describe()`. The shared list makes trace/execution divergence structurally impossible.
 //!
 //! # Pitfall
 //!
 //! `env_remove()` is an OS-level subprocess configuration call that does NOT appear
 //! in `Command`'s arg list. It is invisible to any introspection that only looks at
-//! argv. Only explicit mirroring in `describe()` makes it visible.
+//! argv. Only explicit mirroring in `describe()` (via `removed_vars()`) makes it visible.
 //!
 //! # Test Matrix
 //!
@@ -38,6 +43,8 @@
 //! |------|----------|----------|
 //! | `dry_run_shows_env_u_claudecode_prefix` | default (unset_claudecode=true) | stdout contains `env -u CLAUDECODE` |
 //! | `dry_run_keep_claudecode_omits_env_prefix` | `--keep-claudecode` (unset_claudecode=false) | stdout does NOT contain `env -u CLAUDECODE` |
+//! | `dry_run_always_shows_child_session_removal` | default | stdout contains `env -u CLAUDE_CODE_CHILD_SESSION` |
+//! | `dry_run_keep_claudecode_still_strips_child_session` | `--keep-claudecode` | stdout still contains `-u CLAUDE_CODE_CHILD_SESSION` |
 
 #![ cfg( feature = "enabled" ) ]
 
@@ -68,10 +75,12 @@ fn dry_run_shows_env_u_claudecode_prefix()
   );
 }
 
-/// BUG-246 reproducer T2: `--keep-claudecode` must suppress the `env -u CLAUDECODE` prefix.
+/// BUG-246 reproducer T2: `--keep-claudecode` suppresses `env -u CLAUDECODE` but
+/// `CLAUDE_CODE_CHILD_SESSION` is still stripped.
 ///
-/// When `--keep-claudecode` is passed, `unset_claudecode = false` and `describe()` must
-/// start with plain `claude ...` (no `env -u CLAUDECODE` prefix).
+/// When `--keep-claudecode` is passed, `unset_claudecode = false` and `describe()` starts
+/// with `env -u CLAUDE_CODE_CHILD_SESSION claude ...` (not plain `claude ...` and not
+/// `env -u CLAUDECODE ...`). `CLAUDE_CODE_CHILD_SESSION` is always stripped unconditionally.
 #[ test ]
 #[ doc = "bug_reproducer(BUG-246)" ]
 fn dry_run_keep_claudecode_omits_env_prefix()
@@ -92,5 +101,38 @@ fn dry_run_keep_claudecode_omits_env_prefix()
   assert!(
     stdout.contains( "claude" ),
     "BUG-246: dry-run output must still contain 'claude' with --keep-claudecode;\ngot: {stdout}",
+  );
+}
+
+/// CLAUDE_CODE_CHILD_SESSION is always stripped — it must appear in dry-run output by default.
+///
+/// The marker causes Claude Code to skip transcript saving when inherited. `clr` is always
+/// a top-level launcher and must strip it unconditionally so the spawned Claude session
+/// doesn't inherit the warning.
+#[ test ]
+fn dry_run_always_shows_child_session_removal()
+{
+  let out = run_cli( &[ "--dry-run", "test" ] );
+  assert!( out.status.success(), "must exit 0; stderr: {}", String::from_utf8_lossy( &out.stderr ) );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  assert!(
+    stdout.contains( "-u CLAUDE_CODE_CHILD_SESSION" ),
+    "dry-run output must show CLAUDE_CODE_CHILD_SESSION removal;\ngot: {stdout}",
+  );
+}
+
+/// CLAUDE_CODE_CHILD_SESSION is still stripped even when `--keep-claudecode` is passed.
+///
+/// The two removals are independent: `--keep-claudecode` only controls `CLAUDECODE`;
+/// `CLAUDE_CODE_CHILD_SESSION` is always unconditionally stripped.
+#[ test ]
+fn dry_run_keep_claudecode_still_strips_child_session()
+{
+  let out = run_cli( &[ "--dry-run", "--keep-claudecode", "test" ] );
+  assert!( out.status.success(), "must exit 0; stderr: {}", String::from_utf8_lossy( &out.stderr ) );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  assert!(
+    stdout.contains( "-u CLAUDE_CODE_CHILD_SESSION" ),
+    "dry-run output must still show CLAUDE_CODE_CHILD_SESSION removal with --keep-claudecode;\ngot: {stdout}",
   );
 }

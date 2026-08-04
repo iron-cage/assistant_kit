@@ -25,7 +25,7 @@ Every `clr` command that invokes or manages a subprocess must accept `--trace` a
 
 ### Enforcement Mechanism
 
-- `run` and `ask`: `--trace` is parsed by `parse_args()` into `CliArgs.trace: bool`. When `trace` is `true`, `describe_env()` and `describe()` are written to stderr before `execute()` is called.
+- `run` and `ask`: `--trace` is parsed by `parse_args()` into `CliArgs.trace: bool`. When `trace` is `true`, `describe_full()` is written to stderr before `execute()` is called (the single source-of-truth preview function that combines `describe_env()` env-var block + blank line + `describe()` invocation line).
 - `isolated`: `--trace` is parsed by `parse_isolated_args()`. When set, the `IsolatedArgs` struct carries `trace: true`, and `emit_credential_trace()` writes diagnostic output (credential headers + env vars + assembled command) to stderr before `run_isolated()` is called.
 - `refresh`: `--trace` is parsed by `parse_refresh_args()`. When set, `emit_credential_trace()` writes diagnostic output (credential headers + env vars + assembled command) to stderr before `run_isolated()` is called with the fixed `["--print", "."]` args.
 
@@ -42,22 +42,24 @@ If a subprocess-executing command does not support `--trace`:
 
 #### run / ask commands
 
-Emitted via `describe_env()` + `describe()`:
-- `CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000`
-- `CLAUDE_CODE_BASH_TIMEOUT=3600000`
-- `CLAUDE_CODE_BASH_MAX_TIMEOUT=7200000`
-- `CLAUDE_CODE_AUTO_CONTINUE=true`
-- `CLAUDE_CODE_TELEMETRY=false`
-- Command line: `claude --dangerously-skip-permissions --chrome --effort max -c "msg\nultrathink"` (run and ask — identical output since ask is a pure alias)
+Emitted via `describe_full()` (env-var block, blank line, then invocation line):
+- `export CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000`
+- `export CLAUDE_CODE_BASH_TIMEOUT=3600000`
+- `export CLAUDE_CODE_BASH_MAX_TIMEOUT=7200000`
+- `export CLAUDE_CODE_AUTO_CONTINUE=true`
+- `export CLAUDE_CODE_TELEMETRY=false`
+- (blank line separating env block from invocation line)
+- Command line: `env -u CLAUDECODE claude --dangerously-skip-permissions -c "msg\nultrathink"` (run and ask — identical output since ask is a pure alias; `--chrome` absent in print mode per BUG-304 auto-suppression; `env -u CLAUDECODE` prefix per BUG-246 WYSIWYG fix)
 
 #### isolated / refresh commands
 
-Emitted via `emit_credential_trace()`:
+Emitted via `emit_credential_trace()`, which calls `describe_full()` internally:
 - `# clr {label}` (e.g., `# clr isolated`, `# clr refresh`)
 - `# creds: {path}`
 - `# timeout: {N}s` (isolated default: 30s; refresh default: 45s)
-- `describe_env()` block: `CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000`, `CLAUDE_CODE_BASH_TIMEOUT=3600000`, `CLAUDE_CODE_BASH_MAX_TIMEOUT=7200000`, `CLAUDE_CODE_AUTO_CONTINUE=true`, `CLAUDE_CODE_TELEMETRY=false`
-- `describe()` block: `claude --model {model} [injected flags] [args]` (e.g., `--model claude-opus-4-8 --effort max --no-session-persistence --dangerously-skip-permissions --print "Fix bug"` for isolated; `--model claude-sonnet-5 --no-chrome --effort low --no-session-persistence --print "."` for refresh)
+- `describe_full()` env block: `export CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000`, `export CLAUDE_CODE_BASH_TIMEOUT=3600000`, `export CLAUDE_CODE_BASH_MAX_TIMEOUT=7200000`, `export CLAUDE_CODE_AUTO_CONTINUE=true`, `export CLAUDE_CODE_TELEMETRY=false` (plus `export HOME=/tmp/claude_isolated_{pid}` — the isolated temp HOME)
+- (blank line separating env block from invocation line)
+- Command line: `env -u CLAUDECODE claude --chrome --model {model} [injected flags] [args]` for isolated (e.g., `env -u CLAUDECODE claude --chrome --model claude-opus-4-8 --effort max --no-session-persistence --dangerously-skip-permissions --print "Fix bug"`); `env -u CLAUDECODE claude --model claude-sonnet-5 --no-chrome --effort low --no-session-persistence --print "."` for refresh (`env -u CLAUDECODE` prefix per BUG-246; `--chrome` present in isolated because `emit_credential_trace()` uses `ClaudeCommand::new()` default, not the builder.rs BUG-304 print-mode suppression path)
 
 ### Features
 

@@ -19,14 +19,24 @@ What `--trace` shows depends on the command:
 ```sh
 # Trace on run
 clr --trace "Fix bug"
-# Stderr: CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000
-# Stderr: claude --dangerously-skip-permissions --chrome -c --print "Fix bug\n\nultrathink"
+# Stderr: export CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000
+# Stderr: export CLAUDE_CODE_BASH_TIMEOUT=3600000
+# Stderr: export CLAUDE_CODE_BASH_MAX_TIMEOUT=7200000
+# Stderr: export CLAUDE_CODE_AUTO_CONTINUE=true
+# Stderr: export CLAUDE_CODE_TELEMETRY=false
+# Stderr: (blank line)
+# Stderr: env -u CLAUDECODE claude --dangerously-skip-permissions -c --print "Fix bug\n\nultrathink"
 # Then: subprocess executes normally
 
 # Trace on ask (pure alias — identical output to run)
 clr ask --trace "What is X?"
-# Stderr: CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000
-# Stderr: claude --dangerously-skip-permissions --chrome --effort max --print -c "What is X?\n\nultrathink"
+# Stderr: export CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000
+# Stderr: export CLAUDE_CODE_BASH_TIMEOUT=3600000
+# Stderr: export CLAUDE_CODE_BASH_MAX_TIMEOUT=7200000
+# Stderr: export CLAUDE_CODE_AUTO_CONTINUE=true
+# Stderr: export CLAUDE_CODE_TELEMETRY=false
+# Stderr: (blank line)
+# Stderr: env -u CLAUDECODE claude --dangerously-skip-permissions --effort max --print -c "What is X?\n\nultrathink"
 # Then: subprocess executes normally
 
 # Trace on isolated
@@ -34,12 +44,13 @@ clr isolated --creds creds.json --trace "Fix bug"
 # Stderr: # clr isolated
 # Stderr: # creds: /path/to/creds.json
 # Stderr: # timeout: 30s
-# Stderr: CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000
-# Stderr: CLAUDE_CODE_BASH_TIMEOUT=3600000
-# Stderr: CLAUDE_CODE_BASH_MAX_TIMEOUT=7200000
-# Stderr: CLAUDE_CODE_AUTO_CONTINUE=true
-# Stderr: CLAUDE_CODE_TELEMETRY=false
-# Stderr: claude --model claude-opus-4-8 --effort max --no-session-persistence --dangerously-skip-permissions --print "Fix bug"
+# Stderr: export CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000
+# Stderr: export CLAUDE_CODE_BASH_TIMEOUT=3600000
+# Stderr: export CLAUDE_CODE_BASH_MAX_TIMEOUT=7200000
+# Stderr: export CLAUDE_CODE_AUTO_CONTINUE=true
+# Stderr: export CLAUDE_CODE_TELEMETRY=false
+# Stderr: (blank line)
+# Stderr: env -u CLAUDECODE claude --chrome --model claude-opus-4-8 --effort max --no-session-persistence --dangerously-skip-permissions --print "Fix bug"
 # Then: run_isolated() executes
 
 # Trace on refresh
@@ -47,12 +58,13 @@ clr refresh --creds creds.json --trace
 # Stderr: # clr refresh
 # Stderr: # creds: /path/to/creds.json
 # Stderr: # timeout: 45s
-# Stderr: CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000
-# Stderr: CLAUDE_CODE_BASH_TIMEOUT=3600000
-# Stderr: CLAUDE_CODE_BASH_MAX_TIMEOUT=7200000
-# Stderr: CLAUDE_CODE_AUTO_CONTINUE=true
-# Stderr: CLAUDE_CODE_TELEMETRY=false
-# Stderr: claude --model claude-sonnet-5 --no-chrome --effort low --no-session-persistence --print "."
+# Stderr: export CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000
+# Stderr: export CLAUDE_CODE_BASH_TIMEOUT=3600000
+# Stderr: export CLAUDE_CODE_BASH_MAX_TIMEOUT=7200000
+# Stderr: export CLAUDE_CODE_AUTO_CONTINUE=true
+# Stderr: export CLAUDE_CODE_TELEMETRY=false
+# Stderr: (blank line)
+# Stderr: env -u CLAUDECODE claude --model claude-sonnet-5 --no-chrome --effort low --no-session-persistence --print "."
 # Then: run_isolated() executes
 ```
 
