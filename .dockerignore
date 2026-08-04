@@ -1,9 +1,6 @@
-# .cargo/ must be excluded so dev/.cargo/config.toml is never baked into container
-# images.  The config redirects host-side cargo target dir to dev/-host-target/.
-# Inside the container, cargo must continue using /workspace/target/ (seeded by the
-# cook stage).  Baking the config in would silently invalidate all cook-stage cache
-# on every run because cargo would switch target dirs and rebuild from scratch.
-.cargo/
+# .cargo/ is deliberately INCLUDED in the build context: the cook stage copies it
+# (COPY --from=planner /workspace/.cargo) so config-driven settings resolve during
+# dependency cooking. It carries no credentials and no target-dir redirect.
 
 # Compiled artifacts — excluded to keep build context small.
 # Docker will use target/ from the cook stage, not the host.
@@ -16,12 +13,8 @@ target/
 # Git history is not needed inside the image.
 .git/
 
-# .claude/ is created on the host by cmd_test() (runbox-run) before each run so runc
-# can attach ~/.claude as a child bind-mount under the :ro workspace mount.  Excluded
-# here for two reasons:
-#   1. Security: host credentials in .claude/ must never be baked into a container image.
-#   2. Correctness: COPY . . would include the directory, causing RUN mkdir -p .claude
-#      to find it already present — harmless with -p, but the directory would contain
-#      host-side credential data.
+# ~/.claude is bind-mounted at runtime by the runbox engine (mirror mount) — host
+# credentials in any workspace-local .claude/ must never be baked into a container
+# image.
 .claude/
 

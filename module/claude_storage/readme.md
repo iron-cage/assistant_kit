@@ -427,10 +427,7 @@ fn main() -> claude_storage_core::Result< () >
 - Full workflow integration test
 - CLI sanity tests (build, features)
 
-**Local (w3 required):**
-```bash
-./verb/test
-```
+**Targeted run**: `./verb/test_only <name_substring>` from the crate directory.
 
 ## license
 

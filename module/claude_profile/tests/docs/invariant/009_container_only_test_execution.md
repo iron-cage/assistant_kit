@@ -19,9 +19,8 @@ all test execution paths enforce the container requirement and that the escape h
 | IN-10 | `cargo test -p claude_journal_viewer` panics on bare host before any `Command::new(CLJ)` spawns | Invariant holds (Rust guard L3) |
 | IN-11 | `cargo test -p claude_storage` panics on bare host before any `clg` binary spawns | Invariant holds (Rust guard L3) |
 | IN-12 | `cargo test -p claude_version` panics on bare host before any `claude_version` binary spawns | Invariant holds (Rust guard L3) |
-| IN-13 | `cargo test -p runbox` panics on bare host before any `crb` or `runbox` binary spawns | Invariant holds (Rust guard L3) |
 
-**Total:** 13 IN cases
+**Total:** 12 IN cases
 
 ---
 
@@ -164,15 +163,4 @@ all test execution paths enforce the container requirement and that the escape h
 - **When:** Any test in the `integration` binary (calls `run_clm()` → `run_clm_with_env()` in `tests/integration/subprocess_helpers.rs`), or any test in `cli_args_test` that calls `fn run()` or one of the 6 bypass test functions (`tc494`, `tc_verbosity_level_2_verbose`, `tc_settings_key_dot_literal`, `tc_settings_key_valid_accepted`, `ec3`) that spawn directly via `Command::new(env!("CARGO_BIN_EXE_claude_version"))` is executed
 - **Then:** The test panics with "Tests must run inside a container" before any `claude_version` binary is spawned; exit code is non-zero
 - **Note:** `VERB_LAYER=l0 cargo test -p claude_version` passes — all guard sites in both test binaries honor the escape hatch
-- **Source:** [docs/invariant/009_container_only_test_execution.md](../../../docs/invariant/009_container_only_test_execution.md)
-
----
-
-### IN-13: `cargo test -p runbox` panics on bare host before any binary spawns
-
-- **Given:** `cargo test -p runbox` is invoked directly on a bare host (same signals absent as IN-6)
-- **When:** Any test that calls `crb()` or `runbox_bin()` in `tests/init_command.rs` is executed
-- **Then:** The test panics with "Tests must run inside a container" before any `crb` or `runbox` binary is spawned; exit code is non-zero
-- **Note:** `crb()` and `runbox_bin()` are the only two process-spawning entry points in `runbox` tests — all 14 CLI tests route through one of these helpers; no bypass sites exist
-- **Note:** `VERB_LAYER=l0 cargo test -p runbox` passes — both helpers honor the escape hatch
 - **Source:** [docs/invariant/009_container_only_test_execution.md](../../../docs/invariant/009_container_only_test_execution.md)

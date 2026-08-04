@@ -168,7 +168,7 @@ fn t54_empty_positional_arg_ignored()
   let last_line = stdout.trim_end().lines().last().unwrap_or_default();
   assert_eq!(
     last_line,
-    "env -u CLAUDECODE claude --dangerously-skip-permissions --effort max --print --output-format json",
+    "env -u CLAUDECODE -u CLAUDE_CODE_CHILD_SESSION claude --dangerously-skip-permissions --effort max --print --output-format json",
     "empty positional arg under non-TTY stdin must route to print mode (no -c in empty session dir). Got:\n{stdout}"
   );
   assert!(
@@ -300,7 +300,7 @@ fn t57_empty_positional_after_double_dash_ignored()
   let last_line = stdout.trim_end().lines().last().unwrap_or_default();
   assert_eq!(
     last_line,
-    "env -u CLAUDECODE claude --dangerously-skip-permissions --effort max --print --output-format json",
+    "env -u CLAUDECODE -u CLAUDE_CODE_CHILD_SESSION claude --dangerously-skip-permissions --effort max --print --output-format json",
     "empty arg after -- under non-TTY stdin must route to print mode (no -c in empty session dir). Got:\n{stdout}"
   );
   assert!(

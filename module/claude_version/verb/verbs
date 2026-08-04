@@ -2,12 +2,12 @@
 # do verbs — list available verbs for this project (protocol meta-verb)
 set -euo pipefail
 printf '%-13s %-11s %s\n' build        available "cargo build -p claude_version"
-printf '%-13s %-11s %s\n' test         available "./runbox/runbox .test  (full suite: nextest + doc tests + clippy)"
-printf '%-13s %-11s %s\n' test_only        available "./runbox/runbox .test_only <filter>  (targeted: nextest filter only)"
+printf '%-13s %-11s %s\n' test         available "runbox .live (container, module-scoped: nextest + doc tests + clippy)"
+printf '%-13s %-11s %s\n' test_only        available "./verb/test_only <filter>  (container, targeted: nextest filter only)"
 printf '%-13s %-11s %s\n' clean        available "cargo clean -p claude_version"
 printf '%-13s %-11s %s\n' run          available "cargo run -p claude_version --bin clv"
 printf '%-13s %-11s %s\n' lint         available "cargo clippy -p claude_version --all-features -- -D warnings"
-printf '%-13s %-11s %s\n' verify       available "./runbox/runbox .test + cargo +nightly udeps + cargo +nightly audit"
+printf '%-13s %-11s %s\n' verify       available "./verb/test + cargo +nightly udeps + cargo +nightly audit"
 printf '%-13s %-11s %s\n' install      available "cargo install --path ."
 printf '%-13s %-11s %s\n' verbs        built-in  "-"
 printf '%-13s %-11s %s\n' package_info built-in  "-"

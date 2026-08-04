@@ -206,7 +206,8 @@ fn print_usage( binary : &str )
 /// prints the rendered output.  Prints an error to stderr if the command is
 /// not found and returns without printing usage.
 #[ cfg( feature = "enabled" ) ]
-fn print_command_help( name : &str, registry : &unilang::registry::CommandRegistry )
+#[ inline ]
+pub fn print_command_help( name : &str, registry : &unilang::registry::CommandRegistry )
 {
   use cli_fmt::help::*;
   let Some( def ) = registry.command( name ) else

@@ -3,15 +3,16 @@
 Test case planning for [invariant/009_session_mismatch_detection.md](../../../docs/invariant/009_session_mismatch_detection.md). Tests validate that `run_print_mode()` emits a `[Runner] warning: session mismatch` diagnostic to stderr when the actual `session_id` in claude's JSON result envelope differs from the expected UUID, and that matching UUIDs, absent prior sessions, and non-JSON output all produce no warning.
 
 **Source:** [invariant/009_session_mismatch_detection.md](../../../docs/invariant/009_session_mismatch_detection.md)
-**Related:** [invariant/001_default_flags.md](../../../docs/invariant/001_default_flags.md) (`-c` injection decision), [invariant/008_render_summary_gate.md](../../../docs/invariant/008_render_summary_gate.md) (`"type":"result"` gate inherited by `extract_session_id`)
+**Related:** [invariant/001_default_flags.md](../../../docs/invariant/001_default_flags.md) (`-c` injection decision), [invariant/008_render_summary_gate.md](../../../docs/invariant/008_render_summary_gate.md) (compound gate `subtype` presence OR `"type":"result"` inherited by `extract_session_id` — BUG-437 fix)
 
 ## Test Case Index
 
 | ID | Test Name | Category |
 |----|-----------|----------|
-| IT-1 | `"type":"result"` + `session_id` → `extract_session_id` returns `Some(uuid)` | Unit |
+| IT-1 | Old SDK (`"type":"result"`) + `session_id` → `extract_session_id` returns `Some(uuid)` | Unit |
 | IT-2 | `"type":"tool_use"` → `extract_session_id` returns `None` | Unit |
 | IT-3 | `"type":"result"` without `session_id` → `extract_session_id` returns `None` | Unit |
+| IT-4 | New SDK (`subtype` present, no top-level `type`) + `session_id` → `extract_session_id` returns `Some(uuid)` (BUG-437 reproducer) | Regression Guard |
 | SV-1 | Fake claude emits matching UUID → no warning on stderr, exit 0 | Invariant Hold |
 | SV-2 | Fake claude emits differing UUID → `[Runner] warning: session mismatch` on stderr, exit 0 | Invariant Statement |
 | SV-3 | `--new-session` (no prior session, `expected_session_id=None`) → no warning regardless of binary output | Invariant Boundary |
@@ -20,11 +21,12 @@ Test case planning for [invariant/009_session_mismatch_detection.md](../../../do
 ## Test Coverage Summary
 
 - Unit: 3 tests (IT-1, IT-2, IT-3)
+- Regression Guard: 1 test (IT-4)
 - Invariant Hold: 1 test (SV-1)
 - Invariant Statement: 1 test (SV-2)
 - Invariant Boundary: 2 tests (SV-3, SV-4)
 
-**Total:** 7 invariant test cases
+**Total:** 8 invariant test cases
 
 ## Architectural Constraint
 
@@ -39,6 +41,7 @@ SV-1 through SV-4 are integration tests in `tests/session_verification_test.rs` 
 | IT-1 | `extract_session_id_returns_uuid_for_valid_envelope` | `tests/summary_unit_test.rs` |
 | IT-2 | `extract_session_id_returns_none_for_non_result_type` | `tests/summary_unit_test.rs` |
 | IT-3 | `extract_session_id_returns_none_when_session_id_absent` | `tests/summary_unit_test.rs` |
+| IT-4 | `extract_session_id_returns_uuid_for_new_sdk_envelope` | `tests/summary_unit_test.rs` |
 | SV-1 | `sv1_matching_uuid_emits_no_warning` | `tests/session_verification_test.rs` |
 | SV-2 | `sv2_mismatched_uuid_emits_warning_but_exits_zero` | `tests/session_verification_test.rs` |
 | SV-3 | `sv3_new_session_flag_skips_mismatch_check` | `tests/session_verification_test.rs` |
@@ -46,11 +49,11 @@ SV-1 through SV-4 are integration tests in `tests/session_verification_test.rs` 
 
 ---
 
-### IT-1: `"type":"result"` + `session_id` → `extract_session_id` returns `Some(uuid)`
+### IT-1: Old SDK (`"type":"result"`) + `session_id` → `extract_session_id` returns `Some(uuid)`
 
 - **Given:** JSON string `{"type":"result","session_id":"abc-123","result":"hello","is_error":false}`
 - **When:** `extract_session_id(json)` called directly (unit test)
-- **Then:** Returns `Some("abc-123")` — `"type":"result"` guard satisfied; `session_id` field present and extracted
+- **Then:** Returns `Some("abc-123")` — compound gate passes (`"type":"result"` arm satisfied); `session_id` field present and extracted
 - **Exit:** N/A (unit test; assertion: `assert_eq!(result, Some("abc-123".to_string()))`)
 - **Source:** [invariant/009_session_mismatch_detection.md](../../../docs/invariant/009_session_mismatch_detection.md) Enforcement Mechanism § summary.rs
 
@@ -60,7 +63,7 @@ SV-1 through SV-4 are integration tests in `tests/session_verification_test.rs` 
 
 - **Given:** JSON string `{"type":"tool_use","name":"bash"}`
 - **When:** `extract_session_id(json)` called directly (unit test)
-- **Then:** Returns `None` — `msg_type != "result"` guard fires; non-result type excluded per invariant/009 table row 4
+- **Then:** Returns `None` — compound gate fires: `subtype` absent AND `msg_type == "tool_use" != "result"`; non-result type excluded per invariant/009 table row 4
 - **Exit:** N/A (unit test; assertion: `assert_eq!(result, None)`)
 - **Source:** [invariant/009_session_mismatch_detection.md](../../../docs/invariant/009_session_mismatch_detection.md) Invariant Statement table row 4
 
@@ -70,9 +73,19 @@ SV-1 through SV-4 are integration tests in `tests/session_verification_test.rs` 
 
 - **Given:** JSON string `{"type":"result","result":"hello","is_error":false}` (no `session_id` field)
 - **When:** `extract_session_id(json)` called directly (unit test)
-- **Then:** Returns `None` — `"type":"result"` guard satisfied; `extract_str(stdout, "session_id")` returns `None` (field absent); `?` propagates `None` to caller
+- **Then:** Returns `None` — compound gate passes (`"type":"result"` arm satisfied); `extract_str(json, "session_id")` returns `None` (field absent); function returns `None` directly (no `?`)
 - **Exit:** N/A (unit test; assertion: `assert_eq!(result, None)`)
 - **Source:** [invariant/009_session_mismatch_detection.md](../../../docs/invariant/009_session_mismatch_detection.md) Invariant Statement table row 4
+
+---
+
+### IT-4: New SDK (`subtype` present, no top-level `type`) + `session_id` → `extract_session_id` returns `Some(uuid)` (BUG-437 reproducer)
+
+- **Given:** JSON string `{"subtype":"success","session_id":"abc-123","usage":{"iterations":[{"type":"message"}]}}` — new SDK envelope format with no top-level `"type"` field; `extract_str(json,"type")` finds nested `"message"` first
+- **When:** `extract_session_id(json)` called directly (unit test)
+- **Then:** Returns `Some("abc-123")` — compound gate passes via `subtype` arm (`subtype.is_some()` = true); the old `"type":"result"`-only gate would have fired (found `"message"` from iterations) and incorrectly returned `None`; BUG-320 session mismatch detection is preserved for new SDK envelopes
+- **Exit:** N/A (unit test; assertion: `assert_eq!(result, Some("abc-123".to_string()))`)
+- **Source:** [invariant/009_session_mismatch_detection.md](../../../docs/invariant/009_session_mismatch_detection.md) Enforcement Mechanism § summary.rs; BUG-437 regression coverage
 
 ---
 
