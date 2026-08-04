@@ -592,7 +592,7 @@ clv.version.mark name::NAME unset::1 [dry::1] [v::N] [format::FMT]
 
 | Parameter | Type | Default | Required | Purpose |
 |-----------|------|---------|----------|---------|
-| `name::` | String | — | Yes | Marker name; `[a-z][a-z0-9-]*`, max 32 chars, must not shadow a built-in alias |
+| [`name::`](../param/16_name.md) | String | — | Yes | Marker name; `[a-z][a-z0-9-]*`, max 32 chars, must not shadow a built-in alias |
 | [`version::`](../param/01_version.md) | [`VersionSpec`](../type/03_version_spec.md) | — | Yes (set path) | Version spec the marker resolves to |
 | `description::` | String | `""` | No | Human-readable description stored with the marker |
 | [`unset::`](../param/12_unset.md) | bool | false | No | Remove the named marker instead of creating/updating |
@@ -649,7 +649,7 @@ clv.version.guard version::team-stable dry::1
 
 | # | Parameter |
 |---|-----------|
-| 1 | `name::` |
+| 1 | [`name::`](../param/16_name.md) |
 | 2 | [`version::`](../param/01_version.md) |
 | 3 | `description::` |
 | 4 | [`unset::`](../param/12_unset.md) |

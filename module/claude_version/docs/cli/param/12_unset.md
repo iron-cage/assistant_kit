@@ -3,7 +3,7 @@
 -- **Summary:** Remove a settings key from the target scope file instead of writing a value.
 -- **Type:** bool
 -- **Default:** false
--- **Commands:** `.config`
+-- **Commands:** `.config`, `.version.mark`
 -- **Group:** Config Identity
 
 When `unset::1`, `.config key::K` deletes key K from the target scope's settings file rather than reading or writing it. Mutually exclusive with `value::`.
@@ -23,6 +23,7 @@ clv.config key::theme unset::1 dry::1     # previews removal without changing fi
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
 | 1 | [`.config`](../command/config.md#command-13-config) | false | Requires key::; mutually exclusive with value:: |
+| 2 | [`.version.mark`](../command/version.md#command-17-versionmark) | false | Removes the named custom marker instead of creating/updating |
 
 ### Referenced Type
 

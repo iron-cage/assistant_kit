@@ -83,11 +83,17 @@ Integration test planning for `.version.mark`. See [command/version.md](../../..
 | IT-16 | `version::` absent on set path → exit 1 | set | 1 | F3=absent |
 | IT-17 | `version::x` (invalid spec) → exit 1 | set | 1 | F3=invalid |
 
+### Resilience Tests
+
+| TC | Description | Path | Exit | Factors |
+|----|-------------|------|------|---------|
+| IT-18 | Malformed `version-markers.json` → graceful degradation, exit 0 | — | 0 | resilience |
+
 ### Summary
 
-- **Total:** 17 tests (10 positive, 7 negative)
-- **Negative ratio:** 41.2%
-- **TC range:** IT-1 to IT-17
+- **Total:** 18 tests (11 positive, 7 negative)
+- **Negative ratio:** 38.9%
+- **TC range:** IT-1 to IT-18
 
 ---
 
@@ -97,7 +103,7 @@ Integration test planning for `.version.mark`. See [command/version.md](../../..
 
 | Exit Code | Meaning | Tests |
 |-----------|---------|-------|
-| 0 | Success | IT-1 through IT-10 |
+| 0 | Success | IT-1 through IT-10, IT-18 |
 | 1 | Validation error | IT-11 through IT-17 |
 
 ### Path Coverage
@@ -106,6 +112,7 @@ Integration test planning for `.version.mark`. See [command/version.md](../../..
 |------|-------|
 | set | IT-1, IT-2, IT-5, IT-7, IT-8, IT-9, IT-10, IT-11 through IT-17 |
 | unset | IT-3, IT-4, IT-6 |
+| — (resilience, list path) | IT-18 |
 
 ---
 
@@ -267,6 +274,15 @@ Integration test planning for `.version.mark`. See [command/version.md](../../..
 
 ---
 
+### IT-18: Malformed `version-markers.json` → graceful degradation
+
+- **Given:** isolated HOME; `~/.claude/version-markers.json` contains `"not valid json {{{"` (invalid JSON)
+- **When:** `clv .version.list`
+- **Then:** exit 0; stdout contains `stable`; built-in aliases visible despite malformed markers file; no crash or error exit
+- **Exit:** 0
+
+---
+
 ## Source Functions Table
 
 | Function | File | Test Cases |
@@ -288,3 +304,4 @@ Integration test planning for `.version.mark`. See [command/version.md](../../..
 | `it15_mark_name_shadows_latest_exits_1` | `tests/cli/mutation_version_mark_test.rs` | IT-15 |
 | `it16_mark_version_absent_exits_1` | `tests/cli/mutation_version_mark_test.rs` | IT-16 |
 | `it17_mark_version_invalid_exits_1` | `tests/cli/mutation_version_mark_test.rs` | IT-17 |
+| `it18_mark_malformed_json_graceful` | `tests/cli/mutation_version_mark_test.rs` | IT-18 |

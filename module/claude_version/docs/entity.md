@@ -8,14 +8,14 @@
 | `cli/` | Shared CLI reference: dictionary, parameter interactions, and environment context | [cli/readme.md](cli/readme.md) | 4 |
 | `cli/command/` | Per-namespace command reference for the clv CLI | [cli/command/readme.md](cli/command/readme.md) | 6 |
 | `cli/format/` | Named output format catalog | [cli/format/readme.md](cli/format/readme.md) | 2 |
-| `cli/param/` | Per-parameter reference for all clv parameters | [cli/param/readme.md](cli/param/readme.md) | 15 |
+| `cli/param/` | Per-parameter reference for all clv parameters | [cli/param/readme.md](cli/param/readme.md) | 16 |
 | `cli/param_group/` | Logical groupings of clv parameters by shared purpose | [cli/param_group/readme.md](cli/param_group/readme.md) | 4 |
 | `cli/type/` | Semantic type definitions for clv parameter values | [cli/type/readme.md](cli/type/readme.md) | 10 |
 | `cli/user_story/` | User story catalog with persona-goal scenarios | [cli/user_story/readme.md](cli/user_story/readme.md) | 8 |
 | `feature/` | Behavioral requirements for claude_version capabilities | [feature/readme.md](feature/readme.md) | 10 |
 | `pattern/` | Reusable design patterns applied in the crate | [pattern/readme.md](pattern/readme.md) | 2 |
 | `pitfall/` | Confirmed design traps discovered through implementation | [pitfall/readme.md](pitfall/readme.md) | 2 |
-| `runtime_file/` | On-disk files created and managed by clv at known paths | [runtime_file/readme.md](runtime_file/readme.md) | 3 |
+| `runtime_file/` | On-disk files created and managed by clv at known paths | [runtime_file/readme.md](runtime_file/readme.md) | 4 |
 | `tests/docs/algorithm/` | Per-algorithm test case specifications | [../tests/docs/algorithm/readme.md](../tests/docs/algorithm/readme.md) | 2 |
 | `tests/docs/cli/command/` | Per-command test case specifications | [../tests/docs/cli/command/readme.md](../tests/docs/cli/command/readme.md) | 16 |
 | `tests/docs/cli/format/` | Per-format output rendering test specifications | [../tests/docs/cli/format/readme.md](../tests/docs/cli/format/readme.md) | 2 |
@@ -26,7 +26,7 @@
 | `tests/docs/feature/` | Per-feature test case specifications | [../tests/docs/feature/readme.md](../tests/docs/feature/readme.md) | 10 |
 | `tests/docs/pattern/` | Per-pattern test case specifications | [../tests/docs/pattern/readme.md](../tests/docs/pattern/readme.md) | 1 |
 | `tests/docs/pitfall/` | Per-pitfall regression test case specifications | [../tests/docs/pitfall/readme.md](../tests/docs/pitfall/readme.md) | 2 |
-| `tests/docs/runtime_file/` | Per-runtime-file RF- test case specifications | [../tests/docs/runtime_file/readme.md](../tests/docs/runtime_file/readme.md) | 3 |
+| `tests/docs/runtime_file/` | Per-runtime-file RF- test case specifications | [../tests/docs/runtime_file/readme.md](../tests/docs/runtime_file/readme.md) | 4 |
 
 ## Master Doc Instances Table
 
@@ -65,6 +65,7 @@
 | runtime_file | 001 | Version History Cache | [runtime_file/001_version_history_cache.md](runtime_file/001_version_history_cache.md) |
 | runtime_file | 002 | Versions Directory | [runtime_file/002_versions_directory.md](runtime_file/002_versions_directory.md) |
 | runtime_file | 003 | Binary Symlink | [runtime_file/003_binary_symlink.md](runtime_file/003_binary_symlink.md) |
+| runtime_file | 004 | Version Markers | [runtime_file/004_version_markers.md](runtime_file/004_version_markers.md) |
 | tests/docs/algorithm | 001 | Settings Type Inference | [tests/docs/algorithm/001_settings_type_inference.md](../tests/docs/algorithm/001_settings_type_inference.md) |
 | tests/docs/algorithm | 002 | Config Resolution | [tests/docs/algorithm/002_config_resolution.md](../tests/docs/algorithm/002_config_resolution.md) |
 | tests/docs/feature | 001 | Version Management | [tests/docs/feature/001_version_management.md](../tests/docs/feature/001_version_management.md) |
@@ -83,3 +84,4 @@
 | tests/docs/runtime_file | 001 | Version History Cache | [tests/docs/runtime_file/001_version_history_cache.md](../tests/docs/runtime_file/001_version_history_cache.md) |
 | tests/docs/runtime_file | 002 | Versions Directory | [tests/docs/runtime_file/002_versions_directory.md](../tests/docs/runtime_file/002_versions_directory.md) |
 | tests/docs/runtime_file | 003 | Binary Symlink | [tests/docs/runtime_file/003_binary_symlink.md](../tests/docs/runtime_file/003_binary_symlink.md) |
+| tests/docs/runtime_file | 004 | Version Markers | [tests/docs/runtime_file/004_version_markers.md](../tests/docs/runtime_file/004_version_markers.md) |

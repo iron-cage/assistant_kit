@@ -6,7 +6,7 @@ Edge case coverage for the `version::` parameter. See [param/readme.md](../../..
 
 - **Purpose**: Edge case tests for the `version::` parameter.
 - **Responsibility**: Boundary values, invalid inputs, type violations, and default behavior for `version::`.
-- **Commands:** `.version.install`, `.version.guard`
+- **Commands:** `.version.install`, `.version.guard`, `.version.mark`
 - **In Scope**: Single-parameter edge cases, validation errors, type checking.
 - **Out of Scope**: Command integration (→ `../command/`), group interactions (→ `../param_group/`).
 
@@ -27,7 +27,7 @@ Edge case coverage for the `version::` parameter. See [param/readme.md](../../..
 | EC-5 | `version::01.02.03` → leading zeros, exit 1 | Invalid: format |
 | EC-6 | `version::1.2.3.4` (four-part) → exit 1 | Invalid: format |
 | EC-7 | `version::LATEST` → wrong case, exit 1 | Invalid: case |
-| EC-9 | `version::` only accepted by `.version.install` and `.version.guard` | Command Scope |
+| EC-9 | `version::` only accepted by `.version.install`, `.version.guard`, and `.version.mark` | Command Scope |
 
 ## Test Coverage Summary
 
@@ -115,7 +115,7 @@ Edge case coverage for the `version::` parameter. See [param/readme.md](../../..
 
 ---
 
-### EC-9: `version::` only for `.version.install` and `.version.guard`
+### EC-9: `version::` only for `.version.install`, `.version.guard`, and `.version.mark`
 
 - **Given:** clean environment
 - **When:** `clv .processes version::stable`

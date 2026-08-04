@@ -3,7 +3,7 @@
 -- **Summary:** Specify which Claude Code version to install or guard against.
 -- **Type:** `VersionSpec`
 -- **Default:** `stable`
--- **Commands:** `.version.install`, `.version.guard`
+-- **Commands:** `.version.install`, `.version.guard`, `.version.mark`
 -- **Group:** none
 
 Accepts named aliases (`stable`, `latest`), custom marker names, or semver strings (e.g., `1.2.3`).
@@ -27,6 +27,7 @@ clv.version.guard version::stable dry::1
 |---|---------|---------|-------|
 | 1 | [`.version.install`](../command/version.md#command-4-versioninstall) | stable | Selects version to install |
 | 2 | [`.version.guard`](../command/version.md#command-5-versionguard) | *(stored preference)* | Overrides stored preference for one invocation |
+| 3 | [`.version.mark`](../command/version.md#command-17-versionmark) | — (required on set path) | Version spec the custom marker resolves to |
 
 ### Referenced Type
 

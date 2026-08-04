@@ -28,12 +28,13 @@
 | 13_kind.md | `kind::` — filter show-all to params of one kind |
 | 14_mode.md | `mode::` — select aliases or history listing for `.version.list` |
 | 15_record_only.md | `record_only::` — persist preference without installing |
+| 16_name.md | `name::` — custom marker name for `.version.mark` (required) |
 
 ### All Parameters
 
 | # | Parameter | Type | Default | Groups | Used In |
 |---|-----------|------|---------|--------|---------|
-| 1 | [`version::`](01_version.md) | `VersionSpec` | stable | — | `.version.install`, `.version.guard` |
+| 1 | [`version::`](01_version.md) | `VersionSpec` | stable | — | `.version.install`, `.version.guard`, `.version.mark` |
 | 2 | [`dry::`](02_dry.md) | bool | false | Execution Control | write/mutation commands |
 | 3 | [`force::`](03_force.md) | bool | false | Execution Control | `.version.install`, `.version.guard`, `.processes.kill` |
 | 4 | [`v::`](04_v.md) | `VerbosityLevel` | 1 | Output Control | all output-supporting commands |
@@ -44,10 +45,11 @@
 | 9 | [`count::`](09_count.md) | u64 | 10 | Output Control | `.version.list` (`mode::history`) |
 | 10 | [`.help`](10_help.md) | bool | false | — | all commands |
 | 11 | [`scope::`](11_scope.md) | `ConfigScope` | user | Config Identity | `.config` |
-| 12 | [`unset::`](12_unset.md) | bool | false | Config Identity | `.config` |
+| 12 | [`unset::`](12_unset.md) | bool | false | Config Identity | `.config`, `.version.mark` |
 | 13 | [`kind::`](13_kind.md) | `ParamKind` | absent | — | `.params` |
 | 14 | [`mode::`](14_mode.md) | `ListMode` | aliases | — | `.version.list` |
 | 15 | [`record_only::`](15_record_only.md) | bool | false | Execution Control | `.version.install` |
+| 16 | [`name::`](16_name.md) | string | — (required) | — | `.version.mark` |
 
 ### See Also
 

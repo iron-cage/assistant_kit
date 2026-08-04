@@ -56,6 +56,8 @@ Integration test planning for the `.version.guard` command. See [command/readme.
 | IT-21 | `version::latest dry::1` override → "no version pin to guard" | Version Override |
 | IT-22 | `dry::1 v::0` → output shorter than `v::1` | Output Control |
 | IT-23 | `format::json dry::1` → JSON object output, exit 0 | Format |
+| IT-24 | `format::json interval::N` watch mode → raw JSON passthrough, no dot separator | Watch Resilience |
+| IT-25 | custom marker resolves via `.version.guard version::name dry::1` | Custom Marker |
 
 ## Test Coverage Summary
 
@@ -69,11 +71,12 @@ Integration test planning for the `.version.guard` command. See [command/readme.
 - Error Handling: 3 tests
 - Bug Fix: 1 test
 - Version Override: 3 tests
-- Watch Resilience: 1 test
+- Watch Resilience: 2 tests (IT-20, IT-24)
 - Output Control: 1 test
 - Format: 1 test
+- Custom Marker: 1 test
 
-**Total:** 23 tests (8 integration, 6 edge cases, 1 bug fix, 5 version override/error, 1 watch resilience, 1 output control, 1 format)
+**Total:** 25 tests (8 integration, 6 edge cases, 1 bug fix, 5 version override/error, 2 watch resilience, 1 output control, 1 format, 1 custom marker)
 
 ---
 
@@ -321,6 +324,16 @@ Integration test planning for the `.version.guard` command. See [command/readme.
 
 ---
 
+### IT-25: custom marker resolves via `.version.guard version::name dry::1`
+
+- **Given:** isolated HOME; `~/.claude/version-markers.json` with `team-pin → 2.1.220`
+- **When:** `clv .version.guard version::team-pin dry::1`
+- **Then:** exit 0; stdout contains `2.1.220`; custom marker resolved before guard comparison
+- **Exit:** 0
+- **Source:** [feature/010_custom_markers.md](../../../../docs/feature/010_custom_markers.md)
+
+---
+
 ### Source Functions
 
 | Function | File |
@@ -339,3 +352,10 @@ Integration test planning for the `.version.guard` command. See [command/readme.
 | `tc415_watch_loop_continues_after_install_error` | `tests/cli/mutation_version_guard_test.rs` |
 | `tc416_guard_version_latest_override_dry` | `tests/cli/mutation_version_guard_test.rs` |
 | `tc417_guard_v0_shorter_than_v1` | `tests/cli/mutation_version_guard_test.rs` |
+| `tc418_watch_mode_json_format_passthrough` | `tests/cli/mutation_version_guard_test.rs` |
+| `tc419_hot_swap_binary_traces_with_live_process` | `tests/cli/mutation_version_guard_test.rs` |
+| `tc420_unlock_versions_dir_traces_on_install` | `tests/cli/mutation_version_guard_test.rs` |
+| `tc421_lock_version_traces_via_curated_path` | `tests/cli/mutation_version_guard_test.rs` |
+| `tc422_perform_install_traces_on_install` | `tests/cli/mutation_version_guard_test.rs` |
+| `tc423_store_preferred_version_traces_on_idempotent_skip` | `tests/cli/mutation_version_guard_test.rs` |
+| `tc424_guard_custom_marker_dry` | `tests/cli/mutation_version_guard_test.rs` |

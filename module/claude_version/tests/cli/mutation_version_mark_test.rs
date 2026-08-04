@@ -26,6 +26,7 @@
 //! | FT-3  | Custom marker accepted by `.version.install`          | P   | 0    |
 //! | FT-4  | Invalid name (uppercase start) → exit 1               | N   | 1    |
 //! | FT-5  | `dry::1` does not write `version-markers.json`        | P   | 0    |
+//! | IT-18 | Malformed `version-markers.json` → graceful, exit 0   | P   | 0    |
 
 use tempfile::TempDir;
 
@@ -378,6 +379,29 @@ fn ft010_4_invalid_name_exits_1()
     &[],
   );
   assert_exit( &out, 1 );
+}
+
+// ─── IT-18: Malformed version-markers.json → graceful degradation ────────────
+
+#[ test ]
+fn it18_mark_malformed_json_graceful()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  // Write invalid JSON to the markers file so load_custom_markers() must
+  // gracefully degrade rather than crash or return an error to the caller.
+  let claude_dir = dir.path().join( ".claude" );
+  std::fs::create_dir_all( &claude_dir ).unwrap();
+  std::fs::write( claude_dir.join( "version-markers.json" ), "not valid json {{{" ).unwrap();
+
+  let out = run_clv_with_env( &[ ".version.list" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "stable" ),
+    ".version.list must show built-in aliases even with a malformed markers file: {text}"
+  );
 }
 
 // ─── FT-5: dry::1 does not write markers file ────────────────────────────────

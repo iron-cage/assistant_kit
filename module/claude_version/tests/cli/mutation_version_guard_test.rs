@@ -22,11 +22,12 @@
 //! | 421 | `lock_version` trace fires via curated bash-only PATH (task 313 T04) | P | 0 |
 //! | 422 | `perform_install` trace fires on install (task 313 T05) | P | 1 |
 //! | 423 | `store_preferred_version` trace fires via idempotent-skip (task 313 T06) | P | 0 |
+//! | 424 | custom marker resolves via `.version.guard version::team-pin dry::1` | P | 0 |
 
 use tempfile::TempDir;
 
 use crate::subprocess_helpers::{
-  assert_exit, run_clv, run_clv_with_env, stderr, stdout, write_settings,
+  assert_exit, run_clv, run_clv_with_env, stderr, stdout, write_markers, write_settings,
 };
 
 // ─── E14: version guard ─────────────────────────────────────────────────────
@@ -648,5 +649,31 @@ fn tc423_store_preferred_version_traces_on_idempotent_skip()
   assert!(
     err.contains( "store_preferred_version" ),
     "stderr must contain store_preferred_version trace line via the idempotent-skip path: {err}"
+  );
+}
+
+// TC-424: custom marker resolves via .version.guard version::team-pin dry::1
+//
+// Verifies that .version.guard's version:: override path correctly resolves
+// a custom marker name to its stored version string.  Uses dry::1 so no real
+// install occurs; the test only needs to confirm that the resolved semver
+// ("2.1.220") appears in the output, proving custom-marker resolution fires
+// before the guard comparison step.
+#[ test ]
+fn tc424_guard_custom_marker_dry()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_markers( dir.path(), &[ ( "team-pin", "2.1.220" ) ] );
+
+  let out = run_clv_with_env(
+    &[ ".version.guard", "version::team-pin", "dry::1" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "2.1.220" ),
+    "guard must resolve custom marker team-pin to 2.1.220: {text}"
   );
 }
