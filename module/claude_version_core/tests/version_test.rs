@@ -16,6 +16,7 @@
 //! - `VERSION_ALIASES` table has consistent structure and required entries
 //! - `purge_stale_versions` deletes stale binaries, keeps pinned target, ignores non-version files, is safe on missing dir, and refuses to run when the keep target is absent (BUG-016)
 //! - `verify_install_outcome` gates purge/lock on the requested version actually being present after install (BUG-016)
+//! - `unlock_settings_for_install` removes the 4 settings-level lock keys that block the official installer, and must stay in sync with `lock_version()` (BUG-017)
 //!
 //! ## Test Matrix
 //!
@@ -50,10 +51,13 @@
 //! | `lock_version_repin_updates_minimum_version` | T03: re-pin to a different version updates minimumVersion, not stale |
 //! | `lock_version_pin_all_five_keys_resolve_with_user_source` | T04: all 5 keys resolve with source: user after a pinned install |
 //! | `purge_stale_versions_traces_function_and_parameters` | parameter-trace structural guard (task 313): first statement is `eprintln!` naming the function and both parameters |
+//! | `unlock_settings_for_install_removes_all_four_lock_keys` | pinned lock applied; unlock clears all 4 install-blocking keys (BUG-017 reproducer) |
+//! | `unlock_settings_for_install_noop_when_home_absent` | graceful no-op when HOME is unset |
+//! | `unlock_settings_for_install_traces_function_name` | parameter-trace structural guard: first stmt is `eprintln!` naming the function |
 
 use claude_version_core::version::{
   extract_semver, validate_version_spec, resolve_version_spec, VERSION_ALIASES,
-  purge_stale_versions, lock_version, verify_install_outcome,
+  purge_stale_versions, lock_version, verify_install_outcome, unlock_settings_for_install,
 };
 use claude_core::settings_io::get_setting;
 use claude_version_core::config_resolve::{ resolve, Layer };
@@ -465,5 +469,81 @@ fn purge_stale_versions_traces_function_and_parameters()
   assert_eq!(
     body.matches( "eprintln!" ).count(), 1,
     "purge_stale_versions must have exactly one eprintln! call, found {}", body.matches( "eprintln!" ).count()
+  );
+}
+
+// ─── unlock_settings_for_install ─────────────────────────────────────────────
+
+// Root Cause: unlock_settings_for_install() was private with no integration
+//   test seam — if its key set drifted from lock_version()'s key set (e.g. a
+//   new lock layer added to one but not the other), BUG-016 would silently
+//   re-emerge with no failing test.
+// Why Not Caught: private functions in a crate with all tests in tests/ are
+//   untestable; the function was intentionally private to keep it off the
+//   traced-public-functions list.
+// Fix Applied: function promoted to pub (with eprintln! trace), enabling
+//   direct integration tests that pin the unlock key set.
+// Prevention: any new key added to lock_version()'s pinned path must be mirrored
+//   in unlock_settings_for_install(); these tests are the regression tripwire.
+// Pitfall: the official installer honors update-disabling keys in settings.json
+//   as admin policy — every key that lock_version() writes for pinned installs
+//   must be removed by unlock_settings_for_install() before invoking the installer.
+
+// test_kind: bug_reproducer(BUG-017)
+#[test]
+fn unlock_settings_for_install_removes_all_four_lock_keys()
+{
+  let home       = tempfile::tempdir().unwrap();
+  let no_project = tempfile::tempdir().unwrap();
+  std::env::set_var( "HOME", home.path() );
+
+  // Apply a pinned lock so all 4 install-blocking keys are present.
+  lock_version( false, "2.1.220" );
+
+  // Lift those keys — exactly what perform_install() does pre-install.
+  unlock_settings_for_install();
+
+  let settings_file = home.path().join( ".claude" ).join( "settings.json" );
+  assert_eq!(
+    get_setting( &settings_file, "autoUpdates" ).unwrap().as_deref(),
+    Some( "true" ),
+    "unlock must set autoUpdates=true so the installer treats updates as enabled"
+  );
+  assert_eq!(
+    get_setting( &settings_file, "minimumVersion" ).unwrap(),
+    None,
+    "unlock must remove minimumVersion so the installer is not rejected by a version floor"
+  );
+
+  let auto_updater = resolve( "env.DISABLE_AUTOUPDATER", home.path(), no_project.path(), catalog() );
+  assert!(
+    auto_updater.value.is_none(),
+    "unlock must remove env.DISABLE_AUTOUPDATER — one of the keys the bootstrap treats as an admin policy block"
+  );
+
+  let disable_updates = resolve( "env.DISABLE_UPDATES", home.path(), no_project.path(), catalog() );
+  assert!(
+    disable_updates.value.is_none(),
+    "unlock must remove env.DISABLE_UPDATES — one of the keys the bootstrap treats as an admin policy block"
+  );
+}
+
+#[test]
+fn unlock_settings_for_install_noop_when_home_absent()
+{
+  std::env::remove_var( "HOME" );
+  // Must not panic when ClaudePaths cannot resolve $HOME.
+  unlock_settings_for_install();
+}
+
+#[test]
+fn unlock_settings_for_install_traces_function_name()
+{
+  let src        = include_str!( "../src/version.rs" );
+  let body       = extract_fn_body( src, "unlock_settings_for_install" );
+  let first_stmt = body.trim_start().split( ';' ).next().unwrap().trim();
+  assert!(
+    first_stmt.starts_with( "eprintln!" ) && first_stmt.contains( "unlock_settings_for_install" ),
+    "unlock_settings_for_install must emit eprintln! naming the function as its first statement, got: {first_stmt:?}"
   );
 }

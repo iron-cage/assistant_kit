@@ -120,24 +120,24 @@ Same two valid values and validation rules apply under both modes; JSON field sh
 | IT-15 | `format::json` has `"value"` field | P | 0 | F5=json | [read_version_test.rs] |
 | IT-7 | `format::json` → valid JSON output | P | 0 | F5=json | [read_version_test.rs] |
 | IT-8 | Output is stable across repeated invocations | P | 0 | F1=absent | [read_version_test.rs] |
-| IT-16 | `mode::history` defaults → exits 0 (live fetch or compiled-in fallback) | P | 0 | F1=history, F2=absent, F4=absent, F5=absent, F6=any | [read_version_history_test.rs] |
-| IT-17 | `mode::history count::3` → output has ≤3 version entries | P | 0 | F1=history, F2=3 | [read_version_history_test.rs] |
-| IT-18 | `mode::history count::0` → empty output, no version lines | P | 0 | F1=history, F2=0 | [read_version_history_test.rs] |
-| IT-19 | `mode::history v::0` → bare `{version}  {date}` lines, no summaries | P | 0 | F1=history, F4=0 | [read_version_history_test.rs] |
-| IT-20 | `mode::history v::1` explicit → version + date + summary per line | P | 0 | F1=history, F4=1 | [read_version_history_test.rs] |
-| IT-21 | `mode::history v::2` → full changelog with `##` headers per version | P | 0 | F1=history, F4=2 | [read_version_history_test.rs] |
-| IT-22 | `mode::history format::json` → valid JSON array with version/date/summary fields | P | 0 | F1=history, F5=json | [read_version_history_test.rs] |
-| IT-23 | `mode::history count::1 format::json` → JSON array with exactly 1 element | P | 0 | F1=history, F2=1, F5=json | [read_version_history_test.rs] |
-| IT-24 | `mode::history count::1 v::0` → exactly 1 bare line | P | 0 | F1=history, F2=1, F4=0 | [read_version_history_test.rs] |
-| IT-25 | `mode::history count::1 v::2` → single full changelog block | P | 0 | F1=history, F2=1, F4=2 | [read_version_history_test.rs] |
-| IT-26 | `mode::history` default count ≤10 entries (verify default value) | P | 0 | F1=history, F2=absent | [read_version_history_test.rs] |
-| IT-27 | `mode::history count::100` → all available releases, capped by data | P | 0 | F1=history, F2=100 | [read_version_history_test.rs] |
-| IT-28 | Idempotency: two consecutive `mode::history` calls produce identical output | P | 0 | F1=history, F2=1 | [read_version_history_test.rs] |
-| IT-29 | Param order: `mode::history count::3 v::0` = `v::0 mode::history count::3` | P | 0 | F1=history, F2=3, F4=0 | [read_version_history_test.rs] |
-| IT-30 | `mode::history count::0 format::json` → empty JSON array `[]` | P | 0 | F1=history, F2=0, F5=json | [read_version_history_test.rs] |
-| IT-41 | UTF-8 non-ASCII chars in release body preserved intact (`mode::history`) | P | 0 | F1=history, F5=absent, F4=2 | [read_version_history_test.rs] |
-| IT-42 | `mode::aliases` explicit == default (absent) output, byte-identical | P | 0 | F1=aliases | new |
-| IT-46 | `count::` accepted under `mode::aliases`, has no effect on output | P | 0 | F1=aliases, F2=5 | new |
+| IT-16 | `mode::history` defaults → exits 0 (live fetch or compiled-in fallback) | P | 0 | F1=history, F2=absent, F4=absent, F5=absent, F6=any | [read_version_test.rs] |
+| IT-17 | `mode::history count::3` → output has ≤3 version entries | P | 0 | F1=history, F2=3 | [read_version_test.rs] |
+| IT-18 | `mode::history count::0` → empty output, no version lines | P | 0 | F1=history, F2=0 | [read_version_test.rs] |
+| IT-19 | `mode::history v::0` → bare `{version}  {date}` lines, no summaries | P | 0 | F1=history, F4=0 | [read_version_test.rs] |
+| IT-20 | `mode::history v::1` explicit → version + date + summary per line | P | 0 | F1=history, F4=1 | [read_version_test.rs] |
+| IT-21 | `mode::history v::2` → full changelog with `##` headers per version | P | 0 | F1=history, F4=2 | [read_version_test.rs] |
+| IT-22 | `mode::history format::json` → valid JSON array with version/date/summary fields | P | 0 | F1=history, F5=json | [read_version_test.rs] |
+| IT-23 | `mode::history count::1 format::json` → JSON array with exactly 1 element | P | 0 | F1=history, F2=1, F5=json | [read_version_test.rs] |
+| IT-24 | `mode::history count::1 v::0` → exactly 1 bare line | P | 0 | F1=history, F2=1, F4=0 | [read_version_test.rs] |
+| IT-25 | `mode::history count::1 v::2` → single full changelog block | P | 0 | F1=history, F2=1, F4=2 | [read_version_test.rs] |
+| IT-26 | `mode::history` default count ≤10 entries (verify default value) | P | 0 | F1=history, F2=absent | [read_version_test.rs] |
+| IT-27 | `mode::history count::100` → all available releases, capped by data | P | 0 | F1=history, F2=100 | [read_version_test.rs] |
+| IT-28 | Idempotency: two consecutive `mode::history` calls produce identical output | P | 0 | F1=history, F2=1 | [read_version_test.rs] |
+| IT-29 | Param order: `mode::history count::3 v::0` = `v::0 mode::history count::3` | P | 0 | F1=history, F2=3, F4=0 | [read_version_test.rs] |
+| IT-30 | `mode::history count::0 format::json` → empty JSON array `[]` | P | 0 | F1=history, F2=0, F5=json | [read_version_test.rs] |
+| IT-41 | UTF-8 non-ASCII chars in release body preserved intact (`mode::history`) | P | 0 | F1=history, F5=absent, F4=2 | [read_version_test.rs] |
+| IT-42 | `mode::aliases` explicit == default (absent) output, byte-identical | P | 0 | F1=aliases | [read_version_test.rs] |
+| IT-46 | `count::` accepted under `mode::aliases`, has no effect on output | P | 0 | F1=aliases, F2=5 | [read_version_test.rs] |
 
 ### Negative Tests
 
@@ -146,19 +146,19 @@ Same two valid values and validation rules apply under both modes; JSON field sh
 | IT-4 | `bogus::x` → exit 1, unknown parameter | N | 1 | F8=present | [read_version_test.rs] |
 | IT-5 | `format::xml` → exit 1, unknown format | N | 1 | F5=xml | [read_version_test.rs] |
 | IT-6 | `v::3` → exit 1, out of range (`mode::aliases`) | N | 1 | F3=3 | [read_version_test.rs] |
-| IT-31 | `mode::history format::xml` → exit 1, unknown format | N | 1 | F1=history, F5=xml | [read_version_history_test.rs] |
-| IT-32 | `mode::history format::JSON` (uppercase) → exit 1, case-sensitive | N | 1 | F1=history, F5=JSON | [read_version_history_test.rs] |
-| IT-33 | `mode::history format::` (empty value) → exit 1 | N | 1 | F1=history, F5="" | [read_version_history_test.rs] |
-| IT-34 | `mode::history` unknown param `bogus::x` → exit 1 | N | 1 | F1=history, F8=present | [read_version_history_test.rs] |
-| IT-35 | `mode::history`, network unavailable → exit 0 via compiled-in fallback, stderr carries advisory | P | 0 | F1=history, F6=unavailable | [read_version_history_test.rs] |
-| IT-36 | `mode::history`, HOME empty → exit 2 | N | 2 | F1=history, F7=empty | [read_version_history_test.rs] |
-| IT-37 | `mode::history count::-1` (negative) → parse error → exit 1 | N | 1 | F1=history, F2=-1 | [read_version_history_test.rs] |
-| IT-38 | `mode::history v::abc` → exit 1, type mismatch for Integer | N | 1 | F1=history, F4=invalid | [read_version_history_test.rs] |
-| IT-39 | `mode::history count::abc` → exit 1, type mismatch for Integer | N | 1 | F1=history, F2=invalid | [read_version_history_test.rs] |
-| IT-40 | `mode::history --verbose` flag-style → exit 1 | N | 1 | F1=history, F9=flag-style | [read_version_history_test.rs] |
-| IT-43 | `mode::bogus` → exit 1, unrecognized mode | N | 1 | F1=bogus | new |
-| IT-44 | `mode::` (empty value) → exit 1 | N | 1 | F1="" | new |
-| IT-45 | `mode::History` (wrong case) → exit 1, case-sensitive | N | 1 | F1=History | new |
+| IT-31 | `mode::history format::xml` → exit 1, unknown format | N | 1 | F1=history, F5=xml | [read_version_test.rs] |
+| IT-32 | `mode::history format::JSON` (uppercase) → exit 1, case-sensitive | N | 1 | F1=history, F5=JSON | [read_version_test.rs] |
+| IT-33 | `mode::history format::` (empty value) → exit 1 | N | 1 | F1=history, F5="" | [read_version_test.rs] |
+| IT-34 | `mode::history` unknown param `bogus::x` → exit 1 | N | 1 | F1=history, F8=present | [read_version_test.rs] |
+| IT-35 | `mode::history`, network unavailable → exit 0 via compiled-in fallback, stderr carries advisory | P | 0 | F1=history, F6=unavailable | manual |
+| IT-36 | `mode::history`, HOME empty → exit 2 | N | 2 | F1=history, F7=empty | [read_version_test.rs] |
+| IT-37 | `mode::history count::-1` (negative) → parse error → exit 1 | N | 1 | F1=history, F2=-1 | [read_version_test.rs] |
+| IT-38 | `mode::history v::abc` → exit 1, type mismatch for Integer | N | 1 | F1=history, F4=invalid | [read_version_test.rs] |
+| IT-39 | `mode::history count::abc` → exit 1, type mismatch for Integer | N | 1 | F1=history, F2=invalid | [read_version_test.rs] |
+| IT-40 | `mode::history --verbose` flag-style → exit 1 | N | 1 | F1=history, F9=flag-style | [read_version_test.rs] |
+| IT-43 | `mode::bogus` → exit 1, unrecognized mode | N | 1 | F1=bogus | [read_version_test.rs] |
+| IT-44 | `mode::` (empty value) → exit 1 | N | 1 | F1="" | [read_version_test.rs] |
+| IT-45 | `mode::History` (wrong case) → exit 1, case-sensitive | N | 1 | F1=History | [read_version_test.rs] |
 
 ### Summary
 
@@ -810,30 +810,34 @@ Tests requiring successful network fetch:
 | `it06_version_list_v3_exits_1` | `tests/cli/read_version_test.rs` |
 | `it07_version_list_format_json_valid` | `tests/cli/read_version_test.rs` |
 | `it08_version_list_output_stable` | `tests/cli/read_version_test.rs` |
-| `tc425_version_history_defaults_exit_0` | `tests/cli/read_version_history_test.rs` |
-| `tc426_version_history_count_3` | `tests/cli/read_version_history_test.rs` |
-| `tc427_version_history_count_0_empty` | `tests/cli/read_version_history_test.rs` |
-| `tc428_version_history_v0_bare` | `tests/cli/read_version_history_test.rs` |
-| `tc429_version_history_v1_with_summary` | `tests/cli/read_version_history_test.rs` |
-| `tc430_version_history_v2_full_changelog` | `tests/cli/read_version_history_test.rs` |
-| `tc431_version_history_format_json` | `tests/cli/read_version_history_test.rs` |
-| `tc432_version_history_count_1_json` | `tests/cli/read_version_history_test.rs` |
-| `tc433_version_history_count_1_v0` | `tests/cli/read_version_history_test.rs` |
-| `tc434_version_history_count_1_v2` | `tests/cli/read_version_history_test.rs` |
-| `tc435_version_history_default_count_le_10` | `tests/cli/read_version_history_test.rs` |
-| `tc436_version_history_count_100_all` | `tests/cli/read_version_history_test.rs` |
-| `tc437_version_history_idempotent` | `tests/cli/read_version_history_test.rs` |
-| `tc438_version_history_param_order` | `tests/cli/read_version_history_test.rs` |
-| `tc439_version_history_count_0_json_empty_array` | `tests/cli/read_version_history_test.rs` |
-| `tc440_version_history_format_xml_exits_1` | `tests/cli/read_version_history_test.rs` |
-| `tc441_version_history_format_uppercase_exits_1` | `tests/cli/read_version_history_test.rs` |
-| `tc442_version_history_format_empty_exits_1` | `tests/cli/read_version_history_test.rs` |
-| `tc443_version_history_unknown_param_exits_1` | `tests/cli/read_version_history_test.rs` |
-| `tc445_version_history_no_home_exits_2` | `tests/cli/read_version_history_test.rs` |
-| `tc446_version_history_negative_count_exits_1` | `tests/cli/read_version_history_test.rs` |
-| `tc447_version_history_v_abc_exits_1` | `tests/cli/read_version_history_test.rs` |
-| `tc448_version_history_count_abc_exits_1` | `tests/cli/read_version_history_test.rs` |
-| `tc449_version_history_flag_style_exits_1` | `tests/cli/read_version_history_test.rs` |
-| `tc450_version_history_utf8_body_preserved` | `tests/cli/read_version_history_test.rs` |
-
-**New functions needed** (implementation task): source functions for IT-42 through IT-46 (`mode::` switch tests) do not yet exist — to be created in `tests/cli/read_version_test.rs` during implementation. Existing `tc425`–`tc450` and `it04`–`it08`-style functions will need renaming to reflect explicit `mode::history`/`mode::aliases` invocations and consolidation into a single test file (`read_version_test.rs`), retiring `read_version_history_test.rs` — see implementation task.
+| `it16_version_list_mode_history_defaults_exit_0` | `tests/cli/read_version_test.rs` |
+| `it17_version_list_mode_history_count_3` | `tests/cli/read_version_test.rs` |
+| `it18_version_list_mode_history_count_0_empty` | `tests/cli/read_version_test.rs` |
+| `it19_version_list_mode_history_v0_bare` | `tests/cli/read_version_test.rs` |
+| `it20_version_list_mode_history_v1_with_summary` | `tests/cli/read_version_test.rs` |
+| `it21_version_list_mode_history_v2_full_changelog` | `tests/cli/read_version_test.rs` |
+| `it22_version_list_mode_history_format_json` | `tests/cli/read_version_test.rs` |
+| `it23_version_list_mode_history_count_1_json` | `tests/cli/read_version_test.rs` |
+| `it24_version_list_mode_history_count_1_v0` | `tests/cli/read_version_test.rs` |
+| `it25_version_list_mode_history_count_1_v2` | `tests/cli/read_version_test.rs` |
+| `it26_version_list_mode_history_default_count_le_10` | `tests/cli/read_version_test.rs` |
+| `it27_version_list_mode_history_count_100_all` | `tests/cli/read_version_test.rs` |
+| `it28_version_list_mode_history_idempotent` | `tests/cli/read_version_test.rs` |
+| `it29_version_list_mode_history_param_order` | `tests/cli/read_version_test.rs` |
+| `it30_version_list_mode_history_count_0_json_empty_array` | `tests/cli/read_version_test.rs` |
+| `it31_version_list_mode_history_format_xml_exits_1` | `tests/cli/read_version_test.rs` |
+| `it32_version_list_mode_history_format_uppercase_exits_1` | `tests/cli/read_version_test.rs` |
+| `it33_version_list_mode_history_format_empty_exits_1` | `tests/cli/read_version_test.rs` |
+| `it34_version_list_mode_history_unknown_param_exits_1` | `tests/cli/read_version_test.rs` |
+| IT-35 (manual — no automated function) | — |
+| `it36_version_list_mode_history_no_home_exits_2` | `tests/cli/read_version_test.rs` |
+| `it37_version_list_mode_history_negative_count_exits_1` | `tests/cli/read_version_test.rs` |
+| `it38_version_list_mode_history_v_abc_exits_1` | `tests/cli/read_version_test.rs` |
+| `it39_version_list_mode_history_count_abc_exits_1` | `tests/cli/read_version_test.rs` |
+| `it40_version_list_mode_history_flag_style_exits_1` | `tests/cli/read_version_test.rs` |
+| `it41_version_list_mode_history_utf8_body_preserved` | `tests/cli/read_version_test.rs` |
+| `it42_version_list_mode_aliases_matches_default` | `tests/cli/read_version_test.rs` |
+| `it43_version_list_mode_bogus_exits_1` | `tests/cli/read_version_test.rs` |
+| `it44_version_list_mode_empty_exits_1` | `tests/cli/read_version_test.rs` |
+| `it45_version_list_mode_wrong_case_exits_1` | `tests/cli/read_version_test.rs` |
+| `it46_version_list_count_inert_under_aliases` | `tests/cli/read_version_test.rs` |

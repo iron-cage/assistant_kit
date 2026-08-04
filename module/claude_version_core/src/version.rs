@@ -617,10 +617,13 @@ pub fn lock_version( is_latest : bool, resolved : &str )
 /// after the outcome is verified; on failure the lock stays lifted, which is
 /// the truthful state (`.version.guard` / `.status` then report drift).
 ///
-/// Private helper — not one of the 10 traced public mutating functions
-/// (see `docs/pattern/002_parameter_trace.md`; private helpers are exempt).
-fn unlock_settings_for_install()
+/// Public so the unlock key set is directly testable alongside `lock_version()`.
+/// Fix(BUG-017): an untestable private function cannot express the invariant
+/// that unlock keys must mirror lock keys — any drift silently re-triggers BUG-016.
+#[ inline ]
+pub fn unlock_settings_for_install()
 {
+  eprintln!( "unlock_settings_for_install()" );
   if let Some( paths ) = ClaudePaths::new()
   {
     let settings_file = paths.settings_file();

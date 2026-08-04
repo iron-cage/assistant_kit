@@ -96,7 +96,7 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
   reg_cmd( registry, ".version.show",    "Print the currently installed Claude Code version",          vec![ v(), fmt() ],                      Box::new( version_show_routine    ) );
   reg_cmd( registry, ".version.install", "Download and install a Claude Code version via installer",   vec![ ver(), dry(), frc(), rec(), v(), fmt() ], Box::new( version_install_routine ) );
   reg_cmd( registry, ".version.guard",   "Check for version drift and restore preferred version",      vec![ ver(), dry(), frc(), itv(), v(), fmt() ], Box::new( version_guard_routine   ) );
-  reg_cmd( registry, ".version.list",    "Lists aliases or release history relevant to the installed version", vec![ md(), cnt(), v(), fmt() ], Box::new( version_list_routine    ) );
+  reg_cmd( registry, ".version.list",    "List named version aliases (mode::aliases) or recent release history (mode::history)", vec![ md(), cnt(), v(), fmt() ], Box::new( version_list_routine    ) );
   reg_cmd( registry, ".processes",       "List all running Claude Code processes",                     vec![ v(), fmt() ],                      Box::new( processes_routine       ) );
   reg_cmd( registry, ".processes.kill",  "Terminate all Claude Code processes",                        vec![ dry(), frc(), v(), fmt() ],        Box::new( processes_kill_routine  ) );
   reg_cmd( registry, ".settings.show",   "Print all settings from ~/.claude/settings.json",            vec![ v(), fmt() ],                      Box::new( settings_show_routine   ) );
