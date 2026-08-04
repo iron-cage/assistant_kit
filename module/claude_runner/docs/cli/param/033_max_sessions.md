@@ -58,7 +58,7 @@ unavailable — process scanner cannot read the process list (--max-sessions req
 pass --max-sessions 0 to disable the gate) (exit 1)"`. This check is skipped entirely when
 `--max-sessions 0` — the disable escape hatch survives even a broken process scanner.
 
-<!-- BUG-399 (task/claude_runner/bug/closed/399_timeout_gate_wait_undocumented.md) —
+<!-- BUG-399 (task/claude_runner/bug/completed/399_timeout_gate_wait_undocumented.md) —
      --timeout does not bound this gate-wait phase, by design; this doc did not
      cross-reference that boundary. See 036_timeout.md and user_story/025_concurrency_gate.md. -->
 

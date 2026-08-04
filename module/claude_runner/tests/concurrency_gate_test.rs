@@ -1518,7 +1518,7 @@ fn t18_gate_tries_other_free_index_when_count_derived_index_is_live_held()
 /// could miss — a passing result without ever observing a fully-valid
 /// record would not actually prove the widened window was exercised.
 ///
-/// Bug file: `task/claude_runner/bug/closed/407_claim_slot_file_non_atomic_create_then_write.md`.
+/// Bug file: `task/claude_runner/bug/completed/407_claim_slot_file_non_atomic_create_then_write.md`.
 // test_kind: bug_reproducer(BUG-407)
 #[ test ]
 fn t19_claim_slot_file_publish_is_atomic_under_widened_window()
@@ -1641,7 +1641,7 @@ fn t19_claim_slot_file_publish_is_atomic_under_widened_window()
 /// `unix_now() - 2` paired with a 2s `std::thread::sleep`) — that reintroduces
 /// exactly the wall-clock-precision flakiness this test's `since=0` choice avoids.
 ///
-/// Bug file: `task/claude_runner/bug/closed/400_gate_reclaim_no_staleness_check.md`.
+/// Bug file: `task/claude_runner/bug/completed/400_gate_reclaim_no_staleness_check.md`.
 // test_kind: bug_reproducer(BUG-400)
 #[ test ]
 fn t20_gate_reclaims_stale_live_owner_when_threshold_set()
@@ -1797,7 +1797,7 @@ fn t20_gate_reclaims_stale_live_owner_when_threshold_set()
 /// a real transient fault's lifecycle (occurs once, then clears). A test
 /// relying on this env var must not assume it fires on every attempt.
 ///
-/// Bug file: `task/claude_runner/bug/closed/405_reclaim_ticket_winner_self_collision_denial.md`.
+/// Bug file: `task/claude_runner/bug/completed/405_reclaim_ticket_winner_self_collision_denial.md`.
 // test_kind: bug_reproducer(BUG-405)
 #[ test ]
 fn t21_ticket_winner_that_fails_own_admission_does_not_self_deny_forever()
