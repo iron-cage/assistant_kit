@@ -48,7 +48,7 @@ JSON object with a top-level `"markers"` array. Each element is an object with t
 - **Created:** On the first successful `.version.mark name::N version::V` invocation when no markers file exists.
 - **Updated (upsert):** On any `.version.mark name::N version::V` call; the named entry is added or its value replaced.
 - **Pruned:** On `.version.mark name::N unset::1`; the named entry is removed; the file is rewritten without it.
-- **Read:** On `.version.list` (aliases mode), `.version.install`, and `.version.guard` when resolving a `version::` spec that is not a built-in alias.
+- **Read:** On `.version.list` (aliases mode), `.version.install`, and `.version.guard` when resolving a `version::` spec that is not a built-in alias; and on `.version.show` for reverse-lookup label annotation (when `v::` ≥ 1).
 - **Never deleted by clv:** The file persists until the user removes it manually or via `unset::1` for each entry.
 - **Graceful degradation:** An absent or malformed markers file is treated as an empty marker set; no error is returned to the caller.
 

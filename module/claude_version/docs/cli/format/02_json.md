@@ -25,6 +25,10 @@ Field names are stable snake_case JSON keys. Common fields:
 | `.status` | `sessions` | number | Running process count |
 | `.status` | `account` | string \| null | Active account name |
 | `.version.show` | `version` | string | |
+| `.version.show` | `labels` | array | Aliases and custom markers pointing to the installed version; empty array when none match |
+| `.version.show` | `labels[].name` | string | Alias or marker name |
+| `.version.show` | `labels[].kind` | string | `"builtin"` (preferred alias `stable`/`latest`) or `"custom"` (marker from `version-markers.json`) |
+| `.version.show` | `labels[].description` | string | Custom marker description; absent for builtin labels |
 | `.version.list` (`mode::aliases`) | `[].alias` | string | Array of alias objects |
 | `.version.list` (`mode::aliases`) | `[].version` | string | |
 | `.processes` | `[].pid` | number | Array of process objects |
