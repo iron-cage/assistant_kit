@@ -21,6 +21,7 @@ Output fields differ per command. Common patterns:
 | Pattern | Example |
 |---------|---------|
 | Version string | `version: 2.1.78` |
+| Version with labels | `2.1.220  [stable, team-pin]` (inline brackets at v::1; omitted when no labels match) |
 | PID list | `pid: 4821` (one per line) |
 | Key-value setting | `theme: dark` |
 | Named alias table | `stable   2.1.220` |
