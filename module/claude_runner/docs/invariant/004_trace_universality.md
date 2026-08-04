@@ -15,8 +15,8 @@ Every `clr` command that invokes or manages a subprocess must accept `--trace` a
 |---------|-----------|-------------------|--------------------------|
 | `run` | `claude` binary | yes | env vars + assembled `claude` command line |
 | `ask` | `claude` binary | yes | env vars + assembled `claude` command line (identical to `run` — pure alias) |
-| `isolated` | `claude` binary (temp HOME) | yes | credential headers (`# clr isolated`, `# creds: {path}`, `# timeout: 30s`), env vars, assembled `claude --model claude-opus-4-8 --effort max --no-session-persistence [--dangerously-skip-permissions] --print {msg}` |
-| `refresh` | `claude` binary (temp HOME, fixed args) | yes | credential headers (`# clr refresh`, `# creds: {path}`, `# timeout: 45s`), env vars, assembled `claude --model claude-sonnet-5 --no-chrome --effort low --no-session-persistence --print "."` |
+| `isolated` | `claude` binary (temp HOME) | yes | credential headers (`# clr isolated`, `# creds: {path}`, `# timeout: 30s`), env vars, assembled `env -u CLAUDECODE -u CLAUDE_CODE_CHILD_SESSION claude --chrome --model claude-opus-4-8 --effort max --no-session-persistence [--dangerously-skip-permissions] --print {msg}` |
+| `refresh` | `claude` binary (temp HOME, fixed args) | yes | credential headers (`# clr refresh`, `# creds: {path}`, `# timeout: 45s`), env vars, assembled `env -u CLAUDECODE -u CLAUDE_CODE_CHILD_SESSION claude --model claude-sonnet-5 --no-chrome --effort low --no-session-persistence --print "."` |
 | `help` | — | exempt | no subprocess; `--trace` is not parsed |
 
 `--trace` prints to stderr so it does not pollute captured stdout in print mode. The subprocess is always launched after trace output (unlike `--dry-run`, which suppresses execution).
@@ -49,7 +49,7 @@ Emitted via `describe_full()` (env-var block, blank line, then invocation line):
 - `export CLAUDE_CODE_AUTO_CONTINUE=true`
 - `export CLAUDE_CODE_TELEMETRY=false`
 - (blank line separating env block from invocation line)
-- Command line: `env -u CLAUDECODE claude --dangerously-skip-permissions -c "msg\nultrathink"` (run and ask — identical output since ask is a pure alias; `--chrome` absent in print mode per BUG-304 auto-suppression; `env -u CLAUDECODE` prefix per BUG-246 WYSIWYG fix)
+- Command line: `env -u CLAUDECODE -u CLAUDE_CODE_CHILD_SESSION claude --dangerously-skip-permissions --effort max --print --output-format json [-c] "msg\n\nultrathink"` (run and ask — identical output since ask is a pure alias; `--chrome` absent in print mode per BUG-304 auto-suppression; `env -u CLAUDECODE -u CLAUDE_CODE_CHILD_SESSION` prefix per BUG-246 WYSIWYG fix — `CLAUDE_CODE_CHILD_SESSION` always stripped unconditionally to prevent spurious child-session transcript warnings in the spawned process; `[-c]` present when a session file exists in the session dir; `--output-format json` auto-injected when output style is `summary` — the default)
 
 #### isolated / refresh commands
 
@@ -59,7 +59,7 @@ Emitted via `emit_credential_trace()`, which calls `describe_full()` internally:
 - `# timeout: {N}s` (isolated default: 30s; refresh default: 45s)
 - `describe_full()` env block: `export CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000`, `export CLAUDE_CODE_BASH_TIMEOUT=3600000`, `export CLAUDE_CODE_BASH_MAX_TIMEOUT=7200000`, `export CLAUDE_CODE_AUTO_CONTINUE=true`, `export CLAUDE_CODE_TELEMETRY=false` (plus `export HOME=/tmp/claude_isolated_{pid}` — the isolated temp HOME)
 - (blank line separating env block from invocation line)
-- Command line: `env -u CLAUDECODE claude --chrome --model {model} [injected flags] [args]` for isolated (e.g., `env -u CLAUDECODE claude --chrome --model claude-opus-4-8 --effort max --no-session-persistence --dangerously-skip-permissions --print "Fix bug"`); `env -u CLAUDECODE claude --model claude-sonnet-5 --no-chrome --effort low --no-session-persistence --print "."` for refresh (`env -u CLAUDECODE` prefix per BUG-246; `--chrome` present in isolated because `emit_credential_trace()` uses `ClaudeCommand::new()` default, not the builder.rs BUG-304 print-mode suppression path)
+- Command line: `env -u CLAUDECODE -u CLAUDE_CODE_CHILD_SESSION claude --chrome --model {model} [injected flags] [args]` for isolated (e.g., `env -u CLAUDECODE -u CLAUDE_CODE_CHILD_SESSION claude --chrome --model claude-opus-4-8 --effort max --no-session-persistence --dangerously-skip-permissions --print "Fix bug"`); `env -u CLAUDECODE -u CLAUDE_CODE_CHILD_SESSION claude --model claude-sonnet-5 --no-chrome --effort low --no-session-persistence --print "."` for refresh (`env -u CLAUDECODE -u CLAUDE_CODE_CHILD_SESSION` prefix per BUG-246; `--chrome` present in isolated because `emit_credential_trace()` uses `ClaudeCommand::new()` default, not the builder.rs BUG-304 print-mode suppression path)
 
 ### Features
 

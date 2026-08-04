@@ -95,7 +95,7 @@ Edge case tests for the trace flag. Tests validate command echoing to stderr bef
 
 - **Given:** credentials JSON written to a temp file `<f>` (file is readable); claude binary absent
 - **When:** `clr isolated --creds <f> --trace "Fix bug"` (trace fires before subprocess attempt)
-- **Then:** Stderr contains `# clr isolated`, `# creds: <path>`, `# timeout: 30s`, env var block (including `export CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000`), and `env -u CLAUDECODE claude --chrome --model claude-opus-4-8 --effort max --no-session-persistence --dangerously-skip-permissions --print "Fix bug"`; `env -u CLAUDECODE` prefix per BUG-246; subprocess attempt fails (claude absent in test environment)
+- **Then:** Stderr contains `# clr isolated`, `# creds: <path>`, `# timeout: 30s`, env var block (including `export CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000`), and `env -u CLAUDECODE -u CLAUDE_CODE_CHILD_SESSION claude --chrome --model claude-opus-4-8 --effort max --no-session-persistence --dangerously-skip-permissions --print "Fix bug"`; `env -u CLAUDECODE -u CLAUDE_CODE_CHILD_SESSION` prefix per BUG-246; subprocess attempt fails (claude absent in test environment)
 - **Exit:** 1
 - **Source:** [013_trace.md](../../../../docs/cli/param/013_trace.md), [invariant/004_trace_universality.md](../../../../docs/invariant/004_trace_universality.md)
 - **Commands:** run, isolated, refresh, ask
@@ -105,7 +105,7 @@ Edge case tests for the trace flag. Tests validate command echoing to stderr bef
 
 - **Given:** credentials JSON written to a temp file `<f>` (file is readable); claude binary absent
 - **When:** `clr refresh --creds <f> --trace` (trace fires before subprocess attempt)
-- **Then:** Stderr contains `# clr refresh`, `# creds: <path>`, `# timeout: 45s`, env var block (including `export CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000`), and `env -u CLAUDECODE claude --model claude-sonnet-5 --no-chrome --effort low --no-session-persistence --print "."`; `env -u CLAUDECODE` prefix per BUG-246; subprocess attempt fails (claude absent in test environment)
+- **Then:** Stderr contains `# clr refresh`, `# creds: <path>`, `# timeout: 45s`, env var block (including `export CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000`), and `env -u CLAUDECODE -u CLAUDE_CODE_CHILD_SESSION claude --model claude-sonnet-5 --no-chrome --effort low --no-session-persistence --print "."`; `env -u CLAUDECODE -u CLAUDE_CODE_CHILD_SESSION` prefix per BUG-246; subprocess attempt fails (claude absent in test environment)
 - **Exit:** 1
 - **Source:** [013_trace.md](../../../../docs/cli/param/013_trace.md), [invariant/004_trace_universality.md](../../../../docs/invariant/004_trace_universality.md)
 - **Commands:** run, isolated, refresh, ask

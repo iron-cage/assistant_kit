@@ -98,7 +98,7 @@ fn validate_spec_accepts_known_aliases()
 {
   for alias in VERSION_ALIASES
   {
-    let result = validate_version_spec( alias.name );
+    let result = validate_version_spec( alias.name, &[] );
     assert!(
       result.is_ok(),
       "expected Ok for alias '{}', got: {:?}",
@@ -111,29 +111,29 @@ fn validate_spec_accepts_known_aliases()
 #[test]
 fn validate_spec_accepts_three_part_semver()
 {
-  assert!( validate_version_spec( "1.2.3"   ).is_ok() );
-  assert!( validate_version_spec( "2.1.78"  ).is_ok() );
-  assert!( validate_version_spec( "10.0.0"  ).is_ok() );
+  assert!( validate_version_spec( "1.2.3",  &[] ).is_ok() );
+  assert!( validate_version_spec( "2.1.78", &[] ).is_ok() );
+  assert!( validate_version_spec( "10.0.0", &[] ).is_ok() );
 }
 
 #[test]
 fn validate_spec_rejects_empty()
 {
-  assert!( validate_version_spec( "" ).is_err(), "empty string must be rejected" );
+  assert!( validate_version_spec( "", &[] ).is_err(), "empty string must be rejected" );
 }
 
 #[test]
 fn validate_spec_rejects_unknown()
 {
-  assert!( validate_version_spec( "nightly" ).is_err() );
-  assert!( validate_version_spec( "beta"    ).is_err() );
+  assert!( validate_version_spec( "nightly", &[] ).is_err() );
+  assert!( validate_version_spec( "beta",    &[] ).is_err() );
 }
 
 #[test]
 fn validate_spec_rejects_two_part_semver()
 {
-  assert!( validate_version_spec( "1.2"   ).is_err() );
-  assert!( validate_version_spec( "2.1"   ).is_err() );
+  assert!( validate_version_spec( "1.2", &[] ).is_err() );
+  assert!( validate_version_spec( "2.1", &[] ).is_err() );
 }
 
 // ─── resolve_version_spec ─────────────────────────────────────────────────────
@@ -142,13 +142,13 @@ fn validate_spec_rejects_two_part_semver()
 fn resolve_latest_alias_returns_latest()
 {
   // "latest" has empty value → resolves to the alias name itself
-  assert_eq!( resolve_version_spec( "latest" ), "latest" );
+  assert_eq!( resolve_version_spec( "latest", &[] ), "latest" );
 }
 
 #[test]
 fn resolve_stable_alias_returns_semver()
 {
-  let resolved = resolve_version_spec( "stable" );
+  let resolved = resolve_version_spec( "stable", &[] );
   // Must be a non-empty semver, not the literal "stable"
   assert_ne!( resolved, "stable", "stable must resolve to a pinned semver" );
   assert!(
@@ -161,7 +161,7 @@ fn resolve_stable_alias_returns_semver()
 fn resolve_unknown_spec_passthrough()
 {
   // Unknown specs pass through unchanged (callers validate separately)
-  assert_eq!( resolve_version_spec( "9.9.9" ), "9.9.9" );
+  assert_eq!( resolve_version_spec( "9.9.9", &[] ), "9.9.9" );
 }
 
 // ─── VERSION_ALIASES table ────────────────────────────────────────────────────

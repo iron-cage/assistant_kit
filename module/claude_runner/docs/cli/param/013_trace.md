@@ -25,7 +25,7 @@ clr --trace "Fix bug"
 # Stderr: export CLAUDE_CODE_AUTO_CONTINUE=true
 # Stderr: export CLAUDE_CODE_TELEMETRY=false
 # Stderr: (blank line)
-# Stderr: env -u CLAUDECODE claude --dangerously-skip-permissions -c --print "Fix bug\n\nultrathink"
+# Stderr: env -u CLAUDECODE -u CLAUDE_CODE_CHILD_SESSION claude --dangerously-skip-permissions --effort max --print --output-format json -c "Fix bug\n\nultrathink"
 # Then: subprocess executes normally
 
 # Trace on ask (pure alias — identical output to run)
@@ -36,7 +36,7 @@ clr ask --trace "What is X?"
 # Stderr: export CLAUDE_CODE_AUTO_CONTINUE=true
 # Stderr: export CLAUDE_CODE_TELEMETRY=false
 # Stderr: (blank line)
-# Stderr: env -u CLAUDECODE claude --dangerously-skip-permissions --effort max --print -c "What is X?\n\nultrathink"
+# Stderr: env -u CLAUDECODE -u CLAUDE_CODE_CHILD_SESSION claude --dangerously-skip-permissions --effort max --print --output-format json -c "What is X?\n\nultrathink"
 # Then: subprocess executes normally
 
 # Trace on isolated
@@ -50,7 +50,7 @@ clr isolated --creds creds.json --trace "Fix bug"
 # Stderr: export CLAUDE_CODE_AUTO_CONTINUE=true
 # Stderr: export CLAUDE_CODE_TELEMETRY=false
 # Stderr: (blank line)
-# Stderr: env -u CLAUDECODE claude --chrome --model claude-opus-4-8 --effort max --no-session-persistence --dangerously-skip-permissions --print "Fix bug"
+# Stderr: env -u CLAUDECODE -u CLAUDE_CODE_CHILD_SESSION claude --chrome --model claude-opus-4-8 --effort max --no-session-persistence --dangerously-skip-permissions --print "Fix bug"
 # Then: run_isolated() executes
 
 # Trace on refresh
@@ -64,7 +64,7 @@ clr refresh --creds creds.json --trace
 # Stderr: export CLAUDE_CODE_AUTO_CONTINUE=true
 # Stderr: export CLAUDE_CODE_TELEMETRY=false
 # Stderr: (blank line)
-# Stderr: env -u CLAUDECODE claude --model claude-sonnet-5 --no-chrome --effort low --no-session-persistence --print "."
+# Stderr: env -u CLAUDECODE -u CLAUDE_CODE_CHILD_SESSION claude --model claude-sonnet-5 --no-chrome --effort low --no-session-persistence --print "."
 # Then: run_isolated() executes
 ```
 
