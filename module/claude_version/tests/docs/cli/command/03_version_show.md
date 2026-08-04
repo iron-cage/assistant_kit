@@ -4,8 +4,8 @@
 
 - **Purpose**: Integration test cases for the `.version.show` command.
 - **Responsibility**: Test factor analysis, case index, and expected behavior for version display.
-- **In Scope**: Installed binary detection, verbosity levels, output formats.
-- **Out of Scope**: Parameter edge cases (→ `../param/`), group interactions (→ `../param_group/`).
+- **In Scope**: Installed binary detection, verbosity levels, output formats, label reverse-lookup (builtin aliases and custom markers).
+- **Out of Scope**: Parameter edge cases (→ `../param/`), group interactions (→ `../param_group/`), marker CRUD (→ `17_version_mark.md`).
 
 Integration test planning for the `.version.show` command. See [command/readme.md](../../../../docs/cli/command/readme.md) for specification.
 
@@ -44,6 +44,15 @@ Integration test planning for the `.version.show` command. See [command/readme.m
 | none | No unknown params | Happy path |
 | present | e.g. `bogus::x` | Invalid: exit 1 |
 
+### Factor 5: Label presence (custom markers and preferred alias)
+
+| Level | Description | Equivalence Class |
+|-------|-------------|-------------------|
+| no markers, no alias match | No labels resolve to installed version | No brackets in output |
+| one custom marker matches | One marker value == installed semver | One label in brackets |
+| preferred alias matches | settings.json preferred alias resolves to installed version | Builtin label in brackets |
+| multiple markers match | Two or more custom markers share the installed semver | Multiple labels in brackets |
+
 ---
 
 ## Test Matrix
@@ -65,12 +74,16 @@ Integration test planning for the `.version.show` command. See [command/readme.m
 | IT-6 | `.version.show v::3` → exit 1, out of range | N | 1 | F1=3 | new |
 | IT-7 | `.version.show bogus::x` → exit 1 | N | 1 | F4=present | new |
 | IT-8 | Output goes to stdout only; stderr is empty | P | 0 | F3=available | new |
+| IT-9 | `v::1` with matching custom marker → label in brackets | P | 0 | F1=1, F5=one_marker, F3=available | new |
+| IT-10 | `v::1` with no matching markers → no brackets in output | P | 0 | F1=1, F5=no_match, F3=available | new |
+| IT-11 | `format::json` with matching marker → `labels` array present | P | 0 | F2=json, F5=one_marker, F3=available | new |
+| IT-12 | `v::0` ignores labels entirely → bare semver, no brackets | P | 0 | F1=0, F5=one_marker, F3=available | new |
 
 ### Summary
 
-- **Total:** 8 tests (4 positive, 4 negative)
-- **Negative ratio:** 50.0% ✅ (≥40%)
-- **TC range:** IT-1 to IT-8
+- **Total:** 12 tests (8 positive, 4 negative)
+- **Negative ratio:** 33.3% ⚠️ (below 40% — label tests are all positive by nature; negative coverage already met by IT-1/5/6/7)
+- **TC range:** IT-1 to IT-12
 
 ---
 
@@ -80,7 +93,7 @@ Integration test planning for the `.version.show` command. See [command/readme.m
 
 | Exit Code | Meaning | Tests |
 |-----------|---------|-------|
-| 0 | Success | IT-2, IT-3, IT-4 |
+| 0 | Success | IT-2, IT-3, IT-4, IT-8, IT-9, IT-10, IT-11, IT-12 |
 | 1 | Invalid arguments | IT-5, IT-6, IT-7 |
 | 2 | Runtime error (claude not found) | IT-1 |
 
@@ -185,6 +198,52 @@ IT-1 is the inverse: it explicitly removes claude from PATH to force the exit 2 
 - **Then:** stdout is non-empty; stderr is empty
 - **Exit:** 0
 - **Source:** [command/readme.md](../../../../docs/cli/command/readme.md)
+
+---
+
+---
+
+### IT-9: Matching custom marker → label in brackets (v::1)
+
+- **Given:** claude installed; isolated HOME with `version-markers.json` containing `{"name":"team-pin","value":"<installed-version>","description":""}`.
+- **When:**
+  `clv .version.show v::1`
+- **Then:** Exit 0; stdout contains `[team-pin]`.
+- **Isolation:** Skipped if exit 2 (claude not installed)
+- **Exit:** 0
+
+---
+
+### IT-10: No matching markers → no brackets in output (v::1)
+
+- **Given:** claude installed; isolated HOME with no `version-markers.json` (or empty markers file).
+- **When:**
+  `clv .version.show v::1`
+- **Then:** Exit 0; stdout does NOT contain `[`.
+- **Isolation:** Skipped if exit 2
+- **Exit:** 0
+
+---
+
+### IT-11: `format::json` with matching marker → `labels` array present
+
+- **Given:** claude installed; isolated HOME with `version-markers.json` containing `{"name":"team-pin","value":"<installed-version>","description":"pinned"}`.
+- **When:**
+  `clv .version.show format::json`
+- **Then:** Exit 0; output is valid JSON; `"labels"` key is present; first element has `"name":"team-pin"` and `"kind":"custom"`.
+- **Isolation:** Skipped if exit 2
+- **Exit:** 0
+
+---
+
+### IT-12: `v::0` ignores labels → bare semver, no brackets
+
+- **Given:** claude installed; isolated HOME with `version-markers.json` containing `{"name":"team-pin","value":"<installed-version>","description":""}`.
+- **When:**
+  `clv .version.show v::0`
+- **Then:** Exit 0; stdout is a semver string only; no `[` character present.
+- **Isolation:** Skipped if exit 2
+- **Exit:** 0
 
 ---
 
