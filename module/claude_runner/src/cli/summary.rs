@@ -128,8 +128,11 @@ pub( super ) fn extract_result_text( json : &str ) -> Option< String >
 #[ must_use ]
 pub fn extract_session_id( json : &str ) -> Option< String >
 {
-  let msg_type = extract_str( json, "type" )?;
-  if msg_type != "result" { return None; }
+  // Fix(BUG-437): gate on "subtype" presence instead of "type":"result" — same class as BUG-436.
+  //   extract_str(json,"type") finds "message" in usage.iterations[].type (depth-unaware find()).
+  //   "subtype" is emitted only at the top level of CLR result envelopes.
+  // Pitfall: extract_str uses s.find() — gate only on fields exclusive to the top level.
+  if extract_str( json, "subtype" ).is_none() { return None; }
   extract_str( json, "session_id" )
 }
 
@@ -142,8 +145,11 @@ pub fn extract_session_id( json : &str ) -> Option< String >
 #[ must_use ]
 pub( super ) fn extract_structured_output( json : &str ) -> Option< String >
 {
-  let msg_type = extract_str( json, "type" )?;
-  if msg_type != "result" { return None; }
+  // Fix(BUG-438): gate on "subtype" presence instead of "type":"result" — same class as BUG-436.
+  //   extract_str(json,"type") finds "message" in usage.iterations[].type (depth-unaware find()).
+  //   "subtype" is emitted only at the top level of CLR result envelopes.
+  // Pitfall: extract_str uses s.find() — gate only on fields exclusive to the top level.
+  if extract_str( json, "subtype" ).is_none() { return None; }
   extract_json_value( json, "structured_output" )
 }
 
@@ -322,10 +328,14 @@ pub fn render_summary( json : &str, fields : Option< &str > ) -> Option< String 
   // Root cause: extract_str(json,"session_id")? returned None for 7-field envelopes
   //   where session_id is absent — restoring BUG-309 raw-JSON symptom for those versions.
   // Pitfall: any ? on an optional CLR field silently breaks all envelopes missing that field.
-  let msg_type     = extract_str( json, "type" )?;
-  if msg_type != "result" { return None; }
+  //
+  // Fix(BUG-436): gate on "subtype" instead of "type" — "type":"result" is absent in newer
+  //   SDK envelopes that include usage.iterations[].type = "message"; extract_str's depth-
+  //   unaware find() picks up the nested field. "subtype" is emitted only at the top level.
+  // Pitfall: extract_str uses s.find() — gate only on fields exclusive to the top level.
+  let subtype      = extract_str( json, "subtype" )?;
+  let msg_type     = extract_str( json, "type" ).unwrap_or_default();
   let session_id   = extract_str( json, "session_id" ).unwrap_or_default();
-  let subtype      = extract_str( json, "subtype" ).unwrap_or_default();
   let is_error     = extract_bool( json, "is_error" ).unwrap_or( false );
   let result       = extract_str( json, "result" ).unwrap_or_default();
 
