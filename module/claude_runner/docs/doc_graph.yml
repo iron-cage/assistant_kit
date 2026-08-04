@@ -1,10 +1,10 @@
 meta:
   description: Cross-reference graph for design doc instances in claude_runner (feature, invariant, api entities). CLI reference docs (cli/) are out of scope.
-  node_count: 16
-  edge_count: 42
+  node_count: 19
+  edge_count: 52
   component_count: 1
   generated: 2026-05-16
-  last_reviewed: 2026-07-04
+  last_reviewed: 2026-08-04
 
 nodes:
   - id: feature/001
@@ -62,6 +62,11 @@ nodes:
     label: Container-Only Test Execution
     entity: invariant
 
+  - id: invariant/011
+    file: invariant/011_session_source_isolation.md
+    label: Session Source Isolation
+    entity: invariant
+
   - id: feature/002
     file: feature/002_journaling_integration.md
     label: Journaling Integration
@@ -77,9 +82,19 @@ nodes:
     label: JSON Config Loading
     entity: feature
 
+  - id: feature/005
+    file: feature/005_session_path_resolution.md
+    label: Session Path Resolution
+    entity: feature
+
   - id: feature/006
     file: feature/006_cli_design.md
     label: CLI Design
+    entity: feature
+
+  - id: feature/007
+    file: feature/007_yaml_global_config.md
+    label: YAML Global Config
     entity: feature
 
   - id: api/001
@@ -256,10 +271,50 @@ edges:
     to: feature/004
     via: features
 
+  - from: feature/007
+    to: feature/004
+    via: features
+
+  - from: feature/004
+    to: feature/007
+    via: features
+
+  - from: feature/007
+    to: feature/003
+    via: features
+
+  - from: feature/003
+    to: feature/007
+    via: features
+
+  - from: feature/001
+    to: feature/005
+    via: features
+
+  - from: feature/005
+    to: feature/001
+    via: features
+
+  - from: feature/005
+    to: invariant/011
+    via: invariants
+
+  - from: invariant/011
+    to: feature/005
+    via: features
+
+  - from: feature/001
+    to: feature/007
+    via: features
+
+  - from: feature/007
+    to: feature/001
+    via: features
+
 components:
   - id: 1
     label: Main corpus
-    size: 16
+    size: 19
     isolated: false
     nodes:
       - feature/001
@@ -274,9 +329,12 @@ components:
       - invariant/008
       - invariant/009
       - invariant/010
+      - invariant/011
       - feature/003
       - feature/004
+      - feature/005
       - feature/006
+      - feature/007
       - api/001
 
 dangling_refs: []
