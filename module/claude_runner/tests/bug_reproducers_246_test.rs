@@ -104,7 +104,7 @@ fn dry_run_keep_claudecode_omits_env_prefix()
   );
 }
 
-/// CLAUDE_CODE_CHILD_SESSION is always stripped — it must appear in dry-run output by default.
+/// `CLAUDE_CODE_CHILD_SESSION` is always stripped — it must appear in dry-run output by default.
 ///
 /// The marker causes Claude Code to skip transcript saving when inherited. `clr` is always
 /// a top-level launcher and must strip it unconditionally so the spawned Claude session
@@ -121,7 +121,7 @@ fn dry_run_always_shows_child_session_removal()
   );
 }
 
-/// CLAUDE_CODE_CHILD_SESSION is still stripped even when `--keep-claudecode` is passed.
+/// `CLAUDE_CODE_CHILD_SESSION` is still stripped even when `--keep-claudecode` is passed.
 ///
 /// The two removals are independent: `--keep-claudecode` only controls `CLAUDECODE`;
 /// `CLAUDE_CODE_CHILD_SESSION` is always unconditionally stripped.
