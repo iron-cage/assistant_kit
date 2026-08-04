@@ -47,7 +47,7 @@ IN-7 is a unit test in `tests/summary_unit_test.rs` calling `render_summary()` d
 | IN-6 | `extract_session_id_returns_none_for_unterminated_session_id` | `tests/summary_unit_test.rs` | ✅ |
 | IN-7 | `render_summary_result_field_unterminated_falls_back_to_empty` | `tests/summary_unit_test.rs` | ✅ |
 
-**Note on implementation status:** all 7 cases are now `✅` — BUG-394 and BUG-395 were both fixed and manually verified on 2026-07-07 (1154/1154 crate tests passed, `./verb/lint` clean; see both bugs' `## Verification Record` in `bug/closed/`).
+**Note on implementation status:** all 7 cases are now `✅` — BUG-394 and BUG-395 were both fixed and manually verified on 2026-07-07 (1154/1154 crate tests passed, `./verb/lint` clean; see both bugs' `## Verification Record` in `bug/completed/`).
 
 **Note on IN-2's actual file:** implemented in `tests/ps_command_test.rs` (as `it_37_...`), not `tests/concurrency_gate_test.rs` as originally planned in the Architectural Constraint below. `it_10_gate_file_present_shows_queued_table` in `ps_command_test.rs` already establishes a simpler, non-flaky pattern for exercising `build_queued_table()`/`parse_json_str()` — writing a synthetic `{live_pid}.json` gate-state file directly (using the test process's own PID so the `/proc/{pid}` liveness filter passes trivially) and invoking `clr ps` via `run_cli_with_env()` — rather than spawning and racing real blocked/occupier `clr` subprocesses as T07/T13 do. Both approaches exercise the identical `parse_json_str()` read path; the simpler one was chosen to avoid the 500ms-sleep timing dependency T07/T13 carry for no added coverage value here.
 
