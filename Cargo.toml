@@ -193,12 +193,12 @@ version = "^0.41"
 default-features = false
 
 [workspace.dependencies.unilang]
-version = "^0.57"
+version = "^0.58"
 default-features = false
 
 [workspace.dependencies.cli_fmt]
-# Published companion crate (crates.io: cli_fmt ^0.11). Path removed — use registry version.
-version = "^0.11"
+# Published companion crate (crates.io: cli_fmt ^0.13). Path removed — use registry version.
+version = "^0.13"
 default-features = false
 
 [workspace.dependencies.data_fmt]

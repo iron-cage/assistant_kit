@@ -38,6 +38,8 @@
 
 **Help listing:** `.help` displays commands grouped by functional category (version management, settings & config, process lifecycle, status), all shared parameters, and usage examples. Empty argv also displays help and exits 0. `.help` anywhere in argv triggers help output. Rendered via `cli_fmt::CliHelpTemplate` — intercepted before the unilang pipeline.
 
+**Per-command help:** `.command.help` commands (e.g., `.version.list.help`) are intercepted by the adapter via a `HelpMode` enum before entering the unilang pipeline. The adapter returns `HelpMode::Command("<base_command>")` for any argv[0] ending with `.help` that is not `.help` itself. The caller dispatches to `print_command_help()`, which reads `ArgumentDefinition` metadata (description via `with_description()`, default via `with_optional(Some("…"))`) and renders via `cli_fmt::CliHelpTemplate` — identical style to global help (aligned columns, ANSI color, defaults shown in-column as `(default: X)`). D9.
+
 **Binary names:** `claude_version` (primary binary) and `clv` (alias binary). Both delegate to `run_cli()`.
 
 **`#[inline]` requirement:** Workspace lint `missing_inline_in_public_items = "warn"` with `-D warnings` requires `#[inline]` on every `pub fn`, `pub` method, and trait impl (`Display::fmt`, `Default::default`).
@@ -63,14 +65,17 @@
 | D6 | docs/cli/ with three-layer structure | Documentation |
 | D7 | Unilang re-adopted for per-command validation | Pipeline |
 | D8 | Last occurrence wins for repeated parameters | Parameter Conventions |
+| D9 | Per-command help routed via HelpMode adapter | Pipeline |
 
-Decisions by concern area: **Syntax**: D1, D2 | **Pipeline**: D4, D5, D7 | **Parameter Conventions**: D3, D8 | **Documentation**: D6
+Decisions by concern area: **Syntax**: D1, D2 | **Pipeline**: D4, D5, D7, D9 | **Parameter Conventions**: D3, D8 | **Documentation**: D6
 
 **D2 — Two-level subcommands:** Commands use at most two dot-separated segments (`.version.show`, `.settings.get`). Single-segment commands (`.status`, `.processes`, `.help`) are also supported.
 
 **D6 — docs/cli/ with three-layer structure:** A proper three-layer reference (`command/`, `param/`, `type/`) with parameter groups, dictionary, and workflows — all in unilang syntax.
 
 **D7 — Unilang re-adopted for per-command validation:** `unilang` was added back to Cargo.toml after the hand-rolled parser proved inadequate for per-command parameter scoping. The unilang SemanticAnalyzer rejects unknown parameters per command (not globally), which prevents silent acceptance of params on wrong commands (e.g., `format::` on `.version.guard`). Consistent error message formatting across all 12 commands is a further benefit. The custom `adapter.rs` layer retains full control over `claude_version`-specific normalisation without forking unilang.
+
+**D9 — Per-command help routed via HelpMode adapter:** `argv_to_unilang_tokens` returns a `HelpMode` enum (`None` / `Global` / `Command(String)`) instead of a bool. When `argv[0]` ends with `.help` and is not `.help` itself (e.g., `.version.list.help`), the adapter returns `(vec![], HelpMode::Command(".version.list"))` — the token list is empty and the unilang pipeline is never entered. `run_cli()` matches on `HelpMode::Command(name)`: it builds the registry, looks up the `CommandDefinition`, and dispatches to `print_command_help()` which builds `CliHelpData` from `ArgumentDefinition` metadata (descriptions and defaults) and renders via `CliHelpTemplate`.
 
 ### Sources
 

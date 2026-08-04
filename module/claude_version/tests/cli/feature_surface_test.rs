@@ -121,7 +121,7 @@ fn ft005_3_last_param_wins()
 // FT-3 (feature/004_dry_run.md): tc311 (dry::1 on processes.kill)
 // FT-4 (feature/004_dry_run.md): tc303 (dry::1 force::1→dry wins)
 // FT-4 (feature/005_cli_design.md): tc093 (empty argv→help)
-// FT-5 (feature/005_cli_design.md): tc04 (help anywhere wins)
+// FT-5 (feature/005_cli_design.md): ec8_help_wins_over_params in cli_args_test/help_test.rs
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Feature 007: Params Command (FT-1 through FT-12)
