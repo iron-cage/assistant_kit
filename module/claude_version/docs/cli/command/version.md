@@ -11,7 +11,7 @@
 
 ### Command :: 3. `.version.show`
 
-Print the currently installed Claude Code version by querying `claude --version`. Use this to verify what is currently installed before upgrading or troubleshooting.
+Print the currently installed Claude Code version by querying `claude --version`, and annotate it with any named aliases or custom markers that currently point to that version. Use this to verify what is currently installed and which symbolic names (if any) refer to it.
 
 -- **Parameters:** v::, format::
 -- **Exit Codes:** 0 (success) | 2 (binary not found)
@@ -26,18 +26,34 @@ clv.version.show [v::N] [format::FMT]
 
 | Parameter | Type | Default | Required | Purpose |
 |-----------|------|---------|----------|---------|
-| [`v::`](../param/04_v.md) | [`VerbosityLevel`](../type/01_verbosity_level.md) | 1 | No | Output detail level |
+| [`v::`](../param/04_v.md) | [`VerbosityLevel`](../type/01_verbosity_level.md) | 1 | No | Output detail level (0 = version only; 1 = version + inline labels; 2 = version + labeled detail) |
 | [`format::`](../param/05_format.md) | [`OutputFormat`](../type/02_output_format.md) | text | No | Output format |
 
-**Algorithm (2 steps):**
+**Algorithm (3 steps):**
 1. Invoke `claude --version` to detect the installed binary version string.
-2. Render the version string in the requested format.
+2. Resolve labels (skipped when `v::0`): read `settings.json` to check whether the preferred alias (`stable` or `latest`) resolves to the installed version; load `~/.claude/version-markers.json` and collect all custom marker names whose `value` equals the installed semver. Both sources are read locally — no network call.
+3. Render the version string and labels in the requested format.
+
+**Output by verbosity (text format):**
+
+| `v::` | Example output |
+|-------|---------------|
+| 0 | `2.1.220` |
+| 1 (default) | `2.1.220  [stable, team-pin]` (brackets omitted when no labels match) |
+| 2 | `version: 2.1.220` / `labels:  stable (builtin), team-pin (custom)` |
+
+**Output (JSON format, v::1):**
+```json
+{"version":"2.1.220","labels":[{"name":"stable","kind":"builtin"},{"name":"team-pin","kind":"custom","description":"Team-approved baseline"}]}
+```
 
 **Examples:**
 
 ```sh
 clv.version.show
 clv.version.show format::json
+clv.version.show v::0
+clv.version.show v::2
 ```
 
 ### Referenced Formats
