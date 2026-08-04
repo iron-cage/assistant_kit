@@ -465,11 +465,13 @@ pub enum ErrorKind
 }
 
 // Priority-ordered stderr/stdout patterns → ErrorKind.
-// Both AuthError patterns appear before ApiError so all 401 responses hit AuthError:
+// All AuthError patterns appear before ApiError so all auth-failure responses hit AuthError:
 //   "Your organization..." — org-level access denial
 //   "authentication_error" — Claude CLI 401 form (Fix BUG-314: contains "API Error: "
 //     as a substring; without this pattern the catch-all fired first → misclassified
 //     as ApiError → ErrorClass::Service instead of ErrorClass::Auth)
+//   "Not logged in"        — credential-absent message (TSK-453)
+//   "Please run /login"    — credential-expired / login-required message (TSK-453)
 //
 // NOTE: E4 (Request Timed Out) retry progress uses "API Error (Request timed out.)"
 // which does NOT match "API Error: " (parenthesis, not colon-space). However, E4 hangs
@@ -490,6 +492,13 @@ const ERROR_PATTERNS : &[ ( &str, ErrorKind ) ] =
   // Pitfall: priority-ordered pattern lists silently misclassify errors that also contain
   //   a catch-all substring — every non-catch-all class needs a pattern placed before it.
   ( "authentication_error",                             ErrorKind::AuthError ),
+  // TSK-453: "Not logged in" and "Please run /login" are credential-absent or
+  // credential-expired messages emitted by claude when no valid auth token exists.
+  // Without these patterns classify_error() falls through to Unknown, suppressing
+  // the --retry-on-auth path; both are inserted before "API Error: " for the same
+  // reason as BUG-314.
+  ( "Not logged in",                                    ErrorKind::AuthError ),
+  ( "Please run /login",                                ErrorKind::AuthError ),
   ( "API Error: ",                                      ErrorKind::ApiError ),
 ];
 

@@ -81,6 +81,10 @@
 | 079_category.md | `--category` parameter spec (tools category filter) |
 | 080_value.md | `--value` parameter spec (tools single-column bare output) |
 | 081_input_format.md | `--input-format` parameter spec (Claude-Native, text/stream-json) |
+| 082_gate_poll_secs.md | `--gate-poll-secs` parameter spec (concurrency gate poll interval) |
+| 083_gate_max_attempts.md | `--gate-max-attempts` parameter spec (concurrency gate attempt limit) |
+| 084_gate_stale_secs.md | `--gate-stale-secs` parameter spec (concurrency gate staleness reclaim threshold) |
+| 085_gate_remaining_timeout_secs.md | `CLR_REMAINING_TIMEOUT_SECS` env-var spec (gate remaining timeout budget clamp) |
 
 ### Retired Parameter IDs
 
@@ -93,7 +97,7 @@ These parameter IDs exist in the sequence but have no corresponding file. The ID
 | 038 | Retired — parameter removed; gap predates current tracking |
 | 039 | Retired — parameter removed; gap predates current tracking |
 
-### All Parameters (77 total)
+### All Parameters (81 total)
 
 | # | Parameter | Type | Default | Valid Values | Description | Used In |
 |---|-----------|------|---------|--------------|-------------|---------|
@@ -174,10 +178,14 @@ These parameter IDs exist in the sequence but have no corresponding file. The ID
 | 79 | `--category` | string | — | Any substring | Filter `clr tools` by category (case-insensitive substring) | 1 cmd |
 | 80 | `--value` | string | — | `idx`/`name`/`category`/`desc` | Print only the named column's value for each matching tool, one per line | 1 cmd |
 | 81 | `--input-format` | enum | — | `text`/`stream-json` | Input format for Claude Code subprocess stdin | 2 cmds |
+| 82 | `--gate-poll-secs` | u64 | 30 | Positive integer | Seconds between gate admission attempts; `run`/`ask` full 5-tier; `isolated` env-var-only | 2 cmds |
+| 83 | `--gate-max-attempts` | u32 | 1000 | Positive integer | Admission attempt limit before gate exhaustion; `run`/`ask` full 5-tier; `isolated` env-var-only | 2 cmds |
+| 84 | `--gate-stale-secs` | u64 | absent | Positive integer | Staleness threshold (sec) for reclaiming a live-but-stalled slot; absent = feature off; `run`/`ask` full 5-tier; `isolated` env-var-only | 2 cmds |
+| 85 | `CLR_REMAINING_TIMEOUT_SECS` | u64 | absent | Positive integer | Remaining external timeout budget (sec); clamps effective gate attempt count; env-var-only (no CLI flag) | all cmds |
 
-**Total:** 75 parameters (param 12 deprecated → replaced by 74; net count unchanged for that swap; params 75–77 added; params 78–80 added for the `clr tools` filter/projection redesign)
+**Total:** 81 parameters (param 12 deprecated → replaced by 74; net count unchanged for that swap; params 75–77 added; params 78–80 added for the `clr tools` filter/projection redesign; params 81–85 added for `--input-format` and gate tuning knobs)
 
-**Groups:** Parameters 2–4, 17, 23, 24, 61–67, and 81 form [Claude-Native Flags](../param_group/01_claude_native_flags.md). Parameters 5–11, 13, 14, 18, 21, 22, 25–36, 40–57, 70–76 form [Runner Control](../param_group/02_runner_control.md). Parameters 15–16 form [System Prompt](../param_group/03_system_prompt.md). Parameters 19–20 form [Credential Operations](../param_group/04_credential_operations.md). Parameters 58–60, 68–69 form [Session Listing](../param_group/05_session_listing.md). Parameter 77 (and `--timeout`, `--trace`, `--dry-run`, `--journal`, `--journal-dir`) form [Running Commands](../param_group/06_running_commands.md). Parameters 78–80 (plus shared members 59 `--columns` and 69 `--inspect`) form [Tool Listing](../param_group/07_tool_listing.md).
+**Groups:** Parameters 2–4, 17, 23, 24, 61–67, and 81 form [Claude-Native Flags](../param_group/01_claude_native_flags.md). Parameters 5–11, 13, 14, 18, 21, 22, 25–36, 40–57, 70–76, 82–85 form [Runner Control](../param_group/02_runner_control.md). Parameters 15–16 form [System Prompt](../param_group/03_system_prompt.md). Parameters 19–20 form [Credential Operations](../param_group/04_credential_operations.md). Parameters 58–60, 68–69 form [Session Listing](../param_group/05_session_listing.md). Parameter 77 (and `--timeout`, `--trace`, `--dry-run`, `--journal`, `--journal-dir`) form [Running Commands](../param_group/06_running_commands.md). Parameters 78–80 (plus shared members 59 `--columns` and 69 `--inspect`) form [Tool Listing](../param_group/07_tool_listing.md).
 
 ### Navigation
 
@@ -258,6 +266,10 @@ These parameter IDs exist in the sequence but have no corresponding file. The ID
 - [`--category`](079_category.md)
 - [`--value`](080_value.md)
 - [`--input-format`](081_input_format.md)
+- [`--gate-poll-secs`](082_gate_poll_secs.md)
+- [`--gate-max-attempts`](083_gate_max_attempts.md)
+- [`--gate-stale-secs`](084_gate_stale_secs.md)
+- [`CLR_REMAINING_TIMEOUT_SECS`](085_gate_remaining_timeout_secs.md)
 
 ### Quick Reference
 

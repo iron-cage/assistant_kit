@@ -79,6 +79,20 @@ pub fn gate_stale_secs_from( raw : Option< &str > ) -> Option< u64 >
   raw.and_then( | s | s.parse().ok() )
 }
 
+/// Resolve the remaining external timeout budget (seconds) from a raw env var string.
+/// Pure — no I/O. `None` (unset or non-numeric) means no external budget is imposed —
+/// polling is limited only by `CLR_GATE_MAX_ATTEMPTS`. Unlike the other gate knobs,
+/// this value is env-var-only (no CLI flag, no config-file tier): it is set by a
+/// wrapping job runner (e.g. `wplan_executor`) before spawning `clr`, not by the
+/// operator configuring `clr` itself. See [`wait_for_session_slot`]'s `Fix(BUG-423)`
+/// note for the full semantics and clamping behaviour.
+#[ inline ]
+#[ must_use ]
+pub fn gate_remaining_timeout_secs_from( raw : Option< &str > ) -> Option< u64 >
+{
+  raw.and_then( | s | s.parse().ok() )
+}
+
 // Fix(BUG-400): staleness threshold for reclaiming a live-but-stalled slot owner.
 //
 // Root cause: acquire_slot()'s reclaim-eligibility test was the single binary
@@ -496,6 +510,50 @@ fn json_escape_str( s : &str ) -> String
   out
 }
 
+fn effective_gate_attempts( max_attempts : u32, poll_secs : u64 ) -> ( u32, bool )
+{
+  // Fix(BUG-423): clamp effective_max_attempts to the remaining external timeout budget
+  // so the gate does not outlive a wrapping job-runner deadline (e.g. wplan_executor).
+  // Root cause: wait_for_session_slot() had no knowledge of any external timeout budget —
+  // it polled to CLR_GATE_MAX_ATTEMPTS regardless of how much wall-clock time the
+  // surrounding job was permitted to consume, causing gate-wait alone to exhaust
+  // multi-hour job timeouts (observed: 258 attempts × 30s = 7740s > 7200s budget).
+  // Pitfall: apply .max(1) so at least one admission attempt is always made before
+  // declaring budget exhausted — a remaining budget below one poll interval must not
+  // silently bypass the gate check entirely.
+  let budget = gate_remaining_timeout_secs_from(
+    std::env::var( "CLR_REMAINING_TIMEOUT_SECS" ).ok().as_deref()
+  ).map( | remaining | {
+    u32::try_from( remaining / poll_secs ).unwrap_or( u32::MAX ).max( 1 )
+  } );
+  let effective = match budget {
+    Some( b ) if b < max_attempts => b,
+    _                             => max_attempts,
+  };
+  ( effective, effective < max_attempts )
+}
+
+fn emit_gate_wait_event(
+  gate_emitted : bool,
+  wait_start   : &std::time::Instant,
+  journal      : Option< &JournalWriter >,
+  max          : u32,
+  attempt      : u32,
+)
+{
+  if !gate_emitted { return; }
+  let wait_ms = u64::try_from( wait_start.elapsed().as_millis() ).unwrap_or( u64::MAX );
+  if let Some( w ) = journal
+  {
+    let mut ev              = EventRecord::new( EventType::GateWait );
+    ev.fields.max_sessions  = Some( max );
+    ev.fields.wait_ms       = Some( wait_ms );
+    ev.fields.gate_attempts = Some( attempt.saturating_sub( 1 ) );
+    ev.fields.gate_outcome  = Some( "acquired".to_string() );
+    let _ = w.append( &ev );
+  }
+}
+
 /// Block until fewer than `max` `claude` sessions are running, or until `max_attempts`
 /// is exhausted.  `max == 0` means unlimited — returns immediately without checking.
 ///
@@ -540,6 +598,8 @@ pub( super ) fn wait_for_session_slot(
     std::process::exit( 1 );
   }
 
+  let ( effective_max_attempts, budget_is_limiting ) = effective_gate_attempts( max_attempts, poll_secs );
+
   let poll = core::time::Duration::from_secs( poll_secs );
 
   // Gate state file — best-effort; I/O failures must not abort the caller.
@@ -573,7 +633,7 @@ pub( super ) fn wait_for_session_slot(
   // on_exhausted() either returns (retries the sequence) or exits.
   loop
   {
-    for attempt in 1..=max_attempts
+    for attempt in 1..=effective_max_attempts
     {
       // Print-mode only: interactive sessions never contend for a print-mode slot.
       let count = find_claude_processes()
@@ -581,6 +641,13 @@ pub( super ) fn wait_for_session_slot(
         .filter( | p | super::ps::classify_mode( &p.args ) == "print" )
         .count();
       let count_u32 = u32::try_from( count ).unwrap_or( u32::MAX );
+      // BUG-422: this count can transiently over-read by 1 due to a fork→exec
+      // race — a `claude --print` child briefly inherits the parent's cmdline
+      // before exec() replaces it; a concurrent /proc scan counts both parent
+      // and child, yielding count+1.  Impact is bounded: at most one wasted
+      // 30s poll cycle.  Real admission is protected by the slot-file CAS
+      // below (acquire_slot()), so no over-admission is possible.  The display
+      // count is clamped to max at the eprintln! site further below.
       // Fix(BUG-387): admission now additionally requires winning the atomic
       // reservation at index `count_u32` — see slot_path() for why the index
       // is derived from this same count read instead of a separate counter.
@@ -622,24 +689,12 @@ pub( super ) fn wait_for_session_slot(
       if let Some( Ok( () ) ) = claim
       {
         // Emit GateWait event if we actually waited at least one poll cycle.
-        if gate_emitted
-        {
-          let wait_ms = u64::try_from( wait_start.elapsed().as_millis() ).unwrap_or( u64::MAX );
-          if let Some( w ) = journal
-          {
-            let mut ev              = EventRecord::new( EventType::GateWait );
-            ev.fields.max_sessions  = Some( max );
-            ev.fields.wait_ms       = Some( wait_ms );
-            ev.fields.gate_attempts = Some( attempt.saturating_sub( 1 ) );
-            ev.fields.gate_outcome  = Some( "acquired".to_string() );
-            let _ = w.append( &ev );
-          }
-        }
+        emit_gate_wait_event( gate_emitted, &wait_start, journal, max, attempt );
         return; // _guard.drop() removes only the {pid}.json telemetry file —
                 // the slot reservation from acquire_slot() is deliberately
                 // left in place for the rest of this session; see slot_path().
       }
-      if attempt == max_attempts
+      if attempt == effective_max_attempts
       {
         // Fix(BUG-298): add [Runner] prefix + correct message text to match 14_error_class.md.
         // Root cause: gate-timeout message lacked [Runner] class prefix; display showed no class label.
@@ -654,9 +709,18 @@ pub( super ) fn wait_for_session_slot(
         // "active sessions" — suggesting it counted all sessions (total occupancy).
         // Pitfall: "print sessions" must not be changed back to "active sessions";
         // t09/t29/t31/t16 timeout assertions guard the exact substring.
-        let e = std::io::Error::other(
-          format!( "session gate timed out — {count} print sessions, max-sessions={max}" )
-        );
+        let e = if budget_is_limiting {
+          // CLR_REMAINING_TIMEOUT_SECS budget exhausted: emit a distinct diagnostic
+          // so operators can identify gate-wait budget exhaustion in job stderr output
+          // without counting attempt lines manually (see Fix(BUG-423) above).
+          std::io::Error::other(
+            format!( "gate-wait budget exhausted — {count} print sessions, max-sessions={max}, budget={effective_max_attempts} attempt(s)" )
+          )
+        } else {
+          std::io::Error::other(
+            format!( "session gate timed out — {count} print sessions, max-sessions={max}" )
+          )
+        };
         on_exhausted( &e );
         break; // non-exhaustion path: restart outer poll loop
       }
@@ -689,11 +753,12 @@ pub( super ) fn wait_for_session_slot(
         // session already owns this index) never contends with anything at
         // all, and calling it a "race" actively misleads an operator into
         // expecting imminent, capacity-unrelated resolution that may not
-        // arrive until that specific session ends. The cause suffix is
-        // appended AFTER the pre-existing "active; waiting" text, not spliced
-        // inside it — every prior assertion pattern-matching that substring
-        // (5 sites here: T01/T04 positive, T02/T03/T06 negative-absence; 5 more
-        // positive sites in config_file_test.rs) depends on it staying intact.
+        // arrive until that specific session ends. The cause is placed in
+        // the `(reason: ...)` trailer of the TSK-452 structured line
+        // `"gate-wait  active=X/Y attempt=A/MA wait=Ss (reason: {cause})"`.
+        // T01/T04/T27/T32 assert "gate-wait  active="; T02/T03/T06/T28
+        // assert absence of "gate-wait"; 5 positive sites in config_file_test.rs
+        // assert "gate-wait  active=" anchored to the count ratio.
         let cause = match claim
         {
           Some( Err( SlotDenialCause::HeldByLive ) )        => "slot held by another session",
@@ -704,13 +769,23 @@ pub( super ) fn wait_for_session_slot(
           // than duplicating it (clippy::match_same_arms).
           None | Some( Ok( () ) )                           => "at capacity",
         };
+        // Fix(BUG-422): clamp display count to max — fork→exec race can produce
+        // count > max transiently (see comment at count computation site above).
+        // Root cause: /proc scan counts a forked-but-not-yet-exec'd child that
+        // briefly inherits the parent's claude --print cmdline; yields count+1.
+        // Pitfall: clamp applies to display only — has_capacity and acquire_slot()
+        // are intentionally left unchanged; CAS provides the real admission gate.
+        let display_count = count_u32.min( max );
         // Fix(BUG-431): gate progress message omitted the "print" qualifier.
         // Root cause: `count` is filtered to print-mode processes only, but the message
         // said "sessions active" — indistinguishable from a total count.
-        // Pitfall: any rewrite of this message must preserve the "print sessions active"
-        // phrasing; `t_gate_progress_message_names_print_sessions` guards the exact substring.
+        // TSK-452: format changed to structured timestamp-prefixed line; the mode scope
+        // is preserved — `display_count` counts print-mode processes only (same count
+        // as before); `t_gate_progress_message_names_print_sessions` now guards
+        // the `"gate-wait  active="` label rather than the old `"print sessions active"` phrase.
         eprintln!(
-          "Info: {count}/{max} print sessions active; waiting {poll_secs}s for a slot... (attempt {attempt}/{max_attempts}) [{cause}]"
+          "{}gate-wait  active={display_count}/{max} attempt={attempt}/{effective_max_attempts} wait={poll_secs}s (reason: {cause})",
+          claude_core::trace_ts()
         );
       }
       gate_emitted = true;

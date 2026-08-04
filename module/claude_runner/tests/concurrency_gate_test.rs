@@ -36,6 +36,8 @@
 //! | T30 | `--gate-max-attempts abc` CLI flag → immediate parse-error exit before any subprocess spawn or gate wait, distinct from the env var's silent fallback (T10/T11) (hardening fix 3, CLI-flags-hard-error contract) | — |
 //! | T31 | `clr isolated`, `CLR_GATE_POLL_SECS=1 CLR_GATE_MAX_ATTEMPTS=2` env vars, 1 permanent occupier, `--max-sessions 1` → isolated's one-shot env-var-only resolution changes its real gate timing (hardening fix 3, isolated's env-var-only tier) | — |
 //! | T32 | `clr isolated`, 3 print-mode processes active, `--args-file` JSON `{"max-sessions": 3}` (no CLI flag) → gate triggers and reports 3/3, proving `apply_json_config_isolated()`'s `"max-sessions"` arm actually changes isolated's resolved gate limit, not just its unused-default no-op | — |
+//! | T33 | 1 live occupier in `CLR_PROC_DIR`, `--max-sessions 1` → second invocation observes `count_u32 >= max` (`has_capacity=false`) → stderr names `[at capacity]`, NOT `[slot held by another session]` or `[lost reservation race]` (INV-013 IN-4) | — |
+//! | T34 | same fixture as T33 → diagnostic line preserves `"gate-wait  active="` prefix (TSK-452 format, replaces pre-TSK-452 `"active; waiting"`) when cause suffix is appended (INV-013 IN-5) | — |
 //!
 //! T05 (`clr --help` shows `default: 6`) is covered by
 //! `param_edge_cases_test.rs::ec9_max_sessions_help_shows_default_six`.
@@ -233,9 +235,9 @@ fn t01_gate_triggers_at_six_print_mode_processes()
   );
   let stderr = String::from_utf8_lossy( &out.stderr );
   assert!(
-    // Anchored on "Info: " so a wrong larger count (e.g. "Info: 16/6") can never
+    // Anchored on "active=" so a wrong larger count (e.g. "active=16/6") can never
     // false-positive match via the "6/6" tail — AF1.
-    stderr.contains( "Info: 6/6 print sessions active; waiting" ),
+    stderr.contains( "gate-wait  active=6/6" ),
     "T01: gate must report 6/6 print-mode sessions active. Got:\n{stderr}"
   );
 }
@@ -277,7 +279,7 @@ fn t02_gate_does_not_trigger_below_six_print_mode_processes()
   );
   let stderr = String::from_utf8_lossy( &out.stderr );
   assert!(
-    !stderr.contains( "sessions active; waiting" ),
+    !stderr.contains( "gate-wait" ),
     "T02: gate must not trigger below the limit. Got:\n{stderr}"
   );
 }
@@ -337,7 +339,7 @@ fn t03_interactive_invocation_bypasses_gate_with_zero_wait()
   );
   let stderr = String::from_utf8_lossy( &out.stderr );
   assert!(
-    !stderr.contains( "sessions active; waiting" ),
+    !stderr.contains( "gate-wait" ),
     "T03 (AF1): gate must never be entered for an interactive invocation. Got:\n{stderr}"
   );
 }
@@ -390,9 +392,9 @@ fn t04_gate_counts_print_mode_only_excludes_interactive()
   );
   let stderr = String::from_utf8_lossy( &out.stderr );
   assert!(
-    // Anchored on "Info: " — "15/5" (unfiltered count) contains "5/5" as a bare
-    // substring, which would false-positive an unanchored check. AF1.
-    stderr.contains( "Info: 5/5 print sessions active; waiting" ),
+    // Anchored on "active=" — "active=15/5" (unfiltered count) would not match
+    // "active=5/5" as a bare substring (the `=` anchor prevents false-positives). AF1.
+    stderr.contains( "gate-wait  active=5/5" ),
     "T04: gate must count print-mode processes only (5/5, not 15/5). Got:\n{stderr}"
   );
 }
@@ -430,7 +432,7 @@ fn t06_max_sessions_zero_disables_gate_regardless_of_count()
   );
   let stderr = String::from_utf8_lossy( &out.stderr );
   assert!(
-    !stderr.contains( "sessions active; waiting" ),
+    !stderr.contains( "gate-wait" ),
     "T06: --max-sessions 0 must disable the gate. Got:\n{stderr}"
   );
 }
@@ -783,7 +785,7 @@ fn t10_invalid_poll_secs_env_var_falls_back_to_default()
     "T10: exit must be 1 once the gate exhausts. stderr: {stderr}"
   );
   assert!(
-    stderr.contains( "waiting 30s for a slot" ),
+    stderr.contains( "wait=30s" ),
     "T10: invalid CLR_GATE_POLL_SECS must fall back to the 30s default. Got:\n{stderr}"
   );
   assert!(
@@ -2449,7 +2451,7 @@ fn t27_isolated_gate_triggers_at_capacity()
   );
   let stderr = String::from_utf8_lossy( &out.stderr );
   assert!(
-    stderr.contains( "Info: 3/3 print sessions active; waiting" ),
+    stderr.contains( "gate-wait  active=3/3" ),
     "T27: isolated must participate in the gate and report 3/3 active. Got:\n{stderr}"
   );
 }
@@ -2491,7 +2493,7 @@ fn t28_isolated_gate_does_not_trigger_below_capacity()
   );
   let stderr = String::from_utf8_lossy( &out.stderr );
   assert!(
-    !stderr.contains( "sessions active; waiting" ),
+    !stderr.contains( "gate-wait" ),
     "T28: gate must not trigger below the limit for isolated. Got:\n{stderr}"
   );
 }
@@ -2700,7 +2702,7 @@ fn t32_isolated_max_sessions_json_config_changes_real_gate_limit()
   );
   let stderr = String::from_utf8_lossy( &out.stderr );
   assert!(
-    stderr.contains( "Info: 3/3 print sessions active; waiting" ),
+    stderr.contains( "gate-wait  active=3/3" ),
     "T32: --args-file \"max-sessions\": 3 must set the real gate limit to 3, proving the JSON \
      key tier is functional for isolated (default is 6, which would never trigger at 3 active). \
      Got:\n{stderr}"
@@ -2734,14 +2736,16 @@ fn t32_isolated_max_sessions_json_config_changes_real_gate_limit()
 ///
 /// # Prevention
 ///
-/// This test asserts `stderr.contains("print sessions active")`.  Any future edit
-/// to the progress message format must preserve that substring.
+/// This test now asserts `stderr.contains("gate-wait  active=")` (TSK-452 updated the
+/// format to a structured timestamp-prefixed line; the print-mode scope is preserved
+/// via the same `display_count` which counts only print-mode processes). Any future
+/// edit to the progress message format must preserve the `"gate-wait  active="` label.
 ///
 /// # Pitfall
 ///
-/// The four negative assertions `!stderr.contains("sessions active; waiting")` remain
-/// valid after the fix because `"print sessions active; waiting"` still contains
-/// `"sessions active; waiting"` as a substring — the negative guards are not broken.
+/// The four negative assertions now check `!stderr.contains("gate-wait")` — the old
+/// `"sessions active; waiting"` substring no longer appears in any gate progress line
+/// after TSK-452's format change.
 #[ test ]
 fn t_gate_progress_message_names_print_sessions()
 {
@@ -2768,7 +2772,1198 @@ fn t_gate_progress_message_names_print_sessions()
 
   let stderr = String::from_utf8_lossy( &out.stderr );
   assert!(
-    stderr.contains( "print sessions active" ),
-    "BUG-431 regression: gate progress message must include 'print sessions active'. Got:\n{stderr}"
+    stderr.contains( "gate-wait  active=" ),
+    "BUG-431 regression (TSK-452 format): gate progress message must include 'gate-wait  active='. Got:\n{stderr}"
+  );
+}
+
+// ── T33: genuine exhaustion names "[at capacity]" (INV-013 IN-4) ─────────────
+
+/// T33 (INV-013 IN-4): one long-running occupier holds the sole slot
+/// (`--max-sessions 1`), so a second invocation always observes
+/// `count_u32 >= max` (`has_capacity=false`) without ever attempting
+/// to acquire any slot index. Captures stderr and asserts it names the
+/// cause as `[at capacity]`, NOT `[slot held by another session]` (which
+/// requires `has_capacity=true` and a live slot-file holder) or
+/// `[lost reservation race]` (which requires `has_capacity=true` and a
+/// dead owner with a contested reclaim ticket).
+///
+/// ## Root Cause (INV-013 motivation)
+///
+/// Prior to this test the `has_capacity=false` branch's cause label had
+/// zero focused positive-assertion coverage. T15/T16 exercise only the
+/// `has_capacity=true` branches; T09 captures the final exhaustion error
+/// line rather than the per-attempt diagnostic. The `[at capacity]` label
+/// was therefore unverified reachable from any test.
+///
+/// ## Why Not Caught
+///
+/// T01/T04 positively assert `"gate-wait  active="` (TSK-452) but run with
+/// `count_u32 < max`, so the `[at capacity]` suffix is never emitted
+/// in their fixture and neither can catch a future regression that
+/// routes the exhaustion path through the wrong cause label.
+///
+/// ## Fix Applied
+///
+/// No production code change — coverage-only addition confirming
+/// `wait_for_session_slot()`'s `[at capacity]` suffix is reachable
+/// and correct for the `has_capacity=false` path.
+///
+/// ## Prevention
+///
+/// Assert `stderr.contains("at capacity")` plus the two negative guards
+/// so any future refactor that routes exhaustion through the wrong label
+/// fails here explicitly rather than silently.
+///
+/// ## Pitfall
+///
+/// `count_u32 >= max` requires a LIVE counted occupier in `CLR_PROC_DIR`,
+/// not just a pre-seeded slot file: `count_u32` is derived from the proc
+/// scan, not slot files. A dead occupier in a slot file with an empty
+/// `CLR_PROC_DIR` yields `count_u32 = 0 < max = 1`, routing through the
+/// `has_capacity=true` reclaim path instead — T16's scenario, not this one.
+// test_kind: invariant_guard(INV-013)
+#[ test ]
+fn t33_slot_wait_message_names_at_capacity_for_exhaustion()
+{
+  let ( _occupier_dir, occupier_path ) = fake_claude_binary_dir();
+  // One live occupier whose PID appears in CLR_PROC_DIR → count_u32 = 1.
+  // 60s lifetime is well above this test's ~3s window (2 attempts × 1s).
+  let mut occupier = spawn_print_claude_for( &occupier_path, 60 );
+  let proc = make_proc_dir( &[ occupier.id() ] );
+
+  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
+  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
+
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = Command::new( bin )
+    .args( [ "-p", "--max-sessions", "1", "--retry-override", "0", "--journal", "off", "x" ] )
+    .env( "PATH", &script_path )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
+    .env( "CLR_GATE_DIR", gate_dir.path() )
+    .env( "CLR_GATE_POLL_SECS", "1" )
+    .env( "CLR_GATE_MAX_ATTEMPTS", "2" )
+    .output()
+    .expect( "invoke clr" );
+
+  let _ = occupier.kill();
+  let _ = occupier.wait();
+
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert!(
+    stderr.contains( "at capacity" ),
+    "T33 (INV-013 IN-4): exhaustion branch must name cause as \"at capacity\" when \
+     count_u32 >= max. Got:\n{stderr}"
+  );
+  assert!(
+    !stderr.contains( "slot held by another session" ),
+    "T33 (INV-013 IN-4): exhaustion branch must NOT name \"slot held by another session\" — \
+     that label requires has_capacity=true. Got:\n{stderr}"
+  );
+  assert!(
+    !stderr.contains( "lost reservation race" ),
+    "T33 (INV-013 IN-4): exhaustion branch must NOT name \"lost reservation race\" — \
+     that label requires has_capacity=true and a dead-owner reclaim ticket. Got:\n{stderr}"
+  );
+}
+
+// ── T34: non-admission message preserves "gate-wait  active=" prefix (INV-013 IN-5)
+
+/// T34 (INV-013 IN-5): any non-admission diagnostic — here the exhaustion case
+/// (same fixture as T33: `count_u32 >= max`) — must preserve the TSK-452
+/// structured prefix `"gate-wait  active="`. The differentiating cause suffix
+/// `[at capacity]` / `[slot held by another session]` / `[lost reservation
+/// race]` appears in the `(reason: ...)` trailer at the end of the same line,
+/// so all assertions that pattern-match the prefix survive any future
+/// trailing-format change.
+///
+/// ## Root Cause (INV-013 motivation)
+///
+/// BUG-393 introduced the cause suffix appended AFTER the gate-wait line body.
+/// TSK-452 replaced the old `"active; waiting"` body with a structured
+/// `"gate-wait  active=X/Y ..."` prefix. A hypothetical refactor dropping or
+/// renaming the prefix would silently break assertions with no dedicated guard.
+///
+/// ## Why Not Caught
+///
+/// T01/T04 assert `"gate-wait  active="` positively but only in fixtures where
+/// `count_u32 < max` — the cause-suffix-appended path is never exercised
+/// in those tests, so they cannot detect a regression in the cause-labeled
+/// branch's format string. No prior test positively asserted the prefix
+/// survives the suffix addition in the non-admission path.
+///
+/// ## Fix Applied (TSK-452)
+///
+/// No production code change — updated to assert the TSK-452 format prefix
+/// `"gate-wait  active="` in the cause-labeled format string in `gate.rs`.
+///
+/// ## Prevention
+///
+/// Assert `stderr.contains("gate-wait  active=")` with a fixture that DOES emit
+/// a cause suffix, not just a no-cause wait message.
+///
+/// ## Pitfall
+///
+/// Using T01/T04's fixture (fewer occupiers than max) would trivially pass even
+/// if the prefix were removed from the cause-labeled branch, since those
+/// fixtures never reach the cause-labeled `eprintln!` path. Only a fixture
+/// that forces cause-labeled output validates IN-5's exact requirement.
+// test_kind: invariant_guard(INV-013)
+#[ test ]
+fn t34_non_admission_message_preserves_active_waiting_substring()
+{
+  let ( _occupier_dir, occupier_path ) = fake_claude_binary_dir();
+  let mut occupier = spawn_print_claude_for( &occupier_path, 60 );
+  let proc = make_proc_dir( &[ occupier.id() ] );
+
+  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
+  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
+
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = Command::new( bin )
+    .args( [ "-p", "--max-sessions", "1", "--retry-override", "0", "--journal", "off", "x" ] )
+    .env( "PATH", &script_path )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
+    .env( "CLR_GATE_DIR", gate_dir.path() )
+    .env( "CLR_GATE_POLL_SECS", "1" )
+    .env( "CLR_GATE_MAX_ATTEMPTS", "2" )
+    .output()
+    .expect( "invoke clr" );
+
+  let _ = occupier.kill();
+  let _ = occupier.wait();
+
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert!(
+    stderr.contains( "gate-wait  active=" ),
+    "T34 (INV-013 IN-5): cause-labeled diagnostic must preserve \"gate-wait  active=\" \
+     prefix (TSK-452 format) — the count ratio follows immediately after. Got:\n{stderr}"
+  );
+}
+
+// ── T35 / T36: CLR_REMAINING_TIMEOUT_SECS budget clamp (BUG-423 regression) ─
+
+/// T35 (BUG-423): `CLR_REMAINING_TIMEOUT_SECS` clamps `effective_max_attempts` to
+/// `floor(remaining / poll_secs).max(1)`.  With remaining=2, poll=1, max=1000
+/// the gate must exhaust after exactly 2 attempts, not 1000, and must emit a
+/// diagnostic containing "budget" in the error line so operators can distinguish
+/// budget-exhaustion from ordinary gate timeout in job stderr.
+///
+/// ## Root Cause (BUG-423)
+///
+/// `wait_for_session_slot()` polled up to `CLR_GATE_MAX_ATTEMPTS` (default 1000)
+/// with no awareness of any external job-runner deadline, causing gate-wait
+/// alone to consume the entire `wplan_executor` budget (observed: 258 × 30s =
+/// 7740s exceeded a 7200s wplan timeout).
+///
+/// ## Why Not Caught
+///
+/// `CLR_REMAINING_TIMEOUT_SECS` did not exist before this fix; no test could
+/// exercise the clamping path.
+///
+/// ## Fix Applied
+///
+/// gate.rs reads `CLR_REMAINING_TIMEOUT_SECS` and computes `effective_max_attempts`
+/// = `(remaining_secs / poll_secs).max(1)`; the for loop runs to `effective_max_attempts`
+/// instead of `max_attempts`; budget exhaustion emits a distinct "gate-wait budget
+/// exhausted" diagnostic routed through `on_exhausted` exactly like the normal path.
+///
+/// ## Prevention
+///
+/// Assert that stderr contains "budget" and that the gate exits without sleeping
+/// 1000 poll intervals (practical time bound: test completes in < 5s).
+///
+/// ## Pitfall
+///
+/// The test uses `CLR_REMAINING_TIMEOUT_SECS=2` and `CLR_GATE_POLL_SECS=1` (not the
+/// production 60/30 values) to keep the test to 1 inter-attempt sleep of 1 second.
+/// The invariant under test — clamping to floor(remaining/poll) — is identical.
+// test_kind: bug_reproducer(BUG-423)
+#[ test ]
+fn t35_remaining_timeout_budget_clamps_gate_attempts()
+{
+  let ( _occupier_dir, occupier_path ) = fake_claude_binary_dir();
+  let mut occupier = spawn_print_claude_for( &occupier_path, 60 );
+  let proc = make_proc_dir( &[ occupier.id() ] );
+
+  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
+  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
+
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = Command::new( bin )
+    .args( [ "-p", "--max-sessions", "1", "--retry-override", "0", "--journal", "off", "x" ] )
+    .env( "PATH", &script_path )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
+    .env( "CLR_GATE_DIR", gate_dir.path() )
+    .env( "CLR_GATE_POLL_SECS",        "1"    )  // 1s poll keeps test to ~1s elapsed
+    .env( "CLR_GATE_MAX_ATTEMPTS",     "1000" )  // without budget clamp: 1000 attempts
+    .env( "CLR_REMAINING_TIMEOUT_SECS", "2"   )  // floor(2/1)=2 → clamp to 2 attempts
+    .output()
+    .expect( "invoke clr" );
+
+  let _ = occupier.kill();
+  let _ = occupier.wait();
+
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert_ne!(
+    out.status.code(),
+    Some( 0 ),
+    "T35 (BUG-423): gate must exit non-zero when budget exhausts. Got:\n{stderr}"
+  );
+  assert!(
+    stderr.contains( "budget" ),
+    "T35 (BUG-423): budget-exhaustion diagnostic must contain \"budget\" so operators \
+     can distinguish it from ordinary gate timeout. Got:\n{stderr}"
+  );
+  assert!(
+    !stderr.contains( "session gate timed out" ),
+    "T35 (BUG-423): budget-exhaustion must NOT produce the normal \"session gate timed \
+     out\" message — the two exhaustion paths must be distinguishable. Got:\n{stderr}"
+  );
+}
+
+/// T36 (BUG-423): when `CLR_REMAINING_TIMEOUT_SECS` is less than one poll interval,
+/// `.max(1)` ensures at least one admission attempt is made before declaring budget
+/// exhausted — the gate must not silently skip the admission check entirely.
+///
+/// ## Root Cause / Fix Applied
+///
+/// See T35 above. This case exercises the `.max(1)` floor: `floor(1/30) = 0`, but
+/// `.max(1)` yields 1, so attempt 1 fires and the exhaustion check immediately
+/// follows (no sleep, since sleep happens AFTER the exhaustion check).
+///
+/// ## Pitfall
+///
+/// With `effective_max_attempts=1`, the `if attempt == effective_max_attempts` branch
+/// fires on the very first attempt, before any `std::thread::sleep(poll)` call.
+/// The test therefore completes in < 1s even with `CLR_GATE_POLL_SECS=30`.
+// test_kind: bug_reproducer(BUG-423)
+#[ test ]
+fn t36_remaining_timeout_below_poll_interval_still_makes_one_attempt()
+{
+  let ( _occupier_dir, occupier_path ) = fake_claude_binary_dir();
+  let mut occupier = spawn_print_claude_for( &occupier_path, 60 );
+  let proc = make_proc_dir( &[ occupier.id() ] );
+
+  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
+  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
+
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = Command::new( bin )
+    .args( [ "-p", "--max-sessions", "1", "--retry-override", "0", "--journal", "off", "x" ] )
+    .env( "PATH", &script_path )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
+    .env( "CLR_GATE_DIR", gate_dir.path() )
+    .env( "CLR_GATE_POLL_SECS",        "30"  )  // 30s poll — but .max(1) gives 1 attempt
+    .env( "CLR_GATE_MAX_ATTEMPTS",     "1000" ) // without budget clamp: 1000 attempts
+    .env( "CLR_REMAINING_TIMEOUT_SECS", "1"   ) // floor(1/30)=0 → .max(1)=1 attempt
+    .output()
+    .expect( "invoke clr" );
+
+  let _ = occupier.kill();
+  let _ = occupier.wait();
+
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert_ne!(
+    out.status.code(),
+    Some( 0 ),
+    "T36 (BUG-423): gate must exit non-zero even when budget < 1 poll interval. Got:\n{stderr}"
+  );
+  assert!(
+    stderr.contains( "budget" ),
+    "T36 (BUG-423): budget exhaustion diagnostic must contain \"budget\" even on the \
+     single-attempt floor path. Got:\n{stderr}"
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// 082 — --gate-poll-secs edge cases
+// ──────────────────────────────────────────────────────────────────────────────
+
+/// 082/EC-1: `--gate-poll-secs 5` CLI flag reduces the wait between gate attempts.
+/// Gate-wait diagnostic contains `wait=5s`; exhaustion completes within a 12s
+/// deadline (would take ~30s if the 30s default were applied instead).
+// test_kind: edge_case
+#[ test ]
+fn t_gate_poll_secs_cli_flag_reduces_wait_interval()
+{
+  let ( _occupier_dir, occupier_path ) = fake_claude_binary_dir();
+  let mut occupier = spawn_print_claude_for( &occupier_path, 60 );
+  let proc = make_proc_dir( &[ occupier.id() ] );
+
+  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
+  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
+
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let mut child = Command::new( bin )
+    .args( [
+      "-p", "--max-sessions", "1", "--retry-override", "0",
+      "--gate-poll-secs", "5", "--journal", "off", "x",
+    ] )
+    .env( "PATH", &script_path )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
+    .env( "CLR_GATE_DIR", gate_dir.path() )
+    .env( "CLR_GATE_MAX_ATTEMPTS", "2" )
+    .stdout( std::process::Stdio::null() )
+    .stderr( std::process::Stdio::piped() )
+    .spawn()
+    .expect( "spawn clr" );
+
+  let deadline = std::time::Instant::now() + core::time::Duration::from_secs( 12 );
+  let exited = wait_bounded( &mut child, deadline );
+  if exited.is_none() { let _ = child.kill(); }
+  let out = child.wait_with_output().expect( "reap clr" );
+
+  let _ = occupier.kill();
+  let _ = occupier.wait();
+
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert!(
+    exited.is_some(),
+    "082/EC-1: gate must exhaust within 12s when --gate-poll-secs 5 is set \
+     (would take ~30s with the 30s default). stderr:\n{stderr}"
+  );
+  assert_eq!(
+    exited.and_then( |s| s.code() ), Some( 1 ),
+    "082/EC-1: exit must be 1 once the gate exhausts. stderr: {stderr}"
+  );
+  assert!(
+    stderr.contains( "wait=5s" ),
+    "082/EC-1: gate-wait diagnostic must contain `wait=5s` confirming the CLI flag \
+     was applied. Got:\n{stderr}"
+  );
+}
+
+/// 082/EC-2: `CLR_GATE_POLL_SECS=5` env var produces identical behavior to `--gate-poll-secs 5`.
+/// Confirms the env-var fallback tier is active for `run`/`ask`.
+// test_kind: edge_case
+#[ test ]
+fn t_gate_poll_secs_env_var_equivalent_to_cli_flag()
+{
+  let ( _occupier_dir, occupier_path ) = fake_claude_binary_dir();
+  let mut occupier = spawn_print_claude_for( &occupier_path, 60 );
+  let proc = make_proc_dir( &[ occupier.id() ] );
+
+  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
+  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
+
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let mut child = Command::new( bin )
+    .args( [ "-p", "--max-sessions", "1", "--retry-override", "0", "--journal", "off", "x" ] )
+    .env( "PATH", &script_path )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
+    .env( "CLR_GATE_DIR", gate_dir.path() )
+    .env( "CLR_GATE_POLL_SECS",    "5" )
+    .env( "CLR_GATE_MAX_ATTEMPTS", "2" )
+    .stdout( std::process::Stdio::null() )
+    .stderr( std::process::Stdio::piped() )
+    .spawn()
+    .expect( "spawn clr" );
+
+  let deadline = std::time::Instant::now() + core::time::Duration::from_secs( 12 );
+  let exited = wait_bounded( &mut child, deadline );
+  if exited.is_none() { let _ = child.kill(); }
+  let out = child.wait_with_output().expect( "reap clr" );
+
+  let _ = occupier.kill();
+  let _ = occupier.wait();
+
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert!(
+    exited.is_some(),
+    "082/EC-2: gate must exhaust within 12s when CLR_GATE_POLL_SECS=5. stderr:\n{stderr}"
+  );
+  assert_eq!(
+    exited.and_then( |s| s.code() ), Some( 1 ),
+    "082/EC-2: exit must be 1. stderr: {stderr}"
+  );
+  assert!(
+    stderr.contains( "wait=5s" ),
+    "082/EC-2: gate-wait diagnostic must contain `wait=5s` confirming env var applied. Got:\n{stderr}"
+  );
+}
+
+/// 082/EC-3: When `--gate-poll-secs` and `CLR_GATE_POLL_SECS` are both absent, the
+/// 30s default is used. Verified via dry-run: parameter accepted without error,
+/// exit 0 (gate never triggers in dry-run mode).
+// test_kind: edge_case
+#[ test ]
+fn t_gate_poll_secs_absent_uses_30s_default()
+{
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = Command::new( bin )
+    .args( [ "--dry-run", "--journal", "off", "x" ] )
+    .env( "HOME", "/tmp/clr-isolated-home" )
+    .env_remove( "CLR_GATE_POLL_SECS" )
+    .output()
+    .expect( "invoke clr" );
+
+  assert!(
+    out.status.success(),
+    "082/EC-3: dry-run with absent --gate-poll-secs must exit 0 (30s default, gate never triggers). \
+     stderr: {}",
+    String::from_utf8_lossy( &out.stderr )
+  );
+}
+
+/// 082/EC-4: `"gate-poll-secs"` JSON key in `--args-file` is accepted and applied.
+/// Same 5s timing behavior as EC-1/EC-2.
+// test_kind: edge_case
+#[ test ]
+fn t_gate_poll_secs_json_key_accepted_via_args_file()
+{
+  let ( _occupier_dir, occupier_path ) = fake_claude_binary_dir();
+  let mut occupier = spawn_print_claude_for( &occupier_path, 60 );
+  let proc = make_proc_dir( &[ occupier.id() ] );
+
+  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
+  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
+
+  let mut cfg = NamedTempFile::new().expect( "args-file" );
+  write!( cfg, r#"{{"gate-poll-secs": 5}}"# ).expect( "write args-file JSON" );
+  let cfg_path = cfg.path().to_str().expect( "args-file path UTF-8" );
+
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let mut child = Command::new( bin )
+    .args( [
+      "-p", "--max-sessions", "1", "--retry-override", "0",
+      "--args-file", cfg_path, "--journal", "off", "x",
+    ] )
+    .env( "PATH", &script_path )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
+    .env( "CLR_GATE_DIR", gate_dir.path() )
+    .env( "CLR_GATE_MAX_ATTEMPTS", "2" )
+    .stdout( std::process::Stdio::null() )
+    .stderr( std::process::Stdio::piped() )
+    .spawn()
+    .expect( "spawn clr" );
+
+  let deadline = std::time::Instant::now() + core::time::Duration::from_secs( 12 );
+  let exited = wait_bounded( &mut child, deadline );
+  if exited.is_none() { let _ = child.kill(); }
+  let out = child.wait_with_output().expect( "reap clr" );
+
+  let _ = occupier.kill();
+  let _ = occupier.wait();
+
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert!(
+    exited.is_some(),
+    "082/EC-4: gate must exhaust within 12s when {{\"gate-poll-secs\":5}} in args-file. stderr:\n{stderr}"
+  );
+  assert_eq!(
+    exited.and_then( |s| s.code() ), Some( 1 ),
+    "082/EC-4: exit must be 1. stderr: {stderr}"
+  );
+  assert!(
+    stderr.contains( "wait=5s" ),
+    "082/EC-4: gate-wait diagnostic must contain `wait=5s` confirming JSON key applied. Got:\n{stderr}"
+  );
+}
+
+/// 082/EC-5: CLI flag takes precedence over env var.
+/// `--gate-poll-secs 5` wins over `CLR_GATE_POLL_SECS=60`: gate exhausts in <12s
+/// (would take ~60s if the env var won).
+// test_kind: edge_case
+#[ test ]
+fn t_gate_poll_secs_cli_flag_takes_precedence_over_env_var()
+{
+  let ( _occupier_dir, occupier_path ) = fake_claude_binary_dir();
+  let mut occupier = spawn_print_claude_for( &occupier_path, 60 );
+  let proc = make_proc_dir( &[ occupier.id() ] );
+
+  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
+  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
+
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let mut child = Command::new( bin )
+    .args( [
+      "-p", "--max-sessions", "1", "--retry-override", "0",
+      "--gate-poll-secs", "5", "--journal", "off", "x",
+    ] )
+    .env( "PATH", &script_path )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
+    .env( "CLR_GATE_DIR", gate_dir.path() )
+    .env( "CLR_GATE_POLL_SECS",    "60" )  // env: 60s; CLI wins with 5s
+    .env( "CLR_GATE_MAX_ATTEMPTS", "2"  )
+    .stdout( std::process::Stdio::null() )
+    .stderr( std::process::Stdio::piped() )
+    .spawn()
+    .expect( "spawn clr" );
+
+  let deadline = std::time::Instant::now() + core::time::Duration::from_secs( 12 );
+  let exited = wait_bounded( &mut child, deadline );
+  if exited.is_none() { let _ = child.kill(); }
+  let out = child.wait_with_output().expect( "reap clr" );
+
+  let _ = occupier.kill();
+  let _ = occupier.wait();
+
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert!(
+    exited.is_some(),
+    "082/EC-5: gate must exhaust within 12s when --gate-poll-secs 5 overrides CLR_GATE_POLL_SECS=60 \
+     (would take ~60s if env var won). stderr:\n{stderr}"
+  );
+  assert_eq!(
+    exited.and_then( |s| s.code() ), Some( 1 ),
+    "082/EC-5: exit must be 1. stderr: {stderr}"
+  );
+  assert!(
+    stderr.contains( "wait=5s" ),
+    "082/EC-5: diagnostic must contain `wait=5s` (CLI value), not `wait=60s` (env var). Got:\n{stderr}"
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// 083 — --gate-max-attempts edge cases
+// ──────────────────────────────────────────────────────────────────────────────
+
+/// 083/EC-1: `--gate-max-attempts 2` → gate exhausts after exactly 2 attempts.
+/// Only 1 wait-diagnostic line is emitted (attempt=1/2); attempt 2 triggers the
+/// exhaustion check before the eprintln runs.
+// test_kind: edge_case
+#[ test ]
+fn t_gate_max_attempts_cli_flag_exhausts_after_n_attempts()
+{
+  let ( _occupier_dir, occupier_path ) = fake_claude_binary_dir();
+  let mut occupier = spawn_print_claude_for( &occupier_path, 60 );
+  let proc = make_proc_dir( &[ occupier.id() ] );
+
+  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
+  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
+
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let mut child = Command::new( bin )
+    .args( [
+      "-p", "--max-sessions", "1", "--retry-override", "0",
+      "--gate-max-attempts", "2", "--journal", "off", "x",
+    ] )
+    .env( "PATH", &script_path )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
+    .env( "CLR_GATE_DIR", gate_dir.path() )
+    .env( "CLR_GATE_POLL_SECS", "1" )
+    .stdout( std::process::Stdio::null() )
+    .stderr( std::process::Stdio::piped() )
+    .spawn()
+    .expect( "spawn clr" );
+
+  let deadline = std::time::Instant::now() + core::time::Duration::from_secs( 10 );
+  let exited = wait_bounded( &mut child, deadline );
+  if exited.is_none() { let _ = child.kill(); }
+  let out = child.wait_with_output().expect( "reap clr" );
+
+  let _ = occupier.kill();
+  let _ = occupier.wait();
+
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert!(
+    exited.is_some(),
+    "083/EC-1: gate must exhaust within 10s when --gate-max-attempts 2 with 1s poll. stderr:\n{stderr}"
+  );
+  assert_eq!(
+    exited.and_then( |s| s.code() ), Some( 1 ),
+    "083/EC-1: exit must be 1. stderr: {stderr}"
+  );
+  assert!(
+    stderr.contains( "session gate timed out" ),
+    "083/EC-1: exhaustion message must contain \"session gate timed out\". Got:\n{stderr}"
+  );
+  assert!(
+    stderr.contains( "attempt=1/2" ),
+    "083/EC-1: gate must show ceiling 2 (not 1000 default); diagnostic `attempt=1/2` expected. Got:\n{stderr}"
+  );
+}
+
+/// 083/EC-2: `CLR_GATE_MAX_ATTEMPTS=2` env var produces identical behavior to `--gate-max-attempts 2`.
+// test_kind: edge_case
+#[ test ]
+fn t_gate_max_attempts_env_var_equivalent_to_cli_flag()
+{
+  let ( _occupier_dir, occupier_path ) = fake_claude_binary_dir();
+  let mut occupier = spawn_print_claude_for( &occupier_path, 60 );
+  let proc = make_proc_dir( &[ occupier.id() ] );
+
+  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
+  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
+
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let mut child = Command::new( bin )
+    .args( [ "-p", "--max-sessions", "1", "--retry-override", "0", "--journal", "off", "x" ] )
+    .env( "PATH", &script_path )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
+    .env( "CLR_GATE_DIR", gate_dir.path() )
+    .env( "CLR_GATE_POLL_SECS",    "1" )
+    .env( "CLR_GATE_MAX_ATTEMPTS", "2" )
+    .stdout( std::process::Stdio::null() )
+    .stderr( std::process::Stdio::piped() )
+    .spawn()
+    .expect( "spawn clr" );
+
+  let deadline = std::time::Instant::now() + core::time::Duration::from_secs( 10 );
+  let exited = wait_bounded( &mut child, deadline );
+  if exited.is_none() { let _ = child.kill(); }
+  let out = child.wait_with_output().expect( "reap clr" );
+
+  let _ = occupier.kill();
+  let _ = occupier.wait();
+
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert!(
+    exited.is_some(),
+    "083/EC-2: gate must exhaust within 10s when CLR_GATE_MAX_ATTEMPTS=2. stderr:\n{stderr}"
+  );
+  assert_eq!(
+    exited.and_then( |s| s.code() ), Some( 1 ),
+    "083/EC-2: exit must be 1. stderr: {stderr}"
+  );
+  assert!(
+    stderr.contains( "session gate timed out" ),
+    "083/EC-2: exhaustion message required. Got:\n{stderr}"
+  );
+}
+
+/// 083/EC-3: When `--gate-max-attempts` and `CLR_GATE_MAX_ATTEMPTS` are both absent,
+/// the 1000-attempt default is used. Verified via dry-run: parameter accepted without
+/// error, exit 0 (gate never triggers in dry-run mode).
+// test_kind: edge_case
+#[ test ]
+fn t_gate_max_attempts_absent_uses_1000_default()
+{
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = Command::new( bin )
+    .args( [ "--dry-run", "--journal", "off", "x" ] )
+    .env( "HOME", "/tmp/clr-isolated-home" )
+    .env_remove( "CLR_GATE_MAX_ATTEMPTS" )
+    .output()
+    .expect( "invoke clr" );
+
+  assert!(
+    out.status.success(),
+    "083/EC-3: dry-run with absent --gate-max-attempts must exit 0 (1000-attempt default, gate never triggers). \
+     stderr: {}",
+    String::from_utf8_lossy( &out.stderr )
+  );
+}
+
+/// 083/EC-4: `"gate-max-attempts"` JSON key in `--args-file` is accepted and applied.
+/// Gate exhausts after 2 attempts (same timing as EC-1/EC-2).
+// test_kind: edge_case
+#[ test ]
+fn t_gate_max_attempts_json_key_accepted_via_args_file()
+{
+  let ( _occupier_dir, occupier_path ) = fake_claude_binary_dir();
+  let mut occupier = spawn_print_claude_for( &occupier_path, 60 );
+  let proc = make_proc_dir( &[ occupier.id() ] );
+
+  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
+  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
+
+  let mut cfg = NamedTempFile::new().expect( "args-file" );
+  write!( cfg, r#"{{"gate-max-attempts": 2}}"# ).expect( "write args-file JSON" );
+  let cfg_path = cfg.path().to_str().expect( "args-file path UTF-8" );
+
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let mut child = Command::new( bin )
+    .args( [
+      "-p", "--max-sessions", "1", "--retry-override", "0",
+      "--args-file", cfg_path, "--journal", "off", "x",
+    ] )
+    .env( "PATH", &script_path )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
+    .env( "CLR_GATE_DIR", gate_dir.path() )
+    .env( "CLR_GATE_POLL_SECS", "1" )
+    .stdout( std::process::Stdio::null() )
+    .stderr( std::process::Stdio::piped() )
+    .spawn()
+    .expect( "spawn clr" );
+
+  let deadline = std::time::Instant::now() + core::time::Duration::from_secs( 10 );
+  let exited = wait_bounded( &mut child, deadline );
+  if exited.is_none() { let _ = child.kill(); }
+  let out = child.wait_with_output().expect( "reap clr" );
+
+  let _ = occupier.kill();
+  let _ = occupier.wait();
+
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert!(
+    exited.is_some(),
+    "083/EC-4: gate must exhaust within 10s when {{\"gate-max-attempts\":2}} in args-file. stderr:\n{stderr}"
+  );
+  assert_eq!(
+    exited.and_then( |s| s.code() ), Some( 1 ),
+    "083/EC-4: exit must be 1. stderr: {stderr}"
+  );
+  assert!(
+    stderr.contains( "session gate timed out" ),
+    "083/EC-4: exhaustion message required. Got:\n{stderr}"
+  );
+}
+
+/// 083/EC-5: CLI flag takes precedence over env var.
+/// `--gate-max-attempts 2` wins over `CLR_GATE_MAX_ATTEMPTS=100`: gate exhausts
+/// within 10s and diagnostic shows ceiling 2 (not 100).
+// test_kind: edge_case
+#[ test ]
+fn t_gate_max_attempts_cli_flag_takes_precedence_over_env_var()
+{
+  let ( _occupier_dir, occupier_path ) = fake_claude_binary_dir();
+  let mut occupier = spawn_print_claude_for( &occupier_path, 60 );
+  let proc = make_proc_dir( &[ occupier.id() ] );
+
+  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
+  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
+
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let mut child = Command::new( bin )
+    .args( [
+      "-p", "--max-sessions", "1", "--retry-override", "0",
+      "--gate-max-attempts", "2", "--journal", "off", "x",
+    ] )
+    .env( "PATH", &script_path )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
+    .env( "CLR_GATE_DIR", gate_dir.path() )
+    .env( "CLR_GATE_POLL_SECS",    "1"   )
+    .env( "CLR_GATE_MAX_ATTEMPTS", "100" )  // env: 100 attempts; CLI wins with 2
+    .stdout( std::process::Stdio::null() )
+    .stderr( std::process::Stdio::piped() )
+    .spawn()
+    .expect( "spawn clr" );
+
+  let deadline = std::time::Instant::now() + core::time::Duration::from_secs( 10 );
+  let exited = wait_bounded( &mut child, deadline );
+  if exited.is_none() { let _ = child.kill(); }
+  let out = child.wait_with_output().expect( "reap clr" );
+
+  let _ = occupier.kill();
+  let _ = occupier.wait();
+
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert!(
+    exited.is_some(),
+    "083/EC-5: gate must exhaust within 10s when --gate-max-attempts 2 overrides \
+     CLR_GATE_MAX_ATTEMPTS=100. stderr:\n{stderr}"
+  );
+  assert_eq!(
+    exited.and_then( |s| s.code() ), Some( 1 ),
+    "083/EC-5: exit must be 1. stderr: {stderr}"
+  );
+  assert!(
+    stderr.contains( "attempt=1/2" ),
+    "083/EC-5: diagnostic must show ceiling 2 (CLI value), not 100 (env var). Got:\n{stderr}"
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// 084 — --gate-stale-secs edge cases
+// ──────────────────────────────────────────────────────────────────────────────
+//
+// Fixture: pre-seed `slot_0.json` with a live occupier's PID; use an EMPTY
+// proc_dir so count=0 < max=1 (has_capacity=true). acquire_slot() then reads
+// the pre-seeded slot and decides reclaim eligibility based on `stale_secs`.
+// Mirrors T20's two-phase shape.
+
+/// 084/EC-1: Default (absent) → `CLR_GATE_STALE_SECS`/`--gate-stale-secs` absent.
+/// Live owner (`since=0`, maximally stale) is never reclaimed; gate exhausts.
+// test_kind: edge_case
+#[ test ]
+fn t_gate_stale_secs_absent_live_owner_never_reclaimed()
+{
+  let ( _occupier_dir, occupier_path ) = fake_claude_binary_dir();
+  let mut occupier = spawn_print_claude_for( &occupier_path, 30 );
+  let occupier_pid = occupier.id();
+
+  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
+  let proc_dir  = tempfile::TempDir::new().expect( "proc dir" );
+
+  std::fs::write(
+    gate_dir.path().join( "slot_0.json" ),
+    format!( r#"{{"pid":{occupier_pid},"since":0}}"# ),
+  ).expect( "pre-seed stale live slot" );
+
+  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let mut waiter = Command::new( bin )
+    .args( [ "-p", "--max-sessions", "1", "--retry-override", "0", "--journal", "off", "x" ] )
+    .env( "PATH", &script_path )
+    .env( "CLR_PROC_DIR", proc_dir.path() )
+    .env( "CLR_GATE_DIR", gate_dir.path() )
+    .env( "CLR_GATE_POLL_SECS",    "1" )
+    .env( "CLR_GATE_MAX_ATTEMPTS", "2" )
+    .env_remove( "CLR_GATE_STALE_SECS" )
+    .stdout( std::process::Stdio::null() )
+    .stderr( std::process::Stdio::piped() )
+    .spawn()
+    .expect( "spawn clr" );
+
+  let deadline = std::time::Instant::now() + core::time::Duration::from_secs( 10 );
+  let exited = wait_bounded( &mut waiter, deadline );
+  if exited.is_none() { let _ = waiter.kill(); }
+  let out = waiter.wait_with_output().expect( "reap clr" );
+
+  let _ = occupier.kill();
+  let _ = occupier.wait();
+
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert_eq!(
+    exited.and_then( |s| s.code() ), Some( 1 ),
+    "084/EC-1: gate must exhaust (exit 1) when CLR_GATE_STALE_SECS absent — \
+     live owner never reclaimed. stderr:\n{stderr}"
+  );
+  assert!(
+    stderr.contains( "slot held by another session" ),
+    "084/EC-1: unset stale threshold must not reclaim a live owner; \
+     \"slot held by another session\" expected. Got:\n{stderr}"
+  );
+}
+
+/// 084/EC-2: `--gate-stale-secs 1` CLI flag reclaims a slot whose `since` is 0
+/// (elapsed ≈ decades >> 1s threshold). Waiter is admitted immediately → exit 0.
+// test_kind: edge_case
+#[ test ]
+fn t_gate_stale_secs_cli_flag_reclaims_stale_slot()
+{
+  let ( _occupier_dir, occupier_path ) = fake_claude_binary_dir();
+  let mut occupier = spawn_print_claude_for( &occupier_path, 30 );
+  let occupier_pid = occupier.id();
+
+  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
+  let proc_dir  = tempfile::TempDir::new().expect( "proc dir" );
+
+  std::fs::write(
+    gate_dir.path().join( "slot_0.json" ),
+    format!( r#"{{"pid":{occupier_pid},"since":0}}"# ),
+  ).expect( "pre-seed stale live slot" );
+
+  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = Command::new( bin )
+    .args( [
+      "-p", "--max-sessions", "1", "--retry-override", "0",
+      "--gate-stale-secs", "1", "--journal", "off", "x",
+    ] )
+    .env( "PATH", &script_path )
+    .env( "CLR_PROC_DIR", proc_dir.path() )
+    .env( "CLR_GATE_DIR", gate_dir.path() )
+    .env( "CLR_GATE_POLL_SECS",    "1" )
+    .env( "CLR_GATE_MAX_ATTEMPTS", "5" )
+    .output()
+    .expect( "invoke clr" );
+
+  let _ = occupier.kill();
+  let _ = occupier.wait();
+
+  assert!(
+    out.status.success(),
+    "084/EC-2: --gate-stale-secs 1 must reclaim the stale slot (since=0) and admit \
+     the waiter (exit 0). stderr: {}",
+    String::from_utf8_lossy( &out.stderr )
+  );
+}
+
+/// 084/EC-3: `CLR_GATE_STALE_SECS=10` env var reclaims a stale slot — behavior
+/// identical to EC-2 but via the env-var tier.
+// test_kind: edge_case
+#[ test ]
+fn t_gate_stale_secs_env_var_reclaims_stale_slot()
+{
+  let ( _occupier_dir, occupier_path ) = fake_claude_binary_dir();
+  let mut occupier = spawn_print_claude_for( &occupier_path, 30 );
+  let occupier_pid = occupier.id();
+
+  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
+  let proc_dir  = tempfile::TempDir::new().expect( "proc dir" );
+
+  std::fs::write(
+    gate_dir.path().join( "slot_0.json" ),
+    format!( r#"{{"pid":{occupier_pid},"since":0}}"# ),
+  ).expect( "pre-seed stale live slot" );
+
+  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = Command::new( bin )
+    .args( [ "-p", "--max-sessions", "1", "--retry-override", "0", "--journal", "off", "x" ] )
+    .env( "PATH", &script_path )
+    .env( "CLR_PROC_DIR", proc_dir.path() )
+    .env( "CLR_GATE_DIR", gate_dir.path() )
+    .env( "CLR_GATE_POLL_SECS",    "1"  )
+    .env( "CLR_GATE_MAX_ATTEMPTS", "5"  )
+    .env( "CLR_GATE_STALE_SECS",   "10" )
+    .output()
+    .expect( "invoke clr" );
+
+  let _ = occupier.kill();
+  let _ = occupier.wait();
+
+  assert!(
+    out.status.success(),
+    "084/EC-3: CLR_GATE_STALE_SECS=10 must reclaim the stale slot (since=0) and admit \
+     the waiter (exit 0). stderr: {}",
+    String::from_utf8_lossy( &out.stderr )
+  );
+}
+
+/// 084/EC-4: `"gate-stale-secs"` JSON key in `--args-file` is accepted and applied.
+/// Stale slot reclaimed, waiter admitted → exit 0.
+// test_kind: edge_case
+#[ test ]
+fn t_gate_stale_secs_json_key_accepted_via_args_file()
+{
+  let ( _occupier_dir, occupier_path ) = fake_claude_binary_dir();
+  let mut occupier = spawn_print_claude_for( &occupier_path, 30 );
+  let occupier_pid = occupier.id();
+
+  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
+  let proc_dir  = tempfile::TempDir::new().expect( "proc dir" );
+
+  std::fs::write(
+    gate_dir.path().join( "slot_0.json" ),
+    format!( r#"{{"pid":{occupier_pid},"since":0}}"# ),
+  ).expect( "pre-seed stale live slot" );
+
+  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
+
+  let mut cfg = NamedTempFile::new().expect( "args-file" );
+  write!( cfg, r#"{{"gate-stale-secs": 1}}"# ).expect( "write args-file JSON" );
+  let cfg_path = cfg.path().to_str().expect( "args-file path UTF-8" );
+
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = Command::new( bin )
+    .args( [
+      "-p", "--max-sessions", "1", "--retry-override", "0",
+      "--args-file", cfg_path, "--journal", "off", "x",
+    ] )
+    .env( "PATH", &script_path )
+    .env( "CLR_PROC_DIR", proc_dir.path() )
+    .env( "CLR_GATE_DIR", gate_dir.path() )
+    .env( "CLR_GATE_POLL_SECS",    "1" )
+    .env( "CLR_GATE_MAX_ATTEMPTS", "5" )
+    .output()
+    .expect( "invoke clr" );
+
+  let _ = occupier.kill();
+  let _ = occupier.wait();
+
+  assert!(
+    out.status.success(),
+    "084/EC-4: {{\"gate-stale-secs\":1}} JSON key must reclaim stale slot and admit \
+     the waiter (exit 0). stderr: {}",
+    String::from_utf8_lossy( &out.stderr )
+  );
+}
+
+/// 084/EC-5: CLI flag takes precedence over env var.
+///
+/// `CLR_GATE_STALE_SECS=0` (env, reclaims any slot — `elapsed >= 0` is always true)
+/// is overridden by `--gate-stale-secs 9999999` (CLI, ~115 days — too high for a
+/// freshly-created slot). Pre-seed with a FRESH slot (`since` ≈ now, elapsed ≈ 0s).
+/// With CLI winning, the fresh slot is NOT reclaimed → gate exhausts → exit 1.
+// test_kind: edge_case
+#[ test ]
+fn t_gate_stale_secs_cli_flag_takes_precedence_over_env_var()
+{
+  let ( _occupier_dir, occupier_path ) = fake_claude_binary_dir();
+  let mut occupier = spawn_print_claude_for( &occupier_path, 30 );
+  let occupier_pid = occupier.id();
+
+  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
+  let proc_dir  = tempfile::TempDir::new().expect( "proc dir" );
+
+  // Fresh slot: since ≈ now → elapsed ≈ 0s.
+  // CLR_GATE_STALE_SECS=0 (env) would reclaim it (0s >= 0s → true).
+  // --gate-stale-secs 9999999 (CLI) would NOT reclaim it (0s < 9999999s → false).
+  let since_now = std::time::SystemTime::now()
+    .duration_since( std::time::UNIX_EPOCH )
+    .map_or( 0, |d| d.as_secs() );
+  std::fs::write(
+    gate_dir.path().join( "slot_0.json" ),
+    format!( r#"{{"pid":{occupier_pid},"since":{since_now}}}"# ),
+  ).expect( "pre-seed fresh live slot" );
+
+  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let mut waiter = Command::new( bin )
+    .args( [
+      "-p", "--max-sessions", "1", "--retry-override", "0",
+      "--gate-stale-secs", "9999999", "--journal", "off", "x",
+    ] )
+    .env( "PATH", &script_path )
+    .env( "CLR_PROC_DIR", proc_dir.path() )
+    .env( "CLR_GATE_DIR", gate_dir.path() )
+    .env( "CLR_GATE_POLL_SECS",    "1" )
+    .env( "CLR_GATE_MAX_ATTEMPTS", "2" )
+    .env( "CLR_GATE_STALE_SECS",   "0" )  // env: reclaim everything; CLI wins with 9999999s
+    .stdout( std::process::Stdio::null() )
+    .stderr( std::process::Stdio::piped() )
+    .spawn()
+    .expect( "spawn clr" );
+
+  let deadline = std::time::Instant::now() + core::time::Duration::from_secs( 10 );
+  let exited = wait_bounded( &mut waiter, deadline );
+  if exited.is_none() { let _ = waiter.kill(); }
+  let out = waiter.wait_with_output().expect( "reap clr" );
+
+  let _ = occupier.kill();
+  let _ = occupier.wait();
+
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert_eq!(
+    exited.and_then( |s| s.code() ), Some( 1 ),
+    "084/EC-5: CLI --gate-stale-secs 9999999 must override CLR_GATE_STALE_SECS=0 — \
+     fresh slot must NOT be reclaimed, gate must exhaust (exit 1). stderr:\n{stderr}"
+  );
+}
+
+/// 084/EC-6: `CLR_GATE_STALE_SECS=notanumber` → invalid value resolves to `None`
+/// (feature off); live owner never reclaimed; gate exhausts; no crash.
+// test_kind: edge_case
+#[ test ]
+fn t_gate_stale_secs_invalid_value_resolves_to_none()
+{
+  let ( _occupier_dir, occupier_path ) = fake_claude_binary_dir();
+  let mut occupier = spawn_print_claude_for( &occupier_path, 30 );
+  let occupier_pid = occupier.id();
+
+  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
+  let proc_dir  = tempfile::TempDir::new().expect( "proc dir" );
+
+  std::fs::write(
+    gate_dir.path().join( "slot_0.json" ),
+    format!( r#"{{"pid":{occupier_pid},"since":0}}"# ),
+  ).expect( "pre-seed stale live slot" );
+
+  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let mut waiter = Command::new( bin )
+    .args( [ "-p", "--max-sessions", "1", "--retry-override", "0", "--journal", "off", "x" ] )
+    .env( "PATH", &script_path )
+    .env( "CLR_PROC_DIR", proc_dir.path() )
+    .env( "CLR_GATE_DIR", gate_dir.path() )
+    .env( "CLR_GATE_POLL_SECS",    "1"          )
+    .env( "CLR_GATE_MAX_ATTEMPTS", "2"          )
+    .env( "CLR_GATE_STALE_SECS",   "notanumber" )
+    .stdout( std::process::Stdio::null() )
+    .stderr( std::process::Stdio::piped() )
+    .spawn()
+    .expect( "spawn clr" );
+
+  let deadline = std::time::Instant::now() + core::time::Duration::from_secs( 10 );
+  let exited = wait_bounded( &mut waiter, deadline );
+  if exited.is_none() { let _ = waiter.kill(); }
+  let out = waiter.wait_with_output().expect( "reap clr" );
+
+  let _ = occupier.kill();
+  let _ = occupier.wait();
+
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert_eq!(
+    exited.and_then( |s| s.code() ), Some( 1 ),
+    "084/EC-6: invalid CLR_GATE_STALE_SECS must resolve to None (feature off) — \
+     live owner not reclaimed, gate exhausts (exit 1). stderr:\n{stderr}"
+  );
+  assert!(
+    !stderr.to_lowercase().contains( "panic" ),
+    "084/EC-6: invalid value must fail silently — no panic. Got:\n{stderr}"
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// 085 — CLR_REMAINING_TIMEOUT_SECS edge cases (EC-3 / EC-4)
+// EC-1 and EC-2 are implemented as T35 / T36 above.
+// ──────────────────────────────────────────────────────────────────────────────
+
+/// 085/EC-3: When `CLR_REMAINING_TIMEOUT_SECS` is absent, no budget clamp is applied.
+/// The gate uses the normal `CLR_GATE_MAX_ATTEMPTS` ceiling and emits
+/// `"session gate timed out"` (not `"budget"`).
+// test_kind: edge_case
+#[ test ]
+fn t_gate_remaining_timeout_absent_uses_normal_max_attempts()
+{
+  let ( _occupier_dir, occupier_path ) = fake_claude_binary_dir();
+  let mut occupier = spawn_print_claude_for( &occupier_path, 60 );
+  let proc = make_proc_dir( &[ occupier.id() ] );
+
+  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
+  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
+
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = Command::new( bin )
+    .args( [ "-p", "--max-sessions", "1", "--retry-override", "0", "--journal", "off", "x" ] )
+    .env( "PATH", &script_path )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
+    .env( "CLR_GATE_DIR", gate_dir.path() )
+    .env( "CLR_GATE_POLL_SECS",    "1" )
+    .env( "CLR_GATE_MAX_ATTEMPTS", "2" )
+    .env_remove( "CLR_REMAINING_TIMEOUT_SECS" )
+    .output()
+    .expect( "invoke clr" );
+
+  let _ = occupier.kill();
+  let _ = occupier.wait();
+
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert_ne!(
+    out.status.code(), Some( 0 ),
+    "085/EC-3: gate must exhaust (non-zero exit) with absent CLR_REMAINING_TIMEOUT_SECS. Got:\n{stderr}"
+  );
+  assert!(
+    stderr.contains( "session gate timed out" ),
+    "085/EC-3: absent CLR_REMAINING_TIMEOUT_SECS must use the normal timeout path — \
+     \"session gate timed out\" expected (not \"budget\"). Got:\n{stderr}"
+  );
+  assert!(
+    !stderr.contains( "budget" ),
+    "085/EC-3: absent CLR_REMAINING_TIMEOUT_SECS must NOT produce budget-exhaustion \
+     diagnostic. Got:\n{stderr}"
+  );
+}
+
+/// 085/EC-4: Non-numeric `CLR_REMAINING_TIMEOUT_SECS` resolves to `None` (feature off).
+/// Gate behaves exactly as if the var were absent — normal `CLR_GATE_MAX_ATTEMPTS` ceiling,
+/// `"session gate timed out"`, no crash.
+// test_kind: edge_case
+#[ test ]
+fn t_gate_remaining_timeout_non_numeric_resolves_to_none()
+{
+  let ( _occupier_dir, occupier_path ) = fake_claude_binary_dir();
+  let mut occupier = spawn_print_claude_for( &occupier_path, 60 );
+  let proc = make_proc_dir( &[ occupier.id() ] );
+
+  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
+  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
+
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = Command::new( bin )
+    .args( [ "-p", "--max-sessions", "1", "--retry-override", "0", "--journal", "off", "x" ] )
+    .env( "PATH", &script_path )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
+    .env( "CLR_GATE_DIR", gate_dir.path() )
+    .env( "CLR_GATE_POLL_SECS",        "1"          )
+    .env( "CLR_GATE_MAX_ATTEMPTS",      "2"          )
+    .env( "CLR_REMAINING_TIMEOUT_SECS", "notanumber" )
+    .output()
+    .expect( "invoke clr" );
+
+  let _ = occupier.kill();
+  let _ = occupier.wait();
+
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert_ne!(
+    out.status.code(), Some( 0 ),
+    "085/EC-4: gate must exhaust (non-zero exit) with non-numeric CLR_REMAINING_TIMEOUT_SECS. Got:\n{stderr}"
+  );
+  assert!(
+    stderr.contains( "session gate timed out" ),
+    "085/EC-4: invalid CLR_REMAINING_TIMEOUT_SECS must resolve to None (feature off) — \
+     \"session gate timed out\" expected. Got:\n{stderr}"
+  );
+  assert!(
+    !stderr.contains( "budget" ),
+    "085/EC-4: invalid CLR_REMAINING_TIMEOUT_SECS must NOT produce budget-exhaustion diagnostic. Got:\n{stderr}"
+  );
+  assert!(
+    !stderr.to_lowercase().contains( "panic" ),
+    "085/EC-4: invalid value must fail silently — no panic. Got:\n{stderr}"
   );
 }

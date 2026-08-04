@@ -7,24 +7,26 @@
 | `algorithm/` | Path computation algorithm specifications | [algorithm/readme.md](algorithm/readme.md) | 3 |
 | `api/` | Public API contract for the runner crate | [api/readme.md](api/readme.md) | 1 |
 | `cli/command/` | CLI command specifications | [cli/command/readme.md](cli/command/readme.md) | 10 |
-| `cli/param/` | CLI parameter specifications | [cli/param/readme.md](cli/param/readme.md) | 72 |
-| `cli/param_group/` | CLI parameter group definitions | [cli/param_group/readme.md](cli/param_group/readme.md) | 6 |
+| `cli/command_group/` | Command group specifications | [cli/command_group/readme.md](cli/command_group/readme.md) | 1 |
+| `cli/param/` | CLI parameter specifications | [cli/param/readme.md](cli/param/readme.md) | 81 |
+| `cli/param_group/` | CLI parameter group definitions | [cli/param_group/readme.md](cli/param_group/readme.md) | 7 |
 | `cli/parity/` | Cross-command behavioral parity comparison docs | [cli/parity/readme.md](cli/parity/readme.md) | 2 |
 | `cli/type/` | CLI type definitions | [cli/type/readme.md](cli/type/readme.md) | 14 |
 | `cli/user_story/` | User story catalog for runner use cases | [cli/user_story/readme.md](cli/user_story/readme.md) | 29 |
 | `feature/` | Behavioral requirements for the runner | [feature/readme.md](feature/readme.md) | 6 |
-| `invariant/` | Measurable constraints for runner behavior | [invariant/readme.md](invariant/readme.md) | 14 |
+| `invariant/` | Measurable constraints for runner behavior | [invariant/readme.md](invariant/readme.md) | 15 |
 | `variable/` | Output variable definitions for the six CLAUDE_* paths | [variable/readme.md](variable/readme.md) | 6 |
 | `tests/docs/api/` | Per-API test case specifications | [../tests/docs/api/readme.md](../tests/docs/api/readme.md) | 1 |
 | `tests/docs/feature/` | Per-feature test case specifications | [../tests/docs/feature/readme.md](../tests/docs/feature/readme.md) | 5 |
 | `tests/docs/cli/command/` | Per-command integration test case specifications | [../tests/docs/cli/command/readme.md](../tests/docs/cli/command/readme.md) | 10 |
-| `tests/docs/cli/env_param/` | Per-env-parameter edge case test specifications | [../tests/docs/cli/env_param/readme.md](../tests/docs/cli/env_param/readme.md) | 2 |
-| `tests/docs/cli/param/` | Per-parameter edge case test specifications | [../tests/docs/cli/param/readme.md](../tests/docs/cli/param/readme.md) | 72 |
-| `tests/docs/cli/param_group/` | Per-parameter-group interaction test specifications | [../tests/docs/cli/param_group/readme.md](../tests/docs/cli/param_group/readme.md) | 6 |
+| `tests/docs/cli/command_group/` | Per-command-group structural-equivalence test specifications | [../tests/docs/cli/command_group/readme.md](../tests/docs/cli/command_group/readme.md) | 1 |
+| `tests/docs/cli/env_param/` | Per-env-parameter edge case test specifications | [../tests/docs/cli/env_param/readme.md](../tests/docs/cli/env_param/readme.md) | 3 |
+| `tests/docs/cli/param/` | Per-parameter edge case test specifications | [../tests/docs/cli/param/readme.md](../tests/docs/cli/param/readme.md) | 81 |
+| `tests/docs/cli/param_group/` | Per-parameter-group interaction test specifications | [../tests/docs/cli/param_group/readme.md](../tests/docs/cli/param_group/readme.md) | 7 |
 | `tests/docs/cli/parity/` | Per-parity-matrix cross-command test specifications | [../tests/docs/cli/parity/readme.md](../tests/docs/cli/parity/readme.md) | 2 |
 | `tests/docs/cli/type/` | Per-type validation edge case test specifications | [../tests/docs/cli/type/readme.md](../tests/docs/cli/type/readme.md) | 14 |
 | `tests/docs/cli/user_story/` | Per-user-story end-to-end test specifications | [../tests/docs/cli/user_story/readme.md](../tests/docs/cli/user_story/readme.md) | 29 |
-| `tests/docs/invariant/` | Per-invariant test case specifications | [../tests/docs/invariant/readme.md](../tests/docs/invariant/readme.md) | 13 |
+| `tests/docs/invariant/` | Per-invariant test case specifications | [../tests/docs/invariant/readme.md](../tests/docs/invariant/readme.md) | 15 |
 
 ## Master Doc Instances Table
 
@@ -54,6 +56,7 @@
 | invariant | 012 | Gate Slot Atomicity | [invariant/012_gate_slot_atomicity.md](invariant/012_gate_slot_atomicity.md) |
 | invariant | 013 | Slot-Wait Message Differentiation | [invariant/013_slot_wait_message_differentiation.md](invariant/013_slot_wait_message_differentiation.md) |
 | invariant | 014 | JSON String Extraction Escape Handling | [invariant/014_json_string_extraction_escape_handling.md](invariant/014_json_string_extraction_escape_handling.md) |
+| invariant | 015 | Tools Array Doc Sync | [invariant/015_tools_array_doc_sync.md](invariant/015_tools_array_doc_sync.md) |
 | variable | 001 | CLAUDE_HOME | [variable/001_claude_home.md](variable/001_claude_home.md) |
 | variable | 002 | CLAUDE_PROJECTS_DIR | [variable/002_claude_projects_dir.md](variable/002_claude_projects_dir.md) |
 | variable | 003 | CLAUDE_SESSION_DIR | [variable/003_claude_session_dir.md](variable/003_claude_session_dir.md) |

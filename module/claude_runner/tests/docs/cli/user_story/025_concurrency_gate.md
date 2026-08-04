@@ -73,5 +73,5 @@ Test case spec for [025_concurrency_gate.md](../../../../docs/cli/user_story/025
 - **Then:** Exit 0; gate triggers at exactly `5/5` (not `15/5`); interactive fake processes excluded from the count; releases once a short-lived print-mode process self-expires
 - **Exit:** 0
 - **Verifies:** AC-008
-- **Test:** `t04_gate_counts_print_mode_only_excludes_interactive` (`concurrency_gate_test.rs`) — anchored `"Info: 5/5"` assertion prevents an unfiltered `15/5` count from false-passing (AF1)
+- **Test:** `t04_gate_counts_print_mode_only_excludes_interactive` (`concurrency_gate_test.rs`) — anchored `"gate-wait  active=5/5"` assertion (TSK-452 format) prevents an unfiltered `15/5` count from false-passing (AF1)
 - **Note:** Boundary/regression coverage for the same print-mode-only counting behavior — gate triggers at exactly the limit and not below it — is additionally covered by `t01_gate_triggers_at_six_print_mode_processes` and `t02_gate_does_not_trigger_below_six_print_mode_processes`; `t06_max_sessions_zero_disables_gate_regardless_of_count` regression-guards US-1 against the print-mode-only counting change (all three in `concurrency_gate_test.rs`)

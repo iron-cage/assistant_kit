@@ -110,6 +110,26 @@ pub( crate ) fn build_claude_command( cli : &CliArgs ) -> ( ClaudeCommand, Optio
   {
     builder = builder.with_session_dir( src_dir.to_string_lossy().into_owned() );
   }
+  // Determine print mode early — used for -c injection, effort injection, and chrome
+  // suppression.  Must precede expected_id so all three guards below can reference use_print.
+  // Fix(BUG-227): message without -p was silently using TTY passthrough,
+  //   producing raw TUI escape codes instead of clean text output in scripted contexts.
+  // Root cause: print mode was only enabled by explicit -p/--print; no auto-detection.
+  // Pitfall: `--interactive` must suppress this to allow prompted REPL sessions.
+  //
+  // Fix(BUG-425/427): mirrors `cli/mod.rs`'s dispatch-decision fix — this flag and
+  //   that decision must never disagree, since both describe the same invocation.
+  // Root cause: this formula lacked the same TTY and file/stdin-content terms that
+  //   the mod.rs dispatch decision lacked, before its own BUG-425/427 fix.
+  // Pitfall: an explicit --interactive must gate every inferred term here, not only
+  //   message-presence — gating message alone still forced print mode under
+  //   --interactive whenever stdin was non-TTY, which this test harness's spawned
+  //   subprocesses always are (no PTY simulation — see plan's Known Coverage Gap),
+  //   defeating the flag's purpose for every real invocation in the suite.
+  let is_tty = std::io::stdin().is_terminal();
+  let use_print = cli.print_mode
+    || ( !cli.interactive
+      && ( cli.message.is_some() || !is_tty || cli.file.is_some() || cli.stdin_content.is_some() ) );
   // Fix(BUG-214): inject -c only when a prior session exists in storage
   // Root cause: unconditional -c causes claude binary to exit on first use with no session
   // Pitfall: resumption flags (-c, --continue) require state to resume; guard with existence check
@@ -145,8 +165,19 @@ pub( crate ) fn build_claude_command( cli : &CliArgs ) -> ( ClaudeCommand, Optio
   //   every non-interactive invocation (any script/CI/container context, and every
   //   subprocess-spawning test helper except `run_with_path_stdin`), silently
   //   reproducing BUG-426's original defect instead of fixing it.
+  // Fix(BUG-435): add !use_print as first inner term so interactive mode (bare clr
+  //   on TTY) always allows -c when a session exists.  D-10's guard used cli.interactive
+  //   (the explicit flag), which bare TTY invocations never set — they enter interactive
+  //   mode via TTY detection (BUG-425 fix), never by passing --interactive.  D-10's
+  //   purpose was to prevent `claude -c` with no message in print mode; that case is
+  //   `use_print=true`, which the existing terms still gate correctly.
+  // Root cause: cli.interactive (the flag) is not the same as !use_print (inferred
+  //   interactive mode); D-10's guard was too broad and excluded bare TTY interactive.
+  // Pitfall: always use !use_print to detect interactive mode, not cli.interactive —
+  //   the flag is an explicit opt-in, not the ground truth about the invocation's mode.
   if expected_id.is_some()
-    && ( cli.message.is_some() || cli.print_mode || cli.file.is_some() || cli.interactive
+    && ( !use_print
+      || cli.message.is_some() || cli.print_mode || cli.file.is_some() || cli.interactive
       || cli.stdin_content.as_ref().is_some_and( | v | !v.is_empty() ) )
   {
     builder = builder.with_continue_conversation( true );
@@ -155,31 +186,19 @@ pub( crate ) fn build_claude_command( cli : &CliArgs ) -> ( ClaudeCommand, Optio
   {
     builder = builder.with_skip_permissions( true );
   }
-  if !cli.no_effort_max
+  // Fix(BUG-434): gate default max-effort injection on print mode or explicit --effort.
+  //   Interactive mode rejects "max" since claude v2.1.78; only inject the default when
+  //   there is a prompt to process (use_print) or the caller chose an explicit level.
+  // Root cause: unconditional injection always forwarded --effort max regardless of mode;
+  //   "max" is rejected in interactive mode by claude v2.1.78+.
+  // Pitfall: always gate EffortLevel::Max default on use_print || cli.effort.is_some() —
+  //   never inject "max" unconditionally, even when no_effort_max is false.
+  if !cli.no_effort_max && ( cli.effort.is_some() || use_print )
   {
     builder = builder.with_effort(
       cli.effort.unwrap_or( EffortLevel::Max )
     );
   }
-  // Determine print mode early — used for both chrome suppression and --print injection.
-  // Fix(BUG-227): message without -p was silently using TTY passthrough,
-  //   producing raw TUI escape codes instead of clean text output in scripted contexts.
-  // Root cause: print mode was only enabled by explicit -p/--print; no auto-detection.
-  // Pitfall: `--interactive` must suppress this to allow prompted REPL sessions.
-  //
-  // Fix(BUG-425/427): mirrors `cli/mod.rs`'s dispatch-decision fix — this flag and
-  //   that decision must never disagree, since both describe the same invocation.
-  // Root cause: this formula lacked the same TTY and file/stdin-content terms that
-  //   the mod.rs dispatch decision lacked, before its own BUG-425/427 fix.
-  // Pitfall: an explicit --interactive must gate every inferred term here, not only
-  //   message-presence — gating message alone still forced print mode under
-  //   --interactive whenever stdin was non-TTY, which this test harness's spawned
-  //   subprocesses always are (no PTY simulation — see plan's Known Coverage Gap),
-  //   defeating the flag's purpose for every real invocation in the suite.
-  let is_tty = std::io::stdin().is_terminal();
-  let use_print = cli.print_mode
-    || ( !cli.interactive
-      && ( cli.message.is_some() || !is_tty || cli.file.is_some() || cli.stdin_content.is_some() ) );
   // Fix(BUG-304): suppress --chrome whenever print mode is active.
   //   Root cause: Node.js/libuv registers a ref-counted 1-second timerfd (Chrome CDP
   //   reconnect) that is never unref()'d after --print response flush; event loop cannot

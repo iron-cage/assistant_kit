@@ -4,13 +4,14 @@ Interaction tests for Group 2 (Runner Control): `--no-skip-permissions`, `--inte
 `--new-session`, `--dir`, `--subdir`, `--max-tokens`, `--session-dir`, `--dry-run`, `--quiet`,
 `--trace`, `--no-ultrathink`, `--no-effort-max`, `--no-chrome`, `--no-persist`,
 `--file`, `--strip-fences`, `--keep-claudecode`, `--output-file`, `--expect`,
-`--expect-strategy`, `--max-sessions`, `--retry-on-transient`, `--transient-delay`,
+`--expect-strategy`, `--max-sessions`, `--gate-poll-secs`, `--gate-max-attempts`,
+`--gate-stale-secs`, `--retry-on-transient`, `--transient-delay`,
 `--timeout` (run/ask), `--retry-on-account`, `--account-delay`, `--retry-on-auth`,
 `--auth-delay`, `--retry-on-service`, `--service-delay`, `--retry-on-process`, `--process-delay`,
 `--retry-on-validation`, `--validation-delay`, `--retry-on-runner`, `--runner-delay`,
 `--retry-on-unknown`, `--unknown-delay`, `--retry-override`, `--retry-override-delay`,
 `--retry-default`, `--retry-default-delay`, `--output-style`, `--summary-fields`,
-`--journal`, `--journal-dir`, `--args-file`. Tests validate these forty-seven flags
+`--journal`, `--journal-dir`, `--args-file`. Tests validate these fifty flags
 coexist without conflict and are consumed by the runner, not forwarded to claude.
 
 **Source:** [param_group/02_runner_control.md](../../../../docs/cli/param_group/02_runner_control.md)

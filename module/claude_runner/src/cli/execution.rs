@@ -357,7 +357,8 @@ fn apply_expect_validation(
       {
         let suf = delay_suffix( delay );
         eprintln!(
-          "[Validation] {msg} — retrying{suf} (attempt {attempt}/{})…",
+          "{}[Validation] {msg} — retrying{suf} (attempt {attempt}/{})…",
+          claude_core::trace_ts(),
           retries + 1
         );
         if delay > 0
@@ -558,7 +559,8 @@ pub( super ) fn apply_runner_retry(
     *attempt += 1;
     let suf = delay_suffix( delay );
     eprintln!(
-      "[Runner] {msg} — retrying{suf} (attempt {}/{})…",
+      "{}[Runner] {msg} — retrying{suf} (attempt {}/{})…",
+      claude_core::trace_ts(),
       *attempt,
       u32::from( count ) + 1
     );
@@ -578,7 +580,7 @@ pub( super ) fn apply_runner_retry(
     return;
   }
 
-  eprintln!( "Error: [Runner] {msg} — retries exhausted (exit 1)" );
+  eprintln!( "{}Error: [Runner] {msg} — retries exhausted (exit 1)", claude_core::trace_ts() );
   std::process::exit( 1 );
 }
 
@@ -883,7 +885,8 @@ pub( super ) fn run_print_mode(
         {
           let suf = delay_suffix( delay );
           eprintln!(
-            "[{label}] {msg} — retrying{suf} (attempt {}/{})…",
+            "{}[{label}] {msg} — retrying{suf} (attempt {}/{})…",
+            claude_core::trace_ts(),
             attempts[ class_idx ],
             limit + 1
           );
@@ -901,11 +904,11 @@ pub( super ) fn run_print_mode(
       {
         if attempts[ class_idx ] > 0
         {
-          eprintln!( "Error: [{label}] {msg} — retries exhausted (exit {})", output.exit_code );
+          eprintln!( "{}Error: [{label}] {msg} — retries exhausted (exit {})", claude_core::trace_ts(), output.exit_code );
         }
         else
         {
-          eprintln!( "Error: [{label}] {msg} (exit {})", output.exit_code );
+          eprintln!( "{}Error: [{label}] {msg} (exit {})", claude_core::trace_ts(), output.exit_code );
         }
       }
 

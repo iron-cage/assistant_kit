@@ -23,18 +23,16 @@ Test case planning for [invariant/015_tools_array_doc_sync.md](../../../docs/inv
 
 ## Architectural Constraint
 
-All 4 cases are unit tests co-located with the crate in `tests/tools_command_test.rs` — this file already exists, containing the 9 command-integration tests `it1_tools_exits_zero`–`it9_tools_rejects_unknown_arg` (see [command/08_tools.md](../../../docs/cli/command/08_tools.md)'s IT-1–IT-9); the 4 sync-guard cases here are new functions appended to that same file, not a new file. Each parses `contract/claude_code/docs/tool/readme.md`'s Tool Table into an in-memory `(name, category)` list at test time via a plain-text table-row scan (no markdown-parsing dependency needed — the table's row format is stable and simple enough for a line-oriented scan), then compares against `tools::TOOLS`. Implementation tracked under `task/claude_runner/`.
+All 4 cases are unit tests co-located with the crate in `tests/tools_command_test.rs` — this file already exists, containing the 9 command-integration tests `it1_tools_exits_zero`–`it9_tools_rejects_unknown_arg` (see [command/08_tools.md](../../../docs/cli/command/08_tools.md)'s IT-1–IT-9); the 4 sync-guard cases here are new functions appended to that same file, not a new file. Each parses `contract/claude_code/docs/tool/readme.md`'s Tool Table into an in-memory `(name, category)` list at test time via a plain-text table-row scan (no markdown-parsing dependency needed — the table's row format is stable and simple enough for a line-oriented scan), then compares against `tools::TOOLS`.
 
 ## Implementation Notes
 
 | ID | Test Function | File | Status |
 |----|---------------|------|--------|
-| TS-1 | `tools_array_count_matches_contract_doc` | `tests/tools_command_test.rs` | ⏳ |
-| TS-2 | `tools_array_forward_bijection_with_contract_doc` | `tests/tools_command_test.rs` | ⏳ |
-| TS-3 | `tools_array_reverse_bijection_with_contract_doc` | `tests/tools_command_test.rs` | ⏳ |
-| TS-4 | `tools_array_sync_guard_reads_checked_in_doc` | `tests/tools_command_test.rs` | ⏳ |
-
-**Note on implementation status:** all 4 cases are `⏳` — this invariant and its enforcement test were newly documented during the 2026-07 `clr tools` filter/projection/inspect redesign, alongside the discovery that `TOOLS` held only 26 of the contract doc's 40 entries. Implementation is tracked under `task/claude_runner/`.
+| TS-1 | `tools_array_count_matches_contract_doc` | `tests/tools_command_test.rs` | ✅ |
+| TS-2 | `tools_array_forward_bijection_with_contract_doc` | `tests/tools_command_test.rs` | ✅ |
+| TS-3 | `tools_array_reverse_bijection_with_contract_doc` | `tests/tools_command_test.rs` | ✅ |
+| TS-4 | `tools_array_sync_guard_reads_checked_in_doc` | `tests/tools_command_test.rs` | ✅ |
 
 ---
 

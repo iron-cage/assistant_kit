@@ -38,5 +38,5 @@
 | `025_concurrency_gate.md` | `user_story` spec for Session Concurrency Gate | ✅ |
 | `026_session_listing.md` | `user_story` spec for Session Listing | ✅ |
 | `027_session_termination.md` | `user_story` spec for Session Termination | ✅ |
-| `028_session_transplant.md` | `user_story` spec for Session Cross-Loading (Transplant) | ⏳ |
-| `029_scope_inspection.md` | `user_story` spec for Scope Inspection | ⏳ |
+| `028_session_transplant.md` | `user_story` spec for Session Cross-Loading (Transplant) | ✅ |
+| `029_scope_inspection.md` | `user_story` spec for Scope Inspection | ✅ |
