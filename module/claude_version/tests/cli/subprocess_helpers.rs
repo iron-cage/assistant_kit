@@ -44,6 +44,21 @@ pub fn run_clv( args : &[ &str ] ) -> std::process::Output
 /// `env_overrides` is a list of `(key, value)` pairs appended to the
 /// inherited environment.  Use `HOME` to isolate from the real `~/.claude/`.
 ///
+/// # HOME Isolation — Symlink Requirement
+///
+/// When overriding `HOME`, also create `<tempdir>/.local/bin/claude` as a
+/// symlink whose **target filename** is the expected version string, e.g.:
+///
+/// ```ignore
+/// std::os::unix::fs::symlink( "2.1.220", local_bin.join( "claude" ) )
+/// ```
+///
+/// `get_version_from_symlink()` reads the symlink target filename — not the
+/// file at that path — so the target need not exist on disk.  Without the
+/// symlink, the function falls back to reading the real system binary; under
+/// parallel nextest another test may retarget the system symlink between
+/// subprocess calls, producing a flaky version mismatch.
+///
 /// # Panics
 ///
 /// Panics if the binary cannot be executed.

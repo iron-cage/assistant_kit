@@ -73,3 +73,18 @@ Unit and integration tests for `claude_version`.
 | `cli_args_test/param_bool_test.rs` | `dry::` / `force::` acceptance, non-0/1 rejection, last-wins |
 | `cli_args_test/param_numeric_test.rs` | `count::` / `interval::` / `version::` overflow and semver format |
 | `cli_args_test/type_surface_test.rs` | Type contract tests: VerbosityLevel, OutputFormat, VersionSpec, SettingsKey, SettingsValue |
+
+## Conventions
+
+### Integration Test Binary Scope
+
+Every `.rs` file placed directly in `tests/` is compiled by Cargo as a separate
+integration test binary.  A file with no `#[test]` functions still compiles —
+it runs 0 tests and is invisible in `nextest` output, but consumes compile time
+on every build.
+
+All `.rs` files at the `tests/` root must contain at least one `#[test]`
+function.  Shared helpers or fixtures not intended to run as standalone tests
+must live inside a module directory (e.g., `cli/subprocess_helpers.rs`) and
+be included via `mod` from a real entry-point file (`cli.rs`), never placed
+at the `tests/` root directly.
