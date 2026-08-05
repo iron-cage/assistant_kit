@@ -231,8 +231,9 @@ fn it08_config_arbitrary_key_accepted()
 // IT-9: key::model with no env/config → shows catalog default; exit 0
 //
 // Runs the subprocess with current_dir set to the isolated temp dir to prevent
-// the project config walk from finding /workspace/.claude/settings.json (the
-// ~/.claude mount in the container).
+// the project config walk from climbing to the container-mounted real
+// ~/.claude/settings.json (the workspace mirrors at its real host path, so
+// $HOME is an ancestor of any in-workspace cwd).
 #[ test ]
 fn it09_config_catalog_default_model()
 {
@@ -381,7 +382,7 @@ fn it17_config_dry_out_of_range_exits_1()
 //
 // Uses a separate cwd_dir (not HOME) so the project config walk does not find
 // HOME/.claude/settings.json (which would mis-classify user config as project config).
-// Also avoids the container-mounted /workspace/.claude/settings.json.
+// (In-container, HOME/.claude is the host's real ~/.claude bind-mount.)
 #[ test ]
 fn ft1_006_config_show_all_text()
 {
@@ -630,8 +631,8 @@ fn ft11_006_config_arbitrary_key_accepted()
 
 // FT-12: catalog default for model is claude-sonnet-5 when no env or config; exit 0
 //
-// Uses an isolated cwd to prevent the project config walk from finding the
-// container-mounted /workspace/.claude/settings.json.
+// Uses an isolated cwd to prevent the project config walk from climbing to the
+// container-mounted real ~/.claude/settings.json.
 #[ test ]
 fn ft12_006_config_catalog_default_model()
 {

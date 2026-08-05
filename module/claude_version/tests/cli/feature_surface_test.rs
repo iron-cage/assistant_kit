@@ -57,14 +57,18 @@ fn ft003_settings_set_get_round_trip()
 // ─── FT-4 (feature/002_process_lifecycle.md): force::1, no processes ─────────
 
 // FT-4: force::1 → command completes and reports process state
-// Note: /proc scan is global; claude processes may exist in the container
-// environment with different ownership, causing SIGKILL to be denied.
-// Either outcome (no processes or kill-permission-denied) must produce
-// a meaningful process-state report.
+// Confined to an empty CLR_PROC_DIR: the whole-workspace suite shares one
+// container PID namespace, and a real force::1 sweep would SIGKILL sibling
+// tests' claude subprocesses mid-run. An empty table exercises the same
+// accepted-param + report path deterministically ("no active processes").
 #[ test ]
 fn ft004_processes_kill_force_no_procs()
 {
-  let out = run_clv( &[ ".processes.kill", "force::1" ] );
+  let fake_proc = TempDir::new().unwrap();
+  let out = run_clv_with_env(
+    &[ ".processes.kill", "force::1" ],
+    &[ ( "CLR_PROC_DIR", fake_proc.path().to_str().unwrap() ) ],
+  );
   let combined = format!( "{}{}", stdout( &out ), stderr( &out ) );
   assert!(
     combined.contains( "no active" ) || combined.contains( "killed" ) || combined.contains( "process" ),

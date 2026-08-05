@@ -29,8 +29,8 @@ plugins:
   # The host's own `claude` CLI bind-mounted read-only — real-subprocess control
   # tests run against the host's version and credentials, with no separate
   # install baked into the image. The working volume is the workspace
-  # compilation cache (the engine exports it as CARGO_TARGET_DIR, overriding
-  # the .cargo/config.toml -host-target redirect that rides the :ro mount).
+  # compilation cache — the engine exports it as CARGO_TARGET_DIR, keeping
+  # all build artifacts off the read-only workspace mount.
   - type: binary
     name: claude
     container_path: /usr/local/bin/claude
