@@ -7,7 +7,7 @@ printf '%-13s %-11s %s\n' test_only available "cargo nextest run --all-features 
 printf '%-13s %-11s %s\n' clean   available   "cargo clean -p claude_runner_core"
 printf '%-13s %-11s %s\n' run     unavailable "-"
 printf '%-13s %-11s %s\n' lint    available   "cargo clippy -p claude_runner_core --all-features -- -D warnings"
-printf '%-13s %-11s %s\n' verify   available   "w3 .test level::4"
+printf '%-13s %-11s %s\n' verify   available   "will .test level::4"
 printf '%-13s %-11s %s\n' install  unavailable  "-"
 printf '%-13s %-11s %s\n' verbs   built-in    "-"
 printf '%-13s %-11s %s\n' package_info built-in    "-"
