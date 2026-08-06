@@ -196,9 +196,9 @@ Edge case coverage for the `version::` parameter. See [param/readme.md](../../..
 | `tc308_version_install_absent_version_defaults_to_stable` | `tests/cli/mutation_version_install_test.rs` |
 | `tc354_version_install_leading_zeros_exits_1` | `tests/cli/mutation_version_install_test.rs` |
 | `tc355_version_install_zero_parts_valid_dry` | `tests/cli/mutation_version_install_test.rs` |
-| `tc016_version_param_empty_value` | `cli_args_test/param_numeric_test.rs` |
-| `tc028_four_part_semver_rejected` | `cli_args_test/param_numeric_test.rs` |
-| `tc029_leading_zero_semver_rejected` | `cli_args_test/param_numeric_test.rs` |
+| `tc016_version_param_empty_value` | `tests/cli_args_test/param_numeric_test.rs` |
+| `tc028_four_part_semver_rejected` | `tests/cli_args_test/param_numeric_test.rs` |
+| `tc029_leading_zero_semver_rejected` | `tests/cli_args_test/param_numeric_test.rs` |
 | `version_ec7_latest_wrong_case_exits_1` | `tests/cli/version_param_test.rs` |
 | `version_ec9_command_scope_rejects_on_processes` | `tests/cli/version_param_test.rs` |
 | `version_ec10_stable_alias_dry` | `tests/cli/version_param_test.rs` |

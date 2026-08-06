@@ -26,7 +26,7 @@
 //! | `extract_semver_strips_uppercase_v` | "V1.2.3" → "1.2.3" |
 //! | `extract_semver_passes_bare_semver` | "1.2.3" → "1.2.3" |
 //! | `extract_semver_finds_version_in_verbose_string` | "claude 1.2.3" → "1.2.3" |
-//! | `validate_spec_accepts_known_aliases` | "latest", "stable", "month" |
+//! | `validate_spec_accepts_known_aliases` | "latest", "stable" |
 //! | `validate_spec_accepts_three_part_semver` | "1.2.3" |
 //! | `validate_spec_rejects_empty` | "" → error |
 //! | `validate_spec_rejects_unknown` | "nightly" → error |
@@ -35,7 +35,7 @@
 //! | `resolve_stable_alias_returns_semver` | "stable" → semver |
 //! | `resolve_unknown_spec_passthrough` | "9.9.9" → "9.9.9" |
 //! | `version_aliases_table_all_have_names`                | aliases non-empty names |
-//! | `version_aliases_table_contains_latest_stable_month`  | aliases contains latest, stable, month |
+//! | `version_aliases_table_contains_latest_stable`  | aliases contains latest, stable |
 //! | `purge_stale_versions_keeps_pinned_deletes_others`          | 3 files in tempdir; 2 stale deleted, 1 kept |
 //! | `purge_stale_versions_ignores_non_version_files`           | `lock` and `metadata` files survive purge |
 //! | `purge_stale_versions_noop_on_missing_dir`                 | no panic when directory does not exist |
@@ -98,7 +98,7 @@ fn validate_spec_accepts_known_aliases()
 {
   for alias in VERSION_ALIASES
   {
-    let result = validate_version_spec( alias.name );
+    let result = validate_version_spec( alias.name, &[] );
     assert!(
       result.is_ok(),
       "expected Ok for alias '{}', got: {:?}",
@@ -111,29 +111,29 @@ fn validate_spec_accepts_known_aliases()
 #[test]
 fn validate_spec_accepts_three_part_semver()
 {
-  assert!( validate_version_spec( "1.2.3"   ).is_ok() );
-  assert!( validate_version_spec( "2.1.78"  ).is_ok() );
-  assert!( validate_version_spec( "10.0.0"  ).is_ok() );
+  assert!( validate_version_spec( "1.2.3",  &[] ).is_ok() );
+  assert!( validate_version_spec( "2.1.78", &[] ).is_ok() );
+  assert!( validate_version_spec( "10.0.0", &[] ).is_ok() );
 }
 
 #[test]
 fn validate_spec_rejects_empty()
 {
-  assert!( validate_version_spec( "" ).is_err(), "empty string must be rejected" );
+  assert!( validate_version_spec( "", &[] ).is_err(), "empty string must be rejected" );
 }
 
 #[test]
 fn validate_spec_rejects_unknown()
 {
-  assert!( validate_version_spec( "nightly" ).is_err() );
-  assert!( validate_version_spec( "beta"    ).is_err() );
+  assert!( validate_version_spec( "nightly", &[] ).is_err() );
+  assert!( validate_version_spec( "beta",    &[] ).is_err() );
 }
 
 #[test]
 fn validate_spec_rejects_two_part_semver()
 {
-  assert!( validate_version_spec( "1.2"   ).is_err() );
-  assert!( validate_version_spec( "2.1"   ).is_err() );
+  assert!( validate_version_spec( "1.2", &[] ).is_err() );
+  assert!( validate_version_spec( "2.1", &[] ).is_err() );
 }
 
 // ─── resolve_version_spec ─────────────────────────────────────────────────────
@@ -142,13 +142,13 @@ fn validate_spec_rejects_two_part_semver()
 fn resolve_latest_alias_returns_latest()
 {
   // "latest" has empty value → resolves to the alias name itself
-  assert_eq!( resolve_version_spec( "latest" ), "latest" );
+  assert_eq!( resolve_version_spec( "latest", &[] ), "latest" );
 }
 
 #[test]
 fn resolve_stable_alias_returns_semver()
 {
-  let resolved = resolve_version_spec( "stable" );
+  let resolved = resolve_version_spec( "stable", &[] );
   // Must be a non-empty semver, not the literal "stable"
   assert_ne!( resolved, "stable", "stable must resolve to a pinned semver" );
   assert!(
@@ -161,7 +161,7 @@ fn resolve_stable_alias_returns_semver()
 fn resolve_unknown_spec_passthrough()
 {
   // Unknown specs pass through unchanged (callers validate separately)
-  assert_eq!( resolve_version_spec( "9.9.9" ), "9.9.9" );
+  assert_eq!( resolve_version_spec( "9.9.9", &[] ), "9.9.9" );
 }
 
 // ─── VERSION_ALIASES table ────────────────────────────────────────────────────
@@ -177,12 +177,13 @@ fn version_aliases_table_all_have_names()
 }
 
 #[test]
-fn version_aliases_table_contains_latest_stable_month()
+fn version_aliases_table_contains_latest_stable()
 {
+  // The built-in table carries only the two compile-time aliases; ad hoc
+  // aliases (formerly "month") are runtime custom markers via `.version.mark`.
   let names : Vec< &str > = VERSION_ALIASES.iter().map( | a | a.name ).collect();
   assert!( names.contains( &"latest" ), "must have 'latest' alias" );
   assert!( names.contains( &"stable" ), "must have 'stable' alias" );
-  assert!( names.contains( &"month"  ), "must have 'month' alias"  );
 }
 
 // ─── purge_stale_versions ─────────────────────────────────────────────────────

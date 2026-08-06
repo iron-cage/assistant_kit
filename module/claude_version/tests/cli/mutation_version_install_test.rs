@@ -31,6 +31,9 @@
 //! | 540 | `record_only::1 v::0` → bare label only, no verbose text | P | 0 |
 //! | 541 | `record_only::1 force::1` → exit 0, force silently ignored | P | 0 |
 //! | 542 | `record_only::1` called twice with same version → identical output both times | P | 0 |
+//! | 543 | `record_only::0 dry::1` → normal dry-run path, exit 0 | P | 0 |
+//! | 545 | `record_only::maybe` → non-parseable value rejected, exit 1 | N | 1 |
+//! | 546 | `record_only::` (empty) → empty value rejected, exit 1 | N | 1 |
 
 use tempfile::TempDir;
 
@@ -539,4 +542,30 @@ fn tc542_version_install_record_only_unconditional_repeat()
     stdout( &out1 ), stdout( &out2 ),
     "record_only::1 must behave identically on repeated calls (no idempotency branching)"
   );
+}
+
+// TC-543: record_only::0 dry::1 → takes normal install (dry-run) path, not record-only path
+#[ test ]
+fn tc543_version_install_record_only_zero_normal_install()
+{
+  let out = run_clv( &[ ".version.install", "version::stable", "record_only::0", "dry::1" ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "[dry-run]" ), "record_only::0 must follow normal install path: {text}" );
+}
+
+// TC-545: record_only::maybe → non-parseable value rejected, exit 1
+#[ test ]
+fn tc545_version_install_record_only_invalid_exits_1()
+{
+  let out = run_clv( &[ ".version.install", "record_only::maybe" ] );
+  assert_exit( &out, 1 );
+}
+
+// TC-546: record_only:: (empty) → empty value rejected, exit 1
+#[ test ]
+fn tc546_version_install_record_only_empty_exits_1()
+{
+  let out = run_clv( &[ ".version.install", "record_only::" ] );
+  assert_exit( &out, 1 );
 }

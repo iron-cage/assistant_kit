@@ -12,13 +12,20 @@ user: testuser
 script: verb/test.d/l1
 
 # ── Mounts ────────────────────────────────────────────────────────────────────
+# Per-entry fields: host, container (optional — defaults to the host path, mirrored),
+# mode, check (file|directory), commands (list)
 mounts:
+  # Claude Code auth/session state — control tests spawn the real `claude` CLI
+  # against whatever auth the host already has. Mirror default: the mount lands
+  # at the real ~/.claude, which is where ClaudePaths resolves it via $HOME.
   - host: ~/.claude
     mode: rw
     check: directory
     commands: [run, live, shell]
 
 # ── Plugins ───────────────────────────────────────────────────────────────────
+# type: binary — binary found via 'which name' on host and bind-mounted into container.
+# working_volume / working_volume_path — named volume for compilation artifacts.
 plugins:
   # The host's own `claude` CLI bind-mounted read-only — real-subprocess control
   # tests run against the host's version and credentials. The working volume is
@@ -32,6 +39,10 @@ plugins:
     commands: [run, live, shell]
 
 # ── Environment ───────────────────────────────────────────────────────────────
+# env: global flat map injected into all container runs
+# env_commands: per-command overrides (merged with env)
+env: {}
+
 env_commands:
   live:
     # cargo home for registry bind-mounts; offline flag prevents network fetches
@@ -39,9 +50,10 @@ env_commands:
     CARGO_NET_OFFLINE: "true"
 
 # ── Build ─────────────────────────────────────────────────────────────────────
-# Image-build inputs for this owning config (bake-time only).
+# Image-build inputs for this owning config (bake-time only; runtime scoping is the caller's concern).
 build:
-  # crate scope for cargo chef cook — which crates' external deps get precompiled
+  # crate scope for cargo chef cook — external deps of every workspace member get
+  # precompiled (dependencies only; workspace test binaries are never cooked)
   cmd_scope: "--workspace"
   # union of the retired flat configs' system_packages (root: curl procps jq; modules: curl procps)
   packages: [curl, procps, jq]

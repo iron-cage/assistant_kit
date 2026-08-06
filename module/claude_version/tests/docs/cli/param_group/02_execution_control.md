@@ -179,5 +179,5 @@ Both are valid invocations; the dry-run flag presence in output differs.
 | `tc406_guard_dry_force_no_install` | `tests/cli/mutation_version_guard_test.rs` |
 | `tc409_guard_interval_zero_oneshot` | `tests/cli/mutation_version_guard_test.rs` |
 | `tc415_watch_loop_continues_after_install_error` | `tests/cli/mutation_version_guard_test.rs` |
-| `tc493_dry_0_then_1_last_wins_dry_active` | `cli_args_test/param_bool_test.rs` |
-| `tc494_dry_1_then_0_last_wins_dry_inactive` | `cli_args_test/param_bool_test.rs` |
+| `tc493_dry_0_then_1_last_wins_dry_active` | `tests/cli_args_test/param_bool_test.rs` |
+| `tc494_dry_1_then_0_last_wins_dry_inactive` | `tests/cli_args_test/param_bool_test.rs` |
