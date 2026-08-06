@@ -3,7 +3,7 @@
 -- **Summary:** Preview the action that would be performed without executing side effects.
 -- **Type:** bool
 -- **Default:** false (0)
--- **Commands:** `.version.install`, `.version.guard`, `.processes.kill`, `.settings.set`, `.config`
+-- **Commands:** `.version.install`, `.version.guard`, `.ps.kill`, `.settings.set`, `.config`
 -- **Group:** Execution Control
 
 Output is prefixed with `[dry-run] would ...`.
@@ -15,7 +15,7 @@ Output is prefixed with `[dry-run] would ...`.
 ```sh
 clv.version.install dry::1
 clv.version.guard dry::1
-clv.processes.kill dry::1
+clv.ps.kill dry::1
 clv.settings.set key::theme value::dark dry::1
 ```
 
@@ -25,7 +25,7 @@ clv.settings.set key::theme value::dark dry::1
 |---|---------|---------|-------|
 | 1 | [`.version.install`](../command/version.md#command-4-versioninstall) | false | Preview install steps |
 | 2 | [`.version.guard`](../command/version.md#command-5-versionguard) | false | Preview guard restore |
-| 3 | [`.processes.kill`](../command/processes.md#command-8-processeskill) | false | Preview kill targets without sending signals |
+| 3 | [`.ps.kill`](../command/ps.md#command-8-pskill) | false | Preview kill targets without sending signals |
 | 4 | [`.settings.set`](../command/settings.md#command-11-settingsset) | false | Preview write without file change |
 | 5 | [`.config`](../command/config.md#command-13-config) | false | Preview set/unset without file change |
 

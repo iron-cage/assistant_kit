@@ -13,10 +13,18 @@
 
 | key:: | value:: | unset:: | Mode |
 |-------|---------|---------|------|
-| absent | absent | absent/false | show-all: print all resolved settings |
+| absent | absent | absent/false | show-all: `data_fmt` table of all resolved settings |
 | present | absent | absent/false | get: print resolved value for one key |
 | present | present | absent/false | set: write value to target scope |
 | present | absent | true | unset: delete key from target scope |
+
+**Show-all text output (v::1):** `data_fmt` table with columns `#`, `Key`, `Value`, `Source`. One row per known key that has any value present across the 4 layers; absent keys are omitted. Source column shows the winning layer (`env`, `project`, `user`, `default`):
+
+```
+#   Key     Value              Source
+1   model   claude-opus-4-8   env
+2   theme   dark               user
+```
 
 **Resolution chain:** When showing or getting a setting, the effective value is the first non-absent value found in this priority order:
 

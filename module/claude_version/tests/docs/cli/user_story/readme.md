@@ -25,7 +25,7 @@
 
 - [Environment Check](001_environment_check.md) -- `.status` verification
 - [Version Upgrade](002_version_upgrade.md) -- install/guard/history workflow
-- [Process Lifecycle](003_process_lifecycle.md) -- `.processes` / `.processes.kill`
+- [Process Lifecycle](003_process_lifecycle.md) -- `.ps` / `.ps.kill`
 - [Settings Management](004_settings_management.md) -- `.settings.*` read/write
 - [Version Pinning](005_version_pinning.md) -- team version alignment
 - [Config Management](006_config_management.md) -- `.config` read/write workflow

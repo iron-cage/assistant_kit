@@ -36,8 +36,8 @@ Output fields differ per command. Common patterns:
 | 3 | [`.version.install`](../command/version.md#command-4-versioninstall) | Default human-readable output |
 | 4 | [`.version.guard`](../command/version.md#command-5-versionguard) | Default human-readable output |
 | 5 | [`.version.list`](../command/version.md#command-6-versionlist) | Default human-readable output |
-| 6 | [`.processes`](../command/processes.md#command-7-processes) | Default human-readable output |
-| 7 | [`.processes.kill`](../command/processes.md#command-8-processeskill) | Default human-readable output |
+| 6 | [`.ps`](../command/ps.md#command-7-ps) | Default human-readable output |
+| 7 | [`.ps.kill`](../command/ps.md#command-8-pskill) | Default human-readable output |
 | 8 | [`.settings.show`](../command/settings.md#command-9-settingsshow) | Default human-readable output |
 | 9 | [`.settings.get`](../command/settings.md#command-10-settingsget) | Default human-readable output |
 | 10 | [`.config`](../command/config.md#command-13-config) | Default human-readable output |

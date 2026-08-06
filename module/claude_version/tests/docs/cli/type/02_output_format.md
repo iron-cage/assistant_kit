@@ -6,7 +6,7 @@ Type compliance and validation tests for `OutputFormat`. See [type/02_output_for
 
 - **Purpose**: Validate OutputFormat parsing, case-sensitivity enforcement, and output structure.
 - **Responsibility**: Valid variants, invalid inputs, default behavior, and observable output differences between formats.
-- **Commands:** `.status`, `.version.show`, `.version.install`, `.version.list`, `.version.guard`, `.processes`, `.processes.kill`, `.settings.show`, `.settings.get`
+- **Commands:** `.status`, `.version.show`, `.version.install`, `.version.list`, `.version.guard`, `.ps`, `.ps.kill`, `.settings.show`, `.settings.get`
 - **In Scope**: Format string parsing, case-sensitive matching, and observable output format differences.
 - **Out of Scope**: Per-command JSON schema structure (→ `../command/`), parameter interactions (→ `../param_group/`).
 
