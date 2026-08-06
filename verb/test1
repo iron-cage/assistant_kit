@@ -11,5 +11,6 @@ if [[ -z "$FILTER" ]]; then
   echo "  example: ./verb/test1 test_config_get" >&2
   exit 1
 fi
-if [[ "$FILTER" == "--dry-run" ]]; then echo "./runbox/runbox .test1 '<filter>'"; exit 0; fi
-exec "$(dirname "${BASH_SOURCE[0]}")/../runbox/runbox" .test1 "$FILTER"
+if [[ "$FILTER" == "--dry-run" ]]; then echo "./runbox/runbox .live -- env NEXTEST_FILTER='<filter>' verb/test.d/l1_filter"; exit 0; fi
+ROOT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
+cd "$ROOT_DIR" && exec "$ROOT_DIR/runbox/runbox" .live -- env NEXTEST_FILTER="$FILTER" "$ROOT_DIR/verb/test.d/l1_filter"

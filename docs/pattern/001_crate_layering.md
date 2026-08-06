@@ -4,7 +4,7 @@
 
 - **Purpose**: Document the four-layer crate dependency hierarchy governing the assistant workspace.
 - **Responsibility**: Describe the layer definitions, Layer Invariant, permitted dep directions, and crate-to-layer assignments.
-- **In Scope**: Layer 0–3 definitions, Layer Invariant (no cross-layer-N deps), dependency table, Layer * position (claude_storage_core, claude_auth, claude_quota, claude_journal, runbox — outside hierarchy).
+- **In Scope**: Layer 0–3 definitions, Layer Invariant (no cross-layer-N deps), dependency table, Layer * position (claude_storage_core, claude_auth, claude_quota, claude_journal — outside hierarchy).
 - **Out of Scope**: Cross-workspace integration (→ `integration/001_consumer_integration.md`), privacy invariant (→ `invariant/001_privacy_invariant.md`).
 
 ### Problem
@@ -28,7 +28,6 @@ Layer 0: claude_core                                                  (zero work
 *        claude_auth                                                    (zero workspace deps — OAuth token refresh transport)
 *        claude_quota                                                   (zero workspace deps — API rate-limit HTTP transport)
 *        claude_journal                                                  (zero workspace deps — append-only event journal library)
-*        runbox                                                         (zero workspace deps — container runner scaffold CLI)
 ```
 
 **Dependencies per crate:**
@@ -40,7 +39,6 @@ Layer 0: claude_core                                                  (zero work
 | * | `claude_auth` | lib | — |
 | * | `claude_quota` | lib | — |
 | * | `claude_journal` | lib | — |
-| * | `runbox` | cli | `runbox`, `crb` |
 | 1 | `claude_assets_core` | lib | — |
 | 1 | `claude_profile_core` | lib | — |
 | 1 | `claude_version_core` | lib | — |
@@ -62,7 +60,6 @@ Layer 0: claude_core                                                  (zero work
 - `claude_auth` — OAuth token refresh transport; standalone primitive usable without any workspace dep
 - `claude_quota` — API rate-limit HTTP transport; standalone primitive usable without any workspace dep
 - `claude_journal` — append-only event journal library; zero workspace deps; wrapped by Layer 2's `claude_journal_viewer`
-- `runbox` — container runner scaffold CLI; zero workspace deps; generates `runbox/runbox`, `runbox/runbox.yml`, `runbox/runbox.dockerfile` in a target project
 
 ### Applicability
 
