@@ -9,7 +9,7 @@
 
 ### Design
 
-**Command syntax:** All commands use dot-prefixed dot-separated tokens (`.version.install`, `.processes.kill`, etc.) followed by `param::value` pairs. Unknown parameters exit 1.
+**Command syntax:** All commands use dot-prefixed dot-separated tokens (`.version.install`, `.ps.kill`, etc.) followed by `param::value` pairs. Unknown parameters exit 1.
 
 **5-phase unilang pipeline (`run_cli()`):**
 1. Adapter — converts argv to unilang tokens; handles `v::`/`verbosity::` alias expansion, bool/integer validation, overflow guards
@@ -69,7 +69,7 @@
 
 Decisions by concern area: **Syntax**: D1, D2 | **Pipeline**: D4, D5, D7, D9 | **Parameter Conventions**: D3, D8 | **Documentation**: D6
 
-**D2 — Two-level subcommands:** Commands use at most two dot-separated segments (`.version.show`, `.settings.get`). Single-segment commands (`.status`, `.processes`, `.help`) are also supported.
+**D2 — Two-level subcommands:** Commands use at most two dot-separated segments (`.version.show`, `.settings.get`). Single-segment commands (`.status`, `.ps`, `.help`) are also supported.
 
 **D6 — docs/cli/ with three-layer structure:** A proper three-layer reference (`command/`, `param/`, `type/`) with parameter groups, dictionary, and workflows — all in unilang syntax.
 

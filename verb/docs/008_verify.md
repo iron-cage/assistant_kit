@@ -2,14 +2,14 @@
 
 - **Kind:** canonical
 - **Availability:** universal
-- **`--dry-run`:** `w3 .test level::4` (most modules) / `./verb/test && cargo +nightly udeps … && cargo +nightly audit` (workspace root, `claude_runner`, `claude_version`)
+- **`--dry-run`:** `will .test level::4` (most modules) / `./verb/test && cargo +nightly udeps … && cargo +nightly audit` (workspace root, `claude_runner`, `claude_version`)
 
 ### Command
 
 Most modules:
 
 ```bash
-w3 .test level::4
+will .test level::4
 ```
 
 Level 4 runs: nextest (all features, warnings-as-errors) + doc tests + clippy (-D warnings) + `cargo +nightly udeps` (unused dependency detection) + `cargo +nightly audit` (security vulnerability scan of `Cargo.lock`). It executes host-side — the container-only test invariant blocks its nextest stage on a bare host, so this form only completes where host execution is authorized (`VERB_LAYER=l0` path).
@@ -37,7 +37,7 @@ Library crates skip the audit step automatically when no `Cargo.lock` is present
 ### Example
 
 ```bash
-./verb/verify              # root: container test + udeps + audit; module: w3 .test level::4
+./verb/verify              # root: container test + udeps + audit; module: will .test level::4
 ./verb/verify --dry-run    # prints the command chain
 ```
 

@@ -5,7 +5,7 @@
 - **Purpose**: Reference for version-namespace clv commands.
 - **Responsibility**: Command syntax, parameters, exit codes, and cross-references for all `.version.*` commands.
 - **In Scope**: `.version.show`, `.version.install`, `.version.guard`, `.version.list` (alias and release-history listing via `mode::`), `.version.paths` (filesystem path discovery), `.version.mark` (custom marker CRUD).
-- **Out of Scope**: Root commands (→ [root.md](root.md)), process commands (→ [processes.md](processes.md)), settings commands (→ [settings.md](settings.md)).
+- **Out of Scope**: Root commands (→ [root.md](root.md)), process commands (→ [ps.md](ps.md)), settings commands (→ [settings.md](settings.md)).
 
 ---
 

@@ -18,7 +18,7 @@ export CARGO_NET_OFFLINE=true
 # Pitfall: environment inheritance ensures this env var propagates to nested runners
 # automatically — the fix applies regardless of test runner binary version.
 export NO_COLOR=1
-# Container signal 3 for the container-only test invariant (nextest setup script + Rust guards).
+# Container signal for the container-only test invariant (nextest setup script + Rust guards).
 export RUNBOX_CONTAINER=1
 export RUSTFLAGS="-D warnings"
 cargo nextest run --workspace --all-features

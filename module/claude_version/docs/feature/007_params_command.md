@@ -77,7 +77,16 @@ print
 
 **JSON output:** Array of objects, one per param, with fields: `name`, `cli_flag`, `env_var`, `config_key`, `env_value`, `config_value`, `default`, `effective`, `source`.
 
-**Show-all text output (v::0):** One line per param: `name = value (source)`, or `name = (unset)` for absent env-only params, or `name = (CLI-only)` for CLI-only params.
+**Show-all text output (v::1, default):** `data_fmt` table with columns `#`, `Name`, `Forms`, `Value`, `Default`. Rendered via `claude_runner_core`'s shared rendering module. One row per param in alphabetical order:
+
+```
+#    Name            Forms          Value                    Default
+1    bash_timeout    env            unset                    120000
+2    model           cli, env, cfg  claude-opus-4-8 (env)   claude-sonnet-5
+3    print           cli            (CLI-only)               off
+```
+
+**Show-all text output (v::0):** Compact one-column list — one line per param: `name = value (source)`, or `name = (unset)` for absent env-only params, or `name = (CLI-only)` for CLI-only params.
 
 **Exit codes:**
 

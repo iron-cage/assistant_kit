@@ -5,7 +5,7 @@
 - **Purpose**: Reference for the `.config` clv command.
 - **Responsibility**: Command syntax, parameters, exit codes, examples, and cross-references for `.config`.
 - **In Scope**: `.config` (show-all / get / set / unset modes).
-- **Out of Scope**: Deprecated `.settings.*` commands (→ [settings.md](settings.md)), version commands (→ [version.md](version.md)), process commands (→ [processes.md](processes.md)).
+- **Out of Scope**: Deprecated `.settings.*` commands (→ [settings.md](settings.md)), version commands (→ [version.md](version.md)), process commands (→ [ps.md](ps.md)).
 
 ---
 

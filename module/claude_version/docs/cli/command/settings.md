@@ -7,7 +7,7 @@
 - **Purpose**: Reference for settings-namespace clv commands (deprecated).
 - **Responsibility**: Command syntax, parameters, exit codes, and cross-references for `.settings.show`, `.settings.get`, and `.settings.set`.
 - **In Scope**: `.settings.show`, `.settings.get`, `.settings.set`.
-- **Out of Scope**: Version commands (→ [version.md](version.md)), process commands (→ [processes.md](processes.md)), unified config command (→ [config.md](config.md)).
+- **Out of Scope**: Version commands (→ [version.md](version.md)), process commands (→ [ps.md](ps.md)), unified config command (→ [config.md](config.md)).
 
 ---
 
