@@ -33,7 +33,8 @@
 | `--dangerously-skip-permissions` | Yes — when MESSAGE present; No in no-message REPL | No — never (refresh invokes no tools) |
 | `--no-session-persistence` | Yes — always | Yes — always |
 | `--chrome` | On (ClaudeCommand default) | Off (`--no-chrome` injected) |
-| `env -u CLAUDECODE` | Yes | Yes |
+| `env -u CLAUDECODE` | Yes (always — no suppression flag; isolated/refresh have no `--keep-claudecode`) | Yes |
+| `env -u CLAUDE_CODE_CHILD_SESSION` | Yes (unconditional — no suppression flag) | Yes |
 | Minimal `CLAUDE.md` written to temp HOME | Yes (suppress interactive prompts) | Yes (same content) |
 | `CLAUDE_CODE_MAX_OUTPUT_TOKENS` | `128,000` | `128,000` |
 | **--- Session ---** | | |

@@ -257,9 +257,9 @@ Edge case coverage for the `format::` parameter. See [param/05_format.md](../../
 
 | Function | File |
 |----------|------|
-| `tc015_format_empty_value` | `cli_args_test/param_format_test.rs` |
-| `tc030_format_text_wrong_case_rejected` | `cli_args_test/param_format_test.rs` |
-| `tc495_format_text_then_json_last_wins_json` | `cli_args_test/param_format_test.rs` |
+| `tc015_format_empty_value` | `tests/cli_args_test/param_format_test.rs` |
+| `tc030_format_text_wrong_case_rejected` | `tests/cli_args_test/param_format_test.rs` |
+| `tc495_format_text_then_json_last_wins_json` | `tests/cli_args_test/param_format_test.rs` |
 | `tc242_unknown_format_exits_1` | `tests/cli/read_status_test.rs` |
 | `tc243_uppercase_format_exits_1` | `tests/cli/read_status_test.rs` |
 | `tc244_empty_format_exits_1` | `tests/cli/read_status_test.rs` |
@@ -276,9 +276,9 @@ Edge case coverage for the `format::` parameter. See [param/05_format.md](../../
 | `format_ec17_history_format_json_fields` | `tests/cli/format_param_test.rs` |
 | `format_ec18_history_format_xml_exits_1` | `tests/cli/format_param_test.rs` |
 | `format_ec19_history_format_json_uppercase_exits_1` | `tests/cli/format_param_test.rs` |
-| `format_ec6_absent_defaults_to_text` | `cli_args_test/param_format_test.rs` |
-| `format_ec7_text_explicit_same_as_absent` | `cli_args_test/param_format_test.rs` |
-| `format_ec8_csv_exits_1` | `cli_args_test/param_format_test.rs` |
+| `format_ec6_absent_defaults_to_text` | `tests/cli_args_test/param_format_test.rs` |
+| `format_ec7_text_explicit_same_as_absent` | `tests/cli_args_test/param_format_test.rs` |
+| `format_ec8_csv_exits_1` | `tests/cli_args_test/param_format_test.rs` |
 | `format_ec20_params_format_json_array` | `tests/cli/format_param_test.rs` |
 | `tc241_settings_show_json_preserves_types` | `tests/cli/read_settings_test.rs` |
 | `ft005_9_per_cmd_validation` | `tests/cli/catalog_surface_test.rs` |

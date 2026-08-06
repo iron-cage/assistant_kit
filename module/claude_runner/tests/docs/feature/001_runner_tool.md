@@ -85,7 +85,7 @@ Test case planning for [feature/001_runner_tool.md](../../../docs/feature/001_ru
 
 - **Given:** clean environment
 - **When:** `clr --dry-run "Fix bug"`
-- **Then:** The assembled command line in the dry-run output contains `claude` (the binary being invoked is `claude`, not `clr`); execution is delegated to the claude binary. The line starts with `env -u CLAUDECODE claude` by default (BUG-246 WYSIWYG fix).
+- **Then:** The assembled command line in the dry-run output contains `claude` (the binary being invoked is `claude`, not `clr`); execution is delegated to the claude binary. The line starts with `env -u CLAUDECODE -u CLAUDE_CODE_CHILD_SESSION claude` by default (BUG-246 WYSIWYG fix; `CLAUDE_CODE_CHILD_SESSION` is always stripped unconditionally).
 - **Exit:** 0
 - **Source:** [feature/001_runner_tool.md](../../../docs/feature/001_runner_tool.md)
 

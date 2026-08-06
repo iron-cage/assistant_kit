@@ -31,7 +31,7 @@
 | HOME directory | Real `$HOME` | Real `$HOME` | Fresh temp dir (deleted after subprocess exits) |
 | Temp HOME contents | — | — | `.claude/.credentials.json` + minimal `CLAUDE.md` |
 | **--- Auto-Injections ---** | | | |
-| `env -u CLAUDECODE claude …` | Yes (suppressed by `--keep-claudecode`) | Yes | Yes |
+| `env -u CLAUDECODE -u CLAUDE_CODE_CHILD_SESSION claude …` | Yes (`CLAUDECODE` suppressed by `--keep-claudecode`; `CLAUDE_CODE_CHILD_SESSION` unconditional — no suppression flag) | Yes | Yes |
 | `-c` (continue session) | Yes (suppressed by `--new-session`) | Yes | No |
 | `--dangerously-skip-permissions` | Yes — **always** | Yes — **always** | Yes — only when MESSAGE present; No in no-message REPL mode |
 | `--effort max` | Yes (suppressed by `--no-effort-max`) | Yes | Yes (override with `--effort <level>`; suppress entirely with `--no-effort-max`) |

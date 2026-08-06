@@ -9,7 +9,7 @@
 
 ### Problem
 
-A workspace with 19 crates that have varying responsibilities risks uncontrolled dependency graphs — any crate can depend on any other, creating cycles and tight coupling. Without explicit layer rules, adding a dependency that "just works" today can create a cycle that prevents future refactoring or publishing.
+A workspace with 18 crates that have varying responsibilities risks uncontrolled dependency graphs — any crate can depend on any other, creating cycles and tight coupling. Without explicit layer rules, adding a dependency that "just works" today can create a cycle that prevents future refactoring or publishing.
 
 ### Solution
 
@@ -55,7 +55,7 @@ Layer 0: claude_core                                                  (zero work
 
 `*` = outside layer hierarchy.
 
-**Layer `*` position:** Five crates sit outside the numbered layer hierarchy. They have no workspace dependencies (only external crate deps):
+**Layer `*` position:** Four crates sit outside the numbered layer hierarchy. They have no workspace dependencies (only external crate deps):
 - `claude_storage_core` — zero-dep JSONL parsing primitive; uses env-var paths, not `ClaudePaths`; wrapped by Layer 2's `claude_storage`
 - `claude_auth` — OAuth token refresh transport; standalone primitive usable without any workspace dep
 - `claude_quota` — API rate-limit HTTP transport; standalone primitive usable without any workspace dep

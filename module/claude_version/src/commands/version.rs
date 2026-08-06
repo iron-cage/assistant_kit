@@ -91,12 +91,12 @@ pub fn version_show_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) ->
     {
       if labels.is_empty()
       {
-        format!( "{version}\n" )
+        format!( "Version: {version}\n" )
       }
       else
       {
         let names : Vec< &str > = labels.iter().map( | l | l.name.as_str() ).collect();
-        format!( "{version}  [{}]\n", names.join( ", " ) )
+        format!( "Version: {version}  [{}]\n", names.join( ", " ) )
       }
     }
     ( OutputFormat::Text, _ ) =>

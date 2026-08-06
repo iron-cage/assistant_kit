@@ -32,7 +32,7 @@ Three components collaborate to enforce this invariant:
    `session_exists()` returns `Option<SessionId>` (the UUID of the most-recently-modified `.jsonl` file in the session storage directory) instead of `bool`. `build_claude_command()` stores this as `expected_session_id` and returns `(ClaudeCommand, Option<SessionId>)`. The `-c` injection condition is unchanged: `expected_session_id.is_some()`.
 
 2. **`summary.rs` — extract actual UUID:**
-   `extract_session_id(stdout: &str) -> Option<String>` parses the `session_id` field from a CLR result envelope. Guards on `"type":"result"` per invariant/008 — returns `None` for non-result types (tool use, thinking blocks).
+   `extract_session_id(stdout: &str) -> Option<String>` parses the `session_id` field from a CLR result envelope. Guards on compound gate per invariant/008 (BUG-437 fix) — accepts old SDK (`"type":"result"`, no `"subtype"`) and new SDK (`"subtype"` present, no top-level `"type"`); returns `None` for non-result stream chunks that have neither.
 
 3. **`execution.rs` — compare and warn:**
    On the success path in `run_print_mode()`, after capturing `raw_stdout` and before fence-stripping:
@@ -113,7 +113,7 @@ Daemon inherited `CLR_DIR=<wrong-project>` from launching shell; `parse.rs:313` 
 | File | Relationship |
 |------|--------------|
 | [invariant/001_default_flags.md](001_default_flags.md) | `-c` injection decision that gates this check |
-| [invariant/008_render_summary_gate.md](008_render_summary_gate.md) | `"type":"result"` gate that `extract_session_id()` inherits |
+| [invariant/008_render_summary_gate.md](008_render_summary_gate.md) | compound gate (`subtype` presence OR `"type":"result"`) that `extract_session_id()` inherits (BUG-437 fix) |
 
 ### Features
 

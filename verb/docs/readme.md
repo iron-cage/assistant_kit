@@ -6,7 +6,7 @@ Per-verb reference for the `do` Universal Action Protocol.
 
 - **Purpose:** Document every verb in the `do` protocol implemented across workspace modules.
 - **Responsibility:** Per-instance reference covering kind, availability, `--dry-run` contract, command, and notes.
-- **In Scope:** All 8 protocol verbs (6 canonical + 2 meta); their contracts, module-level variation, and workspace-level behavior.
+- **In Scope:** All 9 documented protocol verbs (7 canonical + 2 meta); their contracts, module-level variation, and workspace-level behavior.
 - **Out of Scope:** Verb script implementation (→ `module/*/verb/` for modules, `verb/` for workspace).
 
 ### Responsibility Table
@@ -36,6 +36,7 @@ Canonical verbs implement project actions. Meta verbs implement protocol introsp
 | [004](004_run.md) | `run` | canonical | binary-only | yes | Execute the project binary |
 | [005](005_lint.md) | `lint` | canonical | universal | yes | Static analysis, warnings as errors |
 | [008](008_verify.md) | `verify` | canonical | universal | yes | Full checks: tests, deps, audit |
+| [009](009_test1.md) | `test1` | canonical | workspace-only | yes | Targeted nextest filter in container |
 | [006](006_verbs.md) | `verbs` | meta | universal | — | List all verbs with status |
 | [007](007_package_info.md) | `package_info` | meta | universal | — | Deterministic flat JSON: name, version, edition, ecosystem |
 

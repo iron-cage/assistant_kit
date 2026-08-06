@@ -89,12 +89,12 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
   let dry = || reg_arg_opt( "dry",         Kind::Boolean, "Preview the action without executing side effects.",            Some( "0"       ) );
   let frc = || reg_arg_opt( "force",       Kind::Boolean, "Bypass safety guards and idempotency checks.",                 Some( "0"       ) );
   let rec = || reg_arg_opt( "record_only", Kind::Boolean, "Persist version preference without installing.",               Some( "0"       ) );
-  let ver = || reg_arg_opt( "version",     Kind::String,  "Version alias or semver to install or guard against.",         Some( "stable"  ) );
+  let ver = || reg_arg_opt( "version",     Kind::String,  "Version alias or semver to install or guard against.",         None             );
   let key = || reg_arg_opt( "key",         Kind::String,  "Settings key to read, write, or remove.",                      None             );
   let val = || reg_arg_opt( "value",       Kind::String,  "Settings value to write.",                                     None             );
   let itv = || reg_arg_opt( "interval",    Kind::Integer, "Guard check frequency in seconds; 0 = one-shot.",              Some( "0"       ) );
   let cnt = || reg_arg_opt( "count",       Kind::Integer, "Maximum history entries to show.",                             Some( "10"      ) );
-  let scp = || reg_arg_opt( "scope",       Kind::String,  "Configuration write scope (user or project).",                 Some( "user"    ) );
+  let scp = || reg_arg_opt( "scope",       Kind::String,  "Configuration write scope (user or project).",                 None             );
   let nme = || reg_arg_opt( "name",        Kind::String,  "Custom marker name for .version.mark.",                        None             );
   let dsc = || reg_arg_opt( "description", Kind::String,  "Human-readable description for a custom marker.",              None             );
   let uns = || reg_arg_opt( "unset",       Kind::Boolean, "Remove the specified key from the target scope.",              Some( "0"       ) );
@@ -206,7 +206,8 @@ fn print_usage( binary : &str )
 /// prints the rendered output.  Prints an error to stderr if the command is
 /// not found and returns without printing usage.
 #[ cfg( feature = "enabled" ) ]
-fn print_command_help( name : &str, registry : &unilang::registry::CommandRegistry )
+#[ inline ]
+pub fn print_command_help( name : &str, registry : &unilang::registry::CommandRegistry )
 {
   use cli_fmt::help::*;
   let Some( def ) = registry.command( name ) else

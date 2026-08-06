@@ -13,7 +13,6 @@ Claude Code account credential management.
 | `unilang.commands.yaml` | YAML command metadata for 16 profile commands |
 | `verb/` | Shell scripts for each `do` protocol verb (build, test, clean, run, lint). |
 | `vision.md` | Crate vision, design decisions, and open problems |
-| `runbox/` | Container run environment definitions and entry scripts |
 | `license` | Crate license text |
 | `changelog.md` | Notable changes by version |
 | `task/` | Task tracking: verified and completed work items. |
@@ -118,22 +117,22 @@ clp .paths                 # show ~/.claude/ canonical paths
 
 ## Testing
 
-**Container (all tests — credentials required):**
+**Container (module suite — credentials required):**
 ```bash
 ./verb/test
 ```
 
-**Container (offline — no credentials needed):**
+**Container (targeted filter):**
 ```bash
-./verb/test offline
+./verb/test_only <name_substring>
 ```
 
 **Container (interactive shell):**
 ```bash
-./verb/shell
+runbox .shell
 ```
 
-**Local (Docker-orchestrated):**
+**Host escape hatch (no container; honored by the nextest setup script):**
 ```bash
-./verb/test
+VERB_LAYER=l0 cargo nextest run --all-features
 ```
