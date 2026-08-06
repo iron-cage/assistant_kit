@@ -17,8 +17,8 @@
 | `.version.install` | Install a Claude Code version via official installer (`curl -fsSL https://claude.ai/install.sh`) |
 | `.version.guard` | Check for version drift and restore preferred version; supports one-shot and watch-mode (`interval::N`) |
 | `.version.list` | List named version aliases and their resolution targets (`mode::aliases`, default), or recent release history from the GitHub Releases API (`mode::history`, cached locally for 1 hour) |
-| `.processes` | List running Claude Code processes detected by scanning `/proc` |
-| `.processes.kill` | Terminate processes: SIGTERM -> 2s -> SIGKILL (normal) or SIGKILL (force) |
+| `.ps` | List running Claude Code processes detected by scanning `/proc` |
+| `.ps.kill` | Terminate processes: SIGTERM -> 2s -> SIGKILL (normal) or SIGKILL (force) |
 | `.settings.show` | Print all key-value pairs from `~/.claude/settings.json` |
 | `.settings.get` | Read a single setting by key |
 | `.settings.set` | Write a single setting atomically via temp-file rename |
@@ -29,7 +29,7 @@
 | Term | Definition |
 |------|------------|
 | dry-run (`dry::1`) | Preview mode: prints `[dry-run] would ...` without executing side effects |
-| force mode (`force::1`) | Bypass safety guards: idempotency check (`.version.install`) or graceful shutdown (`.processes.kill`) |
+| force mode (`force::1`) | Bypass safety guards: idempotency check (`.version.install`) or graceful shutdown (`.ps.kill`) |
 
 ### Types
 
