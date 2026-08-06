@@ -4,7 +4,7 @@
 
 - **Purpose**: Document the purpose, crate inventory, and scope of the assistant workspace.
 - **Responsibility**: Describe what the workspace provides, what it excludes, and how the crates relate.
-- **In Scope**: Workspace purpose, crate inventory (19 members), in-scope capabilities, out-of-scope boundaries, performance characteristics.
+- **In Scope**: Workspace purpose, crate inventory (18 members), in-scope capabilities, out-of-scope boundaries, performance characteristics.
 - **Out of Scope**: Crate layering pattern (→ `pattern/001_crate_layering.md`), privacy invariant (→ `invariant/001_privacy_invariant.md`), cross-workspace integration (→ `integration/001_consumer_integration.md`).
 
 ### Design
@@ -35,7 +35,6 @@ This workspace is self-contained and has no knowledge of consumer workspace arch
 | claude_assets | cla / claude_assets | 2 | CLI for installing Claude Code artifacts (rules, skills, commands) via symlinks |
 | assistant | ast / assistant | 3 | Agent-agnostic super-app aggregator: all Layer 2 CLI crates in one binary |
 | assistant_kit | — | 3 | Library facade for the five Claude Code Layer 2 CLI crates (excludes journal viewer) |
-| runbox | crb / runbox | * | Scaffold container runner integration files into a project |
 
 **Binaries** (16 targets — 7 crates expose both canonical name and short alias; `claude_runner` additionally exposes alias `c`; `claude_journal_viewer` exposes alias `clj` only):
 
@@ -55,10 +54,8 @@ This workspace is self-contained and has no knowledge of consumer workspace arch
 | `claude_runner` | `claude_runner` | canonical | `src/main.rs` |
 | `ast` | `assistant` | alias | `src/bin/ast.rs` |
 | `assistant` | `assistant` | canonical | `src/main.rs` |
-| `crb` | `runbox` | alias | `src/bin/crb.rs` |
-| `runbox` | `runbox` | canonical | `src/main.rs` |
 
-**Naming convention:** Crates prefixed `claude_*` are Claude Code-specific. `dream`, `assistant`, and `runbox` are intentionally unprefixed — `dream` and `assistant` form the agent-agnostic integration layer; `runbox` is a standalone project scaffolding tool not specific to any agent.
+**Naming convention:** Crates prefixed `claude_*` are Claude Code-specific. `dream` and `assistant` are intentionally unprefixed — they form the agent-agnostic integration layer.
 
 **In scope:** Reading and parsing Claude Code's filesystem storage (`~/.claude/`); detecting sessions and continuation state; spawning `claude` with controlled parameters; managing Claude Code installation; managing accounts and active sessions; reading and writing Claude Code settings.
 

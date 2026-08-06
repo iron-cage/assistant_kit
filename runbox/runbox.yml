@@ -1,35 +1,51 @@
-# docker image tag — used for -t at build and image lookup at run; unique per module
-image: workspace_test_claude_version
+# docker image tag — used for -t at build and image lookup at run.
+# Shared workspace image: owned and built by THIS config; all module configs consume it.
+# Tag is unique to this checkout (claude_storage_core_test): the retired flat stack shared one
+# `workspace_test` tag across sibling assistant_kit checkouts, so a rebake here
+# would have swapped the image under unconverted siblings mid-migration.
+image: claude_storage_core_test
 
 # non-root so chmod-000 file-permission tests fail correctly (root bypasses checks)
-test_user: testuser
-# crate scope for nextest run and cargo chef cook — single source of truth for both
-cmd_scope: --workspace
-# baked into the image default CMD; excludes tests needing external I/O (offline-safe default)
-# Fix: contract/claude_code (which owns the `behavior` integration test binary) is excluded
-# from the workspace via Cargo.toml `exclude`, so `!binary(behavior)` matches nothing and
-# nextest fails. `all()` is the correct expression when no exclusion is needed.
-cmd_filter: "all()"
+user: testuser
 
-# script invoked by `.test` inside the container (path relative to /workspace)
-test_script: verb/test.d/l1
-# script invoked by `.test1 <filter>` inside the container (path relative to /workspace)
-test1_script: verb/test.d/l1_filter
+# script invoked by `.run` and `.live` inside the container (workspace-relative path)
+script: verb/test.d/l1
 
-# data directory plugin: host_path:container_path:check_type
-# .test mounts as required+rw; .shell mounts as optional+ro
-plugin_mount: ~/.claude:/workspace/.claude:directory
+# ── Mounts ────────────────────────────────────────────────────────────────────
+mounts:
+  - host: ~/.claude
+    mode: rw
+    check: directory
+    commands: [run, live, shell]
 
-# binary mount plugin: name:/container/path — bind-mounts the host's own `claude` CLI (resolved
-# via `which` at .test invocation time) read-only into the container, so real-subprocess control
-# tests run against whatever claude version/auth the host already has, with no separate install
-# or credentials baked into the image.
-bin_mount: claude:/usr/local/bin/claude
+# ── Plugins ───────────────────────────────────────────────────────────────────
+plugins:
+  # The host's own `claude` CLI bind-mounted read-only — real-subprocess control
+  # tests run against the host's version and credentials. The working volume is
+  # the workspace compilation cache — the engine exports it as CARGO_TARGET_DIR,
+  # keeping all build artifacts off the read-only workspace mount.
+  - type: binary
+    name: claude
+    container_path: /usr/local/bin/claude
+    working_volume: claude_storage_core_targets
+    working_volume_path: /tmp/claude_storage_core_targets
+    commands: [run, live, shell]
 
+# ── Environment ───────────────────────────────────────────────────────────────
+env_commands:
+  live:
+    # cargo home for registry bind-mounts; offline flag prevents network fetches
+    CARGO_HOME: /cargo
+    CARGO_NET_OFFLINE: "true"
 
-# ── Formerly hardcoded parameters (now configurable) ─────────────────────────
-# base_image: rust:slim          # FROM for chef and test stages
-# rustup_components: clippy      # space-separated; e.g. "clippy rustfmt"
-system_packages: curl procps jq
-# cargo_features: --all-features # passed to nextest list and offline run CMD
-# workspace_dir: /workspace      # container WORKDIR; must match in runbox/runbox.dockerfile and runbox-run
+# ── Build ─────────────────────────────────────────────────────────────────────
+# Image-build inputs for this owning config (bake-time only).
+build:
+  # crate scope for cargo chef cook — which crates' external deps get precompiled
+  cmd_scope: "--workspace"
+  # union of the retired flat configs' system_packages (root: curl procps jq; modules: curl procps)
+  packages: [curl, procps, jq]
+  # rustup components added in the final stage — the l1 gate runs clippy in-container
+  rust_components: [clippy]
+  # single-layer image policy: every rebake is a cold full bake
+  squash: true

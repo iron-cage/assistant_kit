@@ -4,12 +4,12 @@ set -euo pipefail
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd "$SCRIPT_DIR/.."
 if [[ "${1:-}" == "--dry-run" ]]; then
-  echo "runbox/runbox .test"
+  echo "../../runbox/runbox .live"
   echo "cargo +nightly udeps --all-targets --all-features"
   echo "[ -f Cargo.lock ] && cargo +nightly audit"
   exit 0
 fi
-"$SCRIPT_DIR/../runbox/runbox" .test
+"$SCRIPT_DIR/../../../runbox/runbox" .live
 cargo +nightly udeps --all-targets --all-features
 if [ -f Cargo.lock ]; then
   cargo +nightly audit
