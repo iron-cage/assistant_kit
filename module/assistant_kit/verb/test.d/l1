@@ -1,11 +1,16 @@
 #!/usr/bin/env bash
-# l1 — bare test execution (VERB_LAYER=l1); runs the cargo test gate directly.
+# l1 — bare test execution (VERB_LAYER=l1); module-scoped full gate, in-container.
+# Invoked as the runbox .live payload; cwd-scoping (this module directory) is
+# what limits cargo to this package — no -p flags needed.
 set -euo pipefail
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd "$SCRIPT_DIR/../.."
-if [[ "${1:-}" == "--dry-run" ]]; then echo "cargo nextest run + doc test + clippy"; exit 0; fi
+if [[ "${1:-}" == "--dry-run" ]]; then echo "cargo nextest run + doc test + clippy (module-scoped)"; exit 0; fi
+# Registry is pre-fetched at bake time and mounted read-only — never hit the network.
 export CARGO_NET_OFFLINE=true
+# Plain \n-terminated nextest output — survives PTY/capture layers intact.
 export NO_COLOR=1
+# Container signal 3 for the container-only test invariant (nextest setup script + Rust guards).
 export RUNBOX_CONTAINER=1
 export RUSTFLAGS="-D warnings"
 cargo nextest run --all-features

@@ -13,7 +13,7 @@ Test spec for `docs/pattern/001_crate_layering.md`.
 
 ### CL-1: No Layer N crate depends on another Layer N crate
 
-- **Given:** The documented layer assignments: Layer 0 (`claude_core`), Layer 1 (`claude_assets_core`, `claude_profile_core`, `claude_version_core`, `claude_runner_core`), Layer 2 (`dream`, `claude_assets`, `claude_version`, `claude_runner`, `claude_profile`, `claude_storage`), Layer 3 (`assistant`, `assistant_kit`), Layer * (`claude_storage_core`, `claude_auth`, `claude_quota`)
+- **Given:** The documented layer assignments: Layer 0 (`claude_core`), Layer 1 (`claude_assets_core`, `claude_profile_core`, `claude_version_core`, `claude_runner_core`), Layer 2 (`dream`, `claude_assets`, `claude_version`, `claude_runner`, `claude_profile`, `claude_storage`, `claude_journal_viewer`), Layer 3 (`assistant`, `assistant_kit`), Layer * (`claude_storage_core`, `claude_auth`, `claude_quota`, `claude_journal`)
 - **When:** Each crate's `[dependencies]` section is parsed and cross-referenced against layer assignments
 - **Then:** No crate lists a dependency on another crate assigned to the same layer; Layer * crates have zero workspace dependencies
 

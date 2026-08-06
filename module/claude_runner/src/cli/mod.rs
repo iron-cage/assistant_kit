@@ -429,6 +429,7 @@ fn gate_isolated_session( cli : &IsolatedArgs, journal : Option< &claude_journal
 }
 
 /// Parse, validate, and execute the `isolated` subcommand.  Never returns.
+#[ allow( clippy::too_many_lines ) ] // sequential dispatch phases — extracting helpers adds indirection without reducing complexity
 pub( super ) fn dispatch_isolated( tokens : &[ String ] ) -> !
 {
   // JSON config: no --file gate for isolated (--file is not a stdin-conflict source here).
@@ -487,6 +488,37 @@ pub( super ) fn dispatch_isolated( tokens : &[ String ] ) -> !
       if !std::path::Path::new( f ).exists()
       {
         eprintln!( "Error: --file path does not exist: {f}" );
+        std::process::exit( 1 );
+      }
+    }
+  }
+
+  // Phase 4: validate --json-schema path when value looks like a file path (skip in dry-run).
+  // Values starting with '{' or '[' are treated as inline JSON literals — no path check.
+  // All other values are treated as file paths; a missing file is caught here with a clear
+  // error rather than letting the claude binary emit a cryptic JSON-parse failure.
+  if !cli.dry_run
+  {
+    if let Some( ref s ) = cli.json_schema
+    {
+      let trimmed = s.trim_start();
+      if !trimmed.starts_with( '{' ) && !trimmed.starts_with( '[' )
+        && !std::path::Path::new( s ).exists()
+      {
+        eprintln!( "Error: --json-schema path does not exist: {s}" );
+        std::process::exit( 1 );
+      }
+    }
+  }
+
+  // Phase 5: validate --mcp-config paths exist before spawning subprocess (skip in dry-run).
+  if !cli.dry_run
+  {
+    for m in &cli.mcp_config
+    {
+      if !std::path::Path::new( m ).exists()
+      {
+        eprintln!( "Error: --mcp-config path does not exist: {m}" );
         std::process::exit( 1 );
       }
     }

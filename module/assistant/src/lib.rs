@@ -30,7 +30,7 @@ use generated::AGGREGATED_COMMANDS;
 mod cli
 {
   use super::AGGREGATED_COMMANDS;
-  use claude_version::adapter::argv_to_unilang_tokens;
+  use claude_version::adapter::{ argv_to_unilang_tokens, HelpMode };
   use unilang::data::{ CommandDefinition, ErrorCode, ErrorData, OutputData };
   use unilang::interpreter::{ ExecutionContext, Interpreter };
   use unilang::parser::{ Parser, UnilangParserOptions };
@@ -275,7 +275,7 @@ mod cli
     .unwrap_or( "ast" )
     .to_owned();
 
-    let ( tokens, needs_help ) = match argv_to_unilang_tokens( argv )
+    let ( tokens, help_mode ) = match argv_to_unilang_tokens( argv )
     {
       Ok( r )  => r,
       Err( e ) =>
@@ -285,10 +285,20 @@ mod cli
       }
     };
 
-    if needs_help
+    match help_mode
     {
-      print_usage( &binary );
-      std::process::exit( 0 );
+      HelpMode::Global =>
+      {
+        print_usage( &binary );
+        std::process::exit( 0 );
+      }
+      HelpMode::Command( name ) =>
+      {
+        let registry = build_registry();
+        claude_version::print_command_help( &name, &registry );
+        std::process::exit( 0 );
+      }
+      HelpMode::None => {}
     }
 
     let registry = build_registry();

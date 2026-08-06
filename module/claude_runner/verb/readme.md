@@ -11,9 +11,9 @@
 | File | Responsibility |
 |------|---------------|
 | `build` | Compile project artifacts via `cargo build`. |
-| `test` | Dispatcher: run full test suite; delegates to `test.d/` layer by `VERB_LAYER`. |
-| `test.d/` | Layer directory: `l0` (host-native), `l1` (container-internal). |
-| `test_only` | Dispatcher: run a single test or group by nextest filter; delegates via `NEXTEST_FILTER`. |
+| `test` | Run module suite in container: `runbox .live` with `test.d/l1` as payload. |
+| `test.d/` | Layer directory: `l0` (disabled hard-error stub), `l1` (container-internal). |
+| `test_only` | Run tests matching a filter in container: `runbox .live` with `test_only.d/l1 <filter>` as payload. |
 | `test_only.d/` | Layer directory: `l1` (container-internal targeted run). |
 | `clean` | Remove generated artifacts and caches via `cargo clean`. |
 | `install` | Install crate binaries to `~/.cargo/bin` via `cargo install`. |

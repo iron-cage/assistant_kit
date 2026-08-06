@@ -18,7 +18,7 @@ Runs clippy on the target module with all features enabled and warnings promoted
 
 `--all-features` ensures feature-gated code paths are also linted, preventing feature-specific warnings from hiding until CI.
 
-`lint` is a subset of what `test` runs: `w3 .test level::3` includes clippy. `lint` exists as a standalone verb for rapid feedback during development without running the full test suite.
+`lint` is a subset of what `test` runs: the container suite (`runbox .live` → `test.d/l1`) already ends with clippy. `lint` exists as a standalone host-side verb for rapid feedback during development without the container round-trip.
 
 `--dry-run` emits the exact command and exits 0 — no analysis runs.
 

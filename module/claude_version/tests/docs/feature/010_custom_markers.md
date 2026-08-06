@@ -95,7 +95,7 @@ Both are valid invocations; the mutation direction differs.
 
 ### FT-6: Marker matching installed version → label shown by `.version.show`
 
-- **Given:** claude installed; isolated HOME with `version-markers.json` containing two markers (`release-pin`, `team-dev`) whose `value` equals the installed semver.
+- **Given:** isolated HOME with `<tempdir>/.local/bin/claude` symlink targeting `"2.1.220"` (simulates installed version without requiring claude on PATH); `version-markers.json` containing two markers (`release-pin`, `team-dev`) both with value `"2.1.220"`.
 - **When:**
   1. `clv .version.show v::1`
   2. `clv .version.show format::json`

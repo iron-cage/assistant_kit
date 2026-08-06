@@ -17,7 +17,7 @@ Edge case coverage for the `record_only::` parameter. See [param/15_record_only.
 | EC-1 | `record_only::1` → settings written, no install | Valid: record-only active |
 | EC-2 | `record_only::0` → normal install path | Valid: record-only inactive |
 | EC-3 | Absent `record_only::` → defaults to 0 (normal install) | Default Behavior |
-| EC-4 | `record_only::true` → exit 1 | Invalid: non-binary value |
+| EC-4 | `record_only::maybe` → exit 1 | Invalid: non-parseable value |
 | EC-5 | `record_only::` (empty) → exit 1 | Invalid: empty |
 | EC-6 | `record_only::1 dry::1` → exit 1 (mutual exclusion) | Mutual Exclusion |
 | EC-7 | `record_only::1 force::1` → `force::` silently ignored | Force Interaction |
@@ -27,7 +27,7 @@ Edge case coverage for the `record_only::` parameter. See [param/15_record_only.
 - Valid record-only active: 1 test (EC-1)
 - Valid record-only inactive: 1 test (EC-2)
 - Default Behavior: 1 test (EC-3)
-- Invalid non-binary value: 1 test (EC-4)
+- Invalid non-parseable value: 1 test (EC-4)
 - Invalid empty: 1 test (EC-5)
 - Mutual Exclusion: 1 test (EC-6)
 - Force Interaction: 1 test (EC-7)
@@ -68,11 +68,11 @@ Edge case coverage for the `record_only::` parameter. See [param/15_record_only.
 
 ---
 
-### EC-4: `record_only::true` → exit 1
+### EC-4: `record_only::maybe` → exit 1
 
 - **Given:** clean environment
-- **When:** `clv .version.install record_only::true`
-- **Then:** exit 1; error message references `record_only::` or invalid boolean value; strictly `0` or `1` required
+- **When:** `clv .version.install record_only::maybe`
+- **Then:** exit 1; error message references `record_only::` or unparseable value; accepted values are `0`, `1`, `true`, `false`, `yes`, `no`
 - **Exit:** 1
 - **Source:** [param/15_record_only.md](../../../../docs/cli/param/15_record_only.md)
 
@@ -112,10 +112,13 @@ Edge case coverage for the `record_only::` parameter. See [param/15_record_only.
 
 | Function | File |
 |----------|------|
-| `record_only_ec1_settings_written_no_install` | `tests/cli/record_only_param_test.rs` |
-| `record_only_ec2_zero_normal_install` | `tests/cli/record_only_param_test.rs` |
-| `record_only_ec3_absent_defaults_zero` | `tests/cli/record_only_param_test.rs` |
-| `record_only_ec4_true_rejected` | `tests/cli/record_only_param_test.rs` |
-| `record_only_ec5_empty_exits_1` | `tests/cli/record_only_param_test.rs` |
-| `record_only_ec6_mutual_exclusion_with_dry` | `tests/cli/record_only_param_test.rs` |
-| `record_only_ec7_force_silently_ignored` | `tests/cli/record_only_param_test.rs` |
+| `tc537_version_install_record_only_skips_install` | `tests/cli/mutation_version_install_test.rs` |
+| `tc538_version_install_record_only_dry_mutually_exclusive` | `tests/cli/mutation_version_install_test.rs` |
+| `tc539_version_install_record_only_format_json` | `tests/cli/mutation_version_install_test.rs` |
+| `tc540_version_install_record_only_v0_bare_label` | `tests/cli/mutation_version_install_test.rs` |
+| `tc541_version_install_record_only_force_silently_ignored` | `tests/cli/mutation_version_install_test.rs` |
+| `tc542_version_install_record_only_unconditional_repeat` | `tests/cli/mutation_version_install_test.rs` |
+| `tc300_version_install_dry_shows_prefix` | `tests/cli/mutation_version_install_test.rs` |
+| `tc543_version_install_record_only_zero_normal_install` | `tests/cli/mutation_version_install_test.rs` |
+| `tc545_version_install_record_only_invalid_exits_1` | `tests/cli/mutation_version_install_test.rs` |
+| `tc546_version_install_record_only_empty_exits_1` | `tests/cli/mutation_version_install_test.rs` |

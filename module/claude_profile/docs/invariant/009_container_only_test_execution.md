@@ -4,7 +4,7 @@
 
 - **Purpose**: Guarantee that all workspace crate tests run inside the runbox container, never directly on the host.
 - **Responsibility**: Documents the container-only test execution constraint, the three detection signals, the escape hatch, and all enforcement layers across all workspace crates.
-- **In Scope**: All test execution paths — `cargo nextest run`, `cargo test`, and direct layer invocations for all 19 workspace crates with tests.
+- **In Scope**: All test execution paths — `cargo nextest run`, `cargo test`, and direct layer invocations for all 18 workspace crates with tests.
 - **Out of Scope**: Container build and image management (→ runbox); production binary execution (not a test concern); crates with zero test files (claud_memory).
 
 ### Invariant Statement
@@ -15,7 +15,7 @@ All tests for all workspace crates MUST execute inside the runbox container. Hos
 
 | Crate type | Examples | Shell layer | Nextest setup | Rust guard |
 |------------|----------|-------------|---------------|------------|
-| With `verb/` (17 crates) | claude_profile, assistant, assistant_kit, … | ✓ `verb/test` rejects VERB_LAYER; `l0` is hard error stub | ✓ via `filter = "all()"` | Full — `claude_profile` (2 test binaries), `claude_runner` (9 helpers), `assistant` (`run_ast()`), `claude_assets` (`cla()`), `claude_storage` (`clg_cmd()` + `op_3` direct spawn), `claude_version` (`run_clm_with_env()` + `fn run()` + 6 bypass sites), `runbox` (`crb()`, `runbox_bin()`) |
+| With `verb/` (16 crates) | claude_profile, assistant, assistant_kit, … | ✓ `verb/test` rejects VERB_LAYER; `l0` is hard error stub | ✓ via `filter = "all()"` | Full — `claude_profile` (2 test binaries), `claude_runner` (9 helpers), `assistant` (`run_ast()`), `claude_assets` (`cla()`), `claude_storage` (`clg_cmd()` + `op_3` direct spawn), `claude_version` (`run_clm_with_env()` + `fn run()` + 6 bypass sites) |
 | Without `verb/` (2 crates) | claude_journal, claude_journal_viewer | — (no verb/ dir) | ✓ via `filter = "all()"` | `claude_journal_viewer`: `run_clj()` + ec11/ec12/ec13 guarded; `claude_journal` has no process-spawning tests |
 
 **Measurable threshold:** Zero test runs succeed on a bare host. Any attempt exits non-zero before any test binary executes.
@@ -38,7 +38,7 @@ Three independent layers ensure the invariant holds even if one layer is bypasse
 |-------|-----------|----------|
 | Shell (primary outer) | `verb/test.d/l0` exits 1 with an error message; `verb/test` rejects any `VERB_LAYER` set on the host | Blocks layer-dispatch bypass |
 | Nextest setup script (primary inner) | `.config/setup-require-container` registered in `.config/nextest.toml`; runs before any test binary; exits 1 on bare host | Blocks direct `cargo nextest run` for all workspace crates |
-| Rust guard (defense-in-depth) | `assert_container()` in `tests/cli/cli_runner.rs` (`run_cs()`), `tests/cli_clp_alias_test.rs`, `module/claude_runner/tests/cli_binary_test_helpers.rs` (9 helpers), `module/assistant/tests/{aggregation,cli_sanity}.rs` (`run_ast()`), `module/claude_assets/tests/cli.rs` (`cla()`), `module/claude_journal_viewer/tests/viewer_integration_test.rs` (4 sites), `module/claude_storage/tests/common/mod.rs` (`clg_cmd()`) + `operation_migration_guide_test.rs` (`op_3`), `module/claude_version/tests/integration/subprocess_helpers.rs` (`run_clm_with_env()`) + `cli_args_test.rs` (`fn run()` + 6 bypass sites), `module/runbox/tests/init_command.rs` (`crb()`, `runbox_bin()`) | Blocks `cargo test` for all process-spawning test binaries across the workspace |
+| Rust guard (defense-in-depth) | `assert_container()` in `tests/cli/cli_runner.rs` (`run_cs()`), `tests/cli_clp_alias_test.rs`, `module/claude_runner/tests/cli_binary_test_helpers.rs` (9 helpers), `module/assistant/tests/{aggregation,cli_sanity}.rs` (`run_ast()`), `module/claude_assets/tests/cli.rs` (`cla()`), `module/claude_journal_viewer/tests/viewer_integration_test.rs` (4 sites), `module/claude_storage/tests/common/mod.rs` (`clg_cmd()`) + `operation_migration_guide_test.rs` (`op_3`), `module/claude_version/tests/integration/subprocess_helpers.rs` (`run_clm_with_env()`) + `cli_args_test.rs` (`fn run()` + 6 bypass sites) | Blocks `cargo test` for all process-spawning test binaries across the workspace |
 
 **`cargo test` gap — fully closed:** `cargo test` bypasses the nextest setup script (L2). The Rust guard (L3) covers all process-spawning test binaries across the workspace. Process-spawning helpers guarded (TSK-355–TSK-361):
 - `claude_profile`: `tests/cli/cli_runner.rs` (`run_cs()`), `tests/cli_clp_alias_test.rs` (`run()`)
@@ -48,7 +48,6 @@ Three independent layers ensure the invariant holds even if one layer is bypasse
 - `claude_journal_viewer`: `run_clj()` + 3 direct spawn sites (`ec11`, `ec12`, `ec13`)
 - `claude_storage`: `clg_cmd()` in `tests/common/mod.rs`; `op_3` direct spawn in `tests/operation_migration_guide_test.rs`
 - `claude_version`: `run_clm_with_env()` in `tests/integration/subprocess_helpers.rs`; `fn run()` + 6 bypass sites in `tests/cli_args_test.rs`
-- `runbox`: `crb()` and `runbox_bin()` in `tests/init_command.rs`
 
 Purely functional test binaries (`usage_integration_test`, `account_tests`, `lib_test`, etc.) are safe on host and do not require L3.
 
@@ -74,7 +73,6 @@ Purely functional test binaries (`usage_integration_test`, `account_tests`, `lib
 - A bare-host `cargo test -p claude_journal_viewer` panics before `run_clj()` or any direct `Command::new(CLJ)` (ec11/ec12/ec13) completes — L3 is now present in all 4 spawn sites
 - A bare-host `cargo test -p claude_storage` panics inside any test that calls `clg_cmd()` (via `common/mod.rs`) or the direct spawn in `op_3_crate_compiles_after_cargo_toml_and_import_migration()` — L3 is now present in both sites
 - A bare-host `cargo test -p claude_version` panics inside any test that calls `run_clm()` (via `subprocess_helpers.rs`), `run()` in `cli_args_test.rs`, or any of the 6 bypass test functions — L3 is now present in all sites
-- A bare-host `cargo test -p runbox` panics inside any test that calls `crb()` or `runbox_bin()` in `init_command.rs` — L3 is now present in both helpers
 - A `VERB_LAYER=l0 ./verb/test` invocation triggers `verb/test`'s VERB_LAYER rejection — the guard detects that `VERB_LAYER` is set on the host side
 - Direct `./verb/test.d/l0` invocation hits the hard error stub
 
@@ -82,9 +80,9 @@ Purely functional test binaries (`usage_integration_test`, `account_tests`, `lib
 
 | File | Relationship |
 |------|-------------|
-| `module/*/verb/test` (17 crates with `verb/`) | Outer dispatcher — rejects any `VERB_LAYER` on host |
-| `module/*/verb/test.d/l0` (17 crates with `verb/`) | Hard error stub — host-native execution disabled |
-| `module/*/verb/test.d/l1` (17 crates with `verb/`) | Container-internal layer — sets `RUNBOX_CONTAINER=1` |
+| `module/*/verb/test` (16 crates with `verb/`) | Outer dispatcher — rejects any `VERB_LAYER` on host |
+| `module/*/verb/test.d/l0` (16 crates with `verb/`) | Hard error stub — host-native execution disabled |
+| `module/*/verb/test.d/l1` (16 crates with `verb/`) | Container-internal layer — sets `RUNBOX_CONTAINER=1` |
 | `.config/setup-require-container` | Nextest setup script — 3-signal check, workspace-wide |
 | `.config/nextest.toml` | Nextest configuration — `filter = "all()"` |
 
@@ -103,7 +101,6 @@ Purely functional test binaries (`usage_integration_test`, `account_tests`, `lib
 | `module/claude_storage/tests/operation_migration_guide_test.rs` | Rust guard in `op_3` direct spawn — defense-in-depth |
 | `module/claude_version/tests/integration/subprocess_helpers.rs` | Rust guard in `run_clm_with_env()` — covers all integration tests |
 | `module/claude_version/tests/cli_args_test.rs` | Rust guard in `fn run()` + 6 bypass test functions — defense-in-depth |
-| `module/runbox/tests/init_command.rs` | Rust guard in `crb()` and `runbox_bin()` — covers all runbox tests |
 
 ### Invariants
 

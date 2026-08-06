@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# do run — unavailable: library crate has no binary entry point
+set -euo pipefail
+echo "verb 'run' is not available for this project" >&2
+exit 3

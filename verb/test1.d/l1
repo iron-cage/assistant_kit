@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# l1 — targeted test execution; runs the nextest filter given as $1, in-container.
+# Invoked as the runbox .live payload by ./verb/test1 — nextest only, no
+# level-3 overhead (no clippy, no doc tests).
+set -euo pipefail
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+cd "$SCRIPT_DIR/../.."
+FILTER="${1:-}"
+if [[ -z "$FILTER" ]]; then
+  echo "error: filter argument required — invoke via './verb/test1 <filter>' on the host." >&2
+  exit 1
+fi
+export CARGO_NET_OFFLINE=true
+export NO_COLOR=1
+export RUNBOX_CONTAINER=1
+export RUSTFLAGS="-D warnings"
+exec cargo nextest run --workspace --all-features --no-fail-fast -E "$FILTER"

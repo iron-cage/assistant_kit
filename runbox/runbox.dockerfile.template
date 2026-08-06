@@ -220,10 +220,11 @@ ARG CARGO_BUILD_JOBS
 
 WORKDIR /workspace
 COPY --from=planner /workspace/recipe.json recipe.json
-# claude_storage_core's .cargo/ is deliberately EXCLUDED from the build context (.dockerignore):
-# its only content is a host-side target-dir redirect (-host-target) that must not
-# be baked; at run time the engine's CARGO_TARGET_DIR export (working volume)
-# overrides the redirect inside the container.
+# .cargo/ is copied so config-driven settings resolve during dependency cooking, per
+# .dockerignore's own build-context policy — currently empty of settings for this
+# workspace, but the cook stage must see it in case that changes; carries no
+# credentials and no target-dir redirect.
+COPY --from=planner /workspace/.cargo .cargo
 # Registry pre-populated by planner's `cargo fetch --workspace`.  Copying it here
 # means cook can resolve and compile deps fully offline, and the final stage inherits
 # a registry that satisfies `cargo metadata --all-features` for the entire workspace —

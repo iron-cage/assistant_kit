@@ -32,7 +32,7 @@
 //! | IT-61 | `--help` lists all 12 new native flags | No |
 //! | IT-62 | `--max-budget-usd`/`--max-turns` no cross-field positional swap | No |
 //! | IT-63 | `--mcp-config` repeated flag — both values survive | No |
-//! | IT-64 | `--json-schema` nonexistent path → exit 1 | No |
+//! | IT-64 | `--json-schema` non-JSON value → exit 1 | No |
 //! | IT-65 | `--mcp-config` nonexistent path → exit 1 | No |
 //! | IT-66 | `--no-effort-max` wins over a simultaneous `--effort` flag | No |
 //! | IT-67 | Native `--model` flag beats `--args-file` JSON config | No |
@@ -1043,11 +1043,20 @@ fn it63_mcp_config_repeated_flag_both_survive()
   );
 }
 
-/// IT-64: `--json-schema` with a nonexistent path exits 1, mirroring `--dir`'s IT-17 precedent.
+/// IT-64: `--json-schema` with a value that is not valid JSON exits 1.
+///
+/// `--json-schema` takes inline JSON schema text, never a file path
+/// (`docs/cli/param/023_json_schema.md` — type `JsonSchemaText`). The value is
+/// forwarded to subprocess argv unchanged with no CLI-side validation, so a
+/// stray path string is rejected by the `claude` subprocess itself. The
+/// rejection wording depends on the installed `claude` version — newer
+/// versions parse the value as JSON ("not valid JSON"); older versions
+/// treated it as a path ("not found") — so all wordings are accepted; the
+/// invariant is exit 1 with a loud stderr rejection.
 ///
 /// Source: tests/docs/cli/command/03_isolated.md#it-64
 #[ test ]
-fn it64_json_schema_nonexistent_path_exits_one()
+fn it64_json_schema_invalid_json_exits_one()
 {
   let creds = make_creds_file( "{}" );
   let path  = creds.path().to_str().unwrap();
@@ -1056,12 +1065,12 @@ fn it64_json_schema_nonexistent_path_exits_one()
   );
   assert_eq!(
     exit_code( &out ), 1,
-    "expected exit 1 for nonexistent --json-schema path; stderr: {}", stderr_str( &out )
+    "expected exit 1 for non-JSON --json-schema value; stderr: {}", stderr_str( &out )
   );
   let err = stderr_str( &out );
   assert!(
-    err.contains( "does not exist" ) || err.contains( "not found" ),
-    "stderr must indicate nonexistent path; got:\n{err}"
+    err.contains( "not valid JSON" ) || err.contains( "does not exist" ) || err.contains( "not found" ),
+    "stderr must reject the non-JSON --json-schema value; got:\n{err}"
   );
 }
 

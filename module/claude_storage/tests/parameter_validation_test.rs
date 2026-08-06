@@ -103,9 +103,10 @@ fn test_list_type_parameter_validation()
 #[ test ]
 fn test_list_type_parameter_valid_values()
 {
-  // CLAUDE_STORAGE_ROOT isolation: container's /workspace/.claude/projects is
-  // bind-mounted with 0700 (host uid), unreadable by the test user. Point to a
-  // non-existent path so list_projects() returns empty list instead of an error.
+  // CLAUDE_STORAGE_ROOT isolation: the container bind-mounts the host's real
+  // ~/.claude, so without isolation list_projects() would read live, mutable
+  // host session data. Point to a non-existent path so list_projects() returns
+  // an empty list deterministically.
 
   // type::uuid
   let output = common::clg_cmd()

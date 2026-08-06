@@ -1,21 +1,12 @@
-[build]
-# Redirect host-side cargo target directory to dev/-host-target/.
+# Cargo build configuration for the assistant workspace.
 #
-# Why: dev/target/ can be written by container processes (testuser = UID 1000)
-# under Podman --userns=keep-id.  In that two-level UID namespace chain, container
-# UID 1000 maps to host UID 166536 — not user1 (UID 1001).  Files testuser writes
-# to a host bind-mount appear as chown 166536, which user1 cannot overwrite,
-# causing EPERM on all subsequent host-side cargo operations (cargo install, etc.).
+# Intentionally empty of settings. The former host-side target-dir redirect
+# (-host-target/) is gone: the runbox engine mounts the workspace read-only and
+# exports CARGO_TARGET_DIR to a named working volume, so container processes
+# never write to the host tree and the UID-mapping EPERM hazard the redirect
+# guarded against no longer exists. Host builds use the default ./target/
+# (excluded from the container build context via .dockerignore).
 #
-# Solution: host cargo uses dev/-host-target/ (separate from dev/target/).
-# Containers continue using /workspace/target/ (their cook-stage baked path).
-# The two directories never overlap regardless of what containers do to dev/target/.
-#
-# Path is relative to workspace root (dev/).
-# Hyphen prefix (-host-target) means it is already gitignored by the -* rule
-# in dev/.gitignore — no additional gitignore entry needed.
-#
-# SAFETY: dev/.dockerignore excludes .cargo/ from all Docker build contexts so
-# this file is NEVER baked into container images.  Container cargo must keep using
-# /workspace/target/ for cook-stage cache coherence across all 14+ crates.
-target-dir = "-host-target"
+# The file itself must exist: the image build's cook stage copies .cargo/ so
+# config-driven settings (e.g. a linker reference) resolve during dependency
+# cooking — see runbox/runbox.dockerfile.template.

@@ -101,7 +101,7 @@ fn tc108_version_show_v0_bare_string()
   }
 }
 
-// TC-109: v::1 → `<semver>  [labels]` or bare `<semver>` when no labels match
+// TC-109: v::1 → labeled output containing semver (e.g. "Version: X.Y.Z  [alias]")
 #[ test ]
 fn tc109_version_show_v1_labeled()
 {
@@ -109,10 +109,9 @@ fn tc109_version_show_v1_labeled()
   if out.status.code() == Some( 0 )
   {
     let text = stdout( &out );
-    let first = text.split_whitespace().next().unwrap_or( "" );
     assert!(
-      first.chars().next().is_some_and( | c | c.is_ascii_digit() ),
-      "v::1 first token must be a semver (starts with digit), got: {text}"
+      text.split_whitespace().any( | tok | tok.chars().next().is_some_and( | c | c.is_ascii_digit() ) ),
+      "v::1 output must contain a semver token (starts with digit), got: {text}"
     );
   }
 }
@@ -752,24 +751,27 @@ fn it12_version_show_v0_no_labels()
 #[ test ]
 fn ft006_marker_label_shown_by_version_show()
 {
-  let ver_out = run_clv( &[ ".version.show", "v::0" ] );
-  if ver_out.status.code() != Some( 0 ) { return; }
-  let installed = stdout( &ver_out ).trim().to_string();
-
-  let dir  = TempDir::new().unwrap();
-  let home = dir.path().to_str().unwrap();
+  const PINNED : &str = "2.1.220";
+  let dir = TempDir::new().unwrap();
+  // Provide a stable symlink so get_version_from_symlink returns PINNED,
+  // decoupling this test from system claude binary availability under parallel load.
+  let local_bin = dir.path().join( ".local" ).join( "bin" );
+  std::fs::create_dir_all( &local_bin ).unwrap();
+  std::os::unix::fs::symlink( PINNED, local_bin.join( "claude" ) ).unwrap();
   write_markers( dir.path(), &[
-    ( "release-pin", &installed ),
-    ( "team-dev",    &installed ),
+    ( "release-pin", PINNED ),
+    ( "team-dev",    PINNED ),
   ] );
+  let home = dir.path().to_str().unwrap();
+  let env  = &[ ( "HOME", home ) ];
 
-  let out = run_clv_with_env( &[ ".version.show", "v::1" ], &[ ( "HOME", home ) ] );
+  let out = run_clv_with_env( &[ ".version.show", "v::1" ], env );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!( text.contains( "release-pin" ), "must show release-pin label, got: {text}" );
   assert!( text.contains( "team-dev" ),    "must show team-dev label, got: {text}" );
 
-  let jout = run_clv_with_env( &[ ".version.show", "format::json" ], &[ ( "HOME", home ) ] );
+  let jout = run_clv_with_env( &[ ".version.show", "format::json" ], env );
   assert_exit( &jout, 0 );
   let jtext = stdout( &jout );
   assert!( jtext.contains( "\"labels\"" ),   "JSON must have 'labels' key, got: {jtext}" );

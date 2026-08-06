@@ -157,12 +157,12 @@ Edge case coverage for the `force::` parameter. See [param/readme.md](../../../.
 
 | Function | File |
 |----------|------|
-| `tc021_force_param` | `cli_args_test/param_bool_test.rs` |
-| `tc035_force_true_rejected` | `cli_args_test/param_bool_test.rs` |
-| `tc037_force_0_accepted` | `cli_args_test/param_bool_test.rs` |
-| `force_ec3_2_exits_1` | `cli_args_test/param_bool_test.rs` |
-| `force_ec4_negative_exits_1` | `cli_args_test/param_bool_test.rs` |
-| `force_ec6_empty_exits_1` | `cli_args_test/param_bool_test.rs` |
+| `tc021_force_param` | `tests/cli_args_test/param_bool_test.rs` |
+| `tc035_force_true_rejected` | `tests/cli_args_test/param_bool_test.rs` |
+| `tc037_force_0_accepted` | `tests/cli_args_test/param_bool_test.rs` |
+| `force_ec3_2_exits_1` | `tests/cli_args_test/param_bool_test.rs` |
+| `force_ec4_negative_exits_1` | `tests/cli_args_test/param_bool_test.rs` |
+| `force_ec6_empty_exits_1` | `tests/cli_args_test/param_bool_test.rs` |
 | `tc250_version_install_dry_force_dry_wins` | `tests/cli/cross_cutting_test.rs` |
 | `tc251_processes_kill_dry_force_dry_wins` | `tests/cli/cross_cutting_test.rs` |
 | `tc303_version_install_dry_wins_over_force` | `tests/cli/mutation_version_install_test.rs` |
