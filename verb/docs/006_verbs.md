@@ -32,7 +32,7 @@ test_only     available  cargo nextest run --all-features <filter>
 clean         available  cargo clean -p claude_profile
 run           available  cargo run -p claude_profile --bin clp
 lint          available  cargo clippy -p claude_profile --all-features -- -D warnings
-verify        available  w3 .test level::4
+verify        available  will .test level::4
 install       available  cargo install --path .
 verbs         built-in   -
 package_info  built-in   -
@@ -46,7 +46,7 @@ test_only     available   cargo nextest run --all-features <filter>
 clean         available   cargo clean -p claude_storage_core
 run           unavailable -
 lint          available   cargo clippy -p claude_storage_core --all-features -- -D warnings
-verify        available   w3 .test level::4
+verify        available   will .test level::4
 install       unavailable -
 verbs         built-in    -
 package_info  built-in    -
@@ -63,7 +63,7 @@ printf '%-13s %-10s %s\n' test_only   available "cargo nextest run --all-feature
 printf '%-13s %-10s %s\n' clean   available "cargo clean -p claude_profile"
 printf '%-13s %-10s %s\n' run     available "cargo run -p claude_profile --bin clp"
 printf '%-13s %-10s %s\n' lint    available "cargo clippy -p claude_profile --all-features -- -D warnings"
-printf '%-13s %-10s %s\n' verify   available "w3 .test level::4"
+printf '%-13s %-10s %s\n' verify   available "will .test level::4"
 printf '%-13s %-10s %s\n' install  available  "cargo install --path ."
 printf '%-13s %-10s %s\n' verbs   built-in  "-"
 printf '%-13s %-10s %s\n' package_info built-in  "-"

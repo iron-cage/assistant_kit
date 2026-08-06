@@ -17,7 +17,7 @@ The operating mode is determined by whether `key::` is provided:
 
 | Mode | Parameters | Behavior |
 |------|------------|----------|
-| show-all | (none) | Table of all catalog params, sorted alphabetically |
+| show-all | (none) | `data_fmt` table of all catalog params, sorted alphabetically |
 | single | `key::K` | Deep-dive for one param: all forms, current values, source |
 
 -- **Parameters:** key::, kind::, format::, v::
@@ -78,6 +78,17 @@ clv.params key::model format::json
 
 # Minimal output — values only, no form annotations
 clv.params v::0
+```
+
+**Sample text output (v::1, `clv.params` — show-all):**
+
+```
+#    Name            Forms          Value                    Default
+1    bash_timeout    env            unset                    120000
+2    model           cli, env, cfg  claude-opus-4-8 (env)   claude-sonnet-5
+3    print           cli            (CLI-only)               off
+…
+138  use_verbose     env            unset                    false
 ```
 
 **Sample text output (v::1, `clv.params key::model`):**

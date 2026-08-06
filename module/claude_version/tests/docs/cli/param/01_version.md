@@ -118,7 +118,7 @@ Edge case coverage for the `version::` parameter. See [param/readme.md](../../..
 ### EC-9: `version::` only for `.version.install`, `.version.guard`, and `.version.mark`
 
 - **Given:** clean environment
-- **When:** `clv .processes version::stable`
+- **When:** `clv .ps version::stable`
 - **Then:** exit code 1; "unknown parameter 'version::'" or similar.
 - **Exit:** 1
 - **Source:** [feature/005_cli_design.md](../../../../docs/feature/005_cli_design.md)

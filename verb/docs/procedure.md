@@ -15,7 +15,7 @@
    - **Binary module:** dispatcher (default→l1) + `verb/run.d/l1` (direct: `cargo run -p <name> --bin <binary>`).
    - **Library module:** `echo "verb 'run' is not available for this project" >&2; exit 3` in `verb/run` (no layers needed).
 7. Create `verb/lint` dispatcher (default→l1) + `verb/lint.d/l1` (`cargo clippy -p <name> --all-features -- -D warnings`). l1 is module-specific; the dispatcher is universal.
-8. Create `verb/verify`: `exec w3 .test level::4` (universal — identical across all modules); add `--dry-run` echo printing `w3 .test level::4`.
+8. Create `verb/verify`: `exec will .test level::4` (universal — identical across all modules); add `--dry-run` echo printing `will .test level::4`.
 9. Create `verb/verbs`: `printf '%-13s ...'` table with verb/status/command for all verbs; library modules show `unavailable` for `run`; last row is `package_info built-in  -`.
 10. Create `verb/package_info`: Python3 script — reads `name`, `version`, `edition` from `Cargo.toml` (resolves workspace inheritance via `../../Cargo.toml`), static fields for `language`/`package_manager`/`signal`/`confidence`; prints deterministic flat JSON with blank line before `{` and after `}` (universal — identical across all cargo modules).
 11. No per-module container config — the workspace's owning `runbox/runbox.yml` serves every module; `verb/test` passes the module layer as the `runbox .live` payload.
@@ -34,7 +34,7 @@ For non-Rust standalone projects (Python, Node.js, etc.) the `verb/` scripts cal
    - **Binary project:** dispatcher (default→l1) at `verb/run` + `verb/run.d/l1` (ecosystem entry point). Runs host-side — the container config carries only `script:`.
    - **Library project:** `echo "verb 'run' is not available for this project" >&2; exit 3` (no layers needed).
 6. Create `verb/lint` dispatcher (default→l1) + `verb/lint.d/l1` (ecosystem linter). Host-side as well.
-7. Create `verb/verify`: call ecosystem-native full checks directly (e.g., `ruff check && pytest` for Python, `eslint . && npm test` for Node.js) — equivalent role to Rust's `w3 .test level::4`. Does not call the `runbox` engine.
+7. Create `verb/verify`: call ecosystem-native full checks directly (e.g., `ruff check && pytest` for Python, `eslint . && npm test` for Node.js) — equivalent role to Rust's `will .test level::4`. Does not call the `runbox` engine.
 8. Create `verb/verbs`: same `printf` table format as Rust; ecosystem-specific commands in the table.
 9. Create `verb/package_info`: reads the ecosystem manifest (`pyproject.toml`, `package.json`, `Cargo.toml`) and emits flat JSON. Match the field set used by Rust projects.
 10. Set executable bit: `chmod +x verb/*` (dispatchers + plain scripts) and `chmod +x verb/*.d/*` (layer files).
