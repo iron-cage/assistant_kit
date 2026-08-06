@@ -1,0 +1,386 @@
+# workspace / module container environment  (parameterised via build args)
+#
+# Why cargo-chef:
+#   On a local machine, cargo keeps a persistent target/ directory.  Changing a .rs
+#   file only recompiles the affected crate and its dependents — external crates are
+#   untouched.  Docker breaks this: there is no persistent target/ between builds.
+#   Any .rs change invalidates the COPY . . layer, so the following cargo command
+#   starts from an empty target/ and recompiles every external dependency from
+#   scratch — even for a one-line change in your own code.
+#
+#   cargo-chef restores the local-dev behaviour inside Docker by splitting
+#   compilation into two separate layers:
+#     1. cook  — compiles all external deps from recipe.json (derived from
+#                Cargo.toml/Cargo.lock only, so .rs changes never touch it)
+#     2. final — receives cook's artifacts + a source snapshot; workspace crates
+#                are NOT compiled here — they compile at container start, driven
+#                by the caller's payload (e.g. verb/test.d/l1 scripts), against
+#                the persistent CARGO_TARGET_DIR volume runbox mounts
+#   Layer caching applies to the docker path only: podman builds run with
+#   --layers=false (see runbox _build), so every podman rebuild is a FULL
+#   rebuild, cook included.  Day-to-day source iteration therefore does not go
+#   through image rebuilds at all — `.live` bind-mounts the live host source, and
+#   the caller's incremental build against the persistent volume gives both
+#   `.live` and `.run` local-dev compile speed.  Image rebuilds are only needed
+#   when the toolchain, apt packages, or dependency set changes.
+#
+#   What crosses stage boundaries:
+#
+#     planner ──► recipe.json
+#                   dep manifest derived purely from Cargo.toml + Cargo.lock;
+#                   contains no .rs content, so it never changes on source edits
+#
+#     cook    ──► /workspace/target/debug/deps/*.rlib
+#                   compiled external crate artifacts (serde, tokio, anyhow, …)
+#                 /usr/local/cargo/registry/
+#                   downloaded crate source archives (cargo re-validates these
+#                   during the final link step; omitting them causes link errors)
+#
+#     final   ──► receives both cook outputs, then:
+#                 COPY . . adds the full workspace source on top
+#
+#   Filesystem when cargo first runs in the started container (when the config
+#   declares a plugin working volume, runbox seeds it from the image's
+#   /workspace/target and points CARGO_TARGET_DIR at it — same contents,
+#   persistent location):
+#
+#     /workspace/
+#     ├── Cargo.toml, Cargo.lock     ← COPY . .
+#     ├── src/ module/ …             ← COPY . .  (workspace source)
+#     └── target/debug/deps/         ← from cook  (external deps pre-built)
+#             ├── libserde-*.rlib         ✓ already compiled — skipped
+#             ├── libtokio-*.rlib         ✓ already compiled — skipped
+#             └── …                       ✓ all external crates — skipped
+#
+#     /usr/local/cargo/registry/     ← from cook  (source archives for linking)
+#
+#   cargo sees a populated target/debug/deps/ and skips every external crate.
+#   It compiles only the workspace crates (absent from deps/), then links.
+#   This is identical to what cargo does on a local machine after the first build.
+#
+# Stages:
+#   A Docker stage is one isolated build environment started by a FROM instruction.
+#   Each stage gets its own filesystem; the only way to move data between stages is
+#   an explicit COPY --from=<stage>.  The final image contains only the last stage —
+#   all intermediate stages are discarded (they exist only to produce artifacts for
+#   downstream stages to cherry-pick).
+#
+#   Stage    Base                              cargo-chef    Purpose
+#   ──────── ───────────────────────────────── ────────────  ──────────────────────────────────────────
+#   chef     lukemathwalker/cargo-chef:*slim   pre-built     shared base — cargo-chef already installed
+#   planner  chef                              inherited     scans workspace manifests → emits recipe.json
+#   cook     chef                              inherited     compiles all external dep .rlib from recipe.json
+#   final    rust:slim                         absent        final image — receives cook artifacts + source
+#
+#   Stage    Receives                         Produces                       In image?
+#   ──────── ───────────────────────────────  ─────────────────────────────  ─────────
+#   chef     lukemathwalker/cargo-chef:*slim  rust:slim + cargo-chef binary  no
+#   planner  chef + COPY . . (full source)    recipe.json                    no
+#   cook     chef + recipe.json               target/debug/deps/ + registry  no
+#   final    rust:slim + cook dirs + source   the runnable image             YES
+#
+#   Data flow:
+#
+#     rust:slim
+#         │
+#         ▼
+#     ┌─ chef ──────────────────────────────────────┐
+#     │  RUN cargo install cargo-chef               │
+#     └──────────┬──────────────────────┬───────────┘
+#                │                      │
+#                ▼                      ▼
+#     ┌─ planner ────────┐    ┌─ cook ───────────────────────────┐
+#     │  COPY . .        │    │  COPY --from=planner recipe.json │
+#     │  chef prepare    │    │  chef cook --tests               │
+#     └────────┬─────────┘    └──────────────────┬───────────────┘
+#              │ recipe.json                      │ target/debug/deps/*.rlib
+#              └──────────────────────────────────┘ /usr/local/cargo/registry/
+#                                                 │
+#                                                 ▼  COPY --from=cook
+#                                       ┌─ final ──────────────────────────┐
+#                                       │  FROM rust:slim                  │
+#                                       │  + nextest, clippy, git, curl, procps │
+#                                       │  + cook artifacts (COPY --from=cook)│
+#                                       │  + COPY . .  (full source)       │
+#                                       │  ── final runnable image ─────── │
+#                                       └──────────────────────────────────┘
+#
+# Rebuilt layers (docker path only — podman uses --layers=false, so every podman
+# rebuild is a full rebuild of every stage regardless of what changed):
+#   chef/planner/cook  — only when Cargo.toml or Cargo.lock change
+#   final              — on every source change; cheap in itself (re-COPY source,
+#                        re-run cargo fetch) because workspace crates compile at
+#                        container start, not in this stage
+#
+# Build args (values come from runbox/runbox.yml, passed by runbox/runbox):
+#   USER        — testuser (chmod-000 + path-resolution tests) | root
+#   CMD_SCOPE   — --workspace | -p dream | -p willbe3
+#
+# Usage (via script — recommended):
+#   ./runbox/runbox .build                        # workspace image
+#   (cd module/<name> && ../../runbox/runbox .build)  # opt-out module image (unique image: + full build:)
+#   ./runbox/runbox .live                         # run config script against live host source (verb/test default)
+#   ./runbox/runbox .run                          # hermetic run of the image-baked snapshot (mounts ~/.claude + w3)
+#   ./runbox/runbox .shell                        # interactive shell
+#
+# Usage (direct docker — workspace; ./runbox/runbox .build renders the dockerfile
+# from this template to -runbox.dockerfile next to the module's runbox.yml):
+#   docker buildx build -f runbox/-runbox.dockerfile -t claude_journal_test .
+#   docker run --rm \
+#     -v ~/.claude:/workspace/.claude:rw \
+#     -v $(which w3):/usr/local/bin/w3:ro \
+#     claude_journal_test \
+#     /workspace/verb/test.d/l1                          # all tests (plugin mounts required)
+#   docker run --rm -it claude_journal_test bash                 # interactive shell (also the default CMD)
+
+# ── Global build arg: chef base image (must precede all FROM instructions) ────
+#
+# CHEF_IMAGE must be declared before the first FROM so Docker treats it as a
+# global ARG usable in subsequent FROM instructions.  Stage-local ARGs (declared
+# after any FROM) cannot be referenced in FROM.
+#
+# Fix(BUG-1380): pinned by version tag + manifest-list digest instead of the
+#   floating latest-rust-slim.  cargo-chef 0.1.77 (latest release as of
+#   2026-08-02) copies the crate-level `edition` onto the [lib]/[[test]] tables
+#   it synthesizes from recipe.json, so every workspace cook emits 52 spurious
+#   "`edition` is set on ... which is deprecated" manifest warnings that
+#   RUSTFLAGS=-D warnings cannot catch (Cargo's manifest parser runs before
+#   rustc).  No fixed release exists — the warnings persist until upstream
+#   resolves LukeMathWalker/cargo-chef#350; the pin removes the floating-tag
+#   time-dependence and freezes the gate-validated toolchain (chef 0.1.77,
+#   rust 1.97.1).  Bump tag AND digest together once a release fixes #350.
+# Root cause: chef's skeleton reconstruction duplicates `edition` onto every
+#   synthesized target table, and current Cargo deprecates target-level
+#   `edition` — firing against manifests chef itself generated, not committed
+#   source.  The floating tag additionally let cook behavior change with zero
+#   repo diff (BUG-1380 H4).
+# Pitfall: a Cargo warning citing a path inside this repo is not proof the
+#   defect is local — chef rewrites manifests before Cargo parses them;
+#   cross-check the cited file's committed content before attributing.
+ARG CHEF_IMAGE=docker.io/lukemathwalker/cargo-chef:0.1.77-rust-slim@sha256:d1f5e967fcecfdff94f3e71db056079f40cbced4e08f73cdf22bab2fe3da3efd
+
+# ── Base: cargo-chef installed once, reused by planner and cook ───────────────
+#
+# Use the pre-built multi-arch image (linux/amd64 + linux/arm64) rather than
+# compiling cargo-chef from source inside the container.  Compiling cargo-chef
+# and its ~100 transitive deps under fuse-overlayfs on aarch64 caused SIGTERM
+# from memory pressure.  The pre-built image is rust:slim-based and avoids the
+# issue; since the BUG-1380 pin it no longer tracks rust:slim across rebuilds.
+
+FROM $CHEF_IMAGE AS chef
+
+# ── Stage 1: planner — generates recipe.json and pre-fetches all dep sources ──
+#
+# cargo-chef traverses the workspace tree automatically.
+#
+# `cargo fetch` (bare, run from workspace root) downloads ALL dep sources listed in
+# Cargo.lock — the lock file is the authoritative source and includes every transitive
+# dep for all workspace members.  `keyaway_core`'s default `enabled` feature activates
+# `aes-gcm` → `aead v0.5.2`, so `aead` is in Cargo.lock and fetched here.
+# This is required because nextest always runs `cargo metadata --all-features` as its
+# first step (full workspace dep graph, offline), even for `-p dream` scoped tests.
+# Without `aead` in the registry, this fails with "failed to download aead … --offline".
+# Note: `cargo fetch` does NOT accept `--workspace` or `--all-features` flags; the bare
+# form covers all workspace members automatically via Cargo.lock.
+# Fetching here (build-time, network available) seeds the registry for cook and test.
+
+FROM chef AS planner
+WORKDIR /workspace
+COPY . .
+RUN cargo chef prepare --recipe-path recipe.json \
+ && cargo fetch
+
+# ── Stage 2: cook — compiles dependencies ─────────────────────────────────────
+#
+# Receives only recipe.json (not source files).
+# This layer is cache-stable: rebuilds only when Cargo.toml or Cargo.lock change,
+# not when .rs files change.
+# CMD_SCOPE scopes which crates' deps to precompile.
+#
+# RUSTFLAGS="-D warnings" must match the test runner (verb/test.d/l1 → w3 .test level::3).
+# Cargo includes RUSTFLAGS in its fingerprint hash.  A mismatch between cook and test
+# causes cargo to discard all cook-stage artifacts and recompile every external dep from
+# scratch on every test run — defeating the entire purpose of the cook stage.
+# Fix(issue-rustflags-fingerprint): set the same RUSTFLAGS here as in the test runner.
+
+FROM chef AS cook
+ARG CMD_SCOPE=--workspace
+# CARGO_BUILD_JOBS: cap cook parallelism to prevent OOM on memory-constrained hosts.
+# Default empty = cargo uses all CPUs; set via: CARGO_BUILD_JOBS=2 verb/test
+# Passed from runbox via --build-arg CARGO_BUILD_JOBS.
+ARG CARGO_BUILD_JOBS
+# Fix(issue-empty-cargo-build-jobs): cargo rejects CARGO_BUILD_JOBS="" (expects a number
+# or "default"). When runbox passes --build-arg CARGO_BUILD_JOBS= (empty = use all CPUs),
+# setting ENV would write an empty string that cargo rejects. Use the ARG directly in the
+# RUN command and unset it when empty so cargo falls back to its default (all CPUs).
+# Pitfall: ENV CARGO_BUILD_JOBS=$CARGO_BUILD_JOBS propagates empty string → cargo error.
+
+# No cook-stage apt packages: claude_journal's dependency set compiles with rust:slim's
+# stock toolchain (no clang/mold linker config, no OpenSSL/libvirt build deps).
+
+WORKDIR /workspace
+COPY --from=planner /workspace/recipe.json recipe.json
+# claude_journal's .cargo/ is deliberately EXCLUDED from the build context (.dockerignore):
+# its only content is a host-side target-dir redirect (-host-target) that must not
+# be baked; at run time the engine's CARGO_TARGET_DIR export (working volume)
+# overrides the redirect inside the container.
+# Registry pre-populated by planner's `cargo fetch --workspace`.  Copying it here
+# means cook can resolve and compile deps fully offline, and the final stage inherits
+# a registry that satisfies `cargo metadata --all-features` for the entire workspace —
+# even when CMD_SCOPE is narrowed to a single package (e.g., -p dream).
+COPY --from=planner /usr/local/cargo/registry /usr/local/cargo/registry
+RUN [ -n "$CARGO_BUILD_JOBS" ] || unset CARGO_BUILD_JOBS; \
+    RUSTFLAGS="-D warnings" cargo chef cook \
+      --recipe-path recipe.json \
+      $CMD_SCOPE \
+      --all-features \
+      --tests
+
+# ── Stage 3: final — the runnable environment image ──────────────────────────
+#
+# Gets precompiled dep artifacts from cook (avoids recompiling external crates).
+# Workspace crates compile at container start, driven by the caller's payload.
+
+FROM docker.io/rust:slim AS final
+
+# System utilities required by tests and compilation:
+#   git          — used by git_tools module for repository operations
+#   curl         — used by fetch/HTTP tests and for the nextest pre-built binary download below
+#   procps       — provides /bin/kill used by daemon process management tests
+#   clang        — required as linker by .cargo/config.toml (stable with ring cryptographic library)
+#   pkg-config   — required by OpenSSL-dependent workspace crates (keyaway_server, etc.)
+#   libssl-dev   — required by OpenSSL-dependent workspace crates
+#   libvirt-dev  — required by vmh/vmh2 crates (virt-0.4.x links against libvirt at link time)
+#   xvfb         — virtual framebuffer for headless clipboard tests (arboard requires X11/Wayland)
+#   xauth        — required by xvfb-run for X11 authentication cookie management
+# rust:slim is intentionally minimal and omits all; tests fail with ENOENT without them.
+# Installed first so curl is available for the nextest download step below.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends %%PACKAGES%% \
+ && rm -rf /var/lib/apt/lists/*
+
+# nextest: download pre-built binary (much faster than compiling from source).
+#   x86_64 / aarch64: get.nexte.st CDN (official installer; linux / linux-arm).
+#   other: fall back to cargo install (any architecture).
+# Fix: the previous aarch64 branch parsed the version out of GitHub's
+# /releases/latest redirect — that tag is repo-wide (nextest-runner-*, not
+# always cargo-nextest-*), so the sed could miss and embed the whole header
+# line in the URL (curl (3) Malformed input). The CDN serves arm directly.
+RUN set -e \
+ && ARCH=$(uname -m) \
+ && case "$ARCH" in \
+      x86_64) \
+        curl -LsSf "https://get.nexte.st/latest/linux" \
+          | tar zxf - -C /usr/local/cargo/bin ;; \
+      aarch64) \
+        curl -LsSf "https://get.nexte.st/latest/linux-arm" \
+          | tar zxf - -C /usr/local/cargo/bin ;; \
+      *) \
+        cargo install cargo-nextest --locked ;; \
+    esac
+
+# clippy: rust:slim ships without it; w3 .test level::3 runs clippy -D warnings.
+RUN rustup component add %%RUST_COMPONENTS%%
+
+# Build-identity watermark for binaries compiled inside this container.
+# Fix(BUG-1312): the build context excludes .git (`**/.git/` in .dockerignore), so
+#   build scripts deriving a SHA via `git rev-parse HEAD` embed "unknown" for every
+#   in-container compile — the caller's at-run compiles (verb scripts, nextest)
+#   run long after bake. runbox .build passes the host HEAD as
+#   this build-arg; exporting it as ENV makes the same value visible to those
+#   compiles AND to test-side comparison helpers at run time.
+# Pitfall: an ARG alone would vanish after bake — the compiles that need it happen
+#   at container start, so the ENV export is the load-bearing half.
+ARG WPLAN_BUILD_SHA=unknown
+ENV WPLAN_BUILD_SHA=$WPLAN_BUILD_SHA
+
+# No ENTRYPOINT: runbox provisions the environment; whatever workspace binaries a
+# payload needs, the payload builds itself (e.g. module verb/test.d/l1 scripts run
+# their own `cargo build -p <sibling_bin>` before their test command — the
+# relocated Fix(BUG-1301)). The image stays workload-neutral by design (task 1373).
+
+# USER: testuser when tests require:
+#   - chmod 000 file checks (root bypasses permission → silent wrong-path failures)
+#   - path-resolution assertions expecting cwd starts with $HOME
+ARG USER=testuser
+RUN [ "$USER" = "root" ] || useradd -m -s /bin/bash "$USER"
+
+# HOME=/workspace so paths resolve .claude/ under /workspace — plugin mounts land there.
+ENV HOME=/workspace
+
+WORKDIR /workspace
+
+# Precompiled dep artifacts + cargo registry from cook.
+# Both are required: target/ has compiled .rlib files; registry/ has crate sources
+# that cargo validates during the final link step.
+#
+# --chmod=777: set permissions during COPY to avoid a subsequent RUN chmod step.
+# A RUN chmod -R on large directories (target/ ~4 GB, registry/ ~2 GB) triggers overlay
+# copy-up — every file is duplicated in the upper layer, doubling disk usage and
+# exhausting disk on hosts with limited free space (~10 GB of extra writes).
+# Setting --chmod=777 during COPY writes files into the new layer with the target
+# permissions already set; no copy-up from a later chmod layer is needed.
+COPY --chown=${USER}:${USER} --chmod=777 --from=cook /usr/local/cargo/registry /usr/local/cargo/registry
+COPY --chown=${USER}:${USER} --chmod=777 --from=cook /workspace/target         /workspace/target
+
+# Fix: COPY --chmod=777 applies per-file mode but leaves some subdirectory permissions
+# at their cook-stage values (e.g. drwxr-xr-x 755) on Docker aarch64.  The test user
+# (host uid via --user $(id-u)) falls into the "others" category for those directories
+# and cannot create invoked.timestamp markers during doc test build script invocations.
+# Only -type d: touches only directory metadata (negligible copy-up cost), not file content.
+RUN find /workspace/target/debug/.fingerprint /workspace/target/debug/build \
+      -mindepth 1 -maxdepth 1 -type d -exec chmod a+rwX {} + 2>/dev/null || true && \
+    find /workspace/target/debug/.fingerprint /workspace/target/debug/build \
+      -name "invoked.timestamp" -exec chmod a+rw {} + 2>/dev/null || true
+
+# Full workspace source (includes the verb/test.d scripts cmd_run executes).
+COPY --chown=${USER}:${USER} --chmod=777 . .
+
+# Cargo.lock from cook stage: ensures the final stage uses the exact same locked dep
+# versions that were compiled by cook (consistent fingerprints → no recompile).
+# Without this COPY, cargo would need to create Cargo.lock from scratch here, which
+# requires write access to /workspace before the explicit chmod below.
+# Placed after COPY . . so the cook-derived lock always wins (the host workspace
+# is a library crate with no committed Cargo.lock).
+COPY --from=cook --chown=${USER}:${USER} --chmod=777 /workspace/Cargo.lock Cargo.lock
+
+# Create the seed mount point so Docker initialises the named volume with USER
+# ownership when _ensure_build_cache first mounts it.  Without this mkdir, Docker
+# creates /workspace/target_seed as root at container start (path absent from image),
+# and testuser cannot write into it — causing the seeding cp -a to fail.
+#
+# chmod a+rwX /workspace: fulfils the design intent stated in runbox cmd_run
+# ("workspace [...] dirs are world-writable (a+rwX)").  WORKDIR creates /workspace
+# with mode 755; COPY --chmod=777 sets only the files inside, not the directory
+# itself.  Making /workspace world-writable lets any running uid (testuser during
+# build, host uid during cmd_run --user $(id -u)) write Cargo.lock and artifacts.
+RUN mkdir -p /workspace/target_seed && \
+    ( [ "$USER" = "root" ] || chown "$USER":"$USER" /workspace /workspace/target_seed ) && \
+    chmod a+rwX /workspace
+
+# chmod only the small RUN-installed entries in /usr/local/cargo (bin, env, .package-cache, etc.).
+# registry/ is already 777 from COPY --chmod=777 above.
+# /workspace/* is already 777 from the COPY --chmod=777 steps above.
+# A blanket chmod -R /workspace /usr/local/cargo would trigger overlay copy-up of those
+# large directories (~10 GB of extra writes) — so they are explicitly excluded here.
+RUN [ "$USER" = "root" ] || find /usr/local/cargo -mindepth 1 -maxdepth 1 ! -name registry -exec chmod -R a+rwX {} +
+USER $USER
+
+# `cargo fetch` (build-time, network available): belt-and-suspenders — guarantees ALL
+# Cargo.lock dep sources are in the registry, including `aead` (locked via
+# keyaway_core → aes-gcm → aead, not in every crate's own dep tree). nextest always
+# runs `cargo metadata --all-features` (full workspace, no -p filter) and the test
+# container runs with CARGO_NET_OFFLINE=true. Missing `aead` causes:
+#   "failed to download `aead v0.5.2` … --offline was specified"
+# `cargo fetch` (bare) reads Cargo.lock and downloads all locked versions for all
+# workspace members — no `--workspace` or `--all-features` flags needed or supported.
+# No `cargo build` here: compiling workspace crates is the caller's run-time work
+# (verb/test.d scripts). This RUN only fetches sources; it compiles nothing.
+RUN cargo fetch \
+ && find /workspace/target -not -perm /0002 -exec chmod a+w {} + 2>/dev/null || true
+
+# Neutral default command — runbox provisions the environment; what runs inside is
+# always the caller's payload (.run/.live inject the config script: or an explicit
+# '--' payload as the container argv). A bare `docker run` opens a shell rather
+# than assuming any particular workload (single-concern collapse, task 1373).
+CMD ["bash"]
