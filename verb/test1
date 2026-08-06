@@ -1,16 +1,21 @@
 #!/usr/bin/env bash
 # test1 — run a single nextest filter inside the container.
 # Usage: ./verb/test1 <nextest-filter>
-#   filter: nextest filter expression (e.g. 'test_name', 'test::module::')
+#   filter: nextest -E filter expression (e.g. 'test(test_config_get)')
 #   Runs only matching tests — no clippy, no doc tests.  Prefer over ./verb/test
 #   whenever a specific test name or filter is known (mandatory per rulebook.md).
 set -euo pipefail
+if [[ -n "${VERB_LAYER:-}" ]]; then
+  echo "ERROR: VERB_LAYER is not valid on the host side." >&2
+  echo "Standard invocation: ./verb/test1 <filter>" >&2
+  exit 1
+fi
 FILTER="${1:-}"
 if [[ -z "$FILTER" ]]; then
   echo "error: usage: ./verb/test1 <nextest-filter>" >&2
   echo "  example: ./verb/test1 test_config_get" >&2
   exit 1
 fi
-if [[ "$FILTER" == "--dry-run" ]]; then echo "./runbox/runbox .live -- env NEXTEST_FILTER='<filter>' verb/test.d/l1_filter"; exit 0; fi
+if [[ "$FILTER" == "--dry-run" ]]; then echo "runbox .live -- ./verb/test1.d/l1 '<filter>'"; exit 0; fi
 ROOT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
-cd "$ROOT_DIR" && exec "$ROOT_DIR/runbox/runbox" .live -- env NEXTEST_FILTER="$FILTER" "$ROOT_DIR/verb/test.d/l1_filter"
+cd "$ROOT_DIR" && exec runbox .live -- ./verb/test1.d/l1 "$FILTER"

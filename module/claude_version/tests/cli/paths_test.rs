@@ -101,8 +101,8 @@ fn it05_paths_v0_unlabeled()
 // IT-6: v::0 with project_settings unresolved → key omitted from output
 //
 // Runs from an isolated `TempDir` (not `run_clv_with_env`'s inherited cwd) because
-// the full-suite container mounts the real `~/.claude` at the `/workspace` git
-// boundary (runbox.yml `plugin_mount`), which would otherwise make `project_settings`
+// the full-suite container bind-mounts the real `~/.claude` at its real home
+// path (runbox.yml `mounts` entry), which would otherwise make `project_settings`
 // resolve to a real path instead of staying unresolved.
 #[ test ]
 fn it06_paths_v0_unresolved_omitted()

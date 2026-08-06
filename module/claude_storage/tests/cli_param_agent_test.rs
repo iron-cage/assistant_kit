@@ -160,9 +160,10 @@ fn ec_3_agent_2_rejected()
 #[ test ]
 fn ec_4_agent_yes_accepted()
 {
-  // CLAUDE_STORAGE_ROOT isolation: /workspace/.claude/projects is bind-mounted
-  // with 0700 (host uid), unreadable by the container test user. Point to a
-  // non-existent path so list_projects() returns an empty list (not an error).
+  // CLAUDE_STORAGE_ROOT isolation: the container bind-mounts the host's real
+  // ~/.claude, so without isolation list_projects() would read live, mutable
+  // host session data. Point to a non-existent path so list_projects() returns
+  // an empty list deterministically.
   let out = common::clg_cmd()
     .arg( ".list" )
     .arg( "agent::yes" )

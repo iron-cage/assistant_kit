@@ -2,7 +2,7 @@
 # do verbs — list available verbs for this project (protocol meta-verb)
 set -euo pipefail
 printf '%-13s %-11s %s\n' build   available   "cargo build -p assistant_kit"
-printf '%-13s %-11s %s\n' test    available   "cargo nextest + doc tests + clippy (container)"
+printf '%-13s %-11s %s\n' test    available   "runbox .live (container, module-scoped)"
 printf '%-13s %-11s %s\n' test_only available "cargo nextest run --all-features <filter>"
 printf '%-13s %-11s %s\n' clean   available   "cargo clean -p assistant_kit"
 printf '%-13s %-11s %s\n' run     unavailable "-"

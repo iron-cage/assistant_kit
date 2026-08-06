@@ -2,12 +2,9 @@
 # test_only — run a single test or group by nextest filter inside the runbox container.
 #
 # Usage: ./verb/test_only <nextest-filter>
-#   nextest-filter — test name substring or full nextest -E expression
-#
-# How it works: delegates to the workspace launcher (../../runbox/runbox) with a
-# .live payload that runs verb/test_only.d/l1 inside the container under
-# NEXTEST_FILTER — targeted nextest only, no doc tests or clippy.
+#   nextest-filter — test name substring pattern
 set -euo pipefail
+MODULE_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
 if [[ -n "${VERB_LAYER:-}" ]]; then
   echo "ERROR: VERB_LAYER is not valid on the host side." >&2
   echo "Standard invocation: cd module/claude_journal_viewer && ./verb/test_only <filter>" >&2
@@ -15,7 +12,7 @@ if [[ -n "${VERB_LAYER:-}" ]]; then
 fi
 if [[ "${1:-}" == "--dry-run" ]]; then
   DRY_FILTER="${2:-<filter>}"
-  echo "NEXTEST_FILTER=$DRY_FILTER runbox .live -- verb/test_only.d/l1  →  cargo nextest run --all-features \"$DRY_FILTER\""
+  echo "runbox .live -- ./module/claude_journal_viewer/verb/test_only.d/l1 '$DRY_FILTER'"
   exit 0
 fi
 FILTER="${1:-}"
@@ -24,5 +21,4 @@ if [[ -z "$FILTER" ]]; then
   echo "Usage: ./verb/test_only <nextest-filter-expression>" >&2
   exit 1
 fi
-MODULE_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
-cd "$MODULE_DIR" && exec "$MODULE_DIR/../../runbox/runbox" .live -- env NEXTEST_FILTER="$FILTER" "$MODULE_DIR/verb/test_only.d/l1"
+cd "$MODULE_DIR" && exec runbox .live -- "./module/claude_journal_viewer/verb/test_only.d/l1" "$FILTER"

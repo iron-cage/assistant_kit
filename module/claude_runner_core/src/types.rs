@@ -702,6 +702,8 @@ pub struct InitializeResult
 ///
 /// Shape confirmed against the captured `mcp_status` response:
 /// `{"mcpServers":[{"name":"phase0probe","status":"connected","scope":"dynamic","tools":[]}]}`.
+/// Newer claude versions omit `tools` from each entry entirely, so it is
+/// version-variant like [`InitializeResult::feedback_survey_config`].
 #[derive( Debug, Clone, PartialEq, serde::Deserialize ) ]
 pub struct McpServerStatusEntry
 {
@@ -711,7 +713,10 @@ pub struct McpServerStatusEntry
   pub status : String,
   /// Registration scope (e.g. `"dynamic"`).
   pub scope : String,
-  /// Tools this server currently exposes.
+  /// Tools this server currently exposes. Absent on newer claude versions
+  /// (observed gone in 2.1.220) — `#[serde(default)]` maps a missing field to
+  /// an empty list rather than a deserialize error.
+  #[ serde( default ) ]
   pub tools : Vec< serde_json::Value >,
 }
 

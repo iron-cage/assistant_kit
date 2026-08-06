@@ -123,11 +123,11 @@ Edge case coverage for the `name::` parameter. See [param/16_name.md](../../../.
 
 | Function | File |
 |----------|------|
-| `name_ec1_valid_name_accepted` | `tests/cli/name_param_test.rs` |
-| `name_ec2_absent_exits_1` | `tests/cli/name_param_test.rs` |
-| `name_ec3_empty_exits_1` | `tests/cli/name_param_test.rs` |
-| `name_ec4_uppercase_exits_1` | `tests/cli/name_param_test.rs` |
-| `name_ec5_leading_digit_exits_1` | `tests/cli/name_param_test.rs` |
-| `name_ec6_too_long_exits_1` | `tests/cli/name_param_test.rs` |
-| `name_ec7_reserved_stable_exits_1` | `tests/cli/name_param_test.rs` |
-| `name_ec8_reserved_latest_exits_1` | `tests/cli/name_param_test.rs` |
+| `ft010_1_create_marker_appears_in_list` | `tests/cli/mutation_version_mark_test.rs` |
+| `it11_mark_name_absent_exits_1` | `tests/cli/mutation_version_mark_test.rs` |
+| `it12_mark_name_uppercase_exits_1` | `tests/cli/mutation_version_mark_test.rs` |
+| `it13_mark_name_digit_start_exits_1` | `tests/cli/mutation_version_mark_test.rs` |
+| `it14_mark_name_shadows_stable_exits_1` | `tests/cli/mutation_version_mark_test.rs` |
+| `it15_mark_name_shadows_latest_exits_1` | `tests/cli/mutation_version_mark_test.rs` |
+| `it19_mark_name_empty_exits_1` | `tests/cli/mutation_version_mark_test.rs` |
+| `it20_mark_name_too_long_exits_1` | `tests/cli/mutation_version_mark_test.rs` |

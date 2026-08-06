@@ -8,12 +8,13 @@
 //! ## Root Cause (design invariant)
 //!
 //! `describe()` returns two lines when `working_directory` is set:
-//! `"cd /dir\nenv -u CLAUDECODE claude ..."`. `describe_compact()` MUST extract only the last line
-//! via `self.describe().lines().last()` to avoid the double-cd pitfall.
+//! `"cd /dir\nenv -u CLAUDECODE -u CLAUDE_CODE_CHILD_SESSION claude ..."`.
+//! `describe_compact()` MUST extract only the last line via `self.describe().lines().last()`
+//! to avoid the double-cd pitfall.
 //!
 //! ## Evidence
 //!
-//! - `describe_compact()` returns `"env -u CLAUDECODE claude ..."` (single line, no cd prefix; BUG-246 fix)
+//! - `describe_compact()` returns `"env -u CLAUDECODE -u CLAUDE_CODE_CHILD_SESSION claude ..."` (single line, no cd prefix; BUG-246 fix)
 //! - `describe_compact()` with `working_dir` set still returns only the invocation line
 //! - `execute()` with `dry_run=true` returns `describe_compact()` as stdout without spawning
 //! - `execute()` with `dry_run=true` returns `exit_code` 0
@@ -28,7 +29,8 @@
 //! | no working dir | ✅ | ✅ | ✅ |
 //! | with working dir | ✅ | — | — |
 //! | dry_run=false | — | — | — |
-//! | CLAUDECODE env removal (BUG-246) | ✅ | — | — |
+//! | CLAUDECODE removal (BUG-246) | ✅ | — | — |
+//! | CLAUDE_CODE_CHILD_SESSION removal | ✅ | — | — |
 
 use claude_runner_core::ClaudeCommand;
 
@@ -46,7 +48,9 @@ fn describe_compact_returns_single_line() {
 // Root cause: describe() was WYSIWYG-broken — ClaudeCommand::new() unsets CLAUDECODE by default
 //   via env_remove(), but describe() showed "claude ..." hiding the env manipulation.
 // Pitfall: describe() and build_command() must stay in sync; any env_remove() in build_command()
-//   must appear explicitly in describe() output so trace/dry-run is WYSIWYG.
+//   must appear explicitly in describe() output so trace/dry-run is WYSIWYG. The shared
+//   removed_vars() method enforces this structurally — adding a removal in one place
+//   automatically propagates to the other.
 #[test]
 fn describe_compact_starts_with_env_unset_claudecode() {
   let cmd = ClaudeCommand::new();
@@ -54,6 +58,26 @@ fn describe_compact_starts_with_env_unset_claudecode() {
   assert!(
     compact.starts_with( "env -u CLAUDECODE" ),
     "describe_compact must start with 'env -u CLAUDECODE' (default: unset_claudecode=true), got: {compact}"
+  );
+}
+
+#[test]
+fn describe_compact_includes_child_session_removal()
+{
+  // CLAUDE_CODE_CHILD_SESSION is always stripped — must appear in the trace even when
+  // CLAUDECODE is kept via with_unset_claudecode(false).
+  let compact_default = ClaudeCommand::new().describe_compact();
+  assert!(
+    compact_default.contains( "-u CLAUDE_CODE_CHILD_SESSION" ),
+    "describe_compact must show CLAUDE_CODE_CHILD_SESSION removal (default); got: {compact_default}"
+  );
+
+  let compact_keep = ClaudeCommand::new()
+    .with_unset_claudecode( false )
+    .describe_compact();
+  assert!(
+    compact_keep.contains( "-u CLAUDE_CODE_CHILD_SESSION" ),
+    "describe_compact must show CLAUDE_CODE_CHILD_SESSION removal even when CLAUDECODE kept; got: {compact_keep}"
   );
 }
 
