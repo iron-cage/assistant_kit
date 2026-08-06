@@ -1,32 +1,30 @@
-# All simple cargo modules share the workspace image.
-# Build the image with: dev/run/runbox .build
-image: workspace_test
+# shared workspace image — built once at the checkout root (runbox/); opt out by
+# declaring a unique tag + full build: section (see runbox/readme.md)
+image: assistant_kit_test
 
-# non-root so chmod-000 file-permission tests fail correctly (root bypasses checks)
-test_user: testuser
-# workspace scope — simple modules share the workspace image; no per-module build
-cmd_scope: --workspace
-# baked into the image default CMD; excludes tests needing external I/O (offline-safe default)
-cmd_filter: "!binary(behavior)"
+# script invoked by `.run` and `.live` inside the container (workspace-relative path)
+script: module/claude_version_core/verb/test.d/l1
 
-# script invoked by `.test` inside the container (path relative to /workspace)
-test_script: module/claude_version_core/verb/test.d/l1
+mounts:
+  - host: ~/.claude
+    mode: rw
+    check: directory
+    commands: [run, live, shell]
 
-# script invoked by `.lint` inside the container (path relative to /workspace)
-lint_script: module/claude_version_core/verb/lint.d/l1
+plugins:
+  # The host's own `claude` CLI bind-mounted read-only — real-subprocess control
+  # tests run against the host's version and credentials. The working volume is
+  # the workspace compilation cache — the engine exports it as CARGO_TARGET_DIR,
+  # keeping all build artifacts off the read-only workspace mount.
+  - type: binary
+    name: claude
+    container_path: /usr/local/bin/claude
+    working_volume: assistant_kit_targets
+    working_volume_path: /tmp/assistant_kit_targets
+    commands: [run, live, shell]
 
-# optional binary plugin: name:container_path (binary found via 'which name' on host)
-bin_plugin: w3:/usr/local/bin/w3
-# container mount point for bin_plugin working volume (persists compilation artifacts)
-bin_plugin_volume: /tmp/will_test_targets
-# data directory plugin: host_path:container_path:check_type
-# .test mounts as required+rw; .shell mounts as optional+ro
-plugin_mount: ~/.claude:/workspace/.claude:directory
-
-
-# ── Formerly hardcoded parameters (now configurable) ─────────────────────────
-# base_image: rust:slim          # FROM for chef and test stages
-# rustup_components: clippy      # space-separated; e.g. "clippy rustfmt"
-system_packages: curl procps jq
-# cargo_features: --all-features # passed to nextest list and offline run CMD
-# workspace_dir: /workspace      # container WORKDIR; must match in runbox/runbox.dockerfile and runbox-run
+env_commands:
+  live:
+    # cargo home for registry bind-mounts; offline flag prevents network fetches
+    CARGO_HOME: /cargo
+    CARGO_NET_OFFLINE: "true"

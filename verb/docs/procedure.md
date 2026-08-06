@@ -9,7 +9,7 @@
 1. Determine module type: **binary** (has a `[[bin]]` entry in `Cargo.toml`) or **library** (lib-only).
 2. Create `module/<name>/verb/` directory.
 3. Create `verb/build`: `cargo build -p <name>` (universal).
-4. Create `verb/test` dispatcher (default→`runbox/runbox .test`) + `verb/test.d/l0` (host-native, `VERB_LAYER=l0`) + `verb/test.d/l1` (container-internal, `VERB_LAYER=l1`). All three are universal — identical across all cargo modules.
+4. Create `verb/test` dispatcher (default→`../../runbox/runbox .live`) + `verb/test.d/l0` (host-native, `VERB_LAYER=l0`) + `verb/test.d/l1` (container-internal, the config's `script:` entry). All three are universal — identical across all cargo modules.
 5. Create `verb/clean`: `cargo clean -p <name>` (universal).
 6. Create `verb/run`:
    - **Binary module:** dispatcher (default→l1) + `verb/run.d/l1` (direct: `cargo run -p <name> --bin <binary>`).
@@ -45,7 +45,7 @@ For non-Rust standalone projects (Python, Node.js, etc.) the `verb/` scripts cal
 Workspace-level verbs operate on all crates simultaneously. They live in the workspace root `verb/` directory alongside the existing `test` dispatcher.
 
 1. Create `verb/build`: `cargo build --workspace` (universal).
-2. `verb/test` already exists — dispatches to `runbox/runbox .test` (container, `--workspace` scope via `runbox.yml cmd_scope`).
+2. `verb/test` already exists — dispatches to `runbox/runbox .live` (container; the root owning config's `script:` runs the workspace suite).
 3. Create `verb/clean`: `cargo clean` (workspace-wide, no `-p` scoping needed).
 4. Create `verb/run`: `echo "error: run is unavailable at workspace scope" >&2; exit 3` — workspace has multiple binaries; use `module/*/verb/run` instead.
 5. Create `verb/lint`: `cargo clippy --workspace --all-targets --all-features -- -D warnings`.
