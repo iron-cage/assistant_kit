@@ -129,5 +129,5 @@ Type compliance and validation tests for `SettingsValue`. See [type/05_settings_
 | `tc_settings_value_float_inferred` | `tests/cli/mutation_settings_set_test.rs` |
 | `tc_settings_value_string_fallback` | `tests/cli/mutation_settings_set_test.rs` |
 | `tc_settings_value_nan_as_string` | `tests/cli/mutation_settings_set_test.rs` |
-| `tc_settings_value_empty_exits_1` | `cli_args_test/type_surface_test.rs` |
-| `tc_settings_value_absent_exits_1` | `cli_args_test/type_surface_test.rs` |
+| `tc_settings_value_empty_exits_1` | `tests/cli_args_test/type_surface_test.rs` |
+| `tc_settings_value_absent_exits_1` | `tests/cli_args_test/type_surface_test.rs` |

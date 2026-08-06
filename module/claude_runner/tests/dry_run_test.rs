@@ -207,7 +207,7 @@ fn dry_run_without_message_shows_bare_command()
   let output = run_dry( &[ "--session-dir", session_path ] );
   let last_line = output.trim_end().lines().last().unwrap_or_default();
   assert_eq!(
-    last_line, "env -u CLAUDECODE claude --dangerously-skip-permissions --effort max --print --output-format json",
+    last_line, "env -u CLAUDECODE -u CLAUDE_CODE_CHILD_SESSION claude --dangerously-skip-permissions --effort max --print --output-format json",
     "Bare --dry-run under non-TTY stdin must route to print mode (no message, no -c in empty session dir). Got:\n{output}"
   );
 }
@@ -590,7 +590,7 @@ fn empty_positional_arg_produces_bare_command()
   //   differentiator (empty positional must not leak as a degenerate "ultrathink " message,
   //   BUG-219) is the assertion immediately below, unaffected by this correction.
   assert_eq!(
-    last_line, "env -u CLAUDECODE claude --dangerously-skip-permissions --effort max --print --output-format json",
+    last_line, "env -u CLAUDECODE -u CLAUDE_CODE_CHILD_SESSION claude --dangerously-skip-permissions --effort max --print --output-format json",
     "empty positional arg must produce no-message command (no -c in empty session dir). Got:\n{stdout}"
   );
   assert!(

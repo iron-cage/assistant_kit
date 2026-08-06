@@ -7,11 +7,12 @@
 //! - `tests/docs/cli/user_story/004_settings_management.md` (US-1 through US-6)
 //! - `tests/docs/cli/user_story/005_version_pinning.md` (US-1 through US-6)
 //! - `tests/docs/cli/user_story/006_config_management.md` (AT-1 through AT-10)
-//! - `tests/docs/cli/user_story/07_params_inspection.md` (US-1 through US-10)
+//! - `tests/docs/cli/user_story/007_params_inspection.md` (US-1 through US-10)
+//! - `tests/docs/cli/user_story/008_path_discovery.md` (US-1 through US-7)
 
 use tempfile::TempDir;
 
-use crate::subprocess_helpers::{ assert_exit, run_clv_with_env, stdout, write_settings };
+use crate::subprocess_helpers::{ assert_exit, run_clv_with_env, stderr, stdout, write_settings };
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // US-001: Environment Check
@@ -812,4 +813,111 @@ fn us10_007_params_show_all_alphabetical()
   let mut sorted = names.clone();
   sorted.sort_unstable();
   assert_eq!( names, sorted, "param names must be in ascending alphabetical order" );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// US-008: Path Discovery
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// US-1: .version.paths shows all 5 keys, each labeled; exit 0
+#[ test ]
+fn us01_008_paths_show_all_keys()
+{
+  let out = run_clv_with_env( &[ ".version.paths" ], &[ ( "HOME", "/tmp/test_home" ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  for label in [ "settings:", "project_settings:", "versions_dir:", "binary_symlink:", "version_history_cache:" ]
+  {
+    assert!(
+      text.lines().any( | l | l.trim_start().starts_with( label ) ),
+      "must contain a line labeled {label}: {text}"
+    );
+  }
+}
+
+// US-2: .version.paths key::versions_dir shows single resolved path under HOME; exit 0
+#[ test ]
+fn us02_008_paths_single_key()
+{
+  let out = run_clv_with_env(
+    &[ ".version.paths", "key::versions_dir" ],
+    &[ ( "HOME", "/tmp/test_home" ) ],
+  );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "/tmp/test_home" ), "single-key output must contain path under HOME: {text}" );
+}
+
+// US-3: .version.paths v::0 outputs plain unlabeled paths (no colon-prefixed labels); exit 0
+#[ test ]
+fn us03_008_paths_v0_unlabeled()
+{
+  let out = run_clv_with_env( &[ ".version.paths", "v::0" ], &[ ( "HOME", "/tmp/test_home" ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  for line in text.lines().filter( | l | !l.is_empty() )
+  {
+    assert!( !line.contains( ':' ), "v::0 output must be plain paths with no labels: {line:?}" );
+  }
+}
+
+// US-4: .version.paths format::json returns valid JSON object with all 5 keys; exit 0
+#[ test ]
+fn us04_008_paths_json_object()
+{
+  let out = run_clv_with_env( &[ ".version.paths", "format::json" ], &[ ( "HOME", "/tmp/test_home" ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.trim_start().starts_with( '{' ), "format::json must produce a JSON object: {text}" );
+  for key in [ "\"settings\"", "\"project_settings\"", "\"versions_dir\"", "\"binary_symlink\"", "\"version_history_cache\"" ]
+  {
+    assert!( text.contains( key ), "JSON object must contain key {key}: {text}" );
+  }
+}
+
+// US-5: unresolvable project_settings shown as "(none found)" at default verbosity; exit 0
+//
+// Uses an isolated TempDir cwd so the container workspace-root `.claude/` mount
+// (runbox.yml plugin_mount) cannot make project_settings resolve to a real path.
+#[ test ]
+fn us05_008_paths_unresolvable_none_found()
+{
+  let project_dir = TempDir::new().unwrap();
+  let out = std::process::Command::new( env!( "CARGO_BIN_EXE_claude_version" ) )
+    .args( [ ".version.paths" ] )
+    .env( "HOME", "/tmp/test_home" )
+    .current_dir( project_dir.path() )
+    .output()
+    .unwrap();
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.lines().any( | l | l.trim_start().starts_with( "project_settings:" ) && l.contains( "(none found)" ) ),
+    "project_settings must show (none found) when unresolvable: {text}"
+  );
+}
+
+// US-6: .version.paths key::bogus → exit 1; stderr names the invalid key
+#[ test ]
+fn us06_008_paths_invalid_key_exits_1()
+{
+  let out = run_clv_with_env( &[ ".version.paths", "key::bogus" ], &[ ( "HOME", "/tmp/test_home" ) ] );
+  assert_exit( &out, 1 );
+  let err = stderr( &out );
+  assert!( err.contains( "bogus" ), "stderr must name the invalid key: {err}" );
+}
+
+// US-7: .version.paths v::2 shows one-line description beyond the path; exit 0
+#[ test ]
+fn us07_008_paths_v2_descriptions()
+{
+  let out = run_clv_with_env(
+    &[ ".version.paths", "key::binary_symlink", "v::2" ],
+    &[ ( "HOME", "/tmp/test_home" ) ],
+  );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "binary_symlink:" ), "v::2 must include label: {text}" );
+  let line_count = text.lines().filter( | l | !l.is_empty() ).count();
+  assert!( line_count >= 2, "v::2 must include a description line beyond the path: {text}" );
 }

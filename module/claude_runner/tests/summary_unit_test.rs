@@ -361,8 +361,14 @@ const NEW_SDK_ENVELOPE_STRUCTURED : &str = r#"{"subtype":"success","session_id":
 /// where `"type"` is absent from the top level and present only inside iterations.
 ///
 /// # Fix Applied
-/// Gate changed to `extract_str(json,"subtype")?` — `"subtype"` is top-level-only,
-/// never present inside `usage.iterations[]` objects.
+/// Compound gate: `if subtype.is_none() && msg_type != "result" { return None; }` where
+/// `subtype = extract_str(json,"subtype")` and `msg_type = extract_str(json,"type")` —
+/// accepts old SDK (`"type":"result"`, no `"subtype"`) OR new SDK (`"subtype"` present,
+/// no top-level `"type"`).  `"subtype"` is top-level-only, never in `usage.iterations[]`.
+///
+/// # Prevention
+/// After any gate change, verify both SDK variants produce `Some`: one fixture with
+/// `"subtype"` but no top-level `"type"`, one with `"type":"result"` but no `"subtype"`.
 ///
 /// # Pitfall
 /// `extract_str` uses `s.find()` — any gate using it must target a key that is
@@ -396,7 +402,13 @@ fn render_summary_with_nested_type_in_iterations_produces_summary()
 /// not appear, indistinguishable from "no mismatch occurred."
 ///
 /// # Fix Applied
-/// Gate changed to `if extract_str(json,"subtype").is_none() { return None; }`.
+/// Compound gate: `let is_result = extract_str(json,"subtype").is_some() || extract_str(json,"type").as_deref() == Some("result"); if !is_result { return None; }` —
+/// accepts old SDK (`"type":"result"`, no `"subtype"`) OR new SDK (`"subtype"` present).
+/// A subtype-only gate breaks old SDK envelopes where `"subtype"` is absent.
+///
+/// # Prevention
+/// Silent-failure gates must have positive tests for BOTH SDK variants.  Add a fixture
+/// with `"type":"result"` only (old SDK) alongside the new SDK fixture.
 ///
 /// # Pitfall
 /// Silent-failure gates (where `None` is also the "no event" path) must have explicit
@@ -430,8 +442,12 @@ fn extract_session_id_returns_uuid_for_new_sdk_envelope()
 /// No test exercised `extract_structured_output()` against a new SDK envelope.
 ///
 /// # Fix Applied
-/// Gate in `extract_structured_output()` changed to
-/// `if extract_str(json,"subtype").is_none() { return None; }`.
+/// Compound gate in `extract_structured_output()`: same as BUG-436/437 —
+/// `let is_result = extract_str(json,"subtype").is_some() || extract_str(json,"type").as_deref() == Some("result"); if !is_result { return None; }`.
+///
+/// # Prevention
+/// When fixing an outer gate (BUG-436), audit all inner gates on the same call path for
+/// the same root cause.  Add a test that reaches each inner gate for the new SDK format.
 ///
 /// # Pitfall
 /// A second gate hidden inside a call path masks its own failure when the outer gate also
@@ -450,6 +466,48 @@ fn render_summary_uses_structured_output_for_new_sdk_envelope()
     s.contains( "schema_data" ),
     "render_summary body must contain the structured_output value when result is empty; \
      got blank body (extract_structured_output returned None — BUG-438 gate not fixed). \
+     Got:\n{s}"
+  );
+}
+
+/// # Root Cause
+/// `extract_str(json, "type")` at summary.rs:342 uses depth-unaware `s.find()`; for new SDK
+/// envelopes with no top-level `"type"` field, it finds `usage.iterations[].type = "message"`.
+/// After BUG-436's compound gate correctly passes the new SDK envelope, `msg_type = "message"`
+/// reached the display logic at line 408 unchanged, producing `type: message` in the header.
+///
+/// # Why Not Caught
+/// The BUG-436 test only asserted `is_some()` — did not check the string content. Display
+/// corruption was invisible at the gate-correctness level.
+///
+/// # Fix Applied
+/// One line inserted between the gate and the `subtype` rebind in `render_summary()`:
+/// `let msg_type = if subtype.is_some() && msg_type != "result" { String::new() } else { msg_type };`
+/// Clears `msg_type` when the new SDK path is taken (subtype present, no top-level "type":"result").
+///
+/// # Prevention
+/// After any gate fix that admits a new envelope format, scan ALL downstream uses of the same
+/// extracted fields in the same function for display-correctness regressions.
+///
+/// # Pitfall
+/// `extract_str` is depth-unaware: any field that appears nested (e.g., `iterations[].type`)
+/// will produce wrong values when the top-level field is absent and a nested one appears first.
+// test_kind: bug_reproducer(BUG-440)
+#[ test ]
+fn render_summary_does_not_display_type_message_for_new_sdk_envelope()
+{
+  let result = render_summary( NEW_SDK_ENVELOPE, None );
+  assert!(
+    result.is_some(),
+    "render_summary must return Some for new SDK envelope; got None"
+  );
+  let s = result.unwrap();
+  assert!(
+    !s.contains( "message" ),
+    "render_summary must NOT contain 'message' in output for new SDK envelope — \
+     'type: message' comes from depth-unaware extract_str finding iterations[].type \
+     before absent top-level 'type' field (BUG-440). ANSI codes separate 'type:' \
+     and 'message' in the rendered string but 'message' itself must not appear. \
      Got:\n{s}"
   );
 }

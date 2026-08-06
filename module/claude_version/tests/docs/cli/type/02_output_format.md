@@ -112,6 +112,6 @@ Type compliance and validation tests for `OutputFormat`. See [type/02_output_for
 |----------|------|
 | `tc258_status_format_json_is_valid_json` | `tests/cli/cross_cutting_test.rs` |
 | `tc260_format_uppercase_rejected` | `tests/cli/cross_cutting_test.rs` |
-| `tc_output_format_text_explicit` | `cli_args_test/type_surface_test.rs` |
-| `tc_output_format_xml_rejected` | `cli_args_test/type_surface_test.rs` |
-| `tc_output_format_empty_rejected` | `cli_args_test/type_surface_test.rs` |
+| `tc_output_format_text_explicit` | `tests/cli_args_test/type_surface_test.rs` |
+| `tc_output_format_xml_rejected` | `tests/cli_args_test/type_surface_test.rs` |
+| `tc_output_format_empty_rejected` | `tests/cli_args_test/type_surface_test.rs` |

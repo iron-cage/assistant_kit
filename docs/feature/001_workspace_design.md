@@ -36,7 +36,7 @@ This workspace is self-contained and has no knowledge of consumer workspace arch
 | assistant | ast / assistant | 3 | Agent-agnostic super-app aggregator: all Layer 2 CLI crates in one binary |
 | assistant_kit | — | 3 | Library facade for the five Claude Code Layer 2 CLI crates (excludes journal viewer) |
 
-**Binaries** (16 targets — 7 crates expose both canonical name and short alias; `claude_runner` additionally exposes alias `c`; `claude_journal_viewer` exposes alias `clj` only):
+**Binaries** (14 targets — 6 crates expose both canonical name and short alias; `claude_runner` additionally exposes alias `c`; `claude_journal_viewer` exposes alias `clj` only):
 
 | Binary | Crate | Kind | Entry point |
 |--------|-------|------|-------------|

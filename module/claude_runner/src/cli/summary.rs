@@ -128,28 +128,37 @@ pub( super ) fn extract_result_text( json : &str ) -> Option< String >
 #[ must_use ]
 pub fn extract_session_id( json : &str ) -> Option< String >
 {
-  // Fix(BUG-437): gate on "subtype" presence instead of "type":"result" — same class as BUG-436.
-  //   extract_str(json,"type") finds "message" in usage.iterations[].type (depth-unaware find()).
-  //   "subtype" is emitted only at the top level of CLR result envelopes.
-  // Pitfall: extract_str uses s.find() — gate only on fields exclusive to the top level.
-  if extract_str( json, "subtype" ).is_none() { return None; }
+  // Fix(BUG-437): compound gate — same pattern as BUG-436 in render_summary().
+  //   Accepts old SDK (type:"result", no subtype) and new SDK (subtype present, no top-level type).
+  //   Rejects non-result stream chunks that have neither "subtype" nor "type":"result".
+  // Root cause: same depth-blindness as BUG-436 — extract_str(json,"type") finds
+  //   iterations[].type = "message" first; no top-level "type":"result" in new SDK.
+  // Pitfall: extract_str uses s.find() — "type":"result" gate alone catches iterations[].type.
+  let is_result = extract_str( json, "subtype" ).is_some()
+    || extract_str( json, "type" ).as_deref() == Some( "result" );
+  if !is_result { return None; }
   extract_str( json, "session_id" )
 }
 
 /// Extract the `"structured_output"` field value from a CLR JSON envelope as a raw JSON string.
 ///
-/// Returns `Some(json)` only when the envelope contains `"type":"result"` (invariant/008 gate)
-/// and a `"structured_output"` key whose value is not `null`.  Used by the raw execution path
-/// when `--json-schema` is active and the `"result"` text field is empty (BUG-318).
+/// Returns `Some(json)` only when the CLR envelope passes the invariant/008 compound gate
+/// (`"subtype"` present OR `"type":"result"`) and a `"structured_output"` key whose value is
+/// not `null`.  Used by the raw execution path when `--json-schema` is active and the
+/// `"result"` text field is empty (BUG-318).
 #[ inline ]
 #[ must_use ]
 pub( super ) fn extract_structured_output( json : &str ) -> Option< String >
 {
-  // Fix(BUG-438): gate on "subtype" presence instead of "type":"result" — same class as BUG-436.
-  //   extract_str(json,"type") finds "message" in usage.iterations[].type (depth-unaware find()).
-  //   "subtype" is emitted only at the top level of CLR result envelopes.
-  // Pitfall: extract_str uses s.find() — gate only on fields exclusive to the top level.
-  if extract_str( json, "subtype" ).is_none() { return None; }
+  // Fix(BUG-438): compound gate — same pattern as BUG-436/437.
+  //   Accepts old SDK (type:"result", no subtype) and new SDK (subtype present, no top-level type).
+  //   Rejects non-result stream chunks that have neither "subtype" nor "type":"result".
+  // Root cause: same depth-blindness as BUG-436/437 — extract_str(json,"type") finds
+  //   iterations[].type = "message" first; no top-level "type":"result" in new SDK.
+  // Pitfall: extract_str uses s.find() — "type":"result" gate alone catches iterations[].type.
+  let is_result = extract_str( json, "subtype" ).is_some()
+    || extract_str( json, "type" ).as_deref() == Some( "result" );
+  if !is_result { return None; }
   extract_json_value( json, "structured_output" )
 }
 
@@ -329,13 +338,25 @@ pub fn render_summary( json : &str, fields : Option< &str > ) -> Option< String 
   //   where session_id is absent — restoring BUG-309 raw-JSON symptom for those versions.
   // Pitfall: any ? on an optional CLR field silently breaks all envelopes missing that field.
   //
-  // Fix(BUG-436): gate on "subtype" instead of "type" — "type":"result" is absent in newer
-  //   SDK envelopes that include usage.iterations[].type = "message"; extract_str's depth-
-  //   unaware find() picks up the nested field. "subtype" is emitted only at the top level.
-  // Pitfall: extract_str uses s.find() — gate only on fields exclusive to the top level.
-  let subtype      = extract_str( json, "subtype" )?;
-  let msg_type     = extract_str( json, "type" ).unwrap_or_default();
-  let session_id   = extract_str( json, "session_id" ).unwrap_or_default();
+  // Fix(BUG-436): compound gate — accepts old SDK ("type":"result", no subtype) and new SDK
+  //   ("subtype" present, no top-level "type"). Non-result stream chunks have neither and
+  //   are rejected. "type":"result"-only gate fails for new SDK envelopes where
+  //   usage.iterations[].type = "message" appears first (extract_str depth-unaware find()).
+  // Root cause: newer Claude SDK dropped top-level "type":"result"; depth-unaware
+  //   extract_str(json,"type") finds iterations[].type = "message" first.
+  // Pitfall: extract_str uses s.find() — "type" gate catches nested iterations[].type.
+  let subtype  = extract_str( json, "subtype" );
+  let msg_type = extract_str( json, "type" ).unwrap_or_default();
+  if subtype.is_none() && msg_type != "result" { return None; }
+  // Fix(BUG-440): new SDK format has no top-level "type"; extract_str found iterations[].type.
+  //   Clear msg_type so the "type:" display line is not shown with a wrong nested value.
+  // Root cause: same depth-blindness as BUG-436; msg_type = extract_str(json,"type") runs
+  //   before the gate, retaining iterations[].type = "message" when new SDK path is taken.
+  // Pitfall: extract_str uses s.find() — depth-unaware; clears whenever subtype is present
+  //   but no top-level "type":"result" was found.
+  let msg_type = if subtype.is_some() && msg_type != "result" { String::new() } else { msg_type };
+  let subtype    = subtype.unwrap_or_default();
+  let session_id = extract_str( json, "session_id" ).unwrap_or_default();
   let is_error     = extract_bool( json, "is_error" ).unwrap_or( false );
   let result       = extract_str( json, "result" ).unwrap_or_default();
 

@@ -33,33 +33,85 @@ pub fn version_show_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) ->
     ErrorCode::InternalError,
     "claude binary not found in PATH".to_string(),
   ) )?;
-  let pref = read_preferred_version();
+
+  struct Label
+  {
+    name        : String,
+    kind        : &'static str,
+    description : Option< String >,
+  }
+
+  // Skip label resolution entirely at v::0 text — per spec.
+  let labels : Vec< Label > = if opts.format == OutputFormat::Text && opts.verbosity == 0
+  {
+    Vec::new()
+  }
+  else
+  {
+    let mut buf = Vec::new();
+    for marker in load_custom_markers()
+    {
+      if marker.value == version
+      {
+        let description = if marker.description.is_empty() { None } else { Some( marker.description ) };
+        buf.push( Label { name : marker.name, kind : "custom", description } );
+      }
+    }
+    if let Some( ( spec, Some( resolved ) ) ) = read_preferred_version()
+    {
+      if resolved == version && VERSION_ALIASES.iter().any( | a | a.name == spec.as_str() )
+      {
+        buf.push( Label { name : spec, kind : "builtin", description : None } );
+      }
+    }
+    buf
+  };
 
   let content = match ( opts.format, opts.verbosity )
   {
     ( OutputFormat::Json, _ ) =>
     {
       let v = json_escape( &version );
-      format!( "{{\"version\":\"{v}\"}}\n" )
+      let labels_json : Vec< String > = labels.iter().map( | l |
+      {
+        let n = json_escape( &l.name );
+        if let Some( ref d ) = l.description
+        {
+          format!( "{{\"name\":\"{n}\",\"kind\":\"{}\",\"description\":\"{}\"}}", l.kind, json_escape( d ) )
+        }
+        else
+        {
+          format!( "{{\"name\":\"{n}\",\"kind\":\"{}\"}}", l.kind )
+        }
+      } ).collect();
+      format!( "{{\"version\":\"{v}\",\"labels\":[{}]}}\n", labels_json.join( "," ) )
     }
     ( OutputFormat::Text, 0 ) => format!( "{version}\n" ),
+    ( OutputFormat::Text, 1 ) =>
+    {
+      if labels.is_empty()
+      {
+        format!( "Version: {version}\n" )
+      }
+      else
+      {
+        let names : Vec< &str > = labels.iter().map( | l | l.name.as_str() ).collect();
+        format!( "Version: {version}  [{}]\n", names.join( ", " ) )
+      }
+    }
     ( OutputFormat::Text, _ ) =>
     {
-      let mut out = format!( "Version: {version}\n" );
-      if let Some( ( spec, resolved ) ) = &pref
+      let mut out = format!( "version: {version}\n" );
+      if !labels.is_empty()
       {
-        let pref_str = match resolved
-        {
-          Some( r ) => format!( "{spec} (v{r})" ),
-          None => spec.clone(),
-        };
-        let match_status = match resolved
-        {
-          Some( r ) if r == &version => "match",
-          Some( _ ) => "MISMATCH",
-          None => "latest",
-        };
-        let _ = writeln!( out, "Preferred: {pref_str} -- {match_status}" );
+        let parts : Vec< String > = labels.iter().map( | l |
+          match &l.description
+          {
+            Some( d ) => format!( "{} ({}, \"{}\")", l.name, l.kind, d ),
+            None      => format!( "{} ({})", l.name, l.kind ),
+          }
+        ).collect();
+        let _ = writeln!( out, "labels:  {}", parts.join( ", " ) );
       }
       out
     }

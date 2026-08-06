@@ -5,8 +5,13 @@
 //! |----|-------------|-----|------|
 //! | TC-107 | `.version.show` without claude in PATH → exits 2 | N | 2 |
 //! | TC-108 | `.version.show v::0` → bare version string | P | 0 |
-//! | TC-109 | `.version.show v::1` → "Version: X.Y.Z" | P | 0 |
+//! | TC-109 | `.version.show v::1` → `<semver>  [labels]` or bare semver when none match | P | 0 |
 //! | TC-111 | `.version.show format::json` → {"version":"..."} | P | 0 |
+//! | IT-9  | `.version.show v::1` → `[team-pin]` when custom marker matches installed | P | 0 |
+//! | IT-10 | `.version.show v::1` with no markers → no brackets | P | 0 |
+//! | IT-11 | `.version.show format::json` → includes `"labels"` array | P | 0 |
+//! | IT-12 | `.version.show v::0` → bare version, no labels even when markers exist | P | 0 |
+//! | FT-6  | Custom marker label annotation shown by `.version.show` (multi-label) | P | 0 |
 //!
 //! ## E4 — `.version.list`
 //! | TC | Description | P/N | Exit |
@@ -63,7 +68,7 @@
 
 use tempfile::TempDir;
 
-use crate::subprocess_helpers::{ assert_exit, run_clv, run_clv_with_env, stderr, stdout };
+use crate::subprocess_helpers::{ assert_exit, run_clv, run_clv_with_env, stderr, stdout, write_markers };
 
 // ─── E3: version show ────────────────────────────────────────────────────────
 
@@ -96,7 +101,7 @@ fn tc108_version_show_v0_bare_string()
   }
 }
 
-// TC-109: v::1 → "Version: X.Y.Z"
+// TC-109: v::1 → labeled output containing semver (e.g. "Version: X.Y.Z  [alias]")
 #[ test ]
 fn tc109_version_show_v1_labeled()
 {
@@ -104,7 +109,10 @@ fn tc109_version_show_v1_labeled()
   if out.status.code() == Some( 0 )
   {
     let text = stdout( &out );
-    assert!( text.contains( "Version:" ), "v::1 must contain 'Version:' label, got: {text}" );
+    assert!(
+      text.split_whitespace().any( | tok | tok.chars().next().is_some_and( | c | c.is_ascii_digit() ) ),
+      "v::1 output must contain a semver token (starts with digit), got: {text}"
+    );
   }
 }
 
@@ -665,4 +673,108 @@ fn it41_version_list_mode_history_utf8_body_preserved()
     !text.contains( '\u{00e2}' ),
     "output must not contain garbled 0xE2 byte (U+00E2 'â'), got: {text:?}"
   );
+}
+
+// ─── E3 label annotation tests (IT-9/IT-10/IT-11/IT-12/FT-6) ─────────────────
+
+// IT-9: v::1 → shows `[team-pin]` when custom marker matches installed version
+#[ test ]
+fn it09_version_show_v1_custom_marker_label()
+{
+  let ver_out = run_clv( &[ ".version.show", "v::0" ] );
+  if ver_out.status.code() != Some( 0 ) { return; }
+  let installed = stdout( &ver_out ).trim().to_string();
+
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_markers( dir.path(), &[ ( "team-pin", &installed ) ] );
+
+  let out = run_clv_with_env( &[ ".version.show", "v::1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "[team-pin]" ), "expected [team-pin] in output, got: {text}" );
+}
+
+// IT-10: v::1 with no markers file → no brackets in output
+#[ test ]
+fn it10_version_show_v1_no_markers_no_brackets()
+{
+  let ver_out = run_clv( &[ ".version.show", "v::0" ] );
+  if ver_out.status.code() != Some( 0 ) { return; }
+
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  let out = run_clv_with_env( &[ ".version.show", "v::1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( !text.contains( '[' ), "v::1 with no markers must not show brackets, got: {text}" );
+}
+
+// IT-11: format::json → includes `"labels"` array when custom marker matches installed version
+#[ test ]
+fn it11_version_show_json_labels_array()
+{
+  let ver_out = run_clv( &[ ".version.show", "v::0" ] );
+  if ver_out.status.code() != Some( 0 ) { return; }
+  let installed = stdout( &ver_out ).trim().to_string();
+
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_markers( dir.path(), &[ ( "my-marker", &installed ) ] );
+
+  let out = run_clv_with_env( &[ ".version.show", "format::json" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "\"labels\"" ), "JSON must contain 'labels' key, got: {text}" );
+}
+
+// IT-12: v::0 → bare version string, no labels even when markers exist
+#[ test ]
+fn it12_version_show_v0_no_labels()
+{
+  let ver_out = run_clv( &[ ".version.show", "v::0" ] );
+  if ver_out.status.code() != Some( 0 ) { return; }
+  let installed = stdout( &ver_out ).trim().to_string();
+
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_markers( dir.path(), &[ ( "some-marker", &installed ) ] );
+
+  let out = run_clv_with_env( &[ ".version.show", "v::0" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( !text.contains( '[' ), "v::0 must not show labels, got: {text}" );
+}
+
+// FT-6: Custom marker label annotation shown by `.version.show` (multi-label)
+#[ test ]
+fn ft006_marker_label_shown_by_version_show()
+{
+  const PINNED : &str = "2.1.220";
+  let dir = TempDir::new().unwrap();
+  // Provide a stable symlink so get_version_from_symlink returns PINNED,
+  // decoupling this test from system claude binary availability under parallel load.
+  let local_bin = dir.path().join( ".local" ).join( "bin" );
+  std::fs::create_dir_all( &local_bin ).unwrap();
+  std::os::unix::fs::symlink( PINNED, local_bin.join( "claude" ) ).unwrap();
+  write_markers( dir.path(), &[
+    ( "release-pin", PINNED ),
+    ( "team-dev",    PINNED ),
+  ] );
+  let home = dir.path().to_str().unwrap();
+  let env  = &[ ( "HOME", home ) ];
+
+  let out = run_clv_with_env( &[ ".version.show", "v::1" ], env );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "release-pin" ), "must show release-pin label, got: {text}" );
+  assert!( text.contains( "team-dev" ),    "must show team-dev label, got: {text}" );
+
+  let jout = run_clv_with_env( &[ ".version.show", "format::json" ], env );
+  assert_exit( &jout, 0 );
+  let jtext = stdout( &jout );
+  assert!( jtext.contains( "\"labels\"" ),   "JSON must have 'labels' key, got: {jtext}" );
+  assert!( jtext.contains( "release-pin" ), "JSON labels must include release-pin, got: {jtext}" );
+  assert!( jtext.contains( "team-dev" ),    "JSON labels must include team-dev, got: {jtext}" );
 }

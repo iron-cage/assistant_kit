@@ -84,10 +84,11 @@ fn t38_double_dash_only_no_message()
   assert!( out.status.success(), "-- as only arg must not error" );
   let stdout = String::from_utf8_lossy( &out.stdout );
   let last_line = stdout.trim_end().lines().last().unwrap_or_default();
-  // Fix(BUG-246): describe() now starts with "env -u CLAUDECODE" (default unset_claudecode=true)
+  // Fix(BUG-246): describe() now starts with "env -u CLAUDECODE -u CLAUDE_CODE_CHILD_SESSION"
+  // (default unset_claudecode=true, plus the always-stripped child-session marker)
   assert_eq!(
     last_line,
-    "env -u CLAUDECODE claude --dangerously-skip-permissions --effort max --print --output-format json",
+    "env -u CLAUDECODE -u CLAUDE_CODE_CHILD_SESSION claude --dangerously-skip-permissions --effort max --print --output-format json",
     "-- with nothing after, under non-TTY stdin, must route to print mode (no -c in empty session dir). Got:\n{stdout}"
   );
 }

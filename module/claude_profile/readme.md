@@ -118,22 +118,22 @@ clp .paths                 # show ~/.claude/ canonical paths
 
 ## Testing
 
-**Container (all tests — credentials required):**
+**Container (module suite — credentials required):**
 ```bash
 ./verb/test
 ```
 
-**Container (offline — no credentials needed):**
+**Container (targeted filter):**
 ```bash
-./verb/test offline
+./verb/test_only <name_substring>
 ```
 
 **Container (interactive shell):**
 ```bash
-./verb/shell
+runbox .shell
 ```
 
-**Local (Docker-orchestrated):**
+**Host escape hatch (no container; honored by the nextest setup script):**
 ```bash
-./verb/test
+VERB_LAYER=l0 cargo nextest run --all-features
 ```

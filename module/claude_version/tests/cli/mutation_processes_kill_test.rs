@@ -16,8 +16,11 @@
 //! regardless of subprocess environment. Tests for `processes kill` cannot assume
 //! zero processes — they must handle both "no processes" and "processes exist" paths.
 //! Setting `PATH=""` only hides the `claude` binary from subprocess, not from `/proc`.
+//! `CLR_PROC_DIR` (`claude_core` scanner override) is the supported seam: point it at
+//! an empty directory to give a live-kill test a deterministic zero-process table.
 
-use crate::subprocess_helpers::{ assert_exit, run_clv, stdout };
+use crate::subprocess_helpers::{ assert_exit, run_clv, run_clv_with_env, stdout };
+use tempfile::TempDir;
 
 // ─── E7: processes kill ───────────────────────────────────────────────────────
 
@@ -94,10 +97,20 @@ fn tc315_processes_kill_no_let_underscore_on_send_sig()
 }
 
 // TC-313: v::0 → accepted, exit 0
+//
+// Confined to an empty CLR_PROC_DIR (claude_core process-scanner override) so
+// this live (non-dry) kill sweeps a simulated-empty process table: the
+// whole-workspace suite runs many claude-spawning tests in one container PID
+// namespace, and a real sweep both kills sibling tests' subprocesses and fails
+// its own settle-rescan when siblings spawn new ones during the 500ms window.
 #[ test ]
 fn tc313_processes_kill_v0_accepted()
 {
-  let out = run_clv( &[ ".processes.kill", "v::0" ] );
+  let fake_proc = TempDir::new().unwrap();
+  let out = run_clv_with_env(
+    &[ ".processes.kill", "v::0" ],
+    &[ ( "CLR_PROC_DIR", fake_proc.path().to_str().unwrap() ) ],
+  );
   assert_exit( &out, 0 );
 }
 
