@@ -10,7 +10,7 @@
 runbox .live
 ```
 
-Delegates to the globally-installed `runbox` engine (ships with `family_dev`; the workspace's owning config is `runbox/runbox.yml`, discovered by walking up from the current directory). The engine bakes the shared image (`workspace_test_claude`) if needed, mounts the workspace read-only at its real path, and runs the payload inside the container. With no explicit payload the config's `script:` runs — `verb/test.d/l1`, the full workspace suite: nextest (all features, warnings-as-errors) + doc tests + clippy (`-D warnings`), all `--workspace`.
+Delegates to the globally-installed `runbox` engine (ships with `family_dev`; the workspace's owning config is `runbox/runbox.yml`, discovered by walking up from the current directory). The engine bakes the shared image (`claude_storage_core_test`) if needed, mounts the workspace read-only at its real path, and runs the payload inside the container. With no explicit payload the config's `script:` runs — `verb/test.d/l1`, the full workspace suite: nextest (all features, warnings-as-errors) + doc tests + clippy (`-D warnings`), all `--workspace`.
 
 Module `verb/test` passes the module's own layer as payload instead:
 
@@ -32,7 +32,7 @@ The module l1 `cd`s to the module directory first, so the same trio runs package
 
 `verb/test` rejects any `VERB_LAYER` set on the host side — container execution is the only path (see `module/claude_profile/docs/invariant/009_container_only_test_execution.md`). The authorized host escape hatch is `VERB_LAYER=l0 cargo nextest run` (bypasses `verb/test` entirely; honored by the nextest setup script).
 
-`verb/test.d/l1` is the container-internal implementation: exports `RUNBOX_CONTAINER=1`, `NO_COLOR=1`, `CARGO_NET_OFFLINE=true`, `RUSTFLAGS="-D warnings"`, then runs nextest + doc tests + clippy. The engine supplies `CARGO_TARGET_DIR` (the `claude_targets` working volume), so compilation artifacts land outside the read-only workspace mount.
+`verb/test.d/l1` is the container-internal implementation: exports `RUNBOX_CONTAINER=1`, `NO_COLOR=1`, `CARGO_NET_OFFLINE=true`, `RUSTFLAGS="-D warnings"`, then runs nextest + doc tests + clippy. The engine supplies `CARGO_TARGET_DIR` (the `claude_storage_core_targets` working volume), so compilation artifacts land outside the read-only workspace mount.
 
 `verb/test.d/l0` is a disabled hard-error stub: prints an error and exits 1 — no host-native test execution path exists.
 

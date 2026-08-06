@@ -101,7 +101,7 @@ Edge case coverage for the `.help` parameter. See [param/readme.md](../../../../
 ### EC-7: `.help` accepted by all commands
 
 - **Given:** clean environment
-- **When:** `clv .settings.show .help`, `clv .processes .help`, `clv .config .help`
+- **When:** `clv .settings.show .help`, `clv .ps .help`, `clv .config .help`
 - **Then:** all exit 0; help text shown in each case; no "unknown parameter" error
 - **Exit:** 0
 - **Source:** [param/10_help.md — commands: all](../../../../docs/cli/param/10_help.md)

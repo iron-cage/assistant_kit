@@ -125,13 +125,13 @@
 #
 # Usage (direct docker — workspace; ./runbox/runbox .build renders the dockerfile
 # from this template to -runbox.dockerfile next to the module's runbox.yml):
-#   docker buildx build -f runbox/-runbox.dockerfile -t willbe_test .
+#   docker buildx build -f runbox/-runbox.dockerfile -t claude_storage_core_test .
 #   docker run --rm \
 #     -v ~/.claude:/workspace/.claude:rw \
 #     -v $(which w3):/usr/local/bin/w3:ro \
-#     willbe_test \
+#     claude_storage_core_test \
 #     /workspace/verb/test.d/l1                          # all tests (plugin mounts required)
-#   docker run --rm -it willbe_test bash                 # interactive shell (also the default CMD)
+#   docker run --rm -it claude_storage_core_test bash                 # interactive shell (also the default CMD)
 
 # ── Global build arg: chef base image (must precede all FROM instructions) ────
 #
@@ -215,24 +215,15 @@ ARG CARGO_BUILD_JOBS
 # RUN command and unset it when empty so cargo falls back to its default (all CPUs).
 # Pitfall: ENV CARGO_BUILD_JOBS=$CARGO_BUILD_JOBS propagates empty string → cargo error.
 
-# clang: required as linker by .cargo/config.toml (stable with ring cryptographic library).
-# mold: fast linker used by .cargo/config.toml for aarch64 (-fuse-ld=mold).
-# pkg-config + libssl-dev: required by OpenSSL-dependent workspace crates (keyaway_server, etc.).
-# libvirt-dev: required by vmh/vmh2 (virt-0.4.x build script probes pkg-config for libvirt).
-RUN apt-get update \
- && apt-get install -y --no-install-recommends clang mold pkg-config libssl-dev libvirt-dev \
- && rm -rf /var/lib/apt/lists/*
+# No cook-stage apt packages: claude_storage_core's dependency set compiles with rust:slim's
+# stock toolchain (no clang/mold linker config, no OpenSSL/libvirt build deps).
 
 WORKDIR /workspace
 COPY --from=planner /workspace/recipe.json recipe.json
-# Fix(container-cook-stage-missing-cargo-config): cargo chef cook reconstructs the workspace
-# from recipe.json alone, which never included .cargo/config.toml or any script it references.
-# BUG-1256 (commit b6b2160d1) changed the workspace linker to a repo-relative script
-# (.cargo/lld_release_linker.sh) instead of a PATH-resolvable binary name, so any dependency
-# whose build script needs the linker during this stage now fails with "linker
-# `/workspace/.cargo/lld_release_linker.sh` not found" (confirmed via proc-macro2's build script).
-# Pitfall: installing clang/mold system-wide (above) is not sufficient — .cargo/config.toml
-# itself must be physically present for cargo to resolve a config-driven linker reference at all.
+# .cargo/ is copied so config-driven settings resolve during dependency cooking, per
+# .dockerignore's own build-context policy — currently empty of settings for this
+# workspace, but the cook stage must see it in case that changes; carries no
+# credentials and no target-dir redirect.
 COPY --from=planner /workspace/.cargo .cargo
 # Registry pre-populated by planner's `cargo fetch --workspace`.  Copying it here
 # means cook can resolve and compile deps fully offline, and the final stage inherits

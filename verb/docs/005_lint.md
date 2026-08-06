@@ -55,4 +55,4 @@ if [[ "${1:-}" == "--dry-run" ]]; then echo "cargo clippy -p claude_profile --al
 exec cargo clippy -p claude_profile --all-features -- -D warnings
 ```
 
-`verb/lint` executes on the host. The linter is ecosystem-specific: ruff for Python, eslint for Node.js, cargo clippy for Rust. `verb/lint` is `available` for all project types — linting is universal.
+Lint runs directly on the host (`verb/lint` → cargo clippy); inside the container, clippy is already part of the full suite run by `verb/test` (nextest + doc tests + clippy). The retired flat-schema `lint_script:` key has no nested-schema counterpart — there is no separate container lint entry point. The linter is ecosystem-specific: ruff for Python, eslint for Node.js, cargo clippy for Rust. `verb/lint` is `available` for all project types — linting is universal.

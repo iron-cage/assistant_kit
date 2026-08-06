@@ -6,7 +6,7 @@ Edge case coverage for the `dry::` parameter. See [param/readme.md](../../../../
 
 - **Purpose**: Edge case tests for the `dry::` parameter.
 - **Responsibility**: Boundary values, invalid inputs, type violations, and default behavior for `dry::`.
-- **Commands:** `.version.install`, `.version.guard`, `.processes.kill`, `.settings.set`
+- **Commands:** `.version.install`, `.version.guard`, `.ps.kill`, `.settings.set`
 - **In Scope**: Single-parameter edge cases, validation errors, type checking.
 - **Out of Scope**: Command integration (→ `../command/`), group interactions (→ `../param_group/`).
 
@@ -15,10 +15,10 @@ Edge case coverage for the `dry::` parameter. See [param/readme.md](../../../../
 | ID | Test Name | Category |
 |----|-----------|----------|
 | EC-1 | `dry::1` → `[dry-run]` prefix on `.version.install` | Explicit True |
-| EC-11 | `dry::1` on `.processes.kill` → no kill | Explicit True |
+| EC-11 | `dry::1` on `.ps.kill` → no kill | Explicit True |
 | EC-12 | `dry::1` on `.settings.set` → no file change | Explicit True |
 | EC-2 | `dry::1` wins over `force::1` | Interaction |
-| EC-13 | `dry::1 force::1` on `.processes.kill` → dry wins | Interaction |
+| EC-13 | `dry::1 force::1` on `.ps.kill` → dry wins | Interaction |
 | EC-3 | `dry::1` does NOT write preference keys | Side-Effect Guard |
 | EC-4 | Default (absent) resolves to `dry::0` (real action) | Default Behavior |
 | EC-5 | `dry::0` explicit → same as absent | Explicit False |
@@ -146,10 +146,10 @@ Edge case coverage for the `dry::` parameter. See [param/readme.md](../../../../
 
 ---
 
-### EC-11: `dry::1` on `.processes.kill` → no kill
+### EC-11: `dry::1` on `.ps.kill` → no kill
 
 - **Given:** clean environment
-- **When:** `clv .processes.kill dry::1`
+- **When:** `clv .ps.kill dry::1`
 - **Then:** exit 0; output contains `[dry-run]`; no process actually killed
 - **Exit:** 0
 - **Source:** [feature/004_dry_run.md](../../../../docs/feature/004_dry_run.md)
@@ -166,10 +166,10 @@ Edge case coverage for the `dry::` parameter. See [param/readme.md](../../../../
 
 ---
 
-### EC-13: `dry::1 force::1` on `.processes.kill` → dry wins
+### EC-13: `dry::1 force::1` on `.ps.kill` → dry wins
 
 - **Given:** clean environment
-- **When:** `clv .processes.kill dry::1 force::1`
+- **When:** `clv .ps.kill dry::1 force::1`
 - **Then:** exit 0; output contains `[dry-run]`; no process killed regardless of force flag
 - **Exit:** 0
 - **Source:** [004_parameter_interactions.md — dry+force precedence](../../../../docs/cli/004_parameter_interactions.md)

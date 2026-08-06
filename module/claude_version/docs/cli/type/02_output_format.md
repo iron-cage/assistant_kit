@@ -29,8 +29,8 @@ clv .status format::JSON       # error: case-sensitive
 | 3 | [`.version.install`](../command/version.md#command-4-versioninstall) | `format::` |
 | 4 | [`.version.guard`](../command/version.md#command-5-versionguard) | `format::` |
 | 5 | [`.version.list`](../command/version.md#command-6-versionlist) | `format::` |
-| 6 | [`.processes`](../command/processes.md#command-7-processes) | `format::` |
-| 7 | [`.processes.kill`](../command/processes.md#command-8-processeskill) | `format::` |
+| 6 | [`.ps`](../command/ps.md#command-7-ps) | `format::` |
+| 7 | [`.ps.kill`](../command/ps.md#command-8-pskill) | `format::` |
 | 8 | [`.settings.show`](../command/settings.md#command-9-settingsshow) | `format::` |
 | 9 | [`.settings.get`](../command/settings.md#command-10-settingsget) | `format::` |
 | 10 | [`.config`](../command/config.md#command-13-config) | `format::` |

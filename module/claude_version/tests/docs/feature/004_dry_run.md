@@ -4,7 +4,7 @@
 
 - **Purpose**: FT- test cases for dry::1 preview mode across all mutation commands.
 - **Responsibility**: Acceptance criteria verifying dry-run output prefix, no side effects, parity with action message, and dry+force precedence.
-- **In Scope**: `dry::1` on `.version.install`, `.processes.kill`, `.settings.set`; parity requirement; `dry::1 force::1` precedence.
+- **In Scope**: `dry::1` on `.version.install`, `.ps.kill`, `.settings.set`; parity requirement; `dry::1 force::1` precedence.
 - **Out of Scope**: Individual command normal-mode behavior (-> `01_version_management.md`, `02_process_lifecycle.md`, `03_settings_management.md`).
 
 Feature test surface for dry-run mode. See [feature/004_dry_run.md](../../../docs/feature/004_dry_run.md) for specification.
@@ -24,7 +24,7 @@ Both are valid invocations; the `[dry-run]` prefix presence differs.
 |----|-----------|----------|
 | FT-1 | `.version.install dry::1` → `[dry-run]` prefix, no install | No Side Effects |
 | FT-2 | `.settings.set dry::1` → `[dry-run]` prefix, settings file unchanged | No Side Effects |
-| FT-3 | `.processes.kill dry::1` → `[dry-run]` prefix, exit 0 | No Side Effects |
+| FT-3 | `.ps.kill dry::1` → `[dry-run]` prefix, exit 0 | No Side Effects |
 | FT-4 | `dry::1 force::1` → dry wins, `[dry-run]` prefix present | Precedence |
 
 ## Test Coverage Summary
@@ -56,10 +56,10 @@ Both are valid invocations; the `[dry-run]` prefix presence differs.
 
 ---
 
-### FT-3: `.processes.kill dry::1` → `[dry-run]` prefix, exit 0
+### FT-3: `.ps.kill dry::1` → `[dry-run]` prefix, exit 0
 
 - **Given:** environment with no detectable claude processes
-- **When:** `clv .processes.kill dry::1`
+- **When:** `clv .ps.kill dry::1`
 - **Then:** stdout contains `"[dry-run]"`; exit 0
 - **Exit:** 0
 - **Source:** [feature/004_dry_run.md — Affected commands](../../../docs/feature/004_dry_run.md)

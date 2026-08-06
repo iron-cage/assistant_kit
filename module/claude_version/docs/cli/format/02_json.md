@@ -10,7 +10,7 @@
 ### Rendering Rules
 
 - **Encoding:** Standard JSON; all strings properly escaped.
-- **Top-level shape:** Object `{}` for single-result commands; array `[]` for list commands (`.processes`, `.version.list`, `.params` show-all mode). Note: `.params` uses array for show-all and object for single-param mode; `.version.list` is array under both `mode::aliases` and `mode::history` — shape is mode-dependent for `.params`, mode-invariant for `.version.list`.
+- **Top-level shape:** Object `{}` for single-result commands; array `[]` for list commands (`.ps`, `.version.list`, `.params` show-all mode). Note: `.params` uses array for show-all and object for single-param mode; `.version.list` is array under both `mode::aliases` and `mode::history` — shape is mode-dependent for `.params`, mode-invariant for `.version.list`.
 - **Verbosity interaction:** `v::0` omits optional fields; `v::1` includes standard fields (default); `v::2` includes all available fields including diagnostics.
 - **Required keys not stripped:** Even at `v::0`, the primary payload key is always present.
 - **Case-sensitive:** The format value is `json` (lowercase only); `JSON` or `Json` are rejected with exit 1.
@@ -31,8 +31,8 @@ Field names are stable snake_case JSON keys. Common fields:
 | `.version.show` | `labels[].description` | string | Custom marker description; absent for builtin labels |
 | `.version.list` (`mode::aliases`) | `[].alias` | string | Array of alias objects |
 | `.version.list` (`mode::aliases`) | `[].version` | string | |
-| `.processes` | `[].pid` | number | Array of process objects |
-| `.processes` | `[].cwd` | string | |
+| `.ps` | `[].pid` | number | Array of process objects |
+| `.ps` | `[].cwd` | string | |
 | `.settings.get` | `key` | string | |
 | `.settings.get` | `value` | any | JSON-typed value |
 | `.version.list` (`mode::history`) | `[].version` | string | Array of release objects |
@@ -61,8 +61,8 @@ Field names are stable snake_case JSON keys. Common fields:
 | 3 | [`.version.install`](../command/version.md#command-4-versioninstall) | Machine-readable structured output |
 | 4 | [`.version.guard`](../command/version.md#command-5-versionguard) | Machine-readable structured output |
 | 5 | [`.version.list`](../command/version.md#command-6-versionlist) | Machine-readable structured output |
-| 6 | [`.processes`](../command/processes.md#command-7-processes) | Machine-readable structured output |
-| 7 | [`.processes.kill`](../command/processes.md#command-8-processeskill) | Machine-readable structured output |
+| 6 | [`.ps`](../command/ps.md#command-7-ps) | Machine-readable structured output |
+| 7 | [`.ps.kill`](../command/ps.md#command-8-pskill) | Machine-readable structured output |
 | 8 | [`.settings.show`](../command/settings.md#command-9-settingsshow) | Machine-readable structured output |
 | 9 | [`.settings.get`](../command/settings.md#command-10-settingsget) | Machine-readable structured output |
 | 10 | [`.config`](../command/config.md#command-13-config) | Machine-readable structured output |

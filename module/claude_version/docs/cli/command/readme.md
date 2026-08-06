@@ -15,7 +15,7 @@
 | procedure.md | Steps for adding, updating, or removing command instances |
 | root.md | Root-namespace commands: `.help`, `.status`, `.runtime_files` |
 | version.md | Version-namespace commands: `.version.*` (including `.version.paths` filesystem path discovery and `.version.mark` custom marker CRUD) |
-| processes.md | Process-namespace commands: `.processes`, `.processes.kill` |
+| ps.md | Process-namespace commands: `.ps`, `.ps.kill` |
 | settings.md | Settings-namespace commands: `.settings.*` (deprecated) |
 | config.md | Config command: `.config` (unified settings inspection and modification) |
 | params.md | Params command: `.params` (read-only param catalog inspection) |
@@ -30,8 +30,8 @@
 | 4 | `.version.install` | version | [version.md](version.md) |
 | 5 | `.version.guard` | version | [version.md](version.md) |
 | 6 | `.version.list` | version | [version.md](version.md) |
-| 7 | `.processes` | processes | [processes.md](processes.md) |
-| 8 | `.processes.kill` | processes | [processes.md](processes.md) |
+| 7 | `.ps` | processes | [ps.md](ps.md) |
+| 8 | `.ps.kill` | processes | [ps.md](ps.md) |
 | 9 | `.settings.show` | settings | [settings.md](settings.md) *(deprecated)* |
 | 10 | `.settings.get` | settings | [settings.md](settings.md) *(deprecated)* |
 | 11 | `.settings.set` | settings | [settings.md](settings.md) *(deprecated)* |
@@ -46,7 +46,7 @@
 
 - [Root Commands](root.md) — `.help`, `.status`, `.runtime_files`
 - [Version Commands](version.md) — `.version.show`, `.version.install`, `.version.guard`, `.version.list` (aliases + release history via `mode::`), `.version.paths` (filesystem path discovery), `.version.mark` (custom marker CRUD)
-- [Process Commands](processes.md) — `.processes`, `.processes.kill`
+- [Process Commands](ps.md) — `.ps`, `.ps.kill`
 - [Settings Commands](settings.md) — `.settings.show`, `.settings.get`, `.settings.set` *(deprecated)*
 - [Config Command](config.md) — `.config`
 - [Params Command](params.md) — `.params`
