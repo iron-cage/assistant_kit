@@ -38,7 +38,7 @@ use std::{
 
 const MANIFEST_DIR : &str = env!( "CARGO_MANIFEST_DIR" );
 
-/// All 19 workspace member crate names.
+/// All 18 workspace member crate names.
 const WORKSPACE_MEMBERS : &[ &str ] = &[
   "claude_storage_core",
   "claude_auth",
@@ -56,7 +56,6 @@ const WORKSPACE_MEMBERS : &[ &str ] = &[
   "claude_assets",
   "assistant",
   "assistant_kit",
-  "runbox",
   "claude_journal",
   "claude_journal_viewer",
 ];
@@ -142,7 +141,7 @@ fn workspace_deps_in( content : &str ) -> Vec< String >
 
 /// Return the numeric layer (0–3) for a workspace member, or `None` for Layer * crates.
 ///
-/// Layer * crates (`claude_storage_core`, `claude_auth`, `claude_quota`, `runbox`)
+/// Layer * crates (`claude_storage_core`, `claude_auth`, `claude_quota`)
 /// are excluded from cross-layer dependency checks (CL-1, CL-2).
 fn layer_of( name : &str ) -> Option< u8 >
 {
@@ -588,8 +587,8 @@ const ALLOWED_SAME_LAYER_DEPS : &[ ( &str, &str ) ] = &[
 ];
 
 /// CL-1: No crate depends on another crate assigned to the same layer.
-///       Layer * crates (`claude_storage_core`, `claude_auth`, `claude_quota`,
-///       `runbox`) are verified to have zero workspace dependencies.
+///       Layer * crates (`claude_storage_core`, `claude_auth`, `claude_quota`)
+///       are verified to have zero workspace dependencies.
 ///
 /// ## Root Cause (why this test exists)
 /// Same-layer dependencies signal confused ownership and make the build graph
