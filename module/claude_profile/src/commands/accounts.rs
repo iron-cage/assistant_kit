@@ -67,7 +67,7 @@ fn detect_current_account(
 //   level, not at list() level.
 #[ inline ]
 #[ allow( clippy::too_many_lines ) ]
-pub fn accounts_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
+pub( crate ) fn accounts_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
   let opts             = OutputOptions::from_cmd( &cmd )?;
   let trace            = crate::output::parse_int_flag( &cmd, "trace", 0 )? != 0;
@@ -385,4 +385,28 @@ pub fn accounts_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Res
     }
   };
   Ok( OutputData::new( content, "text" ) )
+}
+
+// ── Unified group dispatcher ──────────────────────────────────────────────────
+
+/// `.accounts` / `.usage` — single handler for the account-view command group.
+///
+/// CV020 (Representation Absorption): `.accounts` and `.usage` are both read-oriented
+/// views of account data registered with this one routine. Dispatch axis is the command
+/// name carried by `VerifiedCommand`; the per-command logic lives in the private helpers.
+///
+/// # Errors
+///
+/// Propagates any `ErrorData` returned by the dispatched sub-handler.
+#[ inline ]
+pub fn accounts_view_routine( cmd : VerifiedCommand, ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
+{
+  if cmd.definition.name().to_string() == ".usage"
+  {
+    crate::usage::usage_routine( cmd, ctx )
+  }
+  else
+  {
+    accounts_routine( cmd, ctx )
+  }
 }

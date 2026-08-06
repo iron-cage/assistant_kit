@@ -27,6 +27,8 @@
 //! | FT-4  | Invalid name (uppercase start) → exit 1               | N   | 1    |
 //! | FT-5  | `dry::1` does not write `version-markers.json`        | P   | 0    |
 //! | IT-18 | Malformed `version-markers.json` → graceful, exit 0   | P   | 0    |
+//! | IT-19 | `name::` (empty) → exit 1                              | N   | 1    |
+//! | IT-20 | `name::` with 33-char value → length exceeded, exit 1  | N   | 1    |
 
 use tempfile::TempDir;
 
@@ -418,4 +420,29 @@ fn ft010_5_dry_does_not_write_markers_file()
   );
   assert_exit( &out, 0 );
   assert!( !markers_path( dir.path() ).exists(), "markers file must not be created in dry mode" );
+}
+
+// ─── IT-19: name:: (empty) → exit 1 ─────────────────────────────────────────
+
+#[ test ]
+fn it19_mark_name_empty_exits_1()
+{
+  let out = run_clv_with_env(
+    &[ ".version.mark", "name::", "version::2.1.220" ],
+    &[],
+  );
+  assert_exit( &out, 1 );
+}
+
+// ─── IT-20: name::{33 chars} → too long, exit 1 ──────────────────────────────
+
+#[ test ]
+fn it20_mark_name_too_long_exits_1()
+{
+  let name = format!( "name::{}", "a".repeat( 33 ) );
+  let out = run_clv_with_env(
+    &[ ".version.mark", &name, "version::2.1.220" ],
+    &[],
+  );
+  assert_exit( &out, 1 );
 }

@@ -88,12 +88,12 @@ pub( super ) fn print_usage( binary : &str )
   }
 
   const ACCOUNT_MGMT : &[ &str ] = &[
-    ".accounts", ".account.save", ".account.use", ".account.delete",
+    ".accounts", ".usage", ".account.save", ".account.use", ".account.delete",
     ".account.limits", ".account.relogin",
     ".account.renewal", ".account.inspect",
   ];
   const STATUS_INFO : &[ &str ] = &[
-    ".credentials.status", ".paths", ".usage", ".model",
+    ".credentials.status", ".paths", ".model",
   ];
 
   let registry = build_registry();

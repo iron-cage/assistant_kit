@@ -2,14 +2,14 @@
 # do verify — full pre-push gate: container test suite + dependency analysis + audit
 set -euo pipefail
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-WORKSPACE_ROOT="$( cd "$SCRIPT_DIR/../.." && pwd )"
+WORKSPACE_ROOT="$( cd "$SCRIPT_DIR/../../.." && pwd )"
 if [[ "${1:-}" == "--dry-run" ]]
 then
-  echo "../../runbox/runbox .live && cargo +nightly udeps --all-targets --all-features && cargo +nightly audit"
+  echo "./verb/test && cargo +nightly udeps --all-targets --all-features && cargo +nightly audit"
   exit 0
 fi
 # Full test suite (nextest + doc tests + clippy) runs inside the container.
-( cd "$SCRIPT_DIR/.." && "$SCRIPT_DIR/../../../runbox/runbox" .live "$@" )
+"$SCRIPT_DIR/test"
 # Dependency and audit checks run on the host (static analysis — no crate code executed).
 cd "$WORKSPACE_ROOT"
 cargo +nightly udeps --all-targets --all-features

@@ -1,9 +1,7 @@
 # docker image tag — used for -t at build and image lookup at run.
-# Shared workspace image: owned and built by THIS config; all module configs consume it.
-# Tag is unique to this checkout (assistant_kit_test): the retired flat stack shared one
-# `workspace_test` tag across sibling assistant_kit checkouts, so a rebake here
-# would have swapped the image under unconverted siblings mid-migration.
-image: assistant_kit_test
+# Shared workspace image: owned and built by THIS config; every module and
+# workspace-level test invocation consumes it.
+image: workspace_test_claude
 
 # non-root so chmod-000 file-permission tests fail correctly (root bypasses checks)
 user: testuser
@@ -11,27 +9,40 @@ user: testuser
 # script invoked by `.run` and `.live` inside the container (workspace-relative path)
 script: verb/test.d/l1
 
+
 # ── Mounts ────────────────────────────────────────────────────────────────────
+# Per-entry fields: host, container (optional — defaults to the host path, mirrored),
+# mode, check (file|directory), commands (list)
 mounts:
+  # Claude Code auth/session state — control tests spawn the real `claude` CLI
+  # against whatever auth the host already has. Mirror default: the mount lands
+  # at the real ~/.claude, which is where ClaudePaths resolves it via $HOME.
   - host: ~/.claude
     mode: rw
     check: directory
     commands: [run, live, shell]
 
 # ── Plugins ───────────────────────────────────────────────────────────────────
+# type: binary — binary found via 'which name' on host and bind-mounted into container.
+# working_volume / working_volume_path — named volume for compilation artifacts.
 plugins:
   # The host's own `claude` CLI bind-mounted read-only — real-subprocess control
-  # tests run against the host's version and credentials. The working volume is
-  # the workspace compilation cache — the engine exports it as CARGO_TARGET_DIR,
-  # keeping all build artifacts off the read-only workspace mount.
+  # tests run against the host's version and credentials, with no separate
+  # install baked into the image. The working volume is the workspace
+  # compilation cache — the engine exports it as CARGO_TARGET_DIR, keeping
+  # all build artifacts off the read-only workspace mount.
   - type: binary
     name: claude
     container_path: /usr/local/bin/claude
-    working_volume: assistant_kit_targets
-    working_volume_path: /tmp/assistant_kit_targets
+    working_volume: claude_targets
+    working_volume_path: /tmp/claude_targets
     commands: [run, live, shell]
 
 # ── Environment ───────────────────────────────────────────────────────────────
+# env: global flat map injected into all container runs
+# env_commands: per-command overrides (merged with env)
+env: {}
+
 env_commands:
   live:
     # cargo home for registry bind-mounts; offline flag prevents network fetches
@@ -39,13 +50,13 @@ env_commands:
     CARGO_NET_OFFLINE: "true"
 
 # ── Build ─────────────────────────────────────────────────────────────────────
-# Image-build inputs for this owning config (bake-time only).
+# Image-build inputs for this owning config (bake-time only; runtime scoping is the caller's concern).
 build:
-  # crate scope for cargo chef cook — which crates' external deps get precompiled
+  # crate scope for cargo chef cook — external deps of every workspace member get
+  # precompiled (dependencies only; workspace test binaries are never cooked)
   cmd_scope: "--workspace"
-  # union of the retired flat configs' system_packages (root: curl procps jq; modules: curl procps)
+  # apt-get packages installed in the final stage — test-side subprocess deps
+  # (curl for transports, procps for process tests, jq for JSON assertions)
   packages: [curl, procps, jq]
-  # rustup components added in the final stage — the l1 gate runs clippy in-container
+  # rustup components added in the final stage — l1 runs clippy in-container
   rust_components: [clippy]
-  # single-layer image policy: every rebake is a cold full bake
-  squash: true

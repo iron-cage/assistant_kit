@@ -349,11 +349,21 @@ pub( crate ) fn run_query_daemon( tokens : &[ String ] ) -> !
     }
   };
 
-  let Some( claude_pid ) = find_claude_processes()
-    .into_iter()
-    .map( | p | p.pid )
-    .find( | pid | !before.contains( pid ) )
-  else
+  // The child PID exists as soon as spawn returns, but its /proc cmdline shows
+  // the parent's argv until exec completes — under load that window is wide
+  // enough for an immediate single scan to miss the new `claude` entry. Poll
+  // briefly instead of scanning once; still fail loudly if nothing appears.
+  let mut found : Option< u32 > = None;
+  for _ in 0..100
+  {
+    found = find_claude_processes()
+      .into_iter()
+      .map( | p | p.pid )
+      .find( | pid | !before.contains( pid ) );
+    if found.is_some() { break; }
+    std::thread::sleep( core::time::Duration::from_millis( 20 ) );
+  }
+  let Some( claude_pid ) = found else
   {
     eprintln!( "Error: spawned control session but could not determine its PID" );
     std::process::exit( 1 );

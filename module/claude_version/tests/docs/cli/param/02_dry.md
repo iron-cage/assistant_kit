@@ -180,18 +180,18 @@ Edge case coverage for the `dry::` parameter. See [param/readme.md](../../../../
 
 | Function | File |
 |----------|------|
-| `tc020_dry_run_param` | `cli_args_test/param_bool_test.rs` |
-| `tc033_dry_true_rejected` | `cli_args_test/param_bool_test.rs` |
-| `tc034_dry_yes_rejected` | `cli_args_test/param_bool_test.rs` |
-| `tc036_dry_0_accepted` | `cli_args_test/param_bool_test.rs` |
-| `tc493_dry_0_then_1_last_wins_dry_active` | `cli_args_test/param_bool_test.rs` |
-| `tc494_dry_1_then_0_last_wins_dry_inactive` | `cli_args_test/param_bool_test.rs` |
+| `tc020_dry_run_param` | `tests/cli_args_test/param_bool_test.rs` |
+| `tc033_dry_true_rejected` | `tests/cli_args_test/param_bool_test.rs` |
+| `tc034_dry_yes_rejected` | `tests/cli_args_test/param_bool_test.rs` |
+| `tc036_dry_0_accepted` | `tests/cli_args_test/param_bool_test.rs` |
+| `tc493_dry_0_then_1_last_wins_dry_active` | `tests/cli_args_test/param_bool_test.rs` |
+| `tc494_dry_1_then_0_last_wins_dry_inactive` | `tests/cli_args_test/param_bool_test.rs` |
 | `tc300_version_install_dry_shows_prefix` | `tests/cli/mutation_version_install_test.rs` |
 | `tc301_version_install_dry_stable` | `tests/cli/mutation_version_install_test.rs` |
 | `tc252_settings_set_dry_no_write` | `tests/cli/cross_cutting_test.rs` |
-| `dry_ec6_2_exits_1` | `cli_args_test/param_bool_test.rs` |
-| `dry_ec7_negative_exits_1` | `cli_args_test/param_bool_test.rs` |
-| `dry_ec9_empty_exits_1` | `cli_args_test/param_bool_test.rs` |
+| `dry_ec6_2_exits_1` | `tests/cli_args_test/param_bool_test.rs` |
+| `dry_ec7_negative_exits_1` | `tests/cli_args_test/param_bool_test.rs` |
+| `dry_ec9_empty_exits_1` | `tests/cli_args_test/param_bool_test.rs` |
 | `dry_ec10_command_scope_rejects_on_read` | `tests/cli/dry_param_test.rs` |
 | `dry_ec11_processes_kill_dry_run` | `tests/cli/dry_param_test.rs` |
 | `dry_ec12_settings_set_dry_no_file` | `tests/cli/dry_param_test.rs` |
