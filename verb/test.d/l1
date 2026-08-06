@@ -8,9 +8,17 @@ cd "$SCRIPT_DIR/../.."
 if [[ "${1:-}" == "--dry-run" ]]; then echo "cargo nextest run + doc test + clippy (--workspace)"; exit 0; fi
 # Registry is pre-fetched at bake time and mounted read-only — never hit the network.
 export CARGO_NET_OFFLINE=true
-# Plain \n-terminated nextest output — survives PTY/capture layers intact.
+# Fix(BUG-008): Disable nextest's interactive PTY progress bar.
+# Root cause: when the test runner captures subprocess output via PTY, nextest detects
+# isatty()=true and activates indicatif's cursor-movement progress display. The output
+# capture layer discards these ANSI control sequences, making all test results invisible
+# (exit 0, zero per-test lines visible).
+# With NO_COLOR=1, nextest uses hidden()=true regardless of isatty(), and falls back
+# to plain \n-terminated output that survives output capture intact.
+# Pitfall: environment inheritance ensures this env var propagates to nested runners
+# automatically — the fix applies regardless of test runner binary version.
 export NO_COLOR=1
-# Container signal 3 for the container-only test invariant (nextest setup script + Rust guards).
+# Container signal for the container-only test invariant (nextest setup script + Rust guards).
 export RUNBOX_CONTAINER=1
 export RUSTFLAGS="-D warnings"
 cargo nextest run --workspace --all-features

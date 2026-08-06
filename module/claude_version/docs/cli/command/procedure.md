@@ -11,8 +11,8 @@
 
 **Trigger:** A new clvcommand is implemented and requires documentation.
 
-1. Identify the namespace (root, version, processes, settings, or new namespace).
-2. Open the appropriate namespace file (`root.md`, `version.md`, `processes.md`, `settings.md`).
+1. Identify the namespace (root, version, ps, settings, or new namespace).
+2. Open the appropriate namespace file (`root.md`, `version.md`, `ps.md`, `settings.md`).
 3. Add a `### Command :: N. .name` section with:
    - Summary Block (`-- **Label:** value` lines)
    - Description paragraph

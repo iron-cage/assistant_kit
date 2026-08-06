@@ -4,7 +4,7 @@
 
 - **Purpose**: Document integration and edge case test plans for all clv commands, parameters, types, and parameter groups.
 - **Responsibility**: Index of per-command, per-parameter, per-type, per-group, and per-command-group test case planning files.
-- **In Scope**: All 15 clv commands, all 14 parameters, all 10 types, all 4 parameter groups, 0 qualifying command groups, all 8 user stories, and all 2 output formats.
+- **In Scope**: All 15 clv commands, all 17 parameters, all 10 types, all 4 parameter groups, 0 qualifying command groups, all 8 user stories, and all 2 output formats.
 - **Out of Scope**: Automated test implementations (→ `tests/` in crate), spec documentation (→ `docs/feature/`).
 
 7-tier testing organization for `claude_version` CLI, providing distinct audience focus at each level.
@@ -51,8 +51,8 @@
 - [`.version.install`](command/04_version_install.md)
 - [`.version.guard`](command/05_version_guard.md)
 - [`.version.list`](command/06_version_list.md)
-- [`.processes`](command/07_processes.md)
-- [`.processes.kill`](command/08_processes_kill.md)
+- [`.ps`](command/07_ps.md)
+- [`.ps.kill`](command/08_ps_kill.md)
 - [`.settings.show`](command/09_settings_show.md)
 - [`.settings.get`](command/10_settings_get.md)
 - [`.settings.set`](command/11_settings_set.md)
@@ -76,6 +76,9 @@
 - [`unset::`](param/12_unset.md)
 - [`kind::`](param/13_kind.md)
 - [`mode::`](param/14_mode.md)
+- [`record_only::`](param/15_record_only.md)
+- [`name::`](param/16_name.md)
+- [`pid::`](param/17_pid.md)
 
 ### Types
 - [`VerbosityLevel`](type/01_verbosity_level.md)

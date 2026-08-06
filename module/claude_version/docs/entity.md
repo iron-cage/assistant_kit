@@ -8,7 +8,7 @@
 | `cli/` | Shared CLI reference: dictionary, parameter interactions, and environment context | [cli/readme.md](cli/readme.md) | 4 |
 | `cli/command/` | Per-namespace command reference for the clv CLI | [cli/command/readme.md](cli/command/readme.md) | 6 |
 | `cli/format/` | Named output format catalog | [cli/format/readme.md](cli/format/readme.md) | 2 |
-| `cli/param/` | Per-parameter reference for all clv parameters | [cli/param/readme.md](cli/param/readme.md) | 16 |
+| `cli/param/` | Per-parameter reference for all clv parameters | [cli/param/readme.md](cli/param/readme.md) | 17 |
 | `cli/param_group/` | Logical groupings of clv parameters by shared purpose | [cli/param_group/readme.md](cli/param_group/readme.md) | 4 |
 | `cli/type/` | Semantic type definitions for clv parameter values | [cli/type/readme.md](cli/type/readme.md) | 10 |
 | `cli/user_story/` | User story catalog with persona-goal scenarios | [cli/user_story/readme.md](cli/user_story/readme.md) | 8 |
@@ -19,7 +19,7 @@
 | `tests/docs/algorithm/` | Per-algorithm test case specifications | [../tests/docs/algorithm/readme.md](../tests/docs/algorithm/readme.md) | 2 |
 | `tests/docs/cli/command/` | Per-command test case specifications | [../tests/docs/cli/command/readme.md](../tests/docs/cli/command/readme.md) | 16 |
 | `tests/docs/cli/format/` | Per-format output rendering test specifications | [../tests/docs/cli/format/readme.md](../tests/docs/cli/format/readme.md) | 2 |
-| `tests/docs/cli/param/` | Per-parameter edge case test specifications | [../tests/docs/cli/param/readme.md](../tests/docs/cli/param/readme.md) | 16 |
+| `tests/docs/cli/param/` | Per-parameter edge case test specifications | [../tests/docs/cli/param/readme.md](../tests/docs/cli/param/readme.md) | 17 |
 | `tests/docs/cli/param_group/` | Per-group interaction test specifications | [../tests/docs/cli/param_group/readme.md](../tests/docs/cli/param_group/readme.md) | 4 |
 | `tests/docs/cli/type/` | Per-type test case specifications | [../tests/docs/cli/type/readme.md](../tests/docs/cli/type/readme.md) | 10 |
 | `tests/docs/cli/user_story/` | Per-user-story acceptance test specifications | [../tests/docs/cli/user_story/readme.md](../tests/docs/cli/user_story/readme.md) | 8 |

@@ -4,7 +4,7 @@
 
 - **Purpose**: Document edge case coverage for individual clv parameters.
 - **Responsibility**: Index of per-parameter edge case test files covering parameter-level behavior.
-- **In Scope**: All 16 clv parameter test files.
+- **In Scope**: All 17 clv parameter test files.
 - **Out of Scope**: Command-level tests (-> `command/`), parameter group interactions (-> `param_group/`).
 
 ### Overview Table
@@ -27,4 +27,5 @@
 | 14_mode.md | Edge case tests for `mode::` parameter | ✅ |
 | 15_record_only.md | Edge case tests for `record_only::` parameter | ✅ |
 | 16_name.md | Edge case tests for `name::` parameter | ✅ |
+| 17_pid.md | Edge case tests for `pid::` parameter | ✅ |
 | procedure.md | Workflow for creating and updating parameter test specs | ✅ |

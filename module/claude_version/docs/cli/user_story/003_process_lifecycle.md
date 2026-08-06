@@ -7,20 +7,20 @@
 
 ### Acceptance Criteria
 
-- [ ] `clv .processes` lists all running Claude Code PIDs and their working directories.
-- [ ] `clv .processes format::json` returns the same as a JSON array.
-- [ ] `clv .processes.kill dry::1` prints what would be killed without sending signals.
-- [ ] `clv .processes.kill` sends SIGTERM, waits 2 seconds, then SIGKILLs survivors.
-- [ ] `clv .processes.kill force::1` sends SIGKILL directly.
-- [ ] After a successful kill, `clv .processes` returns an empty list (exit 0).
+- [ ] `clv .ps` lists all running Claude Code PIDs and their working directories.
+- [ ] `clv .ps format::json` returns the same as a JSON array.
+- [ ] `clv .ps.kill dry::1` prints what would be killed without sending signals.
+- [ ] `clv .ps.kill` sends SIGTERM, waits 2 seconds, then SIGKILLs survivors.
+- [ ] `clv .ps.kill force::1` sends SIGKILL directly.
+- [ ] After a successful kill, `clv .ps` returns an empty list (exit 0).
 
 ### Referenced Commands
 
 | # | Command | Role |
 |---|---------|------|
 | 1 | [`.help`](../command/root.md#command-1-help) | Provides discovery of available commands |
-| 2 | [`.processes`](../command/processes.md#command-7-processes) | Lists all running Claude Code PIDs |
-| 3 | [`.processes.kill`](../command/processes.md#command-8-processeskill) | Terminates detected processes via signal sequence |
+| 2 | [`.ps`](../command/ps.md#command-7-ps) | Lists all running Claude Code PIDs |
+| 3 | [`.ps.kill`](../command/ps.md#command-8-pskill) | Terminates detected processes via signal sequence |
 
 ### Referenced Formats
 
@@ -50,7 +50,7 @@
 **Step 1 — List all running Claude Code processes:**
 
 ```bash
-clv .processes
+clv .ps
 # PID    DIR
 # 12345  /home/user/projects/frontend
 # 12890  /home/user/projects/api
@@ -59,7 +59,7 @@ clv .processes
 **Step 2 — Preview the kill sequence without sending signals:**
 
 ```bash
-clv .processes.kill dry::1
+clv .ps.kill dry::1
 # [dry-run] Would send SIGTERM to PID 12345 (/home/user/projects/frontend)
 # [dry-run] Would send SIGTERM to PID 12890 (/home/user/projects/api)
 ```
@@ -67,7 +67,7 @@ clv .processes.kill dry::1
 **Step 3 — Execute the kill sequence:**
 
 ```bash
-clv .processes.kill
+clv .ps.kill
 # Sent SIGTERM to PID 12345 ... done
 # Sent SIGTERM to PID 12890 ... done
 ```
@@ -75,6 +75,6 @@ clv .processes.kill
 **Step 4 — Verify no processes remain:**
 
 ```bash
-clv .processes
+clv .ps
 # (no output — empty list, exit 0)
 ```

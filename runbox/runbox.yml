@@ -29,10 +29,9 @@ mounts:
 # working_volume / working_volume_path — named volume for compilation artifacts.
 plugins:
   # The host's own `claude` CLI bind-mounted read-only — real-subprocess control
-  # tests run against the host's version and credentials, with no separate
-  # install baked into the image. The working volume is the workspace
-  # compilation cache — the engine exports it as CARGO_TARGET_DIR, keeping
-  # all build artifacts off the read-only workspace mount.
+  # tests run against the host's version and credentials. The working volume is
+  # the workspace compilation cache — the engine exports it as CARGO_TARGET_DIR,
+  # keeping all build artifacts off the read-only workspace mount.
   - type: binary
     name: claude
     container_path: /usr/local/bin/claude
@@ -57,10 +56,9 @@ build:
   # crate scope for cargo chef cook — external deps of every workspace member get
   # precompiled (dependencies only; workspace test binaries are never cooked)
   cmd_scope: "--workspace"
-  # apt-get packages installed in the final stage — test-side subprocess deps
-  # (curl for transports, procps for process tests, jq for JSON assertions)
+  # union of the retired flat configs' system_packages (root: curl procps jq; modules: curl procps)
   packages: [curl, procps, jq]
-  # rustup components added in the final stage — l1 runs clippy in-container
+  # rustup components added in the final stage — the l1 gate runs clippy in-container
   rust_components: [clippy]
   # single-layer image policy: every rebake is a cold full bake
   squash: true
