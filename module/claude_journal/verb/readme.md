@@ -3,13 +3,20 @@
 ### Scope
 
 **Responsibilities:** Shell scripts implementing the `do` protocol verbs for `claude_journal` (cargo ecosystem).
-**In Scope:** Canonical verbs (`test`, `test_only`, `install`), layer dispatchers (`*.d/`), and the `verbs` meta verb.
+**In Scope:** Canonical verbs (`build`, `test`, `test_only`, `clean`, `lint`, `verify`, `install`, `run`, `package_info`), layer dispatchers (`*.d/`), and the `verbs` meta verb.
 **Out of Scope:** Source code (→ `src/`), test logic (→ `tests/`), documentation (→ `docs/`).
 
 ### Responsibility Table
 
 | File | Responsibility |
 |------|---------------|
+| `build` | Compile the crate: `cargo build -p claude_journal`. |
+| `clean` | Remove build artifacts: `cargo clean -p claude_journal`. |
+| `lint` | Run clippy via layer dispatcher (`lint.d/`). |
+| `lint.d/` | Layer directory: `l1` (direct clippy). |
+| `verify` | Full checks: `will .test level::4`. |
+| `run` | Run crate binary — unavailable for this library crate. |
+| `package_info` | Report package metadata as JSON (meta). |
 | `test` | Run module suite in container: `runbox .live` with `test.d/l1` as payload. |
 | `test.d/` | Layer directory: `l1` (container-internal). |
 | `test_only` | Run tests matching a filter in container: `runbox .live` with `test_only.d/l1 <filter>` as payload. |

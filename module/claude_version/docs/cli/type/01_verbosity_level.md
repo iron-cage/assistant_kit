@@ -38,8 +38,8 @@ clv .status v::3       # error: out of range
 | 3 | [`.version.install`](../command/version.md#command-4-versioninstall) | `v::` |
 | 4 | [`.version.guard`](../command/version.md#command-5-versionguard) | `v::` |
 | 5 | [`.version.list`](../command/version.md#command-6-versionlist) | `v::` |
-| 6 | [`.processes`](../command/processes.md#command-7-processes) | `v::` |
-| 7 | [`.processes.kill`](../command/processes.md#command-8-processeskill) | `v::` |
+| 6 | [`.ps`](../command/ps.md#command-7-ps) | `v::` |
+| 7 | [`.ps.kill`](../command/ps.md#command-8-pskill) | `v::` |
 | 8 | [`.settings.show`](../command/settings.md#command-9-settingsshow) | `v::` |
 | 9 | [`.settings.get`](../command/settings.md#command-10-settingsget) | `v::` |
 | 10 | [`.config`](../command/config.md#command-13-config) | `v::` |

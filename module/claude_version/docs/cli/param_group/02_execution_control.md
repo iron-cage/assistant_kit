@@ -14,7 +14,7 @@ All three parameters modify the execution mode of destructive operations.
 | [`force::`](../param/03_force.md) | bool | Bypass safety guards |
 | [`record_only::`](../param/15_record_only.md) | bool | Persist preference without installing |
 
-**Partial implementors:** `.settings.set` and `.config` implement `dry::` only (no `force::` or `record_only::`). `.version.guard` and `.processes.kill` implement `dry::`/`force::` but not `record_only::` (install-only concept — see `15_record_only.md`).
+**Partial implementors:** `.settings.set` and `.config` implement `dry::` only (no `force::` or `record_only::`). `.version.guard` and `.ps.kill` implement `dry::`/`force::` but not `record_only::` (install-only concept — see `15_record_only.md`).
 
 **Why NOT in this group:**
 - `version::`: specifies *what* to install, not *whether* to install
@@ -28,7 +28,7 @@ clv .version.install dry::1          # preview
 clv .version.install force::1        # bypass idempotency
 clv .version.install record_only::1  # persist preference, no install
 clv .version.guard dry::1 force::1   # preview forced guard
-clv .processes.kill dry::1 force::1  # preview forced kill
+clv .ps.kill dry::1 force::1  # preview forced kill
 ```
 
 ### Referenced Commands
@@ -37,7 +37,7 @@ clv .processes.kill dry::1 force::1  # preview forced kill
 |---|---------|-----------|----------------|
 | 1 | [`.version.install`](../command/version.md#command-4-versioninstall) | Full | — |
 | 2 | [`.version.guard`](../command/version.md#command-5-versionguard) | Partial | `record_only::` |
-| 3 | [`.processes.kill`](../command/processes.md#command-8-processeskill) | Partial | `record_only::` |
+| 3 | [`.ps.kill`](../command/ps.md#command-8-pskill) | Partial | `record_only::` |
 | 4 | [`.settings.set`](../command/settings.md#command-11-settingsset) | Partial | `force::`, `record_only::` |
 | 5 | [`.config`](../command/config.md#command-13-config) | Partial | `force::`, `record_only::` |
 

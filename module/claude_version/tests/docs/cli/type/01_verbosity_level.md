@@ -6,7 +6,7 @@ Type compliance and validation tests for `VerbosityLevel`. See [type/01_verbosit
 
 - **Purpose**: Validate VerbosityLevel parsing, range enforcement, and level semantics.
 - **Responsibility**: Boundary values, invalid inputs, default behavior, and per-level output semantics for `v::`.
-- **Commands:** `.status`, `.version.show`, `.version.install`, `.version.list`, `.version.guard`, `.processes`, `.processes.kill`, `.settings.show`, `.settings.get`
+- **Commands:** `.status`, `.version.show`, `.version.install`, `.version.list`, `.version.guard`, `.ps`, `.ps.kill`, `.settings.show`, `.settings.get`
 - **In Scope**: Type parsing, range validation, and observable output differences between levels.
 - **Out of Scope**: Per-command output structure (→ `../command/`), parameter interactions (→ `../param_group/`).
 

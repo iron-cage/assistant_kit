@@ -14,4 +14,6 @@ export CARGO_NET_OFFLINE=true
 export NO_COLOR=1
 export RUNBOX_CONTAINER=1
 export RUSTFLAGS="-D warnings"
+# CARGO_TARGET_DIR is exported by the engine (persistent working volume) — it
+# overrides the host .cargo/config.toml target-dir redirect inside the container.
 exec cargo nextest run --all-features "$FILTER"

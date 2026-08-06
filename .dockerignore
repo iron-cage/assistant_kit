@@ -13,8 +13,9 @@ target/
 # Git history is not needed inside the image.
 .git/
 
-# .claude/ may exist at the workspace root on the host (agent state; the engine
-# mounts ~/.claude directly at run time).  Excluded here for two reasons:
+# .claude/ may exist at the workspace root on the host (agent state) — the engine
+# bind-mounts ~/.claude directly at run time (mirror mount).  Excluded here for
+# two reasons:
 #   1. Security: host credentials in .claude/ must never be baked into a container image.
 #   2. Correctness: COPY . . would include the directory, causing RUN mkdir -p .claude
 #      to find it already present — harmless with -p, but the directory would contain

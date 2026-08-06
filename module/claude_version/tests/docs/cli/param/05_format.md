@@ -6,7 +6,7 @@ Edge case coverage for the `format::` parameter. See [param/05_format.md](../../
 
 - **Purpose**: Edge case tests for the `format::` parameter.
 - **Responsibility**: Boundary values, invalid inputs, type violations, and default behavior for `format::`.
-- **Commands:** `.status`, `.version.show`, `.version.install`, `.version.list`, `.version.guard`, `.processes`, `.processes.kill`, `.settings.show`, `.settings.get`, `.config`, `.params`, `.version.paths`
+- **Commands:** `.status`, `.version.show`, `.version.install`, `.version.list`, `.version.guard`, `.ps`, `.ps.kill`, `.settings.show`, `.settings.get`, `.config`, `.params`, `.version.paths`
 - **In Scope**: Single-parameter edge cases, validation errors, type checking.
 - **Out of Scope**: Command integration (→ `../command/`), group interactions (→ `../param_group/`).
 
@@ -17,7 +17,7 @@ Edge case coverage for the `format::` parameter. See [param/05_format.md](../../
 | EC-11 | `.status format::json` → `{"version":...}` | Explicit json |
 | EC-12 | `.version.show format::json` → `{"version":"..."}` | Explicit json |
 | EC-13 | `.version.list format::json` → JSON array | Explicit json |
-| EC-14 | `.processes format::json` → `{"processes":[...]}` | Explicit json |
+| EC-14 | `.ps format::json` → `{"processes":[...]}` | Explicit json |
 | EC-15 | `.settings.show format::json` → JSON object | Explicit json |
 | EC-16 | `.settings.get format::json` → `{"key":..,"value":..}` | Explicit json |
 | EC-5 | `format::json` preserves bool/number types | Type Fidelity |
@@ -183,13 +183,13 @@ Edge case coverage for the `format::` parameter. See [param/05_format.md](../../
 
 ---
 
-### EC-14: `.processes format::json` → `{"processes":[...]}`
+### EC-14: `.ps format::json` → `{"processes":[...]}`
 
 - **Given:** clean environment
-- **When:** `clv .processes format::json`
+- **When:** `clv .ps format::json`
 - **Then:** exit 0; stdout is valid JSON object; contains `"processes"` array key
 - **Exit:** 0
-- **Source:** [command/readme.md — .processes](../../../../docs/cli/command/readme.md)
+- **Source:** [command/readme.md — .ps](../../../../docs/cli/command/readme.md)
 
 ---
 

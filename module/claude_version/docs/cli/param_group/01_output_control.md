@@ -23,7 +23,7 @@ changing behavior.
 
 ```sh
 clv .status v::0 format::json
-clv .processes format::json v::2
+clv .ps format::json v::2
 ```
 
 ### Referenced Commands
@@ -35,8 +35,8 @@ clv .processes format::json v::2
 | 3 | [`.version.install`](../command/version.md#command-4-versioninstall) | Partial | `count::` |
 | 4 | [`.version.guard`](../command/version.md#command-5-versionguard) | Partial | `count::` |
 | 5 | [`.version.list`](../command/version.md#command-6-versionlist) | Full | — |
-| 6 | [`.processes`](../command/processes.md#command-7-processes) | Partial | `count::` |
-| 7 | [`.processes.kill`](../command/processes.md#command-8-processeskill) | Partial | `count::` |
+| 6 | [`.ps`](../command/ps.md#command-7-ps) | Partial | `count::` |
+| 7 | [`.ps.kill`](../command/ps.md#command-8-pskill) | Partial | `count::` |
 | 8 | [`.settings.show`](../command/settings.md#command-9-settingsshow) | Partial | `count::` |
 | 9 | [`.settings.get`](../command/settings.md#command-10-settingsget) | Partial | `count::` |
 | 10 | [`.config`](../command/config.md#command-13-config) | Partial | `count::` |

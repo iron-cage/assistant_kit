@@ -4,7 +4,7 @@
 
 - **Purpose**: Document the dry-run preview mode available on all mutation commands.
 - **Responsibility**: Describe dry::1 flag semantics, output parity requirement, and affected commands.
-- **In Scope**: dry::1 parameter, [dry-run] output prefix, parity with actual action messages, affected commands (.version.install, .version.guard, .processes.kill, .settings.set).
+- **In Scope**: dry::1 parameter, [dry-run] output prefix, parity with actual action messages, affected commands (.version.install, .version.guard, .ps.kill, .settings.set).
 - **Out of Scope**: Individual command behavior under normal execution (→ `feature/001_version_management.md`, `feature/002_process_lifecycle.md`, `feature/003_settings_management.md`).
 
 ### Design
@@ -14,7 +14,7 @@
 **Affected commands:**
 - `.version.install dry::1`
 - `.version.guard dry::1`
-- `.processes.kill dry::1`
+- `.ps.kill dry::1`
 - `.settings.set dry::1`
 - `.config set dry::1`
 - `.config unset dry::1`
