@@ -9,7 +9,7 @@
 
 ### Design
 
-**Why a global scalar, not a filter or fallback chain:** account rotation already has many relative, per-call-site gates (ownership, force bypass, claim lock). Provider selection is deliberately different in kind — it is a single piece of standing user intent ("I am currently working with provider X") that must hold across every rotation decision until the user explicitly changes it. Modeling it as a filter parameter or a derived/fallback value (e.g. "use whichever provider the current account has") would let rotation silently drift across providers as accounts come and go — exactly the failure this feature exists to prevent. So `provider` lives in `~/.clr/config.toml`'s user tier (the same tiered flat-TOML store `.model.select` already uses for `model`), read once per rotation decision and never derived.
+**Why a global scalar, not a filter or fallback chain:** account rotation already has many relative, per-call-site gates (ownership, force bypass, claim lock). Provider selection is deliberately different in kind — it is a single piece of standing user intent ("I am currently working with provider X") that must hold across every rotation decision until the user explicitly changes it. Modeling it as a filter parameter or a derived/fallback value (e.g. "use whichever provider the current account has") would let rotation silently drift across providers as accounts come and go — exactly the failure this feature exists to prevent. So `provider` lives in `~/.clr/config.toml`'s user tier (the same tiered flat-TOML store `.model scope::subprocess` already uses for `model`/`effort`, Feature 035), read once per rotation decision and never derived.
 
 **Why `inference_provider` defaults to `"anthropic"` without being written:** mirrors the existing `backend` field's absent-means-`anthropic` convention (Feature 071) rather than the `host`/`role` metadata labels' write-empty-string convention. Every account created before this feature, and every account saved without `inference_provider::`, has no `inference_provider` key in `{name}.json` at all — readers (`.accounts`/`.usage` rendering, Gate 10) treat that absence as `"anthropic"`. This avoids a one-time migration pass over every existing account file and keeps the common case (single-provider users) free of a redundant explicit tag.
 
@@ -38,7 +38,7 @@
 - **AC-08**: `clp .provider.select id::kimi` exits 0; writes `provider = "kimi"` into `~/.clr/config.toml`'s user tier; stdout contains `(selected)`.
 - **AC-09**: `clp .provider.select id::` (empty value) exits 1; stderr: `id:: must be a non-empty provider name`.
 - **AC-10**: `clp .provider.select id::kimi reset::1` (both present) exits 1; stderr: `id:: and reset::1 are mutually exclusive`.
-- **AC-11**: `clp .provider.select reset::1` after a prior `id::kimi` selection removes the `provider` key from `~/.clr/config.toml`'s user tier; subsequent `clp .provider.select` prints `provider.select: anthropic`; other keys (e.g. `model` from `.model.select`) are preserved unchanged.
+- **AC-11**: `clp .provider.select reset::1` after a prior `id::kimi` selection removes the `provider` key from `~/.clr/config.toml`'s user tier; subsequent `clp .provider.select` prints `provider.select: anthropic`; other keys (e.g. `model`/`effort` written by `.model scope::subprocess`) are preserved unchanged.
 - **AC-12**: `clp .provider.select reset::1` with no `~/.clr/config.toml` present exits 0 idempotently — prints `provider.select: anthropic (reset to default)`.
 - **AC-13**: `clp .provider.select format::json` prints `{"provider":"anthropic"}` (or the selected value) — JSON key is `provider`, distinct from `.accounts`/`.usage`'s per-row `inference_provider` JSON key.
 - **AC-14**: With `provider` selected as `kimi` in `~/.clr/config.toml`, and a mixed account list containing both `inference_provider: "anthropic"` and `inference_provider: "kimi"` accounts, `clp .usage rotate::1` (or auto-rotation) never selects an `anthropic`-tagged account as the next/current target, regardless of `force::1`.
@@ -58,7 +58,8 @@
 | [003_account_list.md](003_account_list.md) | `.accounts` gains the `inference_provider` default identity column |
 | [002_account_save.md](002_account_save.md) | `.account.save` gains the `inference_provider::` write path |
 | [029_account_host_metadata.md](029_account_host_metadata.md) | Sibling free-form metadata-label pattern (`host`/`role`) that `inference_provider::` follows |
-| [069_model_select_command.md](069_model_select_command.md) | Sibling `~/.clr/config.toml`-backed get/set/reset command (`.model.select`) that `.provider.select` mirrors |
+| [069_model_select_command.md](069_model_select_command.md) | Superseded — historical `.model.select` design that `.provider.select` originally mirrored |
+| [035_model_command.md](035_model_command.md) | `.model scope::subprocess` — current `~/.clr/config.toml`-backed get/set/reset sibling that `.provider.select` mirrors (absorbed `.model.select`'s role) |
 | [070_account_claim_and_reservation_control.md](070_account_claim_and_reservation_control.md) | Gate 9 (`claim_lock`, unconditional) — the precedent Gate 10 mirrors |
 | [071_redirect_backend_accounts.md](071_redirect_backend_accounts.md) | `backend` field — independent of and orthogonal to `inference_provider` |
 
@@ -67,8 +68,8 @@
 | File | Relationship |
 |------|--------------|
 | [cli/param/073_inference_provider.md](../cli/param/073_inference_provider.md) | `inference_provider::` — tags an account at save time |
-| [cli/param/064_id.md](../cli/param/064_id.md) | `id::` — activates set mode on `.provider.select` (shared with `.model.select`) |
-| [cli/param/066_reset.md](../cli/param/066_reset.md) | `reset::` — removes the `provider` key (shared with `.model.select`) |
+| [cli/param/064_id.md](../cli/param/064_id.md) | `id::` — activates set mode on `.provider.select` (narrowed, Feature 035 — formerly also shared with `.model.select`) |
+| [cli/param/066_reset.md](../cli/param/066_reset.md) | `reset::` — removes the `provider` key (narrowed, Feature 035 — formerly also shared with `.model.select`) |
 
 ### Commands
 
@@ -98,11 +99,11 @@
 | `src/usage/types.rs` | `AccountQuota` struct — new `inference_provider: String` field, populated from `{name}.json` at fetch time |
 | `src/commands/account_ops.rs` | `account_save_routine()` — new parsing for `inference_provider::`, non-empty validation |
 | `src/commands/accounts_render.rs` | New `inference_provider` column rendering for `.accounts` table/json output — default identity set member |
-| `src/commands/provider_select.rs` (new) | `.provider.select` command handler — get/set/reset dispatch mirroring `src/commands/model_select.rs` |
+| `src/commands/provider_select.rs` (new) | `.provider.select` command handler — get/set/reset dispatch mirroring `src/commands/model.rs`'s `scope::subprocess` branch (formerly mirrored the now-retired `src/commands/model_select.rs`) |
 | `src/usage/sort_next.rs` | `find_first_eligible()` — new Gate 10 check immediately after the existing `claim_lock` check (Gate 9); unconditional, not part of the `extra` closure |
 | `src/registry.rs` | New `.provider.select` command registration (Command 21) |
 | `src/cli.rs` | New `.provider.select` dispatch wiring |
-| `claude_core::toml_io` | Shared `get_tiered`/`set_user_tier`/`remove_user_tier` primitives — reused unchanged from `.model.select`'s existing usage |
+| `claude_core::toml_io` | Shared `get_tiered`/`set_user_tier`/`remove_user_tier` primitives — reused unchanged from `.model scope::subprocess`'s existing usage (formerly `.model.select`'s) |
 
 ### Tests
 

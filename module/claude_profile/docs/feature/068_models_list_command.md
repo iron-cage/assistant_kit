@@ -69,7 +69,7 @@ Derived from `contract/claude_code/docs/model/readme.md`. Contains 12 entries: c
 | File | Relationship |
 |------|--------------|
 | [035_model_command.md](035_model_command.md) | `.model` command — interactive session model get/set |
-| [069_model_select_command.md](069_model_select_command.md) | `.model.select` — uses model IDs discovered here to set subprocess preference |
+| [069_model_select_command.md](069_model_select_command.md) | Superseded — historical `.model.select` design; subprocess model IDs discovered here are now set via `.model scope::subprocess model::` (Feature 035) |
 | [026_subprocess_model_effort.md](026_subprocess_model_effort.md) | `imodel::` — subprocess model for touch/refresh (separate mechanism) |
 
 ### Sources

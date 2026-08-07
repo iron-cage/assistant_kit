@@ -10,11 +10,11 @@
 | [002_credentials.md](002_credentials.md) | Credentials namespace: `.credentials.status` |
 | [006_usage.md](006_usage.md) | Usage namespace: `.usage` |
 | [004_paths.md](004_paths.md) | Paths namespace: `.paths` |
-| [007_model.md](007_model.md) | Model namespace: `.model`, `.model.select` |
+| [007_model.md](007_model.md) | Model namespace: `.model` (unified session + subprocess, `scope::`-routed); `.model.select` (removed, merged into `.model`) |
 | [008_models.md](008_models.md) | Models discovery: `.models` |
 | [009_provider.md](009_provider.md) | Provider namespace: `.provider.select` |
 
-**Total:** 21 commands (15 visible + 2 hidden + 1 DEPRECATED: `.account.rotate` (Feature 038) + 3 REMOVED: `.account.assign`, `.account.unclaim`, `.token.status`)
+**Total:** 21 commands (14 visible + 2 hidden + 1 DEPRECATED: `.account.rotate` (Feature 038) + 4 REMOVED: `.account.assign`, `.account.unclaim`, `.token.status`, `.model.select` (Feature 035))
 
 ### All Commands
 
@@ -37,9 +37,9 @@
 | 15 | `.account.inspect` | Live diagnostic inspection of identity, subscription, and org fields | 4 | `clp .account.inspect` |
 | 16 | `.account.assign` | **REMOVED** (Feature 037) — writes per-machine active marker only; use `.accounts assignee::USER@MACHINE name::X` | 0 | `clp .account.assign name::alice@acme.com` |
 | 17 | `.account.unclaim` | **REMOVED** (Feature 037; absorbed param further REMOVED Feature 064) — releases account ownership; use `.accounts owner::0 name::X` | 0 | `clp .account.unclaim name::alice@acme.com` |
-| 18 | `.model` | Get or set the Claude Code session model in `~/.claude/settings.json` | 2 | `clp .model set::opus` |
+| 18 | `.model` | Get/set/reset model and effort for the session (`~/.claude/settings.json`) or subprocess (`~/.clr/config.toml`) store, via `scope::` | 6 | `clp .model model::opus` |
 | 19 | `.models` | List available Claude models via live API or static offline catalog | 3 | `clp .models offline::1` |
-| 20 | `.model.select` | Get/set/reset subprocess model preference in `~/.clr/config.toml` | 3 | `clp .model.select id::claude-opus-4-8` |
+| 20 | `.model.select` | **REMOVED** (Feature 035) — merged into `.model`; use `.model scope::subprocess model::VALUE` | 0 | `clp .model.select id::claude-opus-4-8` |
 | 21 | `.provider.select` | Get/set/reset global inference provider in `~/.clr/config.toml` | 3 | `clp .provider.select id::kimi` |
 
 ### Quick Reference
@@ -48,18 +48,17 @@
 - `name::` — required on `.account.use`, `.account.delete`, `.account.relogin`, `.account.renewal`; optional on `.account.save` (inferred), `.accounts`, `.account.limits`, `.account.inspect` (defaults to active account). For ownership release, use `.accounts owner::0 name::X` (Feature 064).
 
 **Most-Used Parameters:**
-- `format::` — 9 commands (`.accounts`, `.paths`, `.usage`, `.credentials.status`, `.account.limits`, `.account.inspect`, `.models`, `.model.select`, `.provider.select`)
+- `format::` — 9 commands (`.accounts`, `.paths`, `.usage`, `.credentials.status`, `.account.limits`, `.account.inspect`, `.models`, `.model`, `.provider.select`)
 
 **Commands by Parameter Count:**
 
 | Count | Commands |
 |-------|----------|
 | 0 | `.`, `.help` |
-| 2 | `.model` |
-| 3 | `.paths`, `.account.delete`, `.account.limits`, `.account.relogin`, `.models`, `.model.select`, `.provider.select` |
+| 3 | `.paths`, `.account.delete`, `.account.limits`, `.account.relogin`, `.models`, `.provider.select` |
 | 4 | `.account.inspect` |
 | 5 | `.account.save` |
-| 6 | `.account.renewal` |
+| 6 | `.account.renewal`, `.model` |
 | 8 | `.account.use` |
 | 19 | `.credentials.status` |
 | 32 | `.accounts` |
