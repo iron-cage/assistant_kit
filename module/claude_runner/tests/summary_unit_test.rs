@@ -511,3 +511,72 @@ fn render_summary_does_not_display_type_message_for_new_sdk_envelope()
      Got:\n{s}"
   );
 }
+
+/// Envelope where `usage.iterations[]` is serialized BEFORE `usage`'s own scalar fields —
+/// the ordering BUG-439 identifies as latent-but-real (JSON object field order is
+/// unspecified per RFC 8259 §4; the SDK currently happens to order scalars first).
+/// `iterations[0]` carries per-iteration values (111/222/333/444) distinct from the
+/// correct totals (9001/9002/9003/9004) at `usage`'s own top level, so a depth-unaware
+/// first-occurrence extraction is observably wrong rather than accidentally correct.
+const NEW_SDK_ENVELOPE_REORDERED_USAGE : &str = r#"{"subtype":"success","session_id":"00000000-0000-0000-0000-000000000001","is_error":false,"duration_ms":100,"duration_api_ms":90,"num_turns":1,"result":"hello","stop_reason":"end_turn","total_cost_usd":0.001,"uuid":"00000000-0000-0000-0000-000000000002","fast_mode_state":"off","usage":{"iterations":[{"input_tokens":111,"output_tokens":222,"cache_read_input_tokens":333,"cache_creation_input_tokens":444,"type":"message"}],"input_tokens":9001,"output_tokens":9002,"cache_creation_input_tokens":9004,"cache_read_input_tokens":9003,"service_tier":"standard","speed":"standard","inference_geo":"","server_tool_use":{"web_search_requests":0,"web_fetch_requests":0},"cache_creation":{"ephemeral_1h_input_tokens":0,"ephemeral_5m_input_tokens":0}},"modelUsage":{"claude-opus-4-8":{"inputTokens":3,"outputTokens":4,"cacheReadInputTokens":0,"cacheCreationInputTokens":0,"webSearchRequests":0,"costUSD":0.001,"contextWindow":200000,"maxOutputTokens":32000}},"permission_denials":[]}"#;
+
+/// BUG-439 regression: `render_summary()` must extract `usage.*` totals correctly even
+/// when the SDK serializes `usage.iterations[]` BEFORE `usage`'s own scalar fields.
+///
+/// # Root Cause
+/// `usage_str` (summary.rs) is built via `s.find("\"usage\":{")` and was consumed with
+/// `extract_u64`/`extract_str`, both depth-unaware first-occurrence searches. Extraction
+/// was correct only because the current SDK serializes `usage.*` scalars BEFORE
+/// `usage.iterations[]`; nothing enforced that order.
+///
+/// # Why Not Caught
+/// All prior fixtures (`FULL_ENVELOPE`, `NEW_SDK_ENVELOPE`, …) serialize `usage.iterations`
+/// LAST within `usage`, matching the SDK's current (but unspecified) field order — so the
+/// depth-unaware search always happened to land on the correct top-level field first.
+///
+/// # Fix Applied
+/// Added `find_key_shallow()` — a bracket-depth-tracking key search that only matches a
+/// key at depth 0 relative to the object being searched, and stops the scan the moment
+/// depth would go negative (naturally bounding the search to the enclosing object without
+/// requiring a pre-trimmed slice). `extract_u64_shallow`/`extract_str_shallow` use it in
+/// place of `extract_u64`/`extract_str` for every field pulled from `usage_str`/`stu_str`/
+/// `cc_str`; `nested_object_shallow` replaces the marker-based `stu_str`/`cc_str` location
+/// with the same depth-0 search.
+///
+/// # Prevention
+/// Any consumer of an unbounded suffix slice (`&json[pos..]`) that performs first-occurrence
+/// key search must use a depth-aware/bounded search, not `.find()`, whenever the slice can
+/// contain a nested object/array carrying a same-named field (e.g. `usage.iterations[]`).
+///
+/// # Pitfall
+/// A depth-unaware search over an object that has a same-named field nested inside one of
+/// its own children is correct only by accident of the current serializer's field order —
+/// JSON object field order is unspecified (RFC 8259 §4) and may change without notice.
+// test_kind: bug_reproducer(BUG-439)
+#[ test ]
+fn render_summary_uses_usage_totals_when_iterations_precedes_scalars()
+{
+  let result = render_summary( NEW_SDK_ENVELOPE_REORDERED_USAGE, None );
+  assert!( result.is_some(), "render_summary must return Some; got None" );
+  let s = result.unwrap();
+  assert!(
+    s.contains( "input_tokens:\u{1b}[0m \u{1b}[33m9001\u{1b}[0m" ),
+    "input_tokens must show the usage-level total (9001), not iterations[0]'s value (111) \
+     — depth-unaware extraction found iterations[0] first. Got:\n{s}"
+  );
+  assert!(
+    s.contains( "output_tokens:\u{1b}[0m \u{1b}[33m9002\u{1b}[0m" ),
+    "output_tokens must show the usage-level total (9002), not iterations[0]'s value (222). \
+     Got:\n{s}"
+  );
+  assert!(
+    s.contains( "cache_creation_input_tokens:\u{1b}[0m \u{1b}[33m9004\u{1b}[0m" ),
+    "cache_creation_input_tokens must show the usage-level total (9004), not iterations[0]'s \
+     value (444). Got:\n{s}"
+  );
+  assert!(
+    s.contains( "cache_read_input_tokens:\u{1b}[0m \u{1b}[33m9003\u{1b}[0m" ),
+    "cache_read_input_tokens must show the usage-level total (9003), not iterations[0]'s \
+     value (333). Got:\n{s}"
+  );
+}
