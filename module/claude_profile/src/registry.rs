@@ -194,9 +194,13 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
       fmt(),
     ],
     Box::new( account_inspect_routine ) );
-  reg_cmd( registry, ".model", "Get or set the Claude Code session model in ~/.claude/settings.json",
+  reg_cmd( registry, ".model", "Get or set model + effort level for the session (~/.claude/settings.json) or subprocess (~/.clr/config.toml) scope",
     vec![
-      reg_arg_opt( "set", Kind::String ).with_description( "Set model: `opus` (claude-opus-4-8), `sonnet` (claude-sonnet-5), `haiku` (claude-haiku-4-5-20251001), `default` (removes override)" ),
+      reg_arg_opt( "scope",              Kind::String  ).with_description( "Backing store: `session` (~/.claude/settings.json, default) or `subprocess` (~/.clr/config.toml user tier)" ),
+      reg_arg_opt( "model",              Kind::String  ).with_description( "Set model: `opus`/`sonnet`/`haiku`/`default` (session, shorthand) or any non-empty full model ID (subprocess)" ),
+      reg_arg_opt( "effort_level",       Kind::String  ).with_description( "Set effort: `low`/`normal`/`high`/`max` (session) or `low`/`medium`/`high`/`max` (subprocess)" ),
+      reg_arg_opt( "reset_model",        Kind::Integer ).with_description( "Remove the model key for the selected scope; mutually exclusive with model:: (1 = reset)" ),
+      reg_arg_opt( "reset_effort_level", Kind::Integer ).with_description( "Remove the effort key for the selected scope; mutually exclusive with effort_level:: (1 = reset)" ),
       fmt(),
     ],
     Box::new( model_routine ) );
@@ -207,13 +211,27 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
       fmt(),
     ],
     Box::new( models_routine ) );
-  reg_cmd( registry, ".model.select", "Get or pin the clr subprocess model preference in ~/.clr/config.toml",
-    vec![
-      reg_arg_opt( "id",    Kind::String  ).with_description( "Full model ID to pin (e.g. claude-opus-4-8); use .models to list available IDs" ),
-      reg_arg_opt( "reset", Kind::Integer ).with_description( "Remove the subprocess_model preference and revert to ISOLATED_DEFAULT_MODEL (1 = reset)" ),
+  // `.model.select` stays registered (dispatchable, returns a migration-error stub —
+  // see `model_select_routine`) but is hidden from the `.help`/`.` listing (AC-26,
+  // Feature 035): `.model scope::subprocess` is the single listed entry for this
+  // functionality now. Bypasses `reg_cmd()` (no hidden-flag param) — mirrors the
+  // inline `CommandDefinition::former()...hidden_from_list(true)` pattern `src/cli.rs`
+  // already uses to hide the bare `.` command from its own listing.
+  {
+    let def = unilang::data::CommandDefinition::former()
+    .name( ".model.select" )
+    .description( "REMOVED — use .model scope::subprocess instead" )
+    .arguments( vec![
+      reg_arg_opt( "id",    Kind::String  ).with_description( "REMOVED — use .model scope::subprocess model::VALUE instead" ),
+      reg_arg_opt( "reset", Kind::Integer ).with_description( "REMOVED — use .model scope::subprocess reset_model::1 instead" ),
       fmt(),
-    ],
-    Box::new( model_select_routine ) );
+    ] )
+    .hidden_from_list( true )
+    .end();
+    registry
+    .register_with_routine( &def, Box::new( model_select_routine ) )
+    .expect( "internal error: failed to register .model.select" );
+  }
   reg_cmd( registry, ".provider.select", "Get or pin the global inference provider selection in ~/.clr/config.toml",
     vec![
       reg_arg_opt( "id",    Kind::String  ).with_description( "Provider name to select (e.g. kimi); free-form, no allow-list" ),

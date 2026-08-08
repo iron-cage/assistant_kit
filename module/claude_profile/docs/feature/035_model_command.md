@@ -70,7 +70,7 @@ effort_level: (reset)  →  /home/user1/.claude/settings.json (session)
 
 **Mutual exclusion:** `model::` + `reset_model::1` together → exit 1, stderr `model:: and reset_model::1 are mutually exclusive`. `effort_level::` + `reset_effort_level::1` together → exit 1, stderr `effort_level:: and reset_effort_level::1 are mutually exclusive`. The two *concepts* (model vs. effort) are never mutually exclusive with each other — `model::opus reset_effort_level::1` is valid and applies both actions in the same call, satisfying the "flexible set of parameters" requirement this feature was built to meet.
 
-**Absolute Path Disclosure (mandatory, every mode):** every text and JSON output — get, set, or reset — names the fully resolved absolute path of the file it read from or wrote to. Both backing paths are already computed as absolute (`ClaudePaths::settings_file()` in `claude_core/src/paths.rs`, joining `$HOME/.claude/settings.json`; `resolve_config_path()` in `src/commands/model_select.rs`, joining `$HOME/.clr/config.toml`) — this feature adds no new path-resolution logic, only surfaces the already-resolved `PathBuf` in command output via `.display()`, which was previously computed but never printed.
+**Absolute Path Disclosure (mandatory, every mode):** every text and JSON output — get, set, or reset — names the fully resolved absolute path of the file it read from or wrote to. Both backing paths are already computed as absolute (`ClaudePaths::settings_file()` in `claude_core/src/paths.rs`, joining `$HOME/.claude/settings.json`; `resolve_subprocess_config_path()` in `src/commands/model.rs`, joining `$HOME/.clr/config.toml`) — this feature adds no new path-resolution logic, only surfaces the already-resolved `PathBuf` in command output via `.display()`, which was previously computed but never printed.
 
 **Naming/Vocabulary note (why `effort_level::`, not `effort::`):** `.usage`, `.account.use`, and `.accounts` already register a parameter literally named `effort::` (param 36, `docs/cli/param/036_effort.md`) governing the **ephemeral, never-persisted** touch/refresh subprocess effort override — vocabulary `auto`/`low`/`normal`/`high`/`max`, resolved fresh on every invocation, with no relationship to either store this feature manages. Reusing the string `effort::` here — even though there is no CLI-parsing collision, since parameter names are scoped per command — would recreate exactly the kind of same-word-different-meaning confusion that motivated this whole redesign. This feature therefore uses `effort_level::` throughout (parameter name and get-mode output label alike), matching the literal `effortLevel` JSON key it maps to on the session side and staying unambiguous on the subprocess side.
 
@@ -166,8 +166,9 @@ Every persisted, model/effort/provider-relevant key discovered across the worksp
 
 | File | Relationship |
 |------|--------------|
-| `tests/docs/feature/035_model_command.md` | Feature test spec — to be rewritten for the unified design (not yet updated this pass; docs-only turn) |
-| `tests/docs/cli/command/17_model.md` | Command-level integration test spec — to be rewritten for `scope::`-routed behavior (not yet updated this pass) |
+| `tests/docs/feature/035_model_command.md` | Feature test spec — FT-01 through FT-27, 1:1 with AC-01 through AC-27 |
+| `tests/docs/cli/command/17_model.md` | Command-level integration test spec — IT-01 through IT-27, mirrors FT-01 through FT-27 |
+| `tests/docs/cli/command/20_model_select.md` | `.model.select` retirement-stub test spec — IT-01 through IT-03, covers all 3 invocation forms' migration-error behavior |
 
 ### Schema
 

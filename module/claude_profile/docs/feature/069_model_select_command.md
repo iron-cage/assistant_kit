@@ -94,4 +94,4 @@ Refresh (`clr refresh`) passes `IsolatedModel::Specific(REFRESH_DEFAULT_MODEL)` 
 | File | Relationship |
 |------|--------------|
 | `tests/docs/feature/069_model_select_command.md` | FT-01 through FT-12 |
-| `tests/docs/cli/command/20_model_select.md` | IT-01 through IT-12 |
+| `tests/docs/cli/command/20_model_select.md` | IT-01 through IT-03 (rewritten as a retirement-stub spec by Feature 035/Task 465; superseded original design was IT-01 through IT-12) |

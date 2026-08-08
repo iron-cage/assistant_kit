@@ -1,27 +1,31 @@
 # Parameter 066: `reset::` — Edge Cases
 
+> **Narrowed scope** (Feature 035/Task 465): EC-01 through EC-10 below test `reset::` as `.model.select`'s original reset-mode selector against `~/.clr/config.toml`'s `model` key — that role is retired; `.model.select` now returns a migration-error stub unconditionally, regardless of `reset::` (see [20_model_select.md](../command/20_model_select.md)). `reset::` remains live, but exclusively as `.provider.select`'s reset-mode selector against the `provider` key — current coverage: [21_provider_select.md](../command/21_provider_select.md) (IT-05, IT-06, IT-08, IT-09), backed by `account_provider_test.rs` (`t09_provider_select_reset_preserves_model_key`, `t11_provider_select_id_and_reset_mutually_exclusive`). See [docs/cli/param/066_reset.md](../../../../docs/cli/param/066_reset.md)'s own "Narrowed scope" note. Cases below are retained for historical reference only — their cited function names no longer exist in the test suite.
+
 **Behavioral Divergence Pair:** EC-01 ↔ EC-02 — `reset::1` removes the `model` key from `~/.clr/config.toml`'s user tier — an observable file-state change reverting clr subprocess selection to `ISOLATED_DEFAULT_MODEL`; `reset::0` (default) is a no-op for reset — mode on `.model.select` is instead determined purely by `id::` presence, and no key is touched.
 
 ### Test Case Index
 
 | ID | Test | Scenario | Expected | Status |
 |----|------|----------|----------|--------|
-| EC-01 | `ec1_reset_1_removes_subprocess_model_key` | `~/.clr/config.toml` has `model = "claude-opus-4-8"` → `reset::1` | key removed from file; exit 0 | ✅ |
-| EC-02 | `ec2_reset_0_default_is_noop` | `reset::0` (default), no `id::` | no file change; mode is get (determined by `id::` absence, not by `reset::0`) | ✅ |
-| EC-03 | `ec3_reset_omitted_defaults_to_0` | `.model.select` with no `reset::` | behaves identically to `reset::0` | ✅ |
-| EC-04 | `ec4_reset_1_and_id_mutually_exclusive` | `reset::1 id::claude-opus-4-8` | exit 1 — `id:: and reset::1 are mutually exclusive` | ✅ |
-| EC-05 | `ec5_reset_1_idempotent_when_no_preference_set` | `~/.clr/config.toml` exists but has no `model` key → `reset::1` | exits 0 without error; idempotent no-op | ✅ |
-| EC-06 | `ec6_reset_1_idempotent_when_prefs_file_absent` | `~/.clr/config.toml` does not exist → `reset::1` | exits 0 without error; no file created | ✅ |
-| EC-07 | `ec7_reset_1_preserves_other_prefs_keys` | `~/.clr/config.toml` has `model` plus unrelated keys → `reset::1` | `model` removed; other keys preserved; exit 0 | ✅ |
-| EC-08 | `ec8_reset_true_false_aliases_accepted` | `reset::true` and `reset::false` | `true` behaves as `1` (removes key), `false` behaves as `0` (no-op) | ✅ |
-| EC-09 | `ec9_reset_invalid_value_exits_1` | `reset::maybe` (non-boolean) | exit 1 — invalid boolean value rejected | ✅ |
-| EC-10 | `ec10_reset_1_stdout_message` | `~/.clr/config.toml` has `model = "claude-sonnet-5"` → `reset::1` | stdout contains `model.select: (reset to default)`; exit 0 | ✅ |
+| EC-01 | `ec1_reset_1_removes_subprocess_model_key` | `~/.clr/config.toml` has `model = "claude-opus-4-8"` → `reset::1` | key removed from file; exit 0 | N/A |
+| EC-02 | `ec2_reset_0_default_is_noop` | `reset::0` (default), no `id::` | no file change; mode is get (determined by `id::` absence, not by `reset::0`) | N/A |
+| EC-03 | `ec3_reset_omitted_defaults_to_0` | `.model.select` with no `reset::` | behaves identically to `reset::0` | N/A |
+| EC-04 | `ec4_reset_1_and_id_mutually_exclusive` | `reset::1 id::claude-opus-4-8` | exit 1 — `id:: and reset::1 are mutually exclusive` | N/A |
+| EC-05 | `ec5_reset_1_idempotent_when_no_preference_set` | `~/.clr/config.toml` exists but has no `model` key → `reset::1` | exits 0 without error; idempotent no-op | N/A |
+| EC-06 | `ec6_reset_1_idempotent_when_prefs_file_absent` | `~/.clr/config.toml` does not exist → `reset::1` | exits 0 without error; no file created | N/A |
+| EC-07 | `ec7_reset_1_preserves_other_prefs_keys` | `~/.clr/config.toml` has `model` plus unrelated keys → `reset::1` | `model` removed; other keys preserved; exit 0 | N/A |
+| EC-08 | `ec8_reset_true_false_aliases_accepted` | `reset::true` and `reset::false` | `true` behaves as `1` (removes key), `false` behaves as `0` (no-op) | N/A |
+| EC-09 | `ec9_reset_invalid_value_exits_1` | `reset::maybe` (non-boolean) | exit 1 — invalid boolean value rejected | N/A |
+| EC-10 | `ec10_reset_1_stdout_message` | `~/.clr/config.toml` has `model = "claude-sonnet-5"` → `reset::1` | stdout contains `model.select: (reset to default)`; exit 0 | N/A |
 
 **Total:** 10 edge case tests
 
 ---
 
 ### EC-01: `reset::1` removes `model` — observable file-state change
+
+> Historical only — describes `.model.select`'s retired `reset::` behavior. See the Narrowed-scope note at the top of this file for `reset::`'s current coverage on `.provider.select`.
 
 - **Given:** `~/.clr/config.toml` contains `model = "claude-opus-4-8"`
 - **When:** `clp .model.select reset::1`
@@ -33,6 +37,8 @@
 
 ### EC-02: `reset::0` (default) — no-op, mode determined by `id::`
 
+> Historical only — describes `.model.select`'s retired `reset::` behavior. See the Narrowed-scope note at the top of this file for `reset::`'s current coverage on `.provider.select`.
+
 - **Given:** `~/.clr/config.toml` contains `model = "claude-opus-4-8"`
 - **When:** `clp .model.select reset::0` (no `id::`)
 - **Then:** Exits 0. `~/.clr/config.toml` is unchanged — still contains `model = "claude-opus-4-8"`. Mode is get, determined by `id::` absence, not by the `reset::0` value itself.
@@ -42,6 +48,8 @@
 ---
 
 ### EC-03: Omitted `reset::` defaults to `0`
+
+> Historical only — describes `.model.select`'s retired `reset::` behavior. See the Narrowed-scope note at the top of this file for `reset::`'s current coverage on `.provider.select`.
 
 - **Given:** `~/.clr/config.toml` contains `model = "claude-opus-4-8"`
 - **When:** `clp .model.select` (no `reset::` provided, no `id::`)
@@ -53,6 +61,8 @@
 
 ### EC-04: `reset::1 id::VALUE` together — mutually exclusive, rejected
 
+> Historical only — describes `.model.select`'s retired `reset::` behavior. See the Narrowed-scope note at the top of this file for `reset::`'s current coverage on `.provider.select`.
+
 - **Given:** Any `~/.clr/config.toml` state
 - **When:** `clp .model.select reset::1 id::claude-opus-4-8`
 - **Then:** Exits 1. stderr contains `id:: and reset::1 are mutually exclusive`. `~/.clr/config.toml` is unchanged.
@@ -62,6 +72,8 @@
 ---
 
 ### EC-05: `reset::1` idempotent when no preference is currently set
+
+> Historical only — describes `.model.select`'s retired `reset::` behavior. See the Narrowed-scope note at the top of this file for `reset::`'s current coverage on `.provider.select`.
 
 - **Given:** `~/.clr/config.toml` exists and contains `other_key = "value"` — no `model` key present.
 - **When:** `clp .model.select reset::1`
@@ -73,6 +85,8 @@
 
 ### EC-06: `reset::1` idempotent when `config.toml` file is absent
 
+> Historical only — describes `.model.select`'s retired `reset::` behavior. See the Narrowed-scope note at the top of this file for `reset::`'s current coverage on `.provider.select`.
+
 - **Given:** `~/.clr/config.toml` does not exist on disk.
 - **When:** `clp .model.select reset::1`
 - **Then:** Exits 0 without error. No file is created. stdout contains `model.select: (reset to default)`.
@@ -83,6 +97,8 @@
 
 ### EC-07: `reset::1` preserves other keys in `config.toml`
 
+> Historical only — describes `.model.select`'s retired `reset::` behavior. See the Narrowed-scope note at the top of this file for `reset::`'s current coverage on `.provider.select`.
+
 - **Given:** `~/.clr/config.toml` contains `model = "claude-opus-4-8"` and `other_key = "unrelated_value"`
 - **When:** `clp .model.select reset::1`
 - **Then:** Exits 0. `~/.clr/config.toml` contains `other_key = "unrelated_value"` only — `model` removed, all other keys preserved verbatim.
@@ -92,6 +108,8 @@
 ---
 
 ### EC-08: `true`/`false` boolean aliases accepted
+
+> Historical only — describes `.model.select`'s retired `reset::` behavior. See the Narrowed-scope note at the top of this file for `reset::`'s current coverage on `.provider.select`.
 
 - **Given:** `~/.clr/config.toml` contains `model = "claude-opus-4-8"`
 - **When:**
@@ -106,6 +124,8 @@
 
 ### EC-09: Invalid boolean value rejected
 
+> Historical only — describes `.model.select`'s retired `reset::` behavior. See the Narrowed-scope note at the top of this file for `reset::`'s current coverage on `.provider.select`.
+
 - **Given:** Any `~/.clr/config.toml` state.
 - **When:** `clp .model.select reset::maybe`
 - **Then:** Exits 1. stderr indicates `maybe` is not a valid boolean value for `reset::`.
@@ -115,6 +135,8 @@
 ---
 
 ### EC-10: `reset::1` stdout confirmation message
+
+> Historical only — describes `.model.select`'s retired `reset::` behavior. See the Narrowed-scope note at the top of this file for `reset::`'s current coverage on `.provider.select`.
 
 - **Given:** `~/.clr/config.toml` contains `model = "claude-sonnet-5"`
 - **When:** `clp .model.select reset::1`

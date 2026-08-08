@@ -185,14 +185,14 @@ fn t08_provider_select_set_kimi_persists_and_confirms()
 /// T09 (AC-11): `.provider.select reset::1` after a selection → exit 0,
 /// prints `provider.select: anthropic (reset to default)`, removes the
 /// `provider` key, and preserves an unrelated pre-set `model` key (written
-/// via `.model.select`, not this command).
+/// via `.model scope::subprocess model::VALUE`, not this command).
 #[ test ]
 fn t09_provider_select_reset_preserves_model_key()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
 
-  let model_out = run_cs_with_env( &[ ".model.select", "id::claude-opus-4-8" ], &[ ( "HOME", home ) ] );
+  let model_out = run_cs_with_env( &[ ".model", "scope::subprocess", "model::claude-opus-4-8" ], &[ ( "HOME", home ) ] );
   assert_exit( &model_out, 0 );
   let provider_out = run_cs_with_env( &[ ".provider.select", "id::kimi" ], &[ ( "HOME", home ) ] );
   assert_exit( &provider_out, 0 );
@@ -206,7 +206,7 @@ fn t09_provider_select_reset_preserves_model_key()
   assert!( !config.contains( "provider" ),
     "T09: provider key must be removed, got:\n{config}" );
   assert!( config.contains( "claude-opus-4-8" ),
-    "T09: model key from .model.select must be preserved, got:\n{config}" );
+    "T09: model key from .model scope::subprocess must be preserved, got:\n{config}" );
 }
 
 /// T10 (AC-09): `.provider.select id::` (empty) → exit 1, stderr names

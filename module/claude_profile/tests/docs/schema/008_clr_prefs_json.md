@@ -1,6 +1,6 @@
 # Schema 008: CLR Preferences — `~/.clr/prefs.json`
 
-> Deprecated: task 410 retired `~/.clr/prefs.json` — `.model.select` now stores the subprocess model preference as the `model` key in `~/.clr/config.toml`. Current CLI-level coverage lives in [tests/docs/cli/command/20_model_select.md](../cli/command/20_model_select.md); schema-level coverage for the new format lives in `claude_core/docs/api/002_toml_io.md`. Cases below are suspended per `l1_imp_surface.rulebook.md § Spec : NA Case Protocol` — preserved for historical reference only.
+> Deprecated: task 410 retired `~/.clr/prefs.json` — the subprocess model preference is now stored as the `model` key in `~/.clr/config.toml`, written/read via `clp .model scope::subprocess` (Feature 035; formerly `.model.select`, retired). Current CLI-level coverage lives in [tests/docs/cli/command/20_model_select.md](../cli/command/20_model_select.md); schema-level coverage for the new format lives in `claude_core/docs/api/002_toml_io.md`. Cases below are suspended per `l1_imp_surface.rulebook.md § Spec : NA Case Protocol` — preserved for historical reference only.
 
 SC test cases for `docs/schema/008_clr_prefs_json.md`. Verifies the `prefs.json`
 write contract: `subprocess_model` field write/read semantics, auto-creation on

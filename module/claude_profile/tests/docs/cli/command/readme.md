@@ -31,5 +31,5 @@
 | 17_model.md | Test cases for `.model` command |
 | 18_account_unclaim.md | Removed — `.account.unclaim` command fully removed (Feature 037); tests live in `03_accounts.md` |
 | 19_models.md | Test cases for `.models` command |
-| 20_model_select.md | Test cases for `.model.select` command |
+| 20_model_select.md | DEPRECATED — `.model.select` reduced to a migration-error stub, replaced by `.model scope::subprocess` (Feature 035/Task 465); historical test cases retained |
 | 21_provider_select.md | Test cases for `.provider.select` command |

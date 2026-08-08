@@ -11,8 +11,8 @@
 //! | dot01 | `dot01_dot_and_help_byte_identical`     | `.` and `.help` stdout byte-identical         | P   |
 //! | dot02 | `dot02_dot_exits_0`                     | `.` exits 0                                   | P   |
 //! | dot03 | `dot03_dot_hidden_from_listing`         | no bare `.` command row in listing            | P   |
-//! | dot04 | `dot04_all_visible_commands_present`    | 15 commands present; removed commands absent  | P   |
-//! | dot05 | `dot05_exactly_fifteen_command_rows`    | exactly 15 lines starting with `"    ."`      | P   |
+//! | dot04 | `dot04_all_visible_commands_present`    | 14 commands present; removed commands absent  | P   |
+//! | dot05 | `dot05_exactly_fourteen_command_rows`   | exactly 14 lines starting with `"    ."`      | P   |
 //! | dot06 | `dot06_usage_line_present`              | stdout contains `"Usage: clp <command>"`      | P   |
 //! | dot07 | `dot07_unknown_param_ignored`           | `. foo::bar` output identical to bare `.`     | P   |
 //! | dot08 | `dot08_output_stable_across_invocations`| 3 invocations all byte-identical              | P   |
@@ -20,6 +20,7 @@
 //! | dot10 | `dot10_no_per_command_param_syntax`     | no `[`/`]` in command rows                   | P   |
 //! | dot11 | `dot11_options_section_hints`           | format/dry/name hints in Options section      | P   |
 //! | dot12 | `dot12_no_ansi_in_subprocess_output`    | zero ESC (`0x1b`) bytes in stdout             | P   |
+//! | dot13 | `dot13_model_select_hidden_from_listing`| `.model.select` absent (hidden, still dispatchable) | P   |
 //!
 //! ## Maintenance: adding or removing a command
 //!
@@ -47,6 +48,14 @@
 //! name-level presence was unverified for the two new commands.  Fix (TSK-364): inserted
 //! `".models"` and `".model.select"` after `".model"` in the `visible` array.  The
 //! protocol now lists FOUR update sites (step 3, Test Matrix, was previously absent).
+//!
+//! **2026-08-07 (task 465):** `.model.select` retired to a migration-error stub and
+//! hidden from the listing via `hidden_from_list(true)` (Feature 035, AC-26) — still
+//! registered and dispatchable, but no longer a distinct `.help`/`.` row now that
+//! `.model scope::subprocess` absorbs its functionality. Removed from dot04's `visible`
+//! array; dot05's count dropped 15→14 (renamed `dot05_exactly_fourteen_command_rows`);
+//! added dedicated `dot13_model_select_hidden_from_listing` mirroring dot03's precedent
+//! for the bare `.` command (hidden-but-dispatchable, not truly unregistered).
 
 use crate::cli_runner::{ run_cs, stdout, assert_exit };
 
@@ -88,7 +97,7 @@ fn dot03_dot_hidden_from_listing()
   );
 }
 
-// ── dot04 — all 15 visible commands present; truly-absent names absent ────────
+// ── dot04 — all 14 visible commands present; truly-absent names absent ────────
 
 #[ test ]
 fn dot04_all_visible_commands_present()
@@ -110,7 +119,6 @@ fn dot04_all_visible_commands_present()
     ".usage",
     ".model",
     ".models",
-    ".model.select",
     ".provider.select",
   ];
   for name in &visible
@@ -124,15 +132,15 @@ fn dot04_all_visible_commands_present()
   assert!( !text.contains( ".token.status"   ), ".token.status must not appear (removed)" );
 }
 
-// ── dot05 — exactly 15 command rows in listing ────────────────────────────────
+// ── dot05 — exactly 14 command rows in listing ────────────────────────────────
 
 #[ test ]
-fn dot05_exactly_fifteen_command_rows()
+fn dot05_exactly_fourteen_command_rows()
 {
   let out   = run_cs( &[ "." ] );
   let text  = stdout( &out );
   let count = text.lines().filter( |l| l.starts_with( "    ." ) ).count();
-  assert_eq!( count, 15, "expected 15 command rows starting with '    .', got {count}" );
+  assert_eq!( count, 14, "expected 14 command rows starting with '    .', got {count}" );
 }
 
 // ── dot06 — usage line includes `<command>` syntax ───────────────────────────
@@ -229,5 +237,22 @@ fn dot12_no_ansi_in_subprocess_output()
   assert!(
     !out.stdout.contains( &0x1b_u8 ),
     "subprocess stdout must not contain ESC bytes (ANSI suppressed in non-TTY)",
+  );
+}
+
+// ── dot13 — `.model.select` hidden from listing (dispatchable but unlisted) ──
+
+#[ test ]
+fn dot13_model_select_hidden_from_listing()
+{
+  // `.model.select` remains registered and dispatchable (its stub still returns a
+  // migration error at runtime — see model_select_test.rs) but is hidden from the
+  // `.help`/`.` listing via `hidden_from_list(true)` per AC-26 (Feature 035): `.model`
+  // is the single listed entry now that it absorbs this functionality via `scope::`.
+  let out  = run_cs( &[ "." ] );
+  let text = stdout( &out );
+  assert!(
+    !text.contains( ".model.select" ),
+    "`.model.select` must not appear in the listing (hidden_from_list, AC-26)",
   );
 }

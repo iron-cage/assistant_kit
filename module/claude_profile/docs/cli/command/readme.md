@@ -14,7 +14,7 @@
 | [008_models.md](008_models.md) | Models discovery: `.models` |
 | [009_provider.md](009_provider.md) | Provider namespace: `.provider.select` |
 
-**Total:** 21 commands (14 visible + 2 hidden + 1 DEPRECATED: `.account.rotate` (Feature 038) + 4 REMOVED: `.account.assign`, `.account.unclaim`, `.token.status`, `.model.select` (Feature 035))
+**Total:** 21 commands (15 visible + 1 hidden: `.` + 1 DEPRECATED: `.account.rotate` (Feature 038) + 4 REMOVED: `.account.assign`, `.account.unclaim`, `.token.status`, `.model.select` (Feature 035))
 
 ### All Commands
 

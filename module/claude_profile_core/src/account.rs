@@ -870,6 +870,28 @@ pub fn get_session_effort( paths : &ClaudePaths ) -> Option< String >
   parse_string_field( &content, "effortLevel" )
 }
 
+/// Remove the session effort level from `~/.claude/settings.json`.
+///
+/// Performs a read-modify-write preserving all existing JSON keys (same pattern as
+/// `set_session_effort()`). Creates `~/.claude/` if the directory is absent. No-op,
+/// not an error, when `effortLevel` is already absent. Any I/O failure is silently
+/// ignored (best-effort policy).
+///
+/// Called by `.model reset_effort_level::1` on `scope::session` (Feature 035).
+#[ inline ]
+pub fn remove_session_effort( paths : &ClaudePaths )
+{
+  let path = paths.settings_file();
+  if let Some( parent ) = path.parent() { let _ = std::fs::create_dir_all( parent ); }
+  let mut live = std::fs::read_to_string( &path )
+    .ok()
+    .and_then( |s| serde_json::from_str::< serde_json::Value >( &s ).ok() )
+    .unwrap_or_else( || serde_json::json!( {} ) );
+  let Some( obj ) = live.as_object_mut() else { return; };
+  obj.remove( "effortLevel" );
+  let _ = std::fs::write( path, serde_json::to_string_pretty( &live ).map( |s| s + "\n" ).unwrap_or_default() );
+}
+
 /// Validate that a named account can be deleted (name valid + file exists).
 ///
 /// Called by both `delete` and the CLI dry-run path so that dry-run

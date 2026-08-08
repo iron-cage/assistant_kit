@@ -95,6 +95,10 @@
 //! | `ft03_073_switch_to_redirect_non_kimi_provider_omits_tier_env_vars` | Feature 073/AC-08: a redirect account not tagged inference_provider:"kimi" gets only the original 3 env vars, none of the 7 Kimi-tier additions |
 //! | `ft04_073_switch_from_kimi_to_anthropic_clears_all_tier_env_vars` | Feature 073/AC-07: switching from a kimi redirect account to an anthropic account removes all 10 env vars, not just the original 3 |
 //! | `ft05_073_switch_from_kimi_to_other_redirect_clears_stale_tier_env_vars` | Feature 073/AC-07: switching from a kimi redirect account to a different, non-kimi redirect account also clears the 7 stale Kimi-tier vars |
+//! | `it_remove_session_effort_removes_key_preserves_others` | Task 464/T01: remove_session_effort() removes effortLevel, preserves other keys |
+//! | `it_remove_session_effort_noop_when_key_absent` | Task 464/T02: remove_session_effort() is a no-op when effortLevel already absent |
+//! | `ft_remove_session_effort_creates_file_when_settings_absent` | Task 464/T03: remove_session_effort() creates settings.json as {} when file absent |
+//! | `ft_remove_session_effort_creates_dir_when_claude_absent` | Task 464/T04: remove_session_effort() creates ~/.claude/ dir + file when dir absent |
 
 use tempfile::TempDir;
 use claude_profile_core::account;
@@ -708,6 +712,42 @@ fn it_set_session_model_writes_and_removes()
   account::set_session_model( &paths, None );
   let content = std::fs::read_to_string( &settings ).unwrap();
   assert!( !content.contains( "\"model\"" ), "set_session_model None must remove model key; got: {content}" );
+}
+
+/// Task 464 (T01): `remove_session_effort()` removes exactly the `effortLevel` key
+/// from `~/.claude/settings.json`, preserving every other key already present —
+/// the removal counterpart `set_session_effort()` lacked (unlike `set_session_model()`,
+/// which already supports removal via `None`).
+#[ test ]
+fn it_remove_session_effort_removes_key_preserves_others()
+{
+  let tmp   = TempDir::new().unwrap();
+  let paths = ClaudePaths::with_home( tmp.path() );
+  std::fs::create_dir_all( paths.base() ).unwrap();
+  let settings = paths.settings_file();
+
+  std::fs::write( &settings, r#"{"effortLevel":"high","model":"opus"}"# ).unwrap();
+  account::remove_session_effort( &paths );
+  let content = std::fs::read_to_string( &settings ).unwrap();
+  assert!( !content.contains( "effortLevel" ), "remove_session_effort must remove the key; got: {content}" );
+  assert!( content.contains( "\"opus\"" ), "remove_session_effort must preserve other keys; got: {content}" );
+}
+
+/// Task 464 (T02): `remove_session_effort()` is a no-op, not an error, when
+/// `effortLevel` is already absent — mirrors `set_session_effort()`'s best-effort policy.
+#[ test ]
+fn it_remove_session_effort_noop_when_key_absent()
+{
+  let tmp   = TempDir::new().unwrap();
+  let paths = ClaudePaths::with_home( tmp.path() );
+  std::fs::create_dir_all( paths.base() ).unwrap();
+  let settings = paths.settings_file();
+
+  std::fs::write( &settings, r#"{"model":"opus"}"# ).unwrap();
+  account::remove_session_effort( &paths );
+  let content = std::fs::read_to_string( &settings ).unwrap();
+  assert!( content.contains( "\"opus\"" ), "remove_session_effort no-op must preserve existing keys; got: {content}" );
+  assert!( !content.contains( "effortLevel" ), "remove_session_effort no-op must not introduce the key; got: {content}" );
 }
 
 // BUG-341 task/bug/341_orphaned_marker_after_cross_machine_delete.md — this test's dual-HOSTNAME
@@ -1367,6 +1407,41 @@ fn ft11_set_session_model_creates_file_when_absent()
     content.contains( "\"model\"" ) && content.contains( "claude-opus-4-6" ),
     "created settings.json must contain the requested model, got: {content}",
   );
+}
+
+/// Task 464 (T03): `remove_session_effort()` creates `settings.json` when the file
+/// is absent but `~/.claude/` exists — mirrors FT-11's `set_session_model` precedent.
+#[ test ]
+fn ft_remove_session_effort_creates_file_when_settings_absent()
+{
+  let tmp = TempDir::new().unwrap();
+  let dot = tmp.path().join( ".claude" );
+  std::fs::create_dir_all( &dot ).unwrap();
+  // settings.json intentionally absent.
+
+  let paths = ClaudePaths::with_home( tmp.path() );
+  claude_profile_core::account::remove_session_effort( &paths );
+
+  let settings = dot.join( "settings.json" );
+  assert!( settings.exists(), "remove_session_effort must create settings.json when absent" );
+  let content = std::fs::read_to_string( &settings ).expect( "settings.json must be readable" );
+  assert!( content.trim() == "{}", "created settings.json must be an empty object, got: {content}" );
+}
+
+/// Task 464 (T04, mirrors BUG-258's fix): `remove_session_effort()` creates
+/// `~/.claude/` itself when the directory is absent, then behaves as the settings-absent case.
+#[ test ]
+fn ft_remove_session_effort_creates_dir_when_claude_absent()
+{
+  let tmp = TempDir::new().unwrap();
+  let dot = tmp.path().join( ".claude" );
+  assert!( !dot.exists(), "precondition: .claude/ must be absent" );
+
+  let paths = ClaudePaths::with_home( tmp.path() );
+  claude_profile_core::account::remove_session_effort( &paths );
+
+  let settings = dot.join( "settings.json" );
+  assert!( settings.exists(), "remove_session_effort must create .claude/ and settings.json when both absent" );
 }
 
 /// MRE for BUG-258: `set_session_model()` silently failed when `~/.claude/` dir absent.
