@@ -71,7 +71,7 @@ clp .models offline::1 format::text
 - Live mode requires an active account credential. Without credentials, exit 1 with a message suggesting `offline::1`.
 - Live mode shows invite-only models accessible to the token-holder's account (e.g., `claude-fable-5` if the account has access). Offline mode shows only the static workspace catalog.
 - `name::` on `.models` filters on the model `id` field, not `display_name`.
-- `.models` is read-only; use `.model.select id::VALUE` to pin a model for clr subprocesses.
+- `.models` is read-only; use `.model scope::subprocess model::VALUE` to pin a model for clr subprocesses.
 
 ### Referenced Features
 

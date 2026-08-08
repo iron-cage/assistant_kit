@@ -470,6 +470,7 @@ edges:
   # ── feature/035: Dedicated Model Get/Set Command ──────────────────────────
 
   - {from: feature/035, to: feature/034, label: ".model shares set_session_model() and map_model_shorthand() extracted from validate_set_model()"}
+  - {from: feature/035, to: feature/069, label: "supersedes: absorbs .model.select's command name, id::/reset:: params (as model::/reset_model::), and dispatch function via scope::subprocess"}
 
   # ── feature/036: Account Ownership ────────────────────────────────────────
 
@@ -612,13 +613,13 @@ edges:
   # ── feature/068: Models List Command ───────────────────────────────────────
 
   - {from: feature/068, to: feature/035, label: "complementary — .model manages interactive session model; .models discovers live/offline catalog"}
-  - {from: feature/068, to: feature/069, label: ".model.select — uses model IDs discovered here to set subprocess preference"}
+  - {from: feature/068, to: feature/069, label: "historical — .model.select (retired) used model IDs discovered here; live path is .model scope::subprocess model:: (Feature 035)"}
   - {from: feature/068, to: feature/026, label: "imodel:: subprocess model selection is a separate mechanism from .models discovery"}
 
   # ── feature/069: Model Select Command ──────────────────────────────────────
 
   - {from: feature/069, to: feature/068, label: ".models — discover full model IDs to pass to id::"}
-  - {from: feature/069, to: feature/035, label: "complementary — manages settings.json model (interactive session)"}
+  - {from: feature/069, to: feature/035, label: "predecessor: .model.select's id::/reset:: params, command name, and dispatch function merged into .model via scope::subprocess"}
   - {from: feature/069, to: feature/026, label: "imodel:: — per-invocation touch/refresh subprocess model (intentionally separate)"}
 
   # ── feature/070: Account Claim And Reservation Control ─────────────────────

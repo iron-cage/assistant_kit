@@ -74,7 +74,7 @@ clp .provider.select id::kimi reset::1
 - The selected provider is a global config scalar, not a filter — exactly one provider is active at a time, and only this command changes it. No other command derives or falls back across providers.
 - Rotation (`.usage rotate::1` and auto-rotation) is constrained by the selected provider: only accounts whose `inference_provider` field matches the current selection are eligible (Gate 10, [algorithm/004](../../algorithm/004_eligibility_gates.md)).
 - Default is `anthropic` — matches the default value new accounts receive when `inference_provider::` is omitted at `.account.save` time (see [param 073](../param/073_inference_provider.md)).
-- Backing store (`~/.clr/config.toml`'s `provider` key) is independent of `.model.select`'s `model` key — both are short-form keys in the same tiered flat-TOML file, written and read via the same `claude_core::toml_io` primitive, but never interact.
+- Backing store (`~/.clr/config.toml`'s `provider` key) is independent of `.model`'s `model`/`effort` keys (`scope::subprocess`, Feature 035) — all are short-form keys in the same tiered flat-TOML file, written and read via the same `claude_core::toml_io` primitive, but never interact.
 - `.provider.select` appears in the "Status & info" group of `clp .help`.
 
 ### Referenced Features

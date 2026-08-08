@@ -58,7 +58,7 @@ All `clp` CLI parameters with type, default, and command coverage.
 | [052_role.md](052_role.md) | `role::` (metadata label) — free-text role label written to `{name}.json` at account save |
 | [053_for.md](053_for.md) | `for::` — **REMOVED** (Feature 064); absorbed into `active::` value |
 | [054_set_model.md](054_set_model.md) | `set_model::` — explicit Claude Code session model write to `settings.json` |
-| [055_set.md](055_set.md) | `set::` — model shorthand to write on `.model`; absent = get mode |
+| [055_set.md](055_set.md) | `set::` — **RETIRED** (Feature 035); replaced by `model::` (076) on the unified `.model` |
 | [056_unclaim.md](056_unclaim.md) | `unclaim::` — **REMOVED** (Feature 064); replaced by `owner::0` sentinel |
 | [057_assign.md](057_assign.md) | `assign::` — **REMOVED** (Feature 064); replaced by `assignee::USER@MACHINE name::X` |
 | [058_force.md](058_force.md) | `force::` — bypass G5–G8 ownership enforcement on mutation commands |
@@ -67,9 +67,9 @@ All `clp` CLI parameters with type, default, and command coverage.
 | [061_who.md](061_who.md) | `who::` — sessions table visibility in `.usage` (auto: shown when >1 active marker) |
 | [062_owner.md](062_owner.md) | `owner::` — ownership set (`USER@MACHINE`) or release (`owner::0`); batch via comma-list `name::` |
 | [063_assignee.md](063_assignee.md) | `assignee::` — `USER@MACHINE` (or sentinel `0` = current machine) mutation param: assign/unassign active-account marker (Feature 065) |
-| [064_id.md](064_id.md) | `id::` — full model ID to pin as subprocess model via `~/.clr/config.toml`; activates set mode on `.model.select` |
+| [064_id.md](064_id.md) | `id::` — provider name to select via `~/.clr/config.toml`; activates set mode on `.provider.select` (narrowed, Feature 035 — formerly also pinned `.model.select`'s subprocess model) |
 | [065_offline.md](065_offline.md) | `offline::` — use static embedded model catalog instead of live `GET /v1/models`; no credentials required |
-| [066_reset.md](066_reset.md) | `reset::` — remove `model` from `~/.clr/config.toml`'s user tier; idempotent; mutually exclusive with `id::` on `.model.select` |
+| [066_reset.md](066_reset.md) | `reset::` — remove `provider` from `~/.clr/config.toml`'s user tier; idempotent; mutually exclusive with `id::` on `.provider.select` (narrowed, Feature 035 — formerly also reset `.model.select`'s subprocess model) |
 | [067_lock.md](067_lock.md) | `lock::` — set/clear `claim_lock` on an account; ungated write; batch via comma-list `name::` |
 | [068_reserve.md](068_reserve.md) | `reserve::` — set/clear `reserve` on an account; ungated write; batch via comma-list `name::` |
 | [069_backend.md](069_backend.md) | `backend::` — selects `anthropic` (OAuth) or `redirect` (foreign endpoint) backend at account save time |
@@ -78,8 +78,13 @@ All `clp` CLI parameters with type, default, and command coverage.
 | [072_redirect_model.md](072_redirect_model.md) | `redirect_model::` — redirect target's own model identifier; redirect-only |
 | [073_inference_provider.md](073_inference_provider.md) | `inference_provider::` — inference provider label written to `{name}.json` at account save; governs Gate 10 rotation grouping |
 | [074_preset.md](074_preset.md) | `preset::` — named provider preset pre-filling `backend::`/`base_url::`/`inference_provider::`; only `kimi` recognized today |
+| [075_scope.md](075_scope.md) | `scope::` — backing-store router on `.model`: `session` (`~/.claude/settings.json`) or `subprocess` (`~/.clr/config.toml`) |
+| [076_model_value.md](076_model_value.md) | `model::` — model to write for the selected `scope::` on `.model`; replaces retired `set::` and `.model.select`'s `id::` |
+| [077_effort_level.md](077_effort_level.md) | `effort_level::` — effort to write for the selected `scope::` on `.model`; new direct control, deliberately distinct from the unrelated ephemeral `effort::` (036) |
+| [078_reset_model.md](078_reset_model.md) | `reset_model::` — remove the model key for the selected `scope::` on `.model`; replaces `.model.select`'s `reset::` for the model concept |
+| [079_reset_effort_level.md](079_reset_effort_level.md) | `reset_effort_level::` — remove the effort key for the selected `scope::` on `.model`; new, no prior equivalent on either store |
 
-**Total:** 69 active parameters (Feature 023 deprecated: param 032 `next::` REMOVED, absorbed into feature 020's `sort::`; Feature 065: param 013 `active::` REMOVED; param 063 `assignee::` added as replacement; Feature 064: params 053 `for::`, 056 `unclaim::`, 057 `assign::` REMOVED; param 062 `owner::` extended with `owner::0` sentinel + batch; Feature 070: params 067 `lock::`, 068 `reserve::` added; Feature 071: params 069 `backend::`, 070 `base_url::`, 071 `api_key::`, 072 `redirect_model::` added; Feature 072: param 073 `inference_provider::` added; Feature 073: param 074 `preset::` added)
+**Total:** 73 active parameters (Feature 023 deprecated: param 032 `next::` REMOVED, absorbed into feature 020's `sort::`; Feature 065: param 013 `active::` REMOVED; param 063 `assignee::` added as replacement; Feature 064: params 053 `for::`, 056 `unclaim::`, 057 `assign::` REMOVED; param 062 `owner::` extended with `owner::0` sentinel + batch; Feature 070: params 067 `lock::`, 068 `reserve::` added; Feature 071: params 069 `backend::`, 070 `base_url::`, 071 `api_key::`, 072 `redirect_model::` added; Feature 072: param 073 `inference_provider::` added; Feature 073: param 074 `preset::` added; Feature 035: param 055 `set::` RETIRED — `.model`/`.model.select` merged; params 064 `id::`/066 `reset::` narrowed to `.provider.select` only; params 075 `scope::`, 076 `model::`, 077 `effort_level::`, 078 `reset_model::`, 079 `reset_effort_level::` added)
 
 ### Overview Table
 
@@ -139,7 +144,7 @@ All `clp` CLI parameters with type, default, and command coverage.
 | 52 | `role::` (metadata label) | `string` | `""` | Any string | User-defined role label at account save | 1 cmd |
 | 53 | `for::` | — | — | — | REMOVED (Feature 064) — absorbed into `active::` value (Feature 065: `active::` also REMOVED — use `assignee::`) | — |
 | 54 | `set_model::` | `enum` | *(omit)* | `opus`, `sonnet`, `haiku`, `default` | Explicit session model write to `settings.json` | 2 cmds |
-| 55 | `set::` | `enum` | *(omit)* | `opus`, `sonnet`, `haiku`, `default` | Mode selector on `.model`: absent = get, present = set | 1 cmd |
+| 55 | `set::` | — | — | — | RETIRED (Feature 035) — use `model::` (76) on the unified `.model` | — |
 | 56 | `unclaim::` | — | — | — | REMOVED (Feature 064) — use `owner::0` | — |
 | 57 | `assign::` | — | — | — | REMOVED (Feature 064) — use `assignee::USER@MACHINE name::X` | — |
 | 58 | `force::` | `bool` | `0` | `0`, `1`, `false`, `true` | Bypass G5–G8 ownership enforcement on mutation commands | `.account.use`, `.account.delete`, `.account.relogin`, `.accounts`, `.usage` |
@@ -148,9 +153,9 @@ All `clp` CLI parameters with type, default, and command coverage.
 | 61 | `who::` | `bool` | `auto` | `0` (hide), `1` (show); omit = auto | Sessions table visibility in `.usage` output | `.usage` |
 | 62 | `owner::` | `string` | *(omit)* | `USER@MACHINE`, `0` (release) | Set ownership (`USER@MACHINE`) or release (`0`); batch via comma-list `name::` | `.accounts`, `.usage` |
 | 63 | `assignee::` | `string` | *(omit)* | `USER@MACHINE`, `0` (current machine) | Assign/unassign active-account marker; `0` sentinel expands to `$USER@$HOSTNAME` (Feature 065) | `.accounts`, `.usage` |
-| 64 | `id::` | `string` | *(omit)* | Any non-empty model ID or provider name string | Pin subprocess model, or select global inference provider, in `~/.clr/config.toml`; activates set mode when present | `.model.select`, `.provider.select` |
+| 64 | `id::` | `string` | *(omit)* | Any non-empty provider name string | Select global inference provider in `~/.clr/config.toml`; activates set mode when present (narrowed, Feature 035) | `.provider.select` |
 | 65 | `offline::` | `bool` | `0` | `0`, `1`, `false`, `true` | Use static embedded model catalog instead of live API; no network call made | `.models` |
-| 66 | `reset::` | `bool` | `0` | `0`, `1`, `false`, `true` | Remove `model`/`provider` from `~/.clr/config.toml`'s user tier; idempotent; mutually exclusive with `id::` | `.model.select`, `.provider.select` |
+| 66 | `reset::` | `bool` | `0` | `0`, `1`, `false`, `true` | Remove `provider` from `~/.clr/config.toml`'s user tier; idempotent; mutually exclusive with `id::` (narrowed, Feature 035) | `.provider.select` |
 | 67 | `lock::` | `bool` | *(omit)* | `0`, `1`, `false`, `true` | Set/clear `claim_lock`; ungated write; batch via comma-list `name::` | `.accounts`, `.usage` |
 | 68 | `reserve::` | `bool` | *(omit)* | `0`, `1`, `false`, `true` | Set/clear `reserve`; ungated write; batch via comma-list `name::` | `.accounts`, `.usage` |
 | 69 | `backend::` | [`AccountBackend`](../type/005_account_backend.md) (`enum`) | `anthropic` | `anthropic`, `redirect` | Selects OAuth flow or foreign-endpoint redirect at account save time | `.account.save` |
@@ -159,8 +164,13 @@ All `clp` CLI parameters with type, default, and command coverage.
 | 72 | `redirect_model::` | `string` | *(omit; required when `backend::redirect`)* | Non-empty string | Redirect target's own model identifier | `.account.save` |
 | 73 | `inference_provider::` | `string` | *(omit; field absent — reads as `"anthropic"`)* | Any non-empty string | Inference provider label at account save; governs Gate 10 rotation grouping | `.account.save` |
 | 74 | `preset::` | `string` | *(omit)* | `kimi` (only recognized value) | Named provider preset pre-filling `backend::`/`base_url::`/`inference_provider::` | `.account.save` |
+| 75 | `scope::` | `enum` | `session` | `session`, `subprocess` | Backing-store router — every other parameter on the same `.model` call applies to this store | `.model` |
+| 76 | `model::` | `string` | *(omit)* | Scope-dependent — see [076_model_value.md](076_model_value.md) | Write the model key for the selected `scope::` | `.model` |
+| 77 | `effort_level::` | `string` | *(omit)* | Scope-dependent — see [077_effort_level.md](077_effort_level.md) | Write the effort key for the selected `scope::` | `.model` |
+| 78 | `reset_model::` | `bool` | `0` | `0`, `1`, `false`, `true` | Remove the model key for the selected `scope::`; mutually exclusive with `model::` | `.model` |
+| 79 | `reset_effort_level::` | `bool` | `0` | `0`, `1`, `false`, `true` | Remove the effort key for the selected `scope::`; mutually exclusive with `effort_level::` | `.model` |
 
-*Param 1 = cross-command account selector (no formal group); params 48, 52, 73 = Group 006 Account Targeting; params 49–51 = ungrouped (`.account.renewal`-specific); param 53 = ungrouped (`.account.assign`-specific); param 55 = ungrouped (`.model`-specific); param 56 = REMOVED; param 2 = Output Control group; params 5–18, 28–31 = Field Presence group; params 19–23, 34–36, 54, 60 = Fetch Behavior group; param 24 = ungrouped; params 25–27, 32 = Sort Control group; params 33, 37–47 = Display Control group (contains both display-toggle params and pipeline-coupled request-constraint row filters — see Pipeline Stage attribute in each param file); params 64, 66 = ungrouped (`.model.select`/`.provider.select`-specific); param 65 = ungrouped (`.models`-specific); params 69–72, 74 = Group 007 Redirect Backend Config*
+*Param 1 = cross-command account selector (no formal group); params 48, 52, 73 = Group 006 Account Targeting; params 49–51 = ungrouped (`.account.renewal`-specific); param 53 = ungrouped (`.account.assign`-specific); param 55 = RETIRED (Feature 035, see row above); param 2 = Output Control group; params 5–18, 28–31 = Field Presence group; params 19–23, 34–36, 54, 60 = Fetch Behavior group; param 24 = ungrouped; params 25–27, 32 = Sort Control group; params 33, 37–47 = Display Control group (contains both display-toggle params and pipeline-coupled request-constraint row filters — see Pipeline Stage attribute in each param file); params 64, 66 = ungrouped (`.provider.select`-specific, narrowed Feature 035); param 65 = ungrouped (`.models`-specific); params 69–72, 74 = Group 007 Redirect Backend Config; params 75–79 = ungrouped (`.model`-specific, Feature 035)*
 
 ### See Also
 
