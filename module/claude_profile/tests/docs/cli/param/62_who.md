@@ -80,7 +80,7 @@ See [param/061_who.md](../../../../docs/cli/param/061_who.md) for specification.
 - **When:** `clp .usage who::true`
 - **Then:** Exits 1. `who::` is registered as `Kind::Integer`; the unilang routing layer calls `"true".parse::<i64>()` which fails before `parse_usage_params` is reached. Contrast: `Kind::String` params (e.g. `only_next::`) pass "true" as `Value::String` and `parse_int_flag` maps it to `Ok(1)`.
 - **Exit:** 1
-- **Source fn:** `it256_who_true_rejected_kind_integer` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it256_who_true_rejected_kind_integer` (in `usage_solo_test.rs`)
 - **Source:** [param/061_who.md](../../../../docs/cli/param/061_who.md)
 
 ---
@@ -91,5 +91,5 @@ See [param/061_who.md](../../../../docs/cli/param/061_who.md) for specification.
 - **When:** `clp .usage who::2`
 - **Then:** Exits 1. `parse_int_flag` rejects integers outside `{0, 1}`.
 - **Exit:** 1
-- **Source fn:** `ec7_who_rejects_integer_two` (in `src/usage/params.rs`)
+- **Source fn:** `ec7_who_rejects_integer_two` (in `params_tests.rs`)
 - **Source:** [param/061_who.md](../../../../docs/cli/param/061_who.md)

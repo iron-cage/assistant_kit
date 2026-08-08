@@ -26,7 +26,7 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 | FT-12 | `Some(paths)` — credential absent in store → `refresh_account_token` returns `None` → account skipped | Algorithm | test_apply_refresh_lifecycle_switch_fails_result_unchanged |
 | FT-13 | `apply_refresh` does not call `switch_account`; `_active` marker unchanged throughout cycle | Algorithm | test_apply_refresh_lifecycle_active_marker_unchanged |
 | FT-14 | `None`-paths fallback — credential absent in store → `refresh_account_token` returns `None` | Algorithm | test_apply_refresh_401_no_cred_file |
-| FT-15 | `trace::1` propagated to `refresh_account_token`; lifecycle steps logged to stderr; no panic | AC-26 | test_apply_refresh_lifecycle_l010_trace_run_isolated_invoked_no_panic, art_some_paths_run_isolated_invoked_trace_no_panic |
+| FT-15 | `trace::1` propagated to `refresh_account_token`; lifecycle steps logged to stderr; no panic | AC-26 | test_apply_refresh_lifecycle_l10_trace_run_isolated_invoked_no_panic, art_some_paths_run_isolated_invoked_trace_no_panic |
 | FT-16 | `expires_at_ms` from `expiresAt` field when JWT decode returns `None` (opaque token) | AC-25 | test_parse_u064_from_str_mre_bug170_extracts_expires_at, test_jwt_exp_ms_mre_bug170_opaque_returns_none |
 | FT-17 | No `switch_account` in `apply_refresh`; `_active` unchanged confirms no restore occurred | AC-28 | test_apply_refresh_mre_bug208_restore_trace_emitted |
 | FT-18 | After refresh re-fetch succeeds, `aq.account` re-populated via `fetch_oauth_account()` | AC-27 | mre_bug_171_account_populated_after_refresh |
@@ -236,7 +236,7 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 - **Given:** `refresh_account_token` is called via `apply_refresh` with `trace=true`; the credential file exists in the persistent store (so `read credentials` succeeds) AND `{fake_home}/.claude/` directory exists (so the write-credentials path has a valid parent if reached); `run_isolated` fails fast (no valid claude binary or fake token).
 - **When:** `apply_refresh(&mut accounts, store.path(), Some(&paths), true)` is called (unit test; equivalent to `clp .usage refresh::1 trace::1`)
 - **Then:** A timestamped line `... · refresh {name}  read credentials: OK` and `... · refresh {name}  run_isolated: invoking claude  args=["--print", "."]  timeout=35s` are emitted to stderr (in that order); `... · refresh {name}  run_isolated: Err(…)` or `OK credentials=None` follows; no panic; account result unchanged.
-- **Source fn:** `test_apply_refresh_lifecycle_l010_trace_run_isolated_invoked_no_panic` (L10 in `usage.rs`), `art_some_paths_run_isolated_invoked_trace_no_panic` (in `account_refresh_test.rs`)
+- **Source fn:** `test_apply_refresh_lifecycle_l10_trace_run_isolated_invoked_no_panic` (in `tests/usage/refresh_tests_a.rs`) — corrected name (`l010` → `l10`) and file path (`usage.rs` does not exist), `art_some_paths_run_isolated_invoked_trace_no_panic` (in `account_refresh_test.rs`)
 - **Note:** Fix for BUG-166 — `refresh_account_token` previously had no `trace` parameter; all failure paths returned `None` silently without any diagnostic output. Testing uses "does not panic" pattern because nextest does not support reliable stderr assertion for `eprintln!` in unit tests.
 - **Source:** [017_token_refresh.md AC-26](../../../docs/feature/017_token_refresh.md)
 
@@ -271,7 +271,7 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 - **When:** The `Fix(BUG-171)` code path runs: `if let Ok( acct ) = claude_quota::fetch_oauth_account( &token ) { aq.account = Some( acct ); }`.
 - **Then:** `account_quota.account` is `Some(...)` — `~Renews` and `Sub` columns show current data for the refreshed account, not stale `?`. If `fetch_oauth_account` fails, the original `aq.account` value is preserved (non-aborting).
 - **Exit:** n/a (structural — verifies `Fix(BUG-171)` presence in production code)
-- **Source fn:** `mre_bug_171_account_populated_after_refresh` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `mre_bug_171_account_populated_after_refresh` (in `usage_sort_test.rs`)
 - **Note:** BUG-171 fix — before fix, `aq.account` remained `None` after refresh because the initial fetch used the expired token and the retry path never re-populated account data.
 - **Source:** [017_token_refresh.md AC-27](../../../docs/feature/017_token_refresh.md)
 
@@ -294,7 +294,7 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 - **When:** `should_refresh(&aq)` evaluates the G2 gate.
 - **Then:** `should_refresh` returns `false` — the occupancy guard fires and blocks credential mutation. No `refresh_account_token` call is made. The owned-but-occupied account is skipped as if it were non-owned.
 - **Exit:** N/A (unit test — no exit code)
-- **Source fn:** `mre_bug303_should_refresh_false_for_occupied_elsewhere` (in `src/usage/refresh_predicate.rs` `#[cfg(test)]` module)
+- **Source fn:** `mre_bug303_should_refresh_false_for_occupied_elsewhere` (in `tests/usage/refresh_predicate_tests.rs`) — corrected file path (not a `#[cfg(test)]` module in `src/usage/refresh_predicate.rs`)
 - **Note:** BUG-303 MRE (Critical). Before the fix, G2 at `refresh_predicate.rs:32` only checked `!aq.is_owned`, allowing `should_refresh` to return `true` for owned+occupied accounts. Refreshing an occupied account writes new `accessToken`/`refreshToken` to disk while the other machine is actively using those credentials, invalidating its live session. Fix: `if !aq.is_owned || aq.is_occupied_elsewhere { return false; }`. Mirrors `ft06_should_refresh_false_when_not_owned` — same file, same `#[cfg(test)]` block, occupancy variant. This tests the predicate gate; `apply_refresh` never reaches the refresh body when `should_refresh` returns `false`.
 - **Source:** [017_token_refresh.md AC-31](../../../docs/feature/017_token_refresh.md)
 

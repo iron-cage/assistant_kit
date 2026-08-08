@@ -77,7 +77,7 @@ Edge case tests for the `live::` parameter. Tests validate boolean enforcement, 
 - **When:** `clp .usage live::yes`
 - **Then:** Exit 1 with type validation error referencing `live::`.
 - **Exit:** 1
-- **Source fn:** `it053_live_yes_rejected`
+- **Source fn:** `it043_live_yes_rejected` (in `tests/cli/usage_live_test.rs`) — renumbered from `it053` when the `it0NN` series shifted by -10
 - **Source:** [params.md#parameter--20-live](../../../../docs/cli/param/020_live.md)
 ---
 

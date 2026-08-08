@@ -238,7 +238,7 @@ Integration test planning for the `.account.save` command. See [command/namespac
 - **When:** `clp .account.save`
 - **Then:** Exit 0. stdout: `saved current credentials as 'i5@wbox.pro'`. `{credential_store}/i5@wbox.pro.credentials.json` created. `{credential_store}/i2@wbox.pro.credentials.json` NOT created or modified — stale marker ignored when `oauthAccount.emailAddress` is available.
 - **Exit:** 0
-- **Source fn:** `mre_bug_212_account_save_stale_marker_uses_oauth_email` (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `mre_bug_212_account_save_stale_marker_uses_oauth_email` (in `account_relogin_test_b.rs`)
 - **Source:** [002_account_save.md AC-16](../../../../docs/feature/002_account_save.md)
 
 ---
@@ -261,5 +261,5 @@ Integration test planning for the `.account.save` command. See [command/namespac
 - **When (b):** `clp .account.save name::alice@acme.com` (no `inference_provider::`) → `{credential_store}/alice@acme.com.json` has no `inference_provider` key at all — never written as the literal default `"anthropic"`.
 - **When (c):** `clp .account.save name::kimi inference_provider::` (empty value) → exit 1, stderr names `inference_provider::` as requiring a non-empty value, no file written.
 - **Exit:** 0 (a, b) / 1 (c)
-- **Source fn:** *(planned — not yet implemented)*
+- **Source fn:** `t01_inference_provider_kimi_writes_key` (a), `t02_inference_provider_omitted_writes_no_key` (b), `t03_inference_provider_empty_value_exits_1_no_write` (c) (in `tests/cli/account_provider_test.rs`)
 - **Source:** [command/001_account.md — .account.save](../../../../docs/cli/command/001_account.md#command-4-accountsave), [072_inference_provider_selection.md AC-01, AC-02, AC-03](../../../../docs/feature/072_inference_provider_selection.md)

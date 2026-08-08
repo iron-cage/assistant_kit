@@ -13,6 +13,21 @@ All EC test cases in this file (EC-1 through EC-8) are **superseded** — `assig
 parameter. The equivalent behaviors are now covered by `64_assignee.md` EC-1 through EC-11 (the `assignee::USER@MACHINE`
 param handles assign, unassign, dry-run, validation, sanitization, and isolation).
 
+**Citation correction:** the `as0N_*`-named functions cited below never existed in the test suite — `git log -S`
+finds each name only as a doc-file addition (this file itself), never as a `fn as0N_*` definition anywhere in
+history. They are not "removed with the feature" the way `53_for.md`'s `aa0N` citations are; they were fabricated
+citations from the outset. That said, the underlying `assign::` behaviors they describe were real prior to removal
+and most now have a genuine current equivalent, under unrelated names, in `account_assign_test.rs`:
+- EC-1 → `ft01_assignee_assign_writes_current_machine_marker` (current-machine scenario matches exactly)
+- EC-2 → `ft01b_assignee_assign_writes_remote_marker` (remote-machine scenario matches exactly)
+- EC-5 → `ft04_assignee_unknown_account_exits_1` (matches exactly)
+- EC-6 → `ft03_assignee_assign_dry_run` (matches exactly)
+- EC-7 → `ft13_force_ignored_for_assignee` (matches exactly)
+- EC-3 has no live equivalent — the behavior itself changed, not just the name: `assignee::` with no `name::`
+  now unassigns/clears the marker (see `037_accounts_usage_param_unification.md` FT-10), it does not emit the
+  old "usage block."
+- EC-4 and EC-8 have no identified current equivalent by scenario — coverage gaps, not renames.
+
 ### Superseded Test Case Index (DO NOT IMPLEMENT)
 
 | ID | Test Name | Category | Status |
@@ -34,7 +49,7 @@ param handles assign, unassign, dry-run, validation, sanitization, and isolation
 - **When:** `clp .accounts assign::1 name::alice@corp.com`
 - **Then:** Exits 0. `{credential_store}/_active_{machine}_{user}` contains `alice@corp.com`. No other files modified (credentials, `{name}.json`, `~/.claude.json` all unchanged).
 - **Exit:** 0
-- **Source fn:** `as01_current_machine_marker_written`
+- **Source fn:** *(fabricated — `as01_current_machine_marker_written` never existed; current equivalent scenario is `ft01_assignee_assign_writes_current_machine_marker` in `account_assign_test.rs`, see file-level note)*
 - **Source:** [param/057_assign.md](../../../../docs/cli/param/057_assign.md)
 
 ---
@@ -45,7 +60,7 @@ param handles assign, unassign, dry-run, validation, sanitization, and isolation
 - **When:** `clp .accounts assign::1 name::alice@corp.com for::bob@laptop`
 - **Then:** Exits 0. `{credential_store}/_active_laptop_bob` contains `alice@corp.com`. Current machine's marker unchanged. No credential files modified.
 - **Exit:** 0
-- **Source fn:** `as02_remote_machine_marker_written`
+- **Source fn:** *(fabricated — `as02_remote_machine_marker_written` never existed; current equivalent scenario is `ft01b_assignee_assign_writes_remote_marker` in `account_assign_test.rs`, see file-level note)*
 - **Source:** [param/057_assign.md](../../../../docs/cli/param/057_assign.md)
 
 ---
@@ -56,7 +71,7 @@ param handles assign, unassign, dry-run, validation, sanitization, and isolation
 - **When:** `clp .accounts assign::1` (no `name::`)
 - **Then:** Exits 0. stdout contains current machine identity, active account name, and copy-paste examples (`clp .accounts assign::1 name::alice@corp.com`, etc.). No `_active_{machine}_{user}` file is created or modified.
 - **Exit:** 0
-- **Source fn:** `as03_no_name_emits_usage_block`
+- **Source fn:** *(fabricated — `as03_no_name_emits_usage_block` never existed; the "usage block" behavior itself was replaced, not renamed — no live equivalent, see file-level note)*
 - **Source:** [param/057_assign.md](../../../../docs/cli/param/057_assign.md)
 
 ---
@@ -67,7 +82,7 @@ param handles assign, unassign, dry-run, validation, sanitization, and isolation
 - **When:** `clp .accounts assign::0 name::alice@corp.com` (or `.accounts name::alice@corp.com` with no `assign::`)
 - **Then:** Exits 0. No `_active_*` marker file is created. Normal `.accounts` listing behavior.
 - **Exit:** 0
-- **Source fn:** `as04_assign_zero_no_write`
+- **Source fn:** *(fabricated — `as04_assign_zero_no_write` never existed; coverage gap, no identified current equivalent)*
 - **Source:** [param/057_assign.md](../../../../docs/cli/param/057_assign.md)
 
 ---
@@ -78,7 +93,7 @@ param handles assign, unassign, dry-run, validation, sanitization, and isolation
 - **When:** `clp .accounts assign::1 name::missing@corp.com`
 - **Then:** Exits 1. Error message indicates account not found. No `_active_*` file created.
 - **Exit:** 1
-- **Source fn:** `as05_unknown_account_exits_1`
+- **Source fn:** *(fabricated — `as05_unknown_account_exits_1` never existed; current equivalent scenario is `ft04_assignee_unknown_account_exits_1` in `account_assign_test.rs`, see file-level note)*
 - **Source:** [param/057_assign.md](../../../../docs/cli/param/057_assign.md)
 
 ---
@@ -89,7 +104,7 @@ param handles assign, unassign, dry-run, validation, sanitization, and isolation
 - **When:** `clp .accounts assign::1 dry::1 name::alice@corp.com`
 - **Then:** Exits 0. stdout contains `[dry-run]` preview message describing marker write target. No `_active_*` marker file is created or modified. Marker mtime unchanged.
 - **Exit:** 0
-- **Source fn:** `as06_dry_run_no_write`
+- **Source fn:** *(fabricated — `as06_dry_run_no_write` never existed; current equivalent scenario is `ft03_assignee_assign_dry_run` in `account_assign_test.rs`, see file-level note)*
 - **Source:** [param/057_assign.md](../../../../docs/cli/param/057_assign.md)
 
 ---
@@ -101,7 +116,7 @@ param handles assign, unassign, dry-run, validation, sanitization, and isolation
 - **Then:** Exits 0. Marker `_active_{machine}_{user}` written with `alice@corp.com`. `force::1` has no effect — assign has no ownership gate. No error related to force.
 - **Exit:** 0
 - **Note:** Assign is ownership-neutral: does not read or modify the `owner` field; `force::` has nothing to bypass.
-- **Source fn:** `as07_force_ignored_on_assign`
+- **Source fn:** *(fabricated — `as07_force_ignored_on_assign` never existed; current equivalent scenario is `ft13_force_ignored_for_assignee` in `account_assign_test.rs`, see file-level note)*
 - **Source:** [param/057_assign.md](../../../../docs/cli/param/057_assign.md)
 
 ---
@@ -112,5 +127,5 @@ param handles assign, unassign, dry-run, validation, sanitization, and isolation
 - **When:** `clp .accounts assign::1 name::`  (empty name value, distinct from absent `name::`)
 - **Then:** Exits 1. Error message indicates name value cannot be empty. No `_active_*` marker file written. Distinct from the no-`name::` case (EC-3), which emits a live usage block.
 - **Exit:** 1
-- **Source fn:** `as08_empty_name_value_exits_1`
+- **Source fn:** *(fabricated — `as08_empty_name_value_exits_1` never existed; coverage gap, no identified current equivalent)*
 - **Source:** [param/057_assign.md](../../../../docs/cli/param/057_assign.md)

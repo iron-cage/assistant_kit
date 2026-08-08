@@ -68,7 +68,7 @@ Feature behavioral requirement test cases for `docs/feature/021_extended_snapsho
 - **When:** `clp .accounts uuid::1`
 - **Then:** Stdout contains an `ID: user_01Alice` line for alice's block and an `ID: user_01Bob` line for bob's block. Exit 0.
 - **Exit:** 0
-- **Source fn:** `acc35_uuid_shows_id_from_snapshot` (in `tests/cli/accounts_test.rs`)
+- **Source fn:** `acc35_uuid_shows_id_from_snapshot` (in `accounts_list_test_b.rs`)
 - **Source:** [021_extended_snapshot_fields.md AC-03](../../../docs/feature/021_extended_snapshot_fields.md)
 
 ---
@@ -79,7 +79,7 @@ Feature behavioral requirement test cases for `docs/feature/021_extended_snapsho
 - **When:** `clp .accounts capabilities::1`
 - **Then:** Stdout contains a `Capabilities: claude_max` line for each account block. Exit 0.
 - **Exit:** 0
-- **Source fn:** `acc38_capabilities_shows_list_from_snapshot` (in `tests/cli/accounts_test.rs`)
+- **Source fn:** `acc38_capabilities_shows_list_from_snapshot` (in `accounts_list_test_b.rs`)
 - **Source:** [021_extended_snapshot_fields.md AC-04](../../../docs/feature/021_extended_snapshot_fields.md)
 
 ---
@@ -91,7 +91,7 @@ Feature behavioral requirement test cases for `docs/feature/021_extended_snapsho
 - **Then:** Stdout does NOT contain `ID:` or `Capabilities:` lines. All other standard credential fields appear. Exit 0.
 - **Exit:** 0
 - **Note:** AC-05 applies equally to `.accounts` — verified by absence of these lines in default `.accounts` output.
-- **Source fn:** `cred19_uuid_absent_by_default` + `cred26_capabilities_absent_by_default` (in `tests/cli/credentials_test.rs`)
+- **Source fn:** `cred19_uuid_absent_by_default` + `cred26_capabilities_absent_by_default` (in `credentials_test_b.rs`)
 - **Source:** [021_extended_snapshot_fields.md AC-05](../../../docs/feature/021_extended_snapshot_fields.md)
 
 ---
@@ -103,7 +103,7 @@ Feature behavioral requirement test cases for `docs/feature/021_extended_snapsho
 - **Then:** JSON output contains a `tagged_id` key (string value, e.g. `"user_01AbCdEfGh"`) and a `capabilities` key (array value). Both keys present regardless of `uuid::` / `capabilities::` flags. Exit 0.
 - **Exit:** 0
 - **Note:** Same invariant applies to `clp .accounts format::json`.
-- **Source fn:** `cred21_uuid_json_always_includes_tagged_id` + `cred28_capabilities_json_always_emits_key` (in `tests/cli/credentials_test.rs`)
+- **Source fn:** `cred21_uuid_json_always_includes_tagged_id` + `cred28_capabilities_json_always_emits_key` (in `credentials_test_b.rs`)
 - **Source:** [021_extended_snapshot_fields.md AC-06](../../../docs/feature/021_extended_snapshot_fields.md)
 
 ---
@@ -114,7 +114,7 @@ Feature behavioral requirement test cases for `docs/feature/021_extended_snapsho
 - **When:** `clp .credentials.status uuid::1 capabilities::1`
 - **Then:** Stdout contains `ID: N/A` and `Capabilities: N/A`. Exit 0. No error message on stderr.
 - **Exit:** 0
-- **Source fn:** `cred22_uuid_missing_tagged_id_shows_na` + `cred30_capabilities_missing_field_shows_na` (in `tests/cli/credentials_test.rs`)
+- **Source fn:** `cred22_uuid_missing_tagged_id_shows_na` + `cred30_capabilities_missing_field_shows_na` (in `credentials_test_b.rs`)
 - **Source:** [021_extended_snapshot_fields.md AC-07](../../../docs/feature/021_extended_snapshot_fields.md)
 
 ---
@@ -136,5 +136,5 @@ Feature behavioral requirement test cases for `docs/feature/021_extended_snapsho
 - **When:** `clp .credentials.status capabilities::1`
 - **Then:** Stdout contains `Capabilities: N/A`. When `clp .credentials.status format::json` (no `capabilities::` param), the JSON output contains `"capabilities":[]`. Exit 0 for both.
 - **Exit:** 0
-- **Source fn:** `cred29_capabilities_empty_array_shows_na` (in `tests/cli/credentials_test.rs`)
+- **Source fn:** `cred29_capabilities_empty_array_shows_na` (in `credentials_test_b.rs`)
 - **Source:** [021_extended_snapshot_fields.md AC-09](../../../docs/feature/021_extended_snapshot_fields.md)

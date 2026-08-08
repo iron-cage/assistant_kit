@@ -68,7 +68,7 @@ Edge case tests for the `trace::` parameter. Tests validate boolean enforcement,
 - **When:** `clp .usage trace::0`
 - **Then:** stderr contains no timestamped diagnostic lines; behavior identical to default; exit 0.
 - **Exit:** 0
-- **Source fn:** `it059_trace_0_no_trace_on_stderr`
+- **Source fn:** `it049_trace_0_no_trace_on_stderr` (in `tests/cli/usage_live_test.rs`) — renumbered from `it059` when the `it0NN` series shifted by -10
 - **Source:** [params.md#parameter--23-trace](../../../../docs/cli/param/023_trace.md)
 ---
 
@@ -78,7 +78,7 @@ Edge case tests for the `trace::` parameter. Tests validate boolean enforcement,
 - **When:** `clp .usage trace::2`
 - **Then:** Exit 1 with error referencing `trace::`; must be 0 or 1.
 - **Exit:** 1
-- **Source fn:** `it060_trace_2_rejected`
+- **Source fn:** `it050_trace_2_rejected` (in `tests/cli/usage_live_test.rs`) — renumbered from `it060` when the `it0NN` series shifted by -10
 - **Source:** [params.md#parameter--23-trace](../../../../docs/cli/param/023_trace.md)
 ---
 
@@ -88,7 +88,7 @@ Edge case tests for the `trace::` parameter. Tests validate boolean enforcement,
 - **When:** `clp .usage trace::yes`
 - **Then:** Exit 1 with type validation error referencing `trace::`.
 - **Exit:** 1
-- **Source fn:** `it061_trace_yes_rejected`
+- **Source fn:** `it051_trace_yes_rejected` (in `tests/cli/usage_live_test.rs`) — renumbered from `it061` when the `it0NN` series shifted by -10
 - **Source:** [params.md#parameter--23-trace](../../../../docs/cli/param/023_trace.md)
 ---
 
@@ -98,7 +98,7 @@ Edge case tests for the `trace::` parameter. Tests validate boolean enforcement,
 - **When:** `clp .usage` (no `trace::` param)
 - **Then:** stderr contains no timestamped diagnostic lines; behavior identical to `trace::0`; exit 0.
 - **Exit:** 0
-- **Source fn:** `it062_trace_default_off`
+- **Source fn:** `it052_trace_default_off` (in `tests/cli/usage_live_test.rs`) — renumbered from `it062` when the `it0NN` series shifted by -10
 - **Source:** [params.md#parameter--23-trace](../../../../docs/cli/param/023_trace.md)
 ---
 
@@ -119,7 +119,7 @@ Edge case tests for the `trace::` parameter. Tests validate boolean enforcement,
 - **When:** `clp .account.use name::alice@home.com touch::0 trace::1`
 - **Then:** Exits 0; `switched to 'alice@home.com'` on stdout; stderr contains no timestamped `account.use` diagnostic lines; `trace::1` is accepted without "unrecognized parameter" error.
 - **Exit:** 0
-- **Source fn:** `aw31_trace_touch_disabled_no_trace_lines` (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `aw31_trace_touch_disabled_no_trace_lines` (in `account_relogin_test_b.rs`)
 - **Source:** [params.md#parameter--23-trace](../../../../docs/cli/param/023_trace.md)
 
 ---
@@ -130,7 +130,7 @@ Edge case tests for the `trace::` parameter. Tests validate boolean enforcement,
 - **When:** `clp .credentials.status trace::1`
 - **Then:** Exits 0; stderr contains at least one timestamped diagnostic line for the credential file read; no "Unknown parameter" error.
 - **Exit:** 0
-- **Source fn:** `it_trace_credentials_status_accepted` (in `tests/cli/credentials_test.rs`)
+- **Source fn:** `it_trace_credentials_status_accepted` (in `credentials_test_b.rs`)
 - **Source:** [params.md#parameter--23-trace](../../../../docs/cli/param/023_trace.md)
 
 ---
@@ -141,7 +141,7 @@ Edge case tests for the `trace::` parameter. Tests validate boolean enforcement,
 - **When:** `clp .accounts trace::1`
 - **Then:** Exits 0; stderr contains a timestamped diagnostic line for store not-found; stdout shows "(no accounts configured)"; no "Unknown parameter" error.
 - **Exit:** 0
-- **Source fn:** `it_trace_accounts_accepted` (in `tests/cli/accounts_test.rs`)
+- **Source fn:** `it_trace_accounts_accepted` (in `accounts_list_test_b.rs`)
 - **Source:** [params.md#parameter--23-trace](../../../../docs/cli/param/023_trace.md)
 
 ---
@@ -163,7 +163,7 @@ Edge case tests for the `trace::` parameter. Tests validate boolean enforcement,
 - **When:** `clp .account.save name::test@example.com dry::1 trace::1`
 - **Then:** Exits 0 (dry-run); stderr contains a timestamped diagnostic line for credential file read; no "Unknown parameter" error.
 - **Exit:** 0
-- **Source fn:** `it_trace_account_save_accepted` (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `it_trace_account_save_accepted` (in `account_relogin_test_b.rs`)
 - **Source:** [params.md#parameter--23-trace](../../../../docs/cli/param/023_trace.md)
 
 ---
@@ -174,7 +174,7 @@ Edge case tests for the `trace::` parameter. Tests validate boolean enforcement,
 - **When:** `clp .account.use name::test@example.com trace::1`
 - **Then:** Exits 2 (account not found); no "Unknown parameter" error; `trace::1` is accepted by the framework.
 - **Exit:** 2
-- **Source fn:** `it_trace_account_use_accepted` (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `it_trace_account_use_accepted` (in `account_relogin_test_b.rs`)
 - **Source:** [params.md#parameter--23-trace](../../../../docs/cli/param/023_trace.md)
 
 ---
@@ -185,7 +185,7 @@ Edge case tests for the `trace::` parameter. Tests validate boolean enforcement,
 - **When:** `clp .account.delete name::test@example.com dry::1 trace::1`
 - **Then:** Exits 0 (dry-run); stderr contains a timestamped diagnostic line for store read; no "Unknown parameter" error.
 - **Exit:** 0
-- **Source fn:** `it_trace_account_delete_accepted` (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `it_trace_account_delete_accepted` (in `account_relogin_test_b.rs`)
 - **Source:** [params.md#parameter--23-trace](../../../../docs/cli/param/023_trace.md)
 
 ---
@@ -196,7 +196,7 @@ Edge case tests for the `trace::` parameter. Tests validate boolean enforcement,
 - **When:** `clp .account.relogin dry::1 trace::1`
 - **Then:** Exits 0 (dry-run); stderr contains a timestamped diagnostic line; no "Unknown parameter" error.
 - **Exit:** 0
-- **Source fn:** `it_trace_account_relogin_accepted` (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `it_trace_account_relogin_accepted` (in `account_relogin_test_b.rs`)
 - **Source:** [params.md#parameter--23-trace](../../../../docs/cli/param/023_trace.md)
 
 ---

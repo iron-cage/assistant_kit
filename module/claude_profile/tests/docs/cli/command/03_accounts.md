@@ -800,7 +800,7 @@ Test cases below cover the `inference_provider` default identity column added to
 - **When:** `clp .accounts`
 - **Then:** `alice@acme.com` block contains `Provider: kimi`. `bob@acme.com` block contains `Provider: anthropic`. `Provider` column is in the default identity set — no `cols::` modifier required.
 - **Exit:** 0
-- **Source fn:** *(planned — not yet implemented)*
+- **Source fn:** `t05_accounts_default_shows_provider_column_and_anthropic_fallback` (in `tests/cli/account_provider_test.rs`) — real test uses account names `kimi@test.com`/`alice@test.com`, not this case's illustrative `alice@acme.com`/`bob@acme.com`; same underlying assertion (one account with `inference_provider` set shows its value, one without falls back to `anthropic`)
 - **Source:** [feature/072_inference_provider_selection.md AC-04, AC-05](../../../../docs/feature/072_inference_provider_selection.md)
 
 ---
@@ -811,5 +811,5 @@ Test cases below cover the `inference_provider` default identity column added to
 - **When:** `clp .accounts cols::-inference_provider`
 - **Then:** Stdout does NOT contain `Provider:` line in any account block.
 - **Exit:** 0
-- **Source fn:** *(planned — not yet implemented)*
+- **Source fn:** `t06_accounts_cols_minus_inference_provider_omits_column` (in `tests/cli/account_provider_test.rs`) — real test uses account name `kimi@test.com`, not this case's illustrative `alice@acme.com`; same underlying assertion (`Provider:` label absent from output)
 - **Source:** [feature/072_inference_provider_selection.md AC-06](../../../../docs/feature/072_inference_provider_selection.md)

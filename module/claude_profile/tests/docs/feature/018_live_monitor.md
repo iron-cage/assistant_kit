@@ -46,7 +46,7 @@ Feature behavioral requirement test cases for `docs/feature/018_live_monitor.md`
 - **When:** `clp .usage live::0`
 - **Then:** Command performs exactly one fetch cycle, renders the table, and exits; no countdown footer, no screen clear, no loop; behavior is identical to the baseline `.usage` with no `live::` param; exit 0.
 - **Exit:** 0
-- **Source fn:** `f018_ft001_live_0_single_fetch`
+- **Source fn:** `f18_ft01_live_0_single_fetch` (`usage_feature_test.rs`) — renamed from `f018_ft001_live_0_single_fetch`
 - **Source:** [018_live_monitor.md AC-24](../../../docs/feature/018_live_monitor.md)
 
 ---

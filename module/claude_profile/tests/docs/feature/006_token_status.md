@@ -70,5 +70,5 @@ Feature behavioral requirement test cases for `docs/feature/006_token_status.md`
 - **When:** `clp .credentials.status format::json`
 - **Then:** Output is valid JSON containing `"token"` and `"expires_in_secs"` keys (among the command's full 16-field object). `"token"` is one of `"valid"`, `"expiring in Xm"`, `"expired"`, `"unknown"`. `"expires_in_secs"` is a non-negative integer.
 - **Exit:** 0
-- **Source fn:** `cred_status_json_token_valid`, `cred_status_json_token_expired`, `cred_status_json_token_expiring_soon`
+- **Source fn:** `ts06_credentials_valid_json`, `ts07_credentials_expired_json`, `ts14_credentials_expiring_soon_json` (in `tests/cli/token_paths_test.rs`) — renamed from `cred_status_json_token_*`
 - **Source:** [006_token_status.md AC-04](../../../docs/feature/006_token_status.md)

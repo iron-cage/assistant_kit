@@ -54,7 +54,7 @@ Feature behavioral requirement test cases for `docs/feature/039_decision_algorit
 - **When:** `resolve_model(aq)` is called (entry point: `subprocess.rs:29-59`).
 - **Then:** Returns `Sonnet`. `son_idle = son.resets_at.is_none() = true` (no active window). Gate `son_idle || son_available`: `son_idle=true` → Sonnet selected to activate the idle window.
 - **Note:** Table 1 row 2. This is the warm-up case: no active Sonnet session → using Sonnet keeps it warm.
-- **Source fn:** `it_imodel_auto_selects_sonnet_when_son_idle` (in `src/usage/subprocess.rs`)
+- **Source fn:** `it_imodel_auto_selects_sonnet_when_son_idle` (in `subprocess_tests.rs`)
 - **Source:** [feature/039_decision_algorithms.md Table 1](../../../docs/feature/039_decision_algorithms.md)
 
 ---
@@ -65,7 +65,7 @@ Feature behavioral requirement test cases for `docs/feature/039_decision_algorit
 - **When:** `resolve_model(aq)` is called.
 - **Then:** Returns `Haiku`. `if let Some(ref son) = data.seven_day_sonnet` does not match (tier absent). Falls through to Haiku. No Sonnet tier → conserve quota.
 - **Note:** Table 1 row 1.
-- **Source fn:** `it_imodel_auto_selects_haiku_when_son_tier_absent` (in `src/usage/subprocess.rs`)
+- **Source fn:** `it_imodel_auto_selects_haiku_when_son_tier_absent` (in `subprocess_tests.rs`)
 - **Source:** [feature/039_decision_algorithms.md Table 1](../../../docs/feature/039_decision_algorithms.md)
 
 ---
@@ -76,7 +76,7 @@ Feature behavioral requirement test cases for `docs/feature/039_decision_algorit
 - **When:** `resolve_model(aq)` is called (entry point: `subprocess.rs:29-59`).
 - **Then:** Returns `Sonnet`. `son_idle=false` (window running), but `son_available=true` (40% > 20% threshold). Gate `son_idle || son_available = true`. Remaining Sonnet quota must not expire unused.
 - **Note:** Table 1 row 3. Fix BUG-301 (TSK-311): old binary `son_idle` gate returned Haiku in this case; extended gate adds `son_available` check so quota is consumed before window expires.
-- **Source fn:** `mre_bug301_son_active_with_remaining_quota_selects_sonnet` (in `src/usage/subprocess.rs`)
+- **Source fn:** `mre_bug301_son_active_with_remaining_quota_selects_sonnet` (in `subprocess_tests.rs`)
 - **Source:** [feature/039_decision_algorithms.md Table 1](../../../docs/feature/039_decision_algorithms.md)
 
 ---
@@ -124,7 +124,7 @@ Feature behavioral requirement test cases for `docs/feature/039_decision_algorit
 - **When:** The `extra` predicate in `find_next_for_strategy()` evaluates Gate 7 (`sort_next.rs:59`): `seven_day_left(aq) <= WEEKLY_EXHAUSTION_THRESHOLD`.
 - **Then:** `seven_day_left` returns `2.0` (raw 7d_left). `2.0 ≤ 3.0` → gate fires → account is skipped. No `->` marker assigned.
 - **Note:** Table 4 gate 7. Eligibility uses `seven_day_left` (model-agnostic raw 7d quota). `prefer_weekly` is used only for sort tiebreak (Fix BUG-324).
-- **Source fn:** `test_relevant_quotas_son_no_sonnet` (in `tests/usage/format_tests.rs`); `mre_bug292_renew_skips_weekly_exhausted_even_with_soonest_renewal` (in `tests/usage/sort_next_tests.rs`)
+- **Source fn:** `test_relevant_quotas_son_no_sonnet` (in `tests/usage/format_tests.rs`); `mre_bug292_renew_skips_weekly_exhausted_even_with_soonest_renewal` (in `sort_next_tests_b.rs`)
 - **Source:** [feature/039_decision_algorithms.md Table 4](../../../docs/feature/039_decision_algorithms.md)
 
 ---
@@ -145,7 +145,7 @@ Feature behavioral requirement test cases for `docs/feature/039_decision_algorit
 - **When:** `find_next_for_strategy()` walks the sorted list (entry point: `sort_next.rs:46-83`). `sort_indices` produces order: `a@x.com`, `b@x.com`, `c@x.com`.
 - **Then:** `a@x.com` is selected as the winner (position 0 in sorted order, first to pass all 8 gates). `->` marker assigned to `a@x.com`.
 - **Note:** Table 5 Step 3: first account in the within-group sorted order that passes all gates wins. Input insertion order does not determine the winner.
-- **Source fn:** `test_sort_name_alphabetical` (in `src/usage/sort.rs`); `test_find_next_for_strategy_some_when_eligible_none_when_all_current` (in `tests/usage/sort_next_tests.rs`)
+- **Source fn:** `test_sort_name_alphabetical` (in `sort_tests.rs`); `test_find_next_for_strategy_some_when_eligible_none_when_all_current` (in `tests/usage/sort_next_tests.rs`)
 - **Source:** [feature/039_decision_algorithms.md Table 5](../../../docs/feature/039_decision_algorithms.md)
 
 ---
@@ -156,7 +156,7 @@ Feature behavioral requirement test cases for `docs/feature/039_decision_algorit
 - **When:** `approximate_utilization()` is called with the 3 measurements, `resets_at`, window duration, and `now`.
 - **Then:** Returns `Some(value)` where `value > 90.0` (extrapolated beyond last measurement due to accelerating quadratic fit). Value is clamped to [0.0, 100.0].
 - **Note:** Table 6 row "3–10 measurements → degree 2 quadratic LS (Cramer 3x3)". Detailed algorithm testing in F040 FT-04.
-- **Source fn:** `approx_quadratic_three_points_extrapolates` (in `src/usage/approx.rs`)
+- **Source fn:** `approx_quadratic_three_points_extrapolates` (in `approx_tests.rs`)
 - **Source:** [feature/039_decision_algorithms.md Table 6](../../../docs/feature/039_decision_algorithms.md)
 
 ---
@@ -167,7 +167,7 @@ Feature behavioral requirement test cases for `docs/feature/039_decision_algorit
 - **When:** `approximate_utilization()` is called with `resets_at_secs = Some(r)` where `now > r`.
 - **Then:** Returns `Some(0.0)`. Window expired → new window starts at 0% utilization regardless of historical measurements.
 - **Note:** Table 6 pre-fit: "If `now > resets_at` → return 0.0 (window expired)". Detailed testing in F040 FT-07.
-- **Source fn:** `approx_expired_window_returns_zero` (in `src/usage/approx.rs`)
+- **Source fn:** `approx_expired_window_returns_zero` (in `approx_tests.rs`)
 - **Source:** [feature/039_decision_algorithms.md Table 6](../../../docs/feature/039_decision_algorithms.md)
 
 ---
@@ -178,7 +178,7 @@ Feature behavioral requirement test cases for `docs/feature/039_decision_algorit
 - **When:** `approximate_utilization()` attempts quadratic LS fit.
 - **Then:** Falls back to linear; if linear also singular, returns last measurement value (constant). Result is clamped to [0.0, 100.0].
 - **Note:** Table 6 fallback column: "linear if singular". Detailed testing in F040 FT-10.
-- **Source fn:** `approx_singular_matrix_falls_back_to_constant` (in `src/usage/approx.rs`)
+- **Source fn:** `approx_singular_matrix_falls_back_to_constant` (in `approx_tests.rs`)
 - **Source:** [feature/039_decision_algorithms.md Table 6](../../../docs/feature/039_decision_algorithms.md)
 
 ---
@@ -191,7 +191,7 @@ Feature behavioral requirement test cases for `docs/feature/039_decision_algorit
 - **When:** Gate 7 evaluates eligibility in `find_next_for_strategy()` (entry: `sort_next.rs:59`).
 - **Then:** Account passes gate 7. Fix(BUG-324): gate uses `seven_day_left(aq) = 31.0 > WEEKLY_EXHAUSTION_THRESHOLD (3.0)` — model-agnostic. Before fix: `prefer_weekly(aq, Any) = min(31.0, 0.0) = 0.0 ≤ 5.0` — model-aware value blocked a green account from rotation.
 - **Note:** Table 4 gate 7. Existing FT-06/FT-07 test with `seven_day_sonnet = None` (no divergence possible). This case exercises the divergence path where `seven_day_sonnet` is present and differs from `seven_day`. Same class as BUG-299.
-- **Source fn:** `mre_bug324_green_account_eligible_when_7d_son_exhausted` (in `tests/usage/sort_next_tests.rs`)
+- **Source fn:** `mre_bug324_green_account_eligible_when_7d_son_exhausted` (in `sort_next_tests_b.rs`)
 - **Source:** [feature/039_decision_algorithms.md Table 4](../../../docs/feature/039_decision_algorithms.md)
 
 ---

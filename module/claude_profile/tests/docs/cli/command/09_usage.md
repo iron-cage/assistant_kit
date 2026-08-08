@@ -305,7 +305,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **Then:** That account's row shows `EXPIRED` in Expires and `—` for all quota columns (5h Left, 5h Reset, 7d Left, 7d(Son)); the 7d Reset column shows `(auth expired (401))` — NOT `(HTTP transport error: HTTP 401)`. Exit 0.
 - **Exit:** 0
 - **Fix:** BUG-152
-- **Source fn:** `ft002_lim_it_http_401_shortens_to_auth_expired` (in `usage_feature_test.rs`)
+- **Source fn:** `ft02_lim_it_http_401_shortens_to_auth_expired` (in `usage_feature_test.rs`)
 - **Source:** [009_token_usage.md AC-03](../../../../docs/feature/009_token_usage.md)
 
 ---
@@ -692,7 +692,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **When:** `clp .usage cols::+sub`
 - **Then:** Exits 0. Table header contains `Sub`.
 - **Exit:** 0
-- **Source fn:** `it081_cols_sub_shows_sub_column` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it081_cols_sub_shows_sub_column` (in `usage_sort_test.rs`)
 - **Source:** [009_token_usage.md AC-22](../../../../docs/feature/009_token_usage.md)
 
 ---
@@ -703,7 +703,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **When:** `clp .usage cols::+bogus`
 - **Then:** Exits 1. Stderr names valid column IDs.
 - **Exit:** 1
-- **Source fn:** `it082_cols_unknown_id_exit_1` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it082_cols_unknown_id_exit_1` (in `usage_sort_test.rs`)
 - **Source:** [009_token_usage.md AC-23](../../../../docs/feature/009_token_usage.md)
 
 ---
@@ -719,7 +719,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **Then:** Exits 0. The first account's `5h Left` column contains `🟢`; the second contains `🟡`.
 - **Exit:** 0
 - **Live:** yes (requires real tokens)
-- **Source fn:** `it105_lim_it_per_column_emoji_in_5h_left` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it105_lim_it_per_column_emoji_in_5h_left` (in `usage_touch_test.rs`)
 - **Source:** [009_token_usage.md AC-21](../../../../docs/feature/009_token_usage.md)
 
 ---
@@ -738,7 +738,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **When:** `clp .usage.help`
 - **Then:** Exits 0. Stdout contains `"next"` (as a `cols::` column ID for `→ Next`) and `"cols"`. Note: `next::` parameter was removed; `next` here refers to the column name.
 - **Exit:** 0
-- **Source fn:** `it083_usage_help_shows_next_cols_params` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it083_usage_help_shows_next_cols_params` (in `usage_sort_test.rs`)
 - **Source:** [009_token_usage.md AC-09](../../../../docs/feature/009_token_usage.md)
 
 ---
@@ -749,7 +749,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **When:** `clp .usage touch::0`
 - **Then:** Exits 0 with "(no accounts configured)". No error about unrecognized parameter. No subprocess spawned.
 - **Exit:** 0
-- **Source fn:** `it106_touch_0_accepted_empty_store_exits_0` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it106_touch_0_accepted_empty_store_exits_0` (in `usage_touch_test.rs`)
 - **Source:** [feature/024_session_touch.md AC-01](../../../../docs/feature/024_session_touch.md)
 
 ---
@@ -760,7 +760,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **When:** `clp .usage touch::1`
 - **Then:** Exits 0. Account row shows original error state. No subprocess spawned — touch trigger requires `result = Ok(...)`.
 - **Exit:** 0
-- **Source fn:** `it098_touch_1_errored_account_skipped` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it098_touch_1_errored_account_skipped` (in `usage_touch_test.rs`)
 - **Source:** [feature/024_session_touch.md AC-04](../../../../docs/feature/024_session_touch.md)
 
 ---
@@ -771,7 +771,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **When:** `clp .usage.help`
 - **Then:** Exits 0. Stdout contains `"touch"` with default value `1` (on).
 - **Exit:** 0
-- **Source fn:** `it101_usage_help_shows_touch_param` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it101_usage_help_shows_touch_param` (in `usage_touch_test.rs`)
 - **Source:** [feature/024_session_touch.md AC-10](../../../../docs/feature/024_session_touch.md)
 
 ---
@@ -788,7 +788,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **When:** `clp .usage imodel::auto`
 - **Then:** Exits 0 with "(no accounts configured)". No error about unrecognized parameter. `auto` is the default; no subprocess spawned (no accounts).
 - **Exit:** 0
-- **Source fn:** `it122_imodel_auto_accepted_empty_store_exits_0` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it122_imodel_auto_accepted_empty_store_exits_0` (in `usage_model_test.rs`)
 - **Source:** [feature/026_subprocess_model_effort.md AC-01](../../../../docs/feature/026_subprocess_model_effort.md)
 
 ---
@@ -799,7 +799,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **When:** `clp .usage imodel::bogus`
 - **Then:** Exits 1. Stderr contains each of the five valid values: `auto`, `sonnet`, `opus`, `haiku`, `keep`.
 - **Exit:** 1
-- **Source fn:** `it123_imodel_bogus_exits_1` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it123_imodel_bogus_exits_1` (in `usage_model_test.rs`)
 - **Source:** [feature/026_subprocess_model_effort.md AC-10](../../../../docs/feature/026_subprocess_model_effort.md)
 
 ---
@@ -810,7 +810,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **When:** `clp .usage effort::auto`
 - **Then:** Exits 0 with "(no accounts configured)". No error about unrecognized parameter. `auto` is the default; no subprocess spawned (no accounts).
 - **Exit:** 0
-- **Source fn:** `it124_effort_auto_accepted_empty_store_exits_0` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it124_effort_auto_accepted_empty_store_exits_0` (in `usage_model_test.rs`)
 - **Source:** [feature/026_subprocess_model_effort.md AC-05](../../../../docs/feature/026_subprocess_model_effort.md)
 
 ---
@@ -821,7 +821,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **When:** `clp .usage effort::bogus`
 - **Then:** Exits 1. Stderr contains each of the five valid values: `auto`, `low`, `normal`, `high`, `max`.
 - **Exit:** 1
-- **Source fn:** `it125_effort_bogus_exits_1` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it125_effort_bogus_exits_1` (in `usage_model_test.rs`)
 - **Source:** [feature/026_subprocess_model_effort.md AC-11](../../../../docs/feature/026_subprocess_model_effort.md)
 
 ---
@@ -832,7 +832,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **When:** `clp .usage.help`
 - **Then:** Exits 0. Stdout contains `"imodel"` and `"effort"`, each showing default value `auto`.
 - **Exit:** 0
-- **Source fn:** `it126_usage_help_shows_imodel_effort_params` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it126_usage_help_shows_imodel_effort_params` (in `usage_model_test.rs`)
 - **Source:** [feature/026_subprocess_model_effort.md AC-12](../../../../docs/feature/026_subprocess_model_effort.md)
 
 ---
@@ -844,7 +844,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **Then:** Exits 0. The `→ Next` column header appears in the table header row. That account's `→ Next` cell contains `in` followed by a duration string and then ` +7d` (e.g., `in 2d 0m +7d`). No `!tok` or `+5h` label appears — token expiry and 5h resets are not candidates for `→ Next`.
 - **Exit:** 0
 - **Live:** yes
-- **Source fn:** `it225_lim_it_it71_next_event_cell_shows_label_and_duration` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it225_lim_it_it71_next_event_cell_shows_label_and_duration` (in `usage_lim_it_test_b.rs`)
 - **Source:** [feature/009_token_usage.md AC-28](../../../../docs/feature/009_token_usage.md)
 
 ---
@@ -861,7 +861,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
   - No `next_renewal_est` key present in the object.
 - **Exit:** 0
 - **Live:** yes
-- **Source fn:** `it222_lim_it_it72_json_new_renewal_fields` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it222_lim_it_it72_json_new_renewal_fields` (in `usage_lim_it_test_b.rs`)
 - **Source:** [feature/009_token_usage.md AC-29](../../../../docs/feature/009_token_usage.md)
 
 ---
@@ -878,7 +878,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **When (Case B):** `clp .usage cols::-owner`
 - **Then (Case B):** Exit 0. Stdout does NOT contain `Owner` column header.
 - **Exit:** 0
-- **Source fn:** `it248_owner_column_visible_by_default` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it248_owner_column_visible_by_default` (in `usage_solo_test.rs`)
 - **Source:** [feature/037_accounts_usage_param_unification.md AC-19](../../../../docs/feature/037_accounts_usage_param_unification.md)
 
 ---
@@ -889,7 +889,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **When:** `clp .usage rotate::1 live::1`
 - **Then:** Exits 1 before any account fetch. Stderr contains a message indicating `rotate::1` and `live::1` are mutually exclusive. No table is rendered.
 - **Exit:** 1
-- **Source fn:** `it249_rotate_live_mutual_exclusion_exits_1` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `ft04_rotate_live_mutual_exclusion` (in `tests/cli/usage_rotate_test.rs`)
 - **Source:** [feature/038_usage_strategy_rotate.md AC-04](../../../../docs/feature/038_usage_strategy_rotate.md)
 
 ---
@@ -900,7 +900,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **When:** `clp .usage rotate::1`
 - **Then:** Exits 1. Stdout contains the quota table (table IS rendered before the error). Stderr or stdout contains `"no eligible account to rotate to"`. No `switched to` line appears.
 - **Exit:** 1
-- **Source fn:** `it250_rotate_no_eligible_exits_1_table_rendered` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `ft03_no_eligible_account_exits_1` (in `tests/cli/usage_rotate_test.rs`)
 - **Source:** [feature/038_usage_strategy_rotate.md AC-03](../../../../docs/feature/038_usage_strategy_rotate.md)
 
 ---
@@ -911,7 +911,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **When:** `clp .usage rotate::1 dry::1`
 - **Then:** Exits 0. Table is rendered; footer `Next:` line shows `secondary@acme.com`. Output ends with `[dry-run] would switch to 'secondary@acme.com'`. Credential store is NOT modified (credentials file unchanged).
 - **Exit:** 0
-- **Source fn:** `it251_rotate_dry_preview_no_switch` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `cc07_rotate_dry_offline_no_credential_change` (in `tests/cli/usage_rotate_test.rs`)
 - **Source:** [feature/038_usage_strategy_rotate.md AC-02](../../../../docs/feature/038_usage_strategy_rotate.md)
 
 ---
@@ -923,7 +923,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **Then:** Exits 0. Table is rendered; footer `Next:` line shows `secondary@acme.com`. Output ends with `switched to 'secondary@acme.com'`. The active marker in the credential store now points to `secondary@acme.com`.
 - **Exit:** 0
 - **Live:** yes
-- **Source fn:** `it252_lim_it_rotate_core_switch_switches_account` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `ft01_lim_it_rotates_to_next_winner` (in `tests/cli/usage_rotate_test.rs`)
 - **Source:** [feature/038_usage_strategy_rotate.md AC-01](../../../../docs/feature/038_usage_strategy_rotate.md)
 
 ---
@@ -947,7 +947,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **Then:** Exits 0. Both accounts are eligible rotation targets (non-owned `foreign@acme.com` may be selected if it wins the strategy). Output ends with `switched to '{name}'`. No ownership-violation error.
 - **Exit:** 0
 - **Live:** yes
-- **Source fn:** `it254_lim_it_rotate_force_bypasses_g5` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `ft06_lim_it_force_bypasses_g5` (in `tests/cli/usage_rotate_test.rs`)
 - **Source:** [feature/038_usage_strategy_rotate.md AC-06](../../../../docs/feature/038_usage_strategy_rotate.md)
 
 ---

@@ -63,7 +63,7 @@ Feature behavioral requirement test cases for `docs/feature/028_usage_row_filter
 - **Then:** Exits 0. Table body has exactly 3 data rows. Table header and footer are still shown.
 - **Exit:** 0
 - **Live:** yes
-- **Source fn:** `it178_count_3_shows_first_3_rows` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it178_count_3_shows_first_3_rows` (in `usage_filter_test_b.rs`)
 - **Source:** [feature/028_usage_row_filtering.md AC-01](../../../docs/feature/028_usage_row_filtering.md)
 
 ---
@@ -76,7 +76,7 @@ Feature behavioral requirement test cases for `docs/feature/028_usage_row_filter
 - **Then-B:** Exits 0. The rows shown in When-B match rows 3–5 (0-indexed) from When-A output.
 - **Exit:** 0
 - **Live:** yes
-- **Source fn:** `it205_ft028_02_offset2_count3_windows_result` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it205_ft028_02_offset2_count3_windows_result` (in `usage_lim_it_test.rs`)
 - **Source:** [feature/028_usage_row_filtering.md AC-02](../../../docs/feature/028_usage_row_filtering.md)
 
 ---
@@ -87,7 +87,7 @@ Feature behavioral requirement test cases for `docs/feature/028_usage_row_filter
 - **When:** `clp .usage only_active::1`
 - **Then:** Exits 0. Exactly one data row shown — the active account. All other rows absent.
 - **Exit:** 0
-- **Source fn:** `it154_only_active_1_shows_active_account_row` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it154_only_active_1_shows_active_account_row` (in `usage_filter_test.rs`)
 - **Source:** [feature/028_usage_row_filtering.md AC-03](../../../docs/feature/028_usage_row_filtering.md)
 
 ---
@@ -99,7 +99,7 @@ Feature behavioral requirement test cases for `docs/feature/028_usage_row_filter
 - **Then:** Exits 0. Exactly one data row shown — the footer-recommended account. All other rows absent.
 - **Exit:** 0
 - **Live:** yes
-- **Source fn:** `it206_lim_it_ft028_04_only_next_1_shows_arrow` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it206_lim_it_ft028_04_only_next_1_shows_recommended` (in `tests/cli/usage_lim_it_test.rs`)
 - **Source:** [feature/028_usage_row_filtering.md AC-04](../../../docs/feature/028_usage_row_filtering.md)
 
 ---
@@ -111,7 +111,7 @@ Feature behavioral requirement test cases for `docs/feature/028_usage_row_filter
 - **Then:** Exits 0. Rows A and B are shown; row C is hidden (30% < 50). B is shown (50% == threshold — inclusive).
 - **Exit:** 0
 - **Live:** yes
-- **Source fn:** `it207_lim_it_min_5h_50_hides_below_threshold` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it207_lim_it_min_5h_50_hides_below_threshold` (in `usage_lim_it_test.rs`)
 - **Source:** [feature/028_usage_row_filtering.md AC-05](../../../docs/feature/028_usage_row_filtering.md)
 
 ---
@@ -123,7 +123,7 @@ Feature behavioral requirement test cases for `docs/feature/028_usage_row_filter
 - **Then:** Exits 0. Rows A and B shown; row C hidden (10% < 20). B shown (20% == threshold — inclusive).
 - **Exit:** 0
 - **Live:** yes
-- **Source fn:** `it209_lim_it_min_7d_20_hides_below_threshold` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it209_lim_it_min_7d_20_hides_below_threshold` (in `usage_lim_it_test.rs`)
 - **Source:** [feature/028_usage_row_filtering.md AC-06](../../../docs/feature/028_usage_row_filtering.md)
 
 ---
@@ -134,7 +134,7 @@ Feature behavioral requirement test cases for `docs/feature/028_usage_row_filter
 - **When:** `clp .usage only_valid::1`
 - **Then:** Exits 0. 🟢 and 🟡 rows shown; 🔴 row hidden.
 - **Exit:** 0
-- **Source fn:** `it171_only_valid_1_all_red_shows_empty` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it171_only_valid_1_all_red_shows_empty` (in `usage_filter_test.rs`)
 - **Source:** [feature/028_usage_row_filtering.md AC-07](../../../docs/feature/028_usage_row_filtering.md)
 
 ---
@@ -145,7 +145,7 @@ Feature behavioral requirement test cases for `docs/feature/028_usage_row_filter
 - **When:** `clp .usage exclude_exhausted::1`
 - **Then:** Exits 0. Only the 🟢 row shown; both 🟡 and 🔴 rows hidden.
 - **Exit:** 0
-- **Source fn:** `it176_exclude_exhausted_1_all_red_shows_empty` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it176_exclude_exhausted_1_all_red_shows_empty` (in `usage_filter_test.rs`)
 - **Source:** [feature/028_usage_row_filtering.md AC-08](../../../docs/feature/028_usage_row_filtering.md)
 
 ---
@@ -157,7 +157,7 @@ Feature behavioral requirement test cases for `docs/feature/028_usage_row_filter
 - **Then:** Exits 0. Only A shown: must be non-🔴 AND 7d ≥ 30%. B (25% < 30%) excluded; C excluded (🟡 triggers `only_valid::1`); D excluded (🔴).
 - **Exit:** 0
 - **Live:** yes
-- **Source fn:** `it213_lim_it_ft028_09_and_composition` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it213_lim_it_ft028_09_and_composition` (in `usage_lim_it_test.rs`)
 - **Source:** [feature/028_usage_row_filtering.md AC-09](../../../docs/feature/028_usage_row_filtering.md)
 
 ---
@@ -169,7 +169,7 @@ Feature behavioral requirement test cases for `docs/feature/028_usage_row_filter
 - **Then:** Exits 0. Stdout is a single bare percentage string (e.g., `65%`) with no table headers, separator lines, or footer.
 - **Exit:** 0
 - **Live:** yes
-- **Source fn:** `it214_lim_it_ft028_10_get_7d_left_bare` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it214_lim_it_ft028_10_get_7d_left_bare` (in `usage_lim_it_test.rs`)
 - **Source:** [feature/028_usage_row_filtering.md AC-10](../../../docs/feature/028_usage_row_filtering.md)
 
 ---
@@ -181,7 +181,7 @@ Feature behavioral requirement test cases for `docs/feature/028_usage_row_filter
 - **Then:** Exits 0. Stdout is the 7d Left value for the footer-recommended account as a bare string.
 - **Exit:** 0
 - **Live:** yes
-- **Source fn:** `it215_lim_it_ft028_11_only_next_get_7d_left` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it215_lim_it_ft028_11_only_next_get_7d_left` (in `usage_lim_it_test.rs`)
 - **Source:** [feature/028_usage_row_filtering.md AC-11](../../../docs/feature/028_usage_row_filtering.md)
 
 ---
@@ -193,7 +193,7 @@ Feature behavioral requirement test cases for `docs/feature/028_usage_row_filter
 - **Then:** Exits 0. Stdout is exactly `🟢` (or `🟡` / `🔴` for other tier accounts). Single emoji, no newline except final.
 - **Exit:** 0
 - **Live:** yes
-- **Source fn:** `it216_lim_it_ft028_12_get_status_green` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it216_lim_it_ft028_12_get_status_green` (in `usage_lim_it_test.rs`)
 - **Source:** [feature/028_usage_row_filtering.md AC-12](../../../docs/feature/028_usage_row_filtering.md)
 
 ---
@@ -205,7 +205,7 @@ Feature behavioral requirement test cases for `docs/feature/028_usage_row_filter
 - **Then:** Exits 0. Output has a header row with tab-separated column names. Data rows are tab-separated. Status column contains `ok`, `warn`, or `err` (no emoji).
 - **Exit:** 0
 - **Live:** yes
-- **Source fn:** `it217_lim_it_ft028_13_format_tsv_status_text` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it217_lim_it_ft028_13_format_tsv_status_text` (in `usage_lim_it_test_b.rs`)
 - **Source:** [feature/028_usage_row_filtering.md AC-13](../../../docs/feature/028_usage_row_filtering.md)
 
 ---
@@ -217,7 +217,7 @@ Feature behavioral requirement test cases for `docs/feature/028_usage_row_filter
 - **Then:** Exits 0. Stdout contains no emoji (`🟢`, `🟡`, `🔴`, `→`, `✓`, `*` absent). Status column shows plain text labels (`ok`, `warn`, `err`). Table structure preserved.
 - **Exit:** 0
 - **Live:** yes
-- **Source fn:** `it218_lim_it_ft028_14_no_color_emoji_free` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it218_lim_it_ft028_14_no_color_emoji_free` (in `usage_lim_it_test_b.rs`)
 - **Source:** [feature/028_usage_row_filtering.md AC-14](../../../docs/feature/028_usage_row_filtering.md)
 
 ---
@@ -228,7 +228,7 @@ Feature behavioral requirement test cases for `docs/feature/028_usage_row_filter
 - **When:** `clp .usage get::bogus_field`
 - **Then:** Exits 1. Stderr contains a list of valid field IDs including `5h_left`, `7d_left`, `account`, `status`.
 - **Exit:** 1
-- **Source fn:** `ut_get_invalid_field_exits_1` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `ut_get_invalid_field_exits_1` (in `usage_model_test.rs`)
 - **Source:** [feature/028_usage_row_filtering.md AC-15](../../../docs/feature/028_usage_row_filtering.md)
 
 ---
@@ -240,7 +240,7 @@ Feature behavioral requirement test cases for `docs/feature/028_usage_row_filter
 - **Then:** Exits 0. Output shows at most 2 non-🔴 rows, sorted alphabetically, with Sub column present.
 - **Exit:** 0
 - **Live:** yes
-- **Source fn:** `it219_lim_it_ft028_16_filters_compose` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it219_lim_it_ft028_16_filters_compose` (in `usage_lim_it_test_b.rs`)
 - **Source:** [feature/028_usage_row_filtering.md AC-16](../../../docs/feature/028_usage_row_filtering.md)
 
 ---
@@ -252,5 +252,5 @@ Feature behavioral requirement test cases for `docs/feature/028_usage_row_filter
 - **Then:** Exits 0. Trace output contains exactly 1 timestamped `... result:` line (one HTTP fetch). Non-active accounts produce no trace result lines. The single result line corresponds to the active account.
 - **Exit:** 0
 - **Live:** yes
-- **Source fn:** `it_ft028_17_only_active_single_http_fetch` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it_ft028_17_only_active_single_http_fetch` (in `usage_solo_test.rs`)
 - **Source:** [feature/028_usage_row_filtering.md AC-17](../../../docs/feature/028_usage_row_filtering.md)

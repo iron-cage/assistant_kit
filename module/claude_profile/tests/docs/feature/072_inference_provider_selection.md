@@ -10,26 +10,27 @@
 
 | FT | AC | Scenario | Source fn |
 |----|----|----------|-----------|
-| FT-01 | AC-01 | `.account.save inference_provider::kimi` → field written | `ft01_save_writes_inference_provider` |
-| FT-02 | AC-02 | `.account.save` (no `inference_provider::`) → field absent, not written as `"anthropic"` | `ft02_save_omits_field_when_absent` |
-| FT-03 | AC-03 | `.account.save inference_provider::` (empty) → exits 1, no file written | `ft03_empty_inference_provider_exits_1` |
-| FT-04 | AC-04 | Pre-existing account (no `inference_provider` key) reads as `"anthropic"` | `ft04_pre_existing_account_defaults_anthropic` |
-| FT-05 | AC-05 | `.accounts` (no `cols::`) shows `Provider` column, default `anthropic` | `ft05_accounts_default_provider_column` |
-| FT-06 | AC-06 | `.accounts cols::-inference_provider` omits the column | `ft06_cols_hides_provider_column` |
-| FT-07 | AC-07 | `.provider.select` with no prior selection → `provider.select: anthropic` | `ft07_get_default_no_selection` |
-| FT-08 | AC-08 | `.provider.select id::kimi` → file written; stdout `(selected)` | `ft08_set_kimi_selects_provider` |
-| FT-09 | AC-09 | `.provider.select id::` (empty) → exits 1 | `ft09_empty_id_exits_1` |
-| FT-10 | AC-10 | `.provider.select id::kimi reset::1` → exits 1, mutually exclusive | `ft10_id_and_reset_mutual_exclusive` |
-| FT-11 | AC-11 | `.provider.select reset::1` with selection set → key removed, others preserved | `ft11_reset_removes_key_preserves_others` |
-| FT-12 | AC-12 | `.provider.select reset::1` with no `config.toml` → idempotent exit 0 | `ft12_reset_no_file_is_idempotent` |
-| FT-13 | AC-13 | `.provider.select format::json` → `{"provider":"anthropic"}` | `ft13_get_json_format` |
-| FT-14 | AC-14 | `provider = "kimi"` selected; mixed-provider account list; rotation never selects `anthropic`-tagged account, `force::1` included | `ft14_gate10_excludes_mismatch_explicit_selection` |
-| FT-15 | AC-15 | No selection made (default `anthropic`); account tagged `inference_provider: "kimi"` never selected by rotation | `ft15_gate10_excludes_mismatch_default_selection` |
-| FT-16 | AC-16 | `.provider.select` get-mode value unaffected by which account is currently active | `ft16_select_never_derives_from_current_account` |
+| FT-01 | AC-01 | `.account.save inference_provider::kimi` → field written | `t01_inference_provider_kimi_writes_key` |
+| FT-02 | AC-02 | `.account.save` (no `inference_provider::`) → field absent, not written as `"anthropic"` | `t02_inference_provider_omitted_writes_no_key` |
+| FT-03 | AC-03 | `.account.save inference_provider::` (empty) → exits 1, no file written | `t03_inference_provider_empty_value_exits_1_no_write` |
+| FT-04 | AC-04 | Pre-existing account (no `inference_provider` key) reads as `"anthropic"` | `t05_accounts_default_shows_provider_column_and_anthropic_fallback` (secondary assertion — not a dedicated test) |
+| FT-05 | AC-05 | `.accounts` (no `cols::`) shows `Provider` column, default `anthropic` | `t05_accounts_default_shows_provider_column_and_anthropic_fallback` |
+| FT-06 | AC-06 | `.accounts cols::-inference_provider` omits the column | `t06_accounts_cols_minus_inference_provider_omits_column` |
+| FT-07 | AC-07 | `.provider.select` with no prior selection → `provider.select: anthropic` | `t07_provider_select_get_default_anthropic` |
+| FT-08 | AC-08 | `.provider.select id::kimi` → file written; stdout `(selected)` | `t08_provider_select_set_kimi_persists_and_confirms` |
+| FT-09 | AC-09 | `.provider.select id::` (empty) → exits 1 | `t10_provider_select_empty_id_exits_1` |
+| FT-10 | AC-10 | `.provider.select id::kimi reset::1` → exits 1, mutually exclusive | `t11_provider_select_id_and_reset_mutually_exclusive` |
+| FT-11 | AC-11 | `.provider.select reset::1` with selection set → key removed, others preserved | `t09_provider_select_reset_preserves_model_key` |
+| FT-12 | AC-12 | `.provider.select reset::1` with no `config.toml` → idempotent exit 0 | *(none — coverage gap; no test calls `reset::1` against a never-created `config.toml`)* |
+| FT-13 | AC-13 | `.provider.select format::json` → `{"provider":"anthropic"}` | `t12_provider_select_json_format` |
+| FT-14 | AC-14 | `provider = "kimi"` selected; mixed-provider account list; rotation never selects `anthropic`-tagged account, `force::1` included | `test_cc_gate10_provider_mismatch_skips_account`, `test_cc_gate10_mismatch_not_bypassed_by_force_equivalent` |
+| FT-15 | AC-15 | No selection made (default `anthropic`); account tagged `inference_provider: "kimi"` never selected by rotation | `test_cc_gate10_provider_mismatch_skips_account`, `test_cc_gate10_empty_and_explicit_anthropic_are_equivalent` |
+| FT-16 | AC-16 | `.provider.select` get-mode value unaffected by which account is currently active | *(none — coverage gap; no test switches the active account and re-reads `.provider.select` get-mode)* |
 
 ### Notes
 
-- All FT cases are integration tests in `tests/cli/inference_provider_test.rs` (FT-01–FT-06), `tests/cli/provider_select_test.rs` (FT-07–FT-13, shared with `tests/docs/cli/command/21_provider_select.md`'s IT-01–IT-12), and `tests/usage/sort_next_test.rs` (FT-14–FT-16).
+- **Source fn staleness note:** FT-01 through FT-16 originally cited `ft01`–`ft16`-prefixed function names in files `tests/cli/inference_provider_test.rs`, `tests/cli/provider_select_test.rs`, and `tests/usage/sort_next_test.rs` — none of these files or names were ever created (confirmed via `git log -S`: the commit that introduced this doc touched no matching `.rs` files). Real coverage exists under different names in `tests/cli/account_provider_test.rs` (FT-01–FT-13) and `tests/usage/sort_next_tests_b.rs` (FT-14–FT-15); citations below have been corrected to the real function names. FT-12 and FT-16 are genuine coverage gaps — no backing test exists for either.
+- All FT cases are integration tests in `tests/cli/account_provider_test.rs` (FT-01–FT-13, shared with `tests/docs/cli/command/21_provider_select.md`'s IT-01–IT-12 for FT-07–FT-13), and `tests/usage/sort_next_tests_b.rs` (FT-14–FT-15; FT-16 is a coverage gap).
 - All FT cases use a temporary isolated `~/.clr/` directory and/or temporary account store to avoid touching the real user environment.
 - FT-01–FT-06 exercise the `{name}.json` field and `.accounts` rendering side of this feature — see `docs/schema/002_account_json.md` SC-7 for the on-disk field contract and `docs/cli/param/073_inference_provider.md` for the parameter contract.
 - FT-07–FT-13 exercise `.provider.select` itself — near-identical in content to `tests/docs/cli/command/21_provider_select.md`'s IT-01–IT-12 (same underlying test functions), indexed here under the feature entity for full-feature AC traceability rather than duplicated as distinct tests.
@@ -47,7 +48,7 @@
 - **When:** `clp .account.save name::kimi inference_provider::kimi`
 - **Then:** `kimi.json` contains `"inference_provider": "kimi"`. Exits 0.
 - **Exit:** 0
-- **Source fn:** `ft01_save_writes_inference_provider`
+- **Source fn:** `t01_inference_provider_kimi_writes_key`
 - **Source:** [072_inference_provider_selection.md AC-01](../../../docs/feature/072_inference_provider_selection.md)
 
 ---
@@ -58,7 +59,7 @@
 - **When:** `clp .account.save name::alice@acme.com`
 - **Then:** `alice@acme.com.json` has no `inference_provider` key at all. Exits 0.
 - **Exit:** 0
-- **Source fn:** `ft02_save_omits_field_when_absent`
+- **Source fn:** `t02_inference_provider_omitted_writes_no_key`
 - **Source:** [072_inference_provider_selection.md AC-02](../../../docs/feature/072_inference_provider_selection.md)
 
 ---
@@ -69,18 +70,20 @@
 - **When:** `clp .account.save name::kimi inference_provider::`
 - **Then:** Exits 1. Stderr names `inference_provider::` as requiring a non-empty value. No file written.
 - **Exit:** 1
-- **Source fn:** `ft03_empty_inference_provider_exits_1`
+- **Source fn:** `t03_inference_provider_empty_value_exits_1_no_write`
 - **Source:** [072_inference_provider_selection.md AC-03](../../../docs/feature/072_inference_provider_selection.md)
 
 ---
 
 ### FT-04: Pre-existing account defaults to `anthropic`
 
+> Covered as a secondary assertion within `t05_accounts_default_shows_provider_column_and_anthropic_fallback` (`tests/cli/account_provider_test.rs`) — that test's `alice@test.com` account has no `inference_provider` key and asserts its `Provider` line falls back to `anthropic`.
+
 - **Given:** `legacy.json` exists with no `inference_provider` key (saved before this feature).
 - **When:** `clp .accounts name::legacy` (or any read path)
 - **Then:** Account is treated as `inference_provider: "anthropic"` — no error, no misclassification.
 - **Exit:** 0
-- **Source fn:** `ft04_pre_existing_account_defaults_anthropic`
+- **Source fn:** `t05_accounts_default_shows_provider_column_and_anthropic_fallback` (secondary assertion)
 - **Source:** [072_inference_provider_selection.md AC-04](../../../docs/feature/072_inference_provider_selection.md)
 
 ---
@@ -91,7 +94,7 @@
 - **When:** `clp .accounts`
 - **Then:** Output includes a `Provider` column/line showing `anthropic` for accounts with no `inference_provider` key.
 - **Exit:** 0
-- **Source fn:** `ft05_accounts_default_provider_column`
+- **Source fn:** `t05_accounts_default_shows_provider_column_and_anthropic_fallback`
 - **Source:** [072_inference_provider_selection.md AC-05](../../../docs/feature/072_inference_provider_selection.md)
 
 ---
@@ -102,7 +105,7 @@
 - **When:** `clp .accounts cols::-inference_provider`
 - **Then:** Output has no `Provider` column/line.
 - **Exit:** 0
-- **Source fn:** `ft06_cols_hides_provider_column`
+- **Source fn:** `t06_accounts_cols_minus_inference_provider_omits_column`
 - **Source:** [072_inference_provider_selection.md AC-06](../../../docs/feature/072_inference_provider_selection.md)
 
 ---
@@ -113,7 +116,7 @@
 - **When:** `clp .provider.select`
 - **Then:** Stdout is `provider.select: anthropic\n`. Exits 0.
 - **Exit:** 0
-- **Source fn:** `ft07_get_default_no_selection`
+- **Source fn:** `t07_provider_select_get_default_anthropic`
 - **Source:** [072_inference_provider_selection.md AC-07](../../../docs/feature/072_inference_provider_selection.md)
 
 ---
@@ -124,7 +127,7 @@
 - **When:** `clp .provider.select id::kimi`
 - **Then:** `~/.clr/config.toml` contains `provider = "kimi"`. Stdout contains `(selected)`. Exits 0.
 - **Exit:** 0
-- **Source fn:** `ft08_set_kimi_selects_provider`
+- **Source fn:** `t08_provider_select_set_kimi_persists_and_confirms`
 - **Source:** [072_inference_provider_selection.md AC-08](../../../docs/feature/072_inference_provider_selection.md)
 
 ---
@@ -135,7 +138,7 @@
 - **When:** `clp .provider.select id::`
 - **Then:** Exits 1. Stderr: `id:: must be a non-empty provider name`.
 - **Exit:** 1
-- **Source fn:** `ft09_empty_id_exits_1`
+- **Source fn:** `t10_provider_select_empty_id_exits_1`
 - **Source:** [072_inference_provider_selection.md AC-09](../../../docs/feature/072_inference_provider_selection.md)
 
 ---
@@ -146,7 +149,7 @@
 - **When:** `clp .provider.select id::kimi reset::1`
 - **Then:** Exits 1. Stderr contains `mutually exclusive`.
 - **Exit:** 1
-- **Source fn:** `ft10_id_and_reset_mutual_exclusive`
+- **Source fn:** `t11_provider_select_id_and_reset_mutually_exclusive`
 - **Source:** [072_inference_provider_selection.md AC-10](../../../docs/feature/072_inference_provider_selection.md)
 
 ---
@@ -157,18 +160,20 @@
 - **When:** `clp .provider.select reset::1`
 - **Then:** `provider` key removed; `other_key = "val"` preserved. Stdout is `provider.select: anthropic (reset to default)\n`. Exits 0.
 - **Exit:** 0
-- **Source fn:** `ft11_reset_removes_key_preserves_others`
+- **Source fn:** `t09_provider_select_reset_preserves_model_key`
 - **Source:** [072_inference_provider_selection.md AC-11](../../../docs/feature/072_inference_provider_selection.md)
 
 ---
 
 ### FT-12: `reset::1` with no `config.toml` is idempotent
 
+> **Coverage gap** — no test exercises this scenario. `t09_provider_select_reset_preserves_model_key` is the only `reset::1` test and always seeds `config.toml` first; no test calls `reset::1` against a directory where `~/.clr/config.toml` was never created. Same gap as `tests/docs/cli/command/21_provider_select.md`'s IT-06.
+
 - **Given:** `~/.clr/config.toml` does not exist.
 - **When:** `clp .provider.select reset::1`
 - **Then:** Stdout is `provider.select: anthropic (reset to default)\n`. Exits 0.
 - **Exit:** 0
-- **Source fn:** `ft12_reset_no_file_is_idempotent`
+- **Source fn:** *(none — coverage gap)*
 - **Source:** [072_inference_provider_selection.md AC-12](../../../docs/feature/072_inference_provider_selection.md)
 
 ---
@@ -179,7 +184,7 @@
 - **When:** `clp .provider.select format::json`
 - **Then:** Stdout is `{"provider":"kimi"}` (or `{"provider":"anthropic"}` when absent). Exits 0.
 - **Exit:** 0
-- **Source fn:** `ft13_get_json_format`
+- **Source fn:** `t12_provider_select_json_format`
 - **Source:** [072_inference_provider_selection.md AC-13](../../../docs/feature/072_inference_provider_selection.md)
 
 ---
@@ -190,7 +195,7 @@
 - **When:** `clp .usage rotate::1` (or auto-switch evaluation) runs, including with `force::1`.
 - **Then:** The `anthropic`-tagged account is never selected as next/current target under any `force::1` combination.
 - **Exit:** 0
-- **Source fn:** `ft14_gate10_excludes_mismatch_explicit_selection`
+- **Source fn:** `test_cc_gate10_provider_mismatch_skips_account`, `test_cc_gate10_mismatch_not_bypassed_by_force_equivalent` (`tests/usage/sort_next_tests_b.rs`; real tests fix `selected_provider="anthropic"` and tag the excluded account `"kimi"` — the inverse of this case's illustrative `kimi`-selected/`anthropic`-tagged example, but the same Gate 10 exclusion logic)
 - **Source:** [072_inference_provider_selection.md AC-14](../../../docs/feature/072_inference_provider_selection.md)
 
 ---
@@ -201,16 +206,18 @@
 - **When:** `clp .usage rotate::1` (or auto-switch evaluation) runs.
 - **Then:** The `kimi`-tagged account is never selected — Gate 10 fires using the default `anthropic` comparison value exactly as it would for an explicit selection.
 - **Exit:** 0
-- **Source fn:** `ft15_gate10_excludes_mismatch_default_selection`
+- **Source fn:** `test_cc_gate10_provider_mismatch_skips_account`, `test_cc_gate10_empty_and_explicit_anthropic_are_equivalent` (`tests/usage/sort_next_tests_b.rs`)
 - **Source:** [072_inference_provider_selection.md AC-15](../../../docs/feature/072_inference_provider_selection.md)
 
 ---
 
 ### FT-16: `.provider.select` never derives from the current account
 
+> **Coverage gap** — no test exercises this scenario. No existing test switches the active account and then re-reads `.provider.select` get-mode to confirm independence from the account's own `inference_provider` tag.
+
 - **Given:** Current active account has `inference_provider: "kimi"`; `~/.clr/config.toml` has no `provider` key.
 - **When:** `clp .provider.select`
 - **Then:** Stdout is `provider.select: anthropic\n` — unaffected by the current account's own `inference_provider` tag.
 - **Exit:** 0
-- **Source fn:** `ft16_select_never_derives_from_current_account`
+- **Source fn:** *(none — coverage gap)*
 - **Source:** [072_inference_provider_selection.md AC-16](../../../docs/feature/072_inference_provider_selection.md)

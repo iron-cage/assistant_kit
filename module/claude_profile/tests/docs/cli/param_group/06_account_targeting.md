@@ -22,7 +22,7 @@ See [param_group/006_account_targeting.md](../../../../docs/cli/param_group/006_
 - **When:** `clp .account.save name::test@example.com host::workbox role::dev`
 - **Then:** Exits 0. `{credential_store}/test@example.com.json` exists and contains both `"host": "workbox"` and `"role": "dev"`.
 - **Exit:** 0
-- **Source fn:** `as_save_writes_profile_json` (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `as_save_writes_profile_json` (in `account_renewal_test_b.rs`)
 - **Source:** [feature/029_account_host_metadata.md](../../../../docs/feature/029_account_host_metadata.md)
 
 ---
@@ -34,7 +34,7 @@ See [param_group/006_account_targeting.md](../../../../docs/cli/param_group/006_
 - **When:** `clp .account.save name::test@example.com` (neither `host::` nor `role::` provided)
 - **Then:** Exits 0. `{name}.json` contains `"host": "testuser@testhost"` (auto-captured from `$USER@$HOSTNAME`). `"role"` field is empty string.
 - **Exit:** 0
-- **Source fn:** `as24_host_auto_capture_user_hostname` (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `as24_host_auto_capture_user_hostname` (in `account_renewal_test_b.rs`)
 - **Source:** [feature/029_account_host_metadata.md](../../../../docs/feature/029_account_host_metadata.md)
 
 ---
@@ -45,7 +45,7 @@ See [param_group/006_account_targeting.md](../../../../docs/cli/param_group/006_
 - **When:** `clp .account.save name::test@example.com host::newbox role::dev`
 - **Then:** Exits 0. `{name}.json` now contains `"host": "newbox"` and `"role": "dev"`. Previous `oldbox`/`ops` values overwritten; file is not accumulated.
 - **Exit:** 0
-- **Source fn:** `as26_host_resave_overwrites` (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `as26_host_resave_overwrites` (in `account_renewal_test_b.rs`)
 - **Source:** [feature/029_account_host_metadata.md](../../../../docs/feature/029_account_host_metadata.md)
 
 ---
@@ -57,7 +57,7 @@ See [param_group/006_account_targeting.md](../../../../docs/cli/param_group/006_
 - **Then:** Exits 0. Table row for `test@example.com` shows `"mybox"` in the `Host` column and `"work"` in the `Role` column. Both columns appear in the header row.
 - **Exit:** 0
 - **Live:** yes
-- **Source fn:** `it240_lim_it_cols_host_role_shows_profile_data` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it240_lim_it_cols_host_role_shows_profile_data` (in `usage_lim_it_test_b.rs`)
 - **Source:** [feature/029_account_host_metadata.md](../../../../docs/feature/029_account_host_metadata.md)
 
 ---

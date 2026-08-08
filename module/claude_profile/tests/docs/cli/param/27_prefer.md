@@ -79,5 +79,5 @@ Edge case coverage for the `prefer::` parameter on `.usage`. See [param/027_pref
 - **Then-A:** Footer `-> Next` selects P — `prefer::opus` weights on overall `7d Left`; P has more.
 - **Then-B:** Footer `-> Next` selects Q — `prefer::sonnet` weights on `7d(Son) Left`; Q has more.
 - **Exit:** 0 both cases (unit-level assertion via `sort_indices()` in `src/usage/sort.rs`)
-- **Source fn:** `test_prefer_sonnet_qualifies_by_sonnet_quota` (in `src/usage/sort.rs`)
+- **Source fn:** *(coverage gap — no test named or otherwise exercises this exact `prefer::opus` vs. `prefer::sonnet` divergence scenario; `src/usage/sort.rs` has no `#[cfg(test)]` module matching this description)*
 - **Source:** [feature/020_usage_sort_strategies.md AC-05/AC-06](../../../../docs/feature/020_usage_sort_strategies.md)

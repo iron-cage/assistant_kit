@@ -36,7 +36,7 @@ Edge case tests for the `field::` parameter. Tests validate String enforcement, 
 - **When:** `clp .paths field::base`
 - **Then:** stdout contains exactly the resolved `base` path value followed by a newline; no labels, no JSON wrapper; exit 0.
 - **Exit:** 0
-- **Source fn:** `p009_paths_field_returns_single_value`
+- **Source fn:** *(coverage gap — `p09_paths_field_returns_single_value` in `tests/cli/token_paths_test.rs` exercises this same mechanism but only for `field::credential_store` (EC-2); no test exercises `field::base` specifically)*
 - **Source:** [params.md#parameter--24-field](../../../../docs/cli/param/024_field.md)
 ---
 
@@ -46,7 +46,7 @@ Edge case tests for the `field::` parameter. Tests validate String enforcement, 
 - **When:** `clp .paths field::credential_store`
 - **Then:** stdout contains exactly the resolved `credential_store` path value followed by a newline; no labels, no JSON wrapper; exit 0.
 - **Exit:** 0
-- **Source fn:** `p009_paths_field_returns_single_value`
+- **Source fn:** `p09_paths_field_returns_single_value` (in `tests/cli/token_paths_test.rs`) — renumbered from `p009` (dropped leading zero)
 - **Source:** [params.md#parameter--24-field](../../../../docs/cli/param/024_field.md)
 ---
 
@@ -56,7 +56,7 @@ Edge case tests for the `field::` parameter. Tests validate String enforcement, 
 - **When:** `clp .paths field::unknown`
 - **Then:** Exit 1; stderr contains `unknown field 'unknown'` and lists all valid field names: `base`, `credentials`, `credential_store`, `projects`, `stats`, `settings`, `session_env`, `sessions`.
 - **Exit:** 1
-- **Source fn:** `p010_paths_field_unknown_exits_1`
+- **Source fn:** `p10_paths_field_unknown_exits_1` (in `tests/cli/token_paths_test.rs`) — renumbered from `p010` (dropped leading zero); real test confirms exit 1 and stderr containing the bad value, but doesn't verify the error enumerates all 8 valid field names as this case describes
 - **Source:** [params.md#parameter--24-field](../../../../docs/cli/param/024_field.md)
 ---
 
@@ -66,7 +66,7 @@ Edge case tests for the `field::` parameter. Tests validate String enforcement, 
 - **When:** `clp .paths` (no `field::` param)
 - **Then:** stdout contains labeled output for all paths (multiple lines); behavior is the full path listing, not a single-field extract; exit 0.
 - **Exit:** 0
-- **Source fn:** `p002_paths_text_v1_labeled`
+- **Source fn:** `p02_paths_text_v1_labeled` (in `tests/cli/token_paths_test.rs`) — renumbered from `p002` (dropped leading zero)
 - **Source:** [params.md#parameter--24-field](../../../../docs/cli/param/024_field.md)
 ---
 
@@ -76,7 +76,7 @@ Edge case tests for the `field::` parameter. Tests validate String enforcement, 
 - **When:** `clp .paths field::credentials format::json`
 - **Then:** stdout contains the raw string path value (not a JSON object); `format::json` is overridden by `field::`; exit 0.
 - **Exit:** 0
-- **Source fn:** `p009_paths_field_returns_single_value`
+- **Source fn:** *(coverage gap — `p09_paths_field_returns_single_value` in `tests/cli/token_paths_test.rs` covers `field::` alone; no test combines `field::` with `format::json` to verify the override)*
 - **Source:** [params.md#parameter--24-field](../../../../docs/cli/param/024_field.md)
 ---
 
@@ -86,5 +86,5 @@ Edge case tests for the `field::` parameter. Tests validate String enforcement, 
 - **When:** `clp .paths field::F` for each F in `base`, `credentials`, `credential_store`, `projects`, `stats`, `settings`, `session_env`, `sessions`
 - **Then:** Each invocation exits 0 and returns a non-empty path string on stdout; no field name from this set is rejected.
 - **Exit:** 0
-- **Source fn:** `p009_paths_field_returns_single_value`
+- **Source fn:** *(coverage gap — `p09_paths_field_returns_single_value` in `tests/cli/token_paths_test.rs` exercises exactly one field name (`credential_store`), not the full 8-name matrix this case describes)*
 - **Source:** [params.md#parameter--24-field](../../../../docs/cli/param/024_field.md)

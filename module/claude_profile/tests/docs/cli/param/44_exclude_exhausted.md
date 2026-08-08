@@ -22,7 +22,7 @@ Edge case coverage for the `exclude_exhausted::` parameter on `.usage`. See [par
 - **When:** `clp .usage exclude_exhausted::1`
 - **Then:** Exits 0. Only 🟢 row shown; both 🟡 and 🔴 rows hidden.
 - **Exit:** 0
-- **Source fn:** `it229_lim_it_exclude_exhausted_1_shows_green` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it229_lim_it_exclude_exhausted_1_shows_green` (in `usage_lim_it_test_b.rs`)
 - **Source:** [param/044_exclude_exhausted.md](../../../../docs/cli/param/044_exclude_exhausted.md)
 
 ---
@@ -33,7 +33,7 @@ Edge case coverage for the `exclude_exhausted::` parameter on `.usage`. See [par
 - **When:** `clp .usage exclude_exhausted::0`
 - **Then:** Exits 0. All rows shown.
 - **Exit:** 0
-- **Source fn:** `it174_exclude_exhausted_0_shows_all_rows` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it174_exclude_exhausted_0_shows_all_rows` (in `usage_filter_test.rs`)
 - **Source:** [param/044_exclude_exhausted.md](../../../../docs/cli/param/044_exclude_exhausted.md)
 
 ---
@@ -46,7 +46,7 @@ Edge case coverage for the `exclude_exhausted::` parameter on `.usage`. See [par
 - **Then-A:** Both rows shown (🟡 passes `only_valid::1`).
 - **Then-B:** Only 🟢 row shown (🟡 hidden by `exclude_exhausted::1`).
 - **Exit:** 0 both
-- **Source fn:** `it230_lim_it_exclude_exhausted_stricter_than_only_valid` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it230_lim_it_exclude_exhausted_stricter_than_only_valid` (in `usage_lim_it_test_b.rs`)
 - **Source:** [param/044_exclude_exhausted.md](../../../../docs/cli/param/044_exclude_exhausted.md)
 
 ---
@@ -57,7 +57,7 @@ Edge case coverage for the `exclude_exhausted::` parameter on `.usage`. See [par
 - **When:** `clp .usage exclude_exhausted::bad`
 - **Then:** Exits 1. Stderr names valid values: `0`, `1`, `false`, `true`.
 - **Exit:** 1
-- **Source fn:** `it175_exclude_exhausted_bad_exits_1` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it175_exclude_exhausted_bad_exits_1` (in `usage_filter_test.rs`)
 - **Source:** [param/044_exclude_exhausted.md](../../../../docs/cli/param/044_exclude_exhausted.md)
 
 ---
@@ -68,7 +68,7 @@ Edge case coverage for the `exclude_exhausted::` parameter on `.usage`. See [par
 - **When:** `clp .usage exclude_exhausted::1`
 - **Then:** Exits 0. Table has 0 data rows (all filtered). No error.
 - **Exit:** 0
-- **Source fn:** `it176_exclude_exhausted_1_all_red_shows_empty` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it176_exclude_exhausted_1_all_red_shows_empty` (in `usage_filter_test.rs`)
 - **Source:** [param/044_exclude_exhausted.md](../../../../docs/cli/param/044_exclude_exhausted.md)
 
 ---
@@ -79,7 +79,7 @@ Edge case coverage for the `exclude_exhausted::` parameter on `.usage`. See [par
 - **When:** `clp .usage exclude_exhausted::true`
 - **Then:** Exits 0. Only 🟢 row shown — same result as `exclude_exhausted::1`.
 - **Exit:** 0
-- **Source fn:** `it177_exclude_exhausted_true_accepted` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it177_exclude_exhausted_true_accepted` (in `usage_filter_test.rs`)
 - **Source:** [param/044_exclude_exhausted.md](../../../../docs/cli/param/044_exclude_exhausted.md)
 
 ---

@@ -64,21 +64,21 @@ AC test cases for `docs/algorithm/002_session_model_override.md`. Tests `apply_m
 - **Given:** `OauthUsageData { seven_day_sonnet: Some(PeriodUsage { utilization: 91.0, resets_at: None }) }` — 9% remaining (< 10%); no `settings.json` initially
 - **When:** `apply_model_override(&quota, &paths, false, "usage", "test-account")` is called
 - **Then:** `settings.json` contains `"model": "opus"` AND `"effortLevel": "max"` — effort written unconditionally in Opus branch regardless of `overrode` (TSK-335: was `"high"`, and only written when `overrode = true`)
-- **Source fn:** `mre_bug322_opus_override_sets_effort_max` (api_tests.rs)
+- **Source fn:** `mre_bug322_opus_override_sets_effort_max` (api_tests_a.rs)
 
 ### AC-8: Sonnet branch sets effort to `"high"` unconditionally (Fix BUG-322, TSK-335)
 
 - **Given:** `OauthUsageData { seven_day_sonnet: Some(PeriodUsage { utilization: 4.0, resets_at: None }) }` — 96% remaining (≥ 10%); `settings.json` pre-seeded with `"model": "opus", "effortLevel": "max"`
 - **When:** `apply_model_override(&quota, &paths, false, "usage", "test-account")` is called
 - **Then:** `settings.json` contains `"model": "sonnet"` AND `"effortLevel": "high"` — effort written unconditionally in Sonnet branch regardless of `overrode` (TSK-335: was `"low"`, only written when `overrode = true`)
-- **Source fn:** `t11_opus_to_sonnet_sets_effort_high` (api_tests.rs)
+- **Source fn:** `t11_opus_to_sonnet_sets_effort_high` (api_tests_a.rs)
 
 ### AC-9: Absent-tier path sets effort to `"high"` unconditionally (Fix BUG-322, TSK-335)
 
 - **Given:** `OauthUsageData { seven_day_sonnet: None }` (absent tier); `settings.json` pre-seeded with `"model": "opus", "effortLevel": "max"`
 - **When:** `apply_model_override(&quota, &paths, false, "test", "test-account")` is called
 - **Then:** `settings.json` contains `"model": "sonnet"` AND `"effortLevel": "high"` — absent tier forces Sonnet + effort written unconditionally (TSK-335: was `"low"`)
-- **Source fn:** `t12_absent_tier_with_opus_sets_effort_high` (api_tests.rs)
+- **Source fn:** `t12_absent_tier_with_opus_sets_effort_high` (api_tests_a.rs)
 
 ### AC-10: Effort synced even when model is already at target (TSK-335 H2 always-sync)
 

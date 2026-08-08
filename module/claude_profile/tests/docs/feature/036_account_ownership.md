@@ -236,7 +236,7 @@
 - **When (case C):** `clp .accounts assign::1 name::alice` is executed.
 - **Then (case C):** Exits 1 — REMOVED_TOGGLE migration message: "REMOVED — use `assignee::USER@MACHINE name::X`". No file written. (Feature 065: `active::` itself is now also REMOVED_TOGGLE; use `assignee::`.)
 - **Exit:** 1 (all cases)
-- **Source fn:** `ft15_unclaim_not_on_save_or_assign` (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `ft15_unclaim_not_on_save_or_assign` (in `account_ownership_test.rs`)
 - **Source:** [036_account_ownership.md AC-15](../../../docs/feature/036_account_ownership.md)
 
 ---

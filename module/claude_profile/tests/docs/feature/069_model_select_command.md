@@ -45,7 +45,7 @@
 - **When:** `clp .model.select`
 - **Then:** Stdout is `model.select: (unset)\n`. Exits 0.
 - **Exit:** 0
-- **Source fn:** `ft01_get_unset_no_file`
+- **Source fn:** `ft01_get_unset_no_file` (N/A)
 - **Source:** [069_model_select_command.md AC-01](../../../docs/feature/069_model_select_command.md)
 
 ---
@@ -58,7 +58,7 @@
 - **When:** `clp .model.select`
 - **Then:** Stdout is `model.select: claude-opus-4-8\n`. Exits 0.
 - **Exit:** 0
-- **Source fn:** `ft02_get_shows_pinned_value`
+- **Source fn:** `ft02_get_shows_pinned_value` (N/A)
 - **Source:** [069_model_select_command.md AC-02](../../../docs/feature/069_model_select_command.md)
 
 ---
@@ -71,7 +71,7 @@
 - **When:** `clp .model.select id::claude-opus-4-8`
 - **Then:** `~/.clr/config.toml` contains `model = "claude-opus-4-8"`. Stdout contains `(pinned)`. Exits 0.
 - **Exit:** 0
-- **Source fn:** `ft03_set_opus_pins_model`
+- **Source fn:** `ft03_set_opus_pins_model` (N/A)
 - **Source:** [069_model_select_command.md AC-03](../../../docs/feature/069_model_select_command.md)
 
 ---
@@ -84,7 +84,7 @@
 - **When:** `clp .model.select id::claude-sonnet-5`
 - **Then:** `~/.clr/config.toml` contains `model = "claude-sonnet-5"`. Exits 0.
 - **Exit:** 0
-- **Source fn:** `ft04_set_sonnet_pins_model`
+- **Source fn:** `ft04_set_sonnet_pins_model` (N/A)
 - **Source:** [069_model_select_command.md AC-04](../../../docs/feature/069_model_select_command.md)
 
 ---
@@ -97,7 +97,7 @@
 - **When:** `clp .model.select reset::1`
 - **Then:** `~/.clr/config.toml` no longer contains the `model` key. `other_key = "val"` is preserved. Stdout is `model.select: (reset to default)\n`. Exits 0.
 - **Exit:** 0
-- **Source fn:** `ft05_reset_removes_key_preserves_others`
+- **Source fn:** `ft05_reset_removes_key_preserves_others` (N/A)
 - **Source:** [069_model_select_command.md AC-05](../../../docs/feature/069_model_select_command.md)
 
 ---
@@ -110,7 +110,7 @@
 - **When:** `clp .model.select reset::1`
 - **Then:** Stdout is `model.select: (reset to default)\n`. Exits 0.
 - **Exit:** 0
-- **Source fn:** `ft06_reset_no_file_is_idempotent`
+- **Source fn:** `ft06_reset_no_file_is_idempotent` (N/A)
 - **Source:** [069_model_select_command.md AC-06](../../../docs/feature/069_model_select_command.md)
 
 ---
@@ -123,7 +123,7 @@
 - **When:** `clp .model.select id::claude-opus-4-8`
 - **Then:** `~/.clr/config.toml` is created; contains `model = "claude-opus-4-8"`. Exits 0.
 - **Exit:** 0
-- **Source fn:** `ft07_set_creates_file_when_absent`
+- **Source fn:** `ft07_set_creates_file_when_absent` (N/A)
 - **Source:** [069_model_select_command.md AC-07](../../../docs/feature/069_model_select_command.md)
 
 ---
@@ -136,7 +136,7 @@
 - **When:** `clp .model.select id::claude-opus-4-8`
 - **Then:** `~/.clr/config.toml` contains both `model = "claude-opus-4-8"` and `other_key = "val"`. Exits 0.
 - **Exit:** 0
-- **Source fn:** `ft08_set_preserves_other_keys`
+- **Source fn:** `ft08_set_preserves_other_keys` (N/A)
 - **Source:** [069_model_select_command.md AC-08](../../../docs/feature/069_model_select_command.md)
 
 ---
@@ -149,7 +149,7 @@
 - **When:** `clp .model.select id::claude-opus-4-8 reset::1`
 - **Then:** Exits 1. Stderr contains `mutually exclusive`.
 - **Exit:** 1
-- **Source fn:** `ft09_id_and_reset_mutual_exclusive`
+- **Source fn:** `ft09_id_and_reset_mutual_exclusive` (N/A)
 - **Source:** [069_model_select_command.md AC-09](../../../docs/feature/069_model_select_command.md)
 
 ---
@@ -163,7 +163,7 @@
 - **Then:** Stdout is `{"subprocess_model":"claude-opus-4-8"}` (or valid JSON equivalent). Exits 0.
 - **Variant:** When preference absent → `{"subprocess_model":null}`.
 - **Exit:** 0
-- **Source fn:** `ft10_get_json_format`
+- **Source fn:** `ft10_get_json_format` (N/A)
 - **Source:** [069_model_select_command.md AC-10](../../../docs/feature/069_model_select_command.md)
 
 ---
@@ -176,7 +176,7 @@
 - **When:** `clp .help`
 - **Then:** Output contains `.model.select`. Exits 0.
 - **Exit:** 0
-- **Source fn:** `ft11_model_select_in_help`
+- **Source fn:** `ft11_model_select_in_help` (N/A)
 - **Source:** [069_model_select_command.md AC-11](../../../docs/feature/069_model_select_command.md)
 
 ---
@@ -189,5 +189,5 @@
 - **When:** `clp .model.select id::`
 - **Then:** Exits 1. Stderr indicates `id::` must be non-empty.
 - **Exit:** 1
-- **Source fn:** `ft12_empty_id_exits_1`
+- **Source fn:** `ft12_empty_id_exits_1` (N/A)
 - **Source:** [069_model_select_command.md AC-12](../../../docs/feature/069_model_select_command.md)

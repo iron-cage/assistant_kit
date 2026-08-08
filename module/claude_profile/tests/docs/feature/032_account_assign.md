@@ -70,7 +70,7 @@ Feature behavioral requirement test cases for `docs/feature/032_account_assign.m
 - **When:** `clp .accounts assignee::0 name::alice@corp.com dry::1`
 - **Then:** stdout = `[dry-run] would assign alice@corp.com for {user}@{hostname}  →  _active_{hostname}_{user}`; no `_active_*` file created.
 - **Exit:** 0
-- **Source fn:** `ft03_assignee_dry_run` (in `tests/cli/account_assign_test.rs`)
+- **Source fn:** `ft03_assignee_assign_dry_run` (in `tests/cli/account_assign_test.rs`) — renamed from `ft03_assignee_dry_run`
 
 ### FT-04: `assignee::USER@MACHINE` (no `name::`) clears marker for that identity (Feature 065)
 
@@ -142,7 +142,7 @@ Feature behavioral requirement test cases for `docs/feature/032_account_assign.m
 - **When:** `clp .accounts assignee::bob@laptop name::alice@corp.com dry::1`
 - **Then:** stdout contains `_active_laptop_bob`.
 - **Exit:** 0
-- **Source fn:** `ft03_assignee_dry_run` (in `tests/cli/account_assign_test.rs`)
+- **Source fn:** `aa12_dry_run_shows_marker_filename` (in `tests/cli/account_assign_test.rs`) — corrected from `ft03_assignee_dry_run` (wrong function; that fn tests FT-03's `assignee::0` scenario, not this one's `assignee::bob@laptop`)
 
 ### FT-13: `.accounts assignee::USER@MACHINE name::X` does NOT modify `owner` field in `{name}.json` (Feature 065)
 

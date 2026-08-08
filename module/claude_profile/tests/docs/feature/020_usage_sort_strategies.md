@@ -57,7 +57,7 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 - **When:** `sort_indices(&accounts, SortStrategy::Name, None, PreferStrategy::Any, 0)`
 - **Then:** Indices reordered to: `a@x.com`, `b@x.com`, `c@x.com`.
 - **Exit:** n/a (unit test — function return assertion)
-- **Source fn:** `test_sort_name_alphabetical` (in `src/usage/sort.rs`)
+- **Source fn:** `test_sort_name_alphabetical` (in `sort_tests.rs`)
 - **Source:** [feature/020_usage_sort_strategies.md AC-01](../../../docs/feature/020_usage_sort_strategies.md)
 
 ---
@@ -68,7 +68,7 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 - **When:** `sort_indices(&accounts, SortStrategy::Renew, None, PreferStrategy::Any, now_secs)`
 - **Then:** Order: `A`, `B`, `C`, then `D` (sunk). Non-h-exhausted sorted by soonest `7d Reset` countdown first.
 - **Exit:** n/a (unit test)
-- **Source fn:** `test_sort_renew_soonest_first_exhausted_last` (in `src/usage/sort.rs`)
+- **Source fn:** `test_sort_renew_soonest_first_exhausted_last` (in `sort_tests.rs`)
 - **Source:** [feature/020_usage_sort_strategies.md AC-01](../../../docs/feature/020_usage_sort_strategies.md)
 
 ---
@@ -90,7 +90,7 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 - **When:** `clp .usage sort::bogus`
 - **Then:** Exits 1. Stderr names the three valid values: `name`, `renew`, `renews`.
 - **Exit:** 1
-- **Source fn:** `it057_sort_invalid_value_exit_1` (in `tests/cli/usage_test.rs`); unit: `test_sort_strategy_parse_invalid_rejected` (in `tests/usage/mod_tests.rs`)
+- **Source fn:** `it057_sort_invalid_value_exit_1` (in `usage_sort_test.rs`); unit: `test_sort_strategy_parse_invalid_rejected` (in `tests/usage/mod_tests.rs`)
 - **Source:** [feature/020_usage_sort_strategies.md AC-07](../../../docs/feature/020_usage_sort_strategies.md)
 
 ---
@@ -101,7 +101,7 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 - **When:** `clp .usage prefer::bogus`
 - **Then:** Exits 1. Stderr names the three valid values: `any`, `opus`, `sonnet`.
 - **Exit:** 1
-- **Source fn:** `it058_prefer_invalid_value_exit_1` (in `tests/cli/usage_test.rs`); unit: `test_prefer_strategy_parse_invalid_rejected` (in `tests/usage/mod_tests.rs`)
+- **Source fn:** `it058_prefer_invalid_value_exit_1` (in `usage_sort_test.rs`); unit: `test_prefer_strategy_parse_invalid_rejected` (in `tests/usage/mod_tests.rs`)
 - **Source:** [feature/020_usage_sort_strategies.md AC-08](../../../docs/feature/020_usage_sort_strategies.md)
 
 ---
@@ -123,7 +123,7 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 - **When:** `sort_indices(&accounts, SortStrategy::Renew, None, PreferStrategy::Any, now_secs)` — default strategy is `renew`.
 - **Then:** `early@test.com` ranks first (resets in 1h — soonest reset first), `late@test.com` second. Confirms renew default = `desc::0`.
 - **Exit:** n/a (unit test)
-- **Source fn:** `test_sort_renew_default_equals_desc0` (in `src/usage/sort.rs`); `it137_sort_default_is_renew_structural` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `test_sort_renew_default_equals_desc0` (in `sort_tests.rs`); `it137_sort_default_is_renew_structural` (in `usage_model_test.rs`)
 - **Source:** [feature/020_usage_sort_strategies.md AC-01](../../../docs/feature/020_usage_sort_strategies.md)
 
 ---
@@ -150,7 +150,7 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 - **When:** `sort_indices(&accounts, SortStrategy::Renew, None, PreferStrategy::Any, 0)`
 - **Then:** `alpha@test.com` ranks first (alphabetical winner when all numeric keys tie). Confirms the final name tiebreaker prevents filesystem-order-dependent non-determinism.
 - **Exit:** n/a (unit test — name assertion on `accounts[idx[0]].name`)
-- **Source fn:** `mre_bug259_sort_renew_alphabetical_when_all_keys_tied` (in `src/usage/sort.rs`)
+- **Source fn:** `mre_bug259_sort_renew_alphabetical_when_all_keys_tied` (in `sort_tests.rs`)
 - **Source:** [feature/020_usage_sort_strategies.md AC-01](../../../docs/feature/020_usage_sort_strategies.md)
 
 ---
@@ -161,7 +161,7 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 - **When:** `sort_indices(&accounts, SortStrategy::Renews, None, PreferStrategy::Any, now)`
 - **Then:** Order: `soon_renew@test.com` (soonest renewal), `later_renew@test.com`, `no_renew@test.com` (no data, placed last). Default `desc::0`.
 - **Exit:** n/a (unit test — index assertion)
-- **Source fn:** `test_sort_renews_ascending` (in `tests/usage/sort_next_tests.rs`)
+- **Source fn:** `test_sort_renews_ascending` (in `sort_next_tests_b.rs`)
 - **Source:** [feature/020_usage_sort_strategies.md AC-02](../../../docs/feature/020_usage_sort_strategies.md)
 
 ---
@@ -174,7 +174,7 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 - **When:** `sort_indices(&accounts, SortStrategy::Name, None, PreferStrategy::Any, 0)`
 - **Then:** `account-a` appears before `weekly-exh`. `account-a` is in HExhausted (group 2); `weekly-exh` is in WeeklyExhausted (group 3). Under `prefer::any`, `prefer_weekly(account-a) = min(32%, 3%) = 3.0` — the bug used this value and placed `account-a` in Red; the fix uses `seven_day_left = 32% > 3.0%` → HExhausted.
 - **Exit:** n/a (unit test — position assertion)
-- **Source fn:** `mre_bug299_h_exhausted_misclassified_as_red_prefer_any` (in `src/usage/sort.rs`)
+- **Source fn:** `mre_bug299_h_exhausted_misclassified_as_red_prefer_any` (in `sort_tests.rs`)
 - **Source:** [feature/020_usage_sort_strategies.md AC-12](../../../docs/feature/020_usage_sort_strategies.md); BUG-299
 
 ---
@@ -210,5 +210,5 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 - **Then:** Returns `Some(0)` — `aaa_target@test.com` is eligible. Gate 7 uses `seven_day_left(aq) = 31.0 > 3.0` (model-agnostic raw 7d quota). Before Fix(BUG-324): `prefer_weekly(aq, Any) = min(31.0, 0.0) = 0.0 ≤ 5.0` — gate would fire and block this green account.
 - **Exit:** n/a (unit test — return value assertion)
 - **Note:** Same class as BUG-299 (fixed in `sort.rs` status groups, left in `sort_next.rs` eligibility gate). Eligibility is model-agnostic; `apply_model_override()` handles model selection post-rotation.
-- **Source fn:** `mre_bug324_green_account_eligible_when_7d_son_exhausted` (in `tests/usage/sort_next_tests.rs`)
+- **Source fn:** `mre_bug324_green_account_eligible_when_7d_son_exhausted` (in `sort_next_tests_b.rs`)
 - **Source:** [feature/020_usage_sort_strategies.md AC-09](../../../docs/feature/020_usage_sort_strategies.md); BUG-324

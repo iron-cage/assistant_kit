@@ -65,7 +65,7 @@ Feature behavioral requirement test cases for `docs/feature/025_per_machine_acti
 - **When:** `clp .account.save name::alice@home.com`
 - **Then:** The credential store contains `_active_{hostname}_{user}` = `"alice@home.com"`. No bare `_active` file is created. The fix in `save()` uses `active_marker_filename()` (not the old hard-coded `"_active"`).
 - **Exit:** 0
-- **Source fn:** `as16_save_writes_active_marker` (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `as16_save_writes_active_marker` (in `account_mutations_test_b.rs`)
 - **Source:** [feature/025_per_machine_active_marker.md AC-01](../../../docs/feature/025_per_machine_active_marker.md)
 
 ---
@@ -110,7 +110,7 @@ Feature behavioral requirement test cases for `docs/feature/025_per_machine_acti
 - **When:** `clp .account.use i1`
 - **Then:** Exits 0. Active marker contains `i1@wbox.pro`. The exact-local-part check resolves `i1@wbox.pro` before reaching the prefix scan — no ambiguity error.
 - **Exit:** 0
-- **Source fn:** `aw16_exact_local_part_wins_over_ambiguous_prefix` (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `aw16_exact_local_part_wins_over_ambiguous_prefix` (in `account_mutations_test_b.rs`)
 - **Source:** [feature/015_name_shortcut_syntax.md AC-11](../../../docs/feature/015_name_shortcut_syntax.md)
 
 ---
@@ -121,7 +121,7 @@ Feature behavioral requirement test cases for `docs/feature/025_per_machine_acti
 - **When:** `clp .account.use a`
 - **Then:** Exits 1. Stderr contains "ambiguous". No account switch occurs. The exact-local-part check finds no match, falling through to prefix scan which reports ambiguity.
 - **Exit:** 1
-- **Source fn:** `aw15_use_prefix_ambiguous_exits_1` (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `aw15_use_prefix_ambiguous_exits_1` (in `account_mutations_test_b.rs`)
 - **Source:** [feature/015_name_shortcut_syntax.md AC-06](../../../docs/feature/015_name_shortcut_syntax.md)
 
 ---
@@ -132,7 +132,7 @@ Feature behavioral requirement test cases for `docs/feature/025_per_machine_acti
 - **When:** `clp .account.use i1`
 - **Then:** Exits 1. Stderr contains "ambiguous". The exact-local-part check finds no match (no account with local part `i1`), falls through to prefix scan, which finds two matches and reports ambiguity.
 - **Exit:** 1
-- **Source fn:** `aw17_use_prefix_ambiguous_no_exact_local_part_exits_1` (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `aw17_use_prefix_ambiguous_no_exact_local_part_exits_1` (in `account_mutations_test_b.rs`)
 - **Source:** [feature/015_name_shortcut_syntax.md AC-06, AC-11](../../../docs/feature/015_name_shortcut_syntax.md)
 
 ---
@@ -143,7 +143,7 @@ Feature behavioral requirement test cases for `docs/feature/025_per_machine_acti
 - **When:** `clp .account.save` (no `name::` argument)
 - **Then:** Exits 0. Output reads `saved current credentials as 'b@test.com'`. The per-machine active marker still reads `b@test.com`. The two-level inference: (1) `oauthAccount.emailAddress` is absent from the JSON → None; (2) fallback to `_active` marker → `b@test.com`. Top-level `emailAddress` is never read.
 - **Exit:** 0
-- **Source fn:** `mre_bug_209_account_save_uses_active_marker_not_stale_email` (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `mre_bug_209_account_save_uses_active_marker_not_stale_email` (in `account_relogin_test_b.rs`)
 - **Note:** Tests the fallback path. Primary path (`oauthAccount.emailAddress` present, overrides stale marker) is covered by FT-10 (BUG-212).
 - **Source:** [feature/002_account_save.md AC-08](../../../docs/feature/002_account_save.md)
 
@@ -155,7 +155,7 @@ Feature behavioral requirement test cases for `docs/feature/025_per_machine_acti
 - **When:** `clp .account.save` (no `name::` argument)
 - **Then:** Exits 0. Output reads `saved current credentials as 'i5@wbox.pro'`. `{credential_store}/i5@wbox.pro.credentials.json` created. `{credential_store}/i2@wbox.pro.credentials.json` NOT created. The `_active` marker is not consulted when `oauthAccount.emailAddress` provides a non-empty value.
 - **Exit:** 0
-- **Source fn:** `mre_bug_212_account_save_stale_marker_uses_oauth_email` (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `mre_bug_212_account_save_stale_marker_uses_oauth_email` (in `account_relogin_test_b.rs`)
 - **Note:** BUG-212 regression guard. `oauthAccount.emailAddress` is written by both clp ops and external OAuth login; `_active` is written only by clp ops — external login leaves it stale. Primary over fallback precedence is the two-level inference introduced by TSK-215.
 - **Source:** [feature/002_account_save.md AC-08, AC-16](../../../docs/feature/002_account_save.md)
 

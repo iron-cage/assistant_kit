@@ -85,7 +85,7 @@ Integration test planning for the `.paths` command. See [command/namespace.md](.
 - **Then:** A single line on stdout containing the credential store path (no label prefix, no JSON wrapper). Exit 0.
 - **Exit:** 0
 - **Status:** ✅ Implemented
-- **Source:** tests/cli/token_paths_test.rs :: p009_paths_field_returns_single_value
+- **Source:** tests/cli/token_paths_test.rs :: p09_paths_field_returns_single_value — corrected name (`p009` → `p09`, dropped leading zero)
 
 ---
 
@@ -96,7 +96,7 @@ Integration test planning for the `.paths` command. See [command/namespace.md](.
 - **Then:** Error message on stderr listing valid field names. Exit 1.
 - **Exit:** 1
 - **Status:** ✅ Implemented
-- **Source:** tests/cli/token_paths_test.rs :: p010_paths_field_unknown_exits_1
+- **Source:** tests/cli/token_paths_test.rs :: p10_paths_field_unknown_exits_1 — corrected name (`p010` → `p10`, dropped leading zero)
 
 ---
 

@@ -112,7 +112,7 @@ Edge case tests for the `refresh::` parameter. Tests validate boolean enforcemen
 - **When:** `clp .account.use name::alice@home.com refresh::0 trace::1`
 - **Then:** Exits 3. Stderr contains `account credentials expired: alice@home.com`. Does NOT contain `"and refresh failed"` (no refresh was attempted). Trace contains `refused (refresh::0)`. `~/.claude/.credentials.json` unchanged.
 - **Exit:** 3
-- **Source fn:** `aw33_refresh_disabled_exits_3_immediately` (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `aw33_refresh_disabled_exits_3_immediately` (in `account_relogin_test_b.rs`)
 - **Source:** [params.md#parameter--19-refresh](../../../../docs/cli/param/019_refresh.md), [feature/027_account_use_post_switch_touch.md AC-20](../../../../docs/feature/027_account_use_post_switch_touch.md)
 ---
 
@@ -122,5 +122,5 @@ Edge case tests for the `refresh::` parameter. Tests validate boolean enforcemen
 - **When:** `clp .account.use name::alice@home.com` (default `refresh::1`)
 - **Then:** Exits 3. Stderr contains `account credentials expired and refresh failed: alice@home.com`. The refresh was attempted (no `accessToken` → subprocess fails immediately). `~/.claude/.credentials.json` unchanged.
 - **Exit:** 3
-- **Source fn:** `mre_bug230_account_use_refresh_fails_exits_3_with_updated_message` (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `mre_bug230_account_use_refresh_fails_exits_3_with_updated_message` (in `account_relogin_test_b.rs`)
 - **Source:** [params.md#parameter--19-refresh](../../../../docs/cli/param/019_refresh.md), [feature/027_account_use_post_switch_touch.md AC-17](../../../../docs/feature/027_account_use_post_switch_touch.md)

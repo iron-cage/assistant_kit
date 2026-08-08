@@ -24,20 +24,20 @@ Feature behavioral requirement test cases for `docs/feature/067_trace_timestamps
 
 | FT | File | Notes |
 |----|------|-------|
-| FT-01 | `tests/usage/fetch_tests.rs` | Structural test via `src.find( ... )` on `account.rs` source |
+| FT-01 | *(no test — coverage gap)* | Claim true by direct inspection of `account.rs`; no structural test exists in `fetch_tests.rs` or elsewhere |
 | FT-02 | `tests/usage/touch_tests.rs`, `tests/usage/api_tests_a.rs` | Regex or substring check on stderr output |
 | FT-03 | All 12 test files (see Sources in feature doc) | Assertion pattern changed from `[trace]` to ` · ` |
-| FT-04 | `tests/usage/fetch_tests.rs` | Structural test: `trace_ts` fn body does not contain `if trace` |
-| FT-05 | `tests/usage/touch_tests.rs` | `contains( " · touch  " )` assertions |
-| FT-06 | `tests/usage/fetch_tests.rs` | BUG-234 MRE: `src.find( r#"eprintln!( "{}{}  result: OK""# )` |
-| FT-07 | `tests/cli/usage_test.rs`, `tests/cli/usage_feature_test.rs` | `.filter( |l| l.contains( " · " ) )` usage |
+| FT-04 | *(no test — coverage gap)* | Claim true by direct inspection of `account.rs`; no structural test exists in `fetch_tests.rs` or elsewhere |
+| FT-05 | `tests/usage/touch_tests.rs:538` | Structural `src.contains(...)` check in `test_apply_touch_touch_idle_false_silent_when_trace_disabled` — not a literal `contains(" · touch  ")` stderr capture |
+| FT-06 | `tests/usage/fetch_tests.rs:157` | BUG-234 MRE (`mre_bug234_result_trace_after_billing_type_override`): `src.find( r#"eprintln!( "{}{}  result: OK""# )` |
+| FT-07 | `tests/cli/usage_solo_test.rs`, `tests/cli/usage_feature_test.rs` | `.filter( |l| l.contains( " · " ) )` usage — corrected file (`tests/cli/usage_test.rs` does not exist) |
 
 ### FT-01: `trace_ts()` is available in production code
 
 - **Given:** `claude_profile_core/src/account.rs` is the production source file.
 - **When:** The source is inspected for `pub fn trace_ts` with no preceding `#[cfg(test)]` attribute.
 - **Then:** Source match found. `trace_ts` is a `pub fn` callable from production `eprintln!` paths — not test-gated.
-- **Source fn:** structural test in `tests/usage/fetch_tests.rs`
+- **Source fn:** *(coverage gap — no structural test exists in `tests/usage/fetch_tests.rs` or elsewhere; that file's `src.find(...)` structural assertions target unrelated strings (the BUG-234 `result: OK` pattern, the Class A billing override). The claim itself is true by direct inspection: `pub fn trace_ts()` at `claude_profile_core/src/account.rs:2191`, no `#[cfg(test)]` attribute — but nothing in the suite asserts this automatically.)*
 
 ---
 
@@ -64,7 +64,7 @@ Feature behavioral requirement test cases for `docs/feature/067_trace_timestamps
 - **Given:** `trace_ts()` implementation in `account.rs`.
 - **When:** The function body is inspected structurally.
 - **Then:** No `if trace`, `if enabled`, or similar conditional found in the body. The function simply formats the UTC timestamp unconditionally.
-- **Source fn:** structural test in `tests/usage/fetch_tests.rs`
+- **Source fn:** *(coverage gap — no structural test exists in `tests/usage/fetch_tests.rs` or elsewhere asserting `trace_ts()`'s own body is unconditional. The claim itself is true by direct inspection: `trace_ts()` at `claude_profile_core/src/account.rs:2191-2196` contains no conditional — but nothing in the suite asserts this automatically.)*
 
 ---
 
@@ -73,7 +73,7 @@ Feature behavioral requirement test cases for `docs/feature/067_trace_timestamps
 - **Given:** An account is skipped during `apply_touch()` due to solo mode.
 - **When:** `clp .usage touch::1 solo::1 trace::1` (non-current account present).
 - **Then:** stderr contains `" · touch  "` followed by the account name and skip reason. No `"[trace] touch  "` prefix appears.
-- **Source fn:** `contains( " · touch  " )` assertions in `tests/usage/touch_tests.rs`
+- **Source fn:** `test_apply_touch_touch_idle_false_silent_when_trace_disabled` (in `tests/usage/touch_tests.rs:538`) — corrected from an inexact `contains(" · touch  ")` paraphrase; the actual assertion is a structural source-inspection check (`src.contains("if trace { let _ = writeln!( std::io::stderr(), \"{}touch  {}  {}\", trace_ts(), aq.name, reason ); }")`) confirming the sentinel-producing `writeln!` call, not a literal captured-stderr string match. No test asserts the solo-mode-specific scenario in this Given/When directly — the closest scenario-level match, `ec8_solo_gate_skips_non_current_with_trace` (`tests/usage/touch_tests_b.rs:290`), checks `touch_skip_reason()`'s return value only, not the formatted stderr line.
 
 ---
 
@@ -82,7 +82,7 @@ Feature behavioral requirement test cases for `docs/feature/067_trace_timestamps
 - **Given:** `src/usage/fetch.rs` production source file.
 - **When:** Structural test searches for `eprintln!( "{}{}  result: OK"` in the source.
 - **Then:** `src.find( r#"eprintln!( "{}{}  result: OK""# )` returns `Some(...)`. Exactly 1 match at the production site and 1 match at the structural assertion itself.
-- **Source fn:** `mre_bug234_result_ok_uses_two_arg_eprintln` (in `tests/usage/fetch_tests.rs`)
+- **Source fn:** `mre_bug234_result_trace_after_billing_type_override` (in `tests/usage/fetch_tests.rs:157`) — corrected name (was cited as `mre_bug234_result_ok_uses_two_arg_eprintln`)
 
 ---
 

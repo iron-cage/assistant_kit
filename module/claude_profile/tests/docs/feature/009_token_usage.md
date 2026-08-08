@@ -215,7 +215,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 - **Exit:** 0
 - **Live:** yes (lim_it — requires expired token + live account with billing data)
 - **Note:** Fix(BUG-171): `apply_refresh()` previously left `aq.account` stale after refresh; `~Renews` reverted to `?` even though the account had valid billing data.
-- **Source fn:** `mre_bug_171_account_populated_after_refresh` (MRE test in `tests/cli/usage_test.rs`)
+- **Source fn:** `mre_bug_171_account_populated_after_refresh` (MRE test in `tests/cli/usage_sort_test.rs`) — corrected file path (`tests/cli/usage_test.rs` does not exist)
 - **Source:** [009_token_usage.md](../../../docs/feature/009_token_usage.md)
 
 ---
@@ -242,7 +242,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
   - `cols::+sub`: stdout contains `Sub` in the table header. Exit 0.
   - `cols::+7d_son_reset`: stdout contains `7d Son Reset` in the table header. Exit 0.
 - **Exit:** 0
-- **Source fn:** `it117_ft12_cols_plus_reveals_sub_and_7d_son_reset_columns` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it117_ft12_cols_plus_reveals_sub_and_7d_son_reset_columns` (in `usage_touch_test.rs`)
 - **Source:** [009_token_usage.md AC-22](../../../docs/feature/009_token_usage.md)
 
 ---
@@ -253,7 +253,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 - **When:** `clp .usage cols::+not_a_real_column`
 - **Then:** Exit 1. Stderr contains an error message naming valid column IDs (e.g., `sub`, `7d_son_reset`).
 - **Exit:** 1
-- **Source fn:** `it082_cols_unknown_id_exit_1` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it082_cols_unknown_id_exit_1` (in `usage_sort_test.rs`)
 - **Source:** [009_token_usage.md AC-23](../../../docs/feature/009_token_usage.md)
 
 ---
@@ -332,7 +332,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 - **Then:** Exits 0. The JSON object for that account contains: `renewal_secs` (u64 integer), `renewal_is_estimate: false`, `next_event_type` (string), `next_event_secs` (u64 integer). No `next_renewal_est` field present (deprecated field removed).
 - **Exit:** 0
 - **Live:** yes
-- **Source fn:** `it147_json_renewal_secs_present`, `it153_json_renewal_fields_with_renewal_at` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it147_json_renewal_secs_present`, `it153_json_renewal_fields_with_renewal_at` (in `usage_model_test.rs`)
 - **Source:** [009_token_usage.md AC-29](../../../docs/feature/009_token_usage.md)
 
 ---
@@ -508,6 +508,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 - **When:** `clp .usage` is run.
 - **Then:** Output after the footer contains a `Sessions` table with two rows: `user1@laptop` → `alice@x.com ✓` and `user1@desktop` → `bob@x.com`. The `✓` marks the current machine's own session.
 - **Exit:** 0
+- **Source fn:** `ft30_009_sessions_table_shown_auto_multiple_markers` (in `tests/usage/render_tests_b.rs`)
 - **Source:** [009_token_usage.md AC-33](../../../docs/feature/009_token_usage.md)
 
 ---
@@ -518,6 +519,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 - **When:** `clp .usage` is run (no `who::` parameter).
 - **Then:** Output does NOT contain a `Sessions` heading or table. Footer is present but no sessions section follows it.
 - **Exit:** 0
+- **Source fn:** `ft31_009_sessions_table_hidden_auto_single_marker` (in `tests/usage/render_tests_b.rs`)
 - **Source:** [009_token_usage.md AC-33](../../../docs/feature/009_token_usage.md)
 
 ---
@@ -530,6 +532,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 - **When (force):** Credential store contains only 1 `_active_*` marker. `clp .usage who::1`
 - **Then:** Output contains a `Sessions` table with 1 row (the current machine's own session with `✓`), despite ≤1 marker.
 - **Exit:** 0
+- **Source fn:** `ft32_009_sessions_table_who_override` (in `tests/usage/render_tests_b.rs`)
 - **Source:** [009_token_usage.md AC-34](../../../docs/feature/009_token_usage.md)
 
 ---

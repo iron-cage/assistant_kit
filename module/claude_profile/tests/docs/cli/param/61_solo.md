@@ -32,7 +32,7 @@ See [param/060_solo.md](../../../../docs/cli/param/060_solo.md) for specificatio
 - **When:** `clp .usage solo::0`
 - **Then:** Exits 0. Both accounts show live quota data (not approximated). Equivalent to omitting `solo::`.
 - **Exit:** 0
-- **Source fn:** `it257_solo_default_off_exits_0` (in `tests/cli/usage_test.rs`); `solo_field_default_false` (in `src/usage/params.rs`)
+- **Source fn:** `it257_solo_default_off_exits_0` (in `usage_solo_test.rs`); `solo_field_default_false` (in `params_tests.rs`)
 - **Source:** [param/060_solo.md](../../../../docs/cli/param/060_solo.md)
 
 ---
@@ -43,7 +43,7 @@ See [param/060_solo.md](../../../../docs/cli/param/060_solo.md) for specificatio
 - **When:** `clp .usage solo::1`
 - **Then:** Exits 0. Account A row shows live quota data (fresh HTTP fetch). Account B row shows approximated data from `approximate_quota()` (cache values, no HTTP call). Both rows appear in the table.
 - **Exit:** 0
-- **Source fn:** `it258_solo_current_live_noncurrent_approx` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it258_solo_current_live_noncurrent_approx` (in `usage_solo_test.rs`)
 - **Source:** [param/060_solo.md](../../../../docs/cli/param/060_solo.md)
 
 ---
@@ -54,7 +54,7 @@ See [param/060_solo.md](../../../../docs/cli/param/060_solo.md) for specificatio
 - **When:** `clp .usage solo::1`
 - **Then:** Exits 0. No account passes both `is_current && is_owned`. All rows show approximated data. Zero HTTP calls made.
 - **Exit:** 0
-- **Source fn:** `it259_solo_current_not_owned_no_http` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it259_solo_current_not_owned_no_http` (in `usage_solo_test.rs`)
 - **Source:** [param/060_solo.md](../../../../docs/cli/param/060_solo.md)
 
 ---
@@ -65,7 +65,7 @@ See [param/060_solo.md](../../../../docs/cli/param/060_solo.md) for specificatio
 - **When:** `clp .usage solo::1`
 - **Then:** Exits 0. `is_current` is `false` for all accounts. All rows show approximated data. Zero HTTP calls.
 - **Exit:** 0
-- **Source fn:** `it260_solo_no_active_marker_all_approx` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it260_solo_no_active_marker_all_approx` (in `usage_solo_test.rs`)
 - **Source:** [param/060_solo.md](../../../../docs/cli/param/060_solo.md)
 
 ---
@@ -76,7 +76,7 @@ See [param/060_solo.md](../../../../docs/cli/param/060_solo.md) for specificatio
 - **When:** `clp .usage solo::1 rotate::1`
 - **Then:** Exits 1. Error message references both `"solo"` and `"rotate"`. No table rendered (exits before fetch).
 - **Exit:** 1
-- **Source fn:** `it261_solo_rotate_mutual_exclusion_exit_1` (in `tests/cli/usage_test.rs`); `ec5_solo_and_rotate_mutual_exclusion` (in `src/usage/params.rs`)
+- **Source fn:** `it261_solo_rotate_mutual_exclusion_exit_1` (in `usage_solo_test.rs`); `ec5_solo_and_rotate_mutual_exclusion` (in `params_tests.rs`)
 - **Source:** [param/060_solo.md](../../../../docs/cli/param/060_solo.md)
 
 ---
@@ -87,7 +87,7 @@ See [param/060_solo.md](../../../../docs/cli/param/060_solo.md) for specificatio
 - **When:** `clp .usage solo::1 live::1 interval::30`
 - **Then:** Loop starts. Each cycle: Account A gets live HTTP fetch; Account B shows approximated data. Both rows appear in every cycle's table. Ctrl-C exits cleanly.
 - **Exit:** 0 (after Ctrl-C)
-- **Source fn:** `it262_solo_live_composition_allowed` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it262_solo_live_composition_allowed` (in `usage_solo_test.rs`)
 - **Source:** [param/060_solo.md](../../../../docs/cli/param/060_solo.md)
 
 ---
@@ -98,7 +98,7 @@ See [param/060_solo.md](../../../../docs/cli/param/060_solo.md) for specificatio
 - **When:** `clp .usage solo::1 refresh::1 trace::1`
 - **Then:** Exits 0. Refresh solo gate fires for Bob — stderr contains `"solo-skip"` in a refresh trace line. Alice passes the solo gate; no subprocess fires (no 401 error from HTTP fetch).
 - **Exit:** 0
-- **Source fn:** `it263_solo_refresh_composition_allowed` (in `tests/cli/usage_test.rs`); `ec7_solo_gate_skips_non_current_with_trace` (in `tests/usage/refresh_tests_b.rs`)
+- **Source fn:** `it263_solo_refresh_composition_allowed` (in `usage_solo_test.rs`); `ec7_solo_gate_skips_non_current_with_trace` (in `tests/usage/refresh_tests_b.rs`)
 - **Source:** [param/060_solo.md](../../../../docs/cli/param/060_solo.md)
 
 ---
@@ -109,7 +109,7 @@ See [param/060_solo.md](../../../../docs/cli/param/060_solo.md) for specificatio
 - **When:** `clp .usage solo::1 touch::1 trace::1`
 - **Then:** Exits 0. Touch solo gate fires for Bob — stderr contains `"solo-skip"` in a touch trace line. Alice passes the solo gate; no subprocess fires (no active idle window without real quota data).
 - **Exit:** 0
-- **Source fn:** `it264_solo_touch_composition_allowed` (in `tests/cli/usage_test.rs`); `ec8_solo_gate_skips_non_current_with_trace` (in `tests/usage/touch_tests.rs`)
+- **Source fn:** `it264_solo_touch_composition_allowed` (in `usage_solo_test.rs`); `ec8_solo_gate_skips_non_current_with_trace` (in `touch_tests_b.rs`)
 - **Source:** [param/060_solo.md](../../../../docs/cli/param/060_solo.md)
 
 ---
@@ -120,7 +120,7 @@ See [param/060_solo.md](../../../../docs/cli/param/060_solo.md) for specificatio
 - **When:** `clp .usage solo::1 only_active::1`
 - **Then:** Exits 0. Only Account A's row displayed (display filter). Account A has live data (solo allows). The two params compose independently — solo controls fetch, only_active controls display.
 - **Exit:** 0
-- **Source fn:** `it265_solo_only_active_composition_allowed` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it265_solo_only_active_composition_allowed` (in `usage_solo_test.rs`)
 - **Source:** [param/060_solo.md](../../../../docs/cli/param/060_solo.md)
 
 ---
@@ -131,7 +131,7 @@ See [param/060_solo.md](../../../../docs/cli/param/060_solo.md) for specificatio
 - **When:** `clp .usage solo::1 refresh::1 touch::1 trace::1`
 - **Then:** Stderr contains `solo-skip: approximated` in Bob's fetch trace; `solo-skip` in Bob's refresh trace; `solo-skip` in Bob's touch trace. Alice's trace shows no `solo-skip` (she passes the gate at all three sites).
 - **Exit:** 0
-- **Source fn:** `it266_solo_trace_shows_solo_skip` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it266_solo_trace_shows_solo_skip` (in `usage_solo_test.rs`)
 - **Source:** [param/060_solo.md](../../../../docs/cli/param/060_solo.md)
 
 ---
@@ -142,7 +142,7 @@ See [param/060_solo.md](../../../../docs/cli/param/060_solo.md) for specificatio
 - **When:** `clp .usage solo::true`
 - **Then:** Exits 1. `solo::` is registered as `Kind::Integer`; `"true"` is not a valid integer literal.
 - **Exit:** 1
-- **Source fn:** `it267_solo_true_rejected_type_error` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it267_solo_true_rejected_type_error` (in `usage_solo_test.rs`)
 - **Source:** [param/060_solo.md](../../../../docs/cli/param/060_solo.md)
 
 ---
@@ -153,5 +153,5 @@ See [param/060_solo.md](../../../../docs/cli/param/060_solo.md) for specificatio
 - **When:** `clp .usage solo::2`
 - **Then:** Exits 1. `parse_int_flag` rejects integers outside `{0, 1}`.
 - **Exit:** 1
-- **Source fn:** `it268_solo_2_rejected_out_of_range` (in `tests/cli/usage_test.rs`); `ec12_solo_rejects_integer_two` (in `src/usage/params.rs`)
+- **Source fn:** `it268_solo_2_rejected_out_of_range` (in `usage_solo_test.rs`); `ec12_solo_rejects_integer_two` (in `params_tests.rs`)
 - **Source:** [param/060_solo.md](../../../../docs/cli/param/060_solo.md)

@@ -6,7 +6,7 @@
 - **Source**: `docs/feature/008_auto_rotate.md`
 - **Covers**: AC-01 through AC-03
 
-> **DEPRECATED** — `auto_rotate()` and `.account.rotate` removed. Tests superseded by `tests/docs/feature/038_usage_strategy_rotate.md`.
+> **DEPRECATED** — `auto_rotate()` and `.account.rotate` removed. Tests superseded by `tests/docs/feature/038_usage_strategy_rotate.md`. Cases below are retained for historical reference only — their cited function names no longer exist in the test suite (confirmed via `git log -S`: last present before the rotation-consolidation refactor).
 
 Feature behavioral requirement test cases for `docs/feature/008_auto_rotate.md` (FR-13). Each FT case maps to one or more acceptance criteria.
 
@@ -38,7 +38,7 @@ Feature behavioral requirement test cases for `docs/feature/008_auto_rotate.md` 
 - **When:** `account::auto_rotate(credential_store, paths)` is called.
 - **Then:** Returns the name of the inactive account with `expires_at_ms = 9000`. The lower-expiry inactive account is not selected.
 - **Exit:** Ok(name)
-- **Source fn:** `auto_rotate_picks_account_with_highest_expires_at`, `auto_rotate_returns_switched_account_name`
+- **Source fn:** `auto_rotate_picks_account_with_highest_expires_at`, `auto_rotate_returns_switched_account_name` (N/A — removed with the feature)
 - **Source:** [008_auto_rotate.md AC-01](../../../docs/feature/008_auto_rotate.md)
 
 ---
@@ -50,7 +50,7 @@ Feature behavioral requirement test cases for `docs/feature/008_auto_rotate.md` 
 - **When:** `account::auto_rotate(credential_store, paths)` is called.
 - **Then:** Returns `NotFound` in both cases. No panic, no credentials mutation.
 - **Exit:** Err(NotFound)
-- **Source fn:** `auto_rotate_fails_when_no_inactive_accounts`, `auto_rotate_fails_when_account_store_empty`
+- **Source fn:** `auto_rotate_fails_when_no_inactive_accounts`, `auto_rotate_fails_when_account_store_empty` (N/A — removed with the feature)
 - **Source:** [008_auto_rotate.md AC-02](../../../docs/feature/008_auto_rotate.md)
 
 ---
@@ -61,7 +61,7 @@ Feature behavioral requirement test cases for `docs/feature/008_auto_rotate.md` 
 - **When:** `account::auto_rotate(credential_store, paths)` is called.
 - **Then:** `~/.claude/.credentials.json` now contains the inactive account's credentials. The `_active_{hostname}_{user}` marker is updated to the selected account name.
 - **Exit:** Ok(name)
-- **Source fn:** `auto_rotate_switches_to_inactive_account`
+- **Source fn:** `auto_rotate_switches_to_inactive_account` (N/A — removed with the feature)
 - **Source:** [008_auto_rotate.md AC-03](../../../docs/feature/008_auto_rotate.md)
 
 ---
@@ -72,5 +72,5 @@ Feature behavioral requirement test cases for `docs/feature/008_auto_rotate.md` 
 - **When:** `account::auto_rotate(credential_store, paths)` is called.
 - **Then:** Returns the name of `b` (expires_at_ms=9000). Account `c` is not selected despite being inactive with higher expiry than `a`.
 - **Exit:** Ok("b")
-- **Source fn:** `auto_rotate_picks_account_with_highest_expires_at` (in `tests/account_tests.rs`)
+- **Source fn:** `auto_rotate_picks_account_with_highest_expires_at` (N/A — removed with the feature; the `tests/account_tests.rs` path cited here never existed as such — the real historical file was `claude_profile_core/tests/account_test.rs`, singular)
 - **Source:** [008_auto_rotate.md AC-01](../../../docs/feature/008_auto_rotate.md)

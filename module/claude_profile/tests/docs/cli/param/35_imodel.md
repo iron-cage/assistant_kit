@@ -24,7 +24,7 @@ Edge case coverage for the `imodel::` parameter on `.usage`. For `.account.use` 
 - **When:** `clp .usage imodel::auto`
 - **Then:** Exits 0 with "(no accounts configured)". No error about unrecognized parameter. No subprocess spawned.
 - **Exit:** 0
-- **Source fn:** `it122_imodel_auto_accepted_empty_store_exits_0` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it122_imodel_auto_accepted_empty_store_exits_0` (in `usage_model_test.rs`)
 - **Source:** [param/035_imodel.md](../../../../docs/cli/param/035_imodel.md)
 
 ---
@@ -35,7 +35,7 @@ Edge case coverage for the `imodel::` parameter on `.usage`. For `.account.use` 
 - **When:** `clp .usage imodel::sonnet`
 - **Then:** Exits 0 with "(no accounts configured)". No error about unrecognized parameter. No subprocess spawned (no accounts to touch).
 - **Exit:** 0
-- **Source fn:** `it127_imodel_sonnet_accepted_empty_store_exits_0` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it127_imodel_sonnet_accepted_empty_store_exits_0` (in `usage_model_test.rs`)
 - **Source:** [param/035_imodel.md](../../../../docs/cli/param/035_imodel.md)
 
 ---
@@ -46,7 +46,7 @@ Edge case coverage for the `imodel::` parameter on `.usage`. For `.account.use` 
 - **When:** `clp .usage imodel::opus`
 - **Then:** Exits 0 with "(no accounts configured)". No error about unrecognized parameter.
 - **Exit:** 0
-- **Source fn:** `it128_imodel_opus_accepted_empty_store_exits_0` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it128_imodel_opus_accepted_empty_store_exits_0` (in `usage_model_test.rs`)
 - **Source:** [param/035_imodel.md](../../../../docs/cli/param/035_imodel.md)
 
 ---
@@ -57,7 +57,7 @@ Edge case coverage for the `imodel::` parameter on `.usage`. For `.account.use` 
 - **When:** `clp .usage imodel::keep`
 - **Then:** Exits 0 with "(no accounts configured)". No error about unrecognized parameter.
 - **Exit:** 0
-- **Source fn:** `it129_imodel_keep_accepted_empty_store_exits_0` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it129_imodel_keep_accepted_empty_store_exits_0` (in `usage_model_test.rs`)
 - **Source:** [param/035_imodel.md](../../../../docs/cli/param/035_imodel.md)
 
 ---
@@ -68,7 +68,7 @@ Edge case coverage for the `imodel::` parameter on `.usage`. For `.account.use` 
 - **When:** `clp .usage imodel::bad`
 - **Then:** Exits 1. Stderr contains each of the five valid values: `auto`, `sonnet`, `opus`, `haiku`, `keep`.
 - **Exit:** 1
-- **Source fn:** `it123_imodel_bogus_exits_1` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it123_imodel_bogus_exits_1` (in `usage_model_test.rs`)
 - **Source:** [feature/026_subprocess_model_effort.md AC-10](../../../../docs/feature/026_subprocess_model_effort.md)
 
 ---
@@ -79,7 +79,7 @@ Edge case coverage for the `imodel::` parameter on `.usage`. For `.account.use` 
 - **When:** `clp .usage imodel::sonnet touch::1 trace::1`
 - **Then:** Exits 0. `resolve_model()` returns `IsolatedModel::Specific("claude-sonnet-5")`. Args passed to `run_isolated()` include `--model claude-sonnet-5`. Verified via unit test on `resolve_model()` with `imodel="sonnet"`.
 - **Exit:** 0
-- **Source fn:** `it_imodel_sonnet_explicit` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it_imodel_sonnet_explicit` (in `subprocess_tests.rs`)
 - **Source:** [feature/026_subprocess_model_effort.md AC-02](../../../../docs/feature/026_subprocess_model_effort.md)
 
 ---
@@ -94,7 +94,7 @@ Edge case coverage for the `imodel::` parameter on `.usage`. For `.account.use` 
 - **When:** `clp .usage imodel::haiku`
 - **Then:** Exits 0 with "(no accounts configured)". No error about unrecognized parameter. No subprocess spawned (no accounts to touch).
 - **Exit:** 0
-- **Source fn:** `it142_imodel_haiku_accepted_empty_store_exits_0` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it142_imodel_haiku_accepted_empty_store_exits_0` (in `usage_model_test.rs`)
 - **Source:** [param/035_imodel.md](../../../../docs/cli/param/035_imodel.md)
 
 ---
@@ -105,7 +105,7 @@ Edge case coverage for the `imodel::` parameter on `.usage`. For `.account.use` 
 - **When:** `clp .usage imodel::auto touch::1 trace::1`
 - **Then:** Exits 0. `resolve_model()` returns `IsolatedModel::Specific("claude-haiku-4-5-20251001")`. `son_idle = None.is_some_and(...) = false`; `son_idle` gate does NOT fire. Haiku selected for quota-conserving keep-alive. Verified via unit test `it_imodel_auto_selects_haiku_when_son_tier_absent` in `src/usage/subprocess.rs`.
 - **Exit:** 0
-- **Source fn:** `it_imodel_auto_selects_haiku_when_son_tier_absent` (in `src/usage/subprocess.rs`)
+- **Source fn:** `it_imodel_auto_selects_haiku_when_son_tier_absent` (in `subprocess_tests.rs`)
 - **Source:** [feature/026_subprocess_model_effort.md AC-01 FT-23](../../../../docs/feature/026_subprocess_model_effort.md)
 
 ---
@@ -116,5 +116,5 @@ Edge case coverage for the `imodel::` parameter on `.usage`. For `.account.use` 
 - **When:** `clp .usage imodel::auto touch::1 trace::1`
 - **Then:** Exits 0. `resolve_model()` returns `IsolatedModel::Specific("claude-sonnet-5")`. `son_idle=true` → `son_idle` gate fires regardless of 5h/7d state. The 7d-Sonnet window activates only on Sonnet-family calls; a single Sonnet touch opens all idle dimensions simultaneously. Fix(BUG-289, BUG-290, TSK-292). Verified via unit test `it_imodel_auto_selects_sonnet_when_son_idle` in `src/usage/subprocess.rs`.
 - **Exit:** 0
-- **Source fn:** `it_imodel_auto_selects_sonnet_when_son_idle` (in `src/usage/subprocess.rs`)
+- **Source fn:** `it_imodel_auto_selects_sonnet_when_son_idle` (in `subprocess_tests.rs`)
 - **Source:** [feature/026_subprocess_model_effort.md AC-01 FT-22](../../../../docs/feature/026_subprocess_model_effort.md)

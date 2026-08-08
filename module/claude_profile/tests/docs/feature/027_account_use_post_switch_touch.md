@@ -83,7 +83,7 @@ Feature behavioral requirement test cases for `docs/feature/027_account_use_post
 - **Then:** Exits 0; `switched to 'alice@home.com'` on stdout; credentials rotated; an isolated subprocess (`run_isolated`) is dispatched to start the idle 5h session window.
 - **Exit:** 0
 - **Live:** yes (requires valid OAuth token and idle `five_hour.resets_at = None` in live quota response)
-- **Source fn:** `aw27_lim_it_touch_with_live_token` (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `aw27_lim_it_touch_with_live_token` (in `account_relogin_test_b.rs`)
 - **Source:** [feature/027_account_use_post_switch_touch.md AC-01](../../../docs/feature/027_account_use_post_switch_touch.md)
 
 ---
@@ -94,7 +94,7 @@ Feature behavioral requirement test cases for `docs/feature/027_account_use_post
 - **When:** `clp .account.use name::alice@home.com touch::0`
 - **Then:** Exits 0; `switched to 'alice@home.com'` on stdout; credentials rotated; no quota fetch performed; no subprocess dispatched. Behavior is identical to pre-Feature-027 `.account.use`.
 - **Exit:** 0
-- **Source fn:** `aw22_touch_disabled_switch_succeeds` (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `aw22_touch_disabled_switch_succeeds` (in `account_relogin_test.rs`)
 - **Source:** [feature/027_account_use_post_switch_touch.md AC-02](../../../docs/feature/027_account_use_post_switch_touch.md)
 
 ---
@@ -106,7 +106,7 @@ Feature behavioral requirement test cases for `docs/feature/027_account_use_post
 - **Then:** Exits 0; `switched to 'alice@home.com'` on stdout; credentials rotated; subprocess (`run_isolated`) is spawned — it exits immediately because the account is already active. Fix(BUG-285): the idle check using `resets_at` as a subprocess identity oracle was removed; subprocess always fires when quota fetch succeeds.
 - **Exit:** 0
 - **Live:** yes (requires valid OAuth token and active `five_hour.resets_at` in live quota response)
-- **Source fn:** `aw27_lim_it_touch_with_live_token` (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `aw27_lim_it_touch_with_live_token` (in `account_relogin_test_b.rs`)
 - **Source:** [feature/027_account_use_post_switch_touch.md AC-03](../../../docs/feature/027_account_use_post_switch_touch.md)
 
 ---
@@ -117,7 +117,7 @@ Feature behavioral requirement test cases for `docs/feature/027_account_use_post
 - **When:** `clp .account.use name::alice@home.com` (default `touch::1`)
 - **Then:** Exits 0; `switched to 'alice@home.com'` on stdout; credentials rotated; touch skipped silently. No error output. Fetch failure with a non-expired `expiresAt` is non-fatal.
 - **Exit:** 0
-- **Source fn:** `aw23_touch_skipped_no_access_token` (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `aw23_touch_skipped_no_access_token` (in `account_relogin_test.rs`)
 - **Source:** [feature/027_account_use_post_switch_touch.md AC-04](../../../docs/feature/027_account_use_post_switch_touch.md)
 
 ---
@@ -150,7 +150,7 @@ Feature behavioral requirement test cases for `docs/feature/027_account_use_post
 - **When:** `clp .account.use name::alice@home.com imodel::bad`
 - **Then:** Exits 1. Stderr contains each of the five valid values: `auto`, `sonnet`, `opus`, `haiku`, `keep`.
 - **Exit:** 1
-- **Source fn:** `aw24_imodel_bad_value_exits_1` (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `aw24_imodel_bad_value_exits_1` (in `account_relogin_test.rs`)
 - **Source:** [feature/027_account_use_post_switch_touch.md AC-07](../../../docs/feature/027_account_use_post_switch_touch.md)
 
 ---
@@ -161,7 +161,7 @@ Feature behavioral requirement test cases for `docs/feature/027_account_use_post
 - **When:** `clp .account.use name::alice@home.com effort::bad`
 - **Then:** Exits 1. Stderr contains each of the five valid values: `auto`, `low`, `normal`, `high`, `max`.
 - **Exit:** 1
-- **Source fn:** `aw25_effort_bad_value_exits_1` (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `aw25_effort_bad_value_exits_1` (in `account_relogin_test.rs`)
 - **Source:** [feature/027_account_use_post_switch_touch.md AC-07](../../../docs/feature/027_account_use_post_switch_touch.md)
 
 ---
@@ -183,7 +183,7 @@ Feature behavioral requirement test cases for `docs/feature/027_account_use_post
 - **When:** `clp .account.use --help` (or `.account.use help::1`)
 - **Then:** Exits 0. Help output contains `touch::` with default `1`, `refresh::` with default `1`, `imodel::` with default `auto`, `effort::` with default `auto`, and `trace::` with default `0`.
 - **Exit:** 0
-- **Source fn:** `aw26_help_shows_touch_imodel_effort` (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `aw26_help_shows_touch_imodel_effort` (in `account_relogin_test_b.rs`)
 - **Source:** [feature/027_account_use_post_switch_touch.md AC-09, AC-16](../../../docs/feature/027_account_use_post_switch_touch.md)
 
 ---
@@ -195,7 +195,7 @@ Feature behavioral requirement test cases for `docs/feature/027_account_use_post
 - **Then:** Exits 0. Stdout: `switched to 'alice@home.com'`. Stderr (in order): `... · account.use  alice@home.com  reading {path}`, `reading: OK`, `quota fetch: OK`, `subprocess: scheduled (idle check removed)`, `model: {model}  effort: {effort}`, `subprocess: spawned`. Fix(BUG-285): `idle check:` trace line removed; subprocess always fires when fetch succeeds.
 - **Exit:** 0
 - **Live:** yes (requires valid OAuth token)
-- **Source fn:** `aw28_lim_it_trace_idle_account_all_lines` (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `aw28_lim_it_trace_idle_account_all_lines` (in `account_relogin_test_b.rs`)
 - **Source:** [feature/027_account_use_post_switch_touch.md AC-10, AC-11, AC-12, AC-13, AC-14](../../../docs/feature/027_account_use_post_switch_touch.md)
 
 ---
@@ -207,7 +207,7 @@ Feature behavioral requirement test cases for `docs/feature/027_account_use_post
 - **Then:** Exits 0. Stdout: `switched to 'alice@home.com'`. Stderr contains: `quota fetch: OK`, `subprocess: scheduled (idle check removed)`, `model: {model}  effort: {effort}`, `subprocess: spawned`. Fix(BUG-285): `subprocess: skipped (reason: already active)` no longer emitted; subprocess is always dispatched and exits immediately when already active.
 - **Exit:** 0
 - **Live:** yes (requires valid OAuth token with `five_hour.resets_at` present in live quota response)
-- **Source fn:** `aw29_lim_it_trace_active_account_subprocess_skipped` (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `aw29_lim_it_trace_active_account_subprocess_skipped` (in `account_relogin_test_b.rs`)
 - **Source:** [feature/027_account_use_post_switch_touch.md AC-10, AC-11, AC-12, AC-13, AC-14](../../../docs/feature/027_account_use_post_switch_touch.md)
 
 ---
@@ -218,7 +218,7 @@ Feature behavioral requirement test cases for `docs/feature/027_account_use_post
 - **When:** `clp .account.use name::alice@home.com trace::1`
 - **Then:** Exits 0. Stdout: `switched to 'alice@home.com'`. Stderr contains (in order): `reading {path}`, `reading: OK`, `quota fetch: Err({msg})`, `subprocess: skipped (reason: fetch failed)`, `expiry check: valid (expires in`. No `idle check:` or `model:` lines emitted.
 - **Exit:** 0
-- **Source fn:** `aw30_trace_fetch_failure_skips_idle_model_lines` (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `aw30_trace_fetch_failure_skips_idle_model_lines` (in `account_relogin_test_b.rs`)
 - **Source:** [feature/027_account_use_post_switch_touch.md AC-10, AC-11, AC-14](../../../docs/feature/027_account_use_post_switch_touch.md)
 
 ---
@@ -229,7 +229,7 @@ Feature behavioral requirement test cases for `docs/feature/027_account_use_post
 - **When:** `clp .account.use name::alice@home.com touch::0 trace::1`
 - **Then:** Exits 0. Stdout: `switched to 'alice@home.com'`. Stderr: no timestamped `account.use` diagnostic lines (no quota fetch operations performed).
 - **Exit:** 0
-- **Source fn:** `aw31_trace_touch_disabled_no_trace_lines` (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `aw31_trace_touch_disabled_no_trace_lines` (in `account_relogin_test_b.rs`)
 - **Source:** [feature/027_account_use_post_switch_touch.md AC-15](../../../docs/feature/027_account_use_post_switch_touch.md)
 
 ---
@@ -251,7 +251,7 @@ Feature behavioral requirement test cases for `docs/feature/027_account_use_post
 - **When:** `clp .account.use name::alice@home.com trace::bad`
 - **Then:** Exits 1. Stderr names the four valid values: `0`, `1`, `false`, `true`.
 - **Exit:** 1
-- **Source fn:** `aw32_trace_bad_value_exits_1` (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `aw32_trace_bad_value_exits_1` (in `account_relogin_test_b.rs`)
 - **Source:** [feature/027_account_use_post_switch_touch.md AC-16](../../../docs/feature/027_account_use_post_switch_touch.md)
 
 ---
@@ -262,7 +262,7 @@ Feature behavioral requirement test cases for `docs/feature/027_account_use_post
 - **When:** `clp .account.use name::alice@home.com` (default `touch::1 refresh::1`)
 - **Then:** Exits 3. Stderr contains `account credentials expired and refresh failed: alice@home.com (expired ...ago)`. `~/.claude/.credentials.json` is NOT overwritten. The active marker is NOT updated.
 - **Exit:** 3
-- **Source fn:** `mre_bug213_account_use_refuses_expired_token_on_fetch_error` + `mre_bug230_account_use_refresh_fails_exits_3_with_updated_message` (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `mre_bug213_account_use_refuses_expired_token_on_fetch_error` + `mre_bug230_account_use_refresh_fails_exits_3_with_updated_message` (in `account_relogin_test_b.rs`)
 - **Note:** BUG-213 MRE still passes — `err.contains("account credentials expired")` holds because the new message `"account credentials expired and refresh failed"` is a superset. The BUG-230 MRE additionally asserts `err.contains("and refresh failed")`. For `refresh::0` (immediate exit), see FT-18. The discriminant between FT-04 and FT-17 is the `expires_at_ms` argument to `write_account()`: `FAR_FUTURE_MS` (future, not expired) vs `1000` (past, expired).
 - **Source:** [feature/027_account_use_post_switch_touch.md AC-17](../../../docs/feature/027_account_use_post_switch_touch.md)
 
@@ -274,7 +274,7 @@ Feature behavioral requirement test cases for `docs/feature/027_account_use_post
 - **When:** `clp .account.use name::alice@home.com refresh::0 trace::1`
 - **Then:** Exits 3. Stderr contains `account credentials expired: alice@home.com (expired ...ago)`. Does NOT contain `"and refresh failed"` (no refresh attempted). Trace contains `refused (refresh::0)`. `~/.claude/.credentials.json` is NOT overwritten.
 - **Exit:** 3
-- **Source fn:** `aw33_refresh_disabled_exits_3_immediately` (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `aw33_refresh_disabled_exits_3_immediately` (in `account_relogin_test_b.rs`)
 - **Source:** [feature/027_account_use_post_switch_touch.md AC-20](../../../docs/feature/027_account_use_post_switch_touch.md)
 
 ---
