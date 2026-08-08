@@ -7,7 +7,7 @@ Layer 3 super-app aggregating all Layer 2 CLI tools into a single `ast` binary.
 ```
 ast (Layer 3)
   ├── claude_assets   (Layer 2) — 4 commands:  .list, .install, .uninstall, .kinds
-  ├── claude_version  (Layer 2) — 12 commands: .status, .version.*, .processes.*, .settings.*, .config
+  ├── claude_version  (Layer 2) — 12 commands: .status, .version.*, .ps.*, .settings.*, .config
   ├── claude_profile  (Layer 2) — 14 commands: .accounts, .account.*, .credentials.status, .model, .token.status, .paths, .usage
   ├── claude_runner   (Layer 2) — 2 commands:  .claude, .claude.help
   └── claude_storage  (Layer 2) — 9 commands:  .show, .count, .search, .export, .projects, .path, .exists, .session.*

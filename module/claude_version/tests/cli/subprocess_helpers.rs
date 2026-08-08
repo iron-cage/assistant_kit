@@ -183,6 +183,24 @@ pub fn write_markers(
   std::fs::write( &path, json ).unwrap();
 }
 
+/// Register a synthetic claude process at `pid` under `proc_dir`.
+///
+/// Pair with `CLR_PROC_DIR` (via [`run_clv_with_env`]) to give
+/// `find_claude_processes()` a deterministic, non-empty process table without
+/// touching the real `/proc`. Writes only `cmdline` — callers that need the
+/// process's reported cwd should also `write` a `cwd` symlink themselves.
+///
+/// # Panics
+///
+/// Panics if the directory cannot be created or `cmdline` cannot be written.
+#[ inline ]
+pub fn fake_claude_process( proc_dir : &std::path::Path, pid : u32 )
+{
+  let pid_dir = proc_dir.join( pid.to_string() );
+  std::fs::create_dir_all( &pid_dir ).expect( "create fake pid dir" );
+  std::fs::write( pid_dir.join( "cmdline" ), b"claude\0--version\0" ).expect( "write fake cmdline" );
+}
+
 /// Assert that the process exited with `expected` exit code.
 ///
 /// On failure, prints both stdout and stderr to help diagnose the problem.

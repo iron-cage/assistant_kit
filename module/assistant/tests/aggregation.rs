@@ -144,7 +144,7 @@ fn ic1_register_commands_contract()
 {
   let crate_commands : &[ ( &str, &str ) ] = &[
     ( ".kinds",    "claude_assets"  ),
-    ( ".processes","claude_version" ),
+    ( ".ps",       "claude_version" ),
     ( ".accounts", "claude_profile" ),
     ( ".claude",   "claude_runner"  ),
     ( ".projects", "claude_storage" ),

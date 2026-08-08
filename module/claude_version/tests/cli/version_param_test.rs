@@ -15,9 +15,9 @@ fn version_ec7_latest_wrong_case_exits_1()
 
 /// EC-9: `version::` only accepted by `.version.install` and `.version.guard`
 #[ test ]
-fn version_ec9_command_scope_rejects_on_processes()
+fn version_ec9_command_scope_rejects_on_ps()
 {
-  let out = run_clv( &[ ".processes", "version::stable" ] );
+  let out = run_clv( &[ ".ps", "version::stable" ] );
   assert_exit( &out, 1 );
 }
 

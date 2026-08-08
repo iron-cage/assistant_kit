@@ -173,7 +173,7 @@ Both are valid invocations; the dry-run flag presence in output differs.
 | Function | File |
 |----------|------|
 | `tc250_version_install_dry_force_dry_wins` | `tests/cli/cross_cutting_test.rs` |
-| `tc251_processes_kill_dry_force_dry_wins` | `tests/cli/cross_cutting_test.rs` |
+| `tc251_ps_kill_dry_force_dry_wins` | `tests/cli/cross_cutting_test.rs` |
 | `tc252_settings_set_dry_no_write` | `tests/cli/cross_cutting_test.rs` |
 | `tc303_version_install_dry_wins_over_force` | `tests/cli/mutation_version_install_test.rs` |
 | `tc406_guard_dry_force_no_install` | `tests/cli/mutation_version_guard_test.rs` |

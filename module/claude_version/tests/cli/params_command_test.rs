@@ -29,7 +29,7 @@ use crate::subprocess_helpers::{ assert_exit, run_clv_with_env, stderr, stdout }
 
 // ─── IT-1: show-all ≥35 entries ──────────────────────────────────────────────
 
-// IT-1: no params → show-all; ≥35 param entries; each annotated; exit 0
+// IT-1: no params → show-all table; ≥35 param rows; exit 0
 #[ test ]
 fn it01_params_show_all_min_entries()
 {
@@ -42,10 +42,9 @@ fn it01_params_show_all_min_entries()
   );
   assert_exit( &out, 0 );
   let text = stdout( &out );
-  // Top-level lines (param name entries) start at column 0; indented lines are details.
-  let entry_count = text.lines()
-    .filter( |l| !l.starts_with( ' ' ) && !l.is_empty() )
-    .count();
+  // Table rows plus heading/rule/header overhead comfortably exceed 35 non-empty lines
+  // when the catalog holds ≥35 params — a table-format-agnostic lower bound.
+  let entry_count = text.lines().filter( |l| !l.is_empty() ).count();
   assert!(
     entry_count >= 35,
     "show-all must list ≥35 params, got {entry_count}:\n{text}"
@@ -237,7 +236,7 @@ fn it10_params_default_annotation()
 
 // ─── IT-11: show-all alphabetically sorted ───────────────────────────────────
 
-// IT-11: .params show-all → param name entries appear in ascending alphabetical order; exit 0
+// IT-11: .params show-all table rows appear in ascending (catalog) alphabetical order; exit 0
 #[ test ]
 fn it11_params_show_all_alphabetical()
 {
@@ -250,14 +249,32 @@ fn it11_params_show_all_alphabetical()
   );
   assert_exit( &out, 0 );
   let text = stdout( &out );
-  // Top-level non-empty, non-indented lines are param name entries.
-  let names : Vec< &str > = text.lines()
-    .filter( |l| !l.starts_with( ' ' ) && !l.is_empty() )
-    .collect();
-  assert!( !names.is_empty(), "show-all must produce param entries: {text}" );
-  let mut sorted = names.clone();
-  sorted.sort_unstable();
-  assert_eq!( names, sorted, "param names must be in ascending alphabetical order" );
+
+  // Row order must mirror the catalog's own (alphabetical, per params_catalog() contract)
+  // order. Matched by each row's first whitespace-delimited token (the Name column) so the
+  // check is robust to table column widths/padding rather than depending on exact layout.
+  let catalog : &[ claude_version_core::params_catalog::ParamDef ] =
+    claude_version_core::params_catalog::params_catalog();
+  let mut last_line : usize = 0;
+  let mut checked    : usize = 0;
+  for param in catalog
+  {
+    let found = text.lines()
+      .enumerate()
+      .find( |( _, l )| l.split_whitespace().next() == Some( param.name ) )
+      .map( |( i, _ )| i );
+    if let Some( line_idx ) = found
+    {
+      assert!(
+        line_idx >= last_line,
+        "param '{}' appears out of alphabetical order (line {line_idx} < {last_line}):\n{text}",
+        param.name
+      );
+      last_line = line_idx;
+      checked  += 1;
+    }
+  }
+  assert!( checked >= 35, "expected ≥35 catalog rows matched by name, got {checked}:\n{text}" );
 }
 
 // ─── IT-12: unknown key → exit 2 ─────────────────────────────────────────────
@@ -328,4 +345,44 @@ fn it15_params_disable_updates_shows_config_form()
   let text = stdout( &out );
   assert!( text.contains( "DISABLE_UPDATES" ),      "must show env form DISABLE_UPDATES: {text}" );
   assert!( text.contains( "env.DISABLE_UPDATES" ),  "must show config form env.DISABLE_UPDATES: {text}" );
+}
+
+// ─── TSK-462 T01/T07: data_fmt table headers, no trailing whitespace ────────
+
+// T01: show-all v::1 (default) → data_fmt table with Name/Forms/Default/Value headers; ≥14 rows
+#[ test ]
+fn t01_params_show_all_table_headers()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  let out = run_clv_with_env(
+    &[ ".params" ],
+    &[ ( "HOME", home ), ( "CLAUDE_MODEL", "" ) ],
+  );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "Name" ),    "table must have a Name column: {text}" );
+  assert!( text.contains( "Default" ), "table must have a Default column: {text}" );
+  let row_count = text.lines().count();
+  assert!( row_count >= 15, "expected headers + ≥14 param rows, got {row_count} lines:\n{text}" );
+}
+
+// T07: show-all v::1 → no line has trailing whitespace (data_fmt invariant)
+#[ test ]
+fn t07_params_show_all_no_trailing_whitespace()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  let out = run_clv_with_env(
+    &[ ".params" ],
+    &[ ( "HOME", home ), ( "CLAUDE_MODEL", "" ) ],
+  );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  for line in text.lines()
+  {
+    assert_eq!( line, line.trim_end(), "line must not have trailing whitespace: {line:?}" );
+  }
 }

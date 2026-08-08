@@ -15,7 +15,7 @@
 
 ```
 claude_assets::register_commands(&mut registry)    // .list, .install, .uninstall, .kinds
-claude_version::register_commands(&mut registry)   // .status, .version.*, .processes.*, .settings.*, .config
+claude_version::register_commands(&mut registry)   // .status, .version.*, .ps.*, .settings.*, .config
 claude_profile::register_commands(&mut registry)   // .accounts, .account.*, .credentials.status, .model, .token.status, .paths, .usage
 claude_runner::register_commands(&mut registry)    // runner programmatic commands
 claude_storage::register_commands(&mut registry)   // .status (skipped — already registered by version)

@@ -31,7 +31,7 @@ pub use config::config_routine;
 pub use params::params_routine;
 pub use paths::paths_routine;
 pub use runtime_files::runtime_files_routine;
-pub use process::{ processes_kill_routine, processes_routine };
+pub use process::{ ps_kill_routine, ps_routine };
 pub use settings::{ settings_get_routine, settings_set_routine, settings_show_routine };
 pub use status::status_routine;
 pub use version::{

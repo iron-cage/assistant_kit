@@ -22,8 +22,8 @@ const VISIBLE_COMMANDS : &[ &str ] = &[
   ".version.install",
   ".version.guard",
   ".version.list",
-  ".processes",
-  ".processes.kill",
+  ".ps",
+  ".ps.kill",
   ".settings.show",
   ".settings.get",
   ".settings.set",
@@ -96,7 +96,7 @@ fn tc094_help_exits_0_and_shows_commands()
   let out = run_clv( &[ ".help" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
-  for cmd in &[ ".status", ".processes", ".settings.get" ]
+  for cmd in &[ ".status", ".ps", ".settings.get" ]
   {
     assert!( text.contains( cmd ), ".help output must mention {cmd}" );
   }

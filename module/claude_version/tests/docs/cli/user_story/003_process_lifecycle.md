@@ -98,9 +98,9 @@ Acceptance tests for User Story 003. See [user_story/003_process_lifecycle.md](.
 
 | Function | File | Status |
 |----------|------|--------|
-| `us01_003_processes_exits_0` | `tests/cli/user_story_test.rs` | ✅ |
-| `us02_003_processes_json_format` | `tests/cli/user_story_test.rs` | ✅ |
-| `us03_003_processes_kill_dry_preview` | `tests/cli/user_story_test.rs` | ✅ |
-| `us04_003_processes_kill_graceful` | `tests/cli/user_story_test.rs` | ✅ |
-| `us05_003_processes_kill_force` | `tests/cli/user_story_test.rs` | ✅ |
-| `us06_003_processes_empty_after_kill` | `tests/cli/user_story_test.rs` | ✅ |
+| `us01_003_ps_exits_0` | `tests/cli/user_story_test.rs` | ✅ |
+| `us02_003_ps_json_format` | `tests/cli/user_story_test.rs` | ✅ |
+| `us03_003_ps_kill_dry_preview` | `tests/cli/user_story_test.rs` | ✅ |
+| `us04_003_ps_kill_graceful` | `tests/cli/user_story_test.rs` | ✅ |
+| `us05_003_ps_kill_force` | `tests/cli/user_story_test.rs` | ✅ |
+| `us06_003_ps_empty_after_kill` | `tests/cli/user_story_test.rs` | ✅ |

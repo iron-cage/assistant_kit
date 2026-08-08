@@ -77,6 +77,8 @@ mod exit_code;
 mod isolated;
 mod types;
 pub mod process;
+#[ cfg( feature = "ps_table" ) ]
+pub mod ps_table;
 pub mod session_dir;
 
 pub use crate::command::{ ClaudeCommand, claude_version, DEFAULT_COMPACT_WINDOW };

@@ -80,7 +80,7 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
   {
     status_routine, version_show_routine, version_install_routine,
     version_guard_routine, version_list_routine, version_mark_routine,
-    processes_routine, processes_kill_routine,
+    ps_routine, ps_kill_routine,
     settings_show_routine, settings_get_routine, settings_set_routine,
     config_routine, params_routine, runtime_files_routine, paths_routine,
   };
@@ -100,6 +100,7 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
   let uns = || reg_arg_opt( "unset",       Kind::Boolean, "Remove the specified key from the target scope.",              Some( "0"       ) );
   let knd = || reg_arg_opt( "kind",        Kind::String,  "Parameter kind filter for .params (config, env, or absent=all).", None          );
   let md  = || reg_arg_opt( "mode",        Kind::String,  "Operation mode for .version.list (aliases or history).",      Some( "aliases" ) );
+  let pid = || reg_arg_opt( "pid",         Kind::Integer, "Target a single process by pid (bulk-kill all when absent).", None             );
 
   reg_cmd( registry, ".status",          "Show installation state, process count, and active account", vec![ v(), fmt() ],                      Box::new( status_routine          ) );
   reg_cmd( registry, ".version.show",    "Print the currently installed Claude Code version",          vec![ v(), fmt() ],                      Box::new( version_show_routine    ) );
@@ -107,8 +108,8 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
   reg_cmd( registry, ".version.guard",   "Check for version drift and restore preferred version",      vec![ ver(), dry(), frc(), itv(), v(), fmt() ], Box::new( version_guard_routine   ) );
   reg_cmd( registry, ".version.list",    "List named version aliases (mode::aliases) or recent release history (mode::history)", vec![ md(), cnt(), v(), fmt() ], Box::new( version_list_routine    ) );
   reg_cmd( registry, ".version.mark",    "Create, update, or remove a custom version alias marker",                              vec![ nme(), ver(), dsc(), uns(), dry(), v(), fmt() ], Box::new( version_mark_routine ) );
-  reg_cmd( registry, ".processes",       "List all running Claude Code processes",                     vec![ v(), fmt() ],                      Box::new( processes_routine       ) );
-  reg_cmd( registry, ".processes.kill",  "Terminate all Claude Code processes",                        vec![ dry(), frc(), v(), fmt() ],        Box::new( processes_kill_routine  ) );
+  reg_cmd( registry, ".ps",              "List all running Claude Code processes",                     vec![ v(), fmt() ],                      Box::new( ps_routine              ) );
+  reg_cmd( registry, ".ps.kill",         "Terminate all Claude Code processes, or one via pid::",       vec![ pid(), dry(), frc(), v(), fmt() ], Box::new( ps_kill_routine         ) );
   reg_cmd( registry, ".settings.show",   "Print all settings from ~/.claude/settings.json",            vec![ v(), fmt() ],                      Box::new( settings_show_routine   ) );
   reg_cmd( registry, ".settings.get",    "Read a single setting by key",                               vec![ key(), v(), fmt() ],               Box::new( settings_get_routine    ) );
   reg_cmd( registry, ".settings.set",    "Write a single setting atomically",                          vec![ key(), val(), dry() ],             Box::new( settings_set_routine    ) );
@@ -161,8 +162,8 @@ fn print_usage( binary : &str )
       name    : "Process Lifecycle".to_string(),
       entries : vec!
       [
-        CommandEntry { name : ".processes".to_string(),      desc : "List all running Claude Code processes".to_string() },
-        CommandEntry { name : ".processes.kill".to_string(), desc : "Terminate all Claude Code processes".to_string() },
+        CommandEntry { name : ".ps".to_string(),      desc : "List all running Claude Code processes".to_string() },
+        CommandEntry { name : ".ps.kill".to_string(), desc : "Terminate all Claude Code processes, or one via pid::".to_string() },
       ],
     },
     CommandGroup
@@ -193,7 +194,7 @@ fn print_usage( binary : &str )
     ExampleEntry { invocation : format!( "{binary} .status" ),                    desc : None },
     ExampleEntry { invocation : format!( "{binary} .version.install" ),            desc : None },
     ExampleEntry { invocation : format!( "{binary} .settings.get key::model" ),    desc : None },
-    ExampleEntry { invocation : format!( "{binary} .processes" ),                  desc : None },
+    ExampleEntry { invocation : format!( "{binary} .ps" ),                        desc : None },
     ExampleEntry { invocation : format!( "{binary} .config key::model" ),          desc : None },
   ];
   print!( "{}", CliHelpTemplate::new( CliHelpStyle::default(), data ).render() );

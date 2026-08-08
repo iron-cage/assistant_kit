@@ -298,7 +298,7 @@
     - ".version.list mode::history count::10 format::json"
   auto_help_enabled: true
 
-- name: ".processes"
+- name: ".ps"
   namespace: ""
   description: "List all running Claude Code processes"
   hint: "List Claude processes"
@@ -333,13 +333,13 @@
       tags: []
 
   examples:
-    - ".processes"
-    - ".processes format::json"
+    - ".ps"
+    - ".ps format::json"
   auto_help_enabled: true
 
-- name: ".processes.kill"
+- name: ".ps.kill"
   namespace: ""
-  description: "Terminate all Claude Code processes"
+  description: "Terminate all Claude Code processes, or one via pid::"
   hint: "Kill Claude processes"
   version: "1.0.0"
   status: "stable"
@@ -351,6 +351,15 @@
   http_method_hint: "DELETE"
 
   arguments:
+    - name: "pid"
+      kind: "Integer"
+      description: "Target a specific process by pid (bulk-kill all when absent)"
+      hint: "Target process ID"
+      optional: true
+      validation_rules: []
+      aliases: []
+      tags: []
+
     - name: "dry"
       kind: "Boolean"
       description: "Preview without executing (1=dry-run)"
@@ -392,10 +401,11 @@
       tags: []
 
   examples:
-    - ".processes.kill"
-    - ".processes.kill dry::1"
-    - ".processes.kill force::1"
-    - ".processes.kill format::json"
+    - ".ps.kill"
+    - ".ps.kill dry::1"
+    - ".ps.kill force::1"
+    - ".ps.kill format::json"
+    - ".ps.kill pid::12345 dry::1"
   auto_help_enabled: true
 
 - name: ".settings.show"

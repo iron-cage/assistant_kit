@@ -142,19 +142,19 @@ fn us06_002_version_guard_exits_0()
 // US-003: Process Lifecycle
 // ═══════════════════════════════════════════════════════════════════════════════
 
-// US-1: .processes lists PIDs and working directories (or empty list); exit 0
+// US-1: .ps lists PIDs and working directories (or empty list); exit 0
 #[ test ]
-fn us01_003_processes_exits_0()
+fn us01_003_ps_exits_0()
 {
-  let out = run_clv_with_env( &[ ".processes" ], &[] );
+  let out = run_clv_with_env( &[ ".ps" ], &[] );
   assert_exit( &out, 0 );
 }
 
-// US-2: .processes format::json returns JSON array (possibly empty); exit 0
+// US-2: .ps format::json returns JSON array (possibly empty); exit 0
 #[ test ]
-fn us02_003_processes_json_format()
+fn us02_003_ps_json_format()
 {
-  let out = run_clv_with_env( &[ ".processes", "format::json" ], &[] );
+  let out = run_clv_with_env( &[ ".ps", "format::json" ], &[] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   let t = text.trim_start();
@@ -164,40 +164,40 @@ fn us02_003_processes_json_format()
   );
 }
 
-// US-3: .processes.kill dry::1 previews kill targets without sending signals; exit 0
+// US-3: .ps.kill dry::1 previews kill targets without sending signals; exit 0
 #[ test ]
-fn us03_003_processes_kill_dry_preview()
+fn us03_003_ps_kill_dry_preview()
 {
-  let out = run_clv_with_env( &[ ".processes.kill", "dry::1" ], &[] );
+  let out = run_clv_with_env( &[ ".ps.kill", "dry::1" ], &[] );
   assert_exit( &out, 0 );
 }
 
-// US-4: .processes.kill sends SIGTERM then SIGKILL; verified via dry mode; exit 0
+// US-4: .ps.kill sends SIGTERM then SIGKILL; verified via dry mode; exit 0
 //
 // Uses dry::1 to verify the command dispatches correctly without live processes.
 #[ test ]
-fn us04_003_processes_kill_graceful()
+fn us04_003_ps_kill_graceful()
 {
-  let out = run_clv_with_env( &[ ".processes.kill", "dry::1" ], &[] );
+  let out = run_clv_with_env( &[ ".ps.kill", "dry::1" ], &[] );
   assert_exit( &out, 0 );
 }
 
-// US-5: .processes.kill force::1 sends SIGKILL directly; verified via dry mode; exit 0
+// US-5: .ps.kill force::1 sends SIGKILL directly; verified via dry mode; exit 0
 #[ test ]
-fn us05_003_processes_kill_force()
+fn us05_003_ps_kill_force()
 {
-  let out = run_clv_with_env( &[ ".processes.kill", "force::1", "dry::1" ], &[] );
+  let out = run_clv_with_env( &[ ".ps.kill", "force::1", "dry::1" ], &[] );
   assert_exit( &out, 0 );
 }
 
-// US-6: .processes after kill returns empty list; exit 0
+// US-6: .ps after kill returns empty list; exit 0
 //
-// In the test environment there are no Claude processes, so .processes exits 0
+// In the test environment there are no Claude processes, so .ps exits 0
 // with an empty list — the expected post-kill state is already present.
 #[ test ]
-fn us06_003_processes_empty_after_kill()
+fn us06_003_ps_empty_after_kill()
 {
-  let out = run_clv_with_env( &[ ".processes" ], &[] );
+  let out = run_clv_with_env( &[ ".ps" ], &[] );
   assert_exit( &out, 0 );
 }
 
@@ -418,8 +418,10 @@ fn us1_006_config_show_all_source_annotations()
   );
   assert_exit( &out, 0 );
   let text = stdout( &out );
+  // Source is its own table column now (not a parenthesized suffix on Value),
+  // so the annotation itself is the bare source label rather than "(user)".
   assert!(
-    text.contains( "(user)" ) || text.contains( "(default)" ),
+    text.contains( "user" ) || text.contains( "default" ),
     "show-all must include source annotations: {text}"
   );
   assert!( text.contains( "theme" ), "show-all must include written key: {text}" );
@@ -806,7 +808,11 @@ fn us10_007_params_show_all_alphabetical()
   );
   assert_exit( &out, 0 );
   let text  = stdout( &out );
+  // The data_fmt table always opens with 3 structural lines (heading, header,
+  // dash separator) before the first data row; skip them so only real param
+  // name rows are checked for ordering.
   let names : Vec< &str > = text.lines()
+    .skip( 3 )
     .filter( |l| !l.starts_with( ' ' ) && !l.is_empty() )
     .collect();
   assert!( !names.is_empty(), "show-all must produce entries: {text}" );

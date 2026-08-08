@@ -6,7 +6,7 @@
 
 use crate::subprocess_helpers::{ assert_exit, run_clv, run_clv_with_env, stdout, write_settings };
 
-/// EC-7: `force::` only for `.version.install`, `.version.guard`, `.processes.kill`
+/// EC-7: `force::` only for `.version.install`, `.version.guard`, `.ps.kill`
 #[ test ]
 fn force_ec7_command_scope_rejects_on_settings_set()
 {
@@ -55,16 +55,16 @@ fn force_ec9_explicit_zero_same_as_absent()
   assert_eq!( text_absent, text_zero, "force::0 must produce same output as absent force::" );
 }
 
-/// EC-10: `dry::1 force::1` on `.processes.kill` → dry wins
+/// EC-10: `dry::1 force::1` on `.ps.kill` → dry wins
 #[ test ]
-fn force_ec10_processes_kill_dry_wins()
+fn force_ec10_ps_kill_dry_wins()
 {
-  let out = run_clv( &[ ".processes.kill", "dry::1", "force::1" ] );
+  let out = run_clv( &[ ".ps.kill", "dry::1", "force::1" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!(
     text.contains( "[dry-run]" ) || text.contains( "dry" ) || text.contains( "no active" ),
-    "dry must win over force on .processes.kill: {text}"
+    "dry must win over force on .ps.kill: {text}"
   );
 }
 

@@ -82,7 +82,7 @@ Both are valid invocations; the output prefix differs.
 
 | Function | File |
 |----------|------|
-| `tc310_processes_kill_dry_exits_0` | `tests/cli/mutation_processes_kill_test.rs` |
-| `tc311_processes_kill_dry_mentions_sigterm` | `tests/cli/mutation_processes_kill_test.rs` |
-| `tc312_processes_kill_dry_force_mentions_sigkill` | `tests/cli/mutation_processes_kill_test.rs` |
-| `ft004_processes_kill_force_no_procs` | `tests/cli/feature_surface_test.rs` |
+| `tc310_ps_kill_dry_exits_0` | `tests/cli/mutation_ps_kill_test.rs` |
+| `tc311_ps_kill_dry_mentions_sigterm` | `tests/cli/mutation_ps_kill_test.rs` |
+| `tc312_ps_kill_dry_force_mentions_sigkill` | `tests/cli/mutation_ps_kill_test.rs` |
+| `ft004_ps_kill_force_no_procs` | `tests/cli/feature_surface_test.rs` |
