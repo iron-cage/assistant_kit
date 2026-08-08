@@ -23,8 +23,8 @@ const EXPECTED_COMMANDS : &[ &str ] = &[
   ".version.install",
   ".version.guard",
   ".version.list",
-  ".processes",
-  ".processes.kill",
+  ".ps",
+  ".ps.kill",
   ".settings.show",
   ".settings.get",
   ".settings.set",
@@ -46,7 +46,7 @@ mod enabled
     let mut registry = CommandRegistry::new();
     claude_version::register_commands( &mut registry );
     assert!( registry.command( ".status" ).is_some(), ".status must be registered" );
-    assert!( registry.command( ".processes" ).is_some(), ".processes must be registered" );
+    assert!( registry.command( ".ps" ).is_some(), ".ps must be registered" );
     assert!( registry.command( ".settings.get" ).is_some(), ".settings.get must be registered" );
   }
 

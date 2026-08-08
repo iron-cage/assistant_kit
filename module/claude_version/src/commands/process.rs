@@ -1,21 +1,30 @@
-//! `.processes` and `.processes.kill` — list and terminate Claude Code processes.
+//! `.ps` and `.ps.kill` — list and terminate Claude Code processes.
 
 use unilang::data::{ ErrorCode, ErrorData, OutputData };
 use unilang::interpreter::ExecutionContext;
 use unilang::semantic::VerifiedCommand;
+use unilang::types::Value;
 
-use crate::output::{ OutputFormat, OutputOptions, json_escape };
+use crate::output::{ OutputFormat, OutputOptions, json_escape, trim_trailing_whitespace };
 use claude_runner_core::process::{ ProcessInfo, find_claude_processes, send_sigkill, send_sigterm };
+use claude_runner_core::ps_table::render_ps_table;
+use claude_runner_core::OutputFormat as CoreOutputFormat;
 
-/// `.processes` — list all running Claude Code processes.
+/// `.ps` — list all running Claude Code processes.
 ///
 /// # Errors
 ///
-/// Returns `Err` if `format::` has an unrecognised value.
+/// Returns `Err` if `format::` has an unrecognised value, or if `v::` is
+/// outside the valid `0..=2` range.
 #[ allow( clippy::missing_inline_in_public_items ) ]
-pub fn processes_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
+pub fn ps_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
-  let opts  = OutputOptions::from_cmd( &cmd )?;
+  let opts = OutputOptions::from_cmd( &cmd )?;
+  if opts.verbosity > 2
+  {
+    return Err( ErrorData::new( ErrorCode::ValidationRuleFailed,
+      format!( "v:: must be 0, 1, or 2, got {}", opts.verbosity ) ) );
+  }
   let procs = find_claude_processes();
 
   let content = match opts.format
@@ -38,21 +47,13 @@ pub fn processes_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Re
     }
     OutputFormat::Text =>
     {
-      if procs.is_empty()
-      {
-        String::new()
-      }
-      else
-      {
-        let lines : Vec< String > = procs.iter().map( | p |
-          match opts.verbosity
-          {
-            0 => format!( "{} {}", p.pid, p.cwd.display() ),
-            _ => format!( "PID: {}  CWD: {}", p.pid, p.cwd.display() ),
-          }
-        ).collect();
-        format!( "{}\n", lines.join( "\n" ) )
-      }
+      // Task 463: table rendering delegated to claude_runner_core::ps_table,
+      // which knows nothing about CLI-specific trailing-newline conventions —
+      // normalize exactly one trailing newline here, at the CLI output layer.
+      let rendered = render_ps_table( &procs, CoreOutputFormat::Text, opts.verbosity );
+      let mut content = trim_trailing_whitespace( &rendered );
+      if !content.ends_with( '\n' ) { content.push( '\n' ); }
+      content
     }
   };
 
@@ -61,7 +62,7 @@ pub fn processes_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Re
 
 /// Deliver SIGTERM+SIGKILL (with 2 s wait) or bare SIGKILL to a process list.
 ///
-/// Called only from `processes_kill_routine` (`.processes.kill` explicit user command).
+/// Called only from `ps_kill_routine` (`.ps.kill` explicit user command).
 /// MUST NOT be called from guard routines, install routines, or any scheduled path.
 ///
 /// `force == true` → immediate SIGKILL; `force == false` → SIGTERM first, then
@@ -106,12 +107,40 @@ fn send_kill_signals( procs : &[ ProcessInfo ], force : bool ) -> Result< (), Er
   Ok( () )
 }
 
-/// `.processes.kill` — terminate all Claude Code processes.
+/// Parse and validate the optional `pid::` argument for `.ps.kill`.
 ///
-/// Handler for explicit user command `.processes.kill`. Never invoke from automatic paths.
+/// Returns `Ok(None)` when `pid::` is absent (bulk-kill mode targeting every
+/// running Claude Code process). Returns `Err(ValidationRuleFailed)` when
+/// `pid::` is present but not a positive integer that fits in a process id.
+fn parse_pid_filter( cmd : &VerifiedCommand ) -> Result< Option< u32 >, ErrorData >
+{
+  match cmd.arguments.get( "pid" )
+  {
+    Some( Value::Integer( n ) ) =>
+    {
+      if *n <= 0
+      {
+        return Err( ErrorData::new( ErrorCode::ValidationRuleFailed,
+          format!( "pid:: must be a positive integer, got {n}" ) ) );
+      }
+      u32::try_from( *n )
+      .map( Some )
+      .map_err( | _ | ErrorData::new( ErrorCode::ValidationRuleFailed,
+        format!( "pid:: value {n} is out of range for a process id" ) ) )
+    }
+    _ => Ok( None ),
+  }
+}
+
+/// `.ps.kill` — terminate all Claude Code processes, or a single process when
+/// `pid::` is given.
+///
+/// Handler for explicit user command `.ps.kill`. Never invoke from automatic paths.
 ///
 /// # Errors
 ///
+/// Returns `Err(ValidationRuleFailed)` if `pid::` is not a positive integer or
+/// does not match any running Claude Code process.
 /// Returns `Err(InternalError)` if signal delivery fails or processes survive.
 ///
 /// Fix(BUG-007): signal delivery results were discarded via the
@@ -123,10 +152,26 @@ fn send_kill_signals( procs : &[ ProcessInfo ], force : bool ) -> Result< (), Er
 /// Pitfall: ESRCH ("no such process") is a benign race — the process already
 ///   exited — so collect all signal errors but filter ESRCH from final report.
 #[ allow( clippy::missing_inline_in_public_items ) ]
-pub fn processes_kill_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
+pub fn ps_kill_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
-  let opts  = OutputOptions::from_cmd( &cmd )?;
-  let procs = find_claude_processes();
+  let opts       = OutputOptions::from_cmd( &cmd )?;
+  let pid_filter = parse_pid_filter( &cmd )?;
+  let all_procs  = find_claude_processes();
+
+  let procs = match pid_filter
+  {
+    Some( target ) =>
+    {
+      let matched : Vec< ProcessInfo > = all_procs.into_iter().filter( | p | p.pid == target ).collect();
+      if matched.is_empty()
+      {
+        return Err( ErrorData::new( ErrorCode::ValidationRuleFailed,
+          format!( "no running Claude Code process with pid {target}" ) ) );
+      }
+      matched
+    }
+    None => all_procs,
+  };
 
   if procs.is_empty()
   {
@@ -176,7 +221,14 @@ pub fn processes_kill_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) 
   send_kill_signals( &procs, super::is_force( &cmd ) )?;
 
   std::thread::sleep( core::time::Duration::from_millis( 500 ) );
-  let remaining = find_claude_processes().len();
+  // Targeted kill: only the requested pid must be gone — unrelated Claude
+  // processes left running are expected, not a failure. Bulk kill: every
+  // process must be gone.
+  let remaining = match pid_filter
+  {
+    Some( target ) => usize::from( find_claude_processes().iter().any( | p | p.pid == target ) ),
+    None            => find_claude_processes().len(),
+  };
   if remaining > 0
   {
     return Err( ErrorData::new(

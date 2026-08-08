@@ -193,6 +193,6 @@ Edge case coverage for the `dry::` parameter. See [param/readme.md](../../../../
 | `dry_ec7_negative_exits_1` | `tests/cli_args_test/param_bool_test.rs` |
 | `dry_ec9_empty_exits_1` | `tests/cli_args_test/param_bool_test.rs` |
 | `dry_ec10_command_scope_rejects_on_read` | `tests/cli/dry_param_test.rs` |
-| `dry_ec11_processes_kill_dry_run` | `tests/cli/dry_param_test.rs` |
+| `dry_ec11_ps_kill_dry_run` | `tests/cli/dry_param_test.rs` |
 | `dry_ec12_settings_set_dry_no_file` | `tests/cli/dry_param_test.rs` |
-| `dry_ec13_processes_kill_dry_wins_over_force` | `tests/cli/dry_param_test.rs` |
+| `dry_ec13_ps_kill_dry_wins_over_force` | `tests/cli/dry_param_test.rs` |

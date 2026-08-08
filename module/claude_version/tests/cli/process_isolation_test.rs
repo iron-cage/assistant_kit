@@ -3,7 +3,7 @@
 //! Verifies that `.version.guard` does not deliver kill signals to running
 //! Claude processes. The guard's only interaction with running processes is
 //! via `hot_swap_binary()` (unlink); `send_kill_signals()` is reachable only
-//! through the explicit `.processes.kill` user command.
+//! through the explicit `.ps.kill` user command.
 //!
 //! # Test Matrix
 //!
@@ -15,8 +15,8 @@
 //
 // Root Cause
 //
-// `send_kill_signals()` and `processes_kill_routine()` are isolated to the
-// `.processes.kill` explicit user command. No automatic path (guard, install,
+// `send_kill_signals()` and `ps_kill_routine()` are isolated to the
+// `.ps.kill` explicit user command. No automatic path (guard, install,
 // daemon) reaches them. This is a precautionary regression tripwire — the
 // isolation invariant is expected to hold without any code change; the task
 // formalizes it as a tested and documented guarantee.
@@ -30,7 +30,7 @@
 // Fix Applied
 //
 // Isolation doc comments added to `send_kill_signals()` and
-// `processes_kill_routine()` in `src/commands/process.rs` naming the
+// `ps_kill_routine()` in `src/commands/process.rs` naming the
 // exact caller/callee relationship. This test creates a structural
 // regression tripwire for the guard execution path.
 //

@@ -41,11 +41,11 @@ fn format_ec13_version_list_format_json_array()
   assert!( text.trim_start().starts_with( '[' ), "version.list format::json must start with [: {text}" );
 }
 
-/// EC-14: `.processes format::json` → `{"processes":[...]}` with processes key
+/// EC-14: `.ps format::json` → `{"processes":[...]}` with processes key
 #[ test ]
-fn format_ec14_processes_format_json_has_processes_key()
+fn format_ec14_ps_format_json_has_processes_key()
 {
-  let out = run_clv( &[ ".processes", "format::json" ] );
+  let out = run_clv( &[ ".ps", "format::json" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!( text.contains( "\"processes\"" ), "processes json must have 'processes' key: {text}" );

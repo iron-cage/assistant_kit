@@ -172,8 +172,8 @@ mod cli
           entries : vec!
           [
             CommandEntry { name : ".status".to_string(),         desc : "Show overall system status".to_string() },
-            CommandEntry { name : ".processes".to_string(),      desc : "List running Claude processes".to_string() },
-            CommandEntry { name : ".processes.kill".to_string(), desc : "Kill running Claude processes".to_string() },
+            CommandEntry { name : ".ps".to_string(),      desc : "List running Claude processes".to_string() },
+            CommandEntry { name : ".ps.kill".to_string(), desc : "Kill running Claude processes".to_string() },
           ],
         },
         CommandGroup

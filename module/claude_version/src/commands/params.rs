@@ -18,7 +18,7 @@ use unilang::interpreter::ExecutionContext;
 use unilang::semantic::VerifiedCommand;
 use unilang::types::Value;
 
-use crate::output::{ OutputFormat, OutputOptions, json_escape };
+use crate::output::{ OutputFormat, OutputOptions, json_escape, trim_trailing_whitespace };
 use claude_version_core::params_catalog::{ ParamDef, lookup, params_catalog };
 use claude_core::settings_io::get_setting;
 
@@ -179,12 +179,12 @@ fn render_show_all_text(
   user_settings : Option< &Path >,
 ) -> String
 {
-  let mut out = String::new();
-  for param in params
+  if verbosity == 0
   {
-    if verbosity == 0
+    // Compact: one line per param — `name = value (source)` per feature/007 § Show-all v::0.
+    let mut out = String::new();
+    for param in params
     {
-      // Compact: one line per param — `name = value (source)` per feature/007 § Show-all v::0.
       if param.is_cli_only()
       {
         let _ = writeln!( out, "{} = (CLI-only)", param.name );
@@ -203,32 +203,45 @@ fn render_show_all_text(
         let _ = writeln!( out, "{} = {display}", param.name );
       }
     }
+    return out;
+  }
+
+  if params.is_empty()
+  {
+    return String::new();
+  }
+
+  use data_fmt::{ Format, Heading, RowBuilder, TableConfig, TableFormatter };
+
+  let headers = vec![
+    "Name".to_string(), "Forms".to_string(), "Default".to_string(), "Value".to_string(),
+  ];
+  let mut builder = RowBuilder::new( headers );
+  for param in params
+  {
+    let forms   = build_forms( param );
+    let default = param.default.unwrap_or( "" ).to_string();
+    let value   = if param.is_cli_only()
+    {
+      "(CLI-only)".to_string()
+    }
     else
     {
-      // Block format: name (non-indented), then forms + annotated value.
-      let forms = build_forms( param );
-      out.push_str( param.name );
-      out.push( '\n' );
-      let _ = writeln!( out, "  Forms:   {forms}" );
-
-      if param.is_cli_only()
-      {
-        out.push_str( "  Value:   (CLI-only)\n" );
-      }
-      else
-      {
-        let ( val, source ) = resolve_effective( param, user_settings );
-        let display = match source
-        {
-          "absent"  => "(absent)".to_string(),
-          src       => format!( "{val} ({src})" ),
-        };
-        let _ = writeln!( out, "  Value:   {display}" );
-      }
-      out.push( '\n' );
-    }
+      let ( val, source ) = resolve_effective( param, user_settings );
+      if source == "absent" { "(absent)".to_string() } else { format!( "{val} ({source})" ) }
+    };
+    let row : Vec< String > = vec![ param.name.to_string(), forms, default, value ];
+    builder = builder.add_row( row.into_iter().map( Into::into ).collect() );
   }
-  out
+
+  let heading = Heading::new( "Parameters" ).with_field( format!( "{} total", params.len() ) );
+  let config  = TableConfig::plain()
+    .with_heading( heading )
+    .with_auto_wrap( false )
+    .with_auto_fold( false );
+  let rendered = Format::format( &TableFormatter::with_config( config ), &builder.build_view() )
+    .unwrap_or_default();
+  trim_trailing_whitespace( &rendered )
 }
 
 fn render_show_all_json(

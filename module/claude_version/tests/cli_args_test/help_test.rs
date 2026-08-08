@@ -219,13 +219,13 @@ fn ec6_help_output_contains_commands()
   );
 }
 
-// EC-7: `.help` universally accepted by `.settings.show`, `.processes`, `.config`
+// EC-7: `.help` universally accepted by `.settings.show`, `.ps`, `.config`
 #[ test ]
 fn ec7_help_accepted_by_all_commands()
 {
   for args in &[
     vec![ ".settings.show", ".help" ],
-    vec![ ".processes", ".help" ],
+    vec![ ".ps", ".help" ],
     vec![ ".config", ".help" ],
   ]
   {

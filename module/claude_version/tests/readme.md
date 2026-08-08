@@ -25,10 +25,10 @@ Unit and integration tests for `claude_version`.
 | `cli/read_help_test.rs` | Integration tests for `.help` (E1) |
 | `cli/read_status_test.rs` | Integration tests for `.status` and format edge cases (E2) |
 | `cli/read_version_test.rs` | Integration tests for `.version.show` and `.version.list` (E3, E4, E15) |
-| `cli/read_processes_test.rs` | Integration tests for `.processes` (E6) |
+| `cli/read_ps_test.rs` | Integration tests for `.ps` (E6) |
 | `cli/read_settings_test.rs` | Integration tests for `.settings.show` and `.settings.get` (E8, E9) |
 | `cli/mutation_version_install_test.rs` | Integration tests for `.version.install` (E5) |
-| `cli/mutation_processes_kill_test.rs` | Integration tests for `.processes.kill` (E7) |
+| `cli/mutation_ps_kill_test.rs` | Integration tests for `.ps.kill` (E7) |
 | `cli/mutation_version_guard_test.rs` | Integration tests for `.version.guard` (E14) |
 | `cli/mutation_settings_set_test.rs` | Integration tests for `.settings.set` and value type inference (E10) |
 | `cli/cross_cutting_test.rs` | Cross-cutting: dry+force, verbosity parity, format parity |
@@ -52,6 +52,7 @@ Unit and integration tests for `claude_version`.
 | `cli/value_param_test.rs` | EC- edge case tests for the `value::` parameter |
 | `cli/count_param_test.rs` | EC- edge case tests for the `count::` parameter |
 | `cli/process_isolation_test.rs` | Kill-isolation regression: guard does not send kill signals |
+| `cli/pid_param_test.rs` | EC- edge case tests for the `pid::` parameter on `.ps.kill` |
 | `cli/params_command_test.rs` | `.params` command integration tests |
 | `cli/kind_param_test.rs` | EC- edge case tests for the `kind::` parameter |
 | `cli/runtime_files_test.rs` | Integration tests for `.runtime_files` (IT-1..IT-9, FT-1..FT-5) |

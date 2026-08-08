@@ -10,9 +10,10 @@ This directory contains the core implementation of the `claude_runner_core` crat
 | `command/` | ClaudeCommand builder split into per-tier parameter modules |
 | `types.rs` | Enum type definitions and conversions |
 | `process.rs` | Scan `/proc` for Claude processes; send SIGTERM/SIGKILL |
+| `ps_table.rs` | Render a `ProcessInfo` slice as a table (feature `ps_table`) |
 | `session_dir.rs` | Directory-based session isolation for invocations |
 
-## Organization (5 entries)
+## Organization (6 entries)
 
 Files organized by responsibility following Rust module conventions.
 
@@ -28,6 +29,7 @@ src/
 │   └── params_extended.rs  # Tier 3+ optional parameters
 ├── types.rs            # ActionMode, LogLevel enums
 ├── process.rs          # /proc scanner, signal sending
+├── ps_table.rs         # ProcessInfo table rendering (feature `ps_table`)
 └── session_dir.rs      # Session directory isolation
 ```
 
@@ -42,6 +44,7 @@ src/
 - Test-only helpers for verification without actual execution
 - `/proc` scanning for running Claude Code processes
 - Signal delivery (SIGTERM, SIGKILL) to Claude processes
+- Process-list table rendering for downstream `.ps`-style consumers (feature `ps_table`)
 
 **Out of Scope:**
 - Session lifecycle management (→ claude_profile crate)
