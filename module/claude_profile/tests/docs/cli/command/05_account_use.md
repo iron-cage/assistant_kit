@@ -22,15 +22,15 @@ Integration test planning for the `.account.use` command. See [command/namespace
 | IT-14 | Prefix `car` resolves to `carol@example.com` and switches account | Prefix Resolution |
 | IT-15 | Ambiguous prefix matches two accounts → exit 1 | Prefix Resolution / Error |
 | IT-16 | Exact local-part wins over longer ambiguous prefix | Prefix Resolution |
-| IT-17 | `touch::1` with idle account — subprocess spawned after switch | Touch Subprocess |
+| IT-17 | `touch::1` live-token switch — exits 0, `switched` in stdout; subprocess dispatch not observed | Touch Subprocess |
 | IT-18 | `touch::0` with idle account — pure rotation, no subprocess | Touch Subprocess |
-| IT-19 | `touch::1` with already-active account — no subprocess spawned | Touch Subprocess |
+| IT-19 | Same test as IT-17; "no subprocess" premise superseded by BUG-285 (now idempotent dispatch) | Touch Subprocess |
 | IT-20 | `touch::1` with fetch failure — switch completes, exits 0 | Touch Subprocess |
 | IT-21 | `imodel::bad` on `.account.use` exits 1 with valid values in stderr | Validation |
 | IT-22 | `effort::bad` on `.account.use` exits 1 with valid values in stderr | Validation |
 | IT-23 | `touch::`, `refresh::`, `imodel::`, `effort::`, `trace::` appear in `.account.use --help` | Help Output |
 | IT-28 | `refresh::bad` exits 1 naming valid values `0`, `1`, `false`, `true` | Validation |
-| IT-24 | `trace::1 touch::1` idle account — 6 trace lines emitted to stderr in order | Trace Output |
+| IT-24 | `trace::1 touch::1` — 3 trace lines unconditional; 3 more only when live fetch succeeds | Trace Output |
 | IT-25 | `trace::1 touch::0` — no timestamped `account.use` diagnostic lines emitted | Trace Suppression |
 | IT-26 | `trace::bad` exits 1 naming valid values `0`, `1`, `false`, `true` | Validation |
 | IT-27 | `oauthAccount.organizationName` in `~/.claude.json` reflects switched-to account (BUG-219 guard) | Org Identity |
@@ -175,11 +175,13 @@ Integration test planning for the `.account.use` command. See [command/namespace
 
 ### IT-12: Use with path-unsafe chars in email local part exits 1
 
+> Test asserts exit code only — does not read stderr content or check filesystem state. Contrast with the sibling `.account.save` coverage (`as17_save_slash_in_email_local_part_exits_1`), which checks both the stderr message ("path-unsafe characters") and that the credential store is not created.
+
 - **Given:** Any account store state (the name is rejected before any store lookup).
 - **When:** `clp .account.use name::a/b@c.com`
-- **Then:** Error message on stderr indicating the name contains path-unsafe characters, exit 1. No filesystem modification.
+- **Then:** Exit 1.
 - **Exit:** 1
-- **Source:** [command/001_account.md — .account.use](../../../../docs/cli/command/001_account.md#command-5-accountuse), [004_account_use.md AC-06](../../../../docs/feature/004_account_use.md), [aw11 in account_mutations_test.rs]
+- **Source:** [command/001_account.md — .account.use](../../../../docs/cli/command/001_account.md#command-5-accountuse), [004_account_use.md AC-06](../../../../docs/feature/004_account_use.md), [aw11 in account_mutations_test_b.rs]
 
 ---
 
@@ -225,13 +227,15 @@ Integration test planning for the `.account.use` command. See [command/namespace
 
 ---
 
-### IT-17: `touch::1` with idle account — subprocess spawned
+### IT-17: `touch::1` live-token switch — exits 0, `switched` in stdout (subprocess dispatch not observed)
 
-- **Given:** One account `alice@home.com` saved with valid token and idle 5h window (`five_hour.resets_at` is absent). Per-machine active marker set to a different account.
-- **When:** `clp .account.use name::alice@home.com` (default `touch::1`)
-- **Then:** Exits 0; `switched to 'alice@home.com'` on stdout; credentials rotated; an isolated subprocess is dispatched to start a 5h session for the idle account.
+> `aw27_lim_it_touch_with_live_token` (shared with IT-19) is a live/uncontrolled test — it does not force the target account into an idle 5h window; the account's real quota state at test time depends on the live token's history. Its own doc comment says either `pre_switch_touch_ctx` outcome (`Some`/idle or `None`/active-or-fetch-fail) "must exit 0," and treats the subprocess as fire-and-forget ("its success or failure does not affect the command exit code"). Assertions check only `assert_exit(&out, 0)` and that stdout contains `"switched"` — never whether a subprocess actually dispatched.
+
+- **Given:** A live OAuth token account is used; `aw27` does not construct a specifically-idle fixture — the target account's actual 5h-window state at test time is whatever the live token's account happens to have.
+- **When:** `clp .account.use name::target@example.com` (default `touch::1`), using a live token.
+- **Then:** Exits 0; stdout contains `"switched"`. Whether a subprocess was actually dispatched is not observed by this test.
 - **Exit:** 0
-- **Live:** yes (requires valid token with idle 5h window to observe subprocess dispatch)
+- **Live:** yes (requires a live OAuth token; `lim_it`)
 - **Source:** [feature/027_account_use_post_switch_touch.md AC-01](../../../../docs/feature/027_account_use_post_switch_touch.md)
 - **Source fn:** `aw27_lim_it_touch_with_live_token`
 
@@ -248,13 +252,15 @@ Integration test planning for the `.account.use` command. See [command/namespace
 
 ---
 
-### IT-19: `touch::1` with already-active account — no subprocess spawned
+### IT-19: Already-active account also dispatches subprocess (idempotently) — not skipped
 
-- **Given:** Account `alice@home.com` saved with valid token and active 5h window (`five_hour.resets_at` is set). Per-machine active marker set to a different account.
-- **When:** `clp .account.use name::alice@home.com` (default `touch::1`)
-- **Then:** Exits 0; `switched to 'alice@home.com'` on stdout; credentials rotated; no subprocess spawned (account already has active 5h session).
+> Shares `aw27_lim_it_touch_with_live_token` with IT-17 — same uncontrolled fixture, no idle/active distinction (see IT-17's note). The original "no subprocess spawned" premise is also stale: Fix(BUG-285) removed the `AlreadyActive` skip path from `PreSwitchOutcome` (AC-03) — "the idle check that previously skipped the subprocess for already-active accounts used server-side `resets_at` as a local subprocess identity oracle (category error)." The subprocess now dispatches idempotently (exits immediately) even when the account is already active, rather than being skipped.
+
+- **Given:** A live OAuth token account is used; same shared, uncontrolled fixture as IT-17.
+- **When:** `clp .account.use name::target@example.com` (default `touch::1`), using a live token.
+- **Then:** Exits 0; stdout contains `"switched"`. Per AC-03 the subprocess now dispatches idempotently even when the account is already active (no longer skipped) — but this specific outcome is not asserted by `aw27` either, which checks only the shared exit0/message behavior.
 - **Exit:** 0
-- **Live:** yes (requires valid token with active `five_hour.resets_at`)
+- **Live:** yes (requires a live OAuth token; `lim_it`)
 - **Source:** [feature/027_account_use_post_switch_touch.md AC-03](../../../../docs/feature/027_account_use_post_switch_touch.md)
 - **Source fn:** `aw27_lim_it_touch_with_live_token`
 
@@ -273,9 +279,11 @@ Integration test planning for the `.account.use` command. See [command/namespace
 
 ### IT-21: `imodel::bad` exits 1 with valid values in stderr
 
+> Test asserts only 4 of the 5 valid values — `auto`, `sonnet`, `opus`, `keep`. It does not check for `haiku`, even though `imodel::`'s validator (`src/usage/types.rs`) formats all five into the error message: `"imodel:: must be one of: auto, sonnet, opus, keep, haiku"`.
+
 - **Given:** Any account store state (empty is fine).
 - **When:** `clp .account.use name::alice@home.com imodel::bad`
-- **Then:** Exits 1; stderr contains all five valid values: `auto`, `sonnet`, `opus`, `haiku`, `keep`.
+- **Then:** Exits 1; stderr contains `auto`, `sonnet`, `opus`, `keep` (test does not assert `haiku` is present).
 - **Exit:** 1
 - **Source:** [feature/027_account_use_post_switch_touch.md AC-07](../../../../docs/feature/027_account_use_post_switch_touch.md)
 - **Source fn:** `aw24_imodel_bad_value_exits_1`
@@ -284,9 +292,11 @@ Integration test planning for the `.account.use` command. See [command/namespace
 
 ### IT-22: `effort::bad` exits 1 with valid values in stderr
 
+> Test asserts only 3 of the 5 valid values — `auto`, `high`, `max`. It does not check for `low` or `normal`, even though `effort::`'s validator (`src/usage/types.rs`) formats all five into the error message: `"effort:: must be one of: auto, high, max, low, normal"`.
+
 - **Given:** Any account store state (empty is fine).
 - **When:** `clp .account.use name::alice@home.com effort::bad`
-- **Then:** Exits 1; stderr contains all five valid values: `auto`, `low`, `normal`, `high`, `max`.
+- **Then:** Exits 1; stderr contains `auto`, `high`, `max` (test does not assert `low` or `normal` are present).
 - **Exit:** 1
 - **Source:** [feature/027_account_use_post_switch_touch.md AC-07](../../../../docs/feature/027_account_use_post_switch_touch.md)
 - **Source fn:** `aw25_effort_bad_value_exits_1`
@@ -304,13 +314,15 @@ Integration test planning for the `.account.use` command. See [command/namespace
 
 ---
 
-### IT-24: `trace::1 touch::1` account — subprocess always dispatched when quota fetch OK
+### IT-24: `trace::1 touch::1` — subprocess dispatch trace lines (partially conditional on live quota fetch)
 
-- **Given:** Account `alice@home.com` saved with valid token.
+> `aw28_lim_it_trace_idle_account_all_lines` unconditionally asserts only: the `· account.use` trace prefix, `reading`/`reading: OK`, and the absence of `idle check:` (Fix(BUG-285) removed that line). The `quota fetch: OK`, `subprocess: scheduled (idle check removed)`, `model:`, and `subprocess: spawned` lines are checked only inside `if err.contains("quota fetch: OK")` — when the live fetch fails, none of these four are asserted at all (a silent `eprintln!` skip, not a test failure). No line-order assertion exists anywhere in the test (every check is a `contains()` substring test, not a positional one); `effort:` is never checked at all.
+
+- **Given:** Account `alice@home.com` saved with a live token; whether the live quota fetch succeeds is not controlled by the test.
 - **When:** `clp .account.use name::alice@home.com trace::1`
-- **Then:** Exits 0; `switched to 'alice@home.com'` on stdout. Stderr (in order) contains: `reading {path}`, `reading: OK`, `quota fetch: OK`, `subprocess: scheduled (idle check removed)`, `model: {model}  effort: {effort}`, `subprocess: spawned`. Fix(BUG-285): `idle check:` trace line removed; subprocess always fires when fetch succeeds. Prefix of every trace line is `... · account.use  alice@home.com`.
+- **Then:** Exits 0; stdout contains `switched`. Stderr always contains the `· account.use` trace prefix, `reading`, and `reading: OK`, and never contains `idle check:`. Only when the live fetch succeeds (stderr contains `quota fetch: OK`) does stderr additionally contain `subprocess: scheduled (idle check removed)`, `model:`, and `subprocess: spawned` — none of these four are asserted, in any order, when the fetch fails.
 - **Exit:** 0
-- **Live:** yes (requires valid token)
+- **Live:** yes (requires valid token; fetch-success trace lines depend on the live quota fetch outcome)
 - **Source:** [feature/027_account_use_post_switch_touch.md AC-10–AC-14](../../../../docs/feature/027_account_use_post_switch_touch.md)
 - **Source fn:** `aw28_lim_it_trace_idle_account_all_lines`
 
@@ -340,10 +352,12 @@ Integration test planning for the `.account.use` command. See [command/namespace
 
 ### IT-27: `oauthAccount.organizationName` reflects switched-to account (BUG-219 guard)
 
-- **Given:** Account `i7@test.com` saved with `{credential_store}/i7@test.com.json` containing `oauthAccount.organizationName = "i7 Org"` (and active, so `~/.claude.json` has this org). Account `i6@test.com` saved with `{credential_store}/i6@test.com.json` also containing `organizationName = "i7 Org"` (snapshot was captured while i7 was active — stale cross-account contamination). Account `i6@test.com` has `organization_name = "i6 Org"` in its `{credential_store}/i6@test.com.json`.
-- **When:** `clp .account.use name::i6@test.com`
-- **Then:** Exits 0; `switched to 'i6@test.com'` on stdout. `~/.claude.json` contains `oauthAccount.organizationName = "i6 Org"` (reflecting i6's org from `{name}.json`), NOT `"i7 Org"` (the stale snapshot value). `oauthAccount.emailAddress = "i6@test.com"`.
-- **Exit:** 0
+> **Core-library-level test, not a CLI integration test** — `mre_bug_219_switch_account_stale_org_name` calls `account::switch_account("i6@test.com", &store, &paths)` directly (in `claude_profile_core`, not the `clp` binary). No subprocess is spawned, so there is no CLI exit code or stdout to observe; success is `.unwrap()` not panicking, and the result is verified by reading `~/.claude.json` back and parsing it with `parse_string_field`. The fixture also never saves an `i7@test.com` account in the credential store — it only pre-writes `~/.claude.json` directly (simulating i7 as the previously-active session) plus `i6@test.com.credentials.json` and `i6@test.com.json` directly via `std::fs::write`.
+
+- **Given:** `~/.claude.json` pre-written directly with `oauthAccount = {emailAddress: "i7@test.com", organizationName: "i7 Org", organizationUuid: "uuid-i7"}` (simulating i7 as the previously-active session; no `i7@test.com` file exists in the credential store). `{store}/i6@test.com.credentials.json` and `{store}/i6@test.com.json` are written directly; `i6@test.com.json`'s `oauthAccount` subtree still has the stale `"i7 Org"` values, but its top-level `organization_name = "i6 Org"` / `organization_uuid = "uuid-i6"` are correct.
+- **When:** `account::switch_account("i6@test.com", &store, &paths)` called directly (no CLI subprocess).
+- **Then:** Call returns `Ok(())`. `~/.claude.json`, read back and parsed via `parse_string_field`, contains `oauthAccount.organizationName = "i6 Org"` and `organizationUuid = "uuid-i6"` (i6's top-level values, not the stale `"i7 Org"`/`"uuid-i7"` snapshot), and `oauthAccount.emailAddress = "i6@test.com"`.
+- **Exit:** N/A (core-library call, not a CLI invocation)
 - **Source:** [feature/004_account_use.md BUG-219](../../../../docs/feature/004_account_use.md)
 - **Source fn:** `mre_bug_219_switch_account_stale_org_name` (in `claude_profile_core/tests/account_test.rs`)
 

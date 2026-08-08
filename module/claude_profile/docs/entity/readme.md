@@ -2,7 +2,7 @@
 
 ## Master Doc Entities Table
 
-**Instances convention:** this column counts the rows for that type in the Master Doc Instances Table below. Three lifecycle conventions apply depending on type: (a) generic ❌-deprecated instances (e.g. `feature/008`, `feature/023`) are excluded from both tables entirely — the Instances figure omits them; (b) CLI-specific REMOVED instances (e.g. `cli/param/` 013/032/053/056/057, `cli/command_verb/` 009/011) are kept as annotated rows in both tables — the Instances figure includes them; (c) CLI-specific DEPRECATED-but-not-REMOVED instances (e.g. `cli/command_verb/` 006 rotate, Feature 038 — a callable hidden-redirector stub that always exits 1, distinct from REMOVED's zero runtime presence) are also kept as annotated rows — the Instances figure includes them identically to (b). See each type's own readme.md for active-vs-total breakdowns.
+**Instances convention:** this column counts the rows for that type in the Master Doc Instances Table below. Three lifecycle conventions apply depending on type: (a) generic ❌-deprecated instances (e.g. `feature/008`, `feature/023`, `feature/069`) are excluded from both tables entirely — the Instances figure omits them; (b) CLI-specific REMOVED instances (e.g. `cli/param/` 013/032/053/056/057, `cli/command_verb/` 009/011) are kept as annotated rows in both tables — the Instances figure includes them; (c) CLI-specific DEPRECATED-but-not-REMOVED instances (e.g. `cli/command_verb/` 006 rotate, Feature 038 — a callable hidden-redirector stub that always exits 1, distinct from REMOVED's zero runtime presence) are also kept as annotated rows — the Instances figure includes them identically to (b). See each type's own readme.md for active-vs-total breakdowns.
 
 | Type | Purpose | Master File | Instances |
 |------|---------|-------------|----------:|
@@ -13,12 +13,12 @@
 | `cli/command_noun/` | Domain noun documentation (account, token, credentials) | [cli/command_noun/readme.md](../cli/command_noun/readme.md) | 3 |
 | `cli/command_verb/` | Domain verb documentation (save, use, delete, limits, relogin, rotate, renewal, inspect, status) — 006 rotate DEPRECATED (Feature 038); 009 assign and 011 unclaim REMOVED | [cli/command_verb/readme.md](../cli/command_verb/readme.md) | 11 |
 | `cli/format/` | CLI output format specifications | [cli/format/readme.md](../cli/format/readme.md) | 3 |
-| `cli/param/` | CLI parameter specifications | [cli/param/readme.md](../cli/param/readme.md) | 74 |
+| `cli/param/` | CLI parameter specifications | [cli/param/readme.md](../cli/param/readme.md) | 79 |
 | `cli/param_group/` | CLI parameter group definitions | [cli/param_group/readme.md](../cli/param_group/readme.md) | 7 |
 | `cli/type/` | CLI type definitions | [cli/type/readme.md](../cli/type/readme.md) | 5 |
 | `cli/user_story/` | Canonical user stories mapping personas and goals to commands | [cli/user_story/readme.md](../cli/user_story/readme.md) | 5 |
 | `cli/workflow_scenario/` | **ELIMINATED** (`cli_doc.rulebook` v1.7) — all instances migrated to `cli/user_story/`; directory retained only as an archived migration map | [cli/workflow_scenario/readme.md](../cli/workflow_scenario/readme.md) | 0 |
-| `feature/` | Functional requirements for claude_profile capabilities | [readme.md](../feature/readme.md) | 51 |
+| `feature/` | Functional requirements for claude_profile capabilities | [readme.md](../feature/readme.md) | 50 |
 | `invariant/` | Measurable constraints and architectural guarantees | [invariant/readme.md](../invariant/readme.md) | 12 |
 | `pattern/` | Reusable design solutions applied at more than one call site | [pattern/readme.md](../pattern/readme.md) | 1 |
 | `pitfall/` | Systemic pitfall catalog — recurring design traps revealed by bug history | [pitfall/readme.md](../pitfall/readme.md) | 7 |
@@ -94,7 +94,6 @@
 | feature | 066 | Dual-Source OAuth Quota Parsing | [feature/066_dual_source_quota_parsing.md](../feature/066_dual_source_quota_parsing.md) |
 | feature | 067 | Trace Timestamp Prefix | [feature/067_trace_timestamps.md](../feature/067_trace_timestamps.md) |
 | feature | 068 | Models List Command | [feature/068_models_list_command.md](../feature/068_models_list_command.md) |
-| feature | 069 | Model Select Command | [feature/069_model_select_command.md](../feature/069_model_select_command.md) |
 | feature | 070 | Account Claim and Reservation Control | [feature/070_account_claim_and_reservation_control.md](../feature/070_account_claim_and_reservation_control.md) |
 | feature | 071 | Redirect Backend Accounts | [feature/071_redirect_backend_accounts.md](../feature/071_redirect_backend_accounts.md) |
 | feature | 072 | Inference Provider Selection | [feature/072_inference_provider_selection.md](../feature/072_inference_provider_selection.md) |
@@ -186,6 +185,11 @@
 | param | 072 | `redirect_model::` (redirect target's own model identifier) | [cli/param/072_redirect_model.md](../cli/param/072_redirect_model.md) |
 | param | 073 | `inference_provider::` (metadata label) | [cli/param/073_inference_provider.md](../cli/param/073_inference_provider.md) |
 | param | 074 | `preset::` (named provider preset; only `kimi` recognized) | [cli/param/074_preset.md](../cli/param/074_preset.md) |
+| param | 075 | `scope::` (backing-store router on `.model`) | [cli/param/075_scope.md](../cli/param/075_scope.md) |
+| param | 076 | `model::` (per-scope value on `.model`) | [cli/param/076_model_value.md](../cli/param/076_model_value.md) |
+| param | 077 | `effort_level::` (per-scope value on `.model`) | [cli/param/077_effort_level.md](../cli/param/077_effort_level.md) |
+| param | 078 | `reset_model::` (per-scope reset on `.model`) | [cli/param/078_reset_model.md](../cli/param/078_reset_model.md) |
+| param | 079 | `reset_effort_level::` (per-scope reset on `.model`) | [cli/param/079_reset_effort_level.md](../cli/param/079_reset_effort_level.md) |
 | param_group | 001 | Output Control | [cli/param_group/001_output_control.md](../cli/param_group/001_output_control.md) |
 | param_group | 002 | Field Presence | [cli/param_group/002_field_presence.md](../cli/param_group/002_field_presence.md) |
 | param_group | 003 | Fetch Behavior | [cli/param_group/003_fetch_behavior.md](../cli/param_group/003_fetch_behavior.md) |

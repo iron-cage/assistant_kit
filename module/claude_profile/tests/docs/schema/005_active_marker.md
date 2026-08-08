@@ -50,10 +50,12 @@ plain-text content format, and `other_machines_active()` read semantics.
 
 ### SC-4: Active marker content is a single plain-text account name — no JSON
 
-- **Given:** An active marker file `_active_w003_user1` exists in the credential store
-- **When:** The file is read as raw text
-- **Then:** Content is a single email address string (e.g., `alice@example.com`), trimmed of whitespace, no JSON structure, no metadata
-- **Source fn:** `ft13_025_sessions_table_parses_marker_identity_from_filename` (usage/render_tests_b.rs; reads marker filename to identify current session)
+- **Given:** `.account.save name::work@acme.com` is invoked, creating an active marker file
+  in the credential store at `active_marker_filename()`'s path.
+- **When:** The marker file is read as raw text via `std::fs::read_to_string`.
+- **Then:** Content is exactly `work@acme.com` after trimming — a single plain-text account
+  name, no JSON structure, no metadata.
+- **Source fn:** `as16_save_writes_active_marker` in `tests/cli/account_mutations_test_b.rs`
 - **Source:** [docs/schema/005_active_marker.md §Content Format](../../../docs/schema/005_active_marker.md)
 
 ---

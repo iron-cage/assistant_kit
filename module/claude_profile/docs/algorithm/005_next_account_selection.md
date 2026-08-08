@@ -15,7 +15,7 @@ Select the **winner** account for footer recommendation and auto-switch from amo
 
 #### Entry Point
 
-`src/usage/sort_next.rs:46-83` — `find_next_for_strategy(strategy, accounts, prefer, gate_ownership, now_secs)`
+`src/usage/sort_next.rs:63-103` — `find_next_for_strategy(accounts, strategy, prefer, now_secs, gate_ownership, selected_provider)`
 
 #### Algorithm (3 steps)
 
@@ -40,7 +40,7 @@ Key definitions:
 
 #### Step 3 — First eligible wins
 
-Walk the sorted list from position 0. The first account passing all 9 eligibility gates (see [algorithm/004](004_eligibility_gates.md)) is the winner — marked `→` in the table, shown in footer `Next` line. If no account passes, result is `None` (no recommendation; auto-switch returns error). Because `reserve` is a leading sort key (Step 2) rather than a gate, a reserved account is only ever reached by this walk once every non-reserved candidate has already failed a gate — "first eligible wins" needs no change to produce "reserved accounts are picked only when nothing else qualifies."
+Walk the sorted list from position 0. The first account passing all 10 eligibility gates (see [algorithm/004](004_eligibility_gates.md)) is the winner — marked `→` in the table, shown in footer `Next` line. If no account passes, result is `None` (no recommendation; auto-switch returns error). Because `reserve` is a leading sort key (Step 2) rather than a gate, a reserved account is only ever reached by this walk once every non-reserved candidate has already failed a gate — "first eligible wins" needs no change to produce "reserved accounts are picked only when nothing else qualifies."
 
 #### Why `sort::renew` uses ascending `prefer_weekly` as secondary key
 

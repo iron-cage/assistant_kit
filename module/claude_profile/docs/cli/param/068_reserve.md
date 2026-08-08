@@ -3,7 +3,7 @@
 Mutation param on `.accounts` and `.usage` that sets or clears the `reserve` field in `{name}.json`. A reserved account remains fully eligible for selection — it is deprioritized in sort order, not excluded — so it is only picked by the footer recommendation, `.usage rotate::1`, or auto-switch when no non-reserved eligible account remains. Supports comma-list `name::X,Y,Z` for batch operations.
 
 - **Default:** *(omit)* — no reserve write when absent; `reserve` defaults to `false` for accounts that have never set it
-- **Constraints:** `0`, `1`, `false`, `true`. `name::` supports comma-list (e.g., `name::X,Y,Z`) for batch; absent `name::` applies to all accounts in the current filtered set.
+- **Constraints:** `0`, `1` (exact string match against `"1"`; any other value, including `"true"`/`"false"`, is silently treated as `0`/clear — see Values table below). `name::` supports comma-list (e.g., `name::X,Y,Z`) for batch; absent `name::` applies to all accounts in the current filtered set.
 - **Purpose:** Deprioritize an account for automatic rotation while keeping it a usable fallback — for accounts a caller wants touched deliberately (via `.account.use`) but not consumed first by unattended rotation, "unless there is no left."
 
 **Behavior:**
@@ -20,8 +20,8 @@ reserve::1 name::X dry::1   → preview without writing
 
 | Value | Effect |
 |-------|--------|
-| `0` / `false` (default) | Account sorts by strategy order alone (name/renew/renews) |
-| `1` / `true` | Account sorts after all non-reserved accounts, regardless of strategy order — see below |
+| `0` (default); any value other than the exact string `1` | Account sorts by strategy order alone (name/renew/renews) |
+| `1` (exact string match) | Account sorts after all non-reserved accounts, regardless of strategy order — see below |
 
 **Sort-key mechanics (soft deprioritization, not a gate):** `reserve` is a leading sort key prepended to every strategy in `find_next_for_strategy()` — `(reserve, <strategy key>)` — so non-reserved accounts (`reserve=false`) always sort before reserved ones (`reserve=true`), and accounts within each group retain their existing strategy-relative order. No eligibility gate is added or changed: a reserved account still passes Gates 1–9 like any other candidate. The existing "first eligible wins, else `None`" walk is untouched — it naturally lands on a reserved account only when every non-reserved candidate has already been excluded by an eligibility gate or exhausted. See [algorithm/007_sort_strategies.md](../../algorithm/007_sort_strategies.md) for the full sort-key table.
 

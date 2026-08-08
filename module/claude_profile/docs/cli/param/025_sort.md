@@ -38,7 +38,7 @@ All accounts are partitioned into four status groups before any sort strategy ru
 
 **Recommendation (footer):**
 
-`sort::` drives the footer recommendation — the top eligible account in the sort order is shown in the footer's `Next (strategy):` line. No separate `next::` parameter exists. Eligibility: non-current, non-active, non-occupied, not h-exhausted (`5h Left > 15%`), not weekly-exhausted (`seven_day_left > WEEKLY_EXHAUSTION_THRESHOLD`), valid quota data, `expires_in_secs > 0`. When no eligible account exists, the footer recommendation line is omitted.
+`sort::` drives the footer recommendation — the top eligible account in the sort order is shown in the footer's `Next (strategy):` line. No separate `next::` parameter exists. Eligibility (gates enforced by `find_first_eligible`): non-current, non-active, non-occupied, non-cancelled (`billing_type != "none"`), valid quota data, not h-exhausted (`5h Left > 15%`), `expires_in_secs > 0`, not claim-locked (unconditional — no `force::` bypass), matching the selected inference provider (unconditional — no `force::` bypass), not weekly-exhausted (`seven_day_left > WEEKLY_EXHAUSTION_THRESHOLD`); additionally account-owned (`is_owned`) when `rotate::1` is active without `force::1`. When no eligible account exists, the footer recommendation line is omitted.
 
 The footer shows one recommendation line for the active `sort::` strategy (omitted when 0 or 1 valid accounts).
 

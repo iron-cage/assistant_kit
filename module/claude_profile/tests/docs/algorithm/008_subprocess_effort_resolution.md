@@ -51,8 +51,7 @@ effort initialization path in `apply_model_override()` in `src/usage/api.rs`.
 - **When:** `resolve_effort` is called.
 - **Then:** Returns `Some("low")` — Opus supports extended thinking but isolated subprocesses
   use `.` keep-alive prompts; `low` prevents unnecessary extended thinking overhead.
-- **Source fn:** `t10_sonnet_branch_writes_effort_high` (Sonnet path); effort low path
-  implied by `mre_bug322_opus_override_sets_effort_max` in `tests/usage/api_tests_a.rs`
+- **Source fn:** `it_effort_auto_uniform_low` in `tests/usage/subprocess_tests.rs`
 - **Source:** [algorithm/008_subprocess_effort_resolution.md](../../../docs/algorithm/008_subprocess_effort_resolution.md)
 
 ---
@@ -63,8 +62,7 @@ effort initialization path in `apply_model_override()` in `src/usage/api.rs`.
 - **When:** `resolve_effort` is called.
 - **Then:** Returns `Some("low")` — Sonnet supports extended thinking; `low` is used for
   keep-alive subprocesses to avoid timeout.
-- **Source fn:** `t10_sonnet_branch_writes_effort_high` in `tests/usage/api_tests_a.rs`
-  (tests the `settings.json` side); subprocess effort low also in usage_feature_test.rs
+- **Source fn:** `it_effort_auto_uniform_low` in `tests/usage/subprocess_tests.rs`
 - **Source:** [algorithm/008_subprocess_effort_resolution.md](../../../docs/algorithm/008_subprocess_effort_resolution.md)
 
 ---

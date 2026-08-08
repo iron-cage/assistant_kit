@@ -87,7 +87,7 @@ Prefix resolution applies AFTER positional rewriting: `clp .account.use car` →
 | `src/commands/account_relogin.rs` | `account_relogin_routine` — prefix resolution |
 | `src/commands/account_renewal.rs` | `account_renewal_routine` — comma-list token resolution |
 | `src/commands/accounts.rs`, `src/commands/limits.rs` | `accounts_routine`, `account_limits_routine` — prefix resolution |
-| `src/lib.rs` | `cli::print_usage()` — update example to use positional form |
+| `src/cli.rs` | `print_usage()` — update example to use positional form |
 
 ### Tests
 

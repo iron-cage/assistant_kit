@@ -32,16 +32,16 @@ Source: `src/usage/touch.rs`
 
 ### Skip-Reason Trace Codes
 
-| Reason | Condition |
+| Reason (exact literal) | Condition |
 |--------|-----------|
-| `reason: error account` | `aq.result` is `Err` |
-| `reason: touch_idle=false` | Cache flag indicates already activated |
-| `reason: already active` | All three timers have active windows |
-| `reason: h-exhausted` | `five_hour_left ≤ 0.0%` (fully exhausted only, TSK-418 — NOT the 15%-remaining `H_EXHAUSTED_THRESHOLD` display/sort constant) |
-| `reason: 7d-exhausted` | `seven_day_left ≤ 0.0%` |
-| `reason: not owned` | `is_owned = false` |
-| `reason: occupied elsewhere` | `is_occupied_elsewhere = true` |
-| `reason: solo-skip` | `solo::1` and not current account |
+| `"skipped (reason: error account)"` | `aq.result` is `Err` |
+| `"skipped (reason: touch_idle=false)"` | Cache flag indicates already activated |
+| `"skipped (reason: already active)"` | All three timers have active windows |
+| `"skipped (reason: h-exhausted)"` | `five_hour_left ≤ 0.0%` (fully exhausted only, TSK-418 — NOT the 15%-remaining `H_EXHAUSTED_THRESHOLD` display/sort constant) |
+| `"skipped (reason: 7d-exhausted)"` | `seven_day_left ≤ 0.0%` |
+| `"skipped (reason: not owned)"` | `is_owned = false` |
+| `"skipped (reason: occupied elsewhere)"` | `is_occupied_elsewhere = true` |
+| `"solo-skip"` | `solo::1` and not current account — bare literal, no `skipped (reason: ...)` wrapper |
 
 Trace strings are the exact `&'static str` literals returned by `touch_skip_reason()` (`src/usage/touch.rs`); this table previously used shorthand labels (`Err`, `all_running`, `weekly-exhausted`) that did not match the source strings — corrected here to the literal text.
 

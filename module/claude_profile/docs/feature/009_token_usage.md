@@ -207,11 +207,11 @@ Next (renew)     · alice@example.com   · sonnet/high · in 3h 47m $ren
 | File | Relationship |
 |------|--------------|
 | BUG-244 | BUG-244 ✅ Fixed: `apply_model_override()` call added to `usage_routine()` before row-filter pipeline; `label: &str` param added to distinguish `.usage` from `.account.use` trace prefix (TSK-249) |
-| BUG-300 | BUG-300 ✅ Fixed (TSK-302): `apply_model_override()` used `map_or(0.0, ...)` on `quota.seven_day_sonnet`; when `None`, returned 0.0 < 20.0 → Opus override fired unconditionally for accounts without a Sonnet tier. Fix: `if let Some(ref sonnet) = quota.seven_day_sonnet` guard at `api.rs:267`; `mre_bug300_model_override_absent_sonnet_no_override` added to `api_tests.rs` |
+| BUG-300 | BUG-300 ✅ Fixed (TSK-302): `apply_model_override()` used `map_or(0.0, ...)` on `quota.seven_day_sonnet`; when `None`, returned 0.0 < 20.0 → Opus override fired unconditionally for accounts without a Sonnet tier. Fix: `if let Some(ref sonnet) = quota.seven_day_sonnet` guard at `api_switch.rs:274-282`; `mre_bug300_model_override_absent_sonnet_no_override` added to `api_tests_a.rs` |
 | BUG-317 | BUG-317 ✅ Fixed: Cancelled accounts (`billing_type="none"`) misclassified as 🟡/🟢. Fix A: `status_group_of()` gates on `billing_type` before quota thresholds (`sort.rs`). Fix B: `find_first_eligible()` skips cancelled accounts (`sort_next.rs`). Fix C: `status_emoji()` signature changed to `&AccountQuota`; gates on `billing_type` before quota thresholds (`format.rs`). Fix D: `only_valid` filter excludes cancelled; `exclude_exhausted` auto-fixed via Fix C (`api.rs`). MREs: `mre_bug317_cancelled_status_emoji_is_red`, `mre_bug317_cancelled_not_recommended_by_find_next`, `mre_bug317_cancelled_account_status_group_is_red`, `mre_bug317_cancelled_excluded_by_only_valid` |
 | BUG-319 | BUG-319 ✅ Fixed (premise-incorrect — superseded by BUG-321): `status_emoji()` returned 🟡 for both-exhausted accounts — `else { "🟡" }` collapsed G2+G3+G4. Fix changed `(false,false)→🔴` but incorrectly treated both-exhausted as dead. MREs: `mre_bug319_both_exhausted_status_emoji_is_red`, `test_status_emoji_and_both_at_threshold_red` — assertions flipped 🔴→🟡 by BUG-321 fix (Fix BUG-321). |
 | BUG-321 | BUG-321 ✅ Fixed (TSK-331): Both-exhausted accounts (5h ≤ 15% AND 7d ≤ 3%) were showing 🔴 and sorting with dead accounts. Fix: `( _, false ) => StatusGroup::WeeklyExhausted` in `status_group_of()` (merged `(true,false)` and `(false,false)` arms); `_ => "🟡"` catch-all in `status_emoji()` (dead gate fires before the match via `billing_type` early return). No new enum variant or array resize. MREs: `mre_bug321_both_exhausted_status_emoji_is_yellow` (format_tests.rs), `mre_bug321_both_exhausted_sorts_in_weekly_group`, `mre_bug321_four_group_partition_order` (sort.rs). |
-| BUG-322 | BUG-322 ✅ Fixed: Opus model override set effort to `"low"` instead of `"high"`. BUG-312 init wrote `"low"` when absent but never matched effort to model. Fix (updated by TSK-335): unconditional effort writes in all branches — Opus→`"max"`, Sonnet→`"high"`, absent-tier→`"high"`. BUG-312 init retained as unreachable safety fallback. MREs: `mre_bug322_opus_override_sets_effort_max`, `t11_opus_to_sonnet_sets_effort_high`, `t12_absent_tier_with_opus_sets_effort_high` (api_tests.rs). |
+| BUG-322 | BUG-322 ✅ Fixed: Opus model override set effort to `"low"` instead of `"high"`. BUG-312 init wrote `"low"` when absent but never matched effort to model. Fix (updated by TSK-335): unconditional effort writes in all branches — Opus→`"max"`, Sonnet→`"high"`, absent-tier→`"high"`. BUG-312 init retained as unreachable safety fallback. MREs: `mre_bug322_opus_override_sets_effort_max`, `t11_opus_to_sonnet_sets_effort_high`, `t12_absent_tier_with_opus_sets_effort_high` (api_tests_a.rs). |
 
 ### Commands
 
@@ -268,7 +268,7 @@ Next (renew)     · alice@example.com   · sonnet/high · in 3h 47m $ren
 
 | File | Relationship |
 |------|--------------|
-| `src/usage/api.rs`, `src/usage/fetch.rs`, `src/usage/render.rs` | `usage_routine()` CLI handler (incl. `apply_model_override` for current account — AC-32), quota fetching, table rendering, JSON output |
+| `src/usage/api.rs`, `src/usage/api_switch.rs`, `src/usage/fetch.rs`, `src/usage/render.rs` | `usage_routine()` CLI handler (calls `apply_model_override()` — defined in `api_switch.rs` — for current account, AC-32), quota fetching, table rendering, JSON output |
 
 ### Tests
 
