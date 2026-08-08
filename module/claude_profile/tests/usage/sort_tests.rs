@@ -442,3 +442,97 @@ fn test_prefer_weekly_none_periods_treated_as_full()
     "no_data (None seven_day = 100% left) stays in same group, ranks second alphabetically",
   );
 }
+
+// ── BUG-341: stale account-gated org_created_at read ─────────────────────────
+
+/// BUG-341 MRE — `sort::renew`'s subscription-renewal leg must read the top-level
+/// `org_created_at` field, not the stale account-gated path.
+///
+/// # Root Cause
+/// `renewal_event_secs`'s `sub` leg read `aq.account.as_ref().map(|a| a.org_created_at.as_str())`.
+/// For accounts refreshed from cache, `aq.account` is `None` on 3 of 4 fetch branches
+/// (`docs/feature/033_quota_cache.md`), so the estimate is silently dropped to `u64::MAX`
+/// even when the top-level `AccountQuota.org_created_at` (added by BUG-327/TSK-368) carries
+/// the same data.
+///
+/// # Why Not Caught
+/// All prior `sort::renew` estimate-leg tests (BUG-229) set `renewal_at` (Exact path) or
+/// construct `account: Some(...)` with `org_created_at` kept in sync on both paths — neither
+/// exercises the cache-refreshed `account: None` + top-level-only `org_created_at` combination.
+///
+/// # Fix Applied
+/// `renewal_event_secs` now reads `aq.org_created_at.as_deref()` directly — matching the
+/// 7 `render.rs` call sites already fixed by BUG-327/TSK-368.
+///
+/// # Prevention
+/// `sort::renew`/`sort::renews` estimate-leg tests must construct `account: None` with
+/// `org_created_at` set only at the top level — the exact shape a cache-refreshed fetch
+/// produces — never `account: Some(...)` alone, which never exercised the gated bug.
+///
+/// # Pitfall
+/// With `account: None`, both accounts score `u64::MAX` on the numeric key under the bug,
+/// so the observable symptom is a silent fallback to the alphabetical tiebreak — not a
+/// crash or an obviously-wrong value. Account names are chosen so alphabetical order and
+/// correct order disagree, or the bug would be invisible to the assertion.
+#[ doc = "bug_reproducer(BUG-341)" ]
+#[ test ]
+fn mre_bug341_sort_renew_cache_refreshed_uses_org_created_at_estimate()
+{
+  let now : u64 = 1_700_000_000; // 2023-11-14 — billing_day=20 is same-month, a few days out
+  // "zzz_est": cache-refreshed (account: None), top-level org_created_at estimate.
+  // Named to sort LAST alphabetically — only a correct sub-estimate can rank it first.
+  let mut acct_a = mk_aq_sort( "zzz_est@test.com", 30.0, FAR_FUTURE_MS );
+  acct_a.org_created_at = Some( "1970-01-20T00:00:00Z".to_string() );
+  // "aaa_none": no renewal data at all — sub leg is always u64::MAX.
+  // Named to sort FIRST alphabetically — wins only via the tiebreak, i.e. only under the bug.
+  let acct_b = mk_aq_sort( "aaa_none@test.com", 30.0, FAR_FUTURE_MS );
+
+  let accounts = vec![ acct_a, acct_b ];
+  let idx = sort_indices( &accounts, SortStrategy::Renew, None, PreferStrategy::Any, now );
+  assert_eq!(
+    accounts[ idx[ 0 ] ].name, "zzz_est@test.com",
+    "BUG-341: a cache-refreshed account (account=None) with a top-level org_created_at \
+     estimate must sort ahead of an account with no renewal data at all; got: {:?}",
+    idx.iter().map( |&i| &accounts[ i ].name ).collect::< Vec< _ > >(),
+  );
+}
+
+/// BUG-341 MRE — `sort::renews`'s sole sort key must read the top-level `org_created_at`
+/// field, not the stale account-gated path.
+///
+/// # Root Cause
+/// `renews_secs_of` reads the identical gated pattern as `renewal_event_secs`'s `sub` leg
+/// — one function away in the same file.
+///
+/// # Why Not Caught
+/// This file's pre-existing `sort::renews` coverage sets `renewal_at` directly (Exact path)
+/// — the Estimate/`org_created_at` path was never exercised for `sort::renews`.
+///
+/// # Fix Applied
+/// `renews_secs_of` now reads `aq.org_created_at.as_deref()` directly.
+///
+/// # Prevention
+/// See `mre_bug341_sort_renew_cache_refreshed_uses_org_created_at_estimate` — identical
+/// construction rationale applies (cache-refreshed shape, name/tiebreak disambiguation).
+///
+/// # Pitfall
+/// `sort::renews` has no secondary tiebreak key besides name (unlike `sort::renew`'s
+/// `prefer_weekly` secondary) — the divergence is even more directly exposed here.
+#[ doc = "bug_reproducer(BUG-341)" ]
+#[ test ]
+fn mre_bug341_sort_renews_cache_refreshed_uses_org_created_at_estimate()
+{
+  let now : u64 = 1_700_000_000;
+  let mut acct_a = mk_aq_sort( "zzz_est@test.com", 30.0, FAR_FUTURE_MS );
+  acct_a.org_created_at = Some( "1970-01-20T00:00:00Z".to_string() );
+  let acct_b = mk_aq_sort( "aaa_none@test.com", 30.0, FAR_FUTURE_MS );
+
+  let accounts = vec![ acct_a, acct_b ];
+  let idx = sort_indices( &accounts, SortStrategy::Renews, None, PreferStrategy::Any, now );
+  assert_eq!(
+    accounts[ idx[ 0 ] ].name, "zzz_est@test.com",
+    "BUG-341: sort::renews — a cache-refreshed account with a top-level org_created_at \
+     estimate must sort ahead of an account with no renewal data at all; got: {:?}",
+    idx.iter().map( |&i| &accounts[ i ].name ).collect::< Vec< _ > >(),
+  );
+}

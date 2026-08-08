@@ -124,9 +124,15 @@ pub fn strategy_metric(
         .and_then( |p| p.resets_at.as_deref() )
         .and_then( claude_quota::iso_to_unix_secs )
         .map( |t| t.saturating_sub( now_secs ) );
+      // Fix(BUG-341): read the top-level org_created_at field, not the account-gated path.
+      // Root cause: aq.account is None for cache-refreshed accounts on 3 of 4 fetch branches
+      //   (docs/feature/033_quota_cache.md), silently dropping the estimate to u64::MAX even
+      //   when the top-level AccountQuota.org_created_at (BUG-327/TSK-368) carries the data.
+      // Pitfall: render.rs's 7 call sites already read aq.org_created_at.as_deref() directly —
+      //   this file was one of the two remaining holdouts of the stale gated pattern.
       let sub_pair = renewal_secs(
         aq.renewal_at.as_deref(),
-        aq.account.as_ref().map( |a| a.org_created_at.as_str() ),
+        aq.org_created_at.as_deref(),
         now_secs,
       );
       let ( sub_s, sub_est ) = match sub_pair
@@ -143,9 +149,15 @@ pub fn strategy_metric(
     }
     SortStrategy::Renews =>
     {
+      // Fix(BUG-341): read the top-level org_created_at field, not the account-gated path.
+      // Root cause: aq.account is None for cache-refreshed accounts on 3 of 4 fetch branches
+      //   (docs/feature/033_quota_cache.md), silently dropping the estimate to u64::MAX even
+      //   when the top-level AccountQuota.org_created_at (BUG-327/TSK-368) carries the data.
+      // Pitfall: render.rs's 7 call sites already read aq.org_created_at.as_deref() directly —
+      //   this file was one of the two remaining holdouts of the stale gated pattern.
       let sub_pair = renewal_secs(
         aq.renewal_at.as_deref(),
-        aq.account.as_ref().map( |a| a.org_created_at.as_str() ),
+        aq.org_created_at.as_deref(),
         now_secs,
       );
       match sub_pair

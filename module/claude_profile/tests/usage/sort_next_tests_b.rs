@@ -835,3 +835,141 @@ fn test_cc_gate10_empty_and_explicit_anthropic_are_equivalent()
     "T15: explicit inference_provider=\"anthropic\" must be eligible against selected_provider=\"anthropic\"; got: {result_explicit:?}",
   );
 }
+
+// ── BUG-341: stale account-gated org_created_at read ─────────────────────────
+
+/// BUG-341 MRE — `strategy_metric(Renew)` must show the top-level `org_created_at` estimate
+/// for a cache-refreshed account, not silently drop it via the gated `account.org_created_at`
+/// path.
+///
+/// # Root Cause
+/// Same gated read as `sort.rs`'s `renewal_event_secs`/`renews_secs_of` — `sort_next.rs`'s
+/// `strategy_metric` Renew arm reads `aq.account.as_ref().map(|a| a.org_created_at.as_str())`.
+///
+/// # Why Not Caught
+/// BUG-229's own `strategy_metric` coverage (`mre_bug229_strategy_metric_renew_*`) always
+/// sets `renewal_at` (Exact) or leaves both renewal fields absent (no-sub case) — neither
+/// exercises `account: None` + top-level-only `org_created_at` (Estimate path via the
+/// cache-refreshed shape).
+///
+/// # Fix Applied
+/// Renew arm now reads `aq.org_created_at.as_deref()` directly.
+///
+/// # Prevention
+/// Any `strategy_metric`/`renewal_event_secs`/`renews_secs_of` test claiming Estimate-path
+/// coverage must set `account: None` with `org_created_at` populated only at the top level —
+/// the cache-refreshed fetch shape — never `account: Some(...)`.
+///
+/// # Pitfall
+/// Before the fix, the footer metric and the table's own `→ Next` column (computed by
+/// `render.rs`, already reading the top-level field since BUG-327/TSK-368) silently disagree
+/// for the same row — the footer alone gives no visible error, only a cross-column
+/// inconsistency a user must notice manually.
+#[ doc = "bug_reproducer(BUG-341)" ]
+#[ test ]
+fn mre_bug341_strategy_metric_renew_cache_refreshed_uses_org_created_at_estimate()
+{
+  let now  = 1_700_000_000_u64;
+  let data = claude_quota::OauthUsageData
+  {
+    five_hour        : Some( claude_quota::PeriodUsage { utilization : 30.0, resets_at : None } ),
+    seven_day        : None,  // no 7d reset data — isolates the assertion to the sub estimate leg
+    seven_day_sonnet : None,
+  };
+  let aq = AccountQuota
+  {
+    fallback_reason : None,
+    name          : "test@example.com".to_string(),
+    is_current    : false,
+    is_active             : false,
+    is_occupied_elsewhere : false,
+    expires_at_ms : FAR_FUTURE_MS,
+    result        : Ok( data ),
+    account       : None,  // cache-refreshed: no account data
+    host          : String::new(),
+    role          : String::new(),
+    renewal_at    : None,  // no exact renewal timestamp
+    cached        : false,
+    cache_age_secs : None,
+    org_created_at : Some( "1970-01-20T00:00:00Z".to_string() ),  // top-level field (BUG-327/TSK-368)
+    is_owned      : true,
+    owner                : String::new(),
+      claim_lock : false, reserve : false,
+    inference_provider : String::new(),
+  };
+
+  let metric = strategy_metric( &aq, SortStrategy::Renew, PreferStrategy::Any, now );
+
+  assert!(
+    metric.contains( "~in" ) && metric.contains( "$ren" ),
+    "BUG-341: strategy_metric(Renew) for a cache-refreshed account (account=None) with a \
+     top-level org_created_at estimate must show the estimated subscription renewal \
+     ('~in ... $ren'); got: {metric:?}",
+  );
+}
+
+/// BUG-341 MRE — `strategy_metric(Renews)` must show the top-level `org_created_at` estimate
+/// for a cache-refreshed account, not silently drop it via the gated `account.org_created_at`
+/// path.
+///
+/// # Root Cause
+/// Identical gated read, `strategy_metric`'s `Renews` arm — one function, second arm, same
+/// file.
+///
+/// # Why Not Caught
+/// No existing `strategy_metric(Renews)` test exercises the Estimate path at all —
+/// pre-existing coverage for this arm is indirect (via `renews_label`/`next_event_label` in
+/// `format_tests.rs`, which construct their `Option<&str>` inputs directly, bypassing
+/// `AccountQuota` entirely).
+///
+/// # Fix Applied
+/// Renews arm now reads `aq.org_created_at.as_deref()` directly.
+///
+/// # Prevention
+/// See `mre_bug341_strategy_metric_renew_cache_refreshed_uses_org_created_at_estimate` —
+/// identical construction rationale; this test covers the sibling `Renews` arm.
+///
+/// # Pitfall
+/// `strategy_metric(Renews)` returns an EMPTY string (not "—") when both renewal sources are
+/// absent — different from the `Renew` arm's em-dash fallback. Do not assert `"—"` here.
+#[ doc = "bug_reproducer(BUG-341)" ]
+#[ test ]
+fn mre_bug341_strategy_metric_renews_cache_refreshed_uses_org_created_at_estimate()
+{
+  let now  = 1_700_000_000_u64;
+  let data = claude_quota::OauthUsageData
+  {
+    five_hour        : Some( claude_quota::PeriodUsage { utilization : 30.0, resets_at : None } ),
+    seven_day        : None,
+    seven_day_sonnet : None,
+  };
+  let aq = AccountQuota
+  {
+    fallback_reason : None,
+    name          : "test@example.com".to_string(),
+    is_current    : false,
+    is_active             : false,
+    is_occupied_elsewhere : false,
+    expires_at_ms : FAR_FUTURE_MS,
+    result        : Ok( data ),
+    account       : None,
+    host          : String::new(),
+    role          : String::new(),
+    renewal_at    : None,
+    cached        : false,
+    cache_age_secs : None,
+    org_created_at : Some( "1970-01-20T00:00:00Z".to_string() ),
+    is_owned      : true,
+    owner                : String::new(),
+      claim_lock : false, reserve : false,
+    inference_provider : String::new(),
+  };
+
+  let metric = strategy_metric( &aq, SortStrategy::Renews, PreferStrategy::Any, now );
+
+  assert!(
+    metric.starts_with( "~renews in" ),
+    "BUG-341: strategy_metric(Renews) for a cache-refreshed account (account=None) with a \
+     top-level org_created_at estimate must show '~renews in ...'; got: {metric:?}",
+  );
+}

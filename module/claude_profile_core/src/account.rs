@@ -364,36 +364,67 @@ pub fn save(
     }
     else
     {
-      // Merge oauthAccount from live ~/.claude.json (surgical — only per-account data).
-      if let Ok( live_text ) = std::fs::read_to_string( paths.claude_json_file() )
+      // Fix(BUG-343): only merge live-session identity when the caller is an explicit,
+      // user-driven save (`update_marker == true`) OR the live session's own identity
+      // actually IS `name` (`live_is_name == true`).
+      // Root cause: the merge branch read this machine's own live ~/.claude.json and
+      // merged its oauthAccount into ANY target's file unconditionally, with no check
+      // that `name` was the live identity. Background refresh/touch loops over the full
+      // account list (see refresh_token_with_live_path()) routinely call save() for
+      // accounts that are NOT the active one, so the unconditional merge overwrote a
+      // non-active target's own identity with whichever account happens to be locally
+      // active on this machine. `update_marker == true` (`.account.save`/
+      // `.account.relogin`) is preserved unconditionally because those calls, by design,
+      // always snapshot "whatever is currently live" under the caller's chosen name —
+      // per docs/feature/002_account_save.md AC-05/AC-12, name need not match the live
+      // identity there. The live-identity comparison reads the live session's own
+      // oauthAccount.emailAddress directly, not the separate `_active` marker file — the
+      // marker can go stale relative to the live session after an external login
+      // (BUG-212), which would wrongly suppress the merge for the common
+      // name-inferred-from-live-session save path.
+      // Pitfall: a function that reads "the machine's live session" to enrich a named
+      // account's file is only safe when the caller can guarantee `name` IS the live
+      // session's own account — once shared with a caller that saves non-active accounts
+      // (background refresh, by design), every unguarded live-session read becomes a
+      // cross-account identity leak.
+      let live_text    = std::fs::read_to_string( paths.claude_json_file() ).unwrap_or_default();
+      let live_val     = serde_json::from_str::< serde_json::Value >( &live_text ).ok();
+      let live_is_name = live_val.as_ref()
+        .and_then( | v | v.get( "oauthAccount" ) )
+        .and_then( | o | o.get( "emailAddress" ) )
+        .and_then( | e | e.as_str() )
+        .is_some_and( | email | email == name );
+
+      if update_marker || live_is_name
       {
-        if let Ok( live_val ) = serde_json::from_str::< serde_json::Value >( &live_text )
+        // Merge oauthAccount from live ~/.claude.json (surgical — only per-account data).
+        if let Some( live_val ) = &live_val
         {
           if let Some( oauth ) = live_val.get( "oauthAccount" )
           {
             obj.insert( "oauthAccount".to_string(), oauth.clone() );
           }
         }
-      }
-      // Merge org identity from endpoint 005 (best-effort, network) — Anthropic-only;
-      // meaningless (and would spend a live network call) for a redirect account.
-      #[ cfg( feature = "enabled" ) ]
-      {
-        let creds_text = std::fs::read_to_string( paths.credentials_file() ).unwrap_or_default();
-        if let Some( token ) = parse_string_field( &creds_text, "accessToken" )
+        // Merge org identity from endpoint 005 (best-effort, network) — Anthropic-only;
+        // meaningless (and would spend a live network call) for a redirect account.
+        #[ cfg( feature = "enabled" ) ]
         {
-          if let Ok( roles ) = claude_quota::fetch_claude_cli_roles( &token )
+          let creds_text = std::fs::read_to_string( paths.credentials_file() ).unwrap_or_default();
+          if let Some( token ) = parse_string_field( &creds_text, "accessToken" )
           {
-            let val_or_null = | s : &str | -> serde_json::Value
+            if let Ok( roles ) = claude_quota::fetch_claude_cli_roles( &token )
             {
-              if s.is_empty() { serde_json::Value::Null }
-              else { serde_json::Value::String( s.to_string() ) }
-            };
-            obj.insert( "organization_uuid".to_string(), serde_json::Value::String( roles.organization_uuid.clone() ) );
-            obj.insert( "organization_name".to_string(), serde_json::Value::String( roles.organization_name.clone() ) );
-            obj.insert( "organization_role".to_string(), serde_json::Value::String( roles.organization_role.clone() ) );
-            obj.insert( "workspace_uuid".to_string(), val_or_null( &roles.workspace_uuid ) );
-            obj.insert( "workspace_name".to_string(), val_or_null( &roles.workspace_name ) );
+              let val_or_null = | s : &str | -> serde_json::Value
+              {
+                if s.is_empty() { serde_json::Value::Null }
+                else { serde_json::Value::String( s.to_string() ) }
+              };
+              obj.insert( "organization_uuid".to_string(), serde_json::Value::String( roles.organization_uuid.clone() ) );
+              obj.insert( "organization_name".to_string(), serde_json::Value::String( roles.organization_name.clone() ) );
+              obj.insert( "organization_role".to_string(), serde_json::Value::String( roles.organization_role.clone() ) );
+              obj.insert( "workspace_uuid".to_string(), val_or_null( &roles.workspace_uuid ) );
+              obj.insert( "workspace_name".to_string(), val_or_null( &roles.workspace_name ) );
+            }
           }
         }
       }

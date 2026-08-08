@@ -3,8 +3,8 @@
 ### Scope
 
 - **Purpose**: Document failure modes in credential copy management across live, store, and subprocess views.
-- **Responsibility**: Covers `expiresAt` staleness, live-session write contamination, marker race conditions, rotation re-sync gap, stale-boolean race, and cross-machine RT invalidation.
-- **In Scope**: `{name}.credentials.json`, `~/.claude/.credentials.json`, and `_active_*` marker sync pitfalls; BUG-162, BUG-221, BUG-208, BUG-211, BUG-310, BUG-316.
+- **Responsibility**: Covers `expiresAt` staleness, live-session write contamination, marker race conditions, rotation re-sync gap, stale-boolean race, cross-machine RT invalidation, and cross-account identity contamination.
+- **In Scope**: `{name}.credentials.json`, `{name}.json`, `~/.claude/.credentials.json`, and `_active_*` marker sync pitfalls; BUG-162, BUG-221, BUG-208, BUG-211, BUG-310, BUG-316, BUG-343.
 - **Out of Scope**: Token lifecycle states (→ state_machine/002); subprocess arg constraints (→ pitfall/002).
 
 ### Pattern
@@ -66,6 +66,14 @@ When multiple machines share the same credential set (same email / AT+RT pair), 
 2. Check `~/.claude/history.jsonl` on ALL machines for activity in the incident window
 3. Check Claude Code process lists on all machines during the window
 4. Matching AT fingerprint changes on machine B with no store push = H6 mechanism confirmed
+
+### Pitfall 7 — Unconditional live-session identity merge contaminates non-active targets (BUG-343)
+
+`save()`'s `oauthAccount` merge block read this machine's own live `~/.claude.json` and merged its `oauthAccount` (email + org identity) into the target's `{name}.json` metadata file unconditionally — with no check that `name` was actually the live session's own account. Background refresh/touch loops (`refresh_token_with_live_path()`) call `save()` for every account in the credential store, including non-active ones, so refreshing `target@test.com` on a machine whose live session was `live@test.com` silently merged `live@test.com`'s org identity into `target@test.com`'s own file.
+
+**Fix:** `save()`'s merge block now gates on `update_marker || live_is_name` (BUG-343 fix). `update_marker == true` (explicit `.account.save`/`.account.relogin`) always merges by design — those calls snapshot "whatever is currently live" under the caller's chosen name (docs/feature/002_account_save.md AC-05/AC-12). Otherwise, the live session's own `oauthAccount.emailAddress` must equal `name` before merging.
+
+**Rule:** Never merge "the machine's live session" data into a named account's file without first confirming `name` IS the live session's own account — a `save()` call reachable from a background/full-account-list loop cannot assume its target is locally active.
 
 ### State Machines
 
