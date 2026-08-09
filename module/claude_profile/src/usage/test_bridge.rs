@@ -9,7 +9,7 @@ pub mod types
 {
   pub use super::super::types::{
     AccountQuota, SortStrategy, PreferStrategy, ColsVisibility,
-    SubprocessModel, SubprocessEffort,
+    SubprocessModel, SubprocessEffort, GetField,
     OPUS_OVERRIDE_THRESHOLD, H_EXHAUSTED_THRESHOLD, WEEKLY_EXHAUSTION_THRESHOLD,
   };
 }
@@ -27,7 +27,7 @@ pub use super::sort::{ sort_indices, status_group_of, StatusGroup };
 pub use super::sort_next::{ find_next_for_strategy, strategy_metric };
 
 // ── Render ────────────────────────────────────────────────────────────────
-pub use super::render::{ render_text, render_tsv, render_json };
+pub use super::render::{ render_text, render_tsv, render_json, extract_get_field };
 
 // ── Refresh ───────────────────────────────────────────────────────────────
 pub use super::refresh::{ apply_refresh, reason_label };
@@ -37,7 +37,8 @@ pub use super::touch::{ apply_touch, touch_skip_reason };
 
 // ── Format ────────────────────────────────────────────────────────────────
 pub use super::format::{
-  token_exp_label, compute_expires_cell, unix_to_date, renewal_secs,
+  token_exp_label, compute_expires_cell, compute_expires_cell_cached, expires_remaining_secs,
+  unix_to_date, renewal_secs,
   renews_label, next_event_raw, next_event_label, sub_label, shorten_error,
   five_hour_left, seven_day_left, relevant_quotas, prefer_weekly,
   recommended_model, quota_text_cells, status_emoji,
