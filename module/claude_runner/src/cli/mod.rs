@@ -219,11 +219,11 @@ pub( super ) fn run_built_command(
       && ( cli.message.is_some() || !is_tty || cli.file.is_some() || cli.stdin_content.is_some() ) );
 
   // Concurrency gate: block before subprocess launch when max active print-mode
-  // sessions is reached. Default limit is 6; 0 = unlimited.  dry-run is bypassed
+  // sessions is reached. Default limit is 8; 0 = unlimited.  dry-run is bypassed
   // by caller (never reaches here).
   if is_print_invocation
   {
-    let max_sessions = cli.max_sessions.unwrap_or( 6 );
+    let max_sessions = cli.max_sessions.unwrap_or( 8 );
     let mut runner_attempt = 0u32;
     wait_for_session_slot(
       max_sessions,
@@ -416,7 +416,7 @@ pub( super ) fn dispatch_ask( tokens : &[ String ] ) -> !
 fn gate_isolated_session( cli : &IsolatedArgs, journal : Option< &claude_journal::JournalWriter > )
 {
   if cli.dry_run { return; }
-  let max_sessions = cli.max_sessions.unwrap_or( 6 );
+  let max_sessions = cli.max_sessions.unwrap_or( 8 );
   wait_for_session_slot(
     max_sessions,
     false,

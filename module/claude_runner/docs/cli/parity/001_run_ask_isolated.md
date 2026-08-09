@@ -60,7 +60,7 @@
 | Per-class `--retry-on-*` (Tier 2) | Yes (8 params) | Yes | No |
 | `--retry-default` / `--retry-default-delay` (Tier 3) | Yes (default: 2 / 30s) | Yes | No |
 | **--- Concurrency Gate ---** | | | |
-| `--max-sessions` gate | Yes (default: 6) | Yes | Yes (3-tier: CLI flag + `"max-sessions"` JSON key + `CLR_MAX_SESSIONS` env var; no config-file tier) |
+| `--max-sessions` gate | Yes (default: 8) | Yes | Yes (3-tier: CLI flag + `"max-sessions"` JSON key + `CLR_MAX_SESSIONS` env var; no config-file tier) |
 | Blocks when gate hit | Yes (waits for slots) | Yes | Yes (bypassed by `--dry-run`) |
 | **--- Credentials ---** | | | |
 | `--creds` flag | No | No | Yes (default: `~/.claude/.credentials.json`) |

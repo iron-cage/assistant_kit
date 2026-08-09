@@ -8,7 +8,7 @@
 //!
 //! | ID  | Name                                                                      | TSK-368 Row |
 //! |-----|----------------------------------------------------------------------------|-------------|
-//! | T01 | 6 print-mode processes active, print invocation, default → gate triggers at 6 | T01 |
+//! | T01 | 8 print-mode processes active, print invocation, default → gate triggers at 8 | T01 |
 //! | T02 | 5 print-mode processes active, print invocation, default → gate does not trigger | T02 |
 //! | T03 | 15 print-mode + 1 interactive active, interactive invocation → gate skipped, zero wait | T03 |
 //! | T04 | 5 print-mode + 10 interactive active, print invocation, `--max-sessions 5` → print-mode-only count | T04 |
@@ -39,8 +39,8 @@
 //! | T33 | 1 live occupier in `CLR_PROC_DIR`, `--max-sessions 1` → second invocation observes `count_u32 >= max` (`has_capacity=false`) → stderr names `[at capacity]`, NOT `[slot held by another session]` or `[lost reservation race]` (INV-013 IN-4) | — |
 //! | T34 | same fixture as T33 → diagnostic line preserves `"gate-wait  active="` prefix (TSK-452 format, replaces pre-TSK-452 `"active; waiting"`) when cause suffix is appended (INV-013 IN-5) | — |
 //!
-//! T05 (`clr --help` shows `default: 6`) is covered by
-//! `param_edge_cases_test.rs::ec9_max_sessions_help_shows_default_six`.
+//! T05 (`clr --help` shows `default: 8`) is covered by
+//! `param_edge_cases_test.rs::ec9_max_sessions_help_shows_default_eight`.
 //!
 //! T12 (regression: pre-existing T01/T02/T04/T08 still pass using the renamed
 //! `CLR_GATE_POLL_SECS` var) is covered by those same tests post-rename — no
@@ -191,19 +191,19 @@ fn t13_gate_state_file_valid_json_for_control_char_cwd()
   );
 }
 
-// ── T01: gate triggers at exactly 6 print-mode processes (default limit) ───────
+// ── T01: gate triggers at exactly 8 print-mode processes (default limit) ───────
 
-/// T01: 6 print-mode processes active (5 long-lived + 1 short-lived), new print-mode
-/// invocation, `--max-sessions` unset (default 6) → gate triggers and emits the
-/// "6/6 sessions active; waiting" message, then releases once the short-lived
-/// process self-expires and the count drops below 6.
+/// T01: 8 print-mode processes active (7 long-lived + 1 short-lived), new print-mode
+/// invocation, `--max-sessions` unset (default 8) → gate triggers and emits the
+/// "8/8 sessions active; waiting" message, then releases once the short-lived
+/// process self-expires and the count drops below 8.
 #[ test ]
-fn t01_gate_triggers_at_six_print_mode_processes()
+fn t01_gate_triggers_at_eight_print_mode_processes()
 {
   let ( _occupier_dir, occupier_path ) = fake_claude_binary_dir();
 
   let mut long_lived : Vec< std::process::Child > =
-    ( 0..5 ).map( |_| spawn_print_claude( &occupier_path ) ).collect();
+    ( 0..7 ).map( |_| spawn_print_claude( &occupier_path ) ).collect();
   let mut short_lived = spawn_print_claude_for( &occupier_path, 5 );
 
   let mut pids : Vec< u32 > = long_lived.iter().map( std::process::Child::id ).collect();
@@ -235,25 +235,25 @@ fn t01_gate_triggers_at_six_print_mode_processes()
   );
   let stderr = String::from_utf8_lossy( &out.stderr );
   assert!(
-    // Anchored on "active=" so a wrong larger count (e.g. "active=16/6") can never
-    // false-positive match via the "6/6" tail — AF1.
-    stderr.contains( "gate-wait  active=6/6" ),
-    "T01: gate must report 6/6 print-mode sessions active. Got:\n{stderr}"
+    // Anchored on "active=" so a wrong larger count (e.g. "active=18/8") can never
+    // false-positive match via the "8/8" tail — AF1.
+    stderr.contains( "gate-wait  active=8/8" ),
+    "T01: gate must report 8/8 print-mode sessions active. Got:\n{stderr}"
   );
 }
 
 // ── T02: gate does not trigger below the limit ──────────────────────────────────
 
-/// T02: 5 print-mode processes active, new print-mode invocation, `--max-sessions`
-/// unset (default 6) → gate does not trigger; the dispatched command proceeds
+/// T02: 7 print-mode processes active, new print-mode invocation, `--max-sessions`
+/// unset (default 8) → gate does not trigger; the dispatched command proceeds
 /// immediately with no wait message on stderr.
 #[ test ]
-fn t02_gate_does_not_trigger_below_six_print_mode_processes()
+fn t02_gate_does_not_trigger_below_eight_print_mode_processes()
 {
   let ( _occupier_dir, occupier_path ) = fake_claude_binary_dir();
 
   let mut occupiers : Vec< std::process::Child > =
-    ( 0..5 ).map( |_| spawn_print_claude( &occupier_path ) ).collect();
+    ( 0..7 ).map( |_| spawn_print_claude( &occupier_path ) ).collect();
   let pids : Vec< u32 > = occupiers.iter().map( std::process::Child::id ).collect();
   let proc = make_proc_dir( &pids );
 
@@ -2654,7 +2654,7 @@ fn t31_isolated_gate_env_vars_change_real_poll_timing()
 
 /// T32: `clr isolated --args-file <json with "max-sessions": 3>`, 3 print-mode
 /// processes active, no `--max-sessions` CLI flag → gate must trigger and report
-/// 3/3 active. `isolated`'s default `--max-sessions` is 6, so 3 active occupiers
+/// 3/3 active. `isolated`'s default `--max-sessions` is 8, so 3 active occupiers
 /// would never trigger the gate under the default (see T28's below-capacity
 /// shape) — seeing the 3/3 wait message here is only possible if
 /// `apply_json_config_isolated()`'s `"max-sessions" =>` arm actually applied the
@@ -2704,7 +2704,7 @@ fn t32_isolated_max_sessions_json_config_changes_real_gate_limit()
   assert!(
     stderr.contains( "gate-wait  active=3/3" ),
     "T32: --args-file \"max-sessions\": 3 must set the real gate limit to 3, proving the JSON \
-     key tier is functional for isolated (default is 6, which would never trigger at 3 active). \
+     key tier is functional for isolated (default is 8, which would never trigger at 3 active). \
      Got:\n{stderr}"
   );
 }
