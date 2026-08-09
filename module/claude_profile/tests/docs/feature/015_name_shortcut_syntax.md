@@ -122,7 +122,8 @@ Feature behavioral requirement test cases for `docs/feature/015_name_shortcut_sy
 - **When:** `clp .account.use ghost`
 - **Then:** Exits 2 with `account not found: 'ghost'`.
 - **Exit:** 2
-- **Source fn:** `aw03_switch_nonexistent_exits_2`
+- **Note:** `aw03_switch_nonexistent_exits_2` uses `name::missing@example.com` (a full email), which bypasses prefix-matching entirely per `resolve_account_name()`'s `if raw.contains('@') { return Ok(raw.to_string()); }` early return (`src/commands/cmd_args.rs`) — it asserts only exit 2, not the message text, and does not exercise the bare-prefix zero-match branch. No test in this crate exercises a genuine bare-prefix (no `@`) not-found scenario.
+- **Source fn:** `aw03_switch_nonexistent_exits_2` (N/A — full-email not-found path, not bare-prefix resolution)
 - **Source:** [015_name_shortcut_syntax.md AC-07](../../../docs/feature/015_name_shortcut_syntax.md)
 
 ---
@@ -144,7 +145,8 @@ Feature behavioral requirement test cases for `docs/feature/015_name_shortcut_sy
 - **When:** `clp .account.use alice@home.com dry::1`
 - **Then:** Dry-run output shows intent for `alice@home.com`. Both positional and `dry::` params are accepted together. Exit 0.
 - **Exit:** 0
-- **Source fn:** `aw02_switch_dry_run`
+- **Note:** `aw02_switch_dry_run` uses explicit `name::alice@home.com dry::1` syntax, not the bare positional form. `aw36_positional_after_key_value` (`src/adapter.rs`'s position-independent scan, `argv[1..].iter().position(|a| !a.contains("::") && !a.starts_with('-'))`) covers positional + `dry::1` combined, with `dry::1` preceding the bare name (`.account.use dry::1 alice@home.com`) rather than following it — the position-independent scan makes both orders equivalent.
+- **Source fn:** `aw36_positional_after_key_value`
 - **Source:** [015_name_shortcut_syntax.md AC-09](../../../docs/feature/015_name_shortcut_syntax.md)
 
 ---

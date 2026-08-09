@@ -312,7 +312,7 @@
 
 - **Given:** Any environment with at least one account.
 - **When (case A):** `clp .accounts assign::1 name::alice` is executed.
-- **Then (case A):** Exits 1. Error message: "REMOVED — use `active::USER@MACHINE name::X`". No marker file written.
+- **Then (case A):** Exits 1. Error message: "REMOVED — use `assignee::USER@MACHINE name::X`". No marker file written.
 - **When (case B):** `clp .accounts unclaim::1 name::alice` is executed.
 - **Then (case B):** Exits 1. Error message: "REMOVED — use `owner::0 name::X`". No file written.
 - **When (case C):** `clp .accounts for::user@host name::alice` is executed.
