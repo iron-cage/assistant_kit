@@ -75,6 +75,28 @@ pub fn run_cs_with_env( args : &[ &str ], env : &[ ( &str, &str ) ] ) -> Output
   cmd.output().expect( "failed to execute claude_profile binary" )
 }
 
+/// Run the binary with explicit environment overrides AND explicit removals.
+///
+/// Like `run_cs_with_env`, but additionally removes each name in `remove` from
+/// the child's environment — used to test "env var genuinely unset" behavior
+/// without relying on the test runner's own environment happening to lack it.
+///
+/// # Panics
+///
+/// Panics if the binary cannot be executed.
+#[ inline ]
+#[ must_use ]
+pub fn run_cs_with_env_removing( args : &[ &str ], env : &[ ( &str, &str ) ], remove : &[ &str ] ) -> Output
+{
+  assert_container();
+  let mut cmd = Command::new( BIN );
+  cmd.args( args );
+  cmd.env_remove( "PRO" );
+  for name in remove { cmd.env_remove( name ); }
+  for ( k, v ) in env { cmd.env( k, v ); }
+  cmd.output().expect( "failed to execute claude_profile binary" )
+}
+
 /// Run the binary with HOME and PRO removed from the environment.
 ///
 /// Removes both `HOME` and `PRO` so the binary cannot locate any credential

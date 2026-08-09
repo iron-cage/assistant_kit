@@ -65,6 +65,7 @@
 | 071 | [Redirect Backend Accounts](071_redirect_backend_accounts.md) | `backend`/`base_url`/`redirect_model` account fields; `.account.save backend::redirect` static-credential write path; `.account.use` writes/clears `settings.json`'s `env.*` keys; `apply_model_override()` redirect bypass | 🔄 |
 | 072 | [Inference Provider Selection](072_inference_provider_selection.md) | `inference_provider` account field; `.provider.select` global config command; Gate 10 unconditional rotation exclusion on provider mismatch | 🔄 |
 | 073 | [Kimi Provider Preset](073_kimi_provider_preset.md) | `preset::kimi` convenience param on `.account.save` (pre-fills `backend::`/`base_url::`/`inference_provider::`); 7 additional Kimi-tier `settings.json` env vars written by `switch_account()` when `inference_provider == "kimi"` | 🔄 |
+| 074 | [CLI Invocation Telemetry](074_cli_invocation_telemetry.md) | `run_cli()` appends one redacted `Command` event to the `claude_journal` log per invocation; `cli::run()` returns `i32` instead of calling `std::process::exit` internally so the real exit code can be observed and logged | ✅ |
 
 ### Organization
 

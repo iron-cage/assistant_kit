@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# l1 — bare test execution (VERB_LAYER=l1); module-scoped full gate, in-container.
+# Invoked as the runbox .live payload; cwd-scoping (this module directory) is
+# what limits cargo to this package — no -p flags needed.
+set -euo pipefail
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+cd "$SCRIPT_DIR/../.."
+if [[ "${1:-}" == "--dry-run" ]]; then echo "cargo nextest run + doc test + clippy (module-scoped)"; exit 0; fi
+# Registry is pre-fetched at bake time and mounted read-only — never hit the network.
+export CARGO_NET_OFFLINE=true
+# Fix(issue-nextest-pty-output): Disable nextest's interactive PTY progress bar.
+# Root cause: wrun_core spawns subprocesses via PTY, causing nextest to detect isatty()=true
+# and activate indicatif's cursor-movement progress display. wrun_core's ANSI normalization
+# (consolidate_carriage_returns + extract_ansi_erase_codes) then discards this output,
+# making all test results invisible (exit 0, zero per-test lines visible).
+# With NO_COLOR=1, indicatif returns hidden()=true regardless of isatty(), and nextest
+# falls back to plain \n-terminated output that survives wrun_core's normalization intact.
+# Pitfall: Even with the fix in will_test source (local_nextest.rs, workspace_nextest.rs),
+# environment inheritance ensures this works with any w3 binary version.
+export NO_COLOR=1
+# Container signal for the container-only test invariant (nextest setup script + Rust guards).
+export RUNBOX_CONTAINER=1
+export RUSTFLAGS="-D warnings"
+cargo nextest run --all-features
+RUSTDOCFLAGS="-D warnings" cargo test --doc --all-features
+exec cargo clippy --all-targets --all-features -- -D warnings
