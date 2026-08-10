@@ -19,7 +19,7 @@
 //! | EC-timeout-2 | `--timeout 0` → accepted | No |
 //! | EC-timeout-3 | `--timeout 3600` → accepted | No |
 //! | IT-1 | Happy path: valid creds, message → exit 0 | **Yes** (`lim_it`) |
-//! | IT-3 | Timeout 0, no creds refresh → exit 2 | **Yes** (`lim_it`) |
+//! | IT-3 | Timeout 0, no creds refresh → runs to completion, exit 0 | **Yes** (`lim_it`) |
 //! | IT-4 | Credential write-back after startup refresh → exit 0 | **Yes** (`lim_it`) |
 //! | IT-5 | No message → Claude rejects piped non-TTY context | **Yes** (`lim_it`) |
 //! | IT-6 | `-- --version` passthrough → version in stdout | **Yes** (`lim_it`) |
@@ -31,6 +31,8 @@
 //! Plan 035 tests (output params, env fallbacks, journal, trace, IT-10, IT-29–37) → `isolated_plan035_test.rs`.
 //! Tests containing `lim_it` run by default in container environments.
 //! They early-return when the `claude` binary is absent from `$PATH`.
+//! IT-1/IT-3/IT-4 additionally early-return when the network is unreachable
+//! (no egress to `api.anthropic.com`) — see `network_reachable()`.
 
 #![ cfg( feature = "enabled" ) ]
 
@@ -71,6 +73,20 @@ fn live_creds_file() -> Option< ( NamedTempFile, String ) >
   tmp.write_all( content.as_bytes() ).ok()?;
   let path    = tmp.path().to_str()?.to_string();
   Some( ( tmp, path ) )
+}
+
+/// Returns `true` when `api.anthropic.com:443` resolves — a cheap proxy for
+/// "the live-claude tests have network egress to reach the real service."
+///
+/// `lim_it` tests must early-return when this returns `false` — without it,
+/// a network-isolated container doesn't fail fast: the real `claude` binary
+/// still spawns and takes 30-190s (depending on `--timeout`) to give up on
+/// the unreachable connection, producing a slow false-red failure instead of
+/// a clean skip (BUG-473).
+fn network_reachable() -> bool
+{
+  use std::net::ToSocketAddrs;
+  "api.anthropic.com:443".to_socket_addrs().is_ok()
 }
 
 // ── offline tests (no live claude required) ───────────────────────────────────
@@ -310,6 +326,7 @@ fn test_ec_timeout3_large_accepted()
 fn it1_lim_it_happy_path()
 {
   if !claude_binary_available() { return; }
+  if !network_reachable() { return; }
   let Some( ( _tmp, path ) ) = live_creds_file() else
   {
     panic!( "lim_it test requires live credentials at $HOME/.claude/.credentials.json — run only in credentialed environments, not in standard CI" );
@@ -325,23 +342,26 @@ fn it1_lim_it_happy_path()
   );
 }
 
-/// IT-3: `--timeout 0` without creds refresh → exit 2 (timeout).
+/// IT-3: `--timeout 0` without creds refresh → runs to natural completion.
 ///
-/// A 0-second deadline ensures the subprocess is killed before it can
-/// produce output or refresh credentials (assuming no near-instant refresh).
+/// `--timeout 0` means unlimited (Fix(I2): no deadline/watchdog is armed), so
+/// the subprocess runs to natural completion — exit 0 is the expected
+/// outcome. `exit 2` is tolerated only as a defensive legacy bound; it is not
+/// reachable through the current deadline mechanism when `timeout_secs == 0`.
 ///
 /// Source: tests/docs/cli/command/03_isolated.md#it-3
 #[ test ]
 fn it3_lim_it_timeout_no_refresh()
 {
   if !claude_binary_available() { return; }
+  if !network_reachable() { return; }
   let Some( ( _tmp, path ) ) = live_creds_file() else
   {
     panic!( "lim_it test requires live credentials at $HOME/.claude/.credentials.json — run only in credentialed environments, not in standard CI" );
   };
   let out = run_isolated( &[ "--creds", &path, "--timeout", "0", "Long running analysis task" ] );
-  // Creds refresh at startup before timeout is theoretically possible;
-  // both exit 0 (refreshed) and exit 2 (plain timeout) are valid outcomes.
+  // exit 0 is the expected outcome (unlimited wait, no watchdog per Fix(I2));
+  // exit 2 is tolerated only as a defensive legacy bound, not a primary case.
   let code = exit_code( &out );
   assert!(
     code == 0 || code == 2,
@@ -364,6 +384,7 @@ fn it3_lim_it_timeout_no_refresh()
 fn it4_lim_it_timeout_with_refresh()
 {
   if !claude_binary_available() { return; }
+  if !network_reachable() { return; }
   let Some( ( tmp, path ) ) = live_creds_file() else
   {
     panic!( "lim_it test requires live credentials at $HOME/.claude/.credentials.json — run only in credentialed environments, not in standard CI" );
@@ -434,6 +455,7 @@ fn it6_lim_it_flag_passthrough()
 #[ test ]
 fn ec_creds1_lim_it_valid_file_path()
 {
+  if !network_reachable() { return; }
   let Some( ( _tmp, path ) ) = live_creds_file() else { return; };
   let out = run_isolated( &[ "--creds", &path, "--timeout", "10", "Say hi" ] );
   let err = stderr_str( &out );
@@ -449,6 +471,7 @@ fn ec_creds1_lim_it_valid_file_path()
 #[ test ]
 fn ec_creds2_lim_it_absolute_path()
 {
+  if !network_reachable() { return; }
   let Some( ( _tmp, path ) ) = live_creds_file() else { return; };
   // `path` from live_creds_file() is already absolute (NamedTempFile path).
   assert!( path.starts_with( '/' ), "expected absolute path; got: {path}" );
@@ -469,6 +492,7 @@ fn ec_creds2_lim_it_absolute_path()
 #[ test ]
 fn ec_creds3_lim_it_relative_path()
 {
+  if !network_reachable() { return; }
   let Some( ( (), content ) ) = live_creds_file().map( | ( tmp, path ) |
   {
     let c = std::fs::read_to_string( &path ).unwrap_or_default();
