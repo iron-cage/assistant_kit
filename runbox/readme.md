@@ -8,7 +8,7 @@ embedded Rust engine crate (`module/runbox/`), flat-YAML `runbox-run` runner,
 per-module walk-up wrappers, `plugins.sh` hook — was removed on migration
 (TSK-1436 pilot, 2026-08-06); configs now use the engine's nested schema.
 
-One shared image (`claude_storage_core_test`) serves the whole workspace: this
+One shared image (`assistant_kit_claude_profile_test`) serves the whole workspace: this
 config declares it, `.build` bakes it, and every module's `verb/test` consumes
 it via `runbox .live` with the module's own `test.d/l1` as payload. The tag is
 unique to this checkout — sibling `assistant_kit` checkouts under `yrd_core/`
