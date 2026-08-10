@@ -35,8 +35,8 @@ plugins:
   - type: binary
     name: claude
     container_path: /usr/local/bin/claude
-    working_volume: claude_storage_core_targets
-    working_volume_path: /tmp/claude_storage_core_targets
+    working_volume: claude_profile_targets
+    working_volume_path: /tmp/claude_profile_targets
     commands: [run, live, shell]
 
 # ── Environment ───────────────────────────────────────────────────────────────
@@ -46,9 +46,22 @@ env: {}
 
 env_commands:
   live:
-    # cargo home for registry bind-mounts; offline flag prevents network fetches
+    # cargo home for registry bind-mounts; the offline declaration keeps cargo
+    # hermetic AND keeps the engine's warm probe/fetch flow active (warm keys
+    # on this declaration — a payload-internal export alone never triggers it).
+    # The payload still gets network: the network.live knob below opts out of
+    # the declared-offline kernel seal.
     CARGO_HOME: /cargo
     CARGO_NET_OFFLINE: "true"
+
+# ── Network ───────────────────────────────────────────────────────────────────
+# Payload seal policy (runbox task 1460): 'default' keeps .live on the runtime
+# network — this workspace's lim_it live-API tests run in-container against the
+# mounted ~/.claude token (.config/nextest.toml) — while the offline declaration
+# above still drives the warm flow. .shell has no key: it derives from the
+# inherited env and stays sealed.
+network:
+  live: default
 
 # ── Build ─────────────────────────────────────────────────────────────────────
 # Image-build inputs for this owning config (bake-time only; runtime scoping is the caller's concern).

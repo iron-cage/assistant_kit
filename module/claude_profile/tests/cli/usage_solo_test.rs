@@ -75,11 +75,7 @@ fn it247_synthetic_row_suppressed_name_collision()
 #[ test ]
 fn it_ft028_17_only_active_single_http_fetch()
 {
-  let Some( token ) = live_active_token() else
-  {
-    eprintln!( "it_ft028_17: no live token — skipping" );
-    return;
-  };
+  let token = live_active_token().expect( "it_ft028_17: live API token required — no ~/.claude/.credentials.json" );
   require_live_api( "it_ft028_17" );
 
   let dir  = TempDir::new().unwrap();
