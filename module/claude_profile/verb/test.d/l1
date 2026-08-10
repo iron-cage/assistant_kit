@@ -6,7 +6,13 @@ set -euo pipefail
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd "$SCRIPT_DIR/../.."
 if [[ "${1:-}" == "--dry-run" ]]; then echo "cargo nextest run + doc test + clippy (module-scoped)"; exit 0; fi
-# Registry is pre-fetched at bake time and mounted read-only — never hit the network.
+# Cargo deps resolve from the engine-owned runbox_cargo_home volume at /cargo
+# (runbox TSK-1446), warmed by the engine's probe/fetch flow — keyed on the
+# yml's own CARGO_NET_OFFLINE declaration. The container deliberately keeps
+# network access (runbox.yml network.live: default, task 1460): lim_it
+# live-API tests reach the real API via the mounted ~/.claude token. This
+# export is belt-and-braces with the yml declaration — cargo stays hermetic
+# either way.
 export CARGO_NET_OFFLINE=true
 # Fix(issue-nextest-pty-output): Disable nextest's interactive PTY progress bar.
 # Root cause: wrun_core spawns subprocesses via PTY, causing nextest to detect isatty()=true
