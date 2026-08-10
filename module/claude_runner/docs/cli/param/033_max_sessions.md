@@ -25,18 +25,26 @@ whose basename is exactly `"claude"`, excluding the calling process, **counting 
 non-interactive (print-mode) processes**. The count reflects all running non-interactive
 Claude Code processes system-wide, not per-project.
 
+<!-- BUG-480 task/claude_runner/bug/480_gate_diagnostic_hides_slot_occupancy.md — fixed: verbatim gate-wait format below carries the conditional slots={held}/{max} field (slot-side causes only); exhaustion messages carry slots={held}/{max} held -->
 **Note:** When the gate waits, `clr` emits a structured timestamp-prefixed message to stderr each
 polling cycle (unless `--quiet`) in the form:
-`"{ts}gate-wait  active={count}/{max} attempt={n}/{effective_max} wait={poll_secs}s (reason: {cause})"`,
+`"{ts}gate-wait  active={count}/{max}[ slots={held}/{max}] attempt={n}/{effective_max} wait={poll_secs}s (reason: {cause})"`,
 where `{ts}` is a `claude_core::trace_ts()` prefix (`"YYYY-MM-DD · HH:MM:SS UTC · "`), `{cause}` is
 one of `"at capacity"`, `"slot held by another session"`, or `"lost reservation race"` (INV-013),
+`[ slots={held}/{max}]` is the measured slot occupancy, present only when `{cause}` is one of the
+two slot-side causes and omitted on `"at capacity"` lines (the acquisition sweep never ran there,
+so occupancy is unmeasured — INV-013 § Measured occupancy, BUG-480),
 and `{effective_max}` reflects the `CLR_REMAINING_TIMEOUT_SECS` budget clamp if active (see
-[`085_gate_remaining_timeout_secs.md`](085_gate_remaining_timeout_secs.md)). When a slot opens,
+[`085_gate_remaining_timeout_secs.md`](085_gate_remaining_timeout_secs.md)). The first denied
+attempt of a gate entry is additionally preceded by a one-time `gate-deadline` line announcing
+the resolved state of the deadline clamp and the staleness-reclaim protection (BUG-481; format
+in [`085_gate_remaining_timeout_secs.md`](085_gate_remaining_timeout_secs.md)). When a slot opens,
 `clr` proceeds without a message. After `effective_max` failed attempts, gate exhaustion is routed
 through the Runner-class retry wrapper (`apply_runner_retry()`): on final exhaustion (e.g.
 `--retry-override 0`) `clr` emits `"Error: [Runner] session gate timed out — {count} print
-sessions, max-sessions={max} — retries exhausted (exit 1)"` and exits with code 1 (budget
-exhaustion emits `"gate-wait budget exhausted"` instead — see
+sessions, max-sessions={max}[, slots={held}/{max} held] — retries exhausted (exit 1)"` and exits with
+code 1 (budget exhaustion emits `"gate-wait budget exhausted"` instead, with the same conditional
+`[, slots={held}/{max} held]` suffix — see
 [`085_gate_remaining_timeout_secs.md`](085_gate_remaining_timeout_secs.md)); otherwise it emits a
 `[Runner] ... — retrying...` message and restarts the full attempt sequence. For `run`/`ask`, `poll_secs` (default
 30), `max_attempts` (default 1000), and the opt-in staleness reclaim threshold (default unset) are

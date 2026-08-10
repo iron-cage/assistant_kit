@@ -1,5 +1,6 @@
 mod parse;
 mod env;
+mod retry_classify;
 mod execution;
 mod cred_parse;
 mod builder;
@@ -7,6 +8,7 @@ mod fence;
 mod credential;
 mod help;
 mod gate;
+mod column_validate;
 mod ps;
 mod kill;
 mod tools;
@@ -14,6 +16,7 @@ mod scope;
 mod query;
 mod summary;
 mod json_config;
+mod json_config_isolated;
 mod config;
 // summary_unit_test.rs (external test) imports render_summary/resolve_fields via the public API.
 // The unused_imports lint fires for pub use in private modules when no code in the lib crate itself
@@ -442,7 +445,7 @@ pub( super ) fn dispatch_isolated( tokens : &[ String ] ) -> !
   let src_path = env::resolve_args_file_path( cli.args_file.as_deref() );
   if let Some( ref path ) = src_path
   {
-    if let Err( e ) = json_config::load_and_apply_isolated( path, &mut cli )
+    if let Err( e ) = json_config_isolated::load_and_apply_isolated( path, &mut cli )
     {
       eprintln!( "Error: {e}" );
       std::process::exit( 1 );
@@ -452,7 +455,7 @@ pub( super ) fn dispatch_isolated( tokens : &[ String ] ) -> !
   {
     match json_config::parse_json_object( src )
     {
-      Ok( map ) => json_config::apply_json_config_isolated( &mut cli, &map ),
+      Ok( map ) => json_config_isolated::apply_json_config_isolated( &mut cli, &map ),
       Err( e )  => { eprintln!( "Error: {e}" ); std::process::exit( 1 ); }
     }
   }
@@ -587,7 +590,7 @@ pub( super ) fn dispatch_refresh( tokens : &[ String ] ) -> !
   let src_path = env::resolve_args_file_path( cli.args_file.as_deref() );
   if let Some( ref path ) = src_path
   {
-    if let Err( e ) = json_config::load_and_apply_refresh( path, &mut cli )
+    if let Err( e ) = json_config_isolated::load_and_apply_refresh( path, &mut cli )
     {
       eprintln!( "Error: {e}" );
       std::process::exit( 1 );
@@ -597,7 +600,7 @@ pub( super ) fn dispatch_refresh( tokens : &[ String ] ) -> !
   {
     match json_config::parse_json_object( src )
     {
-      Ok( map ) => json_config::apply_json_config_refresh( &mut cli, &map ),
+      Ok( map ) => json_config_isolated::apply_json_config_refresh( &mut cli, &map ),
       Err( e )  => { eprintln!( "Error: {e}" ); std::process::exit( 1 ); }
     }
   }

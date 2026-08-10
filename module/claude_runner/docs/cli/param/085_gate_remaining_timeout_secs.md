@@ -33,11 +33,21 @@ output without counting attempt lines manually.
 
 **Note:** The `.max(1)` floor guarantees at least one admission attempt is always made before
 the budget-exhaustion error fires — a remaining budget smaller than one poll interval does not
-silently skip the gate check.
+silently skip the gate check. The quotient's divisor is likewise floored
+(`poll_secs.max(1)`), so `CLR_GATE_POLL_SECS=0` combined with a numeric budget cannot divide
+by zero (BUG-481); the floor affects the quotient only, never the actual sleep cadence.
 
 **Note:** When `CLR_REMAINING_TIMEOUT_SECS` is absent or non-numeric, the feature is off and
-the gate behaves exactly as before (polls up to `CLR_GATE_MAX_ATTEMPTS`). Non-numeric values
-resolve to `None` silently — no error, no crash.
+gate polling behaves as before (up to `CLR_GATE_MAX_ATTEMPTS`) — no error, no crash. The
+resolution is NOT silent, however (BUG-481): on the first denied attempt of a waiting gate
+entry, `clr` announces the resolved state once on stderr (unless `--quiet`):
+`"{ts}gate-deadline  {state} · stale-reclaim {on (Ns)|off}"`, where `{state}` is one of
+`off (CLR_REMAINING_TIMEOUT_SECS unset)`, `off (CLR_REMAINING_TIMEOUT_SECS="raw" unparseable)`,
+`nonlimiting (Ns covers all M attempts)` (numeric but `floor(N/poll) >= max_attempts`, so the
+strict-`<` clamp never engages), or `engaged (Ns clamps to E of M attempts)`. Misconfiguration,
+non-configuration, and correct-but-nonlimiting configuration are therefore mutually
+distinguishable in job stderr — an invocation admitted without waiting emits nothing
+(user_story/025 AC-001).
 
 **Note:** The effective attempt count shown in gate progress lines reflects the clamped value
 when a budget is imposed: `attempt={n}/{effective_max}` rather than the unclamped

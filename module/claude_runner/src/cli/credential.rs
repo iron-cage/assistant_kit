@@ -4,6 +4,29 @@ use claude_runner_core::{
 };
 use claude_journal::{ EventRecord, EventType, JournalWriter };
 
+/// Write `contents` to `path` with owner-only (`0600`) permissions on Unix, so credential
+/// material is never briefly world-readable — neither in the isolated temp `HOME` nor when
+/// written back to the caller-supplied `--creds` path after a refresh.
+#[ cfg( unix ) ]
+fn write_creds_restricted( path : &std::path::Path, contents : &str ) -> std::io::Result< () >
+{
+  use std::io::Write as _;
+  use std::os::unix::fs::OpenOptionsExt as _;
+  std::fs::OpenOptions::new()
+    .create( true )
+    .write( true )
+    .truncate( true )
+    .mode( 0o600 )
+    .open( path )?
+    .write_all( contents.as_bytes() )
+}
+
+#[ cfg( not( unix ) ) ]
+fn write_creds_restricted( path : &std::path::Path, contents : &str ) -> std::io::Result< () >
+{
+  std::fs::write( path, contents )
+}
+
 /// Emit trace/dry-run diagnostics for a credential-operation command (`isolated` or `refresh`).
 ///
 /// Reconstructs the `ClaudeCommand` exactly as `run_isolated_ext()` would build it
@@ -176,7 +199,7 @@ pub( super ) fn run_isolated_command
       // the subprocess finished (or before the timeout killed it).
       if let Some( ref new_creds ) = result.credentials
       {
-        if let Err( e ) = std::fs::write( creds_path, new_creds )
+        if let Err( e ) = write_creds_restricted( std::path::Path::new( creds_path ), new_creds )
         {
           eprintln!( "Warning: could not write back refreshed credentials to '{creds_path}': {e}" );
         }
@@ -324,7 +347,7 @@ fn run_isolated_with_stdin_file
     .map_err( | e | RunnerError::TempDirFailed( e.to_string() ) )?;
 
   let creds_path = claude_dir.join( ".credentials.json" );
-  std::fs::write( &creds_path, credentials_json )
+  write_creds_restricted( &creds_path, credentials_json )
     .map_err( | e | RunnerError::Io( e.to_string() ) )?;
   std::fs::write( claude_dir.join( "CLAUDE.md" ), ISOLATED_CLAUDE_MD )
     .map_err( | e | RunnerError::Io( e.to_string() ) )?;
