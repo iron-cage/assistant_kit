@@ -22,6 +22,13 @@ export CARGO_NET_OFFLINE=true
 export NO_COLOR=1
 # Container signal for the container-only test invariant (nextest setup script + Rust guards).
 export RUNBOX_CONTAINER=1
+# In-container, will's verb-first delegation must stay off: delegated jobs invoke
+# each member's host-side verb/test, which execs `runbox` — unavailable inside the
+# container the workspace gate is already running in. The container IS the
+# environment those verbs would construct, so the direct pipeline is the correct
+# semantic here. W3_TEST_DELEGATE=0 is will's documented kill switch for exactly
+# this wrapping-script case (will_test verb_delegation.rs, Environment Contract).
+export W3_TEST_DELEGATE=0
 # will .test level::3 runs nextest + doc tests + clippy, all warnings-as-errors —
 # will owns the RUSTFLAGS policy, so no export here. show_build::1 pins full
 # per-job streaming: will's current default (show_build::0, quiet_on_success)

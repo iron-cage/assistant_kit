@@ -58,6 +58,7 @@ const WORKSPACE_MEMBERS : &[ &str ] = &[
   "assistant_kit",
   "claude_journal",
   "claude_journal_viewer",
+  "json_redact",
 ];
 
 // ──────────────────────────────── helpers ─────────────────────────────────

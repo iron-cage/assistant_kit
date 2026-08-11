@@ -32,7 +32,7 @@ The module l1 `cd`s to the module directory first, so the same `will .test level
 
 `verb/test` rejects any `VERB_LAYER` set on the host side — container execution is the only path (see `module/claude_profile/docs/invariant/009_container_only_test_execution.md`). The authorized host escape hatch is `VERB_LAYER=l0 cargo nextest run` (bypasses `verb/test` entirely; honored by the nextest setup script).
 
-`verb/test.d/l1` is the container-internal implementation: exports `RUNBOX_CONTAINER=1`, `NO_COLOR=1`, `CARGO_NET_OFFLINE=true`, then execs `will .test level::3` (nextest + doc tests + clippy — will owns the `RUSTFLAGS` policy, so the layer no longer exports it). The engine supplies `CARGO_TARGET_DIR` (the `claude_profile_targets` working volume), so compilation artifacts land outside the read-only workspace mount.
+`verb/test.d/l1` is the container-internal implementation: exports `RUNBOX_CONTAINER=1`, `NO_COLOR=1`, `CARGO_NET_OFFLINE=true`, and `W3_TEST_DELEGATE=0` (will's verb-first delegation kill switch — delegated jobs would re-invoke module `verb/test` wrappers, which need the host-side `runbox`; in-container the direct pipeline is the correct semantic), then execs `will .test level::3` (nextest + doc tests + clippy — will owns the `RUSTFLAGS` policy, so the layer no longer exports it). The engine supplies `CARGO_TARGET_DIR` (the `claude_profile_targets` working volume), so compilation artifacts land outside the read-only workspace mount.
 
 `verb/test.d/l0` is a disabled hard-error stub: prints an error and exits 1 — no host-native test execution path exists.
 
