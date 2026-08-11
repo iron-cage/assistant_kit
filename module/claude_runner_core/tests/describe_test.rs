@@ -71,13 +71,16 @@
 //!   Prevention: Always call `.with_chrome(None)` (or override other automation defaults)
 //!   in system-query builder chains that must not inherit session-oriented flags.
 //!
-//! - **2026-06-06 (BUG-246):** `describe()` started with `"claude"` unconditionally even though
-//!   `ClaudeCommand::new()` defaults `unset_claudecode = true` which removes CLAUDECODE via
-//!   `env_remove()` in `build_command()`. The removal was invisible in trace/dry-run output,
-//!   breaking WYSIWYG. Fix: `describe()` now starts with `"env -u CLAUDECODE claude ..."` when
-//!   `unset_claudecode` is true. All `starts_with("claude")` assertions updated.
-//!   Prevention: When adding a new `build_command()` env manipulation, immediately update
-//!   `describe()` to mirror it. The two methods must stay in sync — any divergence is a bug.
+//! - **2026-06-06 (BUG-246 + `CLAUDE_CODE_CHILD_SESSION` strip):** `describe()` started with
+//!   `"claude"` unconditionally even though `build_command()` calls `env_remove()` for CLAUDECODE
+//!   (when `unset_claudecode = true`) and always removes `CLAUDE_CODE_CHILD_SESSION` (the marker
+//!   that causes Claude Code to skip transcript saving when inherited). Both removals were invisible
+//!   in trace/dry-run output, breaking WYSIWYG. Fix: `removed_vars()` is now the single source of
+//!   truth — both `build_command()` and `describe()` iterate it, making trace/execution divergence
+//!   structurally impossible. Default output: `"env -u CLAUDECODE -u CLAUDE_CODE_CHILD_SESSION
+//!   claude ..."`. With `--keep-claudecode`: `"env -u CLAUDE_CODE_CHILD_SESSION claude ..."`.
+//!   Prevention: Add new `env_remove()` requirements to `removed_vars()` only — not inline in
+//!   `build_command()` or `describe()`. The shared list propagates automatically to both.
 
 use claude_runner_core::{ ClaudeCommand, ActionMode, LogLevel };
 
@@ -343,7 +346,7 @@ fn describe_env_shows_tier1_defaults()
 {
   let env = ClaudeCommand::new().describe_env();
 
-  assert!( env.contains( "CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000" ) );
+  assert!( env.contains( "CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000" ) );
   assert!( env.contains( "CLAUDE_CODE_BASH_TIMEOUT=3600000" ) );
   assert!( env.contains( "CLAUDE_CODE_BASH_MAX_TIMEOUT=7200000" ) );
   assert!( env.contains( "CLAUDE_CODE_AUTO_CONTINUE=true" ) );
@@ -419,6 +422,71 @@ fn describe_env_lines_are_newline_separated()
   for line in &lines {
     assert!( line.contains( '=' ), "Each line should be NAME=VALUE, got: {line}" );
   }
+}
+
+// ── CLAUDE_CODE_CHILD_SESSION trace visibility ────────────────────────────────
+
+/// `describe()` must show the `CLAUDE_CODE_CHILD_SESSION` removal in trace/dry-run output.
+///
+/// The marker is always stripped by `removed_vars()` (shared source of truth for both
+/// `build_command()` and `describe()`). If it appears in `build_command()` but not
+/// `describe()`, the WYSIWYG contract is broken — users see `env -u CLAUDECODE` but
+/// not the additional `CLAUDE_CODE_CHILD_SESSION` removal, masking the actual subprocess env.
+#[test]
+fn describe_shows_child_session_removal_by_default()
+{
+  let desc = ClaudeCommand::new().describe();
+  assert!(
+    desc.contains( "-u CLAUDE_CODE_CHILD_SESSION" ),
+    "describe() must include CLAUDE_CODE_CHILD_SESSION removal in trace; got: {desc}"
+  );
+}
+
+#[test]
+fn describe_shows_child_session_removal_when_claudecode_kept()
+{
+  // Even with --keep-claudecode, CLAUDE_CODE_CHILD_SESSION must still be stripped.
+  let desc = ClaudeCommand::new()
+    .with_unset_claudecode( false )
+    .describe();
+  assert!(
+    desc.contains( "-u CLAUDE_CODE_CHILD_SESSION" ),
+    "describe() must include CLAUDE_CODE_CHILD_SESSION removal even when unset_claudecode=false; got: {desc}"
+  );
+}
+
+#[test]
+fn describe_uses_env_prefix_when_only_child_session_stripped()
+{
+  // With unset_claudecode=false, CLAUDECODE is kept but CLAUDE_CODE_CHILD_SESSION is
+  // still stripped — the command must start with "env " (not bare "claude").
+  let desc = ClaudeCommand::new()
+    .with_unset_claudecode( false )
+    .describe_compact();
+  assert!(
+    desc.starts_with( "env " ),
+    "describe must still start with 'env' when CLAUDE_CODE_CHILD_SESSION is stripped; got: {desc}"
+  );
+  assert!(
+    !desc.contains( "-u CLAUDECODE " ),
+    "describe must NOT include '-u CLAUDECODE' when unset_claudecode=false; got: {desc}"
+  );
+}
+
+#[test]
+fn describe_env_does_not_list_removed_vars()
+{
+  // describe_env() shows vars that are SET (export NAME=VALUE), not vars that are removed.
+  // Removed vars appear only in the invocation line via the -u flag.
+  let env_block = ClaudeCommand::new().describe_env();
+  assert!(
+    !env_block.contains( "CLAUDE_CODE_CHILD_SESSION" ),
+    "CLAUDE_CODE_CHILD_SESSION is a removal, not a set — must not appear in describe_env(); got: {env_block}"
+  );
+  assert!(
+    !env_block.contains( "CLAUDECODE" ),
+    "CLAUDECODE is a removal, not a set — must not appear in describe_env(); got: {env_block}"
+  );
 }
 
 // ── claude_version() builder chain ───────────────────────────────────────────

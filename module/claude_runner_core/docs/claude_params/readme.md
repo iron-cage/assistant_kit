@@ -132,7 +132,7 @@ These parameters are only settable via environment variables. All have dedicated
 
 | # | Parameter | Type | CLI Flag | Env Var | Builder Default | Builder | Description |
 |---|-----------|------|----------|---------|-----------------|---------|-------------|
-| 48 | [max_output_tokens](034_max_output_tokens.md) | Env | — | `CLAUDE_CODE_MAX_OUTPUT_TOKENS` | `200000` | `with_max_output_tokens()` | Max tokens per response |
+| 48 | [max_output_tokens](034_max_output_tokens.md) | Env | — | `CLAUDE_CODE_MAX_OUTPUT_TOKENS` | `128000` | `with_max_output_tokens()` | Max tokens per response |
 | 49 | [bash_timeout](012_bash_timeout.md) | Env | — | `CLAUDE_CODE_BASH_TIMEOUT` | `3600000` | `with_bash_timeout_ms()` | Default bash timeout (ms) |
 | 50 | [bash_max_timeout](011_bash_max_timeout.md) | Env | — | `CLAUDE_CODE_BASH_MAX_TIMEOUT` | `7200000` | `with_bash_max_timeout_ms()` | Max bash timeout (ms) |
 | 51 | [auto_continue](010_auto_continue.md) | Env | — | `CLAUDE_CODE_AUTO_CONTINUE` | `true` | `with_auto_continue()` | Auto-continue without prompts |
@@ -178,7 +178,7 @@ unless the caller explicitly configures it.
 
 | # | Parameter | Env Var / Flag | Builder Default | `claude` Binary Default | Builder Method |
 |---|-----------|-----------------|------------------|--------------------------|-----------------|
-| 48 | [max_output_tokens](034_max_output_tokens.md) | `CLAUDE_CODE_MAX_OUTPUT_TOKENS` | `200000` | `32000` | `with_max_output_tokens()` |
+| 48 | [max_output_tokens](034_max_output_tokens.md) | `CLAUDE_CODE_MAX_OUTPUT_TOKENS` | `128000` | `32000` | `with_max_output_tokens()` |
 | 49 | [bash_timeout](012_bash_timeout.md) | `CLAUDE_CODE_BASH_TIMEOUT` | `3600000` (1 hr) | `120000` (2 min) | `with_bash_timeout_ms()` |
 | 50 | [bash_max_timeout](011_bash_max_timeout.md) | `CLAUDE_CODE_BASH_MAX_TIMEOUT` | `7200000` (2 hr) | `600000` (10 min) | `with_bash_max_timeout_ms()` |
 | 51 | [auto_continue](010_auto_continue.md) | `CLAUDE_CODE_AUTO_CONTINUE` | `true` | `false` | `with_auto_continue()` |

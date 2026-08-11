@@ -3,11 +3,11 @@
 -- **Summary:** Bypass safety guards.
 -- **Type:** bool
 -- **Default:** false (0)
--- **Commands:** `.version.install`, `.version.guard`, `.processes.kill`
+-- **Commands:** `.version.install`, `.version.guard`, `.ps.kill`
 -- **Group:** Execution Control
 
 For `.version.install`/`.version.guard`: skip the "already installed" idempotency check.
-For `.processes.kill`: SIGKILL directly (no SIGTERM first).
+For `.ps.kill`: SIGKILL directly (no SIGTERM first).
 
 - **Type:** bool
 - **Default:** false (0)
@@ -16,7 +16,7 @@ For `.processes.kill`: SIGKILL directly (no SIGTERM first).
 ```sh
 clv.version.install force::1          # reinstall even if current
 clv.version.guard force::1            # reinstall even if matching
-clv.processes.kill force::1           # SIGKILL immediately
+clv.ps.kill force::1                  # SIGKILL immediately
 ```
 
 ### Referenced Commands
@@ -25,7 +25,7 @@ clv.processes.kill force::1           # SIGKILL immediately
 |---|---------|---------|-------|
 | 1 | [`.version.install`](../command/version.md#command-4-versioninstall) | false | Skip idempotency check; reinstall even if current |
 | 2 | [`.version.guard`](../command/version.md#command-5-versionguard) | false | Reinstall even if version matches preferred |
-| 3 | [`.processes.kill`](../command/processes.md#command-8-processeskill) | false | SIGKILL directly, skipping SIGTERM grace period |
+| 3 | [`.ps.kill`](../command/ps.md#command-8-pskill) | false | SIGKILL directly, skipping SIGTERM grace period |
 
 ### Referenced Type
 

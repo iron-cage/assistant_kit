@@ -14,12 +14,11 @@
 | readme.md | Index and navigation for command namespace files |
 | procedure.md | Steps for adding, updating, or removing command instances |
 | root.md | Root-namespace commands: `.help`, `.status`, `.runtime_files` |
-| version.md | Version-namespace commands: `.version.*` |
-| processes.md | Process-namespace commands: `.processes`, `.processes.kill` |
+| version.md | Version-namespace commands: `.version.*` (including `.version.paths` filesystem path discovery and `.version.mark` custom marker CRUD) |
+| ps.md | Process-namespace commands: `.ps`, `.ps.kill` |
 | settings.md | Settings-namespace commands: `.settings.*` (deprecated) |
 | config.md | Config command: `.config` (unified settings inspection and modification) |
 | params.md | Params command: `.params` (read-only param catalog inspection) |
-| paths.md | Paths command: `.paths` (read-only filesystem path discovery) |
 
 ### All Commands
 
@@ -31,26 +30,26 @@
 | 4 | `.version.install` | version | [version.md](version.md) |
 | 5 | `.version.guard` | version | [version.md](version.md) |
 | 6 | `.version.list` | version | [version.md](version.md) |
-| 7 | `.processes` | processes | [processes.md](processes.md) |
-| 8 | `.processes.kill` | processes | [processes.md](processes.md) |
+| 7 | `.ps` | processes | [ps.md](ps.md) |
+| 8 | `.ps.kill` | processes | [ps.md](ps.md) |
 | 9 | `.settings.show` | settings | [settings.md](settings.md) *(deprecated)* |
 | 10 | `.settings.get` | settings | [settings.md](settings.md) *(deprecated)* |
 | 11 | `.settings.set` | settings | [settings.md](settings.md) *(deprecated)* |
-| 12 | `.version.history` | version | [version.md](version.md) |
+| 12 | `.version.history` | version | [version.md](version.md) *(retired — merged into `.version.list`)* |
 | 13 | `.config` | config | [config.md](config.md) |
 | 14 | `.params` | params | [params.md](params.md) |
 | 15 | `.runtime_files` | root | [root.md](root.md) |
-| 16 | `.paths` | paths | [paths.md](paths.md) |
+| 16 | `.version.paths` | version | [version.md](version.md#command-16-versionpaths) |
+| 17 | `.version.mark` | version | [version.md](version.md#command-17-versionmark) |
 
 ### Navigation
 
 - [Root Commands](root.md) — `.help`, `.status`, `.runtime_files`
-- [Version Commands](version.md) — `.version.show`, `.version.install`, `.version.guard`, `.version.list`, `.version.history`
-- [Process Commands](processes.md) — `.processes`, `.processes.kill`
+- [Version Commands](version.md) — `.version.show`, `.version.install`, `.version.guard`, `.version.list` (aliases + release history via `mode::`), `.version.paths` (filesystem path discovery), `.version.mark` (custom marker CRUD)
+- [Process Commands](ps.md) — `.ps`, `.ps.kill`
 - [Settings Commands](settings.md) — `.settings.show`, `.settings.get`, `.settings.set` *(deprecated)*
 - [Config Command](config.md) — `.config`
 - [Params Command](params.md) — `.params`
-- [Paths Command](paths.md) — `.paths`
 
 ### See Also
 

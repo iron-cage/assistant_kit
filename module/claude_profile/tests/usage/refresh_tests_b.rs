@@ -36,6 +36,7 @@ fn test_apply_refresh_ft4_429_valid_token_not_retried()
       owner                : String::new(),
       claim_lock : false, reserve : false,
           org_created_at : None,
+      inference_provider : String::new(),
     },
   ];
 
@@ -81,6 +82,7 @@ fn test_apply_refresh_ft5_429_expired_refresh_path_entered_no_cred()
       owner                : String::new(),
       claim_lock : false, reserve : false,
           org_created_at : None,
+      inference_provider : String::new(),
     },
   ];
 
@@ -209,6 +211,7 @@ fn test_apply_refresh_mre_bug208_restore_trace_emitted()
       owner                : String::new(),
       claim_lock : false, reserve : false,
           org_created_at : None,
+      inference_provider : String::new(),
     },
   ];
 
@@ -362,6 +365,7 @@ fn mre_bug295_apply_refresh_trace_reason_not_owned()
     owner                 : "other@remote".to_string(),
     claim_lock : false, reserve : false,
       org_created_at : None,
+    inference_provider : String::new(),
   };
 
   let reason = claude_profile::usage::test_bridge::reason_label( &aq, 0 );
@@ -430,6 +434,7 @@ fn mre_bug297_refresh_none_sets_aq_result_err()
       owner                 : String::new(),
       claim_lock : false, reserve : false,
           org_created_at : None,
+      inference_provider : String::new(),
     },
   ];
 
@@ -502,6 +507,7 @@ fn apply_touch_skips_after_refresh_none()
       owner                 : String::new(),
       claim_lock : false, reserve : false,
           org_created_at : None,
+      inference_provider : String::new(),
     },
   ];
 
@@ -575,6 +581,7 @@ fn mre_bug298_apply_refresh_trace_reason_cached_expired()
     owner                 : String::new(),
     claim_lock : false, reserve : false,
       org_created_at : None,
+    inference_provider : String::new(),
   };
 
   let reason = claude_profile::usage::test_bridge::reason_label( &aq, 1 );
@@ -616,6 +623,7 @@ fn ec7_solo_gate_skips_non_current_with_trace()
     owner                 : String::new(),
     claim_lock : false, reserve : false,
       org_created_at : None,
+    inference_provider : String::new(),
   } ];
 
   // solo=true: solo gate fires for is_current=false → account skipped → result unchanged.
@@ -665,6 +673,7 @@ fn mre_bug_gap20_refresh_trace_reason_ok_owned_non_cached_ok()
     owner                 : String::new(),
     claim_lock : false, reserve : false,
       org_created_at : None,
+    inference_provider : String::new(),
   };
 
   // GAP-20: healthy owned+non-cached+Ok path must produce "ok" reason —
@@ -728,6 +737,7 @@ fn mre_bug306_refresh_trace_reason_occupied_elsewhere()
     owner                 : String::new(),
     claim_lock : false, reserve : false,
       org_created_at : None,
+    inference_provider : String::new(),
   };
   assert_eq!( claude_profile::usage::test_bridge::reason_label( &aq, 0 ), "occupied elsewhere" );
 }
@@ -783,6 +793,7 @@ fn mre_bug333_occupied_elsewhere_not_masked_by_cached()
     owner                 : String::new(),
     claim_lock : false, reserve : false,
       org_created_at : None,
+    inference_provider : String::new(),
   };
   assert_eq!(
     claude_profile::usage::test_bridge::reason_label( &aq, 1 ),
@@ -807,6 +818,7 @@ fn reason_label_not_owned()
     is_owned : false, owner : String::new(),
     claim_lock : false, reserve : false,
       org_created_at : None,
+    inference_provider : String::new(),
   };
   assert_eq!( claude_profile::usage::test_bridge::reason_label( &aq, 0 ), "not owned" );
 }
@@ -826,6 +838,7 @@ fn reason_label_cached_expired()
     is_owned : true, owner : String::new(),
     claim_lock : false, reserve : false,
       org_created_at : None,
+    inference_provider : String::new(),
   };
   assert_eq!( claude_profile::usage::test_bridge::reason_label( &aq, 1 ), "cached-expired" );
 }
@@ -848,6 +861,7 @@ fn reason_label_cached_valid()
     is_owned : true, owner : String::new(),
     claim_lock : false, reserve : false,
       org_created_at : None,
+    inference_provider : String::new(),
   };
   assert_eq!( claude_profile::usage::test_bridge::reason_label( &aq, 9_999 ), "cached" );
 }
@@ -867,6 +881,7 @@ fn reason_label_ok()
     is_owned : true, owner : String::new(),
     claim_lock : false, reserve : false,
       org_created_at : None,
+    inference_provider : String::new(),
   };
   assert_eq!( claude_profile::usage::test_bridge::reason_label( &aq, 0 ), "ok" );
 }
@@ -886,6 +901,7 @@ fn reason_label_err()
     is_owned : true, owner : String::new(),
     claim_lock : false, reserve : false,
       org_created_at : None,
+    inference_provider : String::new(),
   };
   assert_eq!( claude_profile::usage::test_bridge::reason_label( &aq, 0 ), "HTTP 401 Unauthorized" );
 }

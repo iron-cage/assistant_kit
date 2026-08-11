@@ -46,6 +46,7 @@ pub( crate ) fn derive_token_state(
     Ok( crate::token::TokenStatus::ExpiringSoon { expires_in } ) =>
       format!( "expiring in {}m", expires_in.as_secs() / 60 ),
     Ok( crate::token::TokenStatus::Expired )                     => "expired".to_string(),
+    Ok( crate::token::TokenStatus::Static )                      => "static".to_string(),
     Err( _ )                                                     => "unknown".to_string(),
   };
   let exp = match ts
@@ -58,6 +59,7 @@ pub( crate ) fn derive_token_state(
       format!( "in {h}h {m}m" )
     }
     Ok( crate::token::TokenStatus::Expired ) => "expired".to_string(),
+    Ok( crate::token::TokenStatus::Static )  => "no expiry".to_string(),
     Err( _ )                                 => "(unavailable)".to_string(),
   };
   let exp_secs = match ts

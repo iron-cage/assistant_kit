@@ -287,6 +287,7 @@ fn test_mre_bug218_fetch_all_quota_no_duplicate_synthetic_row()
     owner                : String::new(),
     claim_lock : false, reserve : false,
     org_created_at       : None,
+    inference_provider   : String::new(),
   };
   let mut results = vec![ stored_row ];
 
@@ -309,6 +310,7 @@ fn test_mre_bug218_fetch_all_quota_no_duplicate_synthetic_row()
     owner                : String::new(),
     claim_lock : false, reserve : false,
     org_created_at       : None,
+    inference_provider   : String::new(),
   };
 
   // Fix(BUG-218): guarded injection — only insert when name is absent from results.
@@ -554,6 +556,10 @@ fn ft04_non_owned_uses_cache_not_http()
     claim_lock        : false,
     reserve           : false,
     renewal_at        : None,
+    backend           : claude_profile::account::AccountBackend::Anthropic,
+    base_url          : None,
+    redirect_model    : None,
+    inference_provider : String::new(),
   } ];
 
   // live_creds_file absent → graceful degradation; is_current=false for all accounts.
@@ -575,6 +581,169 @@ fn ft04_non_owned_uses_cache_not_http()
   assert!(
     aq.result.is_ok(),
     "FT-04: G1 gate must return Ok(cache_data) when cache present; got: {:?}", aq.result,
+  );
+}
+
+// ── R1: redirect-backend accounts bypass token + HTTP; placeholder row ──────
+
+/// T14/AC-17: R1 gate — a `backend: redirect` account produces a placeholder `AccountQuota`
+/// row (`result: Err("redirect backend — no Anthropic quota")`) with no HTTP call. The account
+/// here is OWNED (no `owner` key written) so G1's non-owned branch cannot be what produces
+/// the `Err` result — only R1 can, proving R1 is reached independently of G1.
+///
+/// Spec: `task/claude_profile/434_add_redirect_backend_cli_support.md` T14 (AC-17)
+#[ test ]
+fn ft14_071_redirect_backend_produces_placeholder_no_http()
+{
+  let store = tempfile::TempDir::new().unwrap();
+
+  // No "owner" key → owned by default; G1 must NOT fire for this account.
+  std::fs::write(
+    store.path().join( "kimi@moonshot.ai.json" ),
+    r#"{"backend":"redirect","base_url":"https://api.moonshot.ai/anthropic","redirect_model":"kimi-k3"}"#,
+  ).unwrap();
+  std::fs::write(
+    store.path().join( "kimi@moonshot.ai.credentials.json" ),
+    r#"{"accessToken":"sk-foreign-key-abc123"}"#,
+  ).unwrap();
+
+  let accounts = vec![ claude_profile::account::Account
+  {
+    name              : "kimi@moonshot.ai".to_string(),
+    subscription_type : String::new(),
+    rate_limit_tier   : String::new(),
+    expires_at_ms     : u64::MAX / 2,
+    is_active         : false,
+    email             : String::new(),
+    display_name      : String::new(),
+    billing           : String::new(),
+    model             : String::new(),
+    tagged_id         : String::new(),
+    uuid              : String::new(),
+    capabilities      : Vec::new(),
+    organization_uuid : String::new(),
+    organization_name : String::new(),
+    org_role          : String::new(),
+    workspace_uuid    : String::new(),
+    workspace_name    : String::new(),
+    host              : String::new(),
+    role              : String::new(),
+    owner             : String::new(),
+    is_owned          : true,
+    claim_lock        : false,
+    reserve           : false,
+    renewal_at        : None,
+    backend           : claude_profile::account::AccountBackend::Redirect,
+    base_url          : Some( "https://api.moonshot.ai/anthropic".to_string() ),
+    redirect_model    : Some( "kimi-k3".to_string() ),
+    inference_provider : String::new(),
+  } ];
+
+  // live_creds_file absent → graceful degradation; no bearing on the R1 gate itself.
+  let absent_live = store.path().join( ".absent_credentials.json" );
+
+  let results = fetch_quota_for_list( &accounts, store.path(), &absent_live, false, false, false );
+
+  assert_eq!( results.len(), 1, "T14: must return exactly 1 AccountQuota for 1 account" );
+  let aq = &results[ 0 ];
+  assert!(
+    aq.is_owned,
+    "T14: R1 gate must not mark the account as non-owned (that would mean G1 fired instead); got: {:?}", aq.is_owned,
+  );
+  match &aq.result
+  {
+    Err( reason ) => assert_eq!(
+      reason, "redirect backend — no Anthropic quota",
+      "T14/AC-17: R1 gate must produce the exact placeholder reason string; got: {reason}",
+    ),
+    Ok( _ ) => panic!( "T14/AC-17: R1 gate must produce an Err placeholder, got Ok" ),
+  }
+  assert!(
+    !aq.cached,
+    "T14: R1 gate must not read cache (that's G1's job); got cached={:?}", aq.cached,
+  );
+}
+
+/// C6 (task 434 Checklist): R1 (redirect) must run before G1 (non-owned) in
+/// `fetch_quota_for_list()`. An account that is BOTH `backend: redirect` AND not
+/// owned by this machine must get R1's placeholder, not G1's "not owned" handling —
+/// ownership gating exists to protect Anthropic quota from cross-machine races, which
+/// is moot for a backend with no Anthropic quota to protect in the first place.
+/// Distinct from `ft14`, which deliberately uses an OWNED account so it cannot tell
+/// the two gates' relative order apart; this test is the one that would fail if the
+/// gates were ever swapped back.
+///
+/// Spec: `task/claude_profile/434_add_redirect_backend_cli_support.md` Checklist C6
+#[ test ]
+fn ft14b_071_redirect_checked_before_not_owned_gate()
+{
+  let store = tempfile::TempDir::new().unwrap();
+
+  // "owner" != current_identity() → not owned by this machine (same pattern as ft04).
+  // No "cache" key: if G1 fired first, result would be Err("not owned"), not cached Ok.
+  std::fs::write(
+    store.path().join( "kimi@moonshot.ai.json" ),
+    r#"{"backend":"redirect","base_url":"https://api.moonshot.ai/anthropic","redirect_model":"kimi-k3","owner":"other@remote"}"#,
+  ).unwrap();
+  std::fs::write(
+    store.path().join( "kimi@moonshot.ai.credentials.json" ),
+    r#"{"accessToken":"sk-foreign-key-abc123"}"#,
+  ).unwrap();
+
+  let accounts = vec![ claude_profile::account::Account
+  {
+    name              : "kimi@moonshot.ai".to_string(),
+    subscription_type : String::new(),
+    rate_limit_tier   : String::new(),
+    expires_at_ms     : u64::MAX / 2,
+    is_active         : false,
+    email             : String::new(),
+    display_name      : String::new(),
+    billing           : String::new(),
+    model             : String::new(),
+    tagged_id         : String::new(),
+    uuid              : String::new(),
+    capabilities      : Vec::new(),
+    organization_uuid : String::new(),
+    organization_name : String::new(),
+    org_role          : String::new(),
+    workspace_uuid    : String::new(),
+    workspace_name    : String::new(),
+    host              : String::new(),
+    role              : String::new(),
+    owner             : String::new(),
+    is_owned          : true,
+    claim_lock        : false,
+    reserve           : false,
+    renewal_at        : None,
+    backend           : claude_profile::account::AccountBackend::Redirect,
+    base_url          : Some( "https://api.moonshot.ai/anthropic".to_string() ),
+    redirect_model    : Some( "kimi-k3".to_string() ),
+    inference_provider : String::new(),
+  } ];
+
+  let absent_live = store.path().join( ".absent_credentials.json" );
+
+  let results = fetch_quota_for_list( &accounts, store.path(), &absent_live, false, false, false );
+
+  assert_eq!( results.len(), 1, "C6: must return exactly 1 AccountQuota for 1 account" );
+  let aq = &results[ 0 ];
+  assert!(
+    aq.is_owned,
+    "C6: R1 must fire before G1 even for a not-owned account, so is_owned stays true \
+     (R1's hardcoded value); a false here means G1 fired first — gates are in the wrong order. Got: {:?}", aq.is_owned,
+  );
+  match &aq.result
+  {
+    Err( reason ) => assert_eq!(
+      reason, "redirect backend — no Anthropic quota",
+      "C6: R1's placeholder reason must win over G1's \"not owned\"; got: {reason}",
+    ),
+    Ok( _ ) => panic!( "C6: expected R1's Err placeholder, got Ok — G1 fired first and read cache/succeeded" ),
+  }
+  assert!(
+    !aq.cached,
+    "C6: R1 must not read cache (only G1 does); got cached={:?}", aq.cached,
   );
 }
 
@@ -672,6 +841,10 @@ fn mre_bug327_cache_first_surfaces_org_created_at()
     claim_lock        : false,
     reserve           : false,
     renewal_at        : None,
+    backend           : claude_profile::account::AccountBackend::Anthropic,
+    base_url          : None,
+    redirect_model    : None,
+    inference_provider : String::new(),
   } ];
 
   // live_creds_file absent → is_current=false, but cache-first fires before any HTTP path.
@@ -708,4 +881,98 @@ fn mre_bug327_cache_first_surfaces_org_created_at()
     label.starts_with( "~in " ),
     "FT-15: renews_label() must render an estimate from cache-sourced org_created_at, not '?'; got: {label:?}",
   );
+}
+
+// ── Feature 072: `AccountQuota.inference_provider` population (T04 .usage-side half) ────
+
+/// T04 (`.usage`-side half, AC-04): `fetch_quota_for_list()` threads `Account.inference_provider`
+/// into the returned `AccountQuota.inference_provider` — both when the account carries an
+/// explicit value and when a pre-existing account has no `inference_provider` key at all (empty,
+/// matching `account::list()`'s own default-to-empty parse behavior verified in
+/// `claude_profile_core`). No error occurs in either case; the empty case is rendered as
+/// "anthropic" downstream by `.accounts`/`.usage`/Gate 10 — never treated as an error or a
+/// distinct sentinel at this data layer.
+#[ test ]
+fn ft06_072_fetch_threads_inference_provider_and_defaults_empty_when_missing()
+{
+  let store = tempfile::TempDir::new().unwrap();
+
+  // Two non-owned accounts (G1 branch — simplest fetch.rs path: reads cache, no HTTP/token).
+  for name in [ "kimi@test.com", "legacy@test.com" ]
+  {
+    let meta = serde_json::json!(
+    {
+      "owner" : "other@remote",
+      "cache" :
+      {
+        "fetched_at" : "2026-06-14T10:00:00Z",
+        "status"     : "ok",
+        "five_hour"  : { "left_pct" : 70.0 }
+      }
+    } );
+    std::fs::write(
+      store.path().join( format!( "{name}.json" ) ),
+      serde_json::to_string_pretty( &meta ).map( | s | s + "\n" ).unwrap(),
+    ).unwrap();
+    std::fs::write(
+      store.path().join( format!( "{name}.credentials.json" ) ),
+      r#"{"accessToken":"tok","expiresAt":9999999999999}"#,
+    ).unwrap();
+  }
+
+  let mk_account = | name : &str, inference_provider : &str | claude_profile::account::Account
+  {
+    name              : name.to_string(),
+    subscription_type : "pro".to_string(),
+    rate_limit_tier   : String::new(),
+    expires_at_ms     : u64::MAX / 2,
+    is_active         : false,
+    email             : String::new(),
+    display_name      : String::new(),
+    billing           : String::new(),
+    model             : String::new(),
+    tagged_id         : String::new(),
+    uuid              : String::new(),
+    capabilities      : Vec::new(),
+    organization_uuid : String::new(),
+    organization_name : String::new(),
+    org_role          : String::new(),
+    workspace_uuid    : String::new(),
+    workspace_name    : String::new(),
+    host              : String::new(),
+    role              : String::new(),
+    owner             : String::new(),
+    is_owned          : true,
+    claim_lock        : false,
+    reserve           : false,
+    renewal_at        : None,
+    backend           : claude_profile::account::AccountBackend::Anthropic,
+    base_url          : None,
+    redirect_model    : None,
+    inference_provider : inference_provider.to_string(),
+  };
+
+  let accounts = vec![
+    mk_account( "kimi@test.com",   "kimi" ),
+    mk_account( "legacy@test.com", "" ),
+  ];
+
+  let absent_live = store.path().join( ".absent_credentials.json" );
+  let results = fetch_quota_for_list( &accounts, store.path(), &absent_live, false, false, false );
+
+  assert_eq!( results.len(), 2, "T04: must return exactly 1 AccountQuota per account" );
+
+  let kimi = results.iter().find( |r| r.name == "kimi@test.com" ).expect( "kimi row must exist" );
+  assert_eq!(
+    kimi.inference_provider, "kimi",
+    "T04: explicit inference_provider must thread through unchanged, got: {:?}", kimi.inference_provider,
+  );
+  assert!( kimi.result.is_ok(), "T04: kimi row must not error, got: {:?}", kimi.result );
+
+  let legacy = results.iter().find( |r| r.name == "legacy@test.com" ).expect( "legacy row must exist" );
+  assert_eq!(
+    legacy.inference_provider, "",
+    "T04: missing-key account must default to empty (not error, not a sentinel), got: {:?}", legacy.inference_provider,
+  );
+  assert!( legacy.result.is_ok(), "T04: legacy (missing-key) row must not error, got: {:?}", legacy.result );
 }

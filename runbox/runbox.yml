@@ -1,35 +1,86 @@
-# docker image tag — used for -t at build and image lookup at run; unique per module
-image: workspace_test_claude_version
+# docker image tag — used for -t at build and image lookup at run.
+# Shared workspace image: owned and built by THIS config; all module configs consume it.
+# Tag is unique to this checkout (assistant_kit_claude_profile_test): sibling
+# checkouts under yrd_core/ each mint their own <family>_<checkout>_test tag, so
+# a rebake here never swaps the image out from under an unrelated checkout.
+image: assistant_kit_claude_profile_test
 
 # non-root so chmod-000 file-permission tests fail correctly (root bypasses checks)
-test_user: testuser
-# crate scope for nextest run and cargo chef cook — single source of truth for both
-cmd_scope: --workspace
-# baked into the image default CMD; excludes tests needing external I/O (offline-safe default)
-# Fix: contract/claude_code (which owns the `behavior` integration test binary) is excluded
-# from the workspace via Cargo.toml `exclude`, so `!binary(behavior)` matches nothing and
-# nextest fails. `all()` is the correct expression when no exclusion is needed.
-cmd_filter: "all()"
+user: testuser
 
-# script invoked by `.test` inside the container (path relative to /workspace)
-test_script: verb/test.d/l1
-# script invoked by `.test1 <filter>` inside the container (path relative to /workspace)
-test1_script: verb/test.d/l1_filter
+# script invoked by `.run` and `.live` inside the container (workspace-relative path)
+script: verb/test.d/l1
 
-# data directory plugin: host_path:container_path:check_type
-# .test mounts as required+rw; .shell mounts as optional+ro
-plugin_mount: ~/.claude:/workspace/.claude:directory
+# ── Mounts ────────────────────────────────────────────────────────────────────
+# Per-entry fields: host, container (optional — defaults to the host path, mirrored),
+# mode, check (file|directory), commands (list)
+mounts:
+  # Claude Code auth/session state — control tests spawn the real `claude` CLI
+  # against whatever auth the host already has. Mirror default: the mount lands
+  # at the real ~/.claude, which is where ClaudePaths resolves it via $HOME.
+  - host: ~/.claude
+    mode: rw
+    check: directory
+    commands: [run, live, shell]
 
-# binary mount plugin: name:/container/path — bind-mounts the host's own `claude` CLI (resolved
-# via `which` at .test invocation time) read-only into the container, so real-subprocess control
-# tests run against whatever claude version/auth the host already has, with no separate install
-# or credentials baked into the image.
-bin_mount: claude:/usr/local/bin/claude
+# ── Plugins ───────────────────────────────────────────────────────────────────
+# type: binary — resolved on host PATH (an ELF mounts as-is; a RUNBOX_PRINT_BIN-aware wrapper like bin/will is unwrapped to the fresh managed binary it fronts), falling back to a knob-aware <workspace>/bin/<name> wrapper, then <workspace>/target/debug/<name>; bind-mounted into container.
+# prepare: — optional workspace-relative command run before the target/debug fallback is used (lets a bin/ wrapper rebuild its artifact).
+# working_volume / working_volume_path — named volume for compilation artifacts.
+plugins:
+  # The host's own `claude` CLI bind-mounted read-only — real-subprocess control
+  # tests run against the host's version and credentials. The working volume is
+  # the workspace compilation cache — the engine exports it as CARGO_TARGET_DIR,
+  # keeping all build artifacts off the read-only workspace mount.
+  - type: binary
+    name: claude
+    container_path: /usr/local/bin/claude
+    working_volume: claude_profile_targets
+    working_volume_path: /tmp/claude_profile_targets
+    commands: [run, live, shell]
+  # The test gate (verb/test.d/l1 → `will .test level::3`) delegates to will —
+  # on host PATH the knob-aware bin/will wrapper (family_dev) is unwrapped by
+  # the engine to the fresh managed ELF it fronts, so the container always gets
+  # a freshly rebuilt binary. No working volume of its own: the claude entry
+  # above already supplies CARGO_TARGET_DIR.
+  - type: binary
+    name: will
+    container_path: /usr/local/bin/will
+    commands: [run, live, shell]
 
+# ── Environment ───────────────────────────────────────────────────────────────
+# env: global flat map injected into all container runs
+# env_commands: per-command overrides (merged with env)
+env: {}
 
-# ── Formerly hardcoded parameters (now configurable) ─────────────────────────
-# base_image: rust:slim          # FROM for chef and test stages
-# rustup_components: clippy      # space-separated; e.g. "clippy rustfmt"
-system_packages: curl procps jq
-# cargo_features: --all-features # passed to nextest list and offline run CMD
-# workspace_dir: /workspace      # container WORKDIR; must match in runbox/runbox.dockerfile and runbox-run
+env_commands:
+  live:
+    # cargo home for registry bind-mounts; the offline declaration keeps cargo
+    # hermetic AND keeps the engine's warm probe/fetch flow active (warm keys
+    # on this declaration — a payload-internal export alone never triggers it).
+    # The payload still gets network: the network.live knob below opts out of
+    # the declared-offline kernel seal.
+    CARGO_HOME: /cargo
+    CARGO_NET_OFFLINE: "true"
+
+# ── Network ───────────────────────────────────────────────────────────────────
+# Payload seal policy (runbox task 1460): 'default' keeps .live on the runtime
+# network — this workspace's lim_it live-API tests run in-container against the
+# mounted ~/.claude token (.config/nextest.toml) — while the offline declaration
+# above still drives the warm flow. .shell has no key: it derives from the
+# inherited env and stays sealed.
+network:
+  live: default
+
+# ── Build ─────────────────────────────────────────────────────────────────────
+# Image-build inputs for this owning config (bake-time only; runtime scoping is the caller's concern).
+build:
+  # crate scope for cargo chef cook — external deps of every workspace member get
+  # precompiled (dependencies only; workspace test binaries are never cooked)
+  cmd_scope: "--workspace"
+  # union of the retired flat configs' system_packages (root: curl procps jq; modules: curl procps)
+  packages: [curl, procps, jq]
+  # rustup components added in the final stage — the l1 gate runs clippy in-container
+  rust_components: [clippy]
+  # single-layer image policy: every rebake is a cold full bake
+  squash: true

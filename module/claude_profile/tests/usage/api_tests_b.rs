@@ -649,7 +649,7 @@ fn ac1_absent_tier_with_opus_session_restores_sonnet()
   std::fs::create_dir_all( paths.base() ).unwrap();
   std::fs::write( paths.settings_file(), r#"{"model":"opus"}"# ).unwrap();
   let quota = OauthUsageData { five_hour : None, seven_day : None, seven_day_sonnet : None };
-  apply_model_override( &quota, &paths, false, "test", "test-account" );
+  apply_model_override( &quota, &paths, false, "test", "test-account", claude_profile::account::AccountBackend::Anthropic );
   let content = std::fs::read_to_string( paths.settings_file() ).unwrap_or_default();
   assert!(
     content.contains( "\"sonnet\"" ),
@@ -679,7 +679,7 @@ fn ac2_absent_tier_with_sonnet_session_model_field_unchanged()
   // Pre-write settings.json with sonnet shorthand (production form).
   std::fs::write( paths.settings_file(), r#"{"model":"sonnet"}"# ).unwrap();
   let quota = OauthUsageData { five_hour : None, seven_day : None, seven_day_sonnet : None };
-  apply_model_override( &quota, &paths, false, "test", "test-account" );
+  apply_model_override( &quota, &paths, false, "test", "test-account", claude_profile::account::AccountBackend::Anthropic );
   let content = std::fs::read_to_string( paths.settings_file() ).unwrap_or_default();
   assert!(
     content.contains( "\"sonnet\"" ),
@@ -712,7 +712,7 @@ fn ac3_sufficient_quota_with_opus_session_restores_sonnet()
     seven_day        : None,
     seven_day_sonnet : Some( PeriodUsage { utilization : 80.0, resets_at : None } ),
   };
-  apply_model_override( &quota, &paths, false, "test", "test-account" );
+  apply_model_override( &quota, &paths, false, "test", "test-account", claude_profile::account::AccountBackend::Anthropic );
   let content = std::fs::read_to_string( paths.settings_file() ).unwrap_or_default();
   assert!(
     content.contains( "\"sonnet\"" ),
@@ -773,7 +773,7 @@ fn ac4_near_exhausted_quota_with_sonnet_session_switches_to_opus()
       resets_at   : Some( "2026-06-28T04:00:00+00:00".to_string() ),
     } ),
   };
-  apply_model_override( &quota, &paths, false, "test", "test-account" );
+  apply_model_override( &quota, &paths, false, "test", "test-account", claude_profile::account::AccountBackend::Anthropic );
   let content = std::fs::read_to_string( paths.settings_file() ).unwrap_or_default();
   assert!(
     content.contains( "\"opus\"" ),
@@ -807,7 +807,7 @@ fn ac5_near_exhausted_quota_with_opus_session_model_field_unchanged()
       resets_at   : Some( "2026-06-28T04:00:00+00:00".to_string() ),
     } ),
   };
-  apply_model_override( &quota, &paths, false, "test", "test-account" );
+  apply_model_override( &quota, &paths, false, "test", "test-account", claude_profile::account::AccountBackend::Anthropic );
   let content = std::fs::read_to_string( paths.settings_file() ).unwrap_or_default();
   assert!(
     content.contains( "\"opus\"" ),

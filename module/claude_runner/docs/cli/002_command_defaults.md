@@ -18,25 +18,27 @@ Rows are parameters or behaviors. Columns are the four commands. Key: ✅ = acti
 | **mode** | print if message present; else interactive | print (always) | print (always) | print (always, message `"."`) |
 | **message** | user-supplied positional | user-supplied positional | user-supplied positional (optional) | `"."` hardcoded |
 | **model** | user-specified; none = claude binary default | user-specified; none = claude binary default | `"opus"` (`ISOLATED_DEFAULT_MODEL`) | `"claude-sonnet-5"` (`REFRESH_DEFAULT_MODEL`) |
-| `--effort` | `max` (default; `--no-effort-max` opts out; `--effort <level>` overrides) | `max` (same) | `max` (injected) | `low` (injected) |
+| `--effort` | print mode: `max` (default; `--no-effort-max` opts out; `--effort <level>` overrides); interactive mode: not injected unless explicitly set (BUG-434 — `"max"` rejected by claude v2.1.78+ in interactive mode) | `max` (always print — no interactive-mode issue) | `max` (injected) | `low` (injected) |
 | `ultrathink` suffix | appended to message (unless `--no-ultrathink` or already present) | appended | ➖ not injected | ➖ not injected |
-| `-c` (continue) | injected when session exists and not `--new-session` | injected when session exists | ➖ not injected | ➖ not injected |
+| `-c` (continue) | injected when session exists, not `--new-session`, and (message/print-mode/file/stdin present or explicit `--interactive` flag set) — bare interactive (no flags, no message) excluded by D-10; BUG-435 tracks this gap | injected when session exists | ➖ not injected | ➖ not injected |
 | `--dangerously-skip-permissions` | ON (unless `--no-skip-permissions`) | ON (unless `--no-skip-permissions`) | ON when message present | ➖ not applicable (no tool use) |
 | `--no-session-persistence` | opt-in via `--no-persist` | opt-in via `--no-persist` | always injected | always injected |
 | CLAUDE.md (global) | `~/.claude/CLAUDE.md` from user HOME | `~/.claude/CLAUDE.md` from user HOME | written to `<temp_home>/.claude/CLAUDE.md` | written to `<temp_home>/.claude/CLAUDE.md` |
 | `--chrome` | ON interactive / OFF print (BUG-304; `--no-chrome` opts out) | OFF (always print — BUG-304) | ON (ClaudeCommand default) | OFF (`--no-chrome` injected) |
 | `env -u CLAUDECODE` | ON (unless `--keep-claudecode`) | ON (unless `--keep-claudecode`) | ON (ClaudeCommand default) | ON (ClaudeCommand default) |
-| `CLAUDE_CODE_MAX_OUTPUT_TOKENS` | `200,000` | `200,000` | `200,000` | `200,000` |
+| `env -u CLAUDE_CODE_CHILD_SESSION` | ON (unconditional — no suppression flag) | ON (unconditional) | ON (unconditional) | ON (unconditional) |
+| `CLAUDE_CODE_MAX_OUTPUT_TOKENS` | `128,000` | `128,000` | `128,000` | `128,000` |
 | `CLAUDE_CODE_AUTO_COMPACT_WINDOW` | `300,000` (`--no-compact-window` opts out) | `300,000` (same) | `300,000` (same) | `300,000` (same) |
 | `CLAUDE_CODE_AUTO_CONTINUE` | `true` | `true` | `true` | `true` |
 | `CLAUDE_CODE_TELEMETRY` | `false` | `false` | `false` | `false` |
 | `CLAUDE_CODE_BASH_TIMEOUT` | `3,600,000 ms` (1 h) | `3,600,000 ms` | `3,600,000 ms` | `3,600,000 ms` |
 | `CLAUDE_CODE_BASH_MAX_TIMEOUT` | `7,200,000 ms` (2 h) | `7,200,000 ms` | `7,200,000 ms` | `7,200,000 ms` |
+| `CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS` | `0` (disables claude's own ceiling-exceeded sweep; clr's own watchdog owns background-task waiting — BUG-430) | `0` (same) | `0` (same) | `0` (same) |
 | `--timeout` | `3600 s` (print-mode) / `0` (interactive); `0` = unlimited | same | `30 s` default; `0` = unlimited (no watchdog) | `45 s` default; `0` = unlimited (no watchdog) |
 | passthrough args (`--`) | ➖ not supported | ➖ not supported | ✅ collected verbatim after `--` | ➖ not supported |
 | `--output-file` | ✅ supported | ✅ supported | ➖ not supported | ➖ not supported |
 | `--expect` / `--expect-strategy` | ✅ supported | ✅ supported | ➖ not supported | ➖ not supported |
-| `--max-sessions` | ✅ supported | ✅ supported | ➖ not supported | ➖ not supported |
+| `--max-sessions` | ✅ supported | ✅ supported | ✅ supported (3-tier: CLI flag + `"max-sessions"` JSON key + `CLR_MAX_SESSIONS` env var; no config-file tier) | ➖ not supported |
 | `--retry-on-transient` / `--transient-delay` (+ all retry params) | ✅ supported | ✅ supported | ➖ not supported | ➖ not supported |
 | `--dir` / `--subdir` / `--session-dir` | ✅ supported | ✅ supported | ➖ not supported | ➖ not supported |
 | `--system-prompt` / `--append-system-prompt` | ✅ supported | ✅ supported | via passthrough only | ➖ not supported |

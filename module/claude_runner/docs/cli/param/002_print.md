@@ -1,13 +1,14 @@
 # CLI Parameter: --print
 
-Explicit print mode flag. When a message is given, print mode is the
-default — this flag is a backward-compatible explicit alias.
-Captures Claude's stdout and prints it instead of passing through
-the TTY.
+Explicit print mode flag. Print mode is already the default whenever a message is
+given, stdin is not a terminal, or `--file`/piped stdin content supplies the prompt
+(see [006_cli_design.md](../../feature/006_cli_design.md) § Design : Mode selection) —
+this flag is a backward-compatible explicit alias for that default. Captures Claude's
+stdout and prints it instead of passing through the TTY.
 
 - **Aliases:** `-p`
 - **Type:** bool (standalone flag)
-- **Default:** auto (active when message given; inactive for bare REPL)
+- **Default:** auto (active when message given, stdin is non-TTY, or `--file`/stdin content is present; inactive for bare REPL with a real TTY and no such content)
 - **Command:** [`run`](../command/01_run.md)
 - **Group:** [Claude-Native Flags](../param_group/01_claude_native_flags.md)
 - **JSON Key:** `"print"`
@@ -18,7 +19,9 @@ clr -p "Explain this function"     # same — explicit alias
 output=$(clr "List files" --model sonnet)
 ```
 
-**Note:** Print mode without a message exits with error code 1.
+**Note:** Requested print mode (`-p`/`--print`, `CLR_PRINT`, or JSON config) with no
+message, `--file`, or piped stdin content exits with error code 1 (see
+[Design Decisions D3](../../001_design_decisions.md)).
 
 ### Referenced Type
 
@@ -36,8 +39,8 @@ output=$(clr "List files" --model sonnet)
 
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
-| 1 | [`run`](../command/01_run.md) | auto | Default on when message given |
-| 5 | [`ask`](../command/05_ask.md) | true | Always on for ask |
+| 1 | [`run`](../command/01_run.md) | auto | Default on when message given, stdin is non-TTY, or `--file`/stdin content is present |
+| 5 | [`ask`](../command/05_ask.md) | auto | `ask` delegates to `run`'s dispatch — identical auto-print formula, not unconditional (see [05_ask.md](../command/05_ask.md) Execution Modes: `clr ask` with no message opens the interactive REPL) |
 
 ### Referenced User Stories
 

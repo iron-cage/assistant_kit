@@ -23,6 +23,7 @@ Manage Claude Code installation: versions, processes, and settings.
 | param/ | Parameter reference files |
 | type/ | Semantic type definition files |
 | param_group/ | Parameter group files |
+| command_group/ | Every command partitioned into exactly one group (Total Partition); shared handler + parameter set when multi-member (16 groups, all singletons) |
 | format/ | Output format specification files |
 | user_story/ | User story scenario files |
 
@@ -41,6 +42,7 @@ clv <.command> [param::value ...]
 | param/ | ✅ | ✅ | ✅ | ✅ | ✅ | Complete |
 | type/ | ✅ | ✅ | ✅ | ✅ | ✅ | Complete |
 | param_group/ | ✅ | ✅ | ✅ | ✅ | ✅ | Complete |
+| command_group/ | ✅ | ✅ | ✅ | ✅ | ✅ | Complete (16 singleton groups; Total Partition) |
 | 002_dictionary.md | ➖ | ✅ | ➖ | ➖ | ➖ | Complete |
 | 004_parameter_interactions.md | ➖ | ➖ | ✅ | ➖ | ➖ | L3 Entity |
 | procedure.md | ➖ | ➖ | ✅ | ➖ | ➖ | L3 Entity |
@@ -51,7 +53,7 @@ clv <.command> [param::value ...]
 
 **Current Level:** L5 (Test Detail Complete)
 **Design Completeness:** 100%
-**Implementation Status:** 15/16 commands implemented — `.paths` specified, implementation pending
+**Implementation Status:** 15/16 commands implemented — `.version.paths` specified, implementation pending
 
 ### Navigation
 
@@ -59,6 +61,7 @@ clv <.command> [param::value ...]
 - [Parameters](param/readme.md) — flag reference
 - [Types](type/readme.md) — semantic type definitions
 - [Parameter Groups](param_group/readme.md) — logical parameter groupings
+- [Command Groups](command_group/readme.md) — every command in exactly one group; 16 singleton groups, zero cross-calls found (Total Partition)
 - [Parameter Interactions](004_parameter_interactions.md) — cross-parameter constraints
 - [Dictionary](002_dictionary.md) — domain vocabulary
 - [User Stories](user_story/readme.md) — persona-goal scenarios
@@ -78,4 +81,4 @@ clv <.command> [param::value ...]
 Project retains `tests/docs/cli/format/` as a dedicated testing tier. Rationale: format rendering contracts (verbosity interaction, JSON validity, field presence invariants) are not fully captured by command integration tests alone; a dedicated format test layer makes format contract changes reviewable in isolation.
 
 **Exception to `cli_doc_des.rulebook.md § Completion Levels : Level 3` (`command_noun` / `command_verb` entities):**
-The clv CLI uses a hybrid command pattern: namespace-qualified commands (`.version.*`, `.processes.*`, `.settings.*`) coexist with pure operation commands (`.help`, `.status`, `.config`). `command_noun` and `command_verb` entities are deferred because domain noun lifecycle and verb behavioral contracts are already captured within `command/<namespace>.md` files; a separate `command_noun/` layer would duplicate that content without adding structure.
+The clv CLI uses a hybrid command pattern: namespace-qualified commands (`.version.*`, `.ps.*`, `.settings.*`) coexist with pure operation commands (`.help`, `.status`, `.config`). `command_noun` and `command_verb` entities are deferred because domain noun lifecycle and verb behavioral contracts are already captured within `command/<namespace>.md` files; a separate `command_noun/` layer would duplicate that content without adding structure.

@@ -46,7 +46,10 @@ Sanitization: alphanumeric, `-`, `.` kept; all other characters become `_`. Iden
 **Error cases:**
 - `assignee::badvalue` (no `@`, not `"0"`) → exit 1 (invalid format)
 - `assignee::@machine` or `assignee::user@` (empty component) → exit 1
-- Account `name::` not found in credential store → exit 1
+- Account `name::` not found in credential store → exit 1, message names the source
+  param explicitly (`account 'X' (from name::) not found in credential store`) — the
+  looked-up value always derives from `name::`, never from `assignee::`'s own value,
+  even though both parameters are present on the same command line (BUG-342 fix)
 - `active::` → exit 1 with REMOVED_TOGGLE migration message
 
 ### Referenced Type

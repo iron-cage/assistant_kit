@@ -59,6 +59,7 @@ fn test_apply_refresh_429_not_retried()
       owner                : String::new(),
       claim_lock : false, reserve : false,
           org_created_at : None,
+      inference_provider : String::new(),
     },
   ];
 
@@ -102,6 +103,7 @@ fn test_apply_refresh_ok_result_unchanged()
       owner                : String::new(),
       claim_lock : false, reserve : false,
           org_created_at : None,
+      inference_provider : String::new(),
     },
   ];
   apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto, false );
@@ -137,6 +139,7 @@ fn test_apply_refresh_generic_error_unchanged()
       owner                : String::new(),
       claim_lock : false, reserve : false,
           org_created_at : None,
+      inference_provider : String::new(),
     },
   ];
   apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto, false );
@@ -188,6 +191,7 @@ fn test_apply_refresh_401_no_cred_file()
       owner                : String::new(),
       claim_lock : false, reserve : false,
           org_created_at : None,
+      inference_provider : String::new(),
     },
   ];
   apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto, false );
@@ -228,6 +232,7 @@ fn test_apply_refresh_403_no_cred_file()
       owner                : String::new(),
       claim_lock : false, reserve : false,
           org_created_at : None,
+      inference_provider : String::new(),
     },
   ];
   apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto, false );
@@ -238,6 +243,32 @@ fn test_apply_refresh_403_no_cred_file()
     "403: no cred file → refresh_account_token returns None → \
      result must be Err(\"refresh token expired\"); result: {:?}", accounts[ 0 ].result,
   );
+}
+
+/// Build an `AccountQuota` for FT-07 mixed-refresh testing: only `name`/`result` vary.
+fn mixed_account( name : &str, result : Result< claude_quota::OauthUsageData, String > ) -> AccountQuota
+{
+  AccountQuota
+  {
+    fallback_reason : None,
+    name          : name.to_string(),
+    is_current    : false,
+    is_active             : false,
+    is_occupied_elsewhere : false,
+    expires_at_ms : 0,
+    result,
+    account       : None,
+    host          : String::new(),
+    role          : String::new(),
+    renewal_at    : None,
+    cached        : false,
+    cache_age_secs : None,
+    is_owned       : true,
+    owner                : String::new(),
+    claim_lock : false, reserve : false,
+    org_created_at : None,
+    inference_provider : String::new(),
+  }
 }
 
 /// C4 / FT-07 — `apply_refresh` with mixed results: refresh failure does not affect siblings.
@@ -254,86 +285,10 @@ fn test_apply_refresh_mixed_accounts()
   let store = TempDir::new().unwrap();
   let quota = claude_quota::OauthUsageData { five_hour : None, seven_day : None, seven_day_sonnet : None };
   let mut accounts = vec![
-    AccountQuota
-    {
-      fallback_reason : None,
-      name          : "a@ok.com".to_string(),
-      is_current    : false,
-      is_active             : false,
-      is_occupied_elsewhere : false,
-      expires_at_ms : 0,
-      result        : Ok( quota ),
-      account       : None,
-      host          : String::new(),
-      role          : String::new(),
-      renewal_at    : None,
-      cached        : false,
-      cache_age_secs : None,
-      is_owned       : true,
-      owner                : String::new(),
-      claim_lock : false, reserve : false,
-          org_created_at : None,
-    },
-    AccountQuota
-    {
-      fallback_reason : None,
-      name          : "b@ratelimited.com".to_string(),
-      is_current    : false,
-      is_active             : false,
-      is_occupied_elsewhere : false,
-      expires_at_ms : 0,
-      result        : Err( "HTTP transport error: HTTP 429".to_string() ),
-      account       : None,
-      host          : String::new(),
-      role          : String::new(),
-      renewal_at    : None,
-      cached        : false,
-      cache_age_secs : None,
-      is_owned       : true,
-      owner                : String::new(),
-      claim_lock : false, reserve : false,
-          org_created_at : None,
-    },
-    AccountQuota
-    {
-      fallback_reason : None,
-      name          : "c@expired.com".to_string(),
-      is_current    : false,
-      is_active             : false,
-      is_occupied_elsewhere : false,
-      expires_at_ms : 0,
-      result        : Err( "HTTP transport error: HTTP 401".to_string() ),
-      account       : None,
-      host          : String::new(),
-      role          : String::new(),
-      renewal_at    : None,
-      cached        : false,
-      cache_age_secs : None,
-      is_owned       : true,
-      owner                : String::new(),
-      claim_lock : false, reserve : false,
-          org_created_at : None,
-    },
-    AccountQuota
-    {
-      fallback_reason : None,
-      name          : "d@network.com".to_string(),
-      is_current    : false,
-      is_active             : false,
-      is_occupied_elsewhere : false,
-      expires_at_ms : 0,
-      result        : Err( "connection refused".to_string() ),
-      account       : None,
-      host          : String::new(),
-      role          : String::new(),
-      renewal_at    : None,
-      cached        : false,
-      cache_age_secs : None,
-      is_owned       : true,
-      owner                : String::new(),
-      claim_lock : false, reserve : false,
-          org_created_at : None,
-    },
+    mixed_account( "a@ok.com", Ok( quota ) ),
+    mixed_account( "b@ratelimited.com", Err( "HTTP transport error: HTTP 429".to_string() ) ),
+    mixed_account( "c@expired.com", Err( "HTTP transport error: HTTP 401".to_string() ) ),
+    mixed_account( "d@network.com", Err( "connection refused".to_string() ) ),
   ];
 
   apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto, false );
@@ -385,6 +340,7 @@ fn test_apply_refresh_trace_does_not_panic()
       owner                : String::new(),
       claim_lock : false, reserve : false,
           org_created_at : None,
+      inference_provider : String::new(),
     },
   ];
   apply_refresh( &mut accounts, store.path(), None, true, SubprocessModel::Auto, SubprocessEffort::Auto, false );
@@ -445,6 +401,7 @@ fn test_apply_refresh_lifecycle_switch_fails_result_unchanged()
       owner                : String::new(),
       claim_lock : false, reserve : false,
           org_created_at : None,
+      inference_provider : String::new(),
     },
   ];
 
@@ -532,6 +489,7 @@ fn test_apply_refresh_lifecycle_active_marker_unchanged()
       owner                : String::new(),
       claim_lock : false, reserve : false,
           org_created_at : None,
+      inference_provider : String::new(),
     },
   ];
 
@@ -582,6 +540,7 @@ fn test_apply_refresh_lifecycle_429_expired_switch_fails_unchanged()
       owner                : String::new(),
       claim_lock : false, reserve : false,
           org_created_at : None,
+      inference_provider : String::new(),
     },
   ];
   apply_refresh( &mut accounts, store.path(), Some( &paths ), false, SubprocessModel::Auto, SubprocessEffort::Auto, false );
@@ -629,6 +588,7 @@ fn test_apply_refresh_lifecycle_ft3_403_no_cred_result_unchanged()
       owner                : String::new(),
       claim_lock : false, reserve : false,
           org_created_at : None,
+      inference_provider : String::new(),
     },
   ];
 
@@ -682,6 +642,7 @@ fn test_apply_refresh_lifecycle_copy_fails_no_dot_claude_dir()
       owner                : String::new(),
       claim_lock : false, reserve : false,
           org_created_at : None,
+      inference_provider : String::new(),
     },
   ];
   apply_refresh( &mut accounts, store.path(), Some( &paths ), false, SubprocessModel::Auto, SubprocessEffort::Auto, false );
@@ -745,6 +706,7 @@ fn test_apply_refresh_lifecycle_trace_switch_fails_no_panic()
       owner                : String::new(),
       claim_lock : false, reserve : false,
           org_created_at : None,
+      inference_provider : String::new(),
     },
   ];
   // Must not panic — switch_account fails (no cred file), trace logs to stderr.
@@ -875,6 +837,7 @@ fn test_apply_refresh_lifecycle_l10_trace_run_isolated_invoked_no_panic()
       owner                : String::new(),
       claim_lock : false, reserve : false,
           org_created_at : None,
+      inference_provider : String::new(),
     },
   ];
   // Must not panic — switch_account succeeds; run_isolated invoked; fails fast (fake creds).

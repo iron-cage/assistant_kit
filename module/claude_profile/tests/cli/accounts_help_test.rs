@@ -45,7 +45,6 @@ fn h02_help_lists_all_registered_commands()
     ".account.save",
     ".account.use",
     ".account.delete",
-    ".token.status",
     ".paths",
     ".usage",
     ".credentials.status",
@@ -56,6 +55,7 @@ fn h02_help_lists_all_registered_commands()
   }
   assert!( !text.contains( ".account.list" ),   "help must not list .account.list, got:\n{text}" );
   assert!( !text.contains( ".account.status" ), "help must not list .account.status, got:\n{text}" );
+  assert!( !text.contains( ".token.status" ),   "help must not list .token.status, got:\n{text}" );
 }
 
 #[ test ]

@@ -28,7 +28,8 @@
 //! | FT-01b | `ft01b_assignee_assign_writes_remote_marker` | FT-01 | `assignee::bob@laptop name::X` writes `_active_laptop_bob` | P |
 //! | FT-02 | `ft02_assignee_unassign_clears_marker` | FT-03 | `assignee::user1@w003` (no name) clears marker | P |
 //! | FT-03 | `ft03_assignee_assign_dry_run` | FT-05 | `assignee::testuser@testmachine name::X dry::1` → no write | P |
-//! | FT-04 | `ft04_assignee_unknown_account_exits_1` | FT-08 | `assignee::testuser@testmachine name::ghost` → exit 1 | N |
+//! | FT-04 | `ft04_assignee_unknown_account_exits_1` | FT-08 | `assignee::testuser@testmachine name::ghost` → exit 1; stderr names `name::` (BUG-342) | N |
+//! | FT-04u | `ft04u_assignee_unknown_account_usage_exits_1` | FT-08 | Same as FT-04 via `.usage` — `api_dispatch.rs`'s duplicate call site (BUG-342) | N |
 //! | FT-05 | `ft05_assign_removed_toggle` | FT-10 | `assign::1 name::X` → exit 1 REMOVED_TOGGLE | N |
 //! | FT-06 | `ft06_assign_and_for_removed_toggles` | FT-10 | `assign::1 for::bob@laptop name::X` → exit 1 | N |
 //! | FT-07 | `ft07_unclaim_removed_toggle` | FT-10 | `unclaim::1 name::X` → exit 1 REMOVED_TOGGLE | N |
@@ -220,6 +221,11 @@ fn ft03_assignee_assign_dry_run()
 
 #[ test ]
 /// FT-04 (AC-08): unknown account → exit 1; no marker written.
+///
+/// ## Fix Documentation (BUG-342)
+/// Also asserts the error names its source parameter (`(from name::)`) — a
+/// bare `format!("account '{name_arg}' not found...")` cannot tell the caller
+/// which of `name::`/`assignee::` supplied the unresolved value.
 fn ft04_assignee_unknown_account_exits_1()
 {
   let dir  = TempDir::new().unwrap();
@@ -237,6 +243,52 @@ fn ft04_assignee_unknown_account_exits_1()
 
   let store = credential_store( dir.path() );
   assert_eq!( active_marker_count( &store ), 0, "no marker file must be written for unknown account" );
+
+  let err_text = stderr( &out );
+  assert!(
+    err_text.contains( "(from name::)" ),
+    "BUG-342: error must name name:: as the source of the unresolved value; got: {err_text}",
+  );
+}
+
+// test_kind: bug_reproducer(BUG-342)
+/// FT-04u — `.usage assignee::` dispatch (`dispatch_assignee_param()` in
+/// `usage/api_dispatch.rs`) surfaces the same ambiguous "not found" message as
+/// `.accounts` FT-04 above — BUG-342's second, byte-for-byte-duplicate call site.
+///
+/// ## Root Cause (BUG-342)
+/// `dispatch_assignee_param()` builds its "not found" error from `name_arg`
+/// alone, with no indication of which parameter (`name::` vs `assignee::`)
+/// supplied the unresolved value — the identical omission as the `.accounts`
+/// call site, since both share the same message template.
+///
+/// ## Assert
+/// `.usage assignee::... name::ghost@...` on an unknown account exits 1 and its
+/// stderr names `name::` as the source (`(from name::)`).
+#[ test ]
+fn ft04u_assignee_unknown_account_usage_exits_1()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  let env  = test_env( home );
+  let refs : Vec< ( &str, &str ) > = env.iter().map( | ( k, v ) | ( *k, *v ) ).collect();
+
+  write_account( dir.path(), "alice@corp.com", "max", "tier4", 9_999_999_999_999, false );
+
+  let out = run_cs_with_env(
+    &[ ".usage", &format!( "assignee::{ASSIGNEE_CURRENT}" ), "name::ghost@example.com" ],
+    &refs,
+  );
+  assert_exit( &out, 1 );
+
+  let store = credential_store( dir.path() );
+  assert_eq!( active_marker_count( &store ), 0, "no marker file must be written for unknown account" );
+
+  let err_text = stderr( &out );
+  assert!(
+    err_text.contains( "(from name::)" ),
+    "BUG-342: .usage assignee:: error must name name:: as the source of the unresolved value; got: {err_text}",
+  );
 }
 
 // ── FT-05..FT-07: REMOVED_TOGGLE migration messages ─────────────────────────
@@ -735,6 +787,8 @@ fn aa09_prefix_resolution()
   assert_eq!( content.trim(), "alice@corp.com" );
 }
 
+// BUG-341 task/bug/341_orphaned_marker_after_cross_machine_delete.md — this fixture constructs an
+// orphaned-looking marker for assign-overwrite, not delete; cited as prior art only, not modified.
 #[ test ]
 /// Second `assignee::bob@laptop` assign overwrites the existing `_active_laptop_bob` marker.
 fn aa10_overwrite_existing_marker()

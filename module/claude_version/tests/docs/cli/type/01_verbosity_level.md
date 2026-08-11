@@ -6,7 +6,7 @@ Type compliance and validation tests for `VerbosityLevel`. See [type/01_verbosit
 
 - **Purpose**: Validate VerbosityLevel parsing, range enforcement, and level semantics.
 - **Responsibility**: Boundary values, invalid inputs, default behavior, and per-level output semantics for `v::`.
-- **Commands:** `.status`, `.version.show`, `.version.install`, `.version.list`, `.version.guard`, `.version.history`, `.processes`, `.processes.kill`, `.settings.show`, `.settings.get`
+- **Commands:** `.status`, `.version.show`, `.version.install`, `.version.list`, `.version.guard`, `.ps`, `.ps.kill`, `.settings.show`, `.settings.get`
 - **In Scope**: Type parsing, range validation, and observable output differences between levels.
 - **Out of Scope**: Per-command output structure (→ `../command/`), parameter interactions (→ `../param_group/`).
 
@@ -120,12 +120,12 @@ Type compliance and validation tests for `VerbosityLevel`. See [type/01_verbosit
 
 | Function | File |
 |----------|------|
-| `tc_verbosity_level_0_minimal` | `cli_args_test/type_surface_test.rs` |
+| `tc_verbosity_level_0_minimal` | `tests/cli_args_test/type_surface_test.rs` |
 | `tc098_status_v1_has_labels` | `tests/cli/read_status_test.rs` |
-| `tc_verbosity_level_2_verbose` | `cli_args_test/type_surface_test.rs` |
-| `verbosity_ec5_absent_defaults_to_1` | `cli_args_test/param_verbosity_test.rs` |
-| `tc_verbosity_level_3_out_of_range` | `cli_args_test/type_surface_test.rs` |
-| `tc005_verbosity_empty_value` | `cli_args_test/param_verbosity_test.rs` |
-| `tc_verbosity_level_abc_non_integer` | `cli_args_test/type_surface_test.rs` |
-| `verbosity_ec8_negative_exits_1` | `cli_args_test/param_verbosity_test.rs` |
+| `tc_verbosity_level_2_verbose` | `tests/cli_args_test/type_surface_test.rs` |
+| `verbosity_ec5_absent_defaults_to_1` | `tests/cli_args_test/param_verbosity_test.rs` |
+| `tc_verbosity_level_3_out_of_range` | `tests/cli_args_test/type_surface_test.rs` |
+| `tc005_verbosity_empty_value` | `tests/cli_args_test/param_verbosity_test.rs` |
+| `tc_verbosity_level_abc_non_integer` | `tests/cli_args_test/type_surface_test.rs` |
+| `verbosity_ec8_negative_exits_1` | `tests/cli_args_test/param_verbosity_test.rs` |
 | `tc245_last_occurrence_wins_for_verbosity` | `tests/cli/read_status_test.rs` |

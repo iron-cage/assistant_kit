@@ -4,7 +4,7 @@
 
 - **Purpose**: Document the clg command-line interface for Claude Code conversation storage exploration.
 - **Responsibility**: Reference documentation for commands, parameters, types, workflows, and test planning.
-- **In Scope**: commands, params, types, parameter groups, dictionary, workflows, format/, user_story/.
+- **In Scope**: commands, params, types, parameter groups, command groups, dictionary, workflows, format/, user_story/.
 - **Out of Scope**: CLI tool design (→ `feature/001_cli_tool.md`), quality constraints (→ `invariant/`).
 
 Reference documentation for the `claude_storage` CLI binary — a tool for exploring Claude Code conversation storage. All commands are read-only except `.session.ensure`, which creates the session working directory on disk.
@@ -18,6 +18,7 @@ Reference documentation for the `claude_storage` CLI binary — a tool for explo
 | `type/` | Per-type constraint and parsing reference (13 type pages) |
 | `001_dictionary.md` | Domain vocabulary and term definitions |
 | `param_group/` | Per-group detail pages with membership, examples, and cross-refs |
+| `command_group/` | Every command partitioned into exactly one group (Total Partition); shared handler + parameter set when multi-member (12 groups, all singletons) |
 | `003_workflows.md` | Usage scenarios, best practices, complexity matrix |
 | `format/` | Output format catalog for export rendering modes |
 | `002_env_param.md` | Environment variable catalog with precedence rules |
@@ -38,6 +39,7 @@ Reference documentation for the `claude_storage` CLI binary — a tool for explo
 | `type/*.md` (13 files) | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
 | `param_group/readme.md` | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
 | `param_group/*.md` (5 files) | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
+| `command_group/readme.md` (12 singleton groups) | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
 | `003_workflows.md` | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
 | `format/readme.md` | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
 | `format/*.md` (3 files) | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
@@ -57,6 +59,7 @@ Reference documentation for the `claude_storage` CLI binary — a tool for explo
 - [Types](type/readme.md) — Semantic type constraints and validation rules
 - [Dictionary](001_dictionary.md) — Domain vocabulary
 - [Parameter Groups](param_group/readme.md) — Related parameter sets and their coherence
+- [Command Groups](command_group/readme.md) — every command in exactly one group; 12 singleton groups, zero cross-calls found (Total Partition)
 - [Workflows](003_workflows.md) — Common usage patterns and best practices
 - [Formats](format/readme.md) — Export output format rendering specifications
 - [Environment Parameters](002_env_param.md) — Environment variables and precedence rules

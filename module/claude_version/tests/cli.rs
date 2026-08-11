@@ -20,20 +20,20 @@ mod read_status_test;
 #[ path = "cli/read_version_test.rs" ]
 mod read_version_test;
 
-#[ path = "cli/read_processes_test.rs" ]
-mod read_processes_test;
+#[ path = "cli/read_ps_test.rs" ]
+mod read_ps_test;
 
 #[ path = "cli/read_settings_test.rs" ]
 mod read_settings_test;
 
-#[ path = "cli/read_version_history_test.rs" ]
-mod read_version_history_test;
-
 #[ path = "cli/mutation_version_install_test.rs" ]
 mod mutation_version_install_test;
 
-#[ path = "cli/mutation_processes_kill_test.rs" ]
-mod mutation_processes_kill_test;
+#[ path = "cli/mutation_ps_kill_test.rs" ]
+mod mutation_ps_kill_test;
+
+#[ path = "cli/pid_param_test.rs" ]
+mod pid_param_test;
 
 #[ path = "cli/mutation_version_guard_test.rs" ]
 mod mutation_version_guard_test;
@@ -118,3 +118,12 @@ mod paths_test;
 
 #[ path = "cli/path_key_test.rs" ]
 mod path_key_test;
+
+#[ path = "cli/list_mode_test.rs" ]
+mod list_mode_test;
+
+#[ path = "cli/mode_param_test.rs" ]
+mod mode_param_test;
+
+#[ path = "cli/mutation_version_mark_test.rs" ]
+mod mutation_version_mark_test;

@@ -19,7 +19,7 @@
 //! |------|----------|
 //! | `ast_package_name_is_assistant` | build metadata sanity |
 //! | `ast_binary_is_present` | binary builds and runs |
-//! | `ast_processes_command_accepted` | `.processes` routed via manager programmatic registration |
+//! | `ast_ps_command_accepted` | `.ps` routed via manager programmatic registration |
 //! | `ast_projects_accepts_scope_param` | storage `.projects` accepts `scope::` (manager collision gone) |
 //! | `ast_usage_command_accepted` | `.usage` routed via profile programmatic registration |
 //! | `ast_paths_command_accepted` | `.paths` routed via profile programmatic registration |
@@ -67,15 +67,15 @@ fn ast_binary_is_present()
   assert!( bin.exists(), "astbinary not found at: {}", bin.display() );
 }
 
-/// Verify `.processes` is routed through `ast` via manager's programmatic registration.
+/// Verify `.ps` is routed through `ast` via manager's programmatic registration.
 #[test]
-fn ast_processes_command_accepted()
+fn ast_ps_command_accepted()
 {
   let home = tempfile::TempDir::new().unwrap();
-  let out  = run_ast( home.path(), &[ ".processes" ] );
+  let out  = run_ast( home.path(), &[ ".ps" ] );
   assert_eq!(
     out.status.code().unwrap_or( -1 ), 0,
-    "ast.processes should exit 0; stderr: {}",
+    "ast.ps should exit 0; stderr: {}",
     String::from_utf8_lossy( &out.stderr ),
   );
 }

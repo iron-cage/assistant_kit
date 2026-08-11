@@ -10,7 +10,7 @@ use super::account_inspect_render::{
   inspect_derive_status, extract_access_token,
   build_inspect_snapshot, format_inspect_text, format_inspect_json,
 };
-use claude_profile_core::account::trace_ts;
+use claude_profile_core::account::{ trace_ts, read_backend, AccountBackend };
 
 /// Resolve the account name for `.account.inspect`.
 ///
@@ -118,7 +118,7 @@ fn inspect_call_roles(
 ///
 /// # Errors
 ///
-/// - Exit 1: invalid `format::` value.
+/// - Exit 1: invalid `format::` value; target account uses `backend: redirect` (Feature 071).
 /// - Exit 2: credential store absent; account not found; credential file absent.
 #[ inline ]
 #[ allow( clippy::too_many_lines ) ]
@@ -148,6 +148,17 @@ pub fn account_inspect_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
     return Err( ErrorData::new(
       ErrorCode::InternalError,
       format!( "credential file not found: {}", cred_path.display() ),
+    ) );
+  }
+
+  // Feature 071 (AC-12): reject before any HTTP attempt — a redirect-backend account has
+  // no Anthropic account/roles/usage endpoints to inspect. ArgumentTypeMismatch (not
+  // InternalError) per docs/cli/command/001_account.md's documented exit 1 (usage) for this guard.
+  if read_backend( &credential_store, &name ) == AccountBackend::Redirect
+  {
+    return Err( ErrorData::new(
+      ErrorCode::ArgumentTypeMismatch,
+      format!( "account '{name}' uses a redirect backend \u{2014} .account.inspect is Anthropic-only" ),
     ) );
   }
 

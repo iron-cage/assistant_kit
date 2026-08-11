@@ -67,8 +67,8 @@ $HOME/
 | `~/.claude/downloads/` | dir | W | installer (`install.sh`) | Binary staging |
 | `~/.local/bin/claude` | file | R/del | `.version.install`, `.version.guard`, `.version.show` | Launcher binary; resolved via `which claude`, fallback `~/.local/bin/claude` |
 | `~/.local/share/claude/versions/` | dir | chmod | `.version.install`, `.version.guard` | Versioned binaries; `chmod 555` (locked) or `755` (unlocked) |
-| `/proc/{pid}/cmdline` | file | R | `.processes`, `.processes.kill` | Process command line for Claude process detection |
-| `/proc/{pid}/cwd` | symlink | R | `.processes`, `.processes.kill` | Working directory of detected Claude process |
+| `/proc/{pid}/cmdline` | file | R | `.ps`, `.ps.kill` | Process command line for Claude process detection |
+| `/proc/{pid}/cwd` | symlink | R | `.ps`, `.ps.kill` | Working directory of detected Claude process |
 
 ### Type-Specific Requirements
 

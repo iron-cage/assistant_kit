@@ -31,13 +31,14 @@
 //! | T13 | invalid `output_style` config value → exit 1                    | Error Handling  |
 //! | T14 | invalid `journal` config value → exit 1                         | Error Handling  |
 //! | T15 | invalid `summary_fields` config value → exit 1                  | Error Handling  |
+//! | T16 | config-only `gate_poll_secs`/`gate_max_attempts` change real gate timing | Precedence |
 
 mod cli_binary_test_helpers;
 use cli_binary_test_helpers::
 {
   exit_code, fake_claude_binary_dir, fake_claude_dir, make_proc_dir,
   run_cli_in_dir, run_cli_with_env, spawn_print_claude, spawn_print_claude_for,
-  stderr_str, stdout_str,
+  stderr_str, stdout_str, wait_bounded,
 };
 use std::process::Command;
 
@@ -93,7 +94,7 @@ fn t01_user_config_only_sets_max_sessions()
   );
   let stderr = String::from_utf8_lossy( &out.stderr );
   assert!(
-    stderr.contains( "Info: 5/5 sessions active; waiting" ),
+    stderr.contains( "gate-wait  active=5/5" ),
     "T01: config-supplied max_sessions=5 must be effective. Got:\n{stderr}"
   );
 }
@@ -146,7 +147,7 @@ fn t02_project_config_overrides_user_config()
   );
   let stderr = String::from_utf8_lossy( &out.stderr );
   assert!(
-    stderr.contains( "Info: 3/3 sessions active; waiting" ),
+    stderr.contains( "gate-wait  active=3/3" ),
     "T02: project .clr.toml (max_sessions=3) must override user config (max_sessions=5). Got:\n{stderr}"
   );
 }
@@ -195,7 +196,7 @@ fn t03_cli_overrides_config_max_sessions()
   );
   let stderr = String::from_utf8_lossy( &out.stderr );
   assert!(
-    stderr.contains( "Info: 7/7 sessions active; waiting" ),
+    stderr.contains( "gate-wait  active=7/7" ),
     "T03: CLI --max-sessions 7 must override config (max_sessions=5). Got:\n{stderr}"
   );
 }
@@ -247,7 +248,7 @@ fn t04_args_file_json_overrides_config_max_sessions()
   );
   let stderr = String::from_utf8_lossy( &out.stderr );
   assert!(
-    stderr.contains( "Info: 9/9 sessions active; waiting" ),
+    stderr.contains( "gate-wait  active=9/9" ),
     "T04: --args-file JSON (max-sessions=9) must override config (max_sessions=5). Got:\n{stderr}"
   );
 }
@@ -296,7 +297,7 @@ fn t05_env_var_overrides_config_max_sessions()
   );
   let stderr = String::from_utf8_lossy( &out.stderr );
   assert!(
-    stderr.contains( "Info: 2/2 sessions active; waiting" ),
+    stderr.contains( "gate-wait  active=2/2" ),
     "T05: CLR_MAX_SESSIONS=2 env var must override config (max_sessions=5). Got:\n{stderr}"
   );
 }
@@ -548,5 +549,66 @@ fn t15_invalid_summary_fields_config_value_exits_1()
   assert!(
     stderr.contains( "summary_fields" ) && stderr.contains( "bogus" ),
     "T15: stderr must name the invalid summary_fields value. Got:\n{stderr}"
+  );
+}
+
+// ── T16: gate_poll_secs/gate_max_attempts config.toml keys change real gate timing ──
+
+/// T16 (hardening fix 3, config-file tier): `~/.clr/config.toml` (redirected via
+/// `CLR_CONFIG_DIR`) sets `gate_poll_secs = 1` and `gate_max_attempts = 2`; no CLI
+/// flag, env var, or `--args-file`. Effective values must actually change gate
+/// timing — proven by forcing gate exhaustion (1 permanent occupier,
+/// `--max-sessions 1`, `--retry-override 0`) and asserting it completes within a
+/// bounded 10s deadline instead of the production 1000-attempt x 30s default
+/// (~8.3h), mirroring `concurrency_gate_test.rs`'s T09 pattern for the
+/// config-file tier.
+#[ test ]
+fn t16_config_only_sets_gate_poll_secs_and_max_attempts()
+{
+  let ( _occupier_dir, occupier_path ) = fake_claude_binary_dir();
+  let mut occupier = spawn_print_claude_for( &occupier_path, 60 );
+  let proc = make_proc_dir( &[ occupier.id() ] );
+
+  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
+  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
+  let config_dir = tempfile::TempDir::new().expect( "config dir" );
+  write_config_file( config_dir.path(), "gate_poll_secs = 1\ngate_max_attempts = 2\n" );
+
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let mut child = Command::new( bin )
+    .args( [ "-p", "--max-sessions", "1", "--retry-override", "0", "--journal", "off", "x" ] )
+    .env( "PATH", &script_path )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
+    .env( "CLR_GATE_DIR", gate_dir.path() )
+    .env( "CLR_CONFIG_DIR", config_dir.path() )
+    .stdout( std::process::Stdio::null() )
+    .stderr( std::process::Stdio::piped() )
+    .spawn()
+    .expect( "spawn clr" );
+
+  let deadline = std::time::Instant::now() + core::time::Duration::from_secs( 10 );
+  let exited = wait_bounded( &mut child, deadline );
+  if exited.is_none() { let _ = child.kill(); }
+  let out = child.wait_with_output().expect( "reap clr" );
+
+  let _ = occupier.kill();
+  let _ = occupier.wait();
+
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert!(
+    exited.is_some(),
+    "T16: gate must exhaust within 10s when config supplies both overrides \
+     (2 attempts x 1s poll) — still running means config values are not \
+     taking effect. stderr:\n{stderr}"
+  );
+  assert_eq!(
+    exited.and_then( |s| s.code() ), Some( 1 ),
+    "T16: exit must be 1 once the gate exhausts. stderr: {stderr}"
+  );
+  assert!(
+    stderr.contains(
+      "Error: [Runner] session gate timed out — 1 print sessions, max-sessions=1 — retries exhausted (exit 1)"
+    ),
+    "T16: exact exhaustion message required. Got:\n{stderr}"
   );
 }

@@ -55,6 +55,65 @@ fn test_pre_switch_touch_ctx_model_effort_absent_on_fetch_failure()
   );
 }
 
+/// T06 (touch-skip half)/AC-06: `pre_switch_touch_ctx()` checks `backend == Redirect` and
+/// returns early — before the `{name}.credentials.json` read and before `fetch_oauth_usage(`
+/// can be reached — so a redirect account's touch pre-fetch is a true no-op. A black-box
+/// behavioral test cannot distinguish "bypassed" from "attempted and failed" in this sandboxed
+/// environment (no real network — both return `Unavailable`), so this structural check is the
+/// actual proof; the behavioral test below is a regression guard on the observable half only.
+#[ test ]
+fn ft20_071_pre_switch_touch_ctx_redirect_bypass_checked_before_fetch_structural()
+{
+  let api_switch_rs = std::path::Path::new( env!( "CARGO_MANIFEST_DIR" ) ).join( "src/usage/api_switch.rs" );
+  let content = std::fs::read_to_string( &api_switch_rs )
+    .unwrap_or_else( |e| panic!( "cannot read {}: {e}", api_switch_rs.display() ) );
+
+  let fn_start = content.find( "pub fn pre_switch_touch_ctx(" )
+    .expect( "pre_switch_touch_ctx must exist in api_switch.rs" );
+  let fn_body = &content[ fn_start.. ];
+
+  let bypass_pos = fn_body.find( "AccountBackend::Redirect" )
+    .expect( "AC-06: pre_switch_touch_ctx must check AccountBackend::Redirect" );
+  let creds_read_pos = fn_body.find( "credentials.json" )
+    .expect( "the {name}.credentials.json read must still be reachable in pre_switch_touch_ctx" );
+  let fetch_pos = fn_body.find( "fetch_oauth_usage(" )
+    .expect( "fetch_oauth_usage must still be reachable in pre_switch_touch_ctx" );
+
+  assert!(
+    bypass_pos < creds_read_pos,
+    "AC-06: the redirect-backend check must appear before the {{name}}.credentials.json read \
+     (bypass_pos={bypass_pos}, creds_read_pos={creds_read_pos})",
+  );
+  assert!(
+    bypass_pos < fetch_pos,
+    "AC-06: the redirect-backend check must appear before fetch_oauth_usage( \
+     (bypass_pos={bypass_pos}, fetch_pos={fetch_pos})",
+  );
+}
+
+/// T06 (touch-skip half)/AC-06: `pre_switch_touch_ctx()` against a `backend: redirect` account
+/// returns `Unavailable` immediately.
+#[ test ]
+fn ft21_071_pre_switch_touch_ctx_redirect_account_returns_unavailable()
+{
+  let store = TempDir::new().unwrap();
+  std::fs::write(
+    store.path().join( "kimi@moonshot.ai.credentials.json" ),
+    r#"{"accessToken":"sk-foreign-key-abc123"}"#,
+  ).unwrap();
+  std::fs::write(
+    store.path().join( "kimi@moonshot.ai.json" ),
+    r#"{"backend":"redirect","base_url":"https://api.moonshot.ai/anthropic","redirect_model":"kimi-k3"}"#,
+  ).unwrap();
+
+  let result = pre_switch_touch_ctx( "kimi@moonshot.ai", store.path(), false, "auto", "auto" );
+
+  assert!(
+    matches!( result, PreSwitchOutcome::Unavailable ),
+    "AC-06: pre_switch_touch_ctx against a redirect account must return Unavailable, got {result:?}",
+  );
+}
+
 /// `mre_bug238` — `apply_model_override()` writes opus when 7d(Son) consumed > 80%.
 ///
 /// # Root Cause
@@ -98,12 +157,43 @@ fn mre_bug238_model_override_fires_for_active_account()
     seven_day        : None,
     seven_day_sonnet : Some( PeriodUsage { utilization : 91.0, resets_at : None } ),
   };
-  apply_model_override( &quota, &paths, false, "account.use", "test-account" );
+  apply_model_override( &quota, &paths, false, "account.use", "test-account", claude_profile::account::AccountBackend::Anthropic );
 
   let content = std::fs::read_to_string( paths.settings_file() ).unwrap();
   assert!(
     content.contains( "\"opus\"" ) && !content.contains( "claude-opus-4-8" ),
     "apply_model_override must write opus shorthand to settings.json when 7d(Son) is 91% consumed (9% left), got: {content}",
+  );
+}
+
+/// T09/AC-10: `apply_model_override()` writes neither `model` nor `effortLevel` when the
+/// active account's backend is `Redirect` — checked as the very first statement, before any
+/// Sonnet/Opus branching. Reuses `mre_bug238`'s exact 91%-utilization fixture (which WOULD
+/// fire the opus override for an Anthropic-backend account) to prove the bypass actually
+/// short-circuits a write that would otherwise definitely happen.
+#[ test ]
+fn ft22_071_apply_model_override_redirect_backend_writes_nothing()
+{
+  use claude_quota::{ OauthUsageData, PeriodUsage };
+  let dir   = TempDir::new().unwrap();
+  let paths = claude_profile::ClaudePaths::with_home( dir.path() );
+  std::fs::create_dir_all( paths.base() ).unwrap();
+
+  let quota = OauthUsageData
+  {
+    five_hour        : None,
+    seven_day        : None,
+    seven_day_sonnet : Some( PeriodUsage { utilization : 91.0, resets_at : None } ),
+  };
+  apply_model_override(
+    &quota, &paths, false, "account.use", "test-account",
+    claude_profile::account::AccountBackend::Redirect,
+  );
+
+  assert!(
+    !paths.settings_file().exists(),
+    "AC-10: apply_model_override must write nothing to settings.json for a redirect-backend \
+     account; file exists: {}", paths.settings_file().display(),
   );
 }
 
@@ -156,7 +246,7 @@ fn mre_bug331_apply_model_override_branch_matches_rounded_log_at_threshold_bound
       seven_day        : None,
       seven_day_sonnet : Some( PeriodUsage { utilization : util, resets_at : None } ),
     };
-    apply_model_override( &quota, &paths, false, "account.use", "test-account" );
+    apply_model_override( &quota, &paths, false, "account.use", "test-account", claude_profile::account::AccountBackend::Anthropic );
 
     std::fs::read_to_string( paths.settings_file() )
       .is_ok_and( |content| content.contains( "\"opus\"" ) )
@@ -214,7 +304,7 @@ fn mre_bug286_full_opus_id_normalized_to_shorthand()
     seven_day        : None,
     seven_day_sonnet : Some( PeriodUsage { utilization : 91.0, resets_at : None } ),
   };
-  apply_model_override( &quota, &paths, false, "account.use", "test-account" );
+  apply_model_override( &quota, &paths, false, "account.use", "test-account", claude_profile::account::AccountBackend::Anthropic );
   let content = std::fs::read_to_string( paths.settings_file() ).unwrap();
   assert!(
     content.contains( "\"opus\"" ) && !content.contains( "claude-opus-4-8" ),
@@ -263,7 +353,7 @@ fn mre_bug300_model_override_absent_sonnet_no_override()
   std::fs::create_dir_all( paths.base() ).unwrap();
   // seven_day_sonnet = None: Sonnet tier absent — opus must NOT fire; sonnet written conservatively.
   let quota = OauthUsageData { five_hour : None, seven_day : None, seven_day_sonnet : None };
-  apply_model_override( &quota, &paths, false, "usage", "test-account" );
+  apply_model_override( &quota, &paths, false, "usage", "test-account", claude_profile::account::AccountBackend::Anthropic );
   let content = std::fs::read_to_string( paths.settings_file() ).unwrap_or_default();
   assert!(
     content.contains( "\"sonnet\"" ),
@@ -290,7 +380,7 @@ fn t01_model_override_fires_when_sonnet_below_threshold()
     seven_day        : None,
     seven_day_sonnet : Some( PeriodUsage { utilization : 91.0, resets_at : None } ),
   };
-  apply_model_override( &quota, &paths, false, "usage", "test-account" );
+  apply_model_override( &quota, &paths, false, "usage", "test-account", claude_profile::account::AccountBackend::Anthropic );
   let content = std::fs::read_to_string( paths.settings_file() ).unwrap();
   assert!(
     content.contains( "\"opus\"" ) && !content.contains( "claude-opus-4-8" ),
@@ -313,7 +403,7 @@ fn t02_model_override_writes_sonnet_when_quota_sufficient()
     seven_day        : None,
     seven_day_sonnet : Some( PeriodUsage { utilization : 70.0, resets_at : None } ),
   };
-  apply_model_override( &quota, &paths, false, "usage", "test-account" );
+  apply_model_override( &quota, &paths, false, "usage", "test-account", claude_profile::account::AccountBackend::Anthropic );
   let content = std::fs::read_to_string( paths.settings_file() ).unwrap_or_default();
   assert!(
     content.contains( "\"sonnet\"" ),
@@ -340,7 +430,7 @@ fn t03_model_override_skips_when_already_opus()
     seven_day        : None,
     seven_day_sonnet : Some( PeriodUsage { utilization : 91.0, resets_at : None } ),
   };
-  apply_model_override( &quota, &paths, false, "usage", "test-account" );
+  apply_model_override( &quota, &paths, false, "usage", "test-account", claude_profile::account::AccountBackend::Anthropic );
   let content = std::fs::read_to_string( paths.settings_file() ).unwrap();
   assert!(
     content.contains( "\"opus\"" ),
@@ -426,7 +516,7 @@ fn t07_model_override_writes_sonnet_at_10pct_boundary()
     seven_day        : None,
     seven_day_sonnet : Some( PeriodUsage { utilization : 90.0, resets_at : None } ),
   };
-  apply_model_override( &quota, &paths, false, "usage", "test-account" );
+  apply_model_override( &quota, &paths, false, "usage", "test-account", claude_profile::account::AccountBackend::Anthropic );
   let content = std::fs::read_to_string( paths.settings_file() ).unwrap_or_default();
   assert!(
     content.contains( "\"sonnet\"" ),
@@ -497,7 +587,7 @@ fn mre_bug311_model_restored_to_sonnet_when_opus_and_quota_sufficient()
     seven_day        : None,
     seven_day_sonnet : Some( PeriodUsage { utilization : 4.0, resets_at : None } ),
   };
-  apply_model_override( &quota, &paths, false, "usage", "test-account" );
+  apply_model_override( &quota, &paths, false, "usage", "test-account", claude_profile::account::AccountBackend::Anthropic );
   let content = std::fs::read_to_string( paths.settings_file() ).unwrap();
   assert!(
     content.contains( "\"sonnet\"" ) && !content.contains( "\"opus\"" ),
@@ -565,7 +655,7 @@ fn mre_bug312_effort_initialized_to_high_when_absent()
     seven_day        : None,
     seven_day_sonnet : Some( PeriodUsage { utilization : 4.0, resets_at : None } ),
   };
-  apply_model_override( &quota, &paths, false, "usage", "test-account" );
+  apply_model_override( &quota, &paths, false, "usage", "test-account", claude_profile::account::AccountBackend::Anthropic );
   let content = std::fs::read_to_string( paths.settings_file() ).unwrap();
   assert!(
     content.contains( "\"effortLevel\"" ) && content.contains( "\"high\"" ),
@@ -593,7 +683,7 @@ fn t10_sonnet_branch_writes_effort_high()
     seven_day        : None,
     seven_day_sonnet : Some( PeriodUsage { utilization : 4.0, resets_at : None } ),
   };
-  apply_model_override( &quota, &paths, false, "usage", "test-account" );
+  apply_model_override( &quota, &paths, false, "usage", "test-account", claude_profile::account::AccountBackend::Anthropic );
   let content = std::fs::read_to_string( paths.settings_file() ).unwrap();
   assert!(
     content.contains( "\"high\"" ),
@@ -643,7 +733,7 @@ fn mre_bug322_opus_override_sets_effort_max()
     seven_day        : None,
     seven_day_sonnet : Some( PeriodUsage { utilization : 91.0, resets_at : None } ),
   };
-  apply_model_override( &quota, &paths, false, "usage", "test-account" );
+  apply_model_override( &quota, &paths, false, "usage", "test-account", claude_profile::account::AccountBackend::Anthropic );
   let content = std::fs::read_to_string( paths.settings_file() ).unwrap();
   assert!(
     content.contains( "\"opus\"" ),
@@ -671,7 +761,7 @@ fn t11_opus_to_sonnet_sets_effort_high()
     seven_day        : None,
     seven_day_sonnet : Some( PeriodUsage { utilization : 4.0, resets_at : None } ),
   };
-  apply_model_override( &quota, &paths, false, "usage", "test-account" );
+  apply_model_override( &quota, &paths, false, "usage", "test-account", claude_profile::account::AccountBackend::Anthropic );
   let content = std::fs::read_to_string( paths.settings_file() ).unwrap();
   assert!(
     content.contains( "\"sonnet\"" ),
@@ -693,7 +783,7 @@ fn t12_absent_tier_with_opus_sets_effort_high()
   std::fs::create_dir_all( paths.base() ).unwrap();
   std::fs::write( paths.settings_file(), r#"{"model":"opus","effortLevel":"max"}"# ).unwrap();
   let quota = OauthUsageData { five_hour : None, seven_day : None, seven_day_sonnet : None };
-  apply_model_override( &quota, &paths, false, "test", "test-account" );
+  apply_model_override( &quota, &paths, false, "test", "test-account", claude_profile::account::AccountBackend::Anthropic );
   let content = std::fs::read_to_string( paths.settings_file() ).unwrap();
   assert!(
     content.contains( "\"sonnet\"" ),
@@ -748,7 +838,7 @@ fn ft19_effort_synced_when_model_already_at_target()
     seven_day        : None,
     seven_day_sonnet : Some( PeriodUsage { utilization : 80.0, resets_at : None } ),
   };
-  apply_model_override( &quota, &paths, false, "usage", "test-account" );
+  apply_model_override( &quota, &paths, false, "usage", "test-account", claude_profile::account::AccountBackend::Anthropic );
   let content = std::fs::read_to_string( paths.settings_file() ).unwrap();
   assert!(
     content.contains( "\"effortLevel\"" ) && content.contains( "\"high\"" ),

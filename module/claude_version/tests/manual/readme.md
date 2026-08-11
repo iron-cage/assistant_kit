@@ -11,10 +11,10 @@ human verification or cannot be reliably automated in CI.
 
 ## Manual Test Scenarios
 
-### M-01: Network-unavailable path for `.version.history`
+### M-01: Network-unavailable path for `.version.list mode::history`
 
 - **Trigger:** disable network (e.g., `unshare -n`) and delete cache
-- **Expected:** exit 2, error message mentions network failure
+- **Expected:** exit 0; renders the compiled-in `VERSION_HISTORY` fallback snapshot; stderr carries a warning that the GitHub Releases API was unreachable
 - **Why manual:** Cannot reliably simulate network failure in CI without root-level sandbox
 
 ### M-02: Unilang help footer example (known P1 issue)

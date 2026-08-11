@@ -10,6 +10,7 @@
 //! - Environment variable names match Claude Code expectations
 //! - Values are correctly formatted (strings, booleans, numbers)
 
+use std::ffi::OsStr;
 use claude_runner_core::{ ClaudeCommand, ActionMode, LogLevel };
 
 #[test]
@@ -193,6 +194,62 @@ fn defaults_set_tier1_env_vars() {
   assert!( debug.contains( "CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS" ), "Default print_bg_wait_ceiling_ms not set" );
   assert!( debug.contains( "CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS=\"0\"" ), "Incorrect default print_bg_wait_ceiling_ms: expected 0" );
 }
+
+// ── CLAUDE_CODE_CHILD_SESSION removal ────────────────────────────────────────
+
+/// `CLAUDE_CODE_CHILD_SESSION` is stripped unconditionally from the subprocess env.
+///
+/// `clr` is always a top-level launcher — the marker must never propagate into the Claude
+/// Code session it spawns or that session emits a spurious "inherited marker" warning.
+/// Removal must happen even when `CLAUDECODE` is kept via `--keep-claudecode`.
+#[test]
+fn child_session_marker_always_removed_by_default()
+{
+  let built = ClaudeCommand::new().build_command_for_test();
+  let removed : Vec< &str > = built.get_envs()
+    .filter_map( | ( k, v ) | if v.is_none() { k.to_str() } else { None } )
+    .collect();
+  assert!(
+    removed.contains( &"CLAUDE_CODE_CHILD_SESSION" ),
+    "CLAUDE_CODE_CHILD_SESSION must be stripped by default; removal list: {removed:?}"
+  );
+}
+
+#[test]
+fn child_session_marker_removed_even_when_claudecode_kept()
+{
+  let built = ClaudeCommand::new()
+    .with_unset_claudecode( false )
+    .build_command_for_test();
+  let removed : Vec< &str > = built.get_envs()
+    .filter_map( | ( k, v ) | if v.is_none() { k.to_str() } else { None } )
+    .collect();
+  assert!(
+    removed.contains( &"CLAUDE_CODE_CHILD_SESSION" ),
+    "CLAUDE_CODE_CHILD_SESSION must be removed even when unset_claudecode=false; got: {removed:?}"
+  );
+  assert!(
+    !removed.contains( &"CLAUDECODE" ),
+    "CLAUDECODE must NOT be in removal list when unset_claudecode=false; got: {removed:?}"
+  );
+}
+
+#[test]
+fn claudecode_not_removed_when_unset_claudecode_false()
+{
+  let built = ClaudeCommand::new()
+    .with_unset_claudecode( false )
+    .build_command_for_test();
+  let removed_keys : Vec< _ > = built.get_envs()
+    .filter_map( | ( k, v ) | if v.is_none() { Some( k.to_owned() ) } else { None } )
+    .collect();
+  assert!(
+    !removed_keys.iter().any( | k | k == OsStr::new( "CLAUDECODE" ) ),
+    "CLAUDECODE must NOT be removed when unset_claudecode=false"
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 #[test]
 fn defaults_do_not_set_tier2_tier3_env_vars() {

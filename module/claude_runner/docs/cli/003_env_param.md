@@ -65,7 +65,7 @@ invalid values (parse failure → field stays at default). Exception: `CLR_RETRY
 | 27 | `CLR_OUTPUT_FILE` | [`--output-file`](param/029_output_file.md) | string | `"output-file"` | Applied when `--output-file` absent; value is the output file path |
 | 28 | `CLR_EXPECT` | [`--expect`](param/030_expect.md) | string | `"expect"` | Applied when `--expect` absent; same `val1\|val2\|…` syntax |
 | 29 | `CLR_EXPECT_STRATEGY` | [`--expect-strategy`](param/031_expect_strategy.md) | string | `"expect-strategy"` | Applied when `--expect-strategy` absent; accepts `fail`, `retry`, or `default:<V>` |
-| 30 | `CLR_MAX_SESSIONS` | [`--max-sessions`](param/033_max_sessions.md) | u32 | `"max-sessions"` | Applied when `--max-sessions` absent; invalid values silently ignored (parse failure → field stays at default 6) |
+| 30 | `CLR_MAX_SESSIONS` | [`--max-sessions`](param/033_max_sessions.md) | u32 | `"max-sessions"` | Applied when `--max-sessions` absent; invalid values silently ignored (parse failure → field stays at default 8) |
 | 31 | `CLR_RETRY_ON_TRANSIENT` | [`--retry-on-transient`](param/034_retry_on_transient.md) | u8 | `"retry-on-transient"` | Transient class retry count (Tier 2); default auto → fallback |
 | 32 | `CLR_TRANSIENT_DELAY` | [`--transient-delay`](param/035_transient_delay.md) | u32 | `"transient-delay"` | Transient class delay (Tier 2); default auto → fallback |
 | 33 | `CLR_TIMEOUT` | [`--timeout`](param/036_timeout.md) | u32 | `"timeout"` | Applied when `--timeout` absent; `0` = unlimited (no watchdog); invalid values silently ignored. **Cross-command:** also applies to `isolated`/`refresh` via Section 2 (same semantics: `0` = unlimited) |
@@ -201,20 +201,20 @@ generate in a single turn.
 
 - **Source parameter:** [`--max-tokens`](param/009_max_tokens.md)
 - **Type:** u32 (serialized as decimal string)
-- **Default:** `200000`
+- **Default:** `128000`
 - **Mechanism:** injected via `std::process::Command::env("CLAUDE_CODE_MAX_OUTPUT_TOKENS", value.to_string())`
 - **Scope:** subprocess-only; not visible to or read by `clr` itself
 
 **Precedence:**
 
 1. Explicit `--max-tokens <N>` CLI value (overrides default)
-2. Built-in default `200000` (when `--max-tokens` is absent)
+2. Built-in default `128000` (when `--max-tokens` is absent)
 
 **Discovery:** Use `--dry-run` or `--trace` to see the current value in the
 assembled environment before subprocess invocation.
 
 ```sh
-clr --dry-run "test"                         # shows: CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000
+clr --dry-run "test"                         # shows: CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000
 clr --max-tokens 50000 --dry-run "test"      # shows: CLAUDE_CODE_MAX_OUTPUT_TOKENS=50000
 ```
 
@@ -222,16 +222,24 @@ clr --max-tokens 50000 --dry-run "test"      # shows: CLAUDE_CODE_MAX_OUTPUT_TOK
 
 ### Env Param 5: Gate Runtime Configuration
 
-Runtime configuration overrides for the `--max-sessions` concurrency gate (`gate.rs`). None
-of the four variables has a corresponding CLI flag or `--args-file` JSON key — env-var-only,
-matching the `CLR_PS_ANCIENT_SECS`/`CLR_PS_HIGH_RAM_MB` precedent (Env Param 3).
+<!-- BUG-481 task/claude_runner/bug/481_silent_off_env_protection_boundary.md — fixed: CLR_REMAINING_TIMEOUT_SECS row added to the table below (env-var-only, 1-tier), restoring the discovery path param/085 cross-references -->
+Runtime configuration overrides for the `--max-sessions` concurrency gate (`gate.rs`), which gates
+`run`, `ask`, **and** `isolated` (previously `run`/`ask` only — `isolated` was fixed to route
+through the same mechanism; see [user_story/025_concurrency_gate.md](user_story/025_concurrency_gate.md)).
+`CLR_GATE_DIR` remains env-var-only across all three commands, matching the
+`CLR_PS_ANCIENT_SECS`/`CLR_PS_HIGH_RAM_MB` precedent (Env Param 3). The other 3 variables now
+differ by command: `run`/`ask` resolve them through the full 5-tier `CliArgs` chain (CLI flag +
+JSON key + env var + config file + default); `isolated` resolves them one-shot, env-var-only (no
+CLI flag, JSON key, or config-file tier), consistent with `isolated`'s narrower parameter surface
+elsewhere.
 
 | Variable | Default | Type | Notes |
 |----------|---------|------|-------|
-| `CLR_GATE_DIR` | `/tmp/clr-gate` | path | Gate state directory; read by `gate_dir()` in `gate.rs`, called directly by `ps.rs` |
-| `CLR_GATE_POLL_SECS` | `30` | u64 | Poll interval between gate attempts; read by `gate_poll_secs()` in `gate.rs`; invalid values silently fall back to `30` |
-| `CLR_GATE_MAX_ATTEMPTS` | `1000` | u32 | Attempt limit before gate exhaustion; read by `gate_max_attempts()` in `gate.rs`; invalid values silently fall back to `1000` |
-| `CLR_GATE_STALE_SECS` | unset (`None`) | u64, optional | Staleness threshold for reclaiming a live-but-stalled slot owner; read by `gate_stale_secs()` in `gate.rs`; unset or invalid values resolve to `None` (feature off) — a live owner denies unconditionally, exactly as before this variable existed; never a numeric fallback (BUG-400) |
+| `CLR_GATE_DIR` | `/tmp/clr-gate` | path | Gate state directory; read by `gate_dir()` in `gate.rs`, called directly by `ps.rs`. No CLI flag/JSON/config tier for any command. |
+| `CLR_GATE_POLL_SECS` | `30` | u64 | Poll interval between gate attempts; read by `gate_poll_secs()`/`gate_poll_secs_from()` in `gate.rs`; invalid values silently fall back to `30`. `run`/`ask`: also settable via `--gate-poll-secs` CLI flag, `"gate-poll-secs"` JSON key, `gate_poll_secs` config key. `isolated`: env var + default only. |
+| `CLR_GATE_MAX_ATTEMPTS` | `1000` | u32 | Attempt limit before gate exhaustion; read by `gate_max_attempts()`/`gate_max_attempts_from()` in `gate.rs`; invalid values silently fall back to `1000`. `run`/`ask`: also settable via `--gate-max-attempts` CLI flag, `"gate-max-attempts"` JSON key, `gate_max_attempts` config key. `isolated`: env var + default only. |
+| `CLR_GATE_STALE_SECS` | unset (`None`) | u64, optional | Staleness threshold for reclaiming a live-but-stalled slot owner; read by `gate_stale_secs()`/`gate_stale_secs_from()` in `gate.rs`; unset or invalid values resolve to `None` (feature off) — a live owner denies unconditionally, exactly as before this variable existed; never a numeric fallback (BUG-400). The resolved on/off state is announced once per waiting gate entry in the `gate-deadline` line's `stale-reclaim` segment (BUG-481). `run`/`ask`: also settable via `--gate-stale-secs` CLI flag, `"gate-stale-secs"` JSON key, `gate_stale_secs` config key. `isolated`: env var + default only. |
+| `CLR_REMAINING_TIMEOUT_SECS` | unset (`None`) | u64, optional | Remaining external timeout budget (seconds), set by a wrapping job runner before spawning `clr` — not by an operator configuring `clr` itself; clamps the gate's effective attempt ceiling to `floor(remaining / poll_secs).max(1)` so gate-wait cannot outlive the external deadline. Read by `effective_gate_attempts()` in `gate.rs`. Env-var-only for ALL commands (no CLI flag, JSON key, or config tier — deliberately 1-tier, unlike the 3 knobs above). Unset or unparseable resolves to `None` (clamp off); the resolution state (off-unset / off-unparseable with raw value / nonlimiting / engaged) is announced once per waiting gate entry via the `gate-deadline` stderr line (BUG-481). See [param/085_gate_remaining_timeout_secs.md](param/085_gate_remaining_timeout_secs.md). |
 
 **`CLR_GATE_DIR`:** Overrides the default gate state directory used by `gate.rs` (write) and
 `ps.rs` (read). When a `clr` process is blocked at the `--max-sessions` concurrency gate,
@@ -240,21 +248,32 @@ to populate the queued CLR processes table. Primary use: test isolation — over
 to point at a temp dir, preventing cross-test contamination from real gate files in
 `/tmp/clr-gate/`.
 
-**`CLR_GATE_POLL_SECS` / `CLR_GATE_MAX_ATTEMPTS`:** Override the gate's poll interval and
-attempt limit (production default: 30s x 1000 attempts). `clr` sleeps `poll_secs` between
-attempts but **not after the final attempt** — an `N`-attempt sequence elapses `(N-1) *
-poll_secs` seconds before the gate-exhaustion path fires, since there is no reason to sleep
-immediately before giving up. Exhaustion is then subject to further Runner-class retry via
-`--retry-on-runner`/`--retry-override` (see [param/033_max_sessions.md](param/033_max_sessions.md)
-and [param/054_retry_override.md](param/054_retry_override.md)) before `clr` actually exits.
-Primary use: automation pipelines that want the gate to fail fast instead of waiting up to
-~500 minutes (999 x 30s) for the production defaults.
+**`CLR_GATE_POLL_SECS` / `CLR_GATE_MAX_ATTEMPTS` — `run`/`ask` (5-tier):** For `run` and `ask`,
+these resolve through the same 5-level chain as any other `CliArgs` field: `--gate-poll-secs`/
+`--gate-max-attempts` CLI flag > `"gate-poll-secs"`/`"gate-max-attempts"` JSON key (`--args-file`)
+> `CLR_GATE_POLL_SECS`/`CLR_GATE_MAX_ATTEMPTS` env var > `gate_poll_secs`/`gate_max_attempts`
+config-file key > built-in default (30s / 1000). `clr` sleeps `poll_secs` between attempts but
+**not after the final attempt** — an `N`-attempt sequence elapses `(N-1) * poll_secs` seconds
+before the gate-exhaustion path fires, since there is no reason to sleep immediately before giving
+up. Exhaustion is then subject to further Runner-class retry via `--retry-on-runner`/
+`--retry-override` (see [param/033_max_sessions.md](param/033_max_sessions.md) and
+[param/054_retry_override.md](param/054_retry_override.md)) before `clr` actually exits. Primary
+use: automation pipelines that want the gate to fail fast instead of waiting up to ~500 minutes
+(999 x 30s) for the production defaults.
 
 ```sh
+clr --max-sessions 1 --gate-poll-secs 5 --gate-max-attempts 12 --retry-override 0 "task"
+# CLI-flag form: gate exhausts after ~55s (11 sleeps x 5s) instead of ~29970s (999 x 30s)
 CLR_GATE_POLL_SECS=5 CLR_GATE_MAX_ATTEMPTS=12 clr --max-sessions 1 --retry-override 0 "task"
-# gate exhausts after ~55s (11 sleeps x 5s) instead of ~29970s (999 x 30s); --retry-override 0
-# disables the runner-retry wrapper so exhaustion surfaces on the first pass
+# env-var form: same effect; --retry-override 0 disables the runner-retry wrapper so
+# exhaustion surfaces on the first pass
 ```
+
+**`CLR_GATE_POLL_SECS` / `CLR_GATE_MAX_ATTEMPTS` — `isolated` (env-var-only):** `isolated`
+resolves these 2 variables one-shot via direct `gate_poll_secs_from()`/`gate_max_attempts_from()`
+calls inside `gate_isolated_session()` — no `--gate-poll-secs`/`--gate-max-attempts` CLI flag, no
+JSON key, no config-file tier. `--max-sessions` for `isolated` is a 3-tier chain (CLI flag + `"max-sessions"` JSON key via
+`--args-file` + `CLR_MAX_SESSIONS` env var — no config-file tier; see [param/033_max_sessions.md](param/033_max_sessions.md)).
 
 **`CLR_GATE_STALE_SECS`:** Opt-in staleness threshold for reclaiming a slot from a live-but-stalled
 owner (hung, deadlocked, or `SIGSTOP`ped — a process that never releases its slot but is not dead
@@ -267,7 +286,10 @@ hung-but-alive session could hold its slot forever with no escape hatch (see
 `docs/invariant/012_gate_slot_atomicity.md` Provenance : BUG-400). Unlike `CLR_GATE_POLL_SECS` /
 `CLR_GATE_MAX_ATTEMPTS`, an invalid value does **not** fall back to a numeric default — it resolves
 to `None`, the same as unset, because there is no safe universal staleness threshold that would not
-risk reclaiming a legitimately long-running session.
+risk reclaiming a legitimately long-running session. For `run`/`ask` this resolves through the same
+5-tier chain as the other 2 knobs (`--gate-stale-secs` CLI flag > `"gate-stale-secs"` JSON key >
+`CLR_GATE_STALE_SECS` env var > `gate_stale_secs` config key > `None` default); for `isolated` it
+remains env-var-only, same as `CLR_GATE_POLL_SECS`/`CLR_GATE_MAX_ATTEMPTS` above.
 
 ```sh
 CLR_GATE_STALE_SECS=1800 clr --max-sessions 3 "task"
@@ -275,12 +297,14 @@ CLR_GATE_STALE_SECS=1800 clr --max-sessions 3 "task"
 # indefinitely; a fresher owner (elapsed <= 1800s) is unaffected and still denies normally
 ```
 
-**Commands affected:** `run` / `ask` only (`gate.rs` is invoked only from those two commands)
-— `CLR_GATE_DIR` is the sole exception, additionally read by `ps` for display.
+**Commands affected:** `run`, `ask`, **and** `isolated` (`gate.rs` is now invoked from all three —
+`isolated` previously bypassed the concurrency gate entirely; that gap is closed). `CLR_GATE_DIR`
+is additionally read by `ps` for display.
 
-**No precedence rule** — all four variables are always applied; there is no corresponding
-CLI flag or JSON key for any of them. `CLR_GATE_STALE_SECS` differs only in that its
-"always applied" default is the disabled state (`None`), not a numeric fallback.
+**Precedence:** `CLR_GATE_DIR` has no precedence rule — always applied, no CLI flag/JSON/config
+tier for any command. `CLR_GATE_POLL_SECS`/`CLR_GATE_MAX_ATTEMPTS`/`CLR_GATE_STALE_SECS` have a
+full 5-level precedence chain for `run`/`ask` (see [config_param.md](config_param.md)); for
+`isolated` they remain env-var + default only, with no competing tiers.
 
 ---
 

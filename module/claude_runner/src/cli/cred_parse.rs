@@ -12,8 +12,9 @@
 //! unify the types without updating all struct fields and callers.
 
 use claude_core::paths::ClaudePaths;
+use claude_runner_core::EffortLevel;
 use error_tools::{ Error, Result };
-use super::parse::next_value;
+use super::parse::{ next_value, parse_u32_flag };
 use super::env::{ env_bool, env_str };
 
 /// Parsed arguments for the `isolated` subcommand.
@@ -40,6 +41,19 @@ pub( super ) struct IsolatedArgs
   pub( super ) summary_fields   : Option< String >,
   pub( super ) args_file         : Option< String >,
   pub( super ) no_compact_window : bool,
+  pub( super ) max_sessions      : Option< u32 >,
+  pub( super ) model                 : Option< String >,
+  pub( super ) effort                : Option< EffortLevel >,
+  pub( super ) no_effort_max         : bool,
+  pub( super ) system_prompt         : Option< String >,
+  pub( super ) append_system_prompt  : Option< String >,
+  pub( super ) json_schema           : Option< String >,
+  pub( super ) mcp_config            : Vec< String >,
+  pub( super ) allowed_tools         : Option< String >,
+  pub( super ) disallowed_tools      : Option< String >,
+  pub( super ) max_budget_usd        : Option< String >,
+  pub( super ) max_turns             : Option< String >,
+  pub( super ) no_chrome             : bool,
 }
 
 /// Parsed arguments for the `refresh` subcommand.
@@ -122,6 +136,7 @@ fn apply_cred_env_vars(
 /// Recognises `--creds <FILE>`, `--timeout <SECS>`, a positional `[MESSAGE]`,
 /// and `-- <PASSTHROUGH...>`. Everything after `--` is collected verbatim.
 /// Unknown flags (before `--`) are rejected with an error.
+#[ allow( clippy::too_many_lines ) ] // mechanical dispatch — one arm per CLI flag token
 pub( super ) fn parse_isolated_args( tokens : &[ String ] ) -> Result< IsolatedArgs >
 {
   let mut args          = IsolatedArgs { timeout_secs : 30, ..Default::default() };
@@ -207,6 +222,67 @@ pub( super ) fn parse_isolated_args( tokens : &[ String ] ) -> Result< IsolatedA
         args.args_file = Some( next_value( tokens, i + 1, "--args-file" )?.to_string() );
         i += 1;
       }
+      "--max-sessions" =>
+      {
+        args.max_sessions = Some(
+          parse_u32_flag( next_value( tokens, i + 1, "--max-sessions" )?, "--max-sessions", " (0 = unlimited)" )?
+        );
+        i += 1;
+      }
+      "--model" =>
+      {
+        args.model = Some( next_value( tokens, i + 1, "--model" )?.to_string() );
+        i += 1;
+      }
+      "--effort" =>
+      {
+        args.effort = Some(
+          next_value( tokens, i + 1, "--effort" )?.parse::< EffortLevel >().map_err( Error::msg )?
+        );
+        i += 1;
+      }
+      "--no-effort-max" => { args.no_effort_max = true; }
+      "--system-prompt" =>
+      {
+        args.system_prompt = Some( next_value( tokens, i + 1, "--system-prompt" )?.to_string() );
+        i += 1;
+      }
+      "--append-system-prompt" =>
+      {
+        args.append_system_prompt = Some( next_value( tokens, i + 1, "--append-system-prompt" )?.to_string() );
+        i += 1;
+      }
+      "--json-schema" =>
+      {
+        args.json_schema = Some( next_value( tokens, i + 1, "--json-schema" )?.to_string() );
+        i += 1;
+      }
+      "--mcp-config" =>
+      {
+        args.mcp_config.push( next_value( tokens, i + 1, "--mcp-config" )?.to_string() );
+        i += 1;
+      }
+      "--allowed-tools" =>
+      {
+        args.allowed_tools = Some( next_value( tokens, i + 1, "--allowed-tools" )?.to_string() );
+        i += 1;
+      }
+      "--disallowed-tools" =>
+      {
+        args.disallowed_tools = Some( next_value( tokens, i + 1, "--disallowed-tools" )?.to_string() );
+        i += 1;
+      }
+      "--max-budget-usd" =>
+      {
+        args.max_budget_usd = Some( next_value( tokens, i + 1, "--max-budget-usd" )?.to_string() );
+        i += 1;
+      }
+      "--max-turns" =>
+      {
+        args.max_turns = Some( next_value( tokens, i + 1, "--max-turns" )?.to_string() );
+        i += 1;
+      }
+      "--no-chrome" => { args.no_chrome = true; }
       // Fix(BUG-222): explicit --help arm prevents catch-all from swallowing help flags.
       // Root cause: no --help arm in subcommand parser; catch-all returned Err.
       // Pitfall: always add --help before the starts_with('-') catch-all.
@@ -232,7 +308,11 @@ pub( super ) fn parse_isolated_args( tokens : &[ String ] ) -> Result< IsolatedA
 
 /// Apply `CLR_CREDS`, `CLR_TIMEOUT`, `CLR_TRACE`, `CLR_DIR`, `CLR_ADD_DIR`,
 /// `CLR_JOURNAL`, `CLR_JOURNAL_DIR`, `CLR_OUTPUT_FILE`, `CLR_STRIP_FENCES`,
-/// `CLR_OUTPUT_STYLE`, and `CLR_SUMMARY_FIELDS` env var fallbacks for `isolated`.
+/// `CLR_OUTPUT_STYLE`, `CLR_SUMMARY_FIELDS`, `CLR_MAX_SESSIONS`, `CLR_MODEL`,
+/// `CLR_EFFORT`, `CLR_NO_EFFORT_MAX`, `CLR_SYSTEM_PROMPT`, `CLR_APPEND_SYSTEM_PROMPT`,
+/// `CLR_JSON_SCHEMA`, `CLR_MCP_CONFIG`, `CLR_ALLOWED_TOOLS`, `CLR_DISALLOWED_TOOLS`,
+/// `CLR_MAX_BUDGET_USD`, `CLR_MAX_TURNS`, and `CLR_NO_CHROME` env var fallbacks for
+/// `isolated`.
 ///
 /// Delegates to [`apply_cred_env_vars`] with isolated's timeout sentinel (30).
 pub( super ) fn apply_isolated_env_vars( parsed : &mut IsolatedArgs ) -> Result< () >
@@ -262,6 +342,31 @@ pub( super ) fn apply_isolated_env_vars( parsed : &mut IsolatedArgs ) -> Result<
   if parsed.output_style.is_none() { parsed.output_style = env_str( "CLR_OUTPUT_STYLE" ); }
   if parsed.summary_fields.is_none() { parsed.summary_fields = env_str( "CLR_SUMMARY_FIELDS" ); }
   if !parsed.no_compact_window { parsed.no_compact_window = env_bool( "CLR_NO_COMPACT_WINDOW" ); }
+  if parsed.max_sessions.is_none()
+  {
+    if let Some( v ) = env_str( "CLR_MAX_SESSIONS" ) { parsed.max_sessions = v.parse::< u32 >().ok(); }
+  }
+  if parsed.model.is_none() { parsed.model = env_str( "CLR_MODEL" ); }
+  if parsed.effort.is_none()
+  {
+    if let Some( v ) = env_str( "CLR_EFFORT" ) { parsed.effort = v.parse::< EffortLevel >().ok(); }
+  }
+  if !parsed.no_effort_max { parsed.no_effort_max = env_bool( "CLR_NO_EFFORT_MAX" ); }
+  if parsed.system_prompt.is_none() { parsed.system_prompt = env_str( "CLR_SYSTEM_PROMPT" ); }
+  if parsed.append_system_prompt.is_none()
+  {
+    parsed.append_system_prompt = env_str( "CLR_APPEND_SYSTEM_PROMPT" );
+  }
+  if parsed.json_schema.is_none() { parsed.json_schema = env_str( "CLR_JSON_SCHEMA" ); }
+  if parsed.mcp_config.is_empty()
+  {
+    if let Some( v ) = env_str( "CLR_MCP_CONFIG" ) { parsed.mcp_config.push( v ); }
+  }
+  if parsed.allowed_tools.is_none() { parsed.allowed_tools = env_str( "CLR_ALLOWED_TOOLS" ); }
+  if parsed.disallowed_tools.is_none() { parsed.disallowed_tools = env_str( "CLR_DISALLOWED_TOOLS" ); }
+  if parsed.max_budget_usd.is_none() { parsed.max_budget_usd = env_str( "CLR_MAX_BUDGET_USD" ); }
+  if parsed.max_turns.is_none() { parsed.max_turns = env_str( "CLR_MAX_TURNS" ); }
+  if !parsed.no_chrome { parsed.no_chrome = env_bool( "CLR_NO_CHROME" ); }
   Ok( () )
 }
 

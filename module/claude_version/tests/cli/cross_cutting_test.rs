@@ -7,7 +7,7 @@
 //! | TC  | Description | P/N | Exit |
 //! |-----|-------------|-----|------|
 //! | 250 | `dry::1 force::1` on `.version.install` → dry wins | P | 0 |
-//! | 251 | `dry::1 force::1` on `.processes.kill` → dry wins | P | 0 |
+//! | 251 | `dry::1 force::1` on `.ps.kill` → dry wins | P | 0 |
 //! | 252 | `dry::1` on `.settings.set` → dry wins, no write | P | 0 |
 //!
 //! ## F2: Verbosity Parity
@@ -41,11 +41,11 @@ fn tc250_version_install_dry_force_dry_wins()
   assert!( text.contains( "[dry-run]" ), "dry must win over force: {text}" );
 }
 
-// TC-251: dry::1 force::1 on .processes.kill → dry wins
+// TC-251: dry::1 force::1 on .ps.kill → dry wins
 #[ test ]
-fn tc251_processes_kill_dry_force_dry_wins()
+fn tc251_ps_kill_dry_force_dry_wins()
 {
-  let out = run_clv( &[ ".processes.kill", "dry::1", "force::1" ] );
+  let out = run_clv( &[ ".ps.kill", "dry::1", "force::1" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!(

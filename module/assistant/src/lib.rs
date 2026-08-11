@@ -30,7 +30,7 @@ use generated::AGGREGATED_COMMANDS;
 mod cli
 {
   use super::AGGREGATED_COMMANDS;
-  use claude_version::adapter::argv_to_unilang_tokens;
+  use claude_version::adapter::{ argv_to_unilang_tokens, HelpMode };
   use unilang::data::{ CommandDefinition, ErrorCode, ErrorData, OutputData };
   use unilang::interpreter::{ ExecutionContext, Interpreter };
   use unilang::parser::{ Parser, UnilangParserOptions };
@@ -117,6 +117,7 @@ mod cli
     claude_profile::register_commands( &mut registry );
     claude_runner::register_commands( &mut registry );
     claude_storage::register_commands( &mut registry );
+    claude_journal_viewer::register_commands( &mut registry );
     register_static_commands( &mut registry );
     registry
   }
@@ -151,8 +152,7 @@ mod cli
             CommandEntry { name : ".version.show".to_string(),    desc : "Show current Claude Code version".to_string() },
             CommandEntry { name : ".version.install".to_string(), desc : "Install a specific Claude Code version".to_string() },
             CommandEntry { name : ".version.guard".to_string(),   desc : "Guard minimum version requirement".to_string() },
-            CommandEntry { name : ".version.list".to_string(),    desc : "List available Claude Code versions".to_string() },
-            CommandEntry { name : ".version.history".to_string(), desc : "Show version installation history".to_string() },
+            CommandEntry { name : ".version.list".to_string(),    desc : "List version aliases or release history (mode::)".to_string() },
           ],
         },
         CommandGroup
@@ -172,8 +172,8 @@ mod cli
           entries : vec!
           [
             CommandEntry { name : ".status".to_string(),         desc : "Show overall system status".to_string() },
-            CommandEntry { name : ".processes".to_string(),      desc : "List running Claude processes".to_string() },
-            CommandEntry { name : ".processes.kill".to_string(), desc : "Kill running Claude processes".to_string() },
+            CommandEntry { name : ".ps".to_string(),      desc : "List running Claude processes".to_string() },
+            CommandEntry { name : ".ps.kill".to_string(), desc : "Kill running Claude processes".to_string() },
           ],
         },
         CommandGroup
@@ -275,7 +275,7 @@ mod cli
     .unwrap_or( "ast" )
     .to_owned();
 
-    let ( tokens, needs_help ) = match argv_to_unilang_tokens( argv )
+    let ( tokens, help_mode ) = match argv_to_unilang_tokens( argv )
     {
       Ok( r )  => r,
       Err( e ) =>
@@ -285,10 +285,20 @@ mod cli
       }
     };
 
-    if needs_help
+    match help_mode
     {
-      print_usage( &binary );
-      std::process::exit( 0 );
+      HelpMode::Global =>
+      {
+        print_usage( &binary );
+        std::process::exit( 0 );
+      }
+      HelpMode::Command( name ) =>
+      {
+        let registry = build_registry();
+        claude_version::print_command_help( &name, &registry );
+        std::process::exit( 0 );
+      }
+      HelpMode::None => {}
     }
 
     let registry = build_registry();

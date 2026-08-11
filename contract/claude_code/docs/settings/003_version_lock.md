@@ -35,13 +35,14 @@ Two keys written by `.version.install` on every successful exit (including idemp
 
 ### Install Sequence
 
-`.version.install` follows this order (`perform_install()`'s own doc comment: "hot-swap → unlock → curl → purge → lock"):
-1. If Claude processes are currently running: hot-swap the binary (`hot_swap_binary()`) — the old binary is removed so running sessions keep their open file descriptor (Unix semantics) while new sessions use the newly installed binary
-2. Unlock Layer 3: `chmod 755` on versions directory (`unlock_versions_dir()`)
-3. Run installer (downloads and installs binary)
-4. If pinned: purge all other cached binaries from the versions directory (`purge_stale_versions()`) — must run before Layer 3 is re-locked, since purging after `chmod 555` would fail
-5. If pinned: apply Layer 1 (`autoUpdates: false`), Layer 2 (`DISABLE_AUTOUPDATER=1`), Layer 4 (`autoUpdatesChannel="stable"`), Layer 5 (`minimumVersion=<resolved>`), Layer 6 (`DISABLE_UPDATES=1`), and re-lock Layer 3 (`chmod 555`) via `lock_version()`; if `latest`: reverse (`autoUpdates: true`, remove `DISABLE_AUTOUPDATER`/`DISABLE_UPDATES`/`autoUpdatesChannel`/`minimumVersion`, `chmod 755` to unlock)
-6. Write `preferredVersionSpec` and `preferredVersionResolved` to settings (`store_preferred_version()`, called after `perform_install()` returns success — including on the idempotent-skip path that never calls `perform_install()` at all)
+`.version.install` follows this order (`perform_install()`'s own doc comment: "settings-unlock → hot-swap → dir-unlock → curl → verify → purge → lock"):
+1. Lift settings-level lock keys (`unlock_settings_for_install()`) — removes `autoUpdates=false`, `DISABLE_AUTOUPDATER`, `DISABLE_UPDATES`, and `minimumVersion` from `settings.json` before the installer subprocess starts; the official installer reads `settings.json` at startup and refuses with "Updates are disabled by your administrator" (exit 0) if any of those keys are present (BUG-016)
+2. If Claude processes are currently running: hot-swap the binary (`hot_swap_binary()`) — the old binary is removed so running sessions keep their open file descriptor (Unix semantics) while new sessions use the newly installed binary
+3. Unlock Layer 3: `chmod 755` on versions directory (`unlock_versions_dir()`)
+4. Run installer (downloads and installs binary); outcome verified by `verify_install_outcome()` — only a confirmed install proceeds to steps 5 and 6 (prevents purge from running on a refused-install exit-0)
+5. If pinned: purge all other cached binaries from the versions directory (`purge_stale_versions()`) — must run before Layer 3 is re-locked, since purging after `chmod 555` would fail
+6. If pinned: apply Layer 1 (`autoUpdates: false`), Layer 2 (`DISABLE_AUTOUPDATER=1`), Layer 4 (`autoUpdatesChannel="stable"`), Layer 5 (`minimumVersion=<resolved>`), Layer 6 (`DISABLE_UPDATES=1`), and re-lock Layer 3 (`chmod 555`) via `lock_version()`; if `latest`: reverse (`autoUpdates: true`, remove `DISABLE_AUTOUPDATER`/`DISABLE_UPDATES`/`autoUpdatesChannel`/`minimumVersion`, `chmod 755` to unlock)
+7. Write `preferredVersionSpec` and `preferredVersionResolved` to settings (`store_preferred_version()`, called after `perform_install()` returns success — including on the idempotent-skip path that never calls `perform_install()` at all)
 
 ### Since
 
@@ -56,4 +57,4 @@ pre-v1.0 (unverified)
 | filesystem | [`../filesystem/002_local_install.md`](../filesystem/002_local_install.md) | `~/.local/share/claude/versions/` path and chmod operations |
 | doc | `../../../../module/claude_version/docs/pattern/001_version_lock.md` | Version lock pattern feature doc |
 | doc | [../pattern/001_version_pinning.md](../pattern/001_version_pinning.md) | Full official version-pinning landscape (channels, floors/ceilings, install methods) |
-| source | `../../../../module/claude_version_core/src/version.rs` | Version lock implementation: `lock_version()`, `unlock_versions_dir()`, called by `perform_install()` |
+| source | `../../../../module/claude_version_core/src/version.rs` | Version lock implementation: `lock_version()`, `unlock_versions_dir()`, `unlock_settings_for_install()`, `verify_install_outcome()`, called by `perform_install()` |

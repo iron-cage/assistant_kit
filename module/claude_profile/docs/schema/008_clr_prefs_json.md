@@ -1,6 +1,6 @@
 # Schema: CLR Preferences (`~/.clr/prefs.json`)
 
-> Deprecated: task 410 retired `~/.clr/prefs.json` — `.model.select` now stores the subprocess model preference as the `model` key in `~/.clr/config.toml`. Superseded by [claude_core/docs/api/002_toml_io.md](../../../claude_core/docs/api/002_toml_io.md). Content below describes the retired format for historical reference only.
+> Deprecated: task 410 retired `~/.clr/prefs.json` — the subprocess model preference is now stored as the `model` key in `~/.clr/config.toml`, written/read via `clp .model scope::subprocess` (Feature 035; formerly `.model.select`, retired — see [035_model_command.md](../feature/035_model_command.md)). Superseded by [claude_core/docs/api/002_toml_io.md](../../../claude_core/docs/api/002_toml_io.md). Content below describes the retired format for historical reference only.
 
 ### Scope
 

@@ -8,6 +8,7 @@
 [workspace]
 resolver = "2"
 members = [
+  "module/json_redact",
   "module/claude_journal",
   "module/claude_journal_viewer",
   "module/assistant_kit",
@@ -26,7 +27,6 @@ members = [
   "module/claude_quota",
   "module/dream",
   "module/assistant",
-  "module/runbox",
 ]
 exclude = [ "-*", "contract/claude_code", "contract/sdk" ]
 
@@ -95,6 +95,11 @@ missing_docs_in_private_items = "allow"
 incremental = false
 
 ## Internal workspace dependencies
+
+[workspace.dependencies.json_redact]
+path = "module/json_redact"
+version = "=0.1.0"
+default-features = false
 
 [workspace.dependencies.claude_journal]
 path = "module/claude_journal"
@@ -181,11 +186,6 @@ path = "module/claude_quota"
 version = "=0.3.1"
 default-features = false
 
-[workspace.dependencies.runbox]
-path = "module/runbox"
-version = "=1.5.1"
-default-features = false
-
 ## External — published companion crates
 
 [workspace.dependencies.error_tools]
@@ -193,12 +193,12 @@ version = "^0.41"
 default-features = false
 
 [workspace.dependencies.unilang]
-version = "^0.57"
+version = "^0.58"
 default-features = false
 
 [workspace.dependencies.cli_fmt]
-# Published companion crate (crates.io: cli_fmt ^0.11). Path removed — use registry version.
-version = "^0.11"
+# Published companion crate (crates.io: cli_fmt ^0.13). Path removed — use registry version.
+version = "^0.13"
 default-features = false
 
 [workspace.dependencies.data_fmt]

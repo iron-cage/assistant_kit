@@ -50,7 +50,7 @@ Edge case coverage for the `--keep-claudecode` flag. See [027_keep_claudecode.md
 
 - **Given:** clean environment
 - **When:** `clr --dry-run "task"` vs `clr --dry-run --keep-claudecode "task"`
-- **Then:** Default (`--dry-run`): last line of stdout starts with `"env -u CLAUDECODE claude ..."` (WYSIWYG: CLAUDECODE removal visible). With `--keep-claudecode`: last line starts with `"claude ..."` (no `env -u CLAUDECODE` prefix — removal suppressed)
+- **Then:** Default (`--dry-run`): last line of stdout starts with `"env -u CLAUDECODE -u CLAUDE_CODE_CHILD_SESSION claude ..."` (WYSIWYG: CLAUDECODE and CLAUDE_CODE_CHILD_SESSION removal visible). With `--keep-claudecode`: last line starts with `"env -u CLAUDE_CODE_CHILD_SESSION claude ..."` (CLAUDECODE removal suppressed; CLAUDE_CODE_CHILD_SESSION still stripped unconditionally — no flag suppresses it)
 - **Exit:** 0
 - **Source:** [--keep-claudecode](../../../../docs/cli/param/027_keep_claudecode.md)
 - **Commands:** run, ask

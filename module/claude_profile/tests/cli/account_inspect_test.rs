@@ -9,8 +9,8 @@
 //! No network access required.
 //!
 //! Live tests (names contain `lim_it`, ai14–ai24) require a real Anthropic
-//! OAuth access token. They are excluded from Docker CI by the nextest default
-//! filter `!test(lim_it)` in `.config/nextest.toml`. They skip automatically
+//! OAuth access token. No nextest filter excludes them — they run by default
+//! whenever ~/.claude is mounted (see `.config/nextest.toml`) and panic loudly
 //! when no token is present or the API is rate-limited.
 //!
 //! Tests use credentials WITHOUT `accessToken` (written by `write_account`)

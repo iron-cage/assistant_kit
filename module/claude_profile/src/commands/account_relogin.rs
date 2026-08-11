@@ -115,7 +115,10 @@ pub fn account_relogin_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   {
     // Persist the refreshed credentials into the account store.
     // Pass owner: None — preserve existing owner field unchanged (background save).
-    crate::account::save( &name, &credential_store, &paths, true, None, None, None, None )
+    crate::account::save(
+      &name, &credential_store, &paths, true, None, None, None, None,
+      crate::account::AccountBackend::Anthropic, None, None, None,
+    )
       .map_err( |e| io_err_to_error_data( &e, "account relogin: save" ) )?;
   }
 

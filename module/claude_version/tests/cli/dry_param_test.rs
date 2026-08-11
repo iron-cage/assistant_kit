@@ -16,15 +16,15 @@ fn dry_ec10_command_scope_rejects_on_read()
   assert_exit( &out, 1 );
 }
 
-/// EC-11: `dry::1` on `.processes.kill` → no kill, shows [dry-run]
+/// EC-11: `dry::1` on `.ps.kill` → no kill, shows [dry-run]
 #[ test ]
-fn dry_ec11_processes_kill_dry_run()
+fn dry_ec11_ps_kill_dry_run()
 {
-  let out = run_clv( &[ ".processes.kill", "dry::1" ] );
+  let out = run_clv( &[ ".ps.kill", "dry::1" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!( text.contains( "[dry-run]" ) || text.contains( "dry" ) || text.contains( "no active" ),
-    "dry-run on .processes.kill must show dry-run indicator or no-processes message: {text}" );
+    "dry-run on .ps.kill must show dry-run indicator or no-processes message: {text}" );
 }
 
 /// EC-12: `dry::1` on `.settings.set` → no file change
@@ -44,15 +44,15 @@ fn dry_ec12_settings_set_dry_no_file()
   assert!( !settings_path.exists(), "settings.json must NOT be created during dry-run" );
 }
 
-/// EC-13: `dry::1 force::1` on `.processes.kill` → dry wins
+/// EC-13: `dry::1 force::1` on `.ps.kill` → dry wins
 #[ test ]
-fn dry_ec13_processes_kill_dry_wins_over_force()
+fn dry_ec13_ps_kill_dry_wins_over_force()
 {
-  let out = run_clv( &[ ".processes.kill", "dry::1", "force::1" ] );
+  let out = run_clv( &[ ".ps.kill", "dry::1", "force::1" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!(
     text.contains( "[dry-run]" ) || text.contains( "dry" ) || text.contains( "no active" ),
-    "dry must win over force on .processes.kill: {text}"
+    "dry must win over force on .ps.kill: {text}"
   );
 }

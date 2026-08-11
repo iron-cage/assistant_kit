@@ -1,12 +1,13 @@
 # CLI Parameter: --interactive
 
 Opt into interactive TTY passthrough when a message is given. Without
-this flag, providing a message defaults to print mode (captured output).
-Use `--interactive` when you want live Claude streaming output while
+this flag, providing a message — or invoking `clr` with stdin that is not a terminal, or
+with `--file`/piped stdin content and no message — defaults to print mode (captured
+output). Use `--interactive` when you want live Claude streaming output while
 also providing an initial prompt.
 
 - **Type:** bool (standalone flag)
-- **Default:** false (print mode when message given)
+- **Default:** false (print mode when message given, stdin is not a terminal, or `--file`/piped stdin content is present)
 - **Command:** [`run`](../command/01_run.md)
 - **Group:** [Runner Control](../param_group/02_runner_control.md)
 - **JSON Key:** `"interactive"`
@@ -16,7 +17,26 @@ clr --interactive "Fix bug"               # TTY passthrough with initial prompt
 clr --interactive "Continue" --dir /proj  # interactive, specific directory
 ```
 
-**Note:** No effect when no message is given — bare `clr` is always interactive.
+**Note:** Still has an effect when no message is given: without `--interactive`, a bare
+`clr` invoked from a genuine terminal opens the interactive REPL, but the same bare
+invocation under non-TTY stdin (piped, redirected, non-interactive shell) routes to print
+mode instead (Fix(BUG-425)). `--interactive` forces the interactive/REPL route regardless
+of TTY state — it is the escape hatch for cases like resuming a prior session with no new
+message under non-TTY stdin, where print-mode routing would otherwise apply.
+
+**CWD-keyed session storage:** Claude Code stores sessions per working directory — sessions
+created from `docs/` live in a different project bucket than sessions created from the
+module root. If bare `clr` opens a fresh session despite prior history, check that your
+working directory matches the directory where those sessions were created. Workaround:
+`clr --session-from <dir>` (load sessions from that directory's bucket) or `clr --dir <dir>`
+(run as if CWD were that directory). BUG-435 tracks the companion issue that bare interactive
+`clr` also fails to inject `-c` even when the correct session is found.
+
+This override reaches only the three *inferred* print-mode triggers (message presence,
+non-TTY stdin, `--file`/stdin content) — it does not reach an explicitly requested print
+mode. `-p`/`--print`, `CLR_PRINT`, or JSON config `"print"` each settle the mode-selection
+question outright, so combining `--interactive` with any of them still routes to print
+mode (see [006_cli_design.md](../../feature/006_cli_design.md) § Design : Mode selection).
 
 ### Referenced Type
 

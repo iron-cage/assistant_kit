@@ -30,6 +30,8 @@
 //!     eprintln!( "expires in {}m", expires_in.as_secs() / 60 ),
 //!   token::TokenStatus::Expired =>
 //!     eprintln!( "token expired — run: claude auth login" ),
+//!   token::TokenStatus::Static =>
+//!     println!( "static API key — no expiry" ),
 //! }
 //! ```
 //!
@@ -78,6 +80,8 @@ pub mod registry;
 pub( crate ) mod owner_dispatch;
 #[ cfg( feature = "enabled" ) ]
 mod cli;
+#[ cfg( feature = "enabled" ) ]
+mod telemetry;
 
 pub use paths::ClaudePaths;
 pub use persist::PersistPaths;
@@ -102,5 +106,14 @@ pub fn run_cli()
 
   let argv : Vec< String > = std::env::args().skip( 1 ).collect();
 
-  cli::run( &binary, &argv );
+  let start       = std::time::Instant::now();
+  let exit_code   = cli::run( &binary, &argv );
+  let duration_ms = u64::try_from( start.elapsed().as_millis() ).unwrap_or( u64::MAX );
+
+  telemetry::record( &argv, exit_code, duration_ms );
+
+  if exit_code != 0
+  {
+    std::process::exit( exit_code );
+  }
 }

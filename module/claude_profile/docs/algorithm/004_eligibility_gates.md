@@ -3,8 +3,8 @@
 ### Scope
 
 - **Purpose**: Define the eligibility gate filter applied before next-account recommendation and auto-switch.
-- **Responsibility**: Documents all 9 eligibility gates, their skip conditions, and the `gate_ownership` context by call site.
-- **In Scope**: `find_first_eligible()` gates 1–6, 9; `extra` closure gates 7–8; `gate_ownership` semantics; `is_owned` definition; `claim_lock` unconditional exclusion (Gate 9).
+- **Responsibility**: Documents all 10 eligibility gates, their skip conditions, and the `gate_ownership` context by call site.
+- **In Scope**: `find_first_eligible()` gates 1–6, 9, 10; `extra` closure gates 7–8; `gate_ownership` semantics; `is_owned` definition; `claim_lock` unconditional exclusion (Gate 9); selected-provider unconditional exclusion (Gate 10).
 - **Out of Scope**: Positive selection after gating (→ algorithm/005); sort strategies, `reserve` leading sort key (→ algorithm/007); explicit-command `claim_lock` gate G9 (→ state_machine/004).
 
 ### Abstract
@@ -15,7 +15,7 @@ Filter candidates for next-account recommendation and auto-switch. An account is
 
 #### Entry Points
 
-- `src/usage/sort_next.rs:24-35` — `find_first_eligible()` (gates 1–6; **planned:** gate 9)
+- `src/usage/sort_next.rs:24-35` — `find_first_eligible()` (gates 1–6, 9, 10)
 - `src/usage/sort_next.rs:59` — `extra` closure passed by `find_next_for_strategy()` (gates 7–8)
 
 #### Gate Table
@@ -31,7 +31,8 @@ Filter candidates for next-account recommendation and auto-switch. An account is
 | 6 | Expired | `expires_at_ms / 1000 ≤ now_secs` | `sort_next.rs:31` |
 | 7 | Weekly-exhausted | `seven_day_left(aq) ≤ WEEKLY_EXHAUSTION_THRESHOLD` | `sort_next.rs:59` (extra) |
 | 8 | Foreign-owned | `is_owned = false AND gate_ownership = true` | `sort_next.rs:59` (extra) |
-| 9 | Claim-locked | `claim_lock = true` | `sort_next.rs` — inside `find_first_eligible()` (planned; unconditional, not part of `extra`) |
+| 9 | Claim-locked | `claim_lock = true` | `sort_next.rs` — inside `find_first_eligible()` (unconditional, not part of `extra`) |
+| 10 | Provider-mismatch | `inference_provider != selected_provider` | `sort_next.rs` — inside `find_first_eligible()` (unconditional, not part of `extra`) |
 
 #### Gate 8 Context — `gate_ownership` varies by call site
 
@@ -57,6 +58,12 @@ A claim-locked account cannot be selected by `find_next_for_strategy()` under an
 
 **Not the same as G9 (explicit-command):** the `claim_lock` field also gates `.account.use` and `.accounts assignee::` target-side via a *separate*, `force::1`-bypassable gate — see G9 in [state_machine/004_ownership_lifecycle.md](../state_machine/004_ownership_lifecycle.md). One field, two enforcement points with different bypass semantics: Gate 9 here (unconditional, automatic-selection path) vs. G9 there (bypassable, named-target path). See [feature/070_account_claim_and_reservation_control.md](../feature/070_account_claim_and_reservation_control.md) for the full picture.
 
+#### Gate 10 Context — unconditional, mirrors Gate 9
+
+Gate 10 (Provider-mismatch) fires unconditionally inside `find_first_eligible()`, exactly like Gate 9 (Claim-locked) — it is not part of the `extra` predicate and has no `force::1` bypass at the eligibility layer. The selected provider (`.provider.select`'s global config value, default `anthropic`) is a single static scalar — never a filter, never derived; only a manual `.provider.select id::` write changes it. An account tagged with a different `inference_provider` is categorically ineligible for rotation, not merely deprioritized: silently rotating into a different provider's account would switch billing/auth context without the user's explicit consent. `force::1` bypasses ownership (Gate 8) and other relative "who may act" concerns; it must never bypass a provider mismatch, since provider selection is a "which provider is active" concern, not an ownership concern.
+
+A provider-mismatched account cannot be selected by `find_next_for_strategy()` under any `force::1` combination — same absolute-exclusion property as Gate 3 and Gate 9. See [feature/072_inference_provider_selection.md](../feature/072_inference_provider_selection.md) for the full picture.
+
 #### `is_owned` Semantics
 
 `is_owned = true` when `owner` field is empty OR matches `current_identity()` (`{user}@{hostname}`). `is_owned = false` when a different machine owns the account. Source: `types.rs:193-195`.
@@ -69,6 +76,7 @@ A claim-locked account cannot be selected by `find_next_for_strategy()` under an
 | [feature/036_account_ownership.md](../feature/036_account_ownership.md) | `is_owned` field semantics |
 | [feature/061_solo_token_conservation.md](../feature/061_solo_token_conservation.md) | Solo gate (before G1 in fetch/refresh/touch) |
 | [feature/070_account_claim_and_reservation_control.md](../feature/070_account_claim_and_reservation_control.md) | Gate 9 (`claim_lock`, unconditional) — full properties table |
+| [feature/072_inference_provider_selection.md](../feature/072_inference_provider_selection.md) | Gate 10 (`inference_provider` mismatch, unconditional) — full properties table |
 
 ### Algorithms
 

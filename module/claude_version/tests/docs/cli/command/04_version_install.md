@@ -17,7 +17,6 @@ Integration test planning for the `.version.install` command. See [command/readm
 |-------|-------------|-------------------|
 | absent | Defaults to `stable` | Default behavior |
 | `stable` | Named alias (pinned) | Valid alias |
-| `month` | Named alias (pinned) | Valid alias |
 | `latest` | Named alias (dynamic) | Valid alias (special: no lock) |
 | `1.2.3` | Valid semver | Valid semver |
 | `2.1.50` | Valid semver (older) | Valid semver |
@@ -107,7 +106,6 @@ Boundary set: `0.0.0`, `latest`, two-part, leading-zeros.
 | IT-10 | `version::1.2.3 dry::1` → preview shows exact version | P | 0 | F1=semver, F2=1 | [mutation_version_install_test.rs] |
 | IT-2 | `dry::1 force::1` → dry wins | P | 0 | F2=1, F3=1, F4 | [mutation_version_install_test.rs] |
 | IT-11 | Absent `version::` with `dry::1` → uses `stable` | P | 0 | F1=absent, F2=1 | [mutation_version_install_test.rs] |
-| IT-12 | `version::month dry::1` → resolves to pinned semver (2.1.74) | P | 0 | F1=month, F2=1 | [mutation_version_install_test.rs] |
 | IT-13 | `version::latest dry::1` → autoUpdates=true in preview | P | 0 | F1=latest, F2=1, F5=unlock | [mutation_version_install_test.rs] |
 | IT-14 | `version::stable dry::1` → autoUpdates=false in preview | P | 0 | F1=stable, F2=1, F5=lock | [mutation_version_install_test.rs] |
 | IT-15 | `version::2.1.50 dry::1` → autoUpdates=false in preview | P | 0 | F1=semver, F2=1, F5=lock | [mutation_version_install_test.rs] |
@@ -322,16 +320,6 @@ IT-19 verifies dry-run has zero side effects on settings.
 
 ---
 
-### IT-12: `version::month dry::1` → resolves to pinned semver
-
-- **Given:** clean environment
-- **When:** `clv .version.install version::month dry::1`
-- **Then:** exit 0; stdout contains pinned semver for the `month` alias (e.g., `2.1.74`)
-- **Exit:** 0
-- **Source:** [feature/001_version_management.md](../../../../docs/feature/001_version_management.md)
-
----
-
 ### IT-13: `version::latest dry::1` → autoUpdates=true in preview
 
 - **Given:** clean environment
@@ -469,7 +457,6 @@ flakiness.
 | `tc306_version_install_two_part_semver_exits_1` | `tests/cli/mutation_version_install_test.rs` |
 | `tc307_version_install_unknown_alias_exits_1` | `tests/cli/mutation_version_install_test.rs` |
 | `tc308_version_install_absent_version_defaults_to_stable` | `tests/cli/mutation_version_install_test.rs` |
-| `tc309_version_install_dry_month` | `tests/cli/mutation_version_install_test.rs` |
 | `tc350_version_install_dry_latest_auto_updates_true` | `tests/cli/mutation_version_install_test.rs` |
 | `tc351_version_install_dry_stable_auto_updates_false` | `tests/cli/mutation_version_install_test.rs` |
 | `tc352_version_install_dry_semver_auto_updates_false` | `tests/cli/mutation_version_install_test.rs` |

@@ -131,3 +131,26 @@ pub fn json_escape( s : &str ) -> String
   }
   out
 }
+
+/// Strip trailing whitespace from every line of a rendered table.
+///
+/// `data_fmt` table formatters right-pad every column — including the last —
+/// to its computed column width, which leaves trailing spaces on any row
+/// whose final cell is shorter than that column's widest value. CLI output
+/// must not leak that padding.
+///
+/// # Examples
+///
+/// ```
+/// use claude_version::output::trim_trailing_whitespace;
+///
+/// assert_eq!( trim_trailing_whitespace( "a  \nb\n" ), "a\nb\n" );
+/// assert_eq!( trim_trailing_whitespace( "a  \nb" ),   "a\nb"   );
+/// ```
+#[ inline ]
+#[ must_use ]
+pub fn trim_trailing_whitespace( s : &str ) -> String
+{
+  let trimmed = s.lines().map( str::trim_end ).collect::< Vec< _ > >().join( "\n" );
+  if s.ends_with( '\n' ) { format!( "{trimmed}\n" ) } else { trimmed }
+}

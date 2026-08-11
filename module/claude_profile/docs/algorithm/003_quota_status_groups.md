@@ -21,16 +21,16 @@ Partition accounts into 4 fixed display groups for `.usage` output ordering and 
 
 | 5h Left | 7d Left | Condition | Group | Emoji | Display position |
 |---|---|---|---|---|---|
-| > 15% | > 5% | both available | Green | 🟢 | top |
-| ≤ 15% | > 5% | 5h gone, 7d ok | h-exhausted | 🟡 | 2nd |
-| — | ≤ 5% | 7d gone (any 5h) | weekly-exhausted | 🟡 | 3rd |
+| > 15% | > 3% | both available | Green | 🟢 | top |
+| ≤ 15% | > 3% | 5h gone, 7d ok | h-exhausted | 🟡 | 2nd |
+| — | ≤ 3% | 7d gone (any 5h) | weekly-exhausted | 🟡 | 3rd |
 | — | — | `result=Err` OR `billing_type="none"` | Dead | 🔴 | bottom |
 
 #### Thresholds
 
 ```
 5h threshold:  five_hour_left(aq) > 15.0    (15% of 5h window)
-7d threshold:  seven_day_left(aq) > 5.0     (5% of 7d window)
+7d threshold:  seven_day_left(aq) > 3.0     (3% of 7d window)
 ```
 
 `five_hour_left(aq)` = `100.0 - five_hour.utilization`.
@@ -42,7 +42,7 @@ Partition accounts into 4 fixed display groups for `.usage` output ordering and 
 
 #### Weekly-Exhausted Group (G3)
 
-Any account with `7d Left ≤ 5%` is G3 (weekly-exhausted 🟡), **regardless of 5h Left**. This includes accounts where both quotas are exhausted (`5h Left ≤ 15%` AND `7d Left ≤ 5%`): the 7d constraint is the binding factor. When the 7d resets, the 5h window will have already reset many times over (5h << 7 days), so both-exhausted accounts have identical recovery behavior to weekly-exhausted accounts. Fix(BUG-321): the former code mapped `( false, false )` to `StatusGroup::Red`, incorrectly classifying these recoverable accounts as dead.
+Any account with `7d Left ≤ 3%` is G3 (weekly-exhausted 🟡), **regardless of 5h Left**. This includes accounts where both quotas are exhausted (`5h Left ≤ 15%` AND `7d Left ≤ 3%`): the 7d constraint is the binding factor. When the 7d resets, the 5h window will have already reset many times over (5h << 7 days), so both-exhausted accounts have identical recovery behavior to weekly-exhausted accounts. Fix(BUG-321): the former code mapped `( false, false )` to `StatusGroup::Red`, incorrectly classifying these recoverable accounts as dead.
 
 #### Dead Accounts (G4)
 

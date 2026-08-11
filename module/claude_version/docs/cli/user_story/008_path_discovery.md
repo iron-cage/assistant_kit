@@ -7,17 +7,17 @@
 
 ### Acceptance Criteria
 
-- [ ] `clv .paths` lists all known paths with labels in a single view.
-- [ ] `clv .paths key::versions_dir` shows the single resolved path for that key.
-- [ ] `clv .paths v::0` outputs plain unlabeled paths suitable for piping.
-- [ ] `clv .paths format::json` returns the same paths as a JSON object for scripting.
+- [ ] `clv .version.paths` lists all known paths with labels in a single view.
+- [ ] `clv .version.paths key::versions_dir` shows the single resolved path for that key.
+- [ ] `clv .version.paths v::0` outputs plain unlabeled paths suitable for piping.
+- [ ] `clv .version.paths format::json` returns the same paths as a JSON object for scripting.
 - [ ] Unresolvable paths (e.g., `project_settings` outside a project) are labeled "(none found)" at v::1/v::2, and omitted entirely at v::0.
 
 ### Referenced Commands
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.paths`](../command/paths.md#command-16-paths) | Reports all clv-managed filesystem paths |
+| 1 | [`.version.paths`](../command/version.md#command-16-versionpaths) | Reports all clv-managed filesystem paths |
 
 ### Referenced Formats
 
@@ -45,7 +45,7 @@
 **Step 1 — List all known paths:**
 
 ```bash
-clv .paths
+clv .version.paths
 # settings:               /home/user/.claude/settings.json
 # project_settings:       (none found)
 # versions_dir:           /home/user/.local/share/claude/versions
@@ -56,13 +56,13 @@ clv .paths
 **Step 2 — Get a single path for scripting:**
 
 ```bash
-clv .paths key::versions_dir v::0
+clv .version.paths key::versions_dir v::0
 # /home/user/.local/share/claude/versions
 ```
 
 **Step 3 — Get machine-readable output:**
 
 ```bash
-clv .paths format::json
+clv .version.paths format::json
 # {"settings":"/home/user/.claude/settings.json","project_settings":null,"versions_dir":"/home/user/.local/share/claude/versions","binary_symlink":"/home/user/.local/bin/claude","version_history_cache":"/home/user/.claude/.transient/version_history_cache.json"}
 ```

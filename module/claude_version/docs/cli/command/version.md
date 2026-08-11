@@ -4,14 +4,14 @@
 
 - **Purpose**: Reference for version-namespace clv commands.
 - **Responsibility**: Command syntax, parameters, exit codes, and cross-references for all `.version.*` commands.
-- **In Scope**: `.version.show`, `.version.install`, `.version.guard`, `.version.list`, `.version.history`.
-- **Out of Scope**: Root commands (→ [root.md](root.md)), process commands (→ [processes.md](processes.md)), settings commands (→ [settings.md](settings.md)).
+- **In Scope**: `.version.show`, `.version.install`, `.version.guard`, `.version.list` (alias and release-history listing via `mode::`), `.version.paths` (filesystem path discovery), `.version.mark` (custom marker CRUD).
+- **Out of Scope**: Root commands (→ [root.md](root.md)), process commands (→ [ps.md](ps.md)), settings commands (→ [settings.md](settings.md)).
 
 ---
 
 ### Command :: 3. `.version.show`
 
-Print the currently installed Claude Code version by querying `claude --version`. Use this to verify what is currently installed before upgrading or troubleshooting.
+Print the currently installed Claude Code version by querying `claude --version`, and annotate it with any named aliases or custom markers that currently point to that version. Use this to verify what is currently installed and which symbolic names (if any) refer to it.
 
 -- **Parameters:** v::, format::
 -- **Exit Codes:** 0 (success) | 2 (binary not found)
@@ -26,18 +26,34 @@ clv.version.show [v::N] [format::FMT]
 
 | Parameter | Type | Default | Required | Purpose |
 |-----------|------|---------|----------|---------|
-| [`v::`](../param/04_v.md) | [`VerbosityLevel`](../type/01_verbosity_level.md) | 1 | No | Output detail level |
+| [`v::`](../param/04_v.md) | [`VerbosityLevel`](../type/01_verbosity_level.md) | 1 | No | Output detail level (0 = version only; 1 = version + inline labels; 2 = version + labeled detail) |
 | [`format::`](../param/05_format.md) | [`OutputFormat`](../type/02_output_format.md) | text | No | Output format |
 
-**Algorithm (2 steps):**
+**Algorithm (3 steps):**
 1. Invoke `claude --version` to detect the installed binary version string.
-2. Render the version string in the requested format.
+2. Resolve labels (skipped when `v::0`): read `settings.json` to check whether the preferred alias (`stable` or `latest`) resolves to the installed version; load `~/.claude/version-markers.json` and collect all custom marker names whose `value` equals the installed semver. Both sources are read locally — no network call.
+3. Render the version string and labels in the requested format.
+
+**Output by verbosity (text format):**
+
+| `v::` | Example output |
+|-------|---------------|
+| 0 | `2.1.220` |
+| 1 (default) | `2.1.220  [stable, team-pin]` (brackets omitted when no labels match) |
+| 2 | `version: 2.1.220` / `labels:  stable (builtin), team-pin (custom)` |
+
+**Output (JSON format, v::1):**
+```json
+{"version":"2.1.220","labels":[{"name":"stable","kind":"builtin"},{"name":"team-pin","kind":"custom","description":"Team-approved baseline"}]}
+```
 
 **Examples:**
 
 ```sh
 clv.version.show
 clv.version.show format::json
+clv.version.show v::0
+clv.version.show v::2
 ```
 
 ### Referenced Formats
@@ -66,9 +82,8 @@ clv.version.show format::json
 |---|---------|-------------|
 | 1 | [`.version.install`](#command-4-versioninstall) | Installs the version currently displayed |
 | 2 | [`.version.guard`](#command-5-versionguard) | Restores preferred version if drift detected |
-| 3 | [`.version.list`](#command-6-versionlist) | Lists aliases that may resolve to installed version |
-| 4 | [`.version.history`](#command-12-versionhistory) | Shows release history for version selection |
-| 5 | [`.status`](root.md#command-2-status) | Includes version in broader environment snapshot |
+| 3 | [`.version.list`](#command-6-versionlist) | Lists aliases or release history relevant to the installed version |
+| 4 | [`.status`](root.md#command-2-status) | Includes version in broader environment snapshot |
 
 ### Referenced User Stories
 
@@ -89,15 +104,15 @@ clv.version.show format::json
 
 ### Command :: 4. `.version.install`
 
-Download and install a Claude Code version via the official installer (curl). Supports hot-swap and 8-layer version locking (Layers 1–4, 6, and 8 prevent unwanted version changes via auto-update, manual update, or channel drift; Layer 5 stores the preferred version as a recovery signal for `.version.guard`; Layer 7 enforces a minimum-version floor). Accepts named aliases (`stable`, `latest`, `month`) and semver strings. Already-at-target is a no-op (exit 0) unless `force::1` is set.
+Download and install a Claude Code version via the official installer (curl). Supports hot-swap and 8-layer version locking (Layers 1–4, 6, and 8 prevent unwanted version changes via auto-update, manual update, or channel drift; Layer 5 stores the preferred version as a recovery signal for `.version.guard`; Layer 7 enforces a minimum-version floor). Accepts named aliases (`stable`, `latest`) and semver strings. Already-at-target is a no-op (exit 0) unless `force::1` is set. `record_only::1` persists the resolved preference to `settings.json` without invoking the installer at all — see Algorithm below.
 
--- **Parameters:** version::, dry::, force::, v::, format::
--- **Exit Codes:** 0 (success) | 1 (invalid version spec) | 2 (installer failure)
+-- **Parameters:** version::, dry::, force::, record_only::, v::, format::
+-- **Exit Codes:** 0 (success) | 1 (invalid version spec, or `record_only::1`+`dry::1` both set) | 2 (installer failure, or installer exited 0 without the requested version actually being installed — BUG-016)
 
 **Syntax:**
 
 ```sh
-clv.version.install [version::VER] [dry::1] [force::1] [v::N] [format::FMT]
+clv.version.install [version::VER] [dry::1] [force::1] [record_only::1] [v::N] [format::FMT]
 ```
 
 **Parameters:**
@@ -107,16 +122,24 @@ clv.version.install [version::VER] [dry::1] [force::1] [v::N] [format::FMT]
 | [`version::`](../param/01_version.md) | [`VersionSpec`](../type/03_version_spec.md) | stable | No | Version to install |
 | [`dry::`](../param/02_dry.md) | bool | false | No | Preview install command without executing |
 | [`force::`](../param/03_force.md) | bool | false | No | Bypass idempotency check |
+| [`record_only::`](../param/15_record_only.md) | bool | false | No | Persist preference only; skip the installer (mutually exclusive with `dry::`) |
 | [`v::`](../param/04_v.md) | [`VerbosityLevel`](../type/01_verbosity_level.md) | 1 | No | Output detail level |
 | [`format::`](../param/05_format.md) | [`OutputFormat`](../type/02_output_format.md) | text | No | Output format |
 
-**Algorithm (6 steps):**
-1. Resolve `version::` alias (`stable`, `latest`, `month`) or validate the semver string against known patterns.
+**Algorithm (7 steps):**
+0. If `record_only::1` and `dry::1` are both set, reject immediately (exit 1, `ArgumentMissing`) — the two are mutually exclusive.
+1. Resolve `version::` alias (`stable`, `latest`, or custom marker) or validate the semver string against known patterns.
 2. Compare resolved target against installed version; exit 0 (no-op) if equal and `force::0` — the preferred version is still stored on this path.
 3. Store the preferred version spec and resolved value in `settings.json`. Recorded before the lock mechanism is applied (step 6) so that a crash partway through install leaves a true, not false, mismatch signal in `.status`'s `Lock:` section — see `tests/docs/cli/command/02_status.md` IT-24–IT-27 and TC-530.
-4. Hot-swap the running binary if any Claude Code process is active, then unlock the versions directory so the installer can write to it.
-5. Execute the official curl installer for the resolved version; purge stale cached binaries afterward for pinned installs (skipped for `latest`, so version history remains available for rollback).
+4. Lift the settings-level update locks left by any previous pinned install (`autoUpdates`, `env.DISABLE_AUTOUPDATER`, `env.DISABLE_UPDATES`, `minimumVersion`) — the official installer honors them and would otherwise refuse while still exiting 0 (BUG-016). Hot-swap the running binary if any Claude Code process is active (moved aside to a `.preinstall` sidecar, restored if the install fails), then unlock the versions directory so the installer can write to it.
+5. Execute the official curl installer for the resolved version, then verify the outcome: the requested version must actually be detectable afterward — the installer's exit code alone is not trusted (BUG-016). On verification failure the command exits 2 and the purge/lock steps never run. On verified success, purge stale cached binaries for pinned installs (the purge itself refuses to run if the kept version file is absent; skipped entirely for `latest`, so version history remains available for rollback).
 6. Apply the lock mechanism for pinned installs — `autoUpdates`, `autoUpdatesChannel`, `minimumVersion`, `env.DISABLE_AUTOUPDATER`, `env.DISABLE_UPDATES`, and `chmod 555` on the versions directory — or leave unlocked (`autoUpdates` true, the other 4 keys removed, `chmod 755`) for `latest`.
+
+`record_only::1` short-circuits between steps 1 and 2: after resolving the version
+spec, it performs step 3's `settings.json` write directly — unconditionally,
+without the step 2 idempotency comparison — and returns. Steps 2, 4, 5, and 6
+never run: no hot-swap, no `curl`, no lock mechanism applied. `force::1` has
+nothing to bypass in this path and is silently ignored rather than rejected.
 
 **Examples:**
 
@@ -135,6 +158,12 @@ clv.version.install force::1
 
 # Install latest (no version pin — resolves dynamically)
 clv.version.install version::latest
+
+# Record "stable" as preferred without downloading/installing
+clv.version.install version::stable record_only::1
+
+# Rejected: record_only:: and dry:: are mutually exclusive
+clv.version.install version::stable record_only::1 dry::1
 ```
 
 ### Referenced Formats
@@ -158,8 +187,13 @@ clv.version.install version::latest
 | 1 | [`version::`](../param/01_version.md) |
 | 2 | [`dry::`](../param/02_dry.md) |
 | 3 | [`force::`](../param/03_force.md) |
-| 4 | [`v::`](../param/04_v.md) |
-| 5 | [`format::`](../param/05_format.md) |
+| 4 | [`record_only::`](../param/15_record_only.md) |
+| 5 | [`v::`](../param/04_v.md) |
+| 6 | [`format::`](../param/05_format.md) |
+
+### Referenced Command Group
+
+Evaluated against `.version.guard` (which invokes install logic on drift; see step 4 above) under the strict [command_group](../command_group/readme.md) identity test — does not qualify. `version_install_routine()` (`src/commands/version.rs:75`) and `version_guard_routine()` (`src/commands/version.rs:240`) never call each other directly; what they share is `perform_install()` and `validate_version_spec()`, both imported from the separate `claude_version_core` crate, not one routine calling the other. Parameter sets also differ (`.version.guard` adds `interval::` for watch mode, with no `.version.install` equivalent). See [`command_group/readme.md`](../command_group/readme.md) Evaluated, Not Qualifying for the full analysis.
 
 ### Related Commands
 
@@ -167,8 +201,7 @@ clv.version.install version::latest
 |---|---------|-------------|
 | 1 | [`.version.show`](#command-3-versionshow) | Verifies installed version after install |
 | 2 | [`.version.guard`](#command-5-versionguard) | Guards against drift from newly installed version |
-| 3 | [`.version.list`](#command-6-versionlist) | Lists version aliases before selecting a target |
-| 4 | [`.version.history`](#command-12-versionhistory) | Shows release history for version selection |
+| 3 | [`.version.list`](#command-6-versionlist) | Lists version aliases or release history before selecting a target |
 
 ### Referenced User Stories
 
@@ -289,6 +322,10 @@ clv.version.guard force::1
 | 5 | [`v::`](../param/04_v.md) |
 | 6 | [`format::`](../param/05_format.md) |
 
+### Referenced Command Group
+
+Evaluated against `.version.install` (see step 4 above: "invoke `.version.install` logic for the preferred version") under the strict [command_group](../command_group/readme.md) identity test — does not qualify. `version_guard_routine()` (`src/commands/version.rs:240`) shares no routine with `version_install_routine()` (`src/commands/version.rs:75`); both call `perform_install()`/`validate_version_spec()` from the separate `claude_version_core` crate, which is external-library sharing, not one routine invoking the other. `.version.guard` also adds `interval::` (watch mode) with no `.version.install` equivalent. See [`command_group/readme.md`](../command_group/readme.md) Evaluated, Not Qualifying for the full analysis.
+
 ### Related Commands
 
 | # | Command | Relationship |
@@ -316,33 +353,191 @@ clv.version.guard force::1
 
 ### Command :: 6. `.version.list`
 
-List all named version aliases (`stable`, `month`, `latest`) with their currently pinned values. These are compile-time constants; they do not query the network.
+List available version information: named version aliases with their pinned values (`mode::aliases`, default), or recent Claude Code release history from the GitHub Releases API (`mode::history`). Alias listing is a compile-time constant lookup — no network. History listing fetches from `anthropics/claude-code` releases (response cached locally for 1 hour). Use history mode to see what changed across recent versions, find when a specific fix landed, or review the full changelog for any release.
 
--- **Parameters:** v::, format::
--- **Exit Codes:** 0 (always)
+-- **Parameters:** mode::, count::, v::, format::
+-- **Exit Codes:** 0 (success, both modes — `mode::history` falls back to a compiled-in offline snapshot with a stderr advisory when the live fetch and cache both fail) | 2 (`mode::history`: HOME unset)
 
 **Syntax:**
 
 ```sh
-clv.version.list [v::N] [format::FMT]
+clv.version.list [mode::MODE] [count::N] [v::N] [format::FMT]
 ```
 
 **Parameters:**
 
 | Parameter | Type | Default | Required | Purpose |
 |-----------|------|---------|----------|---------|
+| [`mode::`](../param/14_mode.md) | [`ListMode`](../type/10_list_mode.md) | aliases | No | Select alias listing (local) or release-history listing (network) |
+| [`count::`](../param/09_count.md) | u64 | 10 | No | Number of recent releases to show (`mode::history` only; ignored under `mode::aliases`) |
 | [`v::`](../param/04_v.md) | [`VerbosityLevel`](../type/01_verbosity_level.md) | 1 | No | Output detail level |
 | [`format::`](../param/05_format.md) | [`OutputFormat`](../type/02_output_format.md) | text | No | Output format |
 
-**Algorithm (2 steps):**
-1. Load the compile-time version alias table (`stable`, `month`, `latest` → pinned semver values).
-2. Render the alias-to-version mapping in the requested format.
+**Algorithm, `mode::aliases` (3 steps):**
+1. Load the compile-time version alias table (`stable`, `latest` → pinned semver values).
+2. Load custom markers from `~/.claude/version-markers.json`.
+3. Render all aliases (built-in then custom) in the requested format.
+
+**Algorithm, `mode::history` (3 steps):**
+1. Check local 1-hour cache for GitHub Releases API response; fetch from `anthropics/claude-code` releases endpoint if stale or absent. If both the cache and the live fetch fail, fall back to a compiled-in `VERSION_HISTORY` snapshot (versions 2.1.74-2.1.220) and print a stderr advisory — HOME being unset is the only condition that still exits non-zero.
+2. Select the `count::N` most recent releases from the response payload.
+3. Render each release (tag, date, changelog summary) in the requested format.
 
 **Examples:**
 
 ```sh
+# Default: alias listing
 clv.version.list
 clv.version.list format::json
+
+# Release history
+clv.version.list mode::history
+clv.version.list mode::history count::3
+clv.version.list mode::history v::0
+clv.version.list mode::history count::1 v::2
+clv.version.list mode::history format::json count::5
+```
+
+### Referenced Formats
+
+| # | Format | Role |
+|---|--------|------|
+| 1 | [text](../format/01_text.md) | Default human-readable output |
+| 2 | [json](../format/02_json.md) | Machine-readable structured output |
+
+### Referenced Parameter Groups
+
+| # | Group | Membership | Excluded Params |
+|---|-------|-----------|----------------|
+| 1 | [Output Control](../param_group/01_output_control.md) | Full | — |
+
+### Referenced Parameters
+
+| # | Parameter |
+|---|-----------|
+| 1 | [`mode::`](../param/14_mode.md) |
+| 2 | [`count::`](../param/09_count.md) |
+| 3 | [`v::`](../param/04_v.md) |
+| 4 | [`format::`](../param/05_format.md) |
+
+### Related Commands
+
+| # | Command | Relationship |
+|---|---------|-------------|
+| 1 | [`.version.show`](#command-3-versionshow) | Shows which alias is currently installed |
+| 2 | [`.version.install`](#command-4-versioninstall) | Installs one of the listed aliases or a version found in history |
+| 3 | [`.version.guard`](#command-5-versionguard) | Guards against drift from a listed alias |
+
+### Referenced User Stories
+
+| # | User Story | Persona |
+|---|-----------|---------|
+| 1 | [002 Version Upgrade](../user_story/002_version_upgrade.md) | Developer (version upgrade) |
+| 2 | [005 Version Pinning](../user_story/005_version_pinning.md) | Team lead (version pinning) |
+
+---
+
+**Category:** version
+**Complexity:** 4
+**API Requirement:** Read
+**Idempotent:** Yes
+**Risk Level:** Low
+
+---
+
+### Command :: 12. `.version.history` (retired)
+
+**Retired** — merged into [`.version.list`](#command-6-versionlist) as `mode::history`. All release-history behavior, parameters, and examples now live under Command 6. This entry is preserved only to keep the global command numbering stable; do not implement or reference `.version.history` as a standalone command.
+
+---
+
+### Command :: 16. `.version.paths`
+
+Report filesystem paths clv reads from or writes to: settings files, the versions directory, the binary symlink, and internal caches. Read-only — does not create, modify, or delete any file. Complements `.runtime_files` (unlabeled, pipeline-only, reports only the version-history-cache path) by adding labels and descriptions, plus the versions directory, binary symlink, and settings paths that `.runtime_files` does not report.
+
+The operating mode is determined by whether `key::` is provided:
+
+| Mode | Parameters | Behavior |
+|------|------------|----------|
+| show-all | (none) | All known paths, one per line, labeled |
+| single | `key::K` | One resolved path for the given key |
+
+-- **Parameters:** key::, format::, v::
+-- **Exit Codes:** 0 (success) | 1 (invalid `key::` value) | 2 (HOME unset)
+
+**Syntax:**
+
+```sh
+clv.version.paths [key::K] [format::FMT] [v::N]
+```
+
+**Parameters:**
+
+| Parameter | Type | Default | Required | Purpose |
+|-----------|------|---------|----------|---------|
+| [`key::`](../param/06_key.md) | [`PathKey`](../type/09_path_key.md) | — | No | Specific path key for single-path mode |
+| [`format::`](../param/05_format.md) | [`OutputFormat`](../type/02_output_format.md) | text | No | Output format |
+| [`v::`](../param/04_v.md) | [`VerbosityLevel`](../type/01_verbosity_level.md) | 1 | No | Detail level: 0=plain paths only; 1=labeled (show-all mode only — single-key mode stays plain until v::2); 2=labeled+description |
+
+**`key::` values:**
+
+| Value | Path |
+|-------|------|
+| absent | Show all paths |
+| `settings` | `~/.claude/settings.json` |
+| `project_settings` | `<cwd>/.claude/settings.json` (nearest project config) |
+| `versions_dir` | `~/.local/share/claude/versions` |
+| `binary_symlink` | `~/.local/bin/claude` |
+| `version_history_cache` | `~/.claude/.transient/version_history_cache.json` |
+
+**Algorithm (show-all, 3 steps):**
+1. Resolve all 5 known paths via `ClaudeVersionPaths`.
+2. Text format: at v::0, drop any path that did not resolve (e.g., no project config found for `project_settings`); at v::1/v::2, keep it with a "(none found)" placeholder. JSON format: always includes all 5 keys, using `null` for any unresolved path, regardless of `v::`.
+3. Render the path table in requested format and verbosity.
+
+**Algorithm (single-path, 3 steps):**
+1. Validate `key::K` against the `PathKey` enum; exit 1 if unrecognized.
+2. Resolve the requested path via `ClaudeVersionPaths`.
+3. Render the single path (or placeholder, per verbosity) in requested format.
+
+**Examples:**
+
+```sh
+# Show all known clv-managed paths
+clv.version.paths
+
+# Single path for scripting
+clv.version.paths key::versions_dir v::0
+
+# Machine-readable output
+clv.version.paths format::json
+clv.version.paths key::settings format::json
+
+# Verbose output with descriptions
+clv.version.paths v::2
+```
+
+**Sample text output (v::1, `clv.version.paths`):**
+
+```
+settings:               /home/user/.claude/settings.json
+project_settings:       (none found)
+versions_dir:           /home/user/.local/share/claude/versions
+binary_symlink:         /home/user/.local/bin/claude
+version_history_cache:  /home/user/.claude/.transient/version_history_cache.json
+```
+
+**Sample text output (v::0, `clv.version.paths key::versions_dir`):**
+
+```
+/home/user/.local/share/claude/versions
+```
+
+**Sample text output (v::2, `clv.version.paths key::binary_symlink`):**
+
+```
+binary_symlink:  /home/user/.local/bin/claude
+  Hot-swap target; retargeted by .version.install to activate a version
 ```
 
 ### Referenced Formats
@@ -364,14 +559,127 @@ clv.version.list format::json
 |---|-----------|
 | 1 | [`v::`](../param/04_v.md) |
 | 2 | [`format::`](../param/05_format.md) |
+| 3 | [`key::`](../param/06_key.md) |
+
+### Referenced Command Group
+
+Evaluated against `.runtime_files` under the strict [command_group](../command_group/readme.md) identity test (same routine function, same parameter set) — does not qualify. `paths_routine()` and `runtime_files_routine()` are separate functions with no call between them; `.version.paths` accepts 3 parameters (`key::, format::, v::`) while `.runtime_files` accepts none, so the parameter sets are not the same set differing only by default. See [`command_group/readme.md`](../command_group/readme.md) Evaluated, Not Qualifying for the full analysis.
 
 ### Related Commands
 
 | # | Command | Relationship |
 |---|---------|-------------|
-| 1 | [`.version.show`](#command-3-versionshow) | Shows which alias is currently installed |
-| 2 | [`.version.install`](#command-4-versioninstall) | Installs one of the listed version aliases |
-| 3 | [`.version.guard`](#command-5-versionguard) | Guards against drift from a listed alias |
+| 1 | [`.runtime_files`](root.md#command-15-runtime_files) | Unlabeled, pipeline-only; reports only the version-history-cache path (a subset of `.version.paths`'s 5) |
+
+### Referenced User Stories
+
+| # | User Story | Persona |
+|---|-----------|---------|
+| 1 | [008 Path Discovery](../user_story/008_path_discovery.md) | Developer (path discovery and scripting) |
+
+---
+
+**Category:** paths
+**Complexity:** 6
+**API Requirement:** None
+**Idempotent:** Yes
+**Risk Level:** None (read-only)
+
+---
+
+### Command :: 17. `.version.mark`
+
+Create, update, or remove a named custom version alias marker stored in `~/.claude/version-markers.json`. Custom markers extend the built-in alias set (`stable`, `latest`) with team- or user-specific names that resolve to arbitrary semver strings or other built-in aliases. They appear in `.version.list` output alongside built-in aliases and are accepted everywhere `version::` is accepted.
+
+-- **Parameters:** name::, version::, description::, unset::, dry::, v::, format::
+-- **Exit Codes:** 0 (success) | 1 (validation error: invalid name, shadowed name, invalid version spec, empty name/version on set path)
+
+**Syntax:**
+
+```sh
+# Create or update a marker
+clv.version.mark name::NAME version::VER [description::DESC] [dry::1] [v::N] [format::FMT]
+
+# Remove a marker
+clv.version.mark name::NAME unset::1 [dry::1] [v::N] [format::FMT]
+```
+
+**Parameters:**
+
+| Parameter | Type | Default | Required | Purpose |
+|-----------|------|---------|----------|---------|
+| [`name::`](../param/16_name.md) | String | — | Yes | Marker name; `[a-z][a-z0-9-]*`, max 32 chars, must not shadow a built-in alias |
+| [`version::`](../param/01_version.md) | [`VersionSpec`](../type/03_version_spec.md) | — | Yes (set path) | Version spec the marker resolves to |
+| `description::` | String | `""` | No | Human-readable description stored with the marker |
+| [`unset::`](../param/12_unset.md) | bool | false | No | Remove the named marker instead of creating/updating |
+| [`dry::`](../param/02_dry.md) | bool | false | No | Preview without writing `version-markers.json` |
+| [`v::`](../param/04_v.md) | [`VerbosityLevel`](../type/01_verbosity_level.md) | 1 | No | Output detail level |
+| [`format::`](../param/05_format.md) | [`OutputFormat`](../type/02_output_format.md) | text | No | Output format |
+
+**Name constraints:**
+- Must match `[a-z][a-z0-9-]*` (lowercase letter start, then lowercase letters, digits, or hyphens)
+- Maximum 32 characters
+- Must not duplicate a built-in alias (`stable`, `latest`)
+
+**Algorithm, set path (4 steps):**
+1. Validate `name::` against naming constraints; reject if invalid.
+2. Validate `version::` as a valid VersionSpec (built-in alias or semver); reject if invalid.
+3. Load `~/.claude/version-markers.json` (create empty if absent); upsert the marker entry.
+4. Write atomically via temp-then-rename; report result.
+
+**Algorithm, unset path (3 steps):**
+1. Validate `name::` is non-empty; reject if missing.
+2. Load `~/.claude/version-markers.json`; remove the entry for `name::` (no-op if absent).
+3. Write atomically; report result.
+
+**`dry::1`** skips steps 3–4 (set) or 2–3 (unset) and prints what would have happened.
+
+**Examples:**
+
+```sh
+# Create a custom marker pinned to a specific semver
+clv.version.mark name::team-stable version::2.1.220 description::"Team-approved baseline"
+
+# Preview creation without writing
+clv.version.mark name::team-stable version::2.1.220 dry::1
+
+# Update an existing marker to a new version
+clv.version.mark name::team-stable version::2.1.250
+
+# Remove a custom marker
+clv.version.mark name::team-stable unset::1
+
+# Then use the marker in install/guard
+clv.version.install version::team-stable
+clv.version.guard version::team-stable dry::1
+```
+
+### Referenced Formats
+
+| # | Format | Role |
+|---|--------|------|
+| 1 | [text](../format/01_text.md) | Default human-readable output |
+| 2 | [json](../format/02_json.md) | Machine-readable structured output |
+
+### Referenced Parameters
+
+| # | Parameter |
+|---|-----------|
+| 1 | [`name::`](../param/16_name.md) |
+| 2 | [`version::`](../param/01_version.md) |
+| 3 | `description::` |
+| 4 | [`unset::`](../param/12_unset.md) |
+| 5 | [`dry::`](../param/02_dry.md) |
+| 6 | [`v::`](../param/04_v.md) |
+| 7 | [`format::`](../param/05_format.md) |
+
+### Related Commands
+
+| # | Command | Relationship |
+|---|---------|-------------|
+| 1 | [`.version.list`](#command-6-versionlist) | Shows custom markers alongside built-in aliases |
+| 2 | [`.version.install`](#command-4-versioninstall) | Accepts custom marker names via `version::` |
+| 3 | [`.version.guard`](#command-5-versionguard) | Guards against drift from a custom-marker-resolved version |
 
 ### Referenced User Stories
 
@@ -382,96 +690,7 @@ clv.version.list format::json
 ---
 
 **Category:** version
-**Complexity:** 2
-**API Requirement:** None
-**Idempotent:** Yes
-**Risk Level:** Low
-
----
-
-### Command :: 12. `.version.history`
-
-Fetch and display recent Claude Code release history from the GitHub Releases API (`anthropics/claude-code`). Use this to see what changed across recent versions, find when a specific fix landed, or review the full changelog for any release. Response is cached locally for 1 hour.
-
--- **Parameters:** count::, v::, format::
--- **Exit Codes:** 0 (success) | 2 (network failure or HOME unset)
-
-**Syntax:**
-
-```sh
-clv.version.history [count::N] [v::N] [format::FMT]
-```
-
-**Parameters:**
-
-| Parameter | Type | Default | Required | Purpose |
-|-----------|------|---------|----------|---------|
-| [`count::`](../param/09_count.md) | u64 | 10 | No | Number of recent releases to show |
-| [`v::`](../param/04_v.md) | [`VerbosityLevel`](../type/01_verbosity_level.md) | 1 | No | Output detail level |
-| [`format::`](../param/05_format.md) | [`OutputFormat`](../type/02_output_format.md) | text | No | Output format |
-
-**Algorithm (3 steps):**
-1. Check local 1-hour cache for GitHub Releases API response; fetch from `anthropics/claude-code` releases endpoint if stale or absent.
-2. Select the `count::N` most recent releases from the response payload.
-3. Render each release (tag, date, changelog summary) in the requested format.
-
-**Examples:**
-
-```sh
-# Default: 10 most recent releases with one-line summaries
-clv.version.history
-
-# Show 3 most recent releases
-clv.version.history count::3
-
-# Minimal output: version and date only
-clv.version.history v::0
-
-# Full changelog per release
-clv.version.history count::1 v::2
-
-# JSON format for scripting
-clv.version.history format::json count::5
-```
-
-### Referenced Formats
-
-| # | Format | Role |
-|---|--------|------|
-| 1 | [text](../format/01_text.md) | Default human-readable output |
-| 2 | [json](../format/02_json.md) | Machine-readable structured output |
-
-### Referenced Parameter Groups
-
-| # | Group | Membership | Excluded Params |
-|---|-------|-----------|----------------|
-| 1 | [Output Control](../param_group/01_output_control.md) | Full | — |
-
-### Referenced Parameters
-
-| # | Parameter |
-|---|-----------|
-| 1 | [`count::`](../param/09_count.md) |
-| 2 | [`v::`](../param/04_v.md) |
-| 3 | [`format::`](../param/05_format.md) |
-
-### Related Commands
-
-| # | Command | Relationship |
-|---|---------|-------------|
-| 1 | [`.version.show`](#command-3-versionshow) | Checks which release from history is installed |
-| 2 | [`.version.install`](#command-4-versioninstall) | Installs a release from history |
-
-### Referenced User Stories
-
-| # | User Story | Persona |
-|---|-----------|---------|
-| 1 | [002 Version Upgrade](../user_story/002_version_upgrade.md) | Developer (version upgrade) |
-
----
-
-**Category:** version
 **Complexity:** 3
-**API Requirement:** Read
+**API Requirement:** Write
 **Idempotent:** Yes
 **Risk Level:** Low

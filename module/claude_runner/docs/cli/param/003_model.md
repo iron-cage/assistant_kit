@@ -33,6 +33,7 @@ clr --model opus "Fix bug"
 |---|---------|---------|-------|
 | 1 | [`run`](../command/01_run.md) | — | — |
 | 5 | [`ask`](../command/05_ask.md) | — | — |
+| 3 | [`isolated`](../command/03_isolated.md) | `opus` alias (via config tiers then fallback) | Native flag; when absent falls back to project `.clr.toml` → user `~/.clr/config.toml` → `opus` alias; env: `CLR_MODEL` |
 
 ### Referenced User Stories
 

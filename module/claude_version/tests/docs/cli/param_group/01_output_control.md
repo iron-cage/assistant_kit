@@ -7,7 +7,7 @@ See [param_group/readme.md](../../../../docs/cli/param_group/readme.md) and [004
 
 - **Purpose**: Interaction tests for the Output Control parameter group.
 - **Responsibility**: Cross-parameter semantics between `v::` and `format::`, precedence rules, and combined behavior.
-- **Commands:** `.status`, `.version.show`, `.version.install`, `.version.list`, `.version.guard`, `.version.history`, `.processes`, `.processes.kill`, `.settings.show`, `.settings.get`, `.config`, `.params`, `.paths`
+- **Commands:** `.status`, `.version.show`, `.version.install`, `.version.list`, `.version.guard`, `.ps`, `.ps.kill`, `.settings.show`, `.settings.get`, `.config`, `.params`, `.version.paths`
 - **In Scope**: Multi-parameter interactions within the group, override semantics, format-overrides-verbosity rule.
 - **Out of Scope**: Individual parameter edge cases (→ `../param/`), command behavior (→ `../command/`).
 

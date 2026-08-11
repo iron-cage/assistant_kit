@@ -1,6 +1,6 @@
-//! Integration tests for `.paths` — path enumeration, single-key lookup, format/verbosity rendering, error paths.
+//! Integration tests for `.version.paths` — path enumeration, single-key lookup, format/verbosity rendering, error paths.
 //!
-//! Spec: `tests/docs/cli/command/16_paths.md` (IT-1 through IT-11)
+//! Spec: `tests/docs/cli/command/16_version_paths.md` (IT-1 through IT-11)
 //! Spec: `tests/docs/feature/009_path_discovery.md` (FT-1 through FT-7)
 //!
 //! ## IT tests (integration)
@@ -41,7 +41,7 @@ const ALL_LABELS : [ &str; 5 ] =
 #[ test ]
 fn it01_paths_show_all_keys()
 {
-  let out = run_clv_with_env( &[ ".paths" ], &[ ( "HOME", "/tmp/test_home" ) ] );
+  let out = run_clv_with_env( &[ ".version.paths" ], &[ ( "HOME", "/tmp/test_home" ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   for label in ALL_LABELS
@@ -57,7 +57,7 @@ fn it01_paths_show_all_keys()
 #[ test ]
 fn it02_paths_single_versions_dir()
 {
-  let out = run_clv_with_env( &[ ".paths", "key::versions_dir" ], &[ ( "HOME", "/tmp/test_home" ) ] );
+  let out = run_clv_with_env( &[ ".version.paths", "key::versions_dir" ], &[ ( "HOME", "/tmp/test_home" ) ] );
   assert_exit( &out, 0 );
   assert_eq!( stdout( &out ), "/tmp/test_home/.local/share/claude/versions\n" );
 }
@@ -66,7 +66,7 @@ fn it02_paths_single_versions_dir()
 #[ test ]
 fn it03_paths_single_settings()
 {
-  let out = run_clv_with_env( &[ ".paths", "key::settings" ], &[ ( "HOME", "/tmp/test_home" ) ] );
+  let out = run_clv_with_env( &[ ".version.paths", "key::settings" ], &[ ( "HOME", "/tmp/test_home" ) ] );
   assert_exit( &out, 0 );
   assert_eq!( stdout( &out ), "/tmp/test_home/.claude/settings.json\n" );
 }
@@ -75,7 +75,7 @@ fn it03_paths_single_settings()
 #[ test ]
 fn it04_paths_json_object_structure()
 {
-  let out = run_clv_with_env( &[ ".paths", "format::json" ], &[ ( "HOME", "/tmp/test_home" ) ] );
+  let out = run_clv_with_env( &[ ".version.paths", "format::json" ], &[ ( "HOME", "/tmp/test_home" ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!( text.trim_start().starts_with( '{' ), "must be a JSON object: {text}" );
@@ -89,7 +89,7 @@ fn it04_paths_json_object_structure()
 #[ test ]
 fn it05_paths_v0_unlabeled()
 {
-  let out = run_clv_with_env( &[ ".paths", "v::0" ], &[ ( "HOME", "/tmp/test_home" ) ] );
+  let out = run_clv_with_env( &[ ".version.paths", "v::0" ], &[ ( "HOME", "/tmp/test_home" ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   for line in text.lines().filter( | l | !l.is_empty() )
@@ -101,15 +101,15 @@ fn it05_paths_v0_unlabeled()
 // IT-6: v::0 with project_settings unresolved → key omitted from output
 //
 // Runs from an isolated `TempDir` (not `run_clv_with_env`'s inherited cwd) because
-// the full-suite container mounts the real `~/.claude` at the `/workspace` git
-// boundary (runbox.yml `plugin_mount`), which would otherwise make `project_settings`
+// the full-suite container bind-mounts the real `~/.claude` at its real home
+// path (runbox.yml `mounts` entry), which would otherwise make `project_settings`
 // resolve to a real path instead of staying unresolved.
 #[ test ]
 fn it06_paths_v0_unresolved_omitted()
 {
   let project_dir = tempfile::TempDir::new().unwrap();
   let out = std::process::Command::new( env!( "CARGO_BIN_EXE_claude_version" ) )
-    .args( [ ".paths", "v::0" ] )
+    .args( [ ".version.paths", "v::0" ] )
     .env( "HOME", "/tmp/test_home" )
     .current_dir( project_dir.path() )
     .output()
@@ -129,7 +129,7 @@ fn it07_paths_v1_unresolved_placeholder()
 {
   let project_dir = tempfile::TempDir::new().unwrap();
   let out = std::process::Command::new( env!( "CARGO_BIN_EXE_claude_version" ) )
-    .args( [ ".paths" ] )
+    .args( [ ".version.paths" ] )
     .env( "HOME", "/tmp/test_home" )
     .current_dir( project_dir.path() )
     .output()
@@ -146,7 +146,7 @@ fn it07_paths_v1_unresolved_placeholder()
 #[ test ]
 fn it08_paths_v2_description()
 {
-  let out = run_clv_with_env( &[ ".paths", "key::binary_symlink", "v::2" ], &[ ( "HOME", "/tmp/test_home" ) ] );
+  let out = run_clv_with_env( &[ ".version.paths", "key::binary_symlink", "v::2" ], &[ ( "HOME", "/tmp/test_home" ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!( text.contains( "binary_symlink:" ), "must contain label: {text}" );
@@ -159,7 +159,7 @@ fn it08_paths_v2_description()
 #[ test ]
 fn it09_paths_home_unset_exits_2()
 {
-  let out = run_clv_with_env( &[ ".paths" ], &[ ( "HOME", "" ) ] );
+  let out = run_clv_with_env( &[ ".version.paths" ], &[ ( "HOME", "" ) ] );
   assert_exit( &out, 2 );
   assert!( stdout( &out ).is_empty(), "must not emit any path when HOME is unset: {}", stdout( &out ) );
 }
@@ -168,7 +168,7 @@ fn it09_paths_home_unset_exits_2()
 #[ test ]
 fn it10_paths_invalid_key_exits_1()
 {
-  let out = run_clv_with_env( &[ ".paths", "key::bogus" ], &[ ( "HOME", "/tmp/test_home" ) ] );
+  let out = run_clv_with_env( &[ ".version.paths", "key::bogus" ], &[ ( "HOME", "/tmp/test_home" ) ] );
   assert_exit( &out, 1 );
   assert!( stderr( &out ).contains( "bogus" ), "stderr must name the invalid key: {}", stderr( &out ) );
 }
@@ -177,7 +177,7 @@ fn it10_paths_invalid_key_exits_1()
 #[ test ]
 fn it11_paths_empty_key_exits_1()
 {
-  let out = run_clv_with_env( &[ ".paths", "key::" ], &[ ( "HOME", "/tmp/test_home" ) ] );
+  let out = run_clv_with_env( &[ ".version.paths", "key::" ], &[ ( "HOME", "/tmp/test_home" ) ] );
   assert_exit( &out, 1 );
   let err = stderr( &out );
   assert!( err.contains( "key" ), "stderr must reference key:: or empty value: {err}" );
@@ -189,7 +189,7 @@ fn it11_paths_empty_key_exits_1()
 #[ test ]
 fn ft1_show_all_exits_0_with_all_keys()
 {
-  let out = run_clv_with_env( &[ ".paths" ], &[ ( "HOME", "/tmp/test_home" ) ] );
+  let out = run_clv_with_env( &[ ".version.paths" ], &[ ( "HOME", "/tmp/test_home" ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   for label in ALL_LABELS
@@ -205,7 +205,7 @@ fn ft1_show_all_exits_0_with_all_keys()
 #[ test ]
 fn ft2_v0_output_is_unlabeled()
 {
-  let out = run_clv_with_env( &[ ".paths", "v::0" ], &[ ( "HOME", "/tmp/test_home" ) ] );
+  let out = run_clv_with_env( &[ ".version.paths", "v::0" ], &[ ( "HOME", "/tmp/test_home" ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   for line in text.lines().filter( | l | !l.is_empty() )
@@ -218,7 +218,7 @@ fn ft2_v0_output_is_unlabeled()
 #[ test ]
 fn ft3_single_key_returns_one_path()
 {
-  let out = run_clv_with_env( &[ ".paths", "key::versions_dir", "v::0" ], &[ ( "HOME", "/tmp/test_home" ) ] );
+  let out = run_clv_with_env( &[ ".version.paths", "key::versions_dir", "v::0" ], &[ ( "HOME", "/tmp/test_home" ) ] );
   assert_exit( &out, 0 );
   assert_eq!( stdout( &out ), "/tmp/test_home/.local/share/claude/versions\n" );
 }
@@ -231,7 +231,7 @@ fn ft4_unresolvable_shown_as_none_found_v1()
 {
   let project_dir = tempfile::TempDir::new().unwrap();
   let out = std::process::Command::new( env!( "CARGO_BIN_EXE_claude_version" ) )
-    .args( [ ".paths" ] )
+    .args( [ ".version.paths" ] )
     .env( "HOME", "/tmp/test_home" )
     .current_dir( project_dir.path() )
     .output()
@@ -254,7 +254,7 @@ fn ft5_unresolvable_omitted_at_v0()
 {
   let project_dir = tempfile::TempDir::new().unwrap();
   let out = std::process::Command::new( env!( "CARGO_BIN_EXE_claude_version" ) )
-    .args( [ ".paths", "v::0" ] )
+    .args( [ ".version.paths", "v::0" ] )
     .env( "HOME", "/tmp/test_home" )
     .current_dir( project_dir.path() )
     .output()
@@ -270,7 +270,7 @@ fn ft5_unresolvable_omitted_at_v0()
 #[ test ]
 fn ft6_home_unset_exits_2()
 {
-  let out = run_clv_with_env( &[ ".paths" ], &[ ( "HOME", "" ) ] );
+  let out = run_clv_with_env( &[ ".version.paths" ], &[ ( "HOME", "" ) ] );
   assert_exit( &out, 2 );
 }
 
@@ -278,7 +278,7 @@ fn ft6_home_unset_exits_2()
 #[ test ]
 fn ft7_invalid_key_exits_1()
 {
-  let out = run_clv_with_env( &[ ".paths", "key::bogus" ], &[ ( "HOME", "/tmp/test_home" ) ] );
+  let out = run_clv_with_env( &[ ".version.paths", "key::bogus" ], &[ ( "HOME", "/tmp/test_home" ) ] );
   assert_exit( &out, 1 );
   let err = stderr( &out );
   assert!( err.contains( "bogus" ), "FT-7 must name the unknown key: {err}" );

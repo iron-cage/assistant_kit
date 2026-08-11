@@ -6,7 +6,7 @@ Edge case coverage for the `format::` parameter. See [param/05_format.md](../../
 
 - **Purpose**: Edge case tests for the `format::` parameter.
 - **Responsibility**: Boundary values, invalid inputs, type violations, and default behavior for `format::`.
-- **Commands:** `.status`, `.version.show`, `.version.install`, `.version.list`, `.version.guard`, `.version.history`, `.processes`, `.processes.kill`, `.settings.show`, `.settings.get`, `.config`, `.params`, `.paths`
+- **Commands:** `.status`, `.version.show`, `.version.install`, `.version.list`, `.version.guard`, `.ps`, `.ps.kill`, `.settings.show`, `.settings.get`, `.config`, `.params`, `.version.paths`
 - **In Scope**: Single-parameter edge cases, validation errors, type checking.
 - **Out of Scope**: Command integration (→ `../command/`), group interactions (→ `../param_group/`).
 
@@ -17,17 +17,17 @@ Edge case coverage for the `format::` parameter. See [param/05_format.md](../../
 | EC-11 | `.status format::json` → `{"version":...}` | Explicit json |
 | EC-12 | `.version.show format::json` → `{"version":"..."}` | Explicit json |
 | EC-13 | `.version.list format::json` → JSON array | Explicit json |
-| EC-14 | `.processes format::json` → `{"processes":[...]}` | Explicit json |
+| EC-14 | `.ps format::json` → `{"processes":[...]}` | Explicit json |
 | EC-15 | `.settings.show format::json` → JSON object | Explicit json |
 | EC-16 | `.settings.get format::json` → `{"key":..,"value":..}` | Explicit json |
 | EC-5 | `format::json` preserves bool/number types | Type Fidelity |
-| EC-17 | `.version.history format::json` → version/date/summary fields | Explicit json |
+| EC-17 | `.version.list mode::history format::json` → version/date/summary fields | Explicit json |
 | EC-1 | `.version.guard format::json dry::1` → JSON output, exit 0 | Explicit json |
 | EC-2 | `format::xml` → exit 1, unknown format | Invalid |
 | EC-3 | `format::JSON` (uppercase) → exit 1 | Invalid (case) |
 | EC-4 | `format::` (empty) → exit 1 | Empty Value |
-| EC-18 | `.version.history format::xml` → exit 1 | Invalid |
-| EC-19 | `.version.history format::JSON` → exit 1 | Invalid (case) |
+| EC-18 | `.version.list mode::history format::xml` → exit 1 | Invalid |
+| EC-19 | `.version.list mode::history format::JSON` → exit 1 | Invalid (case) |
 | EC-6 | Default (absent) → `format::text` | Default Behavior |
 | EC-7 | `format::text` explicit → same as absent | Explicit text |
 | EC-8 | `format::csv` → exit 1 | Invalid |
@@ -183,13 +183,13 @@ Edge case coverage for the `format::` parameter. See [param/05_format.md](../../
 
 ---
 
-### EC-14: `.processes format::json` → `{"processes":[...]}`
+### EC-14: `.ps format::json` → `{"processes":[...]}`
 
 - **Given:** clean environment
-- **When:** `clv .processes format::json`
+- **When:** `clv .ps format::json`
 - **Then:** exit 0; stdout is valid JSON object; contains `"processes"` array key
 - **Exit:** 0
-- **Source:** [command/readme.md — .processes](../../../../docs/cli/command/readme.md)
+- **Source:** [command/readme.md — .ps](../../../../docs/cli/command/readme.md)
 
 ---
 
@@ -213,33 +213,33 @@ Edge case coverage for the `format::` parameter. See [param/05_format.md](../../
 
 ---
 
-### EC-17: `.version.history format::json` → version/date/summary fields
+### EC-17: `.version.list mode::history format::json` → version/date/summary fields
 
 - **Given:** network available
-- **When:** `clv .version.history format::json count::3`
+- **When:** `clv .version.list mode::history format::json count::3`
 - **Then:** exit 0; stdout is a valid JSON array; each element has at minimum `version`, `date`, and `summary` fields
 - **Exit:** 0
-- **Source:** [command/version.md — .version.history](../../../../docs/cli/command/version.md)
+- **Source:** [command/version.md — .version.list](../../../../docs/cli/command/version.md#command-6-versionlist)
 
 ---
 
-### EC-18: `.version.history format::xml` → exit 1
+### EC-18: `.version.list mode::history format::xml` → exit 1
 
 - **Given:** clean environment
-- **When:** `clv .version.history format::xml`
+- **When:** `clv .version.list mode::history format::xml`
 - **Then:** exit 1; error message references unknown format value
 - **Exit:** 1
-- **Source:** [command/version.md — .version.history](../../../../docs/cli/command/version.md)
+- **Source:** [command/version.md — .version.list](../../../../docs/cli/command/version.md#command-6-versionlist)
 
 ---
 
-### EC-19: `.version.history format::JSON` (uppercase) → exit 1
+### EC-19: `.version.list mode::history format::JSON` (uppercase) → exit 1
 
 - **Given:** clean environment
-- **When:** `clv .version.history format::JSON`
+- **When:** `clv .version.list mode::history format::JSON`
 - **Then:** exit 1; same error as unknown format; `format::` is case-sensitive
 - **Exit:** 1
-- **Source:** [command/version.md — .version.history](../../../../docs/cli/command/version.md)
+- **Source:** [command/version.md — .version.list](../../../../docs/cli/command/version.md#command-6-versionlist)
 
 ---
 
@@ -257,9 +257,9 @@ Edge case coverage for the `format::` parameter. See [param/05_format.md](../../
 
 | Function | File |
 |----------|------|
-| `tc015_format_empty_value` | `cli_args_test/param_format_test.rs` |
-| `tc030_format_text_wrong_case_rejected` | `cli_args_test/param_format_test.rs` |
-| `tc495_format_text_then_json_last_wins_json` | `cli_args_test/param_format_test.rs` |
+| `tc015_format_empty_value` | `tests/cli_args_test/param_format_test.rs` |
+| `tc030_format_text_wrong_case_rejected` | `tests/cli_args_test/param_format_test.rs` |
+| `tc495_format_text_then_json_last_wins_json` | `tests/cli_args_test/param_format_test.rs` |
 | `tc242_unknown_format_exits_1` | `tests/cli/read_status_test.rs` |
 | `tc243_uppercase_format_exits_1` | `tests/cli/read_status_test.rs` |
 | `tc244_empty_format_exits_1` | `tests/cli/read_status_test.rs` |
@@ -276,9 +276,9 @@ Edge case coverage for the `format::` parameter. See [param/05_format.md](../../
 | `format_ec17_history_format_json_fields` | `tests/cli/format_param_test.rs` |
 | `format_ec18_history_format_xml_exits_1` | `tests/cli/format_param_test.rs` |
 | `format_ec19_history_format_json_uppercase_exits_1` | `tests/cli/format_param_test.rs` |
-| `format_ec6_absent_defaults_to_text` | `cli_args_test/param_format_test.rs` |
-| `format_ec7_text_explicit_same_as_absent` | `cli_args_test/param_format_test.rs` |
-| `format_ec8_csv_exits_1` | `cli_args_test/param_format_test.rs` |
+| `format_ec6_absent_defaults_to_text` | `tests/cli_args_test/param_format_test.rs` |
+| `format_ec7_text_explicit_same_as_absent` | `tests/cli_args_test/param_format_test.rs` |
+| `format_ec8_csv_exits_1` | `tests/cli_args_test/param_format_test.rs` |
 | `format_ec20_params_format_json_array` | `tests/cli/format_param_test.rs` |
 | `tc241_settings_show_json_preserves_types` | `tests/cli/read_settings_test.rs` |
 | `ft005_9_per_cmd_validation` | `tests/cli/catalog_surface_test.rs` |

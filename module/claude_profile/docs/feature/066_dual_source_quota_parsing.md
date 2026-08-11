@@ -15,9 +15,9 @@
 
 **Phase 2 (limits-array, forward compat):** Runs only when Phase 1 returned `None`. Scans `"limits":[...]` array; extracts each object block via `extract_object_block()`; checks `"kind"` and `"scope"` string fields against model needles (e.g. `["weekly_sonnet", "sonnet"]` for Sonnet); on match, reads `"percent"` as `utilization` (both are consumed percentage 0–100) and `"resets_at"` as the reset timestamp.
 
-**Recovery path:** When Anthropic re-enables per-model `limits` entries (e.g. `{"kind": "weekly_sonnet", "percent": 45, "resets_at": "..."}` or `{"kind": "weekly_all", "scope": "sonnet", "percent": 45, ...}`), `scan_limits_for_kind()` populates `seven_day_sonnet` automatically. All three blind-spot algorithms (`apply_model_override`, `resolve_model`, `recommended_model`) receive the populated value and resume correct behavior with zero code changes.
+**Recovery path:** When Anthropic re-enables per-model `limits` entries (e.g. `{"kind": "weekly_sonnet", "percent": 45, "resets_at": "..."}` or `{"kind": "weekly_all", "scope": "sonnet", "percent": 45, ...}`), `scan_limits_for_kind()` populates `seven_day_sonnet` automatically. All three blind-spot algorithms (`apply_model_override`, `resolve_model`, `recommended_model`) receive the populated value and resume correct behavior with zero code changes. **This recovery path assumes `scope` is a flat string** — a live-verified 2026-07-28 observation found a `scope`-bearing `limits` entry (`kind: "weekly_scoped"`) where Anthropic actually shaped `scope` as a nested object instead, which this matching strategy cannot read. See the Known Limitation note below.
 
-**`scan_limits_for_kind()` matching strategy:** Checks both `"kind"` and `"scope"` fields against each needle. Uses substring matching to be resilient to future name changes (e.g. `"kind": "weekly_sonnet"` matches needle `"sonnet"`). Named field takes priority — Phase 2 never overrides a `Some` from Phase 1.
+**`scan_limits_for_kind()` matching strategy:** Checks both `"kind"` and `"scope"` fields against each needle. Uses substring matching to be resilient to future name changes (e.g. `"kind": "weekly_sonnet"` matches needle `"sonnet"`). Named field takes priority — Phase 2 never overrides a `Some` from Phase 1. **Known limitation (live-verified 2026-07-28, not yet fixed):** `scope`-as-object is unreadable by this substring strategy — `parse_optional_string_in_block()` returns `None` for any non-string JSON value, so an object-shaped `scope` silently contributes `""` to the match and never contains any needle. If a future Sonnet/Opus re-enablement uses this same nested-object `scope` shape (as the observed `"weekly_scoped"`/Fable entry does), Phase 2 will silently fail to recover it — no error, indistinguishable from the pre-existing blind spot. Full technical detail: [algorithm/009_oauth_usage_response_migration.md](../algorithm/009_oauth_usage_response_migration.md) § Known Limitation: `scan_limits_for_kind()` Cannot Match Object-Shaped `scope`.
 
 See [algorithm/009_oauth_usage_response_migration.md](../algorithm/009_oauth_usage_response_migration.md) for the full API change history, `limits` field semantics, and algorithm pseudocode.
 
@@ -54,7 +54,7 @@ _(none yet)_
 
 | File | Relationship |
 |------|-------------|
-| [algorithm/009_oauth_usage_response_migration.md](../algorithm/009_oauth_usage_response_migration.md) | Full API change history, `limits` field semantics, dual-source pseudocode, blind-spot table |
+| [algorithm/009_oauth_usage_response_migration.md](../algorithm/009_oauth_usage_response_migration.md) | Full API change history, `limits` field semantics, dual-source pseudocode, blind-spot table, and the `scope`-object Known Limitation |
 
 ### Sources
 

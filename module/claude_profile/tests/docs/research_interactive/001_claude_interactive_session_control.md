@@ -36,7 +36,7 @@ and the constraint that browser auth flows cannot be verified in automated tests
 - **Given:** No account named `unknown@example.com` in the credential store
 - **When:** `.account.relogin unknown@example.com`
 - **Then:** Exits 2 — account not found in credential store; no subprocess is spawned
-- **Source fn:** `ar04_relogin_not_found_exits2` (cli/account_relogin_test.rs)
+- **Source fn:** `ar04_relogin_not_found_exits_2` (cli/account_relogin_test.rs) — corrected missing underscore
 - **Source:** [docs/research_interactive/001_claude_interactive_session_control.md §Implication for .account.relogin](../../../docs/research_interactive/001_claude_interactive_session_control.md)
 
 ---

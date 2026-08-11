@@ -24,11 +24,12 @@ ast .help                    # all ~40 commands in one place
 
 | Path | Responsibility |
 |------|----------------|
-| `module/` | Fifteen workspace crates (see Crates below) |
+| `module/` | Eighteen workspace crates (see Crates below) |
 | `contract/` | Behavioral contract test suites for external dependencies |
 | `docs/` | Workspace doc entities: feature, invariant, pattern, integration, error |
 | `../../agent_kit/task/workspace/` | Workspace task registry — External Layout (see `../../agent_kit/task/`) |
-| `verb/` | Universal Action Protocol: per-verb reference docs for all 7 `do` protocol verbs. |
+| `verb/` | Universal Action Protocol: workspace verbs + per-verb reference docs |
+| `runbox/` | Owning container config for the globally-installed `runbox` engine |
 | `vision.md` | Project vision, design rationale, and open problems |
 | `../locales.md` | Locale and internationalisation notes |
 | `Cargo.toml` | Workspace manifest: members, lints, shared dependencies |
@@ -41,6 +42,7 @@ ast .help                    # all ~40 commands in one place
 | `claude_storage_core` | — | * | Zero-dep JSONL parser for `~/.claude/`; path encoding |
 | `claude_auth` | — | * | Anthropic OAuth token refresh transport; `TokenRefreshResult`, `AuthError` |
 | `claude_quota` | — | * | Anthropic API rate-limit HTTP transport; `RateLimitData`, `QuotaError` |
+| `claude_journal` | — | * | Append-only event journal library (zero workspace deps) |
 | `claude_profile_core` | — | 1 | Token status + account domain logic |
 | `claude_version_core` | — | 1 | Version detection, install, settings domain helpers |
 | `claude_runner_core` | — | 1 | `ClaudeCommand` builder + single process execution point |
@@ -50,10 +52,12 @@ ast .help                    # all ~40 commands in one place
 | `claude_runner` | `clr` | 2 | Claude Code execution with session continuity |
 | `claude_version` | `clv` | 2 | Claude Code version manager |
 | `claude_assets` | `cla` | 2 | Install Claude Code artifacts (rules, skills, commands) via symlinks |
+| `claude_journal_viewer` | `clj` | 2 | Journal viewer CLI over `claude_journal` events |
 | `dream` | — | 2 | Library facade re-exporting all core crates (Layer 0, *, 1) |
 | `assistant` | `ast` | 3 | Super-app aggregating all Layer 2 CLIs |
+| `assistant_kit` | — | 3 | Agent-agnostic integration layer library |
 
-`*` `claude_storage_core` is a zero-dep parsing primitive sitting outside the layer hierarchy — no dependency on `claude_core`.
+`*` Four crates (`claude_storage_core`, `claude_auth`, `claude_quota`, `claude_journal`) sit outside the layer hierarchy — standalone primitives with no workspace dependencies.
 
 ## Architecture
 
@@ -61,6 +65,7 @@ ast .help                    # all ~40 commands in one place
 *        claude_storage_core      (zero-dep JSONL parser — no claude_core dep)
 *        claude_auth              (Anthropic OAuth token refresh transport — standalone primitive)
 *        claude_quota             (Anthropic API rate-limit HTTP transport — standalone primitive)
+*        claude_journal           (append-only event journal library — standalone primitive)
 Layer 0: claude_core              (shared primitives — zero workspace deps)
              ↓
 Layer 1: claude_profile_core      (token status, account domain logic)
@@ -74,28 +79,30 @@ Layer 2: dream           (lib)    (library facade — re-exports all core crates
          claude_runner   (clr)    (Claude Code execution)
          claude_version  (clv)    (Claude Code version manager)
          claude_assets   (cla)    (artifact installer: rules, skills, commands)
+         claude_journal_viewer (clj) (journal viewer over claude_journal events)
              ↓
 Layer 3: assistant       (ast)    (super-app — all Layer 2 CLIs)
+         assistant_kit   (lib)    (agent-agnostic integration layer)
 ```
 
 ## Testing
 
-**Container (all tests — real ~/.claude/ required):**
+**Container (full workspace suite — real ~/.claude/ required):**
 ```bash
 ./verb/test
 ```
 
-**Container (offline — no ~/.claude/ needed):**
+**Container (targeted nextest filter):**
 ```bash
-./verb/test offline
+./verb/test1 'test(name_substring)'
 ```
 
 **Container (interactive shell):**
 ```bash
-./verb/shell
+runbox .shell
 ```
 
-**Local (w3 required):**
+**Host escape hatch (no container; honored by the nextest setup script):**
 ```bash
-./verb/test
+VERB_LAYER=l0 cargo nextest run --workspace --all-features
 ```

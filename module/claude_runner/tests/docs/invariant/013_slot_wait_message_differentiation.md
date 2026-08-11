@@ -1,6 +1,6 @@
 # Test: Invariant — Slot-Wait Message Differentiation
 
-Test case planning for [invariant/013_slot_wait_message_differentiation.md](../../../docs/invariant/013_slot_wait_message_differentiation.md). Tests validate that `wait_for_session_slot()`'s poll-loop diagnostic names which of the three independent non-admission causes fired — `[at capacity]` when `has_capacity` was `false`; `[slot held by another session]` when `has_capacity` was `true` and `acquire_slot()` returned `Err(SlotDenialCause::HeldByLive)`; `[lost reservation race]` when `has_capacity` was `true` and `acquire_slot()` returned `Err(SlotDenialCause::LostReclaimRace)` — and that the pre-existing `"active; waiting"` substring is preserved unchanged.
+Test case planning for [invariant/013_slot_wait_message_differentiation.md](../../../docs/invariant/013_slot_wait_message_differentiation.md). Tests validate that `wait_for_session_slot()`'s poll-loop diagnostic names which of the three independent non-admission causes fired — `[at capacity]` when `has_capacity` was `false`; `[slot held by another session]` when `has_capacity` was `true` and `acquire_slot()` returned `Err(SlotDenialCause::HeldByLive)`; `[lost reservation race]` when `has_capacity` was `true` and `acquire_slot()` returned `Err(SlotDenialCause::LostReclaimRace)` — and that the TSK-452 structured prefix `"gate-wait  active="` is present in every diagnostic emission. BUG-480 extended the invariant: slot-side denial diagnostics (the two `has_capacity=true` causes) must additionally carry the occupancy the denying sweep measured — ` slots=H/M` on the poll line, `, slots=H/M held` on both exhaustion messages — with at-capacity lines exempt (the sweep never ran there, so the tally is unmeasured).
 
 **Source:** [invariant/013_slot_wait_message_differentiation.md](../../../docs/invariant/013_slot_wait_message_differentiation.md)
 **Related:** [invariant/012_gate_slot_atomicity.md](../../../docs/invariant/012_gate_slot_atomicity.md) (admission correctness for the same two false-branches this invariant's message must distinguish)
@@ -13,19 +13,21 @@ Test case planning for [invariant/013_slot_wait_message_differentiation.md](../.
 | IN-2 | Same race as IN-1 → neither racer's stderr names `"at capacity"` or `"lost reservation race"` | Invariant Hold |
 | IN-3 | 2 racers, `--max-sessions 1`, pre-seeded confirmed-dead owner → losing racer's first poll attempt names `"lost reservation race"` | Invariant Hold |
 | IN-4 | 1 long-running occupier already active, `--max-sessions 1`, second invocation polls → stderr names `"at capacity"`, not `"lost reservation race"` or `"slot held by another session"` | Invariant Boundary |
-| IN-5 | Any non-admission message → still contains the literal substring `"active; waiting"` unchanged (regression guard for the 7 pre-existing substring assertions) | Regression Guard |
+| IN-5 | Any non-admission message → contains the literal substring `"gate-wait  active="` (TSK-452 structured format; replaced pre-TSK-452 `"active; waiting"` regression guard) | Regression Guard |
+| IN-6 | Any non-admission message → contains the literal substring `"gate-wait  active="` (BUG-431 regression guard, updated to TSK-452 format; print-mode scope now architectural rather than label-encoded) | Regression Guard |
+| IN-7 | Live-owned sole slot, empty census (census `0/1`, occupancy `1/1`) → poll line carries both `active=0/1` and `slots=1/1`; exhaustion message carries `slots=1/1 held` | Invariant Hold |
 
 ## Test Coverage Summary
 
-- Invariant Hold: 3 tests (IN-1, IN-2, IN-3)
+- Invariant Hold: 4 tests (IN-1, IN-2, IN-3, IN-7)
 - Invariant Boundary: 1 test (IN-4)
-- Regression Guard: 1 test (IN-5)
+- Regression Guard: 2 tests (IN-5, IN-6)
 
-**Total:** 5 invariant test cases (minimum for `invariant` doc type is 2; this spec exceeds it to cover all three message-differentiation directions plus the preserved-substring regression guard)
+**Total:** 7 invariant test cases (minimum for `invariant` doc type is 2; this spec exceeds it to cover all three message-differentiation directions, the measured-occupancy display, the preserved-substring regression guard, and the mode-qualifier regression guard)
 
 ## Architectural Constraint
 
-All 5 cases are integration tests in `tests/concurrency_gate_test.rs` — the differentiation logic lives entirely inside `wait_for_session_slot()`'s poll loop and can only be observed by capturing a real racing `clr` subprocess's stderr (not `Stdio::null()`, the gap BUG-393's own `## Why Not Caught` identified in the pre-fix T08/T14 tests). IN-1 and IN-2 are the two assertions implemented by T15 (`t15_slot_wait_message_names_live_hold_when_owner_alive`) against a fresh-claim race fixture with no pre-existing dead owner — they are listed as separate IDs here because they assert two independent invariant directions (racer names the live-hold cause; racer does NOT name the exhaustion or reclaim-race causes) even though one test function covers both. IN-3 is implemented by T16 (`t16_slot_wait_message_names_genuine_reclaim_race_for_dead_owner`), added for BUG-396 to prove `"lost reservation race"` still fires for the one cause it is actually accurate for (a pre-seeded confirmed-dead owner, contended via an injected reclaim delay). IN-4 and IN-5 remain the coverage this invariant doc requires beyond T15/T16's existing scope: IN-4 needs a genuine-exhaustion fixture (not a race) to prove `"at capacity"` is reachable at all, and IN-5 is a substring-preservation regression guard.
+All 7 cases are integration tests in `tests/concurrency_gate_test.rs` — the differentiation logic lives entirely inside `wait_for_session_slot()`'s poll loop and can only be observed by capturing a real racing `clr` subprocess's stderr (not `Stdio::null()`, the gap BUG-393's own `## Why Not Caught` identified in the pre-fix T08/T14 tests). IN-1 and IN-2 are the two assertions implemented by T15 (`t15_slot_wait_message_names_live_hold_when_owner_alive`) against a fresh-claim race fixture with no pre-existing dead owner — they are listed as separate IDs here because they assert two independent invariant directions (racer names the live-hold cause; racer does NOT name the exhaustion or reclaim-race causes) even though one test function covers both. IN-3 is implemented by T16 (`t16_slot_wait_message_names_genuine_reclaim_race_for_dead_owner`), added for BUG-396 to prove `"lost reservation race"` still fires for the one cause it is actually accurate for (a pre-seeded confirmed-dead owner, contended via an injected reclaim delay). IN-4 is implemented by T33 (`t33_slot_wait_message_names_at_capacity_for_exhaustion`), providing a genuine-exhaustion fixture (not a race) to prove `"at capacity"` is reachable. IN-5 is implemented by T34 (`t34_non_admission_message_preserves_active_waiting_substring`), guarding the `"gate-wait  active="` prefix (TSK-452 format; function name retained for historical traceability). IN-6 is implemented by `t_gate_progress_message_names_print_sessions`, the BUG-431 regression guard ensuring the mode qualifier is never silently dropped. IN-7 is implemented by T38 (`t38_slot_side_denial_names_measured_occupancy`), added for BUG-480: it seeds the sole slot's record with the test process's own live PID while leaving the census (proc dir) empty, forcing census and occupancy to diverge (`active=0/1` vs `slots=1/1`) — the one fixture shape that proves the `slots=` token reports the sweep's measurement rather than echoing the census counter.
 
 ## Implementation Notes
 
@@ -34,8 +36,12 @@ All 5 cases are integration tests in `tests/concurrency_gate_test.rs` — the di
 | IN-1 | `t15_slot_wait_message_names_live_hold_when_owner_alive` | `tests/concurrency_gate_test.rs` | ✅ |
 | IN-2 | `t15_slot_wait_message_names_live_hold_when_owner_alive` | `tests/concurrency_gate_test.rs` | ✅ |
 | IN-3 | `t16_slot_wait_message_names_genuine_reclaim_race_for_dead_owner` | `tests/concurrency_gate_test.rs` | ✅ |
-| IN-4 | *(not yet implemented)* | `tests/concurrency_gate_test.rs` | ⏳ |
-| IN-5 | *(not yet implemented)* | `tests/concurrency_gate_test.rs` | ⏳ |
+| IN-4 | `t33_slot_wait_message_names_at_capacity_for_exhaustion` | `tests/concurrency_gate_test.rs` | ✅ |
+| IN-5 | `t34_non_admission_message_preserves_active_waiting_substring` | `tests/concurrency_gate_test.rs` | ✅ |
+| IN-6 | `t_gate_progress_message_names_print_sessions` | `tests/concurrency_gate_test.rs` | ✅ |
+| IN-7 | `t38_slot_side_denial_names_measured_occupancy` | `tests/concurrency_gate_test.rs` | ✅ |
+
+<!-- BUG-480 task/claude_runner/bug/480_gate_diagnostic_hides_slot_occupancy.md — fixed: IN-7 registered below (census/occupancy-divergence fixture asserting the slots=H/M token and the slots=H/M held exhaustion suffix); implemented by T38 -->
 
 ---
 
@@ -79,10 +85,30 @@ All 5 cases are integration tests in `tests/concurrency_gate_test.rs` — the di
 
 ---
 
-### IN-5: Any non-admission message → preserves the literal substring `"active; waiting"` unchanged
+### IN-5: Any non-admission message → preserves the literal substring `"gate-wait  active="` (TSK-452 format)
 
 - **Given:** any fixture above (IN-1/IN-2's live-hold case, IN-3's reclaim-race case, or IN-4's exhaustion case) with stderr captured
 - **When:** the poll-loop diagnostic is emitted for any non-admission cause
-- **Then:** the message contains the unmodified literal substring `"active; waiting"` — the differentiating `[at capacity]` / `[slot held by another session]` / `[lost reservation race]` suffix is appended after this substring, never spliced into or replacing it
-- **Note:** regression guard for the 7 pre-existing assertions on this exact substring (`tests/config_file_test.rs` lines 96,149,198,250,299; `tests/concurrency_gate_test.rs` T01/T04 lines 220,377) that predate this invariant and must not be broken by any future change to this message
+- **Then:** the message contains the literal substring `"gate-wait  active="` — the TSK-452 structured prefix that replaced the pre-TSK-452 `"active; waiting"` body; the differentiating `[at capacity]` / `[slot held by another session]` / `[lost reservation race]` suffix appears in the `(reason: ...)` trailer at the end of the same line
+- **Note:** regression guard ensuring the `"gate-wait  active="` prefix is never silently dropped from the cause-labeled branch; pre-TSK-452, assertions pattern-matched `"active; waiting"` (5 in `config_file_test.rs`, T01/T04 here) — those have been updated to `"gate-wait  active="` by TSK-452
 - **Source:** [invariant/013_slot_wait_message_differentiation.md](../../../docs/invariant/013_slot_wait_message_differentiation.md) § Invariant Statement, "Preserved substring"
+
+---
+
+### IN-6: Any non-admission message → contains the literal substring `"gate-wait  active="` (BUG-431 regression guard, TSK-452 format)
+
+- **Given:** any fixture above (IN-1/IN-2's live-hold case, IN-3's reclaim-race case, or IN-4's exhaustion case) with stderr captured
+- **When:** the poll-loop diagnostic is emitted for any non-admission cause
+- **Then:** the message contains the literal substring `"gate-wait  active="` — TSK-452 replaced the BUG-431 `"print sessions active"` string with the structured `"gate-wait  active=X/Y"` prefix; the print-mode scope is now architectural (the count displayed is print-mode-only by construction) rather than encoded in the label text
+- **Note:** regression guard for the BUG-431 fix; TSK-452 updated the format from `"print sessions active; waiting"` to `"gate-wait  active=X/Y ..."`; this guard now provides a second fixture (different process lifecycle from IN-5/T34) asserting the same TSK-452 prefix is present — additional coverage breadth rather than an independent string check
+- **Source:** [invariant/013_slot_wait_message_differentiation.md](../../../docs/invariant/013_slot_wait_message_differentiation.md) § Enforcement Mechanism (`eprintln!` format string)
+
+---
+
+### IN-7: Live-owned sole slot, empty census → poll line carries both `active=0/1` and `slots=1/1`; exhaustion message carries `slots=1/1 held`
+
+- **Given:** the sole slot (`--max-sessions 1`) is pre-seeded with a slot file owned by the test process's own PID (guaranteed alive for the whole run, no child to manage) while `CLR_PROC_DIR` is left empty, so the census reads `0` sessions and the sweep's occupancy reads `1/1` — the two conjuncts of the admission condition are forced to diverge; `CLR_GATE_POLL_SECS=1`, `CLR_GATE_MAX_ATTEMPTS=2`, `--retry-override 0`, `CLR_GATE_STALE_SECS` explicitly removed (no staleness comparison ever runs against a live owner)
+- **When:** one `clr -p --max-sessions 1` invocation polls to exhaustion with stderr captured
+- **Then:** the invocation exits non-success; the denial line naming `reason: slot held by another session` contains BOTH the unchanged census half `"gate-wait  active=0/1"` AND the measured occupancy `"slots=1/1"`; the `session gate timed out` message contains `"slots=1/1 held"`
+- **Note:** `bug_reproducer(BUG-480)` — the census/occupancy divergence (`0/1` vs `1/1`) is the load-bearing fixture property: a fixture where both counters agree could pass even if `slots=` merely echoed the census counter. Empirically confirmed to fail pre-fix (denial line carried no `slots=` token) and pass post-fix. At-capacity lines are deliberately NOT asserted to carry `slots=` — the exemption is pinned by the unchanged T29/T31 full-line guards in `tests/concurrency_gate_ext2_test.rs`
+- **Source:** [invariant/013_slot_wait_message_differentiation.md](../../../docs/invariant/013_slot_wait_message_differentiation.md) § Invariant Statement, "Measured occupancy (BUG-480)"

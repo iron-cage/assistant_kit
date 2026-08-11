@@ -15,14 +15,14 @@ Two functions in `src/usage/` each derive a classification decision (an emoji co
 
 #### Entry Point 1 — `pct_emoji`
 
-`claude_profile/src/usage/format.rs:443-451` — closure defined inside `quota_text_cells(data: &claude_quota::OauthUsageData, now_secs: u64) -> [String; 5]` (`format.rs:435`).
+`claude_profile/src/usage/format.rs:470-478` — closure defined inside `quota_text_cells(data: &claude_quota::OauthUsageData, now_secs: u64) -> [String; 5]` (`format.rs:454`). Shown below in its current, post-BUG-331-fix form — see § Rounding-Boundary Hazard below for the defect this fix closed.
 
 ```rust
 let pct_emoji = |util : Option< f64 >, threshold : f64| -> String
 {
   util.map_or_else( || dash.clone(), |u|
   {
-    let left  = 100.0 - u;
+    let left  = ( 100.0 - u ).round();
     let emoji = if left > threshold { "🟢" } else { "🟡" };
     format!( "{emoji} {left:.0}%" )
   } )
@@ -33,41 +33,41 @@ Called twice, once per quota period column:
 
 | Call site | Line | Threshold arg | Column |
 |-----------|------|----------------|--------|
-| `pct_emoji( data.five_hour...utilization, H_EXHAUSTED_THRESHOLD )` | `format.rs:460` | `15.0` | 5h Left |
-| `pct_emoji( data.seven_day...utilization, WEEKLY_EXHAUSTION_THRESHOLD )` | `format.rs:462` | `5.0` | 7d Left |
+| `pct_emoji( data.five_hour...utilization, H_EXHAUSTED_THRESHOLD )` | `format.rs:487` | `15.0` | 5h Left |
+| `pct_emoji( data.seven_day...utilization, WEEKLY_EXHAUSTION_THRESHOLD )` | `format.rs:489` | `3.0` | 7d Left |
 
 #### `pct_emoji` Branch Logic
 
 | Step | Expression | Precision |
 |------|------------|-----------|
-| 1 | `left = 100.0 - u` | full `f64` |
-| 2 | `emoji = if left > threshold { 🟢 } else { 🟡 }` | compares the **raw**, step-1 `left` |
-| 3 | `format!("{emoji} {left:.0}%")` | rounds the **same** step-1 `left` to 0 decimals for display |
+| 1 | `left = ( 100.0 - u ).round()` | rounded once (Fix BUG-331) |
+| 2 | `emoji = if left > threshold { 🟢 } else { 🟡 }` | compares the **rounded**, step-1 `left` |
+| 3 | `format!("{emoji} {left:.0}%")` | formats the **same** step-1 `left` — already rounded, `.0` is a no-op |
 
-No rounding occurs between step 2 and step 3 — both derive from the identical `left` binding, but the comparison sees full precision while the display sees the rounded value. This is the raw-vs-rounded split (§ Rounding-Boundary Hazard below).
+Rounding happens once, at step 1, and both the comparison and the display consume the identical rounded value — this is the fix (BUG-331, applied 2026-07-08) for the raw-vs-rounded split described in § Rounding-Boundary Hazard below.
 
 #### Entry Point 2 — `apply_model_override`
 
-`claude_profile/src/usage/api_switch.rs:225-298` — `pub fn apply_model_override(quota: &OauthUsageData, paths: &crate::ClaudePaths, trace: bool, label: &str, name: &str)`. Called from `usage_routine()` (`api.rs:172,323`) and `account_use_routine()` (`api_switch.rs:329`) for the current/winning account after a successful quota fetch.
+`claude_profile/src/usage/api_switch.rs:261-347` — `pub fn apply_model_override(quota: &OauthUsageData, paths: &crate::ClaudePaths, trace: bool, label: &str, name: &str, backend: AccountBackend)`. Called from `usage_routine()` (`api.rs:188,341`) and from `apply_post_switch_touch()` (`api_switch.rs:378`, itself invoked by `account_use_routine()` in `commands/account_ops.rs` during `.account.use`) for the current/winning account after a successful quota fetch. Shown below in its current, post-BUG-331-fix form.
 
 ```rust
 if let Some( ref sonnet ) = quota.seven_day_sonnet
 {
-  let sonnet_left = 100.0 - sonnet.utilization;                 // api_switch.rs:244, raw
-  if sonnet_left < OPUS_OVERRIDE_THRESHOLD                       // api_switch.rs:245, compares RAW
+  let sonnet_left = ( 100.0 - sonnet.utilization ).round();      // api_switch.rs:293, rounded once (Fix BUG-331)
+  if sonnet_left < OPUS_OVERRIDE_THRESHOLD                       // api_switch.rs:294, compares the ROUNDED value
   {
-    // sonnet→opus branch (api_switch.rs:247-263)
-    // ... trace log: format!( "...sonnet→opus (7d(Son) left={sonnet_left:.0}%)..." )   // api_switch.rs:256, rounds SAME raw value
+    // sonnet→opus branch (api_switch.rs:295-312)
+    // ... trace log: format!( "...sonnet→opus (7d(Son) left={sonnet_left:.0}%)..." )   // api_switch.rs:305, formats SAME rounded value
   }
   else
   {
-    // opus→sonnet branch (api_switch.rs:266-276)
-    // ... trace log: format!( "...opus→sonnet (7d(Son) left={sonnet_left:.0}%)..." )   // api_switch.rs:270, rounds SAME raw value
+    // opus→sonnet branch (api_switch.rs:313-325)
+    // ... trace log: format!( "...opus→sonnet (7d(Son) left={sonnet_left:.0}%)..." )   // api_switch.rs:319, formats SAME rounded value
   }
 }
 else
 {
-  // sonnet tier absent — conservative "sonnet" branch (api_switch.rs:278-288), no threshold comparison
+  // sonnet tier absent — conservative "sonnet" branch (api_switch.rs:327-337), no threshold comparison
 }
 ```
 
@@ -75,11 +75,11 @@ else
 
 | Condition | Branch | Model write | Effort write | Trace log (when `trace::1`) |
 |-----------|--------|--------------|----------------|-------------------------------|
-| `seven_day_sonnet` present AND `sonnet_left < OPUS_OVERRIDE_THRESHOLD` (raw compare, `api_switch.rs:245`) | sonnet→opus | `claude-opus-4-8` | `max` | `model override: sonnet→opus (7d(Son) left={sonnet_left:.0}%)` (`api_switch.rs:256`, rounds same raw value) |
-| `seven_day_sonnet` present AND `sonnet_left >= OPUS_OVERRIDE_THRESHOLD` | opus→sonnet | `claude-sonnet-5` (via `override_session_model_to_sonnet`) | `high` | `model override: opus→sonnet (7d(Son) left={sonnet_left:.0}%)` (`api_switch.rs:270`, rounds same raw value) |
+| `seven_day_sonnet` present AND `sonnet_left < OPUS_OVERRIDE_THRESHOLD` (rounded compare, `api_switch.rs:294`) | sonnet→opus | `claude-opus-4-8` | `max` | `model override: sonnet→opus (7d(Son) left={sonnet_left:.0}%)` (`api_switch.rs:305`, formats same rounded value) |
+| `seven_day_sonnet` present AND `sonnet_left >= OPUS_OVERRIDE_THRESHOLD` | opus→sonnet | `claude-sonnet-5` (via `override_session_model_to_sonnet`) | `high` | `model override: opus→sonnet (7d(Son) left={sonnet_left:.0}%)` (`api_switch.rs:319`, formats same rounded value) |
 | `seven_day_sonnet` absent (`None`) | conservative sonnet | `claude-sonnet-5` | `high` | none (no threshold comparison, not affected) |
 
-`OPUS_OVERRIDE_THRESHOLD : f64 = 10.0` (`types.rs:399`).
+`OPUS_OVERRIDE_THRESHOLD : f64 = 10.0` (`types.rs:456`). Both entry points now round once and reuse the rounded value for both comparison and display/trace — the BUG-331 fix (see § Rounding-Boundary Hazard : Fix pattern below).
 
 ### Rounding-Boundary Hazard (BUG-331)
 
@@ -89,7 +89,7 @@ Both functions above share one defect class: a classification decision and a dis
 
 | Function | Threshold | Window | Symptom |
 |----------|-----------|--------|---------|
-| `pct_emoji` (7d Left) | `WEEKLY_EXHAUSTION_THRESHOLD = 5.0` | `(4.5, 5.5)` | Identical "5%" text, 🟢/🟡 split across rows (BUG-331 original symptom) |
+| `pct_emoji` (7d Left) | `WEEKLY_EXHAUSTION_THRESHOLD = 3.0` | `(2.5, 3.5)` | Identical "3%" text, 🟢/🟡 split across rows (same defect class as BUG-331, which originally exposed this at the prior 5.0 threshold) |
 | `pct_emoji` (5h Left) | `H_EXHAUSTED_THRESHOLD = 15.0` | `(14.5, 15.5)` | Same defect class, by generalization |
 | `apply_model_override` | `OPUS_OVERRIDE_THRESHOLD = 10.0` | `(9.5, 10.5)` | Same rounded trace percentage logged regardless of which override branch actually fired |
 
@@ -111,15 +111,15 @@ The raw-value noise is not produced by `pct_emoji` or `apply_model_override` the
 **Fix pattern** (described in BUG-331 § Fix Location; fix applied 2026-07-08 — see BUG-331 for current status):
 
 ```rust
-// pct_emoji, format.rs:443-451 — round once, derive both outputs from the rounded value:
+// pct_emoji, format.rs:470-478 — round once, derive both outputs from the rounded value:
 let left  = ( 100.0 - u ).round();
 let emoji = if left > threshold { "🟢" } else { "🟡" };
 format!( "{emoji} {left:.0}%" )
 ```
 
 ```rust
-// apply_model_override, api_switch.rs:244-245 — same pattern, applied before BOTH the
-// branch comparison (line 245) and both trace writeln! calls (lines 256, 270):
+// apply_model_override, api_switch.rs:293-294 — same pattern, applied before BOTH the
+// branch comparison (line 294) and both trace writeln! calls (lines 305, 319):
 let sonnet_left = ( 100.0 - sonnet.utilization ).round();
 if sonnet_left < OPUS_OVERRIDE_THRESHOLD { /* ... */ } else { /* ... */ }
 ```
@@ -150,16 +150,16 @@ Per BUG-331 § History (Step 6 — Search More Instances), the following thresho
 
 | File | Relationship |
 |------|--------------|
-| `src/usage/format.rs:443-451` | `pct_emoji` closure — both confirmed violation call sites (`format.rs:460,462`) |
-| `src/usage/api_switch.rs:225-298` | `apply_model_override` — branch selection (`244-245`) and trace logging (`256,270`) |
-| `src/usage/types.rs:399,408,414` | `OPUS_OVERRIDE_THRESHOLD`, `H_EXHAUSTED_THRESHOLD`, `WEEKLY_EXHAUSTION_THRESHOLD` constant definitions |
+| `src/usage/format.rs:470-478` | `pct_emoji` closure — both call sites (`format.rs:487,489`) |
+| `src/usage/api_switch.rs:261-347` | `apply_model_override` — branch selection (`293-294`) and trace logging (`305,319`) |
+| `src/usage/types.rs:456,465,471` | `OPUS_OVERRIDE_THRESHOLD`, `H_EXHAUSTED_THRESHOLD`, `WEEKLY_EXHAUSTION_THRESHOLD` constant definitions |
 | `src/usage/approx.rs:100-176` | `quadratic_fit()` — upstream source of the floating-point noise that triggers this hazard (see algorithm/006) |
 
 ### Invariants
 
 | File | Relationship |
 |------|--------------|
-| [invariant/010_floating_point_comparison_vs_display_consistency.md](../invariant/010_floating_point_comparison_vs_display_consistency.md) | Formal invariant both `pct_emoji` and `apply_model_override` must satisfy; currently violated per BUG-331 |
+| [invariant/010_floating_point_comparison_vs_display_consistency.md](../invariant/010_floating_point_comparison_vs_display_consistency.md) | Formal invariant both `pct_emoji` and `apply_model_override` must satisfy; satisfied by both functions since the BUG-331 fix (2026-07-08) — previously violated, see § Rounding-Boundary Hazard : Fix pattern |
 
 ### Algorithms
 

@@ -65,7 +65,7 @@ cargo run -p claude_runner -- --dry-run --dir /tmp "test"
 ```
 
 **Expected:**
-- Prints env var lines (`CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000`, etc.)
+- Prints env var lines (`CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000`, etc.)
 - Prints: `cd /tmp`
 - Prints: `env -u CLAUDECODE claude --dangerously-skip-permissions --effort max --print --output-format json "test\n\nultrathink"` (bypass, effort max, print, `--output-format json` auto-injected in summary mode per TSK-231; `env -u CLAUDECODE` prefix from Feature 006; `--chrome` absent — print mode suppression per BUG-304; `-c` omitted because `/tmp` has no session history for this project per BUG-214 fix — `-c` appears only when `$HOME/.claude/projects/{encoded(dir)}/` is non-empty)
 - Does NOT invoke Claude binary
@@ -230,7 +230,7 @@ cargo run -p claude_runner -- --trace "test" 2>/tmp/trace29_err.txt; echo "exit:
 
 **Expected:** Command preview (env vars + command) written to stderr. Invocation attempt made (may fail if Claude binary absent). Exit code 0 on success, non-zero if Claude not found.
 
-**Precondition:** Requires fewer than `--max-sessions` live claude sessions on the host. If the gate fires (e.g., 6/6 sessions running), the gate-wait message appears on stderr BEFORE the trace block runs — this is correct gate-before-trace ordering by design. Test in container where session count is 0 for reliable results.
+**Precondition:** Requires fewer than `--max-sessions` live claude sessions on the host. If the gate fires (e.g., 8/8 sessions running), the gate-wait message appears on stderr BEFORE the trace block runs — this is correct gate-before-trace ordering by design. Test in container where session count is 0 for reliable results.
 
 ### TC-30: No-Skip-Permissions in Dry-Run
 ```sh
@@ -354,7 +354,7 @@ cargo run -p claude_runner -- ask --dry-run "question"
 cargo run -p claude_runner -- run --dry-run "question"
 ```
 
-**Expected:** Both commands produce **identical** dry-run output — `--effort max`, `CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000`, `-c` continuation, `--dangerously-skip-permissions`, ultrathink suffix; `--chrome` absent (print mode — BUG-304 suppression). `ask` is a pure semantic alias for `run` since plan-007; all old ask-specific overrides (effort high, 16384 tokens, no `-c`, no skip-permissions) were removed. Exit code 0 on both.
+**Expected:** Both commands produce **identical** dry-run output — `--effort max`, `CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000`, `-c` continuation, `--dangerously-skip-permissions`, ultrathink suffix; `--chrome` absent (print mode — BUG-304 suppression). `ask` is a pure semantic alias for `run` since plan-007; all old ask-specific overrides (effort high, 16384 tokens, no `-c`, no skip-permissions) were removed. Exit code 0 on both.
 
 ### TC-46: Empty Session Dir — No `-c` Injected (BUG-214 regression guard)
 ```sh
@@ -720,7 +720,7 @@ These are exhaustively tested by the integration test suite (not manual). Listed
 - **CC-70:** `clr ask --dry-run test` → does NOT have `--no-session-persistence` (pure alias — no injection)
 - **CC-71:** `clr ask --dry-run test` → has ultrathink suffix (pure alias — no suppression)
 - **CC-72:** `clr ask --dry-run test` → no `--chrome` (print mode — BUG-304 suppression)
-- **CC-73:** `clr ask --dry-run test` → `CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000` (pure alias — not 16384)
+- **CC-73:** `clr ask --dry-run test` → `CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000` (pure alias — not 16384)
 - **CC-74:** `clr ask help` (positional) → shows ask help, exits 0 (BUG-249 regression guard)
 - **CC-75:** `clr ask --effort high --dry-run test` → has `--effort high` (explicit override respected)
 - Automated in: `ask_command_test.rs` T01–T11
@@ -728,7 +728,7 @@ These are exhaustively tested by the integration test suite (not manual). Listed
 ### BUG-245 (CLR_EFFORT/CLR_MAX_TOKENS in ask mode)
 
 - **CC-79:** `CLR_EFFORT=low clr ask` → env var applied (was broken before fix when ask had soft defaults)
-- Equivalent test: `CLR_MAX_TOKENS=50000 clr ask` → overrides default 200000
+- Equivalent test: `CLR_MAX_TOKENS=50000 clr ask` → overrides default 128000
 - Automated in: `it_11_clr_effort_env_overrides_ask_default`, `it_12_clr_max_tokens_env_overrides_ask_default`
 
 ### New features: output-file, expect, expect-strategy, retry-on-validation, max-sessions
@@ -743,7 +743,7 @@ These are exhaustively tested by the integration test suite (not manual). Listed
 - **CC-87:** `--retry-on-validation 256 --dry-run "test"` → exit 1; error "invalid --retry-on-validation value"
 - **CC-88:** `--max-sessions 5 --dry-run "test"` → exit 0
 - **CC-89:** `--max-sessions 0 --dry-run "test"` → exit 0 (gate disabled)
-- **CC-90:** `CLR_MAX_SESSIONS=notanumber --dry-run "test"` → exit 0 (silently ignored, default 6 used)
+- **CC-90:** `CLR_MAX_SESSIONS=notanumber --dry-run "test"` → exit 0 (silently ignored, default 8 used)
 - Automated in: `output_file_test.rs`, `expect_validation_test.rs`, `param_edge_cases_test.rs`, `env_var_ext_test.rs`
 
 ### Env vars for expect/output-file params
@@ -1009,17 +1009,17 @@ clr isolated --trace --creds /nonexistent "test"
 
 **Expected:** Trace printed to stderr first (`# clr isolated`, `# creds: /nonexistent`, command preview), THEN `Error: cannot read credentials file '/nonexistent'`. Exit 1. Trace fires before any I/O (from `emit_credential_trace` being called before `read_to_string`).
 
-### NC-12: Gate Waiting Message Format — `X/Y sessions active`
+### NC-12: Gate Waiting Message Format — `gate-wait  active=X/Y`
 
-**Precondition:** Requires ≥6 live claude sessions running on the host (or use `--max-sessions N` with N sessions already running). Gate-blocked: cannot be tested in container (0 sessions).
+**Precondition:** Requires ≥8 live claude sessions running on the host (or use `--max-sessions N` with N sessions already running). Gate-blocked: cannot be tested in container (0 sessions).
 
 **Expected:** When the gate is triggered, each polling cycle emits to stderr:
-`Info: {count}/{max} sessions active; waiting 30s for a slot... (attempt {attempt}/{max_attempts})`
+`{timestamp} · gate-wait  active={count}/{max} attempt={attempt}/{max_attempts} wait={poll_secs}s (reason: {cause})`
 
-Example with 6 sessions at default limit:
-`Info: 6/6 sessions active; waiting 30s for a slot... (attempt 1/1000)`
+Example with 8 sessions at default limit:
+`2026-08-04 · 12:00:00 UTC · gate-wait  active=8/8 attempt=1/1000 wait=30s (reason: [at capacity])`
 
-The old format `"X claude session(s) running (limit Y)"` is **not** emitted. The `X/Y` ratio format is the canonical output.
+The pre-TSK-452 format `"Info: X/Y print sessions active; waiting Xs..."` is **not** emitted. The structured `gate-wait  active=` prefix with `(reason: ...)` trailer is the canonical output.
 
 ### NC-13: Gate Exhaustion After 1000 Attempts
 

@@ -12,6 +12,7 @@ Reads current rate-limit utilization for an account by making a lightweight HTTP
 
 **Pre-conditions:**
 - Named account (or active account if `name::` omitted) credentials accessible in credential store
+- Target account's `backend` is `anthropic` — `.account.limits` hard-rejects a `backend: redirect` account (exit non-zero) since no `anthropic-ratelimit-unified-*` headers exist for a foreign endpoint
 - Network reachable; Claude API endpoint accessible
 - `$HOME` environment variable set
 
@@ -48,6 +49,7 @@ Reads current rate-limit utilization for an account by making a lightweight HTTP
 | File | Relationship |
 |------|-------------|
 | [feature/013_account_limits.md](../../feature/013_account_limits.md) | Rate-limit header parsing and utilization display |
+| [feature/071_redirect_backend_accounts.md](../../feature/071_redirect_backend_accounts.md) | Anthropic-only hard-reject guard — `backend: redirect` accounts have no rate-limit headers to parse |
 
 ### Referenced Commands
 

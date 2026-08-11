@@ -1,23 +1,23 @@
 # CLI Parameter Group: Credential Operations
 
-**Pattern:** Shared by `clr isolated` and `clr refresh`; configure the credential-isolated execution environment; not accepted by `clr run`.
+**Pattern:** Shared by `clr isolated` and `clr refresh`; configures the credential-isolated execution environment. `--creds` is exclusive to this group; `--trace`/`--timeout` are cross-command members retained here for their credential-op-specific defaults.
 
 **Purpose:** Configure credential-isolated execution for `clr isolated` and `clr refresh`.
 **Order:** 4
 
 ### Semantic Coherence Test
 
-"Is this parameter used by credential-operating commands (`isolated`/`refresh`) and not by `run`?" — YES for all 3.
+"Is this parameter used by credential-operating commands (`isolated`/`refresh`)?" — YES for all 3. `--creds` is exclusive to this group; `--trace` and `--timeout` are cross-command (also consumed by `run`/`ask`, see [`06_running_commands.md`](06_running_commands.md)) but carry credential-op-specific defaults documented here.
 
 ### Why NOT X
 
 - `--creds`: exclusive to credential ops; sets credentials file — not applicable to `run`
-- `--timeout`: exclusive to credential ops; controls subprocess wait time — not applicable to `run`
+- `--timeout`: cross-command like `--trace` — also consumed by `run`/`ask` (default 3600s there); listed here for its credential-op-specific defaults (30s `isolated`, 45s `refresh`)
 - `--trace`: also in Runner Control (Group 2) for `run`; listed here because it applies to credential ops too
 
 ### Invariants
 
-`--creds` and `--timeout` are exclusive to `clr isolated` and `clr refresh`. Neither is accepted by `clr run`. `--trace` is cross-command (also in Group 2).
+`--creds` is exclusive to `clr isolated` and `clr refresh` — not accepted by `clr run`. `--timeout` and `--trace` are cross-command (also accepted by `run`/`ask` — see Group 2) but retain distinct, credential-op-specific defaults documented here.
 
 ### Notes
 

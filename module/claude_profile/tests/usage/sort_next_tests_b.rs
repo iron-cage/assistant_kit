@@ -47,7 +47,7 @@ fn mre_bug229_find_next_renew_picks_account_with_sooner_subscription()
   let acct_c = mk_aq_with_7d_reset( "c@test.com", 30.0, now, 3600 );
 
   let accounts = vec![ acct_a, acct_b, acct_c ];
-  let winner   = find_next_for_strategy( &accounts, SortStrategy::Renew, PreferStrategy::Any, now, false );
+  let winner   = find_next_for_strategy( &accounts, SortStrategy::Renew, PreferStrategy::Any, now, false, "anthropic" );
 
   assert_eq!(
     winner, Some( 1 ),
@@ -112,6 +112,7 @@ fn mre_bug229_strategy_metric_renew_exact_sub_shows_both_timers()
     is_owned      : true,
     owner                : String::new(),
       claim_lock : false, reserve : false,
+    inference_provider : String::new(),
   };
 
   let metric = strategy_metric( &aq, SortStrategy::Renew, PreferStrategy::Any, now);
@@ -173,6 +174,7 @@ fn mre_bug229_strategy_metric_renew_no_sub_shows_7d_only()
     is_owned      : true,
     owner                : String::new(),
       claim_lock : false, reserve : false,
+    inference_provider : String::new(),
   };
 
   let metric = strategy_metric( &aq, SortStrategy::Renew, PreferStrategy::Any, now);
@@ -287,6 +289,7 @@ fn mre_bug260_renew_nondeterministic_when_fully_tied()
     PreferStrategy::Any,
     now_secs,
     false,
+    "anthropic",
   );
   assert_eq!(
     result,
@@ -297,15 +300,15 @@ fn mre_bug260_renew_nondeterministic_when_fully_tied()
 
 /// # BUG-292 Reproducer
 ///
-/// `sort::renew` must skip weekly-exhausted accounts (`prefer_weekly` ≤ 5.0) even
+/// `sort::renew` must skip weekly-exhausted accounts (`prefer_weekly` ≤ 3.0) even
 /// when they have the soonest 7d reset event. Before this fix, a weekly-exhausted
 /// account with an imminent 7d reset was recommended because the `Renew` arm had no
-/// `prefer_weekly > 5.0` gate.
+/// `prefer_weekly > 3.0` gate.
 ///
 /// # Root Cause
 /// `find_next_for_strategy(Renew)` lacked the weekly-floor gate present in `Drain`
 /// (BUG-206) and `Endurance` (BUG-287). The renew arm's qualification predicate did
-/// not include `prefer_weekly > 5.0`, allowing exhausted accounts with a soonest reset
+/// not include `prefer_weekly > 3.0`, allowing exhausted accounts with a soonest reset
 /// to pass all filters and be recommended.
 ///
 /// # Why Not Caught
@@ -316,7 +319,7 @@ fn mre_bug260_renew_nondeterministic_when_fully_tied()
 ///
 /// # Fix Applied
 /// Replace the independent `.filter().min_by()` with `sort_indices(Renew)` +
-/// `find_first_eligible(extra=|aq| prefer_weekly(aq, prefer) > 5.0)`.
+/// `find_first_eligible(extra=|aq| prefer_weekly(aq, prefer) > 3.0)`.
 ///
 /// # Prevention
 /// Any new `find_first_eligible` call site must include a weekly-floor gate.
@@ -332,19 +335,19 @@ fn mre_bug260_renew_nondeterministic_when_fully_tied()
 fn mre_bug292_renew_skips_weekly_exhausted_even_with_soonest_renewal()
 {
   let now = 0u64;
-  // exhausted@test: seven_day_util=96.0 → prefer_weekly=4.0 (≤ 5.0, weekly-exhausted).
+  // exhausted@test: seven_day_util=98.0 → prefer_weekly=2.0 (≤ 3.0, weekly-exhausted).
   //   7d reset fires in 1h (SOONEST event) — before fix this account was recommended.
   //   five_hour_util=0.0 → five_hour_left=100% — NOT h-exhausted; passes all old filters.
-  let exhausted = mk_aq_with_7d_reset_util( "exhausted@test.com", 0.0, 96.0, now, 3_600 );
-  // healthy@test: seven_day_util=40.0 → prefer_weekly=60.0 (> 5.0, qualifies).
+  let exhausted = mk_aq_with_7d_reset_util( "exhausted@test.com", 0.0, 98.0, now, 3_600 );
+  // healthy@test: seven_day_util=40.0 → prefer_weekly=60.0 (> 3.0, qualifies).
   //   7d reset fires in 24h (later event) — must be selected after fix.
   let healthy   = mk_aq_with_7d_reset_util( "healthy@test.com",   0.0, 40.0, now, 86_400 );
 
-  let idx = find_next_for_strategy( &[ exhausted, healthy ], SortStrategy::Renew, PreferStrategy::Any, now, false );
+  let idx = find_next_for_strategy( &[ exhausted, healthy ], SortStrategy::Renew, PreferStrategy::Any, now, false, "anthropic" );
   assert!( idx.is_some(), "BUG-292: renew must find a candidate (healthy@test.com is eligible)" );
   assert_eq!(
     idx.unwrap(), 1,
-    "BUG-292: renew must skip exhausted@test.com (prefer_weekly=4.0 ≤ 5.0) and pick healthy@test.com (index 1); got {idx:?}",
+    "BUG-292: renew must skip exhausted@test.com (prefer_weekly=2.0 ≤ 3.0) and pick healthy@test.com (index 1); got {idx:?}",
   );
 }
 
@@ -401,7 +404,7 @@ fn mre_bug291_renew_next_tiebreaker_matches_sort_indices()
   // Step 2: find_next_for_strategy(Renew) must agree with sort_indices — selects bob (index 1).
   let alice_n = mk_aq_with_7d_reset_util( "alice@test.com", 80.0, 10.0, now, 3_600 );
   let bob_n   = mk_aq_with_7d_reset_util( "bob@test.com",   20.0, 60.0, now, 3_600 );
-  let idx     = find_next_for_strategy( &[ alice_n, bob_n ], SortStrategy::Renew, PreferStrategy::Any, now, false );
+  let idx     = find_next_for_strategy( &[ alice_n, bob_n ], SortStrategy::Renew, PreferStrategy::Any, now, false, "anthropic" );
   assert_eq!(
     idx, Some( 1 ),
     "BUG-291: sort::renew tiebreaker must match sort_indices(Renew) — bob (prefer_weekly=40) must win, not alice; got {idx:?}",
@@ -447,7 +450,7 @@ fn mre_bug317_cancelled_not_recommended_by_find_next()
   let accounts  = vec![ cancelled ];
   for strategy in [ SortStrategy::Renew, SortStrategy::Name, SortStrategy::Renews ]
   {
-    let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, false );
+    let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, false, "anthropic" );
     assert!(
       result.is_none(),
       "BUG-317: {strategy:?} must not recommend cancelled account (billing_type='none'); got idx {result:?}",
@@ -468,7 +471,7 @@ fn mre_bug_gap8_find_first_eligible_at_exactly_85_utilization()
   let accounts = vec![ acct ];
   for strategy in [ SortStrategy::Renew, SortStrategy::Name, SortStrategy::Renews ]
   {
-    let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, false );
+    let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, false, "anthropic" );
     assert!(
       result.is_none(),
       "{strategy:?}: account with five_hour.utilization=85.0 must be skipped by gate 4 (>= 85.0); got: {result:?}",
@@ -510,8 +513,8 @@ fn mre_bug324_green_account_eligible_when_7d_son_exhausted()
 {
   let now = 0u64;
   // target: 5h_util=0.0 (5h Left=100%), 7d_util=69.0 (7d Left=31%), 7d_son_util=100.0 (7d(Son)=0%).
-  // prefer_weekly(any) = min(31%, 0%) = 0.0 ≤ 5.0 → BLOCKED before fix.
-  // seven_day_left    = 31.0 > 5.0          → ELIGIBLE after fix.
+  // prefer_weekly(any) = min(31%, 0%) = 0.0 ≤ 3.0 → BLOCKED before fix.
+  // seven_day_left    = 31.0 > 3.0          → ELIGIBLE after fix.
   let target = mk_aq_sort_weekly( "aaa_target@test.com", 0.0, 69.0, 100.0 );
   // current: force the engine to look past is_current accounts.
   let mut current = mk_aq_sort( "zzz_current@test.com", 20.0, FAR_FUTURE_MS );
@@ -522,7 +525,7 @@ fn mre_bug324_green_account_eligible_when_7d_son_exhausted()
   {
     for prefer in [ PreferStrategy::Any, PreferStrategy::Opus, PreferStrategy::Sonnet ]
     {
-      let result = find_next_for_strategy( &accounts, strategy, prefer, now, false );
+      let result = find_next_for_strategy( &accounts, strategy, prefer, now, false, "anthropic" );
       assert_eq!(
         result, Some( 0 ),
         "BUG-324: {strategy:?}/{prefer:?} — green account with 7d Left=31%, 7d(Son)=0% must be eligible (index 0); \
@@ -548,7 +551,7 @@ fn mre_bug324_green_account_eligible_when_7d_son_exhausted()
 ///
 /// # Prevention
 /// Regression test confirms that having `seven_day_sonnet = Some({util: 100%})` on the only
-/// available account does NOT prevent rotation when `seven_day_left > 5%`.
+/// available account does NOT prevent rotation when `seven_day_left > 3%`.
 ///
 /// # Pitfall
 /// Missing Sonnet tier (`seven_day_sonnet = None`) never triggers the bug — `prefer_weekly(any)`
@@ -575,7 +578,7 @@ fn mre_bug324_sole_green_candidate_7d_son_zero_returns_some()
   let accounts = vec![ sole, b_current, b_active, b_expired, b_hexhausted ];
   for strategy in [ SortStrategy::Name, SortStrategy::Renew, SortStrategy::Renews ]
   {
-    let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, false );
+    let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, false, "anthropic" );
     assert_eq!(
       result, Some( 0 ),
       "BUG-324: {strategy:?} — sole green candidate with 7d(Son)=0% must be selected (index 0); \
@@ -586,77 +589,80 @@ fn mre_bug324_sole_green_candidate_7d_son_zero_returns_some()
 
 // ── BUG-324 corner cases: gate 7 boundary + model-agnostic eligibility ────
 
-/// CC — Gate 7 boundary: `seven_day_left = 5.0` exactly → account SKIPPED in eligibility.
+/// CC — Gate 7 boundary: `seven_day_left = 3.0` exactly → account SKIPPED in eligibility.
 ///
-/// `seven_day_util = 95.0` → `seven_day_left = 100.0 - 95.0 = 5.0`.
-/// Gate 7: `5.0 > WEEKLY_EXHAUSTION_THRESHOLD (5.0) = false` → gate fires → skipped.
+/// `seven_day_util = 97.0` → `seven_day_left = 100.0 - 97.0 = 3.0`.
+/// Gate 7: `3.0 > WEEKLY_EXHAUSTION_THRESHOLD (3.0) = false` → gate fires → skipped.
 /// Strict `>` operator — exactly at threshold is exhausted, not eligible.
 /// Complements `sort.rs` GAP-7b (`status_group_of` boundary) with the eligibility-gate path.
 #[ test ]
-fn test_cc_gate7_boundary_exactly_5pct_skipped_in_eligibility()
+fn test_cc_gate7_boundary_exactly_3pct_skipped_in_eligibility()
 {
   let now = 0u64;
-  // seven_day_left = 5.0 exactly (boundary). seven_day_sonnet_util = 0.0 (no divergence).
-  let target = mk_aq_sort_weekly( "aaa_target@test.com", 0.0, 95.0, 0.0 );
+  // seven_day_left = 3.0 exactly (boundary). seven_day_sonnet_util = 0.0 (no divergence).
+  let target = mk_aq_sort_weekly( "aaa_target@test.com", 0.0, 97.0, 0.0 );
   let mut current = mk_aq_sort( "zzz_current@test.com", 20.0, FAR_FUTURE_MS );
   current.is_current = true;
   let accounts = vec![ target, current ];
 
   for strategy in [ SortStrategy::Name, SortStrategy::Renew, SortStrategy::Renews ]
   {
-    let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, false );
+    let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, false, "anthropic" );
     assert!(
       result.is_none(),
-      "{strategy:?}: seven_day_left=5.0 (exactly at threshold) must be SKIPPED (strict > 5.0); got: {result:?}",
+      "{strategy:?}: seven_day_left=3.0 (exactly at threshold) must be SKIPPED (strict > 3.0); got: {result:?}",
     );
   }
 }
 
-/// CC — Gate 7 just above boundary: `seven_day_left = 5.5` (rounds to 6) → account ELIGIBLE.
+/// CC — Gate 7 just above boundary: `seven_day_left = 3.5` (rounds to 4) → account ELIGIBLE.
 ///
-/// `seven_day_util = 94.5` → `seven_day_left = 100.0 - 94.5 = 5.5` (exact tie-break value).
-/// Gate 7: `round(5.5) = 6.0` (round-half-away-from-zero), `6.0 > 5.0 = true` → eligible.
+/// `seven_day_util = 96.5` → `seven_day_left = 100.0 - 96.5 = 3.5` (exact tie-break value).
+/// Gate 7: `round(3.5) = 4.0` (round-half-away-from-zero), `4.0 > 3.0 = true` → eligible.
 ///
 /// Fix(BUG-336): originally used `seven_day_util=94.99` (`left=5.01`) — once `seven_day_left()`
 ///   rounds its return value (this file's own BUG-336 fix), 5.01 rounds DOWN to 5.0 (the
-///   threshold), no longer demonstrating "just above". Recalibrated to the new narrowest
-///   above-threshold margin: 94.5 (left=5.5), the exact tie-break point that rounds up to 6.
+///   threshold), no longer demonstrating "just above". Recalibrated to the narrowest
+///   above-threshold margin under the original 5.0 threshold: 94.5 (left=5.5), the exact
+///   tie-break point that rounded up to 6. Threshold later lowered to 3.0 — recalibrated again
+///   to 96.5 (left=3.5), the new exact tie-break point that rounds up to 4.
 #[ test ]
 fn test_cc_gate7_just_above_boundary_eligible()
 {
   let now = 0u64;
-  let target = mk_aq_sort_weekly( "aaa_target@test.com", 0.0, 94.5, 0.0 );
+  let target = mk_aq_sort_weekly( "aaa_target@test.com", 0.0, 96.5, 0.0 );
   let mut current = mk_aq_sort( "zzz_current@test.com", 20.0, FAR_FUTURE_MS );
   current.is_current = true;
   let accounts = vec![ target, current ];
 
   for strategy in [ SortStrategy::Name, SortStrategy::Renew, SortStrategy::Renews ]
   {
-    let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, false );
+    let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, false, "anthropic" );
     assert_eq!(
       result, Some( 0 ),
-      "{strategy:?}: seven_day_left=5.5 (rounds to 6, just above threshold) must be ELIGIBLE; got: {result:?}",
+      "{strategy:?}: seven_day_left=3.5 (rounds to 4, just above threshold) must be ELIGIBLE; got: {result:?}",
     );
   }
 }
 
-/// CC — BUG-324 class at narrowest margin: `seven_day_left = 5.5` (rounds to 6), `seven_day_sonnet_left = 0%`.
+/// CC — BUG-324 class at narrowest margin: `seven_day_left = 3.5` (rounds to 4), `seven_day_sonnet_left = 0%`.
 ///
-/// `seven_day_util = 94.5` → `seven_day_left = 5.5` → rounds to 6.0 (above threshold).
+/// `seven_day_util = 96.5` → `seven_day_left = 3.5` → rounds to 4.0 (above threshold).
 /// `seven_day_sonnet_util = 100.0` → `seven_day_sonnet_left = 0.0`.
-/// `prefer_weekly(Any) = min(6.0, 0.0) = 0.0` — pre-BUG-324-fix: blocked (`0.0 ≤ 5.0`).
-/// `seven_day_left = 5.5` (rounds to 6.0) — post-BUG-324-fix: eligible (`6.0 > 5.0`).
+/// `prefer_weekly(Any) = min(4.0, 0.0) = 0.0` — pre-BUG-324-fix: blocked (`0.0 ≤ 3.0`).
+/// `seven_day_left = 3.5` (rounds to 4.0) — post-BUG-324-fix: eligible (`4.0 > 3.0`).
 ///
 /// Fix(BUG-336): originally used `seven_day_util=94.99` (`left=5.01`) — once `seven_day_left()`
 ///   rounds its return value (this file's own BUG-336 fix), 5.01 rounds DOWN to 5.0 (the
 ///   threshold), which would incorrectly re-block this account and no longer exercise the
 ///   BUG-324 divergence this test targets. Recalibrated to 94.5 (left=5.5, the exact tie-break
-///   that rounds up to 6) to keep the BUG-324 regression margin clear of the BUG-336 boundary.
+///   that rounded up to 6) to keep the BUG-324 regression margin clear of the BUG-336 boundary.
+///   Threshold later lowered to 3.0 — recalibrated again to 96.5 (left=3.5, rounds up to 4).
 #[ test ]
 fn test_cc_bug324_divergent_at_boundary_eligible()
 {
   let now = 0u64;
-  let target = mk_aq_sort_weekly( "aaa_target@test.com", 0.0, 94.5, 100.0 );
+  let target = mk_aq_sort_weekly( "aaa_target@test.com", 0.0, 96.5, 100.0 );
   let mut current = mk_aq_sort( "zzz_current@test.com", 20.0, FAR_FUTURE_MS );
   current.is_current = true;
   let accounts = vec![ target, current ];
@@ -665,10 +671,10 @@ fn test_cc_bug324_divergent_at_boundary_eligible()
   {
     for prefer in [ PreferStrategy::Any, PreferStrategy::Opus, PreferStrategy::Sonnet ]
     {
-      let result = find_next_for_strategy( &accounts, strategy, prefer, now, false );
+      let result = find_next_for_strategy( &accounts, strategy, prefer, now, false, "anthropic" );
       assert_eq!(
         result, Some( 0 ),
-        "BUG-324 boundary: {strategy:?}/{prefer:?} — seven_day_left=5.5 (rounds to 6), 7d_son_left=0% \
+        "BUG-324 boundary: {strategy:?}/{prefer:?} — seven_day_left=3.5 (rounds to 4), 7d_son_left=0% \
          must be ELIGIBLE; got: {result:?}",
       );
     }
@@ -677,11 +683,11 @@ fn test_cc_bug324_divergent_at_boundary_eligible()
 
 /// CC — `prefer::sonnet` with absent Sonnet tier: account eligible via raw `seven_day_left`.
 ///
-/// `seven_day_util = 50.0` → `seven_day_left = 50.0` (well above 5%).
+/// `seven_day_util = 50.0` → `seven_day_left = 50.0` (well above 3%).
 /// `seven_day_sonnet = None` → `prefer_weekly(Sonnet) = 0.0` (absent = unknown = 0%).
-/// Pre-fix: `0.0 > 5.0 = false` → BLOCKED (any account without Sonnet tier ineligible
+/// Pre-fix: `0.0 > 3.0 = false` → BLOCKED (any account without Sonnet tier ineligible
 ///   under `prefer::sonnet`).
-/// Post-fix: `seven_day_left = 50.0 > 5.0 = true` → ELIGIBLE (model-agnostic gate).
+/// Post-fix: `seven_day_left = 50.0 > 3.0 = true` → ELIGIBLE (model-agnostic gate).
 #[ test ]
 fn test_cc_prefer_sonnet_absent_tier_eligible()
 {
@@ -694,11 +700,11 @@ fn test_cc_prefer_sonnet_absent_tier_eligible()
   let accounts = vec![ target, current ];
 
   let result = find_next_for_strategy(
-    &accounts, SortStrategy::Renew, PreferStrategy::Sonnet, now, false,
+    &accounts, SortStrategy::Renew, PreferStrategy::Sonnet, now, false, "anthropic",
   );
   assert_eq!(
     result, Some( 0 ),
-    "prefer::sonnet + absent Sonnet tier: seven_day_left=50.0 > 5.0 must be ELIGIBLE; \
+    "prefer::sonnet + absent Sonnet tier: seven_day_left=50.0 > 3.0 must be ELIGIBLE; \
      pre-fix: prefer_weekly(Sonnet)=0.0 would block; got: {result:?}",
   );
 }
@@ -708,7 +714,7 @@ fn test_cc_prefer_sonnet_absent_tier_eligible()
 /// `seven_day_util = 50.0` → `seven_day_left = 50.0`.
 /// `seven_day_sonnet_util = 100.0` → `seven_day_sonnet_left = 0%`.
 /// `prefer_weekly(Sonnet) = 100.0 - 100.0 = 0.0` — pre-fix: blocked.
-/// `seven_day_left = 50.0 > 5.0` — post-fix: eligible.
+/// `seven_day_left = 50.0 > 3.0` — post-fix: eligible.
 #[ test ]
 fn test_cc_prefer_sonnet_exhausted_tier_eligible()
 {
@@ -719,11 +725,251 @@ fn test_cc_prefer_sonnet_exhausted_tier_eligible()
   let accounts = vec![ target, current ];
 
   let result = find_next_for_strategy(
-    &accounts, SortStrategy::Renew, PreferStrategy::Sonnet, now, false,
+    &accounts, SortStrategy::Renew, PreferStrategy::Sonnet, now, false, "anthropic",
   );
   assert_eq!(
     result, Some( 0 ),
-    "prefer::sonnet + Sonnet exhausted (100%% util): seven_day_left=50.0 > 5.0 must be ELIGIBLE; \
+    "prefer::sonnet + Sonnet exhausted (100%% util): seven_day_left=50.0 > 3.0 must be ELIGIBLE; \
      pre-fix: prefer_weekly(Sonnet)=0.0 would block; got: {result:?}",
+  );
+}
+
+// ── Feature 072: Gate 10 (provider mismatch) ──────────────────────────────
+
+/// T04 (Gate-10 half) — an account with no `inference_provider` key (empty string after
+/// parse) is never misclassified as provider-mismatched: Gate 10 normalizes empty to
+/// `"anthropic"` before comparing, so a default-absent selected provider never excludes it.
+#[ test ]
+fn test_cc_gate10_empty_inference_provider_treated_as_anthropic()
+{
+  let now = 0u64;
+  // mk_aq_sort defaults inference_provider to "" (no key present, matches a freshly-read
+  // account file predating Feature 072).
+  let acct = mk_aq_sort( "no_provider_key@test.com", 20.0, FAR_FUTURE_MS );
+  let accounts = vec![ acct ];
+  for strategy in [ SortStrategy::Name, SortStrategy::Renew, SortStrategy::Renews ]
+  {
+    let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, false, "anthropic" );
+    assert_eq!(
+      result, Some( 0 ),
+      "{strategy:?}: empty inference_provider (missing key) must be treated as \"anthropic\" \
+       and never misclassified as a provider mismatch; got: {result:?}",
+    );
+  }
+}
+
+/// T13 — Gate 10 excludes an account whose `inference_provider` does not match the
+/// selected provider from `find_first_eligible()`'s candidate pool, regardless of every
+/// other gate passing.
+#[ test ]
+fn test_cc_gate10_provider_mismatch_skips_account()
+{
+  let now = 0u64;
+  // matched: inference_provider="" (resolves to "anthropic") — eligible.
+  let matched = mk_aq_sort( "matched@test.com", 20.0, FAR_FUTURE_MS );
+  // mismatched: inference_provider="kimi" — passes every other gate but must be skipped.
+  let mut mismatched = mk_aq_sort( "mismatched@test.com", 20.0, FAR_FUTURE_MS );
+  mismatched.inference_provider = "kimi".to_string();
+  let accounts = vec![ matched, mismatched ];
+
+  for strategy in [ SortStrategy::Name, SortStrategy::Renew, SortStrategy::Renews ]
+  {
+    // gate_ownership=true mirrors a non-forced `rotate::1` call (params.rotate && !params.force).
+    let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, true, "anthropic" );
+    assert_eq!(
+      result, Some( 0 ),
+      "{strategy:?}: Gate 10 must skip mismatched@test.com (\"kimi\" != \"anthropic\") and \
+       select matched@test.com (index 0); got: {result:?}",
+    );
+  }
+}
+
+/// T14 (AF3) — Gate 10's exclusion is not bypassed by `force::1`. At the CLI layer
+/// `force::1` maps to `gate_ownership = params.rotate && !params.force` becoming `false`
+/// (`api.rs`) — this test passes `gate_ownership=false` (the force-bypassed value) against
+/// the identical T13 pool and asserts the mismatched account is still excluded, proving
+/// Gate 10 is structurally independent of the ownership-gate/force parameter.
+#[ doc = "`bug_reproducer(AF3)`" ]
+#[ test ]
+fn test_cc_gate10_mismatch_not_bypassed_by_force_equivalent()
+{
+  let now = 0u64;
+  let matched = mk_aq_sort( "matched@test.com", 20.0, FAR_FUTURE_MS );
+  let mut mismatched = mk_aq_sort( "mismatched@test.com", 20.0, FAR_FUTURE_MS );
+  mismatched.inference_provider = "kimi".to_string();
+  let accounts = vec![ matched, mismatched ];
+
+  for strategy in [ SortStrategy::Name, SortStrategy::Renew, SortStrategy::Renews ]
+  {
+    // gate_ownership=false mirrors force::1 (the ownership gate is bypassed) — Gate 10 has
+    // no such bypass and must still fire.
+    let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, false, "anthropic" );
+    assert_eq!(
+      result, Some( 0 ),
+      "{strategy:?}: force::1 (gate_ownership=false) must NOT bypass Gate 10 — \
+       mismatched@test.com must still be skipped; got: {result:?}",
+    );
+  }
+}
+
+/// T15 — both an empty `inference_provider` and an explicit `"anthropic"` value resolve to
+/// the identical effective provider, so an account is equally eligible under either
+/// representation when the selected provider is the default-absent `"anthropic"`.
+#[ test ]
+fn test_cc_gate10_empty_and_explicit_anthropic_are_equivalent()
+{
+  let now = 0u64;
+
+  let empty_provider = mk_aq_sort( "empty_provider@test.com", 20.0, FAR_FUTURE_MS );
+  let result_empty = find_next_for_strategy( &[ empty_provider ], SortStrategy::Name, PreferStrategy::Any, now, false, "anthropic" );
+  assert_eq!(
+    result_empty, Some( 0 ),
+    "T15: empty inference_provider must be eligible against selected_provider=\"anthropic\"; got: {result_empty:?}",
+  );
+
+  let mut explicit_provider = mk_aq_sort( "explicit_provider@test.com", 20.0, FAR_FUTURE_MS );
+  explicit_provider.inference_provider = "anthropic".to_string();
+  let result_explicit = find_next_for_strategy( &[ explicit_provider ], SortStrategy::Name, PreferStrategy::Any, now, false, "anthropic" );
+  assert_eq!(
+    result_explicit, Some( 0 ),
+    "T15: explicit inference_provider=\"anthropic\" must be eligible against selected_provider=\"anthropic\"; got: {result_explicit:?}",
+  );
+}
+
+// ── BUG-341: stale account-gated org_created_at read ─────────────────────────
+
+/// BUG-341 MRE — `strategy_metric(Renew)` must show the top-level `org_created_at` estimate
+/// for a cache-refreshed account, not silently drop it via the gated `account.org_created_at`
+/// path.
+///
+/// # Root Cause
+/// Same gated read as `sort.rs`'s `renewal_event_secs`/`renews_secs_of` — `sort_next.rs`'s
+/// `strategy_metric` Renew arm reads `aq.account.as_ref().map(|a| a.org_created_at.as_str())`.
+///
+/// # Why Not Caught
+/// BUG-229's own `strategy_metric` coverage (`mre_bug229_strategy_metric_renew_*`) always
+/// sets `renewal_at` (Exact) or leaves both renewal fields absent (no-sub case) — neither
+/// exercises `account: None` + top-level-only `org_created_at` (Estimate path via the
+/// cache-refreshed shape).
+///
+/// # Fix Applied
+/// Renew arm now reads `aq.org_created_at.as_deref()` directly.
+///
+/// # Prevention
+/// Any `strategy_metric`/`renewal_event_secs`/`renews_secs_of` test claiming Estimate-path
+/// coverage must set `account: None` with `org_created_at` populated only at the top level —
+/// the cache-refreshed fetch shape — never `account: Some(...)`.
+///
+/// # Pitfall
+/// Before the fix, the footer metric and the table's own `→ Next` column (computed by
+/// `render.rs`, already reading the top-level field since BUG-327/TSK-368) silently disagree
+/// for the same row — the footer alone gives no visible error, only a cross-column
+/// inconsistency a user must notice manually.
+#[ doc = "bug_reproducer(BUG-341)" ]
+#[ test ]
+fn mre_bug341_strategy_metric_renew_cache_refreshed_uses_org_created_at_estimate()
+{
+  let now  = 1_700_000_000_u64;
+  let data = claude_quota::OauthUsageData
+  {
+    five_hour        : Some( claude_quota::PeriodUsage { utilization : 30.0, resets_at : None } ),
+    seven_day        : None,  // no 7d reset data — isolates the assertion to the sub estimate leg
+    seven_day_sonnet : None,
+  };
+  let aq = AccountQuota
+  {
+    fallback_reason : None,
+    name          : "test@example.com".to_string(),
+    is_current    : false,
+    is_active             : false,
+    is_occupied_elsewhere : false,
+    expires_at_ms : FAR_FUTURE_MS,
+    result        : Ok( data ),
+    account       : None,  // cache-refreshed: no account data
+    host          : String::new(),
+    role          : String::new(),
+    renewal_at    : None,  // no exact renewal timestamp
+    cached        : false,
+    cache_age_secs : None,
+    org_created_at : Some( "1970-01-20T00:00:00Z".to_string() ),  // top-level field (BUG-327/TSK-368)
+    is_owned      : true,
+    owner                : String::new(),
+      claim_lock : false, reserve : false,
+    inference_provider : String::new(),
+  };
+
+  let metric = strategy_metric( &aq, SortStrategy::Renew, PreferStrategy::Any, now );
+
+  assert!(
+    metric.contains( "~in" ) && metric.contains( "$ren" ),
+    "BUG-341: strategy_metric(Renew) for a cache-refreshed account (account=None) with a \
+     top-level org_created_at estimate must show the estimated subscription renewal \
+     ('~in ... $ren'); got: {metric:?}",
+  );
+}
+
+/// BUG-341 MRE — `strategy_metric(Renews)` must show the top-level `org_created_at` estimate
+/// for a cache-refreshed account, not silently drop it via the gated `account.org_created_at`
+/// path.
+///
+/// # Root Cause
+/// Identical gated read, `strategy_metric`'s `Renews` arm — one function, second arm, same
+/// file.
+///
+/// # Why Not Caught
+/// No existing `strategy_metric(Renews)` test exercises the Estimate path at all —
+/// pre-existing coverage for this arm is indirect (via `renews_label`/`next_event_label` in
+/// `format_tests.rs`, which construct their `Option<&str>` inputs directly, bypassing
+/// `AccountQuota` entirely).
+///
+/// # Fix Applied
+/// Renews arm now reads `aq.org_created_at.as_deref()` directly.
+///
+/// # Prevention
+/// See `mre_bug341_strategy_metric_renew_cache_refreshed_uses_org_created_at_estimate` —
+/// identical construction rationale; this test covers the sibling `Renews` arm.
+///
+/// # Pitfall
+/// `strategy_metric(Renews)` returns an EMPTY string (not "—") when both renewal sources are
+/// absent — different from the `Renew` arm's em-dash fallback. Do not assert `"—"` here.
+#[ doc = "bug_reproducer(BUG-341)" ]
+#[ test ]
+fn mre_bug341_strategy_metric_renews_cache_refreshed_uses_org_created_at_estimate()
+{
+  let now  = 1_700_000_000_u64;
+  let data = claude_quota::OauthUsageData
+  {
+    five_hour        : Some( claude_quota::PeriodUsage { utilization : 30.0, resets_at : None } ),
+    seven_day        : None,
+    seven_day_sonnet : None,
+  };
+  let aq = AccountQuota
+  {
+    fallback_reason : None,
+    name          : "test@example.com".to_string(),
+    is_current    : false,
+    is_active             : false,
+    is_occupied_elsewhere : false,
+    expires_at_ms : FAR_FUTURE_MS,
+    result        : Ok( data ),
+    account       : None,
+    host          : String::new(),
+    role          : String::new(),
+    renewal_at    : None,
+    cached        : false,
+    cache_age_secs : None,
+    org_created_at : Some( "1970-01-20T00:00:00Z".to_string() ),
+    is_owned      : true,
+    owner                : String::new(),
+      claim_lock : false, reserve : false,
+    inference_provider : String::new(),
+  };
+
+  let metric = strategy_metric( &aq, SortStrategy::Renews, PreferStrategy::Any, now );
+
+  assert!(
+    metric.starts_with( "~renews in" ),
+    "BUG-341: strategy_metric(Renews) for a cache-refreshed account (account=None) with a \
+     top-level org_created_at estimate must show '~renews in ...'; got: {metric:?}",
   );
 }

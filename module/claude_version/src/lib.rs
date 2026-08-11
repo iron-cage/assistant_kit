@@ -31,9 +31,16 @@ pub mod output;
 pub mod commands;
 
 #[ cfg( feature = "enabled" ) ]
-fn reg_arg_opt( name : &str, kind : unilang::data::Kind ) -> unilang::data::ArgumentDefinition
+fn reg_arg_opt(
+  name    : &str,
+  kind    : unilang::data::Kind,
+  desc    : &str,
+  default : Option< &str >,
+) -> unilang::data::ArgumentDefinition
 {
-  unilang::data::ArgumentDefinition::new( name, kind ).with_optional( None::< String > )
+  unilang::data::ArgumentDefinition::new( name, kind )
+  .with_description( desc )
+  .with_optional( default )
 }
 
 #[ cfg( feature = "enabled" ) ]
@@ -72,39 +79,44 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
   use commands::
   {
     status_routine, version_show_routine, version_install_routine,
-    version_guard_routine, version_list_routine, version_history_routine,
-    processes_routine, processes_kill_routine,
+    version_guard_routine, version_list_routine, version_mark_routine,
+    ps_routine, ps_kill_routine,
     settings_show_routine, settings_get_routine, settings_set_routine,
     config_routine, params_routine, runtime_files_routine, paths_routine,
   };
-  let v   = || reg_arg_opt( "verbosity", Kind::Integer );
-  let fmt = || reg_arg_opt( "format",    Kind::String  );
-  let dry = || reg_arg_opt( "dry",       Kind::Boolean );
-  let frc = || reg_arg_opt( "force",     Kind::Boolean );
-  let ver = || reg_arg_opt( "version",   Kind::String  );
-  let key = || reg_arg_opt( "key",       Kind::String  );
-  let val = || reg_arg_opt( "value",     Kind::String  );
-  let itv = || reg_arg_opt( "interval",  Kind::Integer );
-  let cnt = || reg_arg_opt( "count",     Kind::Integer );
-  let scp = || reg_arg_opt( "scope",     Kind::String  );
-  let uns = || reg_arg_opt( "unset",     Kind::Boolean );
-  let knd = || reg_arg_opt( "kind",      Kind::String  );
+  let v   = || reg_arg_opt( "verbosity",   Kind::Integer, "Output detail level (0=quiet, 1=normal, 2=verbose).",          Some( "1"       ) );
+  let fmt = || reg_arg_opt( "format",      Kind::String,  "Output format (text or json).",                                 Some( "text"    ) );
+  let dry = || reg_arg_opt( "dry",         Kind::Boolean, "Preview the action without executing side effects.",            Some( "0"       ) );
+  let frc = || reg_arg_opt( "force",       Kind::Boolean, "Bypass safety guards and idempotency checks.",                 Some( "0"       ) );
+  let rec = || reg_arg_opt( "record_only", Kind::Boolean, "Persist version preference without installing.",               Some( "0"       ) );
+  let ver = || reg_arg_opt( "version",     Kind::String,  "Version alias or semver to install or guard against.",         None             );
+  let key = || reg_arg_opt( "key",         Kind::String,  "Settings key to read, write, or remove.",                      None             );
+  let val = || reg_arg_opt( "value",       Kind::String,  "Settings value to write.",                                     None             );
+  let itv = || reg_arg_opt( "interval",    Kind::Integer, "Guard check frequency in seconds; 0 = one-shot.",              Some( "0"       ) );
+  let cnt = || reg_arg_opt( "count",       Kind::Integer, "Maximum history entries to show.",                             Some( "10"      ) );
+  let scp = || reg_arg_opt( "scope",       Kind::String,  "Configuration write scope (user or project).",                 None             );
+  let nme = || reg_arg_opt( "name",        Kind::String,  "Custom marker name for .version.mark.",                        None             );
+  let dsc = || reg_arg_opt( "description", Kind::String,  "Human-readable description for a custom marker.",              None             );
+  let uns = || reg_arg_opt( "unset",       Kind::Boolean, "Remove the specified key from the target scope.",              Some( "0"       ) );
+  let knd = || reg_arg_opt( "kind",        Kind::String,  "Parameter kind filter for .params (config, env, or absent=all).", None          );
+  let md  = || reg_arg_opt( "mode",        Kind::String,  "Operation mode for .version.list (aliases or history).",      Some( "aliases" ) );
+  let pid = || reg_arg_opt( "pid",         Kind::Integer, "Target a single process by pid (bulk-kill all when absent).", None             );
 
   reg_cmd( registry, ".status",          "Show installation state, process count, and active account", vec![ v(), fmt() ],                      Box::new( status_routine          ) );
   reg_cmd( registry, ".version.show",    "Print the currently installed Claude Code version",          vec![ v(), fmt() ],                      Box::new( version_show_routine    ) );
-  reg_cmd( registry, ".version.install", "Download and install a Claude Code version via installer",   vec![ ver(), dry(), frc(), v(), fmt() ], Box::new( version_install_routine ) );
+  reg_cmd( registry, ".version.install", "Download and install a Claude Code version via installer",   vec![ ver(), dry(), frc(), rec(), v(), fmt() ], Box::new( version_install_routine ) );
   reg_cmd( registry, ".version.guard",   "Check for version drift and restore preferred version",      vec![ ver(), dry(), frc(), itv(), v(), fmt() ], Box::new( version_guard_routine   ) );
-  reg_cmd( registry, ".version.list",    "List all named version aliases",                             vec![ v(), fmt() ],                      Box::new( version_list_routine    ) );
-  reg_cmd( registry, ".version.history", "Show release history with changelogs from GitHub",           vec![ cnt(), v(), fmt() ],               Box::new( version_history_routine ) );
-  reg_cmd( registry, ".processes",       "List all running Claude Code processes",                     vec![ v(), fmt() ],                      Box::new( processes_routine       ) );
-  reg_cmd( registry, ".processes.kill",  "Terminate all Claude Code processes",                        vec![ dry(), frc(), v(), fmt() ],        Box::new( processes_kill_routine  ) );
+  reg_cmd( registry, ".version.list",    "List named version aliases (mode::aliases) or recent release history (mode::history)", vec![ md(), cnt(), v(), fmt() ], Box::new( version_list_routine    ) );
+  reg_cmd( registry, ".version.mark",    "Create, update, or remove a custom version alias marker",                              vec![ nme(), ver(), dsc(), uns(), dry(), v(), fmt() ], Box::new( version_mark_routine ) );
+  reg_cmd( registry, ".ps",              "List all running Claude Code processes",                     vec![ v(), fmt() ],                      Box::new( ps_routine              ) );
+  reg_cmd( registry, ".ps.kill",         "Terminate all Claude Code processes, or one via pid::",       vec![ pid(), dry(), frc(), v(), fmt() ], Box::new( ps_kill_routine         ) );
   reg_cmd( registry, ".settings.show",   "Print all settings from ~/.claude/settings.json",            vec![ v(), fmt() ],                      Box::new( settings_show_routine   ) );
   reg_cmd( registry, ".settings.get",    "Read a single setting by key",                               vec![ key(), v(), fmt() ],               Box::new( settings_get_routine    ) );
   reg_cmd( registry, ".settings.set",    "Write a single setting atomically",                          vec![ key(), val(), dry() ],             Box::new( settings_set_routine    ) );
   reg_cmd( registry, ".config",          "Show, get, set, or unset settings with 4-layer resolution",  vec![ key(), val(), scp(), uns(), dry(), v(), fmt() ], Box::new( config_routine ) );
   reg_cmd( registry, ".params",          "Inspect Claude Code params: forms, current values, defaults", vec![ key(), knd(), v(), fmt() ],       Box::new( params_routine          ) );
   reg_cmd( registry, ".runtime_files",   "List all paths managed by clv at runtime",                   vec![],                                  Box::new( runtime_files_routine   ) );
-  reg_cmd( registry, ".paths",           "Report filesystem paths clv reads from or writes to",        vec![ key(), fmt(), v() ],               Box::new( paths_routine           ) );
+  reg_cmd( registry, ".version.paths",           "Report filesystem paths clv reads from or writes to",        vec![ key(), fmt(), v() ],               Box::new( paths_routine           ) );
 }
 
 /// Render grouped help output via `cli_fmt::CliHelpTemplate`.
@@ -129,8 +141,8 @@ fn print_usage( binary : &str )
         CommandEntry { name : ".version.show".to_string(),    desc : "Print the currently installed Claude Code version".to_string() },
         CommandEntry { name : ".version.install".to_string(), desc : "Download and install a Claude Code version via installer".to_string() },
         CommandEntry { name : ".version.guard".to_string(),   desc : "Check for version drift and restore preferred version".to_string() },
-        CommandEntry { name : ".version.list".to_string(),    desc : "List all named version aliases".to_string() },
-        CommandEntry { name : ".version.history".to_string(), desc : "Show release history with changelogs from GitHub".to_string() },
+        CommandEntry { name : ".version.list".to_string(),    desc : "Lists aliases or release history relevant to the installed version".to_string() },
+        CommandEntry { name : ".version.mark".to_string(),    desc : "Create, update, or remove a custom version alias marker".to_string() },
       ],
     },
     CommandGroup
@@ -150,8 +162,8 @@ fn print_usage( binary : &str )
       name    : "Process Lifecycle".to_string(),
       entries : vec!
       [
-        CommandEntry { name : ".processes".to_string(),      desc : "List all running Claude Code processes".to_string() },
-        CommandEntry { name : ".processes.kill".to_string(), desc : "Terminate all Claude Code processes".to_string() },
+        CommandEntry { name : ".ps".to_string(),      desc : "List all running Claude Code processes".to_string() },
+        CommandEntry { name : ".ps.kill".to_string(), desc : "Terminate all Claude Code processes, or one via pid::".to_string() },
       ],
     },
     CommandGroup
@@ -161,7 +173,7 @@ fn print_usage( binary : &str )
       [
         CommandEntry { name : ".status".to_string(),        desc : "Show installation state, process count, and active account".to_string() },
         CommandEntry { name : ".runtime_files".to_string(), desc : "List all paths managed by clv at runtime".to_string() },
-        CommandEntry { name : ".paths".to_string(),         desc : "Report filesystem paths clv reads from or writes to".to_string() },
+        CommandEntry { name : ".version.paths".to_string(),         desc : "Report filesystem paths clv reads from or writes to".to_string() },
       ],
     },
   ];
@@ -171,6 +183,7 @@ fn print_usage( binary : &str )
     OptionEntry { name : "format::text|json".to_string(), desc : "Output format (default: text)".to_string() },
     OptionEntry { name : "dry::bool".to_string(),       desc : "Dry-run preview (no changes)".to_string() },
     OptionEntry { name : "force::bool".to_string(),     desc : "Force operation (skip confirmations)".to_string() },
+    OptionEntry { name : "record_only::bool".to_string(), desc : "Record preference only, skip the actual install (.version.install)".to_string() },
     OptionEntry { name : "key::KEY".to_string(),        desc : "Setting key".to_string() },
     OptionEntry { name : "value::VALUE".to_string(),    desc : "Setting value".to_string() },
     OptionEntry { name : "interval::N".to_string(),     desc : "Polling interval in seconds".to_string() },
@@ -181,9 +194,43 @@ fn print_usage( binary : &str )
     ExampleEntry { invocation : format!( "{binary} .status" ),                    desc : None },
     ExampleEntry { invocation : format!( "{binary} .version.install" ),            desc : None },
     ExampleEntry { invocation : format!( "{binary} .settings.get key::model" ),    desc : None },
-    ExampleEntry { invocation : format!( "{binary} .processes" ),                  desc : None },
+    ExampleEntry { invocation : format!( "{binary} .ps" ),                        desc : None },
     ExampleEntry { invocation : format!( "{binary} .config key::model" ),          desc : None },
   ];
+  print!( "{}", CliHelpTemplate::new( CliHelpStyle::default(), data ).render() );
+}
+
+/// Render per-command help for a single registered command via `cli_fmt`.
+///
+/// Looks up `name` in `registry`, builds a `CliHelpData` with the command's
+/// description and all its arguments (description + default suffix), then
+/// prints the rendered output.  Prints an error to stderr if the command is
+/// not found and returns without printing usage.
+#[ cfg( feature = "enabled" ) ]
+#[ inline ]
+pub fn print_command_help( name : &str, registry : &unilang::registry::CommandRegistry )
+{
+  use cli_fmt::help::*;
+  let Some( def ) = registry.command( name ) else
+  {
+    eprintln!( "unknown command: {name}" );
+    return;
+  };
+  let mut data = CliHelpData::default();
+  data.binary  = name.to_string();
+  data.tagline = def.description().to_string();
+  data.options = def.arguments().iter().map( | arg |
+  {
+    let default_part = arg.attributes.default
+    .as_deref()
+    .map( | d | format!( " (default: {d})" ) )
+    .unwrap_or_default();
+    OptionEntry
+    {
+      name : arg.name.clone(),
+      desc : format!( "{}{}", arg.description, default_part ),
+    }
+  } ).collect();
   print!( "{}", CliHelpTemplate::new( CliHelpStyle::default(), data ).render() );
 }
 
@@ -204,7 +251,7 @@ fn print_usage( binary : &str )
 #[ inline ]
 pub fn run_cli()
 {
-  use adapter::argv_to_unilang_tokens;
+  use adapter::{ argv_to_unilang_tokens, HelpMode };
   use unilang::data::ErrorCode;
   use unilang::interpreter::{ ExecutionContext, Interpreter };
   use unilang::parser::{ Parser, UnilangParserOptions };
@@ -237,7 +284,7 @@ pub fn run_cli()
 
   let argv : Vec< String > = std::env::args().skip( 1 ).collect();
 
-  let ( tokens, needs_help ) = match argv_to_unilang_tokens( &argv )
+  let ( tokens, help_mode ) = match argv_to_unilang_tokens( &argv )
   {
     Ok( r )  => r,
     Err( e ) =>
@@ -247,10 +294,21 @@ pub fn run_cli()
     }
   };
 
-  if needs_help
+  match help_mode
   {
-    print_usage( &binary );
-    std::process::exit( 0 );
+    HelpMode::Global =>
+    {
+      print_usage( &binary );
+      std::process::exit( 0 );
+    }
+    HelpMode::Command( name ) =>
+    {
+      let mut registry = CommandRegistry::new();
+      register_commands( &mut registry );
+      print_command_help( &name, &registry );
+      std::process::exit( 0 );
+    }
+    HelpMode::None => {}
   }
 
   let mut registry = CommandRegistry::new();

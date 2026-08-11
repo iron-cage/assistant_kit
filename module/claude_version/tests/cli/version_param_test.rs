@@ -13,19 +13,11 @@ fn version_ec7_latest_wrong_case_exits_1()
   assert_exit( &out, 1 );
 }
 
-/// EC-8: `version::MONTH` → wrong case, exit 1
-#[ test ]
-fn version_ec8_month_wrong_case_exits_1()
-{
-  let out = run_clv( &[ ".version.install", "version::MONTH" ] );
-  assert_exit( &out, 1 );
-}
-
 /// EC-9: `version::` only accepted by `.version.install` and `.version.guard`
 #[ test ]
-fn version_ec9_command_scope_rejects_on_processes()
+fn version_ec9_command_scope_rejects_on_ps()
 {
-  let out = run_clv( &[ ".processes", "version::stable" ] );
+  let out = run_clv( &[ ".ps", "version::stable" ] );
   assert_exit( &out, 1 );
 }
 
@@ -37,16 +29,6 @@ fn version_ec10_stable_alias_dry()
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!( text.contains( "stable" ), "output must reference stable alias: {text}" );
-}
-
-/// EC-11: `version::month dry::1` → resolves to pinned semver
-#[ test ]
-fn version_ec11_month_alias_dry()
-{
-  let out = run_clv( &[ ".version.install", "version::month", "dry::1" ] );
-  assert_exit( &out, 0 );
-  let text = stdout( &out );
-  assert!( text.contains( "month" ), "output must reference month alias: {text}" );
 }
 
 /// EC-12: `version::latest dry::1` → no-lock unlock mode

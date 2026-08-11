@@ -47,9 +47,9 @@ is present on the CLI.
 
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
-| 1 | [`run`](../command/01_run.md) | — | Triggers print mode when present |
+| 1 | [`run`](../command/01_run.md) | — | One of several print-mode triggers (see D11) |
 | 2 | [`isolated`](../command/03_isolated.md) | — | Forwarded to claude subprocess |
-| 5 | [`ask`](../command/05_ask.md) | — | Always print mode |
+| 5 | [`ask`](../command/05_ask.md) | — | Same conditional print-mode trigger as `run`, not unconditional |
 
 ### Referenced User Stories
 

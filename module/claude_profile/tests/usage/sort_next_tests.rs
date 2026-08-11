@@ -24,7 +24,7 @@ fn test_find_next_for_strategy_some_when_eligible_none_when_all_current()
   let c = mk_aq_sort( "c@test.com", 60.0, FAR_FUTURE_MS );  // 40% left
   let accounts = vec![ a, b, c ];
 
-  let winner_a = find_next_for_strategy( &accounts, SortStrategy::Name, PreferStrategy::Any, now, false );
+  let winner_a = find_next_for_strategy( &accounts, SortStrategy::Name, PreferStrategy::Any, now, false, "anthropic" );
   assert!( winner_a.is_some(), "find_next_for_strategy must return Some when eligible candidates exist" );
   let winner_idx = winner_a.unwrap();
   assert_eq!(
@@ -40,7 +40,7 @@ fn test_find_next_for_strategy_some_when_eligible_none_when_all_current()
   c2.is_current = true;
   let all_current = vec![ a2, b2, c2 ];
 
-  let winner_b = find_next_for_strategy( &all_current, SortStrategy::Name, PreferStrategy::Any, now, false );
+  let winner_b = find_next_for_strategy( &all_current, SortStrategy::Name, PreferStrategy::Any, now, false, "anthropic" );
   assert!( winner_b.is_none(), "find_next_for_strategy must return None when all accounts are is_current" );
 }
 
@@ -61,7 +61,7 @@ fn test_all_strategies_skip_occupied_elsewhere()
   let accounts = vec![ a, b, c ];
   for strategy in [ SortStrategy::Renew, SortStrategy::Name, SortStrategy::Renews ]
   {
-    let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, false );
+    let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, false, "anthropic" );
     assert_eq!(
       result, Some( 1 ),
       "{strategy:?}: must pick free@test.com (index 1), skipping occupied@test.com",
@@ -76,7 +76,7 @@ fn test_all_strategies_skip_occupied_elsewhere()
   let no_free = vec![ a2, c2 ];
   for strategy in [ SortStrategy::Renew, SortStrategy::Name, SortStrategy::Renews ]
   {
-    let result = find_next_for_strategy( &no_free, strategy, PreferStrategy::Any, now, false );
+    let result = find_next_for_strategy( &no_free, strategy, PreferStrategy::Any, now, false, "anthropic" );
     assert!(
       result.is_none(),
       "{strategy:?}: must return None when only occupied + current remain",
@@ -100,7 +100,7 @@ fn test_all_strategies_skip_h_exhausted()
   let accounts = vec![ a, b, c ];
   for strategy in [ SortStrategy::Renew, SortStrategy::Name, SortStrategy::Renews ]
   {
-    let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, false );
+    let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, false, "anthropic" );
     assert_eq!(
       result, Some( 1 ),
       "{strategy:?}: must pick healthy@test.com (index 1), skipping h-exhausted (8% left)",
@@ -115,7 +115,7 @@ fn test_all_strategies_skip_h_exhausted()
   let boundary_accounts = vec![ boundary, b2, c2 ];
   for strategy in [ SortStrategy::Renew, SortStrategy::Name, SortStrategy::Renews ]
   {
-    let result = find_next_for_strategy( &boundary_accounts, strategy, PreferStrategy::Any, now, false );
+    let result = find_next_for_strategy( &boundary_accounts, strategy, PreferStrategy::Any, now, false, "anthropic" );
     assert_eq!(
       result, Some( 1 ),
       "{strategy:?}: utilization=85.0 (exactly 15% left) must be treated as h-exhausted",
@@ -129,7 +129,7 @@ fn test_all_strategies_skip_h_exhausted()
   let no_healthy = vec![ a3, c3 ];
   for strategy in [ SortStrategy::Renew, SortStrategy::Name, SortStrategy::Renews ]
   {
-    let result = find_next_for_strategy( &no_healthy, strategy, PreferStrategy::Any, now, false );
+    let result = find_next_for_strategy( &no_healthy, strategy, PreferStrategy::Any, now, false, "anthropic" );
     assert!(
       result.is_none(),
       "{strategy:?}: must return None when only h-exhausted + current remain",
@@ -153,7 +153,7 @@ fn test_cc_five_hour_none_not_h_exhausted()
   let accounts = vec![ a, b ];
   for strategy in [ SortStrategy::Renew, SortStrategy::Name, SortStrategy::Renews ]
   {
-    let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, false );
+    let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, false, "anthropic" );
     assert_eq!(
       result, Some( 0 ),
       "{strategy:?}: five_hour=None must NOT be treated as h-exhausted",
@@ -172,7 +172,7 @@ fn test_cc_h_exhausted_boundary_below_threshold()
   let accounts = vec![ a, b ];
   for strategy in [ SortStrategy::Renew, SortStrategy::Name, SortStrategy::Renews ]
   {
-    let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, false );
+    let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, false, "anthropic" );
     assert_eq!(
       result, Some( 0 ),
       "{strategy:?}: utilization=84.9 (15.1% left) must be eligible — only >= 85.0 is h-exhausted",
@@ -193,7 +193,7 @@ fn test_cc_occupied_and_h_exhausted_skipped()
   let accounts = vec![ a, b, c ];
   for strategy in [ SortStrategy::Renew, SortStrategy::Name, SortStrategy::Renews ]
   {
-    let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, false );
+    let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, false, "anthropic" );
     assert_eq!(
       result, Some( 1 ),
       "{strategy:?}: account with both occupied + h-exhausted must be skipped",
@@ -219,7 +219,7 @@ fn test_cc_is_active_skips_account()
   let accounts = vec![ a, b ];
   for strategy in [ SortStrategy::Renew, SortStrategy::Name, SortStrategy::Renews ]
   {
-    let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, false );
+    let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, false, "anthropic" );
     assert_eq!(
       result, Some( 1 ),
       "{strategy:?}: is_active=true must be skipped; free@test.com (index 1) must be selected",
@@ -232,7 +232,7 @@ fn test_cc_is_active_skips_account()
   let all_active = vec![ a2 ];
   for strategy in [ SortStrategy::Renew, SortStrategy::Name, SortStrategy::Renews ]
   {
-    let result = find_next_for_strategy( &all_active, strategy, PreferStrategy::Any, now, false );
+    let result = find_next_for_strategy( &all_active, strategy, PreferStrategy::Any, now, false, "anthropic" );
     assert!( result.is_none(), "{strategy:?}: all-active must return None" );
   }
 }
@@ -258,7 +258,7 @@ fn test_cc_expired_ok_account_skipped()
   let accounts = vec![ a, b ];
   for strategy in [ SortStrategy::Renew, SortStrategy::Name, SortStrategy::Renews ]
   {
-    let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now_secs, false );
+    let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now_secs, false, "anthropic" );
     assert_eq!(
       result, Some( 1 ),
       "{strategy:?}: expired Ok account must be skipped; valid@test.com (index 1) must win",
@@ -270,7 +270,7 @@ fn test_cc_expired_ok_account_skipped()
   let accounts_boundary = vec![ at_boundary ];
   for strategy in [ SortStrategy::Renew, SortStrategy::Name, SortStrategy::Renews ]
   {
-    let result = find_next_for_strategy( &accounts_boundary, strategy, PreferStrategy::Any, now_secs, false );
+    let result = find_next_for_strategy( &accounts_boundary, strategy, PreferStrategy::Any, now_secs, false, "anthropic" );
     assert!(
       result.is_none(),
       "{strategy:?}: boundary-expired account (0 secs remaining) must be skipped",
@@ -282,7 +282,7 @@ fn test_cc_expired_ok_account_skipped()
   let accounts_valid = vec![ one_sec_left ];
   for strategy in [ SortStrategy::Renew, SortStrategy::Name, SortStrategy::Renews ]
   {
-    let result = find_next_for_strategy( &accounts_valid, strategy, PreferStrategy::Any, now_secs, false );
+    let result = find_next_for_strategy( &accounts_valid, strategy, PreferStrategy::Any, now_secs, false, "anthropic" );
     assert_eq!(
       result, Some( 0 ),
       "{strategy:?}: account with 1 second remaining must be eligible",
@@ -310,14 +310,14 @@ fn test_cc_gate_ownership_rejects_non_owned()
   for strategy in [ SortStrategy::Renew, SortStrategy::Name, SortStrategy::Renews ]
   {
     // gate_ownership=true: aaa_unowned is tried first (alphabetically), rejected by is_owned gate
-    let with_gate = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, true );
+    let with_gate = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, true, "anthropic" );
     assert_eq!(
       with_gate, Some( 1 ),
       "{strategy:?} gate_ownership=true: aaa_unowned (is_owned=false) must be skipped; zzz_owned (index 1) must win",
     );
 
     // gate_ownership=false: aaa_unowned (index 0) is selected — ownership gate not enforced
-    let no_gate = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, false );
+    let no_gate = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, false, "anthropic" );
     assert_eq!(
       no_gate, Some( 0 ),
       "{strategy:?} gate_ownership=false: aaa_unowned (is_owned=false, index 0) must be selected \
@@ -332,7 +332,7 @@ fn test_cc_gate_ownership_rejects_non_owned()
   let all_unowned = vec![ a2 ];
   for strategy in [ SortStrategy::Renew, SortStrategy::Name, SortStrategy::Renews ]
   {
-    let result = find_next_for_strategy( &all_unowned, strategy, PreferStrategy::Any, now, true );
+    let result = find_next_for_strategy( &all_unowned, strategy, PreferStrategy::Any, now, true, "anthropic" );
     assert!(
       result.is_none(),
       "{strategy:?}: all-non-owned with gate_ownership=true must return None",
@@ -359,7 +359,7 @@ fn test_cc_err_account_skipped_via_find_next_for_strategy()
   let accounts = vec![ a, b ];
   for strategy in [ SortStrategy::Renew, SortStrategy::Name, SortStrategy::Renews ]
   {
-    let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, false );
+    let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, false, "anthropic" );
     assert_eq!(
       result, Some( 1 ),
       "{strategy:?}: Err account (aaa_error, index 0) must be skipped by gate 3; zzz_valid (index 1) must win",
@@ -385,7 +385,7 @@ fn test_cc_expired_ok_with_gate_ownership_true()
   let accounts = vec![ a, b ];
   for strategy in [ SortStrategy::Renew, SortStrategy::Name, SortStrategy::Renews ]
   {
-    let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now_secs, true );
+    let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now_secs, true, "anthropic" );
     assert_eq!(
       result, Some( 1 ),
       "{strategy:?} gate_ownership=true: expired owned account (gate 5) must be skipped; zzz_valid_owned (index 1) must win",
@@ -412,7 +412,7 @@ fn test_cc_five_hour_none_with_gate_ownership_true()
   let accounts = vec![ a, b ];
   for strategy in [ SortStrategy::Renew, SortStrategy::Name, SortStrategy::Renews ]
   {
-    let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, true );
+    let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, true, "anthropic" );
     assert_eq!(
       result, Some( 0 ),
       "{strategy:?}: five_hour=None with gate_ownership=true must be eligible (owned, not h-exhausted)",
@@ -448,6 +448,7 @@ fn test_sort_renew_tiebreaker_alphabetical_when_equal_renewal()
     PreferStrategy::Any,
     now_secs,
     false,
+    "anthropic",
   );
   assert_eq!(
     result_ab,
@@ -465,6 +466,7 @@ fn test_sort_renew_tiebreaker_alphabetical_when_equal_renewal()
     PreferStrategy::Any,
     now_secs,
     false,
+    "anthropic",
   );
   assert_eq!(
     result_ba,
@@ -528,21 +530,21 @@ fn mre_bug229_sort_renew_subscription_sooner_than_7d_ranks_first()
 /// `bug_reproducer(BUG-336)` — `find_next_for_strategy`'s eligibility gate
 /// (`sort_next.rs:67,85,90`, `seven_day_left(aq) > WEEKLY_EXHAUSTION_THRESHOLD`) must
 /// exclude an account whose raw `7d Left` lands in the one-point disagreement band
-/// `(5.0, 5.5)` once `seven_day_left()` rounds — matching what the account's own `7d Left`
+/// `(3.0, 3.5)` once `seven_day_left()` rounds — matching what the account's own `7d Left`
 /// cell already displays (🟡, exhausted-looking) rather than recommending it as "next".
 ///
 /// # Root Cause
 /// `seven_day_left()` (`format.rs:346-350`) returned the raw, unrounded `100.0 - utilization`.
 /// `find_next_for_strategy`'s eligibility closures (`sort_next.rs:67,85,90`) compare that raw
-/// value directly against `WEEKLY_EXHAUSTION_THRESHOLD`. For `util=94.6` (raw `left=5.4`), the
-/// raw comparison `5.4 > 5.0` passed (eligible), even though the same account's `7d Left` cell
-/// (via `pct_emoji`, fixed under BUG-331) already rounds to `5.0` and renders 🟡 — an account
+/// value directly against `WEEKLY_EXHAUSTION_THRESHOLD`. For `util=96.6` (raw `left=3.4`), the
+/// raw comparison `3.4 > 3.0` passed (eligible), even though the same account's `7d Left` cell
+/// (via `pct_emoji`, fixed under BUG-331) already rounds to `3.0` and renders 🟡 — an account
 /// that visually reads as weekly-exhausted was still being recommended as the next account to
 /// rotate into.
 ///
 /// # Why Not Caught
 /// No existing `sort_next` eligibility test used a utilization value inside the one-point band
-/// `(5.0, 5.5)`; all prior eligibility-gate tests used values several points away from the
+/// `(3.0, 3.5)`; all prior eligibility-gate tests used values several points away from the
 /// threshold on either side, where raw and rounded comparisons always agree.
 ///
 /// # Fix Applied
@@ -565,16 +567,16 @@ fn mre_bug229_sort_renew_subscription_sooner_than_7d_ranks_first()
 fn mre_bug336_find_next_excludes_account_in_one_point_weekly_band()
 {
   let now = 0u64;
-  // a: 7d util=94.6 → raw left=5.4, in (5.0,5.5) disagreement band — must be excluded post-fix.
-  let a = mk_aq_sort_weekly( "a@test.com", 10.0, 94.6, 10.0 );
+  // a: 7d util=96.6 → raw left=3.4, in (3.0,3.5) disagreement band — must be excluded post-fix.
+  let a = mk_aq_sort_weekly( "a@test.com", 10.0, 96.6, 10.0 );
   // b: 7d util=10.0 → left=90.0, unambiguously eligible — the expected winner post-fix.
   let b = mk_aq_sort_weekly( "b@test.com", 10.0, 10.0, 10.0 );
   let accounts = vec![ a, b ];
 
-  let winner = find_next_for_strategy( &accounts, SortStrategy::Name, PreferStrategy::Any, now, false );
+  let winner = find_next_for_strategy( &accounts, SortStrategy::Name, PreferStrategy::Any, now, false, "anthropic" );
   assert_eq!(
     winner, Some( 1 ),
-    "post-fix: account 'a' (7d util=94.6, rounds to left=5.0) must be excluded as weekly-exhausted; \
+    "post-fix: account 'a' (7d util=96.6, rounds to left=3.0) must be excluded as weekly-exhausted; \
      winner must be 'b' (index 1), got {winner:?}",
   );
 }

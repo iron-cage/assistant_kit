@@ -74,6 +74,9 @@ pub( crate ) struct CliArgs
   pub( crate ) expect               : Option< String >,
   pub( crate ) expect_strategy      : Option< ExpectStrategy >,
   pub( crate ) max_sessions            : Option< u32 >,
+  pub( crate ) gate_poll_secs          : Option< u64 >,
+  pub( crate ) gate_max_attempts       : Option< u32 >,
+  pub( crate ) gate_stale_secs         : Option< u64 >,
   pub( crate ) retry_on_transient      : Option< u8 >,
   pub( crate ) transient_delay         : Option< u32 >,
   pub( crate ) timeout                 : Option< u32 >,
@@ -181,9 +184,26 @@ pub( crate ) fn parse_u8_bounded( raw : &str, flag_name : &str ) -> Result< u8 >
 /// Parse a raw string as a u32 flag value with a labeled error message and hint.
 ///
 /// Used for flags like `--max-sessions`, `--transient-delay`, and `--timeout`.
-fn parse_u32_flag( raw : &str, flag_name : &str, hint : &str ) -> Result< u32 >
+/// `pub( super )`: also reused by `cred_parse.rs`'s `--max-sessions` arm for
+/// `isolated`, so the two subcommands never diverge on parse-error wording.
+pub( super ) fn parse_u32_flag( raw : &str, flag_name : &str, hint : &str ) -> Result< u32 >
 {
   raw.parse::< u32 >().map_err( | _ |
+    Error::msg( format!(
+      "invalid {flag_name} value: {raw}\nExpected unsigned integer{hint}"
+    ) )
+  )
+}
+
+/// Parse a raw string as a u64 flag value with a labeled error message and hint.
+///
+/// Sibling of [`parse_u32_flag`] for the wider gate-tuning flags
+/// (`--gate-poll-secs`, `--gate-stale-secs`) whose seconds-based values use `u64`
+/// to match `IsolatedArgs`/`RefreshArgs`'s existing `timeout_secs : u64` convention
+/// (see `cred_parse.rs`'s module doc for why timeouts are u64 there but u32 here).
+fn parse_u64_flag( raw : &str, flag_name : &str, hint : &str ) -> Result< u64 >
+{
+  raw.parse::< u64 >().map_err( | _ |
     Error::msg( format!(
       "invalid {flag_name} value: {raw}\nExpected unsigned integer{hint}"
     ) )
@@ -351,6 +371,24 @@ fn parse_runner_value_flag(
     {
       parsed.max_sessions = Some(
         parse_u32_flag( next_value( tokens, next, "--max-sessions" )?, "--max-sessions", " (0 = unlimited)" )?
+      );
+    }
+    "--gate-poll-secs" =>
+    {
+      parsed.gate_poll_secs = Some(
+        parse_u64_flag( next_value( tokens, next, "--gate-poll-secs" )?, "--gate-poll-secs", " (seconds)" )?
+      );
+    }
+    "--gate-max-attempts" =>
+    {
+      parsed.gate_max_attempts = Some(
+        parse_u32_flag( next_value( tokens, next, "--gate-max-attempts" )?, "--gate-max-attempts", "" )?
+      );
+    }
+    "--gate-stale-secs" =>
+    {
+      parsed.gate_stale_secs = Some(
+        parse_u64_flag( next_value( tokens, next, "--gate-stale-secs" )?, "--gate-stale-secs", " (seconds; unset = staleness reclaim disabled)" )?
       );
     }
     "--retry-on-transient" =>
@@ -581,6 +619,9 @@ pub( crate ) fn parse_args( tokens : &[ String ] ) -> Result< CliArgs >
       expect               : None,
       expect_strategy      : None,
       max_sessions            : None,
+      gate_poll_secs          : None,
+      gate_max_attempts       : None,
+      gate_stale_secs         : None,
       retry_on_transient      : None,
       transient_delay         : None,
       timeout                 : None,

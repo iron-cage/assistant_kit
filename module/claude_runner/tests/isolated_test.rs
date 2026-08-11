@@ -1,5 +1,7 @@
 //! Integration tests for `clr isolated` subcommand.
 //!
+//! IT-9, IT-46–IT-67 (help text + native flag parity) live in `isolated_ext_test.rs`.
+//!
 //! # Test Matrix
 //!
 //! | ID | Test | Requires Live Claude |
@@ -7,7 +9,6 @@
 //! | IT-2 | `--creds missing.json` → exit 1 | No |
 //! | IT-7 | `--timeout abc` → exit 1, invalid timeout | No |
 //! | IT-8 | No `--creds`, `CLR_CREDS` unset → defaults to `$HOME/.claude/.credentials.json`; trace confirms | No |
-//! | IT-9 | `clr isolated --help` → exit 0, help text shown | No |
 //! | EC-creds-4 | Nonexistent creds file → exit 1 | No |
 //! | EC-creds-5 | `--creds` without value → exit 1 | No |
 //! | EC-creds-6 | `--creds` omitted, `CLR_CREDS` unset → trace confirms default path | No |
@@ -18,7 +19,7 @@
 //! | EC-timeout-2 | `--timeout 0` → accepted | No |
 //! | EC-timeout-3 | `--timeout 3600` → accepted | No |
 //! | IT-1 | Happy path: valid creds, message → exit 0 | **Yes** (`lim_it`) |
-//! | IT-3 | Timeout 0, no creds refresh → exit 2 | **Yes** (`lim_it`) |
+//! | IT-3 | Timeout 0, no creds refresh → runs to completion, exit 0 | **Yes** (`lim_it`) |
 //! | IT-4 | Credential write-back after startup refresh → exit 0 | **Yes** (`lim_it`) |
 //! | IT-5 | No message → Claude rejects piped non-TTY context | **Yes** (`lim_it`) |
 //! | IT-6 | `-- --version` passthrough → version in stdout | **Yes** (`lim_it`) |
@@ -30,6 +31,8 @@
 //! Plan 035 tests (output params, env fallbacks, journal, trace, IT-10, IT-29–37) → `isolated_plan035_test.rs`.
 //! Tests containing `lim_it` run by default in container environments.
 //! They early-return when the `claude` binary is absent from `$PATH`.
+//! IT-1/IT-3/IT-4 additionally early-return when the network is unreachable
+//! (no egress to `api.anthropic.com`) — see `network_reachable()`.
 
 #![ cfg( feature = "enabled" ) ]
 
@@ -70,6 +73,20 @@ fn live_creds_file() -> Option< ( NamedTempFile, String ) >
   tmp.write_all( content.as_bytes() ).ok()?;
   let path    = tmp.path().to_str()?.to_string();
   Some( ( tmp, path ) )
+}
+
+/// Returns `true` when `api.anthropic.com:443` resolves — a cheap proxy for
+/// "the live-claude tests have network egress to reach the real service."
+///
+/// `lim_it` tests must early-return when this returns `false` — without it,
+/// a network-isolated container doesn't fail fast: the real `claude` binary
+/// still spawns and takes 30-190s (depending on `--timeout`) to give up on
+/// the unreachable connection, producing a slow false-red failure instead of
+/// a clean skip (BUG-473).
+fn network_reachable() -> bool
+{
+  use std::net::ToSocketAddrs;
+  "api.anthropic.com:443".to_socket_addrs().is_ok()
 }
 
 // ── offline tests (no live claude required) ───────────────────────────────────
@@ -309,6 +326,7 @@ fn test_ec_timeout3_large_accepted()
 fn it1_lim_it_happy_path()
 {
   if !claude_binary_available() { return; }
+  if !network_reachable() { return; }
   let Some( ( _tmp, path ) ) = live_creds_file() else
   {
     panic!( "lim_it test requires live credentials at $HOME/.claude/.credentials.json — run only in credentialed environments, not in standard CI" );
@@ -324,23 +342,26 @@ fn it1_lim_it_happy_path()
   );
 }
 
-/// IT-3: `--timeout 0` without creds refresh → exit 2 (timeout).
+/// IT-3: `--timeout 0` without creds refresh → runs to natural completion.
 ///
-/// A 0-second deadline ensures the subprocess is killed before it can
-/// produce output or refresh credentials (assuming no near-instant refresh).
+/// `--timeout 0` means unlimited (Fix(I2): no deadline/watchdog is armed), so
+/// the subprocess runs to natural completion — exit 0 is the expected
+/// outcome. `exit 2` is tolerated only as a defensive legacy bound; it is not
+/// reachable through the current deadline mechanism when `timeout_secs == 0`.
 ///
 /// Source: tests/docs/cli/command/03_isolated.md#it-3
 #[ test ]
 fn it3_lim_it_timeout_no_refresh()
 {
   if !claude_binary_available() { return; }
+  if !network_reachable() { return; }
   let Some( ( _tmp, path ) ) = live_creds_file() else
   {
     panic!( "lim_it test requires live credentials at $HOME/.claude/.credentials.json — run only in credentialed environments, not in standard CI" );
   };
   let out = run_isolated( &[ "--creds", &path, "--timeout", "0", "Long running analysis task" ] );
-  // Creds refresh at startup before timeout is theoretically possible;
-  // both exit 0 (refreshed) and exit 2 (plain timeout) are valid outcomes.
+  // exit 0 is the expected outcome (unlimited wait, no watchdog per Fix(I2));
+  // exit 2 is tolerated only as a defensive legacy bound, not a primary case.
   let code = exit_code( &out );
   assert!(
     code == 0 || code == 2,
@@ -363,6 +384,7 @@ fn it3_lim_it_timeout_no_refresh()
 fn it4_lim_it_timeout_with_refresh()
 {
   if !claude_binary_available() { return; }
+  if !network_reachable() { return; }
   let Some( ( tmp, path ) ) = live_creds_file() else
   {
     panic!( "lim_it test requires live credentials at $HOME/.claude/.credentials.json — run only in credentialed environments, not in standard CI" );
@@ -433,6 +455,7 @@ fn it6_lim_it_flag_passthrough()
 #[ test ]
 fn ec_creds1_lim_it_valid_file_path()
 {
+  if !network_reachable() { return; }
   let Some( ( _tmp, path ) ) = live_creds_file() else { return; };
   let out = run_isolated( &[ "--creds", &path, "--timeout", "10", "Say hi" ] );
   let err = stderr_str( &out );
@@ -448,6 +471,7 @@ fn ec_creds1_lim_it_valid_file_path()
 #[ test ]
 fn ec_creds2_lim_it_absolute_path()
 {
+  if !network_reachable() { return; }
   let Some( ( _tmp, path ) ) = live_creds_file() else { return; };
   // `path` from live_creds_file() is already absolute (NamedTempFile path).
   assert!( path.starts_with( '/' ), "expected absolute path; got: {path}" );
@@ -468,6 +492,7 @@ fn ec_creds2_lim_it_absolute_path()
 #[ test ]
 fn ec_creds3_lim_it_relative_path()
 {
+  if !network_reachable() { return; }
   let Some( ( (), content ) ) = live_creds_file().map( | ( tmp, path ) |
   {
     let c = std::fs::read_to_string( &path ).unwrap_or_default();
@@ -575,55 +600,5 @@ fn bug_reproducer_225_unknown_subcommand_typo()
       "stderr must suggest 'isolated'; got: {stderr}"
     );
   }
-}
-
-/// IT-9: `clr isolated --help` exits 0 and prints isolated-specific help text.
-///
-/// ## Root Cause (bug_reproducer(BUG-222))
-/// `parse_isolated_args()` had no `"-h" | "--help"` arm before the
-/// `s if s.starts_with('-')` catch-all, so `--help` matched the catch-all and
-/// returned `Err("unknown option: --help")`, causing exit 1.
-///
-/// ## Why Not Caught
-/// Only happy-path and error-flag tests existed for `isolated`;
-/// no test exercised `--help` on the subcommand.
-///
-/// ## Fix Applied
-/// Added `print_isolated_help()` function (exits 0) and inserted a
-/// `"-h" | "--help"` match arm before the catch-all in `parse_isolated_args()`.
-///
-/// ## Prevention
-/// Test both `-h` and `--help` exit codes and stdout content for
-/// every subcommand that accepts flags.
-///
-/// ## Pitfall
-/// `print_isolated_help()` must call `std::process::exit(0)` directly —
-/// returning `Ok(...)` from the arm is insufficient because the caller checks
-/// `creds_path` and would error on the missing `--creds` argument.
-// test_kind: bug_reproducer(BUG-222)
-#[ test ]
-fn it9_isolated_help_exits_zero()
-{
-  let bin = env!( "CARGO_BIN_EXE_clr" );
-  let out = std::process::Command::new( bin )
-    .args( [ "isolated", "--help" ] )
-    .output()
-    .expect( "failed to invoke clr isolated --help" );
-  assert_eq!(
-    out.status.code(),
-    Some( 0 ),
-    "clr isolated --help must exit 0; got: {:?}\nstderr: {}",
-    out.status.code(),
-    String::from_utf8_lossy( &out.stderr ),
-  );
-  let stdout = String::from_utf8_lossy( &out.stdout );
-  assert!(
-    stdout.contains( "--creds" ),
-    "help text must mention --creds; got:\n{stdout}",
-  );
-  assert!(
-    stdout.contains( "--timeout" ),
-    "help text must mention --timeout; got:\n{stdout}",
-  );
 }
 

@@ -26,5 +26,5 @@
 | 004 | [Storage Root (`PersistPaths`)](004_storage_root.md) | Persistent storage root resolution via `$PRO`/`$HOME` | ✅ |
 | 005 | [Active Marker (`_active_{host}_{user}`)](005_active_marker.md) | Per-machine active-account marker file format | ✅ |
 | 006 | [Session Settings (`~/.claude/settings.json`)](006_settings_json.md) | Fields in `settings.json` that `clp` reads or writes | ✅ |
-| 007 | [Claude State (`~/.claude.json`)](007_claude_json.md) | Fields in `~/.claude.json` that `clp` reads (read-only) | ✅ |
-| 008 | [CLR Preferences (`~/.clr/prefs.json`)](008_clr_prefs_json.md) | Subprocess model preference and other clr runtime prefs written/read by `clp .model.select` | ❌ |
+| 007 | [Claude State (`~/.claude.json`)](007_claude_json.md) | Fields in `~/.claude.json` that `clp` reads or writes (`oauthAccount` patched on `.account.use`) | ✅ |
+| 008 | [CLR Preferences (`~/.clr/prefs.json`)](008_clr_prefs_json.md) | **Deprecated** — subprocess model preference and other clr runtime prefs formerly written/read by `clp .model.select`; superseded by `~/.clr/config.toml`'s `model` key via `clp .model scope::subprocess` (Feature 035) | ❌ |

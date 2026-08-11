@@ -4,6 +4,29 @@ use claude_runner_core::{
 };
 use claude_journal::{ EventRecord, EventType, JournalWriter };
 
+/// Write `contents` to `path` with owner-only (`0600`) permissions on Unix, so credential
+/// material is never briefly world-readable — neither in the isolated temp `HOME` nor when
+/// written back to the caller-supplied `--creds` path after a refresh.
+#[ cfg( unix ) ]
+fn write_creds_restricted( path : &std::path::Path, contents : &str ) -> std::io::Result< () >
+{
+  use std::io::Write as _;
+  use std::os::unix::fs::OpenOptionsExt as _;
+  std::fs::OpenOptions::new()
+    .create( true )
+    .write( true )
+    .truncate( true )
+    .mode( 0o600 )
+    .open( path )?
+    .write_all( contents.as_bytes() )
+}
+
+#[ cfg( not( unix ) ) ]
+fn write_creds_restricted( path : &std::path::Path, contents : &str ) -> std::io::Result< () >
+{
+  std::fs::write( path, contents )
+}
+
 /// Emit trace/dry-run diagnostics for a credential-operation command (`isolated` or `refresh`).
 ///
 /// Reconstructs the `ClaudeCommand` exactly as `run_isolated_ext()` would build it
@@ -100,18 +123,43 @@ pub( super ) fn run_isolated_command
   do_strip_fences   : bool,                     // strip markdown code fences from stdout before output
   output_style      : Option< &str >,           // e.g. "summary" — post-processes stdout before printing
   summary_fields    : Option< &str >,           // field list forwarded to summary rendering
+  no_effort_max     : bool,                     // suppresses the injected --effort flag entirely
+  system_prompt         : Option< &str >,       // injected as --system-prompt <value> when Some
+  append_system_prompt  : Option< &str >,       // injected as --append-system-prompt <value> when Some
+  json_schema           : Option< &str >,       // injected as --json-schema <value> when Some
+  mcp_config            : &[ String ],          // injected as repeated --mcp-config <value> pairs
+  allowed_tools         : Option< &str >,       // injected as --allowed-tools <value> when Some
+  disallowed_tools      : Option< &str >,       // injected as --disallowed-tools <value> when Some
+  max_budget_usd        : Option< &str >,       // injected as --max-budget-usd <value> when Some
+  max_turns             : Option< &str >,       // injected as --max-turns <value> when Some
 ) -> !
 {
   let compact_window : Option< u32 > = if no_compact_window { None } else { Some( DEFAULT_COMPACT_WINDOW ) };
   // Build the full arg list with all injected defaults prepended before --print.
-  // Order: [--no-chrome?] --effort <level> --no-session-persistence
-  //        [--dangerously-skip-permissions?] [--print <msg>] [passthrough]
+  // Order: [--no-chrome?] [--effort <level>?] --no-session-persistence [--dangerously-skip-permissions?]
+  //        [--system-prompt?] [--append-system-prompt?] [--json-schema?] [--allowed-tools?]
+  //        [--disallowed-tools?] [--max-budget-usd?] [--max-turns?] [--mcp-config <v>]* [--print <msg>] [passthrough]
   let mut args : Vec< String > = Vec::new();
   if no_chrome    { args.push( "--no-chrome".to_string() ); }
-  args.push( "--effort".to_string() );
-  args.push( effort.as_str().to_string() );
+  if !no_effort_max
+  {
+    args.push( "--effort".to_string() );
+    args.push( effort.as_str().to_string() );
+  }
   args.push( "--no-session-persistence".to_string() );
   if skip_perms   { args.push( "--dangerously-skip-permissions".to_string() ); }
+  if let Some( v ) = system_prompt        { args.push( "--system-prompt".to_string() );        args.push( v.to_string() ); }
+  if let Some( v ) = append_system_prompt { args.push( "--append-system-prompt".to_string() ); args.push( v.to_string() ); }
+  if let Some( v ) = json_schema          { args.push( "--json-schema".to_string() );          args.push( v.to_string() ); }
+  if let Some( v ) = allowed_tools        { args.push( "--allowed-tools".to_string() );         args.push( v.to_string() ); }
+  if let Some( v ) = disallowed_tools     { args.push( "--disallowed-tools".to_string() );      args.push( v.to_string() ); }
+  if let Some( v ) = max_budget_usd       { args.push( "--max-budget-usd".to_string() );        args.push( v.to_string() ); }
+  if let Some( v ) = max_turns            { args.push( "--max-turns".to_string() );             args.push( v.to_string() ); }
+  for m in mcp_config
+  {
+    args.push( "--mcp-config".to_string() );
+    args.push( m.clone() );
+  }
   if let Some( m ) = message
   {
     args.push( "--print".to_string() );
@@ -151,7 +199,7 @@ pub( super ) fn run_isolated_command
       // the subprocess finished (or before the timeout killed it).
       if let Some( ref new_creds ) = result.credentials
       {
-        if let Err( e ) = std::fs::write( creds_path, new_creds )
+        if let Err( e ) = write_creds_restricted( std::path::Path::new( creds_path ), new_creds )
         {
           eprintln!( "Warning: could not write back refreshed credentials to '{creds_path}': {e}" );
         }
@@ -299,7 +347,7 @@ fn run_isolated_with_stdin_file
     .map_err( | e | RunnerError::TempDirFailed( e.to_string() ) )?;
 
   let creds_path = claude_dir.join( ".credentials.json" );
-  std::fs::write( &creds_path, credentials_json )
+  write_creds_restricted( &creds_path, credentials_json )
     .map_err( | e | RunnerError::Io( e.to_string() ) )?;
   std::fs::write( claude_dir.join( "CLAUDE.md" ), ISOLATED_CLAUDE_MD )
     .map_err( | e | RunnerError::Io( e.to_string() ) )?;
@@ -470,5 +518,14 @@ pub( super ) fn run_refresh_command
     false,  // no fence stripping for refresh
     None,   // no output style for refresh
     None,   // no summary fields for refresh
+    false,  // no_effort_max: refresh always sends --effort low (fixed injection, not user-configurable)
+    None,   // no system-prompt override for refresh
+    None,   // no append-system-prompt override for refresh
+    None,   // no json-schema for refresh
+    &[],    // no mcp-config for refresh
+    None,   // no allowed-tools override for refresh
+    None,   // no disallowed-tools override for refresh
+    None,   // no max-budget-usd override for refresh
+    None,   // no max-turns override for refresh
   );
 }

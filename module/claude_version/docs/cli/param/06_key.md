@@ -3,13 +3,13 @@
 -- **Summary:** Identify the settings entry to read or write.
 -- **Type:** `SettingsKey`
 -- **Default:** (required)
--- **Commands:** `.settings.get`, `.settings.set`, `.config`, `.params`, `.paths`
+-- **Commands:** `.settings.get`, `.settings.set`, `.config`, `.params`, `.version.paths`
 -- **Group:** Settings Identity, Config Identity
 
-Required for `.settings.get` and `.settings.set`. Optional for `.config`, `.params`, and `.paths` — absent means show-all mode. When present, value must not be empty.
+Required for `.settings.get` and `.settings.set`. Optional for `.config`, `.params`, and `.version.paths` — absent means show-all mode. When present, value must not be empty.
 
 - **Type:** [`SettingsKey`](../type/04_settings_key.md) / [`ConfigKey`](../type/07_config_key.md) / [`PathKey`](../type/09_path_key.md)
-- **Default:** (required for `.settings.*`; optional for `.config`, `.params`, `.paths`)
+- **Default:** (required for `.settings.*`; optional for `.config`, `.params`, `.version.paths`)
 - **Validation:** when present, must not be empty; `key::` (empty) -> exit 1
 
 ```sh
@@ -25,7 +25,7 @@ clv.settings.set key::theme value::dark
 | 2 | [`.settings.set`](../command/settings.md#command-11-settingsset) | (required) | Identifies entry to write |
 | 3 | [`.config`](../command/config.md#command-13-config) | — | Absent = show-all mode; present = get/set/unset mode |
 | 4 | [`.params`](../command/params.md#command-14-params) | — | Absent = show-all; present = single-param deep-dive |
-| 5 | [`.paths`](../command/paths.md#command-16-paths) | — | Absent = show-all; present = single-path lookup |
+| 5 | [`.version.paths`](../command/version.md#command-16-versionpaths) | — | Absent = show-all; present = single-path lookup |
 
 ### Referenced Parameter Groups
 

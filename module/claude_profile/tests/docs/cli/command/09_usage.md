@@ -22,7 +22,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 | IT-14 | When credentials file unreadable: no `✓`; `*` still marks active account | Active Divergence |
 | IT-15 | When current = active, only `✓` appears; no `*` on any row | Active Divergence |
 | IT-16 | JSON output uses `is_current` (not `active`) and includes `is_active` per object | JSON Schema |
-| IT-17 | HTTP 401 from usage API shows `(auth expired (401))` in 7d Reset column | Error Shortening |
+| IT-17 | HTTP error from usage API never shows verbose `HTTP transport error:` string (exact short form not deterministic) | Error Shortening |
 | IT-18 | `.usage format::table` exits 1 (`ArgumentTypeMismatch`) | Argument Rejection |
 | IT-19 | Live token unmatched → synthetic `(current session)` row | Synthetic Row |
 | IT-20 | `refresh::0` accepted; empty store exits 0 | Token Refresh |
@@ -42,7 +42,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 | IT-34 | `.usage.help` refresh description includes "401/403" but NOT "401/403/429" | Help Output |
 | IT-35 | `trace::1` with no-token account → stderr contains timestamped diagnostic lines | Trace |
 | IT-36 | Empty store + `format::json` → output is `[]` | Output Format |
-| IT-37 | Single failed account → no `Current` footer line emitted | Footer |
+| IT-37 | Single failed account → no `Valid:` footer line emitted | Footer |
 | IT-38 | `.usage.help` shows `refresh::` default as `1` (enabled) | Help Output |
 | IT-39 | `.usage.help` refresh description mentions `429` and locally-expired case | Help Output |
 | IT-40 | Table header row contains `●` column label | Status Emoji |
@@ -61,7 +61,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 | IT-54 | ~~Footer shows both strategy lines~~ → REMOVED (single-strategy footer) | Next Footer |
 | IT-55 | `cols::+sub` shows Sub column in output | Column Visibility |
 | IT-56 | `cols::+bogus` exits 1 naming valid column IDs | Column Rejection |
-| IT-58 | Per-column emoji in `5h Left` value: `🟢 86%` / `🟡 3%` | Per-Column Emoji |
+| IT-58 | Per-column emoji appears somewhere in output — any of `🟢`/`🟡`/`🔴`, one live account, uncontrolled | Per-Column Emoji |
 | IT-61 | `.usage.help` lists `cols` params (`next` removed) | Help Output |
 | IT-62 | `touch::0` accepted; empty store exits 0 | Touch Param |
 | IT-63 | `touch::1` with no-token accounts — errored accounts never touched | Touch Param |
@@ -76,11 +76,11 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 | IT-72 | `format::json` new fields: `renewal_secs`, `renewal_is_estimate`, `next_event_type`, `next_event_secs` | JSON Schema |
 | IT-74 | Owner column visible by default; `cols::-owner` hides it | Owner Column |
 | IT-75 | `rotate::1 live::1` exits 1 with mutual exclusion message | Rotate Param |
-| IT-76 | `rotate::1` with no eligible candidate exits 1; table still rendered | Rotate Param |
+| IT-76 | `rotate::1` — all accounts lack `accessToken` → exits 1 (not an absent-candidate scenario) | Rotate Param |
 | IT-77 | `rotate::1 dry::1` previews target; no switch executed; exit 0 | Rotate Param |
-| IT-78 | `rotate::1` executes switch; output ends with `switched to '{name}'` | Rotate Param |
-| IT-79 | `rotate::1 sort::renews` uses the renews-strategy winner | Rotate Param |
-| IT-80 | `rotate::1 force::1` bypasses G5 gate; non-owned account eligible | Rotate Param |
+| IT-78 | `rotate::1` — exits 0 (switched) or 1 (no eligible); `switched to` only checked on exit 0 | Rotate Param |
+| IT-79 | `rotate::1 sort::renews` — exits 0 (switched) or 1 (no eligible); winner account not verified | Rotate Param |
+| IT-80 | `rotate::1 force::1` — exit 0 unverified; only checks absence of `"ownership"` when exit is 1 | Rotate Param |
 | IT-81 | `who::0` accepted; empty store exits 0 | Who Param |
 | IT-82 | `who::2` rejected; exit 1; error mentions valid values `0` and `1` | Who Param |
 | IT-83 | `.usage.help` lists `who` param with sessions table description | Help Output |
@@ -298,14 +298,17 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 
 ---
 
-### IT-17: HTTP 401 from usage API shows `(auth expired (401))` in 7d Reset column
+### IT-17: HTTP error from usage API is never shown as verbose `HTTP transport error:` (exact short form not deterministic)
 
-- **Given:** One saved account whose `expiresAt` in the credential file is a past timestamp and whose `accessToken` the usage API rejects with HTTP 401.
+> `ft02_lim_it_http_401_shortens_to_auth_expired`'s own doc comment states the literal `(auth expired (401))` string is no longer guaranteed: `apply_refresh` now intercepts 401 responses and attempts an OAuth refresh first; when that refresh itself fails, the error becomes `"refresh token expired"` instead, and a 429 (rate-limited) response would show `"rate limited (429)"`. The durable invariant the test actually enforces is: no verbose `HTTP transport error: HTTP NNN` string appears. The fixture also uses a locally-**valid** `expiresAt` (`FAR_FUTURE_MS`), not a past/expired one — the account's `Expires` column would show a valid date, not `EXPIRED`. Assertions check only: exit 0, the account row (`invalid@test.com`) appears in stdout, and stdout never contains `"HTTP transport error:"`. None of `EXPIRED`, the `—` quota-column placeholders, or `(auth expired (401))` are asserted.
+
+- **Given:** One saved account with a locally-**valid** (far-future) `expiresAt` but an `accessToken` the live usage API rejects (invalid token).
 - **When:** `clp .usage`
-- **Then:** That account's row shows `EXPIRED` in Expires and `—` for all quota columns (5h Left, 5h Reset, 7d Left, 7d(Son)); the 7d Reset column shows `(auth expired (401))` — NOT `(HTTP transport error: HTTP 401)`. Exit 0.
+- **Then:** Exit 0. The account row (`invalid@test.com`) appears in stdout. Stdout never contains the verbose `"HTTP transport error:"` string — the actual short-form message shown (e.g. `(auth expired (401))`, `(refresh token expired)`, or `(rate limited (429))`) depends on live API behavior at test time and is not asserted.
 - **Exit:** 0
+- **Live:** yes (requires network access; exact error text depends on live API response)
 - **Fix:** BUG-152
-- **Source fn:** `ft002_lim_it_http_401_shortens_to_auth_expired` (in `usage_feature_test.rs`)
+- **Source fn:** `ft02_lim_it_http_401_shortens_to_auth_expired` (in `usage_feature_test.rs`)
 - **Source:** [009_token_usage.md AC-03](../../../../docs/feature/009_token_usage.md)
 
 ---
@@ -422,9 +425,11 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 
 ### IT-28: `format::json` for failed account → JSON has `"error"` field
 
+> Test checks 5 things only: the `"error":` key, the absence of `"session_5h_left_pct"`, and the presence of `"is_current"`, `"is_active"`, `"expires_in_secs"`. It does not check `billing_type`, `has_max`, `renewal_secs`, `renewal_is_estimate`, `next_event_type`, `next_event_secs`, or the absence of `next_renewal_est` — none of these fields (null or otherwise) are asserted.
+
 - **Given:** One account with no `accessToken` in the credential file (read_token returns Err).
 - **When:** `clp .usage format::json`
-- **Then:** Exits 0; JSON contains `"error":` key; does NOT contain `"session_5h_left_pct"`; does contain `"is_current"`, `"is_active"`, `"expires_in_secs"`, `"billing_type"` (null — token read failed, no account fetch ran), `"has_max"` (null), `"renewal_secs"` (null), `"renewal_is_estimate"` (null), `"next_event_type"` (null), `"next_event_secs"` (null); does NOT contain `"next_renewal_est"` (deprecated field removed).
+- **Then:** Exits 0; JSON contains `"error":` key; does NOT contain `"session_5h_left_pct"`; does contain `"is_current"`, `"is_active"`, `"expires_in_secs"`.
 - **Exit:** 0
 - **Source fn:** `it027_json_error_field_on_failed_account`
 - **Source:** [009_token_usage.md AC-05](../../../../docs/feature/009_token_usage.md)
@@ -500,9 +505,11 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 
 ### IT-35: `trace::1` with no-token account → stderr contains timestamped diagnostic lines
 
+> Test never calls `stdout(&out)` at all — its own doc comment states it confirms trace output "without affecting exit code or stdout," meaning stdout is deliberately not inspected, not that it was checked and found unaffected.
+
 - **Given:** One saved account whose credential file has no `accessToken` field.
 - **When:** `clp .usage trace::1`
-- **Then:** Exits 0; stderr contains timestamped diagnostic lines including the account name; stdout still shows the account row.
+- **Then:** Exits 0; stderr contains a ` · ` separator and the account name (`trace-acct`). Stdout is not read or asserted on by this test.
 - **Exit:** 0
 - **Source fn:** `it034_trace_param_writes_to_stderr`
 - **Source:** [command/006_usage.md — .usage](../../../../docs/cli/command/006_usage.md#command-9-usage)
@@ -520,11 +527,13 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 
 ---
 
-### IT-37: Single failed account → no `Current` footer line emitted
+### IT-37: Single failed account → no `Valid:` footer line emitted
+
+> Test checks `!text.contains("Valid:")`, not `"Current ·"`. `src/usage/render.rs` emits `"Current · ... · valid_count/total"` only when an account is marked `is_current`; when none is (this fixture's case), rendering falls back to the legacy `"Valid: {valid_count} / {total}"` line — the string the test actually checks for absence of.
 
 - **Given:** One saved account whose credential file has no `accessToken` (quota fetch fails; `valid_count = 0`).
 - **When:** `clp .usage`
-- **Then:** Exits 0; stdout does NOT contain `Current ·` (footer is suppressed when `valid_count < 2`).
+- **Then:** Exits 0; stdout does NOT contain `Valid:` (footer is suppressed when `valid_count < 2`).
 - **Exit:** 0
 - **Source fn:** `it036_no_footer_when_no_valid_accounts`
 - **Source:** [command/006_usage.md — .usage](../../../../docs/cli/command/006_usage.md#command-9-usage)
@@ -692,7 +701,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **When:** `clp .usage cols::+sub`
 - **Then:** Exits 0. Table header contains `Sub`.
 - **Exit:** 0
-- **Source fn:** `it081_cols_sub_shows_sub_column` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it081_cols_sub_shows_sub_column` (in `usage_sort_test.rs`)
 - **Source:** [009_token_usage.md AC-22](../../../../docs/feature/009_token_usage.md)
 
 ---
@@ -703,7 +712,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **When:** `clp .usage cols::+bogus`
 - **Then:** Exits 1. Stderr names valid column IDs.
 - **Exit:** 1
-- **Source fn:** `it082_cols_unknown_id_exit_1` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it082_cols_unknown_id_exit_1` (in `usage_sort_test.rs`)
 - **Source:** [009_token_usage.md AC-23](../../../../docs/feature/009_token_usage.md)
 
 ---
@@ -712,14 +721,16 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 
 ---
 
-### IT-58: Per-column emoji in `5h Left` value: `🟢 86%` / `🟡 3%`
+### IT-58: Per-column emoji appears somewhere in usage output (uncontrolled — one live account)
 
-- **Given:** Two accounts: one with `five_hour.utilization=14%` (86% left), one with `five_hour.utilization=97%` (3% left).
+> Test uses one live-token account, not two, and does not control its quota utilization — the assertion is `text.contains("🟢") || text.contains("🟡") || text.contains("🔴")`, satisfied by any of the three colors appearing anywhere in stdout, not specifically in the `5h Left` column, and not a specific color or percentage.
+
+- **Given:** One live-token account (`acct-a@test.com`); its real quota utilization at test time is not controlled by the test.
 - **When:** `clp .usage`
-- **Then:** Exits 0. The first account's `5h Left` column contains `🟢`; the second contains `🟡`.
+- **Then:** Exits 0; stdout contains at least one of `🟢`, `🟡`, `🔴` (which color, and where, is not asserted).
 - **Exit:** 0
-- **Live:** yes (requires real tokens)
-- **Source fn:** `it105_lim_it_per_column_emoji_in_5h_left` (in `tests/cli/usage_test.rs`)
+- **Live:** yes (requires a live OAuth token; `lim_it`)
+- **Source fn:** `it105_lim_it_per_column_emoji_in_5h_left` (in `usage_touch_test.rs`)
 - **Source:** [009_token_usage.md AC-21](../../../../docs/feature/009_token_usage.md)
 
 ---
@@ -738,7 +749,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **When:** `clp .usage.help`
 - **Then:** Exits 0. Stdout contains `"next"` (as a `cols::` column ID for `→ Next`) and `"cols"`. Note: `next::` parameter was removed; `next` here refers to the column name.
 - **Exit:** 0
-- **Source fn:** `it083_usage_help_shows_next_cols_params` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it083_usage_help_shows_next_cols_params` (in `usage_sort_test.rs`)
 - **Source:** [009_token_usage.md AC-09](../../../../docs/feature/009_token_usage.md)
 
 ---
@@ -749,7 +760,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **When:** `clp .usage touch::0`
 - **Then:** Exits 0 with "(no accounts configured)". No error about unrecognized parameter. No subprocess spawned.
 - **Exit:** 0
-- **Source fn:** `it106_touch_0_accepted_empty_store_exits_0` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it106_touch_0_accepted_empty_store_exits_0` (in `usage_touch_test.rs`)
 - **Source:** [feature/024_session_touch.md AC-01](../../../../docs/feature/024_session_touch.md)
 
 ---
@@ -760,7 +771,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **When:** `clp .usage touch::1`
 - **Then:** Exits 0. Account row shows original error state. No subprocess spawned — touch trigger requires `result = Ok(...)`.
 - **Exit:** 0
-- **Source fn:** `it098_touch_1_errored_account_skipped` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it098_touch_1_errored_account_skipped` (in `usage_touch_test.rs`)
 - **Source:** [feature/024_session_touch.md AC-04](../../../../docs/feature/024_session_touch.md)
 
 ---
@@ -771,7 +782,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **When:** `clp .usage.help`
 - **Then:** Exits 0. Stdout contains `"touch"` with default value `1` (on).
 - **Exit:** 0
-- **Source fn:** `it101_usage_help_shows_touch_param` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it101_usage_help_shows_touch_param` (in `usage_touch_test.rs`)
 - **Source:** [feature/024_session_touch.md AC-10](../../../../docs/feature/024_session_touch.md)
 
 ---
@@ -788,7 +799,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **When:** `clp .usage imodel::auto`
 - **Then:** Exits 0 with "(no accounts configured)". No error about unrecognized parameter. `auto` is the default; no subprocess spawned (no accounts).
 - **Exit:** 0
-- **Source fn:** `it122_imodel_auto_accepted_empty_store_exits_0` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it122_imodel_auto_accepted_empty_store_exits_0` (in `usage_model_test.rs`)
 - **Source:** [feature/026_subprocess_model_effort.md AC-01](../../../../docs/feature/026_subprocess_model_effort.md)
 
 ---
@@ -799,7 +810,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **When:** `clp .usage imodel::bogus`
 - **Then:** Exits 1. Stderr contains each of the five valid values: `auto`, `sonnet`, `opus`, `haiku`, `keep`.
 - **Exit:** 1
-- **Source fn:** `it123_imodel_bogus_exits_1` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it123_imodel_bogus_exits_1` (in `usage_model_test.rs`)
 - **Source:** [feature/026_subprocess_model_effort.md AC-10](../../../../docs/feature/026_subprocess_model_effort.md)
 
 ---
@@ -810,7 +821,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **When:** `clp .usage effort::auto`
 - **Then:** Exits 0 with "(no accounts configured)". No error about unrecognized parameter. `auto` is the default; no subprocess spawned (no accounts).
 - **Exit:** 0
-- **Source fn:** `it124_effort_auto_accepted_empty_store_exits_0` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it124_effort_auto_accepted_empty_store_exits_0` (in `usage_model_test.rs`)
 - **Source:** [feature/026_subprocess_model_effort.md AC-05](../../../../docs/feature/026_subprocess_model_effort.md)
 
 ---
@@ -821,7 +832,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **When:** `clp .usage effort::bogus`
 - **Then:** Exits 1. Stderr contains each of the five valid values: `auto`, `low`, `normal`, `high`, `max`.
 - **Exit:** 1
-- **Source fn:** `it125_effort_bogus_exits_1` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it125_effort_bogus_exits_1` (in `usage_model_test.rs`)
 - **Source:** [feature/026_subprocess_model_effort.md AC-11](../../../../docs/feature/026_subprocess_model_effort.md)
 
 ---
@@ -832,36 +843,35 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **When:** `clp .usage.help`
 - **Then:** Exits 0. Stdout contains `"imodel"` and `"effort"`, each showing default value `auto`.
 - **Exit:** 0
-- **Source fn:** `it126_usage_help_shows_imodel_effort_params` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it126_usage_help_shows_imodel_effort_params` (in `usage_model_test.rs`)
 - **Source:** [feature/026_subprocess_model_effort.md AC-12](../../../../docs/feature/026_subprocess_model_effort.md)
 
 ---
 
-### IT-71: `→ Next` column shows soonest upcoming strategic event label and duration
+### IT-71: `→ Next` column shows soonest upcoming strategic event label and duration (uncontrolled — either `+7d` or `$ren` accepted)
 
-- **Given:** One account with live quota data: `seven_day.resets_at` set to ~2 days in the future; no `_renewal_at`. The `+7d` reset is soonest.
+> Test uses a live account with uncontrolled quota state — it does not construct a specific `seven_day.resets_at`/`_renewal_at` fixture to force `+7d` as soonest. The assertion tolerates either label: `text.contains(" +7d") || text.contains(" $ren")`. Absence of `!tok`/`+5h` labels is not asserted at all.
+
+- **Given:** One account with a live token; its real quota state (which strategic event is soonest) is not controlled by the test.
 - **When:** `clp .usage`
-- **Then:** Exits 0. The `→ Next` column header appears in the table header row. That account's `→ Next` cell contains `in` followed by a duration string and then ` +7d` (e.g., `in 2d 0m +7d`). No `!tok` or `+5h` label appears — token expiry and 5h resets are not candidates for `→ Next`.
+- **Then:** Exits 0. The `→ Next` column header appears in the table header row. That account's `→ Next` cell contains either `" +7d"` or `" $ren"` (whichever event the live account's real quota state makes soonest), preceded by `in <duration>`.
 - **Exit:** 0
 - **Live:** yes
-- **Source fn:** `it225_lim_it_it71_next_event_cell_shows_label_and_duration` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it225_lim_it_it71_next_event_cell_shows_label_and_duration` (in `usage_lim_it_test_b.rs`)
 - **Source:** [feature/009_token_usage.md AC-28](../../../../docs/feature/009_token_usage.md)
 
 ---
 
-### IT-72: `format::json` output contains new fields; `next_renewal_est` absent
+### IT-72: `format::json` contains renewal/next-event field NAMES; values not checked; `next_renewal_est` absent
 
-- **Given:** One account with `_renewal_at` set to a future timestamp (~6 days away). Token expiry is 8h away; `five_hour.resets_at` is 3h away; no `seven_day.resets_at` present.
+> Test uses a live account with uncontrolled quota state — no specific `_renewal_at`/`five_hour.resets_at`/`seven_day.resets_at` fixture is constructed; the live account's real quota data governs the JSON values. Every positive assertion checks only that a field-name substring appears in the JSON text (e.g., `text.contains("renewal_secs")`) — none check the field's actual value. `renewal_is_estimate` could be `true` or `false`, `next_event_type` could be `"ren"` or another sigil, and `renewal_secs`/`next_event_secs` could be any number — the test passes regardless, as long as the key name string is present somewhere. Only the absence of `next_renewal_est` is a genuine (negative) check.
+
+- **Given:** One account with a live token; its real quota state (renewal timing, 5h/7d resets) is not controlled by the test.
 - **When:** `clp .usage format::json`
-- **Then:** Exits 0. JSON array contains one element with:
-  - `renewal_secs`: positive integer (~518400 for 6 days)
-  - `renewal_is_estimate`: `false` (sourced from `_renewal_at`, not estimate)
-  - `next_event_type`: `"ren"` (soonest strategic event is `$ren`; sigil stripped in JSON output)
-  - `next_event_secs`: positive integer (~518400 for 6 days)
-  - No `next_renewal_est` key present in the object.
+- **Then:** Exits 0. JSON output contains the field-name substrings `renewal_secs`, `renewal_is_estimate`, `next_event_type`, `next_event_secs` (actual values not checked), and does NOT contain `next_renewal_est`.
 - **Exit:** 0
 - **Live:** yes
-- **Source fn:** `it222_lim_it_it72_json_new_renewal_fields` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it222_lim_it_it72_json_new_renewal_fields` (in `usage_lim_it_test_b.rs`)
 - **Source:** [feature/009_token_usage.md AC-29](../../../../docs/feature/009_token_usage.md)
 
 ---
@@ -878,7 +888,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **When (Case B):** `clp .usage cols::-owner`
 - **Then (Case B):** Exit 0. Stdout does NOT contain `Owner` column header.
 - **Exit:** 0
-- **Source fn:** `it248_owner_column_visible_by_default` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it248_owner_column_visible_by_default` (in `usage_solo_test.rs`)
 - **Source:** [feature/037_accounts_usage_param_unification.md AC-19](../../../../docs/feature/037_accounts_usage_param_unification.md)
 
 ---
@@ -889,18 +899,20 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **When:** `clp .usage rotate::1 live::1`
 - **Then:** Exits 1 before any account fetch. Stderr contains a message indicating `rotate::1` and `live::1` are mutually exclusive. No table is rendered.
 - **Exit:** 1
-- **Source fn:** `it249_rotate_live_mutual_exclusion_exits_1` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `ft04_rotate_live_mutual_exclusion` (in `tests/cli/usage_rotate_test.rs`)
 - **Source:** [feature/038_usage_strategy_rotate.md AC-04](../../../../docs/feature/038_usage_strategy_rotate.md)
 
 ---
 
-### IT-76: `rotate::1` with no eligible candidate exits 1; table still rendered
+### IT-76: `rotate::1` with all accounts lacking `accessToken` exits 1
 
-- **Given:** One account that is the current (active, live) account — no non-current owned account exists.
+> Not an absent-candidate scenario: the test's own doc comment states the real cause is "all accounts fail API fetch (no `accessToken`)" — `write_account`'s `credential_json()` helper never writes an `accessToken` field. Two accounts exist (`current@test.com`, active; `other@test.com`, not active); both lack a token, so both fail quota fetch and neither is eligible, regardless of ownership/currency. The assertion is also looser than previously documented: `combined.contains("eligible") || combined.contains("rotate")` — an OR of two single-word substrings, not the literal phrase `"no eligible account to rotate to"`. Table rendering and absence of a `switched to` line are not asserted at all.
+
+- **Given:** Two accounts saved: `current@test.com` (active) and `other@test.com` (not active). Neither has an `accessToken` — both fail quota fetch.
 - **When:** `clp .usage rotate::1`
-- **Then:** Exits 1. Stdout contains the quota table (table IS rendered before the error). Stderr or stdout contains `"no eligible account to rotate to"`. No `switched to` line appears.
+- **Then:** Exits 1. Combined stdout+stderr contains `"eligible"` or `"rotate"`. Table rendering and absence of a `switched to` line are not checked by this test.
 - **Exit:** 1
-- **Source fn:** `it250_rotate_no_eligible_exits_1_table_rendered` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `ft03_no_eligible_account_exits_1` (in `tests/cli/usage_rotate_test.rs`)
 - **Source:** [feature/038_usage_strategy_rotate.md AC-03](../../../../docs/feature/038_usage_strategy_rotate.md)
 
 ---
@@ -911,43 +923,49 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **When:** `clp .usage rotate::1 dry::1`
 - **Then:** Exits 0. Table is rendered; footer `Next:` line shows `secondary@acme.com`. Output ends with `[dry-run] would switch to 'secondary@acme.com'`. Credential store is NOT modified (credentials file unchanged).
 - **Exit:** 0
-- **Source fn:** `it251_rotate_dry_preview_no_switch` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `cc07_rotate_dry_offline_no_credential_change` (in `tests/cli/usage_rotate_test.rs`)
 - **Source:** [feature/038_usage_strategy_rotate.md AC-02](../../../../docs/feature/038_usage_strategy_rotate.md)
 
 ---
 
-### IT-78: `rotate::1` executes switch; output ends with `switched to '{name}'`
+### IT-78: `rotate::1` — exits 0 (switched) or 1 (no eligible); `switched to` only checked on exit 0
 
-- **Given:** Two accounts: `primary@acme.com` (current, active) and `secondary@acme.com` (owned, non-current, non-active, has quota). Live test environment.
+> Test's own comment: "Must exit 0 (switched) or 1 (no eligible — rate limited/both same token)." There is no unconditional `assert_exit` call — assertions run only inside `if out.status.code() == Some(0) { ... }`; on exit 1, nothing is checked and the test passes trivially. Even on exit 0, only `text.contains("switched to")` is checked — not the specific account name, not "ends with," not footer/table content, and not the on-disk active-marker file. Account names in the fixture are `active@test.com` (current) / `rotate_target@test.com` (target), not `primary@acme.com`/`secondary@acme.com`.
+
+- **Given:** Two accounts sharing the same live token: `active@test.com` (current, active) and `rotate_target@test.com` (not active). Live test environment.
 - **When:** `clp .usage rotate::1`
-- **Then:** Exits 0. Table is rendered; footer `Next:` line shows `secondary@acme.com`. Output ends with `switched to 'secondary@acme.com'`. The active marker in the credential store now points to `secondary@acme.com`.
-- **Exit:** 0
+- **Then:** Exits 0 or 1, depending on live quota/rate-limit state. Only when exit 0 is observed: stdout contains `"switched to"` (the target account name, table/footer content, and the on-disk active marker are not checked either way).
+- **Exit:** 0 or 1 (not deterministic)
 - **Live:** yes
-- **Source fn:** `it252_lim_it_rotate_core_switch_switches_account` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `ft01_lim_it_rotates_to_next_winner` (in `tests/cli/usage_rotate_test.rs`)
 - **Source:** [feature/038_usage_strategy_rotate.md AC-01](../../../../docs/feature/038_usage_strategy_rotate.md)
 
 ---
 
-### IT-79: `rotate::1 sort::renews` uses the renews-strategy winner
+### IT-79: `rotate::1 sort::renews` — exits 0 (switched) or 1 (no eligible); winner account not verified
 
-- **Given:** Two eligible non-current accounts. Live test environment.
+> Test's own comment: "exit 0 = switched; exit 1 = no eligible account (fine — strategy just found none)." No unconditional `assert_exit`; the `if out.status.code() == Some(0)` branch only checks `text.contains("switched to")` — it never checks which account was selected, so the "soonest billing renewal" strategy outcome is not independently verified. Fixture is one current account (`active@test.com`) plus one non-current candidate (`candidate@test.com`) sharing the same live token — not "two eligible non-current accounts."
+
+- **Given:** One current account (`active@test.com`, active) and one non-current candidate (`candidate@test.com`), sharing the same live token. Live test environment.
 - **When:** `clp .usage rotate::1 sort::renews`
-- **Then:** Exits 0. Switches to the account with the soonest billing renewal. Output ends with `switched to '{name}'`.
-- **Exit:** 0
+- **Then:** Exits 0 or 1, depending on live quota/rate-limit state. Only when exit 0 is observed: stdout contains `"switched to"` — which account was actually selected is not asserted.
+- **Exit:** 0 or 1 (not deterministic)
 - **Live:** yes
 - **Source fn:** `ft07_lim_it_sort_renews` (in `tests/cli/usage_rotate_test.rs`)
 - **Source:** [feature/038_usage_strategy_rotate.md AC-07](../../../../docs/feature/038_usage_strategy_rotate.md)
 
 ---
 
-### IT-80: `rotate::1 force::1` bypasses G5 gate; non-owned account eligible
+### IT-80: `rotate::1 force::1` — exit 0 unverified; only checks absence of `"ownership"` when exit is 1
 
-- **Given:** Two non-current accounts: `owned@acme.com` (owned) and `foreign@acme.com` (non-owned). Without `force::1`, only `owned@acme.com` is eligible. Live test environment.
+> This test's structure is inverted relative to ft01/ft07: it checks `if out.status.code() == Some(1)` (not `Some(0)`), and even then only asserts `!combined.contains("ownership")`. The exit-0 (success) path has zero assertions — if the command exits 0, the test passes without checking anything (no `"switched to"`, no account name, no ownership-bypass confirmation). Fixture is two accounts, not three: `active@test.com` (active/current, implicitly owned) and `foreign@test.com` (not active, explicitly owned by `"other@remotemachine"` via `write_account_owner`) — not `owned@acme.com`/`foreign@acme.com`, and not a current+owned-non-current+foreign-non-owned 3-account scenario.
+
+- **Given:** Two accounts sharing the same live token: `active@test.com` (active/current) and `foreign@test.com` (not active, explicitly owned by a different machine). Live test environment.
 - **When:** `clp .usage rotate::1 force::1`
-- **Then:** Exits 0. Both accounts are eligible rotation targets (non-owned `foreign@acme.com` may be selected if it wins the strategy). Output ends with `switched to '{name}'`. No ownership-violation error.
-- **Exit:** 0
+- **Then:** Exits 0 or 1 (not deterministic). Only when exit 1 is observed: combined stdout+stderr does NOT contain `"ownership"`. When exit 0 is observed, nothing is asserted at all.
+- **Exit:** 0 or 1 (not deterministic; only the exit-1 path is checked, and only for absence of `"ownership"`)
 - **Live:** yes
-- **Source fn:** `it254_lim_it_rotate_force_bypasses_g5` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `ft06_lim_it_force_bypasses_g5` (in `tests/cli/usage_rotate_test.rs`)
 - **Source:** [feature/038_usage_strategy_rotate.md AC-06](../../../../docs/feature/038_usage_strategy_rotate.md)
 
 ---

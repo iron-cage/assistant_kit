@@ -15,7 +15,6 @@ Unit and integration tests for `claude_version`.
 | `lib_test.rs` | Library API: `register_commands()` callable and registers all commands |
 | `manual/` | Manual testing plan for scenarios requiring human verification |
 | `docs/` | Test planning documentation mirroring `docs/` structure |
-| `runbox/` | Container runner test environment (Dockerfile, config) |
 
 ## CLI Test Modules (`cli/`)
 
@@ -25,12 +24,11 @@ Unit and integration tests for `claude_version`.
 | `cli/framework_test.rs` | Pipeline smoke tests: help listing, exit codes |
 | `cli/read_help_test.rs` | Integration tests for `.help` (E1) |
 | `cli/read_status_test.rs` | Integration tests for `.status` and format edge cases (E2) |
-| `cli/read_version_test.rs` | Integration tests for `.version.show` and `.version.list` (E3, E4) |
-| `cli/read_processes_test.rs` | Integration tests for `.processes` (E6) |
+| `cli/read_version_test.rs` | Integration tests for `.version.show` and `.version.list` (E3, E4, E15) |
+| `cli/read_ps_test.rs` | Integration tests for `.ps` (E6) |
 | `cli/read_settings_test.rs` | Integration tests for `.settings.show` and `.settings.get` (E8, E9) |
-| `cli/read_version_history_test.rs` | Integration tests for `.version.history` (E15) |
 | `cli/mutation_version_install_test.rs` | Integration tests for `.version.install` (E5) |
-| `cli/mutation_processes_kill_test.rs` | Integration tests for `.processes.kill` (E7) |
+| `cli/mutation_ps_kill_test.rs` | Integration tests for `.ps.kill` (E7) |
 | `cli/mutation_version_guard_test.rs` | Integration tests for `.version.guard` (E14) |
 | `cli/mutation_settings_set_test.rs` | Integration tests for `.settings.set` and value type inference (E10) |
 | `cli/cross_cutting_test.rs` | Cross-cutting: dry+force, verbosity parity, format parity |
@@ -54,9 +52,14 @@ Unit and integration tests for `claude_version`.
 | `cli/value_param_test.rs` | EC- edge case tests for the `value::` parameter |
 | `cli/count_param_test.rs` | EC- edge case tests for the `count::` parameter |
 | `cli/process_isolation_test.rs` | Kill-isolation regression: guard does not send kill signals |
+| `cli/pid_param_test.rs` | EC- edge case tests for the `pid::` parameter on `.ps.kill` |
 | `cli/params_command_test.rs` | `.params` command integration tests |
 | `cli/kind_param_test.rs` | EC- edge case tests for the `kind::` parameter |
 | `cli/runtime_files_test.rs` | Integration tests for `.runtime_files` (IT-1..IT-9, FT-1..FT-5) |
+| `cli/paths_test.rs` | Integration tests for `.version.paths` (IT-1..IT-11, FT-1..FT-7) |
+| `cli/path_key_test.rs` | Type contract tests for `PathKey` validation (TC-1..TC-9) |
+| `cli/list_mode_test.rs` | Type contract tests for `ListMode` validation (TC-1..TC-6) |
+| `cli/mode_param_test.rs` | EC- edge case tests for the `mode::` parameter |
 
 ## Arg Parsing Test Modules (`cli_args_test/`)
 
@@ -70,3 +73,18 @@ Unit and integration tests for `claude_version`.
 | `cli_args_test/param_bool_test.rs` | `dry::` / `force::` acceptance, non-0/1 rejection, last-wins |
 | `cli_args_test/param_numeric_test.rs` | `count::` / `interval::` / `version::` overflow and semver format |
 | `cli_args_test/type_surface_test.rs` | Type contract tests: VerbosityLevel, OutputFormat, VersionSpec, SettingsKey, SettingsValue |
+
+## Conventions
+
+### Integration Test Binary Scope
+
+Every `.rs` file placed directly in `tests/` is compiled by Cargo as a separate
+integration test binary.  A file with no `#[test]` functions still compiles —
+it runs 0 tests and is invisible in `nextest` output, but consumes compile time
+on every build.
+
+All `.rs` files at the `tests/` root must contain at least one `#[test]`
+function.  Shared helpers or fixtures not intended to run as standalone tests
+must live inside a module directory (e.g., `cli/subprocess_helpers.rs`) and
+be included via `mod` from a real entry-point file (`cli.rs`), never placed
+at the `tests/` root directly.

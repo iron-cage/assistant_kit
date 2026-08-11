@@ -16,7 +16,7 @@
 | readme.md | Index and navigation for parameter group files |
 | procedure.md | Steps for adding, updating, or removing parameter group instances |
 | 01_output_control.md | Output Control group — v::, format::, count:: |
-| 02_execution_control.md | Execution Control group — dry::, force:: |
+| 02_execution_control.md | Execution Control group — dry::, force::, record_only:: |
 | 03_settings_identity.md | Settings Identity group — key::, value:: |
 | 04_config_identity.md | Config Identity group — key::, value::, scope::, unset:: |
 
@@ -25,7 +25,7 @@
 | # | Group | Parameters | Purpose |
 |---|-------|------------|---------|
 | 1 | [Output Control](01_output_control.md) | 3 | Control output appearance and volume |
-| 2 | [Execution Control](02_execution_control.md) | 2 | Control mutation behavior |
+| 2 | [Execution Control](02_execution_control.md) | 3 | Control mutation behavior |
 | 3 | [Settings Identity](03_settings_identity.md) | 2 | Identify settings target (deprecated commands) |
 | 4 | [Config Identity](04_config_identity.md) | 4 | Identify config target and operation |
 

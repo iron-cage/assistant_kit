@@ -221,6 +221,9 @@ pub struct AccountQuota
   /// `reserve` from `{name}.json`; `false` when unset — see Feature 070.
   /// `true` deprioritizes (does not exclude) this account in sort-based selection.
   pub reserve               : bool,
+  /// `inference_provider` from `{name}.json`; empty when unset — see Feature 072.
+  /// Empty is treated as `"anthropic"` by Gate 10 and `.accounts` rendering, never as a wildcard.
+  pub inference_provider    : String,
   // Fix(BUG-327): the 3 non-live branches (G1-not-owned, cache-first, approximate_quota)
   //   set `account: None`, so `renews_label()` never received `org_created_at` on those
   //   paths — `~Renews` showed "?" even with a warm cache holding a successful prior fetch.
@@ -463,9 +466,9 @@ pub const H_EXHAUSTED_THRESHOLD : f64 = 15.0;
 
 /// 7-day weekly quota exhaustion boundary.
 ///
-/// An account is classified **weekly-exhausted** when `7d Left ≤ 5%`. All comparison
-/// sites must reference this constant; never duplicate the literal `5.0`.
-pub const WEEKLY_EXHAUSTION_THRESHOLD : f64 = 5.0;
+/// An account is classified **weekly-exhausted** when `7d Left ≤ 3%`. All comparison
+/// sites must reference this constant; never duplicate the literal `3.0`.
+pub const WEEKLY_EXHAUSTION_THRESHOLD : f64 = 3.0;
 
 /// Map a model shorthand to its full model ID.
 ///

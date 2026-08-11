@@ -23,7 +23,24 @@ fn extract_str( s : &str, key : &str ) -> Option< String >
 {
   let needle = format!( "\"{key}\":" );
   let pos    = s.find( &needle )?;
-  let rest   = s[ pos + needle.len() .. ].trim_start_matches( ' ' );
+  parse_str_value( &s[ pos + needle.len() .. ] )
+}
+
+/// Depth-0 variant of [`extract_str`] — matches `key` only at bracket-depth 0 relative to
+/// the start of `s`, never inside a nested `{...}`/`[...]` value.  See [`find_key_shallow`].
+fn extract_str_shallow( s : &str, key : &str ) -> Option< String >
+{
+  let needle = format!( "\"{key}\":" );
+  let pos    = find_key_shallow( s, key )?;
+  parse_str_value( &s[ pos + needle.len() .. ] )
+}
+
+/// Parse a JSON string value from `rest` (the text immediately following a `"key":`).
+/// Shared by [`extract_str`] and [`extract_str_shallow`], which differ only in how they
+/// locate the key's position.
+fn parse_str_value( rest : &str ) -> Option< String >
+{
+  let rest = rest.trim_start_matches( ' ' );
   if rest.starts_with( "null" ) { return None; }
   if !rest.starts_with( '"' )   { return None; }
   let inner  = &rest[ 1 .. ];
@@ -69,9 +86,77 @@ fn extract_u64( s : &str, key : &str ) -> Option< u64 >
 {
   let needle = format!( "\"{key}\":" );
   let pos    = s.find( &needle )?;
-  let rest   = s[ pos + needle.len() .. ].trim_start_matches( ' ' );
-  let end    = rest.find( |c : char| !c.is_ascii_digit() ).unwrap_or( rest.len() );
+  parse_u64_value( &s[ pos + needle.len() .. ] )
+}
+
+/// Depth-0 variant of [`extract_u64`] — matches `key` only at bracket-depth 0 relative to
+/// the start of `s`, never inside a nested `{...}`/`[...]` value.  See [`find_key_shallow`].
+fn extract_u64_shallow( s : &str, key : &str ) -> Option< u64 >
+{
+  let needle = format!( "\"{key}\":" );
+  let pos    = find_key_shallow( s, key )?;
+  parse_u64_value( &s[ pos + needle.len() .. ] )
+}
+
+/// Parse a `u64` JSON number from `rest` (the text immediately following a `"key":`).
+/// Shared by [`extract_u64`] and [`extract_u64_shallow`].
+fn parse_u64_value( rest : &str ) -> Option< u64 >
+{
+  let rest = rest.trim_start_matches( ' ' );
+  let end  = rest.find( |c : char| !c.is_ascii_digit() ).unwrap_or( rest.len() );
   rest[ ..end ].parse().ok()
+}
+
+/// Locate the byte offset of `"key":` within `s`, matching only at bracket-depth 0 relative
+/// to the start of `s` — skips over the balanced content of any `{...}`/`[...]` value that
+/// appears before the depth-0 occurrence, so a same-named field nested inside a child
+/// array/object (e.g. `usage.iterations[].input_tokens` vs `usage.input_tokens`) cannot be
+/// matched ahead of the direct field. Also stops the scan the instant depth would go
+/// negative — the closing delimiter of `s`'s own enclosing object/array — so the search is
+/// naturally bounded even when `s` is an unbounded suffix slice.
+///
+/// # Fix(BUG-439)
+/// `extract_u64`/`extract_str` use plain depth-unaware `s.find()`, which is correct only
+/// because the current SDK happens to serialize `usage`'s own scalar fields before
+/// `usage.iterations[]`. JSON object field order is unspecified (RFC 8259 §4); if the SDK
+/// reorders them, `s.find()` would match `iterations[0]`'s field instead of `usage`'s own.
+fn find_key_shallow( s : &str, key : &str ) -> Option< usize >
+{
+  let needle      = format!( "\"{key}\":" );
+  let mut depth   = 0i32;
+  let mut in_str  = false;
+  let mut escaped = false;
+  for ( i, c ) in s.char_indices()
+  {
+    if escaped { escaped = false; continue; }
+    if in_str
+    {
+      if c == '\\' { escaped = true; }
+      else if c == '"' { in_str = false; }
+      continue;
+    }
+    if depth == 0 && s[ i.. ].starts_with( &needle ) { return Some( i ); }
+    match c
+    {
+      '"'       => in_str = true,
+      '{' | '[' => depth += 1,
+      '}' | ']' => { depth -= 1; if depth < 0 { return None; } }
+      _         => {}
+    }
+  }
+  None
+}
+
+/// Depth-0 slice of `s` immediately following `"key":{` — the content of a nested object
+/// field, located via [`find_key_shallow`] so a same-named key nested deeper inside `s`
+/// cannot be matched instead of the direct child. Returns `None` when `key` is absent at
+/// depth 0 or its value is not an object. Replaces marker-based lookups
+/// (`s.find("\"key\":{")`) for `stu_str`/`cc_str` in `render_summary()` (BUG-439).
+fn nested_object_shallow< 's >( s : &'s str, key : &str ) -> Option< &'s str >
+{
+  let needle = format!( "\"{key}\":" );
+  let pos    = find_key_shallow( s, key )?;
+  s[ pos + needle.len() .. ].trim_start().strip_prefix( '{' )
 }
 
 /// Extract an `f64` JSON number for `key`.
@@ -128,22 +213,37 @@ pub( super ) fn extract_result_text( json : &str ) -> Option< String >
 #[ must_use ]
 pub fn extract_session_id( json : &str ) -> Option< String >
 {
-  let msg_type = extract_str( json, "type" )?;
-  if msg_type != "result" { return None; }
+  // Fix(BUG-437): compound gate — same pattern as BUG-436 in render_summary().
+  //   Accepts old SDK (type:"result", no subtype) and new SDK (subtype present, no top-level type).
+  //   Rejects non-result stream chunks that have neither "subtype" nor "type":"result".
+  // Root cause: same depth-blindness as BUG-436 — extract_str(json,"type") finds
+  //   iterations[].type = "message" first; no top-level "type":"result" in new SDK.
+  // Pitfall: extract_str uses s.find() — "type":"result" gate alone catches iterations[].type.
+  let is_result = extract_str( json, "subtype" ).is_some()
+    || extract_str( json, "type" ).as_deref() == Some( "result" );
+  if !is_result { return None; }
   extract_str( json, "session_id" )
 }
 
 /// Extract the `"structured_output"` field value from a CLR JSON envelope as a raw JSON string.
 ///
-/// Returns `Some(json)` only when the envelope contains `"type":"result"` (invariant/008 gate)
-/// and a `"structured_output"` key whose value is not `null`.  Used by the raw execution path
-/// when `--json-schema` is active and the `"result"` text field is empty (BUG-318).
+/// Returns `Some(json)` only when the CLR envelope passes the invariant/008 compound gate
+/// (`"subtype"` present OR `"type":"result"`) and a `"structured_output"` key whose value is
+/// not `null`.  Used by the raw execution path when `--json-schema` is active and the
+/// `"result"` text field is empty (BUG-318).
 #[ inline ]
 #[ must_use ]
 pub( super ) fn extract_structured_output( json : &str ) -> Option< String >
 {
-  let msg_type = extract_str( json, "type" )?;
-  if msg_type != "result" { return None; }
+  // Fix(BUG-438): compound gate — same pattern as BUG-436/437.
+  //   Accepts old SDK (type:"result", no subtype) and new SDK (subtype present, no top-level type).
+  //   Rejects non-result stream chunks that have neither "subtype" nor "type":"result".
+  // Root cause: same depth-blindness as BUG-436/437 — extract_str(json,"type") finds
+  //   iterations[].type = "message" first; no top-level "type":"result" in new SDK.
+  // Pitfall: extract_str uses s.find() — "type":"result" gate alone catches iterations[].type.
+  let is_result = extract_str( json, "subtype" ).is_some()
+    || extract_str( json, "type" ).as_deref() == Some( "result" );
+  if !is_result { return None; }
   extract_json_value( json, "structured_output" )
 }
 
@@ -322,10 +422,26 @@ pub fn render_summary( json : &str, fields : Option< &str > ) -> Option< String 
   // Root cause: extract_str(json,"session_id")? returned None for 7-field envelopes
   //   where session_id is absent — restoring BUG-309 raw-JSON symptom for those versions.
   // Pitfall: any ? on an optional CLR field silently breaks all envelopes missing that field.
-  let msg_type     = extract_str( json, "type" )?;
-  if msg_type != "result" { return None; }
-  let session_id   = extract_str( json, "session_id" ).unwrap_or_default();
-  let subtype      = extract_str( json, "subtype" ).unwrap_or_default();
+  //
+  // Fix(BUG-436): compound gate — accepts old SDK ("type":"result", no subtype) and new SDK
+  //   ("subtype" present, no top-level "type"). Non-result stream chunks have neither and
+  //   are rejected. "type":"result"-only gate fails for new SDK envelopes where
+  //   usage.iterations[].type = "message" appears first (extract_str depth-unaware find()).
+  // Root cause: newer Claude SDK dropped top-level "type":"result"; depth-unaware
+  //   extract_str(json,"type") finds iterations[].type = "message" first.
+  // Pitfall: extract_str uses s.find() — "type" gate catches nested iterations[].type.
+  let subtype  = extract_str( json, "subtype" );
+  let msg_type = extract_str( json, "type" ).unwrap_or_default();
+  if subtype.is_none() && msg_type != "result" { return None; }
+  // Fix(BUG-440): new SDK format has no top-level "type"; extract_str found iterations[].type.
+  //   Clear msg_type so the "type:" display line is not shown with a wrong nested value.
+  // Root cause: same depth-blindness as BUG-436; msg_type = extract_str(json,"type") runs
+  //   before the gate, retaining iterations[].type = "message" when new SDK path is taken.
+  // Pitfall: extract_str uses s.find() — depth-unaware; clears whenever subtype is present
+  //   but no top-level "type":"result" was found.
+  let msg_type = if subtype.is_some() && msg_type != "result" { String::new() } else { msg_type };
+  let subtype    = subtype.unwrap_or_default();
+  let session_id = extract_str( json, "session_id" ).unwrap_or_default();
   let is_error     = extract_bool( json, "is_error" ).unwrap_or( false );
   let result       = extract_str( json, "result" ).unwrap_or_default();
 
@@ -339,27 +455,35 @@ pub fn render_summary( json : &str, fields : Option< &str > ) -> Option< String 
   let cost         = extract_f64( json, "total_cost_usd" ).unwrap_or( 0.0 );
 
   // usage nested object
+  // Fix(BUG-439): usage_str stays an unbounded suffix slice (harmless — find_key_shallow
+  //   self-bounds), but every extraction below now uses the *_shallow variants, which only
+  //   match a key at depth 0 relative to usage's own content and stop at its closing brace.
+  //   Prevents usage.iterations[]'s own input_tokens/output_tokens/cache_read_input_tokens/
+  //   cache_creation_input_tokens fields from being matched ahead of usage's own totals when
+  //   the SDK serializes iterations before scalars (JSON object field order is unspecified).
+  // Root cause: extract_u64/extract_str do a depth-unaware s.find() over the whole (unbounded)
+  //   usage_str slice; correctness depended entirely on the current SDK's field order.
+  // Pitfall: a depth-unaware first-occurrence search over a slice containing a same-named
+  //   nested field is correct only by accident of the current serializer's key order.
   let usage_marker = "\"usage\":{";
   let usage_str    = json.find( usage_marker ).map( |p| &json[ p + usage_marker.len() .. ] );
-  let in_tok       = usage_str.and_then( |s| extract_u64( s, "input_tokens" ) ).unwrap_or( 0 );
-  let out_tok      = usage_str.and_then( |s| extract_u64( s, "output_tokens" ) ).unwrap_or( 0 );
-  let cache_create = usage_str.and_then( |s| extract_u64( s, "cache_creation_input_tokens" ) ).unwrap_or( 0 );
-  let cache_read   = usage_str.and_then( |s| extract_u64( s, "cache_read_input_tokens" ) ).unwrap_or( 0 );
-  let svc_tier     = usage_str.and_then( |s| extract_str( s, "service_tier" ) ).unwrap_or_default();
-  let spd          = usage_str.and_then( |s| extract_str( s, "speed" ) ).unwrap_or_default();
-  let inf_geo      = usage_str.and_then( |s| extract_str( s, "inference_geo" ) ).unwrap_or_default();
+  let in_tok       = usage_str.and_then( |s| extract_u64_shallow( s, "input_tokens" ) ).unwrap_or( 0 );
+  let out_tok      = usage_str.and_then( |s| extract_u64_shallow( s, "output_tokens" ) ).unwrap_or( 0 );
+  let cache_create = usage_str.and_then( |s| extract_u64_shallow( s, "cache_creation_input_tokens" ) ).unwrap_or( 0 );
+  let cache_read   = usage_str.and_then( |s| extract_u64_shallow( s, "cache_read_input_tokens" ) ).unwrap_or( 0 );
+  let svc_tier     = usage_str.and_then( |s| extract_str_shallow( s, "service_tier" ) ).unwrap_or_default();
+  let spd          = usage_str.and_then( |s| extract_str_shallow( s, "speed" ) ).unwrap_or_default();
+  let inf_geo      = usage_str.and_then( |s| extract_str_shallow( s, "inference_geo" ) ).unwrap_or_default();
 
   // usage.server_tool_use
-  let stu_marker = "\"server_tool_use\":{";
-  let stu_str    = usage_str.and_then( |s| s.find( stu_marker ).map( |p| &s[ p + stu_marker.len() .. ] ) );
-  let web_search = stu_str.and_then( |s| extract_u64( s, "web_search_requests" ) ).unwrap_or( 0 );
-  let web_fetch  = stu_str.and_then( |s| extract_u64( s, "web_fetch_requests" ) ).unwrap_or( 0 );
+  let stu_str    = usage_str.and_then( |s| nested_object_shallow( s, "server_tool_use" ) );
+  let web_search = stu_str.and_then( |s| extract_u64_shallow( s, "web_search_requests" ) ).unwrap_or( 0 );
+  let web_fetch  = stu_str.and_then( |s| extract_u64_shallow( s, "web_fetch_requests" ) ).unwrap_or( 0 );
 
   // usage.cache_creation
-  let cc_marker = "\"cache_creation\":{";
-  let cc_str    = usage_str.and_then( |s| s.find( cc_marker ).map( |p| &s[ p + cc_marker.len() .. ] ) );
-  let eph_1h    = cc_str.and_then( |s| extract_u64( s, "ephemeral_1h_input_tokens" ) ).unwrap_or( 0 );
-  let eph_5m    = cc_str.and_then( |s| extract_u64( s, "ephemeral_5m_input_tokens" ) ).unwrap_or( 0 );
+  let cc_str = usage_str.and_then( |s| nested_object_shallow( s, "cache_creation" ) );
+  let eph_1h = cc_str.and_then( |s| extract_u64_shallow( s, "ephemeral_1h_input_tokens" ) ).unwrap_or( 0 );
+  let eph_5m = cc_str.and_then( |s| extract_u64_shallow( s, "ephemeral_5m_input_tokens" ) ).unwrap_or( 0 );
 
   // modelUsage — first model's stats
   // Fix(BUG-394): both quote searches now route through find_unescaped_quote()

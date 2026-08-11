@@ -67,7 +67,7 @@ fn detect_current_account(
 //   level, not at list() level.
 #[ inline ]
 #[ allow( clippy::too_many_lines ) ]
-pub fn accounts_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
+pub( crate ) fn accounts_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
   let opts             = OutputOptions::from_cmd( &cmd )?;
   let trace            = crate::output::parse_int_flag( &cmd, "trace", 0 )? != 0;
@@ -201,9 +201,16 @@ pub fn accounts_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Res
       let cred_path = credential_store.join( format!( "{name_arg}.credentials.json" ) );
       if !cred_path.exists()
       {
+        // Fix(BUG-342): name the source parameter in the error message.
+        // Root cause: name_arg derives exclusively from name:: (via resolve_account_name()),
+        // never from assignee::'s own value, but the message named only the failing value with
+        // no indication of which parameter supplied it — ambiguous when both are present.
+        // Pitfall: do not infer the source from whichever param is textually closer to the
+        // error site — name_arg's provenance is fixed (always name::), so the annotation is a
+        // constant string, not a runtime branch.
         return Err( ErrorData::new(
           ErrorCode::ArgumentTypeMismatch,
-          format!( "account '{name_arg}' not found in credential store" ),
+          format!( "account '{name_arg}' (from name::) not found in credential store" ),
         ) );
       }
       // G9: Claim-lock guard — locked accounts cannot become the assignee:: target.
@@ -378,4 +385,28 @@ pub fn accounts_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Res
     }
   };
   Ok( OutputData::new( content, "text" ) )
+}
+
+// ── Unified group dispatcher ──────────────────────────────────────────────────
+
+/// `.accounts` / `.usage` — single handler for the account-view command group.
+///
+/// CV020 (Representation Absorption): `.accounts` and `.usage` are both read-oriented
+/// views of account data registered with this one routine. Dispatch axis is the command
+/// name carried by `VerifiedCommand`; the per-command logic lives in the private helpers.
+///
+/// # Errors
+///
+/// Propagates any `ErrorData` returned by the dispatched sub-handler.
+#[ inline ]
+pub fn accounts_view_routine( cmd : VerifiedCommand, ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
+{
+  if cmd.definition.name().to_string() == ".usage"
+  {
+    crate::usage::usage_routine( cmd, ctx )
+  }
+  else
+  {
+    accounts_routine( cmd, ctx )
+  }
 }

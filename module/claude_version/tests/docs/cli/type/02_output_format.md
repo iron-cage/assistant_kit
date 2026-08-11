@@ -6,7 +6,7 @@ Type compliance and validation tests for `OutputFormat`. See [type/02_output_for
 
 - **Purpose**: Validate OutputFormat parsing, case-sensitivity enforcement, and output structure.
 - **Responsibility**: Valid variants, invalid inputs, default behavior, and observable output differences between formats.
-- **Commands:** `.status`, `.version.show`, `.version.install`, `.version.list`, `.version.guard`, `.version.history`, `.processes`, `.processes.kill`, `.settings.show`, `.settings.get`
+- **Commands:** `.status`, `.version.show`, `.version.install`, `.version.list`, `.version.guard`, `.ps`, `.ps.kill`, `.settings.show`, `.settings.get`
 - **In Scope**: Format string parsing, case-sensitive matching, and observable output format differences.
 - **Out of Scope**: Per-command JSON schema structure (→ `../command/`), parameter interactions (→ `../param_group/`).
 
@@ -112,6 +112,6 @@ Type compliance and validation tests for `OutputFormat`. See [type/02_output_for
 |----------|------|
 | `tc258_status_format_json_is_valid_json` | `tests/cli/cross_cutting_test.rs` |
 | `tc260_format_uppercase_rejected` | `tests/cli/cross_cutting_test.rs` |
-| `tc_output_format_text_explicit` | `cli_args_test/type_surface_test.rs` |
-| `tc_output_format_xml_rejected` | `cli_args_test/type_surface_test.rs` |
-| `tc_output_format_empty_rejected` | `cli_args_test/type_surface_test.rs` |
+| `tc_output_format_text_explicit` | `tests/cli_args_test/type_surface_test.rs` |
+| `tc_output_format_xml_rejected` | `tests/cli_args_test/type_surface_test.rs` |
+| `tc_output_format_empty_rejected` | `tests/cli_args_test/type_surface_test.rs` |

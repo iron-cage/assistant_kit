@@ -247,6 +247,11 @@ fn ec8_no_timeout_when_subprocess_exits_fast()
 /// Fix Applied: DEFAULT_PRINT_TIMEOUT_SECS const added above run_print_mode(); unwrap_or changed
 /// Prevention: this test fails if the constant is removed or changed to a different value
 /// Pitfall: run_interactive() must retain unwrap_or(0) — only print-mode adopts this default
+///
+/// Addendum (AGG-24, Plan 005 Phase 5): this invariant remains accurate after Plan 005
+/// Phase 4's restructuring — Fix(BUG-425)'s AGG-1 dropped that phase's originally-proposed
+/// `execution.rs:941` timeout-hardening deliverable entirely, so `run_interactive()`'s
+/// `unwrap_or(0)` was never touched and this comment was never at risk of going stale.
 #[ test ]
 fn ec_timeout_default_constant_value()
 {

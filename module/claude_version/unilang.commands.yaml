@@ -123,6 +123,16 @@
       aliases: []
       tags: []
 
+    - name: "record_only"
+      kind: "Boolean"
+      description: "Persist the preference without installing (1=record only); mutually exclusive with dry"
+      hint: "Record preference only"
+      optional: true
+      default: "0"
+      validation_rules: []
+      aliases: []
+      tags: []
+
     - name: "verbosity"
       kind: "Integer"
       description: "Output detail level"
@@ -146,6 +156,7 @@
   examples:
     - ".version.install version::2.1.0"
     - ".version.install version::latest dry::1"
+    - ".version.install version::stable record_only::1"
   auto_help_enabled: true
 
 - name: ".version.guard"
@@ -229,8 +240,8 @@
 
 - name: ".version.list"
   namespace: ""
-  description: "List all named version aliases"
-  hint: "List version aliases"
+  description: "Lists aliases or release history relevant to the installed version"
+  hint: "List version aliases or release history"
   version: "1.0.0"
   status: "stable"
   aliases: []
@@ -241,48 +252,19 @@
   http_method_hint: "GET"
 
   arguments:
-    - name: "verbosity"
-      kind: "Integer"
-      description: "Output detail level"
-      hint: "Output verbosity level"
-      optional: true
-      default: "1"
-      validation_rules: []
-      aliases: ["v"]
-      tags: []
-
-    - name: "format"
+    - name: "mode"
       kind: "String"
-      description: "Output format (text or json)"
-      hint: "Output format"
+      description: "Render mode: aliases (named version aliases) or history (GitHub release history)"
+      hint: "List mode"
       optional: true
-      default: "text"
+      default: "aliases"
       validation_rules: []
-      aliases: ["fmt"]
+      aliases: []
       tags: []
 
-  examples:
-    - ".version.list"
-    - ".version.list format::json"
-  auto_help_enabled: true
-
-- name: ".version.history"
-  namespace: ""
-  description: "Show release history with changelogs from GitHub"
-  hint: "Show release history"
-  version: "1.0.0"
-  status: "stable"
-  aliases: []
-  tags: ["manager", "version"]
-  permissions: []
-  idempotent: true
-  deprecation_message: ""
-  http_method_hint: "GET"
-
-  arguments:
     - name: "count"
       kind: "Integer"
-      description: "Number of releases to show"
+      description: "Number of releases to show (mode::history only)"
       hint: "Release count"
       optional: true
       default: "10"
@@ -311,11 +293,12 @@
       tags: []
 
   examples:
-    - ".version.history"
-    - ".version.history count::10 format::json"
+    - ".version.list"
+    - ".version.list format::json"
+    - ".version.list mode::history count::10 format::json"
   auto_help_enabled: true
 
-- name: ".processes"
+- name: ".ps"
   namespace: ""
   description: "List all running Claude Code processes"
   hint: "List Claude processes"
@@ -350,13 +333,13 @@
       tags: []
 
   examples:
-    - ".processes"
-    - ".processes format::json"
+    - ".ps"
+    - ".ps format::json"
   auto_help_enabled: true
 
-- name: ".processes.kill"
+- name: ".ps.kill"
   namespace: ""
-  description: "Terminate all Claude Code processes"
+  description: "Terminate all Claude Code processes, or one via pid::"
   hint: "Kill Claude processes"
   version: "1.0.0"
   status: "stable"
@@ -368,6 +351,15 @@
   http_method_hint: "DELETE"
 
   arguments:
+    - name: "pid"
+      kind: "Integer"
+      description: "Target a specific process by pid (bulk-kill all when absent)"
+      hint: "Target process ID"
+      optional: true
+      validation_rules: []
+      aliases: []
+      tags: []
+
     - name: "dry"
       kind: "Boolean"
       description: "Preview without executing (1=dry-run)"
@@ -409,10 +401,11 @@
       tags: []
 
   examples:
-    - ".processes.kill"
-    - ".processes.kill dry::1"
-    - ".processes.kill force::1"
-    - ".processes.kill format::json"
+    - ".ps.kill"
+    - ".ps.kill dry::1"
+    - ".ps.kill force::1"
+    - ".ps.kill format::json"
+    - ".ps.kill pid::12345 dry::1"
   auto_help_enabled: true
 
 - name: ".settings.show"
@@ -708,4 +701,54 @@
 
   examples:
     - ".runtime_files"
+  auto_help_enabled: true
+
+- name: ".version.paths"
+  namespace: ""
+  description: "Report filesystem paths clv reads from or writes to"
+  hint: "Show clv's filesystem paths"
+  version: "1.0.0"
+  status: "stable"
+  aliases: []
+  tags: ["manager", "info"]
+  permissions: []
+  idempotent: true
+  deprecation_message: ""
+  http_method_hint: "GET"
+
+  arguments:
+    - name: "key"
+      kind: "String"
+      description: "Path key: settings, project_settings, versions_dir, binary_symlink, or version_history_cache (absent = show all)"
+      hint: "Path key (absent = show all)"
+      optional: true
+      validation_rules: []
+      aliases: []
+      tags: []
+
+    - name: "format"
+      kind: "String"
+      description: "Output format (text or json)"
+      hint: "Output format"
+      optional: true
+      default: "text"
+      validation_rules: []
+      aliases: ["fmt"]
+      tags: []
+
+    - name: "verbosity"
+      kind: "Integer"
+      description: "Output detail level (0=path only, 1=label+path, 2=label+path+description)"
+      hint: "Output verbosity level"
+      optional: true
+      default: "1"
+      validation_rules: []
+      aliases: ["v"]
+      tags: []
+
+  examples:
+    - ".version.paths"
+    - ".version.paths key::settings"
+    - ".version.paths key::versions_dir format::json"
+    - ".version.paths key::binary_symlink v::2"
   auto_help_enabled: true

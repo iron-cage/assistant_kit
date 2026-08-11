@@ -65,7 +65,7 @@ invalid values (parse failure → field stays at default). Exception: `CLR_RETRY
 | 27 | `CLR_OUTPUT_FILE` | [`--output-file`](param/029_output_file.md) | string | `"output-file"` | Applied when `--output-file` absent; value is the output file path |
 | 28 | `CLR_EXPECT` | [`--expect`](param/030_expect.md) | string | `"expect"` | Applied when `--expect` absent; same `val1\|val2\|…` syntax |
 | 29 | `CLR_EXPECT_STRATEGY` | [`--expect-strategy`](param/031_expect_strategy.md) | string | `"expect-strategy"` | Applied when `--expect-strategy` absent; accepts `fail`, `retry`, or `default:<V>` |
-| 30 | `CLR_MAX_SESSIONS` | [`--max-sessions`](param/033_max_sessions.md) | u32 | `"max-sessions"` | Applied when `--max-sessions` absent; invalid values silently ignored (parse failure → field stays at default 6) |
+| 30 | `CLR_MAX_SESSIONS` | [`--max-sessions`](param/033_max_sessions.md) | u32 | `"max-sessions"` | Applied when `--max-sessions` absent; invalid values silently ignored (parse failure → field stays at default 8) |
 | 31 | `CLR_RETRY_ON_TRANSIENT` | [`--retry-on-transient`](param/034_retry_on_transient.md) | u8 | `"retry-on-transient"` | Transient class retry count (Tier 2); default auto → fallback |
 | 32 | `CLR_TRANSIENT_DELAY` | [`--transient-delay`](param/035_transient_delay.md) | u32 | `"transient-delay"` | Transient class delay (Tier 2); default auto → fallback |
 | 33 | `CLR_TIMEOUT` | [`--timeout`](param/036_timeout.md) | u32 | `"timeout"` | Applied when `--timeout` absent; `0` = unlimited (no watchdog); invalid values silently ignored. **Cross-command:** also applies to `isolated`/`refresh` via Section 2 (same semantics: `0` = unlimited) |
@@ -201,20 +201,20 @@ generate in a single turn.
 
 - **Source parameter:** [`--max-tokens`](param/009_max_tokens.md)
 - **Type:** u32 (serialized as decimal string)
-- **Default:** `200000`
+- **Default:** `128000`
 - **Mechanism:** injected via `std::process::Command::env("CLAUDE_CODE_MAX_OUTPUT_TOKENS", value.to_string())`
 - **Scope:** subprocess-only; not visible to or read by `clr` itself
 
 **Precedence:**
 
 1. Explicit `--max-tokens <N>` CLI value (overrides default)
-2. Built-in default `200000` (when `--max-tokens` is absent)
+2. Built-in default `128000` (when `--max-tokens` is absent)
 
 **Discovery:** Use `--dry-run` or `--trace` to see the current value in the
 assembled environment before subprocess invocation.
 
 ```sh
-clr --dry-run "test"                         # shows: CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000
+clr --dry-run "test"                         # shows: CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000
 clr --max-tokens 50000 --dry-run "test"      # shows: CLAUDE_CODE_MAX_OUTPUT_TOKENS=50000
 ```
 

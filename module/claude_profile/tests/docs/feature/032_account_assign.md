@@ -58,11 +58,12 @@ Feature behavioral requirement test cases for `docs/feature/032_account_assign.m
 
 ### FT-02: `assignee::bob@laptop name::X` writes `_active_laptop_bob` (Feature 065)
 
-- **Given:** `alice@corp.com.credentials.json` exists; `~/.claude/.credentials.json` has different content.
+- **Given:** `alice@corp.com.credentials.json` exists.
 - **When:** `clp .accounts assignee::bob@laptop name::alice@corp.com` (formerly `assign::1 name::alice@corp.com for::bob@laptop`)
-- **Then:** `_active_laptop_bob` in credential store = `alice@corp.com`; `~/.claude/.credentials.json` unchanged.
+- **Then:** `_active_laptop_bob` in credential store = `alice@corp.com`.
 - **Exit:** 0
-- **Source fn:** `ft01b_assignee_assign_writes_remote_marker` (in `tests/cli/account_assign_test.rs`)
+- **Note:** The "`~/.claude/.credentials.json` unchanged" claim is not exercised by `ft01b` (which never touches that file). It is verified separately by `aa11_no_credentials_json_side_effect`, using the current-machine sentinel identity (`assignee::testuser@testmachine`) rather than `bob@laptop` — same invariant, different assignee value.
+- **Source fn:** `ft01b_assignee_assign_writes_remote_marker` (marker write, in `tests/cli/account_assign_test.rs`); `aa11_no_credentials_json_side_effect` (credentials.json untouched — see Note, in `tests/cli/account_assign_test.rs`)
 
 ### FT-03: Dry-run prints line; writes nothing
 
@@ -70,14 +71,15 @@ Feature behavioral requirement test cases for `docs/feature/032_account_assign.m
 - **When:** `clp .accounts assignee::0 name::alice@corp.com dry::1`
 - **Then:** stdout = `[dry-run] would assign alice@corp.com for {user}@{hostname}  →  _active_{hostname}_{user}`; no `_active_*` file created.
 - **Exit:** 0
-- **Source fn:** `ft03_assignee_dry_run` (in `tests/cli/account_assign_test.rs`)
+- **Source fn:** `ec9_assignee_zero_sentinel_dry_run_assign` (in `tests/cli/account_assign_test.rs`) — corrected from `ft03_assignee_assign_dry_run`, which exercises the literal-identity form (`assignee::testuser@testmachine`), not the `assignee::0` sentinel form this FT case describes. The full `[dry-run] would assign ... → ...` line is accurate to `accounts.rs`'s real format string, but the cited test only asserts the `"[dry-run] would assign"` and expanded-identity substrings, not the complete literal line.
 
 ### FT-04: `assignee::USER@MACHINE` (no `name::`) clears marker for that identity (Feature 065)
 
-- **Given:** `_active_testmachine_testuser` pre-seeded = `alice@corp.com` in credential store.
-- **When:** `clp .accounts assignee::testuser@testmachine` (no `name::`)
-- **Then:** `_active_testmachine_testuser` cleared/removed from credential store; no credential files modified.
+- **Given:** `_active_w003_user1` pre-seeded = `alice@corp.com` in credential store.
+- **When:** `clp .accounts assignee::user1@w003` (no `name::`)
+- **Then:** Stdout contains `unassigned` and names `_active_w003_user1`; `_active_w003_user1` cleared/removed from credential store.
 - **Exit:** 0
+- **Note:** Corrected identity/marker literals to match the cited test (`user1@w003` / `_active_w003_user1`, not `testuser@testmachine` / `_active_testmachine_testuser`). The cited test never calls `write_account()`, so no credential file exists to be "modified" either way — that clause is dropped as untested/vacuous.
 - **Source fn:** `ft02_assignee_unassign_clears_marker` (in `tests/cli/account_assign_test.rs`)
 
 ### FT-05: Unknown account exits 1 (Feature 065)
@@ -115,26 +117,29 @@ Feature behavioral requirement test cases for `docs/feature/032_account_assign.m
 ### FT-09: Prefix resolves to full name (Feature 065)
 
 - **Given:** only `alice@corp.com.credentials.json` in store (unique prefix).
-- **When:** `clp .accounts assignee::bob@laptop name::alice` (prefix `alice` resolves to `alice@corp.com`)
-- **Then:** `_active_laptop_bob` = `alice@corp.com`.
+- **When:** `clp .accounts assignee::testuser@testmachine name::alice` (prefix `alice` resolves to `alice@corp.com`)
+- **Then:** `_active_testmachine_testuser` = `alice@corp.com`.
 - **Exit:** 0
+- **Note:** Corrected assignee value/marker from `bob@laptop` / `_active_laptop_bob` — the cited test uses the current-machine literal identity (`ASSIGNEE_CURRENT` = `testuser@testmachine`), not a remote one.
 - **Source fn:** `aa09_prefix_resolution` (in `tests/cli/account_assign_test.rs`)
 
 ### FT-10: Overwrite existing marker (Feature 065)
 
-- **Given:** `_active_laptop_bob` already contains `old@corp.com`; both accounts in store.
-- **When:** `clp .accounts assignee::bob@laptop name::new@corp.com`
-- **Then:** `_active_laptop_bob` = `new@corp.com`.
+- **Given:** `_active_laptop_bob` already contains `old@account.com`; both `alice@corp.com` and `bob@corp.com` in store.
+- **When:** `clp .accounts assignee::bob@laptop name::alice@corp.com`
+- **Then:** `_active_laptop_bob` = `alice@corp.com`.
 - **Exit:** 0
-- **Source fn:** `ft01b_assignee_assign_writes_remote_marker` (in `tests/cli/account_assign_test.rs`)
+- **Note:** Re-cited from `ft01b_assignee_assign_writes_remote_marker`, which starts from no pre-existing marker and so never exercises an overwrite. `aa10_overwrite_existing_marker` is the test that actually pre-seeds a conflicting marker and asserts it gets replaced.
+- **Source fn:** `aa10_overwrite_existing_marker` (in `tests/cli/account_assign_test.rs`)
 
 ### FT-11: `~/.claude/.credentials.json` untouched after `assignee::` assign (Feature 065)
 
-- **Given:** record mtime of `~/.claude/.credentials.json` before command.
-- **When:** `clp .accounts assignee::bob@laptop name::alice@corp.com`
-- **Then:** mtime unchanged after command.
+- **Given:** `~/.claude/.credentials.json` seeded with known sentinel content (`{"sentinel":"must-not-change"}`).
+- **When:** `clp .accounts assignee::testuser@testmachine name::alice@corp.com`
+- **Then:** `~/.claude/.credentials.json` content is byte-identical before and after the command.
 - **Exit:** 0
-- **Source fn:** `ft01b_assignee_assign_writes_remote_marker` (in `tests/cli/account_assign_test.rs`)
+- **Note:** Re-cited from `ft01b_assignee_assign_writes_remote_marker`, which never touches `~/.claude/.credentials.json` at all. `aa11_no_credentials_json_side_effect` is the test that actually seeds and re-reads that file; it checks content equality (not filesystem mtime), and uses the current-machine sentinel identity (`testuser@testmachine`) rather than `bob@laptop`.
+- **Source fn:** `aa11_no_credentials_json_side_effect` (in `tests/cli/account_assign_test.rs`)
 
 ### FT-12: Dry-run output contains marker filename (Feature 065)
 
@@ -142,7 +147,7 @@ Feature behavioral requirement test cases for `docs/feature/032_account_assign.m
 - **When:** `clp .accounts assignee::bob@laptop name::alice@corp.com dry::1`
 - **Then:** stdout contains `_active_laptop_bob`.
 - **Exit:** 0
-- **Source fn:** `ft03_assignee_dry_run` (in `tests/cli/account_assign_test.rs`)
+- **Source fn:** `aa12_dry_run_shows_marker_filename` (in `tests/cli/account_assign_test.rs`) — corrected from `ft03_assignee_dry_run` (wrong function; that fn tests FT-03's `assignee::0` scenario, not this one's `assignee::bob@laptop`)
 
 ### FT-13: `.accounts assignee::USER@MACHINE name::X` does NOT modify `owner` field in `{name}.json` (Feature 065)
 

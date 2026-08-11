@@ -49,12 +49,13 @@ clr -p "Fix bug" --model sonnet --verbose
 |---|---------|------------|-----------------|-------|
 | 1 | [`run`](../command/01_run.md) | Full | — | All 14 params apply; default command |
 | 5 | [`ask`](../command/05_ask.md) | Full | — | All 14 params apply; only defaults differ |
+| 3 | [`isolated`](../command/03_isolated.md) | Partial (9/14) | `--print` (auto-injected), `--verbose`, `--output-format`, `--input-format`, `--fallback-model` | `--model`, `--effort`, `--json-schema`, `--mcp-config`, `--max-turns`, `--allowed-tools`, `--disallowed-tools`, `--max-budget-usd`, `--add-dir` apply as native flags (TSK-443) |
 
 ### Referenced Parameters
 
 | Parameter | Type | Default | Role in Group | Description |
 |-----------|------|---------|---------------|-------------|
-| [`-p`/`--print`](../param/002_print.md) | bool | auto | Print mode selector | Print mode (default when message given) |
+| [`-p`/`--print`](../param/002_print.md) | bool | auto | Print mode selector | Print mode (default when message given, stdin is not a terminal, or `--file`/piped stdin content is present) |
 | [`--model`](../param/003_model.md) | [`ModelName`](../type/04_model_name.md) | — | Model selection | Model to use |
 | [`--verbose`](../param/004_verbose.md) | bool | false | Verbosity toggle | Enable Claude verbose output |
 | [`--effort`](../param/017_effort.md) | [`EffortLevel`](../type/07_effort_level.md) | max | Effort override | Reasoning effort level (default: max) |

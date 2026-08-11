@@ -130,8 +130,74 @@ fn print_usage( binary : &str )
   print!( "{}", CliHelpTemplate::new( CliHelpStyle::default(), data ).render() );
 }
 
+/// Returns `true` when `token` requests the full grouped command listing.
+///
+/// Covers every alias unilang and this binary recognize as a global-help
+/// trigger: bare argv (handled separately), `.`, `.help`, `--help`, `-h`, `help`.
+fn is_global_help_token( token : &str ) -> bool
+{
+  matches!( token, "." | ".help" | "--help" | "-h" | "help" )
+}
+
+/// Render single-command detail help via `cli_fmt::CliHelpTemplate`.
+///
+/// unilang's own auto-generated `<command>.help` routine (`format_command_help()`
+/// inside the `unilang` crate) prints a plain-text dump with no `cli_fmt` styling.
+/// This renders the same content — description, arguments, examples — through
+/// the same styled renderer `print_usage` uses for the grouped listing, so every
+/// help-producing entry point stays visually consistent.
+fn print_command_help( binary : &str, cmd : &CommandDefinition )
+{
+  use cli_fmt::help::*;
+
+  let name = cmd.name().as_str();
+
+  let mut data     = CliHelpData::default();
+  data.binary      = binary.to_string();
+  data.tagline     = cmd.description().to_string();
+  data.usage_lines = vec![ format!( "Usage: {binary} {name}" ) ];
+  data.arguments   = cmd.arguments().iter().map( | arg |
+  {
+    let suffix = match ( arg.attributes.optional, &arg.attributes.default )
+    {
+      ( true, Some( default ) ) => format!( "optional, default: {default}" ),
+      ( true, None )            => "optional".to_string(),
+      ( false, _ )              => "required".to_string(),
+    };
+    OptionEntry
+    {
+      name : format!( "{}::{}", arg.name, arg.kind ),
+      desc : format!( "{} ({suffix})", arg.description ),
+    }
+  } ).collect();
+  data.examples    = cmd.examples().iter().map( | example |
+    ExampleEntry { invocation : format!( "{binary} {example}" ), desc : None }
+  ).collect();
+
+  print!( "{}", CliHelpTemplate::new( CliHelpStyle::default(), data ).render() );
+}
+
+/// Detects a `<command>.help` token and, when `<command>` is registered,
+/// renders its detail via `print_command_help` instead of letting unilang's
+/// own auto-generated `<command>.help` routine execute and print its
+/// plain-text form.
+///
+/// Returns `true` when `token` was handled; the caller should skip normal
+/// dispatch in that case.
+fn try_command_help( binary : &str, registry : &CommandRegistry, token : &str ) -> bool
+{
+  let Some( base ) = token.strip_suffix( ".help" ) else { return false };
+  let Some( cmd ) = registry.command( base ) else { return false };
+  print_command_help( binary, &cmd );
+  true
+}
+
 /// Run REPL (Read-Eval-Print Loop) mode.
-fn run_repl( registry : CommandRegistry )
+///
+/// Intercepts global-help tokens (`.`, `.help`, `help`, ...) and
+/// `<command>.help` tokens before pipeline dispatch, so both render via
+/// `cli_fmt` instead of unilang's plain-text formatters.
+fn run_repl( registry : CommandRegistry, binary : &str )
 {
   println!( "Claude Code Storage CLI" );
   println!( "Type 'help' for available commands, 'exit' to quit.\n" );
@@ -159,6 +225,17 @@ fn run_repl( registry : CommandRegistry )
     {
       println!( "Goodbye!" );
       break;
+    }
+
+    if is_global_help_token( input )
+    {
+      print_usage( binary );
+      continue;
+    }
+
+    if try_command_help( binary, pipeline.registry(), input )
+    {
+      continue;
     }
 
     let result = pipeline.process_command_simple( input );
@@ -224,9 +301,18 @@ fn extract_user_message( error : &str ) -> String
 /// wrapping (`"Execution error: Execution Error: "`) so handlers receive
 /// clean user-visible messages on stderr (e.g. `"no sessions"` not
 /// `"Error: Execution error: Execution Error: no sessions"`).
+///
+/// A single `<command>.help` argument is intercepted before the pipeline is
+/// built, rendering via `cli_fmt` instead of unilang's auto-generated
+/// `<command>.help` routine — see `try_command_help`.
 #[ allow( clippy::needless_pass_by_value ) ]
-fn execute_oneshot( registry : CommandRegistry, args : Vec< String > ) -> !
+fn execute_oneshot( registry : CommandRegistry, args : Vec< String >, binary : &str ) -> !
 {
+  if args.len() == 2 && try_command_help( binary, &registry, &args[ 1 ] )
+  {
+    process::exit( 0 );
+  }
+
   let pipeline    = Pipeline::new( registry );
   // Fix(issue-030): Quote parameter values that contain spaces before joining argv into
   // a REPL-style command line string.
@@ -279,9 +365,12 @@ fn execute_oneshot( registry : CommandRegistry, args : Vec< String > ) -> !
 /// Run the `claude_storage` CLI.
 ///
 /// Three invocation modes:
-/// - Help: empty argv, `.help`, `--help`, `-h` → grouped help via `cli_fmt`
+/// - Help: empty argv, `.`, `.help`, `--help`, `-h`, `help` → grouped help via `cli_fmt`
 /// - REPL: `--repl` → interactive read-eval-print loop
 /// - One-shot: any other args → execute command and exit
+///
+/// A single `<command>.help` argument (one-shot or REPL) renders that
+/// command's detail via `cli_fmt` as well — see `try_command_help`.
 ///
 /// Entry point shared by the `claude_storage` and `clg` binary targets.
 #[ inline ]
@@ -303,7 +392,7 @@ pub fn run()
 
   let first = &args[ 1 ];
 
-  if first == ".help" || first == "--help" || first == "-h" || first == "help"
+  if is_global_help_token( first )
   {
     print_usage( &binary );
     process::exit( 0 );
@@ -312,10 +401,10 @@ pub fn run()
   if first == "--repl"
   {
     let registry = build_command_registry();
-    run_repl( registry );
+    run_repl( registry, &binary );
     return;
   }
 
   let registry = build_command_registry();
-  execute_oneshot( registry, args );
+  execute_oneshot( registry, args, &binary );
 }

@@ -8,7 +8,7 @@ Integration test planning for the `isolated` command. See [command/03_isolated.m
 |----|-----------|----------|
 | IT-1 | `--creds file.json "msg"` → runs with isolated HOME, exit 0 | Happy Path |
 | IT-2 | `--creds missing.json` → exit 1, file-not-found error | Error: Missing Creds |
-| IT-3 | `--creds file.json --timeout 0 "msg"` → exit 2 (timeout, no creds refresh) | Timeout |
+| IT-3 | `--creds file.json --timeout 0 "msg"` → runs to completion (no watchdog), exit 0 | Timeout |
 | IT-4 | `--creds file.json --timeout 0` → creds refreshed → exit 0, creds updated | Timeout with Refresh |
 | IT-5 | `--creds file.json` (no message) → interactive REPL mode in isolation | Interactive |
 | IT-6 | `--creds file.json -- --version` → passes `--version` through to claude | Flag Passthrough |
@@ -43,6 +43,28 @@ Integration test planning for the `isolated` command. See [command/03_isolated.m
 | IT-35 | `CLR_OUTPUT_STYLE=summary` env var fallback | Output Env |
 | IT-36 | `CLR_SUMMARY_FIELDS=minimal` env var fallback | Output Env |
 | IT-37 | `CLR_JOURNAL=bogus` env var → exit 1, error names env var | Error: Invalid Env |
+| IT-46 | `--model sonnet` overrides isolated's injected `opus` default | Native Flag: model |
+| IT-47 | `--effort medium` overrides isolated's injected `max` default | Native Flag: effort |
+| IT-48 | `--no-effort-max` suppresses the injected `--effort` flag entirely | Native Flag: no-effort-max |
+| IT-49 | `--system-prompt "You are terse"` forwarded to subprocess | Native Flag: system-prompt |
+| IT-50 | `--append-system-prompt "Also: be terse"` forwarded to subprocess | Native Flag: append-system-prompt |
+| IT-51 | `--json-schema schema.json` forwarded to subprocess | Native Flag: json-schema |
+| IT-52 | `--mcp-config mcp.json` forwarded to subprocess | Native Flag: mcp-config |
+| IT-53 | `--allowed-tools "Read,Grep"` forwarded to subprocess | Native Flag: allowed-tools |
+| IT-54 | `--disallowed-tools "Bash"` forwarded to subprocess | Native Flag: disallowed-tools |
+| IT-55 | `--max-budget-usd 2.50` forwarded to subprocess | Native Flag: max-budget-usd |
+| IT-56 | `--max-turns 10` forwarded to subprocess | Native Flag: max-turns |
+| IT-57 | `--no-chrome` suppresses `--chrome` injection | Native Flag: no-chrome |
+| IT-58 | `CLR_MODEL=sonnet` env var → equivalent to `--model sonnet` | Env Var Fallback |
+| IT-59 | `--args-file` JSON `"effort":"medium"` → equivalent to `--effort medium` | JSON Config Fallback |
+| IT-60 | `--effort max -- --effort low` passthrough last-wins preserved | Passthrough Regression |
+| IT-61 | `clr isolated --help` lists all 12 new native flags | Help Listing |
+| IT-62 | `--max-budget-usd 2.50 --max-turns 10` — no cross-field positional swap | Flag Pair Integrity |
+| IT-63 | `--mcp-config a.json --mcp-config b.json` — both values survive | Repeated Flag |
+| IT-64 | `--json-schema` non-JSON value → exit 1 | Invalid Value Rejection |
+| IT-65 | `--mcp-config` nonexistent path → exit 1 | Invalid Value Rejection |
+| IT-66 | `--no-effort-max` wins over a simultaneous `--effort` flag | Flag Precedence |
+| IT-67 | Native `--model` flag beats `--args-file` JSON config | Flag Precedence |
 
 ## Test Coverage Summary
 
@@ -66,8 +88,28 @@ Integration test planning for the `isolated` command. See [command/03_isolated.m
 - Summary Fields: 1 test (IT-32)
 - Output Env: 4 tests (IT-33 through IT-36)
 - Error: Invalid Env: 1 test (IT-37)
+- Native Flag: model: 1 test (IT-46)
+- Native Flag: effort: 1 test (IT-47)
+- Native Flag: no-effort-max: 1 test (IT-48)
+- Native Flag: system-prompt: 1 test (IT-49)
+- Native Flag: append-system-prompt: 1 test (IT-50)
+- Native Flag: json-schema: 1 test (IT-51)
+- Native Flag: mcp-config: 1 test (IT-52)
+- Native Flag: allowed-tools: 1 test (IT-53)
+- Native Flag: disallowed-tools: 1 test (IT-54)
+- Native Flag: max-budget-usd: 1 test (IT-55)
+- Native Flag: max-turns: 1 test (IT-56)
+- Native Flag: no-chrome: 1 test (IT-57)
+- Env Var Fallback: 1 test (IT-58)
+- JSON Config Fallback: 1 test (IT-59)
+- Passthrough Regression: 1 test (IT-60)
+- Help Listing: 1 test (IT-61)
+- Flag Pair Integrity: 1 test (IT-62)
+- Repeated Flag: 1 test (IT-63)
+- Invalid Value Rejection: 2 tests (IT-64, IT-65)
+- Flag Precedence: 2 tests (IT-66, IT-67)
 
-**Total:** 37 test cases
+**Total:** 59 test cases
 
 ---
 
@@ -91,12 +133,12 @@ Integration test planning for the `isolated` command. See [command/03_isolated.m
 
 ---
 
-### IT-3: `--timeout 0 "msg"` → exit 2 (timeout, no creds refresh)
+### IT-3: `--timeout 0 "msg"` → runs to completion, exit 0
 
-- **Setup:** valid credentials JSON at `/tmp/it3_creds.json`; subprocess does not refresh creds before blocking
+- **Setup:** valid credentials JSON at `/tmp/it3_creds.json`; `--timeout 0` means unlimited (no deadline/watchdog armed)
 - **Command:** `clr isolated --creds /tmp/it3_creds.json --timeout 0 "Long running task"`
-- **Expected behavior:** subprocess attempted; wait window expires immediately; creds not refreshed → exit 2
-- **Exit:** 2
+- **Expected behavior:** subprocess runs to natural completion with no deadline enforced → exit 0; exit 2 is tolerated only as a defensive legacy bound, not reachable through the current deadline mechanism when `timeout_secs == 0`
+- **Exit:** 0
 - **Source:** [command/03_isolated.md](../../../../docs/cli/command/03_isolated.md), [--timeout](../../../../docs/cli/param/020_timeout.md)
 
 ---
@@ -164,7 +206,7 @@ Integration test planning for the `isolated` command. See [command/03_isolated.m
 
 - **Setup:** credentials JSON written to a temp file `<f>` (file is readable); claude binary absent in test environment
 - **Command:** `clr isolated --creds <f> --trace "Fix bug"` (no `--dry-run`; trace fires before subprocess attempt)
-- **Expected behavior:** stderr contains `# clr isolated`, `# creds: <path>`, `# timeout: 30s`, env var block (including `CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000`), and `claude --chrome --model claude-opus-4-8 --effort max --no-session-persistence --dangerously-skip-permissions --print "Fix bug"` before any subprocess attempt; subprocess attempt fails (claude absent in test environment)
+- **Expected behavior:** stderr contains `# clr isolated`, `# creds: <path>`, `# timeout: 30s`, env var block (including `CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000`), and `claude --chrome --model claude-opus-4-8 --effort max --no-session-persistence --dangerously-skip-permissions --print "Fix bug"` before any subprocess attempt; subprocess attempt fails (claude absent in test environment)
 - **Exit:** 1
 - **Source:** [invariant/004_trace_universality.md](../../../../docs/invariant/004_trace_universality.md), [--trace](../../../../docs/cli/param/013_trace.md)
 
@@ -439,3 +481,223 @@ Integration test planning for the `isolated` command. See [command/03_isolated.m
 - **Expected behavior:** exit 1; stderr contains `"CLR_JOURNAL"` and `"invalid"`
 - **Exit:** 1
 - **Source:** Fix — `apply_isolated_env_vars()` validates `CLR_JOURNAL` consistently with `apply_env_vars()` in `env.rs`
+
+---
+
+### IT-46: `--model sonnet` overrides isolated's injected `opus` default
+
+- **Setup:** credentials JSON at temp file (content `{}`); `--dry-run` flag prevents subprocess spawn
+- **Command:** `clr isolated --creds <f> --dry-run --model sonnet "msg"`
+- **Expected behavior:** exit 0; `--dry-run` preview stdout contains `--model sonnet`; confirms native flag overrides the default `opus` alias injection
+- **Exit:** 0
+- **Source:** [command/03_isolated.md](../../../../docs/cli/command/03_isolated.md), [param/003_model.md](../../../../docs/cli/param/003_model.md)
+
+---
+
+### IT-47: `--effort medium` overrides isolated's injected `max` default
+
+- **Setup:** credentials JSON at temp file (content `{}`); `--dry-run` flag prevents subprocess spawn
+- **Command:** `clr isolated --creds <f> --dry-run --effort medium "msg"`
+- **Expected behavior:** exit 0; preview stdout contains `--effort medium`; confirms native flag overrides the default `--effort max` injection
+- **Exit:** 0
+- **Source:** [command/03_isolated.md](../../../../docs/cli/command/03_isolated.md), [param/017_effort.md](../../../../docs/cli/param/017_effort.md)
+
+---
+
+### IT-48: `--no-effort-max` suppresses the injected `--effort` flag entirely
+
+- **Setup:** credentials JSON at temp file (content `{}`); `--dry-run` flag prevents subprocess spawn
+- **Command:** `clr isolated --creds <f> --dry-run --no-effort-max "msg"`
+- **Expected behavior:** exit 0; preview stdout does NOT contain `--effort` anywhere; confirms `--no-effort-max` suppresses the automatic injection completely
+- **Exit:** 0
+- **Source:** [command/03_isolated.md](../../../../docs/cli/command/03_isolated.md), [param/018_no_effort_max.md](../../../../docs/cli/param/018_no_effort_max.md)
+
+---
+
+### IT-49: `--system-prompt "You are terse"` forwarded to subprocess
+
+- **Setup:** credentials JSON at temp file (content `{}`); `--dry-run` flag prevents subprocess spawn
+- **Command:** `clr isolated --creds <f> --dry-run --system-prompt "You are terse" "msg"`
+- **Expected behavior:** exit 0; preview stdout contains `--system-prompt` and the value `You are terse`
+- **Exit:** 0
+- **Source:** [command/03_isolated.md](../../../../docs/cli/command/03_isolated.md), [param/015_system_prompt.md](../../../../docs/cli/param/015_system_prompt.md)
+
+---
+
+### IT-50: `--append-system-prompt "Also: be terse"` forwarded to subprocess
+
+- **Setup:** credentials JSON at temp file (content `{}`); `--dry-run` flag prevents subprocess spawn
+- **Command:** `clr isolated --creds <f> --dry-run --append-system-prompt "Also: be terse" "msg"`
+- **Expected behavior:** exit 0; preview stdout contains `--append-system-prompt` and the value `Also: be terse`
+- **Exit:** 0
+- **Source:** [command/03_isolated.md](../../../../docs/cli/command/03_isolated.md), [param/016_append_system_prompt.md](../../../../docs/cli/param/016_append_system_prompt.md)
+
+---
+
+### IT-51: `--json-schema schema.json` forwarded to subprocess
+
+- **Setup:** credentials JSON at temp file (content `{}`); `--dry-run` flag prevents subprocess spawn
+- **Command:** `clr isolated --creds <f> --dry-run --json-schema schema.json "msg"`
+- **Expected behavior:** exit 0; preview stdout contains `--json-schema schema.json`
+- **Exit:** 0
+- **Source:** [command/03_isolated.md](../../../../docs/cli/command/03_isolated.md), [param/023_json_schema.md](../../../../docs/cli/param/023_json_schema.md)
+
+---
+
+### IT-52: `--mcp-config mcp.json` forwarded to subprocess
+
+- **Setup:** credentials JSON at temp file (content `{}`); `--dry-run` flag prevents subprocess spawn
+- **Command:** `clr isolated --creds <f> --dry-run --mcp-config mcp.json "msg"`
+- **Expected behavior:** exit 0; preview stdout contains `--mcp-config mcp.json`
+- **Exit:** 0
+- **Source:** [command/03_isolated.md](../../../../docs/cli/command/03_isolated.md), [param/024_mcp_config.md](../../../../docs/cli/param/024_mcp_config.md)
+
+---
+
+### IT-53: `--allowed-tools "Read,Grep"` forwarded to subprocess
+
+- **Setup:** credentials JSON at temp file (content `{}`); `--dry-run` flag prevents subprocess spawn
+- **Command:** `clr isolated --creds <f> --dry-run --allowed-tools "Read,Grep" "msg"`
+- **Expected behavior:** exit 0; preview stdout contains `--allowed-tools` and the value `Read,Grep`
+- **Exit:** 0
+- **Source:** [command/03_isolated.md](../../../../docs/cli/command/03_isolated.md), [param/063_allowed_tools.md](../../../../docs/cli/param/063_allowed_tools.md)
+
+---
+
+### IT-54: `--disallowed-tools "Bash"` forwarded to subprocess
+
+- **Setup:** credentials JSON at temp file (content `{}`); `--dry-run` flag prevents subprocess spawn
+- **Command:** `clr isolated --creds <f> --dry-run --disallowed-tools "Bash" "msg"`
+- **Expected behavior:** exit 0; preview stdout contains `--disallowed-tools` and the value `Bash`
+- **Exit:** 0
+- **Source:** [command/03_isolated.md](../../../../docs/cli/command/03_isolated.md), [param/064_disallowed_tools.md](../../../../docs/cli/param/064_disallowed_tools.md)
+
+---
+
+### IT-55: `--max-budget-usd 2.50` forwarded to subprocess
+
+- **Setup:** credentials JSON at temp file (content `{}`); `--dry-run` flag prevents subprocess spawn
+- **Command:** `clr isolated --creds <f> --dry-run --max-budget-usd 2.50 "msg"`
+- **Expected behavior:** exit 0; preview stdout contains `--max-budget-usd 2.50`
+- **Exit:** 0
+- **Source:** [command/03_isolated.md](../../../../docs/cli/command/03_isolated.md), [param/065_max_budget_usd.md](../../../../docs/cli/param/065_max_budget_usd.md)
+
+---
+
+### IT-56: `--max-turns 10` forwarded to subprocess
+
+- **Setup:** credentials JSON at temp file (content `{}`); `--dry-run` flag prevents subprocess spawn
+- **Command:** `clr isolated --creds <f> --dry-run --max-turns 10 "msg"`
+- **Expected behavior:** exit 0; preview stdout contains `--max-turns 10`
+- **Exit:** 0
+- **Source:** [command/03_isolated.md](../../../../docs/cli/command/03_isolated.md), [param/062_max_turns.md](../../../../docs/cli/param/062_max_turns.md)
+
+---
+
+### IT-57: `--no-chrome` suppresses `--chrome` injection
+
+- **Setup:** credentials JSON at temp file (content `{}`); `--dry-run` flag prevents subprocess spawn
+- **Command:** `clr isolated --creds <f> --dry-run --no-chrome "msg"`
+- **Expected behavior:** exit 0; preview stdout contains `--no-chrome`; `--chrome` must NOT appear in the preview
+- **Exit:** 0
+- **Source:** [command/03_isolated.md](../../../../docs/cli/command/03_isolated.md), [param/021_no_chrome.md](../../../../docs/cli/param/021_no_chrome.md)
+
+---
+
+### IT-58: `CLR_MODEL=sonnet` env var → equivalent to `--model sonnet`
+
+- **Setup:** credentials JSON at temp file (content `{}`); `CLR_MODEL=sonnet` set in environment; `--dry-run` prevents subprocess spawn; no `--model` flag given
+- **Command:** `clr isolated --creds <f> --dry-run "msg"` (with `CLR_MODEL=sonnet` in env)
+- **Expected behavior:** exit 0; preview stdout contains `--model sonnet`; confirms `CLR_MODEL` fallback is equivalent to the native `--model` flag (IT-46)
+- **Exit:** 0
+- **Source:** [command/03_isolated.md](../../../../docs/cli/command/03_isolated.md), [param/003_model.md](../../../../docs/cli/param/003_model.md)
+
+---
+
+### IT-59: `--args-file` JSON `"effort":"medium"` → equivalent to `--effort medium`
+
+- **Setup:** credentials JSON at temp file (content `{}`); JSON config file containing `{"effort": "medium"}`; `--dry-run` prevents subprocess spawn; no `--effort` flag given
+- **Command:** `clr isolated --creds <f> --args-file <cfg> --dry-run "msg"`
+- **Expected behavior:** exit 0; preview stdout contains `--effort medium`; confirms `--args-file` JSON config is equivalent to the native `--effort` flag (IT-47)
+- **Exit:** 0
+- **Source:** [command/03_isolated.md](../../../../docs/cli/command/03_isolated.md), [param/075_args_file.md](../../../../docs/cli/param/075_args_file.md)
+
+---
+
+### IT-60: `--effort max -- --effort low` passthrough last-wins preserved
+
+- **Setup:** credentials JSON at temp file (content `{}`); `--dry-run` prevents subprocess spawn; native `--effort max` set before `--`; raw `--effort low` passed after `--`
+- **Command:** `clr isolated --creds <f> --dry-run --effort max -- --effort low "msg"`
+- **Expected behavior:** exit 0; the last occurrence of `--effort` in preview stdout is `--effort low`; confirms passthrough still wins over the native flag when both are present
+- **Exit:** 0
+- **Source:** [command/03_isolated.md](../../../../docs/cli/command/03_isolated.md), [param/017_effort.md](../../../../docs/cli/param/017_effort.md)
+
+---
+
+### IT-61: `clr isolated --help` lists all 12 new native flags
+
+- **Setup:** no credentials needed; invoking built-in help
+- **Command:** `clr isolated --help`
+- **Expected behavior:** exit 0; stdout contains all 12 new native flags: `--model`, `--effort`, `--no-effort-max`, `--system-prompt`, `--append-system-prompt`, `--json-schema`, `--mcp-config`, `--allowed-tools`, `--disallowed-tools`, `--max-budget-usd`, `--max-turns`, `--no-chrome`
+- **Exit:** 0
+- **Source:** [command/03_isolated.md](../../../../docs/cli/command/03_isolated.md)
+
+---
+
+### IT-62: `--max-budget-usd 2.50 --max-turns 10` — no cross-field positional swap
+
+- **Setup:** credentials JSON at temp file (content `{}`); `--dry-run` prevents subprocess spawn; two value-taking native flags set in one invocation
+- **Command:** `clr isolated --creds <f> --dry-run --max-budget-usd 2.50 --max-turns 10 "msg"`
+- **Expected behavior:** exit 0; preview stdout contains `--max-budget-usd 2.50` and `--max-turns 10` as adjacent flag-value pairs — each value stays bound to its own flag, no cross-field positional swap
+- **Exit:** 0
+- **Source:** [command/03_isolated.md](../../../../docs/cli/command/03_isolated.md), [param/065_max_budget_usd.md](../../../../docs/cli/param/065_max_budget_usd.md), [param/062_max_turns.md](../../../../docs/cli/param/062_max_turns.md)
+
+---
+
+### IT-63: `--mcp-config a.json --mcp-config b.json` — both values survive
+
+- **Setup:** credentials JSON at temp file (content `{}`); `--dry-run` prevents subprocess spawn; the same flag given twice with different values
+- **Command:** `clr isolated --creds <f> --dry-run --mcp-config a.json --mcp-config b.json "msg"`
+- **Expected behavior:** exit 0; preview stdout contains both `--mcp-config a.json` and `--mcp-config b.json` as separate flag-value pairs — repetition never collapses to a single occurrence
+- **Exit:** 0
+- **Source:** [command/03_isolated.md](../../../../docs/cli/command/03_isolated.md), [param/024_mcp_config.md](../../../../docs/cli/param/024_mcp_config.md)
+
+---
+
+### IT-64: `--json-schema` non-JSON value → exit 1
+
+- **Setup:** credentials JSON at temp file (content `{}`); no `--dry-run` — the value reaches the `claude` subprocess, whose own parsing performs the rejection (`--json-schema` takes inline JSON schema text, never a file path; the CLI forwards it unvalidated)
+- **Command:** `clr isolated --creds <f> --json-schema /nonexistent_clr_test_path_it64.json "msg"`
+- **Expected behavior:** exit 1; stderr rejects the value loudly — accepted wordings: `not valid JSON` (newer `claude` versions parse the value as JSON), `does not exist` / `not found` (older versions treated it as a path); the invariant is the exit code plus a loud rejection, not one exact message
+- **Exit:** 1
+- **Source:** [command/03_isolated.md](../../../../docs/cli/command/03_isolated.md), [param/023_json_schema.md](../../../../docs/cli/param/023_json_schema.md)
+
+---
+
+### IT-65: `--mcp-config` nonexistent path → exit 1
+
+- **Setup:** credentials JSON at temp file (content `{}`); no `--dry-run` — the nonexistent path reaches the `claude` subprocess, mirroring `--dir`'s IT-17 precedent
+- **Command:** `clr isolated --creds <f> --mcp-config /nonexistent_clr_test_path_it65.json "msg"`
+- **Expected behavior:** exit 1; stderr indicates the nonexistent path (`does not exist` or `not found`)
+- **Exit:** 1
+- **Source:** [command/03_isolated.md](../../../../docs/cli/command/03_isolated.md), [param/024_mcp_config.md](../../../../docs/cli/param/024_mcp_config.md)
+
+---
+
+### IT-66: `--no-effort-max` wins over a simultaneous `--effort` flag
+
+- **Setup:** credentials JSON at temp file (content `{}`); `--dry-run` prevents subprocess spawn; both the value flag and its suppressor given together
+- **Command:** `clr isolated --creds <f> --dry-run --effort medium --no-effort-max "msg"`
+- **Expected behavior:** exit 0; preview stdout contains no `--effort` flag at all — `--no-effort-max` suppresses effort injection even when `--effort` is explicitly present
+- **Exit:** 0
+- **Source:** [command/03_isolated.md](../../../../docs/cli/command/03_isolated.md), [param/018_no_effort_max.md](../../../../docs/cli/param/018_no_effort_max.md), [param/017_effort.md](../../../../docs/cli/param/017_effort.md)
+
+---
+
+### IT-67: Native `--model` flag beats `--args-file` JSON config
+
+- **Setup:** credentials JSON at temp file (content `{}`); args-file JSON at a second temp file (content `{"model": "sonnet"}`); `--dry-run` prevents subprocess spawn; native flag and JSON config disagree
+- **Command:** `clr isolated --creds <f> --args-file <cfg> --model haiku --dry-run "msg"`
+- **Expected behavior:** exit 0; preview stdout contains `--model haiku` — the native flag wins over the `--args-file` JSON config value (precedence: native flag > env var > JSON config)
+- **Exit:** 0
+- **Source:** [command/03_isolated.md](../../../../docs/cli/command/03_isolated.md), [param/003_model.md](../../../../docs/cli/param/003_model.md), [param/075_args_file.md](../../../../docs/cli/param/075_args_file.md)

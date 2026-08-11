@@ -7,7 +7,7 @@ See [param_group/readme.md](../../../../docs/cli/param_group/readme.md) and [004
 
 - **Purpose**: Interaction tests for the Execution Control parameter group.
 - **Responsibility**: Cross-parameter semantics between `dry::`, `force::`, and `interval::`, precedence rules, and combined behavior.
-- **Commands:** `.version.install`, `.version.guard`, `.processes.kill`, `.settings.set`
+- **Commands:** `.version.install`, `.version.guard`, `.ps.kill`, `.settings.set`
 - **In Scope**: Multi-parameter interactions within the group, dry-wins-force rule, watch loop semantics.
 - **Out of Scope**: Individual parameter edge cases (→ `../param/`), command behavior (→ `../command/`).
 
@@ -15,8 +15,8 @@ See [param_group/readme.md](../../../../docs/cli/param_group/readme.md) and [004
 
 | Parameter | Type | Default | Commands |
 |-----------|------|---------|---------|
-| `dry::` | Boolean (0/1) | 0 | `.version.install`, `.version.guard`, `.processes.kill`, `.settings.set` |
-| `force::` | Boolean (0/1) | 0 | `.version.install`, `.version.guard`, `.processes.kill` |
+| `dry::` | Boolean (0/1) | 0 | `.version.install`, `.version.guard`, `.ps.kill`, `.settings.set` |
+| `force::` | Boolean (0/1) | 0 | `.version.install`, `.version.guard`, `.ps.kill` |
 | `interval::` | u64 | 0 | `.version.guard` only |
 
 ## Behavioral Divergence Pair
@@ -38,7 +38,7 @@ Both are valid invocations; the dry-run flag presence in output differs.
 | CC-4 | `dry::1 interval::0` → one-shot dry-run | dry+interval |
 | CC-5 | `interval::N` (N>0) starts watch loop | interval>0 |
 | CC-6 | `force::1` bypasses idempotency on `.version.guard` | force alone |
-| CC-7 | `force::1` on `.processes.kill` → SIGKILL directly | force SIGKILL |
+| CC-7 | `force::1` on `.ps.kill` → SIGKILL directly | force SIGKILL |
 | CC-8 | `dry::1 force::1 interval::0` → dry wins, one-shot | All three |
 | CC-9 | `interval::5 dry::1` → watch loop, each iteration dry-run | watch+dry |
 | CC-10 | `force::1` without `dry::1` → real operation | force alone |
@@ -118,10 +118,10 @@ Both are valid invocations; the dry-run flag presence in output differs.
 
 ---
 
-### CC-7: `force::1` on `.processes.kill` → SIGKILL directly
+### CC-7: `force::1` on `.ps.kill` → SIGKILL directly
 
 - **Given:** at least one Claude process running
-- **When:** `clv .processes.kill force::1`
+- **When:** `clv .ps.kill force::1`
 - **Then:** SIGKILL sent directly to all matching processes without graceful shutdown attempt
 - **Exit:** 0
 - **Source:** [feature/002_process_lifecycle.md — Kill sequence force mode](../../../../docs/feature/002_process_lifecycle.md)
@@ -173,11 +173,11 @@ Both are valid invocations; the dry-run flag presence in output differs.
 | Function | File |
 |----------|------|
 | `tc250_version_install_dry_force_dry_wins` | `tests/cli/cross_cutting_test.rs` |
-| `tc251_processes_kill_dry_force_dry_wins` | `tests/cli/cross_cutting_test.rs` |
+| `tc251_ps_kill_dry_force_dry_wins` | `tests/cli/cross_cutting_test.rs` |
 | `tc252_settings_set_dry_no_write` | `tests/cli/cross_cutting_test.rs` |
 | `tc303_version_install_dry_wins_over_force` | `tests/cli/mutation_version_install_test.rs` |
 | `tc406_guard_dry_force_no_install` | `tests/cli/mutation_version_guard_test.rs` |
 | `tc409_guard_interval_zero_oneshot` | `tests/cli/mutation_version_guard_test.rs` |
 | `tc415_watch_loop_continues_after_install_error` | `tests/cli/mutation_version_guard_test.rs` |
-| `tc493_dry_0_then_1_last_wins_dry_active` | `cli_args_test/param_bool_test.rs` |
-| `tc494_dry_1_then_0_last_wins_dry_inactive` | `cli_args_test/param_bool_test.rs` |
+| `tc493_dry_0_then_1_last_wins_dry_active` | `tests/cli_args_test/param_bool_test.rs` |
+| `tc494_dry_1_then_0_last_wins_dry_inactive` | `tests/cli_args_test/param_bool_test.rs` |

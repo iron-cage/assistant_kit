@@ -6,7 +6,7 @@ Live quota utilization commands.
 
 ### Command: 9. `.usage`
 
-Fetches live quota utilization for every saved account via `claude_quota::fetch_oauth_usage()` (`GET /api/oauth/usage`) and account billing state via `claude_quota::fetch_oauth_account()` (`GET /api/oauth/account`, parallel thread). Renders results as a `data_fmt` table with a status emoji column (`●`: 🟢/🟡/🔴), plus 5h Left, 5h Reset, 7d Left, 7d(Son), 7d Reset, Expires, ~Renews, and → Next columns, and a footer recommendation line. `~Renews` shows a duration countdown (exact `in Xh Ym` when `_renewal_at` override is set, estimated `~in Xd` from `org_created_at`). `→ Next` shows the soonest strategic quota reset event (`+7d`/`$ren`); token expiry and 5h resets are not included since they are already shown in `Expires` and `5h Reset`. Supports optional token refresh on auth errors (`refresh::1`) and continuous live-monitor mode (`live::1`).
+Fetches live quota utilization for every saved account via `claude_quota::fetch_oauth_usage()` (`GET /api/oauth/usage`) and account billing state via `claude_quota::fetch_oauth_account()` (`GET /api/oauth/account`, parallel thread). Renders results as a `data_fmt` table with a status emoji column (`●`: 🟢/🟡/🔴), plus 5h Left, 5h Reset, 7d Left, 7d Reset, Expires, ~Renews, Owner, and → Next columns, and a footer recommendation line. `7d(Son)` is hidden by default (show via `cols::+7d_son`; see Notes). `~Renews` shows a duration countdown (exact `in Xh Ym` when `_renewal_at` override is set, estimated `~in Xd` from `org_created_at`). `→ Next` shows the soonest strategic quota reset event (`+7d`/`$ren`); token expiry and 5h resets are not included since they are already shown in `Expires` and `5h Reset`. Supports optional token refresh on auth errors (`refresh::1`) and continuous live-monitor mode (`live::1`).
 
 -- **Parameters:** [`name::`](../param/001_name.md) *(optional)*, [`format::`](../param/002_format.md), [`dry::`](../param/004_dry.md), [`refresh::`](../param/019_refresh.md), [`live::`](../param/020_live.md), [`interval::`](../param/021_interval.md), [`jitter::`](../param/022_jitter.md), [`trace::`](../param/023_trace.md), [`sort::`](../param/025_sort.md), [`desc::`](../param/026_desc.md), [`prefer::`](../param/027_prefer.md), [`cols::`](../param/033_cols.md), [`touch::`](../param/034_touch.md), [`imodel::`](../param/035_imodel.md), [`effort::`](../param/036_effort.md), [`count::`](../param/037_count.md), [`offset::`](../param/038_offset.md), [`only_active::`](../param/039_only_active.md), [`only_next::`](../param/040_only_next.md), [`min_5h::`](../param/041_min_5h.md), [`min_7d::`](../param/042_min_7d.md), [`only_valid::`](../param/043_only_valid.md), [`exclude_exhausted::`](../param/044_exclude_exhausted.md), [`get::`](../param/045_get.md), [`abs::`](../param/046_abs.md), [`no_color::`](../param/047_no_color.md), [`set_model::`](../param/054_set_model.md), [`assignee::`](../param/063_assignee.md), [`owner::`](../param/062_owner.md), [`lock::`](../param/067_lock.md), [`reserve::`](../param/068_reserve.md), [`force::`](../param/058_force.md), [`rotate::`](../param/059_rotate.md), [`solo::`](../param/060_solo.md), [`who::`](../param/061_who.md)
 -- **Exit:** 0 (success) | 1 (usage: invalid param combination; G9 claim-lock violation on `assignee::` target-side unless `force::1`) | 2 (runtime: credential store unreadable, HOME unset)
@@ -25,7 +25,8 @@ clp .usage sort::renew prefer::opus
 clp .usage sort::renews
 clp .usage sort::name desc::1
 clp .usage cols::+sub
-clp .usage cols::+sub,-7d_son
+clp .usage cols::+sub,+7d_son
+clp .usage cols::-owner
 clp .usage touch::0
 clp .usage touch::0 refresh::1 trace::1
 clp .usage imodel::sonnet
@@ -84,7 +85,7 @@ clp .usage solo::1 live::1 interval::60
 1. Enumerate `{credential_store}/*.credentials.json` alphabetically; build account list
 2. `(when assignee:: or owner:: or lock:: or reserve:: present)` Mutation dispatch: `(when assignee::USER@MACHINE + name::X)` G9 claim-lock check on target account (unless `force::1`), then write per-machine marker (`assignee::0` expands to `$USER@$HOSTNAME`); `(when assignee::, no name::)` clear per-machine marker; `(when owner::0)` release ownership per-account with G8 gate (batch-clear when `name::` absent); `(when owner::USER@MACHINE)` set ownership per-account with G8 gate; `(when lock::0/1)` write `claim_lock` per-account via `write_claim_lock()`, ungated; `(when reserve::0/1)` write `reserve` per-account via `write_reserve()`, ungated; comma-list `name::` supported for `owner::`/`lock::`/`reserve::` operations; `(when dry::1)` print planned changes without writing
 3. `(when only_active::1)` Pre-filter: retain only the `is_active` account (filesystem `_active_{hostname}_{user}` marker; no HTTP required)
-4. `fetch_quota_for_list()`: call `GET /api/oauth/usage` per account; call `GET /api/oauth/account` in parallel thread. `(when solo::1)` only the current+owned account gets live HTTP fetch; all others get `approximate_quota()` (historical cached data via dedicated function — no direct cache file reads)
+4. `fetch_quota_for_list()`: call `GET /api/oauth/usage` per account; call `GET /api/oauth/account` in parallel thread. `(when backend == redirect)` skip both HTTP calls entirely — produce an `Err("redirect backend — no Anthropic quota")` placeholder row instead, checked before the non-owned gate. `(when solo::1)` only the current+owned account gets live HTTP fetch; all others get `approximate_quota()` (historical cached data via dedicated function — no direct cache file reads)
 5. `(when refresh::1)` `apply_refresh()`: for 401/403 errors or 429 + locally-expired token, refresh via isolated subprocess and re-fetch. `(when solo::1)` refresh fires only for the current+owned account
 6. `(when touch::1)` `apply_touch()`: for each account with any quota timer absent, spawn isolated subprocess to activate idle window; re-fetch quota (runs after refresh so refreshed accounts are touched). `(when solo::1)` touch fires only for the current+owned account
 7. Session-model override: `(when set_model:: provided)` write requested model via `set_session_model()`; `(otherwise, when current account has valid quota)` write resolved model via `apply_model_override()`
@@ -100,12 +101,12 @@ clp .usage solo::1 live::1 interval::60
 clp .usage
 # Quota
 #
-#   ●  Account              5h Left     5h Reset    7d Left  7d(Son)  7d Reset   Expires     ~Renews      → Next
-#   🟢 bob@example.com      🟢 100%    in 4h 58m  🟢 88%   28%      in 6d 14h  in 5h 02m   ~in 30d      in 6d 14h +7d
-# ✓ 🟢 alice@example.com    🟢 86%     in 3h 19m  🟢 65%   35%      in 4d 23h  in 7h 24m   ~in 6d       in 4d 23h +7d
-# @ 🟢 carol@example.com    🟢 91%     in 4h 12m  🟢 73%   41%      in 5d 8h   in 2h 30m   ~in 14d      in 5d 8h +7d
-#   🟡 frank@example.com    🟡 3%      in 0h 23m  🟢 52%   12%      in 2d 11h  in 1h 12m   ~in 8d       in 2d 11h +7d
-#   🔴 dave@example.com     —          —           —        —        —          EXPIRED      ?            —
+#   ●  Account              5h Left     5h Reset    7d Left  7d Reset   Expires     ~Renews      Owner        → Next
+#   🟢 bob@example.com      🟢 100%    in 4h 58m  🟢 88%   in 6d 14h  in 5h 02m   ~in 30d      —            in 6d 14h +7d
+# ✓ 🟢 alice@example.com    🟢 86%     in 3h 19m  🟢 65%   in 4d 23h  in 7h 24m   ~in 6d       alice@ws1    in 4d 23h +7d
+# @ 🟢 carol@example.com    🟢 91%     in 4h 12m  🟢 73%   in 5d 8h   in 2h 30m   ~in 14d      —            in 5d 8h +7d
+#   🟡 frank@example.com    🟡 3%      in 0h 23m  🟢 52%   in 2d 11h  in 1h 12m   ~in 8d       —            in 2d 11h +7d
+#   🔴 dave@example.com     —          —           —        —          EXPIRED      ?            —            —
 #
 # Current      · alice@example.com · sonnet/high · 4/5
 # Next (renew) · frank@example.com · opus/max    · in 2d 11h +7d
@@ -121,19 +122,21 @@ clp .usage live::1 interval::60 jitter::10
 **Notes:**
 - Accounts are enumerated from `{credential_store}/*.credentials.json` in alphabetical order.
 - Flag column priority: `✓` = current account, `*` = active-but-not-current (divergence), `@` = occupied on another machine (another machine's `_active_*` marker names this account). Priority: `✓` > `*` > `@` > blank. The recommended next account appears in the footer's `Next (strategy):` line, not in the flag column. See [feature/016_current_account_awareness.md](../../feature/016_current_account_awareness.md) and [feature/025_per_machine_active_marker.md](../../feature/025_per_machine_active_marker.md).
-- Status emoji column (`●`): composite of 5h and 7d status — `🟢` = both available (`5h Left > 15%` and `7d Left > 5%`); `🟡` = h-exhausted (`5h Left ≤ 15%`, 7d available) or weekly-exhausted (`7d Left ≤ 5%`, any 5h — including both-exhausted; 7d is binding, per BUG-321 fix); `🔴` = error or cancelled subscription (`billing_type = "none"`). Per-column emoji also embedded in `5h Left` (🟢/🟡 at ≤15% threshold) and `7d Left` (🟢/🟡 at ≤5% threshold). No JSON equivalent.
+- Status emoji column (`●`): composite of 5h and 7d status — `🟢` = both available (`5h Left > 15%` and `7d Left > 3%`); `🟡` = h-exhausted (`5h Left ≤ 15%`, 7d available) or weekly-exhausted (`7d Left ≤ 3%`, any 5h — including both-exhausted; 7d is binding, per BUG-321 fix); `🔴` = error or cancelled subscription (`billing_type = "none"`). Per-column emoji also embedded in `5h Left` (🟢/🟡 at ≤15% threshold) and `7d Left` (🟢/🟡 at ≤3% threshold). No JSON equivalent.
 - `Expires` is sourced from `expiresAt` in the credential file — available even when the API call fails.
 - `Sub` is sourced from `GET /api/oauth/account` (parallel fetch); shows `?` when that fetch fails.
 - `~Renews` shows an exact duration (`in Xh Ym`, no `~`) when `_renewal_at` is set in `{name}.json` (via `.account.renewal`); shows an estimated `~in Xd` from `org_created_at` day-of-month when not set; shows `?` when neither source is available.
 - `→ Next` shows the soonest upcoming strategic event among 7d quota reset (`+7d`) and billing renewal (`$ren`). Token expiry (`!tok`) and 5h session resets are not candidates — already shown in `Expires` and `5h Reset`. Shows `—` when all candidates are absent or in the past.
 - Accounts with failed quota fetch (expired/missing `accessToken`, 429 rate-limit, or other API error) show `—` for all quota columns (`5h Left` through `7d Reset`) with a shortened error reason replacing the **last visible quota column**. `Expires`, `Sub`, and `~Renews` are sourced independently and retain their values regardless of quota fetch failure.
+- `backend: redirect` accounts render identically to a failed quota fetch — `—` for all quota columns with reason `redirect backend — no Anthropic quota` in the last visible column — but no HTTP call is ever attempted for that row (`fetch_quota_for_list()`'s redirect-bypass gate, checked before the non-owned gate). Other `backend: anthropic` rows in the same listing are unaffected. See [feature/071_redirect_backend_accounts.md](../../feature/071_redirect_backend_accounts.md).
 - Footer: two `·`-delimited, column-aligned lines when ≥2 accounts have valid quota data: `Current · <name> · <model>/<effort> · N/N` (the `✓` account) and `Next (<strategy>) · <name> · <model>/<effort> · <metric>` (recommendation; effort is model-derived: `"max"` for Opus, `"high"` for Sonnet — TSK-335). The flag column shows `✓`, `*`, `@`, or blank.
 - Sessions table: appended after the footer when >1 `_active_*` marker exists in the credential store. Shows `Session` (`{user}@{host}`) and `Account` columns. `who::0` suppresses; `who::1` forces on. See [feature/009_token_usage.md AC-33, AC-34](../../feature/009_token_usage.md).
 - Empty credential store exits 0 with `(no accounts configured)`.
 - `refresh::1` triggers at most one retry per account per cycle. See [feature/017_token_refresh.md](../../feature/017_token_refresh.md).
 - `live::1 format::json` exits 1 before any fetch. See [feature/018_live_monitor.md](../../feature/018_live_monitor.md).
-- Four-group status partition (🟢 Green → 🟡 h-exhausted → 🟡 weekly-exhausted → 🔴 Dead) applied before sort strategy. Both-exhausted accounts (5h ≤ 15% AND 7d ≤ 5%) merge into G3 weekly-exhausted. Sort applies within each group only; `desc::1` reverses within groups but never changes group order. See [dictionary](../../cli/002_dictionary.md#status-groups).
-- `Sub` column hidden by default; show via `cols::+sub`. `7d Son Reset` column also hidden by default; show via `cols::+7d_son_reset`.
+- Four-group status partition (🟢 Green → 🟡 h-exhausted → 🟡 weekly-exhausted → 🔴 Dead) applied before sort strategy. Both-exhausted accounts (5h ≤ 15% AND 7d ≤ 3%) merge into G3 weekly-exhausted. Sort applies within each group only; `desc::1` reverses within groups but never changes group order. See [dictionary](../../cli/002_dictionary.md#status-groups).
+- `Sub` column hidden by default; show via `cols::+sub`. `7d Son Reset` column also hidden by default; show via `cols::+7d_son_reset`. `7d(Son)` column hidden by default since BUG-334 (fixed 2026-07-08) — its `seven_day_sonnet` data source has been permanently `null` since Anthropic's 2026-06-25 API restructuring, so the column always rendered blank; show via `cols::+7d_son`. `Host` and `Role` columns also hidden by default; show via `cols::+host` / `cols::+role`.
+- `Owner` column shown by default (Feature 037, AC-19) — the `owner` field from `{name}.json`: `USER@MACHINE` identity when set via `.usage owner::USER@MACHINE`, `—` when unowned. Hide via `cols::-owner`.
 - Duration format (`format_duration_secs`) capped to 2 significant units (e.g., `1d 2h` not `1d 2h 45m`).
 - See [feature/009_token_usage.md](../../feature/009_token_usage.md) for the baseline algorithm and AC criteria.
 - See [feature/020_usage_sort_strategies.md](../../feature/020_usage_sort_strategies.md) for sort strategies and footer recommendation.
@@ -200,6 +203,8 @@ clp .usage live::1 interval::60 jitter::10
 | 11 | [Usage Strategy Rotate](../../feature/038_usage_strategy_rotate.md) | `rotate::1` — strategy-driven account rotation via `.usage` |
 | 12 | [Account Ownership](../../feature/036_account_ownership.md) | `solo::1` extends G1/G2/G4 ownership gates with current-account check |
 | 13 | [Account Claim and Reservation Control](../../feature/070_account_claim_and_reservation_control.md) | `lock::`/`reserve::` params; Gate 9/G9 claim-lock; `reserve` sort key |
+| 14 | [Accounts/Usage Parameter Set Unification](../../feature/037_accounts_usage_param_unification.md) | `Owner` column default-visible (AC-19); unified `cols::` default set shared with `.accounts` |
+| 15 | [Redirect Backend Accounts](../../feature/071_redirect_backend_accounts.md) | `backend: redirect` accounts skip quota-fetch entirely — `—` columns, no HTTP call, in `fetch_quota_for_list()` |
 
 ### Referenced User Stories
 

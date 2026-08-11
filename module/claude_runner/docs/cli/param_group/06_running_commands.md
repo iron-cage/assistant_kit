@@ -32,9 +32,10 @@ Key: ✅ = supported, ⬜ = not injected/not applicable, ➖ = not accepted, `*`
 | `--trace` | ✅ | ✅ | ✅ | ✅ | emit env+command to stderr then execute |
 | `--no-compact-window` | ✅ | ✅ | ✅ | ✅ | suppress `CLAUDE_CODE_AUTO_COMPACT_WINDOW` injection |
 | **Model and effort** | | | | | |
-| `--model` | ✅ | ✅ | default: `"opus"` | default: `"sonnet"` | isolated/refresh use constants as default |
-| `--effort` | ✅ user sets | ✅ user sets | `max` * | `low` * | isolated/refresh inject effort; cannot override via flag |
-| `--no-effort-max` | ✅ | ✅ | ➖ | ➖ | suppresses default `--effort max` in run/ask |
+| `--model` | ✅ | ✅ | ✅ | default: `"sonnet"` | isolated default falls back to config tiers then `opus` alias; refresh uses `"sonnet"` constant |
+| `--effort` | ✅ user sets | ✅ user sets | ✅ user sets (default: `max`) | `low` * | refresh injects `low`; cannot override via flag |
+| `--no-effort-max` | ✅ | ✅ | ✅ | ➖ | suppresses default `--effort max`; not available for refresh (fixed by design) |
+| `--no-chrome` | ✅ | ✅ | ✅ | ➖ | suppresses `--chrome` injection; not available for refresh |
 | **Output** | | | | | |
 | `--output-style` | ✅ | ✅ | ✅ | ➖ | |
 | `--output-file` | ✅ | ✅ | ✅ | ➖ | |
@@ -52,15 +53,25 @@ Key: ✅ = supported, ⬜ = not injected/not applicable, ➖ = not accepted, `*`
 | **Validation** | | | | | |
 | `--expect` | ✅ | ✅ | ✅ | ➖ | |
 | `--expect-strategy` | ✅ | ✅ | ✅ | ➖ | |
+| **System prompt** | | | | | |
+| `--system-prompt` | ✅ | ✅ | ✅ | ➖ | forwarded to claude subprocess |
+| `--append-system-prompt` | ✅ | ✅ | ✅ | ➖ | forwarded to claude subprocess |
+| **Claude-native forwarded** | | | | | |
+| `--json-schema` | ✅ | ✅ | ✅ | ➖ | forwarded to claude subprocess |
+| `--mcp-config` | ✅ | ✅ | ✅ | ➖ | repeatable; forwarded to claude subprocess |
+| `--allowed-tools` | ✅ | ✅ | ✅ | ➖ | forwarded to claude subprocess |
+| `--disallowed-tools` | ✅ | ✅ | ✅ | ➖ | forwarded to claude subprocess |
+| `--max-budget-usd` | ✅ | ✅ | ✅ | ➖ | forwarded to claude subprocess |
+| `--max-turns` | ✅ | ✅ | ✅ | ➖ | forwarded to claude subprocess |
 | **Journaling** | | | | | |
 | `--journal` | ✅ | ✅ | ✅ | ✅ | |
 | `--journal-dir` | ✅ | ✅ | ✅ | ✅ | |
 | **Retries** | | | | | |
 | `--retry-on-transient` / `--transient-delay` | ✅ | ✅ | ➖ | ➖ | run/ask only |
 | `--retry-on-auth` / `--auth-delay` | ✅ | ✅ | ➖ | ➖ | run/ask only |
-| `--max-sessions` | ✅ | ✅ | ➖ | ➖ | concurrency gate; run/ask only |
+| `--max-sessions` | ✅ | ✅ | ✅ | ➖ | concurrency gate; `isolated` uses 3-tier (CLI flag + `"max-sessions"` JSON key + `CLR_MAX_SESSIONS` env var; no config-file tier) |
 | **Injected subprocess env vars** | | | | | |
-| `CLAUDE_CODE_MAX_OUTPUT_TOKENS` | `200,000` | `200,000` | `200,000` | `200,000` | always injected; `--max-tokens` overrides |
+| `CLAUDE_CODE_MAX_OUTPUT_TOKENS` | `128,000` | `128,000` | `128,000` | `128,000` | always injected; `--max-tokens` overrides |
 | `CLAUDE_CODE_AUTO_COMPACT_WINDOW` | `300,000` | `300,000` | `300,000` | `300,000` | always injected; `--no-compact-window` suppresses |
 | `CLAUDE_CODE_AUTO_CONTINUE` | `true` | `true` | `true` | `true` | always injected |
 | `CLAUDE_CODE_TELEMETRY` | `false` | `false` | `false` | `false` | always injected |
@@ -79,11 +90,21 @@ These parameters apply identically across all 4 running commands:
 | `--journal` | Enable journaling (`full`/`meta`/`off`) |
 | `--journal-dir` | Override journal output directory |
 
+### Exclusive Parameters (asymmetric coverage)
+
+Complements Universal Params above by summarizing the opposite extreme — parameters confined to one command or one proper subset, rather than shared by all 4. See the Command Comparison matrix above for every partial-overlap case (e.g. params shared by `run`/`ask`/`isolated` but not `refresh`, such as `--file`, `--dir`, `--expect`).
+
+| Scope | Parameters | Notes |
+|-------|-----------|-------|
+| `isolated`-only | passthrough (`--`) | Sole route to `--output-format` on `isolated` — the only remaining native-flag gap after TSK-443 (all other formerly-passthrough-only params now have native flags); ergonomic gap only (last-wins arg order means passthrough already reaches it), not a functional one — see [`../parity/001_run_ask_isolated.md`](../parity/001_run_ask_isolated.md) Exclusion Rationale |
+| `isolated` + `refresh` only | `--creds` | Credential-isolated execution config; see [`04_credential_operations.md`](04_credential_operations.md) |
+| `run` + `ask` only | `--output-format`, `--subdir`, `--new-session`, `--session-dir`, `--retry-on-transient`/`--transient-delay`, `--retry-on-auth`/`--auth-delay` | Session control, retries, and format negotiation — no passthrough equivalent exists for `isolated`/`refresh` since these configure the runner itself, not the `claude` subprocess |
+
 ### Invariants
 
-1. All 4 running commands inject `CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000` and `CLAUDE_CODE_AUTO_COMPACT_WINDOW=300000` (opt-out via `--no-compact-window`).
+1. All 4 running commands inject `CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000` and `CLAUDE_CODE_AUTO_COMPACT_WINDOW=300000` (opt-out via `--no-compact-window`).
 2. `--dry-run` and `--trace` use the same code path for all 4 commands — `emit_credential_trace` for `isolated`/`refresh`, `handle_dry_run` for `run`/`ask`. Both emit WYSIWYG output matching actual subprocess arguments.
-3. `run` and `ask` are functionally identical — `ask` is an alias for `run` with distinct help text.
+3. `run` and `ask` are functionally identical — `ask` is an alias for `run` with distinct help text. Formalized as a strict command_group (identical handler, identical parameter set) in [`command_group/01_run_ask.md`](../command_group/01_run_ask.md) — see that file for the Representation Absorption Test and default-divergence table backing this claim.
 4. `isolated` and `refresh` run in an isolated temp HOME; session persistence is always suppressed.
 
 ### Notes
@@ -109,3 +130,4 @@ These parameters apply identically across all 4 running commands:
 | doc | [`003_env_param.md`](../003_env_param.md) | All `CLR_*` environment variable fallbacks |
 | group | [`04_credential_operations.md`](04_credential_operations.md) | Params exclusive to `isolated`/`refresh` |
 | group | [`02_runner_control.md`](02_runner_control.md) | Params consumed by the runner before subprocess launch |
+| command_group | [`../command_group/01_run_ask.md`](../command_group/01_run_ask.md) | Strict `run`/`ask` identity — identical handler and parameter set, not just similar defaults |

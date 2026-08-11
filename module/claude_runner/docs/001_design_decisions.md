@@ -12,12 +12,26 @@ errors are always emitted regardless of `--quiet`. Command preview is handled ex
 removed (TSK-337) as an anti-pattern: a 0–5 numeric scale bundles independent output concerns
 into one opaque integer, violating CLI composability.
 
-### D3 — Print mode requires a message
+### D3 — Requested print mode requires a message, `--file`, or stdin content
 
-Fail fast with a clear error if print mode is active without a message. Silent no-op
-would be confusing; claude in print mode without input produces nothing useful. Print
-mode is triggered by: message present (default) or explicit `-p`/`--print`. Either
-way, a message is required.
+Fail fast with a clear error if print mode is requested (via `-p`/`--print`, `CLR_PRINT`,
+or JSON config `"print"`) with no content to send — no message, no `--file`, and no
+non-empty piped stdin content. Silent no-op would be confusing; claude in print mode
+without input produces nothing useful.
+
+**Fixed (BUG-427):** originally gated on message-absence alone, incorrectly rejecting
+`--print --file <path>` even though `--file` supplies the prompt. The guard now also
+accepts `--file` or non-empty stdin content as a valid substitute for a message.
+
+**Scope:** this check fires only when `cli.print_mode` is true — set by the explicit
+`-p`/`--print` flag, `CLR_PRINT`, or JSON config, any of which settle the mode-selection
+question outright. It validates content once print mode is already selected that way,
+and is orthogonal to D11's mode-*selection* formula (message / non-TTY stdin / `--file`
+/ stdin content, any one of which routes to print mode without `cli.print_mode` being
+set at all). A bare invocation that reaches print mode implicitly through non-TTY stdin
+alone (no message, no `--file`,
+no stdin content) does not hit this guard — it proceeds with no content, since
+`cli.print_mode` was never set true and print mode was reached by inference instead.
 
 ### D4 — Positional args joined as message
 
@@ -62,21 +76,28 @@ a proper three-layer reference (command/, param/, type/) with parameter groups,
 dictionary, and user stories (originally workflow_scenario.md; migrated to user_story/ in a subsequent pass) — adapted to the new `--flag value` syntax. Extended to L4 in a
 subsequent pass: tests/docs/cli/ added with per-command, per-param, per-type, and per-group test case coverage.
 
-### D11 — Print by default when message given; `--interactive` to opt into TTY
+### D11 — Print by default when message given, stdin is non-TTY, or file/stdin content is present; `--interactive` to opt into TTY
 
-When `[MESSAGE]` is provided, `clr` defaults to print mode (captured stdout via
-`execute()` + `--print`). Interactive TTY passthrough requires explicit `--interactive`.
+When `[MESSAGE]` is provided, stdin is not a terminal (piped/redirected/non-interactive
+shell), or `--file`/piped stdin content supplies the prompt, `clr` defaults to print mode
+(captured stdout via `execute()` + `--print`). Interactive TTY passthrough requires
+explicit `--interactive`.
 
 **Rationale:** The primary use of `clr "message"` is scripting and automation — piping
 output, capturing into variables, chaining with other tools. Interactive TTY passthrough
 is the minority case when a message is given. Defaulting to print mode avoids forcing
 users to remember `-p` for every scripted invocation and aligns with shell expectations
-(running a command with an argument should produce capturable output).
+(running a command with an argument should produce capturable output). A bare invocation
+under non-TTY stdin (BUG-425) and a `--file`/stdin-content-only invocation (BUG-427) carry
+the same automation intent as a message argument — none of them are a user sitting at a
+live terminal — so all three route to print mode on the same basis.
 
 **Consequence:** `clr "Fix bug"` now behaves like `clr -p "Fix bug"` did before.
 The `-p`/`--print` flag is kept as a backward-compatible explicit alias. The new
 `--interactive` flag opts into TTY passthrough when a message is given. Bare `clr`
-(no message) still opens the interactive REPL as before.
+(no message) invoked from a genuine terminal still opens the interactive REPL as before;
+the same bare invocation under non-TTY stdin, or with `--file`/piped stdin content and no
+message, now routes to print mode instead (BUG-425/427 fix — see Plan 005).
 
 ### D12 — Expose `--system-prompt` (replace) despite capability loss
 

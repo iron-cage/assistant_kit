@@ -3,7 +3,7 @@
 ### Scope
 
 - **Purpose**: Define the lifecycle states and transitions for accounts in the credential store.
-- **Responsibility**: Documents `absent`/`saved`/`active` states, transition triggers, and the active-account delete guard.
+- **Responsibility**: Documents `absent`/`saved`/`active` states, transition triggers, and cross-machine active-marker cleanup on delete.
 - **In Scope**: Account state transitions; `_active_{host}_{user}` marker semantics; multi-machine concurrency.
 - **Out of Scope**: OAuth token state (→ state_machine/002); credential file format (→ schema/001).
 
@@ -23,13 +23,14 @@
 [saved]  --account.use---> [active]   (credentials written to live; marker written)
 [active] --account.save--> [active]   (re-saved; no lifecycle change)
 [active] --account.use other---> [saved]  (marker overwritten with new name; this account → saved)
-[saved]  --account.delete--> [absent] (guard: cannot delete active account)
+[saved]  --account.delete--> [absent] (no active marker to clear)
+[active] --account.delete--> [absent] (clears every _active_* marker across all machines naming this account — Fix(BUG-341))
 [absent] → [absent]  (account.delete on absent = no-op)
 ```
 
-### Safety Guard
+### Delete Behavior
 
-`.account.delete` refuses to delete the active account (the account whose name matches the current machine's `_active_{host}_{user}` marker). The account must first be switched away from (`account.use`) before deletion.
+`.account.delete` deletes unconditionally, regardless of whether the account is active on any machine — there is no refusal guard. When the deleted account is active (on the calling machine or any other), every `_active_{host}_{user}` marker file naming it is also removed, not only the calling machine's own marker (Fix BUG-341: the pre-fix implementation resolved and checked only the calling machine's own marker path, leaving foreign-machine markers naming the same account orphaned). This can leave one or more machines with no active account; a subsequent `.account.use` or `.account.save` on each affected machine restores one.
 
 ### Multi-Machine Note
 
@@ -37,7 +38,8 @@
 
 ### Behavioral Invariants
 
-- An account cannot be deleted while `active` on the current machine — gate fires in `.account.delete`.
+- An account can be deleted regardless of active state on any machine — `.account.delete` has no refusal guard.
+- Deleting an account clears every `_active_*` marker across all machines that names it, not only the calling machine's own marker (Fix BUG-341).
 - A `saved` account's `{name}.json` data is preserved (read-merged) on re-save — no data loss on snapshot update.
 - "Active" is per-machine — multiple machines may each hold a different account as `active` simultaneously.
 

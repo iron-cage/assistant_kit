@@ -62,7 +62,6 @@ Commands:
 
   Status & info
     .credentials.status   Show live credential metadata
-    .token.status         Show OAuth token expiry classification
     .paths                Show all resolved ~/.claude/ paths
     .usage                Show live quota for all saved accounts
     .model                Get or set session model in settings.json

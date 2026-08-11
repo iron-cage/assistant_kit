@@ -7,7 +7,7 @@ use unilang::semantic::VerifiedCommand;
 use unilang::types::Value;
 use crate::output::{ OutputFormat, OutputOptions, json_escape };
 use super::cmd_context::{ require_claude_paths, require_credential_store, derive_token_state, caps_to_json };
-use claude_profile_core::account::trace_ts;
+use claude_profile_core::account::{ trace_ts, read_backend, AccountBackend };
 
 // ── Single-consumer helpers ───────────────────────────────────────────────────
 
@@ -125,16 +125,11 @@ pub fn credentials_status_routine( cmd : VerifiedCommand, _ctx : ExecutionContex
   let show_org_uuid     = crate::output::parse_int_flag( &cmd, "org_uuid",     0 )? != 0;
   let show_org_name     = crate::output::parse_int_flag( &cmd, "org_name",     0 )? != 0;
 
-  let ( tok, exp, exp_secs ) = derive_token_state(
-    &crate::token::status_with_threshold( crate::token::WARNING_THRESHOLD_SECS ),
-  );
-
-  let ( sub, tier, email, display, role, billing ) = read_live_cred_meta( &paths );
-  let model = read_settings_model( &paths );
-  // Read extended snapshot fields from live ~/.claude.json — same file, best-effort.
-  let live_claude_json  = std::fs::read_to_string( paths.claude_json_file() ).unwrap_or_default();
-  let tagged_id         = crate::account::parse_string_field( &live_claude_json, "taggedId" ).unwrap_or_default();
-  let live_capabilities = crate::account::parse_string_array_field( &live_claude_json, "capabilities" );
+  let threshold_secs = match cmd.arguments.get( "threshold" )
+  {
+    Some( Value::Integer( n ) ) => u64::try_from( *n ).unwrap_or( crate::token::WARNING_THRESHOLD_SECS ),
+    _ => crate::token::WARNING_THRESHOLD_SECS,
+  };
 
   // Account: reads _active opportunistically — N/A when absent (no hard dependency).
   let active_name = std::fs::read_to_string( credential_store.join( crate::account::active_marker_filename() ) )
@@ -142,6 +137,28 @@ pub fn credentials_status_routine( cmd : VerifiedCommand, _ctx : ExecutionContex
     .map( | s | s.trim().to_string() )
     .filter( | s | !s.is_empty() );
   let account = active_name.clone().unwrap_or_else( || "N/A".to_string() );
+
+  // Feature 071 (AC-14): a redirect-backend active account has no Anthropic expiresAt to
+  // measure — classify as Static before the normal threshold math runs, which would
+  // otherwise report a nonsensical expiry against a credentials file that has none.
+  let is_redirect_active = active_name.as_deref().is_some_and(
+    | n | read_backend( &credential_store, n ) == AccountBackend::Redirect,
+  );
+  let ( tok, exp, exp_secs ) = if is_redirect_active
+  {
+    derive_token_state( &Ok( crate::token::TokenStatus::Static ) )
+  }
+  else
+  {
+    derive_token_state( &crate::token::status_with_threshold( threshold_secs ) )
+  };
+
+  let ( sub, tier, email, display, role, billing ) = read_live_cred_meta( &paths );
+  let model = read_settings_model( &paths );
+  // Read extended snapshot fields from live ~/.claude.json — same file, best-effort.
+  let live_claude_json  = std::fs::read_to_string( paths.claude_json_file() ).unwrap_or_default();
+  let tagged_id         = crate::account::parse_string_field( &live_claude_json, "taggedId" ).unwrap_or_default();
+  let live_capabilities = crate::account::parse_string_array_field( &live_claude_json, "capabilities" );
 
   // Org identity: read from {_active}.json best-effort; empty when absent.
   let roles_json = active_name.as_deref()

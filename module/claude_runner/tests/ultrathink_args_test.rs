@@ -142,6 +142,14 @@ fn t53_help_lists_no_ultrathink()
 // would also filter whitespace-only strings which are valid non-empty messages (e.g. " ").
 // The correct fix skips only empty tokens at the individual-token level.
 // test_kind: bug_reproducer(BUG-219)
+// Fix(BUG-425): corrected from asserting a bare/no-`--print` command to asserting the
+//   post-fix print-mode-routed command — this test's own subprocess stdin is non-TTY
+//   (no PTY simulation in this harness), and BUG-425's fix makes non-TTY the deciding
+//   term for an empty positional arg (no real message) with no `--interactive`.
+// Root cause: this test was written before BUG-425's TTY-check term existed, when
+//   "no message" alone meant the bare/interactive-REPL command shape.
+// Pitfall: `--chrome` also drops from the composed command here — print mode suppresses
+//   it unconditionally (Fix(BUG-304)), not just when explicitly requested via --no-chrome.
 #[ test ]
 fn t54_empty_positional_arg_ignored()
 {
@@ -160,8 +168,8 @@ fn t54_empty_positional_arg_ignored()
   let last_line = stdout.trim_end().lines().last().unwrap_or_default();
   assert_eq!(
     last_line,
-    "env -u CLAUDECODE claude --dangerously-skip-permissions --chrome --effort max",
-    "empty positional arg must produce bare command (no --print, no message, no -c in empty session dir). Got:\n{stdout}"
+    "env -u CLAUDECODE -u CLAUDE_CODE_CHILD_SESSION claude --dangerously-skip-permissions --effort max --print --output-format json",
+    "empty positional arg under non-TTY stdin must route to print mode (no -c in empty session dir). Got:\n{stdout}"
   );
   assert!(
     !stdout.contains( "\"ultrathink \"" ),
@@ -266,6 +274,15 @@ fn t56_help_wins_over_preceding_unknown_flag()
 // for the same reason as the `_` arm: whitespace-only strings like `" "` are valid
 // messages and must pass through.
 // test_kind: bug_reproducer(BUG-220)
+//
+// Fix(BUG-425): corrected from asserting a bare/no-`--print` command to asserting the
+//   post-fix print-mode-routed command — this test's own subprocess stdin is non-TTY
+//   (no PTY simulation in this harness), and BUG-425's fix makes non-TTY the deciding
+//   term for an empty arg after `--` (no real message) with no `--interactive`.
+// Root cause: this test was written before BUG-425's TTY-check term existed, when
+//   "no message" alone meant the bare/interactive-REPL command shape.
+// Pitfall: `--chrome` also drops from the composed command here — print mode suppresses
+//   it unconditionally (Fix(BUG-304)), not just when explicitly requested via --no-chrome.
 #[ test ]
 fn t57_empty_positional_after_double_dash_ignored()
 {
@@ -283,8 +300,8 @@ fn t57_empty_positional_after_double_dash_ignored()
   let last_line = stdout.trim_end().lines().last().unwrap_or_default();
   assert_eq!(
     last_line,
-    "env -u CLAUDECODE claude --dangerously-skip-permissions --chrome --effort max",
-    "empty arg after -- must produce bare command (no --print, no message, no -c in empty session dir). Got:\n{stdout}"
+    "env -u CLAUDECODE -u CLAUDE_CODE_CHILD_SESSION claude --dangerously-skip-permissions --effort max --print --output-format json",
+    "empty arg after -- under non-TTY stdin must route to print mode (no -c in empty session dir). Got:\n{stdout}"
   );
   assert!(
     !stdout.contains( "\"ultrathink \"" ),

@@ -2,15 +2,27 @@
 
 - **Kind:** canonical
 - **Availability:** universal
-- **`--dry-run`:** `w3 .test level::4`
+- **`--dry-run`:** `will .test level::4` (most modules) / `./verb/test && cargo +nightly udeps … && cargo +nightly audit` (workspace root, `claude_runner`, `claude_version`)
 
 ### Command
 
+Most modules:
+
 ```bash
-w3 .test level::4
+will .test level::4
 ```
 
-Level 4 runs: nextest (all features, warnings-as-errors) + doc tests + clippy (-D warnings) + `cargo +nightly udeps` (unused dependency detection) + `cargo +nightly audit` (security vulnerability scan of `Cargo.lock`).
+Level 4 runs: nextest (all features, warnings-as-errors) + doc tests + clippy (-D warnings) + `cargo +nightly udeps` (unused dependency detection) + `cargo +nightly audit` (security vulnerability scan of `Cargo.lock`). It executes host-side — the container-only test invariant blocks its nextest stage on a bare host, so this form only completes where host execution is authorized (`VERB_LAYER=l0` path).
+
+Workspace root, `claude_runner`, `claude_version` — container-chaining variant:
+
+```bash
+./verb/test                                       # container suite via runbox .live
+cargo +nightly udeps --all-targets --all-features # host-side, no test execution
+cargo +nightly audit                              # host-side; skipped when no Cargo.lock
+```
+
+The test stage runs inside the container; udeps and audit are host-side dependency hygiene and never execute tests.
 
 ### Notes
 
@@ -18,22 +30,19 @@ Level 4 runs: nextest (all features, warnings-as-errors) + doc tests + clippy (-
 
 `udeps` catches dependencies declared in `Cargo.toml` that are never actually used. `audit` cross-references `Cargo.lock` against the RustSec advisory database. Both require nightly.
 
-`verify` is **identical across all modules** — the command does not vary by module name because `w3 .test level::4` scopes itself from the current workspace context.
+Library crates skip the audit step automatically when no `Cargo.lock` is present.
 
-Library crates skip the audit step automatically when no `Cargo.lock` is present. `w3` handles this: `[ -f Cargo.lock ] && cargo +nightly audit || echo "ℹ Library crate — skipping audit"`.
-
-`--dry-run` prints `w3 .test level::4` and exits 0 — no checks run.
+`--dry-run` prints the delegated command chain and exits 0 — no checks run.
 
 ### Example
 
 ```bash
-# Any module (command is identical)
-./verb/verify              # runs: w3 .test level::4
-./verb/verify --dry-run    # prints: w3 .test level::4
+./verb/verify              # root: container test + udeps + audit; module: will .test level::4
+./verb/verify --dry-run    # prints the command chain
 ```
 
 Relation to `test`:
 ```
-test   → w3 .test level::3   (nextest + doc tests + clippy)
-verify → w3 .test level::4   (level::3 + udeps + audit)
+test   → runbox .live → test.d/l1   (nextest + doc tests + clippy, in container)
+verify → test + udeps + audit       (dependency hygiene added, host-side)
 ```

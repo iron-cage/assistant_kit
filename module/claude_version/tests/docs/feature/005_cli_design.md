@@ -31,6 +31,8 @@ Both are valid invocations; output length differs.
 | FT-7 | Repeated `v::` parameter: last occurrence wins (D8) | Design Decision |
 | FT-8 | `CommandNotImplemented` produces exit 2 (D4) | Design Decision |
 | FT-9 | `format::` on `.settings.set` rejected with exit 1; per-command validation (D7) | Design Decision |
+| FT-10 | `.command.help` → per-command help output rendered via cli_fmt, exit 0 | Per-Command Help |
+| FT-11 | per-command help contains argument names with defaults in-column (D9) | Per-Command Help |
 
 ## Test Coverage Summary
 
@@ -40,8 +42,9 @@ Both are valid invocations; output length differs.
 - Empty Argv: 1 test (FT-4)
 - Help Anywhere: 1 test (FT-5)
 - Design Decision: 4 tests (FT-6, FT-7, FT-8, FT-9)
+- Per-Command Help: 2 tests (FT-10, FT-11)
 
-**Total:** 9 tests
+**Total:** 11 tests
 
 ---
 
@@ -68,8 +71,8 @@ Both are valid invocations; output length differs.
 ### FT-3: Repeated parameter → last occurrence wins
 
 - **Given:** clean environment
-- **When:** `clv .version.install version::stable version::month dry::1`
-- **Then:** stdout contains `"2.1.74"` (month resolution wins); exit 0
+- **When:** `clv .version.install version::latest version::stable dry::1`
+- **Then:** stdout contains `"2.1.220"` (stable resolution wins); exit 0
 - **Exit:** 0
 - **Source:** [feature/005_cli_design.md — Parameter rules: last occurrence wins](../../../docs/feature/005_cli_design.md)
 
@@ -103,10 +106,14 @@ Both are valid invocations; output length differs.
 | `ft005_2_empty_bool_param_value_exits_1` | `tests/cli/feature_surface_test.rs` |
 | `ft005_3_last_param_wins` | `tests/cli/feature_surface_test.rs` |
 | `tc093_empty_args_exits_0` | `tests/cli/framework_test.rs` |
+| `ec8_help_wins_over_params` | `tests/cli_args_test/help_test.rs` |
 | `ft005_6_bool_true_rejected` | `tests/cli/catalog_surface_test.rs` |
 | `ft005_7_last_v_wins` | `tests/cli/catalog_surface_test.rs` |
 | `ft005_8_cmd_not_implemented_exit2` | `tests/cli/catalog_surface_test.rs` |
 | `ft005_9_per_cmd_validation` | `tests/cli/catalog_surface_test.rs` |
+| `it10_command_help_exits_0_contains_command_name` | `tests/cli/read_help_test.rs` |
+| `it11_command_help_omits_global_headers` | `tests/cli/read_help_test.rs` |
+| `it12_command_help_shows_arg_with_default` | `tests/cli/read_help_test.rs` |
 
 ---
 
@@ -147,3 +154,23 @@ Both are valid invocations; output length differs.
 - **Then:** exit 1; stderr contains error indicating `format` is not valid for this command
 - **Exit:** 1
 - **Source:** [feature/005_cli_design.md — D7](../../../docs/feature/005_cli_design.md)
+
+---
+
+### FT-10: `.command.help` → per-command help rendered via cli_fmt, exit 0
+
+- **Given:** clean environment
+- **When:** `clv .version.list.help`
+- **Then:** exit 0; stdout contains formatted per-command help (command name, argument section, at least one param name); rendered via cli_fmt (aligned columns, not the raw unilang `format_command_help` format)
+- **Exit:** 0
+- **Source:** [feature/005_cli_design.md — D9](../../../docs/feature/005_cli_design.md)
+
+---
+
+### FT-11: per-command help contains argument names with defaults in-column (D9)
+
+- **Given:** clean environment
+- **When:** `clv .version.list.help`
+- **Then:** exit 0; stdout contains `mode` (and at least one other param name from the command's arg list); stdout contains `(default:` indicating defaults are rendered in-column
+- **Exit:** 0
+- **Source:** [feature/005_cli_design.md — D9](../../../docs/feature/005_cli_design.md)

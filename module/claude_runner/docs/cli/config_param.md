@@ -38,7 +38,7 @@ clr --model sonnet --dry-run "task"  # CLI wins; config value ignored
 
 A parameter qualifies for the config-file tier if its value is a stable, repeatable-choice default — the kind of setting a user or project would want to set once and reuse across invocations. A parameter is excluded if its value is inherently specific to a single invocation (see [Not Configurable](#not-configurable) below). The eligible set is a closed, explicitly enumerated list (this document) — not automatically every `CliArgs` field.
 
-### Eligible Parameters (38 total)
+### Eligible Parameters (41 total)
 
 TOML keys are **snake_case**, matching `ConfigDefaults` struct field names exactly (unlike JSON `--args-file` keys, which are kebab-case matching CLI flag names).
 
@@ -57,6 +57,9 @@ TOML keys are **snake_case**, matching `ConfigDefaults` struct field names exact
 | TOML Key | CLI Flag | CLR_* Env Var | Type | Notes |
 |----------|----------|---------------|------|-------|
 | `max_sessions` | [`--max-sessions`](param/033_max_sessions.md) | `CLR_MAX_SESSIONS` | u32 | |
+| `gate_poll_secs` | [`--gate-poll-secs`](param/033_max_sessions.md) | `CLR_GATE_POLL_SECS` | u64 | Poll interval between gate attempts; default 30. `run`/`ask` only — `isolated` stays env-var-only |
+| `gate_max_attempts` | [`--gate-max-attempts`](param/033_max_sessions.md) | `CLR_GATE_MAX_ATTEMPTS` | u32 | Attempt limit before gate exhaustion; default 1000. `run`/`ask` only — `isolated` stays env-var-only |
+| `gate_stale_secs` | [`--gate-stale-secs`](param/033_max_sessions.md) | `CLR_GATE_STALE_SECS` | u64 | Staleness threshold for reclaiming a stalled slot; unset by default (`None`). `run`/`ask` only — `isolated` stays env-var-only |
 
 **Retry — Tier 2 (per-class)**
 
@@ -137,7 +140,7 @@ The following categories of `CliArgs` fields are excluded by the Eligibility Rul
 | Call-specific values | `--expect`, `--expect-strategy`, `--subdir`, `--session-dir`, `--session-from`, `--add-dir`, `--dir` | Tied to one task's working context |
 | Meta and self-referential | `--help`, `--args-file` | `--help` exits before resolution; `--args-file` chaining is not supported |
 
-All other `CliArgs` fields not listed in [Eligible Parameters](#eligible-parameters-38-total) above (e.g. `--verbose`, `--no-skip-permissions`, `--no-ultrathink`, `--keep-claudecode`, `--strip-fences`, `--system-prompt`, `--append-system-prompt`, `--output-format`, `--max-turns`) are simply not part of this task's scope — extending config-file coverage to additional parameters is a separate follow-up if a concrete need arises.
+All other `CliArgs` fields not listed in [Eligible Parameters](#eligible-parameters-41-total) above (e.g. `--verbose`, `--no-skip-permissions`, `--no-ultrathink`, `--keep-claudecode`, `--strip-fences`, `--system-prompt`, `--append-system-prompt`, `--output-format`, `--max-turns`) are simply not part of this task's scope — extending config-file coverage to additional parameters is a separate follow-up if a concrete need arises.
 
 `isolated`, `refresh`, and `ps` subcommands do not read config files at all — separate `CliArgs`-shaped structs and dispatch paths.
 
@@ -180,4 +183,4 @@ Test-injection override for user-level discovery only — mirrors the existing `
 
 | File | Relationship |
 |------|--------------|
-| `../../tests/config_file_test.rs` | T01–T15: precedence (CLI/JSON/env/config/default), project-over-user, `CLR_CONFIG_DIR` scope, malformed TOML, unknown key, dry-run reflection, invalid `output_style`/`journal`/`summary_fields` rejection |
+| `../../tests/config_file_test.rs` | T01–T16: precedence (CLI/JSON/env/config/default), project-over-user, `CLR_CONFIG_DIR` scope, malformed TOML, unknown key, dry-run reflection, invalid `output_style`/`journal`/`summary_fields` rejection, config-only `gate_poll_secs`/`gate_max_attempts` timing (T16) |

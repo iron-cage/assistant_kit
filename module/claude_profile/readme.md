@@ -13,7 +13,6 @@ Claude Code account credential management.
 | `unilang.commands.yaml` | YAML command metadata for 16 profile commands |
 | `verb/` | Shell scripts for each `do` protocol verb (build, test, clean, run, lint). |
 | `vision.md` | Crate vision, design decisions, and open problems |
-| `runbox/` | Container run environment definitions and entry scripts |
 | `license` | Crate license text |
 | `changelog.md` | Notable changes by version |
 | `task/` | Task tracking: verified and completed work items. |
@@ -66,6 +65,8 @@ match token::status().expect( "failed to read credentials" )
     eprintln!( "expires in {}m — consider switching accounts", expires_in.as_secs() / 60 ),
   token::TokenStatus::Expired =>
     eprintln!( "token expired — run: claude auth login" ),
+  token::TokenStatus::Static =>
+    println!( "static API key — no expiry" ),
 }
 
 // List all stored accounts
@@ -76,7 +77,10 @@ for acct in account::list( &credential_store ).expect( "failed to list accounts"
 }
 
 // Save current credentials as "work@acme.com"
-account::save( "work@acme.com", &credential_store, &claude, true, None, None, None, None ).expect( "failed to save account" );
+account::save(
+  "work@acme.com", &credential_store, &claude, true, None, None, None, None,
+  account::AccountBackend::Anthropic, None, None, None,
+).expect( "failed to save account" );
 
 // Switch to "personal@home.com"
 account::switch_account( "personal@home.com", &credential_store, &claude ).expect( "failed to switch" );
@@ -113,22 +117,22 @@ clp .paths                 # show ~/.claude/ canonical paths
 
 ## Testing
 
-**Container (all tests — credentials required):**
+**Container (module suite — credentials required):**
 ```bash
 ./verb/test
 ```
 
-**Container (offline — no credentials needed):**
+**Container (targeted filter):**
 ```bash
-./verb/test offline
+./verb/test_only <name_substring>
 ```
 
 **Container (interactive shell):**
 ```bash
-./verb/shell
+runbox .shell
 ```
 
-**Local (Docker-orchestrated):**
+**Host escape hatch (no container; honored by the nextest setup script):**
 ```bash
-./verb/test
+VERB_LAYER=l0 cargo nextest run --all-features
 ```

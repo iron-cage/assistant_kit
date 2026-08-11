@@ -22,13 +22,15 @@ Validation tests for the `ErrorKind` classification type. Tests validate subproc
 | TC-11 | `--expect` mismatch → exit 3 | CLR-Layer |
 | TC-12 | `--max-sessions 0`, no gate → still exits 0 on success | CLR-Layer |
 | TC-13 | `authentication_error` 401 string → `AuthError`, not `ApiError` | Auth / Priority Order |
+| TC-14 | `"Not logged in"` in stderr → `AuthError` (TSK-453) | Auth |
+| TC-15 | `"Please run /login"` in stdout → `AuthError` (TSK-453) | Auth |
 
 ## Test Coverage Summary
 
 - Success: 1 test (TC-1)
 - Transient: 1 test (TC-2)
 - Account: 1 test (TC-3)
-- Auth: 1 test (TC-4)
+- Auth: 3 tests (TC-4, TC-14, TC-15)
 - Service: 1 test (TC-5)
 - Process: 1 test (TC-6)
 - Unknown: 1 test (TC-7)
@@ -36,7 +38,7 @@ Validation tests for the `ErrorKind` classification type. Tests validate subproc
 - CLR-Layer: 3 tests (TC-10, TC-11, TC-12)
 - Auth / Priority Order: 1 test (TC-13)
 
-**Total:** 13 test cases
+**Total:** 15 test cases
 
 ## Test Cases
 
@@ -170,4 +172,26 @@ Validation tests for the `ErrorKind` classification type. Tests validate subproc
 - **Then:** Returns `Some(ErrorKind::AuthError)`, not `Some(ErrorKind::ApiError)` — the `"authentication_error"` pattern fires before the `"API Error: "` catch-all
 - **Exit:** N/A (unit test)
 - **Note:** test_kind: bug_reproducer(BUG-314). Without the fix the string would be misclassified as `ApiError` because `"API Error: "` appears in the same message.
+- **Source:** [type/13_error_kind.md](../../../../docs/cli/type/13_error_kind.md)
+
+---
+
+### TC-14: `"Not logged in"` → `AuthError` (TSK-453)
+
+- **Given:** `ExecutionOutput` with `exit_code = 1`, stderr contains `"Not logged in: please authenticate first"`
+- **When:** `classify_error()` called
+- **Then:** Returns `Some(ErrorKind::AuthError)`, not `Some(ErrorKind::Unknown)` — `"Not logged in"` pattern fires before the exit-code fallback
+- **Exit:** N/A (unit test)
+- **Note:** TSK-453 added this pattern. Without it, credential-absent messages fall through to `Unknown`, suppressing `--retry-on-auth`.
+- **Source:** [type/13_error_kind.md](../../../../docs/cli/type/13_error_kind.md)
+
+---
+
+### TC-15: `"Please run /login"` → `AuthError` (TSK-453)
+
+- **Given:** `ExecutionOutput` with `exit_code = 1`, stdout contains `"Please run /login to authenticate"`
+- **When:** `classify_error()` called
+- **Then:** Returns `Some(ErrorKind::AuthError)`, not `Some(ErrorKind::Unknown)` — stdout scan path verified for the new pattern
+- **Exit:** N/A (unit test)
+- **Note:** TSK-453 added this pattern. Validates stdout scan path (parallel to TC-4 for org-access, TC-13 for authentication_error).
 - **Source:** [type/13_error_kind.md](../../../../docs/cli/type/13_error_kind.md)

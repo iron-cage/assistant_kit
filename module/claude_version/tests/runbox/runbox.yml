@@ -1,5 +1,0 @@
-image: my_project
-dockerfile: runbox.dockerfile
-cache_dir: target
-workspace_root: ..
-test_script: verb/test.d/l1

@@ -7,7 +7,7 @@
 
 ### Semantic Coherence Test
 
-"Is this flag consumed by the runner, not Claude?" — YES for all 48.
+"Is this parameter consumed by the runner, not Claude?" — YES for all 52 (51 CLI flags + 1 env-var-only).
 
 ### Why NOT X
 
@@ -38,19 +38,19 @@ clr --trace "Fix bug" --dir /project
 
 | # | Command | Membership | Excluded Params | Notes |
 |---|---------|------------|-----------------|-------|
-| 1 | [`run`](../command/01_run.md) | Full | — | All 47 params apply; default command |
-| 5 | [`ask`](../command/05_ask.md) | Full | — | All 47 params apply; identical behavior — pure alias for run |
+| 1 | [`run`](../command/01_run.md) | Full | — | All 50 params apply; default command |
+| 5 | [`ask`](../command/05_ask.md) | Full | — | All 50 params apply; identical behavior — pure alias for run |
 
 ### Referenced Parameters
 
 | Parameter | Type | Default | Role in Group | Description |
 |-----------|------|---------|---------------|-------------|
 | [`--no-skip-permissions`](../param/005_no_skip_permissions.md) | bool | false | Injection suppressor | Disable automatic permission bypass |
-| [`--interactive`](../param/006_interactive.md) | bool | false | Mode selector | Interactive TTY passthrough when message given |
+| [`--interactive`](../param/006_interactive.md) | bool | false | Mode selector | Forces TTY passthrough, overriding all auto-print triggers |
 | [`--new-session`](../param/007_new_session.md) | bool | false | Session mode | Start fresh session (disable default continuation) |
 | [`--dir`](../param/008_dir.md) | [`DirectoryPath`](../type/02_directory_path.md) | cwd | Working directory | Working directory for subprocess (alias: `--to`) |
 | [`--subdir`](../param/028_subdir.md) | string | `.` | Named workspace | Named subdirectory appended to `--dir` (`/-NAME`); `.` = identity |
-| [`--max-tokens`](../param/009_max_tokens.md) | [`TokenLimit`](../type/03_token_limit.md) | 200000 | Token cap | Max output tokens |
+| [`--max-tokens`](../param/009_max_tokens.md) | [`TokenLimit`](../type/03_token_limit.md) | 128000 | Token cap | Max output tokens |
 | [`--session-dir`](../param/010_session_dir.md) | [`DirectoryPath`](../type/02_directory_path.md) | — | Session storage | Session storage directory |
 | [`--dry-run`](../param/011_dry_run.md) | bool | false | Execution gate | Preview without executing |
 | [`--quiet`](../param/074_quiet.md) | bool | false | Diagnostic suppressor | Suppress non-fatal runner diagnostics |
@@ -65,7 +65,11 @@ clr --trace "Fix bug" --dir /project
 | [`--output-file`](../param/029_output_file.md) | string | — | Output sink | Write captured stdout to a file (tee behavior) |
 | [`--expect`](../param/030_expect.md) | string | — | Output validator | Pipe-separated enum values; stdout must match one after trim+lowercase |
 | [`--expect-strategy`](../param/031_expect_strategy.md) | enum | `fail` | Mismatch handler | Mismatch handling: exit 3, retry N times, or output fallback value |
-| [`--max-sessions`](../param/033_max_sessions.md) | u32 | 6 | Concurrency gate | Max concurrent non-interactive Claude Code sessions before blocking; 0 = unlimited; interactive exempt |
+| [`--max-sessions`](../param/033_max_sessions.md) | u32 | 8 | Concurrency gate | Max concurrent non-interactive Claude Code sessions before blocking; 0 = unlimited; interactive exempt; also applies to `isolated` (3-tier: CLI flag + `"max-sessions"` JSON key + env var; no config-file tier) |
+| [`--gate-poll-secs`](../param/082_gate_poll_secs.md) | u64 | 30 | Concurrency gate tuning | Poll interval (seconds) between gate attempts; `run`/`ask` only — `isolated` stays env-var-only |
+| [`--gate-max-attempts`](../param/083_gate_max_attempts.md) | u32 | 1000 | Concurrency gate tuning | Attempt limit before gate exhaustion; `run`/`ask` only — `isolated` stays env-var-only |
+| [`--gate-stale-secs`](../param/084_gate_stale_secs.md) | u64 | unset | Concurrency gate tuning | Staleness threshold for reclaiming a stalled slot; `run`/`ask` only — `isolated` stays env-var-only |
+| [`CLR_REMAINING_TIMEOUT_SECS`](../param/085_gate_remaining_timeout_secs.md) | u64 | absent | Concurrency gate budget | Clamps effective gate attempt count to remaining external timeout budget; env-var-only (no CLI flag); set by job runner before spawning `clr` |
 | [`--retry-on-transient`](../param/034_retry_on_transient.md) | u8 | auto | Retry (Tier 2) | Transient class retry count; effective default = 2 via fallback |
 | [`--transient-delay`](../param/035_transient_delay.md) | u32 | auto | Retry delay (Tier 2) | Transient class delay; effective default = 30 via fallback |
 | [`--timeout`](../param/036_timeout.md) | u32 | `0` | Execution watchdog | Seconds before watchdog kills subprocess; 0 = unlimited (run/ask only) |

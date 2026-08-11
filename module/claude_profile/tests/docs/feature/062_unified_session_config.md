@@ -141,7 +141,7 @@ Feature doc: [docs/feature/062_unified_session_config.md](../../docs/feature/062
 - **Given:** `settings.json` has no `effortLevel` key before rotation; winner has Sonnet left >= 10%.
 - **When:** `.usage rotate::1` executed.
 - **Then:** After switch, `settings.json` contains `"effortLevel": "high"` — written by `apply_model_override()` Sonnet branch (unconditional write); no carry-forward call.
-- **Source fn:** `api.rs` rotation dispatcher + `apply_model_override` | AC-07 ✅
+- **Source fn:** `api.rs` rotation dispatcher + `apply_model_override` (in `src/usage/api_switch.rs`, not `api.rs`) | AC-07 ✅
 
 ---
 
@@ -150,7 +150,7 @@ Feature doc: [docs/feature/062_unified_session_config.md](../../docs/feature/062
 - **Given:** Temp dir as `~/.claude/`; no `settings.json` present; quota data with Sonnet left >= 10%.
 - **When:** `apply_model_override()` is called.
 - **Then:** `settings.json` created; contains `"effortLevel": "high"`. Written by the Sonnet branch unconditional write (TSK-335); the BUG-312 init guard is unreachable but retained.
-- **Source fn:** `src/usage/api.rs` (`apply_model_override`) | Fix BUG-312, AC-07 ✅
+- **Source fn:** `src/usage/api_switch.rs` (`apply_model_override`) — corrected file path (was `src/usage/api.rs`) | Fix BUG-312, AC-07 ✅
 
 ---
 
@@ -159,7 +159,7 @@ Feature doc: [docs/feature/062_unified_session_config.md](../../docs/feature/062
 - **Given:** `settings.json` pre-seeded with `"effortLevel": "high"`; quota data with Sonnet left >= 10%.
 - **When:** `apply_model_override()` is called.
 - **Then:** `settings.json` contains `"effortLevel": "high"` — written by unconditional Sonnet branch (TSK-335). Value matches pre-seeded value; mechanism has changed from preservation to model-derived overwrite.
-- **Source fn:** `src/usage/api.rs` (`apply_model_override`) | AC-07, AC-11 ✅
+- **Source fn:** `src/usage/api_switch.rs` (`apply_model_override`) — corrected file path (was `src/usage/api.rs`) | AC-07, AC-11 ✅
 
 ---
 
@@ -195,7 +195,7 @@ Feature doc: [docs/feature/062_unified_session_config.md](../../docs/feature/062
 - **Given:** `settings.json` pre-seeded with `"model": "sonnet"` (no `effortLevel`); quota data with Sonnet left >= 10% — `override_session_model_to_sonnet()` returns `false` (model unchanged).
 - **When:** `apply_model_override()` is called.
 - **Then:** `settings.json` contains `"effortLevel": "high"` — effort written unconditionally even though `overrode = false`.
-- **Source fn:** `src/usage/api.rs` (`apply_model_override`) | AC-07, AC-11 ✅
+- **Source fn:** `src/usage/api_switch.rs` (`apply_model_override`) — corrected file path (was `src/usage/api.rs`) | AC-07, AC-11 ✅
 
 ---
 

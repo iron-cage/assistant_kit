@@ -65,8 +65,9 @@ fn it01_config_show_all_source_labels()
   );
   assert_exit( &out, 0 );
   let text = stdout( &out );
-  // show-all must include resolved keys with source annotations
-  assert!( text.contains( "(user)" ) || text.contains( "(default)" ),
+  // show-all is a data_fmt table; source now appears as its own Source column value
+  // (bare "user"/"default", not the old inline "(user)"/"(default)" annotation).
+  assert!( text.contains( "user" ) || text.contains( "default" ),
     "show-all must include source annotations: {text}" );
   assert!( text.contains( "theme" ), "show-all must include theme key: {text}" );
 }
@@ -231,8 +232,9 @@ fn it08_config_arbitrary_key_accepted()
 // IT-9: key::model with no env/config → shows catalog default; exit 0
 //
 // Runs the subprocess with current_dir set to the isolated temp dir to prevent
-// the project config walk from finding /workspace/.claude/settings.json (the
-// ~/.claude mount in the container).
+// the project config walk from climbing to the container-mounted real
+// ~/.claude/settings.json (the workspace mirrors at its real host path, so
+// $HOME is an ancestor of any in-workspace cwd).
 #[ test ]
 fn it09_config_catalog_default_model()
 {
@@ -381,7 +383,7 @@ fn it17_config_dry_out_of_range_exits_1()
 //
 // Uses a separate cwd_dir (not HOME) so the project config walk does not find
 // HOME/.claude/settings.json (which would mis-classify user config as project config).
-// Also avoids the container-mounted /workspace/.claude/settings.json.
+// (In-container, HOME/.claude is the host's real ~/.claude bind-mount.)
 #[ test ]
 fn ft1_006_config_show_all_text()
 {
@@ -401,12 +403,14 @@ fn ft1_006_config_show_all_text()
 
   assert_exit( &out, 0 );
   let text = stdout( &out );
-  // Catalog default for model must appear with (default) annotation.
+  // data_fmt table: source is its own Source column value (bare "default"/"user",
+  // not the old inline "(default)"/"(user)" annotation).
+  // Catalog default for model must appear with a default source.
   assert!( text.contains( "claude-sonnet-5" ), "must include catalog default for model: {text}" );
-  assert!( text.contains( "(default)" ), "must include (default) annotation: {text}" );
-  // User setting for theme must appear with (user) annotation.
+  assert!( text.contains( "default" ), "must include default source: {text}" );
+  // User setting for theme must appear with a user source.
   assert!( text.contains( "theme" ), "must include theme: {text}" );
-  assert!( text.contains( "(user)" ), "must include (user) annotation: {text}" );
+  assert!( text.contains( "user" ), "must include user source: {text}" );
 }
 
 // ─── FT-02: AC-02 get shows source layer ─────────────────────────────────────
@@ -630,8 +634,8 @@ fn ft11_006_config_arbitrary_key_accepted()
 
 // FT-12: catalog default for model is claude-sonnet-5 when no env or config; exit 0
 //
-// Uses an isolated cwd to prevent the project config walk from finding the
-// container-mounted /workspace/.claude/settings.json.
+// Uses an isolated cwd to prevent the project config walk from climbing to the
+// container-mounted real ~/.claude/settings.json.
 #[ test ]
 fn ft12_006_config_catalog_default_model()
 {
@@ -878,4 +882,65 @@ fn tc06_007_config_key_empty_exits_1()
     &[ ( "HOME", "/tmp" ) ],
   );
   assert_exit( &out, 1 );
+}
+
+// ─── TSK-462 T04/T06/T08: data_fmt table headers, env source, no trailing whitespace ─
+
+// T04: show-all → data_fmt table with Key/Value/Source headers; ≥1 row
+#[ test ]
+fn t04_config_show_all_table_headers()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_settings( dir.path(), &[ ( "theme", "dark" ) ] );
+
+  let out = run_clv_with_env(
+    &[ ".config" ],
+    &[ ( "HOME", home ), ( "CLAUDE_MODEL", "" ) ],
+  );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "Key" ),    "table must have a Key column: {text}" );
+  assert!( text.contains( "Source" ), "table must have a Source column: {text}" );
+  assert!( text.lines().count() >= 2, "expected header + ≥1 row, got:\n{text}" );
+}
+
+// T06: show-all with CLAUDE_MODEL set → model row's Source column shows "env"
+#[ test ]
+fn t06_config_show_all_env_override_source()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  let out = run_clv_with_env(
+    &[ ".config" ],
+    &[ ( "HOME", home ), ( "CLAUDE_MODEL", "claude-opus-4-8" ) ],
+  );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  let model_line = text.lines().find( |l| l.split_whitespace().next() == Some( "model" ) );
+  assert!( model_line.is_some(), "show-all must include a model row: {text}" );
+  let model_line = model_line.unwrap();
+  assert!( model_line.contains( "claude-opus-4-8" ), "model row must show env value: {model_line}" );
+  assert!( model_line.contains( "env" ), "model row's Source column must show env: {model_line}" );
+}
+
+// T08: show-all → no line has trailing whitespace (data_fmt invariant)
+#[ test ]
+fn t08_config_show_all_no_trailing_whitespace()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_settings( dir.path(), &[ ( "theme", "dark" ) ] );
+
+  let out = run_clv_with_env(
+    &[ ".config" ],
+    &[ ( "HOME", home ), ( "CLAUDE_MODEL", "" ) ],
+  );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  for line in text.lines()
+  {
+    assert_eq!( line, line.trim_end(), "line must not have trailing whitespace: {line:?}" );
+  }
 }

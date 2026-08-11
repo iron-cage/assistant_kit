@@ -1,0 +1,46 @@
+meta:
+  description: Cross-reference graph for all NNN-identified doc instances in claude_patch
+  node_count: 3
+  edge_count: 4
+  component_count: 1
+  generated: 2026-07-28
+
+nodes:
+  - id: feature/001
+    file: feature/001_patch_cli.md
+    label: Patch CLI
+    entity: feature
+  - id: feature/002
+    file: feature/002_param_cli.md
+    label: Param CLI
+    entity: feature
+  - id: invariant/001
+    file: invariant/001_no_param_mutation.md
+    label: No Param Mutation
+    entity: invariant
+
+edges:
+  - from: feature/001
+    to: feature/002
+    via: cross_references
+  - from: feature/002
+    to: feature/001
+    via: cross_references
+  - from: feature/002
+    to: invariant/001
+    via: cross_references
+  - from: invariant/001
+    to: feature/002
+    via: cross_references
+
+components:
+  - id: 1
+    label: Patch CLI + Param CLI + No Param Mutation
+    size: 3
+    isolated: false
+    nodes:
+      - feature/001
+      - feature/002
+      - invariant/001
+
+dangling_refs: []

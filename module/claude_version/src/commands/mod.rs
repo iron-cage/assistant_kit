@@ -28,16 +28,15 @@ mod status;
 mod version;
 
 pub use config::config_routine;
-pub use history::version_history_routine;
 pub use params::params_routine;
 pub use paths::paths_routine;
 pub use runtime_files::runtime_files_routine;
-pub use process::{ processes_kill_routine, processes_routine };
+pub use process::{ ps_kill_routine, ps_routine };
 pub use settings::{ settings_get_routine, settings_set_routine, settings_show_routine };
 pub use status::status_routine;
 pub use version::{
   version_guard_routine, version_install_routine,
-  version_list_routine, version_show_routine,
+  version_list_routine, version_mark_routine, version_show_routine,
 };
 
 use unilang::data::{ ErrorCode, ErrorData };
@@ -73,6 +72,13 @@ fn is_dry( cmd : &VerifiedCommand ) -> bool
 fn is_force( cmd : &VerifiedCommand ) -> bool
 {
   matches!( cmd.arguments.get( "force" ), Some( Value::Boolean( true ) ) )
+}
+
+/// Return `true` when the command has `record_only::1`.
+#[ inline ]
+fn is_record_only( cmd : &VerifiedCommand ) -> bool
+{
+  matches!( cmd.arguments.get( "record_only" ), Some( Value::Boolean( true ) ) )
 }
 
 /// Validate HOME is non-empty and return a `ClaudePaths`.

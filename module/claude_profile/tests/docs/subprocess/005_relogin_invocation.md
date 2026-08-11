@@ -25,6 +25,12 @@ and the TTY-inherited mechanism distinct from `run_isolated()`.
   the browser OAuth flow to complete interactively. Each invocation is non-idempotent: it
   opens a new browser session. The TTY-inherited mechanism is structurally different from
   `run_isolated()` (which pipes stdout/stderr to an isolated temp HOME).
+- **Not automated:** The cited fn is a zero-assertion guard-and-return stub — it checks
+  `live_active_token()` and returns immediately when no live token is present (always true in
+  CI), never driving an OAuth flow and never asserting anything. Its own comment states it
+  "exists for spec traceability... and is inherently manual-only." This AC is manually
+  verified, not automated-test-verified — an interactive OAuth browser flow cannot be driven
+  programmatically.
 - **Source fn:** `relogin_bv1_lim_it_non_idempotent_oauth_flow` in
   `tests/cli/command_verb_test.rs`
 - **Source:** [subprocess/005_relogin_invocation.md](../../../docs/subprocess/005_relogin_invocation.md)
@@ -39,6 +45,11 @@ and the TTY-inherited mechanism distinct from `run_isolated()`.
   store. The account's `{name}.json` metadata (billing type, org identity, renewal fields) is
   preserved and updated in-place — the account is not deleted and recreated. The previously-
   active account's credentials are restored to `~/.claude/.credentials.json` after relogin.
+- **Not automated:** The cited fn is a zero-assertion guard-and-return stub — it checks
+  `live_active_token()` and returns immediately when no live token is present (always true in
+  CI), never driving an OAuth flow and never asserting anything. Its own comment states it is
+  "the same as BV-1: OAuth interactivity prevents full automation... inherently manual-only."
+  This AC is manually verified, not automated-test-verified.
 - **Source fn:** `relogin_bv2_lim_it_updates_in_place_state_preserved` in
   `tests/cli/command_verb_test.rs`
 - **Source:** [subprocess/005_relogin_invocation.md](../../../docs/subprocess/005_relogin_invocation.md)

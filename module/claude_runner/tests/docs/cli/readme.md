@@ -16,6 +16,7 @@ Test case planning for `clr` CLI. Each file contains a Test Case Index with cove
 | command/ | Per-command integration test case indices |
 | param/ | Per-parameter edge case indices |
 | param_group/ | Per-parameter-group interaction test indices |
+| command_group/ | Per-command-group structural-equivalence test indices |
 | type/ | Per-type validation test indices |
 | env_param/ | Per-env-parameter edge case indices |
 | parity/ | Per-parity-matrix cross-command test case indices |
@@ -29,6 +30,7 @@ Test case planning for `clr` CLI. Each file contains a Test Case Index with cove
 | Commands | 8 | ≥8 IT each |
 | Parameters | 76 (75 active + 1 deprecated) | ≥6 EC each |
 | Parameter groups | 7 | ≥4 CC each |
+| Command groups | 1 | 2 CG (indexed from `command/05_ask.md`) |
 | Types | 14 | ≥4 TC each |
 | Env params | 2 | ≥6 EC each |
 | Parity | 2 | ≥5 PC each |
@@ -131,6 +133,9 @@ Test case planning for `clr` CLI. Each file contains a Test Case Index with cove
 - [Session Listing](param_group/05_session_listing.md)
 - [Running Commands](param_group/06_running_commands.md)
 - [Tool Listing](param_group/07_tool_listing.md)
+
+#### Command Groups
+- [run / ask](command_group/01_run_ask.md)
 
 #### Types
 - [`MessageText`](type/01_message_text.md)

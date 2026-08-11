@@ -4,7 +4,7 @@
 
 - **Purpose**: Document test case plans for the `clj` CLI doc entity (`docs/cli/`).
 - **Responsibility**: Index of per-doc-type test case planning directories mirroring `docs/cli/`.
-- **In Scope**: User story, command, param, param_group, and type test specs mirroring all 5 `docs/cli/` doc-type directories.
+- **In Scope**: User story, command, param, param_group, command_group, and type test specs mirroring all `docs/cli/` doc-type directories.
 - **Out of Scope**: Automated test implementations (→ `tests/` in crate), spec documentation (→ `docs/cli/`).
 
 Test case planning for `clj` CLI. Each file contains a Test Case Index with coverage summary.
@@ -17,4 +17,5 @@ Test case planning for `clj` CLI. Each file contains a Test Case Index with cove
 | `command/` | Per-command IT- test specs (8 files) |
 | `param/` | Per-parameter EC- edge case test specs (28 files) |
 | `param_group/` | Per-group CC- interaction test specs (5 files) |
+| `command_group/` | Per-group structural-equivalence tests (0 files — 0 qualifying groups) |
 | `type/` | Per-type TC- validation test specs (11 files) |

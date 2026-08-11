@@ -1,27 +1,36 @@
 # Type: 1. `AccountName`
 
-**Purpose:** Identifies a credential profile in the account store using the account's email address as the unique key. Enforces email format to guarantee correct identification and safe file creation under the credential store.
+**Purpose:** Identifies a credential profile in the account store, keyed by name. For `backend: anthropic` accounts (the default), the name is the account's email address, guaranteeing unambiguous identification of the Claude account owner. For `backend: redirect` accounts (Feature 071) there is no Anthropic OAuth identity to match, so the email-shape requirement is dropped — only filesystem-safety is enforced.
 
-**Fundamental Type:** Newtype wrapping `String`
+**Fundamental Type:** `&str`/`String` — no dedicated wrapper type; validated in place by free functions, not constructed via a type-level `new()`.
 
 **Constants:**
 - No predefined constants — all valid names are user-defined
 
-**Constraints:**
+**Constraints (`backend: anthropic`, default — enforced by `validate_name()`):**
 - Non-empty (reject `""`)
 - Must contain `@` with non-empty local part and domain (valid email format)
 - Local part (before `@`) must not contain `/`, `\`, or `*` (path-unsafe chars rejected before any filesystem operation)
 - Maps to file `{credential_store}/{email}.credentials.json`
 
+**Constraints (`backend: redirect` — enforced by `validate_redirect_name()`):**
+- Non-empty (reject `""`)
+- Must not contain `/`, `\`, or `*` (path-unsafe chars rejected before any filesystem operation)
+- No email-shape requirement — an arbitrary label (e.g. `kimi`) is valid
+- Maps to file `{credential_store}/{name}.credentials.json`
+
 **Parsing:**
 
 ```
-pub fn new( s : &str ) -> Result< Self, String >
+pub fn validate_name( name : &str ) -> Result< (), std::io::Error >           // backend: anthropic
+pub fn validate_redirect_name( name : &str ) -> Result< (), std::io::Error >  // backend: redirect
 ```
 
+(`claude_profile_core::account`) — both return `Ok(())` on success and `Err(std::io::Error)` (kind `InvalidInput`) on rejection; there is no `Self` to construct.
+
 **Methods:**
-- `get() -> &str` — raw string accessor
-- `to_credential_path( credential_store : &Path ) -> PathBuf` — resolves `{credential_store}/{name}.credentials.json`
+- No accessor methods exist — a validated name is used directly as `&str`/`String`.
+- No `to_credential_path()` helper exists; every call site inlines `credential_store.join(format!("{name}.credentials.json"))` (e.g. `claude_profile_core/src/account.rs`).
 
 **Notes:**
 - `AccountName` is the post-resolution type — it always holds a validated email.

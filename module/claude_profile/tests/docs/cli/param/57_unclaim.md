@@ -16,6 +16,12 @@ All EC test cases in this file (EC-1 through EC-5) are **invalid** — the `uncl
 no longer exists on `.account.save` or on `.accounts`/`.usage`. The `owner::0` replacement path
 is covered by `63_owner.md` EC-10 through EC-16.
 
+The underlying `save()` primitive these cases exercise still lives in `claude_profile_core` and is
+still tested directly there (`tests/account_test.rs`) — EC-1, EC-2, EC-4, and EC-5's Source fn
+citations below are real, current functions, but they call `save()` directly rather than going
+through the (now-removed) CLI `unclaim::` parameter, so they don't prove CLI-level argument parsing
+or dispatch for a param that no longer exists.
+
 ### Superseded Test Case Index (DO NOT IMPLEMENT)
 
 | ID | Test Name | Category | Status |
@@ -34,7 +40,7 @@ is covered by `63_owner.md` EC-10 through EC-16.
 - **When:** `clp .account.save name::alice unclaim::1`
 - **Then:** Exits 0. `alice.json` contains `"owner": ""`. All enforcement gates disabled for `alice`.
 - **Exit:** 0
-- **Source fn:** `ec1_unclaim_writes_empty_owner`
+- **Source fn:** `ec1_unclaim_writes_empty_owner` (in `tests/account_test.rs`, `claude_profile_core` crate) — tests `save()` directly, not the removed CLI param
 - **Source:** [param/056_unclaim.md](../../../../docs/cli/param/056_unclaim.md)
 
 ---
@@ -45,7 +51,7 @@ is covered by `63_owner.md` EC-10 through EC-16.
 - **When:** `clp .account.save name::alice unclaim::1` (from any machine, regardless of current identity)
 - **Then:** Exits 0. `alice.json` now contains `"owner": ""`. Prior owner string is replaced.
 - **Exit:** 0
-- **Source fn:** `ec2_unclaim_overwrites_existing_owner`
+- **Source fn:** `ec2_unclaim_overwrites_existing_owner` (in `tests/account_test.rs`, `claude_profile_core` crate) — tests `save()` directly, not the removed CLI param
 - **Source:** [param/056_unclaim.md](../../../../docs/cli/param/056_unclaim.md)
 
 ---
@@ -56,7 +62,7 @@ is covered by `63_owner.md` EC-10 through EC-16.
 - **When:** `clp .account.save name::alice` (no `unclaim::` arg, or `unclaim::0`)
 - **Then:** Exits 0. `alice.json` contains `"owner": "testuser@testmachine"`. Enforcement gates active for other identities.
 - **Exit:** 0
-- **Source fn:** `ec3_no_unclaim_stamps_current_identity`
+- **Source fn:** `ec3_default_sets_owner_to_current_identity` (in `tests/account_test.rs`, `claude_profile_core` crate) — renamed from `ec3_no_unclaim_stamps_current_identity`; tests `save()` directly, not the removed CLI param
 - **Source:** [param/056_unclaim.md](../../../../docs/cli/param/056_unclaim.md)
 
 ---
@@ -67,7 +73,7 @@ is covered by `63_owner.md` EC-10 through EC-16.
 - **When:** `clp .account.save name::alice unclaim::1`
 - **Then:** Exits 0. `alice.json` retains `_renewal_at` via read-merge in `save()`. `owner` changes to `""`.
 - **Exit:** 0
-- **Source fn:** `ec4_unclaim_preserves_other_fields`
+- **Source fn:** `ec4_unclaim_preserves_other_fields` (in `tests/account_test.rs`, `claude_profile_core` crate) — tests `save()` directly, not the removed CLI param
 - **Source:** [param/056_unclaim.md](../../../../docs/cli/param/056_unclaim.md)
 
 ---
@@ -78,5 +84,5 @@ is covered by `63_owner.md` EC-10 through EC-16.
 - **When:** `clp .account.save name::alice unclaim::1 dry::1`
 - **Then:** Exits 0. Dry-run message printed. `alice.json` still contains `"owner": "alice@host1"` — unchanged. No credential or metadata files written.
 - **Exit:** 0
-- **Source fn:** `ec5_unclaim_dry_run_no_write`
+- **Source fn:** `ec5_unclaim_dry_run_no_write` (in `tests/account_test.rs`, `claude_profile_core` crate) — tests `save()` directly, not the removed CLI param
 - **Source:** [param/056_unclaim.md](../../../../docs/cli/param/056_unclaim.md)

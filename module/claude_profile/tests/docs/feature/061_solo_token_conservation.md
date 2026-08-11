@@ -17,15 +17,15 @@
 | FT-05 | AC-05 | Current account not owned — all accounts approximated; zero HTTP calls | ✅ `it259_solo_current_not_owned_no_http` |
 | FT-06 | AC-06 | No active marker — all accounts approximated; zero HTTP calls | ✅ `it260_solo_no_active_marker_all_approx` |
 | FT-07 | AC-07 | `solo::1 rotate::1` mutual exclusion — exits 1 before fetch | ✅ `it261_solo_rotate_mutual_exclusion_exit_1` |
-| FT-08 | AC-08 | `solo::1 live::1` allowed — loop runs, only current+owned fetched per cycle | ✅ `it262_solo_live_composition_allowed` |
+| FT-08 | AC-08 | `solo::1 live::1` allowed — loop runs; clean SIGINT exit (composition itself covered by FT-01/09/10/12) | ✅ `it262_solo_live_composition_allowed` |
 | FT-09 | AC-09 | `solo::1 refresh::1` allowed — refresh only for current+owned | ✅ `it263_solo_refresh_composition_allowed` |
 | FT-10 | AC-10 | `solo::1 touch::1` allowed — touch only for current+owned | ✅ `it264_solo_touch_composition_allowed` |
-| FT-11 | AC-11 | `solo::1 only_active::1` — fetch gate and display filter compose independently | ✅ `it265_solo_only_active_composition_allowed` |
+| FT-11 | AC-11 | `solo::1 only_active::1` — display filter (`is_active` marker) applies independent of fetch/solo status | ✅ `it265_solo_only_active_composition_allowed` |
 | FT-12 | AC-12 | `solo::1 trace::1` — trace lines show `solo-skip` for non-current accounts | ✅ `it266_solo_trace_shows_solo_skip` |
 
 ### Notes
 
-- FT-01, FT-04, FT-05, FT-06, FT-07, FT-08, FT-09, FT-10, FT-11, FT-12 are integration tests in `tests/cli/usage_test.rs`.
+- FT-01, FT-04, FT-05, FT-06, FT-07, FT-08, FT-09, FT-10, FT-11, FT-12 are integration tests in `tests/cli/usage_solo_test.rs` (corrected — `tests/cli/usage_test.rs` does not exist).
 - FT-02 is a unit test in `tests/usage/refresh_tests_b.rs` (solo gate isolation at the refresh site).
 - FT-03 is a unit test in `tests/usage/touch_tests_b.rs` (solo gate isolation at the touch site).
 - Parameter-level unit tests (`ec5_solo_and_rotate_mutual_exclusion`, `ec12_solo_rejects_integer_two`) in `src/usage/params.rs` complement FT-07 at the unit level.
@@ -35,11 +35,11 @@
 
 ### FT-01: Current+owned gets live fetch; non-current gets approximate_quota()
 
-- **Given:** Two owned accounts. Account A is `is_current && is_owned`. Account B is owned but not current. Both have `cache.history[]` entries.
+- **Given:** Two owned accounts. Account A is `is_current && is_owned` (live token match — no cache read). Account B is owned but not current, with a `cache.five_hour` snapshot (single-point cache, no `history[]` array in this fixture).
 - **When:** `clp .usage solo::1`
 - **Then:** Account A shows live quota data (HTTP fetch performed). Account B shows approximated data returned by `approximate_quota()` — no HTTP call to Account B. Both rows appear in the table.
 - **Exit:** 0
-- **Source fn:** `it258_solo_current_live_noncurrent_approx` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it258_solo_current_live_noncurrent_approx` (in `usage_solo_test.rs`)
 - **Source:** [061_solo_token_conservation.md AC-01](../../../docs/feature/061_solo_token_conservation.md)
 
 ---
@@ -57,10 +57,10 @@
 
 ### FT-03: Touch gate skips non-current under solo::1
 
-- **Given:** Account A is current+owned; Account B is owned but not current. Both have idle 5h windows. `solo=true`, `touch=true`.
-- **When:** `apply_touch()` is called with `solo=true` for Account B.
-- **Then:** The solo gate fires before G4. `touch_skip_reason()` returns `Some("solo-skip")` for Account B — the same reason string `apply_touch()`'s trace would emit. No touch subprocess is spawned for Account B. Returns `Ok(())`. Converted from gag-based trace capture to a direct oracle call.
-- **Exit:** Ok(())
+- **Given:** One owned, non-current account (`is_current=false`, `is_owned=true`) with an idle 5h window (`five_hour.resets_at=None`), built via `mk_aq_with_resets_at(None)`.
+- **When:** `touch_skip_reason(&aq, store.path(), true)` is called directly with `solo=true` — the same oracle `apply_touch()` consults internally, rather than driving `apply_touch()` itself end-to-end.
+- **Then:** Returns `Some("solo-skip")` — the same reason string `apply_touch()`'s trace would emit for this account. Converted from gag-based trace capture to a direct oracle call.
+- **Exit:** `Some("solo-skip")` (unit-level oracle call, not a CLI invocation)
 - **Source fn:** `ec8_solo_gate_skips_non_current_with_trace` (in `tests/usage/touch_tests_b.rs`)
 - **Source:** [061_solo_token_conservation.md AC-03](../../../docs/feature/061_solo_token_conservation.md)
 
@@ -72,7 +72,7 @@
 - **When:** `clp .usage solo::0`
 - **Then:** Exits 0. Both accounts show live quota data. Behavior identical to omitting `solo::`.
 - **Exit:** 0
-- **Source fn:** `it257_solo_default_off_exits_0` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it257_solo_default_off_exits_0` (in `usage_solo_test.rs`)
 - **Source:** [061_solo_token_conservation.md AC-04](../../../docs/feature/061_solo_token_conservation.md)
 
 ---
@@ -83,7 +83,7 @@
 - **When:** `clp .usage solo::1`
 - **Then:** Exits 0. No account passes `is_current && is_owned`. All rows show approximated data. Zero HTTP calls made.
 - **Exit:** 0
-- **Source fn:** `it259_solo_current_not_owned_no_http` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it259_solo_current_not_owned_no_http` (in `usage_solo_test.rs`)
 - **Source:** [061_solo_token_conservation.md AC-05](../../../docs/feature/061_solo_token_conservation.md)
 
 ---
@@ -94,7 +94,7 @@
 - **When:** `clp .usage solo::1`
 - **Then:** Exits 0. `is_current == false` for all accounts. All rows show approximated data. Zero HTTP calls.
 - **Exit:** 0
-- **Source fn:** `it260_solo_no_active_marker_all_approx` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it260_solo_no_active_marker_all_approx` (in `usage_solo_test.rs`)
 - **Source:** [061_solo_token_conservation.md AC-06](../../../docs/feature/061_solo_token_conservation.md)
 
 ---
@@ -105,18 +105,18 @@
 - **When:** `clp .usage solo::1 rotate::1`
 - **Then:** Exits 1. Error message references both `"solo"` and `"rotate"`. No HTTP calls made (exits before fetch).
 - **Exit:** 1
-- **Source fn:** `it261_solo_rotate_mutual_exclusion_exit_1` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it261_solo_rotate_mutual_exclusion_exit_1` (in `usage_solo_test.rs`)
 - **Source:** [061_solo_token_conservation.md AC-07](../../../docs/feature/061_solo_token_conservation.md)
 
 ---
 
 ### FT-08: solo::1 + live::1 — allowed composition
 
-- **Given:** Two owned accounts. Account A is current+owned.
-- **When:** `clp .usage solo::1 live::1 interval::30`
-- **Then:** Live monitor loop starts. Each cycle: Account A gets live HTTP fetch; Account B shows approximated data. Both rows appear each cycle.
+- **Given:** One owned account (current+owned), `jitter::0` for deterministic timing.
+- **When:** `clp .usage solo::1 live::1 interval::30 jitter::0`; SIGINT sent after 3s.
+- **Then:** `solo::1` and `live::1` are not mutually exclusive — the live monitor loop starts and runs normally; SIGINT triggers a clean exit with `"Monitor stopped."` in stdout. (Per-cycle composition — current+owned live-fetched, non-current approximated — is a single-account test here; the two-account composition claim itself is verified by FT-01, FT-09, FT-10, FT-12.)
 - **Exit:** 0 (after signal)
-- **Source fn:** `it262_solo_live_composition_allowed` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it262_solo_live_composition_allowed` (in `usage_solo_test.rs`)
 - **Source:** [061_solo_token_conservation.md AC-08](../../../docs/feature/061_solo_token_conservation.md)
 
 ---
@@ -127,7 +127,7 @@
 - **When:** `clp .usage solo::1 refresh::1 trace::1`
 - **Then:** Exits 0. Refresh solo gate fires for Bob — stderr contains `"solo-skip"` in a refresh trace line. Alice passes the solo gate; no subprocess fires (no 401 from HTTP).
 - **Exit:** 0
-- **Source fn:** `it263_solo_refresh_composition_allowed` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it263_solo_refresh_composition_allowed` (in `usage_solo_test.rs`)
 - **Source:** [061_solo_token_conservation.md AC-09](../../../docs/feature/061_solo_token_conservation.md)
 
 ---
@@ -138,18 +138,18 @@
 - **When:** `clp .usage solo::1 touch::1 trace::1`
 - **Then:** Exits 0. Touch solo gate fires for Bob — stderr contains `"solo-skip"` in a touch trace line. Alice passes the solo gate; no subprocess fires (no active idle window without real quota data).
 - **Exit:** 0
-- **Source fn:** `it264_solo_touch_composition_allowed` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it264_solo_touch_composition_allowed` (in `usage_solo_test.rs`)
 - **Source:** [061_solo_token_conservation.md AC-10](../../../docs/feature/061_solo_token_conservation.md)
 
 ---
 
 ### FT-11: Display filters independent of solo
 
-- **Given:** Two owned accounts. Account A is current+owned+active. Account B is owned but not current.
+- **Given:** Two owned accounts. Account A has the active marker set (`is_active` — a display-only flag written independently of `is_current`; this fixture sets up no live-token match, so Account A is not `is_current` here). Account B has no active marker.
 - **When:** `clp .usage solo::1 only_active::1`
-- **Then:** Exits 0. Only Account A's row appears (display filter). Account A has live data (solo allows). The two params compose independently — solo controls fetch, `only_active::` controls display.
+- **Then:** Exits 0. Only Account A's row appears — filtered by `only_active::` on the `is_active` marker, not on fetch/solo status. Account B is hidden. (This test isolates the display-filter side of the composition; it does not assert live-vs-approximated fetch status for either account — with no live-token setup, both accounts are solo-skipped internally regardless of `is_active`.)
 - **Exit:** 0
-- **Source fn:** `it265_solo_only_active_composition_allowed` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it265_solo_only_active_composition_allowed` (in `usage_solo_test.rs`)
 - **Source:** [061_solo_token_conservation.md AC-11](../../../docs/feature/061_solo_token_conservation.md)
 
 ---
@@ -160,5 +160,5 @@
 - **When:** `clp .usage solo::1 refresh::1 touch::1 trace::1`
 - **Then:** Stderr contains `solo-skip: approximated` in Bob's fetch trace line; `solo-skip` in Bob's refresh trace line; `solo-skip` in Bob's touch trace line. Alice's fetch trace shows normal live fetch (no `solo-skip`).
 - **Exit:** 0
-- **Source fn:** `it266_solo_trace_shows_solo_skip` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it266_solo_trace_shows_solo_skip` (in `usage_solo_test.rs`)
 - **Source:** [061_solo_token_conservation.md AC-12](../../../docs/feature/061_solo_token_conservation.md)

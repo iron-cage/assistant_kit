@@ -23,11 +23,11 @@ use super::format::{ five_hour_left, prefer_weekly, seven_day_left, renewal_secs
 #[ derive( Debug, PartialEq, Eq, PartialOrd, Ord ) ]
 pub enum StatusGroup
 {
-  /// Both windows available: 5h > 15%, 7d > 5%.
+  /// Both windows available: 5h > 15%, 7d > 3%.
   Green,
-  /// 5h exhausted (≤ 15%), 7d still available (> 5%).
+  /// 5h exhausted (≤ 15%), 7d still available (> 3%).
   HExhausted,
-  /// 7d exhausted (≤ 5%); includes both-exhausted (Fix BUG-321).
+  /// 7d exhausted (≤ 3%); includes both-exhausted (Fix BUG-321).
   WeeklyExhausted,
   /// Error result or cancelled subscription (`billing_type="none"`).
   Red,
@@ -59,7 +59,7 @@ pub fn status_group_of( aq : &AccountQuota ) -> StatusGroup
   {
     ( true,  true  ) => StatusGroup::Green,
     ( false, true  ) => StatusGroup::HExhausted,
-    // Fix(BUG-321): both-exhausted (5h ≤ 15% AND 7d ≤ 5%) → G3 WeeklyExhausted, not G4 Red.
+    // Fix(BUG-321): both-exhausted (5h ≤ 15% AND 7d ≤ 3%) → G3 WeeklyExhausted, not G4 Red.
     // 7d is the binding constraint: when 7d resets, 5h will have long since reset.
     // Recovery is identical to single-weekly-exhausted — no separate group needed.
     // Dead classification (result=Err / billing_type="none") fires BEFORE this match.
@@ -143,9 +143,15 @@ pub fn sort_indices(
           .and_then( |p| p.resets_at.as_deref() )
           .and_then( claude_quota::iso_to_unix_secs )
           .map_or( u64::MAX, |t| t.saturating_sub( now_secs ) );
+        // Fix(BUG-341): read the top-level org_created_at field, not the account-gated path.
+        // Root cause: aq.account is None for cache-refreshed accounts on 3 of 4 fetch branches
+        //   (docs/feature/033_quota_cache.md), silently dropping the estimate to u64::MAX even
+        //   when the top-level AccountQuota.org_created_at (BUG-327/TSK-368) carries the data.
+        // Pitfall: render.rs's 7 call sites already read aq.org_created_at.as_deref() directly —
+        //   this file was the last holdout of the stale gated pattern.
         let sub = renewal_secs(
           aq.renewal_at.as_deref(),
-          aq.account.as_ref().map( |a| a.org_created_at.as_str() ),
+          aq.org_created_at.as_deref(),
           now_secs,
         ).map_or( u64::MAX, |( s, _ )| s );
         d7.min( sub )
@@ -179,9 +185,15 @@ pub fn sort_indices(
       let renews_secs_of = |i : usize| -> u64
       {
         let aq = &accounts[ i ];
+        // Fix(BUG-341): read the top-level org_created_at field, not the account-gated path.
+        // Root cause: aq.account is None for cache-refreshed accounts on 3 of 4 fetch branches
+        //   (docs/feature/033_quota_cache.md), silently dropping the estimate to u64::MAX even
+        //   when the top-level AccountQuota.org_created_at (BUG-327/TSK-368) carries the data.
+        // Pitfall: render.rs's 7 call sites already read aq.org_created_at.as_deref() directly —
+        //   this file was the last holdout of the stale gated pattern.
         renewal_secs(
           aq.renewal_at.as_deref(),
-          aq.account.as_ref().map( |a| a.org_created_at.as_str() ),
+          aq.org_created_at.as_deref(),
           now_secs,
         ).map_or( u64::MAX, |( s, _ )| s )
       };

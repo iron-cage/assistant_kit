@@ -2,7 +2,7 @@
 
 Formal specification of co-dependencies, mutual exclusions, and cascading effects between clp parameters.
 
-### All Interactions (12 total)
+### All Interactions (13 total)
 
 | # | Interaction | Parameters | Effect |
 |---|-------------|------------|--------|
@@ -18,6 +18,7 @@ Formal specification of co-dependencies, mutual exclusions, and cascading effect
 | 10 | `imodel::` and `effort::` do not affect `format::json` output | `imodel::`, `effort::`, `format::` | Subprocess model and effort control only subprocess invocations; JSON output structure is unchanged |
 | 11 | `imodel::keep` + `effort::auto` injects no `--effort` flag | `imodel::`, `effort::` | When `imodel::keep`, no model is known at dispatch time; `effort::auto` resolves to no `--effort` flag to avoid incompatible model/effort combinations |
 | 12 | `solo::1` is incompatible with `rotate::1` | `solo::`, `rotate::` | Exits 1 before any fetch — rotation requires live data from candidates but solo prevents live-fetching them |
+| 13 | `name::` is the sole source of the assignee-target lookup value | `name::`, `assignee::` | The "account not found" error on `assignee::` assign always names `name::` as the source, never `assignee::`, even when both parameters are present on the same command line |
 
 ---
 
@@ -142,7 +143,7 @@ clp .usage sort::renew desc::1
 
 **Effect:** `prefer::` determines which weekly quota column is used by the `sort::renew` within-group tiebreak and the footer recommendation eligibility gate. `prefer::any` (default) uses `min(7d Left, 7d(Son))`; `prefer::opus` uses `7d Left`; `prefer::sonnet` uses `7d(Son)`.
 
-**`prefer::` does NOT affect group membership.** The four-group status partition always uses raw `7d Left` for the weekly boundary (`7d Left > 5%` for Green/h-exhausted vs weekly-exhausted/Dead). An account's status group is determined by `5h Left` and `7d Left` columns only — not by `prefer_weekly`. See [AC-12](../feature/020_usage_sort_strategies.md#acceptance-criteria).
+**`prefer::` does NOT affect group membership.** The four-group status partition always uses raw `7d Left` for the weekly boundary (`7d Left > 3%` for Green/h-exhausted vs weekly-exhausted/Dead). An account's status group is determined by `5h Left` and `7d Left` columns only — not by `prefer_weekly`. See [AC-12](../feature/020_usage_sort_strategies.md#acceptance-criteria).
 
 **Affected heuristics:**
 - `sort::renew` tiebreak: lowest `weekly(prefer)` ascending — within a group, among accounts with the same renewal event time, the account with the lower prefer-selected weekly quota ranks first
@@ -314,4 +315,28 @@ clp .usage solo::1
 # Valid: rotation without solo
 clp .usage rotate::1
 # ...table + switch to recommended account...
+```
+
+---
+
+### Interaction :: 13. `name::` is the sole source of the assignee-target lookup value
+
+**Parameters:** [`name::`](param/001_name.md), [`assignee::`](param/063_assignee.md)
+
+**Effect:** When assigning via `assignee::USER@MACHINE name::X`, the credential-store existence check looks up `X` (`name::`'s resolved value) exclusively — `assignee::`'s own `USER@MACHINE` value is never used as a lookup key, only as the marker filename's `{machine}_{user}` components. If `X` is not found, the error names `name::` explicitly (`account 'X' (from name::) not found in credential store`) so the two parameters' values are never confused when both are present on the same command line (BUG-342 fix).
+
+**Rationale:** `assignee::` and `name::` serve different roles — `assignee::` identifies *which machine/user* the marker targets, `name::` identifies *which account* to assign. Both are `USER@...`-shaped strings, so a bare "not found" message naming only the failing value, with no parameter label, is ambiguous about which of the two the message actually describes. Naming the source parameter removes that ambiguity without changing which value is actually looked up.
+
+**Commands affected:** [`.accounts`](command/001_account.md#command-3-accounts), [`.usage`](command/006_usage.md#command-9-usage)
+
+**Examples:**
+
+```bash
+# name::ghost@example.com is not found — error names name:: explicitly
+clp .accounts assignee::user1@w003 name::ghost@example.com
+# error: account 'ghost@example.com' (from name::) not found in credential store
+
+# Same disambiguation on the .usage duplicate call site (api_dispatch.rs)
+clp .usage assignee::user1@w003 name::ghost@example.com
+# error: account 'ghost@example.com' (from name::) not found in credential store
 ```

@@ -2,6 +2,8 @@
 //!
 //! Tests for exporting sessions to markdown, JSON, and text formats.
 #![ cfg( unix ) ]
+// `core` has no `io` module — `Cursor`'s std::io::{Read,Write} impls require std; no core equivalent exists.
+#![ allow( clippy::std_instead_of_core ) ]
 
 use claude_storage_core::{ Storage, ExportFormat, export_session };
 use std::io::Cursor;

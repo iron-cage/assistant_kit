@@ -4,7 +4,7 @@
 //!
 //! | Test Case | Aspect | Input | Expected Output | Status |
 //! |-----------|--------|-------|-----------------|--------|
-//! | `default_token_limit_200k_bug_token_limit` | Bug: Default token limit | `ClaudeCommand::new()` | `CLAUDE_CODE_MAX_OUTPUT_TOKENS="200000"` | ✅ |
+//! | `default_token_limit_128k_bug_token_limit` | Bug: Default token limit | `ClaudeCommand::new()` | `CLAUDE_CODE_MAX_OUTPUT_TOKENS="128000"` | ✅ |
 //! | `token_limit_zero_edge_case` | Boundary: Zero | `with_max_output_tokens(0)` | `CLAUDE_CODE_MAX_OUTPUT_TOKENS="0"` | ✅ |
 //! | `token_limit_one_minimum` | Boundary: Minimum | `with_max_output_tokens(1)` | `CLAUDE_CODE_MAX_OUTPUT_TOKENS="1"` | ✅ |
 //! | `token_limit_u32_max_boundary` | Boundary: Maximum | `with_max_output_tokens(u32::MAX)` | `CLAUDE_CODE_MAX_OUTPUT_TOKENS="4294967295"` | ✅ |
@@ -35,9 +35,21 @@
 //! **Fix:** Updated `ClaudeCommand::new()` to set `max_output_tokens: Some(200_000)` matching
 //! specification (claude_runner_core/src/command.rs:52-57). Added explicit documentation comment.
 //!
-//! **Prevention:** Test `default_token_limit_200k_bug_token_limit` validates default by inspecting
+//! **Prevention:** Test `default_token_limit_128k_bug_token_limit` validates default by inspecting
 //! environment variable without explicit setter call. Always verify defaults match specification
 //! when refactoring APIs. Test implicit contracts (defaults, initial state) explicitly.
+//!
+//! ## BUG-429
+//!
+//! **Root Cause:** The `200_000` value restored by the fix above was itself never checked against
+//! any model's real output-token ceiling — it exceeds every current model's sync max-output (128K on
+//! Sonnet 5/Opus 4.8/Fable 5). See `contract/claude_code/docs/model/` and the BUG-429 report.
+//!
+//! **Fix:** Corrected `max_output_tokens: Some(200_000)` to `Some(128_000)`, matching the current-tier
+//! ceiling — the highest value any model `clr` targets can actually honor in sync use.
+//!
+//! **Prevention:** When restoring or changing a default that represents a real external capability
+//! ceiling, check it against the authoritative capability source, not just against its own prior value.
 
 use claude_runner_core::ClaudeCommand;
 
@@ -73,12 +85,19 @@ use claude_runner_core::ClaudeCommand;
 /// Always verify defaults match specification when refactoring APIs. Dont assume
 /// default values carry over during migrations. Test implicit contracts (defaults,
 /// initial state) explicitly, not just explicit parameter passing.
+///
+/// ## BUG-429 Update
+///
+/// The 200K value this test originally validated was itself corrected to 128K —
+/// 200K exceeded every current model's real max-output ceiling (128K on Sonnet 5/
+/// Opus 4.8/Fable 5; see `contract/claude_code/docs/model/`). This test now validates
+/// the corrected 128K default.
 // test_kind: bug_reproducer(issue-token-limit-default)
 #[ test ]
-fn default_token_limit_200k_bug_token_limit()
+fn default_token_limit_128k_bug_token_limit()
 {
-  // Verify: ClaudeCommand::new() sets 200K tokens by default
-  // This is the BUG FIX - was 32K before migration
+  // Verify: ClaudeCommand::new() sets 128K tokens by default
+  // Fix(BUG-429): was 200K, which exceeded every current model's real output ceiling
 
   let cmd = ClaudeCommand::new();
 
@@ -89,7 +108,7 @@ fn default_token_limit_200k_bug_token_limit()
     .find( | ( key, _val ) | key == &"CLAUDE_CODE_MAX_OUTPUT_TOKENS" )
     .and_then( | ( _key, val ) | val.and_then( | v | v.to_str() ) );
 
-  assert_eq!( env_value, Some( "200000" ), "Default token limit should be 200K" );
+  assert_eq!( env_value, Some( "128000" ), "Default token limit should be 128K" );
 }
 
 /// Validates that token limit can be set to zero without panic.

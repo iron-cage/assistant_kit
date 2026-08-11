@@ -122,6 +122,8 @@ fn analyze_project( storage : &Storage, project_id : &str ) -> Result< () >
   println!( "=================================\n" );
 
   let projects = storage.list_projects()?;
+  // core::io::ErrorKind requires the unstable `core_io` feature (rust-lang/rust#154046) — not usable on stable.
+  #[ allow( clippy::std_instead_of_core ) ]
   let project = projects.iter()
     .find( | p |
     {

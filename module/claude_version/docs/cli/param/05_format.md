@@ -26,14 +26,13 @@ clv.settings.show format::text
 | 3 | [`.version.install`](../command/version.md#command-4-versioninstall) | text | |
 | 4 | [`.version.guard`](../command/version.md#command-5-versionguard) | text | |
 | 5 | [`.version.list`](../command/version.md#command-6-versionlist) | text | |
-| 6 | [`.processes`](../command/processes.md#command-7-processes) | text | |
-| 7 | [`.processes.kill`](../command/processes.md#command-8-processeskill) | text | |
+| 6 | [`.ps`](../command/ps.md#command-7-ps) | text | |
+| 7 | [`.ps.kill`](../command/ps.md#command-8-pskill) | text | |
 | 8 | [`.settings.show`](../command/settings.md#command-9-settingsshow) | text | |
 | 9 | [`.settings.get`](../command/settings.md#command-10-settingsget) | text | |
-| 10 | [`.version.history`](../command/version.md#command-12-versionhistory) | text | |
-| 11 | [`.config`](../command/config.md#command-13-config) | text | |
-| 12 | [`.params`](../command/params.md#command-14-params) | text | |
-| 13 | [`.paths`](../command/paths.md#command-16-paths) | text | |
+| 10 | [`.config`](../command/config.md#command-13-config) | text | |
+| 11 | [`.params`](../command/params.md#command-14-params) | text | |
+| 12 | [`.version.paths`](../command/version.md#command-16-versionpaths) | text | |
 
 ### Referenced Parameter Groups
 

@@ -5,7 +5,7 @@
 - **Purpose**: Reference for the `.config` clv command.
 - **Responsibility**: Command syntax, parameters, exit codes, examples, and cross-references for `.config`.
 - **In Scope**: `.config` (show-all / get / set / unset modes).
-- **Out of Scope**: Deprecated `.settings.*` commands (→ [settings.md](settings.md)), version commands (→ [version.md](version.md)), process commands (→ [processes.md](processes.md)).
+- **Out of Scope**: Deprecated `.settings.*` commands (→ [settings.md](settings.md)), version commands (→ [version.md](version.md)), process commands (→ [ps.md](ps.md)).
 
 ---
 
@@ -108,6 +108,10 @@ clv.config key::theme unset::1
 | 5 | [`v::`](../param/04_v.md) |
 | 6 | [`dry::`](../param/02_dry.md) |
 | 7 | [`unset::`](../param/12_unset.md) |
+
+### Referenced Command Group
+
+Evaluated against `.settings.show`/`.settings.get`/`.settings.set` under the strict [command_group](../command_group/readme.md) identity test (same routine function, same parameter set) — does not qualify. `config_routine()` is self-contained and shares no routine with `settings_show_routine()`/`settings_get_routine()`/`settings_set_routine()`; parameter sets also differ (`.config` adds `scope::`/`unset::` with no equivalent on the `.settings.*` side). "Deprecated predecessor" below is a product-history relationship, not a shared-dispatch one — see [`command_group/readme.md`](../command_group/readme.md) Evaluated, Not Qualifying for the full analysis.
 
 ### Related Commands
 

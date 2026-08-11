@@ -80,7 +80,10 @@ fn runner_option_group() -> cli_fmt::help::OptionGroup
       OptionEntry { name : "--args-file <PATH>".into(),             desc : "Load clr params from JSON file (or stdin JSON); env: CLR_ARGS_FILE".into() },
       OptionEntry { name : "--expect <VALS>".into(),                 desc : "Pipe-separated expected values; mismatch → exit 3".into() },
       OptionEntry { name : "--expect-strategy <STRAT>".into(),       desc : "Mismatch handling: fail (default), retry, default:<VAL>".into() },
-      OptionEntry { name : "--max-sessions <N>".into(),              desc : "Max concurrent sessions before blocking (0=unlimited, default: 6)".into() },
+      OptionEntry { name : "--max-sessions <N>".into(),              desc : "Max concurrent sessions before blocking (0=unlimited, default: 8)".into() },
+      OptionEntry { name : "--gate-poll-secs <SECS>".into(),         desc : "Session gate poll interval (default: 30) [env: CLR_GATE_POLL_SECS]".into() },
+      OptionEntry { name : "--gate-max-attempts <N>".into(),         desc : "Session gate max poll attempts (default: 1000) [env: CLR_GATE_MAX_ATTEMPTS]".into() },
+      OptionEntry { name : "--gate-stale-secs <SECS>".into(),        desc : "Reclaim gate slots held by dead/stale PIDs after N seconds (unset = disabled) [env: CLR_GATE_STALE_SECS]".into() },
       OptionEntry { name : "--timeout <SECS>".into(),                desc : "Kill subprocess after N seconds (0 = unlimited, default: 3600)".into() },
       // Retry tier 1: override
       OptionEntry { name : "--retry-override <N>".into(),            desc : "Force retry count for all error classes (unset = per-class)".into() },
@@ -119,7 +122,7 @@ fn claude_code_option_group() -> cli_fmt::help::OptionGroup
     entries : vec!
     [
       OptionEntry { name : "--model <MODEL>".into(),                 desc : "Model to use".into() },
-      OptionEntry { name : "--max-tokens <N>".into(),                desc : "Max output tokens (default: 200000)".into() },
+      OptionEntry { name : "--max-tokens <N>".into(),                desc : "Max output tokens (default: 128000)".into() },
       OptionEntry { name : "--effort <LEVEL>".into(),                desc : "Reasoning effort: low, medium, high, max (default: max)".into() },
       OptionEntry { name : "--output-format <FMT>".into(),           desc : "Output format: text, json, stream-json".into() },
       OptionEntry { name : "--input-format <FMT>".into(),            desc : "Input format: text, stream-json".into() },
@@ -154,6 +157,7 @@ pub( crate ) fn print_isolated_help() -> !
   println!();
   println!( "CREDENTIAL OPTIONS:" );
   println!( "  --creds <FILE>                     Credentials JSON file (required) [env: CLR_CREDS]" );
+  println!( "  --model <MODEL>                    Model to use (default: claude's own default) [env: CLR_MODEL]" );
   println!( "  --timeout <SECS>                   Max seconds to wait for subprocess (default: 30) [env: CLR_TIMEOUT]" );
   println!( "  --trace                            Print underlying call details to stderr [env: CLR_TRACE]" );
   println!( "  --journal <LEVEL>                  Journal level: full (default), meta, or off [env: CLR_JOURNAL]" );
@@ -163,6 +167,9 @@ pub( crate ) fn print_isolated_help() -> !
   println!();
   println!( "ISOLATION OPTIONS:" );
   println!( "  --dry-run                          Print subprocess command without executing; exit 0" );
+  println!( "  --effort <LEVEL>                   Reasoning effort: low, medium, high, max (default: max) [env: CLR_EFFORT]" );
+  println!( "  --no-effort-max                    Suppress automatic --effort injection entirely [env: CLR_NO_EFFORT_MAX]" );
+  println!( "  --no-chrome                        Suppress --chrome injection (no browser context) [env: CLR_NO_CHROME]" );
   println!( "  --dir <PATH>                       Working directory for the subprocess [env: CLR_DIR]" );
   println!( "  --add-dir <PATH>                   Additional directory Claude may access (repeatable) [env: CLR_ADD_DIR]" );
   println!( "  --file <PATH>                      Pipe file content to subprocess stdin" );
@@ -173,6 +180,17 @@ pub( crate ) fn print_isolated_help() -> !
   println!( "  --strip-fences                     Strip outermost markdown code fences from output [env: CLR_STRIP_FENCES]" );
   println!( "  --output-style <MODE>              Output rendering: raw (default), summary [env: CLR_OUTPUT_STYLE]" );
   println!( "  --summary-fields <PROFILE>         Summary field selection: full, standard, minimal, or comma-separated [env: CLR_SUMMARY_FIELDS]" );
+  println!( "  --max-sessions <N>                 Max concurrent sessions before blocking (0=unlimited, default: 8) [env: CLR_MAX_SESSIONS]" );
+  println!();
+  println!( "CLAUDE CODE OPTIONS (forwarded):" );
+  println!( "  --system-prompt <TEXT>             Set system prompt (replaces the default) [env: CLR_SYSTEM_PROMPT]" );
+  println!( "  --append-system-prompt <TEXT>      Append text to the default system prompt [env: CLR_APPEND_SYSTEM_PROMPT]" );
+  println!( "  --json-schema <SCHEMA>             JSON schema for structured output [env: CLR_JSON_SCHEMA]" );
+  println!( "  --mcp-config <PATH>                MCP server config file (repeatable) [env: CLR_MCP_CONFIG]" );
+  println!( "  --allowed-tools <TOOLS>            Comma-separated tool whitelist (e.g. \"Read,Edit\") [env: CLR_ALLOWED_TOOLS]" );
+  println!( "  --disallowed-tools <TOOLS>         Comma-separated tool blacklist [env: CLR_DISALLOWED_TOOLS]" );
+  println!( "  --max-budget-usd <AMOUNT>          Max API spend in USD for this session [env: CLR_MAX_BUDGET_USD]" );
+  println!( "  --max-turns <N>                    Max agentic turns (0 = unlimited) [env: CLR_MAX_TURNS]" );
   println!();
   println!( "EXIT CODES:" );
   println!( "  0    Success" );
@@ -331,7 +349,7 @@ pub( crate ) fn print_ask_help() -> !
   println!( "OPTIONS:" );
   println!( "  -p, --print                        Non-interactive mode (capture and print output)" );
   println!( "  --effort <LEVEL>                   Reasoning effort: low, medium, high, max (default: max)" );
-  println!( "  --max-tokens <N>                   Max output tokens (default: 200000)" );
+  println!( "  --max-tokens <N>                   Max output tokens (default: 128000)" );
   println!( "  --model <MODEL>                    Model to use" );
   println!( "  --dry-run                          Print command without executing" );
   println!( "  --trace                            Print command to stderr then execute" );

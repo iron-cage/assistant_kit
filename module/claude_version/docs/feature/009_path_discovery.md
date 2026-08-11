@@ -2,14 +2,14 @@
 
 ### Scope
 
-- **Purpose**: Document the `.paths` command that reports all filesystem paths clv reads from or writes to.
+- **Purpose**: Document the `.version.paths` command that reports all filesystem paths clv reads from or writes to.
 - **Responsibility**: Specify the command's output format, path resolution via `ClaudeVersionPaths`, single-key mode, and verbosity-tiered unresolvable-path handling.
-- **In Scope**: `.paths` command, `ClaudeVersionPaths` struct, labeled/unlabeled output modes, `key::` single-path lookup, unresolvable path handling.
+- **In Scope**: `.version.paths` command, `ClaudeVersionPaths` struct, labeled/unlabeled output modes, `key::` single-path lookup, unresolvable path handling.
 - **Out of Scope**: Unlabeled pipeline-only enumeration (→ `feature/008_runtime_file_discovery.md`), individual runtime file lifecycle and ownership (→ `runtime_file/`), settings resolution algorithm (→ `algorithm/002_config_resolution.md`).
 
 ### Design
 
-`.paths` reports every filesystem path clv is aware of — both paths clv itself creates/manages (versions directory, binary symlink, version history cache) and paths clv only reads (user and project `settings.json`, owned by the external Claude Code system). It is built on `ClaudeVersionPaths`, a `claude_version_core` struct that composes over `claude_core::ClaudePaths` (which supplies `settings_file()`) and adds four version-specific resolvers: `versions_dir()`, `binary_symlink()`, `version_history_cache_file()`, and `project_settings_file(cwd)`.
+`.version.paths` reports every filesystem path clv is aware of — both paths clv itself creates/manages (versions directory, binary symlink, version history cache) and paths clv only reads (user and project `settings.json`, owned by the external Claude Code system). It is built on `ClaudeVersionPaths`, a `claude_version_core` struct that composes over `claude_core::ClaudePaths` (which supplies `settings_file()`) and adds four version-specific resolvers: `versions_dir()`, `binary_symlink()`, `version_history_cache_file()`, and `project_settings_file(cwd)`.
 
 **Output format:**
 - show-all mode (no `key::`): one labeled path per line, `<key>:  <path>` (v::1, default), or plain unlabeled paths only (v::0), or labeled with a one-line description (v::2)
@@ -47,7 +47,7 @@
 
 | File | Relationship |
 |------|-------------|
-| `../../src/commands/paths.rs` | .paths command handler |
+| `../../src/commands/paths.rs` | .version.paths command handler |
 | `../../../claude_version_core/src/paths.rs` | `ClaudeVersionPaths` struct implementation |
 
 ### Provenance

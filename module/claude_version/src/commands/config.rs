@@ -5,7 +5,7 @@ use unilang::interpreter::ExecutionContext;
 use unilang::semantic::VerifiedCommand;
 use unilang::types::Value;
 
-use crate::output::{ OutputFormat, OutputOptions, json_escape };
+use crate::output::{ OutputFormat, OutputOptions, json_escape, trim_trailing_whitespace };
 use claude_version_core::config_catalog::catalog;
 use claude_version_core::config_resolve::{ resolve, resolve_all, ResolvedValue };
 use claude_core::settings_io::{ StoredAs, infer_type, remove_setting, set_setting };
@@ -220,16 +220,28 @@ fn render_config_show_all(
     }
     OutputFormat::Text =>
     {
-      let lines : Vec< String > = all.iter().map( | ( k, rv ) |
+      if all.is_empty()
       {
-        match &rv.value
-        {
-          None    => format!( "{k}: ({})", rv.source ),
-          Some( v ) => format!( "{k}: {v} ({})", rv.source ),
-        }
-      } ).collect();
-      if lines.is_empty() { String::new() }
-      else { format!( "{}\n", lines.join( "\n" ) ) }
+        return String::new();
+      }
+      use data_fmt::{ Format, Heading, RowBuilder, TableConfig, TableFormatter };
+      let headers = vec![ "Key".to_string(), "Value".to_string(), "Source".to_string() ];
+      let mut builder = RowBuilder::new( headers );
+      for ( k, rv ) in all
+      {
+        let value_str  = rv.value.clone().unwrap_or_default();
+        let source_str = rv.source.to_string();
+        let row : Vec< String > = vec![ k.clone(), value_str, source_str ];
+        builder = builder.add_row( row.into_iter().map( Into::into ).collect() );
+      }
+      let heading = Heading::new( "Configuration" ).with_field( format!( "{} keys", all.len() ) );
+      let config  = TableConfig::plain()
+        .with_heading( heading )
+        .with_auto_wrap( false )
+        .with_auto_fold( false );
+      let rendered = Format::format( &TableFormatter::with_config( config ), &builder.build_view() )
+        .unwrap_or_default();
+      trim_trailing_whitespace( &rendered )
     }
   }
 }

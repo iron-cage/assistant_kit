@@ -16,9 +16,9 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 | FT-02 | `touch::1` invokes subprocess for accounts with any quota timer absent | AC-02 | Integration (lim_it) |
 | FT-03 | After touch, table shows concrete `5h Reset` value (was `—`) | AC-03 | Integration (lim_it) |
 | FT-04 | Errored accounts are never touched | AC-04 | Integration |
-| FT-05 | When both `refresh::1` and `touch::1`, refresh runs first | AC-05 | Integration |
+| FT-05 | When both `refresh::1` and `touch::1`, refresh runs first | AC-05 | Structural |
 | FT-06 | apply_touch does not call switch_account; `_active` marker unchanged throughout cycle | AC-06 | BUG-211 MRE |
-| FT-07 | Touch failure is non-aborting; row shows original data | AC-07 | Integration |
+| FT-07 | Touch failure is non-aborting; row shows original data | AC-07 | Structural |
 | FT-08 | `touch::` does not affect `format::json` output structure | AC-08 | Integration |
 | FT-09 | `trace=true` emits timestamped diagnostic lines for touch subprocess lifecycle | AC-09 | Integration (lim_it) |
 | FT-10 | `touch::` appears in `.usage.help` with default `1` | AC-10 | Integration |
@@ -76,7 +76,7 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 - **When:** `clp .usage touch::0`
 - **Then:** Exits 0. No subprocess spawned for touch. Account row shows `5h Reset = —` unchanged (still idle).
 - **Exit:** 0
-- **Source fn:** `it109_lim_it_touch_0_no_subprocess_idle_account_unchanged` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it109_lim_it_touch_0_no_subprocess_idle_account_unchanged` (in `usage_touch_test.rs`)
 - **Source:** [feature/024_session_touch.md AC-01](../../../docs/feature/024_session_touch.md)
 
 ---
@@ -88,7 +88,7 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 - **Then:** `refresh_account_token()` is called for that account (observable via `trace::1` output showing subprocess lifecycle). Accounts with `resets_at` present (already active) are not touched.
 - **Exit:** 0
 - **Live:** yes (lim_it — requires live credential + idle 5h window)
-- **Source fn:** `it110_lim_it_touch_1_subprocess_spawned_for_idle_account` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it110_lim_it_touch_1_subprocess_spawned_for_idle_account` (in `usage_touch_test.rs`)
 - **Source:** [feature/024_session_touch.md AC-02](../../../docs/feature/024_session_touch.md)
 
 ---
@@ -100,7 +100,7 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 - **Then:** Account row shows a `5h Reset` value of ~5h (e.g., "in 4h 59m") — transitioned from `—` (idle) to a concrete countdown (active).
 - **Exit:** 0
 - **Live:** yes (lim_it — requires live credential + idle 5h window)
-- **Source fn:** `it111_lim_it_touch_1_5h_reset_changes_from_dash_to_time` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it111_lim_it_touch_1_5h_reset_changes_from_dash_to_time` (in `usage_touch_test.rs`)
 - **Source:** [feature/024_session_touch.md AC-03](../../../docs/feature/024_session_touch.md)
 
 ---
@@ -118,35 +118,34 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 
 ### FT-05: When both `refresh::1` and `touch::1` active, refresh runs first
 
-- **Given:** One account with expired token (quota fetch would fail with 401).
-- **When:** `clp .usage refresh::1 touch::1 trace::1`
-- **Then:** Stderr timestamped diagnostic lines show refresh lifecycle before any touch lifecycle. Touch runs on post-refresh results — if refresh started a session (making `resets_at` present), that account is skipped by touch (already activated by refresh). If the post-refresh result still has `resets_at` absent, touch fires.
-- **Exit:** 0
-- **Live:** yes (lim_it — requires expired token + active 5h window)
-- **Source fn:** `it112_structural_refresh_before_touch_ordering_in_source` (in `tests/cli/usage_test.rs`)
+- **Given:** Source code of `src/usage/api.rs`, read via `include_str!`.
+- **When:** The byte offsets of the `apply_refresh( &mut accounts, &credential_store` call site and the `apply_touch( aq, &credential_store` call site are located and compared.
+- **Then:** The `apply_refresh` call site's byte offset is less than the `apply_touch` call site's byte offset — refresh is wired to run before touch in source order. This is a structural ordering guard, not a live execution trace.
+- **Exit:** N/A (structural source-inspection test — no exit code)
+- **Source fn:** `it112_structural_refresh_before_touch_ordering_in_source` (in `usage_touch_test.rs`)
 - **Source:** [feature/024_session_touch.md AC-05](../../../docs/feature/024_session_touch.md)
 
 ---
 
-### FT-06: apply_touch does not call switch_account; `_active` marker unchanged throughout touch cycle
+### FT-06: apply_touch does not call switch_account; live session credentials file untouched by touch cycle
 
-- **Given:** `apply_touch` is called with one qualifying account (valid quota, `resets_at` absent — idle); the `_active` marker is NOT present in the credential store before the call.
+- **Given:** `apply_touch` is called with one qualifying account (valid quota, `resets_at` absent — idle). The credential-store `_active` marker IS pre-written (content `"test@example.com"`) before the call — its content is not the object under test here. The live session credentials file (`paths.credentials_file()`) does NOT exist before the call.
 - **When:** `apply_touch` processes the qualifying account and completes.
-- **Then:** The `_active` marker file does NOT exist after the call — no `switch_account` write occurred. `apply_touch` does not restore via `switch_account`; `refresh_account_token` passes `update_marker=false` to `save()` so the marker is never written.
+- **Then:** The live session credentials file still does NOT exist after the call — no `switch_account`-style write to the live session file occurred. `apply_touch` does not restore via `switch_account`; the refresh path never invokes it.
 - **Exit:** N/A (unit test — no exit code)
-- **Source fn:** `it_apply_touch_trigger_fires_resets_at_none` (in `tests/usage/touch_tests.rs`)
-- **Note:** BUG-211 regression guard — verifies snapshot+restore was not re-introduced in `apply_touch`. Symmetric to FT-13/BUG-211 guard in `017_token_refresh` test spec.
+- **Source fn:** `it_apply_touch_trigger_fires_resets_at_none` (in `touch_tests_b.rs`)
+- **Note:** BUG-211 regression guard — verifies snapshot+restore was not re-introduced in `apply_touch`. The `_active` marker's own unchanged-content assertion is covered by FT-15's companion test. Symmetric to FT-13/BUG-211 guard in `017_token_refresh` test spec.
 - **Source:** [feature/024_session_touch.md AC-06](../../../docs/feature/024_session_touch.md)
 
 ---
 
 ### FT-07: Touch subprocess failure is non-aborting; account row shows original data unchanged
 
-- **Given:** One account with valid quota data and `resets_at` absent (idle — qualifies for touch); touch subprocess fails (returns non-zero exit or timeout).
-- **When:** `clp .usage touch::1`
-- **Then:** Exits 0. Account row shows original quota data (not a hard error). Table still renders. Touch failure does not abort the command.
-- **Exit:** 0
-- **Source fn:** `it114_structural_touch_failure_non_aborting_guard_exists` (in `tests/cli/usage_test.rs`)
+- **Given:** Source code of `src/usage/touch.rs`, read via `include_str!`.
+- **When:** The source text is searched for the failure-tolerant guard pattern around the subprocess result.
+- **Then:** The source contains the literal guard `if let Some( ref creds ) = new_creds` — the refreshed-credentials branch is conditional, so a subprocess failure (leaving `new_creds` as `None`) falls through without aborting; the account keeps its original quota data and the table still renders.
+- **Exit:** N/A (structural source-inspection test — no exit code)
+- **Source fn:** `it114_structural_touch_failure_non_aborting_guard_exists` (in `usage_touch_test.rs`)
 - **Source:** [feature/024_session_touch.md AC-07](../../../docs/feature/024_session_touch.md)
 
 ---
@@ -170,7 +169,7 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 - **Then:** Stderr contains timestamped diagnostic lines showing the touch subprocess lifecycle steps (`read credentials`, `run_isolated` with elapsed time, `write credentials`, `save`). Lines include account name and subprocess status.
 - **Exit:** 0
 - **Live:** yes (lim_it — requires idle account for subprocess to be triggered)
-- **Source fn:** `it115_lim_it_trace_1_shows_touch_lifecycle` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it115_lim_it_trace_1_shows_touch_lifecycle` (in `usage_touch_test.rs`)
 - **Source:** [feature/024_session_touch.md AC-09](../../../docs/feature/024_session_touch.md)
 
 ---
@@ -193,7 +192,7 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 - **Then:** Exits 0. Subprocess is spawned for this account. After touch, the `5h Reset` column shows a concrete countdown value (~5h) — transitioned from `—` to active. The trigger condition `resets_at.is_none()` fires for this account.
 - **Exit:** 0
 - **Live:** yes (lim_it — requires idle account)
-- **Source fn:** `it116_lim_it_account_with_resets_at_absent_is_touched` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it116_lim_it_account_with_resets_at_absent_is_touched` (in `usage_touch_test.rs`)
 - **Source:** [feature/024_session_touch.md AC-02](../../../docs/feature/024_session_touch.md)
 
 ---
@@ -205,38 +204,38 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 - **Then:** On each cycle where `resets_at` is absent (account became idle), the touch trigger fires (subprocess spawned) and a new 5h session is started. The trigger does not fire for accounts with `resets_at` present (still active).
 - **Exit:** 0
 - **Live:** yes (lim_it — requires live credential + idle 5h window + two live::1 cycles)
-- **Source fn:** `it120_lim_it_ft12_touch_trigger_fires_per_idle_account_cycle` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it120_lim_it_ft12_touch_trigger_fires_per_idle_account_cycle` (in `usage_touch_test.rs`)
 - **Source:** [feature/024_session_touch.md AC-11](../../../docs/feature/024_session_touch.md)
 
 ---
 
 ### FT-13: All three quota timers running → account NOT touched ("already active")
 
-- **Given:** One account with valid quota data where all three quota timers have active `resets_at` values: `five_hour.resets_at` present AND `seven_day.resets_at` present AND `seven_day_sonnet.resets_at` present (all windows active).
-- **When:** `clp .usage touch::1`
-- **Then:** Exits 0. No subprocess spawned for that account. The trigger guard skips accounts where all three timers are running — all quota windows are active. Account row shows original quota data unchanged. Trace emits `skipped (reason: already active)`.
-- **Exit:** 0
-- **Source fn:** `it_apply_touch_trigger_skips_resets_at_some` (in `tests/usage/touch_tests.rs`)
+- **Given:** `apply_touch` is called directly (not via CLI) with one account from `mk_aq_with_resets_at(Some("2099-01-01T00:00:00Z"))`: `five_hour.resets_at` is `Some(...)` (active), and `seven_day`/`seven_day_sonnet` are both `None` (absent entirely — treated as "running" by the `map_or(true, ...)` default, not because either field is itself "present"). `trace=false`.
+- **When:** `apply_touch(&mut aq, &store, Some(&paths), false, SubprocessModel::Auto, SubprocessEffort::Auto, false)` processes the account.
+- **Then:** `apply_touch` returns early without calling `refresh_account_token` — the live session credentials file (`.claude/.credentials.json`) is NOT written. No subprocess is spawned.
+- **Exit:** N/A (unit test — no exit code)
+- **Source fn:** `it_apply_touch_trigger_skips_resets_at_some` (in `touch_tests_b.rs`)
 - **Source:** [feature/024_session_touch.md AC-02, AC-12](../../../docs/feature/024_session_touch.md)
 
 ---
 
 ### FT-14: Skip trace line emitted for each account not qualifying for touch
 
-- **Given:** Two accounts: one with `resets_at` present (already active — skip reason: "already active"); one with errored quota (no valid data — skip reason: error account). `touch::1 trace::1`.
+- **Given:** One account (`err@x.com`) with no `accessToken` — quota fetch fails with an `Err` result (error account; skip reason: "error account"). `touch::1 trace::1`.
 - **When:** `clp .usage touch::1 trace::1`
-- **Then:** Stderr contains timestamped `... · touch  <name>  skipped (reason: ...)` lines for each non-qualifying account. The `resets_at` present case and the errored case each produce a diagnostically distinct skip-reason line. No subprocess spawned for either account.
+- **Then:** Exits 0. Stderr contains the line `· touch  err@x.com  skipped (reason: error account)`. No subprocess spawned for the errored account.
 - **Exit:** 0
-- **Source fn:** `it141_trace_skip_lines_emitted_for_non_qualifying_accounts` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it141_trace_skip_lines_emitted_for_non_qualifying_accounts` (in `usage_model_test.rs`)
 - **Source:** [feature/024_session_touch.md AC-09, AC-12](../../../docs/feature/024_session_touch.md)
 
 ---
 
 ### FT-15: No switch_account called in apply_touch; `_active` unchanged confirms no restore occurred
 
-- **Given:** `apply_touch` is called with `trace=true`; one qualifying account with `resets_at` absent; the `_active` marker is NOT present in the credential store before the call.
+- **Given:** `apply_touch` is called with `trace=true`. The account being touched (`test@example.com`, `resets_at` absent — qualifies) has NO credential file in the store, so the refresh path cannot find a token. The `_active` marker IS pre-written in the credential store but holds a DIFFERENT account's name (`"alice@example.com"`) — a credential file for `alice@example.com` also exists in the store but must never be copied to the live session file.
 - **When:** `apply_touch` processes the qualifying account and completes.
-- **Then:** The credential-store `_active` file does NOT exist after the call — no `switch_account` write occurred during touch cycling, confirming `update_marker=false` suppresses all `_active` writes.
+- **Then:** The live session credentials file (`paths.credentials_file()`) does NOT exist after the call — no `switch_account` write occurred during touch cycling. The `_active` marker file is read back and is UNCHANGED — still `"alice@example.com"` — confirming touch never overwrites or restores the marker.
 - **Source fn:** `test_apply_touch_mre_bug208_restore_trace_emitted` (in `tests/usage/touch_tests.rs`)
 - **Note:** BUG-211 MRE — function name preserved from BUG-208 era; now asserts absence of restore side-effects rather than presence of restore trace. Symmetric to FT-17 in `017_token_refresh` test spec.
 - **Source:** [feature/024_session_touch.md AC-13](../../../docs/feature/024_session_touch.md)
@@ -245,7 +244,7 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 
 ### FT-16: 7d-exhausted account (7d Left = 0%, 5h idle) is NOT touched — 7d guard fires
 
-- **Given:** `apply_touch` is called with one account whose `AccountQuota` has: `result = Ok(data)` with `seven_day_left = 0.0` (weekly quota fully exhausted), `five_hour_left = 100.0` (5h budget non-zero), and `five_hour.resets_at = None` (idle — no active 5h session). The 7d guard is present in `apply_touch`.
+- **Given:** `apply_touch` is called with one account whose `AccountQuota` has: `result = Ok(data)` with `seven_day_left = 0.0` (weekly quota fully exhausted, via `seven_day.utilization = 100.0`), `five_hour_left = 50.0` (5h budget half-consumed but non-zero — not h-exhausted), and `five_hour.resets_at = None` (idle — no active 5h session). The 7d guard is present in `apply_touch`.
 - **When:** `apply_touch` processes this account.
 - **Then:** `touch_skip_reason(&aq, credential_store, false)` returns `Some("skipped (reason: 7d-exhausted)")` — the same reason string `apply_touch()`'s trace line would emit. `apply_touch` only reaches subprocess-spawning logic when this oracle returns `None`, so the `Some(..)` result structurally proves `run_isolated` is never called.
 - **Exit:** N/A (unit test — no exit code)
@@ -273,7 +272,7 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 - **When:** `apply_touch` is subsequently called for that account and evaluates the trigger condition.
 - **Then:** `all_running = true` (5h `resets_at` is Some — active session); `apply_touch` skips the account with reason `already active` and does NOT spawn a second subprocess. Behavior is identical to FT-13 (`it_apply_touch_trigger_skips_resets_at_some`).
 - **Exit:** N/A (structural cross-reference — no separate test code; covered compositionally by FT-21 × FT-13)
-- **Source fn:** `mre_bug288_post_switch_touch_refetch_updates_quota` (in `tests/usage/api_tests_b.rs`, structural block — asserts `write_quota_cache` is called in `apply_post_switch_touch` fn body) + `it_apply_touch_trigger_skips_resets_at_some` (in `tests/usage/touch_tests.rs` — asserts `apply_touch` skips when `resets_at = Some`).
+- **Source fn:** `mre_bug288_post_switch_touch_refetch_updates_quota` (in `tests/usage/api_tests_b.rs`, structural block — asserts `write_quota_cache` is called in `apply_post_switch_touch` fn body) + `it_apply_touch_trigger_skips_resets_at_some` (in `tests/usage/touch_tests_b.rs` — corrected file path; asserts `apply_touch` skips when `resets_at = Some`).
 - **Note:** BUG-288 cross-feature interaction. AC-03 re-fetch requirement applies to ALL touch paths — both `apply_touch` (this feature) and `apply_post_switch_touch` (Feature 027 AC-21). Before the fix, `apply_post_switch_touch` omitted the re-fetch: the on-disk cache still showed `resets_at = None`, so `apply_touch` saw a qualifying idle account and spawned a redundant second subprocess. After Fix A: `apply_post_switch_touch` writes updated quota (including `resets_at = Some`) to the cache, and `apply_touch` skips the account. End-to-end live coverage is provided by Feature 027 FT-01 (live integration test, marked `lim_it`).
 - **Source:** [feature/024_session_touch.md AC-03](../../../docs/feature/024_session_touch.md)
 
@@ -335,7 +334,7 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 - **When:** The `if let Ok( new_data ) = claude_quota::fetch_oauth_usage(...)` re-fetch block is inspected.
 - **Then:** The block contains all three required mutations: (1) `write_quota_cache(...)` is called, (2) `aq.cached = false` is set, (3) `aq.cache_age_secs = None` is set. Additionally, `write_quota_cache` appears BEFORE `aq.result = Ok( new_data )` — enforcing the borrow-before-move ordering constraint.
 - **Exit:** N/A (structural source-inspection test — no exit code)
-- **Source fn:** `mre_bug309_apply_touch_refetch_writes_cache_and_clears_cached_flag` (in `tests/usage/touch_tests.rs`)
+- **Source fn:** `mre_bug309_apply_touch_refetch_writes_cache_and_clears_cached_flag` (in `touch_tests_b.rs`)
 - **Note:** BUG-309 MRE. Structural guard ensuring the three post-fetch mutations are never accidentally dropped by a refactor or merge conflict. Mirrors `mre_bug256_retry_ok_stale_cached_metadata` in `refresh_tests.rs` for the `apply_touch` code path.
 - **Source:** [feature/024_session_touch.md AC-18](../../../docs/feature/024_session_touch.md)
 

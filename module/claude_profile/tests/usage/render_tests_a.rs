@@ -1,8 +1,8 @@
 // Integration tests for render.rs — Part A (split from src/usage/render_tests.rs).
 // Accesses pub(crate) items through claude_profile::usage::test_bridge (testing feature).
 
-use claude_profile::usage::test_bridge::{ render_text, render_tsv, render_json };
-use claude_profile::usage::test_bridge::types::{ AccountQuota, SortStrategy, PreferStrategy, ColsVisibility };
+use claude_profile::usage::test_bridge::{ render_text, render_tsv, render_json, extract_get_field };
+use claude_profile::usage::test_bridge::types::{ AccountQuota, SortStrategy, PreferStrategy, ColsVisibility, GetField };
 use claude_profile::usage::test_bridge::FAR_FUTURE_MS;
 
 /// FT-20/009 — `~Renews` must retain billing date (not error reason) for 429-errored accounts.
@@ -76,6 +76,7 @@ fn mre_bug_220_renews_preserved_for_429_accounts()
     is_owned      : true,
     owner                : String::new(),
     claim_lock : false, reserve : false,
+    inference_provider : String::new(),
   };
   let accounts = vec![ aq ];
   let cols     = ColsVisibility::default_set();
@@ -151,6 +152,7 @@ fn test_ft21_009_occupied_elsewhere_at_flag()
       owner                : String::new(),
       claim_lock : false, reserve : false,
           org_created_at : None,
+      inference_provider : String::new(),
     }
   };
 
@@ -248,6 +250,7 @@ fn ft03_033_render_text_cached_shows_tilde_prefix()
     owner                : String::new(),
     claim_lock : false, reserve : false,
       org_created_at : None,
+    inference_provider : String::new(),
   };
   let accounts = vec![ aq ];
   let cols     = ColsVisibility::default_set();
@@ -310,6 +313,7 @@ fn ft09_033_render_json_cached_includes_fields()
     owner                : String::new(),
     claim_lock : false, reserve : false,
       org_created_at : None,
+    inference_provider : String::new(),
   };
   let accounts = vec![ aq ];
   let json = render_json( &accounts );
@@ -358,6 +362,7 @@ fn ft03_033_cached_sonnet_reset_shows_tilde()
     owner                : String::new(),
     claim_lock : false, reserve : false,
       org_created_at : None,
+    inference_provider : String::new(),
   };
   let accounts = vec![ aq ];
   let mut cols = ColsVisibility::default_set();
@@ -433,6 +438,7 @@ fn test_ft23_009_renews_dash_for_cancelled_subscription()
     is_owned              : true,
     owner                : String::new(),
     claim_lock : false, reserve : false,
+    inference_provider : String::new(),
   };
   let accounts = vec![ aq ];
   let cols     = ColsVisibility::default_set();
@@ -535,6 +541,7 @@ fn mre_bug332_renews_shown_for_billing_none_with_ok_result()
     is_owned              : true,
     owner                 : String::new(),
     claim_lock : false, reserve : false,
+    inference_provider : String::new(),
   };
   let accounts = vec![ aq ];
   let cols     = ColsVisibility::default_set();
@@ -563,6 +570,263 @@ fn mre_bug332_renews_shown_for_billing_none_with_ok_result()
   assert_ne!(
     renews_val, "\u{2014}",
     "BUG-332: TSV ~Renews must NOT be em-dash when result=Ok and billing_type=none; got: {renews_val:?}",
+  );
+}
+
+/// BUG-345 — the `Expires` cell must disclose cache-fallback staleness on the text-table
+/// surface, matching the `~`-prefix convention every other cache-fallback cell already uses.
+///
+/// # Root Cause
+/// `compute_expires_cell( expires_at_ms, now_secs )` had no `cached` parameter, so none of its
+/// 4 call sites could signal that `expires_at_ms` came from a cache-fallback read rather than a
+/// live fetch this invocation.
+///
+/// # Why Not Caught
+/// No test constructed two fixtures with identical `expires_at_ms`/`now_secs` but differing
+/// `cached` and compared the `Expires` cell across surfaces.
+///
+/// # Fix Applied
+/// New `compute_expires_cell_cached( expires_at_ms, now_secs, cached )` in `format.rs`, applied
+/// at `render.rs`'s text-table site and `extract_get_field`'s `GetField::Expires` arm, and at
+/// `render_tsv.rs`'s TSV site. `render_json.rs` now shares `expires_remaining_secs` instead of
+/// duplicating the arithmetic inline — its `expires_in_secs` stays a plain number (JSON already
+/// exposes `cached` as its own boolean field, so no `~`-prefix belongs on a numeric field).
+///
+/// # Prevention
+/// Any new Expires call site must use `compute_expires_cell_cached`, never the bare
+/// `compute_expires_cell`, wherever `aq.cached` is in scope.
+///
+/// # Pitfall
+/// JSON's `expires_in_secs` must stay numerically IDENTICAL regardless of `cached` — the DRY
+/// refactor must not change JSON's output shape, only remove the duplicated arithmetic.
+///
+/// This bug spans 4 rendering surfaces, split one-per-test below (`clippy::too_many_lines` caps a
+/// single-test version at 100 lines) — see `mre_bug345_expires_cell_get_field_tilde`,
+/// `mre_bug345_expires_cell_tsv_tilde`, `mre_bug345_expires_cell_json_identical_regardless_of_cache`
+/// for the other 3 surfaces.
+///
+/// Spec: [`docs/feature/009_token_usage.md`]
+#[ doc = "bug_reproducer(BUG-345)" ]
+#[ test ]
+fn mre_bug345_expires_cell_text_table_tilde()
+{
+  let mk_aq = |name : &str, cached : bool| AccountQuota
+  {
+    fallback_reason : None,
+    name                  : name.to_string(),
+    is_current            : false,
+    is_active             : false,
+    is_occupied_elsewhere : false,
+    expires_at_ms         : FAR_FUTURE_MS,
+    result                : Ok( claude_quota::OauthUsageData
+    {
+      five_hour        : Some( claude_quota::PeriodUsage { utilization : 10.0, resets_at : None } ),
+      seven_day        : None,
+      seven_day_sonnet : None,
+    } ),
+    account               : None,
+    host                  : String::new(),
+    role                  : String::new(),
+    renewal_at            : None,
+    cached,
+    cache_age_secs        : if cached { Some( 300 ) } else { None },
+    org_created_at        : None,
+    is_owned              : true,
+    owner                 : String::new(),
+    claim_lock : false, reserve : false,
+    inference_provider : String::new(),
+  };
+  let cols = ColsVisibility::default_set();
+
+  // Text table — Expires cell must carry ~ only for the cached row.
+  let accounts = vec![ mk_aq( "cached@example.com", true ), mk_aq( "fresh@example.com", false ) ];
+  let text = render_text(
+    &accounts, SortStrategy::Name, None, PreferStrategy::Any, &cols, None, None, None, None, false,
+  );
+  let cached_row     = text.lines().find( |l| l.contains( "cached@example.com" ) )
+    .expect( "BUG-345: cached row must be present in text table" );
+  let not_cached_row = text.lines().find( |l| l.contains( "fresh@example.com" ) )
+    .expect( "BUG-345: non-cached row must be present in text table" );
+  assert!(
+    cached_row.contains( "~in " ),
+    "BUG-345: cached row's Expires cell must show '~in ...'; got:\n{cached_row}",
+  );
+  assert!(
+    !not_cached_row.contains( "~in " ),
+    "BUG-345: non-cached row's Expires cell must NOT carry a ~ prefix; got:\n{not_cached_row}",
+  );
+}
+
+/// BUG-345 — `.get field::expires` surface. See `mre_bug345_expires_cell_text_table_tilde`'s
+/// doc comment for Root Cause / Fix Applied / Prevention / Pitfall (shared across all 4 surfaces).
+#[ doc = "bug_reproducer(BUG-345)" ]
+#[ test ]
+fn mre_bug345_expires_cell_get_field_tilde()
+{
+  let mk_aq = |name : &str, cached : bool| AccountQuota
+  {
+    fallback_reason : None,
+    name                  : name.to_string(),
+    is_current            : false,
+    is_active             : false,
+    is_occupied_elsewhere : false,
+    expires_at_ms         : FAR_FUTURE_MS,
+    result                : Ok( claude_quota::OauthUsageData
+    {
+      five_hour        : Some( claude_quota::PeriodUsage { utilization : 10.0, resets_at : None } ),
+      seven_day        : None,
+      seven_day_sonnet : None,
+    } ),
+    account               : None,
+    host                  : String::new(),
+    role                  : String::new(),
+    renewal_at            : None,
+    cached,
+    cache_age_secs        : if cached { Some( 300 ) } else { None },
+    org_created_at        : None,
+    is_owned              : true,
+    owner                 : String::new(),
+    claim_lock : false, reserve : false,
+    inference_provider : String::new(),
+  };
+
+  // `.get field::expires` — extract_get_field must apply the same ~ convention, fully
+  // deterministic here since now_secs is passed explicitly rather than sampled live.
+  let now_secs         = ( FAR_FUTURE_MS / 1000 ).saturating_sub( 3600 );
+  let cached_field     = extract_get_field( &mk_aq( "cached@example.com", true ), GetField::Expires, now_secs );
+  let not_cached_field = extract_get_field( &mk_aq( "fresh@example.com", false ), GetField::Expires, now_secs );
+  assert!(
+    cached_field.starts_with( '~' ),
+    "BUG-345: .get field::expires must prefix ~ for a cached account; got: {cached_field}",
+  );
+  assert!(
+    !not_cached_field.starts_with( '~' ),
+    "BUG-345: .get field::expires must NOT prefix ~ for a non-cached account; got: {not_cached_field}",
+  );
+  assert_eq!(
+    cached_field.trim_start_matches( '~' ), not_cached_field,
+    "BUG-345: stripped of the ~ prefix, both accounts share identical expires_at_ms/now_secs and must format identically",
+  );
+}
+
+/// BUG-345 — TSV surface. See `mre_bug345_expires_cell_text_table_tilde`'s doc comment for
+/// Root Cause / Fix Applied / Prevention / Pitfall (shared across all 4 surfaces).
+#[ doc = "bug_reproducer(BUG-345)" ]
+#[ test ]
+fn mre_bug345_expires_cell_tsv_tilde()
+{
+  let mk_aq = |name : &str, cached : bool| AccountQuota
+  {
+    fallback_reason : None,
+    name                  : name.to_string(),
+    is_current            : false,
+    is_active             : false,
+    is_occupied_elsewhere : false,
+    expires_at_ms         : FAR_FUTURE_MS,
+    result                : Ok( claude_quota::OauthUsageData
+    {
+      five_hour        : Some( claude_quota::PeriodUsage { utilization : 10.0, resets_at : None } ),
+      seven_day        : None,
+      seven_day_sonnet : None,
+    } ),
+    account               : None,
+    host                  : String::new(),
+    role                  : String::new(),
+    renewal_at            : None,
+    cached,
+    cache_age_secs        : if cached { Some( 300 ) } else { None },
+    org_created_at        : None,
+    is_owned              : true,
+    owner                 : String::new(),
+    claim_lock : false, reserve : false,
+    inference_provider : String::new(),
+  };
+  let cols     = ColsVisibility::default_set();
+  let accounts = vec![ mk_aq( "cached@example.com", true ), mk_aq( "fresh@example.com", false ) ];
+
+  // TSV — same ~ convention on the `expires` column.
+  let tsv         = render_tsv( &accounts, SortStrategy::Name, None, PreferStrategy::Any, &cols );
+  let mut lines   = tsv.lines();
+  let header      = lines.next().expect( "BUG-345: TSV must have header row" );
+  let headers     : Vec< &str > = header.split( '\t' ).collect();
+  let expires_idx = headers.iter().position( |h| *h == "expires" )
+    .expect( "BUG-345: expires column must be present in TSV header" );
+  let cached_tsv_row     = tsv.lines().find( |l| l.contains( "cached@example.com" ) )
+    .expect( "BUG-345: cached row must be present in TSV" );
+  let not_cached_tsv_row = tsv.lines().find( |l| l.contains( "fresh@example.com" ) )
+    .expect( "BUG-345: non-cached row must be present in TSV" );
+  let cached_tsv_expires     = cached_tsv_row.split( '\t' ).nth( expires_idx ).unwrap_or( "" );
+  let not_cached_tsv_expires = not_cached_tsv_row.split( '\t' ).nth( expires_idx ).unwrap_or( "" );
+  assert!(
+    cached_tsv_expires.starts_with( '~' ),
+    "BUG-345: TSV expires column must prefix ~ for the cached row; got: {cached_tsv_expires}",
+  );
+  assert!(
+    !not_cached_tsv_expires.starts_with( '~' ),
+    "BUG-345: TSV expires column must NOT prefix ~ for the non-cached row; got: {not_cached_tsv_expires}",
+  );
+}
+
+/// BUG-345 — JSON surface. See `mre_bug345_expires_cell_text_table_tilde`'s doc comment for
+/// Root Cause / Fix Applied / Prevention / Pitfall (shared across all 4 surfaces).
+#[ doc = "bug_reproducer(BUG-345)" ]
+#[ test ]
+fn mre_bug345_expires_cell_json_identical_regardless_of_cache()
+{
+  let mk_aq = |name : &str, cached : bool| AccountQuota
+  {
+    fallback_reason : None,
+    name                  : name.to_string(),
+    is_current            : false,
+    is_active             : false,
+    is_occupied_elsewhere : false,
+    expires_at_ms         : FAR_FUTURE_MS,
+    result                : Ok( claude_quota::OauthUsageData
+    {
+      five_hour        : Some( claude_quota::PeriodUsage { utilization : 10.0, resets_at : None } ),
+      seven_day        : None,
+      seven_day_sonnet : None,
+    } ),
+    account               : None,
+    host                  : String::new(),
+    role                  : String::new(),
+    renewal_at            : None,
+    cached,
+    cache_age_secs        : if cached { Some( 300 ) } else { None },
+    org_created_at        : None,
+    is_owned              : true,
+    owner                 : String::new(),
+    claim_lock : false, reserve : false,
+    inference_provider : String::new(),
+  };
+  let accounts = vec![ mk_aq( "cached@example.com", true ), mk_aq( "fresh@example.com", false ) ];
+
+  // JSON — expires_in_secs stays numerically identical regardless of cached (DRY refactor must
+  // not change JSON's output shape); "cached" boolean field is the sole signal.
+  let json = render_json( &accounts );
+  let cached_obj     = json.lines().find( |l| l.contains( "cached@example.com" ) )
+    .expect( "BUG-345: cached row must be present in JSON" );
+  let not_cached_obj = json.lines().find( |l| l.contains( "fresh@example.com" ) )
+    .expect( "BUG-345: non-cached row must be present in JSON" );
+  assert!(
+    cached_obj.contains( "\"cached\":true" ),
+    "BUG-345: JSON cached row must report \"cached\":true; got:\n{cached_obj}",
+  );
+  assert!(
+    not_cached_obj.contains( "\"cached\":false" ),
+    "BUG-345: JSON non-cached row must report \"cached\":false; got:\n{not_cached_obj}",
+  );
+  let extract_expires_in_secs = |line : &str| -> String
+  {
+    let key = "\"expires_in_secs\":";
+    let start = line.find( key ).expect( "BUG-345: expires_in_secs field must be present" ) + key.len();
+    let rest = &line[ start.. ];
+    let end = rest.find( ',' ).unwrap_or( rest.len() );
+    rest[ ..end ].to_string()
+  };
+  assert_eq!(
+    extract_expires_in_secs( cached_obj ), extract_expires_in_secs( not_cached_obj ),
+    "BUG-345: JSON expires_in_secs must be numerically identical for cached vs non-cached rows sharing the same expires_at_ms; got cached:\n{cached_obj}\nnot_cached:\n{not_cached_obj}",
   );
 }
 
@@ -604,6 +868,7 @@ fn ft05_non_owned_display_tilde_or_dashes()
     owner                : String::new(),
     claim_lock : false, reserve : false,
       org_created_at : None,
+    inference_provider : String::new(),
   };
   let text_a = render_text(
     &[ aq_cached ],
@@ -635,6 +900,7 @@ fn ft05_non_owned_display_tilde_or_dashes()
     owner                : String::new(),
     claim_lock : false, reserve : false,
       org_created_at : None,
+    inference_provider : String::new(),
   };
   let text_b = render_text(
     &[ aq_no_cache ],
@@ -683,6 +949,7 @@ fn ft12_json_output_includes_is_owned()
     owner                : String::new(),
     claim_lock : false, reserve : false,
       org_created_at : None,
+    inference_provider : String::new(),
   };
   let not_owned = AccountQuota
   {
@@ -703,6 +970,7 @@ fn ft12_json_output_includes_is_owned()
     owner                : String::new(),
     claim_lock : false, reserve : false,
       org_created_at : None,
+    inference_provider : String::new(),
   };
 
   let json = render_json( &[ owned, not_owned ] );
@@ -753,6 +1021,7 @@ fn test_render_footer_model_label_at_10pct_no_override()
     owner                 : String::new(),
     claim_lock : false, reserve : false,
       org_created_at : None,
+    inference_provider : String::new(),
   };
   // b@x.com: second valid account required for footer (≥ 2 valid triggers footer display).
   let aq_b = AccountQuota
@@ -779,6 +1048,7 @@ fn test_render_footer_model_label_at_10pct_no_override()
     owner                 : String::new(),
     claim_lock : false, reserve : false,
       org_created_at : None,
+    inference_provider : String::new(),
   };
   // cur@x.com: is_current=true — triggers 2-line `·`-delimited footer so the model label appears.
   let aq_cur = AccountQuota
@@ -805,6 +1075,7 @@ fn test_render_footer_model_label_at_10pct_no_override()
     owner                 : String::new(),
     claim_lock : false, reserve : false,
       org_created_at : None,
+    inference_provider : String::new(),
   };
   let output = render_text(
     &[ aq_cur, aq_a, aq_b ], SortStrategy::Name, None, PreferStrategy::Any,
@@ -858,6 +1129,7 @@ fn test_render_footer_model_label_below_10pct_opus()
     owner                 : String::new(),
     claim_lock : false, reserve : false,
       org_created_at : None,
+    inference_provider : String::new(),
   };
   // b@x.com: second valid account required for footer (≥ 2 valid triggers footer display).
   let aq_b = AccountQuota
@@ -884,6 +1156,7 @@ fn test_render_footer_model_label_below_10pct_opus()
     owner                 : String::new(),
     claim_lock : false, reserve : false,
       org_created_at : None,
+    inference_provider : String::new(),
   };
   // cur@x.com: is_current=true — triggers 2-line `·`-delimited footer so the model label appears.
   let aq_cur = AccountQuota
@@ -910,6 +1183,7 @@ fn test_render_footer_model_label_below_10pct_opus()
     owner                 : String::new(),
     claim_lock : false, reserve : false,
       org_created_at : None,
+    inference_provider : String::new(),
   };
   let output = render_text(
     &[ aq_cur, aq_a, aq_b ], SortStrategy::Name, None, PreferStrategy::Any,
@@ -984,6 +1258,7 @@ fn mre_bug335_cache_fallback_reason_surfaced_on_all_render_surfaces()
     owner                 : String::new(),
     claim_lock : false, reserve : false,
       org_created_at : None,
+    inference_provider : String::new(),
   };
   let accounts = vec![ aq ];
   let cols     = ColsVisibility::default_set();

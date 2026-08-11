@@ -238,20 +238,20 @@ fn tel_far_future_is_valid()
 
 // ── status_emoji AND logic (SE-AND-T01 to T04) ────────────────────────────
 
-/// SE-AND-T01: `5h_left`=50%, `7d_left`=50% → 🟢 (5h > 15% and 7d > 5%).
+/// SE-AND-T01: `5h_left`=50%, `7d_left`=50% → 🟢 (5h > 15% and 7d > 3%).
 #[ test ]
 fn test_status_emoji_and_both_ample_green()
 {
   let aq = mk_aq_ok_both( 50.0, 50.0 );
-  assert_eq!( status_emoji( &aq ), "🟢", "5h > 15% and 7d > 5% → 🟢" );
+  assert_eq!( status_emoji( &aq ), "🟢", "5h > 15% and 7d > 3% → 🟢" );
 }
 
-/// SE-AND-T02: `5h_left`=50%, `7d_left`=3% (`d7_util`=97) → 🟡 (7d ≤ 5%).
+/// SE-AND-T02: `5h_left`=50%, `7d_left`=1% (`d7_util`=99) → 🟡 (7d ≤ 3%).
 #[ test ]
 fn test_status_emoji_and_7d_low_yellow()
 {
-  let aq = mk_aq_ok_both( 50.0, 97.0 );
-  assert_eq!( status_emoji( &aq ), "🟡", "7d ≤ 5% despite 5h ample → 🟡" );
+  let aq = mk_aq_ok_both( 50.0, 99.0 );
+  assert_eq!( status_emoji( &aq ), "🟡", "7d ≤ 3% despite 5h ample → 🟡" );
 }
 
 /// SE-AND-T03: `5h_left`=3% (`h5_util`=97), `7d_left`=50% → 🟡 (5h ≤ 15%).
@@ -262,26 +262,26 @@ fn test_status_emoji_and_5h_low_yellow()
   assert_eq!( status_emoji( &aq ), "🟡", "5h ≤ 15% despite 7d ample → 🟡" );
 }
 
-/// SE-AND-T04: `5h_left`=15%, `7d_left`=5% → 🟡 (both-exhausted → G3 weekly-exhausted).
+/// SE-AND-T04: `5h_left`=15%, `7d_left`=3% → 🟡 (both-exhausted → G3 weekly-exhausted).
 ///
-/// Both are at-threshold (not above): `h5_left > 15.0` is false, `d7_left > 5.0` is false.
+/// Both are at-threshold (not above): `h5_left > 15.0` is false, `d7_left > 3.0` is false.
 /// With `result=Ok` and no `billing_type="none"`, this is both-exhausted — recoverable, not dead.
 /// Fix(BUG-321): original BUG-319 fix incorrectly mapped `(false,false)→🔴`; corrected to 🟡.
 #[ test ]
 fn test_status_emoji_and_both_at_threshold_red()
 {
-  let aq = mk_aq_ok_both( 85.0, 95.0 );
+  let aq = mk_aq_ok_both( 85.0, 97.0 );
   // Fix(BUG-321): both-at-threshold with result=Ok → 🟡 (G3 weekly-exhausted), not 🔴 (Dead).
-  assert_eq!( status_emoji( &aq ), "🟡", "5h=15% and 7d=5% → 🟡 (both-exhausted → G3; recoverable)" );
+  assert_eq!( status_emoji( &aq ), "🟡", "5h=15% and 7d=3% → 🟡 (both-exhausted → G3; recoverable)" );
 }
 
 /// IT-43 — Exact boundary precision: each threshold tested independently.
 ///
-/// Composite AND: `5h_left > 15.0%` AND `7d_left > 5.0%` required for 🟢.
+/// Composite AND: `5h_left > 15.0%` AND `7d_left > 3.0%` required for 🟢.
 ///
 /// - A: `h5_util=85.0` (`5h_left=15.0`%, at threshold) → 🟡; 7d is ample.
 /// - B: `h5_util=84.5` (`5h_left=15.5%`, rounds away-from-zero to 16, just above) → 🟢; 7d is ample.
-/// - C: `d7_util=95.0` (`7d_left=5.0`%, at threshold) → 🟡; 5h is ample.
+/// - C: `d7_util=97.0` (`7d_left=3.0`%, at threshold) → 🟡; 5h is ample.
 ///
 /// Fix(BUG-336): case B was originally `h5_util=84.9` (`5h_left=15.1`) — once `status_emoji()`
 ///   rounds its comparison inputs (this file's own BUG-336 fix), 15.1 rounds DOWN to 15 (the
@@ -294,10 +294,10 @@ fn it151_status_emoji_boundary_precision()
 {
   let aq_a = mk_aq_ok_both( 85.0, 50.0 );
   let aq_b = mk_aq_ok_both( 84.5, 50.0 );
-  let aq_c = mk_aq_ok_both( 50.0, 95.0 );
+  let aq_c = mk_aq_ok_both( 50.0, 97.0 );
   assert_eq!( status_emoji( &aq_a ), "🟡", "A: 5h=15.0% (at threshold) → 🟡" );
   assert_eq!( status_emoji( &aq_b ), "🟢", "B: 5h=15.5% (rounds to 16, just above) → 🟢" );
-  assert_eq!( status_emoji( &aq_c ), "🟡", "C: 7d=5.0% (at threshold) → 🟡" );
+  assert_eq!( status_emoji( &aq_c ), "🟡", "C: 7d=3.0% (at threshold) → 🟡" );
 }
 
 // ── status_emoji with absent period data ──────────────────────────────────
@@ -333,6 +333,7 @@ fn test_status_emoji_five_hour_none_is_green()
     is_owned              : true,
     owner                 : String::new(),
     claim_lock : false, reserve : false,
+    inference_provider    : String::new(),
   };
   assert_eq!(
     status_emoji( &aq ), "🟢",
@@ -374,7 +375,7 @@ fn mre_bug317_cancelled_status_emoji_is_red()
   );
 }
 
-/// BUG-319 MRE — both-exhausted (5h ≤ 15% AND 7d ≤ 5%) original bug: was 🟡 instead of
+/// BUG-319 MRE — both-exhausted (5h ≤ 15% AND 7d ≤ 3%) original bug: was 🟡 instead of
 /// correct status. Original `else { "🟡" }` catch-all collapsed all non-green states.
 ///
 /// # Root Cause
@@ -404,17 +405,17 @@ fn mre_bug317_cancelled_status_emoji_is_red()
 #[ test ]
 fn mre_bug319_both_exhausted_status_emoji_is_red()
 {
-  // 5h_util=94% → 5h_left=6% (h-exhausted: ≤ 15%); 7d_util=96% → 7d_left=4% (weekly-exhausted: ≤ 5%).
+  // 5h_util=94% → 5h_left=6% (h-exhausted: ≤ 15%); 7d_util=98% → 7d_left=2% (weekly-exhausted: ≤ 3%).
   // Both below thresholds → both-exhausted → G3 (weekly-exhausted) → 🟡 (recoverable, not dead).
   // Fix(BUG-321): BUG-319 premise-incorrect fix reversed; expected changes 🔴 → 🟡.
-  let aq = mk_aq_ok_both( 94.0, 96.0 );
+  let aq = mk_aq_ok_both( 94.0, 98.0 );
   assert_eq!(
     status_emoji( &aq ), "🟡",
-    "Fix(BUG-321): both-exhausted (5h=6%, 7d=4%, result=Ok) must be 🟡 (G3 weekly-exhausted), not 🔴",
+    "Fix(BUG-321): both-exhausted (5h=6%, 7d=2%, result=Ok) must be 🟡 (G3 weekly-exhausted), not 🔴",
   );
 }
 
-/// BUG-321 MRE — both-exhausted (5h ≤ 15% AND 7d ≤ 5%) must show 🟡, not 🔴.
+/// BUG-321 MRE — both-exhausted (5h ≤ 15% AND 7d ≤ 3%) must show 🟡, not 🔴.
 ///
 /// # Root Cause
 /// BUG-319's fix changed `status_emoji()` to a 3-arm match:
@@ -434,7 +435,7 @@ fn mre_bug319_both_exhausted_status_emoji_is_red()
 /// guards that fire before the quota tuple — those guards are unchanged.
 ///
 /// # Prevention
-/// Use values well inside both exhaustion zones (5h=6%, 7d=4%, `result=Ok`, no
+/// Use values well inside both exhaustion zones (5h=6%, 7d=2%, `result=Ok`, no
 /// `billing_type="none"`) so the test clearly exercises G3 (weekly-exhausted) not G4 (Dead).
 ///
 /// # Pitfall
@@ -445,12 +446,12 @@ fn mre_bug319_both_exhausted_status_emoji_is_red()
 #[ test ]
 fn mre_bug321_both_exhausted_status_emoji_is_yellow()
 {
-  // 5h_util=94% → 5h_left=6% (h-exhausted: ≤ 15%); 7d_util=96% → 7d_left=4% (weekly-exhausted: ≤ 5%).
+  // 5h_util=94% → 5h_left=6% (h-exhausted: ≤ 15%); 7d_util=98% → 7d_left=2% (weekly-exhausted: ≤ 3%).
   // result=Ok, no billing_type="none" → both-exhausted → G3 (weekly-exhausted) → must be 🟡.
-  let aq = mk_aq_ok_both( 94.0, 96.0 );
+  let aq = mk_aq_ok_both( 94.0, 98.0 );
   assert_eq!(
     status_emoji( &aq ), "🟡",
-    "BUG-321: both-exhausted (5h=6%, 7d=4%, result=Ok) must be 🟡 (G3 weekly-exhausted), not 🔴",
+    "BUG-321: both-exhausted (5h=6%, 7d=2%, result=Ok) must be 🟡 (G3 weekly-exhausted), not 🔴",
   );
 }
 
@@ -538,16 +539,19 @@ fn test_ft11_009_per_column_emoji_prefix_three_cases()
 
 /// `bug_reproducer(BUG-331)` — `pct_emoji` (inside `quota_text_cells`) must not diverge in
 /// color when two raw `left` values are within floating-point noise of `WEEKLY_EXHAUSTION_THRESHOLD`
-/// (5.0) but format to the identical rounded percentage text.
+/// (3.0) but format to the identical rounded percentage text.
 ///
 /// # Root Cause
 /// `pct_emoji`'s closure computed `let left = 100.0 - u;` once, then used the RAW `left` for
 /// the `if left > threshold` color decision but only rounded `left` for the `{left:.0}%` display
-/// text. Two utilizations whose raw `left` straddles `5.0` by less than `1e-9` —
-/// `94.999999999999716` (`left≈5.000000000000284`, > 5.0 → 🟢) and `95.000000000000510`
-/// (`left≈4.999999999999489`, ≤ 5.0 → 🟡) — both format to the identical `"5%"` text but
-/// received opposite colors, confirmed in production via 3 accounts simultaneously showing
-/// `5%` with a 2-green/1-yellow split.
+/// text. Two utilizations whose raw `left` straddles `3.0` by less than `1e-9` —
+/// `96.9999999999993` (`left≈3.0000000000007`, > 3.0 → 🟢) and `97.0000000000007`
+/// (`left≈2.9999999999993`, ≤ 3.0 → 🟡) — both format to the identical `"3%"` text but
+/// would receive opposite colors under the pre-fix raw-comparison logic. The identical
+/// hazard was originally confirmed in production (3 accounts simultaneously showing `5%`
+/// with a 2-green/1-yellow split, back when `WEEKLY_EXHAUSTION_THRESHOLD` was `5.0`) — the
+/// pattern applies at whatever threshold is currently configured, which is why this MRE now
+/// targets `3.0` instead.
 ///
 /// # Why Not Caught
 /// No existing test constructed a near-boundary pair this close to a threshold; the only
@@ -581,10 +585,10 @@ fn mre_bug331_pct_emoji_color_matches_rounded_display_at_threshold_boundary()
     }
   };
 
-  // Raw left ≈ 5.000000000000284 — strictly > 5.0 under raw comparison.
-  let cells_over = quota_text_cells( &mk_7d( 94.999_999_999_999_72 ), 0 );
-  // Raw left ≈ 4.999999999999489 — strictly ≤ 5.0 under raw comparison.
-  let cells_under = quota_text_cells( &mk_7d( 95.000_000_000_000_51 ), 0 );
+  // Raw left ≈ 3.0000000000007 — strictly > 3.0 under raw comparison.
+  let cells_over = quota_text_cells( &mk_7d( 96.999_999_999_999_3 ), 0 );
+  // Raw left ≈ 2.9999999999993 — strictly ≤ 3.0 under raw comparison.
+  let cells_under = quota_text_cells( &mk_7d( 97.000_000_000_000_7 ), 0 );
 
   assert_eq!(
     cells_over[ 2 ], cells_under[ 2 ],
@@ -592,13 +596,13 @@ fn mre_bug331_pct_emoji_color_matches_rounded_display_at_threshold_boundary()
      color decision and the display text (BUG-331); got {:?} vs {:?}",
     cells_over[ 2 ], cells_under[ 2 ],
   );
-  assert_eq!( cells_over[ 2 ], "🟡 5%", "post-fix: both round to left=5.0, which is NOT > threshold 5.0 → 🟡" );
+  assert_eq!( cells_over[ 2 ], "🟡 3%", "post-fix: both round to left=3.0, which is NOT > threshold 3.0 → 🟡" );
 }
 
 // ── BUG-336: status_emoji / status_group_of / recommended_model rounding ──
 
 /// `bug_reproducer(BUG-336)` — `status_emoji` must not diverge from `pct_emoji`'s color
-/// when the raw `7d Left` value lands in the one-percentage-point band `(5.0, 5.5)` — a raw
+/// when the raw `7d Left` value lands in the one-percentage-point band `(3.0, 3.5)` — a raw
 /// value that reads as "available" under `status_emoji`'s raw `>` comparison but rounds down
 /// to exactly the threshold, which `pct_emoji` (fixed under BUG-331) already renders as 🟡.
 ///
@@ -606,9 +610,9 @@ fn mre_bug331_pct_emoji_color_matches_rounded_display_at_threshold_boundary()
 /// `status_emoji` computed `d7_left = 100.0 - u` and compared the RAW value against
 /// `WEEKLY_EXHAUSTION_THRESHOLD` (`format.rs:502,513`), while `pct_emoji` (inside
 /// `quota_text_cells`, fixed under BUG-331) rounds `left` once before both its own color
-/// decision and its display text. `util = 94.6` gives raw `d7_left = 5.4`: `5.4 > 5.0` is
-/// true under `status_emoji`'s raw comparison (🟢), but `pct_emoji` rounds `5.4` to `5.0`
-/// first, and `5.0 > 5.0` is false (🟡) — the same account's Status dot and `7d Left` cell
+/// decision and its display text. `util = 96.6` gives raw `d7_left = 3.4`: `3.4 > 3.0` is
+/// true under `status_emoji`'s raw comparison (🟢), but `pct_emoji` rounds `3.4` to `3.0`
+/// first, and `3.0 > 3.0` is false (🟡) — the same account's Status dot and `7d Left` cell
 /// disagree in the same table row.
 ///
 /// # Why Not Caught
@@ -632,17 +636,17 @@ fn mre_bug331_pct_emoji_color_matches_rounded_display_at_threshold_boundary()
 /// compare a raw float against a threshold that a sibling function already rounds for display.
 #[ doc = "bug_reproducer(BUG-336)" ]
 #[ test ]
-fn mre_bug336_status_emoji_matches_pct_emoji_at_one_point_band_util_94_6()
+fn mre_bug336_status_emoji_matches_pct_emoji_at_one_point_band_util_96_6()
 {
-  // 5h deep green (not under test); 7d raw left=5.4, in the (5.0,5.5) disagreement band.
-  let aq    = mk_aq_ok_both( 10.0, 94.6 );
+  // 5h deep green (not under test); 7d raw left=3.4, in the (3.0,3.5) disagreement band.
+  let aq    = mk_aq_ok_both( 10.0, 96.6 );
   let data  = aq.result.as_ref().unwrap();
   let cells = quota_text_cells( data, 0 );
 
-  assert_eq!( cells[ 2 ], "🟡 5%", "pct_emoji must round left to 5.0 (NOT > threshold 5.0) → 🟡" );
+  assert_eq!( cells[ 2 ], "🟡 3%", "pct_emoji must round left to 3.0 (NOT > threshold 3.0) → 🟡" );
   assert_eq!(
     status_emoji( &aq ), "🟡",
-    "status_emoji must agree with pct_emoji's 🟡 classification for util=94.6 (raw left=5.4); \
+    "status_emoji must agree with pct_emoji's 🟡 classification for util=96.6 (raw left=3.4); \
      pct_emoji cell={:?}",
     cells[ 2 ],
   );
@@ -656,7 +660,7 @@ fn mre_bug336_status_emoji_matches_pct_emoji_at_one_point_band_util_94_6()
 ///
 /// # Root Cause
 /// Same raw-vs-rounded mechanism as
-/// `mre_bug336_status_emoji_matches_pct_emoji_at_one_point_band_util_94_6`, generalized here
+/// `mre_bug336_status_emoji_matches_pct_emoji_at_one_point_band_util_96_6`, generalized here
 /// across both dimensions and all four `(h5_ok, d7_ok)` combinations rather than a single
 /// fixed input.
 ///
@@ -685,11 +689,11 @@ fn test_bug336_cross_function_agreement_pct_emoji_status_emoji_status_group()
   [
     ( 10.0, 10.0, "both deep green" ),
     ( 97.0, 10.0, "5h deep yellow, 7d deep green" ),
-    ( 10.0, 97.0, "5h deep green, 7d deep yellow" ),
-    ( 97.0, 97.0, "both deep yellow (BUG-321 both-exhausted)" ),
+    ( 10.0, 98.0, "5h deep green, 7d deep yellow" ),
+    ( 97.0, 98.0, "both deep yellow (BUG-321 both-exhausted)" ),
     ( 84.7, 10.0, "5h in one-point band (15.3→15.0), 7d deep green" ),
-    ( 10.0, 94.6, "5h deep green, 7d in one-point band (5.4→5.0)" ),
-    ( 85.0, 95.0, "both at exact-integer boundary (15.0 / 5.0)" ),
+    ( 10.0, 96.6, "5h deep green, 7d in one-point band (3.4→3.0)" ),
+    ( 85.0, 97.0, "both at exact-integer boundary (15.0 / 3.0)" ),
   ];
 
   for ( h5_util, d7_util, desc ) in cases
@@ -770,7 +774,7 @@ fn mre_bug336_recommended_model_agrees_with_apply_model_override_at_opus_thresho
   let aq   = mk_aq_sort_weekly( "test@example.com", 10.0, 10.0, 90.4 );
   let data = aq.result.as_ref().unwrap();
 
-  apply_model_override( data, &paths, false, "test", "test@example.com" );
+  apply_model_override( data, &paths, false, "test", "test@example.com", claude_profile::account::AccountBackend::Anthropic );
   let settings = std::fs::read_to_string( paths.settings_file() ).unwrap();
   let override_picked_sonnet = settings.contains( "\"sonnet\"" );
 

@@ -6,7 +6,7 @@ Edge case coverage for the `count::` parameter. See [param/readme.md](../../../.
 
 - **Purpose**: Edge case tests for the `count::` parameter.
 - **Responsibility**: Boundary values, invalid inputs, type violations, and default behavior for `count::`.
-- **Commands:** `.version.history`
+- **Commands:** `.version.list mode::history`
 - **In Scope**: Single-parameter edge cases, validation errors, type checking.
 - **Out of Scope**: Command integration (→ `../command/`), group interactions (→ `../param_group/`).
 
@@ -25,7 +25,7 @@ Edge case coverage for the `count::` parameter. See [param/readme.md](../../../.
 | EC-5 | `count::abc` → exit 1 (type mismatch) | Invalid: type |
 | EC-8 | `count::0` exits 0 (empty is not an error) | Empty vs Error |
 | EC-9 | `count::` (empty) → exit 1 | Empty Value |
-| EC-10 | `count::` only accepted by `.version.history` | Command Scope |
+| EC-10 | `count::` accepted but inert outside `mode::history` | Mode Scope |
 | EC-11 | Very large count (`count::9999`) → capped at data size | Boundary: very large |
 | EC-6 | `count::18446744073709551615` (u64::MAX) → exit 1 | Overflow: above i64::MAX |
 | EC-7 | `count::9223372036854775807` (i64::MAX) accepted → exit 0 | Boundary: i64::MAX |
@@ -37,7 +37,7 @@ Edge case coverage for the `count::` parameter. See [param/readme.md](../../../.
 - Default Behavior: 1 test
 - Invalid (negative, type, empty): 3 tests
 - Empty vs Error distinction: 1 test
-- Command Scope: 1 test
+- Mode Scope: 1 test
 - Very large boundary: 1 test
 - Overflow (above i64::MAX): 1 test
 - Boundary (i64::MAX accepted): 1 test
@@ -51,7 +51,7 @@ Edge case coverage for the `count::` parameter. See [param/readme.md](../../../.
 ### EC-1: `count::0` → empty output, exit 0
 
 - **Given:** Network available (or ignored if zero truncates before fetch).
-- **When:** `clv .version.history count::0`
+- **When:** `clv .version.list mode::history count::0`
 - **Then:** exit 0; stdout is empty.; valid-empty
 - **Exit:** 0
 - **Source:** [feature/001_version_management.md](../../../../docs/feature/001_version_management.md)
@@ -61,7 +61,7 @@ Edge case coverage for the `count::` parameter. See [param/readme.md](../../../.
 ### EC-2: Absent → default 10
 
 - **Given:** Network available.
-- **When:** `clv .version.history`
+- **When:** `clv .version.list mode::history`
 - **Then:** ≤10 version lines.; default applied
 - **Exit:** 0
 - **Source:** [param/readme.md — count:: default: 10](../../../../docs/cli/param/readme.md)
@@ -71,7 +71,7 @@ Edge case coverage for the `count::` parameter. See [param/readme.md](../../../.
 ### EC-3: `count::100` → all available
 
 - **Given:** Network available; API has ~66 releases.
-- **When:** `clv .version.history count::100 v::0`
+- **When:** `clv .version.list mode::history count::100 v::0`
 - **Then:** exit 0; >10 lines (more than default).; data capped at available count
 - **Exit:** 0
 - **Source:** [feature/001_version_management.md](../../../../docs/feature/001_version_management.md)
@@ -81,7 +81,7 @@ Edge case coverage for the `count::` parameter. See [param/readme.md](../../../.
 ### EC-4: `count::-1` → exit 1
 
 - **Given:** clean environment
-- **When:** `clv .version.history count::-1`
+- **When:** `clv .version.list mode::history count::-1`
 - **Then:** exit code 1 (adapter rejects negative as type error).
 - **Exit:** 1
 - **Source:** [param/readme.md — count:: type: u64](../../../../docs/cli/param/readme.md)
@@ -92,7 +92,7 @@ Edge case coverage for the `count::` parameter. See [param/readme.md](../../../.
 ### EC-5: `count::abc` → exit 1
 
 - **Given:** clean environment
-- **When:** `clv .version.history count::abc`
+- **When:** `clv .version.list mode::history count::abc`
 - **Then:** exit code 1.
 - **Exit:** 1
 - **Source:** [feature/005_cli_design.md](../../../../docs/feature/005_cli_design.md)
@@ -102,7 +102,7 @@ Edge case coverage for the `count::` parameter. See [param/readme.md](../../../.
 ### EC-8: `count::0` is valid-empty (not an error)
 
 - **Given:** Network available.
-- **When:** `clv .version.history count::0`
+- **When:** `clv .version.list mode::history count::0`
 - **Then:** exit 0; stdout empty; no stderr.; empty stdout; no error message
 - **Exit:** 0
 - **Source:** [feature/001_version_management.md](../../../../docs/feature/001_version_management.md)
@@ -112,7 +112,7 @@ Edge case coverage for the `count::` parameter. See [param/readme.md](../../../.
 ### EC-9: `count::` (empty) → exit 1
 
 - **Given:** clean environment
-- **When:** `clv .version.history count::`
+- **When:** `clv .version.list mode::history count::`
 - **Then:** exit code 1; error message mentions `count::`.
 - **Exit:** 1
 - **Source:** [feature/005_cli_design.md](../../../../docs/feature/005_cli_design.md); [count_ec9_empty_value_exits_1](../../../cli/count_param_test.rs)
@@ -120,20 +120,20 @@ Edge case coverage for the `count::` parameter. See [param/readme.md](../../../.
 
 ---
 
-### EC-10: `count::` only for `.version.history`
+### EC-10: `count::` accepted but inert outside `mode::history`
 
 - **Given:** clean environment
-- **When:** `clv .version.list count::3`
-- **Then:** exit code 1; unknown parameter.
-- **Exit:** 1
-- **Source:** [feature/005_cli_design.md](../../../../docs/feature/005_cli_design.md)
+- **When:** `clv .version.list mode::aliases count::3` (equivalently, absent `mode::` — aliases is the default)
+- **Then:** exit code 0; output identical to `mode::aliases` without `count::` — `count::` is a declared parameter of the unified `.version.list` command so it is never rejected as unknown, but only the `mode::history` routine consults its value
+- **Exit:** 0
+- **Source:** [param/14_mode.md — EC-7](../../../../docs/cli/param/14_mode.md)
 
 ---
 
 ### EC-11: Very large `count::9999` → capped at data size
 
 - **Given:** Network available.
-- **When:** `clv .version.history count::9999 v::0`
+- **When:** `clv .version.list mode::history count::9999 v::0`
 - **Then:** exit 0; ~66 lines (current API data size, not 9999).; line count equals API data size
 - **Exit:** 0
 - **Source:** [feature/001_version_management.md](../../../../docs/feature/001_version_management.md)
@@ -143,7 +143,7 @@ Edge case coverage for the `count::` parameter. See [param/readme.md](../../../.
 ### EC-6: `count::18446744073709551615` (u64::MAX) → exit 1
 
 - **Given:** clean environment
-- **When:** `clv .version.history count::18446744073709551615`
+- **When:** `clv .version.list mode::history count::18446744073709551615`
 - **Then:** exit code 1; error message mentions `count::`, NOT "fit in target type".; error is user-friendly (no internal unilang message)
 - **Exit:** 1
 - **Source:** [feature/005_cli_design.md](../../../../docs/feature/005_cli_design.md)
@@ -153,7 +153,7 @@ Edge case coverage for the `count::` parameter. See [param/readme.md](../../../.
 ### EC-7: `count::9223372036854775807` (i64::MAX) accepted → exit 0
 
 - **Given:** Network available (command proceeds past validation; data caps at API size).
-- **When:** `clv .version.history count::9223372036854775807 v::0`
+- **When:** `clv .version.list mode::history count::9223372036854775807 v::0`
 - **Then:** exit code 0; output lines ≤ API data size.; (command succeeds; validation does not reject the boundary value)
 - **Exit:** 0
 - **Source:** [feature/005_cli_design.md](../../../../docs/feature/005_cli_design.md)
@@ -163,37 +163,37 @@ Edge case coverage for the `count::` parameter. See [param/readme.md](../../../.
 ### EC-12: `count::3` → ≤3 version entries in output
 
 - **Given:** network available
-- **When:** `clv .version.history count::3`
+- **When:** `clv .version.list mode::history count::3`
 - **Then:** exit 0; stdout contains at most 3 version entries
 - **Exit:** 0
-- **Source:** [command/version.md — .version.history](../../../../docs/cli/command/version.md)
+- **Source:** [command/version.md — .version.list mode::history](../../../../docs/cli/command/version.md#command-6-versionlist)
 
 ---
 
 ### EC-13: `count::1 v::0` → exactly 1 bare line
 
 - **Given:** network available
-- **When:** `clv .version.history count::1 v::0`
+- **When:** `clv .version.list mode::history count::1 v::0`
 - **Then:** exit 0; stdout has exactly 1 line in `{semver}  {YYYY-MM-DD}` bare format
 - **Exit:** 0
-- **Source:** [command/version.md — .version.history](../../../../docs/cli/command/version.md)
+- **Source:** [command/version.md — .version.list mode::history](../../../../docs/cli/command/version.md#command-6-versionlist)
 
 ---
 
 ### EC-14: `count::0 format::json` → empty array `[]`
 
 - **Given:** network available (or irrelevant if zero truncates before fetch)
-- **When:** `clv .version.history count::0 format::json`
+- **When:** `clv .version.list mode::history count::0 format::json`
 - **Then:** exit 0; stdout is exactly `[]` (empty JSON array)
 - **Exit:** 0
-- **Source:** [command/version.md — .version.history](../../../../docs/cli/command/version.md)
+- **Source:** [command/version.md — .version.list mode::history](../../../../docs/cli/command/version.md#command-6-versionlist)
 
 ---
 
 ### EC-15: `v::abc` → exit 1 (type mismatch)
 
 - **Given:** clean environment
-- **When:** `clv .version.history v::abc`
+- **When:** `clv .version.list mode::history v::abc`
 - **Then:** exit 1; error references type mismatch for Integer parameter
 - **Exit:** 1
 - **Source:** [param/04_v.md — type validation](../../../../docs/cli/param/04_v.md)
@@ -204,19 +204,20 @@ Edge case coverage for the `count::` parameter. See [param/readme.md](../../../.
 
 | Function | File |
 |----------|------|
-| `tc426_version_history_count_3` | `tests/cli/read_version_history_test.rs` |
-| `tc427_version_history_count_0_empty` | `tests/cli/read_version_history_test.rs` |
-| `tc432_version_history_count_1_json` | `tests/cli/read_version_history_test.rs` |
-| `tc433_version_history_count_1_v0` | `tests/cli/read_version_history_test.rs` |
-| `tc434_version_history_count_1_v2` | `tests/cli/read_version_history_test.rs` |
-| `tc435_version_history_default_count_le_10` | `tests/cli/read_version_history_test.rs` |
-| `tc436_version_history_count_100_all` | `tests/cli/read_version_history_test.rs` |
-| `tc446_version_history_negative_count_exits_1` | `tests/cli/read_version_history_test.rs` |
-| `tc448_version_history_count_abc_exits_1` | `tests/cli/read_version_history_test.rs` |
-| `tc487_count_u64_max_rejected_with_clear_error` | `cli_args_test/param_numeric_test.rs` |
-| `tc488_count_i64_max_accepted` | `cli_args_test/param_numeric_test.rs` |
+| `it17_version_list_mode_history_count_3` | `tests/cli/read_version_test.rs` |
+| `it18_version_list_mode_history_count_0_empty` | `tests/cli/read_version_test.rs` |
+| `it23_version_list_mode_history_count_1_json` | `tests/cli/read_version_test.rs` |
+| `it24_version_list_mode_history_count_1_v0` | `tests/cli/read_version_test.rs` |
+| `it25_version_list_mode_history_count_1_v2` | `tests/cli/read_version_test.rs` |
+| `it26_version_list_mode_history_default_count_le_10` | `tests/cli/read_version_test.rs` |
+| `it27_version_list_mode_history_count_100_all` | `tests/cli/read_version_test.rs` |
+| `it37_version_list_mode_history_negative_count_exits_1` | `tests/cli/read_version_test.rs` |
+| `it39_version_list_mode_history_count_abc_exits_1` | `tests/cli/read_version_test.rs` |
+| `tc487_count_u64_max_rejected_with_clear_error` | `tests/cli_args_test/param_numeric_test.rs` |
+| `tc488_count_i64_max_accepted` | `tests/cli_args_test/param_numeric_test.rs` |
 | `count_ec12_count_3_at_most_3_entries` | `tests/cli/count_param_test.rs` |
 | `count_ec13_count_1_v0_exactly_one_line` | `tests/cli/count_param_test.rs` |
 | `count_ec14_count_0_json_empty_array` | `tests/cli/count_param_test.rs` |
 | `count_ec15_v_abc_type_mismatch_exits_1` | `tests/cli/count_param_test.rs` |
 | `count_ec9_empty_value_exits_1` | `tests/cli/count_param_test.rs` |
+| `count_ec10_inert_under_aliases_mode` | `tests/cli/count_param_test.rs` |

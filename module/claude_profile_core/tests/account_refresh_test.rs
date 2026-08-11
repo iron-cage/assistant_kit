@@ -25,12 +25,15 @@
 //! | `mre_bug318_rotation_live_sync_structural` | structural | grep account.rs for `is_still_active` and `Fix(BUG-318)` | present |
 //! | `mre_bug221_save_some_creds_writes_to_store_not_live_file` | unit | `save("acct", store, paths, false, Some(b"data"))` | store = `b"data"`; live file unchanged |
 //! | `mre_bug221_save_none_creds_copies_from_live_file` | unit | `save("acct", store, paths, false, None)` | store = live file content; live file unchanged |
+//! | `bug_reproducer_343_save_does_not_merge_live_identity_into_non_active_target` | bug_reproducer(BUG-343) | live session identifies as `live@test.com`; `save()` called for a different, non-active `target@test.com` | target's own `{name}.json` has no `oauthAccount` merged from the live session |
 //! | `ft22_manipulate_expires_at_replaces_numeric_value` | behavioral | `manipulate_expires_at` with numeric `expiresAt` value | value replaced (original absent from result) |
 //! | `ft22_manipulate_expires_at_replaces_quoted_value` | behavioral | `manipulate_expires_at` with quoted `expiresAt` value | value replaced (original absent from result) |
 //! | `ft22_manipulate_expires_at_noop_when_key_absent` | behavioral | `manipulate_expires_at` when `expiresAt` key absent | string returned unchanged |
 //! | `ft22_manipulate_expires_at_called_before_run_isolated_structural` | structural | grep `account.rs` for `manipulate_expires_at(` before first `run_isolated(` | in order |
 //! | `ft23_live_sync_returns_live_creds_without_subprocess` | behavioral | live creds differ from stored → sync and return `Some(live)` without subprocess | `Some(live_json)` |
 //! | `ft24_some_paths_branch_reads_credentials_file_twice_structural` | structural | grep `account.rs` `Some(paths)` branch for ≥2 `credentials_file()` calls | ≥2 occurrences |
+//! | `ft25_071_refresh_redirect_bypass_checked_before_run_isolated_structural` | structural | Feature 071/AC-09: redirect-backend check appears before `run_isolated(` and before the `Some(paths)`/`None` branch dispatch | in order |
+//! | `ft26_071_refresh_redirect_account_returns_none_credentials_unchanged` | behavioral | Feature 071/AC-09: `refresh_account_token()` against a `backend: redirect` account | `None`; credential store file byte-for-byte unchanged |
 //!
 //! ## Pitfall: Consumer Feature Activation
 //!
@@ -271,7 +274,7 @@ fn mre_bug221_save_some_creds_writes_to_store_not_live_file()
   std::fs::write( &live_file, b"original_live_creds" ).unwrap();
   let paths      = ClaudePaths::with_home( fake_home.path() );
 
-  account::save( "acct@test.com", store.path(), &paths, false, Some( b"new_creds_bytes" ), None, None, None ).unwrap();
+  account::save( "acct@test.com", store.path(), &paths, false, Some( b"new_creds_bytes" ), None, None, None, account::AccountBackend::Anthropic, None, None, None ).unwrap();
 
   let store_file = store.path().join( "acct@test.com.credentials.json" );
   assert!( store_file.exists(), "save(Some(bytes)) must create the credential store file" );
@@ -305,7 +308,7 @@ fn mre_bug221_save_none_creds_copies_from_live_file()
   std::fs::write( &live_file, b"live_creds_content" ).unwrap();
   let paths      = ClaudePaths::with_home( fake_home.path() );
 
-  account::save( "acct@test.com", store.path(), &paths, false, None, None, None, None ).unwrap();
+  account::save( "acct@test.com", store.path(), &paths, false, None, None, None, None, account::AccountBackend::Anthropic, None, None, None ).unwrap();
 
   let store_file = store.path().join( "acct@test.com.credentials.json" );
   assert!( store_file.exists(), "save(None) must create the credential store file" );
@@ -318,6 +321,55 @@ fn mre_bug221_save_none_creds_copies_from_live_file()
     std::fs::read( &live_file ).unwrap(),
     b"live_creds_content",
     "save(None) must NOT modify the live credentials file",
+  );
+}
+
+#[ test ]
+// test_kind: bug_reproducer(BUG-343)
+// Root Cause: save()'s oauthAccount merge (account.rs:367-377) reads the machine-local live
+//   session file (paths.claude_json_file()) unconditionally and merges its `oauthAccount` into
+//   {name}.json with zero comparison against `name` — corrupting a non-active target account's
+//   own file with whichever identity happens to be locally active on this machine. Reachable
+//   via the unguarded save() call at account.rs:1209 inside refresh_token_with_live_path(),
+//   which is routinely invoked for non-active accounts by apply_touch/apply_refresh's default
+//   (non-only_active) full-account-list loops (account.rs:1116-1118).
+// Why Not Caught: no existing test constructs a live session identity DIFFERENT from the
+//   `name` being saved — mre_bug221_save_* above use a single identity throughout and never
+//   populate paths.claude_json_file() with oauthAccount data at all.
+// Fix Applied: save()'s merge block now gates on the live session's own oauthAccount.emailAddress
+//   equaling `name` before merging (see Fix(BUG-343) comment in account.rs).
+// Prevention: this test asserts the target's own oauthAccount is unaffected by a divergent live
+//   session identity; must keep passing for any future save() merge-block change.
+// Pitfall: a function that reads "the machine's live session" to enrich a named account's file
+//   is only safe when the caller can guarantee `name` IS the live session's own account — once
+//   shared with a caller that saves non-active accounts (background refresh, by design), every
+//   unguarded live-session read becomes a cross-account identity leak.
+fn bug_reproducer_343_save_does_not_merge_live_identity_into_non_active_target()
+{
+  let store      = TempDir::new().unwrap();
+  let fake_home  = TempDir::new().unwrap();
+  let dot_claude = fake_home.path().join( ".claude" );
+  std::fs::create_dir_all( &dot_claude ).unwrap();
+  // This machine's live session identifies as "live@test.com" — NOT the account saved below.
+  std::fs::write(
+    fake_home.path().join( ".claude.json" ),
+    r#"{"oauthAccount":{"emailAddress":"live@test.com","organizationUuid":"org-live"}}"#,
+  ).unwrap();
+  let paths = ClaudePaths::with_home( fake_home.path() );
+
+  // save() invoked for a DIFFERENT, non-active account — the routine background-refresh
+  // scenario per account.rs:1116-1118 (refresh_token_with_live_path saves accounts that are
+  // "NOT yet the active account").
+  account::save( "target@test.com", store.path(), &paths, false, Some( b"new_creds_bytes" ), None, None, None, account::AccountBackend::Anthropic, None, None, None ).unwrap();
+
+  let meta_path = store.path().join( "target@test.com.json" );
+  let meta_text = std::fs::read_to_string( &meta_path ).unwrap();
+  let meta_val  : serde_json::Value = serde_json::from_str( &meta_text ).unwrap();
+
+  assert!(
+    meta_val.get( "oauthAccount" ).is_none(),
+    "save() must NOT merge the live session's oauthAccount into a non-active target's own file; found: {:?}",
+    meta_val.get( "oauthAccount" ),
   );
 }
 
@@ -782,4 +834,69 @@ fn mre_bug318_rotation_live_sync_structural()
     src.contains( "Fix(BUG-318)" ),
     "BUG-318 fix: `Fix(BUG-318)` annotation must appear at the live-sync write site in account.rs"
   );
+}
+
+// ── structural + behavioral (Feature 071 / AC-09) ──────────────────────────────
+
+/// T04/433/AC-09: `refresh_account_token()` checks `backend == Redirect` and returns
+/// early — before `args` is built and before either the `Some(paths)`/`None` branch can
+/// dispatch a subprocess — so a redirect account's refresh is a true no-op covering both
+/// branches. A black-box behavioral test cannot distinguish "bypassed" from "attempted and
+/// failed" in this sandboxed environment (no real `claude` binary — both return `None` with
+/// an unchanged store file), so this structural check is the actual AC-09 proof; the
+/// behavioral test below is a regression guard on the observable half only.
+#[ test ]
+fn ft25_071_refresh_redirect_bypass_checked_before_run_isolated_structural()
+{
+  let account_rs = std::path::Path::new( env!( "CARGO_MANIFEST_DIR" ) ).join( "src/account.rs" );
+  let content    = std::fs::read_to_string( &account_rs )
+    .unwrap_or_else( |e| panic!( "cannot read {}: {e}", account_rs.display() ) );
+
+  let fn_start = content.find( "pub fn refresh_account_token(" )
+    .expect( "refresh_account_token must exist in account.rs" );
+  let fn_body = &content[ fn_start.. ];
+
+  let bypass_pos = fn_body.find( "AccountBackend::Redirect" )
+    .expect( "AC-09: refresh_account_token must check AccountBackend::Redirect" );
+  let run_pos = fn_body.find( "run_isolated(" )
+    .expect( "run_isolated must still be reachable in refresh_account_token" );
+  let branch_pos = fn_body.find( "if let Some( p ) = paths" )
+    .expect( "refresh_account_token must still dispatch on the Some(paths)/None branches" );
+
+  assert!(
+    bypass_pos < run_pos,
+    "AC-09: the redirect-backend check must appear before run_isolated( in refresh_account_token \
+     (bypass_pos={bypass_pos}, run_pos={run_pos})",
+  );
+  assert!(
+    bypass_pos < branch_pos,
+    "AC-09: the redirect-backend check must appear before the Some(paths)/None branch dispatch, \
+     so both branches are covered (bypass_pos={bypass_pos}, branch_pos={branch_pos})",
+  );
+}
+
+/// T04/433/AC-09: `refresh_account_token()` against a `backend: redirect` account returns
+/// `None` and leaves the credential store file byte-for-byte unchanged.
+#[ cfg( feature = "enabled" ) ]
+#[ test ]
+fn ft26_071_refresh_redirect_account_returns_none_credentials_unchanged()
+{
+  let store = TempDir::new().unwrap();
+  std::fs::write(
+    store.path().join( "kimi@moonshot.ai.credentials.json" ),
+    r#"{"accessToken":"sk-foreign-key-abc123"}"#,
+  ).unwrap();
+  std::fs::write(
+    store.path().join( "kimi@moonshot.ai.json" ),
+    r#"{"backend":"redirect","base_url":"https://api.moonshot.ai/anthropic","redirect_model":"kimi-k3"}"#,
+  ).unwrap();
+  let before = std::fs::read_to_string( store.path().join( "kimi@moonshot.ai.credentials.json" ) ).unwrap();
+
+  let result = account::refresh_account_token(
+    "kimi@moonshot.ai", store.path(), None, false, "test", claude_runner_core::IsolatedModel::Default, &[],
+  );
+
+  assert_eq!( result, None, "AC-09: refresh against a redirect account must return None" );
+  let after = std::fs::read_to_string( store.path().join( "kimi@moonshot.ai.credentials.json" ) ).unwrap();
+  assert_eq!( before, after, "AC-09: refresh against a redirect account must not modify the credential store file" );
 }

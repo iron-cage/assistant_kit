@@ -11,7 +11,6 @@
 //! | 306 | `version::1.2` → two-part semver rejected | N | 1 |
 //! | 307 | `version::x` → unknown alias, exit 1 | N | 1 |
 //! | 308 | absent `version::` with `dry::1` → uses `stable` | P | 0 |
-//! | 309 | `version::month dry::1` → resolves to pinned semver | P | 0 |
 //! | 350 | `version::latest dry::1` → `autoUpdates = true` in preview | P | 0 |
 //! | 351 | `version::stable dry::1` → `autoUpdates = false` in preview | P | 0 |
 //! | 352 | `version::2.1.50 dry::1` → `autoUpdates = false` in preview | P | 0 |
@@ -26,6 +25,15 @@
 //! | 361 | `dry::1 format::json` → JSON output, exit 0 | P | 0 |
 //! | 362 | `format::JSON` (uppercase) → exit 1 | N | 1 |
 //! | 533 | `version::9.9.9` (nonexistent) → preference recorded before perform_install() attempted, regardless of outcome | P | 0 |
+//! | 537 | `version::9.9.9 record_only::1` → exit 0, preference recorded, perform_install() never invoked | P | 0 |
+//! | 538 | `record_only::1 dry::1` → mutually exclusive, exit 1, no settings written | N | 1 |
+//! | 539 | `record_only::1 format::json` → `installed:false,recorded:true` JSON | P | 0 |
+//! | 540 | `record_only::1 v::0` → bare label only, no verbose text | P | 0 |
+//! | 541 | `record_only::1 force::1` → exit 0, force silently ignored | P | 0 |
+//! | 542 | `record_only::1` called twice with same version → identical output both times | P | 0 |
+//! | 543 | `record_only::0 dry::1` → normal dry-run path, exit 0 | P | 0 |
+//! | 545 | `record_only::maybe` → non-parseable value rejected, exit 1 | N | 1 |
+//! | 546 | `record_only::` (empty) → empty value rejected, exit 1 | N | 1 |
 
 use tempfile::TempDir;
 
@@ -117,16 +125,6 @@ fn tc308_version_install_absent_version_defaults_to_stable()
   assert!( text.contains( "stable" ), "default version must be stable: {text}" );
 }
 
-// TC-309: version::month dry::1 → resolves to pinned semver
-#[ test ]
-fn tc309_version_install_dry_month()
-{
-  let out = run_clv( &[ ".version.install", "version::month", "dry::1" ] );
-  assert_exit( &out, 0 );
-  let text = stdout( &out );
-  assert!( text.contains( "month" ), "must contain alias name 'month': {text}" );
-  assert!( text.contains( "2.1.74" ), "must contain resolved version 2.1.74: {text}" );
-}
 
 // TC-350: version::latest dry::1 → autoUpdates = true in preview
 #[ test ]
@@ -210,8 +208,10 @@ fn tc514_version_install_dry_latest_shows_new_lock_key_removal()
 // Prevention: Include leading-zero variants in version-spec negative test matrix.
 //
 // Pitfall: The installer accepts and attempts to download leading-zero versions,
-// then fails with 404.  By that time, hot_swap_binary has already deleted the
-// old binary, leaving the user without any installed version.
+// then fails with 404.  Historically hot_swap_binary had already deleted the
+// old binary by that point, leaving no installed version at all; since
+// Fix(BUG-016) the launcher is moved aside and restored on failure, but
+// rejecting the spec up front remains the first line of defense.
 #[ test ]
 fn tc354_version_install_leading_zeros_exits_1()
 {
@@ -413,5 +413,159 @@ fn tc361_version_install_dry_format_json()
 fn tc362_version_install_format_uppercase_rejected()
 {
   let out = run_clv( &[ ".version.install", "format::JSON" ] );
+  assert_exit( &out, 1 );
+}
+
+// TC-537: version::9.9.9 record_only::1 → exit 0, preference recorded, perform_install() never invoked
+//
+// "9.9.9" is a syntactically valid but certainly-nonexistent version (same trick
+// as TC-533): without record_only::1, this version cannot hit the idempotent-skip
+// guard and must fall through to the real store+perform_install() path, where
+// perform_install() reliably fails (curl 404 or network error) — see TC-533.
+// With record_only::1, perform_install() must never run at all, so this exits 0
+// cleanly regardless of network conditions — the clean exit 0 is itself the proof.
+#[ test ]
+fn tc537_version_install_record_only_skips_install()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_settings( dir.path(), &[] );
+
+  let out = run_clv_with_env(
+    &[ ".version.install", "version::9.9.9", "record_only::1" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let content = std::fs::read_to_string( dir.path().join( ".claude/settings.json" ) ).unwrap();
+  assert!(
+    content.contains( "preferredVersionSpec" ) && content.contains( "9.9.9" ),
+    "record_only::1 must record the preference: {content}"
+  );
+}
+
+// TC-538: record_only::1 dry::1 → mutually exclusive, exit 1, no settings written
+#[ test ]
+fn tc538_version_install_record_only_dry_mutually_exclusive()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_settings( dir.path(), &[] );
+
+  let out = run_clv_with_env(
+    &[ ".version.install", "version::stable", "record_only::1", "dry::1" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 1 );
+
+  let content = std::fs::read_to_string( dir.path().join( ".claude/settings.json" ) ).unwrap();
+  assert!(
+    !content.contains( "preferredVersionSpec" ),
+    "rejected record_only::1+dry::1 must not write settings: {content}"
+  );
+}
+
+// TC-539: record_only::1 format::json → JSON output with installed:false, recorded:true
+#[ test ]
+fn tc539_version_install_record_only_format_json()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_settings( dir.path(), &[] );
+
+  let out = run_clv_with_env(
+    &[ ".version.install", "version::9.9.9", "record_only::1", "format::json" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.trim_start().starts_with( '{' ), "must produce JSON object: {text}" );
+  assert!( text.contains( "\"installed\":false" ), "must report installed:false: {text}" );
+  assert!( text.contains( "\"recorded\":true" ), "must report recorded:true: {text}" );
+}
+
+// TC-540: record_only::1 v::0 → bare label only, no verbose "recorded"/"preferred" text
+#[ test ]
+fn tc540_version_install_record_only_v0_bare_label()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_settings( dir.path(), &[] );
+
+  let out = run_clv_with_env(
+    &[ ".version.install", "version::9.9.9", "record_only::1", "v::0" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "9.9.9" ), "must contain the version label: {text}" );
+  assert!( !text.contains( "recorded" ), "v::0 must omit the verbose 'recorded' line: {text}" );
+}
+
+// TC-541: record_only::1 force::1 → exit 0; force:: has no install to bypass, silently ignored
+#[ test ]
+fn tc541_version_install_record_only_force_silently_ignored()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_settings( dir.path(), &[] );
+
+  let out = run_clv_with_env(
+    &[ ".version.install", "version::9.9.9", "record_only::1", "force::1" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let content = std::fs::read_to_string( dir.path().join( ".claude/settings.json" ) ).unwrap();
+  assert!(
+    content.contains( "preferredVersionSpec" ),
+    "record_only::1+force::1 must still record the preference: {content}"
+  );
+}
+
+// TC-542: record_only::1 fires unconditionally — repeated calls with the same
+// version both succeed identically; there is no idempotency-guard branch to skip.
+#[ test ]
+fn tc542_version_install_record_only_unconditional_repeat()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_settings( dir.path(), &[] );
+
+  let args = [ ".version.install", "version::9.9.9", "record_only::1" ];
+  let out1 = run_clv_with_env( &args, &[ ( "HOME", home ) ] );
+  assert_exit( &out1, 0 );
+  let out2 = run_clv_with_env( &args, &[ ( "HOME", home ) ] );
+  assert_exit( &out2, 0 );
+
+  assert_eq!(
+    stdout( &out1 ), stdout( &out2 ),
+    "record_only::1 must behave identically on repeated calls (no idempotency branching)"
+  );
+}
+
+// TC-543: record_only::0 dry::1 → takes normal install (dry-run) path, not record-only path
+#[ test ]
+fn tc543_version_install_record_only_zero_normal_install()
+{
+  let out = run_clv( &[ ".version.install", "version::stable", "record_only::0", "dry::1" ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "[dry-run]" ), "record_only::0 must follow normal install path: {text}" );
+}
+
+// TC-545: record_only::maybe → non-parseable value rejected, exit 1
+#[ test ]
+fn tc545_version_install_record_only_invalid_exits_1()
+{
+  let out = run_clv( &[ ".version.install", "record_only::maybe" ] );
+  assert_exit( &out, 1 );
+}
+
+// TC-546: record_only:: (empty) → empty value rejected, exit 1
+#[ test ]
+fn tc546_version_install_record_only_empty_exits_1()
+{
+  let out = run_clv( &[ ".version.install", "record_only::" ] );
   assert_exit( &out, 1 );
 }

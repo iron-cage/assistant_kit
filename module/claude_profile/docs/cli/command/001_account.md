@@ -6,7 +6,7 @@ Account management commands: list, save, use, delete, limits, and relogin.
 
 ### Command: 3. `.accounts`
 
-List all saved accounts (identity view) or run per-account mutations (`assignee::USER@MACHINE`, `owner::0`, `owner::USER@MACHINE`, `lock::0`/`lock::1`, `reserve::0`/`reserve::1`). Without `name::`: shows all accounts; with `name::EMAIL`: shows that account only. Column visibility controlled via `cols::` (modifies from default identity set: Account, Owner, Active, Current, Sub, Tier, Expires, Email). When data-source params are active (`refresh::1`, `touch::1`), fetches live quota using the same pipeline as `.usage` — defaults to local-only read with no HTTP fetch.
+List all saved accounts (identity view) or run per-account mutations (`assignee::USER@MACHINE`, `owner::0`, `owner::USER@MACHINE`, `lock::0`/`lock::1`, `reserve::0`/`reserve::1`). Without `name::`: shows all accounts; with `name::EMAIL`: shows that account only. Column visibility controlled via `cols::` (modifies from default identity set: Account, Owner, Active, Current, Sub, Tier, Expires, Email, Provider). When data-source params are active (`refresh::1`, `touch::1`), fetches live quota using the same pipeline as `.usage` — defaults to local-only read with no HTTP fetch.
 
 -- **Parameters:** [`name::`](../param/001_name.md) *(optional)*, [`cols::`](../param/033_cols.md), [`assignee::`](../param/063_assignee.md), [`owner::`](../param/062_owner.md), [`lock::`](../param/067_lock.md), [`reserve::`](../param/068_reserve.md), [`force::`](../param/058_force.md), [`dry::`](../param/004_dry.md), [`set_model::`](../param/054_set_model.md), [`refresh::`](../param/019_refresh.md), [`touch::`](../param/034_touch.md), [`imodel::`](../param/035_imodel.md), [`effort::`](../param/036_effort.md), [`sort::`](../param/025_sort.md), [`desc::`](../param/026_desc.md), [`prefer::`](../param/027_prefer.md), [`count::`](../param/037_count.md), [`offset::`](../param/038_offset.md), [`only_active::`](../param/039_only_active.md), [`only_next::`](../param/040_only_next.md), [`min_5h::`](../param/041_min_5h.md), [`min_7d::`](../param/042_min_7d.md), [`only_valid::`](../param/043_only_valid.md), [`exclude_exhausted::`](../param/044_exclude_exhausted.md), [`get::`](../param/045_get.md), [`abs::`](../param/046_abs.md), [`no_color::`](../param/047_no_color.md), [`live::`](../param/020_live.md), [`interval::`](../param/021_interval.md), [`jitter::`](../param/022_jitter.md), [`format::`](../param/002_format.md), [`trace::`](../param/023_trace.md)
 -- **Exit:** 0 (success) | 1 (usage: invalid `name::` chars, legacy field-toggle param used, unknown `cols::` id, REMOVED_TOGGLE param used (`assign::`, `for::`, `unclaim::`, `active::`) — exits 1 with migration message, G8 ownership violation on `owner::0` or `owner::USER@MACHINE`, G9 claim-lock violation on `assignee::` target-side) | 2 (runtime: account not found or credential store unreadable)
@@ -20,6 +20,8 @@ clp .accounts alice@acme.com                         # positional: bare name at 
 clp .accounts car                                     # prefix: first saved account starting with "car"
 clp .accounts cols::+host,-tier                      # add host column, remove tier column
 clp .accounts cols::-owner                            # hide owner column
+clp .accounts cols::-inference_provider               # hide inference provider column
+clp .accounts cols::+backend                          # show backend column (anthropic/redirect)
 clp .accounts assignee::user1@w003 name::alice@acme.com  # write per-machine marker for alice
 clp .accounts assignee::0 name::alice@acme.com           # write marker for current machine
 clp .accounts assignee::user1@w003                       # unassign (clear) marker for user1@w003
@@ -40,7 +42,7 @@ clp .accounts format::table
 | Parameter | Type | Default | Purpose |
 |-----------|------|---------|---------|
 | `name::` | [`AccountName`](../type/001_account_name.md) | *(omit to list all)* | Show or operate on a single named account; prefix resolution supported |
-| `cols::` | `string` | `""` | Column visibility modifiers: comma-separated `+col_id` / `-col_id` relative to identity default set (`account`, `owner`, `active`, `current`, `sub`, `tier`, `expires`, `email`); opt-in: `display_name`, `host`, `role`, `billing`, `model`, `uuid`, `capabilities`, `org_uuid`, `org_name` |
+| `cols::` | `string` | `""` | Column visibility modifiers: comma-separated `+col_id` / `-col_id` relative to identity default set (`account`, `owner`, `active`, `current`, `sub`, `tier`, `expires`, `email`, `inference_provider`); opt-in: `display_name`, `host`, `role`, `billing`, `model`, `uuid`, `capabilities`, `org_uuid`, `org_name`, `backend` |
 | `assignee::` | `string` (`USER@MACHINE` or `0`) | *(omit)* | When `name::` present: write per-machine marker `_active_{machine}_{user}` = `{name}`. When `name::` absent: clear marker for the given identity. Value `"0"` expands to `$USER@$HOSTNAME` (current machine). Value sanitized per `active_marker_filename()` rules (Feature 065; renamed from `active::`) |
 | `owner::` | `string` | *(omit)* | `owner::0`: clear ownership via `write_owner(name, store, "")`; G8 gate runs before write even when `dry::1`; when `name::` absent, batch-clears all owned accounts in filtered set. `owner::USER@MACHINE`: set owner; G8 gate; `name::` required (comma-list `X,Y,Z` supported). Feature 063/064. |
 | `lock::` | `bool` | `0` | Set/clear `claim_lock` in `{name}.json`; ungated write (no ownership check); comma-list `name::X,Y,Z` batch; absent `name::` batch-applies to filtered set. Gates Gate 9 (eligibility, unconditional) and G9 (`.account.use`/`assignee::` target-side, `force::1`-bypassable). Feature 070. |
@@ -91,6 +93,7 @@ clp .accounts
 #   Tier:    default_claude_max_20x
 #   Expires: in 2h 11m
 #   Email:   alice@acme.com
+#   Provider: anthropic
 
 clp .accounts format::table
 # Accounts
@@ -107,7 +110,7 @@ clp .accounts assignee::bob@laptop name::alice@acme.com
 ```
 
 **Notes:**
-- `cols::` replaces the 15 former field-toggle params (`active::`, `current::`, `sub::`, `tier::`, `expires::`, `email::`, `display_name::`, `host::`, `role::`, `billing::`, `model::`, `uuid::`, `capabilities::`, `org_uuid::`, `org_name::`). Using any exits 1 with a `cols::` migration hint.
+- `cols::` replaces the 14 former field-toggle params (`current::`, `sub::`, `tier::`, `expires::`, `email::`, `display_name::`, `host::`, `role::`, `billing::`, `model::`, `uuid::`, `capabilities::`, `org_uuid::`, `org_name::`). Using any exits 1 with a `cols::` migration hint.
 - Owner column is in the identity default set — shows `USER@MACHINE` when owned, `—` when unowned. Hide with `cols::-owner`.
 - `format::json` always includes all fields regardless of `cols::`.
 - `format::table` columns: flag, Account, Owner (when enabled), Active, Sub, Tier, Expires.
@@ -116,6 +119,8 @@ clp .accounts assignee::bob@laptop name::alice@acme.com
 - G8 ownership gate evaluates BEFORE `dry::1` on `owner::0 name::X` (Feature 064) — a non-owner gets exit 1 even in dry-run mode.
 - `current::` field (in text mode) shows `Current: yes` for the account whose `accessToken` matches `~/.claude/.credentials.json`. See [feature/016_current_account_awareness.md](../../feature/016_current_account_awareness.md).
 - `lock::` and `reserve::` writes are ungated (no ownership check) — any caller may lock/unlock or reserve/unreserve any account. `claim_lock` gates selection elsewhere (Gate 9 in `find_next_for_strategy()`, unconditional; G9 on `.account.use`/`assignee::` target-side, `force::1`-bypassable); `reserve` only reorders (leading sort key), never excludes. See [Feature 070](../../feature/070_account_claim_and_reservation_control.md).
+- `cols::+backend` shows each account's `backend` field (`anthropic`/`redirect`); `format::json` always includes `backend` regardless of `cols::`. See [Feature 071](../../feature/071_redirect_backend_accounts.md).
+- `inference_provider` is in the identity default set — shows the account's tagged inference provider (`anthropic` when never explicitly tagged via `.account.save inference_provider::`). Hide with `cols::-inference_provider`. Distinct from `backend`: `inference_provider` groups accounts for rotation eligibility (see [algorithm/004](../../algorithm/004_eligibility_gates.md) Gate 10); `backend` selects the credential/routing mechanism (Feature 071). See [Feature 072](../../feature/072_inference_provider_selection.md).
 
 **Help Rendering Scheme:**
 
@@ -131,6 +136,10 @@ clp .accounts assignee::bob@laptop name::alice@acme.com
 | Refresh & Subprocess Control | `trace::`, `refresh::`, `touch::`, `imodel::`, `effort::`, `set_model::`, `live::`, `interval::`, `jitter::` |
 
 Each group header renders bold/colored with no bracket punctuation on a TTY, falling back to a single trailing colon (e.g. `Core:`) in plain text. Every boolean parameter's signature is shown bare (`dry::0`, never `dry::0|1`); accepted values and the default are stated once in a blanket line rather than per row. Enum-valued parameters (`imodel::`, `effort::`, `set_model::`, `format::`, `sort::`, `prefer::`) show an uppercase placeholder in the signature (e.g. `imodel::MODEL`) with actual values spelled out in the description column. The name / `::` / value signature sub-columns are independently padded so the `::` delimiter aligns vertically across all 32 rows. No version banner and no information about REMOVED parameters appear in `.accounts.help` output — the REMOVED_TOGGLE stubs (`assign::`, `for::`, `unclaim::`, `active::`) keep their existing runtime redirect-error behavior (see Notes above); they are simply invisible from `.help` text. Full rationale and general rendering rules: [pattern/001_grouped_help_rendering.md](../../pattern/001_grouped_help_rendering.md).
+
+### Referenced Command Group
+
+Evaluated against `.usage` under the strict [command_group](../command_group/readme.md) identity test (same dispatch function, same parameter set) — does not qualify in substance, though criterion (b) is technically satisfied at the literal-registration level: both `.accounts` and `.usage` are registered to the same function, `accounts_view_routine()` (`src/commands/accounts.rs:402`), a thin shim that branches on command name and delegates to `accounts_routine()` (`src/commands/accounts.rs:70`) for `.accounts` or `usage_routine()` (`src/usage/api.rs:78`) for `.usage` — the two branches share no logic beyond that check, and `accounts_routine()` itself has zero cross-calls with `usage_routine()`. The "same live pipeline as `.usage`" claim in the command summary above and in the Notes (`refresh::`/`touch::` "activate the same live pipeline as `.usage`") describes intended parity, not implemented behavior: `accounts_routine()` registers `refresh::`, `touch::`, `imodel::`, and `effort::` as accepted parameters (`src/registry.rs:92-95`) but never reads any of the four anywhere in its body — `grep -n "refresh\|touch\|fetch" src/commands/accounts.rs` returns no matches — and never calls `fetch_quota_for_list()` (`src/usage/fetch.rs:63`), `apply_refresh()` (`src/usage/refresh.rs:76`), or `apply_touch()` (`src/usage/touch.rs:133`), all of which are called only from `usage_routine()`. The `assignee::`/`owner::`/`lock::`/`reserve::` mutation sharing (line above) is a real shared-helper case, already covered by the `.accounts`/`.usage` rows in [`command_group/readme.md`](../command_group/readme.md) Evaluated, Not Qualifying — see that table for the full citation-backed analysis of both this claim and the mutation-dispatch one.
 
 ### Referenced Parameters
 
@@ -185,6 +194,8 @@ Each group header renders bold/colored with no bracket punctuation on a TTY, fal
 | 10 | [Active Marker and Owner Param Redesign](../../feature/064_active_marker_and_owner_redesign.md) | `active::` introduced as `Kind::String` mutation param (superseded by Feature 065); `owner::0` sentinel; REMOVED_TOGGLE stubs |
 | 11 | [Assignee Param Redesign](../../feature/065_assignee_param_redesign.md) | `assignee::` rename from `active::`; `assignee::0` current-machine sentinel; `active::` REMOVED_TOGGLE |
 | 12 | [Account Claim And Reservation Control](../../feature/070_account_claim_and_reservation_control.md) | `lock::`/`reserve::` mutation params; Gate 9 and G9 `claim_lock` gates; `reserve` leading sort key |
+| 13 | [Redirect Backend Accounts](../../feature/071_redirect_backend_accounts.md) | `cols::+backend` column showing `anthropic`/`redirect` per account |
+| 14 | [Inference Provider Selection](../../feature/072_inference_provider_selection.md) | `inference_provider` default identity column; Gate 10 rotation constraint |
 
 ### Referenced User Stories
 
@@ -221,10 +232,10 @@ Each group header renders bold/colored with no bracket punctuation on a TTY, fal
 
 ### Command: 4. `.account.save`
 
-Copies `~/.claude/.credentials.json` to `{credential_store}/{name}.credentials.json` and merges identity, model, roles, and profile metadata into the unified `{name}.json`. Machine-global state (`commands.*`, `mcpServers`, `projects`) is not captured. Use this to preserve account identity before switching.
+Copies `~/.claude/.credentials.json` to `{credential_store}/{name}.credentials.json` and merges identity, model, roles, and profile metadata into the unified `{name}.json`. Machine-global state (`commands.*`, `mcpServers`, `projects`) is not captured. Use this to preserve account identity before switching. When `backend::redirect`, a different write path applies instead: no OAuth capture — `{name}.credentials.json` is written directly from `api_key::`, and `base_url`/`redirect_model` are stored in `{name}.json` alongside `backend` (see [feature/071](../../feature/071_redirect_backend_accounts.md)). `preset::kimi` pre-fills `backend::`/`base_url::`/`inference_provider::` for a Moonshot Kimi redirect account, so only `name::`, `api_key::`, and `redirect_model::` need to be given explicitly (see [feature/073](../../feature/073_kimi_provider_preset.md)).
 
--- **Parameters:** [`name::`](../param/001_name.md), [`dry::`](../param/004_dry.md), [`host::`](../param/048_host.md), [`role::`](../param/052_role.md), [`trace::`](../param/023_trace.md)
--- **Exit:** 0 (success) | 1 (usage: invalid name or no active account set) | 2 (runtime: credentials unreadable)
+-- **Parameters:** [`name::`](../param/001_name.md), [`dry::`](../param/004_dry.md), [`host::`](../param/048_host.md), [`role::`](../param/052_role.md), [`inference_provider::`](../param/073_inference_provider.md), [`trace::`](../param/023_trace.md), [`backend::`](../param/069_backend.md), [`preset::`](../param/074_preset.md), [`base_url::`](../param/070_base_url.md), [`api_key::`](../param/071_api_key.md), [`redirect_model::`](../param/072_redirect_model.md)
+-- **Exit:** 0 (success) | 1 (usage: invalid name or no active account set; empty `inference_provider::` value; invalid `backend::` value; unrecognized `preset::` value (only `kimi` is recognized); `backend::redirect` missing one of `base_url::`/`api_key::`/`redirect_model::`; any of those three present with `backend::anthropic` or omitted `backend::`) | 2 (runtime: credentials unreadable)
 
 **Syntax:**
 
@@ -235,6 +246,10 @@ clp .account.save name::alice@acme.com dry::1
 clp .account.save host::workstation                   # store host label in {name}.json
 clp .account.save role::work                          # store role label in {name}.json
 clp .account.save host::workstation role::personal    # both metadata fields
+clp .account.save inference_provider::kimi            # tag account with inference provider label
+clp .account.save name::kimi backend::redirect base_url::https://api.moonshot.ai/anthropic api_key::"$KIMI_API_KEY" redirect_model::kimi-k3 inference_provider::kimi
+clp .account.save name::kimi preset::kimi api_key::"$KIMI_API_KEY" redirect_model::kimi-k3
+                                                        # same result — preset::kimi fills backend::/base_url::/inference_provider::
 ```
 
 | Parameter | Type | Default | Purpose |
@@ -243,14 +258,24 @@ clp .account.save host::workstation role::personal    # both metadata fields
 | `dry::` | `bool` | `0` | Preview action without executing |
 | `host::` | `string` | `""` (auto-detected hostname) | Machine/host label stored in `{name}.json` (see [feature/029](../../feature/029_account_host_metadata.md)) |
 | `role::` | `string` | `""` | User-defined role label stored in `{name}.json` (see [param 052](../param/052_role.md)) |
+| `inference_provider::` | `string` | `"anthropic"` (when omitted, field absent from `{name}.json`; `list()` treats absence as `"anthropic"`) | Inference provider label stored in `{name}.json`; non-empty when provided; governs Gate 10 rotation grouping (see [param 073](../param/073_inference_provider.md)) |
 | `trace::` | `bool` | `0` | Print timestamped diagnostic lines to stderr for credential read and file write steps |
+| `backend::` | [`AccountBackend`](../type/005_account_backend.md) | `anthropic` | Selects OAuth capture (`anthropic`) or the static-credential redirect path (`redirect`); see [param 069](../param/069_backend.md) |
+| `preset::` | `string` | *(omit)* | Named provider preset pre-filling `backend::`/`base_url::`/`inference_provider::` when omitted; only `kimi` recognized; see [param 074](../param/074_preset.md) |
+| `base_url::` | `string` | *(omit; required when `backend::redirect`)* | Redirect target's API base URL; see [param 070](../param/070_base_url.md) |
+| `api_key::` | `string` | *(omit; required when `backend::redirect`)* | Redirect target's static API key; see [param 071](../param/071_api_key.md) |
+| `redirect_model::` | `string` | *(omit; required when `backend::redirect`)* | Redirect target's own model identifier; see [param 072](../param/072_redirect_model.md) |
 
-**Algorithm (5 steps):**
+**Preset resolution (before step 1):** `preset::kimi` is resolved first, before any other parameter validation. An unrecognized `preset::` value (anything but `kimi`) exits 1 immediately. Otherwise: `backend` defaults to `redirect` when `backend::` was omitted; then, using that resolved `backend` value, `base_url` defaults to `https://api.moonshot.ai/anthropic` and `inference_provider` defaults to `kimi` — each only when the corresponding parameter was omitted AND the resolved `backend` is `redirect`. Explicit `backend::`/`base_url::`/`inference_provider::` values always take precedence over these defaults. See [feature/073](../../feature/073_kimi_provider_preset.md).
+
+**Algorithm (5 steps for `backend::anthropic`; redirect branch below for `backend::redirect`):**
 1. Resolve `name::`: read `oauthAccount.emailAddress` from `~/.claude.json`; fall back to `_active_{hostname}_{user}` marker; exit 1 if neither present
 2. `(when dry::0)` Copy `~/.claude/.credentials.json` → `{name}.credentials.json` (atomic write)
 3. `(when dry::0)` Read `~/.claude.json` + `~/.claude/settings.json` + call `GET /api/oauth/claude_cli/roles` (best-effort); merge all into unified `{name}.json` (preserves `_renewal_at` and other keys)
-4. `(when dry::0)` Write host and role into `{name}.json`: `host::` (auto-captured `$USER@$HOSTNAME` when omitted); `role::` via read-merge; `owner` field preserved unchanged via read-merge — `account_save_routine()` passes `owner: None` to `save()` (ownership-neutral)
+4. `(when dry::0)` Write host, role, and inference provider into `{name}.json`: `host::` (auto-captured `$USER@$HOSTNAME` when omitted); `role::` via read-merge; `inference_provider::` via read-merge (field left absent when omitted — `list()` defaults absence to `"anthropic"`); `owner` field preserved unchanged via read-merge — `account_save_routine()` passes `owner: None` to `save()` (ownership-neutral)
 5. `(when dry::0)` Write `_active_{hostname}_{user}` = `{name}` (per-machine active marker)
+
+**Redirect branch** `(when backend::redirect)`: validates `base_url::`/`api_key::`/`redirect_model::` are all present (exit 1 naming any missing parameter) — note that `base_url::` may already be filled by `preset::kimi`'s default per the preset resolution above, so this check runs against the resolved value, not the raw CLI argument; `(when dry::0)` writes `{name}.credentials.json` containing only `accessToken` (from `api_key::`) — no `refreshToken`/`expiresAt` keys; writes `backend: "redirect"`, `base_url`, `redirect_model` into `{name}.json`. Steps 2–4 above do not apply (no `~/.claude/.credentials.json` capture, no endpoint 005 call, no host/role merge — `base_url`/`redirect_model` serve as the redirect account's equivalent metadata). Step 5 (active marker) still applies unchanged. See [feature/071](../../feature/071_redirect_backend_accounts.md).
 
 **Examples:**
 
@@ -263,6 +288,15 @@ clp .account.save name::alice@acme.com dry::1
 
 clp .account.save host::workstation role::work
 # saved current credentials as 'alice@acme.com'   (host='workstation', role='work')
+
+clp .account.save name::kimi backend::redirect base_url::https://api.moonshot.ai/anthropic api_key::"$KIMI_API_KEY" redirect_model::kimi-k3
+# saved redirect-backend account 'kimi'   (backend='redirect', base_url='https://api.moonshot.ai/anthropic')
+
+clp .account.save name::kimi preset::kimi api_key::"$KIMI_API_KEY" redirect_model::kimi-k3
+# saved redirect-backend account 'kimi'   (backend='redirect', base_url='https://api.moonshot.ai/anthropic', inference_provider='kimi')
+
+clp .account.save name::kimi preset::bogus api_key::"$KIMI_API_KEY" redirect_model::kimi-k3
+# error: preset:: invalid value 'bogus' — valid values: kimi
 ```
 
 **Notes:**
@@ -270,6 +304,9 @@ clp .account.save host::workstation role::work
 - Also calls endpoint 005 (`GET /api/oauth/claude_cli/roles`) and merges result into `{name}.json` (best-effort: failure is silently skipped).
 - **Metadata refresh:** Re-running `.account.save` for an existing name refreshes the unified `{name}.json` and re-fetches endpoint 005 — this is the canonical way to refresh cached org identity without re-login. `{name}.json` is updated via read-merge (not full overwrite): the `oauthAccount` key is replaced but all other keys (e.g., `_renewal_at` set by `.account.renewal`) are preserved.
 - **Ownership-neutral save:** `.account.save` never writes to the `owner` field — `account_save_routine()` passes `owner: None` to `save()`, preserving any existing `owner` via read-merge. Background refresh callers also pass `owner: None`. To release ownership, use `clp .accounts owner::0 name::EMAIL`. See [Feature 036](../../feature/036_account_ownership.md).
+- **Redirect backend:** `backend` is fixed per save call — re-running `.account.save name::X` with a different `backend::` value rewrites the account from scratch per that backend's own path (not a partial update). Pre-existing accounts saved before Feature 071 have no `backend` key and are treated as `anthropic`. See [Feature 071](../../feature/071_redirect_backend_accounts.md).
+- **Inference provider tagging:** `inference_provider::` is independent of `backend::` — a `backend::redirect` account may still carry any `inference_provider` label (e.g., `kimi`, `moonshot`) for Gate 10 rotation grouping; the two fields serve different purposes (routing/credential mechanism vs. rotation grouping). Defaults to `"anthropic"` when never explicitly tagged. See [Feature 072](../../feature/072_inference_provider_selection.md).
+- **Kimi provider preset:** `preset::kimi` pre-fills `backend::redirect`, `base_url::https://api.moonshot.ai/anthropic`, and `inference_provider::kimi` — but only for fields the caller omitted, and only once `backend` resolves to `redirect`; pairing `preset::kimi` with an explicit `backend::anthropic` leaves the account on the ordinary OAuth-capture path with none of the redirect-only defaults applied. `api_key::`/`redirect_model::` are never defaulted by any preset. Tagging an account `inference_provider::kimi` (whether via the preset or explicitly) also drives `switch_account()`'s 7 additional Kimi-tier `settings.json` env vars on `.account.use` — see [Feature 073](../../feature/073_kimi_provider_preset.md).
 
 ### Referenced Features
 
@@ -281,6 +318,9 @@ clp .account.save host::workstation role::work
 | 4 | [Per-Machine Active Marker](../../feature/025_per_machine_active_marker.md) | `_active_{hostname}_{user}` marker written on save |
 | 5 | [Host Metadata](../../feature/029_account_host_metadata.md) | `host::` and `role::` metadata stored in `{name}.json` |
 | 6 | [Account Ownership](../../feature/036_account_ownership.md) | Ownership model — `.account.save` is ownership-neutral (passes `owner: None`); `.accounts owner::0 name::X` releases ownership (Feature 064); `.accounts assignee::USER@MACHINE` is marker-only (Feature 065) |
+| 7 | [Redirect Backend Accounts](../../feature/071_redirect_backend_accounts.md) | `backend::redirect` write path — static-credential accounts bypassing OAuth capture |
+| 8 | [Inference Provider Selection](../../feature/072_inference_provider_selection.md) | `inference_provider::` write path — tags account for Gate 10 rotation grouping |
+| 9 | [Kimi Provider Preset](../../feature/073_kimi_provider_preset.md) | `preset::kimi` convenience default-filling for `backend::`/`base_url::`/`inference_provider::` |
 
 ### Referenced User Stories
 
@@ -292,14 +332,15 @@ clp .account.save host::workstation role::work
 
 | # | Group | Parameters Used |
 |---|-------|-----------------|
-| 1 | [Account Targeting](../param_group/006_account_targeting.md) | `host::`, `role::` |
+| 1 | [Account Targeting](../param_group/006_account_targeting.md) | `host::`, `role::`, `inference_provider::` |
 | 2 | [Fetch Behavior](../param_group/003_fetch_behavior.md) | `trace::` |
+| 3 | [Redirect Backend Config](../param_group/007_redirect_backend_config.md) | `backend::`, `preset::`, `base_url::`, `api_key::`, `redirect_model::` |
 
 ---
 
 ### Command: 5. `.account.use`
 
-Atomically overwrites `~/.claude/.credentials.json` with the named account's credentials (write-then-rename), updates the active marker (`_active_{hostname}_{user}`), and best-effort patches `~/.claude.json["oauthAccount"]` from the saved snapshot — preserving all machine-global keys untouched. When `touch::1` (default), fetches quota for the target account and spawns an isolated subprocess to activate its idle 5h session window if `five_hour.resets_at` is absent. Guarded by G5 (ownership) and G9 (`claim_lock`) — both bypassable via `force::1`.
+Atomically overwrites `~/.claude/.credentials.json` with the named account's credentials (write-then-rename), updates the active marker (`_active_{hostname}_{user}`), and best-effort patches `~/.claude.json["oauthAccount"]` from the saved snapshot — preserving all machine-global keys untouched. When `touch::1` (default), fetches quota for the target account and spawns an isolated subprocess to activate its idle 5h session window if `five_hour.resets_at` is absent. Guarded by G5 (ownership) and G9 (`claim_lock`) — both bypassable via `force::1`. When the target account is `backend: redirect`, this command additionally writes `settings.json`'s `env.ANTHROPIC_BASE_URL`/`env.ANTHROPIC_AUTH_TOKEN`/`env.ANTHROPIC_MODEL` (clearing those same keys when switching back to a `backend: anthropic` account instead), and skips the quota/touch step entirely — there is no Anthropic quota to fetch for a foreign backend (see [feature/071](../../feature/071_redirect_backend_accounts.md)). When the target account additionally carries `inference_provider: "kimi"`, 7 more Kimi-tier `env.*` variables are written alongside the three above (and all 10 are cleared together on switch-away) — see [feature/073](../../feature/073_kimi_provider_preset.md).
 
 -- **Parameters:** [`name::`](../param/001_name.md) **(required)**, [`dry::`](../param/004_dry.md), [`touch::`](../param/034_touch.md), [`refresh::`](../param/019_refresh.md), [`imodel::`](../param/035_imodel.md), [`effort::`](../param/036_effort.md), [`trace::`](../param/023_trace.md), [`set_model::`](../param/054_set_model.md), [`force::`](../param/058_force.md)
 -- **Exit:** 0 (success) | 1 (usage: invalid name or invalid `imodel::`/`effort::`/`trace::`/`set_model::` value; G5 ownership violation unless `force::1`; G9 claim-lock violation unless `force::1`) | 2 (runtime: account not found or HOME unset) | 3 (account credentials expired — `touch::1` + fetch failed + `expiresAt` in the past, AND refresh failed or `refresh::0`)
@@ -333,14 +374,15 @@ clp .account.use name::alice@home.com force::1        # bypass G5 (ownership) an
 | `set_model::` | `enum` | *(omit)* | Explicitly write session model to `settings.json`: `opus` (`claude-opus-4-8`), `sonnet` (`claude-sonnet-5`), `haiku` (`claude-haiku-4-5-20251001`), `default` (removes override); takes precedence over automatic `apply_model_override()` |
 | `force::` | `bool` | `0` | Bypass G5 (ownership) unless owned or unclaimed; bypass G9 (`claim_lock`) unless clear. Each gate is bypassed independently — one `force::1` satisfies both |
 
-**Algorithm (7 steps):**
+**Algorithm (8 steps):**
 1. Resolve `name::` via `AccountSelector`; load `{name}.credentials.json`; G5 ownership check (unless `force::1`); G9 `claim_lock` check (unless `force::1`) — either failing exits 1 before any write
 2. `(when dry::0)` Atomically overwrite `~/.claude/.credentials.json` via write-then-rename
 3. `(when dry::0)` Write `_active_{hostname}_{user}` = `{name}` (active marker)
 4. `(when dry::0)` Best-effort patch `~/.claude.json["oauthAccount"]` from saved snapshot (preserves machine-global keys)
-5. `(when touch::1)` Fetch quota via `GET /api/oauth/usage`; `(when refresh::1 + locally expired)` call `refresh_account_token()` first; evaluate idle: `five_hour.resets_at` absent → idle
-6. `(when touch::1 + idle)` Resolve model+effort via `resolve_model()`/`resolve_effort()`; spawn isolated subprocess via `run_isolated()`
-7. Session-model override: `(when set_model:: provided)` write requested model via `set_session_model()`; `(otherwise, when target was already active + valid quota)` write resolved model via `apply_model_override()`
+5. `(when dry::0)` Write or clear `settings.json`'s `env.*` keys per target `backend`: `redirect` → write `env.ANTHROPIC_BASE_URL`/`env.ANTHROPIC_AUTH_TOKEN`/`env.ANTHROPIC_MODEL` from `base_url`/`accessToken`/`redirect_model`, plus — when `inference_provider == "kimi"` — 7 more Kimi-tier vars (`ANTHROPIC_DEFAULT_OPUS_MODEL`/`_SONNET_MODEL`/`_HAIKU_MODEL`/`_FABLE_MODEL`/`CLAUDE_CODE_SUBAGENT_MODEL` mirroring `redirect_model`, `CLAUDE_CODE_EFFORT_LEVEL` fixed `"max"`, `CLAUDE_CODE_AUTO_COMPACT_WINDOW` sized by whether `redirect_model` starts with `kimi-k3`); `anthropic` → remove all 10 keys (the three base plus the 7 Kimi-tier, removing `env` entirely if it becomes empty), preserving any other `env`/`settings.json` key unchanged. See [feature/073](../../feature/073_kimi_provider_preset.md) and [schema/006](../../schema/006_settings_json.md).
+6. `(when touch::1 AND target backend == anthropic)` Fetch quota via `GET /api/oauth/usage`; `(when refresh::1 + locally expired)` call `refresh_account_token()` first; evaluate idle: `five_hour.resets_at` absent → idle. Skipped entirely for `backend: redirect` targets — no Anthropic quota to fetch
+7. `(when touch::1 + idle)` Resolve model+effort via `resolve_model()`/`resolve_effort()`; spawn isolated subprocess via `run_isolated()`
+8. Session-model override: `(when set_model:: provided)` write requested model via `set_session_model()`; `(otherwise, when target was already active + valid quota)` write resolved model via `apply_model_override()` — a no-op for `backend: redirect` targets (see [algorithm/002](../../algorithm/002_session_model_override.md)'s redirect bypass)
 
 **Examples:**
 
@@ -372,6 +414,12 @@ clp .account.use name::alice@home.com trace::1
 - `trace::1` only produces output when `touch::1`; with `touch::0` there are no fetch operations to trace.
 - G5 and G9 are checked before any file is written, including in `dry::1` mode — a non-owned or claim-locked target exits 1 even during a dry-run preview (mirrors G5–G8's existing dry-run interaction, see [feature/036](../../feature/036_account_ownership.md)).
 - See [feature/027_account_use_post_switch_touch.md](../../feature/027_account_use_post_switch_touch.md) for full execution sequence and acceptance criteria; see [feature/070_account_claim_and_reservation_control.md](../../feature/070_account_claim_and_reservation_control.md) for G9 and `claim_lock` design.
+- **Redirect backend:** exit 3 (credentials expired) never triggers for a `backend: redirect` target — there is no `expiresAt` to compare, so the expiry probe short-circuits to the `static` classification before any threshold check. See [feature/071](../../feature/071_redirect_backend_accounts.md) and [state_machine/002](../../state_machine/002_oauth_token_lifecycle.md)'s `static` state.
+- **Kimi-tier env vars:** a `backend: redirect` target tagged `inference_provider: "kimi"` (whether via explicit `inference_provider::kimi` or via `preset::kimi`, see [feature/073](../../feature/073_kimi_provider_preset.md)) gets 7 additional `env.*` variables beyond the 3 above; any other redirect target (including one with no `inference_provider` tag) gets only the 3. Switching away from a kimi target clears all 10, not just the 3 base vars.
+
+### Referenced Command Group
+
+Evaluated against `.usage` and `.model` under the strict [command_group](../command_group/readme.md) identity test (same dispatch function, same parameter set) — does not qualify. `account_use_routine()` (`src/commands/account_ops.rs:19`) has zero cross-calls with `usage_routine()` (`src/usage/api.rs:78`) or `model_routine()` (`src/commands/model.rs:88`). The "same resolution logic" note above refers to `resolve_model()`/`resolve_effort()` (`src/usage/subprocess.rs:30,76`), lower-layer helpers reached from both commands via different intermediate wrappers (`.account.use` via `apply_post_switch_touch()`, `src/usage/api_switch.rs:361` calling `resolve_model()` at `src/usage/api_switch.rs:402`; `.usage` via `apply_refresh()` (`src/usage/refresh.rs:76`, calling `resolve_model()` at `src/usage/refresh.rs:117`) and `apply_touch()` (`src/usage/touch.rs:133`, calling `resolve_model()` at `src/usage/touch.rs:149`)); the `set_session_model()` note refers to `claude_profile_core::account::set_session_model()` (`../claude_profile_core/src/account.rs:807`), called from `account_use_routine` (`src/commands/account_ops.rs:149`), `usage_routine` (`src/usage/api.rs:182`), and `model_routine` (`src/commands/model.rs:228,233`) — a shared write primitive in a different crate below the dispatch layer, not a shared dispatch function. Parameter sets diverge sharply: 9 params here vs. 35 on `.usage` vs. 6 on `.model` (`.model`'s `model::`/`effort_level::` and this command's `set_model::` are different parameters with different invocation semantics, not the same parameter under a different default). See [`command_group/readme.md`](../command_group/readme.md) Evaluated, Not Qualifying for the full analysis.
 
 ### Referenced Features
 
@@ -384,6 +432,8 @@ clp .account.use name::alice@home.com trace::1
 | 5 | [Post-Switch Touch](../../feature/027_account_use_post_switch_touch.md) | Full execution sequence with touch and model override |
 | 6 | [Account Ownership](../../feature/036_account_ownership.md) | G5 ownership gate; `force::1` bypass and dry-run interaction pattern |
 | 7 | [Account Claim And Reservation Control](../../feature/070_account_claim_and_reservation_control.md) | G9 `claim_lock` gate; `force::1` bypass |
+| 8 | [Redirect Backend Accounts](../../feature/071_redirect_backend_accounts.md) | `env.*` write/clear in `settings.json`; touch/quota and model-override skip for redirect targets |
+| 9 | [Kimi Provider Preset](../../feature/073_kimi_provider_preset.md) | 7 additional Kimi-tier `env.*` vars written/cleared alongside the base 3, gated on `inference_provider == "kimi"` |
 
 ### Referenced User Stories
 
@@ -403,8 +453,8 @@ clp .account.use name::alice@home.com trace::1
 
 Removes `{credential_store}/{name}.credentials.json` and `{name}.json` from the credential store, plus any legacy satellite files from pre-consolidation layout.
 
--- **Parameters:** [`name::`](../param/001_name.md) **(required)**, [`dry::`](../param/004_dry.md), [`trace::`](../param/023_trace.md)
--- **Exit:** 0 (success) | 1 (usage: invalid name) | 2 (runtime: account not found)
+-- **Parameters:** [`name::`](../param/001_name.md) **(required)**, [`dry::`](../param/004_dry.md), [`trace::`](../param/023_trace.md), [`force::`](../param/058_force.md)
+-- **Exit:** 0 (success) | 1 (usage: invalid name; G6 ownership violation unless `force::1`) | 2 (runtime: account not found)
 
 **Syntax:**
 
@@ -414,6 +464,7 @@ clp .account.delete alice@oldco.com          # positional: bare name at any posi
 clp .account.delete dry::1 alice@oldco.com   # reversed: arg order does not matter
 clp .account.delete car                      # prefix
 clp .account.delete name::alice@oldco.com dry::1
+clp .account.delete name::alice@oldco.com force::1   # bypass G6 ownership gate
 ```
 
 | Parameter | Type | Default | Purpose |
@@ -421,12 +472,14 @@ clp .account.delete name::alice@oldco.com dry::1
 | `name::` | [`AccountName`](../type/001_account_name.md) | **(required)** | Account email to delete |
 | `dry::` | `bool` | `0` | Preview action without executing |
 | `trace::` | `bool` | `0` | Print timestamped diagnostic lines to stderr for each file removal step |
+| `force::` | `bool` | `0` | Bypass G6 ownership gate; allow deleting a non-owned account |
 
-**Algorithm (4 steps):**
+**Algorithm (5 steps):**
 1. Resolve `name::` via `AccountSelector`; validate account exists in credential store
-2. `(when dry::0)` Delete `{name}.credentials.json`
-3. `(when dry::0)` Best-effort delete `{name}.json` + legacy files (`.claude.json`, `.settings.json`, `.roles.json`, `.profile.json`; skip missing)
-4. `(when dry::0 + deleted account = active)` Delete `_active_{hostname}_{user}` marker
+2. G6 ownership check (unless `force::1`) — exits 1 on violation; evaluated before the `dry::1` check so dry-run still surfaces ownership violations
+3. `(when dry::0)` Delete `{name}.credentials.json`
+4. `(when dry::0)` Best-effort delete `{name}.json` + legacy files (`.claude.json`, `.settings.json`, `.roles.json`, `.profile.json`; skip missing)
+5. `(when dry::0 + deleted account = active)` Delete `_active_{hostname}_{user}` marker
 
 **Examples:**
 
@@ -441,12 +494,14 @@ clp .account.delete name::alice@oldco.com dry::1
 **Notes:**
 - Metadata file (`{name}.json`) and legacy satellite files are removed best-effort: missing files are silently skipped.
 - Deleting the active account also removes the active marker (`_active_{hostname}_{user}`).
+- G6 is checked before any file is written, including in `dry::1` mode — a non-owned target exits 1 even during a dry-run preview (mirrors G5's dry-run interaction on `.account.use`). See [feature/036_account_ownership.md](../../feature/036_account_ownership.md).
 
 ### Referenced Features
 
 | # | Feature | Role |
 |---|---------|------|
 | 1 | [Delete Account](../../feature/005_account_delete.md) | File removal sequence and legacy satellite cleanup |
+| 2 | [Account Ownership](../../feature/036_account_ownership.md) | G6 ownership gate; `force::1` bypass |
 
 ### Referenced User Stories
 
@@ -464,10 +519,10 @@ clp .account.delete name::alice@oldco.com dry::1
 
 ### Command: 11. `.account.limits`
 
-Show rate-limit utilization for the active or named account. Displays session (5h) usage, weekly all-model (7d) usage, and rate-limit status with percentage consumed and reset times.
+Show rate-limit utilization for the active or named account. Displays session (5h) usage, weekly all-model (7d) usage, and rate-limit status with percentage consumed and reset times. Rejects `backend: redirect` accounts — there is no Anthropic rate-limit data for a foreign backend.
 
 -- **Parameters:** [`name::`](../param/001_name.md) *(optional)*, [`format::`](../param/002_format.md), [`trace::`](../param/023_trace.md)
--- **Exit:** 0 (success) | 1 (usage: invalid `name::` chars) | 2 (runtime: account not found, data unavailable, HOME unset)
+-- **Exit:** 0 (success) | 1 (usage: invalid `name::` chars; target account is `backend: redirect`) | 2 (runtime: account not found, data unavailable, HOME unset)
 
 **Syntax:**
 
@@ -487,7 +542,7 @@ clp .account.limits format::json
 | `trace::` | `bool` | `0` | Print timestamped diagnostic lines to stderr for credential store read and API call |
 
 **Algorithm (3 steps):**
-1. Resolve `name::` (omit → active account from `_active_{hostname}_{user}` marker); load credentials
+1. Resolve `name::` (omit → active account from `_active_{hostname}_{user}` marker); load credentials; **Anthropic-only guard:** exit 1 with an explanatory message if the resolved account is `backend: redirect` — no HTTP request is made
 2. Fetch rate-limit headers via `fetch_rate_limits()` (`anthropic-ratelimit-unified-*` response headers)
 3. Render session (5h), weekly all-model (7d), and weekly sonnet utilization in requested `format::`
 
@@ -501,16 +556,21 @@ clp .account.limits
 
 clp .account.limits format::json
 # {"session_pct":62,"session_reset_secs":6480,"weekly_all_pct":41,"weekly_all_reset_secs":302400,"weekly_sonnet_pct":38,"weekly_sonnet_reset_secs":302400}
+
+clp .account.limits name::kimi
+# error: '.account.limits' is Anthropic-only — 'kimi' is a redirect-backend account (no rate-limit data available)
 ```
 
 **Notes:**
 - Data source: `anthropic-ratelimit-unified-*` response headers; transport: `claude_quota::fetch_rate_limits()`. See [feature/013_account_limits.md](../../feature/013_account_limits.md).
+- **Redirect backend:** rejected outright (exit 1, no HTTP request) rather than approximated — a foreign backend has no Anthropic rate-limit headers to parse. See [feature/071](../../feature/071_redirect_backend_accounts.md).
 
 ### Referenced Features
 
 | # | Feature | Role |
 |---|---------|------|
 | 1 | [Account Limits](../../feature/013_account_limits.md) | Rate-limit header parsing and utilization rendering |
+| 2 | [Redirect Backend Accounts](../../feature/071_redirect_backend_accounts.md) | Anthropic-only guard rejecting `backend: redirect` accounts |
 
 ### Referenced User Stories
 
@@ -538,8 +598,8 @@ clp .account.limits format::json
 
 Force browser-based re-authentication for a named account whose `refreshToken` is expired or revoked. This is the recovery path when `refresh::1` silently fails (trace shows `run_isolated: OK credentials=None` — Claude starts but performs no OAuth refresh because the refresh token itself is dead).
 
--- **Parameters:** [`name::`](../param/001_name.md) *(optional, defaults to active)*, [`dry::`](../param/004_dry.md), [`trace::`](../param/023_trace.md)
--- **Exit:** 0 (success: credentials refreshed and saved) | 1 (usage: invalid name value) | 2 (runtime: name omitted and no active account; account not found; or Claude spawn failed) | 3 (timeout or login abandoned: claude exited without updating credentials)
+-- **Parameters:** [`name::`](../param/001_name.md) *(optional, defaults to active)*, [`dry::`](../param/004_dry.md), [`trace::`](../param/023_trace.md), [`force::`](../param/058_force.md)
+-- **Exit:** 0 (success: credentials refreshed and saved) | 1 (usage: invalid name value; G7 ownership violation unless `force::1`) | 2 (runtime: name omitted and no active account; account not found; or Claude spawn failed) | 3 (timeout or login abandoned: claude exited without updating credentials)
 
 **Syntax:**
 
@@ -551,6 +611,7 @@ clp .account.relogin dry::1 carol@example.com   # reversed: arg order does not m
 clp .account.relogin car               # prefix
 clp .account.relogin name::carol@example.com dry::1
 clp .account.relogin dry::1            # dry-run for active account
+clp .account.relogin name::carol@example.com force::1   # bypass G7 ownership gate
 ```
 
 | Parameter | Type | Default | Purpose |
@@ -558,14 +619,16 @@ clp .account.relogin dry::1            # dry-run for active account
 | `name::` | [`AccountName`](../type/001_account_name.md) | *(active account)* | Account to re-authenticate; omit to use the currently active account |
 | `dry::` | `bool` | `0` | Preview the steps without executing |
 | `trace::` | `bool` | `0` | Print timestamped diagnostic lines to stderr for each step: store read, switch, spawn, credential change, save, restore |
+| `force::` | `bool` | `0` | Bypass G7 ownership gate; allow re-authenticating a non-owned account |
 
-**Algorithm (6 steps):**
+**Algorithm (7 steps):**
 1. Resolve `name::` via [`AccountSelector`](../type/004_account_selector.md) → validate account exists in credential store
-2. Snapshot the current active account name (for restoration after login)
-3. `switch_account(name)` — makes the named account active in `~/.claude/`
-4. Spawn `claude` with inherited TTY (stdin/stdout/stderr connected — NOT isolated subprocess) — Claude detects empty or invalid credentials and opens the browser login page
-5. Wait for `claude` to exit; if `~/.claude/.credentials.json` changed → `account::save(name)` propagates fresh credentials to credential store
-6. `switch_account(original_active)` — restore the prior active account
+2. G7 ownership check (unless `force::1`) — exits 1 on violation; evaluated before the `dry::1` check so dry-run still surfaces ownership violations
+3. Snapshot the current active account name (for restoration after login)
+4. `switch_account(name)` — makes the named account active in `~/.claude/`
+5. Spawn `claude` with inherited TTY (stdin/stdout/stderr connected — NOT isolated subprocess) — Claude detects empty or invalid credentials and opens the browser login page
+6. Wait for `claude` to exit; if `~/.claude/.credentials.json` changed → `account::save(name)` propagates fresh credentials to credential store
+7. `switch_account(original_active)` — restore the prior active account
 
 **Examples:**
 
@@ -581,16 +644,18 @@ clp .account.relogin name::carol@example.com dry::1
 ```
 
 **Notes:**
-- Requires a TTY — `clp .account.relogin` in a piped non-TTY context will fail at step 4 (Claude cannot open a browser or display the login prompt).
+- Requires a TTY — `clp .account.relogin` in a piped non-TTY context will fail at step 5 (Claude cannot open a browser or display the login prompt).
 - The `claude` subprocess runs with the full inherited environment; no credential isolation (contrast with `refresh::1` which uses an isolated subprocess).
-- If `claude` exits without updating `~/.claude/.credentials.json`, the command exits 3. The active account is still restored (step 6 runs regardless of outcome).
+- If `claude` exits without updating `~/.claude/.credentials.json`, the command exits 3. The active account is still restored (step 7 runs regardless of outcome).
 - Use this when `clp .usage refresh::1 trace::1` shows `run_isolated: OK credentials=None` for an account — that trace indicates a dead refresh token requiring full browser re-auth.
+- G7 is checked before any state change, including in `dry::1` mode — a non-owned target exits 1 even during a dry-run preview (mirrors G5's dry-run interaction on `.account.use`). See [feature/036_account_ownership.md](../../feature/036_account_ownership.md).
 
 ### Referenced Features
 
 | # | Feature | Role |
 |---|---------|------|
 | 1 | [Auto Rotate](../../feature/008_auto_rotate.md) | Relogin as recovery path for dead refresh tokens |
+| 2 | [Account Ownership](../../feature/036_account_ownership.md) | G7 ownership gate; `force::1` bypass |
 
 ### Referenced User Stories
 
@@ -707,10 +772,10 @@ clp .account.renewal name::alice@acme.com at::2026-06-29T21:00:00Z dry::1
 
 ### Command: 15. `.account.inspect`
 
-Unified live account diagnostic — identity, subscription, org, and quota utilization for one account. Calls endpoints 002 (`GET /api/oauth/account`), 005 (`GET /api/oauth/claude_cli/roles`), and 001 (`GET /api/oauth/usage`) and renders identity fields (tagged_id, uuid, email, name), ALL membership entries with a selection-priority indicator, capabilities, rate-limit tier, and 5h/7d/Sonnet quota utilization with reset countdowns. Primary use case: diagnosing account state and remaining quota (see BUG-237 / feature 031).
+Unified live account diagnostic — identity, subscription, org, and quota utilization for one account. Calls endpoints 002 (`GET /api/oauth/account`), 005 (`GET /api/oauth/claude_cli/roles`), and 001 (`GET /api/oauth/usage`) and renders identity fields (tagged_id, uuid, email, name), ALL membership entries with a selection-priority indicator, capabilities, rate-limit tier, and 5h/7d/Sonnet quota utilization with reset countdowns. Primary use case: diagnosing account state and remaining quota (see BUG-237 / feature 031). Rejects `backend: redirect` accounts — none of these three Anthropic endpoints have any meaning for a foreign backend.
 
 -- **Parameters:** [`name::`](../param/001_name.md), [`refresh::`](../param/019_refresh.md), [`trace::`](../param/023_trace.md), [`format::`](../param/002_format.md)
--- **Exit:** 0 (success) | 1 (usage: invalid param) | 2 (runtime: account not found or credential store unreadable)
+-- **Exit:** 0 (success) | 1 (usage: invalid param; target account is `backend: redirect`) | 2 (runtime: account not found or credential store unreadable)
 
 **Syntax:**
 
@@ -731,7 +796,7 @@ clp .account.inspect trace::1          # show timestamped diagnostic endpoint ca
 | `format::` | [`OutputFormat`](../type/002_output_format.md) | `text` | Output format: `text` (default) or `json` |
 
 **Algorithm (5 steps):**
-1. Resolve `name::` (omit → active account from `_active_{hostname}_{user}` marker); load credentials
+1. Resolve `name::` (omit → active account from `_active_{hostname}_{user}` marker); load credentials; **Anthropic-only guard:** exit 1 with an explanatory message if the resolved account is `backend: redirect` — no endpoint call is made
 2. `(when refresh::1 + locally expired)` Call `refresh_account_token()` to obtain a fresh token
 3. Call endpoint 002 (`GET /api/oauth/account`), endpoint 005 (`GET /api/oauth/claude_cli/roles`), and endpoint 001 (`GET /api/oauth/usage`) — each independently; identity/org failure falls back to local snapshots with `(snapshot)` suffix per field; quota failure (transient errors — not 401/403) falls back to the local quota cache (Feature 033); quota section omitted only when both live endpoint and cache are unavailable
 4. Apply membership selection priority: `billing_type=stripe_subscription + claude_max` > `billing_type=stripe_subscription` > `memberships[0]`
@@ -800,12 +865,18 @@ clp .account.inspect format::json | jq '.memberships | length'
 - Endpoints 002, 005, and 001 are called independently. A failure on one endpoint falls back to the local snapshot from `{name}.json` with a `(snapshot)` suffix per field; quota fields (endpoint 001) fall back to the local quota cache on transient errors (not 401/403); the quota section is omitted only when both the live endpoint and the cache are unavailable.
 - `refresh::1` (default) behaves identically to `.usage`'s `refresh::1`: calls `refresh_account_token()` once when `expiresAt` is locally expired; retries endpoint calls with the fresh token.
 - See [feature/031_account_inspect.md](../../feature/031_account_inspect.md) for full design, graceful fallback semantics, and all acceptance criteria.
+- **Redirect backend:** rejected outright (exit 1, no endpoint call) rather than approximated — same rationale as [`.account.limits`](#command-11-accountlimits). See [feature/071](../../feature/071_redirect_backend_accounts.md).
+
+### Referenced Command Group
+
+Evaluated against `.account.use` and `.usage` under the strict [command_group](../command_group/readme.md) identity test (same dispatch function, same parameter set) — does not qualify. `account_inspect_routine()` (`src/commands/account_inspect.rs:125`) has zero cross-calls with `account_use_routine()` (`src/commands/account_ops.rs:19`) or `usage_routine()` (`src/usage/api.rs:78`). The "behaves identically" claim above is precise only about the underlying primitive: `account_inspect_routine()` calls `attempt_expired_token_refresh()` (`src/usage/api_switch.rs:95`) at `src/commands/account_inspect.rs:176`, and `account_use_routine()` calls the same wrapper at `src/commands/account_ops.rs:215` — that specific wrapper is genuinely shared with `.account.use`, not `.usage`. `usage_routine()` instead calls a different wrapper, `apply_refresh()` (`src/usage/refresh.rs:76`, invoked at `src/usage/api.rs:157`), which iterates the full account list with 401/403/429 retry branching that `attempt_expired_token_refresh()` does not have. All three commands converge only at the deepest shared primitive, `refresh_account_token()` (`../claude_profile_core/src/account.rs:986`) — ordinary layered reuse of one OAuth-refresh function, not evidence of shared dispatch. Parameter sets also diverge: 4 params here vs. 9 on `.account.use` vs. 35 on `.usage`. See [`command_group/readme.md`](../command_group/readme.md) Evaluated, Not Qualifying for the full analysis.
 
 ### Referenced Features
 
 | # | Feature | Role |
 |---|---------|------|
 | 1 | [Account Inspect](../../feature/031_account_inspect.md) | Unified account diagnostic — identity, subscription, org, and quota utilization |
+| 2 | [Redirect Backend Accounts](../../feature/071_redirect_backend_accounts.md) | Anthropic-only guard rejecting `backend: redirect` accounts |
 
 ### Referenced User Stories
 

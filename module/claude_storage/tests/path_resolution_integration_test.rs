@@ -12,9 +12,10 @@ use std::env;
 #[ test ]
 fn test_list_path_dot_integration()
 {
-  // CLAUDE_STORAGE_ROOT isolation: container's /workspace/.claude/projects is
-  // bind-mounted 0700; unreadable by test user. Empty storage root returns an
-  // empty list instead of a permission error, letting the path resolution test pass.
+  // CLAUDE_STORAGE_ROOT isolation: the container bind-mounts the host's real
+  // ~/.claude, so without isolation list_projects() would read live, mutable
+  // host session data. A non-existent storage root yields an empty list,
+  // keeping the path resolution test deterministic.
   let test_dir = env::current_dir().unwrap();
 
   let output = common::clg_cmd()

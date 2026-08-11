@@ -107,12 +107,12 @@ Feature behavioral requirement test cases for `docs/feature/004_account_use.md` 
 - **Given:** Any credential store state.
 - **When:** `clp .account.use name::` (empty name)
 - **Then:** Exit 1.
-- **When:** `clp .account.use name::a/b@c.com` (slash in local part)
+- **When:** `clp .account.use name::a/b` (slash in a bare non-email name, no `@`)
 - **Then:** Exit 1 — `validate_name()` rejects path-unsafe characters before any filesystem operation.
 - **When:** `clp .account.use` (missing name param)
 - **Then:** Exit 1.
-- **When:** `clp .account.use name::a/b@c.com` (slash specifically in email local part)
-- **Then:** Exit 1 — the slash character is path-unsafe even in the domain portion of an email.
+- **When:** `clp .account.use name::a/b@c.com` (slash in email local part)
+- **Then:** Exit 1 — the slash character is path-unsafe even when it appears before the `@` in an email-shaped name.
 - **Exit:** 1
 - **Source fn:** `aw04_switch_empty_name_exits_1`, `aw05_switch_slash_name_exits_1`, `aw06_switch_missing_name_param_exits_1`, `aw11_switch_slash_in_email_local_part_exits_1`
 - **Source:** [004_account_use.md AC-06](../../../docs/feature/004_account_use.md)
@@ -162,7 +162,7 @@ Feature behavioral requirement test cases for `docs/feature/004_account_use.md` 
 - **When:** `clp .account.use name::alice@corp.com`
 - **Then:** Exits 1. Stderr contains `"ownership violation: this account is owned by other@remote"`. `switch_account()` is NOT called — no credential files are modified. The `_active` marker is unchanged.
 - **Exit:** 1
-- **Source fn:** `ft08_use_exits_1_when_not_owned` (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `ft08_use_exits_1_when_not_owned` (in `account_ownership_test.rs`)
 - **Note:** G5 ownership gate from Feature 036 AC-08. Shared with Feature 036 FT-08 — same test function, both specs reference it.
 - **Source:** [004_account_use.md AC-10](../../../docs/feature/004_account_use.md)
 
@@ -174,6 +174,6 @@ Feature behavioral requirement test cases for `docs/feature/004_account_use.md` 
 - **When:** `clp .account.use name::alice@corp.com dry::1`
 - **Then:** Exits 1. The ownership violation message is printed to stderr. The `[dry-run] would switch to 'alice@corp.com'` message is NOT printed — dry-run output is suppressed when ownership check fails. No files are modified.
 - **Exit:** 1
-- **Source fn:** `ft13_dry_run_does_not_skip_ownership` (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `ft13_dry_run_does_not_skip_ownership` (in `account_ownership_test.rs`)
 - **Note:** G5 + dry-run ordering gate from Feature 036 AC-13. The ownership guard runs before `dry::1` evaluation — preventing false "would succeed" signals on non-owned accounts.
 - **Source:** [004_account_use.md AC-11](../../../docs/feature/004_account_use.md)

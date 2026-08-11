@@ -112,28 +112,25 @@ fn verbosity_ec19_settings_get_v0_bare_value()
   assert_eq!( text, "myVal", "v::0 must output bare value only, got: {text}" );
 }
 
-/// EC-20: `.version.history v::0 count::3` → bare version+date lines
+/// EC-20: `.version.list mode::history v::0 count::3` → bare version+date lines
+/// (always exits 0 — falls back to the compiled-in snapshot when network is unavailable)
 #[ test ]
 fn verbosity_ec20_history_v0_bare_lines()
 {
-  let out = run_clv( &[ ".version.history", "v::0", "count::3" ] );
-  // allow exit 2 (network unavailable) — only verify format if exit 0
-  if out.status.code() == Some( 0 )
-  {
-    let text = stdout( &out );
-    assert!( !text.contains( "##" ), "v::0 must not contain ## markdown headers: {text}" );
-    assert!( !text.contains( "Summary:" ), "v::0 must not contain label prefixes: {text}" );
-  }
+  let out = run_clv( &[ ".version.list", "mode::history", "v::0", "count::3" ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( !text.contains( "##" ), "v::0 must not contain ## markdown headers: {text}" );
+  assert!( !text.contains( "Summary:" ), "v::0 must not contain label prefixes: {text}" );
 }
 
-/// EC-21: `.version.history v::2 count::2` → full changelog with `##` headers
+/// EC-21: `.version.list mode::history v::2 count::2` → full changelog with `##` headers
+/// (always exits 0 — falls back to the compiled-in snapshot when network is unavailable)
 #[ test ]
 fn verbosity_ec21_history_v2_full_changelog()
 {
-  let out = run_clv( &[ ".version.history", "v::2", "count::2" ] );
-  if out.status.code() == Some( 0 )
-  {
-    let text = stdout( &out );
-    assert!( text.contains( "##" ), "v::2 must include ## markdown headers: {text}" );
-  }
+  let out = run_clv( &[ ".version.list", "mode::history", "v::2", "count::2" ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "##" ), "v::2 must include ## markdown headers: {text}" );
 }

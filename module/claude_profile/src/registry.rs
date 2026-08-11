@@ -4,7 +4,7 @@ use unilang::data::Kind;
 use crate::commands::
 {
   credentials_status_routine,
-  accounts_routine,
+  accounts_view_routine,
   account_limits_routine,
   account_save_routine,
   account_use_routine,
@@ -15,14 +15,13 @@ use crate::commands::
   model_routine,
   models_routine,
   model_select_routine,
-  token_status_routine,
+  provider_select_routine,
   paths_routine,
-  usage_routine,
 };
 
 /// Register all `claude_profile` commands into an existing registry.
 ///
-/// Registers 15 commands (credentials status, account management including limits, relogin, renewal, and inspect, model get/set/select, models discovery, token status, paths, usage).
+/// Registers 14 commands (credentials status, account management including limits, relogin, renewal, and inspect, model get/set/select, models discovery, provider select, paths, usage).
 /// The `.` (dot) hidden command and `.help` are binary-specific — they are NOT
 /// included here.
 ///
@@ -68,6 +67,7 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
       bfs( "org_uuid",     "Show organisation UUID from active account's `{name}.json` snapshot (opt-in)"       ),
       bfs( "org_name",     "Show organisation display name from active account's `{name}.json` snapshot (opt-in)" ),
       reg_arg_opt( "get", Kind::String ).with_description( "Extract bare field value for scripting: `subscription`, `tier`, `token`, `expires_in_secs`, `email`, `account`, `file`" ),
+      thr(),
       trc(),
     ],
     Box::new( credentials_status_routine ) );
@@ -84,7 +84,7 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
       bfs( "force",   "Bypass G8 ownership gate on owner:: (default 0)" ),
       bfs( "lock",    "Set (\"1\") or clear (\"0\") claim-lock: excludes from unattended rotation and explicit-switch targets; ungated (Feature 070)" ),
       bfs( "reserve", "Set (\"1\") or clear (\"0\") reserve marker: deprioritizes (does not exclude) in sort-based selection; ungated (Feature 070)" ),
-      reg_arg_opt( "cols", Kind::String ).with_description( "Column visibility modifiers (comma-separated `+col_id`/`-col_id`); default set: account, owner, active, current, sub, tier, expires, email" ),
+      reg_arg_opt( "cols", Kind::String ).with_description( "Column visibility modifiers (comma-separated `+col_id`/`-col_id`); default set: account, owner, active, current, sub, tier, expires, email, inference_provider" ),
       bfs( "for",     "REMOVED — use assignee::USER@MACHINE name::X (or assignee::0 name::X for current machine)" ),
       bfs( "active",  "REMOVED — use assignee::USER@MACHINE name::X (or assignee::0 name::X for current machine)" ),
       reg_arg_opt( "assignee", Kind::String ).with_description( "USER@MACHINE (or sentinel \"0\" = $USER@$HOSTNAME) assign/unassign active-account marker; Feature 065" ),
@@ -112,6 +112,10 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
       reg_arg_opt( "live",              Kind::Integer ).with_description( "Continuous monitor mode (0 = off, default; 1 = on)" ),
       reg_arg_opt( "interval",          Kind::Integer ).with_description( "Seconds between live refreshes (minimum 30, default 30)" ),
       reg_arg_opt( "jitter",            Kind::Integer ).with_description( "Max random seconds added to interval (0 = none, default)" ),
+      // Shared with .usage (same command group, same handler — CV020/CV006).
+      reg_arg_opt( "rotate",            Kind::Integer ).with_description( "Switch to the → winner after rendering (0 = off, default; 1 = on); .usage only" ),
+      reg_arg_opt( "who",               Kind::Integer ).with_description( "Sessions table visibility: auto (default), 0 = suppress, 1 = force on; .usage only" ),
+      reg_arg_opt( "solo",              Kind::Integer ).with_description( "Token conservation: restrict fetch to current+owned account only (0 = off, default; 1 = on); .usage only" ),
       // Legacy field-toggle params (removed by Feature 037; kept registered so the routine
       // can emit a helpful cols:: migration message instead of a generic framework error).
       bfd( "current",      "REMOVED — use cols::-current instead"      ),
@@ -129,7 +133,7 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
       bfs( "org_uuid",     "REMOVED — use cols::+org_uuid instead"     ),
       bfs( "org_name",     "REMOVED — use cols::+org_name instead"     ),
     ],
-    Box::new( accounts_routine ) );
+    Box::new( accounts_view_routine ) );
   reg_cmd( registry, ".account.limits", "Show rate-limit utilization for the selected account (FR-18)", vec![ nam(), fmt(), trc() ], Box::new( account_limits_routine ) );
   reg_cmd( registry, ".account.save", "Save current credentials as a named account profile",
     vec![
@@ -138,6 +142,12 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
       trc(),
       reg_arg_opt( "host",    Kind::String  ).with_description( "Machine label for this account (default: auto-capture `$USER@$HOSTNAME`); written to `{name}.json`" ),
       reg_arg_opt( "role",    Kind::String  ).with_description( "User-defined role tag (e.g. `work`, `personal`); written to `{name}.json`" ),
+      reg_arg_opt( "backend",        Kind::String ).with_description( "Backend for the new account: `anthropic` (default) or `redirect` (case-insensitive); see docs/cli/param/069_backend.md" ),
+      reg_arg_opt( "preset",         Kind::String ).with_description( "Named provider preset pre-filling backend::/base_url::/inference_provider:: for a known foreign provider; explicit params always override the preset default. Only `kimi` is recognized today; see docs/cli/param/074_preset.md" ),
+      reg_arg_opt( "base_url",       Kind::String ).with_description( "Redirect target's API base URL; required with backend::redirect, rejected otherwise; written to `{name}.json` and env.ANTHROPIC_BASE_URL on use" ),
+      reg_arg_opt( "api_key",        Kind::String ).with_description( "Static API key for a redirect-backend account; required with backend::redirect, rejected otherwise; written to `{name}.credentials.json`" ),
+      reg_arg_opt( "redirect_model", Kind::String ).with_description( "Foreign provider's model identifier; required with backend::redirect, rejected otherwise; written to `{name}.json` and env.ANTHROPIC_MODEL on use" ),
+      reg_arg_opt( "inference_provider", Kind::String ).with_description( "Inference provider tag for this account (e.g. `kimi`, `moonshot`); written to `{name}.json`" ),
     ],
     Box::new( account_save_routine    ) );
   // Registered inline (not via reg_cmd) to add per-command examples — required by feature 015
@@ -184,9 +194,13 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
       fmt(),
     ],
     Box::new( account_inspect_routine ) );
-  reg_cmd( registry, ".model", "Get or set the Claude Code session model in ~/.claude/settings.json",
+  reg_cmd( registry, ".model", "Get or set model + effort level for the session (~/.claude/settings.json) or subprocess (~/.clr/config.toml) scope",
     vec![
-      reg_arg_opt( "set", Kind::String ).with_description( "Set model: `opus` (claude-opus-4-8), `sonnet` (claude-sonnet-5), `haiku` (claude-haiku-4-5-20251001), `default` (removes override)" ),
+      reg_arg_opt( "scope",              Kind::String  ).with_description( "Backing store: `session` (~/.claude/settings.json, default) or `subprocess` (~/.clr/config.toml user tier)" ),
+      reg_arg_opt( "model",              Kind::String  ).with_description( "Set model: `opus`/`sonnet`/`haiku`/`default` (session, shorthand) or any non-empty full model ID (subprocess)" ),
+      reg_arg_opt( "effort_level",       Kind::String  ).with_description( "Set effort: `low`/`normal`/`high`/`max` (session) or `low`/`medium`/`high`/`max` (subprocess)" ),
+      reg_arg_opt( "reset_model",        Kind::Integer ).with_description( "Remove the model key for the selected scope; mutually exclusive with model:: (1 = reset)" ),
+      reg_arg_opt( "reset_effort_level", Kind::Integer ).with_description( "Remove the effort key for the selected scope; mutually exclusive with effort_level:: (1 = reset)" ),
       fmt(),
     ],
     Box::new( model_routine ) );
@@ -197,14 +211,34 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
       fmt(),
     ],
     Box::new( models_routine ) );
-  reg_cmd( registry, ".model.select", "Get or pin the clr subprocess model preference in ~/.clr/config.toml",
+  // `.model.select` stays registered (dispatchable, returns a migration-error stub —
+  // see `model_select_routine`) but is hidden from the `.help`/`.` listing (AC-26,
+  // Feature 035): `.model scope::subprocess` is the single listed entry for this
+  // functionality now. Bypasses `reg_cmd()` (no hidden-flag param) — mirrors the
+  // inline `CommandDefinition::former()...hidden_from_list(true)` pattern `src/cli.rs`
+  // already uses to hide the bare `.` command from its own listing.
+  {
+    let def = unilang::data::CommandDefinition::former()
+    .name( ".model.select" )
+    .description( "REMOVED — use .model scope::subprocess instead" )
+    .arguments( vec![
+      reg_arg_opt( "id",    Kind::String  ).with_description( "REMOVED — use .model scope::subprocess model::VALUE instead" ),
+      reg_arg_opt( "reset", Kind::Integer ).with_description( "REMOVED — use .model scope::subprocess reset_model::1 instead" ),
+      fmt(),
+    ] )
+    .hidden_from_list( true )
+    .end();
+    registry
+    .register_with_routine( &def, Box::new( model_select_routine ) )
+    .expect( "internal error: failed to register .model.select" );
+  }
+  reg_cmd( registry, ".provider.select", "Get or pin the global inference provider selection in ~/.clr/config.toml",
     vec![
-      reg_arg_opt( "id",    Kind::String  ).with_description( "Full model ID to pin (e.g. claude-opus-4-8); use .models to list available IDs" ),
-      reg_arg_opt( "reset", Kind::Integer ).with_description( "Remove the subprocess_model preference and revert to ISOLATED_DEFAULT_MODEL (1 = reset)" ),
+      reg_arg_opt( "id",    Kind::String  ).with_description( "Provider name to select (e.g. kimi); free-form, no allow-list" ),
+      reg_arg_opt( "reset", Kind::Integer ).with_description( "Remove the provider preference and revert to the anthropic default (1 = reset)" ),
       fmt(),
     ],
-    Box::new( model_select_routine ) );
-  reg_cmd( registry, ".token.status",   "Show active OAuth token expiry classification",                  vec![ fmt(), thr(), trc() ], Box::new( token_status_routine   ) );
+    Box::new( provider_select_routine ) );
   reg_cmd( registry, ".paths",          "Show all resolved ~/.claude/ canonical file paths",
     vec![
       fmt(),
@@ -261,7 +295,7 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
       // Token conservation (TSK-314)
       reg_arg_opt( "solo", Kind::Integer ).with_description( "token conservation: restrict fetch to current+owned account only (0 = off, default; 1 = on)" ),
     ],
-    Box::new( usage_routine          ) );
+    Box::new( accounts_view_routine   ) );
 }
 
 fn reg_arg_opt( name : &str, kind : unilang::data::Kind ) -> unilang::data::ArgumentDefinition

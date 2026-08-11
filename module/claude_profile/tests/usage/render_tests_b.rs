@@ -44,6 +44,7 @@ fn test_ft29_009_footer_session_effort_display()
         owner                 : String::new(),
         claim_lock            : false,
         reserve               : false,
+        inference_provider    : String::new(),
               org_created_at : None,
       },
       AccountQuota
@@ -70,6 +71,7 @@ fn test_ft29_009_footer_session_effort_display()
         owner                 : String::new(),
         claim_lock            : false,
         reserve               : false,
+        inference_provider    : String::new(),
               org_created_at : None,
       },
       AccountQuota
@@ -96,6 +98,7 @@ fn test_ft29_009_footer_session_effort_display()
         owner                 : String::new(),
         claim_lock            : false,
         reserve               : false,
+        inference_provider    : String::new(),
               org_created_at : None,
       },
     ]
@@ -398,6 +401,67 @@ fn ft13_025_sessions_table_parses_marker_identity_from_filename()
   );
 }
 
+// test_kind: bug_reproducer(BUG-341)
+/// FT-33/009 — sessions table flags a marker naming an account absent from the
+/// credential store with `(stale)`, leaving a marker naming a live account
+/// unflagged.
+///
+/// ## Root Cause (AC-33 coverage)
+/// `build_sessions_table` rendered marker content verbatim with no existence
+/// check, so a marker orphaned by a cross-machine delete (BUG-341) looked
+/// identical to a genuinely active session.
+///
+/// ## Setup
+/// Own marker plus two "other machine" markers — one naming `live@test.com`
+/// (backed by a `.credentials.json` file in the same store) and one naming
+/// `ghost@test.com` (no such file). Own marker is also backed, so only the
+/// two rows under test are exercised by the stale check.
+///
+/// ## Assert
+/// `ghost@test.com` renders with `(stale)` appended; `live@test.com` does not.
+///
+/// Spec: [`tests/docs/feature/009_token_usage.md` FT-33]
+#[ test ]
+fn ft33_009_sessions_table_flags_stale_marker_account()
+{
+  use tempfile::TempDir;
+  use claude_profile::usage::test_bridge::mk_aq_ok;
+  let store = TempDir::new().unwrap();
+  let spath = store.path();
+
+  let own_fname   = claude_profile_core::account::active_marker_filename();
+  let live_fname  = "_active_testhost3_tst3";
+  let ghost_fname = "_active_testhost4_tst4";
+  assert_ne!( own_fname.as_str(), live_fname,  "BUG-341 guard: pick a different synthetic name" );
+  assert_ne!( own_fname.as_str(), ghost_fname, "BUG-341 guard: pick a different synthetic name" );
+
+  std::fs::write( spath.join( "live@test.com.credentials.json" ), "{}" ).unwrap();
+  std::fs::write( spath.join( live_fname ), "live@test.com" ).unwrap();
+  std::fs::write( spath.join( ghost_fname ), "ghost@test.com" ).unwrap();
+  std::fs::write( spath.join( "own@test.com.credentials.json" ), "{}" ).unwrap();
+  std::fs::write( spath.join( &own_fname ), "own@test.com" ).unwrap();
+
+  let accounts = vec![ mk_aq_ok( 10.0 ) ];
+  let cols     = ColsVisibility::default_set();
+  let output = render_text(
+    &accounts, SortStrategy::Name, None, PreferStrategy::Any,
+    &cols, None, None, Some( spath ), None, false,
+  );
+
+  assert!(
+    output.contains( "ghost@test.com (stale)" ),
+    "FT-33: marker naming a since-deleted account must render with '(stale)' appended; got:\n{output}",
+  );
+  assert!(
+    !output.contains( "live@test.com (stale)" ),
+    "FT-33: marker naming a live account (backed by a .credentials.json) must NOT be flagged stale; got:\n{output}",
+  );
+  assert!(
+    !output.contains( "own@test.com \u{2713} (stale)" ),
+    "FT-33: own session backed by a .credentials.json must NOT be flagged stale; got:\n{output}",
+  );
+}
+
 /// EC-5/062 — `who::1` with 0 `_active_*` markers → sessions table omitted gracefully.
 ///
 /// `build_sessions_table` returns an empty string when no markers exist.
@@ -496,6 +560,7 @@ fn cc_no_current_account_uses_legacy_footer()
       owner                 : String::new(),
       claim_lock            : false,
       reserve               : false,
+      inference_provider    : String::new(),
           org_created_at : None,
     }
   };
@@ -548,6 +613,7 @@ fn cc_effort_only_footer_shows_effort_without_model()
       owner                 : String::new(),
       claim_lock            : false,
       reserve               : false,
+      inference_provider    : String::new(),
           org_created_at : None,
     }
   };

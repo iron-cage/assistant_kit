@@ -124,6 +124,14 @@ impl ClaudePaths
     self.base.join( "settings.json" )
   }
 
+  /// Path to `~/.claude/version-markers.json` — user-defined version alias markers.
+  #[ inline ]
+  #[ must_use ]
+  pub fn markers_file( &self ) -> PathBuf
+  {
+    self.base.join( "version-markers.json" )
+  }
+
   /// Path to `~/.claude.json` — OAuth account metadata (one level above `~/.claude/`).
   ///
   /// This file lives at `$HOME/.claude.json`, NOT inside `$HOME/.claude/`.

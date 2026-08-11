@@ -27,10 +27,10 @@
 | File | ID | Title | Persona | Primary Commands |
 |------|----|-------|---------|-----------------|
 | [001_environment_check.md](001_environment_check.md) | 001 | Environment Check | developer | `.status` |
-| [002_version_upgrade.md](002_version_upgrade.md) | 002 | Version Upgrade | developer | `.version.show`, `.version.install`, `.version.guard`, `.version.history` |
-| [003_process_lifecycle.md](003_process_lifecycle.md) | 003 | Process Lifecycle | developer | `.processes`, `.processes.kill` |
+| [002_version_upgrade.md](002_version_upgrade.md) | 002 | Version Upgrade | developer | `.version.show`, `.version.install`, `.version.guard`, `.version.list` |
+| [003_process_lifecycle.md](003_process_lifecycle.md) | 003 | Process Lifecycle | developer | `.ps`, `.ps.kill` |
 | [004_settings_management.md](004_settings_management.md) | 004 | Settings Management | developer | `.settings.show`, `.settings.get`, `.settings.set` |
 | [005_version_pinning.md](005_version_pinning.md) | 005 | Version Pinning | team lead | `.version.list`, `.version.install`, `.version.show`, `.version.guard` |
 | [006_config_management.md](006_config_management.md) | 006 | Config Management | developer | `.config` |
 | [007_params_inspection.md](007_params_inspection.md) | 007 | Params Inspection | developer | `.params` |
-| [008_path_discovery.md](008_path_discovery.md) | 008 | Path Discovery | developer | `.paths` |
+| [008_path_discovery.md](008_path_discovery.md) | 008 | Path Discovery | developer | `.version.paths` |

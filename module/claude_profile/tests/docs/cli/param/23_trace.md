@@ -23,7 +23,7 @@ Edge case tests for the `trace::` parameter. Tests validate boolean enforcement,
 | EC-13 | `.account.delete trace::1 dry::1` — accepted; timestamped diagnostic line emitted for store read | Acceptance: `.account.delete` |
 | EC-14 | `.account.relogin trace::1 dry::1` — accepted; timestamped diagnostic line emitted | Acceptance: `.account.relogin` |
 | EC-15 | DEPRECATED — `.account.rotate` removed; trace acceptance now covered by `.usage trace::1` (EC-1) | Acceptance: removed |
-| EC-16 | `.token.status trace::1` — accepted; timestamped diagnostic line emitted for credential read | Acceptance: `.token.status` |
+| EC-16 | REMOVED — `.token.status` removed; trace acceptance now covered by `.credentials.status trace::1` (EC-8) | Acceptance: removed |
 | EC-17 | `.paths trace::1` — accepted; timestamped diagnostic line emitted for path resolution | Acceptance: `.paths` |
 
 ## Test Coverage Summary
@@ -42,7 +42,7 @@ Edge case tests for the `trace::` parameter. Tests validate boolean enforcement,
 - Acceptance\: `.account.delete`: 1 test (EC-13)
 - Acceptance\: `.account.relogin`: 1 test (EC-14)
 - ~~Acceptance\: `.account.rotate`~~: DEPRECATED (EC-15 — command removed)
-- Acceptance\: `.token.status`: 1 test (EC-16)
+- ~~Acceptance\: `.token.status`~~: REMOVED (EC-16 — command removed)
 - Acceptance\: `.paths`: 1 test (EC-17)
 
 **Total:** 17 edge cases
@@ -68,7 +68,7 @@ Edge case tests for the `trace::` parameter. Tests validate boolean enforcement,
 - **When:** `clp .usage trace::0`
 - **Then:** stderr contains no timestamped diagnostic lines; behavior identical to default; exit 0.
 - **Exit:** 0
-- **Source fn:** `it059_trace_0_no_trace_on_stderr`
+- **Source fn:** `it049_trace_0_no_trace_on_stderr` (in `tests/cli/usage_live_test.rs`) — renumbered from `it059` when the `it0NN` series shifted by -10
 - **Source:** [params.md#parameter--23-trace](../../../../docs/cli/param/023_trace.md)
 ---
 
@@ -78,7 +78,7 @@ Edge case tests for the `trace::` parameter. Tests validate boolean enforcement,
 - **When:** `clp .usage trace::2`
 - **Then:** Exit 1 with error referencing `trace::`; must be 0 or 1.
 - **Exit:** 1
-- **Source fn:** `it060_trace_2_rejected`
+- **Source fn:** `it050_trace_2_rejected` (in `tests/cli/usage_live_test.rs`) — renumbered from `it060` when the `it0NN` series shifted by -10
 - **Source:** [params.md#parameter--23-trace](../../../../docs/cli/param/023_trace.md)
 ---
 
@@ -88,7 +88,7 @@ Edge case tests for the `trace::` parameter. Tests validate boolean enforcement,
 - **When:** `clp .usage trace::yes`
 - **Then:** Exit 1 with type validation error referencing `trace::`.
 - **Exit:** 1
-- **Source fn:** `it061_trace_yes_rejected`
+- **Source fn:** `it051_trace_yes_rejected` (in `tests/cli/usage_live_test.rs`) — renumbered from `it061` when the `it0NN` series shifted by -10
 - **Source:** [params.md#parameter--23-trace](../../../../docs/cli/param/023_trace.md)
 ---
 
@@ -98,15 +98,15 @@ Edge case tests for the `trace::` parameter. Tests validate boolean enforcement,
 - **When:** `clp .usage` (no `trace::` param)
 - **Then:** stderr contains no timestamped diagnostic lines; behavior identical to `trace::0`; exit 0.
 - **Exit:** 0
-- **Source fn:** `it062_trace_default_off`
+- **Source fn:** `it052_trace_default_off` (in `tests/cli/usage_live_test.rs`) — renumbered from `it062` when the `it0NN` series shifted by -10
 - **Source:** [params.md#parameter--23-trace](../../../../docs/cli/param/023_trace.md)
 ---
 
-### EC-6: `trace::1` — trace output on stderr does not appear on stdout
+### EC-6: `trace::1` — stderr contains trace lines; stdout is not inspected
 
-- **Given:** `.usage` environment with valid credentials and at least one saved account.
+- **Given:** One saved account `trace-acct` with no `accessToken` in its credential file.
 - **When:** `clp .usage trace::1`
-- **Then:** stdout contains the normal quota table output only (no timestamped diagnostic lines); stderr contains timestamped diagnostic lines; the two streams are independent; exit 0.
+- **Then:** Exits 0. stderr contains the trace separator ` · ` and the account name `trace-acct`. stdout is never inspected by this test — there is no assertion that stdout contains "the normal quota table" or that it excludes diagnostic lines; the "two streams are independent" claim is not verified here (same underlying test as EC-1, reused for the stdout/stderr-separation angle).
 - **Exit:** 0
 - **Source fn:** `it034_trace_param_writes_to_stderr`
 - **Source:** [params.md#parameter--23-trace](../../../../docs/cli/param/023_trace.md)
@@ -119,7 +119,7 @@ Edge case tests for the `trace::` parameter. Tests validate boolean enforcement,
 - **When:** `clp .account.use name::alice@home.com touch::0 trace::1`
 - **Then:** Exits 0; `switched to 'alice@home.com'` on stdout; stderr contains no timestamped `account.use` diagnostic lines; `trace::1` is accepted without "unrecognized parameter" error.
 - **Exit:** 0
-- **Source fn:** `aw31_trace_touch_disabled_no_trace_lines` (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `aw31_trace_touch_disabled_no_trace_lines` (in `account_relogin_test_b.rs`)
 - **Source:** [params.md#parameter--23-trace](../../../../docs/cli/param/023_trace.md)
 
 ---
@@ -130,7 +130,7 @@ Edge case tests for the `trace::` parameter. Tests validate boolean enforcement,
 - **When:** `clp .credentials.status trace::1`
 - **Then:** Exits 0; stderr contains at least one timestamped diagnostic line for the credential file read; no "Unknown parameter" error.
 - **Exit:** 0
-- **Source fn:** `it_trace_credentials_status_accepted` (in `tests/cli/credentials_test.rs`)
+- **Source fn:** `it_trace_credentials_status_accepted` (in `credentials_test_b.rs`)
 - **Source:** [params.md#parameter--23-trace](../../../../docs/cli/param/023_trace.md)
 
 ---
@@ -141,7 +141,7 @@ Edge case tests for the `trace::` parameter. Tests validate boolean enforcement,
 - **When:** `clp .accounts trace::1`
 - **Then:** Exits 0; stderr contains a timestamped diagnostic line for store not-found; stdout shows "(no accounts configured)"; no "Unknown parameter" error.
 - **Exit:** 0
-- **Source fn:** `it_trace_accounts_accepted` (in `tests/cli/accounts_test.rs`)
+- **Source fn:** `it_trace_accounts_accepted` (in `accounts_list_test_b.rs`)
 - **Source:** [params.md#parameter--23-trace](../../../../docs/cli/param/023_trace.md)
 
 ---
@@ -157,46 +157,46 @@ Edge case tests for the `trace::` parameter. Tests validate boolean enforcement,
 
 ---
 
-### EC-11: `.account.save trace::1 dry::1` — accepted; trace emitted for credential read
+### EC-11: `.account.save trace::1 dry::1` — accepted; trace emitted; exit code not asserted
 
-- **Given:** Valid credentials file and credential store present; `dry::1` suppresses write.
+- **Given:** Valid credentials file and credential store present (`existing@acme.com` account also saved). `dry::1` suppresses write.
 - **When:** `clp .account.save name::test@example.com dry::1 trace::1`
-- **Then:** Exits 0 (dry-run); stderr contains a timestamped diagnostic line for credential file read; no "Unknown parameter" error.
-- **Exit:** 0
-- **Source fn:** `it_trace_account_save_accepted` (in `tests/cli/account_mutations_test.rs`)
+- **Then:** stderr does NOT contain `Unknown parameter` (trace:: is accepted) and stderr contains the trace separator ` · ` (a diagnostic line is emitted). The test never calls an exit-code assertion — "Exits 0 (dry-run)" is not actually verified.
+- **Exit:** Not asserted by the test (no `assert_exit` call)
+- **Source fn:** `it_trace_account_save_accepted` (in `account_relogin_test_b.rs`)
 - **Source:** [params.md#parameter--23-trace](../../../../docs/cli/param/023_trace.md)
 
 ---
 
-### EC-12: `.account.use trace::1` — accepted; unknown account → exit 2
+### EC-12: `.account.use trace::1` — accepted; exit code not asserted
 
 - **Given:** Empty credential store (account not found).
 - **When:** `clp .account.use name::test@example.com trace::1`
-- **Then:** Exits 2 (account not found); no "Unknown parameter" error; `trace::1` is accepted by the framework.
-- **Exit:** 2
-- **Source fn:** `it_trace_account_use_accepted` (in `tests/cli/account_mutations_test.rs`)
+- **Then:** stderr does NOT contain `Unknown parameter` — this is the ONLY assertion in the test. No check for the trace separator (` · `) and no exit-code assertion at all — "Exits 2" is not actually verified.
+- **Exit:** Not asserted by the test (no `assert_exit` call)
+- **Source fn:** `it_trace_account_use_accepted` (in `account_relogin_test_b.rs`)
 - **Source:** [params.md#parameter--23-trace](../../../../docs/cli/param/023_trace.md)
 
 ---
 
-### EC-13: `.account.delete trace::1 dry::1` — accepted; trace emitted for store read
+### EC-13: `.account.delete trace::1 dry::1` — accepted; trace emitted; exit code not asserted
 
-- **Given:** Account `test@example.com` saved; `dry::1` suppresses deletion.
+- **Given:** Account `test@example.com` saved (no `accessToken`); `dry::1` suppresses deletion.
 - **When:** `clp .account.delete name::test@example.com dry::1 trace::1`
-- **Then:** Exits 0 (dry-run); stderr contains a timestamped diagnostic line for store read; no "Unknown parameter" error.
-- **Exit:** 0
-- **Source fn:** `it_trace_account_delete_accepted` (in `tests/cli/account_mutations_test.rs`)
+- **Then:** stderr does NOT contain `Unknown parameter` and stderr contains the trace separator ` · `. The test never calls an exit-code assertion — "Exits 0 (dry-run)" is not actually verified.
+- **Exit:** Not asserted by the test (no `assert_exit` call)
+- **Source fn:** `it_trace_account_delete_accepted` (in `account_relogin_test_b.rs`)
 - **Source:** [params.md#parameter--23-trace](../../../../docs/cli/param/023_trace.md)
 
 ---
 
-### EC-14: `.account.relogin trace::1 dry::1` — accepted; trace emitted
+### EC-14: `.account.relogin trace::1 dry::1` — accepted; trace emitted; exit code not asserted
 
-- **Given:** Account `work@acme.com` saved and active; `dry::1` suppresses re-auth.
+- **Given:** Account `work@acme.com` saved with an `accessToken`; `dry::1` suppresses re-auth.
 - **When:** `clp .account.relogin dry::1 trace::1`
-- **Then:** Exits 0 (dry-run); stderr contains a timestamped diagnostic line; no "Unknown parameter" error.
-- **Exit:** 0
-- **Source fn:** `it_trace_account_relogin_accepted` (in `tests/cli/account_mutations_test.rs`)
+- **Then:** stderr does NOT contain `Unknown parameter` and stderr contains the trace separator ` · `. The test never calls an exit-code assertion — "Exits 0 (dry-run)" is not actually verified.
+- **Exit:** Not asserted by the test (no `assert_exit` call)
+- **Source fn:** `it_trace_account_relogin_accepted` (in `account_relogin_test_b.rs`)
 - **Source:** [params.md#parameter--23-trace](../../../../docs/cli/param/023_trace.md)
 
 ---
@@ -207,14 +207,9 @@ Edge case tests for the `trace::` parameter. Tests validate boolean enforcement,
 
 ---
 
-### EC-16: `.token.status trace::1` — accepted; trace emitted for credential read
+### EC-16: REMOVED — `.token.status` removed
 
-- **Given:** Valid credentials file present.
-- **When:** `clp .token.status trace::1`
-- **Then:** Exits 0; stderr contains a timestamped diagnostic line for credential file read; no "Unknown parameter" error.
-- **Exit:** 0
-- **Source fn:** `it_trace_token_status_accepted` (in `tests/cli/token_paths_test.rs`)
-- **Source:** [params.md#parameter--23-trace](../../../../docs/cli/param/023_trace.md)
+> **REMOVED** — `.token.status` has been removed; its OAuth token expiry classification now lives under `.credentials.status`. Trace acceptance for credential reads is covered by EC-8 (`.credentials.status trace::1`). The corresponding test `it_trace_token_status_accepted` should be removed during implementation.
 
 ---
 

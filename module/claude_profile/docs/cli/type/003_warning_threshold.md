@@ -2,7 +2,7 @@
 
 **Purpose:** Configures the boundary between `Valid` and `ExpiringSoon` token classification. Allows callers to tune early-warning sensitivity for automation or interactive use.
 
-**Fundamental Type:** Newtype wrapping `u64` (seconds)
+**Fundamental Type:** Raw `u64` (seconds) — no dedicated wrapper type.
 
 **Constants:**
 - `DEFAULT = 3600` — 60 minutes (matches `token::WARNING_THRESHOLD_SECS`)
@@ -14,14 +14,21 @@
 
 **Parsing:**
 
+No dedicated parser — parsed inline where consumed, from the unilang `Value::Integer` argument:
+
 ```
-pub fn new( s : &str ) -> Result< Self, String >
+let threshold_secs = match cmd.arguments.get( "threshold" )
+{
+  Some( Value::Integer( n ) ) => u64::try_from( *n ).unwrap_or( crate::token::WARNING_THRESHOLD_SECS ),
+  _                           => crate::token::WARNING_THRESHOLD_SECS,
+};
 ```
 
+(`src/commands/credentials.rs`) — an out-of-range or absent value falls back to `WARNING_THRESHOLD_SECS` (3600), never an error.
+
 **Methods:**
-- `get() -> u64` — raw seconds value
-- `as_duration() -> Duration` — converts to `std::time::Duration`
-- `is_disabled() -> bool` — true when threshold is 0
+- No methods exist — the raw `u64` is passed directly to `token::status_with_threshold( warning_secs : u64 )` / `token::classify_ms( expires_at_ms, warning_secs )`, which compare `remaining.as_secs() <= warning_secs` inline.
+- No `as_duration()`/`is_disabled()`/`get()` methods exist.
 
 ### Referenced Parameters
 
@@ -33,7 +40,7 @@ pub fn new( s : &str ) -> Result< Self, String >
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.token.status`](../command/005_token.md#command-7-tokenstatus) | Token expiry classification with this threshold |
+| 1 | [`.credentials.status`](../command/002_credentials.md#command-10-credentialsstatus) | Token expiry classification with this threshold |
 
 ### Referenced User Stories
 

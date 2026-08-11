@@ -5,13 +5,13 @@
 //! | TC | Description | Exit |
 //! |----|-------------|------|
 //! | TC-079 | `.help` exits 0 | 0 |
-//! | TC-080 | `.help` lists all 12 commands by name | 0 |
+//! | TC-080 | `.help` lists all 14 commands by name | 0 |
 //! | TC-082 | `.help` output includes cli_fmt section headers | 0 |
 //! | TC-091 | Unknown command `.nonexistent` exits 1 | 1 |
 //! | TC-092 | Unknown two-word command `.zzz.nope` exits 1 | 1 |
 //! | TC-093 | Empty args → help, exits 0 | 0 |
 //! | TC-094 | `.help` exits 0 and shows commands | 0 |
-//! | TC-095 | All 12 visible commands appear in help output | 0 |
+//! | TC-095 | All 14 visible commands appear in help output | 0 |
 //! | IT-9 | `.help` contains all 4 section headers | 0 |
 
 use crate::subprocess_helpers::{ run_clv, stdout, assert_exit };
@@ -22,13 +22,15 @@ const VISIBLE_COMMANDS : &[ &str ] = &[
   ".version.install",
   ".version.guard",
   ".version.list",
-  ".version.history",
-  ".processes",
-  ".processes.kill",
+  ".ps",
+  ".ps.kill",
   ".settings.show",
   ".settings.get",
   ".settings.set",
   ".config",
+  ".params",
+  ".runtime_files",
+  ".version.paths",
 ];
 
 // TC-079: .help exits 0
@@ -39,9 +41,9 @@ fn tc079_help_command_exits_0()
   assert_exit( &out, 0 );
 }
 
-// TC-080: .help lists all 12 operational commands by name
+// TC-080: .help lists all 14 operational commands by name
 #[ test ]
-fn tc080_help_lists_12_commands()
+fn tc080_help_lists_14_commands()
 {
   let out = run_clv( &[ ".help" ] );
   assert_exit( &out, 0 );
@@ -94,13 +96,13 @@ fn tc094_help_exits_0_and_shows_commands()
   let out = run_clv( &[ ".help" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
-  for cmd in &[ ".status", ".processes", ".settings.get" ]
+  for cmd in &[ ".status", ".ps", ".settings.get" ]
   {
     assert!( text.contains( cmd ), ".help output must mention {cmd}" );
   }
 }
 
-// TC-095: all 12 visible commands appear in help output
+// TC-095: all 14 visible commands appear in help output
 #[ test ]
 fn tc095_all_visible_commands_in_help()
 {

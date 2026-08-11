@@ -31,7 +31,7 @@ When combined with `dry::1`: gate is bypassed but mutation is still previewed wi
 - **When:** `clp .account.use name::alice@corp.com force::1`
 - **Then:** Exits 0. G5 ownership gate bypassed — no ownership violation message. `~/.claude/.credentials.json` updated to `alice@corp.com`'s credentials. Active marker updated.
 - **Exit:** 0
-- **Source fn:** `fc01_use_force_bypasses_g5`
+- **Source fn:** `ft18_use_force_bypasses_g5` (in `tests/cli/account_ownership_test.rs`)
 - **Source:** [param/058_force.md](../../../../docs/cli/param/058_force.md)
 
 ---
@@ -42,7 +42,7 @@ When combined with `dry::1`: gate is bypassed but mutation is still previewed wi
 - **When:** `clp .account.delete name::alice@corp.com force::1`
 - **Then:** Exits 0. G6 ownership gate bypassed. `alice@corp.com.credentials.json` and `alice@corp.com.json` deleted from credential store.
 - **Exit:** 0
-- **Source fn:** `fc02_delete_force_bypasses_g6`
+- **Source fn:** `ft19_delete_force_bypasses_g6` (in `tests/cli/account_ownership_test.rs`)
 - **Source:** [param/058_force.md](../../../../docs/cli/param/058_force.md)
 
 ---
@@ -53,7 +53,7 @@ When combined with `dry::1`: gate is bypassed but mutation is still previewed wi
 - **When:** `clp .account.relogin name::alice@corp.com force::1`
 - **Then:** Exits 0. G7 ownership gate bypassed — no ownership violation message. The 6-step relogin procedure proceeds.
 - **Exit:** 0
-- **Source fn:** `fc03_relogin_force_bypasses_g7`
+- **Source fn:** `ft20_relogin_force_bypasses_g7` (in `tests/cli/account_ownership_test.rs`)
 - **Source:** [param/058_force.md](../../../../docs/cli/param/058_force.md)
 
 ---
@@ -64,7 +64,7 @@ When combined with `dry::1`: gate is bypassed but mutation is still previewed wi
 - **When:** `clp .accounts owner::0 name::alice@corp.com force::1` (formerly `unclaim::1 name::X force::1` — Feature 064)
 - **Then:** Exits 0. G8 ownership gate bypassed. `alice@corp.com.json` updated with `"owner": ""`. stdout contains `unclaimed alice@corp.com`.
 - **Exit:** 0
-- **Source fn:** `fc04_accounts_unclaim_force_bypasses_g8`
+- **Source fn:** `ft20_accounts_unclaim_force_bypasses_g8` (in `tests/cli/accounts_ft_test.rs`); also covered by `ec14_owner_zero_force_bypasses_g8` (in `tests/cli/account_owner_param_test.rs`)
 - **Source:** [param/058_force.md](../../../../docs/cli/param/058_force.md)
 
 ---
@@ -75,19 +75,21 @@ When combined with `dry::1`: gate is bypassed but mutation is still previewed wi
 - **When:** `clp .account.use name::alice@corp.com force::0` (equivalent to omitting `force::`)
 - **Then:** Exits 1 with `"ownership violation: this account is owned by other@remote"`. No switch performed. G5 gate enforced normally.
 - **Exit:** 1
-- **Source fn:** `fc05_force_zero_enforces_normally`
+- **Source fn:** `ft08_use_exits_1_when_not_owned` (in `tests/cli/account_ownership_test.rs`)
 - **Source:** [param/058_force.md](../../../../docs/cli/param/058_force.md)
 
 ---
 
-### EC-6: `force::1 dry::1` — gate bypassed; mutation previewed without writing
+### EC-6: `force::1 dry::1` — gate bypassed; mutation previewed without writing (no mtime check — content/existence checks only)
 
-- **Given:** Account `alice@corp.com` with `"owner": "other@remote"`. Current identity ≠ `"other@remote"`. Note mtime of `~/.claude/.credentials.json`.
+> **Semantic drift correction:** the G5 sub-block (`.account.use`) in the cited test does not capture or compare any file mtime — it never touches `~/.claude/.credentials.json` at all. It asserts only: exit 0, no ownership-violation text in stderr, and `[dry-run]` present in stdout. The doc's "mtime unchanged" claim is not verified by any of the four sub-blocks in this function: G6 (`.account.delete`) checks file *existence* (`account_exists(...)`) rather than mtime; G7 (`.account.relogin`) has no additional file check beyond the same three checks as G5; G8 (`.accounts owner::0`) checks *content equality* (`assert_eq!` on `meta_before`/`meta_after`) rather than mtime. No sub-block in this function performs mtime capture or comparison.
+
+- **Given:** Account `alice@corp.com` with `"owner": "other@remote"`. Current identity ≠ `"other@remote"`.
 - **When:** `clp .account.use name::alice@corp.com force::1 dry::1`
-- **Then:** Exits 0. No ownership violation (G5 bypassed). stdout contains `[dry-run]` preview message. `~/.claude/.credentials.json` mtime unchanged — no credential swap performed.
+- **Then:** Exits 0. No ownership violation (G5 bypassed). stdout contains `[dry-run]` preview message. (The test does NOT capture or compare `~/.claude/.credentials.json` mtime — it never touches that file in this sub-block.)
 - **Exit:** 0
-- **Note:** force runs BEFORE dry: gate is bypassed first, then dry-run prevents the actual write. Same behavior applies to delete, relogin, and `.accounts owner::0 name::X` (Feature 064).
-- **Source fn:** `fc06_force_dry_gate_bypassed_write_suppressed`
+- **Note:** force runs BEFORE dry: gate is bypassed first, then dry-run prevents the actual write. Same ordering applies to delete, relogin, and `.accounts owner::0 name::X` (Feature 064) — but none of the four sub-cases verify "no write occurred" via mtime; G6 uses file-existence, G8 uses content-equality, G5 and G7 use exit/stderr/stdout checks only.
+- **Source fn:** `ft21_force_dry_bypasses_gate_previews` (in `tests/cli/account_ownership_test.rs`) — single function covering all four G5/G6/G7/G8 sub-cases in one body; none of the four sub-blocks perform mtime capture/comparison, contrary to this EC's original claim
 - **Source:** [param/058_force.md](../../../../docs/cli/param/058_force.md)
 
 ---
@@ -100,7 +102,7 @@ When combined with `dry::1`: gate is bypassed but mutation is still previewed wi
 - **When (case B):** `clp .accounts force::1 assignee::testuser@testmachine name::alice@corp.com` (Feature 065; formerly `active::` — Feature 064)
 - **Then (case B):** Exits 0. Marker file written normally. `force::1` has no gate to bypass on `assignee::` path — silently ignored.
 - **Exit:** 0 (both cases)
-- **Source fn:** `fc07_force_ignored_without_mutation`
+- **Source fn:** `ft21_force_no_effect_without_unclaim` (in `tests/cli/accounts_ft_test.rs`)
 - **Source:** [param/058_force.md](../../../../docs/cli/param/058_force.md)
 
 ---
@@ -112,5 +114,5 @@ When combined with `dry::1`: gate is bypassed but mutation is still previewed wi
 - **Then:** Exits 0. `... · fetch  alice@corp.com  skipped (reason: not owned)` appears in output (G1 gate active — cache-as-primary). HTTP fetch NOT performed. Quota columns show cached values with `~` prefix. `force::1` does NOT trigger live fetch for non-owned accounts.
 - **Exit:** 0 with cache-sourced data
 - **Note:** G1–G4 are read-side gates that intentionally suppress load on non-owned accounts. `force::` is scoped to write mutations only — G5–G8.
-- **Source fn:** `fc08_force_does_not_bypass_read_gates`
+- **Source fn:** *(coverage gap — no test combines `force::1` with a plain `.usage` call on a non-owned/cached account to prove G1 isn't bypassed. Closest adjacent evidence: `t07_gate9_not_bypassed_by_force_during_rotate` in `tests/cli/account_claim_lock_reserve_test.rs` proves `force::1` doesn't bypass Gate 9, a different gate; `it259_solo_current_not_owned_no_http` in `tests/cli/usage_solo_test.rs` proves G1 fires under `solo::1`, but without `force::1` present at all)*
 - **Source:** [param/058_force.md](../../../../docs/cli/param/058_force.md)

@@ -13,7 +13,7 @@ changing behavior.
 |-----------|------|---------|
 | [`v::`](../param/04_v.md) | [`VerbosityLevel`](../type/01_verbosity_level.md) | Detail level (0=minimal, 1=normal, 2=verbose) |
 | [`format::`](../param/05_format.md) | [`OutputFormat`](../type/02_output_format.md) | Display encoding (text or json) |
-| [`count::`](../param/09_count.md) | u64 | Entry limit (`.version.history` only; default 10) |
+| [`count::`](../param/09_count.md) | u64 | Entry limit (`.version.list mode::history` only; default 10) |
 
 **Why NOT in this group:**
 - `dry::`: controls execution, not display
@@ -23,7 +23,7 @@ changing behavior.
 
 ```sh
 clv .status v::0 format::json
-clv .processes format::json v::2
+clv .ps format::json v::2
 ```
 
 ### Referenced Commands
@@ -34,15 +34,14 @@ clv .processes format::json v::2
 | 2 | [`.version.show`](../command/version.md#command-3-versionshow) | Partial | `count::` |
 | 3 | [`.version.install`](../command/version.md#command-4-versioninstall) | Partial | `count::` |
 | 4 | [`.version.guard`](../command/version.md#command-5-versionguard) | Partial | `count::` |
-| 5 | [`.version.list`](../command/version.md#command-6-versionlist) | Partial | `count::` |
-| 6 | [`.processes`](../command/processes.md#command-7-processes) | Partial | `count::` |
-| 7 | [`.processes.kill`](../command/processes.md#command-8-processeskill) | Partial | `count::` |
+| 5 | [`.version.list`](../command/version.md#command-6-versionlist) | Full | — |
+| 6 | [`.ps`](../command/ps.md#command-7-ps) | Partial | `count::` |
+| 7 | [`.ps.kill`](../command/ps.md#command-8-pskill) | Partial | `count::` |
 | 8 | [`.settings.show`](../command/settings.md#command-9-settingsshow) | Partial | `count::` |
 | 9 | [`.settings.get`](../command/settings.md#command-10-settingsget) | Partial | `count::` |
-| 10 | [`.version.history`](../command/version.md#command-12-versionhistory) | Full | — |
-| 11 | [`.config`](../command/config.md#command-13-config) | Partial | `count::` |
-| 12 | [`.params`](../command/params.md#command-14-params) | Partial | `count::` |
-| 13 | [`.paths`](../command/paths.md#command-16-paths) | Partial | `count::` |
+| 10 | [`.config`](../command/config.md#command-13-config) | Partial | `count::` |
+| 11 | [`.params`](../command/params.md#command-14-params) | Partial | `count::` |
+| 12 | [`.version.paths`](../command/version.md#command-16-versionpaths) | Partial | `count::` |
 
 ### Referenced Parameters
 
@@ -50,7 +49,7 @@ clv .processes format::json v::2
 |---|-----------|------|---------|---------------|
 | 1 | [`v::`](../param/04_v.md) | [`VerbosityLevel`](../type/01_verbosity_level.md) | 1 | Output detail level |
 | 2 | [`format::`](../param/05_format.md) | [`OutputFormat`](../type/02_output_format.md) | text | Output format encoding |
-| 3 | [`count::`](../param/09_count.md) | u64 | 10 | Entry limit (`.version.history` only) |
+| 3 | [`count::`](../param/09_count.md) | u64 | 10 | Entry limit (`.version.list mode::history` only) |
 
 ### Referenced User Stories
 

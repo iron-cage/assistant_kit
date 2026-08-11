@@ -20,7 +20,7 @@ Feature behavioral requirement test cases for `docs/feature/025_per_machine_acti
 | FT-06 | `clp .account.use i1` resolves exact local-part match unambiguously | AC-11 (015) | Integration (→ 015) |
 | FT-07 | `clp .account.use a` exits 1 when no exact local-part match, two prefix hits | AC-06 (015) | Integration (→ 015) |
 | FT-08 | `clp .account.use i1` exits 1 when no `i1@` account and `i11@`/`i12@` both match | AC-06, AC-11 (015) | Integration (→ 015) |
-| FT-09 | `.account.save` (no `name::`) — `oauthAccount.emailAddress` absent, falls back to `_active` marker (BUG-209 regression) | AC-08 (002) | Integration (BUG-209) |
+| FT-09 | `.account.save` (no `name::`) — stale top-level `emailAddress` ignored (BUG-209 regression) | AC-08 (002) | Integration (BUG-209) |
 | FT-10 | `.account.save` (no `name::`) — `oauthAccount.emailAddress` present, overrides stale `_active` marker (BUG-212) | AC-08 (002) | Integration (BUG-212) |
 | FT-11 | `other_machines_active()` returns other machines' account names, excludes own marker | AC-05 | Unit |
 | FT-12 | `other_machines_active()` returns empty HashSet when only own marker or empty store | AC-05 | Unit |
@@ -38,7 +38,7 @@ Feature behavioral requirement test cases for `docs/feature/025_per_machine_acti
 | FT-06 | Exact local-part match resolves unambiguously | AC-11 (015) | Prefix Resolution |
 | FT-07 | Ambiguous prefix with no exact match exits 1 | AC-06 (015) | Prefix Resolution |
 | FT-08 | Prefix `i1` exits 1 when only `i11@`/`i12@` exist (no exact match) | AC-06, AC-11 (015) | Prefix Resolution |
-| FT-09 | .account.save falls back to `_active` marker when `oauthAccount.emailAddress` absent | AC-08 (002) | Name Resolution |
+| FT-09 | .account.save ignores stale top-level `emailAddress` (BUG-209) | AC-08 (002) | Name Resolution |
 | FT-10 | .account.save uses `oauthAccount.emailAddress` when present, ignores stale `_active` marker | AC-08 (002) | Name Resolution |
 | FT-11 | other_machines_active returns other machines' names, excludes own marker | AC-05 | Unit |
 | FT-12 | other_machines_active returns empty HashSet when only own marker or empty store | AC-05 | Unit |
@@ -61,11 +61,11 @@ Feature behavioral requirement test cases for `docs/feature/025_per_machine_acti
 
 ### FT-02: `.account.save` writes per-machine marker
 
-- **Given:** A running `~/.claude/credentials.json` with `alice@home.com` credentials.
-- **When:** `clp .account.save name::alice@home.com`
-- **Then:** The credential store contains `_active_{hostname}_{user}` = `"alice@home.com"`. No bare `_active` file is created. The fix in `save()` uses `active_marker_filename()` (not the old hard-coded `"_active"`).
+- **Given:** A running `~/.claude/.credentials.json` with generic credentials (not yet tied to any saved account name).
+- **When:** `clp .account.save name::work@acme.com`
+- **Then:** The credential store contains `_active_{hostname}_{user}` = `"work@acme.com"`. No bare `_active` file is created. The fix in `save()` uses `active_marker_filename()` (not the old hard-coded `"_active"`).
 - **Exit:** 0
-- **Source fn:** `as16_save_writes_active_marker` (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `as16_save_writes_active_marker` (in `account_mutations_test_b.rs`)
 - **Source:** [feature/025_per_machine_active_marker.md AC-01](../../../docs/feature/025_per_machine_active_marker.md)
 
 ---
@@ -110,7 +110,7 @@ Feature behavioral requirement test cases for `docs/feature/025_per_machine_acti
 - **When:** `clp .account.use i1`
 - **Then:** Exits 0. Active marker contains `i1@wbox.pro`. The exact-local-part check resolves `i1@wbox.pro` before reaching the prefix scan — no ambiguity error.
 - **Exit:** 0
-- **Source fn:** `aw16_exact_local_part_wins_over_ambiguous_prefix` (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `aw16_exact_local_part_wins_over_ambiguous_prefix` (in `account_mutations_test_b.rs`)
 - **Source:** [feature/015_name_shortcut_syntax.md AC-11](../../../docs/feature/015_name_shortcut_syntax.md)
 
 ---
@@ -121,7 +121,7 @@ Feature behavioral requirement test cases for `docs/feature/025_per_machine_acti
 - **When:** `clp .account.use a`
 - **Then:** Exits 1. Stderr contains "ambiguous". No account switch occurs. The exact-local-part check finds no match, falling through to prefix scan which reports ambiguity.
 - **Exit:** 1
-- **Source fn:** `aw15_use_prefix_ambiguous_exits_1` (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `aw15_use_prefix_ambiguous_exits_1` (in `account_mutations_test_b.rs`)
 - **Source:** [feature/015_name_shortcut_syntax.md AC-06](../../../docs/feature/015_name_shortcut_syntax.md)
 
 ---
@@ -132,19 +132,19 @@ Feature behavioral requirement test cases for `docs/feature/025_per_machine_acti
 - **When:** `clp .account.use i1`
 - **Then:** Exits 1. Stderr contains "ambiguous". The exact-local-part check finds no match (no account with local part `i1`), falls through to prefix scan, which finds two matches and reports ambiguity.
 - **Exit:** 1
-- **Source fn:** `aw17_use_prefix_ambiguous_no_exact_local_part_exits_1` (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `aw17_use_prefix_ambiguous_no_exact_local_part_exits_1` (in `account_mutations_test_b.rs`)
 - **Source:** [feature/015_name_shortcut_syntax.md AC-06, AC-11](../../../docs/feature/015_name_shortcut_syntax.md)
 
 ---
 
-### FT-09: `.account.save` (no `name::`) — fallback to `_active` marker when `oauthAccount.emailAddress` absent
+### FT-09: `.account.save` (no `name::`) — stale top-level `emailAddress` is never read
 
-- **Given:** Two saved accounts: `a@test.com` and `b@test.com`. `~/.claude.json` has top-level `emailAddress = "a@test.com"` (stale — no `oauthAccount.emailAddress` field present). The per-machine active marker (`_active_{hostname}_{user}`) contains `"b@test.com"` (set by a prior `.account.use b@test.com`).
+- **Given:** `~/.claude.json` contains BOTH a stale top-level `emailAddress = "a@test.com"` (never updated by `switch_account()`) AND `oauthAccount.emailAddress = "b@test.com"` (kept in sync). The per-machine active marker (`_active_{hostname}_{user}`) also contains `"b@test.com"` (set by a prior `.account.use b@test.com`) — agreeing with `oauthAccount.emailAddress`, so this fixture does not itself discriminate between the two sources.
 - **When:** `clp .account.save` (no `name::` argument)
-- **Then:** Exits 0. Output reads `saved current credentials as 'b@test.com'`. The per-machine active marker still reads `b@test.com`. The two-level inference: (1) `oauthAccount.emailAddress` is absent from the JSON → None; (2) fallback to `_active` marker → `b@test.com`. Top-level `emailAddress` is never read.
+- **Then:** Exits 0. Stdout contains `"b@test.com"` and does NOT contain `"a@test.com"` — the stale top-level `emailAddress` field is never read. The per-machine active marker still reads `b@test.com` after save.
 - **Exit:** 0
-- **Source fn:** `mre_bug_209_account_save_uses_active_marker_not_stale_email` (in `tests/cli/account_mutations_test.rs`)
-- **Note:** Tests the fallback path. Primary path (`oauthAccount.emailAddress` present, overrides stale marker) is covered by FT-10 (BUG-212).
+- **Source fn:** `mre_bug_209_account_save_uses_active_marker_not_stale_email` (in `account_relogin_test_b.rs`)
+- **Note:** Tests the BUG-209 fix: top-level `emailAddress` is stale and never read. The primary-vs-fallback precedence between `oauthAccount.emailAddress` and the `_active` marker (added later by BUG-212, and part of the general two-level inference read in `account_ops.rs`) is exercised where the two sources actually disagree by FT-10.
 - **Source:** [feature/002_account_save.md AC-08](../../../docs/feature/002_account_save.md)
 
 ---
@@ -155,7 +155,7 @@ Feature behavioral requirement test cases for `docs/feature/025_per_machine_acti
 - **When:** `clp .account.save` (no `name::` argument)
 - **Then:** Exits 0. Output reads `saved current credentials as 'i5@wbox.pro'`. `{credential_store}/i5@wbox.pro.credentials.json` created. `{credential_store}/i2@wbox.pro.credentials.json` NOT created. The `_active` marker is not consulted when `oauthAccount.emailAddress` provides a non-empty value.
 - **Exit:** 0
-- **Source fn:** `mre_bug_212_account_save_stale_marker_uses_oauth_email` (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `mre_bug_212_account_save_stale_marker_uses_oauth_email` (in `account_relogin_test_b.rs`)
 - **Note:** BUG-212 regression guard. `oauthAccount.emailAddress` is written by both clp ops and external OAuth login; `_active` is written only by clp ops — external login leaves it stale. Primary over fallback precedence is the two-level inference introduced by TSK-215.
 - **Source:** [feature/002_account_save.md AC-08, AC-16](../../../docs/feature/002_account_save.md)
 
@@ -185,10 +185,10 @@ Feature behavioral requirement test cases for `docs/feature/025_per_machine_acti
 
 ### FT-13: `.usage` sessions table renders `_active_*` markers as session identity → account rows
 
-- **Given:** A credential store with 3 `_active_*` marker files: `_active_w003_user1` containing `"alice@test.com"`, `_active_w004_user2` containing `"bob@test.com"`, and the current machine's own marker (as returned by `active_marker_filename()`) containing `"own@test.com"`. All three accounts exist in the credential store with valid quota data.
-- **When:** `clp .usage` (default — `who::` auto behavior triggers because >1 marker exists)
-- **Then:** Exits 0. Output includes a sessions table after the footer. The table has columns `Session` and `Account`. Each `_active_*` marker is rendered as a row: `Session` = `{user}@{host}` (parsed from filename `_active_{host}_{user}`), `Account` = file content (the account name). The current machine's own row is marked with `✓`. All three rows appear.
-- **Exit:** 0
-- **Note:** Cross-feature integration: this test validates Feature 025's `_active_*` marker data as consumed by Feature 009's sessions table (AC-33). The data source (`other_machines_active()` + own marker) is Feature 025's responsibility; the rendering is Feature 009's.
+- **Given:** A credential store with 3 `_active_*` marker files: `_active_testhost1_tst1` containing `"alice@test.com"`, `_active_testhost2_tst2` containing `"bob@test.com"`, and the current machine's own marker (as returned by `active_marker_filename()`) containing `"own@test.com"`. The `accounts` list passed to the renderer holds one unrelated synthetic `AccountQuota` (`mk_aq_ok(10.0)`) — the sessions table is driven entirely by reading marker files from the store path, not by the `accounts` list content.
+- **When:** `render_text(&accounts, SortStrategy::Name, None, PreferStrategy::Any, &cols, None, None, Some(spath), None, false)` is called directly (not via CLI) with `who=None` — auto-shows because marker_count=3 > 1.
+- **Then:** Output contains "Sessions" (table header appears). Each `_active_*` marker is rendered as a row: `Session` = `{user}@{host}` parsed from filename `_active_{host}_{user}` (`_active_testhost1_tst1` → `"tst1@testhost1"`, `_active_testhost2_tst2` → `"tst2@testhost2"`), and `Account` = file content (`"alice@test.com"`, `"bob@test.com"`). The own session's account cell shows `"own@test.com ✓"`.
+- **Exit:** N/A (direct `render_text` function call — no CLI, no exit code)
+- **Note:** Cross-feature integration: this test validates Feature 025's `_active_*` marker data as consumed by Feature 009's sessions table (AC-33). The data source (marker files under the store path) is Feature 025's responsibility; the rendering is Feature 009's. BUG-308 fix: synthetic hostnames (`testhost1`/`testhost2`) replaced the original hardcoded `_active_w003_user1`/`_active_w004_user2` names, which could collide with `active_marker_filename()` on a machine actually named `w003`/`user1`.
 - **Source fn:** `ft13_025_sessions_table_parses_marker_identity_from_filename` (in `tests/usage/render_tests_b.rs`)
 - **Source:** [feature/009_token_usage.md AC-33](../../../docs/feature/009_token_usage.md), [feature/025_per_machine_active_marker.md AC-05](../../../docs/feature/025_per_machine_active_marker.md)

@@ -55,6 +55,7 @@
 //! | `command_verb_test` | Command-verb behavioral contracts (save, use, delete, limits, relogin, rotate, renewal, inspect, assign, status) | BV |
 //! | `command_noun_test` | Command-noun contracts (account, token, credentials) | NC |
 //! | `user_story_test` | User acceptance tests — account rotation, onboarding, quota monitoring, automation, diagnostics | UA |
+//! | `telemetry_test` | CLI invocation telemetry — `claude_journal` `Command` event per invocation | T, M |
 //!
 //! ## Parallel Execution Note
 //!
@@ -205,3 +206,12 @@ mod command_noun_test;
 
 #[ path = "cli/user_story_test.rs" ]
 mod user_story_test;
+
+#[ path = "cli/account_provider_test.rs" ]
+mod account_provider_test;
+
+#[ path = "cli/account_redirect_backend_test.rs" ]
+mod account_redirect_backend_test;
+
+#[ path = "cli/telemetry_test.rs" ]
+mod telemetry_test;

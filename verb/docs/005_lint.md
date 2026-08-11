@@ -18,7 +18,7 @@ Runs clippy on the target module with all features enabled and warnings promoted
 
 `--all-features` ensures feature-gated code paths are also linted, preventing feature-specific warnings from hiding until CI.
 
-`lint` is a subset of what `test` runs: `w3 .test level::3` includes clippy. `lint` exists as a standalone verb for rapid feedback during development without running the full test suite.
+`lint` is a subset of what `test` runs: the container suite (`runbox .live` → `test.d/l1`) already ends with clippy. `lint` exists as a standalone host-side verb for rapid feedback during development without the container round-trip.
 
 `--dry-run` emits the exact command and exits 0 — no analysis runs.
 
@@ -55,4 +55,4 @@ if [[ "${1:-}" == "--dry-run" ]]; then echo "cargo clippy -p claude_profile --al
 exec cargo clippy -p claude_profile --all-features -- -D warnings
 ```
 
-Each module's `runbox/runbox.yml` must declare `lint_script: module/<name>/verb/lint.d/l1` — the container entry point is the l1 layer directly. See `runbox/docs/parameter/014_lint_script.md`. The linter is ecosystem-specific: ruff for Python, eslint for Node.js, cargo clippy for Rust. `verb/lint` is `available` for all project types — linting is universal.
+Lint runs directly on the host (`verb/lint` → cargo clippy); inside the container, clippy is already part of the full suite run by `verb/test` (nextest + doc tests + clippy). The retired flat-schema `lint_script:` key has no nested-schema counterpart — there is no separate container lint entry point. The linter is ecosystem-specific: ruff for Python, eslint for Node.js, cargo clippy for Rust. `verb/lint` is `available` for all project types — linting is universal.

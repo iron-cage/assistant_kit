@@ -15,8 +15,8 @@
 | `account_inspect.rs` | `.account.inspect` per-account detail view routine. |
 | `account_inspect_render.rs` | Formatting helpers for `.account.inspect` detail view. |
 | `limits.rs` | `.account.limits` API rate-limit fetch routine. |
-| `model.rs` | `.model` get/set session model routine. |
-| `model_select.rs` | `.model.select` get/set/reset subprocess model preference routine. |
+| `model.rs` | `.model` unified session/subprocess model+effort get/set/reset routine. |
+| `model_select.rs` | `.model.select` retirement stub — migration error to `.model scope::subprocess`. |
 | `models.rs` | `.models` list available Claude models routine. |
-| `token_paths.rs` | `.token.status` and `.paths` command routines. |
+| `token_paths.rs` | `.paths` command routine. |
 | `dot.rs` | `.` dot-shorthand command routine. |

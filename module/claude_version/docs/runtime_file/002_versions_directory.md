@@ -28,7 +28,7 @@ Directory containing one subdirectory per installed version (e.g., `2.1.78/`), e
 `module/claude_version_core/src/version.rs`:
 - `versions_dir_path()` (line 204) resolves the directory path.
 - `perform_install()` (line 301) creates the target version's subdirectory during install.
-- `purge_stale_versions()` (line 222) removes all subdirectories except the kept version (Layer 4 of the version lock pattern).
+- `purge_stale_versions()` removes all version-named entries except the kept version (Layer 4 of the version lock pattern); it refuses to run when the kept version's entry is absent (BUG-016).
 - `unlock_versions_dir()` (line 237) sets directory permissions to 755 (writable).
 - `lock_version()` (line 254) sets directory permissions to 555 (read-only) after a pinned install.
 
@@ -36,7 +36,7 @@ Directory containing one subdirectory per installed version (e.g., `2.1.78/`), e
 
 - **Created:** On the first `.version.install` invocation, if the directory does not yet exist.
 - **Subdirectory added:** Each successful `.version.install` adds (or overwrites) the target version's subdirectory.
-- **Subdirectory removed:** `purge_stale_versions()` deletes all subdirectories other than the just-installed version, when a pinned install completes (Layer 4 defense against symlink retarget, see `pitfall/002_symlink_retarget.md`).
+- **Entry removed:** `purge_stale_versions()` deletes all version-named entries other than the just-installed version, when a pinned install completes with a verified outcome (Layer 4 defense against symlink retarget, see `pitfall/002_symlink_retarget.md`). If the just-installed version's entry is absent — the installer refused or failed — the purge is a no-op (BUG-016).
 - **Permission toggled:** `unlock_versions_dir()` / `lock_version()` switch the directory between 755 and 555 around each install cycle.
 - **Never fully deleted by clv:** individual version subdirectories are purged, but the parent directory itself is not removed.
 
@@ -51,7 +51,7 @@ A missing or emptied versions directory does not lose user data — it only remo
 | File | Relationship |
 |------|-------------|
 | [feature/001_version_management.md](../feature/001_version_management.md) | `.version.install`, `.version.guard` create/purge/lock this directory |
-| [feature/009_path_discovery.md](../feature/009_path_discovery.md) | `.paths` command that reports this path |
+| [feature/009_path_discovery.md](../feature/009_path_discovery.md) | `.version.paths` command that reports this path |
 
 ### Patterns
 

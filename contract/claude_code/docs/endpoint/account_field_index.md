@@ -69,19 +69,27 @@ Pro (no Max): billing_type == "stripe_subscription"  AND  "claude_max" NOT IN ca
 |-------|------|-------|-----------|
 | `five_hour.utilization` | f64 | 0.0–100.0 | 5-hour session quota consumed % |
 | `five_hour.resets_at` | string\|null | ISO-8601 UTC | 5-hour window reset timestamp |
+| `five_hour.limit_dollars` / `used_dollars` / `remaining_dollars` | number\|null | — | Reserved, `null` in every response observed (2026-07-28) |
 | `seven_day.utilization` | f64 | 0.0–100.0 | 7-day all-model quota consumed % |
 | `seven_day.resets_at` | string\|null | ISO-8601 UTC | 7-day window reset timestamp |
-| `seven_day_sonnet.utilization` | f64 | 0.0–100.0 | 7-day Sonnet-only quota consumed % |
+| `seven_day.limit_dollars` / `used_dollars` / `remaining_dollars` | number\|null | — | Reserved, `null` in every response observed (2026-07-28) |
+| `seven_day_sonnet.utilization` | f64 | 0.0–100.0 | 7-day Sonnet-only quota consumed % — field always returns bare `null` since 2026-06-25, see [001](001_oauth_usage.md) |
 | `seven_day_sonnet.resets_at` | string\|null | ISO-8601 UTC | Sonnet 7-day reset timestamp |
+| `limits[].kind`/`.group`/`.percent`/`.severity`/`.resets_at`/`.scope`/`.is_active` | mixed | — | Quota boundary array, 3 entries observed (`session`, `weekly_all`, `weekly_scoped`); full schema in [001](001_oauth_usage.md) |
 | `extra_usage.is_enabled` | bool | `false` observed | Pay-as-you-go overage enabled |
 | `extra_usage.monthly_limit` | number\|null | `null` | Monthly overage cap |
 | `extra_usage.used_credits` | number\|null | `null` | Credits used this month |
 | `extra_usage.utilization` | f64\|null | `null` | Overage utilization fraction |
 | `extra_usage.currency` | string\|null | `null` | Billing currency |
-| `extra_usage.disabled_reason` | string\|null | `null` | Overage disable reason |
+| `extra_usage.decimal_places` / `disabled_reason` | number\|null / string\|null | `null` | Overage decimal precision / disable reason |
+| `extra_usage.user_disabled` / `credits_ever_enabled` | bool | real per-account | Overage account-level toggles — observed both `true`/`false` |
+| `extra_usage.spend_limit_reached` | bool | `false` observed | Overage spend-cap-reached flag |
+| `extra_usage.daily` / `.weekly` | object\|null | `null` observed | Overage period breakdown, unpopulated |
+| `spend.*` | mixed | — | New top-level credits/spend object; full schema in [001](001_oauth_usage.md) |
+| `member_dashboard_available` | bool | `false` observed | New top-level field; membership dashboard availability |
 
-**Inactive buckets** (all `null` or zeroed in observed responses):
-`seven_day_oauth_apps`, `seven_day_opus`, `seven_day_cowork`, `tangelo`, `iguana_necktie`, `omelette_promotional`; `seven_day_omelette` returns `{"utilization":0.0,"resets_at":null}`.
+**Inactive buckets** (all `null` in observed responses, 2026-07-28):
+`seven_day_oauth_apps`, `seven_day_opus`, `seven_day_cowork`, `seven_day_omelette`, `tangelo`, `iguana_necktie`, `omelette_promotional`, `cinder_cove`, `amber_ladder`, `nimbus_quill`.
 
 ### From 003 — `POST /v1/messages` response headers
 

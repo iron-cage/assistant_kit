@@ -14,7 +14,7 @@
 //!
 //! ## Corner Cases Covered
 //!
-//! - Default env vars appear (`CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000`)
+//! - Default env vars appear (`CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000`)
 //! - Default `-c` appears in dry-run output when session storage is non-empty (automatic session continuation)
 //! - Empty `--session-dir` suppresses `-c` even without `--new-session` (BUG-214 regression guard)
 //! - `--new-session` suppresses `-c` from dry-run output
@@ -38,6 +38,9 @@
 //! - Idempotent guard: message ending with `"ultrathink"` is not double-suffixed
 //! - `--trace --dry-run` emits nothing to stderr (dry-run returns before trace fires)
 //! - `""` empty positional arg ignored — bare command, no message, no degenerate ultrathink suffix
+//! - T-A: `--interactive --session-dir <nonempty>` injects `-c` (BUG-435 fix)
+//! - T-B: `--interactive --session-dir <empty>` does NOT inject `-c` (no session → no -c)
+//! - T-C: bare `--dry-run --session-dir <nonempty>` (print mode, no message) does NOT inject `-c` (D-10 preserved)
 
 mod cli_binary_test_helpers;
 use cli_binary_test_helpers::{ run_cli, run_dry, stdout_str };
@@ -48,8 +51,8 @@ fn default_env_vars_appear_in_output()
 {
   let output = run_dry( &[ "test" ] );
   assert!(
-    output.contains( "CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000" ),
-    "Default 200K token limit must appear in env output. Got:\n{output}"
+    output.contains( "CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000" ),
+    "Default 128K token limit must appear in env output. Got:\n{output}"
   );
 }
 
@@ -72,8 +75,8 @@ fn max_tokens_override_updates_env_var()
     "--max-tokens must override default. Got:\n{output}"
   );
   assert!(
-    !output.contains( "CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000" ),
-    "Default 200K must be replaced. Got:\n{output}"
+    !output.contains( "CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000" ),
+    "Default 128K must be replaced. Got:\n{output}"
   );
 }
 
@@ -181,11 +184,21 @@ fn dir_with_spaces_produces_unquoted_cd_line()
   );
 }
 
-// No-message case: --dry-run with no message produces the bare command with all defaults
-// but WITHOUT -c because the session dir is empty → session_exists() returns `None`.
-// Fix(BUG-246): describe() now starts with "env -u CLAUDECODE" (default unset_claudecode=true).
+// No-message case: --dry-run with no message routes to print mode under this harness's
+// non-TTY subprocess stdin, but still WITHOUT -c because the session dir is empty →
+// session_exists() returns `None`. Fix(BUG-246): describe() now starts with
+// "env -u CLAUDECODE" (default unset_claudecode=true).
 // Do NOT use make_session_dir() here — that writes a dummy .jsonl making session_exists() return `Some(SessionId)`,
 // which would inject -c and break the "no -c" assertion.
+//
+// Fix(BUG-425): corrected from asserting a bare/no-`--print` command to asserting the
+//   post-fix print-mode-routed command — this test's own subprocess stdin is non-TTY
+//   (no PTY simulation in this harness), and BUG-425's fix makes non-TTY the deciding
+//   term for a bare invocation with no message and no `--interactive`.
+// Root cause: this test was written before BUG-425's TTY-check term existed, when
+//   "no message" alone meant the bare/interactive-REPL command shape.
+// Pitfall: `--chrome` also drops from the composed command here — print mode suppresses
+//   it unconditionally (Fix(BUG-304)), not just when explicitly requested via --no-chrome.
 #[ test ]
 fn dry_run_without_message_shows_bare_command()
 {
@@ -194,8 +207,8 @@ fn dry_run_without_message_shows_bare_command()
   let output = run_dry( &[ "--session-dir", session_path ] );
   let last_line = output.trim_end().lines().last().unwrap_or_default();
   assert_eq!(
-    last_line, "env -u CLAUDECODE claude --dangerously-skip-permissions --chrome --effort max",
-    "Bare --dry-run must end with default bypass and effort max (no message, no -c in empty session dir). Got:\n{output}"
+    last_line, "env -u CLAUDECODE -u CLAUDE_CODE_CHILD_SESSION claude --dangerously-skip-permissions --effort max --print --output-format json",
+    "Bare --dry-run under non-TTY stdin must route to print mode (no message, no -c in empty session dir). Got:\n{output}"
   );
 }
 
@@ -293,14 +306,22 @@ fn interactive_flag_suppresses_default_print()
   );
 }
 
-// Bare --dry-run (no message) does not add --print (no message = interactive REPL).
+// Fix(BUG-425): retitled from `bare_dry_run_no_message_has_no_print` and inverted the
+//   assertion — this test's subprocess stdin is non-TTY (no PTY simulation in this
+//   harness), and BUG-425's fix makes non-TTY the deciding term for a bare invocation
+//   with no message and no `--interactive`, same as a piped invocation.
+// Root cause: this test predates BUG-425's TTY-check term, when "no message" alone
+//   meant the bare/interactive-REPL command shape regardless of TTY presence.
+// Pitfall: a genuine TTY (not reachable in this harness) would still route to
+//   run_interactive() for this same bare invocation — this test only covers the
+//   non-TTY case, matching every other subprocess-spawning test in this suite.
 #[ test ]
-fn bare_dry_run_no_message_has_no_print()
+fn bare_dry_run_no_message_routes_to_print()
 {
   let output = run_dry( &[] );
   assert!(
-    !output.contains( "--print" ),
-    "bare --dry-run (no message) must not add --print. Got:\n{output}"
+    output.contains( "--print" ),
+    "bare --dry-run (no message) under non-TTY stdin must add --print. Got:\n{output}"
   );
 }
 
@@ -563,12 +584,163 @@ fn empty_positional_arg_produces_bare_command()
   assert!( out.status.success(), "empty positional arg must exit 0. stderr: {}", String::from_utf8_lossy( &out.stderr ) );
   let stdout = String::from_utf8_lossy( &out.stdout );
   let last_line = stdout.trim_end().lines().last().unwrap_or_default();
+  // Fix(BUG-425): "bare command" here means no message/-c content, not print-mode-free —
+  //   this subprocess's stdin is non-TTY (no PTY simulation in this harness), so BUG-425's
+  //   fix routes it to print mode same as any other bare invocation. The test's actual
+  //   differentiator (empty positional must not leak as a degenerate "ultrathink " message,
+  //   BUG-219) is the assertion immediately below, unaffected by this correction.
   assert_eq!(
-    last_line, "env -u CLAUDECODE claude --dangerously-skip-permissions --chrome --effort max",
-    "empty positional arg must produce bare command (no message, no -c in empty session dir). Got:\n{stdout}"
+    last_line, "env -u CLAUDECODE -u CLAUDE_CODE_CHILD_SESSION claude --dangerously-skip-permissions --effort max --print --output-format json",
+    "empty positional arg must produce no-message command (no -c in empty session dir). Got:\n{stdout}"
   );
   assert!(
     !stdout.contains( "\"ultrathink \"" ),
     "empty positional must NOT produce 'ultrathink ' degenerate message. Got:\n{stdout}"
+  );
+}
+
+// T-A: `--interactive --session-dir <nonempty>` injects `-c`
+//
+// ## Root Cause (BUG-435)
+//
+// D-10's -c injection guard (BUG-426 fix) required `cli.interactive` (the explicit
+// `--interactive` flag) to be true when no message, print mode, file, or stdin-content
+// was present.  Bare `clr` on TTY enters interactive mode via TTY detection (BUG-425
+// fix), never by setting the explicit flag — so the guard excluded bare interactive
+// invocations and sessions were never resumed.
+//
+// ## Why Not Caught
+//
+// D-10 was designed for BUG-426 (invalid `claude -c` with no message in print mode).
+// In the test harness (non-TTY subprocess), every `--interactive` test that exercised
+// -c injection used the explicit `--interactive` flag, which set `cli.interactive=true`
+// and passed the existing guard.  Bare TTY interactive (no flag) was never tested.
+//
+// ## Fix Applied
+//
+// Added `!use_print` as the first inner term of the -c injection condition.  When
+// `use_print=false` (interactive mode — either via explicit `--interactive` or via TTY
+// detection), -c is always injected if `expected_id.is_some()`.
+//
+// ## Prevention
+//
+// Assert that `--interactive --session-dir <nonempty>` produces ` -c` in dry-run output.
+// In test context `--interactive` forces `use_print=false` (the same path real bare
+// TTY invocations take via `!is_tty`).
+//
+// ## Pitfall
+//
+// In the test harness (non-TTY subprocess), bare `--dry-run` without `--interactive`
+// routes to print mode (`use_print=true`); `!use_print=false`.  `--interactive` is
+// required to reach the interactive path in the test harness.
+// test_kind: bug_reproducer(BUG-435)
+#[ test ]
+fn ta_interactive_with_session_injects_continue_flag()
+{
+  let ( _dir, session_path ) = cli_binary_test_helpers::make_session_dir();
+  let out = run_cli( &[ "--dry-run", "--interactive", "--session-dir", &session_path ] );
+  assert!(
+    out.status.success(),
+    "--interactive --session-dir <nonempty> dry-run must succeed. stderr: {}",
+    String::from_utf8_lossy( &out.stderr )
+  );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  assert!(
+    stdout.contains( " -c" ),
+    "--interactive with existing session must inject -c (BUG-435 fix). Got:\n{stdout}"
+  );
+}
+
+// T-B: `--interactive --session-dir <empty>` does NOT inject `-c`
+//
+// ## Root Cause (BUG-435)
+//
+// See T-A.  This companion test guards the no-session path: the fix must allow -c only
+// when a qualifying session exists, never unconditionally in interactive mode.
+//
+// ## Why Not Caught
+//
+// The no-session path in interactive mode was passively correct before the fix (since
+// `expected_id=None` regardless of mode), but was never explicitly asserted.  Adding
+// T-A without T-B would leave a regression gap for the outer `expected_id.is_some()`
+// guard.
+//
+// ## Fix Applied
+//
+// The `expected_id.is_some()` outer guard remains unchanged; `!use_print` only gates
+// the inner condition.  With an empty session dir, `session_exists()` returns `None`
+// → -c is never injected.
+//
+// ## Prevention
+//
+// Assert that `--interactive --session-dir <empty>` produces no ` -c` in dry-run output.
+//
+// ## Pitfall
+//
+// Always use a fresh `tempfile::TempDir::new()` (no .jsonl files) for the no-session
+// case — never rely on the ambient cwd, which may have prior sessions on the host.
+// test_kind: bug_reproducer(BUG-435)
+#[ test ]
+fn tb_interactive_without_session_no_continue_flag()
+{
+  let empty_dir = tempfile::TempDir::new().expect( "create empty session dir" );
+  let session_path = empty_dir.path().to_str().expect( "session dir path valid utf-8" );
+  let out = run_cli( &[ "--dry-run", "--interactive", "--session-dir", session_path ] );
+  assert!(
+    out.status.success(),
+    "--interactive --session-dir <empty> dry-run must succeed. stderr: {}",
+    String::from_utf8_lossy( &out.stderr )
+  );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  assert!(
+    !stdout.contains( " -c" ),
+    "--interactive with empty session dir must NOT inject -c. Got:\n{stdout}"
+  );
+}
+
+// T-C: bare print-mode dry-run with session → D-10 protection preserved (no -c)
+//
+// ## Root Cause (BUG-426, D-10 regression guard)
+//
+// Before D-10's BUG-426 fix, `claude -c` was injected even when no message would
+// follow — causing the claude binary to fail.  D-10 guarded -c on message-presence
+// (or other qualifying terms).  The BUG-435 fix adds `!use_print` as the first term;
+// a mistake in that addition could accidentally let print mode with no message inject
+// -c again, reintroducing BUG-426.
+//
+// ## Why Not Caught
+//
+// This test was not filed when D-10 landed; it is added now alongside the BUG-435 fix
+// to ensure the `!use_print` addition cannot accidentally regress D-10.
+//
+// ## Fix Applied
+//
+// `!use_print` is false in print mode (`use_print=true`), so the existing
+// message-presence terms still control the guard.  D-10's protection is unchanged.
+//
+// ## Prevention
+//
+// Assert that bare `--dry-run --session-dir <nonempty>` (no `--interactive`, no message)
+// does NOT inject -c in dry-run output.
+//
+// ## Pitfall
+//
+// In test context (non-TTY subprocess), bare `--dry-run --session-dir <path>` routes
+// to print mode (`use_print=true`), so `!use_print=false`.  Do NOT add `--interactive`
+// here — that changes the mode to interactive and would test T-A instead.
+#[ test ]
+fn tc_print_mode_with_session_no_continue_flag()
+{
+  let ( _dir, session_path ) = cli_binary_test_helpers::make_session_dir();
+  let out = run_cli( &[ "--dry-run", "--session-dir", &session_path ] );
+  assert!(
+    out.status.success(),
+    "bare --dry-run --session-dir <nonempty> must succeed. stderr: {}",
+    String::from_utf8_lossy( &out.stderr )
+  );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  assert!(
+    !stdout.contains( " -c" ),
+    "print mode with no message must NOT inject -c even with existing session (D-10). Got:\n{stdout}"
   );
 }

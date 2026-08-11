@@ -5,7 +5,7 @@
 - **Purpose**: Reference for root-namespace clv commands.
 - **Responsibility**: Command syntax, parameters, exit codes, and cross-references for `.help`, `.status`, and `.runtime_files`.
 - **In Scope**: `.help`, `.status`, `.runtime_files`.
-- **Out of Scope**: Version commands (→ [version.md](version.md)), process commands (→ [processes.md](processes.md)), settings commands (→ [settings.md](settings.md)).
+- **Out of Scope**: Version commands (→ [version.md](version.md)), process commands (→ [ps.md](ps.md)), settings commands (→ [settings.md](settings.md)).
 
 ---
 
@@ -37,7 +37,7 @@ clv.status .help  # .help anywhere in argv triggers help (FR-02)
 |---|---------|-------------|
 | 1 | [`.status`](#command-2-status) | First operational check after reviewing help |
 | 2 | [`.version.show`](version.md#command-3-versionshow) | Confirms installed version |
-| 3 | [`.processes`](processes.md#command-7-processes) | Lists running sessions |
+| 3 | [`.ps`](ps.md#command-7-ps) | Lists running sessions |
 | 4 | [`.settings.show`](settings.md#command-9-settingsshow) | Inspects current settings |
 
 ### Referenced User Stories
@@ -122,7 +122,7 @@ clv.status v::2
 |---|---------|-------------|
 | 1 | [`.help`](#command-1-help) | Command reference and usage listing |
 | 2 | [`.version.show`](version.md#command-3-versionshow) | Version-only view without full status |
-| 3 | [`.processes`](processes.md#command-7-processes) | Process-only view |
+| 3 | [`.ps`](ps.md#command-7-ps) | Process-only view |
 | 4 | [`.settings.show`](settings.md#command-9-settingsshow) | Settings-only view |
 
 ### Referenced User Stories
@@ -160,11 +160,15 @@ clv.runtime_files
 2. Compute all runtime file paths for the current configuration: `$HOME/.claude/.transient/version_history_cache.json`.
 3. Print each path as an absolute path, one per line, to stdout; exit 0.
 
+### Referenced Command Group
+
+Evaluated against [`.version.paths`](version.md#command-16-versionpaths) under the strict [command_group](../command_group/readme.md) identity test — does not qualify. `runtime_files_routine()` shares no routine with `paths_routine()`; `.runtime_files` takes zero parameters while `.version.paths` takes 3 (`key::, format::, v::`), so the sets are not the same set differing only by default. See [`command_group/readme.md`](../command_group/readme.md) Evaluated, Not Qualifying for the full analysis.
+
 ### Related Commands
 
 | # | Command | Relationship |
 |---|---------|-------------|
-| 1 | [`.version.history`](version.md#command-12-versionhistory) | Creates the version history cache path enumerated here |
+| 1 | [`.version.list`](version.md#command-6-versionlist) | Creates the version history cache path enumerated here (`mode::history`) |
 
 ---
 

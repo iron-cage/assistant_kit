@@ -40,7 +40,7 @@ When `rotate::1` is active, `find_first_eligible` applies an additional ownershi
 When `rotate::1` (without `force::1`): the `extra` predicate passed to `find_first_eligible` includes `aq.is_owned`. When `rotate::1 force::1`: the ownership check is skipped. For display-only paths (`rotate::0`), no change — `find_first_eligible` does not filter by ownership.
 
 **Behavioral difference from `.account.rotate` (removed):**
-The former `.account.rotate` used `max_by_key(expires_at_ms)` — the account with the longest-lived OAuth token. `.usage rotate::1` defaults to `sort::renew` — the account whose quota renewal event fires soonest. This is intentional: the new behavior is operationally superior for quota-management automation.
+The former `.account.rotate` used `max_by_key(expires_at_ms)` — the account with the longest-lived OAuth token. `.usage rotate::1` defaults to `sort::renew` — the account whose quota renewal event fires soonest. This is intentional: the new behavior is operationally superior for quota-management automation. **Known Limitation (BUG-341):** `find_next_for_strategy()` shares `sort::renew`/`sort::renews`'s `sub_renewal_secs` defect — see [020_usage_sort_strategies.md](020_usage_sort_strategies.md) AC-01/AC-02. For accounts refreshed from cache, `rotate::1`'s chosen winner can be wrong for the same reason. Not yet fixed as of this writing.
 
 ### Acceptance Criteria
 
@@ -50,7 +50,7 @@ The former `.account.rotate` used `max_by_key(expires_at_ms)` — the account wi
 - **AC-04**: `rotate::1 live::1` exits 1 before any fetch with `"rotate::1 and live::1 are mutually exclusive"`.
 - **AC-05**: `rotate::1` applies the G5 ownership gate to `find_first_eligible`: non-owned accounts (`aq.is_owned == false`) are skipped. A non-owned account is excluded from the recommendation and is never switched to.
 - **AC-06**: `rotate::1 force::1` bypasses the G5 ownership gate: non-owned accounts are eligible for rotation (same bypass semantics as `.account.use force::1`).
-- **AC-07**: `rotate::1 sort::renews` switches to the account with soonest billing renewal.
+- **AC-07**: `rotate::1 sort::renews` switches to the account with soonest billing renewal. **Known Limitation (BUG-341):** see Behavioral difference section above — cache-refreshed accounts' estimated renewal is currently misread as absent.
 - **AC-08**: `rotate::1 format::json` still executes the switch; JSON output is unchanged (no `"switched_to"` field added to JSON).
 - **AC-09**: Post-switch touch is applied using the winner's `AccountQuota` already in memory from the main fetch — no additional `GET /api/oauth/usage` call for the winner account.
 - **AC-10**: Exit codes: 0 = switch succeeded (or dry-run); 1 = usage error (no eligible account, mutual exclusion, ownership violation); 2 = runtime error (credential store unreadable, switch I/O failure).
@@ -69,7 +69,7 @@ The former `.account.rotate` used `max_by_key(expires_at_ms)` — the account wi
 
 | File | Relationship |
 |------|--------------|
-| BUG-310 🟢 Fixed | `api.rs:824` copies pre-touch store credentials to live via `switch_account(winner)`; `api.rs:838` `apply_touch(winner)` may refresh token writing to STORE only; live session retains stale pre-refresh credentials; fix = AC-11 — `fs::copy` at `api.rs:847` re-syncs store→live after `apply_touch` (TSK-318) |
+| BUG-310 🟢 Fixed | `api.rs:330` copies pre-touch store credentials to live via `switch_account(winner)`; `api.rs:344` `apply_touch(winner)` may refresh token writing to STORE only; live session retains stale pre-refresh credentials; fix = AC-11 — `fs::copy` at `api.rs:353` re-syncs store→live after `apply_touch` (TSK-318) |
 | BUG-311 🟢 Fixed | `apply_model_override()` only wrote `"opus"`; no else-branch restored `"sonnet"` when winner had sufficient Sonnet quota. Rotation step d' retained stale `"opus"` after switching to a Sonnet-available account. Fix: bidirectional override (else-branch + tier-absent case) in `api.rs`. |
 | BUG-312 🟢 Fixed | `effortLevel` was never written on fresh install or after `.account.use` — only `rotate::1` carry-forward wrote it. Footer omitted effort for all non-carry-forward paths. Fix: `apply_model_override()` (called in step d') now writes effort unconditionally in every branch: `"max"` for Opus, `"high"` for Sonnet/absent-tier (TSK-335). BUG-312 fallback guard retained as unreachable safety net. |
 

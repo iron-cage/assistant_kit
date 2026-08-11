@@ -41,6 +41,7 @@ full    = [ "enabled" ]
 enabled = [
   "dep:claude_runner_core",
   "claude_runner_core/enabled",
+  "claude_runner_core/ps_table",
   "dep:claude_core",
   "claude_core/enabled",
   "dep:claude_version_core",
@@ -50,15 +51,19 @@ enabled = [
   "unilang/enabled",
   "dep:error_tools",
   "error_tools/enabled",
+  "dep:data_fmt",
+  "data_fmt/enabled",
 ]
 
 [dependencies]
 claude_runner_core  = { workspace = true, optional = true }
 claude_core       = { workspace = true, optional = true }
 claude_version_core = { workspace = true, optional = true }
+claude_storage_core = { workspace = true }
 cli_fmt             = { workspace = true, optional = true }
 unilang             = { workspace = true, optional = true }
 error_tools         = { workspace = true, optional = true }
+data_fmt            = { workspace = true, optional = true }
 
 [dev-dependencies]
 tempfile            = { workspace = true }

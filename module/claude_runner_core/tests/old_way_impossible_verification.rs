@@ -83,7 +83,7 @@
 //!
 //! let cmd = ClaudeCommand {
 //!   working_directory: Some(PathBuf::from("/tmp")),
-//!   max_output_tokens: Some(200_000),
+//!   max_output_tokens: Some(128_000),
 //!   continue_conversation: false,
 //!   message: None,
 //!   args: vec![],
@@ -104,7 +104,7 @@
 //! - "exceeded maximum" errors in production
 //!
 //! After migration (single execution + builder pattern):
-//! - Builder defaults to 200K tokens
+//! - Builder defaults to 128K tokens (BUG-429: corrected from an intermediate 200K)
 //! - Compiler enforces explicit token configuration
 //! - Single execution point (1x duplication)
 //! - Token limit bug fixed by architecture
@@ -115,7 +115,7 @@
 //! - Symptom: "Error: Maximum output tokens exceeded"
 //! - Root cause: Default 32K limit, no environment variable set
 //! - Impact: Conversations failed mid-session
-//! - Fix: Explicit 200K limit via `with_max_output_tokens(200_000)`
+//! - Fix: Explicit 128K limit via `with_max_output_tokens(128_000)`
 //! - Prevention: Builder pattern makes configuration explicit and visible
 //!
 //! This test ensures the fix is permanent and cannot be regressed.
@@ -128,7 +128,7 @@
 //! // Builder pattern with explicit token limit
 //! let result = ClaudeCommand::new()
 //!   .with_working_directory("/tmp/session")
-//!   .with_max_output_tokens(200_000)  // BUG FIX: explicit limit
+//!   .with_max_output_tokens(128_000)  // BUG FIX: explicit limit
 //!   .with_message("test message")
 //!   .execute()?;
 //! # Ok::<(), Box<dyn std::error::Error>>(())
@@ -139,7 +139,7 @@
 //! ```text
 //! dream_agent (orchestration)
 //!   └→ claude_runner_core::ClaudeCommand::new()
-//!        .with_max_output_tokens(200_000)
+//!        .with_max_output_tokens(128_000)
 //!        .execute()
 //!
 //! claude_runner_core (execution ONLY)
@@ -178,7 +178,7 @@ fn verify_new_pattern_required()
   // This is the ONLY valid pattern:
   let cmd = ClaudeCommand::new()
     .with_working_directory("/tmp/test")
-    .with_max_output_tokens(200_000);
+    .with_max_output_tokens(128_000);
 
   // Verify builder returns ClaudeCommand (can chain methods)
   let cmd = cmd.with_message("test");
@@ -190,12 +190,12 @@ fn verify_new_pattern_required()
 #[test]
 fn verify_token_limit_default()
 {
-  // Verify that ClaudeCommand::new() sets 200K token limit by default
-  // This prevents regression to 32K default
+  // Verify that ClaudeCommand::new() sets 128K token limit by default
+  // This prevents regression to 32K default (and BUG-429's 200K overshoot)
 
   use claude_runner_core::ClaudeCommand;
 
-  // Default construction should set 200K tokens
+  // Default construction should set 128K tokens
   let cmd = ClaudeCommand::new();
 
   // Note: max_output_tokens field is private, but default behavior is

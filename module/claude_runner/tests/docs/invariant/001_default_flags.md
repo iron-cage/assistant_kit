@@ -53,7 +53,7 @@ Test case planning for [invariant/001_default_flags.md](../../../docs/invariant/
 - **Then:** Assembled command contains `--chrome`; injected by default in interactive mode
 - **Exit:** 0
 - **Source:** [invariant/001_default_flags.md](../../../docs/invariant/001_default_flags.md)
-- **Note:** `--chrome` is automatically suppressed in print mode (message given) to prevent BUG-304 permanent hang; test `s35b_print_mode_suppresses_chrome` covers the suppression invariant
+- **Note:** `--chrome` is automatically suppressed whenever print mode is active — message given, stdin non-TTY, or `--file`/stdin content present (BUG-425/427 extended this suppression formula to match) — to prevent BUG-304 permanent hang; test `s35b_print_mode_suppresses_chrome` covers the suppression invariant
 
 ---
 

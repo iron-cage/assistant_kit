@@ -35,13 +35,22 @@ pub fn token_exp_label( expires_at_ms : u64 ) -> String
 
 // ── Token expiry cell ─────────────────────────────────────────────────────────
 
+/// Seconds remaining until token expiry (saturating at 0 when already past).
+///
+/// Shared by `compute_expires_cell` (text formatting) and `render_json`'s
+/// `expires_in_secs` field, so both surfaces derive from the same arithmetic.
+pub fn expires_remaining_secs( expires_at_ms : u64, now_secs : u64 ) -> u64
+{
+  ( expires_at_ms / 1000 ).saturating_sub( now_secs )
+}
+
 /// Compute the `Expires` cell value for a given token expiry and current time.
 ///
 /// Returns `"EXPIRED"` when `expires_at_ms / 1000 ≤ now_secs` (saturating), or
 /// `"in Xh Ym"` when the token is still valid.
 pub fn compute_expires_cell( expires_at_ms : u64, now_secs : u64 ) -> String
 {
-  let remaining = ( expires_at_ms / 1000 ).saturating_sub( now_secs );
+  let remaining = expires_remaining_secs( expires_at_ms, now_secs );
   if remaining == 0
   {
     "EXPIRED".to_string()
@@ -50,6 +59,24 @@ pub fn compute_expires_cell( expires_at_ms : u64, now_secs : u64 ) -> String
   {
     format!( "in {}", format_duration_secs( remaining ) )
   }
+}
+
+/// Fix(BUG-345): `compute_expires_cell` alone cannot indicate cache-fallback staleness — it
+///   takes only `expires_at_ms`/`now_secs`, with no way to know the reading came from a cache
+///   fallback rather than a fresh live fetch this invocation.
+/// Root cause: `AccountQuota.cached` (fetch provenance) and `expires_at_ms` (the raw value)
+///   were never combined at any of the 3 formatted-string call sites (text table, `.get
+///   field::expires`, TSV) — each showed the same string whether the reading was fresh or
+///   stale-cached.
+/// Pitfall: never call `compute_expires_cell` directly at a call site that has `aq.cached` in
+///   scope — use this cache-aware wrapper instead, mirroring the `~`-prefix convention
+///   `render.rs`'s `prefix_tilde()` already applies to the other quota cells.
+///
+/// Same as `compute_expires_cell`, prefixed with `~` when `cached` is `true`.
+pub fn compute_expires_cell_cached( expires_at_ms : u64, now_secs : u64, cached : bool ) -> String
+{
+  let cell = compute_expires_cell( expires_at_ms, now_secs );
+  if cached { format!( "~{cell}" ) } else { cell }
 }
 
 // ── Date helpers ──────────────────────────────────────────────────────────────
@@ -496,8 +523,8 @@ pub fn quota_text_cells( data : &claude_quota::OauthUsageData, now_secs : u64 ) 
 ///
 /// - `"🔴"` — token is invalid or missing (`result` is `Err`), OR subscription is
 ///   cancelled (`billing_type="none"`).
-/// - `"🟡"` — token valid, subscription active, but `5h Left ≤ 15%` or `7d Left ≤ 5%`.
-/// - `"🟢"` — token valid, subscription active, `5h Left > 15%` AND `7d Left > 5%`.
+/// - `"🟡"` — token valid, subscription active, but `5h Left ≤ 15%` or `7d Left ≤ 3%`.
+/// - `"🟢"` — token valid, subscription active, `5h Left > 15%` AND `7d Left > 3%`.
 ///
 /// Absent period data is treated as fully available (conservative, 0% utilised).
 /// `account=None` (API fetch failed) is NOT classified 🔴 — absent data is ambiguous.
@@ -528,7 +555,7 @@ pub fn status_emoji( aq : &AccountQuota ) -> &'static str
   //   already rounds before comparing against the identical constant.
   let h5_left = ( 100.0 - data.five_hour.as_ref().map_or( 0.0, |p| p.utilization ) ).round();
   let d7_left = ( 100.0 - data.seven_day.as_ref().map_or( 0.0, |p| p.utilization ) ).round();
-  // Fix(BUG-321): both-exhausted (h5 ≤ 15% AND d7 ≤ 5%) → 🟡 (G3 weekly-exhausted), not 🔴.
+  // Fix(BUG-321): both-exhausted (h5 ≤ 15% AND d7 ≤ 3%) → 🟡 (G3 weekly-exhausted), not 🔴.
   // BUG-319's fix used `(false,false)→🔴` as a proxy for "dead" — premise-incorrect.
   // Both quota dimensions depleted with result=Ok is recoverable (7d reset restores both).
   // Root cause: BUG-319 fix assumed the (false,false) arm mapped to "dead" — it does not;

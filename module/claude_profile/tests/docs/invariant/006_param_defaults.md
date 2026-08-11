@@ -20,7 +20,7 @@ exceptions require an explicit argument.
 - **Given:** A credential store with at least one saved account; the active account marker
   (`_active_{hostname}_{user}` file) points to a valid saved account
 - **When:** Any account-scoped command other than `.account.use` or `.account.delete` is invoked
-  without a `name::` argument (e.g., `clp .token.status`, `clp .account.limits`)
+  without a `name::` argument (e.g., `clp .credentials.status`, `clp .account.limits`)
 - **Then:** The command resolves to the active account and executes successfully; no "name
   required" error is produced — the ambient active account serves as the default
 - **Source:** [docs/invariant/006_param_defaults.md](../../../docs/invariant/006_param_defaults.md)

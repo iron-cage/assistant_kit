@@ -6,7 +6,7 @@ Edge case coverage for the `force::` parameter. See [param/readme.md](../../../.
 
 - **Purpose**: Edge case tests for the `force::` parameter.
 - **Responsibility**: Boundary values, invalid inputs, type violations, and default behavior for `force::`.
-- **Commands:** `.version.install`, `.version.guard`, `.processes.kill`
+- **Commands:** `.version.install`, `.version.guard`, `.ps.kill`
 - **In Scope**: Single-parameter edge cases, validation errors, type checking.
 - **Out of Scope**: Command integration (→ `../command/`), group interactions (→ `../param_group/`).
 
@@ -15,7 +15,7 @@ Edge case coverage for the `force::` parameter. See [param/readme.md](../../../.
 | ID | Test Name | Category |
 |----|-----------|----------|
 | EC-1 | `dry::1 force::1` → dry wins, no install | Interaction (dry wins) |
-| EC-10 | `dry::1 force::1` on `.processes.kill` → dry wins | Interaction (dry wins) |
+| EC-10 | `dry::1 force::1` on `.ps.kill` → dry wins | Interaction (dry wins) |
 | EC-11 | `.version.guard force::1 dry::1` → dry wins | Interaction (dry wins) |
 | EC-2 | `force::1` on `.version.guard` → reinstalls despite match | Explicit True |
 | EC-8 | Default (absent) → `force::0` (guard active) | Default Behavior |
@@ -24,7 +24,7 @@ Edge case coverage for the `force::` parameter. See [param/readme.md](../../../.
 | EC-4 | `force::-1` → exit 1, out of range | Invalid Value |
 | EC-5 | `force::abc` → exit 1, non-integer | Format Violation |
 | EC-6 | `force::` (empty) → exit 1 | Empty Value |
-| EC-7 | `force::` only for `.version.install`, `.version.guard`, `.processes.kill` | Command Scope |
+| EC-7 | `force::` only for `.version.install`, `.version.guard`, `.ps.kill` | Command Scope |
 
 ## Test Coverage Summary
 
@@ -133,10 +133,10 @@ Edge case coverage for the `force::` parameter. See [param/readme.md](../../../.
 
 ---
 
-### EC-10: `dry::1 force::1` on `.processes.kill` → dry wins
+### EC-10: `dry::1 force::1` on `.ps.kill` → dry wins
 
 - **Given:** clean environment
-- **When:** `clv .processes.kill dry::1 force::1`
+- **When:** `clv .ps.kill dry::1 force::1`
 - **Then:** exit 0; output contains `[dry-run]`; no process killed; force flag overridden by dry
 - **Exit:** 0
 - **Source:** [004_parameter_interactions.md — dry+force precedence](../../../../docs/cli/004_parameter_interactions.md)
@@ -157,18 +157,18 @@ Edge case coverage for the `force::` parameter. See [param/readme.md](../../../.
 
 | Function | File |
 |----------|------|
-| `tc021_force_param` | `cli_args_test/param_bool_test.rs` |
-| `tc035_force_true_rejected` | `cli_args_test/param_bool_test.rs` |
-| `tc037_force_0_accepted` | `cli_args_test/param_bool_test.rs` |
-| `force_ec3_2_exits_1` | `cli_args_test/param_bool_test.rs` |
-| `force_ec4_negative_exits_1` | `cli_args_test/param_bool_test.rs` |
-| `force_ec6_empty_exits_1` | `cli_args_test/param_bool_test.rs` |
+| `tc021_force_param` | `tests/cli_args_test/param_bool_test.rs` |
+| `tc035_force_true_rejected` | `tests/cli_args_test/param_bool_test.rs` |
+| `tc037_force_0_accepted` | `tests/cli_args_test/param_bool_test.rs` |
+| `force_ec3_2_exits_1` | `tests/cli_args_test/param_bool_test.rs` |
+| `force_ec4_negative_exits_1` | `tests/cli_args_test/param_bool_test.rs` |
+| `force_ec6_empty_exits_1` | `tests/cli_args_test/param_bool_test.rs` |
 | `tc250_version_install_dry_force_dry_wins` | `tests/cli/cross_cutting_test.rs` |
-| `tc251_processes_kill_dry_force_dry_wins` | `tests/cli/cross_cutting_test.rs` |
+| `tc251_ps_kill_dry_force_dry_wins` | `tests/cli/cross_cutting_test.rs` |
 | `tc303_version_install_dry_wins_over_force` | `tests/cli/mutation_version_install_test.rs` |
 | `tc406_guard_dry_force_no_install` | `tests/cli/mutation_version_guard_test.rs` |
 | `force_ec7_command_scope_rejects_on_settings_set` | `tests/cli/force_param_test.rs` |
 | `force_ec8_default_force_zero` | `tests/cli/force_param_test.rs` |
 | `force_ec9_explicit_zero_same_as_absent` | `tests/cli/force_param_test.rs` |
-| `force_ec10_processes_kill_dry_wins` | `tests/cli/force_param_test.rs` |
+| `force_ec10_ps_kill_dry_wins` | `tests/cli/force_param_test.rs` |
 | `force_ec11_version_guard_dry_wins_over_force` | `tests/cli/force_param_test.rs` |

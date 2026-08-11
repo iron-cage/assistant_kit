@@ -38,6 +38,8 @@ For **`latest`**, the lock is reversed:
 5. Remove `minimumVersion`
 6. Remove `DISABLE_UPDATES` from the `env` block
 
+**Install-time lifecycle (BUG-016):** the official installer honors the same update-disabling keys the lock writes (Layers 1, 2, 7, 8) — a lock left in place from a previous pinned install makes the bootstrap refuse a new `.version.install` with "Updates are disabled by your administrator" while still exiting 0. `perform_install()` therefore lifts those settings-level layers (and Layer 3's chmod) BEFORE invoking the installer, and re-applies the full lock only after the outcome is verified (`verify_install_outcome()`). Layer 4's purge additionally refuses to run when the kept version file is absent, so a refused install can never delete the cached binaries it was supposed to keep one of.
+
 ### Applicability
 
 This pattern applies whenever:
@@ -57,6 +59,7 @@ This pattern does not apply when tracking `latest` is desired — for `latest`, 
 **Costs:**
 - `chmod 555` on the versions directory blocks not just the auto-updater but also manual operations — the user must `chmod 755` before manual work and restore afterwards
 - Layer 4 (purging cached binaries) is destructive: it permanently removes cached binaries, requiring a full re-download if a different version is needed
+- Layers 1, 2, 7, 8 are honored by the official installer itself, not only the auto-updater — left in place, the lock blocks its own re-install path (BUG-016); `.version.install` lifts and re-applies them automatically around each install
 
 ### Mechanism Coverage
 

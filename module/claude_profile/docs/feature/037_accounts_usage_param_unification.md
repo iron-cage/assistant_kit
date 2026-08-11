@@ -5,7 +5,7 @@
 > - `unclaim::1` → `owner::0` sentinel on the existing `owner::` param (Feature 064)
 > - `active::USER@MACHINE` → `assignee::USER@MACHINE name::X` (renamed param + `assignee::0` current-machine sentinel, Feature 065; `active::` is now a REMOVED_TOGGLE)
 >
-> The unified 32-param set is now 28 active params (4 removed). REMOVED_TOGGLE stubs for `assign`, `for`, `unclaim`, `active` emit migration messages. All other ACs below apply via the updated command surface — ACs referencing `active::USER@MACHINE` now apply via `assignee::USER@MACHINE`. See [064_active_marker_and_owner_redesign.md](064_active_marker_and_owner_redesign.md) and [065_assignee_param_redesign.md](065_assignee_param_redesign.md).
+> The unified 32-param set is now 30 active params. REMOVED_TOGGLE stubs for `assign`, `for`, `unclaim`, `active` emit migration messages. All other ACs below apply via the updated command surface — ACs referencing `active::USER@MACHINE` now apply via `assignee::USER@MACHINE`. See [064_active_marker_and_owner_redesign.md](064_active_marker_and_owner_redesign.md) and [065_assignee_param_redesign.md](065_assignee_param_redesign.md).
 
 ### Scope
 
@@ -16,7 +16,7 @@
 
 ### Design
 
-**Symmetric commands.** `.accounts` and `.usage` become two views of the same underlying account data, sharing an identical parameter interface. The only difference is defaults — `.accounts` is a local/identity view (no fetching, no touching, sorted by name), while `.usage` is a live/quota view (fetch + touch enabled, sorted by renewal).
+**Symmetric commands.** `.accounts` and `.usage` become two views of the same underlying account data, sharing a large common parameter core with mostly defaults-only divergence — `.accounts` is a local/identity view (no fetching, no touching, sorted by name), while `.usage` is a live/quota view (fetch + touch enabled, sorted by renewal). The parameter interface is not fully identical: `rotate::`, `who::`, and `solo::` are also registered on `.accounts` (`src/registry.rs:116-118`) but silently unread by the `.accounts` routine — `.usage`-only in effect, not in registration. `.accounts` additionally registers 14 legacy `REMOVED_TOGGLE` field-presence stubs (`current::`, `sub::`, `tier::`, `expires::`, `email::`, `display_name::`, `host::`, `role::`, `billing::`, `model::`, `uuid::`, `capabilities::`, `org_uuid::`, `org_name::`) kept only to emit a `cols::`-migration error, not live on `.usage`. The two commands are both registered to the same literal dispatch function, `accounts_view_routine()` (`src/commands/accounts.rs:402`), which branches on command name and delegates to `accounts_routine` vs. `usage_routine` — each of which then delegates mutation handling to the same `owner_dispatch::*` helpers — see [`cli/command_group/readme.md`](../cli/command_group/readme.md) Evaluated, Not Qualifying for the full verified diff and why this pair still does not meet the stricter `command_group` identity bar in substance (the shim's two branches share no logic beyond the name check, and parameter sets diverge) despite the shared design intent described here.
 
 **Unified parameter set:**
 
@@ -31,7 +31,7 @@
 
 **Default column sets.** `cols::` replaces the 15 individual field toggles on `.accounts`. Both default sets include the `Owner` column — showing the `owner` field from `{name}.json` (`USER@MACHINE` identity or `—` when unowned). This overrides the Feature 036 out-of-scope exclusion for owner display.
 
-The identity set (`.accounts` default) includes: Account, Owner, Active, Current, Sub, Tier, Expires, Email. The quota set (`.usage` default) includes: Status, Account, Owner, 5h Left, 5h Reset, 7d Left, 7d(Son), 7d Reset, Expires, ~Renews, → Next. Both commands support `cols::+col_id` / `cols::-col_id` modifiers to add/remove columns from the default set. `cols::-owner` hides the owner column.
+The identity set (`.accounts` default) includes: Account, Owner, Active, Current, Sub, Tier, Expires, Email. The quota set (`.usage` default) includes: Status, Account, Owner, 5h Left, 5h Reset, 7d Left, 7d Reset, Expires, ~Renews, → Next — `7d(Son)` is NOT in the default set (hidden by default since BUG-334, fixed 2026-07-08; show via `cols::+7d_son`). Both commands support `cols::+col_id` / `cols::-col_id` modifiers to add/remove columns from the default set. `cols::-owner` hides the owner column.
 
 **Command absorption — `.account.unclaim` → `owner::0` (via `unclaim::` removal).** The original Feature 037 introduced `unclaim::1` to absorb `.account.unclaim`. Feature 064 removed `unclaim::1` and replaced it with the `owner::0` sentinel on the existing `owner::` param. `clp .accounts owner::0 name::X` clears the `owner` field in `{name}.json` — identical behavior to the former `clp .accounts unclaim::1 name::X`. G8 ownership gate is evaluated before write. Batch support: when `name::` is omitted, `owner::0` applies to all accounts matching the current filter predicates.
 
@@ -48,7 +48,7 @@ The identity set (`.accounts` default) includes: Account, Owner, Active, Current
 - **AC-01**: `.accounts` accepts all parameters from the unified set. Unknown parameters exit 1.
 - **AC-02**: `.usage` accepts all parameters from the unified set. Unknown parameters exit 1.
 - **AC-03**: `.accounts` defaults: `refresh::0`, `touch::0`, `sort::name`, `cols::` = identity set (Account, Owner, Active, Current, Sub, Tier, Expires, Email). No HTTP fetch or subprocess spawn when invoked without explicit `refresh::1` or `touch::1`.
-- **AC-04**: `.usage` defaults: `refresh::1`, `touch::1`, `sort::renew`, `cols::` = quota set (Status, Account, Owner, 5h Left, 5h Reset, 7d Left, 7d(Son), 7d Reset, Expires, ~Renews, → Next). Owner column added to default; all other behavior unchanged.
+- **AC-04**: `.usage` defaults: `refresh::1`, `touch::1`, `sort::renew`, `cols::` = quota set (Status, Account, Owner, 5h Left, 5h Reset, 7d Left, 7d Reset, Expires, ~Renews, → Next; `7d(Son)` excluded — hidden by default since BUG-334). Owner column added to default; all other behavior unchanged.
 - **AC-05**: `.accounts owner::0 name::X` exits 0 and writes `owner: ""` to `{name}.json` when G8 passes. Credentials NOT touched. Active marker NOT changed. Identical observable behavior to the former `.account.unclaim name::X`.
 - **AC-06**: `.accounts owner::0 name::X` when `!is_owned(account)` exits 1 with `"ownership violation: this account is owned by {owner}"`. G8 gate evaluates before `dry::1` check.
 - **AC-07**: `.accounts owner::0` (no `name::`) applies ownership release to every account matching current filter predicates (`only_active::`, `only_valid::`, etc.). Each account independently evaluated against G8; non-owned accounts skipped with `"skip"` message (not exit 1).

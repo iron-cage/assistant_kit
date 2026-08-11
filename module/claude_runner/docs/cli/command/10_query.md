@@ -128,6 +128,10 @@ TSK-415's Phase 0 captured wire trace, not invented independently of it — see
 - `Error: failed to start control session: <reason>` / `Error: query daemon failed to start[: <detail>]` — Session startup failed.
 - `Error: no response from PID <N>.` / `Error: malformed response from PID <N>.` — Daemon connection or protocol failure.
 
+### Referenced Command Group
+
+Evaluated against `run` under the strict [command_group](../command_group/readme.md) identity test (same dispatch function, same parameter set) — does not qualify. `dispatch_query()` (`src/cli/query.rs:90`) has zero cross-calls with `dispatch_run()` (`src/cli/mod.rs:247`). "Shares the backgrounded-by-default session model" below is a behavioral similarity (both return immediately with a PID), not a shared-dispatch claim — the parameter sets diverge entirely beyond `--dir`: this command's `<PID> <METHOD> [ARGS...]` dispatch form has no `run` equivalent, and `run`'s ~30 Claude-native/runner-control flags have no equivalent here. See [`command_group/readme.md`](../command_group/readme.md) Evaluated, Not Qualifying for the full analysis.
+
 ### Related Commands
 
 | # | Command | Relationship |

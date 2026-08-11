@@ -14,6 +14,8 @@
 //!
 //! Covers error handling, exit code propagation, stderr forwarding, quiet gating.
 //!
+//! S76–S80 (new-flag tests) and BUG-424–BUG-428 reproducers live in `execution_mode_ext_test.rs`.
+//!
 //! ## Strategy
 //!
 //! Uses fake `claude` shell scripts injected via PATH manipulation to test
@@ -534,5 +536,59 @@ fn bug_reproducer_424_binary_content_forwarded_verbatim()
   assert_eq!(
     captured.as_slice(), binary_content,
     "binary content must be forwarded byte-for-byte to subprocess stdin. Got: {captured:?}",
+  );
+}
+
+// BUG-425: piped stdin content with no message and no prior session must route to
+// print mode — the current formula has no stdin-content term, so non-empty piped
+// content silently falls through to the interactive REPL instead of being treated
+// as the prompt.
+// test_kind: bug_reproducer(BUG-425)
+//
+// ## Root Cause
+// `is_print_invocation`/`use_print` gated print-mode routing on
+// `{cli.print_mode, cli.message, cli.interactive}` only — no term checked
+// `cli.stdin_content`, so piped, non-empty stdin content with no message and no
+// prior session fell through to `run_interactive()` despite real content being
+// available to serve as the prompt.
+//
+// ## Why Not Caught
+// Existing stdin tests (BUG-424's own reproducers) verified that piped content is
+// captured and forwarded once print mode is already selected some other way (e.g.
+// an explicit message) — none exercised piped content as the ONLY signal present,
+// with no message and no `--print`/`--interactive` to force a mode.
+//
+// ## Fix Applied
+// `is_print_invocation` (`mod.rs`) and `use_print` (`builder.rs`) both gained a
+// `cli.stdin_content.is_some()` disjunct (alongside a `cli.file.is_some()` term and
+// the TTY-check term), so piped content alone now satisfies print-mode routing.
+//
+// ## Prevention
+// A mode-selection formula gating on flag/argument presence must also account for
+// "was content already supplied through a side channel" (stdin, a file) — a
+// complete formula enumerates every source of prompt content, not just explicit ones.
+//
+// ## Pitfall
+// This test alone does not distinguish the stdin-content term from the TTY-check
+// term — piped stdin is also non-TTY, so either term independently routes this
+// invocation to print mode. See `bug_reproducer_425_empty_stdin_no_tty` and the
+// file-only sibling tests for cases that isolate each term.
+#[ test ]
+fn bug_reproducer_425_piped_stdin_no_message_no_session()
+{
+  let args_file      = tempfile::NamedTempFile::new().expect( "create args file" );
+  let args_path      = args_file.path().display().to_string();
+  let script         = format!( "echo \"$@\" > \"{args_path}\"\n" );
+  let ( _tmp, path ) = fake_claude_dir( &script );
+  let out = run_with_path_stdin(
+    &[ "--max-sessions", "0" ],
+    &path,
+    b"piped_content_bug425_no_session",
+  );
+  assert!( out.status.success(), "must exit 0. stderr: {}", String::from_utf8_lossy( &out.stderr ) );
+  let received = std::fs::read_to_string( args_file.path() ).expect( "read args file" );
+  assert!(
+    received.contains( "--print" ),
+    "piped stdin content with no message must route to print mode (--print in subprocess args). Received: {received}",
   );
 }

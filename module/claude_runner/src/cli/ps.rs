@@ -176,7 +176,7 @@ pub( crate ) fn dispatch_ps( tokens : &[ String ] ) -> !
   // sessions exist (build_active_table returns None early for empty proc lists).
   if let Some( ref csv ) = config.columns
   {
-    if let Err( msg ) = validate_columns( csv )
+    if let Err( msg ) = super::column_validate::validate_columns( csv, COLUMN_KEYS )
     {
       eprintln!( "clr ps: {msg}" );
       std::process::exit( 1 );
@@ -330,7 +330,7 @@ fn resolve_columns( config : &PsConfig ) -> Vec< &'static str >
 {
   if let Some( ref csv ) = config.columns
   {
-    return match validate_columns( csv )
+    return match super::column_validate::validate_columns( csv, COLUMN_KEYS )
     {
       Ok( keys ) => keys,
       Err( msg ) =>
@@ -345,38 +345,6 @@ fn resolve_columns( config : &PsConfig ) -> Vec< &'static str >
     return COLUMN_KEYS.iter().map( | ( k, _ ) | *k ).collect();
   }
   DEFAULT_COLUMNS.to_vec()
-}
-
-// Validate a comma-separated column key string against COLUMN_KEYS.
-//
-// Returns ordered `&'static str` keys (from the constant — not slices of the
-// input) so callers have a stable `'static` lifetime regardless of where the
-// input string lives.
-fn validate_columns( csv : &str ) -> Result< Vec< &'static str >, String >
-{
-  let mut out = Vec::new();
-  for raw in csv.split( ',' )
-  {
-    let key = raw.trim();
-    if let Some( ( k, _ ) ) = COLUMN_KEYS.iter().find( | ( k, _ ) | *k == key )
-    {
-      out.push( *k );
-    }
-    else
-    {
-      let valid : Vec< &str > = COLUMN_KEYS.iter().map( | ( k, _ ) | *k ).collect();
-      return Err( format!(
-        "unknown column key `{key}`; valid keys: {}",
-        valid.join( ", " )
-      ) );
-    }
-  }
-  if out.is_empty()
-  {
-    let valid : Vec< &str > = COLUMN_KEYS.iter().map( | ( k, _ ) | *k ).collect();
-    return Err( format!( "no column keys given; valid keys: {}", valid.join( ", " ) ) );
-  }
-  Ok( out )
 }
 
 // Emit a key:value inspect record for each matching process.
@@ -774,7 +742,17 @@ fn shorten_path( path : &str ) -> String
 {
   if let Ok( pro ) = std::env::var( "PRO" )
   {
-    if !pro.is_empty() && path.starts_with( pro.as_str() )
+    // Fix(BUG-432): raw `starts_with` treated sibling directories whose names share
+    // a prefix with `$PRO` (e.g. `$PROtools`) as if they were descendants of `$PRO`,
+    // producing garbled paths like `$PROtools`.
+    // Root cause: byte-sequence prefix match has no path-boundary awareness; a sibling
+    // `/a/pro` and `/a/protools` share the prefix `/a/pro` but are unrelated paths.
+    // Pitfall: always check that the remainder after stripping the prefix starts with '/'
+    // (or that the path equals PRO exactly); `strip_prefix + is_some_and` mirrors the
+    // boundary-aware pattern established for home-dir detection in BUG-383.
+    if !pro.is_empty()
+      && ( path == pro.as_str()
+        || path.strip_prefix( pro.as_str() ).is_some_and( | rest | rest.starts_with( '/' ) ) )
     {
       let rest = &path[ pro.len().. ];
       return format!( "$PRO{rest}" );
@@ -951,14 +929,20 @@ fn build_queued_table() -> Option< String >
       // perpetual phantom waiters.
       // Pitfall: /proc/{pid} is Linux-specific; this entire module is
       // #[cfg(target_os = "linux")] so the path is guaranteed to exist for live PIDs.
+      //
+      // Fix(BUG-479) task/claude_runner/bug/479_zombie_blind_pid_liveness.md: the probe here was bare
+      // /proc/{pid} existence, which reads exited-but-unreaped (zombie) waiters as
+      // alive — the self-heal below never fired for them (`Queued · 84 waiting`
+      // with 4 live). Now delegates to the shared zombie-aware predicate.
+      // Root cause: liveness convention duplicated inline instead of shared —
+      // both copies were existence-only, blind to state `Z`.
+      // Pitfall: a /proc/{pid} entry proves a PID exists, not that a process
+      // runs; one authoritative predicate (gate::pid_alive) for every consumer.
       let alive = e.path()
         .file_stem()
         .and_then( |s| s.to_str() )
         .and_then( |s| s.parse::< u32 >().ok() )
-        .is_some_and( |pid|
-        {
-          std::path::Path::new( &format!( "/proc/{pid}" ) ).exists()
-        } );
+        .is_some_and( super::gate::pid_alive );
       if !alive
       {
         // Self-heal: remove the orphaned gate file so it doesn't recur.

@@ -50,7 +50,6 @@ mod enabled
       ".account.delete",
       ".account.relogin",
       ".credentials.status",
-      ".token.status",
       ".paths",
       ".usage",
     ];

@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **BUG-429: `max_output_tokens` builder default of 200,000 exceeded every current-tier model's real sync max-output ceiling**
+  - `ClaudeCommand::new()` default lowered from `200_000` to `128_000` (`claude_runner_core/src/command/mod.rs`)
+  - Model capability catalog (`contract/claude_code/docs/model/`) confirms no current-tier model (Sonnet 5, Opus 4.8, Fable 5) supports a 200k sync output ceiling
+  - Docs, CLI help text, and tests updated across both `claude_runner_core` and `claude_runner` crates
+
+- **BUG-430: `print_bg_wait_ceiling_ms` documentation incorrectly described `0` as "exit immediately"** (docs-only fix)
+  - The default value `0` is correct and unchanged — it disables the ceiling-based forced-sweep path, so the wait is indefinite rather than immediate
+  - Corrected wording in affected doc comments and docs
+
 - **BUG-318: `--output-style raw` + `--json-schema` produced empty stdout** (TSK-336)
   - `builder.rs` Path B auto-inject gate widened: `effective_style == "summary" || cli.json_schema.is_some()` ensures `--output-format json` is injected when `--json-schema` is present regardless of `--output-style`
   - `execution.rs` raw success path: added `else if cli.json_schema.is_some()` branch calling `extract_structured_output()` — extracts the `structured_output` JSON field from the CLR envelope instead of passing through the empty `result` text field
@@ -17,6 +26,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Tests: EC-15 (`tests/output_style_test.rs`), S89 (`tests/param_extended_flags_test.rs`)
 
 ### Changed
+
+- **`--max-sessions` default raised 6 → 8**
+  - Reflects typical parallel workloads; users with stricter limits can still pass `--max-sessions <N>` explicitly
 
 - **Removed `--verbosity` (0–5); replaced by `--quiet` bool flag** (TSK-337, Plan 038)
   - `src/verbosity.rs` and `VerbosityLevel` newtype deleted entirely

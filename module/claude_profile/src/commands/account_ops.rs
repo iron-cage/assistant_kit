@@ -237,6 +237,7 @@ fn check_expiry_and_refresh(
 /// `_active` marker absent from the credential store), HOME is unset,
 /// or the credential copy fails.
 #[ inline ]
+#[ allow( clippy::too_many_lines ) ]
 pub fn account_save_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
   let paths            = require_claude_paths()?;
@@ -285,10 +286,112 @@ pub fn account_save_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) ->
   let credential_store = require_credential_store()?;
   if trace { eprintln!( "{}account.save  reading {}", trace_ts(), paths.credentials_file().display() ) }
 
-  // Validate name before dry-run check so dry-run rejects invalid names
-  // instead of reporting "[dry-run] would save" for names that would fail.
-  crate::account::validate_name( &name )
+  // Feature 071: parse backend:: before name validation, so redirect accounts can use an
+  // arbitrary label (validate_redirect_name()) instead of the email-shape validate_name()
+  // required for backend: anthropic. backend:: is matched case-insensitively here (CLI-input
+  // boundary, per docs/cli/param/069_backend.md's case-insensitive constraint) —
+  // AccountBackend::parse() itself stays exact-match, since its other callers read the
+  // always-canonical-lowercase stored `backend` field.
+  let backend_raw = match cmd.arguments.get( "backend" )
+  {
+    Some( Value::String( s ) ) => s.clone(),
+    _                          => String::new(),
+  };
+
+  // Feature 073: preset:: is sugar for known-provider redirect accounts — pre-fills
+  // backend::/base_url::/inference_provider:: for anything the caller didn't already
+  // specify explicitly. Only "kimi" is a recognized value today (the user's own scope:
+  // a single supported provider, not a general multi-provider abstraction).
+  let preset_raw = match cmd.arguments.get( "preset" )
+  {
+    Some( Value::String( s ) ) => s.clone(),
+    _                          => String::new(),
+  };
+  if !preset_raw.is_empty() && !preset_raw.eq_ignore_ascii_case( "kimi" )
+  {
+    return Err( ErrorData::new(
+      ErrorCode::ArgumentTypeMismatch,
+      format!( "preset:: invalid value '{preset_raw}' — valid values: kimi" ),
+    ) );
+  }
+  let preset_is_kimi = preset_raw.eq_ignore_ascii_case( "kimi" );
+  let backend_raw    = if backend_raw.is_empty() && preset_is_kimi { "redirect".to_string() } else { backend_raw };
+
+  if !backend_raw.is_empty()
+    && !backend_raw.eq_ignore_ascii_case( "anthropic" )
+    && !backend_raw.eq_ignore_ascii_case( "redirect" )
+  {
+    return Err( ErrorData::new(
+      ErrorCode::ArgumentTypeMismatch,
+      format!( "backend:: invalid value '{backend_raw}' — valid values: anthropic, redirect" ),
+    ) );
+  }
+  let backend = crate::account::AccountBackend::parse( &backend_raw.to_lowercase() );
+
+  // Validate name before dry-run check so dry-run rejects invalid names instead of reporting
+  // "[dry-run] would save" for names that would fail. AC-15: an already-saved account's name
+  // is not re-validated against a newly requested backend's stricter shape rule on re-save.
+  crate::account::validate_name_for_save( &name, backend, &credential_store )
     .map_err( | e | io_err_to_error_data( &e, "account save" ) )?;
+
+  // Feature 071: parse base_url::/api_key::/redirect_model:: before the dry-run check, so
+  // validation failures reject even under dry::1 (mirrors validate_name()'s ordering above —
+  // dry-run must not mask a rejection a real run would hit).
+  let base_url_val = match cmd.arguments.get( "base_url" )
+  {
+    Some( Value::String( s ) ) if !s.is_empty() => Some( s.clone() ),
+    _                                           => None,
+  };
+  // Feature 073: preset::kimi fills base_url:: with Moonshot's fixed Anthropic-compatible
+  // endpoint when the caller didn't pass one explicitly. Gated on the resolved `backend`
+  // (not bare preset_is_kimi) so an explicit backend::anthropic paired with preset::kimi
+  // never forces a redirect-only field onto an anthropic-backend save.
+  let base_url_val = if base_url_val.is_none() && preset_is_kimi && backend == crate::account::AccountBackend::Redirect
+  {
+    Some( "https://api.moonshot.ai/anthropic".to_string() )
+  }
+  else
+  {
+    base_url_val
+  };
+  let api_key_val = match cmd.arguments.get( "api_key" )
+  {
+    Some( Value::String( s ) ) if !s.is_empty() => Some( s.clone() ),
+    _                                           => None,
+  };
+  let redirect_model_val = match cmd.arguments.get( "redirect_model" )
+  {
+    Some( Value::String( s ) ) if !s.is_empty() => Some( s.clone() ),
+    _                                           => None,
+  };
+  if backend == crate::account::AccountBackend::Redirect
+  {
+    let mut missing = Vec::new();
+    if base_url_val.is_none()       { missing.push( "base_url::" ); }
+    if api_key_val.is_none()        { missing.push( "api_key::" ); }
+    if redirect_model_val.is_none() { missing.push( "redirect_model::" ); }
+    if !missing.is_empty()
+    {
+      return Err( ErrorData::new(
+        ErrorCode::ArgumentMissing,
+        format!( "backend::redirect requires base_url::, api_key::, redirect_model:: — missing: {}", missing.join( ", " ) ),
+      ) );
+    }
+  }
+  else
+  {
+    let mut unexpected = Vec::new();
+    if base_url_val.is_some()       { unexpected.push( "base_url::" ); }
+    if api_key_val.is_some()        { unexpected.push( "api_key::" ); }
+    if redirect_model_val.is_some() { unexpected.push( "redirect_model::" ); }
+    if !unexpected.is_empty()
+    {
+      return Err( ErrorData::new(
+        ErrorCode::ArgumentTypeMismatch,
+        format!( "{} redirect-only — requires backend::redirect", unexpected.join( ", " ) ),
+      ) );
+    }
+  }
 
   if is_dry( &cmd )
   {
@@ -314,8 +417,64 @@ pub fn account_save_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) ->
   };
   // Ownership-neutral: preserves existing owner via read-merge.
   // Owner can only be set by write_owner() — no CLI-exposed set path.
-  crate::account::save( &name, &credential_store, &paths, true, None, Some( &host_val ), Some( &role_val ), None )
+  // Redirect accounts capture api_key:: as the credential payload; Anthropic accounts keep
+  // capturing the live ~/.claude/.credentials.json session (creds: None — see save()'s own
+  // None branch), preserving exact pre-071 behavior when backend:: is absent.
+  let creds_bytes = if backend == crate::account::AccountBackend::Redirect
+  {
+    api_key_val.as_deref().map( str::as_bytes )
+  }
+  else
+  {
+    None
+  };
+  // Feature 072: inference_provider:: is a plain tag written verbatim to `{name}.json` —
+  // no fallback-chain/auto-detection logic here (provider selection is a manual, global
+  // config value written solely via `.provider.select`; this field only records which
+  // provider this saved account's credentials belong to).
+  let inference_provider_val = match cmd.arguments.get( "inference_provider" )
+  {
+    Some( Value::String( s ) ) if !s.is_empty() => Some( s.clone() ),
+    Some( Value::String( _ ) ) => return Err( ErrorData::new(
+      ErrorCode::ArgumentMissing,
+      "inference_provider:: must be a non-empty value".to_string(),
+    ) ),
+    _ => None,
+  };
+  // Feature 073: preset::kimi fills inference_provider:: with "kimi" when the caller
+  // didn't pass one explicitly — this is what makes switch_account() write the
+  // Kimi-tier env vars (claude_profile_core::account::write_kimi_tier_env_vars()).
+  // Same resolved-backend gating as base_url_val above.
+  let inference_provider_val = if inference_provider_val.is_none() && preset_is_kimi && backend == crate::account::AccountBackend::Redirect
+  {
+    Some( "kimi".to_string() )
+  }
+  else
+  {
+    inference_provider_val
+  };
+  // AC-15/no-partial-update (Out of Scope note: claude_profile_core's save() merge logic is
+  // task 433's and stays untouched) — save() read-merges the existing {name}.json, so a
+  // re-save that changes backend would otherwise leave the prior backend's fields (e.g. a
+  // stale base_url/redirect_model from a prior redirect save) behind. When the on-disk
+  // backend differs from the one being written, delete the meta file first so save() starts
+  // from empty and genuinely rewrites from scratch; an ordinary same-backend re-save (the
+  // common case, including every pre-071 account) is untouched — parse_string_field() is used
+  // instead of a JSON library per this crate's zero-third-party-deps-in-src rule.
+  let meta_path        = credential_store.join( format!( "{name}.json" ) );
+  let existing_meta    = std::fs::read_to_string( &meta_path ).unwrap_or_default();
+  let old_backend      = crate::account::parse_string_field( &existing_meta, "backend" ).unwrap_or_else( || "anthropic".to_string() );
+  if !existing_meta.is_empty() && old_backend != backend.as_str()
+  {
+    let _ = std::fs::remove_file( &meta_path );
+  }
+
+  crate::account::save(
+    &name, &credential_store, &paths, true, creds_bytes, Some( &host_val ), Some( &role_val ), None,
+    backend, base_url_val.as_deref(), redirect_model_val.as_deref(), inference_provider_val.as_deref(),
+  )
     .map_err( |e| io_err_to_error_data( &e, "account save" ) )?;
+
   if trace { eprintln!( "{}account.save  write: OK  host={host_val}  role={role_val}", trace_ts() ) }
 
   Ok( OutputData::new( format!( "saved current credentials as '{name}'\n" ), "text" ) )

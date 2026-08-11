@@ -4,8 +4,8 @@
 //! `tests/docs/cli/user_story/`. Tests cover five personas: account rotator,
 //! onboarding developer, quota monitor, DevOps automator, and credential diagnostician.
 //!
-//! `lim_it` tests require a live Anthropic API token; they are skipped automatically
-//! when credentials are absent or the API is rate-limited.
+//! `lim_it` tests require a live Anthropic API token; they panic loudly
+//! when credentials are absent or the API is rate-limited (no silent skips).
 //!
 //! ## Test Matrix
 //!
@@ -23,7 +23,7 @@
 //! | UA-2 | `onboarding_ua2_name_inference_and_missing_source` | auto-infer (a); exit 1 when absent (b) | P/N |
 //! | UA-3 | `onboarding_ua3_host_role_captured_and_dry_run` | host+role in `.json`; `dry::1` preview | P |
 //! | UA-4 | `onboarding_ua4_delete_removes_all_account_files` | delete removes `.credentials.json` + `.json` | P |
-//! | UA-5 | `onboarding_ua5_lim_it_relogin_spawns_oauth_tty` | TTY OAuth (`lim_it` — skipped; TTY required) | P |
+//! | UA-5 | `onboarding_ua5_lim_it_relogin_spawns_oauth_tty` | TTY OAuth (`lim_it` — token required; TTY manual-only) | P |
 //! | UA-6 | `onboarding_ua6_renewal_sets_renewal_at` | `_renewal_at` written to `{name}.json` | P |
 //!
 //! ### Story 3 — Multi-Account Quota Monitoring (UA-1..5)
@@ -249,14 +249,14 @@ fn onboarding_ua4_delete_removes_all_account_files()
   assert!( !meta_file.exists(), "metadata .json file must be removed after delete" );
 }
 
-// UA-5: .account.relogin spawns claude with TTY; propagates fresh credentials (lim_it — skipped)
+// UA-5: .account.relogin spawns claude with TTY; propagates fresh credentials (lim_it — token required; TTY manual-only)
 //
 // Requires an interactive OAuth browser flow that cannot be automated in CI.
 // Test exists for spec traceability (UA-5) and documents the OAuth constraint.
 #[ test ]
 fn onboarding_ua5_lim_it_relogin_spawns_oauth_tty()
 {
-  let Some( _token ) = live_active_token() else { return };
+  let _token = live_active_token().expect( "live API token required — no ~/.claude/.credentials.json" );
   // OAuth TTY flow cannot be automated programmatically. Manual test only.
 }
 
@@ -341,7 +341,7 @@ fn quota_ua2_sort_strategies_exit_0()
 #[ test ]
 fn quota_ua3_lim_it_live_mode_produces_output()
 {
-  let Some( token ) = live_active_token() else { return };
+  let token = live_active_token().expect( "live API token required — no ~/.claude/.credentials.json" );
   require_live_api( "quota_ua3_lim_it" );
 
   let dir = TempDir::new().unwrap();
@@ -410,14 +410,14 @@ fn automation_ua1_json_format_on_all_commands()
   write_credentials( dir.path(), "max", "default", FAR_FUTURE_MS );
   write_account( dir.path(), "alice@acme.com", "max", "default", FAR_FUTURE_MS, true );
 
-  // (a) .token.status format::json
+  // (a) .paths format::json
   let out_a = run_cs_with_env(
-    &[ ".token.status", "format::json" ],
+    &[ ".paths", "format::json" ],
     &[ ( "HOME", home ) ],
   );
   assert_exit( &out_a, 0 );
   serde_json::from_str::< serde_json::Value >( &stdout( &out_a ) )
-    .expect( ".token.status format::json must produce valid JSON" );
+    .expect( ".paths format::json must produce valid JSON" );
 
   // (b) .accounts format::json
   let out_b = run_cs_with_env(
@@ -478,7 +478,7 @@ fn automation_ua3_exit_codes_are_deterministic()
   write_account( dir.path(), "alice@acme.com", "max", "default", FAR_FUTURE_MS, true );
 
   // (a) Valid credentials → exit 0
-  let out_a = run_cs_with_env( &[ ".token.status" ], &[ ( "HOME", home ) ] );
+  let out_a = run_cs_with_env( &[ ".credentials.status" ], &[ ( "HOME", home ) ] );
   assert_exit( &out_a, 0 );
 
   // (b) Account not found → exit 2
@@ -567,7 +567,7 @@ fn diagnostics_ua1_credentials_status_shows_fields()
   );
 }
 
-// UA-2: .token.status classifies token as Valid / ExpiringSoon / Expired with exact duration
+// UA-2: .credentials.status classifies token as Valid / ExpiringSoon / Expired with exact duration
 #[ test ]
 fn diagnostics_ua2_token_classification_valid_expiring_expired()
 {
@@ -576,7 +576,7 @@ fn diagnostics_ua2_token_classification_valid_expiring_expired()
     let dir = TempDir::new().unwrap();
     let home = dir.path().to_str().unwrap();
     write_credentials( dir.path(), "max", "default", FAR_FUTURE_MS );
-    let out = run_cs_with_env( &[ ".token.status" ], &[ ( "HOME", home ) ] );
+    let out = run_cs_with_env( &[ ".credentials.status" ], &[ ( "HOME", home ) ] );
     assert_exit( &out, 0 );
     let out_text = stdout( &out ).to_ascii_lowercase();
     assert!( out_text.contains( "valid" ), "FAR_FUTURE_MS must produce Valid classification: {out_text}" );
@@ -588,7 +588,7 @@ fn diagnostics_ua2_token_classification_valid_expiring_expired()
     let home = dir.path().to_str().unwrap();
     let expiring_ms = near_future_ms();
     write_credentials( dir.path(), "max", "default", expiring_ms );
-    let out = run_cs_with_env( &[ ".token.status" ], &[ ( "HOME", home ) ] );
+    let out = run_cs_with_env( &[ ".credentials.status" ], &[ ( "HOME", home ) ] );
     assert_exit( &out, 0 );
     let out_text = stdout( &out ).to_ascii_lowercase();
     // Should be either ExpiringSoon or Valid depending on exact timing; accept both
@@ -603,7 +603,7 @@ fn diagnostics_ua2_token_classification_valid_expiring_expired()
     let dir = TempDir::new().unwrap();
     let home = dir.path().to_str().unwrap();
     write_credentials( dir.path(), "max", "default", PAST_MS );
-    let out = run_cs_with_env( &[ ".token.status" ], &[ ( "HOME", home ) ] );
+    let out = run_cs_with_env( &[ ".credentials.status" ], &[ ( "HOME", home ) ] );
     assert_exit( &out, 0 );
     let out_text = stdout( &out ).to_ascii_lowercase();
     assert!( out_text.contains( "expired" ), "PAST_MS must produce Expired classification: {out_text}" );
@@ -634,7 +634,7 @@ fn diagnostics_ua3_paths_resolves_canonical_paths()
 #[ test ]
 fn diagnostics_ua4_lim_it_inspect_trace_shows_endpoints()
 {
-  let Some( token ) = live_active_token() else { return };
+  let token = live_active_token().expect( "live API token required — no ~/.claude/.credentials.json" );
   require_live_api( "diagnostics_ua4_lim_it" );
 
   let dir = TempDir::new().unwrap();

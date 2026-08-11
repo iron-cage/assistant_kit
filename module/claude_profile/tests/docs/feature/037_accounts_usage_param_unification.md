@@ -14,26 +14,26 @@
 | FT-02 | AC-02 | `.usage` accepts all 32 unified params; unknown param exits 1 | `f37_ft02_usage_accepts_32_params` (`usage_feature_test.rs`) |
 | FT-03 | AC-03 | `.accounts` defaults: `refresh::0`, `touch::0`, `sort::name`, `cols::` = identity set; no HTTP fetch or subprocess without explicit flags | `ft03_accounts_default_profile` |
 | FT-04 | AC-04 | `.usage` defaults: `refresh::1`, `touch::1`, `sort::renew`, `cols::` = quota set with Owner column | `f37_ft04_usage_default_profile` (`usage_feature_test.rs`) |
-| FT-05 | AC-05 | `.accounts owner::0 name::X` exits 0; writes `owner: ""`; credentials and active marker unchanged (Feature 064; formerly `unclaim::1 name::X`) | `it01_unclaim_clears_owner (account_mutations_test.rs)` |
-| FT-06 | AC-06 | `.accounts owner::0 name::X` exits 1 with ownership violation when G8 fails; gate runs before `dry::1` (Feature 064; formerly `unclaim::1`) | `ft16_unclaim_g8_gate (account_mutations_test.rs)` |
+| FT-05 | AC-05 | `.accounts owner::0 name::X` exits 0; writes `owner: ""`; credentials and active marker unchanged (Feature 064; formerly `unclaim::1 name::X`) | `it01_unclaim_clears_owner (account_ownership_test.rs)` |
+| FT-06 | AC-06 | `.accounts owner::0 name::X` exits 1 with ownership violation when G8 fails; gate runs before `dry::1` (Feature 064; formerly `unclaim::1`) | `ft16_unclaim_g8_gate (account_ownership_test.rs)` |
 | FT-07 | AC-07 | `.accounts owner::0` (no `name::`) applies ownership release to all filtered accounts; each evaluated against G8; non-owned skipped (Feature 064; formerly `unclaim::1` batch) | `ft07_accounts_unclaim_batch` |
 | FT-08 | AC-08 | `.accounts assignee::user1@w003 name::X` writes marker file; `{name}.json`, credentials, `~/.claude.json` unchanged (Feature 065; formerly `assign::1 name::X`) | `ft01_assignee_assign_writes_current_machine_marker (account_assign_test.rs)` |
 | FT-09 | AC-09 | `.accounts assignee::bob@laptop name::X` writes `_active_laptop_bob`; sanitization identical to former `.account.assign` (Feature 065; formerly `assign::1 name::X for::bob@laptop`) | `ft01b_assignee_assign_writes_remote_marker (account_assign_test.rs)` |
 | FT-10 | AC-10 | `.accounts assignee::user1@w003` (no `name::`) clears `_active_w003_user1`; exits 0; no credentials or `{name}.json` touched (Feature 065; replaces former `assign::1` no-name usage block) | `ft02_assignee_unassign_clears_marker (account_assign_test.rs)` |
-| FT-11 | AC-11 | `.account.unclaim name::alice` exits 1 with targeted `owner::0` migration hint — registered as redirect stub (Feature 037) | `ft11_account_unclaim_fully_deregistered` (`accounts_test.rs`) |
-| FT-12 | AC-12 | `.account.assign name::alice` exits 1 with targeted `assignee::` migration hint — registered as redirect stub (Feature 037) | `ft12_account_assign_fully_deregistered` (`accounts_test.rs`) |
+| FT-11 | AC-11 | `.account.unclaim name::alice` exits 1 with targeted `owner::0` migration hint — registered as redirect stub (Feature 037) | *(coverage gap — no `accounts_test.rs` exists and no `fully_deregistered`-named function exists anywhere; see body section)* |
+| FT-12 | AC-12 | `.account.assign name::alice` exits 1 with targeted `assignee::` migration hint — registered as redirect stub (Feature 037) | *(coverage gap — no `accounts_test.rs` exists and no `fully_deregistered`-named function exists anywhere; see body section)* |
 | FT-13 | AC-13 | `.accounts` rejects all 15 legacy field toggles (`active::`, `current::`, `sub::`, `tier::`, `expires::`, `email::`, `display_name::`, `host::`, `role::`, `billing::`, `model::`, `uuid::`, `capabilities::`, `org_uuid::`, `org_name::`); each exits 1 directing to `cols::` | `ft13_accounts_legacy_toggles_rejected` |
 | FT-14 | AC-14 | `.accounts cols::+host,-tier` adds host column and removes tier from identity default set | `ft14_accounts_cols_modifier` |
-| FT-15 | AC-15 | `.accounts refresh::1` fetches live quota; `.accounts touch::1` activates idle sessions — same algorithm as `.usage` | `lim_it_ft15_accounts_refresh_live (accounts_test.rs)` |
+| FT-15 | AC-15 | `.accounts refresh::1` fetches live quota; `.accounts touch::1` activates idle sessions — same algorithm as `.usage` | `lim_it_ft15_accounts_refresh_live (accounts_ft_test.rs)` — refresh::1 case only partially covered (account shown, not trace/quota-value comparison); touch::1 case is a coverage gap |
 | FT-16 | AC-16 | `.usage owner::0 name::X` clears owner field — identical result to `.accounts owner::0 name::X` (Feature 064; formerly `usage unclaim::1 name::X`) | `f37_ft16_usage_unclaim_mirrors_accounts` (`usage_feature_test.rs`) |
 | FT-17 | AC-17 | `.usage assignee::user1@w003 name::X` writes marker — identical result to `.accounts assignee::user1@w003 name::X` (Feature 065; formerly `active::USER@MACHINE name::X` — Feature 064) | `f37_ft17_usage_assign_mirrors_accounts` (`usage_feature_test.rs`) |
-| FT-18 | AC-18 | `.accounts dry::1 owner::0 name::X` prints `[dry-run] would clear owner of X`; exits 0; no files modified; G8 gate runs (Feature 064; formerly `dry::1 unclaim::1`) | `ft17_unclaim_dry_run (account_mutations_test.rs)` |
+| FT-18 | AC-18 | `.accounts dry::1 owner::0 name::X` prints `[dry-run] would clear owner of X`; exits 0; no files modified; G8 gate runs (Feature 064; formerly `dry::1 unclaim::1`) | `ft17_unclaim_dry_run (account_ownership_test.rs)` |
 | FT-19 | AC-19 | Owner column visible by default on `.accounts` and `.usage`; shows owner from `{name}.json`; `cols::-owner` hides it | `ft19_owner_column_default_visible` |
 | FT-20 | AC-20 | `.accounts owner::0 name::X force::1` bypasses G8; clears owner even when caller ≠ stored owner; exits 0 (Feature 064; formerly `unclaim::1 force::1`) | `ft20_accounts_unclaim_force_bypasses_g8` |
 | FT-21 | AC-21 | `.accounts force::1` without `owner::`, and `.accounts force::1 assignee::user1@w003 name::X`, silently ignore `force::1` — no error (Feature 065; formerly with `assign::1`/`active::`) | `ft21_force_no_effect_without_unclaim` |
-| FT-22 | AC-22 | `.accounts assign::1` exits 1 with migration message "REMOVED — use `assignee::USER@MACHINE name::X`"; `.accounts unclaim::1` exits 1 "REMOVED — use `owner::0 name::X`"; `.accounts for::user@host` exits 1 with migration message; `.accounts active::user@host` exits 1 with REMOVED_TOGGLE pointing to `assignee::` (Feature 065) | `ft22_removed_toggle_stubs` |
-| FT-23 | AC-23 | `.accounts owner::user1@w003 name::X,Y,Z` sets ownership for X, Y, Z in one invocation; each G8-evaluated independently | `ft23_owner_batch_set` |
-| FT-24 | AC-24 | `.accounts owner::0 name::X,Y,Z` clears ownership for X, Y, Z; each G8-evaluated independently | `ft24_owner_batch_clear` |
+| FT-22 | AC-22 | `.accounts assign::1` exits 1 with migration message "REMOVED — use `assignee::USER@MACHINE name::X`"; `.accounts unclaim::1` exits 1 "REMOVED — use `owner::0 name::X`"; `.accounts for::user@host` exits 1 with migration message; `.accounts active::user@host` exits 1 with REMOVED_TOGGLE pointing to `assignee::` (Feature 065) | split across `ft05_assign_removed_toggle`, `ft06_assign_and_for_removed_toggles`, `ft07_unclaim_removed_toggle`, `ft10_active_removed_toggle_migration_message` (all in `account_assign_test.rs`) — no single `ft22_removed_toggle_stubs` function exists |
+| FT-23 | AC-23 | `.accounts owner::user1@w003 name::X,Y,Z` sets ownership for X, Y, Z in one invocation; each G8-evaluated independently | `ec13_owner_set_comma_list_batch_set (account_owner_param_test.rs)` |
+| FT-24 | AC-24 | `.accounts owner::0 name::X,Y,Z` clears ownership for X, Y, Z; each G8-evaluated independently | `ec12_owner_zero_comma_list_batch_clear (account_owner_param_test.rs)` — fixture has all 3 accounts owned by the caller; does not exercise the mixed-ownership/skip-message path this AC also implies |
 
 ### Notes
 
@@ -48,7 +48,7 @@
 - FT-11 and FT-12 are integration tests via `./verb/test` — verify exit 1 and that stderr contains the targeted migration hint. These commands are registered as redirect stubs (Feature 037): `.account.unclaim` exits 1 with `"owner::0"` hint; `.account.assign` exits 1 with `"assignee::"` hint. NOT generic "unknown command" errors.
 - FT-13 uses one sub-case per legacy toggle — 15 invocations; each exits 1 with a message mentioning `cols::`.
 - FT-14 is a render test verifying column set modification: identity default is Account, Owner, Active, Current, Sub, Tier, Expires, Email. After `cols::+host,-tier`: Tier removed, Host added.
-- FT-15 is an integration test: `.accounts refresh::1` must produce live quota output matching what `.usage` produces for the same accounts.
+- FT-15 is an integration test: `.accounts refresh::1` must produce live quota output matching what `.usage` produces for the same accounts. The only live test, `lim_it_ft15_accounts_refresh_live`, asserts exit 0 and that the account appears in output — it does not assert quota-value or trace-line parity against `.usage trace::1`, and no test anywhere exercises `.accounts touch::1` (see FT-15 body for the coverage-gap detail).
 - FT-18 verifies G8 gate still runs in dry mode: (a) owned by caller → `[dry-run] would clear owner of X` printed, exits 0; (b) owned by other → exits 1, no dry-run line. Uses `owner::0 name::X dry::1` (Feature 064; formerly `dry::1 unclaim::1`).
 - FT-19 verifies Owner column: set up alice with `owner: "testuser@testmachine"`, bob with `owner: ""`. `.accounts` text output: alice row shows `testuser@testmachine` in Owner column, bob shows `—`. `.accounts cols::-owner` output: no Owner column header.
 - FT-20 verifies G8 bypass via force: same non-owned setup as FT-06; with `force::1` added to `owner::0 name::X`, exits 0 and `alice.json` has `"owner": ""`. (Feature 064; formerly `unclaim::1 force::1`.)
@@ -113,7 +113,7 @@
 - **When:** `clp .accounts owner::0 name::alice` is executed. (Formerly `unclaim::1 name::alice` — Feature 064.)
 - **Then:** Exits 0. `alice.json` contains `"owner": ""`. mtime of `alice.credentials.json` unchanged. Active marker unchanged. Output identical to former `clp .account.unclaim name::alice`.
 - **Exit:** 0
-- **Source fn:** `it01_unclaim_clears_owner` (`account_mutations_test.rs`)
+- **Source fn:** `it01_unclaim_clears_owner` (`account_ownership_test.rs`)
 - **Source:** [037_accounts_usage_param_unification.md AC-05](../../../docs/feature/037_accounts_usage_param_unification.md)
 
 ---
@@ -127,7 +127,7 @@
 - **When (case B):** `clp .accounts owner::0 name::alice dry::1` executed.
 - **Then (case B):** Exits 1 with ownership violation. G8 gate runs BEFORE `dry::1` check — no dry-run line printed.
 - **Exit:** 1 (both cases)
-- **Source fn:** `ft16_unclaim_g8_gate` (`account_mutations_test.rs`)
+- **Source fn:** `ft16_unclaim_g8_gate` (`account_ownership_test.rs`)
 - **Source:** [037_accounts_usage_param_unification.md AC-06](../../../docs/feature/037_accounts_usage_param_unification.md)
 
 ---
@@ -149,7 +149,7 @@
 - **When:** `clp .accounts active::user1@w003 name::alice` is executed. (Formerly `assign::1 name::alice` — Feature 064.)
 - **Then:** Exits 0. Marker file `_active_w003_user1` in credential store contains `alice`. mtime of `alice.credentials.json` unchanged. mtime of `alice.json` unchanged. mtime of `~/.claude.json` unchanged.
 - **Exit:** 0
-- **Source fn:** `aa01_current_machine_marker_written` (`account_assign_test.rs`)
+- **Source fn:** `ft01_assignee_assign_writes_current_machine_marker` (`account_assign_test.rs`) — renamed from `aa01_current_machine_marker_written`
 - **Source:** [037_accounts_usage_param_unification.md AC-08](../../../docs/feature/037_accounts_usage_param_unification.md)
 
 ---
@@ -160,7 +160,7 @@
 - **When:** `clp .accounts active::bob@my-laptop name::alice` is executed. (Formerly `assign::1 name::alice for::bob@my-laptop` — Feature 064.)
 - **Then:** Exits 0. Marker file `_active_my-laptop_bob` in credential store contains `alice`. Sanitization rule: alphanumeric, `-`, `.` preserved; all other chars → `_`.
 - **Exit:** 0
-- **Source fn:** `aa02_remote_machine_marker_written` (`account_assign_test.rs`)
+- **Source fn:** `ft01b_assignee_assign_writes_remote_marker` (`account_assign_test.rs`) — renamed from `aa02_remote_machine_marker_written`
 - **Source:** [037_accounts_usage_param_unification.md AC-09](../../../docs/feature/037_accounts_usage_param_unification.md)
 
 ---
@@ -171,7 +171,7 @@
 - **When:** `clp .accounts active::user1@w003` (no `name::`) is executed. (Feature 064 — no-name now unassigns; the former `assign::1` no-name emitted a usage block, no longer applicable.)
 - **Then:** Exits 0. Marker file `_active_w003_user1` is cleared/removed from credential store. `alice.json` unchanged. `alice.credentials.json` unchanged.
 - **Exit:** 0
-- **Source fn:** `aa04_no_name_emits_usage_block` (`account_assign_test.rs`)
+- **Source fn:** `ft02_assignee_unassign_clears_marker` (`account_assign_test.rs`) — renamed from `aa04_no_name_emits_usage_block`; the old name described pre-Feature-065 behavior (usage block), the new one matches this case's current clear-marker behavior
 - **Source:** [037_accounts_usage_param_unification.md AC-10](../../../docs/feature/037_accounts_usage_param_unification.md)
 
 ---
@@ -182,7 +182,7 @@
 - **When:** `clp .account.unclaim name::alice` is executed.
 - **Then:** Exits 1. Error output contains `"owner::0"` migration hint (added by redirect stub, Feature 037). No `alice.json` modification.
 - **Exit:** 1
-- **Source fn:** `ft11_account_unclaim_fully_deregistered` (`accounts_test.rs`)
+- **Source fn:** *(coverage gap — `accounts_test.rs` does not exist and no `fully_deregistered`-named function exists anywhere in the suite. Closest adjacent coverage: `ft07_unclaim_removed_toggle` in `account_assign_test.rs` tests the `unclaim::1` parameter-level REMOVED_TOGGLE stub, not the standalone `.account.unclaim` command's redirect-stub migration hint this case describes)*
 - **Source:** [037_accounts_usage_param_unification.md AC-11](../../../docs/feature/037_accounts_usage_param_unification.md)
 
 ---
@@ -193,7 +193,7 @@
 - **When:** `clp .account.assign name::alice` is executed.
 - **Then:** Exits 1. Error output contains `"assignee::"` migration hint (added by redirect stub, Feature 065). No marker file written.
 - **Exit:** 1
-- **Source fn:** `ft12_account_assign_fully_deregistered` (`accounts_test.rs`)
+- **Source fn:** *(coverage gap — `accounts_test.rs` does not exist and no `fully_deregistered`-named function exists anywhere in the suite. Closest adjacent coverage: `ft05_assign_removed_toggle` in `account_assign_test.rs` tests the `assign::1` parameter-level REMOVED_TOGGLE stub, not the standalone `.account.assign` command's redirect-stub migration hint this case describes)*
 - **Source:** [037_accounts_usage_param_unification.md AC-12](../../../docs/feature/037_accounts_usage_param_unification.md)
 
 ---
@@ -228,7 +228,7 @@
 - **When (case B):** `clp .accounts touch::1 trace::1` is executed.
 - **Then (case B):** timestamped `touch` diagnostic lines appear; same accounts touched as `.usage touch::1` would touch.
 - **Exit:** 0
-- **Source fn:** `lim_it_ft15_accounts_refresh_live (accounts_test.rs)`
+- **Source fn:** `lim_it_ft15_accounts_refresh_live` (`accounts_ft_test.rs`) — file annotation corrected from `accounts_test.rs` (does not exist). Covers case A only partially: asserts `.accounts refresh::1 trace::1` exits 0 and shows the account, but does NOT assert the `fetch` trace-line diagnostic content or compare against `.usage trace::1` output. Case B (`.accounts touch::1 trace::1`) is a coverage gap — no test anywhere in the suite invokes `.accounts touch::1`.
 - **Source:** [037_accounts_usage_param_unification.md AC-15](../../../docs/feature/037_accounts_usage_param_unification.md)
 
 ---
@@ -264,7 +264,7 @@
 - **When (case B):** `clp .accounts dry::1 owner::0 name::bob` executed.
 - **Then (case B):** Exits 1. G8 ownership violation — no `[dry-run]` line printed. `bob.json` unchanged.
 - **Exit:** 0 (case A), 1 (case B)
-- **Source fn:** `ft17_unclaim_dry_run` (`account_mutations_test.rs`)
+- **Source fn:** `ft17_unclaim_dry_run` (`account_ownership_test.rs`)
 - **Source:** [037_accounts_usage_param_unification.md AC-18](../../../docs/feature/037_accounts_usage_param_unification.md)
 
 ---
@@ -312,13 +312,13 @@
 
 - **Given:** Any environment with at least one account.
 - **When (case A):** `clp .accounts assign::1 name::alice` is executed.
-- **Then (case A):** Exits 1. Error message: "REMOVED — use `active::USER@MACHINE name::X`". No marker file written.
+- **Then (case A):** Exits 1. Error message: "REMOVED — use `assignee::USER@MACHINE name::X`". No marker file written.
 - **When (case B):** `clp .accounts unclaim::1 name::alice` is executed.
 - **Then (case B):** Exits 1. Error message: "REMOVED — use `owner::0 name::X`". No file written.
 - **When (case C):** `clp .accounts for::user@host name::alice` is executed.
 - **Then (case C):** Exits 1 with REMOVED migration message. No file written.
 - **Exit:** 1 (all cases)
-- **Source fn:** `ft22_removed_toggle_stubs`
+- **Source fn:** no single `ft22_removed_toggle_stubs` function exists — coverage is split across `ft05_assign_removed_toggle`, `ft06_assign_and_for_removed_toggles`, `ft07_unclaim_removed_toggle`, and `ft10_active_removed_toggle_migration_message` (all in `account_assign_test.rs`)
 - **Source:** [037_accounts_usage_param_unification.md AC-22](../../../docs/feature/037_accounts_usage_param_unification.md)
 
 ---
@@ -329,7 +329,7 @@
 - **When:** `clp .accounts owner::user1@w003 name::alice,bob,carol` is executed.
 - **Then:** Exits 0. `alice.json`, `bob.json`, `carol.json` each contain `"owner": "user1@w003"`. Each evaluated against G8 independently.
 - **Exit:** 0
-- **Source fn:** `ft23_owner_batch_set`
+- **Source fn:** `ec13_owner_set_comma_list_batch_set` (`account_owner_param_test.rs`) — renamed from `ft23_owner_batch_set`
 - **Source:** [037_accounts_usage_param_unification.md AC-23](../../../docs/feature/037_accounts_usage_param_unification.md)
 
 ---
@@ -340,5 +340,5 @@
 - **When:** `clp .accounts owner::0 name::alice,bob,carol` is executed.
 - **Then:** Exits 0 (best-effort). `alice.json` and `bob.json` each have `"owner": ""` (G8 passes). `carol.json` unchanged — G8 violation for `carol` reported as skip message on stdout. Overall exit 0.
 - **Exit:** 0 (best-effort; per-account G8 violations in comma-list mode = skip + continue)
-- **Source fn:** `ft24_owner_batch_clear`
+- **Source fn:** `ec12_owner_zero_comma_list_batch_clear` (`account_owner_param_test.rs`) — renamed from `ft24_owner_batch_clear`; note the real test's fixture has all 3 accounts owned by the caller, so it proves the batch-clear mechanism but does not exercise this case's mixed-ownership skip-message path (`carol` owned by `other@remote`)
 - **Source:** [037_accounts_usage_param_unification.md AC-24](../../../docs/feature/037_accounts_usage_param_unification.md)

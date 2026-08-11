@@ -1,6 +1,8 @@
-use claude_runner_core::{ ClaudeCommand, ErrorKind, ExecutionOutput, signal_exit_code };
+use std::io::IsTerminal;
+use claude_runner_core::{ ClaudeCommand, ExecutionOutput, signal_exit_code };
 use super::parse::{ CliArgs, ExpectStrategy };
 use super::fence::strip_fences;
+use super::retry_classify::{ ClassAttempts, classify_to_class, class_fields, delay_suffix, first_message, resolve_count, resolve_delay };
 use claude_journal::{ EventRecord, EventType, JournalWriter };
 use claude_storage_core::SessionId;
 
@@ -26,6 +28,8 @@ fn is_full_level( cli : &CliArgs ) -> bool
 //
 // `fallback_message` overrides `cli.message` in the journal when BUG-327's one-shot
 // fallback substitution fired for this attempt — Some(FALLBACK_MESSAGE) once set, else None.
+// BUG-428's resume-rejection fallback never sets this — it drops -c but preserves the
+// original message, so its fallback_note stays None (see FallbackReason in execution.rs).
 fn emit_execution(
   writer           : Option< &JournalWriter >,
   cli              : &CliArgs,
@@ -185,135 +189,6 @@ fn write_output_file( path : Option< &str >, content : &str )
   }
 }
 
-// -------------------------------------------------------------------
-// Error class taxonomy and 3-tier resolution
-// -------------------------------------------------------------------
-
-/// Semantic class for caller-facing retry decisions.
-///
-/// Maps `ErrorKind` (subprocess classification) and CLR-layer ad-hoc exits
-/// to a uniform 6-class taxonomy for the retry loop.  Validation and Runner
-/// classes are handled outside the main retry loop.
-#[ derive( Clone, Copy ) ]
-enum ErrorClass
-{
-  Transient,
-  Account,
-  Auth,
-  Service,
-  Process,
-  Unknown,
-}
-
-impl ErrorClass
-{
-  fn label( self ) -> &'static str
-  {
-    match self
-    {
-      ErrorClass::Transient => "Transient",
-      ErrorClass::Account   => "Account",
-      ErrorClass::Auth      => "Auth",
-      ErrorClass::Service   => "Service",
-      ErrorClass::Process   => "Process",
-      ErrorClass::Unknown   => "Unknown",
-    }
-  }
-  fn fallback_message( self ) -> &'static str
-  {
-    match self
-    {
-      ErrorClass::Transient => "rate limit",
-      ErrorClass::Account   => "quota exhausted",
-      ErrorClass::Auth      => "auth error",
-      ErrorClass::Service   => "API error",
-      ErrorClass::Process   => "terminated by signal",
-      ErrorClass::Unknown   => "unknown error",
-    }
-  }
-}
-
-/// Map an `ErrorKind` (or CLR-layer exit 4) to an `ErrorClass`.
-fn classify_to_class( kind : Option< &ErrorKind >, exit_code : i32 ) -> ErrorClass
-{
-  if exit_code == 4 { return ErrorClass::Process; }
-  match kind
-  {
-    Some( ErrorKind::RateLimit )      => ErrorClass::Transient,
-    Some( ErrorKind::QuotaExhausted ) => ErrorClass::Account,
-    Some( ErrorKind::AuthError )      => ErrorClass::Auth,
-    Some( ErrorKind::ApiError )       => ErrorClass::Service,
-    Some( ErrorKind::Signal )         => ErrorClass::Process,
-    Some( ErrorKind::Unknown ) | None => ErrorClass::Unknown,
-  }
-}
-
-/// 3-tier resolution for retry count: override ?? class-specific ?? fallback (2).
-fn resolve_count(
-  over      : Option< u8 >,
-  class_cli : Option< u8 >,
-  fallback  : Option< u8 >,
-) -> u8
-{
-  over.or( class_cli ).or( fallback ).unwrap_or( 2 )
-}
-
-/// 3-tier resolution for retry delay: override ?? class-specific ?? fallback (30).
-fn resolve_delay( over : Option< u32 >, class : Option< u32 >, fallback : Option< u32 > ) -> u32
-{
-  over.or( class ).or( fallback ).unwrap_or( 30 )
-}
-
-/// Return the class-specific (count, delay) fields from `CliArgs` for the given class.
-fn class_fields( cli : &CliArgs, class : ErrorClass ) -> ( Option< u8 >, Option< u32 > )
-{
-  match class
-  {
-    ErrorClass::Transient => ( cli.retry_on_transient, cli.transient_delay ),
-    ErrorClass::Account   => ( cli.retry_on_account,   cli.account_delay ),
-    ErrorClass::Auth      => ( cli.retry_on_auth,       cli.auth_delay ),
-    ErrorClass::Service   => ( cli.retry_on_service,    cli.service_delay ),
-    ErrorClass::Process   => ( cli.retry_on_process,    cli.process_delay ),
-    ErrorClass::Unknown   => ( cli.retry_on_unknown,    cli.unknown_delay ),
-  }
-}
-
-/// Extract the first non-empty line from stdout or stderr as the original message.
-/// Falls back to the class-specific default when both are empty.
-///
-/// When `use_summary` is true and stdout looks like a JSON envelope, extracts the
-/// `"result"` field first so retry diagnostics show human-readable text rather than
-/// the raw JSON blob.
-fn first_message( output : &ExecutionOutput, class : ErrorClass, use_summary : bool ) -> String
-{
-  if use_summary && output.stdout.trim_start().starts_with( '{' )
-  {
-    if let Some( text ) = super::summary::extract_result_text( &output.stdout )
-    {
-      for line in text.lines()
-      {
-        let t = line.trim();
-        if !t.is_empty() { return t.to_string(); }
-      }
-    }
-  }
-  for s in [ &output.stdout, &output.stderr ]
-  {
-    for line in s.lines()
-    {
-      let t = line.trim();
-      if !t.is_empty() { return t.to_string(); }
-    }
-  }
-  class.fallback_message().to_string()
-}
-
-/// Format the retry delay suffix: " in Xs" when delay > 0, empty when immediate.
-fn delay_suffix( delay : u32 ) -> String
-{
-  if delay > 0 { format!( " in {delay}s" ) } else { String::new() }
-}
-
 /// Validate `out` against `--expect`; apply retry/default/fail strategy on mismatch.
 ///
 /// Returns `out` when validation passes (or when `--expect` is not set).
@@ -354,7 +229,8 @@ fn apply_expect_validation(
       {
         let suf = delay_suffix( delay );
         eprintln!(
-          "[Validation] {msg} — retrying{suf} (attempt {attempt}/{})…",
+          "{}[Validation] {msg} — retrying{suf} (attempt {attempt}/{})…",
+          claude_core::trace_ts(),
           retries + 1
         );
         if delay > 0
@@ -469,8 +345,13 @@ fn execute_print_attempt( builder : &ClaudeCommand, timeout_secs : u32 )
   };
 
   // Take pipe handles before entering the poll loop so background threads own them.
-  let stdout_pipe = child.stdout.take().expect( "stdout piped by spawn_piped" );
-  let stderr_pipe = child.stderr.take().expect( "stderr piped by spawn_piped" );
+  // spawn_piped() is expected to always set both to Some — treat a violation of that
+  // contract as a spawn failure (like the branch above) rather than panicking.
+  let ( Some( stdout_pipe ), Some( stderr_pipe ) ) = ( child.stdout.take(), child.stderr.take() )
+  else
+  {
+    return Err( std::io::Error::other( "spawn_piped() did not provide piped stdout/stderr" ) );
+  };
 
   let stdout_t = std::thread::spawn( move || -> Vec< u8 >
   {
@@ -555,7 +436,8 @@ pub( super ) fn apply_runner_retry(
     *attempt += 1;
     let suf = delay_suffix( delay );
     eprintln!(
-      "[Runner] {msg} — retrying{suf} (attempt {}/{})…",
+      "{}[Runner] {msg} — retrying{suf} (attempt {}/{})…",
+      claude_core::trace_ts(),
       *attempt,
       u32::from( count ) + 1
     );
@@ -575,12 +457,13 @@ pub( super ) fn apply_runner_retry(
     return;
   }
 
-  eprintln!( "Error: [Runner] {msg} — retries exhausted (exit 1)" );
+  eprintln!( "{}Error: [Runner] {msg} — retries exhausted (exit 1)", claude_core::trace_ts() );
   std::process::exit( 1 );
 }
 
 /// Default watchdog for print-mode when `--timeout` is absent and `CLR_TIMEOUT` is unset.
-/// Interactive mode retains `unwrap_or( 0 )` (unlimited) — `run_interactive()` must NOT adopt this constant.
+/// `run_interactive()` also adopts this constant (BUG-425), but only for non-TTY stdin —
+/// a genuine TTY-attached session keeps the unlimited `unwrap_or( 0 )` default.
 const DEFAULT_PRINT_TIMEOUT_SECS : u32 = 3600;
 
 /// Diagnostic Claude Code prints when a resumed session's deferred-tool marker is stale
@@ -591,6 +474,26 @@ const DEFERRED_TOOL_MARKER : &str = "No deferred tool marker found in the resume
 
 /// One-shot substitute message sent when `DEFERRED_TOOL_MARKER` fires (BUG-327).
 const FALLBACK_MESSAGE : &str = "Continue.";
+
+/// Message claude itself prints when `-c` was injected for a `.jsonl` transcript that
+/// structurally qualified as a resume candidate but recorded zero model turns (BUG-428).
+/// See `session_exists()`/`most_recent_session_in_dir()` (`builder.rs:25-45`,
+/// `claude_storage_core/src/continuation.rs:109-147`) for the qualification gap, and
+/// `contract/claude_code/docs/version/088_v2_1_187.md:19` for claude's own documented,
+/// content-aware `--resume` rejection this string reports.
+const RESUME_REJECTED_MARKER : &str = "No conversation found to continue";
+
+/// Distinguishes which one-shot fallback mechanism produced `fallback_builder`'s
+/// substitute command, so `fallback_note` (below) knows whether to substitute
+/// `FALLBACK_MESSAGE` when journaling (`DeferredToolMarker`, BUG-327) or preserve the
+/// original message unchanged (`ResumeRejected`, BUG-428 — the retry drops `-c` but
+/// never touches the message itself).
+#[ derive( Clone, Copy, PartialEq, Eq ) ]
+enum FallbackReason
+{
+  DeferredToolMarker,
+  ResumeRejected,
+}
 
 /// Resolve the default print-mode timeout.
 ///
@@ -647,8 +550,14 @@ fn run_print_mode_streaming(
     }
   };
 
-  let stdout_pipe = child.stdout.take().expect( "stdout piped by spawn_piped" );
-  let stderr_pipe = child.stderr.take().expect( "stderr piped by spawn_piped" );
+  // spawn_piped() is expected to always set both to Some — treat a violation of that
+  // contract as a spawn failure (like the branch above) rather than panicking.
+  let ( Some( stdout_pipe ), Some( stderr_pipe ) ) = ( child.stdout.take(), child.stderr.take() )
+  else
+  {
+    eprintln!( "Error: spawn_piped() did not provide piped stdout/stderr" );
+    std::process::exit( 1 );
+  };
 
   // Drain stderr on a background thread while stdout is read line-by-line on this
   // thread — without it, a subprocess that fills the stderr pipe buffer (64 KiB)
@@ -713,7 +622,9 @@ pub( super ) fn run_print_mode(
 {
   // Fix(BUG-305): print-mode sessions had no default watchdog, leaving unattended sessions unbounded.
   // Root cause: unwrap_or( 0 ) treated absent --timeout as unlimited; print-mode should default to 1h.
-  // Pitfall: DEFAULT_PRINT_TIMEOUT_SECS applies ONLY here in run_print_mode(); run_interactive() must retain unwrap_or( 0 ) — it is user-attended.
+  // Pitfall: DEFAULT_PRINT_TIMEOUT_SECS applies here unconditionally; run_interactive() (BUG-425)
+  //   applies the same constant only for non-TTY stdin — a genuine TTY session there still
+  //   retains unwrap_or( 0 ), since it alone is truly user-attended.
   let timeout_secs = cli.timeout.unwrap_or( default_print_timeout() );
   // Validate stdin file before the retry loop — a missing file is a user error,
   // not a transient spawn failure; it must not trigger runner retry.
@@ -735,20 +646,26 @@ pub( super ) fn run_print_mode(
     run_print_mode_streaming( builder, cli, journal );
     return;
   }
-  // Per-class attempt counters: [Transient, Account, Auth, Service, Process, Unknown]
-  let mut attempts = [ 0usize; 6 ];
+  // Per-class attempt counters (one field per ErrorClass variant — see ClassAttempts).
+  let mut attempts = ClassAttempts::default();
   // Fix(BUG-299): Runner retry counter — tracks spawn failure attempts separately from class retries.
   let mut runner_attempt = 0u32;
-  // Fix(BUG-327): one-shot fallback builder — Some(..) once the deferred-tool marker has
-  // fired, substituting FALLBACK_MESSAGE for the original message on the next attempt.
-  let mut fallback_builder : Option< ClaudeCommand > = None;
+  // Fix(BUG-327): one-shot fallback builder — Some(..) once either the deferred-tool
+  // marker (BUG-327) or a resume-rejection (BUG-428) has fired. The paired FallbackReason
+  // records which mechanism fired so fallback_note (below) only substitutes
+  // FALLBACK_MESSAGE for the former — the latter drops -c but preserves cli.message.
+  let mut fallback_builder : Option< ( ClaudeCommand, FallbackReason ) > = None;
 
   loop
   {
-    let active = fallback_builder.as_ref().unwrap_or( builder );
+    let active = fallback_builder.as_ref().map_or( builder, | ( cmd, _ ) | cmd );
     // Fix(BUG-327): journaled message must reflect the fallback substitution, not the
-    // original cli.message, once fallback_builder is set — see emit_execution().
-    let fallback_note = fallback_builder.is_some().then_some( FALLBACK_MESSAGE );
+    // original cli.message, once the DeferredToolMarker fallback is set — see
+    // emit_execution(). Fix(BUG-428): ResumeRejected's fallback never substitutes the
+    // message, so it must not trigger this note.
+    let fallback_note = fallback_builder.as_ref().and_then(
+      | ( _, reason ) | ( *reason == FallbackReason::DeferredToolMarker ).then_some( FALLBACK_MESSAGE )
+    );
     // Fix(BUG-240): spawn errors always emitted regardless of verbosity (inside execute_print_attempt).
     // Root cause: Err(e) branch was guarded by verbosity check; verbosity 0 swallowed fatal spawn errors.
     // Pitfall: verbosity gates diagnostics only — fatal errors must surface regardless of verbosity level.
@@ -800,7 +717,28 @@ pub( super ) fn run_print_mode(
         }
         emit_retry( journal, "FallbackPrompt", 1, 2, 0, "deferred tool marker not found in resumed session" );
         let fallback = active.clone().with_message( FALLBACK_MESSAGE.to_string() );
-        fallback_builder = Some( fallback );
+        fallback_builder = Some( ( fallback, FallbackReason::DeferredToolMarker ) );
+        continue;
+      }
+
+      // Fix(BUG-428): resumed session structurally qualified (right extension, non-`agent-`
+      //   prefix, non-zero size, valid UTF-8 stem — session_exists()'s 4 checks) but recorded
+      //   zero model turns, so claude's own --resume logic rejects it content-aware
+      //   (contract/claude_code/docs/version/088_v2_1_187.md:19). clr had no reactive fallback
+      //   for this signature and surfaced the raw rejection misattributed as its own defect.
+      // Root cause: session_exists() validates structure only, never content — a qualifying
+      //   file with zero model turns still gets -c injected and claude then rejects it.
+      // Pitfall: .contains() is a substring match; a differently-contextualized message that
+      //   happens to embed this exact phrase (e.g., quoted inside a JSON envelope) would also
+      //   fire — same accepted tradeoff as DEFERRED_TOOL_MARKER, untested by design at this scope.
+      if fallback_builder.is_none()
+        && ( output.stdout.contains( RESUME_REJECTED_MARKER ) || output.stderr.contains( RESUME_REJECTED_MARKER ) )
+      {
+        eprintln!(
+          "clr: prior session was not resumable (claude rejected: \"{RESUME_REJECTED_MARKER}\") — starting a new session instead"
+        );
+        let fallback = active.clone().with_continue_conversation( false );
+        fallback_builder = Some( ( fallback, FallbackReason::ResumeRejected ) );
         continue;
       }
 
@@ -815,7 +753,6 @@ pub( super ) fn run_print_mode(
       // Pitfall: never use `break` inside this retry block — break exits the loop and
       //   falls through to the function's implicit return (), bypassing the
       //   process::exit(exit_code) call below. Guard the block ENTRY instead.
-      let class_idx = class as usize;
       let label = class.label();
       let ( count_field, delay_field ) = class_fields( cli, class );
       let limit = resolve_count( cli.retry_override, count_field, cli.retry_default ) as usize;
@@ -823,19 +760,21 @@ pub( super ) fn run_print_mode(
       let use_summary = cli.output_style.as_deref().unwrap_or( "summary" ) == "summary";
       let msg = first_message( &output, class, use_summary );
 
-      if attempts[ class_idx ] < limit
+      let counter = attempts.get_mut( class );
+      if *counter < limit
       {
-        attempts[ class_idx ] += 1;
+        *counter += 1;
         if !cli.quiet
         {
           let suf = delay_suffix( delay );
           eprintln!(
-            "[{label}] {msg} — retrying{suf} (attempt {}/{})…",
-            attempts[ class_idx ],
+            "{}[{label}] {msg} — retrying{suf} (attempt {}/{})…",
+            claude_core::trace_ts(),
+            *counter,
             limit + 1
           );
         }
-        emit_retry( journal, label, u32::try_from( attempts[ class_idx ] ).unwrap_or( u32::MAX ), u32::try_from( limit + 1 ).unwrap_or( u32::MAX ), delay, &msg );
+        emit_retry( journal, label, u32::try_from( *counter ).unwrap_or( u32::MAX ), u32::try_from( limit + 1 ).unwrap_or( u32::MAX ), delay, &msg );
         if delay > 0
         {
           std::thread::sleep( core::time::Duration::from_secs( u64::from( delay ) ) );
@@ -846,13 +785,13 @@ pub( super ) fn run_print_mode(
       // Non-retriable error or retries exhausted.
       if !cli.quiet
       {
-        if attempts[ class_idx ] > 0
+        if *counter > 0
         {
-          eprintln!( "Error: [{label}] {msg} — retries exhausted (exit {})", output.exit_code );
+          eprintln!( "{}Error: [{label}] {msg} — retries exhausted (exit {})", claude_core::trace_ts(), output.exit_code );
         }
         else
         {
-          eprintln!( "Error: [{label}] {msg} (exit {})", output.exit_code );
+          eprintln!( "{}Error: [{label}] {msg} (exit {})", claude_core::trace_ts(), output.exit_code );
         }
       }
 
@@ -932,13 +871,25 @@ pub( super ) fn run_print_mode(
 /// When `timeout_secs == 0`, uses the blocking `execute_interactive()` path.
 /// When `timeout_secs > 0`, uses `spawn_tty()` + `try_wait()` polling so the
 /// subprocess can be killed after the deadline while still using the TTY.
+/// Default absent `--timeout`: unlimited (`0`) for a genuine TTY session;
+/// `DEFAULT_PRINT_TIMEOUT_SECS` for non-TTY stdin (BUG-425).
 pub( super ) fn run_interactive(
   builder : &ClaudeCommand,
   cli     : &CliArgs,
   journal : Option< &JournalWriter >,
 )
 {
-  let timeout_secs = cli.timeout.unwrap_or( 0 );
+  // Fix(BUG-425): default timeout now bounded when stdin is non-TTY.
+  // Root cause: unwrap_or( 0 ) was unconditional — a genuine TTY-attached REPL session
+  //   is user-attended and should stay unlimited, but explicit --interactive paired
+  //   with non-TTY stdin (piped/redirected) reaches this same function with no
+  //   attended terminal at all, reproducing BUG-425's original unbounded-hang risk
+  //   one level deeper than the mode-selection fix reaches.
+  // Pitfall: only the non-TTY branch's default changes — an explicit --timeout value
+  //   from the caller always wins via unwrap_or_else's fallback-only scope; a genuine
+  //   TTY session's default must remain 0 (unlimited), never bounded.
+  let is_tty = std::io::stdin().is_terminal();
+  let timeout_secs = cli.timeout.unwrap_or_else( || if is_tty { 0 } else { default_print_timeout() } );
 
   if timeout_secs == 0
   {

@@ -6,7 +6,7 @@
 use claude_quota::OauthUsageData;
 use super::types::{ AccountQuota, SubprocessModel, SubprocessEffort, OPUS_OVERRIDE_THRESHOLD };
 use super::subprocess::{ resolve_model, resolve_effort };
-use claude_profile_core::account::trace_ts;
+use claude_profile_core::account::{ trace_ts, read_backend, AccountBackend };
 
 // ── TouchCtx ─────────────────────────────────────────────────────────────────
 
@@ -125,6 +125,7 @@ pub fn attempt_expired_token_refresh(
     owner                : String::new(),
     claim_lock           : false,
     reserve              : false,
+    inference_provider   : String::new(),
   };
   let model     = super::subprocess::resolve_model( &aq, imodel );
   let pre_args  = super::subprocess::effort_pre_args( &model, effort );
@@ -165,6 +166,15 @@ pub fn pre_switch_touch_ctx(
   _effort_str : &str,
 ) -> PreSwitchOutcome
 {
+  // Feature 071 (AC-06 touch-skip half): a redirect-backend account has no Anthropic quota
+  // to pre-fetch — checked first, before the on-disk credential file is read below, so no
+  // HTTP is ever attempted for it.
+  if read_backend( store_path, name ) == AccountBackend::Redirect
+  {
+    if trace { eprintln!( "{}account.use  {name}  subprocess: skipped (reason: redirect backend)", trace_ts() ) }
+    return PreSwitchOutcome::Unavailable;
+  }
+
   let path = store_path.join( format!( "{name}.credentials.json" ) );
   if trace { eprintln!( "{}account.use  {name}  reading {}", trace_ts(), path.display() ) }
   let credentials_json = match std::fs::read_to_string( &path )
@@ -217,6 +227,7 @@ pub fn pre_switch_touch_ctx(
 /// performs no mutation, and returns the same `sonnet_left` comparison `apply_model_override` uses.
 /// `None` when `seven_day_sonnet` is absent — matches `apply_model_override`'s tier-absent branch,
 /// which writes "sonnet" conservatively but never emits a direction trace line.
+#[ cfg( any( test, feature = "testing" ) ) ]
 #[ allow( clippy::missing_inline_in_public_items, clippy::must_use_candidate ) ]
 pub fn model_override_direction( quota : &OauthUsageData ) -> Option< &'static str >
 {
@@ -248,13 +259,18 @@ pub fn model_override_direction( quota : &OauthUsageData ) -> Option< &'static s
 // Pitfall: insert the usage_routine call BEFORE row-filter pipeline — filters can remove is_current from slice.
 #[ allow( clippy::missing_inline_in_public_items, clippy::must_use_candidate ) ]
 pub fn apply_model_override(
-  quota : &OauthUsageData,
-  paths : &crate::ClaudePaths,
-  trace : bool,
-  label : &str,
-  name  : &str,
+  quota   : &OauthUsageData,
+  paths   : &crate::ClaudePaths,
+  trace   : bool,
+  label   : &str,
+  name    : &str,
+  backend : AccountBackend,
 )
 {
+  // Feature 071 (AC-10): a redirect-backend account has no Anthropic Sonnet/Opus quota tiers —
+  // checked first, before any branching below, so neither `model` nor `effortLevel` is written.
+  if backend == AccountBackend::Redirect { return; }
+
   // Fix(BUG-300): map_or(0.0,...) treated seven_day_sonnet=None as 0% left — Opus override fired
   //   unconditionally for any account without a Sonnet tier.
   // Root cause: None means "tier absent/unknown", not "fully exhausted"; 0.0 < 20.0 always fires.
@@ -359,7 +375,7 @@ pub fn apply_post_switch_touch(
   //   quota utilization — restored "sonnet" persisted even when 7d(Son) was exhausted.
   // Pitfall: always apply quota-aware model override AFTER restoring the snapshot model;
   //   snapshot model is stale by definition.
-  apply_model_override( &ctx.quota, paths, trace, "account.use", name );
+  apply_model_override( &ctx.quota, paths, trace, "account.use", name, read_backend( credential_store, name ) );
   // Build a minimal AccountQuota to reuse the existing resolve_model() path.
   let aq = AccountQuota
   {
@@ -381,6 +397,7 @@ pub fn apply_post_switch_touch(
     owner                : String::new(),
     claim_lock           : false,
     reserve              : false,
+    inference_provider   : String::new(),
   };
   let model        = resolve_model( &aq, imodel );
   let effort_val   = resolve_effort( &model, effort );

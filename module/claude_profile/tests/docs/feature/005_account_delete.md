@@ -101,7 +101,7 @@ Feature behavioral requirement test cases for `docs/feature/005_account_delete.m
 - **When:** `clp .account.delete name::alice@other.com`
 - **Then:** Exits 1. Stderr contains `"ownership violation: this account is owned by other@remote"`. No files are deleted — `alice@other.com.credentials.json` and `alice@other.com.json` remain present.
 - **Exit:** 1
-- **Source fn:** `ft09_delete_exits_1_when_not_owned` (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `ft09_delete_exits_1_when_not_owned` (in `account_ownership_test.rs`)
 - **Note:** G6 ownership gate from Feature 036 AC-09. Shared with Feature 036 FT-09.
 - **Source:** [005_account_delete.md AC-06](../../../docs/feature/005_account_delete.md)
 
@@ -113,6 +113,6 @@ Feature behavioral requirement test cases for `docs/feature/005_account_delete.m
 - **When:** `clp .account.delete name::alice@other.com dry::1`
 - **Then:** Exits 1. The ownership violation message is printed to stderr. The `[dry-run] would delete account 'alice@other.com'` message is NOT printed. No files are modified.
 - **Exit:** 1
-- **Source fn:** `ft13_dry_run_does_not_skip_ownership` (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `ft13_dry_run_does_not_skip_ownership` (in `account_ownership_test.rs`)
 - **Note:** G6 + dry-run ordering gate from Feature 036 AC-13. Ownership guard runs before `dry::1` evaluation.
 - **Source:** [005_account_delete.md AC-07](../../../docs/feature/005_account_delete.md)

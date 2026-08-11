@@ -109,34 +109,58 @@ fn pf02_002_guard_dry_detects_drift()
 
 // ─── PF-3 (pitfall/002_symlink_retarget.md): no drift after pinned install ────
 
-// PF-3: after stable install preference is set to 2.1.78, guard reports no drift
+// PF-3: after stable install preference is set and matched by an installed
+// binary, guard reports no drift.
+//
+// Fix(BUG-018): hardcoded `preferredVersionResolved: "2.1.78"` was dead data
+// for the "stable" spec path (guard_once_pinned() re-resolves aliases fresh,
+// ignoring the stored `resolved` value — see its own doc comment), and the
+// test relied on the real system `claude` binary via unoverridden PATH
+// instead of the documented symlink-isolation pattern — so the assertion
+// actually compared the container's real installed version against the
+// compile-time `VERSION_ALIASES` "stable" pin, both of which drift
+// independently of this test and of each other.
+// Root cause: missing the HOME-isolation symlink documented in
+// subprocess_helpers.rs § HOME Isolation — Symlink Requirement.
+// Pitfall: any test asserting "no drift" must pin BOTH sides of the
+// comparison deterministically (settings + `~/.local/bin/claude` symlink) —
+// never rely on whatever the host/container happens to have installed.
 #[ test ]
 fn pf03_002_no_drift_after_install()
 {
-  // Write settings matching installed claude version (stable = 2.1.78 in container)
+  // Resolve stable alias to its pinned semver (compile-time constant; stays
+  // in sync with VERSION_ALIASES automatically — no hardcoded string needed).
+  let stable_ver = claude_version_core::version::VERSION_ALIASES
+    .iter()
+    .find( | a | a.name == "stable" )
+    .map( | a | a.value )
+    .expect( "stable alias not found in VERSION_ALIASES" );
+
   let dir = TempDir::new().unwrap();
-  let home = dir.path().to_str().unwrap();
-  let claude_dir = dir.path().join( ".claude" );
+  let home = dir.path();
+  let claude_dir = home.join( ".claude" );
   std::fs::create_dir_all( &claude_dir ).unwrap();
-  let settings_json = r#"{
+  let settings_json = format!( r#"{{
   "preferredVersionSpec": "stable",
-  "preferredVersionResolved": "2.1.78"
-}"#;
+  "preferredVersionResolved": "{stable_ver}"
+}}"# );
   std::fs::write( claude_dir.join( "settings.json" ), settings_json ).unwrap();
 
-  // Use real PATH so guard can find the installed claude binary at 2.1.78
+  // Deterministic install marker — get_version_from_symlink() reads the
+  // symlink's target filename, not the real system claude binary, so this
+  // is immune to whatever version the host/container actually has installed.
+  let local_bin = home.join( ".local" ).join( "bin" );
+  std::fs::create_dir_all( &local_bin ).unwrap();
+  std::os::unix::fs::symlink( stable_ver, local_bin.join( "claude" ) ).unwrap();
+
   let out = run_clv_with_env(
     &[ ".version.guard", "dry::1" ],
-    &[ ( "HOME", home ) ],
+    &[ ( "HOME", home.to_str().unwrap() ) ],
   );
   assert_exit( &out, 0 );
   let text = stdout( &out );
-  // Only assert no-drift when claude is present; "would install" means PATH lacks claude
-  if !text.contains( "would install" )
-  {
-    assert!(
-      text.contains( "matches" ) || text.contains( "ok" ),
-      "guard after pinned install must report no drift: {text}"
-    );
-  }
+  assert!(
+    text.contains( "matches" ) || text.contains( "ok" ),
+    "guard after pinned install must report no drift: {text}"
+  );
 }

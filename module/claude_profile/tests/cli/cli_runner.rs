@@ -75,6 +75,28 @@ pub fn run_cs_with_env( args : &[ &str ], env : &[ ( &str, &str ) ] ) -> Output
   cmd.output().expect( "failed to execute claude_profile binary" )
 }
 
+/// Run the binary with explicit environment overrides AND explicit removals.
+///
+/// Like `run_cs_with_env`, but additionally removes each name in `remove` from
+/// the child's environment — used to test "env var genuinely unset" behavior
+/// without relying on the test runner's own environment happening to lack it.
+///
+/// # Panics
+///
+/// Panics if the binary cannot be executed.
+#[ inline ]
+#[ must_use ]
+pub fn run_cs_with_env_removing( args : &[ &str ], env : &[ ( &str, &str ) ], remove : &[ &str ] ) -> Output
+{
+  assert_container();
+  let mut cmd = Command::new( BIN );
+  cmd.args( args );
+  cmd.env_remove( "PRO" );
+  for name in remove { cmd.env_remove( name ); }
+  for ( k, v ) in env { cmd.env( k, v ); }
+  cmd.output().expect( "failed to execute claude_profile binary" )
+}
+
 /// Run the binary with HOME and PRO removed from the environment.
 ///
 /// Removes both `HOME` and `PRO` so the binary cannot locate any credential
@@ -384,7 +406,7 @@ pub fn write_account_renewal_json( home : &std::path::Path, name : &str, renewal
 /// triggering cache fallback.
 ///
 /// - `h5_util` : consumed 5h quota percent (0–100). Gate 4 rejects `>= 85.0`.
-/// - `d7_util` : consumed 7d quota percent (0–100). Gate 6 requires `100 - d7_util > 5.0`.
+/// - `d7_util` : consumed 7d quota percent (0–100). Gate 6 requires `100 - d7_util > 3.0`.
 /// - `d7_resets_at` : optional ISO-8601 reset timestamp for the 7d period.
 ///
 /// The cache uses the `left_pct` field (actual stored name per `account.rs:period_json`)
@@ -442,6 +464,15 @@ pub fn write_account_claim_lock( home : &std::path::Path, name : &str, claim_loc
 pub fn write_account_reserve( home : &std::path::Path, name : &str, reserve : bool )
 {
   merge_account_meta( home, name, serde_json::json!({ "reserve": reserve }) );
+}
+
+/// Write `inference_provider` field into `{credential_store}/{name}.json`.
+///
+/// Used to pre-populate provider metadata for `.accounts`/`.usage` read-path tests (Feature 072).
+#[ inline ]
+pub fn write_account_inference_provider( home : &std::path::Path, name : &str, inference_provider : &str )
+{
+  merge_account_meta( home, name, serde_json::json!({ "inference_provider": inference_provider }) );
 }
 
 /// Check whether an account credential file exists.
@@ -603,17 +634,16 @@ pub fn write_account_with_token(
   // Pre-populate quota cache from the live snapshot so clp's 30s cache-first guard
   // (fetch.rs) skips the live API call entirely.  Without this, every parallel clp
   // invocation hits /api/oauth/usage and the burst of 429 rejections contaminates the
-  // test run.  With the snapshot written here, total API calls per process = 1.
-  if let Some( snap ) = live_quota_snapshot()
-  {
-    claude_profile::account::write_quota_cache(
-      &credential_store,
-      name,
-      snap.five_hour.as_ref().map( |( u, r )| ( *u, r.as_deref() ) ),
-      snap.seven_day.as_ref().map( |( u, r )| ( *u, r.as_deref() ) ),
-      snap.seven_day_sonnet.as_ref().map( |( u, r )| ( *u, r.as_deref() ) ),
-    );
-  }
+  // test run.  With the snapshot written here (file-cached across test processes),
+  // total API calls ≈ 1 per RUN — not per process; see live_quota_snapshot().
+  let snap = live_quota_snapshot();
+  claude_profile::account::write_quota_cache(
+    &credential_store,
+    name,
+    snap.five_hour.as_ref().map( |( u, r )| ( *u, r.as_deref() ) ),
+    snap.seven_day.as_ref().map( |( u, r )| ( *u, r.as_deref() ) ),
+    snap.seven_day_sonnet.as_ref().map( |( u, r )| ( *u, r.as_deref() ) ),
+  );
 }
 
 /// Write `~/.claude/.credentials.json` with an `accessToken` field.
@@ -662,101 +692,133 @@ struct QuotaSnapshot
   seven_day_sonnet : Option< ( f64, Option< String > ) >,
 }
 
-/// Fetch `/api/oauth/usage` exactly once per test process (OnceLock-protected).
+/// Location of the cross-process snapshot cache: the shared compilation cache
+/// (`CARGO_TARGET_DIR` — the runbox working volume in-container) so every test
+/// process in a run resolves the same file; temp dir as bare-host fallback.
+fn snapshot_cache_path() -> std::path::PathBuf
+{
+  let root = std::env::var( "CARGO_TARGET_DIR" )
+    .map_or_else( |_| std::env::temp_dir(), std::path::PathBuf::from );
+  root.join( "-live_quota_snapshot.tsv" )
+}
+
+/// True when the cache file exists and is younger than the sharing window.
 ///
-/// On first call one thread performs the live fetch; all parallel callers block
-/// until it completes and then share the cached result.  Returns `None` on
-/// HTTP 401/403 (auth failure) or absent live token.
+/// 300s covers one full suite run plus an immediate re-run. Staleness is
+/// harmless for correctness — the snapshot only pre-seeds quota caches whose
+/// displayed values tests treat as opaque live data — the TTL merely bounds
+/// how old that data can get.
+fn snapshot_cache_fresh( path : &std::path::Path ) -> bool
+{
+  const TTL : core::time::Duration = core::time::Duration::from_secs( 300 );
+  std::fs::metadata( path )
+    .and_then( |m| m.modified() )
+    .ok()
+    .and_then( |t| t.elapsed().ok() )
+    .is_some_and( |age| age < TTL )
+}
+
+/// Parse the cache file (one `window\tutilization\tresets_at` line per present
+/// window, `-` for absent `resets_at`). Any anomaly — empty file, unknown key,
+/// malformed field — returns `None` so the caller falls back to a live fetch;
+/// the cache can only save requests, never substitute bad data.
+fn read_snapshot_cache( path : &std::path::Path ) -> Option< QuotaSnapshot >
+{
+  let content = std::fs::read_to_string( path ).ok()?;
+  if content.trim().is_empty()
+  {
+    return None;
+  }
+  let mut snap = QuotaSnapshot { five_hour : None, seven_day : None, seven_day_sonnet : None };
+  for line in content.lines()
+  {
+    let mut parts = line.split( '\t' );
+    let key       = parts.next()?;
+    let util : f64 = parts.next()?.parse().ok()?;
+    let resets = match parts.next()?
+    {
+      "-" => None,
+      s   => Some( s.to_string() ),
+    };
+    match key
+    {
+      "five_hour"        => snap.five_hour        = Some( ( util, resets ) ),
+      "seven_day"        => snap.seven_day        = Some( ( util, resets ) ),
+      "seven_day_sonnet" => snap.seven_day_sonnet = Some( ( util, resets ) ),
+      _                  => return None,
+    }
+  }
+  Some( snap )
+}
+
+/// Write the cache best-effort (tmp file + atomic rename; a failed write just
+/// means the next process fetches live).
+fn write_snapshot_cache( path : &std::path::Path, snap : &QuotaSnapshot )
+{
+  use core::fmt::Write as _;
+  let mut out = String::new();
+  for ( key, val ) in
+  [
+    ( "five_hour", &snap.five_hour ),
+    ( "seven_day", &snap.seven_day ),
+    ( "seven_day_sonnet", &snap.seven_day_sonnet ),
+  ]
+  {
+    if let Some( ( util, resets ) ) = val
+    {
+      let _ = writeln!( out, "{key}\t{util}\t{}", resets.as_deref().unwrap_or( "-" ) );
+    }
+  }
+  let tmp = path.with_extension( format!( "tmp.{}", std::process::id() ) );
+  if std::fs::write( &tmp, out ).is_ok()
+  {
+    let _ = std::fs::rename( &tmp, path );
+  }
+}
+
+/// Fetch `/api/oauth/usage` once per test RUN — not once per test process.
 ///
-/// Transient errors (429, network failure) fall back to the HOST credential store
-/// cache via `host_quota_snapshot_from_cache()` — so tests proceed even when the
-/// active token is currently rate-limited.
+/// Two cache layers. The `OnceLock` dedups threads within one process; the file
+/// cache under `snapshot_cache_path()` dedups across processes. The second layer
+/// exists because nextest runs one PROCESS per test: ~100 live-seeded tests per
+/// suite would otherwise fire ~100 usage fetches per run, and the endpoint's
+/// rolling budget rejects that volume (HTTP 429) no matter how the requests are
+/// spaced — serialization and retries (.config/nextest.toml) handle burst and
+/// transient windows, this layer removes the volume itself.
+///
+/// Panics on any failure — missing token, auth failure (401/403), rate limit (429),
+/// or network error. The live API is required for this test; no cached or synthetic
+/// data is substituted (no silent skips): the file layer only ever reuses a
+/// successful fetch's data, never masks a failed fetch.
 ///
 /// The snapshot pre-populates the per-account quota cache in `write_account_with_token`
 /// so `clp .usage` hits fetch.rs's 30-second cache-first guard and skips the live
-/// endpoint entirely — keeping total `/api/oauth/usage` calls to **1** per test process.
-fn live_quota_snapshot() -> Option< &'static QuotaSnapshot >
+/// endpoint entirely — keeping total `/api/oauth/usage` calls to **~1 per run**.
+fn live_quota_snapshot() -> &'static QuotaSnapshot
 {
-  static SNAPSHOT : std::sync::OnceLock< Option< QuotaSnapshot > > = std::sync::OnceLock::new();
+  static SNAPSHOT : std::sync::OnceLock< QuotaSnapshot > = std::sync::OnceLock::new();
   SNAPSHOT.get_or_init( ||
   {
-    let token = live_active_token()?;
-    match claude_quota::fetch_oauth_usage( &token )
+    let cache = snapshot_cache_path();
+    if snapshot_cache_fresh( &cache )
     {
-      Ok( data ) => Some( QuotaSnapshot
+      if let Some( snap ) = read_snapshot_cache( &cache )
       {
-        five_hour        : data.five_hour.map( |p| ( p.utilization, p.resets_at ) ),
-        seven_day        : data.seven_day.map( |p| ( p.utilization, p.resets_at ) ),
-        seven_day_sonnet : data.seven_day_sonnet.map( |p| ( p.utilization, p.resets_at ) ),
-      } ),
-      Err( e ) =>
-      {
-        let msg = e.to_string();
-        // Auth failures mean the token is bad — no point reading stale cache.
-        if msg.contains( "HTTP 401" ) || msg.contains( "HTTP 403" ) { return None; }
-        // Transient error (429, network) — read from HOST credential store cache.
-        // When the store is unavailable (e.g. container without ~/.persistent
-        // mounted), fall back to synthetic defaults so the 30s cache-first guard
-        // in fetch.rs skips the live API call for all test subprocess invocations.
-        host_quota_snapshot_from_cache().or_else( || Some( synthetic_quota_snapshot() ) )
+        return snap;
       }
     }
-  } ).as_ref()
-}
-
-/// Read a `QuotaSnapshot` from the HOST credential store cache.
-///
-/// Used as a fallback when the live `/api/oauth/usage` call fails with a
-/// transient error (e.g. 429). Reads the active account's `.json` metadata
-/// from the real `PersistPaths` credential store and parses the `cache`
-/// section written by `account::write_quota_cache`.
-///
-/// Returns `None` if the credential store, active marker, metadata file,
-/// or cache section is absent or the cache status is not `"ok"`.
-fn host_quota_snapshot_from_cache() -> Option< QuotaSnapshot >
-{
-  let persist          = claude_profile::PersistPaths::new().ok()?;
-  let credential_store = persist.credential_store();
-  let marker           = credential_store.join( claude_profile::account::active_marker_filename() );
-  let raw_name         = std::fs::read_to_string( &marker ).ok()?;
-  let name             = raw_name.trim();
-  if name.is_empty() { return None; }
-  let meta_str = std::fs::read_to_string( credential_store.join( format!( "{name}.json" ) ) ).ok()?;
-  let val      : serde_json::Value = serde_json::from_str( &meta_str ).ok()?;
-  let cache    = val.get( "cache" )?;
-  if cache.get( "status" ).and_then( |v| v.as_str() ) != Some( "ok" ) { return None; }
-  let parse_period = | key : &str | -> Option< ( f64, Option< String > ) >
-  {
-    let p      = cache.get( key )?;
-    let util   = p.get( "left_pct" )?.as_f64()?;
-    let resets = p.get( "resets_at" ).and_then( |v| v.as_str() ).map( std::string::ToString::to_string );
-    Some( ( util, resets ) )
-  };
-  Some( QuotaSnapshot
-  {
-    five_hour        : parse_period( "five_hour" ),
-    seven_day        : parse_period( "seven_day" ),
-    seven_day_sonnet : parse_period( "seven_day_sonnet" ),
+    let token = live_active_token().expect( "live_quota_snapshot: live API token required — no ~/.claude/.credentials.json" );
+    let data  = claude_quota::fetch_oauth_usage( &token )
+      .expect( "live_quota_snapshot: /api/oauth/usage unreachable — live API required for this test" );
+    let snap = QuotaSnapshot
+    {
+      five_hour        : data.five_hour.map( |p| ( p.utilization, p.resets_at ) ),
+      seven_day        : data.seven_day.map( |p| ( p.utilization, p.resets_at ) ),
+      seven_day_sonnet : data.seven_day_sonnet.map( |p| ( p.utilization, p.resets_at ) ),
+    };
+    write_snapshot_cache( &cache, &snap );
+    snap
   } )
-}
-
-/// Synthetic quota snapshot — final fallback when both live API and host cache fail.
-///
-/// Used when `/api/oauth/usage` returns a transient error (429, network) AND
-/// the host credential store is unavailable (e.g. a container environment where
-/// `~/.persistent` is not mounted).  Values represent a healthy account (80 %
-/// remaining, far-future resets) so all test assertions against status, percentage
-/// extraction, and next-event logic see consistent non-error output from the binary.
-fn synthetic_quota_snapshot() -> QuotaSnapshot
-{
-  // Far-future resets_at avoids 7d/5h window-expiry edge cases during the run.
-  let resets_at = "2027-07-02T00:00:00Z".to_string();
-  QuotaSnapshot
-  {
-    five_hour        : Some( ( 80.0, Some( resets_at.clone() ) ) ),
-    seven_day        : Some( ( 80.0, Some( resets_at.clone() ) ) ),
-    seven_day_sonnet : Some( ( 80.0, Some( resets_at ) ) ),
-  }
 }
 
 /// Assert that the live Anthropic API is reachable before running a `lim_it` test.

@@ -13,7 +13,7 @@
 
 **Parsing:** A hand-rolled parser (no external CLI framework) validates an explicit whitelist of known flags; unknown flags produce an error with a `--help` hint. Positional arguments are joined with spaces to form the message. Duplicate value-flags resolve last-wins (matches curl/git convention).
 
-**Mode selection:** `clr` defaults to print mode when a message is present (captured stdout via `execute()` + `--print`); bare `clr` (no message) opens the interactive REPL. `--interactive` opts into TTY passthrough when a message is given; `-p`/`--print` remains as an explicit alias.
+**Mode selection:** `clr` defaults to print mode (captured stdout via `execute()` + `--print`) when a message is present, stdin is not a terminal (piped/redirected/non-interactive shell), or `--file`/piped stdin content supplies the prompt. Bare `clr` invoked from a genuine terminal — no message, no `--file`/stdin content — opens the interactive REPL instead. `--interactive` forces TTY passthrough unconditionally, overriding all three print-mode terms alike (message presence, non-TTY stdin, or `--file`/stdin content) — e.g. resuming a prior session with no new message under non-TTY stdin; `-p`/`--print` remains as an explicit alias and takes priority if both flags are set.
 
 **Session handling:** Session continuation (`-c`) is injected by default when a prior session exists for the effective working directory; `--new-session` is the only way to disable it.
 
@@ -30,14 +30,14 @@
 | ID | Decision | Category |
 |----|----------|----------|
 | D2 | `--verbose` vs `--quiet` (supersedes `--verbosity`) | Parameter Conventions |
-| D3 | Print mode requires a message | Behavior |
+| D3 | Requested print mode requires a message, `--file`, or stdin content | Behavior |
 | D4 | Positional args joined as message | Syntax |
 | D5 | Unknown flags rejected | Parsing |
 | D6 | Duplicate value-flags: last wins | Parameter Conventions |
 | D7 | Hand-rolled parser over clap/unilang | Parsing |
 | D9 | Session continuation by default | Behavior |
 | D10 | Binary named `clr`, crate named `claude_runner` | Naming |
-| D11 | Print by default when message given; `--interactive` to opt into TTY | Behavior |
+| D11 | Print by default when message given, stdin is non-TTY, or file/stdin content is present; `--interactive` to opt into TTY | Behavior |
 | D12 | Expose `--system-prompt` (replace) despite capability loss | Parameter Conventions |
 | D13 | Commands are bare words, not `--` flags | Syntax |
 | D14 | Dedicated `refresh` command vs reusing `isolated` | Behavior |

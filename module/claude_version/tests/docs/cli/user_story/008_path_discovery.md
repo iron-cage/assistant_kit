@@ -4,9 +4,9 @@ Acceptance tests for User Story 008. See [user_story/008_path_discovery.md](../.
 
 ### Scope
 
-- **Purpose**: Verify `.paths` reports all clv-managed filesystem paths with labels, single-key lookup, and scriptable output.
+- **Purpose**: Verify `.version.paths` reports all clv-managed filesystem paths with labels, single-key lookup, and scriptable output.
 - **Responsibility**: Acceptance criteria coverage for the path discovery workflow.
-- **Commands:** `.paths`
+- **Commands:** `.version.paths`
 - **In Scope**: Show-all mode, single-key mode, plain/labeled/described verbosity tiers, JSON output, unresolvable path handling.
 - **Out of Scope**: Unlabeled pipeline enumeration (-> `../command/15_runtime_files.md`), key edge cases (-> `../type/09_path_key.md`).
 
@@ -14,13 +14,13 @@ Acceptance tests for User Story 008. See [user_story/008_path_discovery.md](../.
 
 | ID | Test Name | Category |
 |----|-----------|----------|
-| US-1 | `.paths` shows all 5 keys, each labeled | Acceptance: show-all |
-| US-2 | `.paths key::versions_dir` shows single resolved path | Acceptance: single-key |
-| US-3 | `.paths v::0` outputs plain unlabeled paths | Acceptance: scripting |
-| US-4 | `.paths format::json` returns valid JSON object with all keys | Acceptance: JSON output |
+| US-1 | `.version.paths` shows all 5 keys, each labeled | Acceptance: show-all |
+| US-2 | `.version.paths key::versions_dir` shows single resolved path | Acceptance: single-key |
+| US-3 | `.version.paths v::0` outputs plain unlabeled paths | Acceptance: scripting |
+| US-4 | `.version.paths format::json` returns valid JSON object with all keys | Acceptance: JSON output |
 | US-5 | Unresolvable `project_settings` shown as "(none found)" at v::1 | Acceptance: unresolvable handling |
-| US-6 | `.paths key::bogus` exits 1 | Acceptance: error handling |
-| US-7 | `.paths v::2` shows descriptions | Acceptance: verbose detail |
+| US-6 | `.version.paths key::bogus` exits 1 | Acceptance: error handling |
+| US-7 | `.version.paths v::2` shows descriptions | Acceptance: verbose detail |
 
 ## Test Coverage Summary
 
@@ -38,37 +38,37 @@ Acceptance tests for User Story 008. See [user_story/008_path_discovery.md](../.
 
 ---
 
-### US-1: `.paths` shows all 5 keys, each labeled
+### US-1: `.version.paths` shows all 5 keys, each labeled
 
 - **Given:** `HOME=<tmp>`
-- **When:** `clv.paths`
+- **When:** `clv.version.paths`
 - **Then:** exit 0; stdout contains a labeled line for each of `settings`, `project_settings`, `versions_dir`, `binary_symlink`, `version_history_cache`
 - **Exit:** 0
 
 ---
 
-### US-2: `.paths key::versions_dir` shows single resolved path
+### US-2: `.version.paths key::versions_dir` shows single resolved path
 
 - **Given:** `HOME=<tmp>`
-- **When:** `clv.paths key::versions_dir`
+- **When:** `clv.version.paths key::versions_dir`
 - **Then:** exit 0; stdout contains exactly the resolved versions directory path
 - **Exit:** 0
 
 ---
 
-### US-3: `.paths v::0` outputs plain unlabeled paths
+### US-3: `.version.paths v::0` outputs plain unlabeled paths
 
 - **Given:** `HOME=<tmp>`
-- **When:** `clv.paths v::0`
+- **When:** `clv.version.paths v::0`
 - **Then:** exit 0; stdout lines contain no labels, only raw paths, suitable for `xargs`/`while read` consumption
 - **Exit:** 0
 
 ---
 
-### US-4: `.paths format::json` returns valid JSON object with all keys
+### US-4: `.version.paths format::json` returns valid JSON object with all keys
 
 - **Given:** `HOME=<tmp>`
-- **When:** `clv.paths format::json`
+- **When:** `clv.version.paths format::json`
 - **Then:** exit 0; stdout is valid JSON parseable as an object; object has keys `settings`, `project_settings`, `versions_dir`, `binary_symlink`, `version_history_cache`
 - **Exit:** 0
 
@@ -77,25 +77,25 @@ Acceptance tests for User Story 008. See [user_story/008_path_discovery.md](../.
 ### US-5: Unresolvable project_settings shown as "(none found)" at v::1
 
 - **Given:** `HOME=<tmp>`; no ancestor `.claude/settings.json` from current directory
-- **When:** `clv.paths`
+- **When:** `clv.version.paths`
 - **Then:** exit 0; stdout contains `project_settings:` followed by a `(none found)` placeholder
 - **Exit:** 0
 
 ---
 
-### US-6: `.paths key::bogus` exits 1
+### US-6: `.version.paths key::bogus` exits 1
 
 - **Given:** `HOME=<tmp>`
-- **When:** `clv.paths key::bogus`
+- **When:** `clv.version.paths key::bogus`
 - **Then:** exit 1; stderr names the invalid key and lists valid values
 - **Exit:** 1
 
 ---
 
-### US-7: `.paths v::2` shows descriptions
+### US-7: `.version.paths v::2` shows descriptions
 
 - **Given:** `HOME=<tmp>`
-- **When:** `clv.paths key::binary_symlink v::2`
+- **When:** `clv.version.paths key::binary_symlink v::2`
 - **Then:** exit 0; stdout contains the path plus a one-line description of the path's purpose
 - **Exit:** 0
 

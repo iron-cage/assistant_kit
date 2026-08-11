@@ -9,23 +9,26 @@
 
 ### Abstract
 
-Claude Code stores CLI sessions in directories whose names are filesystem-safe encodings of the project's working directory path. This library implements the same encoding to locate sessions by path. The encoding is fundamentally **lossy**: `/` (path separator), `_` (underscore), and `-` (hyphen already in a name) all collapse to `-` in the encoded output, so the decoder can only reconstruct the original path heuristically.
+Claude Code stores CLI sessions in directories whose names are filesystem-safe encodings of the project's working directory path. This library implements the same encoding to locate sessions by path. The encoding is fundamentally **lossy**: every non-alphanumeric character (`/` path separator, `_` underscore, `-` hyphen already in a name, `.` dot, and any other punctuation) collapses to `-` in the encoded output, so the decoder can only reconstruct the original path heuristically.
+
+<!-- BUG-366 — encode_path() dot-handling divergence: algorithm doc updated to describe corrected blanket non-alphanumeric substitution + 200-char/djb2-hash fallback -->
 
 ### Algorithm
-
-<!-- BUG-366 ../../../task/claude_storage_core/bug/unverified/366_encode_path_dot_handling_divergence.md — documents only 3 substitutions (/, _, existing -); missing dot/non-alphanumeric handling and the 200-char/hash fallback the real Claude Code algorithm uses -->
 
 **Encoding:**
 1. Strip leading and trailing `/` from the input path.
 2. Split on `/` into path components. Error if the result is empty (e.g., root path `/`) or the path is not valid UTF-8.
-3. Replace every `_` (underscore) with `-` (hyphen) in each component — lossy; the original underscore is not recoverable from the encoded form.
+3. Replace every non-alphanumeric character (`_`, `.`, and any other punctuation — not just underscore) with `-` (hyphen) in each component — lossy; the original character is not recoverable from the encoded form.
 4. Prefix the entire result with `-`.
 5. For each component after the first, insert a separator before it:
    - If the (post-normalization) component begins with `-`: insert `--` (double-hyphen), then the component body without its leading `-`.
    - Otherwise: insert a single `-`, then the component as-is.
    - The first component follows the same rule, using a single `-` for the leading marker instead of a path separator.
+6. If the fully-assembled result exceeds 200 characters, truncate it to 200 characters and append a `-<djb2-hash>` suffix (hex-encoded djb2 hash — XOR-combine variant, masked to 63 bits every iteration — of the *original*, pre-truncation path string), so distinct long paths sharing the same first 200 encoded characters don't collide into the same directory name.
 
 Example: `/commands/-default_topic` → `-commands--default-topic` (the underscore in `default_topic` becomes a hyphen, same as the `/` separators).
+
+Example: `/home/user/file.txt` → `-home-user-file-txt` (the dot before the extension becomes a hyphen too — every non-alphanumeric character is treated identically, not just `_`).
 
 `--` unambiguously means "path component starting with hyphen", which resolves the ambiguity where `-a--b-c` could otherwise be read as `/-a_b/c` or `/-a_b_c`.
 
@@ -48,8 +51,10 @@ Example: `/commands/-default_topic` → `-commands--default-topic` (the undersco
 | Path with non-UTF-8 bytes | Error: UTF-8 validation failure |
 | Hyphen-prefixed component (`/-name`) | Double-hyphen prefix in output: `--name` |
 | Underscore in component (`my_project`) | Lossy: becomes `my-project`; decoder uses heuristics |
+| Dot or other punctuation in component (`file.txt`) | Lossy: becomes `file-txt` — every non-alphanumeric character is treated identically to `_` |
 | Consecutive hyphen-prefixed dirs (`/-a/-b`) | `--a--b` — each gets a `--` prefix |
 | Path with literal hyphen (`/foo-bar`) | `-foo-bar` — indistinguishable from `/foo/bar` encoded |
+| Encoded result exceeds 200 characters | Truncated to 200 chars, `-<djb2-hash>` suffix appended (hash of the original, pre-truncation path) |
 
 ### Cross-References
 

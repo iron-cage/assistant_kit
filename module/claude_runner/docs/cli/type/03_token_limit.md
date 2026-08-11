@@ -6,7 +6,7 @@ the `CLAUDE_CODE_MAX_OUTPUT_TOKENS` environment variable.
 - **Purpose:** Maximum output token count
 - **Fundamental Type:** unsigned 32-bit integer
 - **Constants:** —
-- **Constraints:** 0 to 4294967295; default 200000
+- **Constraints:** 0 to 4294967295; default 128000
 - **Parsing:** integer parse; rejects negative, float, non-numeric
 - **Methods:** —
 

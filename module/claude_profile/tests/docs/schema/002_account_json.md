@@ -16,6 +16,7 @@ format compliance, and append-only history behavior.
 | SC-4 | JSON format: 2-space pretty-print, trailing newline | Encoding | ✅ |
 | SC-5 | `history` array appended — never truncated by successful fetch | Append-Only | ✅ |
 | SC-6 | `cache` updated atomically on successful API call | Cache Write | ✅ |
+| SC-7 | `inference_provider` written only when explicitly given; preserved by unrelated saves | Preserved-Only Fields | 🔲 |
 
 ---
 
@@ -24,7 +25,12 @@ format compliance, and append-only history behavior.
 - **Given:** `{name}.json` contains `_renewal_at`, `host`, and `role` fields not provided by the current save operation
 - **When:** `.account.save` is invoked again for the same account (without specifying `_renewal_at`, `host::`, or `role::`)
 - **Then:** All 3 preserved-only fields remain in `{name}.json` unchanged — `save()` performs a read-merge, not a clobber
-- **Source fn:** `as29_resave_credentials_unchanged` (cli/account_renewal_test_b.rs)
+- **Note:** Direct test evidence covers `_renewal_at` preservation only (shared with SC-2).
+  `host` and `role` traverse the same `save()` read-merge code path but are independently
+  tested only for their EXPLICIT-overwrite behavior (`as26_host_resave_overwrites`,
+  `as33_role_resave_overwrites` in `tests/cli/account_renewal_test_b.rs`), not
+  omission-preservation specifically.
+- **Source fn:** `as22_save_preserves_renewal_at` in `tests/cli/account_renewal_test.rs`
 - **Source:** [docs/schema/002_account_json.md §Format §Preserved-Only Fields](../../../docs/schema/002_account_json.md)
 
 ---
@@ -34,7 +40,7 @@ format compliance, and append-only history behavior.
 - **Given:** `{name}.json` has `_renewal_at` set by a prior `.account.renewal` call
 - **When:** `.account.save` is invoked without providing `at::` or `from_now::`
 - **Then:** `_renewal_at` remains unchanged in `{name}.json` — `.account.save` never touches this field
-- **Source fn:** `as29_resave_credentials_unchanged` (cli/account_renewal_test_b.rs)
+- **Source fn:** `as22_save_preserves_renewal_at` in `tests/cli/account_renewal_test.rs`
 - **Source:** [docs/schema/002_account_json.md §Preserved-Only Fields](../../../docs/schema/002_account_json.md)
 
 ---
@@ -76,3 +82,13 @@ format compliance, and append-only history behavior.
 - **Then:** All `cache` subfields (`fetched_at`, `five_hour`, `seven_day`, `seven_day_sonnet`) are written as a single coherent object — no partial write leaves mismatched fields
 - **Source fn:** `sc6_002_quota_cache_all_subfields_written_atomically` (account_tests.rs)
 - **Source:** [docs/schema/002_account_json.md §Field Table (cache)](../../../docs/schema/002_account_json.md)
+
+---
+
+### SC-7: `inference_provider` written only when explicitly given; preserved by unrelated saves
+
+- **Given:** `{name}.json` does not yet contain an `inference_provider` key.
+- **When:** `.account.save` is invoked without `inference_provider::` — then, in a second scenario, `{name}.json` already has `"inference_provider": "kimi"` and `.account.save` is invoked again without `inference_provider::`.
+- **Then:** First scenario: `{name}.json` still has no `inference_provider` key at all — the field is never written as the literal default `"anthropic"`. Second scenario: `"inference_provider": "kimi"` remains unchanged — `save()`'s read-merge preserves it exactly like `_renewal_at`, `owner`, `host`, and `role` (SC-1, SC-2, SC-3).
+- **Source fn:** *(planned — not yet implemented)*
+- **Source:** [docs/schema/002_account_json.md §Preserved-Only Fields](../../../docs/schema/002_account_json.md), [feature/072_inference_provider_selection.md AC-02](../../../docs/feature/072_inference_provider_selection.md)

@@ -47,6 +47,7 @@ For most use cases, `--append-system-prompt` is the correct choice.
 |---|---------|---------|-------|
 | 1 | [`run`](../command/01_run.md) | — | — |
 | 5 | [`ask`](../command/05_ask.md) | — | — |
+| 3 | [`isolated`](../command/03_isolated.md) | — | Forwarded to claude subprocess; env: `CLR_SYSTEM_PROMPT` |
 
 ### Referenced User Stories
 

@@ -29,7 +29,7 @@ mod params_extended;
 ///
 /// let result = ClaudeCommand::new()
 ///   .with_working_directory( "/home/user/project" )
-///   .with_max_output_tokens( 200_000 )
+///   .with_max_output_tokens( 128_000 )
 ///   .execute()?;
 /// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
@@ -114,6 +114,13 @@ impl ClaudeCommand {
     // Root cause: Migration from factory pattern didnt preserve correct default value
     // Pitfall: Always verify defaults match specification when refactoring APIs
 
+    // Fix(BUG-429): Default token limit corrected from 200K to 128K
+    // Root cause: 200K exceeded every current model's real max-output-token ceiling (128K on
+    //             Sonnet 5/Opus 4.8/Fable 5, the current tier — see contract/claude_code/docs/model/)
+    //             — context-window size was confused with output-token size at authoring time
+    // Pitfall: max_output_tokens must track the model's OUTPUT ceiling, not its CONTEXT window;
+    //          the two are unrelated axes and easy to conflate when picking a default value
+
     // Fix(issue-bash-timeout-default): Bash timeouts increased from 2min/10min to 1hr/2hr
     // Root cause: Standard 2min default causes premature timeout in real automation workflows
     // Pitfall: Always set explicit timeouts matching actual operation duration needs
@@ -133,7 +140,7 @@ impl ClaudeCommand {
 
     Self {
       working_directory: None,
-      max_output_tokens: Some( 200_000 ),
+      max_output_tokens: Some( 128_000 ),
       continue_conversation: false,
       message: None,
       args: Vec::new(),
@@ -167,6 +174,37 @@ impl ClaudeCommand {
       stdin_content: None,
       unset_claudecode: true,
     }
+  }
+
+  /// Ordered list of environment variable names to remove from the subprocess environment.
+  ///
+  /// SINGLE SOURCE OF TRUTH for env-var removals: both [`build_command`](Self::build_command)
+  /// (real execution — removes each via `Command::env_remove`) and [`describe`](Self::describe)
+  /// (trace/dry-run display — renders each as a `-u NAME` token in the `env` prefix) iterate
+  /// this same list. A new removal is added here exactly once and automatically appears in both
+  /// real execution and display — there is no second call site to update, so the two cannot
+  /// structurally diverge.
+  ///
+  /// # Fixed removals
+  ///
+  /// - `CLAUDE_CODE_CHILD_SESSION` — always stripped: `clr` is always a top-level launcher,
+  ///   never a subordinate child of another Claude Code process. Propagating the marker into
+  ///   the subprocess it spawns causes a spurious "inherited `CLAUDE_CODE_CHILD_SESSION` marker"
+  ///   transcript-saving warning inside the new Claude Code session.
+  ///
+  /// # Conditional removals
+  ///
+  /// - `CLAUDECODE` — stripped unless `unset_claudecode` is false (set via `--keep-claudecode`).
+  #[inline]
+  fn removed_vars( &self ) -> Vec< &'static str >
+  {
+    let mut vars = Vec::new();
+    if self.unset_claudecode
+    {
+      vars.push( "CLAUDECODE" );
+    }
+    vars.push( "CLAUDE_CODE_CHILD_SESSION" );
+    vars
   }
 
   /// Ordered list of `(env var name, value)` pairs this command will set on the subprocess.
@@ -276,8 +314,11 @@ impl ClaudeCommand {
   /// Describe only the invocation line (no `cd` prefix)
   ///
   /// Unlike `describe()`, this always returns a single line (without the leading `cd /dir` line).
-  /// When `unset_claudecode` is active (the default), the line starts with `env -u CLAUDECODE claude ...`;
-  /// when disabled via `with_unset_claudecode(false)`, it starts with `claude ...`.
+  /// When `unset_claudecode` is active (the default), the line starts with
+  /// `env -u CLAUDECODE -u CLAUDE_CODE_CHILD_SESSION claude ...`;
+  /// when disabled via `with_unset_claudecode(false)`, it starts with
+  /// `env -u CLAUDE_CODE_CHILD_SESSION claude ...` — `CLAUDE_CODE_CHILD_SESSION` is always
+  /// stripped regardless of `unset_claudecode`; see [`removed_vars`](Self::removed_vars).
   ///
   /// # Critical: Implementation Must Use `describe().lines().last()`
   ///
@@ -323,7 +364,10 @@ impl ClaudeCommand {
   /// The command-line flag order in the output is fixed by the implementation,
   /// **not** by the order in which `with_*` builder methods are called. The order is:
   ///
-  /// 0. `env -u CLAUDECODE` prefix (if `unset_claudecode` is true, the default)
+  /// 0. `env` removal prefix, built from [`removed_vars()`](Self::removed_vars):
+  ///    always includes `-u CLAUDE_CODE_CHILD_SESSION`; includes `-u CLAUDECODE` when
+  ///    `unset_claudecode` is true (the default). Omitted entirely only when
+  ///    `removed_vars()` returns an empty list (not possible with current defaults).
   /// 1. `--dangerously-skip-permissions` (if `skip_permissions` is true)
   /// 2. `--chrome` or `--no-chrome` (from `chrome` field; default `Some(true)` = `--chrome`)
   /// 3. custom args (in insertion order via `with_arg`)
@@ -366,17 +410,27 @@ impl ClaudeCommand {
       lines.push( format!( "cd {}", dir.display() ) );
     }
 
-    // Fix(BUG-246): prefix `env -u CLAUDECODE` when unset_claudecode is active so
-    //   trace/dry-run output is WYSIWYG — what you see is what subprocess actually runs.
-    // Root cause: describe() started with "claude" unconditionally; env_remove("CLAUDECODE")
-    //   in build_command() is an OS-level call invisible in the displayed command string.
-    let mut parts = if self.unset_claudecode
+    // Fix(BUG-246 + child-session-strip): build the `env -u …` removal prefix from
+    //   removed_vars() — the shared single source of truth for both build_command() and
+    //   describe(). Adding a new removal to removed_vars() automatically propagates here
+    //   and into real execution with no second call site to update.
+    // Root cause (BUG-246): describe() started with "claude" unconditionally; env_remove()
+    //   calls in build_command() were OS-level calls invisible in the displayed string.
+    let removed = self.removed_vars();
+    let mut parts = if removed.is_empty()
     {
-      vec![ "env".to_string(), "-u".to_string(), "CLAUDECODE".to_string(), "claude".to_string() ]
+      vec![ "claude".to_string() ]
     }
     else
     {
-      vec![ "claude".to_string() ]
+      let mut p = vec![ "env".to_string() ];
+      for var in &removed
+      {
+        p.push( "-u".to_string() );
+        p.push( ( *var ).to_string() );
+      }
+      p.push( "claude".to_string() );
+      p
     };
 
     for token in self.arg_tokens() {
@@ -439,7 +493,7 @@ impl ClaudeCommand {
   ///
   /// let env = ClaudeCommand::new().describe_env();
   ///
-  /// assert!( env.contains( "export CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000" ) );
+  /// assert!( env.contains( "export CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000" ) );
   /// assert!( env.contains( "export CLAUDE_CODE_BASH_TIMEOUT=3600000" ) );
   /// ```
   #[inline]
@@ -471,7 +525,7 @@ impl ClaudeCommand {
   /// let mut lines = full.lines();
   ///
   /// assert!( lines.next().unwrap().starts_with( "export CLAUDE_CODE_MAX_OUTPUT_TOKENS=" ) );
-  /// assert!( full.contains( "\n\nenv -u CLAUDECODE claude" ), "blank line must separate env block from invocation" );
+  /// assert!( full.contains( "\n\nenv -u CLAUDECODE" ), "blank line must separate env block from invocation" );
   /// ```
   #[inline]
   #[must_use]
@@ -498,7 +552,7 @@ impl ClaudeCommand {
   /// use claude_runner_core::ClaudeCommand;
   ///
   /// let result = ClaudeCommand::new()
-  ///   .with_max_output_tokens( 200_000 )
+  ///   .with_max_output_tokens( 128_000 )
   ///   .execute()?;
   /// println!( "{}", result.stdout );
   /// # Ok::<(), Box<dyn std::error::Error>>(())
@@ -578,7 +632,7 @@ impl ClaudeCommand {
   /// use claude_runner_core::ClaudeCommand;
   ///
   /// let exit_status = ClaudeCommand::new()
-  ///   .with_max_output_tokens( 200_000 )
+  ///   .with_max_output_tokens( 128_000 )
   ///   .execute_interactive()?;
   /// # Ok::<(), Box<dyn std::error::Error>>(())
   /// ```
@@ -664,9 +718,9 @@ impl ClaudeCommand {
       cmd.env( key, value );
     }
 
-    if self.unset_claudecode
+    for var in self.removed_vars()
     {
-      cmd.env_remove( "CLAUDECODE" );
+      cmd.env_remove( var );
     }
 
     for token in self.arg_tokens() {

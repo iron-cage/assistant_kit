@@ -38,17 +38,16 @@ clv .status v::3       # error: out of range
 | 3 | [`.version.install`](../command/version.md#command-4-versioninstall) | `v::` |
 | 4 | [`.version.guard`](../command/version.md#command-5-versionguard) | `v::` |
 | 5 | [`.version.list`](../command/version.md#command-6-versionlist) | `v::` |
-| 6 | [`.processes`](../command/processes.md#command-7-processes) | `v::` |
-| 7 | [`.processes.kill`](../command/processes.md#command-8-processeskill) | `v::` |
+| 6 | [`.ps`](../command/ps.md#command-7-ps) | `v::` |
+| 7 | [`.ps.kill`](../command/ps.md#command-8-pskill) | `v::` |
 | 8 | [`.settings.show`](../command/settings.md#command-9-settingsshow) | `v::` |
 | 9 | [`.settings.get`](../command/settings.md#command-10-settingsget) | `v::` |
-| 10 | [`.version.history`](../command/version.md#command-12-versionhistory) | `v::` |
-| 11 | [`.config`](../command/config.md#command-13-config) | `v::` |
-| 12 | [`.params`](../command/params.md#command-14-params) | `v::` |
-| 13 | [`.paths`](../command/paths.md#command-16-paths) | `v::` |
+| 10 | [`.config`](../command/config.md#command-13-config) | `v::` |
+| 11 | [`.params`](../command/params.md#command-14-params) | `v::` |
+| 12 | [`.version.paths`](../command/version.md#command-16-versionpaths) | `v::` |
 
 ### Referenced Parameters
 
 | # | Parameter | Commands |
 |---|-----------|---------|
-| 1 | [`v::`](../param/04_v.md) | 13 |
+| 1 | [`v::`](../param/04_v.md) | 12 |

@@ -53,11 +53,13 @@ Where `seven_day_left = 100.0 - seven_day.utilization` and `seven_day_sonnet_lef
 | `7d_reset_secs` | `seven_day.resets_at` (ISO 8601 → unix secs) | absent |
 | `sub_renewal_secs` | `renewal_at` (ISO 8601) or estimated from `org_created_at` | absent |
 
-Source locations: `sort.rs:113-116` (`7d_reset_secs`), `sort.rs:117-121` (`sub_renewal_secs`).
+**Known Limitation (BUG-341):** `sub_renewal_secs`'s `org_created_at` estimate leg currently reads via the stale gated path `aq.account.as_ref().map(|a| a.org_created_at.as_str())` instead of the top-level `aq.org_created_at` field populated by the BUG-327 cache-persistence fix. For accounts refreshed from cache (`account` field `None`), this silently degrades the estimate leg to `u64::MAX` instead of the real estimated renewal, which can misorder `sort::renew`/`sort::renews` results. Not yet fixed as of this writing — see `task/claude_profile/bug/verified/341_renewal_sort_stale_account_gated_read.md`.
+
+Source locations: `sort.rs:138-152` (`renewal_event_secs`, `sort::renew`), `sort.rs:179-187` (`renews_secs_of`, `sort::renews`).
 
 #### Group Invariant
 
-Sorting is always applied within status groups — the 4-group partition (Green → h-exhausted → weekly-exhausted → Dead) is never reordered by any strategy. Both-exhausted accounts (5h ≤ 15% AND 7d ≤ 5%) merge into G3 weekly-exhausted — the 7d constraint is binding in both cases. `desc::` reverses row order within each group only.
+Sorting is always applied within status groups — the 4-group partition (Green → h-exhausted → weekly-exhausted → Dead) is never reordered by any strategy. Both-exhausted accounts (5h ≤ 15% AND 7d ≤ 3%) merge into G3 weekly-exhausted — the 7d constraint is binding in both cases. `desc::` reverses row order within each group only.
 
 ### Features
 

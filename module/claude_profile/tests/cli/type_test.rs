@@ -216,7 +216,7 @@ fn warning_threshold_tc1_zero_accepted()
   let home = dir.path().to_str().unwrap();
   write_credentials( dir.path(), "max", "default", FAR_FUTURE_MS );
   let out = run_cs_with_env(
-    &[ ".token.status", "threshold::0" ],
+    &[ ".credentials.status", "threshold::0" ],
     &[ ( "HOME", home ) ],
   );
   assert_exit( &out, 0 );
@@ -230,7 +230,7 @@ fn warning_threshold_tc2_default_value_accepted()
   let home = dir.path().to_str().unwrap();
   write_credentials( dir.path(), "max", "default", FAR_FUTURE_MS );
   let out = run_cs_with_env(
-    &[ ".token.status", "threshold::3600" ],
+    &[ ".credentials.status", "threshold::3600" ],
     &[ ( "HOME", home ) ],
   );
   assert_exit( &out, 0 );
@@ -244,7 +244,7 @@ fn warning_threshold_tc3_large_value_accepted()
   let home = dir.path().to_str().unwrap();
   write_credentials( dir.path(), "max", "default", FAR_FUTURE_MS );
   let out = run_cs_with_env(
-    &[ ".token.status", "threshold::86400" ],
+    &[ ".credentials.status", "threshold::86400" ],
     &[ ( "HOME", home ) ],
   );
   assert_exit( &out, 0 );
@@ -258,7 +258,7 @@ fn warning_threshold_tc4_non_numeric_rejected()
   let home = dir.path().to_str().unwrap();
   write_credentials( dir.path(), "max", "default", FAR_FUTURE_MS );
   let out = run_cs_with_env(
-    &[ ".token.status", "threshold::abc" ],
+    &[ ".credentials.status", "threshold::abc" ],
     &[ ( "HOME", home ) ],
   );
   assert_exit( &out, 1 );

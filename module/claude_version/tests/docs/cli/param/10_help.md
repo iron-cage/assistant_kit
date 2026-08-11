@@ -101,7 +101,7 @@ Edge case coverage for the `.help` parameter. See [param/readme.md](../../../../
 ### EC-7: `.help` accepted by all commands
 
 - **Given:** clean environment
-- **When:** `clv .settings.show .help`, `clv .processes .help`, `clv .config .help`
+- **When:** `clv .settings.show .help`, `clv .ps .help`, `clv .config .help`
 - **Then:** all exit 0; help text shown in each case; no "unknown parameter" error
 - **Exit:** 0
 - **Source:** [param/10_help.md — commands: all](../../../../docs/cli/param/10_help.md)
@@ -122,14 +122,14 @@ Edge case coverage for the `.help` parameter. See [param/readme.md](../../../../
 
 | Function | File |
 |----------|------|
-| `tc001_empty_argv_shows_help` | `cli_args_test/help_test.rs` |
-| `tc002_dot_help` | `cli_args_test/help_test.rs` |
-| `tc038_help_in_second_position` | `cli_args_test/help_test.rs` |
-| `tc039_help_after_multi_part_command` | `cli_args_test/help_test.rs` |
-| `tc040_help_after_params` | `cli_args_test/help_test.rs` |
-| `ec3_help_mutation_no_side_effects` | `cli_args_test/help_test.rs` |
-| `ec4_help_position_first_arg` | `cli_args_test/help_test.rs` |
-| `ec5_absent_help_not_triggered` | `cli_args_test/help_test.rs` |
-| `ec6_help_output_contains_commands` | `cli_args_test/help_test.rs` |
-| `ec7_help_accepted_by_all_commands` | `cli_args_test/help_test.rs` |
-| `ec8_help_wins_over_params` | `cli_args_test/help_test.rs` |
+| `tc001_empty_argv_shows_help` | `tests/cli_args_test/help_test.rs` |
+| `tc002_dot_help` | `tests/cli_args_test/help_test.rs` |
+| `tc038_help_in_second_position` | `tests/cli_args_test/help_test.rs` |
+| `tc039_help_after_multi_part_command` | `tests/cli_args_test/help_test.rs` |
+| `tc040_help_after_params` | `tests/cli_args_test/help_test.rs` |
+| `ec3_help_mutation_no_side_effects` | `tests/cli_args_test/help_test.rs` |
+| `ec4_help_position_first_arg` | `tests/cli_args_test/help_test.rs` |
+| `ec5_absent_help_not_triggered` | `tests/cli_args_test/help_test.rs` |
+| `ec6_help_output_contains_commands` | `tests/cli_args_test/help_test.rs` |
+| `ec7_help_accepted_by_all_commands` | `tests/cli_args_test/help_test.rs` |
+| `ec8_help_wins_over_params` | `tests/cli_args_test/help_test.rs` |

@@ -21,7 +21,9 @@ The implementation is factored into two levels to support callers with different
 
 **UUID selection — most-recent mtime:**
 
-When multiple `.jsonl` session files exist in the storage directory, `most_recent_session_in_dir()` returns the UUID of the file with the highest modification time. This matches Claude Code's own `-c`/`--continue` resolution: Claude resumes the most-recently-modified session when no explicit UUID is given.
+When multiple `.jsonl` session files exist in the storage directory, `most_recent_session_in_dir()` returns the UUID of the file with the highest modification time. This matches Claude Code's own `-c`/`--continue` file-*selection* behavior — which file Claude would pick, if it accepts any. It does NOT match Claude's own resumability-*acceptance* criterion: Claude's real `--resume`/`-c` logic independently rejects a qualifying file whose originating run produced zero model turns (see `contract/claude_code/docs/version/088_v2_1_187.md`), a content-level check this function never performs. A file can satisfy every rule below and still be refused by Claude at resume time.
+
+<!-- BUG-428 — qualified the file-selection/resumability-acceptance claim above; see bug file for the caller-side (`session_exists()`) consequence -->
 
 **File inclusion/exclusion rules:**
 
@@ -29,6 +31,8 @@ A file counts as a resumable conversation session if it:
 - Has a `.jsonl` extension (case-insensitive)
 - Is NOT prefixed with `agent-` — these are agent/sub-conversation definitions, not user sessions
 - Is NOT 0 bytes — Claude Code creates empty `.jsonl` files during initialization or after a crash; 0-byte files contain no conversation history and must be excluded to prevent false-positive detection
+
+These are structural/metadata checks only (extension, filename prefix, byte count) — none reads the file's actual JSONL content, so none can distinguish a transcript Claude would accept from one Claude's own logic would reject.
 
 Non-`.jsonl` formats (`conversation.json`, `.claude*` files) detected by `check_continuation()` for legacy compatibility do NOT yield UUIDs — `most_recent_session_in_dir()` only returns UUIDs from `.jsonl` stems. Callers that need the UUID must use the new API; callers that only need the boolean can continue using `check_continuation()`.
 

@@ -4,14 +4,14 @@
 
 - **Purpose**: RF- test cases for the version_history_cache.json runtime file — path correctness, lifecycle triggers, and durability.
 - **Responsibility**: Verify the cache file path spec, creation behavior, and safe-to-lose durability classification.
-- **In Scope**: Path format, HOME expansion, creation via `.version.history`, durability after deletion.
+- **In Scope**: Path format, HOME expansion, creation via `.version.list mode::history`, durability after deletion.
 - **Out of Scope**: Cache content and JSON schema (→ `../feature/001_version_management.md`), discovery command output (→ `../cli/command/15_runtime_files.md`).
 
 Runtime file test surface for version_history_cache. See [runtime_file/001_version_history_cache.md](../../../docs/runtime_file/001_version_history_cache.md) for specification.
 
 ## Behavioral Divergence Pair
 
-Two `.version.history` invocations that produce different file system outcomes:
+Two `.version.list mode::history` invocations that produce different file system outcomes:
 
 - **Input A:** First call with no cache present → cache file created at `$HOME/.claude/.transient/version_history_cache.json`
 - **Input B:** Subsequent call within TTL (< 3600 s) → cache file read, no write, mtime unchanged
@@ -21,8 +21,8 @@ Two `.version.history` invocations that produce different file system outcomes:
 | RF | Scenario | Source fn |
 |----|----------|-----------|
 | RF-1 | Path matches `$HOME/.claude/.transient/version_history_cache.json` exactly | ⏳ |
-| RF-2 | `.version.history` creates cache file on first invocation when absent | ⏳ |
-| RF-3 | `.version.history` succeeds after cache file is manually deleted (durability classification) | ⏳ |
+| RF-2 | `.version.list mode::history` creates cache file on first invocation when absent | ⏳ |
+| RF-3 | `.version.list mode::history` succeeds after cache file is manually deleted (durability classification) | ⏳ |
 
 ## Test Coverage Summary
 
@@ -44,10 +44,10 @@ Two `.version.history` invocations that produce different file system outcomes:
 
 ---
 
-### RF-2: file created by first .version.history call when absent
+### RF-2: file created by first .version.list mode::history call when absent
 
 - **Given:** `HOME=/tmp/rf_test_home` where `version_history_cache.json` does NOT exist; network accessible
-- **When:** `clv .version.history`
+- **When:** `clv .version.list mode::history`
 - **Then:** exit 0; `$HOME/.claude/.transient/version_history_cache.json` exists on disk after the call; file contains a JSON array
 - **Exit:** 0
 - **Source:** [runtime_file/001_version_history_cache.md — Lifecycle: Created](../../../docs/runtime_file/001_version_history_cache.md)
@@ -57,7 +57,7 @@ Two `.version.history` invocations that produce different file system outcomes:
 ### RF-3: durability — deletion is safe, next call re-creates
 
 - **Given:** `HOME=/tmp/rf_test_home`; cache file exists at expected path; cache file is then manually deleted
-- **When:** `clv .version.history` is called after deletion
+- **When:** `clv .version.list mode::history` is called after deletion
 - **Then:** exit 0; command succeeds despite missing cache; cache file is re-created at expected path after the call
 - **Exit:** 0
 - **Source:** [runtime_file/001_version_history_cache.md — Durability](../../../docs/runtime_file/001_version_history_cache.md)

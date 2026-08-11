@@ -1,166 +1,59 @@
-# Command Tests :: `.model.select`
+# IT — Command 20: `.model.select` (retirement stub)
 
 ### Scope
 
-- **Purpose**: Integration test cases for the `.model.select` subprocess model preference command.
-- **Source**: `docs/cli/command/007_model.md`, `docs/feature/069_model_select_command.md`
-- **Covers**: AC-01 through AC-12
+- **Purpose**: Integration test cases for `.model.select`'s post-retirement behavior — every invocation form now returns a single migration-error stub, unconditionally, exit 1. This file replaces the prior IT-01 through IT-12 live get/set/reset scenarios (Feature 069, now superseded) with the 3 forms the stub still accepts as *syntax* (though it acts on none of them).
+- **Source**: `docs/cli/command/007_model.md` (primary — Command 20, retirement-stub description), `docs/feature/035_model_command.md` (AC-26 — hidden-from-listing), `docs/feature/069_model_select_command.md` (historical only — superseded original design, AC-01 through AC-12)
+- **Covers**: T23 (task 465's own Test Matrix row covering all 3 invocation forms of the retired command)
+
+### Superseded
+
+`docs/feature/069_model_select_command.md`'s AC-01 through AC-12 described `.model.select`'s original live get/set/reset behavior against `~/.clr/config.toml`'s `model` key. That behavior no longer exists — the command body is now a static migration-error stub (`src/commands/model_select.rs`). Feature 069 is retained for historical reference only; this file no longer tests any of its ACs. The replacement functionality lives in `.model scope::subprocess model::VALUE` / `reset_model::1`, covered by `17_model.md` (IT-09, IT-10, IT-17) and `035_model_command.md` (FT-09, FT-10, FT-17).
 
 ### Test Cases
 
-| IT | AC | Scenario | Source fn |
-|----|----|----------|-----------|
-| IT-01 | AC-01 | No `~/.clr/config.toml` → `model.select: (unset)` | `it01_get_unset_no_file` |
-| IT-02 | AC-02 | `config.toml` has `model` → prints value | `it02_get_shows_pinned_value` |
-| IT-03 | AC-03 | `id::claude-opus-4-8` → file written; stdout `(pinned)` | `it03_set_opus_pins_model` |
-| IT-04 | AC-04 | `id::claude-sonnet-5` → file written | `it04_set_sonnet_pins_model` |
-| IT-05 | AC-05 | `reset::1` with preference set → key removed; others preserved | `it05_reset_removes_key_preserves_others` |
-| IT-06 | AC-06 | `reset::1` with no `config.toml` → exits 0 idempotently | `it06_reset_no_file_is_idempotent` |
-| IT-07 | AC-07 | `id::VALUE` creates `config.toml` when absent | `it07_set_creates_file_when_absent` |
-| IT-08 | AC-08 | `id::VALUE` on existing `config.toml` → other keys preserved | `it08_set_preserves_other_keys` |
-| IT-09 | AC-09 | `id::VALUE reset::1` → exits 1 with `mutually exclusive` in stderr | `it09_id_and_reset_mutual_exclusive` |
-| IT-10 | AC-10 | `format::json` with preference set → JSON output | `it10_get_json_format` |
-| IT-11 | AC-11 | `.model.select` appears in `clp .help` | `it11_model_select_in_help` |
-| IT-12 | AC-12 | `id::` (empty) → exits 1 with non-empty required in stderr | `it12_empty_id_exits_1` |
+| IT | Scenario | Source fn |
+|----|----------|-----------|
+| IT-01 | `.model.select` (bare/get form) → exit 1, migration message naming the replacement syntax | ✅ `t23_get_form_exits_1_with_migration_message` |
+| IT-02 | `.model.select id::claude-opus-4-8` (`id::` form) → exit 1, same migration message; `id::` is ignored, not acted on | ✅ `t23_id_form_exits_1_with_migration_message` |
+| IT-03 | `.model.select reset::1` (`reset::` form) → exit 1, same migration message; `reset::1` is ignored, not acted on | ✅ `t23_reset_form_exits_1_with_migration_message` |
 
 ### Notes
 
-- All IT cases use a temporary isolated `~/.clr/` directory to avoid touching the real user environment.
-- Backing store is `~/.clr/config.toml`'s `model` key (task 410 migrated this command off `claude_core::settings_io`/`~/.clr/prefs.json`). The `format::json` output shape is unchanged — still keyed `subprocess_model`, this command's own CLI-visible JSON contract, independent of the `model` backing-store key name.
-- IT-05: seed `config.toml` with `model = "claude-opus-4-8"` and `other_key = "val"` before calling `reset::1`; verify `other_key` is preserved and `model` is absent.
-- IT-08: seed `config.toml` with `other_key = "val"`; call `id::claude-opus-4-8`; verify both keys present.
-- IT-09: does not require file existence — parameter validation fires first.
-- IT-11: requires `clp .help` only (no env setup needed).
+- All 3 forms are covered in a single Test Matrix row (T23) in task 465's own file, since they share one code path (the stub ignores all parameters and always returns the same error) — reflected here as 3 distinct IT cases only because each is a syntactically distinct invocation worth confirming individually accepts parsing and still exits 1.
+- None of the 3 forms write `.clr/config.toml` as a side effect — asserted in each source fn.
+- **Corrects prior IT-11** (old revision of this file, now removed): previously asserted `.model.select` appears in `clp .help`. This is now FALSE — per AC-26 (Feature 035), `.model.select` is hidden from the listing via `hidden_from_list(true)` while remaining registered/dispatchable. The current listing assertion (`.model.select` absent) is `dot13_model_select_hidden_from_listing` in `tests/cli/dot_test.rs` — a shared CLI-listing concern, not re-tested here.
+- `.model.select` remains registered and dispatchable (these 3 IT cases confirm that: dispatch succeeds, argument parsing succeeds, only the command *body* is a stub) — it is hidden from `.help`/`.` output only, not deregistered outright. See `docs/cli/command/007_model.md`'s Command 20 section for the exact stub description and full migration-message wording contract.
 
 ---
 
-### IT-01: Get with no `config.toml` returns `(unset)`
+### IT-01: Bare `.model.select` — get form
 
-- **Given:** `~/.clr/config.toml` does not exist.
+- **Given:** Fresh `HOME`.
 - **When:** `clp .model.select`
-- **Then:** Stdout is `model.select: (unset)\n`. Exits 0.
-- **Exit:** 0
-- **Source fn:** `it01_get_unset_no_file`
-- **Source:** [069_model_select_command.md AC-01](../../../../docs/feature/069_model_select_command.md)
-
----
-
-### IT-02: Get returns pinned model value
-
-- **Given:** `~/.clr/config.toml` contains `model = "claude-opus-4-8"`.
-- **When:** `clp .model.select`
-- **Then:** Stdout is `model.select: claude-opus-4-8\n`. Exits 0.
-- **Exit:** 0
-- **Source fn:** `it02_get_shows_pinned_value`
-- **Source:** [069_model_select_command.md AC-02](../../../../docs/feature/069_model_select_command.md)
-
----
-
-### IT-03: `id::claude-opus-4-8` writes to `config.toml`
-
-- **Given:** Any state.
-- **When:** `clp .model.select id::claude-opus-4-8`
-- **Then:** `~/.clr/config.toml` contains `model = "claude-opus-4-8"`. Stdout contains `(pinned)`. Exits 0.
-- **Exit:** 0
-- **Source fn:** `it03_set_opus_pins_model`
-- **Source:** [069_model_select_command.md AC-03](../../../../docs/feature/069_model_select_command.md)
-
----
-
-### IT-04: `id::claude-sonnet-5` writes to `config.toml`
-
-- **Given:** Any state.
-- **When:** `clp .model.select id::claude-sonnet-5`
-- **Then:** `~/.clr/config.toml` contains `model = "claude-sonnet-5"`. Exits 0.
-- **Exit:** 0
-- **Source fn:** `it04_set_sonnet_pins_model`
-- **Source:** [069_model_select_command.md AC-04](../../../../docs/feature/069_model_select_command.md)
-
----
-
-### IT-05: `reset::1` removes key and preserves others
-
-- **Given:** `~/.clr/config.toml` contains `model = "claude-opus-4-8"` and `other_key = "val"`.
-- **When:** `clp .model.select reset::1`
-- **Then:** `~/.clr/config.toml` no longer contains the `model` key. `other_key = "val"` is preserved. Stdout is `model.select: (reset to default)\n`. Exits 0.
-- **Exit:** 0
-- **Source fn:** `it05_reset_removes_key_preserves_others`
-- **Source:** [069_model_select_command.md AC-05](../../../../docs/feature/069_model_select_command.md)
-
----
-
-### IT-06: `reset::1` with no `config.toml` is idempotent
-
-- **Given:** `~/.clr/config.toml` does not exist.
-- **When:** `clp .model.select reset::1`
-- **Then:** Stdout is `model.select: (reset to default)\n`. Exits 0.
-- **Exit:** 0
-- **Source fn:** `it06_reset_no_file_is_idempotent`
-- **Source:** [069_model_select_command.md AC-06](../../../../docs/feature/069_model_select_command.md)
-
----
-
-### IT-07: `id::VALUE` creates `config.toml` when absent
-
-- **Given:** `~/.clr/config.toml` does not exist.
-- **When:** `clp .model.select id::claude-opus-4-8`
-- **Then:** `~/.clr/config.toml` is created; contains `model = "claude-opus-4-8"`. Exits 0.
-- **Exit:** 0
-- **Source fn:** `it07_set_creates_file_when_absent`
-- **Source:** [069_model_select_command.md AC-07](../../../../docs/feature/069_model_select_command.md)
-
----
-
-### IT-08: `id::VALUE` preserves pre-existing keys
-
-- **Given:** `~/.clr/config.toml` contains `other_key = "val"`.
-- **When:** `clp .model.select id::claude-opus-4-8`
-- **Then:** `~/.clr/config.toml` contains both `model = "claude-opus-4-8"` and `other_key = "val"`. Exits 0.
-- **Exit:** 0
-- **Source fn:** `it08_set_preserves_other_keys`
-- **Source:** [069_model_select_command.md AC-08](../../../../docs/feature/069_model_select_command.md)
-
----
-
-### IT-09: `id::VALUE reset::1` exits 1 with mutual exclusion message
-
-- **Given:** Any environment.
-- **When:** `clp .model.select id::claude-opus-4-8 reset::1`
-- **Then:** Exits 1. Stderr contains `mutually exclusive`.
+- **Then:** Exit 1. Stderr contains `model.select`, `REMOVED`, and `.model scope::subprocess` (the named replacement syntax). No `.clr/config.toml` created.
 - **Exit:** 1
-- **Source fn:** `it09_id_and_reset_mutual_exclusive`
-- **Source:** [069_model_select_command.md AC-09](../../../../docs/feature/069_model_select_command.md)
+- **Source fn:** ✅ `t23_get_form_exits_1_with_migration_message`
+- **Source:** [007_model.md — Command 20](../../../../docs/cli/command/007_model.md)
 
 ---
 
-### IT-10: `format::json` returns JSON output
+### IT-02: `.model.select id::claude-opus-4-8` — `id::` form
 
-- **Given:** `~/.clr/config.toml` contains `model = "claude-opus-4-8"`.
-- **When:** `clp .model.select format::json`
-- **Then:** Stdout is `{"subprocess_model":"claude-opus-4-8"}` (or valid JSON equivalent). Exits 0.
-- **Variant:** When preference absent → `{"subprocess_model":null}`.
-- **Exit:** 0
-- **Source fn:** `it10_get_json_format`
-- **Source:** [069_model_select_command.md AC-10](../../../../docs/feature/069_model_select_command.md)
-
----
-
-### IT-11: `.model.select` appears in `clp .help`
-
-- **Given:** Any environment.
-- **When:** `clp .help`
-- **Then:** Output contains `.model.select`. Exits 0.
-- **Exit:** 0
-- **Source fn:** `it11_model_select_in_help`
-- **Source:** [069_model_select_command.md AC-11](../../../../docs/feature/069_model_select_command.md)
-
----
-
-### IT-12: Empty `id::` exits 1
-
-- **Given:** Any environment.
-- **When:** `clp .model.select id::`
-- **Then:** Exits 1. Stderr indicates `id::` must be non-empty.
+- **Given:** Fresh `HOME`.
+- **When:** `clp .model.select id::claude-opus-4-8`
+- **Then:** Exit 1. Same migration message as IT-01 — the stub does not read or act on `id::`. No `.clr/config.toml` created.
 - **Exit:** 1
-- **Source fn:** `it12_empty_id_exits_1`
-- **Source:** [069_model_select_command.md AC-12](../../../../docs/feature/069_model_select_command.md)
+- **Source fn:** ✅ `t23_id_form_exits_1_with_migration_message`
+- **Source:** [007_model.md — Command 20](../../../../docs/cli/command/007_model.md)
+
+---
+
+### IT-03: `.model.select reset::1` — `reset::` form
+
+- **Given:** Fresh `HOME`.
+- **When:** `clp .model.select reset::1`
+- **Then:** Exit 1. Same migration message as IT-01 — the stub does not read or act on `reset::1`. No `.clr/config.toml` created.
+- **Exit:** 1
+- **Source fn:** ✅ `t23_reset_form_exits_1_with_migration_message`
+- **Source:** [007_model.md — Command 20](../../../../docs/cli/command/007_model.md)

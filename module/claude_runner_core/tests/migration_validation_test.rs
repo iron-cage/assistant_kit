@@ -22,7 +22,7 @@
 //! dream_agent (orchestration)
 //!   └→ uses ClaudeCommand::new()
 //!         .with_working_directory()
-//!         .with_max_output_tokens(200_000)  ← BUG FIX
+//!         .with_max_output_tokens(128_000)  ← BUG FIX (BUG-429: was 200_000)
 //!         .with_message()
 //!         .execute()
 //!   └→ uses check_session_exists() from claude_profile
@@ -39,7 +39,7 @@
 //! - Single execution point: 1 (was 2)
 //! - Old API usage: 0 (was 16)
 //! - Builder pattern adoption: ✓
-//! - Token limit bug fixed: ✓ (200K explicit)
+//! - Token limit bug fixed: ✓ (128K explicit)
 //!
 //! # Root Cause of Token Limit Bug
 //!
@@ -55,17 +55,20 @@
 //!
 //! # Fix Applied
 //!
-//! Set explicit `CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000` via:
+//! Set explicit `CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000` via:
 //! ```rust
 //! ClaudeCommand::new()
-//!   .with_max_output_tokens(200_000)
+//!   .with_max_output_tokens(128_000)
 //! ```
+//!
+//! (BUG-429: originally set to `200_000`, later corrected to `128_000` — 200K exceeded
+//! every current model's real output ceiling; see `contract/claude_code/docs/model/`.)
 //!
 //! # Prevention
 //!
 //! - Single execution point means token limit set in ONE place
 //! - Builder pattern makes configuration explicit and visible
-//! - Default of 200K in `ClaudeCommand::new()` prevents regression
+//! - Default of 128K in `ClaudeCommand::new()` prevents regression
 //!
 //! # Pitfall
 //!
@@ -87,7 +90,7 @@ fn migration_complete_validation() {
   // - 1x Command::new("claude") in claude_runner_core
   // - ClaudeCommand::new().with_*() builder pattern
   // - Single execute() method
-  // - Explicit 200K token limit (bug fix)
+  // - Explicit 128K token limit (bug fix; BUG-429 corrected an intermediate 200K value)
 
   // Documentation-only test - no assertions needed
 }

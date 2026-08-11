@@ -31,6 +31,30 @@ pub struct ProcessInfo
   pub args    : Vec< String >,
 }
 
+/// Resolve the proc root: the `CLR_PROC_DIR` environment variable override,
+/// or `/proc` by default. Shared by [`find_claude_processes`] and
+/// [`proc_scan_available`] so both agree on exactly the same root.
+fn proc_root() -> String
+{
+  std::env::var( "CLR_PROC_DIR" ).unwrap_or_else( |_| "/proc".to_string() )
+}
+
+/// Report whether the proc root ([`proc_root`]) is readable on this host.
+///
+/// [`find_claude_processes`] silently returns an empty `Vec` when the proc
+/// root is unreadable (e.g. non-Linux hosts, or a misconfigured
+/// `CLR_PROC_DIR` in tests) — indistinguishable from "genuinely zero Claude
+/// processes running". Callers that treat an empty scan as a load-bearing
+/// fact (e.g. the concurrency gate treating it as "slot available") must
+/// check this first and fail loudly instead of silently trusting a
+/// false-empty result.
+#[ inline ]
+#[ must_use ]
+pub fn proc_scan_available() -> bool
+{
+  std::fs::read_dir( proc_root() ).is_ok()
+}
+
 /// Scan `/proc` for Claude Code processes, returning one `ProcessInfo` per match.
 ///
 /// Entries whose cmdline basename is not exactly `"claude"` are skipped.
@@ -47,8 +71,7 @@ pub fn find_claude_processes() -> Vec< ProcessInfo >
   let self_pid  = std::process::id();
   let mut result = vec![];
 
-  let proc_root = std::env::var( "CLR_PROC_DIR" )
-    .unwrap_or_else( |_| "/proc".to_string() );
+  let proc_root = proc_root();
 
   let Ok( proc_dir ) = std::fs::read_dir( &proc_root ) else { return result; };
 

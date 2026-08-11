@@ -37,13 +37,13 @@ Every other account: **zero HTTP calls, zero subprocesses**. Cached/historical d
 
 ### Gate Placement
 
-`solo::1` inserts a gate at 3 locations, each after the existing ownership gate:
+`solo::1` inserts a gate at 3 locations, relative to each domain's existing ownership gate — after it for Fetch (which must resolve `is_current` first), but before it for Refresh and Touch (both skip on `solo::1` before ownership is even evaluated):
 
 | Gate | Location | Existing gate | Solo addition |
 |------|----------|---------------|---------------|
 | Fetch | `fetch.rs` (after G1) | `!is_owned → cache` | `solo && !is_current → approximate_quota()` |
-| Refresh | `refresh.rs` (after G2) | `!is_owned → skip` | `solo && !aq.is_current → skip` |
-| Touch | `touch.rs` (after G4b) | `!is_owned → skip` | `solo && !aq.is_current → skip` |
+| Refresh | `refresh.rs` (before G2) | `!is_owned → skip` | `solo && !aq.is_current → skip` |
+| Touch | `touch.rs` (before G4) | `!is_owned → skip` | `solo && !aq.is_current → skip` |
 
 ### Edge Cases
 

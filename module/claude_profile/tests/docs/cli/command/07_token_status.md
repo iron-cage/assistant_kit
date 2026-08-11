@@ -1,108 +1,76 @@
 # Test: `.token.status`
 
-Integration test planning for the `.token.status` command. See [command/namespace.md](../../../../docs/cli/command/005_token.md#command-7-tokenstatus) for specification.
+> **REMOVED** — `.token.status` was removed; its OAuth token expiry classification (`token::status_with_threshold()`) is now exposed via `.credentials.status`'s `Token:`/`Expires:` lines and `threshold::` parameter. See [command/002_credentials.md](../../../../docs/cli/command/002_credentials.md#command-10-credentialsstatus) and [command/005_token.md](../../../../docs/cli/command/005_token.md) (archived spec).
 
 ### Test Case Index
 
 | ID | Test Name | Category |
 |----|-----------|----------|
-| IT-1 | Valid token shows "valid" with remaining time | Basic Invocation |
-| IT-2 | Expired token shows "expired" | Status Classification |
-| IT-3 | ExpiringSoon token shows "expiring soon" with remaining time | Status Classification |
-| IT-4 | Custom `threshold::1800` changes classification boundary | Threshold Override |
-| IT-5 | `threshold::0` never classifies as ExpiringSoon | Threshold Edge |
-| IT-6 | `format::json` returns JSON object with status and expires_in_secs | Output Format |
-| IT-8 | Missing credentials file exits 2 | Error Handling |
-| IT-9 | Credentials file with unparseable `expiresAt` exits 2 | Error Handling |
+| IT-1 | N/A — command removed | Basic Invocation |
+| IT-2 | N/A — command removed | Status Classification |
+| IT-3 | N/A — command removed | Status Classification |
+| IT-4 | N/A — command removed | Threshold Override |
+| IT-5 | N/A — command removed | Threshold Edge |
+| IT-6 | N/A — command removed | Output Format |
+| IT-8 | N/A — command removed | Error Handling |
+| IT-9 | N/A — command removed | Error Handling |
 
-### Test Coverage Summary
+**Total:** 0 integration tests (8 superseded — see per-case notes)
 
-- Basic Invocation: 1 test
-- Status Classification: 2 tests
-- Threshold Override: 1 test
-- Threshold Edge: 1 test
-- Output Format: 1 test
-- Error Handling: 2 tests
-
-**Total:** 8 integration tests
+**Source:** [feature/006_token_status.md](../../../../docs/feature/006_token_status.md), [command/002_credentials.md — .credentials.status](../../../../docs/cli/command/002_credentials.md#command-10-credentialsstatus)
 
 ---
 
-### IT-1: Valid token shows "valid" with remaining time
+### IT-1: N/A — command removed
 
-- **Given:** `~/.claude/.credentials.json` contains an `expiresAt` timestamp set to current time + 7200 seconds (2 hours from now). Default threshold is 3600 seconds.
-- **When:** `clp .token.status`
-- **Then:** Output on stdout matching pattern `valid — *remaining` (e.g., `valid — 1h59m remaining`), exit 0.; output contains "valid" and remaining time
-- **Exit:** 0
-- **Source:** [command/005_token.md — .token.status](../../../../docs/cli/command/005_token.md#command-7-tokenstatus)
+> **N/A** — This case verified `clp .token.status` printed `valid — Xm remaining` for a far-future token. `.token.status` no longer exists; the underlying classification is exercised directly by `tests/docs/feature/006_token_status.md` FT-01 (`token::status()` API) and surfaced via `.credentials.status`'s `Token:`/`Expires:` lines (`docs/feature/012_live_credentials_status.md` Field Presence Table).
+> Becomes testable when: no committed task.
 
 ---
 
-### IT-2: Expired token shows "expired"
+### IT-2: N/A — command removed
 
-- **Given:** `~/.claude/.credentials.json` contains an `expiresAt` timestamp set to current time - 3600 seconds (1 hour ago).
-- **When:** `clp .token.status`
-- **Then:** Output on stdout containing `expired`, exit 0.; output contains "expired"
-- **Exit:** 0
-- **Source:** [command/005_token.md — .token.status](../../../../docs/cli/command/005_token.md#command-7-tokenstatus)
+> **N/A** — This case verified `clp .token.status` printed `expired` for a past-expiry token. Superseded by `tests/docs/feature/006_token_status.md` FT-01 (`status_returns_expired_when_expires_at_in_past`).
+> Becomes testable when: no committed task.
 
 ---
 
-### IT-3: ExpiringSoon token shows "expiring soon" with remaining time
+### IT-3: N/A — command removed
 
-- **Given:** `~/.claude/.credentials.json` contains an `expiresAt` timestamp set to current time + 1800 seconds (30 minutes from now). Default threshold is 3600 seconds, so 1800 < 3600 triggers ExpiringSoon.
-- **When:** `clp .token.status`
-- **Then:** Output on stdout matching pattern `expiring soon — *remaining` (e.g., `expiring soon — 29m remaining`), exit 0.; output contains "expiring soon" and remaining time
-- **Exit:** 0
-- **Source:** [command/005_token.md — .token.status](../../../../docs/cli/command/005_token.md#command-7-tokenstatus)
+> **N/A** — This case verified `clp .token.status` printed `expiring soon — Xm remaining` within the default threshold. Superseded by `tests/docs/feature/006_token_status.md` FT-02 (`status_returns_expiring_soon_within_default_threshold`); the CLI text differs under the new surface (`Token:   expiring in Xm`, not `expiring soon — Xm remaining` — see `docs/feature/012_live_credentials_status.md` Field Presence Table).
+> Becomes testable when: no committed task.
 
 ---
 
-### IT-4: Custom threshold changes classification boundary
+### IT-4: N/A — command removed
 
-- **Given:** `~/.claude/.credentials.json` contains an `expiresAt` timestamp set to current time + 2500 seconds. With default threshold (3600), this would be "expiring soon". With threshold 1800, it should be "valid".
-- **When:** `clp .token.status threshold::1800`
-- **Then:** Output on stdout containing `valid`, exit 0.; output contains "valid" under custom threshold
-- **Exit:** 0
-- **Source:** [command/005_token.md — .token.status](../../../../docs/cli/command/005_token.md#command-7-tokenstatus)
+> **N/A** — This case verified `clp .token.status threshold::1800` changed the classification boundary. `threshold::` now applies to `.credentials.status`; equivalent coverage lives in `tests/docs/cli/param/04_threshold.md` EC-3.
+> Becomes testable when: no committed task.
 
 ---
 
-### IT-5: Threshold zero never classifies as ExpiringSoon
+### IT-5: N/A — command removed
 
-- **Given:** `~/.claude/.credentials.json` contains an `expiresAt` timestamp set to current time + 60 seconds (1 minute remaining). With default threshold (3600), this would be "expiring soon".
-- **When:** `clp .token.status threshold::0`
-- **Then:** Output on stdout containing `valid`, exit 0.; output contains "valid" even with very little time remaining
-- **Exit:** 0
-- **Source:** [command/005_token.md — .token.status](../../../../docs/cli/command/005_token.md#command-7-tokenstatus)
+> **N/A** — This case verified `threshold::0` never classifies as ExpiringSoon. Equivalent coverage lives in `tests/docs/cli/param/04_threshold.md` EC-2 (now exercised via `.credentials.status threshold::0`).
+> Becomes testable when: no committed task.
 
 ---
 
-### IT-6: JSON format returns structured object
+### IT-6: N/A — command removed
 
-- **Given:** `~/.claude/.credentials.json` contains an `expiresAt` timestamp set to current time + 7200 seconds.
-- **When:** `clp .token.status format::json`
-- **Then:** Valid JSON on stdout (e.g., `{"status":"valid","expires_in_secs":7199}`), exit 0.; output is valid JSON with `status` and `expires_in_secs` keys
-- **Exit:** 0
-- **Source:** [command/005_token.md — .token.status](../../../../docs/cli/command/005_token.md#command-7-tokenstatus)
+> **N/A** — This case verified `format::json` returned `{"status":…,"expires_in_secs":N}`. `.credentials.status format::json` returns the same two fields (`"token"`, `"expires_in_secs"`) among its full 16-field object — see `tests/docs/cli/command/10_credentials_status.md` IT-3/IT-14 and `tests/docs/feature/006_token_status.md` FT-04.
+> Becomes testable when: no committed task.
 
 ---
 
-### IT-8: Missing credentials file exits 2
+### IT-8: N/A — command removed
 
-- **Given:** Ensure `~/.claude/.credentials.json` does not exist (rename or remove it). Account store state is irrelevant.
-- **When:** `clp .token.status`
-- **Then:** Error message on stderr indicating credentials file is unreadable or missing, exit 2.; stderr contains error about missing credentials
-- **Exit:** 2
-- **Source:** [command/005_token.md — .token.status](../../../../docs/cli/command/005_token.md#command-7-tokenstatus)
+> **N/A** — This case verified a missing `~/.claude/.credentials.json` exited 2. Superseded by `tests/docs/cli/command/10_credentials_status.md` IT-4 (identical file-absence contract, same underlying error path — `require_claude_paths()`/file-existence check is shared code).
+> Becomes testable when: no committed task.
 
 ---
 
-### IT-9: Unparseable `expiresAt` exits 2
+### IT-9: N/A — command removed; behavior superseded, not equivalent
 
-- **Given:** `~/.claude/.credentials.json` contains valid JSON but with `"expiresAt": "not-a-timestamp"` (a non-numeric, non-ISO string).
-- **When:** `clp .token.status`
-- **Then:** Error message on stderr indicating `expiresAt` is unparseable, exit 2.; stderr contains error about unparseable expiresAt
-- **Exit:** 2
-- **Source:** [command/005_token.md — .token.status](../../../../docs/cli/command/005_token.md#command-7-tokenstatus)
-
+> **N/A** — This case verified an unparseable `expiresAt` exited 2. Under `.credentials.status`, this is no longer fatal: `derive_token_state()` (`src/commands/cmd_context.rs`) degrades gracefully on `Err`, rendering `Token: unknown` / `Expires: (unavailable)` while every other field still renders normally and the command exits 0 — see `docs/feature/006_token_status.md § Error handling`. There is no remaining code path where an unparseable `expiresAt` alone produces a non-zero exit; only a missing credentials file does (`tests/docs/cli/command/10_credentials_status.md` IT-4).
+> Becomes testable when: no committed task.

@@ -9,7 +9,7 @@ use unilang::data::{ ErrorCode, ErrorData };
 use super::types::AccountQuota;
 use super::format::token_exp_label;
 use super::fetch_cache::read_cached_quota;
-use claude_profile_core::account::trace_ts;
+use claude_profile_core::account::{ trace_ts, AccountBackend };
 
 // ── Token reader ──────────────────────────────────────────────────────────────
 
@@ -94,6 +94,39 @@ pub fn fetch_quota_for_list(
       std::thread::sleep( core::time::Duration::from_millis( 200 + nanos % 1301 ) ); // 200..=1500 ms
     }
 
+    // R1: Redirect-backend accounts have no Anthropic quota to fetch — Feature 071.
+    // Checked before G1 (ownership): ownership gating exists to protect Anthropic quota
+    // from cross-machine races, which is moot for a backend with no Anthropic quota at
+    // all. acct.backend is already in scope from list(), so no extra disk read is needed.
+    if acct.backend == AccountBackend::Redirect
+    {
+      let ( host, role ) = read_profile_metadata( credential_store, &acct.name );
+      let renewal_at     = read_renewal_at( credential_store, &acct.name );
+      results.push( AccountQuota
+      {
+        fallback_reason : None,
+        name                  : acct.name.clone(),
+        is_current            : false,
+        is_active             : acct.is_active,
+        is_occupied_elsewhere : occupied_elsewhere.contains( &acct.name ),
+        expires_at_ms         : acct.expires_at_ms,
+        result                : Err( "redirect backend — no Anthropic quota".to_string() ),
+        account               : None,
+        host,
+        role,
+        renewal_at,
+        cached                : false,
+        cache_age_secs        : None,
+        org_created_at        : None,
+        is_owned              : true,
+        owner                 : String::new(),
+        claim_lock            : acct.claim_lock,
+        reserve               : acct.reserve,
+        inference_provider    : acct.inference_provider.clone(),
+      } );
+      continue;
+    }
+
     // G1: Non-owned accounts bypass token read + HTTP; read cache directly.
     // Root cause prevented: token read + API call on a foreign-machine account causes
     //   credential mutations and quota exhaustion without the owner's knowledge.
@@ -132,6 +165,7 @@ pub fn fetch_quota_for_list(
         owner                 : owner.clone(),
         claim_lock            : acct.claim_lock,
         reserve               : acct.reserve,
+        inference_provider    : acct.inference_provider.clone(),
       } );
       continue;
     }
@@ -210,6 +244,7 @@ pub fn fetch_quota_for_list(
         owner,
         claim_lock            : acct.claim_lock,
         reserve               : acct.reserve,
+        inference_provider    : acct.inference_provider.clone(),
       } );
       continue;
     }
@@ -375,6 +410,7 @@ pub fn fetch_quota_for_list(
       owner,
       claim_lock            : acct.claim_lock,
       reserve               : acct.reserve,
+      inference_provider    : acct.inference_provider.clone(),
     } );
   }
 
@@ -450,6 +486,7 @@ fn inject_synthetic_row_if_needed(
     owner                 : String::new(),
     claim_lock            : false,
     reserve               : false,
+    inference_provider    : String::new(),
   } );
 }
 
@@ -502,6 +539,7 @@ fn approximate_quota(
     owner,
     claim_lock            : acct.claim_lock,
     reserve               : acct.reserve,
+    inference_provider    : acct.inference_provider.clone(),
   }
 }
 

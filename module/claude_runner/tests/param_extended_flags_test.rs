@@ -73,18 +73,29 @@ fn s34_no_chrome_suppresses_chrome_flag()
   );
 }
 
-// S35: default (no `--no-chrome`) → `--chrome` present in interactive mode (`021_no_chrome.md` EC-2)
-// Fix(BUG-304): chrome is suppressed automatically in print mode; only injected for interactive.
+// S35: default (no `--no-chrome`), bare invocation under non-TTY stdin → `--chrome`
+// absent — print-mode routing suppresses it (`021_no_chrome.md` EC-2, corrected scope)
+// Fix(BUG-425): inverted from asserting --chrome present (assumed bare invocation always
+//   meant interactive mode) to asserting it absent — this test's own subprocess stdin is
+//   non-TTY (no PTY simulation in this harness), and BUG-425's fix makes non-TTY the
+//   deciding term for a bare invocation with no message and no `--interactive`, routing
+//   it to print mode, which suppresses chrome via the existing `cli.no_chrome || use_print`
+//   gate (Fix(BUG-304)).
+// Root cause: this test predates BUG-425's TTY-check term, when "no message" alone meant
+//   interactive mode regardless of TTY presence, and interactive mode always got --chrome.
+// Pitfall: a genuine TTY (not reachable in this harness) would still route to interactive
+//   mode for this same bare invocation, where --chrome remains present by default — this
+//   test only covers the non-TTY case, matching every other subprocess-spawning test here.
 #[ test ]
-fn s35_default_chrome_injected_interactive()
+fn s35_default_chrome_suppressed_non_tty_bare_invocation()
 {
-  // No message → interactive mode; --chrome must appear by default.
+  // Bare invocation under non-TTY stdin → print mode (Fix(BUG-425)); --chrome suppressed.
   let out = run_cli( &[ "--dry-run" ] );
   assert!( out.status.success(), "exit={} stderr={}", out.status.code().unwrap_or( -1 ), String::from_utf8_lossy( &out.stderr ) );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(
-    stdout.contains( "--chrome" ),
-    "default interactive command must contain --chrome. Got:\n{stdout}"
+    !stdout.contains( "--chrome" ),
+    "bare invocation under non-TTY stdin must route to print mode, suppressing --chrome. Got:\n{stdout}"
   );
 }
 

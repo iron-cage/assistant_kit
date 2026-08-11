@@ -152,8 +152,6 @@ Use `--dry-run` or `--trace` to see effective values after every tier has applie
 | `changelog.md` | Notable changes by version |
 | `rulebook.md` | Local code-style exception: mechanical dispatch function length |
 | `verb/` | Shell scripts for each `do` protocol verb. |
-| `runbox/` | Container environment scripts for test execution |
-| `bug/` | Bug reports: open and closed defects for this crate |
 | `task/` | Task tracking: verified and completed work items. |
 
 ### Architecture

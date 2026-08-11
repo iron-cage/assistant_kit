@@ -29,7 +29,7 @@ Interaction tests for Group 4 (Sort Control: `sort::`, `desc::`, `prefer::`). Se
 ### CC-2: `prefer::` selects weekly column for `sort::renew` tiebreak; group membership unchanged
 
 - **Behavioral Divergence:** `sort::renew prefer::any` vs `sort::renew prefer::opus` can produce different **within-group ordering** when two accounts in the same status group have the same renewal event time but different `7d Left` / `7d(Son)` values. `prefer::` does **not** change which group an account belongs to — the four-group status partition always uses raw `7d Left` for the weekly boundary (AC-12).
-- **Given:** Unit-level test. Two Green accounts (`5h Left > 15%`, `7d Left > 5%`) with identical `renewal_event_secs`. Account P: `7d_left=60%, 7d_son=20%`. Account Q: `7d_left=40%, 7d_son=80%`. Same renewal event time → falls to tiebreak.
+- **Given:** Unit-level test. Two Green accounts (`5h Left > 15%`, `7d Left > 3%`) with identical `renewal_event_secs`. Account P: `7d_left=60%, 7d_son=20%`. Account Q: `7d_left=40%, 7d_son=80%`. Same renewal event time → falls to tiebreak.
 - **When-A:** `sort::renew prefer::any` → `prefer_weekly(P) = min(60%, 20%) = 20%`, `prefer_weekly(Q) = min(40%, 80%) = 40%` → P (20%) < Q (40%) → **P first**.
 - **When-B:** `sort::renew prefer::opus` → `prefer_weekly(P) = 60%`, `prefer_weekly(Q) = 40%` → Q (40%) < P (60%) → **Q first**.
 - **Then-A:** Within the Green group: P ranks before Q.

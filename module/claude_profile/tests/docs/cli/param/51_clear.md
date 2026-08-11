@@ -23,7 +23,7 @@ Edge case coverage for the `clear::` parameter on `.account.renewal`. See [param
 - **When:** `clp .account.renewal name::test@example.com clear::1`
 - **Then:** Exits 0. `{credential_store}/test@example.com.json` no longer contains `_renewal_at` key.
 - **Exit:** 0
-- **Source fn:** `ft04_account_renewal_clear_removes_key` (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `ft04_account_renewal_clear_removes_key` (in `account_renewal_test.rs`)
 - **Source:** [param/051_clear.md](../../../../docs/cli/param/051_clear.md)
 
 ---
@@ -34,7 +34,7 @@ Edge case coverage for the `clear::` parameter on `.account.renewal`. See [param
 - **When:** `clp .account.renewal name::test@example.com clear::1`
 - **Then:** Exits 0. No error. File state unchanged (or empty `{}` if `{name}.json` was absent).
 - **Exit:** 0
-- **Source fn:** `arn19_clear_no_prior_renewal_at_exits_0` (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `arn19_clear_no_prior_renewal_at_exits_0` (in `account_renewal_test_b.rs`)
 - **Source:** [param/051_clear.md](../../../../docs/cli/param/051_clear.md)
 
 ---
@@ -45,19 +45,21 @@ Edge case coverage for the `clear::` parameter on `.account.renewal`. See [param
 - **When:** `clp .account.renewal name::test@example.com clear::1`
 - **Then:** Exits 0. `_renewal_at` is absent. `oauthAccount` content is unchanged (read-merge preserved non-`_renewal_at` keys).
 - **Exit:** 0
-- **Source fn:** `arc02_clear_preserves_oauth_account_content` (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `arc02_clear_preserves_oauth_account_content` (in `account_renewal_test_b.rs`)
 - **Source:** [param/051_clear.md](../../../../docs/cli/param/051_clear.md)
 
 ---
 
-### EC-4: After `clear::1`, `.usage` shows `~`-prefixed estimate again
+### EC-4: After `clear::1`, `.usage` exits 0 — no assertion on `~Renews` column content
 
-- **Given:** Account was saved with `_renewal_at` set (`.usage` showed exact `in Xh Ym`). `clear::1` applied.
+> **Semantic drift correction:** the cited test's final `.usage` call asserts only `exit == 0` — it does not inspect the `~Renews` column, the `~` prefix, or any other display content. The function's own name (`..._shows_tilde_estimate`) and this doc's original claim describe a display verification the body does not implement. The test's real, verified assertion is that after `clear::1`, `_renewal_at` is absent from the account's JSON file (a genuine, correctly-cited check) — the *display* consequence of that removal (tilde-estimate appearing in `.usage`) is asserted by name only, not by content.
+
+- **Given:** Account was saved with `_renewal_at` set. `clear::1` applied.
 - **When:** `clp .usage` after the clear.
-- **Then:** `~Renews` column for that account shows `~in Xd` (estimated, with `~` prefix from `org_created_at`) — not the exact `in Xh Ym` format.
+- **Then:** Exits 0. (The test verifies `_renewal_at` is absent from the JSON file after the clear — a real, correctly-cited assertion. It does NOT verify the `~Renews` column's content, the `~` prefix, or any `in Xd`-style estimate text; the final `.usage` call is exit-code-only.)
 - **Exit:** 0
 - **Live:** yes
-- **Source fn:** `it237_lim_it_clear_usage_shows_tilde_estimate` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it237_lim_it_clear_usage_shows_tilde_estimate` (in `usage_lim_it_test_b.rs`) — name and doc claim describe a tilde-estimate display verification the body does not implement; the final `.usage` call is exit-code-only
 - **Source:** [param/051_clear.md](../../../../docs/cli/param/051_clear.md)
 
 ---
@@ -68,7 +70,7 @@ Edge case coverage for the `clear::` parameter on `.account.renewal`. See [param
 - **When:** `clp .account.renewal name::test@example.com clear::1 at::2026-06-29T21:00:00Z`
 - **Then:** Exits 1. Stderr names the conflicting parameters. No file written.
 - **Exit:** 1
-- **Source fn:** `ft08_account_renewal_at_clear_conflict` (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `ft08_account_renewal_at_clear_conflict` (in `account_renewal_test.rs`)
 - **Source:** [param/051_clear.md](../../../../docs/cli/param/051_clear.md)
 
 ---
@@ -79,7 +81,7 @@ Edge case coverage for the `clear::` parameter on `.account.renewal`. See [param
 - **When:** `clp .account.renewal name::test@example.com clear::1 from_now::+1h`
 - **Then:** Exits 1. Stderr names the conflicting parameters. No file written.
 - **Exit:** 1
-- **Source fn:** `ft09_account_renewal_from_now_clear_conflict` (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `ft09_account_renewal_from_now_clear_conflict` (in `account_renewal_test.rs`)
 - **Source:** [param/051_clear.md](../../../../docs/cli/param/051_clear.md)
 
 ---
@@ -91,7 +93,7 @@ Edge case coverage for the `clear::` parameter on `.account.renewal`. See [param
 - **When:** `clp .account.renewal name::test@example.com clear::1`
 - **Then:** Exits 0. `_renewal_at` is absent from `{name}.json`. A subsequent `clp .usage` shows `~` prefix in the `~Renews` column for this account.
 - **Exit:** 0
-- **Source fn:** `arc03_clear_removes_key_usage_shows_tilde` (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** *(coverage gap — no `arc03`-named function exists anywhere in the suite; `account_mutations_test.rs` has no such function. EC-4's `it237_lim_it_clear_usage_shows_tilde_estimate` (live-tagged, in `usage_lim_it_test_b.rs`) exercises the clear-then-`.usage` sequence but — per EC-4's own correction above — its final `.usage` call is exit-code-only and does not verify tilde-estimate display content either; no test in the suite verifies the `~Renews` column's actual content after a `clear::1`)*
 - **Source:** [param/051_clear.md](../../../../docs/cli/param/051_clear.md)
 
 ---

@@ -15,7 +15,7 @@ Select the **winner** account for footer recommendation and auto-switch from amo
 
 #### Entry Point
 
-`src/usage/sort_next.rs:46-83` — `find_next_for_strategy(strategy, accounts, prefer, gate_ownership, now_secs)`
+`src/usage/sort_next.rs:63-103` — `find_next_for_strategy(accounts, strategy, prefer, now_secs, gate_ownership, selected_provider)`
 
 #### Algorithm (3 steps)
 
@@ -35,12 +35,12 @@ Every strategy below is additionally prefixed with a **leading `reserve` key** (
 
 Key definitions:
 - `7d_reset_secs`: seconds until 7d quota resets (`seven_day.resets_at`; `u64::MAX` if absent). Source: `sort.rs:113-116`.
-- `sub_renewal_secs`: seconds until subscription billing renewal (`renewal_at` or estimated `org_created_at`; `u64::MAX` if absent). Source: `sort.rs:117-121`.
+- `sub_renewal_secs`: seconds until subscription billing renewal (`renewal_at` or estimated `org_created_at`; `u64::MAX` if absent). Source: `sort.rs:138-152` (`sort::renew`), `sort.rs:179-187` (`sort::renews`). **Known Limitation (BUG-341):** the `org_created_at` estimate leg currently reads a stale account-gated path for cache-refreshed accounts, degrading to `u64::MAX` instead of the real estimate — see [algorithm/007](007_sort_strategies.md) Sort Key Definitions.
 - `prefer_weekly`: model-aware 7d capacity via `relevant_quotas(aq, prefer).1` (`format.rs`). See [algorithm/007](007_sort_strategies.md).
 
 #### Step 3 — First eligible wins
 
-Walk the sorted list from position 0. The first account passing all 9 eligibility gates (see [algorithm/004](004_eligibility_gates.md)) is the winner — marked `→` in the table, shown in footer `Next` line. If no account passes, result is `None` (no recommendation; auto-switch returns error). Because `reserve` is a leading sort key (Step 2) rather than a gate, a reserved account is only ever reached by this walk once every non-reserved candidate has already failed a gate — "first eligible wins" needs no change to produce "reserved accounts are picked only when nothing else qualifies."
+Walk the sorted list from position 0. The first account passing all 10 eligibility gates (see [algorithm/004](004_eligibility_gates.md)) is the winner — marked `→` in the table, shown in footer `Next` line. If no account passes, result is `None` (no recommendation; auto-switch returns error). Because `reserve` is a leading sort key (Step 2) rather than a gate, a reserved account is only ever reached by this walk once every non-reserved candidate has already failed a gate — "first eligible wins" needs no change to produce "reserved accounts are picked only when nothing else qualifies."
 
 #### Why `sort::renew` uses ascending `prefer_weekly` as secondary key
 

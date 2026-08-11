@@ -1,16 +1,15 @@
 #!/usr/bin/env bash
-# l1 — bare test execution (VERB_LAYER=l1); runs the workspace test suite inside the container.
+# l1 — bare test execution (VERB_LAYER=l1); full workspace gate, in-container.
+# The config script for runbox .run/.live — delegates to `will .test level::3`
+# (nextest + doc tests + clippy) across every workspace member; cwd at the
+# workspace root is what sets the scope. will is the plugin-mounted ELF at
+# /usr/local/bin/will (see runbox/runbox.yml).
 set -euo pipefail
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd "$SCRIPT_DIR/../.."
-if [[ "${1:-}" == "--dry-run" ]]; then echo "RUSTFLAGS=-D warnings cargo nextest run + doc test + clippy"; exit 0; fi
-# Prevent cargo from trying to update the registry index inside the container.
-# All deps are pre-cooked via cargo-chef during image build; registry is read-only.
+if [[ "${1:-}" == "--dry-run" ]]; then echo "will .test level::3 show_build::1"; exit 0; fi
+# Registry is pre-fetched at bake time and mounted read-only — never hit the network.
 export CARGO_NET_OFFLINE=true
-# Override target-dir from .cargo/config.toml which redirects to -host-target for
-# host builds.  Inside the container the workspace is mounted read-only, so -host-target
-# is not writable.  Force cargo to use /workspace/target (the cook-stage volume).
-export CARGO_TARGET_DIR=/workspace/target
 # Fix(BUG-008): Disable nextest's interactive PTY progress bar.
 # Root cause: when the test runner captures subprocess output via PTY, nextest detects
 # isatty()=true and activates indicatif's cursor-movement progress display. The output
@@ -21,10 +20,17 @@ export CARGO_TARGET_DIR=/workspace/target
 # Pitfall: environment inheritance ensures this env var propagates to nested runners
 # automatically — the fix applies regardless of test runner binary version.
 export NO_COLOR=1
-# Scoped to the claude_profile package: this workspace checkout bundles every
-# assistant_kit module in one Cargo workspace, and an unscoped run compiles
-# unrelated sibling crates (e.g. claude_storage) that this module does not
-# depend on. This script is this workspace's own copy — module-specific.
-RUSTFLAGS="-D warnings" cargo nextest run -p claude_profile --all-features
-RUSTDOCFLAGS="-D warnings" cargo test --doc -p claude_profile --all-features
-exec cargo clippy -p claude_profile --all-targets --all-features -- -D warnings
+# Container signal for the container-only test invariant (nextest setup script + Rust guards).
+export RUNBOX_CONTAINER=1
+# In-container, will's verb-first delegation must stay off: delegated jobs invoke
+# each member's host-side verb/test, which execs `runbox` — unavailable inside the
+# container the workspace gate is already running in. The container IS the
+# environment those verbs would construct, so the direct pipeline is the correct
+# semantic here. W3_TEST_DELEGATE=0 is will's documented kill switch for exactly
+# this wrapping-script case (will_test verb_delegation.rs, Environment Contract).
+export W3_TEST_DELEGATE=0
+# will .test level::3 runs nextest + doc tests + clippy, all warnings-as-errors —
+# will owns the RUSTFLAGS policy, so no export here. show_build::1 pins full
+# per-job streaming: will's current default (show_build::0, quiet_on_success)
+# prints nothing at all on a clean pass, which reads as a broken gate.
+exec will .test level::3 show_build::1 "$@"

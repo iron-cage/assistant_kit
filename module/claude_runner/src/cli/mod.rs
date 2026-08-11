@@ -1,5 +1,6 @@
 mod parse;
 mod env;
+mod retry_classify;
 mod execution;
 mod cred_parse;
 mod builder;
@@ -7,6 +8,7 @@ mod fence;
 mod credential;
 mod help;
 mod gate;
+mod column_validate;
 mod ps;
 mod kill;
 mod tools;
@@ -14,6 +16,7 @@ mod scope;
 mod query;
 mod summary;
 mod json_config;
+mod json_config_isolated;
 mod config;
 // summary_unit_test.rs (external test) imports render_summary/resolve_fields via the public API.
 // The unused_imports lint fires for pub use in private modules when no code in the lib crate itself
@@ -21,20 +24,23 @@ mod config;
 #[ allow( unused_imports ) ]
 pub use summary::{ render_summary, resolve_fields, extract_session_id };
 
-// gate_unit_test.rs (external test) imports gate_max_attempts_from via the public API.
-// Same false-positive unused_imports rationale as the summary re-export above.
+// gate_unit_test.rs (external test) imports gate_max_attempts_from/gate_poll_secs_from/
+// gate_stale_secs_from via the public API. Same false-positive unused_imports rationale
+// as the summary re-export above.
 #[ allow( unused_imports ) ]
-pub use gate::gate_max_attempts_from;
+pub use gate::{ gate_max_attempts_from, gate_poll_secs_from, gate_stale_secs_from };
 
 // tools_command_test.rs (external test) imports TOOLS via the public API for the
 // sync-guard tests (BUG-409). Same false-positive unused_imports rationale as above.
 #[ allow( unused_imports ) ]
 pub use tools::TOOLS;
 
+use std::io::IsTerminal;
 use claude_runner_core::{ ClaudeCommand, EffortLevel, IsolatedModel };
 use claude_storage_core::SessionId;
 use parse::CliArgs;
 use cred_parse::{
+  IsolatedArgs,
   parse_isolated_args, parse_refresh_args,
   apply_isolated_env_vars, apply_refresh_env_vars,
 };
@@ -200,15 +206,37 @@ pub( super ) fn run_built_command(
   // Print/interactive dispatch decision, computed once and reused for both the
   // concurrency gate (print-mode only — interactive sessions never contend for
   // a slot) and the dispatch branch below, so the two can never disagree.
-  let is_print_invocation = cli.print_mode || ( cli.message.is_some() && !cli.interactive );
+  //
+  // Fix(BUG-425/427): route to print mode whenever stdin has no TTY to interact
+  //   through, or file/stdin content is already available to serve as the prompt.
+  // Root cause: the formula only checked message presence, so a script/CI invocation
+  //   with no message hung on the interactive REPL despite stdin having no terminal
+  //   to interact with, and --file/piped content alone never triggered print mode.
+  // Pitfall: an explicit --interactive must gate every inferred term here, not only
+  //   message-presence — gating message alone still forced print mode under
+  //   --interactive whenever stdin was non-TTY, defeating the flag's purpose for the
+  //   ordinary case (piped/redirected stdin with no real TTY attached).
+  let is_tty = std::io::stdin().is_terminal();
+  let is_print_invocation = cli.print_mode
+    || ( !cli.interactive
+      && ( cli.message.is_some() || !is_tty || cli.file.is_some() || cli.stdin_content.is_some() ) );
 
   // Concurrency gate: block before subprocess launch when max active print-mode
-  // sessions is reached. Default limit is 6; 0 = unlimited.  dry-run is bypassed
+  // sessions is reached. Default limit is 8; 0 = unlimited.  dry-run is bypassed
   // by caller (never reaches here).
   if is_print_invocation
   {
-    let max_sessions = cli.max_sessions.unwrap_or( 6 );
-    wait_for_session_slot( max_sessions, cli.quiet, cli, journal );
+    let max_sessions = cli.max_sessions.unwrap_or( 8 );
+    let mut runner_attempt = 0u32;
+    wait_for_session_slot(
+      max_sessions,
+      cli.quiet,
+      cli.gate_poll_secs.unwrap_or( 30 ),
+      cli.gate_max_attempts.unwrap_or( 1000 ),
+      cli.gate_stale_secs,
+      journal,
+      &mut | e | { execution::apply_runner_retry( cli, e, &mut runner_attempt, journal ); },
+    );
   }
 
   if cli.trace
@@ -298,7 +326,21 @@ pub( super ) fn dispatch_run( tokens : &[ String ] ) -> !
     std::process::exit( 0 );
   }
 
-  if cli.print_mode && cli.message.is_none()
+  // Fix(BUG-427): extended from `cli.message.is_none()` alone so --file/piped-stdin
+  //   content satisfies --print's message requirement, not just a positional message.
+  // Root cause: the guard was blind to `cli.file`/`cli.stdin_content`, rejecting
+  //   `--print --file <path>` even though --file supplies the prompt content.
+  // Pitfall: this guard only fires when `cli.print_mode` is explicitly set — it does
+  //   not need the TTY term from `is_print_invocation`, since an explicit --print
+  //   already settled the mode-selection question.
+  // Pitfall: `cli.stdin_content` must be checked for non-emptiness, not bare
+  //   `.is_none()` — see the matching fix/comment on the `-c`-injection gate in
+  //   builder.rs. A bare `.is_none()` check let empty non-TTY stdin (the default for
+  //   this guard's whole scenario space) slip past this rejection and attempt a real
+  //   subprocess launch with no message, surfacing later as a 60s "binary not found,
+  //   retries exhausted" failure instead of this guard's own immediate, specific error.
+  let has_stdin_content = cli.stdin_content.as_ref().is_some_and( | v | !v.is_empty() );
+  if cli.print_mode && cli.message.is_none() && cli.file.is_none() && !has_stdin_content
   {
     eprintln!( "Error: --print requires a message argument" );
     eprintln!( "Run with --help for usage." );
@@ -364,7 +406,33 @@ pub( super ) fn dispatch_ask( tokens : &[ String ] ) -> !
   dispatch_run( &tokens[ 1 .. ] );
 }
 
+/// Gate an isolated session through the same concurrency mechanism as run/ask.
+///
+/// Unlike refresh (which always runs a fixed, throwaway prompt and discards the
+/// response), isolated can run arbitrarily long real user tasks, so it must contend
+/// for a slot too. dry-run bypasses the gate, matching run/ask's own documented
+/// dry-run bypass. isolated has no --quiet flag, so progress messages always show
+/// (quiet=false); the 3 gate-tuning knobs are env-var-only here — isolated has no
+/// config.toml tier for any parameter, so these stay consistent with its other
+/// fields rather than gaining a CLI-flag/config tier run/ask alone has (see
+/// `gate_poll_secs_from()`/`gate_stale_secs_from()` doc for the one-shot-vs-tiered split).
+fn gate_isolated_session( cli : &IsolatedArgs, journal : Option< &claude_journal::JournalWriter > )
+{
+  if cli.dry_run { return; }
+  let max_sessions = cli.max_sessions.unwrap_or( 8 );
+  wait_for_session_slot(
+    max_sessions,
+    false,
+    gate::gate_poll_secs_from( env::env_str( "CLR_GATE_POLL_SECS" ).as_deref() ),
+    gate::gate_max_attempts_from( env::env_str( "CLR_GATE_MAX_ATTEMPTS" ).as_deref() ),
+    gate::gate_stale_secs_from( env::env_str( "CLR_GATE_STALE_SECS" ).as_deref() ),
+    journal,
+    &mut | e | { eprintln!( "Error: [Runner] {e} (exit 1)" ); std::process::exit( 1 ); },
+  );
+}
+
 /// Parse, validate, and execute the `isolated` subcommand.  Never returns.
+#[ allow( clippy::too_many_lines ) ] // sequential dispatch phases — extracting helpers adds indirection without reducing complexity
 pub( super ) fn dispatch_isolated( tokens : &[ String ] ) -> !
 {
   // JSON config: no --file gate for isolated (--file is not a stdin-conflict source here).
@@ -377,7 +445,7 @@ pub( super ) fn dispatch_isolated( tokens : &[ String ] ) -> !
   let src_path = env::resolve_args_file_path( cli.args_file.as_deref() );
   if let Some( ref path ) = src_path
   {
-    if let Err( e ) = json_config::load_and_apply_isolated( path, &mut cli )
+    if let Err( e ) = json_config_isolated::load_and_apply_isolated( path, &mut cli )
     {
       eprintln!( "Error: {e}" );
       std::process::exit( 1 );
@@ -387,7 +455,7 @@ pub( super ) fn dispatch_isolated( tokens : &[ String ] ) -> !
   {
     match json_config::parse_json_object( src )
     {
-      Ok( map ) => json_config::apply_json_config_isolated( &mut cli, &map ),
+      Ok( map ) => json_config_isolated::apply_json_config_isolated( &mut cli, &map ),
       Err( e )  => { eprintln!( "Error: {e}" ); std::process::exit( 1 ); }
     }
   }
@@ -428,6 +496,37 @@ pub( super ) fn dispatch_isolated( tokens : &[ String ] ) -> !
     }
   }
 
+  // Phase 4: validate --json-schema path when value looks like a file path (skip in dry-run).
+  // Values starting with '{' or '[' are treated as inline JSON literals — no path check.
+  // All other values are treated as file paths; a missing file is caught here with a clear
+  // error rather than letting the claude binary emit a cryptic JSON-parse failure.
+  if !cli.dry_run
+  {
+    if let Some( ref s ) = cli.json_schema
+    {
+      let trimmed = s.trim_start();
+      if !trimmed.starts_with( '{' ) && !trimmed.starts_with( '[' )
+        && !std::path::Path::new( s ).exists()
+      {
+        eprintln!( "Error: --json-schema path does not exist: {s}" );
+        std::process::exit( 1 );
+      }
+    }
+  }
+
+  // Phase 5: validate --mcp-config paths exist before spawning subprocess (skip in dry-run).
+  if !cli.dry_run
+  {
+    for m in &cli.mcp_config
+    {
+      if !std::path::Path::new( m ).exists()
+      {
+        eprintln!( "Error: --mcp-config path does not exist: {m}" );
+        std::process::exit( 1 );
+      }
+    }
+  }
+
   // Phase 2: inject --dir/--add-dir into the front of passthrough_args so they
   // appear in the subprocess command before any user-supplied passthrough flags.
   let mut passthrough : Vec< String > = Vec::new();
@@ -444,6 +543,8 @@ pub( super ) fn dispatch_isolated( tokens : &[ String ] ) -> !
   passthrough.extend_from_slice( &cli.passthrough_args );
 
   let journal = if cli.dry_run { None } else { resolve_journal_writer( cli.journal.as_deref(), cli.journal_dir.as_deref() ) };
+  gate_isolated_session( &cli, journal.as_ref() );
+
   run_isolated_command(
     "isolated",
     &cli.creds_path,
@@ -451,12 +552,12 @@ pub( super ) fn dispatch_isolated( tokens : &[ String ] ) -> !
     cli.trace,
     cli.dry_run,
     cli.no_compact_window,
-    IsolatedModel::Default,
-    EffortLevel::Max,
+    cli.model.clone().map_or( IsolatedModel::Default, IsolatedModel::Specific ),
+    cli.effort.unwrap_or( EffortLevel::Max ),
     cli.message.as_deref(),
     &passthrough,
     cli.message.is_some(), // skip-perms when a real task message is present
-    false,                 // chrome stays on for isolated tasks (may use browser tools)
+    cli.no_chrome,
     cli.file.as_deref(),
     cli.expect.as_deref(),
     cli.expect_strategy.as_deref(),
@@ -465,6 +566,15 @@ pub( super ) fn dispatch_isolated( tokens : &[ String ] ) -> !
     cli.strip_fences,
     cli.output_style.as_deref(),
     cli.summary_fields.as_deref(),
+    cli.no_effort_max,
+    cli.system_prompt.as_deref(),
+    cli.append_system_prompt.as_deref(),
+    cli.json_schema.as_deref(),
+    &cli.mcp_config,
+    cli.allowed_tools.as_deref(),
+    cli.disallowed_tools.as_deref(),
+    cli.max_budget_usd.as_deref(),
+    cli.max_turns.as_deref(),
   )
 }
 
@@ -480,7 +590,7 @@ pub( super ) fn dispatch_refresh( tokens : &[ String ] ) -> !
   let src_path = env::resolve_args_file_path( cli.args_file.as_deref() );
   if let Some( ref path ) = src_path
   {
-    if let Err( e ) = json_config::load_and_apply_refresh( path, &mut cli )
+    if let Err( e ) = json_config_isolated::load_and_apply_refresh( path, &mut cli )
     {
       eprintln!( "Error: {e}" );
       std::process::exit( 1 );
@@ -490,7 +600,7 @@ pub( super ) fn dispatch_refresh( tokens : &[ String ] ) -> !
   {
     match json_config::parse_json_object( src )
     {
-      Ok( map ) => json_config::apply_json_config_refresh( &mut cli, &map ),
+      Ok( map ) => json_config_isolated::apply_json_config_refresh( &mut cli, &map ),
       Err( e )  => { eprintln!( "Error: {e}" ); std::process::exit( 1 ); }
     }
   }

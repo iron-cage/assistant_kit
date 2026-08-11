@@ -1,5 +1,7 @@
 # Feature: Subprocess Model Select Command
 
+> **Superseded**: `.model.select` is retired — its command name, `id::`/`reset::` parameters, and dispatch function have been merged into `.model` via the new `scope::` parameter. See [035_model_command.md](035_model_command.md) for the current, unified design. `.model.select` remains registered in the CLI only as a stub that prints a migration message (mirrors the `.token.status`/`.account.assign` precedent in [cli/command/007_model.md](../cli/command/007_model.md)/[cli/command_group/readme.md](../cli/command_group/readme.md)). Content below describes the retired standalone-command design for historical reference only.
+
 ### Scope
 
 - **Purpose**: Provide a `clp .model.select` command to get or pin the subprocess model used by `clr run`, `clr ask`, `clr isolated`, and `clr refresh` via a `model` key in `~/.clr/config.toml`.
@@ -68,9 +70,9 @@ Refresh (`clr refresh`) passes `IsolatedModel::Specific(REFRESH_DEFAULT_MODEL)` 
 
 | File | Relationship |
 |------|--------------|
-| [068_models_list_command.md](068_models_list_command.md) | `.models` — discover full model IDs to pass to `id::` |
-| [035_model_command.md](035_model_command.md) | `.model` — complementary, manages `settings.json` model (interactive session) |
-| [026_subprocess_model_effort.md](026_subprocess_model_effort.md) | `imodel::` — per-invocation touch/refresh subprocess model (intentionally separate) |
+| [068_models_list_command.md](068_models_list_command.md) | `.models` — discover full model IDs to pass to `.model scope::subprocess model::` |
+| [035_model_command.md](035_model_command.md) | Supersedes this feature — `.model.select`'s command name and parameters are retired and absorbed via `scope::subprocess` |
+| [026_subprocess_model_effort.md](026_subprocess_model_effort.md) | `imodel::` — per-invocation touch/refresh subprocess model (intentionally separate; remains separate after the merge) |
 
 ### Schema
 
@@ -92,4 +94,4 @@ Refresh (`clr refresh`) passes `IsolatedModel::Specific(REFRESH_DEFAULT_MODEL)` 
 | File | Relationship |
 |------|--------------|
 | `tests/docs/feature/069_model_select_command.md` | FT-01 through FT-12 |
-| `tests/docs/cli/command/20_model_select.md` | IT-01 through IT-12 |
+| `tests/docs/cli/command/20_model_select.md` | IT-01 through IT-03 (rewritten as a retirement-stub spec by Feature 035/Task 465; superseded original design was IT-01 through IT-12) |

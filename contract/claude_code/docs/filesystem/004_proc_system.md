@@ -11,8 +11,8 @@
 
 | Path | Type | Access | Used By | Purpose |
 |------|------|--------|---------|---------|
-| `/proc/{pid}/cmdline` | file | R | `.processes`, `.processes.kill` | Process command line for Claude process detection |
-| `/proc/{pid}/cwd` | symlink | R | `.processes`, `.processes.kill` | Working directory of detected Claude process (symlink to actual path) |
+| `/proc/{pid}/cmdline` | file | R | `.ps`, `.ps.kill` | Process command line for Claude process detection |
+| `/proc/{pid}/cwd` | symlink | R | `.ps`, `.ps.kill` | Working directory of detected Claude process (symlink to actual path) |
 
 ### Resolution
 
@@ -25,7 +25,7 @@ Direct filesystem access — no environment variable lookup. Linux-only; these p
 
 ### Process Detection
 
-The `.processes` and `.processes.kill` commands scan `/proc/` to detect running Claude Code instances:
+The `.ps` and `.ps.kill` commands scan `/proc/` to detect running Claude Code instances:
 
 1. Enumerate all numeric subdirectories in `/proc/` (each is a PID)
 2. Read `/proc/{pid}/cmdline` — null-byte delimited argv; check if the binary path contains "claude"

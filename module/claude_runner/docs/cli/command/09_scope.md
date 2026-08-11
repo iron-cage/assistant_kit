@@ -73,6 +73,10 @@ clr run --to /home/alice/project-b --session-from /home/alice/project-a "Continu
 
 `clr scope` does not require Claude to be installed or credentials to be present — it is a pure filesystem path computation.
 
+### Referenced Command Group
+
+Evaluated against `run`/`ask` under the strict [command_group](../command_group/readme.md) identity test (same dispatch function, same parameter set) — does not qualify. `dispatch_scope()` (`src/cli/scope.rs:13`) has zero cross-calls with `dispatch_run()`/`dispatch_ask()`. Both call `claude_storage_core::scope_for()` internally, but that's a shared external library utility, not a shared dispatch function — `scope` uses it for its entire output (all 6 returned fields), while `run`'s builder uses only 1 of 6 fields as one step in `--session-from` resolution. `scope`'s single `--dir` parameter is a documented subset of the `Running Commands` param_group (see [`param_group/06_running_commands.md`](../param_group/06_running_commands.md)), a parameter-level relationship distinct from command_group's dispatch-level test. See [`command_group/readme.md`](../command_group/readme.md) Evaluated, Not Qualifying for the full analysis.
+
 ### Related Commands
 
 | # | Command | Relationship |

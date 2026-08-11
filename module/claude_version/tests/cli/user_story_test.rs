@@ -7,11 +7,12 @@
 //! - `tests/docs/cli/user_story/004_settings_management.md` (US-1 through US-6)
 //! - `tests/docs/cli/user_story/005_version_pinning.md` (US-1 through US-6)
 //! - `tests/docs/cli/user_story/006_config_management.md` (AT-1 through AT-10)
-//! - `tests/docs/cli/user_story/07_params_inspection.md` (US-1 through US-10)
+//! - `tests/docs/cli/user_story/007_params_inspection.md` (US-1 through US-10)
+//! - `tests/docs/cli/user_story/008_path_discovery.md` (US-1 through US-7)
 
 use tempfile::TempDir;
 
-use crate::subprocess_helpers::{ assert_exit, run_clv_with_env, stdout, write_settings };
+use crate::subprocess_helpers::{ assert_exit, run_clv_with_env, stderr, stdout, write_settings };
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // US-001: Environment Check
@@ -115,17 +116,17 @@ fn us04_002_version_show_exits_0()
   }
 }
 
-// US-5: .version.history shows recent releases; exit 0
+// US-5: .version.list mode::history shows recent releases; exit 0
 //
-// Guard pattern: .version.history exits 2 when GitHub is unreachable (offline
-// container), so we only check content when the command succeeds.
+// Always exits 0: falls back to the compiled-in VERSION_HISTORY snapshot when
+// GitHub is unreachable (offline container), with a stderr advisory.
 #[ test ]
 fn us05_002_version_history_exits_0()
 {
-  let out = run_clv_with_env( &[ ".version.history" ], &[] );
+  let out = run_clv_with_env( &[ ".version.list", "mode::history" ], &[] );
   if out.status.code() == Some( 0 )
   {
-    assert!( !stdout( &out ).is_empty(), ".version.history must produce output" );
+    assert!( !stdout( &out ).is_empty(), ".version.list mode::history must produce output" );
   }
 }
 
@@ -141,19 +142,19 @@ fn us06_002_version_guard_exits_0()
 // US-003: Process Lifecycle
 // ═══════════════════════════════════════════════════════════════════════════════
 
-// US-1: .processes lists PIDs and working directories (or empty list); exit 0
+// US-1: .ps lists PIDs and working directories (or empty list); exit 0
 #[ test ]
-fn us01_003_processes_exits_0()
+fn us01_003_ps_exits_0()
 {
-  let out = run_clv_with_env( &[ ".processes" ], &[] );
+  let out = run_clv_with_env( &[ ".ps" ], &[] );
   assert_exit( &out, 0 );
 }
 
-// US-2: .processes format::json returns JSON array (possibly empty); exit 0
+// US-2: .ps format::json returns JSON array (possibly empty); exit 0
 #[ test ]
-fn us02_003_processes_json_format()
+fn us02_003_ps_json_format()
 {
-  let out = run_clv_with_env( &[ ".processes", "format::json" ], &[] );
+  let out = run_clv_with_env( &[ ".ps", "format::json" ], &[] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   let t = text.trim_start();
@@ -163,40 +164,40 @@ fn us02_003_processes_json_format()
   );
 }
 
-// US-3: .processes.kill dry::1 previews kill targets without sending signals; exit 0
+// US-3: .ps.kill dry::1 previews kill targets without sending signals; exit 0
 #[ test ]
-fn us03_003_processes_kill_dry_preview()
+fn us03_003_ps_kill_dry_preview()
 {
-  let out = run_clv_with_env( &[ ".processes.kill", "dry::1" ], &[] );
+  let out = run_clv_with_env( &[ ".ps.kill", "dry::1" ], &[] );
   assert_exit( &out, 0 );
 }
 
-// US-4: .processes.kill sends SIGTERM then SIGKILL; verified via dry mode; exit 0
+// US-4: .ps.kill sends SIGTERM then SIGKILL; verified via dry mode; exit 0
 //
 // Uses dry::1 to verify the command dispatches correctly without live processes.
 #[ test ]
-fn us04_003_processes_kill_graceful()
+fn us04_003_ps_kill_graceful()
 {
-  let out = run_clv_with_env( &[ ".processes.kill", "dry::1" ], &[] );
+  let out = run_clv_with_env( &[ ".ps.kill", "dry::1" ], &[] );
   assert_exit( &out, 0 );
 }
 
-// US-5: .processes.kill force::1 sends SIGKILL directly; verified via dry mode; exit 0
+// US-5: .ps.kill force::1 sends SIGKILL directly; verified via dry mode; exit 0
 #[ test ]
-fn us05_003_processes_kill_force()
+fn us05_003_ps_kill_force()
 {
-  let out = run_clv_with_env( &[ ".processes.kill", "force::1", "dry::1" ], &[] );
+  let out = run_clv_with_env( &[ ".ps.kill", "force::1", "dry::1" ], &[] );
   assert_exit( &out, 0 );
 }
 
-// US-6: .processes after kill returns empty list; exit 0
+// US-6: .ps after kill returns empty list; exit 0
 //
-// In the test environment there are no Claude processes, so .processes exits 0
+// In the test environment there are no Claude processes, so .ps exits 0
 // with an empty list — the expected post-kill state is already present.
 #[ test ]
-fn us06_003_processes_empty_after_kill()
+fn us06_003_ps_empty_after_kill()
 {
-  let out = run_clv_with_env( &[ ".processes" ], &[] );
+  let out = run_clv_with_env( &[ ".ps" ], &[] );
   assert_exit( &out, 0 );
 }
 
@@ -345,12 +346,12 @@ fn us01_005_version_list_shows_aliases()
   assert!( text.contains( "stable" ), "version list must include the stable alias: {text}" );
 }
 
-// US-2: .version.install version::month dry::1 → shows install plan for monthly baseline; exit 0
+// US-2: .version.install version::stable dry::1 → shows install plan for stable; exit 0
 #[ test ]
-fn us02_005_version_install_month_dry()
+fn us02_005_version_install_stable_dry()
 {
   let out = run_clv_with_env(
-    &[ ".version.install", "version::month", "dry::1" ],
+    &[ ".version.install", "version::stable", "dry::1" ],
     &[],
   );
   assert_exit( &out, 0 );
@@ -358,23 +359,12 @@ fn us02_005_version_install_month_dry()
   assert!( text.contains( "[dry-run]" ), "dry-run must show [dry-run] prefix: {text}" );
 }
 
-// US-3: .version.install version::month → monthly baseline install plan accepted; exit 0
-#[ test ]
-fn us03_005_version_install_month_accepted()
-{
-  let out = run_clv_with_env(
-    &[ ".version.install", "version::month", "dry::1" ],
-    &[],
-  );
-  assert_exit( &out, 0 );
-}
-
 // US-4: already-at-pinned-version is a no-op; second install exits 0
 #[ test ]
 fn us04_005_version_install_idempotent()
 {
   let out = run_clv_with_env(
-    &[ ".version.install", "version::month", "dry::1" ],
+    &[ ".version.install", "version::stable", "dry::1" ],
     &[],
   );
   assert_exit( &out, 0 );
@@ -428,8 +418,10 @@ fn us1_006_config_show_all_source_annotations()
   );
   assert_exit( &out, 0 );
   let text = stdout( &out );
+  // Source is its own table column now (not a parenthesized suffix on Value),
+  // so the annotation itself is the bare source label rather than "(user)".
   assert!(
-    text.contains( "(user)" ) || text.contains( "(default)" ),
+    text.contains( "user" ) || text.contains( "default" ),
     "show-all must include source annotations: {text}"
   );
   assert!( text.contains( "theme" ), "show-all must include written key: {text}" );
@@ -816,11 +808,122 @@ fn us10_007_params_show_all_alphabetical()
   );
   assert_exit( &out, 0 );
   let text  = stdout( &out );
+  // The data_fmt table always opens with 3 structural lines (heading, header,
+  // dash separator) before the first data row; skip them so only real param
+  // name rows are checked for ordering.
   let names : Vec< &str > = text.lines()
+    .skip( 3 )
     .filter( |l| !l.starts_with( ' ' ) && !l.is_empty() )
     .collect();
   assert!( !names.is_empty(), "show-all must produce entries: {text}" );
   let mut sorted = names.clone();
   sorted.sort_unstable();
   assert_eq!( names, sorted, "param names must be in ascending alphabetical order" );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// US-008: Path Discovery
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// US-1: .version.paths shows all 5 keys, each labeled; exit 0
+#[ test ]
+fn us01_008_paths_show_all_keys()
+{
+  let out = run_clv_with_env( &[ ".version.paths" ], &[ ( "HOME", "/tmp/test_home" ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  for label in [ "settings:", "project_settings:", "versions_dir:", "binary_symlink:", "version_history_cache:" ]
+  {
+    assert!(
+      text.lines().any( | l | l.trim_start().starts_with( label ) ),
+      "must contain a line labeled {label}: {text}"
+    );
+  }
+}
+
+// US-2: .version.paths key::versions_dir shows single resolved path under HOME; exit 0
+#[ test ]
+fn us02_008_paths_single_key()
+{
+  let out = run_clv_with_env(
+    &[ ".version.paths", "key::versions_dir" ],
+    &[ ( "HOME", "/tmp/test_home" ) ],
+  );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "/tmp/test_home" ), "single-key output must contain path under HOME: {text}" );
+}
+
+// US-3: .version.paths v::0 outputs plain unlabeled paths (no colon-prefixed labels); exit 0
+#[ test ]
+fn us03_008_paths_v0_unlabeled()
+{
+  let out = run_clv_with_env( &[ ".version.paths", "v::0" ], &[ ( "HOME", "/tmp/test_home" ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  for line in text.lines().filter( | l | !l.is_empty() )
+  {
+    assert!( !line.contains( ':' ), "v::0 output must be plain paths with no labels: {line:?}" );
+  }
+}
+
+// US-4: .version.paths format::json returns valid JSON object with all 5 keys; exit 0
+#[ test ]
+fn us04_008_paths_json_object()
+{
+  let out = run_clv_with_env( &[ ".version.paths", "format::json" ], &[ ( "HOME", "/tmp/test_home" ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.trim_start().starts_with( '{' ), "format::json must produce a JSON object: {text}" );
+  for key in [ "\"settings\"", "\"project_settings\"", "\"versions_dir\"", "\"binary_symlink\"", "\"version_history_cache\"" ]
+  {
+    assert!( text.contains( key ), "JSON object must contain key {key}: {text}" );
+  }
+}
+
+// US-5: unresolvable project_settings shown as "(none found)" at default verbosity; exit 0
+//
+// Uses an isolated TempDir cwd so the container workspace-root `.claude/` mount
+// (runbox.yml plugin_mount) cannot make project_settings resolve to a real path.
+#[ test ]
+fn us05_008_paths_unresolvable_none_found()
+{
+  let project_dir = TempDir::new().unwrap();
+  let out = std::process::Command::new( env!( "CARGO_BIN_EXE_claude_version" ) )
+    .args( [ ".version.paths" ] )
+    .env( "HOME", "/tmp/test_home" )
+    .current_dir( project_dir.path() )
+    .output()
+    .unwrap();
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.lines().any( | l | l.trim_start().starts_with( "project_settings:" ) && l.contains( "(none found)" ) ),
+    "project_settings must show (none found) when unresolvable: {text}"
+  );
+}
+
+// US-6: .version.paths key::bogus → exit 1; stderr names the invalid key
+#[ test ]
+fn us06_008_paths_invalid_key_exits_1()
+{
+  let out = run_clv_with_env( &[ ".version.paths", "key::bogus" ], &[ ( "HOME", "/tmp/test_home" ) ] );
+  assert_exit( &out, 1 );
+  let err = stderr( &out );
+  assert!( err.contains( "bogus" ), "stderr must name the invalid key: {err}" );
+}
+
+// US-7: .version.paths v::2 shows one-line description beyond the path; exit 0
+#[ test ]
+fn us07_008_paths_v2_descriptions()
+{
+  let out = run_clv_with_env(
+    &[ ".version.paths", "key::binary_symlink", "v::2" ],
+    &[ ( "HOME", "/tmp/test_home" ) ],
+  );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "binary_symlink:" ), "v::2 must include label: {text}" );
+  let line_count = text.lines().filter( | l | !l.is_empty() ).count();
+  assert!( line_count >= 2, "v::2 must include a description line beyond the path: {text}" );
 }

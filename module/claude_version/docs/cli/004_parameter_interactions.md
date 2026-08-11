@@ -22,6 +22,9 @@ How clv parameters interact when combined. See [param/](param/readme.md) and [pa
 | `version::` + `force::1` | Additive | Installs specified version; skips "already installed" guard |
 | `version::` + `dry::1` | Additive | Shows install plan for specified version; no install occurs |
 | `key::` + `kind::` | Mode supersedes filter | `key::` triggers single-param mode; `kind::` filter has no effect |
+| `dry::1` + `record_only::1` | Mutual exclusion | Rejected — exit 1, `ArgumentMissing` |
+| `force::1` + `record_only::1` | Independent | `record_only::` wins; `force::` has no install to bypass, silently ignored |
+| `version::` + `record_only::1` | Additive | Persists specified version as preferred; no install occurs |
 
 ### Required Combinations
 
@@ -41,6 +44,18 @@ When `dry::1` and `force::1` are both present, `dry::` takes precedence:
 .version.install version::stable dry::1 force::1
   -- Output: dry-run preview of install
   -- Action: no install executed (dry wins)
+```
+
+### Mutual Exclusions
+
+`dry::1` and `record_only::1` cannot both be set — `dry::` promises "preview, no
+changes" while `record_only::` promises "write settings.json now", a direct
+contradiction rather than an inert combination like `dry::`+`force::` above:
+
+```
+.version.install version::stable dry::1 record_only::1
+  -- Output: Error: record_only:: and dry:: are mutually exclusive
+  -- Action: exit 1, no changes
 ```
 
 ### Independent Parameters

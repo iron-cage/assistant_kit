@@ -85,7 +85,7 @@ Feature behavioral requirement test cases for `docs/feature/002_account_save.md`
 - **When:** `clp .account.save name::alice@acme.com`
 - **Then:** Exits 0. `{credential_store}/alice@acme.com.json` is created containing `{"oauthAccount": {...}, "model": "claude-sonnet"}` with the extracted subtree and `model` field from `~/.claude/settings.json` (BUG-222 fix).
 - **Exit:** 0
-- **Source fn:** `acc26_save_creates_snapshot_files` (in `tests/cli/accounts_test.rs`)
+- **Source fn:** `acc26_save_creates_snapshot_files` (in `accounts_list_test_b.rs`)
 - **Source:** [feature/002_account_save.md AC-05](../../../docs/feature/002_account_save.md)
 
 ---
@@ -119,7 +119,7 @@ Feature behavioral requirement test cases for `docs/feature/002_account_save.md`
 - **When:** `clp .account.save name::alice@acme.com`
 - **Then:** Exits 0. `{credential_store}/_active_{hostname}_{user}` contains `"alice@acme.com"`. A subsequent `clp .credentials.status` shows `Account: alice@acme.com`.
 - **Exit:** 0
-- **Source fn:** `as16_save_writes_active_marker` (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `as16_save_writes_active_marker` (in `account_mutations_test_b.rs`)
 - **Source:** [feature/002_account_save.md AC-10](../../../docs/feature/002_account_save.md)
 
 ---
@@ -130,7 +130,7 @@ Feature behavioral requirement test cases for `docs/feature/002_account_save.md`
 - **When:** `clp .account.save name::a/b@c.com`
 - **Then:** Exits 1. stderr indicates path-unsafe characters in account name. No file created in `{credential_store}` — validation occurs before any filesystem operation.
 - **Exit:** 1
-- **Source fn:** `as17_save_slash_in_email_local_part_exits_1` (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `as17_save_slash_in_email_local_part_exits_1` (in `account_mutations_test_b.rs`)
 - **Source:** [feature/002_account_save.md AC-11](../../../docs/feature/002_account_save.md)
 
 ---
@@ -141,7 +141,7 @@ Feature behavioral requirement test cases for `docs/feature/002_account_save.md`
 - **When:** `clp .account.save` (no `name::`)
 - **Then:** Exits 0. stdout contains `saved current credentials as 'b@test.com'`. The two-level inference: (1) `oauthAccount.emailAddress` absent from the JSON → None; (2) fallback to `_active` marker → `b@test.com`. Top-level `emailAddress` is never read by the inference logic. The per-machine marker still reads `b@test.com` after save.
 - **Exit:** 0
-- **Source fn:** `mre_bug_209_account_save_uses_active_marker_not_stale_email` (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `mre_bug_209_account_save_uses_active_marker_not_stale_email` (in `account_relogin_test_b.rs`)
 - **Note:** Tests the fallback path — exercises the case where `oauthAccount.emailAddress` is absent, so the `_active` marker is used. The primary path (oauthAccount.emailAddress wins over a stale marker) is covered by FT-10.
 - **Source:** [feature/002_account_save.md AC-08](../../../docs/feature/002_account_save.md)
 
@@ -150,7 +150,7 @@ Feature behavioral requirement test cases for `docs/feature/002_account_save.md`
 ### FT-09: `save(update_marker=false)` does not write `_active`; background callers pass `false`
 
 - **Given:** Empty credential store (no `_active` marker file). Valid credentials at `~/.claude/.credentials.json`.
-- **When:** `account::save("alice@test.com", store.path(), &paths, false, None, None, None, None)` is called (unit test — simulates `refresh_account_token` context).
+- **When:** `account::save("alice@test.com", &store, &paths, false, None, None, None, None, account::AccountBackend::Anthropic, None, None, None)` is called (unit test — simulates `refresh_account_token` context).
 - **Then:** The credential file `alice@test.com.credentials.json` is written. The `_active_{hostname}_{user}` marker file does NOT exist — `update_marker=false` suppresses the write. A concurrent `.account.use` switch would be unaffected.
 - **Exit:** N/A (unit test — no exit code)
 - **Source fn:** `test_mre_bug211_save_false_leaves_marker_unchanged` (in `claude_profile_core/tests/account_test.rs`)
@@ -165,7 +165,7 @@ Feature behavioral requirement test cases for `docs/feature/002_account_save.md`
 - **When:** `clp .account.save` (no `name::`)
 - **Then:** Exits 0. stdout contains `saved current credentials as 'i5@wbox.pro'`. `{credential_store}/i5@wbox.pro.credentials.json` is created. `{credential_store}/i2@wbox.pro.credentials.json` is NOT created or modified — the stale marker is not used when `oauthAccount.emailAddress` provides a valid name.
 - **Exit:** 0
-- **Source fn:** `mre_bug_212_account_save_stale_marker_uses_oauth_email` (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `mre_bug_212_account_save_stale_marker_uses_oauth_email` (in `account_relogin_test_b.rs`)
 - **Note:** BUG-212 MRE — verifies that `oauthAccount.emailAddress` from `~/.claude.json` is the primary name inference source; the stale `_active` marker is only used as a fallback when `oauthAccount.emailAddress` is absent or empty. External OAuth login updates `oauthAccount.emailAddress` but not the `_active` marker.
 - **Source:** [feature/002_account_save.md AC-16](../../../docs/feature/002_account_save.md)
 
@@ -180,18 +180,18 @@ Feature behavioral requirement test cases for `docs/feature/002_account_save.md`
   - `oauthAccount` — updated with fresh content from `~/.claude.json`
   - No other pre-existing top-level keys are removed.
 - **Exit:** 0
-- **Source fn:** `as22_save_preserves_renewal_at` (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `as22_save_preserves_renewal_at` (in `account_renewal_test.rs`)
 - **Source:** [feature/002_account_save.md AC-17](../../../docs/feature/002_account_save.md)
 
 ---
 
 ### FT-12: `.account.save` does NOT modify `owner` field — ownership-neutral
 
-- **Given:** Account `alice@acme.com` exists. `{credential_store}/alice@acme.com.json` contains `"owner": "testuser@testmachine"`. Current identity = `"testuser@testmachine"`.
+- **Given:** Account `alice@acme.com` exists. `{credential_store}/alice@acme.com.json` contains `"owner": "old@host"`. Current identity = `"testuser@testmachine"` — deliberately different from the stored owner, to prove preservation does not depend on an identity match.
 - **When:** `clp .account.save name::alice@acme.com`
-- **Then:** Exits 0. `{credential_store}/alice@acme.com.json` still contains `"owner": "testuser@testmachine"` — unchanged. `account_save_routine()` passes `owner: None` to `save()`, preserving the existing value via read-merge. Credentials re-saved; all other fields updated normally.
+- **Then:** Exits 0. `{credential_store}/alice@acme.com.json` still contains `"owner": "old@host"` — unchanged even though it differs from current identity. `account_save_routine()` passes `owner: None` to `save()`, preserving the existing value via read-merge. Credentials re-saved; all other fields updated normally.
 - **Exit:** 0
-- **Source fn:** `ft12_save_does_not_stamp_owner` (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `ft12_save_does_not_stamp_owner` (in `account_ownership_test.rs`)
 - **Note:** AC-19 — `.account.save` is ownership-neutral. Existing `owner` field is preserved unchanged on every save. An account with no `owner` field retains no `owner` field after save (read-merge: absent key stays absent).
 - **Source:** [feature/002_account_save.md AC-19](../../../docs/feature/002_account_save.md)
 
@@ -214,7 +214,7 @@ Feature behavioral requirement test cases for `docs/feature/002_account_save.md`
 - **When:** `clp .account.save name::not-an-email dry::1`
 - **Then:** Exits 1. stderr contains `not a valid email address`. The `[dry-run]` message is NOT printed — `validate_name()` fires before dry-run evaluation. No files created.
 - **Exit:** 1
-- **Source fn:** `as35_save_dry_run_rejects_invalid_name` (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `as35_save_dry_run_rejects_invalid_name` (in `account_renewal_test_b.rs`)
 - **Source:** [feature/002_account_save.md AC-03](../../../docs/feature/002_account_save.md)
 
 ---
@@ -225,7 +225,7 @@ Feature behavioral requirement test cases for `docs/feature/002_account_save.md`
 - **When:** `clp .account.save name::alice@acme.com`
 - **Then:** Exits 0. `{credential_store}/alice@acme.com.credentials.json` is created. `{credential_store}/alice@acme.com.json` is created but does NOT contain `oauthAccount` key (no source data).
 - **Exit:** 0
-- **Source fn:** `acc27_save_succeeds_without_claude_json` (in `tests/cli/accounts_test.rs`)
+- **Source fn:** `acc27_save_succeeds_without_claude_json` (in `accounts_list_test_b.rs`)
 - **Source:** [feature/002_account_save.md AC-07](../../../docs/feature/002_account_save.md)
 
 ---
@@ -236,6 +236,6 @@ Feature behavioral requirement test cases for `docs/feature/002_account_save.md`
 - **When:** `clp .account.save name::alice@acme.com`
 - **Then:** Exits 0. `{credential_store}/alice@acme.com.json` is created with `oauthAccount` content but no `model` field. Save still succeeds when model source is absent.
 - **Exit:** 0
-- **Source fn:** `acc28_save_succeeds_without_settings_json` (in `tests/cli/accounts_test.rs`)
+- **Source fn:** `acc28_save_succeeds_without_settings_json` (in `accounts_list_test_b.rs`)
 - **Source:** [feature/002_account_save.md AC-18](../../../docs/feature/002_account_save.md)
 

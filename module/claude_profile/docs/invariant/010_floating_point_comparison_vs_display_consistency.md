@@ -29,7 +29,7 @@ Where `f()` is the value-deriving expression (e.g., `100.0 - u`), `round()` is t
 
 | Threshold | Constant | Violation window | Call site |
 |-----------|----------|-------------------|-----------|
-| `5.0` | `WEEKLY_EXHAUSTION_THRESHOLD` (`types.rs:414`) | `(4.5, 5.5)` | `pct_emoji`, 7d-Left column (`format.rs:462`) |
+| `3.0` | `WEEKLY_EXHAUSTION_THRESHOLD` (`types.rs:468`) | `(2.5, 3.5)` | `pct_emoji`, 7d-Left column (`format.rs:462`) |
 | `15.0` | `H_EXHAUSTED_THRESHOLD` (`types.rs:408`) | `(14.5, 15.5)` | `pct_emoji`, 5h-Left column (`format.rs:460`) |
 | `10.0` | `OPUS_OVERRIDE_THRESHOLD` (`types.rs:399`) | `(9.5, 10.5)` | `apply_model_override` (`api_switch.rs:245`) |
 
@@ -61,7 +61,7 @@ format!( "{emoji} {left:.0}%" )                    // display the SAME rounded v
 
 **Detection layer:** No automated lint currently exists for this pattern in this codebase. Prevention is currently procedural: any new closure/function that both branches on and formats the same floating-point value must be reviewed against this invariant before merge (see algorithm/011 § Rounding-Boundary Hazard : Prevention for the full sweep recommendation).
 
-**Test coverage:** `tests/usage/format_tests.rs:502-526` (`test_ft11_009_per_column_emoji_prefix_three_cases`) covers the exact-integer-boundary case (`util=85.0` → `left=15.0` exactly) but does not cover values merely near a boundary without landing on it exactly — this is the specific gap BUG-331 exposes. The focused regression case from BUG-331's Minimum Reproducible Example (`util=94.999999999999716` vs. `util=95.000000000000510`) is implemented as `mre_bug331_pct_emoji_color_matches_rounded_display_at_threshold_boundary` (`tests/usage/format_tests.rs:563`); the broader property-style test asserting the formal statement above remains a recommended addition.
+**Test coverage:** `tests/usage/format_tests.rs:502-526` (`test_ft11_009_per_column_emoji_prefix_three_cases`) covers the exact-integer-boundary case (`util=85.0` → `left=15.0` exactly) but does not cover values merely near a boundary without landing on it exactly — this is the specific gap BUG-331 exposes. The focused regression case from BUG-331's Minimum Reproducible Example (`util=96.9999999999993` vs. `util=97.0000000000007`, recalibrated to the current `WEEKLY_EXHAUSTION_THRESHOLD = 3.0`) is implemented as `mre_bug331_pct_emoji_color_matches_rounded_display_at_threshold_boundary` (`tests/usage/format_tests.rs:563`); the broader property-style test asserting the formal statement above remains a recommended addition.
 
 ### Related Invariants
 
@@ -75,7 +75,7 @@ format!( "{emoji} {left:.0}%" )                    // display the SAME rounded v
 |------|--------------|
 | `src/usage/format.rs:443-451` | `pct_emoji` closure — confirmed violation site (color from raw `left`, display from rounded `left`) |
 | `src/usage/api_switch.rs:244-270` | `apply_model_override` — confirmed violation site (branch from raw `sonnet_left`, trace log from rounded `sonnet_left`) |
-| `src/usage/types.rs:399,408,414` | `OPUS_OVERRIDE_THRESHOLD`, `H_EXHAUSTED_THRESHOLD`, `WEEKLY_EXHAUSTION_THRESHOLD` — the three exact-integer thresholds whose half-intervals define the violation windows |
+| `src/usage/types.rs:453,462,468` | `OPUS_OVERRIDE_THRESHOLD`, `H_EXHAUSTED_THRESHOLD`, `WEEKLY_EXHAUSTION_THRESHOLD` — the three exact-integer thresholds whose half-intervals define the violation windows |
 
 ### Tests
 

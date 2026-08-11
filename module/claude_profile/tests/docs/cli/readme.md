@@ -16,6 +16,7 @@ Test case planning for clp CLI. Each file contains a Test Case Index with covera
 | command/ | Per-command integration test case indices (IT-N entries) |
 | param/ | Per-parameter edge case indices (EC-N entries) |
 | param_group/ | Per-parameter-group interaction test indices |
+| command_group/ | Per-command-group structural-equivalence test indices (0 groups — documented empty) |
 | type/ | Per-type acceptance and boundary case indices (TC-N entries) |
 | command_verb/ | Per-verb behavioral contract specs (BV-N entries) |
 | command_noun/ | Per-noun lifecycle and schema contract specs (NC-N entries) |
@@ -44,7 +45,7 @@ Test case planning for clp CLI. Each file contains a Test Case Index with covera
 - [`.account.save`](command/04_account_save.md)
 - [`.account.use`](command/05_account_use.md)
 - [`.account.delete`](command/06_account_delete.md)
-- [`.token.status`](command/07_token_status.md)
+- [`.token.status` *(REMOVED)*](command/07_token_status.md)
 - [`.paths`](command/08_paths.md)
 - [`.usage`](command/09_usage.md)
 - [`.credentials.status`](command/10_credentials_status.md)

@@ -242,8 +242,13 @@ fn it_ft026_13_imodel_effort_both_paths_structural()
 /// Uses a single error account (no accessToken) to get a deterministic offline JSON response.
 /// Comparing two invocations on the same fixed credential store guarantees schema identity.
 ///
+/// `expires_in_secs` is derived from wall-clock at render time, so two sequential
+/// invocations can straddle a second boundary and legitimately differ by 1; that
+/// field's value is normalized to null on both sides before comparing (the key
+/// itself must still be present in both).
+///
 /// RED:   params alter JSON output structure (e.g. inject extra keys or change shape).
-/// GREEN: both invocations produce byte-identical JSON.
+/// GREEN: both invocations produce identical JSON after time-field normalization.
 ///
 /// Spec: [`tests/docs/feature/26_subprocess_model_effort.md` FT-14]
 ///       [`docs/feature/026_subprocess_model_effort.md` AC-09]
@@ -262,8 +267,29 @@ fn it_ft026_14_imodel_effort_no_effect_on_json_schema()
   );
   assert_exit( &out_default,  0 );
   assert_exit( &out_override, 0 );
+
+  let normalize = | s : &str | -> serde_json::Value
+  {
+    let mut v : serde_json::Value = serde_json::from_str( s )
+      .expect( "026 AC-09: format::json output must be valid JSON" );
+    if let Some( rows ) = v.as_array_mut()
+    {
+      for row in rows
+      {
+        if let Some( obj ) = row.as_object_mut()
+        {
+          assert!(
+            obj.contains_key( "expires_in_secs" ),
+            "026 AC-09: expires_in_secs key must be present before normalization",
+          );
+          obj.insert( "expires_in_secs".to_string(), serde_json::Value::Null );
+        }
+      }
+    }
+    v
+  };
   assert_eq!(
-    stdout( &out_default ), stdout( &out_override ),
+    normalize( &stdout( &out_default ) ), normalize( &stdout( &out_override ) ),
     "026 AC-09: format::json output must be identical regardless of imodel::/effort:: values",
   );
 }
@@ -523,11 +549,7 @@ fn it144_effort_normal_accepted_empty_store_exits_0()
 #[ test ]
 fn it145_lim_it_sort_renew_places_arrow_on_soonest_refill()
 {
-  let Some( token ) = live_active_token() else
-  {
-    eprintln!( "it145: no live token — skipping" );
-    return;
-  };
+  let token = live_active_token().expect( "it145: live API token required — no ~/.claude/.credentials.json" );
   require_live_api( "it145" );
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();

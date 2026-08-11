@@ -149,8 +149,8 @@ fn tc489_bare_help_after_command_routes_to_help()
 #[ test ]
 fn tc490_bare_help_after_params_routes_to_help()
 {
-  let out = run( &[ ".version.history", "count::3", "help" ] );
-  assert_eq!( code( &out ), 0, "`.version.history count::3 help` must exit 0" );
+  let out = run( &[ ".version.list", "mode::history", "count::3", "help" ] );
+  assert_eq!( code( &out ), 0, "`.version.list mode::history count::3 help` must exit 0" );
   let stdout = out_stdout( &out );
   assert!( stdout.contains( "Version Management" ), "must show help listing: {stdout}" );
 }
@@ -219,13 +219,13 @@ fn ec6_help_output_contains_commands()
   );
 }
 
-// EC-7: `.help` universally accepted by `.settings.show`, `.processes`, `.config`
+// EC-7: `.help` universally accepted by `.settings.show`, `.ps`, `.config`
 #[ test ]
 fn ec7_help_accepted_by_all_commands()
 {
   for args in &[
     vec![ ".settings.show", ".help" ],
-    vec![ ".processes", ".help" ],
+    vec![ ".ps", ".help" ],
     vec![ ".config", ".help" ],
   ]
   {

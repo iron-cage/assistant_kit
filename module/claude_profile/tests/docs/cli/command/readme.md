@@ -4,7 +4,7 @@
 
 - **Purpose**: Document integration test cases for each clp command and binary meta-flags.
 - **Responsibility**: Index of per-command integration test case files covering command-level behavior.
-- **In Scope**: All 21 test files: 20 clp command test files plus binary meta-flag tests (`00_version.md`/`--version`/`-V`).
+- **In Scope**: All 22 test files: 21 clp command test files plus binary meta-flag tests (`00_version.md`/`--version`/`-V`).
 - **Out of Scope**: Per-parameter edge cases (→ `param/`), parameter group interactions (→ `param_group/`).
 
 ### Responsibility Table
@@ -18,7 +18,7 @@
 | 04_account_save.md | Test cases for `.account.save` command |
 | 05_account_use.md | Test cases for `.account.use` command |
 | 06_account_delete.md | Test cases for `.account.delete` command |
-| 07_token_status.md | Test cases for `.token.status` command |
+| 07_token_status.md | Removed — `.token.status` command fully removed; superseded by `.credentials.status` (`10_credentials_status.md`) |
 | 08_paths.md | Test cases for `.paths` command |
 | 09_usage.md | Test cases for `.usage` command |
 | 10_credentials_status.md | Test cases for `.credentials.status` command |
@@ -31,4 +31,5 @@
 | 17_model.md | Test cases for `.model` command |
 | 18_account_unclaim.md | Removed — `.account.unclaim` command fully removed (Feature 037); tests live in `03_accounts.md` |
 | 19_models.md | Test cases for `.models` command |
-| 20_model_select.md | Test cases for `.model.select` command |
+| 20_model_select.md | DEPRECATED — `.model.select` reduced to a migration-error stub, replaced by `.model scope::subprocess` (Feature 035/Task 465); historical test cases retained |
+| 21_provider_select.md | Test cases for `.provider.select` command |

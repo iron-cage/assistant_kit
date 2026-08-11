@@ -3,11 +3,11 @@
 ### Scope
 
 - **Purpose**: Document integration and edge case test plans for all clv commands, parameters, types, and parameter groups.
-- **Responsibility**: Index of per-command, per-parameter, per-type, and per-group test case planning files.
-- **In Scope**: All 16 clv commands, all 13 parameters, all 9 types, all 4 parameter groups, all 8 user stories, and all 2 output formats.
+- **Responsibility**: Index of per-command, per-parameter, per-type, per-group, and per-command-group test case planning files.
+- **In Scope**: All 15 clv commands, all 17 parameters, all 10 types, all 4 parameter groups, 0 qualifying command groups, all 8 user stories, and all 2 output formats.
 - **Out of Scope**: Automated test implementations (→ `tests/` in crate), spec documentation (→ `docs/feature/`).
 
-6-tier testing organization for `claude_version` CLI, providing distinct audience focus at each level.
+7-tier testing organization for `claude_version` CLI, providing distinct audience focus at each level.
 
 ### Responsibility Table
 
@@ -17,6 +17,7 @@
 | `param/` | Edge case tests per parameter |
 | `type/` | Type validation test cases per semantic type |
 | `param_group/` | Interaction tests per parameter group |
+| `command_group/` | Structural-equivalence test cases per command group (0 groups qualify) |
 | `format/` | Format rendering test cases per output format |
 | `user_story/` | User story acceptance tests per scenario |
 | `procedure.md` | Workflow for creating and updating CLI test tiers |
@@ -29,6 +30,7 @@
 | Type | `type/*.md` | Validate semantic type parsing, ranges, and inference | Developers | Type validation, boundary |
 | Group | `param_group/*.md` | Test parameter interactions within groups | Developers | Corner cases, dependencies |
 | Command | `command/*.md` | End-to-end command integration | QA / Users | Integration tests, workflows |
+| Command Group | `command_group/*.md` | Structural equivalence between commands sharing one routine (0 groups qualify) | Developers | Equivalence tests |
 | User Story | `user_story/*.md` | End-to-end workflow acceptance | QA / Users | Acceptance tests, scenarios |
 | Format | `format/*.md` | Output format rendering contract | Developers | Format shape, verbosity, case |
 
@@ -38,6 +40,7 @@
 - [Parameter Tests](param/) — Edge case tests per parameter
 - [Type Tests](type/) — Type validation tests per semantic type
 - [Parameter Group Tests](param_group/) — Interaction tests per group
+- [Command Group Tests](command_group/) — Structural-equivalence tests per command group (0 groups qualify)
 - [User Story Tests](user_story/) — Workflow acceptance tests per scenario
 - [Format Tests](format/) — Format rendering tests per output format
 
@@ -48,16 +51,15 @@
 - [`.version.install`](command/04_version_install.md)
 - [`.version.guard`](command/05_version_guard.md)
 - [`.version.list`](command/06_version_list.md)
-- [`.processes`](command/07_processes.md)
-- [`.processes.kill`](command/08_processes_kill.md)
+- [`.ps`](command/07_ps.md)
+- [`.ps.kill`](command/08_ps_kill.md)
 - [`.settings.show`](command/09_settings_show.md)
 - [`.settings.get`](command/10_settings_get.md)
 - [`.settings.set`](command/11_settings_set.md)
-- [`.version.history`](command/12_version_history.md)
 - [`.config`](command/13_config.md)
 - [`.params`](command/14_params.md)
 - [`.runtime_files`](command/15_runtime_files.md)
-- [`.paths`](command/16_paths.md)
+- [`.version.paths`](command/16_version_paths.md)
 
 ### Parameters
 - [`version::`](param/01_version.md)
@@ -73,6 +75,10 @@
 - [`scope::`](param/11_scope.md)
 - [`unset::`](param/12_unset.md)
 - [`kind::`](param/13_kind.md)
+- [`mode::`](param/14_mode.md)
+- [`record_only::`](param/15_record_only.md)
+- [`name::`](param/16_name.md)
+- [`pid::`](param/17_pid.md)
 
 ### Types
 - [`VerbosityLevel`](type/01_verbosity_level.md)
@@ -84,12 +90,16 @@
 - [`ConfigKey`](type/07_config_key.md)
 - [`ParamKind`](type/08_param_kind.md)
 - [`PathKey`](type/09_path_key.md)
+- [`ListMode`](type/10_list_mode.md)
 
 ### Parameter Groups
 - [Output Control](param_group/01_output_control.md)
 - [Execution Control](param_group/02_execution_control.md)
 - [Settings Identity](param_group/03_settings_identity.md)
 - [Config Identity](param_group/04_config_identity.md)
+
+### Command Groups
+*(none — 0 command groups qualify under the strict identity test; see [`command_group/readme.md`](command_group/readme.md))*
 
 ### User Stories
 - [Environment Check](user_story/001_environment_check.md)
