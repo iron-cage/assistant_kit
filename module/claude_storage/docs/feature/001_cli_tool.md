@@ -9,9 +9,10 @@
 
 ### Design
 
-`claude_storage` (binary `clg`) is a CLI wrapper around the `claude_storage_core` library. It provides three invocation modes: help output (empty argv or `.help`), an interactive REPL (`--repl`), and one-shot command execution for scripting.
+`claude_storage` (binary `clg`) is a CLI wrapper around the `claude_storage_core` library. It provides three invocation modes: help output (empty argv, `.`, `.help`, `--help`, `-h`, or `help`), an interactive REPL (`--repl`), and one-shot command execution for scripting.
 
-**Help rendering:** When invoked with no arguments, `.help`, `--help`, or `-h`, the binary renders grouped command output via `cli_fmt::CliHelpTemplate` to stdout and exits 0. Commands are displayed in groups matching their functional domain (Status, Session, Project, Query). Help is rendered before any pipeline initialization.
+<!-- BUG-005 task/claude_storage/bug/completed/005_space_form_command_help_misparsed.md — space-form <command> help interception documented in the Help rendering paragraph below -->
+**Help rendering:** When invoked with no arguments, `.`, `.help`, `--help`, `-h`, or `help`, the binary renders grouped command output via `cli_fmt::CliHelpTemplate` to stdout and exits 0. Commands are displayed in groups matching their functional domain (Status, Session, Project, Query). Help is rendered before any pipeline initialization. A single `<command>.help` argument (e.g. `.list.help`) renders that command's own detail help through the same `cli_fmt::CliHelpTemplate` renderer instead of unilang's plain-text default. The space-separated two-token form `<command> help` (e.g. `.list help`) is intercepted identically — both in one-shot invocation and in the REPL — and renders byte-for-byte the same output as the dot-suffix form. This applies uniformly to every registered command: `help` is treated as a reserved second token (matching npm/git/kubectl convention), even for a command like `.search` whose first positional argument is an unconstrained string that could otherwise take "help" as a literal value — `.search help` renders `.search`'s own help rather than searching for the word "help"; the named-parameter form `.search query::help` is unaffected and still searches.
 
 **Separation from core.** All storage access logic lives in `claude_storage_core`. This crate provides command parsing, REPL interface, output formatting, and routing to the core library. The separation means library consumers (e.g. automation tools) can depend on `claude_storage_core` without pulling in CLI framework dependencies.
 
