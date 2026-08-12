@@ -7,7 +7,7 @@
 //! ## Coverage
 //!
 //! - EC-1: `show_stat::0` → no statistics footer (default)
-//! - EC-2: `show_stat::1` → statistics footer appended to content
+//! - EC-2: `show_stat::1` → accepted, no-op (no separate footer)
 //! - EC-3: Non-boolean value rejected
 //! - EC-4: Omitted uses default of 0
 //! - EC-5: No effect in metadata mode (`show_metadata::1`)
@@ -82,22 +82,24 @@ fn ec_1_show_stat_0_no_footer()
   );
 }
 
-/// EC-2: `show_stat::1` → statistics footer appended.
+/// EC-2: `show_stat::1` → accepted, no-op (no separate footer).
 ///
 /// ## Purpose
-/// Validates that `show_stat::1` appends a statistics section to content output.
+/// Validates that `show_stat::1` is still accepted but no longer appends a
+/// separate statistics footer — content mode's key:val attribute block now
+/// shows the equivalent fields unconditionally, regardless of `show_stat`.
 ///
 /// ## Coverage
-/// Exit 0; output contains entry count breakdown.
+/// Exit 0; output does not contain a separate "Session Metadata:" footer.
 ///
 /// ## Validation Strategy
 /// Create project with session. Run `.show session_id::session-test show_stat::1`.
-/// Assert exit 0 and output contains "Session Metadata:" footer.
+/// Assert exit 0 and output does not contain "Session Metadata:" footer.
 ///
 /// ## Related Requirements
 /// `tests/docs/cli/param/19_show_stat.md` — EC-2
 #[ test ]
-fn ec_2_show_stat_1_footer_shown()
+fn ec_2_show_stat_1_no_op_no_footer()
 {
   let storage = TempDir::new().unwrap();
   let project_cwd = TempDir::new().unwrap();
@@ -121,8 +123,8 @@ fn ec_2_show_stat_1_footer_shown()
   assert_exit( &out, 0 );
   let output = stdout( &out );
   assert!(
-    output.contains( "Session Metadata:" ),
-    "EC-2: show_stat::1 should show statistics footer; got: {output}"
+    !output.contains( "Session Metadata:" ),
+    "EC-2: show_stat::1 is a no-op and should not show a separate statistics footer; got: {output}"
   );
 }
 
@@ -248,15 +250,16 @@ fn ec_5_show_stat_no_effect_in_metadata_mode()
 /// EC-6: Combined with `show_tokens::1`.
 ///
 /// ## Purpose
-/// Validates that `show_stat::1` and `show_tokens::1` can be used together.
+/// Validates that `show_stat::1` (no-op) and `show_tokens::1` can be used
+/// together without `show_stat::1` reintroducing a footer.
 ///
 /// ## Coverage
-/// Exit 0; output includes both statistics footer and token usage section.
+/// Exit 0; output includes the token usage section; no separate statistics footer.
 ///
 /// ## Validation Strategy
 /// Create project with session. Run `.show session_id::session-test
-/// show_stat::1 show_tokens::1`. Assert exit 0 and output contains both
-/// "Session Metadata:" and "Token Usage:" sections.
+/// show_stat::1 show_tokens::1`. Assert exit 0 and output contains
+/// "Token Usage:" section.
 ///
 /// ## Related Requirements
 /// `tests/docs/cli/param/19_show_stat.md` — EC-6
@@ -285,10 +288,6 @@ fn ec_6_show_stat_combined_with_show_tokens()
 
   assert_exit( &out, 0 );
   let output = stdout( &out );
-  assert!(
-    output.contains( "Session Metadata:" ),
-    "EC-6: combined mode should include statistics footer; got: {output}"
-  );
   assert!(
     output.contains( "Token Usage:" ),
     "EC-6: combined mode should include token usage section; got: {output}"

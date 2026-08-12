@@ -189,7 +189,13 @@ cd /home/user/project
 **Content Format**:
 ```text
 Session: 79f86582... (2893 entries)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Path: /home/user/.claude/projects/-home-user-project/79f86582-....jsonl
+Agent Session: false
+Total Entries: 2893
+User Entries: 1447
+Assistant Entries: 1446
+First Entry: 2025-12-01T08:15:23.000Z
+Last Entry: 2025-12-02T09:57:00.000Z
 
 [2025-12-02 09:57] User:
 last 3 biig tasks solved in this context?
@@ -201,8 +207,6 @@ I'll analyze the recent conversation history...
 1. **tree_fmt Standardization**
 2. **Path Filter Bug Investigation**
 3. **Test Suite Fixes**
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
 ### .count
