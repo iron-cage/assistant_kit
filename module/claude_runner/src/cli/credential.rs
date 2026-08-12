@@ -148,7 +148,7 @@ pub( super ) fn run_isolated_command
   max_turns             : Option< &str >,       // injected as --max-turns <value> when Some
 ) -> !
 {
-  // Fix(BUG-482): resolve `IsolatedModel::Default`'s config preference (project
+  // Fix(BUG-485): resolve `IsolatedModel::Default`'s config preference (project
   //   `.clr.toml` → user `~/.clr/config.toml`) once, here at entry — upstream of the
   //   fan-out into emit_credential_trace() (preview), run_isolated_ext(), and
   //   run_isolated_with_stdin_file(), so all three --model sites see the same value.
