@@ -29,6 +29,24 @@ not discarded.
 matching `run`/`ask` semantics. The subprocess runs until it exits naturally
 with no deadline enforced.
 
+<!-- BUG-445 (task/claude_runner/bug/unverified/445_clr_timeout_flag_no_gate_wait_protection_without_remaining_timeout_secs.md) —
+     isolated's --timeout does not bound its --max-sessions gate-wait phase, by design; this
+     doc did not cross-reference that boundary despite 036_timeout.md documenting the parallel
+     run/ask case. See 033_max_sessions.md and 036_timeout.md. -->
+
+**Note — does not bound gate-wait (`isolated` only):** For `isolated`, `--timeout` governs
+only the subprocess-execution phase, AFTER an invocation has already been admitted past the
+`--max-sessions` concurrency gate — `isolated` contends for a slot the same as `run`/`ask`.
+If the invocation is still queued waiting for a session slot, `--timeout` has no effect:
+gate-wait is bounded independently by `CLR_GATE_POLL_SECS` x `CLR_GATE_MAX_ATTEMPTS` (default
+30s x 1000 = ~8.3h) unless the caller separately sets `CLR_REMAINING_TIMEOUT_SECS`. Total
+wall-clock exposure for a queued-then-executing `isolated` invocation is gate-wait time PLUS
+`--timeout` — no single flag bounds the sum. Passing `--trace` surfaces this when it applies
+(a stderr note fires when `--timeout` is finite and `CLR_REMAINING_TIMEOUT_SECS` is unset).
+See [033_max_sessions.md](033_max_sessions.md) and [036_timeout.md](036_timeout.md) for
+gate-wait mechanics. **`refresh` is not affected** — `dispatch_refresh()` never calls the
+concurrency gate, so `refresh`'s `--timeout` has no gate-wait interaction to document.
+
 ### Referenced Type
 
 | Type | Kind | Fundamental | Key Constraint |

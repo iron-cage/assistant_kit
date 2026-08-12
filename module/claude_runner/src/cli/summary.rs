@@ -183,12 +183,48 @@ fn extract_bool( s : &str, key : &str ) -> Option< bool >
 }
 
 /// Count elements in the `permission_denials` JSON array.
+///
+/// Fix(BUG-442)
+/// Root cause: the scan searched for the first `]` character in the remainder of the
+/// string with no bracket-depth tracking and no string-literal awareness — a `]`
+/// inside an entry's own string field (e.g. a `reason` quoting a bracketed term) was
+/// mistaken for the array's own closing bracket, truncating the scan before the
+/// array's true end.
+/// Pitfall: bracket-counting alone is not sufficient to find a JSON array's boundary
+/// — without also tracking string-literal state (quote toggling with
+/// backslash-escape lookahead), a bracket character inside a quoted field value is
+/// misread as a structural delimiter.
 fn count_permission_denials( json : &str ) -> u64
 {
   let needle = "\"permission_denials\":[";
   let Some( pos ) = json.find( needle ) else { return 0 };
-  let rest  = &json[ pos + needle.len() .. ];
-  let Some( end ) = rest.find( ']' ) else { return 0 };
+  let rest = &json[ pos + needle.len() .. ];
+
+  let mut depth       = 1_i32;
+  let mut in_string   = false;
+  let mut escape_next = false;
+  let mut end         = None;
+  for ( i, c ) in rest.char_indices()
+  {
+    if escape_next
+    {
+      escape_next = false;
+      continue;
+    }
+    match c
+    {
+      '\\' if in_string => escape_next = true,
+      '"' => in_string = !in_string,
+      '[' if !in_string => depth += 1,
+      ']' if !in_string =>
+      {
+        depth -= 1;
+        if depth == 0 { end = Some( i ); break; }
+      }
+      _ => {}
+    }
+  }
+  let Some( end ) = end else { return 0 };
   let inner = rest[ ..end ].trim();
   if inner.is_empty() { return 0; }
   ( inner.matches( "},{" ).count() + 1 ) as u64
