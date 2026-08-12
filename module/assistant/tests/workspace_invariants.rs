@@ -142,18 +142,20 @@ fn workspace_deps_in( content : &str ) -> Vec< String >
 
 /// Return the numeric layer (0–3) for a workspace member, or `None` for Layer * crates.
 ///
-/// Layer * crates (`claude_storage_core`, `claude_auth`, `claude_quota`)
+/// Layer * crates (`claude_storage_core`, `claude_auth`, `claude_quota`, `claude_journal`)
 /// are excluded from cross-layer dependency checks (CL-1, CL-2).
 fn layer_of( name : &str ) -> Option< u8 >
 {
   match name
   {
+    // Fix(BUG-019): claude_journal hardcoded as Layer 1; Cargo.toml has zero workspace-member
+    // deps (Layer * criterion). Pitfall: hand-maintained classification table with no
+    // mechanical link to Cargo.toml ground truth — same defect class as claude_journal_charts BUG-001.
     "claude_core" => Some( 0 ),
     "claude_assets_core"
     | "claude_profile_core"
     | "claude_version_core"
-    | "claude_runner_core"
-    | "claude_journal" => Some( 1 ),
+    | "claude_runner_core" => Some( 1 ),
     "dream"
     | "claude_assets"
     | "claude_version"
