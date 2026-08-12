@@ -192,6 +192,49 @@ fn try_command_help( binary : &str, registry : &CommandRegistry, token : &str ) 
   true
 }
 
+/// Detects the space-separated `<command> help` two-token form and, when
+/// `<command>` is registered, renders its detail via `print_command_help` —
+/// the same rendering `try_command_help` uses for the dot-suffix form.
+///
+/// A sibling to `is_global_help_token()` and `try_command_help()` — a third
+/// hand-rolled interceptor of the same shape, mirroring the pattern
+/// established in commit `4230527e`, not a shared abstraction with them. If
+/// a 4th help-interception form is ever needed, consolidate the `try_*`/
+/// `is_global_help_token` predicates into an ordered (matcher, renderer)
+/// list rather than adding another hand-rolled `if` block.
+///
+/// Returns `true` when `tokens` was handled; the caller should skip normal
+/// dispatch in that case.
+///
+/// `help` is a reserved second token for every registered command,
+/// unconditionally — including a command like `.search` whose first
+/// positional argument is an unconstrained string where "help" could
+/// otherwise be a literal value (AGG-01, resolved as an accepted trade-off
+/// matching npm/git/kubectl's own reserved-word convention: `.search help`
+/// renders help rather than searching; `.search query::help`, the
+/// named-parameter form, is unaffected and still searches). See
+/// `t09_search_help_one_shot_reserved_word_tradeoff` /
+/// `t10_search_query_help_named_param_unaffected`.
+///
+/// Fix(BUG-005)
+/// Root cause: unilang binds a trailing bare token positionally when it
+/// isn't recognized as a flag or as one of the existing dot-suffix/global
+/// help special cases, so `<command> help` (space-separated) fell through to
+/// ordinary argument parsing instead of being recognized as a help request.
+/// Pitfall: this match is intentionally exact two-token equality
+/// (`tokens.len() == 2 && tokens[ 1 ] == "help"`) — do not loosen it to a
+/// prefix/contains check (would swallow `.list helpme`) or make it
+/// case-insensitive (would swallow `.list HELP`, currently a distinct
+/// parse-error path); both are locked in as regression boundaries by
+/// `t06_list_help_uppercase_unchanged`/`t07_list_helpme_content_near_miss_unchanged`.
+fn try_command_help_space_form( binary : &str, registry : &CommandRegistry, tokens : &[ &str ] ) -> bool
+{
+  if tokens.len() != 2 || tokens[ 1 ] != "help" { return false; }
+  let Some( cmd ) = registry.command( tokens[ 0 ] ) else { return false };
+  print_command_help( binary, &cmd );
+  true
+}
+
 /// Run REPL (Read-Eval-Print Loop) mode.
 ///
 /// Intercepts global-help tokens (`.`, `.help`, `help`, ...) and
@@ -234,6 +277,12 @@ fn run_repl( registry : CommandRegistry, binary : &str )
     }
 
     if try_command_help( binary, pipeline.registry(), input )
+    {
+      continue;
+    }
+
+    let tokens : Vec< &str > = input.split_whitespace().collect();
+    if try_command_help_space_form( binary, pipeline.registry(), &tokens )
     {
       continue;
     }
@@ -309,6 +358,11 @@ fn extract_user_message( error : &str ) -> String
 fn execute_oneshot( registry : CommandRegistry, args : Vec< String >, binary : &str ) -> !
 {
   if args.len() == 2 && try_command_help( binary, &registry, &args[ 1 ] )
+  {
+    process::exit( 0 );
+  }
+
+  if args.len() == 3 && try_command_help_space_form( binary, &registry, &[ args[ 1 ].as_str(), args[ 2 ].as_str() ] )
   {
     process::exit( 0 );
   }

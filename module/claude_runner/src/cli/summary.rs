@@ -159,13 +159,68 @@ fn nested_object_shallow< 's >( s : &'s str, key : &str ) -> Option< &'s str >
   s[ pos + needle.len() .. ].trim_start().strip_prefix( '{' )
 }
 
+/// Byte offset of the closing delimiter (`}`/`]`) that terminates the object/array whose
+/// content begins at `s[0]` — the first close encountered at bracket-depth 0, string-aware
+/// (quote toggling with backslash-escape lookahead), so an in-string `}` never terminates
+/// the scan.  Returns `None` when the content is unterminated (truncated JSON).
+///
+/// # Fix(BUG-476)
+/// `render_summary()`'s `modelUsage` extraction scanned the entire remainder of the JSON
+/// for the model name's quotes with no check for the object's own closing brace — an
+/// empty `"modelUsage":{}` sent the scan into the next sibling key.
+/// Root cause: `mu_str` was an unbounded suffix slice (`&json[p + marker.len()..]`);
+///   both `find_unescaped_quote()` calls searched to the end of the whole envelope.
+/// Pitfall: locating a field by its opening marker alone and scanning forward for
+///   delimiters silently reads sibling fields' data whenever the field is empty — bound
+///   every such scan to the field's own extent first.
+fn object_extent( s : &str ) -> Option< usize >
+{
+  let mut depth   = 0i32;
+  let mut in_str  = false;
+  let mut escaped = false;
+  for ( i, c ) in s.char_indices()
+  {
+    if escaped { escaped = false; continue; }
+    if in_str
+    {
+      if c == '\\' { escaped = true; }
+      else if c == '"' { in_str = false; }
+      continue;
+    }
+    match c
+    {
+      '"'       => in_str = true,
+      '{' | '[' => depth += 1,
+      '}' | ']' => { if depth == 0 { return Some( i ); } depth -= 1; }
+      _         => {}
+    }
+  }
+  None
+}
+
 /// Extract an `f64` JSON number for `key`.
 fn extract_f64( s : &str, key : &str ) -> Option< f64 >
 {
   let needle = format!( "\"{key}\":" );
   let pos    = s.find( &needle )?;
-  let rest   = s[ pos + needle.len() .. ].trim_start_matches( ' ' );
-  let end    = rest
+  parse_f64_value( &s[ pos + needle.len() .. ] )
+}
+
+/// Depth-0 variant of [`extract_f64`] — matches `key` only at bracket-depth 0 relative to
+/// the start of `s`, never inside a nested `{...}`/`[...]` value.  See [`find_key_shallow`].
+fn extract_f64_shallow( s : &str, key : &str ) -> Option< f64 >
+{
+  let needle = format!( "\"{key}\":" );
+  let pos    = find_key_shallow( s, key )?;
+  parse_f64_value( &s[ pos + needle.len() .. ] )
+}
+
+/// Parse an `f64` JSON number from `rest` (the text immediately following a `"key":`).
+/// Shared by [`extract_f64`] and [`extract_f64_shallow`].
+fn parse_f64_value( rest : &str ) -> Option< f64 >
+{
+  let rest = rest.trim_start_matches( ' ' );
+  let end  = rest
     .find( |c : char| !matches!( c, '0'..='9' | '.' | '-' | 'e' | 'E' | '+' ) )
     .unwrap_or( rest.len() );
   rest[ ..end ].parse().ok()
@@ -521,28 +576,65 @@ pub fn render_summary( json : &str, fields : Option< &str > ) -> Option< String 
   let eph_1h = cc_str.and_then( |s| extract_u64_shallow( s, "ephemeral_1h_input_tokens" ) ).unwrap_or( 0 );
   let eph_5m = cc_str.and_then( |s| extract_u64_shallow( s, "ephemeral_5m_input_tokens" ) ).unwrap_or( 0 );
 
-  // modelUsage — first model's stats
-  // Fix(BUG-394): both quote searches now route through find_unescaped_quote()
+  // modelUsage — name from the first entry; numeric stats aggregated across ALL entries.
+  // Fix(BUG-394): both quote searches route through find_unescaped_quote()
   // instead of a bare .find('"') — the model-name key could itself have been
-  // JSON-escaped, and q2's terminator search is the same "stops at the first
+  // JSON-escaped, and the terminator search is the same "stops at the first
   // escaped quote" defect class as ps.rs's try_jsonl_task()/parse_json_str().
-  let mu_marker  = "\"modelUsage\":{";
-  let mu_str     = json.find( mu_marker ).map( |p| &json[ p + mu_marker.len() .. ] );
-  let model_name = mu_str.and_then( |s| {
-    let q1    = find_unescaped_quote( s )?;
-    let inner = &s[ q1 + 1 .. ];
-    let q2    = find_unescaped_quote( inner )?;
-    Some( inner[ ..q2 ].to_string() )
-  } ).unwrap_or_default();
-  let mu_inner   = mu_str.and_then( |s| s.find( '{' ).map( |p| &s[ p + 1 .. ] ) );
-  let m_in_tok   = mu_inner.and_then( |s| extract_u64( s, "inputTokens" ) ).unwrap_or( 0 );
-  let m_out_tok  = mu_inner.and_then( |s| extract_u64( s, "outputTokens" ) ).unwrap_or( 0 );
-  let m_cr_tok   = mu_inner.and_then( |s| extract_u64( s, "cacheReadInputTokens" ) ).unwrap_or( 0 );
-  let m_cc_tok   = mu_inner.and_then( |s| extract_u64( s, "cacheCreationInputTokens" ) ).unwrap_or( 0 );
-  let m_ws       = mu_inner.and_then( |s| extract_u64( s, "webSearchRequests" ) ).unwrap_or( 0 );
-  let m_cost     = mu_inner.and_then( |s| extract_f64( s, "costUSD" ) ).unwrap_or( 0.0 );
-  let m_ctx      = mu_inner.and_then( |s| extract_u64( s, "contextWindow" ) ).unwrap_or( 0 );
-  let m_max_out  = mu_inner.and_then( |s| extract_u64( s, "maxOutputTokens" ) ).unwrap_or( 0 );
+  //
+  // Fix(BUG-476)+Fix(BUG-477): the scan is bounded to modelUsage's own closing brace
+  //   (object_extent) and loops over every entry instead of reading only the first.
+  // Root cause: mu_str was an unbounded suffix slice — an empty "modelUsage":{} let the
+  //   quote scan read the next sibling key's name as the model name (BUG-476), and a
+  //   single .find('{') with no loop dropped every entry after the first, underreporting
+  //   model_cost_usd/model_*_tokens by up to 4 orders of magnitude on 2+-model turns
+  //   (BUG-477) while total_cost_usd (independently extracted) stayed correct.
+  // Pitfall: "first entry found" is not "the complete field" for a collection-shaped
+  //   JSON field, and an opening marker alone is not a boundary — aggregate across the
+  //   field's own bounded extent, or an empty/multi-entry object silently corrupts output.
+  let mu_marker      = "\"modelUsage\":{";
+  let mu_all         = json.find( mu_marker ).map( |p| &json[ p + mu_marker.len() .. ] );
+  let mut model_name = String::new();
+  let mut m_in_tok   = 0u64;
+  let mut m_out_tok  = 0u64;
+  let mut m_cr_tok   = 0u64;
+  let mut m_cc_tok   = 0u64;
+  let mut m_ws       = 0u64;
+  let mut m_cost     = 0.0f64;
+  let mut m_ctx      = 0u64;
+  let mut m_max_out  = 0u64;
+  let mut first      = true;
+  if let Some( mut rest ) = mu_all.and_then( |s| object_extent( s ).map( |e| &s[ ..e ] ) )
+  {
+    // Entry name — the next unescaped-quote-delimited key within modelUsage's extent.
+    while let Some( q1 ) = find_unescaped_quote( rest )
+    {
+      let inner = &rest[ q1 + 1 .. ];
+      let Some( q2 ) = find_unescaped_quote( inner ) else { break };
+      let name  = &inner[ ..q2 ];
+      // Entry stats object — bounded to its own closing brace before any extraction.
+      let after = &inner[ q2 + 1 .. ];
+      let Some( ob ) = after.find( '{' ) else { break };
+      let body  = &after[ ob + 1 .. ];
+      let Some( ee ) = object_extent( body ) else { break };
+      let entry = &body[ ..ee ];
+      if first
+      {
+        first      = false;
+        model_name = name.to_string();
+        // Per-model capabilities, not additive — first entry's values, matching model:.
+        m_ctx      = extract_u64_shallow( entry, "contextWindow" ).unwrap_or( 0 );
+        m_max_out  = extract_u64_shallow( entry, "maxOutputTokens" ).unwrap_or( 0 );
+      }
+      m_in_tok  += extract_u64_shallow( entry, "inputTokens" ).unwrap_or( 0 );
+      m_out_tok += extract_u64_shallow( entry, "outputTokens" ).unwrap_or( 0 );
+      m_cr_tok  += extract_u64_shallow( entry, "cacheReadInputTokens" ).unwrap_or( 0 );
+      m_cc_tok  += extract_u64_shallow( entry, "cacheCreationInputTokens" ).unwrap_or( 0 );
+      m_ws      += extract_u64_shallow( entry, "webSearchRequests" ).unwrap_or( 0 );
+      m_cost    += extract_f64_shallow( entry, "costUSD" ).unwrap_or( 0.0 );
+      rest = &body[ ee + 1 .. ];
+    }
+  }
 
   let denials  = count_permission_denials( json );
   let is_err_s = if is_error { "true" } else { "false" };

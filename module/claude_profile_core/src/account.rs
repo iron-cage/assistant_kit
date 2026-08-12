@@ -1968,6 +1968,45 @@ pub fn parse_string_array_field( json : &str, key : &str ) -> Vec< String >
   values
 }
 
+/// Bound a JSON substring to its first top-level `{...}` object block via brace-depth counting.
+///
+/// Fix(BUG-002)
+/// Root cause: `parse_string_field()`/`parse_u64_field()`/`parse_bool_field()`/
+/// `parse_string_array_field()` search for `"key":` unboundedly across the entire
+/// input, with no awareness of enclosing object boundaries. On multi-entry JSON
+/// (e.g. a `roles` array with several membership objects), a caller intending to
+/// scope a search to one entry silently matches the first occurrence of `key`
+/// anywhere in the string, including in a later or earlier sibling entry.
+/// Pitfall: callers needing per-entry field extraction from multi-entry JSON must
+/// first bound the entry via `extract_object_block()` and pass only that slice to
+/// the `parse_*_field()` helpers — passing the full multi-entry JSON directly
+/// always risks silently returning a sibling entry's value instead of the intended
+/// entry's.
+///
+/// Returns `None` when `s` does not start with `{`, or the block is unclosed.
+#[ doc( hidden ) ]
+#[ must_use ]
+#[ inline ]
+pub fn extract_object_block( s : &str ) -> Option< &str >
+{
+  if !s.starts_with( '{' ) { return None; }
+  let mut depth = 0_i32;
+  for ( i, c ) in s.char_indices()
+  {
+    match c
+    {
+      '{' => depth += 1,
+      '}' =>
+      {
+        depth -= 1;
+        if depth == 0 { return Some( &s[ ..=i ] ); }
+      }
+      _ => {}
+    }
+  }
+  None
+}
+
 /// Read the OAuth `accessToken` field from a credential JSON file.
 ///
 /// Shared base for both the usage quota fetch path and the credential-read
