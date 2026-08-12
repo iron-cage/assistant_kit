@@ -50,7 +50,7 @@ use credential::{ run_isolated_command, run_refresh_command };
 const CREDS_PATH_ERROR : &str =
   "Error: cannot resolve credentials path: HOME is not set; provide --creds or set CLR_CREDS\nRun with --help for usage.";
 use help::print_ask_help;
-use gate::wait_for_session_slot;
+use gate::{ trace_gate_wait_exposure, wait_for_session_slot };
 pub( super ) use ps::dispatch_ps;
 pub( super ) use kill::dispatch_kill;
 pub( super ) use tools::dispatch_tools;
@@ -227,6 +227,16 @@ pub( super ) fn run_built_command(
   if is_print_invocation
   {
     let max_sessions = cli.max_sessions.unwrap_or( 8 );
+    // Fix(BUG-445): `cli.timeout` is `Some` only when expressed (--timeout flag
+    // or CLR_TIMEOUT env, env.rs fallback) — `is_some()` marks expression for
+    // the exposure note, and `unwrap_or( 0 )` maps both unexpressed (None) and
+    // the explicit `--timeout 0` opt-out to 0 = no gate-budget fallback, so the
+    // built-in 3600s print default never reaches the gate.
+    // Root cause: the gate call carried no timeout input at all — gate-wait's
+    // only timing signal was the opt-in CLR_REMAINING_TIMEOUT_SECS env var.
+    // Pitfall: pass the EXPRESSED value, never the effective default — see
+    // effective_gate_attempts()'s Fix(BUG-445) note in gate.rs.
+    trace_gate_wait_exposure( max_sessions, cli.trace, cli.timeout.is_some() );
     let mut runner_attempt = 0u32;
     wait_for_session_slot(
       max_sessions,
@@ -234,6 +244,7 @@ pub( super ) fn run_built_command(
       cli.gate_poll_secs.unwrap_or( 30 ),
       cli.gate_max_attempts.unwrap_or( 1000 ),
       cli.gate_stale_secs,
+      u64::from( cli.timeout.unwrap_or( 0 ) ),
       journal,
       &mut | e | { execution::apply_runner_retry( cli, e, &mut runner_attempt, journal ); },
     );
@@ -420,12 +431,24 @@ fn gate_isolated_session( cli : &IsolatedArgs, journal : Option< &claude_journal
 {
   if cli.dry_run { return; }
   let max_sessions = cli.max_sessions.unwrap_or( 8 );
+  // Fix(BUG-445): `timeout_expressed` (set by the --timeout parser arm or the
+  // CLR_TIMEOUT env application) gates the budget fallback — isolated's
+  // built-in 30s default must never default the gate budget, or every default
+  // invocation would fail-fast at 30s instead of queueing (~8.3h ceiling). An
+  // expressed `--timeout 0` passes 0 = deliberate unlimited, no fallback.
+  // Root cause: `timeout_secs` is a plain u64 with a baked-in default, so the
+  // gate call could not distinguish "caller said 30" from "nobody said
+  // anything" — the expression bit had to be captured at parse time.
+  // Pitfall: pass the EXPRESSED value, never the effective default — see
+  // effective_gate_attempts()'s Fix(BUG-445) note in gate.rs.
+  trace_gate_wait_exposure( max_sessions, cli.trace, cli.timeout_expressed );
   wait_for_session_slot(
     max_sessions,
     false,
     gate::gate_poll_secs_from( env::env_str( "CLR_GATE_POLL_SECS" ).as_deref() ),
     gate::gate_max_attempts_from( env::env_str( "CLR_GATE_MAX_ATTEMPTS" ).as_deref() ),
     gate::gate_stale_secs_from( env::env_str( "CLR_GATE_STALE_SECS" ).as_deref() ),
+    if cli.timeout_expressed { cli.timeout_secs } else { 0 },
     journal,
     &mut | e | { eprintln!( "Error: [Runner] {e} (exit 1)" ); std::process::exit( 1 ); },
   );

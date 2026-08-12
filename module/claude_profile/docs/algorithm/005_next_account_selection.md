@@ -35,7 +35,7 @@ Every strategy below is additionally prefixed with a **leading `reserve` key** (
 
 Key definitions:
 - `7d_reset_secs`: seconds until 7d quota resets (`seven_day.resets_at`; `u64::MAX` if absent). Source: `sort.rs:113-116`.
-- `sub_renewal_secs`: seconds until subscription billing renewal (`renewal_at` or estimated `org_created_at`; `u64::MAX` if absent). Source: `sort.rs:138-152` (`sort::renew`), `sort.rs:179-187` (`sort::renews`). **Known Limitation (BUG-341):** the `org_created_at` estimate leg currently reads a stale account-gated path for cache-refreshed accounts, degrading to `u64::MAX` instead of the real estimate — see [algorithm/007](007_sort_strategies.md) Sort Key Definitions.
+- `sub_renewal_secs`: seconds until subscription billing renewal (`renewal_at` or estimated `org_created_at`; `u64::MAX` if absent). Source: `sort.rs:138-152` (`sort::renew`), `sort.rs:179-187` (`sort::renews`).
 - `prefer_weekly`: model-aware 7d capacity via `relevant_quotas(aq, prefer).1` (`format.rs`). See [algorithm/007](007_sort_strategies.md).
 
 #### Step 3 — First eligible wins

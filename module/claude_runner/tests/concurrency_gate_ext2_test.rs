@@ -557,6 +557,141 @@ fn t28_isolated_gate_does_not_trigger_below_capacity()
   );
 }
 
+// ── trace_gate_wait_exposure() on the `isolated` gate call site (BUG-445 Fix
+// Location #3) — not T-numbered, same idiom as the `t_gate_*` override-tier
+// matrix below; see `concurrency_gate_ext3_test.rs`'s "086" section for the
+// run/ask-path coverage of the same diagnostic. ──────────────────────────────
+
+/// `clr isolated --trace` with NO expressed timeout and unset
+/// `CLR_REMAINING_TIMEOUT_SECS` must warn on stderr, same as the run/ask
+/// path — `gate_isolated_session()` calls `trace_gate_wait_exposure()` with
+/// `cli.timeout_expressed` (BUG-445 Fix Location #2 added the expression bit,
+/// so isolated's baked-in 30s default no longer masquerades as a caller
+/// choice; an expressed `--timeout` now defaults the gate budget instead of
+/// warning).
+// test_kind: edge_case
+#[ test ]
+fn t_gate_isolated_trace_exposure_warns_when_remaining_timeout_unset()
+{
+  let proc = make_proc_dir( &[] );
+  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
+  let gate_dir   = tempfile::TempDir::new().expect( "gate dir" );
+  let creds      = make_creds_file( "{}" );
+  let creds_path = creds.path().to_str().expect( "creds path UTF-8" );
+
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = Command::new( bin )
+    .args( [
+      "isolated", "--creds", creds_path, "--max-sessions", "3",
+      "--trace", "--journal", "off", "x",
+    ] )
+    .env( "PATH", &script_path )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
+    .env( "CLR_GATE_DIR", gate_dir.path() )
+    .env( "CLR_GATE_POLL_SECS", "1" )
+    .env_remove( "CLR_REMAINING_TIMEOUT_SECS" )
+    .env_remove( "CLR_TIMEOUT" )
+    .env_remove( "CLAUDECODE" )
+    .output()
+    .expect( "invoke clr isolated" );
+
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert!(
+    stderr.contains( "Trace: gate-wait is unbounded — no --timeout given and CLR_REMAINING_TIMEOUT_SECS is unset" ),
+    "isolated must also warn about unbounded gate-wait exposure (BUG-445). Got:\n{stderr}"
+  );
+}
+
+/// `clr isolated --trace --timeout 0` is an explicit unlimited opt-out — must
+/// not warn, mirroring the run/ask path's `--timeout 0` guard.
+// test_kind: edge_case
+#[ test ]
+fn t_gate_isolated_trace_exposure_silent_when_timeout_zero()
+{
+  let proc = make_proc_dir( &[] );
+  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
+  let gate_dir   = tempfile::TempDir::new().expect( "gate dir" );
+  let creds      = make_creds_file( "{}" );
+  let creds_path = creds.path().to_str().expect( "creds path UTF-8" );
+
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = Command::new( bin )
+    .args( [
+      "isolated", "--creds", creds_path, "--max-sessions", "3", "--timeout", "0",
+      "--trace", "--journal", "off", "x",
+    ] )
+    .env( "PATH", &script_path )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
+    .env( "CLR_GATE_DIR", gate_dir.path() )
+    .env( "CLR_GATE_POLL_SECS", "1" )
+    .env_remove( "CLR_REMAINING_TIMEOUT_SECS" )
+    .env_remove( "CLAUDECODE" )
+    .output()
+    .expect( "invoke clr isolated" );
+
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert!(
+    !stderr.contains( "Trace: gate-wait is unbounded" ),
+    "isolated --timeout 0 is an explicit unlimited opt-out — must not warn. Got:\n{stderr}"
+  );
+}
+
+/// `clr isolated --timeout 5` (expressed) with `CLR_REMAINING_TIMEOUT_SECS`
+/// unset must default the gate-wait budget from the flag (BUG-445 Fix
+/// Location #2), pinning the isolated call site's
+/// `if cli.timeout_expressed { cli.timeout_secs } else { 0 }` threading —
+/// the run/ask-path reproducer lives in `concurrency_gate_ext3_test.rs`
+/// (086/FIX-2). Denial fixture per T39: the sole slot pre-seeded with this
+/// test process's own live pid, empty census.
+// test_kind: edge_case
+#[ test ]
+fn t_gate_isolated_expressed_timeout_defaults_gate_wait_budget()
+{
+  let proc = make_proc_dir( &[] );
+  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
+  let gate_dir   = tempfile::TempDir::new().expect( "gate dir" );
+  let creds      = make_creds_file( "{}" );
+  let creds_path = creds.path().to_str().expect( "creds path UTF-8" );
+  let owner_pid  = std::process::id();
+  std::fs::write(
+    gate_dir.path().join( "slot_0.json" ),
+    format!( r#"{{"pid":{owner_pid},"since":0}}"# ),
+  ).expect( "pre-seed live-owner slot file" );
+
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = Command::new( bin )
+    .args( [
+      "isolated", "--creds", creds_path, "--max-sessions", "1", "--timeout", "5",
+      "--journal", "off", "x",
+    ] )
+    .env( "PATH", &script_path )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
+    .env( "CLR_GATE_DIR", gate_dir.path() )
+    .env( "CLR_GATE_POLL_SECS",    "1" )
+    .env( "CLR_GATE_MAX_ATTEMPTS", "8" )
+    .env_remove( "CLR_REMAINING_TIMEOUT_SECS" )
+    .env_remove( "CLR_GATE_STALE_SECS" )
+    .env_remove( "CLAUDECODE" )
+    .output()
+    .expect( "invoke clr isolated" );
+
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert_eq!(
+    out.status.code(), Some( 1 ),
+    "isolated's gate exhaustion closure exits 1. Got:\n{stderr}"
+  );
+  assert!(
+    stderr.contains( "engaged (5s from --timeout clamps to 5 of 8 attempts)" ),
+    "isolated's expressed --timeout 5 must default the gate budget and name \
+     its source (BUG-445). Got:\n{stderr}"
+  );
+  assert!(
+    stderr.contains( "gate-wait budget exhausted" ),
+    "exhaustion under the --timeout-sourced budget must report the budget \
+     diagnostic. Got:\n{stderr}"
+  );
+}
+
 // ── T29/T30/T31: CLI-flag + isolated env-var-only parity for gate tuning (hardening fix 3) ──
 
 /// T29 (hardening fix 3, CLI-flag tier): `--gate-poll-secs 1 --gate-max-attempts 2`

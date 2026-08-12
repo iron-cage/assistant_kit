@@ -38,6 +38,15 @@ plugins:
     working_volume: claude_profile_targets
     working_volume_path: /tmp/claude_profile_targets
     commands: [run, live, shell]
+  # The test gate (verb/test.d/l1 → `will .test level::3`) delegates to will —
+  # on host PATH the knob-aware bin/will wrapper (family_dev) is unwrapped by
+  # the engine to the fresh managed ELF it fronts, so the container always gets
+  # a freshly rebuilt binary. No working volume of its own: the claude entry
+  # above already supplies CARGO_TARGET_DIR.
+  - type: binary
+    name: will
+    container_path: /usr/local/bin/will
+    commands: [run, live, shell]
 
 # ── Environment ───────────────────────────────────────────────────────────────
 # env: global flat map injected into all container runs

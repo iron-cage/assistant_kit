@@ -67,13 +67,16 @@ pass --max-sessions 0 to disable the gate) (exit 1)"`. This check is skipped ent
 `--max-sessions 0` — the disable escape hatch survives even a broken process scanner.
 
 <!-- BUG-399 (task/claude_runner/bug/completed/399_timeout_gate_wait_undocumented.md) —
-     --timeout does not bound this gate-wait phase, by design; this doc did not
-     cross-reference that boundary. See 036_timeout.md and user_story/025_concurrency_gate.md. -->
+     originally: --timeout did not bound this gate-wait phase, by design. Superseded for
+     expressed timeouts by BUG-445 Fix Location #2 (the note below). See 036_timeout.md
+     and user_story/025_concurrency_gate.md. -->
 
-**Note:** This gate-wait ceiling is entirely independent of `--timeout` (see
-[036_timeout.md](036_timeout.md)) — `--timeout` only governs the subprocess-execution phase
-that begins after the gate admits the invocation. An invocation queued in the gate is not
-affected by `--timeout` at all.
+**Note:** This gate-wait ceiling is independent of `--timeout` only when no timeout is
+expressed. An *expressed* `--timeout N` (flag or applied `CLR_TIMEOUT`) defaults the
+gate-wait budget to `N` seconds when `CLR_REMAINING_TIMEOUT_SECS` is absent or unparseable
+(BUG-445; a parseable env var wins, and the built-in defaults — 3600 s print, 30 s
+`isolated` — never reach the gate). See [036_timeout.md](036_timeout.md) and
+[085_gate_remaining_timeout_secs.md](085_gate_remaining_timeout_secs.md).
 
 **Note:** In `--dry-run` mode, the session gate is not triggered — the command preview
 is printed immediately without checking or waiting for active sessions.
