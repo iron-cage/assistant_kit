@@ -195,8 +195,8 @@
 
     - name: "show_stat"
       kind: "Boolean"
-      description: "Show session statistics footer in content mode (entry counts, timestamps)"
-      hint: "Show statistics footer"
+      description: "Accepted for backward compatibility; has no effect (content mode already shows entry counts and timestamps unconditionally)"
+      hint: "No effect (backward compatibility)"
       optional: true
       default: "0"
       validation_rules: []

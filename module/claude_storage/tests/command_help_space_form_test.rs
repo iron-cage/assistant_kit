@@ -6,6 +6,14 @@
 //! - Task: `task/claude_storage/verified/476_intercept_spaced_command_help_dispatch.md`
 //! - AGG-01 (T09/T10): `-plan/verified/002_intercept_spaced_command_help_dispatch.plan.md § Known Deferred Risk`
 //!
+//! Fix(BUG-006)
+//! Root cause: T04/T05 originally read expected output from `-baseline/<name>`, a
+//! hyphen-prefixed (gitignored) path that was never committed — a permanent test
+//! depending on a temporary fixture tier, violating CLAUDE.md storage tiers.
+//! Pitfall: never let a permanent test read its expected value from a path this
+//! project's own convention marks ephemeral (`-*`); bake the expected literal (or a
+//! stable substring, as T06-T10 below already do) into the test source instead.
+//!
 //! ## Coverage
 //!
 //! - T01: `.list help` one-shot intercepted, byte-identical to `.list.help`
@@ -33,11 +41,6 @@ fn stderr( out : &std::process::Output ) -> String
   String::from_utf8_lossy( &out.stderr ).into_owned()
 }
 
-fn merged( out : &std::process::Output ) -> String
-{
-  format!( "{}{}", stdout( out ), stderr( out ) )
-}
-
 fn assert_exit( out : &std::process::Output, code : i32 )
 {
   assert_eq!(
@@ -47,13 +50,6 @@ fn assert_exit( out : &std::process::Output, code : i32 )
     out.status.code(),
     stderr( out )
   );
-}
-
-/// Read a Phase 0 regression baseline captured pre-fix from `-baseline/<name>`.
-fn baseline( name : &str ) -> String
-{
-  let path = std::path::PathBuf::from( env!( "CARGO_MANIFEST_DIR" ) ).join( "-baseline" ).join( name );
-  std::fs::read_to_string( &path ).expect( "failed to read Phase 0 baseline file" )
 }
 
 /// Run the binary in `--repl` mode with piped stdin, returning captured output.
@@ -239,8 +235,10 @@ fn t03_show_help_one_shot_generality()
 /// command.
 ///
 /// ## Validation Strategy
-/// Compare live merged stdout+stderr and exit code against
-/// `-baseline/nonexistent_help.txt` (captured pre-fix in Phase 0).
+/// Live pre-fix capture: `clg .nonexistent help` → exit 1, stderr `Command
+/// Error: The command '.nonexistent' was not found. Use '.' to see all
+/// available commands or check for typos.` Assert this pre-existing message
+/// is unchanged (never intercepted).
 ///
 /// ## Related Requirements
 /// `task/claude_storage/bug/completed/005_space_form_command_help_misparsed.md`
@@ -248,13 +246,12 @@ fn t03_show_help_one_shot_generality()
 fn t04_nonexistent_help_unchanged()
 {
   let out = common::clg_cmd().arg( ".nonexistent" ).arg( "help" ).output().unwrap();
-  let expected = baseline( "nonexistent_help.txt" );
 
   assert_exit( &out, 1 );
-  assert_eq!(
-    merged( &out ).trim_end(), expected.trim_end(),
-    "`.nonexistent help` must remain byte-identical to the Phase 0 baseline; got:\n{}",
-    merged( &out )
+  assert!(
+    stderr( &out ).contains( "The command '.nonexistent' was not found" ),
+    "T04: `.nonexistent help` must remain unintercepted (unregistered command falls through); got stderr:\n{}",
+    stderr( &out )
   );
 }
 
@@ -272,8 +269,11 @@ fn t04_nonexistent_help_unchanged()
 /// `clg .list uuid help` — three tokens.
 ///
 /// ## Validation Strategy
-/// Compare live merged stdout+stderr and exit code against
-/// `-baseline/list_uuid_help.txt` (captured pre-fix in Phase 0).
+/// Live pre-fix capture: `clg .list uuid help` → exit 1, stderr `Argument
+/// Error: Cannot coerce value for argument 'show_sessions' to Boolean.
+/// Invalid boolean value` (the third token binds positionally to the next
+/// unfilled parameter rather than triggering help). Assert this pre-existing
+/// message is unchanged (never intercepted).
 ///
 /// ## Related Requirements
 /// `task/claude_storage/bug/completed/005_space_form_command_help_misparsed.md`
@@ -281,13 +281,12 @@ fn t04_nonexistent_help_unchanged()
 fn t05_list_uuid_help_three_token_unchanged()
 {
   let out = common::clg_cmd().arg( ".list" ).arg( "uuid" ).arg( "help" ).output().unwrap();
-  let expected = baseline( "list_uuid_help.txt" );
 
   assert_exit( &out, 1 );
-  assert_eq!(
-    merged( &out ).trim_end(), expected.trim_end(),
-    "`.list uuid help` must remain byte-identical to the Phase 0 baseline; got:\n{}",
-    merged( &out )
+  assert!(
+    stderr( &out ).contains( "Cannot coerce value for argument 'show_sessions' to Boolean" ),
+    "T05: `.list uuid help` must remain unintercepted (three-token positional binding); got stderr:\n{}",
+    stderr( &out )
   );
 }
 

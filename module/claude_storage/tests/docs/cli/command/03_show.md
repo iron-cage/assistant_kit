@@ -16,6 +16,7 @@ Integration tests for the `.show` command. Tests verify project view, session vi
 | INT-6 | show_entries::1 shows all session entries | Display Mode |
 | INT-7 | Exit code 2 when cwd has no project | Exit Codes |
 | INT-8 | project:: with path-encoded ID | Project View |
+| INT-9 | show_stat::1 is a no-op in content mode | Display Mode |
 
 ## Test Coverage Summary
 
@@ -23,7 +24,7 @@ Integration tests for the `.show` command. Tests verify project view, session vi
 - Session View: 1 test (INT-2)
 - Project View: 2 tests (INT-3, INT-8)
 - Combined: 1 test (INT-4)
-- Display Mode: 2 tests (INT-5, INT-6)
+- Display Mode: 3 tests (INT-5, INT-6, INT-9)
 - Exit Codes: 1 test (INT-7)
 
 ## Test Cases
@@ -145,5 +146,20 @@ CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .show project::-home-alice-projects-al
 **Expected behavior:**
 - Fixture: project stored with path-encoded ID `-home-alice-projects-alpha`
 - Session list for the project with path-encoded ID `-home-alice-projects-alpha`
+- Exit code: 0
+- **Source:** [command/03_show.md](../../../../docs/cli/command/03_show.md)
+
+---
+
+### INT-9: show_stat::1 is a no-op in content mode
+
+**Command:**
+```
+CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .show session_id::-default_topic show_stat::1
+```
+
+**Expected behavior:**
+- Fixture: session `-default_topic` with known messages
+- Content displayed identically to `show_stat::0` — key:val attribute block followed by chat-log content; no separate "Session Metadata:" footer
 - Exit code: 0
 - **Source:** [command/03_show.md](../../../../docs/cli/command/03_show.md)
