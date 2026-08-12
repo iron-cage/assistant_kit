@@ -24,13 +24,13 @@
 [active] --account.save--> [active]   (re-saved; no lifecycle change)
 [active] --account.use other---> [saved]  (marker overwritten with new name; this account → saved)
 [saved]  --account.delete--> [absent] (no active marker to clear)
-[active] --account.delete--> [absent] (clears every _active_* marker across all machines naming this account — Fix(BUG-341))
+[active] --account.delete--> [absent] (clears every _active_* marker across all machines naming this account — Fix(BUG-347))
 [absent] → [absent]  (account.delete on absent = no-op)
 ```
 
 ### Delete Behavior
 
-`.account.delete` deletes unconditionally, regardless of whether the account is active on any machine — there is no refusal guard. When the deleted account is active (on the calling machine or any other), every `_active_{host}_{user}` marker file naming it is also removed, not only the calling machine's own marker (Fix BUG-341: the pre-fix implementation resolved and checked only the calling machine's own marker path, leaving foreign-machine markers naming the same account orphaned). This can leave one or more machines with no active account; a subsequent `.account.use` or `.account.save` on each affected machine restores one.
+`.account.delete` deletes unconditionally, regardless of whether the account is active on any machine — there is no refusal guard. When the deleted account is active (on the calling machine or any other), every `_active_{host}_{user}` marker file naming it is also removed, not only the calling machine's own marker (Fix BUG-347: the pre-fix implementation resolved and checked only the calling machine's own marker path, leaving foreign-machine markers naming the same account orphaned). This can leave one or more machines with no active account; a subsequent `.account.use` or `.account.save` on each affected machine restores one.
 
 ### Multi-Machine Note
 
@@ -39,7 +39,7 @@
 ### Behavioral Invariants
 
 - An account can be deleted regardless of active state on any machine — `.account.delete` has no refusal guard.
-- Deleting an account clears every `_active_*` marker across all machines that names it, not only the calling machine's own marker (Fix BUG-341).
+- Deleting an account clears every `_active_*` marker across all machines that names it, not only the calling machine's own marker (Fix BUG-347).
 - A `saved` account's `{name}.json` data is preserved (read-merged) on re-save — no data loss on snapshot update.
 - "Active" is per-machine — multiple machines may each hold a different account as `active` simultaneously.
 

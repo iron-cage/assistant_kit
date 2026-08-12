@@ -30,8 +30,9 @@ fn write_creds_restricted( path : &std::path::Path, contents : &str ) -> std::io
 /// Emit trace/dry-run diagnostics for a credential-operation command (`isolated` or `refresh`).
 ///
 /// Reconstructs the `ClaudeCommand` exactly as `run_isolated_ext()` would build it
-/// (model flag prepended, then `with_home(&temp_dir)`, `with_compact_window(compact_window)`,
-/// then `with_args(args)`) and prints `describe_full()` — the same single preview-formatting
+/// (model flag prepended, then `with_home(&temp_dir)`, `with_home_isolation()`,
+/// `with_compact_window(compact_window)`, then `with_args(args)`) and prints
+/// `describe_full()` — the same single preview-formatting
 /// method used by `handle_dry_run` and the `--trace` branch in `run_built_command`, so the
 /// blank-line/export formatting can never drift between the three call sites.
 ///
@@ -44,8 +45,10 @@ fn write_creds_restricted( path : &std::path::Path, contents : &str ) -> std::io
 /// WYSIWYG: the reconstructed command here must match what `run_isolated_ext()` actually runs.
 ///
 /// Pitfall: if `run_isolated_ext()` in `claude_runner_core` is updated to modify the
-/// `ClaudeCommand` beyond prepending the model flag, `with_home()`, `with_compact_window()`,
-/// and `with_args()`, this trace will diverge — update both together.
+/// `ClaudeCommand` beyond prepending the model flag, `with_home()`, `with_home_isolation()`,
+/// `with_compact_window()`, and `with_args()`, this trace will diverge — update both
+/// together (BUG-478 was exactly this drift: the real chains gained `with_home_isolation()`
+/// and this preview did not).
 fn emit_credential_trace
 (
   label          : &str,             // subcommand name shown in the "# clr {label}" trace header
@@ -67,8 +70,18 @@ fn emit_credential_trace
     full_args.push( id.to_string() );
   }
   full_args.extend_from_slice( args );
+  // Fix(BUG-478): .with_home_isolation() mirrors both real execution chains
+  //   (run_isolated_ext() and run_isolated_with_stdin_file()), which call it between
+  //   .with_home() and .with_compact_window().
+  // Root cause: the real chains gained .with_home_isolation() (AC-41) but this preview
+  //   reconstruction was never updated to match — it rendered the builder's default
+  //   --chrome token while the real subprocess receives no chrome flag at all.
+  // Pitfall: a preview that reconstructs the real command instead of sharing its
+  //   construction drifts silently on every builder-chain change — mirror every call
+  //   here, per this function's own doc comment.
   let preview = ClaudeCommand::new()
     .with_home( &temp_dir )
+    .with_home_isolation()
     .with_compact_window( compact_window )
     .with_args( full_args.iter().cloned() );
   let block = preview.describe_full();
