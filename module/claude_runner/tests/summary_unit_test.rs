@@ -580,3 +580,54 @@ fn render_summary_uses_usage_totals_when_iterations_precedes_scalars()
      value (333). Got:\n{s}"
   );
 }
+
+// ── BUG-442: permission_denials array boundary ──────────────────────────────
+
+/// # Root Cause
+/// `count_permission_denials()` (summary.rs) located the `permission_denials` array's
+/// closing bracket via a single unbounded `rest.find(']')` call — the first `]`
+/// character anywhere in the remainder of the JSON, with no bracket-depth tracking and
+/// no string-literal awareness. A denial entry's own `reason`/`tool` string field
+/// containing a literal `]` (e.g. quoting a blocked array-index term) was mistaken for
+/// the array's own closing bracket, truncating the scan before the array's true end.
+///
+/// # Why Not Caught
+/// The defect only manifests when a `permission_denials` entry's own text content
+/// contains a literal `]` — most denial reasons/tool names don't, so ordinary use
+/// rarely exercised this path. The miscounted result is a syntactically valid `u64`
+/// with no error signal, indistinguishable from a genuine lower count.
+///
+/// # Fix Applied
+/// `count_permission_denials()` now tracks bracket depth and string-literal state
+/// (quote toggling with backslash-escape lookahead) while scanning forward from the
+/// array's opening `[`, stopping only at the `]` that returns depth to zero outside
+/// any string.
+///
+/// # Prevention
+/// This test pins a 2-entry `permission_denials` array where the first entry's own
+/// `reason` field contains an in-content `]` ahead of the array's real close — any
+/// regression that drops depth/string-literal tracking truncates the scan at that
+/// in-content `]`, undercounting 2 entries as 1.
+///
+/// # Pitfall
+/// Counting delimiter-separated entries in a JSON array by scanning for the first
+/// closing bracket, without tracking bracket depth or string-literal state, silently
+/// truncates the count whenever any entry's own content contains that same
+/// closing-bracket character.
+// test_kind: bug_reproducer(BUG-442)
+#[ test ]
+fn bug442_permission_denials_in_content_bracket_does_not_truncate_count()
+{
+  // Entry 1's own "reason" value contains a literal, unescaped ']' — valid JSON, since
+  // '[' / ']' need no escaping inside a string. Before the fix, count_permission_denials()
+  // truncates its scan at that in-content ']', undercounting this genuine 2-entry array as 1.
+  let json = r#"{"type":"result","subtype":"success","is_error":false,"duration_ms":1,"duration_api_ms":1,"num_turns":1,"result":"hello","permission_denials":[{"tool":"Bash","reason":"blocked: index [3] out of range"},{"tool":"Write","reason":"denied"}]}"#;
+
+  let rendered = render_summary( json, None ).expect( "must parse" );
+
+  assert!(
+    rendered.contains( "permission_denials:\u{1b}[0m \u{1b}[33m2\u{1b}[0m" ),
+    "BUG-442: permission_denials count must survive an in-content ']' in an entry's own \
+     reason text — expected count 2 (both entries), got a different value. Got:\n{rendered}"
+  );
+}
