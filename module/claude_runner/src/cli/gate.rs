@@ -552,7 +552,7 @@ fn json_escape_str( s : &str ) -> String
 // operator reads — a silent off-state reads as health until the incident the
 // feature existed to prevent. And: the state text must avoid the "budget"
 // substring, which EC-3/EC-4 pin as engaged-path-only.
-fn effective_gate_attempts( max_attempts : u32, poll_secs : u64 ) -> ( u32, bool, String )
+fn effective_gate_attempts( max_attempts : u32, poll_secs : u64, caller_timeout_secs : u64 ) -> ( u32, bool, String )
 {
   // Fix(BUG-423): clamp effective_max_attempts to the remaining external timeout budget
   // so the gate does not outlive a wrapping job-runner deadline (e.g. wplan_executor).
@@ -572,9 +572,27 @@ fn effective_gate_attempts( max_attempts : u32, poll_secs : u64 ) -> ( u32, bool
   // Pitfall: parse acceptance is not arithmetic safety — guard env-derived
   // divisors at the division site. The floor affects the quotient only; the
   // gate's actual sleep cadence is untouched.
-  let raw    = std::env::var( "CLR_REMAINING_TIMEOUT_SECS" ).ok();
-  let parsed = gate_remaining_timeout_secs_from( raw.as_deref() );
-  let budget = parsed.map( | remaining | {
+  // Fix(BUG-445): when CLR_REMAINING_TIMEOUT_SECS does not parse, an EXPRESSED
+  // caller timeout (--timeout flag or CLR_TIMEOUT env; callers pass 0 for
+  // unexpressed or an explicit `--timeout 0` opt-out) defaults the budget, so
+  // `--timeout N` alone bounds total exposure instead of only the post-gate
+  // execution phase. A parseable env var still wins — it is the deliberate
+  // per-dispatch coupling signal (BUG-423); the flag is its fallback.
+  // Root cause: the gate's sole timing input was the opt-in env var; a caller
+  // expressing `--timeout N` as a total budget got zero gate-wait protection
+  // (watchdog.sh health probes stalled 9697s/272s/903s against 60s).
+  // Pitfall: only EXPRESSED timeouts may default the budget — the built-in
+  // defaults (isolated 30s, print-mode 3600s) must never reach this fallback,
+  // or every default invocation flips from queue-patiently (~8.3h ceiling) to
+  // fail-fast. The state string names the source so env-vs-flag budgets stay
+  // distinguishable; an unparseable env value masked by the fallback is still
+  // reported (BUG-481's misconfiguration-visibility invariant).
+  let raw      = std::env::var( "CLR_REMAINING_TIMEOUT_SECS" ).ok();
+  let parsed   = gate_remaining_timeout_secs_from( raw.as_deref() );
+  let from_env = parsed.is_some();
+  let fallback = if caller_timeout_secs > 0 { Some( caller_timeout_secs ) } else { None };
+  let budget_secs = parsed.or( fallback );
+  let budget = budget_secs.map( | remaining | {
     u32::try_from( remaining / poll_secs.max( 1 ) ).unwrap_or( u32::MAX ).max( 1 )
   } );
   let effective = match budget {
@@ -582,30 +600,42 @@ fn effective_gate_attempts( max_attempts : u32, poll_secs : u64 ) -> ( u32, bool
     _                             => max_attempts,
   };
   let limiting = effective < max_attempts;
-  let state = match ( raw.as_deref(), parsed )
+  let state = match ( raw.as_deref(), budget_secs )
   {
-    ( None, _ )           => "off (CLR_REMAINING_TIMEOUT_SECS unset)".to_string(),
+    ( None, None )        => "off (CLR_REMAINING_TIMEOUT_SECS unset)".to_string(),
     ( Some( r ), None )   => format!( "off (CLR_REMAINING_TIMEOUT_SECS={r:?} unparseable)" ),
-    ( Some( _ ), Some( s ) ) if !limiting => format!( "nonlimiting ({s}s covers all {max_attempts} attempts)" ),
-    ( Some( _ ), Some( s ) ) => format!( "engaged ({s}s clamps to {effective} of {max_attempts} attempts)" ),
+    ( raw_opt, Some( s ) ) =>
+    {
+      let source = if from_env { "" } else { " from --timeout" };
+      let masked = match ( from_env, raw_opt )
+      {
+        ( false, Some( r ) ) => format!( "; CLR_REMAINING_TIMEOUT_SECS={r:?} unparseable" ),
+        _                    => String::new(),
+      };
+      if limiting
+      { format!( "engaged ({s}s{source} clamps to {effective} of {max_attempts} attempts{masked})" ) }
+      else
+      { format!( "nonlimiting ({s}s{source} covers all {max_attempts} attempts{masked})" ) }
+    },
   };
   ( effective, limiting, state )
 }
 
-// Fix(BUG-445): --trace-gated stderr note when a caller has a finite --timeout
-// but CLR_REMAINING_TIMEOUT_SECS is unset, so gate-wait (if entered) is not
-// bounded by that timeout.
-// Root cause: --timeout only bounds the post-gate execution phase; a caller
-// who sets only --timeout gets zero gate-wait protection with no signal that
-// this is happening, discoverable only by having already read
-// 033_max_sessions.md/036_timeout.md.
+// Fix(BUG-445): --trace-gated stderr note when a caller expressed NO timeout
+// (no --timeout flag, no CLR_TIMEOUT) and CLR_REMAINING_TIMEOUT_SECS is
+// unusable, so gate-wait (if entered) has no deadline bound at all.
+// Root cause: --timeout only bounded the post-gate execution phase; originally
+// this warned callers who SET --timeout that gate-wait ignored it. Fix
+// Location #2 made an expressed --timeout default the gate budget, so those
+// callers are now protected and the old warning would be false for them —
+// unbounded exposure remains only for callers who expressed nothing.
 // Pitfall: only fires when the gate is actually active (max != 0) and the
-// caller's timeout is finite (not an explicit `0` = unlimited opt-out) —
-// warning about an unbounded gate-wait when the caller already opted out of
-// any timeout bound at all would be noise, not signal.
-pub( super ) fn trace_gate_wait_exposure( max : u32, trace : bool, timeout_is_finite : bool )
+// caller expressed no timeout — an explicit `--timeout 0` is a deliberate
+// unlimited opt-out (timeout_expressed = true), and warning a caller who
+// already declined any bound would be noise, not signal.
+pub( super ) fn trace_gate_wait_exposure( max : u32, trace : bool, timeout_expressed : bool )
 {
-  if max == 0 || !trace || !timeout_is_finite { return; }
+  if max == 0 || !trace || timeout_expressed { return; }
   let raw = std::env::var( "CLR_REMAINING_TIMEOUT_SECS" ).ok();
   if gate_remaining_timeout_secs_from( raw.as_deref() ).is_some() { return; }
   let why = match raw
@@ -614,10 +644,10 @@ pub( super ) fn trace_gate_wait_exposure( max : u32, trace : bool, timeout_is_fi
     Some( r ) => format!( "set but unparseable ({r:?})" ),
   };
   eprintln!(
-    "Trace: --timeout is set but CLR_REMAINING_TIMEOUT_SECS is {why} — gate-wait is not bounded \
-     by --timeout; if this invocation queues for a --max-sessions slot, total exposure could reach \
-     the full gate-wait ceiling (CLR_GATE_POLL_SECS x CLR_GATE_MAX_ATTEMPTS, ~8.3h by default) \
-     instead of your --timeout budget. Set CLR_REMAINING_TIMEOUT_SECS to couple the two. See \
+    "Trace: gate-wait is unbounded — no --timeout given and CLR_REMAINING_TIMEOUT_SECS is {why}; \
+     if this invocation queues for a --max-sessions slot, total exposure could reach the full \
+     gate-wait ceiling (CLR_GATE_POLL_SECS x CLR_GATE_MAX_ATTEMPTS, ~8.3h by default). Pass \
+     --timeout N (it also bounds gate-wait) or set CLR_REMAINING_TIMEOUT_SECS. See \
      docs/cli/param/033_max_sessions.md."
   );
 }
@@ -665,15 +695,22 @@ fn emit_gate_wait_event(
 /// `apply_runner_retry()`) retry the whole polling sequence from their closure; callers
 /// without it (`isolated`) report and exit from theirs. Either way, returning from the
 /// closure resumes the outer poll loop; a closure that exits the process never returns.
-#[ allow( clippy::too_many_lines ) ] // gate admission orchestration — census read, slot sweep, one-time resolution announcement, exhaustion routing, and telemetry in one coherent poll loop (mirrors execution.rs retry orchestration)
+///
+/// `caller_timeout_secs` carries the caller's EXPRESSED timeout (`--timeout` flag or
+/// `CLR_TIMEOUT` env) for BUG-445's gate-budget defaulting: pass the expressed value in
+/// seconds, or `0` when the caller expressed nothing (built-in defaults never qualify)
+/// or explicitly opted out via `--timeout 0` — `0` disables the fallback, leaving
+/// `CLR_REMAINING_TIMEOUT_SECS` as the only budget input, exactly the pre-fix behavior.
+#[ allow( clippy::too_many_lines, clippy::too_many_arguments ) ] // gate admission orchestration — census read, slot sweep, one-time resolution announcement, exhaustion routing, and telemetry in one coherent poll loop (mirrors execution.rs retry orchestration); the 8th param is BUG-445's expressed-timeout budget input, resolved per-caller
 pub( super ) fn wait_for_session_slot(
-  max          : u32,
-  quiet        : bool,
-  poll_secs    : u64,
-  max_attempts : u32,
-  stale_secs   : Option< u64 >,
-  journal      : Option< &JournalWriter >,
-  on_exhausted : &mut dyn FnMut( &std::io::Error ),
+  max                 : u32,
+  quiet               : bool,
+  poll_secs           : u64,
+  max_attempts        : u32,
+  stale_secs          : Option< u64 >,
+  caller_timeout_secs : u64,
+  journal             : Option< &JournalWriter >,
+  on_exhausted        : &mut dyn FnMut( &std::io::Error ),
 )
 {
   if max == 0 { return; }
@@ -688,7 +725,7 @@ pub( super ) fn wait_for_session_slot(
     std::process::exit( 1 );
   }
 
-  let ( effective_max_attempts, budget_is_limiting, deadline_state ) = effective_gate_attempts( max_attempts, poll_secs );
+  let ( effective_max_attempts, budget_is_limiting, deadline_state ) = effective_gate_attempts( max_attempts, poll_secs, caller_timeout_secs );
   // Fix(BUG-481): resolved state of the staleness-reclaim protection, from the
   // already-tier-resolved parameter (run/ask: 5-tier chain; isolated: env-only)
   // rather than re-reading CLR_GATE_STALE_SECS — the announcement must report

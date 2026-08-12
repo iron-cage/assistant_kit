@@ -631,3 +631,131 @@ fn bug442_permission_denials_in_content_bracket_does_not_truncate_count()
      reason text — expected count 2 (both entries), got a different value. Got:\n{rendered}"
   );
 }
+
+// ── BUG-476 / BUG-477: modelUsage boundary + multi-entry aggregation ────────
+
+/// # Root Cause
+/// `render_summary()`'s `modelUsage` extraction located the `"modelUsage":{` marker and
+/// scanned the entire remainder of the JSON string for the model name's two delimiting
+/// quotes — never determining where the `modelUsage` object itself ends. With an empty
+/// `"modelUsage":{}` (turn terminated before any model was dispatched), the unbounded
+/// scan read past the object's closing brace and returned the next JSON key's name
+/// (`permission_denials`) as the model name.
+///
+/// # Why Not Caught
+/// Only manifests when `modelUsage` is empty — a turn that terminates before any model
+/// is dispatched (session-limit/quota exhaustion before the first successful model
+/// call). No prior fixture exercised an empty `"modelUsage":{}`, and the corrupted
+/// output is a syntactically valid, populated-looking `model:` line with no error
+/// signal.
+///
+/// # Fix Applied
+/// `object_extent()` (summary.rs) bounds `mu_str` to `modelUsage`'s own closing brace
+/// before any quote scan; an empty object yields no entries, so `model:` renders an
+/// empty value and every `model_*` field stays at its 0 default.
+///
+/// # Prevention
+/// This test pins an empty `"modelUsage":{}` envelope (the real Job #22 shape from the
+/// bug report) and asserts the rendered `model:` value is empty — any regression back
+/// to an unbounded scan resurfaces `permission_denials` here.
+///
+/// # Pitfall
+/// Locating a JSON field by its opening marker alone and scanning forward for
+/// delimiters with no closing-boundary check silently reads into sibling fields
+/// whenever the field is empty — the scan doesn't fail, it returns wrong, unrelated
+/// data with no error signal.
+// test_kind: bug_reproducer(BUG-476)
+#[ test ]
+fn bug476_empty_modelusage_renders_empty_model_not_next_key()
+{
+  // Turn terminated before any model was dispatched (session-limit exhaustion before
+  // the first successful model call): modelUsage is an EMPTY object and
+  // permission_denials is the next key in the envelope schema — the exact Job #22
+  // shape from the bug report.
+  let json = r#"{"type":"result","subtype":"success","is_error":true,"num_turns":1,"duration_api_ms":0,"modelUsage":{},"permission_denials":[]}"#;
+
+  let rendered = render_summary( json, None ).expect( "must parse" );
+
+  assert!(
+    rendered.contains( "model:\u{1b}[0m \u{1b}[32m\u{1b}[0m" ),
+    "BUG-476: with an empty modelUsage object the model: line must render an empty \
+     value, not data scavenged from past the object's closing brace. Got:\n{rendered}"
+  );
+  assert!(
+    !rendered.contains( "\u{1b}[32mpermission_denials\u{1b}[0m" ),
+    "BUG-476: the next JSON key's name (permission_denials) must never appear as the \
+     model: value. Got:\n{rendered}"
+  );
+}
+
+/// # Root Cause
+/// `render_summary()`'s `modelUsage` extraction read only the first model entry — one
+/// `.find('{')` with no loop — so every `model_*` field silently reflected only the
+/// first entry when a turn dispatched two or more models, underreporting cost/tokens
+/// by up to 4 orders of magnitude while the independently-extracted `total_cost_usd`
+/// stayed correct.
+///
+/// # Why Not Caught
+/// Only turns dispatching 2+ models in one envelope exercise the path; single-model
+/// turns render correctly. The first-model-only scoping was disclosed in a source
+/// comment but never in the rendered output labels, and no fixture carried a
+/// multi-entry `modelUsage` object.
+///
+/// # Fix Applied
+/// The extraction now walks every entry inside `modelUsage`'s own extent
+/// (`object_extent()`-bounded) and sums the additive fields (`inputTokens`,
+/// `outputTokens`, `cacheReadInputTokens`, `cacheCreationInputTokens`,
+/// `webSearchRequests`, `costUSD`); `model:` and the per-model capability fields
+/// (`contextWindow`, `maxOutputTokens`) stay with the first entry.
+///
+/// # Prevention
+/// This test pins a 2-entry `modelUsage` mirroring run 3193 Job #1's real values and
+/// asserts each rendered `model_*` total equals the sum across both entries — any
+/// regression to first-entry-only extraction reports 506/$0.0006 instead.
+///
+/// # Pitfall
+/// Treating "first entry found" as "the complete field" for a structurally-collection
+/// JSON field silently drops every later entry — the output looks plausible because
+/// it is internally consistent for the one entry that was read.
+// test_kind: bug_reproducer(BUG-477)
+#[ test ]
+fn bug477_multi_entry_modelusage_aggregates_all_entries()
+{
+  // Two models dispatched in one turn — first entry (haiku) tiny, second (sonnet)
+  // carries the bulk. Mirrors run 3193 Job #1: total_cost_usd 6.4133 = 0.0006 +
+  // 6.4127; input tokens 36329 = 506 + 35823; output 24117 = 14 + 24103.
+  let json = r#"{"type":"result","subtype":"success","total_cost_usd":6.4133,"modelUsage":{"claude-haiku-4-5-20251001":{"inputTokens":506,"outputTokens":14,"cacheReadInputTokens":0,"cacheCreationInputTokens":0,"webSearchRequests":0,"costUSD":0.0006,"contextWindow":200000,"maxOutputTokens":64000},"claude-sonnet-5":{"inputTokens":35823,"outputTokens":24103,"cacheReadInputTokens":1403813,"cacheCreationInputTokens":0,"webSearchRequests":0,"costUSD":6.4127,"contextWindow":200000,"maxOutputTokens":64000}},"permission_denials":[]}"#;
+
+  let rendered = render_summary( json, None ).expect( "must parse" );
+
+  assert!(
+    rendered.contains( "model_input_tokens:\u{1b}[0m \u{1b}[33m36329\u{1b}[0m" ),
+    "BUG-477: model_input_tokens must aggregate across both modelUsage entries \
+     (506 + 35823 = 36329), not report the first entry alone. Got:\n{rendered}"
+  );
+  assert!(
+    rendered.contains( "model_output_tokens:\u{1b}[0m \u{1b}[33m24117\u{1b}[0m" ),
+    "BUG-477: model_output_tokens must aggregate across both entries \
+     (14 + 24103 = 24117). Got:\n{rendered}"
+  );
+  assert!(
+    rendered.contains( "model_cache_read_input_tokens:\u{1b}[0m \u{1b}[33m1403813\u{1b}[0m" ),
+    "BUG-477: model_cache_read_input_tokens must include the second entry's 1403813. \
+     Got:\n{rendered}"
+  );
+  assert!(
+    rendered.contains( "model_cost_usd:\u{1b}[0m \u{1b}[33m6.4133\u{1b}[0m" ),
+    "BUG-477: model_cost_usd must sum costUSD across both entries (0.0006 + 6.4127 = \
+     6.4133), matching the envelope's own total_cost_usd. Got:\n{rendered}"
+  );
+  assert!(
+    rendered.contains( "model:\u{1b}[0m \u{1b}[32mclaude-haiku-4-5-20251001\u{1b}[0m" ),
+    "model: keeps the first entry's name (no meaningful single-value aggregate \
+     exists). Got:\n{rendered}"
+  );
+  assert!(
+    rendered.contains( "model_context_window:\u{1b}[0m \u{1b}[33m200000\u{1b}[0m" ),
+    "model_context_window is a per-model capability — first entry's value, never a \
+     sum. Got:\n{rendered}"
+  );
+}
