@@ -24,6 +24,14 @@ pub( super ) struct IsolatedArgs
 {
   pub( super ) creds_path       : String,
   pub( super ) timeout_secs     : u64,
+  // Fix(BUG-445): true only when the caller EXPRESSED a timeout (--timeout flag
+  // or applied CLR_TIMEOUT env) — distinguishes "caller said 30" from the
+  // baked-in 30s default, which must never default the gate-wait budget.
+  // Root cause: `timeout_secs` is a plain u64, so downstream gate code could
+  // not tell an expressed value from the default sentinel.
+  // Pitfall: set at the parse/env-application sites only — deriving it later
+  // from `timeout_secs != 30` would misclassify an explicit `--timeout 30`.
+  pub( super ) timeout_expressed : bool,
   pub( super ) trace            : bool,
   pub( super ) dry_run          : bool,
   pub( super ) message          : Option< String >,
@@ -103,12 +111,16 @@ fn validate_journal_level( v : &str ) -> Result< String >
 /// Only updates each field when it is still at its default value — CLI flags always win.
 /// `default_timeout` is the sentinel that signals "not set by CLI"; an explicit `--timeout N`
 /// that happens to equal the default is indistinguishable (accepted limitation).
+///
+/// Returns `true` when `CLR_TIMEOUT` was applied to `timeout_secs` — the caller-expressed
+/// signal for BUG-445's gate-budget defaulting (`isolated` records it in
+/// `timeout_expressed`; `refresh` never gates, so it ignores the return).
 fn apply_cred_env_vars(
   creds_path      : &mut String,
   timeout_secs    : &mut u64,
   default_timeout : u64,
   trace           : &mut bool,
-)
+) -> bool
 {
   if creds_path.is_empty()
   {
@@ -121,14 +133,20 @@ fn apply_cred_env_vars(
       *creds_path = paths.credentials_file().to_string_lossy().into_owned();
     }
   }
+  let mut timeout_applied = false;
   if *timeout_secs == default_timeout
   {
     if let Some( v ) = env_str( "CLR_TIMEOUT" )
     {
-      if let Ok( secs ) = v.parse::< u64 >() { *timeout_secs = secs; }
+      if let Ok( secs ) = v.parse::< u64 >()
+      {
+        *timeout_secs   = secs;
+        timeout_applied = true;
+      }
     }
   }
   if !*trace { *trace = env_bool( "CLR_TRACE" ); }
+  timeout_applied
 }
 
 /// Parse `tokens` as arguments to the `isolated` subcommand.
@@ -160,7 +178,8 @@ pub( super ) fn parse_isolated_args( tokens : &[ String ] ) -> Result< IsolatedA
       }
       "--timeout" =>
       {
-        args.timeout_secs = parse_timeout_secs( next_value( tokens, i + 1, "--timeout" )? )?;
+        args.timeout_secs      = parse_timeout_secs( next_value( tokens, i + 1, "--timeout" )? )?;
+        args.timeout_expressed = true;
         i += 1;
       }
       "--trace"            => { args.trace            = true; }
@@ -317,7 +336,12 @@ pub( super ) fn parse_isolated_args( tokens : &[ String ] ) -> Result< IsolatedA
 /// Delegates to [`apply_cred_env_vars`] with isolated's timeout sentinel (30).
 pub( super ) fn apply_isolated_env_vars( parsed : &mut IsolatedArgs ) -> Result< () >
 {
-  apply_cred_env_vars( &mut parsed.creds_path, &mut parsed.timeout_secs, 30, &mut parsed.trace );
+  // Fix(BUG-445): an applied CLR_TIMEOUT counts as an expressed timeout for the
+  // gate-budget fallback, same as the --timeout flag.
+  if apply_cred_env_vars( &mut parsed.creds_path, &mut parsed.timeout_secs, 30, &mut parsed.trace )
+  {
+    parsed.timeout_expressed = true;
+  }
   if parsed.dir.is_none()       { parsed.dir     = env_str( "CLR_DIR" ); }
   if parsed.add_dirs.is_empty()
   {

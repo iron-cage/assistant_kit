@@ -1,6 +1,7 @@
 use claude_runner_core::{
   ClaudeCommand, DEFAULT_COMPACT_WINDOW, EffortLevel, IsolatedModel, IsolatedRunResult,
-  ISOLATED_CLAUDE_MD, REFRESH_DEFAULT_MODEL, RunnerError, run_isolated_ext, signal_exit_code,
+  ISOLATED_CLAUDE_MD, REFRESH_DEFAULT_MODEL, RunnerError, resolve_isolated_default_model,
+  run_isolated_ext, signal_exit_code,
 };
 use claude_journal::{ EventRecord, EventType, JournalWriter };
 
@@ -147,6 +148,25 @@ pub( super ) fn run_isolated_command
   max_turns             : Option< &str >,       // injected as --max-turns <value> when Some
 ) -> !
 {
+  // Fix(BUG-482): resolve `IsolatedModel::Default`'s config preference (project
+  //   `.clr.toml` → user `~/.clr/config.toml`) once, here at entry — upstream of the
+  //   fan-out into emit_credential_trace() (preview), run_isolated_ext(), and
+  //   run_isolated_with_stdin_file(), so all three --model sites see the same value.
+  //   run_isolated_ext()'s own consultation remains as a fallback for direct
+  //   core-API callers; it is a no-op here since Default never reaches it anymore.
+  // Root cause: the preference was consulted only inside run_isolated_ext(), so the
+  //   preview showed ISOLATED_DEFAULT_MODEL and the --file path ran it, while the
+  //   no-file real path used the configured preference — three sibling --model
+  //   prepend sites, one consultation.
+  // Pitfall: resolve shared inputs once, upstream of a multi-path fan-out — a
+  //   preference consulted at only one consuming site silently splits behavior
+  //   across execution paths.
+  let pref_override = match &model
+  {
+    IsolatedModel::Default => resolve_isolated_default_model(),
+    _                      => None,
+  };
+  let model = pref_override.map_or( model, IsolatedModel::Specific );
   let compact_window : Option< u32 > = if no_compact_window { None } else { Some( DEFAULT_COMPACT_WINDOW ) };
   // Build the full arg list with all injected defaults prepended before --print.
   // Order: [--no-chrome?] [--effort <level>?] --no-session-persistence [--dangerously-skip-permissions?]

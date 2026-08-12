@@ -29,21 +29,25 @@ not discarded.
 matching `run`/`ask` semantics. The subprocess runs until it exits naturally
 with no deadline enforced.
 
-<!-- BUG-445 (task/claude_runner/bug/unverified/445_clr_timeout_flag_no_gate_wait_protection_without_remaining_timeout_secs.md) —
-     isolated's --timeout does not bound its --max-sessions gate-wait phase, by design; this
-     doc did not cross-reference that boundary despite 036_timeout.md documenting the parallel
-     run/ask case. See 033_max_sessions.md and 036_timeout.md. -->
+<!-- BUG-445 (task/claude_runner/bug/executing/445_clr_timeout_flag_no_gate_wait_protection_without_remaining_timeout_secs.md) —
+     originally: isolated's --timeout did not bound its --max-sessions gate-wait phase.
+     Fix Location #2 changed this: an EXPRESSED --timeout now defaults the gate budget.
+     See 033_max_sessions.md and 036_timeout.md. -->
 
-**Note — does not bound gate-wait (`isolated` only):** For `isolated`, `--timeout` governs
-only the subprocess-execution phase, AFTER an invocation has already been admitted past the
-`--max-sessions` concurrency gate — `isolated` contends for a slot the same as `run`/`ask`.
-If the invocation is still queued waiting for a session slot, `--timeout` has no effect:
-gate-wait is bounded independently by `CLR_GATE_POLL_SECS` x `CLR_GATE_MAX_ATTEMPTS` (default
-30s x 1000 = ~8.3h) unless the caller separately sets `CLR_REMAINING_TIMEOUT_SECS`. Total
-wall-clock exposure for a queued-then-executing `isolated` invocation is gate-wait time PLUS
-`--timeout` — no single flag bounds the sum. Passing `--trace` surfaces this when it applies
-(a stderr note fires when `--timeout` is finite and `CLR_REMAINING_TIMEOUT_SECS` is unset).
-See [033_max_sessions.md](033_max_sessions.md) and [036_timeout.md](036_timeout.md) for
+**Note — gate-wait defaulting (`isolated` only, BUG-445):** `isolated` contends for a
+`--max-sessions` slot the same as `run`/`ask`. An *expressed* `--timeout N` (the flag, or an
+applied `CLR_TIMEOUT`) also defaults the gate-wait budget to `N` seconds when
+`CLR_REMAINING_TIMEOUT_SECS` is absent or unparseable; a parseable
+`CLR_REMAINING_TIMEOUT_SECS` always wins. The built-in 30 s default is NOT expressed — a
+plain `clr isolated ... "msg"` keeps the gate's own ceiling (`CLR_GATE_POLL_SECS` x
+`CLR_GATE_MAX_ATTEMPTS`, default 30s x 1000 = ~8.3h), so default invocations queue patiently
+instead of failing fast at 30 s, and only in that unexpressed case is total wall-clock
+exposure gate-wait time PLUS `--timeout`. An explicit `--timeout 0` is an unlimited opt-out
+(no execution bound, no gate budget). With `--trace` and NO expressed timeout, a stderr note
+names the unbounded exposure when `CLR_REMAINING_TIMEOUT_SECS` is unusable. Verify:
+`clr isolated --creds <f> --max-sessions 1 --timeout 5 x` under a held slot reports
+`gate-deadline  engaged (5s from --timeout ...)` on stderr. See
+[033_max_sessions.md](033_max_sessions.md) and [036_timeout.md](036_timeout.md) for
 gate-wait mechanics. **`refresh` is not affected** — `dispatch_refresh()` never calls the
 concurrency gate, so `refresh`'s `--timeout` has no gate-wait interaction to document.
 
