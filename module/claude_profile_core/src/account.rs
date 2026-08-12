@@ -970,7 +970,7 @@ pub fn delete( name : &str, credential_store : &Path ) -> Result< (), std::io::E
   let _ = std::fs::remove_file( credential_store.join( format!( "{name}.settings.json" ) ) );
   let _ = std::fs::remove_file( credential_store.join( format!( "{name}.roles.json" ) ) );
   let _ = std::fs::remove_file( credential_store.join( format!( "{name}.profile.json" ) ) );
-  // Fix(BUG-341): clear every `_active_*` marker naming this account, not only
+  // Fix(BUG-347): clear every `_active_*` marker naming this account, not only
   // the calling machine's own marker.
   // Root cause: the guard resolved a single path via `active_marker_filename()`
   // (bound to the CALLING machine's own hostname+user) and compared only that

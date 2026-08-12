@@ -750,7 +750,7 @@ fn it_remove_session_effort_noop_when_key_absent()
   assert!( !content.contains( "effortLevel" ), "remove_session_effort no-op must not introduce the key; got: {content}" );
 }
 
-// BUG-341 task/bug/341_orphaned_marker_after_cross_machine_delete.md — this test's dual-HOSTNAME
+// BUG-347 task/bug/347_orphaned_marker_after_cross_machine_delete.md — this test's dual-HOSTNAME
 // simulation pattern is the prior art a cross-machine `delete()` regression test should follow.
 /// FT-11/025 — `other_machines_active()` returns other machines' account names,
 /// excludes own marker.
@@ -815,7 +815,7 @@ fn test_ft11_025_other_machines_active_returns_others()
   );
 }
 
-// test_kind: bug_reproducer(BUG-341)
+// test_kind: bug_reproducer(BUG-347)
 /// FT-14/025 — `delete()` clears a foreign-machine marker naming the deleted
 /// account, not only the calling machine's own marker.
 ///
