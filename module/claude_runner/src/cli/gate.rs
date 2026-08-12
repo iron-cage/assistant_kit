@@ -592,6 +592,36 @@ fn effective_gate_attempts( max_attempts : u32, poll_secs : u64 ) -> ( u32, bool
   ( effective, limiting, state )
 }
 
+// Fix(BUG-445): --trace-gated stderr note when a caller has a finite --timeout
+// but CLR_REMAINING_TIMEOUT_SECS is unset, so gate-wait (if entered) is not
+// bounded by that timeout.
+// Root cause: --timeout only bounds the post-gate execution phase; a caller
+// who sets only --timeout gets zero gate-wait protection with no signal that
+// this is happening, discoverable only by having already read
+// 033_max_sessions.md/036_timeout.md.
+// Pitfall: only fires when the gate is actually active (max != 0) and the
+// caller's timeout is finite (not an explicit `0` = unlimited opt-out) —
+// warning about an unbounded gate-wait when the caller already opted out of
+// any timeout bound at all would be noise, not signal.
+pub( super ) fn trace_gate_wait_exposure( max : u32, trace : bool, timeout_is_finite : bool )
+{
+  if max == 0 || !trace || !timeout_is_finite { return; }
+  let raw = std::env::var( "CLR_REMAINING_TIMEOUT_SECS" ).ok();
+  if gate_remaining_timeout_secs_from( raw.as_deref() ).is_some() { return; }
+  let why = match raw
+  {
+    None      => "unset".to_string(),
+    Some( r ) => format!( "set but unparseable ({r:?})" ),
+  };
+  eprintln!(
+    "Trace: --timeout is set but CLR_REMAINING_TIMEOUT_SECS is {why} — gate-wait is not bounded \
+     by --timeout; if this invocation queues for a --max-sessions slot, total exposure could reach \
+     the full gate-wait ceiling (CLR_GATE_POLL_SECS x CLR_GATE_MAX_ATTEMPTS, ~8.3h by default) \
+     instead of your --timeout budget. Set CLR_REMAINING_TIMEOUT_SECS to couple the two. See \
+     docs/cli/param/033_max_sessions.md."
+  );
+}
+
 fn emit_gate_wait_event(
   gate_emitted : bool,
   wait_start   : &std::time::Instant,
