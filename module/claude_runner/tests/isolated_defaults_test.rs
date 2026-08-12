@@ -349,7 +349,7 @@ mod isolated_defaults_test
     let _ = std::fs::remove_file( &creds );
   }
 
-  // ── BUG-482 : config model preference must reach every --model site ──────
+  // ── BUG-485 : config model preference must reach every --model site ──────
 
   /// # Root Cause
   /// `IsolatedModel::Default`'s config model preference (project `.clr.toml` /
@@ -387,9 +387,9 @@ mod isolated_defaults_test
   /// value; a preference consulted at only one of them silently splits
   /// behavior across execution paths.  Resolve shared inputs once, upstream
   /// of the fan-out — never per-site.
-  // test_kind: bug_reproducer(BUG-482)
+  // test_kind: bug_reproducer(BUG-485)
   #[ test ]
-  fn bug482_dry_run_preview_shows_config_model_pref_not_hardcoded_default()
+  fn bug485_dry_run_preview_shows_config_model_pref_not_hardcoded_default()
   {
     let tmp = tempfile::tempdir().expect( "create temp project dir" );
     std::fs::write( tmp.path().join( ".clr.toml" ), "model = \"cfg-pinned-model\"\n" )
@@ -416,13 +416,13 @@ mod isolated_defaults_test
     );
     assert!(
       stdout.contains( "--model cfg-pinned-model" ),
-      "BUG-482: with `.clr.toml` pinning `model = \"cfg-pinned-model\"` and no explicit \
+      "BUG-485: with `.clr.toml` pinning `model = \"cfg-pinned-model\"` and no explicit \
        --model flag, the --dry-run preview must show the configured preference — the same \
        model run_isolated_ext() would actually use. Got:\n{stdout}"
     );
     assert!(
       !stdout.contains( &format!( "--model {ISOLATED_DEFAULT_MODEL}" ) ),
-      "BUG-482: the preview must not fall back to the hardcoded ISOLATED_DEFAULT_MODEL \
+      "BUG-485: the preview must not fall back to the hardcoded ISOLATED_DEFAULT_MODEL \
        when a config preference is set. Got:\n{stdout}"
     );
     let _ = std::fs::remove_file( &creds );
