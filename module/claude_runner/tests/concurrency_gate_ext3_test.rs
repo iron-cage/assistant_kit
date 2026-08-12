@@ -1070,6 +1070,217 @@ fn t_gate_remaining_timeout_non_numeric_resolves_to_none()
   );
 }
 
+// ──────────────────────────────────────────────────────────────────────────────
+// 086 — trace_gate_wait_exposure(): --trace-gated gate-wait exposure diagnostic
+// (BUG-445 Fix Location #3)
+// ──────────────────────────────────────────────────────────────────────────────
+
+/// 086: With `--trace` and a finite `--timeout` but `CLR_REMAINING_TIMEOUT_SECS`
+/// unset, `clr` must emit a stderr note before entering gate-wait, warning that
+/// `--timeout` will not bound the wait for a `--max-sessions` slot.
+///
+/// ## Root Cause (BUG-445)
+///
+/// `--timeout` only ever bounded the post-gate subprocess-execution phase.
+/// `CLR_REMAINING_TIMEOUT_SECS` (BUG-423) is the only mechanism that couples
+/// gate-wait to an external deadline, and it is opt-in with no default — a
+/// caller who sets only `--timeout` gets zero gate-wait protection with no
+/// signal that this is happening (confirmed in production: `watchdog.sh`
+/// stalls of 9697s/272s/903s against a 60s `--timeout` budget).
+///
+/// ## Why Not Caught
+///
+/// No test exercised the combination of `--trace` + finite `--timeout` +
+/// unset `CLR_REMAINING_TIMEOUT_SECS` for its own diagnostic value — existing
+/// gate tests (T35/T36, 085/EC-3/EC-4) cover the budget-clamp mechanism
+/// itself, not whether an unprotected caller is ever told they are unprotected.
+///
+/// ## Fix Applied
+///
+/// `trace_gate_wait_exposure()` (gate.rs) is called from both gate call sites
+/// (`run_built_command`, `gate_isolated_session`) immediately before
+/// `wait_for_session_slot()`. When the gate is active (`max != 0`), `--trace`
+/// is set, and the caller's timeout is finite but `CLR_REMAINING_TIMEOUT_SECS`
+/// does not resolve to `Some`, it prints a stderr note naming the exposure.
+///
+/// ## Prevention
+///
+/// Assert the exact warning substring appears on stderr for the unprotected
+/// case, and is absent for each guard condition (see the sibling edge-case
+/// tests below).
+///
+/// ## Pitfall
+///
+/// The diagnostic fires unconditionally on flag/env state alone — it does
+/// NOT require actual gate contention (no occupier process is needed in this
+/// test). Fix Location #3 warns about *exposure* (an unbounded ceiling that
+/// would apply *if* this invocation had to queue), not actual queuing.
+// test_kind: bug_reproducer(BUG-445)
+#[ test ]
+fn t_gate_trace_exposure_warns_when_remaining_timeout_unset()
+{
+  let proc = make_proc_dir( &[] );
+  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
+  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
+
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = Command::new( bin )
+    .args( [
+      "-p", "--max-sessions", "1", "--timeout", "5", "--trace",
+      "--retry-override", "0", "--journal", "off", "x",
+    ] )
+    .env( "PATH", &script_path )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
+    .env( "CLR_GATE_DIR", gate_dir.path() )
+    .env( "CLR_GATE_POLL_SECS", "1" )
+    .env_remove( "CLR_REMAINING_TIMEOUT_SECS" )
+    .output()
+    .expect( "invoke clr" );
+
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert!(
+    stderr.contains(
+      "Trace: --timeout is set but CLR_REMAINING_TIMEOUT_SECS is unset"
+    ),
+    "086: --trace + finite --timeout + unset CLR_REMAINING_TIMEOUT_SECS must \
+     warn about unbounded gate-wait exposure (BUG-445). Got:\n{stderr}"
+  );
+}
+
+/// 086/EC-1: Non-numeric `CLR_REMAINING_TIMEOUT_SECS` must warn with the raw
+/// value quoted, distinguishing misconfiguration from non-configuration —
+/// mirrors 085/EC-4's distinction for the budget-clamp diagnostic.
+// test_kind: edge_case
+#[ test ]
+fn t_gate_trace_exposure_warns_when_remaining_timeout_non_numeric()
+{
+  let proc = make_proc_dir( &[] );
+  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
+  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
+
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = Command::new( bin )
+    .args( [
+      "-p", "--max-sessions", "1", "--timeout", "5", "--trace",
+      "--retry-override", "0", "--journal", "off", "x",
+    ] )
+    .env( "PATH", &script_path )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
+    .env( "CLR_GATE_DIR", gate_dir.path() )
+    .env( "CLR_GATE_POLL_SECS", "1" )
+    .env( "CLR_REMAINING_TIMEOUT_SECS", "notanumber" )
+    .output()
+    .expect( "invoke clr" );
+
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert!(
+    stderr.contains(
+      "Trace: --timeout is set but CLR_REMAINING_TIMEOUT_SECS is set but unparseable (\"notanumber\")"
+    ),
+    "086/EC-1: non-numeric CLR_REMAINING_TIMEOUT_SECS must warn with the raw \
+     value quoted. Got:\n{stderr}"
+  );
+}
+
+/// 086/EC-2: A valid, parseable `CLR_REMAINING_TIMEOUT_SECS` means gate-wait
+/// IS bounded — no warning.
+// test_kind: edge_case
+#[ test ]
+fn t_gate_trace_exposure_silent_when_remaining_timeout_set()
+{
+  let proc = make_proc_dir( &[] );
+  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
+  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
+
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = Command::new( bin )
+    .args( [
+      "-p", "--max-sessions", "1", "--timeout", "5", "--trace",
+      "--retry-override", "0", "--journal", "off", "x",
+    ] )
+    .env( "PATH", &script_path )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
+    .env( "CLR_GATE_DIR", gate_dir.path() )
+    .env( "CLR_GATE_POLL_SECS", "1" )
+    .env( "CLR_REMAINING_TIMEOUT_SECS", "60" )
+    .output()
+    .expect( "invoke clr" );
+
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert!(
+    !stderr.contains( "Trace: --timeout is set but" ),
+    "086/EC-2: a set, parseable CLR_REMAINING_TIMEOUT_SECS must suppress the \
+     exposure warning — gate-wait is actually bounded. Got:\n{stderr}"
+  );
+}
+
+/// 086/EC-3: `--timeout 0` is an explicit unlimited opt-out (matching
+/// `036_timeout.md`/`020_timeout.md` semantics) — warning about unbounded
+/// gate-wait would be noise when the caller already declined any timeout
+/// bound at all.
+// test_kind: edge_case
+#[ test ]
+fn t_gate_trace_exposure_silent_when_timeout_zero()
+{
+  let proc = make_proc_dir( &[] );
+  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
+  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
+
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = Command::new( bin )
+    .args( [
+      "-p", "--max-sessions", "1", "--timeout", "0", "--trace",
+      "--retry-override", "0", "--journal", "off", "x",
+    ] )
+    .env( "PATH", &script_path )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
+    .env( "CLR_GATE_DIR", gate_dir.path() )
+    .env( "CLR_GATE_POLL_SECS", "1" )
+    .env_remove( "CLR_REMAINING_TIMEOUT_SECS" )
+    .output()
+    .expect( "invoke clr" );
+
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert!(
+    !stderr.contains( "Trace: --timeout is set but" ),
+    "086/EC-3: --timeout 0 is an explicit unlimited opt-out — must not warn. \
+     Got:\n{stderr}"
+  );
+}
+
+/// 086/EC-4: Without `--trace`, no diagnostics are printed at all — the
+/// feature is opt-in via `--trace`, matching every other `--trace`-gated
+/// diagnostic in this CLI.
+// test_kind: edge_case
+#[ test ]
+fn t_gate_trace_exposure_silent_without_trace_flag()
+{
+  let proc = make_proc_dir( &[] );
+  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
+  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
+
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = Command::new( bin )
+    .args( [
+      "-p", "--max-sessions", "1", "--timeout", "5",
+      "--retry-override", "0", "--journal", "off", "x",
+    ] )
+    .env( "PATH", &script_path )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
+    .env( "CLR_GATE_DIR", gate_dir.path() )
+    .env( "CLR_GATE_POLL_SECS", "1" )
+    .env_remove( "CLR_REMAINING_TIMEOUT_SECS" )
+    .output()
+    .expect( "invoke clr" );
+
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert!(
+    !stderr.contains( "Trace:" ),
+    "086/EC-4: without --trace, no trace diagnostics (including the gate-wait \
+     exposure note) may print. Got:\n{stderr}"
+  );
+}
+
 // ── T39–T41: silent-off resolution boundary of the optional gate protections
 // (BUG-481) ───────────────────────────────────────────────────────────────────
 

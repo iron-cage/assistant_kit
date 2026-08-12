@@ -50,7 +50,7 @@ use credential::{ run_isolated_command, run_refresh_command };
 const CREDS_PATH_ERROR : &str =
   "Error: cannot resolve credentials path: HOME is not set; provide --creds or set CLR_CREDS\nRun with --help for usage.";
 use help::print_ask_help;
-use gate::wait_for_session_slot;
+use gate::{ trace_gate_wait_exposure, wait_for_session_slot };
 pub( super ) use ps::dispatch_ps;
 pub( super ) use kill::dispatch_kill;
 pub( super ) use tools::dispatch_tools;
@@ -227,6 +227,7 @@ pub( super ) fn run_built_command(
   if is_print_invocation
   {
     let max_sessions = cli.max_sessions.unwrap_or( 8 );
+    trace_gate_wait_exposure( max_sessions, cli.trace, cli.timeout != Some( 0 ) );
     let mut runner_attempt = 0u32;
     wait_for_session_slot(
       max_sessions,
@@ -420,6 +421,7 @@ fn gate_isolated_session( cli : &IsolatedArgs, journal : Option< &claude_journal
 {
   if cli.dry_run { return; }
   let max_sessions = cli.max_sessions.unwrap_or( 8 );
+  trace_gate_wait_exposure( max_sessions, cli.trace, cli.timeout_secs != 0 );
   wait_for_session_slot(
     max_sessions,
     false,
