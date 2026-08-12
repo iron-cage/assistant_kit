@@ -24,7 +24,7 @@ mounts:
     commands: [run, live, shell]
 
 # ── Plugins ───────────────────────────────────────────────────────────────────
-# type: binary — resolved via 'which name' on host PATH, falling back to <workspace>/target/debug/<name>, and bind-mounted into container.
+# type: binary — resolved on host PATH (an ELF mounts as-is; a RUNBOX_PRINT_BIN-aware wrapper like bin/will is unwrapped to the fresh managed binary it fronts), falling back to a knob-aware <workspace>/bin/<name> wrapper, then <workspace>/target/debug/<name>; bind-mounted into container.
 # prepare: — optional workspace-relative command run before the target/debug fallback is used (lets a bin/ wrapper rebuild its artifact).
 # working_volume / working_volume_path — named volume for compilation artifacts.
 plugins:
