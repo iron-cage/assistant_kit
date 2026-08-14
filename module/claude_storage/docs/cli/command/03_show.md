@@ -61,7 +61,7 @@ claude_storage .show session_id::ID project::/path/to/project
 **Notes:**
 - When `session_id::` is given without `project::`, the current project and all its topic variants (scope::local) are searched; supply `project::` to restrict lookup to one specific project
 - Without `session_id::`, resolves to current directory project; exits with `1` if cwd has no project in storage
-- `show_entries::1` and `show_metadata::1` are mutually exclusive; `show_entries::1` takes precedence
+- `show_metadata::1` selects metadata-only mode; `show_entries::1` only has an effect nested within that mode (appends a legacy UUID-only entries list) and is a no-op in the default content-first mode, which always shows full entry content regardless
 - `show_stat::1` has no effect in either `show_metadata::1` mode or content mode (both already show the equivalent fields unconditionally)
 
 ### Referenced Parameter Groups
