@@ -305,7 +305,15 @@ fn test_no_code_duplication()
   // Root cause: 3 new enums (McpPermissionOverrideMode, ReadFileEncoding, ThinkingDisplay) each
   //   contribute one `as_str()` duplicate (+3), and ControlSession's manual `Debug` impl
   //   contributes one more `fmt()` duplicate (+1) — 4 new duplicate occurrences, no headroom added
-  let duplication_threshold = 18;
+  //
+  // Fix(BUG-020): Raised from 18 to 19 after `isolated.rs` gained `write_creds_restricted`
+  // Root cause: the credential-permission-hardening helper is defined twice under mutually
+  //   exclusive `#[cfg(unix)]`/`#[cfg(not(unix))]` gates (same name, different bodies) — the
+  //   naive text-scan heuristic counts both `fn write_creds_restricted` occurrences toward
+  //   `function_count` but collapses them to one name in `unique_count`, adding +1 duplicate
+  // Pitfall: a `#[cfg]`-gated same-name function pair (only one variant ever compiles for a
+  //   given target) reads as genuine duplication to this heuristic — not a copy-paste problem
+  let duplication_threshold = 19;
   let duplicates = function_count.saturating_sub( unique_count );
 
   assert!
