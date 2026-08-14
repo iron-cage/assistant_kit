@@ -306,7 +306,7 @@ fn test_no_code_duplication()
   //   contribute one `as_str()` duplicate (+3), and ControlSession's manual `Debug` impl
   //   contributes one more `fmt()` duplicate (+1) — 4 new duplicate occurrences, no headroom added
   //
-  // Fix(BUG-020): Raised from 18 to 19 after `isolated.rs` gained `write_creds_restricted`
+  // Fix(BUG-484): Raised from 18 to 19 after `isolated.rs` gained `write_creds_restricted`
   // Root cause: the credential-permission-hardening helper is defined twice under mutually
   //   exclusive `#[cfg(unix)]`/`#[cfg(not(unix))]` gates (same name, different bodies) — the
   //   naive text-scan heuristic counts both `fn write_creds_restricted` occurrences toward

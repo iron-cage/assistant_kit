@@ -29,6 +29,7 @@
 //! - T11: `clg ".list help"` (single joined argv element) intercepted — MAAV Tier 5 Round 1 G1 gap
 //! - T12: `clg ".list " "help"` / `clg ".list" "help "` (whitespace-corrupted separate argv) intercepted — MAAV Tier 5 Round 3 G1 gap
 //! - T13: leading whitespace / tab-separated argv intercepted — MAAV Tier 5 Round 4 non-blocking finding
+//! - T14: `clg ".show help"` (single joined argv element) intercepted — MAAV Tier 5 G4 non-blocking finding
 
 mod common;
 
@@ -656,5 +657,61 @@ fn t13_leading_whitespace_and_tab_intercepted()
     stdout( &tab_separated ), stdout( &dot_form ),
     "`.list` + `\\thelp` (tab-prefixed second element) must render byte-identical to `.list.help`;\n  got:\n{}\n  dot-form:\n{}",
     stdout( &tab_separated ), stdout( &dot_form )
+  );
+}
+
+/// T14: `clg ".show help"` — the single-joined-argv shape T11 already proves
+/// for `.list` — is intercepted and renders byte-identical to `.show.help`
+/// (MAAV Tier 5 G4 non-blocking finding, raised in Round 1 by the Dimension
+/// Adversary and reconfirmed live in Round 5: T11 only covers `.list`,
+/// leaving `.show` — already proven generality for the two-separate-argv
+/// shape by this file's own T03 — without an equivalent single-joined-argv
+/// test).
+///
+/// ## Root Cause
+/// T11 was written to close the `args.len() == 2` gap found during
+/// adversarial re-verification, and used `.list` (this file's baseline
+/// command) throughout. `execute_oneshot()`'s `args.len() == 2` fallback
+/// re-tokenizes and retries `try_command_help_space_form()` for any
+/// registered command, not just `.list`, so `.show` was already covered by
+/// the fix — but no test asserted it.
+///
+/// ## Why Not Caught
+/// T03 already proves `.show help` generality for the two-separate-argv
+/// shape (`args.len() == 3`), so `.show`'s space-form coverage looked
+/// complete at a glance. The single-joined-argv shape (`args.len() == 2`)
+/// is a distinct argv path from `args.len() == 3`, and T03 predates T11 by
+/// several MAAV rounds, so the two were never cross-checked against each
+/// other.
+///
+/// ## Fix Applied
+/// No code change — `execute_oneshot()`'s `args.len() == 2` fallback branch
+/// (`src/cli_main.rs`) already calls `registry.command( tokens[ 0 ] )`
+/// generically, with no `.list`-specific logic. This test only adds the
+/// missing pin for a second registered command, proving the fix generalizes
+/// rather than accidentally special-casing `.list`.
+///
+/// ## Prevention
+/// When a regression test is written against one command to close a gap,
+/// add a same-round or near-term test against at least one other registered
+/// command exercising the identical code path — a single-command pin cannot
+/// distinguish "fixed generically" from "fixed for this command only."
+///
+/// ## Pitfall
+/// Keep this scoped to the single-joined-argv shape only — T03 already owns
+/// the two-separate-argv generality proof for `.show`; duplicating that
+/// coverage here would be redundant, not additive.
+#[ test ]
+fn t14_show_help_single_joined_argv_intercepted()
+{
+  let space_form = common::clg_cmd().arg( ".show help" ).output().unwrap();
+  let dot_form = common::clg_cmd().arg( ".show.help" ).output().unwrap();
+
+  assert_exit( &dot_form, 0 );
+  assert_exit( &space_form, 0 );
+  assert_eq!(
+    stdout( &space_form ), stdout( &dot_form ),
+    "`.show help` as a single joined argv element must render byte-identical to `.show.help`;\n  space-form:\n{}\n  dot-form:\n{}",
+    stdout( &space_form ), stdout( &dot_form )
   );
 }
