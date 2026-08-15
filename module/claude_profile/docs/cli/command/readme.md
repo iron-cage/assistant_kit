@@ -23,15 +23,15 @@
 | 1 | `.` | Show help information (hidden dot-shorthand) | 0 | `clp .` |
 | 2 | `.help` | Display command reference and usage examples | 0 | `clp .help` |
 | 3 | `.accounts` | List all saved accounts or show a single named account | 32 | `clp .accounts` |
-| 4 | `.account.save` | Save current credentials as a named account profile | 5 | `clp .account.save name::alice@acme.com` |
-| 5 | `.account.use` | Switch active account by name with atomic credential rotation | 8 | `clp .account.use name::alice@home.com` |
-| 6 | `.account.delete` | Delete a saved account from the account store | 3 | `clp .account.delete name::alice@oldco.com` |
+| 4 | `.account.save` | Save current credentials as a named account profile | 11 | `clp .account.save name::alice@acme.com` |
+| 5 | `.account.use` | Switch active account by name with atomic credential rotation | 9 | `clp .account.use name::alice@home.com` |
+| 6 | `.account.delete` | Delete a saved account from the account store | 4 | `clp .account.delete name::alice@oldco.com` |
 | 7 | `.token.status` | **REMOVED** — use `.credentials.status`'s `token`/`expires` fields with `threshold::` | 0 | `clp .token.status` |
 | 8 | `.paths` | Show all resolved ~/.claude/ canonical file paths | 3 | `clp .paths` |
-| 9 | `.usage` | Show live rate-limit quota for all saved accounts | 33 | `clp .usage` |
-| 10 | `.credentials.status` | Show live credential metadata without account store dependency | 18 | `clp .credentials.status` |
+| 9 | `.usage` | Show live rate-limit quota for all saved accounts | 35 | `clp .usage` |
+| 10 | `.credentials.status` | Show live credential metadata without account store dependency | 20 | `clp .credentials.status` |
 | 11 | `.account.limits` | Show rate-limit utilization for the active or named account | 3 | `clp .account.limits name::alice@acme.com` |
-| 12 | `.account.relogin` | Force browser re-authentication for a named account | 3 | `clp .account.relogin name::carol@example.com` |
+| 12 | `.account.relogin` | Force browser re-authentication for a named account | 4 | `clp .account.relogin name::carol@example.com` |
 | 13 | `.account.rotate` | **DEPRECATED** — hidden redirector; exits 1 with notice to use `.usage rotate::1` | 0 | `clp .account.rotate` |
 | 14 | `.account.renewal` | Set/clear billing renewal timestamp override for one or all accounts | 6 | `clp .account.renewal name::alice@acme.com from_now::+0m` |
 | 15 | `.account.inspect` | Live diagnostic inspection of identity, subscription, and org fields | 4 | `clp .account.inspect` |
@@ -45,7 +45,7 @@
 ### Quick Reference
 
 **Required Parameters:**
-- `name::` — required on `.account.use`, `.account.delete`, `.account.relogin`, `.account.renewal`; optional on `.account.save` (inferred), `.accounts`, `.account.limits`, `.account.inspect` (defaults to active account). For ownership release, use `.accounts owner::0 name::X` (Feature 064).
+- `name::` — required on `.account.use`, `.account.delete`, `.account.renewal`; optional on `.account.save` (inferred), `.accounts`, `.account.limits`, `.account.relogin` (defaults to active account), `.account.inspect` (defaults to active account). For ownership release, use `.accounts owner::0 name::X` (Feature 064).
 
 **Most-Used Parameters:**
 - `format::` — 9 commands (`.accounts`, `.paths`, `.usage`, `.credentials.status`, `.account.limits`, `.account.inspect`, `.models`, `.model`, `.provider.select`)
@@ -55,14 +55,14 @@
 | Count | Commands |
 |-------|----------|
 | 0 | `.`, `.help` |
-| 3 | `.paths`, `.account.delete`, `.account.limits`, `.account.relogin`, `.models`, `.provider.select` |
-| 4 | `.account.inspect` |
-| 5 | `.account.save` |
+| 3 | `.paths`, `.account.limits`, `.models`, `.provider.select` |
+| 4 | `.account.inspect`, `.account.delete`, `.account.relogin` |
 | 6 | `.account.renewal`, `.model` |
-| 8 | `.account.use` |
-| 19 | `.credentials.status` |
+| 9 | `.account.use` |
+| 11 | `.account.save` |
+| 20 | `.credentials.status` |
 | 32 | `.accounts` |
-| 33 | `.usage` |
+| 35 | `.usage` |
 
 ### See Also
 

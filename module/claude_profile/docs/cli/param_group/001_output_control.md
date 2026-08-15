@@ -16,7 +16,7 @@
 | 1 | [`.accounts`](../command/001_account.md#command-3-accounts) | `format::` |
 | 2 | [`.paths`](../command/004_paths.md#command-8-paths) | `format::` |
 | 3 | [`.usage`](../command/006_usage.md#command-9-usage) | `format::`, `get::` |
-| 4 | [`.credentials.status`](../command/002_credentials.md#command-10-credentialsstatus) | `format::` |
+| 4 | [`.credentials.status`](../command/002_credentials.md#command-10-credentialsstatus) | `format::`, `get::` |
 | 5 | [`.account.limits`](../command/001_account.md#command-11-accountlimits) | `format::` |
 | 6 | [`.account.inspect`](../command/001_account.md#command-15-accountinspect) | `format::` |
 

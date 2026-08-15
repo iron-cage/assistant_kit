@@ -97,11 +97,17 @@ and `.account.delete` commands.
 
 ### AC-7: Full lifecycle roundtrip — absent→saved→active→absent
 
-- **Given:** Empty credential store.
-- **When:** The full sequence executes: save → use → save-another → use-another → delete-first.
-- **Then:** Account transitions through all states correctly. After deletion, the credential store
-  is in a consistent state with no orphaned markers. The account that was demoted from active to
-  saved is still deletable.
+- **Given:** Empty credential store, except `bob@acme.com` is pre-seeded directly as
+  already-saved-and-active via the `write_account(..., make_active: true)` fixture helper —
+  NOT a real `.account.save` CLI call. This stands in for "a second account already exists"
+  so step 3 below has an account to switch to.
+- **When:** Four CLI steps execute in sequence: (1) `.account.save name::alice@acme.com`
+  (absent → saved), (2) `.account.use name::alice@acme.com` (saved → active), (3)
+  `.account.use name::bob@acme.com` (alice: active → saved; bob: saved → active), (4)
+  `.account.delete name::alice@acme.com` (saved → absent).
+- **Then:** Account transitions through all states correctly. Alice's credential file exists
+  after step 1, still exists after step 3 (demoted to saved, not deleted), and is removed
+  after step 4. The account that was demoted from active to saved (alice) is still deletable.
 - **Source fn:** `account_nc1_full_lifecycle_roundtrip` in
   `tests/cli/command_noun_test.rs`
 - **Source:** [state_machine/001_account_lifecycle.md](../../../docs/state_machine/001_account_lifecycle.md)

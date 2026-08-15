@@ -1,9 +1,9 @@
 # docker image tag — used for -t at build and image lookup at run.
 # Shared workspace image: owned and built by THIS config; all module configs consume it.
-# Tag is unique to this checkout (claude_storage_core_test): the retired flat stack shared one
-# `workspace_test` tag across sibling assistant_kit checkouts, so a rebake here
-# would have swapped the image under unconverted siblings mid-migration.
-image: claude_storage_core_test
+# Tag is unique to this checkout (assistant_kit_claude_profile_test): sibling
+# checkouts under yrd_core/ each mint their own <family>_<checkout>_test tag, so
+# a rebake here never swaps the image out from under an unrelated checkout.
+image: assistant_kit_claude_profile_test
 
 # non-root so chmod-000 file-permission tests fail correctly (root bypasses checks)
 user: testuser
@@ -24,7 +24,7 @@ mounts:
     commands: [run, live, shell]
 
 # ── Plugins ───────────────────────────────────────────────────────────────────
-# type: binary — resolved via 'which name' on host PATH, falling back to <workspace>/target/debug/<name>, and bind-mounted into container.
+# type: binary — resolved on host PATH (an ELF mounts as-is; a RUNBOX_PRINT_BIN-aware wrapper like bin/will is unwrapped to the fresh managed binary it fronts), falling back to a knob-aware <workspace>/bin/<name> wrapper, then <workspace>/target/debug/<name>; bind-mounted into container.
 # prepare: — optional workspace-relative command run before the target/debug fallback is used (lets a bin/ wrapper rebuild its artifact).
 # working_volume / working_volume_path — named volume for compilation artifacts.
 plugins:
@@ -35,8 +35,17 @@ plugins:
   - type: binary
     name: claude
     container_path: /usr/local/bin/claude
-    working_volume: claude_storage_core_targets
-    working_volume_path: /tmp/claude_storage_core_targets
+    working_volume: claude_profile_targets
+    working_volume_path: /tmp/claude_profile_targets
+    commands: [run, live, shell]
+  # The test gate (verb/test.d/l1 → `will .test level::3`) delegates to will —
+  # on host PATH the knob-aware bin/will wrapper (family_dev) is unwrapped by
+  # the engine to the fresh managed ELF it fronts, so the container always gets
+  # a freshly rebuilt binary. No working volume of its own: the claude entry
+  # above already supplies CARGO_TARGET_DIR.
+  - type: binary
+    name: will
+    container_path: /usr/local/bin/will
     commands: [run, live, shell]
 
 # ── Environment ───────────────────────────────────────────────────────────────
@@ -46,9 +55,22 @@ env: {}
 
 env_commands:
   live:
-    # cargo home for registry bind-mounts; offline flag prevents network fetches
+    # cargo home for registry bind-mounts; the offline declaration keeps cargo
+    # hermetic AND keeps the engine's warm probe/fetch flow active (warm keys
+    # on this declaration — a payload-internal export alone never triggers it).
+    # The payload still gets network: the network.live knob below opts out of
+    # the declared-offline kernel seal.
     CARGO_HOME: /cargo
     CARGO_NET_OFFLINE: "true"
+
+# ── Network ───────────────────────────────────────────────────────────────────
+# Payload seal policy (runbox task 1460): 'default' keeps .live on the runtime
+# network — this workspace's lim_it live-API tests run in-container against the
+# mounted ~/.claude token (.config/nextest.toml) — while the offline declaration
+# above still drives the warm flow. .shell has no key: it derives from the
+# inherited env and stays sealed.
+network:
+  live: default
 
 # ── Build ─────────────────────────────────────────────────────────────────────
 # Image-build inputs for this owning config (bake-time only; runtime scoping is the caller's concern).

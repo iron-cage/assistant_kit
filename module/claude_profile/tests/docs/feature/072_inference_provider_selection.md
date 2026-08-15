@@ -36,7 +36,7 @@
 - FT-07–FT-13 exercise `.provider.select` itself — near-identical in content to `tests/docs/cli/command/21_provider_select.md`'s IT-01–IT-12 (same underlying test functions), indexed here under the feature entity for full-feature AC traceability rather than duplicated as distinct tests.
 - FT-14–FT-16 exercise Gate 10 — see `tests/docs/algorithm/004_eligibility_gates.md` AC-08 for the eligibility-gate-level test case; FT-14/FT-15 here assert the same behavior from the feature/AC perspective (mixed account lists, with and without an explicit `.provider.select`).
 - FT-05: default column set assertion — `Provider` header present with no `cols::` param at all, distinguishing this from opt-in columns like `host`/`role` which require `cols::+host`/`cols::+role`.
-- FT-11: seed `config.toml` with `provider = "kimi"` and `other_key = "val"` before calling `reset::1`; verify `other_key` is preserved and `provider` is absent (subsequent get shows `anthropic`).
+- FT-11: seed `config.toml` via `.model scope::subprocess model::claude-opus-4-8` then `id::kimi` before calling `reset::1` — not a generic `other_key` (see `tests/docs/cli/command/21_provider_select.md` IT-05's note on the same underlying test); verify `model` is preserved and `provider` is absent (subsequent get shows `anthropic`).
 - FT-14: seed at least one `anthropic`-tagged and one `kimi`-tagged account, both otherwise fully eligible (no other gate firing); assert `find_next_for_strategy()` never returns the `anthropic`-tagged account's index when `provider` is selected as `kimi`, including under `gate_ownership=true` and `force::1`-equivalent conditions.
 - FT-15: same setup as FT-14 but with no `.provider.select` ever called — asserts Gate 10 uses the default `anthropic` comparison value, not a no-op.
 
@@ -45,8 +45,8 @@
 ### FT-01: `.account.save inference_provider::kimi` writes the field
 
 - **Given:** Any state.
-- **When:** `clp .account.save name::kimi inference_provider::kimi`
-- **Then:** `kimi.json` contains `"inference_provider": "kimi"`. Exits 0.
+- **When:** `clp .account.save name::kimi@test.com inference_provider::kimi`
+- **Then:** `kimi@test.com.json` contains `"inference_provider": "kimi"`. Exits 0.
 - **Exit:** 0
 - **Source fn:** `t01_inference_provider_kimi_writes_key`
 - **Source:** [072_inference_provider_selection.md AC-01](../../../docs/feature/072_inference_provider_selection.md)
@@ -67,7 +67,7 @@
 ### FT-03: Empty `inference_provider::` exits 1
 
 - **Given:** Any state.
-- **When:** `clp .account.save name::kimi inference_provider::`
+- **When:** `clp .account.save name::kimi@test.com inference_provider::`
 - **Then:** Exits 1. Stderr names `inference_provider::` as requiring a non-empty value. No file written.
 - **Exit:** 1
 - **Source fn:** `t03_inference_provider_empty_value_exits_1_no_write`
@@ -156,9 +156,9 @@
 
 ### FT-11: `reset::1` removes key and preserves others
 
-- **Given:** `~/.clr/config.toml` contains `provider = "kimi"` and `other_key = "val"`.
+- **Given:** `~/.clr/config.toml` contains `provider = "kimi"` (via prior `id::kimi`) and `model = "claude-opus-4-8"` (via prior `.model scope::subprocess model::claude-opus-4-8`) — not a generic `other_key`.
 - **When:** `clp .provider.select reset::1`
-- **Then:** `provider` key removed; `other_key = "val"` preserved. Stdout is `provider.select: anthropic (reset to default)\n`. Exits 0.
+- **Then:** `provider` key removed; `model = "claude-opus-4-8"` preserved. Stdout is `provider.select: anthropic (reset to default)\n`. Exits 0.
 - **Exit:** 0
 - **Source fn:** `t09_provider_select_reset_preserves_model_key`
 - **Source:** [072_inference_provider_selection.md AC-11](../../../docs/feature/072_inference_provider_selection.md)

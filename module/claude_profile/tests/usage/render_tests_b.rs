@@ -401,14 +401,14 @@ fn ft13_025_sessions_table_parses_marker_identity_from_filename()
   );
 }
 
-// test_kind: bug_reproducer(BUG-341)
+// test_kind: bug_reproducer(BUG-347)
 /// FT-33/009 — sessions table flags a marker naming an account absent from the
 /// credential store with `(stale)`, leaving a marker naming a live account
 /// unflagged.
 ///
 /// ## Root Cause (AC-33 coverage)
 /// `build_sessions_table` rendered marker content verbatim with no existence
-/// check, so a marker orphaned by a cross-machine delete (BUG-341) looked
+/// check, so a marker orphaned by a cross-machine delete (BUG-347) looked
 /// identical to a genuinely active session.
 ///
 /// ## Setup
@@ -432,8 +432,8 @@ fn ft33_009_sessions_table_flags_stale_marker_account()
   let own_fname   = claude_profile_core::account::active_marker_filename();
   let live_fname  = "_active_testhost3_tst3";
   let ghost_fname = "_active_testhost4_tst4";
-  assert_ne!( own_fname.as_str(), live_fname,  "BUG-341 guard: pick a different synthetic name" );
-  assert_ne!( own_fname.as_str(), ghost_fname, "BUG-341 guard: pick a different synthetic name" );
+  assert_ne!( own_fname.as_str(), live_fname,  "BUG-347 guard: pick a different synthetic name" );
+  assert_ne!( own_fname.as_str(), ghost_fname, "BUG-347 guard: pick a different synthetic name" );
 
   std::fs::write( spath.join( "live@test.com.credentials.json" ), "{}" ).unwrap();
   std::fs::write( spath.join( live_fname ), "live@test.com" ).unwrap();

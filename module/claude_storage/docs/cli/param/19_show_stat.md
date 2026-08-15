@@ -7,7 +7,7 @@
 - **In Scope**: Value constraints, default behavior, command interactions.
 - **Out of Scope**: Type definitions (→ `type/`), command behavior (→ `command/`).
 
-Show session statistics footer in content mode.
+Accepted for backward compatibility; has no effect on `.show` output.
 
 **Type:** Boolean
 
@@ -17,12 +17,12 @@ Show session statistics footer in content mode.
 
 **Commands:** `.show`
 
-**Purpose:** When set to `1`, appends a statistics section to session content output — total entry count, user/assistant breakdown, and timestamp range. Has no effect in `show_metadata::1` mode (metadata mode always shows structured fields including timestamps). Independent of `show_tokens::`.
+**Purpose:** Accepted for backward compatibility but has no effect — content mode's key:val attribute block already shows total entry count, user/assistant breakdown, and timestamp range unconditionally, and `show_metadata::1` mode has always shown the same structured fields. Independent of `show_tokens::`.
 
 **Examples:**
 ```bash
-show_stat::0    # Default — no statistics footer
-show_stat::1    # Append statistics footer after session content
+show_stat::0    # Default — no effect (parameter accepted, ignored)
+show_stat::1    # No effect — content already shows the equivalent fields unconditionally
 ```
 
 **Group:** [Output Control](../param_group/01_output_control.md)
@@ -40,7 +40,7 @@ show_stat::1    # Append statistics footer after session content
 ### Referenced Commands
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
-| 3 | [`.show`](../command/03_show.md) | `0` | Appends statistics footer in content mode |
+| 3 | [`.show`](../command/03_show.md) | `0` | No effect — accepted for backward compatibility |
 
 ### Referenced User Stories
 | # | User Story | Persona |

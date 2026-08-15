@@ -1,7 +1,7 @@
 meta:
   description: Cross-reference graph for feature/ and invariant/ doc instances in claude_profile
-  node_count: 60
-  edge_count: 268
+  node_count: 59
+  edge_count: 264
   component_count: 2
   generated: 2026-07-16
   scope_note: >
@@ -9,7 +9,7 @@ meta:
     (command, param, param_group, type, format, workflow_scenario) and
     research_interactive/ are excluded — their structure is captured in
     per-directory readmes, not cross-reference edges. Generic ❌-deprecated
-    features (feature/008, feature/023 — excluded from nodes: per the
+    features (feature/008, feature/023, feature/069 — excluded from nodes: per the
     Convention A lifecycle rule in entity/readme.md) declare relationships
     in other features' own "### Features" tables (e.g. feature/004, 006,
     038 → 008; 023 → 020) that are intentionally NOT mirrored as edges
@@ -246,11 +246,6 @@ nodes:
     label: Models List Command
     entity: feature
 
-  - id: feature/069
-    file: feature/069_model_select_command.md
-    label: Model Select Command
-    entity: feature
-
   - id: feature/070
     file: feature/070_account_claim_and_reservation_control.md
     label: Account Claim And Reservation Control
@@ -470,7 +465,6 @@ edges:
   # ── feature/035: Dedicated Model Get/Set Command ──────────────────────────
 
   - {from: feature/035, to: feature/034, label: ".model shares set_session_model() and map_model_shorthand() extracted from validate_set_model()"}
-  - {from: feature/035, to: feature/069, label: "supersedes: absorbs .model.select's command name, id::/reset:: params (as model::/reset_model::), and dispatch function via scope::subprocess"}
 
   # ── feature/036: Account Ownership ────────────────────────────────────────
 
@@ -613,14 +607,7 @@ edges:
   # ── feature/068: Models List Command ───────────────────────────────────────
 
   - {from: feature/068, to: feature/035, label: "complementary — .model manages interactive session model; .models discovers live/offline catalog"}
-  - {from: feature/068, to: feature/069, label: "historical — .model.select (retired) used model IDs discovered here; live path is .model scope::subprocess model:: (Feature 035)"}
   - {from: feature/068, to: feature/026, label: "imodel:: subprocess model selection is a separate mechanism from .models discovery"}
-
-  # ── feature/069: Model Select Command ──────────────────────────────────────
-
-  - {from: feature/069, to: feature/068, label: ".models — discover full model IDs to pass to id::"}
-  - {from: feature/069, to: feature/035, label: "predecessor: .model.select's id::/reset:: params, command name, and dispatch function merged into .model via scope::subprocess"}
-  - {from: feature/069, to: feature/026, label: "imodel:: — per-invocation touch/refresh subprocess model (intentionally separate)"}
 
   # ── feature/070: Account Claim And Reservation Control ─────────────────────
 
@@ -818,7 +805,7 @@ edges:
 
 components:
   - id: 1
-    size: 59
+    size: 58
     isolated: false
     nodes:
       - feature/001
@@ -866,7 +853,6 @@ components:
       - feature/066
       - feature/067
       - feature/068
-      - feature/069
       - feature/070
       - invariant/001
       - invariant/002

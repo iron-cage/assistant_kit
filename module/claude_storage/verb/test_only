@@ -5,7 +5,7 @@
 #   nextest-filter — test name substring pattern
 set -euo pipefail
 MODULE_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
-if [[ -n "${VERB_LAYER:-}" ]]; then
+if [[ -v VERB_LAYER ]]; then
   echo "ERROR: VERB_LAYER is not valid on the host side." >&2
   echo "Standard invocation: cd module/claude_storage && ./verb/test_only <filter>" >&2
   exit 1

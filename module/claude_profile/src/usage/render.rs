@@ -12,7 +12,7 @@ use crate::output::format_duration_secs;
 use super::types::{ AccountQuota, SortStrategy, PreferStrategy, ColsVisibility, GetField };
 use super::format::{
   recommended_model,
-  compute_expires_cell, sub_label, shorten_error,
+  compute_expires_cell_cached, sub_label, shorten_error,
   quota_text_cells, status_emoji, renews_label, next_event_label, next_event_raw, renewal_secs,
 };
 use super::sort::{ sort_indices, find_next_for_strategy, strategy_metric };
@@ -98,6 +98,11 @@ pub fn render_text(
   {
     let aq = &accounts[ orig_idx ];
     // Four-level priority: ✓ (is_current) > * (is_active, not current) > @ (occupied on another machine) > blank.
+    // BUG-344 (reverted): a fetch-result conjunct was added here, then reverted after cross-checking
+    //   docs/feature/009_token_usage.md — AC-02, AC-11, and Algorithm step 5a all specify ✓ display
+    //   gated solely on is_current, independent of aq.result. Status health has its own dedicated
+    //   column (AC-18) for exactly that purpose; conflating the two contradicts the documented design
+    //   and broke tests/cli/usage_core_test.rs::it018_synthetic_row_when_no_saved_match (AC-11).
     let flag_cell = if aq.is_current
     {
       "✓".to_string()
@@ -115,7 +120,10 @@ pub fn render_text(
       String::new()
     };
 
-    let expires_cell = compute_expires_cell( aq.expires_at_ms, now_secs );
+    // Fix(BUG-345): compute_expires_cell alone cannot show cache-fallback staleness.
+    // Root cause: aq.cached (fetch provenance) was never combined with expires_at_ms here.
+    // Pitfall: use the cache-aware wrapper, not compute_expires_cell directly, wherever aq.cached is in scope.
+    let expires_cell = compute_expires_cell_cached( aq.expires_at_ms, now_secs, aq.cached );
     let sub_str      = sub_label( aq.account.as_ref() ).to_string();
     // Fix(BUG-232): billing_type=="none" → no active subscription → no renewal date to show.
     // Root cause: renews_label uses org_created_at unconditionally; has no billing_type param.
@@ -293,6 +301,9 @@ pub fn render_text(
   let rec_display = rec_model.to_string() + "/" + rec_effort;
 
   // Build footer lines: find current (✓) account or fall back to legacy format.
+  // BUG-344 (reverted): see flag_cell's comment above — AC-02/AC-10's "Current · <name>"
+  //   line identifies the ✓ (is_current) account unconditionally; docs/feature/009_token_usage.md
+  //   has no result-gating on this line either.
   let footer = if let Some( cur ) = accounts.iter().find( |aq| aq.is_current )
   {
     let model_effort = match ( session_model, session_effort )
@@ -387,14 +398,17 @@ pub( crate ) fn render_plain(
 /// The returned string is the same value that would appear in the corresponding
 /// cell of the text table — but without trailing whitespace or ANSI sequences.
 /// `host` and `role` return the values from `{name}.json`, empty when absent.
-pub( crate ) fn extract_get_field( aq : &AccountQuota, field : GetField, now_secs : u64 ) -> String
+pub fn extract_get_field( aq : &AccountQuota, field : GetField, now_secs : u64 ) -> String
 {
   let dash = "\u{2014}".to_string();
   match field
   {
     GetField::Status  => status_emoji( aq ).to_string(),
     GetField::Account => aq.name.clone(),
-    GetField::Expires => compute_expires_cell( aq.expires_at_ms, now_secs ),
+    // Fix(BUG-345): .get field::expires must reflect cache-fallback staleness like the table cell does.
+    // Root cause: this extractor called the non-cache-aware compute_expires_cell directly.
+    // Pitfall: any new Expires accessor must use compute_expires_cell_cached, not compute_expires_cell.
+    GetField::Expires => compute_expires_cell_cached( aq.expires_at_ms, now_secs, aq.cached ),
     GetField::Sub    => sub_label( aq.account.as_ref() ).to_string(),
     // Fix(BUG-232): billing_type=="none" → no active subscription → no renewal date to show.
     // Root cause: renews_label uses org_created_at unconditionally; has no billing_type param.

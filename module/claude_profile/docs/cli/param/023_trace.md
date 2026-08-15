@@ -3,7 +3,7 @@
 When enabled, writes timestamped diagnostic lines to stderr (prefix format: `YYYY-MM-DD · HH:MM:SS UTC · `) for internal operations performed by any `clp` command: file reads, API calls, subprocess lifecycle steps, and multi-step operation outcomes.
 
 - **Default:** `0` (off — no diagnostic output)
-- **Constraints:** Accepted values: `0`, `1`, `false`, `true`; ignored in live monitor mode (`live::1`)
+- **Constraints:** Accepted values: `0`, `1`, `false`, `true`
 - **Purpose:** Exposes internal mechanics so failures can be diagnosed without guessing. On `.usage`: shows credential reads, API calls (URL + token prefix), API results, and every lifecycle step of the `refresh::1` retry and `touch::1` subprocess paths. On `.account.use`: shows credential read, quota fetch, idle/active determination, model/effort resolution, and subprocess dispatch decision (only when `touch::1`). On `.account.inspect`: shows per-endpoint call with URL and HTTP status for endpoints 001, 002, and 005. On other commands: shows file-read and write steps.
 
 **Examples:**
@@ -27,12 +27,11 @@ trace::1   → print timestamped diagnostic lines to stderr; stdout output uncha
   2026-06-25 · 16:40:04 UTC · refresh  alice@example.com  attempting token refresh
   2026-06-25 · 16:40:04 UTC · refresh  alice@example.com  read credentials: OK
   2026-06-25 · 16:40:04 UTC · refresh  alice@example.com  run_isolated: invoking claude  args=["--print", "."]  timeout=35s
-  2026-06-25 · 16:40:04 UTC · refresh  alice@example.com  run_isolated: OK credentials=Some
+  2026-06-25 · 16:40:04 UTC · refresh  alice@example.com  run_isolated: OK credentials=Some  (1.8s)
   2026-06-25 · 16:40:04 UTC · refresh  alice@example.com  write credentials: OK
   2026-06-25 · 16:40:04 UTC · refresh  alice@example.com  save: OK
   2026-06-25 · 16:40:04 UTC · refresh  alice@example.com  token refreshed, retrying quota fetch
   2026-06-25 · 16:40:04 UTC · refresh  alice@example.com  retry OK
-  2026-06-25 · 16:40:04 UTC · refresh  alice@example.com  restore switch_account: OK
   ```
 - For a rate-limited account with a non-expired token (refresh not triggered):
   ```

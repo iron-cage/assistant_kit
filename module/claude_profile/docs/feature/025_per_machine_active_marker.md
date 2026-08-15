@@ -26,7 +26,7 @@ The new design writes `_active_{hostname}_{user}` instead. Filename derivation, 
 - **AC-03**: Two machines sharing the same credential store directory can each have their own active account without affecting each other.
 - **AC-04**: `_active_*` is listed in `.gitignore` at the repository root.
 - **AC-05**: `other_machines_active(credential_store)` returns a `HashSet<String>` containing account names found in every `_active_*` file in the credential store EXCEPT the current machine's own marker (as returned by `active_marker_filename()`). Each file's content is trimmed; empty strings after trimming are excluded. Missing or unreadable files are silently skipped.
-- **AC-06**: `delete(name, credential_store)` clears every `_active_*` marker file — the calling machine's own marker and every other machine's — whose trimmed content equals `name`, not only the calling machine's own marker as resolved by `active_marker_filename()`. A marker naming a different account is left untouched (BUG-341 fix).
+- **AC-06**: `delete(name, credential_store)` clears every `_active_*` marker file — the calling machine's own marker and every other machine's — whose trimmed content equals `name`, not only the calling machine's own marker as resolved by `active_marker_filename()`. A marker naming a different account is left untouched (BUG-347 fix).
 
 ### Features
 
@@ -44,13 +44,13 @@ The new design writes `_active_{hostname}_{user}` instead. Filename derivation, 
 
 | File | Relationship |
 |------|--------------|
-| [invariant/005_atomic_switching.md](../invariant/005_atomic_switching.md) | Atomicity invariant; scope-boundary note distinguishes this feature's AC-06 permanent-staleness fix from the invariant's crash-only tolerance clause (BUG-341) |
+| [invariant/005_atomic_switching.md](../invariant/005_atomic_switching.md) | Atomicity invariant; scope-boundary note distinguishes this feature's AC-06 permanent-staleness fix from the invariant's crash-only tolerance clause (BUG-347) |
 
 ### Sources
 
 | File | Relationship |
 |------|--------------|
-| `module/claude_profile_core/src/account.rs` | `active_marker_filename()` — derives per-machine marker name; `read_active_marker()`, `switch_account()`, `save()` — use it; `all_marker_files(store)` — enumerates every `_active_*` file as `(path, trimmed_content)` pairs, own marker included; `other_machines_active(store)` and `delete()` both build on it — `other_machines_active` filters out the own-path, returns `HashSet<String>` of account names; `delete()` removes every marker whose content matches the deleted account name, own or foreign (AC-06, BUG-341 fix) |
+| `module/claude_profile_core/src/account.rs` | `active_marker_filename()` — derives per-machine marker name; `read_active_marker()`, `switch_account()`, `save()` — use it; `all_marker_files(store)` — enumerates every `_active_*` file as `(path, trimmed_content)` pairs, own marker included; `other_machines_active(store)` and `delete()` both build on it — `other_machines_active` filters out the own-path, returns `HashSet<String>` of account names; `delete()` removes every marker whose content matches the deleted account name, own or foreign (AC-06, BUG-347 fix) |
 | `src/commands/cmd_args.rs`, `src/commands/account_ops.rs` | `resolve_account_name()` — exact-local-part match priority (defined in `cmd_args.rs`); `account_save_routine()` — reads `oauthAccount.emailAddress` from `~/.claude.json` as primary name inference source when `name::` is omitted; falls back to `_active_{hostname}_{user}` marker (BUG-212 fix, TSK-215) |
 | `src/commands/accounts.rs` | `accounts_routine()` `assignee::` path — writes or clears `_active_{machine}_{user}` for any `USER@MACHINE` pair without credential rotation (Feature 065: renamed from `active::` which replaced former `assign::1` + `for::` params) |
 | `src/usage/refresh.rs`, `src/usage/touch.rs` | `apply_refresh` and `apply_touch` snapshot/restore the `_active` marker around per-account processing; snapshot+restore removed by BUG-211 fix (`save()` now writes conditionally via `update_marker=false` — see AC-15 in [002_account_save.md](002_account_save.md)); reads removed in Phases 3/4 of TSK-214 |
@@ -61,7 +61,7 @@ The new design writes `_active_{hostname}_{user}` instead. Filename derivation, 
 | File | Relationship |
 |------|--------------|
 | `tests/cli/account_mutations_test.rs` (aw16, aw17) | aw16: exact-local-part wins over prefix; aw17: no exact match falls through to ambiguous |
-| `module/claude_profile_core/tests/account_test.rs` | FT-11: other_machines_active returns others' names; FT-12: returns empty HashSet when only own marker or empty store; FT-14: delete() clears a foreign-machine marker naming the deleted account (AC-06, BUG-341) |
+| `module/claude_profile_core/tests/account_test.rs` | FT-11: other_machines_active returns others' names; FT-12: returns empty HashSet when only own marker or empty store; FT-14: delete() clears a foreign-machine marker naming the deleted account (AC-06, BUG-347) |
 
 ### Schema
 
