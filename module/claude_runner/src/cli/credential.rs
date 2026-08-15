@@ -1,14 +1,39 @@
 use claude_runner_core::{
   ClaudeCommand, DEFAULT_COMPACT_WINDOW, EffortLevel, IsolatedModel, IsolatedRunResult,
-  ISOLATED_CLAUDE_MD, REFRESH_DEFAULT_MODEL, RunnerError, run_isolated_ext, signal_exit_code,
+  ISOLATED_CLAUDE_MD, REFRESH_DEFAULT_MODEL, RunnerError, resolve_isolated_default_model,
+  run_isolated_ext, signal_exit_code,
 };
 use claude_journal::{ EventRecord, EventType, JournalWriter };
+
+/// Write `contents` to `path` with owner-only (`0600`) permissions on Unix, so credential
+/// material is never briefly world-readable — neither in the isolated temp `HOME` nor when
+/// written back to the caller-supplied `--creds` path after a refresh.
+#[ cfg( unix ) ]
+fn write_creds_restricted( path : &std::path::Path, contents : &str ) -> std::io::Result< () >
+{
+  use std::io::Write as _;
+  use std::os::unix::fs::OpenOptionsExt as _;
+  std::fs::OpenOptions::new()
+    .create( true )
+    .write( true )
+    .truncate( true )
+    .mode( 0o600 )
+    .open( path )?
+    .write_all( contents.as_bytes() )
+}
+
+#[ cfg( not( unix ) ) ]
+fn write_creds_restricted( path : &std::path::Path, contents : &str ) -> std::io::Result< () >
+{
+  std::fs::write( path, contents )
+}
 
 /// Emit trace/dry-run diagnostics for a credential-operation command (`isolated` or `refresh`).
 ///
 /// Reconstructs the `ClaudeCommand` exactly as `run_isolated_ext()` would build it
-/// (model flag prepended, then `with_home(&temp_dir)`, `with_compact_window(compact_window)`,
-/// then `with_args(args)`) and prints `describe_full()` — the same single preview-formatting
+/// (model flag prepended, then `with_home(&temp_dir)`, `with_home_isolation()`,
+/// `with_compact_window(compact_window)`, then `with_args(args)`) and prints
+/// `describe_full()` — the same single preview-formatting
 /// method used by `handle_dry_run` and the `--trace` branch in `run_built_command`, so the
 /// blank-line/export formatting can never drift between the three call sites.
 ///
@@ -21,8 +46,10 @@ use claude_journal::{ EventRecord, EventType, JournalWriter };
 /// WYSIWYG: the reconstructed command here must match what `run_isolated_ext()` actually runs.
 ///
 /// Pitfall: if `run_isolated_ext()` in `claude_runner_core` is updated to modify the
-/// `ClaudeCommand` beyond prepending the model flag, `with_home()`, `with_compact_window()`,
-/// and `with_args()`, this trace will diverge — update both together.
+/// `ClaudeCommand` beyond prepending the model flag, `with_home()`, `with_home_isolation()`,
+/// `with_compact_window()`, and `with_args()`, this trace will diverge — update both
+/// together (BUG-478 was exactly this drift: the real chains gained `with_home_isolation()`
+/// and this preview did not).
 fn emit_credential_trace
 (
   label          : &str,             // subcommand name shown in the "# clr {label}" trace header
@@ -44,8 +71,18 @@ fn emit_credential_trace
     full_args.push( id.to_string() );
   }
   full_args.extend_from_slice( args );
+  // Fix(BUG-478): .with_home_isolation() mirrors both real execution chains
+  //   (run_isolated_ext() and run_isolated_with_stdin_file()), which call it between
+  //   .with_home() and .with_compact_window().
+  // Root cause: the real chains gained .with_home_isolation() (AC-41) but this preview
+  //   reconstruction was never updated to match — it rendered the builder's default
+  //   --chrome token while the real subprocess receives no chrome flag at all.
+  // Pitfall: a preview that reconstructs the real command instead of sharing its
+  //   construction drifts silently on every builder-chain change — mirror every call
+  //   here, per this function's own doc comment.
   let preview = ClaudeCommand::new()
     .with_home( &temp_dir )
+    .with_home_isolation()
     .with_compact_window( compact_window )
     .with_args( full_args.iter().cloned() );
   let block = preview.describe_full();
@@ -111,6 +148,25 @@ pub( super ) fn run_isolated_command
   max_turns             : Option< &str >,       // injected as --max-turns <value> when Some
 ) -> !
 {
+  // Fix(BUG-485): resolve `IsolatedModel::Default`'s config preference (project
+  //   `.clr.toml` → user `~/.clr/config.toml`) once, here at entry — upstream of the
+  //   fan-out into emit_credential_trace() (preview), run_isolated_ext(), and
+  //   run_isolated_with_stdin_file(), so all three --model sites see the same value.
+  //   run_isolated_ext()'s own consultation remains as a fallback for direct
+  //   core-API callers; it is a no-op here since Default never reaches it anymore.
+  // Root cause: the preference was consulted only inside run_isolated_ext(), so the
+  //   preview showed ISOLATED_DEFAULT_MODEL and the --file path ran it, while the
+  //   no-file real path used the configured preference — three sibling --model
+  //   prepend sites, one consultation.
+  // Pitfall: resolve shared inputs once, upstream of a multi-path fan-out — a
+  //   preference consulted at only one consuming site silently splits behavior
+  //   across execution paths.
+  let pref_override = match &model
+  {
+    IsolatedModel::Default => resolve_isolated_default_model(),
+    _                      => None,
+  };
+  let model = pref_override.map_or( model, IsolatedModel::Specific );
   let compact_window : Option< u32 > = if no_compact_window { None } else { Some( DEFAULT_COMPACT_WINDOW ) };
   // Build the full arg list with all injected defaults prepended before --print.
   // Order: [--no-chrome?] [--effort <level>?] --no-session-persistence [--dangerously-skip-permissions?]
@@ -176,7 +232,7 @@ pub( super ) fn run_isolated_command
       // the subprocess finished (or before the timeout killed it).
       if let Some( ref new_creds ) = result.credentials
       {
-        if let Err( e ) = std::fs::write( creds_path, new_creds )
+        if let Err( e ) = write_creds_restricted( std::path::Path::new( creds_path ), new_creds )
         {
           eprintln!( "Warning: could not write back refreshed credentials to '{creds_path}': {e}" );
         }
@@ -324,7 +380,7 @@ fn run_isolated_with_stdin_file
     .map_err( | e | RunnerError::TempDirFailed( e.to_string() ) )?;
 
   let creds_path = claude_dir.join( ".credentials.json" );
-  std::fs::write( &creds_path, credentials_json )
+  write_creds_restricted( &creds_path, credentials_json )
     .map_err( | e | RunnerError::Io( e.to_string() ) )?;
   std::fs::write( claude_dir.join( "CLAUDE.md" ), ISOLATED_CLAUDE_MD )
     .map_err( | e | RunnerError::Io( e.to_string() ) )?;

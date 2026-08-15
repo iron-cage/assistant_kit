@@ -1,7 +1,8 @@
 use std::io::IsTerminal;
-use claude_runner_core::{ ClaudeCommand, ErrorKind, ExecutionOutput, signal_exit_code };
+use claude_runner_core::{ ClaudeCommand, ExecutionOutput, signal_exit_code };
 use super::parse::{ CliArgs, ExpectStrategy };
 use super::fence::strip_fences;
+use super::retry_classify::{ ClassAttempts, classify_to_class, class_fields, delay_suffix, first_message, resolve_count, resolve_delay };
 use claude_journal::{ EventRecord, EventType, JournalWriter };
 use claude_storage_core::SessionId;
 
@@ -188,135 +189,6 @@ fn write_output_file( path : Option< &str >, content : &str )
   }
 }
 
-// -------------------------------------------------------------------
-// Error class taxonomy and 3-tier resolution
-// -------------------------------------------------------------------
-
-/// Semantic class for caller-facing retry decisions.
-///
-/// Maps `ErrorKind` (subprocess classification) and CLR-layer ad-hoc exits
-/// to a uniform 6-class taxonomy for the retry loop.  Validation and Runner
-/// classes are handled outside the main retry loop.
-#[ derive( Clone, Copy ) ]
-enum ErrorClass
-{
-  Transient,
-  Account,
-  Auth,
-  Service,
-  Process,
-  Unknown,
-}
-
-impl ErrorClass
-{
-  fn label( self ) -> &'static str
-  {
-    match self
-    {
-      ErrorClass::Transient => "Transient",
-      ErrorClass::Account   => "Account",
-      ErrorClass::Auth      => "Auth",
-      ErrorClass::Service   => "Service",
-      ErrorClass::Process   => "Process",
-      ErrorClass::Unknown   => "Unknown",
-    }
-  }
-  fn fallback_message( self ) -> &'static str
-  {
-    match self
-    {
-      ErrorClass::Transient => "rate limit",
-      ErrorClass::Account   => "quota exhausted",
-      ErrorClass::Auth      => "auth error",
-      ErrorClass::Service   => "API error",
-      ErrorClass::Process   => "terminated by signal",
-      ErrorClass::Unknown   => "unknown error",
-    }
-  }
-}
-
-/// Map an `ErrorKind` (or CLR-layer exit 4) to an `ErrorClass`.
-fn classify_to_class( kind : Option< &ErrorKind >, exit_code : i32 ) -> ErrorClass
-{
-  if exit_code == 4 { return ErrorClass::Process; }
-  match kind
-  {
-    Some( ErrorKind::RateLimit )      => ErrorClass::Transient,
-    Some( ErrorKind::QuotaExhausted ) => ErrorClass::Account,
-    Some( ErrorKind::AuthError )      => ErrorClass::Auth,
-    Some( ErrorKind::ApiError )       => ErrorClass::Service,
-    Some( ErrorKind::Signal )         => ErrorClass::Process,
-    Some( ErrorKind::Unknown ) | None => ErrorClass::Unknown,
-  }
-}
-
-/// 3-tier resolution for retry count: override ?? class-specific ?? fallback (2).
-fn resolve_count(
-  over      : Option< u8 >,
-  class_cli : Option< u8 >,
-  fallback  : Option< u8 >,
-) -> u8
-{
-  over.or( class_cli ).or( fallback ).unwrap_or( 2 )
-}
-
-/// 3-tier resolution for retry delay: override ?? class-specific ?? fallback (30).
-fn resolve_delay( over : Option< u32 >, class : Option< u32 >, fallback : Option< u32 > ) -> u32
-{
-  over.or( class ).or( fallback ).unwrap_or( 30 )
-}
-
-/// Return the class-specific (count, delay) fields from `CliArgs` for the given class.
-fn class_fields( cli : &CliArgs, class : ErrorClass ) -> ( Option< u8 >, Option< u32 > )
-{
-  match class
-  {
-    ErrorClass::Transient => ( cli.retry_on_transient, cli.transient_delay ),
-    ErrorClass::Account   => ( cli.retry_on_account,   cli.account_delay ),
-    ErrorClass::Auth      => ( cli.retry_on_auth,       cli.auth_delay ),
-    ErrorClass::Service   => ( cli.retry_on_service,    cli.service_delay ),
-    ErrorClass::Process   => ( cli.retry_on_process,    cli.process_delay ),
-    ErrorClass::Unknown   => ( cli.retry_on_unknown,    cli.unknown_delay ),
-  }
-}
-
-/// Extract the first non-empty line from stdout or stderr as the original message.
-/// Falls back to the class-specific default when both are empty.
-///
-/// When `use_summary` is true and stdout looks like a JSON envelope, extracts the
-/// `"result"` field first so retry diagnostics show human-readable text rather than
-/// the raw JSON blob.
-fn first_message( output : &ExecutionOutput, class : ErrorClass, use_summary : bool ) -> String
-{
-  if use_summary && output.stdout.trim_start().starts_with( '{' )
-  {
-    if let Some( text ) = super::summary::extract_result_text( &output.stdout )
-    {
-      for line in text.lines()
-      {
-        let t = line.trim();
-        if !t.is_empty() { return t.to_string(); }
-      }
-    }
-  }
-  for s in [ &output.stdout, &output.stderr ]
-  {
-    for line in s.lines()
-    {
-      let t = line.trim();
-      if !t.is_empty() { return t.to_string(); }
-    }
-  }
-  class.fallback_message().to_string()
-}
-
-/// Format the retry delay suffix: " in Xs" when delay > 0, empty when immediate.
-fn delay_suffix( delay : u32 ) -> String
-{
-  if delay > 0 { format!( " in {delay}s" ) } else { String::new() }
-}
-
 /// Validate `out` against `--expect`; apply retry/default/fail strategy on mismatch.
 ///
 /// Returns `out` when validation passes (or when `--expect` is not set).
@@ -473,8 +345,13 @@ fn execute_print_attempt( builder : &ClaudeCommand, timeout_secs : u32 )
   };
 
   // Take pipe handles before entering the poll loop so background threads own them.
-  let stdout_pipe = child.stdout.take().expect( "stdout piped by spawn_piped" );
-  let stderr_pipe = child.stderr.take().expect( "stderr piped by spawn_piped" );
+  // spawn_piped() is expected to always set both to Some — treat a violation of that
+  // contract as a spawn failure (like the branch above) rather than panicking.
+  let ( Some( stdout_pipe ), Some( stderr_pipe ) ) = ( child.stdout.take(), child.stderr.take() )
+  else
+  {
+    return Err( std::io::Error::other( "spawn_piped() did not provide piped stdout/stderr" ) );
+  };
 
   let stdout_t = std::thread::spawn( move || -> Vec< u8 >
   {
@@ -673,8 +550,14 @@ fn run_print_mode_streaming(
     }
   };
 
-  let stdout_pipe = child.stdout.take().expect( "stdout piped by spawn_piped" );
-  let stderr_pipe = child.stderr.take().expect( "stderr piped by spawn_piped" );
+  // spawn_piped() is expected to always set both to Some — treat a violation of that
+  // contract as a spawn failure (like the branch above) rather than panicking.
+  let ( Some( stdout_pipe ), Some( stderr_pipe ) ) = ( child.stdout.take(), child.stderr.take() )
+  else
+  {
+    eprintln!( "Error: spawn_piped() did not provide piped stdout/stderr" );
+    std::process::exit( 1 );
+  };
 
   // Drain stderr on a background thread while stdout is read line-by-line on this
   // thread — without it, a subprocess that fills the stderr pipe buffer (64 KiB)
@@ -763,8 +646,8 @@ pub( super ) fn run_print_mode(
     run_print_mode_streaming( builder, cli, journal );
     return;
   }
-  // Per-class attempt counters: [Transient, Account, Auth, Service, Process, Unknown]
-  let mut attempts = [ 0usize; 6 ];
+  // Per-class attempt counters (one field per ErrorClass variant — see ClassAttempts).
+  let mut attempts = ClassAttempts::default();
   // Fix(BUG-299): Runner retry counter — tracks spawn failure attempts separately from class retries.
   let mut runner_attempt = 0u32;
   // Fix(BUG-327): one-shot fallback builder — Some(..) once either the deferred-tool
@@ -870,7 +753,6 @@ pub( super ) fn run_print_mode(
       // Pitfall: never use `break` inside this retry block — break exits the loop and
       //   falls through to the function's implicit return (), bypassing the
       //   process::exit(exit_code) call below. Guard the block ENTRY instead.
-      let class_idx = class as usize;
       let label = class.label();
       let ( count_field, delay_field ) = class_fields( cli, class );
       let limit = resolve_count( cli.retry_override, count_field, cli.retry_default ) as usize;
@@ -878,20 +760,21 @@ pub( super ) fn run_print_mode(
       let use_summary = cli.output_style.as_deref().unwrap_or( "summary" ) == "summary";
       let msg = first_message( &output, class, use_summary );
 
-      if attempts[ class_idx ] < limit
+      let counter = attempts.get_mut( class );
+      if *counter < limit
       {
-        attempts[ class_idx ] += 1;
+        *counter += 1;
         if !cli.quiet
         {
           let suf = delay_suffix( delay );
           eprintln!(
             "{}[{label}] {msg} — retrying{suf} (attempt {}/{})…",
             claude_core::trace_ts(),
-            attempts[ class_idx ],
+            *counter,
             limit + 1
           );
         }
-        emit_retry( journal, label, u32::try_from( attempts[ class_idx ] ).unwrap_or( u32::MAX ), u32::try_from( limit + 1 ).unwrap_or( u32::MAX ), delay, &msg );
+        emit_retry( journal, label, u32::try_from( *counter ).unwrap_or( u32::MAX ), u32::try_from( limit + 1 ).unwrap_or( u32::MAX ), delay, &msg );
         if delay > 0
         {
           std::thread::sleep( core::time::Duration::from_secs( u64::from( delay ) ) );
@@ -902,7 +785,7 @@ pub( super ) fn run_print_mode(
       // Non-retriable error or retries exhausted.
       if !cli.quiet
       {
-        if attempts[ class_idx ] > 0
+        if *counter > 0
         {
           eprintln!( "{}Error: [{label}] {msg} — retries exhausted (exit {})", claude_core::trace_ts(), output.exit_code );
         }

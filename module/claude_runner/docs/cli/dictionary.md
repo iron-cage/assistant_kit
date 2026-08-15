@@ -24,6 +24,7 @@ Domain vocabulary for the `clr` CLI. Terms are organized by category below.
 | tools | List all Claude Code built-in tools available to the subprocess; canonical form `clr tools` |
 | help | Display usage information and exit; canonical form `clr help`; `--help`/`-h` are parameter aliases |
 
+<!-- BUG-480 task/claude_runner/bug/480_gate_diagnostic_hides_slot_occupancy.md — fixed in the migrated authority: see 001_dictionary.md § Architecture for the three per-surface "active" senses and "slot occupancy"; this un-migrated reference copy is deliberately left unchanged -->
 ### Modes
 
 | Term | Definition |

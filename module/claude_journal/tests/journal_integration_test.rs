@@ -1,4 +1,4 @@
-//! Integration tests for `claude_journal` — IT-1 through IT-7.
+//! Integration tests for `claude_journal` — IT-1 through IT-14.
 //!
 //! Tests cover:
 //! - IT-1: `JournalWriter::append()` creates the daily JSONL file on first call
@@ -8,9 +8,16 @@
 //! - IT-5: Corrupt/partial JSONL lines are skipped; valid lines are returned
 //! - IT-6: Concurrent appends from two writers produce valid JSONL (no interleaved lines)
 //! - IT-7: `EventRecord::v` equals `1` on all events (schema version invariant)
+//! - IT-8: `EventType::Command.as_str()` returns `"command"`
+//! - IT-9: `EventType::parse("command")` returns `Some(EventType::Command)`
+//! - IT-10: `EventType::parse("bogus")` returns `None` (regression guard)
+//! - IT-11: `EventFields::default()` leaves `user`/`host`/`args` all `None`
+//! - IT-12: `user`/`host`/`args` serialize with correct values when `Some`
+//! - IT-13: `user`/`host`/`args` are omitted from JSON when `None`
+//! - IT-14: Existing 8 `EventType` variants' `as_str()` strings are unchanged
 
 use claude_journal::{
-  EventRecord, EventType,
+  EventFields, EventRecord, EventType,
   JournalFilter, JournalReader, JournalWriter,
 };
 use core::time::Duration;
@@ -300,4 +307,110 @@ fn it7_schema_version_is_one_on_all_events()
       "raw JSONL line must contain \"v\":1: {line}"
     );
   }
+}
+
+// ── IT-8: Command variant → string ────────────────────────────────────────────
+
+/// IT-8: `EventType::Command.as_str()` returns exactly `"command"`.
+///
+/// **Root Cause Coverage:** T01 — Command variant string mapping.
+#[ test ]
+fn it8_command_variant_as_str_returns_command()
+{
+  assert_eq!( EventType::Command.as_str(), "command", "Command variant must serialize as \"command\"" );
+}
+
+// ── IT-9: String → Command variant ────────────────────────────────────────────
+
+/// IT-9: `EventType::parse("command")` returns `Some(EventType::Command)`.
+///
+/// **Root Cause Coverage:** T02 — Command variant parse round-trip.
+#[ test ]
+fn it9_parse_command_string_returns_command_variant()
+{
+  assert_eq!( EventType::parse( "command" ), Some( EventType::Command ), "\"command\" must parse to Some(EventType::Command)" );
+}
+
+// ── IT-10: Unknown string still rejected ──────────────────────────────────────
+
+/// IT-10: `EventType::parse("bogus")` returns `None` (regression guard — unrecognized
+/// strings must still be rejected after adding the `Command` variant).
+///
+/// **Root Cause Coverage:** T03 — `parse()` forward-compat rejection unaffected.
+#[ test ]
+fn it10_parse_unknown_string_returns_none()
+{
+  assert_eq!( EventType::parse( "bogus" ), None, "unrecognized strings must still parse to None" );
+}
+
+// ── IT-11: New fields default to None ─────────────────────────────────────────
+
+/// IT-11: `EventFields::default()` leaves `user`, `host`, `args` all `None`.
+///
+/// **Root Cause Coverage:** T04 — new fields covered by existing `#[derive(Default)]`.
+#[ test ]
+fn it11_new_fields_default_to_none()
+{
+  let fields = EventFields::default();
+  assert_eq!( fields.user, None, "user must default to None" );
+  assert_eq!( fields.host, None, "host must default to None" );
+  assert_eq!( fields.args, None, "args must default to None" );
+}
+
+// ── IT-12: New fields serialize when present ──────────────────────────────────
+
+/// IT-12: `user`, `host`, `args` serialize with their correct values when `Some`.
+///
+/// **Root Cause Coverage:** T05 — new field serialization.
+#[ test ]
+fn it12_new_fields_serialize_when_present()
+{
+  let fields = EventFields
+  {
+    user : Some( "i4".to_owned() ),
+    host : Some( "w002".to_owned() ),
+    args : Some( vec![ "--foo".to_owned(), "bar".to_owned() ] ),
+    ..EventFields::default()
+  };
+  let json = serde_json::to_value( &fields ).expect( "serialize" );
+
+  assert_eq!( json[ "user" ], "i4", "user key must be present with correct value" );
+  assert_eq!( json[ "host" ], "w002", "host key must be present with correct value" );
+  assert_eq!( json[ "args" ], serde_json::json!( [ "--foo", "bar" ] ), "args key must be present with correct value" );
+}
+
+// ── IT-13: New fields omitted when None ───────────────────────────────────────
+
+/// IT-13: `user`, `host`, `args` are omitted entirely (not serialized as `null`)
+/// from JSON output when `None`, matching every other `Option` field's convention.
+///
+/// **Root Cause Coverage:** T06 — omit-when-None serialization for new fields.
+#[ test ]
+fn it13_new_fields_omitted_when_none()
+{
+  let fields = EventFields::default();
+  let json = serde_json::to_value( &fields ).expect( "serialize" );
+
+  assert!( json.get( "user" ).is_none(), "user key must be omitted when None" );
+  assert!( json.get( "host" ).is_none(), "host key must be omitted when None" );
+  assert!( json.get( "args" ).is_none(), "args key must be omitted when None" );
+}
+
+// ── IT-14: Existing 8 variants unaffected ─────────────────────────────────────
+
+/// IT-14: All 8 pre-existing `EventType` variants keep their exact prior
+/// `as_str()` strings after adding `Command` (regression guard).
+///
+/// **Root Cause Coverage:** T07 — existing variant strings unaffected.
+#[ test ]
+fn it14_existing_variants_as_str_unchanged()
+{
+  assert_eq!( EventType::Execution.as_str(),      "execution" );
+  assert_eq!( EventType::Credential.as_str(),     "credential" );
+  assert_eq!( EventType::GateWait.as_str(),       "gate_wait" );
+  assert_eq!( EventType::Retry.as_str(),          "retry" );
+  assert_eq!( EventType::Timeout.as_str(),        "timeout" );
+  assert_eq!( EventType::RunnerRetry.as_str(),    "runner_retry" );
+  assert_eq!( EventType::ValidationRetry.as_str(), "validation_retry" );
+  assert_eq!( EventType::Interactive.as_str(),    "interactive" );
 }

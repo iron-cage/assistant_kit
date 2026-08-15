@@ -48,14 +48,14 @@ Cross-command behavioral parity test planning for `clr run`, `clr ask`, and `clr
 
 ---
 
-### PC-3: isolated injects hardcoded opus model; run/ask inject no model
+### PC-3: isolated injects a default model (config-pref-aware); run/ask inject no model
 
 - **Given:** clr binary; valid credentials file; `--trace` flag
 - **When:** `clr isolated --creds <f> --trace "Fix bug"` vs `clr run --trace "Fix bug"`
-- **Then:** isolated stderr contains `--model claude-opus-4-8` in the assembled command; run stderr does not contain `--model` (uses claude binary default)
+- **Then:** isolated stderr contains `--model opus` (`ISOLATED_DEFAULT_MODEL`) in the assembled command — unless a `model` preference is set in project `.clr.toml` or user `~/.clr/config.toml`, in which case that preference appears instead (resolved once at `run_isolated_command()` entry, so preview, no-file, and `--file` paths all agree — BUG-485); run stderr does not contain `--model` (uses claude binary default)
 - **Exit:** 1 (claude absent in test env)
 - **Source:** [parity/001_run_ask_isolated.md](../../../../docs/cli/parity/001_run_ask_isolated.md), [invariant/005_isolated_subprocess_defaults.md](../../../../docs/invariant/005_isolated_subprocess_defaults.md)
-- **Implemented by:** `isolated_defaults_test.rs::isd_01_isolated_default_model_is_opus`
+- **Implemented by:** `isolated_defaults_test.rs::isd_01_isolated_default_model_is_opus`, `isolated_defaults_test.rs::bug485_dry_run_preview_shows_config_model_pref_not_hardcoded_default` (config-pref parity ✅)
 
 ---
 

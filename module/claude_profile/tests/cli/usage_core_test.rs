@@ -23,11 +23,7 @@ use tempfile::TempDir;
 #[ test ]
 fn it001_lim_it_quota_heading_and_columns()
 {
-  let Some( token ) = live_active_token() else
-  {
-    eprintln!( "it001: no live token — skipping" );
-    return;
-  };
+  let token = live_active_token().expect( "it001: live API token required — no ~/.claude/.credentials.json" );
 
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -65,11 +61,7 @@ fn it001_lim_it_quota_heading_and_columns()
 #[ test ]
 fn it002_lim_it_active_account_marked()
 {
-  let Some( token ) = live_active_token() else
-  {
-    eprintln!( "it002: no live token — skipping" );
-    return;
-  };
+  let token = live_active_token().expect( "it002: live API token required — no ~/.claude/.credentials.json" );
   require_live_api( "it002" );
 
   let dir  = TempDir::new().unwrap();
@@ -130,11 +122,7 @@ fn it003_failed_token_shows_dash_exits_0()
 #[ test ]
 fn it004_lim_it_json_format_valid_array()
 {
-  let Some( token ) = live_active_token() else
-  {
-    eprintln!( "it004: no live token — skipping" );
-    return;
-  };
+  let token = live_active_token().expect( "it004: live API token required — no ~/.claude/.credentials.json" );
   require_live_api( "it004" );
 
   let dir  = TempDir::new().unwrap();
@@ -257,11 +245,7 @@ fn it007_home_unset_exits_2()
 #[ test ]
 fn it008_lim_it_accounts_in_alpha_order()
 {
-  let Some( token ) = live_active_token() else
-  {
-    eprintln!( "it008: no live token — skipping" );
-    return;
-  };
+  let token = live_active_token().expect( "it008: live API token required — no ~/.claude/.credentials.json" );
 
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -349,11 +333,7 @@ fn it010_expired_token_shows_expired_in_expires_col()
 #[ test ]
 fn it011_lim_it_recommendation_marker_shown()
 {
-  let Some( token ) = live_active_token() else
-  {
-    eprintln!( "it011: no live token — skipping" );
-    return;
-  };
+  let token = live_active_token().expect( "it011: live API token required — no ~/.claude/.credentials.json" );
   require_live_api( "it011" );
 
   let dir  = TempDir::new().unwrap();
@@ -390,11 +370,7 @@ fn it011_lim_it_recommendation_marker_shown()
 #[ test ]
 fn it012_lim_it_footer_shows_valid_count()
 {
-  let Some( token ) = live_active_token() else
-  {
-    eprintln!( "it012: no live token — skipping" );
-    return;
-  };
+  let token = live_active_token().expect( "it012: live API token required — no ~/.claude/.credentials.json" );
   require_live_api( "it012" );
 
   let dir  = TempDir::new().unwrap();

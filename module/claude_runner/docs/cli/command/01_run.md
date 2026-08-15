@@ -50,7 +50,7 @@ The `run` token is optional — both forms are equivalent. When `run` appears as
 | [`--output-file`](../param/029_output_file.md) | string | — | Write captured stdout to file in addition to printing (tee behavior) |
 | [`--expect`](../param/030_expect.md) | string | — | Pipe-separated enum values; stdout must match one after trim+lowercase |
 | [`--expect-strategy`](../param/031_expect_strategy.md) | enum | `fail` | Mismatch handling: exit 3 (`fail`), retry (`retry`), or fallback (`default:<V>`) |
-| [`--max-sessions`](../param/033_max_sessions.md) | u32 | `6` | Max concurrent non-interactive claude sessions before blocking (0 = unlimited; interactive exempt) |
+| [`--max-sessions`](../param/033_max_sessions.md) | u32 | `8` | Max concurrent non-interactive claude sessions before blocking (0 = unlimited; interactive exempt) |
 | [`--retry-on-transient`](../param/034_retry_on_transient.md) | u8 | auto | Transient class retry count (Tier 2; effective default = 2 via fallback) |
 | [`--transient-delay`](../param/035_transient_delay.md) | u32 | auto | Transient class delay (Tier 2; effective default = 30 via fallback) |
 | [`--timeout`](../param/036_timeout.md) | u32 | `3600` (print-mode) / `0` (interactive) | Seconds before watchdog kills subprocess (absent → `DEFAULT_PRINT_TIMEOUT_SECS` for print-mode; 0 = unlimited) |
