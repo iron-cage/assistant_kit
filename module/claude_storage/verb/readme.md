@@ -17,8 +17,8 @@
 | `test_only.d/` | Layer directory: `l1` (container-internal targeted nextest run). |
 | `clean` | Remove generated artifacts and caches via `cargo clean`. |
 | `install` | Install crate binaries to `~/.cargo/bin` via `cargo install`. |
-| `run` | Dispatcher: execute entry point; delegates to `run.d/` layer by `VERB_LAYER`. |
-| `run.d/` | Layer directory: `l1` (direct; default). |
+| `run` | Run `clg` in container: `runbox .live` with `run.d/l1` as payload. |
+| `run.d/` | Layer directory: `l0` (disabled hard-error stub), `l1` (container-internal). |
 | `lint` | Dispatcher: run linter; delegates to `lint.d/` layer by `VERB_LAYER`. |
 | `lint.d/` | Layer directory: `l1` (direct; default). |
 | `verify` | Run full pre-push gate: tests, deps analysis, audit. |

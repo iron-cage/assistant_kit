@@ -20,6 +20,8 @@ Org ID: aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee
 
 **See Also:** [feature/022_org_identity_snapshot.md](../../feature/022_org_identity_snapshot.md) for org identity snapshot feature spec.
 
+**Note:** `.accounts` no longer supports `org_uuid::` — removed in [Feature 037](../../feature/037_accounts_usage_param_unification.md); `.accounts` now rejects it with `parameter 'org_uuid' removed — use 'cols::+org_uuid' instead` (see `REMOVED_TOGGLES` in `src/commands/accounts.rs`).
+
 ### Referenced Type
 
 - **Fundamental Type:** `bool`
@@ -34,8 +36,7 @@ Org ID: aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.accounts`](../command/001_account.md#command-3-accounts) | Organisation UUID line per stored account |
-| 2 | [`.credentials.status`](../command/002_credentials.md#command-10-credentialsstatus) | Organisation UUID line for live credentials |
+| 1 | [`.credentials.status`](../command/002_credentials.md#command-10-credentialsstatus) | Organisation UUID line for live credentials |
 
 ### Referenced User Stories
 

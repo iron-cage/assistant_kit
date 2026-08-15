@@ -95,9 +95,9 @@ The tables below show which token operations fire per account state across all C
 | Operation | Context | Normal | Non-owned | Occupied-elsewhere |
 |---|---|---|---|---|
 | Shown in display output | render | ✅ live data | ✅ cached (`~` prefix) or `—` | ✅ approximated |
-| Footer "Next (strategy):" line | `render.rs:251` `gate_ownership=false` | N/A | ✅ ownership not checked ⚠ | ❌ Gate 3 unconditional |
+| Footer "Next (strategy):" line | `render.rs:280` `gate_ownership` param (`false` unless `rotate::1` set — Fix BUG-320) | N/A | ✅ ownership not checked (default; gated like auto-switch when `rotate::1` set — see Fix BUG-320 below) | ❌ Gate 3 unconditional |
 
-⚠ Known inconsistency: footer uses `gate_ownership=false` while auto-switch uses `gate_ownership=true`. A non-owned account can appear as the footer recommendation during `.usage rotate::1` even though auto-switch selects a different (owned) account.
+Fix(BUG-320): footer previously hardcoded `gate_ownership=false` regardless of `rotate::1`, while auto-switch used `gate_ownership=!params.force` (`api.rs:306`) — a non-owned account could appear as the footer recommendation during `.usage rotate::1` even though auto-switch selected a different (owned) account. `render_text()` gained a `gate_ownership` parameter (`render.rs:59`); the `.usage` footer call site (`api.rs:284`) now passes `params.rotate && !params.force`, matching auto-switch's own gate whenever `rotate::1` is set.
 
 #### Auto-switch (`.usage rotate::1`)
 
@@ -134,7 +134,7 @@ Note: `rotate::1 solo::1` is rejected at parse time by `parse_usage_params()` (`
 
 #### Key asymmetries
 
-**Non-owned accounts in footer vs auto-switch:** `render.rs:241` calls `find_next_for_strategy` with `gate_ownership=false` — a non-owned account can appear as the footer "Next" recommendation even though auto-switch would reject it (`gate_ownership=true`). The display recommends something that auto-switch cannot execute without `force::1`.
+**Non-owned accounts in footer vs auto-switch (Fixed — BUG-320):** `render.rs:280` calls `find_next_for_strategy` with the `gate_ownership` parameter; the `.usage` footer call site (`api.rs:284`) now passes `params.rotate && !params.force`, matching auto-switch's own `gate_ownership = !params.force` (`api.rs:306`) whenever `rotate::1` is set. A non-owned account no longer appears as the footer "Next" recommendation during `.usage rotate::1` when auto-switch would reject it.
 
 **`force::1` does not unblock occupied-elsewhere for auto-switch:** Gate 3 (`is_occupied_elsewhere → continue`) in `find_first_eligible` is unconditional — not part of the `extra` predicate controlled by `gate_ownership`. `force::1` bypasses Gate 8 only. An occupied-elsewhere account cannot be auto-switched to under any parameter combination.
 
@@ -176,7 +176,7 @@ Note: `rotate::1 solo::1` is rejected at parse time by `parse_usage_params()` (`
 | BUG-304 🟢 Fixed (TSK-316) | G1 non-owned cache read path bypassed Feature 040 polynomial approximation — stale data in multi-machine setups. Fixed: centralized `read_cached_quota()` function replaces all 3 inline cache-read paths |
 | BUG-305 🟢 Fixed (TSK-317) | `fetch_quota_for_list` performed full HTTP fetch for owned+occupied-elsewhere accounts. Fixed: G1b gate added after solo gate — `!is_current && occupied_elsewhere.contains(&acct.name)` → `approximate_quota()` |
 | BUG-306 🟢 Fixed (TSK-317) | `apply_refresh` trace emitted `reason: ok` for owned+non-cached+occupied-elsewhere accounts. Fixed: `reason_label()` extracted with `is_occupied_elsewhere` branch |
-| BUG-320 🟢 Verified | Footer "Next" recommendation passes `gate_ownership=false` (`render.rs:241`) while auto-switch passes `gate_ownership=!params.force` (`api.rs:935`). During `.usage rotate::1 force::0`, footer can recommend a non-owned account while auto-switch selects an owned account — display and actual selection diverge. |
+| BUG-320 🟢 Fixed | Footer "Next" recommendation previously hardcoded `gate_ownership=false` while auto-switch passed `gate_ownership=!params.force` (`api.rs:306`) — during `.usage rotate::1 force::0`, footer could recommend a non-owned account while auto-switch selected an owned account. Fixed: `render_text()` gained a `gate_ownership` parameter (`render.rs:59`); the `.usage` footer call site now passes `params.rotate && !params.force` (`api.rs:284`), matching auto-switch whenever `rotate::1` is set. |
 
 ### Features
 

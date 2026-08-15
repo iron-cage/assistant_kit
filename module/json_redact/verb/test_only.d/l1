@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# l1 — targeted nextest execution (VERB_LAYER=l1); runs the filter given as $1.
+# Invoked as the runbox .live payload by ./verb/test_only — nextest only, no
+# doc tests, no clippy. cwd-scoping (this module directory) limits the run.
+set -euo pipefail
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+cd "$SCRIPT_DIR/../.."
+FILTER="${1:-}"
+if [[ -z "$FILTER" ]]; then
+  echo "ERROR: filter argument required — invoke via ./verb/test_only <filter> on the host." >&2
+  exit 1
+fi
+export CARGO_NET_OFFLINE=true
+export NO_COLOR=1
+export RUNBOX_CONTAINER=1
+export RUSTFLAGS="-D warnings"
+# CARGO_TARGET_DIR is exported by the engine (persistent working volume) — it
+# overrides the host .cargo/config.toml target-dir redirect inside the container.
+exec cargo nextest run --all-features "$FILTER"

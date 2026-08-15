@@ -159,7 +159,7 @@ render results as table
 | File | Relationship |
 |------|--------------|
 | `src/usage/touch.rs`, `src/usage/params.rs` | `touch::` param read; idle-account detection (`resets_at` absent); subprocess call; re-fetch |
-| `src/lib.rs` | `touch::` parameter registration via `register_commands()` |
+| `src/registry.rs` | `touch::` parameter registration via `register_commands()` |
 | `claude_profile_core/src/account.rs` | `refresh_account_token()` — reused for touch |
 
 ### Subprocess Docs

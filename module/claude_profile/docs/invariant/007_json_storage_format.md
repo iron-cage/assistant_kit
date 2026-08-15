@@ -25,10 +25,13 @@ Expected result: no matches.
 
 - **Grep gate:** `grep -r 'serde_json::to_string(' src/` in any affected crate must return no matches.
 - **Code review:** Reject any PR that introduces `serde_json::to_string(` for file writes; require `serde_json::to_string_pretty` + `\n` suffix.
-- **Affected call sites (13 total):**
-  - `module/claude_profile_core/src/account.rs` — 10 write sites (L298, L389, L429, L448, L542, L583, L896, L1025, L1357, L1408)
+- **Affected call sites (38 total):**
+  - `module/claude_profile_core/src/account.rs` — 17 write sites (L331, L435, L561, L601, L620, L743, L781, L822, L856, L892, L1419, L1449, L1479, L1602, L2044, L2098, L2356)
   - `module/claude_profile/tests/usage/fetch_tests.rs` — 2 test-fixture write sites
+  - `module/claude_profile/tests/usage/fetch_tests_b.rs` — 10 test-fixture write sites
   - `module/claude_profile/tests/cli/cli_runner.rs` — 1 test-fixture write site
+  - `module/claude_profile/tests/cli/usage_solo_test.rs` — 7 test-fixture write sites
+  - `module/claude_profile/tests/cli/model_test.rs` — 1 test-fixture write site
 
 ### Violation Consequences
 
@@ -40,7 +43,7 @@ Expected result: no matches.
 
 | File | Relationship |
 |------|-------------|
-| `module/claude_profile_core/src/account.rs` | 10 JSON write sites requiring `to_string_pretty` |
+| `module/claude_profile_core/src/account.rs` | 17 JSON write sites requiring `to_string_pretty` |
 | `module/claude_core/src/settings_io.rs` | `json_serialize_flat_object` — hand-rolled pretty formatter; permitted exception |
 
 ### Features
@@ -55,4 +58,7 @@ Expected result: no matches.
 | File | Relationship |
 |------|-------------|
 | `module/claude_profile/tests/usage/fetch_tests.rs` | 2 test-fixture JSON write sites |
+| `module/claude_profile/tests/usage/fetch_tests_b.rs` | 10 test-fixture JSON write sites |
 | `module/claude_profile/tests/cli/cli_runner.rs` | 1 test-fixture JSON write site |
+| `module/claude_profile/tests/cli/usage_solo_test.rs` | 7 test-fixture JSON write sites |
+| `module/claude_profile/tests/cli/model_test.rs` | 1 test-fixture JSON write site |

@@ -71,13 +71,13 @@ Where:
 - `HH:MM:SS UTC` — wall-clock time at which the next fetch will start (24-hour UTC)
 - The line is right-padded to a fixed width (80 chars minimum) to erase any leftover characters from a previous longer line
 
-**Signal handling (no `ctrlc` crate):**
+**Signal handling (no `ctrlc` crate, no `libc` crate):**
 
-A `static AtomicBool QUIT` is registered as a SIGINT handler via `unsafe { libc::signal(SIGINT, handler as libc::sighandler_t) }`. `libc` is a transitive dependency — no new crate is added. The countdown loop polls `QUIT.load(Ordering::Relaxed)` once per second; when set, the loop exits cleanly, the cursor is restored, and the process exits 0.
+A `static AtomicBool STOP_FLAG` is set by an `extern "C" fn on_sigint` handler registered via a hand-declared FFI block — `signal`, `sigprocmask`, `sigemptyset`, `sigaddset` are declared directly as `extern "C"` functions in `src/usage/live.rs`; `libc` is not a dependency (see `Cargo.toml` — zero third-party dependencies). Before registering the handler, SIGINT is explicitly unblocked via `sigprocmask(SIG_UNBLOCK, ...)`: test runners (e.g. `nextest`) block SIGINT in their own process mask, which child processes inherit — a blocked signal is never delivered even to a registered handler, so `STOP_FLAG` would never be set and the monitor would loop forever without this unblock step. The countdown loop polls `STOP_FLAG.load(Ordering::Relaxed)` once per second; when set, the loop exits cleanly, the cursor is restored, and the process exits 0.
 
 **Feature gate:**
 
-The live monitor loop is compiled only under `#[cfg(feature = "enabled")]`. When `enabled` is absent, `live::1` is accepted as a parameter but no loop is entered — the command runs once (baseline behaviour). This matches the `fetch_oauth_usage` feature gate and prevents offline builds from registering a signal handler or depending on `libc` for process signals.
+The live monitor loop is compiled only under `#[cfg(feature = "enabled")]`. When `enabled` is absent, `live::1` is accepted as a parameter but no loop is entered — the command runs once (baseline behaviour). This matches the `fetch_oauth_usage` feature gate and prevents offline builds from registering a signal handler or including the hand-declared POSIX FFI block for process signals.
 
 **Output format:**
 
@@ -102,12 +102,6 @@ In live mode, `format::json` is rejected before the first fetch (see Validation)
 | File | Relationship |
 |------|--------------|
 | [command/006_usage.md](../cli/command/006_usage.md#command-9-usage) | `.usage` CLI command specification |
-
-### Dependencies
-
-| File | Relationship |
-|------|--------------|
-| `libc` | `signal()` for SIGINT handler (transitive dep, no new crate) |
 
 ### Features
 

@@ -37,11 +37,7 @@ fn aw26_help_shows_touch_imodel_effort()
 #[ test ]
 fn aw27_lim_it_touch_with_live_token()
 {
-  let Some( token ) = live_active_token() else
-  {
-    eprintln!( "aw27: no live token — skipping" );
-    return;
-  };
+  let token = live_active_token().expect( "aw27: live API token required — no ~/.claude/.credentials.json" );
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   // Create ~/.claude/ so switch_account() can copy credentials there (it does not create the dir).
@@ -64,7 +60,7 @@ fn aw27_lim_it_touch_with_live_token()
 
 /// aw28: `trace::1 touch::1` live token — subprocess always dispatched when quota fetch OK (FT-11, IT-24).
 ///
-/// `lim_it` — skips without a live OAuth token. Verifies reading, quota fetch, and subprocess
+/// `lim_it` — panics loudly without a live OAuth token. Verifies reading, quota fetch, and subprocess
 /// dispatch trace lines. Fix(BUG-285): idle check removed — subprocess always fires when fetch
 /// succeeds regardless of `resets_at` state; `idle check:` trace line no longer emitted.
 ///
@@ -74,11 +70,7 @@ fn aw27_lim_it_touch_with_live_token()
 #[ test ]
 fn aw28_lim_it_trace_idle_account_all_lines()
 {
-  let Some( token ) = live_active_token() else
-  {
-    eprintln!( "aw28: no live token — skipping" );
-    return;
-  };
+  let token = live_active_token().expect( "aw28: live API token required — no ~/.claude/.credentials.json" );
   require_live_api( "aw28" );
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -133,18 +125,14 @@ fn aw28_lim_it_trace_idle_account_all_lines()
 
 /// aw29: `trace::1 touch::1` live account — subprocess always spawned when quota fetch OK (FT-12).
 ///
-/// `lim_it` — skips without a live OAuth token. Verifies that when quota fetch succeeded,
+/// `lim_it` — panics loudly without a live OAuth token. Verifies that when quota fetch succeeded,
 /// the subprocess is always dispatched regardless of `resets_at` state (Fix(BUG-285): idle
 /// check removed; `AlreadyActive` variant removed from `PreSwitchOutcome`; subprocess is
 /// idempotent and exits immediately when already active).
 #[ test ]
 fn aw29_lim_it_trace_active_account_subprocess_skipped()
 {
-  let Some( token ) = live_active_token() else
-  {
-    eprintln!( "aw29: no live token — skipping" );
-    return;
-  };
+  let token = live_active_token().expect( "aw29: live API token required — no ~/.claude/.credentials.json" );
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   // Create ~/.claude/ so switch_account() can copy credentials there (it does not create the dir).

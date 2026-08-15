@@ -11,7 +11,7 @@
 
 `claude_profile` MUST NOT execute any processes. `std::process::Command` import is a responsibility violation.
 
-**Measurable threshold:** Zero occurrences of `std::process` in `src/` detected by automated test.
+**Measurable threshold:** Zero occurrences, in `src/`, of `use std::process::Command`, `process::Command::new`, or bare (non-comment, non-fn-signature) `spawn()`/`output()`/`status()`/`.wait()`/`ExitStatus` — detected by automated test. Note: this pattern set targets subprocess *spawning*; a bare `std::process::exit()` call matches none of it and would pass undetected.
 
 **Delegation principle:** All execution is delegated to `claude_runner_core`. Specifically forbidden in `claude_profile`:
 - Browser launch (`xdg-open`, `claude auth login`)
@@ -21,7 +21,7 @@
 
 ### Enforcement Mechanism
 
-- Automated test: `tests/responsibility_no_process_execution_test.rs` greps `src/` for `std::process` and fails if found
+- Automated test: `tests/responsibility_no_process_execution_test.rs` greps `src/` for `use std::process::Command`, `process::Command::new`, and the spawn-pattern set (`spawn()`, `output()`, `status()`, `.wait()`, `ExitStatus`, filtering out comments and fn signatures) — fails if any is found
 - Code review: immediate rejection of any PR importing `std::process`
 - Architecture: `claude_runner_core` owns the `ClaudeCommand` builder; `claude_profile` does not reference it directly — token refresh is coordinated through `claude_profile_core::account::refresh_account_token()`, which delegates subprocess spawning to `claude_runner_core::run_isolated()`
 
