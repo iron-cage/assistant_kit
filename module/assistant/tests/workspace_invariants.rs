@@ -18,7 +18,7 @@
 //!
 //! | Test | Spec | Scenario |
 //! |------|------|----------|
-//! | `wd1_workspace_members_completeness` | WD-1 | All 18 documented crates in members list |
+//! | `wd1_workspace_members_completeness` | WD-1 | All 20 documented crates in members list |
 //! | `pi1_no_private_path_deps` | PI-1 | No workspace path dep points outside the workspace |
 //! | `pi2_out_of_workspace_path_deps_have_version` | PI-2 | Out-of-workspace path deps carry version field |
 //! | `vs1_workspace_package_version_declared` | VS-1 | `[workspace.package]` declares a version |
@@ -38,7 +38,7 @@ use std::{
 
 const MANIFEST_DIR : &str = env!( "CARGO_MANIFEST_DIR" );
 
-/// All 18 workspace member crate names.
+/// All 20 workspace member crate names.
 const WORKSPACE_MEMBERS : &[ &str ] = &[
   "claude_storage_core",
   "claude_auth",
@@ -57,6 +57,8 @@ const WORKSPACE_MEMBERS : &[ &str ] = &[
   "assistant",
   "assistant_kit",
   "claude_journal",
+  "claude_journal_charts",
+  "svg_chart",
   "claude_journal_viewer",
 ];
 
@@ -141,8 +143,16 @@ fn workspace_deps_in( content : &str ) -> Vec< String >
 
 /// Return the numeric layer (0–3) for a workspace member, or `None` for Layer * crates.
 ///
-/// Layer * crates (`claude_storage_core`, `claude_auth`, `claude_quota`)
-/// are excluded from cross-layer dependency checks (CL-1, CL-2).
+/// Layer * crates (`claude_storage_core`, `claude_auth`, `claude_quota`, `claude_journal`,
+/// `svg_chart`) are excluded from cross-layer dependency checks (CL-1, CL-2).
+//
+// Fix(BUG-002): `claude_journal` was hardcoded into the Layer-1 arm below, but its own
+// `Cargo.toml` `[dependencies]` are all external (serde, serde_json, chrono) with zero
+// workspace-member deps — it meets the Layer * criterion, not Layer 1.
+// Root cause: `layer_of()` is a hand-maintained static table with no mechanical link
+// back to `Cargo.toml`'s actual `[dependencies]` content.
+// Pitfall: hand-maintained static crate-classification tables copied verbatim across
+// sibling modules carry no mechanism to detect their own drift from `Cargo.toml` ground truth.
 fn layer_of( name : &str ) -> Option< u8 >
 {
   match name
@@ -152,7 +162,7 @@ fn layer_of( name : &str ) -> Option< u8 >
     | "claude_profile_core"
     | "claude_version_core"
     | "claude_runner_core"
-    | "claude_journal" => Some( 1 ),
+    | "claude_journal_charts" => Some( 1 ),
     "dream"
     | "claude_assets"
     | "claude_version"
@@ -162,13 +172,14 @@ fn layer_of( name : &str ) -> Option< u8 >
     | "claude_journal_viewer" => Some( 2 ),
     "assistant" | "assistant_kit" => Some( 3 ),
     // Layer * — no numeric layer; exempt from CL checks
+    // (includes claude_journal, svg_chart — both have zero workspace-member deps)
     _ => None,
   }
 }
 
 // ──────────────────────── feature: workspace design ───────────────────────
 
-/// WD-1: All 18 documented workspace members are present in `[workspace.members]`.
+/// WD-1: All 20 documented workspace members are present in `[workspace.members]`.
 ///
 /// ## Root Cause (why this test exists)
 /// Workspace membership controls which crates are built and tested in CI.

@@ -39,6 +39,11 @@ plugins:
     working_volume_path: /tmp/claude_storage_core_targets
     commands: [run, live, shell]
 
+  - type: binary
+    name: will
+    container_path: /usr/local/bin/will
+    commands: [run, live, shell]
+
 # ── Environment ───────────────────────────────────────────────────────────────
 # env: global flat map injected into all container runs
 # env_commands: per-command overrides (merged with env)

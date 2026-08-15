@@ -1,0 +1,26 @@
+[package]
+name = "svg_chart"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+readme = "readme.md"
+repository.workspace = true
+homepage.workspace = true
+description = "Minimal SVG line/bar chart rendering, no I/O beyond the file write entry point"
+keywords = [ "svg", "chart", "plot", "graph" ]
+categories = [ "visualization" ]
+
+[lints]
+workspace = true
+
+[lib]
+name = "svg_chart"
+path = "src/lib.rs"
+
+[dependencies]
+plotters = { workspace = true, features = [ "svg_backend", "line_series" ] }
+
+[dev-dependencies]
+tempfile = { workspace = true }
