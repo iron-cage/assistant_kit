@@ -34,7 +34,7 @@ Counterpart to `set_session_model()` with identical read-modify-write pattern: r
 
 ### Acceptance Criteria
 
-- **AC-01**: `recommended_model(aq: &AccountQuota) -> &'static str` is a `pub(crate)` function in `format.rs`. Returns `"opus"` when `aq.result` is `Ok(data)` and `data.seven_day_sonnet` is `Some(s)` and `100.0 - s.utilization < 10.0`. Returns `"sonnet"` in all other cases (tier absent, result is Err, or Sonnet left >= 10%).
+- **AC-01**: `recommended_model(aq: &AccountQuota) -> &'static str` is a `pub` function in `format.rs`. Returns `"opus"` when `aq.result` is `Ok(data)` and `data.seven_day_sonnet` is `Some(s)` and `(100.0 - s.utilization).round() < 10.0` (Fix BUG-336 — rounds before comparing, mirroring `apply_model_override()`'s BUG-331 fix). Returns `"sonnet"` in all other cases (tier absent, result is Err, or rounded Sonnet left >= 10%).
 - **AC-02**: `render.rs` footer `Next` line calls `recommended_model(rec)` instead of the previously-inline match. No inline threshold logic remains in `render.rs` for the recommendation model.
 - **AC-03**: Footer `Next` line always shows `{rec_model}/{model-derived-effort}` where model-derived effort is `"max"` when `rec_model = "opus"` and `"high"` when `rec_model = "sonnet"`. Effort is shown unconditionally — not conditional on `session_effort`. Column width `col3_w` is always computed to include the slash-delimited effort, aligning `·` delimiters across both footer lines. (TSK-335 — Fix H3)
 - **AC-04**: `set_session_effort(paths: &ClaudePaths, effort_id: &str)` exists in `claude_profile_core::account`. Reads `settings.json`, sets `"effortLevel"` key to `effort_id`, writes back. Creates `~/.claude/` if absent (same guard as `set_session_model`).

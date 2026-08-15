@@ -90,28 +90,6 @@ fn valid_keys_string() -> String
   COLUMN_KEYS.iter().map( | ( k, _ ) | *k ).collect::< Vec< _ > >().join( ", " )
 }
 
-// Validate a comma-separated column key string against COLUMN_KEYS.
-//
-// Mirrors `ps.rs`'s `validate_columns`, adapted to `tools`' 4-key column set.
-fn validate_columns( csv : &str ) -> Result< Vec< &'static str >, String >
-{
-  let mut out = Vec::new();
-  for raw in csv.split( ',' )
-  {
-    let key = raw.trim();
-    match lookup_column_key( key )
-    {
-      Some( k ) => out.push( k ),
-      None => return Err( format!( "unknown column key `{key}`; valid keys: {}", valid_keys_string() ) ),
-    }
-  }
-  if out.is_empty()
-  {
-    return Err( format!( "no column keys given; valid keys: {}", valid_keys_string() ) );
-  }
-  Ok( out )
-}
-
 // Validate a single `--value` key against COLUMN_KEYS.
 fn validate_value_key( key : &str ) -> Result< &'static str, String >
 {
@@ -281,7 +259,7 @@ pub( crate ) fn dispatch_tools( tokens : &[ String ] ) -> !
   {
     match &config.columns
     {
-      Some( csv ) => match validate_columns( csv )
+      Some( csv ) => match super::column_validate::validate_columns( csv, COLUMN_KEYS )
       {
         Ok( keys ) => keys,
         Err( msg ) => { eprintln!( "clr tools: {msg}" ); std::process::exit( 1 ); }

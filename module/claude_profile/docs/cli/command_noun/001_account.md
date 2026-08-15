@@ -12,7 +12,7 @@ A saved credential profile stored in the per-machine account store (`{credential
 | 4 | `.account.delete` | delete | Remove account profile from credential store | Conditional | No |
 | 5 | `.account.limits` | limits | Show rate-limit utilization for named account | Yes | No |
 | 6 | `.account.relogin` | relogin | Force browser re-authentication for expired refresh token | No | No |
-| 7 | `.account.rotate` | rotate | **DEPRECATED** — hidden redirector; exits 1 with notice to use `.usage rotate::1` | No | No |
+| 7 | `.account.rotate` *(DEPRECATED — Feature 038)* | — | **Not registered** — no dispatch function exists; superseded by `.usage rotate::1` | — | — |
 | 8 | `.account.renewal` | renewal | Set or clear billing renewal timestamp override | Yes | No |
 | 9 | `.account.inspect` | inspect | Live multi-endpoint identity and subscription diagnostic | Yes | No |
 | 10 | `.account.assign` *(removed — Feature 037)* | — | **Removed.** Use `.accounts assignee::USER@MACHINE name::X` (Feature 065) | — | — |
@@ -63,16 +63,16 @@ An account is created by `save`, activated by `use`, and removed by `delete`. Th
 
 | Operation | Implementation |
 |-----------|---------------|
-| `.accounts` | `account::list_accounts()` — enumerates `{credential_store}/*.credentials.json` |
-| `.account.save` | `account::save_account()` — copies `.credentials.json`, merges `{name}.json` via read-merge |
+| `.accounts` | `account::list()` — enumerates `{credential_store}/*.credentials.json` |
+| `.account.save` | `account::save()` — copies `.credentials.json`, merges `{name}.json` via read-merge |
 | `.account.use` | `account::switch_account()` — atomic write-then-rename to `~/.claude/.credentials.json` |
-| `.account.delete` | `account::delete_account()` — removes `.credentials.json` + `{name}.json` + legacy files |
+| `.account.delete` | `account::delete()` — removes `.credentials.json` + `{name}.json` + legacy files |
 | `.account.limits` | `claude_quota::fetch_rate_limits()` — reads `anthropic-ratelimit-unified-*` response headers |
 | `.account.relogin` | TTY subprocess sequence: switch → spawn `claude` → detect credential change → save → restore |
-| `.account.rotate` | **DEPRECATED** — redirector prints deprecation notice, exits 1; rotation moved to `.usage rotate::1` |
-| `.account.renewal` | `account::set_renewal_at()` — read-merge write to `{name}.json` `_renewal_at` key |
+| `.account.rotate` | **DEPRECATED (Feature 038)** — not registered; zero dispatch function (no `account_rotate`/`account.rotate` hits in `src/registry.rs`, `src/cli.rs`, `src/commands/*.rs`); superseded by `.usage rotate::1` |
+| `.account.renewal` | `account::account_renewal()` — read-merge write to `{name}.json` `_renewal_at` key |
 | `.account.inspect` | Endpoints 002/005/001 — `fetch_oauth_account()`, `fetch_claude_cli_roles()`, `fetch_oauth_usage()` |
-| `.account.assign` *(removed Feature 037)* | Use `.accounts assignee::USER@MACHINE name::X` (Feature 065) → `account::write_active_marker()` |
+| `.account.assign` *(removed Feature 037)* | Use `.accounts assignee::USER@MACHINE name::X` (Feature 065) → inlined `std::fs::write()` in `src/commands/accounts.rs` (no dedicated function) |
 | `.account.unclaim` *(removed Feature 037; `unclaim::1` REMOVED Feature 064)* | Use `.accounts owner::0 name::X` (Feature 064) → `account::write_owner()` |
 
 ### Output Schema
@@ -173,7 +173,7 @@ An account is created by `save`, activated by `use`, and removed by `delete`. Th
 | 4 | [`.account.delete`](../command/001_account.md#command-6-accountdelete) | Delete account from store |
 | 5 | [`.account.limits`](../command/001_account.md#command-11-accountlimits) | Show rate-limit utilization |
 | 6 | [`.account.relogin`](../command/001_account.md#command-12-accountrelogin) | Browser re-authentication |
-| 7 | [`.account.rotate`](../command/001_account.md#command-13-accountrotate-deprecated-feature-038) | **DEPRECATED** — redirector; use `.usage rotate::1` |
+| 7 | [`.account.rotate`](../command/001_account.md#command-13-accountrotate-deprecated-feature-038) | **DEPRECATED (Feature 038)** — not registered; use `.usage rotate::1` |
 | 8 | [`.account.renewal`](../command/001_account.md#command-14-accountrenewal) | Set or clear billing renewal override |
 | 9 | [`.account.inspect`](../command/001_account.md#command-15-accountinspect) | Live identity and subscription diagnostic |
 | 10 | [`.account.assign`](../command/001_account.md#command-16-accountassign-removed-feature-037-migration-path-superseded-feature-064065) *(removed Feature 037)* | Use `.accounts assignee::USER@MACHINE name::X` (Feature 065) |

@@ -22,7 +22,7 @@ Account switching (FR-9) must use write-then-rename to prevent credential corrup
 
 **Active marker:** Best-effort metadata. A stale `_active_{hostname}_{user}` after a crash is acceptable — `.credentials.json` is the authoritative state.
 
-**Scope boundary (BUG-341):** The staleness tolerance above covers only the transient crash-recovery window in the Formal crash analysis — a marker that briefly lags a completed rename until the next switch. It does NOT excuse indefinite staleness after a completed, non-crashed `delete()`: `delete()` clears every `_active_*` marker — the calling machine's own and every other machine's — naming the deleted account (see [feature/025_per_machine_active_marker.md](../feature/025_per_machine_active_marker.md) AC-06), and `.usage`'s Sessions table flags any marker still naming an account absent from the credential store with `(stale)` as a defense-in-depth backstop (see [feature/009_token_usage.md](../feature/009_token_usage.md) AC-33).
+**Scope boundary (BUG-347):** The staleness tolerance above covers only the transient crash-recovery window in the Formal crash analysis — a marker that briefly lags a completed rename until the next switch. It does NOT excuse indefinite staleness after a completed, non-crashed `delete()`: `delete()` clears every `_active_*` marker — the calling machine's own and every other machine's — naming the deleted account (see [feature/025_per_machine_active_marker.md](../feature/025_per_machine_active_marker.md) AC-06), and `.usage`'s Sessions table flags any marker still naming an account absent from the credential store with `(stale)` as a defense-in-depth backstop (see [feature/009_token_usage.md](../feature/009_token_usage.md) AC-33).
 
 ### Enforcement Mechanism
 
@@ -40,7 +40,7 @@ Account switching (FR-9) must use write-then-rename to prevent credential corrup
 
 | File | Relationship |
 |------|-------------|
-| `src/account.rs` | `switch_account()` — write-then-rename implementation |
+| `claude_profile_core/src/account.rs` | `switch_account()` — write-then-rename implementation (`src/account.rs` in this crate only re-exports it) |
 
 ### Features
 

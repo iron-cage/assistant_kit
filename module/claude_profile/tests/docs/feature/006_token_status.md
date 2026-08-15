@@ -14,7 +14,7 @@ Feature behavioral requirement test cases for `docs/feature/006_token_status.md`
 |----|-----------|-----|
 | FT-01 | Valid and expired token classification at default threshold | AC-01 |
 | FT-02 | Token within threshold classified as `ExpiringSoon` | AC-02 |
-| FT-03 | `threshold::1800` changes classification boundary | AC-03 |
+| FT-03 | Custom threshold changes classification boundary (incl. zero-threshold edge case) | AC-03 |
 | FT-04 | `format::json` returns structured status with `expires_in_secs` | AC-04 |
 
 ### Test Case Index
@@ -23,7 +23,7 @@ Feature behavioral requirement test cases for `docs/feature/006_token_status.md`
 |----|-----------|-----|----------|
 | FT-01 | Far-future token → Valid; past token → Expired | AC-01 | Classification |
 | FT-02 | Token within 3600s threshold → ExpiringSoon | AC-02 | Classification |
-| FT-03 | Custom `threshold::1800` changes boundary to 30 min | AC-03 | Custom Threshold |
+| FT-03 | Custom threshold (7200s) widens window; zero threshold narrows to exact boundary | AC-03 | Custom Threshold |
 | FT-04 | `format::json` returns `"token"`/`"expires_in_secs"` fields | AC-04 | JSON Format |
 
 **Total:** 4 FT cases
@@ -33,7 +33,7 @@ Feature behavioral requirement test cases for `docs/feature/006_token_status.md`
 ### FT-01: Far-future token → Valid; past token → Expired
 
 - **Given:** A credentials file where `expiresAt` is more than 3600 seconds in the future (Valid case) or in the past (Expired case).
-- **When:** `token::status(credential_store, paths)` is called.
+- **When:** `token::status()` is called.
 - **Then (Valid):** Returns `TokenStatus::Valid`.
 - **Then (Expired):** Returns `TokenStatus::Expired`.
 - **Exit:** Ok
@@ -45,7 +45,7 @@ Feature behavioral requirement test cases for `docs/feature/006_token_status.md`
 ### FT-02: Token within 3600s threshold → ExpiringSoon
 
 - **Given:** A credentials file where `expiresAt` is in the future but within 3600 seconds of now.
-- **When:** `token::status(credential_store, paths)` is called with default threshold.
+- **When:** `token::status()` is called with default threshold.
 - **Then:** Returns `TokenStatus::ExpiringSoon`.
 - **Exit:** Ok
 - **Source fn:** `status_returns_expiring_soon_within_default_threshold`
@@ -53,11 +53,14 @@ Feature behavioral requirement test cases for `docs/feature/006_token_status.md`
 
 ---
 
-### FT-03: Custom `threshold::1800` changes boundary to 30 min
+### FT-03: Custom threshold (7200s) widens window; zero threshold narrows to exact boundary
 
-- **Given:** A credentials file where `expiresAt` is 2000 seconds in the future (within 1800s but outside default 3600s).
-- **When:** `token::status_with_threshold(credential_store, paths, 1800)` is called.
-- **Then:** Returns `TokenStatus::ExpiringSoon` (within custom threshold). With default threshold (3600s) it would have returned `TokenStatus::ExpiringSoon` too, but at 4000s it would return `Valid` with custom threshold.
+- **Given (a):** A credentials file where `expiresAt` is 3600 seconds (1 hour) in the future.
+- **When (a):** `token::status_with_threshold(7200)` is called (a custom 2-hour threshold, larger than the 1-hour default).
+- **Then (a):** Returns `TokenStatus::ExpiringSoon` — the 1-hour remaining time falls within the custom 7200s threshold.
+- **Given (b):** A credentials file where `expiresAt` is far in the future (`u64::MAX` ms).
+- **When (b):** `token::status_with_threshold(0)` is called (a zero-second threshold).
+- **Then (b):** Returns `TokenStatus::Valid` — with `warning_secs == 0`, `ExpiringSoon` only fires at the exact zero-remaining boundary; any positive remaining time is `Valid`.
 - **Exit:** Ok
 - **Source fn:** `status_with_custom_threshold_classifies_correctly`, `status_with_threshold_zero_classifies_non_expired_as_expiring_soon`
 - **Source:** [006_token_status.md AC-03](../../../docs/feature/006_token_status.md)

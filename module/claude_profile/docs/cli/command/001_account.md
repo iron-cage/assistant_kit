@@ -110,7 +110,7 @@ clp .accounts assignee::bob@laptop name::alice@acme.com
 ```
 
 **Notes:**
-- `cols::` replaces the 15 former field-toggle params (`active::`, `current::`, `sub::`, `tier::`, `expires::`, `email::`, `display_name::`, `host::`, `role::`, `billing::`, `model::`, `uuid::`, `capabilities::`, `org_uuid::`, `org_name::`). Using any exits 1 with a `cols::` migration hint.
+- `cols::` replaces the 14 former field-toggle params (`current::`, `sub::`, `tier::`, `expires::`, `email::`, `display_name::`, `host::`, `role::`, `billing::`, `model::`, `uuid::`, `capabilities::`, `org_uuid::`, `org_name::`). Using any exits 1 with a `cols::` migration hint.
 - Owner column is in the identity default set — shows `USER@MACHINE` when owned, `—` when unowned. Hide with `cols::-owner`.
 - `format::json` always includes all fields regardless of `cols::`.
 - `format::table` columns: flag, Account, Owner (when enabled), Active, Sub, Tier, Expires.
@@ -139,7 +139,7 @@ Each group header renders bold/colored with no bracket punctuation on a TTY, fal
 
 ### Referenced Command Group
 
-Evaluated against `.usage` under the strict [command_group](../command_group/readme.md) identity test (same dispatch function, same parameter set) — does not qualify in substance, though criterion (b) is technically satisfied at the literal-registration level: both `.accounts` and `.usage` are registered to the same function, `accounts_view_routine()` (`src/commands/accounts.rs:402`), a thin shim that branches on command name and delegates to `accounts_routine()` (`src/commands/accounts.rs:70`) for `.accounts` or `usage_routine()` (`src/usage/api.rs:62`) for `.usage` — the two branches share no logic beyond that check, and `accounts_routine()` itself has zero cross-calls with `usage_routine()`. The "same live pipeline as `.usage`" claim in the command summary above and in the Notes (`refresh::`/`touch::` "activate the same live pipeline as `.usage`") describes intended parity, not implemented behavior: `accounts_routine()` registers `refresh::`, `touch::`, `imodel::`, and `effort::` as accepted parameters (`src/registry.rs:92-95`) but never reads any of the four anywhere in its body — `grep -n "refresh\|touch\|fetch" src/commands/accounts.rs` returns no matches — and never calls `fetch_quota_for_list()` (`src/usage/fetch.rs:63`), `apply_refresh()` (`src/usage/refresh.rs:76`), or `apply_touch()` (`src/usage/touch.rs:133`), all of which are called only from `usage_routine()`. The `assignee::`/`owner::`/`lock::`/`reserve::` mutation sharing (line above) is a real shared-helper case, already covered by the `.accounts`/`.usage` rows in [`command_group/readme.md`](../command_group/readme.md) Evaluated, Not Qualifying — see that table for the full citation-backed analysis of both this claim and the mutation-dispatch one.
+Evaluated against `.usage` under the strict [command_group](../command_group/readme.md) identity test (same dispatch function, same parameter set) — does not qualify in substance, though criterion (b) is technically satisfied at the literal-registration level: both `.accounts` and `.usage` are registered to the same function, `accounts_view_routine()` (`src/commands/accounts.rs:402`), a thin shim that branches on command name and delegates to `accounts_routine()` (`src/commands/accounts.rs:70`) for `.accounts` or `usage_routine()` (`src/usage/api.rs:78`) for `.usage` — the two branches share no logic beyond that check, and `accounts_routine()` itself has zero cross-calls with `usage_routine()`. The "same live pipeline as `.usage`" claim in the command summary above and in the Notes (`refresh::`/`touch::` "activate the same live pipeline as `.usage`") describes intended parity, not implemented behavior: `accounts_routine()` registers `refresh::`, `touch::`, `imodel::`, and `effort::` as accepted parameters (`src/registry.rs:92-95`) but never reads any of the four anywhere in its body — `grep -n "refresh\|touch\|fetch" src/commands/accounts.rs` returns no matches — and never calls `fetch_quota_for_list()` (`src/usage/fetch.rs:63`), `apply_refresh()` (`src/usage/refresh.rs:76`), or `apply_touch()` (`src/usage/touch.rs:133`), all of which are called only from `usage_routine()`. The `assignee::`/`owner::`/`lock::`/`reserve::` mutation sharing (line above) is a real shared-helper case, already covered by the `.accounts`/`.usage` rows in [`command_group/readme.md`](../command_group/readme.md) Evaluated, Not Qualifying — see that table for the full citation-backed analysis of both this claim and the mutation-dispatch one.
 
 ### Referenced Parameters
 
@@ -419,7 +419,7 @@ clp .account.use name::alice@home.com trace::1
 
 ### Referenced Command Group
 
-Evaluated against `.usage` and `.model` under the strict [command_group](../command_group/readme.md) identity test (same dispatch function, same parameter set) — does not qualify. `account_use_routine()` (`src/commands/account_ops.rs:19`) has zero cross-calls with `usage_routine()` (`src/usage/api.rs:62`) or `model_routine()` (`src/commands/model.rs:25`). The "same resolution logic" note above refers to `resolve_model()`/`resolve_effort()` (`src/usage/subprocess.rs:30,76`), lower-layer helpers reached from both commands via different intermediate wrappers (`.account.use` via `apply_post_switch_touch()`, `src/usage/api_switch.rs:345` calling `resolve_model()` at `src/usage/api_switch.rs:385`; `.usage` via `apply_refresh()` (`src/usage/refresh.rs:76`, calling `resolve_model()` at `src/usage/refresh.rs:117`) and `apply_touch()` (`src/usage/touch.rs:133`, calling `resolve_model()` at `src/usage/touch.rs:149`)); the `set_session_model()` note refers to `claude_profile_core::account::set_session_model()` (`../claude_profile_core/src/account.rs:586`), called from `account_use_routine` (`src/commands/account_ops.rs:149`), `usage_routine` (`src/usage/api.rs:166`), and `model_routine` (`src/commands/model.rs:51`) — a shared write primitive in a different crate below the dispatch layer, not a shared dispatch function. Parameter sets diverge sharply: 8 params here vs. 33 on `.usage` vs. 2 on `.model` (`.model`'s `set::` and this command's `set_model::` are different parameters with different invocation semantics, not the same parameter under a different default). See [`command_group/readme.md`](../command_group/readme.md) Evaluated, Not Qualifying for the full analysis.
+Evaluated against `.usage` and `.model` under the strict [command_group](../command_group/readme.md) identity test (same dispatch function, same parameter set) — does not qualify. `account_use_routine()` (`src/commands/account_ops.rs:19`) has zero cross-calls with `usage_routine()` (`src/usage/api.rs:78`) or `model_routine()` (`src/commands/model.rs:88`). The "same resolution logic" note above refers to `resolve_model()`/`resolve_effort()` (`src/usage/subprocess.rs:30,76`), lower-layer helpers reached from both commands via different intermediate wrappers (`.account.use` via `apply_post_switch_touch()`, `src/usage/api_switch.rs:361` calling `resolve_model()` at `src/usage/api_switch.rs:402`; `.usage` via `apply_refresh()` (`src/usage/refresh.rs:76`, calling `resolve_model()` at `src/usage/refresh.rs:117`) and `apply_touch()` (`src/usage/touch.rs:133`, calling `resolve_model()` at `src/usage/touch.rs:149`)); the `set_session_model()` note refers to `claude_profile_core::account::set_session_model()` (`../claude_profile_core/src/account.rs:807`), called from `account_use_routine` (`src/commands/account_ops.rs:149`), `usage_routine` (`src/usage/api.rs:182`), and `model_routine` (`src/commands/model.rs:228,233`) — a shared write primitive in a different crate below the dispatch layer, not a shared dispatch function. Parameter sets diverge sharply: 9 params here vs. 35 on `.usage` vs. 6 on `.model` (`.model`'s `model::`/`effort_level::` and this command's `set_model::` are different parameters with different invocation semantics, not the same parameter under a different default). See [`command_group/readme.md`](../command_group/readme.md) Evaluated, Not Qualifying for the full analysis.
 
 ### Referenced Features
 
@@ -453,8 +453,8 @@ Evaluated against `.usage` and `.model` under the strict [command_group](../comm
 
 Removes `{credential_store}/{name}.credentials.json` and `{name}.json` from the credential store, plus any legacy satellite files from pre-consolidation layout.
 
--- **Parameters:** [`name::`](../param/001_name.md) **(required)**, [`dry::`](../param/004_dry.md), [`trace::`](../param/023_trace.md)
--- **Exit:** 0 (success) | 1 (usage: invalid name) | 2 (runtime: account not found)
+-- **Parameters:** [`name::`](../param/001_name.md) **(required)**, [`dry::`](../param/004_dry.md), [`trace::`](../param/023_trace.md), [`force::`](../param/058_force.md)
+-- **Exit:** 0 (success) | 1 (usage: invalid name; G6 ownership violation unless `force::1`) | 2 (runtime: account not found)
 
 **Syntax:**
 
@@ -464,6 +464,7 @@ clp .account.delete alice@oldco.com          # positional: bare name at any posi
 clp .account.delete dry::1 alice@oldco.com   # reversed: arg order does not matter
 clp .account.delete car                      # prefix
 clp .account.delete name::alice@oldco.com dry::1
+clp .account.delete name::alice@oldco.com force::1   # bypass G6 ownership gate
 ```
 
 | Parameter | Type | Default | Purpose |
@@ -471,12 +472,14 @@ clp .account.delete name::alice@oldco.com dry::1
 | `name::` | [`AccountName`](../type/001_account_name.md) | **(required)** | Account email to delete |
 | `dry::` | `bool` | `0` | Preview action without executing |
 | `trace::` | `bool` | `0` | Print timestamped diagnostic lines to stderr for each file removal step |
+| `force::` | `bool` | `0` | Bypass G6 ownership gate; allow deleting a non-owned account |
 
-**Algorithm (4 steps):**
+**Algorithm (5 steps):**
 1. Resolve `name::` via `AccountSelector`; validate account exists in credential store
-2. `(when dry::0)` Delete `{name}.credentials.json`
-3. `(when dry::0)` Best-effort delete `{name}.json` + legacy files (`.claude.json`, `.settings.json`, `.roles.json`, `.profile.json`; skip missing)
-4. `(when dry::0 + deleted account = active)` Delete `_active_{hostname}_{user}` marker
+2. G6 ownership check (unless `force::1`) — exits 1 on violation; evaluated before the `dry::1` check so dry-run still surfaces ownership violations
+3. `(when dry::0)` Delete `{name}.credentials.json`
+4. `(when dry::0)` Best-effort delete `{name}.json` + legacy files (`.claude.json`, `.settings.json`, `.roles.json`, `.profile.json`; skip missing)
+5. `(when dry::0 + deleted account = active)` Delete `_active_{hostname}_{user}` marker
 
 **Examples:**
 
@@ -491,12 +494,14 @@ clp .account.delete name::alice@oldco.com dry::1
 **Notes:**
 - Metadata file (`{name}.json`) and legacy satellite files are removed best-effort: missing files are silently skipped.
 - Deleting the active account also removes the active marker (`_active_{hostname}_{user}`).
+- G6 is checked before any file is written, including in `dry::1` mode — a non-owned target exits 1 even during a dry-run preview (mirrors G5's dry-run interaction on `.account.use`). See [feature/036_account_ownership.md](../../feature/036_account_ownership.md).
 
 ### Referenced Features
 
 | # | Feature | Role |
 |---|---------|------|
 | 1 | [Delete Account](../../feature/005_account_delete.md) | File removal sequence and legacy satellite cleanup |
+| 2 | [Account Ownership](../../feature/036_account_ownership.md) | G6 ownership gate; `force::1` bypass |
 
 ### Referenced User Stories
 
@@ -593,8 +598,8 @@ clp .account.limits name::kimi
 
 Force browser-based re-authentication for a named account whose `refreshToken` is expired or revoked. This is the recovery path when `refresh::1` silently fails (trace shows `run_isolated: OK credentials=None` — Claude starts but performs no OAuth refresh because the refresh token itself is dead).
 
--- **Parameters:** [`name::`](../param/001_name.md) *(optional, defaults to active)*, [`dry::`](../param/004_dry.md), [`trace::`](../param/023_trace.md)
--- **Exit:** 0 (success: credentials refreshed and saved) | 1 (usage: invalid name value) | 2 (runtime: name omitted and no active account; account not found; or Claude spawn failed) | 3 (timeout or login abandoned: claude exited without updating credentials)
+-- **Parameters:** [`name::`](../param/001_name.md) *(optional, defaults to active)*, [`dry::`](../param/004_dry.md), [`trace::`](../param/023_trace.md), [`force::`](../param/058_force.md)
+-- **Exit:** 0 (success: credentials refreshed and saved) | 1 (usage: invalid name value; G7 ownership violation unless `force::1`) | 2 (runtime: name omitted and no active account; account not found; or Claude spawn failed) | 3 (timeout or login abandoned: claude exited without updating credentials)
 
 **Syntax:**
 
@@ -606,6 +611,7 @@ clp .account.relogin dry::1 carol@example.com   # reversed: arg order does not m
 clp .account.relogin car               # prefix
 clp .account.relogin name::carol@example.com dry::1
 clp .account.relogin dry::1            # dry-run for active account
+clp .account.relogin name::carol@example.com force::1   # bypass G7 ownership gate
 ```
 
 | Parameter | Type | Default | Purpose |
@@ -613,14 +619,16 @@ clp .account.relogin dry::1            # dry-run for active account
 | `name::` | [`AccountName`](../type/001_account_name.md) | *(active account)* | Account to re-authenticate; omit to use the currently active account |
 | `dry::` | `bool` | `0` | Preview the steps without executing |
 | `trace::` | `bool` | `0` | Print timestamped diagnostic lines to stderr for each step: store read, switch, spawn, credential change, save, restore |
+| `force::` | `bool` | `0` | Bypass G7 ownership gate; allow re-authenticating a non-owned account |
 
-**Algorithm (6 steps):**
+**Algorithm (7 steps):**
 1. Resolve `name::` via [`AccountSelector`](../type/004_account_selector.md) → validate account exists in credential store
-2. Snapshot the current active account name (for restoration after login)
-3. `switch_account(name)` — makes the named account active in `~/.claude/`
-4. Spawn `claude` with inherited TTY (stdin/stdout/stderr connected — NOT isolated subprocess) — Claude detects empty or invalid credentials and opens the browser login page
-5. Wait for `claude` to exit; if `~/.claude/.credentials.json` changed → `account::save(name)` propagates fresh credentials to credential store
-6. `switch_account(original_active)` — restore the prior active account
+2. G7 ownership check (unless `force::1`) — exits 1 on violation; evaluated before the `dry::1` check so dry-run still surfaces ownership violations
+3. Snapshot the current active account name (for restoration after login)
+4. `switch_account(name)` — makes the named account active in `~/.claude/`
+5. Spawn `claude` with inherited TTY (stdin/stdout/stderr connected — NOT isolated subprocess) — Claude detects empty or invalid credentials and opens the browser login page
+6. Wait for `claude` to exit; if `~/.claude/.credentials.json` changed → `account::save(name)` propagates fresh credentials to credential store
+7. `switch_account(original_active)` — restore the prior active account
 
 **Examples:**
 
@@ -636,16 +644,18 @@ clp .account.relogin name::carol@example.com dry::1
 ```
 
 **Notes:**
-- Requires a TTY — `clp .account.relogin` in a piped non-TTY context will fail at step 4 (Claude cannot open a browser or display the login prompt).
+- Requires a TTY — `clp .account.relogin` in a piped non-TTY context will fail at step 5 (Claude cannot open a browser or display the login prompt).
 - The `claude` subprocess runs with the full inherited environment; no credential isolation (contrast with `refresh::1` which uses an isolated subprocess).
-- If `claude` exits without updating `~/.claude/.credentials.json`, the command exits 3. The active account is still restored (step 6 runs regardless of outcome).
+- If `claude` exits without updating `~/.claude/.credentials.json`, the command exits 3. The active account is still restored (step 7 runs regardless of outcome).
 - Use this when `clp .usage refresh::1 trace::1` shows `run_isolated: OK credentials=None` for an account — that trace indicates a dead refresh token requiring full browser re-auth.
+- G7 is checked before any state change, including in `dry::1` mode — a non-owned target exits 1 even during a dry-run preview (mirrors G5's dry-run interaction on `.account.use`). See [feature/036_account_ownership.md](../../feature/036_account_ownership.md).
 
 ### Referenced Features
 
 | # | Feature | Role |
 |---|---------|------|
 | 1 | [Auto Rotate](../../feature/008_auto_rotate.md) | Relogin as recovery path for dead refresh tokens |
+| 2 | [Account Ownership](../../feature/036_account_ownership.md) | G7 ownership gate; `force::1` bypass |
 
 ### Referenced User Stories
 
@@ -859,7 +869,7 @@ clp .account.inspect format::json | jq '.memberships | length'
 
 ### Referenced Command Group
 
-Evaluated against `.account.use` and `.usage` under the strict [command_group](../command_group/readme.md) identity test (same dispatch function, same parameter set) — does not qualify. `account_inspect_routine()` (`src/commands/account_inspect.rs:125`) has zero cross-calls with `account_use_routine()` (`src/commands/account_ops.rs:19`) or `usage_routine()` (`src/usage/api.rs:62`). The "behaves identically" claim above is precise only about the underlying primitive: `account_inspect_routine()` calls `attempt_expired_token_refresh()` (`src/usage/api_switch.rs:95`) at `src/commands/account_inspect.rs:165`, and `account_use_routine()` calls the same wrapper at `src/commands/account_ops.rs:215` — that specific wrapper is genuinely shared with `.account.use`, not `.usage`. `usage_routine()` instead calls a different wrapper, `apply_refresh()` (`src/usage/refresh.rs:76`, invoked at `src/usage/api.rs:141`), which iterates the full account list with 401/403/429 retry branching that `attempt_expired_token_refresh()` does not have. All three commands converge only at the deepest shared primitive, `refresh_account_token()` (`../claude_profile_core/src/account.rs:731`) — ordinary layered reuse of one OAuth-refresh function, not evidence of shared dispatch. Parameter sets also diverge: 4 params here vs. 8 on `.account.use` vs. 33 on `.usage`. See [`command_group/readme.md`](../command_group/readme.md) Evaluated, Not Qualifying for the full analysis.
+Evaluated against `.account.use` and `.usage` under the strict [command_group](../command_group/readme.md) identity test (same dispatch function, same parameter set) — does not qualify. `account_inspect_routine()` (`src/commands/account_inspect.rs:125`) has zero cross-calls with `account_use_routine()` (`src/commands/account_ops.rs:19`) or `usage_routine()` (`src/usage/api.rs:78`). The "behaves identically" claim above is precise only about the underlying primitive: `account_inspect_routine()` calls `attempt_expired_token_refresh()` (`src/usage/api_switch.rs:95`) at `src/commands/account_inspect.rs:176`, and `account_use_routine()` calls the same wrapper at `src/commands/account_ops.rs:215` — that specific wrapper is genuinely shared with `.account.use`, not `.usage`. `usage_routine()` instead calls a different wrapper, `apply_refresh()` (`src/usage/refresh.rs:76`, invoked at `src/usage/api.rs:157`), which iterates the full account list with 401/403/429 retry branching that `attempt_expired_token_refresh()` does not have. All three commands converge only at the deepest shared primitive, `refresh_account_token()` (`../claude_profile_core/src/account.rs:986`) — ordinary layered reuse of one OAuth-refresh function, not evidence of shared dispatch. Parameter sets also diverge: 4 params here vs. 9 on `.account.use` vs. 35 on `.usage`. See [`command_group/readme.md`](../command_group/readme.md) Evaluated, Not Qualifying for the full analysis.
 
 ### Referenced Features
 

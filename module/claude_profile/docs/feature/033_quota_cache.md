@@ -108,7 +108,7 @@ When the usage API (`GET /api/oauth/usage`) returns an error for an account, the
 | `src/usage/render_tsv.rs` | Staleness display (TSV format) — same `~` prefix surfacing as `render.rs`, TSV-encoded; NAME-cell fallback-reason suffix (AC-14) is a standalone parenthetical — this format has no age-suffix mechanism to combine it with |
 | `src/usage/render_json.rs` | Staleness display (JSON format) — `cache_json_fields()` emits `"cached"`/`"cache_age_secs"` (AC-09); `"fallback_reason"` field (AC-14) |
 | `src/usage/format.rs` | `shorten_error()` — failure-reason shortening shared by all three render formats (AC-03/AC-14); `cache_age_label()` — age-suffix formatting (AC-03); `status_emoji()` — threshold-based status coloring, cache-blind by design |
-| `src/usage/api.rs` | Side-effect cache — `write_cache_string()` (model_override, AC-05) and `write_cache_bool()` (touch_idle, AC-06) |
+| `src/usage/api_switch.rs` | Side-effect cache — `write_cache_string()` (model_override, AC-05) and `write_cache_bool()` (touch_idle, AC-06) |
 | `claude_profile_core/src/account.rs` | Storage layer — `QuotaCacheEntry`, `read_quota_cache()`, `write_quota_cache()`, `write_cache_field()` |
 
 ### Schema

@@ -187,7 +187,7 @@ Feature behavioral requirement test cases for `docs/feature/003_account_list.md`
 - **When (default):** `clp .accounts`
 - **Then:** None of those four lines appear in the block.
 - **Exit:** 0
-- **Source fn:** `acc21_role_billing_model_from_snapshots`, `acc24_new_fields_absent_by_default`, `mre_324_role_toggle_shows_user_label`
+- **Source fn:** `acc49_accounts_host_role_shows_profile_metadata` (Host), `acc21_role_billing_model_from_snapshots` (Role/Billing/Model), `acc24_new_fields_absent_by_default`, `mre_324_role_toggle_shows_user_label`
 - **Source:** [003_account_list.md AC-10](../../../docs/feature/003_account_list.md)
 
 ---

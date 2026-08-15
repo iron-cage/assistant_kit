@@ -3,7 +3,7 @@
 Removes the model key from the store selected by `scope::`. New for Feature 035, replacing the retired `.model.select`'s `reset::1` (which only ever targeted the subprocess store) with a scope-relative parameter that also covers the session store for the first time.
 
 - **Default:** `0` — no reset; mode determined by `model::`/`effort_level::`/`reset_effort_level::` presence
-- **Constraints:** `0`, `1`, `false`, `true`
+- **Constraints:** `0` or `1` (`Kind::Integer` — only integer literals are accepted; `false`/`true` are rejected as a type mismatch before the command runs, unlike the string-typed `lock::`/`reserve::`, which silently coerce non-`"1"` values to off); any integer other than `1` behaves as `0`/no-op.
 - **Purpose:** Undo a previously pinned model for the selected scope; restore that scope's default.
 
 **Values:**

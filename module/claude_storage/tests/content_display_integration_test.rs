@@ -92,9 +92,16 @@ fn show_displays_content_by_default()
     "Should show session header. stdout: {show_output}"
   );
   assert!(
-    show_output.contains( "━" ),
-    "Should show separator line (content-first). stdout: {show_output}"
+    !show_output.contains( "━" ),
+    "Should NOT show divider (replaced by key:val attribute block). stdout: {show_output}"
   );
+  for field in [ "Path:", "Agent Session:", "Total Entries:", "User Entries:", "Assistant Entries:" ]
+  {
+    assert!(
+      show_output.contains( field ),
+      "Should show key:val attribute block field {field:?} in content mode. stdout: {show_output}"
+    );
+  }
 
   // Chat-log format: "[2025-11-29 10:00] User: ..." or "[...] Assistant: ..."
   let has_timestamp_pattern = show_output.contains( "[20" )
@@ -273,6 +280,48 @@ fn show_metadata_flag_is_metadata_only()
     !has_chat_format,
     "show_metadata::1 should NOT show chat-log format. stdout: {show_output}"
   );
+}
+
+/// Test: `.show` renders the key:val attribute block for a zero-entry session (T05)
+///
+/// ## Test Organization
+///
+/// **Root Cause**: No test covered the empty-session edge case for the key:val
+/// attribute block that replaces the removed content-mode divider.
+///
+/// **Why Not Caught**: New behavior — the block and its zero-entry rendering
+/// path did not exist before this change.
+///
+/// **Fix Applied**: Content mode's key:val block renders `0` counts without
+/// panicking or emitting a divider when the session has no entries.
+///
+/// **Prevention**: This test locks in the zero-entry rendering path.
+///
+/// **Pitfall**: Off-by-one errors in entry-count formatting often surface only
+/// at the zero boundary, not with a handful of entries.
+#[ test ]
+fn show_content_mode_zero_entries()
+{
+  let storage     = TempDir::new().unwrap();
+  let project_cwd = TempDir::new().unwrap();
+
+  common::write_path_project_session( storage.path(), project_cwd.path(), "session-zero", 0 );
+
+  let output = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", storage.path() )
+    .current_dir( project_cwd.path() )
+    .args( [ ".show", "session_id::session-zero" ] )
+    .output()
+    .expect( "Failed to execute .show on zero-entry session" );
+
+  let show_output = String::from_utf8_lossy( &output.stdout );
+  let stderr = String::from_utf8_lossy( &output.stderr );
+
+  assert!( output.status.success(), "Command should succeed on zero-entry session. stderr: {stderr}" );
+  assert!( !show_output.contains( "━" ), "Should NOT show divider. stdout: {show_output}" );
+  assert!( show_output.contains( "Total Entries: 0" ), "stdout: {show_output}" );
+  assert!( show_output.contains( "User Entries: 0" ), "stdout: {show_output}" );
+  assert!( show_output.contains( "Assistant Entries: 0" ), "stdout: {show_output}" );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

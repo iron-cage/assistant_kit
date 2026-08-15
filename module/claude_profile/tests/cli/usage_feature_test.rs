@@ -4,8 +4,9 @@
 //! Each FT case maps to one acceptance criterion from the corresponding feature
 //! doc.  Command-level tests (IT-N) live in `tests/cli/usage_test.rs`.
 //!
-//! Live tests (names contain `lim_it`) require network access and are excluded
-//! from Docker CI by the nextest filter `!test(lim_it)`.
+//! Live tests (names contain `lim_it`) require network access. No nextest filter
+//! excludes them — they run by default whenever ~/.claude is mounted (see
+//! .config/nextest.toml) and panic loudly if a live token is unavailable.
 //!
 //! ## Test Matrix
 //!

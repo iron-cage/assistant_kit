@@ -99,11 +99,34 @@ pub( crate ) fn build_claude_command( cli : &CliArgs ) -> ( ClaudeCommand, Optio
   // --session-from: resolve source session dir (--session-dir wins when both are present).
   // Computes scope_for(source_dir).claude_session_dir so the subprocess reads sessions from
   // the source project's encoded storage path rather than the current working directory.
+  //
+  // The raw value is canonicalized before encoding: claude derives storage names from its
+  // physical getcwd, so a relative or symlinked source path must resolve to the same
+  // physical absolute form or the encoded name silently misses the real storage dir
+  // (`./src` would encode as `---src`). Nonexistent paths (no storage can match anyway)
+  // fall back to a lexical cwd-join that drops `.` components. Empty values are ignored
+  // entirely — same empty-is-identity rule as `--subdir ""` (BUG-229); without the filter
+  // an empty value encodes to the `-unknown` fallback dir and actively redirects the
+  // subprocess session storage there.
   let session_from_dir : Option< std::path::PathBuf > = if cli.session_dir.is_none()
   {
-    cli.session_from.as_deref().map( | src |
-      claude_storage_core::scope_for( std::path::Path::new( src ) ).claude_session_dir
-    )
+    cli.session_from.as_deref()
+      .filter( | src | !src.is_empty() )
+      .map( | src |
+      {
+        let raw = std::path::Path::new( src );
+        let abs = std::fs::canonicalize( raw ).unwrap_or_else( | _ |
+        {
+          let joined = if raw.is_absolute() { raw.to_path_buf() }
+          else
+          {
+            std::env::current_dir()
+              .map_or_else( | _ | raw.to_path_buf(), | cwd | cwd.join( raw ) )
+          };
+          joined.components().collect()
+        } );
+        claude_storage_core::scope_for( &abs ).claude_session_dir
+      } )
   }
   else { None };
   if let Some( ref src_dir ) = session_from_dir
