@@ -18,7 +18,7 @@
 | `cli/type/` | CLI type definitions | [cli/type/readme.md](../cli/type/readme.md) | 5 |
 | `cli/user_story/` | Canonical user stories mapping personas and goals to commands | [cli/user_story/readme.md](../cli/user_story/readme.md) | 5 |
 | `cli/workflow_scenario/` | **ELIMINATED** (`cli_doc.rulebook` v1.7) — all instances migrated to `cli/user_story/`; directory retained only as an archived migration map | [cli/workflow_scenario/readme.md](../cli/workflow_scenario/readme.md) | 0 |
-| `feature/` | Functional requirements for claude_profile capabilities | [readme.md](../feature/readme.md) | 50 |
+| `feature/` | Functional requirements for claude_profile capabilities | [readme.md](../feature/readme.md) | 51 |
 | `invariant/` | Measurable constraints and architectural guarantees | [invariant/readme.md](../invariant/readme.md) | 12 |
 | `pattern/` | Reusable design solutions applied at more than one call site | [pattern/readme.md](../pattern/readme.md) | 1 |
 | `pitfall/` | Systemic pitfall catalog — recurring design traps revealed by bug history | [pitfall/readme.md](../pitfall/readme.md) | 7 |
@@ -98,6 +98,7 @@
 | feature | 071 | Redirect Backend Accounts | [feature/071_redirect_backend_accounts.md](../feature/071_redirect_backend_accounts.md) |
 | feature | 072 | Inference Provider Selection | [feature/072_inference_provider_selection.md](../feature/072_inference_provider_selection.md) |
 | feature | 073 | Kimi Provider Preset | [feature/073_kimi_provider_preset.md](../feature/073_kimi_provider_preset.md) |
+| feature | 074 | CLI Invocation Telemetry | [feature/074_cli_invocation_telemetry.md](../feature/074_cli_invocation_telemetry.md) |
 | cli | 001 | Config Parameters | [cli/001_config_param.md](../cli/001_config_param.md) |
 | cli | 002 | Dictionary | [cli/002_dictionary.md](../cli/002_dictionary.md) |
 | cli | 003 | Environment Parameters | [cli/003_env_param.md](../cli/003_env_param.md) |

@@ -65,7 +65,7 @@ clr --trace "Fix bug" --dir /project
 | [`--output-file`](../param/029_output_file.md) | string | — | Output sink | Write captured stdout to a file (tee behavior) |
 | [`--expect`](../param/030_expect.md) | string | — | Output validator | Pipe-separated enum values; stdout must match one after trim+lowercase |
 | [`--expect-strategy`](../param/031_expect_strategy.md) | enum | `fail` | Mismatch handler | Mismatch handling: exit 3, retry N times, or output fallback value |
-| [`--max-sessions`](../param/033_max_sessions.md) | u32 | 6 | Concurrency gate | Max concurrent non-interactive Claude Code sessions before blocking; 0 = unlimited; interactive exempt; also applies to `isolated` (3-tier: CLI flag + `"max-sessions"` JSON key + env var; no config-file tier) |
+| [`--max-sessions`](../param/033_max_sessions.md) | u32 | 8 | Concurrency gate | Max concurrent non-interactive Claude Code sessions before blocking; 0 = unlimited; interactive exempt; also applies to `isolated` (3-tier: CLI flag + `"max-sessions"` JSON key + env var; no config-file tier) |
 | [`--gate-poll-secs`](../param/082_gate_poll_secs.md) | u64 | 30 | Concurrency gate tuning | Poll interval (seconds) between gate attempts; `run`/`ask` only — `isolated` stays env-var-only |
 | [`--gate-max-attempts`](../param/083_gate_max_attempts.md) | u32 | 1000 | Concurrency gate tuning | Attempt limit before gate exhaustion; `run`/`ask` only — `isolated` stays env-var-only |
 | [`--gate-stale-secs`](../param/084_gate_stale_secs.md) | u64 | unset | Concurrency gate tuning | Staleness threshold for reclaiming a stalled slot; `run`/`ask` only — `isolated` stays env-var-only |

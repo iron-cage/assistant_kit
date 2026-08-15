@@ -130,8 +130,131 @@ fn print_usage( binary : &str )
   print!( "{}", CliHelpTemplate::new( CliHelpStyle::default(), data ).render() );
 }
 
+/// Returns `true` when `token` requests the full grouped command listing.
+///
+/// Covers every alias unilang and this binary recognize as a global-help
+/// trigger: bare argv (handled separately), `.`, `.help`, `--help`, `-h`, `help`.
+fn is_global_help_token( token : &str ) -> bool
+{
+  matches!( token, "." | ".help" | "--help" | "-h" | "help" )
+}
+
+/// Render single-command detail help via `cli_fmt::CliHelpTemplate`.
+///
+/// unilang's own auto-generated `<command>.help` routine (`format_command_help()`
+/// inside the `unilang` crate) prints a plain-text dump with no `cli_fmt` styling.
+/// This renders the same content — description, arguments, examples — through
+/// the same styled renderer `print_usage` uses for the grouped listing, so every
+/// help-producing entry point stays visually consistent.
+fn print_command_help( binary : &str, cmd : &CommandDefinition )
+{
+  use cli_fmt::help::*;
+
+  let name = cmd.name().as_str();
+
+  let mut data     = CliHelpData::default();
+  data.binary      = binary.to_string();
+  data.tagline     = cmd.description().to_string();
+  data.usage_lines = vec![ format!( "Usage: {binary} {name}" ) ];
+  data.arguments   = cmd.arguments().iter().map( | arg |
+  {
+    let suffix = match ( arg.attributes.optional, &arg.attributes.default )
+    {
+      ( true, Some( default ) ) => format!( "optional, default: {default}" ),
+      ( true, None )            => "optional".to_string(),
+      ( false, _ )              => "required".to_string(),
+    };
+    OptionEntry
+    {
+      name : format!( "{}::{}", arg.name, arg.kind ),
+      desc : format!( "{} ({suffix})", arg.description ),
+    }
+  } ).collect();
+  data.examples    = cmd.examples().iter().map( | example |
+    ExampleEntry { invocation : format!( "{binary} {example}" ), desc : None }
+  ).collect();
+
+  print!( "{}", CliHelpTemplate::new( CliHelpStyle::default(), data ).render() );
+}
+
+/// Detects a `<command>.help` token and, when `<command>` is registered,
+/// renders its detail via `print_command_help` instead of letting unilang's
+/// own auto-generated `<command>.help` routine execute and print its
+/// plain-text form.
+///
+/// Returns `true` when `token` was handled; the caller should skip normal
+/// dispatch in that case.
+fn try_command_help( binary : &str, registry : &CommandRegistry, token : &str ) -> bool
+{
+  let Some( base ) = token.strip_suffix( ".help" ) else { return false };
+  let Some( cmd ) = registry.command( base ) else { return false };
+  print_command_help( binary, &cmd );
+  true
+}
+
+/// Detects the space-separated `<command> help` two-token form and, when
+/// `<command>` is registered, renders its detail via `print_command_help` —
+/// the same rendering `try_command_help` uses for the dot-suffix form.
+///
+/// A sibling to `is_global_help_token()` and `try_command_help()` — a third
+/// hand-rolled interceptor of the same shape, mirroring the pattern
+/// established in commit `4230527e`, not a shared abstraction with them. If
+/// a 4th help-interception form is ever needed, consolidate the `try_*`/
+/// `is_global_help_token` predicates into an ordered (matcher, renderer)
+/// list rather than adding another hand-rolled `if` block.
+///
+/// Returns `true` when `tokens` was handled; the caller should skip normal
+/// dispatch in that case.
+///
+/// `help` is a reserved second token for every registered command,
+/// unconditionally — including a command like `.search` whose first
+/// positional argument is an unconstrained string where "help" could
+/// otherwise be a literal value (AGG-01, resolved as an accepted trade-off
+/// matching npm/git/kubectl's own reserved-word convention: `.search help`
+/// renders help rather than searching; `.search query::help`, the
+/// named-parameter form, is unaffected and still searches). See
+/// `t09_search_help_one_shot_reserved_word_tradeoff` /
+/// `t10_search_query_help_named_param_unaffected`.
+///
+/// Fix(BUG-005)
+/// Root cause: unilang binds a trailing bare token positionally when it
+/// isn't recognized as a flag or as one of the existing dot-suffix/global
+/// help special cases, so `<command> help` (space-separated) fell through to
+/// ordinary argument parsing instead of being recognized as a help request.
+/// Pitfall: this match is intentionally exact two-token equality on trimmed
+/// content (`tokens.len() == 2 && tokens[ 1 ].trim() == "help"`) — do not
+/// loosen it to a prefix/contains check (would swallow `.list helpme`) or
+/// make it case-insensitive (would swallow `.list HELP`, currently a
+/// distinct parse-error path); both are locked in as regression boundaries
+/// by `t06_list_help_uppercase_unchanged`/`t07_list_helpme_content_near_miss_unchanged`.
+///
+/// Fix(BUG-005 gap 2, MAAV Tier 5 Round 3 G1)
+/// Root cause: the `args.len() == 3` call site (two separate argv elements)
+/// passed its tokens through unnormalized, unlike the REPL path
+/// (`input.trim()` then `split_whitespace()`) and the `args.len() == 2`
+/// fallback (`split_whitespace()`) — `clg ".list " "help"` or
+/// `clg ".list" "help "` (leading/trailing whitespace baked into one argv
+/// element) both reproduced the original BUG-005 symptom, confirmed live
+/// against the compiled binary.
+/// Pitfall: fix whitespace tolerance inside this shared matcher, not per
+/// call site — every current and future caller gets the same tolerance
+/// uniformly, rather than relying on each call site happening to
+/// pre-normalize its own tokens correctly (2 of 3 did, by accident of using
+/// `split_whitespace()` for an unrelated reason; the 3rd didn't).
+fn try_command_help_space_form( binary : &str, registry : &CommandRegistry, tokens : &[ &str ] ) -> bool
+{
+  if tokens.len() != 2 || tokens[ 1 ].trim() != "help" { return false; }
+  let Some( cmd ) = registry.command( tokens[ 0 ].trim() ) else { return false };
+  print_command_help( binary, &cmd );
+  true
+}
+
 /// Run REPL (Read-Eval-Print Loop) mode.
-fn run_repl( registry : CommandRegistry )
+///
+/// Intercepts global-help tokens (`.`, `.help`, `help`, ...) and
+/// `<command>.help` tokens before pipeline dispatch, so both render via
+/// `cli_fmt` instead of unilang's plain-text formatters.
+fn run_repl( registry : CommandRegistry, binary : &str )
 {
   println!( "Claude Code Storage CLI" );
   println!( "Type 'help' for available commands, 'exit' to quit.\n" );
@@ -159,6 +282,23 @@ fn run_repl( registry : CommandRegistry )
     {
       println!( "Goodbye!" );
       break;
+    }
+
+    if is_global_help_token( input )
+    {
+      print_usage( binary );
+      continue;
+    }
+
+    if try_command_help( binary, pipeline.registry(), input )
+    {
+      continue;
+    }
+
+    let tokens : Vec< &str > = input.split_whitespace().collect();
+    if try_command_help_space_form( binary, pipeline.registry(), &tokens )
+    {
+      continue;
     }
 
     let result = pipeline.process_command_simple( input );
@@ -224,9 +364,39 @@ fn extract_user_message( error : &str ) -> String
 /// wrapping (`"Execution error: Execution Error: "`) so handlers receive
 /// clean user-visible messages on stderr (e.g. `"no sessions"` not
 /// `"Error: Execution error: Execution Error: no sessions"`).
+///
+/// A single `<command>.help` argument is intercepted before the pipeline is
+/// built, rendering via `cli_fmt` instead of unilang's auto-generated
+/// `<command>.help` routine — see `try_command_help`.
 #[ allow( clippy::needless_pass_by_value ) ]
-fn execute_oneshot( registry : CommandRegistry, args : Vec< String > ) -> !
+fn execute_oneshot( registry : CommandRegistry, args : Vec< String >, binary : &str ) -> !
 {
+  if args.len() == 2
+  {
+    if try_command_help( binary, &registry, &args[ 1 ] )
+    {
+      process::exit( 0 );
+    }
+    // Fix(BUG-005 gap 1, MAAV Tier 5 Round 1 G1)
+    // Root cause: a single quoted argv element (e.g. `clg ".list help"`,
+    // args.len() == 2) carries both tokens joined by whitespace inside
+    // args[ 1 ]; the dot-suffix check above doesn't match it, and the
+    // separate-argv branch below is never reached (args.len() == 2, not 3).
+    // Pitfall: tokenize the same way run_repl() tokenizes its input line
+    // (split_whitespace) — don't assume args.len() == 2 only ever means
+    // "one bare token".
+    let tokens : Vec< &str > = args[ 1 ].split_whitespace().collect();
+    if try_command_help_space_form( binary, &registry, &tokens )
+    {
+      process::exit( 0 );
+    }
+  }
+
+  if args.len() == 3 && try_command_help_space_form( binary, &registry, &[ args[ 1 ].as_str(), args[ 2 ].as_str() ] )
+  {
+    process::exit( 0 );
+  }
+
   let pipeline    = Pipeline::new( registry );
   // Fix(issue-030): Quote parameter values that contain spaces before joining argv into
   // a REPL-style command line string.
@@ -279,9 +449,12 @@ fn execute_oneshot( registry : CommandRegistry, args : Vec< String > ) -> !
 /// Run the `claude_storage` CLI.
 ///
 /// Three invocation modes:
-/// - Help: empty argv, `.help`, `--help`, `-h` → grouped help via `cli_fmt`
+/// - Help: empty argv, `.`, `.help`, `--help`, `-h`, `help` → grouped help via `cli_fmt`
 /// - REPL: `--repl` → interactive read-eval-print loop
 /// - One-shot: any other args → execute command and exit
+///
+/// A single `<command>.help` argument (one-shot or REPL) renders that
+/// command's detail via `cli_fmt` as well — see `try_command_help`.
 ///
 /// Entry point shared by the `claude_storage` and `clg` binary targets.
 #[ inline ]
@@ -303,7 +476,7 @@ pub fn run()
 
   let first = &args[ 1 ];
 
-  if first == ".help" || first == "--help" || first == "-h" || first == "help"
+  if is_global_help_token( first )
   {
     print_usage( &binary );
     process::exit( 0 );
@@ -312,10 +485,10 @@ pub fn run()
   if first == "--repl"
   {
     let registry = build_command_registry();
-    run_repl( registry );
+    run_repl( registry, &binary );
     return;
   }
 
   let registry = build_command_registry();
-  execute_oneshot( registry, args );
+  execute_oneshot( registry, args, &binary );
 }

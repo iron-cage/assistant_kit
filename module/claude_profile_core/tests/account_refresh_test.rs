@@ -34,6 +34,9 @@
 //! | `ft24_some_paths_branch_reads_credentials_file_twice_structural` | structural | grep `account.rs` `Some(paths)` branch for ≥2 `credentials_file()` calls | ≥2 occurrences |
 //! | `ft25_071_refresh_redirect_bypass_checked_before_run_isolated_structural` | structural | Feature 071/AC-09: redirect-backend check appears before `run_isolated(` and before the `Some(paths)`/`None` branch dispatch | in order |
 //! | `ft26_071_refresh_redirect_account_returns_none_credentials_unchanged` | behavioral | Feature 071/AC-09: `refresh_account_token()` against a `backend: redirect` account | `None`; credential store file byte-for-byte unchanged |
+//! | `mre_bug483_refresh_write_back_must_guard_blank_credentials` | bug_reproducer(BUG-483) | grep account.rs: `fn credentials_usable(` exists; ≥2 non-comment call sites; `Fix(BUG-483)` at ≥2 sites | guard present in both write-back branches |
+//! | `bug483_credentials_usable_accepts_non_blank_pair` | behavioral | `credentials_usable` with both tokens non-empty (flat + nested `claudeAiOauth` shapes) | `true` |
+//! | `bug483_credentials_usable_rejects_blank_or_missing_tokens` | behavioral | `credentials_usable` with the logged-out sandbox shape, each token blank/missing individually, and degenerate inputs | `false` for all |
 //!
 //! ## Pitfall: Consumer Feature Activation
 //!
@@ -899,4 +902,126 @@ fn ft26_071_refresh_redirect_account_returns_none_credentials_unchanged()
   assert_eq!( result, None, "AC-09: refresh against a redirect account must return None" );
   let after = std::fs::read_to_string( store.path().join( "kimi@moonshot.ai.credentials.json" ) ).unwrap();
   assert_eq!( before, after, "AC-09: refresh against a redirect account must not modify the credential store file" );
+}
+
+// ── MRE BUG-483 ───────────────────────────────────────────────────────────────
+
+/// MRE BUG-483: refresh write-back must guard against blank (logged-out) credentials.
+///
+/// # Root Cause
+///
+/// When the store's refresh token is stale (already rotated by another machine —
+/// Anthropic RTs are single-use), the AC-32 forced rotation (`expiresAt=1`) makes the
+/// sandboxed Claude subprocess hit `invalid_grant`, log itself out, and leave a
+/// logged-out credential file (`accessToken:"", refreshToken:"", expiresAt:0`) in its
+/// temp HOME. `run_isolated` captures that file as `Some(blank)` and every write-back
+/// site persisted it verbatim over the store's non-blank record: the `None`-branch
+/// `fs::write`, the `Some(paths)`-branch store write + `save(..., Some(bytes))`, and
+/// the `is_still_active` live-file write. On 2026-08-12 one sweep on w003 blanked ten
+/// accounts' store records in 19 seconds (commit c19b8003de).
+///
+/// # Why Not Caught
+///
+/// No test constructed a `run_isolated` result whose `credentials` payload is a
+/// logged-out blank and asserted the store record survives. All refresh-path tests
+/// exercise early-exit failure paths (`credentials=None`, missing files) or structural
+/// invariants; the `credentials=Some(blank)` success-shape-with-poison-payload case had
+/// zero coverage.
+///
+/// # Fix Applied
+///
+/// `credentials_usable()` predicate (accessToken AND refreshToken non-empty) gates the
+/// write-back in both branches: on a blank payload the refresh returns `None` (caller
+/// already maps that to `Err("refresh token expired")`) and the stored record is left
+/// untouched for diagnosis and cross-machine self-heal. `Fix(BUG-483)` annotations at
+/// both guard sites.
+///
+/// # Prevention
+///
+/// This structural test verifies the predicate exists, is invoked at ≥2 non-comment
+/// call sites (one per branch), and that both sites carry the `Fix(BUG-483)` marker.
+///
+/// # Pitfall
+///
+/// A subprocess "success with credentials captured" is not proof the credentials are
+/// usable — a sandboxed logout produces a well-formed credential file whose tokens are
+/// empty strings. Validate content before persisting over a known-good record; a failed
+/// refresh must fail loudly (`None`) rather than destroy the only recoverable copy.
+#[ cfg( feature = "enabled" ) ]
+#[ test ]
+fn mre_bug483_refresh_write_back_must_guard_blank_credentials()
+{
+  // test_kind: bug_reproducer(BUG-483)
+  let src = std::fs::read_to_string(
+    concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/account.rs" )
+  ).expect( "read account.rs" );
+
+  // Fix: the blank-credentials predicate must exist.
+  assert!(
+    src.contains( "fn credentials_usable(" ),
+    "BUG-483 fix: `fn credentials_usable(` must exist in account.rs — blank-payload guard \
+     for subprocess-returned credentials"
+  );
+
+  // Fix: the predicate must be invoked at >=2 non-comment call sites
+  // (None branch of refresh_account_token + Some(paths) branch in
+  // refresh_token_with_live_path), per the FT-24 comment-filtered counting pattern.
+  let call_count = src.lines()
+    .filter( | line | !line.trim_start().starts_with( "//" ) )
+    .filter( | line | line.contains( "credentials_usable(" ) && !line.contains( "fn credentials_usable(" ) )
+    .count();
+  assert!(
+    call_count >= 2,
+    "BUG-483 fix: `credentials_usable(` must be invoked at >=2 non-comment sites \
+     (one per write-back branch). Found: {call_count}"
+  );
+
+  // Fix: both guard sites must carry the Fix(BUG-483) annotation.
+  let fix_count = src.matches( "Fix(BUG-483)" ).count();
+  assert!(
+    fix_count >= 2,
+    "BUG-483 fix: `Fix(BUG-483)` must appear at >=2 sites (None branch + Some(paths) branch). \
+     Found: {fix_count}"
+  );
+}
+
+/// BUG-483 companion: `credentials_usable` accepts payloads with both tokens non-empty.
+///
+/// Covers the flat shape and the real store shape (tokens nested under
+/// `claudeAiOauth`) — `parse_string_field` scans the whole blob, so nesting must
+/// not affect the verdict.
+#[ cfg( feature = "enabled" ) ]
+#[ test ]
+fn bug483_credentials_usable_accepts_non_blank_pair()
+{
+  assert!( account::credentials_usable(
+    r#"{"accessToken":"at-1","refreshToken":"rt-1"}"#
+  ) );
+  assert!( account::credentials_usable(
+    r#"{"claudeAiOauth":{"accessToken":"sk-ant-oat01-x","refreshToken":"sk-ant-ort01-y","expiresAt":1770000000000,"scopes":["user:inference"],"subscriptionType":"max"}}"#
+  ) );
+}
+
+/// BUG-483 companion: `credentials_usable` rejects every blank/missing-token shape.
+///
+/// The logged-out sandbox shape (`accessToken:""`, `refreshToken:""`, `expiresAt:0`)
+/// is the exact payload that blanked ten store records on 2026-08-12 — it MUST be
+/// rejected, as must each token blank or missing individually, and degenerate inputs.
+#[ cfg( feature = "enabled" ) ]
+#[ test ]
+fn bug483_credentials_usable_rejects_blank_or_missing_tokens()
+{
+  // The exact logged-out shape a sandboxed invalid_grant logout leaves in the temp HOME.
+  assert!( !account::credentials_usable(
+    r#"{"claudeAiOauth":{"accessToken":"","refreshToken":"","expiresAt":0,"scopes":[],"subscriptionType":""}}"#
+  ) );
+  // Each token blank individually.
+  assert!( !account::credentials_usable( r#"{"accessToken":"","refreshToken":"rt-1"}"# ) );
+  assert!( !account::credentials_usable( r#"{"accessToken":"at-1","refreshToken":""}"# ) );
+  // Each token missing individually.
+  assert!( !account::credentials_usable( r#"{"refreshToken":"rt-1"}"# ) );
+  assert!( !account::credentials_usable( r#"{"accessToken":"at-1"}"# ) );
+  // Degenerate inputs.
+  assert!( !account::credentials_usable( "{}" ) );
+  assert!( !account::credentials_usable( "" ) );
 }

@@ -347,16 +347,35 @@ pub fn parse_oauth_usage( body : &str ) -> Result< OauthUsageData, QuotaError >
 ///
 /// `s` must start with `'{'`. Returns the slice `s[..end]` including both braces,
 /// or `None` if the input doesn't start with `'{'` or has unmatched braces.
+///
+/// Fix(BUG-002)
+/// Root cause: the brace-depth scan counted every `{`/`}` character in `s`,
+/// including ones inside a quoted field value, with no string-literal
+/// tracking — an in-string `}` desynchronized `depth`, truncating the
+/// returned slice before the object's real closing brace.
+/// Pitfall: brace-depth counting alone is not sufficient to find a JSON
+/// object's boundary — without also tracking string-literal state (quote
+/// toggling with backslash-escape lookahead), a bracket character inside a
+/// quoted field value is misread as a structural delimiter.
 fn extract_object_block( s : &str ) -> Option< &str >
 {
   if !s.starts_with( '{' ) { return None; }
-  let mut depth = 0_i32;
+  let mut depth       = 0_i32;
+  let mut in_string   = false;
+  let mut escape_next = false;
   for ( i, c ) in s.char_indices()
   {
+    if escape_next
+    {
+      escape_next = false;
+      continue;
+    }
     match c
     {
-      '{' => depth += 1,
-      '}' =>
+      '\\' if in_string => escape_next = true,
+      '"' => in_string = !in_string,
+      '{' if !in_string => depth += 1,
+      '}' if !in_string =>
       {
         depth -= 1;
         if depth == 0 { return Some( &s[ ..=i ] ); }

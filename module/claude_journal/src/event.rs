@@ -26,6 +26,8 @@ pub enum EventType
   ValidationRetry,
   /// An interactive session ended.
   Interactive,
+  /// A CLI invocation of any workspace binary.
+  Command,
 }
 
 impl EventType
@@ -45,6 +47,7 @@ impl EventType
       Self::RunnerRetry     => "runner_retry",
       Self::ValidationRetry => "validation_retry",
       Self::Interactive     => "interactive",
+      Self::Command         => "command",
     }
   }
 
@@ -65,6 +68,7 @@ impl EventType
       "runner_retry"     => Some( Self::RunnerRetry ),
       "validation_retry" => Some( Self::ValidationRetry ),
       "interactive"      => Some( Self::Interactive ),
+      "command"          => Some( Self::Command ),
       _                  => None,
     }
   }
@@ -216,4 +220,13 @@ pub struct EventFields
   /// Human-readable error message for runner-retry events.
   #[ serde( skip_serializing_if = "Option::is_none" ) ]
   pub error_message     : Option< String >,
+  /// Username invoking the CLI command (`command` events).
+  #[ serde( skip_serializing_if = "Option::is_none" ) ]
+  pub user              : Option< String >,
+  /// Hostname the CLI command was invoked from (`command` events).
+  #[ serde( skip_serializing_if = "Option::is_none" ) ]
+  pub host              : Option< String >,
+  /// Full argument list the CLI command was invoked with (`command` events).
+  #[ serde( skip_serializing_if = "Option::is_none" ) ]
+  pub args              : Option< Vec< String > >,
 }
