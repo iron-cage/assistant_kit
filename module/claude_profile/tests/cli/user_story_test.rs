@@ -4,8 +4,8 @@
 //! `tests/docs/cli/user_story/`. Tests cover five personas: account rotator,
 //! onboarding developer, quota monitor, DevOps automator, and credential diagnostician.
 //!
-//! `lim_it` tests require a live Anthropic API token; they are skipped automatically
-//! when credentials are absent or the API is rate-limited.
+//! `lim_it` tests require a live Anthropic API token; they panic loudly
+//! when credentials are absent or the API is rate-limited (no silent skips).
 //!
 //! ## Test Matrix
 //!
@@ -23,7 +23,7 @@
 //! | UA-2 | `onboarding_ua2_name_inference_and_missing_source` | auto-infer (a); exit 1 when absent (b) | P/N |
 //! | UA-3 | `onboarding_ua3_host_role_captured_and_dry_run` | host+role in `.json`; `dry::1` preview | P |
 //! | UA-4 | `onboarding_ua4_delete_removes_all_account_files` | delete removes `.credentials.json` + `.json` | P |
-//! | UA-5 | `onboarding_ua5_lim_it_relogin_spawns_oauth_tty` | TTY OAuth (`lim_it` — skipped; TTY required) | P |
+//! | UA-5 | `onboarding_ua5_lim_it_relogin_spawns_oauth_tty` | TTY OAuth (`lim_it` — token required; TTY manual-only) | P |
 //! | UA-6 | `onboarding_ua6_renewal_sets_renewal_at` | `_renewal_at` written to `{name}.json` | P |
 //!
 //! ### Story 3 — Multi-Account Quota Monitoring (UA-1..5)
@@ -249,14 +249,14 @@ fn onboarding_ua4_delete_removes_all_account_files()
   assert!( !meta_file.exists(), "metadata .json file must be removed after delete" );
 }
 
-// UA-5: .account.relogin spawns claude with TTY; propagates fresh credentials (lim_it — skipped)
+// UA-5: .account.relogin spawns claude with TTY; propagates fresh credentials (lim_it — token required; TTY manual-only)
 //
 // Requires an interactive OAuth browser flow that cannot be automated in CI.
 // Test exists for spec traceability (UA-5) and documents the OAuth constraint.
 #[ test ]
 fn onboarding_ua5_lim_it_relogin_spawns_oauth_tty()
 {
-  let Some( _token ) = live_active_token() else { return };
+  let _token = live_active_token().expect( "live API token required — no ~/.claude/.credentials.json" );
   // OAuth TTY flow cannot be automated programmatically. Manual test only.
 }
 
@@ -341,7 +341,7 @@ fn quota_ua2_sort_strategies_exit_0()
 #[ test ]
 fn quota_ua3_lim_it_live_mode_produces_output()
 {
-  let Some( token ) = live_active_token() else { return };
+  let token = live_active_token().expect( "live API token required — no ~/.claude/.credentials.json" );
   require_live_api( "quota_ua3_lim_it" );
 
   let dir = TempDir::new().unwrap();
@@ -634,7 +634,7 @@ fn diagnostics_ua3_paths_resolves_canonical_paths()
 #[ test ]
 fn diagnostics_ua4_lim_it_inspect_trace_shows_endpoints()
 {
-  let Some( token ) = live_active_token() else { return };
+  let token = live_active_token().expect( "live API token required — no ~/.claude/.credentials.json" );
   require_live_api( "diagnostics_ua4_lim_it" );
 
   let dir = TempDir::new().unwrap();

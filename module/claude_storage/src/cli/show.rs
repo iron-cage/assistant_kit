@@ -11,7 +11,6 @@ struct SessionDisplayOptions
 {
   show_entries  : bool,
   metadata_only : bool,
-  show_stat     : bool,
   show_tokens   : bool,
 }
 
@@ -60,7 +59,6 @@ pub fn show_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   {
     show_entries  : cmd.get_boolean( "show_entries" ).unwrap_or( false ),
     metadata_only,
-    show_stat     : cmd.get_boolean( "show_stat" ).unwrap_or( false ),
     show_tokens   : cmd.get_boolean( "show_tokens" ).unwrap_or( false ),
   };
 
@@ -244,9 +242,10 @@ fn show_project_impl( project_param : &str )
 ///
 /// REQ-011: Content-First Display
 ///
-/// Default shows conversation content in readable chat-log format.
-/// Use `show_metadata::1` for metadata-only behavior.
-/// Use `show_stat::1` to add the session statistics footer.
+/// Default shows conversation content in readable chat-log format, preceded
+/// by the same key:val attribute block used by `show_metadata::1`.
+/// Use `show_metadata::1` for metadata-only behavior (suppresses content).
+/// `show_stat::1` is accepted but has no effect (see `show_stat` param docs).
 /// Use `show_tokens::1` to add token usage counts.
 fn format_session_output(
   project : &claude_storage_core::Project,
@@ -278,8 +277,8 @@ fn format_session_output(
 
   // REQ-011: Content-first paradigm
   // - show_metadata::1 → Metadata only (suppresses conversation content)
-  // - default → Conversation content in chat-log format
-  // - show_stat::1 → Adds session statistics footer after content
+  // - default → key:val attribute block, then conversation content in chat-log format
+  // - show_stat::1 → no-op (block above already shows the equivalent fields)
   // - show_tokens::1 → Adds token usage counts section
 
   // Always show basic session header
@@ -292,21 +291,7 @@ fn format_session_output(
   // Metadata-only mode (show_metadata::1)
   if opts.metadata_only
   {
-    writeln!( output, "Path: {}", session.storage_path().display() ).unwrap();
-    writeln!( output, "Agent Session: {}", stats.is_agent_session ).unwrap();
-    writeln!( output, "Total Entries: {}", stats.total_entries ).unwrap();
-    writeln!( output, "User Entries: {}", stats.user_entries ).unwrap();
-    writeln!( output, "Assistant Entries: {}", stats.assistant_entries ).unwrap();
-
-    if let Some( first ) = &stats.first_timestamp
-    {
-      writeln!( output, "First Entry: {first}" ).unwrap();
-    }
-
-    if let Some( last ) = &stats.last_timestamp
-    {
-      writeln!( output, "Last Entry: {last}" ).unwrap();
-    }
+    write_session_metadata_block( &mut output, session, &stats );
 
     if opts.show_tokens
     {
@@ -342,12 +327,12 @@ fn format_session_output(
   // Content-first mode (default)
   else
   {
+    // Key:val attribute block (same fields/helper as show_metadata::1)
+    write_session_metadata_block( &mut output, session, &stats );
+    output.push( '\n' );
+
     let entries = session.entries()
       .map_err( | e | ErrorData::new( ErrorCode::InternalError, format!( "Failed to load entries: {e}" ) ) )?;
-
-    // Add separator for readability
-    output.push_str( "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" );
-    output.push( '\n' );
 
     // Format each entry as conversation
     for entry in entries
@@ -355,18 +340,6 @@ fn format_session_output(
       let formatted = format_entry_content( entry, None );
       output.push_str( &formatted );
       output.push_str( "\n\n" );
-    }
-
-    output.push_str( "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" );
-
-    // Session statistics footer (show_stat::1)
-    if opts.show_stat
-    {
-      output.push( '\n' );
-      output.push_str( "Session Metadata:\n" );
-      writeln!( output, "- Path: {}", session.storage_path().display() ).unwrap();
-      writeln!( output, "- Total Entries: {}", stats.total_entries ).unwrap();
-      writeln!( output, "- User/Assistant: {}/{}", stats.user_entries, stats.assistant_entries ).unwrap();
     }
 
     // Token usage section (show_tokens::1)
@@ -381,6 +354,32 @@ fn format_session_output(
   }
 
   Ok( OutputData::new( output, "text" ) )
+}
+
+/// Helper: Write the shared key:val attribute block (Path, Agent Session,
+/// Total/User/Assistant Entries, First/Last Entry) — used by both
+/// `show_metadata::1` mode and the default content-first mode.
+fn write_session_metadata_block(
+  output  : &mut String,
+  session : &claude_storage_core::Session,
+  stats   : &claude_storage_core::SessionStats,
+)
+{
+  writeln!( output, "Path: {}", session.storage_path().display() ).unwrap();
+  writeln!( output, "Agent Session: {}", stats.is_agent_session ).unwrap();
+  writeln!( output, "Total Entries: {}", stats.total_entries ).unwrap();
+  writeln!( output, "User Entries: {}", stats.user_entries ).unwrap();
+  writeln!( output, "Assistant Entries: {}", stats.assistant_entries ).unwrap();
+
+  if let Some( first ) = &stats.first_timestamp
+  {
+    writeln!( output, "First Entry: {first}" ).unwrap();
+  }
+
+  if let Some( last ) = &stats.last_timestamp
+  {
+    writeln!( output, "Last Entry: {last}" ).unwrap();
+  }
 }
 
 /// Helper: Format project output (extracted logic)

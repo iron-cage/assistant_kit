@@ -5,7 +5,7 @@
 Removes the `provider` key from `~/.clr/config.toml`'s user tier, reverting the global inference provider to `anthropic`. Present on `.provider.select`.
 
 - **Default:** `0` — no reset; mode on `.provider.select` determined by `id::` presence
-- **Constraints:** `0`, `1`, `false`, `true`
+- **Constraints:** `0` or `1` (`Kind::Integer` — only integer literals are accepted; `false`/`true` are rejected as a type mismatch before the command runs, unlike the string-typed `lock::`/`reserve::`, which silently coerce non-`"1"` values to off); any integer other than `1` behaves as `0`/no-op.
 - **Purpose:** Undo a previously selected provider; restore the default.
 
 **Values:**

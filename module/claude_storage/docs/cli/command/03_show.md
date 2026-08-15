@@ -11,7 +11,7 @@ Display session or project details. Scope-aware: when `session_id::` is given wi
 
 **Parameters:** `session_id::`, `project::`, `show_entries::`, `show_metadata::`, `show_stat::`, `show_tokens::`, `scope::`, `path::`
 
-**Exit:** `0` success | `1` argument error | `2` storage read error or project not found
+**Exit:** `0` success | `1` error (invalid arguments, storage read failure, or no project in cwd)
 
 **Syntax:**
 ```bash
@@ -30,7 +30,7 @@ claude_storage .show session_id::ID project::PROJECT
 | `project::` | [`ProjectId`](../type/05_project_id.md) | optional | current dir | Project identifier; when given with `session_id::`, restricts search to this project only |
 | `show_entries::` | Boolean | optional | `0` | Show all entries in session |
 | `show_metadata::` | Boolean | optional | `0` | Show metadata only (suppresses content) |
-| `show_stat::` | Boolean | optional | `0` | Append statistics footer in content mode |
+| `show_stat::` | Boolean | optional | `0` | Accepted for backward compatibility; no effect on output |
 | `show_tokens::` | Boolean | optional | `0` | Include token usage section |
 | `scope::` | [`ScopeValue`](../type/07_scope_value.md) | optional | `local` | Project search boundary (Case 2 only: session_id without project::) |
 | `path::` | [`StoragePath`](../type/10_storage_path.md) | optional | cwd | Scope anchor path |
@@ -41,7 +41,7 @@ claude_storage .show session_id::ID project::PROJECT
 1. Parse and validate parameters — reject whitespace-only `session_id::`, reject `show_entries::` without `session_id::`
 2. Dispatch by parameter combination — (a) no params → cwd project session list, (b) `session_id::` only → search cwd project and all topic variants, (c) `project::` only → that project session list, (d) both → that session in that project
 3. Load project/session data — prefix matching for partial UUIDs (Git-style 8-char prefix)
-4. Format output — metadata mode (`show_metadata::1`: structured fields) or content mode (default: conversation chat-log with separators); append optional stat footer (`show_stat::1`) and token usage (`show_tokens::1`)
+4. Format output — metadata mode (`show_metadata::1`: structured fields) or content mode (default: key:val attribute block, then conversation chat-log); `show_stat::1` has no effect; token usage appended via `show_tokens::1`
 
 **Examples:**
 ```bash
@@ -60,9 +60,9 @@ claude_storage .show session_id::ID project::/path/to/project
 
 **Notes:**
 - When `session_id::` is given without `project::`, the current project and all its topic variants (scope::local) are searched; supply `project::` to restrict lookup to one specific project
-- Without `session_id::`, resolves to current directory project; exits with `2` if cwd has no project in storage
-- `show_entries::1` and `show_metadata::1` are mutually exclusive; `show_entries::1` takes precedence
-- `show_stat::1` has no effect in `show_metadata::1` mode (metadata mode always shows structured fields)
+- Without `session_id::`, resolves to current directory project; exits with `1` if cwd has no project in storage
+- `show_metadata::1` selects metadata-only mode; `show_entries::1` only has an effect nested within that mode (appends a legacy UUID-only entries list) and is a no-op in the default content-first mode, which always shows full entry content regardless
+- `show_stat::1` has no effect in either `show_metadata::1` mode or content mode (both already show the equivalent fields unconditionally)
 
 ### Referenced Parameter Groups
 

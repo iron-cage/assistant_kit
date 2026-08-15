@@ -161,7 +161,7 @@ if let Some(effort) = effort_opt {
 | File | Relationship |
 |------|--------------|
 | `src/usage/subprocess.rs` | `resolve_model()`, `resolve_effort()`, subprocess arg construction |
-| `src/lib.rs` | `imodel::` and `effort::` parameter registration via `register_commands()` |
+| `src/registry.rs` | `imodel::` and `effort::` parameter registration via `register_commands()` |
 
 ### Algorithm Docs
 

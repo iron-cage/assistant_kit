@@ -40,6 +40,7 @@ The following parameters are legitimately required (no ambient default possible)
 |---------|-----------|---------------|
 | `.account.use` | `name::` | Switching to "the active account" is a no-op with no safe interpretation |
 | `.account.delete` | `name::` | Deleting "the active account" is destructive and must be explicit |
+| `.account.renewal` | `name::` | Accepts `all` or a comma-separated list for multi-account targeting — a single active-account default would be ambiguous about scope (one account vs. all) |
 
 All other account-name parameters must default to the active account or active credentials when omitted.
 
@@ -51,8 +52,9 @@ All other account-name parameters must default to the active account or active c
 
 **Detection command:**
 ```bash
-grep -n "require_nonempty_string_arg" dev/module/claude_profile/src/commands/cmd_args.rs
-# Expected: only .account.use and .account.delete sites
+grep -rn --include="*.rs" "require_nonempty_string_arg" src/commands/
+# cmd_args.rs holds only the definition — call sites live in account_ops.rs
+# (.account.use, .account.delete) and account_renewal.rs (.account.renewal)
 ```
 
 ### Violation Consequences
