@@ -15,7 +15,7 @@ Filter candidates for next-account recommendation and auto-switch. An account is
 
 #### Entry Points
 
-- `src/usage/sort_next.rs:24-35` — `find_first_eligible()` (gates 1–6; **planned:** gates 9, 10)
+- `src/usage/sort_next.rs:24-35` — `find_first_eligible()` (gates 1–6, 9, 10)
 - `src/usage/sort_next.rs:59` — `extra` closure passed by `find_next_for_strategy()` (gates 7–8)
 
 #### Gate Table
@@ -31,8 +31,8 @@ Filter candidates for next-account recommendation and auto-switch. An account is
 | 6 | Expired | `expires_at_ms / 1000 ≤ now_secs` | `sort_next.rs:31` |
 | 7 | Weekly-exhausted | `seven_day_left(aq) ≤ WEEKLY_EXHAUSTION_THRESHOLD` | `sort_next.rs:59` (extra) |
 | 8 | Foreign-owned | `is_owned = false AND gate_ownership = true` | `sort_next.rs:59` (extra) |
-| 9 | Claim-locked | `claim_lock = true` | `sort_next.rs` — inside `find_first_eligible()` (planned; unconditional, not part of `extra`) |
-| 10 | Provider-mismatch | `inference_provider != selected_provider` | `sort_next.rs` — inside `find_first_eligible()` (planned; unconditional, not part of `extra`) |
+| 9 | Claim-locked | `claim_lock = true` | `sort_next.rs` — inside `find_first_eligible()` (unconditional, not part of `extra`) |
+| 10 | Provider-mismatch | `inference_provider != selected_provider` | `sort_next.rs` — inside `find_first_eligible()` (unconditional, not part of `extra`) |
 
 #### Gate 8 Context — `gate_ownership` varies by call site
 

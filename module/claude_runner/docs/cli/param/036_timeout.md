@@ -53,15 +53,24 @@ values are silently ignored (parse failure → field stays at `None`, resolved t
 wins when both are present.
 
 <!-- BUG-399 (task/claude_runner/bug/completed/399_timeout_gate_wait_undocumented.md) —
-     --timeout does not bound the --max-sessions gate-wait phase, by design; this doc did
-     not cross-reference that boundary. See 025_concurrency_gate.md and 033_max_sessions.md. -->
+     originally: --timeout did not bound the --max-sessions gate-wait phase, by design, and
+     this doc did not cross-reference that boundary. Superseded for expressed timeouts by
+     BUG-445 Fix Location #2 (the note below). -->
 
-**Note — does not bound gate-wait:** `--timeout` governs only the subprocess-execution
-phase, AFTER an invocation has already been admitted past the `--max-sessions` concurrency
-gate. If the invocation is still queued waiting for a session slot, `--timeout` has no
-effect: gate-wait is bounded independently by `CLR_GATE_POLL_SECS` x `CLR_GATE_MAX_ATTEMPTS`
-(default 30s x 1000 = ~8.3h). Total wall-clock exposure for a queued-then-executing
-invocation is gate-wait time PLUS `--timeout` — no single flag bounds the sum. See
+**Note — gate-wait defaulting (BUG-445):** An *expressed* `--timeout N` (the flag, or an
+applied `CLR_TIMEOUT`) also defaults the `--max-sessions` gate-wait budget to `N` seconds
+when `CLR_REMAINING_TIMEOUT_SECS` is absent or unparseable — the gate clamps its attempts
+to `N / poll_secs` and its deadline announcement names the source (`engaged (Ns from
+--timeout ...)`). A parseable `CLR_REMAINING_TIMEOUT_SECS` always wins over the flag
+(it is the per-dispatch coupling signal — see
+[085_gate_remaining_timeout_secs.md](085_gate_remaining_timeout_secs.md)). An explicit
+`--timeout 0` is an unlimited opt-out: no execution bound, no gate budget. When NO timeout
+is expressed (flag and env both absent), the print-mode default (3600 s) does NOT reach the
+gate — gate-wait falls back to its own ceiling, `CLR_GATE_POLL_SECS` x
+`CLR_GATE_MAX_ATTEMPTS` (default 30s x 1000 = ~8.3h), and only then is total wall-clock
+exposure gate-wait time PLUS the execution timeout. Verify:
+`clr -p --max-sessions 1 --timeout 5 x` under a held slot reports
+`gate-deadline  engaged (5s from --timeout ...)` on stderr. See
 [025_concurrency_gate.md](../user_story/025_concurrency_gate.md) and
 [033_max_sessions.md](033_max_sessions.md) for gate-wait mechanics.
 

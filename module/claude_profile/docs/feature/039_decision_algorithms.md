@@ -14,12 +14,12 @@ Each algorithm is documented in its canonical `algorithm/` doc — single source
 | # | Algorithm | Canonical doc | Entry point |
 |---|---|---|---|
 | 1 | Touch model selection | [algorithm/001](../algorithm/001_touch_model_selection.md) | `subprocess.rs` `resolve_model()` |
-| 2 | Session model override | [algorithm/002](../algorithm/002_session_model_override.md) | `api.rs` `apply_model_override()`, `format.rs` `recommended_model()` |
+| 2 | Session model override | [algorithm/002](../algorithm/002_session_model_override.md) | `api_switch.rs` `apply_model_override()`, `format.rs` `recommended_model()` |
 | 3 | Quota status groups | [algorithm/003](../algorithm/003_quota_status_groups.md) | `sort.rs` `status_group_of()` |
 | 4 | Next-account eligibility gates | [algorithm/004](../algorithm/004_eligibility_gates.md) | `sort_next.rs` `find_first_eligible()` + `extra` closure |
 | 5 | Next-account positive selection | [algorithm/005](../algorithm/005_next_account_selection.md) | `sort_next.rs` `find_next_for_strategy()` |
 | 6 | Quota polynomial approximation | [algorithm/006](../algorithm/006_quota_approximation.md) | `approx.rs` `approximate_utilization()` |
-| 7 | Sort strategies + `prefer_weekly` | [algorithm/007](../algorithm/007_sort_strategies.md) | `sort.rs` `sort_indices()`, `relevant_quotas()` |
+| 7 | Sort strategies + `prefer_weekly` | [algorithm/007](../algorithm/007_sort_strategies.md) | `sort.rs` `sort_indices()`, `format.rs` `relevant_quotas()` |
 | 8 | Subprocess effort resolution | [algorithm/008](../algorithm/008_subprocess_effort_resolution.md) | `subprocess.rs` `resolve_effort()` |
 
 ### Features

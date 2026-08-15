@@ -12,7 +12,7 @@ all format-capable commands, and column alignment for `.usage` table output.
 |----|------------|----------|--------|
 | FM-1 | `format::text` is the default — omitting `format::` produces text output | Default Behavior | ✅ |
 | FM-2 | `.paths` text output: labeled key-value pairs, one field per line | Structure | ✅ |
-| FM-3 | `.usage` text output includes header row, data rows, and footer recommendation line | Structure | ✅ |
+| FM-3 | `.usage` text footer shows the session model label (`· sonnet` / `· opus`) | Structure | ✅ |
 | FM-4 | Text output differs from JSON output (behavioral divergence) | Behavioral Divergence | ✅ |
 
 **Behavioral Divergence Pair:** FM-1 (format::text, omitted) ↔ FM-4 (format::json) — text output produces human-readable labeled key-value lines; JSON output produces a single-line machine-parseable object. Structurally incompatible outputs from the same command.
@@ -39,11 +39,11 @@ all format-capable commands, and column alignment for `.usage` table output.
 
 ---
 
-### FM-3: `.usage` text output includes header row, data rows, and footer recommendation line
+### FM-3: `.usage` text footer shows the session model label (`· sonnet` / `· opus`)
 
-- **Given:** `.usage` invoked with at least one account in the credential store
-- **When:** Output is captured
-- **Then:** Output contains a header row (column labels), one or more data rows (one per account), and a footer line containing the session model, effort, and `Next` recommendation — three distinct structural sections
+- **Given:** Two accounts built directly via `render_text()` (no CLI): one `is_current`, one candidate whose `seven_day_sonnet.utilization` is set to 50.0 (scenario 1: sonnet_left = 50% ≥ 10%) or 91.0 (scenario 2: sonnet_left = 9% < 10%, override fires)
+- **When:** `render_text()` output is captured for each scenario
+- **Then:** Output contains `· sonnet` in scenario 1 and `· opus` in scenario 2 — only the footer's model-label substring is asserted; the test makes no header-row, data-row-count, or `Next` recommendation-line assertion
 - **Source fn:** `test_ft28_009_footer_model_label` (usage/mod_tests.rs)
 - **Source:** [docs/cli/format/001_text.md §Structure](../../../../docs/cli/format/001_text.md)
 
@@ -51,8 +51,8 @@ all format-capable commands, and column alignment for `.usage` table output.
 
 ### FM-4: Text output is structurally different from JSON output (behavioral divergence)
 
-- **Given:** `.accounts` invoked first without `format::` (text), then with `format::json`
-- **When:** Both outputs are captured
-- **Then:** Text output contains labeled lines (e.g., `Active:  yes`); JSON output contains a single-line JSON array — the two formats are structurally incompatible, proving `format::` controls output structure meaningfully
-- **Source fn:** `acc33_accounts_current_param_and_json` (cli/accounts_list_test_b.rs; captures JSON output for comparison)
+- **Given:** `.accounts` invoked without `format::` (text) in one test, and separately with `format::json` in another test
+- **When:** Each output is captured
+- **Then:** Text output contains labeled lines `Active:  yes` / `Active:  no`; JSON output starts with `[`, confirming a single-line JSON array — the two formats are structurally incompatible, proving `format::` controls output structure meaningfully
+- **Source fn:** `acc02_active_shows_yes_inactive_shows_no` (text half) and `acc09_json_format_array` (JSON half) (both cli/accounts_list_test.rs)
 - **Source:** [docs/cli/format/001_text.md §Scope](../../../../docs/cli/format/001_text.md)

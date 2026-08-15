@@ -287,11 +287,7 @@ fn as20_lim_it_save_writes_roles_json()
 {
   // AC-01 (FT-01): .account.save with a valid accessToken calls fetch_claude_cli_roles and
   // writes {name}.json to the credential store. Requires live Anthropic credentials.
-  let Some( token ) = live_active_token() else
-  {
-    eprintln!( "as20: no live token — skipping" );
-    return;
-  };
+  let token = live_active_token().expect( "as20: live API token required — no ~/.claude/.credentials.json" );
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account_with_token( dir.path(), "user@example.com", &token, false );
@@ -321,11 +317,7 @@ fn as21_lim_it_resave_overwrites_roles_json()
 {
   // AC-03 (FT-03): Second .account.save overwrites existing {name}.json with fresh data.
   // Idempotency: stale snapshot is replaced by new API response. Requires live credentials.
-  let Some( token ) = live_active_token() else
-  {
-    eprintln!( "as21: no live token — skipping" );
-    return;
-  };
+  let token = live_active_token().expect( "as21: live API token required — no ~/.claude/.credentials.json" );
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account_with_token( dir.path(), "user@example.com", &token, false );

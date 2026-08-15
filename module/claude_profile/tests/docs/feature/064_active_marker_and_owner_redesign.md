@@ -8,7 +8,7 @@
 
 **Source:** [feature/064_active_marker_and_owner_redesign.md](../../../docs/feature/064_active_marker_and_owner_redesign.md)
 
-> **Partially superseded (Feature 065):** FTs referencing `active::USER@MACHINE` (FT-01..04, FT-13, FT-14, FT-18, FT-19) now apply via `assignee::USER@MACHINE` in the live codebase. The `owner::0` FTs (FT-08..12, FT-15..17) remain current. See [065_assignee_param_redesign.md](065_assignee_param_redesign.md) for replacement test cases.
+> **Partially superseded (Feature 065):** FTs referencing `active::USER@MACHINE` (FT-01..04, FT-13, FT-14, FT-18, FT-19) now apply via `assignee::USER@MACHINE` in the live codebase — see [065_assignee_param_redesign.md](065_assignee_param_redesign.md) for replacement test cases. FT-05's quoted migration-message text is stale for the same reason (see correction in FT-05 below): `active::` itself became `REMOVED_TOGGLE` under Feature 065, so it is no longer a valid migration target. The `owner::0` FTs (FT-08..12, FT-15..17) and the `unclaim::1` REMOVED_TOGGLE (FT-07) remain current.
 
 ## Test Case Index
 
@@ -92,6 +92,7 @@
 - **Exit:** 1
 - **Maps to:** AC-05
 - **Source:** [feature/064_active_marker_and_owner_redesign.md](../../../docs/feature/064_active_marker_and_owner_redesign.md)
+- **Correction (Feature 065):** the quoted message is stale — `active::` itself became `REMOVED_TOGGLE` under Feature 065, so it is no longer a valid migration target. The current stderr instead reads `"assign:: REMOVED — use assignee::USER@MACHINE name::X (or assignee::0 name::X for current machine)"` (verified: `src/commands/accounts.rs:135`, `src/registry.rs:81`; test: `ft05_assign_removed_toggle` in `tests/cli/account_assign_test.rs`).
 
 ---
 

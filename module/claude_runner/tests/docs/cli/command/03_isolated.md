@@ -8,7 +8,7 @@ Integration test planning for the `isolated` command. See [command/03_isolated.m
 |----|-----------|----------|
 | IT-1 | `--creds file.json "msg"` → runs with isolated HOME, exit 0 | Happy Path |
 | IT-2 | `--creds missing.json` → exit 1, file-not-found error | Error: Missing Creds |
-| IT-3 | `--creds file.json --timeout 0 "msg"` → exit 2 (timeout, no creds refresh) | Timeout |
+| IT-3 | `--creds file.json --timeout 0 "msg"` → runs to completion (no watchdog), exit 0 | Timeout |
 | IT-4 | `--creds file.json --timeout 0` → creds refreshed → exit 0, creds updated | Timeout with Refresh |
 | IT-5 | `--creds file.json` (no message) → interactive REPL mode in isolation | Interactive |
 | IT-6 | `--creds file.json -- --version` → passes `--version` through to claude | Flag Passthrough |
@@ -133,12 +133,12 @@ Integration test planning for the `isolated` command. See [command/03_isolated.m
 
 ---
 
-### IT-3: `--timeout 0 "msg"` → exit 2 (timeout, no creds refresh)
+### IT-3: `--timeout 0 "msg"` → runs to completion, exit 0
 
-- **Setup:** valid credentials JSON at `/tmp/it3_creds.json`; subprocess does not refresh creds before blocking
+- **Setup:** valid credentials JSON at `/tmp/it3_creds.json`; `--timeout 0` means unlimited (no deadline/watchdog armed)
 - **Command:** `clr isolated --creds /tmp/it3_creds.json --timeout 0 "Long running task"`
-- **Expected behavior:** subprocess attempted; wait window expires immediately; creds not refreshed → exit 2
-- **Exit:** 2
+- **Expected behavior:** subprocess runs to natural completion with no deadline enforced → exit 0; exit 2 is tolerated only as a defensive legacy bound, not reachable through the current deadline mechanism when `timeout_secs == 0`
+- **Exit:** 0
 - **Source:** [command/03_isolated.md](../../../../docs/cli/command/03_isolated.md), [--timeout](../../../../docs/cli/param/020_timeout.md)
 
 ---

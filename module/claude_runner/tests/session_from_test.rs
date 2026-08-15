@@ -1,6 +1,6 @@
 //! Edge case tests for the `--session-from` parameter (alias `--from`).
 //!
-//! Covers EC-1–EC-8 from `tests/docs/cli/param/076_session_from.md` and
+//! Covers EC-1–EC-11 from `tests/docs/cli/param/076_session_from.md` and
 //! US-1–US-7 from `tests/docs/cli/user_story/28_session_transplant.md`.
 //!
 //! `--session-from <DIR>` computes `scope_for(DIR).claude_session_dir`, sets
@@ -565,6 +565,119 @@ fn us7_source_session_files_not_modified()
   assert_eq!(
     size_before, size_after,
     "source session `.jsonl` size must not change after cross-loaded run"
+  );
+}
+
+// ── EC-9: relative source path resolves against cwd ───────────────────────────
+
+/// EC-9: a relative `--session-from` value resolves to the physical absolute
+/// path (cwd-anchored, symlinks resolved) before storage-name encoding.
+///
+/// Claude derives storage names from its physical getcwd, so an unresolved
+/// relative value (e.g. `./src`) would encode literally (`---src`) and silently
+/// miss the real storage dir — no `-c`, fresh session, no warning.  The builder
+/// canonicalizes the value, so the encoded name must match the canonicalized
+/// absolute form and the seeded session must be found (`-c` injected).
+#[ test ]
+fn ec9_relative_source_path_resolves_against_cwd()
+{
+  container_check();
+  let ch     = tempfile::TempDir::new().expect( "tmpdir" );
+  let parent = tempfile::TempDir::new().expect( "parent tmpdir" );
+  let src_abs = parent.path().join( "relsrc" );
+  std::fs::create_dir_all( &src_abs ).expect( "create relative source dir" );
+  // Expected encoding uses the canonicalized physical path — immune to /tmp symlinks.
+  let src_canon = std::fs::canonicalize( &src_abs ).expect( "canonicalize source" );
+  make_session_for( ch.path(), src_canon.to_str().expect( "utf-8" ), "rel-901" );
+  let ch_str = ch.path().to_str().expect( "utf-8" );
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = std::process::Command::new( bin )
+    .args( [ "--dry-run", "--session-from", "./relsrc", "Continue" ] )
+    .current_dir( parent.path() )
+    .env( "CLAUDE_HOME", ch_str )
+    .env_remove( "CLR_DIR" )
+    .env_remove( "CLR_SESSION_DIR" )
+    .env_remove( "CLR_SESSION_FROM" )
+    .output()
+    .expect( "failed to invoke clr binary" );
+  assert!(
+    out.status.success(),
+    "dry-run failed (exit {})\nstderr: {}",
+    out.status.code().unwrap_or( -1 ),
+    String::from_utf8_lossy( &out.stderr ),
+  );
+  let stdout = String::from_utf8_lossy( &out.stdout ).into_owned();
+  let expected_dir = format!(
+    "{ch_str}/projects/{}",
+    df( src_canon.to_str().expect( "utf-8" ) )
+  );
+  assert!(
+    stdout.contains( &format!( "CLAUDE_CODE_SESSION_DIR={expected_dir}" ) ),
+    "relative source must resolve to canonical absolute storage path. Got:\n{stdout}"
+  );
+  assert!(
+    stdout.contains( " -c \"" ),
+    "resolved source session must be found → `-c` injected. Got:\n{stdout}"
+  );
+}
+
+// ── EC-10: empty source value is ignored ──────────────────────────────────────
+
+/// EC-10: `--session-from ""` is treated as absent — same empty-is-identity rule
+/// as `--subdir ""` (BUG-229 precedent).
+///
+/// Without the filter, the empty value fell through `encode_path()`'s error path
+/// into the `-unknown` fallback storage name, actively exporting
+/// `CLAUDE_CODE_SESSION_DIR=<projects>/-unknown` and redirecting subprocess
+/// session storage to a shared junk dir.
+#[ test ]
+fn ec10_empty_source_value_ignored()
+{
+  let ch = tempfile::TempDir::new().expect( "tmpdir" );
+  let stdout = run_dry_env(
+    &[ "--session-from", "", "task" ],
+    &[ ( "CLAUDE_HOME", ch.path().to_str().expect( "utf-8" ) ) ],
+  );
+  assert!(
+    !stdout.contains( "CLAUDE_CODE_SESSION_DIR=" ),
+    "empty `--session-from` must not export a session dir. Got:\n{stdout}"
+  );
+  assert!(
+    !stdout.contains( "-unknown" ),
+    "empty `--session-from` must not fall into the `-unknown` storage dir. Got:\n{stdout}"
+  );
+}
+
+// ── EC-11: JSON config key `session-from` ─────────────────────────────────────
+
+/// EC-11: the `session-from` args-file key (JSON config route) behaves like the
+/// CLI flag — third input route alongside `--session-from` and `CLR_SESSION_FROM`.
+///
+/// `json_config.rs` maps the key onto `parsed.session_from` when the CLI did not
+/// set it; the computed source storage path and `-c` injection must match EC-1.
+#[ test ]
+fn ec11_json_config_session_from_key()
+{
+  let ch  = tempfile::TempDir::new().expect( "tmpdir" );
+  let src = "/tmp/076ec11-src";
+  make_session_for( ch.path(), src, "hhh-888" );
+  let cfg_dir  = tempfile::TempDir::new().expect( "cfg tmpdir" );
+  let cfg_path = cfg_dir.path().join( "args.json" );
+  std::fs::write( &cfg_path, format!( "{{\"session-from\": \"{src}\"}}" ) )
+    .expect( "write args-file" );
+  let ch_str = ch.path().to_str().expect( "utf-8" );
+  let stdout = run_dry_env(
+    &[ "--args-file", cfg_path.to_str().expect( "utf-8" ), "Continue" ],
+    &[ ( "CLAUDE_HOME", ch_str ) ],
+  );
+  let expected_dir = format!( "{ch_str}/projects/{}", df( src ) );
+  assert!(
+    stdout.contains( &format!( "CLAUDE_CODE_SESSION_DIR={expected_dir}" ) ),
+    "args-file `session-from` key must set session dir to source storage. Got:\n{stdout}"
+  );
+  assert!(
+    stdout.contains( " -c \"" ),
+    "args-file `session-from` with existing session must inject `-c`. Got:\n{stdout}"
   );
 }
 
