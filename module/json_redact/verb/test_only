@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# test_only — run a single test or group by nextest filter inside the runbox container.
+#
+# Usage: ./verb/test_only <nextest-filter>
+#   nextest-filter — test name substring pattern
+set -euo pipefail
+MODULE_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
+if [[ -n "${VERB_LAYER:-}" ]]; then
+  echo "ERROR: VERB_LAYER is not valid on the host side." >&2
+  echo "Standard invocation: cd module/json_redact && ./verb/test_only <filter>" >&2
+  exit 1
+fi
+if [[ "${1:-}" == "--dry-run" ]]; then
+  DRY_FILTER="${2:-<filter>}"
+  echo "runbox .live -- ./module/json_redact/verb/test_only.d/l1 '$DRY_FILTER'"
+  exit 0
+fi
+FILTER="${1:-}"
+if [[ -z "$FILTER" ]]; then
+  echo "ERROR: test_only requires a test name filter." >&2
+  echo "Usage: ./verb/test_only <nextest-filter-expression>" >&2
+  exit 1
+fi
+cd "$MODULE_DIR" && exec runbox .live -- "./module/json_redact/verb/test_only.d/l1" "$FILTER"

@@ -10,6 +10,7 @@ resolver = "2"
 members = [
   "module/claude_journal",
   "module/claude_journal_viewer",
+  "module/json_redact",
   "module/assistant_kit",
   "module/claude_auth",
   "module/claude_assets_core",
@@ -178,6 +179,11 @@ default-features = false
 [workspace.dependencies.claude_quota]
 path = "module/claude_quota"
 version = "=0.3.1"
+default-features = false
+
+[workspace.dependencies.json_redact]
+path = "module/json_redact"
+version = "=0.1.0"
 default-features = false
 
 ## External — published companion crates
