@@ -716,6 +716,10 @@ pub fn switch_account( name : &str, credential_store : &Path, paths : &ClaudePat
   std::fs::copy( &src, &tmp )?;
   std::fs::rename( &tmp, &creds )?;
 
+  // BUG-485 task/claude_profile/bug/485_refresh_presync_reread_never_applied.md — live
+  // credentials file (above) is updated before the active marker (below); a concurrent
+  // refresh_token_with_live_path's pre-sync guard can observe the old marker while this
+  // rename has already landed, corrupting the other account's store slot.
   // Update active marker after credentials are safely in place.
   let marker = credential_store.join( active_marker_filename() );
   std::fs::write( marker, name )?;
@@ -1154,6 +1158,9 @@ fn refresh_token_with_live_path(
   //   (now holding B's creds post-switch) to be written into A's credential store slot.
   // Pitfall: never cache a filesystem-derived boolean across a blocking call (subprocess,
   //   network I/O) in a multi-process environment — re-read at each use site instead.
+  // BUG-485 task/claude_profile/bug/485_refresh_presync_reread_never_applied.md — is_active_pre_sync
+  // is captured once here and reused unchanged across the read at line 1163 and the write it
+  // gates at line 1168, with no re-check immediately before the write. Not yet fixed.
   let is_active_pre_sync = {
     let marker = credential_store.join( active_marker_filename() );
     std::fs::read_to_string( &marker ).ok().is_some_and( |s| s.trim() == name )

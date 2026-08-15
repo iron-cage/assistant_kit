@@ -751,6 +751,10 @@ fn ft23_active_account_same_creds_falls_through_to_run_isolated()
 ///
 /// Never cache a filesystem-derived boolean across a blocking call (subprocess, network I/O)
 /// in a multi-process environment — re-read at each use site instead.
+// BUG-485 task/claude_profile/bug/485_refresh_presync_reread_never_applied.md — this test's
+// `Fix(BUG-316)` count assertion (below) passes on the still-unfixed pre-sync site too, since
+// the annotation comment sits near that site without the code actually re-reading the marker;
+// the assertion never traces which code block a match occurs in. Does not cover BUG-485's site.
 #[ cfg( feature = "enabled" ) ]
 #[ test ]
 fn mre_bug316_stale_is_active_race_recovery_copies_wrong_account_creds()
