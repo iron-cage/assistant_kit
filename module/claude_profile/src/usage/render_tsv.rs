@@ -5,7 +5,7 @@
 use crate::output::format_duration_secs;
 use super::types::{ AccountQuota, SortStrategy, PreferStrategy, ColsVisibility };
 use super::format::{
-  compute_expires_cell, sub_label, shorten_error,
+  compute_expires_cell_cached, sub_label, shorten_error,
   quota_text_cells, status_emoji, renews_label, next_event_label, renewal_secs,
 };
 use super::sort::sort_indices;
@@ -56,6 +56,9 @@ pub fn render_tsv(
   for idx in sorted_indices
   {
     let aq         = &accounts[ idx ];
+    // BUG-344 (reverted): a fetch-result conjunct was added here, then reverted — see render.rs's
+    //   flag_cell comment for the full explanation (docs/feature/009_token_usage.md AC-02/AC-11/
+    //   Algorithm step 5a specify ✓ gated solely on is_current).
     let flag_cell  = if aq.is_current { "\u{2713}" } else if aq.is_active { "*" } else if aq.is_occupied_elsewhere { "@" } else { "" };
     let status_str = match status_emoji( aq )
     {
@@ -63,7 +66,10 @@ pub fn render_tsv(
       "🟡" => "warn",
       _    => "err",
     };
-    let expires_str = compute_expires_cell( aq.expires_at_ms, now_secs );
+    // Fix(BUG-345): compute_expires_cell alone cannot show cache-fallback staleness.
+    // Root cause: aq.cached (fetch provenance) was never combined with expires_at_ms here.
+    // Pitfall: use the cache-aware wrapper, not compute_expires_cell directly, wherever aq.cached is in scope.
+    let expires_str = compute_expires_cell_cached( aq.expires_at_ms, now_secs, aq.cached );
     let sub_str     = sub_label( aq.account.as_ref() ).to_string();
     // Fix(BUG-232): billing_type=="none" → no active subscription → no renewal date to show.
     // Root cause: renews_label uses org_created_at unconditionally; has no billing_type param.

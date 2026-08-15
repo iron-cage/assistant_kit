@@ -84,14 +84,16 @@ Edge case coverage for the `get::` parameter on `.usage`. See [param/045_get.md]
 
 ---
 
-### EC-7: `get::next_event_type` and `get::next_event_secs` extract next-event scalars
+### EC-7: `get::next_event_type` and `get::next_event_secs` extract next-event scalars (live account — uncontrolled precondition)
 
-- **Given:** One account with a known upcoming 7d quota reset (`seven_day.resets_at` set to a future timestamp ~2 days away); `_renewal_at` not set.
+> **Semantic drift correction:** the cited test does not construct an account with a controlled, known upcoming 7d reset. It uses a live account (shared token) whose `seven_day.resets_at` is whatever the real API returns — not a fixed ~2-day-away timestamp. Consequently the test tolerates EITHER `"+7d"` OR `"$ren"` as valid `next_event_type` output (`let valid_labels = ["+7d", "$ren"]`), not the single deterministic `"+7d"` value originally claimed. `next_event_secs` is verified only as "parses as *some* valid `u64`" (`secs_str.parse::<u64>().is_ok()`), not the specific example value (`172800`) originally implied.
+
+- **Given:** One live account (shared token) — `seven_day.resets_at` and any `_renewal_at` state are whatever the live API returns; not controlled by the test.
 - **When (a):** `clp .usage get::next_event_type`
-- **Then (a):** Exits 0. Stdout is `+7d` (the event type label for the soonest upcoming strategic event).
+- **Then (a):** Exits 0. Stdout is EITHER `+7d` OR `$ren` (the test accepts either label as valid — it does not force a specific one).
 - **When (b):** `clp .usage get::next_event_secs`
-- **Then (b):** Exits 0. Stdout is a bare integer (seconds to event, e.g. `172800`); no table chrome.
+- **Then (b):** Exits 0. Stdout parses as some valid non-negative integer (`u64`); no table chrome. The specific value is not asserted.
 - **Exit:** 0
 - **Live:** yes
-- **Source fn:** `it234_lim_it_get_next_event_type_and_secs` (in `usage_lim_it_test_b.rs`)
+- **Source fn:** `it234_lim_it_get_next_event_type_and_secs` (in `usage_lim_it_test_b.rs`) — uses an uncontrolled live account; tolerates either of two output labels rather than asserting the single deterministic value originally claimed
 - **Source:** [param/045_get.md](../../../../docs/cli/param/045_get.md)

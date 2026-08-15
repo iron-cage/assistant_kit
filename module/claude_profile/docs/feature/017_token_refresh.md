@@ -158,7 +158,7 @@ Two other arg combinations are broken and must not be used:
 | File | Relationship |
 |------|--------------|
 | `src/usage/refresh.rs` | `refresh::` param read; retry trigger; calls `account::refresh_account_token()`; expiry derivation; retry fetch |
-| `src/lib.rs` | `refresh::` parameter registration via `register_commands()` |
+| `src/registry.rs` | `refresh::` parameter registration via `register_commands()` |
 | `src/usage/api.rs` | `apply_post_switch_touch()` — calls `refresh_account_token()` per AC-34 / invariant 008 |
 | `claude_profile_core/src/account.rs` | `refresh_account_token()` — `read credentials → run_isolated → write credentials → save` lifecycle; sole authorized caller of `run_isolated()` (invariant 008) |
 

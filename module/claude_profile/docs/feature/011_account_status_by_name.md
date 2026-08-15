@@ -23,7 +23,7 @@
 
 **N/A normalization:** Both `subscriptionType` and `rateLimitTier` fields normalize absent or empty-string values to `N/A` — regardless of the `name::` path.
 
-**Field-presence toggles apply equally** whether `name::` is used or not — the same `active::`, `sub::`, `tier::`, `expires::`, `email::` toggles suppress lines.
+**Removed field-presence params apply equally** whether `name::` is used or not — `sub::`, `tier::`, `expires::`, `email::` are REMOVED and now return a hard error (exit 1) directing callers to the equivalent `cols::` modifier (e.g. `cols::-sub`); `active::` is likewise REMOVED, directing callers to `assignee::USER@MACHINE name::X` instead.
 
 ### Acceptance Criteria
 

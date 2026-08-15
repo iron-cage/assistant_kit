@@ -4,5 +4,5 @@ Layer scripts for the `test` verb dispatcher.
 
 | File | Responsibility |
 |------|----------------|
-| `l0` | Disabled: blocks host-native execution; prints error and exits 1; entered via `VERB_LAYER=l0`. |
-| `l1` | Container-internal: nextest + doc tests + clippy (`-D warnings`), cwd-scoped to the module; payload of `runbox .live`. |
+| `l0` | Disabled: blocks host-native execution; prints error and exits 1; reachable only via direct invocation (`./verb/test.d/l0`) — the top-level `verb/test` rejects any `VERB_LAYER` override outright. |
+| `l1` | Container-internal: nextest + doc tests + clippy (`-D warnings`), cwd-scoped to the module; payload of `runbox .live`. Directly invocable — bypasses the `verb/test` container guard if invoked outside it; enforcement is scoped to the `verb/test` entry point only, matching `run.d/l1`'s identical pattern. |

@@ -11,7 +11,7 @@
 - `clr isolated --creds <path>` runs the subprocess with a temporary HOME containing only the provided credentials file
 - Subprocess has no access to the caller's real HOME, settings, or session history
 - OAuth tokens refreshed during the run are written back to the resolved credentials file (explicit or default) before exit
-- `--timeout <secs>` sets the max wait time; `--timeout 0` forces the credential-refresh path without a full session
+- `--timeout <secs>` sets the max wait time for the subprocess; `--timeout 0` means unlimited — no deadline/watchdog is armed, so the subprocess runs until it completes on its own
 - Temp HOME is deleted unconditionally on exit regardless of timeout or error
 
 ### Referenced Commands

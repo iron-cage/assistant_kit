@@ -72,16 +72,24 @@ including model-capability constraints and touch trigger conditions.
 
 ### AC-5: Model-capability constraint — Haiku cannot activate 7d-Sonnet window (BUG-289)
 
-- **Given:** An account with `seven_day_sonnet.resets_at = None` (Sonnet window `idle`).
-  A touch subprocess is launched using Haiku model (`IsolatedModel::Haiku`).
-- **When:** Touch completes and quota is re-fetched.
-- **Then:** `seven_day_sonnet.resets_at` remains `None` — Haiku API calls cannot open the
-  7d-Sonnet window. The window stays `idle`. The next `.usage` call detects the idle Sonnet
-  window again and fires another Haiku touch — creating an infinite no-op loop (BUG-289).
-  Fix: `resolve_model(Auto)` selects Sonnet when `son_idle=true`. Sonnet-family API calls
-  are the ONLY mechanism that can transition the 7d-Sonnet window from `idle` to `active`.
+- **Given:** An account with `seven_day_sonnet.resets_at = None` (Sonnet window `idle`,
+  `son_idle=true`).
+- **When:** `touch_skip_reason(&aq, store, false)` is evaluated twice on fresh fixtures with
+  identical `son_idle=true` state — no subprocess is actually launched or re-queried in this
+  test. Separately, `resolve_model(&aq, SubprocessModel::Auto)` is evaluated on the same
+  state.
+- **Then:** Both `touch_skip_reason` calls return `None` — the touch trigger fires on every
+  call as long as `son_idle=true` holds, which is the pre-fix infinite-loop precondition: a
+  Haiku touch subprocess cannot open the 7d-Sonnet window (`resets_at` would stay `None`
+  forever), so the window would stay `idle` and every subsequent `.usage` call would re-fire
+  the trigger (BUG-289). `resolve_model(Auto)` returns `"claude-sonnet-5"`, not Haiku — the
+  actual fix. Sonnet-family API calls are the ONLY mechanism that can transition the
+  7d-Sonnet window from `idle` to `active`.
 - **Source fn:** `test_mre_bug289_son_running_false_haiku_touch_fires_on_every_call` in
-  `tests/usage/touch_tests.rs`
+  `tests/usage/touch_tests_b.rs` (proves the trigger persists across calls — the loop
+  precondition); `it_imodel_auto_selects_sonnet_when_son_idle` in
+  `tests/usage/subprocess_tests.rs` (proves `resolve_model(Auto)` actually selects Sonnet —
+  the fix itself)
 - **Source:** [state_machine/003_session_window_lifecycle.md](../../../docs/state_machine/003_session_window_lifecycle.md)
 
 ---

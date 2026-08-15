@@ -4,11 +4,16 @@
 //!
 //! Test spec: `docs/cli/user_story/025_concurrency_gate.md`, `docs/cli/param/033_max_sessions.md`.
 //!
+//! T15–T22 (slot-wait messaging, reclaim-ticket chains) live in `concurrency_gate_ext_test.rs`.
+//! T21 (staleness threshold) onward through T34 (progress-message wording) live in
+//! `concurrency_gate_ext2_test.rs`. T35/T36 and all `t_gate_*` override-tier tests
+//! live in `concurrency_gate_ext3_test.rs`.
+//!
 //! # Test Case Index
 //!
 //! | ID  | Name                                                                      | TSK-368 Row |
 //! |-----|----------------------------------------------------------------------------|-------------|
-//! | T01 | 6 print-mode processes active, print invocation, default → gate triggers at 6 | T01 |
+//! | T01 | 8 print-mode processes active, print invocation, default → gate triggers at 8 | T01 |
 //! | T02 | 5 print-mode processes active, print invocation, default → gate does not trigger | T02 |
 //! | T03 | 15 print-mode + 1 interactive active, interactive invocation → gate skipped, zero wait | T03 |
 //! | T04 | 5 print-mode + 10 interactive active, print invocation, `--max-sessions 5` → print-mode-only count | T04 |
@@ -38,13 +43,27 @@
 //! | T32 | `clr isolated`, 3 print-mode processes active, `--args-file` JSON `{"max-sessions": 3}` (no CLI flag) → gate triggers and reports 3/3, proving `apply_json_config_isolated()`'s `"max-sessions"` arm actually changes isolated's resolved gate limit, not just its unused-default no-op | — |
 //! | T33 | 1 live occupier in `CLR_PROC_DIR`, `--max-sessions 1` → second invocation observes `count_u32 >= max` (`has_capacity=false`) → stderr names `[at capacity]`, NOT `[slot held by another session]` or `[lost reservation race]` (INV-013 IN-4) | — |
 //! | T34 | same fixture as T33 → diagnostic line preserves `"gate-wait  active="` prefix (TSK-452 format, replaces pre-TSK-452 `"active; waiting"`) when cause suffix is appended (INV-013 IN-5) | — |
+//! | T37 | pre-seeded slot owned by an exited-but-unreaped (zombie) PID, `CLR_GATE_STALE_SECS` unset → owner reads as dead, slot reclaimed, caller admitted promptly (BUG-479) | — |
+//! | T38 | census 0 < max 1 but the sole slot held by a live foreign owner → poll line and timeout message both name the measured occupancy `slots=1/1`; at-capacity lines never carry the field (BUG-480) | — |
+//! | T39 | `CLR_REMAINING_TIMEOUT_SECS` unset / unparseable / set-but-nonlimiting → each denied gate run announces its resolution state (`gate-deadline` line, incl. `stale-reclaim` state) and the three states are mutually distinguishable (BUG-481) | — |
+//! | T40 | `CLR_REMAINING_TIMEOUT_SECS` empty / negative → announced off-unparseable with raw value; `"0"` → engaged with the `.max(1)` one-attempt floor, budget-exhaustion path (BUG-481 edge matrix) | — |
+//! | T41 | `CLR_GATE_POLL_SECS=0` + numeric `CLR_REMAINING_TIMEOUT_SECS` → no divide-by-zero panic; quotient divisor floored to 1, announced nonlimiting (BUG-481) | — |
 //!
-//! T05 (`clr --help` shows `default: 6`) is covered by
-//! `param_edge_cases_test.rs::ec9_max_sessions_help_shows_default_six`.
+//! T05 (`clr --help` shows `default: 8`) is covered by
+//! `param_edge_cases_test.rs::ec9_max_sessions_help_shows_default_eight`.
 //!
 //! T12 (regression: pre-existing T01/T02/T04/T08 still pass using the renamed
 //! `CLR_GATE_POLL_SECS` var) is covered by those same tests post-rename — no
 //! separate function.
+//!
+//! Note: this Test Case Index enumerates every T-ID across all 4 split files
+//! (`concurrency_gate_test.rs`, `_ext_test.rs`, `_ext2_test.rs`, `_ext3_test.rs`);
+//! it is kept whole in this file only to preserve its pre-existing cross-references
+//! rather than being torn across files. Some T-IDs below (e.g. T21, T22) label two
+//! distinct functions in different files — a pre-existing quirk, not introduced by
+//! this split. `t_gate_*` override-tier tests (T35/T36 plus the poll-secs/max-attempts/
+//! stale-secs/remaining-timeout variants) are not T-numbered and are listed by fn name
+//! only in `concurrency_gate_ext3_test.rs`'s own header.
 
 // BUG-387 — T01-T07 above all pre-seed a static synthetic /proc snapshot and
 // invoke exactly one clr binary; none launch N concurrent clr invocations
@@ -56,12 +75,10 @@
 mod cli_binary_test_helpers;
 use cli_binary_test_helpers::
 {
-  fake_claude_binary_dir, fake_claude_dir, make_creds_file, make_proc_dir,
-  spawn_fake_claude, spawn_print_claude, spawn_print_claude_for, wait_bounded,
+  build_argv_tolerant_sleeper, fake_claude_binary_dir, fake_claude_dir, make_proc_dir,
+  slot_owner_pid, spawn_fake_claude, spawn_print_claude, spawn_print_claude_for, wait_bounded,
 };
-use std::io::Write as _;
 use std::process::Command;
-use tempfile::NamedTempFile;
 
 // ── T07: gate state file stays valid JSON when cwd contains a quote (BUG-384) ──
 
@@ -191,19 +208,19 @@ fn t13_gate_state_file_valid_json_for_control_char_cwd()
   );
 }
 
-// ── T01: gate triggers at exactly 6 print-mode processes (default limit) ───────
+// ── T01: gate triggers at exactly 8 print-mode processes (default limit) ───────
 
-/// T01: 6 print-mode processes active (5 long-lived + 1 short-lived), new print-mode
-/// invocation, `--max-sessions` unset (default 6) → gate triggers and emits the
-/// "6/6 sessions active; waiting" message, then releases once the short-lived
-/// process self-expires and the count drops below 6.
+/// T01: 8 print-mode processes active (7 long-lived + 1 short-lived), new print-mode
+/// invocation, `--max-sessions` unset (default 8) → gate triggers and emits the
+/// "8/8 sessions active; waiting" message, then releases once the short-lived
+/// process self-expires and the count drops below 8.
 #[ test ]
-fn t01_gate_triggers_at_six_print_mode_processes()
+fn t01_gate_triggers_at_eight_print_mode_processes()
 {
   let ( _occupier_dir, occupier_path ) = fake_claude_binary_dir();
 
   let mut long_lived : Vec< std::process::Child > =
-    ( 0..5 ).map( |_| spawn_print_claude( &occupier_path ) ).collect();
+    ( 0..7 ).map( |_| spawn_print_claude( &occupier_path ) ).collect();
   let mut short_lived = spawn_print_claude_for( &occupier_path, 5 );
 
   let mut pids : Vec< u32 > = long_lived.iter().map( std::process::Child::id ).collect();
@@ -235,25 +252,25 @@ fn t01_gate_triggers_at_six_print_mode_processes()
   );
   let stderr = String::from_utf8_lossy( &out.stderr );
   assert!(
-    // Anchored on "active=" so a wrong larger count (e.g. "active=16/6") can never
-    // false-positive match via the "6/6" tail — AF1.
-    stderr.contains( "gate-wait  active=6/6" ),
-    "T01: gate must report 6/6 print-mode sessions active. Got:\n{stderr}"
+    // Anchored on "active=" so a wrong larger count (e.g. "active=18/8") can never
+    // false-positive match via the "8/8" tail — AF1.
+    stderr.contains( "gate-wait  active=8/8" ),
+    "T01: gate must report 8/8 print-mode sessions active. Got:\n{stderr}"
   );
 }
 
 // ── T02: gate does not trigger below the limit ──────────────────────────────────
 
-/// T02: 5 print-mode processes active, new print-mode invocation, `--max-sessions`
-/// unset (default 6) → gate does not trigger; the dispatched command proceeds
+/// T02: 7 print-mode processes active, new print-mode invocation, `--max-sessions`
+/// unset (default 8) → gate does not trigger; the dispatched command proceeds
 /// immediately with no wait message on stderr.
 #[ test ]
-fn t02_gate_does_not_trigger_below_six_print_mode_processes()
+fn t02_gate_does_not_trigger_below_eight_print_mode_processes()
 {
   let ( _occupier_dir, occupier_path ) = fake_claude_binary_dir();
 
   let mut occupiers : Vec< std::process::Child > =
-    ( 0..5 ).map( |_| spawn_print_claude( &occupier_path ) ).collect();
+    ( 0..7 ).map( |_| spawn_print_claude( &occupier_path ) ).collect();
   let pids : Vec< u32 > = occupiers.iter().map( std::process::Child::id ).collect();
   let proc = make_proc_dir( &pids );
 
@@ -437,49 +454,6 @@ fn t06_max_sessions_zero_disables_gate_regardless_of_count()
   );
 }
 
-// ── T08: N concurrent live `clr` invocations racing a shared, mutating occupier
-//         set never admit more than --max-sessions at once (BUG-387) ──────────
-
-/// Compile a tiny real ELF binary named `claude` that ignores all argv and sleeps
-/// for `sleep_secs` seconds before exiting.
-///
-/// Needed because neither existing fake-`claude` fixture fits this test: a
-/// shebang shell script (`fake_claude_dir`) shows its *interpreter* as argv[0]
-/// in `/proc/{pid}/cmdline`, making it invisible to `find_claude_processes()`'s
-/// basename check; and `/bin/sleep` (`fake_claude_binary_dir`) errors out
-/// immediately on the non-numeric flags `clr` itself forwards to the dispatched
-/// `claude` process (e.g. `-p`). This binary is a real ELF (so the basename
-/// check passes) that never inspects `std::env::args()` at all (so it tolerates
-/// whatever `clr` forwards) and blocks for a fixed duration (so concurrently
-/// racing invocations have an observable overlap window).
-///
-/// Returns `(TempDir, path_val)` — `path_val` prepends the dir to `$PATH`,
-/// mirroring `fake_claude_binary_dir()`'s contract.
-///
-/// # Panics
-/// Panics if `rustc` is unavailable on `$PATH` or compilation fails.
-fn build_argv_tolerant_sleeper( sleep_secs : u64 ) -> ( tempfile::TempDir, String )
-{
-  let dir = tempfile::TempDir::new().expect( "tmpdir" );
-  let src = dir.path().join( "sleeper.rs" );
-  std::fs::write(
-    &src,
-    format!( "fn main() {{ std::thread::sleep(std::time::Duration::from_secs({sleep_secs})); }}" ),
-  ).expect( "write sleeper source" );
-  let bin = dir.path().join( "claude" );
-  let status = Command::new( "rustc" )
-    .arg( "-O" )
-    .arg( "-o" ).arg( &bin )
-    .arg( &src )
-    .stdout( std::process::Stdio::null() )
-    .stderr( std::process::Stdio::null() )
-    .status()
-    .expect( "invoke rustc for T08 fixture" );
-  assert!( status.success(), "T08 fixture: rustc failed to compile the argv-tolerant sleeper" );
-  let path_val = format!( "{}:{}", dir.path().display(), std::env::var( "PATH" ).unwrap_or_default() );
-  ( dir, path_val )
-}
-
 /// Mirror each PID in `clr_pids`'s direct children (per `/proc/{pid}/task/{pid}/children`)
 /// into `proc_dir` as a `/proc/{child}` symlink, polling every 5ms for up to `duration`.
 ///
@@ -491,6 +465,8 @@ fn build_argv_tolerant_sleeper( sleep_secs : u64 ) -> ( tempfile::TempDir, Strin
 /// direct children (not a blind host-wide `claude`-basename scan) so it cannot
 /// pick up an unrelated process from another test binary running concurrently
 /// under nextest.
+///
+/// Local to this file — not shared with any `_ext_test.rs` split.
 fn sync_children_into_proc_dir( clr_pids : &[ u32 ], proc_dir : &std::path::Path, duration : core::time::Duration )
 {
   let deadline = std::time::Instant::now() + duration;
@@ -516,17 +492,11 @@ fn sync_children_into_proc_dir( clr_pids : &[ u32 ], proc_dir : &std::path::Path
   }
 }
 
-/// Extract the `pid` field from a slot-reservation file's JSON content
-/// (`{"pid":N,"since":M}`), written by `claim_slot_file()` in `src/cli/gate.rs`.
-fn slot_owner_pid( content : &str ) -> Option< u32 >
-{
-  let marker = "\"pid\":";
-  let start  = content.find( marker )? + marker.len();
-  let rest   = &content[ start.. ];
-  let end    = rest.find( [ ',', '}' ] )?;
-  rest[ ..end ].trim().parse().ok()
-}
-
+// BUG-480 task/claude_runner/bug/480_gate_diagnostic_hides_slot_occupancy.md — fixed: this helper
+// computes the same occupancy quantity the production sweep now tallies as
+// `denied_slots` and renders as `slots=H/M`; the display assertion lives in T38
+// (census/occupancy-divergence fixture), while T15-family fixtures keep
+// asserting cause labels only.
 /// Count how many `slot_*.json` files in `gate_dir` are currently held by a
 /// live process — mirrors the exact liveness convention `build_queued_table()`
 /// already applies to `GateFile` orphans in `ps.rs`, so a slot left behind by
@@ -545,6 +515,9 @@ fn count_live_held_slots( gate_dir : &std::path::Path ) -> usize
         .is_some_and( |pid| std::path::Path::new( &format!( "/proc/{pid}" ) ).exists() )
     } ).count() )
 }
+
+// ── T08: N concurrent live `clr` invocations racing a shared, mutating occupier
+//         set never admit more than --max-sessions at once (BUG-387) ──────────
 
 /// T08 (BUG-387): launches 8 real `clr` print-mode invocations concurrently,
 /// sharing one `CLR_GATE_DIR` and one `CLR_PROC_DIR`, with `--max-sessions 3`.
@@ -589,6 +562,9 @@ fn t08_concurrent_clr_invocations_never_exceed_max_sessions()
     sync_children_into_proc_dir( &sync_pids, &sync_proc_dir, core::time::Duration::from_secs( 8 ) );
   } );
 
+  // BUG-479 task/claude_runner/bug/479_zombie_blind_pid_liveness.md — fixed: the zombie-reads-alive
+  // semantics this harness note documents manifested in production; the
+  // zombie-owner reclaim regression test is T37 below.
   // Fix(BUG-387 test): reap every racer via non-blocking, order-independent
   // `try_wait()` polling for the test's ENTIRE lifetime — both during sampling
   // and while draining stragglers afterward — never a sequential `.wait()`.
@@ -1010,2960 +986,179 @@ fn t14_reclaim_race_admits_at_most_one_caller_for_a_dead_owners_slot()
   );
 }
 
-// ── T15: slot-wait message names a live hold, not a race (BUG-393/BUG-396) ───
+// ── T37: zombie-owned slot reclaimed, caller admitted (BUG-479) ───────────────
 
-/// T15 (BUG-393, corrected by BUG-396): races exactly 2 concurrent `clr`
-/// invocations against `--max-sessions 1` with zero pre-existing occupiers,
-/// so both racers read `count_u32 = 0 < max = 1` on their very first attempt
-/// and contend for the same reservation index. Captures both racers' stderr
-/// directly (not `Stdio::null()`, unlike T08/T14) and asserts the losing
-/// racer's message names the cause as the slot being held by another
-/// session, and that neither racer's message claims capacity exhaustion or a
-/// reclaim race.
+/// T37 (BUG-479): a slot file owned by an exited-but-unreaped (zombie) PID must
+/// be reclaimed like any other dead owner's, admitting the caller promptly with
+/// zero `slot held by another session` denials — `CLR_GATE_STALE_SECS` unset.
 ///
 /// ## Root Cause
-/// `wait_for_session_slot()`'s admission check at `gate.rs:334` is a compound
-/// condition, `has_capacity && acquire_slot(...)`. Originally (BUG-393) this
-/// test's docs assumed the losing racer's non-admission was itself a "race" —
-/// but the loser's `pid_alive(owner)` check observes the WINNING racer's own
-/// PID, and that racer remains present in `/proc` (at minimum as a zombie,
-/// since this test's harness does not reap either racer until the 2s
-/// deadline below) for the entire observation window. The loser therefore
-/// always takes `acquire_slot()`'s `HeldByLive` branch — it never contends
-/// for anything, because it never even attempts a reclaim; the winner's slot
-/// is simply, unambiguously "held by a live session" from the loser's very
-/// first check onward. See BUG-396 for the genuine reclaim-race scenario
-/// (T16), which requires a pre-seeded, CONFIRMED-dead owner instead.
+/// `pid_alive()` was bare `/proc/{pid}` existence. A zombie keeps its `/proc`
+/// entry for as long as its parent fails to `wait()`, so `acquire_slot()`
+/// returned `Err( HeldByLive )` for zombie-owned slots forever — and with
+/// `CLR_GATE_STALE_SECS` unset (the default at every tier), no time-based
+/// fallback ever reclaimed them (observed live: 7/8 slots zombie-held for
+/// 9h–67h, starving all print-mode admission).
 ///
 /// ## Why Not Caught
-/// BUG-393's own fix shipped with this test asserting `"lost reservation
-/// race"` for the loser, and it passed — because at the time, `acquire_slot()`
-/// collapsed `HeldByLive` and `LostReclaimRace` into the same bare `false`,
-/// so both this test's scenario AND a genuine reclaim race produced
-/// identical output. The mislabeling was only exposed by production
-/// evidence (job #40: `has_capacity` true, message claimed a "race", but the
-/// recorded slot owner was directly confirmed alive via `/proc` — no reclaim
-/// was ever attempted).
+/// T14/T16/T17 all seed dead owners by spawning AND reaping (`wait()`), so
+/// `/proc/{pid}` is absent; no fixture covered the exited-but-unreaped middle
+/// state, even though T08's own harness had already tripped over exactly that
+/// semantics (see its Fix(BUG-387 test) note above).
 ///
 /// ## Fix Applied
-/// `acquire_slot()` now returns `Result<(), SlotDenialCause>` with
-/// `HeldByLive` and `LostReclaimRace` as distinct variants (`gate.rs`);
-/// `wait_for_session_slot()` matches on the variant to choose the cause
-/// suffix, rather than collapsing every non-admission under `has_capacity`
-/// into one label.
+/// `pid_alive()` now reads `/proc/{pid}/stat` and requires the state field
+/// (after the last `)`) to not be `Z` — bare existence is no longer liveness.
 ///
 /// ## Prevention
-/// A test asserting on `acquire_slot()`'s denial-cause message must confirm
-/// which branch it actually exercises by reasoning about `pid_alive()`'s
-/// observable inputs (is the checked PID a fresh racer that may still be a
-/// zombie, or a genuinely pre-reaped dead process?), not by assuming
-/// "not admitted" implies any particular cause.
+/// Liveness = `/proc/{pid}/stat` readable AND state ∉ {Z}, held in exactly one
+/// predicate shared by every consumer (gate reclaim + ps queued render); never
+/// bare `/proc/{pid}` existence.
 ///
 /// ## Pitfall
-/// Do not reuse T08/T14's 8-racer, compiled-sleeper-binary infrastructure for
-/// this — it is sized for peak-concurrency sampling, not message-content
-/// capture, and switching its uniform `Stdio::null()` to per-child `piped()`
-/// would need individual incremental reads threaded through its careful
-/// non-blocking reap loop. A minimal 2-racer, `--max-sessions 1` fixture
-/// isolates the same branches with far less moving parts.
-// test_kind: bug_reproducer(BUG-393)
+/// A `/proc/{pid}` directory proves a PID exists, not that a process runs —
+/// zombies keep the directory after death, so existence-keyed reclaim
+/// deadlocks the moment any supervisor stops reaping its children.
+// test_kind: bug_reproducer(BUG-479)
 #[ test ]
-fn t15_slot_wait_message_names_live_hold_when_owner_alive()
+fn t37_zombie_owned_slot_reclaimed_and_caller_admitted()
 {
   let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
   let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
-  let proc_dir = tempfile::TempDir::new().expect( "proc dir" ); // empty: 0 pre-existing occupiers
+  let proc_dir = tempfile::TempDir::new().expect( "proc dir" ); // empty: census sees 0 sessions
 
-  let bin = env!( "CARGO_BIN_EXE_clr" );
-  let spawn_racer = | label : &str |
+  // Manufacture a genuine zombie: spawn a real, immediately-exiting process and
+  // do NOT wait() on it — this test process is its parent, so until the reap at
+  // the end it stays state Z with a live /proc/{pid} entry.
+  let mut zombie = Command::new( "true" ).spawn().expect( "spawn zombie-to-be" );
+  let zombie_pid = zombie.id();
+  let deadline = std::time::Instant::now() + core::time::Duration::from_secs( 5 );
+  loop
   {
-    Command::new( bin )
-      .args( [ "-p", "--max-sessions", "1", "--journal", "off", label ] )
-      .env( "PATH", &script_path )
-      .env( "CLR_PROC_DIR", proc_dir.path() )
-      .env( "CLR_GATE_DIR", gate_dir.path() )
-      .env( "CLR_GATE_POLL_SECS", "1" )
-      .env( "CLR_GATE_MAX_ATTEMPTS", "5" )
-      .stdout( std::process::Stdio::null() )
-      .stderr( std::process::Stdio::piped() )
-      .spawn()
-      .expect( "spawn racing clr" )
-  };
-
-  let mut racer_a = spawn_racer( "race-a" );
-  let mut racer_b = spawn_racer( "race-b" );
-
-  // Both racers read count_u32=0 < max=1 on attempt 1 and contend for the same
-  // reservation index; the loser's message prints immediately (no delay before
-  // the first poll's eprintln). 2s is a generous margin before either racer
-  // could reach CLR_GATE_MAX_ATTEMPTS=5's own timeout/retry path, and is also
-  // why the winner is still present in `/proc` (unreaped by this harness) for
-  // the loser's entire observation window — see `## Root Cause` above.
-  std::thread::sleep( core::time::Duration::from_secs( 2 ) );
-  let _ = racer_a.kill();
-  let _ = racer_b.kill();
-  let out_a = racer_a.wait_with_output().expect( "reap racer a" );
-  let out_b = racer_b.wait_with_output().expect( "reap racer b" );
-
-  let stderr_a = String::from_utf8_lossy( &out_a.stderr );
-  let stderr_b = String::from_utf8_lossy( &out_b.stderr );
-
-  let a_held = stderr_a.contains( "slot held by another session" );
-  let b_held = stderr_b.contains( "slot held by another session" );
-  assert!(
-    a_held != b_held,
-    "T15 (BUG-393/396): exactly one racer must report the slot held by \
-     another (live) session. stderr_a:\n{stderr_a}\nstderr_b:\n{stderr_b}"
-  );
-  assert!(
-    !stderr_a.contains( "at capacity" ) && !stderr_b.contains( "at capacity" ),
-    "T15 (BUG-393/396): neither racer should report capacity exhaustion when both \
-     read count_u32=0 < max=1 on the racing attempt. stderr_a:\n{stderr_a}\n\
-     stderr_b:\n{stderr_b}"
-  );
-  assert!(
-    !stderr_a.contains( "lost reservation race" ) && !stderr_b.contains( "lost reservation race" ),
-    "T15 (BUG-393/396): neither racer should claim a reclaim race — the loser \
-     never attempts a reclaim because the observed owner (the winning racer) \
-     is alive. stderr_a:\n{stderr_a}\nstderr_b:\n{stderr_b}"
-  );
-}
-
-// ── T16: slot-wait message names a genuine reclaim race (BUG-396) ──────────
-
-/// T16 (BUG-396): races exactly 2 concurrent `clr` invocations against a
-/// pre-seeded, CONFIRMED-dead slot owner — mirroring T14's dead-owner
-/// technique: a real short-lived process is spawned and reaped so
-/// `/proc/{dead_pid}` is genuinely absent, not a lingering zombie — with
-/// `--max-sessions 1` so `has_capacity` is true for both racers on every
-/// attempt (`CLR_PROC_DIR` stays empty and static throughout). Both racers
-/// observe the identical dead owner and both attempt the reclaim-ticket
-/// path; exactly one wins the ticket (admitted via reclaim, no wait message
-/// at all), the other loses the ticket race. Captures the loser's stderr
-/// directly and asserts it names the cause as a lost reservation race — the
-/// one `acquire_slot()` code path where that label is actually accurate —
-/// and that it does NOT claim capacity exhaustion or a live-held slot,
-/// distinguishing it from T15's scenario.
-///
-/// ## Root Cause
-/// See `Fix(BUG-396)` on `acquire_slot()`/`SlotDenialCause` in `gate.rs`:
-/// prior to that fix, `HeldByLive` and `LostReclaimRace` were both a bare
-/// `false`, so the message site could not tell them apart.
-///
-/// ## Why Not Caught
-/// T15 was believed to already cover "lost reservation race", but its
-/// 2-fresh-racer fixture never exercises the reclaim-ticket path at all (see
-/// T15's `## Root Cause`, above) — it always takes the `HeldByLive` branch.
-/// T14 exercises the true dead-owner reclaim path but discards every
-/// racer's stderr via `Stdio::null()`, so no test asserted on this specific
-/// message content before now.
-///
-/// ## Fix Applied
-/// `acquire_slot()` now returns `Result<(), SlotDenialCause>`;
-/// `wait_for_session_slot()` matches `SlotDenialCause::LostReclaimRace`
-/// specifically for this path, separately from `HeldByLive`.
-///
-/// ## Prevention
-/// Any test claiming to cover "lost reservation race" must pre-seed a
-/// confirmed-dead owner (spawn + reap a real process, as T14 and this test
-/// do) rather than relying on two fresh racers racing an empty path.
-///
-/// ## Pitfall
-/// Do not assume `acquire_slot()` returning an `Err` means a race occurred —
-/// verify which `SlotDenialCause` variant fired. Only `LostReclaimRace`
-/// involves any actual contention; `HeldByLive` is simply "someone else has
-/// this index," which may be a session that started microseconds or hours
-/// ago — the code cannot tell, and the message must not claim it can.
-// test_kind: bug_reproducer(BUG-396)
-#[ test ]
-fn t16_slot_wait_message_names_genuine_reclaim_race_for_dead_owner()
-{
-  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
-  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
-  let proc_dir = tempfile::TempDir::new().expect( "proc dir" ); // empty: 0 counted occupiers throughout
-
-  // Pre-seed a slot file owned by a definitely-dead PID, mirroring T14: spawn
-  // a real, immediately-exiting process and reap it so `/proc/{dead_pid}` is
-  // confirmed absent (not a lingering zombie) from this point on.
-  let mut dead = Command::new( "true" ).spawn().expect( "spawn short-lived process" );
-  let dead_pid = dead.id();
-  let _ = dead.wait();
-  std::fs::write(
-    gate_dir.path().join( "slot_0.json" ),
-    format!( r#"{{"pid":{dead_pid},"since":0}}"# ),
-  ).expect( "pre-seed dead-owner slot file" );
-
-  let bin = env!( "CARGO_BIN_EXE_clr" );
-  let spawn_racer = | label : &str |
-  {
-    Command::new( bin )
-      // count_u32 stays 0 throughout (proc_dir is empty and static), so both
-      // racers read has_capacity=true and target index 0 — the pre-seeded
-      // dead-owner slot — on every attempt.
-      .args( [ "-p", "--max-sessions", "1", "--journal", "off", label ] )
-      .env( "PATH", &script_path )
-      .env( "CLR_PROC_DIR", proc_dir.path() )
-      .env( "CLR_GATE_DIR", gate_dir.path() )
-      .env( "CLR_GATE_POLL_SECS", "1" )
-      .env( "CLR_GATE_MAX_ATTEMPTS", "5" )
-      // Widen the reclaim race window deterministically (see
-      // reclaim_test_delay() in gate.rs), matching T14, so this test forces
-      // genuine ticket contention on every run instead of depending on
-      // incidental OS scheduling jitter between the two racers.
-      .env( "CLR_GATE_RECLAIM_TEST_DELAY_MS", "50" )
-      .stdout( std::process::Stdio::null() )
-      .stderr( std::process::Stdio::piped() )
-      .spawn()
-      .expect( "spawn racing clr" )
-  };
-
-  let mut racer_a = spawn_racer( "race-a" );
-  let mut racer_b = spawn_racer( "race-b" );
-
-  std::thread::sleep( core::time::Duration::from_secs( 2 ) );
-  let _ = racer_a.kill();
-  let _ = racer_b.kill();
-  let out_a = racer_a.wait_with_output().expect( "reap racer a" );
-  let out_b = racer_b.wait_with_output().expect( "reap racer b" );
-
-  let stderr_a = String::from_utf8_lossy( &out_a.stderr );
-  let stderr_b = String::from_utf8_lossy( &out_b.stderr );
-
-  // The winner is admitted on attempt 1 and returns immediately — it never
-  // reaches the `!quiet` message block on any attempt, so its stderr is
-  // empty. The loser, however, polls more than once within the 2s window
-  // (CLR_GATE_POLL_SECS=1): its FIRST attempt is the genuine reclaim-ticket
-  // race this test targets, but by its SECOND attempt the winner's own slot
-  // record is in place and alive, so the loser legitimately (and correctly)
-  // shifts to reporting "slot held by another session" from then on. Only
-  // the loser's first message is this test's subject.
-  let loser_stderr = if stderr_a.trim().is_empty() { stderr_b.as_ref() } else { stderr_a.as_ref() };
-  let first_line   = loser_stderr.lines().next().unwrap_or_default();
-  assert!(
-    first_line.contains( "lost reservation race" ),
-    "T16 (BUG-396): the losing racer's FIRST poll attempt must report losing the \
-     reclaim-ticket race for the pre-seeded dead owner — later attempts may \
-     legitimately shift to \"slot held by another session\" once the winner's own \
-     slot record is alive and observed on a subsequent poll. stderr_a:\n{stderr_a}\n\
-     stderr_b:\n{stderr_b}"
-  );
-  assert!(
-    !stderr_a.contains( "at capacity" ) && !stderr_b.contains( "at capacity" ),
-    "T16 (BUG-396): neither racer should report capacity exhaustion — \
-     has_capacity is true for both throughout. stderr_a:\n{stderr_a}\n\
-     stderr_b:\n{stderr_b}"
-  );
-}
-
-// ── T17: an orphaned reclaim ticket must not permanently block the slot (BUG-402) ──
-
-/// T17 (BUG-402): pre-seeds `gate_dir` with a dead-owner slot file AND its exact
-/// reclaim ticket already on disk, keyed and content-shaped exactly as
-/// `acquire_slot()` would have left it had a PREVIOUS ticket-winner crashed after
-/// winning the ticket's `create_new()` but before completing `rename()` onto the
-/// slot path — the ticket's own recorded claimant (`dead_claimant_pid`) is a
-/// second, independently confirmed-dead PID, distinct from the slot's recorded
-/// owner (`dead_owner_pid`). `CLR_PROC_DIR` stays empty for the whole run (0
-/// counted occupiers), so the single `clr` invocation below always targets index
-/// 0. Bounds the wait via a small `CLR_GATE_MAX_ATTEMPTS`/`CLR_GATE_POLL_SECS`
-/// pair plus `--retry-override 0` (mirroring T09), so this test fails fast
-/// rather than hanging if the bug reproduces. Asserts the invocation is
-/// admitted (exit 0 — the fake `claude` script's own exit code) instead of
-/// exhausting the gate-wait budget and exiting 1 with "session gate timed
-/// out" — the permanent-block symptom BUG-402 describes.
-///
-/// Root Cause: `acquire_slot()`'s reclaim branch treated ANY pre-existing
-/// ticket file as unconditional proof that a live reclaimer was already
-/// contending for the slot — `claim_slot_file(&ticket, ..)` failing (because
-/// the ticket already exists) went straight to `LostReclaimRace` with no
-/// check of the ticket's OWN recorded claimant. A claimant that won the
-/// ticket and then crashed before `rename()` leaves that ticket on disk
-/// forever (tickets are deliberately never deleted — see the `Fix(BUG-392)`
-/// Pitfall on `acquire_slot()`), so every subsequent caller hit the same
-/// false denial, with nothing on disk ever going to change.
-///
-/// Why Not Caught: T14 (BUG-392's own regression test) and T08 both exercise
-/// the reclaim path only through its single-generation happy path — a racer
-/// either wins the one ticket outright or loses to a still-live winner that
-/// finishes its rename shortly after. Neither constructs a ticket whose own
-/// claimant has *also* already died, so the permanently-orphaned-ticket case
-/// — a second, independent crash on top of the first — was entirely
-/// unexercised.
-///
-/// Fix Applied: `acquire_slot()`'s reclaim branch now walks the reclaim-
-/// ticket chain instead of stopping at the first existing ticket — when a
-/// ticket's own recorded claimant is dead AND the slot record hasn't moved
-/// on from the original dead owner, it advances to a new ticket keyed by
-/// that dead claimant's own (pid, since) and retries the same atomic
-/// `create_new()` arbitration, repeating until it either wins an unclaimed
-/// generation or hits a live claimant / already-reclaimed slot. See
-/// `Fix(BUG-402)` on `acquire_slot()` in `src/cli/gate.rs` for the full
-/// explanation.
-///
-/// Prevention: this test — a fresh caller must still acquire the slot
-/// promptly, well inside the bounded gate-wait budget, when the only
-/// obstruction is an orphaned reclaim ticket, instead of exhausting its
-/// retries and exiting with "session gate timed out".
-///
-/// Pitfall: any future change to this branch must preserve the exact
-/// two-variant `SlotDenialCause` diagnostic contract (`HeldByLive` → "slot
-/// held by another session", `LostReclaimRace` → "lost reservation race") —
-/// T15 and T16 in this same file assert these exact message suffixes
-/// verbatim (`config_file_test.rs` asserts only the older, generic
-/// "N/N sessions active; waiting" wait-message shape, not these cause
-/// suffixes). A ticket-chain fix must also re-check the
-/// slot's CURRENT owner before advancing generations, not just each
-/// generation's ticket-claimant liveness — otherwise a concurrent caller
-/// that completes its own rename mid-walk would be silently missed, and
-/// this call would report a stale verdict instead of reflecting the slot's
-/// true, just-changed state.
-///
-/// Bug file: `task/claude_runner/402_orphaned_reclaim_ticket_permanent_slot_block.md`.
-// test_kind: bug_reproducer(BUG-402)
-#[ test ]
-fn t17_orphaned_reclaim_ticket_does_not_permanently_block_slot()
-{
-  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
-  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
-  let proc_dir = tempfile::TempDir::new().expect( "proc dir" ); // empty: 0 counted occupiers throughout
-
-  // Two distinct, confirmed-dead PIDs — one for the slot's recorded owner, one
-  // for the reclaim ticket's recorded claimant — mirroring T14/T16's spawn+reap
-  // pattern so /proc/{pid} is genuinely absent for both, not a made-up number.
-  let mut dead_owner = Command::new( "true" ).spawn().expect( "spawn short-lived process" );
-  let dead_owner_pid = dead_owner.id();
-  let _ = dead_owner.wait();
-
-  let mut dead_claimant = Command::new( "true" ).spawn().expect( "spawn short-lived process" );
-  let dead_claimant_pid = dead_claimant.id();
-  let _ = dead_claimant.wait();
-
-  std::fs::write(
-    gate_dir.path().join( "slot_0.json" ),
-    format!( r#"{{"pid":{dead_owner_pid},"since":0}}"# ),
-  ).expect( "pre-seed dead-owner slot file" );
-
-  // The orphaned reclaim ticket: exactly the file acquire_slot() would have left
-  // behind had dead_claimant_pid won the ticket's create_new() and then crashed
-  // before rename() — keyed by (index=0, dead_owner_pid, owner_since=0), matching
-  // acquire_slot()'s own `reclaim_{index}_{owner}_{owner_since}.lock` naming.
-  std::fs::write(
-    gate_dir.path().join( format!( "reclaim_0_{dead_owner_pid}_0.lock" ) ),
-    format!( r#"{{"pid":{dead_claimant_pid},"since":0}}"# ),
-  ).expect( "pre-seed orphaned reclaim ticket" );
-
-  let bin = env!( "CARGO_BIN_EXE_clr" );
-  let mut child = Command::new( bin )
-    .args( [ "-p", "--max-sessions", "1", "--retry-override", "0", "--journal", "off", "x" ] )
-    .env( "PATH", &script_path )
-    .env( "CLR_PROC_DIR", proc_dir.path() )
-    .env( "CLR_GATE_DIR", gate_dir.path() )
-    .env( "CLR_GATE_POLL_SECS", "1" )
-    .env( "CLR_GATE_MAX_ATTEMPTS", "2" )
-    .stdout( std::process::Stdio::null() )
-    .stderr( std::process::Stdio::piped() )
-    .spawn()
-    .expect( "spawn clr" );
-
-  let deadline = std::time::Instant::now() + core::time::Duration::from_secs( 10 );
-  let exited = wait_bounded( &mut child, deadline );
-  if exited.is_none() { let _ = child.kill(); }
-  let out = child.wait_with_output().expect( "reap clr" );
-  let stderr = String::from_utf8_lossy( &out.stderr );
-
-  assert!(
-    exited.is_some(),
-    "T17 (BUG-402): clr must exit within 10s — still running past the 2-attempt, \
-     1s-poll gate budget means the process is stuck outside the gate-wait loop \
-     entirely. stderr:\n{stderr}"
-  );
-  assert_eq!(
-    exited.and_then( |s| s.code() ), Some( 0 ),
-    "T17 (BUG-402): a fresh caller must still acquire slot 0 promptly when the only \
-     obstruction is an ORPHANED reclaim ticket (its own recorded claimant is also \
-     dead, not a live contender) — acquire_slot() must not treat a pre-existing \
-     ticket as \"lost the race to a live reclaimer\" forever. Got exit {:?}, stderr:\n{stderr}",
-    exited.and_then( |s| s.code() )
-  );
-  assert!(
-    !stderr.contains( "session gate timed out" ),
-    "T17 (BUG-402): must not exhaust the gate-wait budget — stderr:\n{stderr}"
-  );
-}
-
-// ── T18: gate must scan other free indices, not just the count-derived one (BUG-404) ──
-
-/// T18 (BUG-404): a fresh caller must not starve when its single, count-derived
-/// candidate index (`count_u32`) collides with a live, genuinely-active owner
-/// while ANOTHER index within `0..max` sits completely free. `--max-sessions 2`
-/// creates two indices (0, 1); one real print-mode occupier is spawned and
-/// registered via `make_proc_dir` so `count_u32` is always `1` — the pre-fix
-/// algorithm's single candidate is always index 1. `slot_1.json` is pre-seeded
-/// with that same occupier's own (genuinely alive) PID as owner, so index 1 is
-/// legitimately `HeldByLive` on every attempt. `slot_0.json` is left completely
-/// unclaimed.
-///
-/// Prior to the fix, `wait_for_session_slot()` (`src/cli/gate.rs`) computed and
-/// tried only the single index `count_u32`; it never scanned `0..max` for a
-/// different available index. Asserts the invocation is admitted (exit 0 — the
-/// fake `claude` script's own exit code) instead of exhausting the gate-wait
-/// budget and exiting non-zero with "session gate timed out" — the starvation
-/// symptom BUG-404 describes.
-///
-/// Bug file: `task/claude_runner/bug/unverified/404_gate_single_candidate_index_no_scan.md`.
-// test_kind: bug_reproducer(BUG-404)
-#[ test ]
-fn t18_gate_tries_other_free_index_when_count_derived_index_is_live_held()
-{
-  let ( _script_dir, script_path )     = fake_claude_dir( "exit 0" );
-  let ( _occupier_dir, occupier_path ) = fake_claude_binary_dir();
-
-  let mut occupier   = spawn_print_claude_for( &occupier_path, 10 );
-  let occupier_pid   = occupier.id();
-  let proc           = make_proc_dir( &[ occupier_pid ] );
-
-  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
-
-  // Index 1 is exactly the index count_u32=1 will always compute to (one live
-  // print-mode occupier registered above) — seed it as HeldByLive by the SAME
-  // real, genuinely-alive occupier PID. Index 0 is left completely unclaimed.
-  std::fs::write(
-    gate_dir.path().join( "slot_1.json" ),
-    format!( r#"{{"pid":{occupier_pid},"since":0}}"# ),
-  ).expect( "pre-seed live-owner slot file at index 1" );
-
-  let bin = env!( "CARGO_BIN_EXE_clr" );
-  let mut child = Command::new( bin )
-    .args( [ "-p", "--max-sessions", "2", "--retry-override", "0", "--journal", "off", "x" ] )
-    .env( "PATH", &script_path )
-    .env( "CLR_PROC_DIR", proc.path() )
-    .env( "CLR_GATE_DIR", gate_dir.path() )
-    .env( "CLR_GATE_POLL_SECS", "1" )
-    .env( "CLR_GATE_MAX_ATTEMPTS", "2" )
-    .stdout( std::process::Stdio::null() )
-    .stderr( std::process::Stdio::piped() )
-    .spawn()
-    .expect( "spawn clr" );
-
-  let deadline = std::time::Instant::now() + core::time::Duration::from_secs( 10 );
-  let exited = wait_bounded( &mut child, deadline );
-  if exited.is_none() { let _ = child.kill(); }
-  let out    = child.wait_with_output().expect( "reap clr" );
-  let stderr = String::from_utf8_lossy( &out.stderr );
-
-  let _ = occupier.kill();
-  let _ = occupier.wait();
-
-  assert!(
-    exited.is_some(),
-    "T18 (BUG-404): clr must exit within 10s — still running past the 2-attempt, \
-     1s-poll gate budget means the process is stuck outside the gate-wait loop \
-     entirely. stderr:\n{stderr}"
-  );
-  assert_eq!(
-    exited.and_then( |s| s.code() ), Some( 0 ),
-    "T18 (BUG-404): a fresh caller must acquire the FREE index 0 promptly even \
-     though its count-derived candidate index (1) is genuinely held by a live \
-     session — the gate must scan for any available index, not try only the \
-     single count-derived one. Got exit {:?}, stderr:\n{stderr}",
-    exited.and_then( |s| s.code() )
-  );
-  assert!(
-    !stderr.contains( "session gate timed out" ),
-    "T18 (BUG-404): must not exhaust the gate-wait budget while index 0 sits \
-     completely free — stderr:\n{stderr}"
-  );
-}
-
-// ── T19: claim_slot_file() must publish its content atomically with its claim (BUG-407) ──
-
-/// T19 (BUG-407): a slot file must never be observable on disk in an
-/// existing-but-unparseable state — the state a crash between
-/// `claim_slot_file()`'s `create_new()` and its content `write!()` leaves
-/// behind, which `acquire_slot()` then classifies as a permanent denial
-/// (`HeldByLive` at the primary slot, `LostReclaimRace` at a reclaim ticket)
-/// with no liveness recheck and no reclaim path, because no owner PID was
-/// ever parsed out of the empty content.
-///
-/// `CLR_GATE_CLAIM_TEST_DELAY_MS` widens the window `claim_slot_file()`
-/// leaves open around its content becoming durable — pre-fix, between
-/// `create_new()` succeeding and `write!()` completing; post-fix, between
-/// its temp file being fully written and `hard_link()` publishing it. While
-/// a single `clr` invocation is inside that widened window, this test polls
-/// the slot file directly from the test harness (the crash-mid-write state
-/// is a pure filesystem artifact — no second racer is needed to observe it)
-/// and asserts it is always either fully absent or fully parseable, never
-/// present-but-unparseable.
-///
-/// Root Cause: `claim_slot_file()`'s `create_new(true).open(path)` and its
-/// subsequent `write!()` are two independent, non-atomic steps
-/// (`src/cli/gate.rs:115-124`) — `path` becomes visible to concurrent
-/// readers the instant `create_new()` succeeds, before its content is
-/// written.
-///
-/// Why Not Caught: no existing test pre-seeds or observes an
-/// existing-but-empty slot/ticket file — T15/T17/T18 all exercise a
-/// *readable* pre-existing record (dead owner, orphaned ticket, live
-/// owner); none constructs, or waits to observe, a file that exists but
-/// fails to parse.
-///
-/// Fix Applied: see `Fix(BUG-407)` on `claim_slot_file()` in `src/cli/gate.rs`.
-///
-/// Prevention: this test — with the window widened to 1s, a single fresh
-/// claim on an empty gate dir must never leave the slot file observable in
-/// an unparseable state at any point during its own claim.
-///
-/// Pitfall: this test polls tightly (5ms) throughout a generous 6s window
-/// specifically to catch a transient bad state a slower or shorter poll
-/// could miss — a passing result without ever observing a fully-valid
-/// record would not actually prove the widened window was exercised.
-///
-/// Bug file: `task/claude_runner/bug/completed/407_claim_slot_file_non_atomic_create_then_write.md`.
-// test_kind: bug_reproducer(BUG-407)
-#[ test ]
-fn t19_claim_slot_file_publish_is_atomic_under_widened_window()
-{
-  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
-  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
-  let proc_dir = tempfile::TempDir::new().expect( "proc dir" ); // empty: 0 counted occupiers
-
-  let bin = env!( "CARGO_BIN_EXE_clr" );
-  let mut child = Command::new( bin )
-    .args( [ "-p", "--max-sessions", "1", "--retry-override", "0", "--journal", "off", "x" ] )
-    .env( "PATH", &script_path )
-    .env( "CLR_PROC_DIR", proc_dir.path() )
-    .env( "CLR_GATE_DIR", gate_dir.path() )
-    .env( "CLR_GATE_CLAIM_TEST_DELAY_MS", "1000" )
-    .stdout( std::process::Stdio::null() )
-    .stderr( std::process::Stdio::piped() )
-    .spawn()
-    .expect( "spawn clr" );
-
-  let slot_path      = gate_dir.path().join( "slot_0.json" );
-  let poll_deadline  = std::time::Instant::now() + core::time::Duration::from_secs( 6 );
-  let mut saw_unparseable = false;
-  let mut saw_valid       = false;
-  while std::time::Instant::now() < poll_deadline
-  {
-    match std::fs::read_to_string( &slot_path )
-    {
-      Ok( content ) if slot_owner_pid( &content ).is_some() =>
-      {
-        saw_valid = true;
-        break;
-      }
-      Ok( _empty_or_malformed ) =>
-      {
-        saw_unparseable = true;
-        break;
-      }
-      Err( _not_yet_created ) => {}
-    }
-    std::thread::sleep( core::time::Duration::from_millis( 5 ) );
-  }
-
-  let deadline = std::time::Instant::now() + core::time::Duration::from_secs( 10 );
-  let exited = wait_bounded( &mut child, deadline );
-  if exited.is_none() { let _ = child.kill(); }
-  let out    = child.wait_with_output().expect( "reap clr" );
-  let stderr = String::from_utf8_lossy( &out.stderr );
-
-  assert!(
-    !saw_unparseable,
-    "T19 (BUG-407): observed slot_0.json existing but NOT yet parseable during \
-     claim_slot_file()'s widened claim window — this is exactly the on-disk state \
-     a crash between create_new() and write!() leaves behind, which acquire_slot() \
-     then classifies as a permanent denial. stderr:\n{stderr}"
-  );
-  assert!(
-    saw_valid,
-    "T19 (BUG-407): never observed slot_0.json in a fully-valid state within the \
-     poll window — the widened claim window may not have been exercised at all. \
-     stderr:\n{stderr}"
-  );
-  assert_eq!(
-    exited.and_then( |s| s.code() ), Some( 0 ),
-    "T19 (BUG-407): the claim must still succeed once its widened window elapses. \
-     Got exit {:?}, stderr:\n{stderr}",
-    exited.and_then( |s| s.code() )
-  );
-}
-
-// ── T20: reclaim gate has no staleness check for a live-but-stalled owner (BUG-400) ──
-
-/// T20 (BUG-400): pre-seeds `slot_0.json` with a genuinely alive occupier PID and
-/// `since=0` — the earliest representable timestamp, i.e. maximally stale by any
-/// real-world threshold — then races a single waiter against it twice against the
-/// SAME pre-seeded file. `since=0` (rather than a delay-based near-past timestamp)
-/// makes the elapsed-duration comparison deterministic: `unix_now() - 0` is always
-/// far larger than any small test threshold, with no dependency on real wall-clock
-/// timing precision or scheduling jitter.
-///
-/// Phase A: `CLR_GATE_STALE_SECS` unset — `acquire_slot()`'s only reclaim-eligibility
-/// test is `pid_alive(owner)`, so a live owner blocks the waiter indefinitely
-/// regardless of how stale `since` is; asserts the pre-fix/default behavior is
-/// unchanged (denied, gate exhausts) — this must remain true after the fix too,
-/// since an unset threshold means `is_stale` is always `false` (backward compatible).
-/// Also confirms Phase A does not mutate the pre-seeded slot file, since Phase B
-/// reuses it.
-///
-/// Phase B: `CLR_GATE_STALE_SECS=10`, well below the effectively-infinite elapsed
-/// duration since `since=0` — the owner is live but now ALSO stale, so the fixed
-/// `acquire_slot()` must fall through into the existing dead-owner reclaim-ticket
-/// path (the same machinery BUG-392/396/402 already established) and admit the
-/// waiter on its very first attempt.
-///
-/// ## Root Cause
-/// `acquire_slot()`'s reclaim-eligibility branch (`src/cli/gate.rs`, `if
-/// pid_alive( owner )`) is a single binary condition with no elapsed-time
-/// comparison against the recorded `owner_since` anywhere — a live-but-stalled
-/// (hung/deadlocked/SIGSTOPped) slot holder blocks a waiter forever even when
-/// aggregate capacity exists elsewhere, because the waiter's candidate index is
-/// deterministically re-derived from the same live count every poll, making the
-/// collision sticky rather than a one-off.
-///
-/// ## Why Not Caught
-/// T15/T18 both pre-seed a live owner, but neither varies `since` or exercises any
-/// staleness comparison — no prior test asserts on elapsed-time-based reclaim
-/// eligibility at all; the feature does not exist yet.
-///
-/// ## Fix Applied
-/// See `Fix(BUG-400)` on `acquire_slot()`/`gate_stale_secs()` in `src/cli/gate.rs`.
-///
-/// ## Prevention
-/// Any future reclaim-eligibility change must be re-verified against both an
-/// unset threshold (Phase A: denied) and a set, exceeded threshold (Phase B:
-/// admitted) — collapsing either direction silently reopens either the
-/// starvation bug (BUG-400) or a backward-compatibility regression.
-///
-/// ## Pitfall
-/// Do not replace `since=0` with a delay-based near-past timestamp (e.g.
-/// `unix_now() - 2` paired with a 2s `std::thread::sleep`) — that reintroduces
-/// exactly the wall-clock-precision flakiness this test's `since=0` choice avoids.
-///
-/// Bug file: `task/claude_runner/bug/completed/400_gate_reclaim_no_staleness_check.md`.
-// test_kind: bug_reproducer(BUG-400)
-#[ test ]
-fn t20_gate_reclaims_stale_live_owner_when_threshold_set()
-{
-  let ( _occupier_dir, occupier_path ) = fake_claude_binary_dir();
-  // 30s: comfortably longer than both phases' bounded runs combined, so the
-  // occupier's own self-expiry never races either waiter's observation window.
-  let mut occupier = spawn_print_claude_for( &occupier_path, 30 );
-  let occupier_pid = occupier.id();
-
-  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
-  // Empty: the occupier is deliberately NOT registered here — its liveness is
-  // checked directly against real /proc by pid_alive(), independent of the
-  // synthetic process count this dir backs (mirrors T15/T16's convention).
-  let proc_dir = tempfile::TempDir::new().expect( "proc dir" );
-
-  std::fs::write(
-    gate_dir.path().join( "slot_0.json" ),
-    format!( r#"{{"pid":{occupier_pid},"since":0}}"# ),
-  ).expect( "pre-seed live-but-stale owner slot file at index 0" );
-
-  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
-  let bin = env!( "CARGO_BIN_EXE_clr" );
-
-  // ── Phase A: unset CLR_GATE_STALE_SECS -> denied, gate exhausts ──
-  let mut waiter_a = Command::new( bin )
-    .args( [ "-p", "--max-sessions", "1", "--retry-override", "0", "--journal", "off", "x" ] )
-    .env( "PATH", &script_path )
-    .env( "CLR_PROC_DIR", proc_dir.path() )
-    .env( "CLR_GATE_DIR", gate_dir.path() )
-    .env( "CLR_GATE_POLL_SECS", "1" )
-    .env( "CLR_GATE_MAX_ATTEMPTS", "2" )
-    .stdout( std::process::Stdio::null() )
-    .stderr( std::process::Stdio::piped() )
-    .spawn()
-    .expect( "spawn waiter phase A" );
-
-  let deadline_a = std::time::Instant::now() + core::time::Duration::from_secs( 10 );
-  let exited_a = wait_bounded( &mut waiter_a, deadline_a );
-  if exited_a.is_none() { let _ = waiter_a.kill(); }
-  let out_a    = waiter_a.wait_with_output().expect( "reap waiter phase A" );
-  let stderr_a = String::from_utf8_lossy( &out_a.stderr );
-
-  assert!(
-    stderr_a.contains( "slot held by another session" ),
-    "T20 (BUG-400) phase A: default/unset CLR_GATE_STALE_SECS must preserve \
-     current behavior — a live owner (even one recorded since=0, i.e. maximally \
-     stale) is never reclaimed. stderr:\n{stderr_a}"
-  );
-  assert_eq!(
-    exited_a.and_then( |s| s.code() ), Some( 1 ),
-    "T20 (BUG-400) phase A: waiter must exhaust the gate (exit 1), never be \
-     admitted, while CLR_GATE_STALE_SECS is unset. Got exit {:?}, stderr:\n{stderr_a}",
-    exited_a.and_then( |s| s.code() )
-  );
-
-  let still_owned_by_occupier = std::fs::read_to_string( gate_dir.path().join( "slot_0.json" ) )
-    .ok()
-    .is_some_and( |c| c.contains( &occupier_pid.to_string() ) );
-  assert!(
-    still_owned_by_occupier,
-    "T20 (BUG-400): phase A (a pure denial, no reclaim attempted) must not mutate \
-     the pre-seeded slot file — phase B below reuses it."
-  );
-
-  // ── Phase B: CLR_GATE_STALE_SECS below the elapsed duration -> reclaim succeeds ──
-  let mut waiter_b = Command::new( bin )
-    .args( [ "-p", "--max-sessions", "1", "--retry-override", "0", "--journal", "off", "x" ] )
-    .env( "PATH", &script_path )
-    .env( "CLR_PROC_DIR", proc_dir.path() )
-    .env( "CLR_GATE_DIR", gate_dir.path() )
-    .env( "CLR_GATE_POLL_SECS", "1" )
-    .env( "CLR_GATE_MAX_ATTEMPTS", "2" )
-    .env( "CLR_GATE_STALE_SECS", "10" )
-    .stdout( std::process::Stdio::null() )
-    .stderr( std::process::Stdio::piped() )
-    .spawn()
-    .expect( "spawn waiter phase B" );
-
-  let deadline_b = std::time::Instant::now() + core::time::Duration::from_secs( 10 );
-  let exited_b = wait_bounded( &mut waiter_b, deadline_b );
-  if exited_b.is_none() { let _ = waiter_b.kill(); }
-  let out_b    = waiter_b.wait_with_output().expect( "reap waiter phase B" );
-  let stderr_b = String::from_utf8_lossy( &out_b.stderr );
-
-  let _ = occupier.kill();
-  let _ = occupier.wait();
-
-  assert_eq!(
-    exited_b.and_then( |s| s.code() ), Some( 0 ),
-    "T20 (BUG-400) phase B: once CLR_GATE_STALE_SECS is set below the elapsed \
-     duration, a live-but-stale owner must be reclaimed on the very first \
-     attempt, admitting the waiter immediately. Got exit {:?}, stderr:\n{stderr_b}",
-    exited_b.and_then( |s| s.code() )
-  );
-  assert!(
-    !stderr_b.contains( "slot held by another session" ) && !stderr_b.contains( "session gate timed out" ),
-    "T20 (BUG-400) phase B: waiter must be admitted immediately via the reclaim \
-     path, not fall back to the live-hold denial or exhaust the gate. stderr:\n{stderr_b}"
-  );
-}
-
-// ── T21: a caller that wins its own reclaim ticket but fails to complete
-// admission must not permanently self-deny on retry (BUG-405) ──
-
-/// T21 (BUG-405): pre-seeds `gate_dir` with a dead-owner slot file (no
-/// pre-existing ticket — this caller will be the FIRST to reach the ticket
-/// for this generation, unlike T17 which pre-seeds a ticket already
-/// orphaned by a DIFFERENT dead process). Sets
-/// `CLR_GATE_FORCE_TMP_CLAIM_FAIL_ONCE` so the single `clr` invocation's
-/// FIRST attempt at winning the ticket deterministically fails its own
-/// tmp-claim step, simulating a transient fs fault — exactly the scenario
-/// where the pre-fix code left the ticket behind, keyed by this same
-/// process's own (pid, since), causing every subsequent retry within the
-/// SAME invocation to read back its own still-alive pid and self-deny
-/// forever. `CLR_GATE_MAX_ATTEMPTS=3` gives the invocation two more
-/// attempts after the forced failure to prove it recovers. `CLR_PROC_DIR`
-/// stays empty (0 counted occupiers), so the invocation always targets
-/// index 0.
-///
-/// Root Cause: the ticket-win branch in `acquire_slot()` returned
-/// `LostReclaimRace` on tmp-claim or rename failure without removing the
-/// ticket it had just won. Because `pid`/`since` are fixed for this
-/// caller's entire `wait_for_session_slot()` call, every later retry
-/// recomputes the identical ticket path, finds it already claimed by
-/// ITSELF, reads back its own `(pid, since)` as `next_claimant`, and
-/// `pid_alive()` reports `true` — a caller can never lose a fair race to
-/// its own still-running self, so the false denial repeats on every
-/// subsequent attempt for that specific slot index, indefinitely.
-///
-/// Why Not Caught: T17 (BUG-402's own regression test) pre-seeds a ticket
-/// already orphaned by a DIFFERENT, already-dead process — it never
-/// exercises the case where the CURRENT invocation is itself the one that
-/// wins a ticket and then fails to complete it. T14 races several live
-/// concurrent callers to completion and never induces a tmp-claim or
-/// rename failure on any of them. No existing test forced a caller to
-/// collide with its own abandoned ticket.
-///
-/// Fix Applied: the ticket-win branch now removes the ticket it just won on
-/// both non-admission paths (tmp-claim failure, rename failure) before
-/// returning `LostReclaimRace`, so the next retry re-contends the same
-/// generation fresh instead of reading back its own abandoned claim. See
-/// `Fix(BUG-405)` on `acquire_slot()` in `src/cli/gate.rs`.
-///
-/// Prevention: this test — a caller whose own tmp-claim transiently fails
-/// once must still acquire the slot within its bounded gate-wait budget on
-/// a later attempt, instead of self-denying for the rest of its own
-/// invocation.
-///
-/// Pitfall: `CLR_GATE_FORCE_TMP_CLAIM_FAIL_ONCE` is a one-shot, in-process
-/// injection (an `AtomicBool` consumed on first check) — it fires exactly
-/// once regardless of how many `acquire_slot()` calls precede it, matching
-/// a real transient fault's lifecycle (occurs once, then clears). A test
-/// relying on this env var must not assume it fires on every attempt.
-///
-/// Bug file: `task/claude_runner/bug/completed/405_reclaim_ticket_winner_self_collision_denial.md`.
-// test_kind: bug_reproducer(BUG-405)
-#[ test ]
-fn t21_ticket_winner_that_fails_own_admission_does_not_self_deny_forever()
-{
-  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
-  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
-  let proc_dir = tempfile::TempDir::new().expect( "proc dir" ); // empty: 0 counted occupiers throughout
-
-  let mut dead_owner = Command::new( "true" ).spawn().expect( "spawn short-lived process" );
-  let dead_owner_pid = dead_owner.id();
-  let _ = dead_owner.wait();
-
-  std::fs::write(
-    gate_dir.path().join( "slot_0.json" ),
-    format!( r#"{{"pid":{dead_owner_pid},"since":0}}"# ),
-  ).expect( "pre-seed dead-owner slot file" );
-
-  let bin = env!( "CARGO_BIN_EXE_clr" );
-  let mut child = Command::new( bin )
-    .args( [ "-p", "--max-sessions", "1", "--retry-override", "0", "--journal", "off", "x" ] )
-    .env( "PATH", &script_path )
-    .env( "CLR_PROC_DIR", proc_dir.path() )
-    .env( "CLR_GATE_DIR", gate_dir.path() )
-    .env( "CLR_GATE_POLL_SECS", "1" )
-    .env( "CLR_GATE_MAX_ATTEMPTS", "3" )
-    .env( "CLR_GATE_FORCE_TMP_CLAIM_FAIL_ONCE", "1" )
-    .stdout( std::process::Stdio::null() )
-    .stderr( std::process::Stdio::piped() )
-    .spawn()
-    .expect( "spawn clr" );
-
-  let deadline = std::time::Instant::now() + core::time::Duration::from_secs( 10 );
-  let exited = wait_bounded( &mut child, deadline );
-  if exited.is_none() { let _ = child.kill(); }
-  let out = child.wait_with_output().expect( "reap clr" );
-  let stderr = String::from_utf8_lossy( &out.stderr );
-
-  assert!(
-    exited.is_some(),
-    "T21 (BUG-405): clr must exit within 10s — still running past the 3-attempt, \
-     1s-poll gate budget means the process is stuck outside the gate-wait loop \
-     entirely. stderr:\n{stderr}"
-  );
-  assert_eq!(
-    exited.and_then( |s| s.code() ), Some( 0 ),
-    "T21 (BUG-405): a caller whose own tmp-claim fails once (forced) must still \
-     acquire slot 0 on a later attempt — acquire_slot() must not leave its own \
-     abandoned ticket behind to self-deny every subsequent retry. Got exit {:?}, \
-     stderr:\n{stderr}",
-    exited.and_then( |s| s.code() )
-  );
-  assert!(
-    !stderr.contains( "session gate timed out" ),
-    "T21 (BUG-405): must not exhaust the gate-wait budget — stderr:\n{stderr}"
-  );
-}
-
-// ── T22: acquire_slot() walks an arbitrarily deep reclaim-ticket chain, not
-// just a single orphaned ticket (BUG-402 chain-walk capability) ──
-
-/// T22 (BUG-402): extends T17's single-orphaned-ticket scenario to a THREE-
-/// generation chain — `slot_0.json` records a dead owner
-/// (`dead_owner_pid`); its reclaim ticket
-/// (`reclaim_0_{dead_owner_pid}_0.lock`) is pre-seeded as already claimed by
-/// a second, independently-confirmed-dead PID (`dead_claimant_1`); THAT
-/// claimant's own ticket (`reclaim_0_{dead_claimant_1}_0.lock`) is in turn
-/// pre-seeded as claimed by a THIRD independently-confirmed-dead PID
-/// (`dead_claimant_2`) — two full orphaned generations stacked before any
-/// live contender ever runs. Only the third generation's ticket
-/// (`reclaim_0_{dead_claimant_2}_0.lock`) is left genuinely unclaimed, for
-/// the real `clr` invocation to win fresh. Proves `acquire_slot()`'s loop
-/// walks past MULTIPLE dead generations in one call, not merely the single
-/// extra hop T17 exercises — the capability the chain-walk design in
-/// `Fix(BUG-402)` is specifically built to provide, per its own rationale
-/// comment on `acquire_slot()` in `gate.rs`. `CLR_PROC_DIR` stays empty
-/// throughout (0 counted occupiers), so the invocation always targets
-/// index 0.
-///
-/// Prevention: this test — a fresh caller must still acquire the slot
-/// promptly when TWO full orphaned-ticket generations precede it, not just
-/// one, proving the chain-walk loop's depth is not silently bounded to a
-/// single hop.
-///
-/// Pitfall: each generation's ticket key is derived from the PRIOR
-/// generation's own (pid, since) — `reclaim_{index}_{claimant}_{since}.lock`
-/// — so the three ticket paths in this test must be constructed in the
-/// exact same chained order `acquire_slot()` computes them, not assembled
-/// independently, or the test would silently exercise a different, shorter
-/// chain than intended.
-///
-/// Bug file: `task/claude_runner/bug/402_orphaned_reclaim_ticket_permanent_slot_block.md`.
-// test_kind: bug_reproducer(BUG-402)
-#[ test ]
-fn t22_acquire_slot_walks_multi_generation_reclaim_ticket_chain()
-{
-  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
-  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
-  let proc_dir = tempfile::TempDir::new().expect( "proc dir" ); // empty: 0 counted occupiers throughout
-
-  // Three distinct, confirmed-dead PIDs, chained exactly as acquire_slot()'s
-  // loop would advance through them — mirrors T17/T14's spawn+reap pattern.
-  let mut dead_owner = Command::new( "true" ).spawn().expect( "spawn short-lived process" );
-  let dead_owner_pid = dead_owner.id();
-  let _ = dead_owner.wait();
-
-  let mut dead_claimant_1 = Command::new( "true" ).spawn().expect( "spawn short-lived process" );
-  let dead_claimant_1_pid = dead_claimant_1.id();
-  let _ = dead_claimant_1.wait();
-
-  let mut dead_claimant_2 = Command::new( "true" ).spawn().expect( "spawn short-lived process" );
-  let dead_claimant_2_pid = dead_claimant_2.id();
-  let _ = dead_claimant_2.wait();
-
-  std::fs::write(
-    gate_dir.path().join( "slot_0.json" ),
-    format!( r#"{{"pid":{dead_owner_pid},"since":0}}"# ),
-  ).expect( "pre-seed dead-owner slot file" );
-
-  // Generation 1's ticket: claimed by dead_claimant_1 (also dead).
-  std::fs::write(
-    gate_dir.path().join( format!( "reclaim_0_{dead_owner_pid}_0.lock" ) ),
-    format!( r#"{{"pid":{dead_claimant_1_pid},"since":0}}"# ),
-  ).expect( "pre-seed generation-1 ticket" );
-
-  // Generation 2's ticket: claimed by dead_claimant_2 (also dead) — keyed by
-  // generation 1's own claimant, exactly as acquire_slot() would advance.
-  std::fs::write(
-    gate_dir.path().join( format!( "reclaim_0_{dead_claimant_1_pid}_0.lock" ) ),
-    format!( r#"{{"pid":{dead_claimant_2_pid},"since":0}}"# ),
-  ).expect( "pre-seed generation-2 ticket" );
-
-  // Generation 3's ticket is deliberately left unclaimed — the real `clr`
-  // invocation below must walk past both dead generations and win it fresh.
-
-  let bin = env!( "CARGO_BIN_EXE_clr" );
-  let mut child = Command::new( bin )
-    .args( [ "-p", "--max-sessions", "1", "--retry-override", "0", "--journal", "off", "x" ] )
-    .env( "PATH", &script_path )
-    .env( "CLR_PROC_DIR", proc_dir.path() )
-    .env( "CLR_GATE_DIR", gate_dir.path() )
-    .env( "CLR_GATE_POLL_SECS", "1" )
-    .env( "CLR_GATE_MAX_ATTEMPTS", "2" )
-    .stdout( std::process::Stdio::null() )
-    .stderr( std::process::Stdio::piped() )
-    .spawn()
-    .expect( "spawn clr" );
-
-  let deadline = std::time::Instant::now() + core::time::Duration::from_secs( 10 );
-  let exited = wait_bounded( &mut child, deadline );
-  if exited.is_none() { let _ = child.kill(); }
-  let out = child.wait_with_output().expect( "reap clr" );
-  let stderr = String::from_utf8_lossy( &out.stderr );
-
-  assert!(
-    exited.is_some(),
-    "T22 (BUG-402): clr must exit within 10s — still running past the 2-attempt, \
-     1s-poll gate budget means the process is stuck outside the gate-wait loop \
-     entirely. stderr:\n{stderr}"
-  );
-  assert_eq!(
-    exited.and_then( |s| s.code() ), Some( 0 ),
-    "T22 (BUG-402): a fresh caller must still acquire slot 0 promptly when TWO \
-     full orphaned reclaim-ticket generations precede it — acquire_slot() must \
-     walk the entire chain, not just a single hop. Got exit {:?}, stderr:\n{stderr}",
-    exited.and_then( |s| s.code() )
-  );
-  assert!(
-    !stderr.contains( "session gate timed out" ),
-    "T22 (BUG-402): must not exhaust the gate-wait budget — stderr:\n{stderr}"
-  );
-}
-
-// ── T21: opt-in staleness threshold makes a live-but-stale owner's slot
-// reclaimable, without changing default (no-threshold) behavior (BUG-400) ──
-
-/// T21 (BUG-400): a slot owner can be genuinely alive yet make no progress
-/// indefinitely (e.g. a hung session) — pre-fix, `acquire_slot()` treats any
-/// live owner as an unconditional hold with no time bound, so such a slot can
-/// never be reclaimed. `CLR_GATE_STALE_SECS` is an opt-in override: once set,
-/// a live owner whose recorded `since` is older than the threshold becomes
-/// reclaim-eligible via the SAME ticket-arbitration path dead owners already
-/// use (see `Fix(BUG-392)`/`Fix(BUG-402)` on `acquire_slot()`).
-///
-/// Sub-case a (`CLR_GATE_STALE_SECS` unset): pre-existing behavior is fully
-/// preserved — a live owner denies unconditionally regardless of how old its
-/// `since` is.
-///
-/// Sub-case b (`CLR_GATE_STALE_SECS` set below the slot's elapsed age): the
-/// SAME kind of live owner becomes reclaimable — the caller acquires the slot
-/// promptly instead of exhausting its gate-wait budget.
-///
-/// Each sub-case uses its own `gate_dir` and its own genuinely-alive occupier
-/// process (a real, long-lived `/bin/sleep` child — NOT a `claude`/`clr`
-/// process; `pid_alive()` only checks `/proc/{pid}` existence directly, so any
-/// real child qualifies) so the two sub-cases cannot interfere with each
-/// other. `since: 0` gives an elapsed age of decades — any positive-integer
-/// threshold is "below elapsed duration".
-///
-/// Bug file: `task/claude_runner/bug/400_gate_reclaim_no_staleness_check.md`.
-// test_kind: bug_reproducer(BUG-400)
-#[ test ]
-fn t21_stale_alive_owner_becomes_reclaimable_when_threshold_set()
-{
-  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
-
-  // ── sub-case a: no threshold set → current behavior unchanged (denied) ──
-  {
-    let mut owner = Command::new( "/bin/sleep" ).arg( "30" ).spawn().expect( "spawn alive owner" );
-    let owner_pid = owner.id();
-    let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
-    let proc_dir = tempfile::TempDir::new().expect( "proc dir" ); // empty: 0 counted occupiers
-
-    std::fs::write(
-      gate_dir.path().join( "slot_0.json" ),
-      format!( r#"{{"pid":{owner_pid},"since":0}}"# ),
-    ).expect( "pre-seed live-owner slot file" );
-
-    let bin = env!( "CARGO_BIN_EXE_clr" );
-    let mut child = Command::new( bin )
-      .args( [ "-p", "--max-sessions", "1", "--retry-override", "0", "--journal", "off", "x" ] )
-      .env( "PATH", &script_path )
-      .env( "CLR_PROC_DIR", proc_dir.path() )
-      .env( "CLR_GATE_DIR", gate_dir.path() )
-      .env( "CLR_GATE_POLL_SECS", "1" )
-      .env( "CLR_GATE_MAX_ATTEMPTS", "2" )
-      .env_remove( "CLR_GATE_STALE_SECS" )
-      .stdout( std::process::Stdio::null() )
-      .stderr( std::process::Stdio::piped() )
-      .spawn()
-      .expect( "spawn clr" );
-
-    let deadline = std::time::Instant::now() + core::time::Duration::from_secs( 10 );
-    let exited = wait_bounded( &mut child, deadline );
-    if exited.is_none() { let _ = child.kill(); }
-    let out = child.wait_with_output().expect( "reap clr" );
-    let stderr = String::from_utf8_lossy( &out.stderr );
-
-    let _ = owner.kill();
-    let _ = owner.wait();
-
-    assert!(
-      exited.is_some(),
-      "T21a (BUG-400): clr must exit within 10s — stderr:\n{stderr}"
-    );
-    assert!(
-      stderr.contains( "session gate timed out" ),
-      "T21a (BUG-400): with CLR_GATE_STALE_SECS unset, a live owner must still \
-       deny unconditionally (pre-existing behavior) — expected a gate timeout, \
-       got exit {:?}, stderr:\n{stderr}",
-      exited.and_then( |s| s.code() )
-    );
-  }
-
-  // ── sub-case b: threshold set below elapsed age → reclaim succeeds ──
-  {
-    let mut owner = Command::new( "/bin/sleep" ).arg( "30" ).spawn().expect( "spawn alive owner" );
-    let owner_pid = owner.id();
-    let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
-    let proc_dir = tempfile::TempDir::new().expect( "proc dir" ); // empty: 0 counted occupiers
-
-    std::fs::write(
-      gate_dir.path().join( "slot_0.json" ),
-      format!( r#"{{"pid":{owner_pid},"since":0}}"# ),
-    ).expect( "pre-seed live-owner slot file" );
-
-    let bin = env!( "CARGO_BIN_EXE_clr" );
-    let mut child = Command::new( bin )
-      .args( [ "-p", "--max-sessions", "1", "--retry-override", "0", "--journal", "off", "x" ] )
-      .env( "PATH", &script_path )
-      .env( "CLR_PROC_DIR", proc_dir.path() )
-      .env( "CLR_GATE_DIR", gate_dir.path() )
-      .env( "CLR_GATE_POLL_SECS", "1" )
-      .env( "CLR_GATE_MAX_ATTEMPTS", "2" )
-      .env( "CLR_GATE_STALE_SECS", "10" )
-      .stdout( std::process::Stdio::null() )
-      .stderr( std::process::Stdio::piped() )
-      .spawn()
-      .expect( "spawn clr" );
-
-    let deadline = std::time::Instant::now() + core::time::Duration::from_secs( 10 );
-    let exited = wait_bounded( &mut child, deadline );
-    if exited.is_none() { let _ = child.kill(); }
-    let out = child.wait_with_output().expect( "reap clr" );
-    let stderr = String::from_utf8_lossy( &out.stderr );
-
-    let _ = owner.kill();
-    let _ = owner.wait();
-
-    assert!(
-      exited.is_some(),
-      "T21b (BUG-400): clr must exit within 10s — stderr:\n{stderr}"
-    );
-    assert_eq!(
-      exited.and_then( |s| s.code() ), Some( 0 ),
-      "T21b (BUG-400): with CLR_GATE_STALE_SECS=10 and a since:0 (decades-old) \
-       live owner, the caller must reclaim the slot and be admitted promptly \
-       instead of exhausting its gate-wait budget. Got exit {:?}, stderr:\n{stderr}",
-      exited.and_then( |s| s.code() )
-    );
-    assert!(
-      !stderr.contains( "session gate timed out" ),
-      "T21b (BUG-400): must not exhaust the gate-wait budget once the staleness \
-       threshold makes the live owner reclaim-eligible — stderr:\n{stderr}"
-    );
-  }
-}
-
-// ── T22: claim_slot_file()'s content is valid immediately after a successful claim (BUG-407) ──
-
-/// T22 (BUG-407): direct-correctness check of the rewritten `claim_slot_file()`
-/// — a single, uncontested fresh claim followed by an immediate read of the
-/// on-disk slot file must find fully-valid, complete JSON content (this `clr`
-/// invocation's own pid), never a partially-written or empty artifact.
-/// Proves there is no create-then-populate window to observe by
-/// construction — the on-disk path only ever becomes visible via
-/// `hard_link()` from an already-fully-written temp file.
-#[ test ]
-fn t22_claim_slot_file_content_valid_immediately_after_call()
-{
-  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
-  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
-  let proc_dir = tempfile::TempDir::new().expect( "proc dir" ); // empty: 0 pre-existing occupiers
-
-  let bin = env!( "CARGO_BIN_EXE_clr" );
-  let mut child = Command::new( bin )
-    .args( [ "-p", "--max-sessions", "6", "--retry-override", "0", "--journal", "off", "x" ] )
-    .env( "PATH", &script_path )
-    .env( "CLR_PROC_DIR", proc_dir.path() )
-    .env( "CLR_GATE_DIR", gate_dir.path() )
-    .env( "CLR_GATE_POLL_SECS", "1" )
-    .env( "CLR_GATE_MAX_ATTEMPTS", "2" )
-    .stdout( std::process::Stdio::null() )
-    .stderr( std::process::Stdio::piped() )
-    .spawn()
-    .expect( "spawn clr" );
-  let clr_pid = child.id();
-
-  let deadline = std::time::Instant::now() + core::time::Duration::from_secs( 10 );
-  let exited = wait_bounded( &mut child, deadline );
-  if exited.is_none() { let _ = child.kill(); }
-  let out = child.wait_with_output().expect( "reap clr" );
-  let stderr = String::from_utf8_lossy( &out.stderr );
-
-  assert_eq!(
-    exited.and_then( |s| s.code() ), Some( 0 ),
-    "T22 (BUG-407): a single, uncontested fresh claim must be admitted \
-     promptly. Got exit {:?}, stderr:\n{stderr}",
-    exited.and_then( |s| s.code() )
-  );
-
-  let slot_path = gate_dir.path().join( "slot_0.json" );
-  let content = std::fs::read_to_string( &slot_path ).unwrap_or_else(
-    | e | panic!( "T22 (BUG-407): slot_0.json must exist and be readable after a successful claim: {e}" )
-  );
-  assert!(
-    content.contains( r#""pid":"# ) && content.contains( r#""since":"# ),
-    "T22 (BUG-407): slot file content must be fully-formed JSON with both \
-     `pid` and `since` fields immediately after a successful claim — got: {content:?}"
-  );
-  assert_eq!(
-    slot_owner_pid( &content ), Some( clr_pid ),
-    "T22 (BUG-407): slot file's recorded pid must match this clr invocation's \
-     own pid, fully written (not truncated) — got: {content:?}"
-  );
-}
-
-// ── T23: claim_slot_file()'s fresh-claim arbitration still admits exactly one racer (BUG-407) ──
-
-/// T23 (BUG-407): arbitration-preserved regression guard for the rewritten
-/// `claim_slot_file()` — N racers contending for the SAME never-before-seen
-/// slot path (a completely empty gate dir, `--max-sessions 1` forcing every
-/// racer onto index 0) must still yield at most one admitted (concurrently
-/// alive, dispatched-child-holding) winner. Confirms the write-to-temp-then-
-/// `hard_link()` rewrite did not weaken the exactly-one-claimant guarantee
-/// every call site depends on — `hard_link()` fails with `AlreadyExists`
-/// exactly like `create_new()` did.
-#[ test ]
-fn t23_concurrent_racers_still_yield_exactly_one_winner()
-{
-  const N : usize = 8;
-
-  let ( _bin_dir, bin_path ) = build_argv_tolerant_sleeper( 3 );
-  let gate_dir = tempfile::TempDir::new().expect( "gate dir" ); // deliberately empty: no pre-seeded slot
-  let proc_dir = tempfile::TempDir::new().expect( "proc dir" ); // deliberately static/empty
-
-  let mut children : Vec< std::process::Child > = ( 0..N ).map( | i |
-  {
-    Command::new( env!( "CARGO_BIN_EXE_clr" ) )
-      .args( [ "-p", "--max-sessions", "1", "--retry-override", "0", "--journal", "off", &format!( "race-{i}" ) ] )
-      .env( "PATH", &bin_path )
-      .env( "CLR_PROC_DIR", proc_dir.path() )
-      .env( "CLR_GATE_DIR", gate_dir.path() )
-      .env( "CLR_GATE_POLL_SECS", "1" )
-      .env( "CLR_GATE_MAX_ATTEMPTS", "5" )
-      .stdout( std::process::Stdio::null() )
-      .stderr( std::process::Stdio::null() )
-      .spawn()
-      .expect( "spawn racing clr" )
-  } ).collect();
-
-  let clr_pids : Vec< u32 > = children.iter().map( std::process::Child::id ).collect();
-
-  let mut known_children : std::collections::HashSet< u32 > = std::collections::HashSet::new();
-  let mut peak = 0usize;
-  let mut finished = vec![ false; children.len() ];
-  let reap = | children : &mut [ std::process::Child ], finished : &mut [ bool ] |
-  {
-    for ( child, done ) in children.iter_mut().zip( finished.iter_mut() )
-    {
-      if !*done && matches!( child.try_wait(), Ok( Some( _ ) ) ) { *done = true; }
-    }
-  };
-
-  let sample_deadline = std::time::Instant::now() + core::time::Duration::from_secs( 10 );
-  while std::time::Instant::now() < sample_deadline
-  {
-    reap( &mut children, &mut finished );
-    for &parent in &clr_pids
-    {
-      if let Ok( raw ) = std::fs::read_to_string( format!( "/proc/{parent}/task/{parent}/children" ) )
-      {
-        for child_pid in raw.split_whitespace().filter_map( |t| t.parse::< u32 >().ok() )
-        {
-          known_children.insert( child_pid );
-        }
-      }
-    }
-    let live_now = known_children.iter()
-      .filter( |&&pid| std::path::Path::new( &format!( "/proc/{pid}" ) ).exists() )
-      .count();
-    peak = peak.max( live_now );
+    let stat = std::fs::read_to_string( format!( "/proc/{zombie_pid}/stat" ) ).unwrap_or_default();
+    if stat.rsplit_once( ')' ).is_some_and( | ( _, rest ) | rest.trim_start().starts_with( 'Z' ) ) { break; }
+    assert!( std::time::Instant::now() < deadline, "fixture: PID {zombie_pid} never became a zombie" );
     std::thread::sleep( core::time::Duration::from_millis( 20 ) );
   }
 
-  let drain_deadline = std::time::Instant::now() + core::time::Duration::from_secs( 30 );
-  while finished.iter().any( | done | !done ) && std::time::Instant::now() < drain_deadline
-  {
-    reap( &mut children, &mut finished );
-    std::thread::sleep( core::time::Duration::from_millis( 20 ) );
-  }
-  for ( child, done ) in children.iter_mut().zip( finished.iter_mut() )
-  {
-    if !*done { let _ = child.kill(); let _ = child.wait(); }
-  }
+  std::fs::write(
+    gate_dir.path().join( "slot_0.json" ),
+    format!( r#"{{"pid":{zombie_pid},"since":0}}"# ),
+  ).expect( "pre-seed zombie-owner slot file" );
 
-  assert!(
-    peak <= 1,
-    "T23 (BUG-407): peak concurrently-alive dispatched children racing for one \
-     never-before-seen slot ({peak}) must never exceed 1 — the rewritten \
-     claim_slot_file() must still admit at most one racer"
-  );
-  assert!(
-    peak >= 1,
-    "T23 (BUG-407): at least one racer must have been admitted — a peak of 0 \
-     would mean the rewritten claim_slot_file() admits NO ONE, a different \
-     regression (over-strict arbitration) from the one this test targets"
-  );
-}
-
-// ── T24: pre-existing corrupted slot content remains a documented residual (BUG-407) ──
-
-/// T24 (BUG-407): documents the explicit scope boundary of the atomic-publish
-/// fix. A slot file that was ALREADY on disk with empty/unparseable content
-/// BEFORE any call to the rewritten `claim_slot_file()` ever touched it (e.g.
-/// a stray `touch`, or a leftover artifact from a crash under a pre-upgrade
-/// binary) is NOT repaired by this fix — `hard_link()`, like `create_new()`,
-/// cannot claim a path that already exists, so the fresh-claim attempt still
-/// returns `false`, and `acquire_slot()`'s unconditional `None` ->
-/// `HeldByLive` branch (Fix(BUG-396), unchanged by this fix) still denies
-/// forever.
-///
-/// This is an intentional, explicitly-accepted residual, not a silent gap:
-/// the atomic rewrite's actual guarantee is that `claim_slot_file()` itself
-/// can never again CREATE a new empty/incomplete file (proven directly by
-/// T22) — it does not add a repair path for corruption that predates any
-/// call to it, matching this fix's own Fix Location scope ("a `None` result
-/// ... can only mean genuine on-disk corruption unrelated to this race (out
-/// of scope)"). Verified via Tier 4 Paired Verification (independent primary
-/// and adversarial code trace, both confirming that `hard_link` and
-/// `create_new` share identical `AlreadyExists` semantics against an
-/// existing destination) before this test was written, after the original
-/// bug filing's Prevention sketch (recovery expected) was found to
-/// contradict its own, more precise Fix Location section.
-///
-/// Asserts the residual is STABLE — denied identically pre-fix and post-fix
-/// — so a future change cannot silently narrow or widen this boundary
-/// without this test flagging it.
-#[ test ]
-fn t24_preexisting_empty_slot_file_remains_a_documented_residual()
-{
-  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
-  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
-  let proc_dir = tempfile::TempDir::new().expect( "proc dir" ); // empty: 0 counted occupiers
-
-  // Pre-seed slot_0.json as a 0-byte file — simulates content that was
-  // ALREADY corrupted/incomplete before this test's clr invocation ever
-  // runs (out of scope for this fix; see doc comment above).
-  std::fs::write( gate_dir.path().join( "slot_0.json" ), b"" )
-    .expect( "pre-seed empty slot file" );
-
-  let bin = env!( "CARGO_BIN_EXE_clr" );
-  let mut child = Command::new( bin )
+  let out = Command::new( env!( "CARGO_BIN_EXE_clr" ) )
     .args( [ "-p", "--max-sessions", "1", "--retry-override", "0", "--journal", "off", "x" ] )
     .env( "PATH", &script_path )
     .env( "CLR_PROC_DIR", proc_dir.path() )
     .env( "CLR_GATE_DIR", gate_dir.path() )
     .env( "CLR_GATE_POLL_SECS", "1" )
     .env( "CLR_GATE_MAX_ATTEMPTS", "2" )
-    .stdout( std::process::Stdio::null() )
-    .stderr( std::process::Stdio::piped() )
-    .spawn()
-    .expect( "spawn clr" );
-
-  let deadline = std::time::Instant::now() + core::time::Duration::from_secs( 10 );
-  let exited = wait_bounded( &mut child, deadline );
-  if exited.is_none() { let _ = child.kill(); }
-  let out = child.wait_with_output().expect( "reap clr" );
-  let stderr = String::from_utf8_lossy( &out.stderr );
-
-  assert!(
-    exited.is_some(),
-    "T24 (BUG-407): clr must exit within 10s — stderr:\n{stderr}"
-  );
-  assert!(
-    stderr.contains( "session gate timed out" ),
-    "T24 (BUG-407): a pre-existing empty slot file is a documented residual \
-     — it must still deny (gate-wait exhausted), identically pre-fix and \
-     post-fix. If this now PASSES (no timeout), the residual boundary has \
-     shifted and this test's doc comment / BUG-407's closure notes must be \
-     updated to reflect the new behavior. Got exit {:?}, stderr:\n{stderr}",
-    exited.and_then( |s| s.code() )
-  );
-}
-
-// ── T25/T26: proc scanner unavailable → loud failure, not a silent no-op (hardening fix 1) ──
-
-/// T25 (hardening fix 1): `CLR_PROC_DIR` points at a path that does not exist on
-/// disk (simulating a non-Linux host, or a broken/unreadable `/proc`), with
-/// `--max-sessions` left at its nonzero default. Before this fix,
-/// `find_claude_processes()` silently returned an empty list whenever its proc
-/// root was unreadable, so the gate always saw "0 active sessions" and admitted
-/// immediately — the concurrency guarantee silently evaporated with no signal
-/// to the operator. After the fix, `wait_for_session_slot()` checks
-/// `claude_core::process::proc_scan_available()` before entering the poll loop
-/// and exits loudly instead.
-#[ test ]
-fn t25_proc_scan_unavailable_fails_loudly_instead_of_silent_admit()
-{
-  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
-  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
-
-  let bin = env!( "CARGO_BIN_EXE_clr" );
-  let out = Command::new( bin )
-    .args( [ "-p", "--journal", "off", "x" ] )
-    .env( "PATH", &script_path )
-    .env( "CLR_PROC_DIR", "/nonexistent/clr-t25-proc-dir" )
-    .env( "CLR_GATE_DIR", gate_dir.path() )
+    .env_remove( "CLR_GATE_STALE_SECS" )
     .output()
-    .expect( "invoke clr" );
+    .expect( "run clr" );
 
-  assert_eq!(
-    out.status.code(), Some( 1 ),
-    "T25: exit must be 1 when the process scanner cannot read the process list. stderr: {}",
-    String::from_utf8_lossy( &out.stderr )
-  );
+  let _ = zombie.wait(); // reap only after clr has run
+
   let stderr = String::from_utf8_lossy( &out.stderr );
-  assert!(
-    stderr.contains(
-      "Error: [Runner] session gate unavailable — process scanner cannot read the process list \
-       (--max-sessions requires working /proc; pass --max-sessions 0 to disable the gate) (exit 1)"
-    ),
-    "T25: exact GateUnavailable message required. Got:\n{stderr}"
-  );
-}
-
-/// T26 (hardening fix 1 regression guard): the pre-existing `--max-sessions 0`
-/// escape hatch (T06) must survive the loud-failure change — `wait_for_session_slot()`
-/// returns before ever checking `proc_scan_available()` when `max == 0`, so a broken
-/// `CLR_PROC_DIR` must never surface the `GateUnavailable` error when the gate itself
-/// is explicitly disabled.
-#[ test ]
-fn t26_max_sessions_zero_bypasses_gate_even_when_proc_scan_unavailable()
-{
-  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
-
-  let bin = env!( "CARGO_BIN_EXE_clr" );
-  let out = Command::new( bin )
-    .args( [ "-p", "--max-sessions", "0", "--journal", "off", "x" ] )
-    .env( "PATH", &script_path )
-    .env( "CLR_PROC_DIR", "/nonexistent/clr-t26-proc-dir" )
-    .output()
-    .expect( "invoke clr" );
-
   assert!(
     out.status.success(),
-    "T26: --max-sessions 0 must bypass the gate entirely, even with /proc unavailable. stderr: {}",
-    String::from_utf8_lossy( &out.stderr )
-  );
-  let stderr = String::from_utf8_lossy( &out.stderr );
-  assert!(
-    !stderr.contains( "session gate unavailable" ),
-    "T26: GateUnavailable must never fire when --max-sessions 0 disables the gate. Got:\n{stderr}"
-  );
-}
-
-// ── T27/T28: `clr isolated` participates in the same concurrency gate as run/ask (hardening fix 2) ──
-
-/// T27 (hardening fix 2): unlike `refresh` (which always runs a fixed, throwaway
-/// prompt and discards the response), `isolated` can run arbitrarily long real
-/// user tasks, so it must contend for a gate slot exactly like `run`/`ask`.
-/// Mirrors T01's structure with `isolated` prepended and a real (if minimal)
-/// `--creds` file: 2 long-lived + 1 short-lived (self-expiring) print-mode
-/// occupiers, `--max-sessions 3` → gate triggers and reports "3/3 sessions
-/// active", then releases once the short-lived occupier self-expires.
-#[ test ]
-fn t27_isolated_gate_triggers_at_capacity()
-{
-  let ( _occupier_dir, occupier_path ) = fake_claude_binary_dir();
-  let mut long_lived : Vec< std::process::Child > =
-    ( 0..2 ).map( |_| spawn_print_claude( &occupier_path ) ).collect();
-  let mut short_lived = spawn_print_claude_for( &occupier_path, 5 );
-
-  let mut pids : Vec< u32 > = long_lived.iter().map( std::process::Child::id ).collect();
-  pids.push( short_lived.id() );
-  let proc = make_proc_dir( &pids );
-
-  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
-  let gate_dir   = tempfile::TempDir::new().expect( "gate dir" );
-  let creds      = make_creds_file( "{}" );
-  let creds_path = creds.path().to_str().expect( "creds path UTF-8" );
-
-  let bin = env!( "CARGO_BIN_EXE_clr" );
-  let out = Command::new( bin )
-    .args( [ "isolated", "--creds", creds_path, "--max-sessions", "3", "--journal", "off", "x" ] )
-    .env( "PATH", &script_path )
-    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
-    .env( "CLR_GATE_DIR", gate_dir.path() )
-    .env( "CLR_GATE_POLL_SECS", "1" )
-    .env_remove( "CLAUDECODE" )
-    .output()
-    .expect( "invoke clr isolated" );
-
-  for child in &mut long_lived { let _ = child.kill(); let _ = child.wait(); }
-  let _ = short_lived.kill();
-  let _ = short_lived.wait();
-
-  assert!(
-    out.status.success(),
-    "T27: exit must be 0 after gate releases. stderr: {}",
-    String::from_utf8_lossy( &out.stderr )
-  );
-  let stderr = String::from_utf8_lossy( &out.stderr );
-  assert!(
-    stderr.contains( "gate-wait  active=3/3" ),
-    "T27: isolated must participate in the gate and report 3/3 active. Got:\n{stderr}"
-  );
-}
-
-/// T28 (hardening fix 2, parity with T02): 2 print-mode processes active,
-/// `clr isolated --max-sessions 3` → gate does not trigger; isolated proceeds
-/// immediately with no wait message on stderr.
-#[ test ]
-fn t28_isolated_gate_does_not_trigger_below_capacity()
-{
-  let ( _occupier_dir, occupier_path ) = fake_claude_binary_dir();
-  let mut occupiers : Vec< std::process::Child > =
-    ( 0..2 ).map( |_| spawn_print_claude( &occupier_path ) ).collect();
-  let pids : Vec< u32 > = occupiers.iter().map( std::process::Child::id ).collect();
-  let proc = make_proc_dir( &pids );
-
-  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
-  let gate_dir   = tempfile::TempDir::new().expect( "gate dir" );
-  let creds      = make_creds_file( "{}" );
-  let creds_path = creds.path().to_str().expect( "creds path UTF-8" );
-
-  let bin = env!( "CARGO_BIN_EXE_clr" );
-  let out = Command::new( bin )
-    .args( [ "isolated", "--creds", creds_path, "--max-sessions", "3", "--journal", "off", "x" ] )
-    .env( "PATH", &script_path )
-    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
-    .env( "CLR_GATE_DIR", gate_dir.path() )
-    .env( "CLR_GATE_POLL_SECS", "1" )
-    .env_remove( "CLAUDECODE" )
-    .output()
-    .expect( "invoke clr isolated" );
-
-  for child in &mut occupiers { let _ = child.kill(); let _ = child.wait(); }
-
-  assert!(
-    out.status.success(),
-    "T28: exit must be 0. stderr: {}",
-    String::from_utf8_lossy( &out.stderr )
-  );
-  let stderr = String::from_utf8_lossy( &out.stderr );
-  assert!(
-    !stderr.contains( "gate-wait" ),
-    "T28: gate must not trigger below the limit for isolated. Got:\n{stderr}"
-  );
-}
-
-// ── T29/T30/T31: CLI-flag + isolated env-var-only parity for gate tuning (hardening fix 3) ──
-
-/// T29 (hardening fix 3, CLI-flag tier): `--gate-poll-secs 1 --gate-max-attempts 2`
-/// as CLI flags (deliberately no env vars set) must change the gate's actual
-/// runtime behavior for `run`/`ask`, exactly as `CLR_GATE_POLL_SECS`/
-/// `CLR_GATE_MAX_ATTEMPTS` already do via the env var tier (T09). With one
-/// print-mode occupier permanently holding the only `--max-sessions 1` slot and
-/// `--retry-override 0` disabling the outer Runner-retry wrapper, the gate must
-/// exhaust after exactly 2 polls at 1-second intervals (~2s), not the
-/// production default of 1000 attempts × 30s. Bounded to a 10s deadline.
-#[ test ]
-fn t29_gate_cli_flags_change_real_poll_timing()
-{
-  let ( _occupier_dir, occupier_path ) = fake_claude_binary_dir();
-  let mut occupier = spawn_print_claude_for( &occupier_path, 60 );
-  let proc = make_proc_dir( &[ occupier.id() ] );
-
-  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
-  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
-
-  let bin = env!( "CARGO_BIN_EXE_clr" );
-  let mut child = Command::new( bin )
-    .args( [
-      "-p", "--max-sessions", "1", "--retry-override", "0",
-      "--gate-poll-secs", "1", "--gate-max-attempts", "2",
-      "--journal", "off", "x",
-    ] )
-    .env( "PATH", &script_path )
-    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
-    .env( "CLR_GATE_DIR", gate_dir.path() )
-    .stdout( std::process::Stdio::null() )
-    .stderr( std::process::Stdio::piped() )
-    .spawn()
-    .expect( "spawn clr" );
-
-  let deadline = std::time::Instant::now() + core::time::Duration::from_secs( 10 );
-  let exited = wait_bounded( &mut child, deadline );
-  if exited.is_none() { let _ = child.kill(); }
-  let out = child.wait_with_output().expect( "reap clr" );
-
-  let _ = occupier.kill();
-  let _ = occupier.wait();
-
-  let stderr = String::from_utf8_lossy( &out.stderr );
-  assert!(
-    exited.is_some(),
-    "T29: gate must exhaust within 10s when both CLI flags are active (2 attempts x 1s poll) \
-     — still running means the flags are not taking effect. stderr:\n{stderr}"
-  );
-  assert_eq!(
-    exited.and_then( |s| s.code() ), Some( 1 ),
-    "T29: exit must be 1 once the gate exhausts. stderr: {stderr}"
-  );
-  assert!(
-    stderr.contains(
-      "Error: [Runner] session gate timed out — 1 print sessions, max-sessions=1 — retries exhausted (exit 1)"
-    ),
-    "T29: exact exhaustion message required. Got:\n{stderr}"
-  );
-}
-
-/// T30 (hardening fix 3, CLI-flags-hard-error contract): `--gate-max-attempts abc`
-/// must be a hard parse error at argument-parsing time (exit 1, before any
-/// subprocess spawn or gate wait) — the deliberate asymmetry with the env var
-/// equivalent, which silently falls back to the default instead (T11). PATH is
-/// deliberately `/nonexistent`: parsing fails before any claude binary lookup
-/// is ever attempted, so no fake claude script is needed.
-#[ test ]
-fn t30_invalid_gate_max_attempts_cli_flag_is_a_hard_parse_error()
-{
-  let bin = env!( "CARGO_BIN_EXE_clr" );
-  let out = Command::new( bin )
-    .args( [ "-p", "--gate-max-attempts", "abc", "--journal", "off", "x" ] )
-    .env( "PATH", "/nonexistent" )
-    .output()
-    .expect( "invoke clr" );
-
-  assert_eq!(
-    out.status.code(), Some( 1 ),
-    "T30: an invalid --gate-max-attempts value must be a hard parse error (exit 1), \
-     not a silent fallback like the env var equivalent (T11). stderr: {}",
-    String::from_utf8_lossy( &out.stderr )
-  );
-  let stderr = String::from_utf8_lossy( &out.stderr );
-  assert!(
-    stderr.contains( "invalid --gate-max-attempts value: abc" ),
-    "T30: parse error must name the flag and the bad value. Got:\n{stderr}"
-  );
-}
-
-/// T31 (hardening fix 3, isolated's env-var-only tier): `clr isolated` has no
-/// CLI-flag or config-file tier for the 3 gate-tuning knobs (consistent with
-/// its other fields — see `gate_isolated_session`'s doc comment) but must still
-/// honor `CLR_GATE_POLL_SECS`/`CLR_GATE_MAX_ATTEMPTS` via its one-shot
-/// `gate_poll_secs_from`/`gate_max_attempts_from` resolution. Mirrors T09's
-/// exhaustion scenario for `run`, but dispatched via `isolated` — and asserts
-/// isolated's un-suffixed exhaustion message (its `on_exhausted` closure exits
-/// directly, with no `apply_runner_retry` wrapper, so no "— retries exhausted"
-/// suffix appears).
-#[ test ]
-fn t31_isolated_gate_env_vars_change_real_poll_timing()
-{
-  let ( _occupier_dir, occupier_path ) = fake_claude_binary_dir();
-  let mut occupier = spawn_print_claude_for( &occupier_path, 60 );
-  let proc = make_proc_dir( &[ occupier.id() ] );
-
-  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
-  let gate_dir   = tempfile::TempDir::new().expect( "gate dir" );
-  let creds      = make_creds_file( "{}" );
-  let creds_path = creds.path().to_str().expect( "creds path UTF-8" );
-
-  let bin = env!( "CARGO_BIN_EXE_clr" );
-  let mut child = Command::new( bin )
-    .args( [ "isolated", "--creds", creds_path, "--max-sessions", "1", "--journal", "off", "x" ] )
-    .env( "PATH", &script_path )
-    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
-    .env( "CLR_GATE_DIR", gate_dir.path() )
-    .env( "CLR_GATE_POLL_SECS", "1" )
-    .env( "CLR_GATE_MAX_ATTEMPTS", "2" )
-    .env_remove( "CLAUDECODE" )
-    .stdout( std::process::Stdio::null() )
-    .stderr( std::process::Stdio::piped() )
-    .spawn()
-    .expect( "spawn clr isolated" );
-
-  let deadline = std::time::Instant::now() + core::time::Duration::from_secs( 10 );
-  let exited = wait_bounded( &mut child, deadline );
-  if exited.is_none() { let _ = child.kill(); }
-  let out = child.wait_with_output().expect( "reap clr isolated" );
-
-  let _ = occupier.kill();
-  let _ = occupier.wait();
-
-  let stderr = String::from_utf8_lossy( &out.stderr );
-  assert!(
-    exited.is_some(),
-    "T31: isolated's gate must exhaust within 10s when both env var overrides are active \
-     (2 attempts x 1s poll) — still running means isolated is not honoring them. stderr:\n{stderr}"
-  );
-  assert_eq!(
-    exited.and_then( |s| s.code() ), Some( 1 ),
-    "T31: exit must be 1 once the gate exhausts. stderr: {stderr}"
-  );
-  assert!(
-    stderr.contains(
-      "Error: [Runner] session gate timed out — 1 print sessions, max-sessions=1 (exit 1)"
-    ),
-    "T31: exact exhaustion message required (isolated's on_exhausted closure exits directly, \
-     no retry-exhausted suffix). Got:\n{stderr}"
-  );
-}
-
-// ── T32: isolated's `--max-sessions` JSON-key tier (`apply_json_config_isolated()`) ──
-
-/// T32: `clr isolated --args-file <json with "max-sessions": 3>`, 3 print-mode
-/// processes active, no `--max-sessions` CLI flag → gate must trigger and report
-/// 3/3 active. `isolated`'s default `--max-sessions` is 6, so 3 active occupiers
-/// would never trigger the gate under the default (see T28's below-capacity
-/// shape) — seeing the 3/3 wait message here is only possible if
-/// `apply_json_config_isolated()`'s `"max-sessions" =>` arm actually applied the
-/// JSON-supplied value of 3, not merely parsed-and-discarded it.
-#[ test ]
-fn t32_isolated_max_sessions_json_config_changes_real_gate_limit()
-{
-  let ( _occupier_dir, occupier_path ) = fake_claude_binary_dir();
-  let mut long_lived : Vec< std::process::Child > =
-    ( 0..2 ).map( |_| spawn_print_claude( &occupier_path ) ).collect();
-  let mut short_lived = spawn_print_claude_for( &occupier_path, 5 );
-
-  let mut pids : Vec< u32 > = long_lived.iter().map( std::process::Child::id ).collect();
-  pids.push( short_lived.id() );
-  let proc = make_proc_dir( &pids );
-
-  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
-  let gate_dir   = tempfile::TempDir::new().expect( "gate dir" );
-  let creds      = make_creds_file( "{}" );
-  let creds_path = creds.path().to_str().expect( "creds path UTF-8" );
-
-  let mut cfg = NamedTempFile::new().expect( "args-file" );
-  write!( cfg, r#"{{"max-sessions": 3}}"# ).expect( "write args-file JSON" );
-  let cfg_path = cfg.path().to_str().expect( "args-file path UTF-8" );
-
-  let bin = env!( "CARGO_BIN_EXE_clr" );
-  let out = Command::new( bin )
-    .args( [ "isolated", "--creds", creds_path, "--args-file", cfg_path, "--journal", "off", "x" ] )
-    .env( "PATH", &script_path )
-    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
-    .env( "CLR_GATE_DIR", gate_dir.path() )
-    .env( "CLR_GATE_POLL_SECS", "1" )
-    .env_remove( "CLAUDECODE" )
-    .output()
-    .expect( "invoke clr isolated" );
-
-  for child in &mut long_lived { let _ = child.kill(); let _ = child.wait(); }
-  let _ = short_lived.kill();
-  let _ = short_lived.wait();
-
-  assert!(
-    out.status.success(),
-    "T32: exit must be 0 after gate releases. stderr: {}",
-    String::from_utf8_lossy( &out.stderr )
-  );
-  let stderr = String::from_utf8_lossy( &out.stderr );
-  assert!(
-    stderr.contains( "gate-wait  active=3/3" ),
-    "T32: --args-file \"max-sessions\": 3 must set the real gate limit to 3, proving the JSON \
-     key tier is functional for isolated (default is 6, which would never trigger at 3 active). \
-     Got:\n{stderr}"
-  );
-}
-
-// ── t_gate_progress_message_names_print_sessions: BUG-431 regression guard ──
-
-/// BUG-431 regression guard: gate progress message must include the "print" mode
-/// qualifier when counting print-mode-only occupiers.
-///
-/// Exercises the `eprintln!` at `gate.rs:703`. Covers IN-6 (INV-013).
-///
-/// # Root Cause
-///
-/// `count` in `gate.rs` is filtered to print-mode processes only, but the progress
-/// message said `"sessions active"` — indistinguishable from a total session count.
-/// A reader diagnosing capacity issues could not tell whether the number referred
-/// to all running claude sessions or only print-mode ones.
-///
-/// # Why Not Caught
-///
-/// The existing test assertions checked `!stderr.contains("sessions active; waiting")`
-/// (negative — ensuring the gate didn't trigger without occupiers) but no positive
-/// assertion required the `"print"` qualifier to be present in the message text.
-///
-/// # Fix Applied
-///
-/// `gate.rs:703` message changed from `"sessions active"` to `"print sessions active"`,
-/// making the mode qualifier explicit in every gate progress line.
-///
-/// # Prevention
-///
-/// This test now asserts `stderr.contains("gate-wait  active=")` (TSK-452 updated the
-/// format to a structured timestamp-prefixed line; the print-mode scope is preserved
-/// via the same `display_count` which counts only print-mode processes). Any future
-/// edit to the progress message format must preserve the `"gate-wait  active="` label.
-///
-/// # Pitfall
-///
-/// The four negative assertions now check `!stderr.contains("gate-wait")` — the old
-/// `"sessions active; waiting"` substring no longer appears in any gate progress line
-/// after TSK-452's format change.
-#[ test ]
-fn t_gate_progress_message_names_print_sessions()
-{
-  let ( _occupier_dir, occupier_path ) = fake_claude_binary_dir();
-  let mut occupier = spawn_print_claude( &occupier_path );
-  let proc = make_proc_dir( &[ occupier.id() ] );
-
-  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
-  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
-
-  let bin = env!( "CARGO_BIN_EXE_clr" );
-  let out = Command::new( bin )
-    .args( [ "-p", "--max-sessions", "1", "--retry-override", "0", "--journal", "off", "x" ] )
-    .env( "PATH", &script_path )
-    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
-    .env( "CLR_GATE_DIR", gate_dir.path() )
-    .env( "CLR_GATE_POLL_SECS", "1" )
-    .env( "CLR_GATE_MAX_ATTEMPTS", "2" )
-    .output()
-    .expect( "invoke clr" );
-
-  let _ = occupier.kill();
-  let _ = occupier.wait();
-
-  let stderr = String::from_utf8_lossy( &out.stderr );
-  assert!(
-    stderr.contains( "gate-wait  active=" ),
-    "BUG-431 regression (TSK-452 format): gate progress message must include 'gate-wait  active='. Got:\n{stderr}"
-  );
-}
-
-// ── T33: genuine exhaustion names "[at capacity]" (INV-013 IN-4) ─────────────
-
-/// T33 (INV-013 IN-4): one long-running occupier holds the sole slot
-/// (`--max-sessions 1`), so a second invocation always observes
-/// `count_u32 >= max` (`has_capacity=false`) without ever attempting
-/// to acquire any slot index. Captures stderr and asserts it names the
-/// cause as `[at capacity]`, NOT `[slot held by another session]` (which
-/// requires `has_capacity=true` and a live slot-file holder) or
-/// `[lost reservation race]` (which requires `has_capacity=true` and a
-/// dead owner with a contested reclaim ticket).
-///
-/// ## Root Cause (INV-013 motivation)
-///
-/// Prior to this test the `has_capacity=false` branch's cause label had
-/// zero focused positive-assertion coverage. T15/T16 exercise only the
-/// `has_capacity=true` branches; T09 captures the final exhaustion error
-/// line rather than the per-attempt diagnostic. The `[at capacity]` label
-/// was therefore unverified reachable from any test.
-///
-/// ## Why Not Caught
-///
-/// T01/T04 positively assert `"gate-wait  active="` (TSK-452) but run with
-/// `count_u32 < max`, so the `[at capacity]` suffix is never emitted
-/// in their fixture and neither can catch a future regression that
-/// routes the exhaustion path through the wrong cause label.
-///
-/// ## Fix Applied
-///
-/// No production code change — coverage-only addition confirming
-/// `wait_for_session_slot()`'s `[at capacity]` suffix is reachable
-/// and correct for the `has_capacity=false` path.
-///
-/// ## Prevention
-///
-/// Assert `stderr.contains("at capacity")` plus the two negative guards
-/// so any future refactor that routes exhaustion through the wrong label
-/// fails here explicitly rather than silently.
-///
-/// ## Pitfall
-///
-/// `count_u32 >= max` requires a LIVE counted occupier in `CLR_PROC_DIR`,
-/// not just a pre-seeded slot file: `count_u32` is derived from the proc
-/// scan, not slot files. A dead occupier in a slot file with an empty
-/// `CLR_PROC_DIR` yields `count_u32 = 0 < max = 1`, routing through the
-/// `has_capacity=true` reclaim path instead — T16's scenario, not this one.
-// test_kind: invariant_guard(INV-013)
-#[ test ]
-fn t33_slot_wait_message_names_at_capacity_for_exhaustion()
-{
-  let ( _occupier_dir, occupier_path ) = fake_claude_binary_dir();
-  // One live occupier whose PID appears in CLR_PROC_DIR → count_u32 = 1.
-  // 60s lifetime is well above this test's ~3s window (2 attempts × 1s).
-  let mut occupier = spawn_print_claude_for( &occupier_path, 60 );
-  let proc = make_proc_dir( &[ occupier.id() ] );
-
-  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
-  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
-
-  let bin = env!( "CARGO_BIN_EXE_clr" );
-  let out = Command::new( bin )
-    .args( [ "-p", "--max-sessions", "1", "--retry-override", "0", "--journal", "off", "x" ] )
-    .env( "PATH", &script_path )
-    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
-    .env( "CLR_GATE_DIR", gate_dir.path() )
-    .env( "CLR_GATE_POLL_SECS", "1" )
-    .env( "CLR_GATE_MAX_ATTEMPTS", "2" )
-    .output()
-    .expect( "invoke clr" );
-
-  let _ = occupier.kill();
-  let _ = occupier.wait();
-
-  let stderr = String::from_utf8_lossy( &out.stderr );
-  assert!(
-    stderr.contains( "at capacity" ),
-    "T33 (INV-013 IN-4): exhaustion branch must name cause as \"at capacity\" when \
-     count_u32 >= max. Got:\n{stderr}"
+    "T37 (BUG-479): caller must be admitted after zombie-owner reclaim; got exit {:?}, stderr:\n{stderr}",
+    out.status.code()
   );
   assert!(
     !stderr.contains( "slot held by another session" ),
-    "T33 (INV-013 IN-4): exhaustion branch must NOT name \"slot held by another session\" — \
-     that label requires has_capacity=true. Got:\n{stderr}"
-  );
-  assert!(
-    !stderr.contains( "lost reservation race" ),
-    "T33 (INV-013 IN-4): exhaustion branch must NOT name \"lost reservation race\" — \
-     that label requires has_capacity=true and a dead-owner reclaim ticket. Got:\n{stderr}"
+    "T37 (BUG-479): zombie owner must not read as a live slot holder. stderr:\n{stderr}"
   );
 }
 
-// ── T34: non-admission message preserves "gate-wait  active=" prefix (INV-013 IN-5)
+// ── T38: slot-side denial names the measured occupancy (BUG-480) ──────────────
 
-/// T34 (INV-013 IN-5): any non-admission diagnostic — here the exhaustion case
-/// (same fixture as T33: `count_u32 >= max`) — must preserve the TSK-452
-/// structured prefix `"gate-wait  active="`. The differentiating cause suffix
-/// `[at capacity]` / `[slot held by another session]` / `[lost reservation
-/// race]` appears in the `(reason: ...)` trailer at the end of the same line,
-/// so all assertions that pattern-match the prefix survive any future
-/// trailing-format change.
+/// T38 (BUG-480): when admission blocks on the slot conjunct (census says
+/// capacity is free, `active=0/1`, but the sole slot file is held by a live
+/// foreign owner), the poll line and the timeout message must both name the
+/// blocking quantity: `slots=1/1`.
 ///
-/// ## Root Cause (INV-013 motivation)
-///
-/// BUG-393 introduced the cause suffix appended AFTER the gate-wait line body.
-/// TSK-452 replaced the old `"active; waiting"` body with a structured
-/// `"gate-wait  active=X/Y ..."` prefix. A hypothetical refactor dropping or
-/// renaming the prefix would silently break assertions with no dedicated guard.
+/// ## Root Cause
+/// Admission is a conjunction (census AND slot-CAS), but every diagnostic
+/// surface interpolated only the census conjunct's locals (`count`/`max`).
+/// `acquire_slot()`'s sweep collapsed per-index outcomes into one fieldless
+/// `Result< (), SlotDenialCause >`, so the occupancy that actually blocked
+/// admission was erased at that return boundary and never reached the
+/// message sites — 66 consecutive `active=1/8` polls while 8/8 slot files
+/// were held, with the real blocker appearing on no surface.
 ///
 /// ## Why Not Caught
-///
-/// T01/T04 assert `"gate-wait  active="` positively but only in fixtures where
-/// `count_u32 < max` — the cause-suffix-appended path is never exercised
-/// in those tests, so they cannot detect a regression in the cause-labeled
-/// branch's format string. No prior test positively asserted the prefix
-/// survives the suffix addition in the non-admission path.
-///
-/// ## Fix Applied (TSK-452)
-///
-/// No production code change — updated to assert the TSK-452 format prefix
-/// `"gate-wait  active="` in the cause-labeled format string in `gate.rs`.
-///
-/// ## Prevention
-///
-/// Assert `stderr.contains("gate-wait  active=")` with a fixture that DOES emit
-/// a cause suffix, not just a no-cause wait message.
-///
-/// ## Pitfall
-///
-/// Using T01/T04's fixture (fewer occupiers than max) would trivially pass even
-/// if the prefix were removed from the cause-labeled branch, since those
-/// fixtures never reach the cause-labeled `eprintln!` path. Only a fixture
-/// that forces cause-labeled output validates IN-5's exact requirement.
-// test_kind: invariant_guard(INV-013)
-#[ test ]
-fn t34_non_admission_message_preserves_active_waiting_substring()
-{
-  let ( _occupier_dir, occupier_path ) = fake_claude_binary_dir();
-  let mut occupier = spawn_print_claude_for( &occupier_path, 60 );
-  let proc = make_proc_dir( &[ occupier.id() ] );
-
-  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
-  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
-
-  let bin = env!( "CARGO_BIN_EXE_clr" );
-  let out = Command::new( bin )
-    .args( [ "-p", "--max-sessions", "1", "--retry-override", "0", "--journal", "off", "x" ] )
-    .env( "PATH", &script_path )
-    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
-    .env( "CLR_GATE_DIR", gate_dir.path() )
-    .env( "CLR_GATE_POLL_SECS", "1" )
-    .env( "CLR_GATE_MAX_ATTEMPTS", "2" )
-    .output()
-    .expect( "invoke clr" );
-
-  let _ = occupier.kill();
-  let _ = occupier.wait();
-
-  let stderr = String::from_utf8_lossy( &out.stderr );
-  assert!(
-    stderr.contains( "gate-wait  active=" ),
-    "T34 (INV-013 IN-5): cause-labeled diagnostic must preserve \"gate-wait  active=\" \
-     prefix (TSK-452 format) — the count ratio follows immediately after. Got:\n{stderr}"
-  );
-}
-
-// ── T35 / T36: CLR_REMAINING_TIMEOUT_SECS budget clamp (BUG-423 regression) ─
-
-/// T35 (BUG-423): `CLR_REMAINING_TIMEOUT_SECS` clamps `effective_max_attempts` to
-/// `floor(remaining / poll_secs).max(1)`.  With remaining=2, poll=1, max=1000
-/// the gate must exhaust after exactly 2 attempts, not 1000, and must emit a
-/// diagnostic containing "budget" in the error line so operators can distinguish
-/// budget-exhaustion from ordinary gate timeout in job stderr.
-///
-/// ## Root Cause (BUG-423)
-///
-/// `wait_for_session_slot()` polled up to `CLR_GATE_MAX_ATTEMPTS` (default 1000)
-/// with no awareness of any external job-runner deadline, causing gate-wait
-/// alone to consume the entire `wplan_executor` budget (observed: 258 × 30s =
-/// 7740s exceeded a 7200s wplan timeout).
-///
-/// ## Why Not Caught
-///
-/// `CLR_REMAINING_TIMEOUT_SECS` did not exist before this fix; no test could
-/// exercise the clamping path.
+/// All 9+ format guards pin the `gate-wait  active=` prefix and `active=N/N`
+/// ratios (the census half); the T15-family checks cause labels only. No
+/// assertion anywhere named an occupancy, holder, or denied-index token.
 ///
 /// ## Fix Applied
-///
-/// gate.rs reads `CLR_REMAINING_TIMEOUT_SECS` and computes `effective_max_attempts`
-/// = `(remaining_secs / poll_secs).max(1)`; the for loop runs to `effective_max_attempts`
-/// instead of `max_attempts`; budget exhaustion emits a distinct "gate-wait budget
-/// exhausted" diagnostic routed through `on_exhausted` exactly like the normal path.
+/// The sweep tallies denied indices (`denied_slots`) beside its surviving
+/// `Result`; the poll line and both exhaustion messages append
+/// ` slots={denied_slots}/{max}` — only for measured sweeps (slot-side
+/// denials); the at-capacity arm never ran the sweep, so it never carries
+/// the field (keeping every pinned at-capacity line byte-identical).
 ///
 /// ## Prevention
-///
-/// Assert that stderr contains "budget" and that the gate exits without sleeping
-/// 1000 poll intervals (practical time bound: test completes in < 5s).
-///
-/// ## Pitfall
-///
-/// The test uses `CLR_REMAINING_TIMEOUT_SECS=2` and `CLR_GATE_POLL_SECS=1` (not the
-/// production 60/30 values) to keep the test to 1 inter-attempt sleep of 1 second.
-/// The invariant under test — clamping to floor(remaining/poll) — is identical.
-// test_kind: bug_reproducer(BUG-423)
-#[ test ]
-fn t35_remaining_timeout_budget_clamps_gate_attempts()
-{
-  let ( _occupier_dir, occupier_path ) = fake_claude_binary_dir();
-  let mut occupier = spawn_print_claude_for( &occupier_path, 60 );
-  let proc = make_proc_dir( &[ occupier.id() ] );
-
-  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
-  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
-
-  let bin = env!( "CARGO_BIN_EXE_clr" );
-  let out = Command::new( bin )
-    .args( [ "-p", "--max-sessions", "1", "--retry-override", "0", "--journal", "off", "x" ] )
-    .env( "PATH", &script_path )
-    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
-    .env( "CLR_GATE_DIR", gate_dir.path() )
-    .env( "CLR_GATE_POLL_SECS",        "1"    )  // 1s poll keeps test to ~1s elapsed
-    .env( "CLR_GATE_MAX_ATTEMPTS",     "1000" )  // without budget clamp: 1000 attempts
-    .env( "CLR_REMAINING_TIMEOUT_SECS", "2"   )  // floor(2/1)=2 → clamp to 2 attempts
-    .output()
-    .expect( "invoke clr" );
-
-  let _ = occupier.kill();
-  let _ = occupier.wait();
-
-  let stderr = String::from_utf8_lossy( &out.stderr );
-  assert_ne!(
-    out.status.code(),
-    Some( 0 ),
-    "T35 (BUG-423): gate must exit non-zero when budget exhausts. Got:\n{stderr}"
-  );
-  assert!(
-    stderr.contains( "budget" ),
-    "T35 (BUG-423): budget-exhaustion diagnostic must contain \"budget\" so operators \
-     can distinguish it from ordinary gate timeout. Got:\n{stderr}"
-  );
-  assert!(
-    !stderr.contains( "session gate timed out" ),
-    "T35 (BUG-423): budget-exhaustion must NOT produce the normal \"session gate timed \
-     out\" message — the two exhaustion paths must be distinguishable. Got:\n{stderr}"
-  );
-}
-
-/// T36 (BUG-423): when `CLR_REMAINING_TIMEOUT_SECS` is less than one poll interval,
-/// `.max(1)` ensures at least one admission attempt is made before declaring budget
-/// exhausted — the gate must not silently skip the admission check entirely.
-///
-/// ## Root Cause / Fix Applied
-///
-/// See T35 above. This case exercises the `.max(1)` floor: `floor(1/30) = 0`, but
-/// `.max(1)` yields 1, so attempt 1 fires and the exhaustion check immediately
-/// follows (no sleep, since sleep happens AFTER the exhaustion check).
+/// When an admission predicate is a conjunction, every denial diagnostic must
+/// interpolate at least one measured value from the conjunct that actually
+/// failed — INV-013 extended to mandate the occupancy field for slot-side
+/// causes (IN-7).
 ///
 /// ## Pitfall
-///
-/// With `effective_max_attempts=1`, the `if attempt == effective_max_attempts` branch
-/// fires on the very first attempt, before any `std::thread::sleep(poll)` call.
-/// The test therefore completes in < 1s even with `CLR_GATE_POLL_SECS=30`.
-// test_kind: bug_reproducer(BUG-423)
+/// A diagnostic that interpolates only one conjunct's variables misattributes
+/// every denial caused by the other conjunct — operators read `active=1/8` as
+/// "7 slots free" while all 8 are occupied.
+// test_kind: bug_reproducer(BUG-480)
 #[ test ]
-fn t36_remaining_timeout_below_poll_interval_still_makes_one_attempt()
+fn t38_slot_side_denial_names_measured_occupancy()
 {
-  let ( _occupier_dir, occupier_path ) = fake_claude_binary_dir();
-  let mut occupier = spawn_print_claude_for( &occupier_path, 60 );
-  let proc = make_proc_dir( &[ occupier.id() ] );
-
   let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
   let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
+  let proc_dir = tempfile::TempDir::new().expect( "proc dir" ); // empty: census sees 0 sessions
 
-  let bin = env!( "CARGO_BIN_EXE_clr" );
-  let out = Command::new( bin )
-    .args( [ "-p", "--max-sessions", "1", "--retry-override", "0", "--journal", "off", "x" ] )
-    .env( "PATH", &script_path )
-    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
-    .env( "CLR_GATE_DIR", gate_dir.path() )
-    .env( "CLR_GATE_POLL_SECS",        "30"  )  // 30s poll — but .max(1) gives 1 attempt
-    .env( "CLR_GATE_MAX_ATTEMPTS",     "1000" ) // without budget clamp: 1000 attempts
-    .env( "CLR_REMAINING_TIMEOUT_SECS", "1"   ) // floor(1/30)=0 → .max(1)=1 attempt
-    .output()
-    .expect( "invoke clr" );
-
-  let _ = occupier.kill();
-  let _ = occupier.wait();
-
-  let stderr = String::from_utf8_lossy( &out.stderr );
-  assert_ne!(
-    out.status.code(),
-    Some( 0 ),
-    "T36 (BUG-423): gate must exit non-zero even when budget < 1 poll interval. Got:\n{stderr}"
-  );
-  assert!(
-    stderr.contains( "budget" ),
-    "T36 (BUG-423): budget exhaustion diagnostic must contain \"budget\" even on the \
-     single-attempt floor path. Got:\n{stderr}"
-  );
-}
-
-// ──────────────────────────────────────────────────────────────────────────────
-// 082 — --gate-poll-secs edge cases
-// ──────────────────────────────────────────────────────────────────────────────
-
-/// 082/EC-1: `--gate-poll-secs 5` CLI flag reduces the wait between gate attempts.
-/// Gate-wait diagnostic contains `wait=5s`; exhaustion completes within a 12s
-/// deadline (would take ~30s if the 30s default were applied instead).
-// test_kind: edge_case
-#[ test ]
-fn t_gate_poll_secs_cli_flag_reduces_wait_interval()
-{
-  let ( _occupier_dir, occupier_path ) = fake_claude_binary_dir();
-  let mut occupier = spawn_print_claude_for( &occupier_path, 60 );
-  let proc = make_proc_dir( &[ occupier.id() ] );
-
-  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
-  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
-
-  let bin = env!( "CARGO_BIN_EXE_clr" );
-  let mut child = Command::new( bin )
-    .args( [
-      "-p", "--max-sessions", "1", "--retry-override", "0",
-      "--gate-poll-secs", "5", "--journal", "off", "x",
-    ] )
-    .env( "PATH", &script_path )
-    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
-    .env( "CLR_GATE_DIR", gate_dir.path() )
-    .env( "CLR_GATE_MAX_ATTEMPTS", "2" )
-    .stdout( std::process::Stdio::null() )
-    .stderr( std::process::Stdio::piped() )
-    .spawn()
-    .expect( "spawn clr" );
-
-  let deadline = std::time::Instant::now() + core::time::Duration::from_secs( 12 );
-  let exited = wait_bounded( &mut child, deadline );
-  if exited.is_none() { let _ = child.kill(); }
-  let out = child.wait_with_output().expect( "reap clr" );
-
-  let _ = occupier.kill();
-  let _ = occupier.wait();
-
-  let stderr = String::from_utf8_lossy( &out.stderr );
-  assert!(
-    exited.is_some(),
-    "082/EC-1: gate must exhaust within 12s when --gate-poll-secs 5 is set \
-     (would take ~30s with the 30s default). stderr:\n{stderr}"
-  );
-  assert_eq!(
-    exited.and_then( |s| s.code() ), Some( 1 ),
-    "082/EC-1: exit must be 1 once the gate exhausts. stderr: {stderr}"
-  );
-  assert!(
-    stderr.contains( "wait=5s" ),
-    "082/EC-1: gate-wait diagnostic must contain `wait=5s` confirming the CLI flag \
-     was applied. Got:\n{stderr}"
-  );
-}
-
-/// 082/EC-2: `CLR_GATE_POLL_SECS=5` env var produces identical behavior to `--gate-poll-secs 5`.
-/// Confirms the env-var fallback tier is active for `run`/`ask`.
-// test_kind: edge_case
-#[ test ]
-fn t_gate_poll_secs_env_var_equivalent_to_cli_flag()
-{
-  let ( _occupier_dir, occupier_path ) = fake_claude_binary_dir();
-  let mut occupier = spawn_print_claude_for( &occupier_path, 60 );
-  let proc = make_proc_dir( &[ occupier.id() ] );
-
-  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
-  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
-
-  let bin = env!( "CARGO_BIN_EXE_clr" );
-  let mut child = Command::new( bin )
-    .args( [ "-p", "--max-sessions", "1", "--retry-override", "0", "--journal", "off", "x" ] )
-    .env( "PATH", &script_path )
-    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
-    .env( "CLR_GATE_DIR", gate_dir.path() )
-    .env( "CLR_GATE_POLL_SECS",    "5" )
-    .env( "CLR_GATE_MAX_ATTEMPTS", "2" )
-    .stdout( std::process::Stdio::null() )
-    .stderr( std::process::Stdio::piped() )
-    .spawn()
-    .expect( "spawn clr" );
-
-  let deadline = std::time::Instant::now() + core::time::Duration::from_secs( 12 );
-  let exited = wait_bounded( &mut child, deadline );
-  if exited.is_none() { let _ = child.kill(); }
-  let out = child.wait_with_output().expect( "reap clr" );
-
-  let _ = occupier.kill();
-  let _ = occupier.wait();
-
-  let stderr = String::from_utf8_lossy( &out.stderr );
-  assert!(
-    exited.is_some(),
-    "082/EC-2: gate must exhaust within 12s when CLR_GATE_POLL_SECS=5. stderr:\n{stderr}"
-  );
-  assert_eq!(
-    exited.and_then( |s| s.code() ), Some( 1 ),
-    "082/EC-2: exit must be 1. stderr: {stderr}"
-  );
-  assert!(
-    stderr.contains( "wait=5s" ),
-    "082/EC-2: gate-wait diagnostic must contain `wait=5s` confirming env var applied. Got:\n{stderr}"
-  );
-}
-
-/// 082/EC-3: When `--gate-poll-secs` and `CLR_GATE_POLL_SECS` are both absent, the
-/// 30s default is used. Verified via dry-run: parameter accepted without error,
-/// exit 0 (gate never triggers in dry-run mode).
-// test_kind: edge_case
-#[ test ]
-fn t_gate_poll_secs_absent_uses_30s_default()
-{
-  let bin = env!( "CARGO_BIN_EXE_clr" );
-  let out = Command::new( bin )
-    .args( [ "--dry-run", "--journal", "off", "x" ] )
-    .env( "HOME", "/tmp/clr-isolated-home" )
-    .env_remove( "CLR_GATE_POLL_SECS" )
-    .output()
-    .expect( "invoke clr" );
-
-  assert!(
-    out.status.success(),
-    "082/EC-3: dry-run with absent --gate-poll-secs must exit 0 (30s default, gate never triggers). \
-     stderr: {}",
-    String::from_utf8_lossy( &out.stderr )
-  );
-}
-
-/// 082/EC-4: `"gate-poll-secs"` JSON key in `--args-file` is accepted and applied.
-/// Same 5s timing behavior as EC-1/EC-2.
-// test_kind: edge_case
-#[ test ]
-fn t_gate_poll_secs_json_key_accepted_via_args_file()
-{
-  let ( _occupier_dir, occupier_path ) = fake_claude_binary_dir();
-  let mut occupier = spawn_print_claude_for( &occupier_path, 60 );
-  let proc = make_proc_dir( &[ occupier.id() ] );
-
-  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
-  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
-
-  let mut cfg = NamedTempFile::new().expect( "args-file" );
-  write!( cfg, r#"{{"gate-poll-secs": 5}}"# ).expect( "write args-file JSON" );
-  let cfg_path = cfg.path().to_str().expect( "args-file path UTF-8" );
-
-  let bin = env!( "CARGO_BIN_EXE_clr" );
-  let mut child = Command::new( bin )
-    .args( [
-      "-p", "--max-sessions", "1", "--retry-override", "0",
-      "--args-file", cfg_path, "--journal", "off", "x",
-    ] )
-    .env( "PATH", &script_path )
-    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
-    .env( "CLR_GATE_DIR", gate_dir.path() )
-    .env( "CLR_GATE_MAX_ATTEMPTS", "2" )
-    .stdout( std::process::Stdio::null() )
-    .stderr( std::process::Stdio::piped() )
-    .spawn()
-    .expect( "spawn clr" );
-
-  let deadline = std::time::Instant::now() + core::time::Duration::from_secs( 12 );
-  let exited = wait_bounded( &mut child, deadline );
-  if exited.is_none() { let _ = child.kill(); }
-  let out = child.wait_with_output().expect( "reap clr" );
-
-  let _ = occupier.kill();
-  let _ = occupier.wait();
-
-  let stderr = String::from_utf8_lossy( &out.stderr );
-  assert!(
-    exited.is_some(),
-    "082/EC-4: gate must exhaust within 12s when {{\"gate-poll-secs\":5}} in args-file. stderr:\n{stderr}"
-  );
-  assert_eq!(
-    exited.and_then( |s| s.code() ), Some( 1 ),
-    "082/EC-4: exit must be 1. stderr: {stderr}"
-  );
-  assert!(
-    stderr.contains( "wait=5s" ),
-    "082/EC-4: gate-wait diagnostic must contain `wait=5s` confirming JSON key applied. Got:\n{stderr}"
-  );
-}
-
-/// 082/EC-5: CLI flag takes precedence over env var.
-/// `--gate-poll-secs 5` wins over `CLR_GATE_POLL_SECS=60`: gate exhausts in <12s
-/// (would take ~60s if the env var won).
-// test_kind: edge_case
-#[ test ]
-fn t_gate_poll_secs_cli_flag_takes_precedence_over_env_var()
-{
-  let ( _occupier_dir, occupier_path ) = fake_claude_binary_dir();
-  let mut occupier = spawn_print_claude_for( &occupier_path, 60 );
-  let proc = make_proc_dir( &[ occupier.id() ] );
-
-  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
-  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
-
-  let bin = env!( "CARGO_BIN_EXE_clr" );
-  let mut child = Command::new( bin )
-    .args( [
-      "-p", "--max-sessions", "1", "--retry-override", "0",
-      "--gate-poll-secs", "5", "--journal", "off", "x",
-    ] )
-    .env( "PATH", &script_path )
-    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
-    .env( "CLR_GATE_DIR", gate_dir.path() )
-    .env( "CLR_GATE_POLL_SECS",    "60" )  // env: 60s; CLI wins with 5s
-    .env( "CLR_GATE_MAX_ATTEMPTS", "2"  )
-    .stdout( std::process::Stdio::null() )
-    .stderr( std::process::Stdio::piped() )
-    .spawn()
-    .expect( "spawn clr" );
-
-  let deadline = std::time::Instant::now() + core::time::Duration::from_secs( 12 );
-  let exited = wait_bounded( &mut child, deadline );
-  if exited.is_none() { let _ = child.kill(); }
-  let out = child.wait_with_output().expect( "reap clr" );
-
-  let _ = occupier.kill();
-  let _ = occupier.wait();
-
-  let stderr = String::from_utf8_lossy( &out.stderr );
-  assert!(
-    exited.is_some(),
-    "082/EC-5: gate must exhaust within 12s when --gate-poll-secs 5 overrides CLR_GATE_POLL_SECS=60 \
-     (would take ~60s if env var won). stderr:\n{stderr}"
-  );
-  assert_eq!(
-    exited.and_then( |s| s.code() ), Some( 1 ),
-    "082/EC-5: exit must be 1. stderr: {stderr}"
-  );
-  assert!(
-    stderr.contains( "wait=5s" ),
-    "082/EC-5: diagnostic must contain `wait=5s` (CLI value), not `wait=60s` (env var). Got:\n{stderr}"
-  );
-}
-
-// ──────────────────────────────────────────────────────────────────────────────
-// 083 — --gate-max-attempts edge cases
-// ──────────────────────────────────────────────────────────────────────────────
-
-/// 083/EC-1: `--gate-max-attempts 2` → gate exhausts after exactly 2 attempts.
-/// Only 1 wait-diagnostic line is emitted (attempt=1/2); attempt 2 triggers the
-/// exhaustion check before the eprintln runs.
-// test_kind: edge_case
-#[ test ]
-fn t_gate_max_attempts_cli_flag_exhausts_after_n_attempts()
-{
-  let ( _occupier_dir, occupier_path ) = fake_claude_binary_dir();
-  let mut occupier = spawn_print_claude_for( &occupier_path, 60 );
-  let proc = make_proc_dir( &[ occupier.id() ] );
-
-  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
-  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
-
-  let bin = env!( "CARGO_BIN_EXE_clr" );
-  let mut child = Command::new( bin )
-    .args( [
-      "-p", "--max-sessions", "1", "--retry-override", "0",
-      "--gate-max-attempts", "2", "--journal", "off", "x",
-    ] )
-    .env( "PATH", &script_path )
-    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
-    .env( "CLR_GATE_DIR", gate_dir.path() )
-    .env( "CLR_GATE_POLL_SECS", "1" )
-    .stdout( std::process::Stdio::null() )
-    .stderr( std::process::Stdio::piped() )
-    .spawn()
-    .expect( "spawn clr" );
-
-  let deadline = std::time::Instant::now() + core::time::Duration::from_secs( 10 );
-  let exited = wait_bounded( &mut child, deadline );
-  if exited.is_none() { let _ = child.kill(); }
-  let out = child.wait_with_output().expect( "reap clr" );
-
-  let _ = occupier.kill();
-  let _ = occupier.wait();
-
-  let stderr = String::from_utf8_lossy( &out.stderr );
-  assert!(
-    exited.is_some(),
-    "083/EC-1: gate must exhaust within 10s when --gate-max-attempts 2 with 1s poll. stderr:\n{stderr}"
-  );
-  assert_eq!(
-    exited.and_then( |s| s.code() ), Some( 1 ),
-    "083/EC-1: exit must be 1. stderr: {stderr}"
-  );
-  assert!(
-    stderr.contains( "session gate timed out" ),
-    "083/EC-1: exhaustion message must contain \"session gate timed out\". Got:\n{stderr}"
-  );
-  assert!(
-    stderr.contains( "attempt=1/2" ),
-    "083/EC-1: gate must show ceiling 2 (not 1000 default); diagnostic `attempt=1/2` expected. Got:\n{stderr}"
-  );
-}
-
-/// 083/EC-2: `CLR_GATE_MAX_ATTEMPTS=2` env var produces identical behavior to `--gate-max-attempts 2`.
-// test_kind: edge_case
-#[ test ]
-fn t_gate_max_attempts_env_var_equivalent_to_cli_flag()
-{
-  let ( _occupier_dir, occupier_path ) = fake_claude_binary_dir();
-  let mut occupier = spawn_print_claude_for( &occupier_path, 60 );
-  let proc = make_proc_dir( &[ occupier.id() ] );
-
-  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
-  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
-
-  let bin = env!( "CARGO_BIN_EXE_clr" );
-  let mut child = Command::new( bin )
-    .args( [ "-p", "--max-sessions", "1", "--retry-override", "0", "--journal", "off", "x" ] )
-    .env( "PATH", &script_path )
-    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
-    .env( "CLR_GATE_DIR", gate_dir.path() )
-    .env( "CLR_GATE_POLL_SECS",    "1" )
-    .env( "CLR_GATE_MAX_ATTEMPTS", "2" )
-    .stdout( std::process::Stdio::null() )
-    .stderr( std::process::Stdio::piped() )
-    .spawn()
-    .expect( "spawn clr" );
-
-  let deadline = std::time::Instant::now() + core::time::Duration::from_secs( 10 );
-  let exited = wait_bounded( &mut child, deadline );
-  if exited.is_none() { let _ = child.kill(); }
-  let out = child.wait_with_output().expect( "reap clr" );
-
-  let _ = occupier.kill();
-  let _ = occupier.wait();
-
-  let stderr = String::from_utf8_lossy( &out.stderr );
-  assert!(
-    exited.is_some(),
-    "083/EC-2: gate must exhaust within 10s when CLR_GATE_MAX_ATTEMPTS=2. stderr:\n{stderr}"
-  );
-  assert_eq!(
-    exited.and_then( |s| s.code() ), Some( 1 ),
-    "083/EC-2: exit must be 1. stderr: {stderr}"
-  );
-  assert!(
-    stderr.contains( "session gate timed out" ),
-    "083/EC-2: exhaustion message required. Got:\n{stderr}"
-  );
-}
-
-/// 083/EC-3: When `--gate-max-attempts` and `CLR_GATE_MAX_ATTEMPTS` are both absent,
-/// the 1000-attempt default is used. Verified via dry-run: parameter accepted without
-/// error, exit 0 (gate never triggers in dry-run mode).
-// test_kind: edge_case
-#[ test ]
-fn t_gate_max_attempts_absent_uses_1000_default()
-{
-  let bin = env!( "CARGO_BIN_EXE_clr" );
-  let out = Command::new( bin )
-    .args( [ "--dry-run", "--journal", "off", "x" ] )
-    .env( "HOME", "/tmp/clr-isolated-home" )
-    .env_remove( "CLR_GATE_MAX_ATTEMPTS" )
-    .output()
-    .expect( "invoke clr" );
-
-  assert!(
-    out.status.success(),
-    "083/EC-3: dry-run with absent --gate-max-attempts must exit 0 (1000-attempt default, gate never triggers). \
-     stderr: {}",
-    String::from_utf8_lossy( &out.stderr )
-  );
-}
-
-/// 083/EC-4: `"gate-max-attempts"` JSON key in `--args-file` is accepted and applied.
-/// Gate exhausts after 2 attempts (same timing as EC-1/EC-2).
-// test_kind: edge_case
-#[ test ]
-fn t_gate_max_attempts_json_key_accepted_via_args_file()
-{
-  let ( _occupier_dir, occupier_path ) = fake_claude_binary_dir();
-  let mut occupier = spawn_print_claude_for( &occupier_path, 60 );
-  let proc = make_proc_dir( &[ occupier.id() ] );
-
-  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
-  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
-
-  let mut cfg = NamedTempFile::new().expect( "args-file" );
-  write!( cfg, r#"{{"gate-max-attempts": 2}}"# ).expect( "write args-file JSON" );
-  let cfg_path = cfg.path().to_str().expect( "args-file path UTF-8" );
-
-  let bin = env!( "CARGO_BIN_EXE_clr" );
-  let mut child = Command::new( bin )
-    .args( [
-      "-p", "--max-sessions", "1", "--retry-override", "0",
-      "--args-file", cfg_path, "--journal", "off", "x",
-    ] )
-    .env( "PATH", &script_path )
-    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
-    .env( "CLR_GATE_DIR", gate_dir.path() )
-    .env( "CLR_GATE_POLL_SECS", "1" )
-    .stdout( std::process::Stdio::null() )
-    .stderr( std::process::Stdio::piped() )
-    .spawn()
-    .expect( "spawn clr" );
-
-  let deadline = std::time::Instant::now() + core::time::Duration::from_secs( 10 );
-  let exited = wait_bounded( &mut child, deadline );
-  if exited.is_none() { let _ = child.kill(); }
-  let out = child.wait_with_output().expect( "reap clr" );
-
-  let _ = occupier.kill();
-  let _ = occupier.wait();
-
-  let stderr = String::from_utf8_lossy( &out.stderr );
-  assert!(
-    exited.is_some(),
-    "083/EC-4: gate must exhaust within 10s when {{\"gate-max-attempts\":2}} in args-file. stderr:\n{stderr}"
-  );
-  assert_eq!(
-    exited.and_then( |s| s.code() ), Some( 1 ),
-    "083/EC-4: exit must be 1. stderr: {stderr}"
-  );
-  assert!(
-    stderr.contains( "session gate timed out" ),
-    "083/EC-4: exhaustion message required. Got:\n{stderr}"
-  );
-}
-
-/// 083/EC-5: CLI flag takes precedence over env var.
-/// `--gate-max-attempts 2` wins over `CLR_GATE_MAX_ATTEMPTS=100`: gate exhausts
-/// within 10s and diagnostic shows ceiling 2 (not 100).
-// test_kind: edge_case
-#[ test ]
-fn t_gate_max_attempts_cli_flag_takes_precedence_over_env_var()
-{
-  let ( _occupier_dir, occupier_path ) = fake_claude_binary_dir();
-  let mut occupier = spawn_print_claude_for( &occupier_path, 60 );
-  let proc = make_proc_dir( &[ occupier.id() ] );
-
-  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
-  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
-
-  let bin = env!( "CARGO_BIN_EXE_clr" );
-  let mut child = Command::new( bin )
-    .args( [
-      "-p", "--max-sessions", "1", "--retry-override", "0",
-      "--gate-max-attempts", "2", "--journal", "off", "x",
-    ] )
-    .env( "PATH", &script_path )
-    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
-    .env( "CLR_GATE_DIR", gate_dir.path() )
-    .env( "CLR_GATE_POLL_SECS",    "1"   )
-    .env( "CLR_GATE_MAX_ATTEMPTS", "100" )  // env: 100 attempts; CLI wins with 2
-    .stdout( std::process::Stdio::null() )
-    .stderr( std::process::Stdio::piped() )
-    .spawn()
-    .expect( "spawn clr" );
-
-  let deadline = std::time::Instant::now() + core::time::Duration::from_secs( 10 );
-  let exited = wait_bounded( &mut child, deadline );
-  if exited.is_none() { let _ = child.kill(); }
-  let out = child.wait_with_output().expect( "reap clr" );
-
-  let _ = occupier.kill();
-  let _ = occupier.wait();
-
-  let stderr = String::from_utf8_lossy( &out.stderr );
-  assert!(
-    exited.is_some(),
-    "083/EC-5: gate must exhaust within 10s when --gate-max-attempts 2 overrides \
-     CLR_GATE_MAX_ATTEMPTS=100. stderr:\n{stderr}"
-  );
-  assert_eq!(
-    exited.and_then( |s| s.code() ), Some( 1 ),
-    "083/EC-5: exit must be 1. stderr: {stderr}"
-  );
-  assert!(
-    stderr.contains( "attempt=1/2" ),
-    "083/EC-5: diagnostic must show ceiling 2 (CLI value), not 100 (env var). Got:\n{stderr}"
-  );
-}
-
-// ──────────────────────────────────────────────────────────────────────────────
-// 084 — --gate-stale-secs edge cases
-// ──────────────────────────────────────────────────────────────────────────────
-//
-// Fixture: pre-seed `slot_0.json` with a live occupier's PID; use an EMPTY
-// proc_dir so count=0 < max=1 (has_capacity=true). acquire_slot() then reads
-// the pre-seeded slot and decides reclaim eligibility based on `stale_secs`.
-// Mirrors T20's two-phase shape.
-
-/// 084/EC-1: Default (absent) → `CLR_GATE_STALE_SECS`/`--gate-stale-secs` absent.
-/// Live owner (`since=0`, maximally stale) is never reclaimed; gate exhausts.
-// test_kind: edge_case
-#[ test ]
-fn t_gate_stale_secs_absent_live_owner_never_reclaimed()
-{
-  let ( _occupier_dir, occupier_path ) = fake_claude_binary_dir();
-  let mut occupier = spawn_print_claude_for( &occupier_path, 30 );
-  let occupier_pid = occupier.id();
-
-  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
-  let proc_dir  = tempfile::TempDir::new().expect( "proc dir" );
-
+  // The sole slot (max-sessions=1) is held by a live foreign owner — this test
+  // process itself: guaranteed alive for the duration, no child to manage.
+  // `since:0` is irrelevant here: with CLR_GATE_STALE_SECS unset (explicitly
+  // removed below), no staleness comparison ever runs against a live owner.
+  let owner_pid = std::process::id();
   std::fs::write(
     gate_dir.path().join( "slot_0.json" ),
-    format!( r#"{{"pid":{occupier_pid},"since":0}}"# ),
-  ).expect( "pre-seed stale live slot" );
+    format!( r#"{{"pid":{owner_pid},"since":0}}"# ),
+  ).expect( "pre-seed live-owner slot file" );
 
-  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
-  let bin = env!( "CARGO_BIN_EXE_clr" );
-  let mut waiter = Command::new( bin )
+  let out = Command::new( env!( "CARGO_BIN_EXE_clr" ) )
     .args( [ "-p", "--max-sessions", "1", "--retry-override", "0", "--journal", "off", "x" ] )
     .env( "PATH", &script_path )
     .env( "CLR_PROC_DIR", proc_dir.path() )
     .env( "CLR_GATE_DIR", gate_dir.path() )
-    .env( "CLR_GATE_POLL_SECS",    "1" )
+    .env( "CLR_GATE_POLL_SECS", "1" )
     .env( "CLR_GATE_MAX_ATTEMPTS", "2" )
     .env_remove( "CLR_GATE_STALE_SECS" )
-    .stdout( std::process::Stdio::null() )
-    .stderr( std::process::Stdio::piped() )
-    .spawn()
-    .expect( "spawn clr" );
-
-  let deadline = std::time::Instant::now() + core::time::Duration::from_secs( 10 );
-  let exited = wait_bounded( &mut waiter, deadline );
-  if exited.is_none() { let _ = waiter.kill(); }
-  let out = waiter.wait_with_output().expect( "reap clr" );
-
-  let _ = occupier.kill();
-  let _ = occupier.wait();
+    .output()
+    .expect( "run clr" );
 
   let stderr = String::from_utf8_lossy( &out.stderr );
-  assert_eq!(
-    exited.and_then( |s| s.code() ), Some( 1 ),
-    "084/EC-1: gate must exhaust (exit 1) when CLR_GATE_STALE_SECS absent — \
-     live owner never reclaimed. stderr:\n{stderr}"
+  assert!( !out.status.success(), "T38 (BUG-480): fixture must deny admission. stderr:\n{stderr}" );
+
+  let denial_line = stderr.lines()
+    .find( |l| l.contains( "reason: slot held by another session" ) )
+    .unwrap_or_else( || panic!( "T38 (BUG-480): expected a slot-held denial line. stderr:\n{stderr}" ) );
+  assert!(
+    denial_line.contains( "slots=1/1" ),
+    "T38 (BUG-480): slot-side poll line must name the measured occupancy slots=1/1. Line:\n{denial_line}"
   );
   assert!(
-    stderr.contains( "slot held by another session" ),
-    "084/EC-1: unset stale threshold must not reclaim a live owner; \
-     \"slot held by another session\" expected. Got:\n{stderr}"
+    denial_line.contains( "gate-wait  active=0/1" ),
+    "T38 (BUG-480): census half of the line must be preserved unchanged. Line:\n{denial_line}"
+  );
+
+  let timeout_line = stderr.lines()
+    .find( |l| l.contains( "session gate timed out" ) )
+    .unwrap_or_else( || panic!( "T38 (BUG-480): expected the gate-timeout message. stderr:\n{stderr}" ) );
+  assert!(
+    timeout_line.contains( "slots=1/1 held" ),
+    "T38 (BUG-480): slot-side timeout message must mirror the measured occupancy. Line:\n{timeout_line}"
   );
 }
 
-/// 084/EC-2: `--gate-stale-secs 1` CLI flag reclaims a slot whose `since` is 0
-/// (elapsed ≈ decades >> 1s threshold). Waiter is admitted immediately → exit 0.
-// test_kind: edge_case
-#[ test ]
-fn t_gate_stale_secs_cli_flag_reclaims_stale_slot()
-{
-  let ( _occupier_dir, occupier_path ) = fake_claude_binary_dir();
-  let mut occupier = spawn_print_claude_for( &occupier_path, 30 );
-  let occupier_pid = occupier.id();
-
-  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
-  let proc_dir  = tempfile::TempDir::new().expect( "proc dir" );
-
-  std::fs::write(
-    gate_dir.path().join( "slot_0.json" ),
-    format!( r#"{{"pid":{occupier_pid},"since":0}}"# ),
-  ).expect( "pre-seed stale live slot" );
-
-  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
-  let bin = env!( "CARGO_BIN_EXE_clr" );
-  let out = Command::new( bin )
-    .args( [
-      "-p", "--max-sessions", "1", "--retry-override", "0",
-      "--gate-stale-secs", "1", "--journal", "off", "x",
-    ] )
-    .env( "PATH", &script_path )
-    .env( "CLR_PROC_DIR", proc_dir.path() )
-    .env( "CLR_GATE_DIR", gate_dir.path() )
-    .env( "CLR_GATE_POLL_SECS",    "1" )
-    .env( "CLR_GATE_MAX_ATTEMPTS", "5" )
-    .output()
-    .expect( "invoke clr" );
-
-  let _ = occupier.kill();
-  let _ = occupier.wait();
-
-  assert!(
-    out.status.success(),
-    "084/EC-2: --gate-stale-secs 1 must reclaim the stale slot (since=0) and admit \
-     the waiter (exit 0). stderr: {}",
-    String::from_utf8_lossy( &out.stderr )
-  );
-}
-
-/// 084/EC-3: `CLR_GATE_STALE_SECS=10` env var reclaims a stale slot — behavior
-/// identical to EC-2 but via the env-var tier.
-// test_kind: edge_case
-#[ test ]
-fn t_gate_stale_secs_env_var_reclaims_stale_slot()
-{
-  let ( _occupier_dir, occupier_path ) = fake_claude_binary_dir();
-  let mut occupier = spawn_print_claude_for( &occupier_path, 30 );
-  let occupier_pid = occupier.id();
-
-  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
-  let proc_dir  = tempfile::TempDir::new().expect( "proc dir" );
-
-  std::fs::write(
-    gate_dir.path().join( "slot_0.json" ),
-    format!( r#"{{"pid":{occupier_pid},"since":0}}"# ),
-  ).expect( "pre-seed stale live slot" );
-
-  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
-  let bin = env!( "CARGO_BIN_EXE_clr" );
-  let out = Command::new( bin )
-    .args( [ "-p", "--max-sessions", "1", "--retry-override", "0", "--journal", "off", "x" ] )
-    .env( "PATH", &script_path )
-    .env( "CLR_PROC_DIR", proc_dir.path() )
-    .env( "CLR_GATE_DIR", gate_dir.path() )
-    .env( "CLR_GATE_POLL_SECS",    "1"  )
-    .env( "CLR_GATE_MAX_ATTEMPTS", "5"  )
-    .env( "CLR_GATE_STALE_SECS",   "10" )
-    .output()
-    .expect( "invoke clr" );
-
-  let _ = occupier.kill();
-  let _ = occupier.wait();
-
-  assert!(
-    out.status.success(),
-    "084/EC-3: CLR_GATE_STALE_SECS=10 must reclaim the stale slot (since=0) and admit \
-     the waiter (exit 0). stderr: {}",
-    String::from_utf8_lossy( &out.stderr )
-  );
-}
-
-/// 084/EC-4: `"gate-stale-secs"` JSON key in `--args-file` is accepted and applied.
-/// Stale slot reclaimed, waiter admitted → exit 0.
-// test_kind: edge_case
-#[ test ]
-fn t_gate_stale_secs_json_key_accepted_via_args_file()
-{
-  let ( _occupier_dir, occupier_path ) = fake_claude_binary_dir();
-  let mut occupier = spawn_print_claude_for( &occupier_path, 30 );
-  let occupier_pid = occupier.id();
-
-  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
-  let proc_dir  = tempfile::TempDir::new().expect( "proc dir" );
-
-  std::fs::write(
-    gate_dir.path().join( "slot_0.json" ),
-    format!( r#"{{"pid":{occupier_pid},"since":0}}"# ),
-  ).expect( "pre-seed stale live slot" );
-
-  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
-
-  let mut cfg = NamedTempFile::new().expect( "args-file" );
-  write!( cfg, r#"{{"gate-stale-secs": 1}}"# ).expect( "write args-file JSON" );
-  let cfg_path = cfg.path().to_str().expect( "args-file path UTF-8" );
-
-  let bin = env!( "CARGO_BIN_EXE_clr" );
-  let out = Command::new( bin )
-    .args( [
-      "-p", "--max-sessions", "1", "--retry-override", "0",
-      "--args-file", cfg_path, "--journal", "off", "x",
-    ] )
-    .env( "PATH", &script_path )
-    .env( "CLR_PROC_DIR", proc_dir.path() )
-    .env( "CLR_GATE_DIR", gate_dir.path() )
-    .env( "CLR_GATE_POLL_SECS",    "1" )
-    .env( "CLR_GATE_MAX_ATTEMPTS", "5" )
-    .output()
-    .expect( "invoke clr" );
-
-  let _ = occupier.kill();
-  let _ = occupier.wait();
-
-  assert!(
-    out.status.success(),
-    "084/EC-4: {{\"gate-stale-secs\":1}} JSON key must reclaim stale slot and admit \
-     the waiter (exit 0). stderr: {}",
-    String::from_utf8_lossy( &out.stderr )
-  );
-}
-
-/// 084/EC-5: CLI flag takes precedence over env var.
-///
-/// `CLR_GATE_STALE_SECS=0` (env, reclaims any slot — `elapsed >= 0` is always true)
-/// is overridden by `--gate-stale-secs 9999999` (CLI, ~115 days — too high for a
-/// freshly-created slot). Pre-seed with a FRESH slot (`since` ≈ now, elapsed ≈ 0s).
-/// With CLI winning, the fresh slot is NOT reclaimed → gate exhausts → exit 1.
-// test_kind: edge_case
-#[ test ]
-fn t_gate_stale_secs_cli_flag_takes_precedence_over_env_var()
-{
-  let ( _occupier_dir, occupier_path ) = fake_claude_binary_dir();
-  let mut occupier = spawn_print_claude_for( &occupier_path, 30 );
-  let occupier_pid = occupier.id();
-
-  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
-  let proc_dir  = tempfile::TempDir::new().expect( "proc dir" );
-
-  // Fresh slot: since ≈ now → elapsed ≈ 0s.
-  // CLR_GATE_STALE_SECS=0 (env) would reclaim it (0s >= 0s → true).
-  // --gate-stale-secs 9999999 (CLI) would NOT reclaim it (0s < 9999999s → false).
-  let since_now = std::time::SystemTime::now()
-    .duration_since( std::time::UNIX_EPOCH )
-    .map_or( 0, |d| d.as_secs() );
-  std::fs::write(
-    gate_dir.path().join( "slot_0.json" ),
-    format!( r#"{{"pid":{occupier_pid},"since":{since_now}}}"# ),
-  ).expect( "pre-seed fresh live slot" );
-
-  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
-  let bin = env!( "CARGO_BIN_EXE_clr" );
-  let mut waiter = Command::new( bin )
-    .args( [
-      "-p", "--max-sessions", "1", "--retry-override", "0",
-      "--gate-stale-secs", "9999999", "--journal", "off", "x",
-    ] )
-    .env( "PATH", &script_path )
-    .env( "CLR_PROC_DIR", proc_dir.path() )
-    .env( "CLR_GATE_DIR", gate_dir.path() )
-    .env( "CLR_GATE_POLL_SECS",    "1" )
-    .env( "CLR_GATE_MAX_ATTEMPTS", "2" )
-    .env( "CLR_GATE_STALE_SECS",   "0" )  // env: reclaim everything; CLI wins with 9999999s
-    .stdout( std::process::Stdio::null() )
-    .stderr( std::process::Stdio::piped() )
-    .spawn()
-    .expect( "spawn clr" );
-
-  let deadline = std::time::Instant::now() + core::time::Duration::from_secs( 10 );
-  let exited = wait_bounded( &mut waiter, deadline );
-  if exited.is_none() { let _ = waiter.kill(); }
-  let out = waiter.wait_with_output().expect( "reap clr" );
-
-  let _ = occupier.kill();
-  let _ = occupier.wait();
-
-  let stderr = String::from_utf8_lossy( &out.stderr );
-  assert_eq!(
-    exited.and_then( |s| s.code() ), Some( 1 ),
-    "084/EC-5: CLI --gate-stale-secs 9999999 must override CLR_GATE_STALE_SECS=0 — \
-     fresh slot must NOT be reclaimed, gate must exhaust (exit 1). stderr:\n{stderr}"
-  );
-}
-
-/// 084/EC-6: `CLR_GATE_STALE_SECS=notanumber` → invalid value resolves to `None`
-/// (feature off); live owner never reclaimed; gate exhausts; no crash.
-// test_kind: edge_case
-#[ test ]
-fn t_gate_stale_secs_invalid_value_resolves_to_none()
-{
-  let ( _occupier_dir, occupier_path ) = fake_claude_binary_dir();
-  let mut occupier = spawn_print_claude_for( &occupier_path, 30 );
-  let occupier_pid = occupier.id();
-
-  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
-  let proc_dir  = tempfile::TempDir::new().expect( "proc dir" );
-
-  std::fs::write(
-    gate_dir.path().join( "slot_0.json" ),
-    format!( r#"{{"pid":{occupier_pid},"since":0}}"# ),
-  ).expect( "pre-seed stale live slot" );
-
-  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
-  let bin = env!( "CARGO_BIN_EXE_clr" );
-  let mut waiter = Command::new( bin )
-    .args( [ "-p", "--max-sessions", "1", "--retry-override", "0", "--journal", "off", "x" ] )
-    .env( "PATH", &script_path )
-    .env( "CLR_PROC_DIR", proc_dir.path() )
-    .env( "CLR_GATE_DIR", gate_dir.path() )
-    .env( "CLR_GATE_POLL_SECS",    "1"          )
-    .env( "CLR_GATE_MAX_ATTEMPTS", "2"          )
-    .env( "CLR_GATE_STALE_SECS",   "notanumber" )
-    .stdout( std::process::Stdio::null() )
-    .stderr( std::process::Stdio::piped() )
-    .spawn()
-    .expect( "spawn clr" );
-
-  let deadline = std::time::Instant::now() + core::time::Duration::from_secs( 10 );
-  let exited = wait_bounded( &mut waiter, deadline );
-  if exited.is_none() { let _ = waiter.kill(); }
-  let out = waiter.wait_with_output().expect( "reap clr" );
-
-  let _ = occupier.kill();
-  let _ = occupier.wait();
-
-  let stderr = String::from_utf8_lossy( &out.stderr );
-  assert_eq!(
-    exited.and_then( |s| s.code() ), Some( 1 ),
-    "084/EC-6: invalid CLR_GATE_STALE_SECS must resolve to None (feature off) — \
-     live owner not reclaimed, gate exhausts (exit 1). stderr:\n{stderr}"
-  );
-  assert!(
-    !stderr.to_lowercase().contains( "panic" ),
-    "084/EC-6: invalid value must fail silently — no panic. Got:\n{stderr}"
-  );
-}
-
-// ──────────────────────────────────────────────────────────────────────────────
-// 085 — CLR_REMAINING_TIMEOUT_SECS edge cases (EC-3 / EC-4)
-// EC-1 and EC-2 are implemented as T35 / T36 above.
-// ──────────────────────────────────────────────────────────────────────────────
-
-/// 085/EC-3: When `CLR_REMAINING_TIMEOUT_SECS` is absent, no budget clamp is applied.
-/// The gate uses the normal `CLR_GATE_MAX_ATTEMPTS` ceiling and emits
-/// `"session gate timed out"` (not `"budget"`).
-// test_kind: edge_case
-#[ test ]
-fn t_gate_remaining_timeout_absent_uses_normal_max_attempts()
-{
-  let ( _occupier_dir, occupier_path ) = fake_claude_binary_dir();
-  let mut occupier = spawn_print_claude_for( &occupier_path, 60 );
-  let proc = make_proc_dir( &[ occupier.id() ] );
-
-  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
-  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
-
-  let bin = env!( "CARGO_BIN_EXE_clr" );
-  let out = Command::new( bin )
-    .args( [ "-p", "--max-sessions", "1", "--retry-override", "0", "--journal", "off", "x" ] )
-    .env( "PATH", &script_path )
-    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
-    .env( "CLR_GATE_DIR", gate_dir.path() )
-    .env( "CLR_GATE_POLL_SECS",    "1" )
-    .env( "CLR_GATE_MAX_ATTEMPTS", "2" )
-    .env_remove( "CLR_REMAINING_TIMEOUT_SECS" )
-    .output()
-    .expect( "invoke clr" );
-
-  let _ = occupier.kill();
-  let _ = occupier.wait();
-
-  let stderr = String::from_utf8_lossy( &out.stderr );
-  assert_ne!(
-    out.status.code(), Some( 0 ),
-    "085/EC-3: gate must exhaust (non-zero exit) with absent CLR_REMAINING_TIMEOUT_SECS. Got:\n{stderr}"
-  );
-  assert!(
-    stderr.contains( "session gate timed out" ),
-    "085/EC-3: absent CLR_REMAINING_TIMEOUT_SECS must use the normal timeout path — \
-     \"session gate timed out\" expected (not \"budget\"). Got:\n{stderr}"
-  );
-  assert!(
-    !stderr.contains( "budget" ),
-    "085/EC-3: absent CLR_REMAINING_TIMEOUT_SECS must NOT produce budget-exhaustion \
-     diagnostic. Got:\n{stderr}"
-  );
-}
-
-/// 085/EC-4: Non-numeric `CLR_REMAINING_TIMEOUT_SECS` resolves to `None` (feature off).
-/// Gate behaves exactly as if the var were absent — normal `CLR_GATE_MAX_ATTEMPTS` ceiling,
-/// `"session gate timed out"`, no crash.
-// test_kind: edge_case
-#[ test ]
-fn t_gate_remaining_timeout_non_numeric_resolves_to_none()
-{
-  let ( _occupier_dir, occupier_path ) = fake_claude_binary_dir();
-  let mut occupier = spawn_print_claude_for( &occupier_path, 60 );
-  let proc = make_proc_dir( &[ occupier.id() ] );
-
-  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
-  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
-
-  let bin = env!( "CARGO_BIN_EXE_clr" );
-  let out = Command::new( bin )
-    .args( [ "-p", "--max-sessions", "1", "--retry-override", "0", "--journal", "off", "x" ] )
-    .env( "PATH", &script_path )
-    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
-    .env( "CLR_GATE_DIR", gate_dir.path() )
-    .env( "CLR_GATE_POLL_SECS",        "1"          )
-    .env( "CLR_GATE_MAX_ATTEMPTS",      "2"          )
-    .env( "CLR_REMAINING_TIMEOUT_SECS", "notanumber" )
-    .output()
-    .expect( "invoke clr" );
-
-  let _ = occupier.kill();
-  let _ = occupier.wait();
-
-  let stderr = String::from_utf8_lossy( &out.stderr );
-  assert_ne!(
-    out.status.code(), Some( 0 ),
-    "085/EC-4: gate must exhaust (non-zero exit) with non-numeric CLR_REMAINING_TIMEOUT_SECS. Got:\n{stderr}"
-  );
-  assert!(
-    stderr.contains( "session gate timed out" ),
-    "085/EC-4: invalid CLR_REMAINING_TIMEOUT_SECS must resolve to None (feature off) — \
-     \"session gate timed out\" expected. Got:\n{stderr}"
-  );
-  assert!(
-    !stderr.contains( "budget" ),
-    "085/EC-4: invalid CLR_REMAINING_TIMEOUT_SECS must NOT produce budget-exhaustion diagnostic. Got:\n{stderr}"
-  );
-  assert!(
-    !stderr.to_lowercase().contains( "panic" ),
-    "085/EC-4: invalid value must fail silently — no panic. Got:\n{stderr}"
-  );
-}

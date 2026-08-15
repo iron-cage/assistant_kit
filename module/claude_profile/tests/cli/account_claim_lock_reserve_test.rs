@@ -147,9 +147,9 @@ fn t04_lock_1_no_name_batch_sets_all()
 /// (`usage/fetch.rs`'s `stored == *live` comparison against
 /// `~/.claude/.credentials.json`), which `write_account`/`write_credentials`
 /// (no `accessToken` field) can never produce. This is architecturally
-/// live-token-only — opportunistic like `it102`/`it103` in
-/// `usage_touch_test.rs`, which gate the identical footer-text assertion
-/// behind `live_active_token()`. Gate 9 itself is exhaustively covered
+/// live-token-only — same requirement as `it102`/`it103` in
+/// `usage_touch_test.rs`, which assert the identical footer text and panic
+/// via `live_active_token().expect(...)` when no token is present. Gate 9 itself is exhaustively covered
 /// offline via `rotate::1`'s `switched to` message in T06/T07.
 ///
 /// `alice` sorts alphabetically before `zzz` and is otherwise identically
@@ -158,11 +158,7 @@ fn t04_lock_1_no_name_batch_sets_all()
 #[ test ]
 fn t05_gate9_excludes_locked_from_footer_recommendation()
 {
-  let Some( token ) = live_active_token() else
-  {
-    eprintln!( "t05: no live token — skipping" );
-    return;
-  };
+  let token = live_active_token().expect( "t05: live API token required — no ~/.claude/.credentials.json" );
   require_live_api( "t05" );
 
   let dir  = TempDir::new().unwrap();
@@ -411,7 +407,7 @@ fn t12_reserve_1_sets_reserve_true()
 /// under `sort::renew`.
 ///
 /// The `Next (...)` footer requires a live-session match (`is_current`);
-/// opportunistic like `it102`/`it103` — skips without a real token.
+/// same live-token requirement as `it102`/`it103` — panics without a real token.
 ///
 /// `aaa` is named to sort first under every OTHER key (name tiebreak, likely
 /// insertion order) — reserved accounts only sort after `zzz` if `reserve` is
@@ -420,11 +416,7 @@ fn t12_reserve_1_sets_reserve_true()
 #[ test ]
 fn t13_reserve_leading_sort_key_non_reserved_first()
 {
-  let Some( token ) = live_active_token() else
-  {
-    eprintln!( "t13: no live token — skipping" );
-    return;
-  };
+  let token = live_active_token().expect( "t13: live API token required — no ~/.claude/.credentials.json" );
   require_live_api( "t13" );
 
   let dir  = TempDir::new().unwrap();

@@ -56,13 +56,11 @@
 | `cache.last_touch_at` | string (ISO 8601) | Touch subprocess completion time | `write_cache_field()` after touch | Touch lifecycle state | [024](../feature/024_session_touch.md), [033](../feature/033_quota_cache.md) |
 | `cache.touch_idle` | bool | Touch subprocess idle determination | `write_cache_field()` after touch | Touch lifecycle gating | [024](../feature/024_session_touch.md), [033](../feature/033_quota_cache.md) |
 | `cache.org_created_at` | string (ISO 8601) | Live `fetch_oauth_account` response `org_created_at` field | `write_quota_cache()` after successful account fetch | Non-live-fetch branches → `AccountQuota.org_created_at` → `~Renews` Estimate (AC-15) | [033](../feature/033_quota_cache.md) |
-| `history` | array of objects | Successful API measurements | `fetch.rs` after every successful `fetch_oauth_usage()` call | `approximate_quota()` in `approx.rs` | [040](../feature/040_quota_measurement_history.md) |
-| `history[*].ts` | number (unix secs) | Measurement timestamp | history append | Polynomial fitting | [040](../feature/040_quota_measurement_history.md) |
-| `history[*].five_hour` | number (%) | `five_hour.utilization` at measurement time | history append | Polynomial fitting | [040](../feature/040_quota_measurement_history.md) |
-| `history[*].seven_day` | number (%) | `seven_day.utilization` at measurement time | history append | Polynomial fitting | [040](../feature/040_quota_measurement_history.md) |
-| `history[*].seven_day_sonnet` | number or null (%) | `seven_day_sonnet.utilization` at measurement time | history append | Polynomial fitting | [040](../feature/040_quota_measurement_history.md) |
-| `history[*].five_h_resets_at` | string (ISO 8601) or null | `five_hour.resets_at` at measurement | history append | Reset boundary filter | [040](../feature/040_quota_measurement_history.md) |
-| `history[*].seven_d_resets_at` | string (ISO 8601) or null | `seven_day.resets_at` at measurement | history append | Reset boundary filter | [040](../feature/040_quota_measurement_history.md) |
+| `cache.history` | array of objects, max 10 (FIFO ring buffer, `account.rs:2347`) | Successful API measurements | `write_history_entry()` after every successful `fetch_oauth_usage()` call (`fetch.rs`); evicts oldest entry past 10 (AC-02); overwrites same-second entry instead of appending (AC-13) | `read_history()` → `approximate_quota()` in `approx.rs` | [040](../feature/040_quota_measurement_history.md) |
+| `cache.history[*].t` | number (unix secs) | Measurement timestamp | `write_history_entry()` | Polynomial fitting | [040](../feature/040_quota_measurement_history.md) |
+| `cache.history[*].h5` | `[number, string \| null]` pair, or `null` | `[five_hour.utilization, five_hour.resets_at]` at measurement time | `write_history_entry()` | Polynomial fitting | [040](../feature/040_quota_measurement_history.md) |
+| `cache.history[*].d7` | `[number, string \| null]` pair, or `null` | `[seven_day.utilization, seven_day.resets_at]` at measurement time | `write_history_entry()` | Polynomial fitting | [040](../feature/040_quota_measurement_history.md) |
+| `cache.history[*].sn` | `[number, string \| null]` pair, or `null` | `[seven_day_sonnet.utilization, seven_day_sonnet.resets_at]` at measurement time; `null` when the Sonnet tier is absent | `write_history_entry()` | Polynomial fitting | [040](../feature/040_quota_measurement_history.md) |
 
 ### Preserved-Only Fields
 
@@ -110,18 +108,17 @@ These fields are written by one caller and never touched by others (preserved vi
     "model_override": "opus",
     "last_touch_at": "2026-06-23T06:30:00Z",
     "touch_idle": false,
-    "org_created_at": "2026-01-01T00:00:00Z"
-  },
-  "history": [
-    { "ts": 1749900000, "five_hour": 10.0, "seven_day": 20.0, "seven_day_sonnet": null,
-      "five_h_resets_at": "2026-06-22T12:00:00Z", "seven_d_resets_at": "2026-06-27T00:00:00Z" }
-  ]
+    "org_created_at": "2026-01-01T00:00:00Z",
+    "history": [
+      { "t": 1749900000, "h5": [ 10.0, "2026-06-22T12:00:00Z" ], "d7": [ 20.0, "2026-06-27T00:00:00Z" ], "sn": null }
+    ]
+  }
 }
 ```
 
 ### Redirect Backend Example
 
-A `backend::redirect` account (see [feature/071](../feature/071_redirect_backend_accounts.md)) omits every OAuth-quota-specific field (`cache`, `history`, `_renewal_at`) — there is no Claude quota to track — and carries `base_url`/`redirect_model` instead:
+A `backend::redirect` account (see [feature/071](../feature/071_redirect_backend_accounts.md)) omits every OAuth-quota-specific field (`cache` — including its nested `history` array — and `_renewal_at`) — there is no Claude quota to track — and carries `base_url`/`redirect_model` instead:
 
 ```json
 {
@@ -151,7 +148,7 @@ A `backend::redirect` account (see [feature/071](../feature/071_redirect_backend
 | [feature/030_account_renewal_override.md](../feature/030_account_renewal_override.md) | `_renewal_at` field |
 | [feature/033_quota_cache.md](../feature/033_quota_cache.md) | `cache` subtree |
 | [feature/036_account_ownership.md](../feature/036_account_ownership.md) | `owner` field |
-| [feature/040_quota_measurement_history.md](../feature/040_quota_measurement_history.md) | `history` array |
+| [feature/040_quota_measurement_history.md](../feature/040_quota_measurement_history.md) | `cache.history` array |
 | [feature/063_explicit_ownership_claim.md](../feature/063_explicit_ownership_claim.md) | `owner::` param write path |
 | [feature/070_account_claim_and_reservation_control.md](../feature/070_account_claim_and_reservation_control.md) | `claim_lock`, `reserve` fields |
 | [feature/071_redirect_backend_accounts.md](../feature/071_redirect_backend_accounts.md) | `backend`, `base_url`, `redirect_model` fields |

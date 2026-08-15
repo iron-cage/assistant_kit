@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
 # l1 — bare test execution (VERB_LAYER=l1); module-scoped full gate, in-container.
-# Invoked as the runbox .live payload; cwd-scoping (this module directory) is
-# what limits cargo to this package — no -p flags needed.
+# Invoked as the runbox .live payload; delegates to `will .test level::3`
+# (nextest + doc tests + clippy); cwd-scoping (this module directory) is
+# what limits cargo to this package — no -p flags needed. will is the
+# plugin-mounted ELF at /usr/local/bin/will (see runbox/runbox.yml).
 set -euo pipefail
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd "$SCRIPT_DIR/../.."
-if [[ "${1:-}" == "--dry-run" ]]; then echo "cargo nextest run + doc test + clippy (module-scoped)"; exit 0; fi
+if [[ "${1:-}" == "--dry-run" ]]; then echo "will .test level::3 show_build::1 (module-scoped)"; exit 0; fi
 # Registry is pre-fetched at bake time and mounted read-only — never hit the network.
 export CARGO_NET_OFFLINE=true
 # Fix(issue-nextest-pty-output): Disable nextest's interactive PTY progress bar.
@@ -15,12 +17,13 @@ export CARGO_NET_OFFLINE=true
 # making all test results invisible (exit 0, zero per-test lines visible).
 # With NO_COLOR=1, indicatif returns hidden()=true regardless of isatty(), and nextest
 # falls back to plain \n-terminated output that survives wrun_core's normalization intact.
-# Pitfall: Even with the fix in will_test source (local_nextest.rs, workspace_nextest.rs),
-# environment inheritance ensures this works with any w3 binary version.
+# Pitfall: environment inheritance carries the fix into the nextest that will spawns —
+# it holds regardless of the mounted will binary's version.
 export NO_COLOR=1
 # Container signal for the container-only test invariant (nextest setup script + Rust guards).
 export RUNBOX_CONTAINER=1
-export RUSTFLAGS="-D warnings"
-cargo nextest run --all-features
-RUSTDOCFLAGS="-D warnings" cargo test --doc --all-features
-exec cargo clippy --all-targets --all-features -- -D warnings
+# will .test level::3 runs nextest + doc tests + clippy, all warnings-as-errors —
+# will owns the RUSTFLAGS policy, so no export here. show_build::1 pins full
+# per-job streaming: will's current default (show_build::0, quiet_on_success)
+# prints nothing at all on a clean pass, which reads as a broken gate.
+exec will .test level::3 show_build::1 "$@"

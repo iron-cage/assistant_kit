@@ -71,7 +71,7 @@ fn build_sessions_table( store_path : &std::path::Path ) -> ( usize, String )
   let mut builder = RowBuilder::new( headers );
   for ( identity, account, is_own ) in &entries
   {
-    // Fix(BUG-341): flag markers naming an account no longer in the credential
+    // Fix(BUG-347): flag markers naming an account no longer in the credential
     // store, so an orphaned marker reads as stale instead of a live session.
     // Root cause: this table rendered marker content verbatim with no existence
     // check, so a marker orphaned by `delete()`'s prior single-marker blind spot

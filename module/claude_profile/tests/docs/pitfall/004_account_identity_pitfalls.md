@@ -11,7 +11,7 @@ is in place and prevents the described account identity failure mode.
 | ID | Pitfall | Bug | Guard Verified By |
 |----|---------|-----|-------------------|
 | PP-1 | Active marker fixture names must not collide with real machine identity | BUG-308 | `test_write_quota_cache_preserves_touch_idle_false` (synthetic hostnames in all touch tests) |
-| PP-2 | Account name from `oauthAccount.emailAddress`, not `_active` marker | BUG-212 | `test_apply_refresh_lifecycle_active_marker_unchanged` (FT-13+) and account save tests |
+| PP-2 | Account name from `oauthAccount.emailAddress`, not `_active` marker | BUG-212 | `mre_bug_212_account_save_stale_marker_uses_oauth_email` |
 
 ---
 
@@ -43,7 +43,6 @@ is in place and prevents the described account identity failure mode.
 - **Rule:** Account name inference priority: (1) `name::` param → (2)
   `oauthAccount.emailAddress` from `~/.claude.json` → (3) `_active_*` marker as last resort.
   The marker may be stale (pointing to a previously active account).
-- **Source fn:** `test_apply_refresh_lifecycle_active_marker_unchanged` in
-  `tests/usage/refresh_tests_a.rs` (verifies marker is not used as identity source during
-  refresh); account save integration tests in `tests/cli/account_mutations_test.rs`
+- **Source fn:** `mre_bug_212_account_save_stale_marker_uses_oauth_email` in
+  `tests/cli/account_relogin_test_b.rs`
 - **Source:** [pitfall/004_account_identity_pitfalls.md §P2](../../../docs/pitfall/004_account_identity_pitfalls.md)
