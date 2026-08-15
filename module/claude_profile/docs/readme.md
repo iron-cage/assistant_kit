@@ -10,8 +10,8 @@
 | File | Responsibility |
 |------|----------------|
 | cli/ | CLI design documentation (commands, params, types) |
-| feature/ | Functional requirement doc instances (feature/001–070; IDs 041–060 unassigned) |
-| invariant/ | Non-functional constraint doc instances (invariant/001 through invariant/009) |
+| feature/ | Functional requirement doc instances (feature/001–073; IDs 041–060 unassigned) |
+| invariant/ | Non-functional constraint doc instances (invariant/001 through invariant/012) |
 | algorithm/ | Decision algorithm doc instances |
 | state_machine/ | Domain lifecycle state machine doc instances |
 | schema/ | On-disk file format schema doc instances |

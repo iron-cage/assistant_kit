@@ -11,7 +11,7 @@
 
 All errors produced by `claude_profile` must provide actionable messages — messages that tell the user what went wrong and what they can do next.
 
-**Measurable threshold:** Every `CliError` variant that can reach the user has an error message that names the relevant file path, account name, or parameter — never a generic "operation failed".
+**Measurable threshold:** Every user-facing error — constructed as `std::io::Error`/`std::io::ErrorKind` (library/core layer) or `unilang::ErrorData`/`ErrorCode` (CLI dispatch layer) — has a message that names the relevant file path, account name, or parameter — never a generic "operation failed". No dedicated `CliError` type exists; these two mechanisms are the actual error vocabulary.
 
 **Required content for actionable errors:**
 - Name the resource that caused the error (file path, account name, parameter name)
@@ -32,7 +32,7 @@ All errors produced by `claude_profile` must provide actionable messages — mes
 
 ### Enforcement Mechanism
 
-- Code review: every new `CliError` variant must pass the actionability test above
+- Code review: every new `std::io::Error`/`unilang::ErrorData` construction must pass the actionability test above
 - Convention: errors include the account name or file path in the message string
 - No generic error wrappers that swallow context
 
@@ -47,4 +47,4 @@ All errors produced by `claude_profile` must provide actionable messages — mes
 | File | Relationship |
 |------|-------------|
 | `src/commands/` | Error message formatting for all CLI command handlers |
-| `src/account.rs` | Account CRUD error messages (NotFound, PermissionDenied) |
+| `claude_profile_core/src/account.rs` | Account CRUD error messages (`std::io::ErrorKind::NotFound`, etc.); `src/account.rs` in this crate only re-exports it |

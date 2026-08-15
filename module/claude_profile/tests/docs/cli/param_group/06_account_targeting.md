@@ -41,9 +41,9 @@ See [param_group/006_account_targeting.md](../../../../docs/cli/param_group/006_
 
 ### CC-3: Re-save with new `host::` overwrites `{name}.json`
 
-- **Given:** Account `test@example.com` previously saved with `host::oldbox role::ops`.
-- **When:** `clp .account.save name::test@example.com host::newbox role::dev`
-- **Then:** Exits 0. `{name}.json` now contains `"host": "newbox"` and `"role": "dev"`. Previous `oldbox`/`ops` values overwritten; file is not accumulated.
+- **Given:** Account `test@example.com` previously saved with `host::oldbox`.
+- **When:** `clp .account.save name::test@example.com host::newbox`
+- **Then:** Exits 0. `{name}.json` now contains `"host": "newbox"`; the previous `oldbox` value is overwritten and no longer present — file is not accumulated. (This test exercises `host::` overwrite only; it does not pass `role::` in either save call.)
 - **Exit:** 0
 - **Source fn:** `as26_host_resave_overwrites` (in `account_renewal_test_b.rs`)
 - **Source:** [feature/029_account_host_metadata.md](../../../../docs/feature/029_account_host_metadata.md)

@@ -9,7 +9,7 @@ Edge case tests for the `show_stat::` parameter. Tests validate boolean acceptan
 | ID | Test Name | Category |
 |----|-----------|----------|
 | EC-1 | Value 0 accepted (default, no footer) | Valid Input |
-| EC-2 | Value 1 accepted (statistics footer shown) | Valid Input |
+| EC-2 | Value 1 accepted (no-op, no footer) | Valid Input |
 | EC-3 | Non-boolean value rejected | Type Validation |
 | EC-4 | Omitted uses default of 0 | Default |
 | EC-5 | No effect in metadata mode (metadata::1) | Mode Interaction |
@@ -24,8 +24,6 @@ Edge case tests for the `show_stat::` parameter. Tests validate boolean acceptan
 - Parameter Interaction: 1 test (EC-6)
 
 **Total:** 6 edge cases
-
-**Behavioral Divergence Pair:** EC-1 (show_stat::0, no footer) ↔ EC-2 (show_stat::1, footer shown)
 
 ## Test Cases
 
@@ -42,12 +40,12 @@ Edge case tests for the `show_stat::` parameter. Tests validate boolean acceptan
 
 ---
 
-### EC-2: Value 1 accepted (statistics footer shown)
+### EC-2: Value 1 accepted (no-op, no footer)
 
 - **Commands:** `.show`
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture`
 - **When:** `clg .show show_stat::1`
-- **Then:** Session content displayed with statistics footer (entry count, user/assistant breakdown, timestamp range)
+- **Then:** Session content displayed identically to `show_stat::0` — no separate statistics footer (content mode's key:val attribute block already shows the equivalent fields unconditionally)
 - **Exit:** 0
 - **Source:** [param/19_show_stat.md](../../../../docs/cli/param/19_show_stat.md)
 
@@ -91,6 +89,6 @@ Edge case tests for the `show_stat::` parameter. Tests validate boolean acceptan
 - **Commands:** `.show`
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture`
 - **When:** `clg .show show_stat::1 show_tokens::1`
-- **Then:** Output includes both statistics footer and token usage section
+- **Then:** Output includes the token usage section; `show_stat::1` remains a no-op (no separate statistics footer)
 - **Exit:** 0
 - **Source:** [param/19_show_stat.md](../../../../docs/cli/param/19_show_stat.md)

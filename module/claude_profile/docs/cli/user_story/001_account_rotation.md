@@ -11,7 +11,7 @@
 - [ ] The switch is atomic — `~/.claude/.credentials.json` replaced via write-then-rename
 - [ ] `dry::1` previews the selected account without switching: `clp .usage rotate::1 dry::1`
 - [ ] `clp .account.use name::X` enables manual rotation when the target is already known
-- [ ] Exit 1 when no eligible accounts are available; quota table still rendered
+- [ ] Exit 1 when no eligible accounts are available; the command returns `Err` before switch/touch, so only `Error: {e}` is printed to stderr — the quota table is never rendered on this path
 
 ### Referenced Commands
 

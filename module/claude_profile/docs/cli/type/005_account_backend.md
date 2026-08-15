@@ -17,12 +17,14 @@
 **Parsing:**
 
 ```
-pub fn new( s : &str ) -> Result< Self, String >
+pub fn parse( s : &str ) -> Self
 ```
 
+`AccountBackend::parse()` (`claude_profile_core::account`) is infallible — unrecognized or empty input maps to `Anthropic` (never an error); this is what makes AC-05's "neither errors nor misclassifies" hold at the type level. The CLI-level `backend::` parameter rejection (`ArgumentTypeMismatch`, exit 1) described above happens upstream, in `.account.save`'s own argument handling (`src/commands/account_ops.rs`), before `parse()` is ever called — `parse()` itself has no `Result` return and cannot fail.
+
 **Methods:**
-- `get() -> &str` — string representation (`"anthropic"` or `"redirect"`)
-- `is_redirect() -> bool` — true for the redirect backend
+- `as_str( &self ) -> &'static str` — canonical string form (`"anthropic"` or `"redirect"`) written to `{name}.json`'s `backend` key.
+- No `is_redirect()` method exists — callers compare directly via `== AccountBackend::Redirect` (the type derives `PartialEq, Eq`).
 
 ### Referenced Parameters
 

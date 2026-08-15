@@ -20,11 +20,7 @@ use tempfile::TempDir;
 #[ test ]
 fn it217_lim_it_ft028_13_format_tsv_status_text()
 {
-  let Some( token ) = live_active_token() else
-  {
-    eprintln!( "it217: no live token — skipping" );
-    return;
-  };
+  let token = live_active_token().expect( "it217: live API token required — no ~/.claude/.credentials.json" );
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account_with_token( dir.path(), "acct-a@test.com", &token, true );
@@ -55,11 +51,7 @@ fn it217_lim_it_ft028_13_format_tsv_status_text()
 #[ test ]
 fn it218_lim_it_ft028_14_no_color_emoji_free()
 {
-  let Some( token ) = live_active_token() else
-  {
-    eprintln!( "it218: no live token — skipping" );
-    return;
-  };
+  let token = live_active_token().expect( "it218: live API token required — no ~/.claude/.credentials.json" );
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account_with_token( dir.path(), "acct-a@test.com", &token, true );
@@ -83,11 +75,7 @@ fn it218_lim_it_ft028_14_no_color_emoji_free()
 #[ test ]
 fn it219_lim_it_ft028_16_filters_compose()
 {
-  let Some( token ) = live_active_token() else
-  {
-    eprintln!( "it219: no live token — skipping" );
-    return;
-  };
+  let token = live_active_token().expect( "it219: live API token required — no ~/.claude/.credentials.json" );
   require_live_api( "it219" );
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -128,11 +116,7 @@ fn it219_lim_it_ft028_16_filters_compose()
 #[ test ]
 fn it222_lim_it_it72_json_new_renewal_fields()
 {
-  let Some( token ) = live_active_token() else
-  {
-    eprintln!( "it222: no live token — skipping" );
-    return;
-  };
+  let token = live_active_token().expect( "it222: live API token required — no ~/.claude/.credentials.json" );
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account_with_token( dir.path(), "acct-a@test.com", &token, true );
@@ -171,11 +155,7 @@ fn it222_lim_it_it72_json_new_renewal_fields()
 #[ test ]
 fn it223_lim_it_abs_1_shows_token_counts()
 {
-  let Some( token ) = live_active_token() else
-  {
-    eprintln!( "it223: no live token — skipping" );
-    return;
-  };
+  let token = live_active_token().expect( "it223: live API token required — no ~/.claude/.credentials.json" );
   require_live_api( "it223" );
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -209,11 +189,7 @@ fn it223_lim_it_abs_1_shows_token_counts()
 #[ test ]
 fn it224_lim_it_abs_true_shows_token_counts()
 {
-  let Some( token ) = live_active_token() else
-  {
-    eprintln!( "it224: no live token — skipping" );
-    return;
-  };
+  let token = live_active_token().expect( "it224: live API token required — no ~/.claude/.credentials.json" );
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account_with_token( dir.path(), "acct-a@test.com", &token, true );
@@ -242,11 +218,7 @@ fn it224_lim_it_abs_true_shows_token_counts()
 #[ test ]
 fn it225_lim_it_it71_next_event_cell_shows_label_and_duration()
 {
-  let Some( token ) = live_active_token() else
-  {
-    eprintln!( "it225: no live token — skipping" );
-    return;
-  };
+  let token = live_active_token().expect( "it225: live API token required — no ~/.claude/.credentials.json" );
   require_live_api( "it225" );
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -284,11 +256,7 @@ fn it225_lim_it_it71_next_event_cell_shows_label_and_duration()
 #[ test ]
 fn it226_lim_it_only_next_1_renews_shows_winner()
 {
-  let Some( token ) = live_active_token() else
-  {
-    eprintln!( "it226: no live token — skipping" );
-    return;
-  };
+  let token = live_active_token().expect( "it226: live API token required — no ~/.claude/.credentials.json" );
   require_live_api( "it226" );
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -320,11 +288,7 @@ fn it226_lim_it_only_next_1_renews_shows_winner()
 #[ test ]
 fn it227_lim_it_only_next_true_shows_arrow_row()
 {
-  let Some( token ) = live_active_token() else
-  {
-    eprintln!( "it227: no live token — skipping" );
-    return;
-  };
+  let token = live_active_token().expect( "it227: live API token required — no ~/.claude/.credentials.json" );
   require_live_api( "it227" );
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -358,11 +322,7 @@ fn it227_lim_it_only_next_true_shows_arrow_row()
 #[ test ]
 fn it228_lim_it_only_valid_1_shows_green_hides_red()
 {
-  let Some( token ) = live_active_token() else
-  {
-    eprintln!( "it228: no live token — skipping" );
-    return;
-  };
+  let token = live_active_token().expect( "it228: live API token required — no ~/.claude/.credentials.json" );
   require_live_api( "it228" );
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -395,11 +355,7 @@ fn it228_lim_it_only_valid_1_shows_green_hides_red()
 #[ test ]
 fn it229_lim_it_exclude_exhausted_1_shows_green()
 {
-  let Some( token ) = live_active_token() else
-  {
-    eprintln!( "it229: no live token — skipping" );
-    return;
-  };
+  let token = live_active_token().expect( "it229: live API token required — no ~/.claude/.credentials.json" );
   require_live_api( "it229" );
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -431,11 +387,7 @@ fn it229_lim_it_exclude_exhausted_1_shows_green()
 #[ test ]
 fn it230_lim_it_exclude_exhausted_stricter_than_only_valid()
 {
-  let Some( token ) = live_active_token() else
-  {
-    eprintln!( "it230: no live token — skipping" );
-    return;
-  };
+  let token = live_active_token().expect( "it230: live API token required — no ~/.claude/.credentials.json" );
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account_with_token( dir.path(), "live-acct@test.com",  &token, true  );
@@ -470,11 +422,7 @@ fn it230_lim_it_exclude_exhausted_stricter_than_only_valid()
 #[ test ]
 fn it231_lim_it_get_7d_left_extracts_bare_pct()
 {
-  let Some( token ) = live_active_token() else
-  {
-    eprintln!( "it231: no live token — skipping" );
-    return;
-  };
+  let token = live_active_token().expect( "it231: live API token required — no ~/.claude/.credentials.json" );
   require_live_api( "it231" );
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -510,11 +458,7 @@ fn it231_lim_it_get_7d_left_extracts_bare_pct()
 #[ test ]
 fn it232_lim_it_get_status_extracts_green_emoji()
 {
-  let Some( token ) = live_active_token() else
-  {
-    eprintln!( "it232: no live token — skipping" );
-    return;
-  };
+  let token = live_active_token().expect( "it232: live API token required — no ~/.claude/.credentials.json" );
   require_live_api( "it232" );
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -576,11 +520,7 @@ fn it233_get_bogus_exits_1_names_valid_fields()
 #[ test ]
 fn it234_lim_it_get_next_event_type_and_secs()
 {
-  let Some( token ) = live_active_token() else
-  {
-    eprintln!( "it234: no live token — skipping" );
-    return;
-  };
+  let token = live_active_token().expect( "it234: live API token required — no ~/.claude/.credentials.json" );
   require_live_api( "it234" );
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -624,11 +564,7 @@ fn it234_lim_it_get_next_event_type_and_secs()
 #[ test ]
 fn it235_lim_it_no_color_0_output_includes_emoji()
 {
-  let Some( token ) = live_active_token() else
-  {
-    eprintln!( "it235: no live token — skipping" );
-    return;
-  };
+  let token = live_active_token().expect( "it235: live API token required — no ~/.claude/.credentials.json" );
   require_live_api( "it235" );
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -652,11 +588,7 @@ fn it235_lim_it_no_color_0_output_includes_emoji()
 #[ test ]
 fn it236_lim_it_no_color_1_check_mark_replaced_by_star()
 {
-  let Some( token ) = live_active_token() else
-  {
-    eprintln!( "it236: no live token — skipping" );
-    return;
-  };
+  let token = live_active_token().expect( "it236: live API token required — no ~/.claude/.credentials.json" );
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account_with_token( dir.path(), "acct-a@test.com", &token, true  );
@@ -687,11 +619,7 @@ fn it236_lim_it_no_color_1_check_mark_replaced_by_star()
 #[ test ]
 fn it237_lim_it_clear_usage_shows_tilde_estimate()
 {
-  let Some( token ) = live_active_token() else
-  {
-    eprintln!( "it237: no live token — skipping" );
-    return;
-  };
+  let token = live_active_token().expect( "it237: live API token required — no ~/.claude/.credentials.json" );
   let dir   = TempDir::new().unwrap();
   let home  = dir.path().to_str().unwrap();
   let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
@@ -734,11 +662,7 @@ fn it237_lim_it_clear_usage_shows_tilde_estimate()
 #[ test ]
 fn it238_lim_it_get_bypasses_cols_restriction()
 {
-  let Some( token ) = live_active_token() else
-  {
-    eprintln!( "it238: no live token — skipping" );
-    return;
-  };
+  let token = live_active_token().expect( "it238: live API token required — no ~/.claude/.credentials.json" );
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account_with_token( dir.path(), "acct-a@test.com", &token, true );
@@ -809,11 +733,7 @@ fn it239_cols_sub_and_no_color_independent()
 #[ test ]
 fn it240_lim_it_cols_host_role_shows_profile_data()
 {
-  let Some( token ) = live_active_token() else
-  {
-    eprintln!( "it240: no live token — skipping" );
-    return;
-  };
+  let token = live_active_token().expect( "it240: live API token required — no ~/.claude/.credentials.json" );
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account_with_token( dir.path(), "acct-a@test.com", &token, true );

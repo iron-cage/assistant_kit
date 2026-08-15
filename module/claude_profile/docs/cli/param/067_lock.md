@@ -3,7 +3,7 @@
 Mutation param on `.accounts` and `.usage` that sets or clears the `claim_lock` field in `{name}.json`. A claim-locked account cannot become the active/switched-to account (footer recommendation, `.usage rotate::1`, auto-switch, `.account.use`, `.accounts assignee::` target) but remains fully readable — quota fetch, refresh, and touch are unaffected. Supports comma-list `name::X,Y,Z` for batch operations.
 
 - **Default:** *(omit)* — no lock write when absent; `claim_lock` defaults to `false` for accounts that have never set it
-- **Constraints:** `0`, `1`, `false`, `true`. `name::` supports comma-list (e.g., `name::X,Y,Z`) for batch; absent `name::` applies to all accounts in the current filtered set.
+- **Constraints:** `0`, `1` (exact string match against `"1"`; any other value, including `"true"`/`"false"`, is silently treated as `0`/clear — see Values table below). `name::` supports comma-list (e.g., `name::X,Y,Z`) for batch; absent `name::` applies to all accounts in the current filtered set.
 - **Purpose:** Mark an account as "not allowed to be taken" while keeping it usable for quota/refresh/touch — for accounts a caller wants to inspect or keep warm but never wants automatic (or accidental direct) selection to switch onto.
 
 **Behavior:**
@@ -20,8 +20,8 @@ lock::1 name::X dry::1   → preview without writing
 
 | Value | Effect |
 |-------|--------|
-| `0` / `false` (default) | Clear `claim_lock`; account is eligible for selection again |
-| `1` / `true` | Set `claim_lock`; account is excluded from Gate 9 (eligibility) and blocked at G9 (explicit-command) — see below |
+| `0` (default); any value other than the exact string `1` | Clear `claim_lock`; account is eligible for selection again |
+| `1` (exact string match) | Set `claim_lock`; account is excluded from Gate 9 (eligibility) and blocked at G9 (explicit-command) — see below |
 
 **Two independent enforcement points** (same `claim_lock` field, two call-site families):
 

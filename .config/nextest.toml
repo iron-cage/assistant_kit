@@ -40,7 +40,33 @@ slow-timeout = { period = "30s", terminate-after = 1 }
 # in ps tests and mismatched-PID kills in kill tests.
 [test-groups]
 ps-serial = { max-threads = 1 }
+# Live-API tests each fetch /api/oauth/usage once per test PROCESS (the harness
+# OnceLock dedups threads, but nextest runs one process per test), so N
+# concurrent live tests fire N simultaneous usage requests — the endpoint
+# rate-limits the burst (HTTP 429) and fail-fast cancels the suite. Serialized
+# execution spaces the requests out; the delayed retries ride out a transient
+# 429 that still slips through. A persistent 429 (exhausted account window)
+# still fails loudly after the retries — no silent skip.
+live-api-serial = { max-threads = 1 }
 
 [[profile.default.overrides]]
 filter = "binary(user_story_ps_test) | binary(ps_command_test) | binary(kill_command_test) | binary(user_story_kill_test) | binary(ps_mode_test) | binary(ps_columns_test) | binary(ps_wide_test) | binary(ps_pid_test) | binary(ps_inspect_test) | binary(ps_flags_test) | binary(param_group_test)"
 test-group = "ps-serial"
+
+# Population = every test module containing tests that reach /api/oauth/usage.
+# The reach is mostly INDIRECT: write_account_with_token() (cli_runner.rs) calls
+# live_quota_snapshot() to pre-seed the quota cache, so any test seeding a
+# token-bearing account is a live-API test regardless of its name — 101 test fns
+# across these modules, many without any `lim_it` marker (ft04, t05, t13, mre_*…).
+# Module-level scope is the maintainable boundary: name-level filters kept leaking.
+# account_limits_test carries no helper call but its lim_it1/lim_it3 fetch usage
+# through the spawned CLI itself. When adding a live-API test, put it in one of
+# these modules (or add its module here) — an escapee 429-cancels the whole suite.
+[[profile.default.overrides]]
+filter = "test(/^(account_claim_lock_reserve_test|account_inspect_test_b|account_limits_test|account_relogin_test|account_relogin_test_b|accounts_ft_test|accounts_list_test_b|command_verb_test|usage_core_test|usage_feature_test|usage_lim_it_test|usage_lim_it_test_b|usage_live_test|usage_model_test|usage_rotate_test|usage_solo_test|usage_touch_test|user_story_test)::/)"
+test-group = "live-api-serial"
+# Exponential 20s→40s→80s→160s: the usage endpoint's limiter window outlasts a
+# short fixed delay when serialized live calls run back-to-back — and stays hot
+# for minutes when a previous suite run finished moments earlier (the normal
+# fix-and-rerun cadence). The last retry must land in a genuinely fresh window.
+retries = { backoff = "exponential", count = 4, delay = "20s", jitter = true }
