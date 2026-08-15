@@ -20,8 +20,8 @@ Feature behavioral requirement test cases for `docs/feature/014_rich_account_met
 | FT-06 | `format::json` includes all four new keys regardless of params | AC-06 |
 | FT-07 | Absent `~/.claude.json` → oauthAccount fields show `N/A` | AC-07 |
 | FT-08 | Absent `~/.claude/settings.json` → `model` shows `N/A` | AC-08 |
-| FT-09 | `display_name::1` on `.accounts` shows `Display:` from snapshot | AC-09 |
-| FT-10 | `role::1 billing::1 model::1` on `.accounts` shows fields per account | AC-10 |
+| FT-09 | `cols::+display_name` on `.accounts` shows `Display:` from snapshot | AC-09 |
+| FT-10 | `cols::+role,+billing,+model` on `.accounts` shows fields per account | AC-10 |
 | FT-11 | No snapshot on disk → `N/A` for all four fields | AC-11 |
 | FT-12 | `.accounts format::json` includes all four keys per account object | AC-12 |
 
@@ -37,8 +37,8 @@ Feature behavioral requirement test cases for `docs/feature/014_rich_account_met
 | FT-06 | `format::json` includes extended keys on `.credentials.status` | AC-06 | JSON Format |
 | FT-07 | Absent `~/.claude.json` → all three oauthAccount fields `N/A` | AC-07 | N/A Handling |
 | FT-08 | Absent `settings.json` → `model` `N/A` | AC-08 | N/A Handling |
-| FT-09 | `.accounts display_name::1` → `Display:` per account | AC-09 | Accounts Integration |
-| FT-10 | `.accounts role::1 billing::1 model::1` → per-account lines | AC-10 | Accounts Integration |
+| FT-09 | `.accounts cols::+display_name` → `Display:` per account | AC-09 | Accounts Integration |
+| FT-10 | `.accounts cols::+role,+billing,+model` → per-account lines | AC-10 | Accounts Integration |
 | FT-11 | No `{name}.json` snapshot → `N/A` for all new fields | AC-11 | N/A Handling |
 | FT-12 | `.accounts format::json` includes 4 new keys per object | AC-12 | JSON Format |
 
@@ -118,6 +118,7 @@ Feature behavioral requirement test cases for `docs/feature/014_rich_account_met
 - **When:** `clp .credentials.status display_name::1 role::1 billing::1`
 - **Then:** `Display:`, `Role:`, `Billing:` all show `N/A`. No error.
 - **Exit:** 0
+- **Note:** `cred05_no_claude_json_shows_na` runs `.credentials.status` with no extra params, so `Display:`/`Role:`/`Billing:` never render in that test — it asserts `N/A` only for the default-on `Account:`/`Email:` fields. The `N/A` fallback for `display_name`/`role`/`billing` is confirmed by direct source inspection: `read_live_cred_meta()` (`src/commands/credentials.rs`) derives sub/tier/email/display/role/billing from the same `cj` read via the identical `.filter(|s| !s.is_empty()).unwrap_or_else(|| "N/A".to_string())` guard.
 - **Source fn:** `cred05_no_claude_json_shows_na`
 - **Source:** [014_rich_account_metadata.md AC-07](../../../docs/feature/014_rich_account_metadata.md)
 
@@ -134,10 +135,10 @@ Feature behavioral requirement test cases for `docs/feature/014_rich_account_met
 
 ---
 
-### FT-09: `.accounts display_name::1` → `Display:` per account
+### FT-09: `.accounts cols::+display_name` → `Display:` per account
 
 - **Given:** An account saved with a `{name}.json` snapshot containing `displayName`.
-- **When:** `clp .accounts display_name::1`
+- **When:** `clp .accounts cols::+display_name`
 - **Then:** Each account block includes a `Display:` line populated from the snapshot.
 - **Exit:** 0
 - **Source fn:** `acc20_display_name_shows_from_snapshot`
@@ -145,11 +146,11 @@ Feature behavioral requirement test cases for `docs/feature/014_rich_account_met
 
 ---
 
-### FT-10: `.accounts role::1 billing::1 model::1` → per-account lines
+### FT-10: `.accounts cols::+role,+billing,+model` → per-account lines
 
-- **Given:** Accounts saved with `{name}.json` snapshots containing `oauthAccount` and `model` fields.
-- **When:** `clp .accounts role::1 billing::1 model::1`
-- **Then:** Each account block shows `Role:`, `Billing:`, and `Model:` lines from their respective snapshots. `Model:` is `N/A` if `model` field is absent in `{name}.json`.
+- **Given:** Accounts saved with `{name}.json` snapshots containing a top-level `role` field (user-defined role label, distinct from `oauthAccount`), plus `oauthAccount.billingType` and `model` fields.
+- **When:** `clp .accounts cols::+role,+billing,+model`
+- **Then:** Each account block shows `Role:`, `Billing:`, and `Model:` lines from their respective `{name}.json` fields. `Model:` is `N/A` if `model` field is absent in `{name}.json`.
 - **Exit:** 0
 - **Source fn:** `acc21_role_billing_model_from_snapshots`
 - **Source:** [014_rich_account_metadata.md AC-10](../../../docs/feature/014_rich_account_metadata.md)
@@ -159,7 +160,7 @@ Feature behavioral requirement test cases for `docs/feature/014_rich_account_met
 ### FT-11: No `{name}.json` snapshot → `N/A` for all new fields
 
 - **Given:** An account with no `{name}.json` snapshot on disk.
-- **When:** `clp .accounts display_name::1 role::1 billing::1 model::1`
+- **When:** `clp .accounts cols::+display_name,+role,+billing,+model`
 - **Then:** All four lines show `N/A` for the affected account. No error.
 - **Exit:** 0
 - **Source fn:** `acc22_no_snapshot_shows_na_for_new_fields`

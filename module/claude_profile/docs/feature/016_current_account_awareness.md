@@ -26,7 +26,7 @@ These diverge when an external actor (`claude auth login`, a direct credential w
 
 **Changes to `.accounts`:**
 - New `is_current: bool` per-account field derived from the detection algorithm above.
-- `Current:` output line (default on) controlled by `current::` field-presence toggle.
+- `Current:` output line is shown by default; `current::` is REMOVED (returns a hard error directing to `cols::-current` instead).
 - Text format: `Current:  yes` / `Current:  no` (same indentation as `Active:`).
 - When credentials file unreadable: `Current:` line is suppressed entirely for all accounts (no misleading `no`).
 - JSON: new `is_current` boolean field per account object.
@@ -71,7 +71,7 @@ work@acme.com
 
 - **AC-01**: `.accounts` shows `Current:  yes` on the account whose `accessToken` matches `~/.claude/.credentials.json`; all other accounts show `Current:  no`.
 - **AC-02**: `.accounts` suppresses the `Current:` line entirely when `~/.claude/.credentials.json` is absent or unreadable.
-- **AC-03**: `.accounts` `current::0` suppresses the `Current:` line; `current::1` (default) shows it.
+- **AC-03**: `.accounts` `current::` is REMOVED — passing `current::0` or `current::1` returns a hard error (exit 1) directing callers to `cols::-current` instead; the `Current:` line itself is shown by default with no supported way to suppress it via `current::`.
 - **AC-04**: `.accounts` JSON includes an `is_current` boolean field per account object.
 - **AC-05**: `.usage` `✓` marks the account whose `accessToken` matches live credentials (NOT the per-machine active marker).
 - **AC-06**: `.usage` `*` marks the account with the per-machine active marker when it differs from the current account; no `*` appears when current = active.

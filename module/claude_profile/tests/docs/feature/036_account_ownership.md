@@ -128,7 +128,7 @@
 - **When:** `should_refresh(&aq)` is called for each case.
 - **Then:** Returns `false` in both cases. Gate condition: `!is_owned || is_occupied_elsewhere`. No refresh is initiated.
 - **Exit:** false (both cases)
-- **Source fn:** `ft06_should_refresh_false_when_not_owned`
+- **Source fn:** `ft06_should_refresh_false_when_not_owned` (case A — builds 4 `is_owned:false` variants: HTTP 401, locally-expired token, 429+expired, cached+expired); `mre_bug303_should_refresh_false_for_occupied_elsewhere` (case B — `is_owned:true, is_occupied_elsewhere:true`)
 - **Source:** [036_account_ownership.md AC-06](../../../docs/feature/036_account_ownership.md)
 
 ---
@@ -142,7 +142,7 @@
 - **When (case B):** `apply_touch()` processes `alice`.
 - **Then (case B):** No subprocess spawned. Stderr contains a timestamped diagnostic line `... · touch  alice  skipped (reason: occupied elsewhere)`.
 - **Exit:** Ok(()) with no subprocess; matching trace line emitted per case
-- **Source fn:** `ft07_touch_skips_non_owned_with_trace`
+- **Source fn:** `ft07_touch_skips_non_owned_with_trace` (case A — `is_owned:false`); `ft_touch_skips_occupied_elsewhere_with_trace` (case B — `is_owned:true, is_occupied_elsewhere:true`, `bug_reproducer(BUG-302)`)
 - **Note:** Gate condition: `!aq.is_owned || aq.is_occupied_elsewhere`. The trace reason mirrors the specific gate that fired. Converted from gag-based stderr capture to a direct `touch_skip_reason()` call — `apply_touch()`'s trace line embeds this same reason string verbatim, so asserting the oracle's return value is equivalent to asserting the captured trace content.
 - **Source:** [036_account_ownership.md AC-07](../../../docs/feature/036_account_ownership.md)
 

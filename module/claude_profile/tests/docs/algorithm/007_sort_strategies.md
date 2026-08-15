@@ -60,13 +60,18 @@ AC test cases for `docs/algorithm/007_sort_strategies.md`. Tests `sort_indices()
 
 ### AC-4: `prefer::any` with Sonnet present — `min(seven_day_left, sonnet_left)`
 
-- **Given:** Account with `seven_day = Some(...)` and `seven_day_sonnet = Some(...)`.
-  `seven_day_left = 40%`, `seven_day_sonnet_left = 20%`.
-- **When:** `prefer_weekly(aq, Any)` is called.
-- **Then:** Returns `min(40.0, 20.0) = 20.0` — `any` preference takes the more constrained
-  of the two 7d capacities.
-- **Source fn:** `test_relevant_quotas_any_no_sonnet`,
-  implied by `test_relevant_quotas_son_with_sonnet` in `tests/usage/format_tests.rs`
+- **Given:** Account with `seven_day.utilization = 68.0` (`seven_day_left = 32%`) and
+  `seven_day_sonnet.utilization = 95.0` (`seven_day_sonnet_left = 5%`).
+- **When:** `sort_indices(..., PreferStrategy::Any)` ranks this account against a
+  both-exhausted account.
+- **Then:** The account sorts into the `HExhausted` group ahead of the both-exhausted
+  account, consistent with `prefer_weekly(any) = min(32, 5) = 5` — `any` preference takes
+  the more constrained of the two 7d capacities.
+- **Note:** This BUG-299 regression test verifies the `min()` formula's consequence via sort
+  order, not via a direct `relevant_quotas()` return-value assertion — no dedicated unit test
+  exercises `prefer::any` with Sonnet present and diverging from `seven_day_left`.
+- **Source fn:** `mre_bug299_h_exhausted_misclassified_as_red_prefer_any` in
+  `tests/usage/sort_tests.rs`
 - **Source:** [algorithm/007_sort_strategies.md](../../../docs/algorithm/007_sort_strategies.md)
 
 ---
@@ -84,9 +89,9 @@ AC test cases for `docs/algorithm/007_sort_strategies.md`. Tests `sort_indices()
 
 ### AC-6: `prefer::son` with Sonnet present — `seven_day_sonnet_left`
 
-- **Given:** Account with `seven_day_sonnet = Some(PeriodUsage { utilization: 60.0 })`.
+- **Given:** Account with `seven_day_sonnet = Some(PeriodUsage { utilization: 70.0 })`.
 - **When:** `prefer_weekly(aq, Sonnet)` is called.
-- **Then:** Returns `40.0` (100 - 60.0) — Sonnet-specific remaining capacity.
+- **Then:** Returns `30.0` (100 - 70.0) — Sonnet-specific remaining capacity.
 - **Source fn:** `test_relevant_quotas_son_with_sonnet` in `tests/usage/format_tests.rs`
 - **Source:** [algorithm/007_sort_strategies.md](../../../docs/algorithm/007_sort_strategies.md)
 
@@ -120,7 +125,7 @@ AC test cases for `docs/algorithm/007_sort_strategies.md`. Tests `sort_indices()
 
 - **Given:** `AccountQuota.result = Err(...)`.
 - **When:** `relevant_quotas(aq, prefer)` is called.
-- **Then:** Returns `(0.0, 0.0)` — error accounts sort last regardless of preference strategy.
+- **Then:** Returns `(-1.0, 0.0)` — error accounts sort last regardless of preference strategy.
 - **Source fn:** `test_relevant_quotas_err` in `tests/usage/format_tests.rs`
 - **Source:** [algorithm/007_sort_strategies.md](../../../docs/algorithm/007_sort_strategies.md)
 
@@ -143,9 +148,7 @@ AC test cases for `docs/algorithm/007_sort_strategies.md`. Tests `sort_indices()
 - **When:** `renewal_secs(aq, now)` is called.
 - **Then:** Returns estimated seconds from `org_created_at` monthly cycle — advances past the
   current `now` to find the next estimated renewal date.
-- **Source fn:** `mre_bug229_strategy_metric_renew_no_sub_shows_7d_only`,
-  `rl_estimate_from_org_created_at`, `rl_auto_advance_past_renewal_at` in
-  `tests/usage/format_tests.rs`
+- **Source fn:** `rl_estimate_from_org_created_at` in `tests/usage/format_tests.rs`
 - **Source:** [algorithm/007_sort_strategies.md](../../../docs/algorithm/007_sort_strategies.md)
 
 ---

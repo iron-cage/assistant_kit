@@ -2,7 +2,7 @@
 
 **Purpose:** Represents any form of account identification accepted at the CLI before resolution to a concrete [`AccountName`](001_account_name.md). The adapter layer accepts all three forms and resolves them to an `AccountName` before passing to core functions.
 
-**Fundamental Type:** Logical type — handled by adapter resolution logic, not a concrete Rust struct. Resolution produces an `AccountName`.
+**Fundamental Type:** Logical type — handled by adapter resolution logic, not a concrete Rust struct. Resolution produces a plain `String` (validated downstream by `validate_name()`/`validate_redirect_name()` — see [`AccountName`](001_account_name.md), which is likewise a validation contract on `&str`/`String`, not a concrete Rust type).
 
 **Forms:**
 
@@ -16,15 +16,18 @@
 
 ```
 input contains '@'?
-  yes → AccountName::new(input)  [validates email format]
-  no  → prefix match:
+  yes → returned as-is (email-format validation deferred to validate_name() downstream)
+  no  → path-unsafe chars ('/', '\', '*')? → exit 1 "contains invalid characters"
+        else prefix match:
           1. exact local-part match: filter saved accounts where local_part == input
              exactly 1 → resolve to that account (prevents i1 from matching i11, i12)
           2. prefix scan: filter saved accounts where name.starts_with(input)
           0 matches  → exit 2 "account 'X' not found"
-          1 match    → AccountName::new(matched)
+          1 match    → resolve to that account
           2+ matches → exit 1 "ambiguous prefix 'X': matches alice@a.com, alice@b.com, ..."
 ```
+
+(`resolve_account_name()`, `src/commands/cmd_args.rs`) — returns a plain `String`, not any wrapper type.
 
 **Constraints:**
 - The resolved `AccountName` must satisfy all `AccountName` constraints (non-empty, valid email, path-safe)
@@ -34,7 +37,7 @@ input contains '@'?
 **Notes:**
 - `.account.save` does NOT use prefix resolution — its `name::` value must be a full email (or omitted for auto-inference from the per-machine `_active` marker in the credential store).
 - `.account.renewal` additionally accepts `name::all` (targets all saved accounts) and `name::a@x.com,b@x.com` (comma-separated list). Prefix resolution applies to each individual token in the comma list; `all` is handled as a keyword and bypasses resolution.
-- `AccountSelector` is a documentation concept describing the adapter layer's resolution contract. The concrete Rust type that appears in function signatures after resolution is always `AccountName`.
+- `AccountSelector` is a documentation concept describing the adapter layer's resolution contract; so is [`AccountName`](001_account_name.md) — `resolve_account_name()` (`src/commands/cmd_args.rs`) returns a plain `String` in function signatures after resolution, not a concrete `AccountName` Rust type.
 
 ### Referenced Parameters
 

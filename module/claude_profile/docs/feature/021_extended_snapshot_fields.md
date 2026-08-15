@@ -32,8 +32,8 @@ The `{name}.json` snapshot (a copy of `~/.claude.json` taken at `save()` time) c
 
 - **AC-01**: `clp .credentials.status uuid::1` shows `ID: {tagged_id}` or `ID: N/A`.
 - **AC-02**: `clp .credentials.status capabilities::1` shows `Capabilities: {list}` or `Capabilities: N/A`.
-- **AC-03**: `clp .accounts uuid::1` shows `ID:` line per account from saved `{name}.json`.
-- **AC-04**: `clp .accounts capabilities::1` shows `Capabilities:` line per account from saved `{name}.json`.
+- **AC-03**: `clp .accounts cols::+uuid` shows `ID:` line per account from saved `{name}.json`.
+- **AC-04**: `clp .accounts cols::+capabilities` shows `Capabilities:` line per account from saved `{name}.json`.
 - **AC-05**: Both params default to `0` — absent from default output.
 - **AC-06**: `format::json` on both commands always includes `tagged_id` (string) and `capabilities` (array) keys.
 - **AC-07**: Absent snapshot → `N/A` / `[]` for all three fields without error.
@@ -61,7 +61,7 @@ The `{name}.json` snapshot (a copy of `~/.claude.json` taken at `save()` time) c
 |------|--------------|
 | `claude_profile_core/src/account.rs` | `Account` struct new fields; `list()` reads them; `parse_string_array_field` helper |
 | `src/commands/accounts.rs`, `src/commands/credentials.rs` | `read_live_cred_meta()` — reads new fields from live `~/.claude.json`; `accounts_routine()`, `credentials_status_routine()` — render params |
-| `src/lib.rs` | Registration of `uuid::` and `capabilities::` params |
+| `src/registry.rs` | Registration of `uuid::` and `capabilities::` params |
 
 ### Tests
 

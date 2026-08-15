@@ -19,17 +19,19 @@ Test case planning for [invariant/012_gate_slot_atomicity.md](../../../docs/inva
 | IN-8 | Single uncontested fresh claim → slot file content is fully-valid JSON immediately, no create-then-populate window observable | Invariant Hold |
 | IN-9 | 8 racers contending for one never-before-seen slot path → peak concurrently-admitted children never exceeds 1 | Invariant Hold |
 | IN-10 | Pre-seeded 0-byte slot file (content already corrupted before any call) → fresh caller still denied, identically pre-fix and post-fix | Documented Residual |
+| IN-11 | Pre-seeded slot owned by an exited-but-unreaped (zombie) PID → owner reads as dead, slot reclaimed, caller admitted | Invariant Hold |
+| IN-12 | Queued-waiter gate file keyed to a zombie PID → not rendered, self-heal-deleted | Invariant Hold |
 
 ## Test Coverage Summary
 
-- Invariant Hold: 9 tests (IN-1, IN-2, IN-3, IN-4, IN-5, IN-6, IN-7, IN-8, IN-9)
+- Invariant Hold: 11 tests (IN-1, IN-2, IN-3, IN-4, IN-5, IN-6, IN-7, IN-8, IN-9, IN-11, IN-12)
 - Documented Residual: 1 test (IN-10)
 
-**Total:** 10 invariant test cases (minimum for `invariant` doc type is 2; this spec exceeds it to cover the fresh-claim burst case, the single-generation reclaim race, the multi-generation orphaned-ticket chain walk, the fallback-scan starvation guard, the ticket-winner self-collision guard, the multi-generation chain-walk regression guard, the opt-in live-owner staleness threshold, the claim-vs-content atomicity of `claim_slot_file()` itself, the fresh-claim arbitration regression guard, and the explicitly accepted pre-existing-corruption residual boundary)
+**Total:** 12 invariant test cases (minimum for `invariant` doc type is 2; this spec exceeds it to cover the fresh-claim burst case, the single-generation reclaim race, the multi-generation orphaned-ticket chain walk, the fallback-scan starvation guard, the ticket-winner self-collision guard, the multi-generation chain-walk regression guard, the opt-in live-owner staleness threshold, the claim-vs-content atomicity of `claim_slot_file()` itself, the fresh-claim arbitration regression guard, the explicitly accepted pre-existing-corruption residual boundary, and both consumers of the zombie-aware liveness predicate — reclaim and queued-waiter display)
 
 ## Architectural Constraint
 
-All 10 cases are integration tests in `tests/concurrency_gate_test.rs` — the atomicity guarantee lives entirely inside `acquire_slot()` and its call site in `wait_for_session_slot()`, and can only be observed by launching real `clr` subprocesses (or, for IN-1/IN-2/IN-9, real concurrent racers) against a shared `CLR_GATE_DIR` fixture. IN-3 and IN-6 exercise the chain-walking loop added for BUG-402: when a reclaim ticket's own recorded claimant is also dead (never reached `rename()`), `acquire_slot()` advances to the next-generation ticket keyed by that dead claimant's own `(pid, since)` instead of treating the existing ticket as permanent defeat, rechecking the slot's current owner at each generation in case a concurrent caller completed a rename while this call was still walking the chain. IN-5 exercises the self-collision cleanup added for BUG-405 via `CLR_GATE_FORCE_TMP_CLAIM_FAIL_ONCE`, a test-only injection point mirroring the existing `reclaim_test_delay()` idiom used to make an otherwise-narrow race deterministically reproducible. IN-7 exercises the opt-in staleness threshold added for BUG-400 via `CLR_GATE_STALE_SECS`: unlike IN-2/IN-3/IN-6, the pre-seeded owner is a genuinely alive real child process (not a spawned-and-reaped dead one) — the sub-case split (threshold unset vs. set) is what proves the fix is additive rather than a behavior change for existing callers. IN-8/IN-9/IN-10 exercise `claim_slot_file()`'s own claim-vs-content atomicity added for BUG-407: IN-8 and IN-9 are direct-correctness/regression guards (both pass identically pre-fix and post-fix in the absence of an injected crash — no red/green transition is claimed or required for either); IN-10 is a Documented Residual category (distinct from Invariant Hold) — it does not assert the invariant holds for pre-existing corruption, it asserts the KNOWN absence of that guarantee is stable across the fix, so a future change cannot silently narrow or widen the boundary unnoticed.
+All cases except IN-12 are integration tests in `tests/concurrency_gate_test.rs` — the atomicity guarantee lives entirely inside `acquire_slot()` and its call site in `wait_for_session_slot()`, and can only be observed by launching real `clr` subprocesses (or, for IN-1/IN-2/IN-9, real concurrent racers) against a shared `CLR_GATE_DIR` fixture. IN-12 lives in `tests/ps_command_test.rs`: it exercises the queued-waiter display consumer of the same shared `pid_alive()` predicate (BUG-479), so its natural home is beside the other `clr ps` queued-table cases (IT-10/IT-13). IN-11/IN-12's zombie fixture spawns a real immediately-exiting process and deliberately never `wait()`s on it — the test process stays its parent, so the child remains state `Z` with a live `/proc/{pid}` entry for the test's duration (spawn-and-reap, as IN-2 does, produces an ABSENT PID instead, which is a different liveness state). IN-3 and IN-6 exercise the chain-walking loop added for BUG-402: when a reclaim ticket's own recorded claimant is also dead (never reached `rename()`), `acquire_slot()` advances to the next-generation ticket keyed by that dead claimant's own `(pid, since)` instead of treating the existing ticket as permanent defeat, rechecking the slot's current owner at each generation in case a concurrent caller completed a rename while this call was still walking the chain. IN-5 exercises the self-collision cleanup added for BUG-405 via `CLR_GATE_FORCE_TMP_CLAIM_FAIL_ONCE`, a test-only injection point mirroring the existing `reclaim_test_delay()` idiom used to make an otherwise-narrow race deterministically reproducible. IN-7 exercises the opt-in staleness threshold added for BUG-400 via `CLR_GATE_STALE_SECS`: unlike IN-2/IN-3/IN-6, the pre-seeded owner is a genuinely alive real child process (not a spawned-and-reaped dead one) — the sub-case split (threshold unset vs. set) is what proves the fix is additive rather than a behavior change for existing callers. IN-8/IN-9/IN-10 exercise `claim_slot_file()`'s own claim-vs-content atomicity added for BUG-407: IN-8 and IN-9 are direct-correctness/regression guards (both pass identically pre-fix and post-fix in the absence of an injected crash — no red/green transition is claimed or required for either); IN-10 is a Documented Residual category (distinct from Invariant Hold) — it does not assert the invariant holds for pre-existing corruption, it asserts the KNOWN absence of that guarantee is stable across the fix, so a future change cannot silently narrow or widen the boundary unnoticed.
 
 ## Implementation Notes
 
@@ -45,6 +47,8 @@ All 10 cases are integration tests in `tests/concurrency_gate_test.rs` — the a
 | IN-8 | `t22_claim_slot_file_content_valid_immediately_after_call` | `tests/concurrency_gate_test.rs` | ✅ |
 | IN-9 | `t23_concurrent_racers_still_yield_exactly_one_winner` | `tests/concurrency_gate_test.rs` | ✅ |
 | IN-10 | `t24_preexisting_empty_slot_file_remains_a_documented_residual` | `tests/concurrency_gate_test.rs` | ✅ |
+| IN-11 | `t37_zombie_owned_slot_reclaimed_and_caller_admitted` | `tests/concurrency_gate_test.rs` | ✅ |
+| IN-12 | `it_46_zombie_waiter_filtered_out_and_self_healed` | `tests/ps_command_test.rs` | ✅ |
 
 ---
 
@@ -108,9 +112,10 @@ All 10 cases are integration tests in `tests/concurrency_gate_test.rs` — the a
 
 ---
 
+<!-- BUG-479 task/claude_runner/bug/479_zombie_blind_pid_liveness.md — fixed: zombie-owner reclaim and zombie-waiter non-render covered by IN-11/IN-12 below -->
 ### IN-7: Live owner with decades-old `since` → unreclaimable by default; reclaimable once `CLR_GATE_STALE_SECS` is set below the elapsed age
 
-- **Given:** a slot owned by a genuinely alive real child process (a real `/bin/sleep` child, not a `claude`/`clr` process — `pid_alive()` only checks `/proc/{pid}` existence) with `since: 0` recorded (an elapsed age of decades); `--max-sessions 1`; each sub-case uses its own `gate_dir` and its own owner process
+- **Given:** a slot owned by a genuinely alive real child process (a real `/bin/sleep` child, not a `claude`/`clr` process — `pid_alive()` reads process state from `/proc/{pid}/stat`, so only aliveness matters, never the cmdline) with `since: 0` recorded (an elapsed age of decades); `--max-sessions 1`; each sub-case uses its own `gate_dir` and its own owner process
 - **When:** sub-case a runs a fresh `clr --print --max-sessions 1` invocation with `CLR_GATE_STALE_SECS` unset; sub-case b runs the same invocation shape with `CLR_GATE_STALE_SECS=10`
 - **Then:** sub-case a exhausts its gate-wait budget with `"session gate timed out"` on stderr (unchanged pre-existing behavior); sub-case b is admitted (exit 0) promptly with no gate-timeout — the same live owner's slot became reclaim-eligible once its recorded age exceeded the threshold
 - **Note:** `bug_reproducer(BUG-400)` — proves the reclaim-eligibility test gained a supplementary staleness condition without changing behavior for any caller that has not opted in via `CLR_GATE_STALE_SECS`
@@ -145,3 +150,23 @@ All 10 cases are integration tests in `tests/concurrency_gate_test.rs` — the a
 - **Then:** the invocation exits within the gate-wait budget with `"session gate timed out"` on stderr — denied, not admitted
 - **Note:** Documented Residual, not Invariant Hold — this test does NOT assert the invariant holds for pre-existing corruption; it asserts the KNOWN absence of that guarantee is STABLE across the fix. `hard_link()`, like `create_new()`, cannot claim a path that already exists, so a fresh-claim attempt against pre-existing corrupted content still returns `false`, and `acquire_slot()`'s unconditional `None` → `HeldByLive` branch (Fix(BUG-396), unchanged by this fix) still denies forever — matching this fix's own Fix Location scope ("a `None` result ... can only mean genuine on-disk corruption unrelated to this race (out of scope)"). This scope boundary was confirmed via Tier 4 Paired Verification (independent primary and adversarial code trace) after BUG-407's own filing was found to contain a self-contradictory Prevention sketch (recovery expected) versus its more precise Fix Location section. If this test ever starts PASSING with no timeout, the residual boundary has shifted and both this doc and BUG-407's closure notes must be updated to reflect the new behavior — do not silently let that pass uninvestigated
 - **Source:** [invariant/012_gate_slot_atomicity.md](../../../docs/invariant/012_gate_slot_atomicity.md) Enforcement Mechanism : 2, "Explicitly accepted residual"
+
+---
+
+### IN-11: Pre-seeded slot owned by an exited-but-unreaped (zombie) PID → owner reads as dead, slot reclaimed, caller admitted
+
+- **Given:** `slot_0.json` pre-seeded with the PID of a real child that has exited but was deliberately never `wait()`ed on (state `Z`, `/proc/{pid}` entry still present); empty proc dir (census sees 0 sessions); `--max-sessions 1`; `CLR_GATE_STALE_SECS` unset
+- **When:** a fresh `clr --print --max-sessions 1` invocation calls `acquire_slot()` against the zombie-owned slot
+- **Then:** the owner fails the zombie-aware liveness check, the slot is reclaimed via the normal ticket-arbitrated handoff, and the caller is admitted promptly (exit 0) with zero `slot held by another session` denials on stderr
+- **Note:** `bug_reproducer(BUG-479)` — empirically confirmed to fail pre-fix (gate-wait exhaustion, exit 1: the zombie read as a live holder forever) and pass post-fix. The gate-reclaim half of the shared-predicate fix; IN-12 covers the display half
+- **Source:** [invariant/012_gate_slot_atomicity.md](../../../docs/invariant/012_gate_slot_atomicity.md) "Owner-liveness definition" convention paragraph; Provenance : BUG-479
+
+---
+
+### IN-12: Queued-waiter gate file keyed to a zombie PID → not rendered, self-heal-deleted
+
+- **Given:** `{pid}.json` waiter gate file pre-seeded with the PID of a real exited-but-unreaped child (state `Z`); empty proc dir; `clr ps` invocation
+- **When:** `build_queued_table()` filters gate files through the shared `gate::pid_alive()` predicate
+- **Then:** the zombie's row is NOT rendered (no `Queued` table appears when it is the only gate file) AND the waiter file is deleted by the self-healing cleanup
+- **Note:** `bug_reproducer(BUG-479)` — empirically confirmed to fail pre-fix (phantom `Queued · 1 waiting` row rendered; file survived) and pass post-fix. Lives in `tests/ps_command_test.rs` beside IT-13 (the absent-PID orphan case); together they cover both dead-PID states — absent and zombie
+- **Source:** [invariant/012_gate_slot_atomicity.md](../../../docs/invariant/012_gate_slot_atomicity.md) "Owner-liveness definition" convention paragraph; Provenance : BUG-479; [cli/command/06_ps.md](../../../docs/cli/command/06_ps.md) self-heal contract

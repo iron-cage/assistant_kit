@@ -550,19 +550,19 @@ fn ec1_max_sessions_help_listed()
   );
 }
 
-/// EC-9: `clr --help` shows `default: 6` for `--max-sessions`.
+/// EC-9: `clr --help` shows `default: 8` for `--max-sessions`.
 ///
 /// Prevents regression where help text and code default diverge silently.
 /// Covers `033_max_sessions.md` EC-9.
 #[ test ]
-fn ec9_max_sessions_help_shows_default_six()
+fn ec9_max_sessions_help_shows_default_eight()
 {
   let out = run_cli( &[ "--help" ] );
   assert!( out.status.success(), "clr --help must exit 0" );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(
-    stdout.contains( "default: 6" ),
-    "`clr --help` must show `default: 6` for --max-sessions. Got:\n{stdout}"
+    stdout.contains( "default: 8" ),
+    "`clr --help` must show `default: 8` for --max-sessions. Got:\n{stdout}"
   );
 }
 
@@ -573,13 +573,13 @@ fn ec9_max_sessions_help_shows_default_six()
 ///
 /// Dry-run is used here to isolate the dry-run-bypass code path specifically. The divergence
 /// from EC-2 (max=0) is at the code-path level: max=0 bypasses `find_claude_processes()`
-/// entirely; max=6 (default) enters the gate code path in non-dry-run execution. Live
+/// entirely; max=8 (default) enters the gate code path in non-dry-run execution. Live
 /// gate-triggered behavior (waiting messages when sessions ≥ limit) is covered by
 /// `concurrency_gate_test.rs` via synthetic proc-dir process simulation.
 #[ test ]
 fn ec7_max_sessions_no_gate_messages_below_limit()
 {
-  // No --max-sessions override → default 6; dry-run skips gate entirely.
+  // No --max-sessions override → default 8; dry-run skips gate entirely.
   let out = run_cli( &[ "--dry-run", "task" ] );
   assert!( out.status.success(), "dry-run with default max must exit 0. stderr: {}", String::from_utf8_lossy( &out.stderr ) );
   let stderr = String::from_utf8_lossy( &out.stderr );
