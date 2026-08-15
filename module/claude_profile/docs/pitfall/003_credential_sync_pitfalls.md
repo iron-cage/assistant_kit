@@ -67,6 +67,8 @@ When multiple machines share the same credential set (same email / AT+RT pair), 
 3. Check Claude Code process lists on all machines during the window
 4. Matching AT fingerprint changes on machine B with no store push = H6 mechanism confirmed
 
+<!-- BUG-487 task/claude_profile/bug/mixed/487_cross_machine_rt_rotation_kills_credentials.md — H6 confirmed live 2026-08-15 on 9 accounts via this exact runbook; filed as repo_identity: watchdog (routes to Mixed, fix belongs in pro/watchdog, not this crate) -->
+
 ### Pitfall 7 — Unconditional live-session identity merge contaminates non-active targets (BUG-343)
 
 `save()`'s `oauthAccount` merge block read this machine's own live `~/.claude.json` and merged its `oauthAccount` (email + org identity) into the target's `{name}.json` metadata file unconditionally — with no check that `name` was actually the live session's own account. Background refresh/touch loops (`refresh_token_with_live_path()`) call `save()` for every account in the credential store, including non-active ones, so refreshing `target@test.com` on a machine whose live session was `live@test.com` silently merged `live@test.com`'s org identity into `target@test.com`'s own file.
