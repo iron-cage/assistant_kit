@@ -32,7 +32,7 @@ resolution chain ($PRO → $HOME → error), the computed path shapes, and the
 - **Given:** `$PRO` env var is set to a path that does not exist on disk
 - **When:** `PersistPaths::new()` is called
 - **Then:** Falls through to `$HOME`-based resolution — `base()` returns `{$HOME}/.persistent/claude_profile/`; no error is raised for the non-existent `$PRO` path
-- **Source fn:** `p09_path_shape_ends_with_persistent_claude_profile_under_home` (cli/persist_test.rs)
+- **Source fn:** `p06_pro_set_to_nonexistent_falls_back_to_home` in `tests/cli/persist_test.rs`
 - **Source:** [docs/schema/004_storage_root.md §Resolution Chain](../../../docs/schema/004_storage_root.md)
 
 ---

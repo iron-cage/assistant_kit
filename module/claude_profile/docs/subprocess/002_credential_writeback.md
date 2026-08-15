@@ -35,7 +35,7 @@ After `credentials = Some(new_json)`, derive `expires_at_ms` via two-step fallba
 
 ```
 1. jwt_exp_ms(new_json.accessToken)    — preferred for JWT-format tokens (decode "exp" claim)
-2. parse_u64_field(new_json, "expiresAt")  — fallback for opaque sk-ant-oat01-* tokens
+2. parse_u64_from_str(new_json, "expiresAt")  — fallback for opaque sk-ant-oat01-* tokens
 3. unchanged                           — last-resort if both strategies fail
 ```
 

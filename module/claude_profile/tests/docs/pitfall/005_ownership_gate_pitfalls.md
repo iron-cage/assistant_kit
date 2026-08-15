@@ -12,7 +12,7 @@ is in place and prevents the described ownership gate failure mode.
 |----|---------|-----|-------------------|
 | PP-1 | Refresh G2 gate: `!is_owned OR is_occupied_elsewhere` (not just `!is_owned`) | BUG-303 | `mre_bug306_refresh_trace_reason_occupied_elsewhere` |
 | PP-2 | Touch G4 gate: `!is_owned OR is_occupied_elsewhere` (not just `!is_owned`) | BUG-302 | `ft_touch_skips_occupied_elsewhere_with_trace` |
-| PP-3 | Fetch G1b gate: occupied-elsewhere → approximate, not live fetch | BUG-305 | `ft23_g1_non_owned_applies_approximation` in fetch_tests.rs |
+| PP-3 | Fetch G1b gate: occupied-elsewhere → approximate, not live fetch | BUG-305 | `mre_bug305_fetch_skips_occupied_elsewhere_with_trace` in usage_solo_test.rs |
 | PP-4 | `reason_label()` covers occupied-elsewhere trace path | BUG-306 | `mre_bug306_refresh_trace_reason_occupied_elsewhere` |
 
 ---
@@ -52,16 +52,20 @@ is in place and prevents the described ownership gate failure mode.
 
 ### PP-3: Fetch gate (G1b) routes occupied-elsewhere to approximation
 
-- **Given:** An account with `is_owned = true` but `is_occupied_elsewhere = true`.
-- **When:** `fetch_all_quota` runs (G1b gate).
-- **Then:** Live `fetch_oauth_usage()` is NOT called for the occupied account. Instead,
-  `approximate_quota()` is used. Fix BUG-305: the pre-fix fetch gate had no explicit
-  occupied-elsewhere path for owned accounts; they proceeded to live fetch and competed
-  with the remote session's HTTP traffic.
+- **Given:** An account with `is_owned = true` (local credential store holds its own files,
+  no foreign `owner` tag) but `is_occupied_elsewhere = true` (a remote
+  `_active_{host}_{user}` marker names this account).
+- **When:** `.usage trace::1` runs (`fetch_quota_for_list` executes the G1b gate, which fires
+  after G1 non-owned and after `is_current` is resolved).
+- **Then:** Live `fetch_oauth_usage()` is NOT called for the occupied account — no
+  credential-read trace line appears for it; the `"occupied elsewhere"` skip-trace is emitted
+  instead, and `approximate_quota()` is used. Fix BUG-305: the pre-fix fetch gate had no
+  explicit occupied-elsewhere path for owned accounts; they proceeded to live fetch and
+  competed with the remote session's HTTP traffic.
 - **Rule:** The occupied-elsewhere check must appear explicitly for owned accounts, not just
   for non-owned accounts.
-- **Source fn:** `ft23_g1_non_owned_applies_approximation` in `tests/usage/fetch_tests.rs`
-  (covers the approximation path for occupied/non-owned accounts)
+- **Source fn:** `mre_bug305_fetch_skips_occupied_elsewhere_with_trace` in
+  `tests/cli/usage_solo_test.rs`
 - **Source:** [pitfall/005_ownership_gate_pitfalls.md §P3](../../../docs/pitfall/005_ownership_gate_pitfalls.md)
 
 ---

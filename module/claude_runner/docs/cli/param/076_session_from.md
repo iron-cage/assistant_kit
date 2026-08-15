@@ -13,9 +13,12 @@
 |-----------|-------|
 | **Flag** | `--session-from <DIR>` |
 | **Short alias** | `--from <DIR>` |
-| **Type** | `DirectoryPath` — must be an existing directory |
+| **Type** | `DirectoryPath` — resolved to physical absolute form; need not exist (a nonexistent source has no sessions → no cross-load, fresh session) |
+| **Path resolution** | `fs::canonicalize` (symlinks + `..` resolved); lexical cwd-join fallback for nonexistent paths |
+| **Empty value** | ignored entirely — same empty-is-identity rule as `--subdir ""` |
 | **Default** | absent (no cross-loading; uses target dir's own session) |
 | **Env var** | `CLR_SESSION_FROM` |
+| **Config key** | `session-from` (args-file JSON) |
 | **Group** | Runner Control (`02_runner_control.md`) |
 | **Commands** | `run`, `ask` |
 
@@ -23,13 +26,14 @@
 
 When `--session-from <DIR>` is given:
 
-1. `scope_for(DIR)` is called to compute `CLAUDE_SESSION_DIR` for `<DIR>`.
-2. The most recently modified qualifying `.jsonl` file in that `CLAUDE_SESSION_DIR` is selected as the source session UUID.
-3. `-c <uuid>` is injected into the claude subprocess arguments, causing Claude to resume from that session.
-4. Claude runs in the **target** directory (`--dir` or CWD), not in `<DIR>`.
-5. New conversation turns are written to the **target** directory's `CLAUDE_SESSION_DIR`.
+1. `<DIR>` is resolved to its physical absolute form — claude derives storage names from its physical getcwd, so an unresolved relative or symlinked value would encode to a storage name claude never uses (`./src` → `---src`). An empty value is ignored entirely.
+2. `scope_for(resolved DIR)` computes the source `CLAUDE_SESSION_DIR`.
+3. The runner checks that storage dir for the most recently modified qualifying `.jsonl` (see `../algorithm/003_session_file_selection.md`).
+4. If one exists, bare `-c` (continue) is injected into the subprocess arguments — no UUID is passed on the command line; session selection inside claude is steered by the env redirect below.
+5. `CLAUDE_CODE_SESSION_DIR=<source storage dir>` is exported to the subprocess environment, pointing claude's session storage at the source ([contract B23](../../../../../contract/claude_code/docs/behavior/023_b23_session_dir_override.md) — NEG-ONLY certainty: verified not rejected at startup, not confirmed honored).
+6. Claude runs in the **target** directory (`--dir`/`--to` or CWD), not in `<DIR>`.
 
-This is a one-time cross-load. The source directory's session is not modified.
+This is a one-time cross-load; the runner itself never writes to the source directory's session files. See `../../invariant/011_session_source_isolation.md` for the read/write isolation contract and its enforcement caveat.
 
 **Higher-level than `--session-dir`:**
 - `--session-dir /path` takes the raw path verbatim as the session storage directory.

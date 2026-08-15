@@ -170,9 +170,9 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 
 - **Given:** Unit test. Four `AccountQuota` variants:
   - Variant A: `result = Err("missing accessToken".to_string())` → expected `🔴` (dead: error)
-  - Variant B: `result = Ok(data)` where `five_hour.utilization = 10.0` (90% left), `seven_day.utilization = 10.0` (90% left) → expected `🟢`
-  - Variant C: `result = Ok(data)` where `five_hour.utilization = 97.0` (3% left), `seven_day.utilization = 10.0` (90% left) → expected `🟡` (h-exhausted only)
-  - Variant D: `result = Ok(data)` where `five_hour.utilization = 97.0` (3% left), `seven_day.utilization = 98.0` (2% left) → expected `🟡` (both-exhausted → G3 weekly-exhausted; recoverable; Fix BUG-321)
+  - Variant B: `result = Ok(data)` where `five_hour.utilization = 10.0` (90% left); `seven_day` absent (`None`) → expected `🟢`
+  - Variant C: `result = Ok(data)` where `five_hour.utilization = 97.0` (3% left); `seven_day` absent (`None`) → expected `🟡` (h-exhausted only)
+  - Variant D: `result = Ok(data)` where `five_hour.utilization = 94.0` (6% left), `seven_day.utilization = 98.0` (2% left) → expected `🟡` (both-exhausted → G3 weekly-exhausted; recoverable; Fix BUG-321)
 - **When:** `status_emoji(&aq)` called for each variant.
 - **Then:** Returns `"🔴"` for A, `"🟢"` for B, `"🟡"` for C, `"🟡"` for D.
 - **Exit:** n/a (unit test)
@@ -186,22 +186,22 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 
 - **Given:** Unit test. Three `AccountQuota` variants:
   - Variant A: `five_hour.utilization = 85.0` (15.0% left), `seven_day.utilization = 50.0` (50% left) → expected `🟡` (5h at boundary)
-  - Variant B: `five_hour.utilization = 84.9` (15.1% left), `seven_day.utilization = 50.0` (50% left) → expected `🟢` (both above threshold)
+  - Variant B: `five_hour.utilization = 84.5` (15.5% left, rounds away from the boundary), `seven_day.utilization = 50.0` (50% left) → expected `🟢` (both above threshold)
   - Variant C: `five_hour.utilization = 50.0` (50% left), `seven_day.utilization = 97.0` (3.0% left) → expected `🟡` (7d at boundary)
 - **When:** `status_emoji(&aq)` for each.
 - **Then:** A returns `"🟡"`; B returns `"🟢"`; C returns `"🟡"`. The 5h boundary is `left > 15.0`; the 7d boundary is `left > 3.0` (both strict greater-than).
 - **Exit:** n/a (unit test)
-- **Source fn:** `test_status_emoji_boundary`
+- **Source fn:** `it151_status_emoji_boundary_precision`
 - **Source:** [009_token_usage.md AC-19](../../../docs/feature/009_token_usage.md)
 
 ---
 
 ### FT-09: `format::json` output is emoji-free
 
-- **Given:** One saved account whose credential file has no `accessToken` field.
-- **When:** `clp .usage format::json`
-- **Then:** Exits 0. The output string does NOT contain `🔴`, `🟡`, or `🟢`. The JSON array is present and valid.
-- **Exit:** 0
+- **Given (unit test):** One `AccountQuota` with `result = Ok(data)`, `five_hour.utilization = 50.0` (50% left, healthy).
+- **When:** `render_json(&[aq])` is called directly.
+- **Then:** The returned JSON string does NOT contain `🔴`, `🟡`, or `🟢`.
+- **Exit:** n/a (unit test)
 - **Source fn:** `test_status_emoji_absent_in_json`
 - **Source:** [009_token_usage.md AC-20](../../../docs/feature/009_token_usage.md)
 
@@ -222,11 +222,12 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 
 ### FT-11: Per-column emoji in `5h Left` and `7d Left` column values
 
-- **Given:** Unit test. Per-column emoji uses dimension-specific thresholds: `5h Left` at 15%, `7d Left` at 3%.
-  - 5h dimension: `86.0` (> 15% → `🟢`), `12.0` (≤ 15% → `🟡`), boundary `15.0` (exactly 15% → `🟡`)
-  - 7d dimension: `65.0` (> 3% → `🟢`), `2.0` (≤ 3% → `🟡`), boundary `3.0` (exactly 3% → `🟡`)
-- **When:** Per-column emoji formatting applied to each value with its dimension's threshold.
-- **Then:** Values above threshold produce `🟢` prefix; values at or below produce `🟡` prefix. Each dimension uses its own threshold independently.
+- **Given:** Unit test. `quota_text_cells(&data, 0)` applies the `5h Left` dimension's threshold (15%) to the `five_hour.utilization` value:
+  - `10.0` (90% left, > 15% → `🟢`)
+  - `97.0` (3% left, ≤ 15% → `🟡`)
+  - `85.0` (exactly 15% left, boundary → `🟡`, inclusive)
+- **When:** `quota_text_cells(&data, 0)` called for each `five_hour.utilization` value.
+- **Then:** Returns `"🟢 90%"`, `"🟡 3%"`, `"🟡 15%"` respectively. `7d Left` uses the identical `quota_text_cells` mechanism at its own column index with its own 3% threshold but is not separately exercised by this function.
 - **Exit:** n/a (unit test — string return assertion)
 - **Source fn:** `test_ft11_009_per_column_emoji_prefix_three_cases` (in `tests/usage/format_tests.rs`)
 - **Source:** [009_token_usage.md AC-21](../../../docs/feature/009_token_usage.md)
@@ -274,12 +275,9 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 
 ### FT-15: `format_duration_secs` capped to 2 significant time units
 
-- **Given:** Unit test. Three input durations:
-  - `90120` seconds (1 day + 1 hour + 2 minutes)
-  - `11970` seconds (3 hours + 19 minutes + 30 seconds)
-  - `1380` seconds (23 minutes)
-- **When:** `format_duration_secs(n)` for each input.
-- **Then:** Returns `"1d 1h"` (minutes dropped; 2 units shown), `"3h 19m"` (seconds dropped; 2 units shown), `"23m"` (1 unit — within the cap). No input produces a 3-component string.
+- **Given:** Unit test. Input duration `90060` seconds (1 day + 1 hour + 1 minute).
+- **When:** `format_duration_secs(90060)`.
+- **Then:** Returns `"1d 1h"` — the trailing minute is dropped; only the 2 most significant units are shown. No input produces a 3-component string.
 - **Exit:** n/a (unit test — string return assertion)
 - **Source fn:** `dur_90060s_shows_1d_1h_capped` (in `tests/cli_adapter_test.rs` — module `format_duration`, D-11: 2-unit cap drops minutes)
 - **Source:** [009_token_usage.md AC-25](../../../docs/feature/009_token_usage.md)
@@ -305,7 +303,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 
 ### FT-17: `~Renews` shows exact `in Xh Ym` (no `~`) when `_renewal_at` is set
 
-- **Given (unit test):** `renews_label(renewal_at_opt, org_created_at_opt, now_secs)` with `renewal_at_opt = Some("2026-06-29T21:00:00Z")` and `now_secs` set such that the timestamp is 3h47m in the future.
+- **Given (unit test):** `renews_label(renewal_at_opt, org_created_at_opt, now_secs)` with `renewal_at_opt = Some("2030-01-01T03:47:00Z")` and `now_secs = 1_893_456_000` (`2030-01-01T00:00:00Z`) — 3h47m before the renewal timestamp.
 - **When:** `renews_label()` called with the above inputs.
 - **Then:** Returns `"in 3h 47m"` — no `~` prefix, exact duration format.
 - **Exit:** n/a (unit test)
@@ -341,13 +339,13 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 
 - **Given (unit test):** An `AccountQuota` where:
   - `result = Err("rate limited (429)")` (quota API failed with 429)
-  - `account = Some(OauthAccountData { org_created_at: <ISO date string for a known billing anchor>, ... })` (account data fetched independently — unaffected by 429 on usage API)
-  - `now_secs` fixed such that `next_billing_label(&a.org_created_at, now_secs)` produces a known date string (e.g., `Jun  6`)
-  - Default `ColsVisibility` (host and role OFF, renews ON)
+  - `account = Some(OauthAccountData { billing_type: "stripe_subscription", has_max: true, org_created_at: "1970-01-15T00:00:00Z", ... })` (account data fetched independently — unaffected by 429 on usage API)
+  - `org_created_at: Some("1970-01-15T00:00:00Z")` on the `AccountQuota` itself, mirroring `account.org_created_at` (Fix BUG-327)
+  - Default `ColsVisibility`
 - **When:** The `AccountQuota` is rendered via both `render_text()` and `render_tsv()`.
 - **Then:**
-  - In the `render_text()` output: the `~Renews` cell contains the expected renewal date string (e.g., `Jun  6`); the error reason `(rate limited (429))` appears in at least one quota-data column (`5h Left` through `7d Reset`) and does NOT appear in the `~Renews` cell.
-  - In the `render_tsv()` output: the `~Renews` field contains the expected renewal date string; the TSV renews cell is NOT `(rate limited (429))`.
+  - In the `render_tsv()` output: the `~Renews` field (isolated by column position) is NOT `"(rate limited (429))"` and is NOT `"?"` — a billing-derived value is shown instead of the error or an absent-data placeholder.
+  - In the `render_text()` output: the string `"(rate limited (429))"` appears somewhere in the output (in a quota column). The test does not isolate the `~Renews` cell for the text renderer, so it does not independently confirm the error text is absent from that specific cell — that precise isolation is checked only for the TSV renderer.
 - **Exit:** n/a (unit test)
 - **Note:** Fix for BUG-220. The defect had `render_text()` using `last_mut()` positional overwrite (hitting `~Renews` as the last non-host/role column) and `render_tsv()` explicitly pushing `error_str` for the renews cell. Both renderers must preserve `renews_str` (from `OauthAccountData`) regardless of `result` error state.
 - **Source fn:** `mre_bug_220_renews_preserved_for_429_accounts` (in `tests/usage/render_tests_a.rs`)
@@ -376,14 +374,14 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 ### FT-22: Cancelled subscription shows `(no subscription)` in last quota column
 
 - **Given (unit test):** One `AccountQuota`:
-  - `result = Err("no subscription")` (overridden at fetch time when `billing_type == "none"`)
-  - `account = Some(OauthAccountData { billing_type: "none", has_max: false, org_created_at: "..." })`
+  - `result = Err("no subscription")` (overridden at fetch time when `billing_type == "none"` — the override predicate itself is verified in isolation by `test_class_a_billing_none_override_predicate`)
+  - `account = Some(OauthAccountData { billing_type: "none", has_max: false, org_created_at: "2024-01-15T00:00:00Z" })`
   - Default `ColsVisibility` (7d Reset is last visible quota column)
 - **When:** Rendered via `render_text()` and `render_tsv()`.
 - **Then:**
-  - The `7d Reset` column cell contains `(no subscription)`.
-  - No cell contains `(rate limited (429))`.
-  - `Sub` column (when visible via `cols::+sub`) shows `"—"` (from `sub_label` with `billing_type="none"`).
+  - `shorten_error()` has no special case for the `"no subscription"` reason string, so it passes through unchanged into the last visible quota column — the same general Err-reason-in-parens mechanism FT-01/FT-02 verify for other reason strings; neither cited function re-asserts this column directly.
+  - The cited render test itself asserts only the `~Renews` cell: it is `"—"`, not the error text — confirming the error does not leak into `~Renews` (shared fixture with FT-23).
+  - `Sub` column `"—"` (from `sub_label`, which has its own unconditional `billing_type == "none"` branch) is not exercised by either cited function — no test renders the `Sub` column for a cancelled account.
 - **Exit:** n/a (unit test)
 - **Note:** Fix(BUG-233) Class A: fetch layer now overrides `result` to `Err("no subscription")` after `account_handle.join()` when `billing_type == "none"`. The previous BUG-231 display-layer workaround (`error_label` in `format.rs`) is deleted — superseded by this data-layer fix (AC-31).
 - **Source fn:** `test_ft23_009_renews_dash_for_cancelled_subscription` (in `tests/usage/render_tests_a.rs`); `test_class_a_billing_none_override_predicate` (in `tests/usage/fetch_tests.rs`)
@@ -426,16 +424,11 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 
 ### FT-25: `.usage` applies model override for current account when `7d(Son) < 10%`
 
-- **Given (unit test):** One `AccountQuota` for the current account (`is_current = true`):
-  - `result = Ok(OauthUsageData)` with `seven_day_sonnet = Some(PeriodUsage { utilization: 91.0, resets_at: Some("...") })` — 9% left (< 10% threshold)
-  - `~/.claude/settings.json` contains `"model": "claude-sonnet-5"`
-  - `ClaudePaths` pointing to a temp directory
-- **When:** `apply_model_override(&data, &paths, false, "usage", "test@example.com")` is called with the current account's quota data.
-- **Then:**
-  - `~/.claude/settings.json` now contains `"model": "claude-opus-4-8"` — the override fired.
-  - The structural test verifies that `usage_routine()` calls `apply_model_override` after the touch loop for the current account (source position assertion or direct call test).
-- **Exit:** n/a (unit test)
-- **Note:** Fix for BUG-244. The model override was previously only reachable from `.account.use` (`account_ops.rs`). This test verifies the `.usage` path also applies it. Reuses the existing `apply_model_override()` function (tested by BUG-238 MRE) but validates it is called from the `.usage` pipeline.
+- **Given (structural test):** Source file `src/usage/api.rs` as a string (via `include_str!`); the `usage_routine` function body is extracted from the source text.
+- **When:** The extracted `usage_routine` body is checked for the substring `apply_model_override(`.
+- **Then:** The substring is present — `usage_routine()` calls `apply_model_override`. This is a wiring/call-site check only: it does not construct quota data or inspect `settings.json`; value-level override behavior (e.g. writing the `opus` shorthand — NOT the literal string `"claude-opus-4-8"` — when `7d(Son)` is below threshold) is covered separately by the `apply_model_override()` unit tests themselves, such as `mre_bug238_model_override_fires_for_active_account`.
+- **Exit:** n/a (unit test — structural/source-text assertion)
+- **Note:** Fix for BUG-244. The model override was previously only reachable from `.account.use` (`account_ops.rs`). This test verifies `usage_routine()` also calls it. Reuses the existing `apply_model_override()` function (tested by BUG-238 MRE) but validates the call site is wired into the `.usage` pipeline.
 - **Source fn:** `mre_bug244_usage_routine_never_calls_apply_model_override` (in `tests/usage/api_tests_b.rs`)
 - **Source:** [009_token_usage.md AC-32](../../../docs/feature/009_token_usage.md)
 
@@ -447,7 +440,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
   - `result = Ok(OauthUsageData)` with `seven_day_sonnet = None` (absent tier — account has no Sonnet weekly quota)
   - `~/.claude/settings.json` not present (or empty)
   - `ClaudePaths` pointing to a temp directory
-- **When:** `apply_model_override(&data, &paths, false, "usage", "test@example.com")` is called.
+- **When:** `apply_model_override(&data, &paths, false, "usage", "test-account", AccountBackend::Anthropic)` is called.
 - **Then:**
   - `~/.claude/settings.json` contains `"model": "sonnet"` — `override_session_model_to_sonnet()` fires conservatively (Fix BUG-311). `"opus"` does NOT appear. Absent tier is treated as unknown, not exhausted.
 - **Exit:** n/a (unit test)

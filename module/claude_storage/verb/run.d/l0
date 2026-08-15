@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# l0 — host-native run execution is disabled.
+# clg must run inside the runbox container.
+# Standard invocation: cd module/claude_storage && ./verb/run
+set -euo pipefail
+echo "ERROR: host-native run execution (l0) is disabled." >&2
+echo "Standard invocation: cd module/claude_storage && ./verb/run" >&2
+exit 1

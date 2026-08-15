@@ -47,7 +47,7 @@ Feature behavioral requirement test cases for `docs/feature/001_account_store_in
 - **When:** `account::save(name, credential_store, paths)` is called a second time with the same or a different account.
 - **Then:** The call returns success. No error is produced for the pre-existing directory.
 - **Exit:** Ok
-- **Source fn:** `save_copies_credentials_to_named_file`
+- **Source fn:** `save_overwrites_existing_entry`
 - **Source:** [001_account_store_init.md AC-02](../../../docs/feature/001_account_store_init.md)
 
 ---

@@ -3,7 +3,7 @@
 Selects the static embedded model catalog instead of the live API for `.models`. When `offline::1`, no network call is made and no OAuth token is required.
 
 - **Default:** `0` — live mode (queries `GET /v1/models` with OAuth token)
-- **Constraints:** `0`, `1`, `false`, `true`
+- **Constraints:** `0` or `1` (`Kind::Integer` — only integer literals are accepted; `false`/`true` are rejected as a type mismatch before the command runs, unlike the string-typed `lock::`/`reserve::`, which silently coerce non-`"1"` values to off); any integer other than `1` behaves as `0`/no-op.
 - **Purpose:** List models without network access; useful in scripts, CI, or environments without active credentials.
 
 **Values:**

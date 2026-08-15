@@ -11,8 +11,8 @@ is in place and prevents the described subprocess integration failure mode.
 | ID | Pitfall | Bug | Guard Verified By |
 |----|---------|-----|-------------------|
 | PP-1 | `["--print", "."]` is the ONLY valid credential-refresh invocation | BUG-169 | `test_apply_refresh_lifecycle_l10_trace_run_isolated_invoked_no_panic` |
-| PP-2 | Haiku cannot activate the 7d-Sonnet session window | BUG-289 | `test_mre_bug289_son_running_false_haiku_touch_fires_on_every_call` |
-| PP-3 | Touch subprocess must use Sonnet (or Sonnet-family) to open all quota windows | BUG-289 | `test_mre_bug289_son_running_false_haiku_touch_fires_on_every_call` |
+| PP-2 | Haiku cannot activate the 7d-Sonnet session window | BUG-289 | `test_mre_bug289_son_running_false_haiku_touch_fires_on_every_call`, `it_imodel_auto_selects_sonnet_when_son_idle` |
+| PP-3 | Touch subprocess must use Sonnet (or Sonnet-family) to open all quota windows | BUG-289 | `test_mre_bug289_son_running_false_haiku_touch_fires_on_every_call`, `it_imodel_auto_selects_sonnet_when_son_idle` |
 | PP-4 | Refresh scope guard: non-owned and occupied accounts are skipped | BUG-295, BUG-298 | `mre_bug295_apply_refresh_trace_reason_not_owned`, `mre_bug306_refresh_trace_reason_occupied_elsewhere` |
 
 ---
@@ -34,17 +34,26 @@ is in place and prevents the described subprocess integration failure mode.
 
 ### PP-2 / PP-3: Touch subprocess model must be Sonnet to activate all quota windows
 
-- **Given:** An account with `seven_day_sonnet.resets_at = None` (Sonnet window idle). A
-  Haiku subprocess touch is launched.
-- **When:** The touch subprocess completes and quota is re-fetched.
-- **Then:** `seven_day_sonnet.resets_at` remains `None` — Haiku cannot set the Sonnet window
-  timer. The next `.usage` call detects the idle Sonnet window again and fires another touch
-  — creating an infinite no-op loop. Fix BUG-289.
+- **Given:** An account with `seven_day_sonnet.resets_at = None` (`son_idle=true`), 5h and 7d
+  both running.
+- **When:** `touch_skip_reason(&aq, store, false)` — the pure decision oracle `apply_touch`
+  consults first — is evaluated twice on fresh fixtures with identical `son_idle=true` state
+  (no subprocess is launched or re-queried in this test). Separately, `resolve_model(&aq,
+  SubprocessModel::Auto)` is evaluated on the same `son_idle=true` state.
+- **Then:** Both `touch_skip_reason` calls return `None` (no guard skips) — the trigger fires
+  on every call given identical `son_idle=true` state, proving the pre-fix infinite-loop
+  precondition: a Haiku touch cannot set the Sonnet window timer, so `resets_at` would stay
+  `None` forever and every subsequent `.usage` call would re-fire the trigger.
+  `resolve_model(Auto)` returns `"claude-sonnet-5"`, not Haiku — the actual BUG-289 fix that
+  breaks the loop by activating the window on the first call. Fix BUG-289.
 - **Rule:** When the goal is to activate ALL quota windows simultaneously, the touch
   subprocess MUST use a Sonnet-family model. `resolve_model(Auto)` selects Sonnet when
   `seven_day_sonnet.resets_at = None` for exactly this reason.
 - **Source fn:** `test_mre_bug289_son_running_false_haiku_touch_fires_on_every_call` in
-  `tests/usage/touch_tests.rs`
+  `tests/usage/touch_tests_b.rs` (proves the trigger persists across calls — the loop
+  precondition); `it_imodel_auto_selects_sonnet_when_son_idle` in
+  `tests/usage/subprocess_tests.rs` (proves `resolve_model(Auto)` actually selects Sonnet —
+  the fix itself)
 - **Source:** [pitfall/002_subprocess_integration_pitfalls.md §P2-P3](../../../docs/pitfall/002_subprocess_integration_pitfalls.md)
 
 ---

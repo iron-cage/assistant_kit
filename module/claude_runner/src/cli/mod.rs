@@ -1,5 +1,6 @@
 mod parse;
 mod env;
+mod retry_classify;
 mod execution;
 mod cred_parse;
 mod builder;
@@ -7,6 +8,7 @@ mod fence;
 mod credential;
 mod help;
 mod gate;
+mod column_validate;
 mod ps;
 mod kill;
 mod tools;
@@ -14,6 +16,7 @@ mod scope;
 mod query;
 mod summary;
 mod json_config;
+mod json_config_isolated;
 mod config;
 // summary_unit_test.rs (external test) imports render_summary/resolve_fields via the public API.
 // The unused_imports lint fires for pub use in private modules when no code in the lib crate itself
@@ -47,7 +50,7 @@ use credential::{ run_isolated_command, run_refresh_command };
 const CREDS_PATH_ERROR : &str =
   "Error: cannot resolve credentials path: HOME is not set; provide --creds or set CLR_CREDS\nRun with --help for usage.";
 use help::print_ask_help;
-use gate::wait_for_session_slot;
+use gate::{ trace_gate_wait_exposure, wait_for_session_slot };
 pub( super ) use ps::dispatch_ps;
 pub( super ) use kill::dispatch_kill;
 pub( super ) use tools::dispatch_tools;
@@ -219,11 +222,21 @@ pub( super ) fn run_built_command(
       && ( cli.message.is_some() || !is_tty || cli.file.is_some() || cli.stdin_content.is_some() ) );
 
   // Concurrency gate: block before subprocess launch when max active print-mode
-  // sessions is reached. Default limit is 6; 0 = unlimited.  dry-run is bypassed
+  // sessions is reached. Default limit is 8; 0 = unlimited.  dry-run is bypassed
   // by caller (never reaches here).
   if is_print_invocation
   {
-    let max_sessions = cli.max_sessions.unwrap_or( 6 );
+    let max_sessions = cli.max_sessions.unwrap_or( 8 );
+    // Fix(BUG-445): `cli.timeout` is `Some` only when expressed (--timeout flag
+    // or CLR_TIMEOUT env, env.rs fallback) — `is_some()` marks expression for
+    // the exposure note, and `unwrap_or( 0 )` maps both unexpressed (None) and
+    // the explicit `--timeout 0` opt-out to 0 = no gate-budget fallback, so the
+    // built-in 3600s print default never reaches the gate.
+    // Root cause: the gate call carried no timeout input at all — gate-wait's
+    // only timing signal was the opt-in CLR_REMAINING_TIMEOUT_SECS env var.
+    // Pitfall: pass the EXPRESSED value, never the effective default — see
+    // effective_gate_attempts()'s Fix(BUG-445) note in gate.rs.
+    trace_gate_wait_exposure( max_sessions, cli.trace, cli.timeout.is_some() );
     let mut runner_attempt = 0u32;
     wait_for_session_slot(
       max_sessions,
@@ -231,6 +244,7 @@ pub( super ) fn run_built_command(
       cli.gate_poll_secs.unwrap_or( 30 ),
       cli.gate_max_attempts.unwrap_or( 1000 ),
       cli.gate_stale_secs,
+      u64::from( cli.timeout.unwrap_or( 0 ) ),
       journal,
       &mut | e | { execution::apply_runner_retry( cli, e, &mut runner_attempt, journal ); },
     );
@@ -416,13 +430,25 @@ pub( super ) fn dispatch_ask( tokens : &[ String ] ) -> !
 fn gate_isolated_session( cli : &IsolatedArgs, journal : Option< &claude_journal::JournalWriter > )
 {
   if cli.dry_run { return; }
-  let max_sessions = cli.max_sessions.unwrap_or( 6 );
+  let max_sessions = cli.max_sessions.unwrap_or( 8 );
+  // Fix(BUG-445): `timeout_expressed` (set by the --timeout parser arm or the
+  // CLR_TIMEOUT env application) gates the budget fallback — isolated's
+  // built-in 30s default must never default the gate budget, or every default
+  // invocation would fail-fast at 30s instead of queueing (~8.3h ceiling). An
+  // expressed `--timeout 0` passes 0 = deliberate unlimited, no fallback.
+  // Root cause: `timeout_secs` is a plain u64 with a baked-in default, so the
+  // gate call could not distinguish "caller said 30" from "nobody said
+  // anything" — the expression bit had to be captured at parse time.
+  // Pitfall: pass the EXPRESSED value, never the effective default — see
+  // effective_gate_attempts()'s Fix(BUG-445) note in gate.rs.
+  trace_gate_wait_exposure( max_sessions, cli.trace, cli.timeout_expressed );
   wait_for_session_slot(
     max_sessions,
     false,
     gate::gate_poll_secs_from( env::env_str( "CLR_GATE_POLL_SECS" ).as_deref() ),
     gate::gate_max_attempts_from( env::env_str( "CLR_GATE_MAX_ATTEMPTS" ).as_deref() ),
     gate::gate_stale_secs_from( env::env_str( "CLR_GATE_STALE_SECS" ).as_deref() ),
+    if cli.timeout_expressed { cli.timeout_secs } else { 0 },
     journal,
     &mut | e | { eprintln!( "Error: [Runner] {e} (exit 1)" ); std::process::exit( 1 ); },
   );
@@ -442,7 +468,7 @@ pub( super ) fn dispatch_isolated( tokens : &[ String ] ) -> !
   let src_path = env::resolve_args_file_path( cli.args_file.as_deref() );
   if let Some( ref path ) = src_path
   {
-    if let Err( e ) = json_config::load_and_apply_isolated( path, &mut cli )
+    if let Err( e ) = json_config_isolated::load_and_apply_isolated( path, &mut cli )
     {
       eprintln!( "Error: {e}" );
       std::process::exit( 1 );
@@ -452,7 +478,7 @@ pub( super ) fn dispatch_isolated( tokens : &[ String ] ) -> !
   {
     match json_config::parse_json_object( src )
     {
-      Ok( map ) => json_config::apply_json_config_isolated( &mut cli, &map ),
+      Ok( map ) => json_config_isolated::apply_json_config_isolated( &mut cli, &map ),
       Err( e )  => { eprintln!( "Error: {e}" ); std::process::exit( 1 ); }
     }
   }
@@ -587,7 +613,7 @@ pub( super ) fn dispatch_refresh( tokens : &[ String ] ) -> !
   let src_path = env::resolve_args_file_path( cli.args_file.as_deref() );
   if let Some( ref path ) = src_path
   {
-    if let Err( e ) = json_config::load_and_apply_refresh( path, &mut cli )
+    if let Err( e ) = json_config_isolated::load_and_apply_refresh( path, &mut cli )
     {
       eprintln!( "Error: {e}" );
       std::process::exit( 1 );
@@ -597,7 +623,7 @@ pub( super ) fn dispatch_refresh( tokens : &[ String ] ) -> !
   {
     match json_config::parse_json_object( src )
     {
-      Ok( map ) => json_config::apply_json_config_refresh( &mut cli, &map ),
+      Ok( map ) => json_config_isolated::apply_json_config_refresh( &mut cli, &map ),
       Err( e )  => { eprintln!( "Error: {e}" ); std::process::exit( 1 ); }
     }
   }

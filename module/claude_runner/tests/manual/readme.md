@@ -230,7 +230,7 @@ cargo run -p claude_runner -- --trace "test" 2>/tmp/trace29_err.txt; echo "exit:
 
 **Expected:** Command preview (env vars + command) written to stderr. Invocation attempt made (may fail if Claude binary absent). Exit code 0 on success, non-zero if Claude not found.
 
-**Precondition:** Requires fewer than `--max-sessions` live claude sessions on the host. If the gate fires (e.g., 6/6 sessions running), the gate-wait message appears on stderr BEFORE the trace block runs — this is correct gate-before-trace ordering by design. Test in container where session count is 0 for reliable results.
+**Precondition:** Requires fewer than `--max-sessions` live claude sessions on the host. If the gate fires (e.g., 8/8 sessions running), the gate-wait message appears on stderr BEFORE the trace block runs — this is correct gate-before-trace ordering by design. Test in container where session count is 0 for reliable results.
 
 ### TC-30: No-Skip-Permissions in Dry-Run
 ```sh
@@ -743,7 +743,7 @@ These are exhaustively tested by the integration test suite (not manual). Listed
 - **CC-87:** `--retry-on-validation 256 --dry-run "test"` → exit 1; error "invalid --retry-on-validation value"
 - **CC-88:** `--max-sessions 5 --dry-run "test"` → exit 0
 - **CC-89:** `--max-sessions 0 --dry-run "test"` → exit 0 (gate disabled)
-- **CC-90:** `CLR_MAX_SESSIONS=notanumber --dry-run "test"` → exit 0 (silently ignored, default 6 used)
+- **CC-90:** `CLR_MAX_SESSIONS=notanumber --dry-run "test"` → exit 0 (silently ignored, default 8 used)
 - Automated in: `output_file_test.rs`, `expect_validation_test.rs`, `param_edge_cases_test.rs`, `env_var_ext_test.rs`
 
 ### Env vars for expect/output-file params
@@ -1011,13 +1011,13 @@ clr isolated --trace --creds /nonexistent "test"
 
 ### NC-12: Gate Waiting Message Format — `gate-wait  active=X/Y`
 
-**Precondition:** Requires ≥6 live claude sessions running on the host (or use `--max-sessions N` with N sessions already running). Gate-blocked: cannot be tested in container (0 sessions).
+**Precondition:** Requires ≥8 live claude sessions running on the host (or use `--max-sessions N` with N sessions already running). Gate-blocked: cannot be tested in container (0 sessions).
 
 **Expected:** When the gate is triggered, each polling cycle emits to stderr:
 `{timestamp} · gate-wait  active={count}/{max} attempt={attempt}/{max_attempts} wait={poll_secs}s (reason: {cause})`
 
-Example with 6 sessions at default limit:
-`2026-08-04 · 12:00:00 UTC · gate-wait  active=6/6 attempt=1/1000 wait=30s (reason: [at capacity])`
+Example with 8 sessions at default limit:
+`2026-08-04 · 12:00:00 UTC · gate-wait  active=8/8 attempt=1/1000 wait=30s (reason: [at capacity])`
 
 The pre-TSK-452 format `"Info: X/Y print sessions active; waiting Xs..."` is **not** emitted. The structured `gate-wait  active=` prefix with `(reason: ...)` trailer is the canonical output.
 

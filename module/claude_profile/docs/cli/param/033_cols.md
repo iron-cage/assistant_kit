@@ -17,11 +17,13 @@ Controls column visibility in the `.usage` quota table. Accepts comma-separated 
 | `5h_left` | 5h Left | ON |
 | `5h_reset` | 5h Reset | ON |
 | `7d_left` | 7d Left | ON |
-| `7d_son` | 7d(Son) | ON |
+| `7d_son` | 7d(Son) | **OFF** |
 | `7d_reset` | 7d Reset | ON |
 | `7d_son_reset` | 7d Son Reset | **OFF** |
 | `host` | Host | **OFF** |
 | `role` | Role | **OFF** |
+| `owner` | Owner | ON |
+| `next` | → Next | ON |
 
 The `flag` (first column) and `account` (name) columns are structural and always visible.
 
@@ -29,8 +31,8 @@ The `flag` (first column) and `account` (name) columns are structural and always
 
 ```text
 cols::+sub                     -> add Sub column to default set
-cols::+sub,-7d_son             -> add Sub, remove 7d(Son)
-cols::-renews,-7d_son          -> hide Renews and 7d(Son)
+cols::+sub,-renews             -> add Sub, remove ~Renews
+cols::-5h_reset,-7d_reset      -> hide 5h Reset and 7d Reset
 cols::+sub,+7d_son_reset       -> show both hidden-by-default quota columns
 cols::+host,+role              -> show machine/host tag and user-defined role label
 ```

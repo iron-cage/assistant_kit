@@ -1,6 +1,6 @@
 # Parameter: 15. `role::`
 
-Controls whether the organisation role line appears in output. Opt-in (default `0`). Source: `organizationRole` field in `oauthAccount` — read from live `~/.claude.json` (`.credentials.status`) or from the saved `{name}.json` snapshot (`.accounts`).
+Controls whether the organisation role line appears in output. Opt-in (default `0`). Source: `organizationRole` field in `oauthAccount` — read from live `~/.claude.json` (`.credentials.status`). No longer usable on `.accounts` — removed in [Feature 037](../../feature/037_accounts_usage_param_unification.md); `.accounts` now rejects `role::` with `parameter 'role' removed — use 'cols::+role' instead` (see `REMOVED_TOGGLES` in `src/commands/accounts.rs`).
 
 - **Default:** `0` (hidden)
 - **Constraints:** Accepted values: `0`, `1`, `false`, `true`
@@ -27,8 +27,7 @@ role::1   → Role:    admin
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.accounts`](../command/001_account.md#command-3-accounts) | Organisation role line per stored account |
-| 2 | [`.credentials.status`](../command/002_credentials.md#command-10-credentialsstatus) | Organisation role line for live credentials |
+| 1 | [`.credentials.status`](../command/002_credentials.md#command-10-credentialsstatus) | Organisation role line for live credentials |
 
 ### Referenced User Stories
 
