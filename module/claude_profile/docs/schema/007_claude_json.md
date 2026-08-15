@@ -5,7 +5,7 @@
 - **Purpose**: Define which fields in `~/.claude.json` are read by `clp`, their locations, and read callers.
 - **Responsibility**: Documents the `~/.claude.json` fields read by `clp` and their read callers.
 - **In Scope**: All `~/.claude.json` fields that `clp` reads — `oauthAccount` subtree and any auxiliary fields.
-- **Out of Scope**: Full `~/.claude.json` schema (not owned by clp — it is owned exclusively by the Claude binary). `clp` NEVER writes to this file.
+- **Out of Scope**: Full `~/.claude.json` schema (not owned by clp — it is owned exclusively by the Claude binary). `clp` writes only the `oauthAccount` subtree, only during `.account.use` — see Write Behavior below; all other keys and fields remain Claude-binary-owned.
 
 ### File Location
 
@@ -15,9 +15,14 @@
 
 Note: This file is a **sibling** to `~/.claude/` (the directory), not inside it. Path via `ClaudePaths::claude_json_file()`. See [schema/003](003_file_topology.md).
 
-### Read-Only Contract
+### Write Behavior
 
-`clp` never writes to `~/.claude.json`. Mutations to this file are owned by the Claude binary (OAuth login, session state). All `clp` reads are graceful — absent file or absent fields show `N/A` without error.
+`.account.use` (`switch_account()` → `patch_live_state_after_switch()`, `claude_profile_core/src/account.rs`) patches this file's `oauthAccount` subtree on every switch — this is the only `clp` write path to `~/.claude.json`:
+
+1. **Unconditional `emailAddress` patch** — fires regardless of whether `{name}.json` exists, setting `oauthAccount.emailAddress` to the target account name.
+2. **Fuller `oauthAccount` restore** — when `{name}.json` exists and parses, its saved `oauthAccount` object (subject to the reads listed below) is written in, with `emailAddress` re-enforced to the account name (Fix BUG-217: the snapshot may hold a stale email) and `organizationName`/`organizationUuid` overridden from the snapshot's roles data when present (Fix BUG-219).
+
+Both steps are a **surgical merge** — only the `oauthAccount` key is inserted/replaced; every other top-level key in `~/.claude.json` is read back and preserved unchanged, never wholesale-overwritten. All `clp` reads remain graceful — absent file or absent fields show `N/A` without error.
 
 ### Fields Read by `clp`
 

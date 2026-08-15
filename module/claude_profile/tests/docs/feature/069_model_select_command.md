@@ -143,7 +143,7 @@
 
 ### FT-09: `id::VALUE reset::1` exits 1 with mutual exclusion message
 
-> Historical only — describes `.model.select`'s retired mutual-exclusion validation. The `id::`/`reset::1` mutual-exclusion check itself is still live, just relocated — see `.model.select`'s own T23 stub coverage (`20_model_select.md`) and `.provider.select`'s equivalent (`21_provider_select.md` IT-09).
+> Historical only — describes `.model.select`'s retired mutual-exclusion validation. `.model.select`'s own copy of this check is gone entirely — its T23 stub coverage (`20_model_select.md`) shows all three invocation forms (bare/`id::`/`reset::`) now return the identical unconditional migration error, with no parameter-dependent validation left to demonstrate. The `id::`/`reset::1`-style mutual-exclusion check itself is still live elsewhere: `.model`'s own `model::`/`reset_model::` equivalent (`17_model.md` IT-19, `t17_mutual_exclusion_model_exits_1`) and `.provider.select`'s equivalent (`21_provider_select.md` IT-09).
 
 - **Given:** Any environment.
 - **When:** `clp .model.select id::claude-opus-4-8 reset::1`

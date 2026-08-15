@@ -90,7 +90,7 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 - **When:** `resolve_model(&quota, SubprocessModel::Auto)`
 - **Then:** Returns `IsolatedModel::Specific("claude-sonnet-5")`. `son_idle=true` → `son_idle` gate fires regardless of 5h state; Sonnet selected. A single Sonnet touch opens 5h and Son simultaneously. Verifies the old `five_h_running` constraint is gone.
 - **Exit:** n/a (unit test)
-- **Source fn:** `it_imodel_auto_selects_sonnet_when_5h_absent` (in `src/usage/subprocess.rs #[cfg(test)]`)
+- **Source fn:** `it_imodel_auto_selects_sonnet_when_5h_absent` (in `tests/usage/subprocess_tests.rs`)
 - **Source:** [feature/026_subprocess_model_effort.md AC-01](../../../docs/feature/026_subprocess_model_effort.md)
 
 ---
@@ -101,7 +101,7 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 - **When:** `resolve_model(&quota, SubprocessModel::Auto)`
 - **Then:** Returns `IsolatedModel::Specific("claude-sonnet-5")`. `son_idle=true` → gate fires regardless of 5h state or utilization value. Utilization percentage is not consulted in model selection.
 - **Exit:** n/a (unit test)
-- **Source fn:** `it_imodel_auto_selects_sonnet_when_5h_absent_high_util` (in `src/usage/subprocess.rs #[cfg(test)]`)
+- **Source fn:** `it_imodel_auto_selects_sonnet_when_5h_absent_high_util` (in `tests/usage/subprocess_tests.rs`)
 - **Source:** [feature/026_subprocess_model_effort.md AC-01](../../../docs/feature/026_subprocess_model_effort.md)
 
 ---
@@ -112,7 +112,7 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 - **When:** `resolve_model(&quota, SubprocessModel::Auto)`
 - **Then:** Returns `IsolatedModel::Specific("claude-sonnet-5")`. `son_idle=true` → gate fires; utilization percentage is not consulted. Verifies boundary value doesn't accidentally enable an old util-based path.
 - **Exit:** n/a (unit test)
-- **Source fn:** `it_imodel_auto_selects_sonnet_when_5h_absent_boundary_util` (in `src/usage/subprocess.rs #[cfg(test)]`)
+- **Source fn:** `it_imodel_auto_selects_sonnet_when_5h_absent_boundary_util` (in `tests/usage/subprocess_tests.rs`)
 - **Source:** [feature/026_subprocess_model_effort.md AC-01](../../../docs/feature/026_subprocess_model_effort.md)
 
 ---
@@ -123,16 +123,16 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 - **When:** `resolve_model(&quota_without_sonnet_pct, "auto")`
 - **Then:** Returns `IsolatedModel::Specific("claude-haiku-4-5-20251001")`. No quota data is needed — auto always yields Haiku.
 - **Exit:** n/a (unit test)
-- **Source fn:** `it_imodel_auto_selects_haiku_without_quota_data` (in `src/usage/subprocess.rs #[cfg(test)]`)
+- **Source fn:** `it_imodel_auto_selects_haiku_without_quota_data` (in `tests/usage/subprocess_tests.rs`)
 - **Source:** [feature/026_subprocess_model_effort.md AC-01](../../../docs/feature/026_subprocess_model_effort.md)
 
 ---
 
 ### FT-05: `imodel::sonnet` always injects `--model claude-sonnet-5`
 
-- **Given:** Account quota data with `seven_day_sonnet_left_pct = Some(5.0)` (well below threshold — would produce opus under `auto`); `imodel::sonnet`.
-- **When:** `resolve_model(&quota_low_sonnet, "sonnet")`
-- **Then:** Returns `IsolatedModel::Specific("claude-sonnet-5")`. Quota state is ignored; explicit value always wins.
+- **Given:** Account quota data with no Sonnet tier tracked (`mk_aq_no_sonnet_data()` — `seven_day_sonnet=None`, would produce Haiku under `auto`); `imodel::sonnet`.
+- **When:** `resolve_model(&aq, SubprocessModel::Sonnet)`
+- **Then:** Returns `IsolatedModel::Specific("claude-sonnet-5")`. Quota state is ignored; explicit value always wins. (`SubprocessModel::Auto` never resolves to Opus — only Sonnet or Haiku.)
 - **Exit:** n/a (unit test)
 - **Source fn:** `it_imodel_sonnet_explicit` (in `subprocess_tests.rs`)
 - **Source:** [feature/026_subprocess_model_effort.md AC-02](../../../docs/feature/026_subprocess_model_effort.md)
@@ -141,8 +141,8 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 
 ### FT-06: `imodel::opus` always injects `--model claude-opus-4-8`
 
-- **Given:** Account quota data with `seven_day_sonnet_left_pct = Some(90.0)` (well above threshold — would produce sonnet under `auto`); `imodel::opus`.
-- **When:** `resolve_model(&quota_high_sonnet, "opus")`
+- **Given:** Account quota data with no Sonnet tier tracked (`mk_aq_no_sonnet_data()` — `seven_day_sonnet=None`, would produce Haiku under `auto`); `imodel::opus`.
+- **When:** `resolve_model(&aq, SubprocessModel::Opus)`
 - **Then:** Returns `IsolatedModel::Specific("claude-opus-4-8")`. Quota state is ignored; explicit value always wins.
 - **Exit:** n/a (unit test)
 - **Source fn:** `it_imodel_opus_explicit` (in `subprocess_tests.rs`)
@@ -167,7 +167,7 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 - **When:** `resolve_effort(&IsolatedModel::Specific("claude-sonnet-5"), "auto")`
 - **Then:** Returns `Some("low")`. The arg slice prepended before `["--print", "."]` contains `["--effort", "low"]`. `low` prevents extended thinking which would cause isolated subprocess timeouts.
 - **Exit:** n/a (unit test)
-- **Source fn:** `it_effort_auto_uniform_low` (in `src/usage/subprocess.rs` — unified test covering both Sonnet and Opus paths)
+- **Source fn:** `it_effort_auto_uniform_low` (in `tests/usage/subprocess_tests.rs` — unified test covering both Sonnet and Opus paths)
 - **Source:** [feature/026_subprocess_model_effort.md AC-05](../../../docs/feature/026_subprocess_model_effort.md)
 
 ---
@@ -178,16 +178,16 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 - **When:** `resolve_effort(&IsolatedModel::Specific("claude-opus-4-8"), "auto")`
 - **Then:** Returns `Some("low")`. The arg slice contains `["--effort", "low"]`. Same as FT-08: `effort::auto` always produces `low` regardless of whether the model is Sonnet or Opus.
 - **Exit:** n/a (unit test)
-- **Source fn:** `it_effort_auto_uniform_low` (in `src/usage/subprocess.rs` — unified test covering both Sonnet and Opus paths)
+- **Source fn:** `it_effort_auto_uniform_low` (in `tests/usage/subprocess_tests.rs` — unified test covering both Sonnet and Opus paths)
 - **Source:** [feature/026_subprocess_model_effort.md AC-05](../../../docs/feature/026_subprocess_model_effort.md)
 
 ---
 
 ### FT-10: `imodel::keep effort::auto` — no `--model`, no `--effort` in subprocess args
 
-- **Given:** Any account; `imodel::keep effort::auto`.
-- **When:** `resolve_effort(&IsolatedModel::KeepCurrent, "auto")`
-- **Then:** Returns `None`. Combined subprocess arg slice contains neither `--model` nor `--effort`. The `KeepCurrent` branch of `resolve_effort()` skips injection — model is unknown at dispatch time; injecting any effort level would be speculative.
+- **Given:** Any account (`mk_aq_no_sonnet_data()`); `imodel::keep effort::auto`.
+- **When:** `resolve_model(&aq, SubprocessModel::Keep)` resolves to `IsolatedModel::KeepCurrent`; `effort_pre_args(&model, SubprocessEffort::Auto)` is called on that resolved model.
+- **Then:** `effort_pre_args` returns an empty `Vec` — no `--effort` flag is prepended. Combined with `Keep` already producing no `--model` flag, the subprocess arg slice contains neither. The `KeepCurrent` branch of `resolve_effort()` (called internally by `effort_pre_args`) skips injection — model is unknown at dispatch time; injecting any effort level would be speculative.
 - **Exit:** n/a (unit test)
 - **Source fn:** `it_imodel_keep_effort_auto_no_effort_flag` (in `subprocess_tests.rs`)
 - **Source:** [feature/026_subprocess_model_effort.md AC-05](../../../docs/feature/026_subprocess_model_effort.md)
@@ -218,9 +218,9 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 
 ### FT-13: `imodel::`/`effort::` apply to both touch and refresh subprocess call sites
 
-- **Given:** Source code structural assertion (static grep): both the touch call site and the refresh call site in `usage/subprocess.rs` both call `resolve_model()` / `resolve_effort()` and pass the results into their subprocess arg construction.
-- **When:** `grep -n "resolve_model\|resolve_effort" src/usage/subprocess.rs`
-- **Then:** Both call sites are present; at least 2 hits for each function.
+- **Given:** Source code of `src/usage/touch.rs` and `src/usage/refresh.rs`, each read via `include_str!`.
+- **When:** Each file's source text is searched for the literal substrings `resolve_model(` and `effort_pre_args(`.
+- **Then:** All four checks pass: `touch.rs` contains `resolve_model(`; `touch.rs` contains `effort_pre_args(`; `refresh.rs` contains `resolve_model(`; `refresh.rs` contains `effort_pre_args(`. Both call sites wire `imodel::` (via `resolve_model`) and `effort::` (via `effort_pre_args`, which wraps `resolve_effort`) into their subprocess arg construction.
 - **Exit:** n/a (structural test)
 - **Source fn:** `it_ft026_13_imodel_effort_both_paths_structural` (in `usage_model_test.rs`)
 - **Source:** [feature/026_subprocess_model_effort.md AC-08](../../../docs/feature/026_subprocess_model_effort.md)
@@ -229,10 +229,10 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 
 ### FT-14: `imodel::`/`effort::` do not affect `format::json` output structure
 
-- **Given:** One account with valid quota data.
+- **Given:** One account with no `accessToken` (errored quota fetch) — chosen deliberately for a deterministic, offline JSON response.
 - **When-A:** `clp .usage format::json`
 - **When-B:** `clp .usage imodel::opus effort::max format::json`
-- **Then-A and Then-B:** Both produce JSON arrays with identical schema. `imodel::` and `effort::` affect only subprocess invocation, not output rendering.
+- **Then-A and Then-B:** Both exit 0. Both JSON outputs are compared after normalizing the wall-clock-derived `expires_in_secs` field to `null` on both sides (tolerating a legitimate 1-second straddle between the two sequential invocations) — the normalized JSON values are identical. `imodel::` and `effort::` affect only subprocess invocation, not output rendering.
 - **Exit:** 0 both cases
 - **Source fn:** `it_ft026_14_imodel_effort_no_effect_on_json_schema` (in `usage_model_test.rs`)
 - **Source:** [feature/026_subprocess_model_effort.md AC-09](../../../docs/feature/026_subprocess_model_effort.md)
@@ -242,7 +242,7 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 ### FT-15: Invalid `imodel::` value exits 1 naming all five valid values
 
 - **Given:** Any environment (empty credential store).
-- **When:** `clp .usage imodel::bad`
+- **When:** `clp .usage imodel::bogus`
 - **Then:** Exits 1. Stderr contains each of: `auto`, `sonnet`, `opus`, `haiku`, `keep`.
 - **Exit:** 1
 - **Source fn:** `it123_imodel_bogus_exits_1` (in `usage_model_test.rs`)
@@ -253,7 +253,7 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 ### FT-16: Invalid `effort::` value exits 1 naming all five valid values
 
 - **Given:** Any environment (empty credential store).
-- **When:** `clp .usage effort::bad`
+- **When:** `clp .usage effort::bogus`
 - **Then:** Exits 1. Stderr contains each of: `auto`, `low`, `normal`, `high`, `max`.
 - **Exit:** 1
 - **Source fn:** `it125_effort_bogus_exits_1` (in `usage_model_test.rs`)
@@ -286,19 +286,19 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 ### FT-19: `effort::auto` + resolved model=haiku → no `--effort` flag injected
 
 - **Given:** Resolved model = `IsolatedModel::Specific("claude-haiku-4-5-20251001")`; `effort::auto`.
-- **When:** `resolve_effort(&IsolatedModel::Specific("claude-haiku-4-5-20251001"), "auto")`
-- **Then:** Returns `None`. No `--effort` flag is prepended to subprocess args. Haiku has no extended thinking support — injecting any effort level under `auto` would be incorrect.
+- **When:** `effort_pre_args(&IsolatedModel::Specific("claude-haiku-4-5-20251001"), SubprocessEffort::Auto)`
+- **Then:** Returns an empty `Vec`. No `--effort` flag is prepended to subprocess args. Haiku has no extended thinking support — injecting any effort level under `auto` would be incorrect.
 - **Exit:** n/a (unit test)
-- **Source fn:** `it_imodel_haiku_effort_auto_no_effort_flag` (in `src/usage/subprocess.rs #[cfg(test)]`)
+- **Source fn:** `it_imodel_haiku_effort_auto_no_effort_flag` (in `tests/usage/subprocess_tests.rs`)
 - **Source:** [feature/026_subprocess_model_effort.md AC-14](../../../docs/feature/026_subprocess_model_effort.md)
 
 ---
 
 ### FT-20: `effort::low` always injects `--effort low`
 
-- **Given:** Resolved model = `IsolatedModel::Specific("claude-opus-4-8")` (would produce `low` under `auto`); `effort::low`.
-- **When:** `resolve_effort(&IsolatedModel::Specific("claude-opus-4-8"), "low")`
-- **Then:** Returns `Some("low")`. Explicit `low` matches the auto default; no override needed.
+- **Given:** Three resolved models: `IsolatedModel::Specific("claude-sonnet-5")`, `IsolatedModel::Specific("claude-haiku-4-5-20251001")`, and `IsolatedModel::KeepCurrent`; `effort::low`.
+- **When:** `resolve_effort(&model, SubprocessEffort::Low)` is called for each of the three models.
+- **Then:** All three return `Some("low")` — explicit `low` is model-independent, applying even to `KeepCurrent` and to Haiku (which gets no effort flag under `auto`).
 - **Exit:** n/a (unit test)
 - **Source fn:** `it_effort_low_explicit` (in `subprocess_tests.rs`)
 - **Source:** [feature/026_subprocess_model_effort.md AC-15](../../../docs/feature/026_subprocess_model_effort.md)
@@ -307,9 +307,9 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 
 ### FT-21: `effort::normal` always injects `--effort normal`
 
-- **Given:** Resolved model = `IsolatedModel::Specific("claude-opus-4-8")` (would produce `low` under `auto`); `effort::normal`.
-- **When:** `resolve_effort(&IsolatedModel::Specific("claude-opus-4-8"), "normal")`
-- **Then:** Returns `Some("normal")`. Explicit value overrides the auto default of `low`.
+- **Given:** Three resolved models: `IsolatedModel::Specific("claude-sonnet-5")`, `IsolatedModel::Specific("claude-haiku-4-5-20251001")`, and `IsolatedModel::KeepCurrent`; `effort::normal`.
+- **When:** `resolve_effort(&model, SubprocessEffort::Normal)` is called for each of the three models.
+- **Then:** All three return `Some("normal")` — explicit value overrides the auto default of `low`/`None`, applying even to `KeepCurrent` and Haiku.
 - **Exit:** n/a (unit test)
 - **Source fn:** `it_effort_normal_explicit` (in `subprocess_tests.rs`)
 - **Source:** [feature/026_subprocess_model_effort.md AC-16](../../../docs/feature/026_subprocess_model_effort.md)
@@ -322,7 +322,7 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 - **When:** `resolve_model(&aq, SubprocessModel::Auto)`
 - **Then:** Returns `IsolatedModel::Specific("claude-sonnet-5")`. `son_idle=true` → `son_idle` gate fires. The 7d-Sonnet window activates only on Sonnet-family API calls; Haiku cannot start it. Fix(BUG-289, BUG-290, TSK-292).
 - **Exit:** n/a (unit test)
-- **Source fn:** `it_imodel_auto_selects_sonnet_when_son_idle` (in `src/usage/subprocess.rs #[cfg(test)]`)
+- **Source fn:** `it_imodel_auto_selects_sonnet_when_son_idle` (in `tests/usage/subprocess_tests.rs`)
 - **Source:** [feature/026_subprocess_model_effort.md AC-01](../../../docs/feature/026_subprocess_model_effort.md)
 
 ---
@@ -333,7 +333,7 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 - **When:** `resolve_model(&aq, SubprocessModel::Auto)`
 - **Then:** Returns `IsolatedModel::Specific("claude-haiku-4-5-20251001")`. `son_idle = None.is_some_and(...) = false` (Sonnet tier absent); `son_idle` gate does NOT fire. Haiku selected.
 - **Exit:** n/a (unit test)
-- **Source fn:** `it_imodel_auto_selects_haiku_when_son_tier_absent` (in `src/usage/subprocess.rs #[cfg(test)]`)
+- **Source fn:** `it_imodel_auto_selects_haiku_when_son_tier_absent` (in `tests/usage/subprocess_tests.rs`)
 - **Source:** [feature/026_subprocess_model_effort.md AC-01](../../../docs/feature/026_subprocess_model_effort.md)
 
 ---
@@ -344,7 +344,7 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 - **When:** `resolve_model(&aq, SubprocessModel::Auto)`
 - **Then:** Returns `IsolatedModel::Specific("claude-sonnet-5")`. `son_idle=true` → gate fires regardless of `d7_running` state. Verifies the old `d7_running` constraint is gone: 7d-idle no longer blocks Sonnet selection. A single Sonnet touch opens 7d and Son simultaneously.
 - **Exit:** n/a (unit test)
-- **Source fn:** `it_imodel_auto_selects_sonnet_when_d7_idle` (in `src/usage/subprocess.rs #[cfg(test)]`)
+- **Source fn:** `it_imodel_auto_selects_sonnet_when_d7_idle` (in `tests/usage/subprocess_tests.rs`)
 - **Source:** [feature/026_subprocess_model_effort.md AC-01](../../../docs/feature/026_subprocess_model_effort.md)
 
 ---
@@ -355,7 +355,7 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 - **When:** `resolve_model(&aq, SubprocessModel::Auto)`
 - **Then:** Returns `IsolatedModel::Specific("claude-sonnet-5")`. `son_idle=true` → gate fires. Exercises the `seven_day=Some(running)` Some-branch of `map_or` — verifies that path correctly resolves to Sonnet.
 - **Exit:** n/a (unit test)
-- **Source fn:** `it_imodel_auto_selects_sonnet_when_d7_running_explicit` (in `src/usage/subprocess.rs #[cfg(test)]`)
+- **Source fn:** `it_imodel_auto_selects_sonnet_when_d7_running_explicit` (in `tests/usage/subprocess_tests.rs`)
 - **Source:** [feature/026_subprocess_model_effort.md AC-01](../../../docs/feature/026_subprocess_model_effort.md)
 
 ---
@@ -366,7 +366,7 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 - **When:** `resolve_model(&aq, SubprocessModel::Auto)`
 - **Then:** Returns `IsolatedModel::Specific("claude-sonnet-5")`. `son_idle=true` → gate fires regardless of 5h absent state. Verifies the old `five_h_running` short-circuit is gone: a single Sonnet touch opens 5h and Son simultaneously without a two-touch sequence. Fix(BUG-290).
 - **Exit:** n/a (unit test)
-- **Source fn:** `it_imodel_auto_selects_sonnet_when_5h_absent_d7_some_running` (in `src/usage/subprocess.rs #[cfg(test)]`)
+- **Source fn:** `it_imodel_auto_selects_sonnet_when_5h_absent_d7_some_running` (in `tests/usage/subprocess_tests.rs`)
 - **Source:** [feature/026_subprocess_model_effort.md AC-01](../../../docs/feature/026_subprocess_model_effort.md)
 
 ---
@@ -377,7 +377,7 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 - **When:** `resolve_model(&aq, SubprocessModel::Auto)`
 - **Then:** Returns `IsolatedModel::Specific("claude-haiku-4-5-20251001")`. Both gate conditions fail: `son_idle=false` (resets_at is Some) AND `son_available=false` (only 10% remaining < 20% threshold). Haiku selected; `d7_running` state irrelevant. Exercises `son=exhausted` with 7d-idle. Fix(BUG-301, TSK-311).
 - **Exit:** n/a (unit test)
-- **Source fn:** `it_imodel_auto_selects_haiku_when_d7_idle_and_son_running` (in `src/usage/subprocess.rs #[cfg(test)]`)
+- **Source fn:** `it_imodel_auto_selects_haiku_when_d7_idle_and_son_running` (in `tests/usage/subprocess_tests.rs`)
 - **Source:** [feature/026_subprocess_model_effort.md AC-01](../../../docs/feature/026_subprocess_model_effort.md)
 
 ---
@@ -388,7 +388,7 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 - **When:** `resolve_model(&aq, SubprocessModel::Auto)`
 - **Then:** Returns `IsolatedModel::Specific("claude-haiku-4-5-20251001")`. `son_idle = None.is_some_and(...)=false` (Sonnet tier absent); gate does NOT fire; `d7_running` state is irrelevant. Haiku selected. Distinct from FT-24 (`son_idle=true` present) and FT-23 (`d7=None` absent).
 - **Exit:** n/a (unit test)
-- **Source fn:** `it_imodel_auto_selects_haiku_when_d7_idle_and_son_absent` (in `src/usage/subprocess.rs #[cfg(test)]`)
+- **Source fn:** `it_imodel_auto_selects_haiku_when_d7_idle_and_son_absent` (in `tests/usage/subprocess_tests.rs`)
 - **Source:** [feature/026_subprocess_model_effort.md AC-01](../../../docs/feature/026_subprocess_model_effort.md)
 
 ---
@@ -399,7 +399,7 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 - **When:** `resolve_model(&aq, SubprocessModel::Auto)`
 - **Then:** Returns `IsolatedModel::Specific("claude-haiku-4-5-20251001")`. `son_idle = None.is_some_and(...)=false` (Sonnet tier absent); gate does NOT fire. Haiku selected. Exercises `d7=Some(running)` Some-branch via `map_or` closure. Closes the `d7=Some(running) + son=absent` cell (complementary to FT-25 `son=idle` → Sonnet and FT-30 `son=running` → Haiku).
 - **Exit:** n/a (unit test)
-- **Source fn:** `it_imodel_auto_selects_haiku_when_d7_some_running_and_son_absent` (in `src/usage/subprocess.rs #[cfg(test)]`)
+- **Source fn:** `it_imodel_auto_selects_haiku_when_d7_some_running_and_son_absent` (in `tests/usage/subprocess_tests.rs`)
 - **Source:** [feature/026_subprocess_model_effort.md AC-01](../../../docs/feature/026_subprocess_model_effort.md)
 
 ---
@@ -410,7 +410,7 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 - **When:** `resolve_model(&aq, SubprocessModel::Auto)`
 - **Then:** Returns `IsolatedModel::Specific("claude-haiku-4-5-20251001")`. Both gate conditions fail: `son_idle=false` (resets_at is Some) AND `son_available=(100-90>20)=false` (10% remaining < 20% threshold). Haiku selected. Closes the `d7=Some(running) + son=exhausted` cell; together with FT-25 (son=idle → Sonnet), FT-29 (son=absent → Haiku), and FT-31 (son=active+available → Sonnet), all key `son` states are covered. Fix(BUG-301, TSK-311).
 - **Exit:** n/a (unit test)
-- **Source fn:** `it_imodel_auto_selects_haiku_when_d7_some_running_and_son_running` (in `src/usage/subprocess.rs #[cfg(test)]`)
+- **Source fn:** `it_imodel_auto_selects_haiku_when_d7_some_running_and_son_running` (in `tests/usage/subprocess_tests.rs`)
 - **Source:** [feature/026_subprocess_model_effort.md AC-01](../../../docs/feature/026_subprocess_model_effort.md)
 
 ---
@@ -421,5 +421,5 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 - **When:** `resolve_model(&aq, SubprocessModel::Auto)`
 - **Then:** Returns `IsolatedModel::Specific("claude-sonnet-5")`. `son_available=true` → gate fires; remaining Sonnet quota (40%) is used before the window expires. Before BUG-301 fix: `son_idle=false` caused Haiku — wasting 40% quota. Fix(BUG-301, TSK-311).
 - **Exit:** n/a (unit test)
-- **Source fn:** `mre_bug301_son_active_with_remaining_quota_selects_sonnet` (in `src/usage/subprocess.rs #[cfg(test)]`)
+- **Source fn:** `mre_bug301_son_active_with_remaining_quota_selects_sonnet` (in `tests/usage/subprocess_tests.rs`)
 - **Source:** [feature/026_subprocess_model_effort.md AC-01](../../../docs/feature/026_subprocess_model_effort.md)

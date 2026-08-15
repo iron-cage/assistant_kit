@@ -4,7 +4,7 @@
 
 - **Purpose**: Document the purpose, crate inventory, and scope of the assistant workspace.
 - **Responsibility**: Describe what the workspace provides, what it excludes, and how the crates relate.
-- **In Scope**: Workspace purpose, crate inventory (20 members), in-scope capabilities, out-of-scope boundaries, performance characteristics.
+- **In Scope**: Workspace purpose, crate inventory (21 members), in-scope capabilities, out-of-scope boundaries, performance characteristics.
 - **Out of Scope**: Crate layering pattern (→ `pattern/001_crate_layering.md`), privacy invariant (→ `invariant/001_privacy_invariant.md`), cross-workspace integration (→ `integration/001_consumer_integration.md`).
 
 ### Design
@@ -22,6 +22,7 @@ This workspace is self-contained and has no knowledge of consumer workspace arch
 | claude_quota | — | primitives | Anthropic API rate-limit HTTP transport; `RateLimitData`, `QuotaError` |
 | claude_journal | — | primitives | Append-only event journal library: JSONL writer, reader, event types |
 | svg_chart | — | primitives | Minimal SVG line/bar chart renderer (wraps `plotters`) |
+| json_redact | — | primitives | Domain-agnostic redaction of sensitive values from strings and JSON |
 | claude_core | — | 0 | Shared domain primitives: ClaudePaths, process utilities |
 | claude_profile_core | — | 1 | Token status + account domain logic (no CLI deps) |
 | claude_version_core | — | 1 | Version / settings_io / status domain helpers (no CLI deps) |

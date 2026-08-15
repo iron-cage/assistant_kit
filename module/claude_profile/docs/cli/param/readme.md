@@ -130,12 +130,12 @@ All `clp` CLI parameters with type, default, and command coverage.
 | 38 | `offset::` | `u64` | `0` | Non-negative integer | Skip first N rows from result | 1 cmd |
 | 39 | `only_active::` | `bool` | `0` | `0`, `1` | Show only active account row | 1 cmd |
 | 40 | `only_next::` | `bool` | `0` | `0`, `1` | Show only the recommended account row | 1 cmd |
-| 41 | `min_5h::` | `f64` | `0` | `0`–`100` | Minimum 5h Left % filter | 1 cmd |
-| 42 | `min_7d::` | `f64` | `0` | `0`–`100` | Minimum 7d Left % filter | 1 cmd |
+| 41 | `min_5h::` | `u8` | `0` | `0`–`100` | Minimum 5h Left % filter | 1 cmd |
+| 42 | `min_7d::` | `u8` | `0` | `0`–`100` | Minimum 7d Left % filter | 1 cmd |
 | 43 | `only_valid::` | `bool` | `0` | `0`, `1` | Hide 🔴 invalid-token rows | 1 cmd |
 | 44 | `exclude_exhausted::` | `bool` | `0` | `0`, `1` | Hide 🟡 and 🔴 rows | 1 cmd |
 | 45 | `get::` | `string` | `""` | Field IDs (see 045_get.md) | Single column value extraction | 1 cmd |
-| 46 | `abs::` | `bool` | `0` | `0`, `1` | Absolute token counts instead of % | 1 cmd |
+| 46 | `abs::` | `bool` | `0` | `0`, `1` | Registered no-op — reserved for future absolute token counts; no current effect | 1 cmd |
 | 47 | `no_color::` | `bool` | `0` | `0`, `1` | Strip emoji and ANSI from output | 1 cmd |
 | 48 | `host::` | `string` | `""` (auto) | Any string | Machine/host label at save; display toggle at list | 2 cmds |
 | 49 | `at::` | `string` | *(omit)* | ISO-8601 UTC datetime | Absolute renewal timestamp for `.account.renewal` | 1 cmd |
@@ -154,8 +154,8 @@ All `clp` CLI parameters with type, default, and command coverage.
 | 62 | `owner::` | `string` | *(omit)* | `USER@MACHINE`, `0` (release) | Set ownership (`USER@MACHINE`) or release (`0`); batch via comma-list `name::` | `.accounts`, `.usage` |
 | 63 | `assignee::` | `string` | *(omit)* | `USER@MACHINE`, `0` (current machine) | Assign/unassign active-account marker; `0` sentinel expands to `$USER@$HOSTNAME` (Feature 065) | `.accounts`, `.usage` |
 | 64 | `id::` | `string` | *(omit)* | Any non-empty provider name string | Select global inference provider in `~/.clr/config.toml`; activates set mode when present (narrowed, Feature 035) | `.provider.select` |
-| 65 | `offline::` | `bool` | `0` | `0`, `1`, `false`, `true` | Use static embedded model catalog instead of live API; no network call made | `.models` |
-| 66 | `reset::` | `bool` | `0` | `0`, `1`, `false`, `true` | Remove `provider` from `~/.clr/config.toml`'s user tier; idempotent; mutually exclusive with `id::` (narrowed, Feature 035) | `.provider.select` |
+| 65 | `offline::` | `bool` | `0` | `0`, `1` | Use static embedded model catalog instead of live API; no network call made | `.models` |
+| 66 | `reset::` | `bool` | `0` | `0`, `1` | Remove `provider` from `~/.clr/config.toml`'s user tier; idempotent; mutually exclusive with `id::` (narrowed, Feature 035) | `.provider.select` |
 | 67 | `lock::` | `bool` | *(omit)* | `0`, `1`, `false`, `true` | Set/clear `claim_lock`; ungated write; batch via comma-list `name::` | `.accounts`, `.usage` |
 | 68 | `reserve::` | `bool` | *(omit)* | `0`, `1`, `false`, `true` | Set/clear `reserve`; ungated write; batch via comma-list `name::` | `.accounts`, `.usage` |
 | 69 | `backend::` | [`AccountBackend`](../type/005_account_backend.md) (`enum`) | `anthropic` | `anthropic`, `redirect` | Selects OAuth flow or foreign-endpoint redirect at account save time | `.account.save` |
@@ -167,8 +167,8 @@ All `clp` CLI parameters with type, default, and command coverage.
 | 75 | `scope::` | `enum` | `session` | `session`, `subprocess` | Backing-store router — every other parameter on the same `.model` call applies to this store | `.model` |
 | 76 | `model::` | `string` | *(omit)* | Scope-dependent — see [076_model_value.md](076_model_value.md) | Write the model key for the selected `scope::` | `.model` |
 | 77 | `effort_level::` | `string` | *(omit)* | Scope-dependent — see [077_effort_level.md](077_effort_level.md) | Write the effort key for the selected `scope::` | `.model` |
-| 78 | `reset_model::` | `bool` | `0` | `0`, `1`, `false`, `true` | Remove the model key for the selected `scope::`; mutually exclusive with `model::` | `.model` |
-| 79 | `reset_effort_level::` | `bool` | `0` | `0`, `1`, `false`, `true` | Remove the effort key for the selected `scope::`; mutually exclusive with `effort_level::` | `.model` |
+| 78 | `reset_model::` | `bool` | `0` | `0`, `1` | Remove the model key for the selected `scope::`; mutually exclusive with `model::` | `.model` |
+| 79 | `reset_effort_level::` | `bool` | `0` | `0`, `1` | Remove the effort key for the selected `scope::`; mutually exclusive with `effort_level::` | `.model` |
 
 *Param 1 = cross-command account selector (no formal group); params 48, 52, 73 = Group 006 Account Targeting; params 49–51 = ungrouped (`.account.renewal`-specific); param 53 = ungrouped (`.account.assign`-specific); param 55 = RETIRED (Feature 035, see row above); param 2 = Output Control group; params 5–18, 28–31 = Field Presence group; params 19–23, 34–36, 54, 60 = Fetch Behavior group; param 24 = ungrouped; params 25–27, 32 = Sort Control group; params 33, 37–47 = Display Control group (contains both display-toggle params and pipeline-coupled request-constraint row filters — see Pipeline Stage attribute in each param file); params 64, 66 = ungrouped (`.provider.select`-specific, narrowed Feature 035); param 65 = ungrouped (`.models`-specific); params 69–72, 74 = Group 007 Redirect Backend Config; params 75–79 = ungrouped (`.model`-specific, Feature 035)*
 

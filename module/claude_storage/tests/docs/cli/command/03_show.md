@@ -14,7 +14,7 @@ Integration tests for the `.show` command. Tests verify project view, session vi
 | INT-4 | session_id:: + project:: shows session in named project | Combined |
 | INT-5 | show_metadata::1 suppresses content, shows metadata | Display Mode |
 | INT-6 | show_entries::1 shows all session entries | Display Mode |
-| INT-7 | Exit code 2 when cwd has no project | Exit Codes |
+| INT-7 | Exit code 1 when cwd has no project | Exit Codes |
 | INT-8 | project:: with path-encoded ID | Project View |
 
 ## Test Coverage Summary
@@ -120,7 +120,7 @@ CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .show session_id::-default_topic show_
 
 ---
 
-### INT-7: Exit code 2 when cwd has no project
+### INT-7: Exit code 1 when cwd has no project
 
 **Command:**
 ```
@@ -130,7 +130,7 @@ CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .show
 **Expected behavior:**
 - Fixture: run from a directory (e.g., `/tmp`) that has no matching storage project
 - Error message on stderr indicating the current directory has no project in storage
-- Exit code: 2
+- Exit code: 1
 - **Source:** [command/03_show.md](../../../../docs/cli/command/03_show.md)
 
 ---

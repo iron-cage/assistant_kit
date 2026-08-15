@@ -115,7 +115,7 @@ Applied to `.credentials.status` (reads from live `~/.claude.json` — org field
 | `claude_profile_core/src/account.rs` | `Account` struct org fields; `save()` writes org identity to `{name}.json` (feature-gated); `delete()` removes `{name}.json` best-effort; `list()` reads org identity from `{name}.json` |
 | `claude_quota/src/lib.rs` | `fetch_claude_cli_roles()` transport; `ClaudeCliRolesData` struct |
 | `src/commands/credentials.rs`, `src/commands/accounts.rs` | `credentials_status_routine()` — reads active account org identity from `{name}.json`; `accounts_routine()` — renders org fields |
-| `src/lib.rs` | Registration of `org_uuid::` and `org_name::` params |
+| `src/registry.rs` | Registration of `org_uuid::` and `org_name::` params |
 
 ### Tests
 

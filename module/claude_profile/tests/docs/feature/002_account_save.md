@@ -150,7 +150,7 @@ Feature behavioral requirement test cases for `docs/feature/002_account_save.md`
 ### FT-09: `save(update_marker=false)` does not write `_active`; background callers pass `false`
 
 - **Given:** Empty credential store (no `_active` marker file). Valid credentials at `~/.claude/.credentials.json`.
-- **When:** `account::save("alice@test.com", store.path(), &paths, false, None, None, None, None)` is called (unit test — simulates `refresh_account_token` context).
+- **When:** `account::save("alice@test.com", &store, &paths, false, None, None, None, None, account::AccountBackend::Anthropic, None, None, None)` is called (unit test — simulates `refresh_account_token` context).
 - **Then:** The credential file `alice@test.com.credentials.json` is written. The `_active_{hostname}_{user}` marker file does NOT exist — `update_marker=false` suppresses the write. A concurrent `.account.use` switch would be unaffected.
 - **Exit:** N/A (unit test — no exit code)
 - **Source fn:** `test_mre_bug211_save_false_leaves_marker_unchanged` (in `claude_profile_core/tests/account_test.rs`)
@@ -187,9 +187,9 @@ Feature behavioral requirement test cases for `docs/feature/002_account_save.md`
 
 ### FT-12: `.account.save` does NOT modify `owner` field — ownership-neutral
 
-- **Given:** Account `alice@acme.com` exists. `{credential_store}/alice@acme.com.json` contains `"owner": "testuser@testmachine"`. Current identity = `"testuser@testmachine"`.
+- **Given:** Account `alice@acme.com` exists. `{credential_store}/alice@acme.com.json` contains `"owner": "old@host"`. Current identity = `"testuser@testmachine"` — deliberately different from the stored owner, to prove preservation does not depend on an identity match.
 - **When:** `clp .account.save name::alice@acme.com`
-- **Then:** Exits 0. `{credential_store}/alice@acme.com.json` still contains `"owner": "testuser@testmachine"` — unchanged. `account_save_routine()` passes `owner: None` to `save()`, preserving the existing value via read-merge. Credentials re-saved; all other fields updated normally.
+- **Then:** Exits 0. `{credential_store}/alice@acme.com.json` still contains `"owner": "old@host"` — unchanged even though it differs from current identity. `account_save_routine()` passes `owner: None` to `save()`, preserving the existing value via read-merge. Credentials re-saved; all other fields updated normally.
 - **Exit:** 0
 - **Source fn:** `ft12_save_does_not_stamp_owner` (in `account_ownership_test.rs`)
 - **Note:** AC-19 — `.account.save` is ownership-neutral. Existing `owner` field is preserved unchanged on every save. An account with no `owner` field retains no `owner` field after save (read-merge: absent key stays absent).

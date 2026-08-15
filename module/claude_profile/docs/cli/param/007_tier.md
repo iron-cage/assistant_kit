@@ -1,6 +1,6 @@
 # Parameter: 7. `tier::`
 
-Controls whether the rate-limit tier line appears in output. Used by both `.accounts` (per stored credential) and `.credentials.status` (from live credentials).
+Controls whether the rate-limit tier line appears in output. Used by `.credentials.status` (from live credentials). No longer usable on `.accounts` — removed in [Feature 037](../../feature/037_accounts_usage_param_unification.md); `.accounts` now rejects `tier::` with `parameter 'tier' removed — use 'cols::-tier' instead` (see `REMOVED_TOGGLES` in `src/commands/accounts.rs`).
 
 - **Default:** `1` (shown)
 - **Constraints:** Accepted values: `0`, `1`, `false`, `true`
@@ -27,8 +27,7 @@ tier::0   → line omitted
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.accounts`](../command/001_account.md#command-3-accounts) | Rate-limit tier line per stored account |
-| 2 | [`.credentials.status`](../command/002_credentials.md#command-10-credentialsstatus) | Rate-limit tier line for live credentials |
+| 1 | [`.credentials.status`](../command/002_credentials.md#command-10-credentialsstatus) | Rate-limit tier line for live credentials |
 
 ### Referenced User Stories
 

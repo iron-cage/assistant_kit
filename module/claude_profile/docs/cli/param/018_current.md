@@ -1,6 +1,8 @@
 # Parameter: 18. `current::`
 
-Controls whether the current (live) account line appears in `.accounts` output for each account entry. The current account is the saved account whose `accessToken` matches the live `~/.claude/.credentials.json` file — distinct from the active account (per-machine active marker). See [feature/016_current_account_awareness.md](../../feature/016_current_account_awareness.md).
+**Removed.** `current::` is fully removed — `.accounts` (the only command that ever accepted it) now rejects it with `parameter 'current' removed — use 'cols::-current' instead` (see `REMOVED_TOGGLES` in `src/commands/accounts.rs`; [Feature 037](../../feature/037_accounts_usage_param_unification.md)). Unlike sibling field-presence params (`sub::`, `tier::`, etc.), `current::` has no other host command — `.credentials.status` never supported it — so there is no working fallback for this parameter.
+
+Historically, `current::` controlled whether the current (live) account line appeared in `.accounts` output for each account entry. The current account is the saved account whose `accessToken` matches the live `~/.claude/.credentials.json` file — distinct from the active account (per-machine active marker). See [feature/016_current_account_awareness.md](../../feature/016_current_account_awareness.md).
 
 - **Default:** `1` (shown)
 - **Constraints:** Accepted values: `0`, `1`, `false`, `true`; the line is always suppressed when `~/.claude/.credentials.json` is absent or unreadable regardless of the toggle value
@@ -23,15 +25,11 @@ current::0   → line omitted
 
 ### Referenced Parameter Groups
 
-| # | Parameter Group | Role |
-|---|-----------------|------|
-| 1 | [Field Presence](../param_group/002_field_presence.md) | Member parameter |
+Not a member of any parameter group. [Field Presence](../param_group/002_field_presence.md) explicitly excludes `current` from its 16-member list (`.accounts` uses `cols::` for this field instead).
 
 ### Referenced Commands
 
-| # | Command | Role |
-|---|---------|------|
-| 1 | [`.accounts`](../command/001_account.md#command-3-accounts) | Current account match line per stored account |
+None. `.accounts` rejects `current::` (see removal note above); no other command ever supported it.
 
 ### Referenced User Stories
 

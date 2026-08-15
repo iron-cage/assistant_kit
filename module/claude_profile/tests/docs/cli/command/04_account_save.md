@@ -257,9 +257,9 @@ Integration test planning for the `.account.save` command. See [command/namespac
 ### IT-21: `inference_provider::kimi` writes field; omitted → absent; empty value exits 1
 
 - **Given:** `~/.claude/.credentials.json` exists with valid credentials.
-- **When (a):** `clp .account.save name::kimi inference_provider::kimi` → `{credential_store}/kimi.json` contains `"inference_provider": "kimi"`.
+- **When (a):** `clp .account.save name::kimi@test.com inference_provider::kimi` → `{credential_store}/kimi@test.com.json` contains `"inference_provider": "kimi"`. Account name must be a valid email per [param/01_name.md](../param/01_name.md) — `kimi` here names the provider value, not the account name.
 - **When (b):** `clp .account.save name::alice@acme.com` (no `inference_provider::`) → `{credential_store}/alice@acme.com.json` has no `inference_provider` key at all — never written as the literal default `"anthropic"`.
-- **When (c):** `clp .account.save name::kimi inference_provider::` (empty value) → exit 1, stderr names `inference_provider::` as requiring a non-empty value, no file written.
+- **When (c):** `clp .account.save name::kimi@test.com inference_provider::` (empty value) → exit 1, stderr names `inference_provider::` as requiring a non-empty value, no file written.
 - **Exit:** 0 (a, b) / 1 (c)
 - **Source fn:** `t01_inference_provider_kimi_writes_key` (a), `t02_inference_provider_omitted_writes_no_key` (b), `t03_inference_provider_empty_value_exits_1_no_write` (c) (in `tests/cli/account_provider_test.rs`)
 - **Source:** [command/001_account.md — .account.save](../../../../docs/cli/command/001_account.md#command-4-accountsave), [072_inference_provider_selection.md AC-01, AC-02, AC-03](../../../../docs/feature/072_inference_provider_selection.md)

@@ -8,6 +8,7 @@
 [workspace]
 resolver = "2"
 members = [
+  "module/json_redact",
   "module/claude_journal",
   "module/claude_journal_charts",
   "module/svg_chart",
@@ -96,6 +97,11 @@ missing_docs_in_private_items = "allow"
 incremental = false
 
 ## Internal workspace dependencies
+
+[workspace.dependencies.json_redact]
+path = "module/json_redact"
+version = "=0.1.0"
+default-features = false
 
 [workspace.dependencies.claude_journal]
 path = "module/claude_journal"

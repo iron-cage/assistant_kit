@@ -15,10 +15,10 @@
 
 ```rust
 fn run_isolated(
-    credentials_json : &str,          // OAuth credential JSON to write to temp HOME
-    args             : Vec<String>,   // Claude args (e.g. ["--print", "."])
-    model            : IsolatedModel, // Model selection; prepended as --model <id> unless KeepCurrent
-    timeout_secs     : u64,           // 0 = unlimited; 35 for credential refresh pings
+  credentials_json : &str,          // OAuth credential JSON to write to temp HOME
+  args             : Vec<String>,   // Claude args (e.g. ["--print", "."])
+  timeout_secs     : u64,           // 0 = unlimited; 35 for credential refresh pings
+  model            : IsolatedModel, // Model selection; prepended as --model <id> unless KeepCurrent
 ) -> Result<IsolatedRunResult, RunnerError>
 ```
 

@@ -131,22 +131,20 @@
 
 ---
 
-### FT-10: `set_model::opus` preserves pre-existing `settings.json` keys
+### FT-10: `set_session_model()` preserves pre-existing `settings.json` keys
 
-- **Given:** Account `alice` in credential store. `~/.claude/settings.json` contains `{"theme": "dark", "autoUpdaterStatus": "disabled"}`.
-- **When:** `clp .account.use name::alice set_model::opus`
-- **Then:** `~/.claude/settings.json` contains `"theme": "dark"`, `"autoUpdaterStatus": "disabled"`, and `"model": "claude-opus-4-8"`. No pre-existing keys removed. Exits 0.
-- **Exit:** 0
+- **Given:** `~/.claude/settings.json` contains `{"theme": "dark", "autoUpdaterStatus": "disabled"}`. No credential store or account involved — unit-level test against `ClaudePaths` directly.
+- **When:** `claude_profile_core::account::set_session_model(&paths, Some("claude-opus-4-6"))` is called directly.
+- **Then:** `~/.claude/settings.json` contains `"theme": "dark"`, `"autoUpdaterStatus": "disabled"`, and `"model": "claude-opus-4-6"`. No pre-existing keys removed.
 - **Source fn:** ✅ `ft10_set_session_model_preserves_existing_keys`
 - **Source:** [034_explicit_session_model_override.md AC-10](../../../docs/feature/034_explicit_session_model_override.md)
 
 ---
 
-### FT-11: `set_model::opus` creates `settings.json` when absent
+### FT-11: `set_session_model()` creates `settings.json` when absent
 
-- **Given:** Account `alice` in credential store. `~/.claude/settings.json` does not exist.
-- **When:** `clp .account.use name::alice set_model::opus`
-- **Then:** `~/.claude/settings.json` is created and contains `"model": "claude-opus-4-8"`. Exits 0.
-- **Exit:** 0
+- **Given:** `~/.claude/settings.json` does not exist. No credential store or account involved — unit-level test against `ClaudePaths` directly.
+- **When:** `claude_profile_core::account::set_session_model(&paths, Some("claude-opus-4-6"))` is called directly.
+- **Then:** `~/.claude/settings.json` is created and contains `"model": "claude-opus-4-6"`.
 - **Source fn:** ✅ `ft11_set_session_model_creates_file_when_absent`
 - **Source:** [034_explicit_session_model_override.md AC-11](../../../docs/feature/034_explicit_session_model_override.md)

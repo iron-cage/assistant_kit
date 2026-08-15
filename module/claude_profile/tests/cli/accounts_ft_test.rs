@@ -252,7 +252,7 @@ fn ft14_accounts_cols_modifier()
 fn lim_it_ft15_accounts_refresh_live()
 {
   require_live_api( "ft15" );
-  let Some( token ) = live_active_token() else { return };
+  let token = live_active_token().expect( "live API token required — no ~/.claude/.credentials.json" );
 
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();

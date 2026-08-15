@@ -121,10 +121,10 @@ Feature behavioral requirement test cases for `docs/feature/039_decision_algorit
 ### FT-06: Eligibility gate G7 — `seven_day_left ≤ WEEKLY_EXHAUSTION_THRESHOLD` skips account
 
 - **Given:** An `AccountQuota` with `seven_day_util=98%` (7d_left=2%) and `seven_day_sonnet = None`. `prefer::any` in effect.
-- **When:** The `extra` predicate in `find_next_for_strategy()` evaluates Gate 7 (`sort_next.rs:59`): `seven_day_left(aq) <= WEEKLY_EXHAUSTION_THRESHOLD`.
+- **When:** The `extra` predicate in `find_next_for_strategy()` evaluates Gate 7 (`sort_next.rs:77,95,100` — one occurrence per `SortStrategy` arm): `seven_day_left(aq) <= WEEKLY_EXHAUSTION_THRESHOLD`.
 - **Then:** `seven_day_left` returns `2.0` (raw 7d_left). `2.0 ≤ 3.0` → gate fires → account is skipped. No `->` marker assigned.
-- **Note:** Table 4 gate 7. Eligibility uses `seven_day_left` (model-agnostic raw 7d quota). `prefer_weekly` is used only for sort tiebreak (Fix BUG-324).
-- **Source fn:** `test_relevant_quotas_son_no_sonnet` (in `tests/usage/format_tests.rs`); `mre_bug292_renew_skips_weekly_exhausted_even_with_soonest_renewal` (in `sort_next_tests_b.rs`)
+- **Note:** Table 4 gate 7. Eligibility uses `seven_day_left` (model-agnostic raw 7d quota). `prefer_weekly` is used only for sort tiebreak (Fix BUG-324). `relevant_quotas()` (`format.rs:381`) is a separate, non-delegating, `prefer`-aware helper used for sort tiebreak, not Gate 7 — it is not cited here.
+- **Source fn:** `mre_bug292_renew_skips_weekly_exhausted_even_with_soonest_renewal` (in `sort_next_tests_b.rs`)
 - **Source:** [feature/039_decision_algorithms.md Table 4](../../../docs/feature/039_decision_algorithms.md)
 
 ---
@@ -134,7 +134,8 @@ Feature behavioral requirement test cases for `docs/feature/039_decision_algorit
 - **Given:** An `AccountQuota` with `seven_day_util=90%` (7d_left=10%) and `seven_day_sonnet = None`. `prefer::any` in effect. All other gates (G1–G6, G8) do not fire.
 - **When:** Gate 7 evaluates `seven_day_left(aq)`.
 - **Then:** Returns `10.0`. `10.0 > WEEKLY_EXHAUSTION_THRESHOLD (3.0)` → gate does NOT fire. Account remains eligible. `->` marker may be assigned if first in sorted order.
-- **Source fn:** `test_relevant_quotas_son_with_sonnet` (in `tests/usage/format_tests.rs`); `test_find_next_for_strategy_some_when_eligible_none_when_all_current` (in `tests/usage/sort_next_tests.rs`)
+- **Note:** `relevant_quotas()` (`format.rs:381`) is a separate, non-delegating, `prefer`-aware helper used for sort tiebreak, not Gate 7 — not cited here. `mre_bug324_green_account_eligible_when_7d_son_exhausted` (`sort_next_tests_b.rs`) is the tightest Gate-7-passes evidence: it explicitly asserts "gate 7 must use `seven_day_left` not `prefer_weekly`" with `7d Left=31% > 3.0` under `PreferStrategy::Any`, though its fixture uses `7d_util=69%`/`seven_day_sonnet=Some(...)`, not this FT's `90%`/`None`.
+- **Source fn:** `test_find_next_for_strategy_some_when_eligible_none_when_all_current` (in `tests/usage/sort_next_tests.rs`); `mre_bug324_green_account_eligible_when_7d_son_exhausted` (in `tests/usage/sort_next_tests_b.rs`)
 - **Source:** [feature/039_decision_algorithms.md Table 4](../../../docs/feature/039_decision_algorithms.md)
 
 ---
@@ -203,6 +204,6 @@ Feature behavioral requirement test cases for `docs/feature/039_decision_algorit
 | Touch model selection (Table 1) | `it_imodel_auto_selects_sonnet_when_son_idle`, `it_imodel_auto_selects_haiku_when_son_tier_absent`, `mre_bug301_son_active_with_remaining_quota_selects_sonnet` in `src/usage/subprocess.rs` | `subprocess.rs:29-59` |
 | Session model override (Table 2) | `ft01..ft04_recommended_model_*` in `tests/usage/format_tests.rs` (Feature 062); `t07_model_override_writes_sonnet_at_10pct_boundary` in `tests/usage/api_tests_a.rs`; `test_render_footer_model_label_at_10pct_no_override`, `test_render_footer_model_label_below_10pct_opus` in `tests/usage/render_tests_a.rs` | `format.rs` (`recommended_model`, `OPUS_OVERRIDE_THRESHOLD`), `api.rs:259-290` (`apply_model_override`), `render.rs` (footer) |
 | Quota status groups (Table 3) | `test_three_tier_grouping_*` in `tests/usage/mod_tests.rs` | `sort.rs:31-48` |
-| Eligibility gates (Table 4) | `test_relevant_quotas_*` in `tests/usage/format_tests.rs` | `sort_next.rs:24-35, 59` |
+| Eligibility gates (Table 4) | `mre_bug292_renew_skips_weekly_exhausted_even_with_soonest_renewal`, `mre_bug324_green_account_eligible_when_7d_son_exhausted` in `tests/usage/sort_next_tests_b.rs` (Gate 7 specifically); `find_first_eligible`'s other gates covered in `tests/usage/sort_next_tests.rs` | `sort_next.rs:18-53` (`find_first_eligible`), `sort_next.rs:77,95,100` (Gate 7 `extra` closure, one per `SortStrategy` arm) |
 | Positive selection (Table 5) | `test_sort_name_alphabetical` in `src/usage/sort.rs` | `sort_next.rs:46-83` |
 | Quota approximation (Table 6) | `approx_quadratic_three_points_extrapolates`, `approx_expired_window_returns_zero`, `approx_singular_matrix_falls_back_to_constant` in `src/usage/approx.rs` | `approx.rs` |

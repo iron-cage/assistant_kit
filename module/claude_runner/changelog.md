@@ -27,6 +27,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **`--max-sessions` default raised 6 → 8**
+  - Reflects typical parallel workloads; users with stricter limits can still pass `--max-sessions <N>` explicitly
+
 - **Removed `--verbosity` (0–5); replaced by `--quiet` bool flag** (TSK-337, Plan 038)
   - `src/verbosity.rs` and `VerbosityLevel` newtype deleted entirely
   - `--quiet` (env: `CLR_QUIET`) suppresses non-fatal CLR diagnostics: gate-wait messages, retry progress, retry-exhaustion messages, and the keep-claudecode nested-agent warning
