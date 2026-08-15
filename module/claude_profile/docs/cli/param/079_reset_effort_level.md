@@ -3,7 +3,7 @@
 Removes the effort key from the store selected by `scope::`. New for Feature 035 — neither store had any effort reset/removal path exposed via the CLI before this parameter.
 
 - **Default:** `0` — no reset; mode determined by `model::`/`reset_model::`/`effort_level::` presence
-- **Constraints:** `0`, `1`, `false`, `true`
+- **Constraints:** `0` or `1` (`Kind::Integer` — only integer literals are accepted; `false`/`true` are rejected as a type mismatch before the command runs, unlike the string-typed `lock::`/`reserve::`, which silently coerce non-`"1"` values to off); any integer other than `1` behaves as `0`/no-op.
 - **Purpose:** Undo a previously pinned effort level for the selected scope; restore that scope's default (fully automatic management on `scope::session`; unset on `scope::subprocess`).
 
 **Values:**

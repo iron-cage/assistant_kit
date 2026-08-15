@@ -143,7 +143,11 @@ pub( super ) fn print_usage( binary : &str )
 }
 
 /// Run the full unilang pipeline for the given argv.
-pub( super ) fn run( binary : &str, argv : &[ String ] )
+///
+/// Returns the process exit code instead of calling `std::process::exit` directly,
+/// so the caller can observe the outcome (e.g. to record invocation telemetry)
+/// before the process actually terminates.
+pub( super ) fn run( binary : &str, argv : &[ String ] ) -> i32
 {
   // Phase 1: adapter — convert argv to unilang tokens.
   let ( tokens, needs_help ) = match argv_to_unilang_tokens( argv )
@@ -153,7 +157,7 @@ pub( super ) fn run( binary : &str, argv : &[ String ] )
     {
       eprintln!( "Error: {e}" );
       eprintln!( "Run '{binary} .help' for usage." );
-      std::process::exit( 1 );
+      return 1;
     }
   };
 
@@ -162,7 +166,7 @@ pub( super ) fn run( binary : &str, argv : &[ String ] )
   if needs_help
   {
     print_usage( binary );
-    return;
+    return 0;
   }
 
   // `.accounts.help` bypasses unilang's flat auto-generated help in favor of a
@@ -171,7 +175,7 @@ pub( super ) fn run( binary : &str, argv : &[ String ] )
   if tokens.first().map( String::as_str ) == Some( ".accounts.help" )
   {
     print_accounts_help( binary );
-    return;
+    return 0;
   }
 
   let registry = build_registry();
@@ -184,7 +188,7 @@ pub( super ) fn run( binary : &str, argv : &[ String ] )
     Err( e ) =>
     {
       eprintln!( "Error: {e}" );
-      std::process::exit( 1 );
+      return 1;
     }
   };
 
@@ -197,7 +201,7 @@ pub( super ) fn run( binary : &str, argv : &[ String ] )
     Err( e )   =>
     {
       eprintln!( "Error: {e}" );
-      std::process::exit( exit_code_for( &e ) );
+      return exit_code_for( &e );
     }
   };
 
@@ -212,11 +216,12 @@ pub( super ) fn run( binary : &str, argv : &[ String ] )
       {
         print!( "{}", out.content );
       }
+      0
     }
     Err( e ) =>
     {
       eprintln!( "Error: {e}" );
-      std::process::exit( exit_code_for( &e ) );
+      exit_code_for( &e )
     }
   }
 }

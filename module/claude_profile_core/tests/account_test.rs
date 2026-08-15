@@ -20,6 +20,31 @@
 //! - **Pitfall:** Snapshot removal must be best-effort (`let _ = ...`) — accounts saved before
 //!   snapshot support was added have no snapshot files; a strict `remove_file` would fail them.
 //!
+//! ## Fix Documentation — BUG-002
+//!
+//! - **Root Cause:** `parse_string_field()`/`parse_u64_field()`/`parse_bool_field()`/
+//!   `parse_string_array_field()` all open with an unbounded `json.find(&search)` over the
+//!   ENTIRE input string — none accepts or enforces "search only within this one object."
+//!   A caller holding multi-entry JSON (e.g. `roles_json`, a list of workspace/organization
+//!   memberships) has no way to scope the search to the entry it actually needs, and
+//!   silently gets whichever entry's field is textually first.
+//! - **Why Not Caught:** No test exercised any of the four helpers against multi-entry JSON —
+//!   every existing fixture is a flat, single-object JSON blob (credentials files,
+//!   settings.json), where "first occurrence" is always correct by coincidence of there
+//!   being nothing else to find.
+//! - **Fix Applied:** Added `extract_object_block()` — a brace-depth-counted `{...}` bound
+//!   (mirrors `claude_quota`'s own helper of the same name; independently duplicated, not
+//!   shared). A caller walking a multi-entry array can now bound each entry with
+//!   `extract_object_block()` before calling `parse_string_field()` etc. on the bounded
+//!   slice, eliminating the wrong-entry ambiguity for any caller that adopts it. The 4
+//!   existing unbounded helpers are unchanged — still correct for flat single-object JSON.
+//! - **Prevention:** `bug002_extract_object_block_bounds_multi_entry_roles_json` reproduces
+//!   the exact MRE scenario from BUG-002 (`roles_json` with two workspace memberships) and
+//!   asserts the second entry's `workspace_name` is correctly extracted once bounded.
+//! - **Pitfall:** Do not add object-boundary scanning inside the 4 existing helpers directly
+//!   — that would need a scoping parameter and break every existing single-object call site
+//!   across the crate. Bounding is the caller's responsibility via `extract_object_block()`.
+//!
 //! ## Fix Documentation — BUG-222
 //!
 //! - **Root Cause:** `save()` never captured the `model` field from `~/.claude/settings.json`,
@@ -99,6 +124,7 @@
 //! | `it_remove_session_effort_noop_when_key_absent` | Task 464/T02: remove_session_effort() is a no-op when effortLevel already absent |
 //! | `ft_remove_session_effort_creates_file_when_settings_absent` | Task 464/T03: remove_session_effort() creates settings.json as {} when file absent |
 //! | `ft_remove_session_effort_creates_dir_when_claude_absent` | Task 464/T04: remove_session_effort() creates ~/.claude/ dir + file when dir absent |
+//! | `bug002_extract_object_block_bounds_multi_entry_roles_json` | BUG-002: extract_object_block() bounds parse_string_field() to one membership entry in multi-entry roles_json |
 
 use tempfile::TempDir;
 use claude_profile_core::account;
@@ -750,7 +776,7 @@ fn it_remove_session_effort_noop_when_key_absent()
   assert!( !content.contains( "effortLevel" ), "remove_session_effort no-op must not introduce the key; got: {content}" );
 }
 
-// BUG-341 task/bug/341_orphaned_marker_after_cross_machine_delete.md — this test's dual-HOSTNAME
+// BUG-347 task/bug/347_orphaned_marker_after_cross_machine_delete.md — this test's dual-HOSTNAME
 // simulation pattern is the prior art a cross-machine `delete()` regression test should follow.
 /// FT-11/025 — `other_machines_active()` returns other machines' account names,
 /// excludes own marker.
@@ -815,7 +841,7 @@ fn test_ft11_025_other_machines_active_returns_others()
   );
 }
 
-// test_kind: bug_reproducer(BUG-341)
+// test_kind: bug_reproducer(BUG-347)
 /// FT-14/025 — `delete()` clears a foreign-machine marker naming the deleted
 /// account, not only the calling machine's own marker.
 ///
@@ -2806,5 +2832,71 @@ fn ft05_073_switch_from_kimi_to_other_redirect_clears_stale_tier_env_vars()
   assert_eq!(
     live_json[ "env" ][ "ANTHROPIC_MODEL" ].as_str(), Some( "other-model-1" ),
     "sanity: the new account's own ANTHROPIC_MODEL must still be written; got: {live}",
+  );
+}
+
+/// BUG-002 MRE: `parse_string_field()` (and siblings) search the entire input for the
+/// first occurrence of a key, with no way to bound the search to a single object —
+/// callers with multi-entry JSON (e.g. `roles_json`'s membership list) silently get the
+/// wrong entry's value. `extract_object_block()` gives callers a way to bound the search
+/// to one object before calling the existing helpers.
+///
+/// # Root Cause
+/// `parse_string_field()`/`parse_u64_field()`/`parse_bool_field()`/`parse_string_array_field()`
+/// all open with an unbounded `json.find(&search)` over the ENTIRE input string — none
+/// accepts or enforces "search only within this one object." A caller holding multi-entry
+/// JSON (e.g. `roles_json`, a list of workspace/organization memberships) has no way to
+/// scope the search to the entry it actually needs.
+///
+/// # Why Not Caught
+/// No test exercised any of the four helpers against multi-entry JSON — every existing
+/// fixture is a flat, single-object JSON blob (credentials files, settings.json), where
+/// "first occurrence" is always correct by coincidence of there being nothing else to find.
+///
+/// # Fix Applied
+/// Added `extract_object_block()` — a brace-depth-counted `{...}` bound (mirrors
+/// `claude_quota`'s own helper of the same name; independently duplicated, not shared).
+/// A caller walking a multi-entry array can now bound each entry with
+/// `extract_object_block()` before calling `parse_string_field()` etc. on the bounded
+/// slice, eliminating the wrong-entry ambiguity for any caller that adopts it.
+///
+/// # Prevention
+/// Reproduces the exact MRE scenario documented in BUG-002 (`roles_json` with two
+/// workspace memberships) and asserts the second entry's `workspace_name` is correctly
+/// extracted once bounded, not silently defaulting to the first (Acme) entry.
+///
+/// # Pitfall
+/// The existing 4 unbounded helpers are UNCHANGED and remain correct for genuinely flat,
+/// single-object JSON — do not add object-boundary scanning inside them directly, since
+/// that would need a scoping parameter and break every existing single-object call site.
+#[ doc = "bug_reproducer(BUG-002)" ]
+#[ test ]
+fn bug002_extract_object_block_bounds_multi_entry_roles_json()
+{
+  let roles_json = r#"{"roles":[
+  {"organization_name":"Acme Corp","organization_uuid":"org-AAA","workspace_name":"Acme Prod","workspace_uuid":"ws-AAA"},
+  {"organization_name":"Beta Inc","organization_uuid":"org-BBB","workspace_name":"Beta Prod","workspace_uuid":"ws-BBB"}
+]}"#;
+
+  // Sanity: unbounded search still returns the first entry — unchanged, documented
+  // behavior for flat single-object JSON; not itself the fix under test.
+  let unbounded = account::parse_string_field( roles_json, "workspace_name" );
+  assert_eq!(
+    unbounded.as_deref(), Some( "Acme Prod" ),
+    "sanity: unbounded parse_string_field must still return the first entry; got {unbounded:?}",
+  );
+
+  // Bound the search to the SECOND membership entry via extract_object_block().
+  let second_brace = roles_json.match_indices( '{' ).nth( 2 ).map( |( i, _ )| i )
+    .expect( "MRE fixture must contain a third '{' (outer object + 2 memberships)" );
+  let second_entry = account::extract_object_block( &roles_json[ second_brace.. ] )
+    .expect( "extract_object_block must bound the second membership object" );
+
+  let scoped = account::parse_string_field( second_entry, "workspace_name" );
+  assert_eq!(
+    scoped.as_deref(), Some( "Beta Prod" ),
+    "BUG-002: once the caller bounds the search to the second membership entry via \
+     extract_object_block(), parse_string_field() must return that entry's own \
+     workspace_name (Beta Prod), not silently fall back to the first entry; got {scoped:?}",
   );
 }

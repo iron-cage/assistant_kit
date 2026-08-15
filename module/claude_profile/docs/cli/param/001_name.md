@@ -1,11 +1,11 @@
 # Parameter: 1. `name::`
 
-Identifies the target account. Accepted as an explicit `name::EMAIL` pair, as a bare positional argument after the command name (no `name::` prefix required), or as a prefix shortcut (no `@`) that resolves to the first saved account whose name starts with that value.
+Identifies the target account. Accepted as an explicit `name::EMAIL` pair, as a bare positional argument after the command name (no `name::` prefix required), or as a prefix shortcut (no `@`) that resolves to a saved account by exact local-part match first, then by unambiguous prefix (see Prefix resolution below).
 
 - **Default:** **(required)** on `.account.use`, `.account.delete`; **inferred** on `.account.save` (reads `oauthAccount.emailAddress` from `~/.claude.json` as primary source; falls back to per-machine `_active` marker; exits 1 if neither present); **optional** on `.accounts` (omit to list all), `.account.limits` (omit for active account), `.account.relogin` (omit for active account), and `.account.inspect` (omit for active account)
 - **Constraints:** Resolved value must be a valid email address (non-empty, must contain `@`, non-empty local part and domain); local part must not contain `/`, `\`, or `*` (path-unsafe characters rejected before any filesystem operation). Prefix input (no `@`) must be unambiguous — exits 1 when multiple saved accounts share the prefix. Exception: `.account.save backend::redirect` (Feature 071) drops the email-shape requirement — only the path-unsafe-character check applies (see [AccountName](../type/001_account_name.md)'s `backend: redirect` constraints); every other command listed below still requires email format.
 - **Positional syntax:** On `.accounts`, `.account.use`, `.account.delete`, `.account.limits`, `.account.relogin`, and `.account.inspect` a bare argument after the command name is treated as the `name::` value. `clp .account.use alice@home.com` is equivalent to `clp .account.use name::alice@home.com`.
-- **Prefix resolution:** When the supplied value contains no `@`, it is matched as a prefix against saved account names. The first alphabetically sorted match is used. If zero or multiple accounts match, the command exits 1 with a disambiguation error.
+- **Prefix resolution:** When the supplied value contains no `@`, an exact local-part match is tried first — if exactly one saved account's local part (the part before `@`) equals the value, that account is used even when other accounts share the same prefix (Fix(BUG-264); e.g. `i1` resolves to `i1@wbox.pro` exactly even when `i11@wbox.pro` also exists). Otherwise the value is matched as a prefix against all saved account names: exactly one match resolves to that account; zero matches exits 2 (`account 'X' not found`); two or more matches exits 1 (ambiguous prefix).
 - **Purpose:** Selects the target credential file at `{credential_store}/{email}.credentials.json`. Name validation matches the library's `account::validate_name()` rules. An invalid name exits 1; a valid but unknown name exits 2.
 
 **Comma-list for batch `owner::` operations (Feature 064):** When used with `owner::USER@MACHINE` or `owner::0`, `name::` accepts a comma-separated list to operate on multiple accounts in one invocation: `name::X,Y,Z`. Each account is resolved independently using the same rules (explicit email, prefix, or bare `@`-containing value). Comma-list is NOT supported for other params — `assignee::` explicitly has no batch mode.
@@ -15,7 +15,7 @@ Identifies the target account. Accepted as an explicit `name::EMAIL` pair, as a 
 ```text
 name::alice@acme.com             → explicit form → {credential_store}/alice@acme.com.credentials.json
 alice@acme.com                   → positional form (bare arg after command) → same as above
-alice                            → prefix form → resolves to first saved account starting with "alice"
+alice                            → prefix form → resolves to the one saved account starting with "alice" (ambiguous if 2+ match)
 car                              → prefix form → resolves to e.g. carol@example.com
 name::alice@a.com,bob@b.com,car  → comma-list form (batch owner:: only) → resolves 3 accounts
 ```

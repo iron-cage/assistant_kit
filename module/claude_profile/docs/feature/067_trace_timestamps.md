@@ -4,7 +4,7 @@
 
 - **Purpose**: Replace the `[trace]` bracket prefix on all diagnostic trace output with a UTC timestamp, enabling time-based correlation between `clp` trace lines and watchdog logs.
 - **Responsibility**: Every diagnostic line emitted when `trace::1` is active is prefixed with `trace_ts()`, a function in `claude_profile_core::account` that returns `"YYYY-MM-DD · HH:MM:SS UTC · "`. All production source files that emit `trace::1` lines import and call `trace_ts()` in place of the former `"[trace] "` string literal.
-- **In Scope**: `trace_ts()` implementation in `claude_profile_core/src/account.rs`; all 13 production files that emit `trace::1` diagnostic lines (see Sources); removal of all `"[trace] "` string literals from production `eprintln!`/`writeln!( std::io::stderr(), ...)` calls; help-text updates in `src/registry.rs`; test assertion updates across 12 test files.
+- **In Scope**: `trace_ts()` implementation in `claude_profile_core/src/account.rs`; all 15 production files that emit `trace::1` diagnostic lines (see Sources); removal of all `"[trace] "` string literals from production `eprintln!`/`writeln!( std::io::stderr(), ...)` calls; help-text updates in `src/registry.rs`; test assertion updates across 12 test files.
 - **Out of Scope**: Trace output content (message, label, account name, arguments) — only the prefix changes. The `trace::1` gate logic — `if trace { ... }` call-site guards are unchanged. The watchdog script or any external consumer of trace output.
 
 ### Design
@@ -47,9 +47,9 @@ The `#[inline]` attribute satisfies `clippy::missing_inline_in_public_items`. Th
 
 - **AC-01**: `trace_ts()` is exported as `pub fn` from `claude_profile_core::account`. It is not gated with `#[cfg(test)]`, is not `pub(crate)`, and is unconditionally available to all callers at runtime.
 - **AC-02**: `trace_ts()` returns a string matching `"YYYY-MM-DD · HH:MM:SS UTC · "`. The date portion is `chrono_now_utc()[..10]` and the time portion is `chrono_now_utc()[11..19]`, joined with ` · ` separators, followed by a literal `UTC` marker before the trailing ` · ` — disambiguates this UTC-clocked prefix from any other timestamp source (e.g. local-clocked) sharing the same shape in a combined log/transcript stream (BUG-338).
-- **AC-03**: No `"[trace] "` literal string remains in any production `eprintln!` or `writeln!( std::io::stderr(), ...)` call across the 13 affected source files. Every trace line passes `trace_ts()` as the first format argument.
+- **AC-03**: No `"[trace] "` literal string remains in any production `eprintln!` or `writeln!( std::io::stderr(), ...)` call across the 15 affected source files. Every trace line passes `trace_ts()` as the first format argument.
 - **AC-04**: `trace_ts()` is unconditional — it does not inspect any trace flag internally. The `if trace { ... }` call-site guard is the gating mechanism; `trace_ts()` is only called inside that guard.
-- **AC-05**: All 13 production files use `use claude_profile_core::account::trace_ts` to resolve `trace_ts`. No inline path `claude_profile_core::account::trace_ts()` is used at call sites.
+- **AC-05**: All 15 production files use `use claude_profile_core::account::trace_ts` to resolve `trace_ts`. No inline path `claude_profile_core::account::trace_ts()` is used at call sites.
 - **AC-06**: The `fetch.rs` structural test (BUG-234 MRE) asserts the two-argument `"{}{}  result: OK"` pattern in the production `eprintln!` line. This is the only trace line where the account name appears as a separate positional argument; the structural test guards against reversion to the single-argument pattern.
 
 ### Bugs
@@ -89,7 +89,9 @@ _(none — `trace_ts()` depends only on `chrono_now_utc()` which already exists 
 | `src/usage/touch.rs` | `touch` label trace lines — solo-skip, not-owned, skip-reason sites |
 | `src/usage/fetch.rs` | Account-label trace lines — reading, GET, result-OK/Err, cannot-read-token, skipped sites |
 | `src/usage/refresh.rs` | `refresh` label trace lines — solo-skip, should-retry, attempting, refresh-returned-None, token-refreshed, retry-OK/Err sites |
-| `src/usage/api.rs` | `usage`/`account.use`/`account.limits` label trace lines — subprocess skipped, model override, and multi-step operation sites |
+| `src/usage/api_switch.rs` | `account.use` label trace lines — reading, quota-fetch, model-override, and subprocess-spawn sites |
+| `src/usage/api_dispatch.rs` | `usage assignee` label trace lines — marker write/clear sites |
+| `src/owner_dispatch.rs` | Owner/field-set label trace lines — batch-skip, cleared, and set sites |
 | `src/commands/account_ops.rs` | `account.use`/`account.limits`/`account.delete` label trace lines |
 | `src/commands/accounts.rs` | `accounts` label trace lines — credential-store read, assignee-write, owner-write sites |
 | `src/commands/account_inspect.rs` | `account.inspect` label trace lines — per-endpoint GET and result sites |

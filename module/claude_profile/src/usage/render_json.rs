@@ -4,7 +4,7 @@
 
 use crate::output::json_escape;
 use super::types::AccountQuota;
-use super::format::{ renewal_secs, next_event_raw, shorten_error };
+use super::format::{ renewal_secs, next_event_raw, shorten_error, expires_remaining_secs };
 
 /// Produce the `"cached":bool,"cache_age_secs":N|null` JSON fragment.
 fn cache_json_fields( cached : bool, age : Option< u64 > ) -> String
@@ -42,7 +42,12 @@ pub fn render_json( accounts : &[ AccountQuota ] ) -> String
     let is_occupied_elsewhere_str = if aq.is_occupied_elsewhere { "true" } else { "false" };
     let is_owned_str              = if aq.is_owned              { "true" } else { "false" };
     let owner_esc                 = json_escape( &aq.owner );
-    let expires_in_secs  = ( aq.expires_at_ms / 1000 ).saturating_sub( now_secs );
+    // Fix(BUG-345): this duplicated compute_expires_cell's arithmetic instead of sharing it.
+    // Root cause: render_json.rs reimplemented the expires calculation inline rather than
+    //   calling a shared helper, so a formula change would need updating in two places.
+    // Pitfall: JSON already exposes `cached` as its own field (cache_json_fields) — do NOT
+    //   apply the `~`-prefix convention here; expires_in_secs must stay a plain number.
+    let expires_in_secs  = expires_remaining_secs( aq.expires_at_ms, now_secs );
     let billing_type_str = aq.account.as_ref()
       .map_or_else( || "null".to_string(), |a| format!( "\"{}\"", json_escape( &a.billing_type ) ) );
     let has_max_str      = aq.account.as_ref()

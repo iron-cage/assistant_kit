@@ -80,14 +80,16 @@ When combined with `dry::1`: gate is bypassed but mutation is still previewed wi
 
 ---
 
-### EC-6: `force::1 dry::1` — gate bypassed; mutation previewed without writing
+### EC-6: `force::1 dry::1` — gate bypassed; mutation previewed without writing (no mtime check — content/existence checks only)
 
-- **Given:** Account `alice@corp.com` with `"owner": "other@remote"`. Current identity ≠ `"other@remote"`. Note mtime of `~/.claude/.credentials.json`.
+> **Semantic drift correction:** the G5 sub-block (`.account.use`) in the cited test does not capture or compare any file mtime — it never touches `~/.claude/.credentials.json` at all. It asserts only: exit 0, no ownership-violation text in stderr, and `[dry-run]` present in stdout. The doc's "mtime unchanged" claim is not verified by any of the four sub-blocks in this function: G6 (`.account.delete`) checks file *existence* (`account_exists(...)`) rather than mtime; G7 (`.account.relogin`) has no additional file check beyond the same three checks as G5; G8 (`.accounts owner::0`) checks *content equality* (`assert_eq!` on `meta_before`/`meta_after`) rather than mtime. No sub-block in this function performs mtime capture or comparison.
+
+- **Given:** Account `alice@corp.com` with `"owner": "other@remote"`. Current identity ≠ `"other@remote"`.
 - **When:** `clp .account.use name::alice@corp.com force::1 dry::1`
-- **Then:** Exits 0. No ownership violation (G5 bypassed). stdout contains `[dry-run]` preview message. `~/.claude/.credentials.json` mtime unchanged — no credential swap performed.
+- **Then:** Exits 0. No ownership violation (G5 bypassed). stdout contains `[dry-run]` preview message. (The test does NOT capture or compare `~/.claude/.credentials.json` mtime — it never touches that file in this sub-block.)
 - **Exit:** 0
-- **Note:** force runs BEFORE dry: gate is bypassed first, then dry-run prevents the actual write. Same behavior applies to delete, relogin, and `.accounts owner::0 name::X` (Feature 064).
-- **Source fn:** `ft21_force_dry_bypasses_gate_previews` (in `tests/cli/account_ownership_test.rs`) — single function covering all four G5/G6/G7/G8 sub-cases in one body
+- **Note:** force runs BEFORE dry: gate is bypassed first, then dry-run prevents the actual write. Same ordering applies to delete, relogin, and `.accounts owner::0 name::X` (Feature 064) — but none of the four sub-cases verify "no write occurred" via mtime; G6 uses file-existence, G8 uses content-equality, G5 and G7 use exit/stderr/stdout checks only.
+- **Source fn:** `ft21_force_dry_bypasses_gate_previews` (in `tests/cli/account_ownership_test.rs`) — single function covering all four G5/G6/G7/G8 sub-cases in one body; none of the four sub-blocks perform mtime capture/comparison, contrary to this EC's original claim
 - **Source:** [param/058_force.md](../../../../docs/cli/param/058_force.md)
 
 ---

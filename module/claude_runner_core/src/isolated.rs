@@ -224,6 +224,28 @@ pub fn resolve_isolated_default_model() -> Option< String >
   claude_core::toml_io::get_tiered( Some( project_path ), &user_path, "model" )
 }
 
+/// Write `contents` to `path` with owner-only (`0600`) permissions on Unix, so credential
+/// material is never briefly world-readable in the isolated temp `HOME`.
+#[ cfg( unix ) ]
+fn write_creds_restricted( path : &std::path::Path, contents : &str ) -> io::Result< () >
+{
+  use std::io::Write as _;
+  use std::os::unix::fs::OpenOptionsExt as _;
+  std::fs::OpenOptions::new()
+    .create( true )
+    .write( true )
+    .truncate( true )
+    .mode( 0o600 )
+    .open( path )?
+    .write_all( contents.as_bytes() )
+}
+
+#[ cfg( not( unix ) ) ]
+fn write_creds_restricted( path : &std::path::Path, contents : &str ) -> io::Result< () >
+{
+  std::fs::write( path, contents )
+}
+
 /// Spawn Claude in an isolated `HOME` with an explicit compact-window override.
 ///
 /// Identical to [`run_isolated`] but accepts `compact_window: Option<u32>` to control
@@ -266,7 +288,7 @@ pub fn run_isolated_ext
 
   // Step 2: Write caller-supplied credentials to the path claude reads
   let creds_path = claude_dir.join( ".credentials.json" );
-  std::fs::write( &creds_path, credentials_json )
+  write_creds_restricted( &creds_path, credentials_json )
     .map_err( |e| RunnerError::Io( e.to_string() ) )?;
 
   // Step 2a: Write CLAUDE.md to isolated HOME before spawn.

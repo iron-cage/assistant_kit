@@ -20,7 +20,9 @@ An account is submitted for refresh when ALL of the following are true:
 | `aq.is_owned == true` AND `aq.is_occupied_elsewhere == false` | G2 gate — non-owned or occupied accounts are skipped (BUG-303 fix) |
 | NOT solo gate (solo::0 or is_current) | Solo gate skips non-current accounts when `solo::1` |
 | `result` is auth error (`"401"` or `"403"`) | Direct auth failure |
+| OR `result` contains `"token expired (local)"` | Access token locally expired; refresh token still valid (BUG-235 fix) |
 | OR `result` is 429 AND `expires_at_ms / 1000 ≤ now_secs` | 429 with locally-expired token (stale per-account copy) |
+| OR `aq.cached == true` AND `expires_at_ms / 1000 ≤ now_secs` | Cache fallback converts `Err`→`Ok`; expired cached entry still needs refresh (BUG-255 fix) |
 
 Source: `src/usage/refresh_predicate.rs`
 
@@ -28,12 +30,13 @@ Source: `src/usage/refresh_predicate.rs`
 
 ```rust
 account::refresh_account_token(
-    name             : &str,
-    credential_store : &Path,
-    claude_paths     : Option<&ClaudePaths>,  // Some = check live creds for race recovery
-    imodel           : IsolatedModel,
-    effort_opt       : Option<&str>,
-    trace            : bool,
+  name             : &str,
+  credential_store : &Path,
+  paths            : Option<&ClaudePaths>,  // Some = check live creds for race recovery
+  trace            : bool,
+  label            : &str,           // trace-line prefix, e.g. "refresh"
+  model            : IsolatedModel,
+  extra_pre_args   : &[String],      // effort flags, from effort_pre_args()
 )
 ```
 

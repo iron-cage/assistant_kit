@@ -15,7 +15,7 @@ cache integration in `src/usage/fetch.rs` via `read_cached_quota`.
 | AC-5 | Window expired (`now > resets_at`) → returns `0.0` | Boundary | ✅ |
 | AC-6 | Approximation applied for non-owned accounts (G1 non-owned path) | Nominal | ✅ |
 | AC-7 | Independent periods: absent `seven_day_sonnet` unaffected by 5h/7d approx | Isolation | ✅ |
-| AC-8 | Cache fallback skipped when quota fetch succeeds (no spurious approximation) | Nominal | ✅ |
+| AC-8 | Cache-fallback path does not append a new history entry (only live values recorded) | Nominal | ✅ |
 | AC-9 | History not appended for non-owned accounts (no ownership contamination) | Nominal | ✅ |
 
 ---
@@ -92,24 +92,32 @@ cache integration in `src/usage/fetch.rs` via `read_cached_quota`.
 
 ### AC-7: Independent periods — absent `seven_day_sonnet` unaffected by 5h/7d approximation
 
-- **Given:** Account has `five_hour` and `seven_day` history; `seven_day_sonnet` is absent
-  from the cache.
-- **When:** Approximation runs for 5h and 7d periods.
-- **Then:** `seven_day_sonnet` remains `None` in the approximated quota — approximating 5h/7d
-  does not fabricate a Sonnet tier value. Period approximations are independent.
+- **Given:** Cache has 2 `five_hour` history entries (both `utilization = 70.0`) but zero
+  `seven_day_sonnet` history entries (`"sn": null` in both); the raw cached values are
+  `five_hour = 50.0`, `seven_day_sonnet = 50.0`.
+- **When:** Approximation runs during cache-fallback (`fetch_quota_for_list`).
+- **Then:** `five_hour.utilization` becomes `70.0` (approximated from its 2 history points),
+  while `seven_day_sonnet.utilization` stays at its raw cached value `50.0` — with 0
+  post-filter `sn` measurements, approximation returns `None` for that period (AC-1) and the
+  raw cached value is used instead, unaffected by the 5h approximation. Period approximations
+  are independent.
 - **Source fn:** `ft05_approx_independent_periods_absent_sn_unaffected` in
-  `tests/usage/fetch_tests.rs`
+  `tests/usage/fetch_tests_b.rs`
 - **Source:** [algorithm/006_quota_approximation.md](../../../docs/algorithm/006_quota_approximation.md)
 
 ---
 
-### AC-8: Cache fallback skipped when quota fetch succeeds
+### AC-8: Cache-fallback path does not append a new history entry
 
-- **Given:** Live `fetch_oauth_usage()` succeeds and returns a valid quota.
+- **Given:** Cache is pre-seeded with 1 existing history entry; the account's token is
+  expired (`expiresAt = 1`), triggering the "token expired (local)" error — not 401/403 —
+  which routes to the cache-fallback arm rather than a hard failure.
 - **When:** `fetch_all_quota` runs.
-- **Then:** The successful live result is used directly; the cached/approximated value is NOT
-  substituted. Approximation is a fallback, not a primary path.
-- **Source fn:** `ft03_history_skips_cached_fallback` in `tests/usage/fetch_tests.rs`
+- **Then:** The result is served from cache (`cached = true`); the history ring buffer still
+  has exactly 1 entry afterward — the cache-fallback arm does NOT append a new entry. Only
+  live-fetched (real server) values are ever appended to history; cached/error values never
+  are.
+- **Source fn:** `ft03_history_skips_cached_fallback` in `tests/usage/fetch_tests_b.rs`
 - **Source:** [algorithm/006_quota_approximation.md](../../../docs/algorithm/006_quota_approximation.md)
 
 ---

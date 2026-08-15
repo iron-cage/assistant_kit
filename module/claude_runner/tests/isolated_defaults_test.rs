@@ -348,4 +348,83 @@ mod isolated_defaults_test
 
     let _ = std::fs::remove_file( &creds );
   }
+
+  // ── BUG-485 : config model preference must reach every --model site ──────
+
+  /// # Root Cause
+  /// `IsolatedModel::Default`'s config model preference (project `.clr.toml` /
+  /// user `~/.clr/config.toml`, read by `resolve_isolated_default_model()`) was
+  /// consulted only inside `run_isolated_ext()`.  The two sibling
+  /// `--model`-prepend sites consuming the same `Default` value —
+  /// `emit_credential_trace()`'s `--dry-run`/`--trace` preview and the `--file`
+  /// real path (`run_isolated_with_stdin_file()`) — fell back to
+  /// `ISOLATED_DEFAULT_MODEL`, so the preview showed the wrong model and the two
+  /// real execution paths ran different models on identical inputs.
+  ///
+  /// # Why Not Caught
+  /// `isolated_model_resolution_test.rs` pins the resolver in isolation and
+  /// ISD-1 pins the constant, but no test ran the actual binary with a config
+  /// preference present and read which model the assembled command carries —
+  /// the divergence lived in per-site arg assembly no assertion ever crossed.
+  ///
+  /// # Fix Applied
+  /// `run_isolated_command()` resolves `Default` → `Specific(pref)` once at
+  /// entry, before arg assembly — upstream of the preview/ext/stdin-file
+  /// fan-out, so all three sites see the same resolved model.
+  /// `run_isolated_ext()`'s own consultation remains as a fallback for direct
+  /// core-API callers.
+  ///
+  /// # Prevention
+  /// This test runs the real `clr isolated --dry-run` binary in a temp cwd
+  /// whose `.clr.toml` pins a marker model, with `HOME` pointed at the same
+  /// temp dir so only the project tier can supply the preference.  It asserts
+  /// the previewed command carries the marker and not the hardcoded default.
+  /// Because the fix resolves upstream of the fan-out, the preview is a
+  /// WYSIWYG witness for all three consuming sites.
+  ///
+  /// # Pitfall
+  /// Three sibling `--model`-prepend sites consume the same `IsolatedModel`
+  /// value; a preference consulted at only one of them silently splits
+  /// behavior across execution paths.  Resolve shared inputs once, upstream
+  /// of the fan-out — never per-site.
+  // test_kind: bug_reproducer(BUG-485)
+  #[ test ]
+  fn bug485_dry_run_preview_shows_config_model_pref_not_hardcoded_default()
+  {
+    let tmp = tempfile::tempdir().expect( "create temp project dir" );
+    std::fs::write( tmp.path().join( ".clr.toml" ), "model = \"cfg-pinned-model\"\n" )
+      .expect( "write .clr.toml" );
+    let creds = temp_creds();
+    // cwd = temp dir → project-tier `.clr.toml` is the one just written;
+    // HOME = temp dir → user tier (`~/.clr/config.toml`) cannot interfere.
+    let out = clr()
+      .current_dir( tmp.path() )
+      .env( "HOME", tmp.path() )
+      .args( [ "isolated", "--creds", creds.to_str().unwrap(), "--dry-run", "msg" ] )
+      .output()
+      .expect( "spawn clr" );
+    assert_eq!(
+      out.status.code(),
+      Some( 0 ),
+      "expected exit 0 from --dry-run; stderr: {}", String::from_utf8_lossy( &out.stderr )
+    );
+    let stdout = String::from_utf8_lossy( &out.stdout );
+    assert!(
+      stdout.contains( "--no-session-persistence" ),
+      "sanity: preview must show the injected isolated flags (guards against a vacuously \
+       empty preview satisfying the model assertions); got:\n{stdout}"
+    );
+    assert!(
+      stdout.contains( "--model cfg-pinned-model" ),
+      "BUG-485: with `.clr.toml` pinning `model = \"cfg-pinned-model\"` and no explicit \
+       --model flag, the --dry-run preview must show the configured preference — the same \
+       model run_isolated_ext() would actually use. Got:\n{stdout}"
+    );
+    assert!(
+      !stdout.contains( &format!( "--model {ISOLATED_DEFAULT_MODEL}" ) ),
+      "BUG-485: the preview must not fall back to the hardcoded ISOLATED_DEFAULT_MODEL \
+       when a config preference is set. Got:\n{stdout}"
+    );
+    let _ = std::fs::remove_file( &creds );
+  }
 }

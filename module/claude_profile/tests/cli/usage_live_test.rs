@@ -28,11 +28,7 @@ use tempfile::TempDir;
 #[ test ]
 fn it021_lim_it_live_mode()
 {
-  let Some( token ) = live_active_token() else
-  {
-    eprintln!( "it021: no live token — skipping" );
-    return;
-  };
+  let token = live_active_token().expect( "it021: live API token required — no ~/.claude/.credentials.json" );
 
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -421,11 +417,7 @@ fn it033_mre_refresh_help_excludes_429()
 #[ test ]
 fn it032_lim_it_refresh_per_account()
 {
-  let Some( token ) = live_active_token() else
-  {
-    eprintln!( "it032: no live token — skipping" );
-    return;
-  };
+  let token = live_active_token().expect( "it032: live API token required — no ~/.claude/.credentials.json" );
 
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
