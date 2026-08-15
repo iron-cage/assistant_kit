@@ -141,8 +141,16 @@ fn workspace_deps_in( content : &str ) -> Vec< String >
 
 /// Return the numeric layer (0–3) for a workspace member, or `None` for Layer * crates.
 ///
-/// Layer * crates (`claude_storage_core`, `claude_auth`, `claude_quota`)
+/// Layer * crates (`claude_storage_core`, `claude_auth`, `claude_quota`, `claude_journal`)
 /// are excluded from cross-layer dependency checks (CL-1, CL-2).
+//
+// Fix(BUG-003): `claude_journal` was hardcoded into the Layer-1 arm below, but its own
+// `Cargo.toml` `[dependencies]` are all external (serde, serde_json, chrono) with zero
+// workspace-member deps — it meets the Layer * criterion, not Layer 1.
+// Root cause: `layer_of()` is a hand-maintained static table with no mechanical link
+// back to `Cargo.toml`'s actual `[dependencies]` content.
+// Pitfall: hand-maintained static crate-classification tables copied verbatim across
+// sibling modules carry no mechanism to detect their own drift from `Cargo.toml` ground truth.
 fn layer_of( name : &str ) -> Option< u8 >
 {
   match name
@@ -151,8 +159,7 @@ fn layer_of( name : &str ) -> Option< u8 >
     "claude_assets_core"
     | "claude_profile_core"
     | "claude_version_core"
-    | "claude_runner_core"
-    | "claude_journal" => Some( 1 ),
+    | "claude_runner_core" => Some( 1 ),
     "dream"
     | "claude_assets"
     | "claude_version"
@@ -162,6 +169,7 @@ fn layer_of( name : &str ) -> Option< u8 >
     | "claude_journal_viewer" => Some( 2 ),
     "assistant" | "assistant_kit" => Some( 3 ),
     // Layer * — no numeric layer; exempt from CL checks
+    // (includes claude_journal — see Fix(BUG-003) doc comment above)
     _ => None,
   }
 }
