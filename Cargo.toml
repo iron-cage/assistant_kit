@@ -9,7 +9,9 @@
 resolver = "2"
 members = [
   "module/claude_journal",
+  "module/claude_journal_charts",
   "module/claude_journal_viewer",
+  "module/svg_chart",
   "module/assistant_kit",
   "module/claude_auth",
   "module/claude_assets_core",
@@ -100,8 +102,18 @@ path = "module/claude_journal"
 version = "=0.1.0"
 default-features = false
 
+[workspace.dependencies.claude_journal_charts]
+path = "module/claude_journal_charts"
+version = "=0.1.0"
+default-features = false
+
 [workspace.dependencies.claude_journal_viewer]
 path = "module/claude_journal_viewer"
+version = "=0.1.0"
+default-features = false
+
+[workspace.dependencies.svg_chart]
+path = "module/svg_chart"
 version = "=0.1.0"
 default-features = false
 
@@ -197,6 +209,10 @@ default-features = false
 
 [workspace.dependencies.data_fmt]
 version = "^0.7"
+default-features = false
+
+[workspace.dependencies.plotters]
+version = "^0.3"
 default-features = false
 
 [workspace.dependencies.ureq]

@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# do install — unavailable: library crate has no binary to install
+set -euo pipefail
+echo "verb 'install' is not available for this project" >&2
+exit 3
