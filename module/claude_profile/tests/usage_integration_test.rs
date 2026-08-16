@@ -25,6 +25,7 @@
 //! | `params_tests` | parse_usage_params parameter parsing |
 //! | `refresh_predicate_tests` | should_refresh decision logic |
 //! | `sort_tests` | sort_indices, status_group_of, StatusGroup |
+//! | `stalest_tests` | select_stalest, reduction_applies, stale skip gate (TSK-499) |
 //! | `subprocess_tests` | resolve_model, resolve_effort, effort_pre_args |
 
 #[ path = "usage/api_tests_a.rs" ]
@@ -83,6 +84,9 @@ mod refresh_predicate_tests;
 
 #[ path = "usage/sort_tests.rs" ]
 mod sort_tests;
+
+#[ path = "usage/stalest_tests.rs" ]
+mod stalest_tests;
 
 #[ path = "usage/subprocess_tests.rs" ]
 mod subprocess_tests;

@@ -4,8 +4,8 @@
 
 - **Purpose**: Unified field table for the per-account supplementary metadata file stored alongside `{name}.credentials.json`.
 - **Responsibility**: Documents all fields in the per-account supplementary metadata file `{name}.json` across all features.
-- **In Scope**: All fields written or read by `clp` across all features — core identity, OAuth metadata, org identity, extended snapshot fields, host/role labels, renewal override, ownership, quota cache, and measurement history.
-- **Out of Scope**: `{name}.credentials.json` (→ [schema/001](001_credentials_json.md)); HTTP API response shapes.
+- **In Scope**: All fields written or read by `clp` across all features — core identity, OAuth metadata, org identity, extended snapshot fields, host/role labels, renewal override, ownership, and low-churn quota metadata (top-level keys since TSK-500; the legacy `cache` subtree is documented for pre-migration files).
+- **Out of Scope**: `{name}.credentials.json` (→ [schema/001](001_credentials_json.md)); the untracked local volatile cache `-cache/{name}.json` (→ [feature/033](../feature/033_quota_cache.md) — volatile quota fields and measurement history live there since TSK-500); HTTP API response shapes.
 
 ### File Location
 
@@ -46,21 +46,11 @@
 | `owner` | string | `owner::` CLI param or `current_identity()` | `.accounts owner::`, `.account.assign` (removed in F037) | `list()` → ownership gate checks; `current_identity()` comparison | [036](../feature/036_account_ownership.md), [063](../feature/063_explicit_ownership_claim.md) |
 | `claim_lock` | bool | `lock::` CLI param | `.accounts lock::` | Gate 9 (eligibility); G9 (explicit-command on `.account.use`/`assignee::`) | [070](../feature/070_account_claim_and_reservation_control.md) |
 | `reserve` | bool | `reserve::` CLI param | `.accounts reserve::` | `find_next_for_strategy()` leading sort key | [070](../feature/070_account_claim_and_reservation_control.md) |
-| `cache` | object | Live API response via `write_quota_cache()` | `apply_touch()` after touch; `apply_refresh()` after refresh; `fetch.rs` on successful fetch | `fetch.rs` cache fallback; `approximate_quota()` | [033](../feature/033_quota_cache.md) |
-| `cache.fetched_at` | string (ISO 8601) | Current time at cache write | `write_quota_cache()` | Cache age staleness indicator | [033](../feature/033_quota_cache.md) |
-| `cache.status` | string (always `"ok"`) | Hardcoded literal at cache write time | `write_quota_cache()` | Not read by any consumer — write-only | [033](../feature/033_quota_cache.md) |
-| `cache.five_hour` | object (`left_pct`, `resets_at`) | API `five_hour` quota block | `write_quota_cache()` | Cache fallback reads | [033](../feature/033_quota_cache.md) |
-| `cache.seven_day` | object (`left_pct`, `resets_at`) | API `seven_day` quota block | `write_quota_cache()` | Cache fallback reads | [033](../feature/033_quota_cache.md) |
-| `cache.seven_day_sonnet` | object or null | API `seven_day_sonnet` quota block | `write_quota_cache()` | Cache fallback reads | [033](../feature/033_quota_cache.md) |
-| `cache.model_override` | string | `apply_model_override()` decision | `write_cache_string()` | Model override restore on next run | [033](../feature/033_quota_cache.md) |
-| `cache.last_touch_at` | string (ISO 8601) | Touch subprocess completion time | `write_cache_field()` after touch | Touch lifecycle state | [024](../feature/024_session_touch.md), [033](../feature/033_quota_cache.md) |
-| `cache.touch_idle` | bool | Touch subprocess idle determination | `write_cache_field()` after touch | Touch lifecycle gating | [024](../feature/024_session_touch.md), [033](../feature/033_quota_cache.md) |
-| `cache.org_created_at` | string (ISO 8601) | Live `fetch_oauth_account` response `org_created_at` field | `write_quota_cache()` after successful account fetch | Non-live-fetch branches → `AccountQuota.org_created_at` → `~Renews` Estimate (AC-15) | [033](../feature/033_quota_cache.md) |
-| `cache.history` | array of objects, max 10 (FIFO ring buffer, `account.rs:2347`) | Successful API measurements | `write_history_entry()` after every successful `fetch_oauth_usage()` call (`fetch.rs`); evicts oldest entry past 10 (AC-02); overwrites same-second entry instead of appending (AC-13) | `read_history()` → `approximate_quota()` in `approx.rs` | [040](../feature/040_quota_measurement_history.md) |
-| `cache.history[*].t` | number (unix secs) | Measurement timestamp | `write_history_entry()` | Polynomial fitting | [040](../feature/040_quota_measurement_history.md) |
-| `cache.history[*].h5` | `[number, string \| null]` pair, or `null` | `[five_hour.utilization, five_hour.resets_at]` at measurement time | `write_history_entry()` | Polynomial fitting | [040](../feature/040_quota_measurement_history.md) |
-| `cache.history[*].d7` | `[number, string \| null]` pair, or `null` | `[seven_day.utilization, seven_day.resets_at]` at measurement time | `write_history_entry()` | Polynomial fitting | [040](../feature/040_quota_measurement_history.md) |
-| `cache.history[*].sn` | `[number, string \| null]` pair, or `null` | `[seven_day_sonnet.utilization, seven_day_sonnet.resets_at]` at measurement time; `null` when the Sonnet tier is absent | `write_history_entry()` | Polynomial fitting | [040](../feature/040_quota_measurement_history.md) |
+| `model_override` | string | `apply_model_override()` decision | `write_cache_string()` (top-level since TSK-500) | Model override restore on next run (top-level first, legacy `cache.model_override` fallback) | [033](../feature/033_quota_cache.md) |
+| `last_touch_at` | string (ISO 8601) | Touch subprocess completion time | `write_cache_field()` after touch (top-level since TSK-500) | Touch lifecycle state (top-level first, legacy fallback) | [024](../feature/024_session_touch.md), [033](../feature/033_quota_cache.md) |
+| `touch_idle` | bool | Touch subprocess idle determination | `write_cache_field()` after touch (top-level since TSK-500) | Touch lifecycle gating (top-level first, legacy fallback) | [024](../feature/024_session_touch.md), [033](../feature/033_quota_cache.md) |
+| `org_created_at` | string (ISO 8601) | Live `fetch_oauth_account` response `org_created_at` field | `write_cache_string_if_changed()` after successful account fetch (top-level since TSK-500; write skipped when value unchanged) | Non-live-fetch branches → `AccountQuota.org_created_at` → `~Renews` Estimate (033 AC-15) | [033](../feature/033_quota_cache.md) |
+| `cache` | object — **LEGACY (pre-TSK-500)** | Old single-tier layout: volatile quota fields + low-churn metadata + `history[]` in one tracked subtree | No current writer — dissolved by the one-time migration inside `write_quota_cache()` (033 AC-18): low-churn keys relocated to top level, volatile fields and history moved to the untracked local `-cache/{name}.json`, `cache` key removed | Merged-read fallback until migrated: `read_quota_cache()` / `read_history()` read it when the local cache file is absent | [033](../feature/033_quota_cache.md), [040](../feature/040_quota_measurement_history.md) |
 
 ### Preserved-Only Fields
 
@@ -73,6 +63,7 @@ These fields are written by one caller and never touched by others (preserved vi
 - `inference_provider` — written at save time with explicit `inference_provider::` param; preserved on re-save without that param; defaults to `"anthropic"` when absent (pre-existing accounts, and all accounts created before Feature 072)
 - `backend` — written only at `.account.save` creation time; preserved on re-save; defaults to `"anthropic"` when absent (pre-existing accounts, and all accounts created before Feature 071)
 - `base_url`, `redirect_model` — written only at `.account.save` creation time for `backend::redirect` accounts; preserved on re-save; absent entirely for `anthropic` accounts
+- `model_override`, `last_touch_at`, `touch_idle`, `org_created_at` — written only by the quota/touch/override side-effect paths (top-level since TSK-500); preserved by save
 
 ### Example
 
@@ -99,26 +90,18 @@ These fields are written by one caller and never touched by others (preserved vi
   "owner": "user1@w003",
   "claim_lock": false,
   "reserve": false,
-  "cache": {
-    "fetched_at": "2026-06-23T12:00:00Z",
-    "status": "ok",
-    "five_hour": { "left_pct": 42.5, "resets_at": "2026-06-23T16:00:00Z" },
-    "seven_day": { "left_pct": 30.0, "resets_at": "2026-06-27T00:00:00Z" },
-    "seven_day_sonnet": null,
-    "model_override": "opus",
-    "last_touch_at": "2026-06-23T06:30:00Z",
-    "touch_idle": false,
-    "org_created_at": "2026-01-01T00:00:00Z",
-    "history": [
-      { "t": 1749900000, "h5": [ 10.0, "2026-06-22T12:00:00Z" ], "d7": [ 20.0, "2026-06-27T00:00:00Z" ], "sn": null }
-    ]
-  }
+  "model_override": "opus",
+  "last_touch_at": "2026-06-23T06:30:00Z",
+  "touch_idle": false,
+  "org_created_at": "2026-01-01T00:00:00Z"
 }
 ```
 
+Volatile quota fields (`fetched_at`, `status`, `five_hour`, `seven_day`, `seven_day_sonnet`, `history`) live in the untracked local `-cache/{name}.json` since TSK-500 — see [feature/033](../feature/033_quota_cache.md) for its structure. A pre-migration file instead carries all of these plus the four low-churn keys nested in a legacy `cache{}` subtree.
+
 ### Redirect Backend Example
 
-A `backend::redirect` account (see [feature/071](../feature/071_redirect_backend_accounts.md)) omits every OAuth-quota-specific field (`cache` — including its nested `history` array — and `_renewal_at`) — there is no Claude quota to track — and carries `base_url`/`redirect_model` instead:
+A `backend::redirect` account (see [feature/071](../feature/071_redirect_backend_accounts.md)) omits every OAuth-quota-specific field (the low-churn keys `model_override`/`last_touch_at`/`touch_idle`/`org_created_at`, any legacy `cache` subtree, and `_renewal_at`) — there is no Claude quota to track — and carries `base_url`/`redirect_model` instead:
 
 ```json
 {
@@ -146,9 +129,9 @@ A `backend::redirect` account (see [feature/071](../feature/071_redirect_backend
 | [feature/022_org_identity_snapshot.md](../feature/022_org_identity_snapshot.md) | `org_uuid`, `org_name` |
 | [feature/029_account_host_metadata.md](../feature/029_account_host_metadata.md) | `host`, `role` label fields |
 | [feature/030_account_renewal_override.md](../feature/030_account_renewal_override.md) | `_renewal_at` field |
-| [feature/033_quota_cache.md](../feature/033_quota_cache.md) | `cache` subtree |
+| [feature/033_quota_cache.md](../feature/033_quota_cache.md) | Low-churn top-level keys (`model_override`, `last_touch_at`, `touch_idle`, `org_created_at`) + legacy `cache` subtree + the local `-cache/{name}.json` companion |
 | [feature/036_account_ownership.md](../feature/036_account_ownership.md) | `owner` field |
-| [feature/040_quota_measurement_history.md](../feature/040_quota_measurement_history.md) | `cache.history` array |
+| [feature/040_quota_measurement_history.md](../feature/040_quota_measurement_history.md) | History array — in local `-cache/{name}.json` since TSK-500; legacy `cache.history` readable pre-migration |
 | [feature/063_explicit_ownership_claim.md](../feature/063_explicit_ownership_claim.md) | `owner::` param write path |
 | [feature/070_account_claim_and_reservation_control.md](../feature/070_account_claim_and_reservation_control.md) | `claim_lock`, `reserve` fields |
 | [feature/071_redirect_backend_accounts.md](../feature/071_redirect_backend_accounts.md) | `backend`, `base_url`, `redirect_model` fields |

@@ -3,7 +3,7 @@
 ### Scope
 
 - **Purpose**: Provide row-level filters, count/offset pagination, and single-value extraction for `.usage` table output, enabling scripting and targeted monitoring.
-- **Responsibility**: Documents the filtering parameters (`count::`, `offset::`, `only_active::`, `only_next::`, `min_5h::`, `min_7d::`, `only_valid::`, `exclude_exhausted::`), the `get::` single-value extraction shorthand, and the associated format extensions (`format::value`, `format::tsv`, `format::plain`, `abs::`, `no_color::`).
+- **Responsibility**: Documents the filtering parameters (`count::`, `offset::`, `only_active::`, `only_next::`, `min_5h::`, `min_7d::`, `only_valid::`, `exclude_exhausted::`), the pre-fetch reducers (`stalest::`, `max_age::`), the `get::` single-value extraction shorthand, and the associated format extensions (`format::value`, `format::tsv`, `format::plain`, `abs::`, `no_color::`).
 - **In Scope**: Row count limit, row offset, boolean row filters, percentage threshold filters, `get::` field extraction with `format::value` output, `abs::` for absolute values, `no_color::` for plain output.
 - **Out of Scope**: Column visibility (→ 033_cols.md), sort order and footer recommendation (→ 020_usage_sort_strategies.md), live monitor mode (→ 018_live_monitor.md).
 
@@ -14,12 +14,13 @@
 **Filter evaluation order:**
 1. Account list from filesystem (no HTTP) — `account::list()` reads `_active_{hostname}_{user}` marker to populate `is_active`
 2. Request-Constraint pre-fetch gate: `only_active::` — filesystem-based; reduces account list to at most 1 entry before the HTTP fetch loop begins (Pipeline-Constraint rule: O(1) fetch when result is known to be ≤1)
-3. Per-account quota fetch (HTTP — only for accounts not excluded in step 2)
-4. Sort and tier grouping
-5. Post-fetch boolean row filters: `only_next::`, `only_valid::`, `exclude_exhausted::` — predicates require quota data from step 3
-6. Threshold filters: `min_5h::`, `min_7d::` — require per-account quota percentage data
-7. Offset: skip first N rows from the filtered result
-8. Count: truncate to at most N rows after offset
+3. Stale-first fetch reduction: `stalest::`/`max_age::` (task 499) — cache-based; selects the K oldest-cache accounts as the HTTP fetch set. Unlike step 2, no row is removed: non-selected accounts stay in the output rendered from cache (`approximate_quota()`). Mutually exclusive with `only_active::1`; bypassed entirely by `rotate::1` (rotation needs a full fresh ranking)
+4. Per-account quota fetch (HTTP — only for accounts surviving steps 2–3)
+5. Sort and tier grouping
+6. Post-fetch boolean row filters: `only_next::`, `only_valid::`, `exclude_exhausted::` — predicates require quota data from step 4
+7. Threshold filters: `min_5h::`, `min_7d::` — require per-account quota percentage data
+8. Offset: skip first N rows from the filtered result
+9. Count: truncate to at most N rows after offset
 
 **Row filter parameters:**
 
@@ -33,6 +34,13 @@
 | `min_7d::` | `f64` | `0` | Hide rows where `7d Left` is below this percentage (0–100); rows with `—` are also hidden |
 | `only_valid::` | `bool` | `0` | Hide rows where status is 🔴 (invalid or missing token, or cancelled subscription with `billing_type="none"`) |
 | `exclude_exhausted::` | `bool` | `0` | Hide rows where status is 🟡 (weekly or hourly exhausted) or 🔴 (invalid token) |
+
+**Pre-fetch reducer parameters** (fetch-set reduction, not row removal — every account keeps its row):
+
+| Parameter | Type | Default | Behavior |
+|-----------|------|---------|----------|
+| `stalest::` | `u32` | *(omit)* | Fetch only the K accounts with the oldest quota cache; others render from cache via `approximate_quota()`. `stalest::0` exits 1; mutually exclusive with `only_active::1`; bypassed by `rotate::1` |
+| `max_age::` | `u64` | `0` | With `stalest::`, only accounts with cache age > SECS are fetch-eligible (the fetch set may be smaller than K, possibly empty). Standalone use exits 1 |
 
 **`get::` single-value extraction:**
 
@@ -89,6 +97,11 @@
 - **AC-15**: Invalid `get::` field ID exits 1 with an error listing the valid field IDs.
 - **AC-16**: `count::`, `offset::`, filter params, and `get::` all work combined with `sort::`, `prefer::`, and `cols::`.
 - **AC-17**: `clp .usage only_active::1 get::status` on an N-account store performs exactly 1 HTTP request to the OAuth usage API regardless of N. The active account is identified from the `_active_{hostname}_{user}` filesystem marker before any HTTP call; non-active accounts are excluded from the fetch set at step 2.
+- **AC-18**: `clp .usage stalest::K` fetches exactly the K accounts with the oldest cache `fetched_at` (missing cache ranks oldest; ties break by list order). All N rows still render — non-fetched rows from cache — and the output shape is identical to a full run for every `format::`/`get::` variant.
+- **AC-19**: `clp .usage stalest::K max_age::S` fetches only selected accounts whose cache age exceeds S seconds; when every account is fresher than S, zero HTTP requests are made and all rows render from cache.
+- **AC-20**: `clp .usage stalest::0` exits 1 with a parameter error and performs zero HTTP requests and zero cache writes. `max_age::S` without `stalest::` (any S, including `0`) exits 1 identically.
+- **AC-21**: `clp .usage stalest::K only_active::1` exits 1 — mutually exclusive pre-fetch reducers.
+- **AC-22**: `clp .usage stalest::K rotate::1` bypasses the reducer: the full fleet is fetched so rotation ranks fresh data.
 
 ### Commands
 
@@ -121,6 +134,8 @@
 | [cli/param/045_get.md](../cli/param/045_get.md) | `get::` parameter specification |
 | [cli/param/046_abs.md](../cli/param/046_abs.md) | `abs::` parameter specification |
 | [cli/param/047_no_color.md](../cli/param/047_no_color.md) | `no_color::` parameter specification |
+| [cli/param/080_stalest.md](../cli/param/080_stalest.md) | `stalest::` parameter specification |
+| [cli/param/081_max_age.md](../cli/param/081_max_age.md) | `max_age::` parameter specification |
 
 ### Referenced Commands
 
@@ -134,3 +149,4 @@
 |------|--------------|
 | `src/usage/api.rs` | filter pipeline application and orchestration |
 | `src/usage/render.rs` | `get::` field extraction, `format::value`/`tsv`/`plain` rendering |
+| `src/usage/stalest.rs` | `stalest::`/`max_age::` selection: `select_stalest`, `reduction_applies` |

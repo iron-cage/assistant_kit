@@ -938,11 +938,22 @@ fn build_queued_table() -> Option< String >
       // both copies were existence-only, blind to state `Z`.
       // Pitfall: a /proc/{pid} entry proves a PID exists, not that a process
       // runs; one authoritative predicate (gate::pid_alive) for every consumer.
+      // Fix(BUG-488): pass the waiter record's own starttime (absent in
+      // legacy files → None) so display liveness applies the same incarnation
+      // binding as slot reclaim — a thread-masked or recycled PID number no
+      // longer renders a dead waiter as a phantom queued row. Full fix
+      // comment at gate.rs::pid_alive().
       let alive = e.path()
         .file_stem()
         .and_then( |s| s.to_str() )
         .and_then( |s| s.parse::< u32 >().ok() )
-        .is_some_and( super::gate::pid_alive );
+        .is_some_and( | pid |
+        {
+          let recorded_starttime = std::fs::read_to_string( e.path() )
+            .ok()
+            .and_then( | content | parse_json_u64( &content, "starttime" ) );
+          super::gate::pid_alive( pid, recorded_starttime )
+        } );
       if !alive
       {
         // Self-heal: remove the orphaned gate file so it doesn't recur.

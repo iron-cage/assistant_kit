@@ -294,6 +294,9 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
       reg_arg_opt( "who",  Kind::Integer ).with_description( "Sessions table: auto (default — shown when >1 active marker), 0 = suppress, 1 = force on" ),
       // Token conservation (TSK-314)
       reg_arg_opt( "solo", Kind::Integer ).with_description( "token conservation: restrict fetch to current+owned account only (0 = off, default; 1 = on)" ),
+      // Stale-first fetch reduction (task 499)
+      reg_arg_opt( "stalest", Kind::Integer ).with_description( "Fetch only the K accounts with the oldest cache (K >= 1); others render from cache; mutually exclusive with only_active::1; ignored with rotate::1" ),
+      reg_arg_opt( "max_age", Kind::Integer ).with_description( "With stalest::, only refresh accounts whose cache is older than SECS seconds (default 0 = no threshold); requires stalest::" ),
     ],
     Box::new( accounts_view_routine   ) );
 }

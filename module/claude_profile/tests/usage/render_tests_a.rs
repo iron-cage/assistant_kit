@@ -41,6 +41,7 @@ fn mre_bug_220_renews_preserved_for_429_accounts()
   let aq = AccountQuota
   {
     fallback_reason : None,
+    touched_recently : false,
     name          : "i11@test.com".to_string(),
     is_current    : false,
     is_active             : false,
@@ -131,6 +132,7 @@ fn test_ft21_009_occupied_elsewhere_at_flag()
     AccountQuota
     {
       fallback_reason : None,
+      touched_recently : false,
       name                  : name.to_string(),
       is_current,
       is_active,
@@ -229,6 +231,7 @@ fn ft03_033_render_text_cached_shows_tilde_prefix()
   let aq = AccountQuota
   {
     fallback_reason : None,
+    touched_recently : false,
     name                  : "cached@example.com".to_string(),
     is_current            : false,
     is_active             : false,
@@ -292,6 +295,7 @@ fn ft09_033_render_json_cached_includes_fields()
   let aq = AccountQuota
   {
     fallback_reason : None,
+    touched_recently : false,
     name                  : "cached@example.com".to_string(),
     is_current            : false,
     is_active             : false,
@@ -337,6 +341,7 @@ fn ft03_033_cached_sonnet_reset_shows_tilde()
   let aq = AccountQuota
   {
     fallback_reason : None,
+    touched_recently : false,
     name                  : "cached@example.com".to_string(),
     is_current            : false,
     is_active             : false,
@@ -409,6 +414,7 @@ fn test_ft23_009_renews_dash_for_cancelled_subscription()
   let aq = AccountQuota
   {
     fallback_reason : None,
+    touched_recently : false,
     name                  : "cancelled@test.com".to_string(),
     is_current            : false,
     is_active             : false,
@@ -507,6 +513,7 @@ fn mre_bug332_renews_shown_for_billing_none_with_ok_result()
   let aq = AccountQuota
   {
     fallback_reason : None,
+    touched_recently : false,
     name                  : "live@test.com".to_string(),
     is_current            : false,
     is_active             : false,
@@ -613,6 +620,7 @@ fn mre_bug345_expires_cell_text_table_tilde()
   let mk_aq = |name : &str, cached : bool| AccountQuota
   {
     fallback_reason : None,
+    touched_recently : false,
     name                  : name.to_string(),
     is_current            : false,
     is_active             : false,
@@ -666,6 +674,7 @@ fn mre_bug345_expires_cell_get_field_tilde()
   let mk_aq = |name : &str, cached : bool| AccountQuota
   {
     fallback_reason : None,
+    touched_recently : false,
     name                  : name.to_string(),
     is_current            : false,
     is_active             : false,
@@ -718,6 +727,7 @@ fn mre_bug345_expires_cell_tsv_tilde()
   let mk_aq = |name : &str, cached : bool| AccountQuota
   {
     fallback_reason : None,
+    touched_recently : false,
     name                  : name.to_string(),
     is_current            : false,
     is_active             : false,
@@ -776,6 +786,7 @@ fn mre_bug345_expires_cell_json_identical_regardless_of_cache()
   let mk_aq = |name : &str, cached : bool| AccountQuota
   {
     fallback_reason : None,
+    touched_recently : false,
     name                  : name.to_string(),
     is_current            : false,
     is_active             : false,
@@ -847,6 +858,7 @@ fn ft05_non_owned_display_tilde_or_dashes()
   let aq_cached = AccountQuota
   {
     fallback_reason : None,
+    touched_recently : false,
     name                  : "alice@test.com".to_string(),
     is_current            : false,
     is_active             : false,
@@ -884,6 +896,7 @@ fn ft05_non_owned_display_tilde_or_dashes()
   let aq_no_cache = AccountQuota
   {
     fallback_reason : None,
+    touched_recently : false,
     name                  : "bob@test.com".to_string(),
     is_current            : false,
     is_active             : false,
@@ -928,6 +941,7 @@ fn ft12_json_output_includes_is_owned()
   let owned = AccountQuota
   {
     fallback_reason : None,
+    touched_recently : false,
     name                  : "alice@test.com".to_string(),
     is_current            : false,
     is_active             : false,
@@ -954,6 +968,7 @@ fn ft12_json_output_includes_is_owned()
   let not_owned = AccountQuota
   {
     fallback_reason : None,
+    touched_recently : false,
     name                  : "bob@test.com".to_string(),
     is_current            : false,
     is_active             : false,
@@ -1000,6 +1015,7 @@ fn test_render_footer_model_label_at_10pct_no_override()
   let aq_a = AccountQuota
   {
     fallback_reason : None,
+    touched_recently : false,
     name                  : "a@x.com".to_string(),
     is_current            : false,
     is_active             : false,
@@ -1027,6 +1043,7 @@ fn test_render_footer_model_label_at_10pct_no_override()
   let aq_b = AccountQuota
   {
     fallback_reason : None,
+    touched_recently : false,
     name                  : "b@x.com".to_string(),
     is_current            : false,
     is_active             : false,
@@ -1054,6 +1071,7 @@ fn test_render_footer_model_label_at_10pct_no_override()
   let aq_cur = AccountQuota
   {
     fallback_reason : None,
+    touched_recently : false,
     name                  : "cur@x.com".to_string(),
     is_current            : true,
     is_active             : false,
@@ -1108,6 +1126,7 @@ fn test_render_footer_model_label_below_10pct_opus()
   let aq_a = AccountQuota
   {
     fallback_reason : None,
+    touched_recently : false,
     name                  : "a@x.com".to_string(),
     is_current            : false,
     is_active             : false,
@@ -1135,6 +1154,7 @@ fn test_render_footer_model_label_below_10pct_opus()
   let aq_b = AccountQuota
   {
     fallback_reason : None,
+    touched_recently : false,
     name                  : "b@x.com".to_string(),
     is_current            : false,
     is_active             : false,
@@ -1162,6 +1182,7 @@ fn test_render_footer_model_label_below_10pct_opus()
   let aq_cur = AccountQuota
   {
     fallback_reason : None,
+    touched_recently : false,
     name                  : "cur@x.com".to_string(),
     is_current            : true,
     is_active             : false,
@@ -1237,6 +1258,7 @@ fn mre_bug335_cache_fallback_reason_surfaced_on_all_render_surfaces()
   let aq = AccountQuota
   {
     fallback_reason : Some( "HTTP transport error: HTTP 429 Too Many Requests".to_string() ),
+    touched_recently : false,
     name                  : "alice".to_string(),
     is_current            : false,
     is_active             : false,

@@ -23,6 +23,7 @@ pub fn mk_aq_ok( utilization : f64 ) -> AccountQuota
   AccountQuota
   {
     fallback_reason : None,
+    touched_recently : false,
     name          : "test@example.com".to_string(),
     is_current    : false,
     is_active             : false,
@@ -50,6 +51,7 @@ pub fn mk_aq_err() -> AccountQuota
   AccountQuota
   {
     fallback_reason : None,
+    touched_recently : false,
     name          : "bad@example.com".to_string(),
     is_current    : false,
     is_active             : false,
@@ -85,6 +87,7 @@ pub fn mk_aq_ok_both( h5_util : f64, d7_util : f64 ) -> AccountQuota
   AccountQuota
   {
     fallback_reason : None,
+    touched_recently : false,
     name          : "test@example.com".to_string(),
     is_current    : false,
     is_active             : false,
@@ -123,6 +126,7 @@ pub fn mk_aq_sort( name : &str, five_hour_util : f64, expires_at_ms : u64 ) -> A
   AccountQuota
   {
     fallback_reason : None,
+    touched_recently : false,
     name          : name.to_string(),
     is_current    : false,
     is_active             : false,
@@ -164,6 +168,7 @@ pub fn mk_aq_sort_weekly(
   AccountQuota
   {
     fallback_reason : None,
+    touched_recently : false,
     name          : name.to_string(),
     is_current    : false,
     is_active             : false,
@@ -224,6 +229,7 @@ pub fn mk_aq_with_reset(
   AccountQuota
   {
     fallback_reason : None,
+    touched_recently : false,
     name          : name.to_string(),
     is_current    : false,
     is_active             : false,
@@ -269,6 +275,7 @@ pub fn mk_aq_with_7d_reset(
   AccountQuota
   {
     fallback_reason : None,
+    touched_recently : false,
     name          : name.to_string(),
     is_current    : false,
     is_active             : false,
@@ -317,6 +324,7 @@ pub fn mk_aq_with_7d_reset_util(
   AccountQuota
   {
     fallback_reason : None,
+    touched_recently : false,
     name          : name.to_string(),
     is_current    : false,
     is_active             : false,
@@ -352,6 +360,7 @@ pub fn mk_named_aq( name : &str, h5_util : f64, d7_util : f64 ) -> AccountQuota
   AccountQuota
   {
     fallback_reason : None,
+    touched_recently : false,
     name          : name.to_string(),
     is_current    : false,
     is_active             : false,
@@ -379,6 +388,7 @@ pub fn mk_named_aq_err( name : &str ) -> AccountQuota
   AccountQuota
   {
     fallback_reason : None,
+    touched_recently : false,
     name          : name.to_string(),
     is_current    : false,
     is_active             : false,
@@ -408,6 +418,7 @@ pub fn mk_aq_with_sonnet_util( utilization : f64 ) -> AccountQuota
   AccountQuota
   {
     fallback_reason : None,
+    touched_recently : false,
     name          : "test@example.com".to_string(),
     is_current    : false,
     is_active             : false,
@@ -442,6 +453,7 @@ pub fn mk_aq_no_sonnet_data() -> AccountQuota
   AccountQuota
   {
     fallback_reason : None,
+    touched_recently : false,
     name          : "test@example.com".to_string(),
     is_current    : false,
     is_active             : false,
@@ -476,6 +488,7 @@ pub fn mk_aq_with_resets_at( resets_at : Option< &str > ) -> AccountQuota
   AccountQuota
   {
     fallback_reason : None,
+    touched_recently : false,
     name          : "test@example.com".to_string(),
     is_current    : false,
     is_active             : false,
@@ -519,6 +532,7 @@ pub fn mk_aq_with_son_idle() -> AccountQuota
   AccountQuota
   {
     fallback_reason : None,
+    touched_recently : false,
     name          : "test@example.com".to_string(),
     is_current    : false,
     is_active             : false,
@@ -578,6 +592,7 @@ pub fn mk_aq_cancelled(
   AccountQuota
   {
     fallback_reason : None,
+    touched_recently : false,
     name          : name.to_string(),
     is_current    : false,
     is_active             : false,
