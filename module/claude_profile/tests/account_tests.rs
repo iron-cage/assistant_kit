@@ -568,9 +568,10 @@ fn sc2_001_expires_at_stays_t0_manipulate_expires_at_in_memory_only()
 #[ test ]
 fn sc4_002_account_json_is_2space_pretty_with_trailing_newline()
 {
-  //! SC-4/002: `{name}.json` is 2-space indented JSON ending with `\n`.
+  //! SC-4/002: the persisted quota cache is 2-space indented JSON ending with `\n`.
   //!
   //! Why: invariant/007 mandates this encoding for all persisted JSON files.
+  //! TSK-500: the cache lives in the local untracked `-cache/{name}.json`.
   let dir = TempDir::new().expect( "temp dir" );
   let credential_store = dir.path().join( "credential" );
   std::fs::create_dir_all( &credential_store ).expect( "create credential store" );
@@ -583,8 +584,8 @@ fn sc4_002_account_json_is_2space_pretty_with_trailing_newline()
     None,
   );
 
-  let content = std::fs::read_to_string( credential_store.join( "alice@acme.com.json" ) )
-    .expect( "SC-4/002: alice@acme.com.json must exist after write_quota_cache" );
+  let content = std::fs::read_to_string( credential_store.join( "-cache" ).join( "alice@acme.com.json" ) )
+    .expect( "SC-4/002: -cache/alice@acme.com.json must exist after write_quota_cache" );
 
   assert!(
     content.ends_with( '\n' ),
@@ -600,7 +601,8 @@ fn sc4_002_account_json_is_2space_pretty_with_trailing_newline()
 fn sc5_002_history_entry_appended_not_truncated()
 {
   //! SC-5/002: Two `write_history_entry()` calls with distinct timestamps produce
-  //! two entries in `cache.history` — the prior entry is preserved, not overwritten.
+  //! two entries in the history ring — the prior entry is preserved, not overwritten.
+  //! TSK-500: the ring lives in the local untracked `-cache/{name}.json`.
   let dir = TempDir::new().expect( "temp dir" );
   let credential_store = dir.path().join( "credential" );
   std::fs::create_dir_all( &credential_store ).expect( "create credential store" );
@@ -622,10 +624,10 @@ fn sc5_002_history_entry_appended_not_truncated()
     None,
   );
 
-  let content = std::fs::read_to_string( credential_store.join( "alice@acme.com.json" ) )
-    .expect( "alice@acme.com.json must exist" );
+  let content = std::fs::read_to_string( credential_store.join( "-cache" ).join( "alice@acme.com.json" ) )
+    .expect( "-cache/alice@acme.com.json must exist" );
   let val : serde_json::Value = serde_json::from_str( &content ).expect( "valid JSON" );
-  let history = val[ "cache" ][ "history" ].as_array().expect( "history must be array" );
+  let history = val[ "history" ].as_array().expect( "history must be array" );
 
   assert_eq!(
     history.len(), 2,

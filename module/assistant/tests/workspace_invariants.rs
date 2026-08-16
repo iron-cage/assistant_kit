@@ -156,7 +156,7 @@ fn workspace_deps_in( content : &str ) -> Vec< String >
 /// Layer * crates (`claude_storage_core`, `claude_auth`, `claude_quota`, `claude_journal`,
 /// `svg_chart`, `json_redact`) are excluded from cross-layer dependency checks (CL-1, CL-2).
 //
-// Fix(BUG-368): `claude_journal` was hardcoded into the Layer-1 arm below, but its own
+// Fix(BUG-002): `claude_journal` was hardcoded into the Layer-1 arm below, but its own
 // `Cargo.toml` `[dependencies]` are all external (serde, serde_json, chrono) with zero
 // workspace-member deps — it meets the Layer * criterion, not Layer 1.
 // Root cause: `layer_of()` is a hand-maintained static table with no mechanical link
@@ -185,7 +185,7 @@ fn layer_of( name : &str ) -> Option< u8 >
     | "claude_journal_viewer" => Some( 2 ),
     "assistant" | "assistant_kit" => Some( 3 ),
     // Layer * — no numeric layer; exempt from CL checks
-    // (includes claude_journal, svg_chart, json_redact — see Fix(BUG-368) doc comment above)
+    // (includes claude_journal, svg_chart, json_redact — see Fix(BUG-002) doc comment above)
     _ => None,
   }
 }

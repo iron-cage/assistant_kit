@@ -24,7 +24,7 @@ Per-invariant-doc test case indices for `claude_runner`. See [invariant/readme.m
 | `009_session_mismatch_detection.md` | Test cases for the session mismatch detection invariant | ✅ |
 | `010_container_only_test_execution.md` | Test cases for the container-only test execution invariant | ✅ |
 | `011_session_source_isolation.md` | Test cases for the session source isolation invariant | ✅ |
-| `012_gate_slot_atomicity.md` | Test cases for the gate slot atomicity invariant (BUG-387, BUG-392, BUG-402, BUG-404) | ✅ |
+| `012_gate_slot_atomicity.md` | Test cases for the gate slot atomicity invariant (BUG-387, BUG-392, BUG-400, BUG-402, BUG-404, BUG-405, BUG-407, BUG-479, BUG-488) | ✅ |
 | `013_slot_wait_message_differentiation.md` | Test cases for the slot-wait message differentiation invariant (BUG-393) | ✅ |
 | `014_json_string_extraction_escape_handling.md` | Test cases for the JSON string extraction escape handling invariant (BUG-394, BUG-395) | ✅ |
 | `015_tools_array_doc_sync.md` | Test cases for the tools array/doc sync bijection invariant | ✅ |
