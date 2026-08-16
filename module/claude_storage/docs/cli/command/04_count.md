@@ -36,7 +36,7 @@ claude_storage .count scope::relevant
 
 **Algorithm (3 steps):**
 1. Context-aware dispatch — no `target::` and no `project::`: count entries in cwd project (matches `.show` default); fall through to global project count if cwd has no project
-2. Target-specific counting — `projects`: storage-level count; `sessions`: project-level (requires `project::` or sums all); `entries`: session-level or project-level sum (skips corrupted sessions with warning); `conversations`: family grouping count
+2. Target-specific counting — `projects`: storage-level count; `sessions`: project-level (requires `project::` or sums all); `entries`: session-level (`session::` uses prefix matching for partial UUIDs, Git-style 8-char prefix, consistent with `.show`/`.export`/`.search`) or project-level sum (skips corrupted sessions with warning); `conversations`: family grouping count
 3. Output bare integer — single number, no formatting, suitable for shell capture (`$(clg .count ...)`)
 
 **Examples:**
@@ -61,6 +61,7 @@ claude_storage .count target::sessions scope::relevant
 - `target::sessions` requires `project::` to avoid counting all sessions in all projects
 - `target::entries` requires both `project::` and `session::`
 - `target::conversations` requires `project::` (currently 1:1 with sessions; will differ once chain detection is implemented)
+- `session::` matches a leading prefix of the session ID (e.g. the first 8 characters of a UUID), never a substring found elsewhere in the ID (BUG-490)
 
 ### Referenced Parameter Groups
 

@@ -63,6 +63,8 @@ claude_storage .show session_id::ID project::/path/to/project
 - Without `session_id::`, resolves to current directory project; exits with `1` if cwd has no project in storage
 - `show_metadata::1` selects metadata-only mode; `show_entries::1` only has an effect nested within that mode (appends a legacy UUID-only entries list) and is a no-op in the default content-first mode, which always shows full entry content regardless
 - `show_stat::1` has no effect in either `show_metadata::1` mode or content mode (both already show the equivalent fields unconditionally)
+- A session file containing a malformed JSONL line no longer breaks `.show` (BUG-489): the corrupted line is skipped and the rest of the session's stats are computed normally. Before the fix, one bad line in one session's file could abort the entire project-level session listing (case (a) above), not just that session's own row.
+- `session_id::` matches a leading prefix of the session ID, never a substring found elsewhere in the ID — a matching predicate shared with `.export`/`.search`/`.tail` that briefly matched substrings anywhere in the ID (risking a silent match on the wrong session) is fixed (BUG-490)
 
 ### Referenced Parameter Groups
 

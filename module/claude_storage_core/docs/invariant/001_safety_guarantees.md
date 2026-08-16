@@ -17,7 +17,7 @@ For all write operations: the library NEVER modifies or deletes existing JSONL e
 
 **Atomic write pattern:** New session files (or rewrites) use a three-step sequence: (1) write to a temporary file in the same directory, (2) sync the temporary file to disk (`fsync`), (3) rename the temporary file over the target. POSIX rename is atomic — readers either see the old file or the new file, never a partially-written intermediate state.
 
-**Format validation:** All JSON parsing validates structure and syntax. Malformed JSONL lines emit a warning and are skipped (graceful degradation). The library never panics on corrupted input.
+**Format validation:** All JSON parsing validates structure and syntax. A malformed JSONL line is silently skipped line-by-line (graceful degradation), not surfaced with a warning — only a whole-file read failure (I/O error or invalid UTF-8) surfaces as an `Error` (BUG-493). The library never panics on corrupted input.
 
 **Path safety:** `encode_path()` and `decode_path()` prevent path traversal by normalizing separators. Raw paths are never interpolated into filesystem operations without encoding.
 

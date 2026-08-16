@@ -60,6 +60,7 @@ claude_storage .search query::error scope::relevant
 - `query::` is required; command exits with `1` if omitted
 - Use `q` alias for shorter syntax: `claude_storage .search q::version_bump`
 - Without `project::`, searches all projects (may be slow on large storage); `scope::` is a more precise alternative for limiting the search boundary
+- `session::` matches a leading prefix of the session ID, never a substring found elsewhere in the ID — a matching predicate shared with `.show`/`.export`/`.tail` that briefly matched substrings anywhere in the ID is fixed (BUG-490)
 
 ### Referenced Parameter Groups
 

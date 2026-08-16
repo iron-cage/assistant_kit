@@ -58,6 +58,8 @@ claude_storage .export session_id::ID output::PATH scope::global
 **Notes:**
 - Both `session_id::` and `output::` are required; command exits with `1` if either is missing
 - Output file is overwritten without warning if it already exists
+- A session file containing a malformed JSONL line no longer breaks `.export` (BUG-489): the corrupted line is skipped and the export proceeds using the rest of the session's valid entries and stats
+- `session_id::` matches a leading prefix of the session ID, never a substring found elsewhere in the ID — a matching predicate shared with `.show`/`.search`/`.tail` that briefly matched substrings anywhere in the ID is fixed (BUG-490)
 
 ### Referenced Formats
 

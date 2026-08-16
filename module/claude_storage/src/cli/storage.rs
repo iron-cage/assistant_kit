@@ -286,12 +286,56 @@ pub( super ) fn load_project_for_param(
 /// # Errors
 ///
 /// Returns `ErrorData` when no session matches.
+///
+/// Fix(BUG-490): Reverted `s.id().contains(session_id)` to
+/// `s.id().starts_with(session_id)`.
+///
+/// Root cause: commit a405168a ("docs: restructure CLI documentation...")
+/// accidentally changed this predicate from `starts_with` to `contains` while
+/// performing unrelated refactor work in the same commit — the doc comment
+/// above was never updated, so it kept describing the pre-regression
+/// contract this fix restores.
+///
+/// Pitfall: a commit's stated scope is not proof of its actual diff; grep the
+/// full diff of any large commit touching source files for unrelated
+/// mechanical changes, even when the message says "docs" only.
 pub( super ) fn find_session_mut< 'a >(
   sessions   : &'a mut [ claude_storage_core::Session ],
   session_id : &str,
 ) -> core::result::Result< &'a mut claude_storage_core::Session, ErrorData >
 {
   sessions.iter_mut()
-    .find( | s | s.id() == session_id || s.id().contains( session_id ) )
+    .find( | s | s.id() == session_id || s.id().starts_with( session_id ) )
     .ok_or_else( || ErrorData::new( ErrorCode::InternalError, format!( "Session not found: {session_id}" ) ) )
+}
+
+/// Find the mutable reference to the most recently modified non-agent session.
+///
+/// Used as the zero-parameter fallback when no `topic::` is given — real Claude
+/// Code sessions are UUID-named, not topic-tagged, so guessing a fixed
+/// `-{topic}` session ID cannot find them (BUG-488). Recency (file mtime) is the
+/// same signal `claude_storage_core::continuation` uses for `--continue`-style
+/// "resume the current session" resolution elsewhere in this ecosystem.
+///
+/// Agent sessions (`id` starting with `agent-`) are excluded, matching
+/// `continuation::most_recent_session_in_dir`'s own exclusion — a sub-agent's
+/// sidecar session file being newer than the main session must never make the
+/// fallback show sub-agent content instead of the main conversation.
+///
+/// # Errors
+///
+/// Returns `ErrorData` when no non-agent session exists.
+pub( super ) fn most_recent_session_mut< 'a >(
+  sessions : &'a mut [ claude_storage_core::Session ],
+) -> core::result::Result< &'a mut claude_storage_core::Session, ErrorData >
+{
+  let idx = sessions.iter()
+    .enumerate()
+    .filter( | ( _, s ) | !s.is_agent_session() )
+    .filter_map( | ( i, s ) | std::fs::metadata( s.storage_path() ).and_then( | m | m.modified() ).ok().map( | t | ( i, t ) ) )
+    .max_by_key( | &( _, t ) | t )
+    .map( | ( i, _ ) | i )
+    .ok_or_else( || ErrorData::new( ErrorCode::InternalError, "No session found in project".to_string() ) )?;
+
+  Ok( &mut sessions[ idx ] )
 }

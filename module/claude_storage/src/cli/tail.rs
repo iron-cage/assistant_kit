@@ -2,15 +2,16 @@
 // BUG-002 — real implementation replacing the hardcoded-output stub
 
 use unilang::{ VerifiedCommand, ExecutionContext, OutputData, ErrorData, ErrorCode };
-use super::storage::{ create_storage, resolve_path_parameter, find_session_mut };
+use super::storage::{ create_storage, resolve_path_parameter, find_session_mut, most_recent_session_mut };
 use super::format::format_entry_content;
 
 /// Display the last N entries of a session (most-recent context refresh).
 ///
 /// Smart behavior based on parameters (see `docs/cli/command/12_tail.md`):
-/// - No parameters → current directory's project, `-default_topic` session, last 4 entries
+/// - No parameters → current directory's project, most recently modified
+///   non-agent session, last 4 entries
 /// - `tail::N` → last N entries (`tail::0` = all entries, uncapped)
-/// - `topic::NAME` → session `-NAME` instead of `-default_topic`
+/// - `topic::NAME` → session `-NAME` explicitly, instead of the recency fallback
 /// - `path::DIR` → resolve the project from `DIR` instead of the current directory
 ///
 /// # Errors
@@ -41,8 +42,7 @@ pub fn tail_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   }
   let tail_count = usize::try_from( tail_count ).expect( "tail < 0 rejected above" );
 
-  let topic = cmd.get_string( "topic" ).unwrap_or( "default_topic" );
-  let session_id = format!( "-{topic}" );
+  let topic = cmd.get_string( "topic" );
 
   let storage = create_storage()?;
   let path_param = cmd.get_string( "path" );
@@ -73,7 +73,26 @@ pub fn tail_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
 
   let mut sessions = project.all_sessions()
     .map_err( | e | ErrorData::new( ErrorCode::InternalError, format!( "Failed to list sessions: {e}" ) ) )?;
-  let session = find_session_mut( &mut sessions, &session_id )?;
+
+  // Fix(BUG-488)
+  // Root cause: an explicit topic:: always resolved to session `-{topic}` via
+  //   exact/substring ID match, but with no topic:: given, the code guessed a
+  //   fixed `-default_topic` ID even though real Claude Code sessions are
+  //   UUID-named — the guess could never match, so the common case (bare
+  //   `.tail` in a project with only native sessions) always failed.
+  // Pitfall: a "default value" is not always the right fallback strategy —
+  //   when the default collides with a naming scheme that never occurs in
+  //   production data, prefer resolving by an orthogonal signal (recency)
+  //   over guessing an ID that happens to match the parameter's own default.
+  let session = if let Some( topic ) = topic
+  {
+    let session_id = format!( "-{topic}" );
+    find_session_mut( &mut sessions, &session_id )?
+  }
+  else
+  {
+    most_recent_session_mut( &mut sessions )?
+  };
 
   let entries = session.entries()
     .map_err( | e | ErrorData::new( ErrorCode::InternalError, format!( "Failed to load entries: {e}" ) ) )?;

@@ -20,7 +20,7 @@ Session topic name appended as a `-{name}` suffix to the base directory path.
 - Error on empty: `"topic must be non-empty"`
 - Error on slash: `"topic must not contain path separators"`
 
-**Default:** unset (no suffix applied) for `.project.path`, `.project.exists`; `default_topic` for `.session.dir`, `.session.ensure`, `.tail`
+**Default:** unset (no suffix applied) for `.project.path`, `.project.exists`; `default_topic` for `.session.dir`, `.session.ensure`; unset (falls back to the most recently modified non-agent session — BUG-488) for `.tail`
 
 **Commands:** `.project.path`, `.project.exists`, `.session.dir`, `.session.ensure`, `.tail`
 
@@ -51,7 +51,7 @@ topic::-default_topic   # (legal — creates /-default_topic... but convention i
 | 9 | [`.project.exists`](../command/09_project_exists.md) | unset | Checks storage path with topic suffix |
 | 10 | [`.session.dir`](../command/10_session_dir.md) | `default_topic` | Appends `-{topic}` to base directory |
 | 11 | [`.session.ensure`](../command/11_session_ensure.md) | `default_topic` | Appends `-{topic}` to base directory |
-| 12 | [`.tail`](../command/12_tail.md) | `default_topic` | Session topic suffix for the resolved session |
+| 12 | [`.tail`](../command/12_tail.md) | unset | Session topic suffix for the resolved session; omitted falls back to the most recently modified non-agent session |
 
 ### Referenced User Stories
 | # | User Story | Persona |

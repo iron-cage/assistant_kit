@@ -20,7 +20,7 @@
 | # | Parameter | Role |
 |---|-----------|------|
 | 9 | [`path::`](../param/09_path.md) | Directory to resolve the project from (default cwd) |
-| 17 | [`topic::`](../param/17_topic.md) | Session topic suffix (default `default_topic`) |
+| 17 | [`topic::`](../param/17_topic.md) | Session topic suffix (default: unset — falls back to the most recently modified session) |
 | 25 | [`tail::`](../param/25_tail.md) | Number of trailing entries to print (default 4) |
 
 ### Related User Stories
@@ -35,7 +35,7 @@
 ```bash
 cd /home/user/myproject
 cls .tail
-# Prints the last 4 entries of the default-topic session for this directory
+# Prints the last 4 entries of the most recently modified session for this directory
 ```
 
 **Step 2: Show more (or fewer) entries**

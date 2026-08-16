@@ -425,8 +425,26 @@ impl Project
   /// ```
   /// # Errors
   ///
-  /// Returns error if the project directory cannot be read or if session
-  /// filtering fails (e.g., cannot read a session file for entry count).
+  /// Returns error if the project directory cannot be read. A session that fails its
+  /// own filter check (e.g. its JSONL file is corrupted or unreadable) is skipped with
+  /// a `Warning:` printed to stderr — see `Fix(BUG-492)` below — matching the graceful
+  /// per-session degradation already used by [`Self::sessions`], [`Self::all_sessions`],
+  /// and [`Self::project_stats`] in this same file.
+  ///
+  /// Fix(BUG-492): Skip a session whose `matches_filter()` call errors, instead of
+  /// aborting the whole loop via `?`.
+  ///
+  /// Root cause: `session.matches_filter( filter )?` hard-propagated any error from
+  /// `Session::count_entries()` (e.g. a crash-truncated JSONL file failing UTF-8
+  /// validation), discarding every already-collected valid session in `filtered` for
+  /// the entire project — not just the corrupted one. This diverged from the 3 other
+  /// per-session loops in this file, which all catch-and-skip-with-warning.
+  ///
+  /// Pitfall: when one function in a file already establishes a per-item error-handling
+  /// convention (catch + `eprintln!` warning + continue), grep for every other loop over
+  /// the same collection type in that file — a sibling added later can easily revert to
+  /// bare `?` and silently re-introduce the exact failure mode the convention exists to
+  /// prevent.
   #[inline]
   pub fn sessions_filtered( &mut self, filter : &crate::SessionFilter ) -> Result< Vec< Session > >
   {
@@ -441,9 +459,11 @@ impl Project
 
     for mut session in all_sessions
     {
-      if session.matches_filter( filter )?
+      match session.matches_filter( filter )
       {
-        filtered.push( session );
+        Ok( true ) => filtered.push( session ),
+        Ok( false ) => {}
+        Err( e ) => eprintln!( "Warning: Skipping corrupted session {}: {e}", session.storage_path().display() ),
       }
     }
 

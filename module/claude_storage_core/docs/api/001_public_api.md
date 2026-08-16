@@ -46,7 +46,7 @@ The public API exposes the storage hierarchy (Storage, Project, Session, Entry),
 
 ### Error Handling
 
-All I/O operations return `Result<T, Error>`. Error variants cover: `Io` (filesystem errors with path context), `Parse` (malformed JSONL with position context), and others. Corrupted JSONL lines are treated as warnings and skipped rather than hard errors, enabling graceful degradation on partially-corrupted sessions.
+All I/O operations return `Result<T, Error>`. Error variants cover: `Io` (filesystem errors with path context), `Parse` (malformed JSONL with position context), and others. A malformed JSONL line within an otherwise-readable session file is silently skipped rather than surfaced as a hard error or a warning, enabling graceful degradation on partially-corrupted sessions — a whole-file read failure still returns `Err` (BUG-493).
 
 Consumers should match on `Error` variants for structured handling rather than converting to string. Error messages include contextual path information for diagnosability.
 

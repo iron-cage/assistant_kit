@@ -277,10 +277,19 @@ fn export_json< W : Write >
     .replace( '"', "\\\"" );
 
   // Collect JSONL lines from the session file
+  //
+  // Fix(BUG-494)
+  // Root cause: `.map_while( std::io::Result::ok )` stops the iterator entirely at the first
+  //   unreadable (e.g. invalid-UTF-8) line, silently dropping every subsequent line too — not
+  //   just the unreadable one — with no error or warning surfaced anywhere.
+  // Pitfall: `map_while` and `filter_map` both take a `T -> Option<U>` closure, but `map_while`
+  //   terminates the iterator on the first `None` while `filter_map` only omits it and continues;
+  //   picking the wrong adaptor silently encodes a truncate-on-first-failure policy instead of
+  //   skip-and-continue, with no compiler or clippy warning either way.
   let file = StdFile::open( &storage_path )?;
   let reader = BufReader::new( file );
   let lines : Vec< String > = reader.lines()
-    .map_while( std::io::Result::ok )
+    .filter_map( std::io::Result::ok )
     .filter( | l | !l.trim().is_empty() )
     .collect();
 

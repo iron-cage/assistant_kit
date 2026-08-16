@@ -15,9 +15,13 @@
 //! - INT-6: Fewer entries than requested prints all available (also covers EC-6)
 //! - INT-7: Exit code 2 when cwd has no project
 //! - INT-8: Negative `tail::` is rejected with exit code 1 (also covers EC-4)
+//! - INT-9: No args falls back to the most recent session when no `-default_topic` session exists
+//! - INT-10: No args picks the most recently modified session among multiple candidates
+//! - INT-11: No args excludes agent sessions from the most-recent fallback
 //! - EC-5: Empty value rejected
 //! - EC-7: Non-integer value rejected
 // BUG-002 — real assertions replacing the "didn't hang" cheating tests
+// BUG-488 — INT-9..INT-11 added for the -default_topic fallback fix
 
 mod common;
 
@@ -326,6 +330,119 @@ fn int_8_negative_tail_rejected_exit_1()
 
   assert_exit( &out, 1 );
   assert_eq!( stderr( &out ).trim_end(), "tail must be non-negative" );
+}
+
+/// INT-9: No args falls back to the most recent session when no `-default_topic`
+/// session exists.
+///
+/// ## Purpose
+/// Validates that the zero-parameter default does not require a literal
+/// `-default_topic` session to exist. Real Claude Code sessions are UUID-named,
+/// never topic-tagged, so the default must resolve by recency instead of
+/// requiring a fixed guessed ID to be present.
+///
+/// ## Coverage
+/// Exit 0; last 4 of 6 entries shown from the UUID-named session (entries 2-5),
+/// oldest-first; entries 0-1 absent. No `-default_topic` session is written.
+///
+/// ## Related Requirements
+/// `tests/docs/cli/command/12_tail.md` — INT-9
+#[ test ]
+fn int_9_no_args_falls_back_to_most_recent_session_when_no_default_topic()
+{
+  let root = tempfile::TempDir::new().unwrap();
+  let cwd  = tempfile::TempDir::new().unwrap();
+
+  common::write_path_project_session( root.path(), cwd.path(), "7380351c-fde9-482a-afc7-ad738781488f", 6 );
+
+  let out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .current_dir( cwd.path() )
+    .arg( ".tail" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  for i in 2..6
+  {
+    assert!( text.contains( &format!( "entry {i}" ) ), "expected entry {i} in output: {text}" );
+  }
+  for i in 0..2
+  {
+    assert!( !text.contains( &format!( "entry {i}" ) ), "did not expect entry {i} in output: {text}" );
+  }
+}
+
+/// INT-10: No args picks the most recently modified session among multiple candidates.
+///
+/// ## Purpose
+/// Validates that the recency fallback actually compares modification times
+/// rather than picking an arbitrary/first-found session when more than one
+/// UUID-named session exists in the project.
+///
+/// ## Coverage
+/// Exit 0; output shows the newer session's marker text, not the older one's.
+///
+/// ## Related Requirements
+/// `tests/docs/cli/command/12_tail.md` — INT-10
+#[ test ]
+fn int_10_no_args_picks_most_recently_modified_session_among_multiple()
+{
+  let root = tempfile::TempDir::new().unwrap();
+  let cwd  = tempfile::TempDir::new().unwrap();
+
+  common::write_path_project_session( root.path(), cwd.path(), "11111111-1111-1111-1111-111111111111", 2 );
+  // Distinguishable mtimes across filesystems (matches continuation_tests.rs's own convention).
+  std::thread::sleep( core::time::Duration::from_millis( 10 ) );
+  common::write_path_project_session_with_last_message( root.path(), cwd.path(), "22222222-2222-2222-2222-222222222222", 1, "newer session marker" );
+
+  let out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .current_dir( cwd.path() )
+    .arg( ".tail" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "newer session marker" ), "expected the more recently modified session's content: {text}" );
+}
+
+/// INT-11: No args excludes agent sessions from the most-recent fallback.
+///
+/// ## Purpose
+/// Validates that an `agent-*` sidecar session — even if more recently
+/// modified than the main session — is never selected by the recency
+/// fallback, matching `claude_storage_core::continuation`'s own established
+/// agent-exclusion convention.
+///
+/// ## Coverage
+/// Exit 0; output shows the main session's content, not the agent session's.
+///
+/// ## Related Requirements
+/// `tests/docs/cli/command/12_tail.md` — INT-11
+#[ test ]
+fn int_11_no_args_excludes_agent_sessions_from_fallback()
+{
+  let root = tempfile::TempDir::new().unwrap();
+  let cwd  = tempfile::TempDir::new().unwrap();
+
+  common::write_path_project_session_with_last_message( root.path(), cwd.path(), "33333333-3333-3333-3333-333333333333", 1, "main session marker" );
+  std::thread::sleep( core::time::Duration::from_millis( 10 ) );
+  common::write_path_project_session_with_last_message( root.path(), cwd.path(), "agent-33333333", 1, "agent session marker" );
+
+  let out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .current_dir( cwd.path() )
+    .arg( ".tail" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "main session marker" ), "expected the main session's content: {text}" );
+  assert!( !text.contains( "agent session marker" ), "did not expect the agent session's content: {text}" );
 }
 
 /// EC-5: Empty `tail::` value is rejected.

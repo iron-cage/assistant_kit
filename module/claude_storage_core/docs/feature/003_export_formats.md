@@ -17,7 +17,7 @@ Export converts a `Session` into a writer-based stream in one of three formats:
 
 **Streaming.** Export writes to any `Write` implementor. Memory usage is O(1) — entries are serialized incrementally without loading all of them simultaneously. The format is selected via `ExportFormat` enum.
 
-**Graceful degradation.** Non-conversation metadata entries (e.g. queue-operation, summary) are automatically skipped during export — see [003_entry_type_format.md](../../../claude_storage/docs/invariant/003_entry_type_format.md) for the full type contract and evidence tiers. Corrupted entries emit a warning and are skipped without aborting the export.
+**Graceful degradation.** Non-conversation metadata entries (e.g. queue-operation, summary) are automatically skipped during export — see [003_entry_type_format.md](../../../claude_storage/docs/invariant/003_entry_type_format.md) for the full type contract and evidence tiers. A malformed/corrupted entry is likewise silently skipped without aborting the export and without emitting a warning; only a whole-file read failure aborts the export with an `Error` (BUG-493).
 
 ### Cross-References
 

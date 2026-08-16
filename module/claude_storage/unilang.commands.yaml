@@ -703,7 +703,7 @@
 
     - name: "topic"
       kind: "String"
-      description: "Session topic name (default: default_topic)"
+      description: "Session topic name (default: unset, falls back to the most recently modified session)"
       hint: "Session topic"
       optional: true
       validation_rules: []

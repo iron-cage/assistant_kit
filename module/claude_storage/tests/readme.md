@@ -34,6 +34,7 @@ tests/
 ├── search_command_test.rs                 # .search parameter validation tests (Phase 1B)
 ├── search_session_partial_uuid_bug.rs     # .search session partial UUID fix (issue-020)
 ├── search_special_characters_bug.rs       # Special character handling (Bug #006, #007)
+├── session_lookup_contains_regression_bug.rs # Session lookup prefix-vs-substring matching (BUG-490)
 ├── session_path_command_test.rs           # .project.path/.project.exists/.session.dir/.session.ensure lifecycle commands
 ├── projects_command_test.rs               # .projects filter/validation/output formatting (show_tree, session/agent/min_entries filters, IT-14..IT-16, IT-50)
 ├── projects_edge_case_test.rs             # .projects scope parameter acceptance/rejection (EC-1..EC-9)
@@ -76,6 +77,7 @@ tests/
 | `search_command_test.rs` | Validate .search command parameters |
 | `search_session_partial_uuid_bug.rs` | Test partial UUID matching in .search session filter |
 | `search_special_characters_bug.rs` | Test special character handling in queries |
+| `session_lookup_contains_regression_bug.rs` | Test session-ID lookup requires prefix match, not substring-anywhere (BUG-490) |
 | `session_path_command_test.rs` | Test .project.path/.project.exists/.session.dir/.session.ensure lifecycle commands |
 | `projects_command_test.rs` | Test .projects filter/validation/output formatting (show_tree, session/agent/min_entries filters, IT-14..IT-16, IT-50) |
 | `projects_edge_case_test.rs` | Test .projects scope parameter acceptance/rejection edge cases (EC-1..EC-9) |

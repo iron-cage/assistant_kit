@@ -161,8 +161,19 @@ pub fn count_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
         //
         // Pitfall: When fixing partial-UUID support in one session lookup, grep for every
         // other `sessions.iter*().find(|s| s.id() == ...)` and apply the same change.
+        //
+        // Fix(BUG-490): Reverted `s.id().contains(sess_id)` to `s.id().starts_with(sess_id)`.
+        //
+        // Root cause: commit a405168a ("docs: restructure CLI documentation...") accidentally
+        // changed this predicate from starts_with to contains while rewriting this match arm
+        // to add the "no session specified" branch — the comment above was left unchanged and
+        // kept describing the pre-regression starts_with contract this fix restores.
+        //
+        // Pitfall: a duplicated lookup predicate (this one mirrors find_session_mut in
+        // storage.rs instead of calling it) can silently drift from its sibling; grep for all
+        // copies of a fixed predicate, not just the canonical one.
         let session = sessions.iter()
-          .find( | s | s.id() == sess_id || s.id().contains( sess_id ) )
+          .find( | s | s.id() == sess_id || s.id().starts_with( sess_id ) )
           .ok_or_else( || ErrorData::new( ErrorCode::InternalError, format!( "Session not found: {sess_id}" ) ) )?;
 
         session.count_entries()

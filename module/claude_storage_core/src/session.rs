@@ -329,10 +329,33 @@ impl Session
     Ok( entries.iter().filter( | e | e.timestamp.as_str() > timestamp ).collect() )
   }
 
+  /// Fix(BUG-491): Corrected doc comment — removed the false claim that this
+  /// function also checks `isSidechain` on the session's entries.
+  ///
+  /// Root cause: the doc comment (present since the initial commit) described
+  /// an aspirational second signal that was never implemented and doesn't
+  /// match the canonical algorithm (`docs/algorithm/001_agent_session_tracking.md`),
+  /// which deliberately keeps filename-based session classification
+  /// (`is_agent_session`) separate from entry-level sidechain tagging
+  /// (`is_agent_entry` — itself never implemented, since it depends on an
+  /// `Entry::agent_id` field that was deliberately never added).
+  ///
+  /// Pitfall: a function's own doc comment can silently drift from the
+  /// authoritative design doc, since nothing forces them to agree. When a doc
+  /// comment and a canonical algorithm/design doc disagree, check which one
+  /// matches actual behavior and existing test expectations before assuming
+  /// the code is what's wrong.
+  ///
   /// Detect if this is an agent/sidechain session
   ///
-  /// Agent sessions typically have filenames like "agent-{id}.jsonl"
-  /// or have isSidechain: true in their entries.
+  /// Checks the filename convention only: `agent-{id}.jsonl` (`id` = filename
+  /// without the `.jsonl` extension). Entry-level `isSidechain`/`agentId`
+  /// tagging is a deliberately separate, per-entry concept — see
+  /// `docs/algorithm/001_agent_session_tracking.md`'s `is_agent_entry` — not
+  /// combined here because doing so would require loading entries (I/O) into
+  /// what is otherwise a cheap, synchronous, filename-only check. In practice
+  /// this doesn't lose detections: Claude Code always writes sidechain entries
+  /// inside a file that also matches the `agent-*.jsonl` naming convention.
   #[must_use]
   #[inline]
   pub fn is_agent_session( &self ) -> bool
@@ -380,9 +403,15 @@ impl Session
         continue;
       }
 
-      // Parse just the fields we need for stats
-      let json = parse_json( line )
-        .map_err( | e | Error::parse( 0, line, &format!( "JSON parse error: {e}" ) ) )?;
+      // Fix(BUG-489)
+      // Root cause: `parse_json(line)?` hard-propagated any per-line JSON syntax error, unlike
+      //   `load_entries()`'s `if let Ok(entry) = Entry::from_json_line(line) { entries.push(entry); }`,
+      //   which silently skips any line it can't parse — a single malformed/truncated line anywhere
+      //   in an otherwise-valid session file made `stats()` fail entirely.
+      // Pitfall: sibling functions reading the same JSONL data must handle malformed input the same
+      //   way — one graceful, one hard-failing creates command-dependent brittleness where `.tail`
+      //   (`load_entries()`) succeeds on a file that `.show`/`.export` (`stats()`) reject outright.
+      let Ok( json ) = parse_json( line ) else { continue; };
 
       // Extract type - only count conversation entries, skip metadata entries
       // In Claude Code v2.0+, the top-level "type" field indicates entry type ("user" or "assistant")
@@ -548,7 +577,9 @@ impl Session
   ///
   /// # Errors
   ///
-  /// Returns error if the session file cannot be opened or if reading a line fails.
+  /// Returns error if the session file cannot be opened. A line that cannot be read (e.g.
+  /// invalid UTF-8 from a crash-truncated write) is silently skipped, not surfaced as an error —
+  /// matching `load_entries()`'s and `stats()`'s per-line graceful degradation.
   #[inline]
   pub fn search( &mut self, filter : &crate::SearchFilter ) -> Result< Vec< crate::SearchMatch > >
   {
@@ -563,7 +594,18 @@ impl Session
 
     for line in reader.lines()
     {
-      let line = line?;
+      // Fix(BUG-494)
+      // Root cause: `let line = line?;` hard-propagated a single unreadable (e.g. invalid-UTF-8)
+      //   line's error through `?`, discarding every match already collected for this session —
+      //   inconsistent with this same loop's own `Entry::from_json_line` skip a few lines below.
+      // Pitfall: `BufReader::lines()` yields one `io::Result<String>` per line; treating a single
+      //   line's `Err` as fatal for the whole stream (instead of skipping just that line) silently
+      //   discards all results gathered so far, not just the unreadable line's own (non-)match.
+      let Ok( line ) = line else
+      {
+        entry_index += 1;
+        continue;
+      };
 
       // Try to extract role and content from JSON without full parsing
       // This is a lightweight check to see if we should parse the full entry

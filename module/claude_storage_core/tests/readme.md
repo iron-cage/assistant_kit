@@ -5,7 +5,7 @@
 The claude_storage_core test suite covers the core storage library: JSON parsing, path
 encoding/decoding, session filtering, content search, and export. The suite is split between
 integration tests that exercise real `~/.claude/` storage and unit tests that run
-fully in-process. Eight of the twelve files are bug reproducers — each documents a parse,
+fully in-process. Ten of the seventeen files are bug reproducers — each documents a parse,
 encoding, or storage defect found in production data with 5-section root-cause documentation.
 `status_global_stats_fast_bug.rs` covers both issue-015 (performance) and issue-018 (agent
 session discovery for Claude Code v2.x format) with corner case tests for subagents/ traversal.
@@ -21,11 +21,14 @@ tests/
 ├── count_entries_bug.rs                   # Bug Reproducer (issue-016): count_entries vs stats mismatch
 ├── export.rs                              # Export integration tests (markdown, JSON, text)
 ├── filtering.rs                           # Session and project filtering integration tests
+├── is_agent_session_doc_mismatch_bug.rs   # Bug Reproducer (BUG-491): doc comment claimed isSidechain check that never existed
 ├── json_multibyte_bug.rs                  # Bug Reproducer (bug-1): byte/char index mismatch
 ├── json_surrogate_pair_bug.rs             # Bug Reproducer (issue-001): UTF-16 surrogate pairs
 ├── path_decoding_hyphen_component_bug.rs  # Bug reproducer: hyphen-prefixed component decoding
 ├── path_encoding_double_slash_bug.rs      # Bug reproducer: double-slash from lossy encoding
 ├── search.rs                              # Content search integration tests
+├── sessions_filtered_corrupted_session_bug.rs # Bug Reproducer (BUG-492): sessions_filtered() discarded project on one corrupted session
+├── stats_malformed_line_bug.rs            # Bug Reproducer (BUG-489): stats() hard-fail on malformed line
 ├── status_global_stats_fast_bug.rs        # Bug Reproducer (issue-015): global_stats() performance
 ├── string_matcher.rs                      # StringMatcher unit tests (case-insensitive matching)
 └── underscore_encoding_compatibility.rs   # Bug reproducer: underscore vs hyphen encoding mismatch
@@ -41,11 +44,14 @@ tests/
 | `count_entries_bug.rs` | Reproduce and verify fix for count_entries() vs stats() mismatch |
 | `export.rs` | Integration tests for session export (markdown, JSON, text formats) |
 | `filtering.rs` | Session and project filter composition integration tests |
+| `is_agent_session_doc_mismatch_bug.rs` | Lock in filename-only `is_agent_session()` contract; regression guard for BUG-491 |
 | `json_multibyte_bug.rs` | Reproduce and verify fix for multi-byte UTF-8 parser bug |
 | `json_surrogate_pair_bug.rs` | Reproduce and verify fix for UTF-16 surrogate pair parsing |
 | `path_decoding_hyphen_component_bug.rs` | Reproduce and verify fix for hyphen component decode |
 | `path_encoding_double_slash_bug.rs` | Reproduce and verify fix for lossy path encoding |
 | `search.rs` | Content search across sessions integration tests |
+| `sessions_filtered_corrupted_session_bug.rs` | Lock in that one corrupted session must not discard a project's other valid sessions; regression guard for BUG-492 |
+| `stats_malformed_line_bug.rs` | Reproduce and verify fix for stats() hard-fail on malformed JSONL line |
 | `status_global_stats_fast_bug.rs` | Reproduce and verify fix for global_stats() performance bug |
 | `string_matcher.rs` | Unit tests for StringMatcher case-insensitive substring matching |
 | `underscore_encoding_compatibility.rs` | Reproduce and verify fix for underscore/hyphen encoding |
@@ -279,6 +285,27 @@ cargo nextest run --all-features -- --include-ignored
 - **Component**: `src/path.rs` — path encoder
 - **Issue**: v1.0.1 encoder preserved underscores (`/claude_storage` → `-claude_storage`); Claude Code replaces them (`/claude_storage` → `-claude-storage`), causing project-not-found errors
 - **Fix**: Encoder now replaces underscores with hyphens to match Claude Code behavior
+
+### BUG-489: Session::stats() Hard-Failed on the First Malformed JSONL Line
+- **File**: `stats_malformed_line_bug.rs`
+- **Component**: `src/session.rs::stats()`
+- **Issue**: A single syntactically-invalid JSONL line anywhere in a session file made `stats()` return `Err`, discarding all counts/tokens/timestamps accumulated from valid lines around it; sibling `load_entries()` reads the same file successfully
+- **Fix**: Changed the per-line `parse_json(line).map_err(...)?` to `let Ok(json) = parse_json(line) else { continue; };`, mirroring `load_entries()`'s established silent-skip "Graceful Degradation Design"
+- **Root Cause**: Hard `?`-propagation on a per-line parse error, inconsistent with the sibling function processing the same JSONL data and with the crate's own documented invariant (`docs/invariant/001_safety_guarantees.md`: "Malformed JSONL lines emit a warning and are skipped")
+
+### BUG-491: is_agent_session()'s Doc Comment Claimed an isSidechain Check That Was Never Implemented
+- **File**: `is_agent_session_doc_mismatch_bug.rs`
+- **Component**: `src/session.rs::is_agent_session()`
+- **Issue**: Doc comment claimed detection via filename prefix OR `isSidechain: true` in entries; code only ever checked the filename prefix — a reader could reasonably (and incorrectly) assume a non-`agent-`-prefixed session with sidechain entries would be detected
+- **Fix**: Corrected the doc comment to describe only the actual filename-based check; no code logic changed — the implementation already matched the canonical algorithm (`docs/algorithm/001_agent_session_tracking.md`), which keeps filename-based `is_agent_session` and entry-based `is_agent_entry` deliberately separate
+- **Root Cause**: The doc comment (present since the initial commit) described an aspirational second signal that was never implemented and never matched the canonical algorithm doc
+
+### BUG-492: sessions_filtered() Discarded an Entire Project's Session List on One Corrupted Session
+- **File**: `sessions_filtered_corrupted_session_bug.rs`
+- **Component**: `src/project.rs::sessions_filtered()`
+- **Issue**: `session.matches_filter( filter )?` hard-propagated a `Session::count_entries()` failure (e.g. a crash-truncated JSONL file failing UTF-8 validation) from `matches_filter()`'s `min_entries` branch, discarding every already-collected valid session in the project — not just the corrupted one
+- **Fix**: Changed the loop to `match session.matches_filter( filter ) { Ok(true) => ..., Ok(false) => {}, Err(e) => eprintln!("Warning: ...") }`, mirroring the graceful per-session skip already used by `sessions()`, `all_sessions()`, and `project_stats()` in the same file
+- **Root Cause**: `sessions_filtered()` was the sole outlier among 4 per-session loops in `project.rs` still using hard `?`-propagation instead of the file's own established catch-and-skip convention
 
 ## Related Documentation
 
