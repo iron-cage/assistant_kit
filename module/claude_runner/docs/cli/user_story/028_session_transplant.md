@@ -21,6 +21,8 @@
 - **AC-6 (Precedence):** When both `--session-from` and `--session-dir` are given, `--session-dir` takes precedence.
 - **AC-7 (Isolation):** The source directory's session files are never modified by the cross-loaded run.
 
+**Mechanism:** the runner physically copies the source session file into the target's own storage before spawn and injects bare `-c` — see [`../param/076_session_from.md`](../param/076_session_from.md) § Behavior. New turns append to the transplanted copy in target storage; the source file itself is never modified (AC-7).
+
 ### Primary Flags
 
 | Flag | Role |

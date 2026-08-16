@@ -202,6 +202,47 @@ pub fn parse_usage_params( cmd : &VerifiedCommand ) -> Result< UsageParams, Erro
     }
     _ => return Err( ErrorData::new( ErrorCode::ArgumentTypeMismatch, "min_7d:: must be an integer 0–100".to_string() ) ),
   };
+  // ── Stale-first fetch reduction (TSK-499) ───────────────────────────────────
+  // Explicit stalest::0 is a contradiction (an empty fetch set), distinct from the
+  // param being absent — hence the presence-aware check inside the match arm.
+  let stalest = match cmd.arguments.get( "stalest" )
+  {
+    None                        => 0_u32,
+    Some( Value::Integer( n ) ) =>
+    {
+      let k = u32::try_from( *n ).map_err( |_| ErrorData::new( ErrorCode::ArgumentTypeMismatch, "stalest:: must be a positive integer".to_string() ) )?;
+      if k == 0
+      {
+        return Err( ErrorData::new( ErrorCode::ArgumentTypeMismatch, "stalest:: must be at least 1 (an empty fetch set is a contradiction)".to_string() ) );
+      }
+      k
+    }
+    _ => return Err( ErrorData::new( ErrorCode::ArgumentTypeMismatch, "stalest:: must be a positive integer".to_string() ) ),
+  };
+  let max_age = match cmd.arguments.get( "max_age" )
+  {
+    None                        => 0_u64,
+    Some( Value::Integer( n ) ) => u64::try_from( *n ).map_err( |_| ErrorData::new( ErrorCode::ArgumentTypeMismatch, "max_age:: must be a non-negative integer (seconds)".to_string() ) )?,
+    _ => return Err( ErrorData::new( ErrorCode::ArgumentTypeMismatch, "max_age:: must be a non-negative integer (seconds)".to_string() ) ),
+  };
+  // max_age is an eligibility filter over the stalest selection — meaningless alone.
+  // Presence-based (not value-based) so an explicit max_age::0 is rejected too.
+  if cmd.arguments.contains_key( "max_age" ) && stalest == 0
+  {
+    return Err( ErrorData::new(
+      ErrorCode::ArgumentTypeMismatch,
+      "max_age:: requires stalest:: (it filters the stalest selection's eligibility)".to_string(),
+    ) );
+  }
+  // only_active retains a single row before fetch; a K-oldest selection over one
+  // row is self-contradictory — same shape as the solo/rotate exclusion above.
+  if stalest > 0 && only_active
+  {
+    return Err( ErrorData::new(
+      ErrorCode::ArgumentTypeMismatch,
+      "stalest:: and only_active::1 are mutually exclusive".to_string(),
+    ) );
+  }
   // ── Format / extraction (TSK-224) ───────────────────────────────────────────
   let format = match cmd.arguments.get( "format" )
   {
@@ -258,7 +299,7 @@ pub fn parse_usage_params( cmd : &VerifiedCommand ) -> Result< UsageParams, Erro
     refresh, live, interval, jitter, trace, sort, desc : desc_param, prefer, cols, touch, imodel, effort,
     count, offset, only_active, only_next, min_5h : h5_min, min_7d : d7_min, only_valid, exclude_exhausted,
     format, get, abs, no_color, set_model,
-    rotate, force, who, solo,
+    rotate, force, who, solo, stalest, max_age,
   } )
 }
 

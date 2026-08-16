@@ -75,15 +75,151 @@ fn resolve_effective_dir( cli : &CliArgs ) -> Option< std::path::PathBuf >
   }
 }
 
+/// A planned physical copy of a source session file into the target project's own
+/// session storage, executed by `execute_session_transplant` just before spawn (BUG-490).
+#[ derive( Debug ) ]
+pub( crate ) struct SessionTransplant
+{
+  /// Qualifying source session file (`<uuid>.jsonl`) to copy.
+  pub( crate ) source_file : std::path::PathBuf,
+  /// Target project's encoded storage directory the copy lands in.
+  pub( crate ) target_storage_dir : std::path::PathBuf,
+}
+
+/// Side-band data `build_claude_command` hands the run dispatcher: the effective
+/// working directory (post `--dir`/`--subdir` resolution) and the session
+/// transplant plan, when one applies.
+#[ derive( Debug ) ]
+pub( crate ) struct RunPreparation
+{
+  /// Effective working directory after `--dir`/`--subdir` resolution; `None` = cwd.
+  pub( crate ) effective_working_dir : Option< std::path::PathBuf >,
+  /// Physical session copy to perform before spawn (BUG-490), if applicable.
+  pub( crate ) transplant : Option< SessionTransplant >,
+}
+
+/// Resolve `raw` to its physical absolute form: `canonicalize` when the path exists,
+/// else a lexical cwd-join that drops `.` components.
+///
+/// claude derives storage names from its physical getcwd, so a relative or symlinked
+/// path must resolve to the same physical absolute form or the encoded name silently
+/// misses the real storage dir (`./src` would encode as `---src`).
+fn physical_abs( raw : &std::path::Path ) -> std::path::PathBuf
+{
+  std::fs::canonicalize( raw ).unwrap_or_else( | _ |
+  {
+    let joined = if raw.is_absolute() { raw.to_path_buf() }
+    else
+    {
+      std::env::current_dir()
+        .map_or_else( | _ | raw.to_path_buf(), | cwd | cwd.join( raw ) )
+    };
+    joined.components().collect()
+  } )
+}
+
+/// Locate the on-disk file for session `id` inside `storage`: exact `<id>.jsonl` join
+/// when present, else a directory scan matching stem == `id` with a case-insensitive
+/// `jsonl` extension — qualification is extension-case-insensitive, mirroring
+/// `claude_storage_core::continuation`'s own scan.
+fn session_file_path( storage : &std::path::Path, id : &str ) -> Option< std::path::PathBuf >
+{
+  let exact = storage.join( format!( "{id}.jsonl" ) );
+  if exact.is_file() { return Some( exact ); }
+  std::fs::read_dir( storage ).ok()?
+    .filter_map( Result::ok )
+    .map( | entry | entry.path() )
+    .find( | path |
+    {
+      path.file_stem().and_then( std::ffi::OsStr::to_str ) == Some( id )
+        && path.extension().and_then( std::ffi::OsStr::to_str )
+          .is_some_and( | ext | ext.eq_ignore_ascii_case( "jsonl" ) )
+    } )
+}
+
+/// Bump `path`'s mtime by rewriting its first byte in place (read, seek back, write).
+///
+/// `File::set_modified` needs Rust 1.75; the workspace MSRV is 1.74 — this is the
+/// MSRV-compatible equivalent. Content is unchanged: the same byte is written back.
+fn refresh_mtime( path : &std::path::Path ) -> std::io::Result< () >
+{
+  use std::io::{ Read, Seek, Write };
+  let mut file = std::fs::OpenOptions::new().read( true ).write( true ).open( path )?;
+  let mut first = [ 0u8; 1 ];
+  file.read_exact( &mut first )?;
+  file.seek( std::io::SeekFrom::Start( 0 ) )?;
+  file.write_all( &first )?;
+  Ok( () )
+}
+
+/// Execute a planned session transplant: copy the source session file into the target
+/// project's own storage so a plain `claude -c` there continues the cloned history.
+///
+/// Fix(BUG-490): physical copy replaces the dead `CLAUDE_CODE_SESSION_DIR` export.
+/// Root cause: claude ≥2.x ignores `CLAUDE_CODE_SESSION_DIR` for both reads and writes,
+///   so the env-var redirect `--session-from` relied on was a silent no-op.
+/// Pitfall: never overwrite a non-empty destination — the target copy may have diverged
+///   since an earlier clone; only its mtime is refreshed so `-c` still selects it.
+///   Failures warn loudly and proceed: `-c` against an empty target trips claude's own
+///   rejection (BUG-428 fallback), a stale non-empty one trips the BUG-320 mismatch check.
+pub( crate ) fn execute_session_transplant( plan : &SessionTransplant )
+{
+  let Some( file_name ) = plan.source_file.file_name() else
+  {
+    eprintln!
+    (
+      "[Runner] warning: session transplant skipped — source has no file name: {}",
+      plan.source_file.display()
+    );
+    return;
+  };
+  if let Err( e ) = std::fs::create_dir_all( &plan.target_storage_dir )
+  {
+    eprintln!
+    (
+      "[Runner] warning: session transplant failed — cannot create {}: {e}",
+      plan.target_storage_dir.display()
+    );
+    return;
+  }
+  let dest = plan.target_storage_dir.join( file_name );
+  let dest_len = std::fs::metadata( &dest ).ok().map( | meta | meta.len() );
+  if dest_len.is_some_and( | len | len > 0 )
+  {
+    // Non-empty destination = (possibly diverged) history already present for this
+    // session id — refresh its mtime so continuation selection picks it, never overwrite.
+    if let Err( e ) = refresh_mtime( &dest )
+    {
+      eprintln!
+      (
+        "[Runner] warning: session transplant mtime refresh failed for {}: {e}",
+        dest.display()
+      );
+    }
+    return;
+  }
+  if let Err( e ) = std::fs::copy( &plan.source_file, &dest )
+  {
+    eprintln!
+    (
+      "[Runner] warning: session transplant copy failed {} -> {}: {e}",
+      plan.source_file.display(),
+      dest.display()
+    );
+  }
+}
+
 /// Translate parsed CLI args into a `ClaudeCommand` builder together with the
-/// expected `SessionId` for post-execution mismatch detection (BUG-320).
+/// expected `SessionId` for post-execution mismatch detection (BUG-320) and the
+/// `RunPreparation` side-band (effective working dir + session transplant plan, BUG-490).
 ///
 /// Session continuation (`-c`) is applied by default unless `--new-session` is set
 /// or no prior session exists in the configured storage directory.
 /// The returned `Option<SessionId>` is `Some(uuid)` when `-c` was injected, allowing
 /// the caller to verify that claude actually resumed that session.
 #[ allow( clippy::too_many_lines ) ] // mechanical dispatch — one block per CLI flag mapped to the command builder
-pub( crate ) fn build_claude_command( cli : &CliArgs ) -> ( ClaudeCommand, Option< SessionId > )
+pub( crate ) fn build_claude_command( cli : &CliArgs )
+  -> ( ClaudeCommand, Option< SessionId >, RunPreparation )
 {
   let mut builder = ClaudeCommand::new();
 
@@ -97,42 +233,33 @@ pub( crate ) fn build_claude_command( cli : &CliArgs ) -> ( ClaudeCommand, Optio
     builder = builder.with_max_output_tokens( n );
   }
   // --session-from: resolve source session dir (--session-dir wins when both are present).
-  // Computes scope_for(source_dir).claude_session_dir so the subprocess reads sessions from
-  // the source project's encoded storage path rather than the current working directory.
+  // Computes scope_for(source_dir).claude_session_dir — the source project's encoded
+  // storage path — used below for expected-session lookup and the transplant plan.
   //
-  // The raw value is canonicalized before encoding: claude derives storage names from its
-  // physical getcwd, so a relative or symlinked source path must resolve to the same
-  // physical absolute form or the encoded name silently misses the real storage dir
-  // (`./src` would encode as `---src`). Nonexistent paths (no storage can match anyway)
-  // fall back to a lexical cwd-join that drops `.` components. Empty values are ignored
-  // entirely — same empty-is-identity rule as `--subdir ""` (BUG-229); without the filter
-  // an empty value encodes to the `-unknown` fallback dir and actively redirects the
-  // subprocess session storage there.
+  // The raw value is resolved to its physical absolute form before encoding (see
+  // `physical_abs`). Empty values are ignored entirely — same empty-is-identity rule as
+  // `--subdir ""` (BUG-229); without the filter an empty value encodes to the `-unknown`
+  // fallback dir and actively targets that storage.
+  //
+  // Fix(BUG-490): this dir is no longer exported as CLAUDE_CODE_SESSION_DIR — claude ≥2.x
+  //   ignores that variable for both reads and writes, so the export made --session-from
+  //   a silent no-op. The source session is instead physically copied into the target's
+  //   own storage (see `SessionTransplant` / `execute_session_transplant`).
+  // Root cause: the feature's only mechanism was an env contract claude dropped.
+  // Pitfall: -c injection and expected-id logic still key off the SOURCE storage dir —
+  //   after the copy claude continues that same uuid in the target, so the source's
+  //   most-recent session id remains the correct expected id.
   let session_from_dir : Option< std::path::PathBuf > = if cli.session_dir.is_none()
   {
     cli.session_from.as_deref()
       .filter( | src | !src.is_empty() )
       .map( | src |
       {
-        let raw = std::path::Path::new( src );
-        let abs = std::fs::canonicalize( raw ).unwrap_or_else( | _ |
-        {
-          let joined = if raw.is_absolute() { raw.to_path_buf() }
-          else
-          {
-            std::env::current_dir()
-              .map_or_else( | _ | raw.to_path_buf(), | cwd | cwd.join( raw ) )
-          };
-          joined.components().collect()
-        } );
+        let abs = physical_abs( std::path::Path::new( src ) );
         claude_storage_core::scope_for( &abs ).claude_session_dir
       } )
   }
   else { None };
-  if let Some( ref src_dir ) = session_from_dir
-  {
-    builder = builder.with_session_dir( src_dir.to_string_lossy().into_owned() );
-  }
   // Determine print mode early — used for -c injection, effort injection, and chrome
   // suppression.  Must precede expected_id so all three guards below can reference use_print.
   // Fix(BUG-227): message without -p was silently using TTY passthrough,
@@ -168,6 +295,32 @@ pub( crate ) fn build_claude_command( cli : &CliArgs ) -> ( ClaudeCommand, Optio
       effective_working_dir.as_deref(),
     )
   };
+  // Transplant plan (BUG-490): session_from_dir is Some only when --session-dir is
+  // absent; expected_id is Some only when not --new-session and a qualifying source
+  // session exists — together they gate the physical copy of the source session file
+  // into the TARGET's own encoded storage.
+  // Pitfall: when source and target encode to the same storage dir, no copy is planned —
+  //   fs::copy onto the same path truncates the file it is reading from.
+  let transplant = if let ( Some( src_storage ), Some( id ) )
+    = ( &session_from_dir, &expected_id )
+  {
+    let target_dir = effective_working_dir.as_deref().map_or_else(
+      || std::env::current_dir().unwrap_or_else( | _ | std::path::PathBuf::from( "." ) ),
+      std::path::Path::to_path_buf,
+    );
+    let target_storage =
+      claude_storage_core::scope_for( &physical_abs( &target_dir ) ).claude_session_dir;
+    if target_storage == *src_storage { None }
+    else
+    {
+      session_file_path( src_storage, id.as_str() ).map( | source_file | SessionTransplant
+      {
+        source_file,
+        target_storage_dir : target_storage,
+      } )
+    }
+  }
+  else { None };
   // Fix(BUG-426): gate -c injection on message-presence (message, --print, --file,
   //   stdin-content) OR cli.interactive — previously unconditional whenever a prior
   //   session existed, regardless of whether anything would follow -c as the resumed
@@ -358,5 +511,13 @@ pub( crate ) fn build_claude_command( cli : &CliArgs ) -> ( ClaudeCommand, Optio
     builder = builder.with_compact_window( None );
   }
 
-  ( builder, expected_id )
+  (
+    builder,
+    expected_id,
+    RunPreparation
+    {
+      effective_working_dir,
+      transplant,
+    },
+  )
 }
