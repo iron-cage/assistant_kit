@@ -21,9 +21,8 @@ fn test_apply_touch_error_account_skips_before_touch_idle_guard()
   // Cache has touch_idle=false keyed by the error account's name ("bad@example.com").
   // If the error guard were absent, touch_skip_reason would consult this entry and
   // return the touch_idle reason instead — making this a real guard-ordering test.
-  claude_profile_core::account::write_cache_string(
-    store.path(), "bad@example.com", "fetched_at",
-    &claude_profile_core::account::chrono_now_utc(),
+  claude_profile_core::account::write_quota_cache(
+    store.path(), "bad@example.com", None, None, None,
   );
   claude_profile_core::account::write_cache_bool(
     store.path(), "bad@example.com", "touch_idle", false,
@@ -520,9 +519,8 @@ fn test_mre_bug488_touch_idle_guard_age_gated()
   // Scenario A: fresh mark_touched → guard fires (recently touched, endpoint still lagging).
   {
     let store = tempfile::TempDir::new().unwrap();
-    claude_profile_core::account::write_cache_string(
-      store.path(), "test@example.com", "fetched_at",
-      &claude_profile_core::account::chrono_now_utc(),
+    claude_profile_core::account::write_quota_cache(
+      store.path(), "test@example.com", None, None, None,
     );
     mark_touched( store.path(), "test@example.com" );
     let aq = mk_aq_with_resets_at( None );
@@ -536,9 +534,8 @@ fn test_mre_bug488_touch_idle_guard_age_gated()
   // Scenario B: stale last_touch_at (2020) → grace expired → guard must NOT fire.
   {
     let store = tempfile::TempDir::new().unwrap();
-    claude_profile_core::account::write_cache_string(
-      store.path(), "test@example.com", "fetched_at",
-      &claude_profile_core::account::chrono_now_utc(),
+    claude_profile_core::account::write_quota_cache(
+      store.path(), "test@example.com", None, None, None,
     );
     claude_profile_core::account::write_cache_bool(
       store.path(), "test@example.com", "touch_idle", false,
@@ -558,9 +555,8 @@ fn test_mre_bug488_touch_idle_guard_age_gated()
   // guard must NOT fire — the forever-skip regression guard.
   {
     let store = tempfile::TempDir::new().unwrap();
-    claude_profile_core::account::write_cache_string(
-      store.path(), "test@example.com", "fetched_at",
-      &claude_profile_core::account::chrono_now_utc(),
+    claude_profile_core::account::write_quota_cache(
+      store.path(), "test@example.com", None, None, None,
     );
     claude_profile_core::account::write_cache_bool(
       store.path(), "test@example.com", "touch_idle", false,
@@ -588,9 +584,8 @@ fn test_bug488_mark_touched_roundtrip_survives_write_quota_cache()
 
   let store = tempfile::TempDir::new().unwrap();
 
-  claude_profile_core::account::write_cache_string(
-    store.path(), "test@example.com", "fetched_at",
-    &claude_profile_core::account::chrono_now_utc(),
+  claude_profile_core::account::write_quota_cache(
+    store.path(), "test@example.com", None, None, None,
   );
   mark_touched( store.path(), "test@example.com" );
 
@@ -707,9 +702,8 @@ fn test_bug488_derive_touched_recently_from_cache_flags()
   // Scenario A: fresh flags (as mark_touched writes them) → field derived true.
   {
     let store = tempfile::TempDir::new().unwrap();
-    claude_profile_core::account::write_cache_string(
-      store.path(), "test@example.com", "fetched_at",
-      &claude_profile_core::account::chrono_now_utc(),
+    claude_profile_core::account::write_quota_cache(
+      store.path(), "test@example.com", None, None, None,
     );
     mark_touched( store.path(), "test@example.com" );
     let mut accounts = vec![ mk_aq_with_resets_at( None ) ];
@@ -723,9 +717,8 @@ fn test_bug488_derive_touched_recently_from_cache_flags()
   // Scenario B: stale flags (last_touch_at 2020) → grace expired → field stays false.
   {
     let store = tempfile::TempDir::new().unwrap();
-    claude_profile_core::account::write_cache_string(
-      store.path(), "test@example.com", "fetched_at",
-      &claude_profile_core::account::chrono_now_utc(),
+    claude_profile_core::account::write_quota_cache(
+      store.path(), "test@example.com", None, None, None,
     );
     claude_profile_core::account::write_cache_bool(
       store.path(), "test@example.com", "touch_idle", false,
@@ -744,9 +737,8 @@ fn test_bug488_derive_touched_recently_from_cache_flags()
   // Scenario C: no flags at all (fetched_at only) → field stays false.
   {
     let store = tempfile::TempDir::new().unwrap();
-    claude_profile_core::account::write_cache_string(
-      store.path(), "test@example.com", "fetched_at",
-      &claude_profile_core::account::chrono_now_utc(),
+    claude_profile_core::account::write_quota_cache(
+      store.path(), "test@example.com", None, None, None,
     );
     let mut accounts = vec![ mk_aq_with_resets_at( None ) ];
     derive_touched_recently( &mut accounts, store.path() );

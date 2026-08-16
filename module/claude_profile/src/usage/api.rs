@@ -144,7 +144,16 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
       format!( "cannot read credential store: {e}" ),
     ) )?;
   if params.only_active { acct_list.retain( |aq| aq.is_active ); }
-  let mut accounts = fetch_quota_for_list( &acct_list, &credential_store, &live_creds_file, false, params.trace, params.solo );
+
+  // Stale-first fetch reduction (task 499): with stalest::K (and not rotate::1 —
+  // rotation needs a full fresh ranking), select the K oldest-cache accounts before
+  // the HTTP loop. Placed after the only_active retain (BUG-245 ordering) so both
+  // pre-fetch reducers act on the same list; mutual exclusion at parse time keeps
+  // them from combining.
+  let now_secs = std::time::SystemTime::now().duration_since( std::time::UNIX_EPOCH ).unwrap_or_default().as_secs();
+  let stale_selected = super::stalest::reduction_applies( params.stalest, params.rotate )
+    .then( || super::stalest::select_stalest( &acct_list, &credential_store, params.stalest, params.max_age, now_secs ) );
+  let mut accounts = fetch_quota_for_list( &acct_list, &credential_store, &live_creds_file, false, params.trace, params.solo, stale_selected.as_ref() );
 
   // Retry-once per account on 401/403 auth errors or 429+locally-expired: if
   // refresh::1 and any account's quota fetch failed with an auth error OR a

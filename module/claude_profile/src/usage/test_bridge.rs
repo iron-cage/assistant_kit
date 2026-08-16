@@ -64,5 +64,8 @@ pub use super::subprocess::{ resolve_model, resolve_effort, effort_pre_args };
 pub use super::fetch::{ inject_synthetic_if_new, parse_u64_from_str, fetch_quota_for_list };
 pub use super::fetch_cache::read_cached_quota;
 
+// ── Stalest ───────────────────────────────────────────────────────────────
+pub use super::stalest::{ select_stalest, reduction_applies };
+
 // ── Types (UsageParams) ───────────────────────────────────────────────────
 pub use super::types::UsageParams;

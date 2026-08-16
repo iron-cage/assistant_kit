@@ -242,15 +242,16 @@ fn test_mre_bug215_apply_touch_fires_when_7d_timer_absent()
 /// the guard checks `== Some(false)` exclusively. An account with no cache entry
 /// proceeds to the `all_running` check as normal.
 ///
-/// **Test setup — `fetched_at` required by `read_quota_cache`**: calling
-/// `write_cache_bool(..., "touch_idle", false)` alone writes
-/// `{ "cache": { "touch_idle": false } }` without a `"fetched_at"` field.
-/// `read_quota_cache` returns `None` when `"fetched_at"` is absent — the guard
-/// is never entered and no trace line is emitted. Any test that requires
-/// `read_quota_cache` to return `Some` must call
-/// `write_cache_string(..., "fetched_at", &chrono_now_utc())` BEFORE
-/// `write_cache_bool`. This caused Phase 5 reiteration during BUG-288 Fix B
-/// implementation (2026-06-13).
+/// **Test setup — volatile cache required by `read_quota_cache`**: calling
+/// `write_cache_bool(..., "touch_idle", false)` alone writes a top-level
+/// `touch_idle` key into the tracked `{name}.json` (TSK-500) — no volatile
+/// entry exists. `read_quota_cache` returns `None` when the local
+/// `-cache/{name}.json` lacks `"fetched_at"` — the guard is never entered
+/// and no trace line is emitted. Any test that requires `read_quota_cache`
+/// to return `Some` must call `write_quota_cache( store, name, None, None,
+/// None )` (stamps `fetched_at` in the local cache) BEFORE `write_cache_bool`.
+/// Originally caused Phase 5 reiteration during BUG-288 Fix B implementation
+/// (2026-06-13), when the fixture was a raw `write_cache_string( "fetched_at" )`.
 #[ doc = "bug_reproducer(BUG-288-FixB)" ]
 #[ test ]
 fn test_mre_bug288_apply_touch_skips_touch_idle_false()
@@ -261,9 +262,8 @@ fn test_mre_bug288_apply_touch_skips_touch_idle_false()
   // (api.rs:330-332). The account is "already activated" by that subprocess, but
   // the quota endpoint hasn't propagated the new session's resets_at yet.
   // fetched_at must be written first — read_quota_cache returns None if absent.
-  claude_profile_core::account::write_cache_string(
-    store.path(), "test@example.com", "fetched_at",
-    &claude_profile_core::account::chrono_now_utc(),
+  claude_profile_core::account::write_quota_cache(
+    store.path(), "test@example.com", None, None, None,
   );
   // mark_touched writes the paired flags the age-gated guard requires (Fix BUG-488).
   mark_touched( store.path(), "test@example.com" );
@@ -384,9 +384,8 @@ fn test_apply_touch_touch_idle_true_not_skipped_by_guard()
   // None for both Some(false) and Some(true) identically.
   {
     let store_a = tempfile::TempDir::new().unwrap();
-    claude_profile_core::account::write_cache_string(
-      store_a.path(), "test@example.com", "fetched_at",
-      &claude_profile_core::account::chrono_now_utc(),
+    claude_profile_core::account::write_quota_cache(
+      store_a.path(), "test@example.com", None, None, None,
     );
     // mark_touched writes the paired flags the age-gated guard requires (Fix BUG-488).
     mark_touched( store_a.path(), "test@example.com" );
@@ -401,9 +400,8 @@ fn test_apply_touch_touch_idle_true_not_skipped_by_guard()
   // Call B: guard does NOT fire for Some(true) — separate store, fresh aq.
   {
     let store_b = tempfile::TempDir::new().unwrap();
-    claude_profile_core::account::write_cache_string(
-      store_b.path(), "test@example.com", "fetched_at",
-      &claude_profile_core::account::chrono_now_utc(),
+    claude_profile_core::account::write_quota_cache(
+      store_b.path(), "test@example.com", None, None, None,
     );
     claude_profile_core::account::write_cache_bool(
       store_b.path(), "test@example.com", "touch_idle", true,
@@ -433,9 +431,8 @@ fn test_apply_touch_touch_idle_none_in_cache_not_skipped()
   // Call A: prove the guard exists and fires for Some(false).
   {
     let store_a = tempfile::TempDir::new().unwrap();
-    claude_profile_core::account::write_cache_string(
-      store_a.path(), "test@example.com", "fetched_at",
-      &claude_profile_core::account::chrono_now_utc(),
+    claude_profile_core::account::write_quota_cache(
+      store_a.path(), "test@example.com", None, None, None,
     );
     // mark_touched writes the paired flags the age-gated guard requires (Fix BUG-488).
     mark_touched( store_a.path(), "test@example.com" );
@@ -451,9 +448,8 @@ fn test_apply_touch_touch_idle_none_in_cache_not_skipped()
   {
     let store_b = tempfile::TempDir::new().unwrap();
     // Only fetched_at — no touch_idle field → touch_idle=None in cache.
-    claude_profile_core::account::write_cache_string(
-      store_b.path(), "test@example.com", "fetched_at",
-      &claude_profile_core::account::chrono_now_utc(),
+    claude_profile_core::account::write_quota_cache(
+      store_b.path(), "test@example.com", None, None, None,
     );
     // Precondition: read_quota_cache returns Some with touch_idle=None.
     let entry = claude_profile_core::account::read_quota_cache( store_b.path(), "test@example.com" );
@@ -473,26 +469,27 @@ fn test_apply_touch_touch_idle_none_in_cache_not_skipped()
 
 /// CC-B4 (pitfall): `fetched_at` absent → `read_quota_cache` returns `None` → guard bypassed.
 ///
-/// `write_cache_bool(touch_idle, false)` alone writes
-/// `{ "cache": { "touch_idle": false } }` without a `fetched_at` field.
-/// `read_quota_cache` requires `fetched_at` and returns `None` when absent —
-/// the `touch_idle` guard is never entered. The account proceeds to `all_running`.
+/// `write_cache_bool(touch_idle, false)` alone writes a top-level `touch_idle`
+/// key into the tracked `{name}.json` (TSK-500) — no volatile local cache entry.
+/// `read_quota_cache` requires `fetched_at` in the local `-cache/{name}.json`
+/// and returns `None` when absent — the `touch_idle` guard is never entered.
+/// The account proceeds to `all_running`.
 ///
 /// Two-call design for non-vacuity:
-/// - Call A (`touch_idle=false` + `fetched_at`): proves the guard EXISTS and fires.
-/// - Call B (`touch_idle=false`, NO `fetched_at`): proves it is bypassed when cache returns `None`.
+/// - Call A (`touch_idle=false` + volatile cache): proves the guard EXISTS and fires.
+/// - Call B (`touch_idle=false`, NO volatile cache): proves it is bypassed when cache returns `None`.
 ///
 /// This is the pitfall documented in `test_mre_bug288_apply_touch_skips_touch_idle_false`
-/// — test setup MUST call `write_cache_string(fetched_at, ...)` before `write_cache_bool`.
+/// — test setup MUST call `write_quota_cache(...)` (stamps `fetched_at` in the local
+/// volatile cache) before `write_cache_bool`.
 #[ test ]
 fn test_apply_touch_touch_idle_false_fetched_at_absent_guard_bypassed()
 {
   // Call A: prove the guard exists and fires when cache is valid (fetched_at present).
   {
     let store_a = tempfile::TempDir::new().unwrap();
-    claude_profile_core::account::write_cache_string(
-      store_a.path(), "test@example.com", "fetched_at",
-      &claude_profile_core::account::chrono_now_utc(),
+    claude_profile_core::account::write_quota_cache(
+      store_a.path(), "test@example.com", None, None, None,
     );
     // mark_touched writes the paired flags the age-gated guard requires (Fix BUG-488).
     mark_touched( store_a.path(), "test@example.com" );
@@ -540,9 +537,8 @@ fn test_apply_touch_touch_idle_false_silent_when_trace_disabled()
 {
   let store = tempfile::TempDir::new().unwrap();
 
-  claude_profile_core::account::write_cache_string(
-    store.path(), "test@example.com", "fetched_at",
-    &claude_profile_core::account::chrono_now_utc(),
+  claude_profile_core::account::write_quota_cache(
+    store.path(), "test@example.com", None, None, None,
   );
   // mark_touched writes the paired flags the age-gated guard requires (Fix BUG-488).
   mark_touched( store.path(), "test@example.com" );

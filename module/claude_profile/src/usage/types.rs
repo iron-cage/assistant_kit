@@ -344,6 +344,13 @@ pub struct UsageParams
   /// When true, restrict all fetch/refresh/touch operations to the current+owned account.
   /// All other accounts use approximated historical data from the quota cache.
   pub solo      : bool,
+  // ── Stale-first fetch reduction (TSK-499) ─────────────────────────────────
+  /// Fetch only the K accounts with the oldest cache `fetched_at`; 0 = no reduction.
+  /// Non-selected accounts stay in the output, rendered from cache.
+  pub stalest   : u32,
+  /// With `stalest`, only accounts whose cache age exceeds SECS are fetch-eligible;
+  /// 0 = no eligibility threshold. Rejected at parse time without `stalest`.
+  pub max_age   : u64,
 }
 
 // ── Output format ─────────────────────────────────────────────────────────────

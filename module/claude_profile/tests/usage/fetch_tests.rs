@@ -567,7 +567,7 @@ fn ft04_non_owned_uses_cache_not_http()
   // live_creds_file absent → graceful degradation; is_current=false for all accounts.
   let absent_live = store.path().join( ".absent_credentials.json" );
 
-  let results = fetch_quota_for_list( &accounts, store.path(), &absent_live, false, false, false );
+  let results = fetch_quota_for_list( &accounts, store.path(), &absent_live, false, false, false, None );
 
   assert_eq!( results.len(), 1, "FT-04: must return exactly 1 AccountQuota for 1 account" );
   let aq = &results[ 0 ];
@@ -583,6 +583,161 @@ fn ft04_non_owned_uses_cache_not_http()
   assert!(
     aq.result.is_ok(),
     "FT-04: G1 gate must return Ok(cache_data) when cache present; got: {:?}", aq.result,
+  );
+}
+
+// ── TSK-500: local untracked quota cache ─────────────────────────────────────
+
+/// T03 (TSK-500): the error-fallback arm renders from the local `-cache/{name}.json`
+/// when the tracked file carries no legacy `cache{}` block (post-migration store).
+///
+/// Offline stand-in for the 429 path: `expires_at_ms: 1` trips the BUG-233
+/// local-expiry gate → `Err("token expired (local)")` → the BUG-296 fallback arm
+/// (non-401/403) consults the cache. Pre-TSK-500 that read only the tracked
+/// `cache{}`; with a local-only cache the row must still come back `Ok(cached)`
+/// with the BUG-335 `fallback_reason` populated — and the tracked file must stay
+/// byte-identical (T01's defining property observed at the fetch layer).
+#[ test ]
+fn t500_03_fallback_renders_from_local_cache_only()
+{
+  let store = tempfile::TempDir::new().unwrap();
+
+  // Migrated tracked file: metadata only, NO cache{} block, no owner (owned).
+  let meta_path = store.path().join( "alice@test.com.json" );
+  std::fs::write( &meta_path, "{\n  \"host\": \"wbox\"\n}\n" ).unwrap();
+  let tracked_before = std::fs::read( &meta_path ).unwrap();
+
+  // Volatile cache lives ONLY in the local untracked file.
+  let cache_dir = store.path().join( "-cache" );
+  std::fs::create_dir_all( &cache_dir ).unwrap();
+  std::fs::write(
+    cache_dir.join( "alice@test.com.json" ),
+    r#"{"fetched_at":"2026-08-16T10:00:00Z","status":"ok","five_hour":{"left_pct":70.0}}"#,
+  ).unwrap();
+
+  // Expired token → BUG-233 local skip → BUG-296 fallback arm.
+  std::fs::write(
+    store.path().join( "alice@test.com.credentials.json" ),
+    r#"{"accessToken":"tok","expiresAt":1}"#,
+  ).unwrap();
+
+  let accounts = vec![ claude_profile::account::Account
+  {
+    name              : "alice@test.com".to_string(),
+    subscription_type : "pro".to_string(),
+    rate_limit_tier   : String::new(),
+    expires_at_ms     : 1,
+    is_active         : false,
+    email             : String::new(),
+    display_name      : String::new(),
+    billing           : String::new(),
+    model             : String::new(),
+    tagged_id         : String::new(),
+    uuid              : String::new(),
+    capabilities      : Vec::new(),
+    organization_uuid : String::new(),
+    organization_name : String::new(),
+    org_role          : String::new(),
+    workspace_uuid    : String::new(),
+    workspace_name    : String::new(),
+    host              : String::new(),
+    role              : String::new(),
+    owner             : String::new(),
+    is_owned          : true,
+    claim_lock        : false,
+    reserve           : false,
+    renewal_at        : None,
+    backend           : claude_profile::account::AccountBackend::Anthropic,
+    base_url          : None,
+    redirect_model    : None,
+    inference_provider : String::new(),
+  } ];
+
+  let absent_live = store.path().join( ".absent_credentials.json" );
+  let results = fetch_quota_for_list( &accounts, store.path(), &absent_live, false, false, false, None );
+
+  assert_eq!( results.len(), 1, "T03: exactly 1 row" );
+  let aq = &results[ 0 ];
+  assert!( aq.cached, "T03: fallback must read the local cache (cached=true); got: {:?}", aq.result );
+  let data = aq.result.as_ref().expect( "T03: fallback must return Ok(cache data)" );
+  let util = data.five_hour.as_ref().expect( "T03: five_hour from local cache" ).utilization;
+  assert!( ( util - 70.0 ).abs() < 1e-9, "T03: utilization from local cache, got {util}" );
+  assert!(
+    aq.fallback_reason.as_deref().is_some_and( |r| r.contains( "expired" ) ),
+    "T03: BUG-335 fallback_reason must carry the pre-fallback error; got: {:?}", aq.fallback_reason,
+  );
+  assert_eq!(
+    std::fs::read( &meta_path ).unwrap(), tracked_before,
+    "T03: tracked credential file must stay byte-identical through the fallback read",
+  );
+}
+
+/// T04 (TSK-500): non-owned account with no cache anywhere — neither local file
+/// nor legacy tracked `cache{}` — degrades exactly as today: `Err` row, no crash,
+/// zero tracked-file writes.
+///
+/// No-regression guard for the accepted C2 tradeoff (non-owner machines lose
+/// git-borne cache sharing; the G1 no-cache branch is read-only by construction).
+#[ test ]
+fn t500_04_non_owner_no_cache_degrades_without_tracked_write()
+{
+  let store = tempfile::TempDir::new().unwrap();
+
+  let meta_path = store.path().join( "alice@test.com.json" );
+  std::fs::write( &meta_path, "{\n  \"owner\": \"other@remote\"\n}\n" ).unwrap();
+  let tracked_before = std::fs::read( &meta_path ).unwrap();
+
+  std::fs::write(
+    store.path().join( "alice@test.com.credentials.json" ),
+    r#"{"accessToken":"tok","expiresAt":9999999999999}"#,
+  ).unwrap();
+
+  let accounts = vec![ claude_profile::account::Account
+  {
+    name              : "alice@test.com".to_string(),
+    subscription_type : "pro".to_string(),
+    rate_limit_tier   : String::new(),
+    expires_at_ms     : u64::MAX / 2,
+    is_active         : false,
+    email             : String::new(),
+    display_name      : String::new(),
+    billing           : String::new(),
+    model             : String::new(),
+    tagged_id         : String::new(),
+    uuid              : String::new(),
+    capabilities      : Vec::new(),
+    organization_uuid : String::new(),
+    organization_name : String::new(),
+    org_role          : String::new(),
+    workspace_uuid    : String::new(),
+    workspace_name    : String::new(),
+    host              : String::new(),
+    role              : String::new(),
+    owner             : String::new(),
+    is_owned          : true,
+    claim_lock        : false,
+    reserve           : false,
+    renewal_at        : None,
+    backend           : claude_profile::account::AccountBackend::Anthropic,
+    base_url          : None,
+    redirect_model    : None,
+    inference_provider : String::new(),
+  } ];
+
+  let absent_live = store.path().join( ".absent_credentials.json" );
+  let results = fetch_quota_for_list( &accounts, store.path(), &absent_live, false, false, false, None );
+
+  assert_eq!( results.len(), 1, "T04: exactly 1 row" );
+  let aq = &results[ 0 ];
+  assert!( !aq.is_owned, "T04: G1 must mark the row not-owned" );
+  assert!( !aq.cached, "T04: no cache anywhere → cached=false" );
+  assert!(
+    aq.result.as_ref().is_err_and( |e| e.contains( "not owned" ) ),
+    "T04: degradation row must be Err(not owned…); got: {:?}", aq.result,
+  );
+  assert_eq!(
+    std::fs::read( &meta_path ).unwrap(), tracked_before,
+    "T04: G1 no-cache branch must not write the tracked file",
   );
 }
 
@@ -644,7 +799,7 @@ fn ft14_071_redirect_backend_produces_placeholder_no_http()
   // live_creds_file absent → graceful degradation; no bearing on the R1 gate itself.
   let absent_live = store.path().join( ".absent_credentials.json" );
 
-  let results = fetch_quota_for_list( &accounts, store.path(), &absent_live, false, false, false );
+  let results = fetch_quota_for_list( &accounts, store.path(), &absent_live, false, false, false, None );
 
   assert_eq!( results.len(), 1, "T14: must return exactly 1 AccountQuota for 1 account" );
   let aq = &results[ 0 ];
@@ -726,7 +881,7 @@ fn ft14b_071_redirect_checked_before_not_owned_gate()
 
   let absent_live = store.path().join( ".absent_credentials.json" );
 
-  let results = fetch_quota_for_list( &accounts, store.path(), &absent_live, false, false, false );
+  let results = fetch_quota_for_list( &accounts, store.path(), &absent_live, false, false, false, None );
 
   assert_eq!( results.len(), 1, "C6: must return exactly 1 AccountQuota for 1 account" );
   let aq = &results[ 0 ];
@@ -852,7 +1007,7 @@ fn mre_bug327_cache_first_surfaces_org_created_at()
   // live_creds_file absent → is_current=false, but cache-first fires before any HTTP path.
   let absent_live = store.path().join( ".absent_credentials.json" );
 
-  let results = fetch_quota_for_list( &accounts, store.path(), &absent_live, false, false, false );
+  let results = fetch_quota_for_list( &accounts, store.path(), &absent_live, false, false, false, None );
 
   assert_eq!( results.len(), 1, "FT-15: must return exactly 1 AccountQuota for 1 account" );
   let aq = &results[ 0 ];
@@ -960,7 +1115,7 @@ fn ft06_072_fetch_threads_inference_provider_and_defaults_empty_when_missing()
   ];
 
   let absent_live = store.path().join( ".absent_credentials.json" );
-  let results = fetch_quota_for_list( &accounts, store.path(), &absent_live, false, false, false );
+  let results = fetch_quota_for_list( &accounts, store.path(), &absent_live, false, false, false, None );
 
   assert_eq!( results.len(), 2, "T04: must return exactly 1 AccountQuota per account" );
 
