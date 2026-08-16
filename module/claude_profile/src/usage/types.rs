@@ -210,6 +210,19 @@ pub struct AccountQuota
   /// `Some` only when `fetch.rs`'s cache-fallback arm converted a transient `Err` to `Ok`;
   /// `None` on live-fetch success, auth errors, and all non-fallback cache reads.
   pub fallback_reason       : Option< String >,
+  // Fix(BUG-488): a just-touched account whose re-fetch still reported the 5h window
+  //   idle rendered "5h Reset —" — indistinguishable from never-touched — because no
+  //   field carried the "touch recently succeeded" fact to the render layer.
+  //   Root cause: the quota endpoint lags session starts; apply_touch's single AC-03
+  //   re-fetch races that lag and can lose, and render only sees the (lagged) API view.
+  //   Pitfall: two writers, one meaning — `apply_touch` flips it in-memory for the
+  //   touching invocation; `derive_touched_recently` re-derives it on every invocation
+  //   from the cache flags `mark_touched` persisted (`last_touch_at`/`touch_idle`),
+  //   trusted for TOUCH_GRACE_SECS. Every constructor sets `false`.
+  /// `true` when a successful touch subprocess for this account is on record within
+  /// `TOUCH_GRACE_SECS` — this invocation's own, or a prior invocation's via the cache
+  /// flags. Display-only signal for the `5h Reset` cell.
+  pub touched_recently           : bool,
   /// `true` when `owner` in `{name}.json` is empty or matches `current_identity()`.
   /// `false` for accounts owned by a different machine — G1–G7 enforcement gates apply.
   pub is_owned              : bool,
@@ -331,6 +344,13 @@ pub struct UsageParams
   /// When true, restrict all fetch/refresh/touch operations to the current+owned account.
   /// All other accounts use approximated historical data from the quota cache.
   pub solo      : bool,
+  // ── Stale-first fetch reduction (TSK-499) ─────────────────────────────────
+  /// Fetch only the K accounts with the oldest cache `fetched_at`; 0 = no reduction.
+  /// Non-selected accounts stay in the output, rendered from cache.
+  pub stalest   : u32,
+  /// With `stalest`, only accounts whose cache age exceeds SECS are fetch-eligible;
+  /// 0 = no eligibility threshold. Rejected at parse time without `stalest`.
+  pub max_age   : u64,
 }
 
 // ── Output format ─────────────────────────────────────────────────────────────

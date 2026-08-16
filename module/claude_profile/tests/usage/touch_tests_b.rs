@@ -21,9 +21,8 @@ fn test_apply_touch_error_account_skips_before_touch_idle_guard()
   // Cache has touch_idle=false keyed by the error account's name ("bad@example.com").
   // If the error guard were absent, touch_skip_reason would consult this entry and
   // return the touch_idle reason instead — making this a real guard-ordering test.
-  claude_profile_core::account::write_cache_string(
-    store.path(), "bad@example.com", "fetched_at",
-    &claude_profile_core::account::chrono_now_utc(),
+  claude_profile_core::account::write_quota_cache(
+    store.path(), "bad@example.com", None, None, None,
   );
   claude_profile_core::account::write_cache_bool(
     store.path(), "bad@example.com", "touch_idle", false,
@@ -471,5 +470,320 @@ fn reach_bulk_touch_does_not_write_live_credentials()
     !bulk_block.contains( "fs::copy" ),
     "D3: bulk touch loop must NOT call fs::copy — live credentials must not change \
     during a non-rotation .usage call.\nbulk block:\n{bulk_block}",
+  );
+}
+
+// ── BUG-488: age-gated touch_idle guard + mark_touched writer ─────────────
+
+/// BUG-488 MRE: the `touch_idle=false` guard is age-gated on `last_touch_at`.
+///
+/// # Root Cause
+///
+/// Three coupled defects. (1) The `.usage touch::1` loop path (`apply_touch`) never wrote
+/// the BUG-288-FixB coordination flags after a successful touch — only the switch path did.
+/// (2) The switch path wrote them to `paths.base()` while the sole reader
+/// (`touch_skip_reason`) reads `credential_store/{name}.json` — a write/read directory
+/// mismatch (BUG-207/BUG-318 family) that made the flag mechanism fully inert. (3) Nothing
+/// ever writes `touch_idle=true`, so the flag has no expiry — a naive directory fix alone
+/// would have permanently disabled touching for any account once one flag landed.
+///
+/// # Why Not Caught
+///
+/// Every flag-guard test hand-built cache state with `write_cache_bool` in the same
+/// `TempDir` the guard reads, so the production write/read directory split was invisible;
+/// and no test aged `last_touch_at`, so the missing-expiry hazard had no coverage.
+///
+/// # Fix Applied
+///
+/// Fix(BUG-488): `mark_touched` is the single writer (fresh `last_touch_at` +
+/// `touch_idle=false`, into `credential_store`); both touch paths call it; the guard in
+/// `touch_skip_reason` fires only when `touch_idle == Some(false)` AND `last_touch_at`
+/// parses and is younger than `TOUCH_GRACE_SECS` (18 000 s = one 5h window).
+///
+/// # Prevention
+///
+/// A skip-flag with a writer and no expiry is a latent permanent-skip: any new
+/// coordination flag must pair its state with a timestamp and age-gate the reader.
+///
+/// # Pitfall
+///
+/// Scenario C (flag present, `last_touch_at` absent) is the pre-BUG-488 legacy-cache
+/// shape — it must NOT fire the guard, otherwise caches written by the old code would
+/// suppress touching forever after upgrade.
+#[ doc = "bug_reproducer(BUG-488)" ]
+#[ test ]
+fn test_mre_bug488_touch_idle_guard_age_gated()
+{
+  use claude_profile::usage::test_bridge::mark_touched;
+
+  // Scenario A: fresh mark_touched → guard fires (recently touched, endpoint still lagging).
+  {
+    let store = tempfile::TempDir::new().unwrap();
+    claude_profile_core::account::write_quota_cache(
+      store.path(), "test@example.com", None, None, None,
+    );
+    mark_touched( store.path(), "test@example.com" );
+    let aq = mk_aq_with_resets_at( None );
+    assert_eq!(
+      touch_skip_reason( &aq, store.path(), false ),
+      Some( "skipped (reason: touch_idle=false)" ),
+      "A: guard must fire when mark_touched ran within TOUCH_GRACE_SECS",
+    );
+  }
+
+  // Scenario B: stale last_touch_at (2020) → grace expired → guard must NOT fire.
+  {
+    let store = tempfile::TempDir::new().unwrap();
+    claude_profile_core::account::write_quota_cache(
+      store.path(), "test@example.com", None, None, None,
+    );
+    claude_profile_core::account::write_cache_bool(
+      store.path(), "test@example.com", "touch_idle", false,
+    );
+    claude_profile_core::account::write_cache_string(
+      store.path(), "test@example.com", "last_touch_at", "2020-01-01T00:00:00Z",
+    );
+    let aq = mk_aq_with_resets_at( None );
+    assert_eq!(
+      touch_skip_reason( &aq, store.path(), false ),
+      None,
+      "B: guard must NOT fire once last_touch_at is older than TOUCH_GRACE_SECS",
+    );
+  }
+
+  // Scenario C: touch_idle=false with NO last_touch_at (legacy pre-BUG-488 cache) →
+  // guard must NOT fire — the forever-skip regression guard.
+  {
+    let store = tempfile::TempDir::new().unwrap();
+    claude_profile_core::account::write_quota_cache(
+      store.path(), "test@example.com", None, None, None,
+    );
+    claude_profile_core::account::write_cache_bool(
+      store.path(), "test@example.com", "touch_idle", false,
+    );
+    let aq = mk_aq_with_resets_at( None );
+    assert_eq!(
+      touch_skip_reason( &aq, store.path(), false ),
+      None,
+      "C: bare touch_idle=false without last_touch_at must not skip (no expiry otherwise)",
+    );
+  }
+}
+
+/// BUG-488: `mark_touched` writes both flags to the store the guard reads, and
+/// `write_quota_cache` carry-forward preserves them.
+///
+/// The write/read directory mismatch (Root Cause face 2 in the MRE above) is only fixed
+/// if the writer and the reader agree on the directory: `mark_touched( store, name )`
+/// must produce a cache `read_quota_cache( store, name )` sees with `touch_idle=Some(false)`
+/// and a parseable `last_touch_at` — and a subsequent quota write must not drop them.
+#[ test ]
+fn test_bug488_mark_touched_roundtrip_survives_write_quota_cache()
+{
+  use claude_profile::usage::test_bridge::mark_touched;
+
+  let store = tempfile::TempDir::new().unwrap();
+
+  claude_profile_core::account::write_quota_cache(
+    store.path(), "test@example.com", None, None, None,
+  );
+  mark_touched( store.path(), "test@example.com" );
+
+  let entry = claude_profile_core::account::read_quota_cache( store.path(), "test@example.com" )
+    .expect( "cache must be readable after fetched_at + mark_touched" );
+  assert_eq!( entry.touch_idle, Some( false ), "mark_touched must write touch_idle=false" );
+  let stamp = entry.last_touch_at.expect( "mark_touched must write last_touch_at" );
+  assert!(
+    claude_profile_core::account::parse_iso_utc_secs( &stamp ).is_some(),
+    "last_touch_at must be parseable ISO-UTC; got {stamp:?}",
+  );
+
+  // Quota write after the touch (AC-03 re-fetch persists) must carry the flags forward.
+  claude_profile_core::account::write_quota_cache(
+    store.path(), "test@example.com", None, None, None,
+  );
+  let entry2 = claude_profile_core::account::read_quota_cache( store.path(), "test@example.com" )
+    .expect( "cache must remain readable after write_quota_cache" );
+  assert_eq!(
+    entry2.touch_idle, Some( false ),
+    "write_quota_cache must preserve touch_idle written by mark_touched",
+  );
+  assert!(
+    entry2.last_touch_at.is_some(),
+    "write_quota_cache must preserve last_touch_at written by mark_touched",
+  );
+}
+
+/// BUG-488 structural: `apply_touch`'s success block calls `mark_touched` and sets
+/// `aq.touched_recently` — gated on `new_creds`, before the AC-03 re-fetch.
+///
+/// `refresh_account_token` returns `None` on any failure, so anchoring both statements
+/// inside the `if let Some( ref creds ) = new_creds` block proves a failed touch writes
+/// no flags (which would wrongly suppress the retry for `TOUCH_GRACE_SECS`).
+#[ test ]
+fn test_bug488_apply_touch_success_block_marks_touched()
+{
+  let src      = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/usage/touch.rs" ) );
+  let fn_start = src.find( "pub fn apply_touch(" ).expect( "apply_touch not found" );
+  let body     = &src[ fn_start.. ];
+
+  let guard_pos = body
+    .find( "if let Some( ref creds ) = new_creds" )
+    .expect( "BUG-488: new_creds success guard not found in apply_touch" );
+  let mark_pos = body
+    .find( "mark_touched( credential_store, &aq.name );" )
+    .expect( "BUG-488: mark_touched call not found in apply_touch" );
+  let touched_pos = body
+    .find( "aq.touched_recently = true;" )
+    .expect( "BUG-488: touched_recently assignment not found in apply_touch" );
+  let refetch_pos = body
+    .find( "if let Ok( new_data ) = claude_quota::fetch_oauth_usage(" )
+    .expect( "AC-03 re-fetch block not found in apply_touch" );
+
+  assert!(
+    guard_pos < mark_pos && mark_pos < refetch_pos,
+    "BUG-488: mark_touched must sit inside the new_creds success block (after its guard, \
+     before the AC-03 re-fetch) — a failed touch must write no flags",
+  );
+  assert!(
+    guard_pos < touched_pos && touched_pos < refetch_pos,
+    "BUG-488: aq.touched_recently must be set inside the new_creds success block only",
+  );
+  assert_eq!(
+    body.matches( "mark_touched(" ).count(), 1,
+    "BUG-488: apply_touch must call mark_touched exactly once (success block only)",
+  );
+}
+
+/// BUG-488 (cross-invocation): `derive_touched_recently` re-derives the display signal
+/// from the persisted cache flags, so the `(touched)` marker survives past the touching
+/// invocation for as long as the flags are fresh.
+///
+/// # Root Cause
+///
+/// `touched_recently` was set only in-memory by `apply_touch` — it died with the touching
+/// invocation. The very next `.usage` run (skip guard correctly preventing a re-touch)
+/// rendered the just-touched account as plain idle (`5h Reset —`) again until the quota
+/// endpoint caught up — re-creating the original misleading-table symptom for every run
+/// after the first.
+///
+/// # Why Not Caught
+///
+/// The initial BUG-488 tests covered the touching invocation (in-memory set) and the skip
+/// guard, but no test exercised a second invocation's display state — the derive pass did
+/// not exist.
+///
+/// # Fix Applied
+///
+/// Fix(BUG-488): `derive_touched_recently( &mut accounts, credential_store )` runs
+/// unconditionally in the `.usage` pipeline after the touch loop; it sets
+/// `touched_recently` for every account whose cache carries `touch_idle=false` plus a
+/// `last_touch_at` within `TOUCH_GRACE_SECS`, sharing the `touched_within_grace`
+/// predicate with the skip guard so display and skip semantics can never drift.
+///
+/// # Prevention
+///
+/// Scenarios below pin all four derive outcomes: fresh flags set the field, stale flags
+/// don't, absent flags don't, and an already-set field survives with no cache at all.
+/// The structural test that follows pins the pipeline call site.
+///
+/// # Pitfall
+///
+/// The derive pass must NOT require this invocation to have touched anything — its whole
+/// point is `touch::0` / skip-guard invocations. It reads the same store the guard reads;
+/// a future writer/reader directory split would silently kill it (the roundtrip test
+/// above guards that seam).
+#[ doc = "bug_reproducer(BUG-488)" ]
+#[ test ]
+fn test_bug488_derive_touched_recently_from_cache_flags()
+{
+  use claude_profile::usage::test_bridge::{ derive_touched_recently, mark_touched };
+
+  // Scenario A: fresh flags (as mark_touched writes them) → field derived true.
+  {
+    let store = tempfile::TempDir::new().unwrap();
+    claude_profile_core::account::write_quota_cache(
+      store.path(), "test@example.com", None, None, None,
+    );
+    mark_touched( store.path(), "test@example.com" );
+    let mut accounts = vec![ mk_aq_with_resets_at( None ) ];
+    derive_touched_recently( &mut accounts, store.path() );
+    assert!(
+      accounts[ 0 ].touched_recently,
+      "A: fresh cache flags must derive touched_recently=true on a later invocation",
+    );
+  }
+
+  // Scenario B: stale flags (last_touch_at 2020) → grace expired → field stays false.
+  {
+    let store = tempfile::TempDir::new().unwrap();
+    claude_profile_core::account::write_quota_cache(
+      store.path(), "test@example.com", None, None, None,
+    );
+    claude_profile_core::account::write_cache_bool(
+      store.path(), "test@example.com", "touch_idle", false,
+    );
+    claude_profile_core::account::write_cache_string(
+      store.path(), "test@example.com", "last_touch_at", "2020-01-01T00:00:00Z",
+    );
+    let mut accounts = vec![ mk_aq_with_resets_at( None ) ];
+    derive_touched_recently( &mut accounts, store.path() );
+    assert!(
+      !accounts[ 0 ].touched_recently,
+      "B: stale last_touch_at must not derive the display signal",
+    );
+  }
+
+  // Scenario C: no flags at all (fetched_at only) → field stays false.
+  {
+    let store = tempfile::TempDir::new().unwrap();
+    claude_profile_core::account::write_quota_cache(
+      store.path(), "test@example.com", None, None, None,
+    );
+    let mut accounts = vec![ mk_aq_with_resets_at( None ) ];
+    derive_touched_recently( &mut accounts, store.path() );
+    assert!(
+      !accounts[ 0 ].touched_recently,
+      "C: no touch on record must not derive the display signal",
+    );
+  }
+
+  // Scenario D: field already set in-memory (touching invocation) survives with an
+  // empty store — the derive pass skips flagged rows rather than re-deriving them.
+  {
+    let store = tempfile::TempDir::new().unwrap();
+    let mut aq = mk_aq_with_resets_at( None );
+    aq.touched_recently = true;
+    let mut accounts = vec![ aq ];
+    derive_touched_recently( &mut accounts, store.path() );
+    assert!(
+      accounts[ 0 ].touched_recently,
+      "D: in-memory signal from apply_touch must survive the derive pass unchanged",
+    );
+  }
+}
+
+/// BUG-488 structural: the derive pass runs in the `.usage` pipeline — after the touch
+/// loop (so the touching invocation's freshly-written flags are already on disk) and
+/// before render dispatch, unconditionally (not gated on `touch::1`).
+#[ test ]
+fn test_bug488_derive_pass_wired_after_touch_loop()
+{
+  let src = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/usage/api.rs" ) );
+
+  let touch_loop_pos = src
+    .find( "if params.touch == 1" )
+    .expect( "bulk touch block not found in api.rs" );
+  let derive_pos = src
+    .find( "derive_touched_recently( &mut accounts, &credential_store );" )
+    .expect( "BUG-488: derive_touched_recently pipeline call not found in api.rs" );
+  let render_dispatch_pos = src
+    .find( "UsageOutputFormat::Text" )
+    .expect( "render dispatch not found in api.rs" );
+
+  assert!(
+    touch_loop_pos < derive_pos && derive_pos < render_dispatch_pos,
+    "BUG-488: derive_touched_recently must run after the touch loop and before render \
+     dispatch (touch_loop={touch_loop_pos}, derive={derive_pos}, render={render_dispatch_pos})",
   );
 }

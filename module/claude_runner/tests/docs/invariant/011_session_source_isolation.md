@@ -8,11 +8,11 @@ Test case planning for [invariant/011_session_source_isolation.md](../../../docs
 
 | ID | Test Name | Category |
 |----|-----------|----------|
-| IN-1 | Session UUID is read from source dir's `CLAUDE_SESSION_DIR`, not target | Read isolation |
+| IN-1 | Transplant source comes from source dir's `CLAUDE_SESSION_DIR`, never from target | Read isolation |
 | IN-2 | Subprocess working directory is target dir, not source dir | Run isolation |
 | IN-3 | Source session file mtime and size unchanged after cross-loaded run | Write isolation |
 | IN-4 | `--session-dir` takes precedence over `--session-from` (raw path wins) | Precedence |
-| IN-5 | `--session-from` + `--to`: session UUID from source, cwd is target | Combined |
+| IN-5 | `--session-from` + `--to`: transplant source from source, cwd is target | Combined |
 
 ## Test Coverage Summary
 
@@ -26,11 +26,11 @@ Test case planning for [invariant/011_session_source_isolation.md](../../../docs
 
 ---
 
-### IN-1: Session UUID is read from source dir's `CLAUDE_SESSION_DIR`, not target
+### IN-1: Transplant source comes from source dir's `CLAUDE_SESSION_DIR`, never from target
 
-- **Given:** source dir `/tmp/011it1_src` has session `lll-001.jsonl`; target dir `/tmp/011it1_tgt` has no `.jsonl` files; fake claude binary in PATH
-- **When:** `clr --session-from /tmp/011it1_src --to /tmp/011it1_tgt --dry-run "task"`
-- **Then:** dry-run output contains `-c lll-001` (from source); no UUID from target is used
+- **Given:** source dir `/tmp/011it1-src` has session `lll-001.jsonl`; target dir (a temp dir) has no `.jsonl` files; fake claude binary in PATH
+- **When:** `clr --session-from /tmp/011it1-src --to <target> --dry-run "task"`
+- **Then:** dry-run output contains the plan line `# session-transplant: <claude_home>/projects/<Df(src)>/lll-001.jsonl -> ` (source storage's file); no target-derived path appears as a transplant source (target storage appears only as the destination)
 - **Exit:** 0
 - **Source:** [invariant/011_session_source_isolation.md](../../../docs/invariant/011_session_source_isolation.md) point 1
 
@@ -58,19 +58,19 @@ Test case planning for [invariant/011_session_source_isolation.md](../../../docs
 
 ### IN-4: `--session-dir` takes precedence over `--session-from` (raw path wins)
 
-- **Given:** source dir `/tmp/011it4_src` has session `ooo-004.jsonl`; raw session dir `/tmp/011it4_raw` has session `ppp-005.jsonl`; fake claude binary in PATH
-- **When:** `clr --session-from /tmp/011it4_src --session-dir /tmp/011it4_raw --dry-run "test"`
-- **Then:** dry-run output contains `-c ppp-005`; `ooo-004` is NOT used; `--session-dir` raw path wins over `--session-from` computed path
+- **Given:** source dir `/tmp/011it4-src` has session `ooo-004.jsonl`; a raw session dir (a temp dir) has session `ppp-005.jsonl`; fake claude binary in PATH
+- **When:** `clr --session-from /tmp/011it4-src --session-dir <raw dir> --dry-run "test"`
+- **Then:** dry-run output contains `CLAUDE_CODE_SESSION_DIR=<raw dir>` (the raw path verbatim — the raw `--session-dir` export is BUG-493's own domain and still emitted); the source's computed storage path does NOT appear; `--session-dir` raw path wins over `--session-from` computed path
 - **Exit:** 0
 - **Source:** [invariant/011_session_source_isolation.md](../../../docs/invariant/011_session_source_isolation.md) point 5
 
 ---
 
-### IN-5: `--session-from` + `--to`: session UUID from source, cwd is target
+### IN-5: `--session-from` + `--to`: transplant source from source, cwd is target
 
-- **Given:** source dir `/tmp/011it5_src` has session `qqq-006.jsonl`; target dir `/tmp/011it5_tgt` exists; fake claude binary in PATH
-- **When:** `clr --to /tmp/011it5_tgt --session-from /tmp/011it5_src --dry-run "Continue"`
-- **Then:** dry-run output contains `-c qqq-006`; subprocess working directory is `/tmp/011it5_tgt`; source UUID is injected into a subprocess that runs in target — confirming both read isolation (source) and run isolation (target) hold simultaneously
+- **Given:** source dir `/tmp/011it5-src` has session `qqq-006.jsonl`; target dir (a temp dir) exists; fake claude binary in PATH
+- **When:** `clr --to <target> --session-from /tmp/011it5-src --dry-run "Continue"`
+- **Then:** dry-run output contains the plan line `# session-transplant: <claude_home>/projects/<Df(src)>/qqq-006.jsonl -> ` and `cd <target>` — the source session is transplanted into a subprocess that runs in target, confirming both read isolation (source) and run isolation (target) hold simultaneously
 - **Exit:** 0
 - **Source:** [invariant/011_session_source_isolation.md](../../../docs/invariant/011_session_source_isolation.md) points 1–2
 

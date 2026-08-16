@@ -60,6 +60,7 @@ fn runner_option_group() -> cli_fmt::help::OptionGroup
       OptionEntry { name : "--no-effort-max".into(),                 desc : "Suppress default --effort max injection".into() },
       OptionEntry { name : "--no-chrome".into(),                     desc : "Suppress default --chrome injection".into() },
       OptionEntry { name : "--no-persist".into(),                    desc : "Disable session persistence (--no-session-persistence)".into() },
+      OptionEntry { name : "--no-stdin".into(),                      desc : "Never read piped stdin (stdin JSON config and stdin forwarding disabled) [env: CLR_NO_STDIN]".into() },
       OptionEntry { name : "--keep-claudecode".into(),               desc : "Preserve CLAUDECODE env var in subprocess (default: removed)".into() },
       OptionEntry { name : "--verbose".into(),                       desc : "Enable verbose output".into() },
       OptionEntry { name : "--quiet".into(),                         desc : "Suppress non-fatal CLR diagnostics (gate-wait, retry progress, keep-claudecode warning) [env: CLR_QUIET]".into() },
@@ -365,6 +366,7 @@ pub( crate ) fn print_ask_help() -> !
   println!( "  --json-schema <SCHEMA>             JSON schema for structured output" );
   println!( "  --mcp-config <PATH>                MCP server config file (repeatable)" );
   println!( "  --file <PATH>                      Pipe file content to subprocess stdin" );
+  println!( "  --no-stdin                         Never read piped stdin (JSON config and forwarding disabled) [env: CLR_NO_STDIN]" );
   println!( "  --strip-fences                     Strip outermost markdown code fences" );
   println!( "  --output-file <PATH>               Write captured output to file (tee: stdout + file)" );
   println!( "  --expect <VALS>                    Pipe-separated expected values; mismatch → exit 3 (case-insensitive, trimmed)" );
