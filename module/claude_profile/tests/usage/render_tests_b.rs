@@ -23,6 +23,7 @@ fn test_ft29_009_footer_session_effort_display()
       AccountQuota
       {
         fallback_reason : None,
+        touched_recently : false,
         name                  : "cur@x.com".to_string(),
         is_current            : true,
         is_active             : false,
@@ -50,6 +51,7 @@ fn test_ft29_009_footer_session_effort_display()
       AccountQuota
       {
         fallback_reason : None,
+        touched_recently : false,
         name                  : "a@x.com".to_string(),
         is_current            : false,
         is_active             : false,
@@ -77,6 +79,7 @@ fn test_ft29_009_footer_session_effort_display()
       AccountQuota
       {
         fallback_reason : None,
+        touched_recently : false,
         name                  : "b@x.com".to_string(),
         is_current            : false,
         is_active             : false,
@@ -539,6 +542,7 @@ fn cc_no_current_account_uses_legacy_footer()
     AccountQuota
     {
       fallback_reason : None,
+      touched_recently : false,
       name                  : name.to_string(),
       is_current            : false,
       is_active             : false,
@@ -592,6 +596,7 @@ fn cc_effort_only_footer_shows_effort_without_model()
     AccountQuota
     {
       fallback_reason : None,
+      touched_recently : false,
       name                  : name.to_string(),
       is_current            : cur,
       is_active             : false,
@@ -850,5 +855,75 @@ fn mre_bug320_footer_excludes_non_owned_when_rotate_force_0()
   assert!(
     !next_with.contains( "aaa_nonowned" ),
     "BUG-320: gate_ownership=true must not show non-owned account in footer Next;\n  next: {next_with:?}",
+  );
+}
+
+// ── BUG-488: touched-now display signal in the 5h Reset column ────────────
+
+/// BUG-488 render: a just-touched account whose re-fetch still reports the 5h window
+/// idle shows `(touched)` in the `5h Reset` cell — not the idle `—`.
+///
+/// # Root Cause
+///
+/// The quota endpoint lags session starts; `apply_touch`'s single AC-03 re-fetch races
+/// that lag and can lose, leaving `five_hour.resets_at=None` for an account whose touch
+/// subprocess just succeeded. Render had no signal distinguishing that from a
+/// never-touched idle account, so the table showed `5h Reset —` / 100% for all 13
+/// just-touched accounts (2026-08-16 09:11 sync incident).
+///
+/// # Why Not Caught
+///
+/// No render test built an `AccountQuota` in the touched-but-lagging state — the field
+/// carrying that state (`touched_recently`) did not exist before Fix(BUG-488).
+///
+/// # Fix Applied
+///
+/// Fix(BUG-488): `apply_touch` sets `aq.touched_recently = true` after a successful touch
+/// subprocess; `render_text` overrides `cells[ 1 ]` with `"(touched)"` when
+/// `touched_recently && five_hour.resets_at.is_none()`.
+///
+/// # Prevention
+///
+/// Any state the render layer must distinguish needs a field on `AccountQuota` — a
+/// successful side effect that leaves API-visible state unchanged is otherwise invisible.
+///
+/// # Pitfall
+///
+/// Display-only: the override never fabricates a `resets_at` into the data itself, so
+/// sort/recommendation logic still sees the account as idle. The control account below
+/// proves `touched_recently=false` keeps the plain `—`.
+#[ doc = "bug_reproducer(BUG-488)" ]
+#[ test ]
+fn test_bug488_touched_recently_renders_touched_marker()
+{
+  use claude_profile::usage::test_bridge::mk_aq_ok;
+
+  // Touched account: subprocess succeeded this invocation, endpoint still reports idle.
+  let mut touched = mk_aq_ok( 0.0 );
+  touched.name = "touched@x.com".to_string();
+  touched.touched_recently = true;
+
+  // Control: identical idle state, not touched this invocation.
+  let mut idle = mk_aq_ok( 0.0 );
+  idle.name = "idle@x.com".to_string();
+
+  let accounts = vec![ touched, idle ];
+  let text = render_text(
+    &accounts, SortStrategy::Name, None, PreferStrategy::Any,
+    &ColsVisibility::default_set(), None, None, None, None, false,
+  );
+
+  let touched_line = text.lines().find( |l| l.contains( "touched@x.com" ) )
+    .expect( "touched account row must be present" );
+  let idle_line = text.lines().find( |l| l.contains( "idle@x.com" ) )
+    .expect( "idle control row must be present" );
+
+  assert!(
+    touched_line.contains( "(touched)" ),
+    "BUG-488: touched_recently=true + resets_at=None must render '(touched)' in 5h Reset;\n  row: {touched_line:?}",
+  );
+  assert!(
+    !idle_line.contains( "(touched)" ),
+    "BUG-488 (control): touched_recently=false must keep the idle marker, never '(touched)';\n  row: {idle_line:?}",
   );
 }

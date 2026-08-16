@@ -48,8 +48,8 @@ Claude runs in CWD (or `--dir`) but loads the session from `/home/alice/project-
 
 **Mechanics:**
 - `--session-from <DIR>` computes `scope_for(DIR).claude_session_dir` and uses it to find the source session (via `most_recent_session_in_dir()`).
-- The session UUID is injected via `-c <uuid>` to the claude subprocess.
-- Claude then runs in the TARGET directory — future sessions are written to the TARGET's `CLAUDE_SESSION_DIR`, not the source's.
+- The source session file is physically copied into the TARGET's `CLAUDE_SESSION_DIR` before spawn, and bare `-c` (continue) is injected — claude continues the transplanted history in place under the same UUID (overwrite/self-copy/failure rules: `../cli/param/076_session_from.md` § Behavior).
+- Claude runs in the TARGET directory — future turns append to the transplanted copy in the TARGET's `CLAUDE_SESSION_DIR`, not the source's.
 - This is one-time cross-loading: not persistent session mirroring.
 
 **`--to` alias for `--dir`:** Enables the ergonomic pair `--to /b --session-from /a` while keeping `--dir` as the canonical parameter name.

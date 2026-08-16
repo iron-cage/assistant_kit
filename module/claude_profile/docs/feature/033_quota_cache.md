@@ -2,43 +2,56 @@
 
 ### Scope
 
-- **Purpose**: Persist last-known quota data in `{name}.json` so that when the usage API is unavailable (429, timeout, network error), the display shows cached values with a staleness indicator instead of dashes.
-- **Responsibility**: Documents the cache write-on-success, read-on-failure mechanism, the `"cache"` key structure in `{name}.json`, staleness display, and touch/model state persistence.
-- **In Scope**: Cache write after every successful `fetch_oauth_usage` call, proactive cache-first read when cache is ≤30 s old (skips live API call entirely — prevents burst-rate flooding), cache read when fetch returns any transient error, staleness indicator in display (`~` prefix on percentages, `(Nm ago)` age suffix), model override and touch state persistence in the same cache object, `{name}.json` read-merge-write (no new files), persistence of `fetch_oauth_account`'s `org_created_at` identity field so non-live-fetch branches can compute a real `~Renews` value instead of `"?"` (see AC-15; fix for BUG-327).
-- **Out of Scope**: Cache invalidation by time (stale data is always better than no data), separate cache files (all data goes into existing `{name}.json`), persistence of any `fetch_oauth_account` identity field other than `org_created_at` (e.g. `display_name`, `billing_type`, `capabilities` remain live-fetch-only and are never cached — only `org_created_at` has an established need, per AC-15).
+- **Purpose**: Persist last-known quota data so that when the usage API is unavailable (429, timeout, network error), the display shows cached values with a staleness indicator instead of dashes — without dirtying the git-tracked credential files on every fetch (TSK-500).
+- **Responsibility**: Documents the two-tier cache storage (volatile quota data in the untracked local `-cache/{name}.json`, low-churn metadata as top-level keys of the tracked `{name}.json`), the write-on-success/read-on-failure mechanism, the one-time legacy `cache{}` migration, staleness display, and touch/model state persistence.
+- **In Scope**: Cache write after every successful `fetch_oauth_usage` call, proactive cache-first read when cache is ≤30 s old (skips live API call entirely — prevents burst-rate flooding), cache read when fetch returns any transient error, staleness indicator in display (`~` prefix on percentages, `(Nm ago)` age suffix), model override and touch state persistence as top-level `{name}.json` keys, zero tracked-file writes on successful fetch (volatile data lands only in the local `-cache/{name}.json` — AC-16), one-time legacy `cache{}` migration (AC-18), persistence of `fetch_oauth_account`'s `org_created_at` identity field so non-live-fetch branches can compute a real `~Renews` value instead of `"?"` (see AC-15; fix for BUG-327).
+- **Out of Scope**: Cache invalidation by time (stale data is always better than no data), cross-host propagation of volatile quota data (the local cache file is untracked and never committed — accepted G1 tradeoff, see Non-owned accounts below), persistence of any `fetch_oauth_account` identity field other than `org_created_at` (e.g. `display_name`, `billing_type`, `capabilities` remain live-fetch-only and are never cached — only `org_created_at` has an established need, per AC-15).
 
 ### Design
 
-When the usage API (`GET /api/oauth/usage`) returns an error for an account, the `.usage` table currently shows `—` for all quota columns. With this feature, the last successful fetch result is persisted in `{name}.json` under a `"cache"` top-level key, and displayed as fallback when the live fetch fails.
+When the usage API (`GET /api/oauth/usage`) returns an error for an account, the `.usage` table currently shows `—` for all quota columns. With this feature, the last successful fetch result is persisted and displayed as fallback when the live fetch fails.
 
-**Storage target**: `{name}.json` — the existing per-account metadata file in the credential store. Uses the established read-merge-write pattern (introduced by the 5-to-2 file consolidation). No new files are created.
+**Storage targets (TSK-500 two-tier split):**
 
-**Cache structure** (new `"cache"` key in `{name}.json`):
+- **Volatile quota data** — changes on every fetch — lives flat in the untracked local file `{credential_store}/-cache/{name}.json`. The hyphen prefix keeps it out of git (global `-*` ignore rule), so steady-state quota sweeps perform zero writes to tracked files.
+- **Low-churn metadata** (`model_override`, `last_touch_at`, `touch_idle`, `org_created_at`) — must survive across hosts via git — lives as top-level keys of the tracked `{name}.json`, written via the established read-merge-write pattern.
+- **Legacy layout** (pre-TSK-500): a `"cache"` top-level object in `{name}.json` holding both kinds. Still fully readable as a fallback; dissolved by a one-time migration on the first `write_quota_cache` (see Algorithm step 0).
+
+**Local cache structure** (`-cache/{name}.json`, flat — follows [invariant/007](../invariant/007_json_storage_format.md)):
 
 ```json
 {
-  "cache": {
-    "fetched_at": "2026-06-07T07:52:00Z",
-    "status": "ok",
-    "five_hour": { "left_pct": 86.0, "resets_at": "2026-06-07T11:49:00Z" },
-    "seven_day": { "left_pct": 16.0, "resets_at": "2026-06-07T16:00:00Z" },
-    "seven_day_sonnet": { "left_pct": 0.0, "resets_at": "2026-06-07T16:00:00Z" },
-    "model_override": "opus",
-    "last_touch_at": "2026-06-07T06:30:00Z",
-    "touch_idle": true,
-    "org_created_at": "2026-01-01T00:00:00Z"
-  }
+  "fetched_at": "2026-06-07T07:52:00Z",
+  "status": "ok",
+  "five_hour": { "left_pct": 86.0, "resets_at": "2026-06-07T11:49:00Z" },
+  "seven_day": { "left_pct": 16.0, "resets_at": "2026-06-07T16:00:00Z" },
+  "seven_day_sonnet": { "left_pct": 0.0, "resets_at": "2026-06-07T16:00:00Z" },
+  "history": [ { "t": 1749900000, "h5": [ 14.0, "2026-06-07T11:49:00Z" ], "d7": null, "sn": null } ]
 }
 ```
 
+**Tracked low-churn keys** (top level of `{name}.json`, alongside `host`, `model`, etc.):
+
+```json
+{
+  "model_override": "opus",
+  "last_touch_at": "2026-06-07T06:30:00Z",
+  "touch_idle": true,
+  "org_created_at": "2026-01-01T00:00:00Z"
+}
+```
+
+**Merged read** (`read_quota_cache`): the volatile source is the local file when it has `fetched_at`, else the legacy tracked `cache{}`; when neither exists the entry is `None` (the "no cache" contract is unchanged). Each low-churn field reads the tracked top-level key first, falling back to the legacy `cache{}`.
+
 **Algorithm:**
 
-1. **On successful fetch**: After `fetch_oauth_usage` returns `Ok(usage_data)`, serialize the quota fields into the `"cache"` object and write to `{name}.json` via read-merge-write. The `fetched_at` timestamp is set to `now()` UTC ISO-8601. The `status` field is set to `"ok"`.
-2. **On fetch error (transient errors only — 429, timeout, network)**: Read `{name}.json`, extract the `"cache"` object if present. If `cache.fetched_at` exists, compute `age_minutes = now - fetched_at`. Use cached quota values for display. Mark the row with a staleness indicator. **Auth errors (HTTP 401, HTTP 403) bypass cache fallback entirely** — they pass through as `Err` so `should_refresh()` can trigger a token refresh. Only transient errors fall back to cache; auth errors must remain `Err` so the refresh pipeline sees them. Fix for BUG-296.
-3. **On model override**: After `apply_model_override` determines the target model, write `cache.model_override` to `{name}.json`.
-4. **On touch completion**: After a successful touch subprocess, write `cache.last_touch_at` and `cache.touch_idle = false` to `{name}.json`.
+0. **Legacy migration (inside `write_quota_cache`, once per account)**: If the tracked `{name}.json` still has a `cache{}` object, relocate the four low-churn keys to top level (an existing top-level value wins over the legacy one), remove the `cache` key entirely, and write the tracked file — a single write. The removed object's `history` seeds the local file so no measurements are lost. Already-migrated accounts short-circuit with zero tracked writes.
+1. **On successful fetch**: After `fetch_oauth_usage` returns `Ok(usage_data)`, serialize the quota fields flat into the local `-cache/{name}.json` (directory created on demand). The `fetched_at` timestamp is set to `now()` UTC ISO-8601. The `status` field is set to `"ok"`. The tracked `{name}.json` is not written (AC-16).
+2. **On fetch error (transient errors only — 429, timeout, network)**: Read the merged cache entry (`read_quota_cache` — local file first, legacy tracked `cache{}` fallback). If `fetched_at` exists, compute `age_minutes = now - fetched_at`. Use cached quota values for display. Mark the row with a staleness indicator. **Auth errors (HTTP 401, HTTP 403) bypass cache fallback entirely** — they pass through as `Err` so `should_refresh()` can trigger a token refresh. Only transient errors fall back to cache; auth errors must remain `Err` so the refresh pipeline sees them. Fix for BUG-296.
+3. **On model override**: After `apply_model_override` determines the target model, write top-level `model_override` to `{name}.json`.
+4. **On touch completion**: After a successful touch subprocess, write top-level `last_touch_at` and `touch_idle = false` to `{name}.json`.
 5. **On successful retry after token refresh**: After `apply_refresh()` performs a token refresh and the quota retry returns `Ok(retried)`, set `aq.cached = false` and `aq.cache_age_secs = None` on the in-memory `AccountQuota`, then call `write_quota_cache()` with the fresh data. This clears the `~` staleness indicators and updates the on-disk cache so the next run starts from fresh data.
-6. **On successful live `fetch_oauth_account`**: persist its `org_created_at` field into `cache.org_created_at` via the same read-merge-write path as the other cache fields. On any non-live-fetch branch (cache-first, G1-not-owned, `approximate_quota()`) — where no live account fetch occurs and `AccountQuota.account` stays `None` — read `cache.org_created_at` back and surface it through a new, independent `AccountQuota.org_created_at` field so `renews_label()`'s Estimate branch can still compute a real `~Renews` countdown. Old caches predating this field, or accounts never live-fetched, gracefully fall back to `None` (unchanged `"?"` display). Fix for BUG-327.
+6. **On successful live `fetch_oauth_account`**: persist its `org_created_at` field as a top-level `{name}.json` key via `write_cache_string_if_changed()` — a conditional write that skips when the stored value already matches, so steady-state fetches keep the zero-tracked-write property (AC-16). On any non-live-fetch branch (cache-first, G1-not-owned, `approximate_quota()`) — where no live account fetch occurs and `AccountQuota.account` stays `None` — read `org_created_at` back (top-level first, legacy `cache.org_created_at` fallback) and surface it through a new, independent `AccountQuota.org_created_at` field so `renews_label()`'s Estimate branch can still compute a real `~Renews` countdown. Accounts never live-fetched gracefully fall back to `None` (unchanged `"?"` display). Fix for BUG-327.
 
 **Display with cached data:**
 
@@ -48,23 +61,25 @@ When the usage API (`GET /api/oauth/usage`) returns an error for an account, the
 - A row-level age indicator shows time since last successful fetch: `(12m ago)` appended to the account name in the NAME cell (not an error-reason position — see AC-03)
 - When the display originates from a cache-fallback conversion (a transient fetch error substituted with cached data — AC-02), the original failure reason is also preserved on the in-memory result and surfaced via `shorten_error()` in every render format (text table, TSV, JSON) — see AC-14. The text table combines it with the existing NAME-cell age suffix in one parenthetical; TSV has no pre-existing age-suffix mechanism, so it appends the shortened reason as its own standalone parenthetical instead. Live successes never carry a failure reason and render unchanged.
 
-**Non-owned accounts (Feature 036 interaction):** When account ownership is enabled, non-owned accounts use the quota cache as their **primary** fetch source (G1 gate in Feature 036), not as a fallback. The cache read path, staleness display, and `~` prefix are identical to the error-fallback path — the distinction is only in how the cache-read was triggered. This means `write_quota_cache()` calls by the owning machine populate the cache that non-owner machines then read. Non-owned accounts where no cache exists show `—` for quota columns (same as no-cache graceful degradation).
+**Non-owned accounts (Feature 036 interaction):** When account ownership is enabled, non-owned accounts use the quota cache as their **primary** fetch source (G1 gate in Feature 036), not as a fallback. The cache read path, staleness display, and `~` prefix are identical to the error-fallback path — the distinction is only in how the cache-read was triggered.
+
+**Cross-host tradeoff (TSK-500):** volatile quota data is machine-local — the owning machine's `write_quota_cache()` no longer propagates via git, so a non-owner machine only has volatile data it fetched itself, or a legacy tracked `cache{}` the owner has not yet migrated away. A non-owner machine with no cache shows `—` for quota columns (identical to the pre-existing no-cache graceful degradation — no error, no tracked write). This is an accepted tradeoff: cross-host quota freshness was already bounded by commit/pull cadence, and eliminating per-sweep tracked writes keeps the credential store permanently clean for git.
 
 **Graceful degradation:**
 
-- If `{name}.json` has no `"cache"` key (first-ever fetch for this account, or file predates the feature): display dashes as before (no regression)
-- If `cache.fetched_at` is unparseable: treat as no cache
+- If neither the local `-cache/{name}.json` nor a legacy tracked `cache{}` exists (first-ever fetch for this account): display dashes as before (no regression)
+- If `fetched_at` is unparseable: treat as no cache
 - Cache is best-effort — write failures are silently ignored (quota display is non-critical)
 
 ### Acceptance Criteria
 
-- **AC-01**: On successful `fetch_oauth_usage`, the `"cache"` key in `{name}.json` is written with `fetched_at`, `status`, and all quota fields.
-- **AC-02**: On transient fetch error (429, timeout, network), if `{name}.json` contains a valid `"cache"` object, quota columns display cached values with `~` prefix. HTTP 401 and HTTP 403 errors are excluded from cache fallback.
+- **AC-01**: On successful `fetch_oauth_usage`, the local `-cache/{name}.json` is written with `fetched_at`, `status`, and all quota fields — and the tracked `{name}.json` is not modified (AC-16).
+- **AC-02**: On transient fetch error (429, timeout, network), if a cache entry exists (local `-cache/{name}.json`, or legacy tracked `cache{}` pre-migration), quota columns display cached values with `~` prefix. HTTP 401 and HTTP 403 errors are excluded from cache fallback.
 - **AC-03**: When cached data is displayed, an age indicator (`(Nm ago)` or `(Nh ago)`) is appended to the account name in the NAME cell (not an error-reason position — see AC-14 for the separate fallback-reason indicator).
 - **AC-04**: When no cache exists (fresh account, never fetched), display remains `—` (no regression from current behavior).
-- **AC-05**: The `model_override` field is written to cache after `apply_model_override` executes.
-- **AC-06**: The `last_touch_at` and `touch_idle` fields are written to cache after touch subprocess completion.
-- **AC-07**: Cache write uses read-merge-write on `{name}.json` — existing fields (`host`, `model`, `oauthAccount`, `_renewal_at`) are preserved.
+- **AC-05**: The `model_override` field is written as a top-level `{name}.json` key after `apply_model_override` executes (low-churn — must survive across hosts via git).
+- **AC-06**: The `last_touch_at` and `touch_idle` fields are written as top-level `{name}.json` keys after touch subprocess completion.
+- **AC-07**: Low-churn writes (AC-05/AC-06) and the one-time migration (AC-18) use read-merge-write on `{name}.json` — existing fields (`host`, `model`, `oauthAccount`, `_renewal_at`) are preserved. Volatile writes (AC-01) never touch `{name}.json` at all.
 - **AC-08**: Strategy recommendations (`sort::`) operate on cached quota values when live data is unavailable — recommendations remain functional.
 - **AC-09**: `format::json` output includes a `"cached": true` flag and `"cache_age_secs": N` field when displaying cached data.
 - **AC-10**: When cache fallback converts a fetch error to `Ok(cached_data)` (AC-02 path), accounts whose local token is expired (`expires_at_ms / 1000 <= now_secs`) are still flagged for token refresh by `should_refresh()` via the `cached + expired` guard — the `Ok` result does not suppress refresh when `cached = true` and the token is locally expired.
@@ -72,7 +87,10 @@ When the usage API (`GET /api/oauth/usage`) returns an error for an account, the
 - **AC-12**: HTTP 401 and HTTP 403 auth errors from `fetch_oauth_usage` bypass cache fallback — `fetch_all_quota` returns `Err` (not `Ok(cached_data)`) for these error types. The `Err` propagates to `should_refresh()`, which triggers a token refresh attempt. Auth errors must not be masked by cache. Fix for BUG-296.
 - **AC-13**: When `fetch_quota_for_list()` checks an owned, non-solo, non-occupied-elsewhere account and finds a cache entry ≤30 seconds old, the live API call (`GET /api/oauth/usage`) is skipped entirely; the cached data is served directly (`cached: true`, `cache_age_secs: N`). This cache-first guard fires after the G1/G1b/solo gates and after `is_current` is resolved, but before the local token-expiry check. Prevents API burst flooding from rapid-succession `.usage` invocations (test suites, polling scripts). The 30 s window is a constant `CACHE_FRESH_SECS` in `fetch.rs`.
 - **AC-14**: When cache fallback converts a fetch error to `Ok(cached_data)` (AC-02 path), the original failure reason is preserved on the in-memory account result (`fallback_reason: Option<String>` field, populated only on this arm) and surfaced via `shorten_error()` in every render format: the text table appends the shortened reason alongside the existing NAME-cell age suffix (AC-03) in one parenthetical; the TSV format has no pre-existing age-suffix mechanism, so it appends the shortened reason as its own standalone NAME-cell parenthetical instead; JSON output emits a `"fallback_reason":"<shortened_reason>"` field alongside `"cached"`/`"cache_age_secs"` (AC-09). Live successes (`cached=false`) never populate `fallback_reason` and render unchanged. Auth errors (401/403) never reach the cache-fallback arm (AC-12), so `fallback_reason` is never populated from an auth rejection. Fix for BUG-335.
-- **AC-15**: When a live `fetch_oauth_account` call succeeds, its `org_created_at` field is persisted to `cache.org_created_at` in `{name}.json` via the same read-merge-write path as the other cache fields (AC-01). On any non-live-fetch branch (cache-first AC-13, G1-not-owned, `approximate_quota()`) that would otherwise leave `AccountQuota.account` as `None`, the persisted `cache.org_created_at` is read back and surfaces through a new `AccountQuota.org_created_at: Option<String>` field — independent of `account: Option<OauthAccountData>`, which stays `None` on these branches. `renews_label()` (called with `aq.org_created_at.as_deref()` in place of the previous `aq.account.as_ref().map(|a| a.org_created_at.as_str())` in every render format) can then compute a real `~Renews` Estimate value instead of `"?"` for actively-subscribed accounts that have had at least one prior live account fetch. Accounts with no cache entry, or caches predating this field, gracefully fall back to `None` (unchanged `"?"` display — no regression). The existing `is_no_subscription()` guard (BUG-232 fix) is unaffected — it gates on `result.is_err()` and `account.billing_type`, independent of which field carries `org_created_at`. Fix for BUG-327.
+- **AC-15**: When a live `fetch_oauth_account` call succeeds, its `org_created_at` field is persisted as a top-level `org_created_at` key in `{name}.json` via `write_cache_string_if_changed()` — a conditional write skipped when the stored value already matches, preserving AC-16 on steady-state fetches. On any non-live-fetch branch (cache-first AC-13, G1-not-owned, `approximate_quota()`) that would otherwise leave `AccountQuota.account` as `None`, the persisted `org_created_at` is read back (top-level first, legacy `cache.org_created_at` fallback) and surfaces through a new `AccountQuota.org_created_at: Option<String>` field — independent of `account: Option<OauthAccountData>`, which stays `None` on these branches. `renews_label()` (called with `aq.org_created_at.as_deref()` in place of the previous `aq.account.as_ref().map(|a| a.org_created_at.as_str())` in every render format) can then compute a real `~Renews` Estimate value instead of `"?"` for actively-subscribed accounts that have had at least one prior live account fetch. Accounts with no cache entry, or caches predating this field, gracefully fall back to `None` (unchanged `"?"` display — no regression). The existing `is_no_subscription()` guard (BUG-232 fix) is unaffected — it gates on `result.is_err()` and `account.billing_type`, independent of which field carries `org_created_at`. Fix for BUG-327.
+- **AC-16**: A successful fetch-and-persist sequence (`write_quota_cache` + `write_history_entry`) performs zero writes to the tracked `{name}.json` once the account is migrated — the file is byte-identical before/after (verified by content hash, not merely git-status silence). Steady-state quota sweeps leave the credential store clean for git. TSK-500.
+- **AC-17**: Volatile fields (`fetched_at`, `status`, `five_hour`, `seven_day`, `seven_day_sonnet`, `history`) live flat in `{credential_store}/-cache/{name}.json` — hyphen-prefixed, therefore untracked under the global `-*` gitignore rule. The file follows [invariant/007](../invariant/007_json_storage_format.md) (2-space pretty JSON + trailing newline); the `-cache/` directory is created on demand. TSK-500.
+- **AC-18**: The first `write_quota_cache` against a legacy account (tracked `cache{}` present) migrates in a single tracked write: low-churn keys (`model_override`, `last_touch_at`, `touch_idle`, `org_created_at`) are relocated to top level (existing top-level values win), the `cache` key is removed entirely, and the legacy `history` seeds the local file. Before migration, the legacy `cache{}` remains fully readable through the merged read path; after migration, the tracked JSON contains no `cache` key. TSK-500.
 
 ### Bugs
 
@@ -108,8 +126,8 @@ When the usage API (`GET /api/oauth/usage`) returns an error for an account, the
 | `src/usage/render_tsv.rs` | Staleness display (TSV format) — same `~` prefix surfacing as `render.rs`, TSV-encoded; NAME-cell fallback-reason suffix (AC-14) is a standalone parenthetical — this format has no age-suffix mechanism to combine it with |
 | `src/usage/render_json.rs` | Staleness display (JSON format) — `cache_json_fields()` emits `"cached"`/`"cache_age_secs"` (AC-09); `"fallback_reason"` field (AC-14) |
 | `src/usage/format.rs` | `shorten_error()` — failure-reason shortening shared by all three render formats (AC-03/AC-14); `cache_age_label()` — age-suffix formatting (AC-03); `status_emoji()` — threshold-based status coloring, cache-blind by design |
-| `src/usage/api_switch.rs` | Side-effect cache — `write_cache_string()` (model_override, AC-05) and `write_cache_bool()` (touch_idle, AC-06) |
-| `claude_profile_core/src/account.rs` | Storage layer — `QuotaCacheEntry`, `read_quota_cache()`, `write_quota_cache()`, `write_cache_field()` |
+| `src/usage/api_switch.rs` | Side-effect metadata — `write_cache_string()` (model_override, AC-05) and `write_cache_bool()` (touch_idle, AC-06), both top-level tracked keys |
+| `claude_profile_core/src/account.rs` | Storage layer — `QuotaCacheEntry`, merged `read_quota_cache()`, `write_quota_cache()` (local volatile + migration), `write_cache_field()` (top-level tracked), `write_cache_string_if_changed()` (AC-15/AC-16), `migrate_legacy_cache()` (AC-18), `local_cache_path()` (AC-17) |
 
 ### Schema
 

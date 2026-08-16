@@ -10,6 +10,8 @@ resolver = "2"
 members = [
   "module/json_redact",
   "module/claude_journal",
+  "module/claude_journal_charts",
+  "module/svg_chart",
   "module/claude_journal_viewer",
   "module/svg_chart",
   "module/assistant_kit",
@@ -104,6 +106,16 @@ default-features = false
 
 [workspace.dependencies.claude_journal]
 path = "module/claude_journal"
+version = "=0.1.0"
+default-features = false
+
+[workspace.dependencies.claude_journal_charts]
+path = "module/claude_journal_charts"
+version = "=0.1.0"
+default-features = false
+
+[workspace.dependencies.svg_chart]
+path = "module/svg_chart"
 version = "=0.1.0"
 default-features = false
 
@@ -251,6 +263,13 @@ version = "^0.9"
 
 [workspace.dependencies.tiny_http]
 version = "^0.12"
+
+[workspace.dependencies.plotters]
+version = "^0.3"
+default-features = false
+
+[workspace.dependencies.open]
+version = "^5"
 
 [workspace.dependencies.libc]
 version = "^0.2"

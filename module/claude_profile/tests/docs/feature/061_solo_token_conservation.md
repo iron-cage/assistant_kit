@@ -35,7 +35,7 @@
 
 ### FT-01: Current+owned gets live fetch; non-current gets approximate_quota()
 
-- **Given:** Two owned accounts. Account A is `is_current && is_owned` (live token match — no cache read). Account B is owned but not current, with a `cache.five_hour` snapshot (single-point cache, no `history[]` array in this fixture).
+- **Given:** Two owned accounts. Account A is `is_current && is_owned` (live token match — no cache read). Account B is owned but not current, with a `cache.five_hour` snapshot (single-point cache, no `history[]` array in this fixture; legacy tracked `cache{}` format — exercises the pre-migration fallback read, TSK-500).
 - **When:** `clp .usage solo::1`
 - **Then:** Account A shows live quota data (HTTP fetch performed). Account B shows approximated data returned by `approximate_quota()` — no HTTP call to Account B. Both rows appear in the table.
 - **Exit:** 0
