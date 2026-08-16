@@ -25,7 +25,12 @@ format compliance, and append-only history behavior.
 - **Given:** `{name}.json` contains `_renewal_at`, `host`, and `role` fields not provided by the current save operation
 - **When:** `.account.save` is invoked again for the same account (without specifying `_renewal_at`, `host::`, or `role::`)
 - **Then:** All 3 preserved-only fields remain in `{name}.json` unchanged — `save()` performs a read-merge, not a clobber
-- **Source fn:** `as29_resave_credentials_unchanged` (cli/account_renewal_test_b.rs)
+- **Note:** Direct test evidence covers `_renewal_at` preservation only (shared with SC-2).
+  `host` and `role` traverse the same `save()` read-merge code path but are independently
+  tested only for their EXPLICIT-overwrite behavior (`as26_host_resave_overwrites`,
+  `as33_role_resave_overwrites` in `tests/cli/account_renewal_test_b.rs`), not
+  omission-preservation specifically.
+- **Source fn:** `as22_save_preserves_renewal_at` in `tests/cli/account_renewal_test.rs`
 - **Source:** [docs/schema/002_account_json.md §Format §Preserved-Only Fields](../../../docs/schema/002_account_json.md)
 
 ---
@@ -35,7 +40,7 @@ format compliance, and append-only history behavior.
 - **Given:** `{name}.json` has `_renewal_at` set by a prior `.account.renewal` call
 - **When:** `.account.save` is invoked without providing `at::` or `from_now::`
 - **Then:** `_renewal_at` remains unchanged in `{name}.json` — `.account.save` never touches this field
-- **Source fn:** `as29_resave_credentials_unchanged` (cli/account_renewal_test_b.rs)
+- **Source fn:** `as22_save_preserves_renewal_at` in `tests/cli/account_renewal_test.rs`
 - **Source:** [docs/schema/002_account_json.md §Preserved-Only Fields](../../../docs/schema/002_account_json.md)
 
 ---

@@ -15,26 +15,26 @@ ignorance, incompatibility with `live::1`, and error row representation.
 | FM-3 | `format::json` combined with `live::1` exits 1 (incompatible combination) | Incompatibility | ✅ |
 | FM-4 | Error accounts in `.usage` JSON appear as `{"account":"...","error":"..."}` | Error Representation | ✅ |
 
-**Behavioral Divergence Pair:** FM-2 (`format::json` with `sub::0 tier::0` — field suppression params silently ignored, all fields always serialized) ↔ FM-3 (`format::json` with `live::1` — incompatible combination exits 1 before any fetch; some params are blocked outright while field-presence params are silently overridden)
+**Behavioral Divergence Pair:** FM-2 (`format::json` with `cols::-sub,-tier,-active` — field suppression params silently ignored, all fields always serialized) ↔ FM-3 (`format::json` with `live::1` — incompatible combination exits 1 before any fetch; some params are blocked outright while field-presence params are silently overridden)
 
 ---
 
 ### FM-1: Multi-record commands → JSON array; single-record commands → JSON object
 
-- **Given:** `.accounts format::json` (multi-record) and `.credentials.status format::json` (single-record)
-- **When:** Both commands are invoked
-- **Then:** `.accounts` output is a JSON array `[{...}]`; `.credentials.status` output is a JSON object `{...}` — the record multiplicity determines the top-level JSON shape
-- **Source fn:** `acc33_accounts_current_param_and_json` (cli/accounts_list_test_b.rs)
+- **Given:** `.accounts format::json` (multi-record) in one test, and `.credentials.status format::json` (single-record) in another test
+- **When:** Each command's output is captured
+- **Then:** `.accounts` output parses as a JSON array (`.as_array()` succeeds); `.credentials.status` output parses as a JSON object (`.as_object()` succeeds) — the record multiplicity determines the top-level JSON shape
+- **Source fn:** `account_nc2_json_output_schema_valid` (array half) and `credentials_nc2_json_output_schema_valid` (object half) (both cli/command_noun_test.rs)
 - **Source:** [docs/cli/format/002_json.md §Structure](../../../../docs/cli/format/002_json.md)
 
 ---
 
 ### FM-2: Field-presence params are ignored in JSON mode — all fields always included
 
-- **Given:** `.accounts format::json sub::0 tier::0` (field suppression params present)
+- **Given:** `.accounts cols::-sub,-tier,-active format::json` (field-presence suppression params present; `.accounts` no longer accepts the legacy `sub::`/`tier::` boolean toggles directly — Feature 037 replaced them with `cols::`)
 - **When:** The command runs
-- **Then:** JSON output contains both `sub` and `tier` fields — `format::json` overrides field-presence toggles; all fields serialize unconditionally
-- **Source fn:** `ft09_033_render_json_cached_includes_fields` (usage/render_tests_a.rs)
+- **Then:** JSON output still contains `subscription_type`, `rate_limit_tier`, and `is_active` fields — `format::json` overrides field-presence toggles; all fields serialize unconditionally
+- **Source fn:** `acc10_json_ignores_field_presence` (cli/accounts_list_test.rs)
 - **Source:** [docs/cli/format/002_json.md §Notes](../../../../docs/cli/format/002_json.md)
 
 ---

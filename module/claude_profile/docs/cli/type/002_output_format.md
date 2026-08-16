@@ -2,16 +2,20 @@
 
 **Purpose:** Selects between human-readable text, compact table, and machine-parseable JSON output. Enables pipeline composition via `format::json | jq`; enables at-a-glance multi-account comparison via `format::table`.
 
-**Fundamental Type:** Enum — four named rendering modes plus three `.usage`-only variants
+**Fundamental Type:** Enum — 3 variants (`src/output.rs:13-21`). The three `.usage`-only modes (`Value`/`Tsv`/`Plain`) belong to a separate, differently-named enum, `UsageOutputFormat` (`src/usage/types.rs:340-352`) — not to `OutputFormat` itself.
 
-**Constants:**
+**Constants (`OutputFormat`, `src/output.rs:13-21` — used by `.accounts`, `.paths`, `.credentials.status`, `.account.limits`):**
 - `TEXT` — human-readable labeled output (default)
 - `JSON` — structured JSON output; all fields serialized regardless of field-presence toggles
 - `TABLE` — compact aligned table (`.accounts` only)
-- `VALUE` — bare scalar string, no headers or footer (`.usage` only; implied by `get::`)
-- `TSV` — tab-separated values with header row (`.usage` only)
-- `PLAIN` — text layout with no emoji or ANSI colors (`.usage` only; equivalent to `no_color::1`)
 - `DEFAULT = Text`
+
+**Constants (`UsageOutputFormat`, `src/usage/types.rs:340-352` — `.usage` only, separate enum):**
+- `TEXT` — human-readable table (default)
+- `JSON` — machine-readable JSON array
+- `TSV` — tab-separated values with header row, plain-text status labels
+- `PLAIN` — same layout as `TEXT` with no emoji or ANSI sequences (equivalent to `no_color::1`)
+- `VALUE` — bare scalar string, no headers or footer; outputs one field for the first row only (implied by `get::`)
 
 **Constraints:**
 - One of: `text`, `json`, `table` (case-insensitive)
@@ -21,14 +25,14 @@
 **Parsing:**
 
 ```
-pub fn new( s : &str ) -> Result< Self, String >
+pub fn from_cmd( cmd : &VerifiedCommand ) -> Result< Self, ErrorData >
 ```
 
+`OutputOptions::from_cmd()` (`src/output.rs`) — not a method on `OutputFormat` itself; there is no `impl OutputFormat` block and no `OutputFormat::new()`/`get()`. Unrecognized `format::` values return `Err(ErrorData)` with `ErrorCode::ArgumentTypeMismatch`; an absent or non-string value defaults to `OutputFormat::Text`.
+
 **Methods:**
-- `get() -> &str` — string representation (`"text"`, `"json"`, or `"table"`)
-- `is_json() -> bool` — true for JSON format
-- `is_text() -> bool` — true for text format
-- `is_table() -> bool` — true for table format
+- `OutputOptions::is_table() -> bool` — true when the selected format is `Table`; the only accessor method, and it lives on `OutputOptions`, not `OutputFormat`.
+- No `is_json()`/`is_text()`/`get()` methods exist.
 
 ### Referenced Parameters
 

@@ -265,9 +265,9 @@ fn ai36_name_omitted_when_names_empty()
 // ── AI lim_it: live-endpoint tests ───────────────────────────────────────────
 //
 // These tests require a real Anthropic OAuth access token from the host HOME.
-// They are excluded from Docker CI by the `!test(lim_it)` nextest filter.
-// Each test calls `require_live_api()` early — panics if the API is
-// unreachable or rate-limited (no silent skips).
+// No nextest filter excludes them — they run by default whenever ~/.claude is
+// mounted (see .config/nextest.toml). Each test calls `require_live_api()`
+// early — panics if the API is unreachable or rate-limited (no silent skips).
 
 #[ test ]
 /// AC-01: Identity fields (Tagged ID, UUID) come from endpoint 002 with a live token.
@@ -275,7 +275,7 @@ fn ai36_name_omitted_when_names_empty()
 /// Source: `tests/docs/feature/031_account_inspect.md § FT-01`
 fn lim_it_ai14_identity_fields_from_endpoint_002()
 {
-  let Some( token ) = live_active_token() else { return; };
+  let token = live_active_token().expect( "live API token required — no ~/.claude/.credentials.json" );
   require_live_api( "lim_it_ai14" );
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -301,7 +301,7 @@ fn lim_it_ai14_identity_fields_from_endpoint_002()
 /// Source: `tests/docs/feature/031_account_inspect.md § FT-02`
 fn lim_it_ai15_memberships_shown_with_count()
 {
-  let Some( token ) = live_active_token() else { return; };
+  let token = live_active_token().expect( "live API token required — no ~/.claude/.credentials.json" );
   require_live_api( "lim_it_ai15" );
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -325,7 +325,7 @@ fn lim_it_ai15_memberships_shown_with_count()
 /// Source: `tests/docs/feature/031_account_inspect.md § FT-03, FT-04, FT-16, FT-17`
 fn lim_it_ai16_selected_marker_multi_membership()
 {
-  let Some( token ) = live_active_token() else { return; };
+  let token = live_active_token().expect( "live API token required — no ~/.claude/.credentials.json" );
   require_live_api( "lim_it_ai16" );
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -363,7 +363,7 @@ fn lim_it_ai16_selected_marker_multi_membership()
 /// Source: `tests/docs/feature/031_account_inspect.md § FT-05`
 fn lim_it_ai17_org_fields_from_endpoint_005()
 {
-  let Some( token ) = live_active_token() else { return; };
+  let token = live_active_token().expect( "live API token required — no ~/.claude/.credentials.json" );
   require_live_api( "lim_it_ai17" );
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -384,7 +384,7 @@ fn lim_it_ai17_org_fields_from_endpoint_005()
 /// Source: `tests/docs/feature/031_account_inspect.md § FT-06`
 fn lim_it_ai18_billing_from_selected_membership()
 {
-  let Some( token ) = live_active_token() else { return; };
+  let token = live_active_token().expect( "live API token required — no ~/.claude/.credentials.json" );
   require_live_api( "lim_it_ai18" );
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -408,7 +408,7 @@ fn lim_it_ai18_billing_from_selected_membership()
 /// Source: `tests/docs/feature/031_account_inspect.md § FT-13`
 fn lim_it_ai19_valid_token_live_data_source_json()
 {
-  let Some( token ) = live_active_token() else { return; };
+  let token = live_active_token().expect( "live API token required — no ~/.claude/.credentials.json" );
   require_live_api( "lim_it_ai19" );
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -436,7 +436,7 @@ fn lim_it_ai19_valid_token_live_data_source_json()
 /// Source: `tests/docs/feature/031_account_inspect.md § FT-10`
 fn lim_it_ai20_refresh_attempted_on_expired_token()
 {
-  let Some( _token ) = live_active_token() else { return; };
+  let _token = live_active_token().expect( "live API token required — no ~/.claude/.credentials.json" );
   require_live_api( "lim_it_ai20" );
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -464,7 +464,7 @@ fn lim_it_ai20_refresh_attempted_on_expired_token()
 /// Source: `tests/docs/feature/031_account_inspect.md § FT-14`
 fn lim_it_ai21_trace_endpoint_lines_on_live_account()
 {
-  let Some( token ) = live_active_token() else { return; };
+  let token = live_active_token().expect( "live API token required — no ~/.claude/.credentials.json" );
   require_live_api( "lim_it_ai21" );
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -487,7 +487,7 @@ fn lim_it_ai21_trace_endpoint_lines_on_live_account()
 /// Source: `tests/docs/feature/031_account_inspect.md § FT-25`
 fn lim_it_ai22_name_and_email_from_endpoint_002()
 {
-  let Some( token ) = live_active_token() else { return; };
+  let token = live_active_token().expect( "live API token required — no ~/.claude/.credentials.json" );
   require_live_api( "lim_it_ai22" );
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -519,7 +519,7 @@ fn lim_it_ai22_name_and_email_from_endpoint_002()
 /// Source: `tests/docs/feature/031_account_inspect.md § FT-27`
 fn lim_it_ai23_capabilities_and_tier_from_membership()
 {
-  let Some( token ) = live_active_token() else { return; };
+  let token = live_active_token().expect( "live API token required — no ~/.claude/.credentials.json" );
   require_live_api( "lim_it_ai23" );
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -543,7 +543,7 @@ fn lim_it_ai23_capabilities_and_tier_from_membership()
 /// Source: `tests/docs/feature/031_account_inspect.md § FT-28`
 fn lim_it_ai24_usage_data_from_endpoint_001()
 {
-  let Some( token ) = live_active_token() else { return; };
+  let token = live_active_token().expect( "live API token required — no ~/.claude/.credentials.json" );
   require_live_api( "lim_it_ai24" );
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();

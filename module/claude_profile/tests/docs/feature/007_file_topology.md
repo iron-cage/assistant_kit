@@ -17,7 +17,7 @@ Feature behavioral requirement test cases for `docs/feature/007_file_topology.md
 | FT-03 | `clp .paths` exits 2 when `HOME` unset | AC-03 |
 | FT-04 | `claude_json_file()` returns `$HOME/.claude.json` | AC-04 |
 | FT-05 | `claude_json_file()` is NOT inside `.claude/` directory | AC-05 |
-| FT-06 | `ClaudePaths::with_home(home)` resolves `credentials_file()` correctly | AC-06 |
+| FT-06 | `credentials_file()` resolves correctly relative to HOME | AC-06 |
 
 ### Test Case Index
 
@@ -28,7 +28,7 @@ Feature behavioral requirement test cases for `docs/feature/007_file_topology.md
 | FT-03 | `clp .paths` exits 2 with actionable error when HOME unset | AC-03 | CLI Error |
 | FT-04 | `claude_json_file()` returns `$HOME/.claude.json` | AC-04 | Path Shape |
 | FT-05 | `claude_json_file()` is sibling to `.claude/`, not inside it | AC-05 | Path Shape |
-| FT-06 | `with_home()` resolves credentials path from explicit home | AC-06 | Construction |
+| FT-06 | `credentials_file()` resolves correctly relative to HOME | AC-06 | Construction |
 
 **Total:** 6 FT cases
 
@@ -47,7 +47,7 @@ Feature behavioral requirement test cases for `docs/feature/007_file_topology.md
 
 ### FT-02: All path methods return correct paths relative to HOME
 
-- **Given:** `HOME` is set to a known temp directory. `ClaudePaths::with_home(home)` is constructed.
+- **Given:** `HOME` env var is set to a known path (`/test/home`). `ClaudePaths::new()` is constructed.
 - **When:** Each path method is called: `credentials_file()`, `projects_dir()`, `stats_file()`, `settings_file()`, `session_env_dir()`, `sessions_dir()`.
 - **Then:**
   - `credentials_file()` → `{home}/.claude/.credentials.json`
@@ -95,9 +95,9 @@ Feature behavioral requirement test cases for `docs/feature/007_file_topology.md
 
 ---
 
-### FT-06: `with_home()` resolves credentials path from explicit home
+### FT-06: `credentials_file()` resolves correctly relative to HOME
 
-- **Given:** An explicit `home: &Path` is passed to `ClaudePaths::with_home(home)`.
+- **Given:** `HOME` env var is set to a known path (`/test/home`). `ClaudePaths::new()` is constructed.
 - **When:** `paths.credentials_file()` is called.
 - **Then:** Returns `{home}/.claude/.credentials.json`.
 - **Exit:** Ok

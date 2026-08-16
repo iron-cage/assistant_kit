@@ -10,9 +10,9 @@ is in place and prevents the described quota misclassification failure mode.
 
 | ID | Pitfall | Bug | Guard Verified By |
 |----|---------|-----|-------------------|
-| PP-1 | Status groups must use raw `seven_day_left`, not `prefer_weekly` | BUG-299 | `mre_bug321_both_exhausted_status_emoji_is_yellow`, `test_cc_prefer_sonnet_absent_tier_eligible` |
+| PP-1 | Status groups must use raw `seven_day_left`, not `prefer_weekly` | BUG-299 | `mre_bug299_h_exhausted_misclassified_as_red_prefer_any`, `test_cc_prefer_sonnet_absent_tier_eligible` |
 | PP-2 | Absent Sonnet tier (`None`) is NOT exhaustion — `map_or(0.0)` conflation | BUG-300 | `mre_bug300_model_override_absent_sonnet_no_override`, `ac1_absent_tier_with_opus_session_restores_sonnet` |
-| PP-3 | `son_available` must check utilization, not just window state | BUG-301 | `mre_bug285_idle_check_uses_resets_at_as_wrong_oracle` |
+| PP-3 | `son_available` must check utilization, not just window state | BUG-301 | `mre_bug301_son_active_with_remaining_quota_selects_sonnet` |
 | PP-4 | Status group and eligibility thresholds are model-agnostic | BUG-324 | `mre_bug324_green_account_eligible_when_7d_son_exhausted`, `test_cc_gate7_boundary_exactly_3pct_skipped_in_eligibility` |
 | PP-5 | Cancelled subscription is `Dead` regardless of quota | BUG-317 | `mre_bug317_cancelled_status_emoji_is_red`, `mre_bug317_cancelled_not_recommended_by_find_next` |
 
@@ -20,19 +20,24 @@ is in place and prevents the described quota misclassification failure mode.
 
 ### PP-1: Status groups use raw `seven_day_left` for partition boundaries
 
-- **Given:** An account with `seven_day_left = 32%` (> 3%) but `seven_day_sonnet = None` →
-  `prefer_weekly(any) = min(32, 0) = 0%` (≤ 3%).
-- **When:** `status_group_of(aq)` is called.
-- **Then:** Returns `HExhausted` (not `WeeklyExhausted`) — the partition uses raw
-  `seven_day_left`, not the model-weighted `prefer_weekly`. Fix BUG-299.
+- **Given:** Two accounts under `PreferStrategy::Any`: `account-a` has `5h_left = 0%`
+  (h-exhausted), `7d_left = 32%` (> 3%), `7d_son_left = 5%` → `prefer_weekly(any) =
+  min(32, 5) = 5%` — strictly less than raw `7d_left` even though neither individual quota
+  is itself near the 3% threshold; `red-account` has all windows exhausted (`WeeklyExhausted`
+  group).
+- **When:** `sort_indices(&accounts, SortStrategy::Renew, None, PreferStrategy::Any, 0)` ranks
+  the two accounts.
+- **Then:** `account-a` (`HExhausted` group) ranks before `red-account` (`WeeklyExhausted`
+  group) — the group-boundary computation is model-agnostic and uses raw `seven_day_left`
+  (32%, well above 3%), never the lower `prefer_weekly` value. Fix BUG-299.
 - **Rule:** Status group partition and eligibility gate boundaries are always model-agnostic.
   `prefer_weekly` is only a sort tiebreak. Never use strategy-weighted values for group or
   gate boundary decisions.
 - **Note:** Same rule applies to Gate 7 in `find_first_eligible` — BUG-324 was the same
   class of error in `sort_next.rs`.
-- **Source fn:** `mre_bug321_both_exhausted_status_emoji_is_yellow` in
-  `tests/usage/format_tests.rs`; `test_cc_prefer_sonnet_absent_tier_eligible` in
-  `tests/usage/sort_next_tests.rs`
+- **Source fn:** `mre_bug299_h_exhausted_misclassified_as_red_prefer_any` in
+  `tests/usage/sort_tests.rs`; `test_cc_prefer_sonnet_absent_tier_eligible` in
+  `tests/usage/sort_next_tests_b.rs`
 - **Source:** [pitfall/001_quota_gate_pitfalls.md §P1](../../../docs/pitfall/001_quota_gate_pitfalls.md)
 
 ---
@@ -63,8 +68,8 @@ is in place and prevents the described quota misclassification failure mode.
   Haiku-only, wasting quota capacity as the window timer ran down.
 - **Rule:** Sonnet availability requires two checks: (1) window active (`resets_at = Some`)
   AND (2) utilization below threshold.
-- **Source fn:** `mre_bug285_idle_check_uses_resets_at_as_wrong_oracle` in
-  `tests/usage/api_tests_b.rs`
+- **Source fn:** `mre_bug301_son_active_with_remaining_quota_selects_sonnet` in
+  `tests/usage/subprocess_tests.rs`
 - **Source:** [pitfall/001_quota_gate_pitfalls.md §P3](../../../docs/pitfall/001_quota_gate_pitfalls.md)
 
 ---

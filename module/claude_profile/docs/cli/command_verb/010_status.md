@@ -34,6 +34,7 @@ Reports the current state of a live credential as a formatted snapshot via `cred
 | Parameter | Semantics | Required |
 |-----------|-----------|----------|
 | `format::` | Output format (`text` or `json`) | No |
+| `get::` | Extract a single bare field value for scripting (short-circuits normal rendering) | No |
 | `threshold::` | Warning threshold in seconds for `ExpiringSoon` classification | No |
 | `trace::` | Emit diagnostic trace output | No |
 

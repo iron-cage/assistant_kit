@@ -72,14 +72,19 @@ is in place and prevents the described credential corruption failure mode.
 
 ### PP-5: Pitfall 5 guard — active marker re-read after `run_isolated` window (BUG-316 MRE)
 
-- **Given:** `refresh_token_with_live_path("A", store, ...)` is entered. The `_active_{host}_{user}`
-  marker initially contains `"A"`. During the ~35-second `run_isolated` window, a concurrent
-  `switch_account("B")` overwrites the marker with `"B"` and overwrites the live credentials file
-  with B's JSON. `run_isolated` returns `credentials=None`.
-- **When:** The race-recovery block (`credentials=None` arm) executes.
-- **Then:** The active marker is re-read fresh inside the guard. The fresh read returns `"B"`, not
-  `"A"`. `is_active_now == false`. Race recovery does NOT copy the live file to the store.
-  `A.credentials.json` in the store is unchanged — B's credentials are NOT written into A's slot.
+- **Given:** `account.rs`'s race-recovery site (the `credentials=None` arm reached after a
+  `run_isolated` call in `refresh_token_with_live_path`) must re-read the `_active_{host}_{user}`
+  marker fresh, not reuse the `is_active` value cached before `run_isolated` was invoked.
+- **When:** The cited test reads the compiled source text of `account.rs` and scans it for the
+  fix markers (a structural/source-text check — it does not construct or execute the
+  concurrent-write race itself).
+- **Then:** `account.rs` contains the identifier `is_active_now` (the fresh re-read variable at
+  the race-recovery site) and the `Fix(BUG-316)` annotation appears at ≥2 sites (pre-sync +
+  race-recovery). This proves the fix pattern is present in source; it does not exercise the
+  two-OS-process race (concurrent `switch_account("B")` overwriting the marker and live
+  credentials file during the ~35-second `run_isolated` window) end-to-end.
 - **Note:** BUG-316 guard. Verified by `mre_bug316_stale_is_active_race_recovery_copies_wrong_account_creds`
-  in `claude_profile_core/tests/account_refresh_test.rs`. See also FT-26 in
-  `tests/docs/feature/017_token_refresh.md` for full behavioral description.
+  in `claude_profile_core/tests/account_refresh_test.rs` (structural source-text scan only —
+  see also FT-26 in `tests/docs/feature/017_token_refresh.md` for the full behavioral
+  description of the race this guard protects against; no automated test executes that race
+  end-to-end).
