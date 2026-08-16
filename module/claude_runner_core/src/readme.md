@@ -8,12 +8,15 @@ This directory contains the core implementation of the `claude_runner_core` crat
 |------|----------------|
 | `lib.rs` | Crate entry point and public API surface |
 | `command/` | ClaudeCommand builder split into per-tier parameter modules |
+| `control.rs` | Bidirectional control-protocol session over stream-json stdio |
+| `exit_code.rs` | Classify subprocess exit codes/stderr into `ErrorKind` |
+| `isolated.rs` | One-shot run with isolated temp HOME and injected credentials |
 | `types.rs` | Enum type definitions and conversions |
 | `process.rs` | Scan `/proc` for Claude processes; send SIGTERM/SIGKILL |
 | `ps_table.rs` | Render a `ProcessInfo` slice as a table (feature `ps_table`) |
 | `session_dir.rs` | Directory-based session isolation for invocations |
 
-## Organization (6 entries)
+## Organization (9 entries)
 
 Files organized by responsibility following Rust module conventions.
 
@@ -27,6 +30,9 @@ src/
 │   ├── params_core.rs  # Tier 1 critical parameters
 │   ├── params_security.rs  # Tier 2 security-sensitive parameters
 │   └── params_extended.rs  # Tier 3+ optional parameters
+├── control.rs          # Bidirectional control-protocol session (stream-json)
+├── exit_code.rs        # Exit-code/stderr → ErrorKind classification
+├── isolated.rs         # run_isolated(): temp-HOME one-shot execution
 ├── types.rs            # ActionMode, LogLevel enums
 ├── process.rs          # /proc scanner, signal sending
 ├── ps_table.rs         # ProcessInfo table rendering (feature `ps_table`)
@@ -67,11 +73,11 @@ Comprehensive test suite in `tests/` directory:
 - Builder pattern API (4 test files): edge cases, methods, defaults, environment variables
 - Type definitions (1 test file): enum conversions and defaults
 - Migration validation (2 test files): factory pattern removal, single execution point
-- Verification framework (5 test files): 231 validation assertions across 6 layers (spec.md NFR-6)
+- Verification framework (5 test files): 231 validation assertions across 6 layers
 - Inspection methods (1 test file): describe() and describe_env()
 - Execution output (1 test file): ExecutionOutput struct and Display
 - Skip permissions (1 test file): --dangerously-skip-permissions flag
 - Manual execution (2 test files): real Claude binary tests (skipped in CI)
-- **Total**: 21 test files, all passing; see tests/readme.md and spec.md NFR-6 for counts
+- **Total**: 43 test files, all passing; see tests/readme.md for the complete Responsibility Table
 
 See `tests/readme.md` for complete test documentation.

@@ -19,8 +19,12 @@
 //! | T10 | `IsolatedModel::model_id()` all 3 variants + constant | correct `Option<&str>` per variant   | no    |
 //! | T11 | `ISOLATED_CLAUDE_MD` keyword content (AC-42)          | contains expected instruction terms   | no    |
 //! | T12 | `with_home_isolation()` suppresses `--chrome` (AC-41) | `describe()` omits `--chrome`        | no    |
+//! | T13 | isolated HOME is unique per invocation and `0700`     | two runs see distinct, private HOMEs | no (fake binary) |
 
 use claude_runner_core::{ IsolatedModel, IsolatedRunResult, RunnerError, ISOLATED_DEFAULT_MODEL, ISOLATED_CLAUDE_MD };
+
+#[ cfg( unix ) ]
+mod fake_claude_bin;
 
 // ── T01 ───────────────────────────────────────────────────────────────────────
 
@@ -328,5 +332,81 @@ fn t_isolated_no_chrome_flag()
   assert!(
     !desc.contains( "--chrome" ),
     "with_home_isolation() must suppress --chrome; got: {desc}",
+  );
+}
+
+// ── T13 ───────────────────────────────────────────────────────────────────────
+
+/// T13: the isolated HOME is unique per invocation and owner-only (`0700`).
+///
+/// # Root Cause (audit-predictable-isolated-home)
+///
+/// The temp HOME was `{tmp}/claude_isolated_{pid}` created via `create_dir_all`:
+/// the name was predictable (pre-creatable by another local user, who would then own
+/// the credentials file's parent directory), `create_dir_all` silently accepted such a
+/// pre-existing directory, and two invocations in one process collided on the same
+/// path — each could delete the other's live HOME at cleanup.
+///
+/// # Why Not Caught
+///
+/// No test observed the isolated HOME from inside the subprocess; every isolation test
+/// asserted on flags, output, or credentials content — never on the HOME path's
+/// uniqueness or its permission bits.
+///
+/// # Fix Applied
+///
+/// `create_isolated_home()` uses `tempfile::Builder` — random suffix, `0700` applied
+/// at mkdir time, creation failing rather than reusing an existing path — and the
+/// returned `TempDir` guard removes the tree on every exit path (RAII), including the
+/// early `?` returns that previously leaked credentials on spawn failure.
+///
+/// # Prevention
+///
+/// Never derive temp-dir names from PID alone; PID is stable within a process and
+/// reusable across processes. Use a randomized creator that fails on collision.
+///
+/// # Pitfall
+///
+/// A fake `claude` on `PATH` reports its own `$HOME` and its mode — asserting from
+/// *inside* the subprocess is what proves the spawned environment, not just the
+/// builder's intent.
+#[ cfg( unix ) ]
+#[ test ]
+#[ allow( unsafe_code ) ]
+fn t13_isolated_home_unique_and_private_per_invocation()
+{
+  use claude_runner_core::run_isolated;
+
+  // Fake claude: report "<mode>|<home>" and exit.
+  let ( _dir, path_val ) = fake_claude_bin::fake_claude_dir(
+    r#"printf '%s|%s' "$(stat -c '%a' "$HOME")" "$HOME""#
+  );
+  let creds_json = r#"{"accessToken":"fake","refreshToken":"fake","expiresAt":9999999999999}"#;
+
+  let orig_path = std::env::var( "PATH" ).unwrap_or_default();
+  // SAFETY: nextest runs one process per test; no other thread reads PATH concurrently.
+  unsafe { std::env::set_var( "PATH", &path_val ); }
+  let first  = run_isolated( creds_json, vec![], 30, IsolatedModel::KeepCurrent );
+  let second = run_isolated( creds_json, vec![], 30, IsolatedModel::KeepCurrent );
+  // SAFETY: restoring PATH to the original value.
+  unsafe { std::env::set_var( "PATH", &orig_path ); }
+
+  let first  = first.expect( "first isolated run must succeed" );
+  let second = second.expect( "second isolated run must succeed" );
+
+  let ( mode1, home1 ) = first.stdout.split_once( '|' )
+    .expect( "fake claude must print '<mode>|<home>'" );
+  let ( mode2, home2 ) = second.stdout.split_once( '|' )
+    .expect( "fake claude must print '<mode>|<home>'" );
+
+  assert_eq!( mode1, "700", "isolated HOME must be owner-only; stdout: {}", first.stdout );
+  assert_eq!( mode2, "700", "isolated HOME must be owner-only; stdout: {}", second.stdout );
+  assert_ne!(
+    home1, home2,
+    "two sequential invocations in one process must get distinct isolated HOMEs"
+  );
+  assert!(
+    !std::path::Path::new( home1 ).exists() && !std::path::Path::new( home2 ).exists(),
+    "isolated HOMEs must be removed after each run"
   );
 }

@@ -45,65 +45,6 @@ fn session_dir_special_names()
 }
 
 // ============================================================================
-// SessionManager — deprecated session_exists (v1.x behavior)
-// ============================================================================
-
-#[ test ]
-fn session_exists_returns_false_for_nonexistent()
-{
-  //! Verify deprecated `session_exists()` behavior for nonexistent session.
-  //!
-  //! **Note:** This tests the deprecated v1.x detection method.
-  //! Use `claude_storage_core::continuation::check_continuation()` instead.
-
-  let temp = TempDir::new().unwrap();
-  let sessions_root = temp.path().join( "sessions" );
-  let mgr = SessionManager::new( &sessions_root );
-
-  #[ allow( deprecated ) ]
-  {
-    assert!( !mgr.session_exists( "nonexistent" ) );
-  }
-}
-
-#[ test ]
-fn session_exists_returns_false_without_history_file()
-{
-  //! Verify deprecated `session_exists()` requires `.claude_history` file.
-
-  let temp = TempDir::new().unwrap();
-  let sessions_root = temp.path().join( "sessions" );
-  let mgr = SessionManager::new( &sessions_root );
-
-  let session_dir = mgr.session_dir( "test" );
-  std::fs::create_dir_all( &session_dir ).unwrap();
-
-  #[ allow( deprecated ) ]
-  {
-    assert!( !mgr.session_exists( "test" ) );
-  }
-}
-
-#[ test ]
-fn session_exists_returns_true_with_history_file()
-{
-  //! Verify deprecated `session_exists()` detects `.claude_history` file.
-
-  let temp = TempDir::new().unwrap();
-  let sessions_root = temp.path().join( "sessions" );
-  let mgr = SessionManager::new( &sessions_root );
-
-  let session_dir = mgr.session_dir( "test" );
-  std::fs::create_dir_all( &session_dir ).unwrap();
-  std::fs::write( session_dir.join( ".claude_history" ), "" ).unwrap();
-
-  #[ allow( deprecated ) ]
-  {
-    assert!( mgr.session_exists( "test" ) );
-  }
-}
-
-// ============================================================================
 // SessionManager — ensure_session
 // ============================================================================
 

@@ -162,7 +162,7 @@ where
 
 // ── http_agent ───────────────────────────────────────────────────────────────
 
-/// Build an HTTP agent with explicit read and connect timeouts.
+/// Build an HTTP agent with explicit timeouts on every request phase.
 ///
 /// # Fix(BUG-172)
 ///
@@ -170,11 +170,25 @@ where
 /// `timeout_recv_body` defaults to `None` (indefinite), causing ~75–99s hangs when
 /// a server TCP-connects but stalls the response body.
 /// Pitfall: all new HTTP call sites must use this helper, not bare ureq calls.
+///
+/// # Fix(audit-http-stall-gaps)
+///
+/// Root cause: only connect and body-receive were bounded — a server that
+/// accepted the TCP connection but stalled before sending response *headers*
+/// (or stalled the request send) hung the fetch indefinitely, since
+/// `timeout_recv_body` starts counting only after headers arrive.
+/// Pitfall: per-phase timeouts never cover phases you didn't name;
+/// `timeout_global` is the backstop that bounds the whole call regardless of
+/// which phase stalls. `https_only` additionally refuses accidental plaintext
+/// `http://` URLs — these requests carry a live OAuth token.
 #[ cfg( feature = "enabled" ) ]
 #[ inline ]
 fn http_agent() -> ureq::Agent
 {
   let config = ureq::Agent::config_builder()
+    .https_only( true )
+    .timeout_global( Some( core::time::Duration::from_secs( 30 ) ) )
+    .timeout_recv_response( Some( core::time::Duration::from_secs( 10 ) ) )
     .timeout_recv_body( Some( core::time::Duration::from_secs( 10 ) ) )
     .timeout_connect( Some( core::time::Duration::from_secs( 5 ) ) )
     .http_status_as_error( false )
@@ -284,18 +298,19 @@ pub fn iso_to_unix_secs( s : &str ) -> Option< u64 >
   let date_part = &s[ ..t_pos ];
   let time_part = &s[ t_pos + 1 .. ];
 
-  // Parse date: "YYYY-MM-DD"
+  // Parse date: "YYYY-MM-DD" — .get() guards: fixed byte offsets panic
+  // mid-char on multibyte input (e.g. fullwidth digits); return None instead.
   if date_part.len() < 10 { return None; }
-  let year  = date_part[ 0..4 ].parse::< u64 >().ok()?;
-  let month = date_part[ 5..7 ].parse::< u64 >().ok()?;
-  let day   = date_part[ 8..10 ].parse::< u64 >().ok()?;
+  let year  = date_part.get( 0..4 )?.parse::< u64 >().ok()?;
+  let month = date_part.get( 5..7 )?.parse::< u64 >().ok()?;
+  let day   = date_part.get( 8..10 )?.parse::< u64 >().ok()?;
   if !( 1..=12 ).contains( &month ) || !( 1..=31 ).contains( &day ) { return None; }
 
   // Parse time: "HH:MM:SS" — ignore fractional seconds and timezone
   if time_part.len() < 8 { return None; }
-  let hour = time_part[ 0..2 ].parse::< u64 >().ok()?;
-  let min  = time_part[ 3..5 ].parse::< u64 >().ok()?;
-  let sec  = time_part[ 6..8 ].parse::< u64 >().ok()?;
+  let hour = time_part.get( 0..2 )?.parse::< u64 >().ok()?;
+  let min  = time_part.get( 3..5 )?.parse::< u64 >().ok()?;
+  let sec  = time_part.get( 6..8 )?.parse::< u64 >().ok()?;
   if hour > 23 || min > 59 || sec > 59 { return None; }
 
   // Days from 1970-01-01 to YYYY-01-01
@@ -399,9 +414,39 @@ fn extract_object_block( s : &str ) -> Option< &str >
   None
 }
 
+/// Locate `"key"` used as a JSON object key and return the text after its colon.
+///
+/// Tolerates whitespace between the closing quote and the colon (`"key" : value`)
+/// and requires the colon to actually follow — a quoted occurrence of `key` as a
+/// *value* (no colon after it) is skipped instead of being misread as the key.
+///
+/// Fix(audit-needle-colon-coupling)
+/// Root cause: every scanner searched for the fused needle `"key":`, so a body
+/// serialized with whitespace before the colon — valid JSON — made required
+/// fields invisible, and a string *value* equal to `"key":`-shaped text could
+/// false-match.
+/// Pitfall: needle scanning must anchor on the quoted key token and then parse
+/// the separator; fusing the colon into the needle couples the parser to one
+/// serializer's spacing.
+fn after_key< 'a >( block : &'a str, key : &str ) -> Option< &'a str >
+{
+  let quoted = format!( "\"{key}\"" );
+  let mut search = block;
+  loop
+  {
+    let pos  = search.find( quoted.as_str() )?;
+    let rest = &search[ pos + quoted.len() .. ];
+    if let Some( value ) = rest.trim_start().strip_prefix( ':' )
+    {
+      return Some( value );
+    }
+    search = rest;
+  }
+}
+
 /// Extract a single period bucket from the usage JSON body.
 ///
-/// Finds `"key":` needle, inspects the value:
+/// Finds the `"key"` field, inspects the value:
 /// - `null` → `None`
 /// - `{...}` block → parse `utilization` (required) and `resets_at` (optional)
 ///
@@ -409,13 +454,9 @@ fn extract_object_block( s : &str ) -> Option< &str >
 /// or if the JSON structure is unexpected.
 fn parse_period( body : &str, key : &str ) -> Result< Option< PeriodUsage >, QuotaError >
 {
-  let needle = format!( "\"{key}\":" );
-  let after_key = body
-    .find( needle.as_str() )
-    .map( |pos| &body[ pos + needle.len() .. ] )
-    .ok_or_else( || QuotaError::ResponseParse( key.to_string() ) )?;
-
-  let value_start = after_key.trim_start();
+  let value_start = after_key( body, key )
+    .ok_or_else( || QuotaError::ResponseParse( key.to_string() ) )?
+    .trim_start();
 
   // null → None
   if value_start.starts_with( "null" )
@@ -447,9 +488,7 @@ fn parse_period( body : &str, key : &str ) -> Result< Option< PeriodUsage >, Quo
 /// Returns `None` if the key is absent or the value is not a valid `f64`.
 fn parse_f64_in_block( block : &str, key : &str ) -> Option< f64 >
 {
-  let needle     = format!( "\"{key}\":" );
-  let after_key  = block.find( needle.as_str() ).map( |p| &block[ p + needle.len() .. ] )?;
-  let value      = after_key.trim_start();
+  let value = after_key( block, key )?.trim_start();
 
   // Reject string values (start with '"')
   if value.starts_with( '"' ) { return None; }
@@ -466,9 +505,7 @@ fn parse_f64_in_block( block : &str, key : &str ) -> Option< f64 >
 /// Returns `None` if the key is absent, the value is `null`, or parsing fails.
 fn parse_optional_string_in_block( block : &str, key : &str ) -> Option< String >
 {
-  let needle    = format!( "\"{key}\":" );
-  let after_key = block.find( needle.as_str() ).map( |p| &block[ p + needle.len() .. ] )?;
-  let value     = after_key.trim_start();
+  let value = after_key( block, key )?.trim_start();
 
   // null → None
   if value.starts_with( "null" ) { return None; }
@@ -493,10 +530,7 @@ fn parse_optional_string_in_block( block : &str, key : &str ) -> Option< String 
 /// Returns `None` when the `limits` key is absent, the array is empty, or no entry matches.
 fn scan_limits_for_kind( body : &str, kind_needles : &[ &str ] ) -> Option< PeriodUsage >
 {
-  // Find "limits":[ in body
-  let needle = "\"limits\":";
-  let pos    = body.find( needle )?;
-  let after  = body[ pos + needle.len() .. ].trim_start();
+  let after = after_key( body, "limits" )?.trim_start();
   if !after.starts_with( '[' ) { return None; }
 
   // Walk the array: extract each {...} object block
@@ -549,7 +583,7 @@ pub fn fetch_oauth_usage( token : &str ) -> Result< OauthUsageData, QuotaError >
   let status = resp.status().as_u16();
   if status >= 400
   {
-    return Err( QuotaError::HttpTransport( format!( "HTTP {status}" ) ) );
+    return Err( QuotaError::HttpStatus( status ) );
   }
 
   let body = resp
@@ -660,9 +694,8 @@ pub fn select_membership_index( memberships : &[ MembershipRaw ] ) -> usize
 /// Returns an empty `Vec` if the key is absent or the array is empty.
 fn parse_string_array( block : &str, key : &str ) -> Vec< String >
 {
-  let needle = format!( "\"{key}\":" );
-  let Some( pos ) = block.find( needle.as_str() ) else { return vec![]; };
-  let rest = block[ pos + needle.len() .. ].trim_start();
+  let Some( found ) = after_key( block, key ) else { return vec![]; };
+  let rest = found.trim_start();
   let Some( arr_start ) = rest.find( '[' ) else { return vec![]; };
   let inner = &rest[ arr_start + 1 .. ];
   let Some( arr_end ) = inner.find( ']' ) else { return vec![]; };
@@ -689,11 +722,8 @@ fn parse_string_array( block : &str, key : &str ) -> Vec< String >
 /// or if no membership objects with an `"organization"` block are found.
 fn parse_membership_list( body : &str ) -> Result< Vec< MembershipRaw >, QuotaError >
 {
-  let mem_label = "\"memberships\":";
-  let mem_pos   = body
-    .find( mem_label )
+  let after_label = after_key( body, "memberships" )
     .ok_or_else( || QuotaError::ResponseParse( "memberships".to_string() ) )?;
-  let after_label = &body[ mem_pos + mem_label.len() .. ];
   let arr_offset  = after_label
     .find( '[' )
     .ok_or_else( || QuotaError::ResponseParse( "memberships: no array".to_string() ) )?;
@@ -717,18 +747,22 @@ fn parse_membership_list( body : &str ) -> Result< Vec< MembershipRaw >, QuotaEr
     let Some( membership_block ) = extract_object_block( obj_slice ) else { break };
 
     // Extract the nested "organization": { ... } block
-    if let Some( org_label_pos ) = membership_block.find( "\"organization\":" )
+    if let Some( after_org ) = after_key( membership_block, "organization" )
     {
-      let org_label   = "\"organization\":";
-      let after_org   = membership_block[ org_label_pos + org_label.len() .. ].trim_start();
-      if let Some( org_block ) = extract_object_block( after_org )
+      if let Some( org_block ) = extract_object_block( after_org.trim_start() )
       {
         let billing_type   = parse_optional_string_in_block( org_block, "billing_type" )
           .unwrap_or_default();
-        let has_max        = org_block.contains( "\"claude_max\"" );
         let org_created_at = parse_optional_string_in_block( org_block, "created_at" )
           .unwrap_or_default();
         let capabilities    = parse_string_array( org_block, "capabilities" );
+        // Fix(audit-claude-max-substring)
+        // Root cause: `org_block.contains( "\"claude_max\"" )` matched the quoted
+        // token anywhere in the organization object — a string *value* elsewhere
+        // (or a future field named claude_max) would false-flag Max capability.
+        // Pitfall: capability presence is membership in the `capabilities` array,
+        // not a substring of the serialized block — test against the parsed list.
+        let has_max         = capabilities.iter().any( | c | c == "claude_max" );
         let rate_limit_tier = parse_optional_string_in_block( org_block, "rate_limit_tier" )
           .unwrap_or_default();
         memberships.push( MembershipRaw { index: idx, billing_type, has_max, capabilities, org_created_at, rate_limit_tier } );
@@ -746,6 +780,58 @@ fn parse_membership_list( body : &str ) -> Result< Vec< MembershipRaw >, QuotaEr
   Ok( memberships )
 }
 
+/// Extract a `[...]` array block from the start of `s` using bracket counting
+/// with string-literal tracking (same discipline as [`extract_object_block`]).
+///
+/// `s` must start with `'['`. Returns the slice including both brackets, or
+/// `None` if the input doesn't start with `'['` or has unmatched brackets.
+fn extract_array_block( s : &str ) -> Option< &str >
+{
+  if !s.starts_with( '[' ) { return None; }
+  let mut depth       = 0_i32;
+  let mut in_string   = false;
+  let mut escape_next = false;
+  for ( i, c ) in s.char_indices()
+  {
+    if escape_next
+    {
+      escape_next = false;
+      continue;
+    }
+    match c
+    {
+      '\\' if in_string => escape_next = true,
+      '"' => in_string = !in_string,
+      '[' if !in_string => depth += 1,
+      ']' if !in_string =>
+      {
+        depth -= 1;
+        if depth == 0 { return Some( &s[ ..=i ] ); }
+      }
+      _ => {}
+    }
+  }
+  None
+}
+
+/// Split `body` into the regions before and after the `memberships` array.
+///
+/// User-level identity scans run over these two regions only, so a same-named
+/// field inside a membership's `organization` block (`uuid`, `created_at`, …)
+/// can never shadow the top-level user field, regardless of key order in the
+/// serialized response.
+fn identity_scan_regions( body : &str ) -> ( &str, &str )
+{
+  let Some( key_pos ) = body.find( "\"memberships\"" ) else { return ( body, "" ) };
+  let tail = &body[ key_pos .. ];
+  let Some( arr_off ) = tail.find( '[' ) else { return ( &body[ ..key_pos ], "" ) };
+  match extract_array_block( &tail[ arr_off .. ] )
+  {
+    Some( arr ) => ( &body[ ..key_pos ], &tail[ arr_off + arr.len() .. ] ),
+    None        => ( &body[ ..key_pos ], "" ),
+  }
+}
+
 /// Parse the body of `GET /api/oauth/account` into [`OauthAccountData`].
 ///
 /// Extracts user-level identity fields (`tagged_id`, `uuid`, `email_address`,
@@ -761,28 +847,46 @@ fn parse_membership_list( body : &str ) -> Result< Vec< MembershipRaw >, QuotaEr
 ///
 /// # Fix(BUG-237)
 ///
-/// Previously used `str::find("\"organization\":")` on the full memberships string,
-/// which always resolved to `memberships[0]`'s organization regardless of which
-/// membership held the active subscription.
+/// Root cause: `str::find("\"organization\":")` on the full memberships string
+/// always resolved to `memberships[0]`'s organization block, so a paid
+/// subscription at any later index was misclassified as no subscription.
+/// Pitfall: needle-scanning ignores array structure — iterate brace-balanced
+/// membership blocks and select by priority; never scan across element
+/// boundaries.
 ///
 /// # Fix(BUG-295)
 ///
-/// Identity fields now come from endpoint 002 top-level — the fabricated
-/// `/api/oauth/userinfo` endpoint (HTTP 404) has been removed.
+/// Root cause: identity fields were fetched from a fabricated
+/// `/api/oauth/userinfo` endpoint (HTTP 404) — they actually live at the top
+/// level of this endpoint's response.
+/// Pitfall: never infer endpoint URLs from naming symmetry; confirm each
+/// against a live probe or `strings $(which claude)`.
+///
+/// # Fix(audit-identity-shadowing)
+///
+/// Root cause: identity fields were needle-scanned over the FULL body, so the
+/// first `"uuid"`/`"created_at"` hit could come from inside a membership's
+/// `organization` block whenever the serializer emitted `memberships` before
+/// the user fields.
+/// Pitfall: top-level and nested keys share names in this response — scan
+/// identity fields only outside the memberships array span
+/// ([`identity_scan_regions`]).
 #[ inline ]
 pub fn parse_oauth_account( body : &str ) -> Result< OauthAccountData, QuotaError >
 {
-  // User-level identity from body top-level
-  let tagged_id     = parse_optional_string_in_block( body, "tagged_id" )
-    .unwrap_or_default();
-  let uuid          = parse_optional_string_in_block( body, "uuid" )
-    .unwrap_or_default();
-  let email_address = parse_optional_string_in_block( body, "email_address" )
-    .unwrap_or_default();
-  let full_name     = parse_optional_string_in_block( body, "full_name" )
-    .unwrap_or_default();
-  let display_name  = parse_optional_string_in_block( body, "display_name" )
-    .unwrap_or_default();
+  // User-level identity from body top-level — memberships span masked out.
+  let ( before_mem, after_mem ) = identity_scan_regions( body );
+  let identity = | key : &str | -> String
+  {
+    parse_optional_string_in_block( before_mem, key )
+      .or_else( || parse_optional_string_in_block( after_mem, key ) )
+      .unwrap_or_default()
+  };
+  let tagged_id     = identity( "tagged_id" );
+  let uuid          = identity( "uuid" );
+  let email_address = identity( "email_address" );
+  let full_name     = identity( "full_name" );
+  let display_name  = identity( "display_name" );
 
   let memberships = parse_membership_list( body )?;
   let sel         = select_membership_index( &memberships );
@@ -829,7 +933,7 @@ pub fn fetch_oauth_account( token : &str ) -> Result< OauthAccountData, QuotaErr
   let status = resp.status().as_u16();
   if status >= 400
   {
-    return Err( QuotaError::HttpTransport( format!( "HTTP {status}" ) ) );
+    return Err( QuotaError::HttpStatus( status ) );
   }
 
   let body = resp
@@ -922,7 +1026,7 @@ pub fn fetch_claude_cli_roles( token : &str ) -> Result< ClaudeCliRolesData, Quo
   let status = resp.status().as_u16();
   if status >= 400
   {
-    return Err( QuotaError::HttpTransport( format!( "HTTP {status}" ) ) );
+    return Err( QuotaError::HttpStatus( status ) );
   }
 
   let body = resp
@@ -1022,9 +1126,8 @@ fn parse_models_response( body : &str ) -> Vec< ModelInfo >
 {
   let mut models = Vec::new();
 
-  let needle = "\"data\":";
-  let Some( pos ) = body.find( needle ) else { return models };
-  let after  = body[ pos + needle.len() .. ].trim_start();
+  let Some( found ) = after_key( body, "data" ) else { return models };
+  let after = found.trim_start();
   if !after.starts_with( '[' ) { return models; }
 
   let mut rest = &after[ 1 .. ]; // skip '['
@@ -1034,25 +1137,10 @@ fn parse_models_response( body : &str ) -> Vec< ModelInfo >
     if rest.starts_with( ']' ) || rest.is_empty() { break; }
     if !rest.starts_with( '{' ) { break; }
 
-    // Find balanced closing brace
-    let mut depth = 0_usize;
-    let mut end   = 0_usize;
-    for ( i, c ) in rest.char_indices()
-    {
-      match c
-      {
-        '{' => depth += 1,
-        '}' =>
-        {
-          depth = depth.saturating_sub( 1 );
-          if depth == 0 { end = i + 1; break; }
-        }
-        _   => {}
-      }
-    }
-    if end == 0 { break; }
-
-    let block = &rest[ ..end ];
+    // String-aware brace balancing — a '}' inside a display_name string must not
+    // truncate the block (same BUG-002 class extract_object_block already guards).
+    let Some( block ) = extract_object_block( rest ) else { break };
+    let end = block.len();
 
     if let Some( id_owned ) = parse_optional_string_in_block( block, "id" )
     {
@@ -1112,7 +1200,7 @@ pub fn fetch_models( token : &str ) -> Result< Vec< ModelInfo >, QuotaError >
   let status = resp.status().as_u16();
   if status >= 400
   {
-    return Err( QuotaError::HttpTransport( format!( "HTTP {status}" ) ) );
+    return Err( QuotaError::HttpStatus( status ) );
   }
 
   let body = resp
@@ -1126,112 +1214,4 @@ pub fn fetch_models( token : &str ) -> Result< Vec< ModelInfo >, QuotaError >
     return Err( QuotaError::ResponseParse( "data".to_string() ) );
   }
   Ok( models )
-}
-
-// ── Tests ─────────────────────────────────────────────────────────────────────
-
-#[ cfg( test ) ]
-mod tests
-{
-  use super::*;
-
-  // ── BUG-237 MRE: multi-membership selection ─────────────────────────────────
-
-  #[ test ]
-  #[ doc = "`bug_reproducer(237)`" ]
-  /// `parse_oauth_account` selects the stripe+max membership over a none-billing entry.
-  ///
-  /// # Root Cause
-  /// `str::find("\"organization\":")` always resolves to `memberships[0]`'s organization
-  /// block. Accounts with a paid subscription at index > 0 were silently misclassified as
-  /// having no subscription.
-  ///
-  /// # Why Not Caught
-  /// All test fixtures used single-membership bodies. Multi-membership accounts require
-  /// separate Anthropic org entities — uncommon in CI fixtures.
-  ///
-  /// # Fix Applied
-  /// `parse_oauth_account` now calls `parse_membership_list` which iterates ALL membership
-  /// objects using brace-balanced scanning, then `select_membership_index` picks the
-  /// highest-priority entry.
-  ///
-  /// # Prevention
-  /// This test must FAIL before the fix (memberships[0] is "none") and PASS after.
-  ///
-  /// # Pitfall
-  /// Always use brace-balanced extraction when iterating JSON arrays containing nested
-  /// objects — `str::find` on a needle will collide with nested occurrences of the same key.
-  fn mre_bug237_multi_membership_selects_stripe_max_over_none()
-  {
-    let body = r#"{
-      "tagged_id": "user_01ABC",
-      "uuid": "aaaa-bbbb",
-      "email_address": "alice@acme.com",
-      "full_name": "Alice",
-      "display_name": "Alice",
-      "memberships": [
-        { "role": "member", "organization": { "billing_type": "none", "capabilities": ["chat"], "created_at": "2024-01-01T00:00:00Z" } },
-        { "role": "admin",  "organization": { "billing_type": "stripe_subscription", "capabilities": ["claude_max","chat"], "rate_limit_tier": "default_claude_max_20x", "created_at": "2024-02-01T00:00:00Z" } }
-      ]
-    }"#;
-    let result = parse_oauth_account( body ).expect( "should parse" );
-    assert_eq!( result.billing_type, "stripe_subscription", "must select membership[1] (stripe+max), not membership[0] (none)" );
-    assert!( result.has_max, "membership[1] has claude_max capability" );
-    assert_eq!( result.org_created_at, "2024-02-01T00:00:00Z" );
-    // BUG-295: identity fields from body top-level
-    assert_eq!( result.tagged_id, "user_01ABC" );
-    assert_eq!( result.uuid, "aaaa-bbbb" );
-    assert_eq!( result.email_address, "alice@acme.com" );
-    assert_eq!( result.full_name, "Alice" );
-    assert_eq!( result.display_name, "Alice" );
-    assert_eq!( result.capabilities, vec![ "claude_max", "chat" ] );
-    assert_eq!( result.rate_limit_tier, "default_claude_max_20x" );
-    assert_eq!( result.memberships.len(), 2, "all memberships preserved" );
-  }
-
-  #[ test ]
-  #[ doc = "`bug_reproducer(237)`" ]
-  /// `parse_oauth_account` selects stripe (no max) over none when no max tier is present.
-  fn mre_bug237_multi_membership_selects_stripe_over_none_no_max()
-  {
-    let body = r#"{
-      "tagged_id": "user_02XYZ",
-      "uuid": "cccc-dddd",
-      "email_address": "bob@example.com",
-      "memberships": [
-        { "role": "member", "organization": { "billing_type": "none", "capabilities": ["chat"], "created_at": "2024-01-01T00:00:00Z" } },
-        { "role": "admin",  "organization": { "billing_type": "stripe_subscription", "capabilities": ["chat"], "created_at": "2024-03-01T00:00:00Z" } }
-      ]
-    }"#;
-    let result = parse_oauth_account( body ).expect( "should parse" );
-    assert_eq!( result.billing_type, "stripe_subscription" );
-    assert!( !result.has_max, "no claude_max in membership[1]" );
-    assert_eq!( result.org_created_at, "2024-03-01T00:00:00Z" );
-    assert_eq!( result.tagged_id, "user_02XYZ" );
-    assert_eq!( result.email_address, "bob@example.com" );
-    assert!( result.rate_limit_tier.is_empty(), "no rate_limit_tier in fixture" );
-  }
-
-  #[ test ]
-  #[ doc = "`bug_reproducer(237)`" ]
-  /// Single-membership body: index 0 is always selected (Priority 3 fallback unchanged).
-  fn mre_bug237_single_membership_fallback_unchanged()
-  {
-    let body = r#"{
-      "tagged_id": "user_03QRS",
-      "uuid": "eeee-ffff",
-      "email_address": "carol@example.com",
-      "full_name": "Carol",
-      "display_name": "Carol",
-      "memberships": [
-        { "role": "member", "organization": { "billing_type": "none", "capabilities": ["chat"], "created_at": "2024-01-01T00:00:00Z" } }
-      ]
-    }"#;
-    let result = parse_oauth_account( body ).expect( "should parse" );
-    assert_eq!( result.billing_type, "none", "single membership always selected via Priority 3" );
-    assert!( !result.has_max );
-    assert_eq!( result.memberships.len(), 1, "single membership preserved" );
-    assert_eq!( result.tagged_id, "user_03QRS" );
-    assert_eq!( result.full_name, "Carol" );
-  }
 }

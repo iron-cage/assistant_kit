@@ -1333,3 +1333,49 @@ fn ac6_recommended_model_divergence_sufficient_vs_near_exhausted()
      both states returning the same value means the threshold has no effect",
   );
 }
+
+// ── shorten_error: typed HttpStatus form ─────────────────────────────────────
+
+/// `shorten_error` shortens the typed `QuotaError::HttpStatus` Display form
+/// (`"HTTP NNN"`, no transport prefix) for all three allowlisted codes.
+///
+/// # Root Cause
+/// HTTP status failures used to render as `"HTTP transport error: HTTP NNN"`
+/// (folded into `HttpTransport` free text); the typed `HttpStatus` variant
+/// renders the stable form `"HTTP NNN"`, which the old prefixed branches never
+/// matched — live errors would have reappeared verbatim in the table column.
+///
+/// # Why Not Caught
+/// All fixtures were written against the old rendered form; nothing pinned the
+/// shortener to the error type's actual current Display output.
+///
+/// # Fix Applied
+/// `shorten_error` strips the legacy `"HTTP transport error: "` prefix when
+/// present and matches the anchored `"HTTP NNN"` form for both spellings.
+/// Fix(audit-stringly-http-status).
+///
+/// # Prevention
+/// This test feeds the exact `QuotaError::HttpStatus` Display output through
+/// `shorten_error`; format drift on either side breaks it immediately.
+///
+/// # Pitfall
+/// The legacy prefixed form persists on disk in cache `fallback_reason`
+/// strings — both forms must stay matched; removing the legacy branch
+/// un-shortens historical cache entries.
+#[ test ]
+fn test_shorten_error_typed_http_status_form_shortened()
+{
+  assert_eq!( shorten_error( &claude_quota::QuotaError::HttpStatus( 429 ).to_string() ), "rate limited (429)" );
+  assert_eq!( shorten_error( &claude_quota::QuotaError::HttpStatus( 401 ).to_string() ), "auth expired (401)" );
+  assert_eq!( shorten_error( &claude_quota::QuotaError::HttpStatus( 403 ).to_string() ), "auth forbidden (403)" );
+}
+
+/// Legacy persisted form keeps shortening after the typed-variant migration —
+/// cache files written before Fix(audit-stringly-http-status) carry the old
+/// `"HTTP transport error: HTTP NNN"` reasons.
+#[ test ]
+fn test_shorten_error_legacy_persisted_form_still_shortened()
+{
+  assert_eq!( shorten_error( "HTTP transport error: HTTP 429 Too Many Requests" ), "rate limited (429)" );
+  assert_eq!( shorten_error( "HTTP transport error: HTTP 403" ), "auth forbidden (403)" );
+}

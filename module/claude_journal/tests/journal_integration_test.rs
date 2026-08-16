@@ -15,6 +15,10 @@
 //! - IT-12: `user`/`host`/`args` serialize with correct values when `Some`
 //! - IT-13: `user`/`host`/`args` are omitted from JSON when `None`
 //! - IT-14: Existing 8 `EventType` variants' `as_str()` strings are unchanged
+//! - IT-15: `tail()` yields every event of a multi-line append batch, in order
+//! - IT-16: `tail()` defers a torn (partially-written) line and delivers it once completed
+//! - IT-17: Unparseable `ts` excluded under `since`/`until`, included when unbounded
+//! - IT-18: `since: Duration::MAX` degrades to unbounded instead of panicking
 
 use claude_journal::{
   EventFields, EventRecord, EventType,
@@ -413,4 +417,216 @@ fn it14_existing_variants_as_str_unchanged()
   assert_eq!( EventType::RunnerRetry.as_str(),    "runner_retry" );
   assert_eq!( EventType::ValidationRetry.as_str(), "validation_retry" );
   assert_eq!( EventType::Interactive.as_str(),    "interactive" );
+}
+
+// ── IT-15: tail yields every event of a multi-line batch ──────────────────────
+
+/// IT-15: `tail()` yields ALL events appended between polls, not just the first.
+///
+/// # Root Cause (audit-tail-data-loss)
+///
+/// `TailIter::next()` advanced `offset` to the file size before iterating the
+/// read batch, then returned on the first matching event — every remaining line
+/// of that same batch sat behind the already-advanced offset and was permanently
+/// lost.
+///
+/// # Why Not Caught
+///
+/// `TailIter` had no tests at all; `query()` tests never exercise the polling
+/// path, and single-event manual checks can't reveal a batch-local loss.
+///
+/// # Fix Applied
+///
+/// `offset` now advances only past lines actually consumed; a mid-batch return
+/// leaves the rest of the batch unread, so subsequent `next()` calls deliver it.
+///
+/// # Prevention
+///
+/// Any cursor a reader persists must track what was consumed, not what was
+/// observed — never advance past data that hasn't been handed to the caller.
+///
+/// # Pitfall
+///
+/// All 3 events must be in the file BEFORE the first poll so they land in one
+/// read batch — appending after tail starts can split them across polls and
+/// mask the bug.
+#[ test ]
+fn it15_tail_yields_all_events_of_a_batch()
+{
+  let tmp = TempDir::new().expect( "tempdir" );
+  let dir = tmp.path().join( "journal" );
+  let writer = JournalWriter::new( dir.clone() );
+  for code in 0i32..3
+  {
+    let mut ev = EventRecord::new( EventType::Execution );
+    ev.fields.exit_code = Some( code );
+    writer.append( &ev ).expect( "append" );
+  }
+
+  let ( tx, rx ) = std::sync::mpsc::channel();
+  let handle = thread::spawn( move ||
+  {
+    let reader = JournalReader::open( dir );
+    let filter = JournalFilter::default();
+    for event in reader.tail( &filter ).take( 3 )
+    {
+      tx.send( event ).expect( "send" );
+    }
+  } );
+
+  let mut codes = Vec::new();
+  for _ in 0..3
+  {
+    let ev = rx.recv_timeout( Duration::from_secs( 10 ) )
+      .expect( "tail must yield all 3 batch events (first-match-only loss if this times out)" );
+    codes.push( ev.fields.exit_code );
+  }
+  handle.join().expect( "tail thread" );
+  assert_eq!( codes, vec![ Some( 0 ), Some( 1 ), Some( 2 ) ], "batch events must arrive in order" );
+}
+
+// ── IT-16: tail defers a torn line until the writer completes it ──────────────
+
+/// IT-16: a partially-written trailing line is not consumed; the event is
+/// delivered intact once the writer finishes the line.
+///
+/// # Root Cause (audit-tail-data-loss)
+///
+/// `TailIter::next()` set `offset = size` after reading, even when the read
+/// ended mid-line (writer between `write_all` chunks, or reader racing a
+/// non-atomic append). The torn fragment failed to parse and the completed
+/// line was never re-read — the event vanished.
+///
+/// # Why Not Caught
+///
+/// The race window is a few microseconds in production; only a deliberately
+/// half-written file makes it deterministic. No such test existed.
+///
+/// # Fix Applied
+///
+/// Only complete (`\n`-terminated) lines are consumed; `offset` stays at the
+/// start of a partial trailing line so the next poll re-reads it whole.
+///
+/// # Prevention
+///
+/// Treat "bytes read" and "records consumed" as different quantities in any
+/// incremental parser; commit the cursor per record, not per read.
+///
+/// # Pitfall
+///
+/// The half-line must stay incomplete across at least one full poll interval
+/// (~500 ms) before being finished — completing it immediately can land both
+/// halves in the first read and never exercise the deferral path.
+#[ test ]
+fn it16_tail_defers_torn_line_until_completed()
+{
+  let tmp = TempDir::new().expect( "tempdir" );
+  let dir = tmp.path().join( "journal" );
+  std::fs::create_dir_all( &dir ).expect( "create dir" );
+  let path = dir.join( claude_journal::rotation::today_filename() );
+
+  // One complete event + the first half of a second event (no trailing newline).
+  let mut ev1 = EventRecord::new( EventType::Execution );
+  ev1.fields.exit_code = Some( 1 );
+  let line1 = serde_json::to_string( &ev1 ).expect( "serialize" );
+  let mut ev2 = EventRecord::new( EventType::Retry );
+  ev2.fields.exit_code = Some( 2 );
+  let line2 = serde_json::to_string( &ev2 ).expect( "serialize" );
+  let ( half_a, half_b ) = line2.split_at( line2.len() / 2 );
+  std::fs::write( &path, format!( "{line1}\n{half_a}" ) ).expect( "write torn" );
+
+  let ( tx, rx ) = std::sync::mpsc::channel();
+  let dir_clone = dir.clone();
+  let handle = thread::spawn( move ||
+  {
+    let reader = JournalReader::open( dir_clone );
+    let filter = JournalFilter::default();
+    for event in reader.tail( &filter ).take( 2 )
+    {
+      tx.send( event ).expect( "send" );
+    }
+  } );
+
+  let first = rx.recv_timeout( Duration::from_secs( 10 ) )
+    .expect( "complete first line must arrive" );
+  assert_eq!( first.fields.exit_code, Some( 1 ) );
+
+  // Let the tail loop poll at least once while the torn line is still incomplete,
+  // then finish the line.
+  thread::sleep( Duration::from_millis( 1200 ) );
+  {
+    use std::io::Write;
+    let mut f = std::fs::OpenOptions::new().append( true ).open( &path ).expect( "reopen" );
+    f.write_all( format!( "{half_b}\n" ).as_bytes() ).expect( "complete line" );
+  }
+
+  let second = rx.recv_timeout( Duration::from_secs( 10 ) )
+    .expect( "completed torn line must be delivered (lost if offset advanced past it)" );
+  assert_eq!( second.fields.exit_code, Some( 2 ), "the torn-then-completed event must arrive intact" );
+  handle.join().expect( "tail thread" );
+}
+
+// ── IT-17: unparseable timestamp excluded under a time bound ──────────────────
+
+/// IT-17: an event whose `ts` fails RFC 3339 parsing is EXCLUDED from any
+/// time-bounded query (`since`/`until` set) — and still returned when no time
+/// bound is active.
+///
+/// **Root Cause Coverage:** Fix(audit-ts-filter-bypass) — corrupt-ts events used
+/// to skip the time check entirely and leak into "last N minutes" queries.
+#[ test ]
+fn it17_unparseable_ts_excluded_under_time_bound()
+{
+  let tmp = TempDir::new().expect( "tempdir" );
+  let dir = tmp.path().join( "journal" );
+  let writer = JournalWriter::new( dir.clone() );
+
+  let mut corrupt = EventRecord::new( EventType::Execution );
+  corrupt.ts = "not-a-timestamp".to_owned();
+  corrupt.fields.exit_code = Some( 77 );
+  writer.append( &corrupt ).expect( "append corrupt-ts" );
+
+  let mut ok = EventRecord::new( EventType::Execution );
+  ok.fields.exit_code = Some( 0 );
+  writer.append( &ok ).expect( "append valid" );
+
+  let reader = JournalReader::open( dir );
+
+  // Unbounded query: both events visible (corrupt ts is not a parse failure of the line).
+  let all = reader.query( &JournalFilter::default() );
+  assert_eq!( all.len(), 2, "without a time bound the corrupt-ts event must still be returned" );
+
+  // Time-bounded query: the corrupt-ts event must be excluded.
+  let filter = JournalFilter
+  {
+    since : Some( Duration::from_secs( 300 ) ),
+    ..JournalFilter::default()
+  };
+  let bounded = reader.query( &filter );
+  assert_eq!( bounded.len(), 1, "corrupt-ts event must not leak into a time-bounded query" );
+  assert_eq!( bounded[ 0 ].fields.exit_code, Some( 0 ) );
+}
+
+// ── IT-18: huge `since` duration must not panic ───────────────────────────────
+
+/// IT-18: `since` larger than the representable `SystemTime` range degrades to
+/// "no lower bound" (all events returned) instead of panicking.
+///
+/// **Root Cause Coverage:** `now - d` panicked on underflow; now `checked_sub`.
+#[ test ]
+fn it18_huge_since_duration_does_not_panic()
+{
+  let tmp = TempDir::new().expect( "tempdir" );
+  let dir = tmp.path().join( "journal" );
+  let writer = JournalWriter::new( dir.clone() );
+  writer.append( &EventRecord::new( EventType::Execution ) ).expect( "append" );
+
+  let reader = JournalReader::open( dir );
+  let filter = JournalFilter
+  {
+    since : Some( Duration::MAX ),
+    ..JournalFilter::default()
+  };
+  let events = reader.query( &filter );
+  assert_eq!( events.len(), 1, "a since window larger than all of time must include every event" );
 }

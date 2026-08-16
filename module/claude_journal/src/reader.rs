@@ -68,7 +68,9 @@ impl JournalReader
   {
     let mut results = Vec::new();
     let now = SystemTime::now();
-    let since_cutoff : Option< SystemTime > = filter.since.map( | d | now - d );
+    // checked_sub: a `since` larger than the representable range (`now - d` would panic)
+    // degrades to "no lower bound" — semantically identical, every event is within it.
+    let since_cutoff : Option< SystemTime > = filter.since.and_then( | d | now.checked_sub( d ) );
 
     let Ok( mut files ) = collect_jsonl_files( &self.dir ) else { return results };
     files.sort();
@@ -108,7 +110,9 @@ impl JournalReader
   ///
   /// Polls the current UTC day's file for new lines at ~500 ms intervals.
   /// Rolls over to the next day's file at UTC midnight.
-  /// Skips lines that fail JSON parsing.
+  /// Skips complete lines that fail JSON parsing; a partially-written trailing
+  /// line (no `\n` yet) is left unconsumed and re-read on the next poll, so an
+  /// event torn mid-append is delivered once completed rather than lost.
   /// This is a blocking iterator — it yields events as they appear and does
   /// not return `None` until the [`TailIter`] is dropped.
   #[ inline ]
@@ -275,16 +279,27 @@ fn event_matches(
   // since / until timestamp checks
   if since_cutoff.is_some() || filter.until.is_some()
   {
-    if let Some( event_time ) = parse_event_time( &event.ts )
+    match parse_event_time( &event.ts )
     {
-      if let Some( cutoff ) = since_cutoff
+      Some( event_time ) =>
       {
-        if event_time < *cutoff { return false; }
+        if let Some( cutoff ) = since_cutoff
+        {
+          if event_time < *cutoff { return false; }
+        }
+        if let Some( ref until ) = filter.until
+        {
+          if event_time > *until { return false; }
+        }
       }
-      if let Some( ref until ) = filter.until
-      {
-        if event_time > *until { return false; }
-      }
+      // Fix(audit-ts-filter-bypass): unparseable timestamps used to fall through the
+      //   time check and leak into time-bounded queries.
+      // Root cause: `if let Some(..)` silently skipped both bounds when parsing failed,
+      //   so a corrupt-ts event passed every `since`/`until` constraint.
+      // Pitfall: under an active time constraint "timestamp unknown" must mean
+      //   "excluded", not "exempt" — queries with no time bounds still return such
+      //   events (this arm is only reached when a bound is set).
+      None => return false,
     }
   }
 
@@ -347,11 +362,16 @@ fn event_matches(
 ///
 /// Polls the current UTC day's file for new lines at ~500 ms intervals.
 /// Rolls over to the next day's file at UTC midnight.
+/// Consumes only complete (`\n`-terminated) lines: every event in a multi-line
+/// append batch is yielded in order, and a torn trailing line is re-read once
+/// the writer finishes it.
 pub struct TailIter< 'a >
 {
   dir    : &'a Path,
   filter : &'a JournalFilter,
-  /// Byte offset of the next unread position in the current file.
+  /// Byte offset of the first unconsumed byte in the current file — advanced
+  /// only past complete lines that were processed (yielded, filtered out, or
+  /// skipped as malformed), never past a partial trailing line.
   offset : u64,
   /// Filename of the current day being tailed (e.g. `"2026-06-27.jsonl"`).
   date   : String,
@@ -396,20 +416,36 @@ impl Iterator for TailIter< '_ >
         if size > self.offset
           && file.seek( SeekFrom::Start( self.offset ) ).is_ok()
         {
-          let mut buf = String::new();
-          let _ = file.read_to_string( &mut buf );
-          self.offset = size;
-          for line in buf.lines()
+          // Fix(audit-tail-data-loss): advance `offset` only past lines actually
+          //   consumed — never blindly to file size.
+          // Root cause: the old body set `offset = size` before iterating, then
+          //   returned on the FIRST matching event — every later line in the same
+          //   batch was skipped forever; a torn trailing line (writer mid-append)
+          //   failed to parse and was skipped once completed; a failed read still
+          //   advanced offset past bytes never seen.
+          // Pitfall: bytes after the last '\n' are a partial line still being
+          //   written — leave `offset` at its start so the completed line is read
+          //   next poll; process bytes (not `read_to_string`) so a torn multi-byte
+          //   UTF-8 character can't fail the whole batch.
+          let mut buf = Vec::new();
+          if file.read_to_end( &mut buf ).is_ok()
           {
-            let line = line.trim();
-            if line.is_empty() { continue; }
-            if let Ok( event ) = serde_json::from_str::< EventRecord >( line )
+            let mut consumed = 0usize;
+            while let Some( nl ) = buf[ consumed.. ].iter().position( | b | *b == b'\n' )
             {
-              if event_matches( &event, self.filter, None )
+              let line = &buf[ consumed .. consumed + nl ];
+              consumed += nl + 1;
+              if line.iter().all( u8::is_ascii_whitespace ) { continue; }
+              if let Ok( event ) = serde_json::from_slice::< EventRecord >( line )
               {
-                return Some( event );
+                if event_matches( &event, self.filter, None )
+                {
+                  self.offset += u64::try_from( consumed ).unwrap_or( 0 );
+                  return Some( event );
+                }
               }
             }
+            self.offset += u64::try_from( consumed ).unwrap_or( 0 );
           }
         }
       }

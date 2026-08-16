@@ -10,4 +10,4 @@
 
 | Domain | File | Tests What |
 |--------|------|------------|
-| Journal integration (IT-1–IT-14) | `journal_integration_test.rs` | Daily JSONL file creation, ordered event query, `since` timestamp filtering, day-rotation filenames, corrupt/partial line skipping, concurrent-writer interleaving safety, `v` schema version invariant, `EventType` `as_str()`/`parse()` round-trip and unknown-value handling, `EventFields::default()` all-`None`, `Some`/`None` field serialization, existing variant string stability |
+| Journal integration (IT-1–IT-18) | `journal_integration_test.rs` | Daily JSONL file creation, ordered event query, `since` timestamp filtering, day-rotation filenames, corrupt/partial line skipping, concurrent-writer interleaving safety, `v` schema version invariant, `EventType` `as_str()`/`parse()` round-trip and unknown-value handling, `EventFields::default()` all-`None`, `Some`/`None` field serialization, existing variant string stability, `tail()` full-batch delivery and torn-line deferral (audit-tail-data-loss), corrupt-`ts` exclusion under time bounds, `Duration::MAX` since-window safety |

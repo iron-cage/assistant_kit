@@ -41,6 +41,10 @@ This directory contains all functional tests for the `claude_runner_core` crate,
 | `isolated_model_resolution_test.rs` | Test `resolve_isolated_default_model()` tiered config.toml resolution + prefs.json regression guard (tasks 407/410, T4–T7) |
 | `classify_error_test.rs` | Test classify_error() and ErrorKind variants (T01–T12, BUG-037) |
 | `bug_243_test.rs` | BUG-243 reproducer: timeout with partial stdout preserved |
+| `stdin_file_test.rs` | Test stdin content materialization to temp file (`with_stdin_content`) |
+| `ps_table_test.rs` | Test `render_ps_table()` text/JSON formatting (T01–T07) |
+| `control_stderr_drain_test.rs` | Regression: stderr-flooding subprocess must not deadlock control session |
+| `fake_claude_bin/` | Shared fake-`claude`-script helper for subprocess tests (not a test binary) |
 | `control_session_common/` | Shared real-`claude`-spawn helper for control-session tests (not a test binary) |
 | `control_session_lifecycle_test.rs` | Test P0-1 fixture integrity + interrupt/timeout/crash/stopTask/backgroundTasks (task 415) |
 | `control_session_settings_test.rs` | Test live session-config control methods: permission mode, model, thinking tokens, flags, stream input (task 415) |
@@ -50,18 +54,18 @@ This directory contains all functional tests for the `claude_runner_core` crate,
 | `docs/` | Test surface spec files (feature behavioral requirement cases) |
 | `fixtures/sdk_control_capture/` | Real captured Agent SDK wire evidence for the 25 `Query` control methods (task 415 Phase 0) |
 
-## Organization (40 test files)
+## Organization (43 test files)
 
 Tests organized by functional domain and architectural principles (see Responsibility Table above).
 
 ### Scope
 
-This test suite covers the claude_runner_core crate's builder pattern API for Claude Code command construction and comprehensive verification framework (34 test files):
+This test suite covers the claude_runner_core crate's builder pattern API for Claude Code command construction and comprehensive verification framework (43 test files):
 
 **In Scope:**
 - Builder pattern API (4 test files):
   - Edge cases: token limits (0, 1, 128K, u32::MAX), method overrides (last wins), argument accumulation
-  - Methods: 61+ with_*() methods, chainability, order independence
+  - Methods: 69 with_*() methods, chainability, order independence
   - Defaults: tier 1 (bash_timeout=3.6M, auto_continue=true, telemetry=false, max_output_tokens=128K, chrome=--chrome), tier 2/3 (None)
   - Environment variables: each parameter sets correct env var, tier 1 defaults set vars
 - Type definitions (1 test file):

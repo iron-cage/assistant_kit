@@ -10,7 +10,7 @@ Claude Code process execution with builder pattern and single execution point.
 |------|----------------|
 | `Cargo.toml` | Crate manifest: deps, features, metadata |
 | `src/` | Builder pattern implementation: `ClaudeCommand`, types, process scanner |
-| `tests/` | Builder API, migration validation, verification framework (31 test files) |
+| `tests/` | Builder API, migration validation, verification framework (43 test files) |
 | `docs/` | Behavioral requirements: features, invariants, parameter reference |
 | `../../../../agent_kit/task/claude_runner_core/` | Crate task registry — External Layout (see `agent_kit/task/`) |
 | `verb/` | Shell scripts for each `do` protocol verb. |
@@ -32,7 +32,7 @@ Claude Code process execution with builder pattern and single execution point.
 
 **In Scope:**
 - ClaudeCommand::new() builder entry point
-- with_working_directory(), with_max_output_tokens(), with_continue_conversation(), etc. (61 typed builder methods)
+- with_working_directory(), with_max_output_tokens(), with_continue_conversation(), etc. (69 typed builder methods)
 - execute() terminal method with process spawning
 - stdout/stderr capture and parsing
 - Exit code handling and error mapping
@@ -50,7 +50,7 @@ Claude Code process execution with builder pattern and single execution point.
 - **Token Limit Fix**: Explicit 128K token default (prevents "exceeded maximum" errors)
 - **Single Execution Point**: Consolidates duplicate Command::new("claude") calls
 - **Type Safety**: Builder pattern enforces correct configuration
-- **Minimal Dependencies**: Only error_tools + standard library
+- **Lean Dependencies**: claude_core + tempfile, plus optional error_tools/serde/serde_json/data_fmt behind features
 
 ## Usage
 
@@ -89,10 +89,10 @@ ClaudeCommand::new()
   └→ with_max_output_tokens()
   └→ with_continue_conversation()
   └→ execute()                     ← SINGLE execution point
-      └→ CommandBuilder::build()   (construct std::process::Command)
+      └→ build_command()           (assembles std::process::Command)
       └→ Command::new("claude")    ← ONLY location in entire codebase
-      └→ ProcessExecutor::run()    (spawn, capture output)
-      └→ Return ExecutionResult
+      └→ output()                  (spawn, capture stdout/stderr)
+      └→ Return ExecutionOutput
 ```
 
 ## Migration from Old API
@@ -141,15 +141,19 @@ let result = ClaudeCommand::new()
 ## Reference Documentation
 
 - **Parameter Reference**: `docs/claude_params/` — all 59 `claude` binary parameters (CLI flags + env vars), with builder API mapping and default comparisons
-- **Builder API**: `src/command.rs` doc comments — authoritative builder method documentation
+- **Builder API**: `src/command/` doc comments — authoritative builder method documentation
 - **Tests**: `tests/readme.md` — full test suite coverage map
 - **Tasks**: `../../../../agent_kit/task/claude_runner_core/` — crate task registry (External Layout)
 
 ## Dependencies
 
-- **error_tools**: Workspace-standard error handling (Result, Error types)
+- **claude_core**: Shared process scanning and profile primitives (workspace)
+- **tempfile**: Random-suffixed private temp dirs/files for isolated runs and stdin materialization
+- **error_tools** *(optional, feature `enabled`)*: Workspace-standard error handling
+- **serde / serde_json** *(optional, feature `enabled`)*: Control-protocol and JSON output support
+- **data_fmt** *(optional, feature `ps_table`)*: Process-table rendering
 
-Total: 1 workspace dependency (error_tools), 0 external direct dependencies
+Verify: `sed -n '/\[dependencies\]/,/\[dev-dependencies\]/p' Cargo.toml`
 
 ## Testing
 
@@ -164,4 +168,4 @@ cargo nextest run
 - ❌ Zero occurrences in dream_agent
 - ❌ Zero occurrences in claude_profile
 
-Verification: `grep -r "Command::new.*claude" src/` should find exactly 1 match.
+Verification: `grep -rn 'Command::new( "claude" )' src/` should find exactly 1 match (`src/command/mod.rs`, inside `build_command()`; doc examples and the Windows `Command::new( "cmd" )` fallback don't match this pattern).

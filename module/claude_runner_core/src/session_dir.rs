@@ -124,39 +124,6 @@ impl SessionManager
       .join( format!( "-{session_name}" ) )
   }
 
-  /// Check if session exists using legacy storage-based detection.
-  ///
-  /// **DEPRECATED:** This method checks for `.claude_history` files which
-  /// Claude Code v1.x created. Claude Code v2.0+ uses centralized storage
-  /// at `~/.claude/projects/` instead.
-  ///
-  /// Use `claude_storage_core::continuation::check_continuation()` with the
-  /// path returned by `session_dir()` for v2.0+ compatibility.
-  ///
-  /// # Legacy Behavior
-  ///
-  /// A session exists if:
-  /// 1. Session directory exists: `-{session_name}/`
-  /// 2. Claude history file exists: `-{session_name}/.claude_history`
-  ///
-  /// # Returns
-  ///
-  /// `true` if `.claude_history` file exists (Claude Code v1.x sessions only)
-  #[ deprecated(
-    since = "0.2.0",
-    note = "Only detects Claude Code v1.x sessions. \
-            Use `claude_storage_core::continuation::check_continuation()` for v2.0+ compatibility."
-  ) ]
-  #[ inline ]
-  #[ must_use ]
-  pub fn session_exists( &self, session_name : &str ) -> bool
-  {
-    let session_dir = self.session_dir( session_name );
-    let history_file = session_dir.join( ".claude_history" );
-
-    session_dir.exists() && history_file.exists()
-  }
-
   /// Ensure session directory exists (idempotent).
   ///
   /// Creates or resumes session based on strategy:

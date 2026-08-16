@@ -73,6 +73,7 @@ pub struct ClaudeCommand {
 
   // Isolation
   pub(super) home_override: Option< PathBuf >,
+  pub(super) home_isolation: bool,
 
   // Stdin piping
   pub(super) stdin_file: Option< PathBuf >,
@@ -86,6 +87,25 @@ pub struct ClaudeCommand {
 /// the `isolated`/`refresh` CLI paths in `claude_runner::cli::credential` to keep both defaults
 /// in lockstep.
 pub const DEFAULT_COMPACT_WINDOW: u32 = 300_000;
+
+/// Environment variables that can override or redirect the credential source the `claude`
+/// binary uses — direct API keys, bearer/OAuth token overrides, endpoint redirects, cloud
+/// provider switches, and the config-dir relocation that would make the subprocess read the
+/// parent's real `~/.claude` instead of the isolated `HOME`.
+///
+/// Removed from the subprocess environment when home isolation is active
+/// (see [`ClaudeCommand::with_home_isolation`] and [`ClaudeCommand::removed_vars`]).
+const ISOLATION_REMOVED_VARS : &[ &str ] =
+&[
+  "ANTHROPIC_API_KEY",
+  "ANTHROPIC_AUTH_TOKEN",
+  "ANTHROPIC_BASE_URL",
+  "ANTHROPIC_CUSTOM_HEADERS",
+  "CLAUDE_CODE_OAUTH_TOKEN",
+  "CLAUDE_CODE_USE_BEDROCK",
+  "CLAUDE_CODE_USE_VERTEX",
+  "CLAUDE_CONFIG_DIR",
+];
 
 /// One token in the invocation's flag/arg sequence.
 ///
@@ -169,6 +189,7 @@ impl ClaudeCommand {
       dry_run: false,
 
       home_override: None,
+      home_isolation: false,
 
       stdin_file: None,
       stdin_content: None,
@@ -195,6 +216,9 @@ impl ClaudeCommand {
   /// # Conditional removals
   ///
   /// - `CLAUDECODE` — stripped unless `unset_claudecode` is false (set via `--keep-claudecode`).
+  /// - [`ISOLATION_REMOVED_VARS`] (credential/endpoint overrides: `ANTHROPIC_API_KEY`,
+  ///   `CLAUDE_CODE_OAUTH_TOKEN`, `CLAUDE_CONFIG_DIR`, …) — stripped when home isolation is
+  ///   active, so the subprocess authenticates ONLY with the isolated `HOME`'s credentials file.
   #[inline]
   fn removed_vars( &self ) -> Vec< &'static str >
   {
@@ -204,6 +228,17 @@ impl ClaudeCommand {
       vars.push( "CLAUDECODE" );
     }
     vars.push( "CLAUDE_CODE_CHILD_SESSION" );
+    // Fix(audit-isolated-env-leak)
+    // Root cause: the isolated subprocess inherited ANTHROPIC_API_KEY / CLAUDE_CODE_OAUTH_TOKEN /
+    //   CLAUDE_CONFIG_DIR etc. from the parent — any of them makes claude authenticate as the
+    //   parent's identity (or read the parent's real config dir), silently bypassing the
+    //   isolated HOME's credentials file the caller supplied.
+    // Pitfall: removals must flow through this method — the single source of truth — so real
+    //   execution (env_remove) and the `env -u` display prefix can never diverge.
+    if self.home_isolation
+    {
+      vars.extend_from_slice( ISOLATION_REMOVED_VARS );
+    }
     vars
   }
 
@@ -539,6 +574,11 @@ impl ClaudeCommand {
   ///
   /// This is the SINGLE execution point for non-interactive Claude Code process invocations.
   /// For interactive sessions, use [`execute_interactive`](Self::execute_interactive).
+  ///
+  /// Blocks without a deadline: `Command::output()` waits until the subprocess exits and
+  /// closes its pipes. Callers needing a timeout must use [`spawn_piped`](Self::spawn_piped)
+  /// and impose their own deadline with `try_wait` polling plus `kill()` — exactly what
+  /// `run_isolated()` does; this method deliberately carries no timeout parameter.
   ///
   /// Returns [`ExecutionOutput`](crate::ExecutionOutput) with stdout, stderr, and exit code.
   ///

@@ -32,6 +32,9 @@
 //! | FT-11 | Old format (no `limits` key) parses via Phase 1          | `seven_day_sonnet = Some(30.0)`         | ✅   |
 //! | FT-12 | Named field `Some` wins over matching limits entry       | `seven_day_sonnet.utilization = 30.0`   | ✅   |
 //! | BT-01 | `five_hour.resets_at` contains a literal `}` before `utilization`: BUG-002 reproducer | `Ok`, both fields correct, untruncated | ✅ |
+//! | UT-01 | Whitespace before every colon (`"key" : value`)          | body parses; utilization lands          | ✅   |
+//! | UT-02 | `iso_to_unix_secs` with multibyte char in date digits    | `None`, no panic                        | ✅   |
+//! | UT-03 | `iso_to_unix_secs` with multibyte char in time digits    | `None`, no panic                        | ✅   |
 //!
 //! ## Corner Cases Covered
 //!
@@ -454,4 +457,72 @@ fn bt_01_resets_at_brace_in_string_does_not_truncate_object()
     five.resets_at.as_deref(), Some( "closing brace: }" ),
     "BUG-002: five_hour.resets_at (containing the in-string '}}') must round-trip intact"
   );
+}
+
+// ── UT: audit hardening ───────────────────────────────────────────────────────
+
+/// UT-01: whitespace between key quote and colon is valid JSON and must parse.
+///
+/// # Root Cause
+/// Every scanner searched for the fused needle `"key":`, so a body serialized
+/// with `"key" : value` — legal JSON — made required fields invisible and the
+/// parse returned `ResponseParse` for a perfectly valid response.
+///
+/// # Why Not Caught
+/// All fixtures mirrored the API's compact serializer; no test exercised
+/// JSON-legal spacing variants.
+///
+/// # Fix Applied
+/// `after_key` anchors on the quoted key token, then skips whitespace and
+/// requires the colon as a separate step (Fix(audit-needle-colon-coupling)).
+///
+/// # Prevention
+/// This fixture spaces every colon; it fails against the fused-needle scanner.
+///
+/// # Pitfall
+/// Parsers must accept the JSON grammar, not one pretty-printer's output — a
+/// server-side serializer change is invisible in CI.
+#[ test ]
+fn ut01_whitespace_before_colon_parses()
+{
+  let body = r#"{ "five_hour" : { "utilization" : 14.5, "resets_at" : "2026-06-07T12:00:00Z" }, "seven_day" : null, "seven_day_sonnet" : null }"#;
+  let data = parse_oauth_usage( body ).expect( "spaced colons are valid JSON and must parse" );
+  let five = data.five_hour.expect( "five_hour must be Some" );
+  assert!( ( five.utilization - 14.5 ).abs() < 0.001, "utilization must land: {}", five.utilization );
+  assert_eq!( five.resets_at.as_deref(), Some( "2026-06-07T12:00:00Z" ) );
+  assert!( data.seven_day.is_none() );
+}
+
+/// UT-02: a multibyte character inside the date digits returns `None` — never panics.
+///
+/// # Root Cause
+/// `date_part[0..4]` sliced by fixed byte offsets; a multibyte char (e.g. a
+/// fullwidth digit) within the first 4 bytes made the slice cut mid-char and
+/// panic instead of failing the parse.
+///
+/// # Why Not Caught
+/// All fixtures used ASCII timestamps; nothing fed non-ASCII input to the
+/// byte-offset slices.
+///
+/// # Fix Applied
+/// All fixed-offset slices in `iso_to_unix_secs` use `.get(range)?`, turning a
+/// boundary violation into `None` (audit minor).
+///
+/// # Prevention
+/// These inputs panic against the unguarded slicing and return `None` after.
+///
+/// # Pitfall
+/// `&s[a..b]` panics on non-boundary offsets — use `.get(a..b)` whenever the
+/// input is not guaranteed ASCII.
+#[ test ]
+fn ut02_multibyte_in_date_returns_none()
+{
+  assert_eq!( iso_to_unix_secs( "２026-05-20T04:00:00Z" ), None );
+}
+
+/// UT-03: a multibyte character inside the time digits returns `None` — never panics.
+#[ test ]
+fn ut03_multibyte_in_time_returns_none()
+{
+  assert_eq!( iso_to_unix_secs( "2026-05-20T０4:00:00Z" ), None );
 }

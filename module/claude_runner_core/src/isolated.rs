@@ -165,16 +165,16 @@ impl core::error::Error for RunnerError {}
 
 /// Spawn Claude in an isolated `HOME` and return the result.
 ///
-/// Creates a temporary directory containing only `credentials_json` written to
-/// `<temp>/.claude/.credentials.json`, then invokes the Claude binary via the
-/// existing `ClaudeCommand` infrastructure with `HOME=<temp>`. A background
-/// thread drives the subprocess; the caller blocks for at most `timeout_secs`
-/// seconds.
+/// Creates a private (`0700`, randomly-named) temporary directory containing only
+/// `credentials_json` written to `<temp>/.claude/.credentials.json`, then invokes the
+/// Claude binary via the existing `ClaudeCommand` infrastructure with `HOME=<temp>`.
+/// The caller blocks for at most `timeout_secs` seconds.
 ///
 /// If `model` is not `IsolatedModel::KeepCurrent`, `--model <id>` is prepended
 /// to `args` before the subprocess is spawned.
 ///
-/// The temp directory is removed unconditionally after execution or timeout.
+/// The temp directory is removed on every exit path — success, timeout, and error
+/// returns alike (RAII guard).
 ///
 /// # Errors
 ///
@@ -246,6 +246,22 @@ fn write_creds_restricted( path : &std::path::Path, contents : &str ) -> io::Res
   std::fs::write( path, contents )
 }
 
+/// Create the isolated temp `HOME`: random-suffixed name, owner-only (`0700`) permissions on
+/// Unix applied at mkdir time, creation failing rather than reusing an existing path. The
+/// returned guard removes the whole tree (credentials included) when dropped.
+#[ cfg( feature = "enabled" ) ]
+fn create_isolated_home() -> io::Result< tempfile::TempDir >
+{
+  let mut builder = tempfile::Builder::new();
+  builder.prefix( "claude_isolated_" );
+  #[ cfg( unix ) ]
+  {
+    use std::os::unix::fs::PermissionsExt as _;
+    builder.permissions( std::fs::Permissions::from_mode( 0o700 ) );
+  }
+  builder.tempdir()
+}
+
 /// Spawn Claude in an isolated `HOME` with an explicit compact-window override.
 ///
 /// Identical to [`run_isolated`] but accepts `compact_window: Option<u32>` to control
@@ -280,10 +296,21 @@ pub fn run_isolated_ext
   use core::time::Duration;
 
   // Step 1: Create isolated temp HOME containing only .claude/
-  let temp_dir  = std::env::temp_dir()
-    .join( format!( "claude_isolated_{}", std::process::id() ) );
+  //
+  // Fix(audit-predictable-isolated-home): random-suffixed tempfile::TempDir (0700 at mkdir,
+  //   fail-if-exists) instead of a fixed `claude_isolated_{pid}` path under create_dir_all.
+  // Root cause: the PID-derived name was predictable, and create_dir_all silently accepted a
+  //   pre-existing directory — another local user could pre-create it and own the parent of
+  //   the credentials file; two concurrent calls in one process also collided on the same
+  //   path, each deleting the other's live HOME at cleanup.
+  // Pitfall: the RAII guard is also the cleanup — TempDir::drop removes the tree on every
+  //   exit path, including the early `?` returns (a spawn failure previously leaked the
+  //   temp HOME with credentials on disk, because manual cleanup was only reached later).
+  let temp_home = create_isolated_home()
+    .map_err( |e| RunnerError::TempDirFailed( e.to_string() ) )?;
+  let temp_dir   = temp_home.path();
   let claude_dir = temp_dir.join( ".claude" );
-  std::fs::create_dir_all( &claude_dir )
+  std::fs::create_dir( &claude_dir )
     .map_err( |e| RunnerError::TempDirFailed( e.to_string() ) )?;
 
   // Step 2: Write caller-supplied credentials to the path claude reads
@@ -317,7 +344,7 @@ pub fn run_isolated_ext
   }
   full_args.extend( args );
   let cmd = crate::ClaudeCommand::new()
-    .with_home( &temp_dir )
+    .with_home( temp_dir )
     .with_home_isolation()
     .with_compact_window( compact_window )
     .with_args( full_args );
@@ -400,8 +427,10 @@ pub fn run_isolated_ext
     .ok()
     .filter( |new| new.as_bytes() != credentials_json.as_bytes() );
 
-  // Step 7: Unconditional cleanup — no early return may appear before this line.
-  let _ = std::fs::remove_dir_all( &temp_dir );
+  // Step 7: Unconditional cleanup — RAII via TempDir. Dropped here explicitly so removal
+  // stays ordered strictly after the Step 6 credential read; every earlier `?` return is
+  // covered by the same guard's drop.
+  drop( temp_home );
 
   // Step 8: Translate execution result into IsolatedRunResult or RunnerError.
   let output = subprocess_output?;

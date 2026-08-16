@@ -16,7 +16,7 @@
 //!   targeting an in-process MCP server ("SDK servers should be handled in print.ts").
 
 use error_tools::{ Result, Error };
-use std::collections::HashMap;
+use std::collections::{ HashMap, VecDeque };
 use std::io::{ BufRead, Write };
 use std::sync::{ Arc, Mutex };
 use core::sync::atomic::{ AtomicBool, AtomicU64, Ordering };
@@ -36,6 +36,12 @@ use crate::types::
 /// (Test Matrix IT-8).
 const DEFAULT_REQUEST_TIMEOUT : Duration = Duration::from_secs( 30 );
 
+/// Maximum stderr lines retained by the drain thread (older lines are discarded first).
+const STDERR_TAIL_LINES : usize = 64;
+
+/// Maximum bytes retained per stderr line (longer lines are truncated at a char boundary).
+const STDERR_LINE_MAX : usize = 1024;
+
 /// Outcome of a single dispatched `control_request`, routed to its waiter by `request_id`.
 enum WireOutcome
 {
@@ -51,6 +57,9 @@ enum WireOutcome
 /// `request_id`; every other line (system/assistant/result/etc.) is forwarded unparsed via
 /// [`ControlSession::recv_message`]/[`ControlSession::try_recv_message`] — full `SDKMessage`
 /// typing is out of this task's scope (see `contract/sdk/docs/api/005_sdk_message_stream.md`).
+/// A second background thread drains stderr for the subprocess's lifetime (the pipe would
+/// otherwise fill and block it), keeping a bounded tail readable via
+/// [`ControlSession::stderr_tail`].
 pub struct ControlSession
 {
   child : std::process::Child,
@@ -62,6 +71,8 @@ pub struct ControlSession
   messages : Mutex< mpsc::Receiver< serde_json::Value > >,
   broken : Arc< Mutex< Option< String > > >,
   reader : Option< std::thread::JoinHandle< () > >,
+  stderr_tail_buf : Arc< Mutex< VecDeque< String > > >,
+  stderr_reader : Option< std::thread::JoinHandle< () > >,
   next_id : AtomicU64,
   closed : AtomicBool,
   timeout : Duration,
@@ -93,6 +104,8 @@ impl ControlSession
       .ok_or_else( || Error::msg( "spawned control session child has no stdin pipe" ) )?;
     let stdout = child.stdout.take()
       .ok_or_else( || Error::msg( "spawned control session child has no stdout pipe" ) )?;
+    let stderr = child.stderr.take()
+      .ok_or_else( || Error::msg( "spawned control session child has no stderr pipe" ) )?;
 
     let pending : Arc< Mutex< HashMap< String, mpsc::Sender< WireOutcome > > > > =
       Arc::new( Mutex::new( HashMap::new() ) );
@@ -118,6 +131,18 @@ impl ControlSession
       }
     } );
 
+    // Fix(audit-control-stderr-deadlock): dedicated drain thread for the stderr pipe.
+    // Root cause: spawn_control_session() pipes stderr but nothing ever read it — a control
+    //   session runs with the mandatory --verbose flag, so once the subprocess accumulated a
+    //   pipe-buffer's worth (~64 KiB) of stderr it blocked in write() forever, deadlocking
+    //   the whole session (every subsequent request just timed out).
+    // Pitfall: every piped stream needs a reader for the child's lifetime; retain only a
+    //   bounded tail so an arbitrarily chatty subprocess cannot grow memory without bound.
+    let stderr_tail_buf : Arc< Mutex< VecDeque< String > > > =
+      Arc::new( Mutex::new( VecDeque::with_capacity( STDERR_TAIL_LINES ) ) );
+    let drain_buf = Arc::clone( &stderr_tail_buf );
+    let stderr_reader = std::thread::spawn( move || drain_stderr( stderr, &drain_buf ) );
+
     Ok( Self
     {
       child,
@@ -127,10 +152,29 @@ impl ControlSession
       messages : Mutex::new( message_rx ),
       broken,
       reader : Some( reader ),
+      stderr_tail_buf,
+      stderr_reader : Some( stderr_reader ),
       next_id : AtomicU64::new( 0 ),
       closed : AtomicBool::new( false ),
       timeout : DEFAULT_REQUEST_TIMEOUT,
     } )
+  }
+
+  /// Most recent stderr lines emitted by the subprocess (oldest first, bounded tail:
+  /// last 64 lines — `STDERR_TAIL_LINES` — each truncated to 1024 bytes — `STDERR_LINE_MAX`).
+  ///
+  /// Useful for diagnosing a broken session — e.g. after "subprocess exited before
+  /// responding", the tail typically carries the subprocess's own fatal message.
+  ///
+  /// # Panics
+  ///
+  /// Panics if the internal stderr-tail mutex is poisoned (a prior thread panicked
+  /// while holding the lock).
+  #[ inline ]
+  #[ must_use ]
+  pub fn stderr_tail( &self ) -> Vec< String >
+  {
+    self.stderr_tail_buf.lock().unwrap().iter().cloned().collect()
   }
 
   /// Override the per-request timeout (default: 30s). Primarily for tests that need a
@@ -798,6 +842,10 @@ impl ControlSession
     {
       let _ = handle.join();
     }
+    if let Some( handle ) = self.stderr_reader.take()
+    {
+      let _ = handle.join();
+    }
 
     Ok( () )
   }
@@ -873,4 +921,35 @@ fn read_loop(
 fn is_initialize_shaped( value : &serde_json::Value ) -> bool
 {
   value.get( "commands" ).is_some() && value.get( "models" ).is_some() && value.get( "account" ).is_some()
+}
+
+/// Background stderr drain: consumes the subprocess's stderr for its whole lifetime so the
+/// pipe can never fill and block the subprocess, retaining a bounded tail for diagnostics
+/// (last [`STDERR_TAIL_LINES`] lines, each truncated to [`STDERR_LINE_MAX`] bytes).
+fn drain_stderr(
+  stderr : std::process::ChildStderr,
+  tail : &Arc< Mutex< VecDeque< String > > >,
+)
+{
+  let reader = std::io::BufReader::new( stderr );
+  for line in reader.lines()
+  {
+    let Ok( mut line ) = line else { break };
+    if line.len() > STDERR_LINE_MAX
+    {
+      // Truncate at a char boundary — a byte-index truncate mid-codepoint would panic.
+      let mut end = STDERR_LINE_MAX;
+      while !line.is_char_boundary( end )
+      {
+        end -= 1;
+      }
+      line.truncate( end );
+    }
+    let mut buf = tail.lock().unwrap();
+    if buf.len() == STDERR_TAIL_LINES
+    {
+      buf.pop_front();
+    }
+    buf.push_back( line );
+  }
 }

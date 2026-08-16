@@ -276,31 +276,39 @@ fn no_process_execution_in2_responsibility_test_exists()
 
 // ── Invariant 005: Atomic Account Switching ───────────────────────────────────
 
-// IN-1: switch_account uses std::fs::rename for credentials file updates (write-then-rename)
+// IN-1: switch_account uses temp-file + rename for credentials file updates
 //
-// The atomic write is implemented in claude_profile_core (the workspace sibling crate),
-// not in claude_profile/src/ itself. Search the core crate's src/ directory.
+// Since the file_io extraction, the write-then-rename primitive lives in
+// claude_core::file_io (atomic_write / atomic_write_secret); claude_profile_core
+// consumes it. Verify both links of the chain: the core crate calls the atomic
+// primitive, and the primitive itself commits via fs::rename.
 #[ test ]
 fn atomic_switching_in1_src_uses_rename_for_credentials()
 {
-  // switch_account() lives in claude_profile_core — one level up from this crate
+  // Workspace sibling crates — one level up from this crate
   let crate_dir = Path::new( env!( "CARGO_MANIFEST_DIR" ) );
-  let core_src  = crate_dir
-    .parent()
-    .expect( "parent of crate dir must exist" )
-    .join( "claude_profile_core" )
-    .join( "src" );
+  let modules   = crate_dir.parent().expect( "parent of crate dir must exist" );
+  let core_src  = modules.join( "claude_profile_core" ).join( "src" );
+  let file_io   = modules.join( "claude_core" ).join( "src" ).join( "file_io.rs" );
 
-  let output = Command::new( "/usr/bin/grep" )
-    .args( [ "-rn", "fs::rename", core_src.to_str().unwrap() ] )
+  let callers = Command::new( "/usr/bin/grep" )
+    .args( [ "-rn", "atomic_write", core_src.to_str().unwrap() ] )
     .output()
     .expect( "grep failed" );
-
-  let matches = String::from_utf8_lossy( &output.stdout );
   assert!(
-    !matches.trim().is_empty(),
-    "atomic switching invariant violated: std::fs::rename not found in claude_profile_core/src/ — \
-     switch_account() must use temp-file + rename, never direct write",
+    !String::from_utf8_lossy( &callers.stdout ).trim().is_empty(),
+    "atomic switching invariant violated: no atomic_write call in claude_profile_core/src/ — \
+     switch_account() must write credentials via claude_core::file_io, never direct write",
+  );
+
+  let primitive = Command::new( "/usr/bin/grep" )
+    .args( [ "-n", "fs::rename", file_io.to_str().unwrap() ] )
+    .output()
+    .expect( "grep failed" );
+  assert!(
+    !String::from_utf8_lossy( &primitive.stdout ).trim().is_empty(),
+    "atomic switching invariant violated: fs::rename not found in claude_core/src/file_io.rs — \
+     atomic_write must commit via temp-file + rename",
   );
 }
 

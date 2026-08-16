@@ -196,8 +196,16 @@ pub fn account_inspect_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
     let live = inspect_call_usage( tok, trace, &name );
     // Cache fallback for transient errors (429, network failure, etc.).
     // Auth failures (401, 403) indicate the token is bad — don't serve stale data.
-    if live.is_err() && !live.as_ref().unwrap_err().to_string().contains( "HTTP 401" )
-                     && !live.as_ref().unwrap_err().to_string().contains( "HTTP 403" )
+    // Fix(audit-stringly-http-status)
+    // Root cause: auth failures were detected by substring-sniffing "HTTP 401"
+    //   out of the rendered error text — any transport message containing that
+    //   text (a URL, a proxy banner) would wrongly suppress the cache fallback.
+    // Pitfall: match the typed QuotaError::HttpStatus variant, never the
+    //   Display string — the rendered form is for humans and logs.
+    if live.is_err() && !matches!(
+      live.as_ref().unwrap_err(),
+      claude_quota::QuotaError::HttpStatus( 401 | 403 )
+    )
     {
       let now_secs = std::time::SystemTime::now()
         .duration_since( std::time::UNIX_EPOCH )

@@ -15,7 +15,7 @@
 //! | T06 | `QuotaError::MissingHeader("x")` Display        | string contains "x"                   | ✅     |
 //! | T07 | `QuotaError::HttpTransport("refused")` Display  | string contains "refused"             | ✅     |
 //! | T08 | Field access on `RateLimitData`                 | `utilization_5h` = 0.42, status = "allowed" | ✅ |
-//! | T09 | `QuotaError` implements `std::error::Error`     | all 3 variants pass trait bound       | ✅     |
+//! | T09 | `QuotaError` implements `std::error::Error`     | all 5 variants pass trait bound       | ✅     |
 //! | T10 | `5h-reset` header absent                        | Err(MissingHeader) naming the header  | ✅     |
 //! | T11 | `7d-utilization` header absent                  | Err(MissingHeader) naming the header  | ✅     |
 //! | T12 | `status` header absent                          | Err(MissingHeader) naming the header  | ✅     |
@@ -23,6 +23,7 @@
 //! | T14 | `7d-reset` = `"not_a_u64"`                      | Err(MalformedHeader) with context     | ✅     |
 //! | T15 | `QuotaError::MalformedHeader("ctx")` Display    | string contains "ctx"                 | ✅     |
 //! | T16 | `ANTHROPIC_BETA` constant canary                | equals "oauth-2025-04-20"             | ✅     |
+//! | ET-01 | `QuotaError::HttpStatus(429)` Display         | exactly `"HTTP 429"` (stable contract) | ✅    |
 //!
 //! ## Corner Cases Covered
 //!
@@ -30,7 +31,7 @@
 //! - ✅ Each of the 5 required headers absent individually (T02, T03, T10, T11, T12)
 //! - ✅ Float headers malformed — 5h-utilization (T04), 7d-utilization (T13)
 //! - ✅ u64 headers malformed — 5h-reset (T05), 7d-reset (T14)
-//! - ✅ All 3 `QuotaError` variants: Display (T06, T07, T15) and `std::error::Error` bound (T09)
+//! - ✅ All 5 `QuotaError` variants: Display (T06, T07, T15, ET-01) and `std::error::Error` bound (T09)
 //! - ✅ `RateLimitData` field accessibility (T08)
 //! - ✅ `ANTHROPIC_BETA` constant value canary (T16) — not in public docs; drift check
 //! - N/A: status empty string — parses as Ok(status: "") by design; no range constraint
@@ -191,7 +192,7 @@ fn t08_rate_limit_data_fields_accessible()
 
 /// T09: `QuotaError` implements `std::error::Error`.
 ///
-/// Verifies that all three variants are boxable as `Box<dyn Error>`, enabling
+/// Verifies that all five variants are boxable as `Box<dyn Error>`, enabling
 /// callers to use the `?` operator in functions returning `Box<dyn Error>`.
 #[ test ]
 fn t09_quota_error_implements_std_error()
@@ -200,6 +201,8 @@ fn t09_quota_error_implements_std_error()
   assert_error( QuotaError::MissingHeader(  "h".to_string() ) );
   assert_error( QuotaError::MalformedHeader( "h: bad".to_string() ) );
   assert_error( QuotaError::HttpTransport(  "refused".to_string() ) );
+  assert_error( QuotaError::HttpStatus( 429 ) );
+  assert_error( QuotaError::ResponseParse( "utilization".to_string() ) );
 }
 
 // ── T10 ───────────────────────────────────────────────────────────────────────
@@ -334,4 +337,38 @@ fn t16_anthropic_beta_constant_has_expected_value()
     "oauth-2025-04-20",
     "T16: ANTHROPIC_BETA has drifted — re-run `strings $(which claude) | grep oauth` to find new value",
   );
+}
+
+// ── ET-01 ─────────────────────────────────────────────────────────────────────
+
+/// ET-01: `QuotaError::HttpStatus` Display is exactly `HTTP NNN` — a stable,
+/// machine-matchable contract consumed by retry/refresh predicates.
+///
+/// # Root Cause
+/// HTTP failures were folded into `HttpTransport`'s free-text message, forcing
+/// consumers to sniff `"401"`/`"429"` substrings out of arbitrary transport
+/// prose — a byte count or URL fragment could false-match.
+///
+/// # Why Not Caught
+/// No test pinned the rendered form of an HTTP-status failure; consumers
+/// matched whatever the current format happened to be.
+///
+/// # Fix Applied
+/// Dedicated `HttpStatus(u16)` variant with Display `HTTP {code}`
+/// (Fix(audit-stringly-http-status)); fetchers return it for status >= 400.
+///
+/// # Prevention
+/// Exact-equality assertion — any format drift breaks this test before it
+/// breaks the predicates matching on the `HTTP ` prefix.
+///
+/// # Pitfall
+/// Consumers must anchor on this exact form (`HTTP 401`), never on a bare
+/// code substring.
+#[ test ]
+fn et01_http_status_display_is_stable_contract()
+{
+  assert_eq!( QuotaError::HttpStatus( 429 ).to_string(), "HTTP 429" );
+  assert_eq!( QuotaError::HttpStatus( 401 ).to_string(), "HTTP 401" );
+  let parse = QuotaError::ResponseParse( "utilization".to_string() ).to_string();
+  assert!( parse.contains( "utilization" ), "ResponseParse Display names the field: {parse}" );
 }

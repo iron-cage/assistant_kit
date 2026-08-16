@@ -272,30 +272,12 @@ fn t14_stdin_file_interactive_dry_run_skips_open()
 
 // ── BUG-424: stdin_content spawn-method wiring (FT-9 through FT-15) ────────────
 
-// Return a temp dir containing a fake `claude` shell script and the augmented PATH value.
-//
-// The returned `TempDir` must be kept alive for the duration of the test — dropping it
-// removes the directory and makes the fake binary inaccessible. Private per-file copy:
-// Rust compiles each `tests/*.rs` file as its own binary, so this ~15-line helper (already
-// proven in `bug_243_test.rs:40`) is duplicated locally rather than shared — not worth
-// extracting to a module for the 4 call sites below.
+// Shared fake-`claude` fixture — single source of truth in tests/fake_claude_bin/mod.rs
+// (previously a per-file copy; consolidated during the audit remediation pass).
 #[ cfg( unix ) ]
-fn fake_claude_dir( body : &str ) -> ( tempfile::TempDir, String )
-{
-  use std::os::unix::fs::PermissionsExt as _;
-  let dir  = tempfile::TempDir::new().expect( "tmpdir" );
-  let path = dir.path().join( "claude" );
-  let script = format!( "#!/bin/sh\n{body}\n" );
-  std::fs::write( &path, script.as_bytes() ).expect( "write fake-claude" );
-  std::fs::set_permissions( &path, std::fs::Permissions::from_mode( 0o755 ) )
-    .expect( "chmod fake-claude" );
-  let path_val = format!(
-    "{}:{}",
-    dir.path().display(),
-    std::env::var( "PATH" ).unwrap_or_default(),
-  );
-  ( dir, path_val )
-}
+mod fake_claude_bin;
+#[ cfg( unix ) ]
+use fake_claude_bin::fake_claude_dir;
 
 // T15 / FT-9: stdin_content in describe output
 #[ test ]

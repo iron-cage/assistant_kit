@@ -32,27 +32,8 @@
 
 use claude_runner_core::{ run_isolated, RunnerError, IsolatedModel };
 
-// Return a temp dir containing a fake `claude` shell script and the augmented PATH value.
-//
-// The returned `TempDir` must be kept alive for the duration of the test — dropping it
-// removes the directory and makes the fake binary inaccessible.
-#[ cfg( unix ) ]
-fn fake_claude_dir( body : &str ) -> ( tempfile::TempDir, String )
-{
-  use std::os::unix::fs::PermissionsExt as _;
-  let dir  = tempfile::TempDir::new().expect( "tmpdir" );
-  let path = dir.path().join( "claude" );
-  let script = format!( "#!/bin/sh\n{body}\n" );
-  std::fs::write( &path, script.as_bytes() ).expect( "write fake-claude" );
-  std::fs::set_permissions( &path, std::fs::Permissions::from_mode( 0o755 ) )
-    .expect( "chmod fake-claude" );
-  let path_val = format!(
-    "{}:{}",
-    dir.path().display(),
-    std::env::var( "PATH" ).unwrap_or_default(),
-  );
-  ( dir, path_val )
-}
+mod fake_claude_bin;
+use fake_claude_bin::fake_claude_dir;
 
 /// BUG-243 reproducer: timeout fires after partial stdout → `TimeoutWithOutput` has content.
 ///

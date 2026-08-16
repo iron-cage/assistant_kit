@@ -251,6 +251,96 @@ fn claudecode_not_removed_when_unset_claudecode_false()
 
 // ─────────────────────────────────────────────────────────────────────────────
 
+/// `with_home_isolation()` strips every credential/endpoint override var from the
+/// subprocess environment.
+///
+/// # Root Cause (audit-isolated-env-leak)
+///
+/// The isolated subprocess inherited `ANTHROPIC_API_KEY`, `CLAUDE_CODE_OAUTH_TOKEN`,
+/// `CLAUDE_CONFIG_DIR`, etc. from the parent. Any of them makes the `claude` binary
+/// authenticate as the parent's identity — or read the parent's real config dir —
+/// silently bypassing the isolated `HOME`'s credentials file the caller supplied.
+///
+/// # Why Not Caught
+///
+/// All isolation tests asserted what the subprocess *receives* (HOME override, args);
+/// none asserted what it must *not* receive. Inherited-env leaks are invisible unless
+/// a test enumerates the removal list.
+///
+/// # Fix Applied
+///
+/// `with_home_isolation()` now sets a `home_isolation` flag; `removed_vars()` — the
+/// single source of truth shared by `build_command()` and `describe()` — appends
+/// `ISOLATION_REMOVED_VARS` when the flag is set.
+///
+/// # Prevention
+///
+/// When adding an env var the `claude` binary honors for auth/endpoint selection,
+/// add it to `ISOLATION_REMOVED_VARS` and extend this test's list.
+///
+/// # Pitfall
+///
+/// Removals must flow through `removed_vars()` — an ad-hoc `env_remove()` call at one
+/// spawn site would leave `describe()`/dry-run output diverging from real execution.
+#[test]
+fn home_isolation_strips_credential_override_vars()
+{
+  let built = ClaudeCommand::new()
+    .with_home_isolation()
+    .build_command_for_test();
+  let removed : Vec< &str > = built.get_envs()
+    .filter_map( | ( k, v ) | if v.is_none() { k.to_str() } else { None } )
+    .collect();
+  for var in [
+    "ANTHROPIC_API_KEY",
+    "ANTHROPIC_AUTH_TOKEN",
+    "ANTHROPIC_BASE_URL",
+    "ANTHROPIC_CUSTOM_HEADERS",
+    "CLAUDE_CODE_OAUTH_TOKEN",
+    "CLAUDE_CODE_USE_BEDROCK",
+    "CLAUDE_CODE_USE_VERTEX",
+    "CLAUDE_CONFIG_DIR",
+  ]
+  {
+    assert!(
+      removed.contains( &var ),
+      "home isolation must strip {var}; removal list: {removed:?}"
+    );
+  }
+}
+
+/// Isolation removals surface in `describe()` as `-u NAME` tokens (display parity with
+/// real execution, via the shared `removed_vars()` list).
+#[test]
+fn home_isolation_removals_visible_in_describe()
+{
+  let desc = ClaudeCommand::new().with_home_isolation().describe();
+  assert!( desc.contains( "-u ANTHROPIC_API_KEY" ), "describe must show the strip: {desc}" );
+  assert!( desc.contains( "-u CLAUDE_CONFIG_DIR" ), "describe must show the strip: {desc}" );
+}
+
+/// Counterpart: WITHOUT home isolation the credential vars are inherited untouched —
+/// the scrub is strictly opt-in, so ordinary (non-isolated) invocations keep honoring
+/// the caller's environment-based configuration.
+#[test]
+fn no_isolation_keeps_credential_vars()
+{
+  let built = ClaudeCommand::new().build_command_for_test();
+  let removed : Vec< &str > = built.get_envs()
+    .filter_map( | ( k, v ) | if v.is_none() { k.to_str() } else { None } )
+    .collect();
+  assert!(
+    !removed.contains( &"ANTHROPIC_API_KEY" ),
+    "ANTHROPIC_API_KEY must NOT be stripped without home isolation; got: {removed:?}"
+  );
+  assert!(
+    !removed.contains( &"CLAUDE_CONFIG_DIR" ),
+    "CLAUDE_CONFIG_DIR must NOT be stripped without home isolation; got: {removed:?}"
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 #[test]
 fn defaults_do_not_set_tier2_tier3_env_vars() {
   // Verify Tier 2 & 3 defaults are NOT set (inherit standard)

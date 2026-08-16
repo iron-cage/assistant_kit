@@ -116,7 +116,10 @@ impl ClaudeCommand {
   /// Configure the command for home-isolated subprocess invocations.
   ///
   /// Suppresses `--chrome` injection — chrome is not needed for credential-only
-  /// subprocesses and adds unnecessary overhead (AC-41).
+  /// subprocesses and adds unnecessary overhead (AC-41) — and strips credential/endpoint
+  /// override env vars (`ANTHROPIC_API_KEY`, `CLAUDE_CODE_OAUTH_TOKEN`, `CLAUDE_CONFIG_DIR`, …)
+  /// from the subprocess environment, so the subprocess authenticates only with the isolated
+  /// `HOME`'s credentials file. See `ISOLATION_REMOVED_VARS` in `command/mod.rs`.
   ///
   /// # Example
   ///
@@ -126,13 +129,15 @@ impl ClaudeCommand {
   /// let cmd = ClaudeCommand::new()
   ///   .with_home( std::path::Path::new( "/tmp/isolated" ) )
   ///   .with_home_isolation();
+  /// assert!( cmd.describe().contains( "-u ANTHROPIC_API_KEY" ) );
   /// ```
   #[ inline ]
   #[ must_use ]
-  #[ allow( unused_mut ) ]
-  pub fn with_home_isolation( mut self ) -> Self
+  pub fn with_home_isolation( self ) -> Self
   {
-    self.with_chrome( None )
+    let mut cmd = self.with_chrome( None );
+    cmd.home_isolation = true;
+    cmd
   }
 
   /// Add multiple arguments to the command

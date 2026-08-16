@@ -312,12 +312,20 @@ pub fn sub_label( account : Option< &claude_quota::OauthAccountData > ) -> &'sta
 //   pass-through regression guard in task 150, inadvertently documenting the wrong behaviour.
 //   task/claude_profile/bug/152_shorten_error_omits_401.md
 // Pitfall: shorten_error is a manual allowlist — each new HTTP error code from
-//   QuotaError::HttpTransport needs an explicit branch. The else arm is NOT a shortener;
+//   QuotaError needs an explicit branch. The else arm is NOT a shortener;
 //   it is a verbatim passthrough. test_shorten_error_no_raw_http_transport_passthrough
 //   enforces this invariant for known codes (401, 403, 429).
+// Fix(audit-stringly-http-status)
+// Root cause: HTTP status failures rendered as "HTTP transport error: HTTP NNN"
+//   (folded into QuotaError::HttpTransport free text); the typed
+//   QuotaError::HttpStatus variant now renders the stable form "HTTP NNN".
+// Pitfall: the old prefixed form survives on disk in persisted fallback_reason
+//   strings (quota cache files), so both forms stay matched here — removing the
+//   legacy branches would un-shorten historical cache entries.
 /// Shorten verbose quota error strings for display in the final table column.
 ///
-/// `QuotaError::HttpTransport` formats errors as `"HTTP transport error: HTTP NNN"`.
+/// `QuotaError::HttpStatus` formats errors as `"HTTP NNN"`; the pre-typed form
+/// `"HTTP transport error: HTTP NNN"` still occurs in persisted cache reasons.
 /// Handled codes: `429` → `"rate limited (429)"`; `401` → `"auth expired (401)"`;
 /// `403` → `"auth forbidden (403)"` (permission error returned by the usage API).
 /// `QuotaError::MissingHeader` (displays as `"rate-limit header missing: …"`) is
@@ -325,15 +333,18 @@ pub fn sub_label( account : Option< &claude_quota::OauthAccountData > ) -> &'sta
 /// The caller is responsible for wrapping the result in parentheses.
 pub fn shorten_error( reason : &str ) -> &str
 {
-  if reason.starts_with( "HTTP transport error: HTTP 429" )
+  // Accept both the typed form ("HTTP NNN", anchored at the start) and the
+  // legacy transport-folded form persisted by older cache writes.
+  let code_part = reason.strip_prefix( "HTTP transport error: " ).unwrap_or( reason );
+  if code_part.starts_with( "HTTP 429" )
   {
     "rate limited (429)"
   }
-  else if reason.starts_with( "HTTP transport error: HTTP 401" )
+  else if code_part.starts_with( "HTTP 401" )
   {
     "auth expired (401)"
   }
-  else if reason.starts_with( "HTTP transport error: HTTP 403" )
+  else if code_part.starts_with( "HTTP 403" )
   {
     "auth forbidden (403)"
   }
