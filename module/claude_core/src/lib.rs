@@ -6,6 +6,7 @@
 //!
 //! # Modules
 //!
+//! - [`file_io`]: Atomic write-then-rename (unique temp names, optional `0o600` secret mode) and the secret-redacting trace formatter
 //! - [`paths`]: [`ClaudePaths`] — all `~/.claude/` canonical paths from `HOME`
 //! - [`process`]: [`ProcessInfo`], [`ProcessMetrics`] (Linux), and process signal utilities
 //! - [`settings_io`]: Atomic read/write of flat-JSON key-value files (e.g. `settings.json`)
@@ -15,6 +16,7 @@
 #![ cfg_attr( not( feature = "enabled" ), allow( unused ) ) ]
 #![ warn( missing_docs ) ]
 
+pub mod file_io;
 pub mod paths;
 pub mod process;
 pub mod settings_io;

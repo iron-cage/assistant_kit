@@ -588,8 +588,11 @@ fn ft04_non_owned_uses_cache_not_http()
 
 // ── TSK-500: local untracked quota cache ─────────────────────────────────────
 
-/// T03 (TSK-500): the error-fallback arm renders from the local `-cache/{name}.json`
-/// when the tracked file carries no legacy `cache{}` block (post-migration store).
+/// T03 (TSK-500): the error-fallback arm renders from the gitignored
+/// `-cache/{name}.json` when the tracked file carries no legacy `cache{}` block
+/// (post-migration store). Since TSK-502 this path is the legacy migration-era
+/// candidate in the merged read — the fixture deliberately keeps seeding it, so
+/// this test now also proves the legacy-fallback leg of the per-host tree.
 ///
 /// Offline stand-in for the 429 path: `expires_at_ms: 1` trips the BUG-233
 /// local-expiry gate → `Err("token expired (local)")` → the BUG-296 fallback arm

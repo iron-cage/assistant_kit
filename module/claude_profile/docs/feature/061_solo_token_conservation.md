@@ -22,8 +22,8 @@ Only the account where both conditions hold receives live API calls. All other a
 
 A dedicated function `approximate_quota(name, store)` is the sole source of non-live quota data for accounts skipped by the solo gate. It:
 
-1. Reads the quota cache via the merged read path (local `-cache/{name}.json` first, legacy tracked `cache{}` fallback — Feature 033, TSK-500)
-2. Reads the stored measurement history (`history[]` in the local cache file, legacy `cache.history[]` pre-migration)
+1. Reads the quota cache via the merged read path (freshest candidate across host subtrees `cache/*/{name}.json` and the legacy gitignored `-cache/{name}.json`, legacy tracked `cache{}` fallback — Feature 033, TSK-502)
+2. Reads the stored measurement history (`history[]` from the freshest ringed candidate, legacy `cache.history[]` pre-migration)
 3. Applies the Feature 040 polynomial approximation to each period independently
 4. Returns a `QuotaData` struct with `cached: true` and approximated values
 

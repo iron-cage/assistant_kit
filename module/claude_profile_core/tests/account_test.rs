@@ -126,11 +126,15 @@
 //! | `ft_remove_session_effort_creates_dir_when_claude_absent` | Task 464/T04: remove_session_effort() creates ~/.claude/ dir + file when dir absent |
 //! | `bug002_extract_object_block_bounds_multi_entry_roles_json` | BUG-002: extract_object_block() bounds parse_string_field() to one membership entry in multi-entry roles_json |
 //! | `t500_01_fetch_write_sequence_leaves_migrated_tracked_byte_identical` | TSK-500/T01: write_quota_cache + write_history_entry leave a migrated tracked file byte-identical (AF1 hash compare) |
-//! | `t500_02_volatile_cache_lands_in_hyphen_cache_local_file` | TSK-500/T02: volatile cache written to `-cache/{name}.json`; no tracked file created; merged read round-trips |
-//! | `t500_02b_history_entry_lands_local_only` | TSK-500/T02: write_history_entry targets the local file only |
+//! | `t502_01_volatile_cache_lands_in_per_host_tracked_file` | TSK-502/T01: volatile cache written to `cache/{host}_{user}/{name}.json` — no hyphen-prefixed component, so tracked; no account file created; merged read round-trips |
+//! | `t500_02b_history_entry_lands_local_only` | TSK-500/T02: write_history_entry targets the per-host cache file only (TSK-502 location) |
 //! | `t500_05_low_churn_writes_land_top_level_tracked` | TSK-500/T05: write_cache_string/bool land top-level tracked; no cache{} block recreated; merged read surfaces both |
-//! | `t500_06_legacy_cache_migrates_prunes_and_preserves` | TSK-500/T06: legacy cache{} readable pre-migration, dissolved in one write (volatile→local, low-churn→top-level, AF2 cache-key absent) |
+//! | `t500_06_legacy_cache_migrates_prunes_and_preserves` | TSK-500/T06: legacy cache{} readable pre-migration, dissolved in one write (volatile→per-host file since TSK-502, low-churn→top-level, AF2 cache-key absent) |
 //! | `t500_01b_if_changed_write_skips_identical_value` | TSK-500/T01: write_cache_string_if_changed skips the tracked write when the value is unchanged (steady-state org_created_at stamp) |
+//! | `t502_02_read_merges_freshest_across_host_subtrees` | TSK-502/T02+T03: freshest fetched_at wins across cache/*/ subtrees in both directions; an unparseable fetched_at candidate is skipped |
+//! | `t502_03_legacy_gitignored_cache_read_then_self_cleaned` | TSK-502/T04: legacy `-cache/{name}.json` readable as fallback; the next write relocates values + history to the per-host file and deletes it |
+//! | `t502_04_no_cache_anywhere_returns_none` | TSK-502/T05 (regression guard): empty store → read_quota_cache None — the no-cache contract unchanged |
+//! | `t502_05_history_ring_continues_across_hosts` | TSK-502/T06: another host's ring is carried into the own-host file by write_quota_cache and continued by write_history_entry |
 
 use tempfile::TempDir;
 use claude_profile_core::account;
@@ -1014,12 +1018,12 @@ fn mre_bug254_switch_account_patches_email_when_metadata_absent()
 
 // ── Quota cache (Feature 033) ────────────────────────────────────────────────
 
-/// AC-01 (TSK-500): `write_quota_cache` targets the local untracked cache file and
-/// leaves a migrated tracked `{name}.json` byte-identical.
+/// AC-01: `write_quota_cache` targets this host's per-host cache file
+/// (TSK-502 location) and leaves the metadata `{name}.json` byte-identical.
 ///
 /// Given: `alice@acme.com.json` containing `{"host":"wbox","role":"dev"}` (no legacy `cache{}`)
 /// When: `write_quota_cache` called with `five_hour` utilization 14.0
-/// Then: tracked file unchanged; `-cache/alice@acme.com.json` holds `fetched_at` + periods
+/// Then: metadata file unchanged; `cache/{host}_{user}/alice@acme.com.json` holds `fetched_at` + periods
 #[ test ]
 fn cache_write_preserves_existing_fields()
 {
@@ -1040,7 +1044,7 @@ fn cache_write_preserves_existing_fields()
     std::fs::read( &meta ).unwrap(), before,
     "tracked file must stay byte-identical on a migrated store",
   );
-  let local   = store.path().join( "-cache" ).join( format!( "{name}.json" ) );
+  let local   = store.path().join( "cache" ).join( host_slug() ).join( format!( "{name}.json" ) );
   let content = std::fs::read_to_string( &local ).expect( "local cache file must exist" );
   assert!( content.contains( r#""fetched_at""# ), "fetched_at present: {content}" );
   assert!( content.contains( r#""left_pct""# ), "left_pct present: {content}" );
@@ -1325,10 +1329,12 @@ fn t500_01b_if_changed_write_skips_identical_value()
   );
 }
 
-/// T02 (TSK-500): volatile cache lands in `-cache/{name}.json` — hyphen-prefixed
-/// path matching the global `-*` gitignore rule — and no tracked file is created.
+/// T01 (TSK-502, supersedes TSK-500/T02's location assertion): volatile cache
+/// lands in the tracked per-host file `cache/{host}_{user}/{name}.json` — no
+/// path component is hyphen-prefixed, so the global `-*` gitignore rule cannot
+/// match it — and no tracked account file is created.
 #[ test ]
-fn t500_02_volatile_cache_lands_in_hyphen_cache_local_file()
+fn t502_01_volatile_cache_lands_in_per_host_tracked_file()
 {
   let store = tempfile::tempdir().unwrap();
   let name  = "fresh@acme.com";
@@ -1340,33 +1346,34 @@ fn t500_02_volatile_cache_lands_in_hyphen_cache_local_file()
     None,
   );
 
-  let local = store.path().join( "-cache" ).join( format!( "{name}.json" ) );
-  assert!( local.is_file(), "T02: -cache/{name}.json must exist" );
-  let dir_name = local.parent()
-    .and_then( std::path::Path::file_name )
-    .and_then( std::ffi::OsStr::to_str )
-    .unwrap_or_default();
-  assert!(
-    dir_name.starts_with( '-' ),
-    "T02: cache dir must be hyphen-prefixed (gitignored by the global -* rule): {dir_name}",
-  );
+  let local = store.path().join( "cache" ).join( host_slug() ).join( format!( "{name}.json" ) );
+  assert!( local.is_file(), "T01: cache/{}/{name}.json must exist", host_slug() );
+  for component in local.strip_prefix( store.path() ).unwrap().components()
+  {
+    let c = component.as_os_str().to_string_lossy();
+    assert!(
+      !c.starts_with( '-' ),
+      "T01: no cache path component may be hyphen-prefixed (would be gitignored by the global -* rule): {c}",
+    );
+  }
   let json : serde_json::Value = serde_json::from_str( &std::fs::read_to_string( &local ).unwrap() ).unwrap();
-  assert!( json[ "fetched_at" ].is_string(), "T02: local cache carries fetched_at" );
+  assert!( json[ "fetched_at" ].is_string(), "T01: per-host cache carries fetched_at" );
   let u = json[ "five_hour" ][ "left_pct" ].as_f64().expect( "left_pct" );
-  assert!( ( u - 55.5 ).abs() < 1e-9, "T02: utilization stored locally, got {u}" );
+  assert!( ( u - 55.5 ).abs() < 1e-9, "T01: utilization stored per-host, got {u}" );
   assert!(
     !store.path().join( format!( "{name}.json" ) ).exists(),
-    "T02: write_quota_cache must not create a tracked file",
+    "T01: write_quota_cache must not create a tracked account file",
   );
   let entry = claude_profile_core::account::read_quota_cache( store.path(), name )
-    .expect( "T02: merged read must see the local cache" );
+    .expect( "T01: merged read must see the per-host cache" );
   let ( util, reset ) = entry.five_hour.expect( "five_hour present" );
   assert!( ( util - 55.5 ).abs() < f64::EPSILON );
   assert_eq!( reset.as_deref(), Some( "2026-08-16T20:00:00Z" ) );
 }
 
-/// T02 (TSK-500): `write_history_entry` targets the local cache file — the ring
-/// buffer no longer touches (or creates) the tracked `{name}.json`.
+/// T02 (TSK-500): `write_history_entry` targets the per-host cache file
+/// (TSK-502 location) — the ring buffer never touches (or creates) the tracked
+/// `{name}.json`.
 #[ test ]
 fn t500_02b_history_entry_lands_local_only()
 {
@@ -1380,7 +1387,7 @@ fn t500_02b_history_entry_lands_local_only()
     None,
   );
 
-  let local = store.path().join( "-cache" ).join( format!( "{name}.json" ) );
+  let local = store.path().join( "cache" ).join( host_slug() ).join( format!( "{name}.json" ) );
   let json : serde_json::Value = serde_json::from_str(
     &std::fs::read_to_string( &local ).expect( "local cache file must exist" )
   ).unwrap();
@@ -1473,8 +1480,8 @@ fn t500_06_legacy_cache_migrates_prunes_and_preserves()
   assert_eq!( tracked[ "model_override" ].as_str(), Some( "opus" ), "T06: model_override relocated top-level" );
   assert_eq!( tracked[ "host" ].as_str(), Some( "wbox" ), "T06: unrelated fields preserved" );
 
-  // AF2 leg 2: volatile + history present in the local file post-migration.
-  let local = store.path().join( "-cache" ).join( format!( "{name}.json" ) );
+  // AF2 leg 2: volatile + history present in the per-host file post-migration.
+  let local = store.path().join( "cache" ).join( host_slug() ).join( format!( "{name}.json" ) );
   let ljson : serde_json::Value = serde_json::from_str( &std::fs::read_to_string( &local ).unwrap() ).unwrap();
   let u = ljson[ "five_hour" ][ "left_pct" ].as_f64().expect( "left_pct" );
   assert!( ( u - 60.0 ).abs() < 1e-9, "T06: new fetch values in local file, got {u}" );
@@ -1498,6 +1505,147 @@ fn t500_06_legacy_cache_migrates_prunes_and_preserves()
     std::fs::read( &meta ).unwrap(), before,
     "T06/T01: second write must leave tracked byte-identical",
   );
+}
+
+// ── TSK-502: per-host tracked quota cache tree ────────────────────────────────
+
+/// Expected per-host cache subdirectory name — derived from the shipped
+/// active-marker filename so the test can never drift from the slug
+/// sanitization actually used by the write path.
+fn host_slug() -> String
+{
+  claude_profile_core::account::active_marker_filename()
+    .strip_prefix( "_active_" )
+    .expect( "marker filename always starts with _active_" )
+    .to_string()
+}
+
+/// Seed a raw volatile cache object into a named host subtree.
+fn seed_host_cache(
+  store      : &std::path::Path,
+  host_dir   : &str,
+  name       : &str,
+  fetched_at : &str,
+  left_pct   : f64,
+)
+{
+  let dir = store.join( "cache" ).join( host_dir );
+  std::fs::create_dir_all( &dir ).unwrap();
+  std::fs::write(
+    dir.join( format!( "{name}.json" ) ),
+    format!( r#"{{"fetched_at":"{fetched_at}","status":"ok","five_hour":{{"left_pct":{left_pct}}}}}"# ),
+  ).unwrap();
+}
+
+/// T02+T03 (TSK-502): the merged read returns the freshest `fetched_at` across
+/// host subtrees — in both directions — and a candidate whose `fetched_at`
+/// does not parse is skipped instead of winning or aborting the merge.
+#[ test ]
+fn t502_02_read_merges_freshest_across_host_subtrees()
+{
+  let store = tempfile::tempdir().unwrap();
+  let name  = "fleet@acme.com";
+  seed_host_cache( store.path(), "w001_user1", name, "2026-01-01T00:00:00Z", 10.0 );
+  seed_host_cache( store.path(), "w002_user1", name, "2026-01-02T00:00:00Z", 20.0 );
+  // T03: lexicographically huge but unparseable timestamp must never win.
+  seed_host_cache( store.path(), "w009_user1", name, "not-a-timestamp", 99.0 );
+
+  let entry = claude_profile_core::account::read_quota_cache( store.path(), name )
+    .expect( "T02: merged read must see the host subtrees" );
+  let ( u, _ ) = entry.five_hour.expect( "five_hour present" );
+  assert!( ( u - 20.0 ).abs() < f64::EPSILON, "T02: fresher w002 entry must win, got {u}" );
+  assert_eq!( entry.fetched_at, "2026-01-02T00:00:00Z" );
+
+  // Direction flip: w001 becomes the freshest.
+  seed_host_cache( store.path(), "w001_user1", name, "2026-01-03T00:00:00Z", 30.0 );
+  let entry = claude_profile_core::account::read_quota_cache( store.path(), name )
+    .expect( "T02: merged read after flip" );
+  let ( u, _ ) = entry.five_hour.expect( "five_hour present" );
+  assert!( ( u - 30.0 ).abs() < f64::EPSILON, "T02: freshest must flip to w001, got {u}" );
+}
+
+/// T04 (TSK-502): a legacy gitignored `-cache/{name}.json` (pre-502 layout) is
+/// readable as fallback, and the next `write_quota_cache` relocates its role to
+/// the per-host tracked file — carrying the history ring — and deletes it.
+#[ test ]
+fn t502_03_legacy_gitignored_cache_read_then_self_cleaned()
+{
+  let store = tempfile::tempdir().unwrap();
+  let name  = "legacylocal@acme.com";
+  let legacy_dir = store.path().join( "-cache" );
+  std::fs::create_dir_all( &legacy_dir ).unwrap();
+  let legacy = legacy_dir.join( format!( "{name}.json" ) );
+  std::fs::write(
+    &legacy,
+    r#"{"fetched_at":"2026-01-01T00:00:00Z","status":"ok","five_hour":{"left_pct":70.0},"history":[{"t":1000,"h5":[70.0,"2026-01-01T05:00:00Z"],"d7":null,"sn":null}]}"#,
+  ).unwrap();
+
+  let pre = claude_profile_core::account::read_quota_cache( store.path(), name )
+    .expect( "T04: legacy gitignored cache must be readable as fallback" );
+  let ( u, _ ) = pre.five_hour.expect( "five_hour present" );
+  assert!( ( u - 70.0 ).abs() < f64::EPSILON, "T04: legacy value honored, got {u}" );
+
+  claude_profile_core::account::write_quota_cache(
+    store.path(), name, Some( ( 71.0, None ) ), None, None,
+  );
+
+  assert!( !legacy.exists(), "T04: legacy -cache file must be deleted after a successful per-host write" );
+  let per_host = store.path().join( "cache" ).join( host_slug() ).join( format!( "{name}.json" ) );
+  let json : serde_json::Value = serde_json::from_str( &std::fs::read_to_string( &per_host ).unwrap() ).unwrap();
+  assert_eq!(
+    json[ "history" ].as_array().map( Vec::len ), Some( 1 ),
+    "T04/AF2: legacy history must be carried into the per-host file",
+  );
+  let post = claude_profile_core::account::read_quota_cache( store.path(), name )
+    .expect( "T04: post-migration read" );
+  let ( u, _ ) = post.five_hour.expect( "five_hour present" );
+  assert!( ( u - 71.0 ).abs() < f64::EPSILON, "T04: per-host file serves reads, got {u}" );
+}
+
+/// T05 (TSK-502, regression guard — passed before the change too): a store with
+/// no cache in any location returns `None`, the unchanged no-cache contract.
+#[ test ]
+fn t502_04_no_cache_anywhere_returns_none()
+{
+  let store = tempfile::tempdir().unwrap();
+  assert!(
+    claude_profile_core::account::read_quota_cache( store.path(), "nobody@acme.com" ).is_none(),
+    "T05: empty store must read as no cache",
+  );
+}
+
+/// T06 (TSK-502): a history ring living in another host's subtree is carried
+/// into the own-host file by `write_quota_cache` and continued — not restarted —
+/// by `write_history_entry`.
+#[ test ]
+fn t502_05_history_ring_continues_across_hosts()
+{
+  let store = tempfile::tempdir().unwrap();
+  let name  = "ring@acme.com";
+  let other = store.path().join( "cache" ).join( "otherbox_op" );
+  std::fs::create_dir_all( &other ).unwrap();
+  std::fs::write(
+    other.join( format!( "{name}.json" ) ),
+    r#"{"fetched_at":"2026-01-01T00:00:00Z","status":"ok","history":[{"t":1000,"h5":[80.0,"2026-01-01T05:00:00Z"],"d7":null,"sn":null},{"t":2000,"h5":[75.0,"2026-01-01T05:00:00Z"],"d7":null,"sn":null}]}"#,
+  ).unwrap();
+
+  claude_profile_core::account::write_quota_cache(
+    store.path(), name, Some( ( 60.0, None ) ), None, None,
+  );
+  let own = store.path().join( "cache" ).join( host_slug() ).join( format!( "{name}.json" ) );
+  let json : serde_json::Value = serde_json::from_str( &std::fs::read_to_string( &own ).unwrap() ).unwrap();
+  assert_eq!(
+    json[ "history" ].as_array().map( Vec::len ), Some( 2 ),
+    "T06: other host's ring must be carried into the own-host file",
+  );
+
+  claude_profile_core::account::write_history_entry(
+    store.path(), name, 3_000, Some( ( 60.0, "2026-01-02T05:00:00Z" ) ), None, None,
+  );
+  let entries = claude_profile_core::account::read_history( store.path(), name );
+  assert_eq!( entries.len(), 3, "T06: ring continued (2 carried + 1 appended)" );
+  assert_eq!( entries[ 0 ].t, 1_000 );
+  assert_eq!( entries[ 2 ].t, 3_000 );
 }
 
 /// Second `write_quota_cache` replaces first period data.
@@ -3152,5 +3300,97 @@ fn bug002_extract_object_block_bounds_multi_entry_roles_json()
     "BUG-002: once the caller bounds the search to the second membership entry via \
      extract_object_block(), parse_string_field() must return that entry's own \
      workspace_name (Beta Prod), not silently fall back to the first entry; got {scoped:?}",
+  );
+}
+
+// ── FT-08 (021): parse_string_array_field ─────────────────────────────────────
+// Relocated from an in-src `#[cfg(test)]` module in account.rs — all tests for
+// this crate live in tests/ per the workspace test-placement convention.
+
+/// `ft08_a`: Two-element array returns both values in order.
+///
+/// Given: `{"capabilities":["claude_max","chat"]}`
+/// When: `parse_string_array_field(json, "capabilities")`
+/// Then: Returns `["claude_max", "chat"]`
+#[ test ]
+fn ft08_parse_string_array_field_two_elements()
+{
+  let json   = r#"{"capabilities":["claude_max","chat"]}"#;
+  let result = account::parse_string_array_field( json, "capabilities" );
+  assert_eq!( result, vec![ "claude_max", "chat" ] );
+}
+
+/// `ft08_b`: Missing key returns empty Vec.
+///
+/// Given: JSON with no "capabilities" key
+/// When: `parse_string_array_field(json, "capabilities")`
+/// Then: Returns empty Vec
+#[ test ]
+fn ft08_parse_string_array_field_missing_key_returns_empty()
+{
+  let json   = r#"{"other_field":"value"}"#;
+  let result = account::parse_string_array_field( json, "capabilities" );
+  assert!( result.is_empty(), "missing key must return empty Vec, got: {result:?}" );
+}
+
+/// `ft08_c`: Empty array `[]` returns empty Vec.
+///
+/// Given: `{"capabilities":[]}`
+/// When: `parse_string_array_field(json, "capabilities")`
+/// Then: Returns empty Vec
+#[ test ]
+fn ft08_parse_string_array_field_empty_array_returns_empty()
+{
+  let json   = r#"{"capabilities":[]}"#;
+  let result = account::parse_string_array_field( json, "capabilities" );
+  assert!( result.is_empty(), "empty array must return empty Vec, got: {result:?}" );
+}
+
+// ── Credential-file permissions (audit-credential-file-perms) ─────────────────
+
+/// Store credential files land owner-read/write only, and replacing a
+/// world-readable pre-existing slot tightens it to `0o600`.
+///
+/// ## Fix Documentation — audit-credential-file-perms
+///
+/// - **Root Cause:** `save()` wrote `{name}.credentials.json` via bare `fs::write`/
+///   `fs::copy`, landing OAuth tokens with umask-default `0644` — readable by any
+///   local user; `fs::copy` additionally propagated whatever mode the source had.
+/// - **Why Not Caught:** No test asserted on-disk permission bits of any credential
+///   write anywhere in the crate.
+/// - **Fix Applied:** All credential writes route through
+///   `claude_core::file_io::atomic_write_secret`, which opens the temp file `0o600`
+///   before the first content byte; the mode travels through the rename.
+/// - **Prevention:** This test pins the final mode bits for both the fresh-write and
+///   the replace-a-world-readable-file paths.
+/// - **Pitfall:** chmod-after-write leaves a readable window, and `fs::copy` is a
+///   mode-preserving trap — write content through the secret-mode primitive instead.
+#[ cfg( unix ) ]
+#[ test ]
+fn save_writes_credential_file_owner_only()
+{
+  use std::os::unix::fs::PermissionsExt;
+  let tmp   = TempDir::new().unwrap();
+  let store = tmp.path().join( "store" );
+  std::fs::create_dir_all( &store ).unwrap();
+
+  let dot_claude = tmp.path().join( ".claude" );
+  std::fs::create_dir_all( &dot_claude ).unwrap();
+  std::fs::write( dot_claude.join( ".credentials.json" ), r#"{"accessToken":"tok"}"# ).unwrap();
+
+  let paths = ClaudePaths::with_home( tmp.path() );
+  let dest  = store.join( "alice@test.com.credentials.json" );
+
+  // Pre-plant a world-readable slot — save() must replace it with an 0600 file.
+  std::fs::write( &dest, r#"{"accessToken":"old"}"# ).unwrap();
+  std::fs::set_permissions( &dest, std::fs::Permissions::from_mode( 0o644 ) ).unwrap();
+
+  account::save( "alice@test.com", &store, &paths, false, None, None, None, None, account::AccountBackend::Anthropic, None, None, None ).unwrap();
+
+  let mode = std::fs::metadata( &dest ).unwrap().permissions().mode() & 0o777;
+  assert_eq!( mode, 0o600, "store credential file must be 0600, got {mode:o}" );
+  assert_eq!(
+    std::fs::read_to_string( &dest ).unwrap(), r#"{"accessToken":"tok"}"#,
+    "save() must install the live credentials content"
   );
 }

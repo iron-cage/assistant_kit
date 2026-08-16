@@ -3,17 +3,17 @@
 ### Scope
 
 - **Purpose**: Store up to 10 timestamped real server measurements per account and use quadratic least-squares regression to approximate current quota levels when the API is unavailable.
-- **Responsibility**: Documents the measurement history ring buffer in the untracked local `-cache/{name}.json` (TSK-500), the approximation algorithm, reset boundary handling, and display integration.
-- **In Scope**: History storage format (top-level `history[]` in the local cache file; legacy `cache.history[]` in tracked `{name}.json` readable pre-migration), write-on-success append, polynomial degree selection (0/1/2), quadratic LS solver (3x3 Cramer), time normalization, reset boundary detection and filtering, value clamping [0,100], extrapolation safety (tangent-line continuation), singular matrix fallback, backward compatibility with old cache format, duplicate-timestamp deduplication.
+- **Responsibility**: Documents the measurement history ring buffer in the tracked per-host `cache/{host}_{user}/{name}.json` (TSK-502), the approximation algorithm, reset boundary handling, and display integration.
+- **In Scope**: History storage format (top-level `history[]` in the per-host cache file; legacy gitignored `-cache/{name}.json` and legacy `cache.history[]` in tracked `{name}.json` readable pre-migration), write-on-success append, cross-host ring continuity (freshest ring anywhere seeds the own-host file), polynomial degree selection (0/1/2), quadratic LS solver (3x3 Cramer), time normalization, reset boundary detection and filtering, value clamping [0,100], extrapolation safety (tangent-line continuation), singular matrix fallback, backward compatibility with old cache format, duplicate-timestamp deduplication.
 - **Out of Scope**: Approximated values stored in history (only real server values), cache invalidation by time, third-party math dependencies (invariant 001), higher-order polynomials (>2), separate approximation display indicator (reuses `~` from Feature 033).
 
 ### Design
 
 **Measurement History Ring Buffer**
 
-Each successful `fetch_oauth_usage` call appends a timestamped measurement to the top-level `"history"` array of the untracked local `-cache/{name}.json` (Feature 033 two-tier storage, TSK-500). The array is capped at 10 entries (FIFO — oldest evicted when full). Only real server-returned values are stored; approximated values are never persisted. A legacy `cache.history[]` in the tracked `{name}.json` remains readable pre-migration and seeds the local file on the first post-migration history write, so no measurements are lost.
+Each successful `fetch_oauth_usage` call appends a timestamped measurement to the top-level `"history"` array of this host's tracked `cache/{host}_{user}/{name}.json` (Feature 033 two-tier storage, TSK-502). The array is capped at 10 entries (FIFO — oldest evicted when full). Only real server-returned values are stored; approximated values are never persisted. When the own-host file has no ring yet, the freshest candidate anywhere seeds it — another host's subtree or the TSK-500-era gitignored `-cache/{name}.json` — and a legacy `cache.history[]` in the tracked `{name}.json` remains readable pre-migration, so no measurements are lost across host handoffs or upgrades. Reads return the freshest ring across all host subtrees.
 
-**Storage format** (top level of the local `-cache/{name}.json`, alongside Feature 033's volatile quota fields):
+**Storage format** (top level of the per-host `cache/{host}_{user}/{name}.json`, alongside Feature 033's volatile quota fields):
 
 ```json
 {
@@ -93,7 +93,7 @@ This prevents quadratic divergence (a2 > 0 shooting to infinity).
 
 ### Acceptance Criteria
 
-- **AC-01**: On successful `fetch_oauth_usage`, the measurement is appended to `history[]` in the local `-cache/{name}.json` with `t` (current Unix seconds), `h5`, `d7`, `sn` fields matching the fetched quota data. The tracked `{name}.json` is not written (Feature 033 AC-16).
+- **AC-01**: On successful `fetch_oauth_usage`, the measurement is appended to `history[]` in this host's `cache/{host}_{user}/{name}.json` with `t` (current Unix seconds), `h5`, `d7`, `sn` fields matching the fetched quota data. The tracked `{name}.json` is not written (Feature 033 AC-16).
 - **AC-02**: `history[]` contains at most 10 entries; when the 11th is appended, the oldest (index 0) is evicted (FIFO).
 - **AC-03**: Only real server-returned values are stored in `history[]` — approximated values, cached fallback values, and error results are never appended.
 - **AC-04**: When the server is unavailable (transient error) OR when `is_owned = false` (Feature 036 G1 gate — server not consulted) — and the stored history (local `history[]`, or legacy tracked `cache.history[]` pre-migration) has 2+ measurements in the current window — quota columns display polynomial-approximated values with `~` prefix. For 3+ measurements, quadratic LS fit is used; for exactly 2, linear extrapolation. Both display paths call the centralized `read_cached_quota()` function.
@@ -138,4 +138,4 @@ This prevents quadratic divergence (a2 > 0 shooting to infinity).
 |------|-------------|
 | [algorithm/006_quota_approximation.md](../algorithm/006_quota_approximation.md) | Polynomial approximation — degree selection, Cramer 3×3, reset filter, clamping, tangent continuation |
 | [state_machine/005_quota_measurement_lifecycle.md](../state_machine/005_quota_measurement_lifecycle.md) | Ring buffer fill states and approximation readiness progression |
-| [schema/002_account_json.md](../schema/002_account_json.md) | Tracked `{name}.json` field table — history moved to local `-cache/{name}.json` (TSK-500); legacy `cache.history` documented there |
+| [schema/002_account_json.md](../schema/002_account_json.md) | Tracked `{name}.json` field table — history moved to the per-host `cache/{host}_{user}/{name}.json` (TSK-502); legacy `cache.history` documented there |

@@ -175,19 +175,12 @@ pub fn classify_ms( expires_at_ms : u64, warning_secs : u64 ) -> TokenStatus
 
 /// Extract the `expiresAt` integer value from credentials JSON.
 ///
-/// Zero-dependency parser: locates the `"expiresAt":` key and reads the
-/// following digit sequence. Handles optional whitespace after the colon.
+/// Thin key-binding over [`crate::account::parse_u64_field`] — previously a
+/// byte-identical copy of that parser's algorithm lived here.
 #[ doc( hidden ) ]
 #[ must_use ]
 #[ inline ]
 pub fn parse_expires_at( json : &str ) -> Option< u64 >
 {
-  let key = "\"expiresAt\":";
-  let colon_end = json.find( key )? + key.len();
-  let rest = json[ colon_end.. ].trim_start();
-  let end = rest
-    .find( | c : char | !c.is_ascii_digit() )
-    .unwrap_or( rest.len() );
-  if end == 0 { return None; }
-  rest[ ..end ].parse().ok()
+  crate::account::parse_u64_field( json, "expiresAt" )
 }

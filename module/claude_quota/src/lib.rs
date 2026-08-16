@@ -63,6 +63,17 @@ pub enum QuotaError
 {
   /// HTTP transport failure (network error, TLS error, etc.).
   HttpTransport( String ),
+  /// The server answered with a non-success HTTP status (>= 400).
+  ///
+  /// Fix(audit-stringly-http-status)
+  /// Root cause: HTTP failures were folded into `HttpTransport`'s free-text
+  /// message, so consumers had to sniff `"401"`/`"429"` substrings out of
+  /// arbitrary transport prose — a raw byte count or URL fragment could
+  /// false-match.
+  /// Pitfall: the `Display` form `HTTP NNN` is a stable contract consumed by
+  /// retry/refresh predicates; match on this variant (or the anchored prefix
+  /// `"HTTP "`), never on a bare code substring.
+  HttpStatus( u16 ),
   /// A required rate-limit header was absent from the API response.
   MissingHeader( String ),
   /// A required rate-limit header was present but could not be parsed.
@@ -81,6 +92,8 @@ impl fmt::Display for QuotaError
     {
       Self::HttpTransport( msg ) =>
         write!( f, "HTTP transport error: {msg}" ),
+      Self::HttpStatus( code ) =>
+        write!( f, "HTTP {code}" ),
       Self::MissingHeader( name ) =>
         write!( f, "rate-limit header missing: {name}" ),
       Self::MalformedHeader( ctx ) =>

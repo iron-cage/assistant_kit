@@ -21,7 +21,7 @@
 //! | `art_some_paths_run_isolated_invoked_trace_no_panic`    | `Some(paths)` | `trace=true`; cred in store; `.claude/` exists    | no panic, `None`   |
 //! | `bug_mre_bug205_refresh_token_read_write_ok_trace_structural` | structural | grep account.rs for `"read credentials: OK"` and `"write credentials: OK"` | ≥2 each |
 //! | `bug_mre_bug175_no_switch_account_in_some_branch` | structural | grep account.rs for `"switch_account( name, credential_store, p )"` | 0 occurrences |
-//! | `bug_mre_bug221_some_branch_no_p_credentials_file_write` | structural | grep account.rs for `std::fs::write( p.credentials_file(),` | exactly 1 occurrence (BUG-318 active-account live sync) |
+//! | `bug_mre_bug221_some_branch_no_p_credentials_file_write` | structural | grep account.rs for `atomic_write_secret( &p.credentials_file(),` | exactly 1 occurrence (BUG-318 active-account live sync) |
 //! | `mre_bug318_rotation_live_sync_structural` | structural | grep account.rs for `is_still_active` and `Fix(BUG-318)` | present |
 //! | `mre_bug221_save_some_creds_writes_to_store_not_live_file` | unit | `save("acct", store, paths, false, Some(b"data"))` | store = `b"data"`; live file unchanged |
 //! | `mre_bug221_save_none_creds_copies_from_live_file` | unit | `save("acct", store, paths, false, None)` | store = live file content; live file unchanged |
@@ -242,15 +242,18 @@ fn bug_mre_bug205_refresh_token_read_write_ok_trace_structural()
 // Update(BUG-318): changed assertion from count==0 to count==1 — Fix(BUG-318) adds one conditional
 //   write to p.credentials_file() in the success path (post-rotation live sync for active account).
 //   The old invariant (0 occurrences) was correct for batch refresh but prevented the needed live sync.
+// Update(audit-credential-file-perms): the live sync now routes through atomic_write_secret
+//   (0o600 + unique tmp + rename), so the guarded pattern is the atomic_write_secret call.
+//   Same count==1 invariant, same regression semantics in both directions.
 fn bug_mre_bug221_some_branch_no_p_credentials_file_write()
 {
   let account_rs = std::path::Path::new( env!( "CARGO_MANIFEST_DIR" ) ).join( "src/account.rs" );
   let content    = std::fs::read_to_string( &account_rs )
     .unwrap_or_else( |e| panic!( "cannot read {}: {e}", account_rs.display() ) );
-  let count = content.matches( "std::fs::write( p.credentials_file()," ).count();
+  let count = content.matches( "atomic_write_secret( &p.credentials_file()," ).count();
   assert!(
     count == 1,
-    "BUG-221/BUG-318: expected exactly 1 occurrence of 'std::fs::write( p.credentials_file(),' \
+    "BUG-221/BUG-318: expected exactly 1 occurrence of 'atomic_write_secret( &p.credentials_file(),' \
      in account.rs (the BUG-318 is_still_active live sync); 0 = live sync removed, >1 = unconditional \
      clobber reintroduced. Found {count}"
   );
@@ -754,10 +757,11 @@ fn ft23_active_account_same_creds_falls_through_to_run_isolated()
 ///
 /// Never cache a filesystem-derived boolean across a blocking call (subprocess, network I/O)
 /// in a multi-process environment — re-read at each use site instead.
-// BUG-485 task/claude_profile/bug/485_refresh_presync_reread_never_applied.md — this test's
-// `Fix(BUG-316)` count assertion (below) passes on the still-unfixed pre-sync site too, since
-// the annotation comment sits near that site without the code actually re-reading the marker;
-// the assertion never traces which code block a match occurs in. Does not cover BUG-485's site.
+// BUG-485: this test's `Fix(BUG-316)` count assertion (below) never traces which code
+// block a match occurs in, so it passed for 2 months while the pre-sync site carried the
+// annotation without the re-read. The pre-sync site's own coverage now lives in
+// `mre_bug485_presync_marker_reread_gates_store_write`, which bounds its search to the
+// pre-sync block's span instead of matching anywhere in the file.
 #[ cfg( feature = "enabled" ) ]
 #[ test ]
 fn mre_bug316_stale_is_active_race_recovery_copies_wrong_account_creds()
@@ -779,6 +783,82 @@ fn mre_bug316_stale_is_active_race_recovery_copies_wrong_account_creds()
     fix_count >= 2,
     "BUG-316 fix: `Fix(BUG-316)` must appear at ≥2 sites (pre-sync + race-recovery). \
      Found: {fix_count}"
+  );
+}
+
+// ── MRE BUG-485 ───────────────────────────────────────────────────────────────
+
+/// MRE BUG-485: the pre-sync block re-reads the active marker immediately before
+/// the store write it gates.
+///
+/// # Root Cause
+///
+/// `is_active_pre_sync` was captured once at the top of the pre-sync block and
+/// trusted across the intervening live-file read. `switch_account("B")` renames the
+/// live credentials BEFORE updating the marker, so an interleaving between the
+/// capture and the write left the stale bool `true` while the live file already held
+/// B's credentials — which the block then wrote into A's store slot. BUG-316's fix
+/// commit (d1ff4a4c) claimed this site was fixed, but the diff shows only a variable
+/// rename (`is_active` → `is_active_pre_sync`); no re-read was ever added.
+///
+/// # Why Not Caught
+///
+/// The BUG-316 regression test matched `Fix(BUG-316)` annotations ANYWHERE in
+/// account.rs. The pre-sync site's own comment satisfied the count without the code
+/// re-reading the marker — the test certified an annotation, not a control flow.
+///
+/// # Fix Applied
+///
+/// An `is_active_at_write` re-read of the active marker sits between the live-file
+/// read and the store write; the write is additionally atomic (`atomic_write_secret`),
+/// so a lost race can no longer land a partial or misattributed credential file.
+///
+/// # Prevention
+///
+/// This test bounds its search to the pre-sync block's span (capture → first
+/// `manipulate_expires_at` call) and asserts TWO `active_marker_filename()` reads in
+/// that span, ordered capture → live-file read → re-read → store write. It fails if
+/// the re-read is removed, hoisted above the live-file read, or moved below the write.
+///
+/// # Pitfall
+///
+/// A bug report's History claiming a fix landed is not evidence it did — cross-check
+/// the actual commit diff. And a regression test that matches fix annotations
+/// file-wide certifies comments, not code: bound structural assertions to the block
+/// they guard.
+#[ cfg( feature = "enabled" ) ]
+#[ test ]
+fn mre_bug485_presync_marker_reread_gates_store_write()
+{
+  // test_kind: bug_reproducer(BUG-485)
+  let src = std::fs::read_to_string(
+    concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/account.rs" )
+  ).expect( "read account.rs" );
+
+  // Bound the search to the pre-sync block: from the capture to the AC-32 call that
+  // immediately follows the block's close.
+  let start = src.find( "let is_active_pre_sync" )
+    .expect( "BUG-485: pre-sync capture `is_active_pre_sync` must exist in account.rs" );
+  let end = start + src[ start.. ].find( "manipulate_expires_at" )
+    .expect( "BUG-485: pre-sync block must be followed by the manipulate_expires_at call" );
+  let block = &src[ start..end ];
+
+  let marker_reads = block.matches( "active_marker_filename()" ).count();
+  assert_eq!(
+    marker_reads, 2,
+    "BUG-485 fix: the pre-sync span must read the active marker exactly twice \
+     (capture + pre-write re-read); found {marker_reads} — 1 means the re-read regressed"
+  );
+  let reread_pos = block.find( "is_active_at_write" )
+    .expect( "BUG-485 fix: `is_active_at_write` re-read must exist in the pre-sync block" );
+  let live_read_pos = block.find( "p.credentials_file()" )
+    .expect( "pre-sync block must read the live credentials file" );
+  let write_pos = block.find( "atomic_write_secret( &store_path" )
+    .expect( "pre-sync block must write the store slot via atomic_write_secret" );
+  assert!(
+    live_read_pos < reread_pos && reread_pos < write_pos,
+    "BUG-485 fix: the marker re-read must sit between the live-file read and the store \
+     write (read@{live_read_pos} < re-read@{reread_pos} < write@{write_pos})"
   );
 }
 

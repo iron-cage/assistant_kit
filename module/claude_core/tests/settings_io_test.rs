@@ -192,6 +192,25 @@ fn set_setting_traces_function_and_parameters()
       && first_stmt.contains( "key" ) && first_stmt.contains( "raw_value" ),
     "trace line must name the function and all 3 parameters (path, key, raw_value): {first_stmt:?}"
   );
+  // Fix(audit-trace-token-leak): the trace must route the value through the
+  // redaction formatter, never interpolate the raw parameter.
+  // Root Cause: the original trace printed `raw_value={raw_value:?}` verbatim, so a
+  // credential passed as a settings value reached stderr in full.
+  // Why Not Caught: this very test enforced the eprintln's presence and parameter
+  // names but said nothing about HOW the value is rendered — it locked the leak in.
+  // Fix Applied: values pass through `file_io::redact_for_trace`, which replaces
+  // secret-bearing values with a length-only placeholder.
+  // Prevention: the assertions below fail on any trace that bypasses the formatter.
+  // Pitfall: asserting only "eprintln exists" certifies visibility, not safety —
+  // structural guards on a trace line must also pin its redaction path.
+  assert!(
+    first_stmt.contains( "redact_for_trace" ),
+    "trace line must route the value through redact_for_trace: {first_stmt:?}"
+  );
+  assert!(
+    !first_stmt.contains( "raw_value:?" ),
+    "trace line must not interpolate the raw value verbatim: {first_stmt:?}"
+  );
   assert_eq!(
     body.matches( "eprintln!" ).count(), 1,
     "set_setting must have exactly one eprintln! call, found {}", body.matches( "eprintln!" ).count()
@@ -234,6 +253,17 @@ fn set_env_var_traces_function_and_parameters()
     first_stmt.contains( "set_env_var" ) && first_stmt.contains( "path" )
       && first_stmt.contains( "key" ) && first_stmt.contains( "value" ),
     "trace line must name the function and all 3 parameters (path, key, value): {first_stmt:?}"
+  );
+  // Fix(audit-trace-token-leak): see set_setting's guard above — this is the site
+  // that printed the live OAuth token on every redirect-account switch
+  // (`account.rs` passes the access token as the ANTHROPIC_AUTH_TOKEN env value).
+  assert!(
+    first_stmt.contains( "redact_for_trace" ),
+    "trace line must route the value through redact_for_trace: {first_stmt:?}"
+  );
+  assert!(
+    !first_stmt.contains( "value:?" ),
+    "trace line must not interpolate the raw value verbatim: {first_stmt:?}"
   );
   assert_eq!(
     body.matches( "eprintln!" ).count(), 1,

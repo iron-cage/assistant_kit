@@ -198,11 +198,6 @@ path = "module/claude_quota"
 version = "=0.3.1"
 default-features = false
 
-[workspace.dependencies.svg_chart]
-path = "module/svg_chart"
-version = "=0.1.0"
-default-features = false
-
 ## External — published companion crates
 
 [workspace.dependencies.plotters]
@@ -224,10 +219,6 @@ default-features = false
 
 [workspace.dependencies.data_fmt]
 version = "^0.7"
-default-features = false
-
-[workspace.dependencies.plotters]
-version = "^0.3"
 default-features = false
 
 [workspace.dependencies.ureq]

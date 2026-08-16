@@ -19,8 +19,10 @@
 //! unchanged on write — this is what prevents `set_user_tier` from silently
 //! deleting sibling settings of a type this module doesn't interpret.
 
-use std::io::{ self, Write };
+use std::io;
 use std::path::Path;
+
+use crate::file_io::{ atomic_write, upsert_pair };
 
 /// Get a key's string value, checking `project_path` first (if given) then
 /// `user_path`. Missing files are treated as absent, not an error. Returns
@@ -125,18 +127,6 @@ fn parse_flat_table( content : &str ) -> Vec< ( String, String ) >
   pairs
 }
 
-fn upsert_pair( pairs : &mut Vec< ( String, String ) >, key : &str, raw_value : &str )
-{
-  if let Some( entry ) = pairs.iter_mut().find( |( k, _ )| k == key )
-  {
-    entry.1 = raw_value.to_string();
-  }
-  else
-  {
-    pairs.push( ( key.to_string(), raw_value.to_string() ) );
-  }
-}
-
 fn serialize_flat_table( pairs : &[ ( String, String ) ] ) -> String
 {
   use core::fmt::Write as _;
@@ -201,21 +191,4 @@ fn quote_toml_string( s : &str ) -> String
   }
   out.push( '"' );
   out
-}
-
-fn atomic_write( path : &Path, content : &str ) -> Result< (), io::Error >
-{
-  let mut tmp_path = path.to_path_buf();
-  let filename = tmp_path.file_name()
-  .ok_or_else( || io::Error::new( io::ErrorKind::InvalidInput, "path has no filename" ) )?
-  .to_string_lossy()
-  .into_owned();
-  tmp_path.set_file_name( format!( "{filename}.tmp" ) );
-
-  {
-    let mut f = std::fs::File::create( &tmp_path )?;
-    f.write_all( content.as_bytes() )?;
-    f.flush()?;
-  }
-  std::fs::rename( &tmp_path, path )
 }

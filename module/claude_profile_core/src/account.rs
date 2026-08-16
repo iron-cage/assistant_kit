@@ -47,6 +47,7 @@
 use std::io::Write as _;
 use std::path::Path;
 use claude_core::ClaudePaths;
+use claude_core::file_io::{ atomic_write, atomic_write_secret };
 
 /// Which API surface an account routes traffic through.
 ///
@@ -178,9 +179,14 @@ pub struct Account
 ///
 /// Returns an empty `Vec` if the credential store does not exist yet — not an error.
 ///
+/// An individual account whose credential or metadata file cannot be read is still
+/// listed, with the affected fields defaulted (empty strings / zero expiry) — a
+/// single corrupt file must not hide the rest of the store from rendering.
+///
 /// # Errors
 ///
-/// Returns an error if the credential store exists but cannot be read.
+/// Returns an error only if the credential store directory itself cannot be
+/// enumerated (`read_dir` failure); per-file read errors never propagate.
 #[ inline ]
 #[ must_use = "check the returned accounts list" ]
 pub fn list( credential_store : &Path ) -> Result< Vec< Account >, std::io::Error >
@@ -322,21 +328,33 @@ pub fn save(
   validate_name_for_save( name, backend, credential_store )?;
   std::fs::create_dir_all( credential_store )?;
   let dest = credential_store.join( format!( "{name}.credentials.json" ) );
+  // Fix(audit-credential-file-perms): every store credential write goes through
+  // atomic_write_secret — 0o600 from the first byte, unique temp name, rename commit.
+  // Root cause: bare fs::write/fs::copy landed OAuth tokens with umask-default 0644,
+  // readable by any local user, and a shared tmp name let concurrent writers collide.
+  // Pitfall: fs::copy also PRESERVES the source file's mode — copying a world-readable
+  // live file propagates the exposure into the store; write content, not the file.
   if backend == AccountBackend::Redirect
   {
     // Feature 071: a redirect account has no Anthropic OAuth session to capture —
     // write only the caller-supplied static API key as `accessToken`.
     let key = creds.map( String::from_utf8_lossy ).unwrap_or_default();
     let redirect_creds = serde_json::json!( { "accessToken" : key } );
-    std::fs::write( &dest, serde_json::to_string_pretty( &redirect_creds ).map( | s | s + "\n" ).unwrap_or_default() )?;
+    atomic_write_secret( &dest, &serde_json::to_string_pretty( &redirect_creds ).map( | s | s + "\n" ).unwrap_or_default() )?;
   }
   else
   {
     // Fix(BUG-221): accept direct credential bytes to bypass the copy-from-live-file path.
-    match creds
+    if let Some( bytes ) = creds
     {
-      Some( bytes ) => std::fs::write( &dest, bytes )?,
-      None          => { std::fs::copy( paths.credentials_file(), &dest )?; }
+      let text = core::str::from_utf8( bytes )
+      .map_err( | e | std::io::Error::other( format!( "credential bytes are not UTF-8: {e}" ) ) )?;
+      atomic_write_secret( &dest, text )?;
+    }
+    else
+    {
+      let live = std::fs::read_to_string( paths.credentials_file() )?;
+      atomic_write_secret( &dest, &live )?;
     }
   }
 
@@ -463,7 +481,13 @@ pub fn save(
   // an object (as_object_mut() above would have left `snapshot` un-mutated in that case).
   if snapshot.as_object().is_some_and( |obj| !obj.is_empty() )
   {
-    let _ = std::fs::write( &meta_path, serde_json::to_string_pretty( &snapshot ).map( | s | s + "\n" ).unwrap_or_default() );
+    // Fix(audit-save-metadata-swallow): metadata write failures now propagate.
+    // Root cause: `let _ =` discarded the {name}.json write result, so a full disk or
+    // permission error silently dropped backend/owner/renewal metadata while save()
+    // reported success — the account then misrendered as anthropic/unowned.
+    // Pitfall: the credential write above already succeeded by this point; swallowing
+    // the metadata half leaves the two files silently inconsistent with no error trail.
+    atomic_write( &meta_path, &serde_json::to_string_pretty( &snapshot ).map( | s | s + "\n" ).unwrap_or_default() )?;
   }
 
   // Clean up old satellite files (migration to unified {name}.json).
@@ -474,7 +498,7 @@ pub fn save(
 
   if update_marker
   {
-    std::fs::write( credential_store.join( active_marker_filename() ), name )?;
+    atomic_write( &credential_store.join( active_marker_filename() ), name )?;
   }
   Ok( () )
 }
@@ -573,36 +597,28 @@ fn clear_kimi_tier_env_vars( live_settings_path : &Path )
 /// metadata file availability.
 fn patch_live_state_after_switch( name : &str, credential_store : &Path, paths : &ClaudePaths, src : &Path )
 {
-  // Unconditional emailAddress patch — must fire regardless of {name}.json state.
-  let live_path = paths.claude_json_file();
+  let meta_path = credential_store.join( format!( "{name}.json" ) );
+  let meta_text = std::fs::read_to_string( &meta_path ).unwrap_or_default();
+
+  // Patch live ~/.claude.json in one read-modify-write pass (surgical — preserves
+  // machine-global keys). Previously this was two sequential whole-file writes
+  // (unconditional emailAddress patch, then oauthAccount restore) — a reader between
+  // them saw a half-patched identity, and the second write redid the first's work.
   {
+    let live_path = paths.claude_json_file();
     let mut live_val = std::fs::read_to_string( &live_path )
       .ok()
       .and_then( |s| serde_json::from_str::< serde_json::Value >( &s ).ok() )
       .unwrap_or_else( || serde_json::json!( {} ) );
-    if let Some( obj ) = live_val.as_object_mut()
+
+    // Restore the saved oauthAccount snapshot wholesale when one exists.
+    if let Some( mut oauth ) = serde_json::from_str::< serde_json::Value >( &meta_text )
+      .ok()
+      .and_then( | saved | saved.get( "oauthAccount" ).cloned() )
     {
-      let oauth = obj.entry( "oauthAccount" )
-        .or_insert_with( || serde_json::json!( {} ) );
       if let Some( oa_obj ) = oauth.as_object_mut()
       {
-        oa_obj.insert( "emailAddress".to_string(), serde_json::Value::String( name.to_string() ) );
-      }
-    }
-    let _ = std::fs::write( &live_path, serde_json::to_string_pretty( &live_val ).map( | s | s + "\n" ).unwrap_or_default() );
-  }
-
-  let meta_path = credential_store.join( format!( "{name}.json" ) );
-  let meta_text = std::fs::read_to_string( &meta_path ).unwrap_or_default();
-
-  // Restore oauthAccount into live ~/.claude.json (surgical patch — preserves machine-global keys).
-  if let Ok( saved_val ) = serde_json::from_str::< serde_json::Value >( &meta_text )
-  {
-    if let Some( mut oauth ) = saved_val.get( "oauthAccount" ).cloned()
-    {
-      // Fix(BUG-217): enforce emailAddress == name — snapshot may contain stale email.
-      if let Some( oa_obj ) = oauth.as_object_mut()
-      {
+        // Fix(BUG-217): enforce emailAddress == name — snapshot may contain stale email.
         oa_obj.insert( "emailAddress".to_string(), serde_json::Value::String( name.to_string() ) );
         // Fix(BUG-219): override org-identity fields from saved roles data.
         if let Some( org_name ) = parse_string_field( &meta_text, "organization_name" )
@@ -620,17 +636,22 @@ fn patch_live_state_after_switch( name : &str, credential_store : &Path, paths :
           }
         }
       }
-      let live_path = paths.claude_json_file();
-      let mut live_val = std::fs::read_to_string( &live_path )
-        .ok()
-        .and_then( |s| serde_json::from_str::< serde_json::Value >( &s ).ok() )
-        .unwrap_or_else( || serde_json::json!( {} ) );
       if let Some( obj ) = live_val.as_object_mut()
       {
         obj.insert( "oauthAccount".to_string(), oauth );
       }
-      let _ = std::fs::write( live_path, serde_json::to_string_pretty( &live_val ).map( | s | s + "\n" ).unwrap_or_default() );
     }
+    else if let Some( obj ) = live_val.as_object_mut()
+    {
+      // No saved snapshot — still patch emailAddress so the live identity tracks the switch.
+      let oauth = obj.entry( "oauthAccount" )
+        .or_insert_with( || serde_json::json!( {} ) );
+      if let Some( oa_obj ) = oauth.as_object_mut()
+      {
+        oa_obj.insert( "emailAddress".to_string(), serde_json::Value::String( name.to_string() ) );
+      }
+    }
+    let _ = atomic_write( &live_path, &serde_json::to_string_pretty( &live_val ).map( | s | s + "\n" ).unwrap_or_default() );
   }
 
   // Restore model preference into live ~/.claude/settings.json.
@@ -648,7 +669,7 @@ fn patch_live_state_after_switch( name : &str, credential_store : &Path, paths :
       None      => { obj.remove( "model" ); }
     }
   }
-  let _ = std::fs::write( &live_settings_path, serde_json::to_string_pretty( &live_settings ).map( | s | s + "\n" ).unwrap_or_default() );
+  let _ = atomic_write( &live_settings_path, &serde_json::to_string_pretty( &live_settings ).map( | s | s + "\n" ).unwrap_or_default() );
 
   // Feature 071 (AC-06/AC-07): sync env.ANTHROPIC_* to the switched-to account's backend.
   // Redirect: writes BASE_URL/AUTH_TOKEN/MODEL from the account's own snapshot + credential
@@ -705,24 +726,23 @@ pub fn switch_account( name : &str, credential_store : &Path, paths : &ClaudePat
   check_switch_preconditions( name, credential_store )?;
   let src = credential_store.join( format!( "{name}.credentials.json" ) );
 
-  // Atomic write: copy to adjacent temp file, then rename into place.
+  // Atomic install of the live credentials (unique temp + rename, 0o600 from creation).
   let creds = paths.credentials_file();
   // Feature 071: a redirect account can be saved and switched-to without `~/.claude/`
   // ever existing (unlike anthropic accounts, whose save path always reads the live
   // credentials file first, guaranteeing the directory). Same class of gap as BUG-258
   // (see set_session_model's fix note below) — ensure the parent exists before writing.
   if let Some( parent ) = creds.parent() { let _ = std::fs::create_dir_all( parent ); }
-  let tmp = creds.with_extension( "json.tmp" );
-  std::fs::copy( &src, &tmp )?;
-  std::fs::rename( &tmp, &creds )?;
+  let creds_text = std::fs::read_to_string( &src )?;
+  atomic_write_secret( &creds, &creds_text )?;
 
   // BUG-485 task/claude_profile/bug/485_refresh_presync_reread_never_applied.md — live
   // credentials file (above) is updated before the active marker (below); a concurrent
   // refresh_token_with_live_path's pre-sync guard can observe the old marker while this
-  // rename has already landed, corrupting the other account's store slot.
+  // rename has already landed. The pre-sync block now re-reads the marker immediately
+  // before its gated write (Fix(BUG-485) there), closing the corruption window.
   // Update active marker after credentials are safely in place.
-  let marker = credential_store.join( active_marker_filename() );
-  std::fs::write( marker, name )?;
+  atomic_write( &credential_store.join( active_marker_filename() ), name )?;
 
   patch_live_state_after_switch( name, credential_store, paths, &src );
 
@@ -775,7 +795,7 @@ pub fn override_session_model_to_opus( paths : &ClaudePaths ) -> bool
   if current.contains( "sonnet" ) || current == "claude-opus-4-8" || current == "claude-opus-4-6" || current.is_empty()
   {
     obj.insert( "model".to_string(), serde_json::Value::String( "opus".to_string() ) );
-    let _ = std::fs::write( path, serde_json::to_string_pretty( &live ).map( | s | s + "\n" ).unwrap_or_default() );
+    let _ = atomic_write( &path, &serde_json::to_string_pretty( &live ).map( | s | s + "\n" ).unwrap_or_default() );
     true
   }
   else
@@ -813,7 +833,7 @@ pub fn override_session_model_to_sonnet( paths : &ClaudePaths ) -> bool
   if current.contains( "opus" ) || current == "claude-sonnet-5" || current == "claude-sonnet-4-6" || current.is_empty()
   {
     obj.insert( "model".to_string(), serde_json::Value::String( "sonnet".to_string() ) );
-    let _ = std::fs::write( path, serde_json::to_string_pretty( &live ).map( | s | s + "\n" ).unwrap_or_default() );
+    let _ = atomic_write( &path, &serde_json::to_string_pretty( &live ).map( | s | s + "\n" ).unwrap_or_default() );
     true
   }
   else
@@ -854,7 +874,7 @@ pub fn set_session_model( paths : &ClaudePaths, model_id : Option< &str > )
     Some( id ) => { obj.insert( "model".to_string(), serde_json::Value::String( id.to_string() ) ); }
     None       => { obj.remove( "model" ); }
   }
-  let _ = std::fs::write( path, serde_json::to_string_pretty( &live ).map( | s | s + "\n" ).unwrap_or_default() );
+  let _ = atomic_write( &path, &serde_json::to_string_pretty( &live ).map( | s | s + "\n" ).unwrap_or_default() );
 }
 
 /// Read the current session model from `~/.claude/settings.json`.
@@ -888,7 +908,7 @@ pub fn set_session_effort( paths : &ClaudePaths, effort_id : &str )
     .unwrap_or_else( || serde_json::json!( {} ) );
   let Some( obj ) = live.as_object_mut() else { return; };
   obj.insert( "effortLevel".to_string(), serde_json::Value::String( effort_id.to_string() ) );
-  let _ = std::fs::write( path, serde_json::to_string_pretty( &live ).map( |s| s + "\n" ).unwrap_or_default() );
+  let _ = atomic_write( &path, &serde_json::to_string_pretty( &live ).map( |s| s + "\n" ).unwrap_or_default() );
 }
 
 /// Read the current effort level from `~/.claude/settings.json`.
@@ -924,7 +944,7 @@ pub fn remove_session_effort( paths : &ClaudePaths )
     .unwrap_or_else( || serde_json::json!( {} ) );
   let Some( obj ) = live.as_object_mut() else { return; };
   obj.remove( "effortLevel" );
-  let _ = std::fs::write( path, serde_json::to_string_pretty( &live ).map( |s| s + "\n" ).unwrap_or_default() );
+  let _ = atomic_write( &path, &serde_json::to_string_pretty( &live ).map( |s| s + "\n" ).unwrap_or_default() );
 }
 
 /// Validate that a named account can be deleted (name valid + file exists).
@@ -1114,7 +1134,7 @@ pub fn refresh_account_token(
       if trace { let _ = writeln!( std::io::stderr(), "{}{label}  {name}  write credentials: SKIPPED (blank payload — sandbox logged out; store record preserved)", trace_ts() ); }
       return None;
     }
-    if let Err( e ) = std::fs::write( &path, &new_creds )
+    if let Err( e ) = atomic_write_secret( &path, &new_creds )
     {
       if trace { let _ = writeln!( std::io::stderr(), "{}{label}  {name}  write credentials: Err({e})", trace_ts() ); }
       return None;
@@ -1170,9 +1190,15 @@ fn refresh_token_with_live_path(
   //   (now holding B's creds post-switch) to be written into A's credential store slot.
   // Pitfall: never cache a filesystem-derived boolean across a blocking call (subprocess,
   //   network I/O) in a multi-process environment — re-read at each use site instead.
-  // BUG-485 task/claude_profile/bug/485_refresh_presync_reread_never_applied.md — is_active_pre_sync
-  // is captured once here and reused unchanged across the read at line 1163 and the write it
-  // gates at line 1168, with no re-check immediately before the write. Not yet fixed.
+  // Fix(BUG-485): re-read the active marker immediately before the gated store write.
+  // Root cause: is_active_pre_sync was captured once and trusted across the intervening
+  //   live-file read; a switch_account("B") interleaving there (live rename lands before
+  //   the marker update) left the stale bool true while the live file already held B's
+  //   credentials — which were then written into A's store slot. BUG-316's commit
+  //   (d1ff4a4c) claimed this site was fixed but only renamed the variable.
+  // Pitfall: a bug report's History claiming a fix landed is not evidence it did —
+  //   cross-check the actual diff; here the claim survived 2 months because the
+  //   regression test matched fix annotations anywhere in the file, not in this block.
   let is_active_pre_sync = {
     let marker = credential_store.join( active_marker_filename() );
     std::fs::read_to_string( &marker ).ok().is_some_and( |s| s.trim() == name )
@@ -1183,11 +1209,18 @@ fn refresh_token_with_live_path(
     {
       if live_json.trim() != creds_json.trim()
       {
-        let store_path = credential_store.join( format!( "{name}.credentials.json" ) );
-        if std::fs::write( &store_path, &live_json ).is_ok()
+        let is_active_at_write = {
+          let marker = credential_store.join( active_marker_filename() );
+          std::fs::read_to_string( &marker ).ok().is_some_and( |s| s.trim() == name )
+        };
+        if is_active_at_write
         {
-          let _ = save( name, credential_store, p, false, Some( live_json.as_bytes() ), None, None, None, AccountBackend::Anthropic, None, None, None );
-          return Some( live_json );
+          let store_path = credential_store.join( format!( "{name}.credentials.json" ) );
+          if atomic_write_secret( &store_path, &live_json ).is_ok()
+          {
+            let _ = save( name, credential_store, p, false, Some( live_json.as_bytes() ), None, None, None, AccountBackend::Anthropic, None, None, None );
+            return Some( live_json );
+          }
         }
       }
     }
@@ -1235,7 +1268,7 @@ fn refresh_token_with_live_path(
     return None;
   }
   let store_cred_path = credential_store.join( format!( "{name}.credentials.json" ) );
-  if let Err( e ) = std::fs::write( &store_cred_path, &new_creds )
+  if let Err( e ) = atomic_write_secret( &store_cred_path, &new_creds )
   {
     if trace { let _ = writeln!( std::io::stderr(), "{}{label}  {name}  write credentials: Err({e})", trace_ts() ); }
     return None;
@@ -1267,8 +1300,13 @@ fn refresh_token_with_live_path(
   };
   if is_still_active
   {
-    let _ = std::fs::write( p.credentials_file(), &new_creds );
-    if trace { let _ = writeln!( std::io::stderr(), "{}{label}  {name}  write live: OK", trace_ts() ); }
+    // Trace reports the actual write outcome — an "OK" line printed after a failed
+    // write previously falsified the trace's account of the live-sync step.
+    match atomic_write_secret( &p.credentials_file(), &new_creds )
+    {
+      Ok( () )  => { if trace { let _ = writeln!( std::io::stderr(), "{}{label}  {name}  write live: OK", trace_ts() ); } }
+      Err( e ) => { if trace { let _ = writeln!( std::io::stderr(), "{}{label}  {name}  write live: Err({e})", trace_ts() ); } }
+    }
   }
   Some( new_creds )
 }
@@ -1297,7 +1335,7 @@ fn recover_credentials_from_live( name : &str, credential_store : &Path, p : &Cl
       if live_json.trim() != orig_stored.trim()
       {
         let store_path = credential_store.join( format!( "{name}.credentials.json" ) );
-        if std::fs::write( &store_path, &live_json ).is_ok()
+        if atomic_write_secret( &store_path, &live_json ).is_ok()
         {
           let _ = save( name, credential_store, p, false, Some( live_json.as_bytes() ), None, None, None, AccountBackend::Anthropic, None, None, None );
           return Some( live_json );
@@ -1523,7 +1561,7 @@ pub fn write_owner(
   let json = serde_json::to_string_pretty( &serde_json::Value::Object( map ) )
     .map( | s | s + "\n" )
     .map_err( |e| std::io::Error::new( std::io::ErrorKind::InvalidData, e ) )?;
-  std::fs::write( &path, json )
+  atomic_write( &path, &json )
 }
 
 /// Write the `claim_lock` field to `{name}.json` via read-merge.
@@ -1553,7 +1591,7 @@ pub fn write_claim_lock(
   let json = serde_json::to_string_pretty( &serde_json::Value::Object( map ) )
     .map( | s | s + "\n" )
     .map_err( |e| std::io::Error::new( std::io::ErrorKind::InvalidData, e ) )?;
-  std::fs::write( &path, json )
+  atomic_write( &path, &json )
 }
 
 /// Write the `reserve` field to `{name}.json` via read-merge.
@@ -1583,7 +1621,7 @@ pub fn write_reserve(
   let json = serde_json::to_string_pretty( &serde_json::Value::Object( map ) )
     .map( | s | s + "\n" )
     .map_err( |e| std::io::Error::new( std::io::ErrorKind::InvalidData, e ) )?;
-  std::fs::write( &path, json )
+  atomic_write( &path, &json )
 }
 
 /// env var first, falls back to `USERNAME`, then to the literal `"user"`.
@@ -1595,6 +1633,19 @@ pub fn write_reserve(
 #[ must_use ]
 pub fn active_marker_filename() -> String
 {
+  format!( "_active_{}", host_user_slug() )
+}
+
+/// Per-machine identity slug `{host}_{user}` — the single sanitization source
+/// shared by the active marker filename (`_active_{slug}`) and this host's
+/// quota cache subtree (`cache/{slug}/`, TSK-502).
+///
+/// Sanitization keeps alphanumerics, `-`, and `.`; every other character maps
+/// to `_`. Because exactly one machine produces each slug, any path namespaced
+/// by it has a single writer — cross-host merge conflicts are structurally
+/// impossible, the same construction as the `_active_*` markers.
+fn host_user_slug() -> String
+{
   let hostname = resolve_hostname();
   let user = std::env::var( "USER" )
     .or_else( |_| std::env::var( "USERNAME" ) )
@@ -1605,7 +1656,7 @@ pub fn active_marker_filename() -> String
       .map( | c | if c.is_alphanumeric() || c == '-' || c == '.' { c } else { '_' } )
       .collect()
   };
-  format!( "_active_{}_{}", clean( &hostname ), clean( &user ) )
+  format!( "{}_{}", clean( &hostname ), clean( &user ) )
 }
 
 /// Returns the set of account names that are marked as active on other machines.
@@ -1706,7 +1757,7 @@ pub fn account_renewal(
   let new_json = serde_json::to_string_pretty( &val )
     .map( | s | s + "\n" )
     .map_err( |e| std::io::Error::new( std::io::ErrorKind::InvalidData, e.to_string() ) )?;
-  std::fs::write( &meta_path, new_json )?;
+  atomic_write( &meta_path, &new_json )?;
   Ok( format!( "{name}: {status_str}\n" ) )
 }
 
@@ -2100,10 +2151,12 @@ pub fn read_access_token_from_file( path : &std::path::Path ) -> Result< String,
 
 // ── Quota cache ──────────────────────────────────────────────────────────────
 
-/// Cached quota entry — volatile fields from the untracked local cache file
-/// `-cache/{name}.json`, low-churn metadata from top-level keys of the tracked
-/// `{name}.json`; a legacy tracked `cache{}` block is honored as pre-migration
-/// fallback for both groups (TSK-500).
+/// Cached quota entry — volatile fields from the freshest per-host tracked
+/// cache file `cache/{host}_{user}/{name}.json` across all host subtrees
+/// (TSK-502; the legacy gitignored `-cache/{name}.json` participates as a
+/// migration-era candidate), low-churn metadata from top-level keys of the
+/// tracked `{name}.json`; a legacy tracked `cache{}` block is honored as
+/// pre-migration fallback for both groups (TSK-500).
 #[ derive( Debug ) ]
 pub struct QuotaCacheEntry
 {
@@ -2132,13 +2185,65 @@ pub struct QuotaCacheEntry
   pub org_created_at    : Option< String >,
 }
 
-/// Path of the untracked local quota cache file for `name` (TSK-500).
+/// Root of the tracked per-host cache tree inside the credential store (TSK-502).
+fn cache_tree_dir( credential_store : &std::path::Path ) -> std::path::PathBuf
+{
+  credential_store.join( "cache" )
+}
+
+/// Path of this host's tracked quota cache file for `name` (TSK-502).
 ///
-/// Lives in a hyphen-prefixed `-cache/` directory inside the credential store so
-/// the global `-*` gitignore rule keeps volatile quota churn out of git.
+/// Lives in the per-host subtree `cache/{host}_{user}/` — no component is
+/// hyphen-prefixed, so the global `-*` gitignore rule cannot match it and the
+/// file rides ordinary commits, restoring fleet-wide cache visibility. Only
+/// this host writes its own subtree (slug shared with `active_marker_filename`),
+/// so the churn is merge-trivial.
 fn local_cache_path( credential_store : &std::path::Path, name : &str ) -> std::path::PathBuf
 {
+  cache_tree_dir( credential_store ).join( host_user_slug() ).join( format!( "{name}.json" ) )
+}
+
+/// Path of the legacy gitignored host-local cache file (TSK-500's layout).
+///
+/// Read as a migration-era candidate; deleted by `write_quota_cache` after the
+/// first successful per-host write (self-cleaning migration, TSK-502).
+fn legacy_local_cache_path( credential_store : &std::path::Path, name : &str ) -> std::path::PathBuf
+{
   credential_store.join( "-cache" ).join( format!( "{name}.json" ) )
+}
+
+/// Volatile cache candidates for `name` from every host subtree under `cache/`
+/// plus the legacy gitignored file, freshest `fetched_at` first (TSK-502).
+///
+/// A candidate participates only with a parseable `fetched_at` — an unparseable
+/// timestamp is skipped entirely (feature/033's "treat as no cache"), never
+/// selected and never aborting the merge.
+fn read_volatile_candidates(
+  credential_store : &std::path::Path,
+  name             : &str,
+) -> Vec< serde_json::Map< String, serde_json::Value > >
+{
+  let mut paths : Vec< std::path::PathBuf > = vec![];
+  if let Ok( entries ) = std::fs::read_dir( cache_tree_dir( credential_store ) )
+  {
+    for entry in entries.flatten()
+    {
+      paths.push( entry.path().join( format!( "{name}.json" ) ) );
+    }
+  }
+  paths.push( legacy_local_cache_path( credential_store, name ) );
+  let mut candidates : Vec< ( u64, serde_json::Map< String, serde_json::Value > ) > = paths
+    .iter()
+    .filter_map( | p | read_json_value( p ) )
+    .filter_map( | v | if let serde_json::Value::Object( o ) = v { Some( o ) } else { None } )
+    .filter_map( | o |
+    {
+      let secs = o.get( "fetched_at" ).and_then( | f | f.as_str() ).and_then( parse_iso_utc_secs )?;
+      Some( ( secs, o ) )
+    } )
+    .collect();
+  candidates.sort_by_key( | c | core::cmp::Reverse( c.0 ) );
+  candidates.into_iter().map( | ( _, o ) | o ).collect()
 }
 
 /// Parse a JSON file into a `Value`; `None` when absent, unreadable, or malformed.
@@ -2179,18 +2284,24 @@ fn migrate_legacy_cache(
       }
     }
   }
-  let _ = std::fs::write( &meta_path, serde_json::to_string_pretty( &snapshot ).map( | s | s + "\n" ).unwrap_or_default() );
+  let _ = atomic_write( &meta_path, &serde_json::to_string_pretty( &snapshot ).map( | s | s + "\n" ).unwrap_or_default() );
   Some( legacy )
 }
 
-/// Write the volatile quota cache to the untracked local file `-cache/{name}.json`.
+/// Write the volatile quota cache to this host's tracked file
+/// `cache/{host}_{user}/{name}.json` (TSK-502).
 ///
 /// Persists the last successful fetch result so it can be used as fallback when
 /// the usage API is unavailable. The tracked `{name}.json` is never rewritten on
 /// the steady-state path — a successful fetch performs zero writes to tracked
-/// credential files (TSK-500's defining property). The one exception is the first
-/// call against a store still carrying a legacy `cache{}` block, which triggers
-/// `migrate_legacy_cache`'s single transition write. Failures are silently ignored.
+/// credential files (TSK-500's defining property; the per-host cache file is
+/// tracked but dedicated, single-writer, and never carries credentials). The one
+/// exception is the first call against a store still carrying a legacy `cache{}`
+/// block, which triggers `migrate_legacy_cache`'s single transition write. The
+/// history ring is seeded from the freshest candidate anywhere — another host's
+/// subtree or the legacy gitignored file — so ring continuity survives host
+/// handoffs. After a successful write, the legacy gitignored `-cache/{name}.json`
+/// is deleted (self-cleaning migration). Failures are silently ignored.
 #[ inline ]
 pub fn write_quota_cache(
   credential_store  : &std::path::Path,
@@ -2202,7 +2313,7 @@ pub fn write_quota_cache(
 {
   let legacy = migrate_legacy_cache( credential_store, name );
   let local_path = local_cache_path( credential_store, name );
-  let prior = read_json_value( &local_path );
+  let candidates = read_volatile_candidates( credential_store, name );
   let mut cache = serde_json::json!( { "fetched_at": chrono_now_utc(), "status": "ok" } );
   if let Some( co ) = cache.as_object_mut()
   {
@@ -2219,10 +2330,17 @@ pub fn write_quota_cache(
       co.insert( "seven_day_sonnet".into(), period_json( u, r ) );
     }
     // Feature 040: "history" must survive write_quota_cache or every successful fetch
-    //   would clobber the stored ring buffer (verification finding F4-3). The prior
-    //   local ring wins; a just-dissolved legacy block seeds it on the first
-    //   post-upgrade write so continuity survives the TSK-500 migration.
-    let history = prior.as_ref().and_then( | p | p.get( "history" ) ).cloned()
+    //   would clobber the stored ring buffer (verification finding F4-3). The freshest
+    //   candidate carrying a ring wins — own subtree, another host's, or the legacy
+    //   gitignored file (TSK-502 cross-host continuity); a just-dissolved legacy
+    //   `cache{}` block seeds it on the first post-upgrade write (TSK-500).
+    let history = candidates.iter().find_map( | c | c.get( "history" ) ).cloned()
+      .or_else( ||
+        // History-only own-host file (ring written before any fetch): no `fetched_at`
+        //   means it is not a candidate — preserve its ring by reading it directly.
+        read_json_value( &local_path )
+          .and_then( | mut l | l.as_object_mut().and_then( | o | o.remove( "history" ) ) )
+      )
       .or_else( || legacy.as_ref().and_then( | l | l.get( "history" ) ).cloned() );
     if let Some( h ) = history
     {
@@ -2233,24 +2351,33 @@ pub fn write_quota_cache(
   {
     let _ = std::fs::create_dir_all( dir );
   }
-  let _ = std::fs::write( &local_path, serde_json::to_string_pretty( &cache ).map( | s | s + "\n" ).unwrap_or_default() );
+  if atomic_write( &local_path, &serde_json::to_string_pretty( &cache ).map( | s | s + "\n" ).unwrap_or_default() ).is_ok()
+  {
+    // Self-cleaning migration (TSK-502): the legacy gitignored file's role is fully
+    //   absorbed by the per-host tracked file — deleted only after the new-path
+    //   write succeeded, so a failed write never orphans the only copy.
+    let _ = std::fs::remove_file( legacy_local_cache_path( credential_store, name ) );
+  }
 }
 
-/// Read cached quota, merging the local volatile file with tracked metadata.
+/// Read cached quota, merging per-host volatile files with tracked metadata.
 ///
-/// Volatile fields (`fetched_at`, `status`, periods) come from the untracked
-/// local `-cache/{name}.json`; low-churn metadata (`model_override`,
-/// `last_touch_at`, `touch_idle`, `org_created_at`) from top-level keys of the
-/// tracked `{name}.json`. A legacy tracked `cache{}` block (pre-TSK-500 store)
-/// is honored as fallback for both groups. Returns `None` when no volatile
-/// cache exists in either location — the pre-split "no cache" contract.
+/// Volatile fields (`fetched_at`, `status`, periods) come from the freshest
+/// candidate across every host subtree `cache/*/{name}.json` and the legacy
+/// gitignored `-cache/{name}.json` (freshest-`fetched_at`-wins, TSK-502) — this
+/// is what makes another host's fetch visible here; low-churn metadata
+/// (`model_override`, `last_touch_at`, `touch_idle`, `org_created_at`) from
+/// top-level keys of the tracked `{name}.json`. A legacy tracked `cache{}`
+/// block (pre-TSK-500 store) is honored as fallback for both groups. Returns
+/// `None` when no volatile cache exists in any location — the pre-split
+/// "no cache" contract.
 #[ inline ]
 pub fn read_quota_cache( credential_store : &std::path::Path, name : &str ) -> Option< QuotaCacheEntry >
 {
   let tracked = read_json_value( &credential_store.join( format!( "{name}.json" ) ) );
   let legacy = tracked.as_ref().and_then( | t | t.get( "cache" ) ).and_then( | c | c.as_object() );
-  let local = read_json_value( &local_cache_path( credential_store, name ) );
-  let volatile = match local.as_ref().and_then( | l | l.as_object() ).filter( | o | o.contains_key( "fetched_at" ) )
+  let freshest = read_volatile_candidates( credential_store, name ).into_iter().next();
+  let volatile = match freshest.as_ref()
   {
     Some( o ) => o,
     None => legacy?,
@@ -2297,7 +2424,7 @@ pub fn write_cache_field(
   {
     obj.insert( key.to_string(), value );
   }
-  let _ = std::fs::write( &meta_path, serde_json::to_string_pretty( &snapshot ).map( | s | s + "\n" ).unwrap_or_default() );
+  let _ = atomic_write( &meta_path, &serde_json::to_string_pretty( &snapshot ).map( | s | s + "\n" ).unwrap_or_default() );
 }
 
 /// Write a string value into the cache object (typed convenience wrapper).
@@ -2375,57 +2502,12 @@ fn read_period( cache : &serde_json::Map< String, serde_json::Value >, key : &st
   Some( ( left_pct, resets_at ) )
 }
 
-/// Current UTC timestamp as ISO-8601 string (second precision).
-///
-/// Uses manual computation to avoid a chrono dependency — the format is
-/// fixed and only needs second-level precision for cache age display.
-#[ must_use ]
-#[ inline ]
-pub fn chrono_now_utc() -> String
-{
-  use std::time::{ SystemTime, UNIX_EPOCH };
-  let secs = SystemTime::now().duration_since( UNIX_EPOCH ).unwrap_or_default().as_secs();
-  // 86400 secs/day, days since epoch → year/month/day via civil calendar algorithm
-  #[ allow( clippy::cast_possible_wrap ) ]
-  let days = ( secs / 86400 ) as i64;
-  let tod  = secs % 86400;
-  let hh   = tod / 3600;
-  let mm   = ( tod % 3600 ) / 60;
-  let ss   = tod % 60;
-  // Euclidean affine conversion from rata die to Y/M/D (Howard Hinnant algorithm).
-  let z = days + 719_468;
-  let era = if z >= 0 { z } else { z - 146_096 } / 146_097;
-  let doe = z - era * 146_097;
-  let yoe = ( doe - doe / 1460 + doe / 36524 - doe / 146_096 ) / 365;
-  let y   = yoe + era * 400;
-  let doy = doe - ( 365 * yoe + yoe / 4 - yoe / 100 );
-  let mp  = ( 5 * doy + 2 ) / 153;
-  let d   = doy - ( 153 * mp + 2 ) / 5 + 1;
-  let m   = if mp < 10 { mp + 3 } else { mp - 9 };
-  let y   = if m <= 2 { y + 1 } else { y };
-  format!( "{y:04}-{m:02}-{d:02}T{hh:02}:{mm:02}:{ss:02}Z" )
-}
-
-/// Return a UTC timestamp prefix string for diagnostic trace lines.
-///
-/// Format: `"YYYY-MM-DD · HH:MM:SS UTC · "` — two middle dots separate date, time, and body.
-/// Use as first argument in `eprintln!( "{}label  name  ...", trace_ts() )` so the caller
-/// label and account name follow immediately after the space.
-///
-/// Fix(BUG-338)
-/// Root cause: prefix dropped the trailing `Z` (UTC marker) from `chrono_now_utc()`'s
-/// ISO-8601 output during slicing, leaving a timestamp shape indistinguishable from a
-/// differently-clocked source in a combined transcript.
-/// Pitfall: a bare `.contains("UTC")` check is insufficient — verify the marker's exact
-/// position (between time and trailer), not just its presence.
-#[ inline ]
-#[ must_use ]
-pub fn trace_ts() -> String
-{
-  let utc = chrono_now_utc();
-  // chrono_now_utc produces "YYYY-MM-DDTHH:MM:SSZ"; slice date and time parts.
-  format!( "{} · {} UTC · ", &utc[ ..10 ], &utc[ 11..19 ] )
-}
+// Canonical implementations live in claude_core::time (identical bodies were
+// previously duplicated here); re-exported to preserve the public paths
+// `account::chrono_now_utc` / `account::trace_ts` that sibling crates import.
+// trace_ts carries Fix(BUG-338)'s "UTC" marker format — the behavioral test
+// `trace_ts_returns_utc_marked_timestamp` pins it regardless of which crate hosts it.
+pub use claude_core::{ chrono_now_utc, trace_ts };
 
 /// Parse an ISO-8601 UTC timestamp to seconds since epoch.
 ///
@@ -2456,8 +2538,9 @@ pub fn parse_iso_utc_secs( s : &str ) -> Option< u64 >
 
 // ── Measurement history ───────────────────────────────────────────────────────
 
-/// Timestamped quota measurement stored in the local cache file's `history[]`
-/// (`-cache/{name}.json`; legacy stores: tracked `cache.history[]`).
+/// Timestamped quota measurement stored in the per-host cache file's `history[]`
+/// (`cache/{host}_{user}/{name}.json`; legacy stores: gitignored
+/// `-cache/{name}.json` or tracked `cache.history[]`).
 ///
 /// Each successful fetch appends one entry; the array is capped at 10 entries (FIFO).
 /// Used by the approximation module to fit a polynomial when the API is unavailable
@@ -2485,10 +2568,14 @@ fn parse_history_period( val : &serde_json::Value ) -> Option< ( f64, String ) >
   Some( ( u, r ) )
 }
 
-/// Read measurement history (Feature 040 AC-11) — local `-cache/{name}.json`
-/// first, a legacy tracked `cache.history[]` as pre-migration fallback (TSK-500).
+/// Read measurement history (Feature 040 AC-11) — the freshest volatile
+/// candidate carrying a `"history"` array wins, across every host subtree
+/// `cache/*/{name}.json` and the legacy gitignored `-cache/{name}.json`
+/// (TSK-502); a history-only own-host file (no `fetched_at` yet) is read
+/// directly when no candidate carries a ring; a legacy tracked
+/// `cache.history[]` is the pre-migration fallback (TSK-500).
 ///
-/// Returns an empty `Vec` when neither location has a `"history"` array —
+/// Returns an empty `Vec` when no location has a `"history"` array —
 /// backward compatible with old cache format from Feature 033.
 #[ must_use ]
 #[ inline ]
@@ -2497,9 +2584,25 @@ pub fn read_history(
   name             : &str,
 ) -> Vec< HistoryEntry >
 {
-  let local = read_json_value( &local_cache_path( credential_store, name ) );
+  let candidate = read_volatile_candidates( credential_store, name )
+    .into_iter()
+    .find_map( | mut c | match c.remove( "history" )
+    {
+      Some( serde_json::Value::Array( a ) ) => Some( a ),
+      _ => None,
+    } )
+    .or_else( ||
+      // A history-only own-host file (written by `write_history_entry` before any
+      //   fetch) carries no `fetched_at`, so it is not a candidate — read it directly.
+      read_json_value( &local_cache_path( credential_store, name ) )
+        .and_then( | mut l | match l.as_object_mut().and_then( | o | o.remove( "history" ) )
+        {
+          Some( serde_json::Value::Array( a ) ) => Some( a ),
+          _ => None,
+        } )
+    );
   let tracked;
-  let arr = if let Some( a ) = local.as_ref().and_then( | l | l.get( "history" ) ).and_then( | h | h.as_array() )
+  let arr = if let Some( a ) = candidate.as_ref()
   {
     a
   }
@@ -2535,13 +2638,15 @@ fn history_period_json( period : Option< ( f64, &str ) > ) -> serde_json::Value
   }
 }
 
-/// Append a quota measurement to `history[]` in the local `-cache/{name}.json`
-/// (Feature 040 AC-01, AC-02, AC-13; TSK-500).
+/// Append a quota measurement to `history[]` in this host's tracked cache file
+/// `cache/{host}_{user}/{name}.json` (Feature 040 AC-01, AC-02, AC-13; TSK-500/502).
 ///
 /// - Enforces a 10-entry FIFO ring buffer: oldest entry evicted when buffer is full (AC-02).
 /// - Overwrites the last entry when `t` matches its timestamp to prevent fast-cycle fill (AC-13).
-/// - Seeds from a legacy tracked `cache.history[]` when the local file has none yet, so
-///   ring continuity survives the TSK-500 upgrade; the tracked file is never written.
+/// - When the own-host file has no ring yet, seeds from the freshest candidate anywhere
+///   (another host's subtree or the legacy gitignored file — TSK-502 cross-host
+///   continuity), then from a legacy tracked `cache.history[]` (TSK-500 upgrade);
+///   the tracked `{name}.json` is never written.
 /// - Write failures are silently ignored — quota display is non-critical (matches Feature 033 pattern).
 #[ inline ]
 pub fn write_history_entry(
@@ -2559,10 +2664,17 @@ pub fn write_history_entry(
   {
     if !obj.contains_key( "history" )
     {
-      // Legacy seed: adopt a pre-migration tracked ring (read-only on the tracked file).
-      let legacy = read_json_value( &credential_store.join( format!( "{name}.json" ) ) )
-        .and_then( | tr | tr.get( "cache" ).and_then( | c | c.get( "history" ) ).cloned() );
-      if let Some( h ) = legacy
+      // Ring seed: the freshest candidate anywhere first (another host's subtree or
+      //   the legacy gitignored file — TSK-502 continuity), then a pre-migration
+      //   tracked ring (read-only on the tracked file — TSK-500).
+      let seed = read_volatile_candidates( credential_store, name )
+        .into_iter()
+        .find_map( | mut c | c.remove( "history" ) )
+        .or_else( ||
+          read_json_value( &credential_store.join( format!( "{name}.json" ) ) )
+            .and_then( | tr | tr.get( "cache" ).and_then( | c | c.get( "history" ) ).cloned() )
+        );
+      if let Some( h ) = seed
       {
         obj.insert( "history".into(), h );
       }
@@ -2605,57 +2717,11 @@ pub fn write_history_entry(
   {
     let _ = std::fs::create_dir_all( dir );
   }
-  let _ = std::fs::write(
+  let _ = atomic_write(
     &local_path,
-    serde_json::to_string_pretty( &snapshot ).map( |s| s + "\n" ).unwrap_or_default(),
+    &serde_json::to_string_pretty( &snapshot ).map( |s| s + "\n" ).unwrap_or_default(),
   );
 }
 
-#[ cfg( test ) ]
-mod tests
-{
-  use super::*;
-
-  // ── FT-08 (021): parse_string_array_field ───────────────────────────────────
-
-  /// `ft08_a`: Two-element array returns both values in order.
-  ///
-  /// Given: `{"capabilities":["claude_max","chat"]}`
-  /// When: `parse_string_array_field(json, "capabilities")`
-  /// Then: Returns `["claude_max", "chat"]`
-  #[ test ]
-  fn ft08_parse_string_array_field_two_elements()
-  {
-    let json   = r#"{"capabilities":["claude_max","chat"]}"#;
-    let result = parse_string_array_field( json, "capabilities" );
-    assert_eq!( result, vec![ "claude_max", "chat" ] );
-  }
-
-  /// `ft08_b`: Missing key returns empty Vec.
-  ///
-  /// Given: JSON with no "capabilities" key
-  /// When: `parse_string_array_field(json, "capabilities")`
-  /// Then: Returns empty Vec
-  #[ test ]
-  fn ft08_parse_string_array_field_missing_key_returns_empty()
-  {
-    let json   = r#"{"other_field":"value"}"#;
-    let result = parse_string_array_field( json, "capabilities" );
-    assert!( result.is_empty(), "missing key must return empty Vec, got: {result:?}" );
-  }
-
-  /// `ft08_c`: Empty array `[]` returns empty Vec.
-  ///
-  /// Given: `{"capabilities":[]}`
-  /// When: `parse_string_array_field(json, "capabilities")`
-  /// Then: Returns empty Vec
-  #[ test ]
-  fn ft08_parse_string_array_field_empty_array_returns_empty()
-  {
-    let json   = r#"{"capabilities":[]}"#;
-    let result = parse_string_array_field( json, "capabilities" );
-    assert!( result.is_empty(), "empty array must return empty Vec, got: {result:?}" );
-  }
-}
 
 

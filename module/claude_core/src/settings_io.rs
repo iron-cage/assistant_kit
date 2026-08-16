@@ -1,9 +1,9 @@
 //! Settings I/O: read and write Claude Code's `settings.json` file.
 //!
 //! Provides typed access to Claude's JSON configuration.  Writes are atomic
-//! (write to `{path}.tmp` then rename) to prevent partial-write corruption.
-//! Implements type inference so plain string values are promoted to bool or
-//! numeric JSON types where unambiguous.
+//! (via [`crate::file_io::atomic_write`] — unique temp file, then rename) to
+//! prevent partial-write corruption. Implements type inference so plain string
+//! values are promoted to bool or numeric JSON types where unambiguous.
 //!
 //! # Design
 //!
@@ -12,8 +12,10 @@
 //! the parser does not interpret their contents, it only captures them
 //! verbatim so they survive read→modify→write cycles intact.
 
-use std::io::{ self, Write };
+use std::io;
 use std::path::Path;
+
+use crate::file_io::{ atomic_write, redact_for_trace, upsert_pair };
 
 /// How a raw string value is represented in the JSON file.
 #[ derive( Debug, PartialEq ) ]
@@ -150,7 +152,7 @@ fn read_all_settings_typed( path : &Path ) -> Result< Vec< ( String, String, Sto
 #[ inline ]
 pub fn set_setting( path : &Path, key : &str, raw_value : &str ) -> Result< StoredAs, io::Error >
 {
-  eprintln!( "set_setting(path={}, key={key:?}, raw_value={raw_value:?})", path.display() );
+  eprintln!( "set_setting(path={}, key={key:?}, raw_value={})", path.display(), redact_for_trace( key, raw_value ) );
   let mut pairs = read_or_empty( path )?;
   upsert_pair( &mut pairs, key, raw_value );
   let stored_as = infer_type( raw_value );
@@ -196,7 +198,7 @@ pub fn remove_setting( path : &Path, key : &str ) -> Result< (), io::Error >
 #[ inline ]
 pub fn set_env_var( path : &Path, key : &str, value : &str ) -> Result< (), io::Error >
 {
-  eprintln!( "set_env_var(path={}, key={key:?}, value={value:?})", path.display() );
+  eprintln!( "set_env_var(path={}, key={key:?}, value={})", path.display(), redact_for_trace( key, value ) );
   let mut pairs = read_or_empty( path )?;
   let env_idx   = pairs.iter().position( |( k, _ )| k == "env" );
 
@@ -260,35 +262,6 @@ fn read_or_empty( path : &Path ) -> Result< Vec< ( String, String ) >, io::Error
     Err( e ) if e.kind() == io::ErrorKind::NotFound => Ok( vec![] ),
     Err( e ) => Err( e ),
   }
-}
-
-fn upsert_pair( pairs : &mut Vec< ( String, String ) >, key : &str, value : &str )
-{
-  if let Some( entry ) = pairs.iter_mut().find( |( k, _ )| k == key )
-  {
-    entry.1 = value.to_string();
-  }
-  else
-  {
-    pairs.push( ( key.to_string(), value.to_string() ) );
-  }
-}
-
-fn atomic_write( path : &Path, content : &str ) -> Result< (), io::Error >
-{
-  let mut tmp_path = path.to_path_buf();
-  let filename = tmp_path.file_name()
-  .ok_or_else( || io::Error::new( io::ErrorKind::InvalidInput, "path has no filename" ) )?
-  .to_string_lossy()
-  .into_owned();
-  tmp_path.set_file_name( format!( "{filename}.tmp" ) );
-
-  {
-    let mut f = std::fs::File::create( &tmp_path )?;
-    f.write_all( content.as_bytes() )?;
-    f.flush()?;
-  }
-  std::fs::rename( &tmp_path, path )
 }
 
 // ─── Hand-rolled JSON parser ─────────────────────────────────────────────────

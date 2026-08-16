@@ -129,9 +129,9 @@ A `backend::redirect` account (see [feature/071](../feature/071_redirect_backend
 | [feature/022_org_identity_snapshot.md](../feature/022_org_identity_snapshot.md) | `org_uuid`, `org_name` |
 | [feature/029_account_host_metadata.md](../feature/029_account_host_metadata.md) | `host`, `role` label fields |
 | [feature/030_account_renewal_override.md](../feature/030_account_renewal_override.md) | `_renewal_at` field |
-| [feature/033_quota_cache.md](../feature/033_quota_cache.md) | Low-churn top-level keys (`model_override`, `last_touch_at`, `touch_idle`, `org_created_at`) + legacy `cache` subtree + the local `-cache/{name}.json` companion |
+| [feature/033_quota_cache.md](../feature/033_quota_cache.md) | Low-churn top-level keys (`model_override`, `last_touch_at`, `touch_idle`, `org_created_at`) + legacy `cache` subtree + the per-host `cache/{host}_{user}/{name}.json` companion (TSK-502) |
 | [feature/036_account_ownership.md](../feature/036_account_ownership.md) | `owner` field |
-| [feature/040_quota_measurement_history.md](../feature/040_quota_measurement_history.md) | History array — in local `-cache/{name}.json` since TSK-500; legacy `cache.history` readable pre-migration |
+| [feature/040_quota_measurement_history.md](../feature/040_quota_measurement_history.md) | History array — in the per-host `cache/{host}_{user}/{name}.json` since TSK-502; legacy `cache.history` readable pre-migration |
 | [feature/063_explicit_ownership_claim.md](../feature/063_explicit_ownership_claim.md) | `owner::` param write path |
 | [feature/070_account_claim_and_reservation_control.md](../feature/070_account_claim_and_reservation_control.md) | `claim_lock`, `reserve` fields |
 | [feature/071_redirect_backend_accounts.md](../feature/071_redirect_backend_accounts.md) | `backend`, `base_url`, `redirect_model` fields |

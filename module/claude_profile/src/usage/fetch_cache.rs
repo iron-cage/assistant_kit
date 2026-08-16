@@ -21,7 +21,7 @@ fn cache_age_from_fetched_at( fetched_at : &str ) -> u64
 /// Read quota cache and apply Feature 040 polynomial approximation when available.
 ///
 /// Returns `None` when no cache entry exists for `name`. When the stored measurement
-/// history (local `-cache/{name}.json` since TSK-500) has ≥2 entries in the current
+/// history (per-host `cache/{host}_{user}/{name}.json` since TSK-502) has ≥2 entries in the current
 /// window, applies `approximate_utilization()` for each period independently
 /// (AC-04, AC-05 from `docs/feature/040_quota_measurement_history.md`).
 ///

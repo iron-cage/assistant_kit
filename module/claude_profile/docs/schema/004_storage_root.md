@@ -38,6 +38,11 @@
   {name}.credentials.json     # OAuth credential snapshot
   {name}.json                 # Supplementary metadata
   _active_{host}_{user}       # Per-machine active marker (gitignored)
+  cache/{host}_{user}/
+    {name}.json               # Per-host volatile quota cache (tracked; single
+                              #   writer per subtree — TSK-502, feature/033)
+  -cache/{name}.json          # Legacy gitignored quota cache (TSK-500 era);
+                              #   read as fallback, self-cleaned on next write
 ```
 
 ### Features
