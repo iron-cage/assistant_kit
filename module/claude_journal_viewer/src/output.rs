@@ -471,3 +471,29 @@ pub fn export_output< S : ::core::hash::BuildHasher >( params : &HashMap< String
     .map_err( | e | format!( "could not write to '{output}': {e}" ) )?;
   Ok( format!( "Exported {} event(s) to {output}", events.len() ) )
 }
+
+/// `.chart` — render a usage SVG chart, optionally opened in the default browser.
+///
+/// # Errors
+///
+/// Returns `Err` when the chart cannot be rendered or written to disk. A
+/// failure to open the resulting file in a browser is non-fatal — it is
+/// appended as a warning to the success message rather than failing the
+/// command.
+#[ inline ]
+pub fn chart_output< S : ::core::hash::BuildHasher >( params : &HashMap< String, String, S >, dir : PathBuf ) -> Result< String, String >
+{
+  let out_path = params.get( "out" ).map_or_else( || PathBuf::from( "usage.svg" ), PathBuf::from );
+  claude_journal_charts::generate_usage_chart( &dir, &out_path ).map_err( | e | e.to_string() )?;
+
+  let mut msg = format!( "Chart written to {}", out_path.display() );
+  let open_requested = matches!( params.get( "open" ).map( String::as_str ), Some( "1" | "true" ) );
+  if open_requested
+  {
+    if let Err( e ) = open::that( &out_path )
+    {
+      let _ = write!( msg, "\nWarning: could not open {} in browser: {e}", out_path.display() );
+    }
+  }
+  Ok( msg )
+}

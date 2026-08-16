@@ -159,6 +159,18 @@ pub fn render_text(
           if is_past( data.five_hour.as_ref().and_then( |p| p.resets_at.as_deref() ) ) { cells[ 1 ] = "(stale)".to_string(); }
           if is_past( data.seven_day.as_ref().and_then( |p| p.resets_at.as_deref() ) ) { cells[ 4 ] = "(stale)".to_string(); }
         }
+        // Fix(BUG-488): a just-touched row whose re-fetch still reports the 5h window idle
+        //   renders "(touched)" — not the idle "—", which reads as "touch never happened"
+        //   and directly contradicts the touch trace lines above the table.
+        // Root cause: the quota endpoint lags session starts; apply_touch's single AC-03
+        //   re-fetch races that lag, so resets_at can still be None seconds after a
+        //   successful touch subprocess.
+        // Pitfall: display-only — never fabricate a resets_at into `data` itself; sort and
+        //   skip logic must keep seeing the API's own (lagged) state.
+        if aq.touched_recently && data.five_hour.as_ref().and_then( |p| p.resets_at.as_deref() ).is_none()
+        {
+          cells[ 1 ] = "(touched)".to_string();
+        }
         let son_unix  = data.seven_day_sonnet.as_ref()
           .and_then( |p| p.resets_at.as_deref() )
           .and_then( claude_quota::iso_to_unix_secs );

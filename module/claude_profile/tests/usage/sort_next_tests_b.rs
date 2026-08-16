@@ -96,6 +96,7 @@ fn mre_bug229_strategy_metric_renew_exact_sub_shows_both_timers()
   let aq = AccountQuota
   {
     fallback_reason : None,
+    touched_recently : false,
     name          : "test@example.com".to_string(),
     is_current    : false,
     is_active             : false,
@@ -158,6 +159,7 @@ fn mre_bug229_strategy_metric_renew_no_sub_shows_7d_only()
   let aq = AccountQuota
   {
     fallback_reason : None,
+    touched_recently : false,
     name          : "test@example.com".to_string(),
     is_current    : false,
     is_active             : false,
@@ -879,6 +881,7 @@ fn mre_bug341_strategy_metric_renew_cache_refreshed_uses_org_created_at_estimate
   let aq = AccountQuota
   {
     fallback_reason : None,
+    touched_recently : false,
     name          : "test@example.com".to_string(),
     is_current    : false,
     is_active             : false,
@@ -946,6 +949,7 @@ fn mre_bug341_strategy_metric_renews_cache_refreshed_uses_org_created_at_estimat
   let aq = AccountQuota
   {
     fallback_reason : None,
+    touched_recently : false,
     name          : "test@example.com".to_string(),
     is_current    : false,
     is_active             : false,

@@ -10,6 +10,7 @@ mod fetch_cache;
 mod format;
 mod sort;
 mod sort_next;
+mod stalest;
 mod render;
 mod render_sessions;
 mod render_json;

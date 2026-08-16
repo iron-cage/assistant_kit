@@ -28,6 +28,7 @@
 //! | IT-18 | `clr ps help` (positional) → exit 0, stdout non-empty         | BUG-294 positional|
 //! | IT-19 | Task column works for CWD with no underscores (regression)     | BUG-295 regression|
 //! | IT-46 | Zombie-PID gate file filtered out of queued table + self-healed | BUG-479 repro    |
+//! | IT-47 | Thread-TID gate file filtered out of queued table + self-healed | BUG-488 repro    |
 
 mod cli_binary_test_helpers;
 use cli_binary_test_helpers::{ run_cli, run_cli_with_env, stderr_str, stdout_str };
@@ -36,6 +37,9 @@ use cli_binary_test_helpers::{ run_cli, run_cli_with_env, stderr_str, stdout_str
 use cli_binary_test_helpers::{
   fake_claude_binary_dir, make_proc_dir, run_clr_ps_proc, spawn_fake_claude,
 };
+
+#[ cfg( target_os = "linux" ) ]
+use cli_binary_test_helpers::spawn_parked_helper_thread;
 
 // ── IT-1: 0 sessions ──────────────────────────────────────────────────────────
 
@@ -812,5 +816,94 @@ fn it_46_zombie_waiter_filtered_out_and_self_healed()
   assert!(
     !waiter_file.exists(),
     "IT-46 (BUG-479): zombie waiter gate file must be deleted by self-healing cleanup"
+  );
+}
+
+// ── IT-47: thread-TID waiter filtered out + self-healed (BUG-488) ────────────
+
+/// IT-47 (BUG-488): a queued-waiter gate file whose PID number is currently
+/// occupied by a live NON-LEADER thread of an unrelated process must be
+/// filtered out of the Queued table AND self-heal-deleted — the recorded
+/// waiter is dead; the thread merely masks its number.
+///
+/// ## Root Cause
+/// The queued-table liveness filter shares `pid_alive()`, which probed only
+/// `/proc/{pid}/stat` readability and state ∉ {`Z`}. Linux resolves direct
+/// `/proc/<tid>` lookups for non-leader thread IDs (readdir-invisible, yet
+/// stat-readable with a running state), so a dead waiter whose number a live
+/// thread occupied rendered as a phantom Queued row indefinitely (observed
+/// live: dockerd startup thread TID 1744061 shown queued for 76+ hours).
+///
+/// ## Why Not Caught
+/// IT-13 covers the absent PID, IT-46 the zombie; both leave `/proc/<pid>`
+/// either gone or state `Z`. No fixture produced a PID number resolving to a
+/// live non-leader thread, so the `Tgid` dimension was never exercised.
+///
+/// ## Fix Applied
+/// `pid_alive()` clause (c): `/proc/{pid}/status` must report `Tgid == pid`.
+/// The ps filter inherits it through the shared predicate — thread-masked
+/// waiters fail liveness, drop from the table, and are self-heal-deleted.
+///
+/// ## Prevention
+/// One authoritative liveness predicate for every PID-keyed display/reclaim
+/// decision, with fixtures for all four PID states: live leader, zombie,
+/// absent, thread-masked.
+///
+/// ## Pitfall
+/// A parked helper thread of the test's own process is a deterministic
+/// thread-TID fixture — no PID-wrap lottery needed; `/proc/thread-self`
+/// yields the TID without a libc `gettid()` binding.
+// test_kind: bug_reproducer(BUG-488)
+#[ cfg( target_os = "linux" ) ]
+#[ test ]
+fn it_47_thread_tid_waiter_filtered_out_and_self_healed()
+{
+  let gate_dir      = tempfile::TempDir::new().expect( "create gate temp dir" );
+  let gate_dir_path = gate_dir.path().to_str().expect( "gate dir UTF-8" );
+  let proc          = make_proc_dir( &[] );
+  let proc_dir_path = proc.path().to_str().expect( "proc dir UTF-8" );
+
+  let ( tid, park_send, park_handle ) = spawn_parked_helper_thread();
+  // Fixture validity: stat readable via direct lookup, not a zombie, NOT a
+  // thread-group leader — the exact occupancy shape that masked BUG-488.
+  let stat = std::fs::read_to_string( format!( "/proc/{tid}/stat" ) )
+    .expect( "fixture: /proc/<tid>/stat must be readable via direct lookup" );
+  assert!(
+    stat.rsplit_once( ')' ).is_some_and( | ( _, rest ) | !rest.trim_start().starts_with( 'Z' ) ),
+    "fixture: TID {tid} must not be a zombie"
+  );
+  let reported_tgid = std::fs::read_to_string( format!( "/proc/{tid}/status" ) )
+    .expect( "fixture: /proc/<tid>/status must be readable" )
+    .lines()
+    .find_map( | l | l.strip_prefix( "Tgid:" ).and_then( | v | v.trim().parse::< u32 >().ok() ) );
+  assert!(
+    reported_tgid.is_some_and( | t | t != tid ),
+    "fixture: TID {tid} must be a non-leader thread (Tgid {reported_tgid:?})"
+  );
+
+  let waiter_file = gate_dir.path().join( format!( "{tid}.json" ) );
+  std::fs::write(
+    &waiter_file,
+    r#"{"cwd":"/tmp/thread-waiter","since":1,"attempt":9,"message":"waiting for session slot"}"#,
+  ).expect( "write thread-masked waiter gate file" );
+
+  let out    = run_cli_with_env( &[ "ps" ], &[ ( "CLR_GATE_DIR", gate_dir_path ), ( "CLR_PROC_DIR", proc_dir_path ) ] );
+  let stdout = stdout_str( &out );
+
+  drop( park_send ); // release the parked helper thread
+  let _ = park_handle.join();
+
+  assert!( out.status.success(), "exit 0 expected, got {:?}", out.status.code() );
+  assert!(
+    !stdout.contains( "Queued" ),
+    "IT-47 (BUG-488): thread-TID gate file must not produce a queued table. Got:\n{stdout}"
+  );
+  assert!(
+    !stdout.contains( &tid.to_string() ),
+    "IT-47 (BUG-488): thread TID must not appear in output. Got:\n{stdout}"
+  );
+  assert!(
+    !waiter_file.exists(),
+    "IT-47 (BUG-488): thread-masked waiter gate file must be deleted by self-healing cleanup"
   );
 }

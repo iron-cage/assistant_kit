@@ -207,6 +207,16 @@ fn cmd_serve( params : &HashMap< String, String >, dir : PathBuf )
   }
 }
 
+/// `.chart` — render a usage SVG chart, optionally opened in the default browser.
+fn cmd_chart( params : &HashMap< String, String >, dir : PathBuf )
+{
+  match claude_journal_viewer::output::chart_output( params, dir )
+  {
+    Ok( s )  => println!( "{s}" ),
+    Err( e ) => { eprintln!( "Error: {e}" ); std::process::exit( 1 ); }
+  }
+}
+
 // ── Help ──────────────────────────────────────────────────────────────────────
 
 /// Print usage help to stdout.
@@ -225,6 +235,7 @@ fn print_help()
   println!( "  .prune    Delete old journal files (default: keep 30 days)" );
   println!( "  .status   Show journal health: file count, size, date range" );
   println!( "  .export   Export filtered events to file" );
+  println!( "  .chart    Render a usage SVG chart, optionally opened in browser" );
   println!();
   println!( "{}", bold( "Common filter params:" ) );
   println!( "  since::<dur>        Events newer than (e.g. 1h, 7d, 2w)" );
@@ -243,6 +254,7 @@ fn print_help()
   println!( "  .prune   keep::<dur>  dry_run::0|1" );
   println!( "  .export  output::<path>  format::json|jsonl|csv|table" );
   println!( "  .serve   port::<n>" );
+  println!( "  .chart   out::<path>  open::0|1" );
   println!();
   println!( "{}", bold( "Env vars:" ) );
   println!( "  CLR_JOURNAL_DIR   Journal directory (default: ~/.clr/journal/)" );
@@ -269,6 +281,7 @@ fn main()
     ".prune"                            => cmd_prune( &params, dir ),
     ".status"                           => cmd_status( &params, dir ),
     ".export"                           => cmd_export( &params, dir ),
+    ".chart"                            => cmd_chart( &params, dir ),
     ".help" | "--help" | "-h" | "help"  => print_help(),
     other                               =>
     {

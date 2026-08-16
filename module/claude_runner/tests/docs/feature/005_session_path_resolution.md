@@ -19,7 +19,7 @@ Test case planning for [feature/005_session_path_resolution.md](../../../docs/fe
 | FT-4 | `scope_for()` anchors memory dir to git root, not subdirectory | scope_for |
 | FT-5 | `scope_for()` returns `None` for session file when dir is empty | scope_for |
 | FT-6 | `clr scope` prints 6 `CLAUDE_*` vars in `key=value` format | clr scope |
-| FT-7 | `--session-from` resumes most recent session from source dir | cross-loading |
+| FT-7 | `--session-from` plans a transplant of the most-recent source session | cross-loading |
 | FT-8 | `--to` + `--session-from`: Claude runs in target, loads from source | cross-loading |
 | FT-9 | `--to` is an alias for `--dir`; behavior is identical | alias |
 | FT-10 | `--session-dir` takes precedence over `--session-from` | precedence |
@@ -102,11 +102,11 @@ Test case planning for [feature/005_session_path_resolution.md](../../../docs/fe
 
 ---
 
-### FT-7: `--session-from` resumes most recent session from source dir
+### FT-7: `--session-from` plans a transplant of the most-recent source session
 
 - **Given:** source dir `/tmp/sf7_src` has session `hhh-101.jsonl` (highest mtime); CWD is `/tmp/sf7_cwd`; fake claude binary in PATH
 - **When:** `clr --session-from /tmp/sf7_src --dry-run "Continue"`
-- **Then:** dry-run output includes `-c hhh-101`; subprocess working directory is CWD (not `/tmp/sf7_src`)
+- **Then:** dry-run output includes the plan line `# session-transplant: <claude_home>/projects/<Df(src)>/hhh-101.jsonl -> ` (most-recent source session selected as transplant source); subprocess working directory is CWD (no `cd /tmp/sf7_src`)
 - **Exit:** 0
 - **Source:** [feature/005_session_path_resolution.md](../../../docs/feature/005_session_path_resolution.md) AC-7
 - **Implemented by:** `session_path_resolution_test.rs::ft7_session_from_resumes_source_session`
@@ -117,7 +117,7 @@ Test case planning for [feature/005_session_path_resolution.md](../../../docs/fe
 
 - **Given:** source dir `/tmp/sf8_src` has session `iii-202.jsonl`; target dir `/tmp/sf8_tgt` exists; fake claude binary in PATH
 - **When:** `clr --to /tmp/sf8_tgt --session-from /tmp/sf8_src --dry-run "Continue"`
-- **Then:** dry-run output includes `-c iii-202`; subprocess working directory is `/tmp/sf8_tgt`
+- **Then:** dry-run output includes the full plan line `# session-transplant: <source storage>/iii-202.jsonl -> <claude_home>/projects/<Df(canonical target)>` and `cd /tmp/sf8_tgt` (subprocess runs in target)
 - **Exit:** 0
 - **Source:** [feature/005_session_path_resolution.md](../../../docs/feature/005_session_path_resolution.md) AC-8
 - **Implemented by:** `session_path_resolution_test.rs::ft8_to_plus_session_from_target_dir_source_session`
@@ -139,7 +139,7 @@ Test case planning for [feature/005_session_path_resolution.md](../../../docs/fe
 
 - **Given:** source dir `/tmp/sf10_src` has session `jjj-303.jsonl`; raw session dir `/tmp/sf10_raw` has session `kkk-404.jsonl`; fake claude binary in PATH
 - **When:** `clr --session-from /tmp/sf10_src --session-dir /tmp/sf10_raw --dry-run "test"`
-- **Then:** dry-run output contains `-c kkk-404`; `jjj-303` is NOT used; `--session-dir` (raw path) wins
+- **Then:** dry-run output contains `CLAUDE_CODE_SESSION_DIR=<raw dir>` (raw path verbatim — the raw export is BUG-493's own domain and still emitted); the source's computed storage path does NOT appear; `--session-dir` (raw path) wins
 - **Exit:** 0
 - **Source:** [feature/005_session_path_resolution.md](../../../docs/feature/005_session_path_resolution.md) AC-10
 - **Implemented by:** `session_path_resolution_test.rs::ft10_session_dir_wins_over_session_from`

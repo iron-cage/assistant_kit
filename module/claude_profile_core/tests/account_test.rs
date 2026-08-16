@@ -94,7 +94,7 @@
 //! | `cc4_read_owner_null_value` | read_owner with "owner": null → "" |
 //! | `cc5_read_owner_numeric_value` | read_owner with "owner": 42 → "" |
 //! | `cc6_background_save_new_account_no_owner` | background save on new account (owner:None) → no owner field |
-//! | `history_append_stores_correct_fields` | FT-01: write_history_entry stores t/h5/d7/sn in cache.history[0] |
+//! | `history_append_stores_correct_fields` | FT-01: write_history_entry stores t/h5/d7/sn in the history ring (local cache file since TSK-500) |
 //! | `history_ring_buffer_evicts_oldest` | FT-02: 11th append evicts entry 0; length stays 10 |
 //! | `history_read_absent_key_returns_empty` | FT-11: absent history key → empty vec (AC-11 backward compat) |
 //! | `history_duplicate_timestamp_overwrites` | FT-13: same-second append overwrites last entry, not appends |
@@ -125,6 +125,12 @@
 //! | `ft_remove_session_effort_creates_file_when_settings_absent` | Task 464/T03: remove_session_effort() creates settings.json as {} when file absent |
 //! | `ft_remove_session_effort_creates_dir_when_claude_absent` | Task 464/T04: remove_session_effort() creates ~/.claude/ dir + file when dir absent |
 //! | `bug002_extract_object_block_bounds_multi_entry_roles_json` | BUG-002: extract_object_block() bounds parse_string_field() to one membership entry in multi-entry roles_json |
+//! | `t500_01_fetch_write_sequence_leaves_migrated_tracked_byte_identical` | TSK-500/T01: write_quota_cache + write_history_entry leave a migrated tracked file byte-identical (AF1 hash compare) |
+//! | `t500_02_volatile_cache_lands_in_hyphen_cache_local_file` | TSK-500/T02: volatile cache written to `-cache/{name}.json`; no tracked file created; merged read round-trips |
+//! | `t500_02b_history_entry_lands_local_only` | TSK-500/T02: write_history_entry targets the local file only |
+//! | `t500_05_low_churn_writes_land_top_level_tracked` | TSK-500/T05: write_cache_string/bool land top-level tracked; no cache{} block recreated; merged read surfaces both |
+//! | `t500_06_legacy_cache_migrates_prunes_and_preserves` | TSK-500/T06: legacy cache{} readable pre-migration, dissolved in one write (volatile→local, low-churn→top-level, AF2 cache-key absent) |
+//! | `t500_01b_if_changed_write_skips_identical_value` | TSK-500/T01: write_cache_string_if_changed skips the tracked write when the value is unchanged (steady-state org_created_at stamp) |
 
 use tempfile::TempDir;
 use claude_profile_core::account;
@@ -1008,11 +1014,12 @@ fn mre_bug254_switch_account_patches_email_when_metadata_absent()
 
 // ── Quota cache (Feature 033) ────────────────────────────────────────────────
 
-/// AC-01: `write_quota_cache` writes `"cache"` key to `{name}.json` preserving existing fields.
+/// AC-01 (TSK-500): `write_quota_cache` targets the local untracked cache file and
+/// leaves a migrated tracked `{name}.json` byte-identical.
 ///
-/// Given: `alice@acme.com.json` containing `{"host":"wbox"}`
+/// Given: `alice@acme.com.json` containing `{"host":"wbox","role":"dev"}` (no legacy `cache{}`)
 /// When: `write_quota_cache` called with `five_hour` utilization 14.0
-/// Then: file contains both `"host":"wbox"` and `"cache"` with `fetched_at` + `five_hour.left_pct`
+/// Then: tracked file unchanged; `-cache/alice@acme.com.json` holds `fetched_at` + periods
 #[ test ]
 fn cache_write_preserves_existing_fields()
 {
@@ -1020,6 +1027,7 @@ fn cache_write_preserves_existing_fields()
   let name  = "alice@acme.com";
   let meta  = store.path().join( format!( "{name}.json" ) );
   std::fs::write( &meta, r#"{"host":"wbox","role":"dev"}"# ).unwrap();
+  let before = std::fs::read( &meta ).unwrap();
 
   claude_profile_core::account::write_quota_cache(
     store.path(), name,
@@ -1028,10 +1036,12 @@ fn cache_write_preserves_existing_fields()
     None,
   );
 
-  let content = std::fs::read_to_string( &meta ).unwrap();
-  assert!( content.contains( r#""host": "wbox""# ), "host preserved: {content}" );
-  assert!( content.contains( r#""role": "dev""# ), "role preserved: {content}" );
-  assert!( content.contains( r#""cache""# ), "cache key present: {content}" );
+  assert_eq!(
+    std::fs::read( &meta ).unwrap(), before,
+    "tracked file must stay byte-identical on a migrated store",
+  );
+  let local   = store.path().join( "-cache" ).join( format!( "{name}.json" ) );
+  let content = std::fs::read_to_string( &local ).expect( "local cache file must exist" );
   assert!( content.contains( r#""fetched_at""# ), "fetched_at present: {content}" );
   assert!( content.contains( r#""left_pct""# ), "left_pct present: {content}" );
   assert!( content.contains( r#""five_hour""# ), "five_hour present: {content}" );
@@ -1243,6 +1253,250 @@ fn cache_field_creates_file_from_scratch()
   assert!(
     claude_profile_core::account::read_quota_cache( store.path(), name ).is_none(),
     "cache without fetched_at must return None even after write_cache_field",
+  );
+}
+
+// ── TSK-500: quota cache externalized to local untracked file ─────────────────
+
+/// T01 (TSK-500): the fetch-success write sequence leaves a migrated tracked file
+/// byte-identical (AF1: hash compare, not `git status` silence).
+///
+/// Sequence mirrors `fetch.rs`'s success path: `write_quota_cache` then
+/// `write_history_entry`. Store is post-migration: low-churn fields top-level,
+/// no legacy `cache{}` block. Zero tracked writes is the defining property.
+#[ test ]
+fn t500_01_fetch_write_sequence_leaves_migrated_tracked_byte_identical()
+{
+  let store = tempfile::tempdir().unwrap();
+  let name  = "owner@acme.com";
+  let meta  = store.path().join( format!( "{name}.json" ) );
+  std::fs::write(
+    &meta,
+    r#"{"host":"wbox","org_created_at":"2025-11-30T00:00:00Z","model_override":"opus"}"#,
+  ).unwrap();
+  let before = std::fs::read( &meta ).unwrap();
+
+  claude_profile_core::account::write_quota_cache(
+    store.path(), name,
+    Some( ( 42.0, Some( "2026-08-16T18:00:00Z" ) ) ),
+    Some( ( 30.0, None ) ),
+    None,
+  );
+  claude_profile_core::account::write_history_entry(
+    store.path(), name, 1_755_360_000,
+    Some( ( 42.0, "2026-08-16T18:00:00Z" ) ),
+    None,
+    None,
+  );
+
+  assert_eq!(
+    std::fs::read( &meta ).unwrap(), before,
+    "T01: tracked credential file must be byte-identical after the fetch write sequence",
+  );
+}
+
+/// T01 (TSK-500): `write_cache_string_if_changed` skips the tracked write when the
+/// value is unchanged — the steady-state `org_created_at` stamp on every successful
+/// fetch must not re-dirty the tracked file — and still writes on a real change.
+#[ test ]
+fn t500_01b_if_changed_write_skips_identical_value()
+{
+  let store = tempfile::tempdir().unwrap();
+  let name  = "stamp@acme.com";
+  let meta  = store.path().join( format!( "{name}.json" ) );
+  std::fs::write( &meta, r#"{"org_created_at":"2025-11-30T00:00:00Z"}"# ).unwrap();
+  let before = std::fs::read( &meta ).unwrap();
+
+  claude_profile_core::account::write_cache_string_if_changed(
+    store.path(), name, "org_created_at", "2025-11-30T00:00:00Z",
+  );
+  assert_eq!(
+    std::fs::read( &meta ).unwrap(), before,
+    "identical value must be a zero-write no-op (byte-identical tracked file)",
+  );
+
+  claude_profile_core::account::write_cache_string_if_changed(
+    store.path(), name, "org_created_at", "2026-01-01T00:00:00Z",
+  );
+  let json : serde_json::Value = serde_json::from_str( &std::fs::read_to_string( &meta ).unwrap() ).unwrap();
+  assert_eq!(
+    json[ "org_created_at" ].as_str(), Some( "2026-01-01T00:00:00Z" ),
+    "changed value must be written",
+  );
+}
+
+/// T02 (TSK-500): volatile cache lands in `-cache/{name}.json` — hyphen-prefixed
+/// path matching the global `-*` gitignore rule — and no tracked file is created.
+#[ test ]
+fn t500_02_volatile_cache_lands_in_hyphen_cache_local_file()
+{
+  let store = tempfile::tempdir().unwrap();
+  let name  = "fresh@acme.com";
+
+  claude_profile_core::account::write_quota_cache(
+    store.path(), name,
+    Some( ( 55.5, Some( "2026-08-16T20:00:00Z" ) ) ),
+    None,
+    None,
+  );
+
+  let local = store.path().join( "-cache" ).join( format!( "{name}.json" ) );
+  assert!( local.is_file(), "T02: -cache/{name}.json must exist" );
+  let dir_name = local.parent()
+    .and_then( std::path::Path::file_name )
+    .and_then( std::ffi::OsStr::to_str )
+    .unwrap_or_default();
+  assert!(
+    dir_name.starts_with( '-' ),
+    "T02: cache dir must be hyphen-prefixed (gitignored by the global -* rule): {dir_name}",
+  );
+  let json : serde_json::Value = serde_json::from_str( &std::fs::read_to_string( &local ).unwrap() ).unwrap();
+  assert!( json[ "fetched_at" ].is_string(), "T02: local cache carries fetched_at" );
+  let u = json[ "five_hour" ][ "left_pct" ].as_f64().expect( "left_pct" );
+  assert!( ( u - 55.5 ).abs() < 1e-9, "T02: utilization stored locally, got {u}" );
+  assert!(
+    !store.path().join( format!( "{name}.json" ) ).exists(),
+    "T02: write_quota_cache must not create a tracked file",
+  );
+  let entry = claude_profile_core::account::read_quota_cache( store.path(), name )
+    .expect( "T02: merged read must see the local cache" );
+  let ( util, reset ) = entry.five_hour.expect( "five_hour present" );
+  assert!( ( util - 55.5 ).abs() < f64::EPSILON );
+  assert_eq!( reset.as_deref(), Some( "2026-08-16T20:00:00Z" ) );
+}
+
+/// T02 (TSK-500): `write_history_entry` targets the local cache file — the ring
+/// buffer no longer touches (or creates) the tracked `{name}.json`.
+#[ test ]
+fn t500_02b_history_entry_lands_local_only()
+{
+  let store = tempfile::tempdir().unwrap();
+  let name  = "hist@acme.com";
+
+  claude_profile_core::account::write_history_entry(
+    store.path(), name, 2_000,
+    Some( ( 40.0, "2026-08-16T20:00:00Z" ) ),
+    None,
+    None,
+  );
+
+  let local = store.path().join( "-cache" ).join( format!( "{name}.json" ) );
+  let json : serde_json::Value = serde_json::from_str(
+    &std::fs::read_to_string( &local ).expect( "local cache file must exist" )
+  ).unwrap();
+  assert_eq!(
+    json[ "history" ].as_array().map( Vec::len ), Some( 1 ),
+    "T02: history entry stored in the local file",
+  );
+  assert!(
+    !store.path().join( format!( "{name}.json" ) ).exists(),
+    "T02: write_history_entry must not create a tracked file",
+  );
+  let entries = claude_profile_core::account::read_history( store.path(), name );
+  assert_eq!( entries.len(), 1, "read_history must read the local ring" );
+  assert_eq!( entries[ 0 ].t, 2_000 );
+}
+
+/// T05 (TSK-500): low-churn writes (`write_cache_string`/`write_cache_bool`) land
+/// as top-level keys of the tracked file — never under a `cache{}` block — and the
+/// merged reader surfaces them alongside local volatile data.
+#[ test ]
+fn t500_05_low_churn_writes_land_top_level_tracked()
+{
+  let store = tempfile::tempdir().unwrap();
+  let name  = "meta@acme.com";
+  std::fs::write( store.path().join( format!( "{name}.json" ) ), r#"{"host":"wbox"}"# ).unwrap();
+
+  claude_profile_core::account::write_quota_cache(
+    store.path(), name, Some( ( 10.0, None ) ), None, None,
+  );
+  claude_profile_core::account::write_cache_string( store.path(), name, "model_override", "opus" );
+  claude_profile_core::account::write_cache_bool( store.path(), name, "touch_idle", false );
+
+  let json : serde_json::Value = serde_json::from_str(
+    &std::fs::read_to_string( store.path().join( format!( "{name}.json" ) ) ).unwrap()
+  ).unwrap();
+  assert_eq!( json[ "model_override" ].as_str(), Some( "opus" ), "T05: model_override top-level tracked" );
+  assert_eq!( json[ "touch_idle" ].as_bool(), Some( false ), "T05: touch_idle top-level tracked" );
+  assert!( json.get( "cache" ).is_none(), "T05: no cache{{}} block may be (re)created: {json}" );
+  assert_eq!( json[ "host" ].as_str(), Some( "wbox" ), "T05: unrelated fields preserved" );
+
+  let entry = claude_profile_core::account::read_quota_cache( store.path(), name )
+    .expect( "merged read must succeed" );
+  assert_eq!( entry.model_override.as_deref(), Some( "opus" ) );
+  assert_eq!( entry.touch_idle, Some( false ) );
+  assert!( entry.five_hour.is_some(), "volatile (local) + low-churn (tracked) must merge" );
+}
+
+/// T06 (TSK-500): first post-upgrade write migrates a legacy `cache{}` block —
+/// volatile fields move to the local file, low-churn fields relocate to top level,
+/// and the `cache` key is pruned from the tracked JSON in one write.
+///
+/// AF2 — all three legs asserted: legacy readable pre-migration AND volatile
+/// present locally post-migration AND `cache` key absent from tracked JSON.
+#[ test ]
+fn t500_06_legacy_cache_migrates_prunes_and_preserves()
+{
+  let store = tempfile::tempdir().unwrap();
+  let name  = "legacy@acme.com";
+  let meta  = store.path().join( format!( "{name}.json" ) );
+  std::fs::write(
+    &meta,
+    r#"{"host":"wbox","cache":{"fetched_at":"2026-08-01T00:00:00Z","status":"ok","five_hour":{"left_pct":80.0},"history":[{"t":1000,"h5":[80.0,"2026-08-01T05:00:00Z"],"d7":null,"sn":null}],"model_override":"opus","org_created_at":"2025-11-30T00:00:00Z"}}"#,
+  ).unwrap();
+
+  // AF2 leg 1: legacy values readable BEFORE migration (fallback window).
+  let pre = claude_profile_core::account::read_quota_cache( store.path(), name )
+    .expect( "T06: legacy cache{} must be readable pre-migration" );
+  assert_eq!( pre.fetched_at, "2026-08-01T00:00:00Z", "T06: legacy fetched_at honored" );
+  assert_eq!( pre.org_created_at.as_deref(), Some( "2025-11-30T00:00:00Z" ) );
+  assert_eq!(
+    claude_profile_core::account::read_history( store.path(), name ).len(), 1,
+    "T06: legacy history readable pre-migration",
+  );
+
+  // First post-upgrade quota write triggers the migration.
+  claude_profile_core::account::write_quota_cache(
+    store.path(), name,
+    Some( ( 60.0, Some( "2026-08-16T21:00:00Z" ) ) ),
+    None,
+    None,
+  );
+
+  // AF2 leg 3: `cache` key absent from tracked; low-churn relocated top-level.
+  let tracked : serde_json::Value = serde_json::from_str( &std::fs::read_to_string( &meta ).unwrap() ).unwrap();
+  assert!( tracked.get( "cache" ).is_none(), "T06/AF2: cache key pruned from tracked JSON: {tracked}" );
+  assert_eq!(
+    tracked[ "org_created_at" ].as_str(), Some( "2025-11-30T00:00:00Z" ),
+    "T06: org_created_at retained tracked (TSK-368 not regressed)",
+  );
+  assert_eq!( tracked[ "model_override" ].as_str(), Some( "opus" ), "T06: model_override relocated top-level" );
+  assert_eq!( tracked[ "host" ].as_str(), Some( "wbox" ), "T06: unrelated fields preserved" );
+
+  // AF2 leg 2: volatile + history present in the local file post-migration.
+  let local = store.path().join( "-cache" ).join( format!( "{name}.json" ) );
+  let ljson : serde_json::Value = serde_json::from_str( &std::fs::read_to_string( &local ).unwrap() ).unwrap();
+  let u = ljson[ "five_hour" ][ "left_pct" ].as_f64().expect( "left_pct" );
+  assert!( ( u - 60.0 ).abs() < 1e-9, "T06: new fetch values in local file, got {u}" );
+  assert_eq!(
+    ljson[ "history" ].as_array().map( Vec::len ), Some( 1 ),
+    "T06: legacy history carried into the local file",
+  );
+
+  // Merged read: new volatile + preserved low-churn.
+  let post = claude_profile_core::account::read_quota_cache( store.path(), name )
+    .expect( "post-migration read must succeed" );
+  let ( util, _ ) = post.five_hour.expect( "five_hour" );
+  assert!( ( util - 60.0 ).abs() < f64::EPSILON );
+  assert_eq!( post.org_created_at.as_deref(), Some( "2025-11-30T00:00:00Z" ) );
+  assert_eq!( post.model_override.as_deref(), Some( "opus" ) );
+
+  // Steady state: a second write leaves tracked byte-identical (T01 property).
+  let before = std::fs::read( &meta ).unwrap();
+  claude_profile_core::account::write_quota_cache( store.path(), name, Some( ( 61.0, None ) ), None, None );
+  assert_eq!(
+    std::fs::read( &meta ).unwrap(), before,
+    "T06/T01: second write must leave tracked byte-identical",
   );
 }
 

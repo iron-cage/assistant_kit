@@ -13,7 +13,7 @@ use super::fetch::fetch_quota_for_list;
 use super::render::{ render_text, render_json, render_tsv, render_plain, extract_get_field };
 use super::live::execute_live_mode;
 use super::refresh::apply_refresh;
-use super::touch::apply_touch;
+use super::touch::{ apply_touch, derive_touched_recently };
 use super::params::parse_usage_params;
 use super::sort::find_next_for_strategy;
 use super::format::{ five_hour_left, seven_day_left, status_emoji };
@@ -144,7 +144,16 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
       format!( "cannot read credential store: {e}" ),
     ) )?;
   if params.only_active { acct_list.retain( |aq| aq.is_active ); }
-  let mut accounts = fetch_quota_for_list( &acct_list, &credential_store, &live_creds_file, false, params.trace, params.solo );
+
+  // Stale-first fetch reduction (task 499): with stalest::K (and not rotate::1 —
+  // rotation needs a full fresh ranking), select the K oldest-cache accounts before
+  // the HTTP loop. Placed after the only_active retain (BUG-245 ordering) so both
+  // pre-fetch reducers act on the same list; mutual exclusion at parse time keeps
+  // them from combining.
+  let now_secs = std::time::SystemTime::now().duration_since( std::time::UNIX_EPOCH ).unwrap_or_default().as_secs();
+  let stale_selected = super::stalest::reduction_applies( params.stalest, params.rotate )
+    .then( || super::stalest::select_stalest( &acct_list, &credential_store, params.stalest, params.max_age, now_secs ) );
+  let mut accounts = fetch_quota_for_list( &acct_list, &credential_store, &live_creds_file, false, params.trace, params.solo, stale_selected.as_ref() );
 
   // Retry-once per account on 401/403 auth errors or 429+locally-expired: if
   // refresh::1 and any account's quota fetch failed with an auth error OR a
@@ -168,6 +177,15 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
       apply_touch( aq, &credential_store, claude_paths.as_ref(), params.trace, params.imodel, params.effort, params.solo );
     }
   }
+
+  // Fix(BUG-488): carry the touched signal across invocations — a touch recorded in the
+  //   cache within TOUCH_GRACE_SECS renders "(touched)" even when this invocation ran no
+  //   touch (touch::0, or the skip guard fired), so a just-touched account never reads
+  //   as plain idle while the quota endpoint lags.
+  // Pitfall: must run unconditionally (outside the touch::1 block) and after it — the
+  //   touching invocation's own fresh flags are covered in-memory by apply_touch, but
+  //   every later invocation only has the cache to go on.
+  derive_touched_recently( &mut accounts, &credential_store );
 
   // ── Session-model override (BUG-244: .usage path, AC-32) ──────────────────
   // Must run BEFORE row-filter pipeline — filters can remove is_current from slice.

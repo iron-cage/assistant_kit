@@ -59,7 +59,13 @@ pub fn inject_synthetic_if_new( results : &mut Vec< AccountQuota >, row : Accoun
 /// When `trace` is `true`, one timestamped diagnostic line is written to stderr before reading
 /// each account's credentials and one after the final result is determined (including
 /// any `billing_type` override — see AC-31).
-#[ allow( clippy::too_many_lines ) ]
+///
+/// When `stale_selected` is `Some`, only the named accounts take the HTTP path; every
+/// other account renders from cache via `approximate_quota` (stale-first fetch
+/// reduction — `stalest::K`, task 499). `None` = no reduction (full-fleet fetch).
+// implicit_hasher: pub only for the test bridge — generic BuildHasher flexibility
+// has no consumer; every caller passes the default-hasher set from select_stalest.
+#[ allow( clippy::too_many_lines, clippy::implicit_hasher ) ]
 pub fn fetch_quota_for_list(
   accounts         : &[ crate::account::Account ],
   credential_store : &std::path::Path,
@@ -67,6 +73,7 @@ pub fn fetch_quota_for_list(
   stagger          : bool,
   trace            : bool,
   solo             : bool,
+  stale_selected   : Option< &std::collections::HashSet< String > >,
 ) -> Vec< AccountQuota >
 {
   // Read the live session token once (graceful degradation on any error).
@@ -105,6 +112,7 @@ pub fn fetch_quota_for_list(
       results.push( AccountQuota
       {
         fallback_reason : None,
+        touched_recently : false,
         name                  : acct.name.clone(),
         is_current            : false,
         is_active             : acct.is_active,
@@ -145,6 +153,7 @@ pub fn fetch_quota_for_list(
       results.push( AccountQuota
       {
         fallback_reason : None,
+        touched_recently : false,
         name                  : acct.name.clone(),
         is_current            : false,
         is_active             : acct.is_active,
@@ -207,6 +216,22 @@ pub fn fetch_quota_for_list(
       continue;
     }
 
+    // Stale gate: with stalest::K, only the K selected accounts take the HTTP path;
+    // the rest render from cache (task 499). Fires after G1/solo/G1b (those gates
+    // decide per-account safety and preempt reduction) and BEFORE cache-first, so a
+    // selected account's fetch is never silently downgraded by an unrelated guard
+    // ordering change. Non-selected rows reuse the same degradation path as G1b.
+    if let Some( selected ) = stale_selected
+    {
+      if !selected.contains( &acct.name )
+      {
+        if trace { eprintln!( "{}fetch  {}  stale-skip: not in stalest set (cache-rendered)", trace_ts(), acct.name ); }
+        let aq = approximate_quota( acct, credential_store, is_current, occupied_elsewhere.contains( &acct.name ), now_secs );
+        results.push( aq );
+        continue;
+      }
+    }
+
     // Cache-first guard: use recently-fetched cache without hitting the live API.
     // Prevents API flooding from rapid-succession .usage invocations — test suites and
     // polling scripts commonly invoke .usage every few seconds. Window tightened to 30s
@@ -224,6 +249,7 @@ pub fn fetch_quota_for_list(
       results.push( AccountQuota
       {
         fallback_reason : None,
+        touched_recently : false,
         name                  : acct.name.clone(),
         is_current,
         is_active             : acct.is_active,
@@ -345,9 +371,12 @@ pub fn fetch_quota_for_list(
         //   account-details fetch. Root cause: no call site ever wrote this field to cache.
         //   Pitfall: `ref acc` borrows `account` (does not move it) — the outer `account`
         //   variable is still needed unmoved at this function's final AccountQuota push.
+        // TSK-500: conditional write — the value practically never changes, and an
+        //   unconditional stamp would re-dirty the tracked file on every sweep,
+        //   breaking the zero-tracked-writes property of a successful fetch.
         if let Some( ref acc ) = account
         {
-          claude_profile_core::account::write_cache_string(
+          claude_profile_core::account::write_cache_string_if_changed(
             credential_store, &acct.name, "org_created_at", &acc.org_created_at,
           );
         }
@@ -396,6 +425,7 @@ pub fn fetch_quota_for_list(
       is_current,
       is_active             : acct.is_active,
       fallback_reason,
+      touched_recently : false,
       is_occupied_elsewhere : occupied_elsewhere.contains( &acct.name ),
       expires_at_ms         : acct.expires_at_ms,
       result,
@@ -438,7 +468,7 @@ pub( crate ) fn fetch_all_quota(
       ErrorCode::InternalError,
       format!( "cannot read credential store: {e}" ),
     ) )?;
-  Ok( fetch_quota_for_list( &accounts, credential_store, live_creds_file, stagger, trace, solo ) )
+  Ok( fetch_quota_for_list( &accounts, credential_store, live_creds_file, stagger, trace, solo, None ) )
 }
 
 /// Prepend a synthetic current-session row when no stored account matches the live token.
@@ -469,6 +499,7 @@ fn inject_synthetic_row_if_needed(
   inject_synthetic_if_new( results, AccountQuota
   {
     fallback_reason : None,
+    touched_recently : false,
     name                  : synthetic_name,
     is_current            : true,
     is_active             : false,
@@ -520,6 +551,7 @@ fn approximate_quota(
   AccountQuota
   {
     fallback_reason : None,
+    touched_recently : false,
     name                  : acct.name.clone(),
     is_current,
     is_active             : acct.is_active,

@@ -716,6 +716,10 @@ pub fn switch_account( name : &str, credential_store : &Path, paths : &ClaudePat
   std::fs::copy( &src, &tmp )?;
   std::fs::rename( &tmp, &creds )?;
 
+  // BUG-485 task/claude_profile/bug/485_refresh_presync_reread_never_applied.md — live
+  // credentials file (above) is updated before the active marker (below); a concurrent
+  // refresh_token_with_live_path's pre-sync guard can observe the old marker while this
+  // rename has already landed, corrupting the other account's store slot.
   // Update active marker after credentials are safely in place.
   let marker = credential_store.join( active_marker_filename() );
   std::fs::write( marker, name )?;
@@ -1166,6 +1170,9 @@ fn refresh_token_with_live_path(
   //   (now holding B's creds post-switch) to be written into A's credential store slot.
   // Pitfall: never cache a filesystem-derived boolean across a blocking call (subprocess,
   //   network I/O) in a multi-process environment — re-read at each use site instead.
+  // BUG-485 task/claude_profile/bug/485_refresh_presync_reread_never_applied.md — is_active_pre_sync
+  // is captured once here and reused unchanged across the read at line 1163 and the write it
+  // gates at line 1168, with no re-check immediately before the write. Not yet fixed.
   let is_active_pre_sync = {
     let marker = credential_store.join( active_marker_filename() );
     std::fs::read_to_string( &marker ).ok().is_some_and( |s| s.trim() == name )
@@ -2093,7 +2100,10 @@ pub fn read_access_token_from_file( path : &std::path::Path ) -> Result< String,
 
 // ── Quota cache ──────────────────────────────────────────────────────────────
 
-/// Cached quota entry read from `{name}.json` `"cache"` key.
+/// Cached quota entry — volatile fields from the untracked local cache file
+/// `-cache/{name}.json`, low-churn metadata from top-level keys of the tracked
+/// `{name}.json`; a legacy tracked `cache{}` block is honored as pre-migration
+/// fallback for both groups (TSK-500).
 #[ derive( Debug ) ]
 pub struct QuotaCacheEntry
 {
@@ -2122,10 +2132,65 @@ pub struct QuotaCacheEntry
   pub org_created_at    : Option< String >,
 }
 
-/// Write quota cache to `{name}.json` using read-merge-write.
+/// Path of the untracked local quota cache file for `name` (TSK-500).
 ///
-/// Persists the last successful fetch result so it can be used as fallback
-/// when the usage API is unavailable.  Failures are silently ignored.
+/// Lives in a hyphen-prefixed `-cache/` directory inside the credential store so
+/// the global `-*` gitignore rule keeps volatile quota churn out of git.
+fn local_cache_path( credential_store : &std::path::Path, name : &str ) -> std::path::PathBuf
+{
+  credential_store.join( "-cache" ).join( format!( "{name}.json" ) )
+}
+
+/// Parse a JSON file into a `Value`; `None` when absent, unreadable, or malformed.
+fn read_json_value( path : &std::path::Path ) -> Option< serde_json::Value >
+{
+  let text = std::fs::read_to_string( path ).ok()?;
+  serde_json::from_str( &text ).ok()
+}
+
+/// Dissolve a legacy tracked `cache{}` block — TSK-500's one-time migration write.
+///
+/// Low-churn metadata keys relocate to top level (an existing top-level value
+/// wins — it is newer), volatile quota fields are dropped with the block (the
+/// caller re-persists fresh values to the local file and adopts the returned
+/// legacy history), and the `cache` key is removed entirely. Returns the removed
+/// legacy object so the caller can honor it; `None` — with zero tracked writes —
+/// when the store is already migrated.
+fn migrate_legacy_cache(
+  credential_store : &std::path::Path,
+  name             : &str,
+) -> Option< serde_json::Map< String, serde_json::Value > >
+{
+  let meta_path = credential_store.join( format!( "{name}.json" ) );
+  let mut snapshot = read_json_value( &meta_path )?;
+  let obj = snapshot.as_object_mut()?;
+  if !obj.get( "cache" ).is_some_and( serde_json::Value::is_object )
+  {
+    return None;
+  }
+  let Some( serde_json::Value::Object( legacy ) ) = obj.remove( "cache" ) else { return None };
+  for key in [ "model_override", "last_touch_at", "touch_idle", "org_created_at" ]
+  {
+    if let Some( v ) = legacy.get( key )
+    {
+      if !obj.contains_key( key )
+      {
+        obj.insert( key.to_string(), v.clone() );
+      }
+    }
+  }
+  let _ = std::fs::write( &meta_path, serde_json::to_string_pretty( &snapshot ).map( | s | s + "\n" ).unwrap_or_default() );
+  Some( legacy )
+}
+
+/// Write the volatile quota cache to the untracked local file `-cache/{name}.json`.
+///
+/// Persists the last successful fetch result so it can be used as fallback when
+/// the usage API is unavailable. The tracked `{name}.json` is never rewritten on
+/// the steady-state path — a successful fetch performs zero writes to tracked
+/// credential files (TSK-500's defining property). The one exception is the first
+/// call against a store still carrying a legacy `cache{}` block, which triggers
+/// `migrate_legacy_cache`'s single transition write. Failures are silently ignored.
 #[ inline ]
 pub fn write_quota_cache(
   credential_store  : &std::path::Path,
@@ -2135,81 +2200,89 @@ pub fn write_quota_cache(
   seven_day_sonnet  : Option< ( f64, Option< &str > ) >,
 )
 {
-  let meta_path = credential_store.join( format!( "{name}.json" ) );
-  let mut snapshot = std::fs::read_to_string( &meta_path )
-    .ok()
-    .and_then( |s| serde_json::from_str::< serde_json::Value >( &s ).ok() )
-    .unwrap_or_else( || serde_json::json!( {} ) );
-  if let Some( obj ) = snapshot.as_object_mut()
+  let legacy = migrate_legacy_cache( credential_store, name );
+  let local_path = local_cache_path( credential_store, name );
+  let prior = read_json_value( &local_path );
+  let mut cache = serde_json::json!( { "fetched_at": chrono_now_utc(), "status": "ok" } );
+  if let Some( co ) = cache.as_object_mut()
   {
-    let now = chrono_now_utc();
-    let mut cache = serde_json::json!( { "fetched_at": now, "status": "ok" } );
-    if let Some( co ) = cache.as_object_mut()
+    if let Some( ( u, r ) ) = five_hour
     {
-      if let Some( ( u, r ) ) = five_hour
-      {
-        co.insert( "five_hour".into(), period_json( u, r ) );
-      }
-      if let Some( ( u, r ) ) = seven_day
-      {
-        co.insert( "seven_day".into(), period_json( u, r ) );
-      }
-      if let Some( ( u, r ) ) = seven_day_sonnet
-      {
-        co.insert( "seven_day_sonnet".into(), period_json( u, r ) );
-      }
-      // Preserve model_override, touch state, and measurement history from prior cache.
-      // Feature 040: "history" must survive write_quota_cache or every successful fetch
-      //   would clobber the stored ring buffer (verification finding F4-3).
-      if let Some( prev ) = obj.get( "cache" ).and_then( |c| c.as_object() )
-      {
-        if let Some( v ) = prev.get( "model_override" ) { co.insert( "model_override".into(), v.clone() ); }
-        if let Some( v ) = prev.get( "last_touch_at" )  { co.insert( "last_touch_at".into(), v.clone() ); }
-        if let Some( v ) = prev.get( "touch_idle" )     { co.insert( "touch_idle".into(), v.clone() ); }
-        if let Some( v ) = prev.get( "history" )        { co.insert( "history".into(), v.clone() ); }
-        // Fix(BUG-327): org_created_at is written via write_cache_string() at fetch.rs's
-        //   live-fetch success site — a sibling call independent of this function's own
-        //   five_hour/seven_day/seven_day_sonnet args — so it must be preserve-forwarded
-        //   here too, or every OTHER write_quota_cache() caller (api_switch.rs, touch.rs,
-        //   refresh.rs) would silently erase it on their next cache write.
-        if let Some( v ) = prev.get( "org_created_at" ) { co.insert( "org_created_at".into(), v.clone() ); }
-      }
+      co.insert( "five_hour".into(), period_json( u, r ) );
     }
-    obj.insert( "cache".to_string(), cache );
+    if let Some( ( u, r ) ) = seven_day
+    {
+      co.insert( "seven_day".into(), period_json( u, r ) );
+    }
+    if let Some( ( u, r ) ) = seven_day_sonnet
+    {
+      co.insert( "seven_day_sonnet".into(), period_json( u, r ) );
+    }
+    // Feature 040: "history" must survive write_quota_cache or every successful fetch
+    //   would clobber the stored ring buffer (verification finding F4-3). The prior
+    //   local ring wins; a just-dissolved legacy block seeds it on the first
+    //   post-upgrade write so continuity survives the TSK-500 migration.
+    let history = prior.as_ref().and_then( | p | p.get( "history" ) ).cloned()
+      .or_else( || legacy.as_ref().and_then( | l | l.get( "history" ) ).cloned() );
+    if let Some( h ) = history
+    {
+      co.insert( "history".into(), h );
+    }
   }
-  let _ = std::fs::write( &meta_path, serde_json::to_string_pretty( &snapshot ).map( | s | s + "\n" ).unwrap_or_default() );
+  if let Some( dir ) = local_path.parent()
+  {
+    let _ = std::fs::create_dir_all( dir );
+  }
+  let _ = std::fs::write( &local_path, serde_json::to_string_pretty( &cache ).map( | s | s + "\n" ).unwrap_or_default() );
 }
 
-/// Read cached quota from `{name}.json`.
+/// Read cached quota, merging the local volatile file with tracked metadata.
 ///
-/// Returns `None` when the file is absent, unparseable, or has no `"cache"` key.
+/// Volatile fields (`fetched_at`, `status`, periods) come from the untracked
+/// local `-cache/{name}.json`; low-churn metadata (`model_override`,
+/// `last_touch_at`, `touch_idle`, `org_created_at`) from top-level keys of the
+/// tracked `{name}.json`. A legacy tracked `cache{}` block (pre-TSK-500 store)
+/// is honored as fallback for both groups. Returns `None` when no volatile
+/// cache exists in either location — the pre-split "no cache" contract.
 #[ inline ]
 pub fn read_quota_cache( credential_store : &std::path::Path, name : &str ) -> Option< QuotaCacheEntry >
 {
-  let meta_path = credential_store.join( format!( "{name}.json" ) );
-  let text = std::fs::read_to_string( &meta_path ).ok()?;
-  let val : serde_json::Value = serde_json::from_str( &text ).ok()?;
-  let cache = val.get( "cache" )?.as_object()?;
-  let fetched_at = cache.get( "fetched_at" )?.as_str()?.to_string();
+  let tracked = read_json_value( &credential_store.join( format!( "{name}.json" ) ) );
+  let legacy = tracked.as_ref().and_then( | t | t.get( "cache" ) ).and_then( | c | c.as_object() );
+  let local = read_json_value( &local_cache_path( credential_store, name ) );
+  let volatile = match local.as_ref().and_then( | l | l.as_object() ).filter( | o | o.contains_key( "fetched_at" ) )
+  {
+    Some( o ) => o,
+    None => legacy?,
+  };
+  let fetched_at = volatile.get( "fetched_at" )?.as_str()?.to_string();
+  // Low-churn lookup: tracked top-level first (newer), legacy cache{} fallback.
+  let low = | key : &str |
+  {
+    tracked.as_ref().and_then( | t | t.get( key ) )
+      .or_else( || legacy.and_then( | l | l.get( key ) ) )
+  };
   Some( QuotaCacheEntry
   {
     fetched_at,
-    five_hour        : read_period( cache, "five_hour" ),
-    seven_day        : read_period( cache, "seven_day" ),
-    seven_day_sonnet : read_period( cache, "seven_day_sonnet" ),
-    model_override   : cache.get( "model_override" ).and_then( |v| v.as_str() ).map( str::to_string ),
-    last_touch_at    : cache.get( "last_touch_at" ).and_then( |v| v.as_str() ).map( str::to_string ),
-    touch_idle       : cache.get( "touch_idle" ).and_then( serde_json::Value::as_bool ),
-    // Fix(BUG-327): read back org_created_at written by write_cache_string(); defaults to
-    //   None gracefully for pre-existing cache entries that predate this field (T06).
-    org_created_at   : cache.get( "org_created_at" ).and_then( |v| v.as_str() ).map( str::to_string ),
+    five_hour        : read_period( volatile, "five_hour" ),
+    seven_day        : read_period( volatile, "seven_day" ),
+    seven_day_sonnet : read_period( volatile, "seven_day_sonnet" ),
+    model_override   : low( "model_override" ).and_then( | v | v.as_str() ).map( str::to_string ),
+    last_touch_at    : low( "last_touch_at" ).and_then( | v | v.as_str() ).map( str::to_string ),
+    touch_idle       : low( "touch_idle" ).and_then( serde_json::Value::as_bool ),
+    // Fix(BUG-327): org_created_at written by write_cache_string(); defaults to
+    //   None gracefully for stores that predate this field (T06).
+    org_created_at   : low( "org_created_at" ).and_then( | v | v.as_str() ).map( str::to_string ),
   } )
 }
 
-/// Write a single field into the cache object in `{name}.json` (read-merge-write).
+/// Write a single low-churn metadata field as a top-level key of `{name}.json`
+/// (read-merge-write).
 ///
-/// Used by model override and touch persistence to update one cache field
-/// without clobbering the quota data written by `write_quota_cache`.
+/// Used by model override, touch persistence, and org-creation stamping — the
+/// tracked metadata that must survive across hosts via git, unlike the volatile
+/// quota cache which lives in the untracked local file (TSK-500).
 #[ inline ]
 pub fn write_cache_field(
   credential_store : &std::path::Path,
@@ -2219,17 +2292,10 @@ pub fn write_cache_field(
 )
 {
   let meta_path = credential_store.join( format!( "{name}.json" ) );
-  let mut snapshot = std::fs::read_to_string( &meta_path )
-    .ok()
-    .and_then( |s| serde_json::from_str::< serde_json::Value >( &s ).ok() )
-    .unwrap_or_else( || serde_json::json!( {} ) );
+  let mut snapshot = read_json_value( &meta_path ).unwrap_or_else( || serde_json::json!( {} ) );
   if let Some( obj ) = snapshot.as_object_mut()
   {
-    let cache = obj.entry( "cache" ).or_insert_with( || serde_json::json!( {} ) );
-    if let Some( co ) = cache.as_object_mut()
-    {
-      co.insert( key.to_string(), value );
-    }
+    obj.insert( key.to_string(), value );
   }
   let _ = std::fs::write( &meta_path, serde_json::to_string_pretty( &snapshot ).map( | s | s + "\n" ).unwrap_or_default() );
 }
@@ -2256,6 +2322,36 @@ pub fn write_cache_bool(
 )
 {
   write_cache_field( credential_store, name, key, serde_json::Value::Bool( value ) );
+}
+
+/// Write a tracked metadata string only when its current value differs (TSK-500).
+///
+/// Keeps the steady-state fetch path at zero tracked writes: `org_created_at`
+/// is stamped on every successful fetch, but its value practically never
+/// changes — an unconditional write would re-dirty the tracked file every
+/// sweep. Reads the top-level key first, a legacy `cache{}` block as
+/// pre-migration fallback.
+#[ inline ]
+pub fn write_cache_string_if_changed(
+  credential_store : &std::path::Path,
+  name             : &str,
+  key              : &str,
+  value            : &str,
+)
+{
+  let current = read_json_value( &credential_store.join( format!( "{name}.json" ) ) )
+    .and_then( | t |
+    {
+      t.get( key )
+        .or_else( || t.get( "cache" ).and_then( | c | c.get( key ) ) )
+        .and_then( | v | v.as_str() )
+        .map( str::to_string )
+    } );
+  if current.as_deref() == Some( value )
+  {
+    return;
+  }
+  write_cache_string( credential_store, name, key, value );
 }
 
 /// Build a period cache JSON value from utilization + optional `resets_at`.
@@ -2360,7 +2456,8 @@ pub fn parse_iso_utc_secs( s : &str ) -> Option< u64 >
 
 // ── Measurement history ───────────────────────────────────────────────────────
 
-/// Timestamped quota measurement stored in `cache.history[]`.
+/// Timestamped quota measurement stored in the local cache file's `history[]`
+/// (`-cache/{name}.json`; legacy stores: tracked `cache.history[]`).
 ///
 /// Each successful fetch appends one entry; the array is capped at 10 entries (FIFO).
 /// Used by the approximation module to fit a polynomial when the API is unavailable
@@ -2388,9 +2485,10 @@ fn parse_history_period( val : &serde_json::Value ) -> Option< ( f64, String ) >
   Some( ( u, r ) )
 }
 
-/// Read measurement history from `cache.history[]` in `{name}.json` (Feature 040 AC-11).
+/// Read measurement history (Feature 040 AC-11) — local `-cache/{name}.json`
+/// first, a legacy tracked `cache.history[]` as pre-migration fallback (TSK-500).
 ///
-/// Returns an empty `Vec` when the file is absent, unparseable, or has no `"history"` key —
+/// Returns an empty `Vec` when neither location has a `"history"` array —
 /// backward compatible with old cache format from Feature 033.
 #[ must_use ]
 #[ inline ]
@@ -2399,10 +2497,21 @@ pub fn read_history(
   name             : &str,
 ) -> Vec< HistoryEntry >
 {
-  let meta_path = credential_store.join( format!( "{name}.json" ) );
-  let Ok( text ) = std::fs::read_to_string( &meta_path ) else { return vec![] };
-  let val : serde_json::Value = match serde_json::from_str( &text ) { Ok( v ) => v, Err( _ ) => return vec![] };
-  let Some( arr ) = val.get( "cache" ).and_then( |c| c.get( "history" ) ).and_then( |h| h.as_array() ) else { return vec![] };
+  let local = read_json_value( &local_cache_path( credential_store, name ) );
+  let tracked;
+  let arr = if let Some( a ) = local.as_ref().and_then( | l | l.get( "history" ) ).and_then( | h | h.as_array() )
+  {
+    a
+  }
+  else
+  {
+    tracked = read_json_value( &credential_store.join( format!( "{name}.json" ) ) );
+    let Some( a ) = tracked.as_ref()
+      .and_then( | t | t.get( "cache" ) )
+      .and_then( | c | c.get( "history" ) )
+      .and_then( | h | h.as_array() ) else { return vec![] };
+    a
+  };
   arr.iter().filter_map( |entry|
   {
     let t = entry.get( "t" )?.as_u64()?;
@@ -2426,11 +2535,13 @@ fn history_period_json( period : Option< ( f64, &str ) > ) -> serde_json::Value
   }
 }
 
-/// Append a quota measurement to `cache.history[]` in `{name}.json` (Feature 040 AC-01, AC-02, AC-13).
+/// Append a quota measurement to `history[]` in the local `-cache/{name}.json`
+/// (Feature 040 AC-01, AC-02, AC-13; TSK-500).
 ///
 /// - Enforces a 10-entry FIFO ring buffer: oldest entry evicted when buffer is full (AC-02).
 /// - Overwrites the last entry when `t` matches its timestamp to prevent fast-cycle fill (AC-13).
-/// - Creates `cache.history` when absent (first measurement for this account).
+/// - Seeds from a legacy tracked `cache.history[]` when the local file has none yet, so
+///   ring continuity survives the TSK-500 upgrade; the tracked file is never written.
 /// - Write failures are silently ignored — quota display is non-critical (matches Feature 033 pattern).
 #[ inline ]
 pub fn write_history_entry(
@@ -2442,53 +2553,60 @@ pub fn write_history_entry(
   sn               : Option< ( f64, &str ) >,
 )
 {
-  let meta_path = credential_store.join( format!( "{name}.json" ) );
-  let mut snapshot = std::fs::read_to_string( &meta_path )
-    .ok()
-    .and_then( |s| serde_json::from_str::< serde_json::Value >( &s ).ok() )
-    .unwrap_or_else( || serde_json::json!( {} ) );
+  let local_path = local_cache_path( credential_store, name );
+  let mut snapshot = read_json_value( &local_path ).unwrap_or_else( || serde_json::json!( {} ) );
   if let Some( obj ) = snapshot.as_object_mut()
   {
-    let cache = obj.entry( "cache" ).or_insert_with( || serde_json::json!( {} ) );
-    if let Some( co ) = cache.as_object_mut()
+    if !obj.contains_key( "history" )
     {
-      let history = co.entry( "history" ).or_insert_with( || serde_json::json!( [] ) );
-      if let Some( arr ) = history.as_array_mut()
+      // Legacy seed: adopt a pre-migration tracked ring (read-only on the tracked file).
+      let legacy = read_json_value( &credential_store.join( format!( "{name}.json" ) ) )
+        .and_then( | tr | tr.get( "cache" ).and_then( | c | c.get( "history" ) ).cloned() );
+      if let Some( h ) = legacy
       {
-        let entry = serde_json::json!(
+        obj.insert( "history".into(), h );
+      }
+    }
+    let history = obj.entry( "history" ).or_insert_with( || serde_json::json!( [] ) );
+    if let Some( arr ) = history.as_array_mut()
+    {
+      let entry = serde_json::json!(
+      {
+        "t"  : t,
+        "h5" : history_period_json( h5 ),
+        "d7" : history_period_json( d7 ),
+        "sn" : history_period_json( sn ),
+      } );
+      // AC-13: duplicate-timestamp dedup — overwrite last entry when same Unix second.
+      if let Some( last ) = arr.last()
+      {
+        if last.get( "t" ).and_then( serde_json::Value::as_u64 ) == Some( t )
         {
-          "t"  : t,
-          "h5" : history_period_json( h5 ),
-          "d7" : history_period_json( d7 ),
-          "sn" : history_period_json( sn ),
-        } );
-        // AC-13: duplicate-timestamp dedup — overwrite last entry when same Unix second.
-        if let Some( last ) = arr.last()
-        {
-          if last.get( "t" ).and_then( serde_json::Value::as_u64 ) == Some( t )
-          {
-            let len = arr.len();
-            arr[ len - 1 ] = entry;
-          }
-          else
-          {
-            arr.push( entry );
-          }
+          let len = arr.len();
+          arr[ len - 1 ] = entry;
         }
         else
         {
           arr.push( entry );
         }
-        // AC-02: ring buffer FIFO cap — evict oldest (index 0) when over 10 entries.
-        while arr.len() > 10
-        {
-          arr.remove( 0 );
-        }
+      }
+      else
+      {
+        arr.push( entry );
+      }
+      // AC-02: ring buffer FIFO cap — evict oldest (index 0) when over 10 entries.
+      while arr.len() > 10
+      {
+        arr.remove( 0 );
       }
     }
   }
+  if let Some( dir ) = local_path.parent()
+  {
+    let _ = std::fs::create_dir_all( dir );
+  }
   let _ = std::fs::write(
-    &meta_path,
+    &local_path,
     serde_json::to_string_pretty( &snapshot ).map( |s| s + "\n" ).unwrap_or_default(),
   );
 }
