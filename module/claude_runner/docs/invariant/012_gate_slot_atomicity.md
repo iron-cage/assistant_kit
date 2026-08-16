@@ -16,7 +16,7 @@ When `wait_for_session_slot()` evaluates admission for a candidate slot index, i
 | Live count `< max` AND slot reservation at the count-derived index succeeds | Admitted — proceed to spawn the session |
 | Live count `>= max` | Not admitted — no reservation attempted; falls to wait-and-retry |
 | Live count `< max` BUT slot reservation at the count-derived index fails (another racer already holds it) | Falls back to scanning every other index in `0..max`; admitted on the first one that succeeds (see Provenance : BUG-404) — not admitted only if every index in `0..max` is unavailable, in which case it falls to wait-and-retry exactly as the `>= max` case does |
-| A losing reservation attempt (at any index tried, count-derived or fallback) finds the existing slot's owning PID no longer alive (absent from `/proc`, or present only as an exited-but-unreaped zombie — state `Z`; see Provenance : BUG-479) | Slot is reclaimed via a ticket-arbitrated atomic handoff in the same call — race-free against other simultaneous reclaimers, and self-healing **even when a reclaiming caller is itself interrupted**, by walking the resulting chain of orphaned tickets (see Provenance : BUG-392, BUG-402) |
+| A losing reservation attempt (at any index tried, count-derived or fallback) finds the existing slot's owning PID no longer alive (absent from `/proc`; present only as an exited-but-unreaped zombie — state `Z`, see Provenance : BUG-479; or its number no longer identifying the recording process itself — occupied only by a non-leader thread of an unrelated process (`Tgid != pid`) or by a different, later process incarnation, see Provenance : BUG-488) | Slot is reclaimed via a ticket-arbitrated atomic handoff in the same call — race-free against other simultaneous reclaimers, and self-healing **even when a reclaiming caller is itself interrupted**, by walking the resulting chain of orphaned tickets (see Provenance : BUG-392, BUG-402) |
 | A losing reservation attempt finds the existing slot's owning PID still alive, `CLR_GATE_STALE_SECS` is set, AND the owner's recorded `since` is older than that threshold | Owner is treated as reclaim-eligible — the SAME ticket-arbitrated atomic handoff used for a dead owner runs for this index (see Provenance : BUG-400) |
 | A losing reservation attempt finds the existing slot's owning PID still alive, and either `CLR_GATE_STALE_SECS` is unset or the owner's recorded `since` has not yet exceeded it | Not admitted — reported as `HeldByLive`; unchanged from the pre-BUG-400 default |
 
@@ -46,9 +46,10 @@ fn slot_path( dir : &Path, index : u32 ) -> PathBuf
 
 **2. `claim_slot_file()` — atomic kernel-arbitrated claim, published as one unit with its content:**
 ```rust
-fn claim_slot_file( path : &Path, pid : u32, since : u64 ) -> bool
+fn claim_slot_file( path : &Path, pid : u32, since : u64, starttime : Option< u64 > ) -> bool
 {
-  let content = format!( r#"{{"pid":{pid},"since":{since}}}"# );
+  let starttime_field = starttime.map_or_else( String::new, | st | format!( r#","starttime":{st}"# ) );
+  let content = format!( r#"{{"pid":{pid},"since":{since}{starttime_field}}}"# );
   let dir     = path.parent().unwrap_or_else( || Path::new( "." ) );
   let tmp     = dir.join( format!( "claim_tmp_{pid}_{since}" ) );
   if std::fs::write( &tmp, &content ).is_err()
@@ -60,7 +61,7 @@ fn claim_slot_file( path : &Path, pid : u32, since : u64 ) -> bool
   claimed
 }
 ```
-The claim and its content are published as one atomic unit (Fix(BUG-407)): the full content is written to a uniquely-named temp file first, then `hard_link()`s it onto `path`. `hard_link()` maps to the same `O_EXCL`-equivalent semantics `create_new(true)` (`O_CREAT | O_EXCL`) already relied on — it fails with `AlreadyExists` if `path` already exists, preserving the identical exactly-one-winner arbitration every call site depends on. Unlike the prior `create_new` + separate `write!()` shape, `path` never becomes observable to a concurrent reader before its content is already complete, because `path` does not exist at all until the content behind it is already whole — see "Claim-vs-content atomicity" below.
+The claim and its content are published as one atomic unit (Fix(BUG-407)): the full content is written to a uniquely-named temp file first, then `hard_link()`s it onto `path`. `hard_link()` maps to the same `O_EXCL`-equivalent semantics `create_new(true)` (`O_CREAT | O_EXCL`) already relied on — it fails with `AlreadyExists` if `path` already exists, preserving the identical exactly-one-winner arbitration every call site depends on. Unlike the prior `create_new` + separate `write!()` shape, `path` never becomes observable to a concurrent reader before its content is already complete, because `path` does not exist at all until the content behind it is already whole — see "Claim-vs-content atomicity" below. The record additionally carries the writer's own start time when it was readable at write time (Fix(BUG-488)) — binding the claim to the writing process incarnation, not just its recyclable PID number; `None` (start time unreadable) writes the legacy two-field shape.
 
 **Claim-vs-content atomicity (Fix(BUG-407)):** `create_new`'s atomicity alone only guarantees exactly-one-winner over the *path* — it says nothing about whether the *content* behind that path is complete at the moment a concurrent reader can already see the path exists. The prior two-step shape (`create_new(true).open(path)` succeeding, then a separate `write!()`) left a window where a process terminated between the two steps (`SIGKILL`, OOM, host crash, container preemption) leaves `path` existing on disk, permanently, with no (or truncated) content: `read_slot_owner_record()` returns `None` for it forever, and `acquire_slot()`'s `None` arm (Fix(BUG-396) below) denies `HeldByLive` unconditionally, with no owner PID to check liveness of and no reclaim path ever engaging — this was possible at ANY of `claim_slot_file()`'s call sites, including the single most common one (the primary fresh-claim attempt, no reclaim precondition needed at all). The write-to-temp-then-`hard_link()` rewrite closes that window: `path` is only ever created by `hard_link()`, and only once its content already exists in full at `tmp`. There is no observable intermediate state.
 
@@ -68,21 +69,21 @@ The claim and its content are published as one atomic unit (Fix(BUG-407)): the f
 
 **3. `acquire_slot()` — claim, or reclaim a dead owner's slot by walking the reclaim-ticket chain via atomic handoff:**
 ```rust
-fn acquire_slot( dir : &Path, index : u32, pid : u32, since : u64 ) -> Result< (), SlotDenialCause >
+fn acquire_slot( dir : &Path, index : u32, pid : u32, since : u64, starttime : Option< u64 > ) -> Result< (), SlotDenialCause >
 {
   let path = slot_path( dir, index );
-  if claim_slot_file( &path, pid, since )
+  if claim_slot_file( &path, pid, since, starttime )
   {
     return Ok( () );
   }
-  let Some( ( owner, owner_since ) ) = read_slot_owner_record( &path )
+  let Some( ( owner, owner_since, owner_starttime ) ) = read_slot_owner_record( &path )
   else
   {
     return Err( SlotDenialCause::HeldByLive );
   };
   let is_stale = gate_stale_secs()
     .is_some_and( | threshold | unix_now().saturating_sub( owner_since ) > threshold );
-  if pid_alive( owner ) && !is_stale
+  if pid_alive( owner, owner_starttime ) && !is_stale
   {
     return Err( SlotDenialCause::HeldByLive );
   }
@@ -92,10 +93,10 @@ fn acquire_slot( dir : &Path, index : u32, pid : u32, since : u64 ) -> Result< (
   loop
   {
     let ticket = dir.join( format!( "reclaim_{index}_{ticket_owner}_{ticket_since}.lock" ) );
-    if claim_slot_file( &ticket, pid, since )
+    if claim_slot_file( &ticket, pid, since, starttime )
     {
       let tmp = dir.join( format!( "reclaim_tmp_{index}_{pid}" ) );
-      if force_tmp_claim_fail_once() || !claim_slot_file( &tmp, pid, since )
+      if force_tmp_claim_fail_once() || !claim_slot_file( &tmp, pid, since, starttime )
       {
         let _ = std::fs::remove_file( &ticket );
         return Err( SlotDenialCause::LostReclaimRace );
@@ -111,16 +112,16 @@ fn acquire_slot( dir : &Path, index : u32, pid : u32, since : u64 ) -> Result< (
         Err( SlotDenialCause::LostReclaimRace )
       };
     }
-    let Some( ( next_claimant, next_claimant_since ) ) = read_slot_owner_record( &ticket )
+    let Some( ( next_claimant, next_claimant_since, next_claimant_starttime ) ) = read_slot_owner_record( &ticket )
     else
     {
       return Err( SlotDenialCause::LostReclaimRace );
     };
-    if pid_alive( next_claimant )
+    if pid_alive( next_claimant, next_claimant_starttime )
     {
       return Err( SlotDenialCause::LostReclaimRace );
     }
-    let Some( ( current_owner, _ ) ) = read_slot_owner_record( &path )
+    let Some( ( current_owner, _, _ ) ) = read_slot_owner_record( &path )
     else
     {
       return Err( SlotDenialCause::HeldByLive );
@@ -140,7 +141,7 @@ The reclaim branch (Fix(BUG-392)) reuses `claim_slot_file()`'s `create_new` atom
 
 **Self-collision cleanup (Fix(BUG-405)):** winning the ticket is not the same as completing admission — the winner still has to win the temp-file claim and then `rename()` it onto the slot path, and either can fail (e.g. a transient fs fault). `pid`/`since` are fixed for the caller's entire `wait_for_session_slot()` invocation, reused unchanged across every polling attempt, so if the ticket were left in place after such a failure, the caller's own next retry would recompute the identical ticket path, find it already claimed, read back its own `(pid, since)` as `next_claimant`, and observe `pid_alive()` trivially `true` for its own still-running self — a permanent, self-inflicted `LostReclaimRace` on every subsequent retry, indistinguishable from genuine contention but with no other contender involved at all. Both non-admission returns in the ticket-win branch now remove the ticket they just won before returning, so the next retry re-contends this same generation fresh rather than reading back its own abandoned claim. This is orthogonal to the permanent-retention rule above: that rule governs the ticket left behind by a SUCCESSFUL rename (never removed, by design); this cleanup fires only when the winner is confirmed to have never reached that success.
 
-**Staleness threshold (Fix(BUG-400)):** `pid_alive(owner)` alone cannot distinguish a healthy, actively-progressing session from one that is alive but permanently stuck (hung, deadlocked, suspended) — both read identically as "still alive", so neither could ever be reclaimed. The reclaim-eligibility test above (`pid_alive( owner ) && !is_stale`) closes that gap: `gate_stale_secs()` reads `CLR_GATE_STALE_SECS`; unlike `gate_poll_secs()`, it has no hardcoded default and returns `None` when the var is unset or unparseable, so the feature is a strict opt-in — a caller that never sets the var observes byte-for-byte the same `HeldByLive` denial as before this fix, for any owner age. When the var IS set, `is_stale` compares `unix_now().saturating_sub( owner_since )` (the slot's recorded elapsed age) against the threshold; once it is exceeded, `pid_alive( owner ) && !is_stale` evaluates to `false` even though the owner is genuinely alive, and control falls through into the exact same ticket-arbitrated reclaim path (`reclaim_test_delay()` onward, Fix(BUG-392)/(BUG-402)/(BUG-405)) a dead owner already uses — no separate mechanism, no new `SlotDenialCause` variant: staleness only changes which branch is taken at this one `if`, never how the reclaim itself is arbitrated. This closes the gap where a live-but-stalled (hung/deadlocked/SIGSTOPped) holder blocked every waiter indefinitely even with capacity available elsewhere, since the waiter's candidate index is deterministically re-derived from the same live count each poll, making the collision sticky rather than a one-off; see Provenance : BUG-400.
+**Staleness threshold (Fix(BUG-400)):** `pid_alive( owner, owner_starttime )` alone cannot distinguish a healthy, actively-progressing session from one that is alive but permanently stuck (hung, deadlocked, suspended) — both read identically as "still alive", so neither could ever be reclaimed. The reclaim-eligibility test above (`pid_alive( owner, owner_starttime ) && !is_stale`) closes that gap: `gate_stale_secs()` reads `CLR_GATE_STALE_SECS`; unlike `gate_poll_secs()`, it has no hardcoded default and returns `None` when the var is unset or unparseable, so the feature is a strict opt-in — a caller that never sets the var observes byte-for-byte the same `HeldByLive` denial as before this fix, for any owner age. When the var IS set, `is_stale` compares `unix_now().saturating_sub( owner_since )` (the slot's recorded elapsed age) against the threshold; once it is exceeded, `pid_alive( owner, owner_starttime ) && !is_stale` evaluates to `false` even though the owner is genuinely alive, and control falls through into the exact same ticket-arbitrated reclaim path (`reclaim_test_delay()` onward, Fix(BUG-392)/(BUG-402)/(BUG-405)) a dead owner already uses — no separate mechanism, no new `SlotDenialCause` variant: staleness only changes which branch is taken at this one `if`, never how the reclaim itself is arbitrated. This closes the gap where a live-but-stalled (hung/deadlocked/SIGSTOPped) holder blocked every waiter indefinitely even with capacity available elsewhere, since the waiter's candidate index is deterministically re-derived from the same live count each poll, making the collision sticky rather than a one-off; see Provenance : BUG-400.
 
 **4. Admission call site in `wait_for_session_slot()`:**
 ```rust
@@ -157,13 +158,15 @@ let claim = if has_capacity
   // then fall back to every other index in 0..max — a denial at the single
   // count-derived index does not mean no index anywhere is available
   // (see Provenance : BUG-404).
-  let mut result = acquire_slot( &dir, count_u32, pid, since );
+  // my_starttime = proc_starttime( pid ), captured once per wait_for_session_slot()
+  // call — recorded into every slot/ticket/waiter artifact (Fix(BUG-488)).
+  let mut result = acquire_slot( &dir, count_u32, pid, since, my_starttime );
   if result.is_err()
   {
     for candidate in 0..max
     {
       if candidate == count_u32 { continue; }
-      result = acquire_slot( &dir, candidate, pid, since );
+      result = acquire_slot( &dir, candidate, pid, since, my_starttime );
       if result.is_ok() { break; }
     }
   }
@@ -180,7 +183,8 @@ if let Some( Ok( () ) ) = claim
 ```
 
 <!-- BUG-479 task/claude_runner/bug/479_zombie_blind_pid_liveness.md — fixed: pid_alive() reads the /proc/{pid}/stat state field (state ∉ {Z}) instead of bare /proc/{pid} existence, and is the single shared predicate for both consumers (gate reclaim + ps queued render); see Provenance : BUG-479 -->
-`pid_alive()` reads the `/proc/{pid}/stat` state field and treats a PID as alive only when that read succeeds AND the state is not `Z` (Linux-only host assumption) — bare `/proc/{pid}` existence is NOT liveness, since an exited-but-unreaped zombie keeps its `/proc` entry for as long as its parent fails to `wait()` (see Provenance : BUG-479). The predicate is exported (`pub( super )`) and shared by `build_queued_table()` in `ps.rs`, so the reclaim decision and the queued-waiter display can never drift apart again. `read_slot_owner_record()` reads back the `(pid, since)` pair a slot file records — the reclaim branch needs both fields to key its ticket path (see Enforcement Mechanism : 3 above), where the pre-BUG-392 `read_slot_owner()` returned only `pid`. Each `acquire_slot()` call is independently atomic (`create_new`); trying several within one attempt introduces no new race — it only widens which single index the attempt can land on (see Provenance : BUG-404).
+<!-- BUG-488 task/claude_runner/bug/488_pid_liveness_thread_id_blind.md — fixed: pid_alive( pid, recorded_starttime ) enforces all four contract clauses below — thread-group leadership (Tgid == pid from /proc/{pid}/status) and, where the record carries the writer's start time, same-incarnation binding (stat field 22); records written post-fix carry the field; see Provenance : BUG-488 -->
+`pid_alive( pid, recorded_starttime )` is the single owner-liveness predicate, exported (`pub( super )`) and shared by `build_queued_table()` in `ps.rs` — one predicate for both consumers, so the reclaim decision and the queued-waiter display cannot drift apart from each other, though a defect in the predicate itself reaches both at once (see Provenance : BUG-488). The enforced contract: a recorded PID counts as alive only when its number still identifies the live process that recorded it — (a) `/proc/{pid}/stat` is readable, (b) the state field is not `Z` (an exited-but-unreaped zombie keeps its `/proc` entry for as long as its parent fails to `wait()`; see Provenance : BUG-479), (c) `{pid}` is a thread-group leader (`Tgid == pid` in `/proc/{pid}/status`, read via the `proc_tgid()` helper) — Linux resolves direct `/proc/<tid>` lookups for non-leader thread IDs of unrelated processes even though readdir never lists them, so bare stat-readability misreads such a thread as a live process — and (d) where the record carries the writer's start time (`/proc/{pid}/stat` field 22, token index 19 after the `')'` split, read via `starttime_from_stat()`/`proc_starttime()`), the current occupant's start time matches it exactly, closing full PID recycling (Linux-only host assumption throughout). Clauses (c)+(d) are the BUG-488 hardening; clause (d) is deliberately additive — a legacy record without the field keeps (a)–(c) semantics (`None` is never a mismatch), so a mid-upgrade mixed fleet cannot mass-reclaim slots held by live pre-fix sessions. `read_slot_owner_record()` reads back the `(pid, since, Option<starttime>)` triple a slot file records — the reclaim branch needs `pid`+`since` to key its ticket path (see Enforcement Mechanism : 3 above), where the pre-BUG-392 `read_slot_owner()` returned only `pid`; the optional third field feeds clause (d). Each `acquire_slot()` call is independently atomic (`create_new`); trying several within one attempt introduces no new race — it only widens which single index the attempt can land on (see Provenance : BUG-404).
 
 ### Violation Consequences
 
@@ -201,7 +205,7 @@ If the reclaim branch reverts to `remove_file()` + `claim_slot_file()` without t
 If the reclaim's ticket or temp files are cleaned up after a successful `rename()`:
 - A later caller could win a "new" ticket keyed to the same `(index, pid, since)` and clobber the legitimate current holder via its own `rename()` — this is why both are left in place permanently rather than deleted.
 
-If the reclaim-eligibility test reverts to `pid_alive(owner)` alone, with `gate_stale_secs()`/`is_stale` removed from the check:
+If the reclaim-eligibility test reverts to `pid_alive( owner, owner_starttime )` alone, with `gate_stale_secs()`/`is_stale` removed from the check:
 - A slot owner that is alive but has stopped making forward progress (hung, deadlocked, suspended) is functionally equivalent to a dead one from the gate's perspective — it never releases capacity — but the design has no path to reclaim from it. A waiter whose recomputed index collides with that owner is blocked for as long as the owner remains alive, independent of how low the aggregate live count drops (see Provenance : BUG-400).
 
 If a reclaim ticket's own claimant terminates before completing the `rename()` handoff, with no liveness recheck on the ticket's own claimant:
@@ -212,6 +216,10 @@ If the admission call site reverts to trying only the count-derived index, with 
 
 If `claim_slot_file()` reverts to `create_new()` directly on `path` followed by a separate content write, instead of publishing via write-to-temp-then-`hard_link`:
 - A process killed between the two steps leaves `path` existing on disk permanently, with no (or truncated) content. `read_slot_owner_record()` then returns `None` for every future reader, and every call site in `acquire_slot()` classifies that `None` as an unconditional, unrecheckable denial (`HeldByLive` at the primary slot, `LostReclaimRace` at a reclaim ticket) — with no owner PID ever parsed out, so `pid_alive()` is never even reached and no liveness recheck or reclaim path can ever engage. This differs from every other failure mode above in requiring no dead owner and no contending reclaimer as a precondition — it is reachable from the single most common path through `acquire_slot()`, a fresh uncontested claim (see Provenance : BUG-407).
+
+If owner liveness reverts to bare PID-number occupancy — `/proc/{pid}/stat` readable AND state ∉ {`Z`} — with no thread-group-leader or same-incarnation verification:
+- Any live non-leader thread of an unrelated process whose TID equals a dead owner's recorded PID makes that owner read as alive indefinitely: the slot denies `HeldByLive` with no reclaim path ever engaging — BUG-479's starvation consequence, reachable with no zombie and no non-reaping supervisor involved — and a dead waiter's `{pid}.json` renders as a phantom `Queued` row the `ps` self-heal never deletes (observed live: a dockerd startup thread's TID matched a dead waiter's recorded PID for 76+ hours; see Provenance : BUG-488).
+- The collision is invisible to casual host inspection: non-leader TIDs never appear in `ls /proc` or `ps` output — only a direct `/proc/{tid}/status` lookup (`Tgid != pid`) reveals the occupant — so the phantom is indistinguishable from a live waiter in every process listing.
 
 ### Sources
 
@@ -235,6 +243,9 @@ If `claim_slot_file()` reverts to `create_new()` directly on `path` followed by 
 | `../../tests/concurrency_gate_test.rs` | T22 *(duplicate label in source, see note below)*: a single, uncontested fresh claim followed by an immediate read of the on-disk slot file — asserts the content is already fully-valid JSON with this invocation's own pid, proving there is no create-then-populate window to observe by construction (BUG-407) |
 | `../../tests/concurrency_gate_test.rs` | T23: 8 racers contending for the SAME never-before-seen slot path (`--max-sessions 1`, empty gate dir); asserts peak concurrently-admitted children never exceeds 1, confirming the write-to-temp-then-`hard_link()` rewrite preserves the exactly-one-claimant guarantee (BUG-407) |
 | `../../tests/concurrency_gate_test.rs` | T24: pre-seeds a 0-byte slot file (content that was already corrupted before any call touches it); asserts a fresh caller is STILL denied, identically pre-fix and post-fix — documents the explicitly accepted residual boundary of the atomic-publish fix (BUG-407) |
+| `../../tests/concurrency_gate_test.rs` | T42 (`t42_thread_tid_masked_dead_slot_owner_reclaimed_and_caller_admitted`): pre-seeds a legacy-shape slot record whose PID number is a live non-leader thread TID (parked helper thread of the test process, fixture-verified `Tgid != tid`); asserts the owner fails the thread-group-leader clause, the slot is reclaimed, the caller is admitted with zero `HeldByLive` denials, and the fresh post-reclaim record carries the writer's start time (BUG-488) |
+| `../../tests/concurrency_gate_test.rs` | T43 (`t43_mismatched_start_time_slot_owner_reclaimed_and_caller_admitted`): pre-seeds a slot record naming a genuinely alive leader PID but a deliberately mismatched recorded start time; asserts the same-incarnation clause reads the occupant as not-the-writer, the slot is reclaimed, and the caller is admitted promptly (BUG-488) |
+| `../../tests/concurrency_gate_test.rs` | T44 (`t44_legacy_record_without_start_time_live_leader_still_held`): pre-seeds a legacy-shape record (no start-time field) naming a genuinely alive leader owner; asserts the caller is still denied `HeldByLive` through gate-wait exhaustion — the incarnation clause is inert for legacy records, pinning the no-mass-reclaim upgrade boundary — and that the denied caller's own surviving waiter file carries the start-time field (BUG-488) |
 
 <!-- Organizational note (found during 2026-07-09 conflict resolution, not fixed here — out of scope for a conflict-only pass): `t21_stale_alive_owner_becomes_reclaimable_when_threshold_set()` (BUG-400) duplicates T20's coverage above (same threshold-unset/threshold-set assertion, different fixture shape), and both it and `t22_claim_slot_file_content_valid_immediately_after_call()` (BUG-407) reuse `T21`/`T22` labels already used by the BUG-405 and BUG-402 tests two rows above. The module-level `# Test Case Index` doc comment at the top of the file is also stale: it stops at T22 and lists neither duplicate-labeled test nor T23/T24 at all. Recommend deduping the redundant BUG-400 test, renumbering T23/T24 → T25/T26 (or renumbering the later pair), and refreshing the module-level index table to match, in a follow-up pass. -->
 
@@ -250,6 +261,7 @@ If `claim_slot_file()` reverts to `create_new()` directly on `path` followed by 
 | BUG-405 | Fixed: `acquire_slot()`'s ticket-win branch now removes the ticket it just won on both non-admission paths (tmp-claim failure, rename failure) before returning `LostReclaimRace`, so a caller cannot read back its own abandoned claim on a later retry and self-deny — see Enforcement Mechanism : 3, "Self-collision cleanup" above. Distinct from BUG-402: that finding requires a DIFFERENT process to have died mid-handoff; this finding is pure self-collision within one invocation's own retry loop, discovered via adversarial MAAV review of the BUG-402 fix rather than a live symptom report. Regression test T21 was empirically confirmed to fail on pre-fix code (exact predicted symptom) and pass post-fix; T22 confirms the surrounding chain-walk capability is unaffected. |
 | BUG-407 | Fixed (with a documented residual): `claim_slot_file()` now publishes its claim and content as one atomic unit via write-to-temp-then-`hard_link()` instead of a separate `create_new()`-then-`write!()` — see Enforcement Mechanism : 2, "Claim-vs-content atomicity" above. Closes the window where a crash DURING a live claim attempt (at any of the function's call sites, including the single most common one — a fresh, uncontested claim) leaves a new permanently-corrupted slot/ticket/temp file behind. Does **not** repair content that was already unparseable *before* `claim_slot_file()` was ever called against that path (e.g. a leftover artifact from a crash under a pre-upgrade binary) — `hard_link()`, like `create_new()`, cannot claim a path that already exists, so that narrower scenario still denies `HeldByLive` unconditionally, identically pre-fix and post-fix; this is an explicitly accepted residual (T24), not a silent gap. T22 *(duplicate label, see Tests table note)* confirms content is valid immediately after a successful claim; T23 confirms concurrent-racer arbitration is unweakened. One level beneath, and orthogonal to, BUG-392/BUG-402 (which hardened `acquire_slot()`'s own reclaim-branch sequencing on top of `claim_slot_file()`, not `claim_slot_file()`'s own internal atomicity). Two independent Tier 4 Paired Verification passes (primary + adversarial code trace) confirmed the residual boundary before T24 was written, after the original bug filing's Prevention sketch (which expected full recovery) was found to contradict its own, more precise Fix Location scope. |
 | BUG-479 | Fixed: `pid_alive()` was bare `/proc/{pid}` existence, which reads exited-but-unreaped zombies (state `Z`) as alive — under a non-reaping supervisor, zombie-owned slots were denied `HeldByLive` forever (observed live: 7/8 slots zombie-held 9h–67h, starving all print-mode admission) and zombie waiters rendered as phantom `Queued` rows that self-heal never deleted (`84 waiting`, 4 live). Fix: liveness = `/proc/{pid}/stat` readable AND state ∉ {`Z`}, in one `pub( super )` predicate shared by `acquire_slot()` and `build_queued_table()`. Regression tests T37 (zombie-owner reclaim) and IT-46 (zombie-waiter non-render + self-heal) were both empirically confirmed to fail pre-fix with the exact predicted symptoms and pass post-fix. See `task/claude_runner/bug/479_zombie_blind_pid_liveness.md`. |
+| BUG-488 | Fixed: `pid_alive()`'s two BUG-479 clauses (stat readable, state ∉ {`Z`}) treated bare PID-number occupancy as owner identity — Linux resolves direct `/proc/<tid>` lookups for non-leader thread IDs of unrelated processes (readdir-invisible, stat-readable, reporting thread-group comm and per-thread state), so a dead recorded PID whose number a live thread later occupied read as alive: observed live, a dockerd startup thread (TID 1744061, `Tgid` 1743184) masked a dead gate waiter's `{pid}.json` as a phantom `Queued` row for 76+ hours, self-heal never firing; the same hole made a TID-collided dead slot owner deny `HeldByLive` forever (latent BUG-479-class starvation, no zombies required). Third hole in one predicate lineage: BUG-293 (no check) → BUG-479 (zombie-blind) → this (thread/recycling-blind). Fix: `pid_alive( pid, recorded_starttime )` additionally requires thread-group leadership (`Tgid == pid` via `proc_tgid()`) and, when the record carries the writer's `/proc/{pid}/stat` start time (field 22, via `starttime_from_stat()`/`proc_starttime()`), an exact occupant match; `claim_slot_file()` and the waiter-telemetry writes record the field, `read_slot_owner_record()` parses it as optional — legacy records keep (a)–(c) semantics until rewritten (no mass reclaim mid-upgrade, pinned by T44). Regression tests T42 (thread-masked slot owner) and IT-47 in `ps_command_test.rs` (thread-masked waiter row) plus T43 (mismatched incarnation) were all empirically confirmed to fail pre-fix with the exact predicted `HeldByLive`-denial / phantom-row symptoms and pass post-fix. See `task/claude_runner/bug/488_pid_liveness_thread_id_blind.md`. |
 
 ### Features
 

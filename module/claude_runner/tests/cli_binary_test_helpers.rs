@@ -33,6 +33,7 @@
 //! | `run_with_journal` (unix) | `journal_integration_test`, `journal_integration_ext_test` |
 //! | `build_argv_tolerant_sleeper` | `concurrency_gate_test`, `concurrency_gate_ext2_test` |
 //! | `slot_owner_pid` | `concurrency_gate_ext_test`, `concurrency_gate_ext2_test` |
+//! | `spawn_parked_helper_thread` (unix) | `concurrency_gate_test`, `ps_command_test` |
 //!
 //! # Testing Techniques
 //!
@@ -954,9 +955,13 @@ pub fn build_argv_tolerant_sleeper( sleep_secs : u64 ) -> ( tempfile::TempDir, S
 }
 
 /// Extract the `pid` field from a slot-reservation file's JSON content
-/// (`{"pid":N,"since":M}`), written by `claim_slot_file()` in `src/cli/gate.rs`.
+/// (`{"pid":N,"since":M}` or, since BUG-488, `{"pid":N,"since":M,"starttime":S}`),
+/// written by `claim_slot_file()` in `src/cli/gate.rs`. The scan terminates at the
+/// first `,` or `}` after the `pid` value, so the optional trailing `starttime`
+/// field never affects the result.
 ///
-/// Shared by `concurrency_gate_ext_test` and `concurrency_gate_ext2_test`.
+/// Shared by `concurrency_gate_ext_test`, `concurrency_gate_ext2_test`, and
+/// `concurrency_gate_test`.
 #[ must_use ]
 #[ inline ]
 #[ allow( dead_code ) ]
@@ -967,4 +972,42 @@ pub fn slot_owner_pid( content : &str ) -> Option< u32 >
   let rest   = &content[ start.. ];
   let end    = rest.find( [ ',', '}' ] )?;
   rest[ ..end ].trim().parse().ok()
+}
+
+/// Spawn a parked helper thread and return its kernel thread ID (TID), the
+/// `Sender` whose drop releases the park, and the thread's `JoinHandle`.
+///
+/// The returned TID is a live NON-LEADER thread ID of this test process:
+/// `/proc/{tid}/stat` is readable via direct lookup with state ∉ {`Z`}, yet
+/// `/proc/{tid}/status` reports `Tgid != tid` and `ls /proc` never lists it.
+/// That is exactly the PID-number occupancy shape that masked a dead gate
+/// waiter in the wild (BUG-488) — using the test's own thread makes the
+/// collision deterministic instead of waiting for a host PID wrap.
+///
+/// Shared by `concurrency_gate_test` (T42) and `ps_command_test` (IT-47).
+///
+/// # Panics
+///
+/// Panics if the helper thread cannot read its own TID via `/proc/thread-self`.
+#[ cfg( unix ) ]
+#[ must_use ]
+#[ inline ]
+#[ allow( dead_code ) ]
+pub fn spawn_parked_helper_thread() -> ( u32, std::sync::mpsc::Sender< () >, std::thread::JoinHandle< () > )
+{
+  let ( tid_send, tid_recv )   = std::sync::mpsc::channel();
+  let ( park_send, park_recv ) = std::sync::mpsc::channel::< () >();
+  let handle = std::thread::spawn( move ||
+  {
+    // /proc/thread-self (Linux 3.17+) links to <pid>/task/<tid> — its final
+    // component is this thread's own TID, with no libc gettid() dependency.
+    let tid : u32 = std::fs::read_link( "/proc/thread-self" )
+      .ok()
+      .and_then( | p | p.file_name().and_then( std::ffi::OsStr::to_str ).and_then( | s | s.parse().ok() ) )
+      .expect( "read own TID via /proc/thread-self" );
+    tid_send.send( tid ).expect( "send TID to test" );
+    let _ = park_recv.recv(); // park until the test drops its Sender
+  } );
+  let tid = tid_recv.recv().expect( "receive helper thread TID" );
+  ( tid, park_send, handle )
 }
