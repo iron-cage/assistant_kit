@@ -41,10 +41,20 @@ write callers, read callers, and isolation from the live session credential file
 
 ### SC-3: Write caller is `account::save()` only — never writes to live credentials file
 
-- **Given:** An active session where `~/.claude/.credentials.json` exists with specific token values
-- **When:** `.account.save` or any token refresh path runs
-- **Then:** `~/.claude/.credentials.json` is NOT modified — all writes go to `{name}.credentials.json` in the credential store only (BUG-221 fix)
-- **Source fn:** `reach_bulk_touch_does_not_write_live_credentials` (usage/touch_tests_b.rs)
+- **Given:** The bulk-touch code path in `src/usage/api.rs`, exercised via `.usage touch::1`
+  across all accounts.
+- **When:** A static source-text scan confirms the bulk touch block contains neither
+  `switch_account(` nor `fs::copy` calls.
+- **Then:** Live credentials (`~/.claude/.credentials.json`) cannot be modified by the bulk
+  touch loop — only the separate rotation dispatch block may write to the live file
+  (BUG-221 fix). This is a structural/static guarantee, not a runtime before/after read
+  assertion; the broader "`.account.save` or any token refresh path never touches the live
+  file" claim is corroborated the same way in
+  [feature/017_token_refresh.md AC-29](../feature/017_token_refresh.md) (also
+  "structural" — no single dedicated runtime test asserts live-file byte-identity across a
+  full refresh cycle).
+- **Source fn:** `reach_bulk_touch_does_not_write_live_credentials` in
+  `tests/usage/touch_tests_b.rs`
 - **Source:** [docs/schema/001_credentials_json.md §Write Callers](../../../docs/schema/001_credentials_json.md)
 
 ---

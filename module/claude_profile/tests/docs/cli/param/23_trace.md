@@ -102,11 +102,11 @@ Edge case tests for the `trace::` parameter. Tests validate boolean enforcement,
 - **Source:** [params.md#parameter--23-trace](../../../../docs/cli/param/023_trace.md)
 ---
 
-### EC-6: `trace::1` — trace output on stderr does not appear on stdout
+### EC-6: `trace::1` — stderr contains trace lines; stdout is not inspected
 
-- **Given:** `.usage` environment with valid credentials and at least one saved account.
+- **Given:** One saved account `trace-acct` with no `accessToken` in its credential file.
 - **When:** `clp .usage trace::1`
-- **Then:** stdout contains the normal quota table output only (no timestamped diagnostic lines); stderr contains timestamped diagnostic lines; the two streams are independent; exit 0.
+- **Then:** Exits 0. stderr contains the trace separator ` · ` and the account name `trace-acct`. stdout is never inspected by this test — there is no assertion that stdout contains "the normal quota table" or that it excludes diagnostic lines; the "two streams are independent" claim is not verified here (same underlying test as EC-1, reused for the stdout/stderr-separation angle).
 - **Exit:** 0
 - **Source fn:** `it034_trace_param_writes_to_stderr`
 - **Source:** [params.md#parameter--23-trace](../../../../docs/cli/param/023_trace.md)
@@ -157,45 +157,45 @@ Edge case tests for the `trace::` parameter. Tests validate boolean enforcement,
 
 ---
 
-### EC-11: `.account.save trace::1 dry::1` — accepted; trace emitted for credential read
+### EC-11: `.account.save trace::1 dry::1` — accepted; trace emitted; exit code not asserted
 
-- **Given:** Valid credentials file and credential store present; `dry::1` suppresses write.
+- **Given:** Valid credentials file and credential store present (`existing@acme.com` account also saved). `dry::1` suppresses write.
 - **When:** `clp .account.save name::test@example.com dry::1 trace::1`
-- **Then:** Exits 0 (dry-run); stderr contains a timestamped diagnostic line for credential file read; no "Unknown parameter" error.
-- **Exit:** 0
+- **Then:** stderr does NOT contain `Unknown parameter` (trace:: is accepted) and stderr contains the trace separator ` · ` (a diagnostic line is emitted). The test never calls an exit-code assertion — "Exits 0 (dry-run)" is not actually verified.
+- **Exit:** Not asserted by the test (no `assert_exit` call)
 - **Source fn:** `it_trace_account_save_accepted` (in `account_relogin_test_b.rs`)
 - **Source:** [params.md#parameter--23-trace](../../../../docs/cli/param/023_trace.md)
 
 ---
 
-### EC-12: `.account.use trace::1` — accepted; unknown account → exit 2
+### EC-12: `.account.use trace::1` — accepted; exit code not asserted
 
 - **Given:** Empty credential store (account not found).
 - **When:** `clp .account.use name::test@example.com trace::1`
-- **Then:** Exits 2 (account not found); no "Unknown parameter" error; `trace::1` is accepted by the framework.
-- **Exit:** 2
+- **Then:** stderr does NOT contain `Unknown parameter` — this is the ONLY assertion in the test. No check for the trace separator (` · `) and no exit-code assertion at all — "Exits 2" is not actually verified.
+- **Exit:** Not asserted by the test (no `assert_exit` call)
 - **Source fn:** `it_trace_account_use_accepted` (in `account_relogin_test_b.rs`)
 - **Source:** [params.md#parameter--23-trace](../../../../docs/cli/param/023_trace.md)
 
 ---
 
-### EC-13: `.account.delete trace::1 dry::1` — accepted; trace emitted for store read
+### EC-13: `.account.delete trace::1 dry::1` — accepted; trace emitted; exit code not asserted
 
-- **Given:** Account `test@example.com` saved; `dry::1` suppresses deletion.
+- **Given:** Account `test@example.com` saved (no `accessToken`); `dry::1` suppresses deletion.
 - **When:** `clp .account.delete name::test@example.com dry::1 trace::1`
-- **Then:** Exits 0 (dry-run); stderr contains a timestamped diagnostic line for store read; no "Unknown parameter" error.
-- **Exit:** 0
+- **Then:** stderr does NOT contain `Unknown parameter` and stderr contains the trace separator ` · `. The test never calls an exit-code assertion — "Exits 0 (dry-run)" is not actually verified.
+- **Exit:** Not asserted by the test (no `assert_exit` call)
 - **Source fn:** `it_trace_account_delete_accepted` (in `account_relogin_test_b.rs`)
 - **Source:** [params.md#parameter--23-trace](../../../../docs/cli/param/023_trace.md)
 
 ---
 
-### EC-14: `.account.relogin trace::1 dry::1` — accepted; trace emitted
+### EC-14: `.account.relogin trace::1 dry::1` — accepted; trace emitted; exit code not asserted
 
-- **Given:** Account `work@acme.com` saved and active; `dry::1` suppresses re-auth.
+- **Given:** Account `work@acme.com` saved with an `accessToken`; `dry::1` suppresses re-auth.
 - **When:** `clp .account.relogin dry::1 trace::1`
-- **Then:** Exits 0 (dry-run); stderr contains a timestamped diagnostic line; no "Unknown parameter" error.
-- **Exit:** 0
+- **Then:** stderr does NOT contain `Unknown parameter` and stderr contains the trace separator ` · `. The test never calls an exit-code assertion — "Exits 0 (dry-run)" is not actually verified.
+- **Exit:** Not asserted by the test (no `assert_exit` call)
 - **Source fn:** `it_trace_account_relogin_accepted` (in `account_relogin_test_b.rs`)
 - **Source:** [params.md#parameter--23-trace](../../../../docs/cli/param/023_trace.md)
 

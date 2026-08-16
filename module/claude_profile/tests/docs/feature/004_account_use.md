@@ -107,12 +107,12 @@ Feature behavioral requirement test cases for `docs/feature/004_account_use.md` 
 - **Given:** Any credential store state.
 - **When:** `clp .account.use name::` (empty name)
 - **Then:** Exit 1.
-- **When:** `clp .account.use name::a/b@c.com` (slash in local part)
+- **When:** `clp .account.use name::a/b` (slash in a bare non-email name, no `@`)
 - **Then:** Exit 1 — `validate_name()` rejects path-unsafe characters before any filesystem operation.
 - **When:** `clp .account.use` (missing name param)
 - **Then:** Exit 1.
-- **When:** `clp .account.use name::a/b@c.com` (slash specifically in email local part)
-- **Then:** Exit 1 — the slash character is path-unsafe even in the domain portion of an email.
+- **When:** `clp .account.use name::a/b@c.com` (slash in email local part)
+- **Then:** Exit 1 — the slash character is path-unsafe even when it appears before the `@` in an email-shaped name.
 - **Exit:** 1
 - **Source fn:** `aw04_switch_empty_name_exits_1`, `aw05_switch_slash_name_exits_1`, `aw06_switch_missing_name_param_exits_1`, `aw11_switch_slash_in_email_local_part_exits_1`
 - **Source:** [004_account_use.md AC-06](../../../docs/feature/004_account_use.md)

@@ -129,7 +129,21 @@ fn extract_str_field( obj : &str, key : &str ) -> Option< String >
 }
 
 /// Parse the markers array from the JSON file content.
-fn parse_markers_json( json : &str ) -> Vec< CustomMarker >
+///
+/// Fix(BUG-002)
+/// Root cause: the brace-depth scan counted every `{`/`}` character in the raw
+/// array text, including ones inside a marker's own quoted field values (e.g. a
+/// `description` containing literal `{`/`}` text) — with no string-literal
+/// tracking, an in-string brace desynchronized `depth` from the JSON's real
+/// nesting, truncating or dropping the marker.
+/// Pitfall: brace-depth counting alone is not sufficient to find a JSON
+/// object's boundary — without also tracking string-literal state (quote
+/// toggling with backslash-escape lookahead), a bracket character inside a
+/// quoted field value is misread as a structural delimiter.
+#[ doc( hidden ) ]
+#[ must_use ]
+#[ inline ]
+pub fn parse_markers_json( json : &str ) -> Vec< CustomMarker >
 {
   let array_start = json
     .find( "\"markers\"" )
@@ -137,19 +151,28 @@ fn parse_markers_json( json : &str ) -> Vec< CustomMarker >
   let Some( array_start ) = array_start else { return Vec::new() };
   let array_content = &json[ array_start.. ];
 
-  let mut markers   = Vec::new();
-  let mut depth     = 0_usize;
-  let mut obj_start = None;
+  let mut markers     = Vec::new();
+  let mut depth       = 0_usize;
+  let mut obj_start   = None;
+  let mut in_string   = false;
+  let mut escape_next = false;
   for ( i, ch ) in array_content.char_indices()
   {
+    if escape_next
+    {
+      escape_next = false;
+      continue;
+    }
     match ch
     {
-      '{' =>
+      '\\' if in_string => escape_next = true,
+      '"' => in_string = !in_string,
+      '{' if !in_string =>
       {
         if depth == 0 { obj_start = Some( i ); }
         depth += 1;
       }
-      '}' if depth > 0 =>
+      '}' if !in_string && depth > 0 =>
       {
         depth -= 1;
         if depth == 0

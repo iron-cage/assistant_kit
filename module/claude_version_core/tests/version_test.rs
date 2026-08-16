@@ -17,6 +17,7 @@
 //! - `purge_stale_versions` deletes stale binaries, keeps pinned target, ignores non-version files, is safe on missing dir, and refuses to run when the keep target is absent (BUG-016)
 //! - `verify_install_outcome` gates purge/lock on the requested version actually being present after install (BUG-016)
 //! - `unlock_settings_for_install` removes the 4 settings-level lock keys that block the official installer, and must stay in sync with `lock_version()` (BUG-017)
+//! - `parse_markers_json` tracks string-literal state so a marker's own `{`/`}` text doesn't desync brace-depth boundary detection (BUG-002)
 //!
 //! ## Test Matrix
 //!
@@ -54,10 +55,12 @@
 //! | `unlock_settings_for_install_removes_all_four_lock_keys` | pinned lock applied; unlock clears all 4 install-blocking keys (BUG-017 reproducer) |
 //! | `unlock_settings_for_install_noop_when_home_absent` | graceful no-op when HOME is unset |
 //! | `unlock_settings_for_install_traces_function_name` | parameter-trace structural guard: first stmt is `eprintln!` naming the function |
+//! | `parse_markers_json_survives_brace_in_string_field` | marker's own `description` field contains a literal `}`: BUG-002 reproducer |
 
 use claude_version_core::version::{
   extract_semver, validate_version_spec, resolve_version_spec, VERSION_ALIASES,
   purge_stale_versions, lock_version, verify_install_outcome, unlock_settings_for_install,
+  parse_markers_json,
 };
 use claude_core::settings_io::get_setting;
 use claude_version_core::config_resolve::{ resolve, Layer };
@@ -547,4 +550,52 @@ fn unlock_settings_for_install_traces_function_name()
     first_stmt.starts_with( "eprintln!" ) && first_stmt.contains( "unlock_settings_for_install" ),
     "unlock_settings_for_install must emit eprintln! naming the function as its first statement, got: {first_stmt:?}"
   );
+}
+
+// ─── parse_markers_json ───────────────────────────────────────────────────────
+
+// Root Cause: parse_markers_json()'s brace-depth scan counted every `{`/`}`
+//   character in the raw markers array text, including ones inside a marker's
+//   own quoted field values — no in_string tracking existed at all.
+// Why Not Caught: the defect only manifests when a marker's own name/value/
+//   description text contains a literal `{` or `}`; ordinary marker content
+//   rarely does, so routine use never exercised this path.
+// Fix Applied: added in_string/escape_next state to the char_indices() scan
+//   loop; `{`/`}` are only treated as structural boundaries when !in_string,
+//   and a backslash-escaped quote inside a string no longer toggles in_string.
+// Prevention: this test pins a marker whose description contains an unescaped
+//   `}` — any regression that removes the in_string guard truncates or drops
+//   this marker and fails the assertions below.
+// Pitfall: brace-depth counting alone reads as "handles nesting correctly"
+//   but is incomplete without string-literal awareness — a bracket character
+//   inside a quoted field value is not a structural delimiter.
+
+// test_kind: bug_reproducer(BUG-002)
+#[test]
+fn parse_markers_json_survives_brace_in_string_field()
+{
+  // marker 1's own description contains a literal, unescaped '}' — valid JSON,
+  // since '{'/'}' need no escaping inside a string.
+  let json = r#"{"markers":[{"name":"m1","description":"closing brace: }","value":"v1"},{"name":"m2","description":"second","value":"v2"}]}"#;
+
+  let markers = parse_markers_json( json );
+  assert_eq!(
+    markers.len(), 2,
+    "BUG-002: an in-string '}}' must not desync the depth counter into dropping/truncating markers; got {} markers: {markers:?}",
+    markers.len()
+  );
+
+  assert_eq!( markers[ 0 ].name, "m1" );
+  assert_eq!(
+    markers[ 0 ].value, "v1",
+    "BUG-002: marker 1's value must survive its sibling description field's in-string '}}'"
+  );
+  assert_eq!(
+    markers[ 0 ].description, "closing brace: }",
+    "BUG-002: marker 1's own description field (containing the in-string '}}') must round-trip intact"
+  );
+
+  assert_eq!( markers[ 1 ].name, "m2" );
+  assert_eq!( markers[ 1 ].value, "v2" );
+  assert_eq!( markers[ 1 ].description, "second" );
 }

@@ -64,7 +64,8 @@ Feature behavioral requirement test cases for `docs/feature/012_live_credentials
 - **When:** `clp .credentials.status format::json`
 - **Then:** Output is valid JSON with all 12 keys: `subscription`, `tier`, `token`, `expires_in_secs`, `email`, `account`, `file`, `saved`, `display_name`, `role`, `billing`, `model`.
 - **Exit:** 0
-- **Source fn:** `cred03_format_json`
+- **Note:** `cred03_format_json` asserts only 8 of the 12 keys (`subscription`, `tier`, `token`, `expires_in_secs`, `email`, `account`, `file`, `saved`); the remaining 4 (`display_name`, `role`, `billing`, `model`) are asserted by `cred12_json_extended_shape`.
+- **Source fn:** `cred03_format_json`, `cred12_json_extended_shape`
 - **Source:** [012_live_credentials_status.md AC-03](../../../docs/feature/012_live_credentials_status.md)
 
 ---
@@ -104,9 +105,9 @@ Feature behavioral requirement test cases for `docs/feature/012_live_credentials
 
 ### FT-07: `file::1 saved::1` → File and Saved lines shown
 
-- **Given:** Valid credentials present. Credential store contains 2 saved accounts.
+- **Given:** Valid credentials present. Credential store contains no saved accounts.
 - **When:** `clp .credentials.status file::1 saved::1`
-- **Then:** Output appends a `File:` line (showing the path to `.credentials.json`) and a `Saved:` line (e.g., `2 account(s)`) after the default-on fields.
+- **Then:** Output appends a `File:` line (showing the path to `.credentials.json`) and a `Saved:` line after the default-on fields.
 - **Exit:** 0
 - **Source fn:** `cred07_opt_in_file_and_saved`
 - **Source:** [012_live_credentials_status.md AC-07](../../../docs/feature/012_live_credentials_status.md)

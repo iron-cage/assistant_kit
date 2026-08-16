@@ -235,7 +235,7 @@ claude auth status --json
 
 ### Implication for `.account.relogin`
 
-Current code in `account_relogin_routine()` (`commands.rs:1209`):
+Current code in `account_relogin_routine()` (`src/commands/account_relogin.rs:91-92`):
 ```rust
 let spawn_result = claude_runner_core::ClaudeCommand::new()
   .execute_interactive();
@@ -271,7 +271,7 @@ Currently `account_relogin_routine()` emits zero output before calling `execute_
 [relogin] spawning claude for browser re-authentication (Ctrl-C to abort)
 ```
 
-But this `eprintln!` call doesn't exist in the source (`commands.rs:1209`). This is a UX gap independent of which subprocess approach is used.
+But this `eprintln!` call doesn't exist in the source (`src/commands/account_relogin.rs`). This is a UX gap independent of which subprocess approach is used.
 
 ### Recommendation
 

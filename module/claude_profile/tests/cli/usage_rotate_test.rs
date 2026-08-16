@@ -2,8 +2,9 @@
 //!
 //! Tests invoke the compiled `clp` binary as a subprocess via `CARGO_BIN_EXE_clp`.
 //!
-//! Live tests (names contain `lim_it`) require network access and are excluded
-//! from Docker CI by the nextest filter `!test(lim_it)`.
+//! Live tests (names contain `lim_it`) require network access. No nextest filter
+//! excludes them — they run by default whenever ~/.claude is mounted (see
+//! .config/nextest.toml) and panic loudly if a live token is unavailable.
 //!
 //! ## Test Matrix
 //!
@@ -144,7 +145,7 @@ fn ft10_non_owned_no_force_exits_1()
 fn ft01_lim_it_rotates_to_next_winner()
 {
   require_live_api( "ft01_lim_it_rotates_to_next_winner" );
-  let Some( token ) = live_active_token() else { eprintln!( "ft01: no live token — skipping" ); return; };
+  let token = live_active_token().expect( "ft01: live API token required — no ~/.claude/.credentials.json" );
 
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -181,7 +182,7 @@ fn ft01_lim_it_rotates_to_next_winner()
 fn ft02_lim_it_dry_run_no_switch()
 {
   require_live_api( "ft02_lim_it_dry_run_no_switch" );
-  let Some( token ) = live_active_token() else { eprintln!( "ft02: no live token — skipping" ); return; };
+  let token = live_active_token().expect( "ft02: live API token required — no ~/.claude/.credentials.json" );
 
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -222,7 +223,7 @@ fn ft02_lim_it_dry_run_no_switch()
 fn ft05_lim_it_g5_gate_skips_non_owned()
 {
   require_live_api( "ft05_lim_it_g5_gate_skips_non_owned" );
-  let Some( token ) = live_active_token() else { eprintln!( "ft05: no live token — skipping" ); return; };
+  let token = live_active_token().expect( "ft05: live API token required — no ~/.claude/.credentials.json" );
 
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -260,7 +261,7 @@ fn ft05_lim_it_g5_gate_skips_non_owned()
 fn ft06_lim_it_force_bypasses_g5()
 {
   require_live_api( "ft06_lim_it_force_bypasses_g5" );
-  let Some( token ) = live_active_token() else { eprintln!( "ft06: no live token — skipping" ); return; };
+  let token = live_active_token().expect( "ft06: live API token required — no ~/.claude/.credentials.json" );
 
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -295,7 +296,7 @@ fn ft06_lim_it_force_bypasses_g5()
 fn ft07_lim_it_sort_renews()
 {
   require_live_api( "ft07_lim_it_sort_renews" );
-  let Some( token ) = live_active_token() else { eprintln!( "ft07: no live token — skipping" ); return; };
+  let token = live_active_token().expect( "ft07: live API token required — no ~/.claude/.credentials.json" );
 
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -328,7 +329,7 @@ fn ft07_lim_it_sort_renews()
 fn ft08_lim_it_format_json_switch_executes()
 {
   require_live_api( "ft08_lim_it_format_json_switch_executes" );
-  let Some( token ) = live_active_token() else { eprintln!( "ft08: no live token — skipping" ); return; };
+  let token = live_active_token().expect( "ft08: live API token required — no ~/.claude/.credentials.json" );
 
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -381,7 +382,7 @@ fn ft08_lim_it_format_json_switch_executes()
 fn ft09_lim_it_touch_reuse_no_extra_api_call()
 {
   require_live_api( "ft09_lim_it_touch_reuse_no_extra_api_call" );
-  let Some( token ) = live_active_token() else { eprintln!( "ft09: no live token — skipping" ); return; };
+  let token = live_active_token().expect( "ft09: live API token required — no ~/.claude/.credentials.json" );
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_credentials( dir.path(), "max", "default", FAR_FUTURE_MS );

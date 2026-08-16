@@ -32,7 +32,7 @@ AC test cases for `docs/algorithm/003_quota_status_groups.md`. Tests `status_gro
 
 ### AC-2: 5h exhausted, 7d ok → h-exhausted group
 
-- **Given:** `five_hour.utilization = 90.0` → 10% left (≤ 15%); `seven_day.utilization = 50.0`
+- **Given:** `five_hour.utilization = 97.0` → 3% left (≤ 15%); `seven_day.utilization = 50.0`
   → 50% left (> 3%).
 - **When:** `status_group_of(aq)` is called.
 - **Then:** Returns `HExhausted`. `status_emoji()` returns `🟡`.
@@ -43,7 +43,7 @@ AC test cases for `docs/algorithm/003_quota_status_groups.md`. Tests `status_gro
 
 ### AC-3: 7d exhausted (any 5h value) → weekly-exhausted group
 
-- **Given:** `seven_day.utilization = 98.0` → 2% left (≤ 3%); `five_hour.utilization = 50.0`
+- **Given:** `seven_day.utilization = 99.0` → 1% left (≤ 3%); `five_hour.utilization = 50.0`
   → 50% left (> 15%).
 - **When:** `status_group_of(aq)` is called.
 - **Then:** Returns `WeeklyExhausted`. `status_emoji()` returns `🟡`.
@@ -58,7 +58,7 @@ AC test cases for `docs/algorithm/003_quota_status_groups.md`. Tests `status_gro
 - **Given (cancelled):** `AccountQuota.result = Ok(...)` but `billing_type = "none"`.
 - **When:** `status_group_of(aq)` is called.
 - **Then:** Returns `Dead`. `status_emoji()` returns `🔴`.
-- **Source fn:** `test_status_emoji_and_both_at_threshold_red`,
+- **Source fn:** `test_status_emoji_red` in `tests/usage/mod_tests.rs`;
   `mre_bug317_cancelled_status_emoji_is_red` in `tests/usage/format_tests.rs`
 - **Source:** [algorithm/003_quota_status_groups.md](../../../docs/algorithm/003_quota_status_groups.md)
 
@@ -87,16 +87,20 @@ AC test cases for `docs/algorithm/003_quota_status_groups.md`. Tests `status_gro
 
 ### AC-7: Status groups use raw `seven_day_left`, not `prefer_weekly` (BUG-299 fix)
 
-- **Given:** Account with `seven_day_left = 32%` (> 3%) but `seven_day_sonnet = None` →
-  `prefer_weekly(any) = min(32, 0) = 0%` (≤ 3%).
-- **When:** `status_group_of(aq)` is called.
-- **Then:** Returns `HExhausted` (not `WeeklyExhausted`) — group boundary uses raw
-  `seven_day_left`, not the model-weighted `prefer_weekly`. Before Fix(BUG-299), this account
-  was incorrectly placed in `WeeklyExhausted`.
+- **Given:** Account with `five_hour.utilization = 100.0` (5h_left = 0%, h-exhausted) and
+  `seven_day.utilization = 68.0` (`seven_day_left = 32%`, ample) but
+  `seven_day_sonnet.utilization = 95.0` (7d-Sonnet left = 5%) →
+  `prefer_weekly(any) = min(32, 5) = 5`.
+- **When:** `sort_indices(...)` is called with `PreferStrategy::Any`.
+- **Then:** The account ranks in the `HExhausted` group, ahead of a both-exhausted
+  `WeeklyExhausted` account — group boundary uses raw `seven_day_left` (32%, ample), not the
+  model-weighted `prefer_weekly` (5%, which would misclassify it as exhausted). Before
+  Fix(BUG-299), `status_group_of()` used `prefer_weekly(aq, prefer) > 5.0` for the weekly
+  boundary, misclassifying such accounts as exhausted.
 - **Note:** The `prefer_weekly` value is only used for sort tiebreak, never for group/gate
   boundaries.
-- **Source fn:** `mre_bug321_both_exhausted_status_emoji_is_yellow` in
-  `tests/usage/format_tests.rs`
+- **Source fn:** `mre_bug299_h_exhausted_misclassified_as_red_prefer_any` in
+  `tests/usage/sort_tests.rs`
 - **Source:** [algorithm/003_quota_status_groups.md](../../../docs/algorithm/003_quota_status_groups.md)
 
 ---
@@ -115,7 +119,7 @@ AC test cases for `docs/algorithm/003_quota_status_groups.md`. Tests `status_gro
 
 ### AC-9: Both-exhausted → weekly-exhausted, NOT Red (BUG-321 fix)
 
-- **Given:** `five_hour.utilization = 90%` (5h ≤ 15%) AND `seven_day.utilization = 98%`
+- **Given:** `five_hour.utilization = 94%` (5h ≤ 15%) AND `seven_day.utilization = 98%`
   (7d ≤ 3%) — both windows are exhausted.
 - **When:** `status_group_of(aq)` is called.
 - **Then:** Returns `WeeklyExhausted` (🟡), NOT `Dead` (🔴). The `d7_ok` check takes priority

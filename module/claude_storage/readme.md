@@ -74,7 +74,7 @@ cargo run --features cli -- .count target::projects
 cargo run --features cli -- .list target::projects filter::path
 
 # Show session details
-cargo run --features cli -- .show session::abc123 verbosity::2
+cargo run --features cli -- .show session_id::abc123
 ```
 
 ## commands
@@ -160,9 +160,10 @@ Display session or project details with **conversation content by default** (REQ
 **Parameters**:
 - `session_id::{uuid-or-agent-id}` (optional) - Session UUID or agent-{hex}
 - `project::{path-or-id}` (optional) - Project path or UUID (default: current directory)
-- `verbosity::N` (0-5, default 1) - Output detail level
-- `entries::1` (optional) - Show all entries (backward compat with old UUID list format)
-- `metadata::1` (optional) - Show metadata only (old behavior, no conversation content)
+- `show_entries::1` (optional) - Show all entries (backward compat with old UUID list format); only has an effect combined with `show_metadata::1`
+- `show_metadata::1` (optional) - Show metadata only (old behavior, no conversation content)
+- `show_stat::1` (optional) - Accepted for backward compatibility; has no effect (content mode already shows entry counts and timestamps unconditionally)
+- `show_tokens::1` (optional) - Show token usage section
 
 **Default Behavior** (NEW):
 Shows actual conversation content in readable chat-log format. No parameters needed to read messages.
@@ -180,16 +181,22 @@ cd /home/user/project
 .show session_id::abc123 project::/home/user/project
 
 # Metadata only (old behavior)
-.show session_id::abc123 metadata::1
+.show session_id::abc123 show_metadata::1
 
-# Increase verbosity for metadata footer
-.show session_id::abc123 verbosity::2
+# Show token usage alongside metadata
+.show session_id::abc123 show_metadata::1 show_tokens::1
 ```
 
 **Content Format**:
 ```text
 Session: 79f86582... (2893 entries)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Path: /home/user/.claude/projects/-home-user-project/79f86582-....jsonl
+Agent Session: false
+Total Entries: 2893
+User Entries: 1447
+Assistant Entries: 1446
+First Entry: 2025-12-01T08:15:23.000Z
+Last Entry: 2025-12-02T09:57:00.000Z
 
 [2025-12-02 09:57] User:
 last 3 biig tasks solved in this context?
@@ -201,8 +208,6 @@ I'll analyze the recent conversation history...
 1. **tree_fmt Standardization**
 2. **Path Filter Bug Investigation**
 3. **Test Suite Fixes**
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
 ### .count

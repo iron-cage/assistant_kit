@@ -6,12 +6,12 @@
 
 - **Purpose**: Define the core data model shared by every journal event record.
 - **Responsibility**: Documents the `EventType` enum, `EventRecord` struct, and `EventFields` field bag, plus their serialization behavior.
-- **In Scope**: The 8 event-type discriminators, the flat optional-field bag, and JSON (de)serialization rules.
+- **In Scope**: The 9 event-type discriminators, the flat optional-field bag, and JSON (de)serialization rules.
 - **Out of Scope**: Writing events to disk (→ `docs/api/001_journal_writer.md`), reading/filtering events (→ `docs/api/002_journal_reader.md`).
 
 ## Description
 
-Core data model for the journal system: the `EventType` enum, `EventRecord` struct, and `EventFields` field bag. `EventType` discriminates the 8 event categories. `EventRecord` is the top-level serializable unit containing version, timestamp, type, and fields. `EventFields` is a flat struct with all possible fields as `Option` — each event type populates its relevant subset.
+Core data model for the journal system: the `EventType` enum, `EventRecord` struct, and `EventFields` field bag. `EventType` discriminates the 9 event categories. `EventRecord` is the top-level serializable unit containing version, timestamp, type, and fields. `EventFields` is a flat struct with all possible fields as `Option` — each event type populates its relevant subset.
 
 ## Interface
 
@@ -28,6 +28,7 @@ pub enum EventType
   RunnerRetry,
   ValidationRetry,
   Interactive,
+  Command,
 }
 
 impl EventType
@@ -36,7 +37,7 @@ impl EventType
   pub fn as_str( self ) -> &'static str;
 
   /// Deserialize from a JSON `"type"` field value. Returns `None` for unknown types.
-  pub fn from_str( s : &str ) -> Option< Self >;
+  pub fn parse( s : &str ) -> Option< Self >;
 }
 
 /// Top-level journal event record — one per JSONL line.
@@ -88,13 +89,16 @@ pub struct EventFields
   pub output_format : Option< String >,
   pub runner_version : Option< String >,
   pub error_message : Option< String >,
+  pub user : Option< String >,
+  pub host : Option< String >,
+  pub args : Option< Vec< String > >,
 }
 ```
 
 ## Behavioral Contract
 
-- `EventType::as_str()` returns lowercase snake_case strings matching the JSON `"type"` values: `"execution"`, `"credential"`, `"gate_wait"`, `"retry"`, `"timeout"`, `"runner_retry"`, `"validation_retry"`, `"interactive"`
-- `EventType::from_str()` is case-sensitive and returns `None` for unrecognized strings
+- `EventType::as_str()` returns lowercase snake_case strings matching the JSON `"type"` values: `"execution"`, `"credential"`, `"gate_wait"`, `"retry"`, `"timeout"`, `"runner_retry"`, `"validation_retry"`, `"interactive"`, `"command"`
+- `EventType::parse()` is case-sensitive and returns `None` for unrecognized strings
 - `EventFields::default()` returns all fields as `None`
 - `EventRecord` serializes to a single JSON line (no embedded newlines in string fields — newlines in stdout/stderr are JSON-escaped as `\n`)
 - The `retry_class_counts` array indices map to `[Transient, Account, Auth, Service, Process, Unknown]` matching `ErrorClass` variant order in `claude_runner`
