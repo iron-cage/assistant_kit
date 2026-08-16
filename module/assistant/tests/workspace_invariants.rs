@@ -167,9 +167,6 @@ fn layer_of( name : &str ) -> Option< u8 >
 {
   match name
   {
-    // Fix(BUG-019): claude_journal hardcoded as Layer 1; Cargo.toml has zero workspace-member
-    // deps (Layer * criterion). Pitfall: hand-maintained classification table with no
-    // mechanical link to Cargo.toml ground truth — same defect class as claude_journal_charts BUG-001.
     "claude_core" => Some( 0 ),
     "claude_assets_core"
     | "claude_profile_core"
