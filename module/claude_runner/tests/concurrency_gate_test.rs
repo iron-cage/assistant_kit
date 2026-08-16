@@ -48,6 +48,9 @@
 //! | T39 | `CLR_REMAINING_TIMEOUT_SECS` unset / unparseable / set-but-nonlimiting → each denied gate run announces its resolution state (`gate-deadline` line, incl. `stale-reclaim` state) and the three states are mutually distinguishable (BUG-481) | — |
 //! | T40 | `CLR_REMAINING_TIMEOUT_SECS` empty / negative → announced off-unparseable with raw value; `"0"` → engaged with the `.max(1)` one-attempt floor, budget-exhaustion path (BUG-481 edge matrix) | — |
 //! | T41 | `CLR_GATE_POLL_SECS=0` + numeric `CLR_REMAINING_TIMEOUT_SECS` → no divide-by-zero panic; quotient divisor floored to 1, announced nonlimiting (BUG-481) | — |
+//! | T42 | pre-seeded slot owned by a dead PID whose number is a live non-leader thread TID (parked helper thread), `CLR_GATE_STALE_SECS` unset → owner fails the thread-group-leader clause, slot reclaimed, caller admitted promptly (BUG-488) | — |
+//! | T43 | pre-seeded slot recording a live leader PID with a deliberately mismatched start time → occupant fails the same-incarnation clause, slot reclaimed, caller admitted promptly (BUG-488) | — |
+//! | T44 | pre-seeded legacy-shape slot record (no start-time field) owned by a live leader → still denied `HeldByLive`; the same-incarnation clause is inert for legacy records (BUG-488 compatibility boundary) | — |
 //!
 //! T05 (`clr --help` shows `default: 8`) is covered by
 //! `param_edge_cases_test.rs::ec9_max_sessions_help_shows_default_eight`.
@@ -76,7 +79,8 @@ mod cli_binary_test_helpers;
 use cli_binary_test_helpers::
 {
   build_argv_tolerant_sleeper, fake_claude_binary_dir, fake_claude_dir, make_proc_dir,
-  slot_owner_pid, spawn_fake_claude, spawn_print_claude, spawn_print_claude_for, wait_bounded,
+  slot_owner_pid, spawn_fake_claude, spawn_parked_helper_thread, spawn_print_claude,
+  spawn_print_claude_for, wait_bounded,
 };
 use std::process::Command;
 
@@ -1159,6 +1163,293 @@ fn t38_slot_side_denial_names_measured_occupancy()
   assert!(
     timeout_line.contains( "slots=1/1 held" ),
     "T38 (BUG-480): slot-side timeout message must mirror the measured occupancy. Line:\n{timeout_line}"
+  );
+}
+
+// ── T42: thread-TID-masked dead slot owner reclaimed, caller admitted (BUG-488) ─
+
+/// T42 (BUG-488): a slot file whose recorded owner PID is dead, but whose PID
+/// number is currently occupied by a live NON-LEADER thread of an unrelated
+/// process, must be reclaimed like any other dead owner's — admitting the
+/// caller promptly with zero `slot held by another session` denials.
+///
+/// ## Root Cause
+/// `pid_alive()` implemented only two clauses — `/proc/{pid}/stat` readable
+/// AND state ∉ {`Z`} — but Linux resolves direct `/proc/<tid>` lookups for
+/// non-leader thread IDs of unrelated processes (readdir-invisible, yet
+/// stat-readable with a running state). A dead recorded owner whose number a
+/// live thread later occupied therefore read as alive forever, and
+/// `acquire_slot()` denied `HeldByLive` indefinitely — BUG-479's admission
+/// starvation with no zombie involved (observed live: dockerd startup thread
+/// TID 1744061 masking a dead gate waiter for 76+ hours).
+///
+/// ## Why Not Caught
+/// T14/T16/T17 seed dead owners by spawning AND reaping (`/proc/{pid}` absent);
+/// T37 covers the exited-but-unreaped zombie middle state. No fixture covered
+/// a PID number occupied by a live non-leader thread — `/proc/<tid>`'s
+/// direct-lookup resolution for readdir-invisible TIDs was unmodeled.
+///
+/// ## Fix Applied
+/// `pid_alive()` clause (c): `/proc/{pid}/status` must report `Tgid == pid`
+/// (thread-group leadership) — a bare thread occupying the number fails
+/// liveness, so the dead owner is reclaimed via the normal ticket-arbitrated
+/// handoff.
+///
+/// ## Prevention
+/// Liveness = stat readable AND state ∉ {`Z`} AND `Tgid == pid` AND (when the
+/// record carries one) matching start time — INV-012 contract clauses (a)–(d),
+/// held in exactly one predicate shared by every consumer.
+///
+/// ## Pitfall
+/// `ls /proc` never lists non-leader TIDs, but direct `/proc/<tid>` lookup
+/// resolves them — any PID-number-keyed liveness probe that skips the `Tgid`
+/// check reads dead processes as alive whenever a thread occupies the number.
+// test_kind: bug_reproducer(BUG-488)
+#[ test ]
+fn t42_thread_tid_masked_dead_slot_owner_reclaimed_and_caller_admitted()
+{
+  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
+  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
+  let proc_dir = tempfile::TempDir::new().expect( "proc dir" ); // empty: census sees 0 sessions
+
+  let ( tid, park_send, park_handle ) = spawn_parked_helper_thread();
+  // Fixture validity: the TID must present exactly the occupancy shape under
+  // test — stat readable via direct lookup, not a zombie, NOT a group leader.
+  let stat = std::fs::read_to_string( format!( "/proc/{tid}/stat" ) )
+    .expect( "fixture: /proc/<tid>/stat must be readable via direct lookup" );
+  assert!(
+    stat.rsplit_once( ')' ).is_some_and( | ( _, rest ) | !rest.trim_start().starts_with( 'Z' ) ),
+    "fixture: TID {tid} must not be a zombie"
+  );
+  let reported_tgid = std::fs::read_to_string( format!( "/proc/{tid}/status" ) )
+    .expect( "fixture: /proc/<tid>/status must be readable" )
+    .lines()
+    .find_map( | l | l.strip_prefix( "Tgid:" ).and_then( | v | v.trim().parse::< u32 >().ok() ) );
+  assert!(
+    reported_tgid.is_some_and( | t | t != tid ),
+    "fixture: TID {tid} must be a non-leader thread (Tgid {reported_tgid:?})"
+  );
+
+  // Legacy record shape (no start-time field): only the thread-group-leader
+  // clause can reclaim this — isolating clause (c), and matching the live
+  // incident (the masked record was written by a pre-fix binary).
+  std::fs::write(
+    gate_dir.path().join( "slot_0.json" ),
+    format!( r#"{{"pid":{tid},"since":0}}"# ),
+  ).expect( "pre-seed thread-masked slot file" );
+
+  let out = Command::new( env!( "CARGO_BIN_EXE_clr" ) )
+    .args( [ "-p", "--max-sessions", "1", "--retry-override", "0", "--journal", "off", "x" ] )
+    .env( "PATH", &script_path )
+    .env( "CLR_PROC_DIR", proc_dir.path() )
+    .env( "CLR_GATE_DIR", gate_dir.path() )
+    .env( "CLR_GATE_POLL_SECS", "1" )
+    .env( "CLR_GATE_MAX_ATTEMPTS", "2" )
+    .env_remove( "CLR_GATE_STALE_SECS" )
+    .output()
+    .expect( "run clr" );
+
+  drop( park_send ); // release the parked helper thread
+  let _ = park_handle.join();
+
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert!(
+    out.status.success(),
+    "T42 (BUG-488): caller must be admitted after thread-masked dead-owner reclaim; got exit {:?}, stderr:\n{stderr}",
+    out.status.code()
+  );
+  assert!(
+    !stderr.contains( "slot held by another session" ),
+    "T42 (BUG-488): a live non-leader thread occupying the number must not read as a live slot holder. stderr:\n{stderr}"
+  );
+
+  // Record plumbing: the admitted caller's fresh claim must carry its own
+  // start time — the incarnation binding exists on disk, not just in code.
+  let slot_content = std::fs::read_to_string( gate_dir.path().join( "slot_0.json" ) )
+    .expect( "read reclaimed slot record" );
+  assert!(
+    slot_content.contains( r#""starttime":"# ),
+    "T42 (BUG-488): a freshly-claimed slot record must carry the writer's start time. Got:\n{slot_content}"
+  );
+  assert_ne!(
+    slot_owner_pid( &slot_content ), Some( tid ),
+    "T42 (BUG-488): reclaim must have rewritten the slot record away from the masked TID. Got:\n{slot_content}"
+  );
+}
+
+// ── T43: mismatched-start-time slot owner reclaimed, caller admitted (BUG-488) ─
+
+/// T43 (BUG-488): a slot file recording a genuinely alive LEADER PID but a
+/// start time that mismatches the live occupant's `/proc/{pid}/stat` field 22
+/// must be reclaimed — the record's writer is provably not the current
+/// occupant of that PID number.
+///
+/// ## Root Cause
+/// The slot record stored only the bare PID number, so liveness conflated
+/// number-identity with incarnation-identity: any live process occupying the
+/// recorded number read as the recorded writer. Clause (c) (thread-group
+/// leadership) closes the thread-occupancy case but cannot catch a recycled
+/// LEADER PID — a full wrap of the kernel PID space lands the number on a new,
+/// unrelated process that passes every per-occupant check.
+///
+/// ## Why Not Caught
+/// No fixture could produce a same-number-different-process leader without an
+/// actual host PID wrap; nothing in the record identified the writer beyond
+/// its number, so there was nothing for a test to compare against.
+///
+/// ## Fix Applied
+/// `claim_slot_file()` records the writer's own start time (`/proc/{pid}/stat`
+/// field 22) in the slot record; `pid_alive()` clause (d) compares the
+/// recorded value against the current occupant's and reads any mismatch as
+/// dead. Fabricating the mismatch in the record is equivalent to the number
+/// having been recycled to a different process — a deterministic stand-in for
+/// a host PID wrap.
+///
+/// ## Prevention
+/// Records bind to `(pid, starttime)` — the process incarnation — never to the
+/// bare PID number; INV-012 contract clause (d).
+///
+/// ## Pitfall
+/// Clause (c) alone cannot catch a recycled *leader* PID — only the start-time
+/// binding distinguishes two incarnations of the same number. Conversely the
+/// comparison must be exact equality of the recorded field-22 value: it is
+/// stable for a process's entire life, so any mismatch proves a different
+/// incarnation.
+// test_kind: bug_reproducer(BUG-488)
+#[ test ]
+fn t43_mismatched_start_time_slot_owner_reclaimed_and_caller_admitted()
+{
+  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
+  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
+  let proc_dir = tempfile::TempDir::new().expect( "proc dir" ); // empty: census sees 0 sessions
+
+  // Live leader occupant: this test process itself (nextest runs each test in
+  // its own process) — guaranteed alive for the duration, no child to manage.
+  let owner_pid = std::process::id();
+  let real_starttime : u64 = std::fs::read_to_string( format!( "/proc/{owner_pid}/stat" ) )
+    .ok()
+    .and_then( | stat | stat.rsplit_once( ')' ).and_then( | ( _, rest ) | rest.split_whitespace().nth( 19 ).and_then( | f | f.parse().ok() ) ) )
+    .expect( "fixture: parse own starttime (stat field 22)" );
+
+  // Deliberately wrong start time: the record's writer is provably not the
+  // current occupant of this PID number.
+  std::fs::write(
+    gate_dir.path().join( "slot_0.json" ),
+    format!( r#"{{"pid":{owner_pid},"since":0,"starttime":{}}}"#, real_starttime + 1 ),
+  ).expect( "pre-seed mismatched-start-time slot file" );
+
+  let out = Command::new( env!( "CARGO_BIN_EXE_clr" ) )
+    .args( [ "-p", "--max-sessions", "1", "--retry-override", "0", "--journal", "off", "x" ] )
+    .env( "PATH", &script_path )
+    .env( "CLR_PROC_DIR", proc_dir.path() )
+    .env( "CLR_GATE_DIR", gate_dir.path() )
+    .env( "CLR_GATE_POLL_SECS", "1" )
+    .env( "CLR_GATE_MAX_ATTEMPTS", "2" )
+    .env_remove( "CLR_GATE_STALE_SECS" )
+    .output()
+    .expect( "run clr" );
+
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert!(
+    out.status.success(),
+    "T43 (BUG-488): caller must be admitted after mismatched-incarnation reclaim; got exit {:?}, stderr:\n{stderr}",
+    out.status.code()
+  );
+  assert!(
+    !stderr.contains( "slot held by another session" ),
+    "T43 (BUG-488): a mismatched-start-time occupant must not read as the recorded live holder. stderr:\n{stderr}"
+  );
+}
+
+// ── T44: legacy record without start time, live leader owner → still held (BUG-488) ─
+
+/// T44 (BUG-488 compatibility boundary): a legacy-shape slot record —
+/// `{"pid":N,"since":M}`, no start-time field — recording a genuinely alive
+/// leader PID must still deny `HeldByLive`. NOT a reproducer: the denial
+/// behavior must hold identically pre-fix and post-fix; the test pins the
+/// boundary so the incarnation binding can never silently widen into mass
+/// reclaim. A final post-fix-only assert additionally pins the record
+/// plumbing: the denied caller's own surviving waiter file carries the
+/// start-time field.
+///
+/// ## Root Cause
+/// (Boundary guard, not a defect repro.) The BUG-488 fix adds a start-time
+/// comparison to `pid_alive()`; applied unconditionally it would read EVERY
+/// record written by a pre-fix binary — which carries no start-time field —
+/// as a mismatch, mass-reclaiming slots held by live sessions across a
+/// mid-upgrade mixed fleet.
+///
+/// ## Why Not Caught
+/// (Preventive.) Nothing exercised the pre-fix record shape against the
+/// post-fix predicate before this test existed.
+///
+/// ## Fix Applied
+/// `read_slot_owner_record()` parses the start-time field as optional;
+/// `pid_alive()` applies clause (d) only when the record actually carries the
+/// field — legacy records keep clauses (a)–(c) semantics until rewritten by a
+/// post-fix binary.
+///
+/// ## Prevention
+/// The incarnation binding is additive by contract (INV-012 clause (d),
+/// "legacy records" sentence); this test pins that boundary permanently.
+///
+/// ## Pitfall
+/// An absent field and a mismatched field are different facts — treating
+/// absence as mismatch converts an upgrade into an outage (every live
+/// session's slot reclaimed at once by the first post-fix caller).
+#[ test ]
+fn t44_legacy_record_without_start_time_live_leader_still_held()
+{
+  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
+  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
+  let proc_dir = tempfile::TempDir::new().expect( "proc dir" ); // empty: census sees 0 sessions
+
+  // Live leader owner: this test process itself, recorded in the exact
+  // pre-BUG-488 shape (no start-time field).
+  let owner_pid = std::process::id();
+  std::fs::write(
+    gate_dir.path().join( "slot_0.json" ),
+    format!( r#"{{"pid":{owner_pid},"since":0}}"# ),
+  ).expect( "pre-seed legacy-shape live-owner slot file" );
+
+  let out = Command::new( env!( "CARGO_BIN_EXE_clr" ) )
+    .args( [ "-p", "--max-sessions", "1", "--retry-override", "0", "--journal", "off", "x" ] )
+    .env( "PATH", &script_path )
+    .env( "CLR_PROC_DIR", proc_dir.path() )
+    .env( "CLR_GATE_DIR", gate_dir.path() )
+    .env( "CLR_GATE_POLL_SECS", "1" )
+    .env( "CLR_GATE_MAX_ATTEMPTS", "2" )
+    .env_remove( "CLR_GATE_STALE_SECS" )
+    .output()
+    .expect( "run clr" );
+
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert!(
+    !out.status.success(),
+    "T44 (BUG-488): a live leader owner recorded without a start-time field must still hold its slot. stderr:\n{stderr}"
+  );
+  assert!(
+    stderr.contains( "slot held by another session" ),
+    "T44 (BUG-488): denial must classify as HeldByLive, not a reclaim race. stderr:\n{stderr}"
+  );
+  assert!(
+    stderr.contains( "session gate timed out" ),
+    "T44 (BUG-488): the caller must exhaust its gate-wait budget against the held slot. stderr:\n{stderr}"
+  );
+
+  // Record plumbing: waiter gate files written post-fix carry the writer's
+  // start time. The denied caller exits via the exhaustion path (exit 1),
+  // which skips the drop guard — its {pid}.json survives for inspection.
+  let waiter_path = std::fs::read_dir( gate_dir.path() )
+    .expect( "list gate dir" )
+    .flatten()
+    .map( | e | e.path() )
+    .find( | p | p.file_stem().and_then( std::ffi::OsStr::to_str ).is_some_and( | s | s.parse::< u32 >().is_ok() ) )
+    .expect( "denied caller's waiter gate file must survive the exhaustion exit" );
+  let waiter_content = std::fs::read_to_string( &waiter_path ).expect( "read waiter gate file" );
+  assert!(
+    waiter_content.contains( r#""starttime":"# ),
+    "T44 (BUG-488): a waiter gate file written post-fix must carry the writer's start time. Got:\n{waiter_content}"
   );
 }
 

@@ -2,20 +2,20 @@
 //!
 //! Covers IN-1–IN-5 from `tests/docs/invariant/011_session_source_isolation.md`.
 //!
-//! These tests verify that when `--session-from` is used, `CLAUDE_CODE_SESSION_DIR`
-//! is set to the source directory's computed storage path (not the target's), the
-//! subprocess working directory is the target (not the source), and the source
-//! session files are never written to during the cross-loaded run.
+//! These tests verify that when `--session-from` is used, the transplant plan's
+//! source is the source directory's computed storage (never a target-derived
+//! path), the subprocess working directory is the target (not the source), and
+//! the source session files are never written to during the cross-loaded run.
 //!
 //! All tests use `--dry-run` so no real Claude binary is needed.
 //!
 //! | Test | Property |
 //! |------|----------|
-//! | IN-1 | `CLAUDE_CODE_SESSION_DIR` points to source storage, not target |
+//! | IN-1 | Transplant source comes from source storage, never from target |
 //! | IN-2 | Subprocess working directory is target dir, not source |
 //! | IN-3 | Source session file mtime and size unchanged after cross-loaded run |
 //! | IN-4 | `--session-dir` raw path wins over `--session-from` computed path |
-//! | IN-5 | `--session-from` + `--to`: session dir from source, cwd is target |
+//! | IN-5 | `--session-from` + `--to`: transplant source from source, cwd is target |
 
 // IN-3 is the most critical: if source files are written to during a cross-loaded
 // run, the isolation contract is broken and source history would be polluted.
@@ -138,17 +138,18 @@ fn run_dry_env( args : &[ &str ], env : &[ ( &str, &str ) ] ) -> String
 
 // ── IN-1: Session UUID from source dir, not target ────────────────────────────
 
-/// IN-1: `CLAUDE_CODE_SESSION_DIR` points to source storage, not target storage.
+/// IN-1: the transplanted session comes from SOURCE storage, not target storage.
 ///
-/// Target dir has no `.jsonl` files; source dir has `lll-001.jsonl`.
-/// The dry-run must set `CLAUDE_CODE_SESSION_DIR` to source's computed path,
-/// not to any path derived from the target.
+/// Target dir has no `.jsonl` files; source dir has `lll-001.jsonl`.  The
+/// transplant plan's source side must be the source storage's session file;
+/// no target-derived path may ever appear as a transplant SOURCE (the target
+/// storage legitimately appears only as the DESTINATION).
 #[ test ]
 fn in1_uuid_read_from_source_not_target()
 {
   let ch  = tempfile::TempDir::new().expect( "tmpdir" );
   let src = "/tmp/011it1-src";
-  make_session_for( ch.path(), src, "lll-001" );
+  let jsonl = make_session_for( ch.path(), src, "lll-001" );
   // Target dir exists but has NO session files in Claude storage
   let tgt = tempfile::TempDir::new().expect( "tgt tmpdir" );
   let tgt_str = tgt.path().to_str().expect( "utf-8" );
@@ -157,17 +158,20 @@ fn in1_uuid_read_from_source_not_target()
     &[ "--session-from", src, "--to", tgt_str, "task" ],
     &[ ( "CLAUDE_HOME", ch_str ) ],
   );
-  // CLAUDE_CODE_SESSION_DIR must point to source storage path
-  let src_session_dir = format!( "{ch_str}/projects/{}", df( src ) );
+  // Transplant source must be the SOURCE storage's session file
   assert!(
-    stdout.contains( &format!( "CLAUDE_CODE_SESSION_DIR={src_session_dir}" ) ),
-    "session dir must come from source storage. Got:\n{stdout}"
+    stdout.contains( &format!( "# session-transplant: {} -> ", jsonl.display() ) ),
+    "transplant source must come from source storage. Got:\n{stdout}"
   );
-  // Target's encoded path must NOT be used as session dir
-  let tgt_session_dir = format!( "{ch_str}/projects/{}", df( tgt_str ) );
+  // Target's encoded storage must never appear as a transplant SOURCE
+  let tgt_canon = std::fs::canonicalize( tgt.path() ).expect( "canonicalize target" );
+  let tgt_session_dir = format!(
+    "{ch_str}/projects/{}",
+    df( tgt_canon.to_str().expect( "utf-8" ) )
+  );
   assert!(
-    !stdout.contains( &format!( "CLAUDE_CODE_SESSION_DIR={tgt_session_dir}" ) ),
-    "session dir must NOT be derived from target. Got:\n{stdout}"
+    !stdout.contains( &format!( "# session-transplant: {tgt_session_dir}" ) ),
+    "no target-derived path may be a transplant source. Got:\n{stdout}"
   );
 }
 
@@ -275,7 +279,7 @@ fn in4_session_dir_raw_path_wins()
 
 // ── IN-5: --session-from + --to: session UUID from source, cwd is target ───────
 
-/// IN-5: Both read isolation (`CLAUDE_CODE_SESSION_DIR` from source) and run
+/// IN-5: Both read isolation (transplant source from SOURCE storage) and run
 ///       isolation (cwd = target) hold simultaneously when `--to` and
 ///       `--session-from` are combined.
 #[ test ]
@@ -283,7 +287,7 @@ fn in5_combined_source_uuid_and_target_cwd()
 {
   let ch  = tempfile::TempDir::new().expect( "tmpdir" );
   let src = "/tmp/011it5-src";
-  make_session_for( ch.path(), src, "qqq-006" );
+  let jsonl = make_session_for( ch.path(), src, "qqq-006" );
   let tgt = tempfile::TempDir::new().expect( "tgt tmpdir" );
   let tgt_str = tgt.path().to_str().expect( "utf-8" );
   let ch_str = ch.path().to_str().expect( "utf-8" );
@@ -291,11 +295,10 @@ fn in5_combined_source_uuid_and_target_cwd()
     &[ "--to", tgt_str, "--session-from", src, "Continue" ],
     &[ ( "CLAUDE_HOME", ch_str ) ],
   );
-  // Read isolation: session dir comes from source storage
-  let src_session_dir = format!( "{ch_str}/projects/{}", df( src ) );
+  // Read isolation: the transplanted session file comes from source storage
   assert!(
-    stdout.contains( &format!( "CLAUDE_CODE_SESSION_DIR={src_session_dir}" ) ),
-    "session dir must come from source storage. Got:\n{stdout}"
+    stdout.contains( &format!( "# session-transplant: {} -> ", jsonl.display() ) ),
+    "transplant source must come from source storage. Got:\n{stdout}"
   );
   // Run isolation: subprocess runs in target
   assert!(

@@ -12,6 +12,7 @@
 | `format.rs` | Quota metric helpers: five_hour_left, prefer_weekly, renewal_secs. |
 | `sort.rs` | Quota display sort strategies; sort_indices entry point. |
 | `sort_next.rs` | Next-account recommendation strategies; find_next_for_strategy, strategy_metric. |
+| `stalest.rs` | Stale-first fetch-set reduction: select_stalest, reduction_applies. |
 | `render.rs` | Text and JSON quota table rendering; render_text, render_json. |
 | `render_json.rs` | JSON renderer for quota results. |
 | `render_sessions.rs` | Sessions marker table for quota output footer. |

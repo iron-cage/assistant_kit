@@ -34,6 +34,11 @@ subprocess stdin automatically — see
 stdin-classification design. `--file` always takes priority over this
 fallback when both are present.
 
+**Hazard — held-open pipe:** that automatic stdin read blocks until EOF; a pipe
+whose writer never closes would block clr before parsing. Opt out of all stdin
+reading with [`--no-stdin`](086_no_stdin.md) / `CLR_NO_STDIN` (BUG-492) —
+`--file` itself reads a named file, not stdin, and is unaffected by the opt-out.
+
 **Env var:** `CLR_FILE` — accepts a file path string; applied when `--file` is absent from
 the CLI. `CLR_FILE=/path/to/file clr "task"` is equivalent to `clr --file /path/to/file "task"`.
 

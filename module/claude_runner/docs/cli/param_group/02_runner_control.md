@@ -7,7 +7,7 @@
 
 ### Semantic Coherence Test
 
-"Is this parameter consumed by the runner, not Claude?" — YES for all 52 (51 CLI flags + 1 env-var-only).
+"Is this parameter consumed by the runner, not Claude?" — YES for all 53 (52 CLI flags + 1 env-var-only).
 
 ### Why NOT X
 
@@ -59,6 +59,7 @@ clr --trace "Fix bug" --dir /project
 | [`--no-effort-max`](../param/018_no_effort_max.md) | bool | false | Injection suppressor | Suppress default `--effort max` injection |
 | [`--no-chrome`](../param/021_no_chrome.md) | bool | false | Injection suppressor | Suppress default `--chrome` injection |
 | [`--no-persist`](../param/022_no_persist.md) | bool | false | Injection suppressor | Disable session persistence injection |
+| [`--no-stdin`](../param/086_no_stdin.md) | bool | false | Stdin guard | Never read piped stdin — disables JSON config detection and forwarding (pre-parse token/env scan; BUG-492) |
 | [`--file`](../param/025_file.md) | [`FilePath`](../type/12_file_path.md) | — | Stdin source | File content piped as subprocess stdin |
 | [`--strip-fences`](../param/026_strip_fences.md) | bool | false | Output processor | Strip outermost markdown code fences from stdout |
 | [`--keep-claudecode`](../param/027_keep_claudecode.md) | bool | false | Env filter | Preserve `CLAUDECODE` env var in subprocess (default: removed) |
