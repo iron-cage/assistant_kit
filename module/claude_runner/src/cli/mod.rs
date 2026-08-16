@@ -69,9 +69,22 @@ pub( super ) use help::print_help;
 // Fix(BUG-228): always emit; verbosity must not suppress --dry-run output
 // Root cause: prior version gated on shows_progress() (≥3); --verbosity 0–2 produced silent exit
 // Pitfall: Verbosity gates runner diagnostics only, never core feature output like --dry-run
-pub( super ) fn handle_dry_run( builder : &ClaudeCommand )
+pub( super ) fn handle_dry_run( builder : &ClaudeCommand, transplant : Option< &builder::SessionTransplant > )
 {
   println!( "{}", builder.describe_full() );
+  // Fix(BUG-490): preview the planned session transplant — dry-run performs no copy,
+  //   but the copy is part of what the real run would do and must be visible.
+  // Root cause: dropping the dead CLAUDE_CODE_SESSION_DIR export removed the only
+  //   describe_full() trace of --session-from, leaving the flag invisible in previews.
+  // Pitfall: keep this a preview only — dry-run must stay side-effect-free (BUG-231/319).
+  if let Some( plan ) = transplant
+  {
+    println!(
+      "# session-transplant: {} -> {}",
+      plan.source_file.display(),
+      plan.target_storage_dir.display()
+    );
+  }
 }
 
 // Fix(BUG-212): `run` was absent; typing `clr running` produced no helpful error.
@@ -358,7 +371,7 @@ pub( super ) fn dispatch_run( tokens : &[ String ] ) -> !
     std::process::exit( 1 );
   }
 
-  let ( builder, expected_id ) = build_claude_command( &cli );
+  let ( builder, expected_id, prep ) = build_claude_command( &cli );
 
   // Fix(BUG-248): warn when --keep-claudecode is set while CLAUDECODE is present in
   //   the parent environment — the child will run in nested-agent mode unintentionally.
@@ -378,8 +391,35 @@ pub( super ) fn dispatch_run( tokens : &[ String ] ) -> !
 
   if cli.dry_run
   {
-    handle_dry_run( &builder );
+    handle_dry_run( &builder, prep.transplant.as_ref() );
     std::process::exit( 0 );
+  }
+
+  // Fix(BUG-491): validate the effective working directory before the gate wait and
+  //   spawn — a nonexistent --dir/--to must fail fast, by name, with no retries.
+  // Root cause: spawn's ErrorKind::NotFound conflates a missing cwd with a missing
+  //   binary; the error surfaced as "claude binary not found" plus an npm install hint
+  //   and a retry ladder, none of which describe the actual problem.
+  // Pitfall: keep this after the dry-run exit (--dry-run must preview any path,
+  //   validation-free) and before the session gate (failing after a gate wait burns
+  //   a slot on an invocation that can never start).
+  if let Some( ref dir ) = prep.effective_working_dir
+  {
+    if !dir.is_dir()
+    {
+      eprintln!(
+        "Error: [Runner] working directory does not exist: {} (--dir/--to must name an existing directory)",
+        dir.display()
+      );
+      std::process::exit( 1 );
+    }
+  }
+
+  // Fix(BUG-490): physically copy the source session into the target's own storage
+  //   before spawn so the injected -c continues the transplanted history.
+  if let Some( ref plan ) = prep.transplant
+  {
+    builder::execute_session_transplant( plan );
   }
 
   // Fix(BUG-319): resolve journal writer AFTER the dry-run exit so that `--dry-run`

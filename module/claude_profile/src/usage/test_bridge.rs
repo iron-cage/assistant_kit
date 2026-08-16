@@ -33,7 +33,7 @@ pub use super::render::{ render_text, render_tsv, render_json, extract_get_field
 pub use super::refresh::{ apply_refresh, reason_label };
 
 // ── Touch ─────────────────────────────────────────────────────────────────
-pub use super::touch::{ apply_touch, touch_skip_reason };
+pub use super::touch::{ apply_touch, touch_skip_reason, mark_touched, touched_within_grace, derive_touched_recently, TOUCH_GRACE_SECS };
 
 // ── Format ────────────────────────────────────────────────────────────────
 pub use super::format::{
@@ -63,6 +63,9 @@ pub use super::subprocess::{ resolve_model, resolve_effort, effort_pre_args };
 // ── Fetch ─────────────────────────────────────────────────────────────────
 pub use super::fetch::{ inject_synthetic_if_new, parse_u64_from_str, fetch_quota_for_list };
 pub use super::fetch_cache::read_cached_quota;
+
+// ── Stalest ───────────────────────────────────────────────────────────────
+pub use super::stalest::{ select_stalest, reduction_applies };
 
 // ── Types (UsageParams) ───────────────────────────────────────────────────
 pub use super::types::UsageParams;

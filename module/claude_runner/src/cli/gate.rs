@@ -189,9 +189,13 @@ fn slot_path( dir : &Path, index : u32 ) -> PathBuf
 // closes the window where claim_slot_file() itself could CREATE a new
 // incomplete file; it adds no repair path for content that was already
 // unparseable before claim_slot_file() was ever called.
-fn claim_slot_file( path : &Path, pid : u32, since : u64 ) -> bool
+fn claim_slot_file( path : &Path, pid : u32, since : u64, starttime : Option< u64 > ) -> bool
 {
-  let content = format!( r#"{{"pid":{pid},"since":{since}}}"# );
+  // Fix(BUG-488): record the writer's own start time when available, binding
+  // the claim to this process incarnation — see pid_alive() below for the
+  // full fix comment. None (start time unreadable) writes the legacy shape.
+  let starttime_field = starttime.map_or_else( String::new, | st | format!( r#","starttime":{st}"# ) );
+  let content = format!( r#"{{"pid":{pid},"since":{since}{starttime_field}}}"# );
   let dir     = path.parent().unwrap_or_else( || Path::new( "." ) );
   let tmp     = dir.join( format!( "claim_tmp_{pid}_{since}" ) );
   if std::fs::write( &tmp, &content ).is_err()
@@ -218,15 +222,19 @@ fn claim_test_delay()
   }
 }
 
-// Return the (pid, since) recorded in a slot file, if the file is readable and
-// well-formed. Fix(BUG-392) needs `since` in addition to `pid` to key the
-// reclaim ticket path deterministically — see acquire_slot() below.
-fn read_slot_owner_record( path : &Path ) -> Option< ( u32, u64 ) >
+// Return the (pid, since, starttime) recorded in a slot file, if the file is
+// readable and well-formed. Fix(BUG-392) needs `since` in addition to `pid`
+// to key the reclaim ticket path deterministically — see acquire_slot()
+// below. Fix(BUG-488): `starttime` is optional — legacy records written by a
+// pre-fix binary lack the field and must stay parseable (None), never be
+// treated as corrupt or mismatched.
+fn read_slot_owner_record( path : &Path ) -> Option< ( u32, u64, Option< u64 > ) >
 {
-  let content = std::fs::read_to_string( path ).ok()?;
-  let pid     = u32::try_from( super::ps::parse_json_u64( &content, "pid" )? ).ok()?;
-  let since   = super::ps::parse_json_u64( &content, "since" )?;
-  Some( ( pid, since ) )
+  let content   = std::fs::read_to_string( path ).ok()?;
+  let pid       = u32::try_from( super::ps::parse_json_u64( &content, "pid" )? ).ok()?;
+  let since     = super::ps::parse_json_u64( &content, "since" )?;
+  let starttime = super::ps::parse_json_u64( &content, "starttime" );
+  Some( ( pid, since, starttime ) )
 }
 
 // BUG-479 task/claude_runner/bug/479_zombie_blind_pid_liveness.md — fixed: bare /proc/{pid}
@@ -244,21 +252,84 @@ fn read_slot_owner_record( path : &Path ) -> Option< ( u32, u64 ) >
 // — any reclaim/display protocol keyed on it deadlocks/inflates the moment
 // children stop being reaped. Liveness = stat readable AND state ∉ {Z}.
 //
-// Return whether `pid` is a live, running process (Linux-only host assumption,
-// unchanged). The state field follows the LAST ')' — comm may contain
+// Fix(BUG-488) task/claude_runner/bug/488_pid_liveness_thread_id_blind.md:
+// liveness additionally requires thread-group leadership (`Tgid == pid` from
+// /proc/{pid}/status) and — when the caller's record carries the writer's
+// start time — a matching /proc/{pid}/stat field 22 on the current occupant.
+// Root cause: the two BUG-479 clauses test only that SOMETHING with this
+// number is running, never that it is the recorded PROCESS: Linux resolves
+// direct /proc/<tid> lookups for readdir-invisible non-leader thread IDs of
+// unrelated processes, and a full PID-space wrap recycles a leader number to
+// a new process — either occupancy made a dead recorded owner read alive
+// forever (observed live: dockerd startup thread TID 1744061 masking a dead
+// gate waiter as a phantom `Queued` row for 76+ hours).
+// Pitfall: a bare PID number never identifies a process across time — bind
+// records to the (pid, starttime) incarnation and verify both on read. The
+// starttime clause is additive: legacy records without the field keep the
+// (a)-(c) semantics, so a mid-upgrade mixed fleet never mass-reclaims slots
+// held by live pre-fix sessions (absence of the field is NOT a mismatch).
+//
+// Return whether `pid` is a live, running process — and, when
+// `recorded_starttime` is Some, the same process incarnation that wrote the
+// record (Linux-only host assumption, unchanged). Clauses: (a) stat readable,
+// (b) state ∉ {Z}, (c) thread-group leader, (d) start time matches when
+// recorded. The state field follows the LAST ')' — comm may contain
 // spaces/parens.
-pub( super ) fn pid_alive( pid : u32 ) -> bool
+pub( super ) fn pid_alive( pid : u32, recorded_starttime : Option< u64 > ) -> bool
 {
-  match std::fs::read_to_string( format!( "/proc/{pid}/stat" ) )
+  let Ok( stat ) = std::fs::read_to_string( format!( "/proc/{pid}/stat" ) )
+  else
   {
-    Err( _ ) => false,
-    Ok( stat ) =>
-    {
-      stat.rsplit_once( ')' )
-        .and_then( | ( _, rest ) | rest.trim_start().chars().next() )
-        .is_some_and( | state | state != 'Z' )
-    }
+    return false; // (a) no such PID number at all
+  };
+  let running = stat.rsplit_once( ')' )
+    .and_then( | ( _, rest ) | rest.trim_start().chars().next() )
+    .is_some_and( | state | state != 'Z' );
+  if !running
+  {
+    return false; // (b) exited-but-unreaped zombie
   }
+  if proc_tgid( pid ) != Some( pid )
+  {
+    return false; // (c) a non-leader thread merely occupies the number
+  }
+  match recorded_starttime
+  {
+    None             => true, // legacy record — incarnation clause inert
+    Some( recorded ) => starttime_from_stat( &stat ) == Some( recorded ), // (d)
+  }
+}
+
+// Return the thread-group ID reported by /proc/{pid}/status. For a process
+// (thread-group leader) `Tgid == pid`; for a bare thread TID resolved via
+// direct lookup, Tgid names its owning process instead.
+fn proc_tgid( pid : u32 ) -> Option< u32 >
+{
+  std::fs::read_to_string( format!( "/proc/{pid}/status" ) )
+    .ok()?
+    .lines()
+    .find_map( | l | l.strip_prefix( "Tgid:" ).and_then( | v | v.trim().parse().ok() ) )
+}
+
+// Return the start-time token from raw /proc/{pid}/stat content: field 22
+// (clock ticks since boot), stable for a process's entire life — token index
+// 19 after the ')' split, since fields 1-2 (pid, comm) precede the ')'.
+// Compared for exact equality only; never unit-converted.
+fn starttime_from_stat( stat : &str ) -> Option< u64 >
+{
+  stat.rsplit_once( ')' )?
+    .1
+    .split_whitespace()
+    .nth( 19 )?
+    .parse()
+    .ok()
+}
+
+// Return this-or-any process's own current start time (field 22) for
+// recording into slot/ticket/waiter artifacts at write time.
+fn proc_starttime( pid : u32 ) -> Option< u64 >
+{
+  starttime_from_stat( &std::fs::read_to_string( format!( "/proc/{pid}/stat" ) ).ok()? )
 }
 
 // Test-only injection point, same idiom as `gate_dir()`'s `$CLR_GATE_DIR`
@@ -417,14 +488,14 @@ enum SlotDenialCause
 // this cleanup only fires when the winner is confirmed to have never
 // completed admission, so no legitimate holder's ticket is ever disturbed
 // and the permanent-retention guarantee for SUCCESSFUL claims is unchanged.
-fn acquire_slot( dir : &Path, index : u32, pid : u32, since : u64, stale_secs : Option< u64 > ) -> Result< (), SlotDenialCause >
+fn acquire_slot( dir : &Path, index : u32, pid : u32, since : u64, starttime : Option< u64 >, stale_secs : Option< u64 > ) -> Result< (), SlotDenialCause >
 {
   let path = slot_path( dir, index );
-  if claim_slot_file( &path, pid, since )
+  if claim_slot_file( &path, pid, since, starttime )
   {
     return Ok( () );
   }
-  let Some( ( owner, owner_since ) ) = read_slot_owner_record( &path )
+  let Some( ( owner, owner_since, owner_starttime ) ) = read_slot_owner_record( &path )
   else
   {
     // Fix(BUG-396): an unreadable record here is classified HeldByLive, not
@@ -448,7 +519,7 @@ fn acquire_slot( dir : &Path, index : u32, pid : u32, since : u64, stale_secs : 
   // preserving pre-fix behavior exactly (pid_alive(owner) alone gates).
   let is_stale = stale_secs
     .is_some_and( | threshold | unix_now().saturating_sub( owner_since ) > threshold );
-  if pid_alive( owner ) && !is_stale
+  if pid_alive( owner, owner_starttime ) && !is_stale
   {
     return Err( SlotDenialCause::HeldByLive );
   }
@@ -458,10 +529,10 @@ fn acquire_slot( dir : &Path, index : u32, pid : u32, since : u64, stale_secs : 
   loop
   {
     let ticket = dir.join( format!( "reclaim_{index}_{ticket_owner}_{ticket_since}.lock" ) );
-    if claim_slot_file( &ticket, pid, since )
+    if claim_slot_file( &ticket, pid, since, starttime )
     {
       let tmp = dir.join( format!( "reclaim_tmp_{index}_{pid}" ) );
-      if force_tmp_claim_fail_once() || !claim_slot_file( &tmp, pid, since )
+      if force_tmp_claim_fail_once() || !claim_slot_file( &tmp, pid, since, starttime )
       {
         let _ = std::fs::remove_file( &ticket );
         return Err( SlotDenialCause::LostReclaimRace );
@@ -477,16 +548,16 @@ fn acquire_slot( dir : &Path, index : u32, pid : u32, since : u64, stale_secs : 
         Err( SlotDenialCause::LostReclaimRace )
       };
     }
-    let Some( ( next_claimant, next_claimant_since ) ) = read_slot_owner_record( &ticket )
+    let Some( ( next_claimant, next_claimant_since, next_claimant_starttime ) ) = read_slot_owner_record( &ticket )
     else
     {
       return Err( SlotDenialCause::LostReclaimRace );
     };
-    if pid_alive( next_claimant )
+    if pid_alive( next_claimant, next_claimant_starttime )
     {
       return Err( SlotDenialCause::LostReclaimRace );
     }
-    let Some( ( current_owner, _ ) ) = read_slot_owner_record( &path )
+    let Some( ( current_owner, _, _ ) ) = read_slot_owner_record( &path )
     else
     {
       return Err( SlotDenialCause::HeldByLive );
@@ -745,6 +816,10 @@ pub( super ) fn wait_for_session_slot(
 
   // Gate state file — best-effort; I/O failures must not abort the caller.
   let pid        = std::process::id();
+  // Fix(BUG-488): capture this process's own start time once — recorded in
+  // every slot/ticket/waiter artifact this call writes, binding each record
+  // to this exact process incarnation. See pid_alive() for the full comment.
+  let my_starttime = proc_starttime( pid );
   let dir        = gate_dir();
   let _          = std::fs::create_dir_all( &dir );
   let state_path = dir.join( format!( "{pid}.json" ) );
@@ -760,9 +835,12 @@ pub( super ) fn wait_for_session_slot(
   // why a single-pass escaper replaced this fix's first, incomplete `.replace()` chain.
   let cwd_escaped = json_escape_str( &cwd );
   let since = unix_now();
+  // Fix(BUG-488): waiter telemetry carries the same incarnation binding as
+  // slot records, so ps.rs's display-liveness filter can verify it too.
+  let starttime_field = my_starttime.map_or_else( String::new, | st | format!( r#","starttime":{st}"# ) );
   let _     = std::fs::write(
     &state_path,
-    format!( r#"{{"cwd":"{cwd_escaped}","since":{since},"attempt":0,"message":"waiting for session slot"}}"# ),
+    format!( r#"{{"cwd":"{cwd_escaped}","since":{since}{starttime_field},"attempt":0,"message":"waiting for session slot"}}"# ),
   );
 
   // Drop guard removes the gate file on return or unwinding panic ONLY —
@@ -831,14 +909,14 @@ pub( super ) fn wait_for_session_slot(
       let mut denied_slots : u32 = 0;
       let claim = if has_capacity
       {
-        let mut result = acquire_slot( &dir, count_u32, pid, since, stale_secs );
+        let mut result = acquire_slot( &dir, count_u32, pid, since, my_starttime, stale_secs );
         if result.is_err()
         {
           denied_slots += 1;
           for candidate in 0..max
           {
             if candidate == count_u32 { continue; }
-            result = acquire_slot( &dir, candidate, pid, since, stale_secs );
+            result = acquire_slot( &dir, candidate, pid, since, my_starttime, stale_secs );
             if result.is_ok() { break; }
             denied_slots += 1;
           }
@@ -999,7 +1077,7 @@ pub( super ) fn wait_for_session_slot(
       gate_emitted = true;
       let _ = std::fs::write(
         &state_path,
-        format!( r#"{{"cwd":"{cwd_escaped}","since":{since},"attempt":{attempt},"message":"waiting for session slot"}}"# ),
+        format!( r#"{{"cwd":"{cwd_escaped}","since":{since}{starttime_field},"attempt":{attempt},"message":"waiting for session slot"}}"# ),
       );
       std::thread::sleep( poll );
     }

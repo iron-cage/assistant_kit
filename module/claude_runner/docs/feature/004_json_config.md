@@ -40,6 +40,8 @@ git diff | clr -p "Write a commit message for this diff"
 
 This closes the gap where piping arbitrary tool output into `clr` would otherwise be silently discarded. `--file` always takes priority when both are present; an empty stdin stream (EOF with zero bytes) forwards nothing, matching the pre-existing no-`--file` default. The `isolated` and `refresh` subcommands use a separate, unconstrained stdin-JSON-detection path and are unaffected by this behavior.
 
+**Stdin opt-out (Gate 0):** both stdin behaviors above require reading stdin to EOF, which blocks forever on a pipe whose writer never closes (`tail -f |`, a FIFO with a live writer, a supervisor-inherited fd). `--no-stdin` or `CLR_NO_STDIN` disables all stdin reading — checked as a raw token/env scan *before* the read, since by parse time stdin would already have been consumed. Deliberately has no JSON key: the config carrying it would arrive via the very read being opted out of. See [`../cli/param/086_no_stdin.md`](../cli/param/086_no_stdin.md) (BUG-492).
+
 **Precedence (highest to lowest):**
 
 1. **CLI flags** — explicit `--flag value` on the command line; always win

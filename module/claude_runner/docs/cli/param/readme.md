@@ -85,6 +85,7 @@
 | 083_gate_max_attempts.md | `--gate-max-attempts` parameter spec (concurrency gate attempt limit) |
 | 084_gate_stale_secs.md | `--gate-stale-secs` parameter spec (concurrency gate staleness reclaim threshold) |
 | 085_gate_remaining_timeout_secs.md | `CLR_REMAINING_TIMEOUT_SECS` env-var spec (gate remaining timeout budget clamp) |
+| 086_no_stdin.md | `--no-stdin` flag spec (disable all stdin reading — JSON config detection and forwarding) |
 
 ### Retired Parameter IDs
 
@@ -172,7 +173,7 @@ These parameter IDs exist in the sequence but have no corresponding file. The ID
 | 73 | `--journal-dir` | path | `~/.clr/journal/` | Any writable path | Directory for journal JSONL files; overrides `CLR_JOURNAL_DIR` | 3 cmds |
 | 74 | `--quiet` | bool | false | present/absent | Suppress non-fatal runner diagnostics (retry/gate/warning messages) | 2 cmds |
 | 75 | `--args-file` | [`FilePath`](../type/12_file_path.md) | — | Any readable file path | Load clr params from JSON config file; stdin JSON auto-detected when no TTY | 4 cmds |
-| 76 | `--session-from` | [`DirectoryPath`](../type/02_directory_path.md) | absent | Any existing directory path | Cross-load most recent session UUID from another directory's session dir | 2 cmds |
+| 76 | `--session-from` | [`DirectoryPath`](../type/02_directory_path.md) | absent | Any existing directory path | Cross-load most recent session from another directory (transplanted into target storage before spawn) | 2 cmds |
 | 77 | `--no-compact-window` | bool | false | present/absent | Suppress `CLAUDE_CODE_AUTO_COMPACT_WINDOW=300000` injection into subprocess environment | 4 cmds |
 | 78 | `--name` | string | — | Any substring | Filter `clr tools` by tool name (case-insensitive substring) | 1 cmd |
 | 79 | `--category` | string | — | Any substring | Filter `clr tools` by category (case-insensitive substring) | 1 cmd |
@@ -182,10 +183,11 @@ These parameter IDs exist in the sequence but have no corresponding file. The ID
 | 83 | `--gate-max-attempts` | u32 | 1000 | Positive integer | Admission attempt limit before gate exhaustion; `run`/`ask` full 5-tier; `isolated` env-var-only | 2 cmds |
 | 84 | `--gate-stale-secs` | u64 | absent | Positive integer | Staleness threshold (sec) for reclaiming a live-but-stalled slot; absent = feature off; `run`/`ask` full 5-tier; `isolated` env-var-only | 2 cmds |
 | 85 | `CLR_REMAINING_TIMEOUT_SECS` | u64 | absent | Positive integer | Remaining external timeout budget (sec); clamps effective gate attempt count; env-var-only (no CLI flag) | all cmds |
+| 86 | `--no-stdin` | bool | false | present/absent | Never read piped stdin — disables stdin JSON config detection and stdin forwarding; checked pre-parse (raw token/env scan) so a held-open pipe cannot hang clr (BUG-492) | 2 cmds |
 
-**Total:** 81 parameters (param 12 deprecated → replaced by 74; net count unchanged for that swap; params 75–77 added; params 78–80 added for the `clr tools` filter/projection redesign; params 81–85 added for `--input-format` and gate tuning knobs)
+**Total:** 82 parameters (param 12 deprecated → replaced by 74; net count unchanged for that swap; params 75–77 added; params 78–80 added for the `clr tools` filter/projection redesign; params 81–85 added for `--input-format` and gate tuning knobs; param 86 added for the stdin opt-out)
 
-**Groups:** Parameters 2–4, 17, 23, 24, 61–67, and 81 form [Claude-Native Flags](../param_group/01_claude_native_flags.md). Parameters 5–11, 13, 14, 18, 21, 22, 25–36, 40–57, 70–76, 82–85 form [Runner Control](../param_group/02_runner_control.md). Parameters 15–16 form [System Prompt](../param_group/03_system_prompt.md). Parameters 19–20 form [Credential Operations](../param_group/04_credential_operations.md). Parameters 58–60, 68–69 form [Session Listing](../param_group/05_session_listing.md). Parameter 77 (and `--timeout`, `--trace`, `--dry-run`, `--journal`, `--journal-dir`) form [Running Commands](../param_group/06_running_commands.md). Parameters 78–80 (plus shared members 59 `--columns` and 69 `--inspect`) form [Tool Listing](../param_group/07_tool_listing.md).
+**Groups:** Parameters 2–4, 17, 23, 24, 61–67, and 81 form [Claude-Native Flags](../param_group/01_claude_native_flags.md). Parameters 5–11, 13, 14, 18, 21, 22, 25–36, 40–57, 70–76, 82–86 form [Runner Control](../param_group/02_runner_control.md). Parameters 15–16 form [System Prompt](../param_group/03_system_prompt.md). Parameters 19–20 form [Credential Operations](../param_group/04_credential_operations.md). Parameters 58–60, 68–69 form [Session Listing](../param_group/05_session_listing.md). Parameter 77 (and `--timeout`, `--trace`, `--dry-run`, `--journal`, `--journal-dir`) form [Running Commands](../param_group/06_running_commands.md). Parameters 78–80 (plus shared members 59 `--columns` and 69 `--inspect`) form [Tool Listing](../param_group/07_tool_listing.md).
 
 ### Navigation
 
@@ -270,6 +272,7 @@ These parameter IDs exist in the sequence but have no corresponding file. The ID
 - [`--gate-max-attempts`](083_gate_max_attempts.md)
 - [`--gate-stale-secs`](084_gate_stale_secs.md)
 - [`CLR_REMAINING_TIMEOUT_SECS`](085_gate_remaining_timeout_secs.md)
+- [`--no-stdin`](086_no_stdin.md)
 
 ### Quick Reference
 
@@ -279,4 +282,4 @@ These parameter IDs exist in the sequence but have no corresponding file. The ID
 
 **Most used parameters:** `--model` (model selection), `--dir` (project targeting), `--subdir` (session isolation by task name), `--dry-run` (debugging), `--new-session` (fresh start), `--interactive` (TTY passthrough with prompt), `--file` (stdin from file), `--strip-fences` (extract code block content).
 
-**Commands by parameter count:** `run` = 64, `ask` = 64, `ps` = 5, `isolated` = 18, `refresh` = 8, `kill` = 0, `tools` = 5, `help` = 0.
+**Commands by parameter count:** `run` = 65, `ask` = 65, `ps` = 5, `isolated` = 18, `refresh` = 8, `kill` = 0, `tools` = 5, `help` = 0.

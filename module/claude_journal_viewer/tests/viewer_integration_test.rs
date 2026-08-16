@@ -1,4 +1,4 @@
-//! Integration tests for the `clj` binary — EC-1 through EC-12.
+//! Integration tests for the `clj` binary — EC-1 through EC-19.
 //!
 //! Each test writes fixture events via `JournalWriter`, runs the `clj` binary
 //! against the temporary journal directory, and asserts on stdout/stderr/exit.
@@ -478,4 +478,117 @@ fn ec13_tail_starts_and_can_be_killed()
   // Kill the infinite tail loop.
   child.kill().ok();
   child.wait().ok();
+}
+
+// ── EC-14 : .chart default invocation writes usage.svg in cwd ────────────────
+
+#[ test ]
+fn ec14_chart_default_writes_usage_svg_in_cwd()
+{
+  assert_container();
+  let dir     = tempfile::TempDir::new().unwrap();
+  write_fixture_events( dir.path() );
+  let cwd_dir = tempfile::TempDir::new().unwrap();
+
+  let out = Command::new( CLJ )
+    .args( [ ".chart" ] )
+    .arg( format!( "dir::{}", dir.path().display() ) )
+    .current_dir( cwd_dir.path() )
+    .env_remove( "CLR_JOURNAL_DIR" )
+    .output()
+    .expect( "failed to run clj" );
+  assert!( out.status.success(), "exit non-zero: {}", stderr_str( &out ) );
+
+  let expected = cwd_dir.path().join( "usage.svg" );
+  assert!( expected.exists(), "expected usage.svg in cwd: {}", expected.display() );
+  let svg = std::fs::read_to_string( &expected ).expect( "read usage.svg" );
+  assert!( svg.starts_with( "<svg" ), "expected valid svg output: {svg}" );
+
+  let stdout = stdout_str( &out );
+  assert!( stdout.contains( "Chart written" ), "missing confirmation: {stdout}" );
+  assert!( !stdout.to_lowercase().contains( "warning" ), "no open:: requested, should not warn: {stdout}" );
+}
+
+// ── EC-15 : .chart out::<path> writes to a custom path ────────────────────────
+
+#[ test ]
+fn ec15_chart_custom_out_path()
+{
+  let dir     = tempfile::TempDir::new().unwrap();
+  write_fixture_events( dir.path() );
+  let outdir  = tempfile::TempDir::new().unwrap();
+  let out_path = outdir.path().join( "custom.svg" );
+
+  let out = run_clj( &[ ".chart", &format!( "out::{}", out_path.display() ) ], dir.path() );
+  assert!( out.status.success(), "exit non-zero: {}", stderr_str( &out ) );
+  assert!( out_path.exists(), "expected custom.svg to exist at {}", out_path.display() );
+}
+
+// ── EC-16 : .chart open::true — browser-open failure is non-fatal ────────────
+
+#[ test ]
+fn ec16_chart_open_true_failure_is_non_fatal()
+{
+  let dir      = tempfile::TempDir::new().unwrap();
+  write_fixture_events( dir.path() );
+  let outdir   = tempfile::TempDir::new().unwrap();
+  let out_path = outdir.path().join( "chart.svg" );
+
+  let out = run_clj( &[ ".chart", &format!( "out::{}", out_path.display() ), "open::true" ], dir.path() );
+  assert!(
+    out.status.success(),
+    "exit non-zero even though SVG write should succeed regardless of browser-open outcome: {}",
+    stderr_str( &out )
+  );
+  assert!( out_path.exists(), "SVG should still be written even if browser-open fails" );
+}
+
+// ── EC-17 : .help lists .chart ─────────────────────────────────────────────────
+
+#[ test ]
+fn ec17_help_lists_chart()
+{
+  let dir = tempfile::TempDir::new().unwrap();
+  let out = run_clj( &[ ".help" ], dir.path() );
+  assert!( out.status.success(), "exit non-zero: {}", stderr_str( &out ) );
+  let stdout = stdout_str( &out );
+  assert!( stdout.contains( ".chart" ), "expected .chart in help output: {stdout}" );
+}
+
+// ── EC-18 : .chart against an empty journal produces a placeholder SVG ───────
+
+#[ test ]
+fn ec18_chart_empty_journal_produces_placeholder()
+{
+  let dir      = tempfile::TempDir::new().unwrap(); // no fixture events written
+  let outdir   = tempfile::TempDir::new().unwrap();
+  let out_path = outdir.path().join( "chart.svg" );
+
+  let out = run_clj( &[ ".chart", &format!( "out::{}", out_path.display() ) ], dir.path() );
+  assert!( out.status.success(), "exit non-zero: {}", stderr_str( &out ) );
+  let svg = std::fs::read_to_string( &out_path ).expect( "svg should exist" );
+  assert!( svg.starts_with( "<svg" ), "expected valid svg output even for empty journal: {svg}" );
+}
+
+// ── EC-19 : .chart dir:: is resolved the same way as the other commands ──────
+
+#[ test ]
+fn ec19_chart_dir_param_resolution_nonexistent_dir_errors()
+{
+  assert_container();
+  let base        = tempfile::TempDir::new().unwrap();
+  let nonexistent = base.path().join( "does_not_exist" );
+  let outdir      = tempfile::TempDir::new().unwrap();
+  let out_path    = outdir.path().join( "chart.svg" );
+
+  let out = Command::new( CLJ )
+    .args( [ ".chart" ] )
+    .arg( format!( "dir::{}", nonexistent.display() ) )
+    .arg( format!( "out::{}", out_path.display() ) )
+    .env_remove( "CLR_JOURNAL_DIR" )
+    .output()
+    .expect( "failed to run clj" );
+
+  assert!( !out.status.success(), "expected non-zero exit for a nonexistent journal dir" );
+  assert!( !out_path.exists(), "output file must not be written when the journal dir is missing" );
 }

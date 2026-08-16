@@ -108,6 +108,7 @@ pub fn attempt_expired_token_refresh(
   let aq        = AccountQuota
   {
     fallback_reason : None,
+    touched_recently : false,
     name                 : name.to_string(),
     is_current           : false,
     is_active            : false,
@@ -380,6 +381,7 @@ pub fn apply_post_switch_touch(
   let aq = AccountQuota
   {
     fallback_reason : None,
+    touched_recently : false,
     name                 : name.to_string(),
     is_current           : false,
     is_active            : false,
@@ -420,13 +422,15 @@ pub fn apply_post_switch_touch(
   let _ = crate::account::refresh_account_token(
     name, credential_store, Some( paths ), trace, "account.use", model, &extra_pre_args,
   );
-  // Persist touch timestamp to cache (Feature 033 AC-06).
-  claude_profile_core::account::write_cache_string(
-    paths.base(), name, "last_touch_at", &claude_profile_core::account::chrono_now_utc(),
-  );
-  claude_profile_core::account::write_cache_bool(
-    paths.base(), name, "touch_idle", false,
-  );
+  // Persist touch timestamp + touch_idle flag to cache (Feature 033 AC-06).
+  // Fix(BUG-488): these flags went to paths.base() (~/.claude/{name}.json) — a file the
+  //   sole reader (touch_skip_reason, keyed on the credential store) never opens, so the
+  //   BUG-288-FixB guard could never fire and .usage re-touched fresh-switched accounts.
+  // Root cause: same paths.base()/credential_store confusion this function already
+  //   documents for BUG-207/BUG-318 — these two cache writes were simply never migrated.
+  // Pitfall: write and read must share one file; route every touch-flag write through
+  //   touch::mark_touched, never call write_cache_* here directly.
+  super::touch::mark_touched( credential_store, name );
   if trace { eprintln!( "{}account.use  {name}  subprocess: spawned", trace_ts() ) }
   // AC-21: post-subprocess quota re-fetch (best-effort, non-aborting on failure).
   // Persists updated resets_at to cache so subsequent .usage sees the newly-activated

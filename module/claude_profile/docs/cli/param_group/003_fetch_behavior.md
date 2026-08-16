@@ -1,6 +1,6 @@
 # Group: 3. Fetch Behavior
 
-**Parameters:** `refresh::`, `live::`, `interval::`, `jitter::`, `trace::`, `touch::`, `imodel::`, `effort::`, `solo::`
+**Parameters:** `refresh::`, `live::`, `interval::`, `jitter::`, `trace::`, `touch::`, `imodel::`, `effort::`, `solo::`, `stalest::`, `max_age::`
 **Pattern:** Per-invocation fetch control
 **Purpose:** Controls fetch behavior across quota, inspection, and switch commands — token refresh on auth error or locally-expired credentials, continuous monitor loop configuration, isolated subprocess setup, and token conservation mode.
 
@@ -15,12 +15,14 @@
 | [`imodel::`](../param/035_imodel.md) | `enum` | `auto` | Model for isolated subprocesses: `auto` (haiku by default; sonnet when `son_idle=true`), `sonnet`, `opus`, `haiku`, `keep` |
 | [`effort::`](../param/036_effort.md) | `enum` | `auto` | Effort level for isolated subprocesses: `auto` (`low` for any model; no flag for haiku/keep), `low`, `normal`, `high`, `max` |
 | [`solo::`](../param/060_solo.md) | `bool` | `0` | Token conservation: restrict all credential-consuming operations to the current+owned account; others use `approximate_quota()` |
+| [`stalest::`](../param/080_stalest.md) | `u32` | *(omit)* | Stale-first reduction: fetch only the K accounts with the oldest quota cache; others use `approximate_quota()` |
+| [`max_age::`](../param/081_max_age.md) | `u64` | `0` | Eligibility threshold for `stalest::` — only accounts with cache age > SECS are fetch-eligible; requires `stalest::` |
 
 ### Referenced Commands
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.usage`](../command/006_usage.md#command-9-usage) | All 9 params |
+| 1 | [`.usage`](../command/006_usage.md#command-9-usage) | All 11 params |
 | 2 | [`.accounts`](../command/001_account.md#command-3-accounts) | `refresh::`, `live::`, `interval::`, `jitter::`, `trace::`, `touch::`, `imodel::`, `effort::` |
 | 3 | [`.account.use`](../command/001_account.md#command-5-accountuse) | `trace::`, `touch::`, `imodel::`, `effort::` |
 | 4 | [`.account.save`](../command/001_account.md#command-4-accountsave) | `trace::` |
@@ -52,12 +54,14 @@ clp .usage
 
 > "Does parameter X control **how commands fetch remote data** (retry strategy, iteration mode, or isolated subprocess configuration)?"
 
-All 9 members pass: `refresh::` (retry strategy on auth error or locally-expired token), `live::` (iteration mode), `interval::` (loop cycle duration), `jitter::` (loop timing variance), `trace::` (diagnostic output during fetch operations), `touch::` (active-window extension strategy), `imodel::` (subprocess model configuration), `effort::` (subprocess effort configuration), `solo::` (token conservation — restricts which accounts receive live fetch). `format::` fails (output serialisation, not fetch strategy) and is correctly excluded.
+All 11 members pass: `refresh::` (retry strategy on auth error or locally-expired token), `live::` (iteration mode), `interval::` (loop cycle duration), `jitter::` (loop timing variance), `trace::` (diagnostic output during fetch operations), `touch::` (active-window extension strategy), `imodel::` (subprocess model configuration), `effort::` (subprocess effort configuration), `solo::` (token conservation — restricts which accounts receive live fetch), `stalest::` (stale-first reduction — restricts which accounts receive live fetch), `max_age::` (staleness eligibility threshold for that reduction). `format::` fails (output serialisation, not fetch strategy) and is correctly excluded.
 
 **Invariants**
 
 - `interval::` and `jitter::` are only validated when `live::1`; their values have no effect when `live::0`.
 - `refresh::` is orthogonal to `live::` — both may be set simultaneously without conflict.
+- `stalest::` is mutually exclusive with `only_active::1` and rejected at `0`; `rotate::1` bypasses it (full-fleet fetch for rotation ranking).
+- `max_age::` requires `stalest::` — standalone use (any value, including `0`) is rejected at parse time.
 - `live::1 format::json` is rejected before any fetch (see [../004_parameter_interactions.md](../004_parameter_interactions.md#interaction-4-live1-is-incompatible-with-formatjson)).
 
 **Cross-References**

@@ -57,7 +57,7 @@ fn cc7_non_owned_no_cache()
   } ];
 
   let absent_live = store.path().join( ".absent_credentials.json" );
-  let results = fetch_quota_for_list( &accounts, store.path(), &absent_live, false, false, false );
+  let results = fetch_quota_for_list( &accounts, store.path(), &absent_live, false, false, false, None );
 
   assert_eq!( results.len(), 1, "CC-7: must return exactly 1 AccountQuota" );
   let aq = &results[ 0 ];
@@ -144,7 +144,7 @@ fn ft03_history_skips_cached_fallback()
   } ];
 
   let absent_live = store.path().join( ".absent_credentials.json" );
-  let results = fetch_quota_for_list( &accounts, store.path(), &absent_live, false, false, false );
+  let results = fetch_quota_for_list( &accounts, store.path(), &absent_live, false, false, false, None );
 
   // Pipeline must have used cache-fallback.
   assert_eq!( results.len(), 1 );
@@ -230,7 +230,7 @@ fn ft05_approx_independent_periods_absent_sn_unaffected()
   } ];
 
   let absent_live = store.path().join( ".absent_credentials.json" );
-  let results = fetch_quota_for_list( &accounts, store.path(), &absent_live, false, false, false );
+  let results = fetch_quota_for_list( &accounts, store.path(), &absent_live, false, false, false, None );
 
   assert_eq!( results.len(), 1 );
   let aq = &results[ 0 ];
@@ -561,7 +561,7 @@ fn ft23_g1_non_owned_applies_approximation()
   } ];
 
   let absent_live = store.path().join( ".absent_credentials.json" );
-  let results = fetch_quota_for_list( &accounts, store.path(), &absent_live, false, false, false );
+  let results = fetch_quota_for_list( &accounts, store.path(), &absent_live, false, false, false, None );
 
   assert_eq!( results.len(), 1 );
   let aq = &results[ 0 ];
@@ -643,7 +643,7 @@ fn ft12_history_non_owned_skips_append()
   } ];
 
   let absent_live = store.path().join( ".absent_credentials.json" );
-  let results = fetch_quota_for_list( &accounts, store.path(), &absent_live, false, false, false );
+  let results = fetch_quota_for_list( &accounts, store.path(), &absent_live, false, false, false, None );
 
   // G1 gate must have fired.
   assert_eq!( results.len(), 1 );
