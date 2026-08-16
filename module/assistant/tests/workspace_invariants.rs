@@ -18,7 +18,7 @@
 //!
 //! | Test | Spec | Scenario |
 //! |------|------|----------|
-//! | `wd1_workspace_members_completeness` | WD-1 | All 18 documented crates in members list |
+//! | `wd1_workspace_members_completeness` | WD-1 | All 19 documented crates in members list |
 //! | `pi1_no_private_path_deps` | PI-1 | No workspace path dep points outside the workspace |
 //! | `pi2_out_of_workspace_path_deps_have_version` | PI-2 | Out-of-workspace path deps carry version field |
 //! | `vs1_workspace_package_version_declared` | VS-1 | `[workspace.package]` declares a version |
@@ -38,7 +38,16 @@ use std::{
 
 const MANIFEST_DIR : &str = env!( "CARGO_MANIFEST_DIR" );
 
-/// All 18 workspace member crate names.
+/// All 19 workspace member crate names.
+//
+// Fix(BUG-482): doc comment said "18" while this constant already listed 19 entries
+// (json_redact present) — the constant itself was correct, only the count in this
+// comment and two sibling doc comments (Test Matrix table, wd1 test's own doc comment)
+// had drifted stale after json_redact was added to the workspace.
+// Root cause: hand-maintained count literals in doc comments have no mechanical link
+// back to the array they describe.
+// Pitfall: adding an entry to a hand-maintained list without grepping for every doc
+// comment that states its cardinality leaves silently-wrong counts behind.
 const WORKSPACE_MEMBERS : &[ &str ] = &[
   "claude_storage_core",
   "claude_auth",
@@ -58,6 +67,7 @@ const WORKSPACE_MEMBERS : &[ &str ] = &[
   "assistant_kit",
   "claude_journal",
   "claude_journal_viewer",
+  "json_redact",
 ];
 
 // ──────────────────────────────── helpers ─────────────────────────────────
@@ -176,7 +186,7 @@ fn layer_of( name : &str ) -> Option< u8 >
 
 // ──────────────────────── feature: workspace design ───────────────────────
 
-/// WD-1: All 18 documented workspace members are present in `[workspace.members]`.
+/// WD-1: All 19 documented workspace members are present in `[workspace.members]`.
 ///
 /// ## Root Cause (why this test exists)
 /// Workspace membership controls which crates are built and tested in CI.

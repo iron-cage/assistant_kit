@@ -36,21 +36,21 @@ Edge case tests for the `refresh::` parameter. Tests validate boolean enforcemen
 ## Test Cases
 ---
 
-### EC-1: `refresh::1` — default-on value accepted
+### EC-1: `refresh::1` — accepted; offline no-token account never reaches retry logic
 
-- **Given:** `.usage` environment with valid credentials.
+- **Given:** One saved account `test-acct` with no `accessToken` in its credential file (no live credentials — the quota fetch never reaches HTTP).
 - **When:** `clp .usage refresh::1`
-- **Then:** Command accepted; on auth error accounts silently retry via `account::refresh_account_token()`; behavior identical to omitting `refresh::`.
+- **Then:** Exits 0. Account name `test-acct` appears in output. Because there's no `accessToken`, no HTTP call and no 401 ever occur — `refresh_account_token()` is never invoked. The test only confirms `refresh::1` is accepted and doesn't crash this offline/no-token path; it does not exercise or assert a silent-retry code path.
 - **Exit:** 0
 - **Source fn:** `it020_refresh_enabled_offline_no_retry_triggered`
 - **Source:** [params.md#parameter--19-refresh](../../../../docs/cli/param/019_refresh.md)
 ---
 
-### EC-2: `refresh::0` — explicit disable accepted; auth errors shown as rows
+### EC-2: `refresh::0` — explicit disable accepted on empty store
 
-- **Given:** One saved account whose credential is expired (returns 401 on fetch).
+- **Given:** Empty credential store (no accounts saved).
 - **When:** `clp .usage refresh::0`
-- **Then:** The account's row shows the auth error string (e.g., `auth expired (401)`); `refresh_account_token` is never called; exit 0.
+- **Then:** Exits 0. stdout contains a "no accounts" message. This is a parser-acceptance/TDD-guard test — it confirms `refresh::0` is accepted on an empty store; it does not set up an expired-credential/401 account or assert an `auth expired (401)` row.
 - **Exit:** 0
 - **Source fn:** `it019_refresh_disabled_param_accepted`
 - **Source:** [params.md#parameter--19-refresh](../../../../docs/cli/param/019_refresh.md)
@@ -76,11 +76,11 @@ Edge case tests for the `refresh::` parameter. Tests validate boolean enforcemen
 - **Source:** [params.md#parameter--19-refresh](../../../../docs/cli/param/019_refresh.md)
 ---
 
-### EC-5: Default value is `1` (refresh on by default)
+### EC-5: Default value is `1` (refresh on by default) — verified via help text
 
-- **Given:** `.usage` environment with valid credentials.
-- **When:** `clp .usage` (no `refresh::` param)
-- **Then:** Refresh behavior is active — identical to `refresh::1`; on auth error accounts silently retry; exit 0.
+- **Given:** None — no account or credential setup.
+- **When:** `clp .usage.help`
+- **Then:** Exits 0. stdout contains the exact phrase `1 = enabled, default` and does NOT contain `0 = disabled, default`. This is a `bug_reproducer(BUG-155)` regression test verifying the documented default-value wording in help text; it does not invoke `.usage` at runtime or assert any silent-retry behavior.
 - **Exit:** 0
 - **Source fn:** `it037_mre_bug155_refresh_defaults_to_1`
 - **Source:** [params.md#parameter--19-refresh](../../../../docs/cli/param/019_refresh.md)
@@ -96,12 +96,12 @@ Edge case tests for the `refresh::` parameter. Tests validate boolean enforcemen
 - **Source:** [params.md#parameter--19-refresh](../../../../docs/cli/param/019_refresh.md)
 ---
 
-### EC-7: 429 + expired local token — refresh triggered
+### EC-7: 429 + expired local token, no credential file — refresh path entered but hard-fails
 
-- **Given:** One saved account with an expired `expiresAt` in its per-account credential file (`expiresAt / 1000 <= now`); the usage API returns HTTP 429 for that account.
-- **When:** `clp .usage refresh::1`
-- **Then:** `refresh_account_token` is called for that account (expired local token indicates stale per-account copy); if updated credentials are returned, the account quota fetch is retried once.
-- **Exit:** 0
+- **Given:** An in-memory `AccountQuota` with `expires_at_ms: 0` (locally expired) and `result: Err("HTTP transport error: HTTP 429")`. No per-account credential file exists in the (empty) store directory. This is a direct unit-level call to `apply_refresh()` via `test_bridge`, not a `clp` CLI invocation.
+- **When:** `apply_refresh(&mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto, false)` called directly.
+- **Then:** `should_refresh` returns `true` for the locally-expired 429, so the refresh path IS entered — but with no credential file present, `refresh_account_token` returns `None`, the account is skipped, and `accounts[0].result` becomes `Err("refresh token expired")` (BUG-297 fix) — a hard failure, NOT a retried/successful quota fetch. Contrast: `test_apply_refresh_ft4_429_valid_token_not_retried` (FT-04) covers the non-expired 429 case, where the refresh path is never entered at all.
+- **Exit:** N/A (unit-level function call — no CLI process, no exit code)
 - **Source fn:** `test_apply_refresh_ft5_429_expired_refresh_path_entered_no_cred`
 - **Source:** [params.md#parameter--19-refresh](../../../../docs/cli/param/019_refresh.md)
 ---

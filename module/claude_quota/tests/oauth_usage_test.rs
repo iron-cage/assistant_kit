@@ -31,6 +31,7 @@
 //! | FT-10 | `OauthUsageData` struct fields unchanged                 | all 3 fields accessible                 | ✅   |
 //! | FT-11 | Old format (no `limits` key) parses via Phase 1          | `seven_day_sonnet = Some(30.0)`         | ✅   |
 //! | FT-12 | Named field `Some` wins over matching limits entry       | `seven_day_sonnet.utilization = 30.0`   | ✅   |
+//! | BT-01 | `five_hour.resets_at` contains a literal `}` before `utilization`: BUG-002 reproducer | `Ok`, both fields correct, untruncated | ✅ |
 //!
 //! ## Corner Cases Covered
 //!
@@ -52,6 +53,7 @@
 //! - ✅ Validity guard passes for null value on present key (FT-09)
 //! - ✅ Struct field list unchanged after dual-source parsing (FT-10)
 //! - ✅ Old format (no `limits` key) still parses via Phase 1 (FT-11)
+//! - ✅ `extract_object_block`'s brace-depth scan survives an in-string `}` in a period field (BT-01)
 
 use claude_quota::{ parse_oauth_usage, iso_to_unix_secs, OauthUsageData, PeriodUsage, QuotaError };
 
@@ -377,4 +379,79 @@ fn ft_12_named_field_wins_over_limits_when_both_present()
   let data = parse_oauth_usage( body ).unwrap();
   let son  = data.seven_day_sonnet.expect( "FT-12: must be Some" );
   assert!( ( son.utilization - 30.0 ).abs() < 0.001, "FT-12: named field (30.0) must win over limits entry (70.0)" );
+}
+
+// ── BT-01 ─────────────────────────────────────────────────────────────────────
+
+// ## Root Cause
+//
+// `extract_object_block()`'s brace-depth scan (`lib.rs:350-368`) counted every
+// `{`/`}` character in its input, including ones inside a quoted field value,
+// with no string-literal tracking. An in-string `}` desynchronized `depth`,
+// causing the scanner to conclude the object had closed before its real
+// closing brace was reached.
+//
+// ## Why Not Caught
+//
+// Requires a period object field (`resets_at`) to contain a literal `}`
+// character before the object's real close — Anthropic API responses rarely
+// carry such content, so ordinary use never exercised this path; the
+// truncated result was a syntactically valid (but incomplete) `&str` slice,
+// producing a silent `Err` rather than a crash.
+//
+// ## Fix Applied
+//
+// Extended the `char_indices()` loop with `in_string`/`escape_next` state;
+// `{`/`}` are now only treated as structural boundaries when `!in_string`,
+// and a backslash-escaped quote no longer toggles `in_string`.
+//
+// ## Prevention
+//
+// This test pins a `five_hour` period object whose `resets_at` field
+// contains an unescaped `}` ahead of the required `utilization` field — any
+// regression that removes the `in_string` guard truncates the object slice
+// before `utilization` is reached, and this test fails with `Err` instead of
+// asserting the parsed values.
+//
+// ## Pitfall
+//
+// Brace-depth counting alone reads as "handles nesting correctly" but is
+// incomplete without string-literal awareness — a bracket character inside a
+// quoted field value is not a structural delimiter.
+
+/// bug_reproducer(BUG-002): `five_hour.resets_at` contains a literal `}`
+/// before `utilization` — the truncated slice must not desync
+/// `extract_object_block()`'s depth counter.
+///
+/// # Fix(BUG-002)
+///
+/// Root cause: `extract_object_block()`'s brace-depth scan had no
+/// string-literal tracking, so an in-string `}` was misread as the object's
+/// real closing brace, truncating the slice before `utilization` was reached.
+/// Pitfall: brace-depth counting alone is not sufficient to find a JSON
+/// object's boundary without also tracking string-literal state.
+#[ test ]
+fn bt_01_resets_at_brace_in_string_does_not_truncate_object()
+{
+  // five_hour's own "resets_at" value contains a literal, unescaped '}' —
+  // valid JSON, since '{'/'}' need no escaping inside a string. Before the
+  // fix, extract_object_block() truncates at that in-string '}', losing the
+  // "utilization" field entirely.
+  let body = r#"{"five_hour":{"resets_at":"closing brace: }","utilization":42.0},"seven_day":null,"seven_day_sonnet":null}"#;
+
+  let result = parse_oauth_usage( body );
+  let data = result.expect(
+    "BUG-002: an in-string '}' in resets_at must not desync the depth counter into an unclosed-object error"
+  );
+  let five = data.five_hour.expect( "BUG-002: five_hour must be Some" );
+
+  assert!(
+    ( five.utilization - 42.0 ).abs() < 0.001,
+    "BUG-002: five_hour.utilization must survive its sibling resets_at field's in-string '}}': got {}",
+    five.utilization
+  );
+  assert_eq!(
+    five.resets_at.as_deref(), Some( "closing brace: }" ),
+    "BUG-002: five_hour.resets_at (containing the in-string '}}') must round-trip intact"
+  );
 }

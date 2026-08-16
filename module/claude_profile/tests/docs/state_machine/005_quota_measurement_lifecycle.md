@@ -14,20 +14,22 @@ that governs which measurements contribute to polynomial approximation.
 | AC-4 | `linear` — 2 measurements, linear extrapolation applied | State | ✅ |
 | AC-5 | `quadratic` — 3+ measurements, polynomial fit applied | State | ✅ |
 | AC-6 | Fetch failure — measurement NOT appended (only success appends) | Invariant | ✅ |
-| AC-7 | Pre-fit filter — expired window discards old measurements | Filter | ✅ |
+| AC-7 | Expired-window short-circuit — `now > resets_at` returns zero | Filter | ✅ |
 | AC-8 | Non-owned account — history append skipped | Gate | ✅ |
 
 ---
 
 ### AC-1: `empty` — 0 measurements, approximation returns None
 
-- **Given:** An account with a `cache` entry in `{name}.json` but no `history` array,
-  or a `history` array with 0 entries.
-- **When:** `read_cached_quota()` is called for this account.
-- **Then:** Returns `None` (cannot approximate with zero measurements). The ring buffer is in
-  `empty` state — no historical data available for any fit.
+- **Given:** No `{name}.json` cache file exists at all for this account — not merely an empty
+  `history` array, but no file on disk (a `cache` entry present with no/empty `history` is
+  AC-2's scenario, which returns `Some` with raw values, not `None`).
+- **When:** `read_cached_quota(store.path(), name, now_secs)` is called for this account.
+- **Then:** Returns `None` (cannot approximate with zero measurements and no cached raw data
+  to fall back to). This is the absent-cache base case (AC-11 backward-compat) — the `empty`
+  ring-buffer state with a cache entry present is exercised separately by AC-2's test.
 - **Source fn:** `test_read_cached_quota_absent_returns_none` in
-  `tests/usage/fetch_tests.rs`
+  `tests/usage/fetch_tests_b.rs`
 - **Source:** [state_machine/005_quota_measurement_lifecycle.md](../../../docs/state_machine/005_quota_measurement_lifecycle.md)
 
 ---
@@ -96,16 +98,21 @@ that governs which measurements contribute to polynomial approximation.
 
 ---
 
-### AC-7: Pre-fit filter — expired window discards old measurements
+### AC-7: Expired-window short-circuit — `now > resets_at` returns zero before the pre-fit filter runs
 
-- **Given:** An account with measurements in the history ring buffer, some of which were taken
-  BEFORE the most recent `resets_at` timestamp (i.e., from a prior quota window cycle).
-- **When:** `read_cached_quota()` applies the pre-fit filter.
-- **Then:** Measurements before `window_start = resets_at - window_duration` are discarded.
-  If all measurements are discarded, returns zero/reset value. This prevents old-window data
-  from contaminating the polynomial fit for the current window.
+- **Given:** An account with 2 measurements in the history ring buffer, BOTH within the
+  current window's `window_start = resets_at - window_duration` (the cited test's own
+  comments confirm neither point is old enough to be discarded by age). `now_secs` is set
+  well after `resets_at` — the window itself has already reset/expired.
+- **When:** `read_cached_quota()` calls `approximate_utilization()`.
+- **Then:** The `now_secs > resets_at_secs` guard (`src/usage/approx.rs` lines 56-60) fires
+  FIRST and returns `Some(0.0)` immediately — before the age-based `window_start` per-point
+  filter (lines 62-67) is ever reached. This test does NOT exercise the age-based discard
+  filter (its 2 points are deliberately in-window); it exercises the separate
+  "already-expired-window" short-circuit, a distinct guard that runs earlier in the same
+  function.
 - **Source fn:** `test_read_cached_quota_expired_window_returns_zero` in
-  `tests/usage/fetch_tests.rs`
+  `tests/usage/fetch_tests_b.rs`
 - **Source:** [state_machine/005_quota_measurement_lifecycle.md](../../../docs/state_machine/005_quota_measurement_lifecycle.md)
 
 ---

@@ -38,8 +38,8 @@ Each output line is independently controlled by a boolean param. All default to 
 
 `threshold::` (default `3600` seconds) controls the Valid/ExpiringSoon classification boundary for the `Token:` line — delegates to `token::status_with_threshold()` (FR-11, see [006_token_status.md](006_token_status.md)). Tokens expiring within `threshold::` seconds are classified as `expiring in Xm` instead of `valid`.
 
-**`format::json`:** Returns all 12 fields regardless of field-presence params:
-`{"subscription":"…","tier":"…","token":"…","expires_in_secs":N,"email":"…","account":"…","file":"…","saved":N,"display_name":"…","role":"…","billing":"…","model":"…"}`.
+**`format::json`:** Returns all 19 fields regardless of field-presence params:
+`{"subscription":"…","tier":"…","token":"…","expires_in_secs":N,"email":"…","account":"…","file":"…","saved":N,"display_name":"…","role":"…","billing":"…","model":"…","tagged_id":"…","capabilities":[…],"organization_uuid":"…","organization_name":"…","organization_role":"…","workspace_uuid":"…","workspace_name":"…"}`.
 
 **`Account:` line:** Reads per-machine active marker if it exists. Shows `N/A` when no per-machine active marker is present (fresh install or uninitialised account store). Because `.account.save` writes the active marker on every successful save, the account name is always present after any save operation.
 
@@ -55,7 +55,7 @@ Each output line is independently controlled by a boolean param. All default to 
 
 - **AC-01**: `.credentials.status` exits 0 on a machine with only `~/.claude/.credentials.json` (no credential store).
 - **AC-02**: Default output (no params) shows all 6 default-on fields: account, sub, tier, token, expires, email.
-- **AC-03**: `format::json` returns valid JSON with all 12 fields: subscription, tier, token, expires_in_secs, email, account, file, saved, display_name, role, billing, model.
+- **AC-03**: `format::json` returns valid JSON with all 19 fields: subscription, tier, token, expires_in_secs, email, account, file, saved, display_name, role, billing, model, tagged_id, capabilities, organization_uuid, organization_name, organization_role, workspace_uuid, workspace_name.
 - **AC-04**: Absent `~/.claude/.credentials.json` exits 2 with error naming the file path.
 - **AC-05**: Missing or empty email and absent per-machine active marker → shown as `N/A`.
 - **AC-06**: `sub::0 tier::0 expires::0 email::0 account::0` → only Token line shown.

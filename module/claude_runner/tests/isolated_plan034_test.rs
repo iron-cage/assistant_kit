@@ -465,3 +465,59 @@ fn it28_file_large_stdout_no_deadlock()
     "must complete promptly (no pipe deadlock); elapsed {}s suggests hang", elapsed.as_secs()
   );
 }
+
+// ── BUG-478: preview/real chrome-flag parity ────────────────────────────────
+
+/// # Root Cause
+/// `emit_credential_trace()`'s `--dry-run`/`--trace` preview reconstructed the
+/// `ClaudeCommand` without `.with_home_isolation()`, while both real execution paths
+/// (`run_isolated_ext()`, `run_isolated_with_stdin_file()`) call it — so the preview
+/// rendered the builder's default `--chrome` token although the real subprocess never
+/// receives any chrome flag at all.
+///
+/// # Why Not Caught
+/// T12 (`isolated_test.rs`) pins `.with_home_isolation()`'s chrome suppression on the
+/// builder in isolation, but no test compared the *preview's* rendered command against
+/// the real chain's construction — the divergence lived only in the trace text, which
+/// no assertion ever read.
+///
+/// # Fix Applied
+/// `emit_credential_trace()` now calls `.with_home_isolation()` between `.with_home()`
+/// and `.with_compact_window()`, matching both real chains (WYSIWYG restored).
+///
+/// # Prevention
+/// This test runs the real `clr isolated --dry-run` binary path — which routes through
+/// `emit_credential_trace()` itself, not a re-statement of its logic — and asserts the
+/// previewed command carries no `--chrome` token: the parity property the real
+/// execution chains guarantee via `.with_home_isolation()`.
+///
+/// # Pitfall
+/// A preview that *reconstructs* the real command instead of sharing its construction
+/// drifts silently the moment the real path gains a builder call — every builder-chain
+/// change in `run_isolated_ext()`/`run_isolated_with_stdin_file()` must be mirrored in
+/// `emit_credential_trace()` (its own doc comment says exactly this).
+// test_kind: bug_reproducer(BUG-478)
+#[ test ]
+fn bug478_dry_run_preview_omits_chrome_flag_like_real_execution()
+{
+  let creds = make_creds_file( "{}" );
+  let path  = creds.path().to_str().unwrap();
+  let out   = run_isolated( &[ "--creds", path, "--dry-run", "msg" ] );
+  assert_eq!(
+    exit_code( &out ), 0,
+    "expected exit 0 from --dry-run; stderr: {}", stderr_str( &out )
+  );
+  let stdout = stdout_str( &out );
+  assert!(
+    stdout.contains( "--no-session-persistence" ),
+    "sanity: preview must show the injected isolated flags (guards against a vacuously \
+     empty preview satisfying the --chrome absence check); got:\n{stdout}"
+  );
+  assert!(
+    !stdout.contains( "--chrome" ),
+    "BUG-478: the --dry-run preview must not show a --chrome token — the real \
+     subprocess (run_isolated_ext()/run_isolated_with_stdin_file(), both calling \
+     .with_home_isolation()) never receives one; the preview must match what actually \
+     runs. Got:\n{stdout}"
+  );
+}

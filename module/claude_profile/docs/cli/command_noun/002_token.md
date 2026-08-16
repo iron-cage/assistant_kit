@@ -31,7 +31,7 @@ The token lifecycle is managed externally by the Claude Code OAuth flow. `clp` r
 
 | Operation | Implementation |
 |-----------|---------------|
-| `.token.status` | `token::read_expiry()` — reads `expiresAt` from `~/.claude/.credentials.json`; classifies against threshold |
+| `.token.status` | `token::status_with_threshold()` — reads `expiresAt` from `~/.claude/.credentials.json`; classifies against threshold |
 
 ### Output Schema
 

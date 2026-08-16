@@ -16,13 +16,15 @@ Edge case coverage for the `only_valid::` parameter on `.usage`. See [param/043_
 
 ---
 
-### EC-1: `only_valid::1` hides 🔴 rows
+### EC-1: `only_valid::1` hides 🔴 rows (two-account fixture — no 🟡 account tested)
 
-- **Given:** Three accounts: one 🟢, one 🟡, one 🔴.
+> **Semantic drift correction:** the cited test constructs only TWO accounts — one 🟢 (`live-acct@test.com`, a live account) and one 🔴 (`error-acct@test.com`, an invalid/error token) — not three. No 🟡 account is present, so the doc's original claim that "🟢 and 🟡 rows shown" is not verified by this test; only the 🟢-shown/🔴-hidden half of the claim is actually exercised. No test in the suite combines `only_valid::1` with a constructed 🟡 account to independently verify the 🟡-row-shown claim.
+
+- **Given:** Two accounts: one 🟢 (`live-acct@test.com`), one 🔴 (`error-acct@test.com`, invalid token).
 - **When:** `clp .usage only_valid::1`
-- **Then:** Exits 0. 🟢 and 🟡 rows shown; 🔴 row hidden.
+- **Then:** Exits 0. 🟢 row shown; 🔴 row hidden. (The 🟡-row-shown half of the original claim is untested by this function — no 🟡 account is constructed.)
 - **Exit:** 0
-- **Source fn:** `it228_lim_it_only_valid_1_shows_green_hides_red` (in `usage_lim_it_test_b.rs`)
+- **Source fn:** `it228_lim_it_only_valid_1_shows_green_hides_red` (in `usage_lim_it_test_b.rs`) — fixture is 🟢+🔴 only; doc's "three accounts including 🟡" claim not supported by this test's body
 - **Source:** [param/043_only_valid.md](../../../../docs/cli/param/043_only_valid.md)
 
 ---

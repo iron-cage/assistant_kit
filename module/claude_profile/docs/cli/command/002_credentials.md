@@ -8,8 +8,8 @@ Credential metadata commands.
 
 Show live credential metadata by reading `~/.claude/.credentials.json` directly. Succeeds on any authenticated machine regardless of whether account store setup exists.
 
--- **Parameters:** [`format::`](../param/002_format.md), [`account::`](../param/005_account.md), [`sub::`](../param/006_sub.md), [`tier::`](../param/007_tier.md), [`token::`](../param/008_token.md), [`expires::`](../param/009_expires.md), [`email::`](../param/010_email.md), [`file::`](../param/011_file.md), [`saved::`](../param/012_saved.md), [`display_name::`](../param/014_display_name.md), [`role::`](../param/015_role.md), [`billing::`](../param/016_billing.md), [`model::`](../param/017_model.md), [`uuid::`](../param/028_uuid.md), [`capabilities::`](../param/029_capabilities.md), [`org_uuid::`](../param/030_org_uuid.md), [`org_name::`](../param/031_org_name.md), [`threshold::`](../param/003_threshold.md), [`trace::`](../param/023_trace.md)
--- **Exit:** 0 (success) | 2 (credential file absent or HOME unset)
+-- **Parameters:** [`format::`](../param/002_format.md), [`get::`](../param/045_get.md), [`account::`](../param/005_account.md), [`sub::`](../param/006_sub.md), [`tier::`](../param/007_tier.md), [`token::`](../param/008_token.md), [`expires::`](../param/009_expires.md), [`email::`](../param/010_email.md), [`file::`](../param/011_file.md), [`saved::`](../param/012_saved.md), [`display_name::`](../param/014_display_name.md), [`role::`](../param/015_role.md), [`billing::`](../param/016_billing.md), [`model::`](../param/017_model.md), [`uuid::`](../param/028_uuid.md), [`capabilities::`](../param/029_capabilities.md), [`org_uuid::`](../param/030_org_uuid.md), [`org_name::`](../param/031_org_name.md), [`threshold::`](../param/003_threshold.md), [`trace::`](../param/023_trace.md)
+-- **Exit:** 0 (success) | 1 (usage: unknown `get::` field) | 2 (credential file absent or HOME unset)
 
 **Syntax:**
 
@@ -20,11 +20,13 @@ clp .credentials.status file::1 saved::1
 clp .credentials.status display_name::1 role::1 billing::1 model::1
 clp .credentials.status threshold::1800
 clp .credentials.status format::json
+clp .credentials.status get::expires_in_secs
 ```
 
 | Parameter | Type | Default | Purpose |
 |-----------|------|---------|---------|
 | `format::` | [`OutputFormat`](../type/002_output_format.md) | `text` | Output format |
+| `get::` | `string` | `""` | Extract a single bare field value for scripting: `subscription`, `tier`, `token`, `expires_in_secs`, `email`, `account`, `file` |
 | `account::` | `bool` | `1` | Show active account name line |
 | `sub::` | `bool` | `1` | Show subscription type line |
 | `tier::` | `bool` | `1` | Show rate-limit tier line |
@@ -44,10 +46,11 @@ clp .credentials.status format::json
 | `threshold::` | [`WarningThreshold`](../type/003_warning_threshold.md) | `3600` | ExpiringSoon classification boundary in seconds for the `Token:` line and JSON `token`/`expires_in_secs` fields |
 | `trace::` | `bool` | `0` | Print timestamped diagnostic lines to stderr for the credential file read and each supplementary snapshot read |
 
-**Algorithm (3 steps):**
+**Algorithm (4 steps):**
 1. Read `~/.claude/.credentials.json`; read `_active_{hostname}_{user}` marker (best-effort)
 2. `(when snapshot fields enabled)` Read `~/.claude.json`, `~/.claude/settings.json`, and `{active_name}.json` per enabled field params (best-effort; missing files → `N/A`); classify token expiry via `token::status_with_threshold(threshold::)` for the `Token:`/`Expires:` lines — for a `backend: redirect` active account, this classifies as `static` (no `expiresAt` to compare) rather than `valid`/`expiring_soon`/`expired`
-3. Render enabled fields in requested `format::`
+3. `(when get:: present)` Extract and print the single named field as a bare string (`subscription`, `tier`, `token`, `expires_in_secs`, `email`, `account`, `file`) — short-circuits normal rendering; exits 1 for an unrecognized field name
+4. Render enabled fields in requested `format::`
 
 **Examples:**
 
@@ -78,6 +81,7 @@ clp .credentials.status format::json
 - Field-presence params only affect text output. `format::json` always includes all fields regardless of field-presence params.
 - `account::` reads the per-machine active marker; shows `N/A` on machines where no account has ever been saved.
 - `saved::` counts `*.credentials.json` files in the credential store; shows `0` when the credential store is absent.
+- `get::` extracts a single bare field value for scripting (mirrors `.usage`'s `get::` pattern); short-circuits normal rendering — an unrecognized field name exits 1 listing the valid set.
 - **Redirect backend:** `Token: static` (never `valid`/`expiring_soon`/`expired`) signals a `backend: redirect` active account — no separate `backend` field is added to this command's output, since the `Token:` line already carries that signal for the single account this command describes. `Expires:` reports `N/A` (no `expiresAt` to compute a duration from). See [feature/071](../../feature/071_redirect_backend_accounts.md).
 
 ### Referenced Parameters
@@ -103,6 +107,7 @@ clp .credentials.status format::json
 | 17 | [org_name::](../param/031_org_name.md) | Show organisation display name |
 | 18 | [threshold::](../param/003_threshold.md) | ExpiringSoon classification boundary in seconds |
 | 19 | [trace::](../param/023_trace.md) | Diagnostic trace output |
+| 20 | [get::](../param/045_get.md) | Extract bare field value for scripting |
 
 ### Referenced Features
 
@@ -126,7 +131,7 @@ clp .credentials.status format::json
 
 | # | Group | Parameters Used |
 |---|-------|-----------------|
-| 1 | [Output Control](../param_group/001_output_control.md) | `format::` |
+| 1 | [Output Control](../param_group/001_output_control.md) | `format::`, `get::` |
 | 2 | [Field Presence](../param_group/002_field_presence.md) | All 16 params (`account::`, `sub::`, `tier::`, `token::`, `expires::`, `email::`, `file::`, `saved::`, `display_name::`, `role::`, `billing::`, `model::`, `uuid::`, `capabilities::`, `org_uuid::`, `org_name::`) |
 | 3 | [Fetch Behavior](../param_group/003_fetch_behavior.md) | `trace::` |
 

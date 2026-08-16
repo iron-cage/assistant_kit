@@ -13,7 +13,7 @@
 //! | `stderr_str` | `refresh_test`, `bug_reproducers_239_244_test`, `invariant_trace_universality_test`, `error_classification_test`, `user_story_test`, `user_story_creds_isolated_test`, `isolated_correctness_test`, `isolated_test`, `ps_command_test`, `user_story_ps_test`, `kill_command_test`, `user_story_kill_test`, `ps_mode_test`, `ps_columns_test`, `output_format_test`, `no_compact_window_test`, `json_config_test`, `config_file_test` |
 //! | `stdout_str` | `refresh_test`, `isolated_correctness_test`, `isolated_test`, `dry_run_test`, `ps_command_test`, `user_story_ps_test`, `kill_command_test`, `user_story_kill_test`, `ps_mode_test`, `ps_columns_test`, `ps_wide_test`, `output_format_test`, `no_compact_window_test`, `json_config_test`, `config_file_test` |
 //! | `make_creds_file` | `refresh_test`, `param_trace_edge_cases_test`, `invariant_trace_universality_test`, `user_story_test`, `user_story_creds_isolated_test`, `isolated_correctness_test`, `isolated_test`, `no_compact_window_test`, `json_config_test` |
-//! | `fake_claude_dir` (unix) | `bug_reproducers_239_244_test`, `error_classification_test`, `execution_mode_test`, `bug_reproducers_247_test`, `exit_code_contract_test`, `output_format_test`, `output_style_test`, `summary_fields_test`, `journal_integration_test`, `param_extended_flags_test` (S89 only), `config_file_test` |
+//! | `fake_claude_dir` (unix) | `bug_reproducers_239_244_test`, `error_classification_test`, `execution_mode_test`, `bug_reproducers_247_test`, `exit_code_contract_test`, `output_format_test`, `output_style_test`, `summary_fields_test`, `journal_integration_test`, `journal_integration_ext_test`, `param_extended_flags_test` (S89 only), `config_file_test` |
 //! | `fake_claude_binary_dir` (unix) | `ps_command_test`, `user_story_ps_test`, `kill_command_test`, `user_story_kill_test`, `ps_mode_test`, `ps_columns_test`, `ps_wide_test`, `ps_flags_test`, `config_file_test` |
 //! | `fake_claude` (unix) | `execution_mode_test`, `expect_validation_test` |
 //! | `run_with_path` | `execution_mode_test`, `expect_validation_test`, `exit_code_contract_test`, `output_format_test` |
@@ -23,11 +23,16 @@
 //! | `run_dry` | `user_story_test`, `user_story_creds_isolated_test`, `user_story_output_test`, `dry_run_test` |
 //! | `run_ask_dry` | `ask_command_test`, `user_story_creds_isolated_test` |
 //! | `spawn_fake_claude` (unix) | `ps_command_test`, `user_story_ps_test`, `kill_command_test`, `user_story_kill_test`, `ps_mode_test`, `ps_columns_test`, `ps_wide_test`, `ps_pid_test`, `ps_inspect_test`, `param_group_test`, `ps_flags_test` |
-//! | `spawn_print_claude` (unix) | `ps_command_test`, `user_story_ps_test`, `ps_mode_test`, `ps_columns_test`, `ps_inspect_test`, `param_group_test`, `concurrency_gate_test`, `config_file_test` |
-//! | `spawn_print_claude_for` (unix) | `concurrency_gate_test`, `config_file_test` |
+//! | `spawn_print_claude` (unix) | `ps_command_test`, `user_story_ps_test`, `ps_mode_test`, `ps_columns_test`, `ps_inspect_test`, `param_group_test`, `concurrency_gate_test`, `concurrency_gate_ext2_test`, `config_file_test` |
+//! | `spawn_print_claude_for` (unix) | `concurrency_gate_test`, `concurrency_gate_ext_test`, `concurrency_gate_ext2_test`, `concurrency_gate_ext3_test`, `journal_integration_ext_test`, `config_file_test` |
 //! | `run_clr_ps` (unix) | `ps_command_test`, `user_story_ps_test` |
 //! | `run_clr_kill` (unix) | `kill_command_test`, `user_story_kill_test` |
 //! | `run_isolated` | `isolated_test`, `isolated_plan034_test`, `isolated_plan035_test` |
+//! | `find_jsonl_files` (unix) | `journal_integration_test`, `journal_integration_ext_test` |
+//! | `read_journal_content` (unix) | `journal_integration_test`, `journal_integration_ext_test` |
+//! | `run_with_journal` (unix) | `journal_integration_test`, `journal_integration_ext_test` |
+//! | `build_argv_tolerant_sleeper` | `concurrency_gate_test`, `concurrency_gate_ext2_test` |
+//! | `slot_owner_pid` | `concurrency_gate_ext_test`, `concurrency_gate_ext2_test` |
 //!
 //! # Testing Techniques
 //!
@@ -836,4 +841,130 @@ pub fn wait_bounded( child : &mut std::process::Child, deadline : std::time::Ins
     std::thread::sleep( core::time::Duration::from_millis( 50 ) );
   }
   None
+}
+
+/// Scan `dir` and return paths to all `*.jsonl` files found (non-recursive).
+/// Shared by `journal_integration_test` and `journal_integration_ext_test`.
+#[ must_use ]
+#[ inline ]
+#[ allow( dead_code ) ]
+pub fn find_jsonl_files( dir : &std::path::Path ) -> Vec< std::path::PathBuf >
+{
+  let Ok( rd ) = std::fs::read_dir( dir ) else { return Vec::new() };
+  rd.filter_map( core::result::Result::ok )
+    .map( | e | e.path() )
+    .filter( | p | p.extension().is_some_and( | x | x == "jsonl" ) )
+    .collect()
+}
+
+/// Read all content from all `*.jsonl` files in `dir`; return concatenated string.
+/// Shared by `journal_integration_test` and `journal_integration_ext_test`.
+#[ must_use ]
+#[ inline ]
+#[ allow( dead_code ) ]
+pub fn read_journal_content( dir : &std::path::Path ) -> String
+{
+  find_jsonl_files( dir )
+    .iter()
+    .map( | p | std::fs::read_to_string( p ).unwrap_or_default() )
+    .collect()
+}
+
+/// Invoke `clr` in print-mode with a fast-exit fake claude and extra args.
+///
+/// Clears `CLR_JOURNAL`, `CLR_JOURNAL_DIR`, `_CLR_DEFAULT_TIMEOUT`, and `CLR_TIMEOUT`
+/// from the environment, then applies `extra_envs` on top.  Uses `--max-sessions 0` to
+/// bypass the gate.  Appends `"x"` as the positional message.
+/// Shared by `journal_integration_test` and `journal_integration_ext_test`.
+///
+/// # Panics
+///
+/// Panics if the compiled `clr` binary cannot be invoked as a subprocess.
+#[ must_use ]
+#[ inline ]
+#[ allow( dead_code ) ]
+pub fn run_with_journal
+(
+  extra_args : &[ &str ],
+  extra_envs : &[ ( &str, &str ) ],
+  fake_body  : &str,
+) -> ( std::process::Output, tempfile::TempDir )
+{
+  let ( dir, path ) = fake_claude_dir( fake_body );
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let mut args : Vec< &str > = vec![ "-p", "--max-sessions", "0" ];
+  args.extend_from_slice( extra_args );
+  args.push( "x" );
+  let out = Command::new( bin )
+    .args( &args )
+    .env( "PATH", &path )
+    .env_remove( "CLR_JOURNAL" )
+    .env_remove( "CLR_JOURNAL_DIR" )
+    .env_remove( "CLR_TIMEOUT" )
+    .env_remove( "_CLR_DEFAULT_TIMEOUT" )
+    .envs( extra_envs.iter().copied() )
+    .output()
+    .expect( "failed to invoke clr binary" );
+  ( out, dir )
+}
+
+/// Compile a tiny real ELF binary named `claude` that ignores all argv and sleeps
+/// for `sleep_secs` seconds before exiting.
+///
+/// Needed because neither existing fake-`claude` fixture fits this test: a
+/// shebang shell script (`fake_claude_dir`) shows its *interpreter* as argv[0]
+/// in `/proc/{pid}/cmdline`, making it invisible to `find_claude_processes()`'s
+/// basename check; and `/bin/sleep` (`fake_claude_binary_dir`) errors out
+/// immediately on the non-numeric flags `clr` itself forwards to the dispatched
+/// `claude` process (e.g. `-p`). This binary is a real ELF (so the basename
+/// check passes) that never inspects `std::env::args()` at all (so it tolerates
+/// whatever `clr` forwards) and blocks for a fixed duration (so concurrently
+/// racing invocations have an observable overlap window).
+///
+/// Returns `(TempDir, path_val)` — `path_val` prepends the dir to `$PATH`,
+/// mirroring `fake_claude_binary_dir()`'s contract.
+///
+/// Shared by `concurrency_gate_test` and `concurrency_gate_ext2_test`.
+///
+/// # Panics
+/// Panics if `rustc` is unavailable on `$PATH` or compilation fails.
+#[ must_use ]
+#[ inline ]
+#[ allow( dead_code ) ]
+pub fn build_argv_tolerant_sleeper( sleep_secs : u64 ) -> ( tempfile::TempDir, String )
+{
+  let dir = tempfile::TempDir::new().expect( "tmpdir" );
+  let src = dir.path().join( "sleeper.rs" );
+  std::fs::write(
+    &src,
+    format!( "fn main() {{ std::thread::sleep(std::time::Duration::from_secs({sleep_secs})); }}" ),
+  ).expect( "write sleeper source" );
+  let bin = dir.path().join( "claude" );
+  let status = Command::new( "rustc" )
+    .arg( "-O" )
+    .arg( "-o" ).arg( &bin )
+    .arg( &src )
+    .stdout( std::process::Stdio::null() )
+    .stderr( std::process::Stdio::null() )
+    .status()
+    .expect( "invoke rustc for T08 fixture" );
+  assert!( status.success(), "T08 fixture: rustc failed to compile the argv-tolerant sleeper" );
+  let path_val = format!( "{}:{}", dir.path().display(), std::env::var( "PATH" ).unwrap_or_default() );
+  ( dir, path_val )
+}
+
+/// Extract the `pid` field from a slot-reservation file's JSON content
+/// (`{"pid":N,"since":M}`), written by `claim_slot_file()` in `src/cli/gate.rs`.
+///
+/// Shared by `concurrency_gate_ext_test` and `concurrency_gate_ext2_test`.
+#[ must_use ]
+#[ inline ]
+#[ allow( dead_code ) ]
+pub fn slot_owner_pid( content : &str ) -> Option< u32 >
+{
+  let marker = "\"pid\":";
+  let start  = content.find( marker )? + marker.len();
+  let rest   = &content[ start.. ];
+  let end    = rest.find( [ ',', '}' ] )?;
+  rest[ ..end ].trim().parse().ok()
 }

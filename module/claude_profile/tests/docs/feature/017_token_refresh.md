@@ -27,7 +27,7 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 | FT-13 | `apply_refresh` does not call `switch_account`; `_active` marker unchanged throughout cycle | Algorithm | test_apply_refresh_lifecycle_active_marker_unchanged |
 | FT-14 | `None`-paths fallback — credential absent in store → `refresh_account_token` returns `None` | Algorithm | test_apply_refresh_401_no_cred_file |
 | FT-15 | `trace::1` propagated to `refresh_account_token`; lifecycle steps logged to stderr; no panic | AC-26 | test_apply_refresh_lifecycle_l10_trace_run_isolated_invoked_no_panic, art_some_paths_run_isolated_invoked_trace_no_panic |
-| FT-16 | `expires_at_ms` from `expiresAt` field when JWT decode returns `None` (opaque token) | AC-25 | test_parse_u064_from_str_mre_bug170_extracts_expires_at, test_jwt_exp_ms_mre_bug170_opaque_returns_none |
+| FT-16 | `expires_at_ms` from `expiresAt` field when JWT decode returns `None` (opaque token) | AC-25 | test_parse_u64_from_str_mre_bug170_extracts_expires_at, test_jwt_exp_ms_mre_bug170_opaque_returns_none |
 | FT-17 | No `switch_account` in `apply_refresh`; `_active` unchanged confirms no restore occurred | AC-28 | test_apply_refresh_mre_bug208_restore_trace_emitted |
 | FT-18 | After refresh re-fetch succeeds, `aq.account` re-populated via `fetch_oauth_account()` | AC-27 | mre_bug_171_account_populated_after_refresh |
 | FT-13+ | `apply_refresh` does not write `~/.claude/.credentials.json`; file unchanged after cycle | AC-29 | (structural — FT-06/AC-20 mechanism + FT-13/FT-17 verification) |
@@ -77,11 +77,12 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 
 ### FT-01: `refresh::0` produces no retry — auth error shown in row
 
-- **Given:** One saved account whose credential is expired; the usage API returns HTTP 401 for that account.
+- **Given:** Empty credential store (no accounts saved).
 - **When:** `clp .usage refresh::0`
-- **Then:** The account's row shows the auth error (e.g., `auth expired (401)`); no retry is attempted; exit 0.
+- **Then:** Exits 0 with a "no accounts" message.
 - **Exit:** 0
 - **Source fn:** `it019_refresh_disabled_param_accepted`
+- **Note:** This is a parser-acceptance/TDD-guard test — it confirms `refresh::0` is accepted; it does not set up an expired-credential/401 account and does not assert an `auth expired (401)` row (matches `tests/docs/cli/param/019_refresh.md § EC-2`'s description of this same function). No test currently covers the row-level "errors shown as rows without retry" half of AC-18.
 - **Source:** [017_token_refresh.md AC-18](../../../docs/feature/017_token_refresh.md)
 
 ---
@@ -93,6 +94,7 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 - **Then:** A `refresh_account_token` call is made for that account; if updated credentials are returned, the quota fetch is retried and the row shows live data; exit 0.
 - **Exit:** 0
 - **Source fn:** `it032_lim_it_refresh_per_account` [live — requires credentials]
+- **Note:** `it032` only asserts exit 0 and that the account name appears in stdout. Per its own doc comment, when the live token has not yet expired the retry loop is a no-op happy path — the test does not force or assert that `refresh_account_token` is actually invoked.
 - **Source:** [017_token_refresh.md AC-19](../../../docs/feature/017_token_refresh.md)
 
 ---
@@ -137,7 +139,7 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 - **Then:** The live session file (`~/.claude/.credentials.json`) is overwritten with `new_json` first; then `account::save()` propagates to `{credential_store}/{name}.credentials.json`, the active marker (`_active_{hostname}_{user}`), and companion files; all writes complete before the retry `fetch_oauth_usage` call; subsequent reads of the per-account credential file yield the refreshed token.
 - **Exit:** 0
 - **Source fn:** `it032_lim_it_refresh_per_account` [live — requires credentials]
-- **Note:** BUG-165 fix; before the fix, only the persistent store was updated, leaving the live session stale.
+- **Note:** BUG-165 fix; before the fix, only the persistent store was updated, leaving the live session stale. `it032` itself only asserts exit 0 and that the account name appears in stdout — it does not inspect the live credentials file, the store file, or the active marker, and so does not directly verify the write-ordering claim above; no test in the suite currently does.
 - **Source:** [017_token_refresh.md AC-20](../../../docs/feature/017_token_refresh.md)
 
 ---
@@ -202,9 +204,9 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 
 - **Given:** `claude_paths = Some(paths)` (lifecycle mode); one saved account with a 401 error result; no per-account credential file exists in the persistent store for that account.
 - **When:** `apply_refresh(&mut accounts, store.path(), Some(&paths), false)` is called (unit test context; equivalent to `clp .usage refresh::1` when the lifecycle path is active)
-- **Then:** `refresh_account_token(name, store, Some(&paths))` returns `None` (no per-account credential file in store); the account is skipped via `continue`; the 401 error result is unchanged after `apply_refresh` returns.
+- **Then:** `refresh_account_token(name, store, Some(&paths))` returns `None` (no per-account credential file in store); the account is skipped via `continue`. Per BUG-297 (`src/usage/refresh.rs:133`), the original 401 error is NOT left unchanged — `apply_refresh` overwrites `aq.result` to the definitive `Err("refresh token expired")` before the `continue`.
 - **Source fn:** `test_apply_refresh_lifecycle_switch_fails_result_unchanged`
-- **Note:** BUG-165 regression guard; covers the `Some(paths)` early-exit path not testable at CLI level without spawning live subprocess.
+- **Note:** BUG-165 regression guard; covers the `Some(paths)` early-exit path not testable at CLI level without spawning live subprocess. Despite the function's `_result_unchanged` name suffix, the cited test's own assertion (and inline comment) confirms `result` changes to `Err("refresh token expired")`, not that it stays byte-identical to the original 401 message — "unchanged" in the name refers to the account remaining an `Err` (not silently recovered to `Ok`).
 - **Source:** [017_token_refresh.md Algorithm](../../../docs/feature/017_token_refresh.md)
 
 ---
@@ -224,9 +226,9 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 
 - **Given:** `claude_paths = None` (persistent-store mode); one saved account with a 401 error result; no per-account credential file (`{name}.credentials.json`) exists in the persistent store.
 - **When:** `apply_refresh(&mut accounts, store.path(), None, false)` is called (unit test context; equivalent to `clp .usage refresh::1` with no live session)
-- **Then:** `refresh_account_token(name, store, None)` returns `None` (credential file absent in persistent store); the account is skipped via `continue`; the 401 error result is unchanged after `apply_refresh` returns.
+- **Then:** `refresh_account_token(name, store, None)` returns `None` (credential file absent in persistent store); the account is skipped via `continue`. Per BUG-297 (`src/usage/refresh.rs:133`), the original 401 error is NOT left unchanged — `apply_refresh` overwrites `aq.result` to the definitive `Err("refresh token expired")` before the `continue`.
 - **Source fn:** `test_apply_refresh_401_no_cred_file` (C2 — covers None-paths + no credential file)
-- **Note:** Symmetric to FT-12 for the `None`-paths branch; verifies the persistent-store fallback path exits cleanly when the per-account credential file is absent.
+- **Note:** Symmetric to FT-12 for the `None`-paths branch; verifies the persistent-store fallback path exits cleanly when the per-account credential file is absent. The test's own inline comment confirms `result` changes to `Err("refresh token expired")`, not that it stays byte-identical to the original 401 message.
 - **Source:** [017_token_refresh.md Algorithm](../../../docs/feature/017_token_refresh.md)
 
 ---
@@ -245,10 +247,10 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 ### FT-16: Post-refresh `expires_at_ms` from `expiresAt` field for opaque `sk-ant-oat01-*` token
 
 - **Given:** One saved account whose credential is expired; `account::refresh_account_token()` returns `Some(new_creds)` where the `accessToken` is an opaque `sk-ant-oat01-*` value (no `.` separator — `jwt_exp_ms` returns `None`); the `new_creds` JSON contains a future `expiresAt` value written by the OAuth server.
-- **When:** `apply_refresh` processes `new_creds` (unit test via `test_apply_refresh_mre_bug170_opaque_token_expires_fallback`)
-- **Then:** `account_quota.expires_at_ms` is set to the `expiresAt` value from `new_creds`; the Expires column shows a future time (not `EXPIRED`); expiry is derived from `parse_u064_field(new_creds, "expiresAt")`, not from JWT decode.
-- **Exit:** 0
-- **Source fn:** `test_jwt_exp_ms_mre_bug170_opaque_returns_none` (in `tests/usage/refresh_tests_b.rs`)
+- **When:** `apply_refresh` (`src/usage/refresh.rs:142-152`) calls `jwt_exp_ms(&new_creds)`, and on `None` falls back to `parse_u64_from_str(&new_creds, "expiresAt")`. Covered by two component unit tests rather than a single end-to-end `apply_refresh` test.
+- **Then:** `account_quota.expires_at_ms` is set to the `expiresAt` value from `new_creds`; the Expires column shows a future time (not `EXPIRED`); expiry is derived from `parse_u64_from_str(new_creds, "expiresAt")`, not from JWT decode.
+- **Exit:** n/a (unit tests — function return assertions)
+- **Source fn:** `test_jwt_exp_ms_mre_bug170_opaque_returns_none` (in `tests/usage/refresh_tests_b.rs`) verifies the `jwt_exp_ms` precondition; `test_parse_u64_from_str_mre_bug170_extracts_expires_at` (in `tests/usage/fetch_tests.rs`) verifies the `expiresAt` fallback extraction. Neither test, nor any other, exercises the `if`/`else if` composition inside `apply_refresh` itself end-to-end.
 - **Note:** Fix for BUG-170 — the TSK-163 fix for BUG-162 introduced this gap: `jwt_exp_ms` silently returns `None` for opaque tokens, leaving `expires_at_ms` stale. The `expiresAt` field in the returned credentials JSON is the authoritative post-refresh expiry for opaque tokens.
 - **Source:** [017_token_refresh.md AC-25](../../../docs/feature/017_token_refresh.md)
 
@@ -272,7 +274,7 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 - **Then:** `account_quota.account` is `Some(...)` — `~Renews` and `Sub` columns show current data for the refreshed account, not stale `?`. If `fetch_oauth_account` fails, the original `aq.account` value is preserved (non-aborting).
 - **Exit:** n/a (structural — verifies `Fix(BUG-171)` presence in production code)
 - **Source fn:** `mre_bug_171_account_populated_after_refresh` (in `usage_sort_test.rs`)
-- **Note:** BUG-171 fix — before fix, `aq.account` remained `None` after refresh because the initial fetch used the expired token and the retry path never re-populated account data.
+- **Note:** BUG-171 fix — before fix, `aq.account` remained `None` after refresh because the initial fetch used the expired token and the retry path never re-populated account data. The cited test is a pure structural check — it reads `src/usage/refresh.rs` via `include_str!` and asserts the substring `"Fix(BUG-171)"` is present; it never constructs an `AccountQuota`, calls `apply_refresh`, or invokes `fetch_oauth_account`. It confirms the fix marker (and by extension the code shown in "When") is present in production source, not that `account_quota.account` becomes `Some(...)` at runtime. No test in the suite behaviorally exercises this re-population.
 - **Source:** [017_token_refresh.md AC-27](../../../docs/feature/017_token_refresh.md)
 
 ---
@@ -359,5 +361,5 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 - **Failure case (without fix):** The stale `is_active=true` (computed before `run_isolated`) causes race recovery to read the live file (containing B's credentials) and write them into `A.credentials.json` — credential cross-contamination with no error surfaced.
 - **Exit:** N/A (unit test — verifies that `A.credentials.json` is unchanged after `refresh_token_with_live_path` returns `None` when active marker changes mid-function)
 - **Source fn:** `mre_bug316_stale_is_active_race_recovery_copies_wrong_account_creds` (in `claude_profile_core/tests/account_refresh_test.rs`)
-- **Note:** Fix for BUG-316. The race requires two OS processes (watchdog running `refresh::1` + user running `rotate::1`). The ~35-second `run_isolated` window makes this a practically exploitable race. Fix: re-read `_active_{host}_{user}` marker immediately before race-recovery guard at `account.rs:877`.
+- **Note:** Fix for BUG-316. The race requires two OS processes (watchdog running `refresh::1` + user running `rotate::1`). The ~35-second `run_isolated` window makes this a practically exploitable race. Fix: re-read `_active_{host}_{user}` marker immediately before race-recovery guard at `account.rs:877`. The cited test is a pure structural check — it reads `src/account.rs` via `std::fs::read_to_string` and asserts the substring `"is_active_now"` is present plus `"Fix(BUG-316)"` appears at ≥2 sites; it never constructs accounts "A"/"B", writes an active marker or credential files, calls `refresh_token_with_live_path`, or simulates the race window. It confirms the fix's re-read variable and annotations exist in production source (whose logic at `account.rs:1208-1211` does match this FT's description), not that `A.credentials.json` is verified unchanged at runtime. No test in the suite behaviorally exercises this race scenario end-to-end.
 - **Source:** [017_token_refresh.md AC-33](../../../docs/feature/017_token_refresh.md)

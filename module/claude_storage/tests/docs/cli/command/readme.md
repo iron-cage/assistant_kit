@@ -23,3 +23,7 @@
 | 10_session_dir.md | Integration tests for `.session.dir` command | ✅ |
 | 11_session_ensure.md | Integration tests for `.session.ensure` command | ✅ |
 | 12_tail.md | Integration tests for `.tail` command | ✅ |
+
+### Cross-Command Dispatch Coverage
+
+Not every test file maps to exactly one command row above. `tests/command_help_space_form_test.rs` covers the space-separated `<command> help` interception (`BUG-005`) — a pre-dispatch mechanism in `src/cli_main.rs` applying uniformly to every registered command, exercised here against `.list`/`.show`/`.search` as representative cases (T01-T10). It has no dedicated row since its subject is dispatch-level, not any single command's own behavior; see `docs/feature/001_cli_tool.md`'s Help rendering paragraph for the cross-cutting behavioral spec this file tests against.

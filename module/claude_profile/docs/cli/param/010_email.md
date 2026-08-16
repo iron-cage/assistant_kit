@@ -1,6 +1,6 @@
 # Parameter: 10. `email::`
 
-Controls whether the email address line appears in output. Source for `.credentials.status`: `emailAddress` field in live `~/.claude.json`. Source for `.accounts`: `emailAddress` field in saved `{name}.json` snapshot.
+Controls whether the email address line appears in output. Source for `.credentials.status`: `emailAddress` field in live `~/.claude.json`. No longer usable on `.accounts` — removed in [Feature 037](../../feature/037_accounts_usage_param_unification.md); `.accounts` now rejects `email::` with `parameter 'email' removed — use 'cols::-email' instead` (see `REMOVED_TOGGLES` in `src/commands/accounts.rs`).
 
 - **Default:** `1` (shown)
 - **Constraints:** Accepted values: `0`, `1`, `false`, `true`
@@ -27,8 +27,7 @@ email::0   → line omitted
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.accounts`](../command/001_account.md#command-3-accounts) | Email address line per stored account |
-| 2 | [`.credentials.status`](../command/002_credentials.md#command-10-credentialsstatus) | Email address line for live credentials |
+| 1 | [`.credentials.status`](../command/002_credentials.md#command-10-credentialsstatus) | Email address line for live credentials |
 
 ### Referenced User Stories
 

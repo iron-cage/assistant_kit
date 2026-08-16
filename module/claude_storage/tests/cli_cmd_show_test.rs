@@ -324,23 +324,23 @@ fn int_6_entries_1_shows_all_session_entries()
   );
 }
 
-/// INT-7: Exit code 2 when cwd has no project.
+/// INT-7: Exit code 1 when cwd has no project.
 ///
 /// ## Purpose
-/// Verify that `.show` with no args exits with code 2 and emits an error
+/// Verify that `.show` with no args exits with code 1 and emits an error
 /// when the cwd does not match any project in storage.
 ///
 /// ## Coverage
-/// Exit code 2; error on stderr; exit 0.
+/// Exit code 1; error on stderr.
 ///
 /// ## Validation Strategy
 /// Use an empty storage root. Run `.show` from `/tmp` (no matching project).
-/// Assert exit 2 and stderr non-empty.
+/// Assert exit 1 and stderr non-empty.
 ///
 /// ## Related Requirements
 /// `tests/docs/cli/command/03_show.md` — INT-7
 #[ test ]
-fn int_7_exit_code_2_when_cwd_has_no_project()
+fn int_7_exit_code_1_when_cwd_has_no_project()
 {
   let root = TempDir::new().unwrap();
   // Empty storage — no projects written
