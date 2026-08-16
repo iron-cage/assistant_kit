@@ -10,7 +10,9 @@ resolver = "2"
 members = [
   "module/json_redact",
   "module/claude_journal",
+  "module/claude_journal_charts",
   "module/claude_journal_viewer",
+  "module/svg_chart",
   "module/assistant_kit",
   "module/claude_auth",
   "module/claude_assets_core",
@@ -106,8 +108,18 @@ path = "module/claude_journal"
 version = "=0.1.0"
 default-features = false
 
+[workspace.dependencies.claude_journal_charts]
+path = "module/claude_journal_charts"
+version = "=0.1.0"
+default-features = false
+
 [workspace.dependencies.claude_journal_viewer]
 path = "module/claude_journal_viewer"
+version = "=0.1.0"
+default-features = false
+
+[workspace.dependencies.svg_chart]
+path = "module/svg_chart"
 version = "=0.1.0"
 default-features = false
 
@@ -186,7 +198,16 @@ path = "module/claude_quota"
 version = "=0.3.1"
 default-features = false
 
+[workspace.dependencies.svg_chart]
+path = "module/svg_chart"
+version = "=0.1.0"
+default-features = false
+
 ## External — published companion crates
+
+[workspace.dependencies.plotters]
+version = "^0.3"
+default-features = false
 
 [workspace.dependencies.error_tools]
 version = "^0.41"
@@ -203,6 +224,10 @@ default-features = false
 
 [workspace.dependencies.data_fmt]
 version = "^0.7"
+default-features = false
+
+[workspace.dependencies.plotters]
+version = "^0.3"
 default-features = false
 
 [workspace.dependencies.ureq]
@@ -241,6 +266,9 @@ version = "^0.9"
 
 [workspace.dependencies.tiny_http]
 version = "^0.12"
+
+[workspace.dependencies.open]
+version = "^5"
 
 [workspace.dependencies.libc]
 version = "^0.2"

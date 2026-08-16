@@ -1,0 +1,27 @@
+[package]
+name = "claude_journal_charts"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+readme = "readme.md"
+repository.workspace = true
+homepage.workspace = true
+description = "Aggregates claude_journal Command events into a daily-usage SVG bar chart"
+keywords = [ "journal", "chart", "usage", "claude" ]
+categories = [ "visualization" ]
+
+[lints]
+workspace = true
+
+[lib]
+name = "claude_journal_charts"
+path = "src/lib.rs"
+
+[dependencies]
+claude_journal = { workspace = true }
+svg_chart      = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }
