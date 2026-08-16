@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+# do package_info — report package metadata as JSON (deterministic, package-level only)
+set -euo pipefail
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+cd "$SCRIPT_DIR/.."
+python3 - <<'PYEOF'
+import json, re, os
+
+with open("Cargo.toml") as f:
+  toml = f.read()
+
+ws_toml = ""
+ws_path = os.path.join("..", "..", "Cargo.toml")
+if os.path.exists(ws_path):
+  with open(ws_path) as f:
+    ws_toml = f.read()
+
+def direct(key, src):
+  m = re.search(rf'^{key}\s*=\s*"([^"]+)"', src, re.MULTILINE)
+  return m.group(1) if m else None
+
+def resolve(key):
+  v = direct(key, toml)
+  if v:
+    return v
+  if re.search(rf'^{key}\.workspace\s*=\s*true', toml, re.MULTILINE) and ws_toml:
+    section = re.search(r'\[workspace\.package\](.*?)(?=\n\[|\Z)', ws_toml, re.DOTALL)
+    if section:
+      v = direct(key, section.group(1))
+      if v:
+        return v
+  return "unknown"
+
+print("\n" + json.dumps({
+  "name":            direct("name", toml) or "unknown",
+  "version":         resolve("version"),
+  "edition":         resolve("edition"),
+  "language":        "rust",
+  "package_manager": "cargo",
+  "signal":          "Cargo.toml",
+  "confidence":      "inferred",
+}, indent=2) + "\n")
+PYEOF

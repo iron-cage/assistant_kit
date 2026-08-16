@@ -7,7 +7,9 @@
 //! `get::` live/offline extraction, `format::tsv`, `no_color::`, `abs::`, and
 //! Feature 037 owner column display.
 //!
-//! Live tests are excluded from Docker CI via nextest filter `!test(lim_it)`.
+//! No nextest filter excludes live tests — they run by default whenever
+//! ~/.claude is mounted (see .config/nextest.toml) and panic loudly if a
+//! live token is unavailable.
 
 use crate::cli_runner::{
   run_cs_with_env,
@@ -357,11 +359,7 @@ fn it221_ft029_09_usage_no_profile_shows_empty_host()
 #[ test ]
 fn it206_lim_it_ft028_04_only_next_1_shows_recommended()
 {
-  let Some( token ) = live_active_token() else
-  {
-    eprintln!( "it206: no live token — skipping" );
-    return;
-  };
+  let token = live_active_token().expect( "it206: live API token required — no ~/.claude/.credentials.json" );
   require_live_api( "it206" );
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -400,11 +398,7 @@ fn it206_lim_it_ft028_04_only_next_1_shows_recommended()
 #[ test ]
 fn it207_lim_it_min_5h_50_hides_below_threshold()
 {
-  let Some( token ) = live_active_token() else
-  {
-    eprintln!( "it207: no live token — skipping" );
-    return;
-  };
+  let token = live_active_token().expect( "it207: live API token required — no ~/.claude/.credentials.json" );
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account_with_token( dir.path(), "acct-a@test.com", &token, true );
@@ -424,11 +418,7 @@ fn it207_lim_it_min_5h_50_hides_below_threshold()
 #[ test ]
 fn it208_lim_it_min_5h_50_inclusive_boundary()
 {
-  let Some( token ) = live_active_token() else
-  {
-    eprintln!( "it208: no live token — skipping" );
-    return;
-  };
+  let token = live_active_token().expect( "it208: live API token required — no ~/.claude/.credentials.json" );
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account_with_token( dir.path(), "acct-a@test.com", &token, true );
@@ -444,11 +434,7 @@ fn it208_lim_it_min_5h_50_inclusive_boundary()
 #[ test ]
 fn it209_lim_it_min_7d_20_hides_below_threshold()
 {
-  let Some( token ) = live_active_token() else
-  {
-    eprintln!( "it209: no live token — skipping" );
-    return;
-  };
+  let token = live_active_token().expect( "it209: live API token required — no ~/.claude/.credentials.json" );
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account_with_token( dir.path(), "acct-a@test.com", &token, true );
@@ -463,11 +449,7 @@ fn it209_lim_it_min_7d_20_hides_below_threshold()
 #[ test ]
 fn it210_lim_it_min_7d_20_inclusive_boundary()
 {
-  let Some( token ) = live_active_token() else
-  {
-    eprintln!( "it210: no live token — skipping" );
-    return;
-  };
+  let token = live_active_token().expect( "it210: live API token required — no ~/.claude/.credentials.json" );
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account_with_token( dir.path(), "acct-a@test.com", &token, true );
@@ -488,11 +470,7 @@ fn it210_lim_it_min_7d_20_inclusive_boundary()
 #[ test ]
 fn it213_lim_it_ft028_09_and_composition()
 {
-  let Some( token ) = live_active_token() else
-  {
-    eprintln!( "it213: no live token — skipping" );
-    return;
-  };
+  let token = live_active_token().expect( "it213: live API token required — no ~/.claude/.credentials.json" );
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account_with_token( dir.path(), "acct-a@test.com", &token, true  );
@@ -514,11 +492,7 @@ fn it213_lim_it_ft028_09_and_composition()
 #[ test ]
 fn it214_lim_it_ft028_10_get_7d_left_bare()
 {
-  let Some( token ) = live_active_token() else
-  {
-    eprintln!( "it214: no live token — skipping" );
-    return;
-  };
+  let token = live_active_token().expect( "it214: live API token required — no ~/.claude/.credentials.json" );
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account_with_token( dir.path(), "acct-a@test.com", &token, true );
@@ -545,11 +519,7 @@ fn it214_lim_it_ft028_10_get_7d_left_bare()
 #[ test ]
 fn it215_lim_it_ft028_11_only_next_get_7d_left()
 {
-  let Some( token ) = live_active_token() else
-  {
-    eprintln!( "it215: no live token — skipping" );
-    return;
-  };
+  let token = live_active_token().expect( "it215: live API token required — no ~/.claude/.credentials.json" );
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account_with_token( dir.path(), "acct-a@test.com", &token, true  );
@@ -576,11 +546,7 @@ fn it215_lim_it_ft028_11_only_next_get_7d_left()
 #[ test ]
 fn it216_lim_it_ft028_12_get_status_green()
 {
-  let Some( token ) = live_active_token() else
-  {
-    eprintln!( "it216: no live token — skipping" );
-    return;
-  };
+  let token = live_active_token().expect( "it216: live API token required — no ~/.claude/.credentials.json" );
   require_live_api( "it216" );
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();

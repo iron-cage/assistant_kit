@@ -787,7 +787,7 @@ fn aa09_prefix_resolution()
   assert_eq!( content.trim(), "alice@corp.com" );
 }
 
-// BUG-341 task/bug/341_orphaned_marker_after_cross_machine_delete.md — this fixture constructs an
+// BUG-347 task/bug/347_orphaned_marker_after_cross_machine_delete.md — this fixture constructs an
 // orphaned-looking marker for assign-overwrite, not delete; cited as prior art only, not modified.
 #[ test ]
 /// Second `assignee::bob@laptop` assign overwrites the existing `_active_laptop_bob` marker.

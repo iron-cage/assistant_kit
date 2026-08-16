@@ -21,7 +21,7 @@ clr isolated [--creds <FILE>] [--timeout <SECS>] [OPTIONS] [MESSAGE] [-- PASSTHR
 | [`--creds`](../param/019_creds.md) | [`CredentialsFilePath`](../type/08_credentials_file_path.md) | `~/.claude/.credentials.json` | Credentials JSON file path (optional; defaults to current account credentials) |
 | [`--model`](../param/003_model.md) | [`ModelName`](../type/04_model_name.md) | — | Model override; when absent falls back to project `.clr.toml` → user `~/.clr/config.toml` → `opus` alias; env: `CLR_MODEL` |
 | [`--timeout`](../param/020_timeout.md) | [`TimeoutSecs`](../type/09_timeout_secs.md) | 30 | Max seconds to wait for subprocess |
-| [`--max-sessions`](../param/033_max_sessions.md) | u32 | 6 | Max concurrent non-interactive sessions before blocking; `0` = unlimited (gate disabled); JSON key: `"max-sessions"`; env: `CLR_MAX_SESSIONS`; no config-file tier |
+| [`--max-sessions`](../param/033_max_sessions.md) | u32 | 8 | Max concurrent non-interactive sessions before blocking; `0` = unlimited (gate disabled); JSON key: `"max-sessions"`; env: `CLR_MAX_SESSIONS`; no config-file tier |
 | [`--trace`](../param/013_trace.md) | bool | false | Print underlying call details to stderr then execute |
 | [`--dry-run`](../param/011_dry_run.md) | bool | false | Print subprocess env+command to stderr (same path as `--trace`); exit 0 without spawning |
 | [`--effort`](../param/017_effort.md) | [`EffortLevel`](../type/07_effort_level.md) | max | Reasoning effort: `low`, `medium`, `high`, `max`; default `max` injected when absent; env: `CLR_EFFORT` |
@@ -51,7 +51,7 @@ clr isolated [--creds <FILE>] [--timeout <SECS>] [OPTIONS] [MESSAGE] [-- PASSTHR
 | `-h`/`--help` | — | — | Print isolated subcommand help and exit 0 |
 
 **Algorithm (7 steps):**
-1. Wait for a concurrency-gate slot per `--max-sessions` (default 6; same mechanism as `run`/`ask`); `--dry-run` bypasses this step entirely.
+1. Wait for a concurrency-gate slot per `--max-sessions` (default 8; same mechanism as `run`/`ask`); `--dry-run` bypasses this step entirely.
 2. Resolve credentials path: `--creds` if given, else `$HOME/.claude/.credentials.json`; exit 1 if file not found.
 3. Create temporary HOME directory; write `.claude/.credentials.json` from resolved credentials.
 4. Write minimal `~/.claude/CLAUDE.md` to temp HOME to suppress interactive prompts.

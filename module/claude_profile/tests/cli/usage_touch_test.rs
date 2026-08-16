@@ -253,11 +253,7 @@ fn it101_usage_help_shows_touch_param()
 #[ test ]
 fn it102_lim_it_sort_renew_shows_recommendation()
 {
-  let Some( token ) = live_active_token() else
-  {
-    eprintln!( "it102: no live token — skipping" );
-    return;
-  };
+  let token = live_active_token().expect( "it102: live API token required — no ~/.claude/.credentials.json" );
   require_live_api( "it102" );
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -287,11 +283,7 @@ fn it102_lim_it_sort_renew_shows_recommendation()
 #[ test ]
 fn it103_lim_it_sort_renews_shows_recommendation()
 {
-  let Some( token ) = live_active_token() else
-  {
-    eprintln!( "it103: no live token — skipping" );
-    return;
-  };
+  let token = live_active_token().expect( "it103: live API token required — no ~/.claude/.credentials.json" );
   require_live_api( "it103" );
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -321,11 +313,7 @@ fn it103_lim_it_sort_renews_shows_recommendation()
 #[ test ]
 fn it104_lim_it_footer_shows_strategy_recommendation()
 {
-  let Some( token ) = live_active_token() else
-  {
-    eprintln!( "it104: no live token — skipping" );
-    return;
-  };
+  let token = live_active_token().expect( "it104: live API token required — no ~/.claude/.credentials.json" );
   require_live_api( "it104" );
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -354,11 +342,7 @@ fn it104_lim_it_footer_shows_strategy_recommendation()
 #[ test ]
 fn it105_lim_it_per_column_emoji_in_5h_left()
 {
-  let Some( token ) = live_active_token() else
-  {
-    eprintln!( "it105: no live token — skipping" );
-    return;
-  };
+  let token = live_active_token().expect( "it105: live API token required — no ~/.claude/.credentials.json" );
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account_with_token( dir.path(), "acct-a@test.com", &token, true );
@@ -446,11 +430,7 @@ fn it108_touch_bogus_exits_1()
 #[ test ]
 fn it109_lim_it_touch_0_no_subprocess_idle_account_unchanged()
 {
-  let Some( token ) = live_active_token() else
-  {
-    eprintln!( "it109: no live token — skipping" );
-    return;
-  };
+  let token = live_active_token().expect( "it109: live API token required — no ~/.claude/.credentials.json" );
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account_with_token( dir.path(), "acct-a@test.com", &token, true );
@@ -486,11 +466,7 @@ fn it109_lim_it_touch_0_no_subprocess_idle_account_unchanged()
 #[ test ]
 fn it110_lim_it_touch_1_subprocess_spawned_for_idle_account()
 {
-  let Some( token ) = live_active_token() else
-  {
-    eprintln!( "it110: no live token — skipping" );
-    return;
-  };
+  let token = live_active_token().expect( "it110: live API token required — no ~/.claude/.credentials.json" );
   require_live_api( "it110" );
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -526,11 +502,7 @@ fn it110_lim_it_touch_1_subprocess_spawned_for_idle_account()
 #[ test ]
 fn it111_lim_it_touch_1_5h_reset_changes_from_dash_to_time()
 {
-  let Some( token ) = live_active_token() else
-  {
-    eprintln!( "it111: no live token — skipping" );
-    return;
-  };
+  let token = live_active_token().expect( "it111: live API token required — no ~/.claude/.credentials.json" );
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account_with_token( dir.path(), "acct-a@test.com", &token, true );
@@ -589,11 +561,7 @@ fn it112_structural_refresh_before_touch_ordering_in_source()
 #[ test ]
 fn it113_lim_it_active_account_restored_after_touch()
 {
-  let Some( token ) = live_active_token() else
-  {
-    eprintln!( "it113: no live token — skipping" );
-    return;
-  };
+  let token = live_active_token().expect( "it113: live API token required — no ~/.claude/.credentials.json" );
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   // alice is active; acct-b is non-active; if acct-b is idle, touch will switch to it.
@@ -649,11 +617,7 @@ fn it114_structural_touch_failure_non_aborting_guard_exists()
 #[ test ]
 fn it115_lim_it_trace_1_shows_touch_lifecycle()
 {
-  let Some( token ) = live_active_token() else
-  {
-    eprintln!( "it115: no live token — skipping" );
-    return;
-  };
+  let token = live_active_token().expect( "it115: live API token required — no ~/.claude/.credentials.json" );
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account_with_token( dir.path(), "acct-a@test.com", &token, true );
@@ -687,11 +651,7 @@ fn it115_lim_it_trace_1_shows_touch_lifecycle()
 #[ test ]
 fn it116_lim_it_account_with_resets_at_absent_is_touched()
 {
-  let Some( token ) = live_active_token() else
-  {
-    eprintln!( "it116: no live token — skipping" );
-    return;
-  };
+  let token = live_active_token().expect( "it116: live API token required — no ~/.claude/.credentials.json" );
   require_live_api( "it116" );
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -823,11 +783,7 @@ fn it119_touch_2_rejected_exits_1()
 #[ test ]
 fn it120_lim_it_ft12_touch_trigger_fires_per_idle_account_cycle()
 {
-  let Some( token ) = live_active_token() else
-  {
-    eprintln!( "it120: no live token — skipping" );
-    return;
-  };
+  let token = live_active_token().expect( "it120: live API token required — no ~/.claude/.credentials.json" );
   require_live_api( "it120" );
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();

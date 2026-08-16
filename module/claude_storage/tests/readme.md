@@ -59,6 +59,7 @@ tests/
 | `common/mod.rs` | Pre-compiled binary helper for integration tests |
 | `cli_commands.rs` | Test CLI command storage operations |
 | `cli_sanity.rs` | Verify CLI binary builds and runs |
+| `command_help_space_form_test.rs` | Test space-form `<command> help` interception (BUG-005) |
 | `command_version_consistency_test.rs` | Validate version annotation consistency |
 | `content_display_integration_test.rs` | Test content-first display (REQ-011) |
 | `count_command_bug_fix.rs` | Test .count context-awareness and path projects |

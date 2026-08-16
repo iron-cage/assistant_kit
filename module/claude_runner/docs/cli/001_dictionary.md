@@ -20,6 +20,7 @@
 | tools | List all Claude Code built-in tools available to the subprocess; canonical form `clr tools` |
 | help | Display usage information and exit; canonical form `clr help`; `--help`/`-h` are parameter aliases |
 
+<!-- BUG-480 task/claude_runner/bug/480_gate_diagnostic_hides_slot_occupancy.md — fixed: the three per-surface "active" senses and "slot occupancy" are defined in § Architecture below -->
 ### Modes
 
 | Term | Definition |
@@ -47,6 +48,10 @@
 | `--` separator | Double-dash token; everything after it becomes positional (part of the message) |
 | last-wins | When a flag appears multiple times, the last occurrence takes effect |
 | temp HOME | Temporary directory created by `clr isolated` containing only `.claude/.credentials.json`; set as `HOME` for the subprocess; deleted unconditionally on exit regardless of timeout or error |
+| active (gate census) | The `N` in the gate-wait line's `active=N/M`: count of live print-mode sessions observed via `{pid}.json` telemetry files — the census conjunct of gate admission; says nothing about how many slots are held (see slot occupancy) |
+| active (ps summary) | The `N` in `clr ps`'s `Active Sessions · N running` caption: all live sessions across every mode (interactive, print, query), not only print-mode |
+| active (⚡ flag) | Per-row `clr ps` flag: the session's process consumed ≥ 3 CPU ticks in a 1-second sample window — CPU activity, unrelated to either census sense |
+| slot occupancy | Count of gate slot files (`slot_N.json`) whose recorded owner is alive, out of `max-sessions` — the slot-CAS conjunct of gate admission; surfaced as `slots=H/M` on slot-side denial diagnostics and `slots=H/M held` on gate-exhaustion messages (BUG-480) |
 
 ### Provenance
 
