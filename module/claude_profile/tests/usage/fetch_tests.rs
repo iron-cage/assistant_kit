@@ -271,6 +271,7 @@ fn test_mre_bug218_fetch_all_quota_no_duplicate_synthetic_row()
   let stored_row = AccountQuota
   {
     fallback_reason : None,
+    touched_recently : false,
     name                 : "i6@wbox.pro".to_string(),
     is_current           : false,
     is_active            : false,
@@ -294,6 +295,7 @@ fn test_mre_bug218_fetch_all_quota_no_duplicate_synthetic_row()
   let synthetic = AccountQuota
   {
     fallback_reason : None,
+    touched_recently : false,
     name                 : "i6@wbox.pro".to_string(),
     is_current           : true,
     is_active            : false,

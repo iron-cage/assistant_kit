@@ -5,6 +5,7 @@ use claude_profile::usage::test_bridge::apply_touch;
 use claude_profile::usage::test_bridge::touch_skip_reason;
 use claude_profile::usage::test_bridge::types::{ SubprocessModel, SubprocessEffort };
 use claude_profile::usage::test_bridge::mk_aq_with_resets_at;
+use claude_profile::usage::test_bridge::mark_touched;
 use tempfile::TempDir;
 
 /// FT-15 / BUG-211 MRE — `apply_touch` does NOT write live credentials file (no `switch_account`).
@@ -225,6 +226,10 @@ fn test_mre_bug215_apply_touch_fires_when_7d_timer_absent()
 /// timer check, `apply_touch` reads the quota cache; if `touch_idle=Some(false)`,
 /// the account is skipped with a distinguishable trace line.
 ///
+/// Fix(BUG-488) later age-gated this guard: it now fires only when the cache also
+/// carries a `last_touch_at` younger than `TOUCH_GRACE_SECS`. Test setup therefore
+/// uses `mark_touched` — the production writer — which writes both flags paired.
+///
 /// # Prevention
 ///
 /// Any new coordination flag written by one touch path and consumed by another must
@@ -260,9 +265,8 @@ fn test_mre_bug288_apply_touch_skips_touch_idle_false()
     store.path(), "test@example.com", "fetched_at",
     &claude_profile_core::account::chrono_now_utc(),
   );
-  claude_profile_core::account::write_cache_bool(
-    store.path(), "test@example.com", "touch_idle", false,
-  );
+  // mark_touched writes the paired flags the age-gated guard requires (Fix BUG-488).
+  mark_touched( store.path(), "test@example.com" );
 
   // Account is idle (resets_at=None) — would qualify for touch by timer state alone.
   // The touch_idle=false guard must intercept BEFORE the all_running check.
@@ -384,9 +388,8 @@ fn test_apply_touch_touch_idle_true_not_skipped_by_guard()
       store_a.path(), "test@example.com", "fetched_at",
       &claude_profile_core::account::chrono_now_utc(),
     );
-    claude_profile_core::account::write_cache_bool(
-      store_a.path(), "test@example.com", "touch_idle", false,
-    );
+    // mark_touched writes the paired flags the age-gated guard requires (Fix BUG-488).
+    mark_touched( store_a.path(), "test@example.com" );
     let aq = mk_aq_with_resets_at( None );
     assert_eq!(
       touch_skip_reason( &aq, store_a.path(), false ),
@@ -434,9 +437,8 @@ fn test_apply_touch_touch_idle_none_in_cache_not_skipped()
       store_a.path(), "test@example.com", "fetched_at",
       &claude_profile_core::account::chrono_now_utc(),
     );
-    claude_profile_core::account::write_cache_bool(
-      store_a.path(), "test@example.com", "touch_idle", false,
-    );
+    // mark_touched writes the paired flags the age-gated guard requires (Fix BUG-488).
+    mark_touched( store_a.path(), "test@example.com" );
     let aq = mk_aq_with_resets_at( None );
     assert_eq!(
       touch_skip_reason( &aq, store_a.path(), false ),
@@ -492,9 +494,8 @@ fn test_apply_touch_touch_idle_false_fetched_at_absent_guard_bypassed()
       store_a.path(), "test@example.com", "fetched_at",
       &claude_profile_core::account::chrono_now_utc(),
     );
-    claude_profile_core::account::write_cache_bool(
-      store_a.path(), "test@example.com", "touch_idle", false,
-    );
+    // mark_touched writes the paired flags the age-gated guard requires (Fix BUG-488).
+    mark_touched( store_a.path(), "test@example.com" );
     let aq = mk_aq_with_resets_at( None );
     assert_eq!(
       touch_skip_reason( &aq, store_a.path(), false ),
@@ -543,9 +544,8 @@ fn test_apply_touch_touch_idle_false_silent_when_trace_disabled()
     store.path(), "test@example.com", "fetched_at",
     &claude_profile_core::account::chrono_now_utc(),
   );
-  claude_profile_core::account::write_cache_bool(
-    store.path(), "test@example.com", "touch_idle", false,
-  );
+  // mark_touched writes the paired flags the age-gated guard requires (Fix BUG-488).
+  mark_touched( store.path(), "test@example.com" );
 
   let aq = mk_aq_with_resets_at( None );
 

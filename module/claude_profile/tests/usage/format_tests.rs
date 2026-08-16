@@ -317,6 +317,7 @@ fn test_status_emoji_five_hour_none_is_green()
   let aq = AccountQuota
   {
     fallback_reason : None,
+    touched_recently : false,
     name                  : String::new(),
     is_current            : false,
     is_active             : false,

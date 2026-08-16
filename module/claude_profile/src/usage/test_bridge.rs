@@ -33,7 +33,7 @@ pub use super::render::{ render_text, render_tsv, render_json, extract_get_field
 pub use super::refresh::{ apply_refresh, reason_label };
 
 // ── Touch ─────────────────────────────────────────────────────────────────
-pub use super::touch::{ apply_touch, touch_skip_reason };
+pub use super::touch::{ apply_touch, touch_skip_reason, mark_touched, touched_within_grace, derive_touched_recently, TOUCH_GRACE_SECS };
 
 // ── Format ────────────────────────────────────────────────────────────────
 pub use super::format::{

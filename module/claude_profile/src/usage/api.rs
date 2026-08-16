@@ -13,7 +13,7 @@ use super::fetch::fetch_quota_for_list;
 use super::render::{ render_text, render_json, render_tsv, render_plain, extract_get_field };
 use super::live::execute_live_mode;
 use super::refresh::apply_refresh;
-use super::touch::apply_touch;
+use super::touch::{ apply_touch, derive_touched_recently };
 use super::params::parse_usage_params;
 use super::sort::find_next_for_strategy;
 use super::format::{ five_hour_left, seven_day_left, status_emoji };
@@ -168,6 +168,15 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
       apply_touch( aq, &credential_store, claude_paths.as_ref(), params.trace, params.imodel, params.effort, params.solo );
     }
   }
+
+  // Fix(BUG-488): carry the touched signal across invocations — a touch recorded in the
+  //   cache within TOUCH_GRACE_SECS renders "(touched)" even when this invocation ran no
+  //   touch (touch::0, or the skip guard fired), so a just-touched account never reads
+  //   as plain idle while the quota endpoint lags.
+  // Pitfall: must run unconditionally (outside the touch::1 block) and after it — the
+  //   touching invocation's own fresh flags are covered in-memory by apply_touch, but
+  //   every later invocation only has the cache to go on.
+  derive_touched_recently( &mut accounts, &credential_store );
 
   // ── Session-model override (BUG-244: .usage path, AC-32) ──────────────────
   // Must run BEFORE row-filter pipeline — filters can remove is_current from slice.

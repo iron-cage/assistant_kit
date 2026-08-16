@@ -16,6 +16,82 @@ use claude_profile_core::account::trace_ts;
 
 // ── Touch ─────────────────────────────────────────────────────────────────────
 
+/// Trust window for the `touch_idle=false` cache flag, in seconds — one full 5h session
+/// window. Within it a recorded touch implies the window is running regardless of what the
+/// (possibly propagation-lagged) quota endpoint reports; past it the flag is stale and
+/// ignored, since the touched window itself has expired and a fresh touch is warranted.
+pub const TOUCH_GRACE_SECS : u64 = 18_000;
+
+/// Persist the touch coordination flags for `name` after a successful touch subprocess:
+/// `last_touch_at` = now, `touch_idle` = false — written into the credential store's
+/// `{name}.json` cache, the same file `touch_skip_reason` reads them back from.
+/// Single canonical write site for both touch paths (`apply_touch` loop and
+/// `apply_post_switch_touch`).
+// Fix(BUG-488): flags previously went to `paths.base()` (~/.claude/{name}.json) on the
+//   switch path and nowhere at all on the .usage touch loop path, so the sole reader
+//   (touch_skip_reason, keyed on the credential store) could never see them.
+// Root cause: write_cache_*'s first param is the credential store; apply_post_switch_touch
+//   passed paths.base() — the same directory confusion its own BUG-207/BUG-318 comments
+//   already document for sibling call sites in that function.
+// Pitfall: the flags are only trusted while `last_touch_at` is younger than
+//   TOUCH_GRACE_SECS — nothing ever writes `touch_idle=true` back, so an age-ungated
+//   read would skip the account forever once the flag lands.
+pub fn mark_touched( credential_store : &std::path::Path, name : &str )
+{
+  claude_profile_core::account::write_cache_string(
+    credential_store, name, "last_touch_at", &claude_profile_core::account::chrono_now_utc(),
+  );
+  claude_profile_core::account::write_cache_bool( credential_store, name, "touch_idle", false );
+}
+
+/// `true` when the cache's `last_touch_at` parses and is younger than `TOUCH_GRACE_SECS`.
+/// Single freshness predicate shared by the `touch_idle` skip guard in `touch_skip_reason`
+/// and the cross-invocation display derivation in `derive_touched_recently` — both must
+/// trust the flags for exactly the same window or skip/display semantics drift apart.
+pub fn touched_within_grace( cache : &claude_profile_core::account::QuotaCacheEntry ) -> bool
+{
+  let now_secs = std::time::SystemTime::now()
+    .duration_since( std::time::UNIX_EPOCH )
+    .map_or( 0, | d | d.as_secs() );
+  cache.last_touch_at.as_deref()
+    .and_then( claude_profile_core::account::parse_iso_utc_secs )
+    .is_some_and( | t | now_secs.saturating_sub( t ) < TOUCH_GRACE_SECS )
+}
+
+/// Set `touched_recently` on every account whose cache carries fresh touch flags
+/// (`touch_idle=false` + `last_touch_at` within `TOUCH_GRACE_SECS`) — the cross-invocation
+/// half of the touched-display signal. `apply_touch` covers the touching invocation itself
+/// in-memory; this pass covers every later invocation inside the grace window, where the
+/// skip guard (correctly) prevents a re-touch but the quota endpoint may still report the
+/// window idle.
+// Fix(BUG-488): without this pass the `(touched)` marker died with the touching
+//   invocation — the very next `.usage` run rendered a just-touched account as plain
+//   idle ("5h Reset —") again until the endpoint caught up, re-creating the original
+//   misleading-table symptom for every run after the first.
+// Root cause: `touched_recently` was in-memory only; the persistent form of the same
+//   fact (the mark_touched cache flags) was consulted by the skip guard but never by
+//   the display path.
+// Pitfall: rows already flagged in-memory are skipped (cheap), and rows are flagged
+//   regardless of current `resets_at` — the render layer alone decides visibility, so
+//   an endpoint that caught up simply shows the real reset time instead.
+pub fn derive_touched_recently( accounts : &mut [ AccountQuota ], credential_store : &std::path::Path )
+{
+  for aq in accounts.iter_mut()
+  {
+    if aq.touched_recently
+    {
+      continue;
+    }
+    if let Some( cache ) = claude_profile_core::account::read_quota_cache( credential_store, &aq.name )
+    {
+      if cache.touch_idle == Some( false ) && touched_within_grace( &cache )
+      {
+        aq.touched_recently = true;
+      }
+    }
+  }
+}
+
 /// Compute the skip reason for `apply_touch`, or `None` if the account should proceed.
 ///
 /// Pure decision function — mirrors, in order, the 6 guards inlined in `apply_touch`:
@@ -69,7 +145,16 @@ pub fn touch_skip_reason(
   //   coordination signal not subject to that lag.
   if let Some( cache ) = claude_profile_core::account::read_quota_cache( credential_store, &aq.name )
   {
-    if cache.touch_idle == Some( false )
+    // Fix(BUG-488): the flag is trusted only while last_touch_at is younger than
+    //   TOUCH_GRACE_SECS (one 5h window) — before this gate existed, one landed flag
+    //   would have skipped the account forever, because no code path ever writes
+    //   touch_idle=true back.
+    // Root cause: BUG-288-FixB added the read with no expiry semantics; the defect
+    //   stayed invisible because the write side targeted the wrong directory, so the
+    //   guard never actually fired.
+    // Pitfall: absent/unparseable last_touch_at means "no trustworthy touch on record" —
+    //   fall through to the API-state guards, never skip on the bare flag alone.
+    if cache.touch_idle == Some( false ) && touched_within_grace( &cache )
     {
       return Some( "skipped (reason: touch_idle=false)" );
     }
@@ -117,7 +202,11 @@ pub fn touch_skip_reason(
 /// - `five_hour.resets_at.is_none()` — 5h window is idle (no active session).
 ///
 /// After a successful touch, quota is re-fetched so the table shows the concrete
-/// `5h Reset` value. If the subprocess or re-fetch fails the account row is unchanged
+/// `5h Reset` value. When the quota endpoint has not yet propagated the new session
+/// (`five_hour.resets_at` still absent in the re-fetch — see BUG-488), the row is marked
+/// `touched_recently` so the text render shows `(touched)` instead of the idle `—`, and the
+/// `last_touch_at`/`touch_idle` cache flags carry the fact across invocations. If the
+/// subprocess or re-fetch fails the account row is unchanged
 /// (touch failure is non-aborting — other accounts and the render continue normally).
 ///
 /// The original active account is restored unconditionally inside this call before
@@ -155,6 +244,18 @@ pub fn apply_touch(
   // Update expiry if credentials were returned (optional — touch may return None).
   if let Some( ref creds ) = new_creds
   {
+    // Fix(BUG-488): a successful touch persists the coordination flags and marks the row
+    //   touched for this invocation's render — before this, the loop path wrote neither,
+    //   so nothing bridged the quota endpoint's propagation lag and the table rendered
+    //   every just-touched account as still idle ("5h Reset —", 100%).
+    // Root cause: only apply_post_switch_touch wrote the flags (and to the wrong
+    //   directory); the AC-03 re-fetch below can still see the pre-touch idle state
+    //   because the endpoint lags session starts.
+    // Pitfall: gate on new_creds — refresh_account_token returns None on any failure,
+    //   and flags written for a failed touch would wrongly suppress the retry for
+    //   TOUCH_GRACE_SECS.
+    mark_touched( credential_store, &aq.name );
+    aq.touched_recently = true;
     if let Some( exp_ms ) = crate::output::jwt_exp_ms( creds )
     {
       aq.expires_at_ms = exp_ms;
