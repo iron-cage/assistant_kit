@@ -258,6 +258,9 @@ version = "^0.9"
 [workspace.dependencies.tiny_http]
 version = "^0.12"
 
+[workspace.dependencies.open]
+version = "^5"
+
 [workspace.dependencies.libc]
 version = "^0.2"
 
