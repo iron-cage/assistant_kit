@@ -60,11 +60,12 @@
 | 066 | [Dual-Source OAuth Quota Parsing](066_dual_source_quota_parsing.md) | Maintain correct per-model quota data when Anthropic API format changes by parsing both named-field and `limits`-array formats | ✅ |
 | 067 | [Trace Timestamp Prefix](067_trace_timestamps.md) | Replace `[trace]` prefix with UTC timestamp on all diagnostic trace output; enables watchdog log correlation | ✅ |
 | 068 | [Models List Command](068_models_list_command.md) | `.models` command: list available Claude models via live API or static offline catalog; `name::` filter; `format::` output | ✅ |
-| 069 | [Model Select Command](069_model_select_command.md) | `.model.select` command: get/set/reset subprocess model preference in `~/.clr/config.toml` for `clr run/ask/isolated/refresh` — **superseded by Feature 035**, merged into `.model` | ✅ |
+| 069 | [Model Select Command](069_model_select_command.md) | **SUPERSEDED** — `.model.select` command retired to a migration-error stub (Feature 035/Task 465); get/set/reset subprocess model preference now lives on `.model scope::subprocess` | ❌ |
 | 070 | [Account Claim and Reservation Control](070_account_claim_and_reservation_control.md) | `claim_lock` (Gate 9 unconditional exclusion + G9 bypassable explicit-command gate) and `reserve` (leading sort key, soft deprioritization) account properties; `lock::`/`reserve::` params | ✅ |
 | 071 | [Redirect Backend Accounts](071_redirect_backend_accounts.md) | `backend`/`base_url`/`redirect_model` account fields; `.account.save backend::redirect` static-credential write path; `.account.use` writes/clears `settings.json`'s `env.*` keys; `apply_model_override()` redirect bypass | 🔄 |
 | 072 | [Inference Provider Selection](072_inference_provider_selection.md) | `inference_provider` account field; `.provider.select` global config command; Gate 10 unconditional rotation exclusion on provider mismatch | 🔄 |
 | 073 | [Kimi Provider Preset](073_kimi_provider_preset.md) | `preset::kimi` convenience param on `.account.save` (pre-fills `backend::`/`base_url::`/`inference_provider::`); 7 additional Kimi-tier `settings.json` env vars written by `switch_account()` when `inference_provider == "kimi"` | 🔄 |
+| 074 | [CLI Invocation Telemetry](074_cli_invocation_telemetry.md) | `run_cli()` appends one redacted `Command` event to the `claude_journal` log per invocation; `cli::run()` returns `i32` instead of calling `std::process::exit` internally so the real exit code can be observed and logged | ✅ |
 
 ### Organization
 

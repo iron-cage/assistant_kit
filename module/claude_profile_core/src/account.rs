@@ -970,7 +970,7 @@ pub fn delete( name : &str, credential_store : &Path ) -> Result< (), std::io::E
   let _ = std::fs::remove_file( credential_store.join( format!( "{name}.settings.json" ) ) );
   let _ = std::fs::remove_file( credential_store.join( format!( "{name}.roles.json" ) ) );
   let _ = std::fs::remove_file( credential_store.join( format!( "{name}.profile.json" ) ) );
-  // Fix(BUG-341): clear every `_active_*` marker naming this account, not only
+  // Fix(BUG-347): clear every `_active_*` marker naming this account, not only
   // the calling machine's own marker.
   // Root cause: the guard resolved a single path via `active_marker_filename()`
   // (bound to the CALLING machine's own hostname+user) and compared only that
@@ -1098,6 +1098,18 @@ pub fn refresh_account_token(
       let _ = writeln!( std::io::stderr(), "{}{label}  {name}  run_isolated: OK credentials={creds_status}  ({:.1}s)", trace_ts(), t_run.elapsed().as_secs_f64() );
     }
     let new_creds = isolated.credentials?;
+    // Fix(BUG-483): validate the subprocess-returned payload before write-back.
+    // Root cause: a stale single-use RT makes the sandboxed subprocess hit invalid_grant and log
+    //   itself out; run_isolated captured the logged-out blank file (accessToken:"", refreshToken:"")
+    //   as Some(blank) and this site persisted it verbatim over the store's non-blank record —
+    //   ten accounts blanked in one sweep on 2026-08-12 (c19b8003de).
+    // Pitfall: a captured credentials file is a success SHAPE, not usable content — gate every
+    //   write-back on credentials_usable(); fail loudly (None) and preserve the stored record.
+    if !credentials_usable( &new_creds )
+    {
+      if trace { let _ = writeln!( std::io::stderr(), "{}{label}  {name}  write credentials: SKIPPED (blank payload — sandbox logged out; store record preserved)", trace_ts() ); }
+      return None;
+    }
     if let Err( e ) = std::fs::write( &path, &new_creds )
     {
       if trace { let _ = writeln!( std::io::stderr(), "{}{label}  {name}  write credentials: Err({e})", trace_ts() ); }
@@ -1200,35 +1212,21 @@ fn refresh_token_with_live_path(
   //   bypassing the copy-from-live-file path that would copy now-stale credentials.
   let Some( new_creds ) = isolated.credentials else
   {
-    // AC-33 (Change B) race recovery: run_isolated returned credentials=None.
-    // A concurrent live session may have refreshed during the subprocess call.
-    // Fix(BUG-316): re-read the active marker here — not the cached value from function
-    //   entry. The 35-second run_isolated window allows switch_account("B") to change the
-    //   marker; the stale cached bool would write B's live credentials into A's store slot.
-    let is_active_now = {
-      let marker = credential_store.join( active_marker_filename() );
-      std::fs::read_to_string( &marker ).ok().is_some_and( |s| s.trim() == name )
-    };
-    if is_active_now
-    {
-      let orig_stored = std::fs::read_to_string(
-        credential_store.join( format!( "{name}.credentials.json" ) ),
-      ).unwrap_or_default();
-      if let Ok( live_json ) = std::fs::read_to_string( p.credentials_file() )
-      {
-        if live_json.trim() != orig_stored.trim()
-        {
-          let store_path = credential_store.join( format!( "{name}.credentials.json" ) );
-          if std::fs::write( &store_path, &live_json ).is_ok()
-          {
-            let _ = save( name, credential_store, p, false, Some( live_json.as_bytes() ), None, None, None, AccountBackend::Anthropic, None, None, None );
-            return Some( live_json );
-          }
-        }
-      }
-    }
-    return None;
+    // AC-33 (Change B) race recovery — extracted to recover_credentials_from_live (line-count limit).
+    return recover_credentials_from_live( name, credential_store, p );
   };
+  // Fix(BUG-483): validate the subprocess-returned payload before all three persistence sites
+  //   in this branch (store write, save(Some(bytes)), is_still_active live-file sync).
+  // Root cause: same mechanism as the None branch — the AC-32 forced rotation turns a stale
+  //   single-use RT into invalid_grant + sandbox logout; the captured blank payload was written
+  //   to the store, re-saved as metadata bytes, and synced onto the live file when active.
+  // Pitfall: guard once BEFORE the first persistence site, not per-site — a later-added write
+  //   site downstream stays covered; a blank must leave store, metadata, and live file untouched.
+  if !credentials_usable( &new_creds )
+  {
+    if trace { let _ = writeln!( std::io::stderr(), "{}{label}  {name}  write credentials: SKIPPED (blank payload — sandbox logged out; store record preserved)", trace_ts() ); }
+    return None;
+  }
   let store_cred_path = credential_store.join( format!( "{name}.credentials.json" ) );
   if let Err( e ) = std::fs::write( &store_cred_path, &new_creds )
   {
@@ -1266,6 +1264,41 @@ fn refresh_token_with_live_path(
     if trace { let _ = writeln!( std::io::stderr(), "{}{label}  {name}  write live: OK", trace_ts() ); }
   }
   Some( new_creds )
+}
+
+// AC-33 (Change B) race recovery, extracted from refresh_token_with_live_path (line-count
+// limit): run_isolated returned credentials=None, but a concurrent live session may have
+// refreshed during the subprocess call — when this account is still the active one and the
+// live file differs from its store record, adopt the live content as the refresh result.
+// Fix(BUG-316): re-read the active marker here — not the cached value from the caller's
+//   entry. The 35-second run_isolated window allows switch_account("B") to change the
+//   marker; the stale cached bool would write B's live credentials into A's store slot.
+#[ cfg( feature = "enabled" ) ]
+fn recover_credentials_from_live( name : &str, credential_store : &Path, p : &ClaudePaths ) -> Option< String >
+{
+  let is_active_now = {
+    let marker = credential_store.join( active_marker_filename() );
+    std::fs::read_to_string( &marker ).ok().is_some_and( |s| s.trim() == name )
+  };
+  if is_active_now
+  {
+    let orig_stored = std::fs::read_to_string(
+      credential_store.join( format!( "{name}.credentials.json" ) ),
+    ).unwrap_or_default();
+    if let Ok( live_json ) = std::fs::read_to_string( p.credentials_file() )
+    {
+      if live_json.trim() != orig_stored.trim()
+      {
+        let store_path = credential_store.join( format!( "{name}.credentials.json" ) );
+        if std::fs::write( &store_path, &live_json ).is_ok()
+        {
+          let _ = save( name, credential_store, p, false, Some( live_json.as_bytes() ), None, None, None, AccountBackend::Anthropic, None, None, None );
+          return Some( live_json );
+        }
+      }
+    }
+  }
+  None
 }
 
 /// Replace the `expiresAt` value in a credentials JSON string with `1`.
@@ -1327,6 +1360,39 @@ pub fn manipulate_expires_at( creds_json : &str ) -> String
     }
   }
   creds_json.to_string()
+}
+
+/// Check that a credentials JSON payload carries usable OAuth tokens.
+///
+/// # Purpose (BUG-483 guard)
+///
+/// A sandboxed refresh subprocess whose stored refresh token is stale (already
+/// rotated by another machine — Anthropic RTs are single-use) hits `invalid_grant`
+/// under the AC-32 forced rotation, logs itself out, and leaves a well-formed but
+/// blank credential file (`accessToken:""`, `refreshToken:""`, `expiresAt:0`) in its
+/// temp HOME. `run_isolated` captures that file as `Some(blank)` — a success shape
+/// with a poison payload. Every refresh write-back must call this predicate before
+/// persisting a subprocess-returned payload over the store's non-blank record.
+///
+/// # Contract
+///
+/// Returns `true` only when BOTH `accessToken` and `refreshToken` are present and
+/// non-empty. Absent keys and empty-string values return `false`. Nesting is
+/// irrelevant — `parse_string_field` scans the whole blob, so both the flat shape
+/// and the real store shape (tokens under `claudeAiOauth`) are handled.
+///
+/// # Pitfall
+///
+/// "Subprocess succeeded and credentials were captured" is not proof the payload is
+/// usable — a sandboxed logout produces a structurally valid credential file whose
+/// tokens are empty strings. A failed refresh must fail loudly (`None`) rather than
+/// destroy the only recoverable copy of the account's credentials.
+#[ must_use ]
+#[ inline ]
+pub fn credentials_usable( creds_json : &str ) -> bool
+{
+  parse_string_field( creds_json, "accessToken" ).is_some_and( |t| !t.is_empty() )
+  && parse_string_field( creds_json, "refreshToken" ).is_some_and( |t| !t.is_empty() )
 }
 
 /// Return the filename for the per-machine active-account marker.
@@ -1966,6 +2032,45 @@ pub fn parse_string_array_field( json : &str, key : &str ) -> Vec< String >
     pos = end_val + 1;
   }
   values
+}
+
+/// Bound a JSON substring to its first top-level `{...}` object block via brace-depth counting.
+///
+/// Fix(BUG-002)
+/// Root cause: `parse_string_field()`/`parse_u64_field()`/`parse_bool_field()`/
+/// `parse_string_array_field()` search for `"key":` unboundedly across the entire
+/// input, with no awareness of enclosing object boundaries. On multi-entry JSON
+/// (e.g. a `roles` array with several membership objects), a caller intending to
+/// scope a search to one entry silently matches the first occurrence of `key`
+/// anywhere in the string, including in a later or earlier sibling entry.
+/// Pitfall: callers needing per-entry field extraction from multi-entry JSON must
+/// first bound the entry via `extract_object_block()` and pass only that slice to
+/// the `parse_*_field()` helpers — passing the full multi-entry JSON directly
+/// always risks silently returning a sibling entry's value instead of the intended
+/// entry's.
+///
+/// Returns `None` when `s` does not start with `{`, or the block is unclosed.
+#[ doc( hidden ) ]
+#[ must_use ]
+#[ inline ]
+pub fn extract_object_block( s : &str ) -> Option< &str >
+{
+  if !s.starts_with( '{' ) { return None; }
+  let mut depth = 0_i32;
+  for ( i, c ) in s.char_indices()
+  {
+    match c
+    {
+      '{' => depth += 1,
+      '}' =>
+      {
+        depth -= 1;
+        if depth == 0 { return Some( &s[ ..=i ] ); }
+      }
+      _ => {}
+    }
+  }
+  None
 }
 
 /// Read the OAuth `accessToken` field from a credential JSON file.

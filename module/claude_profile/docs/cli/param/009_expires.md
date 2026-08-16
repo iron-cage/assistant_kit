@@ -1,6 +1,6 @@
 # Parameter: 9. `expires::`
 
-Controls whether the token expiry duration line appears in output. Used by both `.accounts` (per stored credential) and `.credentials.status` (from live credentials).
+Controls whether the token expiry duration line appears in output. Used by `.credentials.status` (from live credentials). No longer usable on `.accounts` — removed in [Feature 037](../../feature/037_accounts_usage_param_unification.md); `.accounts` now rejects `expires::` with `parameter 'expires' removed — use 'cols::-expires' instead` (see `REMOVED_TOGGLES` in `src/commands/accounts.rs`).
 
 - **Default:** `1` (shown)
 - **Constraints:** Accepted values: `0`, `1`, `false`, `true`
@@ -27,8 +27,7 @@ expires::0   → line omitted
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.accounts`](../command/001_account.md#command-3-accounts) | Expiry duration line per stored account |
-| 2 | [`.credentials.status`](../command/002_credentials.md#command-10-credentialsstatus) | Expiry duration line for live credentials |
+| 1 | [`.credentials.status`](../command/002_credentials.md#command-10-credentialsstatus) | Expiry duration line for live credentials |
 
 ### Referenced User Stories
 

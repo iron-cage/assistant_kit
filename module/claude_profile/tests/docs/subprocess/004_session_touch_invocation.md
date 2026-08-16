@@ -104,14 +104,20 @@ post-touch cache write, refresh-before-touch ordering, and Sonnet model requirem
 
 ### AC-7: Post-touch refetch writes quota cache (BUG-309)
 
-- **Given:** `apply_touch()` calls `refresh_account_token()` which returns (with or without
-  new credentials).
-- **When:** Post-touch actions run unconditionally.
-- **Then:** Quota is re-fetched via `fetch_oauth_usage(new_token)`. The quota cache is written
-  with `touch_idle=false` flag (via `write_quota_cache()`). Fix BUG-309: without this cache
-  write, the next `.usage` call would re-detect idle windows and fire another redundant touch.
+- **Given:** `apply_touch()`'s re-fetch block (the closing statements of `apply_touch` in
+  `touch.rs`, reached after `refresh_account_token()` returns).
+- **When:** The cited test reads the compiled source text of `touch.rs` and scans the
+  re-fetch block for the fix markers — a structural/source-text check; it does not execute
+  `apply_touch` or perform a live re-fetch.
+- **Then:** The re-fetch block sets `aq.cached = false` and `aq.cache_age_secs = None`, and
+  calls `write_quota_cache(...)` (5-param signature: store, name, five_hour, seven_day,
+  seven_day_sonnet — it has no `touch_idle` parameter; `touch_idle` is a distinct cache field
+  written by a different call site) to persist fresh h5/d7/sn quota data, with that call
+  ordered BEFORE `aq.result = Ok(new_data)` (h5/d7/sn borrow from `new_data`; the ordering
+  avoids a use-after-move). Fix BUG-309: without this cache write, the next `.usage` call
+  would re-detect idle windows and fire another redundant touch.
 - **Source fn:** `mre_bug309_apply_touch_refetch_writes_cache_and_clears_cached_flag` in
-  `tests/usage/touch_tests.rs`
+  `tests/usage/touch_tests_b.rs`
 - **Source:** [subprocess/004_session_touch_invocation.md](../../../docs/subprocess/004_session_touch_invocation.md)
 
 ---
@@ -132,13 +138,19 @@ post-touch cache write, refresh-before-touch ordering, and Sonnet model requirem
 ### AC-9: Sonnet model required when `son_idle=true` (BUG-289 fix)
 
 - **Given:** An account with `seven_day_sonnet.resets_at = None` (`son_idle=true`).
-- **When:** `resolve_model(Auto)` is called to select the touch subprocess model.
-- **Then:** Sonnet (not Haiku) is selected. A Haiku touch subprocess cannot open the 7d-Sonnet
-  window — it remains idle forever, causing an infinite per-call touch loop (BUG-289). The
-  `resolve_model(Auto)` logic selects Sonnet specifically when `son_idle=true` to ensure ALL
-  quota windows can be activated in a single touch invocation.
-- **Source fn:** `test_mre_bug289_son_running_false_haiku_touch_fires_on_every_call` in
-  `tests/usage/touch_tests.rs`
+- **When:** `resolve_model(&aq, SubprocessModel::Auto)` is called to select the touch
+  subprocess model.
+- **Then:** Sonnet (`"claude-sonnet-5"`, not Haiku) is selected. A Haiku touch subprocess
+  cannot open the 7d-Sonnet window — it remains idle forever, causing an infinite per-call
+  touch loop (BUG-289). The `resolve_model(Auto)` logic selects Sonnet specifically when
+  `son_idle=true` to ensure ALL quota windows can be activated in a single touch invocation.
+- **Source fn:** `it_imodel_auto_selects_sonnet_when_son_idle` in
+  `tests/usage/subprocess_tests.rs` (calls `resolve_model` directly and asserts Sonnet is
+  returned; the companion test
+  `test_mre_bug289_son_running_false_haiku_touch_fires_on_every_call` in
+  `tests/usage/touch_tests_b.rs` proves the pre-fix infinite-loop trigger persists via the
+  `touch_skip_reason()` oracle on hand-built fixtures, but does not itself call
+  `resolve_model` or launch a subprocess)
 - **Source:** [subprocess/004_session_touch_invocation.md](../../../docs/subprocess/004_session_touch_invocation.md)
 
 ---

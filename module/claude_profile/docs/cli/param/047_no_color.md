@@ -15,8 +15,9 @@ Strips emoji and ANSI color sequences from `.usage` output, producing plain text
 | `🟢` (status ok) | `ok` |
 | `🟡` (status warn) | `warn` |
 | `🔴` (status err) | `err` |
-| `✓` (current) | `*cur` |
-| `*` (active) | `*act` |
+| `→` (arrow) | `->` |
+| `✓` (current) | `*` |
+| `*` (active) | `*` (unchanged — same as the current marker; the two become visually indistinguishable under `no_color::1`) |
 
 **Examples:**
 

@@ -14,7 +14,7 @@ Feature behavioral requirement test cases for `docs/feature/016_current_account_
 |----|-----------|-----|
 | FT-01 | `.accounts` shows `Current: yes` on token-matched account | AC-01 |
 | FT-02 | `.accounts` suppresses `Current:` entirely when credentials unreadable | AC-02 |
-| FT-03 | `current::0` suppresses the `Current:` line | AC-03 |
+| FT-03 | `cols::-current` suppresses the `Current:` line | AC-03 |
 | FT-04 | `.accounts` JSON includes `is_current` boolean per account | AC-04 |
 | FT-05 | `.usage` `✓` marks current account (token match, not active marker) | AC-05 |
 | FT-06 | `.usage` `*` marks active account when it differs from current | AC-06 |
@@ -30,7 +30,7 @@ Feature behavioral requirement test cases for `docs/feature/016_current_account_
 |----|-----------|-----|----------|
 | FT-01 | `.accounts` shows Current: yes/no per token match | AC-01 | Accounts |
 | FT-02 | `.accounts` suppresses Current: when creds absent | AC-02 | Accounts |
-| FT-03 | `current::0` suppresses Current: line | AC-03 | Field Toggle |
+| FT-03 | `cols::-current` suppresses Current: line | AC-03 | Field Toggle |
 | FT-04 | `.accounts format::json` has `is_current` boolean | AC-04 | JSON Format |
 | FT-05 | `.usage` `✓` on current, not just active | AC-05 | Usage Flags |
 | FT-06 | `.usage` `*` on active when diverges from current | AC-06 | Usage Flags |
@@ -46,9 +46,9 @@ Feature behavioral requirement test cases for `docs/feature/016_current_account_
 
 ### FT-01: `.accounts` shows `Current: yes/no` per token match
 
-- **Given:** Two accounts saved. `alice@acme.com`'s `accessToken` matches `~/.claude/.credentials.json`. `work@acme.com` does not match.
+- **Given:** Two accounts saved. `work@acme.com`'s `accessToken` matches `~/.claude/.credentials.json`. `alice@acme.com` does not match.
 - **When:** `clp .accounts`
-- **Then:** `alice@acme.com`'s block shows `Current:  yes`; `work@acme.com`'s block shows `Current:  no`.
+- **Then:** `work@acme.com`'s block shows `Current:  yes`; `alice@acme.com`'s block shows `Current:  no`.
 - **Exit:** 0
 - **Source fn:** `acc31_accounts_shows_current_yes_no`
 - **Source:** [016_current_account_awareness.md AC-01](../../../docs/feature/016_current_account_awareness.md)
@@ -66,10 +66,10 @@ Feature behavioral requirement test cases for `docs/feature/016_current_account_
 
 ---
 
-### FT-03: `current::0` suppresses `Current:` line
+### FT-03: `cols::-current` suppresses `Current:` line
 
 - **Given:** Valid credentials; `~/.claude/.credentials.json` readable.
-- **When:** `clp .accounts current::0`
+- **When:** `clp .accounts cols::-current`
 - **Then:** No `Current:` line appears in any account block.
 - **Exit:** 0
 - **Source fn:** `acc33_accounts_current_param_and_json`
@@ -79,10 +79,11 @@ Feature behavioral requirement test cases for `docs/feature/016_current_account_
 
 ### FT-04: `.accounts format::json` has `is_current` boolean
 
-- **Given:** Two accounts saved; one matches live credentials.
+- **Given:** One account saved; its token matches live credentials.
 - **When:** `clp .accounts format::json`
 - **Then:** Each account object in the JSON array has an `is_current` boolean field. The matching account has `"is_current": true`; others have `"is_current": false`.
 - **Exit:** 0
+- **Note:** `acc33_accounts_current_param_and_json` uses a single-account fixture and asserts only field presence (`json.contains("\"is_current\"")`), not true/false differentiation across multiple accounts. The differentiation itself is computed by the same `is_current = current_name == Some(a.name.as_str())` expression used for both JSON and text rendering (`src/commands/accounts_render.rs`), and is directly demonstrated in text form by `acc31_accounts_shows_current_yes_no` (FT-01).
 - **Source fn:** `acc33_accounts_current_param_and_json`
 - **Source:** [016_current_account_awareness.md AC-04](../../../docs/feature/016_current_account_awareness.md)
 

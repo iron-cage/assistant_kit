@@ -41,7 +41,7 @@ The credential lifecycle is managed externally: `clp` reads but never writes `~/
 
 | Operation | Implementation |
 |-----------|---------------|
-| `.credentials.status` | `credentials::read_live()` — reads `~/.claude/.credentials.json` + per-enabled-field supplementary reads from `~/.claude.json`, `~/.claude/settings.json`, `{active_name}.json` |
+| `.credentials.status` | `credentials_status_routine()` (`src/commands/credentials.rs`), using private helper `read_live_cred_meta()` — reads `~/.claude/.credentials.json` + per-enabled-field supplementary reads from `~/.claude.json`, `~/.claude/settings.json`, `{active_name}.json` |
 
 ### Output Schema
 

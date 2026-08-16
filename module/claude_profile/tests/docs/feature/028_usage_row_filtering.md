@@ -58,11 +58,10 @@ Feature behavioral requirement test cases for `docs/feature/028_usage_row_filter
 
 ### FT-01: `count::3` shows at most 3 rows
 
-- **Given:** Five accounts with valid quota data (quota fetched live).
+- **Given:** Five accounts in the credential store (no live token — `count::` truncation applies to rows regardless of quota validity).
 - **When:** `clp .usage count::3`
 - **Then:** Exits 0. Table body has exactly 3 data rows. Table header and footer are still shown.
 - **Exit:** 0
-- **Live:** yes
 - **Source fn:** `it178_count_3_shows_first_3_rows` (in `usage_filter_test_b.rs`)
 - **Source:** [feature/028_usage_row_filtering.md AC-01](../../../docs/feature/028_usage_row_filtering.md)
 
@@ -70,12 +69,11 @@ Feature behavioral requirement test cases for `docs/feature/028_usage_row_filter
 
 ### FT-02: `offset::2 count::3` windows result set
 
-- **Given:** Five or more accounts with valid quota data.
-- **When-A:** `clp .usage count::0` (all rows, no offset)
-- **When-B:** `clp .usage offset::2 count::3`
+- **Given:** Five accounts in the credential store (no live token; `sort::name` gives deterministic ordering).
+- **When-A:** `clp .usage sort::name` (all rows; `count::` defaults to 0/unlimited)
+- **When-B:** `clp .usage sort::name offset::2 count::3`
 - **Then-B:** Exits 0. The rows shown in When-B match rows 3–5 (0-indexed) from When-A output.
 - **Exit:** 0
-- **Live:** yes
 - **Source fn:** `it205_ft028_02_offset2_count3_windows_result` (in `usage_lim_it_test.rs`)
 - **Source:** [feature/028_usage_row_filtering.md AC-02](../../../docs/feature/028_usage_row_filtering.md)
 
@@ -111,7 +109,8 @@ Feature behavioral requirement test cases for `docs/feature/028_usage_row_filter
 - **Then:** Exits 0. Rows A and B are shown; row C is hidden (30% < 50). B is shown (50% == threshold — inclusive).
 - **Exit:** 0
 - **Live:** yes
-- **Source fn:** `it207_lim_it_min_5h_50_hides_below_threshold` (in `usage_lim_it_test.rs`)
+- **Note:** No test in the suite constructs this three-account fixture. `it207` only verifies that `min_5h::50` is accepted (exit 0) with a single live account — it does not assert per-row inclusion/exclusion. The inclusive (`>=`) comparison is confirmed by direct source inspection: `src/usage/api.rs` filters via `five_hour_left( aq ) >= threshold`.
+- **Source fn:** `it207_lim_it_min_5h_50_hides_below_threshold` (in `usage_lim_it_test.rs`) (N/A — structural acceptance only, not this scenario)
 - **Source:** [feature/028_usage_row_filtering.md AC-05](../../../docs/feature/028_usage_row_filtering.md)
 
 ---
@@ -123,7 +122,8 @@ Feature behavioral requirement test cases for `docs/feature/028_usage_row_filter
 - **Then:** Exits 0. Rows A and B shown; row C hidden (10% < 20). B shown (20% == threshold — inclusive).
 - **Exit:** 0
 - **Live:** yes
-- **Source fn:** `it209_lim_it_min_7d_20_hides_below_threshold` (in `usage_lim_it_test.rs`)
+- **Note:** No test in the suite constructs this three-account fixture. `it209` only verifies that `min_7d::20` is accepted (exit 0) with a single live account — it does not assert per-row inclusion/exclusion. The inclusive (`>=`) comparison is confirmed by direct source inspection: `src/usage/api.rs` filters via `seven_day_left( aq ) >= threshold`.
+- **Source fn:** `it209_lim_it_min_7d_20_hides_below_threshold` (in `usage_lim_it_test.rs`) (N/A — structural acceptance only, not this scenario)
 - **Source:** [feature/028_usage_row_filtering.md AC-06](../../../docs/feature/028_usage_row_filtering.md)
 
 ---
@@ -157,7 +157,8 @@ Feature behavioral requirement test cases for `docs/feature/028_usage_row_filter
 - **Then:** Exits 0. Only A shown: must be non-🔴 AND 7d ≥ 30%. B (25% < 30%) excluded; C excluded (🟡 triggers `only_valid::1`); D excluded (🔴).
 - **Exit:** 0
 - **Live:** yes
-- **Source fn:** `it213_lim_it_ft028_09_and_composition` (in `usage_lim_it_test.rs`)
+- **Note:** No test in the suite constructs this four-account fixture. `it213` sets up 2 accounts sharing one live token and only verifies that `only_valid::1` and `min_7d::30` are accepted together (exit 0) — it does not assert per-row inclusion/exclusion for the A/B/C/D scenario above.
+- **Source fn:** `it213_lim_it_ft028_09_and_composition` (in `usage_lim_it_test.rs`) (N/A — structural acceptance only, not this scenario)
 - **Source:** [feature/028_usage_row_filtering.md AC-09](../../../docs/feature/028_usage_row_filtering.md)
 
 ---

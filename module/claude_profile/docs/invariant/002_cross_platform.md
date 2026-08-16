@@ -35,7 +35,7 @@ All path operations in `claude_profile` must work correctly on Linux, macOS, and
 
 | File | Relationship |
 |------|-------------|
-| `src/paths.rs` | `ClaudePaths` — all path construction via `PathBuf::from(home).join(...)` |
+| `src/paths.rs` | Re-exports `ClaudePaths` from `claude_core`; actual path construction (`PathBuf::from(home).join(...)`) lives in `claude_core/src/paths.rs` |
 | `src/persist.rs` | `PersistPaths` — `$HOME`/`$USERPROFILE`/`$PRO` resolution chain |
 
 ### Features

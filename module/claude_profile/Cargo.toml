@@ -47,6 +47,8 @@ error_tools           = { workspace = true, optional = true }
 unilang               = { workspace = true, optional = true }
 claude_quota          = { workspace = true, optional = true, features = [ "enabled" ] }
 data_fmt              = { workspace = true, optional = true }
+claude_journal        = { workspace = true, optional = true }
+json_redact           = { workspace = true, optional = true }
 
 [dev-dependencies]
 serde_json.workspace = true
@@ -54,6 +56,7 @@ tempfile.workspace = true
 claude_quota       = { workspace = true, features = [ "enabled" ] }
 claude_runner_core = { workspace = true, features = [ "enabled" ] }
 unilang            = { workspace = true }
+claude_journal     = { workspace = true }
 
 [features]
 # Default: full CLI build (binary + all deps). Use --no-default-features for library-only.
@@ -71,6 +74,8 @@ enabled = [
   "dep:claude_quota",
   "dep:data_fmt",
   "data_fmt/enabled",
+  "dep:claude_journal",
+  "dep:json_redact",
 ]
 # Exposes pub test_bridge module for integration tests in tests/usage/.
 # Requires enabled so claude_quota types are available.

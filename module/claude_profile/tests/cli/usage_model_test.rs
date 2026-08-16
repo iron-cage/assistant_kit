@@ -549,11 +549,7 @@ fn it144_effort_normal_accepted_empty_store_exits_0()
 #[ test ]
 fn it145_lim_it_sort_renew_places_arrow_on_soonest_refill()
 {
-  let Some( token ) = live_active_token() else
-  {
-    eprintln!( "it145: no live token — skipping" );
-    return;
-  };
+  let token = live_active_token().expect( "it145: live API token required — no ~/.claude/.credentials.json" );
   require_live_api( "it145" );
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();

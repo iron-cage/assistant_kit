@@ -15,7 +15,7 @@ Bidirectionally manage the interactive session model in `~/.claude/settings.json
 
 #### Entry Points
 
-- `src/usage/api.rs` — `apply_model_override(quota, paths, trace, label, name)` (mutation; `quota: &OauthUsageData`)
+- `src/usage/api_switch.rs:261` — `apply_model_override(quota, paths, trace, label, name, backend)` (mutation; `quota: &OauthUsageData`, `backend: AccountBackend` — the Redirect Backend Bypass check below); called from `src/usage/api.rs`, which does not define it
 - `src/usage/format.rs` — `recommended_model(aq)` (read-only, for footer recommendation; `aq: &AccountQuota`)
 
 #### Redirect Backend Bypass (Feature 071)
@@ -40,7 +40,7 @@ Effort is written **unconditionally** on every call to `apply_model_override()` 
 
 #### Threshold
 
-10.0 from `OPUS_OVERRIDE_THRESHOLD` constant in `format.rs:385` (canonical) — actual gate: `100.0 - seven_day_sonnet.utilization < OPUS_OVERRIDE_THRESHOLD` (i.e., < 10% remaining).
+10.0 from `OPUS_OVERRIDE_THRESHOLD` constant in `types.rs:456` (canonical; `format.rs` and `api_switch.rs` both import it from there) — actual gate: `100.0 - seven_day_sonnet.utilization < OPUS_OVERRIDE_THRESHOLD` (i.e., < 10% remaining).
 
 #### Bug History
 
