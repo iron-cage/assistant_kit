@@ -38,6 +38,8 @@ clr --args-file fast.json --dry-run "task"       # inspect merged params
 
 **Stdin pipe:** When stdin is not a TTY and begins with `{`, clr auto-detects stdin as a JSON parameter source (equivalent to `--args-file`). `--file` takes priority over stdin JSON detection when both are present. When stdin is piped but does not begin with `{` (`run`/`ask` only), the raw content is forwarded to the subprocess's own stdin instead — see [--file](025_file.md).
 
+**Hazard — held-open pipe:** the stdin read blocks until EOF. A non-TTY stdin whose writer never closes (`tail -f |`, a FIFO with a live writer, a supervisor-inherited fd) would block clr forever, before argument parsing. Opt out with [`--no-stdin`](086_no_stdin.md) or `CLR_NO_STDIN` — checked pre-parse, before any read (BUG-492). Note `"no-stdin"` has no JSON key by construction: the config carrying it would itself arrive via the read being opted out of.
+
 ### Since
 
 Introduced in the JSON Config Loading feature (feature/004_json_config.md).

@@ -42,7 +42,9 @@ pub( super ) enum StdinPayload
 /// arbitrary content to forward.
 ///
 /// Returns `Some(StdinPayload::Json(_))` or `Some(StdinPayload::Raw(_))` whenever stdin is
-/// actually read — i.e. when both of these hold:
+/// actually read — i.e. when all of these hold:
+/// - `--no-stdin` is absent from `tokens` and `CLR_NO_STDIN` is unset (explicit opt-out —
+///   stdin is left entirely untouched, even when piped)
 /// - `--file` is absent from `tokens` (raw scan; `--file` gates out stdin detection
 ///   for `run`/`ask` because `--file` already reserves stdin/file content for the message)
 /// - stdin is not attached to a TTY (i.e. it is a pipe or redirect)
@@ -59,6 +61,15 @@ pub( super ) enum StdinPayload
 //   check ever ran, reintroducing a narrower version of the same bug.
 pub( super ) fn detect_stdin_json( tokens : &[ String ] ) -> Option< StdinPayload >
 {
+  // Gate 0: --no-stdin / CLR_NO_STDIN opt out of stdin handling entirely.
+  // Fix(BUG-492): non-TTY stdin was read unconditionally with a blocking read_to_end;
+  //   a held-open pipe (`tail -f |`, a FIFO with a live writer, a supervisor-inherited
+  //   fd) hung clr forever, before argument parsing could even reject anything.
+  // Root cause: no opt-out existed ahead of the blocking read — TTY detection alone
+  //   cannot distinguish "pipe with data" from "pipe that never closes".
+  // Pitfall: this must stay a raw token/env scan BEFORE the read — a parsed-flag check
+  //   would run after stdin was already consumed (parsing receives stdin content as input).
+  if tokens.iter().any( | t | t == "--no-stdin" ) || env_bool( "CLR_NO_STDIN" ) { return None; }
   // Gate 1: --file bypasses stdin detection for run/ask.
   if tokens.iter().any( | t | t == "--file" ) { return None; }
   // Gate 2: TTY stdin is interactive — not a pipe.
@@ -96,7 +107,7 @@ pub( super ) fn detect_stdin_json_unconstrained() -> Option< String >
   if src.trim_start().starts_with( '{' ) { Some( src ) } else { None }
 }
 
-/// Apply `CLR_*` environment variable fallbacks for the 60 run parameters.
+/// Apply `CLR_*` environment variable fallbacks for the 61 run parameters.
 ///
 /// Each field is updated only when it is still at its zero/default value — the CLI
 /// flag always wins when both are present (CLI-wins field-default check).
@@ -135,6 +146,7 @@ pub( crate ) fn apply_env_vars( parsed : &mut CliArgs ) -> Result< () >
   if !parsed.no_effort_max                 { parsed.no_effort_max        = env_bool( "CLR_NO_EFFORT_MAX" ); }
   if !parsed.no_chrome                     { parsed.no_chrome            = env_bool( "CLR_NO_CHROME" ); }
   if !parsed.no_persist                    { parsed.no_persist           = env_bool( "CLR_NO_PERSIST" ); }
+  if !parsed.no_stdin                      { parsed.no_stdin             = env_bool( "CLR_NO_STDIN" ); }
   if parsed.json_schema.is_none()         { parsed.json_schema          = env_str( "CLR_JSON_SCHEMA" ); }
   if parsed.mcp_config.is_empty()
   {

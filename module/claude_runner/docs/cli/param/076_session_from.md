@@ -29,11 +29,11 @@ When `--session-from <DIR>` is given:
 1. `<DIR>` is resolved to its physical absolute form — claude derives storage names from its physical getcwd, so an unresolved relative or symlinked value would encode to a storage name claude never uses (`./src` → `---src`). An empty value is ignored entirely.
 2. `scope_for(resolved DIR)` computes the source `CLAUDE_SESSION_DIR`.
 3. The runner checks that storage dir for the most recently modified qualifying `.jsonl` (see `../algorithm/003_session_file_selection.md`).
-4. If one exists, bare `-c` (continue) is injected into the subprocess arguments — no UUID is passed on the command line; session selection inside claude is steered by the env redirect below.
-5. `CLAUDE_CODE_SESSION_DIR=<source storage dir>` is exported to the subprocess environment, pointing claude's session storage at the source ([contract B23](../../../../../contract/claude_code/docs/behavior/023_b23_session_dir_override.md) — NEG-ONLY certainty: verified not rejected at startup, not confirmed honored).
+4. If one exists, bare `-c` (continue) is injected into the subprocess arguments — no UUID is passed on the command line; session selection inside claude is steered by the physical transplant below.
+5. The source session file is physically copied into the **target's own** storage dir (`scope_for(target).claude_session_dir`) before spawn, so plain `-c` continues the transplanted history in place under the same UUID. If source and target resolve to the same storage dir, no transplant is planned (the session is already in place). If a file with the same name already exists in target storage, it is never overwritten — only its mtime is refreshed so `-c` selects it. A failed copy warns loudly (`[Runner] warning:`) and proceeds, degrading to a fresh session. Under `--dry-run` no copy happens; the plan is previewed as `# session-transplant: <src_file> -> <target_storage_dir>`. (The former mechanism — exporting `CLAUDE_CODE_SESSION_DIR=<source storage>` — is inert on claude 2.x, which ignores that variable for both reads and writes; see BUG-490. [Contract B23](../../../../../contract/claude_code/docs/behavior/023_b23_session_dir_override.md)'s NEG-ONLY grading anticipated exactly this: "not rejected at startup" never implied "honored".)
 6. Claude runs in the **target** directory (`--dir`/`--to` or CWD), not in `<DIR>`.
 
-This is a one-time cross-load; the runner itself never writes to the source directory's session files. See `../../invariant/011_session_source_isolation.md` for the read/write isolation contract and its enforcement caveat.
+This is a one-time cross-load; the runner reads the source directory's session files but never modifies them — the transplant is a copy outward. See `../../invariant/011_session_source_isolation.md` for the read/write isolation contract.
 
 **Higher-level than `--session-dir`:**
 - `--session-dir /path` takes the raw path verbatim as the session storage directory.

@@ -11,11 +11,11 @@
 
 When `--session-from <SOURCE_DIR>` is given:
 
-1. **Session reads use the source directory's storage.** The runner's continue decision (bare `-c` injection) is gated on a qualifying session existing in `scope_for(SOURCE_DIR).claude_session_dir` — NOT in the target directory's `CLAUDE_SESSION_DIR` — and the subprocess receives `CLAUDE_CODE_SESSION_DIR=<source storage>` so claude's own session selection is pointed at the source.
+1. **Session reads use the source directory's storage.** The runner's continue decision (bare `-c` injection) is gated on a qualifying session existing in `scope_for(SOURCE_DIR).claude_session_dir` — NOT in the target directory's `CLAUDE_SESSION_DIR` — and that source session file is physically copied into the target's own storage before spawn (never the reverse), so claude's `-c` continues the transplanted history. No target-derived path is ever used as a transplant source.
 
 2. **Claude runs in the target directory.** The subprocess working directory is set to `--dir` (or CWD if `--dir` is absent). The target directory is unchanged.
 
-3. **New session data is written to the target directory's storage.** Any conversation turns that Claude adds during the session are written to the target directory's `CLAUDE_SESSION_DIR` (controlled by Claude Code itself, based on the subprocess `HOME` + working directory). The source directory's session files are never written to.
+3. **New session data is written to the target directory's storage.** Any conversation turns that Claude adds during the session append to the transplanted copy in the target directory's `CLAUDE_SESSION_DIR` (claude derives that storage from the subprocess `HOME` + working directory — both target-side). The source directory's session files are never written to; the transplant never overwrites an existing destination file either (mtime refresh only).
 
 4. **Cross-loading is one-time, not persistent.** After the initial `-c` injection, the session evolves independently of the source. There is no ongoing mirroring or sync between source and target.
 
@@ -27,10 +27,11 @@ When `--session-from <SOURCE_DIR>` is given:
 |-------|-----------------------|
 | `src/cli/builder.rs` | `session_exists(session_dir, effective_dir)` uses `scope_for(source_dir).claude_session_dir` as the storage path when `--session-from` is set; falls back to `scope_for(effective_dir).claude_session_dir` otherwise |
 | `src/cli/builder.rs` | `build_claude_command()` checks `--session-dir` first; `--session-from` is consulted only when `--session-dir` is absent; the source value is canonicalized to its physical absolute form (and empty values ignored) before encoding |
-| `ClaudeCommand` env pairs | The subprocess receives `CLAUDE_CODE_SESSION_DIR=<source storage>` ([contract B23](../../../../contract/claude_code/docs/behavior/023_b23_session_dir_override.md)) — the read-side steering mechanism |
-| Claude subprocess | Runs with the target directory as working directory; runner-side reads of the source are verified non-mutating (`session_from_test.rs::us7_source_session_files_not_modified`) |
+| `src/cli/builder.rs` | `execute_session_transplant()` copies the source `<uuid>.jsonl` into `scope_for(target).claude_session_dir` before spawn — the read-side steering mechanism. Never overwrites an existing destination (mtime refresh only); self-copy (source storage == target storage) plans nothing; a failed copy warns (`[Runner] warning:`) and proceeds |
+| `src/cli/mod.rs` | `dispatch_run` executes the transplant after working-dir validation, before journal + spawn; `--dry-run` previews the plan as `# session-transplant: <src> -> <dst>` without copying |
+| Claude subprocess | Runs with the target directory as working directory; runner-side reads of the source are verified non-mutating (`session_from_test.rs::us7_source_session_files_not_modified`, `session_source_isolation_test.rs::in3_source_session_file_unchanged`) |
 
-**Enforcement caveat — write side is claude-dependent.** Statements 2 and 5 are runner-enforced. Statements 1 and 3, at runtime, rest on how claude treats `CLAUDE_CODE_SESSION_DIR`, whose contract status is NEG-ONLY (verified not rejected at startup; not confirmed honored — see contract B23). If claude honors the variable for both reads and writes, new turns land in the **source** storage, violating statement 3; if claude ignores it, session selection falls back to the target's own storage, weakening statement 1. Neither failure mode is currently detectable from the runner: resolving this requires upgrading B23's evidence tier (a VALIDATED live observation of where a cross-loaded turn is actually written).
+**Enforcement history.** An earlier mechanism exported `CLAUDE_CODE_SESSION_DIR=<source storage>` to steer claude's session selection at the source, leaving statements 1 and 3 dependent on claude honoring that variable (contract [B23](../../../../contract/claude_code/docs/behavior/023_b23_session_dir_override.md), NEG-ONLY). BUG-490 established empirically that claude 2.x ignores the variable for both reads and writes — the redirect was inert and `--session-from` a silent no-op. The physical transplant replaced it: statements 1–3 are now runner-enforced by construction (the session file is placed where claude's own cwd-derived storage lookup will find it), with degradation on copy failure limited to a fresh session in the target — never a write to the source.
 
 ### Violation Consequences
 

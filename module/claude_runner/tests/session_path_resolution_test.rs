@@ -7,7 +7,7 @@
 //! | Test | Covers |
 //! |------|--------|
 //! | FT-6 | `clr scope` prints 6 `CLAUDE_*` vars in `key=value` format |
-//! | FT-7 | `--session-from` sets `CLAUDE_CODE_SESSION_DIR` to source dir storage |
+//! | FT-7 | `--session-from` plans a transplant of the most-recent source session |
 //! | FT-8 | `--to` + `--session-from`: Claude runs in target, loads from source |
 //! | FT-9 | `--to` is an alias for `--dir`; behavior is identical |
 //! | FT-10 | `--session-dir` takes precedence over `--session-from` |
@@ -171,8 +171,8 @@ fn ft6_scope_prints_six_vars_in_key_value_format()
 
 // ── FT-7: --session-from resumes most recent session from source dir ───────────
 
-/// FT-7: `--session-from <src>` sets `CLAUDE_CODE_SESSION_DIR` to source storage and
-/// activates continue mode when a session file exists there.
+/// FT-7: `--session-from <src>` plans a transplant of the most-recent source
+/// session file (BUG-490) and activates continue mode when one exists.
 ///
 /// The subprocess working directory is CWD (no `--to` flag; no `cd` prefix).
 #[ test ]
@@ -186,10 +186,10 @@ fn ft7_session_from_resumes_source_session()
     &[ "--session-from", src, "Continue" ],
     &[ ( "CLAUDE_HOME", ch_str ) ],
   );
-  let expected_dir = format!( "{ch_str}/projects/{}", df( src ) );
+  let expected_src = format!( "{ch_str}/projects/{}/hhh-101.jsonl", df( src ) );
   assert!(
-    stdout.contains( &format!( "CLAUDE_CODE_SESSION_DIR={expected_dir}" ) ),
-    "session dir must point to source storage. Got:\n{stdout}"
+    stdout.contains( &format!( "# session-transplant: {expected_src} -> " ) ),
+    "plan must name the source session file (BUG-490 transplant). Got:\n{stdout}"
   );
   // No --to → no cd prefix for the source dir
   assert!(
@@ -202,7 +202,8 @@ fn ft7_session_from_resumes_source_session()
 
 /// FT-8: `--to <tgt> --session-from <src>` sets working dir to target, loads from source.
 ///
-/// `CLAUDE_CODE_SESSION_DIR` must point to source storage; subprocess `cd` must be target.
+/// The transplant plan copies the source session file into the TARGET's own
+/// storage (BUG-490); subprocess `cd` must be the target.
 #[ test ]
 fn ft8_to_plus_session_from_target_dir_source_session()
 {
@@ -216,10 +217,15 @@ fn ft8_to_plus_session_from_target_dir_source_session()
     &[ "--to", tgt_str, "--session-from", src, "Continue" ],
     &[ ( "CLAUDE_HOME", ch_str ) ],
   );
-  let expected_dir = format!( "{ch_str}/projects/{}", df( src ) );
+  let expected_src = format!( "{ch_str}/projects/{}/iii-202.jsonl", df( src ) );
+  let tgt_canon = std::fs::canonicalize( tgt.path() ).expect( "canonicalize target" );
+  let target_storage = format!(
+    "{ch_str}/projects/{}",
+    df( tgt_canon.to_str().expect( "utf-8" ) )
+  );
   assert!(
-    stdout.contains( &format!( "CLAUDE_CODE_SESSION_DIR={expected_dir}" ) ),
-    "session dir must point to source storage. Got:\n{stdout}"
+    stdout.contains( &format!( "# session-transplant: {expected_src} -> {target_storage}" ) ),
+    "plan must copy the source session into the TARGET's storage. Got:\n{stdout}"
   );
   assert!(
     stdout.contains( &format!( "cd {tgt_str}" ) ),

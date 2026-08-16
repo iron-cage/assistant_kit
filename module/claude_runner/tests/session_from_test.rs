@@ -3,10 +3,13 @@
 //! Covers EC-1–EC-11 from `tests/docs/cli/param/076_session_from.md` and
 //! US-1–US-7 from `tests/docs/cli/user_story/28_session_transplant.md`.
 //!
-//! `--session-from <DIR>` computes `scope_for(DIR).claude_session_dir`, sets
-//! `CLAUDE_CODE_SESSION_DIR` to that path, and activates `-c` (continue) mode when
-//! a qualifying `.jsonl` exists there.  All tests use `--dry-run` so no real Claude
-//! binary is needed.
+//! `--session-from <DIR>` computes `scope_for(DIR).claude_session_dir`, plans a
+//! physical copy of the most-recent qualifying `.jsonl` from that source storage
+//! into the TARGET's own storage (Fix(BUG-490): claude ≥2.x ignores the former
+//! `CLAUDE_CODE_SESSION_DIR` export for reads and writes, so the env route is
+//! dead and dropped), and activates `-c` (continue) mode.  Dry-run previews the
+//! plan as a `# session-transplant: <src_file> -> <target_storage>` line without
+//! copying.  All tests use `--dry-run` so no real Claude binary is needed.
 //!
 //! # Test Setup Pattern
 //!
@@ -141,23 +144,26 @@ fn run_dry_env( args : &[ &str ], env : &[ ( &str, &str ) ] ) -> String
 
 // ── EC-1: --session-from injects -c when source has session ───────────────────
 
-/// EC-1: `--session-from` sets `CLAUDE_CODE_SESSION_DIR` to the computed source
-/// storage path and activates continue mode (`-c`) when a session file exists.
+/// EC-1: `--session-from` plans a transplant of the source session file and
+/// activates continue mode (`-c`) when a qualifying session file exists.
 #[ test ]
 fn ec1_session_from_injects_continue()
 {
   let ch  = tempfile::TempDir::new().expect( "tmpdir" );
   let src = "/tmp/076ec1-src";
-  make_session_for( ch.path(), src, "aaa-111" );
+  let jsonl = make_session_for( ch.path(), src, "aaa-111" );
   let ch_str = ch.path().to_str().expect( "utf-8" );
   let stdout = run_dry_env(
     &[ "--session-from", src, "Continue" ],
     &[ ( "CLAUDE_HOME", ch_str ) ],
   );
-  let expected_dir = format!( "{ch_str}/projects/{}", df( src ) );
   assert!(
-    stdout.contains( &format!( "CLAUDE_CODE_SESSION_DIR={expected_dir}" ) ),
-    "session dir must point to source storage. Got:\n{stdout}"
+    stdout.contains( &format!( "# session-transplant: {} -> ", jsonl.display() ) ),
+    "dry-run must plan a transplant of the source session file. Got:\n{stdout}"
+  );
+  assert!(
+    !stdout.contains( "CLAUDE_CODE_SESSION_DIR=" ),
+    "the dead CLAUDE_CODE_SESSION_DIR export must be gone (BUG-490). Got:\n{stdout}"
   );
   // Continue mode: `-c` flag precedes the quoted message in the subprocess command.
   assert!(
@@ -170,22 +176,21 @@ fn ec1_session_from_injects_continue()
 
 /// EC-2: `--from` alias behaves identically to `--session-from`.
 ///
-/// `CLAUDE_CODE_SESSION_DIR` must point to the same computed source storage path.
+/// The same transplant plan must be produced for the same source.
 #[ test ]
 fn ec2_from_alias_identical_to_session_from()
 {
   let ch  = tempfile::TempDir::new().expect( "tmpdir" );
   let src = "/tmp/076ec2-src";
-  make_session_for( ch.path(), src, "bbb-222" );
+  let jsonl = make_session_for( ch.path(), src, "bbb-222" );
   let ch_str = ch.path().to_str().expect( "utf-8" );
   let stdout = run_dry_env(
     &[ "--from", src, "Continue" ],
     &[ ( "CLAUDE_HOME", ch_str ) ],
   );
-  let expected_dir = format!( "{ch_str}/projects/{}", df( src ) );
   assert!(
-    stdout.contains( &format!( "CLAUDE_CODE_SESSION_DIR={expected_dir}" ) ),
-    "`--from` alias must set session dir to source storage. Got:\n{stdout}"
+    stdout.contains( &format!( "# session-transplant: {} -> ", jsonl.display() ) ),
+    "`--from` alias must plan the same transplant. Got:\n{stdout}"
   );
 }
 
@@ -205,6 +210,10 @@ fn ec3_empty_source_no_continue()
   assert!(
     !stdout.contains( " -c \"" ),
     "no session → dry-run must NOT have continue flag `-c`. Got:\n{stdout}"
+  );
+  assert!(
+    !stdout.contains( "# session-transplant:" ),
+    "no session → no transplant plan. Got:\n{stdout}"
   );
 }
 
@@ -242,13 +251,18 @@ fn ec4_session_dir_wins_over_session_from()
     !stdout.contains( &src_dir ),
     "`--session-from` computed path `{src_dir}` must NOT appear. Got:\n{stdout}"
   );
+  assert!(
+    !stdout.contains( "# session-transplant:" ),
+    "`--session-dir` override must suppress the transplant plan. Got:\n{stdout}"
+  );
 }
 
 // ── EC-5: --new-session suppresses --session-from ─────────────────────────────
 
 /// EC-5: `--new-session` takes precedence over `--session-from`.
 ///
-/// `--new-session` suppresses cross-loading; no `-c` is injected.
+/// `--new-session` suppresses cross-loading entirely: no `-c`, no transplant
+/// plan, and no session-related env export of any kind.
 #[ test ]
 fn ec5_new_session_suppresses_session_from()
 {
@@ -259,31 +273,30 @@ fn ec5_new_session_suppresses_session_from()
     &[ "--session-from", src, "--new-session", "fresh" ],
     &[ ( "CLAUDE_HOME", ch.path().to_str().expect( "utf-8" ) ) ],
   );
-  // CLAUDE_CODE_SESSION_DIR is still set (--session-from computes the path),
-  // but continue mode must be suppressed by --new-session.
-  let ch_str = ch.path().to_str().expect( "utf-8" );
-  let expected_dir = format!( "{ch_str}/projects/{}", df( src ) );
-  assert!(
-    stdout.contains( &format!( "CLAUDE_CODE_SESSION_DIR={expected_dir}" ) ),
-    "session dir must still be set from `--session-from`. Got:\n{stdout}"
-  );
   assert!(
     !stdout.contains( " -c \"" ),
     "`--new-session` must suppress continue flag `-c`. Got:\n{stdout}"
+  );
+  assert!(
+    !stdout.contains( "# session-transplant:" ),
+    "`--new-session` must suppress the transplant plan. Got:\n{stdout}"
+  );
+  assert!(
+    !stdout.contains( "CLAUDE_CODE_SESSION_DIR=" ),
+    "no session env export may appear (BUG-490 dropped it). Got:\n{stdout}"
   );
 }
 
 // ── EC-6: --to + --session-from ───────────────────────────────────────────────
 
-/// EC-6: `--to <tgt>` + `--session-from <src>`: Claude runs in target, loads from source.
-///
-/// `CLAUDE_CODE_SESSION_DIR` must point to source storage; subprocess `cd` must be target.
+/// EC-6: `--to <tgt>` + `--session-from <src>`: Claude runs in target; the source
+/// session is planned for transplant into the TARGET's own storage.
 #[ test ]
 fn ec6_to_plus_session_from()
 {
   let ch  = tempfile::TempDir::new().expect( "tmpdir" );
   let src = "/tmp/076ec6-src";
-  make_session_for( ch.path(), src, "eee-555" );
+  let jsonl = make_session_for( ch.path(), src, "eee-555" );
   let tgt = tempfile::TempDir::new().expect( "target tmpdir" );
   let tgt_str = tgt.path().to_str().expect( "utf-8" );
   let ch_str = ch.path().to_str().expect( "utf-8" );
@@ -291,10 +304,16 @@ fn ec6_to_plus_session_from()
     &[ "--to", tgt_str, "--session-from", src, "Continue" ],
     &[ ( "CLAUDE_HOME", ch_str ) ],
   );
-  let expected_dir = format!( "{ch_str}/projects/{}", df( src ) );
+  let tgt_canon = std::fs::canonicalize( tgt.path() ).expect( "canonicalize target" );
+  let target_storage = format!(
+    "{ch_str}/projects/{}",
+    df( tgt_canon.to_str().expect( "utf-8" ) )
+  );
   assert!(
-    stdout.contains( &format!( "CLAUDE_CODE_SESSION_DIR={expected_dir}" ) ),
-    "session dir must point to source storage. Got:\n{stdout}"
+    stdout.contains(
+      &format!( "# session-transplant: {} -> {target_storage}", jsonl.display() )
+    ),
+    "plan must copy the source session into the TARGET's own storage. Got:\n{stdout}"
   );
   assert!(
     stdout.contains( &format!( "cd {tgt_str}" ) ),
@@ -307,7 +326,7 @@ fn ec6_to_plus_session_from()
 /// EC-7: `CLR_SESSION_FROM` env var is equivalent to `--session-from`.
 ///
 /// No `--session-from` on CLI; `CLR_SESSION_FROM` provides the source path.
-/// `CLAUDE_CODE_SESSION_DIR` must point to the computed source storage path.
+/// The same transplant plan must be produced as for the CLI flag.
 ///
 /// Note: cannot use `run_dry_env` here because it calls `env_remove("CLR_SESSION_FROM")`
 /// which would strip the very variable this test passes in.
@@ -317,7 +336,7 @@ fn ec7_clr_session_from_env_var()
   container_check();
   let ch  = tempfile::TempDir::new().expect( "tmpdir" );
   let src = "/tmp/076ec7-src";
-  make_session_for( ch.path(), src, "fff-666" );
+  let jsonl = make_session_for( ch.path(), src, "fff-666" );
   let home_str = ch.path().to_str().expect( "utf-8" );
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = std::process::Command::new( bin )
@@ -336,34 +355,36 @@ fn ec7_clr_session_from_env_var()
     String::from_utf8_lossy( &out.stderr ),
   );
   let stdout = String::from_utf8_lossy( &out.stdout ).into_owned();
-  let expected_dir = format!( "{home_str}/projects/{}", df( src ) );
   assert!(
-    stdout.contains( &format!( "CLAUDE_CODE_SESSION_DIR={expected_dir}" ) ),
-    "`CLR_SESSION_FROM` must set session dir to source storage. Got:\n{stdout}"
+    stdout.contains( &format!( "# session-transplant: {} -> ", jsonl.display() ) ),
+    "`CLR_SESSION_FROM` must plan the source-session transplant. Got:\n{stdout}"
+  );
+  assert!(
+    !stdout.contains( "CLAUDE_CODE_SESSION_DIR=" ),
+    "the dead CLAUDE_CODE_SESSION_DIR export must be gone (BUG-490). Got:\n{stdout}"
   );
 }
 
 // ── EC-8: --dry-run WYSIWYG reflects session-from UUID ────────────────────────
 
-/// EC-8: Dry-run accurately reflects `CLAUDE_CODE_SESSION_DIR` for source session.
+/// EC-8: Dry-run accurately previews the transplant plan (WYSIWYG).
 ///
-/// WYSIWYG: dry-run shows the computed source storage path that the subprocess
-/// will receive as `CLAUDE_CODE_SESSION_DIR`.
+/// The `# session-transplant:` line names the exact source file the real run
+/// would copy — and dry-run itself performs no copy.
 #[ test ]
 fn ec8_dry_run_wysiwyg_session_from()
 {
   let ch  = tempfile::TempDir::new().expect( "tmpdir" );
   let src = "/tmp/076ec8-src";
-  make_session_for( ch.path(), src, "ggg-777" );
+  let jsonl = make_session_for( ch.path(), src, "ggg-777" );
   let ch_str = ch.path().to_str().expect( "utf-8" );
   let stdout = run_dry_env(
     &[ "--session-from", src, "task" ],
     &[ ( "CLAUDE_HOME", ch_str ) ],
   );
-  let expected_dir = format!( "{ch_str}/projects/{}", df( src ) );
   assert!(
-    stdout.contains( &format!( "CLAUDE_CODE_SESSION_DIR={expected_dir}" ) ),
-    "dry-run must reflect source storage path. Got:\n{stdout}"
+    stdout.contains( &format!( "# session-transplant: {} -> ", jsonl.display() ) ),
+    "dry-run must preview the transplant plan. Got:\n{stdout}"
   );
 }
 
@@ -371,13 +392,13 @@ fn ec8_dry_run_wysiwyg_session_from()
 
 /// US-1: `--to <tgt> --session-from <src>` clones outward.
 ///
-/// `CLAUDE_CODE_SESSION_DIR` must point to source storage; subprocess `cd` must be target.
+/// The transplant plan targets the TARGET's storage; subprocess `cd` is the target.
 #[ test ]
 fn us1_clone_outward_continue_injected()
 {
   let ch  = tempfile::TempDir::new().expect( "tmpdir" );
   let src = "/tmp/us28-project-a";
-  make_session_for( ch.path(), src, "abc-123" );
+  let jsonl = make_session_for( ch.path(), src, "abc-123" );
   let tgt = tempfile::TempDir::new().expect( "tgt tmpdir" );
   let tgt_str = tgt.path().to_str().expect( "utf-8" );
   let ch_str = ch.path().to_str().expect( "utf-8" );
@@ -385,10 +406,16 @@ fn us1_clone_outward_continue_injected()
     &[ "--to", tgt_str, "--session-from", src, "Continue" ],
     &[ ( "CLAUDE_HOME", ch_str ) ],
   );
-  let expected_dir = format!( "{ch_str}/projects/{}", df( src ) );
+  let tgt_canon = std::fs::canonicalize( tgt.path() ).expect( "canonicalize target" );
+  let target_storage = format!(
+    "{ch_str}/projects/{}",
+    df( tgt_canon.to_str().expect( "utf-8" ) )
+  );
   assert!(
-    stdout.contains( &format!( "CLAUDE_CODE_SESSION_DIR={expected_dir}" ) ),
-    "session dir must point to source storage. Got:\n{stdout}"
+    stdout.contains(
+      &format!( "# session-transplant: {} -> {target_storage}", jsonl.display() )
+    ),
+    "clone outward must plan the copy into the target's storage. Got:\n{stdout}"
   );
   assert!(
     stdout.contains( &format!( "cd {tgt_str}" ) ),
@@ -400,22 +427,26 @@ fn us1_clone_outward_continue_injected()
 
 /// US-2: `--session-from <src>` (no `--to`) runs in CWD, loads from source.
 ///
-/// `CLAUDE_CODE_SESSION_DIR` points to source storage; no `cd <src>` in output.
+/// The transplant plan targets the CWD's own storage; no `cd <src>` in output.
 #[ test ]
 fn us2_inject_inward_cwd_unchanged()
 {
   let ch  = tempfile::TempDir::new().expect( "tmpdir" );
   let src = "/tmp/us28-project-b-inward";
-  make_session_for( ch.path(), src, "def-456" );
+  let jsonl = make_session_for( ch.path(), src, "def-456" );
   let ch_str = ch.path().to_str().expect( "utf-8" );
   let stdout = run_dry_env(
     &[ "--session-from", src, "What did you do in B?" ],
     &[ ( "CLAUDE_HOME", ch_str ) ],
   );
-  let expected_dir = format!( "{ch_str}/projects/{}", df( src ) );
+  let cwd = std::fs::canonicalize( std::env::current_dir().expect( "cwd" ) )
+    .expect( "canonicalize cwd" );
+  let cwd_storage = format!( "{ch_str}/projects/{}", df( cwd.to_str().expect( "utf-8" ) ) );
   assert!(
-    stdout.contains( &format!( "CLAUDE_CODE_SESSION_DIR={expected_dir}" ) ),
-    "session dir must point to source storage. Got:\n{stdout}"
+    stdout.contains(
+      &format!( "# session-transplant: {} -> {cwd_storage}", jsonl.display() )
+    ),
+    "inward injection must plan the copy into the CWD's own storage. Got:\n{stdout}"
   );
   // No --to means no `cd` prefix — CWD is implicit.
   assert!(
@@ -441,20 +472,23 @@ fn us3_no_source_history_fresh_session()
     !stdout.contains( " -c \"" ),
     "no history → must NOT have continue flag `-c`. Got:\n{stdout}"
   );
+  assert!(
+    !stdout.contains( "# session-transplant:" ),
+    "no history → no transplant plan. Got:\n{stdout}"
+  );
 }
 
 // ── US-4: --from alias ────────────────────────────────────────────────────────
 
 /// US-4: `--from` alias is accepted and produces the same result as `--session-from`.
 ///
-/// `CLAUDE_CODE_SESSION_DIR` must equal the result from `--session-from`; subprocess
-/// `cd` must be the target.
+/// The same transplant plan must be produced; subprocess `cd` must be the target.
 #[ test ]
 fn us4_from_alias_accepted()
 {
   let ch  = tempfile::TempDir::new().expect( "tmpdir" );
   let src = "/tmp/us28-proj-a-alias";
-  make_session_for( ch.path(), src, "abc-123" );
+  let jsonl = make_session_for( ch.path(), src, "abc-123" );
   let tgt = tempfile::TempDir::new().expect( "tgt tmpdir" );
   let tgt_str = tgt.path().to_str().expect( "utf-8" );
   let ch_str = ch.path().to_str().expect( "utf-8" );
@@ -462,10 +496,9 @@ fn us4_from_alias_accepted()
     &[ "--to", tgt_str, "--from", src, "Continue" ],
     &[ ( "CLAUDE_HOME", ch_str ) ],
   );
-  let expected_dir = format!( "{ch_str}/projects/{}", df( src ) );
   assert!(
-    stdout.contains( &format!( "CLAUDE_CODE_SESSION_DIR={expected_dir}" ) ),
-    "`--from` alias must set session dir to source storage. Got:\n{stdout}"
+    stdout.contains( &format!( "# session-transplant: {} -> ", jsonl.display() ) ),
+    "`--from` alias must plan the transplant. Got:\n{stdout}"
   );
   assert!(
     stdout.contains( &format!( "cd {tgt_str}" ) ),
@@ -498,8 +531,8 @@ fn us5_to_alias_sets_working_dir()
 
 /// US-6: `--session-dir` raw path wins over `--session-from` computed path.
 ///
-/// `CLAUDE_CODE_SESSION_DIR` must equal the raw `--session-dir` path, not the
-/// computed source storage path.
+/// `CLAUDE_CODE_SESSION_DIR` must equal the raw `--session-dir` path (that raw
+/// export is BUG-493's domain and still emitted); no transplant plan appears.
 #[ test ]
 fn us6_session_dir_wins_over_session_from()
 {
@@ -526,6 +559,10 @@ fn us6_session_dir_wins_over_session_from()
   assert!(
     !stdout.contains( &src_dir ),
     "source computed path `{src_dir}` must NOT appear. Got:\n{stdout}"
+  );
+  assert!(
+    !stdout.contains( "# session-transplant:" ),
+    "`--session-dir` override must suppress the transplant plan. Got:\n{stdout}"
   );
 }
 
@@ -607,13 +644,13 @@ fn ec9_relative_source_path_resolves_against_cwd()
     String::from_utf8_lossy( &out.stderr ),
   );
   let stdout = String::from_utf8_lossy( &out.stdout ).into_owned();
-  let expected_dir = format!(
-    "{ch_str}/projects/{}",
+  let expected_src = format!(
+    "{ch_str}/projects/{}/rel-901.jsonl",
     df( src_canon.to_str().expect( "utf-8" ) )
   );
   assert!(
-    stdout.contains( &format!( "CLAUDE_CODE_SESSION_DIR={expected_dir}" ) ),
-    "relative source must resolve to canonical absolute storage path. Got:\n{stdout}"
+    stdout.contains( &format!( "# session-transplant: {expected_src} -> " ) ),
+    "relative source must resolve to the canonical storage's session file. Got:\n{stdout}"
   );
   assert!(
     stdout.contains( " -c \"" ),
@@ -646,6 +683,10 @@ fn ec10_empty_source_value_ignored()
     !stdout.contains( "-unknown" ),
     "empty `--session-from` must not fall into the `-unknown` storage dir. Got:\n{stdout}"
   );
+  assert!(
+    !stdout.contains( "# session-transplant:" ),
+    "empty `--session-from` must not plan a transplant. Got:\n{stdout}"
+  );
 }
 
 // ── EC-11: JSON config key `session-from` ─────────────────────────────────────
@@ -660,7 +701,7 @@ fn ec11_json_config_session_from_key()
 {
   let ch  = tempfile::TempDir::new().expect( "tmpdir" );
   let src = "/tmp/076ec11-src";
-  make_session_for( ch.path(), src, "hhh-888" );
+  let jsonl = make_session_for( ch.path(), src, "hhh-888" );
   let cfg_dir  = tempfile::TempDir::new().expect( "cfg tmpdir" );
   let cfg_path = cfg_dir.path().join( "args.json" );
   std::fs::write( &cfg_path, format!( "{{\"session-from\": \"{src}\"}}" ) )
@@ -670,10 +711,9 @@ fn ec11_json_config_session_from_key()
     &[ "--args-file", cfg_path.to_str().expect( "utf-8" ), "Continue" ],
     &[ ( "CLAUDE_HOME", ch_str ) ],
   );
-  let expected_dir = format!( "{ch_str}/projects/{}", df( src ) );
   assert!(
-    stdout.contains( &format!( "CLAUDE_CODE_SESSION_DIR={expected_dir}" ) ),
-    "args-file `session-from` key must set session dir to source storage. Got:\n{stdout}"
+    stdout.contains( &format!( "# session-transplant: {} -> ", jsonl.display() ) ),
+    "args-file `session-from` key must plan the transplant. Got:\n{stdout}"
   );
   assert!(
     stdout.contains( " -c \"" ),

@@ -63,6 +63,7 @@ pub( crate ) struct CliArgs
   pub( crate ) no_effort_max        : bool,
   pub( crate ) no_chrome            : bool,
   pub( crate ) no_persist           : bool,
+  pub( crate ) no_stdin             : bool,
   pub( crate ) json_schema          : Option< String >,
   pub( crate ) mcp_config           : Vec< String >,
   pub( crate ) file                 : Option< String >,
@@ -608,6 +609,7 @@ pub( crate ) fn parse_args( tokens : &[ String ] ) -> Result< CliArgs >
       no_effort_max        : false,
       no_chrome            : false,
       no_persist           : false,
+      no_stdin             : false,
       json_schema          : None,
       mcp_config           : Vec::new(),
       file                 : None,
@@ -716,6 +718,15 @@ pub( crate ) fn parse_args( tokens : &[ String ] ) -> Result< CliArgs >
       "--no-persist" =>
       {
         parsed.no_persist = true;
+      }
+      // Fix(BUG-492): stdin opt-out. The flag's real effect happens pre-parse — env.rs's
+      //   detect_stdin_json() checks it in its raw token scan (Gate 0) before any stdin
+      //   read; this arm only keeps the token from tripping the unknown-option error.
+      // Root cause: no opt-out existed for the unconditional blocking read on non-TTY stdin.
+      // Pitfall: never move the behavior here — by parse time, stdin has already been read.
+      "--no-stdin" =>
+      {
+        parsed.no_stdin = true;
       }
       "--strip-fences" =>
       {
