@@ -113,6 +113,27 @@ fn ast_usage_command_accepted()
 }
 
 /// Verify `.paths` is routed through `ast` via profile's programmatic registration.
+///
+/// ## Fix Documentation — BUG-015
+///
+/// - **Root Cause:** `assistant::build_registry()` aggregates the Layer-2 crates in fixed
+///   order; both `claude_version` and `claude_profile` registered a command named `.paths`,
+///   so the second registration hit the registry's `CommandAlreadyExists` → `.expect()`
+///   panic — the whole aggregate binary died at startup, before any dispatch.
+/// - **Why Not Caught:** Each crate's own test suite dispatches through its own binary,
+///   where no collision exists — the duplicate name only materializes in the aggregate
+///   registry, and no aggregate-level test dispatched `.paths` through `ast`.
+/// - **Fix Applied:** Renamed `claude_version`'s command to `.version.paths`, matching its
+///   own existing `.version.*` namespace; `claude_profile`'s `.paths` (the original,
+///   aggregation-aware command) keeps the bare name. Isolated to `claude_version`'s source.
+/// - **Prevention:** This test dispatches `.paths` through the real aggregate binary —
+///   a reintroduced collision panics during registry build, so exit 0 here proves a
+///   single, unambiguous registration.
+/// - **Pitfall:** A command name that is free within one Layer-2 crate can still collide
+///   in the aggregate — new commands must be checked against the aggregate namespace and
+///   should use their crate's own namespace prefix (as `.version.paths` does). Tolerating
+///   `CommandAlreadyExists` at registration is NOT a fix: registration order would then
+///   silently pick a winner, leaving one name bound to two different behaviors.
 #[ doc = "bug_reproducer(BUG-015)" ]
 #[test]
 fn ast_paths_command_accepted()

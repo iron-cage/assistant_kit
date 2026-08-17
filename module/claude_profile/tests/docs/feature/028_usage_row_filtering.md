@@ -114,26 +114,24 @@ Feature behavioral requirement test cases for `docs/feature/028_usage_row_filter
 
 ### FT-05: `min_5h::50` inclusive threshold filter
 
-- **Given:** Three accounts: A with `5h Left = 80%`, B with `5h Left = 50%`, C with `5h Left = 30%`.
+- **Given:** Three accounts: A with `5h Left = 80%`, B with `5h Left = 50%`, C with `5h Left = 30%` — quota values seeded exactly via `seed_quota_cache`, rendered through the G1 not-owned cache path (no token, no HTTP).
 - **When:** `clp .usage min_5h::50`
-- **Then:** Exits 0. Rows A and B are shown; row C is hidden (30% < 50). B is shown (50% == threshold — inclusive).
+- **Then:** Exits 0. Rows A and B are shown; row C is hidden (30% < 50). B is shown (50% == threshold — inclusive `>=`).
 - **Exit:** 0
-- **Live:** yes
-- **Note:** No test in the suite constructs this three-account fixture. `it207` only verifies that `min_5h::50` is accepted (exit 0) with a single live account — it does not assert per-row inclusion/exclusion. The inclusive (`>=`) comparison is confirmed by direct source inspection: `src/usage/api.rs` filters via `five_hour_left( aq ) >= threshold`.
-- **Source fn:** `it207_lim_it_min_5h_50_hides_below_threshold` (in `usage_lim_it_test.rs`) (N/A — structural acceptance only, not this scenario)
+- **Live:** no
+- **Source fn:** `it207_min_5h_50_hides_below_threshold` (in `usage_lim_it_test.rs`)
 - **Source:** [feature/028_usage_row_filtering.md AC-05](../../../docs/feature/028_usage_row_filtering.md)
 
 ---
 
 ### FT-06: `min_7d::20` inclusive threshold filter
 
-- **Given:** Three accounts: A with `7d Left = 60%`, B with `7d Left = 20%`, C with `7d Left = 10%`.
+- **Given:** Three accounts: A with `7d Left = 60%`, B with `7d Left = 20%`, C with `7d Left = 10%` — quota values seeded exactly via `seed_quota_cache`, rendered through the G1 not-owned cache path (no token, no HTTP).
 - **When:** `clp .usage min_7d::20`
-- **Then:** Exits 0. Rows A and B shown; row C hidden (10% < 20). B shown (20% == threshold — inclusive).
+- **Then:** Exits 0. Rows A and B shown; row C hidden (10% < 20). B shown (20% == threshold — inclusive `>=`).
 - **Exit:** 0
-- **Live:** yes
-- **Note:** No test in the suite constructs this three-account fixture. `it209` only verifies that `min_7d::20` is accepted (exit 0) with a single live account — it does not assert per-row inclusion/exclusion. The inclusive (`>=`) comparison is confirmed by direct source inspection: `src/usage/api.rs` filters via `seven_day_left( aq ) >= threshold`.
-- **Source fn:** `it209_lim_it_min_7d_20_hides_below_threshold` (in `usage_lim_it_test.rs`) (N/A — structural acceptance only, not this scenario)
+- **Live:** no
+- **Source fn:** `it209_min_7d_20_hides_below_threshold` (in `usage_lim_it_test.rs`)
 - **Source:** [feature/028_usage_row_filtering.md AC-06](../../../docs/feature/028_usage_row_filtering.md)
 
 ---
@@ -162,13 +160,12 @@ Feature behavioral requirement test cases for `docs/feature/028_usage_row_filter
 
 ### FT-09: AND composition of multiple filters
 
-- **Given:** Four accounts: A (🟢, 7d=40%), B (🟢, 7d=25%), C (🟡, 7d=40%), D (🔴).
+- **Given:** Four accounts with seeded quota caches: A (🟢, `7d Left = 40%`), B (🟢, `7d Left = 25%`), C (🟡 — 5h exhausted, `7d Left = 40%`), D (🔴 — no cache, quota Err).
 - **When:** `clp .usage only_valid::1 min_7d::30`
-- **Then:** Exits 0. Only A shown: must be non-🔴 AND 7d ≥ 30%. B (25% < 30%) excluded; C excluded (🟡 triggers `only_valid::1`); D excluded (🔴).
+- **Then:** Exits 0. A and C shown — per AC-09 (`only_valid::1` keeps 🟢/🟡 rows, see AC-07) AND `7d Left ≥ 30%`. B hidden (25% < 30%); D hidden (🔴 fails `only_valid::1` — even though a bare `min_7d::30` alone would pass an Err row through, absent data ≠ exhausted).
 - **Exit:** 0
-- **Live:** yes
-- **Note:** No test in the suite constructs this four-account fixture. `it213` sets up 2 accounts sharing one live token and only verifies that `only_valid::1` and `min_7d::30` are accepted together (exit 0) — it does not assert per-row inclusion/exclusion for the A/B/C/D scenario above.
-- **Source fn:** `it213_lim_it_ft028_09_and_composition` (in `usage_lim_it_test.rs`) (N/A — structural acceptance only, not this scenario)
+- **Live:** no
+- **Source fn:** `it213_ft028_09_and_composition` (in `usage_lim_it_test.rs`)
 - **Source:** [feature/028_usage_row_filtering.md AC-09](../../../docs/feature/028_usage_row_filtering.md)
 
 ---

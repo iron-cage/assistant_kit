@@ -195,9 +195,12 @@ fn ic2_no_orphan_yaml_commands()
 
 /// IC-3: `claude_journal_viewer::register_commands` is called inside `build_registry()`,
 /// positioned after `claude_storage`'s call and before `register_static_commands()`.
-/// Source-inspection only — `build_registry()` panics unconditionally per pre-existing
-/// BUG-015 (`task/claude_version/bug/015_paths_command_collision_with_claude_profile.md`),
-/// so this never invokes it; live-dispatch proof remains blocked until that bug is fixed.
+/// Source-inspection only — and permanently so, not as a workaround: the hook is an
+/// intentionally empty `pub fn register_commands( _registry ) {}` (the viewer's real
+/// commands live in its own binary), so there is no dispatchable surface a behavioral
+/// test could observe; wiring an empty hook can only be proven structurally. (An older
+/// revision of this comment blamed BUG-015's `build_registry()` panic — that bug is
+/// fixed; the source-inspection form is kept for the reason above, not because of it.)
 #[test]
 fn ic3_claude_journal_viewer_registered_in_build_registry()
 {

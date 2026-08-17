@@ -15,7 +15,7 @@
 
 #### Account CRUD and identity
 
-`Account` (parsed store entry), `AccountBackend` (`Oauth`/`Redirect`), `list`, `save`, `delete`, `check_delete_preconditions`, `validate_name`, `validate_redirect_name`, `validate_name_for_save`, `credential_stem`. A store entry is `{name}.credentials.json` plus sidecar metadata in `{name}.json`.
+`Account` (parsed store entry), `AccountBackend` (`Oauth`/`Redirect`), `list`, `save`, `delete`, `check_delete_preconditions`, `validate_name`, `validate_redirect_name`, `validate_name_for_save`, `credential_stem`, `lock_store` + `StoreLock` (blocking exclusive `flock` on `{store}/-store.lock`, RAII release; taken internally by `save`/`switch_account`/`delete` so their multi-file sequences never interleave across processes). A store entry is `{name}.credentials.json` plus sidecar metadata in `{name}.json`.
 
 #### Switching and session overrides
 

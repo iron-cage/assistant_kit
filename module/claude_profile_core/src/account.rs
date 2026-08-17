@@ -276,6 +276,74 @@ pub fn list( credential_store : &Path ) -> Result< Vec< Account >, std::io::Erro
   Ok( accounts )
 }
 
+/// Guard for the exclusive store-wide mutation lock; the lock releases on drop.
+///
+/// Returned by [`lock_store()`]. Holds the open lock-file descriptor — the kernel
+/// releases the `flock` automatically when the descriptor closes (drop, panic
+/// unwind, or process death), so a crashed holder can never wedge the store.
+#[ derive( Debug ) ]
+pub struct StoreLock
+{
+  _file : std::fs::File,
+}
+
+/// Take the exclusive cross-process mutation lock for `credential_store`.
+///
+/// Serializes the multi-file store mutations — `save()`, `switch_account()`,
+/// `delete()` — via a blocking exclusive `flock(2)` on `{store}/-store.lock`
+/// (hyphen prefix keeps the lock file out of the store's tracked git tree).
+/// Two concurrent switches, or a switch racing a save/delete, could otherwise
+/// interleave their credentials/marker/metadata writes and leave the `_active`
+/// marker naming one account while another account's credentials are live (each
+/// individual write is atomic, but the SEQUENCE was not); under the lock each
+/// mutation's whole file sequence lands before the next begins.
+///
+/// Blocks until the current holder (if any) releases. Advisory only: nothing
+/// stops a writer that bypasses this function, and `flock` semantics over NFS
+/// mounts are historically unreliable — the store is expected on local disk.
+/// The token refresh path deliberately does NOT hold this lock across its
+/// multi-second OAuth subprocess window; only its final store writes serialize,
+/// via the `save()` call inside — so its marker re-read guard (Fix(BUG-485))
+/// stays load-bearing rather than being subsumed by this lock.
+///
+/// On non-unix targets the lock file is created but no lock is taken.
+///
+/// # Errors
+///
+/// Returns an error if the store directory or lock file cannot be created, or
+/// the `flock` call itself fails.
+// `extern "C"` decl + unsafe call are scoped to this one fn — same idiom as the
+// signal-FFI in clp's usage/live.rs execute_live_mode() (workspace denies unsafe
+// globally; std's own File::lock would need MSRV 1.89 vs the declared 1.74).
+#[ inline ]
+#[ allow( unsafe_code ) ]
+pub fn lock_store( credential_store : &Path ) -> Result< StoreLock, std::io::Error >
+{
+  std::fs::create_dir_all( credential_store )?;
+  let file = std::fs::OpenOptions::new()
+    .create( true )
+    .write( true )
+    .truncate( false ) // a lock file's content is irrelevant — never disturb a held lock's file
+    .open( credential_store.join( "-store.lock" ) )?;
+  #[ cfg( unix ) ]
+  {
+    use std::os::raw::c_int;
+    use std::os::unix::io::AsRawFd as _;
+    extern "C"
+    {
+      fn flock( fd : c_int, operation : c_int ) -> c_int;
+    }
+    const LOCK_EX : c_int = 2;
+    // SAFETY: flock takes only an owned open fd and an integer op flag; no pointers cross.
+    let rc = unsafe { flock( file.as_raw_fd(), LOCK_EX ) };
+    if rc != 0
+    {
+      return Err( std::io::Error::last_os_error() );
+    }
+  }
+  Ok( StoreLock { _file : file } )
+}
+
 /// Save credentials as a named account in `credential_store`.
 ///
 /// Writes two files per account:
@@ -325,6 +393,8 @@ pub fn save(
   inference_provider : Option< &str >,
 ) -> Result< (), std::io::Error >
 {
+  // `_lock` must be a named binding — `let _ =` would drop (and release) immediately.
+  let _lock = lock_store( credential_store )?;
   validate_name_for_save( name, backend, credential_store )?;
   std::fs::create_dir_all( credential_store )?;
   let dest = credential_store.join( format!( "{name}.credentials.json" ) );
@@ -723,6 +793,8 @@ fn patch_live_state_after_switch( name : &str, credential_store : &Path, paths :
 #[ inline ]
 pub fn switch_account( name : &str, credential_store : &Path, paths : &ClaudePaths ) -> Result< (), std::io::Error >
 {
+  // `_lock` must be a named binding — `let _ =` would drop (and release) immediately.
+  let _lock = lock_store( credential_store )?;
   check_switch_preconditions( name, credential_store )?;
   let src = credential_store.join( format!( "{name}.credentials.json" ) );
 
@@ -986,6 +1058,8 @@ pub fn check_delete_preconditions( name : &str, credential_store : &Path ) -> Re
 #[ inline ]
 pub fn delete( name : &str, credential_store : &Path ) -> Result< (), std::io::Error >
 {
+  // `_lock` must be a named binding — `let _ =` would drop (and release) immediately.
+  let _lock = lock_store( credential_store )?;
   check_delete_preconditions( name, credential_store )?;
   std::fs::remove_file( credential_store.join( format!( "{name}.credentials.json" ) ) )?;
   let _ = std::fs::remove_file( credential_store.join( format!( "{name}.json" ) ) );
