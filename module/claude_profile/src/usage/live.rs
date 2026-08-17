@@ -61,7 +61,7 @@ pub( crate ) fn execute_live_mode(
   params           : &UsageParams,
 ) -> Result< OutputData, ErrorData >
 {
-  use std::os::raw::{ c_int, c_void };
+  use std::os::raw::c_int;
   use core::sync::atomic::Ordering;
   use std::time::{ SystemTime, UNIX_EPOCH };
   use std::io::Write;
@@ -69,10 +69,7 @@ pub( crate ) fn execute_live_mode(
   type SignalFn = extern "C" fn( c_int );
   extern "C"
   {
-    fn signal     ( signum : c_int, handler : SignalFn ) -> usize;
-    fn sigprocmask( how : c_int, set : *const c_void, oldset : *mut c_void ) -> c_int;
-    fn sigemptyset( set : *mut c_void ) -> c_int;
-    fn sigaddset  ( set : *mut c_void, signum : c_int ) -> c_int;
+    fn signal( signum : c_int, handler : SignalFn ) -> usize;
   }
 
   // Reset STOP_FLAG before registering the handler (safe across sequential test runs).
@@ -81,16 +78,44 @@ pub( crate ) fn execute_live_mode(
   // inherit this blocked mask.  A blocked signal is never delivered even with a registered
   // handler, so the STOP_FLAG is never set and the monitor loops forever.
   // Fix: explicitly unblock SIGINT before registering the handler.
-  // sigset_t on Linux = 128 bytes, represented as [u64; 16].
-  let mut sigset = [ 0u64; 16 ];
-  // SAFETY: `on_sigint` is a valid C-compatible function pointer.
-  //         `sigset` is zero-initialised and large enough for sigset_t on Linux.
-  unsafe
+  // Fix(audit-signal-ffi-linux-only): the mask block is cfg(target_os = "linux"), not cfg(unix).
+  // Root cause: sigset_t = 128 bytes ([u64; 16]) and SIG_UNBLOCK = 1 are Linux ABI values —
+  //   on macOS sigset_t is 4 bytes and SIG_UNBLOCK is 2, so `how = 1` means SIG_BLOCK there:
+  //   the call would BLOCK SIGINT, inverting the fix and making Ctrl-C undeliverable.
+  // Pitfall: raw POSIX FFI with numeric constants is per-OS ABI, not per-family; the plain
+  //   signal(2, handler) registration below is portable (SIGINT = 2 on all supported unix).
+  #[ cfg( target_os = "linux" ) ]
   {
-    sigemptyset( sigset.as_mut_ptr().cast::< c_void >() );
-    sigaddset  ( sigset.as_mut_ptr().cast::< c_void >(), 2 );  // 2 = SIGINT
-    sigprocmask( 1, sigset.as_ptr().cast::< c_void >(), core::ptr::null_mut() ); // 1 = SIG_UNBLOCK
-    signal( 2, on_sigint );
+    use std::os::raw::c_void;
+    extern "C"
+    {
+      fn sigprocmask( how : c_int, set : *const c_void, oldset : *mut c_void ) -> c_int;
+      fn sigemptyset( set : *mut c_void ) -> c_int;
+      fn sigaddset  ( set : *mut c_void, signum : c_int ) -> c_int;
+    }
+    // sigset_t on Linux = 128 bytes, represented as [u64; 16].
+    let mut sigset = [ 0u64; 16 ];
+    // SAFETY: `sigset` is zero-initialised and large enough for sigset_t on Linux.
+    unsafe
+    {
+      sigemptyset( sigset.as_mut_ptr().cast::< c_void >() );
+      sigaddset  ( sigset.as_mut_ptr().cast::< c_void >(), 2 );  // 2 = SIGINT
+      sigprocmask( 1, sigset.as_ptr().cast::< c_void >(), core::ptr::null_mut() ); // 1 = SIG_UNBLOCK
+    }
+  }
+  // SAFETY: `on_sigint` is a valid C-compatible fn pointer with the extern "C" fn(c_int) ABI.
+  let prev = unsafe { signal( 2, on_sigint ) };
+  // Fix(audit-signal-return-unchecked): SIG_ERR (-1, i.e. usize::MAX) means registration
+  //   failed; continuing would run an unstoppable loop with Ctrl-C never delivered.
+  // Root cause: the return value was discarded, silently degrading to an unkillable monitor.
+  // Pitfall: compare against usize::MAX (SIG_ERR), never 0 — 0 is SIG_DFL, the normal
+  //   previous-handler value.
+  if prev == usize::MAX
+  {
+    return Err( ErrorData::new(
+      unilang::data::ErrorCode::InternalError,
+      "failed to register SIGINT handler for live mode".to_string(),
+    ) );
   }
 
   loop

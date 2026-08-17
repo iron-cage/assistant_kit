@@ -207,7 +207,12 @@ pub fn jwt_exp_ms( creds_json : &str ) -> Option< u64 >
   let after     = &payload[ payload.find( needle )? + needle.len().. ];
   let digits_end = after.find( |c : char| !c.is_ascii_digit() ).unwrap_or( after.len() );
   let exp_secs : u64 = after[ ..digits_end ].parse().ok()?;
-  Some( exp_secs * 1000 )
+  // Fix(audit-exp-mul-overflow)
+  // Root cause: `exp_secs * 1000` on an attacker-controlled JWT `exp` overflows u64
+  //   (panic in debug builds, silent wrap in release) for values above u64::MAX / 1000.
+  // Pitfall: this parser runs on untrusted credential-file bytes — arithmetic on parsed
+  //   fields must be checked; None (treated as "no expiry info") is the safe degradation.
+  exp_secs.checked_mul( 1000 )
 }
 
 /// Escape a string for safe embedding inside a JSON string value.

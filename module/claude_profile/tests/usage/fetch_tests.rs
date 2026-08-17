@@ -358,6 +358,9 @@ fn test_mre_bug218_fetch_all_quota_no_duplicate_synthetic_row()
 /// Fix(BUG-296): match guard `Err( ref e ) if !e.contains("401") && !e.contains("403")`.
 /// Auth errors fall through to `Err( _ ) => ( result, false, None, None )` — `cached=false`,
 /// `aq.result` remains `Err`, enabling `should_refresh()` to trigger credential refresh.
+/// Fix(audit-bare-status-substring): guard later hardened to
+/// `!is_http_code( e, 401 ) && !is_http_code( e, 403 )` — anchored matching instead of
+/// bare substrings (see `format.rs::is_http_code`); the bypass semantics are unchanged.
 ///
 /// # Prevention
 /// Structural assertion: the guard pattern must appear in source before `read_quota_cache`.
@@ -374,7 +377,7 @@ fn mre_bug296_cached_non_expired_401_no_refresh()
   // AFTER it (not before) — there is another read_quota_cache call earlier in the file
   // (non-owned path), so we search within src[guard_pos..] to find the one in the error arm.
   let src = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/usage/fetch.rs" ) );
-  let guard_pos = src.find( r#"!e.contains( "401" ) && !e.contains( "403" )"# )
+  let guard_pos = src.find( "!is_http_code( e, 401 ) && !is_http_code( e, 403 )" )
     .expect(
       "BUG-296: auth-error guard not found in fetch.rs — \
        401/403 errors must bypass cache fallback via match guard",

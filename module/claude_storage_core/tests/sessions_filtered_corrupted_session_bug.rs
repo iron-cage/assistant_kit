@@ -35,9 +35,10 @@
 //! — each loop must be checked individually; a bare `?` in just one of several near-identical
 //! loops is easy to miss in review.
 
+use core::fmt::Write as _;
 use std::fs;
 use tempfile::TempDir;
-use claude_storage_core::{ Project, ProjectId, SessionFilter };
+use claude_storage_core::{ Project, ProjectId, Session, SessionFilter };
 
 /// Helper: create a project directory in `projects_dir`
 fn create_project( projects_dir : &std::path::Path, name : &str ) -> std::path::PathBuf
@@ -53,10 +54,12 @@ fn write_valid_session( project_dir : &std::path::Path, session_id : &str, n : u
   let mut content = String::new();
   for i in 0..n
   {
-    content.push_str( &format!(
+    writeln!
+    (
+      content,
       r#"{{"type":"user","message":{{"role":"user","content":"msg {i}"}},"timestamp":"2026-01-01T00:00:{i:02}Z"}}"#
-    ) );
-    content.push( '\n' );
+    )
+    .expect( "write to in-memory String cannot fail" );
   }
   let path = project_dir.join( format!( "{session_id}.jsonl" ) );
   fs::write( &path, content ).expect( "write valid session file" );
@@ -106,7 +109,7 @@ fn sessions_filtered_skips_corrupted_session_keeps_valid_ones()
     .expect( "BUG-492: one corrupted session must not abort filtering of the whole project" );
 
   assert_eq!( filtered.len(), 2, "should keep both valid sessions, skipping only the corrupted one" );
-  let ids : Vec< &str > = filtered.iter().map( | s | s.id() ).collect();
+  let ids : Vec< &str > = filtered.iter().map( Session::id ).collect();
   assert!( ids.contains( &"aaaaaaaa-0000-0000-0000-000000000001" ) );
   assert!( ids.contains( &"cccccccc-0000-0000-0000-000000000003" ) );
   assert!( !ids.contains( &"bbbbbbbb-0000-0000-0000-000000000002" ), "corrupted session must be excluded, not included" );

@@ -27,7 +27,8 @@ pub use super::render_tsv::render_tsv;
 /// the file is absent, or `HOME` cannot be resolved. Reads directly via
 /// `claude_core::toml_io`, structurally independent of `.provider.select`'s
 /// own routine (`commands::provider_select`) — the sole write path for this key.
-fn resolve_selected_provider() -> String
+/// Sole definition — `api.rs` imports it from here (was duplicated verbatim there).
+pub( crate ) fn resolve_selected_provider() -> String
 {
   std::env::var( "HOME" )
     .ok()
@@ -273,7 +274,13 @@ pub fn render_text(
   }
 
   let view  = builder.build_view();
-  let table = Format::format( &TableFormatter::with_config( TableConfig::default().with_auto_wrap( false ) ), &view ).unwrap_or_default();
+  // Fix(audit-silent-table-default)
+  // Root cause: .unwrap_or_default() swallowed formatter errors into an empty string —
+  //   the command printed a bare "Quota" header with no table and no explanation.
+  // Pitfall: this is a display path, not a data path — degrade to a visible error line,
+  //   never to silence and never to a panic.
+  let table = Format::format( &TableFormatter::with_config( TableConfig::default().with_auto_wrap( false ) ), &view )
+    .unwrap_or_else( | e | format!( "(table render error: {e})" ) );
   let body  = format!( "Quota\n\n{table}\n" );
 
   // Footer: shown only when ≥2 valid accounts (AC-10).
@@ -395,7 +402,18 @@ pub( crate ) fn render_plain(
 ) -> String
 {
   let raw = render_text( accounts, sort, desc, prefer, cols, session_model, session_effort, store_path, who, gate_ownership );
-  raw
+  apply_no_color( raw )
+}
+
+/// Strip emoji and replace status symbols with plain-text equivalents.
+///
+/// Replaces: `🟢`→`ok`, `🟡`→`warn`, `🔴`→`err`, `→`→`->`, `✓`→`*`.
+/// Sole definition — used by `render_plain` above and by `api.rs` for `no_color::1`
+/// (AC-14 / TSK-224); the two sites previously carried verbatim copies of the
+/// replacement chain (audit-no-color-dup).
+pub( crate ) fn apply_no_color( s : String ) -> String
+{
+  s
     .replace( "🟢", "ok" )
     .replace( "🟡", "warn" )
     .replace( "🔴", "err" )

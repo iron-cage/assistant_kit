@@ -97,12 +97,12 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | 025_per_machine_active_marker | [025_per_machine_active_marker.md](025_per_machine_active_marker.md) | FT-01 … FT-13 | ✅ |
 | 026_subprocess_model_effort | [026_subprocess_model_effort.md](026_subprocess_model_effort.md) | FT-01 … FT-31 | ✅ |
 | 027_account_use_post_switch_touch | [027_account_use_post_switch_touch.md](027_account_use_post_switch_touch.md) | FT-01 … FT-24 | ✅ |
-| 028_usage_row_filtering | [028_usage_row_filtering.md](028_usage_row_filtering.md) | FT-01 … FT-17 | ✅ |
+| 028_usage_row_filtering | [028_usage_row_filtering.md](028_usage_row_filtering.md) | FT-01 … FT-22 | ✅ |
 | 029_account_host_metadata | [029_account_host_metadata.md](029_account_host_metadata.md) | FT-01 … FT-10 | ✅ |
 | 030_account_renewal_override | [030_account_renewal_override.md](030_account_renewal_override.md) | FT-01 … FT-15 | ✅ |
 | 031_account_inspect | [031_account_inspect.md](031_account_inspect.md) | FT-01 … FT-31 | ✅ |
 | 032_account_assign | [032_account_assign.md](032_account_assign.md) | FT-01 … FT-13 | ✅ |
-| 033_quota_cache | [033_quota_cache.md](033_quota_cache.md) | FT-01 … FT-11 | ✅ |
+| 033_quota_cache | [033_quota_cache.md](033_quota_cache.md) | FT-01 … FT-15 | ✅ |
 | 034_explicit_session_model_override | [034_explicit_session_model_override.md](034_explicit_session_model_override.md) | FT-01 … FT-11 | ✅ |
 | 035_model_command | [035_model_command.md](035_model_command.md) | FT-01 … FT-12 | ✅ |
 | 036_account_ownership | [036_account_ownership.md](036_account_ownership.md) | FT-01 … FT-25 | ✅ |

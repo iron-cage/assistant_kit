@@ -325,9 +325,9 @@ pub( super ) fn find_session_mut< 'a >(
 /// # Errors
 ///
 /// Returns `ErrorData` when no non-agent session exists.
-pub( super ) fn most_recent_session_mut< 'a >(
-  sessions : &'a mut [ claude_storage_core::Session ],
-) -> core::result::Result< &'a mut claude_storage_core::Session, ErrorData >
+pub( super ) fn most_recent_session_mut(
+  sessions : &mut [ claude_storage_core::Session ],
+) -> core::result::Result< &mut claude_storage_core::Session, ErrorData >
 {
   let idx = sessions.iter()
     .enumerate()

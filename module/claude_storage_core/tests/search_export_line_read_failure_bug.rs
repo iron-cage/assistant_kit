@@ -25,9 +25,12 @@
 //!
 //! `search()`: changed `let line = line?;` to skip the unreadable line and continue (mirroring
 //! the `entry_index += 1; continue;` shape already used by this same function's other two
-//! skip-paths). `export_json()`: changed `.map_while( std::io::Result::ok )` to
-//! `.filter_map( std::io::Result::ok )` — `filter_map` omits `None`-producing elements without
-//! stopping the iterator, `map_while` stops at the first one.
+//! skip-paths). `export_json()`: replaced the `.map_while( std::io::Result::ok )` streaming read
+//! with one up-front `fs::read` of the whole file, split on `b'\n'`, each line converted via
+//! `String::from_utf8( ... ).ok()` — a real I/O error fails loudly once via `?`, while a line of
+//! invalid UTF-8 is skipped without stopping the iteration. (The intermediate
+//! `lines().filter_map( Result::ok )` form was rejected by `clippy::lines_filter_map_ok`: a
+//! repeated device-level read error never advances the reader, looping forever.)
 //!
 //! ## Prevention
 //!
@@ -38,10 +41,18 @@
 //! ## Pitfall
 //!
 //! `BufReader::lines()`'s `io::Result<String>` per line looks like a single opaque failure, but
-//! `map_while`/`?` treat it as fatal-for-the-whole-stream while `filter_map`/skip-and-continue
-//! treat it as fatal-for-just-that-line only — the iterator adaptor choice silently encodes a
-//! graceful-degradation policy decision; picking the wrong one (as both functions did) doesn't
-//! show up as a compile error or a clippy lint, only as data loss on real-world corrupted input.
+//! `map_while`/`?` treat it as fatal-for-the-whole-stream while skip-and-continue treats it as
+//! fatal-for-just-that-line only — the reader shape silently encodes a graceful-degradation
+//! policy decision; picking the truncating one (as both functions did) doesn't show up as a
+//! compile error or a clippy lint, only as data loss on real-world corrupted input. And the
+//! obvious streaming skip form, `lines().filter_map( Result::ok )`, is itself rejected by
+//! `clippy::lines_filter_map_ok` (repeated read errors never advance — infinite loop), which is
+//! why the final fix reads the whole file up front and degrades per line at UTF-8 conversion.
+
+// core::io::Cursor requires the unstable `core_io` feature (rust-lang/rust#154046) — not usable
+// on stable — and clippy's useless_attribute rejects an item-level allow on a `use`, so the
+// allow must be crate-level.
+#![ allow( clippy::std_instead_of_core ) ]
 
 use std::fs;
 use std::io::Cursor;

@@ -11,7 +11,7 @@ use unilang::data::{ ErrorCode, ErrorData, OutputData };
 use unilang::interpreter::ExecutionContext;
 use unilang::semantic::VerifiedCommand;
 use unilang::types::Value;
-use crate::output::{ OutputFormat, OutputOptions };
+use crate::output::{ OutputFormat, OutputOptions, json_escape };
 use super::cmd_context::require_credential_store;
 use super::account_inspect_render::extract_access_token;
 use super::cmd_args::io_err_to_error_data;
@@ -152,14 +152,19 @@ fn render_json( models : &[ &claude_quota::ModelInfo ] ) -> String
   for ( i, m ) in models.iter().enumerate()
   {
     if i > 0 { json.push( ',' ); }
-    let id_esc = escape_json_str( m.id );
-    let dn_esc = escape_json_str( m.display_name );
+    // Fix(audit-weak-json-escaper): use the canonical crate::output::json_escape.
+    // Root cause: a local escape_json_str handled only `"` and `\` — a display name
+    //   carrying a newline/tab would emit structurally invalid JSON.
+    // Pitfall: one escaper per crate; any new JSON emitter must reuse json_escape,
+    //   never grow its own subset copy.
+    let id_esc = json_escape( m.id );
+    let dn_esc = json_escape( m.display_name );
     write!( json, "{{\"id\":\"{id_esc}\",\"display_name\":\"{dn_esc}\"" ).unwrap();
     match m.created_at
     {
       Some( ca ) =>
       {
-        let ca_esc = escape_json_str( ca );
+        let ca_esc = json_escape( ca );
         write!( json, ",\"created_at\":\"{ca_esc}\"" ).unwrap();
       }
       None => json.push_str( ",\"created_at\":null" ),
@@ -178,29 +183,13 @@ fn render_json( models : &[ &claude_quota::ModelInfo ] ) -> String
     for ( j, cap ) in m.capabilities.iter().enumerate()
     {
       if j > 0 { json.push( ',' ); }
-      let cap_esc = escape_json_str( cap );
+      let cap_esc = json_escape( cap );
       write!( json, "\"{cap_esc}\"" ).unwrap();
     }
     json.push_str( "]}" );
   }
   json.push_str( "]\n" );
   json
-}
-
-/// Escape a string for embedding in a JSON string value (`"` → `\"`, `\` → `\\`).
-fn escape_json_str( s : &str ) -> String
-{
-  let mut out = String::with_capacity( s.len() );
-  for ch in s.chars()
-  {
-    match ch
-    {
-      '"'  => out.push_str( "\\\"" ),
-      '\\' => out.push_str( "\\\\" ),
-      _    => out.push( ch ),
-    }
-  }
-  out
 }
 
 /// Format a token count as a compact K string (e.g. `200_000` → "200K").

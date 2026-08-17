@@ -26,25 +26,33 @@ convention.
 
 ## What We Built
 
-A 13-crate layered Rust workspace:
+A 21-crate layered Rust workspace:
 
 ```
 Layer 3: assistant              Agent-agnostic super-app aggregating all CLI tools (ast)
+         assistant_kit          Agent-agnostic integration layer library
              ↓
 Layer 2: claude_profile  (clp)  Account management, token status, ~/.claude/ paths
          claude_storage  (clg)  CLI for exploring Claude Code session storage
          claude_runner   (clr)  Claude Code execution with session continuity
          claude_version  (clv)  Claude Code version manager
          claude_assets   (cla)  Install artifacts (rules, skills, commands) via symlinks
+         claude_journal_viewer (clj)  Journal viewer over claude_journal events
          dream                  Agent-agnostic library facade re-exporting all core crates
              ↓
 Layer 1: claude_profile_core    Token status + account domain logic
          claude_version_core    Version detection, settings domain helpers
          claude_runner_core     ClaudeCommand builder + single process execution point
          claude_assets_core     Symlink-based artifact installer domain logic
+         claude_journal_charts  Journal events → daily-usage SVG chart
              ↓
-Layer 0: claude_core          Shared primitives: ClaudePaths, process utilities
+Layer 0: claude_core            Shared primitives: ClaudePaths, process utilities
 *        claude_storage_core    Zero-dep JSONL parser for ~/.claude/
+*        claude_auth            Anthropic OAuth token refresh transport
+*        claude_quota           Anthropic API rate-limit HTTP transport
+*        claude_journal         Append-only event journal library
+*        json_redact            Sensitive-value redaction for strings and JSON
+*        svg_chart              Minimal SVG line/bar chart rendering
 ```
 
 ## Design Principles
@@ -63,7 +71,7 @@ must pass for the checkmark to stay.
 
 ## Current State
 
-13 crates. All pass L3 (nextest + doc tests + clippy, zero warnings).
+21 crates. All pass L3 (nextest + doc tests + clippy, zero warnings).
 
 Validated in production:
 - `claude_storage` parsing ~1,900 projects and 2,400 sessions (~7 GB of JSONL) in under
@@ -73,11 +81,12 @@ Validated in production:
 
 ## Open Problems
 
-- **Rotation automation:** A daemon watching `TokenStatus` and rotating accounts
-  automatically when `ExpiringSoon` fires — the piece that makes multi-subscription setups
-  truly seamless.
-- **Usage analytics:** Token spend by project, day, and conversation type built on the
-  existing `claude_storage_core` statistics.
+- **Rotation automation:** `clp .usage rotate::1` now selects and switches to the best
+  eligible account in one call; the remaining piece is a standing daemon that fires it on
+  expiry/exhaustion without a human in the loop.
+- **Usage analytics:** `claude_journal_charts` renders daily usage from journal events;
+  token spend by project, day, and conversation type built on the existing
+  `claude_storage_core` statistics is still open.
 - **Conversation replay:** The JSONL format is fully parsed — extraction, summarisation,
   and cross-session comparison are straightforward to build.
 - **CI integration:** `claude_runner` on pull requests as a structured code review step

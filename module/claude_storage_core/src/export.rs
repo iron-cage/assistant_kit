@@ -266,9 +266,6 @@ fn export_json< W : Write >
   writer : &mut W,
 ) -> Result< () >
 {
-  use std::io::{ BufRead, BufReader };
-  use std::fs::File as StdFile;
-
   let session_id = session.id().to_string();
   let storage_path = session.storage_path().to_path_buf();
   // Escape backslash and double-quote for embedding in a JSON string
@@ -285,11 +282,16 @@ fn export_json< W : Write >
   // Pitfall: `map_while` and `filter_map` both take a `T -> Option<U>` closure, but `map_while`
   //   terminates the iterator on the first `None` while `filter_map` only omits it and continues;
   //   picking the wrong adaptor silently encodes a truncate-on-first-failure policy instead of
-  //   skip-and-continue, with no compiler or clippy warning either way.
-  let file = StdFile::open( &storage_path )?;
-  let reader = BufReader::new( file );
-  let lines : Vec< String > = reader.lines()
-    .filter_map( std::io::Result::ok )
+  //   skip-and-continue, with no compiler or clippy warning either way. The follow-up
+  //   `lines().filter_map( Result::ok )` form tripped `clippy::lines_filter_map_ok` (a repeated
+  //   device-level read `Err` never advances, looping forever), so the whole file is read once
+  //   up front instead: a real I/O error now fails loudly via `?`, while per-line invalid UTF-8
+  //   keeps the BUG-494 skip-and-continue policy via byte-split + per-line conversion.
+  let bytes = std::fs::read( &storage_path )?;
+  let lines : Vec< String > = bytes
+    .split( | b | *b == b'\n' )
+    .map( | l | l.strip_suffix( b"\r" ).unwrap_or( l ) )
+    .filter_map( | l | String::from_utf8( l.to_vec() ).ok() )
     .filter( | l | !l.trim().is_empty() )
     .collect();
 
