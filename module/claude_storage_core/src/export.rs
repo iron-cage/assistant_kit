@@ -278,20 +278,26 @@ fn export_json< W : Write >
 
   // Collect JSONL lines from the session file
   //
-  // Fix(BUG-494)
+  // Fix(BUG-503)
   // Root cause: `.map_while( std::io::Result::ok )` stops the iterator entirely at the first
   //   unreadable (e.g. invalid-UTF-8) line, silently dropping every subsequent line too — not
   //   just the unreadable one — with no error or warning surfaced anywhere.
   // Pitfall: `map_while` and `filter_map` both take a `T -> Option<U>` closure, but `map_while`
   //   terminates the iterator on the first `None` while `filter_map` only omits it and continues;
   //   picking the wrong adaptor silently encodes a truncate-on-first-failure policy instead of
-  //   skip-and-continue, with no compiler or clippy warning either way.
+  //   skip-and-continue. `.filter_map( std::io::Result::ok )` itself trips clippy's
+  //   `lines_filter_map_ok` (its auto-fix suggests `map_while`, which is the very truncation bug
+  //   this fix removes) — a manual loop with `let Ok(line) = line else { continue; }` skips the
+  //   same way without matching that lint's pattern, and mirrors `Session::search()`'s loop shape.
   let file = StdFile::open( &storage_path )?;
   let reader = BufReader::new( file );
-  let lines : Vec< String > = reader.lines()
-    .filter_map( std::io::Result::ok )
-    .filter( | l | !l.trim().is_empty() )
-    .collect();
+  let mut lines : Vec< String > = Vec::new();
+  for line in reader.lines()
+  {
+    let Ok( line ) = line else { continue; };
+    if line.trim().is_empty() { continue; }
+    lines.push( line );
+  }
 
   // Emit a single compact JSON line so the output is simultaneously valid JSON
   // (export_json_basic checks `starts_with('{')` + `ends_with('}')` + field presence)

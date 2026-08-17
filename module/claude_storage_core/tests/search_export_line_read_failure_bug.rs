@@ -1,4 +1,4 @@
-//! Bug Reproducer (BUG-494): `Session::search()` and `export::export_json()` diverge from the
+//! Bug Reproducer (BUG-503): `Session::search()` and `export::export_json()` diverge from the
 //! established per-line graceful-degradation policy when a single JSONL line fails to decode
 //! as UTF-8 (e.g. a crash-truncated write leaving binary garbage mid-file)
 //!
@@ -42,6 +42,9 @@
 //! treat it as fatal-for-just-that-line only — the iterator adaptor choice silently encodes a
 //! graceful-degradation policy decision; picking the wrong one (as both functions did) doesn't
 //! show up as a compile error or a clippy lint, only as data loss on real-world corrupted input.
+
+// `core` has no `io` module — `Cursor`'s std::io::{Read,Write} impls require std; no core equivalent exists.
+#![ allow( clippy::std_instead_of_core ) ]
 
 use std::fs;
 use std::io::Cursor;
@@ -108,7 +111,7 @@ fn search_skips_line_with_invalid_utf8_and_finds_matches_around_it()
   // Before fix: Err( ... ) from the invalid-UTF-8 line, discarding the "before" match too.
   // After fix: Ok( 2 matches ), the bad line skipped, search continuing to the "after" entry.
   let matches = session.search( &filter )
-    .expect( "BUG-494: an unreadable line must not abort the whole search" );
+    .expect( "BUG-503: an unreadable line must not abort the whole search" );
 
   assert_eq!( matches.len(), 2, "should find matches both before and after the unreadable line" );
   assert!( matches.iter().any( | m | m.excerpt().contains( "before" ) ), "missing the pre-corruption match" );
@@ -142,6 +145,6 @@ fn export_json_includes_entries_after_invalid_utf8_line()
 
   // Before fix: only "marker before" appears — "marker after" silently truncated.
   // After fix: both appear, proving the bad line was skipped, not treated as end-of-stream.
-  assert!( result.contains( "marker before" ), "BUG-494: entry before the unreadable line must still be exported" );
-  assert!( result.contains( "marker after" ), "BUG-494: entry after the unreadable line must not be silently truncated" );
+  assert!( result.contains( "marker before" ), "BUG-503: entry before the unreadable line must still be exported" );
+  assert!( result.contains( "marker after" ), "BUG-503: entry after the unreadable line must not be silently truncated" );
 }

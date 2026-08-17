@@ -165,17 +165,28 @@ impl Session
   /// but aren't part of the conversation history we expose.
   fn load_entries( &mut self ) -> Result< ()>
   {
-    let content = fs::read_to_string( &self.storage_path )
+    use std::io::{ BufRead, BufReader };
+
+    let file = fs::File::open( &self.storage_path )
       .map_err( | e | Error::io
       (
         e,
         format!( "reading session file: {}", self.storage_path.display() )
       ))?;
+    let reader = BufReader::new( file );
 
     let mut entries = Vec::new();
 
-    for line in content.lines()
+    // Fix(BUG-504)
+    // Root cause: `fs::read_to_string()` validated UTF-8 across the WHOLE file in one pass, so a
+    //   single invalid-UTF-8 byte anywhere failed this function before any line was processed —
+    //   inconsistent with `search()`'s own per-line `BufReader::lines()` skip (BUG-503).
+    // Pitfall: `fs::read_to_string()` and `BufReader::lines()` both look like "read this JSONL
+    //   file," but only the latter validates UTF-8 per-line rather than across the whole buffer.
+    for line in reader.lines()
     {
+      let Ok( line ) = line else { continue; };
+
       if line.trim().is_empty()
       {
         continue; // Skip empty lines
@@ -183,7 +194,7 @@ impl Session
 
       // Try to parse as conversation entry; silently skip metadata entries
       // (queue-operation, summary, etc.) - graceful degradation, we only need conversation entries
-      if let Ok( entry ) = Entry::from_json_line( line )
+      if let Ok( entry ) = Entry::from_json_line( &line )
       {
         entries.push( entry );
       }
@@ -272,16 +283,26 @@ impl Session
   #[inline]
   pub fn count_entries( &self ) -> Result< usize >
   {
-    let content = fs::read_to_string( &self.storage_path )
+    use std::io::{ BufRead, BufReader };
+
+    let file = fs::File::open( &self.storage_path )
       .map_err( | e | Error::io
       (
         e,
         format!( "reading session file: {}", self.storage_path.display() )
       ))?;
+    let reader = BufReader::new( file );
 
     let mut count = 0usize;
-    for line in content.lines()
+    // Fix(BUG-504)
+    // Root cause: `fs::read_to_string()` validated UTF-8 across the WHOLE file in one pass, so a
+    //   single invalid-UTF-8 byte anywhere failed this function before any line was processed —
+    //   inconsistent with `search()`'s own per-line `BufReader::lines()` skip (BUG-503).
+    // Pitfall: `fs::read_to_string()` and `BufReader::lines()` both look like "read this JSONL
+    //   file," but only the latter validates UTF-8 per-line rather than across the whole buffer.
+    for line in reader.lines()
     {
+      let Ok( line ) = line else { continue; };
       let t = line.trim();
       if t.is_empty() { continue; }
 
@@ -383,21 +404,32 @@ impl Session
   pub fn stats( &mut self ) -> Result< SessionStats >
   {
     use crate::json::parse_json;
+    use std::io::{ BufRead, BufReader };
 
     let mut stats = SessionStats::new( self.id.as_str().to_string() );
     stats.is_agent_session = self.is_agent_session();
 
     // Read file content
-    let content = fs::read_to_string( &self.storage_path )
+    let file = fs::File::open( &self.storage_path )
       .map_err( | e | Error::io
       (
         e,
         format!( "reading session file: {}", self.storage_path.display() )
       ))?;
+    let reader = BufReader::new( file );
 
     // Process each line
-    for line in content.lines()
+    // Fix(BUG-504)
+    // Root cause: `fs::read_to_string()` validated UTF-8 across the WHOLE file in one pass, so a
+    //   single invalid-UTF-8 byte anywhere failed this function before any line was processed —
+    //   BUG-489's fix below already skips a per-line JSON *parse* failure, but that never covered
+    //   this earlier read/decode layer.
+    // Pitfall: fixing one failure layer of a per-line loop (parse) does not imply an earlier layer
+    //   (read/decode) is also fixed — each must be swapped to a per-line-fallible strategy on its own.
+    for line in reader.lines()
     {
+      let Ok( line ) = line else { continue; };
+
       if line.trim().is_empty()
       {
         continue;
@@ -411,7 +443,7 @@ impl Session
       // Pitfall: sibling functions reading the same JSONL data must handle malformed input the same
       //   way — one graceful, one hard-failing creates command-dependent brittleness where `.tail`
       //   (`load_entries()`) succeeds on a file that `.show`/`.export` (`stats()`) reject outright.
-      let Ok( json ) = parse_json( line ) else { continue; };
+      let Ok( json ) = parse_json( &line ) else { continue; };
 
       // Extract type - only count conversation entries, skip metadata entries
       // In Claude Code v2.0+, the top-level "type" field indicates entry type ("user" or "assistant")
@@ -594,7 +626,7 @@ impl Session
 
     for line in reader.lines()
     {
-      // Fix(BUG-494)
+      // Fix(BUG-503)
       // Root cause: `let line = line?;` hard-propagated a single unreadable (e.g. invalid-UTF-8)
       //   line's error through `?`, discarding every match already collected for this session —
       //   inconsistent with this same loop's own `Entry::from_json_line` skip a few lines below.
