@@ -427,11 +427,11 @@ impl Project
   ///
   /// Returns error if the project directory cannot be read. A session that fails its
   /// own filter check (e.g. its JSONL file is corrupted or unreadable) is skipped with
-  /// a `Warning:` printed to stderr — see `Fix(BUG-492)` below — matching the graceful
+  /// a `Warning:` printed to stderr — see `Fix(BUG-506)` below — matching the graceful
   /// per-session degradation already used by [`Self::sessions`], [`Self::all_sessions`],
   /// and [`Self::project_stats`] in this same file.
   ///
-  /// Fix(BUG-492): Skip a session whose `matches_filter()` call errors, instead of
+  /// Fix(BUG-506): Skip a session whose `matches_filter()` call errors, instead of
   /// aborting the whole loop via `?`.
   ///
   /// Root cause: `session.matches_filter( filter )?` hard-propagated any error from

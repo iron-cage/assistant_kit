@@ -177,7 +177,7 @@ impl Session
 
     let mut entries = Vec::new();
 
-    // Fix(BUG-504)
+    // Fix(BUG-508)
     // Root cause: `fs::read_to_string()` validated UTF-8 across the WHOLE file in one pass, so a
     //   single invalid-UTF-8 byte anywhere failed this function before any line was processed —
     //   inconsistent with `search()`'s own per-line `BufReader::lines()` skip (BUG-503).
@@ -294,7 +294,7 @@ impl Session
     let reader = BufReader::new( file );
 
     let mut count = 0usize;
-    // Fix(BUG-504)
+    // Fix(BUG-508)
     // Root cause: `fs::read_to_string()` validated UTF-8 across the WHOLE file in one pass, so a
     //   single invalid-UTF-8 byte anywhere failed this function before any line was processed —
     //   inconsistent with `search()`'s own per-line `BufReader::lines()` skip (BUG-503).
@@ -419,7 +419,7 @@ impl Session
     let reader = BufReader::new( file );
 
     // Process each line
-    // Fix(BUG-504)
+    // Fix(BUG-508)
     // Root cause: `fs::read_to_string()` validated UTF-8 across the WHOLE file in one pass, so a
     //   single invalid-UTF-8 byte anywhere failed this function before any line was processed —
     //   BUG-489's fix below already skips a per-line JSON *parse* failure, but that never covered

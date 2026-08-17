@@ -1,4 +1,4 @@
-//! Bug Reproducer (BUG-492): `Project::sessions_filtered()` discarded an entire project's
+//! Bug Reproducer (BUG-506): `Project::sessions_filtered()` discarded an entire project's
 //! filtered session list when just one session's JSONL file was corrupted/unreadable
 //!
 //! ## Root Cause
@@ -106,7 +106,7 @@ fn sessions_filtered_skips_corrupted_session_keeps_valid_ones()
   // discarding both valid sessions.
   // After fix: Ok( vec![ 2 valid sessions ] ), corrupted session skipped with a warning.
   let filtered = project.sessions_filtered( &filter )
-    .expect( "BUG-492: one corrupted session must not abort filtering of the whole project" );
+    .expect( "BUG-506: one corrupted session must not abort filtering of the whole project" );
 
   assert_eq!( filtered.len(), 2, "should keep both valid sessions, skipping only the corrupted one" );
   let ids : Vec< &str > = filtered.iter().map( Session::id ).collect();
@@ -142,7 +142,7 @@ fn sessions_filtered_all_corrupted_returns_empty_not_err()
   };
 
   let filtered = project.sessions_filtered( &filter )
-    .expect( "BUG-492: an all-corrupted project must return Ok(empty), not Err" );
+    .expect( "BUG-506: an all-corrupted project must return Ok(empty), not Err" );
 
   assert!( filtered.is_empty(), "no sessions should match when every session is corrupted" );
 }

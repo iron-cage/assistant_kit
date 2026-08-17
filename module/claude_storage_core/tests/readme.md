@@ -27,7 +27,7 @@ tests/
 ├── path_decoding_hyphen_component_bug.rs  # Bug reproducer: hyphen-prefixed component decoding
 ├── path_encoding_double_slash_bug.rs      # Bug reproducer: double-slash from lossy encoding
 ├── search.rs                              # Content search integration tests
-├── sessions_filtered_corrupted_session_bug.rs # Bug Reproducer (BUG-492): sessions_filtered() discarded project on one corrupted session
+├── sessions_filtered_corrupted_session_bug.rs # Bug Reproducer (BUG-506): sessions_filtered() discarded project on one corrupted session
 ├── stats_malformed_line_bug.rs            # Bug Reproducer (BUG-489): stats() hard-fail on malformed line
 ├── status_global_stats_fast_bug.rs        # Bug Reproducer (issue-015): global_stats() performance
 ├── string_matcher.rs                      # StringMatcher unit tests (case-insensitive matching)
@@ -50,7 +50,7 @@ tests/
 | `path_decoding_hyphen_component_bug.rs` | Reproduce and verify fix for hyphen component decode |
 | `path_encoding_double_slash_bug.rs` | Reproduce and verify fix for lossy path encoding |
 | `search.rs` | Content search across sessions integration tests |
-| `sessions_filtered_corrupted_session_bug.rs` | Lock in that one corrupted session must not discard a project's other valid sessions; regression guard for BUG-492 |
+| `sessions_filtered_corrupted_session_bug.rs` | Lock in that one corrupted session must not discard a project's other valid sessions; regression guard for BUG-506 |
 | `stats_malformed_line_bug.rs` | Reproduce and verify fix for stats() hard-fail on malformed JSONL line |
 | `status_global_stats_fast_bug.rs` | Reproduce and verify fix for global_stats() performance bug |
 | `string_matcher.rs` | Unit tests for StringMatcher case-insensitive substring matching |
@@ -300,7 +300,7 @@ cargo nextest run --all-features -- --include-ignored
 - **Fix**: Corrected the doc comment to describe only the actual filename-based check; no code logic changed — the implementation already matched the canonical algorithm (`docs/algorithm/001_agent_session_tracking.md`), which keeps filename-based `is_agent_session` and entry-based `is_agent_entry` deliberately separate
 - **Root Cause**: The doc comment (present since the initial commit) described an aspirational second signal that was never implemented and never matched the canonical algorithm doc
 
-### BUG-492: sessions_filtered() Discarded an Entire Project's Session List on One Corrupted Session
+### BUG-506: sessions_filtered() Discarded an Entire Project's Session List on One Corrupted Session
 - **File**: `sessions_filtered_corrupted_session_bug.rs`
 - **Component**: `src/project.rs::sessions_filtered()`
 - **Issue**: `session.matches_filter( filter )?` hard-propagated a `Session::count_entries()` failure (e.g. a crash-truncated JSONL file failing UTF-8 validation) from `matches_filter()`'s `min_entries` branch, discarding every already-collected valid session in the project — not just the corrupted one
