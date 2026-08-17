@@ -130,7 +130,7 @@ behave consistently and interact correctly across all four commands.
 - **Then:** Each output contains `CLAUDE_CODE_AUTO_COMPACT_WINDOW=300000`
 - **Exit:** 0
 - **Note:** lim_it for isolated/refresh — requires credentials file to exist (content irrelevant for dry-run)
-- **Source:** [param_group/06_running_commands.md](../../../../docs/cli/param_group/06_running_commands.md), [env_param.md](../../../../docs/cli/env_param.md)
+- **Source:** [param_group/06_running_commands.md](../../../../docs/cli/param_group/06_running_commands.md), [003_env_param.md](../../../../docs/cli/003_env_param.md)
 - **Commands:** run, ask, isolated, refresh
 
 ---
@@ -174,7 +174,7 @@ behave consistently and interact correctly across all four commands.
 - **When:** `CLR_NO_COMPACT_WINDOW=1 clr --dry-run "test" 2>&1`
 - **Then:** output does NOT contain `CLAUDE_CODE_AUTO_COMPACT_WINDOW`; identical suppression to using `--no-compact-window` flag
 - **Exit:** 0
-- **Source:** [param_group/06_running_commands.md](../../../../docs/cli/param_group/06_running_commands.md), [env_param.md](../../../../docs/cli/env_param.md)
+- **Source:** [param_group/06_running_commands.md](../../../../docs/cli/param_group/06_running_commands.md), [003_env_param.md](../../../../docs/cli/003_env_param.md)
 - **Commands:** run
 
 ---

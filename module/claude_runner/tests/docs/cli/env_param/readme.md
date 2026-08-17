@@ -7,7 +7,7 @@
 - **In Scope**: All clr env parameter edge case entries (CLR_* input vars + subprocess-injected vars).
 - **Out of Scope**: Command-level tests (→ `command/`), parameter edge cases (→ `param/`).
 
-Per-env-parameter edge case indices for `clr`. See [env_param.md](../../../../docs/cli/env_param.md) for specification.
+Per-env-parameter edge case indices for `clr`. See [003_env_param.md](../../../../docs/cli/003_env_param.md) for specification.
 
 ### Responsibility Table
 

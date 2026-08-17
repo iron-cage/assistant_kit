@@ -137,7 +137,7 @@ clr --model sonnet --dry-run "task"  # CLI wins; config value ignored
 ```
 
 Use `--dry-run` or `--trace` to see effective values after every tier has applied. Full reference:
-[docs/cli/env_param.md](docs/cli/env_param.md), [docs/cli/config_param.md](docs/cli/config_param.md),
+[docs/cli/003_env_param.md](docs/cli/003_env_param.md), [docs/cli/config_param.md](docs/cli/config_param.md),
 [docs/feature/004_json_config.md](docs/feature/004_json_config.md).
 
 ### Files

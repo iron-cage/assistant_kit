@@ -479,11 +479,3 @@ CLR_QUERY_DIR=/tmp/my-test-query-dir clr query "task" &
 and dispatch forms, plus the liveness watchdog's socket cleanup).
 
 **No precedence rule** — always applied; there is no corresponding CLI flag or JSON key.
-
----
-
-### Provenance
-
-| File | Notes |
-|------|-------|
-| [../env_param.md](env_param.md) | Original un-migrated source; retained as reference |

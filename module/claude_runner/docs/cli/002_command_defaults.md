@@ -117,9 +117,3 @@ Execute the given task immediately and exit.
 | source | `module/claude_runner_core/src/command/mod.rs` | `ClaudeCommand::new()` defaults (chrome, tokens, env vars) |
 | param | `param/036_timeout.md` | `--timeout` semantics for run/ask |
 | param | `param/022_no_persist.md` | `--no-persist` / `--no-session-persistence` for run/ask |
-
-### Provenance
-
-| File | Notes |
-|------|-------|
-| [../command_defaults.md](command_defaults.md) | Original un-migrated source; retained as reference |

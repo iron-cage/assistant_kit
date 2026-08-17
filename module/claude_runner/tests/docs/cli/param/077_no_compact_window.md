@@ -88,7 +88,7 @@ Edge case tests for the `--no-compact-window` flag, which suppresses injection o
 - **When:** `CLR_NO_COMPACT_WINDOW=1 clr --dry-run "test" 2>&1`
 - **Then:** output does NOT contain `CLAUDE_CODE_AUTO_COMPACT_WINDOW`; identical to passing `--no-compact-window`
 - **Exit:** 0
-- **Source:** [param/077_no_compact_window.md](../../../../docs/cli/param/077_no_compact_window.md), [env_param.md](../../../../docs/cli/env_param.md)
+- **Source:** [param/077_no_compact_window.md](../../../../docs/cli/param/077_no_compact_window.md), [003_env_param.md](../../../../docs/cli/003_env_param.md)
 
 ---
 
