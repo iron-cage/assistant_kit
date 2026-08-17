@@ -74,8 +74,9 @@ pass --max-sessions 0 to disable the gate) (exit 1)"`. This check is skipped ent
 **Note:** This gate-wait ceiling is independent of `--timeout` only when no timeout is
 expressed. An *expressed* `--timeout N` (flag or applied `CLR_TIMEOUT`) defaults the
 gate-wait budget to `N` seconds when `CLR_REMAINING_TIMEOUT_SECS` is absent or unparseable
-(BUG-445; a parseable env var wins, and the built-in defaults — 3600 s print, 30 s
-`isolated` — never reach the gate). See [036_timeout.md](036_timeout.md) and
+(BUG-445; a parseable env var wins, and the built-in defaults — 30 s `isolated`, and
+print-mode's, 3600 s then and 0 since TSK-503 — never reach the gate). See
+[036_timeout.md](036_timeout.md) and
 [085_gate_remaining_timeout_secs.md](085_gate_remaining_timeout_secs.md).
 
 **Note:** In `--dry-run` mode, the session gate is not triggered — the command preview

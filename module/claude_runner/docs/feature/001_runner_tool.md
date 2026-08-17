@@ -126,7 +126,7 @@ not an error. Unknown arguments exit 1. See [cli/command/08_tools.md](../cli/com
 | [invariant/004_trace_universality.md](../invariant/004_trace_universality.md) | --trace applies to all executing subcommands |
 | [invariant/005_isolated_subprocess_defaults.md](../invariant/005_isolated_subprocess_defaults.md) | Isolated subprocess model, effort, and flag defaults |
 | [invariant/006_exit_codes.md](../invariant/006_exit_codes.md) | Exit code semantics (0-4, 128+signal) |
-| [invariant/007_print_mode_timeout.md](../invariant/007_print_mode_timeout.md) | Print-mode default timeout (3600s) vs interactive (unlimited) |
+| [invariant/007_print_mode_timeout.md](../invariant/007_print_mode_timeout.md) | No built-in session timeout — watchdog only when `--timeout`/`CLR_TIMEOUT` expressed (TSK-503) |
 | [invariant/008_render_summary_gate.md](../invariant/008_render_summary_gate.md) | `render_summary()` must gate on `"type":"result"`; optional fields use `.unwrap_or_default()` |
 | [invariant/009_session_mismatch_detection.md](../invariant/009_session_mismatch_detection.md) | Diagnostic warning when `-c` resumes a different session than expected |
 | [invariant/010_container_only_test_execution.md](../invariant/010_container_only_test_execution.md) | All tests run inside runbox container; host-native execution is a hard error |

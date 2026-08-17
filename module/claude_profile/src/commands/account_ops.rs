@@ -184,14 +184,12 @@ fn check_expiry_and_refresh(
   let cred_path = credential_store.join( format!( "{name}.credentials.json" ) );
   let Ok( cred_str ) = std::fs::read_to_string( &cred_path )
   else { return crate::usage::PreSwitchOutcome::Unavailable };
-  let needle     = "\"expiresAt\":";
-  let expires_ms = cred_str.find( needle ).and_then( | pos |
-  {
-    let rest = cred_str[ pos + needle.len().. ].trim_start();
-    let end  = rest.find( | c : char | !c.is_ascii_digit() ).unwrap_or( rest.len() );
-    rest[ ..end ].parse::< u64 >().ok()
-  } );
-  let Some( exp_ms ) = expires_ms
+  // Fix(audit-inline-expiry-parse): delegate to the canonical key-bound parser.
+  // Root cause: a verbatim copy of parse_u64_field's needle/trim/digit-run algorithm
+  //   lived inline here — claude_profile_core::token::parse_expires_at already binds
+  //   that parser to the "expiresAt" key.
+  // Pitfall: the value is milliseconds (as stored in credentials JSON), not seconds.
+  let Some( exp_ms ) = claude_profile_core::token::parse_expires_at( &cred_str )
   else { return crate::usage::PreSwitchOutcome::Unavailable };
   use std::time::{ SystemTime, UNIX_EPOCH };
   let now_ms = u64::try_from(

@@ -653,9 +653,10 @@ fn effective_gate_attempts( max_attempts : u32, poll_secs : u64, caller_timeout_
   // expressing `--timeout N` as a total budget got zero gate-wait protection
   // (watchdog.sh health probes stalled 9697s/272s/903s against 60s).
   // Pitfall: only EXPRESSED timeouts may default the budget — the built-in
-  // defaults (isolated 30s, print-mode 3600s) must never reach this fallback,
-  // or every default invocation flips from queue-patiently (~8.3h ceiling) to
-  // fail-fast. The state string names the source so env-vs-flag budgets stay
+  // defaults (isolated 30s; print-mode's is 0 since TSK-503, but the
+  // _CLR_DEFAULT_TIMEOUT test hook can still arm one) must never reach this
+  // fallback, or a default invocation flips from queue-patiently (~8.3h
+  // ceiling) to fail-fast. The state string names the source so env-vs-flag budgets stay
   // distinguishable; an unparseable env value masked by the fallback is still
   // reported (BUG-481's misconfiguration-visibility invariant).
   let raw      = std::env::var( "CLR_REMAINING_TIMEOUT_SECS" ).ok();

@@ -27,6 +27,7 @@
 //! See BUG-323 for the full investigation history.
 
 use super::types::AccountQuota;
+use super::format::is_http_code;
 
 // ── Refresh predicate ─────────────────────────────────────────────────────────
 
@@ -59,7 +60,12 @@ pub fn should_refresh( aq : &AccountQuota, now_secs : u64 ) -> bool
   // Pitfall: is_owned and is_occupied_elsewhere are independent flags; both can be true simultaneously.
   if !aq.is_owned || aq.is_occupied_elsewhere { return false; }
 
-  if matches!( aq.result, Err( ref e ) if e.contains( "401" ) || e.contains( "403" ) )
+  // Fix(audit-bare-status-substring): anchored is_http_code() replaces bare contains("401").
+  // Root cause: substring matching false-matched any digit run containing the code
+  //   (byte counts, field names, timestamps) — see format.rs::is_http_code.
+  // Pitfall: three emit forms must all stay matched — bare "401" (api_switch sentinel),
+  //   "HTTP 401" (typed HttpStatus), "HTTP transport error: HTTP 401" (legacy persisted).
+  if matches!( aq.result, Err( ref e ) if is_http_code( e, 401 ) || is_http_code( e, 403 ) )
   {
     return true;
   }
@@ -79,7 +85,7 @@ pub fn should_refresh( aq : &AccountQuota, now_secs : u64 ) -> bool
   //   file may be stale — the token may need refreshing despite the 429 response.
   // Pitfall: don't refresh ALL 429 accounts (as task 142 did) — that adds a
   //   pointless 30-second wait for valid-but-rate-limited accounts.
-  if matches!( aq.result, Err( ref e ) if e.contains( "429" ) )
+  if matches!( aq.result, Err( ref e ) if is_http_code( e, 429 ) )
     && ( aq.expires_at_ms / 1000 ) <= now_secs
   {
     return true;

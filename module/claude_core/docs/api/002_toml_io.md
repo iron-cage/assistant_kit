@@ -4,7 +4,7 @@
 
 - **Purpose**: Document the programmatic interface of the claude_core `toml_io` module.
 - **Responsibility**: Specify the tiered (project + user) flat-TOML key-value read/write contract.
-- **In Scope**: `get_tiered`, `set_user_tier`.
+- **In Scope**: `get_tiered`, `set_user_tier`, `remove_user_tier`.
 - **Out of Scope**: Path resolution (→ `paths` module, undocumented at this level), process utilities (→ `process` module, undocumented at this level), flat-JSON KV I/O (→ `settings_io` module, `001_settings_io.md`).
 
 ### Abstract
@@ -21,14 +21,18 @@ Returns a key's string value, checking `project_path` first (if given) then `use
 
 Writes (or updates) a single key in the user-tier file, creating the file if absent. Every other key's raw value text is preserved unchanged, regardless of its type. Atomic write.
 
+#### `remove_user_tier(user_path: &Path, key: &str) -> Result<(), io::Error>`
+
+Removes a single key from the user-tier file. Every other key's raw value text is preserved unchanged. No-op (no write, no file created) if the key or the file itself is absent — mirrors `settings_io::remove_setting`'s idempotent-reset semantics. Consumers: `.model reset_model::`/`reset_effort_level::` and `.provider.select reset::`. Atomic write.
+
 ### Error Handling
 
-`get_tiered` never returns an `Err` — any read failure (missing file, permission error, malformed line) is treated as "no value found" for that tier, consistent with the tiered-lookup contract's `Option<String>` return type. `set_user_tier` returns `Result<(), io::Error>`; a missing file is treated as an empty starting state rather than erroring, and the write itself fails loudly if the atomic rename cannot complete.
+`get_tiered` never returns an `Err` — any read failure (missing file, permission error, malformed line) is treated as "no value found" for that tier, consistent with the tiered-lookup contract's `Option<String>` return type. `set_user_tier` and `remove_user_tier` return `Result<(), io::Error>`; a missing file is treated as an empty starting state (for removal: a no-op success) rather than erroring, and the write itself fails loudly if the atomic rename cannot complete.
 
 ### Compatibility Guarantees
 
 - `get_tiered` always prefers `project_path` over `user_path` when both provide a value for the same key.
-- `set_user_tier` never alters any key other than the one targeted — sibling keys' raw text (including comments-adjacent formatting quirks aside) survive read-modify-write byte-for-byte.
+- `set_user_tier` and `remove_user_tier` never alter any key other than the one targeted — sibling keys' raw text (including comments-adjacent formatting quirks aside) survive read-modify-write byte-for-byte.
 - Only plain double-quoted string values are ever returned by `get_tiered`; every other TOML value type is preserved on write but never surfaced as a string.
 
 ### Sources

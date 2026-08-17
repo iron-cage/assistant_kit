@@ -10,7 +10,7 @@ use unilang::interpreter::ExecutionContext;
 use unilang::semantic::VerifiedCommand;
 use super::types::UsageOutputFormat;
 use super::fetch::fetch_quota_for_list;
-use super::render::{ render_text, render_json, render_tsv, render_plain, extract_get_field };
+use super::render::{ render_text, render_json, render_tsv, render_plain, extract_get_field, resolve_selected_provider, apply_no_color };
 use super::live::execute_live_mode;
 use super::refresh::apply_refresh;
 use super::touch::{ apply_touch, derive_touched_recently };
@@ -27,39 +27,6 @@ pub use super::api_switch::{
   apply_post_switch_touch,
 };
 
-
-// ── no_color post-processor ────────────────────────────────────────────────────
-
-/// Strip emoji and replace status symbols with plain-text equivalents.
-///
-/// Replaces: `🟢`→`ok`, `🟡`→`warn`, `🔴`→`err`, `→`→`->`, `✓`→`*`.
-/// Used when `no_color::1` is set (AC-14 / TSK-224).
-fn apply_no_color( s : String ) -> String
-{
-  s
-    .replace( "🟢", "ok" )
-    .replace( "🟡", "warn" )
-    .replace( "🔴", "err" )
-    .replace( '→', "->" )
-    .replace( '✓', "*" )
-}
-
-
-// ── Provider resolution ────────────────────────────────────────────────────────
-
-/// Resolve the globally selected inference provider from `~/.clr/config.toml`'s
-/// user tier for Gate 10 (Feature 072) — defaults to `"anthropic"` when unset,
-/// the file is absent, or `HOME` cannot be resolved. Reads directly via
-/// `claude_core::toml_io`, structurally independent of `.provider.select`'s
-/// own routine (`commands::provider_select`) — the sole write path for this key.
-fn resolve_selected_provider() -> String
-{
-  std::env::var( "HOME" )
-    .ok()
-    .map( |home| std::path::PathBuf::from( home ).join( ".clr" ).join( "config.toml" ) )
-    .and_then( |path| claude_core::toml_io::get_tiered( None, &path, "provider" ) )
-    .unwrap_or_else( || "anthropic".to_string() )
-}
 
 // ── Main routine ──────────────────────────────────────────────────────────────
 
@@ -368,9 +335,19 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
     // Pitfall: do NOT call switch_account again — it re-writes _active marker and patches
     //   .claude.json redundantly; a targeted credential file copy suffices.
     let src_cred = credential_store.join( format!( "{winner_name}.credentials.json" ) );
-    let _ = std::fs::copy( &src_cred, claude_paths.credentials_file() );
+    // Fix(audit-silent-resync): surface a failed live-credential re-sync instead of
+    //   swallowing it with `let _`.
+    // Root cause: a failed copy left possibly server-invalidated credentials live while
+    //   the command still reported plain success — the degraded state was invisible.
+    // Pitfall: don't hard-fail — the switch itself already succeeded and the next client
+    //   call recovers via its own 401-refresh path; warn so the state is visible.
+    let resync_note = match std::fs::copy( &src_cred, claude_paths.credentials_file() )
+    {
+      Ok( _ ) => String::new(),
+      Err( e ) => format!( "warning: live credential re-sync failed ({e}); live token may be stale until next refresh\n" ),
+    };
 
-    let msg = format!( "{content}\nswitched to '{winner_name}'\n" );
+    let msg = format!( "{content}\nswitched to '{winner_name}'\n{resync_note}" );
     return Ok( OutputData::new( msg, "text" ) );
   }
 

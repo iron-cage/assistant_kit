@@ -27,7 +27,7 @@ Filter candidates for next-account recommendation and auto-switch. An account is
 | 3 | Occupied | `is_occupied_elsewhere = true` | `sort_next.rs:28` |
 | 3b | Cancelled | `billing_type = "none"` | `sort_next.rs:29` |
 | 4 | Error | `result = Err(...)` | `sort_next.rs:30` |
-| 5 | h-exhausted | `five_hour.utilization >= 85.0` (≤ 15% left) | `sort_next.rs:30` |
+| 5 | h-exhausted | `five_hour_left( aq ) <= H_EXHAUSTED_THRESHOLD` (rounded left ≤ 15%; audit-h-exhaustion-drift — formerly raw `utilization >= 85.0`) | `sort_next.rs:47` |
 | 6 | Expired | `expires_at_ms / 1000 ≤ now_secs` | `sort_next.rs:31` |
 | 7 | Weekly-exhausted | `seven_day_left(aq) ≤ WEEKLY_EXHAUSTION_THRESHOLD` | `sort_next.rs:59` (extra) |
 | 8 | Foreign-owned | `is_owned = false AND gate_ownership = true` | `sort_next.rs:59` (extra) |

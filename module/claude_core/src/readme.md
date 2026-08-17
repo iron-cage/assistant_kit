@@ -7,6 +7,7 @@ Source code for the `claude_core` crate.
 | File | Responsibility |
 |------|----------------|
 | `lib.rs` | Crate root; module declarations and `ClaudePaths` re-export |
+| `file_io.rs` | Atomic file replacement (unique temp + rename, `0o600` secret mode) and trace redaction |
 | `paths.rs` | `ClaudePaths`: all canonical `~/.claude/` paths derived from `HOME` |
 | `process.rs` | `/proc`-based Claude process enumeration and signal sending |
 | `settings_io.rs` | Atomic read/write of flat-JSON key-value files; type inference |

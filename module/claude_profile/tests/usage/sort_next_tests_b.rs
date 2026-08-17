@@ -462,8 +462,9 @@ fn mre_bug317_cancelled_not_recommended_by_find_next()
 
 /// GAP-8 — `find_first_eligible` gate 4 fires at exactly `five_hour.utilization = 85.0`.
 ///
-/// Gate 4: `data.five_hour.as_ref().is_some_and(|p| p.utilization >= 85.0)` → skip.
-/// At exactly 85.0, the condition `>= 85.0` is satisfied → account is excluded.
+/// Gate 4: `five_hour_left( aq ) <= H_EXHAUSTED_THRESHOLD` → skip
+/// (audit-h-exhaustion-drift; formerly raw `utilization >= 85.0`).
+/// At exactly 85.0, `five_hour_left = 15.0 <= 15.0` is satisfied → account is excluded.
 /// All three strategies must skip this account → `find_next_for_strategy` returns `None`.
 #[ test ]
 fn mre_bug_gap8_find_first_eligible_at_exactly_85_utilization()
@@ -476,7 +477,51 @@ fn mre_bug_gap8_find_first_eligible_at_exactly_85_utilization()
     let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, false, "anthropic" );
     assert!(
       result.is_none(),
-      "{strategy:?}: account with five_hour.utilization=85.0 must be skipped by gate 4 (>= 85.0); got: {result:?}",
+      "{strategy:?}: account with five_hour.utilization=85.0 must be skipped by gate 4 (five_hour_left <= 15.0); got: {result:?}",
+    );
+  }
+}
+
+/// Gate 4 rounds before comparing — utilization 84.6 (displays as "15% left") is skipped,
+/// 84.4 (displays as "16% left") stays eligible.
+///
+/// # Root Cause
+/// Gate 4 compared raw `utilization >= 85.0`, duplicating the threshold complement as a
+/// literal and skipping the BUG-331/BUG-336 round-before-compare doctrine. An account at
+/// 84.6% renders `five_hour_left = (100 - 84.6).round() = 15` — h-exhausted in every
+/// display and in `sort.rs:51` — yet stayed eligible for the next-account recommendation.
+///
+/// # Why Not Caught
+/// GAP-8 pinned only the exact-85.0 boundary, where raw and rounded comparisons agree;
+/// no test carried a fractional utilization inside the 84.5..85.0 divergence window.
+///
+/// # Fix Applied
+/// Fix(audit-h-exhaustion-drift): gate 4 is now `five_hour_left( aq ) <= H_EXHAUSTED_THRESHOLD`
+/// — the same rounded accessor and named constant as display and `sort.rs:51`.
+///
+/// # Prevention
+/// Eligibility and display must round the same value against the same named constant;
+/// never re-derive a threshold complement as a raw literal.
+///
+/// # Pitfall
+/// The divergence window is fractional-only and exclusive: 84.5 < util < 85.0. Both
+/// endpoints agree under either comparison — 84.5 rounds to 16% left (round half
+/// away from zero) and 85.0 fails both — so integer-utilization tests can never catch it.
+#[ test ]
+fn gate4_rounds_before_comparing_fractional_boundary()
+{
+  let now = 0u64;
+  // 84.6 → five_hour_left = 15.4.round() = 15.0 → 15.0 <= 15.0 → SKIPPED (was eligible pre-fix).
+  let displayed_exhausted = mk_aq_sort( "aaa@test.com", 84.6, FAR_FUTURE_MS );
+  // 84.4 → five_hour_left = 15.6.round() = 16.0 → 16.0 > 15.0 → still eligible.
+  let displayed_ok        = mk_aq_sort( "bbb@test.com", 84.4, FAR_FUTURE_MS );
+  let accounts = vec![ displayed_exhausted, displayed_ok ];
+  for strategy in [ SortStrategy::Renew, SortStrategy::Name, SortStrategy::Renews ]
+  {
+    let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, false, "anthropic" );
+    assert_eq!(
+      result, Some( 1 ),
+      "{strategy:?}: 84.6% (rounds to 15% left) must be skipped, 84.4% (16% left) must win; got: {result:?}",
     );
   }
 }

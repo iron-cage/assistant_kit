@@ -12,7 +12,7 @@
 ### Why NOT X
 
 - `--creds`: exclusive to credential ops; sets credentials file — not applicable to `run`
-- `--timeout`: cross-command like `--trace` — also consumed by `run`/`ask` (default 3600s there); listed here for its credential-op-specific defaults (30s `isolated`, 45s `refresh`)
+- `--timeout`: cross-command like `--trace` — also consumed by `run`/`ask` (default 0 = unlimited there since TSK-503); listed here for its credential-op-specific defaults (30s `isolated`, 45s `refresh`)
 - `--trace`: also in Runner Control (Group 2) for `run`; listed here because it applies to credential ops too
 
 ### Invariants

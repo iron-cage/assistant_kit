@@ -113,6 +113,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Touch-flag cache writes routed to the credential store** (BUG-488)
+  - `apply_post_switch_touch` wrote `last_touch_at`/`touch_idle` to `~/.claude/{name}.json`
+    (`paths.base()`) while the sole reader (`touch_skip_reason`) reads the credential store —
+    the BUG-288-FixB skip guard could never fire and `.usage` re-touched fresh-switched accounts
+  - Both writes now go through `touch::mark_touched( credential_store, name )`
+
 - **Account switching and credential integrity** (BUG-174, 209, 211–213, 217, 219, 254, 277, 282, 285)
   - `switch_account()` wholesale overwrite of `~/.claude.json` replaced with surgical JSON-merge
     preserving global config keys (BUG-174); stale `emailAddress` and org fields no longer

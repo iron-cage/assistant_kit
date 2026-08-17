@@ -131,13 +131,19 @@ fn date_to_unix( year : u64, month : u64, day : u64 ) -> u64
 /// Returns `None` on parse failure or year before 1970.
 fn parse_iso_secs( s : &str ) -> Option< u64 >
 {
-  if s.len() < 19 { return None; }
-  let year  : u64 = s[ 0..4   ].parse().ok()?;
-  let month : u64 = s[ 5..7   ].parse().ok()?;
-  let day   : u64 = s[ 8..10  ].parse().ok()?;
-  let hour  : u64 = s[ 11..13 ].parse().ok()?;
-  let min   : u64 = s[ 14..16 ].parse().ok()?;
-  let sec   : u64 = s[ 17..19 ].parse().ok()?;
+  // Fix(audit-iso-char-boundary): `.get(range)` instead of `s[range]` — indexing panics
+  //   when a slice boundary lands inside a multi-byte UTF-8 character.
+  // Root cause: the old `len() < 19` guard checked byte count, not boundary validity —
+  //   a timestamp-like string with a multi-byte char (e.g. fullwidth digits) passed the
+  //   guard and panicked at the first mid-char boundary.
+  // Pitfall: every fixed-position field needs its own guarded slice; `.get` also covers
+  //   the too-short case, so no separate length precheck is needed.
+  let year  : u64 = s.get( 0..4   )?.parse().ok()?;
+  let month : u64 = s.get( 5..7   )?.parse().ok()?;
+  let day   : u64 = s.get( 8..10  )?.parse().ok()?;
+  let hour  : u64 = s.get( 11..13 )?.parse().ok()?;
+  let min   : u64 = s.get( 14..16 )?.parse().ok()?;
+  let sec   : u64 = s.get( 17..19 )?.parse().ok()?;
   if year < 1970 || month == 0 || month > 12 || day == 0 || day > 31 { return None; }
   Some( date_to_unix( year, month, day ) + hour * 3_600 + min * 60 + sec )
 }
@@ -189,8 +195,8 @@ pub fn renewal_secs(
   }
   if let Some( org_created_at ) = org_created_at_opt
   {
-    if org_created_at.len() < 10 { return None; }
-    let billing_day : u64 = org_created_at[ 8..10 ].parse().ok()?;
+    // .get: same char-boundary guard as parse_iso_secs — indexing would panic mid-char.
+    let billing_day : u64 = org_created_at.get( 8..10 )?.parse().ok()?;
     if billing_day == 0 || billing_day > 31 { return None; }
     let ( year, month, day ) = unix_to_date( now_secs );
     let ( renewal_year, renewal_month ) = if billing_day > day
@@ -358,6 +364,35 @@ pub fn shorten_error( reason : &str ) -> &str
   }
 }
 
+/// Return `true` when the error string `e` denotes the HTTP status `code`.
+///
+/// Accepted forms (the only forms quota error strings carry):
+/// - the bare sentinel — the whole string is exactly the code (`"401"`), emitted by
+///   `api_switch.rs` for synthetic placeholder rows;
+/// - `"HTTP NNN"` at any position with a non-digit (or end-of-string) boundary after
+///   the code — covers the typed `QuotaError::HttpStatus` Display form and the legacy
+///   `"HTTP transport error: HTTP NNN"` form persisted in older cache reasons.
+// Fix(audit-bare-status-substring): anchored matching replaces bare `e.contains( "401" )`.
+// Root cause: a bare substring check false-matches any digit run containing the code —
+//   "read 14290 bytes", "field '4013'", an epoch timestamp — misclassifying transport
+//   errors as auth/rate-limit failures in should_refresh and the fetch cache-fallback guard.
+// Pitfall: the boundary check is one-sided by design — "HTTP 1401" cannot contain
+//   "HTTP 401" (the space anchors the left edge), so only the trailing digit needs testing.
+#[ must_use ]
+pub fn is_http_code( e : &str, code : u16 ) -> bool
+{
+  if e.parse::< u16 >().ok() == Some( code ) { return true; }
+  let needle = format!( "HTTP {code}" );
+  let mut rest = e;
+  while let Some( pos ) = rest.find( &needle )
+  {
+    let after = &rest[ pos + needle.len().. ];
+    if !after.starts_with( | c : char | c.is_ascii_digit() ) { return true; }
+    rest = after;
+  }
+  false
+}
+
 // ── Quota left helpers ────────────────────────────────────────────────────────
 
 /// Return `5h Left` as a percentage for sorting purposes.
@@ -409,7 +444,8 @@ pub fn seven_day_left( aq : &AccountQuota ) -> f64
 /// - `Any`    → `min(seven_day_left, 100.0 - sonnet.utilization)` when `Some`; else `seven_day_left`.
 /// - `Err(_)` result → `(-1.0, 0.0)`.
 ///
-/// Fix(BUG Phase-2): old `prefer_weekly` used `map_or(0.0, ...)` for Sonnet utilization —
+/// Fix(BUG-489, shipped in feature-039 Phase-2, commit 5c5815c2): old `prefer_weekly`
+///   used `map_or(0.0, ...)` for Sonnet utilization —
 ///   when `seven_day_sonnet = None`, `100.0 - 0.0 = 100.0`, silently inflating the quota
 ///   and making accounts with absent Sonnet tiers appear fully eligible under `prefer::son`.
 /// Root cause: `map_or(0.0, ...)` is correct for DISPLAY (absent = show nothing / 0% label)

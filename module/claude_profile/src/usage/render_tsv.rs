@@ -109,9 +109,15 @@ pub fn render_tsv(
       {
         // Plain percentage cells (no emoji prefix).
         let dash     = "\u{2014}".to_string();
+        // Fix(audit-tsv-round-divergence)
+        // Root cause: bare "{:.0}" formatting rounds half-to-even (16.5 → "16") while the
+        //   canonical accessors round half-away via .round() (BUG-331/BUG-336 doctrine), so
+        //   the TSV percentage could disagree with the text table by 1% at *.5 values.
+        // Pitfall: .round() first, then the now-exact "{:.0}" — never let the format string
+        //   perform the rounding.
         let pct_bare = |util : Option< f64 >| -> String
         {
-          util.map_or_else( || dash.clone(), |u| format!( "{:.0}%", 100.0 - u ) )
+          util.map_or_else( || dash.clone(), |u| format!( "{:.0}%", ( 100.0 - u ).round() ) )
         };
         let cells = quota_text_cells( data, now_secs );
         // cells[0] = "🟢 88%" — strip emoji; use bare pct_bare instead.

@@ -243,8 +243,9 @@ pub( super ) fn run_built_command(
     // Fix(BUG-445): `cli.timeout` is `Some` only when expressed (--timeout flag
     // or CLR_TIMEOUT env, env.rs fallback) — `is_some()` marks expression for
     // the exposure note, and `unwrap_or( 0 )` maps both unexpressed (None) and
-    // the explicit `--timeout 0` opt-out to 0 = no gate-budget fallback, so the
-    // built-in 3600s print default never reaches the gate.
+    // the explicit `--timeout 0` opt-out to 0 = no gate-budget fallback, so a
+    // built-in print default never reaches the gate (moot in production since
+    // TSK-503 zeroed that default, but the shield still guards the test hook).
     // Root cause: the gate call carried no timeout input at all — gate-wait's
     // only timing signal was the opt-in CLR_REMAINING_TIMEOUT_SECS env var.
     // Pitfall: pass the EXPRESSED value, never the effective default — see

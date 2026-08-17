@@ -638,3 +638,91 @@ fn mre_bug303_should_refresh_false_for_occupied_elsewhere()
      credential mutation while another machine uses this account would invalidate its live session",
   );
 }
+
+// ── audit-bare-status-substring: anchored HTTP-code matching ──────────────────
+
+/// Build an owned, non-occupied `AccountQuota` with the given error and expiry for
+/// the anchored-matching tests below.
+fn err_aq( reason : &str, expires_at_ms : u64 ) -> AccountQuota
+{
+  AccountQuota
+  {
+    fallback_reason : None,
+    touched_recently : false,
+    name                  : "a@test.com".to_string(),
+    is_current            : false,
+    is_active             : false,
+    is_occupied_elsewhere : false,
+    expires_at_ms,
+    result                : Err( reason.to_string() ),
+    account               : None,
+    host                  : String::new(),
+    role                  : String::new(),
+    renewal_at            : None,
+    cached                : false,
+    cache_age_secs        : None,
+    org_created_at        : None,
+    is_owned              : true,
+    owner                 : String::new(),
+    claim_lock : false, reserve : false,
+    inference_provider : String::new(),
+  }
+}
+
+/// SR-12 — the bare `"401"` sentinel (whole string is exactly the code) triggers refresh.
+///
+/// `api_switch.rs` synthesizes placeholder rows with `result = Err( "401".to_string() )`;
+/// anchored matching must keep accepting this exact-string form alongside `"HTTP 401"`.
+#[ test ]
+fn sr12_bare_sentinel_401_triggers_refresh()
+{
+  let aq = err_aq( "401", FAR_FUTURE_MS );
+  assert!( should_refresh( &aq, 0 ), "SR-12: bare \"401\" sentinel must trigger refresh" );
+}
+
+/// SR-13 — a digit run containing "429" inside transport prose must NOT trigger refresh.
+///
+/// # Root Cause
+/// `should_refresh` used bare `e.contains( "429" )` (and `"401"`/`"403"`), so any error
+/// string with the code embedded in a longer digit run — byte counts, field names,
+/// epoch timestamps — was misclassified as a rate-limit (or auth) failure.
+///
+/// # Why Not Caught
+/// All prior tests used clean `"HTTP transport error: HTTP 429"` literals, which pass
+/// under both bare-substring and anchored matching; no test carried a hostile digit run.
+///
+/// # Fix Applied
+/// Fix(audit-bare-status-substring): `format.rs::is_http_code` — the whole string must be
+/// exactly the code (bare sentinel) or contain `"HTTP NNN"` with a non-digit boundary
+/// after the code. Both `should_refresh` arms and the `fetch.rs` cache-fallback guard use it.
+///
+/// # Prevention
+/// Match status codes only via `is_http_code`; never bare `contains` on a code substring.
+///
+/// # Pitfall
+/// This input plus an expired token hit the 429+expired arm under the old code — a
+/// transport error would have triggered a pointless ~30 s refresh subprocess per poll.
+#[ test ]
+fn sr13_digit_run_containing_429_must_not_trigger()
+{
+  // Expired token: under bare matching the "429"+expired arm would fire.
+  let aq = err_aq( "HTTP transport error: read 14290 bytes then connection reset", 0 );
+  assert!(
+    !should_refresh( &aq, 9_999 ),
+    "SR-13: '14290' contains '429' but is not an HTTP 429 — must not trigger refresh",
+  );
+}
+
+/// SR-14 — `"HTTP 4013"` does not match code 401 (trailing-digit boundary).
+///
+/// Companion to SR-13: the anchored form itself needs a boundary check — `"HTTP 4013"`
+/// starts with `"HTTP 401"` but denotes a different (hypothetical) code, not 401.
+#[ test ]
+fn sr14_http_4013_is_not_401()
+{
+  let aq = err_aq( "HTTP transport error: HTTP 4013", FAR_FUTURE_MS );
+  assert!(
+    !should_refresh( &aq, 0 ),
+    "SR-14: 'HTTP 4013' must not match 401 — trailing digit breaks the boundary",
+  );
+}

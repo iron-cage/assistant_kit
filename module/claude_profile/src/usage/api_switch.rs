@@ -75,6 +75,52 @@ pub fn validate_effort_str( s : &str ) -> Result< (), String >
   SubprocessEffort::parse( s ).map( |_| () )
 }
 
+// ── Minimal resolution stub ───────────────────────────────────────────────────
+
+/// Build the minimal `AccountQuota` used solely to reuse `resolve_model()`'s
+/// auto-selection logic — every field except `name`/`result` is a neutral default.
+// Fix(audit-aq-literal-dup)
+// Root cause: attempt_expired_token_refresh and apply_post_switch_touch each carried a
+//   verbatim 19-field AccountQuota literal differing only in `result`; any field added
+//   to the struct forced both copies to be edited in lockstep.
+// Pitfall: this is a model-resolution stub, not real fetch data — never let it leak
+//   into rendering or eligibility paths.
+fn minimal_resolution_aq( name : &str, result : Result< OauthUsageData, String > ) -> AccountQuota
+{
+  AccountQuota
+  {
+    fallback_reason : None,
+    touched_recently : false,
+    name                 : name.to_string(),
+    is_current           : false,
+    is_active            : false,
+    is_occupied_elsewhere : false,
+    expires_at_ms        : 0,
+    result,
+    account              : None,
+    host                 : String::new(),
+    role                 : String::new(),
+    renewal_at           : None,
+    cached               : false,
+    cache_age_secs       : None,
+    org_created_at       : None,
+    is_owned             : true,
+    owner                : String::new(),
+    claim_lock           : false,
+    reserve              : false,
+    inference_provider   : String::new(),
+  }
+}
+
+/// Rounded Sonnet-tier remaining percentage — the one value both the override branch
+/// comparison and the trace text consume (BUG-331 round-before-compare doctrine).
+/// Sole definition — `model_override_direction` and `apply_model_override` previously
+/// carried the expression verbatim (audit-sonnet-left-dup).
+fn sonnet_left_pct( sonnet : &claude_quota::PeriodUsage ) -> f64
+{
+  ( 100.0 - sonnet.utilization ).round()
+}
+
 // ── Expired-token refresh helper ──────────────────────────────────────────────
 
 /// Attempt OAuth token refresh for a locally-expired account credential.
@@ -103,31 +149,8 @@ pub fn attempt_expired_token_refresh(
 {
   let imodel    = SubprocessModel::parse( imodel_str ).unwrap_or( SubprocessModel::Auto );
   let effort    = SubprocessEffort::parse( effort_str ).unwrap_or( SubprocessEffort::Auto );
-  // Build a minimal AccountQuota for model resolution.
   // result=Err("401") drives auto model selection to Opus (conservative when no quota data).
-  let aq        = AccountQuota
-  {
-    fallback_reason : None,
-    touched_recently : false,
-    name                 : name.to_string(),
-    is_current           : false,
-    is_active            : false,
-    is_occupied_elsewhere : false,
-    expires_at_ms        : 0,
-    result               : Err( "401".to_string() ),
-    account              : None,
-    host                 : String::new(),
-    role                 : String::new(),
-    renewal_at           : None,
-    cached               : false,
-    cache_age_secs       : None,
-    org_created_at       : None,
-    is_owned             : true,
-    owner                : String::new(),
-    claim_lock           : false,
-    reserve              : false,
-    inference_provider   : String::new(),
-  };
+  let aq        = minimal_resolution_aq( name, Err( "401".to_string() ) );
   let model     = super::subprocess::resolve_model( &aq, imodel );
   let pre_args  = super::subprocess::effort_pre_args( &model, effort );
   crate::account::refresh_account_token(
@@ -233,7 +256,7 @@ pub fn pre_switch_touch_ctx(
 pub fn model_override_direction( quota : &OauthUsageData ) -> Option< &'static str >
 {
   let sonnet = quota.seven_day_sonnet.as_ref()?;
-  let sonnet_left = ( 100.0 - sonnet.utilization ).round();
+  let sonnet_left = sonnet_left_pct( sonnet );
   if sonnet_left < OPUS_OVERRIDE_THRESHOLD
   {
     Some( "sonnet→opus" )
@@ -291,7 +314,7 @@ pub fn apply_model_override(
     //   Pitfall: always round once and reuse the rounded value for both the branch comparison
     //   and the trace text; never compare a raw float against a threshold when the log shows
     //   a rounded value derived from the same float.
-    let sonnet_left = ( 100.0 - sonnet.utilization ).round();
+    let sonnet_left = sonnet_left_pct( sonnet );
     if sonnet_left < OPUS_OVERRIDE_THRESHOLD
     {
       let overrode = crate::account::override_session_model_to_opus( paths );
@@ -377,30 +400,7 @@ pub fn apply_post_switch_touch(
   // Pitfall: always apply quota-aware model override AFTER restoring the snapshot model;
   //   snapshot model is stale by definition.
   apply_model_override( &ctx.quota, paths, trace, "account.use", name, read_backend( credential_store, name ) );
-  // Build a minimal AccountQuota to reuse the existing resolve_model() path.
-  let aq = AccountQuota
-  {
-    fallback_reason : None,
-    touched_recently : false,
-    name                 : name.to_string(),
-    is_current           : false,
-    is_active            : false,
-    is_occupied_elsewhere : false,
-    expires_at_ms        : 0,
-    result               : Ok( ctx.quota ),
-    account              : None,
-    host                 : String::new(),
-    role                 : String::new(),
-    renewal_at           : None,
-    cached               : false,
-    cache_age_secs       : None,
-    org_created_at       : None,
-    is_owned             : true,
-    owner                : String::new(),
-    claim_lock           : false,
-    reserve              : false,
-    inference_provider   : String::new(),
-  };
+  let aq           = minimal_resolution_aq( name, Ok( ctx.quota ) );
   let model        = resolve_model( &aq, imodel );
   let effort_val   = resolve_effort( &model, effort );
   let model_str    = match &model
@@ -419,9 +419,18 @@ pub fn apply_post_switch_touch(
   // refresh_account_token internally appends ["--print", "."] and applies:
   //   - expiresAt=1 manipulation (Feature 017 AC-32): forces RT rotation on every call
   //   - live credential sync for current account (Feature 017 AC-33): avoids redundant subprocess
-  let _ = crate::account::refresh_account_token(
+  let refreshed = crate::account::refresh_account_token(
     name, credential_store, Some( paths ), trace, "account.use", model, &extra_pre_args,
   );
+  // Fix(audit-discarded-refresh)
+  // Root cause: the Option result was discarded with `let _` — a failed touch/refresh
+  //   (subprocess died, credential file unwritable) left no signal even under trace::1.
+  // Pitfall: this path stays best-effort by design (the switch already happened) —
+  //   surface the failure, never abort the switch for it.
+  if refreshed.is_none() && trace
+  {
+    eprintln!( "{}account.use  {name}  subprocess: refresh_account_token failed (no credential rotation)", trace_ts() );
+  }
   // Persist touch timestamp + touch_idle flag to cache (Feature 033 AC-06).
   // Fix(BUG-488): these flags went to paths.base() (~/.claude/{name}.json) — a file the
   //   sole reader (touch_skip_reason, keyed on the credential store) never opens, so the

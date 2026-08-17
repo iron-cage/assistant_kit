@@ -41,7 +41,8 @@ by zero (BUG-481); the floor affects the quotient only, never the actual sleep c
 
 **Note — `--timeout` fallback (BUG-445):** When `CLR_REMAINING_TIMEOUT_SECS` does not parse
 (absent or non-numeric) but the caller *expressed* a finite timeout (`--timeout` flag or an
-applied `CLR_TIMEOUT` — never the built-in 3600 s print / 30 s `isolated` defaults, and not an
+applied `CLR_TIMEOUT` — never the built-in defaults (30 s `isolated`; print's was 3600 s,
+0 since TSK-503), and not an
 explicit `--timeout 0` opt-out), that value defaults the budget with identical clamp
 mechanics. A parseable `CLR_REMAINING_TIMEOUT_SECS` always wins — it is the per-dispatch
 coupling signal; the flag is its fallback. Verify precedence:

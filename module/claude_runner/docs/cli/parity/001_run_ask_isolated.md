@@ -48,7 +48,7 @@
 | `--dry-run` preview | Yes | Yes | Yes |
 | `--trace` | Yes | Yes | Yes |
 | **--- Timeout ---** | | | |
-| Default timeout (print mode) | `3600 s` (`DEFAULT_PRINT_TIMEOUT_SECS`) | `3600 s` | `30 s` |
+| Default timeout (print mode) | `0` = unlimited (`DEFAULT_PRINT_TIMEOUT_SECS = 0`, TSK-503) | `0` = unlimited | `30 s` |
 | Default timeout (interactive / no-message) | `0` (unlimited) | `0` (unlimited) | `0` (unlimited when no message) |
 | `--timeout 0` = unlimited | Yes | Yes | Yes |
 | Exit code on timeout | `4` (CLR watchdog) | `4` | `2` — unless creds refreshed before timeout -> `0` |

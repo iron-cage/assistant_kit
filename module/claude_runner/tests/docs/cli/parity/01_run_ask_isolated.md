@@ -12,7 +12,7 @@ Cross-command behavioral parity test planning for `clr run`, `clr ask`, and `clr
 | PC-2 | ask carries through all common run flags unchanged (--effort, --model, --subdir) | Param Surface Parity |
 | PC-3 | isolated injects hardcoded model (opus); run/ask inject no model by default | Model Injection Divergence |
 | PC-4 | isolated creates a fresh temp HOME; run/ask execute in real `$HOME` | HOME Divergence |
-| PC-5 | isolated print-mode timeout is 30 s; run/ask print-mode timeout is 3600 s | Timeout Divergence |
+| PC-5 | isolated print-mode timeout is 30 s; run/ask default is 0 = unlimited (TSK-503) | Timeout Divergence |
 
 ## Test Coverage Summary
 
@@ -70,11 +70,11 @@ Cross-command behavioral parity test planning for `clr run`, `clr ask`, and `clr
 
 ---
 
-### PC-5: isolated print-mode timeout is 30 s; run print-mode timeout is 3600 s
+### PC-5: isolated print-mode timeout is 30 s; run's default is 0 = unlimited
 
 - **Given:** clr binary; valid credentials file; `--trace` flag
 - **When:** `clr isolated --creds <f> --trace "x"` (trace shows timeout in header)
-- **Then:** isolated trace header shows `# timeout: 30s`; run's watchdog default for print mode is `3600 s` (per `DEFAULT_PRINT_TIMEOUT_SECS` constant)
+- **Then:** isolated trace header shows `# timeout: 30s`; run's print-mode default is `0` = unlimited (per `DEFAULT_PRINT_TIMEOUT_SECS = 0`, TSK-503 — a run/ask watchdog exists only when expressed)
 - **Exit:** 1 (claude absent)
 - **Source:** [parity/001_run_ask_isolated.md](../../../../docs/cli/parity/001_run_ask_isolated.md), [param/020_timeout.md](../../../../docs/cli/param/020_timeout.md)
 - **Implemented by:** `param_trace_edge_cases_test.rs::s58_isolated_trace_credential_format`
