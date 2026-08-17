@@ -4,7 +4,7 @@
 
 - **Purpose**: Test cases for `.usage` row filtering, pagination, threshold filters, and value extraction via `get::`.
 - **Source**: `docs/feature/028_usage_row_filtering.md`
-- **Covers**: AC-01 through AC-17
+- **Covers**: AC-01 through AC-22
 
 Feature behavioral requirement test cases for `docs/feature/028_usage_row_filtering.md`. Each FT case maps to one acceptance criterion.
 
@@ -29,6 +29,11 @@ Feature behavioral requirement test cases for `docs/feature/028_usage_row_filter
 | FT-15 | Invalid `get::` field ID exits 1 listing valid IDs | AC-15 | Validation |
 | FT-16 | Filters compose with `sort::`, `prefer::`, `cols::` | AC-16 | Composability |
 | FT-17 | `only_active::1` performs exactly 1 HTTP fetch on N-account store | AC-17 | Pipeline-Constraint |
+| FT-18 | `stalest::K` selects the K oldest-cache accounts; all N rows render | AC-18 | Pre-Fetch Reducer |
+| FT-19 | `max_age::S` eligibility threshold; fully-fresh fleet fetches nothing | AC-19 | Pre-Fetch Reducer |
+| FT-20 | `stalest::0` and standalone `max_age::` exit 1 pre-HTTP | AC-20 | Validation |
+| FT-21 | `stalest::K only_active::1` exits 1 — mutually exclusive reducers | AC-21 | Validation |
+| FT-22 | `rotate::1` bypasses the reducer (full-fleet fetch) | AC-22 | Pre-Fetch Reducer |
 
 ### Test Case Index
 
@@ -51,8 +56,13 @@ Feature behavioral requirement test cases for `docs/feature/028_usage_row_filter
 | FT-15 | Invalid get:: field ID rejected | AC-15 | Validation |
 | FT-16 | Filters compose with sort/prefer/cols | AC-16 | Composability |
 | FT-17 | only_active::1 performs exactly 1 HTTP fetch (N-account store) | AC-17 | Pipeline-Constraint |
+| FT-18 | stalest::K selection: K oldest, missing cache oldest, list-order ties, full-fleet rows | AC-18 | Pre-Fetch Reducer |
+| FT-19 | max_age::S drain: oldest-first eligibility, empty set when fleet fresh | AC-19 | Pre-Fetch Reducer |
+| FT-20 | stalest::0 / negative / standalone max_age:: rejected | AC-20 | Validation |
+| FT-21 | stalest + only_active mutual exclusion | AC-21 | Validation |
+| FT-22 | rotate::1 bypasses reduction predicate | AC-22 | Pre-Fetch Reducer |
 
-**Total:** 17 FT cases
+**Total:** 22 FT cases
 
 ---
 
@@ -255,3 +265,63 @@ Feature behavioral requirement test cases for `docs/feature/028_usage_row_filter
 - **Live:** yes
 - **Source fn:** `it_ft028_17_only_active_single_http_fetch` (in `usage_solo_test.rs`)
 - **Source:** [feature/028_usage_row_filtering.md AC-17](../../../docs/feature/028_usage_row_filtering.md)
+
+---
+
+### FT-18: `stalest::K` selects the K oldest-cache accounts; all N rows render
+
+- **Given:** N-account store with per-account quota cache `fetched_at` timestamps of varying age; one account cacheless; two accounts with equal timestamps.
+- **When:** `select_stalest( accounts, store, K, 0, now )` runs, and the fetch layer receives the resulting subset.
+- **Then:** Exactly the K oldest-cache accounts are selected — a missing cache ranks oldest, equal ages tie-break by original list order, K > fleet selects all. Non-selected accounts still render rows (from cache via `approximate_quota()`); no row is removed.
+- **Exit:** n/a (library-level; deterministic tempdir store)
+- **Live:** no
+- **Source fn:** `selection_picks_k_oldest`, `selection_missing_cache_ranks_oldest`, `selection_tie_breaks_by_list_order`, `selection_k_exceeding_fleet_selects_all`, `fetch_subset_preserves_full_fleet_rows` (in `usage/stalest_tests.rs`)
+- **Source:** [feature/028_usage_row_filtering.md AC-18](../../../docs/feature/028_usage_row_filtering.md)
+
+---
+
+### FT-19: `max_age::S` eligibility threshold; fully-fresh fleet fetches nothing
+
+- **Given:** Four accounts with cache ages 3.0 h / 2.5 h / 2.2 h / 10 m against a 7200 s threshold; winners re-marked fresh between calls (as a successful fetch would).
+- **When:** `select_stalest( accounts, store, 1, 7200, now )` runs repeatedly.
+- **Then:** Successive calls drain oldest-first (3.0 h, then 2.5 h, then 2.2 h); the under-threshold account is never selected; once every cache is fresher than S the selection is empty — zero fetch-eligible accounts. Non-selected accounts take the cache path and their cache files stay untouched.
+- **Exit:** n/a (library-level; deterministic tempdir store)
+- **Live:** no
+- **Source fn:** `selection_max_age_drains_oldest_first`, `fetch_gate_skips_non_selected`, `fetch_gate_leaves_non_selected_files_untouched` (in `usage/stalest_tests.rs`)
+- **Source:** [feature/028_usage_row_filtering.md AC-19](../../../docs/feature/028_usage_row_filtering.md)
+
+---
+
+### FT-20: `stalest::0` and standalone `max_age::` exit 1 pre-HTTP
+
+- **Given:** Parsed `.usage` command parameters.
+- **When:** `stalest::0`, `stalest::-1`, or `max_age::7200` without `stalest::` is supplied.
+- **Then:** Parameter validation returns `Err` before any HTTP request or cache write; the error message names the offending parameter (and, for standalone `max_age::`, references `stalest`).
+- **Exit:** 1 (validation error at parse time)
+- **Live:** no
+- **Source fn:** `stalest_zero_rejected`, `stalest_negative_rejected`, `max_age_without_stalest_rejected` (in `usage/params_tests.rs`)
+- **Source:** [feature/028_usage_row_filtering.md AC-20](../../../docs/feature/028_usage_row_filtering.md)
+
+---
+
+### FT-21: `stalest::K only_active::1` exits 1 — mutually exclusive reducers
+
+- **Given:** Parsed `.usage` command parameters combining both pre-fetch reducers.
+- **When:** `stalest::2 only_active::1` is supplied.
+- **Then:** Parameter validation returns `Err`; the message names both `stalest` and `only_active`.
+- **Exit:** 1 (validation error at parse time)
+- **Live:** no
+- **Source fn:** `stalest_and_only_active_mutual_exclusion` (in `usage/params_tests.rs`)
+- **Source:** [feature/028_usage_row_filtering.md AC-21](../../../docs/feature/028_usage_row_filtering.md)
+
+---
+
+### FT-22: `rotate::1` bypasses the reducer (full-fleet fetch)
+
+- **Given:** `stalest::2` with and without rotation.
+- **When:** `reduction_applies( stalest, rotate )` gates the subset decision in `usage_routine`.
+- **Then:** `reduction_applies( 2, false )` is true; `reduction_applies( 2, true )` is false — rotation needs a complete fresh ranking, so the reducer is bypassed. Source-order proof pins the predicate call before `fetch_quota_for_list` in `api.rs`.
+- **Exit:** n/a (library-level + structural)
+- **Live:** no
+- **Source fn:** `reduction_predicate_rotate_bypasses`, `api_routes_reduction_through_predicate` (in `usage/stalest_tests.rs`)
+- **Source:** [feature/028_usage_row_filtering.md AC-22](../../../docs/feature/028_usage_row_filtering.md)

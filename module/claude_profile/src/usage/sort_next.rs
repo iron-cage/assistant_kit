@@ -7,8 +7,8 @@
 
 use crate::output::format_duration_secs;
 use super::sort::sort_indices;
-use super::types::{ AccountQuota, SortStrategy, PreferStrategy, WEEKLY_EXHAUSTION_THRESHOLD };
-use super::format::{ seven_day_left, renewal_secs, next_event_raw };
+use super::types::{ AccountQuota, SortStrategy, PreferStrategy, WEEKLY_EXHAUSTION_THRESHOLD, H_EXHAUSTED_THRESHOLD };
+use super::format::{ five_hour_left, seven_day_left, renewal_secs, next_event_raw };
 
 // ── Next-account recommendation ───────────────────────────────────────────────
 
@@ -35,8 +35,16 @@ where F : Fn( &AccountQuota ) -> bool
     // Pitfall: account=None is ambiguous (API fetch failed); only gate when billing_type
     //   is definitively "none" with account data present.
     if aq.account.as_ref().is_some_and( |a| a.billing_type == "none" ) { continue; }
-    let Ok( data ) = &aq.result else { continue; };
-    if data.five_hour.as_ref().is_some_and( |p| p.utilization >= 85.0 ) { continue; }
+    if aq.result.is_err() { continue; }
+    // Fix(audit-h-exhaustion-drift): use the canonical rounded five_hour_left() against
+    //   H_EXHAUSTED_THRESHOLD instead of raw `utilization >= 85.0`.
+    // Root cause: the complement literal duplicated the threshold (types.rs forbids this)
+    //   and compared un-rounded utilization — an 84.6% account displayed as "15% left"
+    //   (h-exhausted everywhere else, BUG-331/BUG-336 round-before-compare doctrine) was
+    //   still eligible here.
+    // Pitfall: eligibility and display must round the same value against the same
+    //   constant; sort.rs:51 is the sibling call site this now mirrors.
+    if five_hour_left( aq ) <= H_EXHAUSTED_THRESHOLD { continue; }
     if ( aq.expires_at_ms / 1000 ).saturating_sub( now_secs ) == 0 { continue; }
     // Gate 9 (Claim-locked): unconditional — no force::1 bypass at the eligibility layer,
     // unlike the force-bypassable G9 explicit-command gate on .account.use/assignee:: (Feature 070).

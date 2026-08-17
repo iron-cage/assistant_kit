@@ -21,23 +21,44 @@ Workspace-level behavioral requirements, structural patterns, integration contra
 
 ## Doc Entity Index
 
-All doc entities across the workspace, including per-crate documentation scopes.
+Workspace-level (`docs/`) entities with instance counts, maintained here:
 
 | Scope | Entity | Type | Instances |
 |-------|--------|------|-----------|
 | workspace (`docs/`) | `feature/` | standard | 1 |
-| workspace (`docs/`) | `invariant/` | standard | 5 |
+| workspace (`docs/`) | `invariant/` | standard | 6 |
 | workspace (`docs/`) | `pattern/` | standard | 1 |
 | workspace (`docs/`) | `integration/` | standard | 1 |
 | workspace (`docs/`) | `error/` | extension | 6 |
-| `module/assistant/` | `feature/` | standard | 1 |
-| `module/assistant/` | `invariant/` | standard | 1 |
-| `module/claude_journal/` | `feature/` | standard | 3 |
-| `module/claude_journal/` | `invariant/` | standard | 3 |
-| `module/claude_journal/` | `api/` | standard | 3 |
-| `module/claude_journal_viewer/` | `feature/` | standard | 3 |
-| `module/claude_journal_viewer/` | `invariant/` | standard | 2 |
-| `module/claude_journal_viewer/` | `cli/` | cli | 62 |
+
+Per-crate documentation scopes. Instance counts live in each crate's own
+`docs/readme.md` (the authoritative index for that scope) — they are not
+duplicated here, where they would silently drift:
+
+| Crate | Entity dirs |
+|-------|-------------|
+| `module/assistant/` | `feature/`, `invariant/` |
+| `module/claude_assets/` | `feature/`, `invariant/` |
+| `module/claude_assets_core/` | `feature/`, `invariant/` |
+| `module/claude_core/` | `api/` |
+| `module/claude_journal/` | `api/`, `feature/`, `invariant/` |
+| `module/claude_journal_charts/` | `api/` |
+| `module/claude_journal_viewer/` | `cli/`, `feature/`, `invariant/` |
+| `module/claude_patch/` | `feature/`, `invariant/` (docs-only planned crate) |
+| `module/claude_patch_core/` | `feature/`, `invariant/` (docs-only planned crate) |
+| `module/claude_profile_core/` | `api/` |
+| `module/claude_profile/` | `algorithm/`, `cli/`, `feature/`, `invariant/`, `pattern/`, `pitfall/`, `research_interactive/`, `schema/`, `state_machine/`, `subprocess/` |
+| `module/claude_runner/` | `algorithm/`, `api/`, `cli/`, `feature/`, `invariant/`, `variable/` |
+| `module/claude_runner_core/` | `api/`, `claude_params/`, `data_structure/`, `failure_mode/`, `feature/`, `invariant/`, `pattern/` |
+| `module/claude_storage/` | `algorithm/`, `cli/`, `feature/`, `invariant/`, `operation/` |
+| `module/claude_storage_core/` | `algorithm/`, `api/`, `data_structure/`, `feature/`, `invariant/` |
+| `module/claude_version/` | `algorithm/`, `cli/`, `feature/`, `pattern/`, `pitfall/`, `runtime_file/` |
+| `module/dream/` | `feature/`, `invariant/` |
+| `module/json_redact/` | `api/` |
+| `module/svg_chart/` | `api/` |
+
+Crates without a `docs/` collection yet: `assistant_kit`, `claude_auth`,
+`claude_quota`. Test-side mirrors live under each crate's `tests/docs/`.
 
 ### Instance Naming
 

@@ -52,7 +52,7 @@ _(none — no defects filed against this feature)_
 
 | File | Relationship |
 |------|-------------|
-| [../../../claude_journal/module/claude_journal/docs/api/003_event_type.md](../../../claude_journal/module/claude_journal/docs/api/003_event_type.md) | `EventType::Command` and the `user`/`host`/`args` `EventFields` this feature's writes populate (schema landed by task 467) |
+| [../../../claude_journal/docs/api/003_event_type.md](../../../claude_journal/docs/api/003_event_type.md) | `EventType::Command` and the `user`/`host`/`args` `EventFields` this feature's writes populate (schema landed by task 467) |
 | `json_redact` crate (`module/json_redact/`) | `redact_str()` — the redaction primitive applied to `args` before persistence (task 468) |
 
 ### CLI Parameters

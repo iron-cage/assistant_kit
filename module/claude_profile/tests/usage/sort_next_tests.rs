@@ -161,12 +161,20 @@ fn test_cc_five_hour_none_not_h_exhausted()
   }
 }
 
-/// Corner case: utilization=84.9 (just below 85.0 threshold) → account IS eligible.
+/// Corner case: utilization just below the h-exhaustion boundary → account IS eligible.
+///
+/// Fix(audit-h-exhaustion-drift): boundary realigned from raw `utilization < 85.0` to the
+/// rounded `five_hour_left( aq ) > H_EXHAUSTED_THRESHOLD` (BUG-331/BUG-336 doctrine).
+/// 84.9 — this test's previous input — rounds to exactly 15% left, which displays as
+/// h-exhausted everywhere else and is therefore now correctly SKIPPED; the eligible side
+/// of the boundary starts at 84.4 (rounds to 16% left). The fractional divergence window
+/// itself (84.6 skip / 84.4 win) is pinned by
+/// `sort_next_tests_b::gate4_rounds_before_comparing_fractional_boundary`.
 #[ test ]
 fn test_cc_h_exhausted_boundary_below_threshold()
 {
   let now = 0u64;
-  let a = mk_aq_sort( "just_below@test.com", 84.9, FAR_FUTURE_MS );
+  let a = mk_aq_sort( "just_below@test.com", 84.4, FAR_FUTURE_MS );
   let mut b = mk_aq_sort( "current@test.com", 50.0, FAR_FUTURE_MS );
   b.is_current = true;
   let accounts = vec![ a, b ];
@@ -175,7 +183,7 @@ fn test_cc_h_exhausted_boundary_below_threshold()
     let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, false, "anthropic" );
     assert_eq!(
       result, Some( 0 ),
-      "{strategy:?}: utilization=84.9 (15.1% left) must be eligible — only >= 85.0 is h-exhausted",
+      "{strategy:?}: utilization=84.4 (rounds to 16% left) must be eligible — rounded left <= 15% is h-exhausted",
     );
   }
 }

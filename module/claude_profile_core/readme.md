@@ -8,5 +8,6 @@ Layer 1 domain logic for Claude Code account and token management. Depends only 
 |------|---------------|
 | `Cargo.toml` | Crate manifest: depends on `claude_core` |
 | `src/` | Token status detection and account CRUD domain logic |
+| `docs/` | Public API contracts for `token` and `account` |
 | `tests/` | Unit tests for token classification and account lifecycle |
 | `verb/` | Shell scripts for each `do` protocol verb. |

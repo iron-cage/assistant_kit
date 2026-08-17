@@ -22,6 +22,7 @@
 | FT-10 | AC-10 | Cached+expired account triggers `should_refresh()` | `mre_bug255_cache_defeats_refresh` |
 | FT-11 | AC-11 | After retry OK, `cached` flag cleared and cache file written with fresh data | `mre_bug256_retry_ok_stale_cached_metadata` |
 | FT-12 | AC-12 | HTTP 401 / 403 auth errors bypass cache fallback — `Err` propagates | `mre_bug296_cached_non_expired_401_no_refresh` |
+| FT-13 | AC-13 | Cache entry ≤ `CACHE_FRESH_SECS` (30 s) old → live API call skipped, row served from cache (`cached: true`) | `mre_bug327_cache_first_surfaces_org_created_at` (guard-firing assertion; see FT-13 Note) |
 | FT-14 | AC-14 | Cache-fallback row preserves the original failure reason and surfaces it via `shorten_error()` in text, TSV, and JSON render formats (text combines it with the AC-03 age suffix; TSV has no age suffix to combine with, so it stands alone) | `mre_bug335_cache_fallback_reason_surfaced_on_all_render_surfaces` |
 | FT-15 | AC-15 | Non-live-fetch branch (cache-first, G1-not-owned, or `approximate_quota()`) surfaces a cached `org_created_at` through `AccountQuota.org_created_at`, producing a real `~Renews` Estimate value instead of `"?"`; absent/pre-migration cache gracefully falls back to `None` | `mre_bug327_cache_first_surfaces_org_created_at` (cache-first branch only — see Notes) |
 
@@ -173,11 +174,23 @@
 
 - **Given:** `src/usage/fetch.rs`'s cache-fallback `match` arm inside `fetch_quota_for_list`.
 - **When:** The test reads `fetch.rs`'s own source text (`include_str!`) and searches for the auth-error match guard and catch-all arm — this is a structural/source-text assertion, not a constructed `AccountQuota`/simulated-fetch scenario.
-- **Then:** The guard string `!e.contains( "401" ) && !e.contains( "403" )` is present; `read_cached_quota( credential_store` appears textually AFTER that guard (confirming the cache read is gated behind the auth-error exclusion); the catch-all arm `Err( _ ) => ( result, false, None, None, None )` is present (confirming 401/403 propagate as `Err` with `cached=false`, never converted to `Ok(cached_data)`). HTTP 403 is covered by the same guard string.
+- **Then:** The guard string `!is_http_code( e, 401 ) && !is_http_code( e, 403 )` is present; `read_cached_quota( credential_store` appears textually AFTER that guard (confirming the cache read is gated behind the auth-error exclusion); the catch-all arm `Err( _ ) => ( result, false, None, None, None )` is present (confirming 401/403 propagate as `Err` with `cached=false`, never converted to `Ok(cached_data)`). HTTP 403 is covered by the same guard string.
 - **Exit:** N/A — structural/source-text assertion, not a runtime `Err`/`Ok` result
 - **Source fn:** `mre_bug296_cached_non_expired_401_no_refresh` (in `tests/usage/fetch_tests.rs`)
-- **Note:** Fix for BUG-296. This is a structural test — it greps `fetch.rs`'s own source text for the guard/catch-all pattern rather than constructing an `AccountQuota` and invoking `fetch_quota_for_list` with a mocked 401 response. Auth-error guard: `Err( ref e ) if !e.contains("401") && !e.contains("403") =>` on the cache fallback arm; a catch-all `Err( _ ) =>` arm propagates auth errors unchanged. Only transient errors (429, network, timeout) trigger cache fallback in the real match arm this test inspects.
+- **Note:** Fix for BUG-296; guard later hardened by Fix(audit-bare-status-substring) from bare `e.contains("401")` substring matching to anchored `is_http_code( e, 401 )` matching (whole-string bare sentinel or `HTTP NNN` with a digit boundary), so digit runs like `"read 14290 bytes"` can't false-match — bypass semantics unchanged. This is a structural test — it greps `fetch.rs`'s own source text for the guard/catch-all pattern rather than constructing an `AccountQuota` and invoking `fetch_quota_for_list` with a mocked 401 response. Auth-error guard: `Err( ref e ) if !is_http_code( e, 401 ) && !is_http_code( e, 403 ) =>` on the cache fallback arm; a catch-all `Err( _ ) =>` arm propagates auth errors unchanged. Only transient errors (429, network, timeout) trigger cache fallback in the real match arm this test inspects.
 - **Source:** [033_quota_cache.md AC-12](../../../docs/feature/033_quota_cache.md)
+
+---
+
+### FT-13: Fresh cache entry (≤ 30 s) skips the live API call entirely
+
+- **Given:** An owned, non-solo, non-occupied-elsewhere account whose quota cache entry has a `fetched_at` younger than `CACHE_FRESH_SECS` (30 s, a constant in `src/usage/fetch.rs`).
+- **When:** `fetch_quota_for_list` processes the account.
+- **Then:** The live `GET /api/oauth/usage` call is skipped; the row is served directly from cache with `cached: true` and `cache_age_secs: N`. Prevents API burst flooding from rapid-succession `.usage` invocations.
+- **Exit:** N/A — library-level; asserted via the returned `AccountQuota`
+- **Source fn:** `mre_bug327_cache_first_surfaces_org_created_at` (in `tests/usage/fetch_tests.rs`)
+- **Note:** The guard-firing behavior (fresh cache → `cached=true`, no live fetch) is pinned by the FT-15 test's setup, which deliberately routes through this branch. The AC-13 gate-ordering details (fires after G1/G1b/solo gates and `is_current` resolution, before the local token-expiry check) have no dedicated assertion yet.
+- **Source:** [033_quota_cache.md AC-13](../../../docs/feature/033_quota_cache.md)
 
 ---
 

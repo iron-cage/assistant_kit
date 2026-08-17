@@ -7,7 +7,7 @@
 
 use unilang::data::{ ErrorCode, ErrorData };
 use super::types::AccountQuota;
-use super::format::token_exp_label;
+use super::format::{ token_exp_label, is_http_code };
 use super::fetch_cache::read_cached_quota;
 use claude_profile_core::account::{ trace_ts, AccountBackend };
 
@@ -303,7 +303,15 @@ pub fn fetch_quota_for_list(
 
           if trace
           {
-            let prefix = if token.len() >= 20 { &token[ ..20 ] } else { &token };
+            // Fix(audit-trace-slice-boundary)
+            // Root cause: `&token[ ..20 ]` panics when byte 20 falls mid-character; the
+            //   length guard alone cannot prevent that — a corrupt credentials file with
+            //   multi-byte content would crash the whole fetch sweep just for a trace line.
+            // Pitfall: walk back to a char boundary instead of falling back to the full
+            //   token — the fallback would leak the entire secret into trace output.
+            let mut end = 20.min( token.len() );
+            while !token.is_char_boundary( end ) { end -= 1; }
+            let prefix = &token[ ..end ];
             eprintln!(
               "{}{}  GET {}  token={}...  exp={}",
               trace_ts(),
@@ -398,7 +406,10 @@ pub fn fetch_quota_for_list(
       //   Ok(cached_data), bypassing the 401/403 guard in refresh_predicate.rs:34.
       // Pitfall: only transient errors (5xx, network, timeout) are legitimate cache-fallback
       //   candidates; auth errors are definitive rejections that need credential action.
-      Err( ref e ) if !e.contains( "401" ) && !e.contains( "403" ) =>
+      // Fix(audit-bare-status-substring): anchored is_http_code() — a transport error whose
+      //   free text happens to contain "401" (byte count, timestamp) must still fall back
+      //   to cache; see format.rs::is_http_code for root cause and matched forms.
+      Err( ref e ) if !is_http_code( e, 401 ) && !is_http_code( e, 403 ) =>
       {
         match read_cached_quota( credential_store, &acct.name, now_secs )
         {

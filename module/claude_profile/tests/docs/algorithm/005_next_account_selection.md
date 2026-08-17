@@ -49,7 +49,8 @@ AC test cases for `docs/algorithm/005_next_account_selection.md`. Tests
 
 ### AC-3: h-exhausted accounts skipped by all strategies
 
-- **Given:** An account with `five_hour.utilization ≥ 85.0` (≤ 15% left).
+- **Given:** An account with rounded `five_hour_left ≤ 15%` (`H_EXHAUSTED_THRESHOLD`;
+  e.g. `utilization ≥ 84.6`, since 15.4 rounds to 15).
 - **When:** `find_next_for_strategy` runs with all strategies.
 - **Then:** The h-exhausted account is skipped for all three strategies. Gate 4 fires.
 - **Source fn:** `test_all_strategies_skip_h_exhausted` in `tests/usage/sort_next_tests.rs`
@@ -181,12 +182,17 @@ AC test cases for `docs/algorithm/005_next_account_selection.md`. Tests
 
 ### AC-14: Gate 4 boundary — `five_hour.utilization = 85.0` exactly → skipped
 
-- **Given:** An account with `five_hour.utilization = 85.0` (exactly at the threshold).
-- **When:** Gate 4 evaluates `five_hour.utilization >= 85.0`.
-- **Then:** Account is skipped — at exactly the threshold, `>= 85.0 = true`, gate fires.
-  Account just below threshold (`84.9`) is eligible (AC-3 coverage in sort_next_tests.rs).
+- **Given:** An account with `five_hour.utilization = 85.0` (rounded `five_hour_left = 15.0`,
+  exactly `H_EXHAUSTED_THRESHOLD`).
+- **When:** Gate 4 evaluates `five_hour_left( aq ) <= H_EXHAUSTED_THRESHOLD`
+  (audit-h-exhaustion-drift — formerly raw `utilization >= 85.0`).
+- **Then:** Account is skipped — `15.0 <= 15.0 = true`, gate fires.
+  Eligibility resumes at `84.4` (rounds to 16% left) — `test_cc_h_exhausted_boundary_below_threshold`.
+  The fractional divergence window (84.6 skipped / 84.4 eligible; display and eligibility
+  now round the same value) is pinned by `gate4_rounds_before_comparing_fractional_boundary`.
 - **Source fn:** `mre_bug_gap8_find_first_eligible_at_exactly_85_utilization`,
-  `test_cc_h_exhausted_boundary_below_threshold` in `tests/usage/sort_next_tests.rs`
+  `test_cc_h_exhausted_boundary_below_threshold` in `tests/usage/sort_next_tests.rs`;
+  `gate4_rounds_before_comparing_fractional_boundary` in `tests/usage/sort_next_tests_b.rs`
 - **Source:** [algorithm/005_next_account_selection.md](../../../docs/algorithm/005_next_account_selection.md)
 
 ---

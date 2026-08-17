@@ -1123,6 +1123,55 @@ fn ne_all_none_returns_dash()
   assert_eq!( result, "\u{2014}", "all absent → em-dash, got: {result}" );
 }
 
+// ── renewal_secs: char-boundary safety ─────────────────────────────────────
+
+/// Multi-byte UTF-8 in `renewal_at` → `None`, no panic.
+///
+/// # Root Cause (audit-iso-char-boundary)
+///
+/// `parse_iso_secs` sliced fixed byte ranges with `s[0..4]`-style indexing, which
+/// panics when a range boundary lands inside a multi-byte UTF-8 character. The
+/// `len() < 19` guard checked byte count only, so a timestamp-like string with
+/// fullwidth digits passed the guard and panicked.
+///
+/// # Why Not Caught
+///
+/// All existing tests fed well-formed ASCII timestamps; the field comes from
+/// server JSON normally, so hostile/corrupt encodings never appeared in fixtures.
+///
+/// # Fix Applied
+///
+/// Every fixed-position slice now uses `.get(range)?` — mid-char boundaries and
+/// too-short input both flow to `None`.
+///
+/// # Prevention
+///
+/// Never index a `&str` with byte ranges derived from expected format positions;
+/// use `.get()` so malformed input degrades instead of panicking.
+///
+/// # Pitfall
+///
+/// The fullwidth digit `６` is 3 bytes — `"202６-…"` occupies bytes 3–5, so the
+/// year slice's upper boundary (4) lands mid-char while the string stays ≥19
+/// bytes long, defeating any length-only guard.
+#[ test ]
+fn renewal_multibyte_renewal_at_returns_none()
+{
+  let result = renewal_secs( Some( "202６-01-15T00:00:00Z" ), None, 1_700_000_000 );
+  assert_eq!( result, None, "multi-byte renewal_at must yield None, not panic" );
+}
+
+/// Multi-byte UTF-8 in `org_created_at` day field → `None`, no panic.
+///
+/// Same audit-iso-char-boundary fix as above, second call site: the estimate
+/// branch sliced `org_created_at[8..10]` directly.
+#[ test ]
+fn renewal_multibyte_org_created_at_returns_none()
+{
+  let result = renewal_secs( None, Some( "2020-01-３1T00:00:00Z" ), 1_700_000_000 );
+  assert_eq!( result, None, "multi-byte org_created_at must yield None, not panic" );
+}
+
 // ── relevant_quotas ────────────────────────────────────────────────────────
 
 /// `prefer::any` + absent Sonnet → `relevant_7d_left` equals raw `seven_day_left`.

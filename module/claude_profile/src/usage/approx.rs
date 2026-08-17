@@ -76,7 +76,6 @@ pub fn approximate_utilization(
 }
 
 /// Linear extrapolation through exactly 2 points, or any set treated as degree-1.
-#[ allow( dead_code ) ]
 fn linear_extrapolate( pts : &[ ( u64, f64 ) ], now_secs : u64 ) -> f64
 {
   let t0   = pts[ 0 ].0;
@@ -96,7 +95,6 @@ fn linear_extrapolate( pts : &[ ( u64, f64 ) ], now_secs : u64 ) -> f64
 ///
 /// Time normalization: subtract `t_values[0]` before power-sum computation
 /// to keep magnitudes small and avoid f64 precision loss (AC).
-#[ allow( dead_code ) ]
 fn quadratic_fit( pts : &[ ( u64, f64 ) ], now_secs : u64 ) -> f64
 {
   let t0      = pts[ 0 ].0;
