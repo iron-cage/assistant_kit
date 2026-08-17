@@ -12,33 +12,33 @@ must not be confused with those in `020_timeout.md`.
 | ID | Test Name | Category |
 |----|-----------|----------|
 | EC-1 | `--help` output contains `--timeout` (run/ask help) | Documentation |
-| EC-2 | `--timeout 0 --dry-run` → exit 0; explicit unlimited (overrides 3600s print-mode default) | Behavioral Divergence |
+| EC-2 | `--timeout 0 --dry-run` → exit 0; explicit unlimited (matches the TSK-503 default; self-documenting opt-out) | Behavioral Divergence |
 | EC-3 | `--timeout 30 --dry-run` → exit 0; 30s watchdog accepted | Behavioral Divergence |
 | EC-4 | `CLR_TIMEOUT=10 --dry-run` → exit 0; env var applied | Env Var |
 | EC-5 | `CLR_TIMEOUT=5 --timeout 60 --dry-run` → CLI 60 wins | CLI-wins |
-| EC-6 | `CLR_TIMEOUT=abc --dry-run` → silently ignored; default `DEFAULT_PRINT_TIMEOUT_SECS` (3600) for print-mode | Validation |
+| EC-6 | `CLR_TIMEOUT=abc --dry-run` → silently ignored; default `DEFAULT_PRINT_TIMEOUT_SECS` (0 = unlimited) for print-mode | Validation |
 | EC-7 | Fake script sleeps 30; `--timeout 1` → exit 4 within ~2s; stderr contains "timeout" | Integration |
 | EC-8 | Fake script exits 0 quickly; `--timeout 30` → exit 0; no timeout message | Integration |
-| ec_timeout_default_constant_value | `DEFAULT_PRINT_TIMEOUT_SECS` constant equals `3600` in source | Structural |
+| ec_timeout_default_constant_value | `DEFAULT_PRINT_TIMEOUT_SECS` constant equals `0` in source (TSK-503) | Structural |
 | ec_timeout_default_no_fire | No `--timeout`, no `CLR_TIMEOUT`; fast subprocess → exit 0, no timeout msg | Integration |
-| ec_timeout_default_activates_watchdog | No `--timeout`, no `CLR_TIMEOUT`; 2s subprocess → exit 0 in ≤10s (3600s watchdog) | Integration |
-| ec_timeout_explicit_above_default | `--timeout 7200` with fast subprocess → exit 0, no timeout msg | Integration |
-| ec_timeout_unlimited_flag | `--timeout 0` opts out of 3600s default; fast subprocess → exit 0 | Integration |
-| ec_timeout_unlimited_env | `CLR_TIMEOUT=0` opts out of 3600s default; fast subprocess → exit 0 | Env Var |
-| ec_timeout_env_matches_default | `CLR_TIMEOUT=3600` accepted without error; dry-run exits 0 | Env Var |
-| ec_timeout_default_kills | No `--timeout`, `_CLR_DEFAULT_TIMEOUT=2`; hanging subprocess → exit 4, killed by default watchdog | Integration (TSK-227) |
+| ec_timeout_default_unlimited | No `--timeout`, no `CLR_TIMEOUT`; 2s subprocess → exit 0 in ≤10s (no default watchdog) | Integration |
+| ec_timeout_explicit_large_value | `--timeout 7200` with fast subprocess → exit 0, no timeout msg | Integration |
+| ec_timeout_unlimited_flag | `--timeout 0` expresses unlimited explicitly; fast subprocess → exit 0 | Integration |
+| ec_timeout_unlimited_env | `CLR_TIMEOUT=0` expresses unlimited via env; fast subprocess → exit 0 | Env Var |
+| ec_timeout_env_hour_value_accepted | `CLR_TIMEOUT=3600` accepted without error; dry-run exits 0 | Env Var |
+| ec_timeout_default_kills | No `--timeout`, `_CLR_DEFAULT_TIMEOUT=2`; hanging subprocess → exit 4, killed by hook-armed default watchdog | Integration (TSK-227) |
 | ec_timeout_retry_no_double_emission | `_CLR_DEFAULT_TIMEOUT=2`, `--retry-on-process 1`, `--process-delay 0`; hanging subprocess → no stderr line starts with `"timeout after"` | Bug Reproducer (BUG-317) |
 
 ## Test Coverage Summary
 
 - Documentation: 1 test (EC-1)
 - Behavioral Divergence: 2 tests (EC-2, EC-3)
-- Env Var: 3 tests (EC-4, ec_timeout_unlimited_env, ec_timeout_env_matches_default)
+- Env Var: 3 tests (EC-4, ec_timeout_unlimited_env, ec_timeout_env_hour_value_accepted)
 - CLI-wins: 1 test (EC-5)
 - Validation: 1 test (EC-6)
 - Integration: 2 tests (EC-7, EC-8)
 - Structural: 1 test (ec_timeout_default_constant_value)
-- Integration (TSK-227): 5 tests (ec_timeout_default_no_fire, ec_timeout_default_activates_watchdog, ec_timeout_explicit_above_default, ec_timeout_unlimited_flag, ec_timeout_default_kills)
+- Integration (TSK-227): 5 tests (ec_timeout_default_no_fire, ec_timeout_default_unlimited, ec_timeout_explicit_large_value, ec_timeout_unlimited_flag, ec_timeout_default_kills)
 - Bug Reproducer (BUG-317): 1 test (ec_timeout_retry_no_double_emission)
 
 **Total:** 17 edge cases
@@ -70,11 +70,11 @@ semantics: unlimited (no watchdog). Tests in this file cover `run`/`ask` only;
 | EC-8 | `ec8_no_timeout_when_subprocess_exits_fast` | `timeout_test.rs` |
 | ec_timeout_default_constant_value | `ec_timeout_default_constant_value` | `timeout_test.rs` |
 | ec_timeout_default_no_fire | `ec_timeout_default_no_fire` | `timeout_test.rs` |
-| ec_timeout_default_activates_watchdog | `ec_timeout_default_activates_watchdog` | `timeout_test.rs` |
-| ec_timeout_explicit_above_default | `ec_timeout_explicit_above_default` | `timeout_test.rs` |
+| ec_timeout_default_unlimited | `ec_timeout_default_unlimited` | `timeout_test.rs` |
+| ec_timeout_explicit_large_value | `ec_timeout_explicit_large_value` | `timeout_test.rs` |
 | ec_timeout_unlimited_flag | `ec_timeout_unlimited_flag` | `timeout_test.rs` |
 | ec_timeout_unlimited_env | `ec_timeout_unlimited_env` | `timeout_test.rs` |
-| ec_timeout_env_matches_default | `ec_timeout_env_matches_default` | `env_var_test.rs` |
+| ec_timeout_env_hour_value_accepted | `ec_timeout_env_hour_value_accepted` | `env_var_test.rs` |
 | ec_timeout_default_kills | `ec_timeout_default_kills` | `timeout_test.rs` |
 | ec_timeout_retry_no_double_emission | `ec_timeout_retry_no_double_emission` | `timeout_test.rs` |
 
@@ -95,7 +95,7 @@ semantics: unlimited (no watchdog). Tests in this file cover `run`/`ask` only;
 
 - **Given:** `--timeout 0` and `--dry-run` set
 - **When:** `clr --timeout 0 --dry-run "task"`
-- **Then:** Exit 0; dry-run output produced; `Some(0).unwrap_or(DEFAULT_PRINT_TIMEOUT_SECS) = 0` → no watchdog. **Divergence from EC-3:** value 0 disables the watchdog entirely — no `child.kill()` thread is spawned; value 30 (EC-3) activates the watchdog with a 30-second countdown. Explicit `--timeout 0` opts out of the 3600s print-mode default (TSK-227)
+- **Then:** Exit 0; dry-run output produced; `Some(0).unwrap_or(DEFAULT_PRINT_TIMEOUT_SECS) = 0` → no watchdog. **Divergence from EC-3:** value 0 disables the watchdog entirely — no `child.kill()` thread is spawned; value 30 (EC-3) activates the watchdog with a 30-second countdown. Since TSK-503 explicit `--timeout 0` matches the built-in default; it remains the self-documenting opt-out (and contributes no gate-wait budget — BUG-445)
 - **Exit:** 0
 - **Source:** [036_timeout.md](../../../../docs/cli/param/036_timeout.md)
 - **Commands:** run, ask
@@ -135,11 +135,11 @@ semantics: unlimited (no watchdog). Tests in this file cover `run`/`ask` only;
 
 ---
 
-### EC-6: CLR_TIMEOUT=invalid → silently ignored; default DEFAULT_PRINT_TIMEOUT_SECS (3600) used
+### EC-6: CLR_TIMEOUT=invalid → silently ignored; default DEFAULT_PRINT_TIMEOUT_SECS (0 = unlimited) used
 
 - **Given:** `CLR_TIMEOUT=abc` set; no `--timeout` CLI flag; `--dry-run` set
 - **When:** `CLR_TIMEOUT=abc clr --dry-run "task"`
-- **Then:** Exit 0; invalid env var silently ignored; `cli.timeout` stays at `None`; `None.unwrap_or(DEFAULT_PRINT_TIMEOUT_SECS) = 3600` for print-mode
+- **Then:** Exit 0; invalid env var silently ignored; `cli.timeout` stays at `None`; `None.unwrap_or(DEFAULT_PRINT_TIMEOUT_SECS) = 0` for print-mode (unlimited since TSK-503)
 - **Exit:** 0
 - **Source:** [036_timeout.md](../../../../docs/cli/param/036_timeout.md)
 - **Commands:** run, ask
@@ -168,11 +168,11 @@ semantics: unlimited (no watchdog). Tests in this file cover `run`/`ask` only;
 
 ---
 
-### ec_timeout_default_constant_value: DEFAULT_PRINT_TIMEOUT_SECS equals 3600
+### ec_timeout_default_constant_value: DEFAULT_PRINT_TIMEOUT_SECS equals 0
 
 - **Given:** source file `src/cli/execution.rs` at build time
 - **When:** `include_str!("../src/cli/execution.rs")` — static assertion at test compile/run time
-- **Then:** File contains (1) `DEFAULT_PRINT_TIMEOUT_SECS : u32 = 3600`; (2) `unwrap_or( DEFAULT_PRINT_TIMEOUT_SECS )` inside the `default_print_timeout()` helper; (3) `unwrap_or( default_print_timeout() )` at the `run_print_mode()` call site (TSK-228 — not the constant directly)
+- **Then:** File contains (1) `DEFAULT_PRINT_TIMEOUT_SECS : u32 = 0` (TSK-503 — no built-in watchdog); (2) `unwrap_or( DEFAULT_PRINT_TIMEOUT_SECS )` inside the `default_print_timeout()` helper; (3) `unwrap_or( default_print_timeout() )` at the `run_print_mode()` call site (TSK-228 — not the constant directly, so the `_CLR_DEFAULT_TIMEOUT` hook stays live)
 - **Exit:** 0
 - **Source:** [036_timeout.md](../../../../docs/cli/param/036_timeout.md), [invariant/007_print_mode_timeout.md](../../../../docs/invariant/007_print_mode_timeout.md)
 - **Commands:** run, ask
@@ -183,62 +183,62 @@ semantics: unlimited (no watchdog). Tests in this file cover `run`/`ask` only;
 
 - **Given:** no `--timeout` CLI flag; `CLR_TIMEOUT` removed from env; fake claude script that exits 0 immediately; `-p "x" --max-sessions 0`
 - **When:** `clr -p --max-sessions 0 "x"` using fast-exit fake script, `CLR_TIMEOUT` unset
-- **Then:** Exit 0; stderr does NOT contain "timeout"; fast subprocess completes under 3600s default watchdog without incident
+- **Then:** Exit 0; stderr does NOT contain "timeout"; fast subprocess completes on the unexpressed path without incident (no default watchdog exists to fire — TSK-503)
 - **Exit:** 0
 - **Source:** [036_timeout.md](../../../../docs/cli/param/036_timeout.md), [invariant/007_print_mode_timeout.md](../../../../docs/invariant/007_print_mode_timeout.md)
 - **Commands:** run, ask
 
 ---
 
-### ec_timeout_default_activates_watchdog: 2s subprocess survives 3600s default
+### ec_timeout_default_unlimited: 2s subprocess completes, no default watchdog armed
 
 - **Given:** no `--timeout` CLI flag; `CLR_TIMEOUT` removed; fake claude sleeps 2s then exits 0; `-p --max-sessions 0`
 - **When:** `clr -p --max-sessions 0 "x"` using 2s-sleep fake, `CLR_TIMEOUT` unset
-- **Then:** Exit 0 within ≤10s; no "timeout" on stderr; 3600s watchdog does not fire before 2s subprocess completes. If `DEFAULT_PRINT_TIMEOUT_SECS` were < 2, this test would fail — proving the constant is ≥ 2
+- **Then:** Exit 0 within ≤10s; no "timeout" on stderr; the unexpressed path arms nothing (TSK-503). If a nonzero built-in default under 2 s were ever reintroduced, the subprocess would be killed prematurely and this test would fail
 - **Exit:** 0
 - **Source:** [036_timeout.md](../../../../docs/cli/param/036_timeout.md), [invariant/007_print_mode_timeout.md](../../../../docs/invariant/007_print_mode_timeout.md)
 - **Commands:** run, ask
 
 ---
 
-### ec_timeout_explicit_above_default: --timeout 7200 with fast subprocess
+### ec_timeout_explicit_large_value: --timeout 7200 with fast subprocess
 
 - **Given:** `--timeout 7200` CLI flag; fast-exit fake claude; `-p --max-sessions 0 "x"`
 - **When:** `clr -p --timeout 7200 --max-sessions 0 "x"` using fast-exit fake
-- **Then:** Exit 0; no "timeout" on stderr; `Some(7200).unwrap_or(3600) = 7200` (explicit wins)
+- **Then:** Exit 0; no "timeout" on stderr; `Some(7200)` expressed branch resolves to 7200 (explicit wins)
 - **Exit:** 0
 - **Source:** [036_timeout.md](../../../../docs/cli/param/036_timeout.md)
 - **Commands:** run, ask
 
 ---
 
-### ec_timeout_unlimited_flag: --timeout 0 opts out of 3600s print-mode default
+### ec_timeout_unlimited_flag: --timeout 0 expresses unlimited explicitly
 
 - **Given:** `--timeout 0` CLI flag; `CLR_TIMEOUT` removed; fast-exit fake claude; `-p --max-sessions 0 "x"`
 - **When:** `clr -p --timeout 0 --max-sessions 0 "x"` using fast-exit fake, `CLR_TIMEOUT` unset
-- **Then:** Exit 0; no "timeout" on stderr; `Some(0).unwrap_or(3600) = 0` → unlimited
+- **Then:** Exit 0; no "timeout" on stderr; `Some(0)` resolves to 0 → unlimited (same as the TSK-503 default; the expressed-zero path stays intact)
 - **Exit:** 0
 - **Source:** [036_timeout.md](../../../../docs/cli/param/036_timeout.md)
 - **Commands:** run, ask
 
 ---
 
-### ec_timeout_unlimited_env: CLR_TIMEOUT=0 opts out of 3600s print-mode default
+### ec_timeout_unlimited_env: CLR_TIMEOUT=0 expresses unlimited via env
 
 - **Given:** `CLR_TIMEOUT=0`; no `--timeout` CLI flag; fast-exit fake claude; `-p --max-sessions 0 "x"`
 - **When:** `CLR_TIMEOUT=0 clr -p --max-sessions 0 "x"` using fast-exit fake
-- **Then:** Exit 0; no "timeout" on stderr; env var sets `cli.timeout = Some(0)` → `Some(0).unwrap_or(3600) = 0` → unlimited
+- **Then:** Exit 0; no "timeout" on stderr; env var sets `cli.timeout = Some(0)` → resolves to 0 → unlimited (same as the TSK-503 default; env-expressed-zero path stays intact)
 - **Exit:** 0
 - **Source:** [036_timeout.md](../../../../docs/cli/param/036_timeout.md)
 - **Commands:** run, ask
 
 ---
 
-### ec_timeout_env_matches_default: CLR_TIMEOUT=3600 is valid and accepted
+### ec_timeout_env_hour_value_accepted: CLR_TIMEOUT=3600 is valid and accepted
 
 - **Given:** `CLR_TIMEOUT=3600`; `--dry-run "task"`
 - **When:** `CLR_TIMEOUT=3600 clr --dry-run "task"`
-- **Then:** Exit 0; env var parsed successfully without error; dry-run completes normally
+- **Then:** Exit 0; env var parsed successfully without error; dry-run completes normally. (3600 was the built-in default when this test was written under TSK-227; since TSK-503 it survives purely as a representative hour-scale expressed value)
 - **Exit:** 0
 - **Source:** [036_timeout.md](../../../../docs/cli/param/036_timeout.md)
 - **Commands:** run, ask
@@ -249,7 +249,7 @@ semantics: unlimited (no watchdog). Tests in this file cover `run`/`ask` only;
 
 - **Given:** no `--timeout` CLI flag; `CLR_TIMEOUT` removed; `_CLR_DEFAULT_TIMEOUT=2`; fake claude sleeps 30s; `-p --max-sessions 0 --retry-override 0 "x"`
 - **When:** `_CLR_DEFAULT_TIMEOUT=2 clr -p --max-sessions 0 --retry-override 0 "x"` with 30s-sleeping fake; `CLR_TIMEOUT` unset
-- **Then:** Exit 4 within ~5s; stderr contains "timeout"; subprocess killed by default watchdog. Proves the `None → unwrap_or(default_print_timeout())` path fires `poll_timeout()`. EC-7 tests `Some(1)` (explicit `--timeout`); this test covers the `None` (no flag) path.
+- **Then:** Exit 4 within ~5s; stderr contains "timeout"; subprocess killed by the hook-armed default watchdog (`_CLR_DEFAULT_TIMEOUT=2` — the production default is 0/unlimited since TSK-503). Proves the `None → unwrap_or(default_print_timeout())` path fires `poll_timeout()`. EC-7 tests `Some(1)` (explicit `--timeout`); this test covers the `None` (no flag) path.
 - **Exit:** 4
 - **Source:** [036_timeout.md](../../../../docs/cli/param/036_timeout.md), [invariant/007_print_mode_timeout.md](../../../../docs/invariant/007_print_mode_timeout.md)
 - **Commands:** run, ask

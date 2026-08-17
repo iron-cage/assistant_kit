@@ -1297,8 +1297,9 @@ fn t_gate_trace_exposure_silent_without_trace_flag()
 /// `effective_gate_attempts()` gains a `caller_timeout_secs` parameter: when
 /// `CLR_REMAINING_TIMEOUT_SECS` does not parse and the caller *expressed* a
 /// finite timeout (`--timeout` flag or `CLR_TIMEOUT` env — never the built-in
-/// 30s/3600s defaults), that value defaults the budget. A parseable env var
-/// still wins. Threaded through `wait_for_session_slot()` from both call sites
+/// defaults: isolated's 30s, or print-mode's, 3600s then and 0 since TSK-503),
+/// that value defaults the budget. A parseable env var still wins. Threaded
+/// through `wait_for_session_slot()` from both call sites
 /// (`run_built_command`, `gate_isolated_session`).
 ///
 /// ## Prevention
@@ -1311,8 +1312,10 @@ fn t_gate_trace_exposure_silent_without_trace_flag()
 /// ## Pitfall
 ///
 /// Only EXPRESSED timeouts may default the budget. `isolated`'s built-in 30s
-/// and print-mode's 3600s defaults must never — otherwise every default
-/// invocation flips from queue-patiently (~8.3h ceiling) to fail-fast (30s!).
+/// default must never (nor print-mode's built-in default — 3600s at fix time,
+/// 0 since TSK-503, and the `_CLR_DEFAULT_TIMEOUT` test hook can still arm
+/// one) — otherwise every default invocation flips from queue-patiently
+/// (~8.3h ceiling) to fail-fast (30s!).
 // test_kind: bug_reproducer(BUG-445)
 #[ test ]
 fn t_gate_expressed_timeout_defaults_gate_wait_budget()

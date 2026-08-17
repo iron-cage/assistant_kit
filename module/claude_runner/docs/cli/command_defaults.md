@@ -33,7 +33,7 @@ Rows are parameters or behaviors. Columns are the four commands. Key: ✅ = acti
 | `CLAUDE_CODE_TELEMETRY` | `false` | `false` | `false` | `false` |
 | `CLAUDE_CODE_BASH_TIMEOUT` | `3,600,000 ms` (1 h) | `3,600,000 ms` | `3,600,000 ms` | `3,600,000 ms` |
 | `CLAUDE_CODE_BASH_MAX_TIMEOUT` | `7,200,000 ms` (2 h) | `7,200,000 ms` | `7,200,000 ms` | `7,200,000 ms` |
-| `--timeout` | `3600 s` (print-mode) / `0` (interactive); `0` = unlimited | same | `30 s` default; `0` = unlimited (no watchdog) | `45 s` default; `0` = unlimited (no watchdog) |
+| `--timeout` | `0` = unlimited (print-mode and interactive; watchdog only when expressed — TSK-503) | same | `30 s` default; `0` = unlimited (no watchdog) | `45 s` default; `0` = unlimited (no watchdog) |
 | passthrough args (`--`) | ➖ not supported | ➖ not supported | ✅ collected verbatim after `--` | ➖ not supported |
 | `--output-file` | ✅ supported | ✅ supported | ➖ not supported | ➖ not supported |
 | `--expect` / `--expect-strategy` | ✅ supported | ✅ supported | ➖ not supported | ➖ not supported |

@@ -68,7 +68,7 @@ behave consistently and interact correctly across all four commands.
 
 - **Given:** clean environment; credentials JSON at temp path
 - **When:** `clr --dry-run "task"` (run), `clr ask --dry-run "task"`, `clr isolated --creds <tmp> --dry-run "task"`, `clr refresh --creds <tmp> --dry-run` — inspect dry-run env block
-- **Then:** `run` and `ask` show `timeout=3600`; `isolated` shows `timeout=30`; `refresh` shows `timeout=45`
+- **Then:** `run`/`ask` arm no default watchdog (`0` = unlimited since TSK-503; no timeout line rendered); `isolated` shows `timeout=30`; `refresh` shows `timeout=45`
 - **Exit:** 0
 - **Source:** [param_group/06_running_commands.md](../../../../docs/cli/param_group/06_running_commands.md)
 - **Commands:** run, ask, isolated, refresh

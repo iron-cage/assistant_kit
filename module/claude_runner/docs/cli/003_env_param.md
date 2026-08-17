@@ -432,19 +432,19 @@ this setting.
 **Relationship to clr's own timeout layer:** this is an *inner* layer —
 claude's own internal wait logic for background work during its print-mode
 wind-down. It is independent of clr's *outer* layer:
-[`run_print_mode()`'s own 1-hour watchdog](../invariant/007_print_mode_timeout.md)
-(`DEFAULT_PRINT_TIMEOUT_SECS`), which unconditionally kills the entire
-`claude` subprocess after `--timeout`/`CLR_TIMEOUT` (default 3600s) regardless
-of what the inner ceiling is doing. Setting
-`CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS=0` does not remove clr's outer bound —
-a genuinely long-running background agent can still be killed by the outer
-watchdog even though the inner ceiling has been neutralized. For a session
-expected to run background work past 1 hour, `--timeout 0` /
-`CLR_TIMEOUT=0` (unlimited) is the relevant lever, not this variable.
+[`run_print_mode()`'s watchdog](../invariant/007_print_mode_timeout.md)
+(`DEFAULT_PRINT_TIMEOUT_SECS = 0` since TSK-503 — armed only by an expressed
+`--timeout`/`CLR_TIMEOUT`), which when armed unconditionally kills the entire
+`claude` subprocess at the deadline regardless of what the inner ceiling is
+doing. Setting `CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS=0` does not touch an
+expressed outer bound — a long-running background agent can still be killed
+by an expressed outer watchdog even though the inner ceiling has been
+neutralized. Since TSK-503 the layers agree by default: with nothing
+expressed, neither imposes a deadline.
 
 | Variable | Injected value | Binary default | Opt-out |
 |----------|-----------------|-----------------|---------|
-| `CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS` | `0` | `600 000` | none exposed — override the outer bound instead via `--timeout 0` / `CLR_TIMEOUT=0` |
+| `CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS` | `0` | `600 000` | none exposed — clr's outer bound is off by default too (TSK-503); an expressed `--timeout`/`CLR_TIMEOUT` arms it |
 
 **Cross-reference:** `contract/claude_code/docs/param/131_print_bg_wait_ceiling_ms.md`
 — canonical parameter spec (includes the corrected `ra>0` guard evidence).

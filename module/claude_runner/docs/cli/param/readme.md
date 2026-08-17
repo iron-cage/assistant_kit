@@ -136,7 +136,7 @@ These parameter IDs exist in the sequence but have no corresponding file. The ID
 | 33 | `--max-sessions` | u32 | 8 | 0 to 4294967295 | Max concurrent non-interactive Claude Code sessions before blocking; 0 = unlimited; interactive exempt | 3 cmds |
 | 34 | `--retry-on-transient` | u8 | auto | 0–255 | Transient class retry count (Tier 2) | 2 cmds |
 | 35 | `--transient-delay` | u32 | auto | 0 to 4294967295 | Transient class delay (Tier 2) | 2 cmds |
-| 36 | `--timeout` | u32 | `3600` (print) / `0` (interactive) | 0 to 4294967295 | Seconds before watchdog kills subprocess; 0 = unlimited (run/ask only; contrast with param 20) | 2 cmds |
+| 36 | `--timeout` | u32 | `0` = unlimited (TSK-503) | 0 to 4294967295 | Seconds before watchdog kills subprocess; armed only when expressed (run/ask only; contrast with param 20) | 2 cmds |
 | 40 | `--retry-on-account` | u8 | auto | 0–255 | Account class retry count (Tier 2) | 2 cmds |
 | 41 | `--account-delay` | u32 | auto | 0 to 4294967295 | Account class delay (Tier 2) | 2 cmds |
 | 42 | `--retry-on-auth` | u8 | auto | 0–255 | Auth class retry count (Tier 2) | 2 cmds |

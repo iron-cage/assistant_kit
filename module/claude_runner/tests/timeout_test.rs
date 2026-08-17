@@ -7,7 +7,8 @@
 //!
 //! Verify EC-1 through EC-8 from `tests/docs/cli/param/036_timeout.md`, the
 //! default-timeout tests (`ec_timeout_default_*`, `ec_timeout_explicit_*`, `ec_timeout_unlimited_*`)
-//! introduced by TSK-227/228 (BUG-305: print-mode had no default watchdog), and the
+//! introduced by TSK-227/228 (BUG-305) and retargeted by TSK-503 (built-in default
+//! retired — 0 = unlimited unless `--timeout`/`CLR_TIMEOUT` is expressed), and the
 //! BUG-317 double-emission guard (`ec_timeout_retry_no_double_emission`).
 //!
 //! ## Scope Note
@@ -19,8 +20,9 @@
 //!
 //! - EC-1..EC-6: parser/dry-run — no subprocess required
 //! - EC-7..EC-8: require fake subprocess (explicit timeout)
-//! - ec_timeout_default_*: require fake subprocess (default timeout path, TSK-227)
-//! - ec_timeout_explicit_*: explicit timeout above default
+//! - ec_timeout_default_*: require fake subprocess (default path — unlimited since
+//!   TSK-503; the kill mechanism stays proven via the `_CLR_DEFAULT_TIMEOUT` hook)
+//! - ec_timeout_explicit_*: explicit large timeout values
 //! - ec_timeout_unlimited_*: explicit --timeout 0 / CLR_TIMEOUT=0 opt-out
 //!
 //! ## Corner Cases Covered
@@ -33,12 +35,12 @@
 //! - EC-6: `CLR_TIMEOUT=abc` silently ignored
 //! - EC-7: fake sleeps 30; --timeout 1 → exit 4 within ~2s; stderr "timeout after 1s"
 //! - EC-8: fake exits 0 fast; --timeout 30 → exit 0; no timeout message
-//! - ec_timeout_default_constant_value: DEFAULT_PRINT_TIMEOUT_SECS constant equals 3600
+//! - ec_timeout_default_constant_value: DEFAULT_PRINT_TIMEOUT_SECS constant equals 0 (TSK-503)
 //! - ec_timeout_default_no_fire: no --timeout, fast subprocess → exit 0, no timeout msg (BUG-305)
-//! - ec_timeout_default_activates_watchdog: no --timeout, 2s subprocess → exit 0 (3600s default)
-//! - ec_timeout_explicit_above_default: --timeout 7200 with fast subprocess → exit 0
-//! - ec_timeout_unlimited_flag: --timeout 0 opts out of 3600s default → exit 0
-//! - ec_timeout_unlimited_env: CLR_TIMEOUT=0 opts out of 3600s default → exit 0
+//! - ec_timeout_default_unlimited: no --timeout, 2s subprocess → exit 0 (no default watchdog)
+//! - ec_timeout_explicit_large_value: --timeout 7200 with fast subprocess → exit 0
+//! - ec_timeout_unlimited_flag: --timeout 0 explicit unlimited opt-out → exit 0
+//! - ec_timeout_unlimited_env: CLR_TIMEOUT=0 explicit unlimited opt-out → exit 0
 //! - ec_timeout_default_kills: `_CLR_DEFAULT_TIMEOUT=2`, hanging subprocess → exit 4 (TSK-228)
 //! - ec_timeout_retry_no_double_emission: no stderr line starts with bare label on retry (BUG-317)
 mod cli_binary_test_helpers;
@@ -132,7 +134,8 @@ fn ec5_timeout_cli_wins_over_env()
 
 // ── EC-6: CLR_TIMEOUT=invalid → silently ignored ─────────────────────────────
 
-/// EC-6: invalid `CLR_TIMEOUT` silently ignored; default 3600s watchdog applied for run/ask print-mode; dry-run exits before timeout fires.
+/// EC-6: invalid `CLR_TIMEOUT` silently ignored; the unexpressed default (unlimited since
+/// TSK-503) applies for run/ask print-mode; dry-run exits before any timeout could matter.
 #[ test ]
 fn ec6_clr_timeout_invalid_ignored()
 {
@@ -238,27 +241,28 @@ fn ec8_no_timeout_when_subprocess_exits_fast()
   );
 }
 
-// ── ec_timeout_default_constant_value: DEFAULT_PRINT_TIMEOUT_SECS = 3600 ──────
+// ── ec_timeout_default_constant_value: DEFAULT_PRINT_TIMEOUT_SECS = 0 ─────────
 
-/// TSK-227 / BUG-305 — `DEFAULT_PRINT_TIMEOUT_SECS` constant must equal 3600.
+/// TSK-503 — `DEFAULT_PRINT_TIMEOUT_SECS` constant must equal 0 (unlimited).
 ///
-/// Root Cause: run_print_mode() used unwrap_or(0), leaving print-mode sessions unbounded by default
-/// Why Not Caught: no test asserted the constant value existed or was correct
-/// Fix Applied: DEFAULT_PRINT_TIMEOUT_SECS const added above run_print_mode(); unwrap_or changed
-/// Prevention: this test fails if the constant is removed or changed to a different value
-/// Pitfall: run_interactive() must retain unwrap_or(0) — only print-mode adopts this default
+/// TSK-227/BUG-305 introduced a 3600 s (1 h) built-in watchdog here; TSK-503
+/// removes it — long agentic sessions were killed mid-work at the hour mark
+/// even though clr neutralizes claude's inner wind-down ceiling precisely to
+/// let background work run. A session is killed only by an EXPRESSED
+/// `--timeout N`/`CLR_TIMEOUT=N`; the constant and its resolution chain stay
+/// so the `_CLR_DEFAULT_TIMEOUT` test hook can still arm a default-path
+/// watchdog in tests (see ec_timeout_default_kills).
 ///
-/// Addendum (AGG-24, Plan 005 Phase 5): this invariant remains accurate after Plan 005
-/// Phase 4's restructuring — Fix(BUG-425)'s AGG-1 dropped that phase's originally-proposed
-/// `execution.rs:941` timeout-hardening deliverable entirely, so `run_interactive()`'s
-/// `unwrap_or(0)` was never touched and this comment was never at risk of going stale.
+/// Prevention: this test fails if the constant is removed, re-raised to a
+/// nonzero value, or the resolution chain stops flowing through
+/// default_print_timeout() (which would orphan the test hook).
 #[ test ]
 fn ec_timeout_default_constant_value()
 {
   let src = include_str!( "../src/cli/execution.rs" );
   assert!(
-    src.contains( "DEFAULT_PRINT_TIMEOUT_SECS : u32 = 3600" ),
-    "DEFAULT_PRINT_TIMEOUT_SECS must be defined as u32 = 3600 in src/cli/execution.rs"
+    src.contains( "DEFAULT_PRINT_TIMEOUT_SECS : u32 = 0" ),
+    "DEFAULT_PRINT_TIMEOUT_SECS must be defined as u32 = 0 (unlimited) in src/cli/execution.rs"
   );
   assert!(
     src.contains( "unwrap_or( DEFAULT_PRINT_TIMEOUT_SECS )" ),
@@ -270,14 +274,13 @@ fn ec_timeout_default_constant_value()
   );
 }
 
-// ── ec_timeout_default_no_fire: fast subprocess exits before 3600s watchdog ───
+// ── ec_timeout_default_no_fire: fast subprocess, no expressed timeout ─────────
 
-/// TSK-227 / BUG-305 — no --timeout, fast subprocess → exit 0, no timeout message.
+/// TSK-503 — no --timeout, fast subprocess → exit 0, no timeout message.
 ///
-/// Root Cause: unwrap_or(0) disabled watchdog entirely; default path was never exercised
-/// Why Not Caught: no test covered the None → unwrap_or branch for print-mode
-/// Fix Applied: unwrap_or( DEFAULT_PRINT_TIMEOUT_SECS ) arms a 3600s watchdog by default
-/// Prevention: verifies fast subprocess completes normally under the default watchdog
+/// Originally proved a fast subprocess completed under TSK-227's 3600 s default
+/// watchdog; since TSK-503 zeroed that default the same run proves the unexpressed
+/// path arms nothing at all — either way, no timeout message may appear.
 /// Pitfall: env_remove("CLR_TIMEOUT") required — ambient env var would override the None path
 #[ cfg( unix ) ]
 #[ test ]
@@ -303,34 +306,35 @@ fn ec_timeout_default_no_fire()
 
   assert!(
     out.status.success(),
-    "exit must be 0: fast subprocess under default 3600s watchdog. exit={:?} stderr={}",
+    "exit must be 0: fast subprocess with no expressed timeout. exit={:?} stderr={}",
     out.status.code(),
     String::from_utf8_lossy( &out.stderr )
   );
   let stderr = String::from_utf8_lossy( &out.stderr );
   assert!(
     !stderr.to_lowercase().contains( "timeout" ),
-    "no timeout message: 3600s default watchdog must not fire on fast subprocess. Got:\n{stderr}"
+    "no timeout message: nothing may fire on the unexpressed default path. Got:\n{stderr}"
   );
 }
 
-// ── ec_timeout_default_activates_watchdog: 2s subprocess survives 3600s default
+// ── ec_timeout_default_unlimited: 2s subprocess, no default watchdog ──────────
 
-/// TSK-227 / BUG-305 — no --timeout, 2s subprocess → exit 0 (3600s watchdog, not 0).
+/// TSK-503 — no --timeout, 2s subprocess → exit 0 promptly (no default watchdog armed).
 ///
-/// Root Cause: with unwrap_or(0) the watchdog was disabled; a small constant would kill a 2s process
-/// Why Not Caught: no test proved the default was armed at a sane value (not 0 or 1)
-/// Fix Applied: DEFAULT_PRINT_TIMEOUT_SECS = 3600 → 2s subprocess completes long before deadline
-/// Prevention: if constant is changed to < 2, this test will fail (subprocess killed prematurely)
+/// Successor to TSK-227's ec_timeout_default_activates_watchdog (which proved the 3600 s
+/// default was armed at a sane value). With the built-in default retired, the same fixture
+/// now pins the opposite contract: the unexpressed path kills nothing.
+/// Prevention: if a nonzero default under 2 s is ever reintroduced, the subprocess is
+/// killed prematurely and this test fails; the <10 s wall bound catches a hang regression.
 /// Pitfall: env_remove("CLR_TIMEOUT") required; test timing must allow ≥2s for subprocess sleep
 #[ cfg( unix ) ]
 #[ test ]
-fn ec_timeout_default_activates_watchdog()
+fn ec_timeout_default_unlimited()
 {
   let tmp  = tempfile::tempdir().expect( "create temp dir" );
   let fake = tmp.path().join( "claude" );
 
-  // 2s sleep: completes well before the 3600s default watchdog
+  // 2s sleep: completes normally — no default watchdog exists to race against
   std::fs::write( &fake, b"#!/bin/sh\nsleep 2\nprintf 'ok'\nexit 0\n" ).expect( "write fake claude" );
   std::fs::set_permissions( &fake, std::fs::Permissions::from_mode( 0o755 ) )
     .expect( "chmod fake claude" );
@@ -350,14 +354,14 @@ fn ec_timeout_default_activates_watchdog()
 
   assert!(
     out.status.success(),
-    "exit must be 0: 2s subprocess completes before 3600s default watchdog. exit={:?} stderr={}",
+    "exit must be 0: 2s subprocess completes; no default watchdog exists. exit={:?} stderr={}",
     out.status.code(),
     String::from_utf8_lossy( &out.stderr )
   );
   let stderr = String::from_utf8_lossy( &out.stderr );
   assert!(
     !stderr.to_lowercase().contains( "timeout" ),
-    "3600s default watchdog must not fire on a 2s subprocess. Got:\n{stderr}"
+    "no default watchdog may fire on the unexpressed path. Got:\n{stderr}"
   );
   assert!(
     elapsed.as_secs() < 10,
@@ -365,15 +369,15 @@ fn ec_timeout_default_activates_watchdog()
   );
 }
 
-// ── ec_timeout_explicit_above_default: --timeout 7200 with fast subprocess ───
+// ── ec_timeout_explicit_large_value: --timeout 7200 with fast subprocess ─────
 
-/// TSK-227 — explicit --timeout 7200 (above the 3600 default); fast subprocess exits 0.
+/// TSK-227 — explicit --timeout 7200 (a large expressed value); fast subprocess exits 0.
 ///
-/// Verifies that an explicit timeout value above the default is accepted and the fast
-/// subprocess completes normally. The Some(7200).unwrap_or(3600) = 7200 branch is exercised.
+/// Verifies that a large explicit timeout value is accepted and the fast subprocess
+/// completes normally. The Some(7200) expressed branch is exercised end to end.
 #[ cfg( unix ) ]
 #[ test ]
-fn ec_timeout_explicit_above_default()
+fn ec_timeout_explicit_large_value()
 {
   let tmp  = tempfile::tempdir().expect( "create temp dir" );
   let fake = tmp.path().join( "claude" );
@@ -406,12 +410,13 @@ fn ec_timeout_explicit_above_default()
   );
 }
 
-// ── ec_timeout_unlimited_flag: --timeout 0 opts out of 3600s default ─────────
+// ── ec_timeout_unlimited_flag: --timeout 0 expresses unlimited explicitly ────
 
-/// TSK-227 — `--timeout 0` explicitly opts out of the 3600s default; fast subprocess exits 0.
+/// TSK-227 — `--timeout 0` expresses unlimited explicitly; fast subprocess exits 0.
 ///
-/// Some(0).unwrap_or(DEFAULT_PRINT_TIMEOUT_SECS) = 0 (unlimited). Confirms the explicit
-/// override path still works after introducing the default.
+/// Some(0).unwrap_or(DEFAULT_PRINT_TIMEOUT_SECS) = 0 (unlimited). Since TSK-503 the
+/// unexpressed default is also 0, so this now confirms the expressed-zero path stays
+/// identical to the default rather than opting out of anything.
 #[ cfg( unix ) ]
 #[ test ]
 fn ec_timeout_unlimited_flag()
@@ -436,7 +441,7 @@ fn ec_timeout_unlimited_flag()
 
   assert!(
     out.status.success(),
-    "--timeout 0 must opt out of 3600s default; fast subprocess exits 0. exit={:?} stderr={}",
+    "--timeout 0 must express unlimited; fast subprocess exits 0. exit={:?} stderr={}",
     out.status.code(),
     String::from_utf8_lossy( &out.stderr )
   );
@@ -447,12 +452,13 @@ fn ec_timeout_unlimited_flag()
   );
 }
 
-// ── ec_timeout_unlimited_env: CLR_TIMEOUT=0 opts out of 3600s default ────────
+// ── ec_timeout_unlimited_env: CLR_TIMEOUT=0 expresses unlimited via env ──────
 
-/// TSK-227 — `CLR_TIMEOUT=0` opts out of the 3600s default via env var; fast subprocess exits 0.
+/// TSK-227 — `CLR_TIMEOUT=0` expresses unlimited via env var; fast subprocess exits 0.
 ///
 /// apply_env_vars() sets cli.timeout = Some(0); Some(0).unwrap_or(DEFAULT) = 0 (unlimited).
-/// Confirms env-var opt-out path still works after introducing the default.
+/// Since TSK-503 the unexpressed default is also 0 — this pins the env-expressed-zero
+/// path as equivalent (expressed 0 is a full opt-out: no watchdog, no gate budget; BUG-445).
 #[ cfg( unix ) ]
 #[ test ]
 fn ec_timeout_unlimited_env()
@@ -477,7 +483,7 @@ fn ec_timeout_unlimited_env()
 
   assert!(
     out.status.success(),
-    "CLR_TIMEOUT=0 must opt out of 3600s default; fast subprocess exits 0. exit={:?} stderr={}",
+    "CLR_TIMEOUT=0 must express unlimited; fast subprocess exits 0. exit={:?} stderr={}",
     out.status.code(),
     String::from_utf8_lossy( &out.stderr )
   );
@@ -568,8 +574,9 @@ fn ec_timeout_retry_no_double_emission()
 ///   text only, not runtime kill behaviour
 /// Fix Applied: default_print_timeout() reads _CLR_DEFAULT_TIMEOUT env var (test-only override),
 ///   falls back to DEFAULT_PRINT_TIMEOUT_SECS; run_print_mode() calls unwrap_or(default_print_timeout())
-/// Prevention: _CLR_DEFAULT_TIMEOUT=2 shortens the default to 2s so a 30s subprocess is killed,
-///   proving the None→default path fires poll_timeout() and exits 4
+/// Prevention: _CLR_DEFAULT_TIMEOUT=2 arms a test-only 2s default (the production default is
+///   unlimited since TSK-503) so a 30s subprocess is killed, proving the None→default path
+///   fires poll_timeout() and exits 4
 /// Pitfall: must set --retry-override 0 — default retry=2 × delay=30s = 60s hang without it
 #[ cfg( unix ) ]
 #[ test ]

@@ -27,7 +27,7 @@ Key: ✅ = supported, ⬜ = not injected/not applicable, ➖ = not accepted, `*`
 | **Credentials** | | | | | |
 | `--creds` | ➖ | ➖ | ✅ | ✅ | credentials JSON path |
 | **Execution control** | | | | | |
-| `--timeout` | ✅ 3600s | ✅ 3600s | ✅ 30s | ✅ 45s | different defaults per command |
+| `--timeout` | ✅ 0 = unlimited (TSK-503) | ✅ 0 = unlimited | ✅ 30s | ✅ 45s | different defaults per command |
 | `--dry-run` | ✅ | ✅ | ✅ | ✅ | preview without spawning |
 | `--trace` | ✅ | ✅ | ✅ | ✅ | emit env+command to stderr then execute |
 | `--no-compact-window` | ✅ | ✅ | ✅ | ✅ | suppress `CLAUDE_CODE_AUTO_COMPACT_WINDOW` injection |

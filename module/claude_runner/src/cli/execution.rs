@@ -464,7 +464,15 @@ pub( super ) fn apply_runner_retry(
 /// Default watchdog for print-mode when `--timeout` is absent and `CLR_TIMEOUT` is unset.
 /// `run_interactive()` also adopts this constant (BUG-425), but only for non-TTY stdin —
 /// a genuine TTY-attached session keeps the unlimited `unwrap_or( 0 )` default.
-const DEFAULT_PRINT_TIMEOUT_SECS : u32 = 3600;
+///
+/// 0 = no built-in watchdog (TSK-503): sessions run unlimited unless the caller expresses
+/// `--timeout`/`CLR_TIMEOUT`. The former 3600 s (1 h) default killed long agentic sessions
+/// mid-work — clr already neutralizes claude's inner wind-down ceiling
+/// (`CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS=0`) precisely to let background work run past
+/// arbitrary deadlines, and the outer kill contradicted that. The constant and the
+/// `default_print_timeout()` resolution chain stay so `_CLR_DEFAULT_TIMEOUT` can still arm
+/// a default-path watchdog in tests (invariant/007).
+const DEFAULT_PRINT_TIMEOUT_SECS : u32 = 0;
 
 /// Diagnostic Claude Code prints when a resumed session's deferred-tool marker is stale
 /// (tool already ran) or falls outside the tail-scan window (BUG-327).
@@ -497,9 +505,9 @@ enum FallbackReason
 
 /// Resolve the default print-mode timeout.
 ///
-/// In production: always returns `DEFAULT_PRINT_TIMEOUT_SECS` (3600).
+/// In production: always returns `DEFAULT_PRINT_TIMEOUT_SECS` (0 = unlimited, TSK-503).
 /// In tests: `_CLR_DEFAULT_TIMEOUT` env var overrides the constant so integration
-///   tests can verify the kill path without waiting 3600 seconds.
+///   tests can arm a default-path watchdog and verify the kill path.
 /// The `_` prefix signals internal/test-only use — not exposed in `--help`.
 fn default_print_timeout() -> u32
 {
@@ -611,7 +619,8 @@ fn run_print_mode_streaming(
 /// Uses a 4-tier retry hierarchy: override → class-specific → class-default → fallback.
 /// Every error class is retried when its effective count > 0.
 /// Console output uses `[Class] <message>` format on stderr.
-/// Supports subprocess timeout via `--timeout` (0 = unlimited; absent = `DEFAULT_PRINT_TIMEOUT_SECS`).
+/// Supports subprocess timeout via `--timeout` (0 = unlimited; absent = `DEFAULT_PRINT_TIMEOUT_SECS`,
+/// itself 0 since TSK-503 — the watchdog arms only from an expressed value or the test hook).
 #[ allow( clippy::too_many_lines ) ] // retry orchestration — per-class attempt counters, delay logic, and exit handling in one coherent loop
 pub( super ) fn run_print_mode(
   builder             : &ClaudeCommand,
@@ -620,11 +629,11 @@ pub( super ) fn run_print_mode(
   expected_session_id : Option< &SessionId >,
 )
 {
-  // Fix(BUG-305): print-mode sessions had no default watchdog, leaving unattended sessions unbounded.
-  // Root cause: unwrap_or( 0 ) treated absent --timeout as unlimited; print-mode should default to 1h.
-  // Pitfall: DEFAULT_PRINT_TIMEOUT_SECS applies here unconditionally; run_interactive() (BUG-425)
-  //   applies the same constant only for non-TTY stdin — a genuine TTY session there still
-  //   retains unwrap_or( 0 ), since it alone is truly user-attended.
+  // DEFAULT_PRINT_TIMEOUT_SECS is 0 since TSK-503 — absent --timeout/CLR_TIMEOUT means
+  // unlimited (BUG-305's 1 h default retired; it killed long agentic sessions mid-work).
+  // Pitfall: keep the resolution flowing through default_print_timeout(), never a literal —
+  //   the _CLR_DEFAULT_TIMEOUT test hook is the only remaining way tests arm this path,
+  //   and run_interactive() (BUG-425) shares the same chain for non-TTY stdin.
   let timeout_secs = cli.timeout.unwrap_or( default_print_timeout() );
   // Validate stdin file before the retry loop — a missing file is a user error,
   // not a transient spawn failure; it must not trigger runner retry.
@@ -872,22 +881,27 @@ pub( super ) fn run_print_mode(
 /// When `timeout_secs > 0`, uses `spawn_tty()` + `try_wait()` polling so the
 /// subprocess can be killed after the deadline while still using the TTY.
 /// Default absent `--timeout`: unlimited (`0`) for a genuine TTY session;
-/// `DEFAULT_PRINT_TIMEOUT_SECS` for non-TTY stdin (BUG-425).
+/// `DEFAULT_PRINT_TIMEOUT_SECS` for non-TTY stdin (BUG-425) — itself 0 since
+/// TSK-503, so both branches are unlimited in production and the split only
+/// matters for the `_CLR_DEFAULT_TIMEOUT` test hook (TTY stays exempt from it).
 pub( super ) fn run_interactive(
   builder : &ClaudeCommand,
   cli     : &CliArgs,
   journal : Option< &JournalWriter >,
 )
 {
-  // Fix(BUG-425): default timeout now bounded when stdin is non-TTY.
-  // Root cause: unwrap_or( 0 ) was unconditional — a genuine TTY-attached REPL session
-  //   is user-attended and should stay unlimited, but explicit --interactive paired
-  //   with non-TTY stdin (piped/redirected) reaches this same function with no
-  //   attended terminal at all, reproducing BUG-425's original unbounded-hang risk
-  //   one level deeper than the mode-selection fix reaches.
-  // Pitfall: only the non-TTY branch's default changes — an explicit --timeout value
-  //   from the caller always wins via unwrap_or_else's fallback-only scope; a genuine
-  //   TTY session's default must remain 0 (unlimited), never bounded.
+  // Fix(BUG-425): the non-TTY branch resolves through default_print_timeout() while a
+  //   genuine TTY session hardcodes 0 — with DEFAULT_PRINT_TIMEOUT_SECS at 0 (TSK-503)
+  //   both are unlimited in production, but the split is retained: the _CLR_DEFAULT_TIMEOUT
+  //   test hook can arm the non-TTY branch, and a TTY session must stay exempt from it.
+  // Root cause: unwrap_or( 0 ) was unconditional — explicit --interactive paired with
+  //   non-TTY stdin (piped/redirected) reaches this function with no attended terminal,
+  //   reproducing BUG-425's original unbounded-hang risk one level deeper than the
+  //   mode-selection fix reaches. TSK-503 later retired the production bound as a
+  //   deliberate tradeoff: long agentic sessions outrank stall protection, and callers
+  //   wanting a bound express --timeout/CLR_TIMEOUT (watchdog.sh probes already do).
+  // Pitfall: an explicit --timeout value always wins via unwrap_or_else's fallback-only
+  //   scope; never collapse the TTY/non-TTY split even while both default to 0.
   let is_tty = std::io::stdin().is_terminal();
   let timeout_secs = cli.timeout.unwrap_or_else( || if is_tty { 0 } else { default_print_timeout() } );
 

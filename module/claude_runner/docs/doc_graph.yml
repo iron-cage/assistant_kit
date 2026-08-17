@@ -44,7 +44,7 @@ nodes:
 
   - id: invariant/007
     file: invariant/007_print_mode_timeout.md
-    label: Print-Mode Timeout Default
+    label: No Built-In Print-Mode Session Timeout
     entity: invariant
 
   - id: invariant/008

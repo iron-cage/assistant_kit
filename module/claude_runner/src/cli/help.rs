@@ -85,7 +85,7 @@ fn runner_option_group() -> cli_fmt::help::OptionGroup
       OptionEntry { name : "--gate-poll-secs <SECS>".into(),         desc : "Session gate poll interval (default: 30) [env: CLR_GATE_POLL_SECS]".into() },
       OptionEntry { name : "--gate-max-attempts <N>".into(),         desc : "Session gate max poll attempts (default: 1000) [env: CLR_GATE_MAX_ATTEMPTS]".into() },
       OptionEntry { name : "--gate-stale-secs <SECS>".into(),        desc : "Reclaim gate slots held by dead/stale PIDs after N seconds (unset = disabled) [env: CLR_GATE_STALE_SECS]".into() },
-      OptionEntry { name : "--timeout <SECS>".into(),                desc : "Kill subprocess after N seconds (0 = unlimited, default: 3600)".into() },
+      OptionEntry { name : "--timeout <SECS>".into(),                desc : "Kill subprocess after N seconds (default: 0 = unlimited)".into() },
       // Retry tier 1: override
       OptionEntry { name : "--retry-override <N>".into(),            desc : "Force retry count for all error classes (unset = per-class)".into() },
       OptionEntry { name : "--retry-override-delay <SECS>".into(),   desc : "Force delay for all error classes (unset = per-class)".into() },
@@ -371,7 +371,7 @@ pub( crate ) fn print_ask_help() -> !
   println!( "  --output-file <PATH>               Write captured output to file (tee: stdout + file)" );
   println!( "  --expect <VALS>                    Pipe-separated expected values; mismatch → exit 3 (case-insensitive, trimmed)" );
   println!( "  --expect-strategy <STRAT>          Mismatch handling: fail (default), retry, default:<VAL>" );
-  println!( "  --timeout <SECS>                   Kill subprocess after N seconds (0 = unlimited, default: 3600)" );
+  println!( "  --timeout <SECS>                   Kill subprocess after N seconds (default: 0 = unlimited)" );
   println!( "  --retry-override <N>               Force retry count for all error classes" );
   println!( "  --retry-default <N>                Fallback retry count (default: 2)" );
   println!( "  --retry-on-transient <N>           Transient class retry count (default: auto → fallback)" );
