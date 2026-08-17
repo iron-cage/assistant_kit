@@ -444,7 +444,7 @@ pub fn seven_day_left( aq : &AccountQuota ) -> f64
 /// - `Any`    → `min(seven_day_left, 100.0 - sonnet.utilization)` when `Some`; else `seven_day_left`.
 /// - `Err(_)` result → `(-1.0, 0.0)`.
 ///
-/// Fix(feature-039 Phase-2, commit 5c5815c2 — no BUG-NNN was filed): old `prefer_weekly`
+/// Fix(BUG-489, shipped in feature-039 Phase-2, commit 5c5815c2): old `prefer_weekly`
 ///   used `map_or(0.0, ...)` for Sonnet utilization —
 ///   when `seven_day_sonnet = None`, `100.0 - 0.0 = 100.0`, silently inflating the quota
 ///   and making accounts with absent Sonnet tiers appear fully eligible under `prefer::son`.
