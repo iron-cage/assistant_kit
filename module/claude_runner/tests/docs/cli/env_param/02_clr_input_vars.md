@@ -1,7 +1,7 @@
 # Env Param :: CLR_* Input Variables
 
-Edge cases for the `CLR_*` input environment variable fallbacks (60 for `run`, 3 for `isolated`/`refresh`, 5 for `ps`; see `env_param.md` §1–§3 for full list).
-Source: [`env_param.md`](../../../../docs/cli/env_param.md)
+Edge cases for the `CLR_*` input environment variable fallbacks (60 for `run`, 3 for `isolated`/`refresh`, 5 for `ps`; see `003_env_param.md` §1–§3 for full list).
+Source: [`003_env_param.md`](../../../../docs/cli/003_env_param.md)
 Implementation: `apply_env_vars()` in `src/cli/env.rs`; `apply_isolated_env_vars()` and `apply_refresh_env_vars()` in `src/cli/cred_parse.rs`
 Test files: `tests/env_var_test.rs` (E01–E17), `tests/env_var_ext_test.rs` (E18–E40), `tests/ps_flags_test.rs` (E41–E42), `tests/output_style_test.rs` (E43), `tests/summary_fields_test.rs` (E44)
 
@@ -79,7 +79,7 @@ Test files: `tests/env_var_test.rs` (E01–E17), `tests/env_var_ext_test.rs` (E1
 - **Then:** stdout contains `hello world`
 - **Exit:** 0
 - **CLI-wins:** `clr --dry-run cli_msg` with `CLR_MESSAGE=env_msg` → stdout contains `cli_msg`, NOT `env_msg`
-- **Source:** [env_param.md §1](../../../../docs/cli/env_param.md)
+- **Source:** [003_env_param.md §1](../../../../docs/cli/003_env_param.md)
 
 ---
 
@@ -89,7 +89,7 @@ Test files: `tests/env_var_test.rs` (E01–E17), `tests/env_var_ext_test.rs` (E1
 - **When:** `clr --dry-run --interactive x`
 - **Then:** stdout contains `--print`
 - **Exit:** 0
-- **Source:** [env_param.md §1](../../../../docs/cli/env_param.md)
+- **Source:** [003_env_param.md §1](../../../../docs/cli/003_env_param.md)
 
 ---
 
@@ -100,7 +100,7 @@ Test files: `tests/env_var_test.rs` (E01–E17), `tests/env_var_ext_test.rs` (E1
 - **Then:** stdout contains `--model` and `sonnet`
 - **Exit:** 0
 - **CLI-wins:** `clr --dry-run --model opus task` with `CLR_MODEL=sonnet` → stdout contains `opus`, NOT `sonnet`
-- **Source:** [env_param.md §1](../../../../docs/cli/env_param.md)
+- **Source:** [003_env_param.md §1](../../../../docs/cli/003_env_param.md)
 
 ---
 
@@ -111,7 +111,7 @@ Test files: `tests/env_var_test.rs` (E01–E17), `tests/env_var_ext_test.rs` (E1
 - **Then:** stdout contains `--verbose`
 - **Bool negative:** `CLR_VERBOSE=yes` → `--verbose` must NOT appear (only `1`/`true` are truthy)
 - **Exit:** 0
-- **Source:** [env_param.md §1](../../../../docs/cli/env_param.md)
+- **Source:** [003_env_param.md §1](../../../../docs/cli/003_env_param.md)
 
 ---
 
@@ -121,7 +121,7 @@ Test files: `tests/env_var_test.rs` (E01–E17), `tests/env_var_ext_test.rs` (E1
 - **When:** `clr --dry-run task`
 - **Then:** stdout does NOT contain `--dangerously-skip-permissions`
 - **Exit:** 0
-- **Source:** [env_param.md §1](../../../../docs/cli/env_param.md)
+- **Source:** [003_env_param.md §1](../../../../docs/cli/003_env_param.md)
 
 ---
 
@@ -131,7 +131,7 @@ Test files: `tests/env_var_test.rs` (E01–E17), `tests/env_var_ext_test.rs` (E1
 - **When:** `clr --dry-run task`
 - **Then:** stdout does NOT contain `--print`
 - **Exit:** 0
-- **Source:** [env_param.md §1](../../../../docs/cli/env_param.md)
+- **Source:** [003_env_param.md §1](../../../../docs/cli/003_env_param.md)
 
 ---
 
@@ -141,7 +141,7 @@ Test files: `tests/env_var_test.rs` (E01–E17), `tests/env_var_ext_test.rs` (E1
 - **When:** `clr --dry-run task`
 - **Then:** stdout does NOT contain ` -c`
 - **Exit:** 0
-- **Source:** [env_param.md §1](../../../../docs/cli/env_param.md)
+- **Source:** [003_env_param.md §1](../../../../docs/cli/003_env_param.md)
 
 ---
 
@@ -151,7 +151,7 @@ Test files: `tests/env_var_test.rs` (E01–E17), `tests/env_var_ext_test.rs` (E1
 - **When:** `clr --dry-run task`
 - **Then:** stdout contains `/tmp/e08dir`
 - **Exit:** 0
-- **Source:** [env_param.md §1](../../../../docs/cli/env_param.md)
+- **Source:** [003_env_param.md §1](../../../../docs/cli/003_env_param.md)
 
 ---
 
@@ -161,7 +161,7 @@ Test files: `tests/env_var_test.rs` (E01–E17), `tests/env_var_ext_test.rs` (E1
 - **When:** `clr --dry-run task`
 - **Then:** stdout contains `3000`
 - **Exit:** 0
-- **Source:** [env_param.md §1](../../../../docs/cli/env_param.md)
+- **Source:** [003_env_param.md §1](../../../../docs/cli/003_env_param.md)
 
 ---
 
@@ -171,7 +171,7 @@ Test files: `tests/env_var_test.rs` (E01–E17), `tests/env_var_ext_test.rs` (E1
 - **When:** `clr --dry-run task`
 - **Then:** stdout contains `/tmp/e10sess`
 - **Exit:** 0
-- **Source:** [env_param.md §1](../../../../docs/cli/env_param.md)
+- **Source:** [003_env_param.md §1](../../../../docs/cli/003_env_param.md)
 
 ---
 
@@ -181,7 +181,7 @@ Test files: `tests/env_var_test.rs` (E01–E17), `tests/env_var_ext_test.rs` (E1
 - **When:** `clr task`
 - **Then:** exit 0; stdout contains assembled command (contains `--effort`)
 - **Rationale:** without env var the process attempts claude execution (non-0 in test env)
-- **Source:** [env_param.md §1](../../../../docs/cli/env_param.md)
+- **Source:** [003_env_param.md §1](../../../../docs/cli/003_env_param.md)
 
 ---
 
@@ -190,7 +190,7 @@ Test files: `tests/env_var_test.rs` (E01–E17), `tests/env_var_ext_test.rs` (E1
 - **Given:** `CLR_QUIET=true`; `CLAUDECODE=1`; `--keep-claudecode` flag used
 - **When:** `clr --keep-claudecode --dry-run task`
 - **Then:** stderr does NOT contain nested-agent warning; `--quiet` gate applied via env var
-- **Source:** [env_param.md §1](../../../../docs/cli/env_param.md)
+- **Source:** [003_env_param.md §1](../../../../docs/cli/003_env_param.md)
 
 ---
 
@@ -199,7 +199,7 @@ Test files: `tests/env_var_test.rs` (E01–E17), `tests/env_var_ext_test.rs` (E1
 - **Given:** `CLR_TRACE=1`
 - **When:** `clr task`
 - **Then:** stderr contains assembled command preview (contains `--effort`)
-- **Source:** [env_param.md §1](../../../../docs/cli/env_param.md)
+- **Source:** [003_env_param.md §1](../../../../docs/cli/003_env_param.md)
 
 ---
 
@@ -209,7 +209,7 @@ Test files: `tests/env_var_test.rs` (E01–E17), `tests/env_var_ext_test.rs` (E1
 - **When:** `clr --dry-run task`
 - **Then:** stdout does NOT contain `ultrathink`
 - **Exit:** 0
-- **Source:** [env_param.md §1](../../../../docs/cli/env_param.md)
+- **Source:** [003_env_param.md §1](../../../../docs/cli/003_env_param.md)
 
 ---
 
@@ -219,7 +219,7 @@ Test files: `tests/env_var_test.rs` (E01–E17), `tests/env_var_ext_test.rs` (E1
 - **When:** `clr --dry-run task`
 - **Then:** stdout contains `--system-prompt`
 - **Exit:** 0
-- **Source:** [env_param.md §1](../../../../docs/cli/env_param.md)
+- **Source:** [003_env_param.md §1](../../../../docs/cli/003_env_param.md)
 
 ---
 
@@ -229,7 +229,7 @@ Test files: `tests/env_var_test.rs` (E01–E17), `tests/env_var_ext_test.rs` (E1
 - **When:** `clr --dry-run task`
 - **Then:** stdout contains `--append-system-prompt`
 - **Exit:** 0
-- **Source:** [env_param.md §1](../../../../docs/cli/env_param.md)
+- **Source:** [003_env_param.md §1](../../../../docs/cli/003_env_param.md)
 
 ---
 
@@ -239,7 +239,7 @@ Test files: `tests/env_var_test.rs` (E01–E17), `tests/env_var_ext_test.rs` (E1
 - **When:** `clr --dry-run task`
 - **Then:** stdout contains `low` (default is `max`; env var overrides)
 - **Exit:** 0
-- **Source:** [env_param.md §1](../../../../docs/cli/env_param.md)
+- **Source:** [003_env_param.md §1](../../../../docs/cli/003_env_param.md)
 
 ---
 
@@ -249,7 +249,7 @@ Test files: `tests/env_var_test.rs` (E01–E17), `tests/env_var_ext_test.rs` (E1
 - **When:** `clr --dry-run task`
 - **Then:** stdout does NOT contain `--effort`
 - **Exit:** 0
-- **Source:** [env_param.md §1](../../../../docs/cli/env_param.md)
+- **Source:** [003_env_param.md §1](../../../../docs/cli/003_env_param.md)
 
 ---
 
@@ -259,7 +259,7 @@ Test files: `tests/env_var_test.rs` (E01–E17), `tests/env_var_ext_test.rs` (E1
 - **When:** `clr --dry-run task`
 - **Then:** stdout does NOT contain `--chrome`
 - **Exit:** 0
-- **Source:** [env_param.md §1](../../../../docs/cli/env_param.md)
+- **Source:** [003_env_param.md §1](../../../../docs/cli/003_env_param.md)
 
 ---
 
@@ -269,7 +269,7 @@ Test files: `tests/env_var_test.rs` (E01–E17), `tests/env_var_ext_test.rs` (E1
 - **When:** `clr --dry-run task`
 - **Then:** stdout contains `--no-session-persistence`
 - **Exit:** 0
-- **Source:** [env_param.md §1](../../../../docs/cli/env_param.md)
+- **Source:** [003_env_param.md §1](../../../../docs/cli/003_env_param.md)
 
 ---
 
@@ -279,7 +279,7 @@ Test files: `tests/env_var_test.rs` (E01–E17), `tests/env_var_ext_test.rs` (E1
 - **When:** `clr --dry-run task`
 - **Then:** stdout contains `--json-schema`
 - **Exit:** 0
-- **Source:** [env_param.md §1](../../../../docs/cli/env_param.md)
+- **Source:** [003_env_param.md §1](../../../../docs/cli/003_env_param.md)
 
 ---
 
@@ -290,7 +290,7 @@ Test files: `tests/env_var_test.rs` (E01–E17), `tests/env_var_ext_test.rs` (E1
 - **Then:** stdout contains `--mcp-config` and `/tmp/mcp.json`
 - **Exit:** 0
 - **Note:** env var supplies at most one path; multiple paths require CLI repeats
-- **Source:** [env_param.md §1](../../../../docs/cli/env_param.md)
+- **Source:** [003_env_param.md §1](../../../../docs/cli/003_env_param.md)
 
 ---
 
@@ -299,7 +299,7 @@ Test files: `tests/env_var_test.rs` (E01–E17), `tests/env_var_ext_test.rs` (E1
 - **Given:** `CLR_CREDS=/tmp/e23.creds.json`; no `--creds` on CLI
 - **When:** `clr isolated`
 - **Then:** stderr contains a file-not-found error referencing the CLR_CREDS path (not a HOME-resolution error); confirms `creds_path` was populated from tier-2 env var
-- **Source:** [env_param.md §2](../../../../docs/cli/env_param.md)
+- **Source:** [003_env_param.md §2](../../../../docs/cli/003_env_param.md)
 
 ---
 
@@ -308,7 +308,7 @@ Test files: `tests/env_var_test.rs` (E01–E17), `tests/env_var_ext_test.rs` (E1
 - **Given:** `CLR_CREDS=/tmp/e24.creds.json` + `CLR_TIMEOUT=5`; no `--creds`/`--timeout` on CLI
 - **When:** `clr isolated`
 - **Then:** stderr contains a file-not-found error (creds path populated from CLR_CREDS); no HOME-resolution error; confirms both tier-2 vars applied
-- **Source:** [env_param.md §2](../../../../docs/cli/env_param.md)
+- **Source:** [003_env_param.md §2](../../../../docs/cli/003_env_param.md)
 
 ---
 
@@ -319,7 +319,7 @@ Test files: `tests/env_var_test.rs` (E01–E17), `tests/env_var_ext_test.rs` (E1
 - **Then:** describe output includes the file path (same as `clr --dry-run --file /tmp/x.txt task`)
 - **Exit:** 0
 - **CLI-wins:** `clr --dry-run --file /tmp/other.txt task` with `CLR_FILE=/tmp/x.txt` → `/tmp/other.txt` used, NOT `/tmp/x.txt`
-- **Source:** [env_param.md §1](../../../../docs/cli/env_param.md)
+- **Source:** [003_env_param.md §1](../../../../docs/cli/003_env_param.md)
 
 ---
 
@@ -329,7 +329,7 @@ Test files: `tests/env_var_test.rs` (E01–E17), `tests/env_var_ext_test.rs` (E1
 - **When:** `clr -p task`
 - **Then:** captured stdout has fence lines removed (same as `clr -p --strip-fences task`)
 - **Exit:** 0
-- **Source:** [env_param.md §1](../../../../docs/cli/env_param.md)
+- **Source:** [003_env_param.md §1](../../../../docs/cli/003_env_param.md)
 
 ---
 
@@ -339,7 +339,7 @@ Test files: `tests/env_var_test.rs` (E01–E17), `tests/env_var_ext_test.rs` (E1
 - **When:** `clr task` (via fake claude that prints its env)
 - **Then:** subprocess env contains `CLAUDECODE` (same as `clr --keep-claudecode task`)
 - **Exit:** 0
-- **Source:** [env_param.md §1](../../../../docs/cli/env_param.md)
+- **Source:** [003_env_param.md §1](../../../../docs/cli/003_env_param.md)
 
 ---
 
@@ -349,7 +349,7 @@ Test files: `tests/env_var_test.rs` (E01–E17), `tests/env_var_ext_test.rs` (E1
 - **When:** `clr isolated` (dry-run or parse-only path)
 - **Then:** stderr contains creds path and temp HOME details (cross-command trace output)
 - **Note:** `CLR_TRACE` is shared with `run` (E13); this case validates `apply_isolated_env_vars()` and `apply_refresh_env_vars()` apply it independently
-- **Source:** [env_param.md §2](../../../../docs/cli/env_param.md)
+- **Source:** [003_env_param.md §2](../../../../docs/cli/003_env_param.md)
 
 ---
 
@@ -360,7 +360,7 @@ Test files: `tests/env_var_test.rs` (E01–E17), `tests/env_var_ext_test.rs` (E1
 - **Then:** dry-run output contains the effective dir ending in `/-feature`
 - **Exit:** 0
 - **CLI-wins:** `clr --dry-run --subdir cliname task` with `CLR_SUBDIR=envname` → effective dir ends in `/-cliname`, NOT `/-envname`
-- **Source:** [env_param.md §1](../../../../docs/cli/env_param.md)
+- **Source:** [003_env_param.md §1](../../../../docs/cli/003_env_param.md)
 
 ---
 
@@ -372,7 +372,7 @@ Test files: `tests/env_var_test.rs` (E01–E17), `tests/env_var_ext_test.rs` (E1
 - **Exit:** 0
 - **Invalid-ignored:** `CLR_MAX_SESSIONS=notanumber` → parse failure silently ignored; default 8 used; `--dry-run` exits 0 normally
 - **CLI-wins:** `clr --max-sessions 5 --dry-run task` with `CLR_MAX_SESSIONS=2` → CLI value 5 used; env var 2 ignored
-- **Source:** [env_param.md §1](../../../../docs/cli/env_param.md)
+- **Source:** [003_env_param.md §1](../../../../docs/cli/003_env_param.md)
 
 ---
 
@@ -383,7 +383,7 @@ Test files: `tests/env_var_test.rs` (E01–E17), `tests/env_var_ext_test.rs` (E1
 - **Then:** exit 0; env var applied (output would tee to `/tmp/e31_out.txt` in a live run); dry-run exits 0 normally without creating the file
 - **Exit:** 0
 - **CLI-wins:** `clr --output-file /tmp/cli.txt --dry-run task` with `CLR_OUTPUT_FILE=/tmp/env.txt` → CLI value `/tmp/cli.txt` used; env var `/tmp/env.txt` ignored
-- **Source:** [env_param.md §1](../../../../docs/cli/env_param.md)
+- **Source:** [003_env_param.md §1](../../../../docs/cli/003_env_param.md)
 
 ---
 
@@ -394,7 +394,7 @@ Test files: `tests/env_var_test.rs` (E01–E17), `tests/env_var_ext_test.rs` (E1
 - **Then:** exit 0; env var applied (validation would check stdout against `yes|no` in a live run); dry-run exits 0 normally
 - **Exit:** 0
 - **CLI-wins:** `clr --expect "ok|fail" --dry-run task` with `CLR_EXPECT=yes|no` → CLI value `ok|fail` used; env var ignored
-- **Source:** [env_param.md §1](../../../../docs/cli/env_param.md)
+- **Source:** [003_env_param.md §1](../../../../docs/cli/003_env_param.md)
 
 ---
 
@@ -406,7 +406,7 @@ Test files: `tests/env_var_test.rs` (E01–E17), `tests/env_var_ext_test.rs` (E1
 - **Exit:** 0
 - **CLI-wins:** `clr --expect-strategy fail --dry-run task` with `CLR_EXPECT_STRATEGY=retry` → CLI value `fail` used; env var `retry` ignored
 - **Invalid:** `CLR_EXPECT_STRATEGY=bogus clr --dry-run task` → parse failure; exit 1 with error message about invalid strategy value
-- **Source:** [env_param.md §1](../../../../docs/cli/env_param.md)
+- **Source:** [003_env_param.md §1](../../../../docs/cli/003_env_param.md)
 
 ---
 
@@ -418,7 +418,7 @@ Test files: `tests/env_var_test.rs` (E01–E17), `tests/env_var_ext_test.rs` (E1
 - **Exit:** 0
 - **CLI-wins:** `clr --retry-on-validation 5 --dry-run task` with `CLR_RETRY_ON_VALIDATION=3` → CLI value 5 used; env var 3 ignored
 - **Out-of-range:** `CLR_RETRY_ON_VALIDATION=256 clr --dry-run task` → exit 1; stderr contains error about value exceeding u8 range (max 255); note: hard-rejected unlike other retry env vars
-- **Source:** [env_param.md §1](../../../../docs/cli/env_param.md)
+- **Source:** [003_env_param.md §1](../../../../docs/cli/003_env_param.md)
 
 ---
 
@@ -430,7 +430,7 @@ Test files: `tests/env_var_test.rs` (E01–E17), `tests/env_var_ext_test.rs` (E1
 - **Exit:** 0
 - **CLI-wins:** `clr --retry-on-transient 0 --dry-run task` with `CLR_RETRY_ON_TRANSIENT=3` → CLI value 0 used; env var 3 ignored
 - **Invalid-ignored:** `CLR_RETRY_ON_TRANSIENT=notanumber` → parse failure silently ignored; effective default (auto → fallback 2) used; dry-run exits 0 normally
-- **Source:** [env_param.md §1](../../../../docs/cli/env_param.md)
+- **Source:** [003_env_param.md §1](../../../../docs/cli/003_env_param.md)
 
 ---
 
@@ -442,7 +442,7 @@ Test files: `tests/env_var_test.rs` (E01–E17), `tests/env_var_ext_test.rs` (E1
 - **Exit:** 0
 - **CLI-wins:** `clr --transient-delay 5 --dry-run task` with `CLR_TRANSIENT_DELAY=60` → CLI value 5 used; env var 60 ignored
 - **Invalid-ignored:** `CLR_TRANSIENT_DELAY=notanumber` → parse failure silently ignored; effective default (auto → fallback 30s) used; dry-run exits 0 normally
-- **Source:** [env_param.md §1](../../../../docs/cli/env_param.md)
+- **Source:** [003_env_param.md §1](../../../../docs/cli/003_env_param.md)
 
 ---
 
@@ -456,7 +456,7 @@ Test files: `tests/env_var_test.rs` (E01–E17), `tests/env_var_ext_test.rs` (E1
 - **Zero:** `CLR_TIMEOUT=0` → unlimited (no watchdog); dry-run exits 0 normally
 - **Invalid-ignored:** `CLR_TIMEOUT=notanumber` → parse failure silently ignored; run/ask fall back to the built-in default `0` = unlimited (TSK-503; isolated/refresh keep their own 30s/45s defaults); dry-run exits 0 normally
 - **Cross-command:** `CLR_TIMEOUT` also applies to `isolated`/`refresh` (same semantics: 0 = unlimited); tested separately in E24
-- **Source:** [env_param.md §1](../../../../docs/cli/env_param.md)
+- **Source:** [003_env_param.md §1](../../../../docs/cli/003_env_param.md)
 
 ---
 
@@ -468,7 +468,7 @@ Test files: `tests/env_var_test.rs` (E01–E17), `tests/env_var_ext_test.rs` (E1
 - **Exit:** 0
 - **CLI-wins:** `clr --retry-on-service 3 --dry-run task` with `CLR_RETRY_ON_SERVICE=1` → CLI value 3 used; env var 1 ignored
 - **Invalid-ignored:** `CLR_RETRY_ON_SERVICE=notanumber` → parse failure silently ignored; effective default (auto → fallback 2) used; dry-run exits 0 normally
-- **Source:** [env_param.md §1](../../../../docs/cli/env_param.md)
+- **Source:** [003_env_param.md §1](../../../../docs/cli/003_env_param.md)
 
 ---
 
@@ -480,7 +480,7 @@ Test files: `tests/env_var_test.rs` (E01–E17), `tests/env_var_ext_test.rs` (E1
 - **Exit:** 0
 - **CLI-wins:** `clr --service-delay 30 --dry-run task` with `CLR_SERVICE_DELAY=10` → CLI value 30 used; env var 10 ignored
 - **Invalid-ignored:** `CLR_SERVICE_DELAY=notanumber` → parse failure silently ignored; effective default (auto → fallback 30s) used; dry-run exits 0 normally
-- **Source:** [env_param.md §1](../../../../docs/cli/env_param.md)
+- **Source:** [003_env_param.md §1](../../../../docs/cli/003_env_param.md)
 
 ---
 
@@ -492,7 +492,7 @@ Test files: `tests/env_var_test.rs` (E01–E17), `tests/env_var_ext_test.rs` (E1
 - **Exit:** 0
 - **CLI-wins:** `clr --retry-on-unknown 2 --dry-run task` with `CLR_RETRY_ON_UNKNOWN=1` → CLI value 2 used; env var 1 ignored
 - **Invalid-ignored:** `CLR_RETRY_ON_UNKNOWN=bad` → parse failure silently ignored; effective default (auto → fallback 2) used; dry-run exits 0 normally
-- **Source:** [env_param.md §1](../../../../docs/cli/env_param.md)
+- **Source:** [003_env_param.md §1](../../../../docs/cli/003_env_param.md)
 
 ---
 
@@ -504,7 +504,7 @@ Test files: `tests/env_var_test.rs` (E01–E17), `tests/env_var_ext_test.rs` (E1
 - **Exit:** 0
 - **Invalid-ignored:** `CLR_PS_ANCIENT_SECS=notanumber` → parse failure silently ignored; default 28800 used; no 🕰 flag for typical running session
 - **Note:** No CLI flag equivalent — env var is the only override mechanism
-- **Source:** [env_param.md §3](../../../../docs/cli/env_param.md)
+- **Source:** [003_env_param.md §3](../../../../docs/cli/003_env_param.md)
 
 ---
 
@@ -516,7 +516,7 @@ Test files: `tests/env_var_test.rs` (E01–E17), `tests/env_var_ext_test.rs` (E1
 - **Exit:** 0
 - **Invalid-ignored:** `CLR_PS_HIGH_RAM_MB=notanumber` → parse failure silently ignored; default 400 used; typical test process RAM would not trigger the flag
 - **Note:** No CLI flag equivalent — env var is the only override mechanism
-- **Source:** [env_param.md §3](../../../../docs/cli/env_param.md)
+- **Source:** [003_env_param.md §3](../../../../docs/cli/003_env_param.md)
 
 ---
 
@@ -529,7 +529,7 @@ Test files: `tests/env_var_test.rs` (E01–E17), `tests/env_var_ext_test.rs` (E1
 - **CLI-wins:** `CLR_OUTPUT_STYLE=raw clr -p --max-sessions 0 --output-style summary "x"` → stdout contains `---`; CLI flag `summary` wins over env var `raw`
 - **Invalid:** `CLR_OUTPUT_STYLE=bogus clr run -m "x"` → exit 1; stderr contains `"CLR_OUTPUT_STYLE: invalid value 'bogus'"` (hard-rejected, not silently ignored)
 - **Note:** Covered by `output_style_test.rs` EC-04 (env var applied), EC-11 (CLI-wins), EC-12 (env var validation)
-- **Source:** [env_param.md §1](../../../../docs/cli/env_param.md)
+- **Source:** [003_env_param.md §1](../../../../docs/cli/003_env_param.md)
 
 ---
 
@@ -542,4 +542,4 @@ Test files: `tests/env_var_test.rs` (E01–E17), `tests/env_var_ext_test.rs` (E1
 - **CLI-wins:** `CLR_SUMMARY_FIELDS=minimal clr -p --max-sessions 0 --summary-fields full "x"` → stdout contains `duration_ms:` and `model:`; CLI flag `full` wins over env var `minimal`
 - **Invalid:** `CLR_SUMMARY_FIELDS=bogus clr run -m "x"` → exit 1; stderr contains `"CLR_SUMMARY_FIELDS: invalid value 'bogus'"` (hard-rejected, not silently ignored)
 - **Note:** Covered by `summary_fields_test.rs` EC-09 (env var applied), EC-10 (CLI-wins), EC-11 (env var validation)
-- **Source:** [env_param.md §1](../../../../docs/cli/env_param.md)
+- **Source:** [003_env_param.md §1](../../../../docs/cli/003_env_param.md)

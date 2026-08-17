@@ -2,7 +2,7 @@
 
 Edge case tests for the `CLAUDE_CODE_MAX_OUTPUT_TOKENS` environment variable injection mechanism.
 
-**Source:** [env_param.md](../../../../docs/cli/env_param.md)
+**Source:** [003_env_param.md](../../../../docs/cli/003_env_param.md)
 
 ## Test Case Index
 
@@ -33,7 +33,7 @@ Edge case tests for the `CLAUDE_CODE_MAX_OUTPUT_TOKENS` environment variable inj
 - **When:** `clr --dry-run --max-tokens 50000 "test"`
 - **Then:** Output contains `CLAUDE_CODE_MAX_OUTPUT_TOKENS=50000`
 - **Exit:** 0
-- **Source:** [env_param.md](../../../../docs/cli/env_param.md)
+- **Source:** [003_env_param.md](../../../../docs/cli/003_env_param.md)
 
 ---
 
@@ -43,7 +43,7 @@ Edge case tests for the `CLAUDE_CODE_MAX_OUTPUT_TOKENS` environment variable inj
 - **When:** `clr --dry-run "test"`
 - **Then:** Output contains `CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000`
 - **Exit:** 0
-- **Source:** [env_param.md](../../../../docs/cli/env_param.md)
+- **Source:** [003_env_param.md](../../../../docs/cli/003_env_param.md)
 
 ---
 
@@ -53,7 +53,7 @@ Edge case tests for the `CLAUDE_CODE_MAX_OUTPUT_TOKENS` environment variable inj
 - **When:** `clr --dry-run --max-tokens 0 "test"`
 - **Then:** Output contains `CLAUDE_CODE_MAX_OUTPUT_TOKENS=0`
 - **Exit:** 0
-- **Source:** [env_param.md](../../../../docs/cli/env_param.md)
+- **Source:** [003_env_param.md](../../../../docs/cli/003_env_param.md)
 
 ---
 
@@ -63,7 +63,7 @@ Edge case tests for the `CLAUDE_CODE_MAX_OUTPUT_TOKENS` environment variable inj
 - **When:** `clr --dry-run --max-tokens 4294967295 "test"`
 - **Then:** Output contains `CLAUDE_CODE_MAX_OUTPUT_TOKENS=4294967295`; no overflow error
 - **Exit:** 0
-- **Source:** [env_param.md](../../../../docs/cli/env_param.md), [param/009_max_tokens.md](../../../../docs/cli/param/009_max_tokens.md)
+- **Source:** [003_env_param.md](../../../../docs/cli/003_env_param.md), [param/009_max_tokens.md](../../../../docs/cli/param/009_max_tokens.md)
 
 ---
 
@@ -73,7 +73,7 @@ Edge case tests for the `CLAUDE_CODE_MAX_OUTPUT_TOKENS` environment variable inj
 - **When:** `clr --dry-run "test"`
 - **Then:** `CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000` appears in the env section before the command line
 - **Exit:** 0
-- **Source:** [env_param.md](../../../../docs/cli/env_param.md), [param/011_dry_run.md](../../../../docs/cli/param/011_dry_run.md)
+- **Source:** [003_env_param.md](../../../../docs/cli/003_env_param.md), [param/011_dry_run.md](../../../../docs/cli/param/011_dry_run.md)
 
 ---
 
@@ -83,4 +83,4 @@ Edge case tests for the `CLAUDE_CODE_MAX_OUTPUT_TOKENS` environment variable inj
 - **When:** `clr --trace "test"` (claude unavailable in test environment)
 - **Then:** Stderr contains `CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000` before the command line
 - **Exit:** 1 (claude absent)
-- **Source:** [env_param.md](../../../../docs/cli/env_param.md), [param/013_trace.md](../../../../docs/cli/param/013_trace.md)
+- **Source:** [003_env_param.md](../../../../docs/cli/003_env_param.md), [param/013_trace.md](../../../../docs/cli/param/013_trace.md)

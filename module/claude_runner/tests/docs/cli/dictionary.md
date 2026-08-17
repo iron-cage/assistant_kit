@@ -1,9 +1,9 @@
 # CLI Dictionary: Vocabulary Consistency Tests
 
 Term accuracy and completeness checks for the CLI dictionary at
-[`docs/cli/dictionary.md`](../../../docs/cli/dictionary.md).
+[`docs/cli/001_dictionary.md`](../../../docs/cli/001_dictionary.md).
 
-**Source:** [dictionary.md](../../../docs/cli/dictionary.md)
+**Source:** [001_dictionary.md](../../../docs/cli/001_dictionary.md)
 
 ## Test Case Index
 
@@ -29,21 +29,21 @@ Term accuracy and completeness checks for the CLI dictionary at
 
 ### DT-1: Commands section lists all 8 subcommands
 
-- **Given:** `docs/cli/dictionary.md` Commands section
+- **Given:** `docs/cli/001_dictionary.md` Commands section
 - **When:** inspect entries in the Commands table
 - **Then:** exactly 8 entries present: `run`, `ask`, `isolated`, `refresh`, `ps`, `kill`, `tools`, `help`; no entry missing; no extra entries; each name matches the corresponding file under `docs/cli/command/`
 - **Exit:** n/a (static doc check)
-- **Source:** [dictionary.md](../../../docs/cli/dictionary.md), [command/](../../../docs/cli/command/readme.md)
+- **Source:** [001_dictionary.md](../../../docs/cli/001_dictionary.md), [command/](../../../docs/cli/command/readme.md)
 
 ---
 
 ### DT-2: Modes section lists all 10 behavioral modes
 
-- **Given:** `docs/cli/dictionary.md` Modes section
+- **Given:** `docs/cli/001_dictionary.md` Modes section
 - **When:** inspect entries in the Modes table
 - **Then:** exactly 10 entries present: `interactive mode`, `print mode`, `dry-run`, `new session`, `ultrathink suffix`, `credential-isolated mode`, `fence stripping`, `standalone mode`, `nested-agent mode`, `credential refresh mode`
 - **Exit:** n/a (static doc check)
-- **Source:** [dictionary.md](../../../docs/cli/dictionary.md)
+- **Source:** [001_dictionary.md](../../../docs/cli/001_dictionary.md)
 
 ---
 
@@ -53,7 +53,7 @@ Term accuracy and completeness checks for the CLI dictionary at
 - **When:** `clr help`
 - **Then:** exit 0; stdout contains usage information; output identical to `clr --help` and `clr -h`
 - **Exit:** 0
-- **Source:** [dictionary.md](../../../docs/cli/dictionary.md), [command/02_help.md](../../../docs/cli/command/02_help.md)
+- **Source:** [001_dictionary.md](../../../docs/cli/001_dictionary.md), [command/02_help.md](../../../docs/cli/command/02_help.md)
 
 ---
 
@@ -63,7 +63,7 @@ Term accuracy and completeness checks for the CLI dictionary at
 - **When:** `clr --dry-run "test message"`
 - **Then:** exit 0; stdout contains assembled command line; no claude subprocess is spawned; output does not contain subprocess execution artifacts
 - **Exit:** 0
-- **Source:** [dictionary.md](../../../docs/cli/dictionary.md), [param/011_dry_run.md](../../../docs/cli/param/011_dry_run.md)
+- **Source:** [001_dictionary.md](../../../docs/cli/001_dictionary.md), [param/011_dry_run.md](../../../docs/cli/param/011_dry_run.md)
 
 ---
 
@@ -73,7 +73,7 @@ Term accuracy and completeness checks for the CLI dictionary at
 - **When:** `clr --model haiku --model sonnet --dry-run "x"`
 - **Then:** assembled command reflects `sonnet` (last value), not `haiku` (first value); no error for duplicate flag
 - **Exit:** 0
-- **Source:** [dictionary.md](../../../docs/cli/dictionary.md), [param/003_model.md](../../docs/cli/param/003_model.md)
+- **Source:** [001_dictionary.md](../../../docs/cli/001_dictionary.md), [param/003_model.md](../../../docs/cli/param/003_model.md)
 
 ---
 
@@ -83,4 +83,4 @@ Term accuracy and completeness checks for the CLI dictionary at
 - **When:** `clr --dry-run "fix the bug"`
 - **Then:** assembled command argument list ends with `"fix the bug\n\nultrathink"`; confirm suffix absent when `--no-ultrathink` is added to same invocation
 - **Exit:** 0
-- **Source:** [dictionary.md](../../../docs/cli/dictionary.md), [param/014_no_ultrathink.md](../../../docs/cli/param/014_no_ultrathink.md)
+- **Source:** [001_dictionary.md](../../../docs/cli/001_dictionary.md), [param/014_no_ultrathink.md](../../../docs/cli/param/014_no_ultrathink.md)

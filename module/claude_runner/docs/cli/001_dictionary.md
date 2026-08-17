@@ -52,9 +52,3 @@
 | active (ps summary) | The `N` in `clr ps`'s `Active Sessions · N running` caption: all live sessions across every mode (interactive, print, query), not only print-mode |
 | active (⚡ flag) | Per-row `clr ps` flag: the session's process consumed ≥ 3 CPU ticks in a 1-second sample window — CPU activity, unrelated to either census sense |
 | slot occupancy | Count of gate slot files (`slot_N.json`) whose recorded owner is alive, out of `max-sessions` — the slot-CAS conjunct of gate admission; surfaced as `slots=H/M` on slot-side denial diagnostics and `slots=H/M held` on gate-exhaustion messages (BUG-480) |
-
-### Provenance
-
-| File | Notes |
-|------|-------|
-| [../dictionary.md](dictionary.md) | Original un-migrated source; retained as reference |

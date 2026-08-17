@@ -33,7 +33,7 @@ use cli_binary_test_helpers::{ make_creds_file, stderr_str, stdout_str };
 ///
 /// Root Cause: `run_isolated_command()` did not inject --no-session-persistence;
 ///   session files were written to temp HOME that is discarded after every run
-///   (pure I/O waste per gap I3 in command_defaults.md).
+///   (pure I/O waste per gap I3 in 002_command_defaults.md).
 /// Why Not Caught: no test for injected flags in isolated trace.
 /// Fix Applied: Task 022 S3 prepends --no-session-persistence in `run_isolated_command()`.
 /// Prevention: this test; trace checked for flag presence.
@@ -62,7 +62,7 @@ fn ct1_isolated_trace_has_no_session_persistence()
 ///
 /// Root Cause: `run_isolated_command()` did not inject --dangerously-skip-permissions;
 ///   isolated tasks with tool use blocked at every tool call waiting for interactive
-///   permission prompt (gap I5 in command_defaults.md).
+///   permission prompt (gap I5 in 002_command_defaults.md).
 /// Why Not Caught: no test for injected flags; live execution blocks silently.
 /// Fix Applied: Task 022 S5 injects --dangerously-skip-permissions when message present.
 /// Prevention: this test; trace checked for flag when message is non-empty.
@@ -92,7 +92,7 @@ fn ct2_isolated_trace_has_skip_permissions_when_message_present()
 ///
 /// Root Cause: `run_refresh_command()` used `ClaudeCommand::new()` defaults which include
 ///   --chrome; refresh is an HTTP-only OAuth ping and does not need browser context
-///   (gap I4 in command_defaults.md).
+///   (gap I4 in 002_command_defaults.md).
 /// Why Not Caught: no trace test for refresh flag injection.
 /// Fix Applied: Task 022 S4 adds "--no-chrome" to refresh passthrough args.
 /// Prevention: this test; trace checked for --no-chrome in refresh.
@@ -151,7 +151,7 @@ fn ct4_isolated_no_message_no_skip_permissions()
 ///
 /// Root Cause: `run_isolated()` set deadline = `Instant::now()` + `Duration::from_secs(0)`
 ///   unconditionally; with timeout_secs==0 the deadline was already expired on first
-///   poll (50ms later), killing the subprocess immediately (gap I2 in command_defaults.md).
+///   poll (50ms later), killing the subprocess immediately (gap I2 in 002_command_defaults.md).
 /// Why Not Caught: behavior diverges from run/ask (where 0 = unlimited) but no test.
 /// Fix Applied: Task 022 S2 gates deadline computation on timeout_secs > 0.
 /// Prevention: this test; fake subprocess sleeps 3s; timeout=0 must not kill it.
@@ -204,7 +204,7 @@ fn ct5_timeout_zero_is_unlimited()
 ///
 /// Root Cause: `run_isolated()` did not write CLAUDE.md to the temp HOME; the subprocess
 ///   had no user-level behavioral instructions, potentially asking clarifying questions
-///   or requesting interactive confirmation (gap I6 in command_defaults.md).
+///   or requesting interactive confirmation (gap I6 in 002_command_defaults.md).
 /// Why Not Caught: no test for CLAUDE.md presence; subprocess blocking is silent in tests.
 /// Fix Applied: Task 022 S6 writes CLAUDE.md to claude_dir before spawn.
 /// Prevention: this test; fake claude reads and outputs CLAUDE.md content to stdout.
