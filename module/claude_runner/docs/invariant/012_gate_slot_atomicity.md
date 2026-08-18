@@ -34,7 +34,7 @@ Deriving the index from `find_claude_processes()`'s live count — rather than a
 
 ### Enforcement Mechanism
 
-Four functions in `src/cli/gate.rs` collaborate to enforce this invariant:
+Four functions in `src/cli/gate_slot.rs` collaborate to enforce this invariant (the liveness predicate they consult, `pid_alive()`, lives in `src/cli/gate_liveness.rs`):
 
 **1. `slot_path()` — deterministic per-index path:**
 ```rust
@@ -225,7 +225,9 @@ If owner liveness reverts to bare PID-number occupancy — `/proc/{pid}/stat` re
 
 | File | Notes |
 |------|-------|
-| `../../src/cli/gate.rs` | `slot_path()`, `claim_slot_file()`, `read_slot_owner_record()`, `pid_alive()`, `acquire_slot()`, and the admission call site in `wait_for_session_slot()` |
+| `../../src/cli/gate_slot.rs` | `slot_path()`, `claim_slot_file()`, `read_slot_owner_record()`, `acquire_slot()` |
+| `../../src/cli/gate_liveness.rs` | `pid_alive()` — the reclaim-eligibility predicate `acquire_slot()` consults |
+| `../../src/cli/gate.rs` | The admission call site in `wait_for_session_slot()` |
 
 ### Tests
 

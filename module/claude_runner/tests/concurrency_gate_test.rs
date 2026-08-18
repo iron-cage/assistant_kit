@@ -576,7 +576,7 @@ fn t08_concurrent_clr_invocations_never_exceed_max_sessions()
   // Root cause (two compounding defects, both in this harness, not in gate.rs):
   // 1. A `clr` process that has exited but not yet been `wait()`-ed on is a
   //    zombie, and a zombie still has a `/proc/{pid}` entry — so `pid_alive()`
-  //    (which `gate.rs::acquire_slot()` uses to decide whether a slot is
+  //    (which `gate_slot.rs::acquire_slot()` uses to decide whether a slot is
   //    reclaimable) sees an unreaped zombie as "still alive" indefinitely.
   // 2. A sequential `for child in &mut children { child.wait(); }` reaps in
   //    launch order. If an EARLY-indexed racer is itself still legitimately
@@ -649,7 +649,7 @@ fn t08_concurrent_clr_invocations_never_exceed_max_sessions()
 /// `--retry-override 0` disabling the outer Runner-retry wrapper, the gate must
 /// exhaust after exactly 2 polls at 1-second intervals (~2s total) — not the
 /// production default of 1000 attempts × 30s (~8.3h) — and report the exact
-/// exhaustion message on stderr. Bounded to a 10s deadline: if gate.rs still
+/// exhaustion message on stderr. Bounded to a 10s deadline: if the gate still
 /// reads the pre-Phase-1 hardcoded defaults, neither override takes effect and
 /// this deadline elapses long before natural exit, failing fast.
 ///
@@ -779,7 +779,7 @@ fn t10_invalid_poll_secs_env_var_falls_back_to_default()
 /// production default. Paired with a valid `CLR_GATE_POLL_SECS=1` and a
 /// short-lived occupier (releases after ~3s): once genuinely active, the 1s
 /// poll interval admits within ~10s of the occupier releasing. Bounded to a
-/// 10s deadline — if gate.rs still reads the pre-Phase-1 hardcoded 30s poll
+/// 10s deadline — if the gate still reads the pre-Phase-1 hardcoded 30s poll
 /// interval, `CLR_GATE_POLL_SECS=1` has no effect and the first re-check after
 /// the occupier releases doesn't happen until a real 30s sleep elapses, well
 /// past this deadline, failing fast instead of hanging.
@@ -874,7 +874,7 @@ fn t11_invalid_max_attempts_env_var_falls_back_to_default()
 /// one racer wins the right to reclaim. Only the winner writes to the
 /// original slot path, via `rename()` from a per-caller-unique temp file
 /// (atomic replace, no observably-absent gap). See `Fix(BUG-392)` on
-/// `acquire_slot()` in `src/cli/gate.rs` for the full explanation.
+/// `acquire_slot()` in `src/cli/gate_slot.rs` for the full explanation.
 ///
 /// Prevention: this test — asserts peak concurrently-alive dispatched
 /// children sharing one contested, dead-owned slot never exceeds 1, under
@@ -924,7 +924,7 @@ fn t14_reclaim_race_admits_at_most_one_caller_for_a_dead_owners_slot()
       .env( "CLR_GATE_POLL_SECS", "1" )
       .env( "CLR_GATE_MAX_ATTEMPTS", "5" )
       // Widen the reclaim race window deterministically (see reclaim_test_delay()
-      // in gate.rs) so this test forces genuine contention on every run instead
+      // in gate_slot.rs) so this test forces genuine contention on every run instead
       // of depending on incidental OS scheduling jitter between racers.
       .env( "CLR_GATE_RECLAIM_TEST_DELAY_MS", "50" )
       .stdout( std::process::Stdio::null() )

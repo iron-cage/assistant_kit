@@ -25,6 +25,72 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - New `pub(super) fn extract_structured_output(json: &str) -> Option<String>` + private `fn extract_json_value(s: &str, key: &str) -> Option<String>` added to `summary.rs`
   - Tests: EC-15 (`tests/output_style_test.rs`), S89 (`tests/param_extended_flags_test.rs`)
 
+- **Backfilled fix log (BUG-383 – BUG-531)** — internal correctness, concurrency-gate reliability, and test-flake fixes shipped without individual changelog entries at the time; full detail in each bug's file under `task/claude_runner/bug/completed/`
+  - BUG-383: `clr ps` container-flag path-prefix false match
+  - BUG-384: `gate.rs` hand-rolled JSON `cwd` escaping gap
+  - BUG-385: `clr ps` Task Column Test IT-19 Fails — Fixture Uses Stale Path Encoding, Not a Production Regression
+  - BUG-386: `clr scope` `CLAUDE_SESSION_FILE` Empty Despite Existing Session
+  - BUG-387: Print-mode concurrency gate has a check-then-spawn TOCTOU race — enforcement can be silently exceeded
+  - BUG-391: Three Sibling Test Files Still Duplicate the Pre-BUG-366 `df()` Path Encoder (BUG-386 Residual)
+  - BUG-392: `acquire_slot()` Crash-Recovery Reclaim Is Non-Atomic — Reopens a Narrow TOCTOU Window (BUG-387 Residual)
+  - BUG-393: Slot-wait diagnostic message conflates global exhaustion and local race-loss into one undifferentiated text
+  - BUG-394: Naive escape-unaware `.find('"')` truncates JSON string extraction at the first escaped quote (3 sites)
+  - BUG-395: `extract_str()` returns `Some(<truncated>)` instead of `None` for an unterminated JSON string value
+  - BUG-396: `acquire_slot()`'s "held by a live session" denial is mislabeled "lost reservation race"
+  - BUG-399: `--timeout` does not bound the `--max-sessions` gate-wait phase — and this boundary is undocumented
+  - BUG-400: Concurrency gate reclaim has no staleness check — a live-but-stalled slot holder can starve waiters indefinitely even when aggregate capacity exists
+  - BUG-402: Orphaned reclaim ticket permanently blocks a slot index despite low live session count
+  - BUG-403: `reset_to_pending()` omits `daemon_instance_ticks` from its NULL-out column list — stale ticks survive a retry re-queue
+  - BUG-404: Concurrency gate computes and tries only one candidate slot index per attempt — waiter starves despite free/dead slots existing elsewhere
+  - BUG-405: Reclaim-ticket winner that fails its own admission self-denies forever within that invocation
+  - BUG-406: `retry_job()`/`replace_job()` (`.retry`/`.replace`, Suspended→Pending) never clear `daemon_instance_ticks` or `pid` — stale values survive into the re-queued job
+  - BUG-407: `claim_slot_file()`'s `create_new`-then-`write!` is non-atomic — a crash mid-write permanently poisons any slot/ticket/takeover file it touches
+  - BUG-408: BUG-402's closed record (and its downstream citations) describe a superseded fix implementation that does not match the code actually shipped in `gate.rs`
+  - BUG-409: `TOOLS` array in `clr tools` holds only 26 of 40 contract-doc entries
+  - BUG-422: `clr`'s session-slot gate displays (and admits against) a live process count that bidirectionally deviates from the true concurrent-session total — 24× over-read (`7/6`), 5× under-read (`5/6`/`4/6`) against a 357× stable `6/6` baseline — and the same fallible value feeds both the operator-facing message and the actual admission decision
+  - BUG-423: Timeout-killed job's wrapper `Duration:` lands exactly on `Timeout:` because `clr`'s pre-execution concurrency gate (`wait_for_session_slot`) is not coordinated with the daemon's `timeout_secs` enforcement
+  - BUG-424: Plain `cmd | clr run "msg"` (no `--file`) silently discards non-JSON piped stdin instead of forwarding it to the `claude` subprocess
+  - BUG-425: Bare `clr`/`clr run` (no `[MESSAGE]`) unconditionally selects Interactive REPL mode with no TTY check — piped/non-TTY invocations either hang indefinitely or exit fast via claude's own "No conversation found to continue" guard
+  - BUG-426: `clr` composes an invalid `claude` invocation when `-c` (session resume) is injected but no message argument is present — mode-selection and session-resume logic never check each other
+  - BUG-427: Mode-selection and no-prompt validation never check `--file`/piped-stdin content presence — `clr` rejects or dispatches through a mismatched interactive-mode path, independent of TTY state
+  - BUG-428: `session_exists()`/`most_recent_session_in_dir()` qualify a `.jsonl` transcript by structural file properties only (extension, `agent-` prefix, non-zero size, mtime) — never by content — causing invalid `-c` injection and claude's own misleading `"No conversation found to continue"` fast-exit
+  - BUG-431: Gate message labels print-session count as "sessions active" — omits "print" qualifier, misleading operators about what is being limited
+  - BUG-432: `shorten_path()` uses raw `starts_with` without path-separator boundary — same class as BUG-383, not swept to this site
+  - BUG-433: Gate timeout error message labels print-session count as "active sessions" — same unqualified label as BUG-431, different site
+  - BUG-434: `--effort max` rejected in interactive mode — Claude Code v2.1.78 removed `"max"` as a valid interactive-mode effort level, causing every bare `clr` invocation to fail immediately
+  - BUG-435: Bare interactive `clr` (no message, no flags) does not continue a prior session — the D-10 guard excludes the bare-interactive case from `-c` injection even when a session exists
+  - BUG-436: `render_summary()` falls back to raw JSON when `usage.iterations[].type` is `"message"` — `extract_str` finds nested key before absent top-level `"type":"result"`
+  - BUG-437: `extract_session_id()` returns `None` for new SDK envelope — `"type":"result"` gate silently disables BUG-320 session mismatch detection
+  - BUG-438: `extract_structured_output()` returns `None` for new SDK envelope — breaks `--json-schema` summary body and `--output-style raw --json-schema` mode
+  - BUG-439: `usage_str` over-broad slice in `render_summary()` — `usage.*` field extractions are fragile to SDK serialization order of `iterations` vs scalar fields
+  - BUG-440: `render_summary()` displays `type: message` for new SDK envelope — `extract_str(json,"type")` finds nested `usage.iterations[].type` after compound gate passes
+  - BUG-442: `clr`'s `count_permission_denials()` scans for the first `]` after the array opens with no check that it is the array's own closing bracket — a denial's `reason`/`tool` string value containing a literal `]` truncates the count
+  - BUG-445: `clr`'s `--timeout` flag gives zero `--max-sessions` gate-wait protection unless the caller also sets `CLR_REMAINING_TIMEOUT_SECS` — `watchdog.sh`'s health-check probe sets only `--timeout` and stalled 9697s/272s/903s against a 60s budget on 2026-08-09
+  - BUG-473: `it1`/`it3`/`it4` `lim_it` tests lack a network-reachability precondition gate
+  - BUG-474: `it3`'s `--timeout 0` doc/inline comments (plus 3 sibling doc sites) predate `Fix(I2)`'s "unlimited" semantics
+  - BUG-475: `ec_creds1`/`ec_creds2`/`ec_creds3` lack the `network_reachable()` precondition gate added for BUG-473
+  - BUG-476: `render_summary()`'s `model_name` extraction has no boundary check against `modelUsage`'s own closing brace — when a turn terminates before any model is dispatched (`"modelUsage":{}`), the unbounded quote-scan reads into the next JSON key and renders its name as `model:`
+  - BUG-477: `render_summary()`'s `modelUsage` extraction reads only the first model entry — a turn that dispatches a second, more expensive model has its cost/tokens silently dropped from every rendered `model_*` field, while `total_cost_usd` (independently extracted) stays correct
+  - BUG-478: `emit_credential_trace()`'s `--dry-run`/`--trace` preview reconstructs `ClaudeCommand` without `.with_home_isolation()`, so the previewed command shows `--chrome` while the real subprocess (`run_isolated_ext()`/`run_isolated_with_stdin_file()`, which both call `.with_home_isolation()`) never receives any chrome flag at all
+  - BUG-479: Zombie-blind PID liveness starves gate slots and fabricates queue rows
+  - BUG-480: Gate diagnostic hides slot occupancy
+  - BUG-481: Silent-off env boundary disables gate protections undetectably
+  - BUG-482: `workspace_invariants.rs` — stale "18 members" doc counts plus `claude_journal` Layer misclassification
+  - BUG-485: `IsolatedModel::Default`'s config model preference (project `.clr.toml` / user `~/.clr/config.toml`) is consulted only by `run_isolated_ext()` — both `emit_credential_trace()`'s `--dry-run`/`--trace` preview and the `--file` real path (`run_isolated_with_stdin_file()`) fall back to `ISOLATED_DEFAULT_MODEL`, so the preview shows the wrong model and the two real execution paths run different models on identical inputs
+  - BUG-486: `claude_runner_core::test_no_code_duplication` — threshold breach from a `#[cfg]`-gated same-name function pair
+  - BUG-488: Thread-ID-blind PID liveness — a live thread's hidden `/proc/{tid}/stat` masks dead gate PIDs as running processes
+  - BUG-490: `--session-from` cross-load silently no-ops — claude ≥2.x ignores `CLAUDE_CODE_SESSION_DIR`, so every "clone" starts a fresh session with no history and no error
+  - BUG-491: Nonexistent `--dir`/`--to` target is misdiagnosed as "claude binary not found in PATH" and burns the full binary-missing retry ladder
+  - BUG-492: An open-but-silent non-TTY stdin blocks `clr run`/`ask` forever before parsing — zero output, even `--dry-run`, and no opt-out exists
+  - BUG-494: `ERROR_PATTERNS` has no pattern for "Failed to authenticate: OAuth session expired and could not be refreshed" — falls through to `ErrorKind::Unknown`, so the retry loop applies `--retry-on-unknown`/`--unknown-delay` instead of `--retry-on-auth`/`--auth-delay`
+  - BUG-495: `ERROR_PATTERNS`'s only `QuotaExhausted` pattern (`"You've hit your limit"`) never matches the real-world `"...session limit"`/`"...weekly limit"` messages — 100% of real occurrences fall through to `ErrorKind::Unknown`
+  - BUG-506: `cargo run -p claude_runner` is ambiguous — no `default-run` key across 4 `[[bin]]` targets breaks every documented manual-test recipe
+  - BUG-507: `tests/manual/readme.md` TC-84/85/86/88 `cd` into an unrelated `mktemp -d` directory, then invoke `cargo run -p claude_runner` — Cargo cannot find the workspace manifest from outside the repo tree
+  - BUG-508: T15/T16 concurrency-gate racer tests use a fixed 2s sleep to observe subprocess stderr — false-red under host scheduling contention instead of polling for the actual message
+  - BUG-509: T16's 50ms `CLR_GATE_RECLAIM_TEST_DELAY_MS` reclaim-race widening window is too narrow to survive racer-process spawn scheduling skew under host contention — loser's first attempt can see `HeldByLive` instead of the intended `LostReclaimRace`
+  - BUG-530: t16's first-poll message assertion depends on inter-process spawn skew the test never enforces — flaky under parallel suite load, and the third occurrence of this defect class on the same test
+  - BUG-531: two `lim_it` tests make a real Claude API round-trip under `clr isolated`'s 30s default budget — times out under parallel suite load; the same file also skips silently when its live prerequisites are absent
+
 ### Changed
 
 - **`--max-sessions` default raised 6 → 8**

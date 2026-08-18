@@ -4,9 +4,28 @@
 //! Verifies that `clr tools` lists all Claude Code built-in tools with correct
 //! column headers and exit 0, and that the `TOOLS` array stays in sync with
 //! `contract/claude_code/docs/tool/readme.md` (see `docs/invariant/015_tools_array_doc_sync.md`).
+//!
+//! ## Spec Coverage
+//!
+//! | Spec | Cases Covered |
+//! |------|---------------|
+//! | `tests/docs/cli/command/08_tools.md` | IT-1..IT-21 |
+//! | `tests/docs/cli/param/078_name.md` | EC-1..EC-6 |
+//! | `tests/docs/cli/param/079_category.md` | EC-1..EC-7 |
+//! | `tests/docs/cli/param/080_value.md` | EC-1..EC-7 |
+//! | `tests/docs/cli/param_group/07_tool_listing.md` | G7-CC1..G7-CC6 |
+//! | `tests/docs/cli/param/059_columns.md` | IT-14, IT-15, IT-20 |
+//! | `tests/docs/cli/param/069_inspect.md` | IT-18 |
+//! | `tests/docs/invariant/015_tools_array_doc_sync.md` | TS-1..TS-4 |
+//!
+//! The `IT-N` numbering is this file's own, from `08_tools.md`; the per-param `EC-N`
+//! and per-group `G7-CCN` identifiers are cross-references into the specs above and
+//! are always written with their source prefix, since three different param specs
+//! each number their cases from `EC-1`. Several tests discharge more than one
+//! identifier — each such test names every case it satisfies in its `Spec:` line.
 
 mod cli_binary_test_helpers;
-use cli_binary_test_helpers::run_cli;
+use cli_binary_test_helpers::{ run_cli, run_with_path };
 use claude_runner::TOOLS;
 use std::path::Path;
 
@@ -45,6 +64,9 @@ fn it2_tools_lists_core_tools()
 // ── IT-3: Output contains expected categories ─────────────────────────────────
 
 /// IT-3: Stdout contains the category headers present in the TOOLS table.
+///
+/// Spec: `tests/docs/cli/param/079_category.md` EC-6 (unfiltered listing spans
+/// multiple distinct categories, i.e. no implicit `--category` filter)
 #[ test ]
 fn it3_tools_lists_categories()
 {
@@ -63,6 +85,9 @@ fn it3_tools_lists_categories()
 // ── IT-4: Output contains table caption with count ────────────────────────────
 
 /// IT-4: Stdout contains the caption "Claude Code Tools" and the live `TOOLS.len()` count.
+///
+/// Spec: `tests/docs/cli/param/078_name.md` EC-5 (unfiltered listing shows every
+/// tool, i.e. no implicit `--name` filter -- the live count is what pins "every")
 ///
 /// # Fix Applied (BUG-409)
 /// Was hardcoded `stdout.contains( "26" )`, which silently kept passing while `TOOLS`
@@ -197,7 +222,7 @@ fn it9_tools_rejects_unknown_arg()
 /// IT-10: `clr tools --name task` shows only tools whose name contains "task"
 /// (case-insensitive substring match).
 ///
-/// Spec: `tests/docs/cli/command/08_tools.md` IT-10
+/// Spec: `tests/docs/cli/command/08_tools.md` IT-10, `tests/docs/cli/param/078_name.md` EC-1
 #[ test ]
 fn it10_tools_name_filter()
 {
@@ -223,7 +248,7 @@ fn it10_tools_name_filter()
 /// IT-11: `clr tools --category Web` shows only tools whose category contains
 /// "Web" (case-insensitive substring match).
 ///
-/// Spec: `tests/docs/cli/command/08_tools.md` IT-11
+/// Spec: `tests/docs/cli/command/08_tools.md` IT-11, `tests/docs/cli/param/079_category.md` EC-1
 #[ test ]
 fn it11_tools_category_filter()
 {
@@ -247,7 +272,8 @@ fn it11_tools_category_filter()
 /// Dependency section: `RemoteTrigger`/`ScheduleWakeup` do not exist in the
 /// pre-412 26-entry array, which would make this assertion pass trivially.
 ///
-/// Spec: `tests/docs/cli/param_group/07_tool_listing.md` IT-12 / G7-CC3
+/// Spec: `tests/docs/cli/param_group/07_tool_listing.md` IT-12 / G7-CC3,
+/// `tests/docs/cli/param/078_name.md` EC-4, `tests/docs/cli/param/079_category.md` EC-5
 #[ test ]
 fn it12_tools_name_and_category_and_logic()
 {
@@ -325,7 +351,7 @@ fn it15_tools_columns_invalid_key_rejected()
 /// IT-16: `clr tools --value name` prints bare tool names, one per line, with
 /// zero table decoration (no caption, no column headers).
 ///
-/// Spec: `tests/docs/cli/param/080_value.md` IT-16
+/// Spec: `tests/docs/cli/param/080_value.md` IT-16 / EC-1
 #[ test ]
 fn it16_tools_value_bare_output()
 {
@@ -342,7 +368,7 @@ fn it16_tools_value_bare_output()
 /// IT-17: `clr tools --name Bash --value category` narrows to exactly one
 /// matching tool and prints exactly one bare value.
 ///
-/// Spec: `tests/docs/cli/param/080_value.md` IT-17
+/// Spec: `tests/docs/cli/param/080_value.md` IT-17 / EC-2
 #[ test ]
 fn it17_tools_value_single_row_narrowing()
 {
@@ -376,7 +402,8 @@ fn it18_tools_inspect_record_format()
 /// IT-19: `clr tools --value name --inspect` exits 1 -- the two output-format
 /// switches cannot be combined.
 ///
-/// Spec: `tests/docs/cli/param_group/07_tool_listing.md` IT-19 / G7-CC5
+/// Spec: `tests/docs/cli/param_group/07_tool_listing.md` IT-19 / G7-CC5,
+/// `tests/docs/cli/param/080_value.md` EC-4
 #[ test ]
 fn it19_tools_value_inspect_mutually_exclusive()
 {
@@ -424,6 +451,256 @@ fn it21_tools_count_matches_contract_doc()
   assert!(
     stdout.contains( &count ),
     "`clr tools` stdout must reference {count} tools (contract doc row count). Got:\n{stdout}"
+  );
+}
+
+// ── IT-22: `--name` matching is case-insensitive ─────────────────────────────
+
+/// IT-22: `clr tools --name TASK` selects the same rows as `--name task` --
+/// the substring match folds case on both sides.
+///
+/// Compares the two invocations' stdout directly rather than re-listing the
+/// expected tool names: an equality assertion cannot drift out of sync with the
+/// `TOOLS` array the way a hardcoded name list can (the BUG-409 failure mode).
+///
+/// Spec: `tests/docs/cli/param/078_name.md` EC-2
+#[ test ]
+fn it22_tools_name_filter_case_insensitive()
+{
+  let upper = run_cli( &[ "tools", "--name", "TASK" ] );
+  let lower = run_cli( &[ "tools", "--name", "task" ] );
+  assert!( upper.status.success(), "`--name TASK` must exit 0: {upper:?}" );
+  assert!( lower.status.success(), "`--name task` must exit 0: {lower:?}" );
+  let upper_out = String::from_utf8_lossy( &upper.stdout );
+  let lower_out = String::from_utf8_lossy( &lower.stdout );
+  assert_eq!(
+    upper_out, lower_out,
+    "`--name TASK` and `--name task` must produce identical output.\nTASK:\n{upper_out}\ntask:\n{lower_out}"
+  );
+  assert!(
+    upper_out.contains( "TaskCreate" ),
+    "guard: the shared output must be non-empty -- two empty results would compare equal trivially. Got:\n{upper_out}"
+  );
+}
+
+// ── IT-23: `--category` matching is case-insensitive ─────────────────────────
+
+/// IT-23: `clr tools --category web` selects the same rows as `--category Web`.
+///
+/// Spec: `tests/docs/cli/param/079_category.md` EC-2
+#[ test ]
+fn it23_tools_category_filter_case_insensitive()
+{
+  let lower = run_cli( &[ "tools", "--category", "web" ] );
+  let upper = run_cli( &[ "tools", "--category", "Web" ] );
+  assert!( lower.status.success(), "`--category web` must exit 0: {lower:?}" );
+  assert!( upper.status.success(), "`--category Web` must exit 0: {upper:?}" );
+  let lower_out = String::from_utf8_lossy( &lower.stdout );
+  let upper_out = String::from_utf8_lossy( &upper.stdout );
+  assert_eq!(
+    lower_out, upper_out,
+    "`--category web` and `--category Web` must produce identical output.\nweb:\n{lower_out}\nWeb:\n{upper_out}"
+  );
+  assert!(
+    lower_out.contains( "WebFetch" ),
+    "guard: the shared output must be non-empty. Got:\n{lower_out}"
+  );
+}
+
+// ── IT-24: `--category` accepts a multi-word value ───────────────────────────
+
+/// IT-24: `clr tools --category "File Operations"` matches the multi-word
+/// category verbatim -- the value is one argument, not two, and the space is
+/// part of the substring being matched.
+///
+/// Spec: `tests/docs/cli/param/079_category.md` EC-3
+#[ test ]
+fn it24_tools_category_multi_word_value()
+{
+  let out = run_cli( &[ "tools", "--category", "File Operations" ] );
+  assert!( out.status.success(), "multi-word category must exit 0: {out:?}" );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  for tool in &[ "Read", "Write", "Edit" ]
+  {
+    assert!( stdout.contains( tool ), "stdout must contain '{tool}'. Got:\n{stdout}" );
+  }
+  assert!( !stdout.contains( "WebFetch" ), "stdout must NOT contain 'WebFetch'. Got:\n{stdout}" );
+}
+
+// ── IT-25: `--category` zero matches is not an error ─────────────────────────
+
+/// IT-25: `clr tools --category doesnotexist` exits 0 with the caption present
+/// but no tool rows -- the `--category` counterpart of IT-13's `--name` case.
+///
+/// Spec: `tests/docs/cli/param/079_category.md` EC-4
+#[ test ]
+fn it25_tools_category_zero_match_not_error()
+{
+  let out = run_cli( &[ "tools", "--category", "doesnotexist" ] );
+  assert!( out.status.success(), "zero-match must still exit 0: {out:?}" );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  assert!(
+    stdout.contains( "Claude Code Tools" ),
+    "stdout must still contain the table caption. Got:\n{stdout}"
+  );
+  for tool in &[ "Bash", "Read", "WebFetch" ]
+  {
+    assert!( !stdout.contains( tool ), "stdout must contain no tool rows -- found '{tool}'. Got:\n{stdout}" );
+  }
+}
+
+// ── IT-26: unknown `--value` key rejected ────────────────────────────────────
+
+/// IT-26: `clr tools --value badkey` exits 1 with stderr listing the valid keys
+/// -- the `--value` counterpart of IT-15's `--columns` validation.
+///
+/// Spec: `tests/docs/cli/param/080_value.md` EC-3
+#[ test ]
+fn it26_tools_value_invalid_key_rejected()
+{
+  let out = run_cli( &[ "tools", "--value", "badkey" ] );
+  assert_eq!( out.status.code(), Some( 1 ), "must exit 1: {out:?}" );
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  for key in &[ "idx", "name", "category", "desc" ]
+  {
+    assert!( stderr.contains( key ), "stderr must list valid key '{key}'. Got:\n{stderr}" );
+  }
+}
+
+// ── IT-27: `--columns` ignored when `--value` active ─────────────────────────
+
+/// IT-27: `clr tools --columns name --value category` prints bare *category*
+/// values -- `--value` wins outright, so `--columns name` neither restricts the
+/// output to a name-column table nor redirects which attribute is printed.
+///
+/// Distinct from IT-20, which covers the same precedence for `--inspect`.
+///
+/// Spec: `tests/docs/cli/param/080_value.md` EC-5, `tests/docs/cli/param_group/07_tool_listing.md` G7-CC6
+#[ test ]
+fn it27_tools_columns_ignored_when_value_active()
+{
+  let out = run_cli( &[ "tools", "--columns", "name", "--value", "category" ] );
+  assert!( out.status.success(), "must exit 0: {out:?}" );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  assert!(
+    stdout.lines().any( | l | l == "Shell" ),
+    "stdout must contain the bare category value 'Shell' on its own line. Got:\n{stdout}"
+  );
+  assert!(
+    !stdout.lines().any( | l | l == "Bash" ),
+    "stdout must NOT contain name values -- `--columns name` must be ignored, not honoured. Got:\n{stdout}"
+  );
+  assert!( !stdout.contains( "Claude Code Tools" ), "stdout must NOT contain the table caption. Got:\n{stdout}" );
+}
+
+// ── IT-28: `--value` with zero matches produces no output ────────────────────
+
+/// IT-28: `clr tools --name doesnotexist --value name` exits 0 and prints
+/// nothing at all -- in `--value` mode there is no caption or header to fall
+/// back on, so an empty result set means empty stdout.
+///
+/// Spec: `tests/docs/cli/param/080_value.md` EC-6
+#[ test ]
+fn it28_tools_value_zero_match_empty_output()
+{
+  let out = run_cli( &[ "tools", "--name", "doesnotexist", "--value", "name" ] );
+  assert!( out.status.success(), "zero-match must still exit 0: {out:?}" );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  assert!( stdout.is_empty(), "stdout must be entirely empty. Got:\n{stdout:?}" );
+}
+
+// ── IT-29: help documents the three tools-exclusive flags ────────────────────
+
+/// IT-29: `clr tools --help` documents `--name`, `--category` and `--value`.
+///
+/// IT-5 only asserts the word "tools" appears, which any help text would satisfy;
+/// this pins the three flags that are unique to this subcommand.
+///
+/// Spec: `tests/docs/cli/param/078_name.md` EC-6, `tests/docs/cli/param/079_category.md` EC-7,
+/// `tests/docs/cli/param/080_value.md` EC-7
+#[ test ]
+fn it29_tools_help_documents_filter_flags()
+{
+  let out = run_cli( &[ "tools", "--help" ] );
+  assert!( out.status.success(), "`clr tools --help` must exit 0: {out:?}" );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  for flag in &[ "--name", "--category", "--value" ]
+  {
+    assert!( stdout.contains( flag ), "`clr tools --help` must document '{flag}'. Got:\n{stdout}" );
+  }
+}
+
+// ── IT-30: the three core filter/projection params combine cleanly ───────────
+
+/// IT-30: `clr tools --name Bash --category Shell --columns name,category` is
+/// accepted as a whole -- exit 0 and a silent stderr, so none of the three is
+/// rejected as unknown when the others are present.
+///
+/// Spec: `tests/docs/cli/param_group/07_tool_listing.md` G7-CC2
+#[ test ]
+fn it30_tools_core_params_accepted_together()
+{
+  let out = run_cli( &[ "tools", "--name", "Bash", "--category", "Shell", "--columns", "name,category" ] );
+  assert!( out.status.success(), "must exit 0: {out:?}" );
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert!( stderr.is_empty(), "stderr must be silent -- no unknown-flag complaint. Got:\n{stderr}" );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  assert!( stdout.contains( "Bash" ), "stdout must contain the surviving row 'Bash'. Got:\n{stdout}" );
+}
+
+// ── IT-31: tools-exclusive flags absent from `run` help ──────────────────────
+
+/// IT-31: neither `clr run --help` nor `clr --help` advertises `--name`,
+/// `--category` or `--value` -- those three belong to `clr tools` alone.
+///
+/// `--columns`/`--inspect` are deliberately not asserted here: they are shared
+/// with the Session Listing group, and their exclusivity from `run` is covered
+/// by G5-CC4 instead.
+///
+/// Spec: `tests/docs/cli/param_group/07_tool_listing.md` G7-CC4
+#[ test ]
+fn it31_tools_exclusive_flags_absent_from_run_help()
+{
+  for args in [ [ "run", "--help" ].as_slice(), [ "--help" ].as_slice() ]
+  {
+    let out = run_cli( args );
+    assert!( out.status.success(), "`clr {args:?}` must exit 0: {out:?}" );
+    let stdout = String::from_utf8_lossy( &out.stdout );
+    for flag in &[ "--name", "--category", "--value" ]
+    {
+      assert!(
+        !stdout.contains( flag ),
+        "`clr {args:?}` must NOT advertise the tools-exclusive flag '{flag}'. Got:\n{stdout}"
+      );
+    }
+  }
+}
+
+// ── IT-32: `tools` spawns no subprocess ──────────────────────────────────────
+
+/// IT-32: `clr tools --name Bash --columns name,category` succeeds with a `PATH`
+/// containing no `claude` binary -- proving the params are consumed entirely by
+/// `dispatch_tools()` against the static `TOOLS` array, with no subprocess involved.
+///
+/// The empty `PATH` has teeth: a genuinely spawning invocation under the same
+/// `PATH` fails with "claude binary not found in PATH", so exit 0 here is a real
+/// signal rather than a vacuous one.
+///
+/// Spec: `tests/docs/cli/param_group/07_tool_listing.md` G7-CC1
+#[ test ]
+fn it32_tools_spawns_no_subprocess()
+{
+  let out = run_with_path(
+    &[ "tools", "--name", "Bash", "--columns", "name,category" ],
+    "/nonexistent-dir",
+  );
+  assert!( out.status.success(), "`clr tools` must exit 0 with no `claude` on PATH: {out:?}" );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  assert!( stdout.contains( "Bash" ), "stdout must still render the filtered row. Got:\n{stdout}" );
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert!(
+    !stderr.contains( "not found in PATH" ),
+    "stderr must not report a missing `claude` binary -- `tools` must never look for one. Got:\n{stderr}"
   );
 }
 

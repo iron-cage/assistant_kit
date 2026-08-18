@@ -22,6 +22,21 @@ Test case spec for [07_tool_listing.md](../../../../docs/cli/param_group/07_tool
 
 **Total:** 6 tests
 
+## Implementation Map
+
+All contract cases live in `tests/tools_command_test.rs`, whose own numbering is `IT-N`
+(from `command/08_tools.md`). `G7-CCN` identifiers are cross-references, written with the
+`G7-` prefix at the call site so they never collide with another group's `CCN`.
+
+| CC | Test function |
+|----|---------------|
+| G7-CC1 | `it32_tools_spawns_no_subprocess` |
+| G7-CC2 | `it30_tools_core_params_accepted_together` |
+| G7-CC3 | `it12_tools_name_and_category_and_logic` |
+| G7-CC4 | `it31_tools_exclusive_flags_absent_from_run_help` |
+| G7-CC5 | `it19_tools_value_inspect_mutually_exclusive` |
+| G7-CC6 | `it27_tools_columns_ignored_when_value_active` |
+
 ---
 
 ### G7-CC1: Params consumed by `dispatch_tools()` only

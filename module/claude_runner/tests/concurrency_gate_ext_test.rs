@@ -42,7 +42,7 @@ use std::process::Command;
 /// reclaim race.
 ///
 /// ## Root Cause
-/// `wait_for_session_slot()`'s admission check at `gate.rs:334` is a compound
+/// `wait_for_session_slot()`'s admission check at `gate.rs` is a compound
 /// condition, `has_capacity && acquire_slot(...)`. Originally (BUG-393) this
 /// test's docs assumed the losing racer's non-admission was itself a "race" —
 /// but the loser's `pid_alive(owner)` check observes the WINNING racer's own
@@ -67,7 +67,7 @@ use std::process::Command;
 ///
 /// ## Fix Applied
 /// `acquire_slot()` now returns `Result<(), SlotDenialCause>` with
-/// `HeldByLive` and `LostReclaimRace` as distinct variants (`gate.rs`);
+/// `HeldByLive` and `LostReclaimRace` as distinct variants (`gate_slot.rs`);
 /// `wait_for_session_slot()` matches on the variant to choose the cause
 /// suffix, rather than collapsing every non-admission under `has_capacity`
 /// into one label.
@@ -86,11 +86,66 @@ use std::process::Command;
 /// would need individual incremental reads threaded through its careful
 /// non-blocking reap loop. A minimal 2-racer, `--max-sessions 1` fixture
 /// isolates the same branches with far less moving parts.
-// test_kind: bug_reproducer(BUG-393)
+///
+/// # Fix(BUG-532)
+///
+/// ## Root Cause
+/// The two racers were spawned back-to-back and the fixture simply hoped they
+/// would overlap. They usually did — but the winner's entire critical section
+/// is *microseconds*, because the fake `claude` was `exit 0`: claim the slot,
+/// spawn a script that immediately exits, release. When spawn skew exceeded
+/// that microsecond window, the winner had already finished and released
+/// before the loser read the slot; the loser then found a FREE slot, claimed
+/// it, never waited, and printed nothing. Both racers exited 0 with empty
+/// stderr and no `gate-wait` line was ever going to appear — so the 15s poll
+/// could only ever run out. The required precondition (overlapping lifetimes)
+/// was never enforced, only assumed.
+///
+/// ## Why Not Caught
+/// The failure is indistinguishable at the assertion from a slow-but-coming
+/// message, so it was first read as the poll ceiling being too short. It is
+/// the opposite: on a *successful* run the marker appears in 17-25ms, nowhere
+/// near 15s. A ceiling is only ever the answer when the message is late; here
+/// it was absent. Discriminating the two required observing the racers'
+/// terminal state at the ceiling — which this test discards, since it kills
+/// both racers only AFTER the marker wait has already failed.
+///
+/// ## Fix Applied
+/// A rendezvous replaces the assumption. The fake `claude` now announces
+/// itself (`printf 'READY'`) and then sleeps, so the winner *holds* the slot
+/// for a bounded-but-long interval; racer B is spawned only once that
+/// announcement has been observed. The overlap is therefore established by
+/// construction rather than by luck, and B is guaranteed to meet a live
+/// owner. Deliberately NOT done: widening the 15s ceiling — per BUG-530's
+/// precedent and BUG-532's own H5, that lowers a failure rate without
+/// touching the dependency.
+///
+/// ## Prevention
+/// A test that needs two processes to overlap must make one *observe* the
+/// other's arrival before proceeding. Spawning both and hoping is an
+/// unenforced ordering assumption, and the smaller the critical section, the
+/// less often it holds.
+///
+/// ## Pitfall
+/// The occupant sleeping does NOT push the census to capacity, so B still
+/// reaches the slot-CAS branch (`HeldByLive`) rather than reporting
+/// `at capacity`: `CLR_PROC_DIR` points at an empty temp dir, and
+/// `find_claude_processes()` (`claude_core/src/process.rs:69`) scans exactly
+/// that root — the racer's real process lives in the real `/proc`, which the
+/// census never looks at. Repointing `CLR_PROC_DIR` at the real `/proc` would
+/// silently convert this into T33's at-capacity fixture.
+// test_kind: bug_reproducer(BUG-393); bug_reproducer(BUG-532)
 #[ test ]
 fn t15_slot_wait_message_names_live_hold_when_owner_alive()
 {
-  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
+  // Fix(BUG-532): the occupant announces itself, then holds the slot. `sleep`
+  // must outlast the 15s marker wait below so the slot is still held when the
+  // loser polls; both racers are killed at the end of the test regardless.
+  let ready_dir  = tempfile::TempDir::new().expect( "ready dir" );
+  let ready_path = ready_dir.path().join( "occupant.ready" );
+  let ( _script_dir, script_path ) = fake_claude_dir(
+    &format!( "printf 'READY\\n' > '{}'\nsleep 60\nexit 0", ready_path.display() )
+  );
   let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
   let proc_dir = tempfile::TempDir::new().expect( "proc dir" ); // empty: 0 pre-existing occupiers
   let stderr_dir = tempfile::TempDir::new().expect( "stderr dir" );
@@ -115,24 +170,40 @@ fn t15_slot_wait_message_names_live_hold_when_owner_alive()
   };
 
   let mut racer_a = spawn_racer( "race-a", &stderr_a_path );
+
+  // Fix(BUG-532): rendezvous. Wait until racer A has actually claimed the slot
+  // and entered its critical section before racer B is spawned at all —
+  // otherwise A can complete and release before B ever reads the slot, leaving
+  // B to claim a free slot, never wait, and never print (see `## Root Cause`).
+  // Reuses the same bounded-poll helper as the marker wait below rather than
+  // introducing a second waiter. The 30s ceiling here bounds process startup
+  // only; it is not an ordering assumption.
+  let occupied_deadline = std::time::Instant::now() + core::time::Duration::from_secs( 30 );
+  assert!(
+    wait_for_marker_in_files( &[ ready_path.as_path() ], "READY", occupied_deadline ),
+    "T15 (BUG-532): racer A never announced itself within 30s, so it never held \
+     the slot and there is nothing for racer B to contend with. This is a \
+     failure to establish the fixture's precondition, NOT a gate defect."
+  );
+
   let mut racer_b = spawn_racer( "race-b", &stderr_b_path );
 
-  // Both racers read count_u32=0 < max=1 on attempt 1 and contend for the same
-  // reservation index; the loser's message prints immediately (no delay before
-  // the first poll's eprintln) — see `## Root Cause` above. Fix(BUG-508): poll
-  // the racers' file-redirected stderr for the loser's message instead of a
-  // fixed sleep — a fixed duration has no adaptive margin and can under-wait
-  // under genuine host CPU contention, producing a false-red failure (both
-  // racers' stderr empty) instead of the test simply taking a little longer.
-  // 15s is a generous ceiling, well under either racer's own
+  // Racer A now holds the slot and is sleeping; the census stays 0 (see the
+  // `## Pitfall` note above), so B reads count_u32=0 < max=1, fails the
+  // slot-CAS against A's live record, and prints its message immediately (no
+  // delay before the first poll's eprintln). Fix(BUG-508): poll B's
+  // file-redirected stderr for that message instead of a fixed sleep — a fixed
+  // duration has no adaptive margin and can under-wait under genuine host CPU
+  // contention. 15s is a generous ceiling, well under either racer's own
   // CLR_GATE_MAX_ATTEMPTS=5 exhaustion; the winner is still present in
   // `/proc` (unreaped by this harness) throughout, since neither racer is
   // killed until the marker is observed or the ceiling is hit.
   let deadline = std::time::Instant::now() + core::time::Duration::from_secs( 15 );
   assert!(
-    wait_for_marker_in_files( &[ stderr_a_path.as_path(), stderr_b_path.as_path() ], "gate-wait", deadline ),
-    "T15 (BUG-393/396/508): timed out after 15s waiting for either racer's stderr \
-     to report a gate-wait message"
+    wait_for_marker_in_files( &[ stderr_b_path.as_path() ], "gate-wait", deadline ),
+    "T15 (BUG-393/396/508/532): timed out after 15s waiting for racer B's stderr to \
+     report a gate-wait message. Racer A is known to hold the slot at this point \
+     (it announced itself above), so B must have been denied and must have said so."
   );
   let _ = racer_a.kill();
   let _ = racer_b.kill();
@@ -144,10 +215,15 @@ fn t15_slot_wait_message_names_live_hold_when_owner_alive()
 
   let a_held = stderr_a.contains( "slot held by another session" );
   let b_held = stderr_b.contains( "slot held by another session" );
+  // Fix(BUG-532): the rendezvous makes the winner deterministic, so this can
+  // assert WHICH racer reports the hold rather than merely that exactly one
+  // does — B is the loser by construction, and A, admitted immediately with a
+  // free slot and an empty census, must never enter the wait loop at all.
   assert!(
-    a_held != b_held,
-    "T15 (BUG-393/396): exactly one racer must report the slot held by \
-     another (live) session. stderr_a:\n{stderr_a}\nstderr_b:\n{stderr_b}"
+    b_held && !a_held,
+    "T15 (BUG-393/396/532): racer B must report the slot held by another (live) \
+     session, and racer A — which held the slot from the start — must report \
+     nothing. stderr_a:\n{stderr_a}\nstderr_b:\n{stderr_b}"
   );
   assert!(
     !stderr_a.contains( "at capacity" ) && !stderr_b.contains( "at capacity" ),
@@ -180,7 +256,7 @@ fn t15_slot_wait_message_names_live_hold_when_owner_alive()
 /// distinguishing it from T15's scenario.
 ///
 /// ## Root Cause
-/// See `Fix(BUG-396)` on `acquire_slot()`/`SlotDenialCause` in `gate.rs`:
+/// See `Fix(BUG-396)` on `acquire_slot()`/`SlotDenialCause` in `gate_slot.rs`:
 /// prior to that fix, `HeldByLive` and `LostReclaimRace` were both a bare
 /// `false`, so the message site could not tell them apart.
 ///
@@ -210,7 +286,7 @@ fn t15_slot_wait_message_names_live_hold_when_owner_alive()
 /// ago — the code cannot tell, and the message must not claim it can.
 ///
 /// ## Fix(BUG-509): Root Cause
-/// `CLR_GATE_RECLAIM_TEST_DELAY_MS` (in `acquire_slot()`, `gate.rs`) widens
+/// `CLR_GATE_RECLAIM_TEST_DELAY_MS` (in `acquire_slot()`, `gate_slot.rs`) widens
 /// the reclaim-ticket race only from the point a racer's process has already
 /// been scheduled far enough to pass the dead-owner check onward — it gives
 /// zero protection against OS scheduling delay in getting the racer's
@@ -256,7 +332,7 @@ fn t15_slot_wait_message_names_live_hold_when_owner_alive()
 /// ## Fix(BUG-530): Root Cause
 /// The BUG-509 widening treated an insufficient margin as the root cause when
 /// the actual defect was a missing synchronization. `acquire_slot()` returns
-/// `HeldByLive` (`gate.rs:525`) BEFORE `reclaim_test_delay()` (`gate.rs:527`),
+/// `HeldByLive` BEFORE `reclaim_test_delay()` (both in `gate_slot.rs`),
 /// so the injected delay widens only the window in which the DEAD owner
 /// record stays visible — it never synchronizes the racers' arrival. For the
 /// loser to reach the ticket branch, both racers must execute their slot-read
@@ -333,7 +409,7 @@ fn t16_slot_wait_message_names_genuine_reclaim_race_for_dead_owner()
       .env( "CLR_GATE_POLL_SECS", "1" )
       .env( "CLR_GATE_MAX_ATTEMPTS", "5" )
       // Widen the reclaim race window deterministically (see
-      // reclaim_test_delay() in gate.rs) so this test forces genuine ticket
+      // reclaim_test_delay() in gate_slot.rs) so this test forces genuine ticket
       // contention on every run instead of depending on incidental OS
       // scheduling jitter between the two racers. Fix(BUG-509): 500ms, not
       // T14's 50ms — reclaim_test_delay() only widens the window AFTER a
@@ -380,7 +456,7 @@ fn t16_slot_wait_message_names_genuine_reclaim_race_for_dead_owner()
   // can determine. Reaching the reclaim-ticket branch at all requires both
   // racers to execute their slot-read within the
   // `CLR_GATE_RECLAIM_TEST_DELAY_MS` window, because `acquire_slot()` returns
-  // `HeldByLive` (gate.rs:525) BEFORE `reclaim_test_delay()` (gate.rs:527)
+  // `HeldByLive` BEFORE `reclaim_test_delay()` (both in gate_slot.rs)
   // whenever the recorded owner is already alive. That is a constraint on
   // relative process-spawn skew between two independently spawned processes,
   // which this test neither controls nor enforces — under parallel-suite CPU
@@ -458,7 +534,7 @@ fn t16_slot_wait_message_names_genuine_reclaim_race_for_dead_owner()
 /// that dead claimant's own (pid, since) and retries the same atomic
 /// `create_new()` arbitration, repeating until it either wins an unclaimed
 /// generation or hits a live claimant / already-reclaimed slot. See
-/// `Fix(BUG-402)` on `acquire_slot()` in `src/cli/gate.rs` for the full
+/// `Fix(BUG-402)` on `acquire_slot()` in `src/cli/gate_slot.rs` for the full
 /// explanation.
 ///
 /// Prevention: this test — a fresh caller must still acquire the slot
@@ -658,7 +734,7 @@ fn t18_gate_tries_other_free_index_when_count_derived_index_is_live_held()
 ///
 /// Root Cause: `claim_slot_file()`'s `create_new(true).open(path)` and its
 /// subsequent `write!()` are two independent, non-atomic steps
-/// (`src/cli/gate.rs:115-124`) — `path` becomes visible to concurrent
+/// (`src/cli/gate_slot.rs`) — `path` becomes visible to concurrent
 /// readers the instant `create_new()` succeeds, before its content is
 /// written.
 ///
@@ -668,7 +744,7 @@ fn t18_gate_tries_other_free_index_when_count_derived_index_is_live_held()
 /// owner); none constructs, or waits to observe, a file that exists but
 /// fails to parse.
 ///
-/// Fix Applied: see `Fix(BUG-407)` on `claim_slot_file()` in `src/cli/gate.rs`.
+/// Fix Applied: see `Fix(BUG-407)` on `claim_slot_file()` in `src/cli/gate_slot.rs`.
 ///
 /// Prevention: this test — with the window widened to 1s, a single fresh
 /// claim on an empty gate dir must never leave the slot file observable in
@@ -775,7 +851,7 @@ fn t19_claim_slot_file_publish_is_atomic_under_widened_window()
 /// waiter on its very first attempt.
 ///
 /// ## Root Cause
-/// `acquire_slot()`'s reclaim-eligibility branch (`src/cli/gate.rs`, `if
+/// `acquire_slot()`'s reclaim-eligibility branch (`src/cli/gate_slot.rs`, `if
 /// pid_alive( owner )`) is a single binary condition with no elapsed-time
 /// comparison against the recorded `owner_since` anywhere — a live-but-stalled
 /// (hung/deadlocked/SIGSTOPped) slot holder blocks a waiter forever even when
@@ -789,7 +865,7 @@ fn t19_claim_slot_file_publish_is_atomic_under_widened_window()
 /// eligibility at all; the feature does not exist yet.
 ///
 /// ## Fix Applied
-/// See `Fix(BUG-400)` on `acquire_slot()`/`gate_stale_secs()` in `src/cli/gate.rs`.
+/// See `Fix(BUG-400)` on `acquire_slot()`/`gate_stale_secs()` in `src/cli/gate_slot.rs`.
 ///
 /// ## Prevention
 /// Any future reclaim-eligibility change must be re-verified against both an
@@ -945,7 +1021,7 @@ fn t20_gate_reclaims_stale_live_owner_when_threshold_set()
 /// both non-admission paths (tmp-claim failure, rename failure) before
 /// returning `LostReclaimRace`, so the next retry re-contends the same
 /// generation fresh instead of reading back its own abandoned claim. See
-/// `Fix(BUG-405)` on `acquire_slot()` in `src/cli/gate.rs`.
+/// `Fix(BUG-405)` on `acquire_slot()` in `src/cli/gate_slot.rs`.
 ///
 /// Prevention: this test — a caller whose own tmp-claim transiently fails
 /// once must still acquire the slot within its bounded gate-wait budget on
@@ -1033,7 +1109,7 @@ fn t21_ticket_winner_that_fails_own_admission_does_not_self_deny_forever()
 /// walks past MULTIPLE dead generations in one call, not merely the single
 /// extra hop T17 exercises — the capability the chain-walk design in
 /// `Fix(BUG-402)` is specifically built to provide, per its own rationale
-/// comment on `acquire_slot()` in `gate.rs`. `CLR_PROC_DIR` stays empty
+/// comment on `acquire_slot()` in `gate_slot.rs`. `CLR_PROC_DIR` stays empty
 /// throughout (0 counted occupiers), so the invocation always targets
 /// index 0.
 ///
@@ -1148,7 +1224,7 @@ fn t22_acquire_slot_walks_multi_generation_reclaim_ticket_chain()
 ///
 ///   1. `claim_slot_file(slot_0.json)` fails — the path already exists.
 ///   2. Owner record reads back the dead PID, so the `HeldByLive` guard at
-///      `gate.rs:525` does NOT fire.
+///      `gate_slot.rs` does NOT fire.
 ///   3. `claim_slot_file(ticket)` fails — the ticket already exists.
 ///   4. The ticket's claimant is alive → `Err(LostReclaimRace)`.
 ///
