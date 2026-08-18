@@ -1,11 +1,11 @@
 # Event Schema
 
-**Status**: Planned | **Since**: 1.3.0
+**Status**: Implemented | **Since**: 1.3.0
 
 ### Scope
 
 - **Purpose**: Define the type-discriminated, version-tagged schema every journal event record follows.
-- **Responsibility**: Documents the 8 event types, their trigger conditions and key fields, and the forward-compatible versioning rules.
+- **Responsibility**: Documents the 9 event types, their trigger conditions and key fields, and the forward-compatible versioning rules.
 - **In Scope**: The `v`/`type` discriminator fields, timestamp format, and per-event-type field population.
 - **Out of Scope**: Journal write/read mechanics (→ `docs/feature/001_event_journaling.md`), the Rust type definitions (→ `docs/api/003_event_type.md`).
 

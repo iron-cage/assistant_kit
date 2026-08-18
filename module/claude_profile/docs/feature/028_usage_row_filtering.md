@@ -3,8 +3,8 @@
 ### Scope
 
 - **Purpose**: Provide row-level filters, count/offset pagination, and single-value extraction for `.usage` table output, enabling scripting and targeted monitoring.
-- **Responsibility**: Documents the filtering parameters (`count::`, `offset::`, `only_active::`, `only_next::`, `min_5h::`, `min_7d::`, `only_valid::`, `exclude_exhausted::`), the pre-fetch reducers (`stalest::`, `max_age::`), the `get::` single-value extraction shorthand, and the associated format extensions (`format::value`, `format::tsv`, `format::plain`, `abs::`, `no_color::`).
-- **In Scope**: Row count limit, row offset, boolean row filters, percentage threshold filters, `get::` field extraction with `format::value` output, `abs::` for absolute values, `no_color::` for plain output.
+- **Responsibility**: Documents the filtering parameters (`count::`, `offset::`, `only_active::`, `only_next::`, `min_5h::`, `min_7d::`, `only_valid::`, `exclude_exhausted::`), the pre-fetch reducers (`stalest::`, `max_age::`), the `get::` single-value extraction shorthand, and the associated format extensions (`format::value`, `format::tsv`, `format::plain`, `no_color::`).
+- **In Scope**: Row count limit, row offset, boolean row filters, percentage threshold filters, `get::` field extraction with `format::value` output, `no_color::` for plain output.
 - **Out of Scope**: Column visibility (→ 033_cols.md), sort order and footer recommendation (→ 020_usage_sort_strategies.md), live monitor mode (→ 018_live_monitor.md).
 
 ### Design
@@ -73,9 +73,8 @@
 | `format::tsv` | Tab-separated values with one header row; no emoji in status column (uses text labels: `ok`, `warn`, `err`) |
 | `format::plain` | Same layout as `format::text` but with no emoji and no ANSI colors |
 
-**`abs::` and `no_color::`:**
+**`no_color::`:**
 
-- `abs::1` replaces percentage values with absolute token counts where the API provides them.
 - `no_color::1` is equivalent to `format::plain` for text output — strips all emoji and ANSI sequences from the output regardless of format.
 
 ### Acceptance Criteria
@@ -132,7 +131,7 @@
 | [cli/param/043_only_valid.md](../cli/param/043_only_valid.md) | `only_valid::` parameter specification |
 | [cli/param/044_exclude_exhausted.md](../cli/param/044_exclude_exhausted.md) | `exclude_exhausted::` parameter specification |
 | [cli/param/045_get.md](../cli/param/045_get.md) | `get::` parameter specification |
-| [cli/param/046_abs.md](../cli/param/046_abs.md) | `abs::` parameter specification |
+| [cli/param/046_abs.md](../cli/param/046_abs.md) | `abs::` — REMOVED (audit remediation); registered no-op deleted |
 | [cli/param/047_no_color.md](../cli/param/047_no_color.md) | `no_color::` parameter specification |
 | [cli/param/080_stalest.md](../cli/param/080_stalest.md) | `stalest::` parameter specification |
 | [cli/param/081_max_age.md](../cli/param/081_max_age.md) | `max_age::` parameter specification |

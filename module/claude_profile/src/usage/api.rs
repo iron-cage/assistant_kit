@@ -232,9 +232,6 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
   }
   // ── End filter pipeline ────────────────────────────────────────────────────
 
-  // abs::1 is registered for future absolute-count display; no-op until API exposes counts.
-  let _ = params.abs;
-
   // `get::` extraction: output the requested field from the first row as a bare string.
   // When accounts is empty after filtering, output nothing (exit 0, empty stdout).
   if let Some( field ) = params.get

@@ -26,7 +26,7 @@
 | Data source | `refresh::`, `touch::`, `imodel::`, `effort::`, `live::`, `interval::`, `jitter::` | **0**, **0**, auto, auto, 0, 30, 0 | **1**, **1**, auto, auto, 0, 30, 0 |
 | Sort & filter | `sort::`, `desc::`, `prefer::`, `min_5h::`, `min_7d::`, `only_valid::`, `exclude_exhausted::` | **name**, 0, any, 0, 0, 0, 0 | **renew**, 0, any, 0, 0, 0, 0 |
 | Columns | `cols::` | **identity set** | **quota set** |
-| Output | `format::`, `get::`, `abs::`, `no_color::`, `trace::` | text, —, 0, 0, 0 | text, —, 0, 0, 0 |
+| Output | `format::`, `get::`, `no_color::`, `trace::` | text, —, 0, 0 | text, —, 0, 0 |
 | Mutations | `dry::`, `assignee::`, `owner::`, `set_model::`, `force::` | 0, —, —, —, 0 | 0, —, —, —, 0 |
 
 **Default column sets.** `cols::` replaces the 15 individual field toggles on `.accounts`. Both default sets include the `Owner` column — showing the `owner` field from `{name}.json` (`USER@MACHINE` identity or `—` when unowned). This overrides the Feature 036 out-of-scope exclusion for owner display.

@@ -1,6 +1,6 @@
 # Test: Display Control Parameter Group
 
-Interaction tests for Group 5 (Display Control: `cols::`, `no_color::`, `abs::`, `get::`). See [param_group/005_display_control.md](../../../../docs/cli/param_group/005_display_control.md) for specification.
+Interaction tests for Group 5 (Display Control: `cols::`, `no_color::`, `get::`). See [param_group/005_display_control.md](../../../../docs/cli/param_group/005_display_control.md) for specification.
 
 ### Test Case Index
 

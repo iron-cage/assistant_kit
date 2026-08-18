@@ -279,7 +279,6 @@ pub fn parse_usage_params( cmd : &VerifiedCommand ) -> Result< UsageParams, Erro
       "get:: must be a string".to_string(),
     ) ),
   };
-  let abs      = crate::output::parse_int_flag( cmd, "abs",      0 )? != 0;
   let no_color = crate::output::parse_int_flag( cmd, "no_color", 0 )? != 0;
   let set_model = match cmd.arguments.get( "set_model" )
   {
@@ -298,7 +297,7 @@ pub fn parse_usage_params( cmd : &VerifiedCommand ) -> Result< UsageParams, Erro
   {
     refresh, live, interval, jitter, trace, sort, desc : desc_param, prefer, cols, touch, imodel, effort,
     count, offset, only_active, only_next, min_5h : h5_min, min_7d : d7_min, only_valid, exclude_exhausted,
-    format, get, abs, no_color, set_model,
+    format, get, no_color, set_model,
     rotate, force, who, solo, stalest, max_age,
   } )
 }

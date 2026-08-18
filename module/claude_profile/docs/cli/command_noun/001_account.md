@@ -212,9 +212,8 @@ An account is created by `save`, activated by `use`, and removed by `delete`. Th
 | 27 | [`min_7d::`](../param/042_min_7d.md) | Keep only rows with 7d quota ≥ N% |
 | 28 | [`only_valid::`](../param/043_only_valid.md) | Keep only non-exhausted non-expired rows |
 | 29 | [`exclude_exhausted::`](../param/044_exclude_exhausted.md) | Remove exhausted rows |
-| 30 | [`abs::`](../param/046_abs.md) | Show absolute token counts |
-| 31 | [`no_color::`](../param/047_no_color.md) | Strip emoji and ANSI sequences |
-| 32 | [`get::`](../param/045_get.md) | Extract bare field value from first row |
-| 33 | [`live::`](../param/020_live.md) | Continuous monitor mode |
-| 34 | [`interval::`](../param/021_interval.md) | Seconds between live refresh cycles |
-| 35 | [`jitter::`](../param/022_jitter.md) | Random jitter added to interval |
+| 30 | [`no_color::`](../param/047_no_color.md) | Strip emoji and ANSI sequences |
+| 31 | [`get::`](../param/045_get.md) | Extract bare field value from first row |
+| 32 | [`live::`](../param/020_live.md) | Continuous monitor mode |
+| 33 | [`interval::`](../param/021_interval.md) | Seconds between live refresh cycles |
+| 34 | [`jitter::`](../param/022_jitter.md) | Random jitter added to interval |

@@ -37,6 +37,17 @@ pub const ANTHROPIC_BETA    : &str = "oauth-2025-04-20";
 /// Anthropic API version header value.
 pub const ANTHROPIC_VERSION : &str = "2023-06-01";
 
+/// Env var overriding the API origin (scheme + host + port) — the test seam
+/// for all `fetch_*` transports.
+///
+/// Unset (production): every fetch targets the hardcoded `api.anthropic.com`
+/// endpoint constants unchanged. Set to a local listener origin (e.g.
+/// `http://127.0.0.1:41623`): each endpoint's path/query is grafted onto that
+/// origin, so a real local HTTP server observes the same paths, headers, and
+/// bodies the live API would. `https_only` is relaxed ONLY when the override
+/// is plaintext loopback — see [`fetch_rate_limits`] and the agent builder.
+pub const BASE_URL_ENV : &str = "CLAUDE_QUOTA_BASE_URL";
+
 // ── RateLimitData ─────────────────────────────────────────────────────────────
 
 /// Rate-limit utilization data parsed from Anthropic API response headers.
@@ -160,6 +171,42 @@ where
   } )
 }
 
+// ── resolved_url ─────────────────────────────────────────────────────────────
+
+/// Resolve an endpoint URL against the optional [`BASE_URL_ENV`] override.
+///
+/// Env unset: returns `url` unchanged. Env set: swaps scheme+host for the
+/// override origin while preserving the endpoint's path — a seam test's local
+/// server receives `GET /api/oauth/usage` exactly as the live API would.
+#[ cfg( feature = "enabled" ) ]
+fn resolved_url( url : &str ) -> String
+{
+  let Ok( base ) = std::env::var( BASE_URL_ENV ) else { return url.to_string(); };
+  let path_start = url.find( "://" )
+    .map( | i | i + 3 )
+    .and_then( | host | url[ host.. ].find( '/' ).map( | p | host + p ) );
+  match path_start
+  {
+    Some( p ) => format!( "{}{}", base.trim_end_matches( '/' ), &url[ p.. ] ),
+    None => base,
+  }
+}
+
+/// True only when [`BASE_URL_ENV`] points at a plaintext loopback origin —
+/// the sole case where the agent's `https_only` guard is relaxed.
+///
+/// A non-loopback `http://` override stays rejected: these requests carry a
+/// live OAuth token, and the seam must never silently downgrade transport
+/// security toward a remote host.
+#[ cfg( feature = "enabled" ) ]
+fn loopback_http_override() -> bool
+{
+  let Ok( base ) = std::env::var( BASE_URL_ENV ) else { return false; };
+  let Some( rest ) = base.strip_prefix( "http://" ) else { return false; };
+  let host = rest.split( [ ':', '/' ] ).next().unwrap_or( "" );
+  host == "localhost" || host.starts_with( "127." )
+}
+
 // ── http_agent ───────────────────────────────────────────────────────────────
 
 /// Build an HTTP agent with explicit timeouts on every request phase.
@@ -180,13 +227,15 @@ where
 /// Pitfall: per-phase timeouts never cover phases you didn't name;
 /// `timeout_global` is the backstop that bounds the whole call regardless of
 /// which phase stalls. `https_only` additionally refuses accidental plaintext
-/// `http://` URLs — these requests carry a live OAuth token.
+/// `http://` URLs — these requests carry a live OAuth token. The single
+/// exception: a plaintext *loopback* [`BASE_URL_ENV`] override (seam tests
+/// against a local server) — see [`loopback_http_override`].
 #[ cfg( feature = "enabled" ) ]
 #[ inline ]
 fn http_agent() -> ureq::Agent
 {
   let config = ureq::Agent::config_builder()
-    .https_only( true )
+    .https_only( !loopback_http_override() )
     .timeout_global( Some( core::time::Duration::from_secs( 30 ) ) )
     .timeout_recv_response( Some( core::time::Duration::from_secs( 10 ) ) )
     .timeout_recv_body( Some( core::time::Duration::from_secs( 10 ) ) )
@@ -224,7 +273,7 @@ pub fn fetch_rate_limits( token : &str ) -> Result< RateLimitData, QuotaError >
   let body = r#"{"model":"claude-haiku-4-5-20251001","max_tokens":1,"messages":[{"role":"user","content":"quota"}]}"#;
 
   let resp = http_agent()
-    .post( API_URL )
+    .post( &resolved_url( API_URL ) )
     .header( "Authorization",     &format!( "Bearer {token}" ) )
     .header( "anthropic-beta",    ANTHROPIC_BETA )
     .header( "anthropic-version", ANTHROPIC_VERSION )
@@ -575,7 +624,7 @@ fn scan_limits_for_kind( body : &str, kind_needles : &[ &str ] ) -> Option< Peri
 pub fn fetch_oauth_usage( token : &str ) -> Result< OauthUsageData, QuotaError >
 {
   let mut resp = http_agent()
-    .get( OAUTH_USAGE_URL )
+    .get( &resolved_url( OAUTH_USAGE_URL ) )
     .header( "Authorization", &format!( "Bearer {token}" ) )
     .call()
     .map_err( |e| QuotaError::HttpTransport( e.to_string() ) )?;
@@ -924,7 +973,7 @@ pub fn parse_oauth_account( body : &str ) -> Result< OauthAccountData, QuotaErro
 pub fn fetch_oauth_account( token : &str ) -> Result< OauthAccountData, QuotaError >
 {
   let mut resp = http_agent()
-    .get( OAUTH_ACCOUNT_URL )
+    .get( &resolved_url( OAUTH_ACCOUNT_URL ) )
     .header( "Authorization",     &format!( "Bearer {token}" ) )
     .header( "anthropic-version", ANTHROPIC_VERSION )
     .call()
@@ -1017,7 +1066,7 @@ pub fn parse_claude_cli_roles( body : &str ) -> Result< ClaudeCliRolesData, Quot
 pub fn fetch_claude_cli_roles( token : &str ) -> Result< ClaudeCliRolesData, QuotaError >
 {
   let mut resp = http_agent()
-    .get( CLAUDE_CLI_ROLES_URL )
+    .get( &resolved_url( CLAUDE_CLI_ROLES_URL ) )
     .header( "Authorization",     &format!( "Bearer {token}" ) )
     .header( "anthropic-version", ANTHROPIC_VERSION )
     .call()
@@ -1188,7 +1237,7 @@ fn parse_models_response( body : &str ) -> Vec< ModelInfo >
 #[ inline ]
 pub fn fetch_models( token : &str ) -> Result< Vec< ModelInfo >, QuotaError >
 {
-  let url  = format!( "{MODELS_URL}?limit=1000" );
+  let url  = format!( "{}?limit=1000", resolved_url( MODELS_URL ) );
   let mut resp = http_agent()
     .get( &url )
     .header( "Authorization",     &format!( "Bearer {token}" ) )

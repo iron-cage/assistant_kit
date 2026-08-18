@@ -1,8 +1,8 @@
 # Group: 5. Display Control
 
-**Parameters:** `cols::`, `count::`, `offset::`, `only_active::`, `only_next::`, `min_5h::`, `min_7d::`, `only_valid::`, `exclude_exhausted::`, `abs::`, `no_color::`
+**Parameters:** `cols::`, `count::`, `offset::`, `only_active::`, `only_next::`, `min_5h::`, `min_7d::`, `only_valid::`, `exclude_exhausted::`, `no_color::`
 **Pattern:** Column visibility, row filtering, and display modifiers for `.usage` and `.accounts`
-**Purpose:** Controls which columns appear, which rows survive filtering, pagination/truncation, and display rendering (absolute values, color stripping) for the `.usage` and `.accounts` quota tables.
+**Purpose:** Controls which columns appear, which rows survive filtering, pagination/truncation, and display rendering (color stripping) for the `.usage` and `.accounts` quota tables.
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
@@ -15,15 +15,14 @@
 | [`min_7d::`](../param/042_min_7d.md) | `u8` | `0` | Keep only rows with 7d quota ≥ N% |
 | [`only_valid::`](../param/043_only_valid.md) | `bool` | `0` | Keep only 🟢 rows (non-exhausted, non-expired) |
 | [`exclude_exhausted::`](../param/044_exclude_exhausted.md) | `bool` | `0` | Remove 🔴 exhausted rows |
-| [`abs::`](../param/046_abs.md) | `bool` | `0` | Show absolute token counts instead of percentages |
 | [`no_color::`](../param/047_no_color.md) | `bool` | `0` | Strip emoji and ANSI sequences from output |
 
 ### Referenced Commands
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.usage`](../command/006_usage.md#command-9-usage) | All 11 display and filter params |
-| 2 | [`.accounts`](../command/001_account.md#command-3-accounts) | All 11 display and filter params |
+| 1 | [`.usage`](../command/006_usage.md#command-9-usage) | All 10 display and filter params |
+| 2 | [`.accounts`](../command/001_account.md#command-3-accounts) | All 10 display and filter params |
 
 **Typical Patterns:**
 
@@ -45,20 +44,16 @@ clp .usage offset::1 count::2
 
 # Non-TTY output (logs, CI)
 clp .usage no_color::1
-
-# Absolute token counts
-clp .usage abs::1
 ```
 
 **Semantic Coherence Test**
 
 > "Does parameter X control **what rows appear, which columns are visible, or how values are rendered** in the `.usage` or `.accounts` quota table?"
 
-All 11 members pass:
+All 10 members pass:
 - `cols::` — controls which columns are visible
 - `count::` / `offset::` — control row window (pagination/truncation)
 - `only_active::`, `only_next::`, `min_5h::`, `min_7d::`, `only_valid::`, `exclude_exhausted::` — filter which rows survive
-- `abs::` — controls value rendering (percentages vs absolute counts)
 - `no_color::` — controls symbol rendering (emoji/ANSI vs plain text)
 
 Parameters that fail: `sort::` (ordering strategy + recommendation, not display); `format::` (serialization format, not row selection); `live::`, `refresh::` (fetch behavior, not display).
@@ -71,7 +66,7 @@ Parameters that fail: `sort::` (ordering strategy + recommendation, not display)
 - Invalid `cols::` column IDs cause exit 1 with an error naming the valid column IDs.
 - Row filters combine with AND logic — a row must pass ALL active filters to survive.
 - `count::` and `offset::` are applied last (after all row filters and sorting).
-- `abs::` and `no_color::` have no effect on `format::json` output.
+- `no_color::` has no effect on `format::json` output.
 
 **Cross-References**
 

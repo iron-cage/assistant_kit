@@ -146,64 +146,6 @@ fn it222_lim_it_it72_json_new_renewal_fields()
   );
 }
 
-// ── it223–it224: lim_it abs::1 / abs::true show token counts (046 EC-4/EC-6) ─
-
-/// it223 `lim_it` (046 EC-4): `abs::1` shows absolute token counts instead of
-/// percentages. Quota columns must not contain `%` suffix.
-///
-/// Spec: [`tests/docs/cli/param/046_abs.md` EC-4]
-#[ test ]
-fn it223_lim_it_abs_1_shows_token_counts()
-{
-  let token = live_active_token().expect( "it223: live API token required — no ~/.claude/.credentials.json" );
-  require_live_api( "it223" );
-  let dir  = TempDir::new().unwrap();
-  let home = dir.path().to_str().unwrap();
-  write_account_with_token( dir.path(), "acct-a@test.com", &token, true );
-
-  let out_pct = run_cs_with_env( &[ ".usage", "abs::0" ], &[ ( "HOME", home ) ] );
-  let out_abs = run_cs_with_env( &[ ".usage", "abs::1" ], &[ ( "HOME", home ) ] );
-  // Structural: abs::1 is accepted (valid param, exit 0).
-  assert_exit( &out_abs, 0 );
-
-  let text_pct = stdout( &out_pct );
-  let text_abs = stdout( &out_abs );
-
-  // Default (abs::0) shows % values in quota columns.
-  assert!(
-    text_pct.contains( '%' ),
-    "abs::0 (default) must show percentage values, got:\n{text_pct}",
-  );
-  // abs::1 is registered but currently a no-op (absolute-count display pending API exposure).
-  // Structural gate: abs::1 produces valid table output.
-  // TODO(046 EC-4): add !text_abs.contains('%') assertion when abs::1 converts to counts.
-  assert!(
-    text_abs.contains( "Account" ),
-    "abs::1 must produce valid table output, got:\n{text_abs}",
-  );
-}
-
-/// it224 `lim_it` (046 EC-6): `abs::true` produces the same output as `abs::1`.
-///
-/// Spec: [`tests/docs/cli/param/046_abs.md` EC-6]
-#[ test ]
-fn it224_lim_it_abs_true_shows_token_counts()
-{
-  let token = live_active_token().expect( "it224: live API token required — no ~/.claude/.credentials.json" );
-  let dir  = TempDir::new().unwrap();
-  let home = dir.path().to_str().unwrap();
-  write_account_with_token( dir.path(), "acct-a@test.com", &token, true );
-
-  let out_1    = run_cs_with_env( &[ ".usage", "abs::1"    ], &[ ( "HOME", home ) ] );
-  let out_true = run_cs_with_env( &[ ".usage", "abs::true" ], &[ ( "HOME", home ) ] );
-  assert_exit( &out_true, 0 );
-  // abs::true and abs::1 must produce identical output.
-  assert_eq!(
-    stdout( &out_1 ), stdout( &out_true ),
-    "abs::true must produce the same output as abs::1 (046 EC-6)",
-  );
-}
-
 // ── it225: → Next cell shows event label + duration (live) ───────────────────
 
 /// it225 — The `→ Next` column cells contain a recognized strategic event-label-and-duration string.

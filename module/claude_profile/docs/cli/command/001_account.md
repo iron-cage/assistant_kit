@@ -8,7 +8,7 @@ Account management commands: list, save, use, delete, limits, and relogin.
 
 List all saved accounts (identity view) or run per-account mutations (`assignee::USER@MACHINE`, `owner::0`, `owner::USER@MACHINE`, `lock::0`/`lock::1`, `reserve::0`/`reserve::1`). Without `name::`: shows all accounts; with `name::EMAIL`: shows that account only. Column visibility controlled via `cols::` (modifies from default identity set: Account, Owner, Active, Current, Sub, Tier, Expires, Email, Provider). When data-source params are active (`refresh::1`, `touch::1`), fetches live quota using the same pipeline as `.usage` — defaults to local-only read with no HTTP fetch.
 
--- **Parameters:** [`name::`](../param/001_name.md) *(optional)*, [`cols::`](../param/033_cols.md), [`assignee::`](../param/063_assignee.md), [`owner::`](../param/062_owner.md), [`lock::`](../param/067_lock.md), [`reserve::`](../param/068_reserve.md), [`force::`](../param/058_force.md), [`dry::`](../param/004_dry.md), [`set_model::`](../param/054_set_model.md), [`refresh::`](../param/019_refresh.md), [`touch::`](../param/034_touch.md), [`imodel::`](../param/035_imodel.md), [`effort::`](../param/036_effort.md), [`sort::`](../param/025_sort.md), [`desc::`](../param/026_desc.md), [`prefer::`](../param/027_prefer.md), [`count::`](../param/037_count.md), [`offset::`](../param/038_offset.md), [`only_active::`](../param/039_only_active.md), [`only_next::`](../param/040_only_next.md), [`min_5h::`](../param/041_min_5h.md), [`min_7d::`](../param/042_min_7d.md), [`only_valid::`](../param/043_only_valid.md), [`exclude_exhausted::`](../param/044_exclude_exhausted.md), [`get::`](../param/045_get.md), [`abs::`](../param/046_abs.md), [`no_color::`](../param/047_no_color.md), [`live::`](../param/020_live.md), [`interval::`](../param/021_interval.md), [`jitter::`](../param/022_jitter.md), [`format::`](../param/002_format.md), [`trace::`](../param/023_trace.md)
+-- **Parameters:** [`name::`](../param/001_name.md) *(optional)*, [`cols::`](../param/033_cols.md), [`assignee::`](../param/063_assignee.md), [`owner::`](../param/062_owner.md), [`lock::`](../param/067_lock.md), [`reserve::`](../param/068_reserve.md), [`force::`](../param/058_force.md), [`dry::`](../param/004_dry.md), [`set_model::`](../param/054_set_model.md), [`refresh::`](../param/019_refresh.md), [`touch::`](../param/034_touch.md), [`imodel::`](../param/035_imodel.md), [`effort::`](../param/036_effort.md), [`sort::`](../param/025_sort.md), [`desc::`](../param/026_desc.md), [`prefer::`](../param/027_prefer.md), [`count::`](../param/037_count.md), [`offset::`](../param/038_offset.md), [`only_active::`](../param/039_only_active.md), [`only_next::`](../param/040_only_next.md), [`min_5h::`](../param/041_min_5h.md), [`min_7d::`](../param/042_min_7d.md), [`only_valid::`](../param/043_only_valid.md), [`exclude_exhausted::`](../param/044_exclude_exhausted.md), [`get::`](../param/045_get.md), [`no_color::`](../param/047_no_color.md), [`live::`](../param/020_live.md), [`interval::`](../param/021_interval.md), [`jitter::`](../param/022_jitter.md), [`format::`](../param/002_format.md), [`trace::`](../param/023_trace.md)
 -- **Exit:** 0 (success) | 1 (usage: invalid `name::` chars, legacy field-toggle param used, unknown `cols::` id, REMOVED_TOGGLE param used (`assign::`, `for::`, `unclaim::`, `active::`) — exits 1 with migration message, G8 ownership violation on `owner::0` or `owner::USER@MACHINE`, G9 claim-lock violation on `assignee::` target-side) | 2 (runtime: account not found or credential store unreadable)
 
 **Syntax:**
@@ -66,7 +66,6 @@ clp .accounts format::table
 | `only_valid::` | `bool` | `0` | Hide 🔴 (invalid/expired) rows |
 | `exclude_exhausted::` | `bool` | `0` | Hide 🟡 and 🔴 rows |
 | `get::` | `string` | `""` | Extract bare field value for first row |
-| `abs::` | `bool` | `0` | Show absolute token counts instead of percentages |
 | `no_color::` | `bool` | `0` | Strip emoji and ANSI colors |
 | `live::` | `bool` | `0` | Continuous monitor mode |
 | `interval::` | `u64` | `30` | Seconds between live refresh cycles (≥ 30) |
@@ -132,10 +131,10 @@ clp .accounts assignee::bob@laptop name::alice@acme.com
 | Account Ownership | `owner::`, `assignee::`, `lock::`, `reserve::`, `force::` |
 | Sort Control | `sort::`, `desc::`, `prefer::` |
 | Row Filtering & Pagination | `cols::`, `count::`, `offset::`, `only_active::`, `only_next::`, `only_valid::`, `exclude_exhausted::`, `min_5h::`, `min_7d::` |
-| Display Rendering | `abs::`, `no_color::`, `get::` |
+| Display Rendering | `no_color::`, `get::` |
 | Refresh & Subprocess Control | `trace::`, `refresh::`, `touch::`, `imodel::`, `effort::`, `set_model::`, `live::`, `interval::`, `jitter::` |
 
-Each group header renders bold/colored with no bracket punctuation on a TTY, falling back to a single trailing colon (e.g. `Core:`) in plain text. Every boolean parameter's signature is shown bare (`dry::0`, never `dry::0|1`); accepted values and the default are stated once in a blanket line rather than per row. Enum-valued parameters (`imodel::`, `effort::`, `set_model::`, `format::`, `sort::`, `prefer::`) show an uppercase placeholder in the signature (e.g. `imodel::MODEL`) with actual values spelled out in the description column. The name / `::` / value signature sub-columns are independently padded so the `::` delimiter aligns vertically across all 32 rows. No version banner and no information about REMOVED parameters appear in `.accounts.help` output — the REMOVED_TOGGLE stubs (`assign::`, `for::`, `unclaim::`, `active::`) keep their existing runtime redirect-error behavior (see Notes above); they are simply invisible from `.help` text. Full rationale and general rendering rules: [pattern/001_grouped_help_rendering.md](../../pattern/001_grouped_help_rendering.md).
+Each group header renders bold/colored with no bracket punctuation on a TTY, falling back to a single trailing colon (e.g. `Core:`) in plain text. Every boolean parameter's signature is shown bare (`dry::0`, never `dry::0|1`); accepted values and the default are stated once in a blanket line rather than per row. Enum-valued parameters (`imodel::`, `effort::`, `set_model::`, `format::`, `sort::`, `prefer::`) show an uppercase placeholder in the signature (e.g. `imodel::MODEL`) with actual values spelled out in the description column. The name / `::` / value signature sub-columns are independently padded so the `::` delimiter aligns vertically across all 31 rows. No version banner and no information about REMOVED parameters appear in `.accounts.help` output — the REMOVED_TOGGLE stubs (`assign::`, `for::`, `unclaim::`, `active::`) keep their existing runtime redirect-error behavior (see Notes above); they are simply invisible from `.help` text. Full rationale and general rendering rules: [pattern/001_grouped_help_rendering.md](../../pattern/001_grouped_help_rendering.md).
 
 ### Referenced Command Group
 
@@ -170,13 +169,12 @@ Evaluated against `.usage` under the strict [command_group](../command_group/rea
 | 23 | [`only_valid::`](../param/043_only_valid.md) | Keep non-exhausted non-expired rows |
 | 24 | [`exclude_exhausted::`](../param/044_exclude_exhausted.md) | Remove exhausted rows |
 | 25 | [`get::`](../param/045_get.md) | Extract bare field value from first row |
-| 26 | [`abs::`](../param/046_abs.md) | Show absolute token counts |
-| 27 | [`no_color::`](../param/047_no_color.md) | Strip emoji and ANSI sequences |
-| 28 | [`live::`](../param/020_live.md) | Continuous monitor mode |
-| 29 | [`interval::`](../param/021_interval.md) | Seconds between live refresh cycles |
-| 30 | [`jitter::`](../param/022_jitter.md) | Random jitter added to interval |
-| 31 | [`format::`](../param/002_format.md) | Output serialization format |
-| 32 | [`trace::`](../param/023_trace.md) | Diagnostic trace output |
+| 26 | [`no_color::`](../param/047_no_color.md) | Strip emoji and ANSI sequences |
+| 27 | [`live::`](../param/020_live.md) | Continuous monitor mode |
+| 28 | [`interval::`](../param/021_interval.md) | Seconds between live refresh cycles |
+| 29 | [`jitter::`](../param/022_jitter.md) | Random jitter added to interval |
+| 30 | [`format::`](../param/002_format.md) | Output serialization format |
+| 31 | [`trace::`](../param/023_trace.md) | Diagnostic trace output |
 
 ### Referenced Features
 
@@ -212,7 +210,7 @@ Evaluated against `.usage` under the strict [command_group](../command_group/rea
 | 1 | [Output Control](../param_group/001_output_control.md) | `format::`, `get::` |
 | 2 | [Fetch Behavior](../param_group/003_fetch_behavior.md) | `refresh::`, `live::`, `interval::`, `jitter::`, `trace::`, `touch::`, `imodel::`, `effort::` |
 | 3 | [Sort Control](../param_group/004_sort_control.md) | `sort::`, `desc::`, `prefer::` |
-| 4 | [Display Control](../param_group/005_display_control.md) | `cols::`, `count::`, `offset::`, `only_active::`, `only_next::`, `min_5h::`, `min_7d::`, `only_valid::`, `exclude_exhausted::`, `abs::`, `no_color::` |
+| 4 | [Display Control](../param_group/005_display_control.md) | `cols::`, `count::`, `offset::`, `only_active::`, `only_next::`, `min_5h::`, `min_7d::`, `only_valid::`, `exclude_exhausted::`, `no_color::` |
 
 ### Referenced Formats
 

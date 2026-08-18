@@ -1,6 +1,6 @@
 # JournalReader
 
-**Status**: Planned | **Since**: 1.3.0
+**Status**: Implemented | **Since**: 1.3.0
 
 ### Scope
 

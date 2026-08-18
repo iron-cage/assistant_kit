@@ -418,7 +418,6 @@ fn f37_ft02_usage_accepts_32_params()
       "min_7d::0",
       "only_valid::0",
       "exclude_exhausted::0",
-      "abs::0",
     ],
     &[ ( "HOME", home ) ],
   );

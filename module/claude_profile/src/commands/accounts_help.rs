@@ -22,9 +22,9 @@ const GROUP_ORDER : [ &str ; 6 ] =
   "Refresh & Subprocess Control",
 ];
 
-/// All 30 active `.accounts` parameters, per
+/// All 29 active `.accounts` parameters, per
 /// `docs/cli/command/001_account.md § Help Rendering Scheme`.
-const PARAMS : [ ParamSpec ; 30 ] =
+const PARAMS : [ ParamSpec ; 29 ] =
 [
   ParamSpec { name : "name",              group : "Core",                          value : "EMAIL",    desc : "Account identifier or prefix (optional)" },
   ParamSpec { name : "format",            group : "Core",                          value : "FORMAT",   desc : "Output serialization format" },
@@ -48,7 +48,6 @@ const PARAMS : [ ParamSpec ; 30 ] =
   ParamSpec { name : "min_5h",            group : "Row Filtering & Pagination",    value : "N",        desc : "Keep rows with 5h quota >= N%" },
   ParamSpec { name : "min_7d",            group : "Row Filtering & Pagination",    value : "N",        desc : "Keep rows with 7d quota >= N%" },
 
-  ParamSpec { name : "abs",               group : "Display Rendering",             value : "0",        desc : "Show absolute token counts" },
   ParamSpec { name : "no_color",          group : "Display Rendering",             value : "0",        desc : "Strip emoji and ANSI sequences" },
   ParamSpec { name : "get",               group : "Display Rendering",             value : "FIELD",    desc : "Extract bare field value from first row" },
 
@@ -67,7 +66,7 @@ const PARAMS : [ ParamSpec ; 30 ] =
 ///
 /// Bypasses unilang's automatic per-command help — builds `cli_fmt::CliHelpData`
 /// directly from `PARAMS` so the `::` delimiter aligns at the same column across
-/// all 30 rows, spanning group boundaries (per
+/// all 29 rows, spanning group boundaries (per
 /// `docs/cli/command/001_account.md § Help Rendering Scheme`).
 #[ inline ]
 pub fn print_accounts_help( binary : &str )

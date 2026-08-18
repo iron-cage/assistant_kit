@@ -103,7 +103,7 @@ Test case planning for clp CLI. Each file contains a Test Case Index with covera
 - [`only_valid::`](param/43_only_valid.md)
 - [`exclude_exhausted::`](param/44_exclude_exhausted.md)
 - [`get::`](param/45_get.md)
-- [`abs::`](param/46_abs.md)
+- [`abs::` *(REMOVED)*](param/46_abs.md)
 - [`no_color::`](param/47_no_color.md)
 - [`host::`](param/48_host.md)
 - [`at::`](param/49_at.md)

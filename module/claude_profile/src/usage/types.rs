@@ -324,8 +324,6 @@ pub struct UsageParams
   pub format    : UsageOutputFormat,
   /// When `Some`, extract this field's value from the first row as bare string.
   pub get       : Option< GetField >,
-  /// When true, replace percentage columns with absolute token counts (no-op when API data absent).
-  pub abs       : bool,
   /// When true, strip emoji and ANSI sequences from the output.
   pub no_color  : bool,
   /// When `Some`, write this value to `set_session_model` instead of running `apply_model_override`.

@@ -106,7 +106,6 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
       reg_arg_opt( "only_valid",        Kind::String  ).with_description( "Hide expired/invalid token rows (0 = off, default; 1 = on)" ),
       reg_arg_opt( "exclude_exhausted", Kind::String  ).with_description( "Hide exhausted rows; show only accounts with quota (0 = off, default; 1 = on)" ),
       reg_arg_opt( "get",               Kind::String  ).with_description( "Extract bare field value for first row for scripting" ),
-      reg_arg_opt( "abs",               Kind::String  ).with_description( "Replace percentage columns with absolute token counts (0 = off, default; 1 = on)" ),
       reg_arg_opt( "no_color",          Kind::String  ).with_description( "Strip emoji and ANSI sequences (0 = off, default; 1 = on)" ),
       reg_arg_opt( "set_model",         Kind::String  ).with_description( "Set Claude Code session model: `opus`, `sonnet`, `haiku`, `default`" ),
       reg_arg_opt( "live",              Kind::Integer ).with_description( "Continuous monitor mode (0 = off, default; 1 = on)" ),
@@ -273,7 +272,6 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
       reg_arg_opt( "exclude_exhausted", Kind::String  ).with_description( "Hide 🟡 and 🔴 rows; show only 🟢 rows (0 = off, default; 1 = on)" ),
       // Extraction and display (TSK-224)
       reg_arg_opt( "get",       Kind::String  ).with_description( "Extract bare field value for first row: `5h_left`, `5h_reset`, `7d_left`, `7d_son`, `7d_reset`, `expires`, `renews`, `sub`, `status`, `account`, `host`, `role`, `next_event_type`, `next_event_secs`" ),
-      reg_arg_opt( "abs",       Kind::String  ).with_description( "Replace percentage columns with absolute token counts where available (0 = off, default; 1 = on)" ),
       reg_arg_opt( "no_color",  Kind::String  ).with_description( "Strip emoji and ANSI sequences; status shows `ok`/`warn`/`err` (0 = off, default; 1 = on)" ),
       reg_arg_opt( "set_model", Kind::String  ).with_description( "Set Claude Code session model: `opus` (claude-opus-4-8), `sonnet` (claude-sonnet-5), `haiku` (claude-haiku-4-5-20251001), `default` (removes override)" ),
       // Mutation params (Feature 037 — unified with .accounts)

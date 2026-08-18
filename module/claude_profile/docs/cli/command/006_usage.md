@@ -8,7 +8,7 @@ Live quota utilization commands.
 
 Fetches live quota utilization for every saved account via `claude_quota::fetch_oauth_usage()` (`GET /api/oauth/usage`) and account billing state via `claude_quota::fetch_oauth_account()` (`GET /api/oauth/account`, parallel thread). Renders results as a `data_fmt` table with a status emoji column (`●`: 🟢/🟡/🔴), plus 5h Left, 5h Reset, 7d Left, 7d Reset, Expires, ~Renews, Owner, and → Next columns, and a footer recommendation line. `7d(Son)` is hidden by default (show via `cols::+7d_son`; see Notes). `~Renews` shows a duration countdown (exact `in Xh Ym` when `_renewal_at` override is set, estimated `~in Xd` from `org_created_at`). `→ Next` shows the soonest strategic quota reset event (`+7d`/`$ren`); token expiry and 5h resets are not included since they are already shown in `Expires` and `5h Reset`. Supports optional token refresh on auth errors (`refresh::1`) and continuous live-monitor mode (`live::1`).
 
--- **Parameters:** [`name::`](../param/001_name.md) *(optional)*, [`format::`](../param/002_format.md), [`dry::`](../param/004_dry.md), [`refresh::`](../param/019_refresh.md), [`live::`](../param/020_live.md), [`interval::`](../param/021_interval.md), [`jitter::`](../param/022_jitter.md), [`trace::`](../param/023_trace.md), [`sort::`](../param/025_sort.md), [`desc::`](../param/026_desc.md), [`prefer::`](../param/027_prefer.md), [`cols::`](../param/033_cols.md), [`touch::`](../param/034_touch.md), [`imodel::`](../param/035_imodel.md), [`effort::`](../param/036_effort.md), [`count::`](../param/037_count.md), [`offset::`](../param/038_offset.md), [`only_active::`](../param/039_only_active.md), [`only_next::`](../param/040_only_next.md), [`min_5h::`](../param/041_min_5h.md), [`min_7d::`](../param/042_min_7d.md), [`only_valid::`](../param/043_only_valid.md), [`exclude_exhausted::`](../param/044_exclude_exhausted.md), [`get::`](../param/045_get.md), [`abs::`](../param/046_abs.md), [`no_color::`](../param/047_no_color.md), [`set_model::`](../param/054_set_model.md), [`assignee::`](../param/063_assignee.md), [`owner::`](../param/062_owner.md), [`lock::`](../param/067_lock.md), [`reserve::`](../param/068_reserve.md), [`force::`](../param/058_force.md), [`rotate::`](../param/059_rotate.md), [`solo::`](../param/060_solo.md), [`who::`](../param/061_who.md), [`stalest::`](../param/080_stalest.md), [`max_age::`](../param/081_max_age.md)
+-- **Parameters:** [`name::`](../param/001_name.md) *(optional)*, [`format::`](../param/002_format.md), [`dry::`](../param/004_dry.md), [`refresh::`](../param/019_refresh.md), [`live::`](../param/020_live.md), [`interval::`](../param/021_interval.md), [`jitter::`](../param/022_jitter.md), [`trace::`](../param/023_trace.md), [`sort::`](../param/025_sort.md), [`desc::`](../param/026_desc.md), [`prefer::`](../param/027_prefer.md), [`cols::`](../param/033_cols.md), [`touch::`](../param/034_touch.md), [`imodel::`](../param/035_imodel.md), [`effort::`](../param/036_effort.md), [`count::`](../param/037_count.md), [`offset::`](../param/038_offset.md), [`only_active::`](../param/039_only_active.md), [`only_next::`](../param/040_only_next.md), [`min_5h::`](../param/041_min_5h.md), [`min_7d::`](../param/042_min_7d.md), [`only_valid::`](../param/043_only_valid.md), [`exclude_exhausted::`](../param/044_exclude_exhausted.md), [`get::`](../param/045_get.md), [`no_color::`](../param/047_no_color.md), [`set_model::`](../param/054_set_model.md), [`assignee::`](../param/063_assignee.md), [`owner::`](../param/062_owner.md), [`lock::`](../param/067_lock.md), [`reserve::`](../param/068_reserve.md), [`force::`](../param/058_force.md), [`rotate::`](../param/059_rotate.md), [`solo::`](../param/060_solo.md), [`who::`](../param/061_who.md), [`stalest::`](../param/080_stalest.md), [`max_age::`](../param/081_max_age.md)
 -- **Exit:** 0 (success) | 1 (usage: invalid param combination; G9 claim-lock violation on `assignee::` target-side unless `force::1`) | 2 (runtime: credential store unreadable, HOME unset)
 
 **Syntax:**
@@ -67,7 +67,6 @@ clp .usage solo::1 live::1 interval::60
 | `only_valid::` | `bool` | `0` | Hide accounts with invalid/missing tokens (status ≠ 🔴) |
 | `exclude_exhausted::` | `bool` | `0` | Hide weekly-exhausted (🟡) and invalid (🔴) accounts |
 | `get::` | `string` | `""` | Extract a single column value for the first matching row; implies `format::value`; valid field ids: `5h_left`, `5h_reset`, `7d_left`, `7d_son`, `7d_reset`, `expires`, `renews`, `next_event_type`, `next_event_secs`, `sub`, `status`, `account`, `host`, `role` |
-| `abs::` | `bool` | `0` | Show absolute token counts instead of percentages |
 | `no_color::` | `bool` | `0` | Strip emoji and ANSI colors from output |
 | `set_model::` | `enum` | *(omit)* | Explicitly write session model to `settings.json` for the current account: `opus`, `sonnet`, `haiku`, `default`; when provided, skips automatic `apply_model_override()` |
 | `name::` | `string` | *(omit)* | Restrict mutation (`assignee::`, `owner::`) to the named account; comma-list `X,Y,Z` supported for `owner::` batch operations; when absent, `assignee::` unassigns marker, `owner::0` batch-clears all owned accounts |
@@ -176,17 +175,16 @@ clp .usage live::1 interval::60 jitter::10
 | 22 | [only_valid::](../param/043_only_valid.md) | Hide invalid token rows |
 | 23 | [exclude_exhausted::](../param/044_exclude_exhausted.md) | Hide exhausted rows |
 | 24 | [get::](../param/045_get.md) | Extract single column value |
-| 25 | [abs::](../param/046_abs.md) | Show absolute token counts |
-| 26 | [no_color::](../param/047_no_color.md) | Strip emoji and ANSI colors |
-| 27 | [set_model::](../param/054_set_model.md) | Explicitly write session model |
-| 28 | [force::](../param/058_force.md) | Bypass G8 ownership gate and G9 claim-lock gate (Gate 8 in `rotate::1`'s auto-selection; Gate 9 there is never bypassed) |
-| 29 | [rotate::](../param/059_rotate.md) | Execute account rotation after fetch |
-| 30 | [solo::](../param/060_solo.md) | Token conservation mode |
-| 31 | [who::](../param/061_who.md) | Sessions table visibility |
-| 32 | [owner::](../param/062_owner.md) | Set or release account ownership |
-| 33 | [assignee::](../param/063_assignee.md) | Write per-machine active marker |
-| 34 | [lock::](../param/067_lock.md) | Set or clear `claim_lock` (ungated write) |
-| 35 | [reserve::](../param/068_reserve.md) | Set or clear `reserve` (ungated write) |
+| 25 | [no_color::](../param/047_no_color.md) | Strip emoji and ANSI colors |
+| 26 | [set_model::](../param/054_set_model.md) | Explicitly write session model |
+| 27 | [force::](../param/058_force.md) | Bypass G8 ownership gate and G9 claim-lock gate (Gate 8 in `rotate::1`'s auto-selection; Gate 9 there is never bypassed) |
+| 28 | [rotate::](../param/059_rotate.md) | Execute account rotation after fetch |
+| 29 | [solo::](../param/060_solo.md) | Token conservation mode |
+| 30 | [who::](../param/061_who.md) | Sessions table visibility |
+| 31 | [owner::](../param/062_owner.md) | Set or release account ownership |
+| 32 | [assignee::](../param/063_assignee.md) | Write per-machine active marker |
+| 33 | [lock::](../param/067_lock.md) | Set or clear `claim_lock` (ungated write) |
+| 34 | [reserve::](../param/068_reserve.md) | Set or clear `reserve` (ungated write) |
 
 ### Referenced Features
 
@@ -222,7 +220,7 @@ clp .usage live::1 interval::60 jitter::10
 | 1 | [Output Control](../param_group/001_output_control.md) | `format::`, `get::` |
 | 2 | [Fetch Behavior](../param_group/003_fetch_behavior.md) | `refresh::`, `live::`, `interval::`, `jitter::`, `trace::`, `touch::`, `imodel::`, `effort::`, `solo::` |
 | 3 | [Sort Control](../param_group/004_sort_control.md) | `sort::`, `desc::`, `prefer::` |
-| 4 | [Display Control](../param_group/005_display_control.md) | `cols::`, `count::`, `offset::`, `only_active::`, `only_next::`, `min_5h::`, `min_7d::`, `only_valid::`, `exclude_exhausted::`, `abs::`, `no_color::` |
+| 4 | [Display Control](../param_group/005_display_control.md) | `cols::`, `count::`, `offset::`, `only_active::`, `only_next::`, `min_5h::`, `min_7d::`, `only_valid::`, `exclude_exhausted::`, `no_color::` |
 
 ### Referenced Formats
 

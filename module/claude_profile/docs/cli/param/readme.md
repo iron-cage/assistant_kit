@@ -49,7 +49,7 @@ All `clp` CLI parameters with type, default, and command coverage.
 | [043_only_valid.md](043_only_valid.md) | `only_valid::` — hide invalid-token (🔴) account rows |
 | [044_exclude_exhausted.md](044_exclude_exhausted.md) | `exclude_exhausted::` — hide exhausted (🟡) and invalid (🔴) account rows |
 | [045_get.md](045_get.md) | `get::` — single column value extraction for first filtered row |
-| [046_abs.md](046_abs.md) | `abs::` — show absolute token counts instead of percentages |
+| [046_abs.md](046_abs.md) | `abs::` — REMOVED; registered no-op deleted (absolute-count display never implemented) |
 | [047_no_color.md](047_no_color.md) | `no_color::` — strip emoji and ANSI colors from output |
 | [048_host.md](048_host.md) | `host::` — host/machine label captured at account save time |
 | [049_at.md](049_at.md) | `at::` — absolute ISO-8601 UTC renewal timestamp for `.account.renewal` |
@@ -86,7 +86,7 @@ All `clp` CLI parameters with type, default, and command coverage.
 | [080_stalest.md](080_stalest.md) | `stalest::` — restrict HTTP fetch to the K accounts with the oldest quota cache; others render from cache |
 | [081_max_age.md](081_max_age.md) | `max_age::` — staleness eligibility threshold for `stalest::`; fully-fresh fleet fetches nothing |
 
-**Total:** 75 active parameters (Feature 023 deprecated: param 032 `next::` REMOVED, absorbed into feature 020's `sort::`; Feature 065: param 013 `active::` REMOVED; param 063 `assignee::` added as replacement; Feature 064: params 053 `for::`, 056 `unclaim::`, 057 `assign::` REMOVED; param 062 `owner::` extended with `owner::0` sentinel + batch; Feature 070: params 067 `lock::`, 068 `reserve::` added; Feature 071: params 069 `backend::`, 070 `base_url::`, 071 `api_key::`, 072 `redirect_model::` added; Feature 072: param 073 `inference_provider::` added; Feature 073: param 074 `preset::` added; Feature 035: param 055 `set::` RETIRED — `.model`/`.model.select` merged; params 064 `id::`/066 `reset::` narrowed to `.provider.select` only; params 075 `scope::`, 076 `model::`, 077 `effort_level::`, 078 `reset_model::`, 079 `reset_effort_level::` added; task 499: params 080 `stalest::`, 081 `max_age::` added)
+**Total:** 74 active parameters (Feature 023 deprecated: param 032 `next::` REMOVED, absorbed into feature 020's `sort::`; Feature 065: param 013 `active::` REMOVED; param 063 `assignee::` added as replacement; Feature 064: params 053 `for::`, 056 `unclaim::`, 057 `assign::` REMOVED; param 062 `owner::` extended with `owner::0` sentinel + batch; Feature 070: params 067 `lock::`, 068 `reserve::` added; Feature 071: params 069 `backend::`, 070 `base_url::`, 071 `api_key::`, 072 `redirect_model::` added; Feature 072: param 073 `inference_provider::` added; Feature 073: param 074 `preset::` added; Feature 035: param 055 `set::` RETIRED — `.model`/`.model.select` merged; params 064 `id::`/066 `reset::` narrowed to `.provider.select` only; params 075 `scope::`, 076 `model::`, 077 `effort_level::`, 078 `reset_model::`, 079 `reset_effort_level::` added; task 499: params 080 `stalest::`, 081 `max_age::` added; audit remediation: param 046 `abs::` REMOVED — registered no-op, absolute-count display never implemented)
 
 ### Overview Table
 
@@ -137,7 +137,7 @@ All `clp` CLI parameters with type, default, and command coverage.
 | 43 | `only_valid::` | `bool` | `0` | `0`, `1` | Hide 🔴 invalid-token rows | 1 cmd |
 | 44 | `exclude_exhausted::` | `bool` | `0` | `0`, `1` | Hide 🟡 and 🔴 rows | 1 cmd |
 | 45 | `get::` | `string` | `""` | Field IDs (see 045_get.md) | Single column value extraction | 1 cmd |
-| 46 | `abs::` | `bool` | `0` | `0`, `1` | Registered no-op — reserved for future absolute token counts; no current effect | 1 cmd |
+| 46 | `abs::` | — | — | — | REMOVED — registered no-op deleted; absolute-count display never implemented | — |
 | 47 | `no_color::` | `bool` | `0` | `0`, `1` | Strip emoji and ANSI from output | 1 cmd |
 | 48 | `host::` | `string` | `""` (auto) | Any string | Machine/host label at save; display toggle at list | 2 cmds |
 | 49 | `at::` | `string` | *(omit)* | ISO-8601 UTC datetime | Absolute renewal timestamp for `.account.renewal` | 1 cmd |

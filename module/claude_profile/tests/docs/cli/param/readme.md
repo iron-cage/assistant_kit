@@ -57,7 +57,7 @@
 | 43_only_valid.md | Edge cases for `only_valid::` parameter |
 | 44_exclude_exhausted.md | Edge cases for `exclude_exhausted::` parameter |
 | 45_get.md | Edge cases for `get::` parameter |
-| 46_abs.md | Edge cases for `abs::` parameter |
+| 46_abs.md | REMOVED marker for the deleted `abs::` parameter |
 | 47_no_color.md | Edge cases for `no_color::` parameter |
 | 48_host.md | Edge cases for `host::` parameter (`.account.save` metadata capture) |
 | 49_at.md | Edge cases for `at::` parameter (`.account.renewal` absolute timestamp) |

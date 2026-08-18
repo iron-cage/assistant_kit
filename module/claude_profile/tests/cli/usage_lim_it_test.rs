@@ -6,7 +6,7 @@
 //! and render through the G1 not-owned cache path (fetch.rs) — no token, no HTTP.
 //!
 //! Covers `min_5h/min_7d` threshold filters and edge cases, `get::` live/offline
-//! extraction, `format::tsv`, `no_color::`, `abs::`, and Feature 037 owner
+//! extraction, `format::tsv`, `no_color::`, and Feature 037 owner
 //! column display.
 //!
 //! No nextest filter excludes live tests — they run by default whenever

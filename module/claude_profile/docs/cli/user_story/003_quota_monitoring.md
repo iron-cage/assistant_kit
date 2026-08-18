@@ -32,11 +32,10 @@
 | 6 | [`jitter::`](../param/022_jitter.md) | Live mode cycle timing variance |
 | 7 | [`min_5h::`](../param/041_min_5h.md) | Minimum 5h Left % filter |
 | 8 | [`min_7d::`](../param/042_min_7d.md) | Minimum 7d Left % filter |
-| 9 | [`abs::`](../param/046_abs.md) | Show absolute token counts instead of percentages |
-| 10 | [`cols::`](../param/033_cols.md) | Column visibility modifiers |
-| 11 | [`format::`](../param/002_format.md) | Output format (text default; json for processing) |
-| 12 | [`solo::`](../param/060_solo.md) | Conserve tokens — live fetch only for current+owned account |
-| 13 | [`who::`](../param/061_who.md) | Force sessions table on/off to show active users across machines |
+| 9 | [`cols::`](../param/033_cols.md) | Column visibility modifiers |
+| 10 | [`format::`](../param/002_format.md) | Output format (text default; json for processing) |
+| 11 | [`solo::`](../param/060_solo.md) | Conserve tokens — live fetch only for current+owned account |
+| 12 | [`who::`](../param/061_who.md) | Force sessions table on/off to show active users across machines |
 
 ### Referenced Parameter Groups
 

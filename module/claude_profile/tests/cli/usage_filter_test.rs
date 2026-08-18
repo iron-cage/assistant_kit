@@ -1,9 +1,8 @@
-//! Integration tests: IT-154–IT-205 — `.usage` row-filtering, `get::`, `abs::`, `no_color::` parameters.
+//! Integration tests: IT-154–IT-205 — `.usage` row-filtering, `get::`, `no_color::` parameters.
 //!
 //! Covers `only_active::`, `only_next::`, `min_5h::`, `min_7d::`, `only_valid::`,
 //! `exclude_exhausted::`, `count::`, `offset::` pagination, `get::` extraction,
-//! `abs::` absolute token counts, `no_color::` emoji suppression,
-//! and `cols::+host/+role` visibility.
+//! `no_color::` emoji suppression, and `cols::+host/+role` visibility.
 
 use crate::cli_runner::{
   run_cs_with_env,
