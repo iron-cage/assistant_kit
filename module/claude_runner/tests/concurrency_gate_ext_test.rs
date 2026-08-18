@@ -18,7 +18,7 @@ mod cli_binary_test_helpers;
 use cli_binary_test_helpers::
 {
   fake_claude_binary_dir, fake_claude_dir, make_proc_dir,
-  slot_owner_pid, spawn_print_claude_for, wait_bounded,
+  slot_owner_pid, spawn_print_claude_for, wait_bounded, wait_for_marker_in_files,
 };
 use std::process::Command;
 
@@ -85,10 +85,14 @@ fn t15_slot_wait_message_names_live_hold_when_owner_alive()
   let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
   let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
   let proc_dir = tempfile::TempDir::new().expect( "proc dir" ); // empty: 0 pre-existing occupiers
+  let stderr_dir = tempfile::TempDir::new().expect( "stderr dir" );
+  let stderr_a_path = stderr_dir.path().join( "race-a.stderr" );
+  let stderr_b_path = stderr_dir.path().join( "race-b.stderr" );
 
   let bin = env!( "CARGO_BIN_EXE_clr" );
-  let spawn_racer = | label : &str |
+  let spawn_racer = | label : &str, stderr_path : &std::path::Path |
   {
+    let stderr_file = std::fs::File::create( stderr_path ).expect( "create racer stderr file" );
     Command::new( bin )
       .args( [ "-p", "--max-sessions", "1", "--journal", "off", label ] )
       .env( "PATH", &script_path )
@@ -97,28 +101,38 @@ fn t15_slot_wait_message_names_live_hold_when_owner_alive()
       .env( "CLR_GATE_POLL_SECS", "1" )
       .env( "CLR_GATE_MAX_ATTEMPTS", "5" )
       .stdout( std::process::Stdio::null() )
-      .stderr( std::process::Stdio::piped() )
+      .stderr( stderr_file )
       .spawn()
       .expect( "spawn racing clr" )
   };
 
-  let mut racer_a = spawn_racer( "race-a" );
-  let mut racer_b = spawn_racer( "race-b" );
+  let mut racer_a = spawn_racer( "race-a", &stderr_a_path );
+  let mut racer_b = spawn_racer( "race-b", &stderr_b_path );
 
   // Both racers read count_u32=0 < max=1 on attempt 1 and contend for the same
   // reservation index; the loser's message prints immediately (no delay before
-  // the first poll's eprintln). 2s is a generous margin before either racer
-  // could reach CLR_GATE_MAX_ATTEMPTS=5's own timeout/retry path, and is also
-  // why the winner is still present in `/proc` (unreaped by this harness) for
-  // the loser's entire observation window — see `## Root Cause` above.
-  std::thread::sleep( core::time::Duration::from_secs( 2 ) );
+  // the first poll's eprintln) — see `## Root Cause` above. Fix(BUG-508): poll
+  // the racers' file-redirected stderr for the loser's message instead of a
+  // fixed sleep — a fixed duration has no adaptive margin and can under-wait
+  // under genuine host CPU contention, producing a false-red failure (both
+  // racers' stderr empty) instead of the test simply taking a little longer.
+  // 15s is a generous ceiling, well under either racer's own
+  // CLR_GATE_MAX_ATTEMPTS=5 exhaustion; the winner is still present in
+  // `/proc` (unreaped by this harness) throughout, since neither racer is
+  // killed until the marker is observed or the ceiling is hit.
+  let deadline = std::time::Instant::now() + core::time::Duration::from_secs( 15 );
+  assert!(
+    wait_for_marker_in_files( &[ stderr_a_path.as_path(), stderr_b_path.as_path() ], "gate-wait", deadline ),
+    "T15 (BUG-393/396/508): timed out after 15s waiting for either racer's stderr \
+     to report a gate-wait message"
+  );
   let _ = racer_a.kill();
   let _ = racer_b.kill();
-  let out_a = racer_a.wait_with_output().expect( "reap racer a" );
-  let out_b = racer_b.wait_with_output().expect( "reap racer b" );
+  let _ = racer_a.wait();
+  let _ = racer_b.wait();
 
-  let stderr_a = String::from_utf8_lossy( &out_a.stderr );
-  let stderr_b = String::from_utf8_lossy( &out_b.stderr );
+  let stderr_a = std::fs::read_to_string( &stderr_a_path ).unwrap_or_default();
+  let stderr_b = std::fs::read_to_string( &stderr_b_path ).unwrap_or_default();
 
   let a_held = stderr_a.contains( "slot held by another session" );
   let b_held = stderr_b.contains( "slot held by another session" );
@@ -186,7 +200,51 @@ fn t15_slot_wait_message_names_live_hold_when_owner_alive()
 /// involves any actual contention; `HeldByLive` is simply "someone else has
 /// this index," which may be a session that started microseconds or hours
 /// ago — the code cannot tell, and the message must not claim it can.
-// test_kind: bug_reproducer(BUG-396)
+///
+/// ## Fix(BUG-509): Root Cause
+/// `CLR_GATE_RECLAIM_TEST_DELAY_MS` (in `acquire_slot()`, `gate.rs`) widens
+/// the reclaim-ticket race only from the point a racer's process has already
+/// been scheduled far enough to pass the dead-owner check onward — it gives
+/// zero protection against OS scheduling delay in getting the racer's
+/// process itself dispatched and run up to that point. At the original 50ms
+/// (matching T14), under genuine host CPU contention one racer's process
+/// could be scheduling-delayed long enough after spawn that the other racer
+/// completed its entire reclaim first; the delayed racer then observed the
+/// now-alive winner as current owner and returned `HeldByLive` immediately,
+/// skipping the ticket-race branch this test's first-attempt assertion
+/// requires.
+///
+/// ## Fix(BUG-509): Why Not Caught
+/// The 50ms value was a deliberate, reasoned choice ("matching T14") and
+/// correct under the scheduling conditions this test was authored and
+/// normally run under — never exercised against severe, unrelated host-wide
+/// contention until repeated back-to-back isolated re-runs (made practical
+/// by BUG-508's own fix, which made this test resolve in ~0.1s instead of a
+/// fixed ~2s) happened to coincide with such contention.
+///
+/// ## Fix(BUG-509): Fix Applied
+/// Widened `CLR_GATE_RECLAIM_TEST_DELAY_MS` from `"50"` to `"500"` — a 10x
+/// larger scheduling-slack budget for both racers to reach the dead-owner
+/// check before either can complete its full reclaim. T14
+/// (`concurrency_gate_test.rs`) is unchanged: its peak-admission invariant is
+/// timing-independent and does not need this margin.
+///
+/// ## Fix(BUG-509): Prevention
+/// A delay injected to widen a race window between two independently
+/// scheduled OS processes must be sized against realistic *contended-host*
+/// process-spawn-to-checkpoint scheduling latency, not just the in-process
+/// work nominally being widened — and a value borrowed from a sibling test
+/// must be re-validated against this test's own assertion strictness, not
+/// assumed safe by association (T14 tolerates arbitrary scheduling skew;
+/// this test's first-attempt-content assertion does not).
+///
+/// ## Fix(BUG-509): Pitfall
+/// "Matching" an existing test's widening-delay value propagates whatever
+/// margin that other test chose without re-validating adequacy for a
+/// stricter assertion — the same numeric value can be safe for one test and
+/// unsafe for another, depending on what each actually asserts once the
+/// window closes.
+// test_kind: bug_reproducer(BUG-396); bug_reproducer(BUG-509)
 #[ test ]
 fn t16_slot_wait_message_names_genuine_reclaim_race_for_dead_owner()
 {
@@ -205,9 +263,14 @@ fn t16_slot_wait_message_names_genuine_reclaim_race_for_dead_owner()
     format!( r#"{{"pid":{dead_pid},"since":0}}"# ),
   ).expect( "pre-seed dead-owner slot file" );
 
+  let stderr_dir = tempfile::TempDir::new().expect( "stderr dir" );
+  let stderr_a_path = stderr_dir.path().join( "race-a.stderr" );
+  let stderr_b_path = stderr_dir.path().join( "race-b.stderr" );
+
   let bin = env!( "CARGO_BIN_EXE_clr" );
-  let spawn_racer = | label : &str |
+  let spawn_racer = | label : &str, stderr_path : &std::path::Path |
   {
+    let stderr_file = std::fs::File::create( stderr_path ).expect( "create racer stderr file" );
     Command::new( bin )
       // count_u32 stays 0 throughout (proc_dir is empty and static), so both
       // racers read has_capacity=true and target index 0 — the pre-seeded
@@ -219,40 +282,58 @@ fn t16_slot_wait_message_names_genuine_reclaim_race_for_dead_owner()
       .env( "CLR_GATE_POLL_SECS", "1" )
       .env( "CLR_GATE_MAX_ATTEMPTS", "5" )
       // Widen the reclaim race window deterministically (see
-      // reclaim_test_delay() in gate.rs), matching T14, so this test forces
-      // genuine ticket contention on every run instead of depending on
-      // incidental OS scheduling jitter between the two racers.
-      .env( "CLR_GATE_RECLAIM_TEST_DELAY_MS", "50" )
+      // reclaim_test_delay() in gate.rs) so this test forces genuine ticket
+      // contention on every run instead of depending on incidental OS
+      // scheduling jitter between the two racers. Fix(BUG-509): 500ms, not
+      // T14's 50ms — reclaim_test_delay() only widens the window AFTER a
+      // racer's process has already been scheduled far enough to reach the
+      // dead-owner check; under host contention a scheduling-delayed racer
+      // can otherwise never reach that point at all before the other racer
+      // completes its full reclaim. T14 tolerates that (timing-independent
+      // mutual-exclusion invariant); this test's first-attempt-content
+      // assertion does not, so it needs a materially larger margin.
+      .env( "CLR_GATE_RECLAIM_TEST_DELAY_MS", "500" )
       .stdout( std::process::Stdio::null() )
-      .stderr( std::process::Stdio::piped() )
+      .stderr( stderr_file )
       .spawn()
       .expect( "spawn racing clr" )
   };
 
-  let mut racer_a = spawn_racer( "race-a" );
-  let mut racer_b = spawn_racer( "race-b" );
+  let mut racer_a = spawn_racer( "race-a", &stderr_a_path );
+  let mut racer_b = spawn_racer( "race-b", &stderr_b_path );
 
-  std::thread::sleep( core::time::Duration::from_secs( 2 ) );
+  // Fix(BUG-508): poll for the loser's first gate-wait line instead of a
+  // fixed sleep — a fixed duration has no adaptive margin and can under-wait
+  // under genuine host CPU contention, producing a false-red failure (both
+  // racers' stderr empty). 15s is a generous ceiling, well under either
+  // racer's own CLR_GATE_MAX_ATTEMPTS=5 exhaustion.
+  let deadline = std::time::Instant::now() + core::time::Duration::from_secs( 15 );
+  assert!(
+    wait_for_marker_in_files( &[ stderr_a_path.as_path(), stderr_b_path.as_path() ], "gate-wait", deadline ),
+    "T16 (BUG-392/508): timed out after 15s waiting for either racer's stderr \
+     to report a gate-wait message"
+  );
   let _ = racer_a.kill();
   let _ = racer_b.kill();
-  let out_a = racer_a.wait_with_output().expect( "reap racer a" );
-  let out_b = racer_b.wait_with_output().expect( "reap racer b" );
+  let _ = racer_a.wait();
+  let _ = racer_b.wait();
 
-  let stderr_a = String::from_utf8_lossy( &out_a.stderr );
-  let stderr_b = String::from_utf8_lossy( &out_b.stderr );
+  let stderr_a = std::fs::read_to_string( &stderr_a_path ).unwrap_or_default();
+  let stderr_b = std::fs::read_to_string( &stderr_b_path ).unwrap_or_default();
 
   // The winner is admitted on attempt 1 and returns immediately — it never
   // reaches the `!quiet` message block on any attempt, so its stderr is
-  // empty. The loser, however, polls more than once within the 2s window
-  // (CLR_GATE_POLL_SECS=1): its FIRST attempt is the genuine reclaim-ticket
-  // race this test targets, but by its SECOND attempt the winner's own slot
-  // record is in place and alive, so the loser legitimately (and correctly)
-  // shifts to reporting "slot held by another session" from then on. Only
-  // the loser's first gate-WAIT message is this test's subject — selected by
-  // its `gate-wait` token, not as stderr's literal first line, because the
-  // gate's first denied attempt is preceded by the one-time `gate-deadline`
-  // resolution announcement (BUG-481; param/033), which is not a wait message.
-  let loser_stderr = if stderr_a.trim().is_empty() { stderr_b.as_ref() } else { stderr_a.as_ref() };
+  // empty. The loser, however, may poll more than once before being killed
+  // above (CLR_GATE_POLL_SECS=1): its FIRST attempt is the genuine
+  // reclaim-ticket race this test targets, but by its SECOND attempt the
+  // winner's own slot record is in place and alive, so the loser legitimately
+  // (and correctly) shifts to reporting "slot held by another session" from
+  // then on. Only the loser's first gate-WAIT message is this test's
+  // subject — selected by its `gate-wait` token, not as stderr's literal
+  // first line, because the gate's first denied attempt is preceded by the
+  // one-time `gate-deadline` resolution announcement (BUG-481; param/033),
+  // which is not a wait message.
+  let loser_stderr = if stderr_a.trim().is_empty() { stderr_b.as_str() } else { stderr_a.as_str() };
   let first_line   = loser_stderr.lines().find( | l | l.contains( "gate-wait" ) ).unwrap_or_default();
   assert!(
     first_line.contains( "lost reservation race" ),

@@ -283,6 +283,75 @@ fn t490_existing_dest_never_overwritten_mtime_refreshed()
   );
 }
 
+/// The transplant mechanism (BUG-490) and the print/interactive dispatch decision
+/// are both computed independently of message presence: a real run with `--to`/
+/// `--from` diverging and no trailing message still performs the physical copy,
+/// and lands in print mode rather than blocking on an interactive REPL, since a
+/// spawned test subprocess's stdin is never a TTY.
+#[ test ]
+fn transplant_and_print_dispatch_are_independent_of_message_presence()
+{
+  container_check();
+  let ch   = tempfile::TempDir::new().expect( "claude home" );
+  let src  = tempfile::TempDir::new().expect( "source project" );
+  let tgt  = tempfile::TempDir::new().expect( "target project" );
+  let work = tempfile::TempDir::new().expect( "work dir" );
+  let src_canon = std::fs::canonicalize( src.path() ).expect( "canonicalize source" );
+  let uuid = "ddd49004-1111-2222-3333-444444444444";
+  let content = b"{\"seed\":\"no-message source bytes\"}\n";
+  let src_jsonl = make_session( ch.path(), &src_canon, uuid, content );
+
+  let dest_dir  = target_storage( ch.path(), tgt.path() );
+  let dest_file = dest_dir.join( format!( "{uuid}.jsonl" ) );
+  let invoke_log = work.path().join( "invocations.log" );
+  let probe_out  = work.path().join( "probe.txt" );
+  write_claude_stub( &work.path().join( "bin" ), &invoke_log, &dest_file, &probe_out, uuid );
+
+  let out = std::process::Command::new( env!( "CARGO_BIN_EXE_clr" ) )
+    .args
+    ([
+      "--to", tgt.path().to_str().expect( "utf-8" ),
+      "--from", src.path().to_str().expect( "utf-8" ),
+      "--max-sessions", "0",
+      "--journal", "off",
+      "--trace",
+      // deliberately no trailing message argument
+    ])
+    .env( "CLAUDE_HOME", ch.path() )
+    .env( "PATH", stub_path( &work.path().join( "bin" ) ) )
+    .env_remove( "CLR_DIR" ).env_remove( "CLR_SESSION_DIR" ).env_remove( "CLR_FROM" )
+    .output()
+    .expect( "invoke clr" );
+  assert!(
+    out.status.success(),
+    "no-message real run must succeed, never hang waiting on an interactive REPL. stdout: {}\nstderr: {}",
+    String::from_utf8_lossy( &out.stdout ),
+    String::from_utf8_lossy( &out.stderr ),
+  );
+
+  // Dispatch landed in print mode — proven by --trace naming --print in the
+  // constructed command — never the interactive REPL (spawned stdin has no TTY).
+  let stderr = String::from_utf8_lossy( &out.stderr ).into_owned();
+  assert!(
+    stderr.contains( "--print" ),
+    "no-message dispatch on non-TTY stdin must still select print mode. Got:\n{stderr}"
+  );
+
+  // Transplant executed exactly as it would with a message present — the
+  // mechanism in builder.rs never reads cli.message at all.
+  let invocations = std::fs::read_to_string( &invoke_log ).unwrap_or_default();
+  assert_eq!( invocations.lines().count(), 1, "stub claude must be spawned exactly once" );
+  let probe = std::fs::read_to_string( &probe_out ).unwrap_or_default();
+  assert_eq!(
+    probe.trim(), "present",
+    "transplanted session file must exist in target storage BEFORE the subprocess spawns, even with no message"
+  );
+  let copied = std::fs::read( &dest_file ).expect( "transplanted file must exist" );
+  assert_eq!( copied, content, "transplanted file must be byte-identical to the source session" );
+  let src_after = std::fs::read( &src_jsonl ).expect( "source must still exist" );
+  assert_eq!( src_after, content, "source session must never be modified by a clone run" );
+}
+
 // ── BUG-491: nonexistent working dir named, no retry ladder ───────────────────
 
 /// BUG-491: a nonexistent `--dir`/`--to` fails immediately with the real cause.

@@ -34,6 +34,7 @@
 //! | `build_argv_tolerant_sleeper` | `concurrency_gate_test`, `concurrency_gate_ext2_test` |
 //! | `slot_owner_pid` | `concurrency_gate_ext_test`, `concurrency_gate_ext2_test` |
 //! | `spawn_parked_helper_thread` (unix) | `concurrency_gate_test`, `ps_command_test` |
+//! | `wait_for_marker_in_files` | `concurrency_gate_ext_test` |
 //!
 //! # Testing Techniques
 //!
@@ -842,6 +843,36 @@ pub fn wait_bounded( child : &mut std::process::Child, deadline : std::time::Ins
     std::thread::sleep( core::time::Duration::from_millis( 50 ) );
   }
   None
+}
+
+/// Poll `paths` every 50ms until any file's content contains `marker`, or
+/// `deadline` passes, whichever comes first. Returns `true` once observed,
+/// `false` on timeout.
+///
+/// Used to observe a still-racing subprocess's incremental, file-redirected
+/// stderr for a specific message substring instead of guessing a fixed sleep
+/// duration long enough for the message to have appeared (Fix(BUG-508): a
+/// fixed sleep has no adaptive margin — under genuine host CPU contention a
+/// freshly-spawned process can fail to be scheduled enough to print within a
+/// guessed window, producing a false-red failure). Shared by
+/// `concurrency_gate_ext_test` (T15, T16).
+#[ must_use ]
+#[ inline ]
+#[ allow( dead_code ) ]
+pub fn wait_for_marker_in_files( paths : &[ &std::path::Path ], marker : &str, deadline : std::time::Instant ) -> bool
+{
+  while std::time::Instant::now() < deadline
+  {
+    for path in paths
+    {
+      if let Ok( content ) = std::fs::read_to_string( path )
+      {
+        if content.contains( marker ) { return true; }
+      }
+    }
+    std::thread::sleep( core::time::Duration::from_millis( 50 ) );
+  }
+  false
 }
 
 /// Scan `dir` and return paths to all `*.jsonl` files found (non-recursive).
