@@ -17,6 +17,8 @@ fn tag_char_ok( c : char ) -> bool
 }
 
 /// Build the `InvalidInput` error every tag-validation failure returns.
+// core::io::ErrorKind requires the unstable `core_io` feature (rust-lang/rust#154046) — not usable on stable.
+#[ allow( clippy::std_instead_of_core ) ]
 fn invalid( msg : String ) -> std::io::Error
 {
   std::io::Error::new( std::io::ErrorKind::InvalidInput, msg )
@@ -30,6 +32,7 @@ fn invalid( msg : String ) -> std::io::Error
 ///
 /// Returns `InvalidInput` when the lowercased tag is empty, exceeds 64
 /// characters, or contains a character outside `[a-z0-9_-]`.
+#[ inline ]
 pub fn normalize_tag( raw : &str ) -> Result< String, std::io::Error >
 {
   let tag = raw.to_lowercase();
@@ -54,6 +57,7 @@ pub fn normalize_tag( raw : &str ) -> Result< String, std::io::Error >
 /// # Errors
 ///
 /// Returns the first entry's [`normalize_tag`] error, unchanged.
+#[ inline ]
 pub fn normalize_tag_set( raws : &[ String ] ) -> Result< Vec< String >, std::io::Error >
 {
   let mut out = Vec::with_capacity( raws.len() );
@@ -182,6 +186,7 @@ pub( super ) fn apply_tag_write(
 /// Returns `InvalidInput` (nothing written, file byte-identical) when `op`
 /// carries an invalid tag, or an IO error when the merged file cannot be
 /// written.
+#[ inline ]
 pub fn write_tags( name : &str, credential_store : &Path, op : &TagOp ) -> Result< Vec< String >, std::io::Error >
 {
   let path = credential_store.join( format!( "{name}.json" ) );
@@ -201,6 +206,7 @@ pub fn write_tags( name : &str, credential_store : &Path, op : &TagOp ) -> Resul
 /// # Errors
 ///
 /// Returns `InvalidInput` when `op` carries an invalid tag.
+#[ inline ]
 pub fn preview_tags( name : &str, credential_store : &Path, op : &TagOp ) -> Result< Vec< String >, std::io::Error >
 {
   let mut obj = read_meta_object( &credential_store.join( format!( "{name}.json" ) ) );

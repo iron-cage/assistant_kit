@@ -57,6 +57,9 @@ fn string_array( obj : &serde_json::Map< String, serde_json::Value >, key : &str
 /// Returns `InvalidData` naming the file when its content is not a JSON
 /// object, or the underlying IO error for any read failure other than
 /// not-found.
+#[ inline ]
+// core::io::ErrorKind requires the unstable `core_io` feature (rust-lang/rust#154046) — not usable on stable.
+#[ allow( clippy::std_instead_of_core ) ]
 pub fn read_filter( credential_store : &Path ) -> Result< TagFilter, std::io::Error >
 {
   let path = credential_store.join( filter_filename() );
@@ -98,6 +101,9 @@ pub fn read_filter( credential_store : &Path ) -> Result< TagFilter, std::io::Er
 /// [`normalize_tag_set`] error for an invalid tag on either side, a
 /// [`read_filter`] error when a preserved side must be loaded from a
 /// malformed file, or an IO error when the file cannot be written.
+#[ inline ]
+// core::io::ErrorKind requires the unstable `core_io` feature (rust-lang/rust#154046) — not usable on stable.
+#[ allow( clippy::std_instead_of_core ) ]
 pub fn write_filter(
   credential_store : &Path,
   include : Option< &[ String ] >,

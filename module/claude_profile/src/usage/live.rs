@@ -129,8 +129,16 @@ pub( crate ) fn execute_live_mode(
     // Fetch with per-account stagger delays (thunder-herd mitigation).
     let accounts = fetch_all_quota( credential_store, live_creds_file, true, params.trace, params.solo )?;
 
+    // Gate 11 (Feature 076): re-read the Identity tag filter each cycle — a filter edit
+    // during a long-running monitor takes effect on the next refresh. Malformed is loud.
+    let tag_filter = crate::account::read_filter( credential_store )
+      .map_err( |e| ErrorData::new(
+        unilang::data::ErrorCode::InternalError,
+        format!( "cannot read identity tag filter: {e}" ),
+      ) )?;
+
     // live mode: no session context for footer; no credential_store path for sessions table.
-    let text = render_text( &accounts, params.sort, params.desc, params.prefer, &params.cols, None, None, None, None, false );
+    let text = render_text( &accounts, params.sort, params.desc, params.prefer, &params.cols, None, None, None, None, false, &tag_filter );
     print!( "{text}" );
 
     // Compute next-refresh wall-clock time.

@@ -30,6 +30,7 @@ fn test_should_refresh_401_triggers()
     owner                : String::new(),
       claim_lock : false, reserve : false,
     inference_provider : String::new(),
+    tags : Vec::new(),
   };
   assert!( should_refresh( &aq, 0 ), "401 must trigger refresh" );
 }
@@ -59,6 +60,7 @@ fn test_should_refresh_403_triggers()
     owner                : String::new(),
       claim_lock : false, reserve : false,
     inference_provider : String::new(),
+    tags : Vec::new(),
   };
   assert!( should_refresh( &aq, 0 ), "403 must trigger refresh" );
 }
@@ -92,6 +94,7 @@ fn test_should_refresh_mre_bug156_429_expired_triggers()
     owner                : String::new(),
       claim_lock : false, reserve : false,
     inference_provider : String::new(),
+    tags : Vec::new(),
   };
   assert!(
     should_refresh( &aq, 9_999 ),
@@ -127,6 +130,7 @@ fn test_should_refresh_429_valid_token_no_trigger()
     owner                : String::new(),
       claim_lock : false, reserve : false,
     inference_provider : String::new(),
+    tags : Vec::new(),
   };
   assert!(
     !should_refresh( &aq, 0 ),
@@ -159,6 +163,7 @@ fn test_should_refresh_429_exact_boundary_expired_triggers()
     owner                : String::new(),
       claim_lock : false, reserve : false,
     inference_provider : String::new(),
+    tags : Vec::new(),
   };
   assert!(
     should_refresh( &aq, 5 ),
@@ -191,6 +196,7 @@ fn test_should_refresh_429_one_sec_future_no_trigger()
     owner                : String::new(),
       claim_lock : false, reserve : false,
     inference_provider : String::new(),
+    tags : Vec::new(),
   };
   assert!(
     !should_refresh( &aq, 5 ),
@@ -224,6 +230,7 @@ fn test_should_refresh_ok_no_trigger()
     owner                : String::new(),
       claim_lock : false, reserve : false,
     inference_provider : String::new(),
+    tags : Vec::new(),
   };
   assert!( !should_refresh( &aq, 9_999 ), "Ok result must not trigger refresh" );
 }
@@ -253,6 +260,7 @@ fn test_should_refresh_generic_error_no_trigger()
     owner                : String::new(),
       claim_lock : false, reserve : false,
     inference_provider : String::new(),
+    tags : Vec::new(),
   };
   assert!( !should_refresh( &aq, 9_999 ), "generic error must not trigger refresh" );
 }
@@ -311,6 +319,7 @@ fn mre_bug235_locally_expired_triggers_should_refresh()
     owner                : String::new(),
       claim_lock : false, reserve : false,
     inference_provider : String::new(),
+    tags : Vec::new(),
   };
   assert!(
     should_refresh( &aq, 9_999 ),
@@ -372,6 +381,7 @@ fn mre_bug255_cache_defeats_refresh()
     owner                : String::new(),
       claim_lock : false, reserve : false,
     inference_provider : String::new(),
+    tags : Vec::new(),
   };
   assert!(
     should_refresh( &aq, 9_999 ),
@@ -406,6 +416,7 @@ fn test_should_refresh_cached_valid_token_no_trigger()
     owner                : String::new(),
       claim_lock : false, reserve : false,
     inference_provider : String::new(),
+    tags : Vec::new(),
   };
   assert!(
     !should_refresh( &aq, 9_999 ),
@@ -444,6 +455,7 @@ fn ft06_should_refresh_false_when_not_owned()
     owner                : String::new(),
       claim_lock : false, reserve : false,
     inference_provider : String::new(),
+    tags : Vec::new(),
   };
   assert!(
     !should_refresh( &aq_401, 9_999 ),
@@ -471,6 +483,7 @@ fn ft06_should_refresh_false_when_not_owned()
     owner                : String::new(),
       claim_lock : false, reserve : false,
     inference_provider : String::new(),
+    tags : Vec::new(),
   };
   assert!(
     !should_refresh( &aq_expired, 9_999 ),
@@ -498,6 +511,7 @@ fn ft06_should_refresh_false_when_not_owned()
     owner                : String::new(),
       claim_lock : false, reserve : false,
     inference_provider : String::new(),
+    tags : Vec::new(),
   };
   assert!(
     !should_refresh( &aq_429_expired, 9_999 ),
@@ -530,6 +544,7 @@ fn ft06_should_refresh_false_when_not_owned()
     owner                : String::new(),
       claim_lock : false, reserve : false,
     inference_provider : String::new(),
+    tags : Vec::new(),
   };
   assert!(
     !should_refresh( &aq_cached_expired, 9_999 ),
@@ -581,6 +596,7 @@ fn sr11_approaching_expiry_must_not_trigger_refresh()
     owner                 : String::new(),
       claim_lock : false, reserve : false,
     inference_provider : String::new(),
+    tags : Vec::new(),
   };
   assert!(
     !should_refresh( &aq, now_secs ),
@@ -631,6 +647,7 @@ fn mre_bug303_should_refresh_false_for_occupied_elsewhere()
     owner                 : String::new(),
       claim_lock : false, reserve : false,
     inference_provider : String::new(),
+    tags : Vec::new(),
   };
   assert!(
     !should_refresh( &aq, 9_999 ),
@@ -666,6 +683,7 @@ fn err_aq( reason : &str, expires_at_ms : u64 ) -> AccountQuota
     owner                 : String::new(),
     claim_lock : false, reserve : false,
     inference_provider : String::new(),
+    tags : Vec::new(),
   }
 }
 

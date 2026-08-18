@@ -79,6 +79,7 @@ fn mk_account( name : &str ) -> Account
     base_url          : None,
     redirect_model    : None,
     inference_provider : String::new(),
+    tags : Vec::new(),
   }
 }
 

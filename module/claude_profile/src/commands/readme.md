@@ -11,6 +11,8 @@
 | `accounts_help.rs` | Grouped, `::`-aligned help rendering for `.accounts.help`. |
 | `account_ops.rs` | `.account.save/.use/.delete/.rotate` command routines. |
 | `account_relogin.rs` | `.account.relogin` interactive re-authentication routine. |
+| `account_tag.rs` | `.account.tag` tag-set mutation routine. |
+| `identity.rs` | `.tags`, `.identities`, `.identity.filter` Identity listing and filter routines. |
 | `account_renewal.rs` | `.account.renewal` subscription renewal check routine. |
 | `account_inspect.rs` | `.account.inspect` per-account detail view routine. |
 | `account_inspect_render.rs` | Formatting helpers for `.account.inspect` detail view. |

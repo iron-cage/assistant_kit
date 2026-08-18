@@ -54,6 +54,7 @@ fn cc7_non_owned_no_cache()
     base_url          : None,
     redirect_model    : None,
     inference_provider : String::new(),
+    tags : Vec::new(),
   } ];
 
   let absent_live = store.path().join( ".absent_credentials.json" );
@@ -141,6 +142,7 @@ fn ft03_history_skips_cached_fallback()
     base_url          : None,
     redirect_model    : None,
     inference_provider : String::new(),
+    tags : Vec::new(),
   } ];
 
   let absent_live = store.path().join( ".absent_credentials.json" );
@@ -227,6 +229,7 @@ fn ft05_approx_independent_periods_absent_sn_unaffected()
     base_url          : None,
     redirect_model    : None,
     inference_provider : String::new(),
+    tags : Vec::new(),
   } ];
 
   let absent_live = store.path().join( ".absent_credentials.json" );
@@ -558,6 +561,7 @@ fn ft23_g1_non_owned_applies_approximation()
     base_url          : None,
     redirect_model    : None,
     inference_provider : String::new(),
+    tags : Vec::new(),
   } ];
 
   let absent_live = store.path().join( ".absent_credentials.json" );
@@ -640,6 +644,7 @@ fn ft12_history_non_owned_skips_append()
     base_url          : None,
     redirect_model    : None,
     inference_provider : String::new(),
+    tags : Vec::new(),
   } ];
 
   let absent_live = store.path().join( ".absent_credentials.json" );

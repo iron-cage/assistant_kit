@@ -109,6 +109,7 @@ fn minimal_resolution_aq( name : &str, result : Result< OauthUsageData, String >
     claim_lock           : false,
     reserve              : false,
     inference_provider   : String::new(),
+    tags                 : Vec::new(),
   }
 }
 

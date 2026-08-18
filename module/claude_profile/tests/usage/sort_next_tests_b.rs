@@ -3,6 +3,7 @@
 
 use claude_profile::usage::test_bridge::{ find_next_for_strategy, strategy_metric };
 use claude_profile::usage::test_bridge::sort_indices;
+use claude_profile::account::TagFilter;
 use claude_profile::usage::test_bridge::types::{ AccountQuota, SortStrategy, PreferStrategy };
 use claude_profile::usage::test_bridge::
 {
@@ -47,7 +48,7 @@ fn mre_bug229_find_next_renew_picks_account_with_sooner_subscription()
   let acct_c = mk_aq_with_7d_reset( "c@test.com", 30.0, now, 3600 );
 
   let accounts = vec![ acct_a, acct_b, acct_c ];
-  let winner   = find_next_for_strategy( &accounts, SortStrategy::Renew, PreferStrategy::Any, now, false, "anthropic" );
+  let winner   = find_next_for_strategy( &accounts, SortStrategy::Renew, PreferStrategy::Any, now, false, "anthropic", &TagFilter::default() );
 
   assert_eq!(
     winner, Some( 1 ),
@@ -114,6 +115,7 @@ fn mre_bug229_strategy_metric_renew_exact_sub_shows_both_timers()
     owner                : String::new(),
       claim_lock : false, reserve : false,
     inference_provider : String::new(),
+    tags : Vec::new(),
   };
 
   let metric = strategy_metric( &aq, SortStrategy::Renew, PreferStrategy::Any, now);
@@ -177,6 +179,7 @@ fn mre_bug229_strategy_metric_renew_no_sub_shows_7d_only()
     owner                : String::new(),
       claim_lock : false, reserve : false,
     inference_provider : String::new(),
+    tags : Vec::new(),
   };
 
   let metric = strategy_metric( &aq, SortStrategy::Renew, PreferStrategy::Any, now);
@@ -291,8 +294,7 @@ fn mre_bug260_renew_nondeterministic_when_fully_tied()
     PreferStrategy::Any,
     now_secs,
     false,
-    "anthropic",
-  );
+    "anthropic", &TagFilter::default() );
   assert_eq!(
     result,
     Some( 1 ),
@@ -345,7 +347,7 @@ fn mre_bug292_renew_skips_weekly_exhausted_even_with_soonest_renewal()
   //   7d reset fires in 24h (later event) — must be selected after fix.
   let healthy   = mk_aq_with_7d_reset_util( "healthy@test.com",   0.0, 40.0, now, 86_400 );
 
-  let idx = find_next_for_strategy( &[ exhausted, healthy ], SortStrategy::Renew, PreferStrategy::Any, now, false, "anthropic" );
+  let idx = find_next_for_strategy( &[ exhausted, healthy ], SortStrategy::Renew, PreferStrategy::Any, now, false, "anthropic", &TagFilter::default() );
   assert!( idx.is_some(), "BUG-292: renew must find a candidate (healthy@test.com is eligible)" );
   assert_eq!(
     idx.unwrap(), 1,
@@ -406,7 +408,7 @@ fn mre_bug291_renew_next_tiebreaker_matches_sort_indices()
   // Step 2: find_next_for_strategy(Renew) must agree with sort_indices — selects bob (index 1).
   let alice_n = mk_aq_with_7d_reset_util( "alice@test.com", 80.0, 10.0, now, 3_600 );
   let bob_n   = mk_aq_with_7d_reset_util( "bob@test.com",   20.0, 60.0, now, 3_600 );
-  let idx     = find_next_for_strategy( &[ alice_n, bob_n ], SortStrategy::Renew, PreferStrategy::Any, now, false, "anthropic" );
+  let idx     = find_next_for_strategy( &[ alice_n, bob_n ], SortStrategy::Renew, PreferStrategy::Any, now, false, "anthropic", &TagFilter::default() );
   assert_eq!(
     idx, Some( 1 ),
     "BUG-291: sort::renew tiebreaker must match sort_indices(Renew) — bob (prefer_weekly=40) must win, not alice; got {idx:?}",
@@ -452,7 +454,7 @@ fn mre_bug317_cancelled_not_recommended_by_find_next()
   let accounts  = vec![ cancelled ];
   for strategy in [ SortStrategy::Renew, SortStrategy::Name, SortStrategy::Renews ]
   {
-    let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, false, "anthropic" );
+    let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, false, "anthropic", &TagFilter::default() );
     assert!(
       result.is_none(),
       "BUG-317: {strategy:?} must not recommend cancelled account (billing_type='none'); got idx {result:?}",
@@ -474,7 +476,7 @@ fn mre_bug_gap8_find_first_eligible_at_exactly_85_utilization()
   let accounts = vec![ acct ];
   for strategy in [ SortStrategy::Renew, SortStrategy::Name, SortStrategy::Renews ]
   {
-    let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, false, "anthropic" );
+    let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, false, "anthropic", &TagFilter::default() );
     assert!(
       result.is_none(),
       "{strategy:?}: account with five_hour.utilization=85.0 must be skipped by gate 4 (five_hour_left <= 15.0); got: {result:?}",
@@ -518,7 +520,7 @@ fn gate4_rounds_before_comparing_fractional_boundary()
   let accounts = vec![ displayed_exhausted, displayed_ok ];
   for strategy in [ SortStrategy::Renew, SortStrategy::Name, SortStrategy::Renews ]
   {
-    let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, false, "anthropic" );
+    let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, false, "anthropic", &TagFilter::default() );
     assert_eq!(
       result, Some( 1 ),
       "{strategy:?}: 84.6% (rounds to 15% left) must be skipped, 84.4% (16% left) must win; got: {result:?}",
@@ -572,7 +574,7 @@ fn mre_bug324_green_account_eligible_when_7d_son_exhausted()
   {
     for prefer in [ PreferStrategy::Any, PreferStrategy::Opus, PreferStrategy::Sonnet ]
     {
-      let result = find_next_for_strategy( &accounts, strategy, prefer, now, false, "anthropic" );
+      let result = find_next_for_strategy( &accounts, strategy, prefer, now, false, "anthropic", &TagFilter::default() );
       assert_eq!(
         result, Some( 0 ),
         "BUG-324: {strategy:?}/{prefer:?} — green account with 7d Left=31%, 7d(Son)=0% must be eligible (index 0); \
@@ -625,7 +627,7 @@ fn mre_bug324_sole_green_candidate_7d_son_zero_returns_some()
   let accounts = vec![ sole, b_current, b_active, b_expired, b_hexhausted ];
   for strategy in [ SortStrategy::Name, SortStrategy::Renew, SortStrategy::Renews ]
   {
-    let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, false, "anthropic" );
+    let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, false, "anthropic", &TagFilter::default() );
     assert_eq!(
       result, Some( 0 ),
       "BUG-324: {strategy:?} — sole green candidate with 7d(Son)=0% must be selected (index 0); \
@@ -654,7 +656,7 @@ fn test_cc_gate7_boundary_exactly_3pct_skipped_in_eligibility()
 
   for strategy in [ SortStrategy::Name, SortStrategy::Renew, SortStrategy::Renews ]
   {
-    let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, false, "anthropic" );
+    let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, false, "anthropic", &TagFilter::default() );
     assert!(
       result.is_none(),
       "{strategy:?}: seven_day_left=3.0 (exactly at threshold) must be SKIPPED (strict > 3.0); got: {result:?}",
@@ -684,7 +686,7 @@ fn test_cc_gate7_just_above_boundary_eligible()
 
   for strategy in [ SortStrategy::Name, SortStrategy::Renew, SortStrategy::Renews ]
   {
-    let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, false, "anthropic" );
+    let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, false, "anthropic", &TagFilter::default() );
     assert_eq!(
       result, Some( 0 ),
       "{strategy:?}: seven_day_left=3.5 (rounds to 4, just above threshold) must be ELIGIBLE; got: {result:?}",
@@ -718,7 +720,7 @@ fn test_cc_bug324_divergent_at_boundary_eligible()
   {
     for prefer in [ PreferStrategy::Any, PreferStrategy::Opus, PreferStrategy::Sonnet ]
     {
-      let result = find_next_for_strategy( &accounts, strategy, prefer, now, false, "anthropic" );
+      let result = find_next_for_strategy( &accounts, strategy, prefer, now, false, "anthropic", &TagFilter::default() );
       assert_eq!(
         result, Some( 0 ),
         "BUG-324 boundary: {strategy:?}/{prefer:?} — seven_day_left=3.5 (rounds to 4), 7d_son_left=0% \
@@ -747,8 +749,7 @@ fn test_cc_prefer_sonnet_absent_tier_eligible()
   let accounts = vec![ target, current ];
 
   let result = find_next_for_strategy(
-    &accounts, SortStrategy::Renew, PreferStrategy::Sonnet, now, false, "anthropic",
-  );
+    &accounts, SortStrategy::Renew, PreferStrategy::Sonnet, now, false, "anthropic", &TagFilter::default() );
   assert_eq!(
     result, Some( 0 ),
     "prefer::sonnet + absent Sonnet tier: seven_day_left=50.0 > 3.0 must be ELIGIBLE; \
@@ -772,8 +773,7 @@ fn test_cc_prefer_sonnet_exhausted_tier_eligible()
   let accounts = vec![ target, current ];
 
   let result = find_next_for_strategy(
-    &accounts, SortStrategy::Renew, PreferStrategy::Sonnet, now, false, "anthropic",
-  );
+    &accounts, SortStrategy::Renew, PreferStrategy::Sonnet, now, false, "anthropic", &TagFilter::default() );
   assert_eq!(
     result, Some( 0 ),
     "prefer::sonnet + Sonnet exhausted (100%% util): seven_day_left=50.0 > 3.0 must be ELIGIBLE; \
@@ -796,7 +796,7 @@ fn test_cc_gate10_empty_inference_provider_treated_as_anthropic()
   let accounts = vec![ acct ];
   for strategy in [ SortStrategy::Name, SortStrategy::Renew, SortStrategy::Renews ]
   {
-    let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, false, "anthropic" );
+    let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, false, "anthropic", &TagFilter::default() );
     assert_eq!(
       result, Some( 0 ),
       "{strategy:?}: empty inference_provider (missing key) must be treated as \"anthropic\" \
@@ -822,7 +822,7 @@ fn test_cc_gate10_provider_mismatch_skips_account()
   for strategy in [ SortStrategy::Name, SortStrategy::Renew, SortStrategy::Renews ]
   {
     // gate_ownership=true mirrors a non-forced `rotate::1` call (params.rotate && !params.force).
-    let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, true, "anthropic" );
+    let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, true, "anthropic", &TagFilter::default() );
     assert_eq!(
       result, Some( 0 ),
       "{strategy:?}: Gate 10 must skip mismatched@test.com (\"kimi\" != \"anthropic\") and \
@@ -850,7 +850,7 @@ fn test_cc_gate10_mismatch_not_bypassed_by_force_equivalent()
   {
     // gate_ownership=false mirrors force::1 (the ownership gate is bypassed) — Gate 10 has
     // no such bypass and must still fire.
-    let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, false, "anthropic" );
+    let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, false, "anthropic", &TagFilter::default() );
     assert_eq!(
       result, Some( 0 ),
       "{strategy:?}: force::1 (gate_ownership=false) must NOT bypass Gate 10 — \
@@ -868,7 +868,7 @@ fn test_cc_gate10_empty_and_explicit_anthropic_are_equivalent()
   let now = 0u64;
 
   let empty_provider = mk_aq_sort( "empty_provider@test.com", 20.0, FAR_FUTURE_MS );
-  let result_empty = find_next_for_strategy( &[ empty_provider ], SortStrategy::Name, PreferStrategy::Any, now, false, "anthropic" );
+  let result_empty = find_next_for_strategy( &[ empty_provider ], SortStrategy::Name, PreferStrategy::Any, now, false, "anthropic", &TagFilter::default() );
   assert_eq!(
     result_empty, Some( 0 ),
     "T15: empty inference_provider must be eligible against selected_provider=\"anthropic\"; got: {result_empty:?}",
@@ -876,7 +876,7 @@ fn test_cc_gate10_empty_and_explicit_anthropic_are_equivalent()
 
   let mut explicit_provider = mk_aq_sort( "explicit_provider@test.com", 20.0, FAR_FUTURE_MS );
   explicit_provider.inference_provider = "anthropic".to_string();
-  let result_explicit = find_next_for_strategy( &[ explicit_provider ], SortStrategy::Name, PreferStrategy::Any, now, false, "anthropic" );
+  let result_explicit = find_next_for_strategy( &[ explicit_provider ], SortStrategy::Name, PreferStrategy::Any, now, false, "anthropic", &TagFilter::default() );
   assert_eq!(
     result_explicit, Some( 0 ),
     "T15: explicit inference_provider=\"anthropic\" must be eligible against selected_provider=\"anthropic\"; got: {result_explicit:?}",
@@ -944,6 +944,7 @@ fn mre_bug341_strategy_metric_renew_cache_refreshed_uses_org_created_at_estimate
     owner                : String::new(),
       claim_lock : false, reserve : false,
     inference_provider : String::new(),
+    tags : Vec::new(),
   };
 
   let metric = strategy_metric( &aq, SortStrategy::Renew, PreferStrategy::Any, now );
@@ -1012,6 +1013,7 @@ fn mre_bug341_strategy_metric_renews_cache_refreshed_uses_org_created_at_estimat
     owner                : String::new(),
       claim_lock : false, reserve : false,
     inference_provider : String::new(),
+    tags : Vec::new(),
   };
 
   let metric = strategy_metric( &aq, SortStrategy::Renews, PreferStrategy::Any, now );
@@ -1020,5 +1022,126 @@ fn mre_bug341_strategy_metric_renews_cache_refreshed_uses_org_created_at_estimat
     metric.starts_with( "~renews in" ),
     "BUG-341: strategy_metric(Renews) for a cache-refreshed account (account=None) with a \
      top-level org_created_at estimate must show '~renews in ...'; got: {metric:?}",
+  );
+}
+
+// ── Feature 076: Gate 11 (Identity tag filter) ────────────────────────────
+
+/// Build an owned tag list from literals (Gate 11 fixture shorthand).
+fn tag_list( raw : &[ &str ] ) -> Vec< String >
+{
+  raw.iter().map( | s | (*s).to_string() ).collect()
+}
+
+/// The shared FT-09 pool: three otherwise fully-eligible accounts differing only
+/// in tags, named so both filter-failing accounts sort BEFORE the eligible one
+/// under `SortStrategy::Name` — selection of the eligible account proves the
+/// gate fired rather than the sort happening to agree.
+fn gate11_pool() -> Vec< AccountQuota >
+{
+  let mut fails_include = mk_aq_sort( "aaa_fails_include@test.com", 20.0, FAR_FUTURE_MS );
+  fails_include.tags = tag_list( &[ "ci" ] );
+  let mut fails_exclude = mk_aq_sort( "bbb_fails_exclude@test.com", 20.0, FAR_FUTURE_MS );
+  fails_exclude.tags = tag_list( &[ "kimi_pool", "personal" ] );
+  let mut eligible = mk_aq_sort( "ccc_eligible@test.com", 20.0, FAR_FUTURE_MS );
+  eligible.tags = tag_list( &[ "kimi_pool" ] );
+  vec![ fails_include, fails_exclude, eligible ]
+}
+
+/// The FT-09 filter: `include=[kimi_pool] exclude=[personal]`.
+fn gate11_filter() -> TagFilter
+{
+  TagFilter { include : tag_list( &[ "kimi_pool" ] ), exclude : tag_list( &[ "personal" ] ) }
+}
+
+/// FT-09 — Gate 11 excludes every filter-failing account from
+/// `find_first_eligible()`'s candidate pool: a missing include tag and a hit
+/// exclude tag each disqualify, regardless of every other gate passing and of
+/// sort order (both failing accounts sort first).
+#[ test ]
+fn test_cc_gate11_tag_mismatch_skips_account()
+{
+  let now = 0u64;
+  let accounts = gate11_pool();
+  for strategy in [ SortStrategy::Name, SortStrategy::Renew, SortStrategy::Renews ]
+  {
+    // gate_ownership=true mirrors a non-forced `rotate::1` call (params.rotate && !params.force).
+    let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, true, "anthropic", &gate11_filter() );
+    assert_eq!(
+      result, Some( 2 ),
+      "{strategy:?}: Gate 11 must skip aaa (include miss) and bbb (exclude hit) and \
+       select ccc_eligible@test.com (index 2); got: {result:?}",
+    );
+  }
+}
+
+/// FT-09 (force half) — Gate 11 is not bypassed by `force::1`. At the CLI layer
+/// `force::1` maps to `gate_ownership = params.rotate && !params.force` becoming
+/// `false` (`api.rs`) — this test passes `gate_ownership=false` (the
+/// force-bypassed value) against the identical FT-09 pool and asserts both
+/// filter-failing accounts are still excluded, proving Gate 11 is structurally
+/// independent of the ownership-gate/force parameter (mirrors Gate 10's AF3).
+#[ test ]
+fn test_cc_gate11_not_bypassed_by_force_equivalent()
+{
+  let now = 0u64;
+  let accounts = gate11_pool();
+  for strategy in [ SortStrategy::Name, SortStrategy::Renew, SortStrategy::Renews ]
+  {
+    let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, false, "anthropic", &gate11_filter() );
+    assert_eq!(
+      result, Some( 2 ),
+      "{strategy:?}: force::1 (gate_ownership=false) must NOT bypass Gate 11 — \
+       filter-failing accounts must still be skipped; got: {result:?}",
+    );
+  }
+}
+
+/// FT-11 — a default (permit-all) `TagFilter` — the absent-file read result —
+/// excludes nothing: tagged and untagged accounts are both exactly as eligible
+/// as pre-feature, preserving zero-migration adoption at the selection layer.
+#[ test ]
+fn test_cc_gate11_absent_filter_permit_all()
+{
+  let now = 0u64;
+
+  let untagged = mk_aq_sort( "untagged@test.com", 20.0, FAR_FUTURE_MS );
+  let result = find_next_for_strategy( &[ untagged ], SortStrategy::Name, PreferStrategy::Any, now, false, "anthropic", &TagFilter::default() );
+  assert_eq!(
+    result, Some( 0 ),
+    "FT-11: an untagged account must be eligible under the permit-all default; got: {result:?}",
+  );
+
+  let mut tagged = mk_aq_sort( "tagged@test.com", 20.0, FAR_FUTURE_MS );
+  tagged.tags = tag_list( &[ "ci", "kimi_pool" ] );
+  let result = find_next_for_strategy( &[ tagged ], SortStrategy::Name, PreferStrategy::Any, now, false, "anthropic", &TagFilter::default() );
+  assert_eq!(
+    result, Some( 0 ),
+    "FT-11: a tagged account must be equally eligible under the permit-all default; got: {result:?}",
+  );
+}
+
+/// FT-12 — untagged-account semantics: an empty tag set fails any non-empty
+/// `include` (∅ ⊉ include) and trivially passes an exclude-only filter
+/// (∅ ∩ exclude = ∅).
+#[ test ]
+fn test_cc_gate11_untagged_fails_include_passes_exclude()
+{
+  let now = 0u64;
+  let untagged = mk_aq_sort( "untagged@test.com", 20.0, FAR_FUTURE_MS );
+  let accounts = [ untagged ];
+
+  let include_only = TagFilter { include : tag_list( &[ "ci" ] ), exclude : Vec::new() };
+  let result = find_next_for_strategy( &accounts, SortStrategy::Name, PreferStrategy::Any, now, false, "anthropic", &include_only );
+  assert_eq!(
+    result, None,
+    "FT-12: an untagged account must fail a non-empty include; got: {result:?}",
+  );
+
+  let exclude_only = TagFilter { include : Vec::new(), exclude : tag_list( &[ "ci" ] ) };
+  let result = find_next_for_strategy( &accounts, SortStrategy::Name, PreferStrategy::Any, now, false, "anthropic", &exclude_only );
+  assert_eq!(
+    result, Some( 0 ),
+    "FT-12: an untagged account must trivially pass an exclude-only filter; got: {result:?}",
   );
 }

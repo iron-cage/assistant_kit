@@ -342,6 +342,22 @@ pub( crate ) fn accounts_routine( cmd : VerifiedCommand, _ctx : ExecutionContext
     }
   }
 
+  // ── tags:: subset filter (Feature 075) ────────────────────────────────────────
+  // Keep only accounts carrying ALL listed tags (AND semantics, not any-of).
+  let accounts = match cmd.arguments.get( "tags" )
+  {
+    Some( Value::String( s ) ) if !s.is_empty() =>
+    {
+      let raw : Vec< String > = s.split( ',' ).map( str::to_string ).collect();
+      let wanted = crate::account::normalize_tag_set( &raw )
+        .map_err( | e | io_err_to_error_data( &e, "accounts tags filter" ) )?;
+      accounts.into_iter()
+        .filter( | a | wanted.iter().all( | t | a.tags.contains( t ) ) )
+        .collect()
+    }
+    _ => accounts,
+  };
+
   // ── Parse cols:: modifier string into IdentityCols ────────────────────────────
   let cols_raw = match cmd.arguments.get( "cols" )
   {

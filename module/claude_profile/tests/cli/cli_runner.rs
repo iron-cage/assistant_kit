@@ -475,6 +475,81 @@ pub fn write_account_inference_provider( home : &std::path::Path, name : &str, i
   merge_account_meta( home, name, serde_json::json!({ "inference_provider": inference_provider }) );
 }
 
+/// Write `tags` array into `{credential_store}/{name}.json`.
+///
+/// Used to pre-populate tag metadata for `.account.tag`/`.tags`/`.accounts`
+/// read-path tests (Feature 075).
+#[ inline ]
+pub fn write_account_tags( home : &std::path::Path, name : &str, tags : &[ &str ] )
+{
+  let arr : Vec< serde_json::Value > = tags.iter()
+    .map( | t | serde_json::Value::String( (*t).to_string() ) )
+    .collect();
+  merge_account_meta( home, name, serde_json::json!({ "tags": arr }) );
+}
+
+/// The credential store directory under a test HOME.
+///
+/// For fixtures that write store-level files directly (`_filter_*`, `_active_*`)
+/// or byte-compare store content around read-only commands.
+#[ inline ]
+#[ must_use ]
+pub fn credential_store_dir( home : &std::path::Path ) -> std::path::PathBuf
+{
+  home.join( ".persistent" ).join( "claude" ).join( "credential" )
+}
+
+/// Write a `_filter_{slug}` Identity tag-filter file into the credential store.
+///
+/// `slug` is the pre-sanitized `{hostname}_{user}` suffix — the caller controls
+/// the child's `HOSTNAME`/`USER` env so the binary resolves the same slug
+/// (Feature 076, `docs/schema/009_identity_filter_json.md`).
+///
+/// # Panics
+///
+/// Panics if the directory or file cannot be created.
+#[ inline ]
+pub fn write_filter_file( home : &std::path::Path, slug : &str, include : &[ &str ], exclude : &[ &str ] )
+{
+  let store = credential_store_dir( home );
+  std::fs::create_dir_all( &store ).unwrap();
+  let json = serde_json::json!( { "include": include, "exclude": exclude } );
+  std::fs::write(
+    store.join( format!( "_filter_{slug}" ) ),
+    serde_json::to_string_pretty( &json ).unwrap() + "\n",
+  ).unwrap();
+}
+
+/// Write an `_active_{slug}` marker naming `name` as that Identity's active account.
+///
+/// Unlike [`write_account`]'s `make_active` (which derives the slug from the
+/// test process's own env), the slug here is explicit — for tests whose child
+/// env (`HOSTNAME`/`USER`) differs from the test runner's.
+///
+/// # Panics
+///
+/// Panics if the directory or file cannot be created.
+#[ inline ]
+pub fn write_active_marker( home : &std::path::Path, slug : &str, name : &str )
+{
+  let store = credential_store_dir( home );
+  std::fs::create_dir_all( &store ).unwrap();
+  std::fs::write( store.join( format!( "_active_{slug}" ) ), name ).unwrap();
+}
+
+/// Split output into lines with runs of whitespace collapsed to single spaces.
+///
+/// For column-layout assertions (`.tags`, `.identities`, table renders) that
+/// must not depend on padding widths.
+#[ inline ]
+#[ must_use ]
+pub fn normalized_lines( s : &str ) -> Vec< String >
+{
+  s.lines()
+    .map( | l | l.split_whitespace().collect::< Vec< _ > >().join( " " ) )
+    .collect()
+}
+
 /// Check whether an account credential file exists.
 #[ inline ]
 #[ must_use ]

@@ -11,8 +11,8 @@
 //! | dot01 | `dot01_dot_and_help_byte_identical`     | `.` and `.help` stdout byte-identical         | P   |
 //! | dot02 | `dot02_dot_exits_0`                     | `.` exits 0                                   | P   |
 //! | dot03 | `dot03_dot_hidden_from_listing`         | no bare `.` command row in listing            | P   |
-//! | dot04 | `dot04_all_visible_commands_present`    | 14 commands present; removed commands absent  | P   |
-//! | dot05 | `dot05_exactly_fourteen_command_rows`   | exactly 14 lines starting with `"    ."`      | P   |
+//! | dot04 | `dot04_all_visible_commands_present`    | 18 commands present; removed commands absent  | P   |
+//! | dot05 | `dot05_exactly_eighteen_command_rows`   | exactly 18 lines starting with `"    ."`      | P   |
 //! | dot06 | `dot06_usage_line_present`              | stdout contains `"Usage: clp <command>"`      | P   |
 //! | dot07 | `dot07_unknown_param_ignored`           | `. foo::bar` output identical to bare `.`     | P   |
 //! | dot08 | `dot08_output_stable_across_invocations`| 3 invocations all byte-identical              | P   |
@@ -56,6 +56,11 @@
 //! array; dot05's count dropped 15→14 (renamed `dot05_exactly_fourteen_command_rows`);
 //! added dedicated `dot13_model_select_hidden_from_listing` mirroring dot03's precedent
 //! for the bare `.` command (hidden-but-dispatchable, not truly unregistered).
+//!
+//! **2026-08-18 (task 528):** Features 075/076 added four commands — `.account.tag`,
+//! `.tags`, `.identities`, `.identity.filter` — all four update sites applied together:
+//! dot04's `visible` array +4, dot05's count 14→18 (renamed
+//! `dot05_exactly_eighteen_command_rows`), Test Matrix rows, section comments.
 
 use crate::cli_runner::{ run_cs, stdout, assert_exit };
 
@@ -97,7 +102,7 @@ fn dot03_dot_hidden_from_listing()
   );
 }
 
-// ── dot04 — all 14 visible commands present; truly-absent names absent ────────
+// ── dot04 — all 18 visible commands present; truly-absent names absent ────────
 
 #[ test ]
 fn dot04_all_visible_commands_present()
@@ -120,6 +125,10 @@ fn dot04_all_visible_commands_present()
     ".model",
     ".models",
     ".provider.select",
+    ".account.tag",
+    ".tags",
+    ".identities",
+    ".identity.filter",
   ];
   for name in &visible
   {
@@ -132,15 +141,15 @@ fn dot04_all_visible_commands_present()
   assert!( !text.contains( ".token.status"   ), ".token.status must not appear (removed)" );
 }
 
-// ── dot05 — exactly 14 command rows in listing ────────────────────────────────
+// ── dot05 — exactly 18 command rows in listing ────────────────────────────────
 
 #[ test ]
-fn dot05_exactly_fourteen_command_rows()
+fn dot05_exactly_eighteen_command_rows()
 {
   let out   = run_cs( &[ "." ] );
   let text  = stdout( &out );
   let count = text.lines().filter( |l| l.starts_with( "    ." ) ).count();
-  assert_eq!( count, 14, "expected 14 command rows starting with '    .', got {count}" );
+  assert_eq!( count, 18, "expected 18 command rows starting with '    .', got {count}" );
 }
 
 // ── dot06 — usage line includes `<command>` syntax ───────────────────────────

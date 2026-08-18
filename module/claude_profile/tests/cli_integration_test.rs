@@ -56,6 +56,8 @@
 //! | `command_noun_test` | Command-noun contracts (account, token, credentials) | NC |
 //! | `user_story_test` | User acceptance tests — account rotation, onboarding, quota monitoring, automation, diagnostics | UA |
 //! | `telemetry_test` | CLI invocation telemetry — `claude_journal` `Command` event per invocation | T, M |
+//! | `account_tag_test` | Feature 075 account tags — save/tag write paths, `.tags`, render surfaces | FT, IT |
+//! | `identity_filter_test` | Feature 076 Identity tag filter — filter CRUD, `.identities`, Gate 11 CLI binding | FT, IT |
 //!
 //! ## Parallel Execution Note
 //!
@@ -218,3 +220,9 @@ mod account_redirect_backend_test;
 
 #[ path = "cli/telemetry_test.rs" ]
 mod telemetry_test;
+
+#[ path = "cli/account_tag_test.rs" ]
+mod account_tag_test;
+
+#[ path = "cli/identity_filter_test.rs" ]
+mod identity_filter_test;

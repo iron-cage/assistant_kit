@@ -113,8 +113,7 @@ fn test_ft29_009_footer_session_effort_display()
     let accounts = make_accounts();
     let output = render_text(
       &accounts, SortStrategy::Renew, None, PreferStrategy::Any,
-      &ColsVisibility::default_set(), Some( "claude-sonnet-5" ), Some( "low" ), None, None, false,
-    );
+      &ColsVisibility::default_set(), Some( "claude-sonnet-5" ), Some( "low" ), None, None, false, &TagFilter::default() );
     assert!(
       output.contains( "claude-sonnet-5/low" ),
       "FT-29 s1: footer Current line col3 must be 'claude-sonnet-5/low'; got:\n{output}",
@@ -131,8 +130,7 @@ fn test_ft29_009_footer_session_effort_display()
     let accounts = make_accounts();
     let output = render_text(
       &accounts, SortStrategy::Renew, None, PreferStrategy::Any,
-      &ColsVisibility::default_set(), Some( "claude-sonnet-5" ), None, None, None, false,
-    );
+      &ColsVisibility::default_set(), Some( "claude-sonnet-5" ), None, None, None, false, &TagFilter::default() );
     assert!(
       output.contains( "claude-sonnet-5" ),
       "FT-29 s2: footer Current line must contain model name; got:\n{output}",
@@ -152,8 +150,7 @@ fn test_ft29_009_footer_session_effort_display()
     let accounts = make_accounts();
     let output = render_text(
       &accounts, SortStrategy::Renew, None, PreferStrategy::Any,
-      &ColsVisibility::default_set(), None, None, None, None, false,
-    );
+      &ColsVisibility::default_set(), None, None, None, None, false, &TagFilter::default() );
     assert!(
       output.contains( "Current" ),
       "FT-29 s3: footer must have Current line even with no model/effort; got:\n{output}",
@@ -196,8 +193,7 @@ fn ft30_009_sessions_table_shown_auto_multiple_markers()
   let cols     = ColsVisibility::default_set();
   let output   = render_text(
     &accounts, SortStrategy::Name, None, PreferStrategy::Any,
-    &cols, None, None, Some( spath ), None, false,
-  );
+    &cols, None, None, Some( spath ), None, false, &TagFilter::default() );
 
   assert!(
     output.contains( "Sessions" ),
@@ -238,8 +234,7 @@ fn ft31_009_sessions_table_hidden_auto_single_marker()
   let cols     = ColsVisibility::default_set();
   let output   = render_text(
     &accounts, SortStrategy::Name, None, PreferStrategy::Any,
-    &cols, None, None, Some( spath ), None, false,
-  );
+    &cols, None, None, Some( spath ), None, false, &TagFilter::default() );
 
   assert!(
     !output.contains( "Sessions" ),
@@ -268,8 +263,7 @@ fn ft32_009_sessions_table_who_override()
     let accounts = vec![ mk_aq_ok( 10.0 ) ];
     let output = render_text(
       &accounts, SortStrategy::Name, None, PreferStrategy::Any,
-      &ColsVisibility::default_set(), None, None, Some( spath ), Some( true ), false,
-    );
+      &ColsVisibility::default_set(), None, None, Some( spath ), Some( true ), false, &TagFilter::default() );
     assert!(
       output.contains( "Sessions" ),
       "FT-32 who=1: sessions table must appear with who=Some(true) even with 1 marker; got:\n{output}",
@@ -288,8 +282,7 @@ fn ft32_009_sessions_table_who_override()
     let accounts = vec![ mk_aq_ok( 10.0 ) ];
     let output = render_text(
       &accounts, SortStrategy::Name, None, PreferStrategy::Any,
-      &ColsVisibility::default_set(), None, None, Some( spath ), Some( false ), false,
-    );
+      &ColsVisibility::default_set(), None, None, Some( spath ), Some( false ), false, &TagFilter::default() );
     assert!(
       !output.contains( "Sessions" ),
       "FT-32 who=0: sessions table must be suppressed with who=Some(false) even with 3 markers; got:\n{output}",
@@ -370,8 +363,7 @@ fn ft13_025_sessions_table_parses_marker_identity_from_filename()
   // who=None: auto-shows because marker_count=3 > 1.
   let output = render_text(
     &accounts, SortStrategy::Name, None, PreferStrategy::Any,
-    &cols, None, None, Some( spath ), None, false,
-  );
+    &cols, None, None, Some( spath ), None, false, &TagFilter::default() );
 
   // Sessions table header must appear (3 markers, who=None → auto-show).
   assert!(
@@ -448,8 +440,7 @@ fn ft33_009_sessions_table_flags_stale_marker_account()
   let cols     = ColsVisibility::default_set();
   let output = render_text(
     &accounts, SortStrategy::Name, None, PreferStrategy::Any,
-    &cols, None, None, Some( spath ), None, false,
-  );
+    &cols, None, None, Some( spath ), None, false, &TagFilter::default() );
 
   assert!(
     output.contains( "ghost@test.com (stale)" ),
@@ -484,8 +475,7 @@ fn ec5_062_who_force_on_zero_markers_omits_gracefully()
   let accounts = vec![ mk_aq_ok( 10.0 ) ];
   let output   = render_text(
     &accounts, SortStrategy::Name, None, PreferStrategy::Any,
-    &ColsVisibility::default_set(), None, None, Some( spath ), Some( true ), false,
-  );
+    &ColsVisibility::default_set(), None, None, Some( spath ), Some( true ), false, &TagFilter::default() );
 
   assert!(
     !output.contains( "Sessions" ),
@@ -510,8 +500,7 @@ fn cc_single_valid_account_no_footer()
   let accounts = vec![ aq ];
   let output = render_text(
     &accounts, SortStrategy::Name, None, PreferStrategy::Any,
-    &ColsVisibility::default_set(), None, None, None, None, false,
-  );
+    &ColsVisibility::default_set(), None, None, None, None, false, &TagFilter::default() );
   // "Current ·" is the footer format; bare "Current" could appear elsewhere.
   assert!(
     !output.contains( "Current \u{00b7}" ),
@@ -571,8 +560,7 @@ fn cc_no_current_account_uses_legacy_footer()
   let accounts = vec![ mk( "a@x.com" ), mk( "b@x.com" ) ];
   let output = render_text(
     &accounts, SortStrategy::Name, None, PreferStrategy::Any,
-    &ColsVisibility::default_set(), None, None, None, None, false,
-  );
+    &ColsVisibility::default_set(), None, None, None, None, false, &TagFilter::default() );
   assert!(
     output.contains( "Valid:" ),
     "CC-07: no is_current among ≥2 valid must use legacy 'Valid:' footer; got:\n{output}",
@@ -625,8 +613,7 @@ fn cc_effort_only_footer_shows_effort_without_model()
   let accounts = vec![ mk( "cur@x.com", true ), mk( "a@x.com", false ), mk( "b@x.com", false ) ];
   let output = render_text(
     &accounts, SortStrategy::Name, None, PreferStrategy::Any,
-    &ColsVisibility::default_set(), None, Some( "high" ), None, None, false,
-  );
+    &ColsVisibility::default_set(), None, Some( "high" ), None, None, false, &TagFilter::default() );
   // Footer Current line col3 must contain "high" (effort only, no model prefix).
   // The Next line legitimately shows "sonnet/high" (Feature 062, AC-03) — scope
   // the no-slash check to the Current line only, not the full output.
@@ -660,8 +647,7 @@ fn ft05_footer_next_shows_model_and_effort_when_set()
   let accounts = vec![ cur, rec ];
   let output = render_text(
     &accounts, SortStrategy::Name, None, PreferStrategy::Any,
-    &ColsVisibility::default_set(), None, Some( "high" ), None, None, false,
-  );
+    &ColsVisibility::default_set(), None, Some( "high" ), None, None, false, &TagFilter::default() );
   assert!(
     output.contains( "sonnet/high" ),
     "FT-05: footer Next must contain 'sonnet/high' when session_effort=Some(\"high\") and Sonnet available; got:\n{output}",
@@ -684,8 +670,7 @@ fn ft07_footer_next_shows_opus_and_effort_when_sonnet_exhausted()
   let accounts = vec![ cur, rec ];
   let output = render_text(
     &accounts, SortStrategy::Name, None, PreferStrategy::Any,
-    &ColsVisibility::default_set(), None, Some( "max" ), None, None, false,
-  );
+    &ColsVisibility::default_set(), None, Some( "max" ), None, None, false, &TagFilter::default() );
   assert!(
     output.contains( "opus/max" ),
     "FT-07: footer Next must contain 'opus/max' when Sonnet exhausted and session_effort=Some(\"max\"); got:\n{output}",
@@ -710,8 +695,7 @@ fn ft08_footer_column_alignment_third_dot()
   let accounts = vec![ cur, rec ];
   let output = render_text(
     &accounts, SortStrategy::Name, None, PreferStrategy::Any,
-    &ColsVisibility::default_set(), Some( "s" ), None, None, None, false,
-  );
+    &ColsVisibility::default_set(), Some( "s" ), None, None, None, false, &TagFilter::default() );
   let footer_lines : Vec< &str > = output.lines()
     .filter( |l| l.contains( '·' ) )
     .collect();
@@ -777,8 +761,7 @@ fn ft20_next_line_always_shows_effort_without_session_effort()
   // session_effort = None — no carry-forward; model-derived effort must appear anyway.
   let output = render_text(
     &accounts, SortStrategy::Name, None, PreferStrategy::Any,
-    &ColsVisibility::default_set(), None, None, None, None, false,
-  );
+    &ColsVisibility::default_set(), None, None, None, None, false, &TagFilter::default() );
   let next_line = output.lines()
     .find( |l| l.trim_start().starts_with( "Next" ) )
     .unwrap_or( "" );
@@ -830,8 +813,7 @@ fn mre_bug320_footer_excludes_non_owned_when_rotate_force_0()
   // Without gate: non-owned "aaa" wins (sorts first by name, fully eligible).
   let without_gate = render_text(
     &accounts, SortStrategy::Name, None, PreferStrategy::Any,
-    &ColsVisibility::default_set(), None, None, None, None, false,
-  );
+    &ColsVisibility::default_set(), None, None, None, None, false, &TagFilter::default() );
   let next_without = without_gate.lines()
     .find( |l| l.trim_start().starts_with( "Next" ) )
     .unwrap_or( "" );
@@ -843,8 +825,7 @@ fn mre_bug320_footer_excludes_non_owned_when_rotate_force_0()
   // With gate (fix): non-owned "aaa" skipped → owned "bbb" recommended.
   let with_gate = render_text(
     &accounts, SortStrategy::Name, None, PreferStrategy::Any,
-    &ColsVisibility::default_set(), None, None, None, None, true,
-  );
+    &ColsVisibility::default_set(), None, None, None, None, true, &TagFilter::default() );
   let next_with = with_gate.lines()
     .find( |l| l.trim_start().starts_with( "Next" ) )
     .unwrap_or( "" );
@@ -910,8 +891,7 @@ fn test_bug488_touched_recently_renders_touched_marker()
   let accounts = vec![ touched, idle ];
   let text = render_text(
     &accounts, SortStrategy::Name, None, PreferStrategy::Any,
-    &ColsVisibility::default_set(), None, None, None, None, false,
-  );
+    &ColsVisibility::default_set(), None, None, None, None, false, &TagFilter::default() );
 
   let touched_line = text.lines().find( |l| l.contains( "touched@x.com" ) )
     .expect( "touched account row must be present" );

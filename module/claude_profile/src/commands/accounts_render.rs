@@ -11,11 +11,11 @@ use super::cmd_context::caps_to_json;
 /// Column visibility set for `.accounts` text/table output.
 ///
 /// Default set (default-on): account, owner, active, current, sub, tier, expires, email, `inference_provider`.
-/// Opt-in: `display_name`, host, role, billing, model, uuid, capabilities, `org_uuid`, `org_name`, `backend`.
+/// Opt-in: `display_name`, host, role, billing, model, uuid, capabilities, `org_uuid`, `org_name`, `backend`, tags.
 ///
 /// Constructed via [`IdentityCols::default_set()`] or parsed from a `cols::` modifier string
 /// (comma-separated `+col_id` / `-col_id` tokens) via [`IdentityCols::parse()`].
-// IdentityCols is a pure column-visibility bitfield; all 19 flags are intentional.
+// IdentityCols is a pure column-visibility bitfield; all 20 flags are intentional.
 #[ allow( clippy::struct_excessive_bools ) ]
 #[ derive( Clone, Debug ) ]
 pub( crate ) struct IdentityCols
@@ -41,6 +41,9 @@ pub( crate ) struct IdentityCols
   pub( crate ) org_name     : bool,
   /// `Backend` column — `Account.backend` (`anthropic`/`redirect`). Feature 071.
   pub( crate ) backend      : bool,
+  /// `Tags` column — `Account.tags` joined with `", "`. Table-only gate; the text
+  /// renderer's `Tags:` line is presence-driven instead (Feature 075). Opt-in.
+  pub( crate ) tags         : bool,
 }
 
 impl IdentityCols
@@ -68,6 +71,7 @@ impl IdentityCols
       org_uuid     : false,
       org_name     : false,
       backend      : false,
+      tags         : false,
     }
   }
 
@@ -116,9 +120,10 @@ impl IdentityCols
         "org_uuid"     => cols.org_uuid     = flag,
         "org_name"     => cols.org_name     = flag,
         "backend"      => cols.backend      = flag,
+        "tags"         => cols.tags         = flag,
         _ => return Err( ErrorData::new(
           ErrorCode::ArgumentTypeMismatch,
-          format!( "unknown cols:: column id '{name}'; valid: account, owner, active, current, sub, tier, expires, email, inference_provider, display_name, host, role, billing, model, uuid, capabilities, org_uuid, org_name, backend" ),
+          format!( "unknown cols:: column id '{name}'; valid: account, owner, active, current, sub, tier, expires, email, inference_provider, display_name, host, role, billing, model, uuid, capabilities, org_uuid, org_name, backend, tags" ),
         ) ),
       }
     }
@@ -150,7 +155,7 @@ pub( crate ) fn render_accounts_text(
   let any_field = cols.owner || cols.active || emit_current || cols.sub || cols.tier
     || cols.expires || cols.email || cols.inference_provider || cols.display_name || cols.host || cols.role
     || cols.billing || cols.model || cols.uuid || cols.capabilities || cols.org_uuid
-    || cols.org_name || cols.backend;
+    || cols.org_name || cols.backend || cols.tags;
   let mut out  = String::new();
   let last_idx = accounts.len() - 1;
   for ( idx, a ) in accounts.iter().enumerate()
@@ -268,6 +273,12 @@ pub( crate ) fn render_accounts_text(
       {
         let _ = writeln!( out, "  Backend: {}", a.backend.as_str() );
       }
+      // Feature 075 AC-14: presence-driven, not cols-gated — a tagged account always
+      // shows its tags; an untagged account emits no line at all (byte-stable, AC-16).
+      if !a.tags.is_empty()
+      {
+        let _ = writeln!( out, "  Tags:    {}", a.tags.join( ", " ) );
+      }
       if idx < last_idx { out.push( '\n' ); }
     }
   }
@@ -299,7 +310,7 @@ pub( crate ) fn render_accounts_json( accounts : &[ &crate::account::Account ], 
        \"organization_uuid\":\"{}\",\"organization_name\":\"{}\",\
        \"organization_role\":\"{}\",\"workspace_uuid\":\"{}\",\"workspace_name\":\"{}\",\
        \"host\":\"{}\",\"owner\":\"{}\",\"is_owned\":{},\"renewal_at\":{},\"inference_provider\":\"{}\",\
-       \"backend\":\"{}\"}}",
+       \"backend\":\"{}\",\"tags\":{}}}",
       json_escape( &a.name ),
       a.is_active,
       is_current,
@@ -324,6 +335,8 @@ pub( crate ) fn render_accounts_json( accounts : &[ &crate::account::Account ], 
       renewal_at_json( a.renewal_at.as_deref() ),
       json_escape( if a.inference_provider.is_empty() { "anthropic" } else { &a.inference_provider } ),
       a.backend.as_str(),
+      // AC-14: always an array, [] when untagged — never absent, never null.
+      caps_to_json( &a.tags ),
     )
   } ).collect();
   format!( "[{}]\n", entries.join( "," ) )
@@ -359,6 +372,7 @@ pub( crate ) fn render_accounts_table(
   headers.push( "Expires".to_string() );
   if cols.inference_provider { headers.push( "Provider".to_string() ); }
   if cols.backend { headers.push( "Backend".to_string() ); }
+  if cols.tags    { headers.push( "Tags".to_string() ); }
 
   let mut builder = RowBuilder::new( headers );
   for ( idx, acct ) in accounts.iter().enumerate()
@@ -395,6 +409,7 @@ pub( crate ) fn render_accounts_table(
       row.push( provider.to_string().into() );
     }
     if cols.backend { row.push( acct.backend.as_str().into() ); }
+    if cols.tags    { row.push( acct.tags.join( ", " ).into() ); }
 
     builder = builder.add_row( row );
   }

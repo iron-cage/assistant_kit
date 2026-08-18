@@ -93,6 +93,8 @@ pub struct ColsVisibility
   pub owner        : bool,
   /// `→ Next` soonest upcoming event column (default ON).
   pub next         : bool,
+  /// `Tags` account tag set column (default OFF) — see Feature 075.
+  pub tags         : bool,
 }
 
 impl ColsVisibility
@@ -122,6 +124,7 @@ impl ColsVisibility
       role         : false,
       owner        : true,
       next         : true,
+      tags         : false,
     }
   }
 
@@ -155,8 +158,9 @@ impl ColsVisibility
       "role"         => self.role         = show,
       "owner"        => self.owner        = show,
       "next"         => self.next         = show,
+      "tags"         => self.tags         = show,
       _              => return Err( format!(
-        "cols:: unknown column {id:?}: valid IDs are `status`, `expires`, `sub`, `renews`, `5h_left`, `5h_reset`, `7d_left`, `7d_son`, `7d_reset`, `7d_son_reset`, `host`, `role`, `owner`, `next`",
+        "cols:: unknown column {id:?}: valid IDs are `status`, `expires`, `sub`, `renews`, `5h_left`, `5h_reset`, `7d_left`, `7d_son`, `7d_reset`, `7d_son_reset`, `host`, `role`, `owner`, `next`, `tags`",
       ) ),
     }
     Ok( () )
@@ -237,6 +241,9 @@ pub struct AccountQuota
   /// `inference_provider` from `{name}.json`; empty when unset — see Feature 072.
   /// Empty is treated as `"anthropic"` by Gate 10 and `.accounts` rendering, never as a wildcard.
   pub inference_provider    : String,
+  /// `tags` from `{name}.json`; empty when unset — see Feature 075.
+  /// Consumed by Gate 11 (Identity tag filter) and the opt-in `Tags` column.
+  pub tags                  : Vec< String >,
   // Fix(BUG-327): the 3 non-live branches (G1-not-owned, cache-first, approximate_quota)
   //   set `account: None`, so `renews_label()` never received `org_created_at` on those
   //   paths — `~Renews` showed "?" even with a warm cache holding a successful prior fetch.

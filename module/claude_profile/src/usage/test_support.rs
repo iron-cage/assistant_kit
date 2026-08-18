@@ -42,6 +42,7 @@ pub fn mk_aq_ok( utilization : f64 ) -> AccountQuota
     reserve              : false,
     org_created_at       : None,
     inference_provider   : String::new(),
+    tags                 : Vec::new(),
   }
 }
 
@@ -70,6 +71,7 @@ pub fn mk_aq_err() -> AccountQuota
     reserve              : false,
     org_created_at       : None,
     inference_provider   : String::new(),
+    tags                 : Vec::new(),
   }
 }
 
@@ -106,6 +108,7 @@ pub fn mk_aq_ok_both( h5_util : f64, d7_util : f64 ) -> AccountQuota
     reserve              : false,
     org_created_at       : None,
     inference_provider   : String::new(),
+    tags                 : Vec::new(),
   }
 }
 
@@ -145,6 +148,7 @@ pub fn mk_aq_sort( name : &str, five_hour_util : f64, expires_at_ms : u64 ) -> A
     reserve              : false,
     org_created_at       : None,
     inference_provider   : String::new(),
+    tags                 : Vec::new(),
   }
 }
 
@@ -187,6 +191,7 @@ pub fn mk_aq_sort_weekly(
     reserve              : false,
     org_created_at       : None,
     inference_provider   : String::new(),
+    tags                 : Vec::new(),
   }
 }
 
@@ -248,6 +253,7 @@ pub fn mk_aq_with_reset(
     reserve              : false,
     org_created_at       : None,
     inference_provider   : String::new(),
+    tags                 : Vec::new(),
   }
 }
 
@@ -294,6 +300,7 @@ pub fn mk_aq_with_7d_reset(
     reserve              : false,
     org_created_at       : None,
     inference_provider   : String::new(),
+    tags                 : Vec::new(),
   }
 }
 
@@ -343,6 +350,7 @@ pub fn mk_aq_with_7d_reset_util(
     reserve              : false,
     org_created_at       : None,
     inference_provider   : String::new(),
+    tags                 : Vec::new(),
   }
 }
 
@@ -379,6 +387,7 @@ pub fn mk_named_aq( name : &str, h5_util : f64, d7_util : f64 ) -> AccountQuota
     reserve              : false,
     org_created_at       : None,
     inference_provider   : String::new(),
+    tags                 : Vec::new(),
   }
 }
 
@@ -407,6 +416,7 @@ pub fn mk_named_aq_err( name : &str ) -> AccountQuota
     reserve              : false,
     org_created_at       : None,
     inference_provider   : String::new(),
+    tags                 : Vec::new(),
   }
 }
 
@@ -442,6 +452,7 @@ pub fn mk_aq_with_sonnet_util( utilization : f64 ) -> AccountQuota
     reserve              : false,
     org_created_at       : None,
     inference_provider   : String::new(),
+    tags                 : Vec::new(),
   }
 }
 
@@ -477,6 +488,7 @@ pub fn mk_aq_no_sonnet_data() -> AccountQuota
     reserve              : false,
     org_created_at       : None,
     inference_provider   : String::new(),
+    tags                 : Vec::new(),
   }
 }
 
@@ -516,6 +528,7 @@ pub fn mk_aq_with_resets_at( resets_at : Option< &str > ) -> AccountQuota
     reserve              : false,
     org_created_at       : None,
     inference_provider   : String::new(),
+    tags                 : Vec::new(),
   }
 }
 
@@ -564,6 +577,7 @@ pub fn mk_aq_with_son_idle() -> AccountQuota
     reserve              : false,
     org_created_at       : None,
     inference_provider   : String::new(),
+    tags                 : Vec::new(),
   }
 }
 
@@ -624,5 +638,6 @@ pub fn mk_aq_cancelled(
     reserve              : false,
     org_created_at       : None,
     inference_provider   : String::new(),
+    tags                 : Vec::new(),
   }
 }

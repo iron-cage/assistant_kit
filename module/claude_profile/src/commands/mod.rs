@@ -19,6 +19,8 @@ mod accounts_help;
 mod account_ops;
 mod account_relogin;
 mod account_renewal;
+mod account_tag;
+mod identity;
 mod account_inspect;
 mod account_inspect_render;
 mod limits;
@@ -39,6 +41,8 @@ pub use account_ops::{
 };
 pub use account_relogin::account_relogin_routine;
 pub use account_renewal::account_renewal_routine;
+pub use account_tag::account_tag_routine;
+pub use identity::{ tags_routine, identities_routine, identity_filter_routine };
 pub use account_inspect::account_inspect_routine;
 pub use limits::account_limits_routine;
 pub use model::model_routine;

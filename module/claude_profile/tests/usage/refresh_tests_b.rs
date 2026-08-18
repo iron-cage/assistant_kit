@@ -38,6 +38,7 @@ fn test_apply_refresh_ft4_429_valid_token_not_retried()
       claim_lock : false, reserve : false,
           org_created_at : None,
       inference_provider : String::new(),
+      tags : Vec::new(),
     },
   ];
 
@@ -85,6 +86,7 @@ fn test_apply_refresh_ft5_429_expired_refresh_path_entered_no_cred()
       claim_lock : false, reserve : false,
           org_created_at : None,
       inference_provider : String::new(),
+      tags : Vec::new(),
     },
   ];
 
@@ -215,6 +217,7 @@ fn test_apply_refresh_mre_bug208_restore_trace_emitted()
       claim_lock : false, reserve : false,
           org_created_at : None,
       inference_provider : String::new(),
+      tags : Vec::new(),
     },
   ];
 
@@ -370,6 +373,7 @@ fn mre_bug295_apply_refresh_trace_reason_not_owned()
     claim_lock : false, reserve : false,
       org_created_at : None,
     inference_provider : String::new(),
+    tags : Vec::new(),
   };
 
   let reason = claude_profile::usage::test_bridge::reason_label( &aq, 0 );
@@ -440,6 +444,7 @@ fn mre_bug297_refresh_none_sets_aq_result_err()
       claim_lock : false, reserve : false,
           org_created_at : None,
       inference_provider : String::new(),
+      tags : Vec::new(),
     },
   ];
 
@@ -514,6 +519,7 @@ fn apply_touch_skips_after_refresh_none()
       claim_lock : false, reserve : false,
           org_created_at : None,
       inference_provider : String::new(),
+      tags : Vec::new(),
     },
   ];
 
@@ -589,6 +595,7 @@ fn mre_bug298_apply_refresh_trace_reason_cached_expired()
     claim_lock : false, reserve : false,
       org_created_at : None,
     inference_provider : String::new(),
+    tags : Vec::new(),
   };
 
   let reason = claude_profile::usage::test_bridge::reason_label( &aq, 1 );
@@ -632,6 +639,7 @@ fn ec7_solo_gate_skips_non_current_with_trace()
     claim_lock : false, reserve : false,
       org_created_at : None,
     inference_provider : String::new(),
+    tags : Vec::new(),
   } ];
 
   // solo=true: solo gate fires for is_current=false → account skipped → result unchanged.
@@ -683,6 +691,7 @@ fn mre_bug_gap20_refresh_trace_reason_ok_owned_non_cached_ok()
     claim_lock : false, reserve : false,
       org_created_at : None,
     inference_provider : String::new(),
+    tags : Vec::new(),
   };
 
   // GAP-20: healthy owned+non-cached+Ok path must produce "ok" reason —
@@ -748,6 +757,7 @@ fn mre_bug306_refresh_trace_reason_occupied_elsewhere()
     claim_lock : false, reserve : false,
       org_created_at : None,
     inference_provider : String::new(),
+    tags : Vec::new(),
   };
   assert_eq!( claude_profile::usage::test_bridge::reason_label( &aq, 0 ), "occupied elsewhere" );
 }
@@ -805,6 +815,7 @@ fn mre_bug333_occupied_elsewhere_not_masked_by_cached()
     claim_lock : false, reserve : false,
       org_created_at : None,
     inference_provider : String::new(),
+    tags : Vec::new(),
   };
   assert_eq!(
     claude_profile::usage::test_bridge::reason_label( &aq, 1 ),
@@ -831,6 +842,7 @@ fn reason_label_not_owned()
     claim_lock : false, reserve : false,
       org_created_at : None,
     inference_provider : String::new(),
+    tags : Vec::new(),
   };
   assert_eq!( claude_profile::usage::test_bridge::reason_label( &aq, 0 ), "not owned" );
 }
@@ -852,6 +864,7 @@ fn reason_label_cached_expired()
     claim_lock : false, reserve : false,
       org_created_at : None,
     inference_provider : String::new(),
+    tags : Vec::new(),
   };
   assert_eq!( claude_profile::usage::test_bridge::reason_label( &aq, 1 ), "cached-expired" );
 }
@@ -876,6 +889,7 @@ fn reason_label_cached_valid()
     claim_lock : false, reserve : false,
       org_created_at : None,
     inference_provider : String::new(),
+    tags : Vec::new(),
   };
   assert_eq!( claude_profile::usage::test_bridge::reason_label( &aq, 9_999 ), "cached" );
 }
@@ -897,6 +911,7 @@ fn reason_label_ok()
     claim_lock : false, reserve : false,
       org_created_at : None,
     inference_provider : String::new(),
+    tags : Vec::new(),
   };
   assert_eq!( claude_profile::usage::test_bridge::reason_label( &aq, 0 ), "ok" );
 }
@@ -918,6 +933,7 @@ fn reason_label_err()
     claim_lock : false, reserve : false,
       org_created_at : None,
     inference_provider : String::new(),
+    tags : Vec::new(),
   };
   assert_eq!( claude_profile::usage::test_bridge::reason_label( &aq, 0 ), "HTTP 401 Unauthorized" );
 }

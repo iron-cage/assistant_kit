@@ -78,6 +78,7 @@ fn mre_bug_220_renews_preserved_for_429_accounts()
     owner                : String::new(),
     claim_lock : false, reserve : false,
     inference_provider : String::new(),
+    tags : Vec::new(),
   };
   let accounts = vec![ aq ];
   let cols     = ColsVisibility::default_set();
@@ -108,8 +109,7 @@ fn mre_bug_220_renews_preserved_for_429_accounts()
 
   // Text renderer: the error reason must appear somewhere in output (in a quota column).
   let text = render_text(
-    &accounts, SortStrategy::Name, None, PreferStrategy::Any, &cols, None, None, None, None, false,
-  );
+    &accounts, SortStrategy::Name, None, PreferStrategy::Any, &cols, None, None, None, None, false, &TagFilter::default() );
   assert!(
     text.contains( "(rate limited (429))" ),
     "BUG-220: error reason must appear in render_text output (in a quota column)",
@@ -155,6 +155,7 @@ fn test_ft21_009_occupied_elsewhere_at_flag()
       claim_lock : false, reserve : false,
           org_created_at : None,
       inference_provider : String::new(),
+      tags : Vec::new(),
     }
   };
 
@@ -168,8 +169,7 @@ fn test_ft21_009_occupied_elsewhere_at_flag()
 
   // --- text renderer ---
   let text = render_text(
-    &accounts, SortStrategy::Name, None, PreferStrategy::Any, &cols, None, None, None, None, false,
-  );
+    &accounts, SortStrategy::Name, None, PreferStrategy::Any, &cols, None, None, None, None, false, &TagFilter::default() );
   let alice_text = text.lines().find( | l | l.contains( "alice@test.com" ) )
     .expect( "FT-21: alice line missing from render_text" );
   let bob_text   = text.lines().find( | l | l.contains( "bob@test.com" ) )
@@ -254,12 +254,12 @@ fn ft03_033_render_text_cached_shows_tilde_prefix()
     claim_lock : false, reserve : false,
       org_created_at : None,
     inference_provider : String::new(),
+    tags : Vec::new(),
   };
   let accounts = vec![ aq ];
   let cols     = ColsVisibility::default_set();
   let text = render_text(
-    &accounts, SortStrategy::Name, None, PreferStrategy::Any, &cols, None, None, None, None, false,
-  );
+    &accounts, SortStrategy::Name, None, PreferStrategy::Any, &cols, None, None, None, None, false, &TagFilter::default() );
   assert!(
     text.contains( '~' ),
     "FT-03/033: cached row must show ~ prefix on non-dash quota cells; got:\n{text}",
@@ -318,6 +318,7 @@ fn ft09_033_render_json_cached_includes_fields()
     claim_lock : false, reserve : false,
       org_created_at : None,
     inference_provider : String::new(),
+    tags : Vec::new(),
   };
   let accounts = vec![ aq ];
   let json = render_json( &accounts );
@@ -368,13 +369,13 @@ fn ft03_033_cached_sonnet_reset_shows_tilde()
     claim_lock : false, reserve : false,
       org_created_at : None,
     inference_provider : String::new(),
+    tags : Vec::new(),
   };
   let accounts = vec![ aq ];
   let mut cols = ColsVisibility::default_set();
   cols.d7_son_reset = true;
   let text = render_text(
-    &accounts, SortStrategy::Name, None, PreferStrategy::Any, &cols, None, None, None, None, false,
-  );
+    &accounts, SortStrategy::Name, None, PreferStrategy::Any, &cols, None, None, None, None, false, &TagFilter::default() );
   assert!(
     text.contains( "~in " ),
     "cached sonnet reset must show ~in prefix; got:\n{text}",
@@ -445,14 +446,14 @@ fn test_ft23_009_renews_dash_for_cancelled_subscription()
     owner                : String::new(),
     claim_lock : false, reserve : false,
     inference_provider : String::new(),
+    tags : Vec::new(),
   };
   let accounts = vec![ aq ];
   let cols     = ColsVisibility::default_set();
 
   // text renderer: ~Renews must be "—", NOT "~in Nd"
   let text = render_text(
-    &accounts, SortStrategy::Name, None, PreferStrategy::Any, &cols, None, None, None, None, false,
-  );
+    &accounts, SortStrategy::Name, None, PreferStrategy::Any, &cols, None, None, None, None, false, &TagFilter::default() );
   assert!(
     text.contains( "\u{2014}" ),
     "FT-23: render_text must contain em-dash for cancelled subscription ~Renews; got:\n{text}",
@@ -549,6 +550,7 @@ fn mre_bug332_renews_shown_for_billing_none_with_ok_result()
     owner                 : String::new(),
     claim_lock : false, reserve : false,
     inference_provider : String::new(),
+    tags : Vec::new(),
   };
   let accounts = vec![ aq ];
   let cols     = ColsVisibility::default_set();
@@ -557,8 +559,7 @@ fn mre_bug332_renews_shown_for_billing_none_with_ok_result()
   // `seven_day_sonnet`, irrelevant here) so 7d Left/7d Reset don't contribute an unrelated
   // legitimate em-dash — the only em-dash this row could show is a buggy ~Renews.
   let text = render_text(
-    &accounts, SortStrategy::Name, None, PreferStrategy::Any, &cols, None, None, None, None, false,
-  );
+    &accounts, SortStrategy::Name, None, PreferStrategy::Any, &cols, None, None, None, None, false, &TagFilter::default() );
   assert!(
     !text.contains( "\u{2014}" ),
     "BUG-332: render_text must NOT show em-dash for ~Renews when result=Ok and billing_type=none; got:\n{text}",
@@ -643,14 +644,14 @@ fn mre_bug345_expires_cell_text_table_tilde()
     owner                 : String::new(),
     claim_lock : false, reserve : false,
     inference_provider : String::new(),
+    tags : Vec::new(),
   };
   let cols = ColsVisibility::default_set();
 
   // Text table — Expires cell must carry ~ only for the cached row.
   let accounts = vec![ mk_aq( "cached@example.com", true ), mk_aq( "fresh@example.com", false ) ];
   let text = render_text(
-    &accounts, SortStrategy::Name, None, PreferStrategy::Any, &cols, None, None, None, None, false,
-  );
+    &accounts, SortStrategy::Name, None, PreferStrategy::Any, &cols, None, None, None, None, false, &TagFilter::default() );
   let cached_row     = text.lines().find( |l| l.contains( "cached@example.com" ) )
     .expect( "BUG-345: cached row must be present in text table" );
   let not_cached_row = text.lines().find( |l| l.contains( "fresh@example.com" ) )
@@ -697,6 +698,7 @@ fn mre_bug345_expires_cell_get_field_tilde()
     owner                 : String::new(),
     claim_lock : false, reserve : false,
     inference_provider : String::new(),
+    tags : Vec::new(),
   };
 
   // `.get field::expires` — extract_get_field must apply the same ~ convention, fully
@@ -750,6 +752,7 @@ fn mre_bug345_expires_cell_tsv_tilde()
     owner                 : String::new(),
     claim_lock : false, reserve : false,
     inference_provider : String::new(),
+    tags : Vec::new(),
   };
   let cols     = ColsVisibility::default_set();
   let accounts = vec![ mk_aq( "cached@example.com", true ), mk_aq( "fresh@example.com", false ) ];
@@ -809,6 +812,7 @@ fn mre_bug345_expires_cell_json_identical_regardless_of_cache()
     owner                 : String::new(),
     claim_lock : false, reserve : false,
     inference_provider : String::new(),
+    tags : Vec::new(),
   };
   let accounts = vec![ mk_aq( "cached@example.com", true ), mk_aq( "fresh@example.com", false ) ];
 
@@ -881,12 +885,12 @@ fn ft05_non_owned_display_tilde_or_dashes()
     claim_lock : false, reserve : false,
       org_created_at : None,
     inference_provider : String::new(),
+    tags : Vec::new(),
   };
   let text_a = render_text(
     &[ aq_cached ],
     SortStrategy::Name, None, PreferStrategy::Any,
-    &cols, None, None, None, None, false,
-  );
+    &cols, None, None, None, None, false, &TagFilter::default() );
   assert!(
     text_a.contains( '~' ),
     "FT-05 case A: non-owned cached row must show ~ prefix; got:\n{text_a}",
@@ -914,12 +918,12 @@ fn ft05_non_owned_display_tilde_or_dashes()
     claim_lock : false, reserve : false,
       org_created_at : None,
     inference_provider : String::new(),
+    tags : Vec::new(),
   };
   let text_b = render_text(
     &[ aq_no_cache ],
     SortStrategy::Name, None, PreferStrategy::Any,
-    &cols, None, None, None, None, false,
-  );
+    &cols, None, None, None, None, false, &TagFilter::default() );
   // No tilde prefix when no cache data.
   assert!(
     !text_b.contains( "~🟢" ) && !text_b.contains( "~🟡" ) && !text_b.contains( "~🔴" ),
@@ -964,6 +968,7 @@ fn ft12_json_output_includes_is_owned()
     claim_lock : false, reserve : false,
       org_created_at : None,
     inference_provider : String::new(),
+    tags : Vec::new(),
   };
   let not_owned = AccountQuota
   {
@@ -986,6 +991,7 @@ fn ft12_json_output_includes_is_owned()
     claim_lock : false, reserve : false,
       org_created_at : None,
     inference_provider : String::new(),
+    tags : Vec::new(),
   };
 
   let json = render_json( &[ owned, not_owned ] );
@@ -1038,6 +1044,7 @@ fn test_render_footer_model_label_at_10pct_no_override()
     claim_lock : false, reserve : false,
       org_created_at : None,
     inference_provider : String::new(),
+    tags : Vec::new(),
   };
   // b@x.com: second valid account required for footer (≥ 2 valid triggers footer display).
   let aq_b = AccountQuota
@@ -1066,6 +1073,7 @@ fn test_render_footer_model_label_at_10pct_no_override()
     claim_lock : false, reserve : false,
       org_created_at : None,
     inference_provider : String::new(),
+    tags : Vec::new(),
   };
   // cur@x.com: is_current=true — triggers 2-line `·`-delimited footer so the model label appears.
   let aq_cur = AccountQuota
@@ -1094,11 +1102,11 @@ fn test_render_footer_model_label_at_10pct_no_override()
     claim_lock : false, reserve : false,
       org_created_at : None,
     inference_provider : String::new(),
+    tags : Vec::new(),
   };
   let output = render_text(
     &[ aq_cur, aq_a, aq_b ], SortStrategy::Name, None, PreferStrategy::Any,
-    &ColsVisibility::default_set(), None, None, None, None, false,
-  );
+    &ColsVisibility::default_set(), None, None, None, None, false, &TagFilter::default() );
   // Footer line 2: `Next (name) · a@x.com · sonnet · {metric}` — 10.0% left is NOT < 10%.
   assert!(
     output.contains( "· sonnet" ),
@@ -1149,6 +1157,7 @@ fn test_render_footer_model_label_below_10pct_opus()
     claim_lock : false, reserve : false,
       org_created_at : None,
     inference_provider : String::new(),
+    tags : Vec::new(),
   };
   // b@x.com: second valid account required for footer (≥ 2 valid triggers footer display).
   let aq_b = AccountQuota
@@ -1177,6 +1186,7 @@ fn test_render_footer_model_label_below_10pct_opus()
     claim_lock : false, reserve : false,
       org_created_at : None,
     inference_provider : String::new(),
+    tags : Vec::new(),
   };
   // cur@x.com: is_current=true — triggers 2-line `·`-delimited footer so the model label appears.
   let aq_cur = AccountQuota
@@ -1205,11 +1215,11 @@ fn test_render_footer_model_label_below_10pct_opus()
     claim_lock : false, reserve : false,
       org_created_at : None,
     inference_provider : String::new(),
+    tags : Vec::new(),
   };
   let output = render_text(
     &[ aq_cur, aq_a, aq_b ], SortStrategy::Name, None, PreferStrategy::Any,
-    &ColsVisibility::default_set(), None, None, None, None, false,
-  );
+    &ColsVisibility::default_set(), None, None, None, None, false, &TagFilter::default() );
   // Footer line 2: `Next (name) · a@x.com · opus · {metric}` — 9.0% left IS < 10%.
   assert!(
     output.contains( "· opus" ),
@@ -1281,6 +1291,7 @@ fn mre_bug335_cache_fallback_reason_surfaced_on_all_render_surfaces()
     claim_lock : false, reserve : false,
       org_created_at : None,
     inference_provider : String::new(),
+    tags : Vec::new(),
   };
   let accounts = vec![ aq ];
   let cols     = ColsVisibility::default_set();
@@ -1288,8 +1299,7 @@ fn mre_bug335_cache_fallback_reason_surfaced_on_all_render_surfaces()
   // T03: text table combines cache_age_label()'s existing suffix (AC-03) with the shortened
   // fallback reason (AC-14) in ONE parenthetical.
   let text = render_text(
-    &accounts, SortStrategy::Name, None, PreferStrategy::Any, &cols, None, None, None, None, false,
-  );
+    &accounts, SortStrategy::Name, None, PreferStrategy::Any, &cols, None, None, None, None, false, &TagFilter::default() );
   assert!(
     text.contains( "alice (2h ago, rate limited (429))" ),
     "BUG-335: text table must combine the age suffix and shortened fallback reason in one \

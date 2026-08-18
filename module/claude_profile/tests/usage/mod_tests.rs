@@ -21,8 +21,7 @@ fn test_status_emoji_red()
   let aq = mk_aq_err();
   let output = render_text(
     &[ aq ], SortStrategy::Name, None, PreferStrategy::Any,
-    &ColsVisibility::default_set(), None, None, None, None, false,
-  );
+    &ColsVisibility::default_set(), None, None, None, None, false, &TagFilter::default() );
   assert!( output.contains( "🔴" ), "Err account must show 🔴. Got:\n{output}" );
 }
 
@@ -33,8 +32,7 @@ fn test_status_emoji_green()
   let aq = mk_aq_ok( 10.0 );
   let output = render_text(
     &[ aq ], SortStrategy::Name, None, PreferStrategy::Any,
-    &ColsVisibility::default_set(), None, None, None, None, false,
-  );
+    &ColsVisibility::default_set(), None, None, None, None, false, &TagFilter::default() );
   assert!( output.contains( "🟢" ), "90% left must show 🟢. Got:\n{output}" );
 }
 
@@ -45,8 +43,7 @@ fn test_status_emoji_yellow()
   let aq = mk_aq_ok( 97.0 );
   let output = render_text(
     &[ aq ], SortStrategy::Name, None, PreferStrategy::Any,
-    &ColsVisibility::default_set(), None, None, None, None, false,
-  );
+    &ColsVisibility::default_set(), None, None, None, None, false, &TagFilter::default() );
   assert!( output.contains( "🟡" ), "3% left must show 🟡. Got:\n{output}" );
 }
 
@@ -63,12 +60,10 @@ fn test_status_emoji_boundary()
   let aq_15_5pct = mk_aq_ok( 84.5 );
   let out_15   = render_text(
     &[ aq_15pct ], SortStrategy::Name, None, PreferStrategy::Any,
-    &ColsVisibility::default_set(), None, None, None, None, false,
-  );
+    &ColsVisibility::default_set(), None, None, None, None, false, &TagFilter::default() );
   let out_15_5 = render_text(
     &[ aq_15_5pct ], SortStrategy::Name, None, PreferStrategy::Any,
-    &ColsVisibility::default_set(), None, None, None, None, false,
-  );
+    &ColsVisibility::default_set(), None, None, None, None, false, &TagFilter::default() );
   assert!( out_15.contains( "🟡" ),   "exactly 15% left must show 🟡. Got:\n{out_15}" );
   assert!( out_15_5.contains( "🟢" ), "15.5% left (rounds to 16) must show 🟢. Got:\n{out_15_5}" );
 }
@@ -82,8 +77,7 @@ fn test_status_emoji_on_synthetic_row()
   aq.name = "(current session)".to_string();
   let output = render_text(
     &[ aq ], SortStrategy::Name, None, PreferStrategy::Any,
-    &ColsVisibility::default_set(), None, None, None, None, false,
-  );
+    &ColsVisibility::default_set(), None, None, None, None, false, &TagFilter::default() );
   assert!( output.contains( "🟢" ), "80% left synthetic row must show 🟢. Got:\n{output}" );
 }
 
@@ -107,8 +101,7 @@ fn test_render_text_empty()
 {
   let result = render_text(
     &[], SortStrategy::Name, None, PreferStrategy::Any,
-    &ColsVisibility::default_set(), None, None, None, None, false,
-  );
+    &ColsVisibility::default_set(), None, None, None, None, false, &TagFilter::default() );
   assert!( result.contains( "no accounts configured" ), "empty must say no accounts, got: {result}" );
 }
 
@@ -136,6 +129,7 @@ fn test_render_json_error_account()
       host : String::new(), role : String::new(), renewal_at : None,
       cached : false, cache_age_secs : None, is_owned : true, owner : String::new(), claim_lock : false, reserve : false,
       inference_provider : String::new(),
+      tags : Vec::new(),
           org_created_at : None,
     },
   ];
@@ -158,6 +152,7 @@ fn test_render_json_escapes_quotes_in_name()
       host : String::new(), role : String::new(), renewal_at : None,
       cached : false, cache_age_secs : None, is_owned : true, owner : String::new(), claim_lock : false, reserve : false,
       inference_provider : String::new(),
+      tags : Vec::new(),
           org_created_at : None,
     },
   ];
@@ -297,8 +292,7 @@ fn test_sort_recommendation_unaffected_by_sort_strategy()
 
   let output = render_text(
     &accounts, SortStrategy::Name, None, PreferStrategy::Any,
-    &ColsVisibility::default_set(), None, None, None, None, false,
-  );
+    &ColsVisibility::default_set(), None, None, None, None, false, &TagFilter::default() );
 
   assert!( output.contains( "a@x.com" ), "output must contain a@x.com; got:\n{output}" );
   assert!(
@@ -323,8 +317,7 @@ fn test_three_tier_grouping_green_before_yellow_before_red()
   let accounts = vec![ a, b, c ];
   let output = render_text(
     &accounts, SortStrategy::Name, None, PreferStrategy::Any,
-    &ColsVisibility::default_set(), None, None, None, None, false,
-  );
+    &ColsVisibility::default_set(), None, None, None, None, false, &TagFilter::default() );
   let pos_a = output.find( "a@x.com" ).expect( "a@x.com must appear in output" );
   let pos_b = output.find( "b@x.com" ).expect( "b@x.com must appear in output" );
   let pos_c = output.find( "c@x.com" ).expect( "c@x.com must appear in output" );
@@ -344,8 +337,7 @@ fn test_ft16_009_yellow_tier_session_before_weekly()
 
   let output = render_text(
     &accounts, SortStrategy::Name, None, PreferStrategy::Any,
-    &ColsVisibility::default_set(), None, None, None, None, false,
-  );
+    &ColsVisibility::default_set(), None, None, None, None, false, &TagFilter::default() );
 
   let pos_d = output.find( "d@x.com" ).expect( "d@x.com must appear" );
   let pos_b = output.find( "b@x.com" ).expect( "b@x.com must appear" );
@@ -370,8 +362,7 @@ fn test_ft15_020_yellow_sub_grouping_not_reversed_by_desc()
 
   let output = render_text(
     &accounts, SortStrategy::Name, Some( true ), PreferStrategy::Any,
-    &ColsVisibility::default_set(), None, None, None, None, false,
-  );
+    &ColsVisibility::default_set(), None, None, None, None, false, &TagFilter::default() );
 
   let pos_c = output.find( "c@x.com" ).expect( "c@x.com must appear" );
   let pos_b = output.find( "b@x.com" ).expect( "b@x.com must appear" );
@@ -399,8 +390,7 @@ fn test_ft08_020_footer_omits_recommendation_when_no_eligible_candidate()
 
   let output = render_text(
     &accounts, SortStrategy::Name, None, PreferStrategy::Any,
-    &ColsVisibility::default_set(), None, None, None, None, false,
-  );
+    &ColsVisibility::default_set(), None, None, None, None, false, &TagFilter::default() );
 
   assert!(
     !output.contains( "→ Next (" ),
@@ -422,8 +412,7 @@ fn test_ft28_009_footer_model_label()
   let sonnet_ok = mk_aq_sort_weekly( "b@x.com", 10.0, 10.0, 50.0 );
   let output = render_text(
     &[ current_1, sonnet_ok ], SortStrategy::Name, None, PreferStrategy::Any,
-    &ColsVisibility::default_set(), None, None, None, None, false,
-  );
+    &ColsVisibility::default_set(), None, None, None, None, false, &TagFilter::default() );
   assert!(
     output.contains( "· sonnet" ),
     "FT-28 scenario 1: footer line 2 must show '· sonnet' when sonnet_left=50% ≥ 10%; got:\n{output}",
@@ -443,8 +432,7 @@ fn test_ft28_009_footer_model_label()
   }
   let output = render_text(
     &[ current_2, opus_override ], SortStrategy::Name, None, PreferStrategy::Any,
-    &ColsVisibility::default_set(), None, None, None, None, false,
-  );
+    &ColsVisibility::default_set(), None, None, None, None, false, &TagFilter::default() );
   assert!(
     output.contains( "· opus" ),
     "FT-28 scenario 2: footer line 2 must show '· opus' when sonnet_left=9% < 10%; got:\n{output}",

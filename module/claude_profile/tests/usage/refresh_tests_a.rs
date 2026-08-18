@@ -61,6 +61,7 @@ fn test_apply_refresh_429_not_retried()
       claim_lock : false, reserve : false,
           org_created_at : None,
       inference_provider : String::new(),
+      tags : Vec::new(),
     },
   ];
 
@@ -106,6 +107,7 @@ fn test_apply_refresh_ok_result_unchanged()
       claim_lock : false, reserve : false,
           org_created_at : None,
       inference_provider : String::new(),
+      tags : Vec::new(),
     },
   ];
   apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto, false );
@@ -143,6 +145,7 @@ fn test_apply_refresh_generic_error_unchanged()
       claim_lock : false, reserve : false,
           org_created_at : None,
       inference_provider : String::new(),
+      tags : Vec::new(),
     },
   ];
   apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto, false );
@@ -196,6 +199,7 @@ fn test_apply_refresh_401_no_cred_file()
       claim_lock : false, reserve : false,
           org_created_at : None,
       inference_provider : String::new(),
+      tags : Vec::new(),
     },
   ];
   apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto, false );
@@ -238,6 +242,7 @@ fn test_apply_refresh_403_no_cred_file()
       claim_lock : false, reserve : false,
           org_created_at : None,
       inference_provider : String::new(),
+      tags : Vec::new(),
     },
   ];
   apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto, false );
@@ -274,6 +279,7 @@ fn mixed_account( name : &str, result : Result< claude_quota::OauthUsageData, St
     claim_lock : false, reserve : false,
     org_created_at : None,
     inference_provider : String::new(),
+    tags : Vec::new(),
   }
 }
 
@@ -348,6 +354,7 @@ fn test_apply_refresh_trace_does_not_panic()
       claim_lock : false, reserve : false,
           org_created_at : None,
       inference_provider : String::new(),
+      tags : Vec::new(),
     },
   ];
   apply_refresh( &mut accounts, store.path(), None, true, SubprocessModel::Auto, SubprocessEffort::Auto, false );
@@ -410,6 +417,7 @@ fn test_apply_refresh_lifecycle_switch_fails_result_unchanged()
       claim_lock : false, reserve : false,
           org_created_at : None,
       inference_provider : String::new(),
+      tags : Vec::new(),
     },
   ];
 
@@ -499,6 +507,7 @@ fn test_apply_refresh_lifecycle_active_marker_unchanged()
       claim_lock : false, reserve : false,
           org_created_at : None,
       inference_provider : String::new(),
+      tags : Vec::new(),
     },
   ];
 
@@ -551,6 +560,7 @@ fn test_apply_refresh_lifecycle_429_expired_switch_fails_unchanged()
       claim_lock : false, reserve : false,
           org_created_at : None,
       inference_provider : String::new(),
+      tags : Vec::new(),
     },
   ];
   apply_refresh( &mut accounts, store.path(), Some( &paths ), false, SubprocessModel::Auto, SubprocessEffort::Auto, false );
@@ -600,6 +610,7 @@ fn test_apply_refresh_lifecycle_ft3_403_no_cred_result_unchanged()
       claim_lock : false, reserve : false,
           org_created_at : None,
       inference_provider : String::new(),
+      tags : Vec::new(),
     },
   ];
 
@@ -655,6 +666,7 @@ fn test_apply_refresh_lifecycle_copy_fails_no_dot_claude_dir()
       claim_lock : false, reserve : false,
           org_created_at : None,
       inference_provider : String::new(),
+      tags : Vec::new(),
     },
   ];
   apply_refresh( &mut accounts, store.path(), Some( &paths ), false, SubprocessModel::Auto, SubprocessEffort::Auto, false );
@@ -720,6 +732,7 @@ fn test_apply_refresh_lifecycle_trace_switch_fails_no_panic()
       claim_lock : false, reserve : false,
           org_created_at : None,
       inference_provider : String::new(),
+      tags : Vec::new(),
     },
   ];
   // Must not panic — switch_account fails (no cred file), trace logs to stderr.
@@ -852,6 +865,7 @@ fn test_apply_refresh_lifecycle_l10_trace_run_isolated_invoked_no_panic()
       claim_lock : false, reserve : false,
           org_created_at : None,
       inference_provider : String::new(),
+      tags : Vec::new(),
     },
   ];
   // Must not panic — switch_account succeeds; run_isolated invoked; fails fast (fake creds).

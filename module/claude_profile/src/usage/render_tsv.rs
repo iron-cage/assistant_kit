@@ -47,6 +47,7 @@ pub fn render_tsv(
   if cols.role         { headers.push( "role".to_string() ); }
   if cols.owner        { headers.push( "owner".to_string() ); }
   if cols.next         { headers.push( "next".to_string() ); }
+  if cols.tags         { headers.push( "tags".to_string() ); }
   let mut out = headers.join( "\t" );
   out.push( '\n' );
 
@@ -153,6 +154,7 @@ pub fn render_tsv(
         if cols.role         { row.push( aq.role.clone() ); }
         if cols.owner        { row.push( aq.owner.clone() ); }
         if cols.next         { row.push( next_str ); }
+        if cols.tags         { row.push( aq.tags.join( ", " ) ); }
       }
       Err( reason ) =>
       {
@@ -173,6 +175,7 @@ pub fn render_tsv(
         if cols.role    { row.push( aq.role.clone() ); }
         if cols.owner   { row.push( aq.owner.clone() ); }
         if cols.next    { row.push( "\u{2014}".to_string() ); }
+        if cols.tags    { row.push( aq.tags.join( ", " ) ); }
       }
     }
 

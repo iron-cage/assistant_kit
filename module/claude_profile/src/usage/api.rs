@@ -176,6 +176,16 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
     }
   }
 
+  // ── Identity tag filter (Feature 076 — Gate 11) ────────────────────────────
+  // Read this Identity's filter file once; threaded to only_next, the rotation
+  // winner selection, and the text renderers. Absent file → permit-all default;
+  // malformed file is loud (exit 2), never silently permit-all.
+  let tag_filter = crate::account::read_filter( &credential_store )
+    .map_err( |e| ErrorData::new(
+      ErrorCode::InternalError,
+      format!( "cannot read identity tag filter: {e}" ),
+    ) )?;
+
   // ── Row filter pipeline (TSK-223) ─────────────────────────────────────────
   // Applied after sort/tier (which runs inside render_text), before render.
   // Filters are AND-composition; count/offset applied last as a window.
@@ -187,7 +197,7 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
     if params.only_next
     {
       let selected_provider = resolve_selected_provider();
-      let best_opt = find_next_for_strategy( &accounts, params.sort, params.prefer, now_secs, params.rotate && !params.force, &selected_provider );
+      let best_opt = find_next_for_strategy( &accounts, params.sort, params.prefer, now_secs, params.rotate && !params.force, &selected_provider, &tag_filter );
       accounts = match best_opt
       {
         Some( i ) => { let w = accounts.swap_remove( i ); vec![ w ] }
@@ -261,9 +271,9 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
   {
     UsageOutputFormat::Json  => render_json( &accounts ),
     UsageOutputFormat::Tsv   => render_tsv( &accounts, params.sort, params.desc, params.prefer, &params.cols ),
-    UsageOutputFormat::Plain => render_plain( &accounts, params.sort, params.desc, params.prefer, &params.cols, session_model, session_effort, Some( &credential_store ), params.who, params.rotate && !params.force ),
+    UsageOutputFormat::Plain => render_plain( &accounts, params.sort, params.desc, params.prefer, &params.cols, session_model, session_effort, Some( &credential_store ), params.who, params.rotate && !params.force, &tag_filter ),
     UsageOutputFormat::Value => String::new(),
-    UsageOutputFormat::Text  => render_text( &accounts, params.sort, params.desc, params.prefer, &params.cols, session_model, session_effort, Some( &credential_store ), params.who, params.rotate && !params.force ),
+    UsageOutputFormat::Text  => render_text( &accounts, params.sort, params.desc, params.prefer, &params.cols, session_model, session_effort, Some( &credential_store ), params.who, params.rotate && !params.force, &tag_filter ),
   };
 
   let content = if params.no_color && params.format != UsageOutputFormat::Tsv
@@ -287,7 +297,7 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
     // gate_ownership: true when rotate::1 without force::1 — G5 applies (AC-05).
     let gate_ownership = !params.force;
     let selected_provider = resolve_selected_provider();
-    let winner_opt     = find_next_for_strategy( &accounts, params.sort, params.prefer, now_secs, gate_ownership, &selected_provider );
+    let winner_opt     = find_next_for_strategy( &accounts, params.sort, params.prefer, now_secs, gate_ownership, &selected_provider, &tag_filter );
     let Some( winner_idx ) = winner_opt
     else
     {

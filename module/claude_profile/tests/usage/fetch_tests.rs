@@ -565,6 +565,7 @@ fn ft04_non_owned_uses_cache_not_http()
     base_url          : None,
     redirect_model    : None,
     inference_provider : String::new(),
+    tags : Vec::new(),
   } ];
 
   // live_creds_file absent → graceful degradation; is_current=false for all accounts.
@@ -657,6 +658,7 @@ fn t500_03_fallback_renders_from_local_cache_only()
     base_url          : None,
     redirect_model    : None,
     inference_provider : String::new(),
+    tags : Vec::new(),
   } ];
 
   let absent_live = store.path().join( ".absent_credentials.json" );
@@ -728,6 +730,7 @@ fn t500_04_non_owner_no_cache_degrades_without_tracked_write()
     base_url          : None,
     redirect_model    : None,
     inference_provider : String::new(),
+    tags : Vec::new(),
   } ];
 
   let absent_live = store.path().join( ".absent_credentials.json" );
@@ -800,6 +803,7 @@ fn ft14_071_redirect_backend_produces_placeholder_no_http()
     base_url          : Some( "https://api.moonshot.ai/anthropic".to_string() ),
     redirect_model    : Some( "kimi-k3".to_string() ),
     inference_provider : String::new(),
+    tags : Vec::new(),
   } ];
 
   // live_creds_file absent → graceful degradation; no bearing on the R1 gate itself.
@@ -883,6 +887,7 @@ fn ft14b_071_redirect_checked_before_not_owned_gate()
     base_url          : Some( "https://api.moonshot.ai/anthropic".to_string() ),
     redirect_model    : Some( "kimi-k3".to_string() ),
     inference_provider : String::new(),
+    tags : Vec::new(),
   } ];
 
   let absent_live = store.path().join( ".absent_credentials.json" );
@@ -1008,6 +1013,7 @@ fn mre_bug327_cache_first_surfaces_org_created_at()
     base_url          : None,
     redirect_model    : None,
     inference_provider : String::new(),
+    tags : Vec::new(),
   } ];
 
   // live_creds_file absent → is_current=false, but cache-first fires before any HTTP path.

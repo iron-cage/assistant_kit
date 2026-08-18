@@ -12,6 +12,10 @@ use crate::commands::
   account_relogin_routine,
   account_renewal_routine,
   account_inspect_routine,
+  account_tag_routine,
+  tags_routine,
+  identities_routine,
+  identity_filter_routine,
   model_routine,
   models_routine,
   model_select_routine,
@@ -21,7 +25,7 @@ use crate::commands::
 
 /// Register all `claude_profile` commands into an existing registry.
 ///
-/// Registers 14 commands (credentials status, account management including limits, relogin, renewal, and inspect, model get/set/select, models discovery, provider select, paths, usage).
+/// Registers 18 commands (credentials status, account management including limits, relogin, renewal, inspect, and tag, model get/set/select, models discovery, provider select, paths, usage, tags/identities listings, identity filter).
 /// The `.` (dot) hidden command and `.help` are binary-specific — they are NOT
 /// included here.
 ///
@@ -85,6 +89,7 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
       bfs( "lock",    "Set (\"1\") or clear (\"0\") claim-lock: excludes from unattended rotation and explicit-switch targets; ungated (Feature 070)" ),
       bfs( "reserve", "Set (\"1\") or clear (\"0\") reserve marker: deprioritizes (does not exclude) in sort-based selection; ungated (Feature 070)" ),
       reg_arg_opt( "cols", Kind::String ).with_description( "Column visibility modifiers (comma-separated `+col_id`/`-col_id`); default set: account, owner, active, current, sub, tier, expires, email, inference_provider" ),
+      reg_arg_opt( "tags", Kind::String ).with_description( "Subset filter: list only accounts carrying ALL listed tags (comma-separated); Feature 075" ),
       bfs( "for",     "REMOVED — use assignee::USER@MACHINE name::X (or assignee::0 name::X for current machine)" ),
       bfs( "active",  "REMOVED — use assignee::USER@MACHINE name::X (or assignee::0 name::X for current machine)" ),
       reg_arg_opt( "assignee", Kind::String ).with_description( "USER@MACHINE (or sentinel \"0\" = $USER@$HOSTNAME) assign/unassign active-account marker; Feature 065" ),
@@ -140,7 +145,8 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
       dry(),
       trc(),
       reg_arg_opt( "host",    Kind::String  ).with_description( "Machine label for this account (default: auto-capture `$USER@$HOSTNAME`); written to `{name}.json`" ),
-      reg_arg_opt( "role",    Kind::String  ).with_description( "User-defined role tag (e.g. `work`, `personal`); written to `{name}.json`" ),
+      reg_arg_opt( "role",    Kind::String  ).with_description( "REMOVED — use tags:: instead (a role value is now just a tag, e.g. tags::work)" ),
+      reg_arg_opt( "tags",    Kind::String  ).with_description( "Comma-separated tags replacing the whole stored set (e.g. tags::work,kimi_pool); each tag 1-64 chars from [a-z0-9_-]; Feature 075" ),
       reg_arg_opt( "backend",        Kind::String ).with_description( "Backend for the new account: `anthropic` (default) or `redirect` (case-insensitive); see docs/cli/param/069_backend.md" ),
       reg_arg_opt( "preset",         Kind::String ).with_description( "Named provider preset pre-filling backend::/base_url::/inference_provider:: for a known foreign provider; explicit params always override the preset default. Only `kimi` is recognized today; see docs/cli/param/074_preset.md" ),
       reg_arg_opt( "base_url",       Kind::String ).with_description( "Redirect target's API base URL; required with backend::redirect, rejected otherwise; written to `{name}.json` and env.ANTHROPIC_BASE_URL on use" ),
@@ -193,6 +199,16 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
       fmt(),
     ],
     Box::new( account_inspect_routine ) );
+  reg_cmd( registry, ".account.tag", "Add, remove, or replace tags on one or more saved accounts",
+    vec![
+      reg_arg_opt( "name",   Kind::String ).with_description( "Account name or comma-separated list; every component must resolve before any write" ),
+      reg_arg_opt( "add",    Kind::String ).with_description( "Comma-separated tags to union into the stored set; exactly one of add::/remove::/tags::" ),
+      reg_arg_opt( "remove", Kind::String ).with_description( "Comma-separated tags to drop from the stored set (absent tags are a no-op); exactly one of add::/remove::/tags::" ),
+      reg_arg_opt( "tags",   Kind::String ).with_description( "Comma-separated tags replacing the whole stored set; exactly one of add::/remove::/tags::" ),
+      dry(),
+      trc(),
+    ],
+    Box::new( account_tag_routine ) );
   reg_cmd( registry, ".model", "Get or set model + effort level for the session (~/.claude/settings.json) or subprocess (~/.clr/config.toml) scope",
     vec![
       reg_arg_opt( "scope",              Kind::String  ).with_description( "Backing store: `session` (~/.claude/settings.json, default) or `subprocess` (~/.clr/config.toml user tier)" ),
@@ -245,6 +261,21 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
       trc(),
     ],
     Box::new( paths_routine ) );
+  reg_cmd( registry, ".tags", "List every tag across accounts and identity filters with usage counts",
+    vec![ fmt() ],
+    Box::new( tags_routine ) );
+  reg_cmd( registry, ".identities", "List every known Identity (USER@MACHINE) with active-marker, ownership, and filter state",
+    vec![ fmt() ],
+    Box::new( identities_routine ) );
+  reg_cmd( registry, ".identity.filter", "Get, set, or clear an Identity's include/exclude rotation tag filter",
+    vec![
+      reg_arg_opt( "include",  Kind::String ).with_description( "Comma-separated tags a candidate must ALL carry to be rotation-eligible; replaces the stored include side" ),
+      reg_arg_opt( "exclude",  Kind::String ).with_description( "Comma-separated tags none of which a rotation candidate may carry; replaces the stored exclude side" ),
+      bfs( "clear", "Delete the filter file (restore permit-all); idempotent; mutually exclusive with include::/exclude::" ),
+      reg_arg_opt( "identity", Kind::String ).with_description( "Target another Identity's filter as USER@HOST (default: current $USER@$HOSTNAME)" ),
+      fmt(),
+    ],
+    Box::new( identity_filter_routine ) );
   reg_cmd( registry, ".usage",          "Show live rate-limit quota for all saved accounts",
     vec![
       reg_arg_opt( "format", Kind::String ).with_description( "Output format: `text` (default), `json`, `tsv` (tab-separated, plain status), `plain` (no emoji), `value` (bare, use with `get::`)" ),

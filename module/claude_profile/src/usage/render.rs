@@ -9,6 +9,7 @@
 
 use data_fmt::{ RowBuilder, TableFormatter, TableConfig, Format };
 use crate::output::format_duration_secs;
+use crate::account::{ TagFilter, eligible };
 use super::types::{ AccountQuota, SortStrategy, PreferStrategy, ColsVisibility, GetField };
 use super::format::{
   recommended_model,
@@ -58,6 +59,7 @@ pub fn render_text(
   store_path     : Option< &std::path::Path >,
   who            : Option< bool >,
   gate_ownership : bool,
+  tag_filter     : &TagFilter,
 ) -> String
 {
   use std::time::{ SystemTime, UNIX_EPOCH };
@@ -93,6 +95,7 @@ pub fn render_text(
   if cols.role         { headers.push( "Role".to_string() ); }
   if cols.owner        { headers.push( "Owner".to_string() ); }
   if cols.next         { headers.push( "\u{2192} Next".to_string() ); }
+  if cols.tags         { headers.push( "Tags".to_string() ); }
 
   let mut builder = RowBuilder::new( headers );
   for orig_idx in sorted_indices.iter().copied()
@@ -234,6 +237,7 @@ pub fn render_text(
         if cols.role         { row.push( aq.role.clone() ); }
         if cols.owner        { row.push( aq.owner.clone() ); }
         if cols.next         { row.push( next_cell ); }
+        if cols.tags         { row.push( aq.tags.join( ", " ) ); }
         builder = builder.add_row( row.into_iter().map( Into::into ).collect() );
       }
       Err( reason ) =>
@@ -259,6 +263,7 @@ pub fn render_text(
         if cols.role         { row.push( aq.role.clone() ); }
         if cols.owner        { row.push( aq.owner.clone() ); }
         if cols.next         { row.push( "\u{2014}".to_string() ); }
+        if cols.tags         { row.push( aq.tags.join( ", " ) ); }
         // Fix(BUG-220): only the last visible quota-data column carries error_str — non-quota
         //   metadata columns (expires, sub, renews) are sourced independently and must be preserved.
         // Root cause: positional last_mut() targeted ~Renews after BUG-180 moved it to trail quota
@@ -283,6 +288,22 @@ pub fn render_text(
     .unwrap_or_else( | e | format!( "(table render error: {e})" ) );
   let body  = format!( "Quota\n\n{table}\n" );
 
+  // Gate 11 visibility (Feature 076 AC-13): pool-level exclusion note — TEXT surface only,
+  // never JSON/TSV. Counts accounts the active Identity tag filter would skip in rotation.
+  let excluded = accounts.iter().filter( |aq| !eligible( &aq.tags, tag_filter ) ).count();
+  let body = if excluded >= 1
+  {
+    format!(
+      "{body}{excluded} excluded by tag filter include=[{}] exclude=[{}]\n",
+      tag_filter.include.join( ", " ),
+      tag_filter.exclude.join( ", " ),
+    )
+  }
+  else
+  {
+    body
+  };
+
   // Footer: shown only when ≥2 valid accounts (AC-10).
   let valid_count = accounts.iter().filter( |aq| aq.result.is_ok() ).count();
   if valid_count < 2
@@ -304,7 +325,7 @@ pub fn render_text(
   //   had no gate_ownership param; false was hardcoded at the call site.
   // Pitfall: api.rs must pass params.rotate && !params.force; live.rs and mod.rs pass false.
   let selected_provider = resolve_selected_provider();
-  let Some( idx ) = find_next_for_strategy( accounts, sort, prefer, now_secs, gate_ownership, &selected_provider ) else
+  let Some( idx ) = find_next_for_strategy( accounts, sort, prefer, now_secs, gate_ownership, &selected_provider, tag_filter ) else
   {
     return append_sessions_table( body, store_path, who );
   };
@@ -399,9 +420,10 @@ pub( crate ) fn render_plain(
   store_path     : Option< &std::path::Path >,
   who            : Option< bool >,
   gate_ownership : bool,
+  tag_filter     : &TagFilter,
 ) -> String
 {
-  let raw = render_text( accounts, sort, desc, prefer, cols, session_model, session_effort, store_path, who, gate_ownership );
+  let raw = render_text( accounts, sort, desc, prefer, cols, session_model, session_effort, store_path, who, gate_ownership, tag_filter );
   apply_no_color( raw )
 }
 

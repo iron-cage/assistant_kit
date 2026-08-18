@@ -391,12 +391,35 @@ pub fn account_save_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) ->
     }
   }
 
+  // Feature 075: role:: is REMOVED — a role value is now just a tag. Rejected loudly
+  // (never silently ignored) so scripted callers migrate instead of losing data.
+  if cmd.arguments.contains_key( "role" )
+  {
+    return Err( ErrorData::new(
+      ErrorCode::ArgumentTypeMismatch,
+      "role:: REMOVED — use tags:: instead (a role value is now just a tag, e.g. tags::work)".to_string(),
+    ) );
+  }
+  // Feature 075: tags:: replaces the whole stored tag set (comma-separated). Validated
+  // before the dry-run check, mirroring base_url::'s ordering above — dry-run must not
+  // mask a rejection a real run would hit. save() re-validates internally before writing.
+  let tags_val : Option< Vec< String > > = match cmd.arguments.get( "tags" )
+  {
+    Some( Value::String( s ) ) if !s.is_empty() => Some( s.split( ',' ).map( str::to_string ).collect() ),
+    _                                           => None,
+  };
+  if let Some( ref raw ) = tags_val
+  {
+    crate::account::normalize_tag_set( raw )
+      .map_err( | e | io_err_to_error_data( &e, "account save" ) )?;
+  }
+
   if is_dry( &cmd )
   {
     return Ok( OutputData::new( format!( "[dry-run] would save current credentials as '{name}'\n" ), "text" ) );
   }
 
-  // Resolve host/role profile metadata before calling save().
+  // Resolve host profile metadata before calling save().
   // host:: defaults to auto-captured $USER@<hostname> when omitted.
   let host_val = match cmd.arguments.get( "host" )
   {
@@ -407,11 +430,6 @@ pub fn account_save_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) ->
       let hostname = crate::account::resolve_hostname();
       format!( "{user}@{hostname}" )
     }
-  };
-  let role_val  = match cmd.arguments.get( "role" )
-  {
-    Some( Value::String( s ) ) => s.clone(),
-    _                          => String::new(),
   };
   // Ownership-neutral: preserves existing owner via read-merge.
   // Owner can only be set by write_owner() — no CLI-exposed set path.
@@ -468,12 +486,13 @@ pub fn account_save_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) ->
   }
 
   crate::account::save(
-    &name, &credential_store, &paths, true, creds_bytes, Some( &host_val ), Some( &role_val ), None,
+    &name, &credential_store, &paths, true, creds_bytes, Some( &host_val ), None, None,
     backend, base_url_val.as_deref(), redirect_model_val.as_deref(), inference_provider_val.as_deref(),
+    tags_val.as_deref(),
   )
     .map_err( |e| io_err_to_error_data( &e, "account save" ) )?;
 
-  if trace { eprintln!( "{}account.save  write: OK  host={host_val}  role={role_val}", trace_ts() ) }
+  if trace { eprintln!( "{}account.save  write: OK  host={host_val}", trace_ts() ) }
 
   Ok( OutputData::new( format!( "saved current credentials as '{name}'\n" ), "text" ) )
 }

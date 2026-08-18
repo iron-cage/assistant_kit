@@ -51,7 +51,7 @@ pub( super ) fn build_registry() -> CommandRegistry
 
   // `.help` is pre-registered by CommandRegistry::new() — do not register again.
 
-  // Register 17 shared commands (credentials, account, paths, usage, model, models).
+  // Register 18 shared commands (credentials, account, tags, identities, paths, usage, model, models).
   crate::register_commands( &mut registry );
 
   registry
