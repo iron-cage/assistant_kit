@@ -808,7 +808,7 @@ pub fn switch_account( name : &str, credential_store : &Path, paths : &ClaudePat
   let creds_text = std::fs::read_to_string( &src )?;
   atomic_write_secret( &creds, &creds_text )?;
 
-  // BUG-485 task/claude_profile/bug/485_refresh_presync_reread_never_applied.md — live
+  // BUG-485 task/claude_profile_core/bug/completed/485_refresh_presync_reread_never_applied.md — live
   // credentials file (above) is updated before the active marker (below); a concurrent
   // refresh_token_with_live_path's pre-sync guard can observe the old marker while this
   // rename has already landed. The pre-sync block now re-reads the marker immediately
