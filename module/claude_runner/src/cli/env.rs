@@ -188,7 +188,7 @@ pub( crate ) fn apply_env_vars( parsed : &mut CliArgs ) -> Result< () >
   }
   // Fix: give CLR_GATE_POLL_SECS/CLR_GATE_MAX_ATTEMPTS/CLR_GATE_STALE_SECS the same
   // CLI-flag + config.toml tier parity every other numeric knob already has (see
-  // gate.rs's gate_poll_secs_from()/gate_max_attempts_from()/gate_stale_secs_from()
+  // gate_limits.rs's gate_poll_secs_from()/gate_max_attempts_from()/gate_stale_secs_from()
   // for the pure parse-or-default siblings this mirrors). An invalid value here
   // leaves the field None (not the hardcoded default) so config.toml still gets a
   // chance to contribute before the final unwrap_or() at the call site applies —

@@ -8,6 +8,9 @@ mod fence;
 mod credential;
 mod help;
 mod gate;
+mod gate_limits;
+mod gate_liveness;
+mod gate_slot;
 mod column_validate;
 mod ps;
 mod kill;
@@ -29,7 +32,7 @@ pub use summary::{ render_summary, resolve_fields, extract_session_id };
 // gate_stale_secs_from via the public API. Same false-positive unused_imports rationale
 // as the summary re-export above.
 #[ allow( unused_imports ) ]
-pub use gate::{ gate_max_attempts_from, gate_poll_secs_from, gate_stale_secs_from };
+pub use gate_limits::{ gate_max_attempts_from, gate_poll_secs_from, gate_stale_secs_from };
 
 // tools_command_test.rs (external test) imports TOOLS via the public API for the
 // sync-guard tests (BUG-409). Same false-positive unused_imports rationale as above.
@@ -51,7 +54,8 @@ use credential::{ run_isolated_command, run_refresh_command };
 const CREDS_PATH_ERROR : &str =
   "Error: cannot resolve credentials path: HOME is not set; provide --creds or set CLR_CREDS\nRun with --help for usage.";
 use help::print_ask_help;
-use gate::{ trace_gate_wait_exposure, wait_for_session_slot };
+use gate::wait_for_session_slot;
+use gate_limits::trace_gate_wait_exposure;
 pub( super ) use ps::dispatch_ps;
 pub( super ) use kill::dispatch_kill;
 pub( super ) use tools::dispatch_tools;
@@ -296,7 +300,7 @@ pub( super ) fn run_built_command(
     // Root cause: the gate call carried no timeout input at all — gate-wait's
     // only timing signal was the opt-in CLR_REMAINING_TIMEOUT_SECS env var.
     // Pitfall: pass the EXPRESSED value, never the effective default — see
-    // effective_gate_attempts()'s Fix(BUG-445) note in gate.rs.
+    // effective_gate_attempts()'s Fix(BUG-445) note in gate_limits.rs.
     trace_gate_wait_exposure( max_sessions, cli.trace, cli.timeout.is_some() );
     let mut runner_attempt = 0u32;
     wait_for_session_slot(
@@ -528,14 +532,14 @@ fn gate_isolated_session( cli : &IsolatedArgs, journal : Option< &claude_journal
   // gate call could not distinguish "caller said 30" from "nobody said
   // anything" — the expression bit had to be captured at parse time.
   // Pitfall: pass the EXPRESSED value, never the effective default — see
-  // effective_gate_attempts()'s Fix(BUG-445) note in gate.rs.
+  // effective_gate_attempts()'s Fix(BUG-445) note in gate_limits.rs.
   trace_gate_wait_exposure( max_sessions, cli.trace, cli.timeout_expressed );
   wait_for_session_slot(
     max_sessions,
     false,
-    gate::gate_poll_secs_from( env::env_str( "CLR_GATE_POLL_SECS" ).as_deref() ),
-    gate::gate_max_attempts_from( env::env_str( "CLR_GATE_MAX_ATTEMPTS" ).as_deref() ),
-    gate::gate_stale_secs_from( env::env_str( "CLR_GATE_STALE_SECS" ).as_deref() ),
+    gate_limits::gate_poll_secs_from( env::env_str( "CLR_GATE_POLL_SECS" ).as_deref() ),
+    gate_limits::gate_max_attempts_from( env::env_str( "CLR_GATE_MAX_ATTEMPTS" ).as_deref() ),
+    gate_limits::gate_stale_secs_from( env::env_str( "CLR_GATE_STALE_SECS" ).as_deref() ),
     if cli.timeout_expressed { cli.timeout_secs } else { 0 },
     journal,
     &mut | e | { eprintln!( "Error: [Runner] {e} (exit 1)" ); std::process::exit( 1 ); },

@@ -25,6 +25,23 @@ Edge case coverage for the `--value` parameter. See [080_value.md](../../../../d
 
 **Total:** 7 edge cases
 
+## Implementation Map
+
+All cases live in `tests/tools_command_test.rs`, whose own numbering is `IT-N` (from
+`command/08_tools.md`). EC identifiers are cross-references and are always written with
+their `080_value.md` prefix at the call site, because `078_name.md` and `079_category.md`
+number their own cases from `EC-1` too.
+
+| EC | Test function |
+|----|---------------|
+| EC-1 | `it16_tools_value_bare_output` |
+| EC-2 | `it17_tools_value_single_row_narrowing` |
+| EC-3 | `it26_tools_value_invalid_key_rejected` |
+| EC-4 | `it19_tools_value_inspect_mutually_exclusive` |
+| EC-5 | `it27_tools_columns_ignored_when_value_active` |
+| EC-6 | `it28_tools_value_zero_match_empty_output` |
+| EC-7 | `it29_tools_help_documents_filter_flags` |
+
 ---
 
 ### EC-1: Bare value output, one per line

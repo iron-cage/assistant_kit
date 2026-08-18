@@ -143,7 +143,10 @@ not an error. Unknown arguments exit 1. See [cli/command/08_tools.md](../cli/com
 | `../../src/cli/parse.rs` | CLI argument parsing (`parse_args`, `CliArgs`, `ExpectStrategy`) |
 | `../../src/cli/env.rs` | `apply_env_vars` — CLR_* env-variable fallbacks for all run params |
 | `../../src/cli/help.rs` | Help text printing for all subcommands (`clr`, `ask`, `isolated`, `refresh`) |
-| `../../src/cli/gate.rs` | Session concurrency gate (`wait_for_session_slot`; delegates process scan to `claude_core`) |
+| `../../src/cli/gate.rs` | Session concurrency gate poll loop (`wait_for_session_slot`; delegates process scan to `claude_core`) |
+| `../../src/cli/gate_limits.rs` | Gate knob resolution (`gate_poll_secs_from`, `gate_max_attempts_from`, `gate_stale_secs_from`, `effective_gate_attempts`) |
+| `../../src/cli/gate_slot.rs` | Gate slot reservation protocol (`acquire_slot`, `claim_slot_file`, `SlotDenialCause`) |
+| `../../src/cli/gate_liveness.rs` | `/proc`-based PID liveness and incarnation predicates (`pid_alive`) |
 | `../../src/cli/ps.rs` | Session listing (`dispatch_ps`; reads `/proc` metrics, formats plain-style tables) |
 | `../../src/cli/kill.rs` | Session termination (`dispatch_kill`; validates PID, sends SIGTERM) |
 | `../../src/cli/builder.rs` | `build_claude_command()` implementation, `session_exists()` guard, effective-dir resolution |

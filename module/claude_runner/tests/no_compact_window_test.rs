@@ -15,6 +15,12 @@
 //! | `tests/docs/cli/env_param/03_auto_compact_window.md` | acw:EC-1..EC-5, acw:EC-7..EC-9 |
 //! | `tests/docs/cli/param/077_no_compact_window.md` | ncw:EC-1..EC-8 |
 //!
+//! ncw:EC-7 has no dedicated function — its When/Then/Exit are identical to ncw:EC-1's, so
+//! `default_injection_run` discharges both. EC-7's extra precondition (the opt-out env var
+//! provably unset, not merely unset by ambient luck) is satisfied structurally: `run_cli`
+//! scrubs `CLR_NO_COMPACT_WINDOW` from the subprocess environment. See the spec doc's EC-7
+//! entry for why the case is still worth keeping as a distinct precedence-matrix cell.
+//!
 //! ## Exclusions
 //!
 //! 15 of the 27 spec cases are excluded: RC-1/RC-2 (cross-invocation dry-run vs trace
@@ -25,7 +31,9 @@
 mod cli_binary_test_helpers;
 use cli_binary_test_helpers::{ run_cli, run_cli_with_env, stdout_str, make_creds_file };
 
-// RC-3/run, acw:EC-1, ncw:EC-1
+// RC-3/run, acw:EC-1, ncw:EC-1, ncw:EC-7
+// ncw:EC-7 rides on this function: same command, same assertion, plus the guarantee that
+// CLR_NO_COMPACT_WINDOW is absent — enforced by run_cli's env_remove, not assumed.
 #[ test ]
 fn default_injection_run()
 {

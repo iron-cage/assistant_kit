@@ -387,7 +387,7 @@ fn build_queued_table() -> Option< String >
       // Fix(BUG-387-followup): slot_*.json reservation files are a distinct
       // Domain Type from the {pid}.json queued-waiter telemetry this table
       // displays — they record an already-ADMITTED session, not one still
-      // queued. gate.rs::acquire_slot() already owns their entire lifecycle
+      // queued. gate_slot.rs::acquire_slot() already owns their entire lifecycle
       // (claim, liveness check, reclaim) independently. Skip them here
       // untouched: the liveness filter below parses the *filename* as a PID,
       // which always fails for "slot_N", so treating them as unparseable
@@ -411,12 +411,12 @@ fn build_queued_table() -> Option< String >
       // Root cause: liveness convention duplicated inline instead of shared —
       // both copies were existence-only, blind to state `Z`.
       // Pitfall: a /proc/{pid} entry proves a PID exists, not that a process
-      // runs; one authoritative predicate (gate::pid_alive) for every consumer.
+      // runs; one authoritative predicate (gate_liveness::pid_alive) for every consumer.
       // Fix(BUG-488): pass the waiter record's own starttime (absent in
       // legacy files → None) so display liveness applies the same incarnation
       // binding as slot reclaim — a thread-masked or recycled PID number no
       // longer renders a dead waiter as a phantom queued row. Full fix
-      // comment at gate.rs::pid_alive().
+      // comment at gate_liveness.rs::pid_alive().
       let alive = e.path()
         .file_stem()
         .and_then( |s| s.to_str() )
@@ -426,7 +426,7 @@ fn build_queued_table() -> Option< String >
           let recorded_starttime = std::fs::read_to_string( e.path() )
             .ok()
             .and_then( | content | parse_json_u64( &content, "starttime" ) );
-          super::gate::pid_alive( pid, recorded_starttime )
+          super::gate_liveness::pid_alive( pid, recorded_starttime )
         } );
       if !alive
       {

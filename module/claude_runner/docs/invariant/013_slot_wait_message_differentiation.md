@@ -4,7 +4,7 @@
 
 - **Purpose**: Ensure the operator-facing slot-wait diagnostic names which of the three independent non-admission causes fired, so an operator can distinguish a genuine capacity problem from transient reservation contention from an unrelated live session simply holding the slot.
 - **Responsibility**: State the three distinguishable non-admission causes at the admission condition in `wait_for_session_slot()`, the message-layer contract for encoding which cause fired, and the boundary with `012_gate_slot_atomicity.md` (which governs admission correctness, not message content).
-- **In Scope**: `wait_for_session_slot()`'s poll-loop diagnostic message construction (`gate.rs`), the `has_capacity` boolean and the `SlotDenialCause` enum returned by `acquire_slot()` and their joint role in message differentiation, the `[at capacity]` / `[slot held by another session]` / `[lost reservation race]` message suffixes and their mapping to the admission condition's false-branches.
+- **In Scope**: `wait_for_session_slot()`'s poll-loop diagnostic message construction (`gate.rs`), the `has_capacity` boolean and the `SlotDenialCause` enum returned by `acquire_slot()` (`gate_slot.rs`) and their joint role in message differentiation, the `[at capacity]` / `[slot held by another session]` / `[lost reservation race]` message suffixes and their mapping to the admission condition's false-branches.
 - **Out of Scope**: Admission condition correctness and atomicity (→ `012_gate_slot_atomicity.md`), gate-timeout exhaustion message at `max_attempts` (→ `006_exit_codes.md`), gate poll interval / attempt-limit configuration (→ `cli/003_env_param.md` Env Param 5).
 
 ### Invariant Statement
@@ -30,7 +30,7 @@ This invariant is deliberately narrow: it governs **what the message says**, not
 <!-- BUG-480 task/claude_runner/bug/480_gate_diagnostic_hides_slot_occupancy.md — fixed: slot-side denial diagnostics now carry the measured occupancy (slots=H/M on the poll line, slots=H/M held on both exhaustion messages), at-capacity lines exempt; see Invariant Statement : Measured occupancy and Provenance : BUG-480 -->
 ### Enforcement Mechanism
 
-In `src/cli/gate.rs`, `acquire_slot()` returns a typed cause and `wait_for_session_slot()` applies the differentiation as follows:
+`acquire_slot()` (`src/cli/gate_slot.rs`) returns a typed cause and `wait_for_session_slot()` (`src/cli/gate.rs`) applies the differentiation as follows:
 
 ```rust
 enum SlotDenialCause
@@ -136,7 +136,8 @@ If the message reverts to a 2-way (or 1-way) distinction — e.g. collapsing `He
 
 | File | Notes |
 |------|-------|
-| `../../src/cli/gate.rs` | `SlotDenialCause` enum, `acquire_slot()`'s typed return, and `wait_for_session_slot()`'s `has_capacity` binding plus the differentiated `eprintln!` at the poll-loop's non-admission fall-through |
+| `../../src/cli/gate_slot.rs` | `SlotDenialCause` enum and `acquire_slot()`'s typed return |
+| `../../src/cli/gate.rs` | `wait_for_session_slot()`'s `has_capacity` binding plus the differentiated `eprintln!` at the poll-loop's non-admission fall-through |
 
 ### Tests
 

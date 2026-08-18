@@ -24,10 +24,10 @@ Edge case tests for the `--no-compact-window` flag, which suppresses injection o
 - Default: 1 test (EC-1)
 - Behavioral: 4 tests (EC-2, EC-3, EC-4, EC-5)
 - EnvFallback: 1 test (EC-6)
-- Precedence: 1 test (EC-7)
+- Precedence: 0 dedicated tests (EC-7 — same When/Then as EC-1, discharged by it)
 - Discovery: 2 tests (EC-8, EC-9)
 
-**Total:** 9 edge cases
+**Total:** 9 edge cases, 8 dedicated test functions
 
 ## Test Cases
 ---
@@ -98,6 +98,18 @@ Edge case tests for the `--no-compact-window` flag, which suppresses injection o
 - **When:** `clr --dry-run "test" 2>&1`
 - **Then:** output CONTAINS `CLAUDE_CODE_AUTO_COMPACT_WINDOW=300000` — confirms opt-in default
 - **Exit:** 0
+- **Covered by:** `no_compact_window_test.rs::default_injection_run` (EC-1) — no dedicated
+  test function. EC-7's When/Then/Exit are identical to EC-1's; only the Given differs, by
+  making the opt-out's absence explicit rather than assumed. A second function issuing the
+  same command with the same assertion would be duplication, so the Given is discharged
+  structurally instead: `run_cli` scrubs `CLR_NO_COMPACT_WINDOW` from the subprocess
+  environment, which makes every `run_cli` invocation — EC-1's included — satisfy EC-7's
+  precondition by construction rather than by ambient luck.
+- **Distinct from EC-1 because:** EC-1 is the Default category (the shipped behaviour with
+  no operator input); EC-7 is the Precedence category's fourth cell — flag absent *and*
+  env absent. The other three cells are EC-2 (flag present), EC-6 (env truthy), and
+  `env_param/03_auto_compact_window.md` EC-9 (env falsy). Retaining EC-7 as a spec case
+  keeps that matrix complete even though its observable outcome coincides with EC-1's.
 - **Source:** [param/077_no_compact_window.md](../../../../docs/cli/param/077_no_compact_window.md)
 
 ---

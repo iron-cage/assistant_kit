@@ -23,6 +23,22 @@ Edge case coverage for the `--name` parameter. See [078_name.md](../../../../doc
 
 **Total:** 6 edge cases
 
+## Implementation Map
+
+All cases live in `tests/tools_command_test.rs`, whose own numbering is `IT-N` (from
+`command/08_tools.md`). EC identifiers are cross-references and are always written with
+their `078_name.md` prefix at the call site, because `079_category.md` and `080_value.md`
+number their own cases from `EC-1` too.
+
+| EC | Test function |
+|----|---------------|
+| EC-1 | `it10_tools_name_filter` |
+| EC-2 | `it22_tools_name_filter_case_insensitive` |
+| EC-3 | `it13_tools_zero_match_not_error` |
+| EC-4 | `it12_tools_name_and_category_and_logic` |
+| EC-5 | `it4_tools_caption_present` |
+| EC-6 | `it29_tools_help_documents_filter_flags` |
+
 ---
 
 ### EC-1: Substring match on tool name

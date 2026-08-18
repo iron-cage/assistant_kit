@@ -48,7 +48,7 @@ use tempfile::NamedTempFile;
 ///
 /// ## Fix Applied
 ///
-/// gate.rs reads `CLR_REMAINING_TIMEOUT_SECS` and computes `effective_max_attempts`
+/// `gate_limits.rs` reads `CLR_REMAINING_TIMEOUT_SECS` and computes `effective_max_attempts`
 /// = `(remaining_secs / poll_secs).max(1)`; the for loop runs to `effective_max_attempts`
 /// instead of `max_attempts`; budget exhaustion emits a distinct "gate-wait budget
 /// exhausted" diagnostic routed through `on_exhausted` exactly like the normal path.

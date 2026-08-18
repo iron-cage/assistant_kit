@@ -24,6 +24,23 @@ Edge case coverage for the `--category` parameter. See [079_category.md](../../.
 
 **Total:** 7 edge cases
 
+## Implementation Map
+
+All cases live in `tests/tools_command_test.rs`, whose own numbering is `IT-N` (from
+`command/08_tools.md`). EC identifiers are cross-references and are always written with
+their `079_category.md` prefix at the call site, because `078_name.md` and `080_value.md`
+number their own cases from `EC-1` too.
+
+| EC | Test function |
+|----|---------------|
+| EC-1 | `it11_tools_category_filter` |
+| EC-2 | `it23_tools_category_filter_case_insensitive` |
+| EC-3 | `it24_tools_category_multi_word_value` |
+| EC-4 | `it25_tools_category_zero_match_not_error` |
+| EC-5 | `it12_tools_name_and_category_and_logic` |
+| EC-6 | `it3_tools_lists_categories` |
+| EC-7 | `it29_tools_help_documents_filter_flags` |
+
 ---
 
 ### EC-1: Substring match on tool category

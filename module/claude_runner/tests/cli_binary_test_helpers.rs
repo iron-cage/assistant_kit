@@ -78,6 +78,13 @@ fn assert_container()
 /// explicitly exercise `CLR_DIR`/`CLR_SESSION_DIR` behavior use `run_cli_with_env`
 /// instead, which adds those vars explicitly.
 ///
+/// `CLR_NO_COMPACT_WINDOW` is removed for a narrower reason: `077_no_compact_window.md`
+/// EC-7 asserts the `CLAUDE_CODE_AUTO_COMPACT_WINDOW` default injection under a
+/// *provably* unset opt-out, which the same When/Then as EC-1 can only satisfy if the
+/// var's absence is enforced here rather than inherited from whatever the host happens
+/// to export. Scrubbing it makes `default_injection_run` deterministic instead of
+/// ambient-dependent. Tests that exercise the opt-out use `run_cli_with_env`.
+///
 /// `HOME` is set to a fixed, empty-by-design path (`/tmp/clr-isolated-home`) so that
 /// a host `~/.clr/config.toml` cannot inject `--model` or other preference values into
 /// tests that assert a clean default state (Fix(BUG-008) isolation guard). Tests that
@@ -99,6 +106,7 @@ pub fn run_cli( args : &[ &str ] ) -> std::process::Output
     .env( "HOME", "/tmp/clr-isolated-home" )
     .env_remove( "CLR_DIR" )
     .env_remove( "CLR_SESSION_DIR" )
+    .env_remove( "CLR_NO_COMPACT_WINDOW" )
     .output()
     .expect( "Failed to invoke clr binary" )
 }
@@ -712,6 +720,7 @@ pub fn run_dry( args : &[ &str ] ) -> String
     .env( "HOME", "/tmp/clr-isolated-home" )
     .env_remove( "CLR_DIR" )
     .env_remove( "CLR_SESSION_DIR" )
+    .env_remove( "CLR_NO_COMPACT_WINDOW" )
     .output()
     .expect( "Failed to invoke clr binary" );
   assert!(
@@ -1021,7 +1030,7 @@ pub fn build_argv_tolerant_sleeper( sleep_secs : u64 ) -> ( tempfile::TempDir, S
 
 /// Extract the `pid` field from a slot-reservation file's JSON content
 /// (`{"pid":N,"since":M}` or, since BUG-488, `{"pid":N,"since":M,"starttime":S}`),
-/// written by `claim_slot_file()` in `src/cli/gate.rs`. The scan terminates at the
+/// written by `claim_slot_file()` in `src/cli/gate_slot.rs`. The scan terminates at the
 /// first `,` or `}` after the `pid` value, so the optional trailing `starttime`
 /// field never affects the result.
 ///

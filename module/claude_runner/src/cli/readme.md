@@ -9,6 +9,9 @@
 | `fence.rs` | `strip_fences` utility — outermost code-fence stripping for `--strip-fences`. |
 | `credential.rs` | `run_isolated_command`, `run_refresh_command`, credential trace emission. |
 | `gate.rs` | Session count check and blocking wait for concurrent-session limit. |
+| `gate_limits.rs` | Gate knob resolution and external deadline-budget clamping. |
+| `gate_slot.rs` | Atomic slot reservation, dead-owner reclaim, and denial causes. |
+| `gate_liveness.rs` | PID liveness and start-time incarnation checks via `/proc`. |
 | `ps.rs` | `clr ps` dispatch — active sessions and queued waiters in two plain-style tables. |
 | `help.rs` | Help text printing for all subcommands (clr, ask, isolated, refresh, scope). |
 | `execution.rs` | `run_print_mode`, `run_interactive`, timeout watchdog, expect validation, 3-tier retry resolution. |

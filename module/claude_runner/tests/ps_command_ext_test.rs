@@ -654,7 +654,7 @@ fn it_38_mode_query_filter_and_caption()
 // ── IT-35: slot reservation file survives a `clr ps` scan (BUG-387 follow-up) ──
 
 /// IT-35: a live BUG-387 slot reservation file (`slot_{n}.json`, written by
-/// `gate.rs::acquire_slot()`) must NOT be deleted by `clr ps`'s queued-table
+/// `gate_slot.rs::acquire_slot()`) must NOT be deleted by `clr ps`'s queued-table
 /// scan. Regression guard for a gap found during BUG-387's own MAAV
 /// validation: `build_queued_table()`'s liveness filter parses the gate
 /// file's *filename* as a PID (the `{pid}.json` convention used by queued-
