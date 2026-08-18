@@ -280,7 +280,7 @@ fn mre_bug221_save_some_creds_writes_to_store_not_live_file()
   std::fs::write( &live_file, b"original_live_creds" ).unwrap();
   let paths      = ClaudePaths::with_home( fake_home.path() );
 
-  account::save( "acct@test.com", store.path(), &paths, false, Some( b"new_creds_bytes" ), None, None, None, account::AccountBackend::Anthropic, None, None, None ).unwrap();
+  account::save( "acct@test.com", store.path(), &paths, false, Some( b"new_creds_bytes" ), None, None, None, account::AccountBackend::Anthropic, None, None, None, None ).unwrap();
 
   let store_file = store.path().join( "acct@test.com.credentials.json" );
   assert!( store_file.exists(), "save(Some(bytes)) must create the credential store file" );
@@ -314,7 +314,7 @@ fn mre_bug221_save_none_creds_copies_from_live_file()
   std::fs::write( &live_file, b"live_creds_content" ).unwrap();
   let paths      = ClaudePaths::with_home( fake_home.path() );
 
-  account::save( "acct@test.com", store.path(), &paths, false, None, None, None, None, account::AccountBackend::Anthropic, None, None, None ).unwrap();
+  account::save( "acct@test.com", store.path(), &paths, false, None, None, None, None, account::AccountBackend::Anthropic, None, None, None, None ).unwrap();
 
   let store_file = store.path().join( "acct@test.com.credentials.json" );
   assert!( store_file.exists(), "save(None) must create the credential store file" );
@@ -366,7 +366,7 @@ fn bug_reproducer_343_save_does_not_merge_live_identity_into_non_active_target()
   // save() invoked for a DIFFERENT, non-active account — the routine background-refresh
   // scenario per refresh_token_with_live_path (account.rs:1116-1118 at fix time; saves accounts that are
   // "NOT yet the active account").
-  account::save( "target@test.com", store.path(), &paths, false, Some( b"new_creds_bytes" ), None, None, None, account::AccountBackend::Anthropic, None, None, None ).unwrap();
+  account::save( "target@test.com", store.path(), &paths, false, Some( b"new_creds_bytes" ), None, None, None, account::AccountBackend::Anthropic, None, None, None, None ).unwrap();
 
   let meta_path = store.path().join( "target@test.com.json" );
   let meta_text = std::fs::read_to_string( &meta_path ).unwrap();

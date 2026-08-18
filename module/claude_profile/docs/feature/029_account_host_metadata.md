@@ -3,7 +3,7 @@
 ### Scope
 
 - **Purpose**: Allow accounts to carry host and role labels that identify which machine and workspace context each account belongs to, displayed in `.usage` via opt-in columns.
-- **Responsibility**: Documents the `host::` and `role::` parameters for `.account.save`, auto-capture of `$USER@<hostname>` at save time (hostname via syscall fallback chain), storage in the account profile, and the `cols::+host` / `cols::+role` display columns.
+- **Responsibility**: Documents the `host::` and `role::` parameters for `.account.save`, auto-capture of `$USER@<hostname>` at save time (hostname via syscall fallback chain), storage in the account profile, and the `cols::+host` / `cols::+role` display columns. The `role::` half is superseded (📋 planned) by the tag set — see [Feature 075](075_account_tags.md); `host::` is untouched.
 - **In Scope**: `host::` and `role::` params on `.account.save`, auto-capture from `$USER@<hostname>` when `host::` is omitted (hostname resolved via `resolve_hostname()` — same fallback chain as `active_marker_filename()`), storage in `{name}.json`, `host` and `role` columns in the `cols::` registry (off by default).
 - **Out of Scope**: Account switching (→ 004_account_use.md), column visibility mechanism (→ 033_cols.md), `.usage` row filtering (→ 028_usage_row_filtering.md), account ownership and access enforcement (→ 036_account_ownership.md — `owner` field is separate from `host` display label).
 
@@ -12,7 +12,7 @@
 When `.account.save` runs, it captures host metadata for the account being saved:
 
 - **`host::` param**: explicit machine/host label for this account. If omitted, auto-captured as `$USER@<hostname>` where hostname is resolved via `resolve_hostname()`: `$HOSTNAME` env var → `/etc/hostname` file → `"local"` fallback (same fallback chain as `active_marker_filename()` in Feature 025). The auto-captured value records which user on which machine was active when the account was saved — useful for identifying where an account is primarily used.
-- **`role::` param**: user-defined role label for this account (e.g., `work`, `personal`, `dev`, `staging`). If omitted, stored as empty string.
+- **`role::` param**: user-defined role label for this account (e.g., `work`, `personal`, `dev`, `staging`). If omitted, stored as empty string. 📋 planned ([Feature 075](075_account_tags.md)): this param is REMOVED — `.account.save role::` exits 1 naming `tags::`; a stored non-empty `role` converts to a tag and the field is removed on the account's first tag write; `cols::+role` remains as legacy display until that migration erases the field.
 
 Both values are written to `{credential_store}/{name}.json` as a JSON object:
 
@@ -56,6 +56,7 @@ This file is created or overwritten on every `save()` invocation (same idempoten
 | [009_token_usage.md](009_token_usage.md) | Base `.usage` rendering that gains `host`/`role` columns |
 | [025_per_machine_active_marker.md](025_per_machine_active_marker.md) | `resolve_hostname()` fallback chain shared with `active_marker_filename()` |
 | [028_usage_row_filtering.md](028_usage_row_filtering.md) | `get::host` and `get::role` field extraction |
+| [075_account_tags.md](075_account_tags.md) | Supersedes the `role` label with the tag set (📋 planned) — `role::` param REMOVED, lazy field migration; `host::` unaffected |
 
 ### Parameters
 

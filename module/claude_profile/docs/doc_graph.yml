@@ -1,12 +1,13 @@
 meta:
   description: Cross-reference graph for feature/ and invariant/ doc instances in claude_profile
-  node_count: 59
-  edge_count: 264
-  component_count: 2
-  generated: 2026-07-16
+  node_count: 65
+  edge_count: 295
+  component_count: 1
+  generated: 2026-08-18
   scope_note: >
     Covers feature/ and invariant/ cross-references only. CLI entities
-    (command, param, param_group, type, format, workflow_scenario) and
+    (command, param, param_group, type, format, workflow_scenario),
+    type/ (domain types), and
     research_interactive/ are excluded — their structure is captured in
     per-directory readmes, not cross-reference edges. Generic ❌-deprecated
     features (feature/008, feature/023, feature/069 — excluded from nodes: per the
@@ -249,6 +250,36 @@ nodes:
   - id: feature/070
     file: feature/070_account_claim_and_reservation_control.md
     label: Account Claim And Reservation Control
+    entity: feature
+
+  - id: feature/071
+    file: feature/071_redirect_backend_accounts.md
+    label: Redirect Backend Accounts
+    entity: feature
+
+  - id: feature/072
+    file: feature/072_inference_provider_selection.md
+    label: Inference Provider Selection
+    entity: feature
+
+  - id: feature/073
+    file: feature/073_kimi_provider_preset.md
+    label: Kimi Provider Preset
+    entity: feature
+
+  - id: feature/074
+    file: feature/074_cli_invocation_telemetry.md
+    label: CLI Invocation Telemetry
+    entity: feature
+
+  - id: feature/075
+    file: feature/075_account_tags.md
+    label: Account Tags
+    entity: feature
+
+  - id: feature/076
+    file: feature/076_identity_tag_filter.md
+    label: Identity Tag Filter
     entity: feature
 
   - id: invariant/001
@@ -796,6 +827,45 @@ edges:
 
   - {from: feature/036, to: feature/063, label: "owner:: set path; G8 gate; force:: bypass; owner::0 release sentinel via Feature 064"}
 
+  # ── features 071–076: redirect backend, provider selection, kimi preset, tags, identity filter ──
+
+  - {from: feature/029, to: feature/075, label: "role label superseded by tag set (lazy migration); host:: unaffected"}
+
+  - {from: feature/071, to: feature/002, label: "backend::redirect static-credential save path"}
+  - {from: feature/071, to: feature/004, label: ".account.use writes/clears settings.json env.* keys"}
+  - {from: feature/071, to: feature/006, label: "token classification gains static value"}
+  - {from: feature/071, to: feature/011, label: "by-name status surfaces static classification"}
+  - {from: feature/071, to: feature/012, label: "credentials.status gains backend field"}
+  - {from: feature/071, to: feature/013, label: "Anthropic-only guard rejects redirect accounts"}
+  - {from: feature/071, to: feature/017, label: "refresh_account_token() redirect no-op bypass"}
+  - {from: feature/071, to: feature/024, label: "touch subprocess skipped for redirect targets"}
+  - {from: feature/071, to: feature/027, label: "pre_switch_touch_ctx() redirect backend check"}
+  - {from: feature/071, to: feature/031, label: "inspect shares the Anthropic-only guard"}
+  - {from: feature/071, to: feature/034, label: "apply_model_override() redirect no-op bypass"}
+
+  - {from: feature/072, to: feature/002, label: "inference_provider:: write path at save"}
+  - {from: feature/072, to: feature/003, label: "inference_provider default identity column"}
+  - {from: feature/072, to: feature/029, label: "sibling free-form metadata-label pattern"}
+  - {from: feature/072, to: feature/035, label: ".model scope::subprocess config.toml sibling"}
+  - {from: feature/072, to: feature/070, label: "Gate 9 precedent that Gate 10 mirrors"}
+  - {from: feature/072, to: feature/071, label: "backend field orthogonal to inference_provider"}
+  - {from: feature/072, to: feature/076, label: "Gate 11 sibling which-pool gate after Gate 10"}
+
+  - {from: feature/073, to: feature/071, label: "extends env.* write/clear with 7 Kimi-tier vars"}
+  - {from: feature/073, to: feature/072, label: "exact-match kimi inference_provider gate"}
+
+  - {from: feature/075, to: feature/029, label: "supersedes the role label; host:: untouched"}
+  - {from: feature/075, to: feature/037, label: "opt-in tags column joins unified cols:: registry"}
+  - {from: feature/075, to: feature/070, label: "ungated metadata write precedent (lock::/reserve::)"}
+  - {from: feature/075, to: feature/072, label: "sibling save-time label; Gate 10 vs Gate 11 orthogonal"}
+  - {from: feature/075, to: feature/076, label: "companion — filters consume tag sets via Gate 11"}
+
+  - {from: feature/076, to: feature/025, label: "reuses active-marker filename sanitization convention"}
+  - {from: feature/076, to: feature/038, label: "rotate::1 selection path Gate 11 binds"}
+  - {from: feature/076, to: feature/070, label: "Gate 9 contrast: who-may-act vs which-pool"}
+  - {from: feature/076, to: feature/072, label: "Gate 10 doctrine Gate 11 mirrors; automatic selection only"}
+  - {from: feature/076, to: feature/075, label: "companion — account-side tag sets this filter evaluates"}
+
   - {from: invariant/002, to: feature/010, label: "$USERPROFILE fallback for Windows"}
 
   - {from: invariant/004, to: invariant/008, label: "related boundary: single entry point for token refresh delegates to run_isolated() in claude_runner_core"}
@@ -805,7 +875,7 @@ edges:
 
 components:
   - id: 1
-    size: 58
+    size: 65
     isolated: false
     nodes:
       - feature/001
@@ -813,6 +883,7 @@ components:
       - feature/003
       - feature/004
       - feature/005
+      - feature/006
       - feature/007
       - feature/009
       - feature/010
@@ -854,6 +925,12 @@ components:
       - feature/067
       - feature/068
       - feature/070
+      - feature/071
+      - feature/072
+      - feature/073
+      - feature/074
+      - feature/075
+      - feature/076
       - invariant/001
       - invariant/002
       - invariant/003
@@ -867,20 +944,11 @@ components:
       - invariant/011
       - invariant/012
 
-  - id: 2
-    size: 1
-    isolated: true
-    nodes: [feature/006]
-    gap: >
-      Token Status's only declared cross-reference is to feature/008 (Auto Rotate), which
-      is generic ❌-deprecated and excluded from nodes: per Convention A (entity/readme.md
-      § Instances convention). With that target removed, feature/006 has zero remaining
-      edges to any live node — no other feature or invariant doc references
-      006_token_status.md from its own "### Features"/"### Invariants" table (the only
-      other mention, in feature/003's "Out of Scope" line, is prose, not a declared
-      cross-reference). Isolation is a real, current gap, not a stale artifact — a future
-      feature or invariant doc that formally cross-references token status detection logic
-      (e.g. from feature/009 or feature/017, which both implement token-status-adjacent
-      behavior) would resolve it, but none currently does.
+    note: >
+      feature/006 (Token Status) was previously an isolated component (its only declared
+      cross-reference targeted ❌-deprecated feature/008, excluded from nodes: per
+      Convention A). Resolved by feature/071 (Redirect Backend Accounts), whose "###
+      Features" table formally references 006 — token classification gains the `static`
+      value — giving 006 a live in-edge and merging the graph into one component.
 
 dangling_refs: []

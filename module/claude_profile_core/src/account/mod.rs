@@ -9,10 +9,15 @@
 //!   alice@home.com.credentials.json
 //!   alice@home.com.json
 //!   _active_w003_user1                ← text: name of active account (per-machine)
+//!   _filter_w003_user1                ← JSON: per-identity include/exclude tag filter
 //! ```
 //!
 //! The active marker filename is `_active_{hostname}_{user}` (see [`active_marker_filename`]).
 //! Each machine maintains its own marker independently; add `_active_*` to `.gitignore`.
+//!
+//! The tag filter filename is `_filter_{hostname}_{user}` — the same slug (see
+//! [`filter_filename`]). Unlike the marker it is deliberately NOT gitignored: the
+//! filter syncs with the store so it can be administered centrally (Feature 076).
 //!
 //! # Examples
 //!
@@ -34,7 +39,7 @@
 //! // Save current credentials as "alice@acme.com"
 //! account::save(
 //!   "alice@acme.com", credential_store, &paths, true, None, None, None, None,
-//!   account::AccountBackend::Anthropic, None, None, None,
+//!   account::AccountBackend::Anthropic, None, None, None, None,
 //! ).expect( "failed to save" );
 //!
 //! // Switch to "alice@home.com"
@@ -55,6 +60,8 @@ mod renewal;
 mod json_field;
 mod quota_cache;
 mod history;
+mod tags;
+mod filter;
 
 pub use types::*;
 pub use store::*;
@@ -67,6 +74,8 @@ pub use renewal::*;
 pub use json_field::*;
 pub use quota_cache::*;
 pub use history::*;
+pub use tags::*;
+pub use filter::*;
 
 // Canonical implementations live in claude_core::time (identical bodies were
 // previously duplicated here); re-exported to preserve the public paths

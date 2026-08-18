@@ -152,7 +152,7 @@ fn test_mre_bug211_save_false_leaves_marker_unchanged()
 
   let paths = ClaudePaths::with_home( tmp.path() );
 
-  account::save( "alice@test.com", &store, &paths, false, None, None, None, None, account::AccountBackend::Anthropic, None, None, None ).unwrap();
+  account::save( "alice@test.com", &store, &paths, false, None, None, None, None, account::AccountBackend::Anthropic, None, None, None, None ).unwrap();
 
   let marker = store.join( account::active_marker_filename() );
   assert!(
@@ -272,7 +272,7 @@ fn as_save_writes_active_marker()
 
   let paths = ClaudePaths::with_home( tmp.path() );
 
-  account::save( "alice@acme.com", &store, &paths, true, None, None, None, None, account::AccountBackend::Anthropic, None, None, None ).unwrap();
+  account::save( "alice@acme.com", &store, &paths, true, None, None, None, None, account::AccountBackend::Anthropic, None, None, None, None ).unwrap();
 
   let marker_name = account::active_marker_filename();
   let active = std::fs::read_to_string( store.join( &marker_name ) )
@@ -338,7 +338,7 @@ fn mre_bug222_save_captures_model_to_settings_snapshot()
   std::fs::write( dot_claude.join( "settings.json" ), r#"{"model":"claude-opus-4-5","theme":"dark"}"# ).unwrap();
 
   let paths = ClaudePaths::with_home( tmp.path() );
-  account::save( "alice@test.com", &store, &paths, false, None, None, None, None, account::AccountBackend::Anthropic, None, None, None ).unwrap();
+  account::save( "alice@test.com", &store, &paths, false, None, None, None, None, account::AccountBackend::Anthropic, None, None, None, None ).unwrap();
 
   let snap_path = store.join( "alice@test.com.json" );
   assert!( snap_path.exists(), "save() must create {{name}}.json when model is present in live settings" );
@@ -374,7 +374,7 @@ fn mre_bug222_save_no_model_does_not_write_settings_snapshot()
   let paths = ClaudePaths::with_home( tmp.path() );
   account::save(
     "bob@test.com", &store, &paths, false, None, None, None, None,
-    account::AccountBackend::Anthropic, None, None, None,
+    account::AccountBackend::Anthropic, None, None, None, None,
   ).unwrap();
 
   let snap_content = std::fs::read_to_string( store.join( "bob@test.com.json" ) )
@@ -574,7 +574,7 @@ fn save_writes_credential_file_owner_only()
   std::fs::write( &dest, r#"{"accessToken":"old"}"# ).unwrap();
   std::fs::set_permissions( &dest, std::fs::Permissions::from_mode( 0o644 ) ).unwrap();
 
-  account::save( "alice@test.com", &store, &paths, false, None, None, None, None, account::AccountBackend::Anthropic, None, None, None ).unwrap();
+  account::save( "alice@test.com", &store, &paths, false, None, None, None, None, account::AccountBackend::Anthropic, None, None, None, None ).unwrap();
 
   let mode = std::fs::metadata( &dest ).unwrap().permissions().mode() & 0o777;
   assert_eq!( mode, 0o600, "store credential file must be 0600, got {mode:o}" );

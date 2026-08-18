@@ -7,6 +7,7 @@ use super::types::{ Account, AccountBackend };
 use super::validate::{ credential_stem, validate_name, validate_name_for_save };
 use super::ownership::{ active_marker_filename, all_marker_files, current_identity, read_active_marker };
 use super::json_field::{ parse_bool_field, parse_string_array_field, parse_string_field, parse_u64_field };
+use super::tags::{ TagOp, apply_tag_write, normalize_tag_set };
 
 /// List all accounts in `credential_store`.
 ///
@@ -62,6 +63,7 @@ pub fn list( credential_store : &Path ) -> Result< Vec< Account >, std::io::Erro
     let workspace_name    = parse_string_field( &meta_json, "workspace_name"    ).unwrap_or_default();
     let host         = parse_string_field( &meta_json, "host"       ).unwrap_or_default();
     let role         = parse_string_field( &meta_json, "role"       ).unwrap_or_default();
+    let tags         = parse_string_array_field( &meta_json, "tags" );
     let owner        = parse_string_field( &meta_json, "owner"      ).unwrap_or_default();
     let is_owned     = owner.is_empty() || owner == identity;
     let claim_lock   = parse_bool_field( &meta_json, "claim_lock" ).unwrap_or( false );
@@ -93,6 +95,7 @@ pub fn list( credential_store : &Path ) -> Result< Vec< Account >, std::io::Erro
       workspace_name,
       host,
       role,
+      tags,
       owner,
       is_owned,
       claim_lock,
@@ -204,12 +207,19 @@ pub fn lock_store( credential_store : &Path ) -> Result< StoreLock, std::io::Err
 /// - `Some(s)` — writes `s` as the selected provider (`.provider.select` only).
 /// - `None` — preserves existing `inference_provider` field unchanged (all other callers).
 ///
+/// `tags` sets the `tags` array in `{name}.json` (Feature 075):
+/// - `Some(list)` — a tag write with replace semantics: the list is normalized
+///   (lowercased, validated, deduplicated, sorted) and overwrites the stored set;
+///   the lazy `role` migration applies in the same merge (see `tags::apply_tag_write`).
+/// - `None` — preserves the existing `tags` array unchanged (every non-tag caller).
+///
 /// # Errors
 ///
-/// Returns an error if the name is invalid, the credentials file cannot be
-/// read, or the credential store cannot be written.
+/// Returns an error if the name is invalid, a given tag is invalid (rejected
+/// before any file write), the credentials file cannot be read, or the
+/// credential store cannot be written.
 #[ inline ]
-#[ allow( clippy::too_many_arguments ) ] // 9th-12th params `backend`/`base_url`/`redirect_model`/`inference_provider` added by Features 071/072 — all args are independent concerns.
+#[ allow( clippy::too_many_arguments ) ] // 9th-13th params `backend`/`base_url`/`redirect_model`/`inference_provider`/`tags` added by Features 071/072/075 — all args are independent concerns.
 #[ allow( clippy::too_many_lines ) ] // Feature 071's backend-gated branches extend a single coherent capture→merge→write sequence — splitting would fragment closely-threaded local state.
 pub fn save(
   name               : &str,
@@ -224,11 +234,15 @@ pub fn save(
   base_url           : Option< &str >,
   redirect_model     : Option< &str >,
   inference_provider : Option< &str >,
+  tags               : Option< &[ String ] >,
 ) -> Result< (), std::io::Error >
 {
   // `_lock` must be a named binding — `let _ =` would drop (and release) immediately.
   let _lock = lock_store( credential_store )?;
   validate_name_for_save( name, backend, credential_store )?;
+  // Feature 075/AC-02: validate tags BEFORE any file write — a rejected tag
+  // must leave the store byte-identical, including the credentials file below.
+  let tags = tags.map( normalize_tag_set ).transpose()?;
   std::fs::create_dir_all( credential_store )?;
   let dest = credential_store.join( format!( "{name}.credentials.json" ) );
   // Fix(audit-credential-file-perms): every store credential write goes through
@@ -377,6 +391,12 @@ pub fn save(
     if let Some( p ) = inference_provider
     {
       obj.insert( "inference_provider".to_string(), serde_json::Value::String( p.to_string() ) );
+    }
+    // `tags` — write-through when Some (a tag write: replace semantics + lazy `role`
+    // migration in the same merge); None preserves the stored set — Feature 075.
+    if let Some( t ) = &tags
+    {
+      apply_tag_write( obj, &TagOp::Replace( t.clone() ) )?;
     }
   }
   // {name}.json is now always non-empty (backend is always inserted above, Feature 071/AC-04) —

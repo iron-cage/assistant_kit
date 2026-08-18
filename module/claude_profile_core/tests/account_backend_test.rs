@@ -161,7 +161,7 @@ fn ft04_071_save_redirect_writes_minimal_credentials_and_metadata()
   account::save(
     "redirect@foreign.com", &store, &paths, false,
     Some( b"sk-foreign-key-abc123" ), None, None, None,
-    account::AccountBackend::Redirect, Some( "https://foreign.example.com" ), Some( "foreign-model-x" ), None,
+    account::AccountBackend::Redirect, Some( "https://foreign.example.com" ), Some( "foreign-model-x" ), None, None,
   ).unwrap();
 
   let creds_content = std::fs::read_to_string( store.join( "redirect@foreign.com.credentials.json" ) )
@@ -211,7 +211,7 @@ fn ft05_071_save_redirect_never_touches_live_credentials_file()
   account::save(
     "redirect@foreign.com", &store, &paths, false,
     Some( b"sk-foreign-key-abc123" ), None, None, None,
-    account::AccountBackend::Redirect, Some( "https://foreign.example.com" ), Some( "foreign-model-x" ), None,
+    account::AccountBackend::Redirect, Some( "https://foreign.example.com" ), Some( "foreign-model-x" ), None, None,
   ).unwrap();
 
   let live_content = std::fs::read_to_string( dot_claude.join( ".credentials.json" ) )
@@ -240,7 +240,7 @@ fn ft06_071_save_default_anthropic_writes_backend_field()
   let paths = ClaudePaths::with_home( tmp.path() );
   account::save(
     "alice@test.com", &store, &paths, false, None, None, None, None,
-    account::AccountBackend::Anthropic, None, None, None,
+    account::AccountBackend::Anthropic, None, None, None, None,
   ).unwrap();
 
   let creds_content = std::fs::read_to_string( store.join( "alice@test.com.credentials.json" ) )
@@ -443,7 +443,7 @@ fn ft01_072_save_some_inference_provider_writes_field()
   let paths = ClaudePaths::with_home( tmp.path() );
   account::save(
     "alice@test.com", &store, &paths, false, None, None, None, None,
-    account::AccountBackend::Anthropic, None, None, Some( "kimi" ),
+    account::AccountBackend::Anthropic, None, None, Some( "kimi" ), None,
   ).unwrap();
 
   let meta_content = std::fs::read_to_string( store.join( "alice@test.com.json" ) )
@@ -471,13 +471,13 @@ fn ft02_072_save_none_inference_provider_preserves_existing()
   let paths = ClaudePaths::with_home( tmp.path() );
   account::save(
     "alice@test.com", &store, &paths, false, None, None, None, None,
-    account::AccountBackend::Anthropic, None, None, Some( "kimi" ),
+    account::AccountBackend::Anthropic, None, None, Some( "kimi" ), None,
   ).unwrap();
 
   // Second save with inference_provider: None — must not clobber the existing value.
   account::save(
     "alice@test.com", &store, &paths, false, None, None, None, None,
-    account::AccountBackend::Anthropic, None, None, None,
+    account::AccountBackend::Anthropic, None, None, None, None,
   ).unwrap();
 
   let meta_content = std::fs::read_to_string( store.join( "alice@test.com.json" ) )
@@ -507,7 +507,7 @@ fn ft03_072_save_none_inference_provider_no_prior_key_writes_no_key()
   let paths = ClaudePaths::with_home( tmp.path() );
   account::save(
     "alice@test.com", &store, &paths, false, None, None, None, None,
-    account::AccountBackend::Anthropic, None, None, None,
+    account::AccountBackend::Anthropic, None, None, None, None,
   ).unwrap();
 
   let meta_content = std::fs::read_to_string( store.join( "alice@test.com.json" ) )

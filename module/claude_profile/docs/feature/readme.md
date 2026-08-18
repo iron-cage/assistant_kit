@@ -4,7 +4,7 @@
 
 - **Purpose**: Defines the functional capabilities of `claude_profile` — account credential management and the `clp` CLI.
 - **Responsibility**: Documents all functional requirements with their design, acceptance criteria, and test references.
-- **In Scope**: feature/001 through feature/040, feature/061 through feature/073 — full functional capability set for claude_profile and the clp CLI.
+- **In Scope**: feature/001 through feature/040, feature/061 through feature/076 — full functional capability set for claude_profile and the clp CLI.
 - **Out of Scope**: Quality constraints (→ invariant/), CLI design (→ cli/).
 
 ### Overview Table
@@ -66,6 +66,8 @@
 | 072 | [Inference Provider Selection](072_inference_provider_selection.md) | `inference_provider` account field; `.provider.select` global config command; Gate 10 unconditional rotation exclusion on provider mismatch | 🔄 |
 | 073 | [Kimi Provider Preset](073_kimi_provider_preset.md) | `preset::kimi` convenience param on `.account.save` (pre-fills `backend::`/`base_url::`/`inference_provider::`); 7 additional Kimi-tier `settings.json` env vars written by `switch_account()` when `inference_provider == "kimi"` | 🔄 |
 | 074 | [CLI Invocation Telemetry](074_cli_invocation_telemetry.md) | `run_cli()` appends one redacted `Command` event to the `claude_journal` log per invocation; `cli::run()` returns `i32` instead of calling `std::process::exit` internally so the real exit code can be observed and logged | ✅ |
+| 075 | [Account Tags](075_account_tags.md) | `tags` set in `{name}.json`; `.account.save tags::`, `.account.tag` mutation command, `.tags` listing, `.accounts tags::` filter, `cols::+tags`; supersedes `role::` with lazy migration | 📋 |
+| 076 | [Identity Tag Filter](076_identity_tag_filter.md) | Per-Identity `_filter_{machine}_{user}` include/exclude tag sets; `.identity.filter` get/set/clear; `.identities` listing; Gate 11 unconditional rotation exclusion; loud exclusion reporting | 📋 |
 
 ### Organization
 

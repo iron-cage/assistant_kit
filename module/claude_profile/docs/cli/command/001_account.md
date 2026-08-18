@@ -1,15 +1,15 @@
 # Commands: Account
 
-Account management commands: list, save, use, delete, limits, and relogin.
+Account management commands: list, save, use, delete, limits, relogin, and tag.
 
 ---
 
 ### Command: 3. `.accounts`
 
-List all saved accounts (identity view) or run per-account mutations (`assignee::USER@MACHINE`, `owner::0`, `owner::USER@MACHINE`, `lock::0`/`lock::1`, `reserve::0`/`reserve::1`). Without `name::`: shows all accounts; with `name::EMAIL`: shows that account only. Column visibility controlled via `cols::` (modifies from default identity set: Account, Owner, Active, Current, Sub, Tier, Expires, Email, Provider). When data-source params are active (`refresh::1`, `touch::1`), fetches live quota using the same pipeline as `.usage` — defaults to local-only read with no HTTP fetch.
+List all saved accounts (identity view) or run per-account mutations (`assignee::USER@MACHINE`, `owner::0`, `owner::USER@MACHINE`, `lock::0`/`lock::1`, `reserve::0`/`reserve::1`). Without `name::`: shows all accounts; with `name::EMAIL`: shows that account only; with `tags::a,b` (📋 planned, [feature/075](../../feature/075_account_tags.md)): only accounts carrying **all** listed tags. Column visibility controlled via `cols::` (modifies from default identity set: Account, Owner, Active, Current, Sub, Tier, Expires, Email, Provider). When data-source params are active (`refresh::1`, `touch::1`), fetches live quota using the same pipeline as `.usage` — defaults to local-only read with no HTTP fetch.
 
--- **Parameters:** [`name::`](../param/001_name.md) *(optional)*, [`cols::`](../param/033_cols.md), [`assignee::`](../param/063_assignee.md), [`owner::`](../param/062_owner.md), [`lock::`](../param/067_lock.md), [`reserve::`](../param/068_reserve.md), [`force::`](../param/058_force.md), [`dry::`](../param/004_dry.md), [`set_model::`](../param/054_set_model.md), [`refresh::`](../param/019_refresh.md), [`touch::`](../param/034_touch.md), [`imodel::`](../param/035_imodel.md), [`effort::`](../param/036_effort.md), [`sort::`](../param/025_sort.md), [`desc::`](../param/026_desc.md), [`prefer::`](../param/027_prefer.md), [`count::`](../param/037_count.md), [`offset::`](../param/038_offset.md), [`only_active::`](../param/039_only_active.md), [`only_next::`](../param/040_only_next.md), [`min_5h::`](../param/041_min_5h.md), [`min_7d::`](../param/042_min_7d.md), [`only_valid::`](../param/043_only_valid.md), [`exclude_exhausted::`](../param/044_exclude_exhausted.md), [`get::`](../param/045_get.md), [`no_color::`](../param/047_no_color.md), [`live::`](../param/020_live.md), [`interval::`](../param/021_interval.md), [`jitter::`](../param/022_jitter.md), [`format::`](../param/002_format.md), [`trace::`](../param/023_trace.md)
--- **Exit:** 0 (success) | 1 (usage: invalid `name::` chars, legacy field-toggle param used, unknown `cols::` id, REMOVED_TOGGLE param used (`assign::`, `for::`, `unclaim::`, `active::`) — exits 1 with migration message, G8 ownership violation on `owner::0` or `owner::USER@MACHINE`, G9 claim-lock violation on `assignee::` target-side) | 2 (runtime: account not found or credential store unreadable)
+-- **Parameters:** [`name::`](../param/001_name.md) *(optional)*, [`cols::`](../param/033_cols.md), [`tags::`](../param/082_tags.md) *(📋 planned)*, [`assignee::`](../param/063_assignee.md), [`owner::`](../param/062_owner.md), [`lock::`](../param/067_lock.md), [`reserve::`](../param/068_reserve.md), [`force::`](../param/058_force.md), [`dry::`](../param/004_dry.md), [`set_model::`](../param/054_set_model.md), [`refresh::`](../param/019_refresh.md), [`touch::`](../param/034_touch.md), [`imodel::`](../param/035_imodel.md), [`effort::`](../param/036_effort.md), [`sort::`](../param/025_sort.md), [`desc::`](../param/026_desc.md), [`prefer::`](../param/027_prefer.md), [`count::`](../param/037_count.md), [`offset::`](../param/038_offset.md), [`only_active::`](../param/039_only_active.md), [`only_next::`](../param/040_only_next.md), [`min_5h::`](../param/041_min_5h.md), [`min_7d::`](../param/042_min_7d.md), [`only_valid::`](../param/043_only_valid.md), [`exclude_exhausted::`](../param/044_exclude_exhausted.md), [`get::`](../param/045_get.md), [`no_color::`](../param/047_no_color.md), [`live::`](../param/020_live.md), [`interval::`](../param/021_interval.md), [`jitter::`](../param/022_jitter.md), [`format::`](../param/002_format.md), [`trace::`](../param/023_trace.md)
+-- **Exit:** 0 (success) | 1 (usage: invalid `name::` chars, legacy field-toggle param used, unknown `cols::` id, invalid `tags::` item (📋 planned), REMOVED_TOGGLE param used (`assign::`, `for::`, `unclaim::`, `active::`) — exits 1 with migration message, G8 ownership violation on `owner::0` or `owner::USER@MACHINE`, G9 claim-lock violation on `assignee::` target-side) | 2 (runtime: account not found or credential store unreadable)
 
 **Syntax:**
 
@@ -22,6 +22,8 @@ clp .accounts cols::+host,-tier                      # add host column, remove t
 clp .accounts cols::-owner                            # hide owner column
 clp .accounts cols::-inference_provider               # hide inference provider column
 clp .accounts cols::+backend                          # show backend column (anthropic/redirect)
+clp .accounts tags::kimi_pool                         # only accounts carrying kimi_pool (📋 planned)
+clp .accounts tags::kimi_pool,ci cols::+tags          # all listed tags required; show Tags column (📋 planned)
 clp .accounts assignee::user1@w003 name::alice@acme.com  # write per-machine marker for alice
 clp .accounts assignee::0 name::alice@acme.com           # write marker for current machine
 clp .accounts assignee::user1@w003                       # unassign (clear) marker for user1@w003
@@ -42,7 +44,8 @@ clp .accounts format::table
 | Parameter | Type | Default | Purpose |
 |-----------|------|---------|---------|
 | `name::` | [`AccountName`](../type/001_account_name.md) | *(omit to list all)* | Show or operate on a single named account; prefix resolution supported |
-| `cols::` | `string` | `""` | Column visibility modifiers: comma-separated `+col_id` / `-col_id` relative to identity default set (`account`, `owner`, `active`, `current`, `sub`, `tier`, `expires`, `email`, `inference_provider`); opt-in: `display_name`, `host`, `role`, `billing`, `model`, `uuid`, `capabilities`, `org_uuid`, `org_name`, `backend` |
+| `cols::` | `string` | `""` | Column visibility modifiers: comma-separated `+col_id` / `-col_id` relative to identity default set (`account`, `owner`, `active`, `current`, `sub`, `tier`, `expires`, `email`, `inference_provider`); opt-in: `display_name`, `host`, `role`, `billing`, `model`, `uuid`, `capabilities`, `org_uuid`, `org_name`, `backend`; 📋 planned: `tags` |
+| `tags::` 📋 | `string` | *(omit)* | Subset row filter: show only accounts whose tag set contains **all** listed tags (comma-separated); planned — [feature/075](../../feature/075_account_tags.md) |
 | `assignee::` | `string` (`USER@MACHINE` or `0`) | *(omit)* | When `name::` present: write per-machine marker `_active_{machine}_{user}` = `{name}`. When `name::` absent: clear marker for the given identity. Value `"0"` expands to `$USER@$HOSTNAME` (current machine). Value sanitized per `active_marker_filename()` rules (Feature 065; renamed from `active::`) |
 | `owner::` | `string` | *(omit)* | `owner::0`: clear ownership via `write_owner(name, store, "")`; G8 gate runs before write even when `dry::1`; when `name::` absent, batch-clears all owned accounts in filtered set. `owner::USER@MACHINE`: set owner; G8 gate; `name::` required (comma-list `X,Y,Z` supported). Feature 063/064. |
 | `lock::` | `bool` | `0` | Set/clear `claim_lock` in `{name}.json`; ungated write (no ownership check); comma-list `name::X,Y,Z` batch; absent `name::` batch-applies to filtered set. Gates Gate 9 (eligibility, unconditional) and G9 (`.account.use`/`assignee::` target-side, `force::1`-bypassable). Feature 070. |
@@ -120,21 +123,22 @@ clp .accounts assignee::bob@laptop name::alice@acme.com
 - `lock::` and `reserve::` writes are ungated (no ownership check) — any caller may lock/unlock or reserve/unreserve any account. `claim_lock` gates selection elsewhere (Gate 9 in `find_next_for_strategy()`, unconditional; G9 on `.account.use`/`assignee::` target-side, `force::1`-bypassable); `reserve` only reorders (leading sort key), never excludes. See [Feature 070](../../feature/070_account_claim_and_reservation_control.md).
 - `cols::+backend` shows each account's `backend` field (`anthropic`/`redirect`); `format::json` always includes `backend` regardless of `cols::`. See [Feature 071](../../feature/071_redirect_backend_accounts.md).
 - `inference_provider` is in the identity default set — shows the account's tagged inference provider (`anthropic` when never explicitly tagged via `.account.save inference_provider::`). Hide with `cols::-inference_provider`. Distinct from `backend`: `inference_provider` groups accounts for rotation eligibility (see [algorithm/004](../../algorithm/004_eligibility_gates.md) Gate 10); `backend` selects the credential/routing mechanism (Feature 071). See [Feature 072](../../feature/072_inference_provider_selection.md).
+- 📋 planned ([Feature 075](../../feature/075_account_tags.md)): `tags::a,b` filters rows to accounts whose tag set contains all listed tags (an invalid tag item exits 1); text mode adds a `Tags:` line (comma-joined, sorted) only for accounts carrying ≥1 tag; `format::json` always includes the `tags` array; `cols::+tags` adds an opt-in Tags column.
 
 **Help Rendering Scheme:**
 
-`.accounts.help` renders the 31 parameters above as 6 presentation groups — a command-specific rendering taxonomy, distinct from the 4 `param_group/` cross-command semantic groups referenced below (see [pattern/001_grouped_help_rendering.md](../../pattern/001_grouped_help_rendering.md) for why these differ):
+`.accounts.help` renders the 32 parameters above as 6 presentation groups — a command-specific rendering taxonomy, distinct from the 4 `param_group/` cross-command semantic groups referenced below (see [pattern/001_grouped_help_rendering.md](../../pattern/001_grouped_help_rendering.md) for why these differ):
 
 | Group | Parameters |
 |-------|-----------|
 | Core | `name::`, `format::`, `dry::` |
 | Account Ownership | `owner::`, `assignee::`, `lock::`, `reserve::`, `force::` |
 | Sort Control | `sort::`, `desc::`, `prefer::` |
-| Row Filtering & Pagination | `cols::`, `count::`, `offset::`, `only_active::`, `only_next::`, `only_valid::`, `exclude_exhausted::`, `min_5h::`, `min_7d::` |
+| Row Filtering & Pagination | `cols::`, `tags::` (📋), `count::`, `offset::`, `only_active::`, `only_next::`, `only_valid::`, `exclude_exhausted::`, `min_5h::`, `min_7d::` |
 | Display Rendering | `no_color::`, `get::` |
 | Refresh & Subprocess Control | `trace::`, `refresh::`, `touch::`, `imodel::`, `effort::`, `set_model::`, `live::`, `interval::`, `jitter::` |
 
-Each group header renders bold/colored with no bracket punctuation on a TTY, falling back to a single trailing colon (e.g. `Core:`) in plain text. Every boolean parameter's signature is shown bare (`dry::0`, never `dry::0|1`); accepted values and the default are stated once in a blanket line rather than per row. Enum-valued parameters (`imodel::`, `effort::`, `set_model::`, `format::`, `sort::`, `prefer::`) show an uppercase placeholder in the signature (e.g. `imodel::MODEL`) with actual values spelled out in the description column. The name / `::` / value signature sub-columns are independently padded so the `::` delimiter aligns vertically across all 31 rows. No version banner and no information about REMOVED parameters appear in `.accounts.help` output — the REMOVED_TOGGLE stubs (`assign::`, `for::`, `unclaim::`, `active::`) keep their existing runtime redirect-error behavior (see Notes above); they are simply invisible from `.help` text. Full rationale and general rendering rules: [pattern/001_grouped_help_rendering.md](../../pattern/001_grouped_help_rendering.md).
+Each group header renders bold/colored with no bracket punctuation on a TTY, falling back to a single trailing colon (e.g. `Core:`) in plain text. Every boolean parameter's signature is shown bare (`dry::0`, never `dry::0|1`); accepted values and the default are stated once in a blanket line rather than per row. Enum-valued parameters (`imodel::`, `effort::`, `set_model::`, `format::`, `sort::`, `prefer::`) show an uppercase placeholder in the signature (e.g. `imodel::MODEL`) with actual values spelled out in the description column. The name / `::` / value signature sub-columns are independently padded so the `::` delimiter aligns vertically across all 32 rows. No version banner and no information about REMOVED parameters appear in `.accounts.help` output — the REMOVED_TOGGLE stubs (`assign::`, `for::`, `unclaim::`, `active::`) keep their existing runtime redirect-error behavior (see Notes above); they are simply invisible from `.help` text. Full rationale and general rendering rules: [pattern/001_grouped_help_rendering.md](../../pattern/001_grouped_help_rendering.md).
 
 ### Referenced Command Group
 
@@ -175,6 +179,7 @@ Evaluated against `.usage` under the strict [command_group](../command_group/rea
 | 29 | [`jitter::`](../param/022_jitter.md) | Random jitter added to interval |
 | 30 | [`format::`](../param/002_format.md) | Output serialization format |
 | 31 | [`trace::`](../param/023_trace.md) | Diagnostic trace output |
+| 32 | [`tags::`](../param/082_tags.md) | Tag subset row filter (📋 planned) |
 
 ### Referenced Features
 
@@ -194,6 +199,7 @@ Evaluated against `.usage` under the strict [command_group](../command_group/rea
 | 12 | [Account Claim And Reservation Control](../../feature/070_account_claim_and_reservation_control.md) | `lock::`/`reserve::` mutation params; Gate 9 and G9 `claim_lock` gates; `reserve` leading sort key |
 | 13 | [Redirect Backend Accounts](../../feature/071_redirect_backend_accounts.md) | `cols::+backend` column showing `anthropic`/`redirect` per account |
 | 14 | [Inference Provider Selection](../../feature/072_inference_provider_selection.md) | `inference_provider` default identity column; Gate 10 rotation constraint |
+| 15 | [Account Tags](../../feature/075_account_tags.md) | `tags::` subset filter; `Tags:` line; `cols::+tags` column (📋 planned) |
 
 ### Referenced User Stories
 
@@ -232,8 +238,8 @@ Evaluated against `.usage` under the strict [command_group](../command_group/rea
 
 Copies `~/.claude/.credentials.json` to `{credential_store}/{name}.credentials.json` and merges identity, model, roles, and profile metadata into the unified `{name}.json`. Machine-global state (`commands.*`, `mcpServers`, `projects`) is not captured. Use this to preserve account identity before switching. When `backend::redirect`, a different write path applies instead: no OAuth capture — `{name}.credentials.json` is written directly from `api_key::`, and `base_url`/`redirect_model` are stored in `{name}.json` alongside `backend` (see [feature/071](../../feature/071_redirect_backend_accounts.md)). `preset::kimi` pre-fills `backend::`/`base_url::`/`inference_provider::` for a Moonshot Kimi redirect account, so only `name::`, `api_key::`, and `redirect_model::` need to be given explicitly (see [feature/073](../../feature/073_kimi_provider_preset.md)).
 
--- **Parameters:** [`name::`](../param/001_name.md), [`dry::`](../param/004_dry.md), [`host::`](../param/048_host.md), [`role::`](../param/052_role.md), [`inference_provider::`](../param/073_inference_provider.md), [`trace::`](../param/023_trace.md), [`backend::`](../param/069_backend.md), [`preset::`](../param/074_preset.md), [`base_url::`](../param/070_base_url.md), [`api_key::`](../param/071_api_key.md), [`redirect_model::`](../param/072_redirect_model.md)
--- **Exit:** 0 (success) | 1 (usage: invalid name or no active account set; empty `inference_provider::` value; invalid `backend::` value; unrecognized `preset::` value (only `kimi` is recognized); `backend::redirect` missing one of `base_url::`/`api_key::`/`redirect_model::`; any of those three present with `backend::anthropic` or omitted `backend::`) | 2 (runtime: credentials unreadable)
+-- **Parameters:** [`name::`](../param/001_name.md), [`dry::`](../param/004_dry.md), [`host::`](../param/048_host.md), [`tags::`](../param/082_tags.md) *(📋 planned; replaces the REMOVED `role::`)*, [`inference_provider::`](../param/073_inference_provider.md), [`trace::`](../param/023_trace.md), [`backend::`](../param/069_backend.md), [`preset::`](../param/074_preset.md), [`base_url::`](../param/070_base_url.md), [`api_key::`](../param/071_api_key.md), [`redirect_model::`](../param/072_redirect_model.md)
+-- **Exit:** 0 (success) | 1 (usage: invalid name or no active account set; empty `inference_provider::` value; invalid `backend::` value; unrecognized `preset::` value (only `kimi` is recognized); `backend::redirect` missing one of `base_url::`/`api_key::`/`redirect_model::`; any of those three present with `backend::anthropic` or omitted `backend::`; 📋 planned: `role::` used (REMOVED — exit 1 with `tags::` migration message) or invalid `tags::` item) | 2 (runtime: credentials unreadable)
 
 **Syntax:**
 
@@ -242,8 +248,8 @@ clp .account.save                                      # infer name from oauthAc
 clp .account.save name::alice@acme.com                # explicit name
 clp .account.save name::alice@acme.com dry::1
 clp .account.save host::workstation                   # store host label in {name}.json
-clp .account.save role::work                          # store role label in {name}.json
-clp .account.save host::workstation role::personal    # both metadata fields
+clp .account.save tags::work                          # store tag set in {name}.json (📋 planned)
+clp .account.save host::workstation tags::ci,work     # host label plus tag set (📋 planned)
 clp .account.save inference_provider::kimi            # tag account with inference provider label
 clp .account.save name::kimi backend::redirect base_url::https://api.moonshot.ai/anthropic api_key::"$KIMI_API_KEY" redirect_model::kimi-k3 inference_provider::kimi
 clp .account.save name::kimi preset::kimi api_key::"$KIMI_API_KEY" redirect_model::kimi-k3
@@ -255,7 +261,7 @@ clp .account.save name::kimi preset::kimi api_key::"$KIMI_API_KEY" redirect_mode
 | `name::` | [`AccountName`](../type/001_account_name.md) | `auto` (inferred from `oauthAccount.emailAddress` in `~/.claude.json`; falls back to per-machine active marker — see [Feature 025](../../feature/025_per_machine_active_marker.md); exits 1 if neither source present) | Account email to save as |
 | `dry::` | `bool` | `0` | Preview action without executing |
 | `host::` | `string` | `""` (auto-detected hostname) | Machine/host label stored in `{name}.json` (see [feature/029](../../feature/029_account_host_metadata.md)) |
-| `role::` | `string` | `""` | User-defined role label stored in `{name}.json` (see [param 052](../param/052_role.md)) |
+| `tags::` 📋 | `string` | *(omit — tag set unchanged)* | Comma-separated tag set stored in `{name}.json` (sorted, deduplicated); replaces the REMOVED `role::` (see [param 082](../param/082_tags.md), [param 052](../param/052_role.md)) |
 | `inference_provider::` | `string` | `"anthropic"` (when omitted, field absent from `{name}.json`; `list()` treats absence as `"anthropic"`) | Inference provider label stored in `{name}.json`; non-empty when provided; governs Gate 10 rotation grouping (see [param 073](../param/073_inference_provider.md)) |
 | `trace::` | `bool` | `0` | Print timestamped diagnostic lines to stderr for credential read and file write steps |
 | `backend::` | [`AccountBackend`](../type/005_account_backend.md) | `anthropic` | Selects OAuth capture (`anthropic`) or the static-credential redirect path (`redirect`); see [param 069](../param/069_backend.md) |
@@ -270,10 +276,10 @@ clp .account.save name::kimi preset::kimi api_key::"$KIMI_API_KEY" redirect_mode
 1. Resolve `name::`: read `oauthAccount.emailAddress` from `~/.claude.json`; fall back to `_active_{hostname}_{user}` marker; exit 1 if neither present
 2. `(when dry::0)` Copy `~/.claude/.credentials.json` → `{name}.credentials.json` (atomic write)
 3. `(when dry::0)` Read `~/.claude.json` + `~/.claude/settings.json` + call `GET /api/oauth/claude_cli/roles` (best-effort); merge all into unified `{name}.json` (preserves `_renewal_at` and other keys)
-4. `(when dry::0)` Write host, role, and inference provider into `{name}.json`: `host::` (auto-captured `$USER@$HOSTNAME` when omitted); `role::` via read-merge; `inference_provider::` via read-merge (field left absent when omitted — `list()` defaults absence to `"anthropic"`); `owner` field preserved unchanged via read-merge — `account_save_routine()` passes `owner: None` to `save()` (ownership-neutral)
+4. `(when dry::0)` Write host, tags, and inference provider into `{name}.json`: `host::` (auto-captured `$USER@$HOSTNAME` when omitted); `tags::` via read-merge (📋 planned — omitted leaves the tag set unchanged; a first tag write converts a legacy non-empty `role` to a tag and removes the field, [feature/075](../../feature/075_account_tags.md)); `inference_provider::` via read-merge (field left absent when omitted — `list()` defaults absence to `"anthropic"`); `owner` field preserved unchanged via read-merge — `account_save_routine()` passes `owner: None` to `save()` (ownership-neutral)
 5. `(when dry::0)` Write `_active_{hostname}_{user}` = `{name}` (per-machine active marker)
 
-**Redirect branch** `(when backend::redirect)`: validates `base_url::`/`api_key::`/`redirect_model::` are all present (exit 1 naming any missing parameter) — note that `base_url::` may already be filled by `preset::kimi`'s default per the preset resolution above, so this check runs against the resolved value, not the raw CLI argument; `(when dry::0)` writes `{name}.credentials.json` containing only `accessToken` (from `api_key::`) — no `refreshToken`/`expiresAt` keys; writes `backend: "redirect"`, `base_url`, `redirect_model` into `{name}.json`. Steps 2–4 above do not apply (no `~/.claude/.credentials.json` capture, no endpoint 005 call, no host/role merge — `base_url`/`redirect_model` serve as the redirect account's equivalent metadata). Step 5 (active marker) still applies unchanged. See [feature/071](../../feature/071_redirect_backend_accounts.md).
+**Redirect branch** `(when backend::redirect)`: validates `base_url::`/`api_key::`/`redirect_model::` are all present (exit 1 naming any missing parameter) — note that `base_url::` may already be filled by `preset::kimi`'s default per the preset resolution above, so this check runs against the resolved value, not the raw CLI argument; `(when dry::0)` writes `{name}.credentials.json` containing only `accessToken` (from `api_key::`) — no `refreshToken`/`expiresAt` keys; writes `backend: "redirect"`, `base_url`, `redirect_model` into `{name}.json`. Steps 2–4 above do not apply (no `~/.claude/.credentials.json` capture, no endpoint 005 call, no host/tags merge — `base_url`/`redirect_model` serve as the redirect account's equivalent metadata). Step 5 (active marker) still applies unchanged. See [feature/071](../../feature/071_redirect_backend_accounts.md).
 
 **Examples:**
 
@@ -284,8 +290,8 @@ clp .account.save
 clp .account.save name::alice@acme.com dry::1
 # [dry-run] would save current credentials as 'alice@acme.com'
 
-clp .account.save host::workstation role::work
-# saved current credentials as 'alice@acme.com'   (host='workstation', role='work')
+clp .account.save host::workstation tags::ci,work     # 📋 planned
+# saved current credentials as 'alice@acme.com'   (host='workstation', tags='ci,work')
 
 clp .account.save name::kimi backend::redirect base_url::https://api.moonshot.ai/anthropic api_key::"$KIMI_API_KEY" redirect_model::kimi-k3
 # saved redirect-backend account 'kimi'   (backend='redirect', base_url='https://api.moonshot.ai/anthropic')
@@ -304,6 +310,7 @@ clp .account.save name::kimi preset::bogus api_key::"$KIMI_API_KEY" redirect_mod
 - **Ownership-neutral save:** `.account.save` never writes to the `owner` field — `account_save_routine()` passes `owner: None` to `save()`, preserving any existing `owner` via read-merge. Background refresh callers also pass `owner: None`. To release ownership, use `clp .accounts owner::0 name::EMAIL`. See [Feature 036](../../feature/036_account_ownership.md).
 - **Redirect backend:** `backend` is fixed per save call — re-running `.account.save name::X` with a different `backend::` value rewrites the account from scratch per that backend's own path (not a partial update). Pre-existing accounts saved before Feature 071 have no `backend` key and are treated as `anthropic`. See [Feature 071](../../feature/071_redirect_backend_accounts.md).
 - **Inference provider tagging:** `inference_provider::` is independent of `backend::` — a `backend::redirect` account may still carry any `inference_provider` label (e.g., `kimi`, `moonshot`) for Gate 10 rotation grouping; the two fields serve different purposes (routing/credential mechanism vs. rotation grouping). Defaults to `"anthropic"` when never explicitly tagged. See [Feature 072](../../feature/072_inference_provider_selection.md).
+- **Tags (📋 planned):** `tags::` writes the full tag set (replace semantics at save); omitted, the stored set is untouched. `role::` is REMOVED — using it exits 1 with a migration message naming `tags::`; the first tag write to an account holding a legacy non-empty `role` converts it to a tag and removes the field. For pure metadata edits without re-capturing credentials, use [`.account.tag`](#command-25-accounttag). See [Feature 075](../../feature/075_account_tags.md).
 - **Kimi provider preset:** `preset::kimi` pre-fills `backend::redirect`, `base_url::https://api.moonshot.ai/anthropic`, and `inference_provider::kimi` — but only for fields the caller omitted, and only once `backend` resolves to `redirect`; pairing `preset::kimi` with an explicit `backend::anthropic` leaves the account on the ordinary OAuth-capture path with none of the redirect-only defaults applied. `api_key::`/`redirect_model::` are never defaulted by any preset. Tagging an account `inference_provider::kimi` (whether via the preset or explicitly) also drives `switch_account()`'s 7 additional Kimi-tier `settings.json` env vars on `.account.use` — see [Feature 073](../../feature/073_kimi_provider_preset.md).
 
 ### Referenced Features
@@ -314,11 +321,12 @@ clp .account.save name::kimi preset::bogus api_key::"$KIMI_API_KEY" redirect_mod
 | 2 | [Save Account](../../feature/002_account_save.md) | Core save algorithm and file layout |
 | 3 | [Persistent Storage](../../feature/010_persistent_storage.md) | Unified `{name}.json` merge semantics |
 | 4 | [Per-Machine Active Marker](../../feature/025_per_machine_active_marker.md) | `_active_{hostname}_{user}` marker written on save |
-| 5 | [Host Metadata](../../feature/029_account_host_metadata.md) | `host::` and `role::` metadata stored in `{name}.json` |
+| 5 | [Host Metadata](../../feature/029_account_host_metadata.md) | `host::` metadata stored in `{name}.json`; the feature's `role::` half is superseded by tags (Feature 075) |
 | 6 | [Account Ownership](../../feature/036_account_ownership.md) | Ownership model — `.account.save` is ownership-neutral (passes `owner: None`); `.accounts owner::0 name::X` releases ownership (Feature 064); `.accounts assignee::USER@MACHINE` is marker-only (Feature 065) |
 | 7 | [Redirect Backend Accounts](../../feature/071_redirect_backend_accounts.md) | `backend::redirect` write path — static-credential accounts bypassing OAuth capture |
 | 8 | [Inference Provider Selection](../../feature/072_inference_provider_selection.md) | `inference_provider::` write path — tags account for Gate 10 rotation grouping |
 | 9 | [Kimi Provider Preset](../../feature/073_kimi_provider_preset.md) | `preset::kimi` convenience default-filling for `backend::`/`base_url::`/`inference_provider::` |
+| 10 | [Account Tags](../../feature/075_account_tags.md) | `tags::` write path; `role::` removal and lazy migration (📋 planned) |
 
 ### Referenced User Stories
 
@@ -330,7 +338,7 @@ clp .account.save name::kimi preset::bogus api_key::"$KIMI_API_KEY" redirect_mod
 
 | # | Group | Parameters Used |
 |---|-------|-----------------|
-| 1 | [Account Targeting](../param_group/006_account_targeting.md) | `host::`, `role::`, `inference_provider::` |
+| 1 | [Account Targeting](../param_group/006_account_targeting.md) | `host::`, `tags::` (📋), `inference_provider::` |
 | 2 | [Fetch Behavior](../param_group/003_fetch_behavior.md) | `trace::` |
 | 3 | [Redirect Backend Config](../param_group/007_redirect_backend_config.md) | `backend::`, `preset::`, `base_url::`, `api_key::`, `redirect_model::` |
 
@@ -922,3 +930,116 @@ clp .accounts owner::0 name::alice@acme.com dry::1
 clp .accounts owner::0 name::alice@acme.com force::1    # bypass G8
 clp .accounts owner::0                                   # batch-clear all owned accounts
 ```
+
+---
+
+### Command: 25. `.account.tag`
+
+> **Status: 📋 planned** — specified by [feature/075](../../feature/075_account_tags.md); not yet implemented.
+
+Mutates a saved account's [Tag](../../type/003_tag.md) set in `{name}.json` — add, remove, or replace — without touching credentials. Tags change operationally far more often than accounts are re-saved; re-running `.account.save` re-captures live credentials as a side effect, which is wrong for a pure metadata edit. Writes are ungated (no ownership check) with comma-list `name::` batching and `dry::1` preview — the same doctrine as `lock::`/`reserve::` ([Feature 070](../../feature/070_account_claim_and_reservation_control.md)).
+
+-- **Parameters:** [`name::`](../param/001_name.md) *(required)*, [`add::`](../param/083_add.md), [`remove::`](../param/084_remove.md), [`tags::`](../param/082_tags.md), [`dry::`](../param/004_dry.md)
+-- **Exit:** 0 (success, including remove of an absent tag) | 1 (usage: missing `name::`, none of `add::`/`remove::`/`tags::` given, more than one of them given, invalid tag item) | 2 (runtime: named account not found or credential store unreadable)
+
+**Syntax:**
+
+```bash
+clp .account.tag name::alice@acme.com add::kimi_pool,ci     # union into existing set
+clp .account.tag name::alice@acme.com remove::ci            # remove (idempotent)
+clp .account.tag name::alice@acme.com tags::kimi_pool       # replace whole set
+clp .account.tag name::alice@acme.com,bob@acme.com add::ci  # batch
+clp .account.tag name::alice@acme.com tags::ci dry::1       # preview
+```
+
+| Parameter | Type | Default | Purpose |
+|-----------|------|---------|---------|
+| `name::` | [`AccountName`](../type/001_account_name.md) | *(required)* | Target account, or comma-list `X,Y,Z` applying the same operation to each |
+| `add::` | `string` | *(omit)* | Comma-separated tags to union into the set (see [param 083](../param/083_add.md)) |
+| `remove::` | `string` | *(omit)* | Comma-separated tags to remove; absent tags are a no-op success (see [param 084](../param/084_remove.md)) |
+| `tags::` | `string` | *(omit)* | Comma-separated set replacing the whole tag set (see [param 082](../param/082_tags.md)) |
+| `dry::` | `bool` | `0` | Preview all writes without touching disk |
+
+**Operation dispatch** (exactly one of the three must be given):
+
+| Params given | Effect |
+|--------------|--------|
+| `add::a,b` | Union `{a, b}` into the existing set (dedup, sort) |
+| `remove::a` | Remove listed tags; removing an absent tag is a no-op success |
+| `tags::a,b` | Replace the whole set |
+| `add::` + `remove::` together | Exit 1 — one operation per invocation |
+| `tags::` + (`add::` or `remove::`) | Exit 1 — replace is mutually exclusive with incremental ops |
+| none of the three | Exit 1 — no operation given |
+
+**Algorithm (6 steps):**
+1. Validate exactly one of `add::`/`remove::`/`tags::` is given — zero or more than one exits 1
+2. Require `name::`; split comma-list; each item must resolve to a saved account (exit 2 naming the first missing one; no partial writes)
+3. Normalize the operation's tag list per [type/003](../../type/003_tag.md): lowercase, validate charset `[a-z0-9_-]` and 1–64 length, deduplicate — exit 1 naming the first offending tag
+4. Per account: read `{name}.json`; when a non-empty legacy `role` field is present, convert it to a tag (lowercased, sanitized to the tag charset), merge it into the working set, and mark the `role` field for removal (lazy migration — fires on every tag write, including `remove::`)
+5. Apply the operation to the working set (union / difference / replace); deduplicate and sort the result
+6. `(when dry::0)` Write the result via read-merge (removing `role` when step 4 fired); print a per-account confirmation line; `dry::1` prints the would-be result instead
+
+**Examples:**
+
+```bash
+clp .account.tag name::alice@acme.com add::kimi_pool
+# alice@acme.com tags: [ci, kimi_pool]
+
+clp .account.tag name::alice@acme.com remove::nonexistent
+# alice@acme.com tags: [ci, kimi_pool]   (no-op — tag not present)
+
+clp .account.tag name::alice@acme.com tags::personal
+# alice@acme.com tags: [personal]
+
+clp .account.tag name::alice@acme.com,bob@acme.com add::ci dry::1
+# [dry-run] alice@acme.com tags: [ci, personal]
+# [dry-run] bob@acme.com tags: [ci]
+
+clp .account.tag name::alice@acme.com add::a remove::b
+# exit 1: one of add::/remove::/tags:: per invocation
+
+clp .account.tag name::alice@acme.com
+# exit 1: no operation given — use add::, remove::, or tags::
+
+clp .account.tag name::alice@acme.com add::Bad!Tag
+# exit 1: invalid tag 'bad!tag'
+```
+
+**Notes:**
+- Writes are **ungated** — no ownership (G8) or claim-lock check; any caller may retag any account. Tags are fleet-operations metadata, not credential operations ([Feature 070](../../feature/070_account_claim_and_reservation_control.md) doctrine).
+- Never touches `{name}.credentials.json`, the active marker, or any live credential — pure `{name}.json` metadata edit (contrast [`.account.save`](#command-4-accountsave), which re-captures credentials).
+- Lazy `role`→tag migration (step 4) fires on **any** of the three operations — even `remove::` — so any tag write finishes the account's migration.
+- Tag semantics (charset, normalization, set behavior): [type/003](../../type/003_tag.md). Rotation filtering by these tags: [Feature 076](../../feature/076_identity_tag_filter.md) (Gate 11).
+
+### Referenced Features
+
+| # | Feature | Role |
+|---|---------|------|
+| 1 | [Account Tags](../../feature/075_account_tags.md) | Owning feature — mutation semantics, lazy migration, batch/dry (AC-05…AC-10) |
+| 2 | [Account Claim And Reservation Control](../../feature/070_account_claim_and_reservation_control.md) | Structural precedent — ungated metadata writes, comma-list batch, `dry::1` |
+| 3 | [Identity Tag Filter](../../feature/076_identity_tag_filter.md) | Consumer — Gate 11 evaluates the tag sets this command writes |
+
+### Referenced Types
+
+| # | Type | Role |
+|---|------|------|
+| 1 | [Tag](../../type/003_tag.md) | Value contract — charset, normalization, set semantics, migration rules |
+| 2 | [AccountName](../type/001_account_name.md) | `name::` value type |
+
+### Referenced Schema
+
+| # | Schema | Role |
+|---|--------|------|
+| 1 | [Account JSON](../../schema/002_account_json.md) | `tags` array written; legacy `role` field removed on migration |
+
+### Referenced User Stories
+
+| # | User Story | Persona |
+|---|------------|---------|
+| 1 | [Account Rotation](../user_story/001_account_rotation.md) | Partition the fleet into rotation pools via tags |
+
+### Referenced Parameter Groups
+
+| # | Group | Parameters Used |
+|---|-------|-----------------|
+| 1 | [Account Targeting](../param_group/006_account_targeting.md) | `tags::` (replace mode) |

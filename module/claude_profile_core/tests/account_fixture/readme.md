@@ -7,4 +7,4 @@ subdirectory so cargo does not auto-discover it as a test binary of its own.
 
 | File | Responsibility |
 |------|----------------|
-| `mod.rs` | Credential-store file builders shared by account test binaries |
+| `mod.rs` | Credential-store file and argument builders shared by account test binaries |

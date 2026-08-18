@@ -19,3 +19,10 @@ pub fn write_active( store : &std::path::Path, active_name : &str )
 {
   std::fs::write( store.join( "_active" ), active_name ).unwrap();
 }
+
+/// Build an owned `Vec< String >` from literals — argument builder for the
+/// tag/filter APIs (`TagOp`, `write_filter`, `eligible`), which take owned sets.
+pub fn strings( v : &[ &str ] ) -> Vec< String >
+{
+  v.iter().map( | s | ( *s ).to_string() ).collect()
+}
