@@ -538,14 +538,14 @@ pub fn projects_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   // --- collect projects by scope ---
 
   let storage = create_storage()?;
-  let mut scoped_projects = resolve_scoped_projects( &storage, &scope, cmd.get_string( "path" ) )?;
+  let scoped_projects = resolve_scoped_projects( &storage, &scope, cmd.get_string( "path" ) )?;
 
-  // --- narrow by type:: / filter:: ---
+  // --- narrow by type:: / filter::, decoding each surviving project's display path once ---
 
   let path_filter = cmd.get_string( "filter" ).map( str::to_lowercase );
-  if project_type != "all" || path_filter.is_some()
-  {
-    scoped_projects.retain( | project |
+  let scoped_projects = scoped_projects
+    .into_iter()
+    .filter_map( | project |
     {
       let type_ok = match project_type.as_str()
       {
@@ -553,17 +553,21 @@ pub fn projects_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
         "path" => matches!( project.id(), ProjectId::Path( _ ) ),
         _ => true,
       };
-      if !type_ok { return false; }
-      let Some( ref substr ) = path_filter else { return true };
+      if !type_ok { return None; }
       let dir_name = project
         .storage_dir()
         .file_name()
         .and_then( | n | n.to_str() )
         .unwrap_or( "" )
         .to_string();
-      decode_project_display( &dir_name ).to_lowercase().contains( substr.as_str() )
-    } );
-  }
+      let display_path = decode_project_display( &dir_name );
+      if let Some( ref substr ) = path_filter
+      {
+        if !display_path.to_lowercase().contains( substr.as_str() ) { return None; }
+      }
+      Some( ( project, display_path ) )
+    } )
+    .collect::< Vec< _ > >();
 
   // --- build session filter ---
 
@@ -579,16 +583,8 @@ pub fn projects_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   // BTreeMap gives deterministic, alphabetically sorted project order.
   let mut groups : BTreeMap< String, Vec< Session > > = BTreeMap::new();
 
-  for mut project in scoped_projects
+  for ( mut project, display_path ) in scoped_projects
   {
-    let dir_name = project
-      .storage_dir()
-      .file_name()
-      .and_then( | n | n.to_str() )
-      .unwrap_or( "" )
-      .to_string();
-    let display_path = decode_project_display( &dir_name );
-
     let Ok( mut sessions ) = project.sessions_filtered( &session_filter ) else { continue };
     if let Some( cutoff ) = since_cutoff
     {

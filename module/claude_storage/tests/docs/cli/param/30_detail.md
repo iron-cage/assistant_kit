@@ -14,6 +14,7 @@ Edge case tests for the `detail::` parameter on `.projects` and `.show`. Tests v
 | EC-2 | Omitted matches explicit `detail::sessions` byte-for-byte | Default |
 | EC-3 | Invalid value rejected | Error Handling |
 | EC-4 | `limit::`/`show_tree::`/`show_topic::` are no-ops under `detail::projects` | Composition |
+| EC-5 | Mixed-case value (`detail::PROJECTS`) matches lowercase byte-for-byte | Case Insensitivity |
 
 ## Test Coverage Summary
 
@@ -21,10 +22,9 @@ Edge case tests for the `detail::` parameter on `.projects` and `.show`. Tests v
 - Default: 1 test (EC-2)
 - Error Handling: 1 test (EC-3)
 - Composition: 1 test (EC-4)
+- Case Insensitivity: 1 test (EC-5)
 
-**Total:** 4 edge cases
-
-**Known gap:** case-insensitive parsing is a stated constraint (→ [`type/14_detail_level.md`](../../../../docs/cli/type/14_detail_level.md)) with no dedicated regression test yet — see that file's own note.
+**Total:** 5 edge cases
 
 ## Test Cases
 
@@ -71,3 +71,14 @@ Edge case tests for the `detail::` parameter on `.projects` and `.show`. Tests v
 - **Then:** stdout is byte-identical between the two invocations — these three parameters have nothing to act on once body lines are suppressed
 - **Exit:** 0
 - **Source:** [param/30_detail.md](../../../../docs/cli/param/30_detail.md); same test as [command/07_projects.md INT-65](../command/07_projects.md) (`int_65_limit_show_tree_show_topic_noop_under_detail_projects`)
+
+---
+
+### EC-5: Mixed-case value (`detail::PROJECTS`) matches lowercase byte-for-byte
+
+- **Commands:** `.projects`
+- **Given:** two projects with sessions in scope (one family, one plain path project)
+- **When:** `clg .projects scope::global detail::PROJECTS` compared against `clg .projects scope::global detail::projects`
+- **Then:** stdout is byte-identical between the two invocations — `validate_detail_level` lowercases input before matching
+- **Exit:** 0
+- **Source:** [param/30_detail.md](../../../../docs/cli/param/30_detail.md); same test as [command/07_projects.md INT-67](../command/07_projects.md) (`int_67_detail_uppercase_matches_lowercase`)

@@ -77,6 +77,8 @@ Integration tests for the `.projects` command. Tests verify summary mode output 
 | INT-64 | type:: and filter:: compose under scope::global | Combined Narrowing (task-525) |
 | INT-65 | limit::/show_tree::/show_topic:: are no-ops under detail::projects | Detail Level (task-525) |
 | INT-66 | .list's deprecation_message edit does not alter runtime output | `.list` Deprecation (task-525) |
+| INT-67 | detail::PROJECTS (mixed-case) matches detail::projects byte-for-byte | Case Insensitivity (task-525) |
+| INT-68 | filter::ALPHA-INT68 (mixed-case) matches lowercase-equivalent projects | Case Insensitivity (task-525) |
 
 ## Test Coverage Summary
 
@@ -104,6 +106,7 @@ Integration tests for the `.projects` command. Tests verify summary mode output 
 - IDs Scripting Mode (task-525): 3 tests (INT-61, INT-62, INT-63)
 - Combined Narrowing (task-525): 1 test (INT-64)
 - `.list` Deprecation (task-525): 1 test (INT-66)
+- Case Insensitivity (task-525): 2 tests (INT-67, INT-68)
 
 ## Test Cases
 
@@ -1199,3 +1202,33 @@ CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .list
 - stdout is byte-for-byte identical to `.list`'s pre-task output — `unilang.commands.yaml`'s `deprecation_message` field is metadata consumed only by the `--help` generator and build-time registry code, never by the dispatch/execution path (part of the same `.list`→`.projects` absorption change as INT-53 through INT-65; see [command/02_list.md](../../../../docs/cli/command/02_list.md) for `.list`'s own deprecated-status documentation)
 - Exit code: 0
 - **Source:** [command/07_projects.md](../../../../docs/cli/command/07_projects.md)
+
+---
+
+### INT-67: detail::PROJECTS (mixed-case) matches detail::projects byte-for-byte
+
+**Command:**
+```
+CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects scope::global detail::PROJECTS
+```
+
+**Expected behavior:**
+- Fixture: one hierarchical family project (root + 2 agent sessions) plus one plain path-based project (single session)
+- stdout is byte-for-byte identical to the same command run with `detail::projects` (lowercase) — `validate_detail_level` calls `.to_lowercase()` on the raw value before matching against `projects`/`sessions`
+- Exit code: 0
+- **Source:** [command/07_projects.md](../../../../docs/cli/command/07_projects.md); scope amendment to task-525 (case-insensitivity regression coverage for `detail::`); test: `int_67_detail_uppercase_matches_lowercase`
+
+---
+
+### INT-68: filter::ALPHA-INT68 (mixed-case) matches lowercase-equivalent projects
+
+**Command:**
+```
+CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects scope::global filter::ALPHA-INT68
+```
+
+**Expected behavior:**
+- Fixture: two path-based projects whose decoded paths contain `alpha-int68` and `beta-int68` respectively
+- stdout includes only the `alpha-int68` project; the `beta-int68` project is absent — both the supplied filter substring and the decoded display path are lowercased before the `contains` check, so casing never affects the match
+- Exit code: 0
+- **Source:** [command/07_projects.md](../../../../docs/cli/command/07_projects.md); scope amendment to task-525 (case-insensitivity regression coverage for `filter::`); test: `int_68_filter_uppercase_matches_lowercase`

@@ -52,8 +52,8 @@ Mirror of [type/](../../../../docs/cli/type/readme.md).
 | `11_target_type.md` | 5 |
 | `12_topic_name.md` | 5 |
 | `13_strategy_type.md` | 5 |
-| `14_detail_level.md` | 3 |
-| **Total** | **67** |
+| `14_detail_level.md` | 4 |
+| **Total** | **68** |
 
 ### Related Documentation
 

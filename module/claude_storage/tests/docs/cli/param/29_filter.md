@@ -13,14 +13,16 @@ Edge case tests for the `filter::` parameter on `.projects`. Tests validate subs
 | EC-1 | Substring match narrows to matching projects only | Behavior |
 | EC-2 | No matching substring shows empty listing, not an error | Empty State |
 | EC-3 | Composes with `type::` — both filters apply together | Composition |
+| EC-4 | Mixed-case substring (`filter::ALPHA`) matches lowercase-equivalent projects | Case Insensitivity |
 
 ## Test Coverage Summary
 
 - Behavior: 1 test (EC-1)
 - Empty State: 1 test (EC-2)
 - Composition: 1 test (EC-3)
+- Case Insensitivity: 1 test (EC-4)
 
-**Total:** 3 edge cases
+**Total:** 4 edge cases
 
 ## Test Cases
 
@@ -56,3 +58,14 @@ Edge case tests for the `filter::` parameter on `.projects`. Tests validate subs
 - **Then:** stdout includes only the project matching both constraints; the UUID project (fails `type::path`) and the mismatched path project (fails `filter::alpha`) are both absent
 - **Exit:** 0
 - **Source:** [param/29_filter.md](../../../../docs/cli/param/29_filter.md); same test as [command/07_projects.md INT-64](../command/07_projects.md) (`int_64_type_and_filter_compose`)
+
+---
+
+### EC-4: Mixed-case substring (`filter::ALPHA`) matches lowercase-equivalent projects
+
+- **Commands:** `.projects`
+- **Given:** two path-based projects whose decoded paths contain `alpha-int68` and `beta-int68` respectively
+- **When:** `clg .projects scope::global filter::ALPHA-INT68`
+- **Then:** stdout includes only the `alpha` project; `beta` is absent — both the supplied substring and the decoded display path are lowercased before comparison, so casing never affects the match
+- **Exit:** 0
+- **Source:** [param/29_filter.md](../../../../docs/cli/param/29_filter.md); same test as [command/07_projects.md INT-68](../command/07_projects.md) (`int_68_filter_uppercase_matches_lowercase`)

@@ -1459,3 +1459,83 @@ fn int_66_list_deprecation_message_preserves_output()
     "must show Path(...) debug-format project id, unaffected by deprecation_message; got:\n{s}"
   );
 }
+
+// ─── INT-67 ───────────────────────────────────────────────────────────────────
+
+/// INT-67: `detail::` accepts mixed-case input identically to lowercase (T15).
+#[ test ]
+fn int_67_detail_uppercase_matches_lowercase()
+{
+  let root = TempDir::new().unwrap();
+  let storage_root = root.path().join( ".claude" );
+  let proj_a = root.path().join( "proj-int67-a" );
+  let proj_b = root.path().join( "proj-int67-b" );
+  fs::create_dir_all( &proj_a ).unwrap();
+  fs::create_dir_all( &proj_b ).unwrap();
+  common::write_hierarchical_session(
+    &storage_root, &claude_storage_core::encode_path( &proj_a ).expect( "encode" ),
+    "root-int67", &[ ( "agent-int67-x", "general-purpose" ) ], 2
+  );
+  common::write_path_project_session( &storage_root, &proj_b, "session-int67-b", 2 );
+
+  let out_lower = common::clg_cmd()
+    .env( "HOME", root.path() )
+    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+    .arg( ".projects" )
+    .arg( "scope::global" )
+    .arg( "detail::projects" )
+    .output()
+    .unwrap();
+
+  let out_mixed = common::clg_cmd()
+    .env( "HOME", root.path() )
+    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+    .arg( ".projects" )
+    .arg( "scope::global" )
+    .arg( "detail::PROJECTS" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out_lower, 0 );
+  assert_exit( &out_mixed, 0 );
+  assert_eq!(
+    stdout( &out_lower ), stdout( &out_mixed ),
+    "detail::PROJECTS (mixed-case) must byte-match detail::projects"
+  );
+  assert!(
+    stdout( &out_mixed ).contains( "Found 2 projects" ),
+    "sanity: header must still show project count; got:\n{}", stdout( &out_mixed )
+  );
+}
+
+// ─── INT-68 ───────────────────────────────────────────────────────────────────
+
+/// INT-68: `filter::` matches case-insensitively — mixed-case substring narrows
+/// the same as its lowercase equivalent (T16).
+#[ test ]
+fn int_68_filter_uppercase_matches_lowercase()
+{
+  let root = TempDir::new().unwrap();
+  let storage_root = root.path().join( ".claude" );
+
+  let proj_alpha = root.path().join( "alpha-int68" );
+  let proj_beta  = root.path().join( "beta-int68" );
+  fs::create_dir_all( &proj_alpha ).unwrap();
+  fs::create_dir_all( &proj_beta ).unwrap();
+  common::write_path_project_session( &storage_root, &proj_alpha, "session-int68-alpha", 2 );
+  common::write_path_project_session( &storage_root, &proj_beta,  "session-int68-beta",  2 );
+
+  let out = common::clg_cmd()
+    .env( "HOME", root.path() )
+    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+    .arg( ".projects" )
+    .arg( "scope::global" )
+    .arg( "filter::ALPHA-INT68" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  assert!( s.contains( "session-int68-alpha" ), "must include alpha project via uppercase filter; got:\n{s}" );
+  assert!( !s.contains( "session-int68-beta" ),  "must NOT include beta project; got:\n{s}" );
+}

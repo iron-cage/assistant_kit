@@ -48,14 +48,14 @@
 
 | Tier | Files | Tests |
 |------|-------|-------|
-| Commands | 13 files | 192 tests |
-| Parameters | 27 files | 190 tests |
+| Commands | 13 files | 194 tests |
+| Parameters | 27 files | 192 tests |
 | Parameter Groups | 5 files | 31 tests |
 | Command Groups | 1 file | 0 tests (0 groups qualify — evidentiary record only, no `INT-N`/`CC-N` cases) |
-| Types | 13 files | 64 tests |
+| Types | 13 files | 65 tests |
 | Formats | 3 files | 15 tests |
 | User Stories | 6 files | 29 tests |
-| **Total** | **68 files** | **521 tests** |
+| **Total** | **68 files** | **526 tests** |
 
 ### Test ID Conventions
 
