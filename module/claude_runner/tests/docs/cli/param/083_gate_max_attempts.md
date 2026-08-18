@@ -29,11 +29,11 @@ admission attempts before the `--max-sessions` concurrency gate declares exhaust
 
 | EC | Test Function | File |
 |----|---------------|------|
-| EC-1 | `t_gate_max_attempts_cli_flag_exhausts_after_n_attempts` | `concurrency_gate_test.rs` |
-| EC-2 | `t_gate_max_attempts_env_var_equivalent_to_cli_flag` | `concurrency_gate_test.rs` |
-| EC-3 | `t_gate_max_attempts_absent_uses_1000_default` | `concurrency_gate_test.rs` |
-| EC-4 | `t_gate_max_attempts_json_key_accepted_via_args_file` | `concurrency_gate_test.rs` |
-| EC-5 | `t_gate_max_attempts_cli_flag_takes_precedence_over_env_var` | `concurrency_gate_test.rs` |
+| EC-1 | `t_gate_max_attempts_cli_flag_exhausts_after_n_attempts` | `concurrency_gate_ext3_test.rs` |
+| EC-2 | `t_gate_max_attempts_env_var_equivalent_to_cli_flag` | `concurrency_gate_ext3_test.rs` |
+| EC-3 | `t_gate_max_attempts_absent_uses_1000_default` | `concurrency_gate_ext3_test.rs` |
+| EC-4 | `t_gate_max_attempts_json_key_accepted_via_args_file` | `concurrency_gate_ext3_test.rs` |
+| EC-5 | `t_gate_max_attempts_cli_flag_takes_precedence_over_env_var` | `concurrency_gate_ext3_test.rs` |
 
 ## Test Cases
 

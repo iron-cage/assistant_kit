@@ -32,12 +32,12 @@ unset (default), live slot owners are never reclaimed regardless of elapsed time
 
 | EC | Test Function | File |
 |----|---------------|------|
-| EC-1 | `t_gate_stale_secs_absent_live_owner_never_reclaimed` | `concurrency_gate_test.rs` |
-| EC-2 | `t_gate_stale_secs_cli_flag_reclaims_stale_slot` | `concurrency_gate_test.rs` |
-| EC-3 | `t_gate_stale_secs_env_var_reclaims_stale_slot` | `concurrency_gate_test.rs` |
-| EC-4 | `t_gate_stale_secs_json_key_accepted_via_args_file` | `concurrency_gate_test.rs` |
-| EC-5 | `t_gate_stale_secs_cli_flag_takes_precedence_over_env_var` | `concurrency_gate_test.rs` |
-| EC-6 | `t_gate_stale_secs_invalid_value_resolves_to_none` | `concurrency_gate_test.rs` |
+| EC-1 | `t_gate_stale_secs_absent_live_owner_never_reclaimed` | `concurrency_gate_ext3_test.rs` |
+| EC-2 | `t_gate_stale_secs_cli_flag_reclaims_stale_slot` | `concurrency_gate_ext3_test.rs` |
+| EC-3 | `t_gate_stale_secs_env_var_reclaims_stale_slot` | `concurrency_gate_ext3_test.rs` |
+| EC-4 | `t_gate_stale_secs_json_key_accepted_via_args_file` | `concurrency_gate_ext3_test.rs` |
+| EC-5 | `t_gate_stale_secs_cli_flag_takes_precedence_over_env_var` | `concurrency_gate_ext3_test.rs` |
+| EC-6 | `t_gate_stale_secs_invalid_value_resolves_to_none` | `concurrency_gate_ext3_test.rs` |
 
 ## Test Cases
 
