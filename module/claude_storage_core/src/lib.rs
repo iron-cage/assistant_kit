@@ -81,7 +81,7 @@ pub mod continuation;
 mod session_id;
 pub mod scope;
 
-pub use path::{ encode_path, decode_path };
+pub use path::{ encode_path, decode_path, encode_component_piece };
 pub use continuation::{ check_continuation, to_storage_path_for, most_recent_session_id, most_recent_session_in_dir };
 pub use scope::{ ClaudeScope, scope_for, git_root_for };
 pub use session_id::SessionId;

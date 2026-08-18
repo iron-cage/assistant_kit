@@ -98,6 +98,54 @@ use core::fmt::Write as _;
 use std::path::{ Path, PathBuf };
 use crate::{ Error, Result };
 
+/// Encode a single path component's own contribution to the storage key,
+/// exactly mirroring `encode_path`'s per-component branch. `is_first`
+/// selects the first-component rule (no separator; a single extra `-` when
+/// the component's own leading character is special) vs. the rule for every
+/// subsequent component (a `-` separator; `--` when the component's own
+/// leading character is special).
+///
+/// Exposed (rather than kept as a private closure inside `encode_path`) so a
+/// filesystem-guided decoder can invert the encoding BY CONSTRUCTION —
+/// checking a real directory entry's own encoded contribution against a
+/// target byte sequence — instead of re-deriving (and risking drift from)
+/// the same rule by hand. See `claude_storage::cli::scope::walk_fs`
+/// (Fix(BUG-511)) for the consumer this was extracted for.
+///
+/// # Examples
+///
+/// ```
+/// use claude_storage_core::encode_component_piece;
+///
+/// assert_eq!( encode_component_piece( "home", true ), "home" );
+/// assert_eq!( encode_component_piece( ".config", true ), "-config" );
+/// assert_eq!( encode_component_piece( "project", false ), "-project" );
+/// assert_eq!( encode_component_piece( ".venv", false ), "--venv" );
+/// assert_eq!( encode_component_piece( "_", false ), "--" );
+/// assert_eq!( encode_component_piece( "--nested", false ), "---nested" );
+/// ```
+#[ must_use ]
+#[inline]
+pub fn encode_component_piece( component : &str, is_first : bool ) -> String
+{
+  let normalized : String = component
+    .chars()
+    .map( | c | if c.is_ascii_alphanumeric() { c } else { '-' } )
+    .collect();
+  if let Some( stripped ) = normalized.strip_prefix( '-' )
+  {
+    if is_first { format!( "-{stripped}" ) } else { format!( "--{stripped}" ) }
+  }
+  else if is_first
+  {
+    normalized
+  }
+  else
+  {
+    format!( "-{normalized}" )
+  }
+}
+
 /// Encode a filesystem path to a storage directory name
 ///
 /// Encoding algorithm (matches Claude Code's lossy encoding):
@@ -168,55 +216,19 @@ pub fn encode_path( path : &Path ) -> Result< String >
   // - Join components with single hyphens (path separators)
   // - Components starting with hyphen get double-hyphen prefix (--)
   // - Decoder uses heuristics to reconstruct paths (hyphen-prefixed: → underscores)
+  //
+  // Fix(BUG-366): the per-component normalization generalizes from
+  // `component.replace('_', "-")` to a full non-alphanumeric character class
+  // so `.` and other special characters match the real algorithm's blanket
+  // `${path//[^a-zA-Z0-9]/-}` substitution (scope_claude.sh:_df()). See
+  // `encode_component_piece` (extracted so a filesystem-guided decoder can
+  // reuse the exact same rule — Fix(BUG-511)) for the per-component logic.
   let mut result = String::with_capacity( path_str.len() );
   result.push( '-' ); // Leading hyphen prefix
 
   for ( i, component ) in components.iter().enumerate()
   {
-    // Encoding strategy:
-    // - ALL components: non-alphanumeric chars → hyphens (lossy encoding, like `/` → `-`)
-    // - The decoder uses different heuristics to decide if hyphens should decode to `/` or `_`
-    // - For hyphen-prefixed components, decoder converts ALL hyphens back to underscores
-    // Fix(BUG-366): generalized from `component.replace('_', "-")` to a full non-alphanumeric
-    // character class so `.` and other special characters match the real algorithm's
-    // blanket `${path//[^a-zA-Z0-9]/-}` substitution (scope_claude.sh:_df()).
-    // Root cause: only `_` was substituted; any other non-alphanumeric character (most
-    // commonly `.` in dotfile/dotdir components) was left untouched, diverging from the
-    // real on-disk directory name Claude Code actually creates.
-    // Pitfall: don't special-case `.` alone — the real algorithm treats every non-alphanumeric
-    // byte identically, so the fix must generalize to the full character class, not just add `.`.
-    let component_normalized : String = component
-      .chars()
-      .map( | c | if c.is_ascii_alphanumeric() { c } else { '-' } )
-      .collect();
-
-    if i > 0
-    {
-      // Add separator before each component (except first)
-      if let Some( stripped ) = component_normalized.strip_prefix( '-' )
-      {
-        result.push_str( "--" ); // Double hyphen for hyphen-prefixed component
-        result.push_str( stripped ); // Rest of component (skip leading hyphen)
-      }
-      else
-      {
-        result.push( '-' ); // Single hyphen separator
-        result.push_str( &component_normalized ); // Normal component
-      }
-    }
-    else
-    {
-      // First component
-      if let Some( stripped ) = component_normalized.strip_prefix( '-' )
-      {
-        result.push( '-' ); // Extra hyphen for hyphen-prefixed first component
-        result.push_str( stripped );
-      }
-      else
-      {
-        result.push_str( &component_normalized );
-      }
-    }
+    result.push_str( &encode_component_piece( component, i == 0 ) );
   }
 
   // Fix(BUG-366): real algorithm truncates encodings over 200 chars and appends a

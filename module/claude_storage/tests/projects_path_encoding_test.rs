@@ -19,6 +19,12 @@
 //! | IT-65 | BUG-003 | Display resolves a dot-prefixed mid-path component           |
 //! | IT-67 | BUG-003 | `scope::under` excludes a dot-prefixed similar-named sibling  |
 //! | IT-68 | BUG-003 | `scope::relevant` excludes a dot-prefixed similar-named sibling |
+//! | IT-69 | BUG-509 | `scope::local` excludes a real nested dot-prefixed project    |
+//! | IT-70 | BUG-510 | `scope::local` excludes a real nested project named a single special character |
+//! | IT-71 | BUG-510 | `scope::local` excludes a real nested project when the anchor's own name ends in a special character |
+//! | IT-72 | BUG-511 | `scope::local` excludes a nested project whose name starts with an arbitrary special character |
+//! | IT-73 | BUG-511 | `scope::under` excludes a sibling whose name embeds a double-hyphen topic-boundary shape |
+//! | IT-74 | BUG-511 | `scope::local` excludes a nested project whose name starts with two consecutive special characters |
 //!
 //! Note: IT-60..IT-64 follow IT-59 (`scope::around` tests in `projects_scope_around_test.rs`).
 //! IT-27..IT-30 were already allocated in `tests/docs/cli/command/007_projects.md`
@@ -27,7 +33,15 @@
 //! allocated to `scope_under_finds_project_with_dot_prefixed_path` in
 //! `projects_scope_test.rs`; IT-67/IT-68 continue the shared sequence from
 //! there — combinatorial gap between IT-25/IT-26 (sibling exclusion, no
-//! dot-prefix) and IT-65/IT-66 (dot-prefix, no sibling collision).
+//! dot-prefix) and IT-65/IT-66 (dot-prefix, no sibling collision). IT-69
+//! renames what was originally added as `it_27_...` (a numbering collision
+//! with the IT-27..IT-30 reservation above — see git history); IT-70/IT-71
+//! continue the sequence for two further `scope::local` bypass shapes found
+//! independently during BUG-509's own MAAV re-verification. IT-72/IT-73/IT-74
+//! continue the sequence for three further bypass shapes (arbitrary special
+//! character, mid-component sibling collision, consecutive leading specials)
+//! found during a Tier 5 MAAV Cycle's Round 6 re-verification of BUG-509/510's
+//! own fix, all sharing one root cause and fixed together as BUG-511.
 #![ cfg( unix ) ]
 
 mod common;
@@ -310,6 +324,85 @@ fn it_26_scope_relevant_excludes_underscore_named_sibling()
   assert!(
     !s.contains( "session-it26-sibling" ),
     "must NOT contain session-it26-sibling (/base is NOT an ancestor of /base_extra); got:\n{s}"
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// scope::local — Nested Dot-Prefixed Project False-Match (BUG-509)
+//
+// Root Cause: project_matches's "local" arm used a naive string check —
+// dir_name == encoded_base || dir_name.starts_with(format!("{encoded_base}--"))
+// — with no filesystem verification, unlike scope::under/relevant
+// (matches_under/matches_relevant, both fixed by BUG-003). A REAL nested
+// project whose path component starts with a non-alphanumeric character (e.g.
+// `.venv`) encodes to exactly `{encoded_base}--venv` (encode_path's `--`
+// topic-boundary marker for a component whose first char is normalized away),
+// so it satisfies the naive starts_with("{encoded_base}--") check even though
+// it is a genuine, separate, nested project — not a topic-suffix alias of the
+// anchor itself.
+//
+// Why Not Caught: BUG-003's fix (issue-031/032) added filesystem verification
+// to scope::under and scope::relevant, but scope::local's own inline check in
+// project_matches was never updated to match — no test exercised scope::local
+// with a real, dot-prefixed nested project directory.
+//
+// Fix Applied: New matches_local() function mirrors matches_under's shape:
+// exact match returns true; a "--"-shaped candidate is verified via
+// decode_path_via_fs; if it resolves to a REAL path, only match when that path
+// EXACTLY equals base_path (scope::local means the anchor itself, never a
+// descendant); an unresolvable candidate (genuine synthetic topic tag, no real
+// directory) is conservatively included, same fallback philosophy as
+// matches_under/matches_relevant.
+//
+// Prevention: Always test scope::local with a real nested project directory
+// whose name is non-alphanumeric-prefixed (dot-prefixed child). Create all
+// directories on disk so decode_path_via_fs can resolve them.
+//
+// Pitfall: decode_path_via_fs returns None for deleted/remote paths. The fixed
+// predicate uses map_or(true, ...) (conservative include) for unresolvable
+// candidates, exactly like matches_under/matches_relevant — do not special-case
+// "local" to be stricter than that fallback philosophy.
+// ─────────────────────────────────────────────────────────────────────────────
+#[ test ]
+// bug_reproducer(BUG-509)
+fn it_69_scope_local_excludes_nested_dot_prefixed_project()
+{
+  let root = TempDir::new().unwrap();
+  let storage_root = root.path().join( ".claude" );
+
+  // Simulate: anchor = module/claude_storage        (scope::local target)
+  //           victim = module/claude_storage/.venv  (REAL nested project;
+  //                     encodes to {encoded_anchor}--venv — collides with the
+  //                     naive starts_with("{encoded_base}--") check)
+  let anchor = root.path().join( "anchor" );
+  let victim = anchor.join( ".venv" );
+
+  // Directories must exist on disk: decode_path_via_fs uses is_dir() to walk.
+  // Without real dirs the walker returns None → map_or(true, ...) includes all.
+  std::fs::create_dir_all( &anchor ).expect( "create anchor dir" );
+  std::fs::create_dir_all( &victim ).expect( "create victim dir" );
+
+  common::write_path_project_session( &storage_root, &anchor, "session-it69-anchor", 2 );
+  common::write_path_project_session( &storage_root, &victim, "session-it69-victim", 2 );
+
+  let out = common::clg_cmd()
+    .env( "HOME", root.path().to_str().unwrap() )
+    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+    .arg( ".projects" )
+    .arg( "scope::local" )
+    .arg( format!( "path::{}", anchor.display() ) )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  assert!(
+    s.contains( "session-it69-anchor" ),
+    "must contain session-it69-anchor (anchor is the scope::local target); got:\n{s}"
+  );
+  assert!(
+    !s.contains( "session-it69-victim" ),
+    "must NOT contain session-it69-victim (anchor/.venv is a distinct nested project, not a topic alias of anchor); got:\n{s}"
   );
 }
 
@@ -680,4 +773,355 @@ fn it_68_scope_relevant_excludes_dot_prefixed_similar_named_sibling()
     "scope::relevant must EXCLUDE dot-prefixed sibling `.my_config` despite shared encoded prefix; got:\n{s}"
   );
   assert!( !s.contains( "session-it68-unrelated" ), "must exclude unrelated project; got:\n{s}" );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// scope::local — Single-Special-Character Nested Directory Bypass (BUG-510)
+//
+// Root Cause: when a real nested project's ENTIRE path component is a single
+// non-alphanumeric character (e.g. `_` or `-`), encode_path collapses it to a
+// bare `--` marker with NOTHING after it. decode_path_via_fs's walk_fs then
+// splits the encoded name into two consecutive empty pieces at that boundary.
+// walk_fs's candidate-resolution loop tried `.` as the first candidate
+// character regardless of whether anything followed it; when the remaining
+// piece is itself empty, this produces a bare `.` segment, and
+// `base.join(".")` trivially `.exists()` (Path's Components iterator drops
+// non-leading `.` components, so `base.join(".") == base` under PartialEq) —
+// so the walk always "resolved" back to the anchor itself, never reaching the
+// real single-char-named directory.
+//
+// Why Not Caught: BUG-509's own regression test (IT-69) only exercised a
+// multi-character topic-suffix component (`.venv`); no existing test used a
+// nested directory whose name was ONLY a single special character.
+//
+// Fix Applied: walk_fs now skips the bare `.` candidate specifically when the
+// remaining piece is empty (that shape can never correspond to a real,
+// encodable directory name), letting the `_`/`-` candidates run and correctly
+// resolve to the real single-char-named directory instead.
+//
+// Prevention: When testing filesystem-walk decoders, always include a
+// same-shape variant where the ENTIRE component collapses to nothing after
+// its leading-character marker is stripped, not just multi-character ones.
+//
+// Pitfall: do not special-case this in matches_local — the fix belongs in
+// walk_fs, since matches_under/matches_relevant share the exact same hole.
+// ─────────────────────────────────────────────────────────────────────────────
+#[ test ]
+// bug_reproducer(BUG-510)
+fn it_70_scope_local_excludes_single_char_nested_project()
+{
+  let root = TempDir::new().unwrap();
+  let storage_root = root.path().join( ".claude" );
+
+  // victim's entire path component is a single underscore — encode_path
+  // collapses it to a bare `--` marker with nothing after it.
+  let anchor = root.path().join( "anchor" );
+  let victim = anchor.join( "_" );
+
+  std::fs::create_dir_all( &anchor ).expect( "create anchor dir" );
+  std::fs::create_dir_all( &victim ).expect( "create victim dir" );
+
+  common::write_path_project_session( &storage_root, &anchor, "session-it70-anchor", 2 );
+  common::write_path_project_session( &storage_root, &victim, "session-it70-victim", 2 );
+
+  let out = common::clg_cmd()
+    .env( "HOME", root.path().to_str().unwrap() )
+    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+    .arg( ".projects" )
+    .arg( "scope::local" )
+    .arg( format!( "path::{}", anchor.display() ) )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  assert!(
+    s.contains( "session-it70-anchor" ),
+    "must contain session-it70-anchor (anchor is the scope::local target); got:\n{s}"
+  );
+  assert!(
+    !s.contains( "session-it70-victim" ),
+    "must NOT contain session-it70-victim (anchor/_ is a distinct nested project, not the anchor itself); got:\n{s}"
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// scope::local — Trailing-Special-Character Anchor Name Bypass (BUG-510)
+//
+// Root Cause: encode_path produces the identical `--` marker whether a
+// component's FIRST character is special (the case walk_fs's Option C
+// already handled) or the PRECEDING component's LAST character is special —
+// the component's own trailing normalized `-` and the ordinary `-` separator
+// before the next component concatenate into the same two bytes. When the
+// scope::local ANCHOR's own final path component ends in a special character
+// (e.g. a directory literally named `myproject-`), its encoded form itself
+// ends in a stray `-`; the fast-reject `starts_with("{eb}--")` then
+// false-positives on an unrelated but genuinely nested real project, and
+// walk_fs's decode (which only ever tried attaching the special character to
+// the START of the NEXT piece, never the END of the current one) could never
+// reconstruct the anchor's own trailing character to disprove the match —
+// falling through to the conservative-include fallback.
+//
+// Why Not Caught: every existing scope::local regression test used an anchor
+// name containing only alphanumeric characters; none varied the ANCHOR's own
+// trailing character, only the nested victim's.
+//
+// Fix Applied: walk_fs now also tries appending a trailing special character
+// to the accumulated segment (committing it as a directory) before
+// continuing the walk fresh from the next piece — trying both "the marker
+// belongs to what comes after" and "the marker belongs to what came before"
+// interpretations, exactly as the module's own doc comment already commits
+// to doing via filesystem verification for other ambiguous cases.
+//
+// Prevention: scope::local regression tests must vary the ANCHOR's own
+// trailing character (`.`, `_`, literal `-`), not only the nested victim's
+// leading character — both sides of a `--` boundary are ambiguous.
+//
+// Pitfall: matches_under/matches_relevant share the same walk_fs machinery
+// and the same hole; the fix lives in walk_fs so all three benefit.
+// ─────────────────────────────────────────────────────────────────────────────
+#[ test ]
+// bug_reproducer(BUG-510)
+fn it_71_scope_local_excludes_trailing_special_char_anchor_nested_project()
+{
+  let root = TempDir::new().unwrap();
+  let storage_root = root.path().join( ".claude" );
+
+  // anchor's OWN name ends in a trailing literal hyphen; victim is a REAL,
+  // separate nested project (dot-prefixed) one level under it.
+  let anchor = root.path().join( "myproject-" );
+  let victim = anchor.join( ".venv" );
+
+  std::fs::create_dir_all( &anchor ).expect( "create anchor dir" );
+  std::fs::create_dir_all( &victim ).expect( "create victim dir" );
+
+  common::write_path_project_session( &storage_root, &anchor, "session-it71-anchor", 2 );
+  common::write_path_project_session( &storage_root, &victim, "session-it71-victim", 2 );
+
+  let out = common::clg_cmd()
+    .env( "HOME", root.path().to_str().unwrap() )
+    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+    .arg( ".projects" )
+    .arg( "scope::local" )
+    .arg( format!( "path::{}", anchor.display() ) )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  assert!(
+    s.contains( "session-it71-anchor" ),
+    "must contain session-it71-anchor (anchor is the scope::local target); got:\n{s}"
+  );
+  assert!(
+    !s.contains( "session-it71-victim" ),
+    "must NOT contain session-it71-victim (myproject-/.venv is a distinct nested project, not the anchor itself); got:\n{s}"
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// scope::local — Arbitrary Non-Alphanumeric Character Bypass (BUG-511)
+//
+// Root Cause: walk_fs's old candidate-character set for resolving a `--`
+// boundary was hardcoded to `.`, `_`, and literal `-` — but encode_path (and
+// docs/invariant/001_path_encoding.md's documented contract) normalizes
+// EVERY non-alphanumeric byte identically, not just those three. A nested
+// project whose leading path component starts with any OTHER special
+// character (e.g. `!`) produces the same `--` marker but could never be
+// resolved by the fixed candidate set, falling through to the
+// conservative-include fallback that matches_local relies on to distinguish
+// a real nested project from a topic-suffix alias.
+//
+// Why Not Caught: every existing scope::local bypass regression (IT-69/70/71)
+// used `.` or `_` or a literal `-` as the special character; none tried an
+// arbitrary other non-alphanumeric byte.
+//
+// Fix Applied: walk_fs (and decode_path_via_fs) no longer guess a candidate
+// character at all — they enumerate REAL directory entries and forward-encode
+// each one's name via encode_component_piece (the same function encode_path
+// itself calls), matching by construction regardless of which
+// non-alphanumeric byte produced a hyphen run.
+//
+// Prevention: scope::local bypass regressions must include at least one case
+// using a special character outside the old `.`/`_`/`-` candidate set, to
+// guard against ever reintroducing a finite candidate list.
+//
+// Pitfall: matches_under/matches_relevant share the same walk_fs machinery
+// and the same hole; the fix lives in walk_fs so all three benefit.
+// ─────────────────────────────────────────────────────────────────────────────
+#[ test ]
+// bug_reproducer(BUG-511)
+fn it_72_scope_local_excludes_nested_project_with_arbitrary_special_leading_char()
+{
+  let root = TempDir::new().unwrap();
+  let storage_root = root.path().join( ".claude" );
+
+  // victim's leading path component starts with `!` — a non-alphanumeric
+  // byte outside walk_fs's old hardcoded `.`/`_`/`-` candidate set.
+  let anchor = root.path().join( "anchor72" );
+  let victim = anchor.join( "!important" );
+
+  std::fs::create_dir_all( &anchor ).expect( "create anchor dir" );
+  std::fs::create_dir_all( &victim ).expect( "create victim dir" );
+
+  common::write_path_project_session( &storage_root, &anchor, "session-it72-anchor", 2 );
+  common::write_path_project_session( &storage_root, &victim, "session-it72-victim", 2 );
+
+  let out = common::clg_cmd()
+    .env( "HOME", root.path().to_str().unwrap() )
+    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+    .arg( ".projects" )
+    .arg( "scope::local" )
+    .arg( format!( "path::{}", anchor.display() ) )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  assert!(
+    s.contains( "session-it72-anchor" ),
+    "must contain session-it72-anchor (anchor is the scope::local target); got:\n{s}"
+  );
+  assert!(
+    !s.contains( "session-it72-victim" ),
+    "must NOT contain session-it72-victim (anchor72/!important is a distinct nested project, not the anchor itself); got:\n{s}"
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// scope::under — Mid-Component Sibling Collision Bypass (BUG-511)
+//
+// Root Cause: walk_fs's old options only ever tried to resolve a `--`
+// boundary as EITHER a component boundary (splitting into two components)
+// OR a single trailing/leading special character — never "this whole run of
+// hyphens is literal characters embedded inside one real component that is
+// never split at all". A sibling directory whose own literal name extends
+// the anchor's encoded prefix with an embedded `--` (e.g. anchor `sibfoo73`
+// next to sibling `sibfoo73--extra`) passed the fast `starts_with("{eb}-")`
+// pre-filter but could never be correctly decoded back to its own real
+// (non-nested) path, falling through to the conservative-include fallback
+// and letting an unrelated sibling's sessions leak into scope::under.
+//
+// Why Not Caught: every existing scope::under sibling-exclusion regression
+// (IT-25) used a plain underscore/hyphen suffix on the sibling's name, never
+// a sibling name containing an embedded double-hyphen identical to the
+// anchor's own topic-boundary marker shape.
+//
+// Fix Applied: walk_fs now enumerates real directory entries and
+// forward-encodes each one's own name via encode_component_piece, so the
+// sibling's OWN full name (including its embedded `--`) is matched as a
+// single real component rather than guessed at — resolving to the sibling's
+// own real, non-nested path.
+//
+// Prevention: scope::under/relevant sibling-exclusion regressions must
+// include a sibling name containing an embedded run of hyphens shaped like a
+// real topic-boundary marker, not only a single extra suffix character.
+//
+// Pitfall: this is the same walk_fs machinery matches_local/matches_relevant
+// use; the fix lives in walk_fs so all three benefit.
+// ─────────────────────────────────────────────────────────────────────────────
+#[ test ]
+// bug_reproducer(BUG-511)
+fn it_73_scope_under_excludes_sibling_with_embedded_double_hyphen()
+{
+  let root = TempDir::new().unwrap();
+  let storage_root = root.path().join( ".claude" );
+
+  // sibling's own literal name embeds a double hyphen identical in shape to
+  // a real topic-boundary marker — a SIBLING of anchor, never nested under it.
+  let parent = root.path().join( "parent73" );
+  let anchor = parent.join( "sibfoo73" );
+  let sibling = parent.join( "sibfoo73--extra" );
+
+  std::fs::create_dir_all( &anchor ).expect( "create anchor dir" );
+  std::fs::create_dir_all( &sibling ).expect( "create sibling dir" );
+
+  common::write_path_project_session( &storage_root, &anchor, "session-it73-anchor", 2 );
+  common::write_path_project_session( &storage_root, &sibling, "session-it73-sibling", 2 );
+
+  let out = common::clg_cmd()
+    .env( "HOME", root.path().to_str().unwrap() )
+    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+    .arg( ".projects" )
+    .arg( "scope::under" )
+    .arg( format!( "path::{}", anchor.display() ) )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  assert!(
+    s.contains( "session-it73-anchor" ),
+    "must contain session-it73-anchor (anchor is the scope::under target); got:\n{s}"
+  );
+  assert!(
+    !s.contains( "session-it73-sibling" ),
+    "must NOT contain session-it73-sibling (parent73/sibfoo73--extra is a sibling, not a descendant of parent73/sibfoo73); got:\n{s}"
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// scope::local — Consecutive Leading Special Characters Bypass (BUG-511)
+//
+// Root Cause: walk_fs's options C/D each substituted only ONE candidate
+// character per empty split-piece / `--` boundary. A nested project whose
+// leading path component starts with TWO OR MORE consecutive special
+// characters (e.g. a real directory literally named `--nested`) needs two
+// substitutions resolved together at the same boundary — something no
+// combination of single-substitution options could ever produce — so the
+// walk always fell through to the conservative-include fallback.
+//
+// Why Not Caught: every existing scope::local bypass regression (IT-69/70/71)
+// used exactly ONE special character at the ambiguous boundary; none tried
+// two or more consecutive special characters in the same component.
+//
+// Fix Applied: walk_fs now forward-encodes each real directory entry's own
+// name via encode_component_piece and matches the resulting byte sequence
+// (of any length) against what remains to decode, rather than substituting
+// one guessed character at a time — resolving any run length by construction.
+//
+// Prevention: scope::local bypass regressions must include a case with two
+// or more consecutive special characters at the same component boundary, to
+// guard against ever reintroducing a single-substitution-per-boundary design.
+//
+// Pitfall: matches_under/matches_relevant share the same walk_fs machinery
+// and the same hole; the fix lives in walk_fs so all three benefit.
+// ─────────────────────────────────────────────────────────────────────────────
+#[ test ]
+// bug_reproducer(BUG-511)
+fn it_74_scope_local_excludes_nested_project_with_consecutive_leading_specials()
+{
+  let root = TempDir::new().unwrap();
+  let storage_root = root.path().join( ".claude" );
+
+  // victim's entire leading path component is two literal hyphens followed
+  // by ordinary characters — two consecutive special characters at once.
+  let anchor = root.path().join( "anchor74" );
+  let victim = anchor.join( "--nested" );
+
+  std::fs::create_dir_all( &anchor ).expect( "create anchor dir" );
+  std::fs::create_dir_all( &victim ).expect( "create victim dir" );
+
+  common::write_path_project_session( &storage_root, &anchor, "session-it74-anchor", 2 );
+  common::write_path_project_session( &storage_root, &victim, "session-it74-victim", 2 );
+
+  let out = common::clg_cmd()
+    .env( "HOME", root.path().to_str().unwrap() )
+    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+    .arg( ".projects" )
+    .arg( "scope::local" )
+    .arg( format!( "path::{}", anchor.display() ) )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  assert!(
+    s.contains( "session-it74-anchor" ),
+    "must contain session-it74-anchor (anchor is the scope::local target); got:\n{s}"
+  );
+  assert!(
+    !s.contains( "session-it74-victim" ),
+    "must NOT contain session-it74-victim (anchor74/--nested is a distinct nested project, not the anchor itself); got:\n{s}"
+  );
 }

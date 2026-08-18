@@ -89,10 +89,12 @@ fn tilde_compress( path : &std::path::Path ) -> String
 
 /// Walk the filesystem to decode a lossy-encoded storage dir name to a real path.
 ///
-/// At each `-` boundary the standard heuristic cannot distinguish a path separator
-/// from an underscore (both encoded as `-`). This function resolves the ambiguity by
-/// checking `is_dir()` at each step: it tries path separator first; if the candidate
-/// directory does not exist, it falls back to joining with `_`.
+/// `encode_path` normalizes every non-alphanumeric character to `-`, so the
+/// encoded name alone cannot say which real character (or how many
+/// consecutive ones, or whether they sit at a component boundary or inside
+/// one component's own name) produced any given run of hyphens. This
+/// function resolves the ambiguity against the real filesystem — see
+/// `walk_fs`'s own doc comment (Fix(BUG-511)) for the resolution algorithm.
 ///
 /// Returns `None` if no matching path is found (project deleted, remote, or unmounted).
 ///
@@ -104,9 +106,7 @@ fn tilde_compress( path : &std::path::Path ) -> String
 fn decode_path_via_fs( encoded : &str ) -> Option< std::path::PathBuf >
 {
   let inner = &encoded[ 1.. ]; // strip leading `-`
-  let pieces : Vec< &str > = inner.split( '-' ).collect();
-  if pieces.is_empty() { return None; }
-  walk_fs( std::path::Path::new( "/" ), &pieces, 0, "" )
+  walk_fs( std::path::Path::new( "/" ), inner, true )
 }
 
 /// Decode the base-encoded component of a storage dir name to a real filesystem path.
@@ -167,89 +167,109 @@ fn matches_relevant( dir_name : &str, eb : &str, base_path : &std::path::Path ) 
     .map_or( true, | p | base_path.starts_with( &p ) )
 }
 
-/// Recursive DFS helper for `decode_path_via_fs`.
+/// Return true if `dir_name` encodes a project path that is exactly `base_path`
+/// itself (`scope::local` predicate) — the anchor project only, never a
+/// descendant or ancestor.
 ///
-/// `segment` accumulates the current unresolved path component. At each step, option A
-/// commits `segment` as a directory and recurses with the next piece; option B appends
-/// `_` + piece to `segment` and recurses; option C handles an empty piece (a `--`
-/// boundary) by trying `.`/`_`/`-` as the next component's original first character.
-/// `is_dir()` prunes option A (and gates option C) early.
-///
-/// Fix(BUG-003)
-/// Root cause: `encode_path` emits a `--` marker whenever a path component's first
-/// character is normalized away (original `.`, `_`, or literal `-` all become the
-/// marker), so `split('-')` on the storage key produces an EMPTY piece at that
-/// boundary. Options A and B only know how to commit a whole prior segment as a
-/// directory or merge an underscore into the current one — neither ever re-derives
-/// which of `.`/`_`/`-` the marker stood for, so a dot-prefixed component (e.g. a
-/// `TempDir`'s `.tmpXXXXXX` root) can never resolve and the whole walk returns `None`.
-/// Fix: on an empty piece, commit the current segment (or use `base` directly if the
-/// segment is already empty) and try each candidate character as the FIRST character
-/// of a fresh segment for the next piece.
-/// Pitfall: option C must consume the empty piece AND the following piece together
-/// (recurse at `idx + 2`) — treating the empty piece alone as a component would try to
-/// join a bare candidate character with nothing.
-fn walk_fs(
-  base    : &std::path::Path,
-  pieces  : &[ &str ],
-  idx     : usize,
-  segment : &str,
-) -> Option< std::path::PathBuf >
+/// Fix(BUG-509)
+/// Root cause: the previous inline check in `project_matches`'s `"local"` arm
+/// was a naive `dir_name.starts_with("{eb}--")` with no filesystem
+/// verification — unlike `matches_under`/`matches_relevant`, which both
+/// already received the BUG-003 treatment. A REAL nested project whose
+/// leading path component is non-alphanumeric-prefixed (e.g. `.venv`) encodes
+/// to exactly `"{eb}--venv"` (`encode_path`'s `--` topic-boundary marker),
+/// satisfying the naive check even though it is a genuine, separate, nested
+/// project — not a topic-suffix alias of the anchor. This let `scope::local`
+/// silently include an unrelated nested project's sessions (a cross-project
+/// data leak, since `scope::local` is also the default scope for
+/// `session::`-targeted `.show`/`.export`).
+/// Fix: verify the `--`-shaped candidate via `decode_path_via_fs`; if it
+/// resolves to a REAL path, only match when that path is EXACTLY `base_path`
+/// (never merely nested under it — that is `scope::under`'s job, not
+/// `scope::local`'s). An unresolvable candidate (genuine synthetic topic tag,
+/// no real directory on disk) is conservatively included, same fallback
+/// philosophy as `matches_under`/`matches_relevant`.
+/// Pitfall: do not reuse `matches_under`'s `starts_with(base_path)` check
+/// here — `scope::local` means the anchor itself, so the comparison must be
+/// equality, not a `starts_with`/ancestor relationship.
+fn matches_local( dir_name : &str, eb : &str, base_path : &std::path::Path ) -> bool
 {
-  if idx == pieces.len()
+  if dir_name == eb { return true; }
+  if !dir_name.starts_with( &format!( "{eb}--" ) ) { return false; }
+  decode_path_via_fs( dir_name )
+    .map_or( true, | p | p == base_path )
+}
+
+/// Recursive helper for `decode_path_via_fs`, resolving the encoding by
+/// construction against REAL directory entries rather than guessing which
+/// candidate character produced a run of hyphens.
+///
+/// At each step, list `base`'s actual directory entries; for each entry,
+/// forward-encode that entry's own name via
+/// `claude_storage_core::encode_component_piece` — the exact same
+/// per-component rule `encode_path` itself calls to build the storage key in
+/// the first place — and keep only the entries whose encoding is an actual
+/// prefix of `remaining`. A match strips that prefix and recurses into the
+/// entry with the leftover suffix; `is_first` flips to `false` after the
+/// first component, matching `encode_path`'s own first-vs-rest branch. An
+/// empty `remaining` at any point means the accumulated path is the answer.
+///
+/// Fix(BUG-511)
+/// Root cause: `encode_path` only ever special-cases each component's own
+/// LEADING character — nothing in the encoded output distinguishes a
+/// mid-component run of special characters from a component boundary, says
+/// how many special characters a run represents, or limits which
+/// non-alphanumeric byte produced it. The previous design (options A-D; see
+/// `git log` for the removed implementation) tried to invert this by
+/// guessing: a fixed three-character candidate set (`.`, `_`, `-`) for "the"
+/// special character, one candidate consumed per boundary. This was
+/// incomplete in three compounding ways, each independently confirmed by a
+/// MAAV Round 6 dimension agent: (1) any OTHER non-alphanumeric byte (e.g.
+/// `!`, `@`) was never in the candidate set, even though `encode_path` (and
+/// `docs/invariant/001_path_encoding.md`'s documented contract) treats every
+/// non-alphanumeric character identically; (2) two or more CONSECUTIVE
+/// leading special characters in one real component could never resolve,
+/// because each option only ever substituted a single candidate character
+/// per empty split-piece; (3) no option ever tried "this whole run of
+/// hyphens is literal characters embedded inside one real component that is
+/// never split at all" — so a same-level SIBLING directory whose name
+/// happens to extend the anchor's own encoded prefix (e.g. anchor `sibfoo`
+/// next to sibling `sibfoo--extra`) could be wrongly walked into as if it
+/// were a nested descendant.
+/// Fix: stop guessing candidate characters entirely. `encode_component_piece`
+/// is the same function `encode_path` itself calls per component — so
+/// instead of inverting the rule by hand, enumerate every REAL entry in
+/// `base`, forward-encode each one's name with that same function, and keep
+/// only the entries whose forward-encoding is an actual prefix of what is
+/// left to decode. This is complete by construction for any non-alphanumeric
+/// byte, any run length, and any component-boundary-vs-mid-component
+/// ambiguity, because it never needs to guess what produced a run of
+/// hyphens — it only ever checks what a real candidate entry's name WOULD
+/// encode to, which is exactly the computation `encode_path` already
+/// performed when the directory was first named.
+/// Pitfall: do not reintroduce a hardcoded candidate-character list (`.`,
+/// `_`, `-`, or any other finite set) for any reason, including performance
+/// — the whole point of this design is that no finite set can ever be
+/// complete against an encoding that normalizes ALL non-alphanumeric
+/// characters identically. If the encoding rule itself changes, change
+/// `encode_component_piece` (shared with `encode_path`) and this function
+/// picks up the new rule automatically — never re-derive the rule locally.
+fn walk_fs( base : &std::path::Path, remaining : &str, is_first : bool ) -> Option< std::path::PathBuf >
+{
+  if remaining.is_empty() { return Some( base.to_path_buf() ); }
+  let Ok( entries ) = std::fs::read_dir( base ) else { return None };
+  for entry in entries.flatten()
   {
-    let candidate = if segment.is_empty() { base.to_path_buf() } else { base.join( segment ) };
-    return if candidate.exists() { Some( candidate ) } else { None };
-  }
-  let piece = pieces[ idx ];
-  // Option C — empty piece (`--` boundary): try `.`, `_`, `-` as the original first
-  // character of the next piece's component, starting a fresh segment for it.
-  if piece.is_empty() && idx + 1 < pieces.len()
-  {
-    let commit_base = if segment.is_empty()
+    let name = entry.file_name();
+    let Some( name_str ) = name.to_str() else { continue };
+    let piece = claude_storage_core::encode_component_piece( name_str, is_first );
+    let Some( rest ) = remaining.strip_prefix( piece.as_str() ) else { continue };
+    if let Some( result ) = walk_fs( &entry.path(), rest, false )
     {
-      Some( base.to_path_buf() )
+      return Some( result );
     }
-    else
-    {
-      let candidate = base.join( segment );
-      if candidate.is_dir() { Some( candidate ) } else { None }
-    };
-    if let Some( next_base ) = commit_base
-    {
-      let next_piece = pieces[ idx + 1 ];
-      for prefix in [ '.', '_', '-' ]
-      {
-        let fresh_segment = format!( "{prefix}{next_piece}" );
-        if let Some( result ) = walk_fs( &next_base, pieces, idx + 2, &fresh_segment )
-        {
-          return Some( result );
-        }
-      }
-    }
   }
-  // Option A — path separator: commit current segment as a directory, recurse
-  if !segment.is_empty()
-  {
-    let next_base = base.join( segment );
-    if next_base.is_dir()
-    {
-      if let Some( result ) = walk_fs( &next_base, pieces, idx + 1, piece )
-      {
-        return Some( result );
-      }
-    }
-  }
-  // Option B — underscore: merge piece into segment
-  let joined = if segment.is_empty()
-  {
-    piece.to_string()
-  }
-  else
-  {
-    format!( "{segment}_{piece}" )
-  };
-  walk_fs( base, pieces, idx + 1, &joined )
+  None
 }
 
 /// Decode a storage dir name to the longest real filesystem path it represents.
@@ -437,7 +457,10 @@ fn project_matches(
     .unwrap_or( "" );
   match scope
   {
-    "local"    => dir_name == encoded_base || dir_name.starts_with( &format!( "{encoded_base}--" ) ),
+    // Fix(BUG-509): delegate to matches_local (filesystem-verified), replacing
+    // a naive starts_with("{eb}--") check that could not distinguish a real
+    // nested project from a topic-suffix alias of the anchor itself.
+    "local" => matches_local( dir_name, encoded_base, base_path ),
     // Fix(issue-031)
     // Root cause: starts_with on encoded strings cannot distinguish a child
     //   directory (base/sub → `base-sub`) from a same-level sibling whose name

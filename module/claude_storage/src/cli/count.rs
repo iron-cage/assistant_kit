@@ -2,7 +2,7 @@
 
 use unilang::{ VerifiedCommand, ExecutionContext, OutputData, ErrorData, ErrorCode };
 use claude_storage_core::Storage;
-use super::storage::{ create_storage, load_project_for_param, resolve_path_parameter };
+use super::storage::{ create_storage, load_project_for_param, resolve_path_parameter, find_session_mut };
 use super::projects::{ build_families, group_into_conversations };
 use super::scope::{ validate_scope, resolve_scoped_projects };
 
@@ -177,33 +177,23 @@ pub fn count_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
       // Bugs often exist in multiple locations sharing the same flawed assumption.
       let project = load_project_for_param( &storage, proj_id )?;
 
-      let sessions = project.all_sessions()
+      let mut sessions = project.all_sessions()
         .map_err( | e | ErrorData::new( ErrorCode::InternalError, format!( "Failed to list sessions: {e}" ) ) )?;
 
       if let Some( sess_id ) = session_id
       {
-        // Fix(issue-019): Use prefix matching for partial UUID, consistent with show_routine
-        // and export_routine (both use starts_with from the issue-011 fix).
+        // Fix(BUG-490 follow-up): call the shared find_session_mut (storage.rs)
+        // instead of inlining the same prefix-matching predicate a second time.
         //
-        // Root cause: count_routine used exact equality only, so "79f86582" failed even
-        // though ".show session_id::79f86582" succeeds via prefix matching.
+        // Root cause: this arm carried its own copy of find_session_mut's exact
+        // predicate, which is precisely the shape of drift BUG-490 itself warned
+        // about (see the removed comment this replaces) — the duplicate had not
+        // yet drifted, but nothing prevented a future fix from landing on only
+        // one of the two copies.
         //
-        // Pitfall: When fixing partial-UUID support in one session lookup, grep for every
-        // other `sessions.iter*().find(|s| s.id() == ...)` and apply the same change.
-        //
-        // Fix(BUG-490): Reverted `s.id().contains(sess_id)` to `s.id().starts_with(sess_id)`.
-        //
-        // Root cause: commit a405168a ("docs: restructure CLI documentation...") accidentally
-        // changed this predicate from starts_with to contains while rewriting this match arm
-        // to add the "no session specified" branch — the comment above was left unchanged and
-        // kept describing the pre-regression starts_with contract this fix restores.
-        //
-        // Pitfall: a duplicated lookup predicate (this one mirrors find_session_mut in
-        // storage.rs instead of calling it) can silently drift from its sibling; grep for all
-        // copies of a fixed predicate, not just the canonical one.
-        let session = sessions.iter()
-          .find( | s | s.id() == sess_id || s.id().starts_with( sess_id ) )
-          .ok_or_else( || ErrorData::new( ErrorCode::InternalError, format!( "Session not found: {sess_id}" ) ) )?;
+        // Pitfall: a duplicated lookup predicate can silently drift from its
+        // sibling; prefer calling the shared function over inlining its logic.
+        let session = find_session_mut( &mut sessions, sess_id )?;
 
         session.count_entries()
           .map_err( | e | ErrorData::new( ErrorCode::InternalError, format!( "Failed to count entries: {e}" ) ) )?

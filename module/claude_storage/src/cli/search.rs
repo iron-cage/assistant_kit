@@ -2,7 +2,7 @@
 
 use core::fmt::Write as FmtWrite;
 use unilang::{ VerifiedCommand, ExecutionContext, OutputData, ErrorData, ErrorCode };
-use super::storage::{ create_storage, load_project_for_param };
+use super::storage::{ create_storage, load_project_for_param, find_session_mut };
 use super::scope::{ validate_scope, resolve_scoped_projects };
 
 /// One search match, tagged with the project and session it was found in.
@@ -289,7 +289,10 @@ fn try_search_session_in_project(
   let mut sessions = project.all_sessions()
     .map_err( | e | ErrorData::new( ErrorCode::InternalError, format!( "Failed to list sessions: {e}" ) ) )?;
 
-  let Some( session ) = sessions.iter_mut().find( | s | s.id() == sess_id || s.id().starts_with( sess_id ) )
+  // Reuse the shared lookup (storage.rs) instead of inlining the same predicate a
+  // second time — see BUG-490's pitfall comment (count.rs) on duplicated session-
+  // matching predicates silently drifting from their sibling.
+  let Ok( session ) = find_session_mut( &mut sessions, sess_id )
   else
   {
     return Ok( None );

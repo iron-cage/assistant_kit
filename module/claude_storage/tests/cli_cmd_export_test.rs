@@ -821,9 +821,19 @@ fn t06_path_anchor_override_without_explicit_scope()
     root.path(), anchor.path(), "t06-session", 0, "t06-unique-content"
   );
 
+  // Fix(BUG-scope-under-t02-sibling): a literal "/tmp" cwd does not isolate path::
+  // as load-bearing — every TempDir in this suite (including `anchor`) is itself
+  // rooted under /tmp (TMPDIR unset), so "/tmp"'s encoded form is a real prefix of
+  // `anchor`'s own encoded name, and the "local" scope match in scope.rs's
+  // project_matches() would still coincidentally admit `anchor` even if path::
+  // were silently dropped. A second, independent TempDir's random suffix diverges
+  // from `anchor`'s, which is what actually makes the cwd unrelated in the
+  // filesystem-ancestor sense the "local" scope match checks.
+  let unrelated_cwd = TempDir::new().unwrap();
+
   let out = common::clg_cmd()
     .env( "CLAUDE_STORAGE_ROOT", root.path() )
-    .current_dir( "/tmp" )
+    .current_dir( unrelated_cwd.path() )
     .arg( ".export" )
     .arg( "session_id::t06-session" )
     .arg( format!( "path::{}", anchor.path().display() ) )
