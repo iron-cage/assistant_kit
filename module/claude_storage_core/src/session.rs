@@ -480,6 +480,13 @@ impl Session
         stats.last_timestamp = Some( timestamp.to_string() );
       }
 
+      // Extract cwd — first-entry-wins, mirroring the first_timestamp guard
+      // above (flat form: single-statement nesting would trip collapsible_if)
+      if stats.cwd.is_none()
+      {
+        stats.cwd = json.get_str( "cwd" ).map( std::string::ToString::to_string );
+      }
+
       // Extract token usage from assistant messages
       if let Some( "assistant" ) = json.get_str( "type" )
       {

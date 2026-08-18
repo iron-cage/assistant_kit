@@ -16,16 +16,20 @@ Edge case tests for the `scope::` parameter. Tests validate enum parsing and per
 | EC-6 | Invalid value "all" rejected with error | Error Handling |
 | EC-7 | Omitted defaults to "under" | Default |
 | EC-8 | scope::global ignores path:: | Behavior |
+| EC-9 | Invalid value rejected with documented word order | Error Handling |
+| EC-10 | Value "AROUND" accepted (case-insensitive) | Case Insensitivity |
+| EC-11 | Global help describes scope:: with real value set | Help |
 
 ## Test Coverage Summary
 
 - Enum Values: 4 tests (EC-1, EC-2, EC-3, EC-4)
-- Case Insensitivity: 1 test (EC-5)
-- Error Handling: 1 test (EC-6)
+- Case Insensitivity: 2 tests (EC-5, EC-10)
+- Error Handling: 2 tests (EC-6, EC-9)
 - Default: 1 test (EC-7)
 - Behavior: 1 test (EC-8)
+- Help: 1 test (EC-11)
 
-**Total:** 8 edge cases
+**Total:** 11 edge cases
 
 **Behavioral Divergence Pair:** EC-1 (scope::local, current project only) ↔ EC-2 (scope::relevant, ancestors included)
 
@@ -93,7 +97,7 @@ Edge case tests for the `scope::` parameter. Tests validate enum parsing and per
 - **Commands:** `.list`
 - **Given:** clean environment
 - **When:** `clg .list scope::all`
-- **Then:** stderr contains `scope must be relevant|local|under|global, got all`; error message `scope must be relevant|local|under|global, got all`
+- **Then:** stderr contains `scope must be relevant|local|under|global|around, got all`; error message `scope must be relevant|local|under|global|around, got all`
 - **Exit:** 1
 - **Source:** [param/12_scope.md](../../../../docs/cli/param/12_scope.md)
 
@@ -123,5 +127,38 @@ The project path in the summary header belongs to the child project, confirming 
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture`
 - **When:** `clg .list scope::global path::/tmp/nonexistent-subpath`
 - **Then:** stdout lists sessions from all projects in storage; the `path::` value has no filtering effect with `scope::global`.; output unaffected by path parameter when scope is global
+- **Exit:** 0
+- **Source:** [param/12_scope.md](../../../../docs/cli/param/12_scope.md)
+
+---
+
+### EC-9: Invalid value rejected with documented word order
+
+- **Commands:** `.projects`
+- **Given:** clean environment (validation precedes storage access)
+- **When:** `clg .projects scope::bogus`
+- **Then:** stderr contains the canonical message `scope must be relevant|local|under|global|around, got bogus` — the value list ends `global|around` exactly as documented at [param/12_scope.md](../../../../docs/cli/param/12_scope.md) line 19, not the pre-Task-512 `around|global` drift
+- **Exit:** 1
+- **Source:** [param/12_scope.md](../../../../docs/cli/param/12_scope.md)
+
+---
+
+### EC-10: Value "AROUND" accepted (case-insensitive)
+
+- **Commands:** `.projects`
+- **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture` with one path-encoded project; run from that project's directory
+- **When:** `clg .projects scope::AROUND`
+- **Then:** No error; uppercase input normalizes to `around` — the same case-insensitivity EC-5 pins for `RELEVANT`, applied to the value `.projects` defaults to
+- **Exit:** 0
+- **Source:** [param/12_scope.md](../../../../docs/cli/param/12_scope.md)
+
+---
+
+### EC-11: Global help describes scope:: with real value set
+
+- **Commands:** global help (`.help`)
+- **Given:** clean environment
+- **When:** `clg .help`
+- **Then:** stdout's `scope::VALUE` option line contains the value token `relevant|local|under|global|around`; no fragment of the stale `(all, cli, web, ide)` set remains
 - **Exit:** 0
 - **Source:** [param/12_scope.md](../../../../docs/cli/param/12_scope.md)

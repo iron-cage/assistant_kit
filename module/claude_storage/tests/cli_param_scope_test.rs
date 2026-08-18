@@ -14,6 +14,9 @@
 //! - EC-6: Invalid value "all" rejected with error
 //! - EC-7: Omitted defaults to "under" scope (summary mode output)
 //! - EC-8: `scope::global` ignores `path::`
+//! - EC-9: Invalid value rejected with the documented error-message word order
+//! - EC-10: Value "AROUND" accepted (case-insensitive, default value's own casing)
+//! - EC-11: Global help describes `scope::` with the real value set
 
 mod common;
 
@@ -299,4 +302,108 @@ fn ec_8_scope_global_ignores_path()
     .unwrap();
 
   assert_exit( &out, 0 );
+}
+
+/// EC-9: Invalid value rejected with the documented error-message word order.
+///
+/// ## Purpose
+/// Validates that `validate_scope()` emits the canonical message from
+/// `docs/cli/param/12_scope.md` line 19 — the value list ends `global|around`,
+/// not the pre-Task-512 `around|global` drift.
+///
+/// ## Coverage
+/// Exit 1; stderr contains the full documented string including the raw input.
+///
+/// ## Validation Strategy
+/// Run `.projects scope::bogus` with no fixture (validation precedes storage
+/// access). Assert exit 1 and the exact documented message in stderr.
+///
+/// ## Related Requirements
+/// `tests/docs/cli/param/12_scope.md` — EC-9
+#[ test ]
+fn ec_9_scope_error_message_word_order()
+{
+  let out = common::clg_cmd()
+    .arg( ".projects" )
+    .arg( "scope::bogus" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 1 );
+  let err = stderr( &out );
+  assert!(
+    err.contains( "scope must be relevant|local|under|global|around, got bogus" ),
+    "EC-9: expected documented word order (ending global|around) in stderr; got: {err}"
+  );
+}
+
+/// EC-10: Value "AROUND" accepted (case-insensitive).
+///
+/// ## Purpose
+/// Validates that the default scope's own value survives uppercase input —
+/// `scope::AROUND` normalizes to `around`. EC-5 covers `RELEVANT`; this pins
+/// the same guarantee for the value `.projects` defaults to.
+///
+/// ## Coverage
+/// Exit 0.
+///
+/// ## Validation Strategy
+/// Create fixture. Run `.projects scope::AROUND` from a project directory.
+/// Assert exit 0.
+///
+/// ## Related Requirements
+/// `tests/docs/cli/param/12_scope.md` — EC-10
+#[ test ]
+fn ec_10_scope_uppercase_around_accepted()
+{
+  let root = TempDir::new().unwrap();
+  let project_dir = TempDir::new().unwrap();
+  common::write_path_project_session( root.path(), project_dir.path(), "sess-arnd", 2 );
+
+  let out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .current_dir( project_dir.path() )
+    .arg( ".projects" )
+    .arg( "scope::AROUND" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+}
+
+/// EC-11: Global help describes `scope::` with the real value set.
+///
+/// ## Purpose
+/// Validates that the global help's `scope::VALUE` option line lists the real
+/// values instead of the stale `(all, cli, web, ide)` set it carried before
+/// Task 512.
+///
+/// ## Coverage
+/// Exit 0; corrected value set present; stale value set absent.
+///
+/// ## Validation Strategy
+/// Run `clg .help`. Assert stdout contains the option name and the unbroken
+/// value token `relevant|local|under|global|around`, and no fragment of the
+/// stale value list.
+///
+/// ## Related Requirements
+/// `tests/docs/cli/param/12_scope.md` — EC-11
+#[ test ]
+fn ec_11_global_help_scope_values_accurate()
+{
+  let out = common::clg_cmd()
+    .arg( ".help" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let output = stdout( &out );
+  assert!(
+    output.contains( "relevant|local|under|global|around" ),
+    "EC-11: expected corrected scope value set in global help; got: {output}"
+  );
+  assert!(
+    !output.contains( "all, cli" ),
+    "EC-11: stale scope value fragment must be gone from global help; got: {output}"
+  );
 }

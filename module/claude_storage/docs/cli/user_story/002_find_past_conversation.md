@@ -26,7 +26,7 @@
 | 2 | [Project Scope](../param_group/02_project_scope.md) | Pin lookup to a specific project |
 | 3 | [Session Identification](../param_group/03_session_identification.md) | Identify session by ID for `.show` |
 | 4 | [Session Filter](../param_group/04_session_filter.md) | Filter sessions by type, agent flag, entry count |
-| 5 | [Scope Configuration](../param_group/05_scope_configuration.md) | Narrow discovery scope |
+| 5 | [Scope Configuration](../param_group/05_scope_configuration.md) | Narrow discovery scope — implemented for both `.list` and `.search` |
 
 ### Referenced Parameters
 | # | Parameter | Role |
@@ -39,7 +39,7 @@
 | 9 | [`path::`](../param/09_path.md) | Restrict to a specific storage root |
 | 10 | [`project::`](../param/10_project.md) | Pin search or listing to a specific project |
 | 11 | [`query::`](../param/11_query.md) | Keyword to search in session content |
-| 12 | [`scope::`](../param/12_scope.md) | Discovery scope for search and listing |
+| 12 | [`scope::`](../param/12_scope.md) | Discovery scope for search and listing — implemented for both `.list` and `.search` |
 | 13 | [`session::`](../param/13_session.md) | Filter sessions by ID substring |
 | 14 | [`session_id::`](../param/14_session_id.md) | Identify specific session for detailed view |
 | 15 | [`show_sessions::`](../param/15_sessions.md) | Show sessions per project in list view |
@@ -48,6 +48,8 @@
 | 19 | [`show_stat::`](../param/19_show_stat.md) | Append statistics footer in session view |
 | 22 | [`limit::`](../param/22_limit.md) | Cap sessions per project when browsing |
 | 24 | [`show_tree::`](../param/24_show_tree.md) | Tree-indent agent sessions in project view |
+| 27 | [`since_days::`](../param/27_since_days.md) | Window project view to recently active conversations |
+| 28 | [`show_topic::`](../param/28_show_topic.md) | Show each conversation's opening topic in project view |
 
 ### Related User Stories
 | # | User Story | Relationship |
@@ -126,8 +128,10 @@ cls .show session_id::abc123
 
 **Session not found:**
 ```bash
-cls .search query::keyword scope::all
-# If no results: try broader scope or different keyword
+cls .search query::keyword
+# Omit project:: to search all projects (the default scope::global); if no results, try a different keyword.
+# Note: scope::local/under/relevant/around (with path::) narrows the project set searched
+# instead of sweeping all of storage — see the Scope Configuration parameter group.
 ```
 
 **Project not recognized:**

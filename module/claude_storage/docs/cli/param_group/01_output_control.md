@@ -7,13 +7,13 @@
 - **In Scope**: Group membership, shared behavior, command interactions.
 - **Out of Scope**: Individual parameter specs (→ `param/`), type constraints (→ `type/`).
 
-**Parameters:** `show_stat::`, `show_tokens::`, `show_tree::`
+**Parameters:** `show_stat::`, `show_tokens::`, `show_tree::`, `show_topic::`
 
 **Pattern:** Per-block boolean toggles for optional output sections
 
 **Purpose:** Controls which optional information blocks are included in command output. Each parameter independently enables one additional section; the default output is always the standard summary.
 
-**Used By:** `.show` (show_stat, show_tokens), `.status` (show_tokens), `.projects` (show_tree) — 3 commands total
+**Used By:** `.show` (show_stat, show_tokens), `.status` (show_tokens), `.projects` (show_tree, show_topic) — 3 commands total
 
 **Semantic Coherence Test:**
 - "Does each parameter toggle a specific optional output block?" → YES
@@ -34,6 +34,7 @@
 | `show_stat::` | Boolean | Append statistics footer (entry counts, timestamps) | `.show` |
 | `show_tokens::` | Boolean | Include token usage section | `.show`, `.status` |
 | `show_tree::` | Boolean | Tree-indent agent sessions under root sessions | `.projects` |
+| `show_topic::` | Boolean | Append first user message text to session lines | `.projects` |
 
 **Examples:**
 ```bash
@@ -41,6 +42,7 @@
 .show session_id::abc123 show_tokens::1
 .status show_tokens::1
 .projects show_tree::1
+.projects show_topic::1
 ```
 
 ### Referenced Commands
@@ -49,7 +51,7 @@
 |---|---------|------------|
 | 1 | [`.status`](../command/01_status.md) | `show_tokens::` |
 | 3 | [`.show`](../command/03_show.md) | `show_stat::`, `show_tokens::` |
-| 7 | [`.projects`](../command/07_projects.md) | `show_tree::` |
+| 7 | [`.projects`](../command/07_projects.md) | `show_tree::`, `show_topic::` |
 
 ### Referenced Parameters
 
@@ -58,6 +60,7 @@
 | 19 | [`show_stat::`](../param/19_show_stat.md) | Boolean | `0` | Statistics footer in `.show` content mode |
 | 23 | [`show_tokens::`](../param/23_show_tokens.md) | Boolean | `0` | Token usage section in `.show` and `.status` |
 | 24 | [`show_tree::`](../param/24_show_tree.md) | Boolean | `0` | Tree-indented agent display in `.projects` |
+| 28 | [`show_topic::`](../param/28_show_topic.md) | Boolean | `0` | First user message on session lines in `.projects` |
 
 ### Referenced User Stories
 

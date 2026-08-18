@@ -149,7 +149,7 @@ fn ec6_invalid_scope_rejected()
   assert_exit( &out, 1 );
   let err = stderr( &out );
   assert!(
-    err.contains( "scope must be relevant|local|under|around|global, got all" ),
+    err.contains( "scope must be relevant|local|under|global|around, got all" ),
     "error must contain exact message; got: {err}"
   );
 }

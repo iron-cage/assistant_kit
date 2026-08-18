@@ -105,6 +105,8 @@ tests/
 | `cli_cmd_session_dir_test.rs` | Spec-driven integration tests for `.session.dir` command |
 | `cli_cmd_session_ensure_test.rs` | Spec-driven integration tests for `.session.ensure` command |
 | `cli_cmd_tail_test.rs` | Spec-driven integration tests for `.tail` command (INT-1..INT-8) |
+| `cli_cmd_usage_test.rs` | Spec-driven integration tests for `.usage` command (INT-1..INT-21) |
+| `cli_repl_eof_test.rs` | REPL EOF clean-exit reproducers, timeout-guarded (task-482) |
 | `cli_param_agent_test.rs` | Edge case tests for `agent::` parameter |
 | `cli_param_case_sensitive_test.rs` | Edge case tests for `case_sensitive::` parameter |
 | `cli_param_count_test.rs` | Edge case tests for `count::` parameter |
@@ -129,6 +131,8 @@ tests/
 | `cli_param_show_stat_test.rs` | Edge case tests for `show_stat::` parameter |
 | `cli_param_show_tokens_test.rs` | Edge case tests for `show_tokens::` parameter |
 | `cli_param_show_tree_test.rs` | Edge case tests for `show_tree::` parameter |
+| `cli_param_since_days_test.rs` | Edge case tests for `since_days::` parameter |
+| `cli_param_show_topic_test.rs` | Edge case tests for `show_topic::` parameter |
 | `cli_param_group_output_control_test.rs` | Cross-command interaction tests for Output Control parameter group |
 | `cli_param_group_project_scope_test.rs` | Cross-command interaction tests for Project Scope parameter group |
 | `cli_param_group_scope_configuration_test.rs` | Cross-command interaction tests for Scope Configuration parameter group |

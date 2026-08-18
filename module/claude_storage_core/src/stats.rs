@@ -44,6 +44,11 @@ pub struct SessionStats
 
   /// Last entry timestamp (ISO 8601 format)
   pub last_timestamp : Option< String >,
+
+  /// Session working directory, from the first parsed line carrying a `cwd`
+  /// field (first-entry-wins, mirroring `first_timestamp`). `None` when no
+  /// line carries one.
+  pub cwd : Option< String >,
 }
 
 impl SessionStats
@@ -66,6 +71,7 @@ impl SessionStats
       session_id,
       first_timestamp : None,
       last_timestamp : None,
+      cwd : None,
     }
   }
 }

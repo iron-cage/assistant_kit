@@ -31,6 +31,7 @@ fn build_command_registry() -> CommandRegistry
     ".list"           => cli::list_routine,
     ".show"           => cli::show_routine,
     ".tail"           => cli::tail_routine,
+    ".usage"          => cli::usage_routine,
     ".count"          => cli::count_routine,
     ".search"         => cli::search_routine,
     ".export"         => cli::export_routine,
@@ -115,7 +116,7 @@ fn print_usage( binary : &str )
   [
     OptionEntry { name : "project::ID".to_string(),     desc : "Filter by project identifier".to_string() },
     OptionEntry { name : "session::ID".to_string(),     desc : "Target a specific session".to_string() },
-    OptionEntry { name : "scope::VALUE".to_string(),    desc : "Scope filter (all, cli, web, ide)".to_string() },
+    OptionEntry { name : "scope::VALUE".to_string(),    desc : "Scope filter (relevant|local|under|global|around)".to_string() },
     OptionEntry { name : "format::FMT".to_string(),     desc : "Output format (text, json, markdown)".to_string() },
     OptionEntry { name : "limit::N".to_string(),        desc : "Maximum entries to return".to_string() },
     OptionEntry { name : "query::TEXT".to_string(),     desc : "Search query string".to_string() },
@@ -123,7 +124,7 @@ fn print_usage( binary : &str )
   data.examples   = vec!
   [
     ExampleEntry { invocation : format!( "{binary} .status" ),                          desc : None },
-    ExampleEntry { invocation : format!( "{binary} .list scope::cli limit::10" ),       desc : None },
+    ExampleEntry { invocation : format!( "{binary} .list limit::10" ),                  desc : None },
     ExampleEntry { invocation : format!( "{binary} .search query::\"error handling\"" ), desc : None },
     ExampleEntry { invocation : format!( "{binary} --repl" ),                           desc : Some( "Enter interactive REPL mode".to_string() ) },
   ];
@@ -268,10 +269,29 @@ fn run_repl( registry : CommandRegistry, binary : &str )
     io::stdout().flush().unwrap();
 
     command_buffer.clear();
-    if let Err( e ) = io::stdin().read_line( &mut command_buffer )
+    // Fix(task-482)
+    // Root cause: EOF is signaled in-band as `Ok(0)` — the previous
+    // `if let Err` form treated it as empty input and `continue`d, and
+    // reads at EOF return instantly, so the loop became a CPU-pegging
+    // busy-spin escapable only by SIGINT/SIGKILL.
+    // Pitfall: `read_line` never reports EOF through `Err`; every REPL
+    // input loop needs an explicit `Ok(0)` exit arm.
+    match io::stdin().read_line( &mut command_buffer )
     {
-      eprintln!( "Error reading input: {e}" );
-      continue;
+      Ok( 0 ) =>
+      {
+        // EOF (empty-line Ctrl+D or exhausted pipe): close the
+        // unterminated `> ` prompt line, then exit like `exit` does.
+        println!();
+        println!( "Goodbye!" );
+        break;
+      }
+      Ok( _ ) => {}
+      Err( e ) =>
+      {
+        eprintln!( "Error reading input: {e}" );
+        continue;
+      }
     }
 
     let input = command_buffer.trim();

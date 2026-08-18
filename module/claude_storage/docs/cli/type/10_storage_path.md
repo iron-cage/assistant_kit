@@ -35,23 +35,25 @@ Validate and normalize path:
 - `expanded() -> string` — Returns path with `~` expanded
 - `exists() -> boolean` — True when path exists on filesystem
 
-**Commands:** `.status`, `.project.exists`, `.projects`, `.export` (via `output::`)
+**Commands:** `.status`, `.show`, `.count`, `.search`, `.projects`, `.usage`, `.project.path`, `.project.exists`, `.session.dir`, `.session.ensure` (via `path::`); `.export` (via both `output::` and `path::`)
 
 ### Referenced Commands
 
 | # | Command | Via Parameter |
 |---|---------|---------------|
 | 1 | [`.status`](../command/01_status.md) | `path::` |
-| 2 | [`.list`](../command/02_list.md) | `path::` |
 | 3 | [`.show`](../command/03_show.md) | `path::` |
 | 4 | [`.count`](../command/04_count.md) | `path::` |
 | 5 | [`.search`](../command/05_search.md) | `path::` |
-| 6 | [`.export`](../command/06_export.md) | `path::`, `output::` |
+| 6 | [`.export`](../command/06_export.md) | `output::`, `path::` |
 | 7 | [`.projects`](../command/07_projects.md) | `path::` |
 | 8 | [`.project.path`](../command/08_project_path.md) | `path::` |
 | 9 | [`.project.exists`](../command/09_project_exists.md) | `path::` |
 | 10 | [`.session.dir`](../command/10_session_dir.md) | `path::` |
 | 11 | [`.session.ensure`](../command/11_session_ensure.md) | `path::` |
+| 13 | [`.usage`](../command/13_usage.md) | `path::` |
+
+Not listed: `.list` (its `path::` is [`PathSubstring`](../type/04_path_substring.md)-typed, not `StoragePath`).
 
 ### Referenced Parameters
 

@@ -7,9 +7,11 @@
 - **In Scope**: Invocation syntax, accepted parameters, output structure, error conditions.
 - **Out of Scope**: Parameter definitions (→ `param/`), type constraints (→ `type/`).
 
-Display session or project details. Scope-aware: when `session_id::` is given without `project::`, the current project and all its topic variants (`--commit`, `--default-topic`, etc.) are searched (scope::local). Without `session_id::`, resolves to the current project. Use this when you need the content of a conversation or a project's session list.
+Display session or project details. When `session_id::` is given without `project::`, `scope::`-resolved projects (default `local` — the current project and all its topic variants, e.g. `--commit`, `--default-topic`) are searched for that session. Without `session_id::`, resolves to the current project. Use this when you need the content of a conversation or a project's session list.
 
 **Parameters:** `session_id::`, `project::`, `show_entries::`, `show_metadata::`, `show_stat::`, `show_tokens::`, `scope::`, `path::`
+
+`scope::` (default `local`) and `path::` (default cwd) narrow the session lookup used when `session_id::` is given without `project::` (see [Scope Configuration](../param_group/05_scope_configuration.md)) — `local` reproduces the original cwd-project-and-topic-variants lookup exactly. An explicit `project::`, or omitting `session_id::` entirely, makes both parameters a no-op.
 
 **Exit:** `0` success | `1` error (invalid arguments, storage read failure, or no project in cwd)
 
@@ -26,20 +28,20 @@ claude_storage .show session_id::ID project::PROJECT
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
-| `session_id::` | [`SessionId`](../type/09_session_id.md) | optional | — | Session to display; when given without `project::`, the current project and all its topic variants are searched (scope::local) |
-| `project::` | [`ProjectId`](../type/05_project_id.md) | optional | current dir | Project identifier; when given with `session_id::`, restricts search to this project only |
+| `session_id::` | [`SessionId`](../type/09_session_id.md) | optional | — | Session to display; when given without `project::`, `scope::`-resolved projects are searched (default `local`) |
+| `project::` | [`ProjectId`](../type/05_project_id.md) | optional | current dir | Project identifier; when given with `session_id::`, restricts search to this project only (scope::/path:: ignored) |
 | `show_entries::` | Boolean | optional | `0` | Show all entries in session |
 | `show_metadata::` | Boolean | optional | `0` | Show metadata only (suppresses content) |
 | `show_stat::` | Boolean | optional | `0` | Accepted for backward compatibility; no effect on output |
 | `show_tokens::` | Boolean | optional | `0` | Include token usage section |
-| `scope::` | [`ScopeValue`](../type/07_scope_value.md) | optional | `local` | Project search boundary (Case 2 only: session_id without project::) |
-| `path::` | [`StoragePath`](../type/10_storage_path.md) | optional | cwd | Scope anchor path |
+| `scope::` | [`ScopeValue`](../type/07_scope_value.md) | optional | `local` | Project search boundary when `session_id::` is given without `project::` |
+| `path::` | [`StoragePath`](../type/10_storage_path.md) | optional | current dir | Anchor path for `scope::` resolution |
 
-`session_id::` and `project::` belong to [Session Identification](../param_group/03_session_identification.md) and [Project Scope](../param_group/02_project_scope.md) groups. `scope::` and `path::` belong to the [Scope Configuration group](../param_group/05_scope_configuration.md). `show_stat::` and `show_tokens::` belong to the [Output Control group](../param_group/01_output_control.md).
+`session_id::` and `project::` belong to [Session Identification](../param_group/03_session_identification.md) and [Project Scope](../param_group/02_project_scope.md) groups. `scope::` and `path::` belong to the [Scope Configuration group](../param_group/05_scope_configuration.md) and narrow the session lookup as described above when `session_id::` is given without `project::`. `show_stat::` and `show_tokens::` belong to the [Output Control group](../param_group/01_output_control.md).
 
 **Algorithm (4 steps):**
 1. Parse and validate parameters — reject whitespace-only `session_id::`, reject `show_entries::` without `session_id::`
-2. Dispatch by parameter combination — (a) no params → cwd project session list, (b) `session_id::` only → search cwd project and all topic variants, (c) `project::` only → that project session list, (d) both → that session in that project
+2. Dispatch by parameter combination — (a) no params → cwd project session list, (b) `session_id::` only → search `scope::`-resolved projects (default `local`, reproducing the cwd-project-and-topic-variants lookup), (c) `project::` only → that project session list, (d) both → that session in that project (scope::/path:: ignored)
 3. Load project/session data — prefix matching for partial UUIDs (Git-style 8-char prefix)
 4. Format output — metadata mode (`show_metadata::1`: structured fields) or content mode (default: key:val attribute block, then conversation chat-log); `show_stat::1` has no effect; token usage appended via `show_tokens::1`
 
@@ -48,18 +50,21 @@ claude_storage .show session_id::ID project::PROJECT
 # Show current project's session list
 claude_storage .show
 
-# Show a specific session — searches all projects globally (no project:: needed)
+# Show a specific session — searches the current project and its topic variants (scope::local, the default)
 claude_storage .show session_id::-default_topic
 
 # Show session metadata only (no content)
 claude_storage .show session_id::abc123 show_metadata::1
 
-# Show a session in a specific project only (skips global search)
+# Show a session in a specific project only (skips scope::/path:: resolution)
 claude_storage .show session_id::ID project::/path/to/project
+
+# Show a session anywhere in storage (scope::global)
+claude_storage .show session_id::abc123 scope::global
 ```
 
 **Notes:**
-- When `session_id::` is given without `project::`, the current project and all its topic variants (scope::local) are searched; supply `project::` to restrict lookup to one specific project
+- When `session_id::` is given without `project::`, `scope::`-resolved projects are searched (default `local` — the current project and all its topic variants, reproducing the original lookup exactly); use `scope::global`/`under`/`relevant`/`around` with `path::` to broaden the search boundary. Supplying `project::` restricts lookup to one specific project and makes `scope::`/`path::` a no-op.
 - Without `session_id::`, resolves to current directory project; exits with `1` if cwd has no project in storage
 - `show_metadata::1` selects metadata-only mode; `show_entries::1` only has an effect nested within that mode (appends a legacy UUID-only entries list) and is a no-op in the default content-first mode, which always shows full entry content regardless
 - `show_stat::1` has no effect in either `show_metadata::1` mode or content mode (both already show the equivalent fields unconditionally)

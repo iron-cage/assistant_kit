@@ -31,6 +31,8 @@
 //! - INT-23: `scope::relevant` excludes sibling with underscore-suffix name
 //! - INT-24: entry count shown per session
 //! - INT-25: `limit::N` truncates main sessions
+//! - INT-51: `scope::` with invalid value rejected
+//! - INT-52: `agent::` with non-boolean value rejected
 //!
 //! Tests INT-26..INT-50: → `cli_cmd_projects_summary_test.rs`
 
@@ -876,5 +878,99 @@ fn int_25_v1_limit_truncates_sessions()
   assert!(
     s.contains( "more" ) || s.contains( "truncat" ) || s.contains( "conversation" ),
     "must show truncation hint when limit < total sessions; got:\n{s}"
+  );
+}
+
+/// INT-51: `scope::` with invalid value rejected.
+///
+/// ## Purpose
+/// Verify `.projects scope::badvalue` is rejected — `badvalue` is not a
+/// valid `scope::` option (accepted: `local`, `under`, `relevant`, `global`,
+/// `around`).
+///
+/// ## Coverage
+/// Exit code exactly 1; stderr carries the canonical `validate_scope()`
+/// error naming the invalid value; no project output on stdout.
+///
+/// ## Validation Strategy
+/// Run `.projects scope::badvalue` against an empty temp storage root from
+/// a neutral cwd. Assert exit 1, canonical stderr text, empty stdout.
+///
+/// ## Related Requirements
+/// `tests/docs/cli/command/07_projects.md` — INT-51
+#[ test ]
+fn int_51_scope_invalid_value_rejected()
+{
+  let root = TempDir::new().unwrap();
+
+  let out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .current_dir( "/tmp" )
+    .arg( ".projects" )
+    .arg( "scope::badvalue" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 1 );
+  let err = stderr( &out );
+  assert!(
+    !err.is_empty(),
+    "INT-51: invalid scope:: value must produce an error on stderr"
+  );
+  assert!(
+    err.contains( "scope must be relevant|local|under|global|around, got badvalue" ),
+    "INT-51: stderr must carry the canonical validate_scope() error; got: {err}"
+  );
+  assert!(
+    stdout( &out ).is_empty(),
+    "INT-51: no project output on stdout when scope:: is rejected; got:\n{}",
+    stdout( &out )
+  );
+}
+
+/// INT-52: `agent::` with non-boolean value rejected.
+///
+/// ## Purpose
+/// Verify `.projects agent::invalid` is rejected as an argument error —
+/// `invalid` is not a valid boolean value (accepted: `0`, `1`).
+///
+/// ## Coverage
+/// Exit code exactly 1; non-empty stderr describing the argument error; no
+/// project output on stdout.
+///
+/// ## Validation Strategy
+/// Run `.projects agent::invalid` against an empty temp storage root from a
+/// neutral cwd. Assert exit 1, stderr naming the `agent` argument, empty
+/// stdout.
+///
+/// ## Related Requirements
+/// `tests/docs/cli/command/07_projects.md` — INT-52
+#[ test ]
+fn int_52_agent_non_boolean_rejected()
+{
+  let root = TempDir::new().unwrap();
+
+  let out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .current_dir( "/tmp" )
+    .arg( ".projects" )
+    .arg( "agent::invalid" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 1 );
+  let err = stderr( &out );
+  assert!(
+    !err.is_empty(),
+    "INT-52: non-boolean agent:: value must produce an error on stderr"
+  );
+  assert!(
+    err.contains( "agent" ),
+    "INT-52: stderr must name the rejected agent argument; got: {err}"
+  );
+  assert!(
+    stdout( &out ).is_empty(),
+    "INT-52: no project output on stdout when agent:: is rejected; got:\n{}",
+    stdout( &out )
   );
 }

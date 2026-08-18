@@ -14,6 +14,13 @@
 //! - INT-6: Exit code 1 on invalid target value
 //! - INT-7: `target::sessions` with no `project::` counts all sessions
 //! - INT-8: `target::entries` with no `session::` counts all entries in project
+//! - T01: `target::projects` default (no `scope::`) regression guard
+//! - T02: `target::projects scope::local` narrows below the global count
+//! - T03: `target::sessions` default (no `scope::`) regression guard
+//! - T04: `target::sessions scope::under` narrows to descendant projects' sessions
+//! - T05: `issue-003a` cwd-shortcut is unaffected by `scope::` (even an invalid value)
+//! - T06: `target::projects scope::bogus` rejected with the canonical error
+//! - T07: `target::entries` ignores `scope::` (already fully scoped via `project::`)
 
 mod common;
 
@@ -351,4 +358,382 @@ fn int_8_target_entries_no_session_counts_all_entries_in_project()
     "INT-8: .count output must be a bare integer; got: '{s}'"
   ) );
   assert_eq!( n, 8, "INT-8: expected 8 total entries across s1+s2; got {n}" );
+}
+
+/// T01: `target::projects` default (no `scope::`) regression guard.
+///
+/// ## Purpose
+/// Verify that `target::projects` with no `scope::` still counts every
+/// project, matching pre-retrofit behavior (the `global` default fast path).
+///
+/// ## Coverage
+/// Count equals the total written projects (3); exit 0.
+///
+/// ## Validation Strategy
+/// Write 3 unrelated projects. Run `.count target::projects` with no
+/// `scope::`. Assert the count is 3.
+///
+/// ## Related Requirements
+/// `task/claude_storage/verified/517_count_scope_retrofit.md` — T01
+#[ test ]
+fn t01_target_projects_default_scope_global_regression_guard()
+{
+  let root = TempDir::new().unwrap();
+
+  let p1 = root.path().join( "t01alpha" );
+  let p2 = root.path().join( "t01beta" );
+  let p3 = root.path().join( "t01gamma" );
+  common::write_path_project_session( root.path(), &p1, "s001", 2 );
+  common::write_path_project_session( root.path(), &p2, "s001", 2 );
+  common::write_path_project_session( root.path(), &p3, "s001", 2 );
+
+  let out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .current_dir( "/tmp" )
+    .arg( ".count" )
+    .arg( "target::projects" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let s = stdout( &out ).trim().to_string();
+  let n : usize = s.parse().unwrap_or_else( |_| panic!(
+    "T01: .count target::projects output must be a bare integer; got: '{s}'"
+  ) );
+  assert_eq!( n, 3, "T01: expected project count 3 at default scope; got {n}" );
+}
+
+/// T02: `target::projects scope::local` narrows below the global count.
+///
+/// ## Purpose
+/// Verify `scope::local` limits the projects counted to the cwd's own
+/// project, producing a strictly smaller count than the unscoped total in
+/// the same storage fixture (AF1).
+///
+/// ## Coverage
+/// Global count is 3; `scope::local` count is 1; `1 < 3`; both exit 0.
+///
+/// ## Validation Strategy
+/// Write the cwd's own project (a real directory, required for
+/// `Command::current_dir`) plus two unrelated projects, all in the same
+/// storage root. Run `.count target::projects` (no `scope::`) and
+/// `.count target::projects scope::local` from the cwd project's own
+/// directory. Assert the local count is strictly less than the global count.
+///
+/// ## Related Requirements
+/// `task/claude_storage/verified/517_count_scope_retrofit.md` — T02
+#[ test ]
+fn t02_target_projects_scope_local_narrows_below_global()
+{
+  let root       = TempDir::new().unwrap();
+  let target_tmp = TempDir::new().unwrap();
+  let target     = target_tmp.path().join( "t02targetmarker" );
+  std::fs::create_dir_all( &target ).unwrap();
+
+  common::write_path_project_session( root.path(), &target, "s001", 2 );
+
+  let other1 = root.path().join( "t02other1" );
+  let other2 = root.path().join( "t02other2" );
+  common::write_path_project_session( root.path(), &other1, "s001", 2 );
+  common::write_path_project_session( root.path(), &other2, "s001", 2 );
+
+  let global_out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .current_dir( "/tmp" )
+    .arg( ".count" )
+    .arg( "target::projects" )
+    .output()
+    .unwrap();
+
+  let local_out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .current_dir( &target )
+    .arg( ".count" )
+    .arg( "target::projects" )
+    .arg( "scope::local" )
+    .output()
+    .unwrap();
+
+  assert_exit( &global_out, 0 );
+  assert_exit( &local_out, 0 );
+
+  let global_n : usize = stdout( &global_out ).trim().parse().unwrap_or_else( |_| panic!(
+    "T02: global count must be a bare integer; got: '{}'", stdout( &global_out )
+  ) );
+  let local_n : usize = stdout( &local_out ).trim().parse().unwrap_or_else( |_| panic!(
+    "T02: scope::local count must be a bare integer; got: '{}'", stdout( &local_out )
+  ) );
+
+  assert_eq!( global_n, 3, "T02: expected global project count 3; got {global_n}" );
+  assert_eq!( local_n, 1, "T02: expected scope::local project count 1; got {local_n}" );
+  assert!(
+    local_n < global_n,
+    "T02 (AF1): scope::local count ({local_n}) must be strictly less than the global count ({global_n}) in the same fixture"
+  );
+}
+
+/// T03: `target::sessions` default (no `scope::`) regression guard.
+///
+/// ## Purpose
+/// Verify that `target::sessions` with no `project::` and no `scope::`
+/// still sums sessions across every project, matching pre-retrofit behavior.
+///
+/// ## Coverage
+/// Count equals the total written sessions (2 + 3 = 5); exit 0.
+///
+/// ## Validation Strategy
+/// Write 2 projects with 2 and 3 sessions. Run `.count target::sessions`
+/// with no `scope::`. Assert the count is 5.
+///
+/// ## Related Requirements
+/// `task/claude_storage/verified/517_count_scope_retrofit.md` — T03
+#[ test ]
+fn t03_target_sessions_default_scope_global_regression_guard()
+{
+  let root = TempDir::new().unwrap();
+
+  let p1 = root.path().join( "t03alpha" );
+  let p2 = root.path().join( "t03beta" );
+  common::write_path_project_session( root.path(), &p1, "s001", 2 );
+  common::write_path_project_session( root.path(), &p1, "s002", 2 );
+  common::write_path_project_session( root.path(), &p2, "s001", 2 );
+  common::write_path_project_session( root.path(), &p2, "s002", 2 );
+  common::write_path_project_session( root.path(), &p2, "s003", 2 );
+
+  let out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .current_dir( "/tmp" )
+    .arg( ".count" )
+    .arg( "target::sessions" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let s = stdout( &out ).trim().to_string();
+  let n : usize = s.parse().unwrap_or_else( |_| panic!(
+    "T03: .count target::sessions output must be a bare integer; got: '{s}'"
+  ) );
+  assert_eq!( n, 5, "T03: expected total session count 5 at default scope; got {n}" );
+}
+
+/// T04: `target::sessions scope::under` narrows to descendant projects' sessions.
+///
+/// ## Purpose
+/// Verify `scope::under` from an ancestor cwd sums sessions only across
+/// descendant projects, excluding an unrelated project elsewhere in storage.
+///
+/// ## Coverage
+/// Global count is 5 (2 + 3); `scope::under` count is 2 (nested project
+/// only); `2 < 5`; both exit 0.
+///
+/// ## Validation Strategy
+/// Write a 2-session project nested under an ancestor directory (the
+/// ancestor itself is a real directory for `Command::current_dir`) plus a
+/// 3-session unrelated project elsewhere. Run `.count target::sessions` (no
+/// `scope::`) and `.count target::sessions scope::under` from the ancestor.
+/// Assert the under-scoped count is strictly less than the global count.
+///
+/// ## Related Requirements
+/// `task/claude_storage/verified/517_count_scope_retrofit.md` — T04
+#[ test ]
+fn t04_target_sessions_scope_under_narrows_to_descendants()
+{
+  let root       = TempDir::new().unwrap();
+  let anchor_tmp = TempDir::new().unwrap();
+  let anchor     = anchor_tmp.path().join( "t04anchor" );
+  let nested     = anchor.join( "t04nestedchild" );
+  std::fs::create_dir_all( &anchor ).unwrap();
+
+  common::write_path_project_session( root.path(), &nested, "s001", 2 );
+  common::write_path_project_session( root.path(), &nested, "s002", 2 );
+
+  let other = root.path().join( "t04other" );
+  common::write_path_project_session( root.path(), &other, "s001", 2 );
+  common::write_path_project_session( root.path(), &other, "s002", 2 );
+  common::write_path_project_session( root.path(), &other, "s003", 2 );
+
+  let global_out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .current_dir( "/tmp" )
+    .arg( ".count" )
+    .arg( "target::sessions" )
+    .output()
+    .unwrap();
+
+  let under_out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .current_dir( &anchor )
+    .arg( ".count" )
+    .arg( "target::sessions" )
+    .arg( "scope::under" )
+    .output()
+    .unwrap();
+
+  assert_exit( &global_out, 0 );
+  assert_exit( &under_out, 0 );
+
+  let global_n : usize = stdout( &global_out ).trim().parse().unwrap_or_else( |_| panic!(
+    "T04: global count must be a bare integer; got: '{}'", stdout( &global_out )
+  ) );
+  let under_n : usize = stdout( &under_out ).trim().parse().unwrap_or_else( |_| panic!(
+    "T04: scope::under count must be a bare integer; got: '{}'", stdout( &under_out )
+  ) );
+
+  assert_eq!( global_n, 5, "T04: expected global session count 5; got {global_n}" );
+  assert_eq!( under_n, 2, "T04: expected scope::under session count 2; got {under_n}" );
+  assert!(
+    under_n < global_n,
+    "T04 (AF1): scope::under count ({under_n}) must be strictly less than the global count ({global_n}) in the same fixture"
+  );
+}
+
+/// T05: `issue-003a` cwd-shortcut is unaffected by `scope::`, even an invalid value.
+///
+/// ## Purpose
+/// Verify the cwd-shortcut (no `target::`, no `project::`) never reads
+/// `scope::` at all — not even to validate it — confirming the shortcut is
+/// fully exempt per the task's Out of Scope.
+///
+/// ## Coverage
+/// Output identical with and without `scope::bogus`; both exit 0 (not 1 —
+/// proving the invalid value was never validated).
+///
+/// ## Validation Strategy
+/// Write the cwd's own project with 2 sessions. Run `.count` and
+/// `.count scope::bogus` from that project's directory. Assert both exit 0
+/// and produce byte-identical output.
+///
+/// ## Related Requirements
+/// `task/claude_storage/verified/517_count_scope_retrofit.md` — T05
+#[ test ]
+fn t05_issue_003a_shortcut_unaffected_by_scope()
+{
+  let root = TempDir::new().unwrap();
+  let proj = root.path().join( "t05project" );
+  std::fs::create_dir_all( &proj ).unwrap();
+
+  common::write_path_project_session( root.path(), &proj, "s001", 3 );
+  common::write_path_project_session( root.path(), &proj, "s002", 2 );
+
+  let no_scope_out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .current_dir( &proj )
+    .arg( ".count" )
+    .output()
+    .unwrap();
+
+  let with_bogus_scope_out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .current_dir( &proj )
+    .arg( ".count" )
+    .arg( "scope::bogus" )
+    .output()
+    .unwrap();
+
+  assert_exit( &no_scope_out, 0 );
+  assert_exit(
+    &with_bogus_scope_out, 0
+  );
+  assert_eq!(
+    no_scope_out.stdout, with_bogus_scope_out.stdout,
+    "T05: issue-003a cwd-shortcut must ignore scope:: entirely, even an invalid value \
+    (proves the shortcut never calls validate_scope())"
+  );
+}
+
+/// T06: `target::projects scope::bogus` rejected with the canonical error.
+///
+/// ## Purpose
+/// Verify invalid `scope::` values are rejected for `.count` the same way
+/// as for `.projects`/`.show`/`.export`/`.search`/`.list` — one shared
+/// validator, one canonical error.
+///
+/// ## Coverage
+/// Exit 1; stderr contains the exact `validate_scope()` wording.
+///
+/// ## Validation Strategy
+/// Run `.count target::projects scope::bogus`. Assert exit 1 and the
+/// canonical error text.
+///
+/// ## Related Requirements
+/// `task/claude_storage/verified/517_count_scope_retrofit.md` — T06
+#[ test ]
+fn t06_target_projects_scope_bogus_rejected_with_canonical_error()
+{
+  let root = TempDir::new().unwrap();
+
+  let out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .current_dir( "/tmp" )
+    .arg( ".count" )
+    .arg( "target::projects" )
+    .arg( "scope::bogus" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 1 );
+  let err = stderr( &out );
+  assert!(
+    err.contains( "scope must be relevant|local|under|global|around, got bogus" ),
+    "T06: scope::bogus must produce the canonical validate_scope() error; got: {err}"
+  );
+}
+
+/// T07: `target::entries` ignores `scope::` (already fully scoped via `project::`).
+///
+/// ## Purpose
+/// Verify `target::entries` (which requires an explicit `project::`) treats
+/// a present, valid `scope::` value as a no-op — identical output whether
+/// `scope::` is given or omitted.
+///
+/// ## Coverage
+/// Output identical with and without `scope::under`; both exit 0.
+///
+/// ## Validation Strategy
+/// Write a project with one 6-entry session. Run
+/// `.count target::entries project::<id> session::s1` with and without
+/// `scope::under`. Assert both produce the same count.
+///
+/// ## Related Requirements
+/// `task/claude_storage/verified/517_count_scope_retrofit.md` — T07
+#[ test ]
+fn t07_target_entries_ignores_scope()
+{
+  let root  = TempDir::new().unwrap();
+  let alpha = root.path().join( "t07alpha" );
+  let enc   = common::write_path_project_session( root.path(), &alpha, "s1", 6 );
+
+  let no_scope_out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .current_dir( "/tmp" )
+    .arg( ".count" )
+    .arg( "target::entries" )
+    .arg( format!( "project::{enc}" ) )
+    .arg( "session::s1" )
+    .output()
+    .unwrap();
+
+  let with_scope_out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .current_dir( "/tmp" )
+    .arg( ".count" )
+    .arg( "target::entries" )
+    .arg( format!( "project::{enc}" ) )
+    .arg( "session::s1" )
+    .arg( "scope::under" )
+    .output()
+    .unwrap();
+
+  assert_exit( &no_scope_out, 0 );
+  assert_exit( &with_scope_out, 0 );
+  assert_eq!(
+    no_scope_out.stdout, with_scope_out.stdout,
+    "T07: target::entries must ignore scope:: entirely — identical output with and without it"
+  );
+
+  let s = stdout( &no_scope_out ).trim().to_string();
+  let n : usize = s.parse().unwrap_or_else( |_| panic!(
+    "T07: .count target::entries output must be a bare integer; got: '{s}'"
+  ) );
+  assert_eq!( n, 6, "T07: expected 6 entries in session s1; got {n}" );
 }

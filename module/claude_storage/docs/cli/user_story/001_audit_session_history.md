@@ -11,6 +11,7 @@
 - [ ] Can count specific targets (projects, sessions, entries) independently
 - [ ] Can override the storage root to inspect an alternate location
 - [ ] Can view token usage breakdown with show_tokens::1
+- [ ] Can view a per-session usage table (turns, tokens, cache, duration, directory) across a scoped set of sessions — see [`.usage`](../command/13_usage.md)
 
 ### Referenced Commands
 | # | Command | Role |
@@ -18,6 +19,7 @@
 | 1 | [`.status`](../command/01_status.md) | Primary overview: project totals, session totals, storage root |
 | 2 | [`.list`](../command/02_list.md) | Enumerate projects with per-project session expansion |
 | 4 | [`.count`](../command/04_count.md) | Precise item counts for specific targets |
+| 13 | [`.usage`](../command/13_usage.md) | Per-session usage table for detailed activity audit |
 
 ### Referenced Parameter Groups
 | # | Parameter Group | Role |
@@ -92,4 +94,11 @@ cls .count target::projects path::/backup/.claude
 ```bash
 cls .status show_tokens::1
 # Output: includes entry counts and token totals (slow — parses all JSONL)
+```
+
+**Per-session usage audit (see [`.usage`](../command/13_usage.md)):**
+```bash
+cls .usage scope::under path::/data/repos/yrd_review
+# Session   Command   Turns      In     Out   Cache      Dur  Dir
+# bf61b676  /role        31   44.8k  105.8k   4.8M    5m24s  /data/repos/yrd_review/2026_troy_venue_pipeline_dev/pr_101
 ```

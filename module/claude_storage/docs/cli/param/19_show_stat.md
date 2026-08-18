@@ -35,7 +35,7 @@ show_stat::1    # No effect — content already shows the equivalent fields unco
 ### Referenced Parameter Groups
 | # | Group | Membership | Co-members |
 |---|-------|------------|------------|
-| 1 | [Output Control](../param_group/01_output_control.md) | Full | `show_tokens::`, `show_tree::` |
+| 1 | [Output Control](../param_group/01_output_control.md) | Full | `show_tokens::`, `show_tree::`, `show_topic::` |
 
 ### Referenced Commands
 | # | Command | Default | Notes |

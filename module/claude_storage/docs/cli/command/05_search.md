@@ -11,6 +11,8 @@ Search session content for a query string across projects and sessions. Use this
 
 **Parameters:** `query::`, `project::`, `session::`, `case_sensitive::`, `entry_type::`, `scope::`, `path::`
 
+`scope::` (default `global`) and `path::` (default cwd) narrow the project set searched when `project::` is absent (see [Scope Configuration](../param_group/05_scope_configuration.md)): with `session::` given, they scope which projects are searched for that session; with neither `project::` nor `session::` given, they scope the full-text search itself. `global` reproduces the original unscoped search exactly. An explicit `project::` makes both parameters a no-op (already fully scoped).
+
 **Exit:** `0` success | `1` argument error (missing `query::`) | `2` storage read error
 
 **Syntax:**
@@ -18,7 +20,6 @@ Search session content for a query string across projects and sessions. Use this
 claude_storage .search query::QUERY
 claude_storage .search query::QUERY project::PROJECT
 claude_storage .search query::QUERY [case_sensitive::1] [entry_type::user|assistant]
-claude_storage .search query::QUERY scope::relevant
 ```
 
 **Parameters:**
@@ -30,14 +31,14 @@ claude_storage .search query::QUERY scope::relevant
 | `session::` | [`SessionId`](../type/09_session_id.md) | optional | — | Restrict to this session |
 | `case_sensitive::` | Boolean | optional | `0` | Enable case-sensitive matching |
 | `entry_type::` | [`EntryType`](../type/02_entry_type.md) | optional | `all` | Filter by entry type |
-| `scope::` | [`ScopeValue`](../type/07_scope_value.md) | optional | `global` | Search boundary |
-| `path::` | [`StoragePath`](../type/10_storage_path.md) | optional | cwd | Scope anchor path |
+| `scope::` | [`ScopeValue`](../type/07_scope_value.md) | optional | `global` | Project search boundary when `project::` is absent |
+| `path::` | [`StoragePath`](../type/10_storage_path.md) | optional | current dir | Anchor path for `scope::` resolution |
 
-`project::` belongs to the [Project Scope group](../param_group/02_project_scope.md). `scope::` and `path::` belong to the [Scope Configuration group](../param_group/05_scope_configuration.md). `.search` has no output-control parameters.
+`project::` belongs to the [Project Scope group](../param_group/02_project_scope.md). `scope::` and `path::` belong to the [Scope Configuration group](../param_group/05_scope_configuration.md) and narrow project discovery as described above when `project::` is absent. `.search` has no output-control parameters.
 
 **Algorithm (4 steps):**
 1. Validate `query::` — reject missing or whitespace-only values; build search filter with case sensitivity and entry type
-2. Determine search scope — specific session (prefix-matched), specific project, or all projects globally
+2. Determine search scope — specific session within an explicit project (prefix-matched); specific session across `scope::`-resolved projects (default `global`) when `project::` is absent; a specific project; or `scope::`-resolved projects (default `global`, reproducing the original all-projects search) when neither is given
 3. Iterate sessions in scope — parse JSONL entries, apply filter (text match + optional entry type); skip corrupted sessions with warning
 4. Format output — match count header; per-match: session ID, entry type, content excerpt
 
@@ -52,14 +53,14 @@ claude_storage .search query::"session management" case_sensitive::1
 # Search only user messages in a project
 claude_storage .search query::implement entry_type::user project::abc123
 
-# Search only within the relevant scope (ancestor chain of cwd)
-claude_storage .search query::error scope::relevant
+# Search only the current directory's own project (scope::local)
+claude_storage .search query::error scope::local
 ```
 
 **Notes:**
 - `query::` is required; command exits with `1` if omitted
 - Use `q` alias for shorter syntax: `claude_storage .search q::version_bump`
-- Without `project::`, searches all projects (may be slow on large storage); `scope::` is a more precise alternative for limiting the search boundary
+- Without `project::`, searches `scope::`-resolved projects (default `global` — all projects, may be slow on large storage); use `scope::local`/`under`/`relevant`/`around` with `path::` to narrow the search boundary without naming an exact `project::`
 - `session::` matches a leading prefix of the session ID, never a substring found elsewhere in the ID — a matching predicate shared with `.show`/`.export`/`.tail` that briefly matched substrings anywhere in the ID is fixed (BUG-490)
 
 ### Referenced Parameter Groups

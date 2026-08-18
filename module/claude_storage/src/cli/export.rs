@@ -2,6 +2,7 @@
 
 use unilang::{ VerifiedCommand, ExecutionContext, OutputData, ErrorData, ErrorCode };
 use super::storage::{ create_storage, load_project_for_param, find_session_mut };
+use super::scope::{ validate_scope, resolve_scoped_projects };
 
 /// Export session to file
 ///
@@ -31,27 +32,54 @@ pub fn export_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
 
   // Create storage instance
   let storage = create_storage()?;
+  let output_path = std::path::Path::new( output_path_str );
 
-  // Load project
-  let project = if let Some( proj_id ) = project_id
+  // Fix(issue-012): Support path projects in .export command
+  //
+  // Root cause: Hardcoded ProjectId::uuid() prevented path projects from working.
+  // Commands .count/.search/.export shared this bug which was fixed for .show (Finding #008)
+  // but not propagated.
+  //
+  // Pitfall: When fixing a bug in one command, grep for identical patterns in other commands.
+  // Bugs often exist in multiple locations sharing the same flawed assumption.
+  if let Some( proj_id ) = project_id
   {
-    // Fix(issue-012): Support path projects in .export command
-    //
-    // Root cause: Hardcoded ProjectId::uuid() prevented path projects from working.
-    // Commands .count/.search/.export shared this bug which was fixed for .show (Finding #008)
-    // but not propagated.
-    //
-    // Pitfall: When fixing a bug in one command, grep for identical patterns in other commands.
-    // Bugs often exist in multiple locations sharing the same flawed assumption.
-    load_project_for_param( &storage, proj_id )
+    // scope::/path:: only apply to the "project:: absent" branch below — an
+    // explicit project:: is already fully scoped.
+    let project = load_project_for_param( &storage, proj_id )?;
+    export_from_project( &project, session_id, format, output_path )
   }
   else
   {
-    storage.load_project_for_cwd()
-      .map_err( | e | ErrorData::new( ErrorCode::InternalError, format!( "Failed to load project: {e}" ) ) )
-  }?;
+    let scope = validate_scope( cmd.get_string( "scope" ), "local" )?;
+    let scoped_projects = resolve_scoped_projects( &storage, &scope, cmd.get_string( "path" ) )?;
 
-  // Find session
+    for project in &scoped_projects
+    {
+      if let Ok( output ) = export_from_project( project, session_id, format, output_path )
+      {
+        return Ok( output );
+      }
+    }
+
+    Err( ErrorData::new( ErrorCode::InternalError, format!( "Session '{session_id}' not found in scope-resolved projects" ) ) )
+  }
+}
+
+/// Helper: find `session_id` in `project`, export it to `output_path`, and
+/// build the confirmation message.
+///
+/// # Errors
+///
+/// Returns error if the session cannot be found in `project`, sessions
+/// cannot be listed, or the export write itself fails.
+fn export_from_project(
+  project     : &claude_storage_core::Project,
+  session_id  : &str,
+  format      : claude_storage_core::ExportFormat,
+  output_path : &std::path::Path,
+) -> core::result::Result< OutputData, ErrorData >
+{
   let mut sessions = project.all_sessions()
     .map_err( | e | ErrorData::new( ErrorCode::InternalError, format!( "Failed to list sessions: {e}" ) ) )?;
 
@@ -65,9 +93,6 @@ pub fn export_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   // both exact and partial IDs to ensure both work. Use production-format test data
   // (actual UUIDs) not test-friendly strings like "test-session-123".
   let session = find_session_mut( &mut sessions, session_id )?;
-
-  // Export to file
-  let output_path = std::path::Path::new( output_path_str );
 
   claude_storage_core::export_session_to_file( session, format, output_path )
     .map_err( | e | ErrorData::new( ErrorCode::InternalError, format!( "Export failed: {e}" ) ) )?;

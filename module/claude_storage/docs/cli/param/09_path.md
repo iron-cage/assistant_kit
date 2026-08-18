@@ -17,7 +17,7 @@ Path argument. Semantics differ by command — see command sections for exact be
 
 **Default:** Command-dependent
 
-**Commands:** `.status`, `.list`, `.projects`, `.count`, `.search`, `.show`, `.export`, `.project.path`, `.project.exists`, `.session.dir`, `.session.ensure`, `.tail`
+**Commands:** `.status`, `.list`, `.projects`, `.count`, `.show`, `.search`, `.export`, `.project.path`, `.project.exists`, `.session.dir`, `.session.ensure`, `.tail`, `.usage` — registered.
 
 **Per-command semantics:**
 
@@ -25,18 +25,19 @@ Path argument. Semantics differ by command — see command sections for exact be
 |---------|------|---------|-----------|
 | `.status` | StoragePath | `~/.claude/` | Storage root override |
 | `.list` | PathSubstring | — | Filter projects by path substring (case-insensitive) |
-| `.projects` | StoragePath | cwd | Scope anchor path |
-| `.count` | StoragePath | cwd | Scope anchor path |
-| `.search` | StoragePath | cwd | Scope anchor path |
-| `.show` | StoragePath | cwd | Scope anchor path |
-| `.export` | StoragePath | cwd | Scope anchor path |
+| `.projects` | StoragePath | cwd | Scope anchor path (implemented) |
+| `.count` | String | `~/.claude/` | Storage root override — not a scope anchor; `.count` narrows via `scope::` alone (no `path::` anchor role) |
+| `.search` | StoragePath | cwd | Scope anchor path for `scope::`-resolved project search when `project::` is absent (implemented) |
+| `.show` | StoragePath | cwd | Scope anchor path for `scope::`-resolved session lookup when `session_id::` is given without `project::` (implemented) |
+| `.export` | StoragePath | cwd | Scope anchor path for `scope::`-resolved source-session lookup when `project::` is absent (implemented) |
 | `.project.path` | StoragePath | cwd | Directory to compute storage path for |
 | `.project.exists` | StoragePath | cwd | Directory to check for history |
 | `.session.dir` | StoragePath | cwd | Base directory |
 | `.session.ensure` | StoragePath | cwd | Base directory |
 | `.tail` | StoragePath | cwd | Directory to resolve project from |
+| `.usage` | StoragePath | cwd | Scope anchor path (implemented) |
 
-**Purpose:** Provides a path context appropriate to each command. In `.project.exists`, `.project.path`, `.session.dir`, and `.session.ensure`, it is a filesystem path to process. In `.list`, it is a substring filter on project paths. In `.projects`, `.count`, `.search`, `.show`, and `.export`, it anchors the scope discovery when paired with `scope::`.
+**Purpose:** Provides a path context appropriate to each command. In `.project.exists`, `.project.path`, `.session.dir`, and `.session.ensure`, it is a filesystem path to process. In `.list`, it is a substring filter on project paths. In `.status` and `.count`, it overrides the storage root entirely. In `.projects`, `.search`, `.show`, `.export`, and [`.usage`](../command/13_usage.md), it anchors the scope discovery when paired with `scope::` (all five implemented).
 
 **Examples:**
 ```bash
@@ -56,16 +57,22 @@ Path argument. Semantics differ by command — see command sections for exact be
 .session.dir path::/home/user/project
 .session.ensure path::/home/user/project
 
-# .projects / .count / .search / .show / .export: scope anchor
+# .projects: scope anchor (one of four commands implementing this role)
 .projects scope::under path::/home/alice/projects
-.count scope::under path::/home/alice/projects
+
+# .search / .show / .export: scope anchor for scope::-resolved lookups
 .search query::error scope::under path::/home/alice/projects
+.show session_id::abc123 scope::under path::/home/alice/projects
+.export session_id::abc123 output::out.md scope::under path::/home/alice/projects
+
+# .count: storage root override (not a scope anchor — .count narrows via scope:: alone)
+.count path::/alt/storage/root
 
 # .tail: directory to resolve project from
 .tail path::/home/alice/projects/my-app
 ```
 
-**Group (scope anchor context):** [Scope Configuration](../param_group/05_scope_configuration.md) — `path::` acts as the scope anchor paired with `scope::` in `.projects`, `.count`, `.search`, `.show`, and `.export`; its role in `.status`, `.list`, `.project.exists`, `.project.path`, `.session.dir`, and `.session.ensure` is independent and not part of this group.
+**Group (scope anchor context):** [Scope Configuration](../param_group/05_scope_configuration.md) — `path::` acts as the scope anchor paired with `scope::` in `.projects`, `.search`, `.show`, `.export`, and [`.usage`](../command/13_usage.md) (all implemented). `.count` is a Partial member of this group via `scope::` alone — its own `path::` keeps a separate storage-root-override role, not the anchor role. `path::`'s role in `.status`, `.list`, `.project.exists`, `.project.path`, `.session.dir`, and `.session.ensure` is independent and not part of this group.
 
 ### Referenced Type
 | Type | Kind | Fundamental | Key Constraint |
@@ -76,23 +83,24 @@ Path argument. Semantics differ by command — see command sections for exact be
 ### Referenced Parameter Groups
 | # | Group | Membership | Co-members |
 |---|-------|------------|------------|
-| 5 | [Scope Configuration](../param_group/05_scope_configuration.md) | Full | `scope::` |
+| 5 | [Scope Configuration](../param_group/05_scope_configuration.md) | Partial — anchor role implemented via `.projects`, `.search`, `.show`, `.export`, `.usage` | `scope::` |
 
 ### Referenced Commands
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
 | 1 | [`.status`](../command/01_status.md) | `~/.claude/` | Storage root override |
 | 2 | [`.list`](../command/02_list.md) | — | PathSubstring type: substring filter on project paths |
-| 3 | [`.show`](../command/03_show.md) | cwd | Scope anchor path |
-| 4 | [`.count`](../command/04_count.md) | cwd | Scope anchor path |
-| 5 | [`.search`](../command/05_search.md) | cwd | Scope anchor path |
-| 6 | [`.export`](../command/06_export.md) | cwd | Scope anchor path |
-| 7 | [`.projects`](../command/07_projects.md) | cwd | Scope anchor path |
+| 3 | [`.show`](../command/03_show.md) | cwd | Scope anchor path — implemented |
+| 4 | [`.count`](../command/04_count.md) | `~/.claude/` | Storage root override, not a scope anchor — `.count` narrows via `scope::` alone |
+| 5 | [`.search`](../command/05_search.md) | cwd | Scope anchor path — implemented |
+| 6 | [`.export`](../command/06_export.md) | cwd | Scope anchor path — implemented |
+| 7 | [`.projects`](../command/07_projects.md) | cwd | Scope anchor path — implemented |
 | 8 | [`.project.path`](../command/08_project_path.md) | cwd | Directory to compute storage path for |
 | 9 | [`.project.exists`](../command/09_project_exists.md) | cwd | Directory to check for history |
 | 10 | [`.session.dir`](../command/10_session_dir.md) | cwd | Base directory |
 | 11 | [`.session.ensure`](../command/11_session_ensure.md) | cwd | Base directory |
 | 12 | [`.tail`](../command/12_tail.md) | cwd | Directory to resolve project from |
+| 13 | [`.usage`](../command/13_usage.md) | cwd | Scope anchor path — implemented |
 
 ### Referenced User Stories
 | # | User Story | Persona |

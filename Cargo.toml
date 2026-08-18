@@ -35,7 +35,7 @@ exclude = [ "-*", "contract/claude_code", "contract/sdk" ]
 [workspace.package]
 version = "1.2.0"
 edition = "2021"
-rust-version = "1.74"
+rust-version = "1.75"
 authors    = [ "wandalen" ]
 license    = "MIT"
 repository = "https://github.com/iron-cage/claude_tools"

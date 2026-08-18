@@ -13,6 +13,7 @@
 //! - INT-6: Exit code 0 on success
 //! - INT-7: Exit code 2 on unreadable storage path
 //! - INT-8: Output contains project count and session count
+//! - INT-9: `show_tokens::` with invalid value rejected
 #![ cfg( unix ) ]
 
 mod common;
@@ -329,5 +330,50 @@ fn int_8_output_contains_project_and_session_count()
   assert!(
     s.contains( '5' ),
     "INT-8: output must reference session count 5; got:\n{s}"
+  );
+}
+
+/// INT-9: `show_tokens::` with invalid value rejected.
+///
+/// ## Purpose
+/// Verify `.status show_tokens::invalid` is rejected as an argument error —
+/// `invalid` is not a valid boolean value (accepted: `0`, `1`).
+///
+/// ## Coverage
+/// Exit code exactly 1; non-empty stderr describing the argument error; no
+/// storage output on stdout.
+///
+/// ## Validation Strategy
+/// Run `.status show_tokens::invalid` against an empty temp storage root.
+/// Assert exit 1, stderr naming the `show_tokens` argument, empty stdout.
+///
+/// ## Related Requirements
+/// `tests/docs/cli/command/01_status.md` — INT-9
+#[ test ]
+fn int_9_show_tokens_invalid_value_rejected()
+{
+  let root = TempDir::new().unwrap();
+
+  let out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .arg( ".status" )
+    .arg( "show_tokens::invalid" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 1 );
+  let err = stderr( &out );
+  assert!(
+    !err.is_empty(),
+    "INT-9: invalid show_tokens:: boolean must produce an error on stderr"
+  );
+  assert!(
+    err.contains( "show_tokens" ),
+    "INT-9: stderr must name the rejected show_tokens argument; got: {err}"
+  );
+  assert!(
+    stdout( &out ).is_empty(),
+    "INT-9: no storage output on stdout when the argument is rejected; got:\n{}",
+    stdout( &out )
   );
 }

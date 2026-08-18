@@ -3,6 +3,7 @@
 use core::fmt::Write as FmtWrite;
 use unilang::{ VerifiedCommand, ExecutionContext, OutputData, ErrorData, ErrorCode };
 use super::storage::{ create_storage, load_project_for_param, find_session_mut };
+use super::scope::{ validate_scope, resolve_scoped_projects };
 
 /// Search session content for query string
 ///
@@ -42,6 +43,10 @@ pub fn search_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   let session_id = cmd.get_string( "session" );
   let case_sensitive = cmd.get_boolean( "case_sensitive" ).unwrap_or( false );
   let entry_type = cmd.get_string( "entry_type" );
+  // scope::/path:: only apply to the two "no project::" branches below — an
+  // explicit project:: is already fully scoped.
+  let scope_raw = cmd.get_string( "scope" );
+  let path_raw = cmd.get_string( "path" );
 
   // Create storage instance
   let storage = create_storage()?;
@@ -77,8 +82,7 @@ pub fn search_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
 
   if let Some( sess_id ) = session_id
   {
-    // Search specific session
-    let project = if let Some( proj_id ) = project_id
+    if let Some( proj_id ) = project_id
     {
       // Fix(issue-012): Support path projects in .search command
       //
@@ -88,33 +92,32 @@ pub fn search_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
       //
       // Pitfall: When fixing a bug in one command, grep for identical patterns in other commands.
       // Bugs often exist in multiple locations sharing the same flawed assumption.
-      load_project_for_param( &storage, proj_id )
+      let project = load_project_for_param( &storage, proj_id )?;
+      all_matches.extend( search_session_in_project( &project, sess_id, &filter )? );
     }
     else
     {
-      storage.load_project_for_cwd()
-        .map_err( | e | ErrorData::new( ErrorCode::InternalError, format!( "Failed to load project: {e}" ) ) )
-    }?;
+      // Fix(BUG-scope-014): session:: given without project:: now searches
+      // scope::-resolved projects (default global) instead of the single cwd
+      // project — see docs/cli/param/12_scope.md's flat global default row.
+      let scope = validate_scope( scope_raw, "global" )?;
+      let scoped_projects = resolve_scoped_projects( &storage, &scope, path_raw )?;
 
-    let mut sessions = project.all_sessions()
-      .map_err( | e | ErrorData::new( ErrorCode::InternalError, format!( "Failed to list sessions: {e}" ) ) )?;
+      let mut found = false;
+      for project in &scoped_projects
+      {
+        if let Ok( matches ) = search_session_in_project( project, sess_id, &filter )
+        {
+          all_matches.extend( matches );
+          found = true;
+          break;
+        }
+      }
 
-    // Fix(issue-020): Use prefix matching for partial UUID, consistent with show_routine
-    // and export_routine (issue-011 fix).
-    //
-    // Root cause: search_routine used exact equality only, so ".search session::79f86582"
-    // failed even though ".show session_id::79f86582" succeeds via starts_with.
-    //
-    // Pitfall: Partial-UUID support must be applied uniformly. Any session find()
-    // predicate that uses only == will silently reject valid prefix IDs.
-    let session = find_session_mut( &mut sessions, sess_id )?;
-
-    let matches = session.search( &filter )
-      .map_err( | e | ErrorData::new( ErrorCode::InternalError, format!( "Search failed: {e}" ) ) )?;
-
-    for m in matches
-    {
-      all_matches.push( ( project.id().clone(), sess_id.to_string(), m ) );
+      if !found
+      {
+        return Err( ErrorData::new( ErrorCode::InternalError, format!( "Session not found: {sess_id}" ) ) );
+      }
     }
   }
   else if let Some( proj_id ) = project_id
@@ -149,9 +152,10 @@ pub fn search_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   }
   else
   {
-    // No project or session specified: search all projects globally
-    let projects = storage.list_projects()
-      .map_err( | e | ErrorData::new( ErrorCode::InternalError, format!( "Failed to list projects: {e}" ) ) )?;
+    // No project or session specified: search per scope:: (default global —
+    // identical project set to the prior unconditional storage.list_projects()).
+    let scope = validate_scope( scope_raw, "global" )?;
+    let projects = resolve_scoped_projects( &storage, &scope, path_raw )?;
 
     for project in &projects
     {
@@ -199,4 +203,36 @@ pub fn search_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   }
 
   Ok( OutputData::new( output, "text" ) )
+}
+
+/// Search `sess_id` within a single `project`, returning `(project_id, session_id, match)` triples.
+///
+/// Fix(issue-020): Use prefix matching for partial UUID, consistent with `show_routine`
+/// and `export_routine` (issue-011 fix).
+///
+/// Root cause: `search_routine` used exact equality only, so ".search `session::79f86582`"
+/// failed even though ".show `session_id::79f86582`" succeeds via `starts_with`.
+///
+/// Pitfall: Partial-UUID support must be applied uniformly. Any session `find()`
+/// predicate that uses only == will silently reject valid prefix IDs.
+///
+/// # Errors
+///
+/// Returns error if `sess_id` is not found in `project`, sessions cannot be
+/// listed, or the search itself fails.
+fn search_session_in_project(
+  project : &claude_storage_core::Project,
+  sess_id : &str,
+  filter  : &claude_storage_core::SearchFilter,
+) -> core::result::Result< Vec< ( claude_storage_core::ProjectId, String, claude_storage_core::SearchMatch ) >, ErrorData >
+{
+  let mut sessions = project.all_sessions()
+    .map_err( | e | ErrorData::new( ErrorCode::InternalError, format!( "Failed to list sessions: {e}" ) ) )?;
+
+  let session = find_session_mut( &mut sessions, sess_id )?;
+
+  let matches = session.search( filter )
+    .map_err( | e | ErrorData::new( ErrorCode::InternalError, format!( "Search failed: {e}" ) ) )?;
+
+  Ok( matches.into_iter().map( | m | ( project.id().clone(), sess_id.to_string(), m ) ).collect() )
 }

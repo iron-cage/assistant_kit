@@ -36,7 +36,7 @@ The hierarchy mirrors the `~/.claude/` directory layout exactly. Each level is a
 - Non-conversation entries (e.g. queue-operation, summary) are silently skipped during loading — see [003_entry_type_format.md](../../../claude_storage/docs/invariant/003_entry_type_format.md) for the full type contract and evidence tiers.
 
 **Statistics types** — aggregated metrics.
-- `SessionStats`: per-session totals (entries, input/output tokens, first/last timestamps).
+- `SessionStats`: per-session totals (entries, input/output tokens, cache tokens, first/last timestamps, agent-session flag). Does not yet aggregate `Entry.cwd` or `Entry.model`, though both are already parsed per-entry — the `claude_storage` crate's planned `.usage` command needs a `cwd` field (first entry's value, one per session) added here; a `model` field was evaluated for the same command but deliberately deferred (see [`docs/cli/command/13_usage.md`](../../../claude_storage/docs/cli/command/13_usage.md) Notes).
 - `ProjectStats`: per-project aggregation over sessions.
 - `GlobalStats`: workspace-wide summary with per-project breakdown.
 

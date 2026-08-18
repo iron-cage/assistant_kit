@@ -4,7 +4,7 @@
 
 - **Purpose**: Document individual parameter specifications for the `claude_storage` CLI.
 - **Responsibility**: Per-parameter detail pages with type, defaults, and command cross-refs.
-- **In Scope**: All 25 CLI parameters with type constraints, defaults, valid values, and command usage.
+- **In Scope**: All 28 CLI parameters with type constraints, defaults, valid values, and command usage.
 - **Out of Scope**: Type definitions (→ `type/`), parameter group semantics (→ `param_group/`), command-level behavior (→ `command/`).
 
 All parameters for the `claude_storage` CLI. Parameters use `param::value` syntax.
@@ -40,6 +40,9 @@ See [type/readme.md](../type/readme.md) for type definitions and [param_group/re
 | `23_show_tokens.md` | show_tokens:: — token usage section toggle |
 | `24_show_tree.md` | show_tree:: — agent tree-indented display toggle |
 | `25_tail.md` | tail:: — trailing entry count for .tail |
+| `26_depth.md` | depth:: — path-component depth cap for .usage scope walks |
+| `27_since_days.md` | since_days:: — recency window in days for .projects |
+| `28_show_topic.md` | show_topic:: — first user message on session lines toggle |
 
 ### Parameters Table
 
@@ -53,10 +56,10 @@ See [type/readme.md](../type/readme.md) for type definitions and [param_group/re
 | 6 | [`show_metadata::`](06_metadata.md) | Boolean | `0` | `0`, `1` | Show metadata only mode | 1 |
 | 7 | [`min_entries::`](07_min_entries.md) | [`EntryCount`](../type/01_entry_count.md) | — | Integer ≥ 0 | Minimum entry count threshold | 2 |
 | 8 | [`output::`](08_output.md) | [`StoragePath`](../type/10_storage_path.md) | — | filesystem path | Export output file path | 1 |
-| 9 | [`path::`](09_path.md) | varies | varies | varies | Path argument (semantics vary by command) | 12 |
+| 9 | [`path::`](09_path.md) | varies | varies | varies | Path argument (semantics vary by command) | 13 |
 | 10 | [`project::`](10_project.md) | [`ProjectId`](../type/05_project_id.md) | current dir | path, uuid, substring | Project scope identifier | 5 |
 | 11 | [`query::`](11_query.md) | String | — | any string | Search query string | 1 |
-| 12 | [`scope::`](12_scope.md) | [`ScopeValue`](../type/07_scope_value.md) | varies | `local`, `relevant`, `under`, `global`, `around` | Session/project discovery scope | 6 |
+| 12 | [`scope::`](12_scope.md) | [`ScopeValue`](../type/07_scope_value.md) | varies | `local`, `relevant`, `under`, `global`, `around` | Session/project discovery scope | 7 |
 | 13 | [`session::`](13_session.md) | [`SessionFilter`](../type/08_session_filter.md) / [`SessionId`](../type/09_session_id.md) | — | ID substring or exact | Session filter or scope pin | 4 |
 | 14 | [`session_id::`](14_session_id.md) | [`SessionId`](../type/09_session_id.md) | — | exact session ID | Direct session identifier | 2 |
 | 15 | [`show_sessions::`](15_sessions.md) | Boolean | `0` | `0`, `1` | Explicit session display toggle | 1 |
@@ -66,9 +69,12 @@ See [type/readme.md](../type/readme.md) for type definitions and [param_group/re
 | 19 | [`show_stat::`](19_show_stat.md) | Boolean | `0` | `0`, `1` | Session statistics footer in content mode | 1 |
 | 20 | [`strategy::`](20_strategy.md) | [`StrategyType`](../type/13_strategy_type.md) | auto-detect | `resume`, `fresh` | Resume strategy override | 1 |
 | 21 | [`count::`](21_count.md) | Boolean | `0` | `0`, `1` | Output count only flag | 1 |
-| 22 | [`limit::`](22_limit.md) | Integer | `0` | Integer ≥ 0 | Per-project session display cap | 1 |
+| 22 | [`limit::`](22_limit.md) | Integer | `0` | Integer ≥ 0 | Session display cap (per-project or flat, command-dependent) | 2 |
 | 23 | [`show_tokens::`](23_show_tokens.md) | Boolean | `0` | `0`, `1` | Token usage section in output | 2 |
 | 24 | [`show_tree::`](24_show_tree.md) | Boolean | `0` | `0`, `1` | Agent tree-indented display | 1 |
 | 25 | [`tail::`](25_tail.md) | Integer | `4` | Integer ≥ 0 | Number of trailing entries to print | 1 |
+| 26 | [`depth::`](26_depth.md) | Integer | `3` | Integer ≥ 0 | Path-component depth cap for scope walks | 1 |
+| 27 | [`since_days::`](27_since_days.md) | Integer | — | Integer ≥ 0 | Recency window in days (`0` = last 24 hours) | 1 |
+| 28 | [`show_topic::`](28_show_topic.md) | Boolean | `0` | `0`, `1` | First user message text on session lines | 1 |
 
-**Total:** 25 parameters
+**Total:** 28 parameters (27 implemented across some or all of their specified commands, 1 — `depth::` — specified only for the not-yet-implemented `.usage`)

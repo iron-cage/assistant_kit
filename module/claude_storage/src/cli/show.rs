@@ -3,6 +3,7 @@
 use core::fmt::Write as FmtWrite;
 use unilang::{ VerifiedCommand, ExecutionContext, OutputData, ErrorData, ErrorCode };
 use super::storage::{ create_storage, parse_project_parameter, find_session_mut };
+use super::scope::{ validate_scope, resolve_scoped_projects };
 use super::format::format_entry_content;
 
 /// Display control flags for session output.
@@ -99,6 +100,11 @@ pub fn show_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   // additional effect in the current mode. Errors should be reserved for truly
   // incompatible combinations, not for parameters that are simply redundant.
 
+  // scope::/path:: only affect Case 2 below — no scope is used once project::
+  // is given (Cases 3/4), and Case 1 has no session to search for.
+  let scope_raw = cmd.get_string( "scope" );
+  let path_raw = cmd.get_string( "path" );
+
   // Smart parameter detection (4 cases)
   match ( session_id, project_param )
   {
@@ -111,7 +117,7 @@ pub fn show_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
     // Case 2: session_id only → Show session in current project
     ( Some( sid ), None ) =>
     {
-      show_session_in_cwd_impl( sid, opts )
+      show_session_in_cwd_impl( sid, opts, scope_raw, path_raw )
     }
 
     // Case 3: project only → Show that project
@@ -128,40 +134,22 @@ pub fn show_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   }
 }
 
-/// Helper: Show session in current directory project
+/// Helper: Show session in scope-resolved projects (default scope: `local`,
+/// i.e. the current directory project — identical to the pre-scope behavior).
 fn show_session_in_cwd_impl(
   session_id : &str,
   opts : SessionDisplayOptions,
+  scope_raw : Option< &str >,
+  path_raw : Option< &str >,
 ) -> core::result::Result< OutputData, ErrorData >
 {
-  // Fix(issue-036)
-  // Root cause: load_project_for_cwd() only matches the exact encoded base path, so sessions
-  //   stored under topic project dirs ({base}--commit, {base}--default-topic) were invisible
-  //   when running .show from the corresponding working directory.
-  // Pitfall: Use double-hyphen ({eb}--) not single ({eb}-) for the topic prefix predicate;
-  //   single-hyphen would falsely match sibling directories sharing a common prefix.
   let storage = create_storage()?;
 
-  let cwd = std::env::current_dir()
-    .map_err( | e | ErrorData::new( ErrorCode::InternalError, format!( "Failed to get current directory: {e}" ) ) )?;
+  let scope = validate_scope( scope_raw, "local" )?;
+  let scoped_projects = resolve_scoped_projects( &storage, &scope, path_raw )?;
 
-  let eb = claude_storage_core::encode_path( &cwd )
-    .map_err( | e | ErrorData::new( ErrorCode::InternalError, format!( "Failed to encode current directory: {e}" ) ) )?;
-
-  let topic_prefix = format!( "{eb}--" );
-
-  let all_projects = storage.list_projects()
-    .map_err( | e | ErrorData::new( ErrorCode::InternalError, format!( "Failed to list projects: {e}" ) ) )?;
-
-  for project in &all_projects
+  for project in &scoped_projects
   {
-    let dir_name = project.storage_dir()
-      .file_name()
-      .and_then( | n | n.to_str() )
-      .unwrap_or( "" );
-
-    if dir_name != eb && !dir_name.starts_with( &topic_prefix ) { continue; }
-
     if let Ok( output ) = format_session_output( project, session_id, &opts )
     {
       return Ok( output );

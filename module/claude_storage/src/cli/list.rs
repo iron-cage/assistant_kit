@@ -4,6 +4,7 @@ use core::fmt::Write as FmtWrite;
 use unilang::{ VerifiedCommand, ExecutionContext, OutputData, ErrorData, ErrorCode };
 use super::storage::{ create_storage, resolve_path_parameter, load_project_for_param };
 use super::projects::{ build_families, group_into_conversations };
+use super::scope::{ validate_scope, resolve_scoped_projects };
 
 /// List projects or sessions
 ///
@@ -192,21 +193,36 @@ pub fn list_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   };
 
   // Get projects based on type filter
-  let mut projects = match project_type
+  //
+  // Fix(BUG-scope-016): scope:: narrows the "all" (default) type branch via the
+  // shared resolver; type::uuid/type::path keep listing unconditionally — UUID
+  // projects have no filesystem path to scope against, and scope::'s documented
+  // role ("Discovery boundary for project listing") is orthogonal to type::.
+  let scope_raw = cmd.get_string( "scope" );
+  let scope = validate_scope( scope_raw, "global" )?;
+
+  let mut projects = if project_type == "all" && scope != "global"
   {
-    "uuid" => storage.list_uuid_projects(),
-    "path" => storage.list_path_projects(),
-    "all" => storage.list_projects(),
-    _ => return Err
-    (
-      ErrorData::new
-      (
-        ErrorCode::InternalError,
-        format!( "Invalid type: {project_type}. Valid values: uuid, path, all" )
-      )
-    ),
+    resolve_scoped_projects( &storage, &scope, None )?
   }
-  .map_err( | e | ErrorData::new( ErrorCode::InternalError, format!( "Failed to list projects: {e}" ) ) )?;
+  else
+  {
+    match project_type
+    {
+      "uuid" => storage.list_uuid_projects(),
+      "path" => storage.list_path_projects(),
+      "all" => storage.list_projects(),
+      _ => return Err
+      (
+        ErrorData::new
+        (
+          ErrorCode::InternalError,
+          format!( "Invalid type: {project_type}. Valid values: uuid, path, all" )
+        )
+      ),
+    }
+    .map_err( | e | ErrorData::new( ErrorCode::InternalError, format!( "Failed to list projects: {e}" ) ) )?
+  };
 
   // Apply project-level filtering
   if !project_filter.is_default()

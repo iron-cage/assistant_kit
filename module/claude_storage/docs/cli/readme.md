@@ -18,7 +18,7 @@ Reference documentation for the `claude_storage` CLI binary — a tool for explo
 | `type/` | Per-type constraint and parsing reference (13 type pages) |
 | `001_dictionary.md` | Domain vocabulary and term definitions |
 | `param_group/` | Per-group detail pages with membership, examples, and cross-refs |
-| `command_group/` | Every command partitioned into exactly one group (Total Partition); shared handler + parameter set when multi-member (12 groups, all singletons) |
+| `command_group/` | Every command partitioned into exactly one group (Total Partition); shared handler + parameter set when multi-member (13 groups, all singletons) |
 | `003_workflows.md` | Usage scenarios, best practices, complexity matrix |
 | `format/` | Output format catalog for export rendering modes |
 | `002_env_param.md` | Environment variable catalog with precedence rules |
@@ -31,9 +31,9 @@ Reference documentation for the `claude_storage` CLI binary — a tool for explo
 |------|----|----|----|----|----|----|
 | `readme.md` | ✅ | ✅ | ✅ | ✅ | ✅ | L5 |
 | `command/readme.md` | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
-| `command/*.md` (12 files) | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
+| `command/*.md` (13 files) | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
 | `param/readme.md` | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
-| `param/*.md` (25 files) | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
+| `param/*.md` (28 files) | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
 | `001_dictionary.md` | ➖ | ✅ | ✅ | ✅ | ✅ | L5 |
 | `type/readme.md` | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
 | `type/*.md` (13 files) | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
@@ -50,7 +50,7 @@ Reference documentation for the `claude_storage` CLI binary — a tool for explo
 | `pitfall/*.md` (3 files) | ➖ | ➖ | ✅ | ➖ | ➖ | L3 |
 **Current Level:** L5 (Test Detail Complete)
 **Design Completeness:** 100%
-**Implementation Status:** 92% (11/12 commands implemented)
+**Implementation Status:** 100% (13/13 commands implemented)
 
 ### Navigation
 

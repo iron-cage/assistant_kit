@@ -1,11 +1,12 @@
 //! `.projects` command — session-first cross-project view with scope control.
 //!
-//! Also houses shared family/conversation domain types and the path-decode
-//! helpers used by scope filtering (`under`, `relevant`, `around`).
+//! Also houses shared family/conversation domain types. Scope/path
+//! resolution itself lives in `super::scope`.
 
 use core::fmt::Write as FmtWrite;
 use unilang::{ VerifiedCommand, ExecutionContext, OutputData, ErrorData, ErrorCode };
-use super::storage::{ create_storage, resolve_path_parameter };
+use super::storage::create_storage;
+use super::scope::{ validate_scope, resolve_scoped_projects, decode_project_display };
 
 // ─── constants ─────────────────────────────────────────────────────────────
 
@@ -23,301 +24,6 @@ const SECS_PER_MIN   : u64 = 60;
 const SECS_PER_HOUR  : u64 = 3_600;
 const SECS_PER_DAY   : u64 = 86_400;
 const SECS_PER_MONTH : u64 = 2_592_000;
-
-// ─── path decode helpers ───────────────────────────────────────────────────
-
-/// Length, in bytes, of the longest common prefix of `a` and `b`. Always a
-/// valid char-boundary index into both strings (accumulates whole chars).
-fn common_prefix_len( a : &str, b : &str ) -> usize
-{
-  let mut len = 0;
-  for ( ca, cb ) in a.chars().zip( b.chars() )
-  {
-    if ca != cb { break; }
-    len += ca.len_utf8();
-  }
-  len
-}
-
-/// Check whether `encoded_base` (cwd or `path::` arg, encoded) is covered by
-/// the project identified by `dir_name` (raw storage directory name).
-///
-/// Returns `true` when the project is an ancestor of (or equal to) the base:
-/// - `encoded_base == dir_name` — same project, no topic
-/// - `encoded_base.starts_with(dir_name + "-")` — base is in the project subtree
-/// - same two checks after stripping a genuine `--topic` suffix from `dir_name`
-///
-/// Fix(BUG-003)
-/// Root cause: the previous `rfind("--")` loop stripped from the LAST `--`
-/// found anywhere in `dir_name`, with no way to tell whether that `--` was a
-/// genuine topic-suffix marker or just incidental structure shared with
-/// `encoded_base` (e.g. both paths sit under the same dot-prefixed temp-dir
-/// root, which itself contains a `--`-like byte sequence once encoded).
-/// Filesystem existence cannot discriminate either: a shallow shared ancestor
-/// (e.g. `/tmp`) exists just as reliably as a genuine one.
-/// Fix: only accept a `--` as a real topic boundary when it falls EXACTLY at
-/// the point where `dir_name` and `encoded_base` diverge (the longest common
-/// prefix). Shared/incidental structure can never BE the divergence point
-/// between two different paths, so the topic-boundary decision itself is
-/// structurally sound without relying on filesystem state. This guarantee is
-/// scoped to that decision only: the naive literal-prefix check above
-/// (`check(dir_name)`, no topic suffix involved) is intentionally unchanged
-/// and was never filesystem-independent — it can still admit a same-prefix
-/// sibling (e.g. an underscore/dot collision), left for the caller's
-/// `decode_path_via_fs` verification to resolve. See
-/// `docs/invariant/001_path_encoding.md § Contract` for the accepted
-/// multi-candidate tradeoff this depends on.
-/// Pitfall: do not reintroduce a blind `rfind("--")`/`split("--")` search
-/// for the topic-boundary decision — any boundary search that ignores
-/// `encoded_base` re-opens this hole. Also do not assume the naive prefix
-/// check is filesystem-independent-safe; only the topic-boundary alignment is.
-fn is_relevant_encoded( dir_name : &str, encoded_base : &str ) -> bool
-{
-  let check = | candidate : &str | -> bool
-  {
-    encoded_base == candidate || encoded_base.starts_with( &format!( "{candidate}-" ) )
-  };
-  if check( dir_name ) { return true; }
-  let lcp_len = common_prefix_len( dir_name, encoded_base );
-  if lcp_len == 0 || lcp_len >= dir_name.len() { return false; }
-  let ( before, after ) = ( &dir_name[ ..lcp_len ], &dir_name[ lcp_len.. ] );
-  if !before.ends_with( '-' ) || !after.starts_with( '-' ) { return false; }
-  check( &dir_name[ ..lcp_len - 1 ] )
-}
-
-/// Decode a storage directory name into a human-readable display path.
-///
-/// Path-encoded dirs start with `-` (e.g. `-home-alice-projects`). UUID dirs do not.
-/// Compress `$HOME` prefix to `~` for display. Returns full path string if HOME unset.
-fn tilde_compress( path : &std::path::Path ) -> String
-{
-  if let Ok( home ) = std::env::var( "HOME" )
-  {
-    if let Ok( rel ) = path.strip_prefix( std::path::Path::new( &home ) )
-    {
-      return format!( "~/{}", rel.display() );
-    }
-  }
-  path.display().to_string()
-}
-
-/// Walk the filesystem to decode a lossy-encoded storage dir name to a real path.
-///
-/// At each `-` boundary the standard heuristic cannot distinguish a path separator
-/// from an underscore (both encoded as `-`). This function resolves the ambiguity by
-/// checking `is_dir()` at each step: it tries path separator first; if the candidate
-/// directory does not exist, it falls back to joining with `_`.
-///
-/// Returns `None` if no matching path is found (project deleted, remote, or unmounted).
-///
-/// # Why only as fallback
-///
-/// Requires the project directory to exist on disk. Always call heuristic decode first
-/// and only reach here when that result does not exist. This avoids unnecessary stat
-/// calls for paths the heuristic already handles correctly.
-fn decode_path_via_fs( encoded : &str ) -> Option< std::path::PathBuf >
-{
-  let inner = &encoded[ 1.. ]; // strip leading `-`
-  let pieces : Vec< &str > = inner.split( '-' ).collect();
-  if pieces.is_empty() { return None; }
-  walk_fs( std::path::Path::new( "/" ), &pieces, 0, "" )
-}
-
-/// Decode the base-encoded component of a storage dir name to a real filesystem path.
-///
-/// Returns `None` if the encoded string is malformed (non-path-encoded keys such as UUIDs).
-/// When `decode_path` succeeds but the result does not exist on disk, falls back to the
-/// filesystem-guided walk to resolve `_` vs `/` ambiguity (Fix(issue-029)).
-fn decode_storage_base( base_encoded : &str ) -> Option< std::path::PathBuf >
-{
-  use claude_storage_core::decode_path;
-  let h = decode_path( base_encoded ).ok()?;
-  if h.exists()
-  {
-    Some( h )
-  }
-  else
-  {
-    // Fix(issue-029): heuristic maps '_' to '/', try filesystem-guided decode.
-    Some( decode_path_via_fs( base_encoded ).unwrap_or( h ) )
-  }
-}
-
-/// Return true if `dir_name` encodes a project path that is `base_path` itself or is nested
-/// under `base_path` (`scope::under` predicate).
-///
-/// The single-hyphen fast-reject `starts_with("{eb}-")` weeds out projects with completely
-/// different paths before the more expensive filesystem decode.
-///
-/// Fix(BUG-003)
-/// Root cause: previously stripped a `--topic` suffix via `strip_topic_suffix` before
-/// the filesystem-verification decode. That stripping used the same unsound blind
-/// `find("--")` search being removed from `is_relevant_encoded` for the same reason.
-/// Fix: decode `dir_name` directly — `decode_path_via_fs` already treats an
-/// unverifiable/nonexistent path as `true` (conservative include), which covers the
-/// case where a genuine topic suffix would have made the raw decode fail to exist.
-/// Pitfall: this simplification is only sound because no current test combines
-/// `scope::under` with a project that has a genuine topic suffix; if such a test is
-/// added, re-verify this fallback still selects the correct base.
-fn matches_under( dir_name : &str, eb : &str, base_path : &std::path::Path ) -> bool
-{
-  if dir_name != eb && !dir_name.starts_with( &format!( "{eb}-" ) ) { return false; }
-  if dir_name == eb { return true; }
-  decode_path_via_fs( dir_name )
-    .map_or( true, | p | p.starts_with( base_path ) )
-}
-
-/// Return true if `dir_name` encodes a project path that is an ancestor of `base_path`
-/// (`scope::relevant` predicate).
-///
-/// Fix(BUG-003)
-/// Root cause/Pitfall: see `matches_under` — same topic-suffix-stripping removal,
-/// same conservative-include fallback in `decode_path_via_fs`.
-fn matches_relevant( dir_name : &str, eb : &str, base_path : &std::path::Path ) -> bool
-{
-  if !is_relevant_encoded( dir_name, eb ) { return false; }
-  if dir_name == eb { return true; }
-  decode_path_via_fs( dir_name )
-    .map_or( true, | p | base_path.starts_with( &p ) )
-}
-
-/// Recursive DFS helper for `decode_path_via_fs`.
-///
-/// `segment` accumulates the current unresolved path component. At each step, option A
-/// commits `segment` as a directory and recurses with the next piece; option B appends
-/// `_` + piece to `segment` and recurses; option C handles an empty piece (a `--`
-/// boundary) by trying `.`/`_`/`-` as the next component's original first character.
-/// `is_dir()` prunes option A (and gates option C) early.
-///
-/// Fix(BUG-003)
-/// Root cause: `encode_path` emits a `--` marker whenever a path component's first
-/// character is normalized away (original `.`, `_`, or literal `-` all become the
-/// marker), so `split('-')` on the storage key produces an EMPTY piece at that
-/// boundary. Options A and B only know how to commit a whole prior segment as a
-/// directory or merge an underscore into the current one — neither ever re-derives
-/// which of `.`/`_`/`-` the marker stood for, so a dot-prefixed component (e.g. a
-/// `TempDir`'s `.tmpXXXXXX` root) can never resolve and the whole walk returns `None`.
-/// Fix: on an empty piece, commit the current segment (or use `base` directly if the
-/// segment is already empty) and try each candidate character as the FIRST character
-/// of a fresh segment for the next piece.
-/// Pitfall: option C must consume the empty piece AND the following piece together
-/// (recurse at `idx + 2`) — treating the empty piece alone as a component would try to
-/// join a bare candidate character with nothing.
-fn walk_fs(
-  base    : &std::path::Path,
-  pieces  : &[ &str ],
-  idx     : usize,
-  segment : &str,
-) -> Option< std::path::PathBuf >
-{
-  if idx == pieces.len()
-  {
-    let candidate = if segment.is_empty() { base.to_path_buf() } else { base.join( segment ) };
-    return if candidate.exists() { Some( candidate ) } else { None };
-  }
-  let piece = pieces[ idx ];
-  // Option C — empty piece (`--` boundary): try `.`, `_`, `-` as the original first
-  // character of the next piece's component, starting a fresh segment for it.
-  if piece.is_empty() && idx + 1 < pieces.len()
-  {
-    let commit_base = if segment.is_empty()
-    {
-      Some( base.to_path_buf() )
-    }
-    else
-    {
-      let candidate = base.join( segment );
-      if candidate.is_dir() { Some( candidate ) } else { None }
-    };
-    if let Some( next_base ) = commit_base
-    {
-      let next_piece = pieces[ idx + 1 ];
-      for prefix in [ '.', '_', '-' ]
-      {
-        let fresh_segment = format!( "{prefix}{next_piece}" );
-        if let Some( result ) = walk_fs( &next_base, pieces, idx + 2, &fresh_segment )
-        {
-          return Some( result );
-        }
-      }
-    }
-  }
-  // Option A — path separator: commit current segment as a directory, recurse
-  if !segment.is_empty()
-  {
-    let next_base = base.join( segment );
-    if next_base.is_dir()
-    {
-      if let Some( result ) = walk_fs( &next_base, pieces, idx + 1, piece )
-      {
-        return Some( result );
-      }
-    }
-  }
-  // Option B — underscore: merge piece into segment
-  let joined = if segment.is_empty()
-  {
-    piece.to_string()
-  }
-  else
-  {
-    format!( "{segment}_{piece}" )
-  };
-  walk_fs( base, pieces, idx + 1, &joined )
-}
-
-/// Decode a storage dir name to the longest real filesystem path it represents.
-///
-/// # Why the `starts_with('-')` guard
-///
-/// `decode_path()` requires its input to be a valid path-encoded string. UUID project
-/// directories (e.g. `deadbeef-1234-...`) do not start with `-` and are NOT path-encoded.
-/// Calling `decode_path` on a UUID returns `Err` — but more importantly, it would be
-/// semantically wrong. UUID dirs represent web/IDE sessions without filesystem paths.
-/// The guard ensures they fall through to the raw string return at the end.
-///
-/// # Topic components: metadata vs real directories
-///
-/// Topic-scoped project dirs are named `-path--topic` (double dash before topic).
-/// Topics are often pure metadata tags (e.g. `--commit`), but they can also be real
-/// hyphen-prefixed directories (e.g. `--default-topic` → `-default_topic/`).
-///
-/// Examples:
-/// - `-...-src--default-topic`         → `src/-default_topic`
-/// - `-...-src--default-topic--commit` → `src/-default_topic/-commit`
-/// - `-...-src--commit`                → `src/-commit`
-///
-/// # Why a single `decode_storage_base` call is sufficient
-///
-/// Fix(BUG-003)
-/// Root cause: this used to call `split_storage_key` to break `dir_name` into a base
-/// component plus a list of `--topic` components, then re-join each topic as a
-/// separate `-{topic}` path segment. That split relied on the same unsound blind
-/// `find("--")` search removed from `is_relevant_encoded` for the same reason — it
-/// could not tell a genuine topic boundary from incidental shared structure.
-/// Fix: `claude_storage_core::decode_path`'s own heuristic already chains multiple
-/// `--`-separated segments correctly on its own (each `--` starts a new
-/// hyphen-prefixed segment while the rest of that segment maps `-` → `_`), so passing
-/// the whole `dir_name` straight through reconstructs the same multi-topic display
-/// path with no external split/append loop needed.
-/// Pitfall: do not reintroduce a `--`-splitting loop here — `decode_storage_base`
-/// (via `decode_path`) already handles the full string, topics included.
-///
-/// # Why the filesystem fallback for the base
-///
-/// Fix(issue-029)
-/// Root cause: `decode_path` heuristic defaults to path separator `/` for all
-/// unrecognized `-` boundaries. Paths with underscore-named dirs (e.g. `my_project`,
-/// `claude_tools`) display incorrectly as `wip/core`, `claude/tools`.
-/// Pitfall: Only call the filesystem walk as fallback — never primary — because it
-/// requires the project directory to exist on disk. Deleted/remote projects fall
-/// back to the raw encoded storage dir name.
-fn decode_project_display( dir_name : &str ) -> String
-{
-  if !dir_name.starts_with( '-' ) { return dir_name.to_string(); }
-  let Some( path ) = decode_storage_base( dir_name ) else { return dir_name.to_string() };
-  tilde_compress( &path )
-}
 
 // ─── sessions output helpers ───────────────────────────────────────────────
 
@@ -676,20 +382,23 @@ fn aggregate_projects(
 
 /// List sessions with scope control (session-first view).
 ///
-/// Scope semantics:
+/// Scope semantics (full definitions: `super::scope::resolve_scoped_projects`):
 /// - `local`    — Current project only (`path::` selects the project, defaults to cwd)
 /// - `relevant` — Every project whose path is an ancestor of (or equal to) `path::`
-/// - `under`    — Every project whose path starts with `path::` (default)
+/// - `under`    — Every project whose path starts with `path::`
+/// - `around`   — Union of `under` + `relevant` (default)
 /// - `global`   — All projects in storage (ignores `path::`)
 ///
 /// # Errors
 ///
 /// Returns error if `scope::` is invalid, `min_entries::` is negative,
-/// `limit::` is negative, path resolution fails, or storage access fails.
+/// `limit::` is negative, `since_days::` is negative, path resolution fails,
+/// or storage access fails.
 ///
 /// # Panics
 ///
-/// Does not panic — `min_entries` and `limit` are validated non-negative before conversion.
+/// Does not panic — `min_entries`, `limit`, and `since_days` are validated
+/// non-negative before conversion.
 #[ allow( clippy::needless_pass_by_value ) ]
 #[ allow( clippy::too_many_lines ) ]
 #[ inline ]
@@ -697,20 +406,11 @@ pub fn projects_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   -> core::result::Result< OutputData, ErrorData >
 {
   use std::collections::BTreeMap;
-  use std::path::PathBuf;
-  use claude_storage_core::{ Session, SessionFilter, encode_path };
+  use claude_storage_core::{ Session, SessionFilter };
 
   // --- parameters ---
 
-  let scope_raw = cmd.get_string( "scope" ).unwrap_or( "around" );
-  let scope = scope_raw.to_lowercase();
-  if !matches!( scope.as_str(), "local" | "relevant" | "under" | "around" | "global" )
-  {
-    return Err( ErrorData::new(
-      ErrorCode::InternalError,
-      format!( "scope must be relevant|local|under|around|global, got {scope_raw}" ),
-    ) );
-  }
+  let scope = validate_scope( cmd.get_string( "scope" ), "around" )?;
 
   let show_tree = cmd.get_boolean( "show_tree" ).unwrap_or( false );
 
@@ -742,100 +442,32 @@ pub fn projects_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   }
   else { usize::MAX };
 
+  let since_cutoff = if let Some( n ) = cmd.get_integer( "since_days" )
+  {
+    if n < 0
+    {
+      return Err( ErrorData::new(
+        ErrorCode::InternalError,
+        format!( "Invalid since_days: {n}. Must be non-negative" ),
+      ) );
+    }
+    // 0 and 1 both mean the most recent 24 hours: a session touched today must stay
+    // inside a 0-day window, while N >= 1 keeps the strict `now - N*24h` cutoff of
+    // the manual jq algorithm this parameter productizes.
+    let days = u64::try_from( n ).expect( "since_days < 0 rejected above" ).max( 1 );
+    Some( std::time::SystemTime::now() - core::time::Duration::from_secs( days * 86_400 ) )
+  }
+  else { None };
+
+  let show_topic = cmd.get_boolean( "show_topic" ).unwrap_or( false );
+
   let agent_filter = cmd.get_boolean( "agent" );
   let session_id_filter = cmd.get_string( "session" );
-
-  // Resolve base path (used by local / relevant / under; ignored for global)
-  let base_path : PathBuf = if let Some( p ) = cmd.get_string( "path" )
-  {
-    resolve_path_parameter( p )
-      .map( PathBuf::from )
-      .map_err( | e | ErrorData::new(
-        ErrorCode::InternalError,
-        format!( "Failed to resolve path '{p}': {e}" ),
-      ) )?
-  }
-  else
-  {
-    std::env::current_dir()
-      .map_err( | e | ErrorData::new(
-        ErrorCode::InternalError,
-        format!( "Failed to get current directory: {e}" ),
-      ) )?
-  };
 
   // --- collect projects by scope ---
 
   let storage = create_storage()?;
-  let all_projects = storage.list_projects()
-    .map_err( | e | ErrorData::new( ErrorCode::InternalError, format!( "Failed to list projects: {e}" ) ) )?;
-
-  // Fix(issue-024)
-  // Root cause: encode_path() maps both '_' and '/' to '-', so decode_component()
-  // defaults unknown pairs to '/', turning `my_project` → `wip-core` → `wip/core`.
-  // Decoded paths never match the real base_path, causing silent 0-result returns.
-  // Pitfall: Never decode storage dir names for path comparison — encoding is
-  // deterministic but decoding is lossy. Compare encoded ↔ encoded instead.
-  let encoded_base : Option< String > = if scope == "global"
-  {
-    None
-  }
-  else
-  {
-    Some(
-      encode_path( &base_path )
-        .map_err( | e | ErrorData::new(
-          ErrorCode::InternalError,
-          format!( "Failed to encode base path '{}': {e}", base_path.display() ),
-        ) )?
-    )
-  };
-
-  // Closure: does this project qualify under `scope`?
-  // Compares encoded base against raw storage directory name — no decode step.
-  // UUID project dirs start with a hex character (not '-'), so they never match
-  // path-based comparisons and are correctly excluded from non-global scopes.
-  let project_matches = | project : &claude_storage_core::Project | -> bool
-  {
-    if scope == "global" { return true; }
-    let Some( ref eb ) = encoded_base else { return false };
-    let dir_name = project
-      .storage_dir()
-      .file_name()
-      .and_then( | n | n.to_str() )
-      .unwrap_or( "" );
-    match scope.as_str()
-    {
-      "local"    => dir_name == eb || dir_name.starts_with( &format!( "{eb}--" ) ),
-      // Fix(issue-031)
-      // Root cause: starts_with on encoded strings cannot distinguish a child
-      //   directory (base/sub → `base-sub`) from a same-level sibling whose name
-      //   uses an underscore (base_extra → `base-extra`): both share the `base-`
-      //   prefix. Path::starts_with is component-wise and correctly excludes siblings.
-      // Pitfall: strip the `--topic` suffix from dir_name before calling
-      //   decode_path_via_fs. The `--topic` part encodes a hyphen-prefixed directory
-      //   like `-default_topic`; left in place, the walker searches for a dir named
-      //   `topic` under the project root, returns None, and the fallback silently
-      //   includes everything — the sibling exclusion is bypassed.
-      "under" => matches_under( dir_name, eb, &base_path ),
-      // Fix(issue-032)
-      // Root cause: is_relevant_encoded uses string starts_with to check if
-      //   dir_name's encoded path is a prefix of encoded_base, so a sibling
-      //   `base` (encoded `base-`) falsely matches when base_path is `base_extra`
-      //   (encoded `base-extra`). Both `_` and `/` map to `-`, making siblings
-      //   indistinguishable from ancestors by string comparison alone.
-      //   base_path.starts_with(decoded_path) is component-wise and rejects siblings.
-      // Pitfall: strip the `--topic` suffix before calling decode_path_via_fs —
-      //   same requirement as the issue-031 fix for scope::under.
-      "relevant" => matches_relevant( dir_name, eb, &base_path ),
-      // Union of under + relevant — bidirectional neighborhood.
-      // BTreeMap key on decoded path deduplicates projects matched by both arms.
-      "around" =>
-        matches_under( dir_name, eb, &base_path )
-          || matches_relevant( dir_name, eb, &base_path ),
-      _          => false,
-    }
-  };
+  let scoped_projects = resolve_scoped_projects( &storage, &scope, cmd.get_string( "path" ) )?;
 
   // --- build session filter ---
 
@@ -851,10 +483,8 @@ pub fn projects_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   // BTreeMap gives deterministic, alphabetically sorted project order.
   let mut groups : BTreeMap< String, Vec< Session > > = BTreeMap::new();
 
-  for mut project in all_projects
+  for mut project in scoped_projects
   {
-    if !project_matches( &project ) { continue; }
-
     let dir_name = project
       .storage_dir()
       .file_name()
@@ -863,7 +493,13 @@ pub fn projects_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
       .to_string();
     let display_path = decode_project_display( &dir_name );
 
-    let Ok( sessions ) = project.sessions_filtered( &session_filter ) else { continue };
+    let Ok( mut sessions ) = project.sessions_filtered( &session_filter ) else { continue };
+    if let Some( cutoff ) = since_cutoff
+    {
+      // Day-window filter on the same mtime the recency sort below already uses;
+      // sessions with unreadable mtime are excluded (cannot prove they are recent).
+      sessions.retain( | s | session_mtime( s ).is_some_and( | t | t >= cutoff ) );
+    }
     if sessions.is_empty() { continue; }
 
     groups
@@ -950,7 +586,7 @@ pub fn projects_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
       }
       else
       {
-        render_families_v1( &mut output, &families, limit_cap );
+        render_families_v1( &mut output, &families, limit_cap, show_topic );
       }
     }
     else
@@ -976,19 +612,8 @@ pub fn projects_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
       for ( i, &session ) in displayable[ ..show_count ].iter().enumerate()
       {
         let marker = if i == 0 { '*' } else { '-' };
-        let id_str = short_id( session.id() );
-        let time_str = session_mtime( session )
-          .map( | t | format!( "  {}", format_relative_time( t ) ) )
-          .unwrap_or_default();
-        let count_str = session
-          .count_entries()
-          .map( | n |
-          {
-            let noun = if n == 1 { "entry" } else { "entries" };
-            format!( "  ({n} {noun})" )
-          } )
-          .unwrap_or_default();
-        writeln!( output, "  {marker} {id_str}{time_str}{count_str}" ).unwrap();
+        let line = format_session_line( session, marker, show_topic );
+        writeln!( output, "{line}" ).unwrap();
       }
       if displayable.len() > limit_cap
       {
@@ -1010,6 +635,61 @@ pub fn projects_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
 
 // ─── render helpers ────────────────────────────────────────────────────────
 
+// Topic display cap, matching the manual jq algorithm's 90-char truncation
+// that `show_topic::` productizes.
+const TOPIC_MAX_CHARS : usize = 90;
+
+/// Extract the display text of a transcript entry's `message.content`.
+///
+/// Handles both content shapes Claude Code writes: a plain string, or an
+/// array of content blocks where the first `{"type":"text"}` block carries
+/// the text.
+fn extract_message_text( entry : &std::collections::HashMap< String, claude_storage_core::JsonValue > ) -> Option< String >
+{
+  let message = entry.get( "message" )?;
+  let content = message.get( "content" )?;
+  if let Some( s ) = content.as_str()
+  {
+    return Some( s.to_string() );
+  }
+  content
+    .as_array()?
+    .iter()
+    .find( | block | block.get_str( "type" ) == Some( "text" ) )
+    .and_then( | block | block.get_str( "text" ) )
+    .map( String::from )
+}
+
+/// Extract a session's topic: its first `"type":"user"` entry's message text.
+///
+/// Streams the transcript line by line (the same file already read for entry
+/// counting) and returns the first user entry whose text is non-empty after
+/// trimming. Newlines are flattened to spaces and the result is truncated to
+/// `TOPIC_MAX_CHARS` characters.
+fn session_topic( session : &claude_storage_core::Session ) -> Option< String >
+{
+  use std::io::BufRead;
+  let file = std::fs::File::open( session.storage_path() ).ok()?;
+  let reader = std::io::BufReader::new( file );
+  for line in reader.lines()
+  {
+    let Ok( line ) = line else { break };
+    if line.trim().is_empty() { continue; }
+    let Ok( val ) = claude_storage_core::parse_json( &line ) else { continue };
+    let Some( obj ) = val.as_object() else { continue };
+    if obj.get( "type" ).and_then( claude_storage_core::JsonValue::as_str ) != Some( "user" )
+    {
+      continue;
+    }
+    let Some( text ) = extract_message_text( obj ) else { continue };
+    let flat = text.replace( [ '\r', '\n' ], " " );
+    let trimmed = flat.trim();
+    if trimmed.is_empty() { continue; }
+    return Some( trimmed.chars().take( TOPIC_MAX_CHARS ).collect() );
+  }
+  None
+}
+
 /// Format `[N agents: breakdown]` bracket suffix for a family with agents.
 ///
 /// Returns empty string when the agent list is empty.
@@ -1022,10 +702,11 @@ fn format_agent_bracket( agents : &[ AgentInfo ] ) -> String
   format!( "  [{n} {noun}: {breakdown}]" )
 }
 
-/// Format a single session line: `{marker} {id}  {age}  ({n} entries)`.
+/// Format a single session line: `{marker} {id}  {age}  ({n} entries)[  topic]`.
 fn format_session_line(
-  session : &claude_storage_core::Session,
-  marker  : char,
+  session    : &claude_storage_core::Session,
+  marker     : char,
+  with_topic : bool,
 ) -> String
 {
   let id_str = short_id( session.id() );
@@ -1040,14 +721,22 @@ fn format_session_line(
       format!( "  ({n} {noun})" )
     } )
     .unwrap_or_default();
-  format!( "  {marker} {id_str}{time_str}{count_str}" )
+  let topic_str = if with_topic
+  {
+    session_topic( session )
+      .map( | t | format!( "  {t}" ) )
+      .unwrap_or_default()
+  }
+  else { String::new() };
+  format!( "  {marker} {id_str}{time_str}{count_str}{topic_str}" )
 }
 
 /// Render family-grouped display at v1: root lines with `[N agents: breakdown]`.
 fn render_families_v1(
-  output    : &mut String,
-  families  : &[ SessionFamily ],
-  limit_cap : usize,
+  output     : &mut String,
+  families   : &[ SessionFamily ],
+  limit_cap  : usize,
+  with_topic : bool,
 )
 {
   let displayable : Vec< &SessionFamily > = families.iter()
@@ -1060,7 +749,7 @@ fn render_families_v1(
     if let Some( root ) = &family.root
     {
       let marker = if i == 0 { '*' } else { '-' };
-      let line = format_session_line( root, marker );
+      let line = format_session_line( root, marker, with_topic );
       let bracket = format_agent_bracket( &family.agents );
       writeln!( output, "{line}{bracket}" ).unwrap();
     }

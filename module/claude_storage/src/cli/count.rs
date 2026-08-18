@@ -4,6 +4,7 @@ use unilang::{ VerifiedCommand, ExecutionContext, OutputData, ErrorData, ErrorCo
 use claude_storage_core::Storage;
 use super::storage::{ create_storage, load_project_for_param, resolve_path_parameter };
 use super::projects::{ build_families, group_into_conversations };
+use super::scope::{ validate_scope, resolve_scoped_projects };
 
 /// Count entries, sessions, or projects
 ///
@@ -94,8 +95,21 @@ pub fn count_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   {
     "projects" =>
     {
-      storage.count_projects()
-        .map_err( | e | ErrorData::new( ErrorCode::InternalError, format!( "Failed to count projects: {e}" ) ) )?
+      // Fix(BUG-scope-017): scope:: narrows the project count via the shared resolver;
+      // global/omitted keeps calling the fast storage.count_projects() (fs::read_dir +
+      // is_dir() only, no Project::load()) so the documented 2000+-project performance
+      // contract is preserved — only a non-global scope:: pays the heavier list+len() cost.
+      let scope = validate_scope( cmd.get_string( "scope" ), "global" )?;
+
+      if scope == "global"
+      {
+        storage.count_projects()
+          .map_err( | e | ErrorData::new( ErrorCode::InternalError, format!( "Failed to count projects: {e}" ) ) )?
+      }
+      else
+      {
+        resolve_scoped_projects( &storage, &scope, None )?.len()
+      }
     }
     "sessions" =>
     {
@@ -116,9 +130,24 @@ pub fn count_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
       }
       else
       {
-        // No project specified — count sessions across all projects
-        let projects = storage.list_projects()
-          .map_err( | e | ErrorData::new( ErrorCode::InternalError, format!( "Failed to list projects: {e}" ) ) )?;
+        // No project specified — count sessions across all projects (scope::-narrowed)
+        //
+        // Fix(BUG-scope-017): scope:: narrows the project set summed over here, matching
+        // target::projects above. global/omitted keeps the original unconditional
+        // storage.list_projects() call (already the heavier Project::load()-per-entry
+        // path, so routing it through resolve_scoped_projects() at non-global scope
+        // introduces no new cost class).
+        let scope = validate_scope( cmd.get_string( "scope" ), "global" )?;
+
+        let projects = if scope == "global"
+        {
+          storage.list_projects()
+            .map_err( | e | ErrorData::new( ErrorCode::InternalError, format!( "Failed to list projects: {e}" ) ) )?
+        }
+        else
+        {
+          resolve_scoped_projects( &storage, &scope, None )?
+        };
 
         let mut total = 0usize;
         for p in &projects

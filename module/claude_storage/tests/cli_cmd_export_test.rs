@@ -16,6 +16,12 @@
 //! - INT-8:  Exit code 2 when output parent dir does not exist
 //! - INT-9:  `project::` selects session from named project
 //! - INT-10: Export succeeds with valid session and output path
+//! - T01:    default (no `scope::`) exact-project case reproduces pre-retrofit behavior
+//! - T02:    default `local` scope finds a session in a topic-suffixed project
+//! - T03:    `scope::global` finds a session in an unrelated project
+//! - T04:    `scope::bogus` rejected with the canonical `validate_scope()` error
+//! - T05:    `project::` given → `scope::` is ignored
+//! - T06:    `path::` anchors scope resolution without an explicit `scope::`
 
 mod common;
 
@@ -522,5 +528,318 @@ fn int_10_export_succeeds_with_valid_session_and_output_path()
   assert!(
     !content.is_empty(),
     "INT-10: exported file must contain session content; got empty file"
+  );
+}
+
+/// T01: default (no `scope::`) exact-project case reproduces pre-retrofit behavior.
+///
+/// ## Purpose
+/// Regression guard — `.export` without `scope::`/`project::` must still find
+/// and export the session belonging to the exact cwd-encoded project, exactly
+/// as before the retrofit.
+///
+/// ## Coverage
+/// Session found via cwd project; exported file contains session content; exit 0.
+///
+/// ## Validation Strategy
+/// Write a session under the cwd-encoded project with a known last message.
+/// Run `.export session_id::X output::f.md` from that cwd with no `scope::`/
+/// `project::`. Assert the output file contains the known content.
+///
+/// ## Related Requirements
+/// `task/claude_storage/executed/514_export_scope_path_retrofit.md` — T01
+#[ test ]
+fn t01_default_scope_local_exact_project_regression_guard()
+{
+  let root    = TempDir::new().unwrap();
+  let cwd     = TempDir::new().unwrap();
+  let out_dir = TempDir::new().unwrap();
+  let out_file = out_dir.path().join( "t01.md" );
+
+  common::write_path_project_session_with_last_message(
+    root.path(), cwd.path(), "t01-session", 2, "t01-unique-content"
+  );
+
+  let out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .current_dir( cwd.path() )
+    .arg( ".export" )
+    .arg( "session_id::t01-session" )
+    .arg( format!( "output::{}", out_file.display() ) )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  assert!(
+    out_file.exists(),
+    "T01: default scope must find session in cwd project, matching pre-retrofit behavior; stderr: {}",
+    stderr( &out )
+  );
+  let content = std::fs::read_to_string( &out_file ).unwrap();
+  assert!(
+    content.contains( "t01-unique-content" ),
+    "T01: exported file must contain the cwd project's session content; got:\n{content}"
+  );
+}
+
+/// T02: default `local` scope finds a session in a topic-suffixed project.
+///
+/// ## Purpose
+/// Prove the retrofit broadens the default lookup to storage-key `--topic`
+/// suffixed projects — a project registered as `{encoded_base}--commit` is a
+/// distinct storage key that `load_project_for_cwd()`'s own filesystem-scan
+/// fallback structurally cannot match, since it looks for real `-`-prefixed
+/// subdirectories on disk, not storage-key suffixes.
+///
+/// ## Coverage
+/// Session in a `--commit`-suffixed project is found at default scope; exported
+/// file contains session content; exit 0.
+///
+/// ## Validation Strategy
+/// Encode the cwd path and write a session directly under
+/// `{encoded_base}--commit` (raw storage-key form, no real directory needed).
+/// Run `.export` from that cwd with no `scope::`/`project::`. Assert the
+/// output file contains the known content.
+///
+/// ## Related Requirements
+/// `task/claude_storage/executed/514_export_scope_path_retrofit.md` — T02
+#[ test ]
+fn t02_scope_local_finds_session_in_topic_suffixed_project()
+{
+  let root    = TempDir::new().unwrap();
+  let cwd     = TempDir::new().unwrap();
+  let out_dir = TempDir::new().unwrap();
+  let out_file = out_dir.path().join( "t02.md" );
+
+  let eb = claude_storage_core::encode_path( cwd.path() ).unwrap();
+  common::write_test_session_with_last_message(
+    root.path(), &format!( "{eb}--commit" ), "t02-session", 0, "t02-unique-content"
+  );
+
+  let out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .current_dir( cwd.path() )
+    .arg( ".export" )
+    .arg( "session_id::t02-session" )
+    .arg( format!( "output::{}", out_file.display() ) )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  assert!(
+    out_file.exists(),
+    "T02: default local scope must find session in topic-suffixed project; stderr: {}",
+    stderr( &out )
+  );
+  let content = std::fs::read_to_string( &out_file ).unwrap();
+  assert!(
+    content.contains( "t02-unique-content" ),
+    "T02: exported file must contain the topic-suffixed project's session content; got:\n{content}"
+  );
+}
+
+/// T03: `scope::global` finds a session in an unrelated project.
+///
+/// ## Purpose
+/// Prove `scope::global` searches all of storage regardless of cwd — the
+/// broadest scope value.
+///
+/// ## Coverage
+/// Session in a project unrelated to cwd is found; exported file contains
+/// session content; exit 0.
+///
+/// ## Validation Strategy
+/// Write a session under an unrelated project path. Run `.export` from `/tmp`
+/// (matches no project) with `scope::global`. Assert the output file contains
+/// the known content.
+///
+/// ## Related Requirements
+/// `task/claude_storage/executed/514_export_scope_path_retrofit.md` — T03
+#[ test ]
+fn t03_scope_global_finds_session_in_unrelated_project()
+{
+  let root      = TempDir::new().unwrap();
+  let out_dir   = TempDir::new().unwrap();
+  let elsewhere = root.path().join( "t03-elsewhere" );
+  common::write_path_project_session_with_last_message(
+    root.path(), &elsewhere, "t03-session", 0, "t03-unique-content"
+  );
+  let out_file = out_dir.path().join( "t03.md" );
+
+  let out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .current_dir( "/tmp" )
+    .arg( ".export" )
+    .arg( "session_id::t03-session" )
+    .arg( "scope::global" )
+    .arg( format!( "output::{}", out_file.display() ) )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  assert!(
+    out_file.exists(),
+    "T03: scope::global must find session in an unrelated project regardless of cwd; stderr: {}",
+    stderr( &out )
+  );
+  let content = std::fs::read_to_string( &out_file ).unwrap();
+  assert!(
+    content.contains( "t03-unique-content" ),
+    "T03: exported file must contain the unrelated project's session content; got:\n{content}"
+  );
+}
+
+/// T04: `scope::bogus` rejected with the canonical `validate_scope()` error.
+///
+/// ## Purpose
+/// Verify invalid `scope::` values are rejected the same way for `.export` as
+/// for `.projects`/`.show` — one shared validator, one canonical error.
+///
+/// ## Coverage
+/// Exit 1; stderr contains the exact `validate_scope()` wording; no file written.
+///
+/// ## Validation Strategy
+/// Run `.export session_id::whatever output::f.md scope::bogus`. Assert exit 1
+/// and the canonical error text.
+///
+/// ## Related Requirements
+/// `task/claude_storage/executed/514_export_scope_path_retrofit.md` — T04
+#[ test ]
+fn t04_scope_bogus_rejected_with_canonical_error()
+{
+  let root    = TempDir::new().unwrap();
+  let out_dir = TempDir::new().unwrap();
+  let out_file = out_dir.path().join( "t04.md" );
+
+  let out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .current_dir( "/tmp" )
+    .arg( ".export" )
+    .arg( "session_id::whatever" )
+    .arg( format!( "output::{}", out_file.display() ) )
+    .arg( "scope::bogus" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 1 );
+  let err = stderr( &out );
+  assert!(
+    err.contains( "scope must be relevant|local|under|global|around, got bogus" ),
+    "T04: scope::bogus must produce the canonical validate_scope() error; got: {err}"
+  );
+  assert!(
+    !out_file.exists(),
+    "T04: no output file should be written when scope:: validation fails"
+  );
+}
+
+/// T05: `project::` given → `scope::` is ignored.
+///
+/// ## Purpose
+/// Confirm the "`project::` given" branch is untouched by the retrofit —
+/// adding `scope::` alongside an explicit `project::` must not change the
+/// exported content.
+///
+/// ## Coverage
+/// Exported file content identical with and without `scope::` when `project::`
+/// is given.
+///
+/// ## Validation Strategy
+/// Run `.export session_id::X project::Y output::<f>` twice, once with
+/// `scope::under` and once without, to two different output files. Assert
+/// both files' content is byte-identical (stdout is not compared — it embeds
+/// the output path, which necessarily differs between the two runs).
+///
+/// ## Related Requirements
+/// `task/claude_storage/executed/514_export_scope_path_retrofit.md` — T05
+#[ test ]
+fn t05_project_given_scope_ignored()
+{
+  let root    = TempDir::new().unwrap();
+  let out_dir = TempDir::new().unwrap();
+  let proj    = root.path().join( "t05-proj" );
+  let enc     = common::write_path_project_session( root.path(), &proj, "t05-session", 2 );
+
+  let out_file_a = out_dir.path().join( "t05a.md" );
+  let out_file_b = out_dir.path().join( "t05b.md" );
+
+  let without_scope = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .arg( ".export" )
+    .arg( "session_id::t05-session" )
+    .arg( format!( "project::{enc}" ) )
+    .arg( format!( "output::{}", out_file_a.display() ) )
+    .output()
+    .unwrap();
+
+  let with_scope = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .arg( ".export" )
+    .arg( "session_id::t05-session" )
+    .arg( format!( "project::{enc}" ) )
+    .arg( "scope::under" )
+    .arg( format!( "output::{}", out_file_b.display() ) )
+    .output()
+    .unwrap();
+
+  assert_exit( &without_scope, 0 );
+  assert_exit( &with_scope, 0 );
+  let content_a = std::fs::read_to_string( &out_file_a ).unwrap();
+  let content_b = std::fs::read_to_string( &out_file_b ).unwrap();
+  assert_eq!(
+    content_a, content_b,
+    "T05: scope:: must be ignored when project:: is given"
+  );
+}
+
+/// T06: `path::` anchors scope resolution without an explicit `scope::`.
+///
+/// ## Purpose
+/// Prove `path::` actually overrides the anchor used by the default `local`
+/// scope, independent of cwd.
+///
+/// ## Coverage
+/// Session found via `path::`-anchored project while cwd matches nothing;
+/// exported file contains session content; exit 0.
+///
+/// ## Validation Strategy
+/// Write a session under an anchor project path unrelated to cwd. Run
+/// `.export` from `/tmp` with `path::<anchor>` and no `scope::`. Assert the
+/// output file contains the known content.
+///
+/// ## Related Requirements
+/// `task/claude_storage/executed/514_export_scope_path_retrofit.md` — T06
+#[ test ]
+fn t06_path_anchor_override_without_explicit_scope()
+{
+  let root    = TempDir::new().unwrap();
+  let anchor  = TempDir::new().unwrap();
+  let out_dir = TempDir::new().unwrap();
+  let out_file = out_dir.path().join( "t06.md" );
+
+  common::write_path_project_session_with_last_message(
+    root.path(), anchor.path(), "t06-session", 0, "t06-unique-content"
+  );
+
+  let out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .current_dir( "/tmp" )
+    .arg( ".export" )
+    .arg( "session_id::t06-session" )
+    .arg( format!( "path::{}", anchor.path().display() ) )
+    .arg( format!( "output::{}", out_file.display() ) )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  assert!(
+    out_file.exists(),
+    "T06: path:: must anchor scope resolution to the given directory; stderr: {}",
+    stderr( &out )
+  );
+  let content = std::fs::read_to_string( &out_file ).unwrap();
+  assert!(
+    content.contains( "t06-unique-content" ),
+    "T06: exported file must contain the path::-anchored project's session content; got:\n{content}"
   );
 }

@@ -9,7 +9,7 @@
 
 Project list with scope control; conversations are grouped by project directory and one entry is shown per project (not per session file). Bare invocation shows all projects in the bidirectional neighborhood (ancestors + current + descendants via `scope::around`).
 
-**Parameters:** `scope::`, `path::`, `session::`, `agent::`, `min_entries::`, `limit::`, `show_tree::`
+**Parameters:** `scope::`, `path::`, `session::`, `agent::`, `min_entries::`, `limit::`, `show_tree::`, `since_days::`, `show_topic::`
 
 **Exit:** `0` success | `1` argument error | `2` storage read error
 
@@ -21,6 +21,7 @@ claude_storage .projects scope::relevant
 claude_storage .projects scope::under path::PATH
 claude_storage .projects scope::global [agent::1] [min_entries::N]
 claude_storage .projects limit::5
+claude_storage .projects scope::global since_days::20 show_topic::1
 ```
 
 **Parameters:**
@@ -34,15 +35,17 @@ claude_storage .projects limit::5
 | `min_entries::` | [`EntryCount`](../type/01_entry_count.md) | optional | — | Minimum entry count threshold |
 | `limit::` | Integer | optional | `0` | Max main sessions per project (`0` = unlimited) |
 | `show_tree::` | Boolean | optional | `0` | Tree-indent agent sessions under root sessions |
+| `since_days::` | Integer | optional | — | Only sessions modified within the last N days (`0` = last 24 hours) |
+| `show_topic::` | Boolean | optional | `0` | Append first user message text to session lines |
 
-`scope::` and `path::` belong to the [Scope Configuration group](../param_group/05_scope_configuration.md). Session filters belong to [Session Filter](../param_group/04_session_filter.md). `show_tree::` belongs to [Output Control](../param_group/01_output_control.md).
+`scope::` and `path::` belong to the [Scope Configuration group](../param_group/05_scope_configuration.md). Session filters belong to [Session Filter](../param_group/04_session_filter.md). `show_tree::` and `show_topic::` belong to [Output Control](../param_group/01_output_control.md).
 
 **Algorithm (5 steps):**
-1. Parse scope, filters, and resolve base path — validate `scope::` value, `min_entries::` non-negative, `limit::` non-negative; encode base path for scope comparison
+1. Parse scope, filters, and resolve base path — validate `scope::` value, `min_entries::` non-negative, `limit::` non-negative, `since_days::` non-negative; encode base path for scope comparison
 2. Filter projects by scope predicate — `local`: exact match + topic variants; `relevant`: ancestor chain (component-wise); `under`: subtree (component-wise); `around`: union of under + relevant; `global`: all projects
-3. Collect sessions per matching project — apply session filter (agent, min_entries, session ID substring); group by decoded display path (filesystem-guided decode resolves `_` vs `/` ambiguity)
+3. Collect sessions per matching project — apply session filter (agent, min_entries, session ID substring), then the `since_days::` mtime window (cutoff `now - max(N,1) × 24h`; unreadable mtime = excluded); group by decoded display path (filesystem-guided decode resolves `_` vs `/` ambiguity)
 4. Sort and aggregate — sessions by mtime descending within each project; projects by most-recent session mtime descending; exclude zero-byte placeholder sessions
-5. Format output — family display (agents grouped under root sessions with `[N agents: breakdown]` brackets) or tree display (`show_tree::1`: `├─`/`└─` connectors); apply `limit::` cap with `... and N more` hint
+5. Format output — family display (agents grouped under root sessions with `[N agents: breakdown]` brackets) or tree display (`show_tree::1`: `├─`/`└─` connectors); with `show_topic::1`, append each session's first user message (flattened, max 90 chars); apply `limit::` cap with `... and N more` hint
 
 **Default invocation:**
 
@@ -67,6 +70,9 @@ claude_storage .projects scope::global agent::1 min_entries::50
 
 # Show at most 5 sessions per project
 claude_storage .projects scope::global limit::5
+
+# Conversations active in the last 20 days, with their opening topic
+claude_storage .projects scope::global since_days::20 show_topic::1
 ```
 
 **Notes:**
@@ -115,6 +121,8 @@ With `show_tree::1`, agents are tree-indented under their parent:
 - Orphan families (no root): `  ? (orphan)  [N agents: breakdown]`
 - `limit::N` caps families per project; truncated projects show `... and N more sessions` hint
 - `show_tree::1` — agents tree-indented under parent (`├─`/`└─`); full IDs shown
+- `since_days::N` — sessions outside the mtime window dropped before aggregation; a project with no surviving session disappears entirely
+- `show_topic::1` — first user message text appended to session lines (newlines flattened, truncated at 90 chars); compact and flat views only, tree view unchanged
 
 ### Algorithms
 
@@ -141,6 +149,8 @@ With `show_tree::1`, agents are tree-indented under their parent:
 | 13 | [`session::`](../param/13_session.md) | [`SessionFilter`](../type/08_session_filter.md) | optional |
 | 22 | [`limit::`](../param/22_limit.md) | Integer | optional |
 | 24 | [`show_tree::`](../param/24_show_tree.md) | Boolean | optional |
+| 27 | [`since_days::`](../param/27_since_days.md) | Integer | optional |
+| 28 | [`show_topic::`](../param/28_show_topic.md) | Boolean | optional |
 
 ### Referenced User Stories
 

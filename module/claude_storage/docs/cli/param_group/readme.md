@@ -15,7 +15,7 @@ See [param/readme.md](../param/readme.md) for individual parameter specs and [co
 
 | File | Responsibility |
 |------|----------------|
-| `01_output_control.md` | Output Control — show_stat, show_tokens, show_tree toggles |
+| `01_output_control.md` | Output Control — show_stat, show_tokens, show_tree, show_topic toggles |
 | `02_project_scope.md` | Project Scope — project:: identifier scoping |
 | `03_session_identification.md` | Session Identification — session_id:: direct access |
 | `04_session_filter.md` | Session Filter — session/agent/min_entries listing filters |
@@ -25,7 +25,7 @@ See [param/readme.md](../param/readme.md) for individual parameter specs and [co
 
 | # | Group | Parameters | Used By |
 |---|-------|-----------|---------|
-| 1 | [Output Control](01_output_control.md) | `show_stat::`, `show_tokens::`, `show_tree::` | 3 commands |
+| 1 | [Output Control](01_output_control.md) | `show_stat::`, `show_tokens::`, `show_tree::`, `show_topic::` | 3 commands |
 | 2 | [Project Scope](02_project_scope.md) | `project::` | 5 commands |
 | 3 | [Session Identification](03_session_identification.md) | `session_id::` | 2 commands |
 | 4 | [Session Filter](04_session_filter.md) | `session::`, `agent::`, `min_entries::` | 2 commands |

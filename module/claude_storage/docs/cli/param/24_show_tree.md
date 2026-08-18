@@ -37,7 +37,7 @@ show_tree::1    # Tree-indented agents under root sessions
 ### Referenced Parameter Groups
 | # | Group | Membership | Co-members |
 |---|-------|------------|------------|
-| 1 | [Output Control](../param_group/01_output_control.md) | Full | `show_stat::`, `show_tokens::` |
+| 1 | [Output Control](../param_group/01_output_control.md) | Full | `show_stat::`, `show_tokens::`, `show_topic::` |
 
 ### Referenced Commands
 | # | Command | Default | Notes |

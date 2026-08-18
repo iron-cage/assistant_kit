@@ -4,9 +4,9 @@
 
 | Type | Purpose | Master File | Instances |
 |------|---------|-------------|----------:|
-| `cli/command/` | Per-command detail pages with full parameter tables and cross-refs | [cli/command/readme.md](cli/command/readme.md) | 12 |
+| `cli/command/` | Per-command detail pages with full parameter tables and cross-refs | [cli/command/readme.md](cli/command/readme.md) | 13 |
 | `cli/format/` | Index of format doc instances covering all export rendering modes | [cli/format/readme.md](cli/format/readme.md) | 3 |
-| `cli/param/` | Per-parameter detail pages with type, defaults, and command cross-refs | [cli/param/readme.md](cli/param/readme.md) | 25 |
+| `cli/param/` | Per-parameter detail pages with type, defaults, and command cross-refs | [cli/param/readme.md](cli/param/readme.md) | 26 |
 | `cli/param_group/` | Per-group detail pages with membership, examples, and cross-refs | [cli/param_group/readme.md](cli/param_group/readme.md) | 5 |
 | `cli/type/` | Per-type constraint and parsing reference | [cli/type/readme.md](cli/type/readme.md) | 13 |
 | `cli/user_story/` | Index of user story instances capturing persona intent and acceptance criteria | [cli/user_story/readme.md](cli/user_story/readme.md) | 6 |
@@ -15,7 +15,7 @@
 | `algorithm/` | Index of algorithm doc instances covering procedure design and correctness guarantees | [algorithm/readme.md](algorithm/readme.md) | 1 |
 | `invariant/` | System behavioral invariants | [invariant/readme.md](invariant/readme.md) | 3 |
 | `cli/pitfall/` | CLI implementation pitfall documentation | [cli/pitfall/readme.md](cli/pitfall/readme.md) | 4 |
-| `tests/docs/cli/command/` | Index of per-command integration test case files covering command-level behavior | [../../tests/docs/cli/command/readme.md](../tests/docs/cli/command/readme.md) | 12 |
+| `tests/docs/cli/command/` | Index of per-command integration test case files covering command-level behavior | [../../tests/docs/cli/command/readme.md](../tests/docs/cli/command/readme.md) | 13 |
 | `tests/docs/cli/param/` | Index of per-parameter edge case test files covering parameter-level behavior | [../../tests/docs/cli/param/readme.md](../tests/docs/cli/param/readme.md) | 25 |
 | `tests/docs/cli/param_group/` | Index of per-group interaction test files covering parameter group behavior | [../../tests/docs/cli/param_group/readme.md](../tests/docs/cli/param_group/readme.md) | 5 |
 | `tests/docs/cli/type/` | Index of per-type constraint test case files covering type parsing and validation | [../../tests/docs/cli/type/readme.md](../tests/docs/cli/type/readme.md) | 13 |
@@ -51,6 +51,7 @@
 | cli/command | 10 | Session Dir | [cli/command/10_session_dir.md](cli/command/10_session_dir.md) |
 | cli/command | 11 | Session Ensure | [cli/command/11_session_ensure.md](cli/command/11_session_ensure.md) |
 | cli/command | 12 | Tail | [cli/command/12_tail.md](cli/command/12_tail.md) |
+| cli/command | 13 | Usage | [cli/command/13_usage.md](cli/command/13_usage.md) |
 | cli/format | 01 | Markdown | [cli/format/01_markdown.md](cli/format/01_markdown.md) |
 | cli/format | 02 | JSON | [cli/format/02_json.md](cli/format/02_json.md) |
 | cli/format | 03 | Text | [cli/format/03_text.md](cli/format/03_text.md) |
@@ -79,6 +80,7 @@
 | cli/param | 23 | Show Tokens | [cli/param/23_show_tokens.md](cli/param/23_show_tokens.md) |
 | cli/param | 24 | Show Tree | [cli/param/24_show_tree.md](cli/param/24_show_tree.md) |
 | cli/param | 25 | Tail | [cli/param/25_tail.md](cli/param/25_tail.md) |
+| cli/param | 26 | Depth | [cli/param/26_depth.md](cli/param/26_depth.md) |
 | cli/param_group | 01 | Output Control | [cli/param_group/01_output_control.md](cli/param_group/01_output_control.md) |
 | cli/param_group | 02 | Project Scope | [cli/param_group/02_project_scope.md](cli/param_group/02_project_scope.md) |
 | cli/param_group | 03 | Session Identification | [cli/param_group/03_session_identification.md](cli/param_group/03_session_identification.md) |

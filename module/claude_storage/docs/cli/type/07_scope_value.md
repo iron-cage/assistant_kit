@@ -7,7 +7,7 @@
 - **In Scope**: Parsing rules, valid/invalid values, error messages.
 - **Out of Scope**: Parameter usage (→ `param/`), command context (→ `command/`).
 
-**Purpose:** Controls the discovery boundary for session listing in `.projects`. Defines how broadly to search for matching projects relative to a filesystem anchor path.
+**Purpose:** Controls the discovery boundary for session/project listing across the Scope Configuration group's specified commands (`.list`, `.show`, `.count`, `.search`, `.export`, `.projects`, `.usage` — see Commands below for which actually implement it today). Defines how broadly to search for matching projects relative to a filesystem anchor path.
 
 **Fundamental Type:** Wrapper around string enum
 
@@ -53,21 +53,22 @@ Parse string to enum variant (case-insensitive):
 
 **`around` semantics:** Union of `relevant` and `under` with deduplication. Ancestor results listed first (CWD → `/`), then descendant results below CWD. Projects appearing in both (including CWD itself) appear once. Models the "project neighborhood" — what governs this work and what lives under it.
 
-**Commands:** `.list`, `.show`, `.count`, `.search`, `.export`, `.projects`
+**Commands:** Specified for `.list`, `.show`, `.count`, `.search`, `.export`, `.projects`, `.usage` in the parameter and command docs; actually implemented in all but [`.usage`](../command/13_usage.md) (not yet built) — see Referenced Commands below for per-command status.
 
 ### Referenced Commands
 
-| # | Command | Via Parameter |
-|---|---------|---------------|
-| 2 | [`.list`](../command/02_list.md) | `scope::` |
-| 3 | [`.show`](../command/03_show.md) | `scope::` |
-| 4 | [`.count`](../command/04_count.md) | `scope::` |
-| 5 | [`.search`](../command/05_search.md) | `scope::` |
-| 6 | [`.export`](../command/06_export.md) | `scope::` |
-| 7 | [`.projects`](../command/07_projects.md) | `scope::` |
+| # | Command | Via Parameter | Status |
+|---|---------|---------------|--------|
+| 2 | [`.list`](../command/02_list.md) | `scope::` | Implemented |
+| 3 | [`.show`](../command/03_show.md) | `scope::` | Implemented |
+| 4 | [`.count`](../command/04_count.md) | `scope::` | Implemented |
+| 5 | [`.search`](../command/05_search.md) | `scope::` | Implemented |
+| 6 | [`.export`](../command/06_export.md) | `scope::` | Implemented |
+| 7 | [`.projects`](../command/07_projects.md) | `scope::` | Implemented |
+| 13 | [`.usage`](../command/13_usage.md) | `scope::` | Implemented |
 
 ### Referenced Parameters
 
 | # | Parameter | Commands |
 |---|-----------|----------|
-| 12 | [`scope::`](../param/12_scope.md) | 6 |
+| 12 | [`scope::`](../param/12_scope.md) | 7 specified, 6 implemented |

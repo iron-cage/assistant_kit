@@ -113,6 +113,12 @@ The human-readable name component of a session directory. Stored without the lea
 
 ---
 
+### Conversation Topic
+
+The first user message text of a conversation, used as its one-line display preview. Rendered by `.projects show_topic::1` — newlines flattened to spaces, trimmed, truncated to 90 characters. Distinct from Session Topic (above): a Session Topic names the working directory a session is keyed to; a Conversation Topic summarizes what the conversation is about.
+
+---
+
 ### Strategy
 
 The resume/fresh decision for `.session.ensure`. `resume` means an existing conversation history was found in storage for the session directory; `fresh` means no history was found and the session starts clean. Can be auto-detected from storage (default) or forced via `strategy::resume|fresh`.

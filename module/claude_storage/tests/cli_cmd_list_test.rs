@@ -18,6 +18,15 @@
 //! - INT-10: `show_sessions::0` suppresses display even with `session::`
 //! - INT-11: Combined `path::` `session::` filter
 //! - INT-12: Exit code 0 on empty storage
+//! - B007:   Historical collision layout cannot break path-filter isolation
+//! - T01:    Default (no `scope::`) regression guard
+//! - T02:    `scope::global` explicit byte-identical to default (AF2)
+//! - T03:    `scope::local` narrows to the cwd project only
+//! - T04:    `scope::under` narrows to descendant projects
+//! - T05:    `scope::bogus` rejected with canonical error
+//! - T06:    `scope::local` composes with the existing `path::` filter
+//! - INT-13: `type::` with invalid value rejected
+//! - INT-14: `agent::` with non-boolean value rejected
 #![ cfg( unix ) ]
 
 mod common;
@@ -238,15 +247,15 @@ fn int_4_sessions_1_expands_session_list_per_project()
 /// INT-5: `path::` substring filters project list.
 ///
 /// ## Purpose
-/// Verify that `path::pro` shows only projects whose decoded path contains
-/// the substring `pro`, excluding unrelated projects.
+/// Verify that `path::projects` shows only projects whose decoded path
+/// contains the substring `projects`, excluding unrelated projects.
 ///
 /// ## Coverage
 /// Matching projects present; non-matching project absent; exit 0.
 ///
 /// ## Validation Strategy
 /// Write 2 projects under a path containing "projects" and 1 under "/tmp/other".
-/// Run `.list ``path::pr``o`. Assert "alpha" and "beta" appear, "other" absent.
+/// Run `.list path::projects`. Assert "alpha" and "beta" appear, "other" absent.
 ///
 /// ## Related Requirements
 /// `tests/docs/cli/command/02_list.md` — INT-5
@@ -258,7 +267,7 @@ fn int_5_path_substring_filters_project_list()
   // Projects whose decoded paths contain "projects"
   let alpha = root.path().join( "projects" ).join( "alpha" );
   let beta  = root.path().join( "projects" ).join( "beta" );
-  // Project whose decoded path does NOT contain "pro"
+  // Project whose decoded path does NOT contain "projects"
   let other = root.path().join( "other" );
 
   common::write_path_project_session( root.path(), &alpha, "s001", 2 );
@@ -268,7 +277,10 @@ fn int_5_path_substring_filters_project_list()
   let out = common::clg_cmd()
     .env( "CLAUDE_STORAGE_ROOT", root.path() )
     .arg( ".list" )
-    .arg( "path::pro" )
+    // Filter "projects" (not the former "pro") — see Fix(BUG-007) at INT-11:
+    // 8 chars + '_' segment boundaries cannot collide with the shared TempDir
+    // root's 6-char random component, unlike the 3-char "pro".
+    .arg( "path::projects" )
     .output()
     .unwrap();
 
@@ -276,11 +288,11 @@ fn int_5_path_substring_filters_project_list()
   let s = stdout( &out );
   assert!(
     s.contains( "alpha" ) || s.contains( "beta" ),
-    "INT-5: projects under 'projects/' must appear with path::pro filter; got:\n{s}"
+    "INT-5: projects under 'projects/' must appear with path::projects filter; got:\n{s}"
   );
   assert!(
     !s.contains( "other" ),
-    "INT-5: project '/other' must be absent with path::pro filter; got:\n{s}"
+    "INT-5: project '/other' must be absent with path::projects filter; got:\n{s}"
   );
 }
 
@@ -514,10 +526,10 @@ fn int_10_sessions_0_suppresses_display_even_with_session_filter()
 /// non-matching project absent; exit 0.
 ///
 /// ## Validation Strategy
-/// Write project alpha (path contains "pro") with session "s-abc".
-/// Write project other (path does not contain "pro") with session "s-abc".
-/// Run `.list ``path::pro`` ``session::ab``c`. Assert alpha's session appears,
-/// other's session absent.
+/// Write project alpha (path contains "projects") with session "s-abc".
+/// Write project other (path does not contain "projects") with session "s-abc".
+/// Run `.list path::projects session::abc`. Assert alpha's session
+/// appears, other's session absent.
 ///
 /// ## Related Requirements
 /// `tests/docs/cli/command/02_list.md` — INT-11
@@ -526,9 +538,19 @@ fn int_11_combined_path_session_filter()
 {
   let root = TempDir::new().unwrap();
 
-  // alpha is under a path containing "pro"
+  // Fix(BUG-007): filter changed "pro" -> "projects".
+  // Root cause: both fixtures share ONE random TempDir root whose encoded form
+  // starts "-tmp<6 random chars>"; the literal 'p' of "tmp" followed by a random
+  // suffix starting "ro"/"RO" made the shared root itself contain "pro"
+  // case-insensitively, so BOTH projects matched `path::pro` and the
+  // "other must be absent" assertion failed intermittently (~1/961 draws).
+  // Pitfall: a substring filter asserted absent must be impossible — not just
+  // unlikely — in every generator-controlled segment of the fixture's full
+  // stored identifier; "projects" (8 chars, crossing a '_' boundary) cannot
+  // fit in the 6-char random component under any draw.
+  // alpha is under a path containing "projects"
   let alpha = root.path().join( "projects" ).join( "alpha" );
-  // other is NOT under a path containing "pro"
+  // other is NOT under a path containing "projects"
   let other = root.path().join( "unrelated" ).join( "other" );
 
   common::write_path_project_session( root.path(), &alpha, "s-abc", 2 );
@@ -537,7 +559,7 @@ fn int_11_combined_path_session_filter()
   let out = common::clg_cmd()
     .env( "CLAUDE_STORAGE_ROOT", root.path() )
     .arg( ".list" )
-    .arg( "path::pro" )
+    .arg( "path::projects" )
     .arg( "session::abc" )
     .output()
     .unwrap();
@@ -546,11 +568,74 @@ fn int_11_combined_path_session_filter()
   let s = stdout( &out );
   assert!(
     s.contains( "alpha" ),
-    "INT-11: project 'alpha' (path contains 'pro') must appear; got:\n{s}"
+    "INT-11: project 'alpha' (path contains 'projects') must appear; got:\n{s}"
   );
   assert!(
     !s.contains( "other" ),
-    "INT-11: project 'other' (path lacks 'pro') must be absent; got:\n{s}"
+    "INT-11: project 'other' (path lacks 'projects') must be absent; got:\n{s}"
+  );
+}
+
+/// B007: Historical collision layout cannot break path-filter isolation.
+///
+/// ## Root Cause
+/// INT-5/INT-11 formerly filtered on `path::pro` while both fixture projects
+/// shared one random `TempDir` root. `tempfile`'s ".tmp" prefix ends in 'p',
+/// so a random suffix starting "ro" (any case) put the substring "pro" into
+/// the SHARED root — both projects then matched, violating the fixtures'
+/// isolation assumption (observed live: root `.tmpROq9Z7` -> "tmpro...").
+///
+/// ## Why Not Caught
+/// ~1/961 trigger probability per run; an intermittent failure followed by an
+/// immediate clean re-run reads as "flaky CI", discouraging root-causing.
+///
+/// ## Fix Applied
+/// Filter substring "pro" -> "projects" in INT-5/INT-11 (BUG-007). 8 chars
+/// cannot fit inside the 6-char random component, and spanning matches break
+/// on the '_' segment boundary — collision is impossible, not just unlikely.
+///
+/// ## Prevention
+/// This test pins the exact historical worst-case draw as a FIXED path
+/// segment (".tmpROq9Z7", which contains "pro" case-insensitively) and
+/// asserts `path::projects` still isolates the two projects deterministically.
+///
+/// ## Pitfall
+/// Fixture isolation must never depend on shared uncontrolled randomness:
+/// any generator-fed segment of a stored identifier is part of the filter's
+/// comparison surface, whether or not the fixture author intended it.
+// test_kind: bug_reproducer(BUG-007)
+#[ test ]
+fn bug_007_collision_prefix_root_does_not_break_path_filter_isolation()
+{
+  let root = TempDir::new().unwrap();
+
+  // Deliberately embed the historical failure's exact random draw as a fixed
+  // literal: ".tmpROq9Z7" contains "pro" case-insensitively ("...pRO...").
+  let collision_root = root.path().join( ".tmpROq9Z7" );
+  let alpha = collision_root.join( "projects" ).join( "alpha" );
+  let other = collision_root.join( "unrelated" ).join( "other" );
+
+  common::write_path_project_session( root.path(), &alpha, "s-abc", 2 );
+  common::write_path_project_session( root.path(), &other, "s-abc", 2 );
+
+  let out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .arg( ".list" )
+    .arg( "path::projects" )
+    .arg( "session::abc" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  assert!(
+    s.contains( "alpha" ),
+    "B007: project 'alpha' (path contains 'projects') must appear; got:\n{s}"
+  );
+  assert!(
+    !s.contains( "other" ),
+    "B007: project 'other' must stay absent even under the historical \
+     collision-bearing root ('.tmpROq9Z7' contains 'pro'); got:\n{s}"
   );
 }
 
@@ -582,4 +667,389 @@ fn int_12_exit_code_0_on_empty_storage()
     .unwrap();
 
   assert_exit( &out, 0 );
+}
+
+/// T01: Default (no `scope::`) regression guard.
+///
+/// ## Purpose
+/// Verify that `.list` with no `scope::` given still lists every project,
+/// matching pre-retrofit behavior (the `global` default).
+///
+/// ## Coverage
+/// Both written projects appear; exit 0.
+///
+/// ## Validation Strategy
+/// Write 2 unrelated path-encoded projects. Run `.list` with no `scope::`.
+/// Assert both project names appear.
+///
+/// ## Related Requirements
+/// `task/claude_storage/executed/516_list_scope_retrofit.md` — T01
+#[ test ]
+fn t01_default_scope_global_regression_guard()
+{
+  let root  = TempDir::new().unwrap();
+  let alpha = root.path().join( "t01alpha" );
+  let beta  = root.path().join( "t01beta" );
+
+  common::write_path_project_session( root.path(), &alpha, "s001", 2 );
+  common::write_path_project_session( root.path(), &beta,  "s001", 2 );
+
+  let out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .current_dir( "/tmp" )
+    .arg( ".list" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  assert!(
+    s.contains( "t01alpha" ) && s.contains( "t01beta" ),
+    "T01: default (no scope::) must list all projects, matching pre-retrofit behavior; got:\n{s}"
+  );
+}
+
+/// T02: `scope::global` explicit is byte-for-byte identical to the omitted default.
+///
+/// ## Purpose
+/// Prove zero drift at the default (AF2) — the omitted-scope and
+/// explicit-`scope::global` invocations execute the exact same untouched
+/// `storage.list_projects()` code path and must produce identical bytes.
+///
+/// ## Coverage
+/// `stdout` byte-for-byte equal between the two invocations; both exit 0.
+///
+/// ## Validation Strategy
+/// Write 2 projects. Run `.list` and `.list scope::global` separately.
+/// Assert `stdout` is byte-identical between the two.
+///
+/// ## Related Requirements
+/// `task/claude_storage/executed/516_list_scope_retrofit.md` — T02
+#[ test ]
+fn t02_scope_global_explicit_byte_identical_to_default()
+{
+  let root  = TempDir::new().unwrap();
+  let alpha = root.path().join( "t02alpha" );
+  let beta  = root.path().join( "t02beta" );
+
+  common::write_path_project_session( root.path(), &alpha, "s001", 2 );
+  common::write_path_project_session( root.path(), &beta,  "s001", 2 );
+
+  let default_out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .current_dir( "/tmp" )
+    .arg( ".list" )
+    .output()
+    .unwrap();
+
+  let explicit_out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .current_dir( "/tmp" )
+    .arg( ".list" )
+    .arg( "scope::global" )
+    .output()
+    .unwrap();
+
+  assert_exit( &default_out, 0 );
+  assert_exit( &explicit_out, 0 );
+  assert_eq!(
+    default_out.stdout, explicit_out.stdout,
+    "T02: scope::global explicit must be byte-for-byte identical to the omitted default \
+    (same untouched storage.list_projects() code path)"
+  );
+}
+
+/// T03: `scope::local` narrows to the cwd project only.
+///
+/// ## Purpose
+/// Verify `scope::local` limits the listed projects to the cwd's own
+/// project, excluding an unrelated project written elsewhere in storage.
+///
+/// ## Coverage
+/// cwd's own project present; unrelated project absent; exit 0.
+///
+/// ## Validation Strategy
+/// Write the cwd's own project (a real directory, required for
+/// `Command::current_dir`) plus one unrelated project. Run
+/// `.list scope::local` from the cwd project's own directory. Assert the
+/// cwd project appears and the unrelated one does not.
+///
+/// ## Related Requirements
+/// `task/claude_storage/executed/516_list_scope_retrofit.md` — T03
+#[ test ]
+fn t03_scope_local_narrows_to_cwd_project()
+{
+  let root       = TempDir::new().unwrap();
+  let target_tmp = TempDir::new().unwrap();
+  let target     = target_tmp.path().join( "t03targetmarker" );
+  std::fs::create_dir_all( &target ).unwrap();
+
+  common::write_path_project_session( root.path(), &target, "s001", 2 );
+
+  let other = root.path().join( "t03other" );
+  common::write_path_project_session( root.path(), &other, "s001", 2 );
+
+  let out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .current_dir( &target )
+    .arg( ".list" )
+    .arg( "scope::local" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  assert!(
+    s.contains( "t03targetmarker" ),
+    "T03: scope::local from the target project's own cwd must include it; got:\n{s}"
+  );
+  assert!(
+    !s.contains( "t03other" ),
+    "T03: scope::local must exclude an unrelated project outside the anchor; got:\n{s}"
+  );
+}
+
+/// T04: `scope::under` narrows to descendant projects.
+///
+/// ## Purpose
+/// Verify `scope::under` from an ancestor cwd includes a nested descendant
+/// project while excluding an unrelated project elsewhere in storage.
+///
+/// ## Coverage
+/// Nested descendant project present; unrelated project absent; exit 0.
+///
+/// ## Validation Strategy
+/// Write a project nested under an ancestor directory (the ancestor itself
+/// is a real directory for `Command::current_dir`; the nested project's
+/// storage encoding does not require real on-disk existence — see
+/// `scope.rs`'s conservative-include fallback). Run `.list scope::under`
+/// from the ancestor. Assert the nested project appears and the unrelated
+/// one does not.
+///
+/// ## Related Requirements
+/// `task/claude_storage/executed/516_list_scope_retrofit.md` — T04
+#[ test ]
+fn t04_scope_under_narrows_to_descendants()
+{
+  let root       = TempDir::new().unwrap();
+  let anchor_tmp = TempDir::new().unwrap();
+  let anchor     = anchor_tmp.path().join( "t04anchor" );
+  let nested     = anchor.join( "t04nestedchild" );
+  std::fs::create_dir_all( &anchor ).unwrap();
+
+  common::write_path_project_session( root.path(), &nested, "s001", 2 );
+
+  let other = root.path().join( "t04other" );
+  common::write_path_project_session( root.path(), &other, "s001", 2 );
+
+  let out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .current_dir( &anchor )
+    .arg( ".list" )
+    .arg( "scope::under" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  assert!(
+    s.contains( "t04nestedchild" ),
+    "T04: scope::under from the ancestor cwd must include the nested descendant project; got:\n{s}"
+  );
+  assert!(
+    !s.contains( "t04other" ),
+    "T04: scope::under must exclude an unrelated project outside the anchor; got:\n{s}"
+  );
+}
+
+/// T05: `scope::bogus` rejected with the canonical `validate_scope()` error.
+///
+/// ## Purpose
+/// Verify invalid `scope::` values are rejected the same way for `.list` as
+/// for `.projects`/`.show`/`.export`/`.search` — one shared validator, one
+/// canonical error.
+///
+/// ## Coverage
+/// Exit 1; stderr contains the exact `validate_scope()` wording.
+///
+/// ## Validation Strategy
+/// Run `.list scope::bogus`. Assert exit 1 and the canonical error text.
+///
+/// ## Related Requirements
+/// `task/claude_storage/executed/516_list_scope_retrofit.md` — T05
+#[ test ]
+fn t05_scope_bogus_rejected_with_canonical_error()
+{
+  let root = TempDir::new().unwrap();
+
+  let out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .current_dir( "/tmp" )
+    .arg( ".list" )
+    .arg( "scope::bogus" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 1 );
+  let err = stderr( &out );
+  assert!(
+    err.contains( "scope must be relevant|local|under|global|around, got bogus" ),
+    "T05: scope::bogus must produce the canonical validate_scope() error; got: {err}"
+  );
+}
+
+/// T06: `scope::local` composes with the existing `path::` filter.
+///
+/// ## Purpose
+/// Prove both narrowings apply together — `path::` substring-filters the
+/// `scope::`-narrowed set rather than either one silently overriding the
+/// other.
+///
+/// ## Coverage
+/// Project present when `path::` matches; same project absent when `path::`
+/// does not match, despite `scope::local` being identical in both runs;
+/// both exit 0.
+///
+/// ## Validation Strategy
+/// Write the cwd's own project with "assistant" in its path. Run
+/// `.list scope::local path::assistant` (should include it) and
+/// `.list scope::local path::zzz-nonexistent-substring` (should exclude
+/// it). Assert both outcomes.
+///
+/// ## Related Requirements
+/// `task/claude_storage/executed/516_list_scope_retrofit.md` — T06
+#[ test ]
+fn t06_scope_local_composes_with_path_filter()
+{
+  let root       = TempDir::new().unwrap();
+  let target_tmp = TempDir::new().unwrap();
+  let target     = target_tmp.path().join( "t06assistantproject" );
+  std::fs::create_dir_all( &target ).unwrap();
+
+  common::write_path_project_session( root.path(), &target, "s001", 2 );
+
+  let matching = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .current_dir( &target )
+    .arg( ".list" )
+    .arg( "scope::local" )
+    .arg( "path::assistant" )
+    .output()
+    .unwrap();
+
+  assert_exit( &matching, 0 );
+  let s_match = stdout( &matching );
+  assert!(
+    s_match.contains( "t06assistantproject" ),
+    "T06: scope::local + a matching path:: substring must include the project; got:\n{s_match}"
+  );
+
+  let non_matching = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .current_dir( &target )
+    .arg( ".list" )
+    .arg( "scope::local" )
+    .arg( "path::zzz-nonexistent-substring" )
+    .output()
+    .unwrap();
+
+  assert_exit( &non_matching, 0 );
+  let s_non_match = stdout( &non_matching );
+  assert!(
+    !s_non_match.contains( "t06assistantproject" ),
+    "T06: scope::local narrowed set must still be filtered by a non-matching path::; got:\n{s_non_match}"
+  );
+}
+
+/// INT-13: `type::` with invalid value rejected.
+///
+/// ## Purpose
+/// Verify `.list type::badvalue` is rejected — `badvalue` is not a valid
+/// `type::` option.
+///
+/// ## Coverage
+/// Exit code exactly 1; stderr names the invalid value; no listing output
+/// on stdout.
+///
+/// ## Validation Strategy
+/// Run `.list type::badvalue` against an empty temp storage root from a
+/// neutral cwd. Assert exit 1, stderr containing `badvalue`, empty stdout.
+///
+/// ## Related Requirements
+/// `tests/docs/cli/command/02_list.md` — INT-13
+#[ test ]
+fn int_13_type_invalid_value_rejected()
+{
+  let root = TempDir::new().unwrap();
+
+  let out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .current_dir( "/tmp" )
+    .arg( ".list" )
+    .arg( "type::badvalue" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 1 );
+  let err = stderr( &out );
+  assert!(
+    !err.is_empty(),
+    "INT-13: invalid type:: value must produce an error on stderr"
+  );
+  assert!(
+    err.contains( "badvalue" ),
+    "INT-13: stderr must name the invalid type:: value; got: {err}"
+  );
+  assert!(
+    stdout( &out ).is_empty(),
+    "INT-13: no listing output on stdout when type:: is rejected; got:\n{}",
+    stdout( &out )
+  );
+}
+
+/// INT-14: `agent::` with non-boolean value rejected.
+///
+/// ## Purpose
+/// Verify `.list agent::invalid` is rejected as an argument error —
+/// `invalid` is not a valid boolean value (accepted: `0`, `1`).
+///
+/// ## Coverage
+/// Exit code exactly 1; non-empty stderr describing the argument error; no
+/// listing output on stdout.
+///
+/// ## Validation Strategy
+/// Run `.list agent::invalid` against an empty temp storage root from a
+/// neutral cwd. Assert exit 1, stderr naming the `agent` argument, empty
+/// stdout.
+///
+/// ## Related Requirements
+/// `tests/docs/cli/command/02_list.md` — INT-14
+#[ test ]
+fn int_14_agent_non_boolean_rejected()
+{
+  let root = TempDir::new().unwrap();
+
+  let out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .current_dir( "/tmp" )
+    .arg( ".list" )
+    .arg( "agent::invalid" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 1 );
+  let err = stderr( &out );
+  assert!(
+    !err.is_empty(),
+    "INT-14: non-boolean agent:: value must produce an error on stderr"
+  );
+  assert!(
+    err.contains( "agent" ),
+    "INT-14: stderr must name the rejected agent argument; got: {err}"
+  );
+  assert!(
+    stdout( &out ).is_empty(),
+    "INT-14: no listing output on stdout when agent:: is rejected; got:\n{}",
+    stdout( &out )
+  );
 }

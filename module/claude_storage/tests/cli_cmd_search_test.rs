@@ -16,6 +16,13 @@
 //! - INT-8:  q alias works same as query
 //! - INT-9:  Phrase query with spaces returns results
 //! - INT-10: Exit code 0 when results found
+//! - T01:    default (no `scope::`) neither-given case reproduces pre-retrofit behavior
+//! - T02:    default `global` scope, `session::` given, session lives in cwd's own project
+//! - T03:    default `global` scope broadening finds a `session::` in an unrelated project
+//! - T04:    `scope::local` on the session-given branch reproduces pre-retrofit narrow behavior
+//! - T05:    `scope::bogus` rejected with the canonical `validate_scope()` error
+//! - T06:    `project::` given → `scope::` is ignored
+//! - T07:    `path::` anchors scope resolution without cwd involvement
 
 mod common;
 
@@ -500,5 +507,318 @@ fn int_10_exit_code_0_when_results_found()
     !s.is_empty(),
     "INT-10: .search must produce output when results found; stderr: {}",
     stderr( &out )
+  );
+}
+
+/// T01: default (no `scope::`) neither-given case reproduces pre-retrofit behavior.
+///
+/// ## Purpose
+/// Regression guard — `.search query::X` with neither `project::` nor
+/// `session::` must still search every project in storage, matching
+/// pre-retrofit behavior (structurally guaranteed: `resolve_scoped_projects`'s
+/// `global` arm calls the identical `storage.list_projects()` the old code
+/// called directly).
+///
+/// ## Coverage
+/// Match found across all storage with no `scope::`/`project::`/`session::`; exit 0.
+///
+/// ## Validation Strategy
+/// Write a session with unique content. Run `.search query::X` with no other
+/// params. Assert the unique content is found.
+///
+/// ## Related Requirements
+/// `task/claude_storage/executed/515_search_scope_path_retrofit.md` — T01
+#[ test ]
+fn t01_default_scope_global_neither_given_regression_guard()
+{
+  let root = TempDir::new().unwrap();
+  let proj = root.path().join( "t01-proj" );
+  common::write_path_project_session_with_last_message(
+    root.path(), &proj, "t01-session", 0, "t01-unique-content"
+  );
+
+  let out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .arg( ".search" )
+    .arg( "query::t01-unique-content" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  assert!(
+    s.contains( "t01-unique-content" ),
+    "T01: default scope (neither project:: nor session:: given) must find the session \
+    across all storage, matching pre-retrofit behavior; got:\n{s}"
+  );
+}
+
+/// T02: default `global` scope, `session::` given, session lives in cwd's own project.
+///
+/// ## Purpose
+/// Regression guard — when the target session happens to live in the cwd
+/// project, the default (now `global`) scope must still find it, exactly as
+/// the old cwd-only lookup did.
+///
+/// ## Coverage
+/// Match found via `session::` when the session lives in cwd's own project; exit 0.
+///
+/// ## Validation Strategy
+/// Write a session under the cwd-encoded project with unique content. Run
+/// `.search query::X session::Y` from that cwd with no `scope::`/`project::`.
+/// Assert the unique content is found.
+///
+/// ## Related Requirements
+/// `task/claude_storage/executed/515_search_scope_path_retrofit.md` — T02
+#[ test ]
+fn t02_default_scope_global_session_given_found_in_cwd_project()
+{
+  let root = TempDir::new().unwrap();
+  let cwd  = TempDir::new().unwrap();
+
+  common::write_path_project_session_with_last_message(
+    root.path(), cwd.path(), "t02-session", 0, "t02-unique-content"
+  );
+
+  let out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .current_dir( cwd.path() )
+    .arg( ".search" )
+    .arg( "query::t02-unique-content" )
+    .arg( "session::t02-session" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  assert!(
+    s.contains( "t02-unique-content" ),
+    "T02: default scope with session:: given must find a session living in cwd's own \
+    project, matching pre-retrofit behavior; got:\n{s}"
+  );
+}
+
+/// T03: default `global` scope broadening finds a `session::` in an unrelated project.
+///
+/// ## Purpose
+/// Prove the retrofit's documented, intentional behavior change: at the new
+/// `global` default, `session::` given without `project::` now searches all
+/// projects — pre-retrofit this was a "session not found" error since only
+/// the single cwd project was ever tried.
+///
+/// ## Coverage
+/// Match found in a project unrelated to cwd; exit 0.
+///
+/// ## Validation Strategy
+/// Write a session under an unrelated project path with unique content. Run
+/// `.search query::X session::Y` from an empty cwd with no `scope::`. Assert
+/// the unique content is found.
+///
+/// ## Related Requirements
+/// `task/claude_storage/executed/515_search_scope_path_retrofit.md` — T03
+#[ test ]
+fn t03_scope_global_default_broadens_session_given_to_unrelated_project()
+{
+  let root      = TempDir::new().unwrap();
+  let cwd       = TempDir::new().unwrap();
+  let elsewhere = root.path().join( "t03-elsewhere" );
+
+  common::write_path_project_session_with_last_message(
+    root.path(), &elsewhere, "t03-session", 0, "t03-unique-content"
+  );
+
+  let out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .current_dir( cwd.path() )
+    .arg( ".search" )
+    .arg( "query::t03-unique-content" )
+    .arg( "session::t03-session" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  assert!(
+    s.contains( "t03-unique-content" ),
+    "T03: default global scope must broaden session:: lookup to an unrelated project \
+    (was 'session not found' pre-retrofit); got:\n{s}"
+  );
+}
+
+/// T04: `scope::local` on the session-given branch reproduces pre-retrofit narrow behavior.
+///
+/// ## Purpose
+/// Prove `scope::local` is an explicit escape hatch back to the old cwd-only
+/// behavior — the same fixture as T03, but narrowed, must fail to find the
+/// session.
+///
+/// ## Coverage
+/// "Session not found" error when the session lives outside the `scope::local`
+/// anchor; exit 1.
+///
+/// ## Validation Strategy
+/// Write a session under an unrelated project path. Run `.search query::X
+/// session::Y scope::local` from an unrelated empty cwd. Assert exit 1 and
+/// stderr mentions "Session not found".
+///
+/// ## Related Requirements
+/// `task/claude_storage/executed/515_search_scope_path_retrofit.md` — T04
+#[ test ]
+fn t04_scope_local_reproduces_pre_retrofit_narrow_behavior()
+{
+  let root      = TempDir::new().unwrap();
+  let cwd       = TempDir::new().unwrap();
+  let elsewhere = root.path().join( "t04-elsewhere" );
+
+  common::write_path_project_session( root.path(), &elsewhere, "t04-session", 2 );
+
+  let out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .current_dir( cwd.path() )
+    .arg( ".search" )
+    .arg( "query::whatever" )
+    .arg( "session::t04-session" )
+    .arg( "scope::local" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 1 );
+  let err = stderr( &out );
+  assert!(
+    err.contains( "Session not found" ),
+    "T04: scope::local must reproduce the pre-retrofit 'Session not found' error when \
+    the session lives outside the local anchor; got: {err}"
+  );
+}
+
+/// T05: `scope::bogus` rejected with the canonical `validate_scope()` error.
+///
+/// ## Purpose
+/// Verify invalid `scope::` values are rejected the same way for `.search` as
+/// for `.projects`/`.show`/`.export` — one shared validator, one canonical error.
+///
+/// ## Coverage
+/// Exit 1; stderr contains the exact `validate_scope()` wording.
+///
+/// ## Validation Strategy
+/// Run `.search query::whatever scope::bogus` (neither `project::` nor
+/// `session::` given). Assert exit 1 and the canonical error text.
+///
+/// ## Related Requirements
+/// `task/claude_storage/executed/515_search_scope_path_retrofit.md` — T05
+#[ test ]
+fn t05_scope_bogus_rejected_with_canonical_error()
+{
+  let root = TempDir::new().unwrap();
+
+  let out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .current_dir( "/tmp" )
+    .arg( ".search" )
+    .arg( "query::whatever" )
+    .arg( "scope::bogus" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 1 );
+  let err = stderr( &out );
+  assert!(
+    err.contains( "scope must be relevant|local|under|global|around, got bogus" ),
+    "T05: scope::bogus must produce the canonical validate_scope() error; got: {err}"
+  );
+}
+
+/// T06: `project::` given → `scope::` is ignored.
+///
+/// ## Purpose
+/// Confirm the "`project::` given" branch is untouched by the retrofit —
+/// adding `scope::` alongside an explicit `project::` must not change output.
+///
+/// ## Coverage
+/// Output identical with and without `scope::` when `project::` is given.
+///
+/// ## Validation Strategy
+/// Run `.search query::X project::Y` with and without `scope::under`. Assert
+/// byte-identical stdout.
+///
+/// ## Related Requirements
+/// `task/claude_storage/executed/515_search_scope_path_retrofit.md` — T06
+#[ test ]
+fn t06_project_given_scope_ignored()
+{
+  let root = TempDir::new().unwrap();
+  let proj = root.path().join( "t06-proj" );
+  let enc  = common::write_path_project_session_with_last_message(
+    root.path(), &proj, "t06-session", 0, "t06-unique-content"
+  );
+
+  let without_scope = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .arg( ".search" )
+    .arg( "query::t06-unique-content" )
+    .arg( format!( "project::{enc}" ) )
+    .output()
+    .unwrap();
+
+  let with_scope = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .arg( ".search" )
+    .arg( "query::t06-unique-content" )
+    .arg( format!( "project::{enc}" ) )
+    .arg( "scope::under" )
+    .output()
+    .unwrap();
+
+  assert_exit( &without_scope, 0 );
+  assert_exit( &with_scope, 0 );
+  assert_eq!(
+    without_scope.stdout, with_scope.stdout,
+    "T06: scope:: must be ignored when project:: is given"
+  );
+}
+
+/// T07: `path::` anchors scope resolution without cwd involvement.
+///
+/// ## Purpose
+/// Prove `path::` actually overrides the anchor used by scope resolution,
+/// independent of cwd, on the "neither given" branch.
+///
+/// ## Coverage
+/// Match found via a `path::`-anchored project while cwd matches nothing; exit 0.
+///
+/// ## Validation Strategy
+/// Write a session under an anchor project path unrelated to cwd. Run
+/// `.search query::X scope::under path::<anchor>` from an unrelated empty
+/// cwd. Assert the unique content is found.
+///
+/// ## Related Requirements
+/// `task/claude_storage/executed/515_search_scope_path_retrofit.md` — T07
+#[ test ]
+fn t07_path_anchor_override_scopes_resolution()
+{
+  let root   = TempDir::new().unwrap();
+  let cwd    = TempDir::new().unwrap();
+  let anchor = TempDir::new().unwrap();
+
+  common::write_path_project_session_with_last_message(
+    root.path(), anchor.path(), "t07-session", 0, "t07-unique-content"
+  );
+
+  let out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .current_dir( cwd.path() )
+    .arg( ".search" )
+    .arg( "query::t07-unique-content" )
+    .arg( "scope::under" )
+    .arg( format!( "path::{}", anchor.path().display() ) )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  assert!(
+    s.contains( "t07-unique-content" ),
+    "T07: path:: must anchor scope resolution to the given directory, independent of cwd; \
+    got:\n{s}"
   );
 }

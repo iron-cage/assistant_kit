@@ -5,7 +5,7 @@
 The claude_storage_core test suite covers the core storage library: JSON parsing, path
 encoding/decoding, session filtering, content search, and export. The suite is split between
 integration tests that exercise real `~/.claude/` storage and unit tests that run
-fully in-process. Ten of the seventeen files are bug reproducers — each documents a parse,
+fully in-process. Ten of the eighteen files are bug reproducers — each documents a parse,
 encoding, or storage defect found in production data with 5-section root-cause documentation.
 `status_global_stats_fast_bug.rs` covers both issue-015 (performance) and issue-018 (agent
 session discovery for Claude Code v2.x format) with corner case tests for subagents/ traversal.
@@ -28,6 +28,7 @@ tests/
 ├── path_encoding_double_slash_bug.rs      # Bug reproducer: double-slash from lossy encoding
 ├── search.rs                              # Content search integration tests
 ├── sessions_filtered_corrupted_session_bug.rs # Bug Reproducer (BUG-506): sessions_filtered() discarded project on one corrupted session
+├── stats_cwd_field_test.rs                # Feature tests (Task 510): SessionStats.cwd populated first-entry-wins
 ├── stats_malformed_line_bug.rs            # Bug Reproducer (BUG-489): stats() hard-fail on malformed line
 ├── status_global_stats_fast_bug.rs        # Bug Reproducer (issue-015): global_stats() performance
 ├── string_matcher.rs                      # StringMatcher unit tests (case-insensitive matching)
@@ -51,6 +52,7 @@ tests/
 | `path_encoding_double_slash_bug.rs` | Reproduce and verify fix for lossy path encoding |
 | `search.rs` | Content search across sessions integration tests |
 | `sessions_filtered_corrupted_session_bug.rs` | Lock in that one corrupted session must not discard a project's other valid sessions; regression guard for BUG-506 |
+| `stats_cwd_field_test.rs` | Task 510: SessionStats.cwd populated first-entry-wins from JSONL cwd field |
 | `stats_malformed_line_bug.rs` | Reproduce and verify fix for stats() hard-fail on malformed JSONL line |
 | `status_global_stats_fast_bug.rs` | Reproduce and verify fix for global_stats() performance bug |
 | `string_matcher.rs` | Unit tests for StringMatcher case-insensitive substring matching |

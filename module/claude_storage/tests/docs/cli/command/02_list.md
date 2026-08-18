@@ -102,12 +102,12 @@ CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .list show_sessions::1
 
 **Command:**
 ```
-CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .list path::pro
+CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .list path::projects
 ```
 
 **Expected behavior:**
 - Fixture: projects at `/home/alice/projects/alpha`, `/home/alice/projects/beta`, `/tmp/other`
-- Only projects whose path contains `pro` are listed (`alpha`, `beta`); `/tmp/other` is absent
+- Only projects whose path contains `projects` are listed (`alpha`, `beta`); `/tmp/other` is absent
 - Exit code: 0
 - **Source:** [command/02_list.md](../../../../docs/cli/command/02_list.md)
 
@@ -192,11 +192,11 @@ CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .list session::abc show_sessions::0
 
 **Command:**
 ```
-CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .list path::pro session::abc
+CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .list path::projects session::abc
 ```
 
 **Expected behavior:**
-- Fixture: project `alpha` at path containing `pro` with session `s-abc`; project `other` at unrelated path with session `s-abc`
+- Fixture: project `alpha` at path containing `projects` with session `s-abc`; project `other` at unrelated path with session `s-abc`
 - Session `s-abc` under project `alpha` appears; session `s-abc` under project `other` does not (path filter excluded it)
 - Exit code: 0
 - **Source:** [command/02_list.md](../../../../docs/cli/command/02_list.md)

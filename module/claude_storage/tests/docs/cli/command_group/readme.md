@@ -21,10 +21,10 @@ No command_group members exist in `claude_storage` — see the source readme's "
 
 The verdict is a static-dispatch fact, not behavioral output, so no runtime equivalence test applies. It rests on two mechanically-checkable properties of `src/`, both confirmed at doc-authoring time:
 
-1. **`src/cli_main.rs`'s `routines` phf map** (lines ~30-42) registers exactly 12 command names against exactly 12 distinct function identifiers — no two command names resolve to the same routine function.
+1. **`src/cli_main.rs`'s `routines` phf map** (lines ~30-43) registers exactly 13 command names against exactly 13 distinct function identifiers — no two command names resolve to the same routine function.
 2. **No `*_routine` function calls another `*_routine` function** — confirmed by grepping every `pub fn *_routine` definition against every `*_routine(` call site across `src/cli/*.rs`; the only matches are each function's own definition line and the `pub use` re-export list in `src/cli/mod.rs`.
 
-Existing per-command integration tests in [`../command/`](../command/readme.md) (12 files, one per command) already exercise each routine's distinct behavior independently; their divergent expected outputs are themselves evidence against equivalence (e.g. `../command/09_project_exists.md`'s INT-1..10 assert exit-code branching that `../command/08_project_path.md`'s tests never exhibit, despite both commands accepting the identical `{path::, topic::}` parameter set).
+Existing per-command integration tests in [`../command/`](../command/readme.md) (13 files, one per command) already exercise each routine's distinct behavior independently; their divergent expected outputs are themselves evidence against equivalence (e.g. `../command/09_project_exists.md`'s INT-1..10 assert exit-code branching that `../command/08_project_path.md`'s tests never exhibit, despite both commands accepting the identical `{path::, topic::}` parameter set).
 
 ### Navigation
 

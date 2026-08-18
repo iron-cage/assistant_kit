@@ -39,7 +39,7 @@ show_tokens::1    # Include token usage section
 ### Referenced Parameter Groups
 | # | Group | Membership | Co-members |
 |---|-------|------------|------------|
-| 1 | [Output Control](../param_group/01_output_control.md) | Full | `show_stat::`, `show_tree::` |
+| 1 | [Output Control](../param_group/01_output_control.md) | Full | `show_stat::`, `show_tree::`, `show_topic::` |
 
 ### Referenced Commands
 | # | Command | Default | Notes |

@@ -14,6 +14,12 @@
 //! - INT-6: `show_entries::1` shows all session entries
 //! - INT-7: Exit code 2 when cwd has no project
 //! - INT-8: `project::` with path-encoded ID
+//! - T01: default (no `scope::`) reproduces pre-retrofit behavior (regression guard)
+//! - T02: `scope::under path::<ancestor>` finds a session in a descendant project
+//! - T03: `scope::global` finds a session in an unrelated project
+//! - T04: `scope::bogus` rejected with the canonical `validate_scope()` error
+//! - T05: `project::` given → `scope::` is ignored (Case 4 unchanged)
+//! - T06: no `session_id::` → `scope::` is ignored (Case 1 unchanged)
 
 mod common;
 
@@ -396,5 +402,257 @@ fn int_8_project_param_with_path_encoded_id()
   assert!(
     s.contains( "enc-session" ) || s.contains( &encoded ),
     "INT-8: session for path-encoded project must appear; got:\n{s}"
+  );
+}
+
+/// T01: default (no `scope::`) reproduces pre-retrofit behavior.
+///
+/// ## Purpose
+/// Regression guard — `session_id::` without `scope::` or `project::` must
+/// still resolve via the cwd project exactly as before the retrofit.
+///
+/// ## Coverage
+/// Session found via cwd project; exit 0.
+///
+/// ## Validation Strategy
+/// Write a session under the cwd-encoded project; run `.show session_id::X`
+/// with no `scope::`/`path::`. Assert the session is found.
+///
+/// ## Related Requirements
+/// `task/claude_storage/executed/513_show_scope_path_retrofit.md` — T01
+#[ test ]
+fn t01_default_scope_local_matches_pre_retrofit_behavior()
+{
+  let root = TempDir::new().unwrap();
+  let cwd  = TempDir::new().unwrap();
+
+  common::write_path_project_session( root.path(), cwd.path(), "t01-session", 4 );
+
+  let out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .current_dir( cwd.path() )
+    .arg( ".show" )
+    .arg( "session_id::t01-session" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  assert!(
+    s.contains( "t01-session" ),
+    "T01: default (no scope::) must find session in cwd project, matching pre-retrofit behavior; got:\n{s}"
+  );
+}
+
+/// T02: `scope::under path::<ancestor>` finds a session in a descendant project.
+///
+/// ## Purpose
+/// Prove `scope::under` actually broadens the search — pre-retrofit, this
+/// session would be invisible since only the exact cwd-encoded project (and
+/// its topic variants) were ever checked.
+///
+/// ## Coverage
+/// Session in a project nested under `path::` is found; exit 0.
+///
+/// ## Validation Strategy
+/// Write a session under a `parent/child` path; run `.show` from an
+/// unrelated cwd with `scope::under path::<parent>`. Assert the session
+/// (stored under `child`) is found.
+///
+/// ## Related Requirements
+/// `task/claude_storage/executed/513_show_scope_path_retrofit.md` — T02
+#[ test ]
+fn t02_scope_under_finds_session_in_descendant_project()
+{
+  let root   = TempDir::new().unwrap();
+  let parent = root.path().join( "t02-parent" );
+  let child  = parent.join( "t02-child" );
+  common::write_path_project_session( root.path(), &child, "t02-session", 2 );
+
+  let out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .current_dir( root.path() )
+    .arg( ".show" )
+    .arg( "session_id::t02-session" )
+    .arg( "scope::under" )
+    .arg( format!( "path::{}", parent.display() ) )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  assert!(
+    s.contains( "t02-session" ),
+    "T02: scope::under path::<ancestor> must find session in descendant project; got:\n{s}"
+  );
+}
+
+/// T03: `scope::global` finds a session in an unrelated project.
+///
+/// ## Purpose
+/// Prove `scope::global` searches all of storage regardless of cwd or
+/// `path::` — the broadest scope value.
+///
+/// ## Coverage
+/// Session in a project unrelated to cwd is found; exit 0.
+///
+/// ## Validation Strategy
+/// Write a session under an unrelated project path; run `.show` from `/tmp`
+/// (matches no project) with `scope::global`. Assert the session is found.
+///
+/// ## Related Requirements
+/// `task/claude_storage/executed/513_show_scope_path_retrofit.md` — T03
+#[ test ]
+fn t03_scope_global_finds_session_in_unrelated_project()
+{
+  let root      = TempDir::new().unwrap();
+  let elsewhere = root.path().join( "t03-elsewhere" );
+  common::write_path_project_session( root.path(), &elsewhere, "t03-session", 2 );
+
+  let out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .current_dir( "/tmp" )
+    .arg( ".show" )
+    .arg( "session_id::t03-session" )
+    .arg( "scope::global" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  assert!(
+    s.contains( "t03-session" ),
+    "T03: scope::global must find session in an unrelated project regardless of cwd; got:\n{s}"
+  );
+}
+
+/// T04: `scope::bogus` rejected with the canonical `validate_scope()` error.
+///
+/// ## Purpose
+/// Verify invalid `scope::` values are rejected the same way for `.show` as
+/// for `.projects` — one shared validator, one canonical error.
+///
+/// ## Coverage
+/// Exit 1; stderr contains the exact `validate_scope()` wording.
+///
+/// ## Validation Strategy
+/// Run `.show session_id::whatever scope::bogus`. Assert exit 1 and the
+/// canonical error text.
+///
+/// ## Related Requirements
+/// `task/claude_storage/executed/513_show_scope_path_retrofit.md` — T04
+#[ test ]
+fn t04_scope_bogus_rejected_with_canonical_error()
+{
+  let root = TempDir::new().unwrap();
+
+  let out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .current_dir( "/tmp" )
+    .arg( ".show" )
+    .arg( "session_id::whatever" )
+    .arg( "scope::bogus" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 1 );
+  let err = stderr( &out );
+  assert!(
+    err.contains( "scope must be relevant|local|under|global|around, got bogus" ),
+    "T04: scope::bogus must produce the canonical validate_scope() error; got: {err}"
+  );
+}
+
+/// T05: `project::` given → `scope::` is ignored (Case 4 unchanged).
+///
+/// ## Purpose
+/// Confirm Case 4 (`session_id::` + `project::`) is untouched by the
+/// retrofit — adding `scope::` alongside an explicit `project::` must not
+/// change behavior.
+///
+/// ## Coverage
+/// Output identical with and without `scope::` when `project::` is given.
+///
+/// ## Validation Strategy
+/// Run `.show session_id::X project::Y` with and without `scope::under`.
+/// Assert byte-identical stdout.
+///
+/// ## Related Requirements
+/// `task/claude_storage/executed/513_show_scope_path_retrofit.md` — T05
+#[ test ]
+fn t05_project_given_scope_ignored()
+{
+  let root = TempDir::new().unwrap();
+  let proj = root.path().join( "t05-proj" );
+  let enc  = common::write_path_project_session( root.path(), &proj, "t05-session", 2 );
+
+  let without_scope = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .arg( ".show" )
+    .arg( "session_id::t05-session" )
+    .arg( format!( "project::{enc}" ) )
+    .output()
+    .unwrap();
+
+  let with_scope = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .arg( ".show" )
+    .arg( "session_id::t05-session" )
+    .arg( format!( "project::{enc}" ) )
+    .arg( "scope::under" )
+    .output()
+    .unwrap();
+
+  assert_exit( &without_scope, 0 );
+  assert_exit( &with_scope, 0 );
+  assert_eq!(
+    without_scope.stdout, with_scope.stdout,
+    "T05: scope:: must be ignored when project:: is given"
+  );
+}
+
+/// T06: no `session_id::` → `scope::` is ignored (Case 1 unchanged).
+///
+/// ## Purpose
+/// Confirm Case 1 (no `session_id::`, no `project::`) is untouched — adding
+/// `scope::` with no session to search for must not change behavior.
+///
+/// ## Coverage
+/// Output identical with and without `scope::` when `session_id::` is absent.
+///
+/// ## Validation Strategy
+/// Run bare `.show` with and without `scope::under`. Assert byte-identical
+/// stdout.
+///
+/// ## Related Requirements
+/// `task/claude_storage/executed/513_show_scope_path_retrofit.md` — T06
+#[ test ]
+fn t06_no_session_id_scope_ignored()
+{
+  let root = TempDir::new().unwrap();
+  let cwd  = TempDir::new().unwrap();
+
+  common::write_path_project_session( root.path(), cwd.path(), "t06-session", 2 );
+
+  let without_scope = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .current_dir( cwd.path() )
+    .arg( ".show" )
+    .output()
+    .unwrap();
+
+  let with_scope = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .current_dir( cwd.path() )
+    .arg( ".show" )
+    .arg( "scope::under" )
+    .output()
+    .unwrap();
+
+  assert_exit( &without_scope, 0 );
+  assert_exit( &with_scope, 0 );
+  assert_eq!(
+    without_scope.stdout, with_scope.stdout,
+    "T06: scope:: must be ignored when session_id:: is absent (Case 1)"
   );
 }
