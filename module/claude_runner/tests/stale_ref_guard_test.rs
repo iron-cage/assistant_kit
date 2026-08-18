@@ -278,3 +278,118 @@ fn all_cargo_dependencies_are_optional()
     violations.join( "\n" )
   );
 }
+
+/// BUG-506 reproducer: `Cargo.toml` must set `default-run = "clr"` under `[package]`.
+///
+/// # Root Cause
+/// This crate declares 4 `[[bin]]` targets (`claude_runner`, `clr`, `c`,
+/// `fake_claude_control`). Cargo requires disambiguation (`--bin <name>` or a
+/// `default-run` key) whenever a manifest has more than one binary target; with
+/// neither present, a bare `cargo run -p claude_runner -- <args>` is rejected by
+/// Cargo before any crate code runs.
+///
+/// # Why Not Caught
+/// The project's own tooling never hits it — `verb/run.d/l1` already hardcodes
+/// `--bin clr`, `verb/build`/`verb/install` never need run-target selection. Only
+/// the manually-typed bare form, used throughout `tests/manual/readme.md`'s ~90
+/// test-case recipes, is affected — nothing in the automated suite invokes
+/// `cargo run`, so no prior test exercised this path.
+///
+/// # Fix Applied
+/// Added `default-run = "clr"` under `[package]` in `Cargo.toml`. `clr` is the
+/// canonical product name used throughout documentation, CLI help text, and error
+/// messages; `claude_runner`/`clr`/`c` are behaviorally identical thin wrappers
+/// (each is `fn main() { claude_runner::run_cli(); }`), so the choice is a
+/// naming/UX decision only, not a behavior change.
+///
+/// # Prevention
+/// Any crate adding a second `[[bin]]` target must set `default-run` in the same
+/// change. See BUG-506's Prevention section for a read-only detection command.
+///
+/// # Pitfall
+/// A future `[[bin]]` target added to this crate must not remove or shadow this
+/// key — the plain `cargo run -p claude_runner -- <args>` form (used throughout
+/// `tests/manual/readme.md`) depends on it resolving unambiguously.
+#[ test ]
+#[ doc = "bug_reproducer(BUG-506)" ]
+fn default_run_is_set_to_clr()
+{
+  let manifest = Path::new( env!( "CARGO_MANIFEST_DIR" ) );
+  let cargo_toml = fs::read_to_string( manifest.join( "Cargo.toml" ) )
+    .expect( "Cannot read Cargo.toml" );
+  let has_default_run = cargo_toml
+    .lines()
+    .any( |line| line.trim() == r#"default-run = "clr""# );
+  assert!(
+    has_default_run,
+    "Cargo.toml [package] must set default-run = \"clr\" (BUG-506): with 4 [[bin]] \
+     targets and no default-run, `cargo run -p claude_runner -- <args>` is ambiguous \
+     and rejected by Cargo before any crate code runs."
+  );
+}
+
+/// BUG-507 reproducer: `tests/manual/readme.md` must not `cd` to an external directory
+/// and then invoke `cargo run -p claude_runner` from inside it.
+///
+/// # Root Cause
+/// `cargo run -p <crate>` locates the workspace `Cargo.toml` by walking up from the
+/// shell's cwd, unconditionally, before it ever reaches package or binary selection.
+/// TC-84/85/86/88 simulate "the user is in a different project directory" (the point of
+/// testing `--to`/`--from` CWD-defaulting) by `cd`-ing to a `mktemp -d` directory outside
+/// the repo tree, then invoking `cargo run -p claude_runner` from inside it — which can
+/// never find this repo's `Cargo.toml` and fails before any crate code runs.
+///
+/// # Why Not Caught
+/// No automated test executes `tests/manual/readme.md`'s shell snippets (manual testing
+/// plans are run by hand per project convention). TC-84/85/86/88 were newly authored the
+/// same session as BUG-506; each recipe also makes an earlier, non-`cd`'d `cargo run`
+/// call that BUG-506 broke independently, and that earlier failure's cascading error
+/// noise dominated the pre-fix output, masking this second, distinct defect until
+/// BUG-506's own fix cleared its error first.
+///
+/// # Fix Applied
+/// TC-84/85/86/88 now build the binary once (`cargo build -q -p claude_runner`) and
+/// resolve `TARGET_DIR="${CARGO_TARGET_DIR:-$(pwd)/target}"` while still in the original
+/// crate directory — before any `cd` — then invoke the resolved `"$BIN"` directly instead
+/// of `cargo run -p claude_runner` after `cd`-ing away. Generalizes NC-27's already
+/// documented `${CARGO_TARGET_DIR:-target}` idiom to the absolute-path case this use
+/// needs (NC-27's own check never changes directory, so a relative fallback was safe
+/// there; here `$(pwd)` must be captured before the subsequent `cd` changes it).
+///
+/// # Prevention
+/// Any manual-test recipe that `cd`s outside this crate's workspace tree to simulate
+/// "a different project directory" must resolve `clr`'s absolute binary path before that
+/// `cd`, and invoke the resolved path directly — never `cargo run -p claude_runner` after
+/// leaving the workspace tree. See BUG-507's Prevention section for a read-only detection
+/// command.
+///
+/// # Pitfall
+/// A future recipe added to `tests/manual/readme.md` that needs to simulate "the user is
+/// elsewhere" must not reintroduce `cd "$VAR" && cargo run -p claude_runner` — this test
+/// only catches that exact shape; a differently-worded but equivalent mistake (e.g. `cd
+/// "$VAR"; cargo run -p claude_runner` on separate lines) would not trip this assertion.
+#[ test ]
+#[ doc = "bug_reproducer(BUG-507)" ]
+fn manual_doc_has_no_cd_then_cargo_run_pattern()
+{
+  let manifest = Path::new( env!( "CARGO_MANIFEST_DIR" ) );
+  let doc = fs::read_to_string( manifest.join( "tests/manual/readme.md" ) )
+    .expect( "Cannot read tests/manual/readme.md" );
+  let broken_lines : Vec< &str > = doc
+    .lines()
+    .filter( | line |
+    {
+      let trimmed = line.trim_start();
+      trimmed.starts_with( "(cd " ) && trimmed.contains( "&& cargo run -p claude_runner" )
+    } )
+    .collect();
+  assert!(
+    broken_lines.is_empty(),
+    "tests/manual/readme.md must not `cd` to an external directory and then invoke \
+     `cargo run -p claude_runner` from inside it (BUG-507): cargo run -p <crate> cannot \
+     locate the workspace Cargo.toml from outside the repo tree, so this pattern always \
+     fails with 'could not find Cargo.toml'. Resolve an absolute binary path before \
+     cd-ing away and invoke it directly instead.\nViolating lines:\n{}",
+    broken_lines.join( "\n" )
+  );
+}

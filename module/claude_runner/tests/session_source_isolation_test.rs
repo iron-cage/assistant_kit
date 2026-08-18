@@ -2,7 +2,7 @@
 //!
 //! Covers IN-1–IN-5 from `tests/docs/invariant/011_session_source_isolation.md`.
 //!
-//! These tests verify that when `--session-from` is used, the transplant plan's
+//! These tests verify that when `--from` is used, the transplant plan's
 //! source is the source directory's computed storage (never a target-derived
 //! path), the subprocess working directory is the target (not the source), and
 //! the source session files are never written to during the cross-loaded run.
@@ -14,8 +14,8 @@
 //! | IN-1 | Transplant source comes from source storage, never from target |
 //! | IN-2 | Subprocess working directory is target dir, not source |
 //! | IN-3 | Source session file mtime and size unchanged after cross-loaded run |
-//! | IN-4 | `--session-dir` raw path wins over `--session-from` computed path |
-//! | IN-5 | `--session-from` + `--to`: transplant source from source, cwd is target |
+//! | IN-4 | `--session-dir` raw path wins over `--from` computed path |
+//! | IN-5 | `--from` + `--to`: transplant source from source, cwd is target |
 
 // IN-3 is the most critical: if source files are written to during a cross-loaded
 // run, the isolation contract is broken and source history would be polluted.
@@ -123,7 +123,7 @@ fn run_dry_env( args : &[ &str ], env : &[ ( &str, &str ) ] ) -> String
     .envs( env.iter().copied() )
     .env_remove( "CLR_DIR" )
     .env_remove( "CLR_SESSION_DIR" )
-    .env_remove( "CLR_SESSION_FROM" )
+    .env_remove( "CLR_FROM" )
     .output()
     .expect( "failed to invoke clr binary" );
   assert!(
@@ -155,7 +155,7 @@ fn in1_uuid_read_from_source_not_target()
   let tgt_str = tgt.path().to_str().expect( "utf-8" );
   let ch_str = ch.path().to_str().expect( "utf-8" );
   let stdout = run_dry_env(
-    &[ "--session-from", src, "--to", tgt_str, "task" ],
+    &[ "--from", src, "--to", tgt_str, "task" ],
     &[ ( "CLAUDE_HOME", ch_str ) ],
   );
   // Transplant source must be the SOURCE storage's session file
@@ -179,7 +179,7 @@ fn in1_uuid_read_from_source_not_target()
 
 /// IN-2: Subprocess working directory is target dir, not source dir.
 ///
-/// `--to <tgt>` sets the working dir; `--session-from <src>` does not.
+/// `--to <tgt>` sets the working dir; `--from <src>` does not.
 #[ test ]
 fn in2_subprocess_dir_is_target_not_source()
 {
@@ -189,7 +189,7 @@ fn in2_subprocess_dir_is_target_not_source()
   let tgt = tempfile::TempDir::new().expect( "tgt tmpdir" );
   let tgt_str = tgt.path().to_str().expect( "utf-8" );
   let stdout = run_dry_env(
-    &[ "--session-from", src, "--to", tgt_str, "task" ],
+    &[ "--from", src, "--to", tgt_str, "task" ],
     &[ ( "CLAUDE_HOME", ch.path().to_str().expect( "utf-8" ) ) ],
   );
   // Target must appear as the working dir (`cd <tgt>` prefix)
@@ -224,7 +224,7 @@ fn in3_source_session_file_unchanged()
   let size_before  = before.len();
 
   run_dry_env(
-    &[ "--session-from", src, "--to", tgt_str, "Continue" ],
+    &[ "--from", src, "--to", tgt_str, "Continue" ],
     &[ ( "CLAUDE_HOME", ch.path().to_str().expect( "utf-8" ) ) ],
   );
 
@@ -242,9 +242,9 @@ fn in3_source_session_file_unchanged()
   );
 }
 
-// ── IN-4: --session-dir raw path wins over --session-from ─────────────────────
+// ── IN-4: --session-dir raw path wins over --from ──────────────────────────────
 
-/// IN-4: `--session-dir` raw path wins over `--session-from` computed path.
+/// IN-4: `--session-dir` raw path wins over `--from` computed path.
 ///
 /// `CLAUDE_CODE_SESSION_DIR` must equal the raw `--session-dir` path; the
 /// computed source storage path must not appear in the output.
@@ -261,7 +261,7 @@ fn in4_session_dir_raw_path_wins()
   let raw_str = raw_dir.path().to_str().expect( "utf-8" );
   let ch_str = ch.path().to_str().expect( "utf-8" );
   let stdout = run_dry_env(
-    &[ "--session-from", src, "--session-dir", raw_str, "test" ],
+    &[ "--from", src, "--session-dir", raw_str, "test" ],
     &[ ( "CLAUDE_HOME", ch_str ) ],
   );
   // Raw path must be used as CLAUDE_CODE_SESSION_DIR
@@ -277,11 +277,11 @@ fn in4_session_dir_raw_path_wins()
   );
 }
 
-// ── IN-5: --session-from + --to: session UUID from source, cwd is target ───────
+// ── IN-5: --from + --to: session UUID from source, cwd is target ───────────────
 
 /// IN-5: Both read isolation (transplant source from SOURCE storage) and run
 ///       isolation (cwd = target) hold simultaneously when `--to` and
-///       `--session-from` are combined.
+///       `--from` are combined.
 #[ test ]
 fn in5_combined_source_uuid_and_target_cwd()
 {
@@ -292,7 +292,7 @@ fn in5_combined_source_uuid_and_target_cwd()
   let tgt_str = tgt.path().to_str().expect( "utf-8" );
   let ch_str = ch.path().to_str().expect( "utf-8" );
   let stdout = run_dry_env(
-    &[ "--to", tgt_str, "--session-from", src, "Continue" ],
+    &[ "--to", tgt_str, "--from", src, "Continue" ],
     &[ ( "CLAUDE_HOME", ch_str ) ],
   );
   // Read isolation: the transplanted session file comes from source storage

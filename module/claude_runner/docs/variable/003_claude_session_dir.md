@@ -4,7 +4,7 @@
 
 - **Purpose**: Document the per-working-directory session storage path — the directory Claude Code uses to store conversation `.jsonl` files for a given execution directory.
 - **Responsibility**: Define the value format, derivation rule (Df() applied to target dir), and examples for `CLAUDE_SESSION_DIR`.
-- **In Scope**: CLAUDE_SESSION_DIR derivation, relationship to Df() encoding, `--session-from` override semantics.
+- **In Scope**: CLAUDE_SESSION_DIR derivation, relationship to Df() encoding, `--from` override semantics.
 - **Out of Scope**: CLAUDE_HOME/CLAUDE_PROJECTS_DIR (→ `001_claude_home.md`, `002_claude_projects_dir.md`); session file selection within the dir (→ `../algorithm/003_session_file_selection.md`); memory path (→ `004_claude_memory_dir.md`).
 
 ### Value Format
@@ -38,11 +38,11 @@ CLAUDE_SESSION_DIR  = /home/alice/.claude/projects/-home-alice-project
 |-----------|-------|
 | Env var | none |
 | `--session-dir` param | Raw path override — bypasses Df() entirely; takes a verbatim directory path |
-| `--session-from <DIR>` param | Computes `scope_for(DIR).claude_session_dir` and uses that for session lookup |
+| `--from <DIR>` param | Computes `scope_for(DIR).claude_session_dir` and uses that for session lookup; defaults to cwd when omitted |
 
-**`--session-from` vs `--session-dir`:**
+**`--from` vs `--session-dir`:**
 - `--session-dir /path/to/dir` — takes the raw path verbatim as the session storage directory.
-- `--session-from /home/alice/project` — computes `Df("/home/alice/project")` → uses `~/.claude/projects/-home-alice-project` as the source session dir. Higher-level ergonomic wrapper.
+- `--from /home/alice/project` — computes `Df("/home/alice/project")` → uses `~/.claude/projects/-home-alice-project` as the source session dir. Higher-level ergonomic wrapper; defaults to cwd when omitted.
 
 ### Examples
 
@@ -62,5 +62,5 @@ CLAUDE_SESSION_DIR  = /home/alice/.claude/projects/-home-alice-project
 | [`../algorithm/001_path_encoding.md`](../algorithm/001_path_encoding.md) | Df() — converts target_dir to storage segment |
 | [`../algorithm/003_session_file_selection.md`](../algorithm/003_session_file_selection.md) | Session file selection — scans CLAUDE_SESSION_DIR |
 | [`../cli/param/010_session_dir.md`](../cli/param/010_session_dir.md) | `--session-dir` — raw path override |
-| [`../cli/param/076_session_from.md`](../cli/param/076_session_from.md) | `--session-from` — computes CLAUDE_SESSION_DIR for source dir |
+| [`../cli/param/076_from.md`](../cli/param/076_from.md) | `--from` — computes CLAUDE_SESSION_DIR for source dir |
 | [`../feature/005_session_path_resolution.md`](../feature/005_session_path_resolution.md) | Feature hub: `scope_for()` and session cross-loading |

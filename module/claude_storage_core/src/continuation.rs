@@ -57,7 +57,7 @@ use crate::{ encode_path, SessionId };
 // Fix(TSK-338): honour CLAUDE_HOME override — consistent with scope_for().
 // Root cause: CLAUDE_HOME was never consulted; to_storage_path_for() always used
 //   $HOME/.claude, diverging from scope_for() when CLAUDE_HOME is set.
-//   Default continuation detection (no --session-from) looked in the wrong dir.
+//   Default continuation detection (no --from) looked in the wrong dir.
 // Pitfall: CLAUDE_HOME replaces the entire base — do NOT append .claude; only
 //   the HOME fallback appends .claude (single suffix, matching scope_for()).
 #[ inline ]

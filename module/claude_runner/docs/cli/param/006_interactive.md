@@ -28,7 +28,7 @@ message under non-TTY stdin, where print-mode routing would otherwise apply.
 created from `docs/` live in a different project bucket than sessions created from the
 module root. If bare `clr` opens a fresh session despite prior history, check that your
 working directory matches the directory where those sessions were created. Workaround:
-`clr --session-from <dir>` (load sessions from that directory's bucket) or `clr --dir <dir>`
+`clr --from <dir>` (load sessions from that directory's bucket) or `clr --dir <dir>`
 (run as if CWD were that directory). BUG-435 tracks the companion issue that bare interactive
 `clr` also fails to inject `-c` even when the correct session is found.
 

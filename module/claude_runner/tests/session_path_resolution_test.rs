@@ -7,10 +7,10 @@
 //! | Test | Covers |
 //! |------|--------|
 //! | FT-6 | `clr scope` prints 6 `CLAUDE_*` vars in `key=value` format |
-//! | FT-7 | `--session-from` plans a transplant of the most-recent source session |
-//! | FT-8 | `--to` + `--session-from`: Claude runs in target, loads from source |
+//! | FT-7 | `--from` plans a transplant of the most-recent source session |
+//! | FT-8 | `--to` + `--from`: Claude runs in target, loads from source |
 //! | FT-9 | `--to` is an alias for `--dir`; behavior is identical |
-//! | FT-10 | `--session-dir` takes precedence over `--session-from` |
+//! | FT-10 | `--session-dir` takes precedence over `--from` |
 
 mod cli_binary_test_helpers;
 use cli_binary_test_helpers::{ run_cli, run_cli_with_env };
@@ -112,7 +112,7 @@ fn run_dry_env( args : &[ &str ], env : &[ ( &str, &str ) ] ) -> String
     .envs( env.iter().copied() )
     .env_remove( "CLR_DIR" )
     .env_remove( "CLR_SESSION_DIR" )
-    .env_remove( "CLR_SESSION_FROM" )
+    .env_remove( "CLR_FROM" )
     .output()
     .expect( "failed to invoke clr binary" );
   assert!(
@@ -169,21 +169,21 @@ fn ft6_scope_prints_six_vars_in_key_value_format()
   }
 }
 
-// ── FT-7: --session-from resumes most recent session from source dir ───────────
+// ── FT-7: --from resumes most recent session from source dir ───────────────────
 
-/// FT-7: `--session-from <src>` plans a transplant of the most-recent source
+/// FT-7: `--from <src>` plans a transplant of the most-recent source
 /// session file (BUG-490) and activates continue mode when one exists.
 ///
 /// The subprocess working directory is CWD (no `--to` flag; no `cd` prefix).
 #[ test ]
-fn ft7_session_from_resumes_source_session()
+fn ft7_from_resumes_source_session()
 {
   let ch  = tempfile::TempDir::new().expect( "tmpdir" );
   let src = "/tmp/ft7-src";
   make_session_for( ch.path(), src, "hhh-101" );
   let ch_str = ch.path().to_str().expect( "utf-8" );
   let stdout = run_dry_env(
-    &[ "--session-from", src, "Continue" ],
+    &[ "--from", src, "Continue" ],
     &[ ( "CLAUDE_HOME", ch_str ) ],
   );
   let expected_src = format!( "{ch_str}/projects/{}/hhh-101.jsonl", df( src ) );
@@ -198,14 +198,14 @@ fn ft7_session_from_resumes_source_session()
   );
 }
 
-// ── FT-8: --to + --session-from: runs in target, loads from source ─────────────
+// ── FT-8: --to + --from: runs in target, loads from source ─────────────────────
 
-/// FT-8: `--to <tgt> --session-from <src>` sets working dir to target, loads from source.
+/// FT-8: `--to <tgt> --from <src>` sets working dir to target, loads from source.
 ///
 /// The transplant plan copies the source session file into the TARGET's own
 /// storage (BUG-490); subprocess `cd` must be the target.
 #[ test ]
-fn ft8_to_plus_session_from_target_dir_source_session()
+fn ft8_to_plus_from_target_dir_source_session()
 {
   let ch  = tempfile::TempDir::new().expect( "tmpdir" );
   let src = "/tmp/ft8-src";
@@ -214,7 +214,7 @@ fn ft8_to_plus_session_from_target_dir_source_session()
   let tgt_str = tgt.path().to_str().expect( "utf-8" );
   let ch_str = ch.path().to_str().expect( "utf-8" );
   let stdout = run_dry_env(
-    &[ "--to", tgt_str, "--session-from", src, "Continue" ],
+    &[ "--to", tgt_str, "--from", src, "Continue" ],
     &[ ( "CLAUDE_HOME", ch_str ) ],
   );
   let expected_src = format!( "{ch_str}/projects/{}/iii-202.jsonl", df( src ) );
@@ -269,14 +269,14 @@ fn ft9_to_alias_identical_to_dir()
   );
 }
 
-// ── FT-10: --session-dir takes precedence over --session-from ─────────────────
+// ── FT-10: --session-dir takes precedence over --from ──────────────────────────
 
-/// FT-10: `--session-dir` raw path wins over `--session-from` computed path.
+/// FT-10: `--session-dir` raw path wins over `--from` computed path.
 ///
 /// `CLAUDE_CODE_SESSION_DIR` must equal the raw `--session-dir` path, not the
 /// computed source storage path.
 #[ test ]
-fn ft10_session_dir_wins_over_session_from()
+fn ft10_session_dir_wins_over_from()
 {
   let ch  = tempfile::TempDir::new().expect( "tmpdir" );
   let src = "/tmp/ft10-src";
@@ -289,7 +289,7 @@ fn ft10_session_dir_wins_over_session_from()
   let raw_str = raw_dir.path().to_str().expect( "utf-8" );
   let ch_str = ch.path().to_str().expect( "utf-8" );
   let stdout = run_dry_env(
-    &[ "--session-from", src, "--session-dir", raw_str, "test" ],
+    &[ "--from", src, "--session-dir", raw_str, "test" ],
     &[ ( "CLAUDE_HOME", ch_str ) ],
   );
   // Raw --session-dir must be used as CLAUDE_CODE_SESSION_DIR

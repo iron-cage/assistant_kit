@@ -157,7 +157,7 @@ fn refresh_mtime( path : &std::path::Path ) -> std::io::Result< () >
 ///
 /// Fix(BUG-490): physical copy replaces the dead `CLAUDE_CODE_SESSION_DIR` export.
 /// Root cause: claude ≥2.x ignores `CLAUDE_CODE_SESSION_DIR` for both reads and writes,
-///   so the env-var redirect `--session-from` relied on was a silent no-op.
+///   so the env-var redirect `--from` relied on was a silent no-op.
 /// Pitfall: never overwrite a non-empty destination — the target copy may have diverged
 ///   since an earlier clone; only its mtime is refreshed so `-c` still selects it.
 ///   Failures warn loudly and proceed: `-c` against an empty target trips claude's own
@@ -232,17 +232,26 @@ pub( crate ) fn build_claude_command( cli : &CliArgs )
   {
     builder = builder.with_max_output_tokens( n );
   }
-  // --session-from: resolve source session dir (--session-dir wins when both are present).
+  // --from: resolve source session dir (--session-dir wins when both are present).
   // Computes scope_for(source_dir).claude_session_dir — the source project's encoded
   // storage path — used below for expected-session lookup and the transplant plan.
   //
+  // Defaults to the current working directory when --from is omitted or empty — the
+  // same default-to-cwd rule --to/--dir already applies (see `resolve_effective_dir`).
+  // This makes `--to <TARGET>` alone clone outward from cwd by default. When neither
+  // --from nor --to is given, source and target both resolve to cwd's own storage, so
+  // the self-copy guard below (`target_storage == *src_storage`) makes the transplant a
+  // guaranteed no-op — behaviorally identical to the pre-default bare invocation, since
+  // `scope_for(physical_abs(cwd)).claude_session_dir` and `most_recent_session_id(cwd)`
+  // both encode the identical canonical cwd via the same `encode_path()` call.
+  //
   // The raw value is resolved to its physical absolute form before encoding (see
-  // `physical_abs`). Empty values are ignored entirely — same empty-is-identity rule as
-  // `--subdir ""` (BUG-229); without the filter an empty value encodes to the `-unknown`
-  // fallback dir and actively targets that storage.
+  // `physical_abs`). An explicitly-empty value is treated the same as omitted — same
+  // empty-is-identity rule as `--subdir ""` (BUG-229); without the filter an empty value
+  // would encode to the `-unknown` fallback dir and actively target that storage.
   //
   // Fix(BUG-490): this dir is no longer exported as CLAUDE_CODE_SESSION_DIR — claude ≥2.x
-  //   ignores that variable for both reads and writes, so the export made --session-from
+  //   ignores that variable for both reads and writes, so the export made --from
   //   a silent no-op. The source session is instead physically copied into the target's
   //   own storage (see `SessionTransplant` / `execute_session_transplant`).
   // Root cause: the feature's only mechanism was an env contract claude dropped.
@@ -251,13 +260,13 @@ pub( crate ) fn build_claude_command( cli : &CliArgs )
   //   most-recent session id remains the correct expected id.
   let session_from_dir : Option< std::path::PathBuf > = if cli.session_dir.is_none()
   {
-    cli.session_from.as_deref()
-      .filter( | src | !src.is_empty() )
-      .map( | src |
-      {
-        let abs = physical_abs( std::path::Path::new( src ) );
-        claude_storage_core::scope_for( &abs ).claude_session_dir
-      } )
+    let src_path = match cli.from.as_deref().filter( | src | !src.is_empty() )
+    {
+      Some( src ) => std::path::PathBuf::from( src ),
+      None => std::env::current_dir().unwrap_or_else( | _ | std::path::PathBuf::from( "." ) ),
+    };
+    let abs = physical_abs( &src_path );
+    Some( claude_storage_core::scope_for( &abs ).claude_session_dir )
   }
   else { None };
   // Determine print mode early — used for -c injection, effort injection, and chrome

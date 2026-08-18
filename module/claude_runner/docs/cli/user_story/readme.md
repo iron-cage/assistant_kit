@@ -72,7 +72,7 @@
 | 025 | Session Concurrency Gate | `--max-sessions` | `run`, `ask`, `isolated` |
 | 026 | Session Listing | (none) | `ps` |
 | 027 | Session Termination | `<PID>` | `kill` |
-| 028 | Session Cross-Loading | `--session-from`, `--from`, `--to` | `run`, `ask` |
+| 028 | Session Cross-Loading | `--from`, `--to` | `run`, `ask` |
 | 029 | Scope Inspection | `--dir` | `scope` |
 
 ### Adding User Stories
