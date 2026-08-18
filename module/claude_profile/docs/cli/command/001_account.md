@@ -123,7 +123,7 @@ clp .accounts assignee::bob@laptop name::alice@acme.com
 
 **Help Rendering Scheme:**
 
-`.accounts.help` renders the 32 parameters above as 6 presentation groups — a command-specific rendering taxonomy, distinct from the 4 `param_group/` cross-command semantic groups referenced below (see [pattern/001_grouped_help_rendering.md](../../pattern/001_grouped_help_rendering.md) for why these differ):
+`.accounts.help` renders the 31 parameters above as 6 presentation groups — a command-specific rendering taxonomy, distinct from the 4 `param_group/` cross-command semantic groups referenced below (see [pattern/001_grouped_help_rendering.md](../../pattern/001_grouped_help_rendering.md) for why these differ):
 
 | Group | Parameters |
 |-------|-----------|

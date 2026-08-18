@@ -56,8 +56,8 @@ Integration test planning for the `.accounts` command. See [command/namespace.md
 | IT-48 | `format::json` emits `is_owned: false` when owner is a foreign identity | TSK-324 — JSON value correctness |
 | IT-49 | `format::json` emits correct `host`, `role`, `organization_role` values | TSK-324 — JSON value correctness |
 | IT-50 | `.accounts.help` shows all 6 group headers in documented order | Grouped Help — Structure |
-| IT-51 | `.accounts.help` shows all 30 parameters under their correct documented group | Grouped Help — Structure |
-| IT-52 | `.accounts.help` `::` delimiter aligns at the same offset across all 30 rows, spanning group boundaries | Grouped Help — Alignment |
+| IT-51 | `.accounts.help` shows all 31 parameters under their correct documented group | Grouped Help — Structure |
+| IT-52 | `.accounts.help` `::` delimiter aligns at the same offset across all 31 rows, spanning group boundaries | Grouped Help — Alignment |
 | IT-53 | `.accounts.help` boolean parameters render bare `name::0`, never `name::0\|1` | Grouped Help — Signature Conventions |
 | IT-54 | `.accounts.help` enum parameters show an uppercase value placeholder | Grouped Help — Signature Conventions |
 | IT-55 | `.accounts.help` output contains no version/build banner | Grouped Help — Minimal Content |
@@ -625,7 +625,7 @@ Test cases below cover the grouped, `::`-aligned `.accounts.help` rendering sche
 
 ---
 
-### IT-51: `.accounts.help` shows all 30 parameters under their correct documented group
+### IT-51: `.accounts.help` shows all 31 parameters under their correct documented group
 
 - **Given:** clean environment, `clp` on PATH
 - **When:** `clp .accounts.help`
@@ -635,11 +635,11 @@ Test cases below cover the grouped, `::`-aligned `.accounts.help` rendering sche
 
 ---
 
-### IT-52: `::` delimiter aligns at the same offset across all 30 rows
+### IT-52: `::` delimiter aligns at the same offset across all 31 rows
 
 - **Given:** clean environment
 - **When:** `clp .accounts.help`
-- **Then:** the `::` delimiter appears at the identical character offset on all 30 parameter rows, including rows in different group blocks — the alignment column is computed once, globally, not reset per group.
+- **Then:** the `::` delimiter appears at the identical character offset on all 31 parameter rows, including rows in different group blocks — the alignment column is computed once, globally, not reset per group.
 - **Exit:** 0
 - **Source:** [pattern/001_grouped_help_rendering.md](../../../../docs/pattern/001_grouped_help_rendering.md) (Solution point 3)
 
@@ -707,11 +707,11 @@ Test cases below cover the grouped, `::`-aligned `.accounts.help` rendering sche
 
 ### IT-59: longest parameter name sets the shared alignment column (boundary)
 
-- **Given:** clean environment. Among the 30 rendered parameters, `exclude_exhausted` (17 characters) is the longest name and renders under `Row Filtering & Pagination`; `dry` (3 characters) is one of the shortest and renders under the unrelated `Core` group.
+- **Given:** clean environment. Among the 31 rendered parameters, `exclude_exhausted` (17 characters) is the longest name and renders under `Row Filtering & Pagination`; `dry` (3 characters) is one of the shortest and renders under the unrelated `Core` group.
 - **When:** `clp .accounts.help`
-- **Then:** the `::` offset on the `dry` row equals the `::` offset on the `exclude_exhausted` row — the single longest name across all 30 parameters sets the shared alignment column, even for the shortest name in a different group.
+- **Then:** the `::` offset on the `dry` row equals the `::` offset on the `exclude_exhausted` row — the single longest name across all 31 parameters sets the shared alignment column, even for the shortest name in a different group.
 - **Exit:** 0
-- **Source:** `src/commands/accounts_help.rs` (`let width = PARAMS.iter().map(|p| p.name.len()).max()...`, computed once before per-group rendering) — the global-vs-per-group boundary itself is not a standalone claim in `001_account.md`, only implied by "aligned across all 32 rows".
+- **Source:** `src/commands/accounts_help.rs` (`let width = PARAMS.iter().map(|p| p.name.len()).max()...`, computed once before per-group rendering) — the global-vs-per-group boundary itself is not a standalone claim in `001_account.md`, only implied by "aligns vertically across all 31 rows".
 
 ---
 
