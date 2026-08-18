@@ -38,7 +38,7 @@
 | Credential defaults (T1–T5) | `creds_default_test.rs` | `--creds` 3-tier resolution: HOME default, CLR_CREDS tier, and refresh path |
 | Bug reproducers BUG-239–244 | `bug_reproducers_239_244_test.rs` | Silent-failure: exit code propagation, signal codes, quiet gate, install hint, mirror sync (BUG-243 moved to claude_runner_core) |
 | Bug reproducers BUG-246 | `bug_reproducers_246_test.rs` | WYSIWYG: CLAUDECODE removal visible in trace/dry-run; `--keep-claudecode` suppresses prefix |
-| Bug reproducers BUG-037 (T09–T10) | `error_classification_test.rs` | Labeled per-type CLR stderr diagnostics via classify_error() |
+| Bug reproducers BUG-037 (T09–T10), BUG-495 (T11a–T11b) | `error_classification_test.rs` | Labeled per-type CLR stderr diagnostics via classify_error(); verbatim captured session/weekly quota forms route to `[Account]` |
 | Strip-fences unit (sf01–sf08) | `fence_test.rs` | `strip_fences` correctness: pair stripping, pass-through, edge cases |
 | Summary unit (EC-14, IT-1, IT-4–IT-6, +7 resolve/render; +3 extract_session_id) | `summary_unit_test.rs` | `render_summary`/`resolve_fields`/`extract_session_id` unit: CLR envelope parsing, field profiles, BUG-309/310/320 regression guards |
 | Gate max-attempts unit (none/invalid/valid fallback) | `gate_unit_test.rs` | `gate_max_attempts_from` unit: literal-value fallback assertions closing the AC-010 precision gap |
@@ -132,7 +132,7 @@
 | `creds_default_test.rs` | `--creds` 3-tier resolution: HOME default, CLR_CREDS tier, and refresh path (T1–T5). |
 | `bug_reproducers_239_244_test.rs` | Bug reproducers BUG-239–244: exit code passthrough, signal codes, quiet gate, install hint, mirror sync (BUG-243 in claude_runner_core). |
 | `bug_reproducers_246_test.rs` | Bug reproducer BUG-246: CLAUDECODE removal visible in trace/dry-run output; `--keep-claudecode` suppresses prefix. |
-| `error_classification_test.rs` | Bug reproducer BUG-037: labeled per-type stderr diagnostics from classify_error() (T09–T10). |
+| `error_classification_test.rs` | Bug reproducer BUG-037: labeled per-type stderr diagnostics from classify_error() (T09–T10); BUG-495: verbatim captured quota-message forms route end-to-end to `[Account]` (T11a–T11b). |
 | `param_edge_cases_test.rs` | Per-param edge cases (S01–S33): help, core param flags, and invariant checks. |
 | `param_trace_edge_cases_test.rs` | Trace edge cases (S04–S06, S58–S60): basic trace behavior and credential trace format. |
 | `param_extended_flags_test.rs` | Extended flag edge cases (S34–S57, S81–S89): `--no-chrome`, `--no-persist`, `--json-schema`, `--mcp-config`, `--subdir`; S89 (unix): raw+json-schema structured output BUG-318 fix. |

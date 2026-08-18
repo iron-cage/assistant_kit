@@ -11,6 +11,8 @@
 //! | T09 | fake-claude exits 2, empty output | `"Error: [Transient] rate limit (exit 2)"` |
 //! | T10 | fake-claude writes auth pattern to stdout, exits 1 | `"Error: [Auth]"` prefix |
 //! | T11 | fake-claude writes quota pattern to stderr, exits 1 | `"Error: [Account]"` prefix |
+//! | T11a | fake-claude writes the real captured session-limit form to stderr, exits 1 | `"Error: [Account]"` prefix, no `[Unknown]` |
+//! | T11b | fake-claude writes the real captured weekly-limit form to stdout, exits 1 | `"Error: [Account]"` prefix, no `[Unknown]` |
 //!
 //! # Root Cause (BUG-037)
 //!
@@ -138,6 +140,102 @@ fn quota_exhausted_pattern_emits_labeled_message()
   assert!(
     !err.contains( "[Transient]" ),
     "T11 (TSK-253): [Transient] must be absent for quota exhaustion; got:\n{err}"
+  );
+}
+
+// ── T11a ───────────────────────────────────────────────────────────────────────
+
+/// T11a (BUG-495): fake-claude writes the REAL captured session-limit message form
+/// to stderr, exits 1 → clr stderr contains `"Error: [Account]"` and never `[Unknown]`.
+///
+/// Extends T11 (plain synthetic form) and the core-layer reproducers B495a/B495b in
+/// `claude_runner_core/tests/classify_error_test.rs` (real forms → `ErrorKind::QuotaExhausted`)
+/// with the end-to-end invariant neither pins: the byte-exact real captured CLI text
+/// routing through the spawned `clr` binary to the `[Account]` class label —
+/// recommended by `yrd_aes` BUG-1841 after observing the invariant break in production.
+///
+/// ## Root Cause
+/// `ERROR_PATTERNS`' sole `QuotaExhausted` pattern was the plain form `"You've hit your
+/// limit"`, which is not a substring of the qualified forms the real CLI emits — 100%
+/// of real quota messages classified `[Unknown]`, silently bypassing the Account-class
+/// retry configuration (`--retry-on-account`/`--account-delay`) wired by consumers.
+///
+/// ## Why Not Caught
+/// Every CLI-layer test (EC-7/8/9, T11) drove the plain synthetic string the CLI never
+/// emits; the core-layer fix added real-form tests only for `classify_error()` in
+/// isolation. No test asserted real captured text → `[Account]` through the binary.
+///
+/// ## Fix Applied
+/// BUG-495 inserted the two qualified-form patterns into `ERROR_PATTERNS`
+/// (`claude_runner_core/src/types.rs`); T11a/T11b pin that fix at the CLI layer.
+///
+/// ## Prevention
+/// Classifier regression tests must use verbatim captured production strings, not
+/// remembered/assumed forms — at every layer that consumes the classification.
+///
+/// ## Pitfall
+/// A pattern fix proven at the pure-function layer can still be unreachable end-to-end
+/// (`yrd_aes` BUG-1841: a stale deployed binary misclassified the byte-identical
+/// message a fresh binary classified correctly, in the same pipeline run) — the
+/// end-to-end pin catches regressions in the wiring, not only the pattern array.
+// test_kind: bug_reproducer(BUG-495)
+#[ test ]
+fn t11a_bug495_session_limit_real_form_routes_to_account()
+{
+  let ( _dir, path_val ) = fake_claude_dir(
+    "echo \"You've hit your session limit · resets 4:20am (Europe/Kyiv)\" >&2; exit 1",
+  );
+  let out = run_cli_with_env(
+    &[ "--print", "--retry-override", "0", "--max-sessions", "0", "test" ],
+    &[ ( "PATH", &path_val ) ],
+  );
+  let err = stderr_str( &out );
+  assert!(
+    err.contains( "Error: [Account]" ),
+    "T11a (BUG-495): stderr must contain 'Error: [Account]' for the real session-limit form; got:\n{err}"
+  );
+  assert!(
+    err.contains( "You've hit your session limit · resets 4:20am (Europe/Kyiv)" ),
+    "T11a (BUG-495): stderr must echo the verbatim captured message; got:\n{err}"
+  );
+  assert!(
+    !err.contains( "[Unknown]" ),
+    "T11a (BUG-495): [Unknown] must be absent — that is the exact pre-fix misclassification; got:\n{err}"
+  );
+}
+
+// ── T11b ───────────────────────────────────────────────────────────────────────
+
+/// T11b (BUG-495): fake-claude writes the REAL captured weekly-limit message form
+/// to stdout, exits 1 → clr stderr contains `"Error: [Account]"` and never `[Unknown]`.
+///
+/// Divergence from T11a: weekly form (the exact message `yrd_aes` BUG-1841's run-3641
+/// evidence captured being tagged `[Unknown]` by a stale binary and `[Account]` by a
+/// fresh one), delivered via stdout — the scan path T10's pitfall documents as the one
+/// a stderr-only test would miss.
+// test_kind: bug_reproducer(BUG-495)
+#[ test ]
+fn t11b_bug495_weekly_limit_real_form_routes_to_account()
+{
+  let ( _dir, path_val ) = fake_claude_dir(
+    "echo \"You've hit your weekly limit · resets Aug 11, 11pm (Europe/Kyiv)\"; exit 1",
+  );
+  let out = run_cli_with_env(
+    &[ "--print", "--retry-override", "0", "--max-sessions", "0", "test" ],
+    &[ ( "PATH", &path_val ) ],
+  );
+  let err = stderr_str( &out );
+  assert!(
+    err.contains( "Error: [Account]" ),
+    "T11b (BUG-495): stderr must contain 'Error: [Account]' for the real weekly-limit form; got:\n{err}"
+  );
+  assert!(
+    err.contains( "You've hit your weekly limit · resets Aug 11, 11pm (Europe/Kyiv)" ),
+    "T11b (BUG-495): stderr must echo the verbatim captured message; got:\n{err}"
+  );
+  assert!(
+    !err.contains( "[Unknown]" ),
+    "T11b (BUG-495): [Unknown] must be absent — that is the exact pre-fix misclassification; got:\n{err}"
   );
 }
 
