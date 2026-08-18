@@ -27,3 +27,4 @@ clr --add-dir ../common "Review dependencies"
 | 1 | [`run`](../command/01_run.md) | — | — |
 | 2 | [`isolated`](../command/03_isolated.md) | — | Repeatable; `CLR_ADD_DIR` env fallback; injected into subprocess command (TSK-329) |
 | 5 | [`ask`](../command/05_ask.md) | — | — |
+| 11 | [`topic`](../command/11_topic.md) | — | Identical to `ask`; delegates to `run`'s handler |

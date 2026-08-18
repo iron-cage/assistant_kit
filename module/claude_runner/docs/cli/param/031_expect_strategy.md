@@ -5,7 +5,7 @@ meaningful when `--expect` is set; silently ignored otherwise.
 
 - **Type:** enum (`fail` | `retry` | `default:<VALUE>`)
 - **Default:** `fail`
-- **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md)
+- **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md), [`topic`](../command/11_topic.md)
 - **Group:** [Runner Control](../param_group/02_runner_control.md)
 - **JSON Key:** `"expect-strategy"`
 
@@ -62,6 +62,7 @@ emitted to stdout as-is (no trimming, no suffix).
 | 1 | [`run`](../command/01_run.md) | — | — |
 | 2 | [`isolated`](../command/03_isolated.md) | fail | `fail`→exit 3, `default:<V>`→exit 0 supported; `retry` unsupported → exit 1 (one-shot semantics — no retry loop) (TSK-331) |
 | 5 | [`ask`](../command/05_ask.md) | — | — |
+| 11 | [`topic`](../command/11_topic.md) | — | Identical to `ask`; delegates to `run`'s handler |
 
 ### See Also
 

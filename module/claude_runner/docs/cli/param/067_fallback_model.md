@@ -26,3 +26,4 @@ clr --fallback-model haiku "Quick task"
 |---|---------|---------|-------|
 | 1 | [`run`](../command/01_run.md) | — | — |
 | 5 | [`ask`](../command/05_ask.md) | — | — |
+| 11 | [`topic`](../command/11_topic.md) | — | Identical to `ask`; delegates to `run`'s handler |

@@ -163,6 +163,7 @@ clr --dry-run "Run tests" --max-tokens 50000
 | 1 | [`ask`](05_ask.md) | Pure semantic alias for `run` with identical behavior |
 | 2 | [`isolated`](03_isolated.md) | Credential-isolated variant; does not share session state |
 | 3 | [`refresh`](04_refresh.md) | Credential refresh only; no task execution |
+| 4 | [`topic`](11_topic.md) | Alias for `run` with an auto-naming `--subdir` default |
 
 ### Referenced Parameter Groups
 
@@ -176,7 +177,7 @@ clr --dry-run "Run tests" --max-tokens 50000
 
 | # | Group | Role |
 |---|-------|------|
-| 1 | [run / ask](../command_group/01_run_ask.md) | Canonical — `ask` delegates to this command's handler |
+| 1 | [run / ask / topic](../command_group/01_run_ask.md) | Canonical — `ask` and `topic` delegate to this command's handler |
 
 ### Referenced User Stories
 

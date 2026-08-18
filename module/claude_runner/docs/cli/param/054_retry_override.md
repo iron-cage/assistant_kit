@@ -7,7 +7,7 @@ also `auto`, the Tier 3 fallback (`--retry-default`) applies.
 
 - **Type:** u8 (0–255)
 - **Default:** `auto` (unset — class-specific or fallback values apply)
-- **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md)
+- **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md), [`topic`](../command/11_topic.md)
 - **Group:** [Runner Control](../param_group/02_runner_control.md)
 - **JSON Key:** `"retry-override"`
 
@@ -60,6 +60,7 @@ This parameter is Tier 1 — the leftmost (highest priority) in the chain.
 |---|---------|---------|-------|
 | 1 | [`run`](../command/01_run.md) | auto | 3-tier resolution in `run_print_mode()` |
 | 5 | [`ask`](../command/05_ask.md) | auto | Same behavior; pure alias for run |
+| 11 | [`topic`](../command/11_topic.md) | auto | Identical to `ask`; delegates to `run`'s handler |
 
 ### See Also
 

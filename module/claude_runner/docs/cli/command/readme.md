@@ -2,9 +2,9 @@
 
 ### Scope
 
-- **Purpose**: Document the ten clr subcommands and their parameters, modes, and usage examples.
+- **Purpose**: Document the eleven clr subcommands and their parameters, modes, and usage examples.
 - **Responsibility**: Specify each command's behavior, accepted parameters, and usage.
-- **In Scope**: run, ask, isolated, refresh, help, ps, kill, tools, scope, query commands and their invocation modes.
+- **In Scope**: run, ask, isolated, refresh, help, ps, kill, tools, scope, query, topic commands and their invocation modes.
 - **Out of Scope**: Parameter definitions (-> `../param/`), type definitions (-> `../type/`), user stories (-> `../user_story/`).
 
 ### Responsibility Table
@@ -21,8 +21,9 @@
 | 08_tools.md | Command spec: list Claude Code tools with version information |
 | 09_scope.md | Command spec: print all 6 CLAUDE_* path variables for a directory |
 | 10_query.md | Command spec: start or dispatch PID-addressed bidirectional control sessions |
+| 11_topic.md | Command spec: `run`/`ask` alias with an auto-naming `--subdir` default |
 
-### All Commands (10 total)
+### All Commands (11 total)
 
 | # | Command | Description | Params | Example |
 |---|---------|-------------|--------|---------|
@@ -36,7 +37,8 @@
 | 8 | `tools` | List Claude Code tools with filter/projection/inspect controls | 5 | `clr tools --category Web --inspect` |
 | 9 | `scope` | Print all 6 CLAUDE_* path variables for a directory | 1 | `clr scope --dir /project` |
 | 10 | `query` | Start or dispatch PID-addressed bidirectional control sessions | 1 | `clr query "Fix bug"` |
+| 11 | `topic` | `run`/`ask` alias with an auto-naming `--subdir` default | 63 | `clr topic "Investigate the flaky test"` |
 
-**Total:** 10 commands
+**Total:** 11 commands
 
 **Maintenance note:** When a new param is added to the Runner Control group (`docs/cli/param_group/02_runner_control.md`), these files must ALL be updated manually: (1) `01_run.md` Parameters table, (2) the Params count column above, (3) `docs/entity.md` param count + row, (4) `docs/cli/003_env_param.md` if it has an env var, (5) `tests/docs/cli/param/readme.md` status. `ask` inherits all `run` params automatically via the "All parameters from run are accepted" shortcut — no separate table update needed for `05_ask.md`.

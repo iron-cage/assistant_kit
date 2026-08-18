@@ -13,4 +13,4 @@ Per-group structural-equivalence test indices for `clr`. See [command_group/read
 
 | Name | Purpose | Status |
 |------|---------|--------|
-| `01_run_ask.md` | Structural-equivalence tests for Group 1 (run / ask) | ✅ |
+| `01_run_ask.md` | Structural-equivalence tests for Group 1 (run / ask / topic) | ✅ |

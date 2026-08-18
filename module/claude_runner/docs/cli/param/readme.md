@@ -179,9 +179,9 @@ These parameter IDs exist in the sequence but have no corresponding file. The ID
 | 79 | `--category` | string | — | Any substring | Filter `clr tools` by category (case-insensitive substring) | 1 cmd |
 | 80 | `--value` | string | — | `idx`/`name`/`category`/`desc` | Print only the named column's value for each matching tool, one per line | 1 cmd |
 | 81 | `--input-format` | enum | — | `text`/`stream-json` | Input format for Claude Code subprocess stdin | 2 cmds |
-| 82 | `--gate-poll-secs` | u64 | 30 | Positive integer | Seconds between gate admission attempts; `run`/`ask` full 5-tier; `isolated` env-var-only | 2 cmds |
-| 83 | `--gate-max-attempts` | u32 | 1000 | Positive integer | Admission attempt limit before gate exhaustion; `run`/`ask` full 5-tier; `isolated` env-var-only | 2 cmds |
-| 84 | `--gate-stale-secs` | u64 | absent | Positive integer | Staleness threshold (sec) for reclaiming a live-but-stalled slot; absent = feature off; `run`/`ask` full 5-tier; `isolated` env-var-only | 2 cmds |
+| 82 | `--gate-poll-secs` | u64 | 30 | Positive integer | Seconds between gate admission attempts; `run`/`ask`/`topic` full 5-tier; `isolated` env-var-only | 3 cmds |
+| 83 | `--gate-max-attempts` | u32 | 1000 | Positive integer | Admission attempt limit before gate exhaustion; `run`/`ask`/`topic` full 5-tier; `isolated` env-var-only | 3 cmds |
+| 84 | `--gate-stale-secs` | u64 | absent | Positive integer | Staleness threshold (sec) for reclaiming a live-but-stalled slot; absent = feature off; `run`/`ask`/`topic` full 5-tier; `isolated` env-var-only | 3 cmds |
 | 85 | `CLR_REMAINING_TIMEOUT_SECS` | u64 | absent | Positive integer | Remaining external timeout budget (sec); clamps effective gate attempt count; env-var-only (no CLI flag) | all cmds |
 | 86 | `--no-stdin` | bool | false | present/absent | Never read piped stdin — disables stdin JSON config detection and stdin forwarding; checked pre-parse (raw token/env scan) so a held-open pipe cannot hang clr (BUG-492) | 2 cmds |
 
@@ -282,4 +282,4 @@ These parameter IDs exist in the sequence but have no corresponding file. The ID
 
 **Most used parameters:** `--model` (model selection), `--dir` (project targeting), `--subdir` (session isolation by task name), `--dry-run` (debugging), `--new-session` (fresh start), `--interactive` (TTY passthrough with prompt), `--file` (stdin from file), `--strip-fences` (extract code block content).
 
-**Commands by parameter count:** `run` = 65, `ask` = 65, `ps` = 5, `isolated` = 18, `refresh` = 8, `kill` = 0, `tools` = 5, `help` = 0.
+**Commands by parameter count:** `run` = 65, `ask` = 65, `topic` = 65, `ps` = 5, `isolated` = 18, `refresh` = 8, `kill` = 0, `tools` = 5, `help` = 0.

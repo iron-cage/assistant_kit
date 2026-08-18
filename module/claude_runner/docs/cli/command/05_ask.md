@@ -68,6 +68,7 @@ clr ask --dir ~/project "What is the entry point?"
 | # | Command | Relationship |
 |---|---------|--------------|
 | 1 | [`run`](01_run.md) | `ask` is a pure semantic alias for `run` with identical behavior |
+| 2 | [`topic`](11_topic.md) | Sibling alias in the same command_group; `topic` differs from `ask` only in `--subdir`'s default |
 
 ### Referenced Parameter Groups
 
@@ -81,7 +82,7 @@ clr ask --dir ~/project "What is the entry point?"
 
 | # | Group | Role |
 |---|-------|------|
-| 1 | [run / ask](../command_group/01_run_ask.md) | Member — delegates to `run`'s handler |
+| 1 | [run / ask / topic](../command_group/01_run_ask.md) | Member — delegates to `run`'s handler |
 
 ### Referenced User Stories
 

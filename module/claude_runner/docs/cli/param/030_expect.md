@@ -9,7 +9,7 @@ proceeds normally. When it does not match, the strategy set by
 
 - **Type:** string (`val1|val2|…`)
 - **Default:** — (no output validation)
-- **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md)
+- **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md), [`topic`](../command/11_topic.md)
 - **Group:** [Runner Control](../param_group/02_runner_control.md)
 - **JSON Key:** `"expect"`
 
@@ -45,6 +45,7 @@ the captured stdout against literal values after execution.
 | 1 | [`run`](../command/01_run.md) | — | — |
 | 2 | [`isolated`](../command/03_isolated.md) | — | Validates stdout after exit; `retry` strategy unsupported → exit 1 with error (TSK-331) |
 | 5 | [`ask`](../command/05_ask.md) | — | — |
+| 11 | [`topic`](../command/11_topic.md) | — | Identical to `ask`; delegates to `run`'s handler |
 
 ### See Also
 

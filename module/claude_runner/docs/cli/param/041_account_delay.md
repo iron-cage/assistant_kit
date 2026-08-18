@@ -6,7 +6,7 @@ effective retry count for Account is 0.
 
 - **Type:** u32 (seconds)
 - **Default:** `auto` (inherits from `--retry-default-delay`, Tier 3 fallback)
-- **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md)
+- **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md), [`topic`](../command/11_topic.md)
 - **Group:** [Runner Control](../param_group/02_runner_control.md)
 - **JSON Key:** `"account-delay"`
 
@@ -48,6 +48,7 @@ effective = --retry-override-delay ?? --account-delay ?? --retry-default-delay (
 |---|---------|---------|-------|
 | 1 | [`run`](../command/01_run.md) | auto | Delay applied inside retry wrapper |
 | 5 | [`ask`](../command/05_ask.md) | auto | Same behavior; pure alias for run |
+| 11 | [`topic`](../command/11_topic.md) | auto | Identical to `ask`; delegates to `run`'s handler |
 
 ### See Also
 

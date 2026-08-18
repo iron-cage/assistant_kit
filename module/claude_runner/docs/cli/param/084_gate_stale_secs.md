@@ -9,7 +9,7 @@ not apply to `isolated` (env-var resolution only there).
 
 - **Type:** u64 (seconds), optional
 - **Default:** unset (`None` — feature disabled; live owners deny unconditionally)
-- **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md)
+- **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md), [`topic`](../command/11_topic.md)
 - **Group:** [Runner Control](../param_group/02_runner_control.md)
 - **JSON Key:** `"gate-stale-secs"`
 
@@ -53,6 +53,7 @@ with its narrower parameter surface; see
 |---|---------|---------|-------|
 | 1 | [`run`](../command/01_run.md) | unset (`None`) | Full 5-tier resolution; feature off by default |
 | 5 | [`ask`](../command/05_ask.md) | unset (`None`) | Alias for run; same behavior |
+| 11 | [`topic`](../command/11_topic.md) | unset (`None`) | Identical to `ask`; delegates to `run`'s handler |
 
 ### See Also
 

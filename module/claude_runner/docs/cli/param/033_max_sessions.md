@@ -9,7 +9,7 @@ for up to 1000 attempts, then exits with code 1. Setting `0` disables the gate e
 
 - **Type:** u32
 - **Default:** 8
-- **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md), [`isolated`](../command/03_isolated.md)
+- **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md), [`topic`](../command/11_topic.md), [`isolated`](../command/03_isolated.md)
 - **JSON Key:** `"max-sessions"` (run/ask/isolated all three — `isolated` sets it via `apply_json_config_isolated()` same as run/ask; no config-file tier for `isolated`, which has no config-file tier for any parameter)
 
 ```sh
@@ -102,6 +102,7 @@ regardless of `--max-sessions` or the number of active sessions.
 | 1 | [`run`](../command/01_run.md) | 8 | Gate applied before subprocess launch; non-interactive only |
 | 5 | [`ask`](../command/05_ask.md) | 8 | Same behavior; pure alias for run |
 | 3 | [`isolated`](../command/03_isolated.md) | 8 | Same gate mechanism; CLI flag + `"max-sessions"` JSON key + `CLR_MAX_SESSIONS` (no config tier — `isolated` has none); `--dry-run` bypasses exactly as for run/ask |
+| 11 | [`topic`](../command/11_topic.md) | 8 | Identical to `ask`; delegates to `run`'s handler |
 
 ### Referenced User Stories
 

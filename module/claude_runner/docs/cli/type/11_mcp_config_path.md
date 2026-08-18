@@ -22,9 +22,10 @@ clr --mcp-config server1.json --mcp-config server2.json "task"
 |---|---------|---------------|
 | 1 | [`run`](../command/01_run.md) | `--mcp-config` |
 | 5 | [`ask`](../command/05_ask.md) | `--mcp-config` |
+| 11 | [`topic`](../command/11_topic.md) | `--mcp-config` |
 
 ### Referenced Parameters
 
 | # | Parameter | Commands |
 |---|-----------|----------|
-| 24 | [`--mcp-config`](../param/024_mcp_config.md) | 2 |
+| 24 | [`--mcp-config`](../param/024_mcp_config.md) | 3 |

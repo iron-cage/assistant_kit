@@ -49,6 +49,7 @@ use `--no-effort-max` or `--effort high` until TSK-447 lands a mode-aware inject
 | 1 | [`run`](../command/01_run.md) | max | clr default; claude binary default is medium |
 | 5 | [`ask`](../command/05_ask.md) | max | Pure alias — same default as `run` |
 | 3 | [`isolated`](../command/03_isolated.md) | max | Injected automatically; override with this flag or suppress entirely with `--no-effort-max`; env: `CLR_EFFORT` |
+| 11 | [`topic`](../command/11_topic.md) | max | Identical to `ask`; delegates to `run`'s handler |
 
 ### Referenced User Stories
 

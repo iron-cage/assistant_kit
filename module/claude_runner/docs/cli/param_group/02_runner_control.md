@@ -40,6 +40,7 @@ clr --trace "Fix bug" --dir /project
 |---|---------|------------|-----------------|-------|
 | 1 | [`run`](../command/01_run.md) | Full | — | All 50 params apply; default command |
 | 5 | [`ask`](../command/05_ask.md) | Full | — | All 50 params apply; identical behavior — pure alias for run |
+| 11 | [`topic`](../command/11_topic.md) | Full | — | All 50 params apply; `--subdir`'s default overridden with an auto-generated slug — see [`command_group/01_run_ask.md`](../command_group/01_run_ask.md) Default Divergence Table |
 
 ### Referenced Parameters
 
@@ -128,3 +129,4 @@ clr --trace "Fix bug" --dir /project
 | 24 | [024_enum_output_validation.md](../user_story/024_enum_output_validation.md) | Developer |
 | 25 | [025_concurrency_gate.md](../user_story/025_concurrency_gate.md) | Developer |
 | 28 | [028_session_transplant.md](../user_story/028_session_transplant.md) | Developer |
+| 30 | [030_topic_creation.md](../user_story/030_topic_creation.md) | Developer |

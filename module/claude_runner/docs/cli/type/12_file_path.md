@@ -22,10 +22,12 @@ clr --file /tmp/diff.txt -p "Review this diff"
 | # | Command | Via Parameter |
 |---|---------|---------------|
 | 1 | [`run`](../command/01_run.md) | `--file` |
+| 2 | [`isolated`](../command/03_isolated.md) | `--file` |
 | 5 | [`ask`](../command/05_ask.md) | `--file` |
+| 11 | [`topic`](../command/11_topic.md) | `--file` |
 
 ### Referenced Parameters
 
 | # | Parameter | Commands |
 |---|-----------|----------|
-| 25 | [`--file`](../param/025_file.md) | 2 |
+| 25 | [`--file`](../param/025_file.md) | 4 |

@@ -34,9 +34,10 @@ clr --effort bad "Fix bug"     # error: unknown effort level
 |---|---------|---------------|
 | 1 | [`run`](../command/01_run.md) | `--effort` |
 | 5 | [`ask`](../command/05_ask.md) | `--effort` |
+| 11 | [`topic`](../command/11_topic.md) | `--effort` |
 
 ### Referenced Parameters
 
 | # | Parameter | Commands |
 |---|-----------|----------|
-| 17 | [`--effort`](../param/017_effort.md) | 2 |
+| 17 | [`--effort`](../param/017_effort.md) | 3 |

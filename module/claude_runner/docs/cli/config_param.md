@@ -9,7 +9,7 @@
 
 ### Discovery & Precedence
 
-`clr run` / `clr ask` read config defaults from up to two TOML files, in `load_config()` (`src/cli/config.rs`), called from `dispatch_run()` immediately after `apply_env_vars()`:
+`clr run` / `clr ask` read config defaults from up to two TOML files, in `load_config()` (`src/cli/config.rs`), called from `dispatch_run()` immediately after `apply_env_vars()`. `clr topic` is designed to share this same code path (it delegates to `run`'s handler) but dispatch wiring is pending implementation (task 521):
 
 1. **Project-level**: `.clr.toml` in the current working directory
 2. **User-level**: `config.toml` under `$CLR_CONFIG_DIR` (if set and non-empty), else `$HOME/.clr`
@@ -57,9 +57,9 @@ TOML keys are **snake_case**, matching `ConfigDefaults` struct field names exact
 | TOML Key | CLI Flag | CLR_* Env Var | Type | Notes |
 |----------|----------|---------------|------|-------|
 | `max_sessions` | [`--max-sessions`](param/033_max_sessions.md) | `CLR_MAX_SESSIONS` | u32 | |
-| `gate_poll_secs` | [`--gate-poll-secs`](param/033_max_sessions.md) | `CLR_GATE_POLL_SECS` | u64 | Poll interval between gate attempts; default 30. `run`/`ask` only — `isolated` stays env-var-only |
-| `gate_max_attempts` | [`--gate-max-attempts`](param/033_max_sessions.md) | `CLR_GATE_MAX_ATTEMPTS` | u32 | Attempt limit before gate exhaustion; default 1000. `run`/`ask` only — `isolated` stays env-var-only |
-| `gate_stale_secs` | [`--gate-stale-secs`](param/033_max_sessions.md) | `CLR_GATE_STALE_SECS` | u64 | Staleness threshold for reclaiming a stalled slot; unset by default (`None`). `run`/`ask` only — `isolated` stays env-var-only |
+| `gate_poll_secs` | [`--gate-poll-secs`](param/033_max_sessions.md) | `CLR_GATE_POLL_SECS` | u64 | Poll interval between gate attempts; default 30. `run`/`ask`/`topic` only — `isolated` stays env-var-only |
+| `gate_max_attempts` | [`--gate-max-attempts`](param/033_max_sessions.md) | `CLR_GATE_MAX_ATTEMPTS` | u32 | Attempt limit before gate exhaustion; default 1000. `run`/`ask`/`topic` only — `isolated` stays env-var-only |
+| `gate_stale_secs` | [`--gate-stale-secs`](param/033_max_sessions.md) | `CLR_GATE_STALE_SECS` | u64 | Staleness threshold for reclaiming a stalled slot; unset by default (`None`). `run`/`ask`/`topic` only — `isolated` stays env-var-only |
 
 **Retry — Tier 2 (per-class)**
 

@@ -41,6 +41,7 @@ message, `--file`, or piped stdin content exits with error code 1 (see
 |---|---------|---------|-------|
 | 1 | [`run`](../command/01_run.md) | auto | Default on when message given, stdin is non-TTY, or `--file`/stdin content is present |
 | 5 | [`ask`](../command/05_ask.md) | auto | `ask` delegates to `run`'s dispatch — identical auto-print formula, not unconditional (see [05_ask.md](../command/05_ask.md) Execution Modes: `clr ask` with no message opens the interactive REPL) |
+| 11 | [`topic`](../command/11_topic.md) | auto | Identical to `ask`; delegates to `run`'s handler |
 
 ### Referenced User Stories
 

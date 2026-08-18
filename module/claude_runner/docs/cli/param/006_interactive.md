@@ -56,6 +56,7 @@ mode (see [006_cli_design.md](../../feature/006_cli_design.md) § Design : Mode 
 |---|---------|---------|-------|
 | 1 | [`run`](../command/01_run.md) | false | — |
 | 5 | [`ask`](../command/05_ask.md) | false | — |
+| 11 | [`topic`](../command/11_topic.md) | false | Identical to `ask`; delegates to `run`'s handler |
 
 ### Referenced User Stories
 

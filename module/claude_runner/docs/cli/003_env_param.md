@@ -315,7 +315,7 @@ Set by `clr` before spawning any `claude` subprocess to cap the auto-compaction 
 window and triggering expensive compaction late in long sessions.
 
 - **Type:** integer (tokens)
-- **Injected value:** `300 000` (all 4 running commands: `run`, `ask`, `isolated`, `refresh`)
+- **Injected value:** `300 000` (all 5 running commands: `run`, `ask`, `topic`, `isolated`, `refresh`)
 - **Available since:** Claude Code v2.1.75 (2026-03-13)
 - **Mechanism:** injected via `ClaudeCommand::new()` default in `claude_runner_core/src/command/mod.rs`
 - **Scope:** `claude` subprocess only; not read by `clr` itself

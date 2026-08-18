@@ -19,6 +19,7 @@
 |---|---------|------|
 | 1 | [`run`](../command/01_run.md) | Default command; `--subdir` scopes the execution directory |
 | 5 | [`ask`](../command/05_ask.md) | `--subdir` applies; same directory-scoping behavior |
+| 11 | [`topic`](../command/11_topic.md) | `--subdir` applies; default diverges to an auto-generated slug instead of `.` |
 
 ### Referenced Parameter Groups
 
@@ -45,3 +46,4 @@
 | # | User Story | Relationship |
 |---|------------|--------------|
 | 5 | [005_project_specific_execution.md](005_project_specific_execution.md) | `--dir` for base project scoping; `--subdir` adds task-level isolation within that project |
+| 30 | [030_topic_creation.md](030_topic_creation.md) | `topic` auto-generates `--subdir`'s value instead of requiring it named explicitly |

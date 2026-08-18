@@ -61,7 +61,7 @@ When both `--args-file` and a CLR_* env var cover the same parameter, the JSON s
 
 **Error handling:** A non-existent or unreadable `--args-file` path causes `clr` to exit 1 with a file-not-found error on stderr before any subprocess is spawned. Invalid JSON (malformed, non-object root value) also causes exit 1 with a parse error message on stderr. These errors occur before any CLR_* env var or built-in default resolution.
 
-**Subcommand coverage:** JSON config loading applies to all four executing subcommands: `run`, `ask`, `isolated`, `refresh`. Parameters that are only valid for a specific subcommand are ignored when the active subcommand does not support them (consistent with the existing unknown-flag handling behavior). Raw-content forwarding (above) is narrower — it applies only to `run` and `ask`; `isolated` and `refresh` retain their pre-existing, separately-implemented stdin handling.
+**Subcommand coverage:** JSON config loading applies to all five executing subcommands: `run`, `ask`, `topic`, `isolated`, `refresh`. Parameters that are only valid for a specific subcommand are ignored when the active subcommand does not support them (consistent with the existing unknown-flag handling behavior). Raw-content forwarding (above) is narrower — it applies only to `run`, `ask`, and `topic`; `isolated` and `refresh` retain their pre-existing, separately-implemented stdin handling.
 
 **Dry-run inspection:** `--dry-run` combined with `--args-file` prints the merged parameter set (CLI + JSON) in the command preview, making JSON config inspection transparent.
 
@@ -114,93 +114,93 @@ Columns: JSON Key | CLI Flag | CLR_* Env Var | Type | Supported By
 
 | JSON Key | CLI Flag | CLR_* Env Var | Type | Supported By |
 |----------|----------|---------------|------|--------------|
-| `"message"` | `[MESSAGE]` | `CLR_MESSAGE` | string | run, ask |
-| `"print"` | `--print` / `-p` | `CLR_PRINT` | bool | run, ask |
-| `"interactive"` | `--interactive` | `CLR_INTERACTIVE` | bool | run, ask |
-| `"new-session"` | `--new-session` | `CLR_NEW_SESSION` | bool | run, ask |
-| `"dry-run"` | `--dry-run` | `CLR_DRY_RUN` | bool | run, ask |
+| `"message"` | `[MESSAGE]` | `CLR_MESSAGE` | string | run, ask, topic |
+| `"print"` | `--print` / `-p` | `CLR_PRINT` | bool | run, ask, topic |
+| `"interactive"` | `--interactive` | `CLR_INTERACTIVE` | bool | run, ask, topic |
+| `"new-session"` | `--new-session` | `CLR_NEW_SESSION` | bool | run, ask, topic |
+| `"dry-run"` | `--dry-run` | `CLR_DRY_RUN` | bool | run, ask, topic |
 
 **Model and Effort**
 
 | JSON Key | CLI Flag | CLR_* Env Var | Type | Supported By |
 |----------|----------|---------------|------|--------------|
-| `"model"` | `--model` | `CLR_MODEL` | string | run, ask |
-| `"effort"` | `--effort` | `CLR_EFFORT` | EffortLevel (low/medium/high/max) | run, ask |
-| `"no-effort-max"` | `--no-effort-max` | `CLR_NO_EFFORT_MAX` | bool | run, ask |
-| `"fallback-model"` | `--fallback-model` | `CLR_FALLBACK_MODEL` | string | run, ask |
-| `"verbose"` | `--verbose` | `CLR_VERBOSE` | bool | run, ask |
+| `"model"` | `--model` | `CLR_MODEL` | string | run, ask, topic |
+| `"effort"` | `--effort` | `CLR_EFFORT` | EffortLevel (low/medium/high/max) | run, ask, topic |
+| `"no-effort-max"` | `--no-effort-max` | `CLR_NO_EFFORT_MAX` | bool | run, ask, topic |
+| `"fallback-model"` | `--fallback-model` | `CLR_FALLBACK_MODEL` | string | run, ask, topic |
+| `"verbose"` | `--verbose` | `CLR_VERBOSE` | bool | run, ask, topic |
 
 **Session and Directory**
 
 | JSON Key | CLI Flag | CLR_* Env Var | Type | Supported By |
 |----------|----------|---------------|------|--------------|
-| `"session-dir"` | `--session-dir` | `CLR_SESSION_DIR` | string | run, ask |
-| `"no-persist"` | `--no-persist` | `CLR_NO_PERSIST` | bool | run, ask |
-| `"dir"` | `--dir` | `CLR_DIR` | string | run, ask, isolated |
-| `"subdir"` | `--subdir` | `CLR_SUBDIR` | string | run, ask |
-| `"add-dir"` | `--add-dir` | `CLR_ADD_DIR` | string | run, ask, isolated |
+| `"session-dir"` | `--session-dir` | `CLR_SESSION_DIR` | string | run, ask, topic |
+| `"no-persist"` | `--no-persist` | `CLR_NO_PERSIST` | bool | run, ask, topic |
+| `"dir"` | `--dir` | `CLR_DIR` | string | run, ask, topic, isolated |
+| `"subdir"` | `--subdir` | `CLR_SUBDIR` | string | run, ask, topic |
+| `"add-dir"` | `--add-dir` | `CLR_ADD_DIR` | string | run, ask, topic, isolated |
 
 **Permissions and Chrome**
 
 | JSON Key | CLI Flag | CLR_* Env Var | Type | Supported By |
 |----------|----------|---------------|------|--------------|
-| `"no-skip-permissions"` | `--no-skip-permissions` | `CLR_NO_SKIP_PERMISSIONS` | bool | run, ask |
-| `"no-chrome"` | `--no-chrome` | `CLR_NO_CHROME` | bool | run, ask |
-| `"keep-claudecode"` | `--keep-claudecode` | `CLR_KEEP_CLAUDECODE` | bool | run, ask |
+| `"no-skip-permissions"` | `--no-skip-permissions` | `CLR_NO_SKIP_PERMISSIONS` | bool | run, ask, topic |
+| `"no-chrome"` | `--no-chrome` | `CLR_NO_CHROME` | bool | run, ask, topic |
+| `"keep-claudecode"` | `--keep-claudecode` | `CLR_KEEP_CLAUDECODE` | bool | run, ask, topic |
 
 **System Prompt**
 
 | JSON Key | CLI Flag | CLR_* Env Var | Type | Supported By |
 |----------|----------|---------------|------|--------------|
-| `"system-prompt"` | `--system-prompt` | `CLR_SYSTEM_PROMPT` | string | run, ask |
-| `"append-system-prompt"` | `--append-system-prompt` | `CLR_APPEND_SYSTEM_PROMPT` | string | run, ask |
-| `"no-ultrathink"` | `--no-ultrathink` | `CLR_NO_ULTRATHINK` | bool | run, ask |
+| `"system-prompt"` | `--system-prompt` | `CLR_SYSTEM_PROMPT` | string | run, ask, topic |
+| `"append-system-prompt"` | `--append-system-prompt` | `CLR_APPEND_SYSTEM_PROMPT` | string | run, ask, topic |
+| `"no-ultrathink"` | `--no-ultrathink` | `CLR_NO_ULTRATHINK` | bool | run, ask, topic |
 
 **Tools and Input**
 
 | JSON Key | CLI Flag | CLR_* Env Var | Type | Supported By |
 |----------|----------|---------------|------|--------------|
-| `"json-schema"` | `--json-schema` | `CLR_JSON_SCHEMA` | string | run, ask |
-| `"mcp-config"` | `--mcp-config` | `CLR_MCP_CONFIG` | string (single; use CLI for multiple) | run, ask |
-| `"file"` | `--file` | `CLR_FILE` | string | run, ask, isolated |
-| `"allowed-tools"` | `--allowed-tools` | `CLR_ALLOWED_TOOLS` | string | run, ask |
-| `"disallowed-tools"` | `--disallowed-tools` | `CLR_DISALLOWED_TOOLS` | string | run, ask |
-| `"max-turns"` | `--max-turns` | `CLR_MAX_TURNS` | string | run, ask |
-| `"max-budget-usd"` | `--max-budget-usd` | `CLR_MAX_BUDGET_USD` | string | run, ask |
+| `"json-schema"` | `--json-schema` | `CLR_JSON_SCHEMA` | string | run, ask, topic |
+| `"mcp-config"` | `--mcp-config` | `CLR_MCP_CONFIG` | string (single; use CLI for multiple) | run, ask, topic |
+| `"file"` | `--file` | `CLR_FILE` | string | run, ask, topic, isolated |
+| `"allowed-tools"` | `--allowed-tools` | `CLR_ALLOWED_TOOLS` | string | run, ask, topic |
+| `"disallowed-tools"` | `--disallowed-tools` | `CLR_DISALLOWED_TOOLS` | string | run, ask, topic |
+| `"max-turns"` | `--max-turns` | `CLR_MAX_TURNS` | string | run, ask, topic |
+| `"max-budget-usd"` | `--max-budget-usd` | `CLR_MAX_BUDGET_USD` | string | run, ask, topic |
 
 **Output**
 
 | JSON Key | CLI Flag | CLR_* Env Var | Type | Supported By |
 |----------|----------|---------------|------|--------------|
-| `"max-tokens"` | `--max-tokens` | `CLR_MAX_TOKENS` | u32 | run, ask |
-| `"output-format"` | `--output-format` | `CLR_OUTPUT_FORMAT` | string | run, ask |
-| `"output-file"` | `--output-file` | `CLR_OUTPUT_FILE` | string | run, ask |
-| `"output-style"` | `--output-style` | `CLR_OUTPUT_STYLE` | string (summary/raw) | run, ask |
-| `"summary-fields"` | `--summary-fields` | `CLR_SUMMARY_FIELDS` | string | run, ask |
-| `"quiet"` | `--quiet` | `CLR_QUIET` | bool | run, ask |
-| `"strip-fences"` | `--strip-fences` | `CLR_STRIP_FENCES` | bool | run, ask |
+| `"max-tokens"` | `--max-tokens` | `CLR_MAX_TOKENS` | u32 | run, ask, topic |
+| `"output-format"` | `--output-format` | `CLR_OUTPUT_FORMAT` | string | run, ask, topic |
+| `"output-file"` | `--output-file` | `CLR_OUTPUT_FILE` | string | run, ask, topic |
+| `"output-style"` | `--output-style` | `CLR_OUTPUT_STYLE` | string (summary/raw) | run, ask, topic |
+| `"summary-fields"` | `--summary-fields` | `CLR_SUMMARY_FIELDS` | string | run, ask, topic |
+| `"quiet"` | `--quiet` | `CLR_QUIET` | bool | run, ask, topic |
+| `"strip-fences"` | `--strip-fences` | `CLR_STRIP_FENCES` | bool | run, ask, topic |
 
 **Observability and Tracing**
 
 | JSON Key | CLI Flag | CLR_* Env Var | Type | Supported By |
 |----------|----------|---------------|------|--------------|
-| `"trace"` | `--trace` | `CLR_TRACE` | bool | run, ask, isolated, refresh |
+| `"trace"` | `--trace` | `CLR_TRACE` | bool | run, ask, topic, isolated, refresh |
 
 **Validation**
 
 | JSON Key | CLI Flag | CLR_* Env Var | Type | Supported By |
 |----------|----------|---------------|------|--------------|
-| `"expect"` | `--expect` | `CLR_EXPECT` | string (val1\|val2\|…) | run, ask |
-| `"expect-strategy"` | `--expect-strategy` | `CLR_EXPECT_STRATEGY` | string (fail/retry/default:V) | run, ask |
+| `"expect"` | `--expect` | `CLR_EXPECT` | string (val1\|val2\|…) | run, ask, topic |
+| `"expect-strategy"` | `--expect-strategy` | `CLR_EXPECT_STRATEGY` | string (fail/retry/default:V) | run, ask, topic |
 
 **Concurrency**
 
 | JSON Key | CLI Flag | CLR_* Env Var | Type | Supported By |
 |----------|----------|---------------|------|--------------|
-| `"max-sessions"` | `--max-sessions` | `CLR_MAX_SESSIONS` | u32 (0 = unlimited) | run, ask, isolated |
-| `"gate-poll-secs"` | `--gate-poll-secs` | `CLR_GATE_POLL_SECS` | u64 (default 30) | run, ask |
-| `"gate-max-attempts"` | `--gate-max-attempts` | `CLR_GATE_MAX_ATTEMPTS` | u32 (default 1000) | run, ask |
-| `"gate-stale-secs"` | `--gate-stale-secs` | `CLR_GATE_STALE_SECS` | u64, optional (default unset) | run, ask |
+| `"max-sessions"` | `--max-sessions` | `CLR_MAX_SESSIONS` | u32 (0 = unlimited) | run, ask, topic, isolated |
+| `"gate-poll-secs"` | `--gate-poll-secs` | `CLR_GATE_POLL_SECS` | u64 (default 30) | run, ask, topic |
+| `"gate-max-attempts"` | `--gate-max-attempts` | `CLR_GATE_MAX_ATTEMPTS` | u32 (default 1000) | run, ask, topic |
+| `"gate-stale-secs"` | `--gate-stale-secs` | `CLR_GATE_STALE_SECS` | u64, optional (default unset) | run, ask, topic |
 
 `isolated` is gated by the same `--max-sessions`/`"max-sessions"`/`CLR_MAX_SESSIONS` 3-tier chain as
 run/ask (CLI flag + JSON key + env var — `apply_json_config_isolated()` handles `"max-sessions"`
@@ -214,44 +214,44 @@ CLI flag or JSON key. See
 
 | JSON Key | CLI Flag | CLR_* Env Var | Type | Supported By |
 |----------|----------|---------------|------|--------------|
-| `"timeout"` | `--timeout` | `CLR_TIMEOUT` | u32 seconds (0 = unlimited) | run, ask, isolated, refresh |
+| `"timeout"` | `--timeout` | `CLR_TIMEOUT` | u32 seconds (0 = unlimited) | run, ask, topic, isolated, refresh |
 
 **Retry — Tier 2 (per-class)**
 
 | JSON Key | CLI Flag | CLR_* Env Var | Type | Supported By |
 |----------|----------|---------------|------|--------------|
-| `"retry-on-transient"` | `--retry-on-transient` | `CLR_RETRY_ON_TRANSIENT` | u8 | run, ask |
-| `"transient-delay"` | `--transient-delay` | `CLR_TRANSIENT_DELAY` | u32 seconds | run, ask |
-| `"retry-on-account"` | `--retry-on-account` | `CLR_RETRY_ON_ACCOUNT` | u8 | run, ask |
-| `"account-delay"` | `--account-delay` | `CLR_ACCOUNT_DELAY` | u32 seconds | run, ask |
-| `"retry-on-auth"` | `--retry-on-auth` | `CLR_RETRY_ON_AUTH` | u8 | run, ask |
-| `"auth-delay"` | `--auth-delay` | `CLR_AUTH_DELAY` | u32 seconds | run, ask |
-| `"retry-on-service"` | `--retry-on-service` | `CLR_RETRY_ON_SERVICE` | u8 | run, ask |
-| `"service-delay"` | `--service-delay` | `CLR_SERVICE_DELAY` | u32 seconds | run, ask |
-| `"retry-on-process"` | `--retry-on-process` | `CLR_RETRY_ON_PROCESS` | u8 | run, ask |
-| `"process-delay"` | `--process-delay` | `CLR_PROCESS_DELAY` | u32 seconds | run, ask |
-| `"retry-on-validation"` | `--retry-on-validation` | `CLR_RETRY_ON_VALIDATION` | u8 | run, ask |
-| `"validation-delay"` | `--validation-delay` | `CLR_VALIDATION_DELAY` | u32 seconds | run, ask |
-| `"retry-on-runner"` | `--retry-on-runner` | `CLR_RETRY_ON_RUNNER` | u8 | run, ask |
-| `"runner-delay"` | `--runner-delay` | `CLR_RUNNER_DELAY` | u32 seconds | run, ask |
-| `"retry-on-unknown"` | `--retry-on-unknown` | `CLR_RETRY_ON_UNKNOWN` | u8 | run, ask |
-| `"unknown-delay"` | `--unknown-delay` | `CLR_UNKNOWN_DELAY` | u32 seconds | run, ask |
+| `"retry-on-transient"` | `--retry-on-transient` | `CLR_RETRY_ON_TRANSIENT` | u8 | run, ask, topic |
+| `"transient-delay"` | `--transient-delay` | `CLR_TRANSIENT_DELAY` | u32 seconds | run, ask, topic |
+| `"retry-on-account"` | `--retry-on-account` | `CLR_RETRY_ON_ACCOUNT` | u8 | run, ask, topic |
+| `"account-delay"` | `--account-delay` | `CLR_ACCOUNT_DELAY` | u32 seconds | run, ask, topic |
+| `"retry-on-auth"` | `--retry-on-auth` | `CLR_RETRY_ON_AUTH` | u8 | run, ask, topic |
+| `"auth-delay"` | `--auth-delay` | `CLR_AUTH_DELAY` | u32 seconds | run, ask, topic |
+| `"retry-on-service"` | `--retry-on-service` | `CLR_RETRY_ON_SERVICE` | u8 | run, ask, topic |
+| `"service-delay"` | `--service-delay` | `CLR_SERVICE_DELAY` | u32 seconds | run, ask, topic |
+| `"retry-on-process"` | `--retry-on-process` | `CLR_RETRY_ON_PROCESS` | u8 | run, ask, topic |
+| `"process-delay"` | `--process-delay` | `CLR_PROCESS_DELAY` | u32 seconds | run, ask, topic |
+| `"retry-on-validation"` | `--retry-on-validation` | `CLR_RETRY_ON_VALIDATION` | u8 | run, ask, topic |
+| `"validation-delay"` | `--validation-delay` | `CLR_VALIDATION_DELAY` | u32 seconds | run, ask, topic |
+| `"retry-on-runner"` | `--retry-on-runner` | `CLR_RETRY_ON_RUNNER` | u8 | run, ask, topic |
+| `"runner-delay"` | `--runner-delay` | `CLR_RUNNER_DELAY` | u32 seconds | run, ask, topic |
+| `"retry-on-unknown"` | `--retry-on-unknown` | `CLR_RETRY_ON_UNKNOWN` | u8 | run, ask, topic |
+| `"unknown-delay"` | `--unknown-delay` | `CLR_UNKNOWN_DELAY` | u32 seconds | run, ask, topic |
 
 **Retry — Tier 1 (override) and Tier 3 (default)**
 
 | JSON Key | CLI Flag | CLR_* Env Var | Type | Supported By |
 |----------|----------|---------------|------|--------------|
-| `"retry-override"` | `--retry-override` | `CLR_RETRY_OVERRIDE` | u8 | run, ask |
-| `"retry-override-delay"` | `--retry-override-delay` | `CLR_RETRY_OVERRIDE_DELAY` | u32 seconds | run, ask |
-| `"retry-default"` | `--retry-default` | `CLR_RETRY_DEFAULT` | u8 (default: 2) | run, ask |
-| `"retry-default-delay"` | `--retry-default-delay` | `CLR_RETRY_DEFAULT_DELAY` | u32 seconds (default: 30) | run, ask |
+| `"retry-override"` | `--retry-override` | `CLR_RETRY_OVERRIDE` | u8 | run, ask, topic |
+| `"retry-override-delay"` | `--retry-override-delay` | `CLR_RETRY_OVERRIDE_DELAY` | u32 seconds | run, ask, topic |
+| `"retry-default"` | `--retry-default` | `CLR_RETRY_DEFAULT` | u8 (default: 2) | run, ask, topic |
+| `"retry-default-delay"` | `--retry-default-delay` | `CLR_RETRY_DEFAULT_DELAY` | u32 seconds (default: 30) | run, ask, topic |
 
 **Journal**
 
 | JSON Key | CLI Flag | CLR_* Env Var | Type | Supported By |
 |----------|----------|---------------|------|--------------|
-| `"journal"` | `--journal` | `CLR_JOURNAL` | string (full/meta/off) | run, ask, isolated, refresh |
-| `"journal-dir"` | `--journal-dir` | `CLR_JOURNAL_DIR` | string | run, ask, isolated, refresh |
+| `"journal"` | `--journal` | `CLR_JOURNAL` | string (full/meta/off) | run, ask, topic, isolated, refresh |
+| `"journal-dir"` | `--journal-dir` | `CLR_JOURNAL_DIR` | string | run, ask, topic, isolated, refresh |
 
 **Isolated and Refresh Subcommands Only**
 
@@ -263,7 +263,7 @@ CLI flag or JSON key. See
 
 | JSON Key | CLI Flag | CLR_* Env Var | Type | Supported By |
 |----------|----------|---------------|------|--------------|
-| `"args-file"` | `--args-file` | `CLR_ARGS_FILE` | string (file path) | run, ask, isolated, refresh — **not re-processed when encountered inside a JSON source; chaining not supported** |
+| `"args-file"` | `--args-file` | `CLR_ARGS_FILE` | string (file path) | run, ask, topic, isolated, refresh — **not re-processed when encountered inside a JSON source; chaining not supported** |
 
 ### Not Configurable via JSON
 

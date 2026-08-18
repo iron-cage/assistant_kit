@@ -36,6 +36,7 @@ clr --new-session "Review this PR fresh" --model opus
 |---|---------|---------|-------|
 | 1 | [`run`](../command/01_run.md) | false | — |
 | 5 | [`ask`](../command/05_ask.md) | true | Default ON for ask |
+| 11 | [`topic`](../command/11_topic.md) | true | Identical to `ask`; delegates to `run`'s handler |
 
 ### Referenced User Stories
 

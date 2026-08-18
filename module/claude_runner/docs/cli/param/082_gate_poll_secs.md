@@ -6,7 +6,7 @@ before trying again. Does not apply to `isolated` (env-var resolution only there
 
 - **Type:** u64 (seconds)
 - **Default:** `30`
-- **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md)
+- **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md), [`topic`](../command/11_topic.md)
 - **Group:** [Runner Control](../param_group/02_runner_control.md)
 - **JSON Key:** `"gate-poll-secs"`
 
@@ -49,6 +49,7 @@ with its narrower parameter surface; see
 |---|---------|---------|-------|
 | 1 | [`run`](../command/01_run.md) | `30` | Full 5-tier resolution |
 | 5 | [`ask`](../command/05_ask.md) | `30` | Alias for run; same behavior |
+| 11 | [`topic`](../command/11_topic.md) | `30` | Identical to `ask`; delegates to `run`'s handler |
 
 ### See Also
 

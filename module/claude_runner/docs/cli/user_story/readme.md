@@ -40,6 +40,7 @@
 | 027_session_termination.md | User story: terminate a Claude Code session by PID with clr kill |
 | 028_session_transplant.md | User story: run Claude in target dir while loading session from source dir |
 | 029_scope_inspection.md | User story: inspect all 6 CLAUDE_* path variables for any directory |
+| 030_topic_creation.md | User story: auto-named or explicitly-named topic workspace via clr topic |
 
 ### Index
 
@@ -74,6 +75,7 @@
 | 027 | Session Termination | `<PID>` | `kill` |
 | 028 | Session Cross-Loading | `--from`, `--to` | `run`, `ask` |
 | 029 | Scope Inspection | `--dir` | `scope` |
+| 030 | Topic Creation | `--subdir`, `--from` | `topic` |
 
 ### Adding User Stories
 

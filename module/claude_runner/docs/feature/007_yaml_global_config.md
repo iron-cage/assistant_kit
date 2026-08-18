@@ -13,11 +13,11 @@
 
 ### Motivation
 
-The existing TOML config tier ([config_param.md](../cli/config_param.md)) works for `run`/`ask` but has three gaps this proposal closes:
+The existing TOML config tier ([config_param.md](../cli/config_param.md)) works for `run`/`ask` (and, once dispatch wiring lands per task 521, `topic`) but has three gaps this proposal closes:
 
 1. **Profile support absent.** Users running `clr` in automation pipelines often need named configurations (e.g., `fast`, `deep`, `ci`) switchable at runtime. TOML has no inheritance or merge-key syntax; expressing three related profiles requires three separate config files.
 
-2. **Scope limited to `run`/`ask`.** The current TOML config is not read by `isolated`, `refresh`, or `ps`. Defaults for these subcommands can only be set via `CLR_*` env vars. A global config should be global — covering all subcommands.
+2. **Scope limited to `run`/`ask`.** The current TOML config is not read by `isolated`, `refresh`, `ps`, or (pending task 521's dispatch wiring) `topic`. Defaults for these subcommands can only be set via `CLR_*` env vars. A global config should be global — covering all subcommands.
 
 3. **Multi-line values awkward.** YAML's block scalar syntax (`|`) makes multi-line `system_prompt` values natural to read and edit. TOML's `"""..."""` multiline string works but is less familiar and harder to compose in complex configs.
 
@@ -201,7 +201,7 @@ All 41 parameters currently eligible for the TOML config tier (see [config_param
 | `output_style` | `CLR_OUTPUT_STYLE` | string | `summary`/`raw` |
 | `summary_fields` | `CLR_SUMMARY_FIELDS` | string | Preset or comma-separated whitelist |
 
-`timeout` and `journal`/`journal_dir` already appear in the TOML eligible set for `run`/`ask`; the YAML global config extends their applicability to `isolated` and `refresh` via the `isolated:` and `refresh:` subcommand sections.
+`timeout` and `journal`/`journal_dir` already appear in the TOML eligible set for `run`/`ask` (and, once dispatch wiring lands per task 521, `topic`); the YAML global config extends their applicability to `isolated` and `refresh` via the `isolated:` and `refresh:` subcommand sections.
 
 #### Multi-Line Values
 

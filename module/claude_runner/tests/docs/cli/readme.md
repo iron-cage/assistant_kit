@@ -4,7 +4,7 @@
 
 - **Purpose**: Document integration and edge case test plans for all clr commands, parameters, and types.
 - **Responsibility**: Index of per-command, per-parameter, per-type, per-group, and per-env-param test case planning files.
-- **In Scope**: All 8 clr commands, all 75 parameters, all 14 types, all 7 parameter groups, 2 env parameter specs, 27 user story specs, 2 parity specs, 1 dictionary vocabulary check, and test surface for feature/invariant/api doc instances.
+- **In Scope**: All 11 clr commands, all 75 parameters, all 14 types, all 7 parameter groups, 2 env parameter specs, 30 user story specs, 2 parity specs, 1 dictionary vocabulary check, and test surface for feature/invariant/api doc instances.
 - **Out of Scope**: Automated test implementations (→ `tests/` in crate), spec documentation (→ `docs/feature/`).
 
 Test case planning for `clr` CLI. Each file contains a Test Case Index with coverage summary. Detailed test sections (executable specs) are added at L5.
@@ -27,14 +27,14 @@ Test case planning for `clr` CLI. Each file contains a Test Case Index with cove
 
 | Scope | Files | Min Tests |
 |-------|-------|-----------|
-| Commands | 8 | ≥8 IT each |
+| Commands | 11 | ≥8 IT each |
 | Parameters | 76 (75 active + 1 deprecated) | ≥6 EC each |
 | Parameter groups | 7 | ≥4 CC each |
-| Command groups | 1 | 2 CG (indexed from `command/05_ask.md`) |
+| Command groups | 1 | 3 CG (indexed from `command/05_ask.md`, `command/11_topic.md`) |
 | Types | 14 | ≥4 TC each |
 | Env params | 2 | ≥6 EC each |
 | Parity | 2 | ≥5 PC each |
-| User stories | 27 | ≥4 US each |
+| User stories | 30 | ≥4 US each |
 | Dictionary | 1 | ≥4 DT total |
 
 ### Navigation
@@ -48,6 +48,9 @@ Test case planning for `clr` CLI. Each file contains a Test Case Index with cove
 - [`ps`](command/06_ps.md)
 - [`kill`](command/07_kill.md)
 - [`tools`](command/08_tools.md)
+- [`scope`](command/09_scope.md)
+- [`query`](command/10_query.md)
+- [`topic`](command/11_topic.md)
 
 #### Parameters
 - [`[MESSAGE]`](param/001_message.md)
@@ -135,7 +138,7 @@ Test case planning for `clr` CLI. Each file contains a Test Case Index with cove
 - [Tool Listing](param_group/07_tool_listing.md)
 
 #### Command Groups
-- [run / ask](command_group/01_run_ask.md)
+- [run / ask / topic](command_group/01_run_ask.md)
 
 #### Types
 - [`MessageText`](type/01_message_text.md)
@@ -181,6 +184,9 @@ Test case planning for `clr` CLI. Each file contains a Test Case Index with cove
 - [Session Concurrency Gate](user_story/025_concurrency_gate.md)
 - [Session Listing](user_story/026_session_listing.md)
 - [Session Termination](user_story/027_session_termination.md)
+- [Session Cross-Loading](user_story/028_session_transplant.md)
+- [Scope Inspection](user_story/029_scope_inspection.md)
+- [Topic Creation](user_story/030_topic_creation.md)
 
 #### Parity
 - [run / ask / isolated](parity/01_run_ask_isolated.md)

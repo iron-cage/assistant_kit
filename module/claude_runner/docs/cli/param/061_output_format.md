@@ -89,3 +89,4 @@ Complete field table for the JSON object emitted by `claude --output-format json
 |---|---------|---------|-------|
 | 1 | [`run`](../command/01_run.md) | — | — |
 | 5 | [`ask`](../command/05_ask.md) | — | — |
+| 11 | [`topic`](../command/11_topic.md) | — | Identical to `ask`; delegates to `run`'s handler |

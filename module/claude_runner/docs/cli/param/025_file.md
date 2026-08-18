@@ -63,6 +63,7 @@ the CLI. `CLR_FILE=/path/to/file clr "task"` is equivalent to `clr --file /path/
 | 1 | [`run`](../command/01_run.md) | — | — |
 | 2 | [`isolated`](../command/03_isolated.md) | — | Pre-spawn existence check (exit 1 if missing); uses `run_isolated_with_stdin_file()` code path (TSK-330) |
 | 5 | [`ask`](../command/05_ask.md) | — | — |
+| 11 | [`topic`](../command/11_topic.md) | — | Identical to `ask`; delegates to `run`'s handler |
 
 ### Referenced User Stories
 

@@ -27,9 +27,10 @@ clr --max-tokens abc "test"          # non-numeric → error
 |---|---------|---------------|
 | 1 | [`run`](../command/01_run.md) | `--max-tokens` |
 | 5 | [`ask`](../command/05_ask.md) | `--max-tokens` |
+| 11 | [`topic`](../command/11_topic.md) | `--max-tokens` |
 
 ### Referenced Parameters
 
 | # | Parameter | Commands |
 |---|-----------|----------|
-| 9 | [`--max-tokens`](../param/009_max_tokens.md) | 2 |
+| 9 | [`--max-tokens`](../param/009_max_tokens.md) | 3 |

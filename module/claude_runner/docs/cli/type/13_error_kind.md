@@ -65,6 +65,7 @@ The following failure conditions are emitted by the CLR runner layer (`module/cl
 |---|---------|-------------|
 | 1 | [`run`](../command/01_run.md) | subprocess exit classification |
 | 5 | [`ask`](../command/05_ask.md) | subprocess exit classification |
+| 11 | [`topic`](../command/11_topic.md) | subprocess exit classification |
 
 ### Referenced Parameters
 

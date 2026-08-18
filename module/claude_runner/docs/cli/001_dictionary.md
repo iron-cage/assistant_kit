@@ -18,6 +18,9 @@
 | ps | List running Claude Code sessions with process metrics; supports `--mode`, `--columns`, `--wide`, `--pid`, `--inspect` |
 | kill | Terminate a running Claude Code session by PID via SIGTERM; canonical form `clr kill <PID>` |
 | tools | List all Claude Code built-in tools available to the subprocess; canonical form `clr tools` |
+| scope | Print all 6 `CLAUDE_*` path variables for a directory; canonical form `clr scope [--dir <DIR>]` |
+| query | Start or dispatch against a persistent PID-addressed control session; canonical form `clr query "<message>"` or `clr query <pid> <method>` |
+| topic | Create a hyphened-subdir topic session, or continue one if it already exists; auto-names via slug generation when `--subdir` is omitted; canonical form `clr topic "<prompt>"` |
 | help | Display usage information and exit; canonical form `clr help`; `--help`/`-h` are parameter aliases |
 
 <!-- BUG-480 task/claude_runner/bug/480_gate_diagnostic_hides_slot_occupancy.md — fixed: the three per-surface "active" senses and "slot occupancy" are defined in § Architecture below -->

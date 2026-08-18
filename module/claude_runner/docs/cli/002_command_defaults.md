@@ -45,6 +45,8 @@ Rows are parameters or behaviors. Columns are the four commands. Key: ✅ = acti
 | `--json-schema` / `--mcp-config` | ✅ supported | ✅ supported | via passthrough only | ➖ not supported |
 | `--args-file` / `CLR_ARGS_FILE` / stdin JSON | ✅ supported | ✅ supported | ✅ supported | ✅ supported |
 
+**Note:** `topic` (the 3rd member of the run/ask command group — see [`command_group/01_run_ask.md`](command_group/01_run_ask.md)) has an injection profile byte-identical to `ask` in every row above; it is omitted as a separate column to avoid duplicating identical data. `topic`'s only divergence is its default `--subdir` value (auto-generated slug vs. `.`), documented in [`param/028_subdir.md`](param/028_subdir.md), not a Parameter Matrix injection default.
+
 ---
 
 ### Design Issues (all resolved — Plan 009)

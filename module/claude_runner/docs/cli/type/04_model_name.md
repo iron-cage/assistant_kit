@@ -21,9 +21,10 @@ clr --model opus "Fix bug"
 |---|---------|---------------|
 | 1 | [`run`](../command/01_run.md) | `--model` |
 | 5 | [`ask`](../command/05_ask.md) | `--model` |
+| 11 | [`topic`](../command/11_topic.md) | `--model` |
 
 ### Referenced Parameters
 
 | # | Parameter | Commands |
 |---|-----------|----------|
-| 3 | [`--model`](../param/003_model.md) | 2 |
+| 3 | [`--model`](../param/003_model.md) | 3 |

@@ -6,13 +6,13 @@ subprocess is launched. Mirrors shell `set -x` semantics.
 
 - **Type:** bool (standalone flag)
 - **Default:** false
-- **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md), [`isolated`](../command/03_isolated.md), [`refresh`](../command/04_refresh.md)
-- **Group:** [Runner Control](../param_group/02_runner_control.md) (for `run` and `ask`), [Credential Operations](../param_group/04_credential_operations.md) (for `isolated` and `refresh`)
+- **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md), [`topic`](../command/11_topic.md), [`isolated`](../command/03_isolated.md), [`refresh`](../command/04_refresh.md)
+- **Group:** [Runner Control](../param_group/02_runner_control.md) (for `run`, `ask`, and `topic`), [Credential Operations](../param_group/04_credential_operations.md) (for `isolated` and `refresh`)
 - **JSON Key:** `"trace"`
 
 What `--trace` shows depends on the command:
 
-- **`run`** / **`ask`**: assembled env vars + full `claude` subprocess command (printed to stderr before execution)
+- **`run`** / **`ask`** / **`topic`**: assembled env vars + full `claude` subprocess command (printed to stderr before execution); `topic` output is identical — it delegates to `run`'s handler
 - **`isolated`**: header lines (`# clr isolated`, `# creds:`, `# timeout:`), then env vars, then assembled `claude` invocation (including `--model claude-opus-4-8`, `--effort max`, `--no-session-persistence`, `--dangerously-skip-permissions` when message present)
 - **`refresh`**: header lines (`# clr refresh`, `# creds:`, `# timeout:`), then env vars, then assembled `claude` invocation with `--model claude-sonnet-5`, `--no-chrome`, `--effort low`, `--no-session-persistence`
 
@@ -69,7 +69,7 @@ clr refresh --creds creds.json --trace
 ```
 
 **Note:** `--trace` prints to stderr so it does not pollute captured stdout in print mode.
-Combine with `--dry-run` if you want to preview without executing (`run` and `ask` only — trace fires after dry-run exits for those commands).
+Combine with `--dry-run` if you want to preview without executing (`run`, `ask`, and `topic` only — trace fires after dry-run exits for those commands).
 
 ### Referenced Type
 
@@ -92,6 +92,7 @@ Combine with `--dry-run` if you want to preview without executing (`run` and `as
 | 2 | [`isolated`](../command/03_isolated.md) | false | Emits creds path, temp HOME, timeout |
 | 3 | [`refresh`](../command/04_refresh.md) | false | Emits creds path, fixed args |
 | 5 | [`ask`](../command/05_ask.md) | false | Emits env vars + claude command |
+| 11 | [`topic`](../command/11_topic.md) | false | Identical to `ask`; delegates to `run`'s handler |
 
 ### Referenced User Stories
 

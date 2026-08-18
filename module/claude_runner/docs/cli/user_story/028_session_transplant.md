@@ -57,6 +57,7 @@ clr "Continue"
 |---------|------|
 | `run` | Primary command for session cross-loading |
 | `ask` | Also supports `--from`; identical to `run` |
+| `topic` | Also supports `--from`; identical to `run`/`ask` — combines with topic's auto-named `--subdir` target |
 
 ### Related Doc Instances
 
@@ -74,3 +75,4 @@ clr "Continue"
 | 005 | [Project-specific Execution](005_project_specific_execution.md) | `--dir` for running in specific directory |
 | 007 | [Fresh Session](007_fresh_session.md) | `--new-session` takes precedence over `--from` |
 | 029 | [Scope Inspection](029_scope_inspection.md) | Use `clr scope` to verify source/target paths before cross-loading |
+| 030 | [Topic Creation](030_topic_creation.md) | `topic` combines `--from` cross-loading with an auto-named `--subdir` target |

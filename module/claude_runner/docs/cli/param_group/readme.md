@@ -16,7 +16,7 @@
 | 03_system_prompt.md | Group spec: system prompt injection and extension flags |
 | 04_credential_operations.md | Group spec: credential-isolated execution configuration |
 | 05_session_listing.md | Group spec: `clr ps` output display controls |
-| 06_running_commands.md | Cross-command comparison: all 4 subprocess-invoking commands |
+| 06_running_commands.md | Cross-command comparison: all 5 subprocess-invoking commands |
 | 07_tool_listing.md | Group spec: `clr tools` output display controls |
 
 ### All Groups (7 total)
@@ -28,7 +28,7 @@
 | 3 | System Prompt | 2 | Inject or extend the behavioral system context sent to the `claude` subprocess |
 | 4 | Credential Operations | 3 | Configure credential-isolated execution for `clr isolated` and `clr refresh` |
 | 5 | Session Listing | 5 | Control `clr ps` session listing display — row filtering, PID filtering, column selection, and inspect output |
-| 6 | Running Commands | — | Cross-command comparison: all 4 subprocess-invoking commands (`run`, `ask`, `isolated`, `refresh`) |
+| 6 | Running Commands | — | Cross-command comparison: all 5 subprocess-invoking commands (`run`, `ask`, `topic`, `isolated`, `refresh`) |
 | 7 | Tool Listing | 5 | Control `clr tools` tool listing display — name/category filtering, column selection, value extraction, and inspect output |
 
 **Total:** 7 groups (`--columns` and `--inspect` are shared members of both Session Listing and Tool Listing; parameter-count columns above count each such shared parameter once per group)

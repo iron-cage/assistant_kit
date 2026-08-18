@@ -6,7 +6,7 @@ The directory is created if it does not exist.
 
 - **Type:** `Path`
 - **Default:** ~/.clr/journal/ (or `CLR_JOURNAL_DIR` env var)
-- **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md), [`isolated`](../command/03_isolated.md), [`refresh`](../command/04_refresh.md)
+- **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md), [`topic`](../command/11_topic.md), [`isolated`](../command/03_isolated.md), [`refresh`](../command/04_refresh.md)
 - **JSON Key:** `"journal-dir"`
 
 ```sh
@@ -44,6 +44,7 @@ env var for journal location.
 | 2 | [`isolated`](../command/03_isolated.md) | ~/.clr/journal/ | Standard location |
 | 3 | [`refresh`](../command/04_refresh.md) | ~/.clr/journal/ | Standard location |
 | 5 | [`ask`](../command/05_ask.md) | ~/.clr/journal/ | Standard location |
+| 11 | [`topic`](../command/11_topic.md) | ~/.clr/journal/ | Identical to `ask`; delegates to `run`'s handler |
 
 ### Referenced User Stories
 

@@ -6,7 +6,7 @@ identity value — the working directory is used as-is, with no subdirectory app
 
 - **Type:** string (single directory name component; no `/` separators; `.` or `""` = identity)
 - **Default:** `.` (identity — no subdirectory appended)
-- **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md)
+- **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md), [`topic`](../command/11_topic.md)
 - **Group:** [Runner Control](../param_group/02_runner_control.md)
 - **JSON Key:** `"subdir"`
 
@@ -60,9 +60,11 @@ and `CLR_SUBDIR` is non-empty. `CLR_SUBDIR=build clr "task"` is equivalent to
 |---|---------|---------|-------|
 | 1 | [`run`](../command/01_run.md) | `.` (identity) | — |
 | 5 | [`ask`](../command/05_ask.md) | `.` (identity) | — |
+| 11 | [`topic`](../command/11_topic.md) | auto-generated slug from `MESSAGE` | Only command diverging from `.`; explicit `--subdir NAME` overrides the auto-generated slug |
 
 ### Referenced User Stories
 
 | # | User Story | Persona |
 |---|------------|---------|
 | 22 | [022_session_isolation_subdir.md](../user_story/022_session_isolation_subdir.md) | Developer |
+| 30 | [030_topic_creation.md](../user_story/030_topic_creation.md) | Developer |

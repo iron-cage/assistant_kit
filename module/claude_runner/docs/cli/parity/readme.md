@@ -17,4 +17,4 @@
 ### See Also
 
 - [002_command_defaults.md](../002_command_defaults.md) — default injection values and Plan 009 design traceability
-- [command/](../command/readme.md) — individual command reference (8 commands)
+- [command/](../command/readme.md) — individual command reference (11 commands)

@@ -1,14 +1,14 @@
 # CLI Parameter: --no-compact-window
 
-Suppress the default `CLAUDE_CODE_AUTO_COMPACT_WINDOW=300000` injection. By default all four
-running commands (`run`, `ask`, `isolated`, `refresh`) inject this variable to enable context-window
+Suppress the default `CLAUDE_CODE_AUTO_COMPACT_WINDOW=300000` injection. By default all five
+running commands (`run`, `ask`, `topic`, `isolated`, `refresh`) inject this variable to enable context-window
 auto-compaction in the Claude subprocess. Use `--no-compact-window` when the caller's environment
 already sets `CLAUDE_CODE_AUTO_COMPACT_WINDOW` to a different value, or when compaction is
 undesirable for a specific invocation.
 
 - **Type:** bool
 - **Default:** false
-- **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md), [`isolated`](../command/03_isolated.md), [`refresh`](../command/04_refresh.md)
+- **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md), [`topic`](../command/11_topic.md), [`isolated`](../command/03_isolated.md), [`refresh`](../command/04_refresh.md)
 - **Group:** [Running Commands](../param_group/06_running_commands.md)
 - **Env:** `CLR_NO_COMPACT_WINDOW` (bool: `"1"` or `"true"`; applied only when `--no-compact-window` absent from CLI)
 
@@ -48,6 +48,7 @@ resolved value (or absence) accurately.
 | 2 | [`isolated`](../command/03_isolated.md) | false | — |
 | 3 | [`refresh`](../command/04_refresh.md) | false | — |
 | 5 | [`ask`](../command/05_ask.md) | false | — |
+| 11 | [`topic`](../command/11_topic.md) | false | — |
 
 ### Referenced User Stories
 

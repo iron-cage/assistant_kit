@@ -7,7 +7,7 @@ concrete built-in default.
 
 - **Type:** u32 (seconds)
 - **Default:** `30` (thirty seconds between retry attempts)
-- **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md)
+- **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md), [`topic`](../command/11_topic.md)
 - **Group:** [Runner Control](../param_group/02_runner_control.md)
 - **JSON Key:** `"retry-default-delay"`
 
@@ -56,6 +56,7 @@ This parameter is Tier 3 — the rightmost (lowest priority, concrete default) i
 |---|---------|---------|-------|
 | 1 | [`run`](../command/01_run.md) | 30 | Fallback delay in `run_print_mode()` |
 | 5 | [`ask`](../command/05_ask.md) | 30 | Same behavior; pure alias for run |
+| 11 | [`topic`](../command/11_topic.md) | 30 | Identical to `ask`; delegates to `run`'s handler |
 
 ### See Also
 

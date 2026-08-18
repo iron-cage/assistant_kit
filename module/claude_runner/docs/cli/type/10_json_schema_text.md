@@ -21,9 +21,10 @@ clr --json-schema "$(cat schema.json)" "task"
 |---|---------|---------------|
 | 1 | [`run`](../command/01_run.md) | `--json-schema` |
 | 5 | [`ask`](../command/05_ask.md) | `--json-schema` |
+| 11 | [`topic`](../command/11_topic.md) | `--json-schema` |
 
 ### Referenced Parameters
 
 | # | Parameter | Commands |
 |---|-----------|----------|
-| 23 | [`--json-schema`](../param/023_json_schema.md) | 2 |
+| 23 | [`--json-schema`](../param/023_json_schema.md) | 3 |

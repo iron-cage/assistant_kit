@@ -6,7 +6,7 @@ Accepts preset profile names or a custom comma-separated field whitelist.
 - **Type:** string (preset name or comma-separated field list)
 - **Default:** `full`
 - **Valid Values:** `minimal`, `standard`, `full`, or comma-separated field names
-- **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md)
+- **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md), [`topic`](../command/11_topic.md)
 - **Group:** [Runner Control](../param_group/02_runner_control.md)
 - **Requires:** `--output-style summary` (the default); ignored when `--output-style raw`
 - **JSON Key:** `"summary-fields"`
@@ -77,6 +77,7 @@ All field names correspond to the flattened CLR result envelope keys rendered by
 |---|---------|---------|-------|
 | 1 | [`run`](../command/01_run.md) | `full` | Applied in `run_print_mode()` via field filter in `render_summary()` |
 | 5 | [`ask`](../command/05_ask.md) | `full` | Pure alias for run; same rendering path |
+| 11 | [`topic`](../command/11_topic.md) | `full` | Identical to `ask`; delegates to `run`'s handler |
 
 ### See Also
 

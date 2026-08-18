@@ -4,7 +4,7 @@
 
 - **Purpose**: Test case specs for user story doc instances in `docs/cli/user_story/`.
 - **Responsibility**: Per-user-story test spec files covering end-to-end user workflows.
-- **In Scope**: All 29 user stories: Interactive REPL, Print Mode Capture, Interactive With Message, Dry-run Preview, Project-specific Execution, Verbose Debugging, Fresh Session, Trace Execution, Custom System Prompt, Credential-isolated Execution, File Input, Code Block Extraction, Structured JSON Pipeline, Credential Refresh, Ask Mode, CLI Discoverability, Model Selection, Env-var Configuration, MCP Config Injection, Suppress Effort Max, Keep ClaudeCode Context, Session Isolation via Subdirectory, Output File Capture, Enum Output Validation, Session Concurrency Gate, Session Listing, Session Termination, Session Cross-Loading, Scope Inspection.
+- **In Scope**: All 30 user stories: Interactive REPL, Print Mode Capture, Interactive With Message, Dry-run Preview, Project-specific Execution, Verbose Debugging, Fresh Session, Trace Execution, Custom System Prompt, Credential-isolated Execution, File Input, Code Block Extraction, Structured JSON Pipeline, Credential Refresh, Ask Mode, CLI Discoverability, Model Selection, Env-var Configuration, MCP Config Injection, Suppress Effort Max, Keep ClaudeCode Context, Session Isolation via Subdirectory, Output File Capture, Enum Output Validation, Session Concurrency Gate, Session Listing, Session Termination, Session Cross-Loading, Scope Inspection, Topic Creation.
 - **Out of Scope**: Parameter-level edge cases (-> `param/`), command-level integration (-> `command/`), type validation (-> `type/`).
 
 ### Responsibility Table
@@ -40,3 +40,4 @@
 | `027_session_termination.md` | `user_story` spec for Session Termination | ✅ |
 | `028_session_transplant.md` | `user_story` spec for Session Cross-Loading (Transplant) | ✅ |
 | `029_scope_inspection.md` | `user_story` spec for Scope Inspection | ✅ |
+| `030_topic_creation.md` | `user_story` spec for Topic Creation | ✅ |

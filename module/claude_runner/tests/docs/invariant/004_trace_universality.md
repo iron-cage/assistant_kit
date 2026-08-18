@@ -68,6 +68,6 @@ Test case planning for [invariant/004_trace_universality.md](../../../docs/invar
 
 - **Given:** static analysis of `src/cli/parse.rs` and `src/cli/cred_parse.rs`
 - **When:** inspect `parse_args()` in `src/cli/parse.rs`; `parse_isolated_args()` and `parse_refresh_args()` in `src/cli/cred_parse.rs` (and `dispatch_ask()` which calls `parse_args()`)
-- **Then:** all four functions include `--trace` in their flag definitions; no subprocess-executing command omits it; `help` does not accept `--trace` (it is not a subprocess-executing command)
+- **Then:** all four functions include `--trace` in their flag definitions; no subprocess-executing command omits it; `help` does not accept `--trace` (it is not a subprocess-executing command); `topic` will inherit this coverage automatically via the shared `parse_args()` path once its dispatch wiring lands (pending — task 521), requiring no parser change of its own
 - **Exit:** 0
 - **Source:** [invariant/004_trace_universality.md](../../../docs/invariant/004_trace_universality.md)

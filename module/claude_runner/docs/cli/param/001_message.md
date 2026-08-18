@@ -50,6 +50,7 @@ is present on the CLI.
 | 1 | [`run`](../command/01_run.md) | — | One of several print-mode triggers (see D11) |
 | 2 | [`isolated`](../command/03_isolated.md) | — | Forwarded to claude subprocess |
 | 5 | [`ask`](../command/05_ask.md) | — | Same conditional print-mode trigger as `run`, not unconditional |
+| 11 | [`topic`](../command/11_topic.md) | — | The prompt text for the new/continued topic session; identical to `ask`; delegates to `run`'s handler |
 
 ### Referenced User Stories
 

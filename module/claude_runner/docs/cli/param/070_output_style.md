@@ -6,7 +6,7 @@ returns the raw claude output without post-processing (`raw`).
 
 - **Type:** enum (`summary` | `raw`)
 - **Default:** `summary`
-- **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md)
+- **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md), [`topic`](../command/11_topic.md)
 - **Group:** [Runner Control](../param_group/02_runner_control.md)
 - **JSON Key:** `"output-style"`
 
@@ -76,6 +76,7 @@ CLI flag wins when both are set (standard precedence).
 |---|---------|---------|-------|
 | 1 | [`run`](../command/01_run.md) | `summary` | Applied in `run_print_mode()` via `output_style.unwrap_or("summary")` |
 | 5 | [`ask`](../command/05_ask.md) | `summary` | Pure alias for run; same rendering path |
+| 11 | [`topic`](../command/11_topic.md) | `summary` | Identical to `ask`; delegates to `run`'s handler |
 
 ### See Also
 

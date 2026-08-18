@@ -9,7 +9,7 @@ propagates the subprocess exit code.
 
 - **Type:** u8 (0–255)
 - **Default:** `auto` (inherits from `--retry-default`, Tier 3 fallback)
-- **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md)
+- **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md), [`topic`](../command/11_topic.md)
 - **Group:** [Runner Control](../param_group/02_runner_control.md)
 - **Replaces:** `--retry-on-api-error` (renamed + renumbered from 037)
 - **JSON Key:** `"retry-on-service"`
@@ -61,6 +61,7 @@ effective = --retry-override ?? --retry-on-service ?? --retry-default (2)
 |---|---------|---------|-------|
 | 1 | [`run`](../command/01_run.md) | auto | 3-tier resolution in `run_print_mode()` |
 | 5 | [`ask`](../command/05_ask.md) | auto | Same behavior; pure alias for run |
+| 11 | [`topic`](../command/11_topic.md) | auto | Identical to `ask`; delegates to `run`'s handler |
 
 ### See Also
 

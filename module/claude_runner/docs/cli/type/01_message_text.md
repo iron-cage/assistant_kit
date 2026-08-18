@@ -23,9 +23,10 @@ clr -- --not-a-flag         # after --, everything is positional
 | 1 | [`run`](../command/01_run.md) | `[MESSAGE]` |
 | 2 | [`isolated`](../command/03_isolated.md) | `[MESSAGE]` |
 | 5 | [`ask`](../command/05_ask.md) | `[MESSAGE]` |
+| 11 | [`topic`](../command/11_topic.md) | `[MESSAGE]` |
 
 ### Referenced Parameters
 
 | # | Parameter | Commands |
 |---|-----------|----------|
-| 1 | [`[MESSAGE]`](../param/001_message.md) | 3 |
+| 1 | [`[MESSAGE]`](../param/001_message.md) | 4 |

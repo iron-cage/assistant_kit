@@ -41,6 +41,7 @@ clr --append-system-prompt "Always respond in JSON." "List failing tests"
 |---|---------|------------|-----------------|-------|
 | 1 | [`run`](../command/01_run.md) | Full | — | Both params apply; default command |
 | 5 | [`ask`](../command/05_ask.md) | Full | — | Both params apply; only defaults differ |
+| 11 | [`topic`](../command/11_topic.md) | Full | — | Both params apply; identical to `ask`'s Full membership |
 
 ### Referenced Parameters
 

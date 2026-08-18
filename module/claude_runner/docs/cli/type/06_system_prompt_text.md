@@ -23,10 +23,11 @@ clr --append-system-prompt "Always respond in JSON." "List failing tests"
 |---|---------|---------------|
 | 1 | [`run`](../command/01_run.md) | `--system-prompt`, `--append-system-prompt` |
 | 5 | [`ask`](../command/05_ask.md) | `--system-prompt`, `--append-system-prompt` |
+| 11 | [`topic`](../command/11_topic.md) | `--system-prompt`, `--append-system-prompt` |
 
 ### Referenced Parameters
 
 | # | Parameter | Commands |
 |---|-----------|----------|
-| 15 | [`--system-prompt`](../param/015_system_prompt.md) | 2 |
-| 16 | [`--append-system-prompt`](../param/016_append_system_prompt.md) | 2 |
+| 15 | [`--system-prompt`](../param/015_system_prompt.md) | 3 |
+| 16 | [`--append-system-prompt`](../param/016_append_system_prompt.md) | 3 |

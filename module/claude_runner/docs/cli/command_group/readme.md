@@ -15,13 +15,13 @@ Every command belongs to exactly one group — including a command with no sibli
 
 | File | Responsibility |
 |------|----------------|
-| 01_run_ask.md | Group spec: `run`/`ask` — identical handler, identical parameter set, zero default divergence |
+| 01_run_ask.md | Group spec: `run`/`ask`/`topic` — identical handler; `topic` diverges only in `--subdir`'s default |
 
 ### All Groups (9 total)
 
 | # | Group | Members | Shared Handler | Divergence |
 |---|-------|---------|-----------------|------------|
-| 1 | run / ask | 2 | `dispatch_run()` (`src/cli/mod.rs:247`) | None — pure alias |
+| 1 | run / ask / topic | 3 | `dispatch_run()` (`src/cli/mod.rs:247`) | `topic` only — `--subdir` default (see `01_run_ask.md`) |
 | 2 | isolated | 1 | `dispatch_isolated()` (`src/cli/mod.rs:396`) | N/A — sole member |
 | 3 | refresh | 1 | `dispatch_refresh()` (`src/cli/mod.rs:500`) | N/A — sole member |
 | 4 | ps | 1 | `dispatch_ps()` (`src/cli/ps.rs:76`) | N/A — sole member |
@@ -31,7 +31,7 @@ Every command belongs to exactly one group — including a command with no sibli
 | 8 | query | 1 | `dispatch_query()` (`src/cli/query.rs:90`) | N/A — sole member |
 | 9 | help | 1 | N/A — intercepted pre-dispatch in `src/lib.rs`; no dispatch function | N/A — sole member |
 
-**Total:** 9 groups for 10 commands (1 pair + 8 singletons). All 10 claude_runner commands were evaluated pairwise under the Representation Absorption Test — every one of the 9 dispatch functions (`dispatch_run`, `dispatch_ask`, `dispatch_isolated`, `dispatch_refresh`, `dispatch_ps`, `dispatch_kill`, `dispatch_tools`, `dispatch_scope`, `dispatch_query`; `help` is intercepted pre-dispatch in `src/lib.rs` and calls none) is invoked from exactly one call site in `src/lib.rs`'s top-level match, confirmed via a direct grep sweep for cross-calls among all 9 — the only delegation found is `dispatch_ask() -> dispatch_run()`. `run`/`ask` is the only pair sharing both an identical parameter set and an identical dispatch function; every other command forms a Singleton Group. See Evaluated, Not Qualifying below for the nearest misses considered and rejected.
+**Total:** 9 groups for 11 commands (1 triple + 8 singletons). All 11 claude_runner commands were evaluated pairwise under the Representation Absorption Test — every one of the 10 dispatch functions (`dispatch_run`, `dispatch_ask`, `dispatch_topic`, `dispatch_isolated`, `dispatch_refresh`, `dispatch_ps`, `dispatch_kill`, `dispatch_tools`, `dispatch_scope`, `dispatch_query`; `help` is intercepted pre-dispatch in `src/lib.rs` and calls none) is invoked from exactly one call site in `src/lib.rs`'s top-level match, confirmed via a direct grep sweep for cross-calls among all 10 — the only delegations found are `dispatch_ask() -> dispatch_run()` and `dispatch_topic() -> dispatch_run()`. `run`/`ask`/`topic` is the only group sharing an identical dispatch function (with `topic` carrying one stated `--subdir` default divergence); every other command forms a Singleton Group. See Evaluated, Not Qualifying below for the nearest misses considered and rejected.
 
 ### Evaluated, Not Qualifying
 
@@ -44,4 +44,4 @@ Every command belongs to exactly one group — including a command with no sibli
 
 ### Navigation
 
-- [run / ask](01_run_ask.md)
+- [run / ask / topic](01_run_ask.md)

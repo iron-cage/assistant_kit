@@ -39,6 +39,7 @@ interactive/headless/CI environments where no Chrome instance is available.
 | 1 | [`run`](../command/01_run.md) | false | Chrome suppressed in print mode via `use_print` guard (BUG-304) |
 | 5 | [`ask`](../command/05_ask.md) | false | Chrome suppressed in print mode via the same `use_print` guard as `run` — not unconditional (BUG-304) |
 | 3 | [`isolated`](../command/03_isolated.md) | false | `--chrome` injected by default for isolated; this flag suppresses it; env: `CLR_NO_CHROME` |
+| 11 | [`topic`](../command/11_topic.md) | false | Identical to `ask`; delegates to `run`'s handler |
 
 ### Referenced User Stories
 

@@ -19,7 +19,7 @@
 | **Env var** | `CLR_FROM` |
 | **Config key** | `from` (args-file JSON) |
 | **Group** | Runner Control (`02_runner_control.md`) |
-| **Commands** | `run`, `ask` |
+| **Commands** | `run`, `ask`, `topic` |
 
 ### Behavior
 
@@ -97,3 +97,4 @@ CLR_FROM=/home/alice/project-a clr "Continue"
 | # | User Story | Persona |
 |---|------------|---------|
 | 28 | [028_session_transplant.md](../user_story/028_session_transplant.md) | Developer |
+| 30 | [030_topic_creation.md](../user_story/030_topic_creation.md) | Developer |

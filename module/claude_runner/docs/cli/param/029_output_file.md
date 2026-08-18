@@ -6,7 +6,7 @@ to the file and prints it to stdout in one operation.
 
 - **Type:** string (file path)
 - **Default:** — (output goes only to stdout)
-- **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md)
+- **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md), [`topic`](../command/11_topic.md)
 - **Group:** [Runner Control](../param_group/02_runner_control.md)
 - **JSON Key:** `"output-file"`
 
@@ -44,6 +44,7 @@ assembled command description.
 |---|---------|---------|-------|
 | 1 | [`run`](../command/01_run.md) | — | — |
 | 5 | [`ask`](../command/05_ask.md) | — | — |
+| 11 | [`topic`](../command/11_topic.md) | — | Identical to `ask`; delegates to `run`'s handler |
 
 ### See Also
 

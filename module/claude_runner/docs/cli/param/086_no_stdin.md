@@ -7,7 +7,7 @@ FIFO with a live writer, a supervisor-inherited fd) can never block clr.
 - **Type:** bool (standalone flag)
 - **Default:** false (non-TTY stdin is read and auto-detected by default)
 - **Env var:** `CLR_NO_STDIN`
-- **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md)
+- **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md), [`topic`](../command/11_topic.md)
 - **Group:** [Runner Control](../param_group/02_runner_control.md)
 - **JSON Key:** *not supported* — deliberate: stdin JSON config is itself delivered via stdin, so by the time any config could be parsed the blocking read would already have happened. The opt-out must arrive on the command line or in the environment.
 
@@ -44,6 +44,7 @@ and `refresh` have their own stdin handling, out of this flag's scope.
 |---|---------|---------|-------|
 | 1 | [`run`](../command/01_run.md) | false | — |
 | 5 | [`ask`](../command/05_ask.md) | false | — |
+| 11 | [`topic`](../command/11_topic.md) | false | Identical to `ask`; delegates to `run`'s handler |
 
 ### Referenced User Stories
 

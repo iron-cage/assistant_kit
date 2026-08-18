@@ -7,7 +7,7 @@ Fatal errors (spawn failures, binary-not-found) are always emitted regardless of
 
 - **Type:** bool
 - **Default:** false
-- **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md)
+- **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md), [`topic`](../command/11_topic.md)
 - **Group:** [Runner Control](../param_group/02_runner_control.md)
 - **Env:** `CLR_QUIET` (bool: `"1"` or `"true"`; applied only when `--quiet` absent from CLI)
 - **JSON Key:** `"quiet"`
@@ -44,6 +44,7 @@ Introduced to replace the deprecated `--verbosity` (0–5) parameter (TSK-337).
 |---|---------|---------|-------|
 | 1 | [`run`](../command/01_run.md) | false | — |
 | 5 | [`ask`](../command/05_ask.md) | false | — |
+| 11 | [`topic`](../command/11_topic.md) | false | Identical to `ask`; delegates to `run`'s handler |
 
 ### Referenced User Stories
 

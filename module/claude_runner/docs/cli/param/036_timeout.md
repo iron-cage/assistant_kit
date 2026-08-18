@@ -1,4 +1,4 @@
-# CLI Parameter: --timeout (run/ask)
+# CLI Parameter: --timeout (run/ask/topic)
 
 Maximum seconds to wait for the Claude subprocess to complete on the `run`/`ask`
 dispatch paths. When the subprocess does not exit within this limit, `clr` sends
@@ -7,7 +7,7 @@ disables the watchdog entirely (unlimited runtime).
 
 - **Type:** u32 (seconds; 0 = unlimited)
 - **Default:** `0` (unlimited) for print-mode and interactive alike — a watchdog runs only when expressed (TSK-503)
-- **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md)
+- **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md), [`topic`](../command/11_topic.md)
 - **Group:** [Runner Control](../param_group/02_runner_control.md)
 - **JSON Key:** `"timeout"`
 
@@ -34,7 +34,8 @@ precisely to let background work run.
 
 **Cross-command parity:** The `--timeout` parameter on `isolated`/`refresh`
 (see [`020_timeout.md`](020_timeout.md)) uses the same semantics: `0` = unlimited
-(no watchdog). All four commands treat `--timeout 0` identically.
+(no watchdog). All five commands treat `--timeout 0` identically (`topic` via its
+delegation to `run`'s handler).
 
 **Note:** When the timeout fires, `clr` emits to stderr:
 `"Error: timeout after {N}s"` and exits with code 4. Any partial stdout accumulated
@@ -92,6 +93,7 @@ exposure gate-wait time PLUS the execution timeout. Verify:
 |---|---------|---------|-------|
 | 1 | [`run`](../command/01_run.md) | `DEFAULT_PRINT_TIMEOUT_SECS` (0 = unlimited) — print-mode and interactive alike | Watchdog spawned only when resolved timeout > 0 (i.e. expressed) |
 | 5 | [`ask`](../command/05_ask.md) | Same as `run` (pure alias) | Same behavior; pure alias for run |
+| 11 | [`topic`](../command/11_topic.md) | Same as `run` | Identical to `ask`; delegates to `run`'s handler |
 
 ### See Also
 
