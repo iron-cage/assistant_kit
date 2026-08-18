@@ -21,6 +21,9 @@
 //! - T05: `issue-003a` cwd-shortcut is unaffected by `scope::` (even an invalid value)
 //! - T06: `target::projects scope::bogus` rejected with the canonical error
 //! - T07: `target::entries` ignores `scope::` (already fully scoped via `project::`)
+//! - T08: default/global `target::projects` proven to use the fast `count_projects()`
+//!   path (not silently rerouted through the resolver) via an unloadable directory
+//!   entry only the fast path counts
 
 mod common;
 
@@ -736,4 +739,91 @@ fn t07_target_entries_ignores_scope()
     "T07: .count target::entries output must be a bare integer; got: '{s}'"
   ) );
   assert_eq!( n, 6, "T07: expected 6 entries in session s1; got {n}" );
+}
+
+/// T08: default (global) `target::projects` count is produced by the fast
+/// `storage.count_projects()` path, not a silent reroute through the resolver.
+///
+/// ## Purpose
+/// AF2's performance contract (the fast path is preserved at the default/
+/// global scope) previously had no automated regression guard — the task's
+/// own M2 measurement was a grep for `storage.count_projects()`'s call-site
+/// text, which cannot tell whether that text is on the branch actually
+/// executed at runtime. This test proves the contract by observable
+/// behavior instead: `count_projects()` is a raw `fs::read_dir` + `is_dir()`
+/// count with no `Project::load()` call, while the resolver path
+/// (`resolve_scoped_projects()` → `list_projects()`) calls `Project::load()`
+/// per entry and silently skips (via `eprintln!`, not an error) any
+/// directory that fails to load.
+///
+/// ## Coverage
+/// A directory literally named `-` fails `decode_path()`'s "encoded path is
+/// empty after removing prefix" check, so `Project::load()` returns `Err`
+/// for it. The fast path counts it anyway (no load attempted); the resolver
+/// path silently drops it.
+///
+/// ## Validation Strategy
+/// Write one real, loadable project plus a raw `-`-named directory directly
+/// under `<root>/projects/`. Run `.count target::projects` (no `scope::`)
+/// and assert count == 2 — this can only be true if the fast path is what
+/// actually executes; a silent reroute to the resolver would drop the
+/// unloadable directory and yield 1. Then run the same command with
+/// `scope::local` and assert count == 1, confirming the contrast is real.
+///
+/// ## Related Requirements
+/// `task/claude_storage/completed/517_count_scope_retrofit.md` — AF2, M2
+#[ test ]
+fn t08_default_scope_fast_path_counts_unloadable_dir_resolver_path_skips_it()
+{
+  let root       = TempDir::new().unwrap();
+  let target_tmp = TempDir::new().unwrap();
+  let target     = target_tmp.path().join( "t08target" );
+  std::fs::create_dir_all( &target ).unwrap();
+
+  common::write_path_project_session( root.path(), &target, "s001", 2 );
+
+  // `is_dir()` finds this, but `Project::load()` cannot: `decode_path("-")`
+  // fails its "empty after removing prefix" check.
+  std::fs::create_dir_all( root.path().join( "projects" ).join( "-" ) ).unwrap();
+
+  let global_out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .current_dir( &target )
+    .arg( ".count" )
+    .arg( "target::projects" )
+    .output()
+    .unwrap();
+
+  let local_out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .current_dir( &target )
+    .arg( ".count" )
+    .arg( "target::projects" )
+    .arg( "scope::local" )
+    .output()
+    .unwrap();
+
+  assert_exit( &global_out, 0 );
+  assert_exit( &local_out, 0 );
+
+  let global_n : usize = stdout( &global_out ).trim().parse().unwrap_or_else( |_| panic!(
+    "T08: global count must be a bare integer; got: '{}'", stdout( &global_out )
+  ) );
+  let local_n : usize = stdout( &local_out ).trim().parse().unwrap_or_else( |_| panic!(
+    "T08: scope::local count must be a bare integer; got: '{}'", stdout( &local_out )
+  ) );
+
+  assert_eq!(
+    global_n, 2,
+    "T08: default/global target::projects must use the fast count_projects() path, which \
+     counts the unloadable '-' directory alongside the real project (raw fs::read_dir + \
+     is_dir(), no Project::load()) — got {global_n}. A count of 1 here would mean the default \
+     scope was silently rerouted through the resolver path, which drops directories \
+     Project::load() can't parse."
+  );
+  assert_eq!(
+    local_n, 1,
+    "T08: scope::local must use the resolver path (list_projects()), which silently skips \
+     the unloadable '-' directory and returns only the real project — got {local_n}."
+  );
 }

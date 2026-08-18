@@ -469,9 +469,20 @@ fn t02_scope_under_finds_session_in_descendant_project()
   let child  = parent.join( "t02-child" );
   common::write_path_project_session( root.path(), &child, "t02-session", 2 );
 
+  // Fix(BUG-scope-under-t02): a literal "/tmp" cwd does NOT isolate path:: as
+  // load-bearing here — every TempDir in this suite is itself rooted under
+  // /tmp (TMPDIR is unset), so encode_path("/tmp") = "-tmp" is a real prefix
+  // of `child`'s own encoded name, and scope.rs's matches_under() conservative-
+  // includes on top of that. A second, independent TempDir's random suffix
+  // diverges from `root`'s in the encoded string, which is what actually
+  // makes the cwd unrelated in the filesystem-ancestor sense matches_under()
+  // checks. See scope.rs's own Fix(BUG-003) comment: "a shallow shared
+  // ancestor (e.g. /tmp) exists just as reliably as a genuine one."
+  let unrelated_cwd = TempDir::new().unwrap();
+
   let out = common::clg_cmd()
     .env( "CLAUDE_STORAGE_ROOT", root.path() )
-    .current_dir( root.path() )
+    .current_dir( unrelated_cwd.path() )
     .arg( ".show" )
     .arg( "session_id::t02-session" )
     .arg( "scope::under" )
@@ -483,7 +494,10 @@ fn t02_scope_under_finds_session_in_descendant_project()
   let s = stdout( &out );
   assert!(
     s.contains( "t02-session" ),
-    "T02: scope::under path::<ancestor> must find session in descendant project; got:\n{s}"
+    "T02: scope::under path::<ancestor> must find session in descendant project, from a cwd \
+     whose encoded form does not prefix-match parent/child's (a distinct TempDir, not a literal \
+     \"/tmp\") so the assertion actually isolates path:: as load-bearing (not a cwd-fallback \
+     coincidence); got:\n{s}"
   );
 }
 

@@ -13,7 +13,7 @@ Search session content for a query string across projects and sessions. Use this
 
 `scope::` (default `global`) and `path::` (default cwd) narrow the project set searched when `project::` is absent (see [Scope Configuration](../param_group/05_scope_configuration.md)): with `session::` given, they scope which projects are searched for that session; with neither `project::` nor `session::` given, they scope the full-text search itself. `global` reproduces the original unscoped search exactly. An explicit `project::` makes both parameters a no-op (already fully scoped).
 
-**Exit:** `0` success | `1` argument error (missing `query::`) | `2` storage read error
+**Exit:** `0` success | `1` argument error (missing `query::`, session not found, or `session::` ambiguous across scoped projects) | `2` storage read error
 
 **Syntax:**
 ```bash
@@ -38,7 +38,7 @@ claude_storage .search query::QUERY [case_sensitive::1] [entry_type::user|assist
 
 **Algorithm (4 steps):**
 1. Validate `query::` — reject missing or whitespace-only values; build search filter with case sensitivity and entry type
-2. Determine search scope — specific session within an explicit project (prefix-matched); specific session across `scope::`-resolved projects (default `global`) when `project::` is absent; a specific project; or `scope::`-resolved projects (default `global`, reproducing the original all-projects search) when neither is given
+2. Determine search scope — specific session within an explicit project (prefix-matched); specific session across `scope::`-resolved projects (default `global`) when `project::` is absent — if the session id resolves in exactly one scoped project it is used, in zero it's a "Session not found" error, in 2+ it's rejected as ambiguous (error names every matching project; narrow with `project::` or a longer session id); a specific project; or `scope::`-resolved projects (default `global`, reproducing the original all-projects search) when neither is given
 3. Iterate sessions in scope — parse JSONL entries, apply filter (text match + optional entry type); skip corrupted sessions with warning
 4. Format output — match count header; per-match: session ID, entry type, content excerpt
 
@@ -62,6 +62,7 @@ claude_storage .search query::error scope::local
 - Use `q` alias for shorter syntax: `claude_storage .search q::version_bump`
 - Without `project::`, searches `scope::`-resolved projects (default `global` — all projects, may be slow on large storage); use `scope::local`/`under`/`relevant`/`around` with `path::` to narrow the search boundary without naming an exact `project::`
 - `session::` matches a leading prefix of the session ID, never a substring found elsewhere in the ID — a matching predicate shared with `.show`/`.export`/`.tail` that briefly matched substrings anywhere in the ID is fixed (BUG-490)
+- `session::` without `project::`: if the id (or its shared prefix) resolves in more than one `scope::`-resolved project, the command exits `1` with an `"Ambiguous session::..."` error naming every matching project, instead of silently returning the first candidate's content
 
 ### Referenced Parameter Groups
 

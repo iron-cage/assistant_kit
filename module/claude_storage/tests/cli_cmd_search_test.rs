@@ -23,6 +23,7 @@
 //! - T05:    `scope::bogus` rejected with the canonical `validate_scope()` error
 //! - T06:    `project::` given → `scope::` is ignored
 //! - T07:    `path::` anchors scope resolution without cwd involvement
+//! - T08:    `session::` matching 2+ scoped projects returns an `Ambiguous` error naming both
 
 mod common;
 
@@ -820,5 +821,67 @@ fn t07_path_anchor_override_scopes_resolution()
     s.contains( "t07-unique-content" ),
     "T07: path:: must anchor scope resolution to the given directory, independent of cwd; \
     got:\n{s}"
+  );
+}
+
+/// T08: `session::` matching 2+ scoped projects returns an `Ambiguous` error naming both.
+///
+/// ## Purpose
+/// Close the MAAV-flagged gap: the "`session::` given, no `project::`" branch
+/// collects every scope-resolved project the session id resolves in, instead of
+/// silently returning the first candidate. With the new `global` default, a
+/// shared session id across 2+ projects must be reported as ambiguous rather
+/// than silently returning the wrong project's content.
+///
+/// ## Coverage
+/// Exit 1; stderr contains "Ambiguous" and both candidate project identities;
+/// no result content from either project on stdout.
+///
+/// ## Validation Strategy
+/// Write the SAME session id into two distinct (unrelated) project paths, both
+/// reachable under the default `global` scope. Run `.search query::X
+/// session::<shared-id>` with neither `project::` nor `scope::`. Assert exit 1,
+/// stderr names the ambiguity, and stdout has no match content from either
+/// project.
+///
+/// ## Related Requirements
+/// MAAV Round 2, Dimension 4 (Task 515) — Fresh Challenger + Adversary finding:
+/// ambiguity-detection branch had zero test coverage.
+#[ test ]
+fn t08_session_ambiguous_across_scoped_projects_rejected()
+{
+  let root = TempDir::new().unwrap();
+  let cwd  = TempDir::new().unwrap();
+  let proj_a = root.path().join( "t08-proj-a" );
+  let proj_b = root.path().join( "t08-proj-b" );
+
+  common::write_path_project_session_with_last_message(
+    root.path(), &proj_a, "t08-shared-session", 0, "t08-content-in-a"
+  );
+  common::write_path_project_session_with_last_message(
+    root.path(), &proj_b, "t08-shared-session", 0, "t08-content-in-b"
+  );
+
+  let out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .current_dir( cwd.path() )
+    .arg( ".search" )
+    .arg( "query::t08-content" )
+    .arg( "session::t08-shared-session" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 1 );
+  let err = stderr( &out );
+  assert!(
+    err.contains( "Ambiguous" ) && err.contains( "t08-shared-session" ),
+    "T08: session:: matching the same id in 2+ scoped projects must be rejected as \
+    ambiguous, naming the session id; got: {err}"
+  );
+  let s = stdout( &out );
+  assert!(
+    !s.contains( "t08-content-in-a" ) && !s.contains( "t08-content-in-b" ),
+    "T08: an ambiguous session:: match must not silently return either candidate's \
+    content; got:\n{s}"
   );
 }

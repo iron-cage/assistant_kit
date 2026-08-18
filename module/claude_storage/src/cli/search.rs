@@ -2,8 +2,11 @@
 
 use core::fmt::Write as FmtWrite;
 use unilang::{ VerifiedCommand, ExecutionContext, OutputData, ErrorData, ErrorCode };
-use super::storage::{ create_storage, load_project_for_param, find_session_mut };
+use super::storage::{ create_storage, load_project_for_param };
 use super::scope::{ validate_scope, resolve_scoped_projects };
+
+/// One search match, tagged with the project and session it was found in.
+type SearchHit = ( claude_storage_core::ProjectId, String, claude_storage_core::SearchMatch );
 
 /// Search session content for query string
 ///
@@ -103,20 +106,50 @@ pub fn search_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
       let scope = validate_scope( scope_raw, "global" )?;
       let scoped_projects = resolve_scoped_projects( &storage, &scope, path_raw )?;
 
-      let mut found = false;
+      // Collect every project the session id resolves in, instead of stopping at the
+      // first success — a global-scope search over multiple projects can hit a session
+      // id (or, via try_search_session_in_project's prefix matching, a shared prefix)
+      // in more than one project. Silently taking the first candidate would return the
+      // wrong project's content with no indication to the caller. "Not found in this
+      // candidate" is the expected, common outcome of scanning N projects for 1 session
+      // and stays silent (Ok(None)); only genuine per-candidate errors (I/O, corrupted
+      // session) are logged, matching the eprintln! convention already used by the
+      // "no project, no session" branch below.
+      let mut hits : Vec< ( claude_storage_core::ProjectId, Vec< SearchHit > ) > = Vec::new();
       for project in &scoped_projects
       {
-        if let Ok( matches ) = search_session_in_project( project, sess_id, &filter )
+        match try_search_session_in_project( project, sess_id, &filter )
         {
-          all_matches.extend( matches );
-          found = true;
-          break;
+          Ok( Some( matches ) ) => hits.push( ( project.id().clone(), matches ) ),
+          Ok( None ) => {}
+          Err( e ) => eprintln!( "warning: search skipped project {:?} while resolving session {sess_id}: {e}", project.id() ),
         }
       }
 
-      if !found
+      match hits.len()
       {
-        return Err( ErrorData::new( ErrorCode::InternalError, format!( "Session not found: {sess_id}" ) ) );
+        0 =>
+        {
+          return Err( ErrorData::new( ErrorCode::InternalError, format!( "Session not found: {sess_id}" ) ) );
+        }
+        1 =>
+        {
+          for ( _, matches ) in hits
+          {
+            all_matches.extend( matches );
+          }
+        }
+        _ =>
+        {
+          let ids : Vec< String > = hits.iter().map( | ( id, _ ) | format!( "{id:?}" ) ).collect();
+          return Err( ErrorData::new(
+            ErrorCode::InternalError,
+            format!(
+              "Ambiguous session:: '{sess_id}' matches sessions in {} projects ({}); narrow with project:: or a longer session id",
+              hits.len(), ids.join( ", " )
+            ),
+          ) );
+        }
       }
     }
   }
@@ -207,6 +240,10 @@ pub fn search_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
 
 /// Search `sess_id` within a single `project`, returning `(project_id, session_id, match)` triples.
 ///
+/// Thin wrapper over `try_search_session_in_project` that turns "not found" into
+/// an error — correct here because this caller (the `project::`+`session::` branch)
+/// already knows `sess_id` is expected to live in exactly this `project`.
+///
 /// Fix(issue-020): Use prefix matching for partial UUID, consistent with `show_routine`
 /// and `export_routine` (issue-011 fix).
 ///
@@ -224,15 +261,42 @@ fn search_session_in_project(
   project : &claude_storage_core::Project,
   sess_id : &str,
   filter  : &claude_storage_core::SearchFilter,
-) -> core::result::Result< Vec< ( claude_storage_core::ProjectId, String, claude_storage_core::SearchMatch ) >, ErrorData >
+) -> core::result::Result< Vec< SearchHit >, ErrorData >
+{
+  try_search_session_in_project( project, sess_id, filter )?
+    .ok_or_else( || ErrorData::new( ErrorCode::InternalError, format!( "Session not found: {sess_id}" ) ) )
+}
+
+/// Search `sess_id` within a single `project`, distinguishing "not present here"
+/// from a genuine failure.
+///
+/// Returns `Ok(None)` when `sess_id` does not resolve in `project` — the expected,
+/// non-exceptional outcome when scanning multiple candidate projects for one
+/// session id (see the multi-project loop above), so callers there must not log
+/// it as a warning. Returns `Err` only for genuine failures: sessions unlistable,
+/// or the search itself fails.
+///
+/// # Errors
+///
+/// Returns error if sessions cannot be listed in `project`, or the search itself
+/// fails — never for "`sess_id` not found here".
+fn try_search_session_in_project(
+  project : &claude_storage_core::Project,
+  sess_id : &str,
+  filter  : &claude_storage_core::SearchFilter,
+) -> core::result::Result< Option< Vec< SearchHit > >, ErrorData >
 {
   let mut sessions = project.all_sessions()
     .map_err( | e | ErrorData::new( ErrorCode::InternalError, format!( "Failed to list sessions: {e}" ) ) )?;
 
-  let session = find_session_mut( &mut sessions, sess_id )?;
+  let Some( session ) = sessions.iter_mut().find( | s | s.id() == sess_id || s.id().starts_with( sess_id ) )
+  else
+  {
+    return Ok( None );
+  };
 
   let matches = session.search( filter )
     .map_err( | e | ErrorData::new( ErrorCode::InternalError, format!( "Search failed: {e}" ) ) )?;
 
-  Ok( matches.into_iter().map( | m | ( project.id().clone(), sess_id.to_string(), m ) ).collect() )
+  Ok( Some( matches.into_iter().map( | m | ( project.id().clone(), sess_id.to_string(), m ) ).collect() ) )
 }
