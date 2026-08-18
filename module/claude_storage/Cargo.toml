@@ -31,7 +31,11 @@ assert_cmd = { workspace = true }
 
 [build-dependencies]
 serde_yaml = { workspace = true }
-unilang = { workspace = true, features = [ "approach_yaml_multi_build" ] }
+# Fix(BUG-007, assistant registry): "enabled" must be explicit — unilang's multi_yaml
+# module is cfg-gated on it; isolated package builds (cargo publish sandbox) fail
+# E0433 without it. Lost from the workspace def in commit 2f45fdc2 (2026-07-02);
+# every published claude_storage version (1.0.0-1.9.1) carried it.
+unilang = { workspace = true, features = [ "enabled", "approach_yaml_multi_build" ] }
 
 [[bin]]
 name = "claude_storage"

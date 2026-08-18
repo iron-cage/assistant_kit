@@ -82,8 +82,16 @@ mod cli
       ".count"               => claude_storage::cli::count_routine,
       ".search"              => claude_storage::cli::search_routine,
       ".export"              => claude_storage::cli::export_routine,
-      ".path"                => claude_storage::cli::project_path_routine,
-      ".exists"              => claude_storage::cli::project_exists_routine,
+      // Fix(BUG-001): keys must match the YAML command names exactly — the loop
+      // below looks up AGGREGATED_COMMANDS' YAML-sourced names in this map.
+      // Root cause: keys were ".path"/".exists" while claude_storage's YAML names
+      // them ".project.path"/".project.exists"; the lookup missed, so both
+      // routines were compiled but never registered (dead commands listed in help).
+      // Pitfall: claude_storage::register_commands() is a no-op — YAML aggregation
+      // + this map is the ONLY path storage commands reach the registry through;
+      // a key/name mismatch here silently drops the command with no error.
+      ".project.path"        => claude_storage::cli::project_path_routine,
+      ".project.exists"      => claude_storage::cli::project_exists_routine,
       ".session.dir"         => claude_storage::cli::session_dir_routine,
       ".session.ensure"      => claude_storage::cli::session_ensure_routine,
       ".journal.list"        => claude_journal_viewer::routines::list_routine,
@@ -213,8 +221,8 @@ mod cli
             CommandEntry { name : ".search".to_string(),         desc : "Search conversation content across sessions".to_string() },
             CommandEntry { name : ".export".to_string(),         desc : "Export session data in various formats".to_string() },
             CommandEntry { name : ".projects".to_string(),       desc : "List all known projects with session counts".to_string() },
-            CommandEntry { name : ".path".to_string(),           desc : "Print filesystem path of a project directory".to_string() },
-            CommandEntry { name : ".exists".to_string(),         desc : "Check whether a project has any sessions".to_string() },
+            CommandEntry { name : ".project.path".to_string(),   desc : "Print filesystem path of a project directory".to_string() },
+            CommandEntry { name : ".project.exists".to_string(), desc : "Check whether a project has any sessions".to_string() },
             CommandEntry { name : ".session.dir".to_string(),    desc : "Print the filesystem path of a session directory".to_string() },
             CommandEntry { name : ".session.ensure".to_string(), desc : "Ensure a session directory exists (create if missing)".to_string() },
           ],

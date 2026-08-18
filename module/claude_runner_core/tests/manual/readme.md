@@ -135,15 +135,31 @@ See `-corner_cases_exhaustive.md` for complete corner case analysis.
 - execute_interactive() TTY mode (requires real terminal)
 - Claude binary not in PATH (requires PATH manipulation)
 
-<!-- BUG-002 task/claude_runner_core/bug/002_ac_claims_unreachable_zero_failures.md — this
-directory's own stated prerequisite ("Claude Code binary must be in PATH") is the pre-existing,
-unused design slot the 5 control_session_*_test.rs files structurally belong in (Fix Location
-Option A), rather than the offline Container-Only automated sweep. -->
-- Bidirectional control-session integration tests (`control_session_*_test.rs`) requiring a
-  real, authenticated `claude` binary — see BUG-002 for routing recommendation
+- Live end-to-end pass of the control-session integration tests (`control_session_*_test.rs`) —
+  excluded from the default automated sweep and run via the explicit opt-in command below
+  (TSK-419); a live authenticated pass has not been recorded in this environment
 - Continuation flag with missing/corrupted session
 - API key with invalid values (security sensitive)
 - Very large output (>1GB) - impractical
+
+### Control-Session Integration Tests (manual opt-in — TSK-419, fixes BUG-002)
+
+The 5 `control_session_*_test.rs` binaries (28 tests, TSK-415 Phase 2) each spawn a real,
+authenticated `claude` subprocess via `control_session_common`'s `spawn_session()`. The shared
+runbox image intentionally ships no `claude` binary ("Offline tests by default"), so these
+binaries are excluded from the default automated sweep via `claude_runner/.config/nextest.toml`'s
+`default-filter` — they still compile in every run, and remain real, no-mock Rust. Run them
+explicitly in an environment satisfying this directory's stated prerequisite ("Claude Code
+binary must be in PATH", authenticated):
+
+```bash
+cd module/claude_runner_core
+cargo nextest run --all-features -E 'binary(/^control_session_/)' --ignore-default-filter
+```
+
+`--ignore-default-filter` lifts the exclusion; the `-E` filterset then selects exactly the 5
+control-session binaries. Without a `claude` binary the only runtime failure is the documented
+spawn-site panic (`control_session_common/mod.rs:44`) — a precondition failure, not a build error.
 
 ## Security Testing
 

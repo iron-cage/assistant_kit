@@ -167,10 +167,21 @@ fn ic1_register_commands_contract()
 #[test]
 fn ic2_no_orphan_yaml_commands()
 {
-  // Note: `.path` and `.exists` are in the PHF routines map but their YAML
-  // names are `.project.path` / `.project.exists` — the name mismatch means
-  // register_static_commands() never activates them.  Orphan PHF entries,
-  // not orphan *commands* — excluded here until the mapping is fixed.
+  // Fix(BUG-001): `.project.path`/`.project.exists` were excluded here while the
+  // PHF map carried mismatched keys (".path"/".exists") that never matched the
+  // YAML names — the routines were compiled but unreachable.
+  // Root cause: PHF keys drifted from the YAML command names they must mirror.
+  // Why Not Caught: this very test documented the mismatch as an exclusion
+  // instead of failing on it — the workaround made the suite green while the
+  // commands stayed dead; no other test exercised the two routines end-to-end.
+  // Fix Applied: PHF keys renamed to the canonical `.project.*` names (matching
+  // claude_storage's YAML and its own standalone binary); both commands restored
+  // to this coverage list.
+  // Prevention: this test now covers every storage entry in the PHF map — a
+  // future key/name drift fails here as exit 1 instead of hiding behind an
+  // exclusion comment.
+  // Pitfall: register_static_commands() silently skips PHF keys with no matching
+  // YAML name — absence of a registration error is NOT evidence the command works.
   let export_dir = tempfile::TempDir::new().unwrap();
   let export_path = export_dir.path().join( "export_out" );
   let export_arg = format!( "output::{}", export_path.display() );
@@ -179,6 +190,7 @@ fn ic2_no_orphan_yaml_commands()
     vec![ ".claude" ], vec![ ".claude.help" ],
     vec![ ".status" ], vec![ ".list" ], vec![ ".show" ], vec![ ".projects" ],
     vec![ ".count" ], vec![ ".search", "query::test" ], vec![ ".export", "session_id::test", &export_arg ],
+    vec![ ".project.path" ], vec![ ".project.exists" ],
     vec![ ".session.dir" ], vec![ ".session.ensure" ],
   ];
 

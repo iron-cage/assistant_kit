@@ -452,7 +452,8 @@ pub enum ErrorKind
 {
   /// Transient rate limit reached (exit code 2 — HTTP 429, retry in seconds).
   RateLimit,
-  /// Period quota exhausted ("You've hit your limit" pattern — wait for reset or switch account).
+  /// Period quota exhausted ("You've hit your session/weekly limit" patterns, plus the
+  /// plain "You've hit your limit" form — wait for reset or switch account).
   QuotaExhausted,
   /// API-level error (HTTP 5xx/4xx — "API Error: " pattern).
   ApiError,
@@ -472,6 +473,7 @@ pub enum ErrorKind
 //     as ApiError → ErrorClass::Service instead of ErrorClass::Auth)
 //   "Not logged in"        — credential-absent message (TSK-453)
 //   "Please run /login"    — credential-expired / login-required message (TSK-453)
+//   "OAuth session expired" — refresh-failure form (Fix BUG-494)
 //
 // NOTE: E4 (Request Timed Out) retry progress uses "API Error (Request timed out.)"
 // which does NOT match "API Error: " (parenthesis, not colon-space). However, E4 hangs
@@ -483,6 +485,18 @@ pub enum ErrorKind
 // and never appears in print-mode captured stdout/stderr.
 const ERROR_PATTERNS : &[ ( &str, ErrorKind ) ] =
 &[
+  // Fix(BUG-495): the real claude CLI qualifies the quota message with the limit period
+  //   ("session"/"weekly"), inserting a word between "your" and "limit" that breaks the
+  //   plain form's substring match — every real quota occurrence (0-for-45 in the source
+  //   corpus) fell through to Unknown, making ErrorClass::Account unreachable in practice.
+  // Root cause: the plain-form pattern was authored from an assumed message shape, never
+  //   validated against a captured real CLI emission.
+  // Pitfall: a category having a pattern is not evidence the category is covered — a
+  //   single-pattern category is either 100% or 0% covered; validate each pattern against
+  //   captured production output, not a remembered string.
+  ( "You've hit your session limit",                    ErrorKind::QuotaExhausted ),
+  ( "You've hit your weekly limit",                     ErrorKind::QuotaExhausted ),
+  // Plain form retained as cheap insurance for invocation modes not seen in the corpus.
   ( "You've hit your limit",                            ErrorKind::QuotaExhausted ),
   ( "Your organization does not have access to Claude", ErrorKind::AuthError ),
   // Fix(BUG-314): "authentication_error" precedes the "API Error: " catch-all.
@@ -499,6 +513,16 @@ const ERROR_PATTERNS : &[ ( &str, ErrorKind ) ] =
   // reason as BUG-314.
   ( "Not logged in",                                    ErrorKind::AuthError ),
   ( "Please run /login",                                ErrorKind::AuthError ),
+  // Fix(BUG-494): "Failed to authenticate: OAuth session expired and could not be
+  //   refreshed" is a fifth auth-failure shape matched by none of the four patterns
+  //   above — it fell through to Unknown, retrying under (retry_on_unknown,
+  //   unknown_delay) instead of (retry_on_auth, auth_delay).
+  // Root cause: ERROR_PATTERNS grows reactively, one observed incident at a time; no
+  //   mechanism enumerates the auth-failure shapes the claude CLI can actually emit.
+  // Pitfall: an uncovered shape of an already-modeled category is a policy misrouting,
+  //   not a cosmetic mislabel — Unknown and AuthError resolve to independently
+  //   configured retry parameters downstream (retry_classify.rs).
+  ( "OAuth session expired",                            ErrorKind::AuthError ),
   ( "API Error: ",                                      ErrorKind::ApiError ),
 ];
 

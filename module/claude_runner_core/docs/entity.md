@@ -5,14 +5,14 @@
 | Entity | Purpose | Master File | Instances |
 |--------|---------|-------------|----------:|
 | `api/` | Public API contract for execution control | [api/readme.md](api/readme.md) | 1 |
-| `claude_params/` | Claude CLI parameter specifications (60 params) | [claude_params/readme.md](claude_params/readme.md) | 60 |
+| `claude_params/` | Claude CLI parameter specifications | [claude_params/readme.md](claude_params/readme.md) | 62 |
 | `data_structure/` | Domain type documentation for command builder | [data_structure/readme.md](data_structure/readme.md) | 1 |
 | `failure_mode/` | Documented failure modes and silent error conditions | [failure_mode/readme.md](failure_mode/readme.md) | 4 |
 | `feature/` | Behavioral requirements for execution control | [feature/readme.md](feature/readme.md) | 6 |
 | `invariant/` | Measurable constraints for execution behavior | [invariant/readme.md](invariant/readme.md) | 2 |
 | `pattern/` | Reusable design patterns in the runner core | [pattern/readme.md](pattern/readme.md) | 1 |
-| `tests/docs/error/` | Per-error condition test case specifications | [../../tests/docs/error/readme.md](../tests/docs/error/readme.md) | 0 |
-| `tests/docs/feature/` | Per-feature test case specifications | [../../tests/docs/feature/readme.md](../tests/docs/feature/readme.md) | 0 |
+| `tests/docs/error/` | Per-error condition test case specifications | [../tests/docs/error/readme.md](../tests/docs/error/readme.md) | 1 |
+| `tests/docs/feature/` | Per-feature test case specifications | [../tests/docs/feature/readme.md](../tests/docs/feature/readme.md) | 3 |
 
 ## Master Doc Instances Table
 

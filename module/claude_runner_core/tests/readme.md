@@ -46,11 +46,11 @@ This directory contains all functional tests for the `claude_runner_core` crate,
 | `control_stderr_drain_test.rs` | Regression: stderr-flooding subprocess must not deadlock control session |
 | `fake_claude_bin/` | Shared fake-`claude`-script helper for subprocess tests (not a test binary) |
 | `control_session_common/` | Shared real-`claude`-spawn helper for control-session tests (not a test binary) |
-| `control_session_lifecycle_test.rs` | Test P0-1 fixture integrity + interrupt/timeout/crash/stopTask/backgroundTasks (task 415) |
-| `control_session_settings_test.rs` | Test live session-config control methods: permission mode, model, thinking tokens, flags, stream input (task 415) |
-| `control_session_cached_accessors_test.rs` | Test the 5 cached-accessor control methods (task 415) |
-| `control_session_mcp_test.rs` | Test MCP-server control methods: status, reconnect, toggle, set servers, permission override (task 415) |
-| `control_session_file_task_test.rs` | Test file/session-state control methods: rewind, context usage, read file, reload, seed read state (task 415) |
+| `control_session_lifecycle_test.rs` | Test P0-1 fixture integrity + interrupt/timeout/crash/stopTask/backgroundTasks (task 415; manual track — excluded from default sweep, TSK-419) |
+| `control_session_settings_test.rs` | Test live session-config control methods: permission mode, model, thinking tokens, flags, stream input (task 415; manual track — excluded from default sweep, TSK-419) |
+| `control_session_cached_accessors_test.rs` | Test the 5 cached-accessor control methods (task 415; manual track — excluded from default sweep, TSK-419) |
+| `control_session_mcp_test.rs` | Test MCP-server control methods: status, reconnect, toggle, set servers, permission override (task 415; manual track — excluded from default sweep, TSK-419) |
+| `control_session_file_task_test.rs` | Test file/session-state control methods: rewind, context usage, read file, reload, seed read state (task 415; manual track — excluded from default sweep, TSK-419) |
 | `docs/` | Test surface spec files (feature behavioral requirement cases) |
 | `fixtures/sdk_control_capture/` | Real captured Agent SDK wire evidence for the 25 `Query` control methods (task 415 Phase 0) |
 
@@ -89,7 +89,7 @@ This test suite covers the claude_runner_core crate's builder pattern API for Cl
   - issue-token-limit-default: Migration from factory pattern didnt preserve 200K default (later corrected to 128K, BUG-429)
   - Root Cause, Why Not Caught Initially, Fix Applied, Prevention, Pitfall documented
 - Test organization: Test Matrix cataloging, Lessons Learned documentation, Cross-references in Out of Scope
-- Bidirectional control protocol (5 test files, 28 Test Matrix rows, task 415):
+- Bidirectional control protocol (5 test files, 28 Test Matrix rows, task 415 — **manual track**: excluded from the default `verb/test`/`verb/test_only` sweep via `claude_runner/.config/nextest.toml` `default-filter`, since the runbox image intentionally ships no `claude` binary; still compiled in every run; opt-in command in `tests/manual/readme.md` (TSK-419, fixes BUG-002)):
   - Real `claude` subprocess spawned via `spawn_control_session()` for every test — no mocking
   - Lifecycle/fault handling: `interrupt`, request timeout, subprocess crash, `stopTask`, `backgroundTasks`
   - Live session config: `setPermissionMode`, `setModel`, `setMaxThinkingTokens`, `applyFlagSettings`, `streamInput`

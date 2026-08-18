@@ -66,7 +66,12 @@ error_tools            = { workspace = true, optional = true }
 cli_fmt                = { workspace = true, optional = true }
 
 [build-dependencies]
-unilang    = { workspace = true, features = [ "approach_yaml_multi_build" ] }
+# Fix(BUG-007): "enabled" must be explicit — unilang's whole mod_interface tree
+# (including multi_yaml) is cfg-gated on it. The workspace build masks its absence
+# via host-side feature unification; an isolated package build (cargo publish
+# sandbox) resolves only this edge and fails E0433 without it. The feature was
+# lost from [workspace.dependencies.unilang] in commit 2f45fdc2 (2026-07-02).
+unilang    = { workspace = true, features = [ "enabled", "approach_yaml_multi_build" ] }
 serde_yaml = { workspace = true }
 
 [dev-dependencies]
