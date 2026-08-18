@@ -171,6 +171,35 @@ fn print_bg_wait_ceiling_ms_sets_env_var() {
 }
 
 #[test]
+fn compact_window_sets_env_var() {
+  let cmd_builder = ClaudeCommand::new()
+    .with_compact_window( Some( 500_000 ) );
+
+  let cmd = cmd_builder.build_command_for_test();
+
+  let debug = format!( "{cmd:?}" );
+  assert!( debug.contains( "CLAUDE_CODE_AUTO_COMPACT_WINDOW" ), "Missing CLAUDE_CODE_AUTO_COMPACT_WINDOW env var" );
+  assert!( debug.contains( "500000" ), "Incorrect compact_window value" );
+}
+
+#[test]
+fn compact_window_none_suppresses_env_var() {
+  // compact_window is the only Tier 1 field whose builder takes Option<u32> directly —
+  // None fully suppresses the env var (deferring to the model-native window), exercising
+  // the `if let Some( window )` branch of env_pairs() that no bare-value sibling covers
+  let cmd_builder = ClaudeCommand::new()
+    .with_compact_window( None );
+
+  let cmd = cmd_builder.build_command_for_test();
+
+  let debug = format!( "{cmd:?}" );
+  assert!(
+    !debug.contains( "CLAUDE_CODE_AUTO_COMPACT_WINDOW" ),
+    "compact_window None must fully suppress the env var, got: {debug}"
+  );
+}
+
+#[test]
 fn defaults_set_tier1_env_vars() {
   // Verify Tier 1 defaults are set (different from standard)
   let cmd_builder = ClaudeCommand::new();
@@ -193,6 +222,9 @@ fn defaults_set_tier1_env_vars() {
 
   assert!( debug.contains( "CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS" ), "Default print_bg_wait_ceiling_ms not set" );
   assert!( debug.contains( "CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS=\"0\"" ), "Incorrect default print_bg_wait_ceiling_ms: expected 0" );
+
+  assert!( debug.contains( "CLAUDE_CODE_AUTO_COMPACT_WINDOW" ), "Default compact_window not set" );
+  assert!( debug.contains( "CLAUDE_CODE_AUTO_COMPACT_WINDOW=\"300000\"" ), "Incorrect default compact_window: expected 300000" );
 }
 
 // ── CLAUDE_CODE_CHILD_SESSION removal ────────────────────────────────────────

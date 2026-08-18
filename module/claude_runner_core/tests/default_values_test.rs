@@ -144,6 +144,23 @@ fn default_print_bg_wait_ceiling_ms_is_zero() {
 }
 
 #[test]
+fn default_compact_window_is_300k() {
+  // compact_window defaults to Some(300_000) — caps the auto-compaction window below
+  // the model-native context (200K standard / 1M extended) so automation runs never
+  // silently accumulate an extended-window context; None opts back into model-native
+  // (see docs/claude_params/071_compact_window.md)
+  let cmd_builder = ClaudeCommand::new();
+  let cmd = cmd_builder.build_command_for_test();
+
+  let debug = format!( "{cmd:?}" );
+  assert!( debug.contains( "CLAUDE_CODE_AUTO_COMPACT_WINDOW" ), "compact_window not set" );
+  assert!(
+    debug.contains( "CLAUDE_CODE_AUTO_COMPACT_WINDOW=\"300000\"" ),
+    "Incorrect default: expected 300000 (300K token compaction window), got: {debug}"
+  );
+}
+
+#[test]
 fn tier2_tier3_defaults_are_none() {
   // Tier 2 & 3 should be None (inherit standard defaults)
   let cmd_builder = ClaudeCommand::new();
@@ -176,9 +193,10 @@ fn all_tier1_defaults_set_together() {
   let has_telemetry = debug.contains( "CLAUDE_CODE_TELEMETRY" );
   let has_chrome = debug.contains( "--chrome" );
   let has_print_bg_wait_ceiling = debug.contains( "CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS" );
+  let has_compact_window = debug.contains( "CLAUDE_CODE_AUTO_COMPACT_WINDOW" );
 
   assert!(
-    has_bash_timeout && has_bash_max_timeout && has_auto_continue && has_telemetry && has_chrome && has_print_bg_wait_ceiling,
-    "All Tier 1 defaults must be set: bash_timeout={has_bash_timeout}, bash_max_timeout={has_bash_max_timeout}, auto_continue={has_auto_continue}, telemetry={has_telemetry}, chrome={has_chrome}, print_bg_wait_ceiling_ms={has_print_bg_wait_ceiling}"
+    has_bash_timeout && has_bash_max_timeout && has_auto_continue && has_telemetry && has_chrome && has_print_bg_wait_ceiling && has_compact_window,
+    "All Tier 1 defaults must be set: bash_timeout={has_bash_timeout}, bash_max_timeout={has_bash_max_timeout}, auto_continue={has_auto_continue}, telemetry={has_telemetry}, chrome={has_chrome}, print_bg_wait_ceiling_ms={has_print_bg_wait_ceiling}, compact_window={has_compact_window}"
   );
 }

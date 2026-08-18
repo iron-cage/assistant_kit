@@ -25,6 +25,9 @@
 //! | A4  | exit=1, stderr contains both quota pattern and `"authentication_error"` | `Some(QuotaExhausted)` — quota wins |
 //! | A5  | exit=1, stderr=`"Not logged in: ..."` | `Some(AuthError)` — TSK-453 |
 //! | A6  | exit=1, stdout=`"Please run /login to authenticate"` | `Some(AuthError)` — TSK-453 |
+//! | B494 | exit=1, stderr=`"Failed to authenticate: OAuth session expired and could not be refreshed"` | `Some(AuthError)` — Fix(BUG-494) |
+//! | B495a | exit=1, stderr=`"You've hit your session limit · resets ..."` | `Some(QuotaExhausted)` — Fix(BUG-495) |
+//! | B495b | exit=1, stdout=`"You've hit your weekly limit · resets ..."` | `Some(QuotaExhausted)` — Fix(BUG-495), stdout path |
 //!
 //! # Root Cause (BUG-037)
 //!
@@ -509,5 +512,142 @@ fn classify_error_quota_wins_over_authentication_error()
     Some( ErrorKind::QuotaExhausted ),
     "A4: QuotaExhausted must win over authentication_error when both patterns present \
      (quota is index 0 in ERROR_PATTERNS; authentication_error is index 2)"
+  );
+}
+
+// ── B494: OAuth session expired → AuthError (BUG-494 MRE) ────────────────────
+
+/// B494: `"Failed to authenticate: OAuth session expired and could not be refreshed"`
+/// in stderr → `AuthError`.
+///
+/// # Root Cause
+///
+/// `ERROR_PATTERNS` had no pattern matching the OAuth-refresh-failure message — none of
+/// the 4 existing `AuthError` patterns is a substring of it, so `classify_error()` fell
+/// through to `Unknown`. Downstream, `retry_classify.rs` routes `Unknown` and `AuthError`
+/// to independently-configured retry parameter pairs (`retry_on_unknown`/`unknown_delay`
+/// vs `retry_on_auth`/`auth_delay`), so the misclassification silently applies the wrong
+/// retry policy to an error that retrying cannot fix.
+///
+/// # Why Not Caught
+///
+/// The pattern list grows reactively, one observed incident at a time (BUG-314, TSK-453);
+/// no test enumerates the real auth-failure message shapes the `claude` CLI emits, so a
+/// shape not yet fed back into a fix had no failing test.
+///
+/// # Fix Applied
+///
+/// `"OAuth session expired"` `AuthError` pattern added to `ERROR_PATTERNS` before the
+/// `"API Error: "` catch-all — the same single-line insertion precedent as Fix(BUG-314)
+/// and TSK-453's two entries.
+///
+/// # Prevention
+///
+/// This test fails whenever the `"OAuth session expired"` pattern is removed or the
+/// observed real-world message shape stops classifying as `AuthError`.
+///
+/// # Pitfall
+///
+/// A reactively-extended substring classifier gives no signal when a NEW message shape
+/// for an already-modeled category appears — it silently falls through to the generic
+/// class, and the divergence is behavioral (wrong retry-class parameters), not cosmetic.
+#[ test ]
+fn mre_bug494_oauth_session_expired_classifies_as_auth_error()
+{
+  // test_kind: bug_reproducer(BUG-494)
+  //
+  // Byte-exact real message observed in two independent live runs (yrd_aes 3466/3616),
+  // both tagged [Unknown] in the captured transcripts before the fix.
+  let out = make_output(
+    "",
+    "Failed to authenticate: OAuth session expired and could not be refreshed",
+    1,
+  );
+  assert_eq!(
+    out.classify_error(),
+    Some( ErrorKind::AuthError ),
+    "B494: OAuth-session-expired message must yield AuthError, not Unknown — \
+     an auth failure retried under the Unknown class applies the wrong retry policy"
+  );
+}
+
+// ── B495a: session-limit quota message → QuotaExhausted (BUG-495 MRE) ────────
+
+/// B495a: `"You've hit your session limit · resets ..."` in stderr → `QuotaExhausted`.
+///
+/// # Root Cause
+///
+/// The sole `QuotaExhausted` pattern (`"You've hit your limit"`) was authored against an
+/// assumed plain-form message the real `claude` CLI never emits. Real messages qualify
+/// the period — `"You've hit your session limit"` / `"You've hit your weekly limit"` —
+/// and the inserted qualifier breaks substring contiguity, so `str::contains` never
+/// matches: 100% of real quota occurrences (45 files in the source corpus) classified
+/// `Unknown`, making the entire Account-class retry path unreachable.
+///
+/// # Why Not Caught
+///
+/// The pattern was never validated against a captured real CLI emission; pre-existing
+/// tests (T03/T13/T15) assert the same assumed plain-form string the pattern was written
+/// from, so pattern and tests shared the same wrong assumption.
+///
+/// # Fix Applied
+///
+/// Two `QuotaExhausted` patterns for the real forms added (`"You've hit your session
+/// limit"`, `"You've hit your weekly limit"`); the plain form retained as cheap insurance.
+///
+/// # Prevention
+///
+/// This test (stderr path) and B495b (stdout path) fail whenever either qualified pattern
+/// is removed; T03/T13/T15 keep the retained plain-form pattern honest.
+///
+/// # Pitfall
+///
+/// A pattern existing for a category is not evidence the category is covered — a
+/// single-pattern category is either 100% or 0% covered, and only checking against
+/// captured production output distinguishes the two.
+#[ test ]
+fn mre_bug495_session_limit_classifies_as_quota_exhausted()
+{
+  // test_kind: bug_reproducer(BUG-495)
+  //
+  // Byte-exact real message form (36 corpus files); [Unknown]-tagged before the fix.
+  let out = make_output(
+    "",
+    "You've hit your session limit · resets 4:20am (Europe/Kyiv)",
+    1,
+  );
+  assert_eq!(
+    out.classify_error(),
+    Some( ErrorKind::QuotaExhausted ),
+    "B495a: session-limit message must yield QuotaExhausted, not Unknown — \
+     the qualifier between \"your\" and \"limit\" breaks the plain-form pattern's match"
+  );
+}
+
+// ── B495b: weekly-limit quota message in stdout → QuotaExhausted (BUG-495) ───
+
+/// B495b: `"You've hit your weekly limit · resets ..."` in stdout → `QuotaExhausted`.
+///
+/// Covers the second real message shape (weekly) AND the stdout scan path
+/// (`stderr.contains(pattern) || stdout.contains(pattern)`) for the new patterns —
+/// parallel to T13 (plain quota form in stdout) and A2 (auth pattern in stdout).
+/// Shares B495a's Root Cause / Why Not Caught / Fix Applied / Prevention / Pitfall
+/// (one defect, two message shapes — see B495a's sections).
+#[ test ]
+fn mre_bug495_weekly_limit_classifies_as_quota_exhausted()
+{
+  // test_kind: bug_reproducer(BUG-495)
+  //
+  // Byte-exact real message form (9 corpus files); [Unknown]-tagged before the fix.
+  let out = make_output(
+    "You've hit your weekly limit · resets Aug 11, 11pm (Europe/Kyiv)",
+    "",
+    1,
+  );
+  assert_eq!(
+    out.classify_error(),
+    Some( ErrorKind::QuotaExhausted ),
+    "B495b: weekly-limit message must yield QuotaExhausted, not Unknown — \
+     both real quota variants and the stdout scan path must classify correctly"
   );
 }
