@@ -136,5 +136,7 @@ account::switch_account( &candidate.name, &credential_store, &paths )?;
 account::auto_rotate( &credential_store, &paths )?;  // returns the name switched to
 ```
 
-`auto_rotate()` is FR-13, implemented in `account.rs`. It completes the
-"seamless rotation" promise and makes the primary use case a one-liner.
+`auto_rotate()` was FR-13. It completed the "seamless rotation" promise as a
+one-liner at the time; the API was later superseded by strategy-driven rotation
+via `clp .usage rotate::1` (Feature 038) and removed — see
+[feature/008_auto_rotate.md](docs/feature/008_auto_rotate.md).

@@ -22,9 +22,9 @@ const GROUP_ORDER : [ &str ; 6 ] =
   "Refresh & Subprocess Control",
 ];
 
-/// All 29 active `.accounts` parameters, per
+/// All 31 active `.accounts` parameters, per
 /// `docs/cli/command/001_account.md § Help Rendering Scheme`.
-const PARAMS : [ ParamSpec ; 29 ] =
+const PARAMS : [ ParamSpec ; 31 ] =
 [
   ParamSpec { name : "name",              group : "Core",                          value : "EMAIL",    desc : "Account identifier or prefix (optional)" },
   ParamSpec { name : "format",            group : "Core",                          value : "FORMAT",   desc : "Output serialization format" },
@@ -32,6 +32,8 @@ const PARAMS : [ ParamSpec ; 29 ] =
 
   ParamSpec { name : "owner",             group : "Account Ownership",             value : "OWNER",    desc : "Set or release account ownership" },
   ParamSpec { name : "assignee",          group : "Account Ownership",             value : "ASSIGNEE", desc : "Write per-machine active-account marker" },
+  ParamSpec { name : "lock",              group : "Account Ownership",             value : "0",        desc : "Set (1) or clear (0) claim-lock" },
+  ParamSpec { name : "reserve",           group : "Account Ownership",             value : "0",        desc : "Set (1) or clear (0) reserve marker" },
   ParamSpec { name : "force",             group : "Account Ownership",             value : "0",        desc : "Bypass G8 ownership gate" },
 
   ParamSpec { name : "sort",              group : "Sort Control",                  value : "SORT",     desc : "Row ordering strategy" },
@@ -66,7 +68,7 @@ const PARAMS : [ ParamSpec ; 29 ] =
 ///
 /// Bypasses unilang's automatic per-command help — builds `cli_fmt::CliHelpData`
 /// directly from `PARAMS` so the `::` delimiter aligns at the same column across
-/// all 29 rows, spanning group boundaries (per
+/// all 31 rows, spanning group boundaries (per
 /// `docs/cli/command/001_account.md § Help Rendering Scheme`).
 #[ inline ]
 pub fn print_accounts_help( binary : &str )

@@ -12,8 +12,8 @@
 //! | h06 | `h06_double_dash_help` | `--help` → exit 1 (POSIX flags not supported) | N |
 //! | h07 | `h07_unknown_command_exits_1` | `.nonexistent` → exit 1 + stderr | N |
 //! | h08 | `h08_grouped_help_shows_all_group_headers_in_order` | `.accounts.help` → 6 group headers, documented order | P |
-//! | h09 | `h09_grouped_help_all_params_under_correct_group` | `.accounts.help` → all 29 params under their documented group | P |
-//! | h10 | `h10_grouped_help_colons_align_globally` | `.accounts.help` → `::` at same offset across all 29 rows | P |
+//! | h09 | `h09_grouped_help_all_params_under_correct_group` | `.accounts.help` → all 31 params under their documented group | P |
+//! | h10 | `h10_grouped_help_colons_align_globally` | `.accounts.help` → `::` at same offset across all 31 rows | P |
 //! | h11 | `h11_grouped_help_booleans_are_bare` | `.accounts.help` → boolean params render `name::0`, never `0\|1` | P |
 //! | h12 | `h12_grouped_help_enums_show_uppercase_placeholder` | `.accounts.help` → enum params show uppercase placeholder | P |
 //! | h13 | `h13_grouped_help_no_version_banner` | `.accounts.help` → no version/build banner | N |
@@ -117,7 +117,7 @@ fn h07_unknown_command_exits_1()
 const GROUPS : &[ ( &str, &[ &str ] ) ] = &
 [
   ( "Core",                         &[ "name", "format", "dry" ] ),
-  ( "Account Ownership",            &[ "owner", "assignee", "force" ] ),
+  ( "Account Ownership",            &[ "owner", "assignee", "lock", "reserve", "force" ] ),
   ( "Sort Control",                 &[ "sort", "desc", "prefer" ] ),
   ( "Row Filtering & Pagination",   &[ "cols", "count", "offset", "only_active", "only_next", "only_valid", "exclude_exhausted", "min_5h", "min_7d" ] ),
   ( "Display Rendering",            &[ "no_color", "get" ] ),
@@ -127,7 +127,7 @@ const GROUPS : &[ ( &str, &[ &str ] ) ] = &
 /// Every boolean `.accounts` parameter — must render bare (`name::0`, never `name::0|1`).
 const BOOLEAN_PARAMS : &[ &str ] = &
 [
-  "dry", "trace", "force", "refresh", "touch", "desc",
+  "dry", "trace", "force", "refresh", "touch", "desc", "lock", "reserve",
   "only_active", "only_next", "only_valid", "exclude_exhausted", "no_color", "live",
 ];
 
@@ -216,11 +216,11 @@ fn h10_grouped_help_colons_align_globally()
     }
   }
 
-  assert_eq!( offsets.len(), 29, "must have checked exactly 29 parameter rows" );
+  assert_eq!( offsets.len(), 31, "must have checked exactly 31 parameter rows" );
   let first = offsets[ 0 ];
   assert!(
     offsets.iter().all( | &o | o == first ),
-    "`::` must align at the same offset across all 29 rows, got offsets: {offsets:?}\nfull output:\n{text}"
+    "`::` must align at the same offset across all 31 rows, got offsets: {offsets:?}\nfull output:\n{text}"
   );
 }
 
