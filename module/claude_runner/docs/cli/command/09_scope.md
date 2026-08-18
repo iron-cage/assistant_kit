@@ -2,7 +2,7 @@
 
 ### Description
 
-Print all 6 `CLAUDE_*` path variables for a given directory (default: CWD). Use `clr scope` to inspect where Claude Code stores sessions and memory for any project directory, or to verify that `--session-from` / `--dir` resolve to the expected paths before running.
+Print all 6 `CLAUDE_*` path variables for a given directory (default: CWD). Use `clr scope` to inspect where Claude Code stores sessions and memory for any project directory, or to verify that `--from` / `--dir` resolve to the expected paths before running.
 
 -- **Parameters:** `--dir`
 -- **Exit Codes:** 0 (success) | 1 (error)
@@ -64,7 +64,7 @@ echo "$CLAUDE_SESSION_FILE"
 # Verify cross-loading paths before running
 clr scope --dir /home/alice/project-b   # target session dir
 clr scope --dir /home/alice/project-a   # source session dir
-clr run --to /home/alice/project-b --session-from /home/alice/project-a "Continue"
+clr run --to /home/alice/project-b --from /home/alice/project-a "Continue"
 ```
 
 ### Notes
@@ -75,14 +75,14 @@ clr run --to /home/alice/project-b --session-from /home/alice/project-a "Continu
 
 ### Referenced Command Group
 
-Evaluated against `run`/`ask` under the strict [command_group](../command_group/readme.md) identity test (same dispatch function, same parameter set) — does not qualify. `dispatch_scope()` (`src/cli/scope.rs:13`) has zero cross-calls with `dispatch_run()`/`dispatch_ask()`. Both call `claude_storage_core::scope_for()` internally, but that's a shared external library utility, not a shared dispatch function — `scope` uses it for its entire output (all 6 returned fields), while `run`'s builder uses only 1 of 6 fields as one step in `--session-from` resolution. `scope`'s single `--dir` parameter is a documented subset of the `Running Commands` param_group (see [`param_group/06_running_commands.md`](../param_group/06_running_commands.md)), a parameter-level relationship distinct from command_group's dispatch-level test. See [`command_group/readme.md`](../command_group/readme.md) Evaluated, Not Qualifying for the full analysis.
+Evaluated against `run`/`ask` under the strict [command_group](../command_group/readme.md) identity test (same dispatch function, same parameter set) — does not qualify. `dispatch_scope()` (`src/cli/scope.rs:13`) has zero cross-calls with `dispatch_run()`/`dispatch_ask()`. Both call `claude_storage_core::scope_for()` internally, but that's a shared external library utility, not a shared dispatch function — `scope` uses it for its entire output (all 6 returned fields), while `run`'s builder uses only 1 of 6 fields as one step in `--from` resolution (defaults to CWD when omitted). `scope`'s single `--dir` parameter is a documented subset of the `Running Commands` param_group (see [`param_group/06_running_commands.md`](../param_group/06_running_commands.md)), a parameter-level relationship distinct from command_group's dispatch-level test. See [`command_group/readme.md`](../command_group/readme.md) Evaluated, Not Qualifying for the full analysis.
 
 ### Related Commands
 
 | # | Command | Relationship |
 |---|---------|--------------|
-| 1 | [`run`](01_run.md) | Uses `scope_for()` internally for `--session-from` resolution |
-| 5 | [`ask`](05_ask.md) | Same as `run` — uses `scope_for()` for `--session-from` |
+| 1 | [`run`](01_run.md) | Uses `scope_for()` internally for `--from` resolution (defaults to CWD) |
+| 5 | [`ask`](05_ask.md) | Same as `run` — uses `scope_for()` for `--from` |
 
 ### Referenced Parameter Groups
 

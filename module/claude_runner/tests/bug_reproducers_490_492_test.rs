@@ -94,10 +94,10 @@ fn target_storage( claude_home : &std::path::Path, target : &std::path::Path ) -
 }
 
 /// BUG-490: `--dry-run` previews the transplant plan and no longer exports the
-/// inert `CLAUDE_CODE_SESSION_DIR` variable for `--session-from`.
+/// inert `CLAUDE_CODE_SESSION_DIR` variable for `--from`.
 ///
 /// ## Root Cause
-/// The entire `--session-from` mechanism was exporting `CLAUDE_CODE_SESSION_DIR`
+/// The entire `--from` mechanism was exporting `CLAUDE_CODE_SESSION_DIR`
 /// to the subprocess; claude ≥2.x gives that variable no observable effect for
 /// reads or writes (contract B23 was NEG-ONLY from introduction), so `-c` resolved
 /// "most recent conversation" from the target's cwd-derived storage — a silent
@@ -113,7 +113,7 @@ fn target_storage( claude_home : &std::path::Path, target : &std::path::Path ) -
 /// session file into the *target's own* storage dir (same filename → same session
 /// id, fresh mtime → `-c` selects it); the dispatch path executes the copy after
 /// the dry-run exit and before spawn.  The env export is dropped for
-/// `--session-from` (it remains for raw `--session-dir` — BUG-493's own report).
+/// `--from` (it remains for raw `--session-dir` — BUG-493's own report).
 ///
 /// ## Prevention
 /// A NEG-ONLY contract must never be a feature's sole load-bearing mechanism —
@@ -140,11 +140,11 @@ fn t490_dry_run_plans_transplant_and_drops_env_export()
     ([
       "--dry-run",
       "--to", tgt.path().to_str().expect( "utf-8" ),
-      "--session-from", src.path().to_str().expect( "utf-8" ),
+      "--from", src.path().to_str().expect( "utf-8" ),
       "transplant preview",
     ])
     .env( "CLAUDE_HOME", ch.path() )
-    .env_remove( "CLR_DIR" ).env_remove( "CLR_SESSION_DIR" ).env_remove( "CLR_SESSION_FROM" )
+    .env_remove( "CLR_DIR" ).env_remove( "CLR_SESSION_DIR" ).env_remove( "CLR_FROM" )
     .output()
     .expect( "invoke clr" );
   assert!( out.status.success(), "dry-run must succeed. stderr: {}", String::from_utf8_lossy( &out.stderr ) );
@@ -162,7 +162,7 @@ fn t490_dry_run_plans_transplant_and_drops_env_export()
   );
   assert!(
     !stdout.contains( "CLAUDE_CODE_SESSION_DIR=" ),
-    "the inert CLAUDE_CODE_SESSION_DIR export must be dropped for --session-from. Got:\n{stdout}"
+    "the inert CLAUDE_CODE_SESSION_DIR export must be dropped for --from. Got:\n{stdout}"
   );
 }
 
@@ -192,14 +192,14 @@ fn t490_real_run_copies_source_session_into_target_storage_before_spawn()
     .args
     ([
       "--to", tgt.path().to_str().expect( "utf-8" ),
-      "--session-from", src.path().to_str().expect( "utf-8" ),
+      "--from", src.path().to_str().expect( "utf-8" ),
       "--max-sessions", "0",
       "--journal", "off",
       "what is in the source session?",
     ])
     .env( "CLAUDE_HOME", ch.path() )
     .env( "PATH", stub_path( &work.path().join( "bin" ) ) )
-    .env_remove( "CLR_DIR" ).env_remove( "CLR_SESSION_DIR" ).env_remove( "CLR_SESSION_FROM" )
+    .env_remove( "CLR_DIR" ).env_remove( "CLR_SESSION_DIR" ).env_remove( "CLR_FROM" )
     .output()
     .expect( "invoke clr" );
   assert!(
@@ -255,14 +255,14 @@ fn t490_existing_dest_never_overwritten_mtime_refreshed()
     .args
     ([
       "--to", tgt.path().to_str().expect( "utf-8" ),
-      "--session-from", src.path().to_str().expect( "utf-8" ),
+      "--from", src.path().to_str().expect( "utf-8" ),
       "--max-sessions", "0",
       "--journal", "off",
       "continue the clone lineage",
     ])
     .env( "CLAUDE_HOME", ch.path() )
     .env( "PATH", stub_path( &work.path().join( "bin" ) ) )
-    .env_remove( "CLR_DIR" ).env_remove( "CLR_SESSION_DIR" ).env_remove( "CLR_SESSION_FROM" )
+    .env_remove( "CLR_DIR" ).env_remove( "CLR_SESSION_DIR" ).env_remove( "CLR_FROM" )
     .output()
     .expect( "invoke clr" );
   assert!(
@@ -335,7 +335,7 @@ fn t491_nonexistent_working_dir_fails_fast_named_no_retry_ladder()
       "hello",
     ])
     .env( "PATH", stub_path( &work.path().join( "bin" ) ) )
-    .env_remove( "CLR_DIR" ).env_remove( "CLR_SESSION_DIR" ).env_remove( "CLR_SESSION_FROM" )
+    .env_remove( "CLR_DIR" ).env_remove( "CLR_SESSION_DIR" ).env_remove( "CLR_FROM" )
     .output()
     .expect( "invoke clr" );
   let stderr = String::from_utf8_lossy( &out.stderr ).into_owned();
@@ -370,7 +370,7 @@ fn t491_dry_run_exempt_from_working_dir_validation()
   let missing = work.path().join( "never_made" );
   let out = std::process::Command::new( env!( "CARGO_BIN_EXE_clr" ) )
     .args( [ "--dry-run", "--dir", missing.to_str().expect( "utf-8" ), "hello" ] )
-    .env_remove( "CLR_DIR" ).env_remove( "CLR_SESSION_DIR" ).env_remove( "CLR_SESSION_FROM" )
+    .env_remove( "CLR_DIR" ).env_remove( "CLR_SESSION_DIR" ).env_remove( "CLR_FROM" )
     .output()
     .expect( "invoke clr" );
   assert!(
@@ -393,7 +393,7 @@ fn run_with_held_open_stdin( args : &[ &str ], env : &[ ( &str, &str ) ], ceilin
     .args( args )
     // Isolation removals FIRST, caller-supplied pairs second — Command env ops apply
     // in call order, so a later env_remove would clobber a caller's own injection.
-    .env_remove( "CLR_DIR" ).env_remove( "CLR_SESSION_DIR" ).env_remove( "CLR_SESSION_FROM" )
+    .env_remove( "CLR_DIR" ).env_remove( "CLR_SESSION_DIR" ).env_remove( "CLR_FROM" )
     .env_remove( "CLR_NO_STDIN" )
     .envs( env.iter().copied() )
     .stdin( std::process::Stdio::piped() )
@@ -499,7 +499,7 @@ fn t492_no_stdin_declines_piped_json_config()
   container_check();
   let mut child = std::process::Command::new( env!( "CARGO_BIN_EXE_clr" ) )
     .args( [ "--no-stdin", "--dry-run", "hi" ] )
-    .env_remove( "CLR_DIR" ).env_remove( "CLR_SESSION_DIR" ).env_remove( "CLR_SESSION_FROM" )
+    .env_remove( "CLR_DIR" ).env_remove( "CLR_SESSION_DIR" ).env_remove( "CLR_FROM" )
     .env_remove( "CLR_NO_STDIN" ).env_remove( "CLR_MODEL" )
     .stdin( std::process::Stdio::piped() )
     .stdout( std::process::Stdio::piped() )

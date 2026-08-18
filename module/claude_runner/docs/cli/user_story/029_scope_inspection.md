@@ -46,7 +46,7 @@ echo "Memory:  $CLAUDE_MEMORY_FILE"
 # Verify cross-loading paths before running
 clr scope --dir /home/alice/project-a   # check source
 clr scope --dir /home/alice/project-b   # check target
-clr run --to /home/alice/project-b --session-from /home/alice/project-a "Continue"
+clr run --to /home/alice/project-b --from /home/alice/project-a "Continue"
 ```
 
 ### Related Commands
@@ -54,7 +54,7 @@ clr run --to /home/alice/project-b --session-from /home/alice/project-a "Continu
 | Command | Role |
 |---------|------|
 | `scope` | Primary command for this user story |
-| `run` | Uses `scope_for()` when `--session-from` is given |
+| `run` | Uses `scope_for()` when `--from` is given |
 | `ask` | Same as `run` |
 
 ### Related Doc Instances
@@ -70,5 +70,5 @@ clr run --to /home/alice/project-b --session-from /home/alice/project-a "Continu
 
 | # | Title | Relationship |
 |---|-------|--------------|
-| 028 | [Session Cross-Loading](028_session_transplant.md) | `clr scope` used to verify paths before `--session-from` |
+| 028 | [Session Cross-Loading](028_session_transplant.md) | `clr scope` used to verify paths before `--from` |
 | 005 | [Project-specific Execution](005_project_specific_execution.md) | `--dir` for targeting specific directories |

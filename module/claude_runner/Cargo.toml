@@ -1,5 +1,11 @@
 [package]
 name = "claude_runner"
+# Fix(BUG-506): default-run selects a canonical binary for bare `cargo run -p claude_runner -- <args>`.
+# Root cause: 4 [[bin]] targets (claude_runner/clr/c/fake_claude_control) with no default-run left
+#   every undecorated `cargo run` invocation ambiguous — rejected by Cargo before any crate code runs.
+# Pitfall: any future [[bin]] target added to this crate must not remove this key; the plain
+#   `cargo run -p claude_runner -- <args>` form (used throughout tests/manual/readme.md) depends on it.
+default-run = "clr"
 version = "1.7.1"
 edition.workspace = true
 rust-version.workspace = true

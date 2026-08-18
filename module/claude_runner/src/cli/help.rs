@@ -68,7 +68,7 @@ fn runner_option_group() -> cli_fmt::help::OptionGroup
       OptionEntry { name : "--subdir <NAME>".into(),                 desc : "Named subdirectory appended to --dir as /-NAME; . = identity".into() },
       OptionEntry { name : "--message <MSG>".into(),                  desc : "Message to send (alternative to positional argument)".into() },
       OptionEntry { name : "--session-dir <PATH>".into(),            desc : "Session storage directory".into() },
-      OptionEntry { name : "--session-from <DIR>".into(),              desc : "Cross-load most-recent session from source directory (alias: --from) [env: CLR_SESSION_FROM]".into() },
+      OptionEntry { name : "--from <DIR>".into(),                     desc : "Cross-load most-recent session from source directory (default: current directory) [env: CLR_FROM]".into() },
       OptionEntry { name : "--dry-run".into(),                       desc : "Print command without executing".into() },
       OptionEntry { name : "--trace".into(),                         desc : "Print command to stderr then execute (like set -x)".into() },
       OptionEntry { name : "--file <PATH>".into(),                   desc : "Pipe file content to subprocess stdin".into() },
@@ -360,7 +360,7 @@ pub( crate ) fn print_ask_help() -> !
   println!( "  --subdir <NAME>                    Named subdirectory appended to --dir as /-NAME; . = identity" );
   println!( "  --message <MSG>                    Message to send (alternative to positional argument)" );
   println!( "  --session-dir <PATH>               Session storage directory" );
-  println!( "  --session-from <DIR>, --from <DIR> Cross-load most-recent session from source directory [env: CLR_SESSION_FROM]" );
+  println!( "  --from <DIR>                       Cross-load most-recent session from source directory (default: current directory) [env: CLR_FROM]" );
   println!( "  --quiet                            Suppress non-fatal diagnostics (gate-wait, retry, keep-claudecode) [env: CLR_QUIET]" );
   println!( "  --args-file <PATH>                 Load clr params from JSON file (or stdin JSON); env: CLR_ARGS_FILE" );
   println!( "  --json-schema <SCHEMA>             JSON schema for structured output" );

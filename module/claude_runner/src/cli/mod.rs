@@ -75,7 +75,7 @@ pub( super ) fn handle_dry_run( builder : &ClaudeCommand, transplant : Option< &
   // Fix(BUG-490): preview the planned session transplant — dry-run performs no copy,
   //   but the copy is part of what the real run would do and must be visible.
   // Root cause: dropping the dead CLAUDE_CODE_SESSION_DIR export removed the only
-  //   describe_full() trace of --session-from, leaving the flag invisible in previews.
+  //   describe_full() trace of --from, leaving the flag invisible in previews.
   // Pitfall: keep this a preview only — dry-run must stay side-effect-free (BUG-231/319).
   if let Some( plan ) = transplant
   {

@@ -1,6 +1,6 @@
 # Test: Invariant — Session Source Isolation
 
-Test case planning for [invariant/011_session_source_isolation.md](../../../docs/invariant/011_session_source_isolation.md). Tests verify that session reads use the source directory's storage, Claude runs in the target directory, source files are never modified, cross-loading is one-time, and `--session-dir` takes precedence over `--session-from`.
+Test case planning for [invariant/011_session_source_isolation.md](../../../docs/invariant/011_session_source_isolation.md). Tests verify that session reads use the source directory's storage, Claude runs in the target directory, source files are never modified, cross-loading is one-time, and `--session-dir` takes precedence over `--from`.
 
 **Source:** [invariant/011_session_source_isolation.md](../../../docs/invariant/011_session_source_isolation.md)
 
@@ -11,8 +11,8 @@ Test case planning for [invariant/011_session_source_isolation.md](../../../docs
 | IN-1 | Transplant source comes from source dir's `CLAUDE_SESSION_DIR`, never from target | Read isolation |
 | IN-2 | Subprocess working directory is target dir, not source dir | Run isolation |
 | IN-3 | Source session file mtime and size unchanged after cross-loaded run | Write isolation |
-| IN-4 | `--session-dir` takes precedence over `--session-from` (raw path wins) | Precedence |
-| IN-5 | `--session-from` + `--to`: transplant source from source, cwd is target | Combined |
+| IN-4 | `--session-dir` takes precedence over `--from` (raw path wins) | Precedence |
+| IN-5 | `--from` + `--to`: transplant source from source, cwd is target | Combined |
 
 ## Test Coverage Summary
 
@@ -29,7 +29,7 @@ Test case planning for [invariant/011_session_source_isolation.md](../../../docs
 ### IN-1: Transplant source comes from source dir's `CLAUDE_SESSION_DIR`, never from target
 
 - **Given:** source dir `/tmp/011it1-src` has session `lll-001.jsonl`; target dir (a temp dir) has no `.jsonl` files; fake claude binary in PATH
-- **When:** `clr --session-from /tmp/011it1-src --to <target> --dry-run "task"`
+- **When:** `clr --from /tmp/011it1-src --to <target> --dry-run "task"`
 - **Then:** dry-run output contains the plan line `# session-transplant: <claude_home>/projects/<Df(src)>/lll-001.jsonl -> ` (source storage's file); no target-derived path appears as a transplant source (target storage appears only as the destination)
 - **Exit:** 0
 - **Source:** [invariant/011_session_source_isolation.md](../../../docs/invariant/011_session_source_isolation.md) point 1
@@ -39,7 +39,7 @@ Test case planning for [invariant/011_session_source_isolation.md](../../../docs
 ### IN-2: Subprocess working directory is target dir, not source dir
 
 - **Given:** source dir `/tmp/011it2_src` has session `mmm-002.jsonl`; target dir `/tmp/011it2_tgt` exists; fake claude binary in PATH
-- **When:** `clr --session-from /tmp/011it2_src --to /tmp/011it2_tgt --dry-run "task"`
+- **When:** `clr --from /tmp/011it2_src --to /tmp/011it2_tgt --dry-run "task"`
 - **Then:** dry-run output shows subprocess working directory as `/tmp/011it2_tgt`; `/tmp/011it2_src` does NOT appear as the working directory
 - **Exit:** 0
 - **Source:** [invariant/011_session_source_isolation.md](../../../docs/invariant/011_session_source_isolation.md) point 2
@@ -49,27 +49,27 @@ Test case planning for [invariant/011_session_source_isolation.md](../../../docs
 ### IN-3: Source session file mtime and size unchanged after cross-loaded run
 
 - **Given:** source dir `/tmp/011it3_src` has session `nnn-003.jsonl` with recorded mtime T1 and known file size; target dir `/tmp/011it3_tgt`; fake claude binary in PATH
-- **When:** `clr --session-from /tmp/011it3_src --to /tmp/011it3_tgt --dry-run "Continue"`; run completes
+- **When:** `clr --from /tmp/011it3_src --to /tmp/011it3_tgt --dry-run "Continue"`; run completes
 - **Then:** `nnn-003.jsonl` mtime is still T1; file size is unchanged; source dir contents are identical to before the run
 - **Exit:** 0
 - **Source:** [invariant/011_session_source_isolation.md](../../../docs/invariant/011_session_source_isolation.md) point 3
 
 ---
 
-### IN-4: `--session-dir` takes precedence over `--session-from` (raw path wins)
+### IN-4: `--session-dir` takes precedence over `--from` (raw path wins)
 
 - **Given:** source dir `/tmp/011it4-src` has session `ooo-004.jsonl`; a raw session dir (a temp dir) has session `ppp-005.jsonl`; fake claude binary in PATH
-- **When:** `clr --session-from /tmp/011it4-src --session-dir <raw dir> --dry-run "test"`
-- **Then:** dry-run output contains `CLAUDE_CODE_SESSION_DIR=<raw dir>` (the raw path verbatim — the raw `--session-dir` export is BUG-493's own domain and still emitted); the source's computed storage path does NOT appear; `--session-dir` raw path wins over `--session-from` computed path
+- **When:** `clr --from /tmp/011it4-src --session-dir <raw dir> --dry-run "test"`
+- **Then:** dry-run output contains `CLAUDE_CODE_SESSION_DIR=<raw dir>` (the raw path verbatim — the raw `--session-dir` export is BUG-493's own domain and still emitted); the source's computed storage path does NOT appear; `--session-dir` raw path wins over `--from` computed path
 - **Exit:** 0
 - **Source:** [invariant/011_session_source_isolation.md](../../../docs/invariant/011_session_source_isolation.md) point 5
 
 ---
 
-### IN-5: `--session-from` + `--to`: transplant source from source, cwd is target
+### IN-5: `--from` + `--to`: transplant source from source, cwd is target
 
 - **Given:** source dir `/tmp/011it5-src` has session `qqq-006.jsonl`; target dir (a temp dir) exists; fake claude binary in PATH
-- **When:** `clr --to <target> --session-from /tmp/011it5-src --dry-run "Continue"`
+- **When:** `clr --to <target> --from /tmp/011it5-src --dry-run "Continue"`
 - **Then:** dry-run output contains the plan line `# session-transplant: <claude_home>/projects/<Df(src)>/qqq-006.jsonl -> ` and `cd <target>` — the source session is transplanted into a subprocess that runs in target, confirming both read isolation (source) and run isolation (target) hold simultaneously
 - **Exit:** 0
 - **Source:** [invariant/011_session_source_isolation.md](../../../docs/invariant/011_session_source_isolation.md) points 1–2

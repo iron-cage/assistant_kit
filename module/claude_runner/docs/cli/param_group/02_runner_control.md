@@ -97,7 +97,7 @@ clr --trace "Fix bug" --dir /project
 | [`--journal`](../param/072_journal.md) | enum | `full` | Journal level | Journal level for execution events: `full` (stdout+stderr ≤1MB each), `meta` (metadata only), `off` (disabled) |
 | [`--journal-dir`](../param/073_journal_dir.md) | path | `~/.clr/journal/` | Journal directory | Directory for journal JSONL files; overrides `CLR_JOURNAL_DIR` |
 | [`--args-file`](../param/075_args_file.md) | [`FilePath`](../type/12_file_path.md) | — | Config loader | Load all clr params from JSON file; also applies to `isolated` and `refresh` |
-| [`--session-from`](../param/076_session_from.md) | [`DirectoryPath`](../type/02_directory_path.md) | — | Session source | Compute session storage for this dir and use it for `-c` injection (alias: `--from`) |
+| [`--from`](../param/076_from.md) | [`DirectoryPath`](../type/02_directory_path.md) | cwd | Session source | Compute session storage for this dir and use it for `-c` injection; defaults to cwd (self-copy guard suppresses no-op transplants) |
 
 ### Referenced Tests
 

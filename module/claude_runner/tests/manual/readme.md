@@ -637,10 +637,109 @@ cargo run -p claude_runner -- tools some-arg
 
 **Expected:** Exit 1. Stderr contains "does not accept arguments". Stdout is empty.
 
+### TC-83: Session Transplant — Clone Outward (`--to` + `--from`)
+
+```sh
+SRC=$(mktemp -d); TGT=$(mktemp -d)
+SRC_STORAGE=$(cargo run -q -p claude_runner -- scope --dir "$SRC" | grep CLAUDE_SESSION_DIR= | cut -d= -f2-)
+mkdir -p "$SRC_STORAGE"
+echo '{"type":"user","message":{"role":"user","content":"hi"}}' > "$SRC_STORAGE/abc-123.jsonl"
+cargo run -p claude_runner -- --to "$TGT" --from "$SRC" --dry-run "Continue"
+```
+
+**Expected:** Dry-run output contains a `# session-transplant:` line referencing `abc-123.jsonl`, and `cd $TGT` in the assembled command. Exit code 0.
+
+### TC-84: Session Transplant — Inject Inward (`--from` Alone, `--to` Defaults to CWD)
+
+```sh
+cargo build -q -p claude_runner
+TARGET_DIR="${CARGO_TARGET_DIR:-$(pwd)/target}"; BIN="$TARGET_DIR/debug/clr"
+SRC=$(mktemp -d); CWD_DIR=$(mktemp -d)
+SRC_STORAGE=$("$BIN" scope --dir "$SRC" | grep CLAUDE_SESSION_DIR= | cut -d= -f2-)
+mkdir -p "$SRC_STORAGE"
+echo '{"type":"user","message":{"role":"user","content":"hi"}}' > "$SRC_STORAGE/abc-123.jsonl"
+(cd "$CWD_DIR" && "$BIN" --from "$SRC" --dry-run "What did you do")
+```
+
+**Expected:** Dry-run output contains `# session-transplant:` referencing `abc-123.jsonl`. No `cd $SRC` line — target stays CWD; only the session file is copied inward. Exit code 0.
+
+### TC-85: Session Transplant — `--to` Alone Defaults `--from` to CWD
+
+```sh
+cargo build -q -p claude_runner
+TARGET_DIR="${CARGO_TARGET_DIR:-$(pwd)/target}"; BIN="$TARGET_DIR/debug/clr"
+TGT=$(mktemp -d); CWD_DIR=$(mktemp -d)
+CWD_STORAGE=$("$BIN" scope --dir "$CWD_DIR" | grep CLAUDE_SESSION_DIR= | cut -d= -f2-)
+mkdir -p "$CWD_STORAGE"
+echo '{"type":"user","message":{"role":"user","content":"hi"}}' > "$CWD_STORAGE/cwd-999.jsonl"
+(cd "$CWD_DIR" && "$BIN" --to "$TGT" --dry-run "Continue")
+```
+
+**Expected:** Dry-run output references `cwd-999.jsonl` (source defaulted to CWD — no `--from` given) and contains `cd $TGT`. Exit code 0.
+
+### TC-86: Session Transplant — Bare Invocation Is a No-Op (Self-Copy Guard)
+
+```sh
+cargo build -q -p claude_runner
+TARGET_DIR="${CARGO_TARGET_DIR:-$(pwd)/target}"; BIN="$TARGET_DIR/debug/clr"
+CWD_DIR=$(mktemp -d)
+CWD_STORAGE=$("$BIN" scope --dir "$CWD_DIR" | grep CLAUDE_SESSION_DIR= | cut -d= -f2-)
+mkdir -p "$CWD_STORAGE"
+echo '{"type":"user","message":{"role":"user","content":"hi"}}' > "$CWD_STORAGE/cwd-999.jsonl"
+(cd "$CWD_DIR" && "$BIN" --dry-run "Continue")
+```
+
+**Expected:** Dry-run output does NOT contain `# session-transplant:` — target storage equals source storage (both CWD), so the self-copy guard suppresses the transplant. Ordinary `-c` continuation still appears since CWD has session history. Exit code 0.
+
+### TC-87: Session Transplant — Old `--session-from` Flag Is Rejected
+
+```sh
+cargo run -p claude_runner -- --session-from /tmp --dry-run "x"
+```
+
+**Expected:** Non-zero exit code. Stderr contains "unknown option". Confirms the breaking rename — `--session-from` is no longer recognized.
+
+### TC-88: Session Transplant — Old `CLR_SESSION_FROM` Env Var Is Inert
+
+```sh
+cargo build -q -p claude_runner
+TARGET_DIR="${CARGO_TARGET_DIR:-$(pwd)/target}"; BIN="$TARGET_DIR/debug/clr"
+SRC=$(mktemp -d); TGT=$(mktemp -d); CWD_DIR=$(mktemp -d)
+SRC_STORAGE=$("$BIN" scope --dir "$SRC" | grep CLAUDE_SESSION_DIR= | cut -d= -f2-)
+CWD_STORAGE=$("$BIN" scope --dir "$CWD_DIR" | grep CLAUDE_SESSION_DIR= | cut -d= -f2-)
+mkdir -p "$SRC_STORAGE" "$CWD_STORAGE"
+echo '{"type":"user","message":{"role":"user","content":"hi"}}' > "$SRC_STORAGE/abc-123.jsonl"
+echo '{"type":"user","message":{"role":"user","content":"hi"}}' > "$CWD_STORAGE/cwd-999.jsonl"
+(cd "$CWD_DIR" && CLR_SESSION_FROM="$SRC" "$BIN" --to "$TGT" --dry-run "x")
+```
+
+**Expected:** Dry-run output references `cwd-999.jsonl` (CWD default), NOT `abc-123.jsonl` — the old `CLR_SESSION_FROM` env var is silently ignored, not read.
+
+### TC-89: Session Transplant — New `CLR_FROM` Env Var Works
+
+```sh
+SRC=$(mktemp -d); TGT=$(mktemp -d)
+SRC_STORAGE=$(cargo run -q -p claude_runner -- scope --dir "$SRC" | grep CLAUDE_SESSION_DIR= | cut -d= -f2-)
+mkdir -p "$SRC_STORAGE"
+echo '{"type":"user","message":{"role":"user","content":"hi"}}' > "$SRC_STORAGE/abc-123.jsonl"
+CLR_FROM="$SRC" cargo run -p claude_runner -- --to "$TGT" --dry-run "x"
+```
+
+**Expected:** Dry-run output contains `# session-transplant:` referencing `abc-123.jsonl` — `CLR_FROM` supplies the source when `--from` is not given on the CLI. Exit code 0.
+
+### TC-90: Session Transplant — `--session-dir` Takes Precedence Over `--from`
+
+```sh
+SRC=$(mktemp -d); OVERRIDE=$(mktemp -d)
+cargo run -p claude_runner -- --from "$SRC" --session-dir "$OVERRIDE" --dry-run "x"
+```
+
+**Expected:** Dry-run output contains `CLAUDE_CODE_SESSION_DIR=$OVERRIDE`. Does NOT contain `# session-transplant:` — the raw `--session-dir` override suppresses cross-loading entirely. Exit code 0.
+
 ## Pass Criteria
 
-All TC-1 through TC-82 must pass without unexpected errors or panics.
-TC-7 through TC-11, TC-13 through TC-20, TC-23 through TC-82 are runnable without a configured Claude API key (except TC-61 requires container, TC-62/TC-63 require live sessions).
+All TC-1 through TC-90 must pass without unexpected errors or panics.
+TC-7 through TC-11, TC-13 through TC-20, TC-23 through TC-90 are runnable without a configured Claude API key (except TC-61 requires container, TC-62/TC-63 require live sessions).
 TC-1 through TC-6, TC-12, TC-21, TC-22 require Claude binary and API key for full execution test.
 CC-1 through CC-231 are automated — listed for traceability only.
 
@@ -927,7 +1026,7 @@ These are exhaustively tested by the integration test suite (not manual). Listed
 
 ---
 
-## New Corner Cases (NC-1 through NC-26) — Discovered During Manual Testing
+## New Corner Cases (NC-1 through NC-27) — Discovered During Manual Testing
 
 ### NC-1: QuotaExhausted Label (Automated)
 
@@ -1173,4 +1272,16 @@ CLR_OUTPUT_STYLE=raw cargo run -p claude_runner -- --dry-run --output-style summ
 ```
 
 **Expected:** Exit 0. CLI wins: `output_style == "summary"` → `--output-format json` IS injected, despite env var being `raw`. Confirms CLI-over-env precedence rule. Automated in: `output_style_test.rs` EC-09.
+
+### NC-27: Container Build Places the Binary Under `$CARGO_TARGET_DIR`, Not `target/debug/`
+
+**Context:** Discovered while manually verifying TC-83 through TC-90 (session transplant `--from`/`--to`) against the real compiled binary inside the `runbox .live` container. The container sets `CARGO_TARGET_DIR=/tmp/claude_profile_targets`, so `cargo build -p claude_runner` places the binary at `${CARGO_TARGET_DIR}/debug/clr` — NOT at the crate-relative `target/debug/clr` the Prerequisites section names, and not at the workspace-root `target/debug/clr` either.
+
+```sh
+echo "${CARGO_TARGET_DIR:-<unset>}"
+cargo build -q -p claude_runner
+ls "${CARGO_TARGET_DIR:-target}/debug/clr"
+```
+
+**Expected:** Inside the container, `CARGO_TARGET_DIR` prints `/tmp/claude_profile_targets` and the binary exists at `/tmp/claude_profile_targets/debug/clr`. On host (or any environment without the override), `CARGO_TARGET_DIR` is unset and the binary falls back to the crate/workspace `target/debug/clr` as usual. A script invoking the built binary directly (rather than via `cargo run`) should resolve the path via `${CARGO_TARGET_DIR:-target}/debug/clr` instead of hardcoding `target/debug/clr`, to work in both environments.
 

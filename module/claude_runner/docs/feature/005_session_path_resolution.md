@@ -3,9 +3,9 @@
 ### Scope
 
 - **Purpose**: Define the `scope_for()` function contract — how all 6 `CLAUDE_*` path variables are computed for any target directory — and the session cross-loading behaviors enabled by it.
-- **Responsibility**: Specify what `scope_for(dir)` produces, the `clr scope` inspection command, and the `--session-from` / `--to` parameters for session cross-loading.
-- **In Scope**: `scope_for()` function contract, `ClaudeScope` struct fields, `git_root_for()` helper, `clr scope` command, `--session-from` parameter, `--to` alias for `--dir`, CLAUDE_HOME env var fix in `claude_storage_core`.
-- **Out of Scope**: Algorithm internals (→ `../algorithm/`); per-variable format specs (→ `../variable/`); session cross-loading isolation constraint (→ `../invariant/011_session_source_isolation.md`); CLI parameter syntax (→ `../cli/param/076_session_from.md`, `../cli/command/09_scope.md`).
+- **Responsibility**: Specify what `scope_for(dir)` produces, the `clr scope` inspection command, and the `--from` / `--to` parameters for session cross-loading.
+- **In Scope**: `scope_for()` function contract, `ClaudeScope` struct fields, `git_root_for()` helper, `clr scope` command, `--from` parameter (defaults to CWD), `--to` alias for `--dir` (defaults to CWD), CLAUDE_HOME env var fix in `claude_storage_core`.
+- **Out of Scope**: Algorithm internals (→ `../algorithm/`); per-variable format specs (→ `../variable/`); session cross-loading isolation constraint (→ `../invariant/011_session_source_isolation.md`); CLI parameter syntax (→ `../cli/param/076_from.md`, `../cli/command/09_scope.md`).
 
 ### Feature Description
 
@@ -24,16 +24,16 @@
 
 **`git_root_for(dir: &Path) -> PathBuf`** — pure helper that walks up from `dir` looking for `.git`; falls back to `dir` if none found. Used by `scope_for()` to anchor `claude_memory_dir` to the project root.
 
-**CLAUDE_HOME env var handling:** Both `to_storage_path_for()` (`continuation.rs`) and `scope_for()` (`scope.rs`) check `$CLAUDE_HOME` first, falling back to `$HOME/.claude`. This ensures `clr scope` and `--session-from` respect `CLAUDE_HOME` overrides.
+**CLAUDE_HOME env var handling:** Both `to_storage_path_for()` (`continuation.rs`) and `scope_for()` (`scope.rs`) check `$CLAUDE_HOME` first, falling back to `$HOME/.claude`. This ensures `clr scope` and `--from` respect `CLAUDE_HOME` overrides.
 
 ### Session Cross-Loading
 
-Session cross-loading lets Claude run in one directory while loading its initial session from another directory's session history. Two scenarios are supported:
+Session cross-loading lets Claude run in one directory while loading its initial session from another directory's session history. Both `--from` and `--to` default to CWD when omitted, so several scenarios are supported:
 
 **Scenario 1 — Clone Outward** ("run in B, use session from A")
 
 ```sh
-clr --to /home/alice/project-b --session-from /home/alice/project-a "Continue this feature"
+clr --to /home/alice/project-b --from /home/alice/project-a "Continue this feature"
 ```
 
 Claude runs in `/home/alice/project-b` but starts from the most recent session of `/home/alice/project-a`. This is useful when branching work to a new project directory.
@@ -41,18 +41,29 @@ Claude runs in `/home/alice/project-b` but starts from the most recent session o
 **Scenario 2 — Inject Inward** ("run in A, use session from B")
 
 ```sh
-clr --session-from /home/alice/project-b "What did you do in B?"
+clr --from /home/alice/project-b "What did you do in B?"
 ```
 
 Claude runs in CWD (or `--dir`) but loads the session from `/home/alice/project-b`. This is useful when you want to query or build on work done in another directory.
 
+**Scenario 3 — Default Source to CWD** ("run in B, use session from wherever `clr` was invoked")
+
+```sh
+clr --to /home/alice/project-b "Continue this feature"
+```
+
+With no `--from`, the source defaults to CWD — identical to explicitly passing `--from <cwd>`. This is the common case: cloning the session you're currently in outward to a new project directory without spelling out the source path.
+
+**Bare invocation is a no-op.** `clr "message"` with neither `--from` nor `--to` defaults both to CWD — source and target storage are identical, so the self-copy guard suppresses the transplant plan entirely. Ordinary `-c` continuation (unrelated to cross-loading) still applies independently when CWD already has a session.
+
 **Mechanics:**
-- `--session-from <DIR>` computes `scope_for(DIR).claude_session_dir` and uses it to find the source session (via `most_recent_session_in_dir()`).
-- The source session file is physically copied into the TARGET's `CLAUDE_SESSION_DIR` before spawn, and bare `-c` (continue) is injected — claude continues the transplanted history in place under the same UUID (overwrite/self-copy/failure rules: `../cli/param/076_session_from.md` § Behavior).
+- `--from <DIR>` computes `scope_for(DIR).claude_session_dir` and uses it to find the source session (via `most_recent_session_in_dir()`); defaults to CWD when omitted.
+- The source session file is physically copied into the TARGET's `CLAUDE_SESSION_DIR` before spawn, and bare `-c` (continue) is injected — claude continues the transplanted history in place under the same UUID (overwrite/self-copy/failure rules: `../cli/param/076_from.md` § Behavior).
 - Claude runs in the TARGET directory — future turns append to the transplanted copy in the TARGET's `CLAUDE_SESSION_DIR`, not the source's.
 - This is one-time cross-loading: not persistent session mirroring.
+- **Self-copy guard:** when source and target storage resolve to the same directory (including the bare-invocation case above), no transplant is planned — cross-loading is a no-op, though ordinary `-c` continuation still applies independently.
 
-**`--to` alias for `--dir`:** Enables the ergonomic pair `--to /b --session-from /a` while keeping `--dir` as the canonical parameter name.
+**`--to` alias for `--dir`:** Enables the ergonomic pair `--to /b --from /a` while keeping `--dir` as the canonical parameter name; like `--from`, `--to` defaults to CWD when omitted.
 
 ### `clr scope` Command
 
@@ -82,10 +93,10 @@ CLAUDE_SESSION_FILE=
 - **AC-4**: `scope_for("/project/src")` with `.git` at `/project` returns `claude_memory_dir` rooted at `/project` (not `/project/src`).
 - **AC-5**: `scope_for(dir)` returns `claude_session_file = None` when `CLAUDE_SESSION_DIR` is empty or missing.
 - **AC-6**: `clr scope` prints all 6 `CLAUDE_*` variables for CWD (or `--dir`) in `key=value` format, one per line.
-- **AC-7**: `clr run --session-from /src-dir "message"` causes Claude to resume the most recent session from `scope_for(/src-dir).claude_session_dir`, while running in CWD.
-- **AC-8**: `clr run --to /target-dir --session-from /src-dir "message"` causes Claude to run in `/target-dir` with the session from `scope_for(/src-dir).claude_session_dir`.
-- **AC-9**: `--to` is a usable alias for `--dir` in `run` and `ask`; behavior is identical.
-- **AC-10**: `--session-from` is a higher-level companion to `--session-dir`; when both are given, `--session-dir` takes precedence (raw path beats computed).
+- **AC-7**: `clr run --from /src-dir "message"` causes Claude to resume the most recent session from `scope_for(/src-dir).claude_session_dir`, while running in CWD.
+- **AC-8**: `clr run --to /target-dir --from /src-dir "message"` causes Claude to run in `/target-dir` with the session from `scope_for(/src-dir).claude_session_dir`.
+- **AC-9**: `--to` is a usable alias for `--dir` in `run` and `ask`; behavior is identical; defaults to CWD when omitted.
+- **AC-10**: `--from` is a higher-level companion to `--session-dir`; when both are given, `--session-dir` takes precedence (raw path beats computed); like `--to`, `--from` defaults to CWD when omitted.
 
 ### Related Docs
 
@@ -102,4 +113,4 @@ CLAUDE_SESSION_FILE=
 | [`../variable/006_claude_session_file.md`](../variable/006_claude_session_file.md) | CLAUDE_SESSION_FILE |
 | [`../invariant/011_session_source_isolation.md`](../invariant/011_session_source_isolation.md) | Isolation constraint: session loaded from source, writes go to target |
 | [`../cli/command/09_scope.md`](../cli/command/09_scope.md) | `clr scope` command reference |
-| [`../cli/param/076_session_from.md`](../cli/param/076_session_from.md) | `--session-from` parameter reference |
+| [`../cli/param/076_from.md`](../cli/param/076_from.md) | `--from` parameter reference |

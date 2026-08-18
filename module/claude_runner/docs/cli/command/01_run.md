@@ -28,7 +28,7 @@ The `run` token is optional — both forms are equivalent. When `run` appears as
 | [`--no-skip-permissions`](../param/005_no_skip_permissions.md) | bool | false | Disable automatic permission bypass |
 | [`--interactive`](../param/006_interactive.md) | bool | false | Forces TTY passthrough, overriding all auto-print triggers |
 | [`--new-session`](../param/007_new_session.md) | bool | false | Start fresh session (disables default continuation) |
-| [`--dir`](../param/008_dir.md) | [`DirectoryPath`](../type/02_directory_path.md) | cwd | Working directory |
+| [`--dir`](../param/008_dir.md) | [`DirectoryPath`](../type/02_directory_path.md) | cwd | Working directory (alias: `--to`) |
 | [`--subdir`](../param/028_subdir.md) | string | `.` | Named subdirectory appended to `--dir` (`/-NAME`); `.` = identity |
 | [`--max-tokens`](../param/009_max_tokens.md) | [`TokenLimit`](../type/03_token_limit.md) | 128000 | Max output tokens |
 | [`--session-dir`](../param/010_session_dir.md) | [`DirectoryPath`](../type/02_directory_path.md) | — | Session storage directory |
@@ -85,6 +85,7 @@ The `run` token is optional — both forms are equivalent. When `run` appears as
 | [`--add-dir`](../param/066_add_dir.md) | path | — | Additional directory for Claude Code to access |
 | [`--fallback-model`](../param/067_fallback_model.md) | string | — | Fallback model when primary unavailable |
 | [`--args-file`](../param/075_args_file.md) | [`FilePath`](../type/12_file_path.md) | — | Load clr params from JSON config file; stdin JSON auto-detected when no TTY |
+| [`--from`](../param/076_from.md) | [`DirectoryPath`](../type/02_directory_path.md) | cwd | Source directory for session cross-loading (`-c` transplant); see [User Story 028](../user_story/028_session_transplant.md) |
 
 **Algorithm (7 steps):**
 1. Parse flags; apply JSON config (from `--args-file`/`CLR_ARGS_FILE`/stdin) for unset parameters; apply CLR_* env var fallbacks for still-unset parameters; apply config-file defaults (project `.clr.toml` overriding user `~/.clr/config.toml`) for still-unset parameters — this is the final tier for every parameter including `--model`.
@@ -202,6 +203,7 @@ clr --dry-run "Run tests" --max-tokens 50000
 | 23 | [023_output_file_capture.md](../user_story/023_output_file_capture.md) | Developer |
 | 24 | [024_enum_output_validation.md](../user_story/024_enum_output_validation.md) | Developer |
 | 25 | [025_concurrency_gate.md](../user_story/025_concurrency_gate.md) | Developer |
+| 28 | [028_session_transplant.md](../user_story/028_session_transplant.md) | Developer |
 
 ---
 

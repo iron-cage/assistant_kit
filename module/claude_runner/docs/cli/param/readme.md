@@ -75,7 +75,7 @@
 | 073_journal_dir.md | `--journal-dir` parameter spec |
 | 074_quiet.md | `--quiet` flag spec (suppress non-fatal runner diagnostics) |
 | 075_args_file.md | `--args-file` parameter spec |
-| 076_session_from.md | `--session-from` / `--from` parameter spec (session cross-loading source dir) |
+| 076_from.md | `--from` parameter spec (session cross-loading source dir) |
 | 077_no_compact_window.md | `--no-compact-window` flag spec (suppress `CLAUDE_CODE_AUTO_COMPACT_WINDOW` injection) |
 | 078_name.md | `--name` parameter spec (tools name filter) |
 | 079_category.md | `--category` parameter spec (tools category filter) |
@@ -173,7 +173,7 @@ These parameter IDs exist in the sequence but have no corresponding file. The ID
 | 73 | `--journal-dir` | path | `~/.clr/journal/` | Any writable path | Directory for journal JSONL files; overrides `CLR_JOURNAL_DIR` | 3 cmds |
 | 74 | `--quiet` | bool | false | present/absent | Suppress non-fatal runner diagnostics (retry/gate/warning messages) | 2 cmds |
 | 75 | `--args-file` | [`FilePath`](../type/12_file_path.md) | — | Any readable file path | Load clr params from JSON config file; stdin JSON auto-detected when no TTY | 4 cmds |
-| 76 | `--session-from` | [`DirectoryPath`](../type/02_directory_path.md) | absent | Any existing directory path | Cross-load most recent session from another directory (transplanted into target storage before spawn) | 2 cmds |
+| 76 | `--from` | [`DirectoryPath`](../type/02_directory_path.md) | cwd | Any existing directory path | Cross-load most recent session from another directory (transplanted into target storage before spawn); defaults to cwd, same as `--to` | 2 cmds |
 | 77 | `--no-compact-window` | bool | false | present/absent | Suppress `CLAUDE_CODE_AUTO_COMPACT_WINDOW=300000` injection into subprocess environment | 4 cmds |
 | 78 | `--name` | string | — | Any substring | Filter `clr tools` by tool name (case-insensitive substring) | 1 cmd |
 | 79 | `--category` | string | — | Any substring | Filter `clr tools` by category (case-insensitive substring) | 1 cmd |
@@ -262,7 +262,7 @@ These parameter IDs exist in the sequence but have no corresponding file. The ID
 - [`--fallback-model`](067_fallback_model.md)
 - [`--quiet`](074_quiet.md)
 - [`--args-file`](075_args_file.md)
-- [`--session-from`](076_session_from.md)
+- [`--from`](076_from.md)
 - [`--no-compact-window`](077_no_compact_window.md)
 - [`--name`](078_name.md)
 - [`--category`](079_category.md)
