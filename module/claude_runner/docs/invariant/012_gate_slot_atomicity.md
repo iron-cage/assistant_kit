@@ -267,4 +267,4 @@ If owner liveness reverts to bare PID-number occupancy — `/proc/{pid}/stat` re
 
 | File | Relationship |
 |------|--------------|
-| `../feature/001_runner_tool.md` | Defines the `run`/`ask` execution paths whose concurrency this invariant gates; `isolated` shares the identical `wait_for_session_slot()`/`acquire_slot()` mechanism (see `cli/command/03_isolated.md`); `topic` will share the same gate once its delegation to `run`'s handler is wired (pending implementation, task 521) |
+| `../feature/001_runner_tool.md` | Defines the `run`/`ask` execution paths whose concurrency this invariant gates; `isolated` shares the identical `wait_for_session_slot()`/`acquire_slot()` mechanism (see `cli/command/03_isolated.md`); `topic` shares the same gate via its delegation to `run`'s handler |

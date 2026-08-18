@@ -13,7 +13,7 @@ There is no CLI flag, JSON key, or config-file tier for this value.
 - **Default:** absent (unset) — no budget clamp from this var; an *expressed* `--timeout`
   defaults the budget instead when present (BUG-445, see below), else gate polls to
   `CLR_GATE_MAX_ATTEMPTS`
-- **Applies to:** `run`, `ask`, `isolated` (any invocation that triggers the concurrency gate) — and, once dispatch wiring lands per task 521, `topic`
+- **Applies to:** `run`, `ask`, `isolated`, `topic` (any invocation that triggers the concurrency gate)
 - **Group:** [Runner Control](../param_group/02_runner_control.md)
 
 ```sh
@@ -74,8 +74,7 @@ when a budget is imposed: `attempt={n}/{effective_max}` rather than the unclampe
 1. `CLR_REMAINING_TIMEOUT_SECS` env var (the only tier — absent = feature off)
 
 This differs from `CLR_GATE_POLL_SECS` / `CLR_GATE_MAX_ATTEMPTS` / `CLR_GATE_STALE_SECS`,
-which support the full 5-tier chain for `run`/`ask` (and, once dispatch wiring lands per
-task 521, `topic`). `CLR_REMAINING_TIMEOUT_SECS` is
+which support the full 5-tier chain for `run`/`ask`/`topic`. `CLR_REMAINING_TIMEOUT_SECS` is
 deliberately env-var-only because it is a runtime property injected by a calling process, not
 a configuration choice made by the `clr` operator.
 

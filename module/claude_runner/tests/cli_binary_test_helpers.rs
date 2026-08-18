@@ -22,6 +22,7 @@
 //! | `make_proc_dir` (unix) | `kill_command_test`, `expect_validation_test`, `config_file_test` |
 //! | `run_dry` | `user_story_test`, `user_story_creds_isolated_test`, `user_story_output_test`, `dry_run_test` |
 //! | `run_ask_dry` | `ask_command_test`, `user_story_creds_isolated_test` |
+//! | `run_topic_dry` | `topic_command_test` |
 //! | `spawn_fake_claude` (unix) | `ps_command_test`, `user_story_ps_test`, `kill_command_test`, `user_story_kill_test`, `ps_mode_test`, `ps_columns_test`, `ps_wide_test`, `ps_pid_test`, `ps_inspect_test`, `param_group_test`, `ps_flags_test` |
 //! | `spawn_print_claude` (unix) | `ps_command_test`, `user_story_ps_test`, `ps_mode_test`, `ps_columns_test`, `ps_inspect_test`, `param_group_test`, `concurrency_gate_test`, `concurrency_gate_ext2_test`, `config_file_test` |
 //! | `spawn_print_claude_for` (unix) | `concurrency_gate_test`, `concurrency_gate_ext_test`, `concurrency_gate_ext2_test`, `concurrency_gate_ext3_test`, `journal_integration_ext_test`, `config_file_test` |
@@ -621,6 +622,39 @@ pub fn run_ask_dry( extra_args : &[ &str ] ) -> String
   assert!(
     out.status.success(),
     "clr ask --dry-run failed (exit {}): {}",
+    out.status.code().unwrap_or( -1 ),
+    String::from_utf8_lossy( &out.stderr )
+  );
+  String::from_utf8_lossy( &out.stdout ).into_owned()
+}
+
+/// Invoke `clr topic --dry-run` with extra args; assert exit 0 and return stdout as `String`.
+///
+/// Prepends `["topic", "--dry-run"]` to the given args, invokes the binary, asserts success,
+/// and returns the captured stdout. Mirrors `run_ask_dry` exactly — `topic` and `ask` share
+/// the same dry-run success contract; a deliberately-erroring case (e.g. an unknown flag)
+/// must call `run_cli(&["topic", ...])` directly instead, since this helper asserts success.
+///
+/// # Panics
+///
+/// Panics if the subprocess cannot be launched or exits non-zero.
+#[must_use]
+#[inline]
+#[allow(dead_code)]
+pub fn run_topic_dry( extra_args : &[ &str ] ) -> String
+{
+  assert_container();
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let mut args = vec![ "topic", "--dry-run" ];
+  args.extend_from_slice( extra_args );
+  let out = Command::new( bin )
+    .args( &args )
+    .env( "HOME", "/tmp/clr-isolated-home" )
+    .output()
+    .expect( "failed to invoke clr binary" );
+  assert!(
+    out.status.success(),
+    "clr topic --dry-run failed (exit {}): {}",
     out.status.code().unwrap_or( -1 ),
     String::from_utf8_lossy( &out.stderr )
   );

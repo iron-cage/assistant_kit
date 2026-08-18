@@ -10,7 +10,7 @@ Test case planning for [invariant/004_trace_universality.md](../../../docs/invar
 | IN-2 | `clr ask --trace "msg"` → stderr identical to run trace (pure alias) | Ask Trace |
 | IN-3 | `clr isolated --creds <f> --trace "msg"` → stderr contains `# clr isolated` / `# creds:` / `# timeout: 30s` | Isolated Trace |
 | IN-4 | `clr refresh --creds <f> --trace` → stderr contains `# clr refresh` / `# creds:` / `# timeout: 45s` | Refresh Trace |
-| IN-5 | Static: `--trace` parsed by all four subprocess-executing commands | Structural Invariant |
+| IN-5 | Static: `--trace` parsed by all five subprocess-executing commands | Structural Invariant |
 
 ## Test Coverage Summary
 
@@ -64,10 +64,10 @@ Test case planning for [invariant/004_trace_universality.md](../../../docs/invar
 
 ---
 
-### IN-5: Static: `--trace` parsed by all four subprocess-executing commands
+### IN-5: Static: `--trace` parsed by all five subprocess-executing commands
 
 - **Given:** static analysis of `src/cli/parse.rs` and `src/cli/cred_parse.rs`
-- **When:** inspect `parse_args()` in `src/cli/parse.rs`; `parse_isolated_args()` and `parse_refresh_args()` in `src/cli/cred_parse.rs` (and `dispatch_ask()` which calls `parse_args()`)
-- **Then:** all four functions include `--trace` in their flag definitions; no subprocess-executing command omits it; `help` does not accept `--trace` (it is not a subprocess-executing command); `topic` will inherit this coverage automatically via the shared `parse_args()` path once its dispatch wiring lands (pending — task 521), requiring no parser change of its own
+- **When:** inspect `parse_args()` in `src/cli/parse.rs`; `parse_isolated_args()` and `parse_refresh_args()` in `src/cli/cred_parse.rs` (and `dispatch_ask()`/`dispatch_topic()`, both of which call `parse_args()`)
+- **Then:** all three parser functions (`parse_args()`, `parse_isolated_args()`, `parse_refresh_args()`) include `--trace` in their flag definitions, together covering all five subprocess-executing commands — `run`/`ask`/`topic` share `parse_args()`, `isolated` uses `parse_isolated_args()`, `refresh` uses `parse_refresh_args()`; no subprocess-executing command omits it; `help` does not accept `--trace` (it is not a subprocess-executing command); `topic` inherits this coverage automatically via the shared `parse_args()` path (delegates to `dispatch_run()` after computing its `--subdir` default), requiring no parser change of its own
 - **Exit:** 0
 - **Source:** [invariant/004_trace_universality.md](../../../docs/invariant/004_trace_universality.md)

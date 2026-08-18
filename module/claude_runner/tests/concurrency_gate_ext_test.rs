@@ -2,14 +2,22 @@
 //! messaging and reclaim-ticket chains (extended).
 #![ cfg( unix ) ]
 //!
-//! Extension of `concurrency_gate_test.rs` (T01–T14) covering T15–T22: the
+//! Extension of `concurrency_gate_test.rs` (T01–T14) covering T15–T23: the
 //! wait-message wording that distinguishes a live hold from a lost reclaim
 //! race (T15/T16), an orphaned reclaim ticket that must not permanently block
 //! a slot (T17), the fallback free-index scan (T18), atomic slot-file
 //! publication under a widened claim window (T19), the opt-in staleness
 //! threshold for reclaiming a live-but-stalled owner (T20), a ticket winner
-//! that fails its own admission and must not self-deny forever (T21), and a
-//! multi-generation orphaned reclaim-ticket chain walk (T22).
+//! that fails its own admission and must not self-deny forever (T21), a
+//! multi-generation orphaned reclaim-ticket chain walk (T22), and the
+//! deterministic (race-free) assertion of the lost-reclaim-race wording (T23).
+//!
+//! Fix(BUG-530): T16 and T23 split one previously-flaky assertion in two. T16
+//! keeps the genuine two-process race but asserts only what a race can
+//! guarantee, because which denial cause its loser observes depends on
+//! inter-process spawn skew no test can enforce; T23 asserts the
+//! `LostReclaimRace` wording itself from a pre-seeded live-claimant ticket,
+//! where no race exists to be lost and no timing margin is involved.
 //!
 //! See `concurrency_gate_test.rs`'s own header for the full Test Case Index
 //! across all 4 split files.
@@ -244,7 +252,50 @@ fn t15_slot_wait_message_names_live_hold_when_owner_alive()
 /// stricter assertion — the same numeric value can be safe for one test and
 /// unsafe for another, depending on what each actually asserts once the
 /// window closes.
-// test_kind: bug_reproducer(BUG-396); bug_reproducer(BUG-509)
+///
+/// ## Fix(BUG-530): Root Cause
+/// The BUG-509 widening treated an insufficient margin as the root cause when
+/// the actual defect was a missing synchronization. `acquire_slot()` returns
+/// `HeldByLive` (`gate.rs:525`) BEFORE `reclaim_test_delay()` (`gate.rs:527`),
+/// so the injected delay widens only the window in which the DEAD owner
+/// record stays visible — it never synchronizes the racers' arrival. For the
+/// loser to reach the ticket branch, both racers must execute their slot-read
+/// within that window: a bound on relative process-spawn skew that this test
+/// neither controls nor enforces. Under parallel-suite load the skew exceeds
+/// 500ms often enough to fail regularly.
+///
+/// ## Fix(BUG-530): Why Not Caught
+/// The dependency is invisible on an idle host, where back-to-back spawn skew
+/// is far below any of the chosen margins. Both prior fixes were validated
+/// that way, and neither made the required interleaving mandatory — so a
+/// passing run could never falsify either one. Reproduction required inducing
+/// CPU contention deliberately (`-0003_mre_530.sh`: 5/10 runs failed).
+///
+/// ## Fix(BUG-530): Fix Applied
+/// Removed the timing dependency instead of widening it a third time. This
+/// test's first-attempt assertion was relaxed to what a race can actually
+/// guarantee (one of the two legitimate causes, never a spurious third), and
+/// the deterministic `LostReclaimRace` classification assertion moved to T23,
+/// which pre-seeds the slot's reclaim ticket with a LIVE claimant so a single
+/// process walks dead-owner -> ticket-exists -> claimant-alive with no race.
+/// `CLR_GATE_RECLAIM_TEST_DELAY_MS` stays at 500 — it still makes the race
+/// genuine when skew permits; nothing now ASSERTS that it did.
+///
+/// ## Fix(BUG-530): Prevention
+/// A test whose assertion depends on a specific interleaving must make that
+/// interleaving mandatory — via a rendezvous, a pre-seeded end state, or a
+/// single-process construction — never via a sleep sized against observed
+/// skew. Assert the classification where it can be forced; assert only
+/// non-determinism-tolerant properties where it cannot.
+///
+/// ## Fix(BUG-530): Pitfall
+/// Widening a timing constant in response to an intermittent failure is
+/// evidence that the synchronization is missing, not a fix for it. Each
+/// widening lowers the rate enough to look resolved while leaving the
+/// dependency fully intact, so the defect returns under any new load profile
+/// — and each recurrence costs a fresh investigation from scratch (this was
+/// the third on this one test).
+// test_kind: bug_reproducer(BUG-396); bug_reproducer(BUG-509); bug_reproducer(BUG-530)
 #[ test ]
 fn t16_slot_wait_message_names_genuine_reclaim_race_for_dead_owner()
 {
@@ -323,24 +374,38 @@ fn t16_slot_wait_message_names_genuine_reclaim_race_for_dead_owner()
 
   // The winner is admitted on attempt 1 and returns immediately — it never
   // reaches the `!quiet` message block on any attempt, so its stderr is
-  // empty. The loser, however, may poll more than once before being killed
-  // above (CLR_GATE_POLL_SECS=1): its FIRST attempt is the genuine
-  // reclaim-ticket race this test targets, but by its SECOND attempt the
-  // winner's own slot record is in place and alive, so the loser legitimately
-  // (and correctly) shifts to reporting "slot held by another session" from
-  // then on. Only the loser's first gate-WAIT message is this test's
-  // subject — selected by its `gate-wait` token, not as stderr's literal
-  // first line, because the gate's first denied attempt is preceded by the
-  // one-time `gate-deadline` resolution announcement (BUG-481; param/033),
-  // which is not a wait message.
+  // empty. The loser polls until killed above (CLR_GATE_POLL_SECS=1).
+  //
+  // Fix(BUG-530): WHICH cause the loser observes is not something this test
+  // can determine. Reaching the reclaim-ticket branch at all requires both
+  // racers to execute their slot-read within the
+  // `CLR_GATE_RECLAIM_TEST_DELAY_MS` window, because `acquire_slot()` returns
+  // `HeldByLive` (gate.rs:525) BEFORE `reclaim_test_delay()` (gate.rs:527)
+  // whenever the recorded owner is already alive. That is a constraint on
+  // relative process-spawn skew between two independently spawned processes,
+  // which this test neither controls nor enforces — under parallel-suite CPU
+  // contention the winner routinely completes its `rename()` first, and the
+  // loser then CORRECTLY reports "slot held by another session".
+  //
+  // So this test now asserts only what a genuine race can guarantee: the
+  // loser's first gate-wait names one of the two legitimate
+  // dead-owner-contention causes and never a spurious third. The
+  // deterministic assertion — that `LostReclaimRace` specifically produces
+  // "lost reservation race" — moved to T23, which pre-seeds a live-claimant
+  // ticket and needs no race, no delay, and no margin at all.
+  //
+  // The loser's first gate-WAIT message is selected by its `gate-wait` token,
+  // not as stderr's literal first line, because the gate's first denied
+  // attempt is preceded by the one-time `gate-deadline` resolution
+  // announcement (BUG-481; param/033), which is not a wait message.
   let loser_stderr = if stderr_a.trim().is_empty() { stderr_b.as_str() } else { stderr_a.as_str() };
   let first_line   = loser_stderr.lines().find( | l | l.contains( "gate-wait" ) ).unwrap_or_default();
   assert!(
-    first_line.contains( "lost reservation race" ),
-    "T16 (BUG-396): the losing racer's FIRST poll attempt must report losing the \
-     reclaim-ticket race for the pre-seeded dead owner — later attempts may \
-     legitimately shift to \"slot held by another session\" once the winner's own \
-     slot record is alive and observed on a subsequent poll. stderr_a:\n{stderr_a}\n\
+    first_line.contains( "lost reservation race" ) || first_line.contains( "slot held by another session" ),
+    "T16 (BUG-396/530): the losing racer's first gate-wait must name one of the two \
+     legitimate dead-owner-contention causes — \"lost reservation race\" (it reached the \
+     ticket branch) or \"slot held by another session\" (the winner's rename() landed \
+     first). Any other reason is a message-differentiation defect. stderr_a:\n{stderr_a}\n\
      stderr_b:\n{stderr_b}"
   );
   assert!(
@@ -1066,3 +1131,111 @@ fn t22_acquire_slot_walks_multi_generation_reclaim_ticket_chain()
   );
 }
 
+
+// ── T23: LostReclaimRace wording asserted with no race at all (BUG-396; BUG-530) ──
+
+/// T23 (BUG-396/530): asserts the `LostReclaimRace` → "lost reservation race"
+/// mapping deterministically — no second process, no injected delay, no timing
+/// margin, and therefore nothing for host load to perturb.
+///
+/// Pre-seeds `gate_dir` with a dead-owner `slot_0.json` AND that owner's exact
+/// reclaim ticket, keyed as `acquire_slot()` names it
+/// (`reclaim_{index}_{owner}_{owner_since}.lock`), whose recorded claimant is a
+/// **live** PID — this test's own process, which is by construction alive, its
+/// own thread-group leader, and not a zombie, so `pid_alive()` returns true via
+/// its `None => true` legacy-record arm. A single `clr` invocation then walks
+/// `acquire_slot()` deterministically:
+///
+///   1. `claim_slot_file(slot_0.json)` fails — the path already exists.
+///   2. Owner record reads back the dead PID, so the `HeldByLive` guard at
+///      `gate.rs:525` does NOT fire.
+///   3. `claim_slot_file(ticket)` fails — the ticket already exists.
+///   4. The ticket's claimant is alive → `Err(LostReclaimRace)`.
+///
+/// Every step is a property of on-disk state this test wrote itself, so the
+/// outcome cannot depend on scheduling.
+///
+/// Contrast T17, which pre-seeds the same ticket shape with a **dead** claimant
+/// to prove the orphaned-ticket chain walk recovers; here a **live** claimant
+/// proves the opposite branch reports genuine contention. Contrast T16, which
+/// keeps the real two-process race but — per BUG-530 — can no longer assert
+/// WHICH cause the loser observes, because that depends on inter-process spawn
+/// skew no test can enforce.
+///
+/// ## Pitfall
+/// The ticket filename must be keyed by the SLOT OWNER's pid/since, not the
+/// claimant's — `acquire_slot()` derives it from the owner record it just read,
+/// so a ticket named after the claimant is simply never consulted and the test
+/// would silently exercise the ticket-win path instead of the contention path.
+// test_kind: bug_reproducer(BUG-396); bug_reproducer(BUG-530)
+#[ test ]
+fn t23_slot_wait_message_names_lost_reclaim_race_without_a_race()
+{
+  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
+  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
+  let proc_dir = tempfile::TempDir::new().expect( "proc dir" ); // empty: 0 counted occupiers
+
+  // Confirmed-dead slot owner — spawned and reaped, so /proc/{pid} is genuinely
+  // absent rather than a made-up number (same pattern as T14/T16/T17).
+  let mut dead_owner = Command::new( "true" ).spawn().expect( "spawn short-lived process" );
+  let dead_owner_pid = dead_owner.id();
+  let _ = dead_owner.wait();
+
+  // The live ticket claimant: this very test process.
+  let live_claimant_pid = std::process::id();
+
+  std::fs::write(
+    gate_dir.path().join( "slot_0.json" ),
+    format!( r#"{{"pid":{dead_owner_pid},"since":0}}"# ),
+  ).expect( "pre-seed dead-owner slot file" );
+
+  std::fs::write(
+    gate_dir.path().join( format!( "reclaim_0_{dead_owner_pid}_0.lock" ) ),
+    format!( r#"{{"pid":{live_claimant_pid},"since":0}}"# ),
+  ).expect( "pre-seed live-claimant reclaim ticket" );
+
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let mut child = Command::new( bin )
+    .args( [ "-p", "--max-sessions", "1", "--retry-override", "0", "--journal", "off", "x" ] )
+    .env( "PATH", &script_path )
+    .env( "CLR_PROC_DIR", proc_dir.path() )
+    .env( "CLR_GATE_DIR", gate_dir.path() )
+    .env( "CLR_GATE_POLL_SECS", "1" )
+    .env( "CLR_GATE_MAX_ATTEMPTS", "2" )
+    .stdout( std::process::Stdio::null() )
+    .stderr( std::process::Stdio::piped() )
+    .spawn()
+    .expect( "spawn clr" );
+
+  let deadline = std::time::Instant::now() + core::time::Duration::from_secs( 10 );
+  let exited = wait_bounded( &mut child, deadline );
+  if exited.is_none() { let _ = child.kill(); }
+  let out = child.wait_with_output().expect( "reap clr" );
+  let stderr = String::from_utf8_lossy( &out.stderr );
+
+  assert!(
+    exited.is_some(),
+    "T23 (BUG-396/530): clr must exit within 10s — still running past the 2-attempt, \
+     1s-poll gate budget means the process is stuck outside the gate-wait loop \
+     entirely. stderr:\n{stderr}"
+  );
+  assert!(
+    stderr.contains( "lost reservation race" ),
+    "T23 (BUG-396/530): the slot's owner is dead and its reclaim ticket is held by a \
+     LIVE claimant, so acquire_slot() must classify this as LostReclaimRace and say \
+     \"lost reservation race\" — deterministically, on every attempt, with no race to \
+     lose. stderr:\n{stderr}"
+  );
+  assert!(
+    !stderr.contains( "slot held by another session" ),
+    "T23 (BUG-396/530): must NOT report a live hold — the slot's recorded owner is \
+     confirmed dead; only the ticket's claimant is alive, which is genuine reclaim \
+     contention, not occupancy. Reporting occupancy here is exactly the \
+     message-differentiation defect BUG-396 fixed. stderr:\n{stderr}"
+  );
+  assert!(
+    !stderr.contains( "at capacity" ),
+    "T23 (BUG-396/530): must NOT report capacity exhaustion — has_capacity is true \
+     throughout (CLR_PROC_DIR is empty, so 0 counted occupiers). stderr:\n{stderr}"
+  );
+}

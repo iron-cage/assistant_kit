@@ -11,37 +11,40 @@ Test case planning for [invariant/013_slot_wait_message_differentiation.md](../.
 |----|-----------|----------|
 | IN-1 | 2 racers, `--max-sessions 1`, 0 pre-existing occupiers → losing racer's stderr names `"slot held by another session"` | Invariant Hold |
 | IN-2 | Same race as IN-1 → neither racer's stderr names `"at capacity"` or `"lost reservation race"` | Invariant Hold |
-| IN-3 | 2 racers, `--max-sessions 1`, pre-seeded confirmed-dead owner → losing racer's first poll attempt names `"lost reservation race"` | Invariant Hold |
+| IN-3 | 2 racers, `--max-sessions 1`, pre-seeded confirmed-dead owner → losing racer's first poll attempt names one of the two legitimate dead-owner-contention causes (narrowed by BUG-530; see IN-8) | Invariant Hold |
 | IN-4 | 1 long-running occupier already active, `--max-sessions 1`, second invocation polls → stderr names `"at capacity"`, not `"lost reservation race"` or `"slot held by another session"` | Invariant Boundary |
 | IN-5 | Any non-admission message → contains the literal substring `"gate-wait  active="` (TSK-452 structured format; replaced pre-TSK-452 `"active; waiting"` regression guard) | Regression Guard |
 | IN-6 | Any non-admission message → contains the literal substring `"gate-wait  active="` (BUG-431 regression guard, updated to TSK-452 format; print-mode scope now architectural rather than label-encoded) | Regression Guard |
 | IN-7 | Live-owned sole slot, empty census (census `0/1`, occupancy `1/1`) → poll line carries both `active=0/1` and `slots=1/1`; exhaustion message carries `slots=1/1 held` | Invariant Hold |
+| IN-8 | Dead-owner sole slot whose reclaim ticket is pre-seeded with a **live** claimant → stderr names `"lost reservation race"` and neither `"slot held by another session"` nor `"at capacity"` — deterministically, with no second process | Invariant Hold |
 
 ## Test Coverage Summary
 
-- Invariant Hold: 4 tests (IN-1, IN-2, IN-3, IN-7)
+- Invariant Hold: 5 tests (IN-1, IN-2, IN-3, IN-7, IN-8)
 - Invariant Boundary: 1 test (IN-4)
 - Regression Guard: 2 tests (IN-5, IN-6)
 
-**Total:** 7 invariant test cases (minimum for `invariant` doc type is 2; this spec exceeds it to cover all three message-differentiation directions, the measured-occupancy display, the preserved-substring regression guard, and the mode-qualifier regression guard)
+**Total:** 8 invariant test cases (minimum for `invariant` doc type is 2; this spec exceeds it to cover all three message-differentiation directions, the measured-occupancy display, the preserved-substring regression guard, and the mode-qualifier regression guard)
 
 ## Architectural Constraint
 
-All 7 cases are integration tests in `tests/concurrency_gate_test.rs` — the differentiation logic lives entirely inside `wait_for_session_slot()`'s poll loop and can only be observed by capturing a real racing `clr` subprocess's stderr (not `Stdio::null()`, the gap BUG-393's own `## Why Not Caught` identified in the pre-fix T08/T14 tests). IN-1 and IN-2 are the two assertions implemented by T15 (`t15_slot_wait_message_names_live_hold_when_owner_alive`) against a fresh-claim race fixture with no pre-existing dead owner — they are listed as separate IDs here because they assert two independent invariant directions (racer names the live-hold cause; racer does NOT name the exhaustion or reclaim-race causes) even though one test function covers both. IN-3 is implemented by T16 (`t16_slot_wait_message_names_genuine_reclaim_race_for_dead_owner`), added for BUG-396 to prove `"lost reservation race"` still fires for the one cause it is actually accurate for (a pre-seeded confirmed-dead owner, contended via an injected reclaim delay). IN-4 is implemented by T33 (`t33_slot_wait_message_names_at_capacity_for_exhaustion`), providing a genuine-exhaustion fixture (not a race) to prove `"at capacity"` is reachable. IN-5 is implemented by T34 (`t34_non_admission_message_preserves_active_waiting_substring`), guarding the `"gate-wait  active="` prefix (TSK-452 format; function name retained for historical traceability). IN-6 is implemented by `t_gate_progress_message_names_print_sessions`, the BUG-431 regression guard ensuring the mode qualifier is never silently dropped. IN-7 is implemented by T38 (`t38_slot_side_denial_names_measured_occupancy`), added for BUG-480: it seeds the sole slot's record with the test process's own live PID while leaving the census (proc dir) empty, forcing census and occupancy to diverge (`active=0/1` vs `slots=1/1`) — the one fixture shape that proves the `slots=` token reports the sweep's measurement rather than echoing the census counter.
+All 8 cases are integration tests, split across `tests/concurrency_gate_ext_test.rs` (IN-1/IN-2/IN-3/IN-8), `tests/concurrency_gate_ext2_test.rs` (IN-4/IN-5/IN-6), and `tests/concurrency_gate_test.rs` (IN-7) — the differentiation logic lives entirely inside `wait_for_session_slot()`'s poll loop and can only be observed by capturing a real `clr` subprocess's stderr (not `Stdio::null()`, the gap BUG-393's own `## Why Not Caught` identified in the pre-fix T08/T14 tests). IN-1 and IN-2 are the two assertions implemented by T15 (`t15_slot_wait_message_names_live_hold_when_owner_alive`) against a fresh-claim race fixture with no pre-existing dead owner — they are listed as separate IDs here because they assert two independent invariant directions (racer names the live-hold cause; racer does NOT name the exhaustion or reclaim-race causes) even though one test function covers both. IN-3 is implemented by T16 (`t16_slot_wait_message_names_genuine_reclaim_race_for_dead_owner`), added for BUG-396 as a genuine two-process race over a pre-seeded confirmed-dead owner; BUG-530 narrowed its assertion to "one of the two legitimate dead-owner-contention causes" because which one fires depends on inter-process spawn skew that no fixture can bound (see IN-3's own Note). IN-8 is implemented by T23 (`t23_slot_wait_message_names_lost_reclaim_race_without_a_race`), added for BUG-530 to carry the exact-cause assertion IN-3 gave up: it pre-seeds both the dead-owner slot record and its reclaim ticket (claimed by the test's own live PID), so the single `clr` process under test is forced down the `LostReclaimRace` branch with no second process and no timing window involved. The two are deliberately complementary — T16 proves the race is survivable and never mislabels, T23 proves the label itself is correct. IN-4 is implemented by T33 (`t33_slot_wait_message_names_at_capacity_for_exhaustion`), providing a genuine-exhaustion fixture (not a race) to prove `"at capacity"` is reachable. IN-5 is implemented by T34 (`t34_non_admission_message_preserves_active_waiting_substring`), guarding the `"gate-wait  active="` prefix (TSK-452 format; function name retained for historical traceability). IN-6 is implemented by `t_gate_progress_message_names_print_sessions`, the BUG-431 regression guard ensuring the mode qualifier is never silently dropped. IN-7 is implemented by T38 (`t38_slot_side_denial_names_measured_occupancy`), added for BUG-480: it seeds the sole slot's record with the test process's own live PID while leaving the census (proc dir) empty, forcing census and occupancy to diverge (`active=0/1` vs `slots=1/1`) — the one fixture shape that proves the `slots=` token reports the sweep's measurement rather than echoing the census counter.
 
 ## Implementation Notes
 
 | ID | Test Function | File | Status |
 |----|---------------|------|--------|
-| IN-1 | `t15_slot_wait_message_names_live_hold_when_owner_alive` | `tests/concurrency_gate_test.rs` | ✅ |
-| IN-2 | `t15_slot_wait_message_names_live_hold_when_owner_alive` | `tests/concurrency_gate_test.rs` | ✅ |
-| IN-3 | `t16_slot_wait_message_names_genuine_reclaim_race_for_dead_owner` | `tests/concurrency_gate_test.rs` | ✅ |
-| IN-4 | `t33_slot_wait_message_names_at_capacity_for_exhaustion` | `tests/concurrency_gate_test.rs` | ✅ |
-| IN-5 | `t34_non_admission_message_preserves_active_waiting_substring` | `tests/concurrency_gate_test.rs` | ✅ |
-| IN-6 | `t_gate_progress_message_names_print_sessions` | `tests/concurrency_gate_test.rs` | ✅ |
+| IN-1 | `t15_slot_wait_message_names_live_hold_when_owner_alive` | `tests/concurrency_gate_ext_test.rs` | ✅ |
+| IN-2 | `t15_slot_wait_message_names_live_hold_when_owner_alive` | `tests/concurrency_gate_ext_test.rs` | ✅ |
+| IN-3 | `t16_slot_wait_message_names_genuine_reclaim_race_for_dead_owner` | `tests/concurrency_gate_ext_test.rs` | ✅ |
+| IN-4 | `t33_slot_wait_message_names_at_capacity_for_exhaustion` | `tests/concurrency_gate_ext2_test.rs` | ✅ |
+| IN-5 | `t34_non_admission_message_preserves_active_waiting_substring` | `tests/concurrency_gate_ext2_test.rs` | ✅ |
+| IN-6 | `t_gate_progress_message_names_print_sessions` | `tests/concurrency_gate_ext2_test.rs` | ✅ |
 | IN-7 | `t38_slot_side_denial_names_measured_occupancy` | `tests/concurrency_gate_test.rs` | ✅ |
+| IN-8 | `t23_slot_wait_message_names_lost_reclaim_race_without_a_race` | `tests/concurrency_gate_ext_test.rs` | ✅ |
 
 <!-- BUG-480 task/claude_runner/bug/480_gate_diagnostic_hides_slot_occupancy.md — fixed: IN-7 registered below (census/occupancy-divergence fixture asserting the slots=H/M token and the slots=H/M held exhaustion suffix); implemented by T38 -->
+<!-- BUG-530 task/claude_runner/bug/verified/530_t16_first_poll_assertion_depends_on_unenforced_spawn_skew.md — fixed: IN-3 narrowed to "one of the two legitimate causes" (its exact-cause assertion depended on an unenforceable spawn-skew bound), and IN-8 registered below to carry that assertion deterministically; implemented by T23 -->
 
 ---
 
@@ -65,12 +68,12 @@ All 7 cases are integration tests in `tests/concurrency_gate_test.rs` — the di
 
 ---
 
-### IN-3: 2 racers, `--max-sessions 1`, pre-seeded confirmed-dead owner → losing racer's first poll attempt names `"lost reservation race"`
+### IN-3: 2 racers, `--max-sessions 1`, pre-seeded confirmed-dead owner → losing racer's first poll attempt names one of the two legitimate dead-owner-contention causes
 
 - **Given:** the sole slot (`--max-sessions 1`) is pre-seeded with a confirmed-dead owner (a real `true` process spawned and reaped, so its PID is guaranteed not alive and not recyclable within the test window); two racers then contend to reclaim it, with `CLR_GATE_RECLAIM_TEST_DELAY_MS` injecting a delay to widen the reclaim-ticket contention window
-- **When:** both racers observe `count_u32 < max` and a dead recorded owner, and both attempt the atomic reclaim-ticket sequence in `acquire_slot()`
-- **Then:** the losing racer's stderr is non-empty (the winner returns immediately with no wait-loop output) and its FIRST line contains the literal substring `"lost reservation race"` — later poll attempts may legitimately shift to `"slot held by another session"` once the winner's own slot record becomes observable, so only the first line is asserted
-- **Note:** `bug_reproducer(BUG-396)` — proves `"lost reservation race"` still fires for the one cause it is actually accurate for; without this case, BUG-396's fix could over-correct and make the label unreachable entirely
+- **When:** both racers observe `count_u32 < max` and a dead recorded owner, and at least one attempts the atomic reclaim-ticket sequence in `acquire_slot()`
+- **Then:** the losing racer's stderr is non-empty (the winner returns immediately with no wait-loop output) and its first `gate-wait` line contains either `"lost reservation race"` or `"slot held by another session"` — and never any third cause
+- **Note:** `bug_reproducer(BUG-396)`/`bug_reproducer(BUG-530)`. **Scope narrowed by BUG-530:** this case can no longer assert *which* of the two causes appears. `acquire_slot()` returns `HeldByLive` (`gate.rs:525`) **before** `reclaim_test_delay()` (`gate.rs:527`), so the injected delay widens only the window in which the dead owner stays visible — reaching the ticket branch requires both racers to execute their slot-read within it, a constraint on inter-process spawn skew that no fixture can enforce. Under parallel-suite load the winner's `rename()` routinely lands first and the loser then *correctly* reports a live hold. The deterministic assertion that `LostReclaimRace` produces `"lost reservation race"` moved to **IN-8**, which needs no race at all
 - **Source:** [invariant/013_slot_wait_message_differentiation.md](../../../docs/invariant/013_slot_wait_message_differentiation.md) Invariant Statement table row 3 (`has_capacity=true`, `LostReclaimRace`)
 
 ---
@@ -112,3 +115,13 @@ All 7 cases are integration tests in `tests/concurrency_gate_test.rs` — the di
 - **Then:** the invocation exits non-success; the denial line naming `reason: slot held by another session` contains BOTH the unchanged census half `"gate-wait  active=0/1"` AND the measured occupancy `"slots=1/1"`; the `session gate timed out` message contains `"slots=1/1 held"`
 - **Note:** `bug_reproducer(BUG-480)` — the census/occupancy divergence (`0/1` vs `1/1`) is the load-bearing fixture property: a fixture where both counters agree could pass even if `slots=` merely echoed the census counter. Empirically confirmed to fail pre-fix (denial line carried no `slots=` token) and pass post-fix. At-capacity lines are deliberately NOT asserted to carry `slots=` — the exemption is pinned by the unchanged T29/T31 full-line guards in `tests/concurrency_gate_ext2_test.rs`
 - **Source:** [invariant/013_slot_wait_message_differentiation.md](../../../docs/invariant/013_slot_wait_message_differentiation.md) § Invariant Statement, "Measured occupancy (BUG-480)"
+
+---
+
+### IN-8: Dead-owner sole slot with a pre-seeded live reclaim ticket → stderr names `"lost reservation race"`, deterministically and with no second process
+
+- **Given:** the sole slot (`--max-sessions 1`) is pre-seeded with a confirmed-dead owner (a real `true` process spawned and reaped, so its PID is guaranteed not alive), AND that owner's reclaim ticket `reclaim_0_{dead_pid}_0.lock` is pre-seeded as already claimed by the test process's own PID (guaranteed alive for the whole run); `CLR_PROC_DIR` left empty so the census never denies first; `CLR_GATE_POLL_SECS=1`, `CLR_GATE_MAX_ATTEMPTS=2`, `--retry-override 0`, `--journal off`; exactly one `clr` process is launched
+- **When:** that single invocation observes `count_u32 < max` and a dead recorded owner, proceeds past the `HeldByLive` early return into the reclaim-ticket branch, and finds the ticket already held by a live claimant
+- **Then:** the invocation terminates within a bounded wait and its captured stderr contains the literal substring `"lost reservation race"`, and contains neither `"slot held by another session"` nor `"at capacity"`
+- **Note:** `bug_reproducer(BUG-396)`/`bug_reproducer(BUG-530)` — this is the deterministic counterpart to IN-3, carrying the exact-cause assertion IN-3 surrendered. The fixture's load-bearing property is that **both** the dead slot record and its live-claimed ticket are pre-seeded: that combination is the only state from which `acquire_slot()` can reach `LostReclaimRace`, and pre-seeding it removes every timing dependency — no second process, no `CLR_GATE_RECLAIM_TEST_DELAY_MS`, no spawn-skew bound. Per BUG-530, `acquire_slot()` returns `HeldByLive` (`gate.rs:525`) before `reclaim_test_delay()` (`gate.rs:527`) ever runs, which is precisely why a two-racer fixture cannot guarantee this branch is reached at all
+- **Source:** [invariant/013_slot_wait_message_differentiation.md](../../../docs/invariant/013_slot_wait_message_differentiation.md) Invariant Statement table row 3 (`has_capacity=true`, `LostReclaimRace`)

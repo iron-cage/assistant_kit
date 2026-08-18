@@ -89,6 +89,27 @@ fn network_reachable() -> bool
   "api.anthropic.com:443".to_socket_addrs().is_ok()
 }
 
+/// Fix(BUG-531): announce an unmet live prerequisite on stderr before returning.
+///
+/// Root cause: `claude_binary_available()` and `network_reachable()` drove a bare
+/// `return;`, making "this assertion held" and "this assertion was never
+/// evaluated" the same observable outcome — a vacuous pass, across 10 sites, in a
+/// project whose own testing principles forbid silently passing on missing
+/// resources. The third prerequisite in this same file (`live_creds_file()`)
+/// already fails loudly, so the file was internally inconsistent too.
+///
+/// Deliberately a notice rather than a `panic!`: escalating to a hard failure
+/// would break every genuinely uncredentialed environment (standard CI), which is
+/// a policy change beyond this fix. Visibility is what was actually missing.
+///
+/// Pitfall: `cargo nextest` captures per-test stderr and prints it only for
+/// failing tests by default — pass `--no-capture` (or read the JUnit/libtest
+/// output) to see these notices on a passing run.
+fn skip_notice( reason : &str )
+{
+  eprintln!( "SKIP (live prerequisite unmet): {reason} — assertions in this test were not evaluated" );
+}
+
 // ── offline tests (no live claude required) ───────────────────────────────────
 
 /// IT-2: creds file that does not exist → exit 1 with file-not-found message.
@@ -322,16 +343,46 @@ fn test_ec_timeout3_large_accepted()
 /// IT-1: Happy path — valid creds, message → response on stdout, exit 0.
 ///
 /// Source: tests/docs/cli/command/03_isolated.md#it-1
+///
+/// ## Fix(BUG-531): Root Cause
+/// This test passed no `--timeout`, so `clr isolated` applied its compiled-in
+/// 30s default (`cred_parse.rs:160`) as the budget for a full live Claude API
+/// round-trip — `claude` process start, Node runtime init, auth handshake, and
+/// live inference — executed while the rest of a 1334-test suite competed for
+/// CPU. Observed failing under full-suite load with `exit 2` and
+/// `Error: isolated subprocess timed out after 30 seconds`.
+///
+/// ## Fix(BUG-531): Why Not Caught
+/// On an unloaded host the same round-trip completes in a few seconds, leaving
+/// what looks like a 6-10x margin. The budget was never chosen — it was
+/// inherited silently from a production default tuned for a human waiting at a
+/// terminal, so no reviewer had a stated number to question.
+///
+/// ## Fix(BUG-531): Fix Applied
+/// Pass an explicit, generous `--timeout`, matching the pattern the other six
+/// `lim_it` tests already follow (they pass `0`, `3`, or `10`). The value is
+/// deliberately far above the observed latency: this budget exists only to stop
+/// a genuine hang, never to assert responsiveness.
+///
+/// ## Fix(BUG-531): Prevention
+/// A test that crosses a network boundary states its own time budget rather
+/// than inheriting a production default chosen for a different usage profile.
+///
+/// ## Fix(BUG-531): Pitfall
+/// A timeout budget sized against observed happy-path latency is not a margin —
+/// under parallel-suite contention the same call competes with hundreds of
+/// sibling processes, so size against the contended worst case or don't assert
+/// on it at all.
 #[ test ]
 fn it1_lim_it_happy_path()
 {
-  if !claude_binary_available() { return; }
-  if !network_reachable() { return; }
+  if !claude_binary_available() { skip_notice( "claude binary not on PATH" ); return; }
+  if !network_reachable() { skip_notice( "api.anthropic.com:443 not resolvable" ); return; }
   let Some( ( _tmp, path ) ) = live_creds_file() else
   {
     panic!( "lim_it test requires live credentials at $HOME/.claude/.credentials.json — run only in credentialed environments, not in standard CI" );
   };
-  let out = run_isolated( &[ "--creds", &path, "What is 2+2? Reply with just the number." ] );
+  let out = run_isolated( &[ "--creds", &path, "--timeout", "180", "What is 2+2? Reply with just the number." ] );
   assert_eq!(
     exit_code( &out ), 0,
     "expected exit 0; stderr: {}", stderr_str( &out )
@@ -353,8 +404,8 @@ fn it1_lim_it_happy_path()
 #[ test ]
 fn it3_lim_it_timeout_no_refresh()
 {
-  if !claude_binary_available() { return; }
-  if !network_reachable() { return; }
+  if !claude_binary_available() { skip_notice( "claude binary not on PATH" ); return; }
+  if !network_reachable() { skip_notice( "api.anthropic.com:443 not resolvable" ); return; }
   let Some( ( _tmp, path ) ) = live_creds_file() else
   {
     panic!( "lim_it test requires live credentials at $HOME/.claude/.credentials.json — run only in credentialed environments, not in standard CI" );
@@ -383,8 +434,8 @@ fn it3_lim_it_timeout_no_refresh()
 #[ test ]
 fn it4_lim_it_timeout_with_refresh()
 {
-  if !claude_binary_available() { return; }
-  if !network_reachable() { return; }
+  if !claude_binary_available() { skip_notice( "claude binary not on PATH" ); return; }
+  if !network_reachable() { skip_notice( "api.anthropic.com:443 not resolvable" ); return; }
   let Some( ( tmp, path ) ) = live_creds_file() else
   {
     panic!( "lim_it test requires live credentials at $HOME/.claude/.credentials.json — run only in credentialed environments, not in standard CI" );
@@ -430,15 +481,22 @@ fn it5_lim_it_interactive_mode()
 /// `claude --version` exits 0 and prints a version string to stdout.
 ///
 /// Source: tests/docs/cli/command/03_isolated.md#it-6
+///
+/// Fix(BUG-531): also inherited the compiled-in 30s default (`cred_parse.rs:160`)
+/// rather than stating a budget. Materially less exposed than IT-1 — `--version`
+/// is process startup only, with no network round-trip (note this test does not
+/// even gate on `network_reachable()`) — but the budget is now an explicit test
+/// decision rather than a silently inherited production default. Root cause,
+/// prevention, and pitfall as documented on `it1_lim_it_happy_path`.
 #[ test ]
 fn it6_lim_it_flag_passthrough()
 {
-  if !claude_binary_available() { return; }
+  if !claude_binary_available() { skip_notice( "claude binary not on PATH" ); return; }
   let Some( ( _tmp, path ) ) = live_creds_file() else
   {
     panic!( "lim_it test requires live credentials at $HOME/.claude/.credentials.json — run only in credentialed environments, not in standard CI" );
   };
-  let out = run_isolated( &[ "--creds", &path, "--", "--version" ] );
+  let out = run_isolated( &[ "--creds", &path, "--timeout", "60", "--", "--version" ] );
   assert_eq!(
     exit_code( &out ), 0,
     "expected exit 0 from --version; stderr: {}", stderr_str( &out )
@@ -455,7 +513,7 @@ fn it6_lim_it_flag_passthrough()
 #[ test ]
 fn ec_creds1_lim_it_valid_file_path()
 {
-  if !network_reachable() { return; }
+  if !network_reachable() { skip_notice( "api.anthropic.com:443 not resolvable" ); return; }
   let Some( ( _tmp, path ) ) = live_creds_file() else { return; };
   let out = run_isolated( &[ "--creds", &path, "--timeout", "10", "Say hi" ] );
   let err = stderr_str( &out );
@@ -471,7 +529,7 @@ fn ec_creds1_lim_it_valid_file_path()
 #[ test ]
 fn ec_creds2_lim_it_absolute_path()
 {
-  if !network_reachable() { return; }
+  if !network_reachable() { skip_notice( "api.anthropic.com:443 not resolvable" ); return; }
   let Some( ( _tmp, path ) ) = live_creds_file() else { return; };
   // `path` from live_creds_file() is already absolute (NamedTempFile path).
   assert!( path.starts_with( '/' ), "expected absolute path; got: {path}" );
@@ -492,7 +550,7 @@ fn ec_creds2_lim_it_absolute_path()
 #[ test ]
 fn ec_creds3_lim_it_relative_path()
 {
-  if !network_reachable() { return; }
+  if !network_reachable() { skip_notice( "api.anthropic.com:443 not resolvable" ); return; }
   let Some( ( (), content ) ) = live_creds_file().map( | ( tmp, path ) |
   {
     let c = std::fs::read_to_string( &path ).unwrap_or_default();

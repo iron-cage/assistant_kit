@@ -252,7 +252,7 @@ Error: [Runner] session gate timed out — 30 active sessions, max-sessions=30 (
 ```
 Error: [Runner] session gate unavailable — process scanner cannot read the process list (--max-sessions requires working /proc; pass --max-sessions 0 to disable the gate) (exit 1)
 ```
-Skipped entirely when `--max-sessions 0` — the disable escape hatch survives a broken process scanner. Applies to `run`, `ask`, and `isolated` (and, once dispatch wiring lands per task 521, `topic`) (see [param/033_max_sessions.md](../param/033_max_sessions.md)).
+Skipped entirely when `--max-sessions 0` — the disable escape hatch survives a broken process scanner. Applies to `run`, `ask`, `isolated`, and `topic` (see [param/033_max_sessions.md](../param/033_max_sessions.md)).
 
 **Unknown** (non-zero, no recognized pattern, exit ≤ 128, exit ≠ 2):
 ```

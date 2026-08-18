@@ -60,7 +60,7 @@ clr <command> [OPTIONS] [MESSAGE]
 
 **Current Level:** L5
 **Design Completeness:** 100%
-**Implementation Status:** Complete (`clr tools` filter/projection/inspect flags and `clr topic` dispatch wiring documented at Level 2 pending implementation — see task tracking under `task/claude_runner/`)
+**Implementation Status:** Complete
 
 ### Navigation
 

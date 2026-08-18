@@ -9,7 +9,7 @@
 
 ### Invariant Statement
 
-`clr run` must inject the following flags on every invocation unless explicitly overridden. These defaults apply to the `run` command (including the implicit default when no subcommand is given). The `ask` command is a pure semantic alias for `run` with identical defaults — see [command/05_ask.md](../cli/command/05_ask.md). `topic` is designed to delegate to the same handler with identical defaults (diverging only in `--subdir`'s default) — see [command/11_topic.md](../cli/command/11_topic.md); dispatch wiring is pending implementation (task 521).
+`clr run` must inject the following flags on every invocation unless explicitly overridden. These defaults apply to the `run` command (including the implicit default when no subcommand is given). The `ask` command is a pure semantic alias for `run` with identical defaults — see [command/05_ask.md](../cli/command/05_ask.md). `topic` delegates to the same handler with identical defaults (diverging only in `--subdir`'s default) — see [command/11_topic.md](../cli/command/11_topic.md).
 
 | Flag | Default | Override | Rationale |
 |------|---------|----------|-----------|

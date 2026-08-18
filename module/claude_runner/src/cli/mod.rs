@@ -13,6 +13,7 @@ mod ps;
 mod kill;
 mod tools;
 mod scope;
+mod topic;
 mod query;
 mod summary;
 mod json_config;
@@ -55,6 +56,7 @@ pub( super ) use ps::dispatch_ps;
 pub( super ) use kill::dispatch_kill;
 pub( super ) use tools::dispatch_tools;
 pub( crate ) use scope::dispatch_scope;
+pub( crate ) use topic::dispatch_topic;
 pub( super ) use query::{ dispatch_query, run_query_daemon };
 
 pub( super ) use parse::parse_args;
@@ -90,7 +92,7 @@ pub( super ) fn handle_dry_run( builder : &ClaudeCommand, transplant : Option< &
 // Fix(BUG-212): `run` was absent; typing `clr running` produced no helpful error.
 // Root cause: list was never updated when `run` became an explicit subcommand.
 // Pitfall: update both this list and the dispatch match in lib.rs when adding a subcommand.
-const KNOWN_SUBCOMMANDS : &[ &str ] = &[ "run", "ask", "isolated", "refresh", "help", "ps", "kill", "tools", "scope", "query" ];
+const KNOWN_SUBCOMMANDS : &[ &str ] = &[ "run", "ask", "isolated", "refresh", "help", "ps", "kill", "tools", "scope", "query", "topic" ];
 
 // Fix(BUG-225): Guard against typos/truncations of known subcommand names.
 // Root cause: `run_cli()` dispatched subcommands by exact string match only — any

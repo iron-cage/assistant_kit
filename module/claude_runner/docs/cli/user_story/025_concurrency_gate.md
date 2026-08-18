@@ -39,7 +39,7 @@
 | 1 | [`run`](../command/01_run.md) | Primary command; gate applies before subprocess launch |
 | 5 | [`ask`](../command/05_ask.md) | Same behavior; pure alias for run |
 | 3 | [`isolated`](../command/03_isolated.md) | Same gate mechanism; 3-tier (CLI flag + `"max-sessions"` JSON key via `--args-file` + `CLR_MAX_SESSIONS` env var; no config-file tier) |
-| 11 | [`topic`](../command/11_topic.md) | Same gate mechanism as `run`/`ask` via delegation, once dispatch wiring lands per task 521 |
+| 11 | [`topic`](../command/11_topic.md) | Same gate mechanism as `run`/`ask` via delegation |
 
 ### Referenced Parameter Groups
 

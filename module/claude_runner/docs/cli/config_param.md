@@ -9,7 +9,7 @@
 
 ### Discovery & Precedence
 
-`clr run` / `clr ask` read config defaults from up to two TOML files, in `load_config()` (`src/cli/config.rs`), called from `dispatch_run()` immediately after `apply_env_vars()`. `clr topic` is designed to share this same code path (it delegates to `run`'s handler) but dispatch wiring is pending implementation (task 521):
+`clr run` / `clr ask` read config defaults from up to two TOML files, in `load_config()` (`src/cli/config.rs`), called from `dispatch_run()` immediately after `apply_env_vars()`. `clr topic` shares this same code path (it delegates to `run`'s handler):
 
 1. **Project-level**: `.clr.toml` in the current working directory
 2. **User-level**: `config.toml` under `$CLR_CONFIG_DIR` (if set and non-empty), else `$HOME/.clr`

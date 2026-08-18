@@ -84,7 +84,7 @@ pub fn run_cli()
   use cli::{
     print_help, dispatch_run,
     dispatch_ask, dispatch_isolated, dispatch_refresh, dispatch_ps, dispatch_kill,
-    dispatch_tools, dispatch_scope, dispatch_query, run_query_daemon, guard_unknown_subcommand,
+    dispatch_tools, dispatch_scope, dispatch_topic, dispatch_query, run_query_daemon, guard_unknown_subcommand,
   };
 
   let tokens : Vec< String > = std::env::args().skip( 1 ).collect();
@@ -126,6 +126,7 @@ pub fn run_cli()
     Some( "kill" )     => dispatch_kill( &tokens ),
     Some( "tools" )    => dispatch_tools( &tokens ),
     Some( "scope" )    => dispatch_scope( &tokens ),
+    Some( "topic" )    => dispatch_topic( &tokens ),
     Some( "query" )    => dispatch_query( &tokens ),
     Some( "__query_daemon" ) => run_query_daemon( &tokens ),
     _                  => {}

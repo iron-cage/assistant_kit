@@ -11,6 +11,7 @@ pub( crate ) fn print_help()
     "clr <command>".to_string(),
     "clr run [OPTIONS] [<MSG>]".to_string(),
     "clr ask [OPTIONS] [<MSG>]".to_string(),
+    "clr topic [OPTIONS] [<MSG>]".to_string(),
     "clr ps [OPTIONS]".to_string(),
     "clr kill <PID>".to_string(),
     "clr tools".to_string(),
@@ -29,6 +30,7 @@ pub( crate ) fn print_help()
       [
         CommandEntry { name : "run".to_string(),      desc : "Execute Claude Code (default mode)".to_string() },
         CommandEntry { name : "ask".to_string(),      desc : "Semantic alias for run (identical behavior)".to_string() },
+        CommandEntry { name : "topic".to_string(),    desc : "Auto-named topic session (run/ask + generated --subdir)".to_string() },
         CommandEntry { name : "isolated".to_string(), desc : "Run with credential-isolated temp HOME".to_string() },
         CommandEntry { name : "refresh".to_string(),  desc : "Refresh OAuth credentials without a task".to_string() },
         CommandEntry { name : "ps".to_string(),       desc : "List running Claude Code sessions".to_string() },
@@ -358,6 +360,64 @@ pub( crate ) fn print_ask_help() -> !
   println!( "  --append-system-prompt <TEXT>      Append to default system prompt" );
   println!( "  --dir <PATH>, --to <PATH>          Working directory (alias: --to)" );
   println!( "  --subdir <NAME>                    Named subdirectory appended to --dir as /-NAME; . = identity" );
+  println!( "  --message <MSG>                    Message to send (alternative to positional argument)" );
+  println!( "  --session-dir <PATH>               Session storage directory" );
+  println!( "  --from <DIR>                       Cross-load most-recent session from source directory (default: current directory) [env: CLR_FROM]" );
+  println!( "  --quiet                            Suppress non-fatal diagnostics (gate-wait, retry, keep-claudecode) [env: CLR_QUIET]" );
+  println!( "  --args-file <PATH>                 Load clr params from JSON file (or stdin JSON); env: CLR_ARGS_FILE" );
+  println!( "  --json-schema <SCHEMA>             JSON schema for structured output" );
+  println!( "  --mcp-config <PATH>                MCP server config file (repeatable)" );
+  println!( "  --file <PATH>                      Pipe file content to subprocess stdin" );
+  println!( "  --no-stdin                         Never read piped stdin (JSON config and forwarding disabled) [env: CLR_NO_STDIN]" );
+  println!( "  --strip-fences                     Strip outermost markdown code fences" );
+  println!( "  --output-file <PATH>               Write captured output to file (tee: stdout + file)" );
+  println!( "  --expect <VALS>                    Pipe-separated expected values; mismatch → exit 3 (case-insensitive, trimmed)" );
+  println!( "  --expect-strategy <STRAT>          Mismatch handling: fail (default), retry, default:<VAL>" );
+  println!( "  --timeout <SECS>                   Kill subprocess after N seconds (default: 0 = unlimited)" );
+  println!( "  --retry-override <N>               Force retry count for all error classes" );
+  println!( "  --retry-default <N>                Fallback retry count (default: 2)" );
+  println!( "  --retry-on-transient <N>           Transient class retry count (default: auto → fallback)" );
+  println!( "  --retry-on-service <N>             Service class retry count (default: auto → fallback)" );
+  println!( "  --retry-on-unknown <N>             Unknown class retry count (default: auto → fallback)" );
+  println!( "  -h, --help                         Show this help" );
+  println!();
+  println!( "See `clr --help` for the full retry option list (20 params, 3-tier hierarchy)." );
+  std::process::exit( 0 );
+}
+
+/// Print help for the `topic` subcommand and exit 0.
+///
+/// Called when `--help`/`-h` or positional `help` is detected in `dispatch_topic`
+/// before delegating to `dispatch_run`.
+pub( crate ) fn print_topic_help() -> !
+{
+  println!( "clr topic — Auto-named topic session: `run`/`ask` with a generated --subdir" );
+  println!();
+  println!( "USAGE:" );
+  println!( "  clr topic [OPTIONS] [MESSAGE]" );
+  println!();
+  println!( "ARGUMENTS:" );
+  println!( "  [MESSAGE]                          Message to send to Claude" );
+  println!();
+  println!( "`clr topic` behaves exactly like `clr ask`, with one addition: when --subdir" );
+  println!( "is not given, an auto-generated directory-name slug is derived from MESSAGE" );
+  println!( "(lowercase, hyphenated, disambiguated with a -2, -3, ... counter suffix" );
+  println!( "against what already exists on disk) and applied as if --subdir <slug> had" );
+  println!( "been passed. An explicit --subdir always wins — `clr topic --subdir NAME" );
+  println!( "\"msg\"` is then byte-identical to `clr ask --subdir NAME \"msg\"`." );
+  println!( "See `clr --help` or `clr run --help` for the full option list." );
+  println!();
+  println!( "OPTIONS:" );
+  println!( "  -p, --print                        Non-interactive mode (capture and print output)" );
+  println!( "  --effort <LEVEL>                   Reasoning effort: low, medium, high, max (default: max)" );
+  println!( "  --max-tokens <N>                   Max output tokens (default: 128000)" );
+  println!( "  --model <MODEL>                    Model to use" );
+  println!( "  --dry-run                          Print command without executing" );
+  println!( "  --trace                            Print command to stderr then execute" );
+  println!( "  --system-prompt <TEXT>             Set system prompt" );
+  println!( "  --append-system-prompt <TEXT>      Append to default system prompt" );
+  println!( "  --dir <PATH>, --to <PATH>          Working directory (alias: --to)" );
+  println!( "  --subdir <NAME>                    Named subdirectory (default: auto-generated slug)" );
   println!( "  --message <MSG>                    Message to send (alternative to positional argument)" );
   println!( "  --session-dir <PATH>               Session storage directory" );
   println!( "  --from <DIR>                       Cross-load most-recent session from source directory (default: current directory) [env: CLR_FROM]" );

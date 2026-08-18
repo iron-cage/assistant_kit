@@ -47,6 +47,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`clr topic [OPTIONS] [MESSAGE]` — named, session-isolated workspace subcommand** (TSK-521)
+  - Alias of `run`/`ask` that changes only `--subdir`'s default: auto-generates a slug from `MESSAGE` (lowercase, non-alphanumeric runs collapsed to `-`, truncated to 40 chars word-boundary-aware) when `--subdir` is omitted, disambiguated against existing subdirectories via a `-2`/`-3`... counter
+  - Explicit `--subdir NAME` behaves byte-identically to `clr ask --subdir NAME` — no new session-management code; the pre-existing `--subdir`+`--from` clone/continue transplant mechanism handles first-call clone and subsequent-call continuation unmodified
+  - New `src/cli/topic.rs` (`dispatch_topic()`, slug generation/disambiguation); wired into `src/lib.rs` and `src/cli/mod.rs`; `print_topic_help()` added to `src/cli/help.rs`
+  - Tests: `tests/topic_command_test.rs` (T01-T08)
+
 - **Container-only test execution enforcement** (commit `40927a98`)
   - `verb/test` rejects any `VERB_LAYER` set on the host; `verb/test.d/l0` is a hard-error stub (exits 1) — no host-native test execution path exists
   - Workspace-level `.config/setup-require-container` registered as a nextest setup script; checks three detection signals (`/.dockerenv`, `/run/.containerenv`, `RUNBOX_CONTAINER=1`); exits 1 before any test binary on bare host

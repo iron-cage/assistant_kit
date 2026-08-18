@@ -11,7 +11,7 @@ Test case planning for [invariant/003_command_naming.md](../../../docs/invariant
 | IN-3 | `clr` (no args) → interactive REPL, not help | Default Dispatch | ✅ |
 | IN-4 | `clr run "msg"` (explicit) → dispatches `run` command | Bare Word Command | ✅ |
 | IN-5 | `clr unknowncmd` → exit 1, unrecognized subcommand error | Unknown Command | ✅ |
-| IN-6 | `KNOWN_SUBCOMMANDS` contains all 10 commands; no entry begins with `--` | Naming Invariant | ✅ |
+| IN-6 | `KNOWN_SUBCOMMANDS` contains all 11 commands; no entry begins with `--` | Naming Invariant | ✅ |
 | IN-7 | `clr is` / `clr is it so?` — common English prefix passes through guard without error | Guard False-Positive (BUG-302) | ✅ |
 | IN-8 | `clr isolat` still caught by guard after BUG-302 fix (true-positive regression) | Guard True-Positive | ✅ |
 
@@ -80,11 +80,11 @@ Test case planning for [invariant/003_command_naming.md](../../../docs/invariant
 
 ---
 
-### IN-6: `KNOWN_SUBCOMMANDS` contains all 10 commands; no entry begins with `--`
+### IN-6: `KNOWN_SUBCOMMANDS` contains all 11 commands; no entry begins with `--`
 
 - **Given:** static analysis of `guard_unknown_subcommand()` dispatch in `src/cli/mod.rs`
 - **When:** inspect `KNOWN_SUBCOMMANDS` constant
-- **Then:** `KNOWN_SUBCOMMANDS` contains exactly 10 entries: `run`, `ask`, `isolated`, `refresh`, `help`, `ps`, `kill`, `tools`, `scope`, `query`; none starts with `--` or `-`; all are bare words. `topic` is not yet a registered subcommand — dispatch wiring is pending implementation (task 521)
+- **Then:** `KNOWN_SUBCOMMANDS` contains exactly 11 entries: `run`, `ask`, `isolated`, `refresh`, `help`, `ps`, `kill`, `tools`, `scope`, `query`, `topic`; none starts with `--` or `-`; all are bare words
 - **Exit:** 0
 - **Source:** [invariant/003_command_naming.md](../../../docs/invariant/003_command_naming.md)
 
