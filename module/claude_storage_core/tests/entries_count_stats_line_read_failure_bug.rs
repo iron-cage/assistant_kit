@@ -1,4 +1,4 @@
-//! Bug Reproducer (BUG-504): `Session::entries()` (via `load_entries()`), `Session::count_entries()`,
+//! Bug Reproducer (BUG-508): `Session::entries()` (via `load_entries()`), `Session::count_entries()`,
 //! and `Session::stats()` hard-fail the WHOLE session file on a single JSONL line that fails to
 //! decode as UTF-8 (e.g. a crash-truncated write leaving binary garbage mid-file), instead of
 //! skipping just that one line the way `Session::search()` and `export::export_json()` already do
@@ -101,7 +101,7 @@ fn entries_skips_line_with_invalid_utf8_and_finds_entries_around_it()
   let mut session = Session::load( &session_path ).expect( "load session" );
 
   let entries = session.entries()
-    .expect( "BUG-504: an unreadable line must not abort the whole entries() read" );
+    .expect( "BUG-508: an unreadable line must not abort the whole entries() read" );
 
   assert_eq!( entries.len(), 2, "should find entries both before and after the unreadable line" );
 }
@@ -125,7 +125,7 @@ fn count_entries_skips_line_with_invalid_utf8_and_counts_entries_around_it()
   let session = Session::load( &session_path ).expect( "load session" );
 
   let count = session.count_entries()
-    .expect( "BUG-504: an unreadable line must not abort the whole count_entries() read" );
+    .expect( "BUG-508: an unreadable line must not abort the whole count_entries() read" );
 
   assert_eq!( count, 2, "should count entries both before and after the unreadable line" );
 }
@@ -149,7 +149,7 @@ fn stats_skips_line_with_invalid_utf8_and_counts_entries_around_it()
   let mut session = Session::load( &session_path ).expect( "load session" );
 
   let stats = session.stats()
-    .expect( "BUG-504: an unreadable line must not abort the whole stats() read" );
+    .expect( "BUG-508: an unreadable line must not abort the whole stats() read" );
 
   assert_eq!( stats.total_entries, 2, "should count entries both before and after the unreadable line" );
   assert_eq!( stats.user_entries, 1, "the 'before' entry is type:user" );

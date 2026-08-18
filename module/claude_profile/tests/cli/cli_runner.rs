@@ -646,6 +646,39 @@ pub fn write_account_with_token(
   );
 }
 
+/// Write a deterministic quota cache for `name` with chosen utilization values.
+///
+/// Offline counterpart of the live-snapshot seeding in `write_account_with_token()`:
+/// unowned fixture accounts (no owner file) render straight from this cache via the
+/// G1 not-owned gate in `fetch.rs` — no token, no HTTP — so a test controls the
+/// exact `5h/7d Left` percentages that filters and display see (`Left = 100 - utilization`).
+///
+/// `None` omits that quota window entirely (absent data); `seven_day_sonnet` and
+/// `resets_at` are always absent — no current consumer needs them controlled.
+///
+/// # Panics
+///
+/// Panics if the credential-store directory cannot be created — test fixtures
+/// fail loudly on setup errors rather than letting a test run against missing state.
+#[ inline ]
+pub fn seed_quota_cache(
+  home      : &std::path::Path,
+  name      : &str,
+  five_hour : Option< f64 >,
+  seven_day : Option< f64 >,
+)
+{
+  let credential_store = home.join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &credential_store ).unwrap();
+  claude_profile::account::write_quota_cache(
+    &credential_store,
+    name,
+    five_hour.map( | u | ( u, None ) ),
+    seven_day.map( | u | ( u, None ) ),
+    None,
+  );
+}
+
 /// Write `~/.claude/.credentials.json` with an `accessToken` field.
 ///
 /// Used to simulate a live authenticated session for `detect_current_account()` tests.

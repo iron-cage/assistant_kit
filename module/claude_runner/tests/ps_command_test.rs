@@ -436,8 +436,23 @@ fn it_13_orphaned_gate_file_filtered_out()
 
 /// IT-14 (BUG-294): `clr ps --help` must exit 0 and print help text.
 ///
-/// Before fix: `dispatch_ps()` rejected `--help` as "unexpected argument" (exit 1).
-/// After fix: matches `"--help" | "-h" | "help"` and calls `print_ps_help()`.
+/// ## Fix Documentation — BUG-294
+///
+/// - **Root Cause:** `dispatch_ps()` checked `tokens.get(1)` and rejected every second
+///   token unconditionally as "unexpected argument" (exit 1) — there was no
+///   `print_ps_help()` and no help-intercept branch before the rejection arm, unlike
+///   every analogous subcommand dispatcher.
+/// - **Why Not Caught:** No test invoked `ps` with any help spelling — help-path
+///   coverage existed only for the other subcommands, so the missing intercept was
+///   invisible to the suite.
+/// - **Fix Applied:** Help-intercept at the top of `dispatch_ps()` matching
+///   `"--help" | "-h" | "help"` → `print_ps_help()`, exit 0 — placed BEFORE the
+///   unexpected-argument rejection arm.
+/// - **Prevention:** IT-14/IT-15/IT-18 lock all three help spellings to exit 0 with
+///   non-empty stdout (plus `us_08_ps_help` in `user_story_ps_test.rs`).
+/// - **Pitfall:** In a new subcommand dispatcher, the help intercept must come before
+///   any argument-rejection arm — a rejection-first structure makes every standard
+///   help spelling an "unexpected argument".
 // test_kind: bug_reproducer(BUG-294)
 #[ test ]
 fn it_14_ps_help_flag()

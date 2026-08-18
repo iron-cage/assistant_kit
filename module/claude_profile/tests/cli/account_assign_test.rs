@@ -256,11 +256,24 @@ fn ft04_assignee_unknown_account_exits_1()
 /// `usage/api_dispatch.rs`) surfaces the same ambiguous "not found" message as
 /// `.accounts` FT-04 above — BUG-342's second, byte-for-byte-duplicate call site.
 ///
-/// ## Root Cause (BUG-342)
-/// `dispatch_assignee_param()` builds its "not found" error from `name_arg`
-/// alone, with no indication of which parameter (`name::` vs `assignee::`)
-/// supplied the unresolved value — the identical omission as the `.accounts`
-/// call site, since both share the same message template.
+/// ## Fix Documentation — BUG-342
+///
+/// - **Root Cause:** `dispatch_assignee_param()` builds its "not found" error from
+///   `name_arg` alone — the already-validated assignee identity (`display`) is in scope
+///   at the error site but never interpolated — so with both parameters present the
+///   message cannot say which of `name::`/`assignee::` supplied the failing value.
+///   Identical omission at the `.accounts` call site; both shared one message template.
+/// - **Why Not Caught:** Pre-fix tests asserted only exit 1 and a "not found" substring —
+///   which parameter the message attributes the value to is a clarity property no
+///   existing assertion touched.
+/// - **Fix Applied:** The message names the source parameter — `(from name::)` — at both
+///   call sites; `name_arg` derives exclusively from `name::` (via
+///   `resolve_account_name()`), so the attribution is static, not inferred.
+/// - **Prevention:** FT-04 (`.accounts`) and this FT-04u (`.usage`) each assert stderr
+///   contains `(from name::)` — both duplicate call sites are locked independently.
+/// - **Pitfall:** Never infer the source parameter from whichever one is textually
+///   closer or "looks wrong" — attribution must follow the actual dataflow of the
+///   interpolated value, or the message lies exactly when it matters.
 ///
 /// ## Assert
 /// `.usage assignee::... name::ghost@...` on an unknown account exits 1 and its

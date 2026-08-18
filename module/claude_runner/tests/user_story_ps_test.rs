@@ -247,6 +247,7 @@ fn us_07_active_table_caption()
 /// Before fix (BUG-294): `dispatch_ps()` had no help intercept — `--help` was
 /// treated as an unknown argument and rejected with exit 1.
 /// After fix: `print_ps_help()` is called, process exits 0 with help on stdout.
+/// Full 5-section fix documentation: `ps_command_test.rs` IT-14 (`it_14_ps_help_flag`).
 // test_kind: bug_reproducer(BUG-294)
 #[ test ]
 fn us_08_ps_help()

@@ -1,11 +1,13 @@
-//! Integration tests: IT-205–IT-247 — `.usage` live `lim_it` filter, `get::`, format tests.
+//! Integration tests: IT-205–IT-247 — `.usage` filter, `get::`, and format tests.
 //!
-//! All tests in this file require or benefit from a real Anthropic OAuth access
-//! token (names contain `lim_it` or explicitly test live behavior).
+//! Mixed population: tests whose names contain `lim_it` require a real Anthropic
+//! OAuth access token; the rest are offline-deterministic. The threshold-filter
+//! tests (it207–it210, it213) seed exact quota-cache values via `seed_quota_cache()`
+//! and render through the G1 not-owned cache path (fetch.rs) — no token, no HTTP.
 //!
-//! Covers offline extras (`min_5h/min_7d` edge cases), `lim_it` threshold filters,
-//! `get::` live/offline extraction, `format::tsv`, `no_color::`, `abs::`, and
-//! Feature 037 owner column display.
+//! Covers `min_5h/min_7d` threshold filters and edge cases, `get::` live/offline
+//! extraction, `format::tsv`, `no_color::`, `abs::`, and Feature 037 owner
+//! column display.
 //!
 //! No nextest filter excludes live tests — they run by default whenever
 //! ~/.claude is mounted (see .config/nextest.toml) and panic loudly if a
@@ -15,6 +17,7 @@ use crate::cli_runner::{
   run_cs_with_env,
   stdout, assert_exit,
   write_account, write_account_with_token, write_account_profile_json,
+  seed_quota_cache,
   live_active_token, require_live_api,
   FAR_FUTURE_MS,
 };
@@ -380,107 +383,199 @@ fn it206_lim_it_ft028_04_only_next_1_shows_recommended()
   );
 }
 
-// ── it207–it210: lim_it threshold filters (041/042 EC-1/EC-2) ────────────────
+// ── it207–it210: min_5h/min_7d threshold filters (041/042 EC-1/EC-2) ─────────
 
-/// it207 `lim_it` (041 EC-1): `min_5h::50` hides rows below 50% threshold.
+/// it207 (041 EC-1, 028 FT-05): `min_5h::50` hides rows below the threshold.
 ///
-/// With two live accounts sharing the same token the quota values are identical,
-/// so we run with a threshold of 0 (all shown) and then 101 (all hidden as a
-/// proxy). For a more meaningful EC-1 test a separate `lim_it` run is used; this
-/// test verifies acceptance when threshold equals 0 (baseline) and that the
-/// flag is parsed correctly with a live account.
+/// Offline-deterministic: each account's quota comes from a cache seeded with a
+/// chosen utilization (`seed_quota_cache`), rendered via the G1 not-owned cache
+/// path — no token, no HTTP. Fixture per FT-05: A `5h Left = 80%`, B `= 50%`,
+/// C `= 30%`. A and B shown (B exactly at the threshold — inclusive `>=`);
+/// C hidden.
 ///
-/// Note: Exact threshold verification (80% shown / 30% hidden) requires two
-/// accounts with different quota levels — non-trivial to guarantee with shared
-/// tokens. This test verifies structural acceptance only.
-///
-/// Spec: [`tests/docs/cli/param/041_min_5h.md` EC-1]
+/// Spec: [`tests/docs/cli/param/41_min_5h.md` EC-1]
+///       [`tests/docs/feature/028_usage_row_filtering.md` FT-05]
 #[ test ]
-fn it207_lim_it_min_5h_50_hides_below_threshold()
+fn it207_min_5h_50_hides_below_threshold()
 {
-  let token = live_active_token().expect( "it207: live API token required — no ~/.claude/.credentials.json" );
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  write_account_with_token( dir.path(), "acct-a@test.com", &token, true );
+  write_account( dir.path(), "acct-a@test.com", "max", "standard", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "acct-b@test.com", "max", "standard", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "acct-c@test.com", "max", "standard", FAR_FUTURE_MS, false );
+  seed_quota_cache( dir.path(), "acct-a@test.com", Some( 20.0 ), Some( 50.0 ) ); // 5h Left 80
+  seed_quota_cache( dir.path(), "acct-b@test.com", Some( 50.0 ), Some( 50.0 ) ); // 5h Left 50
+  seed_quota_cache( dir.path(), "acct-c@test.com", Some( 70.0 ), Some( 50.0 ) ); // 5h Left 30
 
-  // min_5h::50 accepted with live account → exit 0 (filter applied).
   let out = run_cs_with_env( &[ ".usage", "min_5h::50" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
+  let text = stdout( &out );
+  let rows : Vec< &str > = text.lines().filter( | l | l.contains( "@test.com" ) ).collect();
+  assert!(
+    rows.iter().any( | l | l.contains( "acct-a@test.com" ) ),
+    "min_5h::50 must show acct-a (5h Left 80), got:\n{text}",
+  );
+  assert!(
+    rows.iter().any( | l | l.contains( "acct-b@test.com" ) ),
+    "min_5h::50 must show acct-b (5h Left 50 — inclusive boundary), got:\n{text}",
+  );
+  assert!(
+    !rows.iter().any( | l | l.contains( "acct-c@test.com" ) ),
+    "min_5h::50 must hide acct-c (5h Left 30), got:\n{text}",
+  );
 }
 
-/// it208 `lim_it` (041 EC-2): `min_5h::50` with row at exactly 50% — row shown.
+/// it208 (041 EC-2): `min_5h::50` boundary — row at exactly 50% Left shown
+/// (inclusive `>=`), row just below hidden.
 ///
-/// Verifies structural acceptance of the threshold flag with a live account.
-/// The inclusive-boundary semantic (≥ threshold) is verified by the offline
-/// unit logic; this test confirms the flag is parsed and applied.
+/// Offline-deterministic via seeded quota cache: A `5h Left = 50%` (shown),
+/// B `5h Left = 49%` (hidden). Locks the comparison direction on both sides of
+/// the boundary — a strict `>` would hide A; an inverted predicate would show B.
 ///
-/// Spec: [`tests/docs/cli/param/041_min_5h.md` EC-2]
+/// Spec: [`tests/docs/cli/param/41_min_5h.md` EC-2]
 #[ test ]
-fn it208_lim_it_min_5h_50_inclusive_boundary()
+fn it208_min_5h_50_inclusive_boundary()
 {
-  let token = live_active_token().expect( "it208: live API token required — no ~/.claude/.credentials.json" );
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  write_account_with_token( dir.path(), "acct-a@test.com", &token, true );
+  write_account( dir.path(), "acct-a@test.com", "max", "standard", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "acct-b@test.com", "max", "standard", FAR_FUTURE_MS, false );
+  seed_quota_cache( dir.path(), "acct-a@test.com", Some( 50.0 ), Some( 50.0 ) ); // 5h Left 50 — at threshold
+  seed_quota_cache( dir.path(), "acct-b@test.com", Some( 51.0 ), Some( 50.0 ) ); // 5h Left 49 — just below
 
-  // min_5h::50 accepted → exit 0.
   let out = run_cs_with_env( &[ ".usage", "min_5h::50" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
+  let text = stdout( &out );
+  let rows : Vec< &str > = text.lines().filter( | l | l.contains( "@test.com" ) ).collect();
+  assert!(
+    rows.iter().any( | l | l.contains( "acct-a@test.com" ) ),
+    "min_5h::50 must show acct-a at exactly 50% Left (inclusive >=), got:\n{text}",
+  );
+  assert!(
+    !rows.iter().any( | l | l.contains( "acct-b@test.com" ) ),
+    "min_5h::50 must hide acct-b at 49% Left, got:\n{text}",
+  );
 }
 
-/// it209 `lim_it` (042 EC-1): `min_7d::20` accepted with live account — exit 0.
+/// it209 (042 EC-1, 028 FT-06): `min_7d::20` hides rows below the threshold.
 ///
-/// Spec: [`tests/docs/cli/param/042_min_7d.md` EC-1]
+/// Offline-deterministic via seeded quota cache. Fixture per FT-06:
+/// A `7d Left = 60%`, B `= 20%`, C `= 10%`. A and B shown (B exactly at the
+/// threshold — inclusive `>=`); C hidden.
+///
+/// Spec: [`tests/docs/cli/param/42_min_7d.md` EC-1]
+///       [`tests/docs/feature/028_usage_row_filtering.md` FT-06]
 #[ test ]
-fn it209_lim_it_min_7d_20_hides_below_threshold()
+fn it209_min_7d_20_hides_below_threshold()
 {
-  let token = live_active_token().expect( "it209: live API token required — no ~/.claude/.credentials.json" );
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  write_account_with_token( dir.path(), "acct-a@test.com", &token, true );
+  write_account( dir.path(), "acct-a@test.com", "max", "standard", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "acct-b@test.com", "max", "standard", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "acct-c@test.com", "max", "standard", FAR_FUTURE_MS, false );
+  seed_quota_cache( dir.path(), "acct-a@test.com", Some( 20.0 ), Some( 40.0 ) ); // 7d Left 60
+  seed_quota_cache( dir.path(), "acct-b@test.com", Some( 20.0 ), Some( 80.0 ) ); // 7d Left 20
+  seed_quota_cache( dir.path(), "acct-c@test.com", Some( 20.0 ), Some( 90.0 ) ); // 7d Left 10
 
   let out = run_cs_with_env( &[ ".usage", "min_7d::20" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
+  let text = stdout( &out );
+  let rows : Vec< &str > = text.lines().filter( | l | l.contains( "@test.com" ) ).collect();
+  assert!(
+    rows.iter().any( | l | l.contains( "acct-a@test.com" ) ),
+    "min_7d::20 must show acct-a (7d Left 60), got:\n{text}",
+  );
+  assert!(
+    rows.iter().any( | l | l.contains( "acct-b@test.com" ) ),
+    "min_7d::20 must show acct-b (7d Left 20 — inclusive boundary), got:\n{text}",
+  );
+  assert!(
+    !rows.iter().any( | l | l.contains( "acct-c@test.com" ) ),
+    "min_7d::20 must hide acct-c (7d Left 10), got:\n{text}",
+  );
 }
 
-/// it210 `lim_it` (042 EC-2): `min_7d::20` inclusive boundary — accepted, exit 0.
+/// it210 (042 EC-2): `min_7d::20` boundary — row at exactly 20% Left shown
+/// (inclusive `>=`), row just below hidden.
 ///
-/// Spec: [`tests/docs/cli/param/042_min_7d.md` EC-2]
+/// Offline-deterministic via seeded quota cache: A `7d Left = 20%` (shown),
+/// B `7d Left = 19%` (hidden).
+///
+/// Spec: [`tests/docs/cli/param/42_min_7d.md` EC-2]
 #[ test ]
-fn it210_lim_it_min_7d_20_inclusive_boundary()
+fn it210_min_7d_20_inclusive_boundary()
 {
-  let token = live_active_token().expect( "it210: live API token required — no ~/.claude/.credentials.json" );
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  write_account_with_token( dir.path(), "acct-a@test.com", &token, true );
+  write_account( dir.path(), "acct-a@test.com", "max", "standard", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "acct-b@test.com", "max", "standard", FAR_FUTURE_MS, false );
+  seed_quota_cache( dir.path(), "acct-a@test.com", Some( 20.0 ), Some( 80.0 ) ); // 7d Left 20 — at threshold
+  seed_quota_cache( dir.path(), "acct-b@test.com", Some( 20.0 ), Some( 81.0 ) ); // 7d Left 19 — just below
 
   let out = run_cs_with_env( &[ ".usage", "min_7d::20" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
+  let text = stdout( &out );
+  let rows : Vec< &str > = text.lines().filter( | l | l.contains( "@test.com" ) ).collect();
+  assert!(
+    rows.iter().any( | l | l.contains( "acct-a@test.com" ) ),
+    "min_7d::20 must show acct-a at exactly 20% Left (inclusive >=), got:\n{text}",
+  );
+  assert!(
+    !rows.iter().any( | l | l.contains( "acct-b@test.com" ) ),
+    "min_7d::20 must hide acct-b at 19% Left, got:\n{text}",
+  );
 }
 
-// ── it213: lim_it AND filter composition (028 FT-09) ─────────────────────────
+// ── it213: AND filter composition (028 FT-09) ────────────────────────────────
 
-/// it213 `lim_it` (028 FT-09): `only_valid::1 min_7d::30` shows only accounts
-/// that are non-🔴 AND have 7d Left ≥ 30%.
+/// it213 (028 FT-09): `only_valid::1 min_7d::30` AND-composition — shows only
+/// non-🔴 rows with `7d Left >= 30%`.
 ///
-/// With two live accounts, the composition is verified by checking exit 0 and
-/// that the filter params are both accepted together.
+/// Offline-deterministic via seeded quota cache. Fixture per FT-09/AC-09:
+/// A 🟢 (`7d Left 40`) shown; B 🟢 (`7d Left 25`) hidden by `min_7d::30`;
+/// C 🟡 (5h exhausted, `7d Left 40`) shown — `only_valid` keeps 🟡 rows (AC-07);
+/// D 🔴 (no cache → quota Err) hidden by `only_valid::1` — even though a bare
+/// `min_7d::30` alone would pass an Err row through (absent data ≠ exhausted).
 ///
 /// Spec: [`tests/docs/feature/028_usage_row_filtering.md` FT-09]
+///       [`docs/feature/028_usage_row_filtering.md` AC-09]
 #[ test ]
-fn it213_lim_it_ft028_09_and_composition()
+fn it213_ft028_09_and_composition()
 {
-  let token = live_active_token().expect( "it213: live API token required — no ~/.claude/.credentials.json" );
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  write_account_with_token( dir.path(), "acct-a@test.com", &token, true  );
-  write_account_with_token( dir.path(), "acct-b@test.com", &token, false );
+  for name in [ "acct-a@test.com", "acct-b@test.com", "acct-c@test.com", "acct-d@test.com" ]
+  {
+    write_account( dir.path(), name, "max", "standard", FAR_FUTURE_MS, false );
+  }
+  seed_quota_cache( dir.path(), "acct-a@test.com", Some( 20.0 ), Some( 60.0 ) ); // 🟢, 7d Left 40
+  seed_quota_cache( dir.path(), "acct-b@test.com", Some( 20.0 ), Some( 75.0 ) ); // 🟢, 7d Left 25
+  seed_quota_cache( dir.path(), "acct-c@test.com", Some( 95.0 ), Some( 60.0 ) ); // 🟡 (5h Left 5), 7d Left 40
+  // acct-d: no cache seeded — the G1 not-owned path yields quota Err → 🔴.
 
   let out = run_cs_with_env(
     &[ ".usage", "only_valid::1", "min_7d::30" ],
     &[ ( "HOME", home ) ],
   );
   assert_exit( &out, 0 );
+  let text = stdout( &out );
+  let rows : Vec< &str > = text.lines().filter( | l | l.contains( "@test.com" ) ).collect();
+  assert!(
+    rows.iter().any( | l | l.contains( "acct-a@test.com" ) ),
+    "only_valid::1 min_7d::30 must show acct-a (🟢, 7d Left 40), got:\n{text}",
+  );
+  assert!(
+    !rows.iter().any( | l | l.contains( "acct-b@test.com" ) ),
+    "only_valid::1 min_7d::30 must hide acct-b (7d Left 25 < 30), got:\n{text}",
+  );
+  assert!(
+    rows.iter().any( | l | l.contains( "acct-c@test.com" ) ),
+    "only_valid::1 min_7d::30 must show acct-c (🟡 is valid — AC-07), got:\n{text}",
+  );
+  assert!(
+    !rows.iter().any( | l | l.contains( "acct-d@test.com" ) ),
+    "only_valid::1 min_7d::30 must hide acct-d (🔴 quota Err), got:\n{text}",
+  );
 }
 
 // ── it214: lim_it get::7d_left bare extraction (028 FT-10) ───────────────────

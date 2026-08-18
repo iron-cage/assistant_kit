@@ -135,6 +135,8 @@
 //! | `t502_03_legacy_gitignored_cache_read_then_self_cleaned` | TSK-502/T04: legacy `-cache/{name}.json` readable as fallback; the next write relocates values + history to the per-host file and deletes it |
 //! | `t502_04_no_cache_anywhere_returns_none` | TSK-502/T05 (regression guard): empty store → read_quota_cache None — the no-cache contract unchanged |
 //! | `t502_05_history_ring_continues_across_hosts` | TSK-502/T06: another host's ring is carried into the own-host file by write_quota_cache and continued by write_history_entry |
+//! | `m8_lock_store_blocks_second_holder_until_release` | Audit M8: a second lock_store() on the same store blocks until the first holder drops — mutual exclusion direction |
+//! | `m8_lock_store_release_frees_reacquire_and_names_lockfile` | Audit M8: after drop the lock is immediately reacquirable (release direction), and the lock file is the gitignored `-store.lock` |
 
 use tempfile::TempDir;
 use claude_profile_core::account;
@@ -3393,4 +3395,59 @@ fn save_writes_credential_file_owner_only()
     std::fs::read_to_string( &dest ).unwrap(), r#"{"accessToken":"tok"}"#,
     "save() must install the live credentials content"
   );
+}
+
+/// Audit M8 (mutual-exclusion direction): while one `StoreLock` is held, a second
+/// `lock_store()` on the same store must block until the first is dropped.
+///
+/// Two separate `File` opens are two open file descriptions, so `flock` contention
+/// applies even within one process — no subprocess needed for a real, non-mocked
+/// contention check. The assertion is a lower bound only (second acquisition cannot
+/// land before the 300 ms hold ends); no upper bound, so scheduler jitter can't flake it.
+#[ test ]
+fn m8_lock_store_blocks_second_holder_until_release()
+{
+  let tmp   = TempDir::new().unwrap();
+  let store = tmp.path().join( "store" );
+
+  let t0     = std::time::Instant::now();
+  let lock_a = account::lock_store( &store ).unwrap();
+
+  let store_b = store.clone();
+  let waiter  = std::thread::spawn( move ||
+  {
+    let _lock_b = account::lock_store( &store_b ).unwrap();
+    std::time::Instant::now()
+  } );
+
+  const HOLD : core::time::Duration = core::time::Duration::from_millis( 300 );
+  std::thread::sleep( HOLD );
+  drop( lock_a );
+
+  let acquired_at = waiter.join().unwrap();
+  let blocked_for = acquired_at.duration_since( t0 );
+  assert!(
+    blocked_for >= HOLD,
+    "second lock_store() must block until the first holder releases — acquired after {blocked_for:?}, hold was {HOLD:?}"
+  );
+}
+
+/// Audit M8 (release direction — counterpart of the blocking test): dropping the
+/// guard frees the lock for immediate reacquisition, and the lock file lands at
+/// the store root as `-store.lock` (hyphen prefix → gitignored in tracked stores).
+///
+/// If drop failed to release, the second `lock_store()` would block forever and the
+/// runner's per-test timeout would fail this loudly — no timing assertion needed.
+#[ test ]
+fn m8_lock_store_release_frees_reacquire_and_names_lockfile()
+{
+  let tmp   = TempDir::new().unwrap();
+  let store = tmp.path().join( "store" );
+
+  let first = account::lock_store( &store ).unwrap();
+  assert!( store.join( "-store.lock" ).is_file(), "lock file must be created at {{store}}/-store.lock" );
+  drop( first );
+
+  let second = account::lock_store( &store ).unwrap();
+  drop( second );
 }

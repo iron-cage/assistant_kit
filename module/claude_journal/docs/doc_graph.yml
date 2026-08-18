@@ -26,6 +26,9 @@ nodes:
   - id: api_003
     path: api/003_event_type.md
     type: api
+  - id: api_004
+    path: api/004_rotation.md
+    type: api
 
 edges:
   - from: feature_001
@@ -46,6 +49,9 @@ edges:
   - from: feature_003
     to: api_002
     relation: uses
+  - from: feature_003
+    to: api_004
+    relation: implemented_by
   - from: api_001
     to: api_003
     relation: depends_on

@@ -15,30 +15,26 @@ Edge case coverage for the `min_7d::` parameter on `.usage`. See [param/042_min_
 
 ---
 
-### EC-1: `min_7d::20` accepted with a live account — structural acceptance only
+### EC-1: `min_7d::20` hides rows below threshold
 
-> **Semantic drift correction:** the cited test does not construct two accounts or verify any row-hiding behavior, and the doc's own claimed threshold value (30) does not match the test's actual parameter — the function name itself uses `min_7d::20`. The test uses a single live account (shared token) and asserts only exit 0. No test anywhere in the suite constructs the 60%/10% two-row hiding scenario this EC originally described, at any threshold value.
-
-- **Given:** One live account (`write_account_with_token`, shared token) — quota percentage is whatever the live API returns, not controlled by the test.
+- **Given:** Three offline accounts with seeded quota caches (`seed_quota_cache`): A `7d Left = 60%`, B `7d Left = 20%`, C `7d Left = 10%`. Rows render via the G1 not-owned cache path (fetch.rs) — values exact, no token, no live API.
 - **When:** `clp .usage min_7d::20`
-- **Then:** Exits 0. The test verifies only that the flag is parsed and accepted without error — it does NOT verify that a row below 20% is hidden, nor does it construct a second account to compare against.
+- **Then:** Exits 0. A and B shown (B exactly at the threshold — inclusive `>=`); C hidden (10 < 20).
 - **Exit:** 0
-- **Live:** yes
-- **Source fn:** `it209_lim_it_min_7d_20_hides_below_threshold` (in `usage_lim_it_test.rs`) — name and doc claim describe a hiding scenario the body does not implement; body is structural-acceptance-only; the function's own name uses threshold 20, not the 30 this EC originally claimed
+- **Live:** no
+- **Source fn:** `it209_min_7d_20_hides_below_threshold` (in `usage_lim_it_test.rs`)
 - **Source:** [param/042_min_7d.md](../../../../docs/cli/param/042_min_7d.md)
 
 ---
 
-### EC-2: `min_7d::20` accepted with a live account — inclusive-boundary NOT independently controlled
+### EC-2: `min_7d::20` with row exactly at threshold — row shown (inclusive)
 
-> **Semantic drift correction:** the cited test does not set the account's quota to exactly 20% (nor 30%, the value this EC originally claimed), nor does it assert a row is shown at that boundary. It uses a single live account with an uncontrolled quota and asserts only exit 0. No offline unit test asserting the exact `min_7d` inclusive-boundary/row-shown case was found elsewhere in the suite.
-
-- **Given:** One live account (shared token) — quota percentage not set to any specific value by the test.
+- **Given:** Two offline accounts with seeded quota caches: A `7d Left = 20%` (exactly at the threshold), B `7d Left = 19%` (just below).
 - **When:** `clp .usage min_7d::20`
-- **Then:** Exits 0. The test verifies only that the flag is parsed and applied without error — it does not control the account's quota to a specific percentage and does not assert the row is shown at that exact boundary.
+- **Then:** Exits 0. A shown (inclusive `>=`); B hidden — locks the comparison direction on both sides of the boundary.
 - **Exit:** 0
-- **Live:** yes
-- **Source fn:** `it210_lim_it_min_7d_20_inclusive_boundary` (in `usage_lim_it_test.rs`) — name and doc claim describe an inclusive-boundary verification the body does not implement; body is structural-acceptance-only; the function's own name uses threshold 20, not the 30 this EC originally claimed
+- **Live:** no
+- **Source fn:** `it210_min_7d_20_inclusive_boundary` (in `usage_lim_it_test.rs`)
 - **Source:** [param/042_min_7d.md](../../../../docs/cli/param/042_min_7d.md)
 
 ---
