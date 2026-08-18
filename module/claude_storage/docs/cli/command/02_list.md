@@ -1,11 +1,13 @@
-# Command :: 2. `.list`
+# Command :: 2. `.list` — DEPRECATED
+
+> **Deprecated.** Superseded by [`.projects`](07_projects.md). `.projects` absorbs every capability `.list` provided — project-only listing (`detail::projects`), session display (`detail::sessions`, the new default), path-substring filtering (`filter::`), and the raw conversation-ID scripting shortcut (`ids::`, paired with the existing `count::`). This file is retained for traceability; do not add new cross-references to it. See `docs/cli/command_group/readme.md § Command Removal: .list -> .projects` for the consolidation rationale.
 
 ### Scope
 
-- **Purpose**: Specify the `.list` CLI command.
-- **Responsibility**: Syntax, parameters, exit codes, and examples for `.list`.
-- **In Scope**: Invocation syntax, accepted parameters, output structure, error conditions.
-- **Out of Scope**: Parameter definitions (→ `param/`), type constraints (→ `type/`).
+- **Purpose**: Specify the `.list` CLI command (deprecated).
+- **Responsibility**: Historical syntax, parameters, exit codes, and examples for `.list`, retained for traceability.
+- **In Scope**: Invocation syntax, accepted parameters, output structure, error conditions — as they existed before deprecation.
+- **Out of Scope**: Parameter definitions (→ `param/`), type constraints (→ `type/`), current behavior (→ [`.projects`](07_projects.md)).
 
 List projects or conversations in Claude Code storage. Project-first view: all projects are listed, with conversations optionally shown per project. Use this when navigating projects or filtering by project path.
 
@@ -72,6 +74,18 @@ claude_storage .list type::conversation count::1 project::abc123
 claude_storage .list scope::local
 ```
 
+**Migration to `.projects`:**
+
+| `.list` invocation | `.projects` equivalent |
+|---|---|
+| `.list` | `.projects scope::global detail::projects` |
+| `.list path::assistant show_sessions::1` | `.projects scope::global filter::assistant detail::sessions` |
+| `.list session::commit` | `.projects scope::global session::commit` (session filters imply `detail::sessions`) |
+| `.list agent::1 min_entries::10` | `.projects scope::global agent::1 min_entries::10` |
+| `.list type::conversation project::abc123` | `.projects project::abc123 ids::1` |
+| `.list type::conversation count::1 project::abc123` | `.projects project::abc123 ids::1 count::1` |
+| `.list scope::local` | `.projects scope::local detail::projects` |
+
 **Notes:**
 - `session::`, `agent::`, or `min_entries::` auto-enables `show_sessions::1`; use `show_sessions::0` to suppress
 - `type::uuid` shows projects identified by UUID rather than path encoding
@@ -83,9 +97,9 @@ claude_storage .list scope::local
 
 | # | Group | Membership | Excluded Params |
 |---|-------|------------|-----------------|
-| 2 | [Project Scope](../param_group/02_project_scope.md) | Full | — |
-| 4 | [Session Filter](../param_group/04_session_filter.md) | Full | — |
-| 5 | [Scope Configuration](../param_group/05_scope_configuration.md) | Partial (implemented) | `path::` (pre-existing PathSubstring filter, not the group's anchor role) |
+| 2 | [Project Scope](../param_group/02_project_scope.md) | Full (historical) | — |
+| 4 | [Session Filter](../param_group/04_session_filter.md) | Full (historical) | — |
+| 5 | [Scope Configuration](../param_group/05_scope_configuration.md) | Partial (historical) | `path::` (pre-existing PathSubstring filter, not the group's anchor role) |
 
 ### Referenced Parameters
 

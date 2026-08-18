@@ -16,7 +16,8 @@
 | # | Command | Role |
 |---|---------|------|
 | 1 | [`.status`](../command/01_status.md) | Plain-text storage summary (parseable) |
-| 2 | [`.list`](../command/02_list.md) | Enumerate projects for scripted iteration |
+| 2 | [`.list`](../command/02_list.md) (deprecated) | Historical; superseded by `.projects` |
+| 7 | [`.projects`](../command/07_projects.md) | Enumerate projects for scripted iteration; `ids::`+`project::` for raw conversation-ID output |
 | 4 | [`.count`](../command/04_count.md) | Bare integer count output for comparison and thresholds |
 
 ### Referenced Formats
@@ -36,6 +37,7 @@
 | 12 | [`scope::`](../param/12_scope.md) | Constrain discovery to a project or subtree |
 | 16 | [`target::`](../param/16_target.md) | Specify what to count (projects, sessions, entries) |
 | 21 | [`count::`](../param/21_count.md) | Output count only as bare integer for scripting |
+| 31 | [`ids::`](../param/31_ids.md) | Raw conversation-ID output for scripted iteration over a project's conversations |
 
 ### Related User Stories
 | # | User Story | Relationship |
@@ -61,11 +63,11 @@ fi
 # Warning: large session count
 ```
 
-**Note:** `.count` is optimized for performance and avoids loading full session content — prefer it over `.list` when a script only needs a number.
+**Note:** `.count` is optimized for performance and avoids loading full session content — prefer it over `.projects` when a script only needs a number.
 
 **Step 3: Iterate over projects in a script**
 ```bash
-cls .list | grep '^/' | while read -r project_line; do
+cls .projects detail::projects | grep '^/' | while read -r project_line; do
   echo "Processing: $project_line"
 done
 # Processing: /home/user/projects/my_app (14)

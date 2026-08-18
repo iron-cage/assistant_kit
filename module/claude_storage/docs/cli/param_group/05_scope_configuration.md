@@ -13,11 +13,11 @@
 
 **Purpose:** Together these control the session discovery strategy: `scope::` selects the discovery algorithm and `path::` provides the filesystem anchor for scope resolution.
 
-**Used By:** `.list` (scope:: only — path:: is PathSubstring in this command), `.count`, `.search`, `.show`, `.export`, `.projects`, `.usage` (7 commands total) — all implemented: [`.projects`](../command/07_projects.md), [`.list`](../command/02_list.md), [`.count`](../command/04_count.md), [`.search`](../command/05_search.md), [`.show`](../command/03_show.md), [`.export`](../command/06_export.md), [`.usage`](../command/13_usage.md), each genuinely wired into its routine. See Referenced Commands below for exact per-command status.
+**Used By:** `.list` (deprecated; scope:: only — path:: was PathSubstring in this command), `.count`, `.search`, `.show`, `.export`, `.projects`, `.usage` (7 commands total, 1 deprecated) — all implemented: [`.projects`](../command/07_projects.md), [`.list`](../command/02_list.md) (deprecated), [`.count`](../command/04_count.md), [`.search`](../command/05_search.md), [`.show`](../command/03_show.md), [`.export`](../command/06_export.md), [`.usage`](../command/13_usage.md), each genuinely wired into its routine. See Referenced Commands below for exact per-command status.
 
 **Note on `depth::`:** the discovery model below already anticipates a third parameter (`scope`, `path`, `depth`). [`.usage`](../command/13_usage.md) is the first command to specify it — see [`depth::`](../param/26_depth.md). It is not yet a formal member of this group (only `scope::`/`path::` are); `.projects` has no depth cap today, so `depth::` remains a `.usage`-specific companion until a second implemented consumer justifies formal membership.
 
-**Note on `.list` membership:** `.list` is a partial member by design, not by omission — it accepts `scope::` for discovery boundary control (implemented) while keeping its pre-existing `path::` as a PathSubstring filter, not a StoragePath anchor. `.list` never gains a second, anchor-role `path::`; the two parameters compose (`scope::` narrows discovery, `path::` substring-filters the result).
+**Note on `.list` membership (historical, `.list` deprecated):** `.list` was a partial member by design, not by omission — it accepted `scope::` for discovery boundary control while keeping its own `path::` as a PathSubstring filter, not a StoragePath anchor, so the two composed (`scope::` narrowed discovery, `path::` substring-filtered the result) despite `path::` meaning something different than on every other member of this group. `.projects` resolves that naming collision cleanly: `scope::`/`path::` keep their group-standard anchor meaning, and the substring-filter role moved to a distinctly-named parameter, [`filter::`](../param/29_filter.md) — no more overloaded `path::`.
 
 **Semantic Coherence Test:**
 - "Does `scope::` control how session discovery is bounded?" → YES
@@ -60,7 +60,7 @@ The `scope` + `path` pair uses a consistent discovery model across tools (scope,
 
 | # | Command | Membership | Excluded Params | Notes |
 |---|---------|------------|-----------------|-------|
-| 2 | [`.list`](../command/02_list.md) | Partial | `path::` (used as PathSubstring) | `scope::` implemented — narrows `type::all` project discovery |
+| 2 | [`.list`](../command/02_list.md) (deprecated) | Partial | `path::` (used as PathSubstring) | Historical; superseded by `.projects`' `scope::` + [`filter::`](../param/29_filter.md) |
 | 3 | [`.show`](../command/03_show.md) | Full | — | Implemented — `scope::`/`path::` narrow the session lookup when `session_id::` given without `project::` |
 | 4 | [`.count`](../command/04_count.md) | Partial | `path::` (registered, but as a storage-root override — not a scope anchor) | `scope::` implemented — narrows `target::projects`/`target::sessions`-without-`project::` |
 | 5 | [`.search`](../command/05_search.md) | Full | — | Implemented — `scope::`/`path::` narrow project discovery when `project::` is absent |

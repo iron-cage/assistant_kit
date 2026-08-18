@@ -13,7 +13,7 @@
 
 **Purpose:** Together these three parameters filter which sessions appear in a listing — by ID pattern, by session type, and by minimum size.
 
-**Used By (full implementors):** `.list`, `.projects` (2 commands total)
+**Used By (full implementors):** `.list` (deprecated), `.projects` (2 commands total, 1 deprecated)
 
 **Partial implementors:**
 - `.count` (`session::` only — as exact `SessionId`, not substring filter): scopes entry counting to a session
@@ -26,38 +26,38 @@ Note: In `.count` and `.search`, `session::` behaves as a `SessionId` (exact mat
 - "Does `agent::` control which sessions appear in listing?" → YES (by session type)
 - "Does `min_entries::` control which sessions appear in listing?" → YES (by size threshold)
 
-**Why NOT `show_sessions::` (bool):**
-- `show_sessions::` controls whether sessions are shown at all — an on/off toggle for the entire session display tier
+**Why NOT `show_sessions::` (bool, deprecated) / `detail::` (its successor):**
+- `show_sessions::` controlled whether sessions were shown at all — an on/off toggle for the entire session display tier; its successor [`detail::`](../param/30_detail.md) plays the identical tier-visibility role on `.projects`
 - These three parameters determine *which* sessions appear, assuming session display is enabled
-- Different semantic level: tier visibility vs session predicate
+- Different semantic level: tier visibility vs session predicate — this is also why `detail::` (like `show_sessions::` before it) is not a member of this group either
 
 
-**Auto-enable behavior:** In `.list`, providing any of `session::`, `agent::`, or `min_entries::` automatically enables `show_sessions::1`. Override with `show_sessions::0`.
+**Auto-enable behavior (historical — `.list` only, deprecated):** In `.list`, providing any of `session::`, `agent::`, or `min_entries::` automatically enabled `show_sessions::1`, overridable with `show_sessions::0`. `.projects` has no equivalent auto-enable: `detail::sessions` is already the default, so a session filter simply narrows the already-visible session lines; use `detail::projects` explicitly to suppress them regardless of filters (see [`30_detail.md`](../param/30_detail.md)).
 
 **Parameter Details:**
 
-| Parameter | Type | Description | Side Effect |
+| Parameter | Type | Description | Side Effect (current — `.projects`) |
 |-----------|------|-------------|-------------|
-| `session::` | [`SessionFilter`](../type/08_session_filter.md) | Filter sessions by ID substring | Auto-enables `show_sessions::1` |
-| `agent::` | Boolean | `0`=main only, `1`=agent only, unset=all | Auto-enables `show_sessions::1` |
-| `min_entries::` | [`EntryCount`](../type/01_entry_count.md) | Minimum entry count threshold | Auto-enables `show_sessions::1` |
+| `session::` | [`SessionFilter`](../type/08_session_filter.md) | Filter sessions by ID substring | None — narrows already-visible session lines |
+| `agent::` | Boolean | `0`=main only, `1`=agent only, unset=all | None — narrows already-visible session lines |
+| `min_entries::` | [`EntryCount`](../type/01_entry_count.md) | Minimum entry count threshold | None — narrows already-visible session lines |
 
 **Examples:**
 ```bash
-.list session::commit
-.list agent::1
-.list agent::0 min_entries::5
-.list session::feature agent::0 min_entries::10
+.projects session::commit
+.projects agent::1
+.projects agent::0 min_entries::5
+.projects session::feature agent::0 min_entries::10
 ```
 
 ### Referenced Commands
 
 | # | Command | Membership | Excluded Params | Notes |
 |---|---------|------------|-----------------|-------|
-| 2 | [`.list`](../command/02_list.md) | Full | — | |
+| 2 | [`.list`](../command/02_list.md) (deprecated) | Full | — | Historical; auto-enabled `show_sessions::1` |
 | 4 | [`.count`](../command/04_count.md) | Partial | `agent::`, `min_entries::` | `session::` as SessionId |
 | 5 | [`.search`](../command/05_search.md) | Partial | `agent::`, `min_entries::` | `session::` as SessionId |
-| 7 | [`.projects`](../command/07_projects.md) | Full | — | |
+| 7 | [`.projects`](../command/07_projects.md) | Full | — | No auto-enable side effect (see `detail::`) |
 
 ### Referenced Parameters
 

@@ -7,22 +7,22 @@
 - **In Scope**: Value constraints, default behavior, command interactions.
 - **Out of Scope**: Type definitions (→ `type/`), command behavior (→ `command/`).
 
-Boolean mode flag for `.list` that suppresses the full listing and outputs only the count as a bare integer.
+Boolean mode flag for `.projects` that suppresses the full listing and outputs only the count as a bare integer. Absorbed from `.list` (see [`02_list.md`](../command/02_list.md)); now pairs with `ids::` instead of `type::conversation`.
 
 **Type:** Boolean
 
 **Fundamental Type:** Boolean (`0`/`1`, `true`/`false`)
 
 **Constraints:**
-- Only meaningful with `type::conversation`
+- Only meaningful with `ids::1`
 - When `1`: outputs bare integer count + newline, no other output
 - When `0` (default): outputs full listing
 
 **Default:** `0` (full listing)
 
-**Commands:** `.list`
+**Commands:** [`.projects`](../command/07_projects.md)
 
-**Purpose:** Enables scripting use cases where only the count is needed. For example, `clg .list type::conversation count::1 project::abc123` outputs `3` and nothing else.
+**Purpose:** Enables scripting use cases where only the count is needed. For example, `clg .projects project::abc123 ids::1 count::1` outputs `3` and nothing else.
 
 **Examples:**
 ```bash
@@ -32,8 +32,8 @@ count::1    # Output bare integer only
 # Count mode off (default)
 count::0    # Output full listing
 
-# Combined with conversation type
-.list type::conversation count::1 project::abc123   # e.g., outputs "3"
+# Combined with ids:: and project::
+.projects project::abc123 ids::1 count::1   # e.g., outputs "3"
 ```
 
 ### Referenced Type
@@ -44,7 +44,7 @@ count::0    # Output full listing
 ### Referenced Commands
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
-| 2 | [`.list`](../command/02_list.md) | `0` | Only meaningful with `type::conversation` |
+| 7 | [`.projects`](../command/07_projects.md) | `0` | Only meaningful with `ids::1`; absorbed from `.list` |
 
 ### Referenced User Stories
 | # | User Story | Persona |

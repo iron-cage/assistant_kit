@@ -18,7 +18,7 @@
 - Absolute path: `/home/alice/projects/my-app`
 - Path-encoded ID: `-home-alice-projects-my-app`
 - UUID: `8d795a1c-c81d-4010-8d29-b4e678272419`
-- `Path(...)` form from `.list`: `Path("/home/alice/projects/my-app")`
+- `Path(...)` form from `.list` (deprecated): `Path("/home/alice/projects/my-app")`
 
 **Constraints:**
 - Non-empty string
@@ -40,17 +40,18 @@ Detect format and resolve to internal key:
 - `path_encoded() -> string` — Resolved path-encoded form
 - `is_uuid() -> boolean` — True when project uses UUID naming
 
-**Commands:** `.list`, `.show`, `.count`, `.search`, `.export`
+**Commands:** `.list` (deprecated), `.show`, `.count`, `.search`, `.export`, `.projects`
 
 ### Referenced Commands
 
 | # | Command | Via Parameter |
 |---|---------|---------------|
-| 2 | [`.list`](../command/02_list.md) | `project::` |
+| 2 | [`.list`](../command/02_list.md) (deprecated) | `project::` |
 | 3 | [`.show`](../command/03_show.md) | `project::` |
 | 4 | [`.count`](../command/04_count.md) | `project::` |
 | 5 | [`.search`](../command/05_search.md) | `project::` |
 | 6 | [`.export`](../command/06_export.md) | `project::` |
+| 7 | [`.projects`](../command/07_projects.md) | `project::` |
 
 ### Referenced Parameters
 

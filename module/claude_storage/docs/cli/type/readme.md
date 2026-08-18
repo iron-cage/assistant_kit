@@ -4,7 +4,7 @@
 
 - **Purpose**: Document semantic newtypes constraining CLI parameter values.
 - **Responsibility**: Per-type constraint and parsing reference for all CLI types.
-- **In Scope**: All 13 semantic types with validation rules, fundamental types, and parameter mappings.
+- **In Scope**: All 14 semantic types with validation rules, fundamental types, and parameter mappings.
 - **Out of Scope**: Parameter specifications (→ `param/`), command behavior (→ `command/`).
 
 Semantic newtypes for `claude_storage` CLI parameters. Every parameter uses a named type with validation constraints — never bare primitives.
@@ -28,6 +28,7 @@ See [param/readme.md](../param/readme.md) for which parameters use each type.
 | `11_target_type.md` | TargetType — count target enum (projects/sessions/entries) |
 | `12_topic_name.md` | TopicName — session topic identifier string |
 | `13_strategy_type.md` | StrategyType — resume strategy enum (resume/fresh) |
+| `14_detail_level.md` | DetailLevel — output verbosity enum (projects/sessions) |
 
 ### Type Index
 
@@ -36,7 +37,7 @@ See [param/readme.md](../param/readme.md) for which parameters use each type.
 | 1 | [`EntryCount`](01_entry_count.md) | Integer (≥0) | `min_entries::` |
 | 2 | [`EntryType`](02_entry_type.md) | String enum | `entry_type::` |
 | 3 | [`ExportFormat`](03_export_format.md) | String enum | `format::` |
-| 4 | [`PathSubstring`](04_path_substring.md) | String | `path::` in `.list` |
+| 4 | [`PathSubstring`](04_path_substring.md) | String | `filter::` in `.projects` |
 | 5 | [`ProjectId`](05_project_id.md) | String (multi-format) | `project::` |
 | 6 | [`ProjectType`](06_project_type.md) | String enum | `type::` |
 | 7 | [`ScopeValue`](07_scope_value.md) | String enum | `scope::` |
@@ -46,6 +47,7 @@ See [param/readme.md](../param/readme.md) for which parameters use each type.
 | 11 | [`TargetType`](11_target_type.md) | String enum | `target::` |
 | 12 | [`TopicName`](12_topic_name.md) | String (identifier) | `topic::` |
 | 13 | [`StrategyType`](13_strategy_type.md) | String enum | `strategy::` |
+| 14 | [`DetailLevel`](14_detail_level.md) | String enum | `detail::` |
 
 ### Navigation
 
@@ -62,3 +64,4 @@ See [param/readme.md](../param/readme.md) for which parameters use each type.
 - [TargetType](11_target_type.md)
 - [TopicName](12_topic_name.md)
 - [StrategyType](13_strategy_type.md)
+- [DetailLevel](14_detail_level.md)

@@ -38,7 +38,7 @@ show_metadata::1    # Metadata only
 ### Referenced Commands
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
-| 3 | [`.show`](../command/03_show.md) | `0` | Shows metadata only when enabled; mutually exclusive with `show_entries::` |
+| 3 | [`.show`](../command/03_show.md) | `0` | Shows metadata only when enabled; composes with `show_entries::` (appends a raw entry list to the metadata block) rather than excluding it |
 
 ### Referenced User Stories
 | # | User Story | Persona |

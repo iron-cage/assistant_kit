@@ -17,14 +17,14 @@ Path argument. Semantics differ by command — see command sections for exact be
 
 **Default:** Command-dependent
 
-**Commands:** `.status`, `.list`, `.projects`, `.count`, `.show`, `.search`, `.export`, `.project.path`, `.project.exists`, `.session.dir`, `.session.ensure`, `.tail`, `.usage` — registered.
+**Commands:** `.status`, `.list` (deprecated), `.projects`, `.count`, `.show`, `.search`, `.export`, `.project.path`, `.project.exists`, `.session.dir`, `.session.ensure`, `.tail`, `.usage` — registered.
 
 **Per-command semantics:**
 
 | Command | Type | Default | Semantics |
 |---------|------|---------|-----------|
 | `.status` | StoragePath | `~/.claude/` | Storage root override |
-| `.list` | PathSubstring | — | Filter projects by path substring (case-insensitive) |
+| `.list` (deprecated) | PathSubstring | — | Filter projects by path substring (case-insensitive); this role moved to `.projects`' new [`filter::`](29_filter.md) parameter — NOT to `.projects`' own `path::` below, which keeps its distinct StoragePath meaning |
 | `.projects` | StoragePath | cwd | Scope anchor path (implemented) |
 | `.count` | String | `~/.claude/` | Storage root override — not a scope anchor; `.count` narrows via `scope::` alone (no `path::` anchor role) |
 | `.search` | StoragePath | cwd | Scope anchor path for `scope::`-resolved project search when `project::` is absent (implemented) |
@@ -37,14 +37,14 @@ Path argument. Semantics differ by command — see command sections for exact be
 | `.tail` | StoragePath | cwd | Directory to resolve project from |
 | `.usage` | StoragePath | cwd | Scope anchor path (implemented) |
 
-**Purpose:** Provides a path context appropriate to each command. In `.project.exists`, `.project.path`, `.session.dir`, and `.session.ensure`, it is a filesystem path to process. In `.list`, it is a substring filter on project paths. In `.status` and `.count`, it overrides the storage root entirely. In `.projects`, `.search`, `.show`, `.export`, and [`.usage`](../command/13_usage.md), it anchors the scope discovery when paired with `scope::` (all five implemented).
+**Purpose:** Provides a path context appropriate to each command. In `.project.exists`, `.project.path`, `.session.dir`, and `.session.ensure`, it is a filesystem path to process. In `.list` (deprecated), it was a substring filter on project paths — that role is now `.projects`' [`filter::`](29_filter.md). In `.status` and `.count`, it overrides the storage root entirely. In `.projects`, `.search`, `.show`, `.export`, and [`.usage`](../command/13_usage.md), it anchors the scope discovery when paired with `scope::` (all five implemented).
 
 **Examples:**
 ```bash
 # .status: storage root override
 .status path::~/.claude/
 
-# .list: path substring filter
+# .list (deprecated): path substring filter — use .projects filter:: instead
 .list path::assistant          # Matches all projects with "assistant" in path
 
 # .project.exists: directory check
@@ -72,13 +72,13 @@ Path argument. Semantics differ by command — see command sections for exact be
 .tail path::/home/alice/projects/my-app
 ```
 
-**Group (scope anchor context):** [Scope Configuration](../param_group/05_scope_configuration.md) — `path::` acts as the scope anchor paired with `scope::` in `.projects`, `.search`, `.show`, `.export`, and [`.usage`](../command/13_usage.md) (all implemented). `.count` is a Partial member of this group via `scope::` alone — its own `path::` keeps a separate storage-root-override role, not the anchor role. `path::`'s role in `.status`, `.list`, `.project.exists`, `.project.path`, `.session.dir`, and `.session.ensure` is independent and not part of this group.
+**Group (scope anchor context):** [Scope Configuration](../param_group/05_scope_configuration.md) — `path::` acts as the scope anchor paired with `scope::` in `.projects`, `.search`, `.show`, `.export`, and [`.usage`](../command/13_usage.md) (all implemented). `.count` is a Partial member of this group via `scope::` alone — its own `path::` keeps a separate storage-root-override role, not the anchor role. `path::`'s role in `.status`, `.list` (deprecated), `.project.exists`, `.project.path`, `.session.dir`, and `.session.ensure` is independent and not part of this group.
 
 ### Referenced Type
 | Type | Kind | Fundamental | Key Constraint |
 |------|------|-------------|----------------|
 | [`StoragePath`](../type/10_storage_path.md) | String (filesystem path) | String | Filesystem path; `~` expansion supported |
-| [`PathSubstring`](../type/04_path_substring.md) | String | String | In `.list` only: substring filter on project paths |
+| [`PathSubstring`](../type/04_path_substring.md) | String | String | Historical: in `.list` (deprecated) only. Current substring-filter role lives on `.projects`' [`filter::`](29_filter.md), a distinct parameter — not `path::`. |
 
 ### Referenced Parameter Groups
 | # | Group | Membership | Co-members |
@@ -89,7 +89,7 @@ Path argument. Semantics differ by command — see command sections for exact be
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
 | 1 | [`.status`](../command/01_status.md) | `~/.claude/` | Storage root override |
-| 2 | [`.list`](../command/02_list.md) | — | PathSubstring type: substring filter on project paths |
+| 2 | [`.list`](../command/02_list.md) (deprecated) | — | Historical PathSubstring role; superseded by `.projects`' [`filter::`](29_filter.md) |
 | 3 | [`.show`](../command/03_show.md) | cwd | Scope anchor path — implemented |
 | 4 | [`.count`](../command/04_count.md) | `~/.claude/` | Storage root override, not a scope anchor — `.count` narrows via `scope::` alone |
 | 5 | [`.search`](../command/05_search.md) | cwd | Scope anchor path — implemented |

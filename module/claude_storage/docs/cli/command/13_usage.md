@@ -7,7 +7,7 @@
 - **In Scope**: Invocation syntax, accepted parameters, output structure, error conditions.
 - **Out of Scope**: Parameter definitions (→ `param/`), type constraints (→ `type/`).
 
-Implemented in `src/cli/usage.rs`. No other shipped command owns this responsibility — `.list` prints session IDs only (no metrics), `.count` is contractually a single bare integer (not a table), `.status`'s `show_tokens::1` is one **global** rollup, never per-session.
+Implemented in `src/cli/usage.rs`. No other shipped command owns this responsibility — `.projects` (which absorbed `.list`, deprecated) prints session listings only (no metrics), `.count` is contractually a single bare integer (not a table), `.status`'s `show_tokens::1` is one **global** rollup, never per-session.
 
 **Representation Absorption Test** (per [`command_group/readme.md`](../command_group/readme.md), the mandatory gate before adding any new command name): closest candidate is [`.projects`](07_projects.md) — it already implements `scope::`/`path::`/`limit::`, the same discovery machinery `.usage` reuses. Fails both criteria anyway: (1) *identical routine* — `.usage` has its own routine; `projects_routine()`'s output is project-grouped (summary/list/family-tree rendering keyed on project path, with agent-family detection) while `.usage`'s is a flat, session-keyed table with its own numeric/duration formatting (k/M suffixes, s/m/h) that `.projects` has no equivalent of; not reachable by changing `.projects`' parameter defaults. (2) *identical parameter set* — `.usage` registers `depth::`, which `.projects` does not register and has no default-value equivalent for (`.projects`' walk is uncapped). Confirmed as a genuinely new command, not a disguised `.projects` reparameterization.
 

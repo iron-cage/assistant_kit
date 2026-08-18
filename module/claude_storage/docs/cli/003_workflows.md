@@ -16,13 +16,13 @@ See [command/readme.md](command/readme.md) for command reference and [param/read
 | Workflow | Commands Used | Complexity |
 |----------|--------------|------------|
 | [Quick storage check](#1-quick-storage-check) | `.status` | low |
-| [Find a past conversation](#2-find-a-past-conversation) | `.list`, `.show` | low |
+| [Find a past conversation](#2-find-a-past-conversation) | `.projects`, `.show` | low |
 | [Export a conversation](#3-export-a-conversation) | `.show`, `.export` | low |
 | [Search for a topic](#4-search-for-a-topic) | `.search`, `.show` | low |
 | [Count storage by scope](#5-count-storage-by-scope) | `.count` | low |
-| [Inspect agent sessions](#6-inspect-agent-sessions) | `.list`, `.show` | medium |
+| [Inspect agent sessions](#6-inspect-agent-sessions) | `.projects`, `.show` | medium |
 | [Navigate project hierarchy](#7-navigate-project-hierarchy) | `.projects`, `.project.exists` | medium |
-| [Find substantial sessions](#8-find-substantial-sessions) | `.list` | medium |
+| [Find substantial sessions](#8-find-substantial-sessions) | `.projects` | medium |
 | [Session lifecycle management](#9-session-lifecycle-management) | `.project.path`, `.project.exists`, `.session.dir`, `.session.ensure` | medium |
 | [Quick context refresh](#10-quick-context-refresh) | `.tail` | low |
 
@@ -53,12 +53,12 @@ claude_storage .status show_tokens::1
 **Scenario:** You remember working on a specific project last week and want to find the session.
 
 ```bash
-# Step 1: List projects matching path keyword
-claude_storage .list path::assistant
+# Step 1: List projects matching path keyword (terse, project-only view)
+claude_storage .projects filter::assistant detail::projects
 # Output: projects whose paths contain "assistant"
 
-# Step 2: List sessions for a matching project
-claude_storage .list path::assistant show_sessions::1
+# Step 2: List sessions for a matching project (detail::sessions is the default)
+claude_storage .projects filter::assistant
 # Output: same projects, now with their sessions listed
 
 # Step 3: Show the session content
@@ -140,7 +140,7 @@ claude_storage .count target::entries project::-home-alice-projects-my-app sessi
 
 ```bash
 # Step 1: Find agent sessions for the current project
-claude_storage .list show_sessions::1 agent::1
+claude_storage .projects agent::1
 # Output: projects with agent-only sessions listed
 
 # Step 2: Show a specific agent session
@@ -184,15 +184,15 @@ clg .project.exists path::/home/alice/projects
 
 ```bash
 # Find sessions with at least 20 entries
-claude_storage .list min_entries::20
-# Output: projects with sessions meeting the threshold, sessions auto-shown
+claude_storage .projects min_entries::20
+# Output: projects with sessions meeting the threshold (session detail shown by default)
 
 # Find substantive agent sessions
-claude_storage .list agent::1 min_entries::10
+claude_storage .projects agent::1 min_entries::10
 # Output: agent sessions with 10+ entries
 
 # Find substantial sessions in a specific project by path
-claude_storage .list path::assistant min_entries::50
+claude_storage .projects filter::assistant min_entries::50
 # Output: assistant projects with sessions having 50+ entries
 ```
 
@@ -269,9 +269,9 @@ claude_storage .tail topic::work
 
 **Use `.count` for scripting:** `.count` outputs a bare integer — no decorations, no parsing needed. Use `show_tokens::1` on `.status` when you need token breakdowns.
 
-**Prefer `.count` over `.list` for numbers:** `.count` avoids loading session content and is much faster on large storage.
+**Prefer `.count` over `.projects` for numbers:** `.count` avoids loading session content and is much faster on large storage.
 
-**Use `show_sessions::0` with session filters for project discovery:** `claude_storage .list session::commit show_sessions::0` finds which projects have sessions matching "commit" without expanding the session list.
+**Use `detail::projects` with session filters for project discovery:** `claude_storage .projects session::commit detail::projects` finds which projects have sessions matching "commit" without expanding the session list.
 
 **Session IDs from `.show` output:** When you see sessions listed by `.show` (project view), copy the session ID directly into `session_id::` for the next command.
 

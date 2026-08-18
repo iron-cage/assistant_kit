@@ -29,13 +29,13 @@ Validate non-empty string:
 - `get() -> string` — Raw substring value
 - `matches(session_id: string) -> boolean` — True if session ID contains substring (case-insensitive)
 
-**Commands:** `.list`, `.count`, `.search`, `.projects`
+**Commands:** `.list` (deprecated), `.count`, `.search`, `.projects`
 
 ### Referenced Commands
 
 | # | Command | Via Parameter |
 |---|---------|---------------|
-| 2 | [`.list`](../command/02_list.md) | `session::` |
+| 2 | [`.list`](../command/02_list.md) (deprecated) | `session::` |
 | 4 | [`.count`](../command/04_count.md) | `session::` |
 | 5 | [`.search`](../command/05_search.md) | `session::` |
 | 7 | [`.projects`](../command/07_projects.md) | `session::` |

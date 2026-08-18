@@ -1,9 +1,10 @@
 meta:
   description: Cross-reference graph for all NNN-identified doc instances in claude_storage
-  node_count: 70
-  edge_count: 83
-  component_count: 14
+  node_count: 74
+  edge_count: 87
+  component_count: 15
   generated: 2026-07-04
+  note: "param/29-31 and type/14 added for the .list->.projects consolidation; a pre-existing gap (param/25-28, command/12-13, user_story/006, pitfall/04) predates this update and is not yet graphed"
 
 nodes:
   # feature/ entity (1)
@@ -210,6 +211,19 @@ nodes:
     file: cli/param/24_show_tree.md
     label: Show Tree
     entity: param
+  # cli/param/ entity, continued: 29-31 added (25-28 pre-existing gap, not yet graphed)
+  - id: param/29
+    file: cli/param/29_filter.md
+    label: Filter
+    entity: param
+  - id: param/30
+    file: cli/param/30_detail.md
+    label: Detail
+    entity: param
+  - id: param/31
+    file: cli/param/31_ids.md
+    label: Ids
+    entity: param
   # cli/param_group/ entity (5)
   - id: param_group/01
     file: cli/param_group/01_output_control.md
@@ -283,6 +297,10 @@ nodes:
   - id: type/13
     file: cli/type/13_strategy_type.md
     label: Strategy Type
+    entity: type
+  - id: type/14
+    file: cli/type/14_detail_level.md
+    label: Detail Level
     entity: type
   # cli/pitfall/ entity (3)
   - id: pitfall/01
@@ -398,6 +416,9 @@ edges:
   - from: user_story/001
     to: param/23
     via: referenced_params
+  - from: user_story/001
+    to: param/30
+    via: referenced_params
   # user_story/002 → commands, param_groups, params
   - from: user_story/002
     to: command/02
@@ -474,6 +495,12 @@ edges:
   - from: user_story/002
     to: param/24
     via: referenced_params
+  - from: user_story/002
+    to: param/29
+    via: referenced_params
+  - from: user_story/002
+    to: param/30
+    via: referenced_params
   # user_story/003 → command, param_groups, formats, params
   - from: user_story/003
     to: command/06
@@ -536,6 +563,9 @@ edges:
   - from: user_story/004
     to: param/21
     via: referenced_params
+  - from: user_story/004
+    to: param/31
+    via: referenced_params
   # user_story/005 → commands, param_groups, params
   - from: user_story/005
     to: command/08
@@ -565,7 +595,7 @@ edges:
 components:
   - id: 1
     label: CLI Tool + Algorithms + Invariants + Pitfalls + User Stories + Commands + Params + Param Groups + Formats
-    size: 57
+    size: 60
     isolated: false
     nodes:
       - feature/001
@@ -620,6 +650,9 @@ components:
       - param/22
       - param/23
       - param/24
+      - param/29
+      - param/30
+      - param/31
       - param_group/01
       - param_group/02
       - param_group/03
@@ -703,5 +736,11 @@ components:
     isolated: true
     nodes:
       - type/13
+  - id: 15
+    label: "CLI Type: Detail Level (no inter-entity cross-references yet)"
+    size: 1
+    isolated: true
+    nodes:
+      - type/14
 
 dangling_refs: []

@@ -29,7 +29,7 @@ The most-recently modified session (JSONL file) within the current scope. Comput
 
 ### Agent Session
 
-A sub-agent conversation spawned during a main session. Two storage layouts coexist (per-project, neither deprecated): **flat** (older projects) where `agent-*.jsonl` files are siblings of the main session at project root, and **hierarchical** (newer projects) where agents live in `{session-uuid}/subagents/agent-{agentId}.jsonl` with optional `.meta.json` sidecars. Agents have `isSidechain: true` in their entries. The `sessionId` field in agent entries references the parent session UUID. Use `agent::1` in `.list` or `.projects` to filter to agent sessions only. See [storage/readme.md](../../../../contract/claude_code/docs/storage/readme.md#conceptual-model) for layout diagrams.
+A sub-agent conversation spawned during a main session. Two storage layouts coexist (per-project, neither deprecated): **flat** (older projects) where `agent-*.jsonl` files are siblings of the main session at project root, and **hierarchical** (newer projects) where agents live in `{session-uuid}/subagents/agent-{agentId}.jsonl` with optional `.meta.json` sidecars. Agents have `isSidechain: true` in their entries. The `sessionId` field in agent entries references the parent session UUID. Use `agent::1` in `.projects` to filter to agent sessions only. See [storage/readme.md](../../../../contract/claude_code/docs/storage/readme.md#conceptual-model) for layout diagrams.
 
 ---
 
@@ -97,7 +97,7 @@ A directory on the filesystem that has been opened in Claude Code. Each project 
 
 ### Scope
 
-The discovery boundary for project and conversation listing. Controls which projects are searched: `local` (current project only), `relevant` (all ancestor projects up to `/`), `under` (all descendant projects), `around` (bidirectional: ancestors + current + descendants), or `global` (all projects in storage). Applies to `.projects` (scope default: `around`), `.list` (scope default: `global`), `.search`, and `.count`.
+The discovery boundary for project and conversation listing. Controls which projects are searched: `local` (current project only), `relevant` (all ancestor projects up to `/`), `under` (all descendant projects), `around` (bidirectional: ancestors + current + descendants), or `global` (all projects in storage). Applies to `.projects` (scope default: `around`), `.search`, and `.count`. (`.list`, deprecated, also specified this, scope default `global`, before its role migrated to `.projects`.)
 
 ---
 

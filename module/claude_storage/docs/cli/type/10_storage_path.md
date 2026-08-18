@@ -53,7 +53,7 @@ Validate and normalize path:
 | 11 | [`.session.ensure`](../command/11_session_ensure.md) | `path::` |
 | 13 | [`.usage`](../command/13_usage.md) | `path::` |
 
-Not listed: `.list` (its `path::` is [`PathSubstring`](../type/04_path_substring.md)-typed, not `StoragePath`).
+Not listed: `.list` (deprecated; its `path::` was [`PathSubstring`](../type/04_path_substring.md)-typed, not `StoragePath` — that substring role is now `.projects`' [`filter::`](../param/29_filter.md)).
 
 ### Referenced Parameters
 

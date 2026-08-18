@@ -16,7 +16,7 @@ propagation pattern — each required fixes in 3–5 command files after the ini
 
 ### Trigger
 
-Fixing a logic bug in (e.g.) `.count` without searching `.show`, `.list`, `.search`,
+Fixing a logic bug in (e.g.) `.count` without searching `.show`, `.projects`, `.search`,
 `.export`, and the session commands for the same flawed pattern.
 
 ### Required Pattern
@@ -40,7 +40,7 @@ run the grep.
 
 | # | Command | Notes |
 |---|---------|-------|
-| All 11 | *(all commands)* | Any bug found in one command may exist in all others |
+| All 13 (12 active) | *(all commands)* | Any bug found in one command may exist in all others |
 
 ### Sources
 

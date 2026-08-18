@@ -17,7 +17,7 @@
 | # | Command | Role |
 |---|---------|------|
 | 1 | [`.status`](../command/01_status.md) | Primary overview: project totals, session totals, storage root |
-| 2 | [`.list`](../command/02_list.md) | Enumerate projects with per-project session expansion |
+| 7 | [`.projects`](../command/07_projects.md) | Enumerate projects with per-project session expansion |
 | 4 | [`.count`](../command/04_count.md) | Precise item counts for specific targets |
 | 13 | [`.usage`](../command/13_usage.md) | Per-session usage table for detailed activity audit |
 
@@ -31,7 +31,7 @@
 | # | Parameter | Role |
 |---|-----------|------|
 | 9 | [`path::`](../param/09_path.md) | Override default storage root for inspection |
-| 15 | [`show_sessions::`](../param/15_sessions.md) | Expand session list per project in `.list` |
+| 30 | [`detail::`](../param/30_detail.md) | Select terse (`projects`) or full (`sessions`, default) view in `.projects` |
 | 16 | [`target::`](../param/16_target.md) | Specify count target (projects, sessions, entries) |
 | 23 | [`show_tokens::`](../param/23_show_tokens.md) | Show token usage section in .status |
 
@@ -72,7 +72,7 @@ cls .count target::sessions
 
 **Step 4: List all projects with sessions**
 ```bash
-cls .list show_sessions::1
+cls .projects
 # /home/user/projects/my_app
 #   2024-01-15T14-30-22-abc1 (24 entries)
 #   2024-01-16T09-01-33-def4 (18 entries)

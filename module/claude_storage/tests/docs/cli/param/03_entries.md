@@ -1,6 +1,6 @@
 # Parameter :: `show_entries::`
 
-Edge case tests for the `show_entries::` parameter. Tests validate boolean enforcement and display impact in `.show`.
+Edge case tests for the `show_entries::` parameter. Tests validate boolean enforcement and its three distinct contexts in `.show`: a no-op in session-detail content mode, a nested entry-list toggle inside session-detail metadata mode, and a rendering toggle in project-overview mode.
 
 **Source:** [param/03_entries.md](../../../../docs/cli/param/03_entries.md)
 
@@ -8,45 +8,50 @@ Edge case tests for the `show_entries::` parameter. Tests validate boolean enfor
 
 | ID | Test Name | Category |
 |----|-----------|----------|
-| EC-1 | Value 0 shows summary view | Behavior |
-| EC-2 | Value 1 shows all entry records | Behavior |
+| EC-1 | Value 0, session-detail content mode → full formatted content | Content-Mode No-Op |
+| EC-2 | Value 1, session-detail content mode → still full formatted content | Content-Mode No-Op |
 | EC-3 | Value "yes" rejected | Type Validation |
-| EC-4 | Omitted defaults to 0 (summary view) | Default |
-| EC-5 | show_entries::1 with small session shows all entries | Behavior |
-| EC-6 | show_entries::1 output includes UUID and timestamp per entry | Output Format |
+| EC-4 | show_metadata::1 + show_entries::0 (default) → metadata only, no entry list | Metadata-Mode Behavior |
+| EC-5 | show_metadata::1 + show_entries::1 → metadata + raw entry list | Metadata-Mode Behavior |
+| EC-6 | show_metadata::1 + show_entries::1 entry list includes UUID and timestamp | Output Format |
+| EC-7 | show_entries::0 (default), project overview → formatted tail messages | Project-Overview Behavior |
+| EC-8 | show_entries::1, project overview → tail window as raw list | Project-Overview Behavior |
 
 ## Test Coverage Summary
 
-- Behavior: 3 tests (EC-1, EC-2, EC-5)
+- Content-Mode No-Op: 2 tests (EC-1, EC-2)
 - Type Validation: 1 test (EC-3)
-- Default: 1 test (EC-4)
+- Metadata-Mode Behavior: 2 tests (EC-4, EC-5)
 - Output Format: 1 test (EC-6)
+- Project-Overview Behavior: 2 tests (EC-7, EC-8)
 
-**Total:** 6 edge cases
+**Total:** 8 edge cases
 
-**Behavioral Divergence Pair:** EC-1 (show_entries::0, summary view) ↔ EC-2 (show_entries::1, full records)
+**Behavioral Divergence Pair:** EC-2 (content mode, no-op) ↔ EC-5 (metadata mode, appends list) — same `show_entries::1` value, different effect depending on `show_metadata::`.
+
+**Behavioral Divergence Pair:** EC-7 (project overview, formatted) ↔ EC-8 (project overview, raw list)
 
 ## Test Cases
 
 ---
 
-### EC-1: Value 0 shows summary view
+### EC-1: Value 0, session-detail content mode → full formatted content
 
 - **Commands:** `.show`
-- **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture`
+- **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture` (fixture: session `-default_topic` with 4 known entries)
 - **When:** `clg .show session_id::-default_topic show_entries::0`
-- **Then:** stdout contains a concise summary of the session (entry count, timestamps) without listing each individual message record.; summary output without per-entry records
+- **Then:** stdout contains the full conversation as formatted chat content (`[timestamp] Role:` + message body for all 4 entries) — content mode's baseline, unaffected by `show_entries::`
 - **Exit:** 0
 - **Source:** [param/03_entries.md](../../../../docs/cli/param/03_entries.md)
 
 ---
 
-### EC-2: Value 1 shows all entry records
+### EC-2: Value 1, session-detail content mode → still full formatted content
 
 - **Commands:** `.show`
-- **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture`
+- **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture` (fixture: session `-default_topic` with 4 known entries)
 - **When:** `clg .show session_id::-default_topic show_entries::1`
-- **Then:** stdout lists each entry in the session with its record details (UUID, type, timestamp).; individual entry records listed in output
+- **Then:** stdout is byte-identical to EC-1's output — `show_entries::` has no effect in content mode (no `show_metadata::1`); content mode always shows full formatted entry content regardless of this flag
 - **Exit:** 0
 - **Source:** [param/03_entries.md](../../../../docs/cli/param/03_entries.md)
 
@@ -57,39 +62,61 @@ Edge case tests for the `show_entries::` parameter. Tests validate boolean enfor
 - **Commands:** `.show`
 - **Given:** clean environment
 - **When:** `clg .show session_id::-default_topic show_entries::yes`
-- **Then:** stderr contains an error indicating `entries` must be 0 or 1.; error message indicating non-boolean value rejected
+- **Then:** stderr contains an error indicating `entries` must be 0 or 1
 - **Exit:** 1
 - **Source:** [param/03_entries.md](../../../../docs/cli/param/03_entries.md)
 
 ---
 
-### EC-4: Omitted defaults to 0 (summary view)
+### EC-4: show_metadata::1 + show_entries::0 (default) → metadata only, no entry list
 
 - **Commands:** `.show`
-- **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture`
-- **When:** `clg .show session_id::-default_topic`
-- **Then:** stdout contains the session summary, identical to running with explicit `show_entries::0`.; summary view shown (default applied, no per-entry expansion)
+- **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture` (fixture: session `-default_topic` with 4 known entries)
+- **When:** `clg .show session_id::-default_topic show_metadata::1`
+- **Then:** stdout contains metadata fields (entry count, session type, timestamps) only; no per-entry list, no message content
 - **Exit:** 0
 - **Source:** [param/03_entries.md](../../../../docs/cli/param/03_entries.md)
 
 ---
 
-### EC-5: show_entries::1 with small session shows all entries
+### EC-5: show_metadata::1 + show_entries::1 → metadata + raw entry list
 
 - **Commands:** `.show`
-- **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture` (fixture session with a known small number of entries, e.g., 3)
-- **When:** `clg .show session_id::-default_topic show_entries::1`
-- **Then:** stdout lists exactly the number of entry records that exist in the session (e.g., 3 records for a 3-entry session).; entry record count in output equals the fixture session's actual entry count
+- **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture` (fixture: session `-default_topic` with 4 known entries)
+- **When:** `clg .show session_id::-default_topic show_metadata::1 show_entries::1`
+- **Then:** stdout contains the metadata fields from EC-4, followed by a raw numbered list of all 4 entries; no formatted message content
 - **Exit:** 0
 - **Source:** [param/03_entries.md](../../../../docs/cli/param/03_entries.md)
 
 ---
 
-### EC-6: show_entries::1 output includes UUID and timestamp per entry
+### EC-6: show_metadata::1 + show_entries::1 entry list includes UUID and timestamp
 
 - **Commands:** `.show`
-- **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture`
-- **When:** `clg .show session_id::-default_topic show_entries::1`
-- **Then:** stdout contains entry records where each line (or block) includes a UUID-format string and a timestamp string.; UUID and timestamp fields present in per-entry output
+- **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture` (fixture: session `-default_topic` with 4 known entries)
+- **When:** `clg .show session_id::-default_topic show_metadata::1 show_entries::1`
+- **Then:** Each line of the appended entry list includes a UUID-format string, an entry type, and a timestamp string
+- **Exit:** 0
+- **Source:** [param/03_entries.md](../../../../docs/cli/param/03_entries.md)
+
+---
+
+### EC-7: show_entries::0 (default), project overview → formatted tail messages
+
+- **Commands:** `.show`
+- **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture` (fixture: project with 3 sessions, run from its cwd)
+- **When:** `clg .show`
+- **Then:** Summary block followed by the last `tail::` messages rendered as formatted chat content (default — `show_entries::0`)
+- **Exit:** 0
+- **Source:** [param/03_entries.md](../../../../docs/cli/param/03_entries.md)
+
+---
+
+### EC-8: show_entries::1, project overview → tail window as raw list
+
+- **Commands:** `.show`
+- **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture` (fixture: project with 3 sessions, run from its cwd)
+- **When:** `clg .show show_entries::1`
+- **Then:** Summary block followed by the same `tail::`-windowed entries, rendered as a raw UUID/type/timestamp list instead of formatted chat content
 - **Exit:** 0
 - **Source:** [param/03_entries.md](../../../../docs/cli/param/03_entries.md)

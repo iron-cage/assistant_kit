@@ -41,13 +41,13 @@ Pseudocode:
 - `is_zero() -> boolean` — True when count is 0 (no minimum)
 - `exceeds(actual: integer) -> boolean` — True when actual count is below threshold
 
-**Commands:** `.list`, `.projects`
+**Commands:** `.list` (deprecated), `.projects`
 
 ### Referenced Commands
 
 | # | Command | Via Parameter |
 |---|---------|---------------|
-| 2 | [`.list`](../command/02_list.md) | `min_entries::` |
+| 2 | [`.list`](../command/02_list.md) (deprecated) | `min_entries::` |
 | 7 | [`.projects`](../command/07_projects.md) | `min_entries::` |
 
 ### Referenced Parameters

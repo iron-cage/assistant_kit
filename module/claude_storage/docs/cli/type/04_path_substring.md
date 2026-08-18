@@ -29,16 +29,16 @@ Validate non-empty string:
 - `get() -> string` — Raw substring value
 - `matches(path: string) -> boolean` — True if path contains substring (case-insensitive)
 
-**Commands:** `.list` (via `path::`)
+**Commands:** [`.projects`](../command/07_projects.md) (via `filter::`; absorbed from `.list`'s former `path::` role, see [`02_list.md`](../command/02_list.md))
 
 ### Referenced Commands
 
 | # | Command | Via Parameter |
 |---|---------|---------------|
-| 2 | [`.list`](../command/02_list.md) | `path::` |
+| 7 | [`.projects`](../command/07_projects.md) | `filter::` |
 
 ### Referenced Parameters
 
 | # | Parameter | Commands |
 |---|-----------|----------|
-| 9 | [`path::`](../param/09_path.md) | 11 |
+| 29 | [`filter::`](../param/29_filter.md) | 1 |

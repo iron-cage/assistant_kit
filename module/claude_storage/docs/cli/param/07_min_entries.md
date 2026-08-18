@@ -20,11 +20,11 @@ Filter sessions by minimum entry count threshold.
 
 **Default:** unset (no minimum)
 
-**Commands:** `.list`, `.projects`
+**Commands:** `.list` (deprecated), `.projects`
 
 **Purpose:** Excludes sessions with fewer entries than the threshold. Useful for finding substantive conversations (skip one-message sessions) or for performance (only load sessions known to have content).
 
-**Side effect:** Auto-enables `show_sessions::1` in `.list` (see [Session Filter group](../param_group/04_session_filter.md)).
+**Side effect (historical — `.list` only, deprecated):** Auto-enabled `show_sessions::1` in `.list`. No equivalent side effect in `.projects` — session display is unconditional by default (`detail::sessions`); see [Session Filter group](../param_group/04_session_filter.md).
 
 **Examples:**
 ```bash
@@ -53,7 +53,7 @@ min_entries::abc  # "min_entries must be a non-negative integer, got abc"
 ### Referenced Commands
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
-| 2 | [`.list`](../command/02_list.md) | unset | Auto-enables `show_sessions::1`; excludes sessions below threshold |
+| 2 | [`.list`](../command/02_list.md) (deprecated) | unset | Historical; auto-enabled `show_sessions::1` |
 | 7 | [`.projects`](../command/07_projects.md) | unset | Excludes sessions below threshold |
 
 ### Referenced User Stories

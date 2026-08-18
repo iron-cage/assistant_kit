@@ -20,20 +20,20 @@ Session identifier parameter — acts as substring filter in listing commands, a
 
 **Default:** unset (no filter / no scope restriction)
 
-**Commands:** `.list`, `.count`, `.search`, `.projects`
+**Commands:** `.list` (deprecated), `.count`, `.search`, `.projects`
 
 **Per-command semantics:**
 
 | Command | Type | Semantics |
 |---------|------|-----------|
-| `.list` | SessionFilter | Substring filter — shows sessions whose ID contains this string |
+| `.list` (deprecated) | SessionFilter | Historical substring filter — see `.projects` below |
 | `.projects` | SessionFilter | Substring filter — shows sessions whose ID contains this string |
 | `.count` | SessionId | Exact scope — counts entries within this specific session |
 | `.search` | SessionId | Exact scope — restricts search to this specific session |
 
 **Purpose:** Narrows results by session identity. In listing contexts (`.list`, `.projects`), acts as a substring filter for discovery. In counting/search contexts (`.count`, `.search`), acts as an exact scope pin to a specific session.
 
-**Side effect:** Auto-enables `show_sessions::1` in `.list` (see [Session Filter group](../param_group/04_session_filter.md)).
+**Side effect (historical — `.list` only, deprecated):** Auto-enabled `show_sessions::1` in `.list`. No equivalent side effect in `.projects` — session display is unconditional by default (`detail::sessions`); see [Session Filter group](../param_group/04_session_filter.md).
 
 **Examples:**
 ```bash
@@ -62,7 +62,7 @@ session::default      # Matches -default_topic.jsonl
 ### Referenced Commands
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
-| 2 | [`.list`](../command/02_list.md) | unset | SessionFilter: substring filter; auto-enables `show_sessions::1` |
+| 2 | [`.list`](../command/02_list.md) (deprecated) | unset | Historical; auto-enabled `show_sessions::1` |
 | 4 | [`.count`](../command/04_count.md) | unset | SessionId: exact scope pin to a specific session |
 | 5 | [`.search`](../command/05_search.md) | unset | SessionId: exact scope pin to a specific session |
 | 7 | [`.projects`](../command/07_projects.md) | unset | SessionFilter: substring filter |

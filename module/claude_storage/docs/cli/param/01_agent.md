@@ -21,11 +21,11 @@ Session type filter for listing operations.
 
 **Default:** unset (all session types shown)
 
-**Commands:** `.list`, `.projects`
+**Commands:** `.list` (deprecated), `.projects`
 
 **Purpose:** Distinguishes between main conversation sessions and agent sub-sessions spawned by tool calls. Agent sessions are stored as `agent-*.jsonl` files and have `isSidechain: true`. Use `agent::1` to inspect sub-agent behavior, `agent::0` to see only top-level conversations.
 
-**Side effect:** Auto-enables `show_sessions::1` in `.list` (see [Session Filter group](../param_group/04_session_filter.md)).
+**Side effect (historical — `.list` only, deprecated):** Auto-enabled `show_sessions::1` in `.list`. No equivalent side effect in `.projects` — session display is unconditional by default (`detail::sessions`); see [Session Filter group](../param_group/04_session_filter.md).
 
 **Examples:**
 ```bash
@@ -54,7 +54,7 @@ agent::yes     # Not a boolean: "agent must be 0 or 1"
 ### Referenced Commands
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
-| 2 | [`.list`](../command/02_list.md) | unset | Auto-enables `show_sessions::1`; filters by session type |
+| 2 | [`.list`](../command/02_list.md) (deprecated) | unset | Historical; auto-enabled `show_sessions::1` |
 | 7 | [`.projects`](../command/07_projects.md) | unset | Filters sessions by type |
 
 ### Referenced User Stories

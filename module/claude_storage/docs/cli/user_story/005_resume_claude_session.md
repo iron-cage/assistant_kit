@@ -87,7 +87,7 @@ cls .session.ensure path::/home/user/myproject topic::auth strategy::fresh
 **Full session setup in one script:**
 ```bash
 PROJECT=/home/user/myproject
-SESSION_ID=$(cls .list type::conversation project::$PROJECT | head -1)
+SESSION_ID=$(cls .projects project::$PROJECT ids::1 | head -1)
 cls .session.ensure path::$PROJECT topic::auth
 ```
 

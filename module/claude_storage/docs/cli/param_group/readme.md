@@ -26,7 +26,7 @@ See [param/readme.md](../param/readme.md) for individual parameter specs and [co
 | # | Group | Parameters | Used By |
 |---|-------|-----------|---------|
 | 1 | [Output Control](01_output_control.md) | `show_stat::`, `show_tokens::`, `show_tree::`, `show_topic::` | 3 commands |
-| 2 | [Project Scope](02_project_scope.md) | `project::` | 5 commands |
+| 2 | [Project Scope](02_project_scope.md) | `project::` | 6 commands (1 deprecated) |
 | 3 | [Session Identification](03_session_identification.md) | `session_id::` | 2 commands |
-| 4 | [Session Filter](04_session_filter.md) | `session::`, `agent::`, `min_entries::` | 2 commands |
-| 5 | [Scope Configuration](05_scope_configuration.md) | `scope::`, `path::` | 6 commands |
+| 4 | [Session Filter](04_session_filter.md) | `session::`, `agent::`, `min_entries::` | 2 commands (1 deprecated) |
+| 5 | [Scope Configuration](05_scope_configuration.md) | `scope::`, `path::` | 7 commands (1 deprecated) |

@@ -1,13 +1,15 @@
-# Parameter :: 15. `show_sessions::`
+# Parameter :: 15. `show_sessions::` — DEPRECATED
+
+> **Deprecated.** `.list` is deprecated (see [`02_list.md`](../command/02_list.md)); this parameter had no equivalent role on `.projects` because `.projects` never needed auto-detection — it always showed session detail. Use [`detail::`](30_detail.md) instead: `detail::sessions` (default) shows session detail unconditionally, `detail::projects` suppresses it unconditionally. There is no auto-detect mode on `.projects` — `detail::` is always explicit, which is simpler than the auto-enable behavior this parameter provided.
 
 ### Scope
 
-- **Purpose**: Specify the `show_sessions::` CLI parameter.
-- **Responsibility**: Type, defaults, valid values, and command usage for `show_sessions::`.
-- **In Scope**: Value constraints, default behavior, command interactions.
-- **Out of Scope**: Type definitions (→ `type/`), command behavior (→ `command/`).
+- **Purpose**: Specify the `show_sessions::` CLI parameter (deprecated).
+- **Responsibility**: Historical type, defaults, valid values, and command usage for `show_sessions::`, retained for traceability.
+- **In Scope**: Value constraints, default behavior, command interactions — as they existed before deprecation.
+- **Out of Scope**: Type definitions (→ `type/`), command behavior (→ `command/`), current behavior (→ [`detail::`](30_detail.md)).
 
-Explicit control over session display in `.list`.
+Explicit control over session display in `.list` (deprecated).
 
 **Type:** Boolean
 
@@ -21,7 +23,7 @@ Explicit control over session display in `.list`.
 
 **Default:** `0` (auto-detection active)
 
-**Commands:** `.list`
+**Commands:** `.list` (deprecated)
 
 **Purpose:** Normally session display is auto-controlled: the presence of any session filter enables it. `show_sessions::` provides an explicit override — `show_sessions::0` suppresses display even when filters are set (useful for counting projects that have matching sessions), and `show_sessions::1` forces display even with no filters.
 
@@ -32,6 +34,8 @@ show_sessions::1    # Force on (show even with no filters)
                # (unset) — auto-detect from other params
 ```
 
+**Migration:** `show_sessions::0` → `detail::projects`; `show_sessions::1` or unset → `detail::sessions` (the new default).
+
 ### Referenced Type
 | Type | Kind | Fundamental | Key Constraint |
 |------|------|-------------|----------------|
@@ -40,7 +44,7 @@ show_sessions::1    # Force on (show even with no filters)
 ### Referenced Commands
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
-| 2 | [`.list`](../command/02_list.md) | `0` (auto) | Explicit override for session display; auto-enabled by `session::`, `agent::`, `min_entries::` |
+| 2 | [`.list`](../command/02_list.md) | `0` (auto) | DEPRECATED — historical; auto-enabled by `session::`, `agent::`, `min_entries::` |
 
 ### Referenced User Stories
 | # | User Story | Persona |

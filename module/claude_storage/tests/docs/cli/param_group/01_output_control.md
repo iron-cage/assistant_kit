@@ -33,7 +33,7 @@ Interaction tests for the Output Control group (`show_stat::`, `show_tokens::`, 
 
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture`
 - **When:** `clg .show` (no toggle params — all default to 0)
-- **Then:** Standard session content without statistics footer, token usage section, or tree format
+- **Then:** Project overview (summary block + last `tail::` messages, default `detail::projects`) without statistics footer, token usage section, or tree format
 - **Exit:** 0
 - **Source:** [param_group/01_output_control.md](../../../../docs/cli/param_group/01_output_control.md)
 

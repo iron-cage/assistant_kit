@@ -38,7 +38,7 @@ Environment variables that influence `claude_storage` CLI behavior. These are re
 
 **Precedence:** An explicit `path::` CLI parameter always wins. If `CLAUDE_STORAGE_ROOT` is set and non-empty, it overrides the default `~/.claude/`. An empty string is treated as unset (falls back to default).
 
-**Affected commands:** All commands that access storage (`.status`, `.list`, `.show`, `.count`, `.search`, `.export`, `.projects`, `.project.path`, `.project.exists`, `.session.dir`, `.session.ensure`) — except those where `path::` is supplied directly by the caller.
+**Affected commands:** All commands that access storage (`.status`, `.list` (deprecated), `.show`, `.count`, `.search`, `.export`, `.projects`, `.project.path`, `.project.exists`, `.session.dir`, `.session.ensure`) — except those where `path::` is supplied directly by the caller.
 
 **Source:** `src/cli/storage.rs::create_storage`
 

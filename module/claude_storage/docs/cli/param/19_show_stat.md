@@ -17,7 +17,7 @@ Accepted for backward compatibility; has no effect on `.show` output.
 
 **Commands:** `.show`
 
-**Purpose:** Accepted for backward compatibility but has no effect — content mode's key:val attribute block already shows total entry count, user/assistant breakdown, and timestamp range unconditionally, and `show_metadata::1` mode has always shown the same structured fields. Independent of `show_tokens::`.
+**Purpose:** Accepted for backward compatibility but has no effect in any `.show` branch — session-detail content mode's key:val attribute block, `show_metadata::1` mode's structured fields, and the project-overview summary block (see [`03_show.md`](../command/03_show.md)) all already show total entry/session counts and timestamp range unconditionally. Independent of `show_tokens::`.
 
 **Examples:**
 ```bash
