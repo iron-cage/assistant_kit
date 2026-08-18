@@ -258,7 +258,12 @@ clr --profile fast --args-file ./ci-overrides.json "Run the tests"
 
 | # | Flag | Env Var | JSON Key | Type | Notes |
 |---|------|---------|----------|------|-------|
-| 86 | `--profile <name>` | `CLR_PROFILE` | `"profile"` | string | Selects named YAML profile; absent = `default:` section only; not applicable when no YAML config is present |
+| 87 | `--profile <name>` | `CLR_PROFILE` | `"profile"` | string | Selects named YAML profile; absent = `default:` section only; not applicable when no YAML config is present |
+
+> **ID note.** This feature originally reserved ID 86, which has since shipped as
+> [`086_no_stdin.md`](../cli/param/086_no_stdin.md) (`--no-stdin`, BUG-492). The next free ID at time
+> of writing is 87 — reconfirm against `cli/param/` before implementing, since this feature is still
+> unimplemented and further parameters may land first.
 
 ### Implementation Dependencies
 

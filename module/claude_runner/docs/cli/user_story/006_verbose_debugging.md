@@ -21,6 +21,7 @@
 |---|---------|------|
 | 1 | [`run`](../command/01_run.md) | Default command; `--quiet` gates CLR diagnostic output |
 | 5 | [`ask`](../command/05_ask.md) | Alias for `run`; same `--quiet` behavior |
+| 11 | [`topic`](../command/11_topic.md) | Same `--quiet` behavior via `run` delegation, once dispatch wiring lands per task 521 |
 
 ### Referenced Parameter Groups
 

@@ -28,7 +28,7 @@ clr <command> [OPTIONS] [MESSAGE]
 | `param_group/` | Logical parameter groupings (7 groups) |
 | `command_group/` | Every command partitioned into exactly one group (Total Partition); shared handler + parameter set when multi-member (9 groups: 1 triple + 8 singletons) |
 | `type/` | Semantic type definitions (13 active types; 1 deprecated) |
-| `param/` | Individual parameter reference docs (75 active; 1 deprecated) |
+| `param/` | Individual parameter reference docs (81 active; 1 deprecated) |
 | `user_story/` | User goal and usage pattern docs (30 user stories) |
 
 ### Completion Matrix
@@ -37,7 +37,7 @@ clr <command> [OPTIONS] [MESSAGE]
 |--------|----|----|----|----|----|----|
 | readme.md | ✅ | ✅ | ➖ | ➖ | ➖ | Complete |
 | command/ (11 instances) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
-| param/ (75 instances; 1 deprecated) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
+| param/ (82 instances; 1 deprecated) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
 | 001_dictionary.md | ✅ | ✅ | ➖ | ➖ | ➖ | Complete |
 | type/ (14 instances; 1 deprecated) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
 | param_group/ (7 instances) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
@@ -50,7 +50,7 @@ clr <command> [OPTIONS] [MESSAGE]
 | tests/docs/cli/readme.md | ➖ | ➖ | ➖ | ✅ | ➖ | Complete |
 | tests/docs/cli/dictionary.md | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
 | tests/docs/cli/command/ (11 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
-| tests/docs/cli/param/ (75 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
+| tests/docs/cli/param/ (82 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
 | tests/docs/cli/param_group/ (7 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
 | tests/docs/cli/command_group/ (1 file) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
 | tests/docs/cli/type/ (14 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
@@ -65,7 +65,7 @@ clr <command> [OPTIONS] [MESSAGE]
 ### Navigation
 
 - [Commands](command/readme.md) — command reference (11 commands)
-- [Parameters](param/readme.md) — flag and argument reference (75 active; 1 deprecated)
+- [Parameters](param/readme.md) — flag and argument reference (81 active; 1 deprecated)
 - [Types](type/readme.md) — semantic type definitions (13 active types; 1 deprecated)
 - [Parameter Groups](param_group/readme.md) — logical parameter groupings (7 groups)
 - [Command Groups](command_group/readme.md) — every command in exactly one group; shared handler + parameter set when multi-member (9 groups: 1 triple + 8 singletons)

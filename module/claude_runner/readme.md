@@ -54,6 +54,10 @@ additionally exposes `COMMANDS_YAML` for consumers that register `clr` as a comm
   expected values with configurable retry/fallback strategies.
 - **Fleet visibility** — `clr ps` lists active sessions and queued gate waiters; `clr kill <pid>`
   terminates a session; `clr scope` prints the 6 `CLAUDE_*` path variables for a directory.
+- **Bidirectional control sessions** — `clr query` starts a persistent, PID-addressed session
+  (backgrounded immediately, PID printed to stdout) and dispatches any of 25 camelCase SDK control
+  methods against it — interrupt, change model or permission mode, inspect context usage, and more.
+  See [docs/cli/command/10_query.md](docs/cli/command/10_query.md).
 - **Isolated one-shot execution** — `clr isolated` runs a task in a sandboxed temp-HOME, separate
   from the caller's normal session and credentials; `clr refresh` refreshes Claude Code OAuth
   credentials the same way.
@@ -82,8 +86,9 @@ The library target (`COMMANDS_YAML`) has zero extra dependencies and builds with
 | `clr refresh` | Refresh Claude Code OAuth credentials (isolated one-shot) |
 | `clr ps` | List active Claude Code sessions and queued gate waiters |
 | `clr kill <pid>` | Terminate a running Claude Code session |
-| `clr tools` | List the 26 Claude Code built-in tools |
+| `clr tools` | List the 40 Claude Code built-in tools |
 | `clr scope` | Print the 6 `CLAUDE_*` path variables for a directory |
+| `clr query` | Start a PID-addressed control session, or dispatch one of 25 SDK control methods against a running one |
 | `clr help` | Show help text |
 
 ```sh
@@ -108,6 +113,12 @@ clr --dry-run --verbose "fix it"           # preview with all flags
 clr -p "task" --max-sessions 3             # cap concurrent claude processes at 3
 clr ps                                     # active sessions + queued waiters
 clr kill 12345                             # terminate a session by PID
+
+# Control session (start prints a PID immediately, then dispatch methods against it)
+clr query "Refactor this module"           # start session, prints PID
+clr query 12345 interrupt                  # interrupt the running session
+clr query 12345 setModel opus              # change model mid-session
+clr query 12345 getContextUsage            # inspect context usage
 
 # Help
 clr --help
@@ -150,9 +161,7 @@ Use `--dry-run` or `--trace` to see effective values after every tier has applie
 | `tests/` | CLI flag parsing, dry-run, quiet gate, execution mode tests |
 | `docs/` | CLI reference and design documentation |
 | `changelog.md` | Notable changes by version |
-| `rulebook.md` | Local code-style exception: mechanical dispatch function length |
 | `verb/` | Shell scripts for each `do` protocol verb. |
-| `task/` | Task tracking: verified and completed work items. |
 
 ### Architecture
 

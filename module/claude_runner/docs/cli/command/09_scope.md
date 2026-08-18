@@ -83,6 +83,7 @@ Evaluated against `run`/`ask` under the strict [command_group](../command_group/
 |---|---------|--------------|
 | 1 | [`run`](01_run.md) | Uses `scope_for()` internally for `--from` resolution (defaults to CWD) |
 | 5 | [`ask`](05_ask.md) | Same as `run` — uses `scope_for()` for `--from` |
+| 11 | [`topic`](11_topic.md) | Same as `run` — uses `scope_for()` for `--from`, once dispatch wiring lands per task 521 |
 
 ### Referenced Parameter Groups
 

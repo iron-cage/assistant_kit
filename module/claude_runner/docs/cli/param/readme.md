@@ -98,7 +98,7 @@ These parameter IDs exist in the sequence but have no corresponding file. The ID
 | 038 | Retired — parameter removed; gap predates current tracking |
 | 039 | Retired — parameter removed; gap predates current tracking |
 
-### All Parameters (81 total)
+### All Parameters (82 total)
 
 | # | Parameter | Type | Default | Valid Values | Description | Used In |
 |---|-----------|------|---------|--------------|-------------|---------|

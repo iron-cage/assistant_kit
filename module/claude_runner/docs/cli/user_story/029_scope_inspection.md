@@ -56,6 +56,7 @@ clr run --to /home/alice/project-b --from /home/alice/project-a "Continue"
 | `scope` | Primary command for this user story |
 | `run` | Uses `scope_for()` when `--from` is given |
 | `ask` | Same as `run` |
+| `topic` | Same as `run`, once dispatch wiring lands per task 521 |
 
 ### Related Doc Instances
 

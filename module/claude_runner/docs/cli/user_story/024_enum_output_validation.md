@@ -28,6 +28,7 @@
 |---|---------|------|
 | 1 | [`run`](../command/01_run.md) | Primary command; validation applies in print mode |
 | 5 | [`ask`](../command/05_ask.md) | Also supported; same behavior |
+| 11 | [`topic`](../command/11_topic.md) | Same validation via `run` delegation, once dispatch wiring lands per task 521 |
 
 ### Referenced Parameter Groups
 

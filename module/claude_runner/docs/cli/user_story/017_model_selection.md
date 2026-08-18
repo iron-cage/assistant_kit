@@ -18,6 +18,7 @@
 |---|---------|------|
 | 1 | [`run`](../command/01_run.md) | Default command; `--model` selects the model |
 | 5 | [`ask`](../command/05_ask.md) | Ask command also accepts `--model` |
+| 11 | [`topic`](../command/11_topic.md) | Also accepts `--model` via `run` delegation, once dispatch wiring lands per task 521 |
 
 ### Referenced Parameter Groups
 

@@ -21,6 +21,6 @@ Per-command integration test case indices for `clr`. See [command/](../../../../
 | `06_ps.md` | Integration tests for the `ps` command | ✅ |
 | `07_kill.md` | Integration tests for the `kill` command | ✅ |
 | `08_tools.md` | Integration tests for the `tools` command | ✅ |
-| `09_scope.md` | Integration tests for the `scope` command | ⏳ |
+| `09_scope.md` | Integration tests for the `scope` command | ✅ |
 | `10_query.md` | Integration tests for the `query` command | ✅ |
 | `11_topic.md` | Integration tests for the `topic` command | ✅ |

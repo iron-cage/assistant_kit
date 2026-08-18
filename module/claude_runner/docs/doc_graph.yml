@@ -1,10 +1,10 @@
 meta:
   description: Cross-reference graph for design doc instances in claude_runner (feature, invariant, api entities). CLI reference docs (cli/) are out of scope.
-  node_count: 19
-  edge_count: 52
+  node_count: 23
+  edge_count: 57
   component_count: 1
   generated: 2026-05-16
-  last_reviewed: 2026-08-04
+  last_reviewed: 2026-08-18
 
 nodes:
   - id: feature/001
@@ -101,6 +101,26 @@ nodes:
     file: api/001_public_api.md
     label: Public API
     entity: api
+
+  - id: invariant/012
+    file: invariant/012_gate_slot_atomicity.md
+    label: Gate Slot Atomicity
+    entity: invariant
+
+  - id: invariant/013
+    file: invariant/013_slot_wait_message_differentiation.md
+    label: Slot-Wait Message Differentiation
+    entity: invariant
+
+  - id: invariant/014
+    file: invariant/014_json_string_extraction_escape_handling.md
+    label: JSON String Extraction Escape Handling
+    entity: invariant
+
+  - id: invariant/015
+    file: invariant/015_tools_array_doc_sync.md
+    label: Tools Array Doc Sync
+    entity: invariant
 
 edges:
   - from: feature/001
@@ -311,10 +331,30 @@ edges:
     to: feature/001
     via: features
 
+  - from: feature/001
+    to: invariant/012
+    via: invariants
+
+  - from: invariant/012
+    to: feature/001
+    via: features
+
+  - from: invariant/013
+    to: feature/001
+    via: features
+
+  - from: invariant/014
+    to: feature/001
+    via: features
+
+  - from: feature/001
+    to: invariant/015
+    via: invariants
+
 components:
   - id: 1
     label: Main corpus
-    size: 19
+    size: 23
     isolated: false
     nodes:
       - feature/001
@@ -336,5 +376,9 @@ components:
       - feature/006
       - feature/007
       - api/001
+      - invariant/012
+      - invariant/013
+      - invariant/014
+      - invariant/015
 
 dangling_refs: []
