@@ -206,12 +206,12 @@ fn ft01_save_captures_owner()
   let store = home.join( "store" );
   std::fs::create_dir_all( &store ).unwrap();
 
-  account::save( "alice@test.com", &store, &paths, false, None, None, None, Some( "user@host1" ), account::AccountBackend::Anthropic, None, None, None ).unwrap();
+  account::save( "alice@test.com", &store, &paths, false, None, None, None, Some( "user@host1" ), account::AccountBackend::Anthropic, None, None, None, None ).unwrap();
   let owner = account::read_owner( &store, "alice@test.com" );
   assert_eq!( owner, "user@host1", "FT-01: save() must write owner to {{name}}.json; got: {owner:?}" );
 
   // Re-save from a different identity — owner must be overwritten.
-  account::save( "alice@test.com", &store, &paths, false, None, None, None, Some( "user@host2" ), account::AccountBackend::Anthropic, None, None, None ).unwrap();
+  account::save( "alice@test.com", &store, &paths, false, None, None, None, Some( "user@host2" ), account::AccountBackend::Anthropic, None, None, None, None ).unwrap();
   let owner2 = account::read_owner( &store, "alice@test.com" );
   assert_eq!( owner2, "user@host2", "FT-01: re-save must overwrite owner field; got: {owner2:?}" );
 }
@@ -233,10 +233,10 @@ fn ft02_unclaim_clears_owner()
   std::fs::create_dir_all( &store ).unwrap();
 
   // Set a non-local owner first.
-  account::save( "alice@test.com", &store, &paths, false, None, None, None, Some( "other@remote" ), account::AccountBackend::Anthropic, None, None, None ).unwrap();
+  account::save( "alice@test.com", &store, &paths, false, None, None, None, Some( "other@remote" ), account::AccountBackend::Anthropic, None, None, None, None ).unwrap();
 
   // Unclaim: write empty owner.
-  account::save( "alice@test.com", &store, &paths, false, None, None, None, Some( "" ), account::AccountBackend::Anthropic, None, None, None ).unwrap();
+  account::save( "alice@test.com", &store, &paths, false, None, None, None, Some( "" ), account::AccountBackend::Anthropic, None, None, None, None ).unwrap();
   let owner = account::read_owner( &store, "alice@test.com" );
   assert_eq!( owner, "", "FT-02: unclaim must write empty string as owner; got: {owner:?}" );
   assert!(
@@ -286,10 +286,10 @@ fn ft14_background_save_preserves_owner()
   std::fs::create_dir_all( &store ).unwrap();
 
   // Initial CLI save: set owner.
-  account::save( "alice@test.com", &store, &paths, false, None, None, None, Some( "alice@host1" ), account::AccountBackend::Anthropic, None, None, None ).unwrap();
+  account::save( "alice@test.com", &store, &paths, false, None, None, None, Some( "alice@host1" ), account::AccountBackend::Anthropic, None, None, None, None ).unwrap();
 
   // Background save with owner: None — simulates refresh_account_token() path.
-  account::save( "alice@test.com", &store, &paths, false, None, None, None, None, account::AccountBackend::Anthropic, None, None, None ).unwrap();
+  account::save( "alice@test.com", &store, &paths, false, None, None, None, None, account::AccountBackend::Anthropic, None, None, None, None ).unwrap();
 
   let owner = account::read_owner( &store, "alice@test.com" );
   assert_eq!(
@@ -315,7 +315,7 @@ fn ec1_unclaim_writes_empty_owner()
   let store = home.join( "store" );
   std::fs::create_dir_all( &store ).unwrap();
 
-  account::save( "alice@test.com", &store, &paths, false, None, None, None, Some( "" ), account::AccountBackend::Anthropic, None, None, None ).unwrap();
+  account::save( "alice@test.com", &store, &paths, false, None, None, None, Some( "" ), account::AccountBackend::Anthropic, None, None, None, None ).unwrap();
   let owner = account::read_owner( &store, "alice@test.com" );
   assert_eq!( owner, "", "EC-1: unclaim must write empty string as owner; got: {owner:?}" );
   assert!( account::is_owned( &owner ), "EC-1: empty owner must pass all enforcement gates" );
@@ -336,8 +336,8 @@ fn ec2_unclaim_overwrites_existing_owner()
   let store = home.join( "store" );
   std::fs::create_dir_all( &store ).unwrap();
 
-  account::save( "alice@test.com", &store, &paths, false, None, None, None, Some( "alice@host1" ), account::AccountBackend::Anthropic, None, None, None ).unwrap();
-  account::save( "alice@test.com", &store, &paths, false, None, None, None, Some( "" ), account::AccountBackend::Anthropic, None, None, None ).unwrap();
+  account::save( "alice@test.com", &store, &paths, false, None, None, None, Some( "alice@host1" ), account::AccountBackend::Anthropic, None, None, None, None ).unwrap();
+  account::save( "alice@test.com", &store, &paths, false, None, None, None, Some( "" ), account::AccountBackend::Anthropic, None, None, None, None ).unwrap();
   let owner = account::read_owner( &store, "alice@test.com" );
   assert_eq!( owner, "", "EC-2: unclaim must overwrite existing non-empty owner; got: {owner:?}" );
 }
@@ -362,7 +362,7 @@ fn ec3_default_sets_owner_to_current_identity()
   std::fs::create_dir_all( &store ).unwrap();
 
   let identity = account::current_identity();
-  account::save( "alice@test.com", &store, &paths, false, None, None, None, Some( &identity ), account::AccountBackend::Anthropic, None, None, None ).unwrap();
+  account::save( "alice@test.com", &store, &paths, false, None, None, None, Some( &identity ), account::AccountBackend::Anthropic, None, None, None, None ).unwrap();
   let owner = account::read_owner( &store, "alice@test.com" );
   assert_eq!(
     owner, identity,
@@ -394,7 +394,7 @@ fn ec4_unclaim_preserves_other_fields()
   ).unwrap();
 
   // Unclaim — only owner should change.
-  account::save( "alice@test.com", &store, &paths, false, None, None, None, Some( "" ), account::AccountBackend::Anthropic, None, None, None ).unwrap();
+  account::save( "alice@test.com", &store, &paths, false, None, None, None, Some( "" ), account::AccountBackend::Anthropic, None, None, None, None ).unwrap();
 
   let content = std::fs::read_to_string( &meta ).unwrap();
   assert!(
@@ -575,7 +575,7 @@ fn cc6_background_save_new_account_no_owner()
   std::fs::create_dir_all( &store ).unwrap();
 
   // Background save: owner: None, no pre-existing {name}.json.
-  account::save( "new@test.com", &store, &paths, false, None, None, None, None, account::AccountBackend::Anthropic, None, None, None ).unwrap();
+  account::save( "new@test.com", &store, &paths, false, None, None, None, None, account::AccountBackend::Anthropic, None, None, None, None ).unwrap();
 
   let owner = account::read_owner( &store, "new@test.com" );
   assert_eq!(

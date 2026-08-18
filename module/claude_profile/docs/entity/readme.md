@@ -8,35 +8,36 @@
 |------|---------|-------------|----------:|
 | `algorithm/` | Decision algorithm references (model selection, quota classification, sort, approximation) | [algorithm/readme.md](../algorithm/readme.md) | 12 |
 | `cli/` (standalone) | Cross-cutting CLI reference (config params, dictionary, env params, interactions) | [cli/readme.md](../cli/readme.md) | 4 |
-| `cli/command/` | CLI command specifications | [cli/command/readme.md](../cli/command/readme.md) | 9 |
+| `cli/command/` | CLI command specifications | [cli/command/readme.md](../cli/command/readme.md) | 11 |
 | `cli/command_group/` | Strict same-handler/same-parameter-set command identity groups | [cli/command_group/readme.md](../cli/command_group/readme.md) | 0 |
 | `cli/command_noun/` | Domain noun documentation (account, token, credentials) | [cli/command_noun/readme.md](../cli/command_noun/readme.md) | 3 |
 | `cli/command_verb/` | Domain verb documentation (save, use, delete, limits, relogin, rotate, renewal, inspect, status) — 006 rotate DEPRECATED (Feature 038); 009 assign and 011 unclaim REMOVED | [cli/command_verb/readme.md](../cli/command_verb/readme.md) | 11 |
 | `cli/format/` | CLI output format specifications | [cli/format/readme.md](../cli/format/readme.md) | 3 |
-| `cli/param/` | CLI parameter specifications | [cli/param/readme.md](../cli/param/readme.md) | 79 |
+| `cli/param/` | CLI parameter specifications | [cli/param/readme.md](../cli/param/readme.md) | 87 |
 | `cli/param_group/` | CLI parameter group definitions | [cli/param_group/readme.md](../cli/param_group/readme.md) | 7 |
 | `cli/type/` | CLI type definitions | [cli/type/readme.md](../cli/type/readme.md) | 5 |
 | `cli/user_story/` | Canonical user stories mapping personas and goals to commands | [cli/user_story/readme.md](../cli/user_story/readme.md) | 5 |
 | `cli/workflow_scenario/` | **ELIMINATED** (`cli_doc.rulebook` v1.7) — all instances migrated to `cli/user_story/`; directory retained only as an archived migration map | [cli/workflow_scenario/readme.md](../cli/workflow_scenario/readme.md) | 0 |
-| `feature/` | Functional requirements for claude_profile capabilities | [readme.md](../feature/readme.md) | 51 |
+| `feature/` | Functional requirements for claude_profile capabilities | [readme.md](../feature/readme.md) | 53 |
 | `invariant/` | Measurable constraints and architectural guarantees | [invariant/readme.md](../invariant/readme.md) | 12 |
 | `pattern/` | Reusable design solutions applied at more than one call site | [pattern/readme.md](../pattern/readme.md) | 1 |
 | `pitfall/` | Systemic pitfall catalog — recurring design traps revealed by bug history | [pitfall/readme.md](../pitfall/readme.md) | 7 |
 | `research_interactive/` | Investigation findings on Claude binary behavior | [research_interactive/readme.md](../research_interactive/readme.md) | 1 |
-| `schema/` | On-disk file format definitions (credentials, metadata, paths, settings) | [schema/readme.md](../schema/readme.md) | 7 |
+| `schema/` | On-disk file format definitions (credentials, metadata, paths, settings) | [schema/readme.md](../schema/readme.md) | 8 |
 | `state_machine/` | Domain lifecycle state machines (account, token, session window, ownership, quota measurement) | [state_machine/readme.md](../state_machine/readme.md) | 5 |
 | `subprocess/` | Isolated subprocess contract, credential write-back protocol, and invocation sites | [subprocess/readme.md](../subprocess/readme.md) | 5 |
+| `type/` | Domain Type definitions (account aggregate, identity, tag, provider, backend, quota, token, session) with `domain`/`ddd` classification | [type/readme.md](../type/readme.md) | 10 |
 | `tests/docs/algorithm/` | Per-algorithm AC-N correctness test documentation | [tests/docs/algorithm/readme.md](../../tests/docs/algorithm/readme.md) | 10 |
-| `tests/docs/cli/command/` | Per-command integration test case documentation | [tests/docs/cli/command/readme.md](../../tests/docs/cli/command/readme.md) | 22 |
+| `tests/docs/cli/command/` | Per-command integration test case documentation | [tests/docs/cli/command/readme.md](../../tests/docs/cli/command/readme.md) | 26 |
 | `tests/docs/cli/command_group/` | Structural-equivalence test index for command_group entities | [tests/docs/cli/command_group/readme.md](../../tests/docs/cli/command_group/readme.md) | 0 |
 | `tests/docs/cli/command_noun/` | Per-noun test case documentation | [tests/docs/cli/command_noun/readme.md](../../tests/docs/cli/command_noun/readme.md) | 3 |
 | `tests/docs/cli/command_verb/` | Per-verb test case documentation | [tests/docs/cli/command_verb/readme.md](../../tests/docs/cli/command_verb/readme.md) | 11 |
 | `tests/docs/cli/format/` | Per-format output structure test documentation | [tests/docs/cli/format/readme.md](../../tests/docs/cli/format/readme.md) | 3 |
-| `tests/docs/cli/param/` | Per-parameter edge case test documentation | [tests/docs/cli/param/readme.md](../../tests/docs/cli/param/readme.md) | 62 |
+| `tests/docs/cli/param/` | Per-parameter edge case test documentation | [tests/docs/cli/param/readme.md](../../tests/docs/cli/param/readme.md) | 66 |
 | `tests/docs/cli/param_group/` | Per-group interaction test documentation | [tests/docs/cli/param_group/readme.md](../../tests/docs/cli/param_group/readme.md) | 6 |
 | `tests/docs/cli/type/` | Per-type test case documentation | [tests/docs/cli/type/readme.md](../../tests/docs/cli/type/readme.md) | 4 |
 | `tests/docs/cli/user_story/` | Per-story acceptance test documentation | [tests/docs/cli/user_story/readme.md](../../tests/docs/cli/user_story/readme.md) | 5 |
-| `tests/docs/feature/` | Per-feature behavioral test documentation | [tests/docs/feature/readme.md](../../tests/docs/feature/readme.md) | 51 |
+| `tests/docs/feature/` | Per-feature behavioral test documentation | [tests/docs/feature/readme.md](../../tests/docs/feature/readme.md) | 53 |
 | `tests/docs/invariant/` | Per-invariant constraint test documentation | [tests/docs/invariant/readme.md](../../tests/docs/invariant/readme.md) | 9 |
 | `tests/docs/pitfall/` | Per-pitfall guard verification test documentation | [tests/docs/pitfall/readme.md](../../tests/docs/pitfall/readme.md) | 6 |
 | `tests/docs/research_interactive/` | Per-investigation RC-N research constraint test documentation | [tests/docs/research_interactive/readme.md](../../tests/docs/research_interactive/readme.md) | 1 |
@@ -99,6 +100,8 @@
 | feature | 072 | Inference Provider Selection | [feature/072_inference_provider_selection.md](../feature/072_inference_provider_selection.md) |
 | feature | 073 | Kimi Provider Preset | [feature/073_kimi_provider_preset.md](../feature/073_kimi_provider_preset.md) |
 | feature | 074 | CLI Invocation Telemetry | [feature/074_cli_invocation_telemetry.md](../feature/074_cli_invocation_telemetry.md) |
+| feature | 075 | Account Tags (📋 planned) | [feature/075_account_tags.md](../feature/075_account_tags.md) |
+| feature | 076 | Identity Tag Filter (📋 planned) | [feature/076_identity_tag_filter.md](../feature/076_identity_tag_filter.md) |
 | cli | 001 | Config Parameters | [cli/001_config_param.md](../cli/001_config_param.md) |
 | cli | 002 | Dictionary | [cli/002_dictionary.md](../cli/002_dictionary.md) |
 | cli | 003 | Environment Parameters | [cli/003_env_param.md](../cli/003_env_param.md) |
@@ -112,6 +115,8 @@
 | command | 007 | Model Command | [cli/command/007_model.md](../cli/command/007_model.md) |
 | command | 008 | Models Command | [cli/command/008_models.md](../cli/command/008_models.md) |
 | command | 009 | Provider Command | [cli/command/009_provider.md](../cli/command/009_provider.md) |
+| command | 010 | Tag Commands (📋 planned) | [cli/command/010_tag.md](../cli/command/010_tag.md) |
+| command | 011 | Identity Commands (📋 planned) | [cli/command/011_identity.md](../cli/command/011_identity.md) |
 | param | 001 | `name::` | [cli/param/001_name.md](../cli/param/001_name.md) |
 | param | 002 | `format::` | [cli/param/002_format.md](../cli/param/002_format.md) |
 | param | 003 | `threshold::` | [cli/param/003_threshold.md](../cli/param/003_threshold.md) |
@@ -163,7 +168,7 @@
 | param | 049 | `at::` | [cli/param/049_at.md](../cli/param/049_at.md) |
 | param | 050 | `from_now::` | [cli/param/050_from_now.md](../cli/param/050_from_now.md) |
 | param | 051 | `clear::` | [cli/param/051_clear.md](../cli/param/051_clear.md) |
-| param | 052 | `role::` (metadata label) | [cli/param/052_role.md](../cli/param/052_role.md) |
+| param | 052 | `role::` (metadata label) — **REMOVED** (Feature 075, 📋 planned); use `tags::` | [cli/param/052_role.md](../cli/param/052_role.md) |
 | param | 053 | `for::` | [cli/param/053_for.md](../cli/param/053_for.md) |
 | param | 054 | `set_model::` | [cli/param/054_set_model.md](../cli/param/054_set_model.md) |
 | param | 055 | `set::` | [cli/param/055_set.md](../cli/param/055_set.md) |
@@ -191,6 +196,14 @@
 | param | 077 | `effort_level::` (per-scope value on `.model`) | [cli/param/077_effort_level.md](../cli/param/077_effort_level.md) |
 | param | 078 | `reset_model::` (per-scope reset on `.model`) | [cli/param/078_reset_model.md](../cli/param/078_reset_model.md) |
 | param | 079 | `reset_effort_level::` (per-scope reset on `.model`) | [cli/param/079_reset_effort_level.md](../cli/param/079_reset_effort_level.md) |
+| param | 080 | `stalest::` (K oldest-cache fetch restriction) | [cli/param/080_stalest.md](../cli/param/080_stalest.md) |
+| param | 081 | `max_age::` (staleness threshold for `stalest::`) | [cli/param/081_max_age.md](../cli/param/081_max_age.md) |
+| param | 082 | `tags::` (tag set write / subset filter, 📋 planned) | [cli/param/082_tags.md](../cli/param/082_tags.md) |
+| param | 083 | `add::` (tag union on `.account.tag`, 📋 planned) | [cli/param/083_add.md](../cli/param/083_add.md) |
+| param | 084 | `remove::` (tag removal on `.account.tag`, 📋 planned) | [cli/param/084_remove.md](../cli/param/084_remove.md) |
+| param | 085 | `include::` (filter include side, 📋 planned) | [cli/param/085_include.md](../cli/param/085_include.md) |
+| param | 086 | `exclude::` (filter exclude side, 📋 planned) | [cli/param/086_exclude.md](../cli/param/086_exclude.md) |
+| param | 087 | `identity::` (filter seat targeting, 📋 planned) | [cli/param/087_identity.md](../cli/param/087_identity.md) |
 | param_group | 001 | Output Control | [cli/param_group/001_output_control.md](../cli/param_group/001_output_control.md) |
 | param_group | 002 | Field Presence | [cli/param_group/002_field_presence.md](../cli/param_group/002_field_presence.md) |
 | param_group | 003 | Fetch Behavior | [cli/param_group/003_fetch_behavior.md](../cli/param_group/003_fetch_behavior.md) |
@@ -245,6 +258,7 @@
 | schema | 005 | Active Marker (`_active_{host}_{user}`) | [schema/005_active_marker.md](../schema/005_active_marker.md) |
 | schema | 006 | Session Settings (`~/.claude/settings.json`) | [schema/006_settings_json.md](../schema/006_settings_json.md) |
 | schema | 007 | Claude State (`~/.claude.json`) | [schema/007_claude_json.md](../schema/007_claude_json.md) |
+| schema | 009 | Identity Filter (`_filter_{machine}_{user}`, 📋 planned) | [schema/009_identity_filter_json.md](../schema/009_identity_filter_json.md) |
 | algorithm | 001 | Touch Model Selection | [algorithm/001_touch_model_selection.md](../algorithm/001_touch_model_selection.md) |
 | algorithm | 002 | Session Model Override | [algorithm/002_session_model_override.md](../algorithm/002_session_model_override.md) |
 | algorithm | 003 | Quota Status Groups | [algorithm/003_quota_status_groups.md](../algorithm/003_quota_status_groups.md) |
@@ -275,3 +289,13 @@
 | pitfall | 006 | Model Override Pitfalls | [pitfall/006_model_override_pitfalls.md](../pitfall/006_model_override_pitfalls.md) |
 | pitfall | 007 | Label Selection Branch-Priority Pitfalls | [pitfall/007_label_selection_branch_priority_pitfalls.md](../pitfall/007_label_selection_branch_priority_pitfalls.md) |
 | pattern | 001 | Grouped Column-Aligned Help Rendering | [pattern/001_grouped_help_rendering.md](../pattern/001_grouped_help_rendering.md) |
+| type | 001 | Account | [type/001_account.md](../type/001_account.md) |
+| type | 002 | Identity | [type/002_identity.md](../type/002_identity.md) |
+| type | 003 | Tag | [type/003_tag.md](../type/003_tag.md) |
+| type | 004 | Tag Filter | [type/004_tag_filter.md](../type/004_tag_filter.md) |
+| type | 005 | Provider | [type/005_provider.md](../type/005_provider.md) |
+| type | 006 | Backend | [type/006_backend.md](../type/006_backend.md) |
+| type | 007 | Preset | [type/007_preset.md](../type/007_preset.md) |
+| type | 008 | Quota Snapshot | [type/008_quota_snapshot.md](../type/008_quota_snapshot.md) |
+| type | 009 | Token | [type/009_token.md](../type/009_token.md) |
+| type | 010 | Session | [type/010_session.md](../type/010_session.md) |

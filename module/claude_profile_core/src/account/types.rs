@@ -100,6 +100,9 @@ pub struct Account
   /// User-defined role label from saved `{name}.json` `role`.
   /// Empty string when file absent or field missing.
   pub role : String,
+  /// Tag set from saved `{name}.json` `tags` — sorted, deduplicated (Feature 075).
+  /// Empty vec when file absent or field missing (absent key ≡ empty set).
+  pub tags : Vec< String >,
   /// Account owner from saved `{name}.json` `owner`; empty when unset — see Feature 036.
   pub owner : String,
   /// `true` when `owner` is empty (unowned) or matches `current_identity()` (owned by this machine).

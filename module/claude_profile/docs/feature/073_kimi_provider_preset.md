@@ -100,5 +100,5 @@
 
 | File | Relationship |
 |------|--------------|
-| `claude_profile_core/tests/account_test.rs` | AC-01–AC-05 — Kimi-tier env var writing on switch, `kimi-k3*`-vs-other compact window sizing, non-kimi-provider omission, clearing on switch-to-anthropic and switch-to-other-redirect |
+| `claude_profile_core/tests/account_backend_test.rs` | AC-01–AC-05 — Kimi-tier env var writing on switch, `kimi-k3*`-vs-other compact window sizing, non-kimi-provider omission, clearing on switch-to-anthropic and switch-to-other-redirect |
 | `claude_profile/tests/cli/account_redirect_backend_test.rs` | AC-06–AC-10 — `preset::kimi` default-filling, explicit-value override, unrecognized preset rejection, end-to-end env var write via `.account.save` + `.account.use`, `preset::kimi` + explicit `backend::anthropic` non-interference |

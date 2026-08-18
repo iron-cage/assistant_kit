@@ -215,7 +215,7 @@ fn refresh_token_with_live_path(
           let store_path = credential_store.join( format!( "{name}.credentials.json" ) );
           if atomic_write_secret( &store_path, &live_json ).is_ok()
           {
-            let _ = save( name, credential_store, p, false, Some( live_json.as_bytes() ), None, None, None, AccountBackend::Anthropic, None, None, None );
+            let _ = save( name, credential_store, p, false, Some( live_json.as_bytes() ), None, None, None, AccountBackend::Anthropic, None, None, None, None );
             return Some( live_json );
           }
         }
@@ -272,7 +272,7 @@ fn refresh_token_with_live_path(
   }
   if trace { let _ = writeln!( std::io::stderr(), "{}{label}  {name}  write credentials: OK", trace_ts() ); }
   // Pass owner: None — background refresh must not mutate the owner field.
-  match save( name, credential_store, p, false, Some( new_creds.as_bytes() ), None, None, None, AccountBackend::Anthropic, None, None, None )
+  match save( name, credential_store, p, false, Some( new_creds.as_bytes() ), None, None, None, AccountBackend::Anthropic, None, None, None, None )
   {
     Ok( () ) => { if trace { let _ = writeln!( std::io::stderr(), "{}{label}  {name}  save: OK", trace_ts() ); } }
     Err( e ) =>
@@ -334,7 +334,7 @@ fn recover_credentials_from_live( name : &str, credential_store : &Path, p : &Cl
         let store_path = credential_store.join( format!( "{name}.credentials.json" ) );
         if atomic_write_secret( &store_path, &live_json ).is_ok()
         {
-          let _ = save( name, credential_store, p, false, Some( live_json.as_bytes() ), None, None, None, AccountBackend::Anthropic, None, None, None );
+          let _ = save( name, credential_store, p, false, Some( live_json.as_bytes() ), None, None, None, AccountBackend::Anthropic, None, None, None, None );
           return Some( live_json );
         }
       }

@@ -22,10 +22,13 @@ Controls column visibility in the `.usage` quota table. Accepts comma-separated 
 | `7d_son_reset` | 7d Son Reset | **OFF** |
 | `host` | Host | **OFF** |
 | `role` | Role | **OFF** |
+| `tags` 📋 | Tags | **OFF** |
 | `owner` | Owner | ON |
 | `next` | → Next | ON |
 
 The `flag` (first column) and `account` (name) columns are structural and always visible.
+
+📋 planned ([feature/075](../../feature/075_account_tags.md)): `tags` shows the account's comma-joined tag set; `role` remains a legacy toggle until per-account lazy migration erases the stored field.
 
 **Examples:**
 
@@ -34,7 +37,8 @@ cols::+sub                     -> add Sub column to default set
 cols::+sub,-renews             -> add Sub, remove ~Renews
 cols::-5h_reset,-7d_reset      -> hide 5h Reset and 7d Reset
 cols::+sub,+7d_son_reset       -> show both hidden-by-default quota columns
-cols::+host,+role              -> show machine/host tag and user-defined role label
+cols::+host,+role              -> show machine/host label and legacy role label
+cols::+tags                    -> show the account tag set (📋 planned)
 ```
 
 **See Also:** [feature/009_token_usage.md](../../feature/009_token_usage.md) for column definitions.

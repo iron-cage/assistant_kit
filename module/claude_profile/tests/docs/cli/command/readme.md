@@ -4,7 +4,7 @@
 
 - **Purpose**: Document integration test cases for each clp command and binary meta-flags.
 - **Responsibility**: Index of per-command integration test case files covering command-level behavior.
-- **In Scope**: All 22 test files: 21 clp command test files plus binary meta-flag tests (`00_version.md`/`--version`/`-V`).
+- **In Scope**: All 26 test files: 25 clp command test files plus binary meta-flag tests (`00_version.md`/`--version`/`-V`).
 - **Out of Scope**: Per-parameter edge cases (→ `param/`), parameter group interactions (→ `param_group/`).
 
 ### Responsibility Table
@@ -33,3 +33,7 @@
 | 19_models.md | Test cases for `.models` command |
 | 20_model_select.md | DEPRECATED — `.model.select` reduced to a migration-error stub, replaced by `.model scope::subprocess` (Feature 035/Task 465); historical test cases retained |
 | 21_provider_select.md | Test cases for `.provider.select` command |
+| 22_tags.md | Test cases for `.tags` command (📋 planned) |
+| 23_identities.md | Test cases for `.identities` command (📋 planned) |
+| 24_identity_filter.md | Test cases for `.identity.filter` command (📋 planned) |
+| 25_account_tag.md | Test cases for `.account.tag` command (📋 planned) |

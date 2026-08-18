@@ -1,5 +1,14 @@
 # Parameter: 52. `role::` (metadata label)
 
+> **REMOVED (Feature 075, 📋 planned):** The `role::` parameter is removed from `.account.save` — the single free-form role label is superseded by the tag set ([`tags::`](082_tags.md), [type/003](../../type/003_tag.md)).
+>
+> **Migration:**
+> - `role::work` → `tags::work` (a role is just a tag; tag charset applies — lowercase `[a-z0-9_-]`)
+> - Stored `role` fields need no manual action: the first tag write to an account converts its non-empty `role` to a tag and removes the field (lazy, per-account)
+> - `cols::+role` remains a legacy display toggle until migration erases the field
+>
+> Using `role::` on `.account.save` exits 1 with a migration message naming `tags::`. Content below describes the removed parameter for historical reference only.
+
 Specifies a user-defined role label to store in the account profile at `.account.save` time. Displayed via `cols::+role` in `.usage`.
 
 - **Default:** `""` (empty; field stored as `""` in `{name}.json`)

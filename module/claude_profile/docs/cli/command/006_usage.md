@@ -82,7 +82,7 @@ clp .usage solo::1 live::1 interval::60
 | `max_age::` | `u64` | `0` | With `stalest::`, only accounts with cache age > SECS seconds are fetch-eligible (fetch set may be empty → zero HTTP); standalone use exits 1 |
 | `who::` | `bool` | auto | Sessions table visibility: auto (shown when >1 `_active_*` marker), `1` (force on), `0` (force off) |
 
-**Algorithm (11 steps):**
+**Algorithm (12 steps):**
 1. Enumerate `{credential_store}/*.credentials.json` alphabetically; build account list
 2. `(when assignee:: or owner:: or lock:: or reserve:: present)` Mutation dispatch: `(when assignee::USER@MACHINE + name::X)` G9 claim-lock check on target account (unless `force::1`), then write per-machine marker (`assignee::0` expands to `$USER@$HOSTNAME`); `(when assignee::, no name::)` clear per-machine marker; `(when owner::0)` release ownership per-account with G8 gate (batch-clear when `name::` absent); `(when owner::USER@MACHINE)` set ownership per-account with G8 gate; `(when lock::0/1)` write `claim_lock` per-account via `write_claim_lock()`, ungated; `(when reserve::0/1)` write `reserve` per-account via `write_reserve()`, ungated; comma-list `name::` supported for `owner::`/`lock::`/`reserve::` operations; `(when dry::1)` print planned changes without writing
 3. `(when only_active::1)` Pre-filter: retain only the `is_active` account (filesystem `_active_{hostname}_{user}` marker; no HTTP required)
@@ -94,7 +94,7 @@ clp .usage solo::1 live::1 interval::60
 9. Compute derived fields: status emoji, `→ Next` column, `~Renews`, flag column priority (`✓`/`*`/`@`)
 10. Four-group status partition (`🟢`→`🟡 h-exhausted`→`🟡 weekly-exhausted`→`🔴 Dead`); apply `sort::` strategy + `desc::` direction within each group
 11. `(when format::text)` Render table + footer; `(when get:: provided)` extract single field from first match; `(when live::1)` loop with `interval::` + `jitter::` delay
-12. `(when rotate::1)` Rotation dispatch: call `find_next_for_strategy()` winner — Gate 8 (foreign-owned, `force::1`-bypassable) and Gate 9 (claim-locked, unconditional — never bypassed) are applied inside this call, so a claim-locked account can never be `winner`; if no winner → exit 1 (`"no eligible account to rotate to"`); if `dry::1` → append `"[dry-run] would switch to '{name}'"` and exit 0; call `switch_account(winner)`; apply post-switch touch from in-memory `AccountQuota` (no re-fetch); append `"switched to '{name}'"` to output
+12. `(when rotate::1)` Rotation dispatch: call `find_next_for_strategy()` winner — Gate 8 (foreign-owned, `force::1`-bypassable) and Gate 9 (claim-locked, unconditional — never bypassed) are applied inside this call, so a claim-locked account can never be `winner`; 📋 planned ([feature/076](../../feature/076_identity_tag_filter.md)): Gate 11 — tag-filter mismatch against the current Identity's `_filter_*` file — also applies inside the winner selection (`find_first_eligible()`), unconditional like Gate 9, and when it excluded ≥1 account the output includes `N excluded by tag filter include=[…] exclude=[…]`; if no winner → exit 1 (`"no eligible account to rotate to"`); if `dry::1` → append `"[dry-run] would switch to '{name}'"` and exit 0; call `switch_account(winner)`; apply post-switch touch from in-memory `AccountQuota` (no re-fetch); append `"switched to '{name}'"` to output
 
 **Examples:**
 
@@ -136,12 +136,13 @@ clp .usage live::1 interval::60 jitter::10
 - `refresh::1` triggers at most one retry per account per cycle. See [feature/017_token_refresh.md](../../feature/017_token_refresh.md).
 - `live::1 format::json` exits 1 before any fetch. See [feature/018_live_monitor.md](../../feature/018_live_monitor.md).
 - Four-group status partition (🟢 Green → 🟡 h-exhausted → 🟡 weekly-exhausted → 🔴 Dead) applied before sort strategy. Both-exhausted accounts (5h ≤ 15% AND 7d ≤ 3%) merge into G3 weekly-exhausted. Sort applies within each group only; `desc::1` reverses within groups but never changes group order. See [dictionary](../../cli/002_dictionary.md#status-groups).
-- `Sub` column hidden by default; show via `cols::+sub`. `7d Son Reset` column also hidden by default; show via `cols::+7d_son_reset`. `7d(Son)` column hidden by default since BUG-334 (fixed 2026-07-08) — its `seven_day_sonnet` data source has been permanently `null` since Anthropic's 2026-06-25 API restructuring, so the column always rendered blank; show via `cols::+7d_son`. `Host` and `Role` columns also hidden by default; show via `cols::+host` / `cols::+role`.
+- `Sub` column hidden by default; show via `cols::+sub`. `7d Son Reset` column also hidden by default; show via `cols::+7d_son_reset`. `7d(Son)` column hidden by default since BUG-334 (fixed 2026-07-08) — its `seven_day_sonnet` data source has been permanently `null` since Anthropic's 2026-06-25 API restructuring, so the column always rendered blank; show via `cols::+7d_son`. `Host` and `Role` columns also hidden by default; show via `cols::+host` / `cols::+role`. `Tags` column (📋 planned, [feature/075](../../feature/075_account_tags.md)) will also be hidden by default; show via `cols::+tags`.
 - `Owner` column shown by default (Feature 037, AC-19) — the `owner` field from `{name}.json`: `USER@MACHINE` identity when set via `.usage owner::USER@MACHINE`, `—` when unowned. Hide via `cols::-owner`.
 - Duration format (`format_duration_secs`) capped to 2 significant units (e.g., `1d 2h` not `1d 2h 45m`).
 - See [feature/009_token_usage.md](../../feature/009_token_usage.md) for the baseline algorithm and AC criteria.
 - See [feature/020_usage_sort_strategies.md](../../feature/020_usage_sort_strategies.md) for sort strategies and footer recommendation.
 - `rotate::1` executes account switch to the footer-recommended account after rendering; mutually exclusive with `live::1` (exits 1 before fetch). Gate 8 (foreign-owned) applies inside the winner-selection call — non-owned accounts are ineligible unless `force::1`. Gate 9 (claim-locked) also applies there and is never bypassed, even with `force::1` — a claim-locked account is never the rotation target. Post-switch touch reuses already-fetched `AccountQuota` (no extra API call). See [feature/038_usage_strategy_rotate.md](../../feature/038_usage_strategy_rotate.md) and [feature/070_account_claim_and_reservation_control.md](../../feature/070_account_claim_and_reservation_control.md).
+- 📋 planned ([feature/076](../../feature/076_identity_tag_filter.md)): Gate 11 — the current Identity's tag filter (`_filter_{machine}_{user}`) — constrains `rotate::1`, auto-switch, and the footer `Next` recommendation inside `find_first_eligible()`; unconditional (no `force::1` interaction), mirroring Gate 10's "which pool" doctrine. When Gate 11 excluded ≥1 account, `.usage` prints `N excluded by tag filter include=[…] exclude=[…]`; explicit `.account.use name::X` is never filtered. Set the filter via [`.identity.filter`](011_identity.md#command-24-identityfilter).
 - `lock::`/`reserve::` writes are ungated regardless of ownership — any machine can set or clear `claim_lock`/`reserve` on any account, including non-owned ones. `claim_lock` blocks explicit selection (G9, `force::1`-bypassable) and automatic selection (Gate 9, unconditional); `reserve` only deprioritizes automatic selection (sort key, no gate). See [feature/070_account_claim_and_reservation_control.md](../../feature/070_account_claim_and_reservation_control.md).
 - `touch::` (default `1`) activates accounts with any quota timer absent (no active 5h, 7d, or 7d-Sonnet window) by sending a minimal prompt; pass `touch::0` to suppress. Runs after `refresh::` when both active. See [feature/024_session_touch.md](../../feature/024_session_touch.md) for full trigger conditions including skip guards (h-exhausted, 7d-exhausted).
 - `imodel::` controls the Claude model injected into `touch::` and `refresh::` subprocesses. `auto` (default) selects Haiku by default; Sonnet when `son_idle=true` (7d-Sonnet window present but not yet started — activates idle window). See [feature/026_subprocess_model_effort.md](../../feature/026_subprocess_model_effort.md).
@@ -185,6 +186,8 @@ clp .usage live::1 interval::60 jitter::10
 | 32 | [assignee::](../param/063_assignee.md) | Write per-machine active marker |
 | 33 | [lock::](../param/067_lock.md) | Set or clear `claim_lock` (ungated write) |
 | 34 | [reserve::](../param/068_reserve.md) | Set or clear `reserve` (ungated write) |
+| 35 | [stalest::](../param/080_stalest.md) | Fetch only the K oldest-cache accounts |
+| 36 | [max_age::](../param/081_max_age.md) | Cache-age threshold for `stalest::` refresh |
 
 ### Referenced Features
 
@@ -205,6 +208,8 @@ clp .usage live::1 interval::60 jitter::10
 | 13 | [Account Claim and Reservation Control](../../feature/070_account_claim_and_reservation_control.md) | `lock::`/`reserve::` params; Gate 9/G9 claim-lock; `reserve` sort key |
 | 14 | [Accounts/Usage Parameter Set Unification](../../feature/037_accounts_usage_param_unification.md) | `Owner` column default-visible (AC-19); unified `cols::` default set shared with `.accounts` |
 | 15 | [Redirect Backend Accounts](../../feature/071_redirect_backend_accounts.md) | `backend: redirect` accounts skip quota-fetch entirely — `—` columns, no HTTP call, in `fetch_quota_for_list()` |
+| 16 | [Identity Tag Filter](../../feature/076_identity_tag_filter.md) | Gate 11 — per-Identity tag filter constraining `rotate::1`/recommendation; loud exclusion line (📋 planned) |
+| 17 | [Account Tags](../../feature/075_account_tags.md) | `cols::+tags` opt-in column (📋 planned) |
 
 ### Referenced User Stories
 

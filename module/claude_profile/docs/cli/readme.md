@@ -15,8 +15,8 @@ Manage Claude Code account credentials: save, list, use, and delete named profil
 
 | Entry | Responsibility |
 |-------|----------------|
-| [command/](command/readme.md) | Per-namespace command specifications (account, token, credentials, usage, paths, model, models, meta) |
-| [param/](param/readme.md) | Individual parameter specifications (73 active params, 79 files; 5 REMOVED: 013, 032, 053, 056, 057; 1 RETIRED: 055) |
+| [command/](command/readme.md) | Per-namespace command specifications (account, token, credentials, usage, paths, model, models, provider, tag, identity, meta) |
+| [param/](param/readme.md) | Individual parameter specifications (74 active params, 87 files; 6 REMOVED: 013, 032, 046, 053, 056, 057; 1 RETIRED: 055; 6 planned 📋: 082–087) |
 | [type/](type/readme.md) | CLI type definitions (AccountName, OutputFormat, WarningThreshold, AccountSelector, AccountBackend) |
 | [param_group/](param_group/readme.md) | Parameter group semantics (Output Control, Field Presence, Fetch Behavior, Sort Control, Display Control, Account Targeting) |
 | [command_group/](command_group/readme.md) | Every command partitioned into exactly one group (Total Partition); 6 non-routine/dead commands itemized outside it (15 groups, all singletons) |
@@ -52,12 +52,12 @@ Manage Claude Code account credentials: save, list, use, and delete named profil
 
 **Current Level:** L5 (Test Detail Complete)
 **Design Completeness:** 100%
-**Implementation Status:** 100% (17/17 active commands; 1 DEPRECATED: .account.rotate; 2 REMOVED: .account.assign, .account.unclaim)
+**Implementation Status:** 17 implemented + 4 planned 📋 (`.tags`, `.identities`, `.identity.filter`, `.account.tag` — Features 075/076); 1 DEPRECATED: .account.rotate; 4 REMOVED: .account.assign, .account.unclaim, .token.status, .model.select
 
 ### Navigation
 
-- [Commands](command/readme.md) — 20 commands (15 visible + 2 hidden + 1 DEPRECATED: `.account.rotate` (Feature 038) + 2 REMOVED: `.account.assign`, `.account.unclaim`) across 8 namespaces
-- [Parameters](param/readme.md) — 73 active parameter specifications (79 files; 5 REMOVED: 013, 032, 053, 056, 057; 1 RETIRED: 055)
+- [Commands](command/readme.md) — 25 commands (15 visible + 4 planned 📋: `.tags`, `.identities`, `.identity.filter`, `.account.tag` + 1 hidden + 1 DEPRECATED: `.account.rotate` (Feature 038) + 4 REMOVED: `.account.assign`, `.account.unclaim`, `.token.status`, `.model.select`) across 11 namespace files
+- [Parameters](param/readme.md) — 74 active parameter specifications (87 files; 6 REMOVED: 013, 032, 046, 053, 056, 057; 1 RETIRED: 055; 6 planned 📋: 082–087)
 - [Types](type/readme.md) — 5 CLI types (AccountName, OutputFormat, WarningThreshold, AccountSelector, AccountBackend)
 - [Parameter Groups](param_group/readme.md) — 6 groups (Output Control, Field Presence, Fetch Behavior, Sort Control, Display Control, Account Targeting)
 - [Command Groups](command_group/readme.md) — 15 singleton groups, one per command (Total Partition); 6 commands (`.help` + 5 dead DEPRECATED/REMOVED) itemized outside the partition
