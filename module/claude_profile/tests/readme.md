@@ -224,7 +224,7 @@ tests/
 
 ## Adding New Tests
 
-**Q: Testing a new library function in `src/account.rs`?**
+**Q: Testing a new library function in `src/account/`?**
 → Add to `account_tests.rs` (account domain). Update test matrix in that file.
 
 **Q: Testing a new CLI command end-to-end?**

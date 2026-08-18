@@ -107,7 +107,7 @@ fn arn18_from_now_unsupported_unit_exits_1()
 ///
 /// # Fix Applied
 /// Added `if rest.trim().is_empty() { return Err(...) }` immediately after sign
-/// extraction in `parse_from_now_delta` (`claude_profile_core/src/account.rs`).
+/// extraction in `parse_from_now_delta` (`claude_profile_core/src/account/renewal.rs`).
 ///
 /// # Why Not Caught
 /// No test existed for sign-only input.  All prior tests had at least one numeric unit

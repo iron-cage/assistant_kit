@@ -115,7 +115,7 @@ assignee::0                               # clear current machine's marker
 | `src/registry.rs` | `bfs("active", ...)` → REMOVED_TOGGLE (Kind::String — accepts USER@MACHINE values at parser level so routine can show migration message); `bfs("for", ...)` updated to point to `assignee::`; `reg_arg_opt("assignee", Kind::String)` added to both `.accounts` and `.usage` |
 | `src/commands/accounts.rs` | `assignee::` dispatch (assign/unassign); `assignee::0` sentinel expansion before processing |
 | `src/usage/api.rs` | Same `assignee::` dispatch and `assignee::0` expansion for `.usage` side |
-| `claude_profile_core/src/account.rs` | `active_marker_filename()` sanitization re-used by `assignee::` value parser; `current_identity()` used for `assignee::0` expansion |
+| `claude_profile_core/src/account/ownership.rs` | `active_marker_filename()` sanitization re-used by `assignee::` value parser; `current_identity()` used for `assignee::0` expansion |
 
 ### Tests
 

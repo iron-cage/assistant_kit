@@ -4,14 +4,14 @@
 
 - **Purpose**: Replace the `[trace]` bracket prefix on all diagnostic trace output with a UTC timestamp, enabling time-based correlation between `clp` trace lines and watchdog logs.
 - **Responsibility**: Every diagnostic line emitted when `trace::1` is active is prefixed with `trace_ts()`, a function in `claude_profile_core::account` that returns `"YYYY-MM-DD · HH:MM:SS UTC · "`. All production source files that emit `trace::1` lines import and call `trace_ts()` in place of the former `"[trace] "` string literal.
-- **In Scope**: `trace_ts()` implementation in `claude_profile_core/src/account.rs`; all 15 production files that emit `trace::1` diagnostic lines (see Sources); removal of all `"[trace] "` string literals from production `eprintln!`/`writeln!( std::io::stderr(), ...)` calls; help-text updates in `src/registry.rs`; test assertion updates across 12 test files.
+- **In Scope**: `trace_ts()` re-export in `claude_profile_core/src/account/mod.rs` (implementation now in `claude_core`); all 15 production files that emit `trace::1` diagnostic lines (see Sources); removal of all `"[trace] "` string literals from production `eprintln!`/`writeln!( std::io::stderr(), ...)` calls; help-text updates in `src/registry.rs`; test assertion updates across 12 test files.
 - **Out of Scope**: Trace output content (message, label, account name, arguments) — only the prefix changes. The `trace::1` gate logic — `if trace { ... }` call-site guards are unchanged. The watchdog script or any external consumer of trace output.
 
 ### Design
 
 All diagnostic trace lines previously began with the literal string `"[trace] "`. This prefix was statically embedded in every `eprintln!`/`writeln!` format string, making it impossible to correlate `clp` trace output with time-stamped logs (watchdog, cron, journald).
 
-`trace_ts()` is added to `claude_profile_core/src/account.rs` immediately after `chrono_now_utc()`:
+`trace_ts()` is added to `claude_profile_core`'s account module immediately after `chrono_now_utc()` (both since moved to `claude_core`, re-exported from `src/account/mod.rs`):
 
 ```rust
 #[inline]
@@ -85,7 +85,7 @@ _(none — `trace_ts()` depends only on `chrono_now_utc()` which already exists 
 
 | File | Relationship |
 |------|-------------|
-| `claude_profile_core/src/account.rs` | `trace_ts()` implementation; multiple `writeln!( std::io::stderr(), ...)` call sites updated |
+| `claude_profile_core/src/account/` | `trace_ts()` re-export (implementation in `claude_core`); multiple `writeln!( std::io::stderr(), ...)` call sites updated |
 | `src/usage/touch.rs` | `touch` label trace lines — solo-skip, not-owned, skip-reason sites |
 | `src/usage/fetch.rs` | Account-label trace lines — reading, GET, result-OK/Err, cannot-read-token, skipped sites |
 | `src/usage/refresh.rs` | `refresh` label trace lines — solo-skip, should-retry, attempting, refresh-returned-None, token-refreshed, retry-OK/Err sites |

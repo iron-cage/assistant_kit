@@ -22,7 +22,7 @@ non-managed fields via read-modify-write, and the Opus/Sonnet effort level mappi
 
 - **Given:** No pre-existing `settings.json`; account `alice@example.com` is switched to with `set_model::sonnet`.
 - **When:** `clp .account.use name::alice@example.com set_model::sonnet` runs — the `sonnet` shorthand is resolved to a full model ID before `set_session_model()` writes it.
-- **Then:** `settings.json` contains `"model": "claude-sonnet-5"` — shorthand-to-full-ID resolution happens at write time, not read time; `get_session_model()` itself is a passive reader with no mapping logic (`claude_profile_core/src/account.rs::get_session_model`, confirmed by direct inspection — it returns whatever raw string is stored under the `"model"` key).
+- **Then:** `settings.json` contains `"model": "claude-sonnet-5"` — shorthand-to-full-ID resolution happens at write time, not read time; `get_session_model()` itself is a passive reader with no mapping logic (`claude_profile_core/src/account/session_settings.rs::get_session_model`, confirmed by direct inspection — it returns whatever raw string is stored under the `"model"` key).
 - **Source fn:** `ft02_set_model_sonnet_writes_full_id` (cli/set_model_test.rs) — corrected; previous citation (`mre_bug322_opus_override_sets_effort_max`) tested an unrelated opus/effort scenario, and the original Given/When/Then (claiming `get_session_model()` itself performs shorthand→full-ID mapping) did not match `get_session_model()`'s actual passive-read implementation
 - **Source:** [docs/schema/006_settings_json.md §Fields Managed by clp](../../../docs/schema/006_settings_json.md)
 

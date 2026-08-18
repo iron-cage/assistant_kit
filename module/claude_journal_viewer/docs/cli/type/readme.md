@@ -9,7 +9,7 @@
 
 | File | Responsibility |
 |------|----------------|
-| `01_duration.md` | Human-friendly duration parsing (1h, 7d, 4w, 3M) |
+| `01_duration.md` | Human-friendly duration parsing (30s, 1h, 7d, 4w) |
 | `02_event_type.md` | 8-variant event type enum |
 | `03_string.md` | UTF-8 string fundamental type |
 | `04_integer.md` | Non-negative integer fundamental type |
@@ -19,13 +19,13 @@
 | `08_boolean.md` | 0/1 boolean fundamental type |
 | `09_group_by.md` | 7-variant stats grouping enum |
 | `10_port.md` | TCP port semantic type |
-| `11_retention_spec.md` | Age or size retention specification |
+| `11_retention_spec.md` | Age-based retention duration, floored to days |
 
 ### All Types (11 total)
 
 | # | Type | Kind | Fundamental | Key Constraint |
 |---|------|------|-------------|----------------|
-| 01 | [`Duration`](01_duration.md) | Semantic | String | Suffix: s/m/h/d/w/M |
+| 01 | [`Duration`](01_duration.md) | Semantic | String | Suffix: s/m/h/d/w |
 | 02 | [`EventType`](02_event_type.md) | Enum | String | 8 canonical variants |
 | 03 | [`String`](03_string.md) | Fundamental | String | Any UTF-8 text |
 | 04 | [`Integer`](04_integer.md) | Fundamental | Integer | Non-negative |
@@ -35,6 +35,6 @@
 | 08 | [`Boolean`](08_boolean.md) | Fundamental | Integer | 0 or 1 |
 | 09 | [`GroupBy`](09_group_by.md) | Enum | String | 7 variants |
 | 10 | [`Port`](10_port.md) | Semantic | Integer | 0-65535 |
-| 11 | [`RetentionSpec`](11_retention_spec.md) | Semantic | String | Age duration or byte size |
+| 11 | [`RetentionSpec`](11_retention_spec.md) | Semantic | String | Duration, floored to whole days |
 
 **Total:** 11 types

@@ -197,6 +197,7 @@ fn resolve_journal_dir( journal_dir : Option< &str > ) -> std::path::PathBuf
 /// Resolution order for the directory: `--journal-dir` > `CLR_JOURNAL_DIR` > `~/.clr/journal/`.
 /// The directory is created if it does not exist. I/O errors during directory creation are
 /// silently ignored — journaling is best-effort and must not abort the runner.
+/// Also runs the once-daily retention prune (see `auto_prune_daily`).
 pub( super ) fn resolve_journal_writer(
   journal     : Option< &str >,   // journal level; "off" disables journaling entirely
   journal_dir : Option< &str >,   // --journal-dir override; falls back to CLR_JOURNAL_DIR then ~/.clr/journal/
@@ -206,7 +207,51 @@ pub( super ) fn resolve_journal_writer(
   if level == "off" { return None; }
   let dir = resolve_journal_dir( journal_dir );
   let _ = std::fs::create_dir_all( &dir );
+  auto_prune_daily( &dir );
   Some( claude_journal::JournalWriter::new( dir ) )
+}
+
+/// Once-daily journal retention prune, gated by a `-last_prune` stamp file.
+///
+/// The stamp (in the journal dir, hyphen-prefixed so it never matches the
+/// `YYYY-MM-DD.jsonl` pattern) holds the UTC date of the last prune attempt —
+/// at most one attempt per UTC day, regardless of how many `clr` invocations
+/// happen. Retention defaults to 30 days; `CLR_JOURNAL_KEEP` overrides it
+/// (`"45"` or `"45d"` = days; `"0"` or `"off"` disables pruning entirely, and
+/// then no stamp is written so re-enabling takes effect on the next invocation).
+/// Best-effort throughout: failures never abort the runner, and
+/// `prune_by_age`'s filename-date cutoff structurally never deletes today's file.
+fn auto_prune_daily( dir : &std::path::Path )
+{
+  let stamp             = dir.join( "-last_prune" );
+  let ( year, month, day ) = claude_journal::rotation::today_ymd();
+  let today_str         = format!( "{year:04}-{month:02}-{day:02}" );
+  if std::fs::read_to_string( &stamp ).is_ok_and( | s | s.trim() == today_str ) { return; }
+  let keep_days = match std::env::var( "CLR_JOURNAL_KEEP" )
+  {
+    Err( _ ) => Some( 30 ),
+    Ok( v )  =>
+    {
+      let v = v.trim();
+      if v.eq_ignore_ascii_case( "off" ) { None }
+      else
+      {
+        match v.strip_suffix( 'd' ).unwrap_or( v ).parse::< u32 >()
+        {
+          Ok( 0 )  => None,
+          Ok( n )  => Some( n ),
+          Err( _ ) =>
+          {
+            eprintln!( "clr: invalid CLR_JOURNAL_KEEP '{v}' — using 30d default" );
+            Some( 30 )
+          }
+        }
+      }
+    }
+  };
+  let Some( keep ) = keep_days else { return; };
+  let _ = claude_journal::rotation::prune_by_age( dir, keep, ( year, month, day ), false );
+  let _ = std::fs::write( &stamp, format!( "{today_str}\n" ) );
 }
 
 pub( super ) fn run_built_command(

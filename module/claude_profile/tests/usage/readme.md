@@ -28,3 +28,4 @@ Tests access `pub(crate)` items through `claude_profile::usage::test_bridge` (re
 | `sort_tests.rs` | Tests for sort.rs: sort_indices, status_group_of, StatusGroup. |
 | `stalest_tests.rs` | Tests for stalest.rs: select_stalest, reduction_applies, fetch skip gate. |
 | `subprocess_tests.rs` | Tests for subprocess.rs: resolve_model, resolve_effort, effort_pre_args. |
+| `quota_seam.rs` | Shared loopback recorder server for `CLAUDE_QUOTA_BASE_URL` seam tests (support module, wired into both the usage and cli test targets). |

@@ -63,7 +63,7 @@
 
 | File | Relationship |
 |------|--------------|
-| `src/account.rs` | `delete()` — validate, remove file, clear every `_active_*` marker naming this account across all machines (Fix BUG-347) |
+| `src/account/store.rs` | `delete()` — validate, remove file, clear every `_active_*` marker naming this account across all machines (Fix BUG-347) |
 | `src/commands/account_ops.rs` | `account_delete_routine()` — CLI handler |
 
 ### Tests

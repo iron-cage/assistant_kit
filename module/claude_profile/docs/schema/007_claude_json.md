@@ -17,7 +17,7 @@ Note: This file is a **sibling** to `~/.claude/` (the directory), not inside it.
 
 ### Write Behavior
 
-`.account.use` (`switch_account()` → `patch_live_state_after_switch()`, `claude_profile_core/src/account.rs`) patches this file's `oauthAccount` subtree on every switch — this is the only `clp` write path to `~/.claude.json`:
+`.account.use` (`switch_account()` → `patch_live_state_after_switch()`, `claude_profile_core/src/account/switch.rs`) patches this file's `oauthAccount` subtree on every switch — this is the only `clp` write path to `~/.claude.json`:
 
 1. **Unconditional `emailAddress` patch** — fires regardless of whether `{name}.json` exists, setting `oauthAccount.emailAddress` to the target account name.
 2. **Fuller `oauthAccount` restore** — when `{name}.json` exists and parses, its saved `oauthAccount` object (subject to the reads listed below) is written in, with `emailAddress` re-enforced to the account name (Fix BUG-217: the snapshot may hold a stale email) and `organizationName`/`organizationUuid` overridden from the snapshot's roles data when present (Fix BUG-219).

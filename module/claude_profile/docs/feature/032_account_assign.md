@@ -135,7 +135,7 @@ Where `{machine}` and `{user}` are the current machine's resolved values (same s
 | File | Relationship |
 |------|--------------|
 | `src/commands/accounts.rs` | `accounts_routine()` assign path — marker write only; does not call `write_owner()` |
-| `claude_profile_core/src/account.rs` | `active_marker_filename()`, `resolve_hostname()` |
+| `claude_profile_core/src/account/ownership.rs` | `active_marker_filename()`, `resolve_hostname()` |
 
 ### Tests
 

@@ -45,7 +45,7 @@ The caller does not need to know whether the store was newly created or pre-exis
 
 | File | Relationship |
 |------|--------------|
-| `src/account.rs` | Account CRUD operations including credential store path resolution and directory initialization |
+| `src/account/` | Account CRUD operations including credential store path resolution and directory initialization |
 | `src/persist.rs` | `PersistPaths` type — resolves credential store path via `$PRO`/`$HOME` chain (consumed by account operations) |
 
 ### Tests

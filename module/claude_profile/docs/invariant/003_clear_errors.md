@@ -47,4 +47,4 @@ All errors produced by `claude_profile` must provide actionable messages — mes
 | File | Relationship |
 |------|-------------|
 | `src/commands/` | Error message formatting for all CLI command handlers |
-| `claude_profile_core/src/account.rs` | Account CRUD error messages (`std::io::ErrorKind::NotFound`, etc.); `src/account.rs` in this crate only re-exports it |
+| `claude_profile_core/src/account/` | Account CRUD error messages (`std::io::ErrorKind::NotFound`, etc.); `src/account.rs` in this crate only re-exports it |

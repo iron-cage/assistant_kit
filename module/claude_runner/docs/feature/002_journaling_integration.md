@@ -4,8 +4,8 @@
 
 - **Purpose**: Document the integration of `claude_journal` into `clr` for automatic event journaling.
 - **Responsibility**: Define how `clr` calls `JournalWriter` at execution boundaries to record events.
-- **In Scope**: Journal writer initialization, event emission points, journal level control, truncation behavior.
-- **Out of Scope**: Journal file format (-> `claude_journal/docs/feature/001_event_journaling.md`), viewer CLI (-> `claude_journal_viewer/docs/`).
+- **In Scope**: Journal writer initialization, event emission points, journal level control, truncation behavior, once-daily retention auto-prune.
+- **Out of Scope**: Journal file format (-> `claude_journal/docs/feature/001_event_journaling.md`), viewer CLI (-> `claude_journal_viewer/docs/`), pruning mechanics — cutoff math and filename filtering (-> `claude_journal/docs/feature/003_rotation.md`).
 
 ### Design
 
@@ -42,6 +42,17 @@ growing unboundedly with large subprocess outputs.
 but never cause `clr` to exit non-zero. Journaling is best-effort — it must not
 interfere with the primary execution path.
 
+**Retention auto-prune:** When journal resolution runs (any journaling-enabled
+invocation), `clr` prunes journal files older than the keep window — once per UTC
+day at most, gated by a `-last_prune` stamp file in the journal dir holding the
+last attempt's date. The window defaults to 30 days; `CLR_JOURNAL_KEEP` overrides
+it (`"45"` or `"45d"` = days; `"0"` or `"off"` disables pruning — then no stamp is
+written, so re-enabling takes effect on the next invocation; an unparsable value
+warns on stderr and the default applies). Deletion is filename-date-based via
+`claude_journal::rotation::prune_by_age` — only `YYYY-MM-DD.jsonl` files qualify
+and today's file is structurally never deleted. Best-effort like all journaling:
+prune failures never abort the runner.
+
 ### Acceptance Criteria
 
 | # | Criterion |
@@ -59,6 +70,10 @@ interfere with the primary execution path.
 | AC-011 | Timeout events include timeout_secs and partial_stdout |
 | AC-012 | Interactive session events include session_duration |
 | AC-013 | Validation-retry events are emitted when `--expect-strategy retry` fires a retry |
+| AC-014 | A journaling-enabled run deletes journal files older than the keep window (default 30 days) and writes the `-last_prune` stamp |
+| AC-015 | A second run on the same UTC day does not prune again (stamp gate) |
+| AC-016 | `CLR_JOURNAL_KEEP=off` (or `0`) disables pruning and writes no stamp; `Nd`/`N` sets the window; invalid values warn on stderr and fall back to 30 days |
+| AC-017 | Auto-prune never deletes today's file or files not matching `YYYY-MM-DD.jsonl` |
 
 ### Features
 
@@ -73,6 +88,7 @@ interfere with the primary execution path.
 | File | Relationship |
 |------|--------------|
 | [claude_journal/docs/api/001_journal_writer.md](../../../claude_journal/docs/api/001_journal_writer.md) | `JournalWriter` API — write-side contract |
+| [claude_journal/docs/api/004_rotation.md](../../../claude_journal/docs/api/004_rotation.md) | `rotation` API — `prune_by_age` consumed by the auto-prune |
 
 ### Parameters
 

@@ -92,7 +92,7 @@
 
 | File | Relationship |
 |------|--------------|
-| `claude_profile_core/src/account.rs` | New `KIMI_MODEL_TIER_ENV_VARS` const, `kimi_auto_compact_window()`, `write_kimi_tier_env_vars()`, `clear_kimi_tier_env_vars()` helpers; `patch_live_state_after_switch()` — new branch checking `inference_provider == "kimi"` on a redirect switch, invoking these helpers instead of (alongside) the plain 3-var write, and clearing them on switch-to-anthropic and switch-to-non-kimi-redirect |
+| `claude_profile_core/src/account/switch.rs` | New `KIMI_MODEL_TIER_ENV_VARS` const, `kimi_auto_compact_window()`, `write_kimi_tier_env_vars()`, `clear_kimi_tier_env_vars()` helpers; `patch_live_state_after_switch()` — new branch checking `inference_provider == "kimi"` on a redirect switch, invoking these helpers instead of (alongside) the plain 3-var write, and clearing them on switch-to-anthropic and switch-to-non-kimi-redirect |
 | `claude_profile/src/commands/account_ops.rs` | `account_save_routine()` — new `preset::` parsing, validation (only `kimi` recognized), and default-filling for `backend`/`base_url`/`inference_provider`, gated on the resolved `backend` |
 | `claude_profile/src/registry.rs` | New `preset::` param registration on `.account.save` |
 

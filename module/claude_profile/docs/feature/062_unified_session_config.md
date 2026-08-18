@@ -64,7 +64,7 @@ Counterpart to `set_session_model()` with identical read-modify-write pattern: r
 | `src/usage/format.rs` | `recommended_model(aq)` — canonical session model recommendation function |
 | `src/usage/render.rs` | Footer `Next` line generation — calls `recommended_model()`; always shows `/{model-derived-effort}` (`"max"` for opus, `"high"` for sonnet) |
 | `src/usage/api.rs` | Rotation dispatcher — calls `apply_model_override()` for winner; carry-forward `set_session_effort()` removed (TSK-335) |
-| `module/claude_profile_core/src/account.rs` | `set_session_effort(paths, effort_id)` — writes `effortLevel` to `settings.json` |
+| `module/claude_profile_core/src/account/session_settings.rs` | `set_session_effort(paths, effort_id)` — writes `effortLevel` to `settings.json` |
 
 ### Tests
 

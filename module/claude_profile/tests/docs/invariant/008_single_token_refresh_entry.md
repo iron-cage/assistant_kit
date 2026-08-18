@@ -2,7 +2,7 @@
 
 Property assertion cases for `docs/invariant/008_single_token_refresh_entry.md`. Verifies that
 all token refresh operations go through `refresh_account_token()` and that no direct
-`run_isolated()` calls exist outside `account.rs`.
+`run_isolated()` calls exist outside `refresh.rs`.
 
 ### Test Case Index
 
@@ -23,7 +23,7 @@ all token refresh operations go through `refresh_account_token()` and that no di
 - **When:** `grep -r "run_isolated(" src/` is run from `module/claude_profile/`
 - **Then:** The command returns empty output (exit 1 from grep); no file in `src/` calls
   `run_isolated` directly — all token refresh goes through `refresh_account_token()` in
-  `claude_profile_core/src/account.rs`
+  `claude_profile_core/src/account/refresh.rs`
 - **Source:** [docs/invariant/008_single_token_refresh_entry.md](../../../docs/invariant/008_single_token_refresh_entry.md)
 
 ---

@@ -16,6 +16,9 @@
 //! [`parse_headers`] accepts `Fn(&str) -> Option<String>` so unit tests pass a
 //! `HashMap`-backed closure — no live network, no `ureq` in dev-dependencies.
 //! [`parse_oauth_usage`] operates on a raw `&str` body for the same reason.
+//! The `fetch_*` transports themselves are testable through [`BASE_URL_ENV`]:
+//! point it at a real loopback HTTP server and every fetch hits that server
+//! with the production path, headers, and body (`tests/base_url_seam_test.rs`).
 
 use std::fmt;
 

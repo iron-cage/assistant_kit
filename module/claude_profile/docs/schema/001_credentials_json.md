@@ -51,7 +51,7 @@ A `backend: "redirect"` account (see [feature/071](../feature/071_redirect_backe
 
 | Caller | When |
 |--------|------|
-| `account::save()` in `claude_profile_core/src/account.rs:307` | Single entry point for both backends — takes a `backend: AccountBackend` param and branches internally (`account.rs:325`). `backend == AccountBackend::Anthropic`: `.account.save`, credential writeback after token refresh (BUG-221 fix: writes to credential store only, never to `~/.claude/.credentials.json`). `backend == AccountBackend::Redirect`: `.account.save backend::redirect api_key::KEY` — writes `accessToken` only, from the caller-supplied `api_key::` bytes; never touches `~/.claude/.credentials.json` (see [feature/071](../feature/071_redirect_backend_accounts.md)) |
+| `account::save()` in `claude_profile_core/src/account/store.rs` | Single entry point for both backends — takes a `backend: AccountBackend` param and branches internally (account.rs:325 pre-split). `backend == AccountBackend::Anthropic`: `.account.save`, credential writeback after token refresh (BUG-221 fix: writes to credential store only, never to `~/.claude/.credentials.json`). `backend == AccountBackend::Redirect`: `.account.save backend::redirect api_key::KEY` — writes `accessToken` only, from the caller-supplied `api_key::` bytes; never touches `~/.claude/.credentials.json` (see [feature/071](../feature/071_redirect_backend_accounts.md)) |
 
 ### Read Callers
 

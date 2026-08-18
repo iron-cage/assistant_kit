@@ -4,12 +4,12 @@
 
 - **Purpose**: Document the programmatic interface of the claude_profile_core `account` module.
 - **Responsibility**: Specify the credential-store account domain contract at cluster level — one section per functional cluster, key signatures named, exhaustive per-item detail left to the source doc comments.
-- **In Scope**: All `pub` items of `src/account.rs`, grouped into the clusters below.
+- **In Scope**: All `pub` items of the `src/account/` module, grouped into the clusters below.
 - **Out of Scope**: Token expiry classification (→ `001_token.md`), CLI parameter handling and rendering (→ `claude_profile`), the subprocess execution engine behind refresh (→ `claude_runner_core`).
 
 ### Abstract
 
-`claude_profile_core::account` is the Layer 1 domain engine behind `clp`'s account commands: named credential storage under a credential-store directory, atomic account switching into `~/.claude/.credentials.json`, token refresh orchestration, multi-machine ownership/claim/reservation markers, a per-account quota cache, and a measurement history log. All credential writes go through `claude_core::file_io::atomic_write_secret` (`0o600`), all non-secret store writes through `atomic_write`. This doc indexes the surface by cluster; the authoritative per-item contract is each item's doc comment in `src/account.rs` (`#![warn(missing_docs)]` is enforced).
+`claude_profile_core::account` is the Layer 1 domain engine behind `clp`'s account commands: named credential storage under a credential-store directory, atomic account switching into `~/.claude/.credentials.json`, token refresh orchestration, multi-machine ownership/claim/reservation markers, a per-account quota cache, and a measurement history log. All credential writes go through `claude_core::file_io::atomic_write_secret` (`0o600`), all non-secret store writes through `atomic_write`. This doc indexes the surface by cluster; the authoritative per-item contract is each item's doc comment in `src/account/` (`#![warn(missing_docs)]` is enforced; every submodule is glob-re-exported, so public paths are unchanged by the module split).
 
 ### Clusters
 
@@ -59,7 +59,7 @@ Fallible operations return `std::io::Error`; validation failures use `InvalidInp
 
 | File | Relationship |
 |------|--------------|
-| `../../src/account.rs` | All clusters above |
+| `../../src/account/` | All clusters above — one file per cluster (see its `readme.md`) |
 
 ### Tests
 

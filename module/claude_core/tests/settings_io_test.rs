@@ -256,7 +256,7 @@ fn set_env_var_traces_function_and_parameters()
   );
   // Fix(audit-trace-token-leak): see set_setting's guard above — this is the site
   // that printed the live OAuth token on every redirect-account switch
-  // (`account.rs` passes the access token as the ANTHROPIC_AUTH_TOKEN env value).
+  // (`switch.rs` passes the access token as the ANTHROPIC_AUTH_TOKEN env value).
   assert!(
     first_stmt.contains( "redact_for_trace" ),
     "trace line must route the value through redact_for_trace: {first_stmt:?}"

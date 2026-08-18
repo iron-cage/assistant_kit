@@ -97,7 +97,7 @@
 
 | File | Relationship |
 |------|--------------|
-| `src/account.rs` | `save()` implementation — validate, init dir, copy credentials |
+| `src/account/store.rs` | `save()` implementation — validate, init dir, copy credentials |
 | `src/commands/account_ops.rs` | `account_save_routine()` — CLI handler |
 
 ### Tests

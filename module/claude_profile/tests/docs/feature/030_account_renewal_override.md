@@ -69,7 +69,7 @@ Feature behavioral requirement test cases for `docs/feature/030_account_renewal_
 - **When:** `clp .account.renewal name::test@example.com from_now::+1h30m`
 - **Then:** Exits 0. `_renewal_at` is written as an ISO-8601 UTC string starting with `"202"` (not `"200"`).
 - **Exit:** 0
-- **Note:** The cited test performs only a coarse year-prefix sanity check (`starts_with "202"`, `not "200"`) — it does not assert the precise `±10s` window around `now+5400s` (1h30m) this FT case originally claimed, nor does it assert `oauthAccount` preservation (the Given here never creates an `oauthAccount` subtree to preserve, unlike FT-01/FT-04). The `h`/`m` unit-conversion math itself is confirmed correct by direct inspection of `parse_from_now_delta()` in `claude_profile_core/src/account.rs`, but no test in this workspace independently re-derives and checks the precise resulting timestamp.
+- **Note:** The cited test performs only a coarse year-prefix sanity check (`starts_with "202"`, `not "200"`) — it does not assert the precise `±10s` window around `now+5400s` (1h30m) this FT case originally claimed, nor does it assert `oauthAccount` preservation (the Given here never creates an `oauthAccount` subtree to preserve, unlike FT-01/FT-04). The `h`/`m` unit-conversion math itself is confirmed correct by direct inspection of `parse_from_now_delta()` in `claude_profile_core/src/account/renewal.rs`, but no test in this workspace independently re-derives and checks the precise resulting timestamp.
 - **Source fn:** `ft02_account_renewal_from_now_positive` (in `account_renewal_test.rs`)
 - **Source:** [030_account_renewal_override.md AC-02](../../../docs/feature/030_account_renewal_override.md)
 

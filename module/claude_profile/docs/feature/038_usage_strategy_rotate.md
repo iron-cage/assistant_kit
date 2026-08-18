@@ -110,7 +110,7 @@ The former `.account.rotate` used `max_by_key(expires_at_ms)` — the account wi
 | `src/usage/params.rs` | `parse_usage_params()` — `rotate::` param parsing and `live::` mutual exclusion guard |
 | `src/usage/types.rs` | `UsageParams.rotate` field |
 | `src/usage/touch.rs` | Post-switch touch from pre-fetched quota |
-| `claude_profile_core/src/account.rs` | `switch_account()` — credentials write + active marker update |
+| `claude_profile_core/src/account/switch.rs` | `switch_account()` — credentials write + active marker update |
 
 ### Tests
 

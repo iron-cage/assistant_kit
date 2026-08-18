@@ -90,7 +90,7 @@ Derived from `contract/claude_code/docs/model/readme.md`. Contains 5 entries, al
 | `src/commands/models.rs` | `.models` command handler |
 | `src/registry.rs` | Registration of `.models` command and parameters |
 | `claude_quota/src/lib.rs` | `fetch_models()` HTTP function; `STATIC_MODELS` constant; `ModelInfo` type |
-| `claude_profile_core/src/account.rs` | OAuth token retrieval for live mode |
+| `claude_profile_core/src/account/refresh.rs` | OAuth token retrieval for live mode |
 
 ### Tests
 

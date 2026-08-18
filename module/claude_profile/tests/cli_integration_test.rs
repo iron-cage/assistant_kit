@@ -30,7 +30,7 @@
 //! | `usage_touch_test` | .usage touch/NextStrategy IT-92–IT-121 | IT |
 //! | `usage_model_test` | .usage imodel/effort/gates IT-122–IT-153 | IT |
 //! | `usage_filter_test` | .usage row-filtering IT-154–IT-177 Part A | IT |
-//! | `usage_filter_test_b` | .usage row-filtering IT-178+ Part B | IT |
+//! | `usage_filter_test_b` | .usage row-filtering IT-178+ Part B, BUG-245/246 seam MRE | IT, mre |
 //! | `usage_lim_it_test` | .usage `lim_it` IT-205–IT-216 Part A | IT |
 //! | `usage_lim_it_test_b` | .usage `lim_it` IT-217+ Part B | IT |
 //! | `usage_solo_test` | .usage `solo::` + cross-feature IT-247–IT-271 | IT |
@@ -68,6 +68,9 @@
 
 #[ path = "cli/cli_runner.rs" ]
 pub mod cli_runner;
+
+#[ path = "usage/quota_seam.rs" ]
+pub mod quota_seam;
 
 #[ path = "cli/accounts_help_test.rs" ]
 mod accounts_help_test;

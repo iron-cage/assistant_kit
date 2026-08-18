@@ -76,7 +76,7 @@ This matches the G8 pattern used by `owner::0` (Feature 064).
 |------|--------------|
 | `src/commands/accounts.rs` | `accounts_routine()` — `owner::` write path; `unclaim::1` and `assign::1` are REMOVED_TOGGLE (Feature 064) |
 | `src/usage/api.rs` | `usage_routine()` — `owner::` write path (same logic, shared unified param set) |
-| `claude_profile_core/src/account.rs` | `write_owner()` — the underlying write API called by both paths |
+| `claude_profile_core/src/account/ownership.rs` | `write_owner()` — the underlying write API called by both paths |
 
 ### Tests
 

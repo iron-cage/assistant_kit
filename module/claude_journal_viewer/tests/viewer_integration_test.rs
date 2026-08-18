@@ -1,4 +1,4 @@
-//! Integration tests for the `clj` binary — EC-1 through EC-19.
+//! Integration tests for the `clj` binary — EC-1 through EC-20.
 //!
 //! Each test writes fixture events via `JournalWriter`, runs the `clj` binary
 //! against the temporary journal directory, and asserts on stdout/stderr/exit.
@@ -591,4 +591,32 @@ fn ec19_chart_dir_param_resolution_nonexistent_dir_errors()
 
   assert!( !out.status.success(), "expected non-zero exit for a nonexistent journal dir" );
   assert!( !out_path.exists(), "output file must not be written when the journal dir is missing" );
+}
+
+// ── EC-20 : .prune is filename-date-based and never touches non-journal files ─
+
+/// `.prune` deletes by `YYYY-MM-DD.jsonl` filename date: an old dated file goes,
+/// while a non-date `.jsonl` file and today's file survive even at `keep::0s`
+/// (sub-day durations floor to a 0-day window = keep only today).
+#[ test ]
+fn ec20_prune_filename_date_semantics()
+{
+  let dir = tempfile::TempDir::new().unwrap();
+  write_fixture_events( dir.path() ); // creates today's YYYY-MM-DD.jsonl
+  std::fs::write( dir.path().join( "2020-01-01.jsonl" ), "{}\n" ).unwrap();
+  std::fs::write( dir.path().join( "notes.jsonl" ), "not a journal file\n" ).unwrap();
+
+  let out = run_clj( &[ ".prune", "keep::0s" ], dir.path() );
+  assert!( out.status.success(), "exit non-zero: {}", stderr_str( &out ) );
+  let stdout = stdout_str( &out );
+  assert!( stdout.contains( "2020-01-01.jsonl" ), "old dated file must be reported: {stdout}" );
+  assert!( !dir.path().join( "2020-01-01.jsonl" ).exists(), "old dated file must be deleted" );
+  assert!(
+    dir.path().join( "notes.jsonl" ).exists(),
+    "non-date-pattern .jsonl must never be deleted by .prune"
+  );
+  assert!(
+    dir.path().join( claude_journal::rotation::today_filename() ).exists(),
+    "today's journal file must survive even keep::0s"
+  );
 }

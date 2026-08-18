@@ -7,12 +7,12 @@
 | `feature/` | Behavioral requirements for the journal viewer | [feature/readme.md](../feature/readme.md) | 3 |
 | `invariant/` | Measurable constraints for the viewer | [invariant/readme.md](../invariant/readme.md) | 2 |
 | `cli/command/` | CLI command specifications for the journal viewer | [cli/command/readme.md](../cli/command/readme.md) | 8 |
-| `cli/param/` | CLI parameter specifications for the journal viewer | [cli/param/readme.md](../cli/param/readme.md) | 28 |
+| `cli/param/` | CLI parameter specifications for the journal viewer | [cli/param/readme.md](../cli/param/readme.md) | 27 |
 | `cli/type/` | CLI type definitions | [cli/type/readme.md](../cli/type/readme.md) | 11 |
 | `cli/param_group/` | CLI parameter group definitions | [cli/param_group/readme.md](../cli/param_group/readme.md) | 5 |
 | `cli/user_story/` | User story catalog for journal viewing use cases | [cli/user_story/readme.md](../cli/user_story/readme.md) | 5 |
 
-**Total:** 7 types, 62 instances
+**Total:** 7 types, 61 instances
 
 ## Master Doc Instances Table
 
@@ -50,7 +50,6 @@
 | cli/param | 17 | open | [cli/param/17_open.md](../cli/param/17_open.md) |
 | cli/param | 18 | keep | [cli/param/18_keep.md](../cli/param/18_keep.md) |
 | cli/param | 19 | dry_run | [cli/param/19_dry_run.md](../cli/param/19_dry_run.md) |
-| cli/param | 20 | confirm | [cli/param/20_confirm.md](../cli/param/20_confirm.md) |
 | cli/param | 21 | journal_dir | [cli/param/21_journal_dir.md](../cli/param/21_journal_dir.md) |
 | cli/param | 22 | verbosity | [cli/param/22_verbosity.md](../cli/param/22_verbosity.md) |
 | cli/param | 23 | output | [cli/param/23_output.md](../cli/param/23_output.md) |

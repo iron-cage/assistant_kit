@@ -1,8 +1,8 @@
 # CLI Parameter: dry_run
 
-When set to `1`, `.prune` shows which files would be deleted
-without actually deleting them. The output lists each candidate
-file with its size and age.
+When set to `1` (or `true`), `.prune` shows which files would be
+deleted without actually deleting them. The output lists each
+candidate as a `Would delete: <path>` line, followed by a count.
 
 - **Type:** [`Boolean`](../type/08_boolean.md)
 - **Default:** 0
@@ -10,7 +10,7 @@ file with its size and age.
 
 ```bash
 clj .prune keep::30d dry_run::1      # Preview what would be pruned
-clj .prune keep::100mb dry_run::1    # Preview size-based pruning
+clj .prune dry_run::1                # Preview with the default 30d window
 ```
 
 ### Referenced Type

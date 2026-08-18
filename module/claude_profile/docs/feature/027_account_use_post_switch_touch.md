@@ -148,7 +148,7 @@ When `trace::1` and `touch::0`: no timestamped `account.use` diagnostic lines (n
 | `src/commands/account_ops.rs` | `account_use_routine()` — adds quota fetch + subprocess call after credential rotation |
 | `src/lib.rs` | `touch::`, `imodel::`, `effort::`, `trace::` parameter registration on `.account.use` |
 | `src/usage/subprocess.rs`, `src/usage/api.rs` | `resolve_model()`, `resolve_effort()` reused from Feature 026; new: `TouchCtx`, `validate_imodel_str()`, `validate_effort_str()`, `pre_switch_touch_ctx()` (gains a `backend` check — unconditional skip for `backend: redirect`, Feature 071), `apply_post_switch_touch()`, `apply_model_override()` |
-| `claude_profile_core/src/account.rs` | `refresh_account_token()` — invoked by `apply_post_switch_touch()` per Feature 017 AC-34 / invariant 008 |
+| `claude_profile_core/src/account/refresh.rs` | `refresh_account_token()` — invoked by `apply_post_switch_touch()` per Feature 017 AC-34 / invariant 008 |
 
 ### Algorithm Docs
 

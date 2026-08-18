@@ -111,7 +111,7 @@ owner::user1@w003 name::X,Y,Z      → set ownership for X, Y, and Z
 | `src/registry.rs` | `bfd("assign", ...)`, `bfd("for", ...)`, `bfd("unclaim", ...)` → REMOVED_TOGGLEs; `reg_arg_opt("active", Kind::String)` added to both `.accounts` and `.usage` |
 | `src/commands/accounts.rs` | `active::` dispatch (assign/unassign); `owner::` dispatch updated for `owner::0` sentinel + comma-list batch |
 | `src/usage/api.rs` | Same `active::` and `owner::` dispatch changes for `.usage` side |
-| `claude_profile_core/src/account.rs` | `write_owner()` — called by `owner::0` path; `active_marker_filename()` sanitization re-used by `active::` value parser |
+| `claude_profile_core/src/account/ownership.rs` | `write_owner()` — called by `owner::0` path; `active_marker_filename()` sanitization re-used by `active::` value parser |
 
 ### Tests
 

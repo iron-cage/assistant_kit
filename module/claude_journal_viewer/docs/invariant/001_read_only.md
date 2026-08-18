@@ -1,6 +1,6 @@
 # Read-Only
 
-**Status**: Planned | **Since**: 1.3.0
+**Status**: Implemented | **Since**: 1.3.0
 
 ### Scope
 
@@ -11,14 +11,14 @@
 
 ## Description
 
-The viewer never modifies journal file content. All viewing commands (`.list`, `.tail`, `.stats`, `.search`, `.serve`, `.status`, `.export`) open journal files in read-only mode. The `.prune` command deletes whole files but never modifies their content. No command truncates, seeks, or writes to any `.jsonl` file.
+The viewer never modifies journal file content. All viewing commands (`.list`, `.tail`, `.stats`, `.search`, `.serve`, `.status`, `.export`) open journal files in read-only mode. The `.prune` command deletes whole files but never modifies their content — and even that deletion is not implemented in viewer source: `prune_output` delegates to `claude_journal::rotation::prune_by_age`. No command truncates, seeks, or writes to any `.jsonl` file.
 
 ## Measurement
 
-- **Threshold**: 0 write-mode file opens on `.jsonl` files across all viewer commands (measured by code review — no `OpenOptions::write`, `fs::write`, `File::create` on journal paths outside `prune.rs`)
-- **Method**: `grep -rn "OpenOptions\|fs::write\|File::create" src/cli/ | grep -v prune.rs` must return zero matches
+- **Threshold**: 0 deletion calls and 0 write-mode file opens on journal paths anywhere in viewer source
+- **Method**: `grep -rn "remove_file" src/` must return zero matches (deletion lives in `claude_journal::rotation`, not here), and `grep -rn "OpenOptions\|fs::write\|File::create" src/` must return exactly one match — `.export`'s write to its user-specified `output::` path, which is never a journal file
 
 ## Sources
 
-- `src/cli/*.rs` — all command implementations use `JournalReader` (read-only)
-- `src/cli/prune.rs` — uses `std::fs::remove_file` (whole-file delete, not content modification)
+- `src/cli_main.rs`, `src/output.rs` — all command implementations read via `JournalReader` (read-only)
+- `src/output.rs` `prune_output()` — delegates deletion to `claude_journal::rotation::prune_by_age` (whole-file delete, not content modification)

@@ -112,4 +112,4 @@ When the fetch gate fires, `approximate_quota()` is called and its result replac
 | `src/usage/refresh.rs` | Solo gate at refresh site — first gate in per-account loop |
 | `src/usage/touch.rs` | Solo gate at touch site — first gate in per-account loop |
 | `src/usage/params.rs` | `solo` field parsing — `parse_int_flag(cmd, "solo", 0) != 0`; mutual exclusion validation |
-| `claude_profile_core/src/account.rs` | Storage layer — `read_history()` called by `approximate_quota()` |
+| `claude_profile_core/src/account/history.rs` | Storage layer — `read_history()` called by `approximate_quota()` |

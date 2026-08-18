@@ -72,13 +72,13 @@ is in place and prevents the described credential corruption failure mode.
 
 ### PP-5: Pitfall 5 guard — active marker re-read after `run_isolated` window (BUG-316 MRE)
 
-- **Given:** `account.rs`'s race-recovery site (the `credentials=None` arm reached after a
+- **Given:** `refresh.rs`'s race-recovery site (the `credentials=None` arm reached after a
   `run_isolated` call in `refresh_token_with_live_path`) must re-read the `_active_{host}_{user}`
   marker fresh, not reuse the `is_active` value cached before `run_isolated` was invoked.
-- **When:** The cited test reads the compiled source text of `account.rs` and scans it for the
+- **When:** The cited test reads the compiled source text of `refresh.rs` and scans it for the
   fix markers (a structural/source-text check — it does not construct or execute the
   concurrent-write race itself).
-- **Then:** `account.rs` contains the identifier `is_active_now` (the fresh re-read variable at
+- **Then:** `refresh.rs` contains the identifier `is_active_now` (the fresh re-read variable at
   the race-recovery site) and the `Fix(BUG-316)` annotation appears at ≥2 sites (pre-sync +
   race-recovery). This proves the fix pattern is present in source; it does not exercise the
   two-OS-process race (concurrent `switch_account("B")` overwriting the marker and live

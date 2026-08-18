@@ -95,7 +95,7 @@
 
 | File | Relationship |
 |------|--------------|
-| `claude_profile_core/src/account.rs` | `Account` struct — new `inference_provider: String` field (empty/absent-on-omit, mirrors `backend`'s absent-defaults-to-anthropic pattern rather than `host`/`role`'s write-empty-string pattern); `save()` — new read-merge write path for `inference_provider::` |
+| `claude_profile_core/src/account/` | `Account` struct — new `inference_provider: String` field (empty/absent-on-omit, mirrors `backend`'s absent-defaults-to-anthropic pattern rather than `host`/`role`'s write-empty-string pattern); `save()` — new read-merge write path for `inference_provider::` |
 | `src/usage/types.rs` | `AccountQuota` struct — new `inference_provider: String` field, populated from `{name}.json` at fetch time |
 | `src/commands/account_ops.rs` | `account_save_routine()` — new parsing for `inference_provider::`, non-empty validation |
 | `src/commands/accounts_render.rs` | New `inference_provider` column rendering for `.accounts` table/json output — default identity set member |

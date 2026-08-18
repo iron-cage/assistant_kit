@@ -17,19 +17,17 @@ Human-friendly duration string parsed into a time offset from now.
 | `h` | Hours | `2h` | 7200 |
 | `d` | Days | `7d` | 604800 |
 | `w` | Weeks | `4w` | 2419200 |
-| `M` | Months (30 days) | `3M` | 7776000 |
 
 ### Validation
 
-- Must match regex `^[0-9]+[smhdwM]$`
-- Numeric part must be > 0
+- Must match regex `^[0-9]+[smhdw]$` (no month suffix — use `d`/`w` multiples)
 - No spaces between number and suffix
-- Case-sensitive: `M` = months, `m` = minutes
+- Suffix is case-sensitive and lowercase-only
 
 ### Error Handling
 
 Invalid duration strings cause exit 1 with message:
-`Error: invalid duration '<input>' — expected format: <number><s|m|h|d|w|M>`
+`Error: invalid duration '<input>' (expected e.g. 30s, 5m, 1h, 7d, 2w)`
 
 ### Referenced Parameters
 

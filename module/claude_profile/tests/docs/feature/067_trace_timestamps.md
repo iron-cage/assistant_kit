@@ -24,20 +24,20 @@ Feature behavioral requirement test cases for `docs/feature/067_trace_timestamps
 
 | FT | File | Notes |
 |----|------|-------|
-| FT-01 | *(no test — coverage gap)* | Claim true by direct inspection of `account.rs`; no structural test exists in `fetch_tests.rs` or elsewhere |
+| FT-01 | *(no test — coverage gap)* | Claim true by direct inspection of `account/mod.rs`; no structural test exists in `fetch_tests.rs` or elsewhere |
 | FT-02 | `tests/usage/touch_tests.rs`, `tests/usage/api_tests_a.rs` | Regex or substring check on stderr output |
 | FT-03 | All 12 test files (see Sources in feature doc) | Assertion pattern changed from `[trace]` to ` · ` |
-| FT-04 | *(no test — coverage gap)* | Claim true by direct inspection of `account.rs`; no structural test exists in `fetch_tests.rs` or elsewhere |
+| FT-04 | *(no test — coverage gap)* | Claim true by direct inspection of `trace_ts` in `claude_core`; no structural test exists in `fetch_tests.rs` or elsewhere |
 | FT-05 | `tests/usage/touch_tests.rs:538` | Structural `src.contains(...)` check in `test_apply_touch_touch_idle_false_silent_when_trace_disabled` — not a literal `contains(" · touch  ")` stderr capture |
 | FT-06 | `tests/usage/fetch_tests.rs:157` | BUG-234 MRE (`mre_bug234_result_trace_after_billing_type_override`): `src.find( r#"eprintln!( "{}{}  result: OK""# )` |
 | FT-07 | `tests/cli/usage_solo_test.rs`, `tests/cli/usage_feature_test.rs` | `.filter( |l| l.contains( " · " ) )` usage — corrected file (`tests/cli/usage_test.rs` does not exist) |
 
 ### FT-01: `trace_ts()` is available in production code
 
-- **Given:** `claude_profile_core/src/account.rs` is the production source file.
+- **Given:** `claude_profile_core/src/account/` is the production source tree.
 - **When:** The source is inspected for `pub fn trace_ts` with no preceding `#[cfg(test)]` attribute.
 - **Then:** Source match found. `trace_ts` is a `pub fn` callable from production `eprintln!` paths — not test-gated.
-- **Source fn:** *(coverage gap — no structural test exists in `tests/usage/fetch_tests.rs` or elsewhere; that file's `src.find(...)` structural assertions target unrelated strings (the BUG-234 `result: OK` pattern, the Class A billing override). The claim itself is true by direct inspection: `pub fn trace_ts()` at `claude_profile_core/src/account.rs:2191`, no `#[cfg(test)]` attribute — but nothing in the suite asserts this automatically.)*
+- **Source fn:** *(coverage gap — no structural test exists in `tests/usage/fetch_tests.rs` or elsewhere; that file's `src.find(...)` structural assertions target unrelated strings (the BUG-234 `result: OK` pattern, the Class A billing override). The claim itself is true by direct inspection: `trace_ts()` is implemented in `claude_core` and re-exported from `claude_profile_core/src/account/mod.rs`, no `#[cfg(test)]` attribute — but nothing in the suite asserts this automatically.)*
 
 ---
 
@@ -61,10 +61,10 @@ Feature behavioral requirement test cases for `docs/feature/067_trace_timestamps
 
 ### FT-04: `trace_ts()` body contains no conditional guard
 
-- **Given:** `trace_ts()` implementation in `account.rs`.
+- **Given:** `trace_ts()` implementation in `claude_core` (re-exported from `account/mod.rs`).
 - **When:** The function body is inspected structurally.
 - **Then:** No `if trace`, `if enabled`, or similar conditional found in the body. The function simply formats the UTC timestamp unconditionally.
-- **Source fn:** *(coverage gap — no structural test exists in `tests/usage/fetch_tests.rs` or elsewhere asserting `trace_ts()`'s own body is unconditional. The claim itself is true by direct inspection: `trace_ts()` at `claude_profile_core/src/account.rs:2191-2196` contains no conditional — but nothing in the suite asserts this automatically.)*
+- **Source fn:** *(coverage gap — no structural test exists in `tests/usage/fetch_tests.rs` or elsewhere asserting `trace_ts()`'s own body is unconditional. The claim itself is true by direct inspection: `trace_ts()` (implemented in `claude_core`, re-exported from `claude_profile_core/src/account/mod.rs`) contains no conditional — but nothing in the suite asserts this automatically.)*
 
 ---
 

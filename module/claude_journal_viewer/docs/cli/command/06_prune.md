@@ -1,38 +1,37 @@
 # .prune
 
-Delete old journal files by age or size.
+Delete old journal files by filename-date age.
 
--- **Parameters:** keep::, dry_run::, confirm::
--- **Exit Codes:** 0 (success), 1 (invalid param or I/O error)
+-- **Parameters:** keep::, dry_run::
+-- **Exit Codes:** 0 (success, including "dir not found" and "nothing to prune"), 1 (invalid param)
 
 ### Syntax
 
 ```
-clj .prune keep::RETENTION_SPEC [dry_run::BOOL] [confirm::BOOL]
+clj .prune [keep::RETENTION_SPEC] [dry_run::BOOL]
 ```
 
 ### Parameters
 
 | Parameter | Type | Default | Required | Purpose |
 |-----------|------|---------|----------|---------|
-| `keep` | RetentionSpec | -- | Yes | Retention: age (`30d`, `4w`, `3m`) or size (`100mb`, `1gb`) |
+| `keep` | RetentionSpec | `30d` | No | Age threshold — a duration, floored to whole days |
 | `dry_run` | Boolean | 0 | No | Show what would be pruned without deleting |
-| `confirm` | Boolean | 0 | No | Skip interactive confirmation prompt |
 
 **Algorithm (4 steps):**
 
-1. Parse `keep` as age (duration) or size (bytes); error on invalid format
-2. List journal files, identify candidates for deletion
-3. If `dry_run::1`, print candidate list and exit 0 without deleting
-4. If `confirm::0` (default), prompt user for confirmation; on yes or `confirm::1`, delete files and report count
+1. Parse `keep` as a duration and floor it to whole days (`keep_days`); error on invalid format
+2. Delegate to `claude_journal::rotation::prune_by_age` — candidates are exactly the files named `YYYY-MM-DD.jsonl` whose filename date is strictly before `today - keep_days` (UTC); filesystem mtime is never consulted, and today's file is structurally never deleted
+3. If `dry_run::1`, print each candidate as `Would delete: <path>` and exit 0 without deleting
+4. Otherwise delete immediately (no confirmation prompt — `dry_run::1` is the preview mechanism), printing `Deleted: <path>` per file, `Warning: could not delete ...` on per-file failure (sweep continues), and a final count line
 
 ### Examples
 
 ```bash
-clj .prune keep::30d                # Delete files older than 30 days
-clj .prune keep::100mb              # Delete oldest until under 100MB
-clj .prune keep::4w dry_run::1     # Preview: what would be pruned
-clj .prune keep::7d confirm::1     # Delete without confirmation
+clj .prune                          # Delete files older than 30 days (default)
+clj .prune keep::7d                 # Delete files older than 7 days
+clj .prune keep::4w dry_run::1      # Preview: what would be pruned
+clj .prune keep::12h                # Sub-day floors to 0 days: keep only today's file
 ```
 
 ### Referenced User Stories

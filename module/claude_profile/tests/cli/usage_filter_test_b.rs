@@ -5,7 +5,7 @@
 use crate::cli_runner::{
   run_cs_with_env,
   stdout, stderr, assert_exit,
-  write_account, write_account_profile_json,
+  write_account, write_account_profile_json, write_account_with_token_uncached,
   FAR_FUTURE_MS,
 };
 use tempfile::TempDir;
@@ -540,3 +540,74 @@ fn it204_cols_bogus_names_host_and_role_in_error()
 }
 
 // ── it205: offset::2 count::3 windows result set (028 FT-02) ─────────────────
+
+// ── mre BUG-245/246: only_active pre-filter gates the HTTP fetch ──────────────
+
+/// # MRE: BUG-245 + BUG-246 — `only_active` retain fired after HTTP fetch
+///
+/// ## Root Cause
+/// `usage_routine()` placed `accounts.retain( |aq| aq.is_active )` after
+/// `fetch_all_quota`. With N saved accounts and `only_active::1`, all N accounts
+/// were HTTP-fetched before the row filter reduced output to 1 row.
+///
+/// ## Why Not Caught
+/// Output was correct (1 row shown) but N unnecessary HTTP round trips occurred —
+/// invisible to output-only assertions, and the live API offered no way to observe
+/// which accounts were actually fetched.
+///
+/// ## Fix Applied
+/// Pre-filter via `account::list()` (filesystem marker, no HTTP) in `usage_routine()`
+/// before the HTTP fetch. When `only_active::1`, only the active account is passed to
+/// `fetch_quota_for_list()`. BUG-246 (touch loop over all N accounts) is fixed by the
+/// same mechanism: `apply_touch` iterates the same pre-filtered slice.
+///
+/// ## Prevention
+/// Behavioral: the `CLAUDE_QUOTA_BASE_URL` seam records every request the binary
+/// makes. With 3 token-bearing accounts and `only_active::1`, the local server must
+/// see the active account's Bearer token ONLY — a regression to post-fetch filtering
+/// fetches all 3 tokens and fails the token-set assertion. (Supersedes the structural
+/// source-order grep formerly in `tests/usage/api_tests_a.rs`.)
+///
+/// ## Pitfall
+/// Fixture accounts must carry tokens but NO quota cache — a fresh cache (< 30s)
+/// hits the cache-first guard in `fetch.rs` and no HTTP occurs at all, making the
+/// token-set assertion vacuous. Hence `write_account_with_token_uncached`, not
+/// `write_account_with_token`.
+#[ doc = "bug_reproducer(BUG-245)" ]
+#[ doc = "bug_reproducer(BUG-246)" ]
+#[ test ]
+fn mre_bug245_only_active_gates_http_fetch_behavioral()
+{
+  let server = crate::quota_seam::QuotaSeamServer::start();
+  let dir    = TempDir::new().unwrap();
+  let home   = dir.path().to_str().unwrap();
+  write_account_with_token_uncached( dir.path(), "aaa@x.com", "tok-aaa", false );
+  write_account_with_token_uncached( dir.path(), "bbb@x.com", "tok-bbb", true );
+  write_account_with_token_uncached( dir.path(), "ccc@x.com", "tok-ccc", false );
+
+  let out = run_cs_with_env(
+    &[ ".usage", "only_active::1" ],
+    &[ ( "HOME", home ), ( claude_quota::BASE_URL_ENV, server.origin() ) ],
+  );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "bbb@x.com" ), "active row must render, got:\n{text}" );
+  assert!(
+    !text.contains( "aaa@x.com" ) && !text.contains( "ccc@x.com" ),
+    "only_active::1 must hide non-active rows, got:\n{text}",
+  );
+
+  let request_lines : Vec< String > = server.requests().iter().map( | r | r.line.clone() ).collect();
+  assert!(
+    request_lines.iter().any( | l | l.starts_with( "GET /api/oauth/usage" ) ),
+    "the active account's usage fetch must reach the seam server — zero usage requests \
+     would make the token-set assertion below vacuous, got: {request_lines:?}",
+  );
+  let tokens = server.bearer_tokens();
+  assert_eq!(
+    tokens, vec![ "tok-bbb".to_string() ],
+    "BUG-245/246: only the active account may be fetched with only_active::1 — \
+     any other token here means the pre-filter regressed to post-fetch filtering \
+     (requests: {request_lines:?})",
+  );
+}

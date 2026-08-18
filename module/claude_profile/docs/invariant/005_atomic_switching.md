@@ -40,7 +40,7 @@ Account switching (FR-9) must use write-then-rename to prevent credential corrup
 
 | File | Relationship |
 |------|-------------|
-| `claude_profile_core/src/account.rs` | `switch_account()` — write-then-rename implementation (`src/account.rs` in this crate only re-exports it) |
+| `claude_profile_core/src/account/switch.rs` | `switch_account()` — write-then-rename implementation (`src/account.rs` in this crate only re-exports it) |
 
 ### Features
 

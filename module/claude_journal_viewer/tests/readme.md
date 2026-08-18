@@ -11,4 +11,4 @@
 | Domain | File | Tests What |
 |--------|------|------------|
 | Library API (TC-001) | `lib_test.rs` | `register_commands()` is callable and leaves the registry unchanged |
-| `clj` binary (EC-1–EC-13) | `viewer_integration_test.rs` | `.list` table/JSON output and `type`/`since` validation, `.stats by::model` aggregation, `.search pattern::` filtering, `.prune dry_run::1`, `.status` health report, `.export format::json`, parse-time type validation, `NO_COLOR=1` ANSI suppression, `.serve` HTTP GET `/`, `.tail` blocking behavior |
+| `clj` binary (EC-1–EC-20) | `viewer_integration_test.rs` | `.list` table/JSON output and `type`/`since` validation, `.stats by::model` aggregation, `.search pattern::` filtering, `.prune dry_run::1` and filename-date prune semantics (old dated file deleted; non-date `.jsonl` and today's file survive), `.status` health report, `.export format::json`, parse-time type validation, `NO_COLOR=1` ANSI suppression, `.serve` HTTP GET `/`, `.tail` blocking behavior, `.chart` rendering |

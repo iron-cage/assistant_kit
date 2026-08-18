@@ -82,7 +82,7 @@ if let Some( ref sm ) = set_model_str
 | `src/commands/account_ops.rs` | `set_model_str` parsing, post-match `set_session_model()` call, timestamped diagnostic line emission |
 | `src/usage/api.rs` | `.usage` session-model override block — `set_model` branch vs `apply_model_override` branch |
 | `src/usage/types.rs` | `validate_set_model()` — calls `map_model_shorthand()` inner function and formats error with `set_model::` prefix; four-value mapping |
-| `claude_profile_core/src/account.rs` | `set_session_model()` — read-merge-write on `~/.claude/settings.json` |
+| `claude_profile_core/src/account/session_settings.rs` | `set_session_model()` — read-merge-write on `~/.claude/settings.json` |
 | `src/lib.rs` | `set_model::` parameter registration on `.account.use` and `.usage` |
 
 ### Schema

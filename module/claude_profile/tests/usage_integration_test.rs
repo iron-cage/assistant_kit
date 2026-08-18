@@ -27,6 +27,7 @@
 //! | `sort_tests` | sort_indices, status_group_of, StatusGroup |
 //! | `stalest_tests` | select_stalest, reduction_applies, stale skip gate (TSK-499) |
 //! | `subprocess_tests` | resolve_model, resolve_effort, effort_pre_args |
+//! | `quota_seam` | shared loopback recorder server for `CLAUDE_QUOTA_BASE_URL` seam tests (support, no tests) |
 
 #[ path = "usage/api_tests_a.rs" ]
 mod api_tests_a;
@@ -90,3 +91,6 @@ mod stalest_tests;
 
 #[ path = "usage/subprocess_tests.rs" ]
 mod subprocess_tests;
+
+#[ path = "usage/quota_seam.rs" ]
+pub mod quota_seam;

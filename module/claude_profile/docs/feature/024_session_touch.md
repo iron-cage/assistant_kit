@@ -161,7 +161,7 @@ render results as table
 |------|--------------|
 | `src/usage/touch.rs`, `src/usage/params.rs` | `touch::` param read; idle-account detection (`resets_at` absent); subprocess call; re-fetch |
 | `src/registry.rs` | `touch::` parameter registration via `register_commands()` |
-| `claude_profile_core/src/account.rs` | `refresh_account_token()` — reused for touch |
+| `claude_profile_core/src/account/refresh.rs` | `refresh_account_token()` — reused for touch |
 
 ### Subprocess Docs
 

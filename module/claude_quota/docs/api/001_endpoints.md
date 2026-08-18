@@ -9,7 +9,7 @@
 
 ### Abstract
 
-`claude_quota` is a dependency-light HTTP client for five Anthropic API endpoints. Every endpoint follows the same split: a pure `parse_*` function over a response body (offline-testable, no I/O) and a `fetch_*` function that performs the HTTP call and delegates to the parser. Network functions are gated behind the `enabled` feature and share one hardened agent configuration: `https_only`, a 30s global timeout, and per-phase connect/response/body timeouts — no request can hang indefinitely regardless of which phase stalls (guarded structurally by `tests/bug172_guard_test.rs`: no bare `ureq::*` calls may bypass the configured agent). Endpoint URLs are `pub const` and not overridable — tests exercising fetch paths use the real API (live-token test lane), not a fake server.
+`claude_quota` is a dependency-light HTTP client for five Anthropic API endpoints. Every endpoint follows the same split: a pure `parse_*` function over a response body (offline-testable, no I/O) and a `fetch_*` function that performs the HTTP call and delegates to the parser. Network functions are gated behind the `enabled` feature and share one hardened agent configuration: `https_only`, a 30s global timeout, and per-phase connect/response/body timeouts — no request can hang indefinitely regardless of which phase stalls (guarded structurally by `tests/bug172_guard_test.rs`: no bare `ureq::*` calls may bypass the configured agent). Endpoint URLs are `pub const`, with one test seam: the `CLAUDE_QUOTA_BASE_URL` env var (name exported as `BASE_URL_ENV`) swaps the origin while preserving each endpoint's path, letting tests target a real local HTTP server. `https_only` is relaxed solely when that override points at plaintext loopback (`127.*`/`localhost`); any other plaintext origin stays rejected. Unset, every fetch targets the live API unchanged (live-token test lane).
 
 ### Clusters
 
@@ -19,7 +19,7 @@
 
 #### Rate limits (`/v1/messages` headers)
 
-`API_URL`, `ANTHROPIC_BETA`, `ANTHROPIC_VERSION`, `RateLimitData` (5h/7d utilization fractions 0.0–1.0, Unix reset timestamps, `status` string `allowed`/`allowed_warning`/`rejected`), `parse_headers` (generic over a header-lookup closure — testable without HTTP), `fetch_rate_limits`.
+`API_URL`, `ANTHROPIC_BETA`, `ANTHROPIC_VERSION`, `BASE_URL_ENV`, `RateLimitData` (5h/7d utilization fractions 0.0–1.0, Unix reset timestamps, `status` string `allowed`/`allowed_warning`/`rejected`), `parse_headers` (generic over a header-lookup closure — testable without HTTP), `fetch_rate_limits`.
 
 #### OAuth usage (`/api/oauth/usage`)
 
@@ -55,3 +55,4 @@ All `fetch_*` functions return `Result<_, QuotaError>`; all `parse_*` functions 
 | `../../tests/oauth_usage_test.rs` | `parse_oauth_usage`, `iso_to_unix_secs`, `OauthUsageData`, `PeriodUsage` |
 | `../../tests/oauth_account_test.rs` | `parse_oauth_account` membership selection and scanner hardening |
 | `../../tests/bug172_guard_test.rs` | Structural guard: no bare `ureq` calls bypassing the timeout-configured agent |
+| `../../tests/base_url_seam_test.rs` | `BASE_URL_ENV` seam: path grafting, loopback `https_only` carve-out, non-loopback plaintext rejection |

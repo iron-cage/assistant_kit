@@ -1,42 +1,39 @@
 # CLI Type: RetentionSpec
 
-Retention specification for `.prune` — either an age-based duration
-or a size-based limit. Determines which journal files to delete.
+Retention specification for `.prune` — an age-based duration, floored
+to whole days. Determines which journal files to delete. (A size-based
+mode was considered and dropped — no consumer needs it; use `.status`
+to monitor journal size.)
 
 - **Kind:** Semantic
 - **Fundamental:** String
-- **Key Constraint:** Duration suffix (age) or byte suffix (size)
+- **Key Constraint:** Duration syntax, interpreted as whole days
 
 ### Format
 
-**Age-based** — same syntax as Duration type:
+Same syntax as the [Duration](01_duration.md) type (`<number><s|m|h|d|w>`),
+then floored to whole days — journal files rotate daily, so day granularity
+is the natural unit:
 
 | Example | Meaning |
 |---------|---------|
-| `7d` | Delete files older than 7 days |
-| `4w` | Delete files older than 4 weeks |
-| `3M` | Delete files older than 3 months |
-| `24h` | Delete files older than 24 hours |
-
-**Size-based** — numeric value + byte suffix:
-
-| Suffix | Unit | Example |
-|--------|------|---------|
-| `kb` | Kilobytes | `500kb` |
-| `mb` | Megabytes | `100mb` |
-| `gb` | Gigabytes | `1gb` |
+| `7d` | Delete files dated more than 7 days ago |
+| `4w` | Delete files dated more than 28 days ago |
+| `30d` | The default when `keep::` is omitted |
+| `12h` | Floors to 0 days — keep only today's file |
 
 ### Validation
 
-- Must match either Duration format or size format
-- Size suffixes are case-insensitive (`MB` = `mb`)
+- Must match Duration format (`s`, `m`, `h`, `d`, `w` suffixes)
 - Invalid format causes exit 1 with:
-  `Error: invalid retention spec '<input>' — expected duration (7d, 4w) or size (100mb, 1gb)`
+  `Error: invalid duration '<input>' (expected e.g. 30s, 5m, 1h, 7d, 2w)`
 
 ### Behavior
 
-- **Age-based**: Files with `YYYY-MM-DD` in filename older than threshold are candidates
-- **Size-based**: Sum all file sizes; delete oldest files until total is under threshold
+- Candidates are exactly the files named `YYYY-MM-DD.jsonl` whose filename
+  date is strictly before `today - keep_days` (UTC) — filesystem mtime is
+  never consulted, and non-matching filenames are ignored entirely
+- Today's file is structurally never deleted, even at a 0-day window
 
 ### Referenced Parameters
 

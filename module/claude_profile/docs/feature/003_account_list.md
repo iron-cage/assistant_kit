@@ -118,7 +118,7 @@ When all default-on columns are removed via `cols::`, only bare account name lin
 
 | File | Relationship |
 |------|--------------|
-| `src/account.rs` | `list()` — enumerates credential store, reads per-machine active marker |
+| `src/account/store.rs` | `list()` — enumerates credential store, reads per-machine active marker |
 | `src/commands/accounts.rs` | `accounts_routine()` — CLI handler |
 
 ### Tests

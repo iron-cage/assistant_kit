@@ -12,4 +12,4 @@
 |---|------|----------------|
 | 001 | `001_event_journaling.md` | Core append-only event logging to daily JSONL files |
 | 002 | `002_event_schema.md` | Extensible type-discriminated event structure with version field |
-| 003 | `003_rotation.md` | Daily file rotation, age-based and size-based retention pruning |
+| 003 | `003_rotation.md` | Daily file rotation, age-based retention pruning |

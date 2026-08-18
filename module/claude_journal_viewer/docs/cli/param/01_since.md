@@ -1,7 +1,7 @@
 # CLI Parameter: since
 
 Time window start — show events newer than this duration ago.
-Parsed as a human-friendly duration string (e.g., `1h`, `7d`, `30m`, `4w`, `3M`).
+Parsed as a human-friendly duration string (e.g., `1h`, `7d`, `30m`, `4w`).
 
 - **Type:** [`Duration`](../type/01_duration.md)
 - **Default:** -- (no time lower bound)

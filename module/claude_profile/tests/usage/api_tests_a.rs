@@ -55,40 +55,59 @@ fn test_pre_switch_touch_ctx_model_effort_absent_on_fetch_failure()
   );
 }
 
-/// T06 (touch-skip half)/AC-06: `pre_switch_touch_ctx()` checks `backend == Redirect` and
-/// returns early — before the `{name}.credentials.json` read and before `fetch_oauth_usage(`
-/// can be reached — so a redirect account's touch pre-fetch is a true no-op. A black-box
-/// behavioral test cannot distinguish "bypassed" from "attempted and failed" in this sandboxed
-/// environment (no real network — both return `Unavailable`), so this structural check is the
-/// actual proof; the behavioral test below is a regression guard on the observable half only.
+/// T06 (touch-skip half)/AC-06: `pre_switch_touch_ctx()` against a redirect-backend account
+/// performs no quota fetch at all — proven behaviorally through the `CLAUDE_QUOTA_BASE_URL`
+/// seam. A control account first demonstrates that the fetch path really reaches the local
+/// server; the redirect account then produces zero further requests, so "bypassed" is
+/// observably distinct from "attempted and failed" (the ambiguity that previously forced a
+/// structural source-order check here — no real network meant both looked like `Unavailable`).
 #[ test ]
-fn ft20_071_pre_switch_touch_ctx_redirect_bypass_checked_before_fetch_structural()
+fn ft20_071_pre_switch_touch_ctx_redirect_bypass_no_fetch_behavioral()
 {
-  let api_switch_rs = std::path::Path::new( env!( "CARGO_MANIFEST_DIR" ) ).join( "src/usage/api_switch.rs" );
-  let content = std::fs::read_to_string( &api_switch_rs )
-    .unwrap_or_else( |e| panic!( "cannot read {}: {e}", api_switch_rs.display() ) );
+  let server = crate::quota_seam::QuotaSeamServer::start();
+  let store  = TempDir::new().unwrap();
 
-  let fn_start = content.find( "pub fn pre_switch_touch_ctx(" )
-    .expect( "pre_switch_touch_ctx must exist in api_switch.rs" );
-  let fn_body = &content[ fn_start.. ];
+  // Control: Anthropic-backend account with a token — the fetch path must hit the server.
+  std::fs::write(
+    store.path().join( "control@example.com.credentials.json" ),
+    r#"{"accessToken":"tok-seam-control","expiresAt":9999999999000}"#,
+  ).unwrap();
 
-  let bypass_pos = fn_body.find( "AccountBackend::Redirect" )
-    .expect( "AC-06: pre_switch_touch_ctx must check AccountBackend::Redirect" );
-  let creds_read_pos = fn_body.find( "credentials.json" )
-    .expect( "the {name}.credentials.json read must still be reachable in pre_switch_touch_ctx" );
-  let fetch_pos = fn_body.find( "fetch_oauth_usage(" )
-    .expect( "fetch_oauth_usage must still be reachable in pre_switch_touch_ctx" );
+  // Redirect account with a valid foreign token — must never fetch.
+  std::fs::write(
+    store.path().join( "kimi@moonshot.ai.credentials.json" ),
+    r#"{"accessToken":"sk-foreign-key-abc123"}"#,
+  ).unwrap();
+  std::fs::write(
+    store.path().join( "kimi@moonshot.ai.json" ),
+    r#"{"backend":"redirect","base_url":"https://api.moonshot.ai/anthropic","redirect_model":"kimi-k3"}"#,
+  ).unwrap();
 
-  assert!(
-    bypass_pos < creds_read_pos,
-    "AC-06: the redirect-backend check must appear before the {{name}}.credentials.json read \
-     (bypass_pos={bypass_pos}, creds_read_pos={creds_read_pos})",
-  );
-  assert!(
-    bypass_pos < fetch_pos,
-    "AC-06: the redirect-backend check must appear before fetch_oauth_usage( \
-     (bypass_pos={bypass_pos}, fetch_pos={fetch_pos})",
-  );
+  crate::quota_seam::with_seam_env( server.origin(), ||
+  {
+    let control = pre_switch_touch_ctx( "control@example.com", store.path(), true, "auto", "auto" );
+    let after_control = server.requests().len();
+    assert!(
+      after_control >= 1,
+      "control account must reach the seam server — 0 requests means the seam observes nothing \
+       and the redirect assertion below would be vacuous (control outcome: {control:?})",
+    );
+
+    let result = pre_switch_touch_ctx( "kimi@moonshot.ai", store.path(), true, "auto", "auto" );
+    assert!(
+      matches!( result, PreSwitchOutcome::Unavailable ),
+      "AC-06: redirect account must return Unavailable, got {result:?}",
+    );
+    assert_eq!(
+      server.requests().len(), after_control,
+      "AC-06: the redirect bypass must not produce any HTTP request, got: {:?}",
+      server.requests().iter().map( | r | r.line.clone() ).collect::< Vec< _ > >(),
+    );
+    assert!(
+      !server.bearer_tokens().iter().any( | t | t == "sk-foreign-key-abc123" ),
+      "the redirect account's token must never be sent to the quota API",
+    );
+  } );
 }
 
 /// T06 (touch-skip half)/AC-06: `pre_switch_touch_ctx()` against a `backend: redirect` account
@@ -850,53 +869,9 @@ fn ft19_effort_synced_when_model_already_at_target()
   );
 }
 
-/// # MRE: BUG-245 + BUG-246 — `only_active` retain fires after HTTP fetch
-///
-/// ## Root Cause
-/// `usage_routine()` placed `accounts.retain( |aq| aq.is_active )` at ~line 490,
-/// after `fetch_all_quota` (~line 430). With N saved accounts and `only_active::1`,
-/// all N accounts were HTTP-fetched before the row filter reduced output to 1 row.
-///
-/// ## Why Not Caught
-/// No structural test enforced ordering of the pre-filter vs. the HTTP fetch call.
-/// Output was correct (1 row shown) but N unnecessary HTTP round trips occurred.
-///
-/// ## Fix Applied
-/// Pre-filter via `account::list()` (filesystem marker, no HTTP) in `usage_routine()`
-/// before the HTTP fetch. When `only_active::1`, only the active account is passed to
-/// `fetch_quota_for_list()` — exactly 1 HTTP call per invocation. BUG-246 (touch loop)
-/// is fixed simultaneously: `apply_touch` iterates the pre-filtered 1-entry slice.
-///
-/// ## Prevention
-/// This structural test: assert that `retain( |aq| aq.is_active )` appears in
-/// `usage_routine` source BEFORE `fetch_quota_for_list(` — maintains the ordering invariant.
-///
-/// ## Pitfall
-/// The pre-filter uses `Vec<Account>` (from `account::list()`), not `Vec<AccountQuota>`.
-/// Both types have `is_active: bool` — the retain closure `|aq| aq.is_active` works on either.
-#[ doc = "bug_reproducer(BUG-245)" ]
-#[ doc = "bug_reproducer(BUG-246)" ]
-#[ test ]
-fn mre_bug245_only_active_retain_fires_before_http_fetch()
-{
-  let src      = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/usage/api.rs" ) );
-  let fn_start = src.find( "pub fn usage_routine" ).expect( "usage_routine not found" );
-  let body_end = {
-    let after = &src[ fn_start + 1.. ];
-    let a     = after.find( "\npub fn " ).unwrap_or( after.len() );
-    let b     = after.find( "\n#[ cfg( t" ).unwrap_or( after.len() );
-    let c     = after.find( "\n#[cfg(t" ).unwrap_or( after.len() );
-    fn_start + 1 + a.min( b ).min( c )
-  };
-  let body       = &src[ fn_start..body_end ];
-  let retain_pos = body.find( "retain( |aq| aq.is_active )" )
-    .expect( "BUG-245: retain( |aq| aq.is_active ) must exist in usage_routine body" );
-  let fetch_pos  = body.find( "fetch_quota_for_list(" )
-    .expect( "BUG-245: fetch_quota_for_list call must exist in usage_routine body" );
-  assert!(
-    retain_pos < fetch_pos,
-    "BUG-245/246: retain must fire BEFORE fetch_quota_for_list — \
-    retain at ~{retain_pos}, fetch at ~{fetch_pos}",
-  );
-}
+// BUG-245/246 MRE moved to `tests/cli/usage_filter_test_b.rs`
+// (`mre_bug245_only_active_gates_http_fetch_behavioral`): the former structural
+// source-order grep of `usage_routine` is superseded by a behavioral proof via
+// the `CLAUDE_QUOTA_BASE_URL` seam — the local server observes exactly which
+// accounts get fetched, which is the invariant the grep only approximated.
 

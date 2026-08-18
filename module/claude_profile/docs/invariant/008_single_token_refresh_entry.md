@@ -23,9 +23,9 @@ Bypassing `refresh_account_token()` loses both behaviors: RT silently ages (no r
 
 ### Enforcement Mechanism
 
-- Automated test: grep-based invariant test scans all non-test `.rs` files in `claude_profile/src/` for `run_isolated(` call sites; asserts zero matches. `refresh_account_token()` in `claude_profile_core/src/account.rs` is the sole authorized caller.
+- Automated test: grep-based invariant test scans all non-test `.rs` files in `claude_profile/src/` for `run_isolated(` call sites; asserts zero matches. `refresh_account_token()` in `claude_profile_core/src/account/refresh.rs` is the sole authorized caller.
 - Doc comment warnings: `run_isolated()` function doc in `claude_runner_core/src/isolated.rs` and the `pub use` re-export in `claude_runner_core/src/lib.rs` carry warnings directing callers to `refresh_account_token()`.
-- Code review: immediate rejection of any direct `run_isolated()` call outside `account.rs`.
+- Code review: immediate rejection of any direct `run_isolated()` call outside `refresh.rs`.
 
 ### Violation Consequences
 
@@ -37,7 +37,7 @@ Bypassing `refresh_account_token()` loses both behaviors: RT silently ages (no r
 
 | File | Relationship |
 |------|-------------|
-| `claude_profile_core/src/account.rs` | `refresh_account_token()` — sole authorized `run_isolated()` caller |
+| `claude_profile_core/src/account/refresh.rs` | `refresh_account_token()` — sole authorized `run_isolated()` caller |
 | `claude_runner_core/src/isolated.rs` | `run_isolated()` — doc comment warning directing to `refresh_account_token()` |
 
 ### Features
@@ -58,4 +58,4 @@ Bypassing `refresh_account_token()` loses both behaviors: RT silently ages (no r
 
 | File | Relationship |
 |------|-------------|
-| (invariant grep test) | Automated test enforcing zero `run_isolated()` calls outside `account.rs` |
+| (invariant grep test) | Automated test enforcing zero `run_isolated()` calls outside `refresh.rs` |

@@ -1,26 +1,26 @@
 # CLI Parameter: keep
 
-Retention specification for the `.prune` command. Accepts either
-an age duration (`30d`, `4w`, `3M`) or a size limit (`100mb`, `1gb`).
-When age-based, files older than the duration are deleted. When
-size-based, oldest files are deleted until total size is under the limit.
+Retention threshold for the `.prune` command. An age duration
+(`30d`, `4w`), floored to whole days — files whose `YYYY-MM-DD.jsonl`
+filename date is older than the window are deleted. Today's file is
+never deleted, so a sub-day duration means "keep only today".
 
 - **Type:** [`RetentionSpec`](../type/11_retention_spec.md)
-- **Default:** -- (none)
-- **Required:** Yes (for `.prune`)
+- **Default:** `30d`
+- **Required:** No
 
 ```bash
-clj .prune keep::30d                  # Delete files older than 30 days
-clj .prune keep::100mb               # Delete oldest until under 100MB
+clj .prune keep::30d                 # Delete files older than 30 days
+clj .prune                           # Same — 30d is the default
 clj .prune keep::4w dry_run::1       # Preview what would be pruned
-clj .prune keep::1gb confirm::1      # Delete without confirmation
+clj .prune keep::12h                 # Floors to 0 days: keep only today
 ```
 
 ### Referenced Type
 
 | Type | Kind | Fundamental | Key Constraint |
 |------|------|-------------|----------------|
-| [`RetentionSpec`](../type/11_retention_spec.md) | Semantic | String | Age (duration) or size (bytes with suffix) |
+| [`RetentionSpec`](../type/11_retention_spec.md) | Semantic | String | Duration, floored to whole days |
 
 ### Referenced Parameter Groups
 
@@ -32,7 +32,7 @@ clj .prune keep::1gb confirm::1      # Delete without confirmation
 
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
-| 6 | [`.prune`](../command/06_prune.md) | -- | Required parameter |
+| 6 | [`.prune`](../command/06_prune.md) | `30d` | Optional — defaults to 30 days |
 
 ### Referenced User Stories
 

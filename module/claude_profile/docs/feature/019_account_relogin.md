@@ -76,7 +76,7 @@ When `refresh::1` silently fails (`run_isolated` returns `credentials=None`), th
 | File | Relationship |
 |------|--------------|
 | `src/commands/account_relogin.rs` | `account_relogin_routine()` — CLI handler; 6-step TTY spawn and credential capture |
-| `src/account.rs` | `switch_account()`, `save()` — credential rotation and store write-back |
+| `src/account/` | `switch_account()`, `save()` — credential rotation and store write-back |
 
 ### Tests
 

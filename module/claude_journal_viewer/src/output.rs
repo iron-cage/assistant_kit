@@ -5,6 +5,7 @@
 //! the `clj` binary (`cli_main.rs`) and the unilang assistant routines
 //! (`routines.rs`).
 
+use claude_journal::rotation::{ prune_by_age, today_ymd, PruneAction };
 use claude_journal::{ EventRecord, EventType, JournalFilter, JournalReader };
 use core::{ fmt::Write as _, time::Duration };
 use std::{ collections::HashMap, path::PathBuf, time::SystemTime };
@@ -333,6 +334,12 @@ pub fn status_output( dir : PathBuf ) -> String
 ///
 /// This function has filesystem side effects when `dry_run` is `false`.
 ///
+/// Delegates to `claude_journal::rotation::prune_by_age`: age comes from the
+/// `YYYY-MM-DD.jsonl` filename date (never filesystem mtime), only
+/// pattern-matching files are candidates, and today's file is never deleted.
+/// A sub-day `keep::` duration (e.g. `1h`) floors to 0 days — for daily-rotated
+/// files that means "keep only today's file".
+///
 /// # Errors
 ///
 /// Returns `Err` when `keep::` or `dry_run::` params are invalid.
@@ -350,31 +357,24 @@ pub fn prune_output< S : ::core::hash::BuildHasher >( params : &HashMap< String,
       format!( "invalid dry_run '{other}' (valid: 0, 1, true, false)" )
     ),
   };
-  let cutoff  = SystemTime::now().checked_sub( keep_dur ).unwrap_or( SystemTime::UNIX_EPOCH );
-  let Ok( entries ) = std::fs::read_dir( &dir ) else
+  if !dir.is_dir()
   {
     return Ok( format!( "Journal dir {} not found or empty.", dir.display() ) );
-  };
+  }
+  let keep_days = u32::try_from( keep_dur.as_secs() / 86_400 ).unwrap_or( u32::MAX );
+  let report    = prune_by_age( &dir, keep_days, today_ymd(), dry_run );
   let mut lines = Vec::new();
   let mut count = 0_u32;
-  for entry in entries.flatten()
+  for ( path, action ) in report
   {
-    let path = entry.path();
-    if path.extension().and_then( | e | e.to_str() ) != Some( "jsonl" ) { continue; }
-    let mtime = entry.metadata().and_then( | m | m.modified() ).unwrap_or( SystemTime::UNIX_EPOCH );
-    if mtime >= cutoff { continue; }
-    if dry_run { lines.push( format!( "Would delete: {}", path.display() ) ); }
-    else
+    match action
     {
-      match std::fs::remove_file( &path )
-      {
-        Ok( () ) => lines.push( format!( "Deleted: {}", path.display() ) ),
-        Err( e ) => lines.push( format!( "Warning: could not delete {}: {e}", path.display() ) ),
-      }
+      PruneAction::Deleted     => { lines.push( format!( "Deleted: {}", path.display() ) ); count += 1; }
+      PruneAction::WouldDelete => { lines.push( format!( "Would delete: {}", path.display() ) ); count += 1; }
+      PruneAction::Failed( e ) => lines.push( format!( "Warning: could not delete {}: {e}", path.display() ) ),
     }
-    count += 1;
   }
-  if count == 0 { return Ok( "Nothing to prune (all files within keep window).".to_owned() ); }
+  if lines.is_empty() { return Ok( "Nothing to prune (all files within keep window).".to_owned() ); }
   let mut out = lines.join( "\n" );
   out.push( '\n' );
   out.push( '\n' );

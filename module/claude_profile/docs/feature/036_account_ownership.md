@@ -222,7 +222,7 @@ Note: `rotate::1 solo::1` is rejected at parse time by `parse_usage_params()` (`
 | `src/usage/touch.rs` | G4: `apply_touch()` — non-owned skip with trace |
 | `src/commands/account_ops.rs` | G5/G6: `account_use_routine()` / `account_delete_routine()` — ownership guard before mutation; `account_save_routine()` — ownership-neutral (passes `owner: None`) |
 | `src/commands/accounts.rs` | G8: `accounts_routine()` `owner::0` path — ownership guard before `write_owner(name, store, "")`; `owner::USER@MACHINE` path — ownership guard before `write_owner(name, store, identity)`; `assignee::` path — marker-only write; does NOT call `write_owner()` |
-| `claude_profile_core/src/account.rs` | `save()` with `owner: Option<&str>` — writes when `Some`, preserves when `None`; `current_identity()`; `read_owner()`; `is_owned()`; `write_owner()` — used by `account_unclaim_routine()` for direct owner writes |
+| `claude_profile_core/src/account/` | `save()` with `owner: Option<&str>` — writes when `Some`, preserves when `None`; `current_identity()`; `read_owner()`; `is_owned()`; `write_owner()` — used by `account_unclaim_routine()` for direct owner writes |
 | `src/commands/account_relogin.rs` | G7: `account_relogin_routine()` — ownership guard before 6-step procedure |
 | `src/usage/types.rs` | `AccountQuota.is_owned: bool` field |
 

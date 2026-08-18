@@ -130,7 +130,7 @@ This prevents quadratic divergence (a2 > 0 shooting to infinity).
 |------|-------------|
 | `src/usage/approx.rs` | Approximation algorithm — polynomial fit, reset filtering, clamping, tangent-line continuation |
 | `src/usage/fetch.rs` | History append on success; approximation call on cache-fallback path |
-| `claude_profile_core/src/account.rs` | Storage layer — `write_history_entry()`, `read_history()`, ring buffer management |
+| `claude_profile_core/src/account/history.rs` | Storage layer — `write_history_entry()`, `read_history()`, ring buffer management |
 
 ### Algorithm / State Machine Docs
 

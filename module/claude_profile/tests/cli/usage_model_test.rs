@@ -337,7 +337,7 @@ fn it133_refresh_account_token_has_label_param_structural()
 {
   let src = include_str!( concat!(
     env!( "CARGO_MANIFEST_DIR" ),
-    "/../claude_profile_core/src/account.rs"
+    "/../claude_profile_core/src/account/refresh.rs"
   ) );
   assert!(
     !src.contains( "[trace] refresh  {name}  switch_account: OK" ),
@@ -393,7 +393,7 @@ fn it136_refresh_account_token_has_instant_timing_structural()
 {
   let src = include_str!( concat!(
     env!( "CARGO_MANIFEST_DIR" ),
-    "/../claude_profile_core/src/account.rs"
+    "/../claude_profile_core/src/account/refresh.rs"
   ) );
   assert!(
     src.contains( "Instant::now()" ),

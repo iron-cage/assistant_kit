@@ -95,7 +95,7 @@ This label is NOT a separate field param — it is the formatted output of the e
 | `module/claude_core/src/paths.rs` | `claude_json_file()` — path to `~/.claude.json` (FR-19) |
 | `src/commands/credentials.rs`, `src/commands/accounts.rs` | `read_live_cred_meta()` — reads new fields; `credentials_status_routine()` — wires params; `accounts_routine()` — renders saved metadata |
 | `src/registry.rs` | Registration of `display_name::`, `role::`, `billing::`, `model::` params |
-| `claude_profile_core/src/account.rs` | `Account` struct with new fields; `save()` snapshots metadata files; `list()` reads snapshots |
+| `claude_profile_core/src/account/` | `Account` struct with new fields; `save()` snapshots metadata files; `list()` reads snapshots |
 
 ### Tests
 

@@ -20,7 +20,7 @@ Eight CLI commands for exploring journal data using unilang `.command param::val
 | 3 | `.stats` | Aggregate statistics: cost/day, success rate, token usage, error distribution |
 | 4 | `.search` | Full-text regex search across event messages and optionally stdout |
 | 5 | `.serve` | Start embedded HTTP server for web-based viewing |
-| 6 | `.prune` | Delete old journal files by age or total size |
+| 6 | `.prune` | Delete journal files older than an age window (filename date) |
 | 7 | `.status` | Show journal health: file count, total size, date range, config |
 | 8 | `.export` | Export filtered events to file in table/json/csv/jsonl format |
 
@@ -36,7 +36,7 @@ The `clj` binary operates standalone and also registers its commands into the `a
 - AC-004: `.tail` blocks and emits new events as they are appended to the journal
 - AC-005: `.stats` without params shows daily aggregates for the last 7 days
 - AC-006: `.search pattern::"rate limit"` searches event messages using regex
-- AC-007: `.prune keep::30d` deletes journal files older than 30 days with confirmation prompt
+- AC-007: `.prune keep::30d` deletes journal files whose `YYYY-MM-DD.jsonl` filename date is older than 30 days (today's file never deleted; `dry_run::1` previews; no confirmation prompt)
 - AC-008: `.status` reports file count, total bytes, oldest/newest dates, and configured journal dir
 - AC-009: `.export format::csv since::7d output::/tmp/events.csv` writes filtered events to file
 - AC-010: Standalone `clj` binary and `ast .journal.*` super-app routing both work

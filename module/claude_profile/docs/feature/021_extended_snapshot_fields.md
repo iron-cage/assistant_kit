@@ -59,7 +59,7 @@ The `{name}.json` snapshot (a copy of `~/.claude.json` taken at `save()` time) c
 
 | File | Relationship |
 |------|--------------|
-| `claude_profile_core/src/account.rs` | `Account` struct new fields; `list()` reads them; `parse_string_array_field` helper |
+| `claude_profile_core/src/account/` | `Account` struct new fields; `list()` reads them; `parse_string_array_field` helper |
 | `src/commands/accounts.rs`, `src/commands/credentials.rs` | `read_live_cred_meta()` — reads new fields from live `~/.claude.json`; `accounts_routine()`, `credentials_status_routine()` — render params |
 | `src/registry.rs` | Registration of `uuid::` and `capabilities::` params |
 

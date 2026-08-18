@@ -30,7 +30,6 @@ All parameters use unilang `param::value` syntax.
 | `17_open.md` | Auto-open browser toggle |
 | `18_keep.md` | Retention spec for pruning |
 | `19_dry_run.md` | Dry run toggle for prune |
-| `20_confirm.md` | Skip confirmation prompt |
 | `21_journal_dir.md` | Journal directory override |
 | `22_verbosity.md` | Output detail level |
 | `23_output.md` | Export output file path |
@@ -40,7 +39,7 @@ All parameters use unilang `param::value` syntax.
 | `27_refresh.md` | Auto-refresh interval |
 | `28_include_stdout.md` | Search in stdout content |
 
-### All Parameters (28 total)
+### All Parameters (27 total)
 
 | # | Parameter | Type | Default | Commands |
 |---|-----------|------|---------|----------|
@@ -63,7 +62,6 @@ All parameters use unilang `param::value` syntax.
 | 17 | [`open`](17_open.md) | [Boolean](../type/08_boolean.md) | 0 | .serve |
 | 18 | [`keep`](18_keep.md) | [RetentionSpec](../type/11_retention_spec.md) | -- | .prune |
 | 19 | [`dry_run`](19_dry_run.md) | [Boolean](../type/08_boolean.md) | 0 | .prune |
-| 20 | [`confirm`](20_confirm.md) | [Boolean](../type/08_boolean.md) | 0 | .prune |
 | 21 | [`journal_dir`](21_journal_dir.md) | [Path](../type/05_path.md) | ~/.clr/journal/ | .list, .tail, .search, .stats, .status |
 | 22 | [`verbosity`](22_verbosity.md) | [Integer](../type/04_integer.md) | 1 | .stats, .status |
 | 23 | [`output`](23_output.md) | [Path](../type/05_path.md) | -- | .export |
@@ -73,4 +71,4 @@ All parameters use unilang `param::value` syntax.
 | 27 | [`refresh`](27_refresh.md) | [Integer](../type/04_integer.md) | 10 | .serve |
 | 28 | [`include_stdout`](28_include_stdout.md) | [Boolean](../type/08_boolean.md) | 0 | .search |
 
-**Total:** 28 parameters
+**Total:** 27 parameters (numbering keeps historical gaps — `20` was `confirm`, dropped: `.prune` deletes without prompting; `dry_run` is the preview mechanism)

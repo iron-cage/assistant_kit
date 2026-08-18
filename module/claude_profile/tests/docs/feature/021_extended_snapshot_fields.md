@@ -130,7 +130,7 @@ Feature behavioral requirement test cases for `docs/feature/021_extended_snapsho
 - **When:** `parse_string_array_field(json, "capabilities")`
 - **Then:** Returns `vec!["claude_max", "chat"]` (two elements, values match exactly). Also: missing key returns empty `Vec`; empty array `[]` returns empty `Vec`.
 - **Exit:** n/a (unit test — function return assertion)
-- **Source fn:** `ft08_parse_string_array_field_two_elements` + `ft08_parse_string_array_field_missing_key_returns_empty` + `ft08_parse_string_array_field_empty_array_returns_empty` (in `claude_profile_core/src/account.rs` `#[cfg(test)]` block)
+- **Source fn:** `ft08_parse_string_array_field_two_elements` + `ft08_parse_string_array_field_missing_key_returns_empty` + `ft08_parse_string_array_field_empty_array_returns_empty` (in `claude_profile_core/tests/account_backend_test.rs`)
 - **Source:** [021_extended_snapshot_fields.md AC-08](../../../docs/feature/021_extended_snapshot_fields.md)
 
 ---

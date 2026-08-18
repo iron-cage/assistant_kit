@@ -30,7 +30,7 @@ pub fn validate_redirect_name( name : &str ) -> Result< (), std::io::Error >  //
 
 **Methods:**
 - No accessor methods exist — a validated name is used directly as `&str`/`String`.
-- No `to_credential_path()` helper exists; every call site inlines `credential_store.join(format!("{name}.credentials.json"))` (e.g. `claude_profile_core/src/account.rs`).
+- No `to_credential_path()` helper exists; every call site inlines `credential_store.join(format!("{name}.credentials.json"))` (e.g. `claude_profile_core/src/account/store.rs`).
 
 **Notes:**
 - `AccountName` is the post-resolution type — it always holds a validated email.

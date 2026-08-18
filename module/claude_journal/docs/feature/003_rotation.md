@@ -1,32 +1,34 @@
 # Rotation
 
-**Status**: Planned | **Since**: 1.3.0
+**Status**: Implemented | **Since**: 1.3.0
 
 ### Scope
 
 - **Purpose**: Provide daily file rotation and retention pruning for journal storage.
-- **Responsibility**: Documents the age-based and size-based pruning strategies and the filename-driven file listing they rely on.
-- **In Scope**: Explicit `.prune`-triggered pruning, filename-date ordering, and non-matching-filename handling.
-- **Out of Scope**: Journal file creation/writing (→ `docs/feature/001_event_journaling.md`), the CLI `.prune` command surface (→ `claude_journal_viewer` `docs/feature/001_cli_viewing.md`).
+- **Responsibility**: Documents the age-based pruning strategy and the filename-driven file listing it relies on.
+- **In Scope**: Age-based pruning, filename-date ordering, dry-run reporting, and non-matching-filename handling.
+- **Out of Scope**: Journal file creation/writing (→ `docs/feature/001_event_journaling.md`), the CLI `.prune` command surface (→ `claude_journal_viewer` `docs/feature/001_cli_viewing.md`), the runner's once-daily auto-prune policy — stamp cadence and `CLR_JOURNAL_KEEP` (→ `claude_runner` `docs/feature/002_journaling_integration.md`).
 
 ## Description
 
-Daily file rotation and retention pruning for journal storage. Journal files are named by UTC date (`YYYY-MM-DD.jsonl`) — one file per day, created on first write. Two pruning strategies are supported: age-based (delete files older than N days) and size-based (delete oldest files until total size is under a threshold).
+Daily file rotation and retention pruning for journal storage. Journal files are named by UTC date (`YYYY-MM-DD.jsonl`) — one file per day, created on first write. Retention is age-based: delete files whose filename date falls strictly before `today - keep_days`. (A size-based strategy was considered and dropped — no consumer needs it.)
 
-Pruning is invoked explicitly via `clj .prune` — there is no automatic background pruning. The `JournalWriter` never deletes files; it only appends. The `rotation` module provides pruning functions consumed by the viewer's `.prune` command.
+Pruning is always explicitly invoked — the `JournalWriter` never deletes files; it only appends. Two consumers call the `rotation` module's pruning functions: the viewer's `clj .prune` command (on demand, with `dry_run` support) and the runner's once-daily auto-prune at journal resolution (policy documented in `claude_runner`).
 
-File listing uses the filename date for ordering and age calculation — no filesystem metadata dependency. Filenames that do not match the `YYYY-MM-DD.jsonl` pattern are ignored (not deleted, not listed).
+File listing and age calculation use the filename date exclusively — no filesystem metadata dependency, so copies and restores cannot change what gets pruned. Filenames that do not match the `YYYY-MM-DD.jsonl` pattern exactly (including calendar-invalid dates like `2026-02-30`) are ignored: not deleted, not listed.
 
 ## Acceptance Criteria
 
-- AC-001: `list_journal_files()` returns files sorted by date (oldest first), filtering to `YYYY-MM-DD.jsonl` pattern only
-- AC-002: `prune_by_age(dir, keep_days)` deletes all `.jsonl` files older than `keep_days` and returns the count deleted
-- AC-003: `prune_by_size(dir, max_bytes)` deletes oldest files first until total directory size is under `max_bytes`
-- AC-004: Both pruning functions skip non-matching filenames (non-JSONL, non-date-pattern)
-- AC-005: Pruning an empty or nonexistent directory returns `Ok(0)` (no error)
-- AC-006: Today's file is never deleted by age-based pruning (age = 0 days)
-- AC-007: Size-based pruning stops if only today's file remains, even if it exceeds `max_bytes`
+- AC-001: `list_journal_files()` returns files sorted by date (oldest first), filtering to the strict `YYYY-MM-DD.jsonl` pattern only
+- AC-002: `prune_by_age( dir, keep_days, today, dry_run )` deletes exactly the pattern-matching files dated strictly before `today - keep_days`, reporting one `( path, PruneAction )` entry per qualifying file
+- AC-003: With `dry_run`, qualifying files are reported as `WouldDelete` and nothing is touched
+- AC-004: Both functions skip non-matching filenames (non-JSONL, non-date-pattern, calendar-invalid)
+- AC-005: Listing or pruning an empty or nonexistent directory yields an empty result (no error)
+- AC-006: Today's file is never deleted — the cutoff is at most `today` and only strictly-older dates qualify, so even `keep_days = 0` spares it
+- AC-007: A per-file deletion failure is reported as `Failed` and the sweep continues (best-effort)
 
 ## Sources
 
-- `src/rotation.rs` — `list_journal_files()`, `prune_by_age()`, `prune_by_size()`
+- `src/rotation.rs` — `parse_date_filename()`, `list_journal_files()`, `prune_by_age()`, `PruneAction`
+- `docs/api/004_rotation.md` — interface contract
+- `tests/rotation_test.rs` — RT-1..RT-12 coverage of every AC

@@ -409,7 +409,7 @@ pub fn write_account_renewal_json( home : &std::path::Path, name : &str, renewal
 /// - `d7_util` : consumed 7d quota percent (0–100). Gate 6 requires `100 - d7_util > 3.0`.
 /// - `d7_resets_at` : optional ISO-8601 reset timestamp for the 7d period.
 ///
-/// The cache uses the `left_pct` field (actual stored name per `account.rs:period_json`)
+/// The cache uses the `left_pct` field (actual stored name per `quota_cache.rs:period_json`)
 /// which stores the consumed utilization percentage despite the name suggesting "left".
 ///
 /// # Panics
@@ -644,6 +644,34 @@ pub fn write_account_with_token(
     snap.seven_day.as_ref().map( |( u, r )| ( *u, r.as_deref() ) ),
     snap.seven_day_sonnet.as_ref().map( |( u, r )| ( *u, r.as_deref() ) ),
   );
+}
+
+/// Write a saved account credential file WITH `accessToken` and WITHOUT any quota cache.
+///
+/// Seam-test counterpart of [`write_account_with_token`]: that helper pre-seeds the
+/// quota cache from the LIVE API (live-token lane); this one leaves the cache empty
+/// so `fetch.rs` takes the HTTP path — required by `CLAUDE_QUOTA_BASE_URL` seam tests
+/// that assert which requests the pipeline actually makes against a local server.
+///
+/// # Panics
+///
+/// Panics if the directory or file cannot be created.
+#[ inline ]
+pub fn write_account_with_token_uncached(
+  home        : &std::path::Path,
+  name        : &str,
+  token       : &str,
+  make_active : bool,
+)
+{
+  let credential_store = home.join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &credential_store ).unwrap();
+  let dest = credential_store.join( format!( "{name}.credentials.json" ) );
+  std::fs::write( dest, credential_json_with_token( token ) ).unwrap();
+  if make_active
+  {
+    std::fs::write( credential_store.join( claude_profile::account::active_marker_filename() ), name ).unwrap();
+  }
 }
 
 /// Write a deterministic quota cache for `name` with chosen utilization values.

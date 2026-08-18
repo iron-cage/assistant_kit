@@ -26,7 +26,6 @@ Binary flag using integer representation (unilang convention).
 | 12 | [`reverse`](../param/12_reverse.md) |
 | 17 | [`open`](../param/17_open.md) |
 | 19 | [`dry_run`](../param/19_dry_run.md) |
-| 20 | [`confirm`](../param/20_confirm.md) |
 | 24 | [`no_color`](../param/24_no_color.md) |
 | 25 | [`wide`](../param/25_wide.md) |
 | 28 | [`include_stdout`](../param/28_include_stdout.md) |

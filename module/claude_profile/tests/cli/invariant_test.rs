@@ -53,8 +53,8 @@
 //! |----|---------------|-----------|-----|
 //! | FT-25/IN-1 | `single_token_refresh_entry_in1_src_contains_zero_run_isolated_calls` | grep finds no code-level `run_isolated(` in src/ | P |
 //! | IN-2 | `single_token_refresh_entry_in2_run_isolated_doc_has_warning` | `# Warning` present in `run_isolated()` doc in `isolated.rs` | P |
-//! | IN-3 | `single_token_refresh_entry_in3_expires_manipulation_before_run_isolated` | `manipulate_expires_at(` appears before `run_isolated(` in `account.rs` | P |
-//! | IN-4 | `single_token_refresh_entry_in4_live_sync_in_refresh_token_with_live_path` | `credentials_file()` appears in `refresh_token_with_live_path` in `account.rs` | P |
+//! | IN-3 | `single_token_refresh_entry_in3_expires_manipulation_before_run_isolated` | `manipulate_expires_at(` appears before `run_isolated(` in `refresh.rs` | P |
+//! | IN-4 | `single_token_refresh_entry_in4_live_sync_in_refresh_token_with_live_path` | `credentials_file()` appears in `refresh_token_with_live_path` in `refresh.rs` | P |
 
 use std::path::Path;
 use std::process::Command;
@@ -474,10 +474,10 @@ fn single_token_refresh_entry_in2_run_isolated_doc_has_warning()
   );
 }
 
-// IN-3: `manipulate_expires_at(` appears before `run_isolated(` in `claude_profile_core/src/account.rs`
+// IN-3: `manipulate_expires_at(` appears before `run_isolated(` in `claude_profile_core/src/account/refresh.rs`
 //
 // AC-32 (Change A) requires `expiresAt=1` manipulation to be applied before every `run_isolated`
-// call. This structural test verifies the ordering is maintained in `account.rs`.
+// call. This structural test verifies the ordering is maintained in `refresh.rs`.
 #[ test ]
 fn single_token_refresh_entry_in3_expires_manipulation_before_run_isolated()
 {
@@ -487,25 +487,26 @@ fn single_token_refresh_entry_in3_expires_manipulation_before_run_isolated()
     .expect( "parent of crate dir must exist" )
     .join( "claude_profile_core" )
     .join( "src" )
-    .join( "account.rs" );
+    .join( "account" )
+    .join( "refresh.rs" );
 
   let content = std::fs::read_to_string( &core_src )
     .unwrap_or_else( |e| panic!( "cannot read {}: {e}", core_src.display() ) );
 
   let manip_pos = content.find( "manipulate_expires_at(" )
-    .expect( "manipulate_expires_at( must appear in account.rs (AC-32 / Change A)" );
+    .expect( "manipulate_expires_at( must appear in refresh.rs (AC-32 / Change A)" );
   let run_pos = content.find( "run_isolated(" )
-    .expect( "run_isolated( must appear in account.rs (it is the sole authorized caller)" );
+    .expect( "run_isolated( must appear in refresh.rs (it is the sole authorized caller)" );
 
   assert!(
     manip_pos < run_pos,
     "invariant 008 AC-32 violation: manipulate_expires_at( must appear before run_isolated( \
-     in account.rs to ensure expiresAt=1 manipulation always precedes subprocess spawn \
+     in refresh.rs to ensure expiresAt=1 manipulation always precedes subprocess spawn \
      (manip_pos={manip_pos}, run_pos={run_pos})",
   );
 }
 
-// IN-4: `credentials_file()` appears inside `refresh_token_with_live_path` in `account.rs`
+// IN-4: `credentials_file()` appears inside `refresh_token_with_live_path` in `refresh.rs`
 //
 // AC-33 (Change B) requires current-account live credential sync inside the `Some(paths)` branch.
 // After the extraction refactor, this logic lives in `refresh_token_with_live_path`. This structural
@@ -519,14 +520,15 @@ fn single_token_refresh_entry_in4_live_sync_in_refresh_token_with_live_path()
     .expect( "parent of crate dir must exist" )
     .join( "claude_profile_core" )
     .join( "src" )
-    .join( "account.rs" );
+    .join( "account" )
+    .join( "refresh.rs" );
 
   let content = std::fs::read_to_string( &core_src )
     .unwrap_or_else( |e| panic!( "cannot read {}: {e}", core_src.display() ) );
 
   // Locate the refresh_token_with_live_path helper body
   let helper_start = content.find( "fn refresh_token_with_live_path(" )
-    .expect( "refresh_token_with_live_path must exist in account.rs (private helper for AC-33)" );
+    .expect( "refresh_token_with_live_path must exist in refresh.rs (private helper for AC-33)" );
   let helper_body_start = content[ helper_start.. ].find( '{' )
     .expect( "helper body opening brace must exist" );
   let helper_region = &content[ helper_start + helper_body_start.. ];

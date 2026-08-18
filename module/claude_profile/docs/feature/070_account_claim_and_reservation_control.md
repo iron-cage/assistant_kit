@@ -117,7 +117,7 @@
 | `src/usage/types.rs` | `AccountQuota` — new `claim_lock: bool`, `reserve: bool` fields, populated alongside existing `is_owned` |
 | `src/usage/sort_next.rs` | `find_first_eligible()` — new Gate 9 check; `find_next_for_strategy()` — delegates to `sort_indices()` (`sort.rs`) for the `reserve` leading sort key ahead of the existing strategy comparator |
 | `src/usage/sort.rs` | `sort_indices()` — new `reserve` leading sort key in the comparator for all three strategies; the actual implementation `find_next_for_strategy()` delegates to |
-| `claude_profile_core/src/account.rs` | `Account` struct — new `claim_lock`/`reserve` fields; new `write_claim_lock()`/`write_reserve()` functions mirroring `write_owner()` (fields are written directly, not threaded through `save()`'s parameter list) |
+| `claude_profile_core/src/account/` | `Account` struct — new `claim_lock`/`reserve` fields; new `write_claim_lock()`/`write_reserve()` functions mirroring `write_owner()` (fields are written directly, not threaded through `save()`'s parameter list) |
 | `src/commands/accounts.rs` | New `lock::`/`reserve::` mutation dispatch (comma-list batch, `dry::1`), alongside existing `owner::`/`assignee::` dispatch; new G9 check in the `assignee::` target-side path |
 | `src/commands/account_ops.rs` | `account_use_routine()` — new G9 `claim_lock` check alongside the existing G5 ownership check |
 

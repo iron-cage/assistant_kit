@@ -25,8 +25,8 @@ Developer running high-volume CLR automation needing resource management.
 | AC-03 | `clj .stats by::day since::30d` shows daily invocation volume trend |
 | AC-04 | `clj .stats by::hour since::1d` shows hourly distribution (peak detection) |
 | AC-05 | `clj .prune keep::30d dry_run::1` previews what would be pruned |
-| AC-06 | `clj .prune keep::100mb` maintains journal under 100MB |
-| AC-07 | `clj .prune keep::7d confirm::1` prunes without confirmation |
+| AC-06 | `clj .prune keep::7d` deletes files whose filename date is older than 7 days |
+| AC-07 | Disk growth is bounded by pairing `.status` size monitoring with an age window (size-based pruning was dropped — no consumer needs it) |
 
 ### Workflow
 
@@ -43,8 +43,8 @@ clj .stats by::hour since::1d
 # Preview cleanup
 clj .prune keep::30d dry_run::1
 
-# Execute cleanup
-clj .prune keep::30d confirm::1
+# Execute cleanup (immediate — the dry run above is the confirmation step)
+clj .prune keep::30d
 ```
 
 ### Referenced Parameters

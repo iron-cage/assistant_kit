@@ -21,7 +21,7 @@
 |---|-------|---------|----------|
 | 01 | [Filtering](01_filtering.md) | since, until, type, command, exit, model, dir, creds | .list, .tail, .search, .stats, .export |
 | 02 | [Display](02_display.md) | limit, format, sort, reverse, verbosity, wide, columns, output | .list, .tail, .stats, .export |
-| 03 | [Aggregation](03_aggregation.md) | by, keep, dry_run, confirm | .stats, .prune |
+| 03 | [Aggregation](03_aggregation.md) | by, keep, dry_run | .stats, .prune |
 | 04 | [Search](04_search.md) | pattern, include_stdout | .search |
 | 05 | [Global](05_global.md) | journal_dir, no_color, port, bind, open, refresh | All commands |
 

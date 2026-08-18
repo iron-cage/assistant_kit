@@ -635,7 +635,7 @@ fn cc7_usage_set_model_haiku_overwrites_existing_opus()
 ///
 /// # Fix Applied
 /// `set_session_model()` now calls `create_dir_all(parent)` before `fs::write`
-/// (`claude_profile_core/src/account.rs`).
+/// (`claude_profile_core/src/account/session_settings.rs`).
 ///
 /// # Prevention
 /// Precondition assertion (`!dir.path().join(".claude").exists()`) confirms the test

@@ -246,7 +246,7 @@ Resolved via [`AccountSelector`](../cli/type/004_account_selector.md): full emai
 
 | File | Relationship |
 |------|--------------|
-| `src/account.rs` | `account::list()` — reads local snapshot data for fallback |
+| `src/account/store.rs` | `account::list()` — reads local snapshot data for fallback |
 | `src/commands/account_inspect.rs` | `account_inspect_routine()` — three-endpoint fetch (002, 005, 001), selection priority, text/json render |
 | `src/registry.rs` | Registration of `.account.inspect` and its four parameters |
 | `claude_quota/src/lib.rs` | `fetch_oauth_account()`, `fetch_claude_cli_roles()`, `fetch_oauth_usage()` — endpoint transports; `select_membership_index()` — priority logic |

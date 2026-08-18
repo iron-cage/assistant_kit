@@ -17,8 +17,8 @@
 | Journal Directory | Filesystem directory containing all journal files | `~/.clr/journal/` |
 | Journal File | A single daily JSONL file named by date | `2026-06-27.jsonl` |
 | Journal Level | Recording detail level set in `clr` | `full` (default), `meta`, `off` |
-| Duration | Human-friendly time offset string | `1h`, `7d`, `4w`, `3M` |
-| Retention Spec | Age or size threshold for pruning | `30d`, `100mb`, `1gb` |
+| Duration | Human-friendly time offset string | `30s`, `1h`, `7d`, `4w` |
+| Retention Spec | Age threshold for pruning — a duration floored to whole days | `30d`, `4w` |
 | Filter | A constraint that excludes non-matching events | `type::execution since::1d` |
 | AND Combination | Multiple filters require ALL conditions to match | type AND command AND since |
 | Sort Field | Event field used as sort key for listing | `time`, `cost`, `duration` |
@@ -29,7 +29,7 @@
 | Crash Safety | At most 1 corrupted line per crash guarantee | Append-only write pattern |
 | Error Class | CLR error classification from exit code | `RateLimit`, `Auth`, `Timeout` |
 | Super-app | The `ast` aggregator binary | `ast .journal.list since::1d` |
-| Pruning | Deleting old journal files by age or size | `clj .prune keep::30d` |
+| Pruning | Deleting journal files older than an age window (filename date) | `clj .prune keep::30d` |
 | Web Viewer | Embedded HTTP dashboard for journal browsing | `clj .serve` on port 8411 |
 
 ### Provenance

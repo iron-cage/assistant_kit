@@ -19,22 +19,22 @@
 //! | `art_some_paths_dot_claude_absent_trace_does_not_panic` | `Some(paths)` | `trace=true`; cred in store; `.claude/` absent    | no panic, `None`   |
 //! | `art_none_paths_no_store_cred_trace_does_not_panic`     | `None`        | `trace=true`; cred absent in store                | no panic, `None`   |
 //! | `art_some_paths_run_isolated_invoked_trace_no_panic`    | `Some(paths)` | `trace=true`; cred in store; `.claude/` exists    | no panic, `None`   |
-//! | `bug_mre_bug205_refresh_token_read_write_ok_trace_structural` | structural | grep account.rs for `"read credentials: OK"` and `"write credentials: OK"` | ≥2 each |
-//! | `bug_mre_bug175_no_switch_account_in_some_branch` | structural | grep account.rs for `"switch_account( name, credential_store, p )"` | 0 occurrences |
-//! | `bug_mre_bug221_some_branch_no_p_credentials_file_write` | structural | grep account.rs for `atomic_write_secret( &p.credentials_file(),` | exactly 1 occurrence (BUG-318 active-account live sync) |
-//! | `mre_bug318_rotation_live_sync_structural` | structural | grep account.rs for `is_still_active` and `Fix(BUG-318)` | present |
+//! | `bug_mre_bug205_refresh_token_read_write_ok_trace_structural` | structural | grep refresh.rs for `"read credentials: OK"` and `"write credentials: OK"` | ≥2 each |
+//! | `bug_mre_bug175_no_switch_account_in_some_branch` | structural | grep refresh.rs for `"switch_account( name, credential_store, p )"` | 0 occurrences |
+//! | `bug_mre_bug221_some_branch_no_p_credentials_file_write` | structural | grep refresh.rs for `atomic_write_secret( &p.credentials_file(),` | exactly 1 occurrence (BUG-318 active-account live sync) |
+//! | `mre_bug318_rotation_live_sync_structural` | structural | grep refresh.rs for `is_still_active` and `Fix(BUG-318)` | present |
 //! | `mre_bug221_save_some_creds_writes_to_store_not_live_file` | unit | `save("acct", store, paths, false, Some(b"data"))` | store = `b"data"`; live file unchanged |
 //! | `mre_bug221_save_none_creds_copies_from_live_file` | unit | `save("acct", store, paths, false, None)` | store = live file content; live file unchanged |
 //! | `bug_reproducer_343_save_does_not_merge_live_identity_into_non_active_target` | bug_reproducer(BUG-343) | live session identifies as `live@test.com`; `save()` called for a different, non-active `target@test.com` | target's own `{name}.json` has no `oauthAccount` merged from the live session |
 //! | `ft22_manipulate_expires_at_replaces_numeric_value` | behavioral | `manipulate_expires_at` with numeric `expiresAt` value | value replaced (original absent from result) |
 //! | `ft22_manipulate_expires_at_replaces_quoted_value` | behavioral | `manipulate_expires_at` with quoted `expiresAt` value | value replaced (original absent from result) |
 //! | `ft22_manipulate_expires_at_noop_when_key_absent` | behavioral | `manipulate_expires_at` when `expiresAt` key absent | string returned unchanged |
-//! | `ft22_manipulate_expires_at_called_before_run_isolated_structural` | structural | grep `account.rs` for `manipulate_expires_at(` before first `run_isolated(` | in order |
+//! | `ft22_manipulate_expires_at_called_before_run_isolated_structural` | structural | grep `refresh.rs` for `manipulate_expires_at(` before first `run_isolated(` | in order |
 //! | `ft23_live_sync_returns_live_creds_without_subprocess` | behavioral | live creds differ from stored → sync and return `Some(live)` without subprocess | `Some(live_json)` |
-//! | `ft24_some_paths_branch_reads_credentials_file_twice_structural` | structural | grep `account.rs` `Some(paths)` branch for ≥2 `credentials_file()` calls | ≥2 occurrences |
+//! | `ft24_some_paths_branch_reads_credentials_file_twice_structural` | structural | grep `refresh.rs` `Some(paths)` branch for ≥2 `credentials_file()` calls | ≥2 occurrences |
 //! | `ft25_071_refresh_redirect_bypass_checked_before_run_isolated_structural` | structural | Feature 071/AC-09: redirect-backend check appears before `run_isolated(` and before the `Some(paths)`/`None` branch dispatch | in order |
 //! | `ft26_071_refresh_redirect_account_returns_none_credentials_unchanged` | behavioral | Feature 071/AC-09: `refresh_account_token()` against a `backend: redirect` account | `None`; credential store file byte-for-byte unchanged |
-//! | `mre_bug483_refresh_write_back_must_guard_blank_credentials` | bug_reproducer(BUG-483) | grep account.rs: `fn credentials_usable(` exists; ≥2 non-comment call sites; `Fix(BUG-483)` at ≥2 sites | guard present in both write-back branches |
+//! | `mre_bug483_refresh_write_back_must_guard_blank_credentials` | bug_reproducer(BUG-483) | grep refresh.rs: `fn credentials_usable(` exists; ≥2 non-comment call sites; `Fix(BUG-483)` at ≥2 sites | guard present in both write-back branches |
 //! | `bug483_credentials_usable_accepts_non_blank_pair` | behavioral | `credentials_usable` with both tokens non-empty (flat + nested `claudeAiOauth` shapes) | `true` |
 //! | `bug483_credentials_usable_rejects_blank_or_missing_tokens` | behavioral | `credentials_usable` with the logged-out sandbox shape, each token blank/missing individually, and degenerate inputs | `false` for all |
 //!
@@ -54,7 +54,7 @@
 //! contract, not the return value — hence the explicit `let _ =` discard. Without
 //! `let _ =`, `-D warnings` produces `error: unused return value of 'refresh_account_token'
 //! that must be used`, but this error is invisible while the Docker image cache is valid.
-//! It only surfaces when the image is rebuilt after any `account.rs` source change forces
+//! It only surfaces when the image is rebuilt after any `src/account/` source change forces
 //! recompilation. Always use `let _ =` when intentionally discarding a `#[must_use]`
 //! return value — never rely on cache masking to suppress the warning. (BUG-168.)
 
@@ -186,13 +186,13 @@ fn art_some_paths_run_isolated_invoked_trace_no_panic()
 //   global write is only observable in concurrent multi-account batch scenarios.
 fn bug_mre_bug175_no_switch_account_in_some_branch()
 {
-  let account_rs = std::path::Path::new( env!( "CARGO_MANIFEST_DIR" ) ).join( "src/account.rs" );
+  let account_rs = std::path::Path::new( env!( "CARGO_MANIFEST_DIR" ) ).join( "src/account/refresh.rs" );
   let content    = std::fs::read_to_string( &account_rs )
     .unwrap_or_else( |e| panic!( "cannot read {}: {e}", account_rs.display() ) );
   let count = content.matches( "switch_account( name, credential_store, p )" ).count();
   assert!(
     count == 0,
-    "BUG-175: expected 0 occurrences of 'switch_account( name, credential_store, p )' in account.rs, found {count}"
+    "BUG-175: expected 0 occurrences of 'switch_account( name, credential_store, p )' in refresh.rs, found {count}"
   );
 }
 
@@ -209,18 +209,18 @@ fn bug_mre_bug175_no_switch_account_in_some_branch()
 // Pitfall: Multi-branch functions duplicate lifecycle steps — both branches must be updated.
 fn bug_mre_bug205_refresh_token_read_write_ok_trace_structural()
 {
-  let account_rs = std::path::Path::new( env!( "CARGO_MANIFEST_DIR" ) ).join( "src/account.rs" );
+  let account_rs = std::path::Path::new( env!( "CARGO_MANIFEST_DIR" ) ).join( "src/account/refresh.rs" );
   let content    = std::fs::read_to_string( &account_rs )
     .unwrap_or_else( |e| panic!( "cannot read {}: {e}", account_rs.display() ) );
   let read_ok_count  = content.matches( "read credentials: OK" ).count();
   let write_ok_count = content.matches( "write credentials: OK" ).count();
   assert!(
     read_ok_count >= 2,
-    "BUG-205: expected ≥2 occurrences of 'read credentials: OK' in account.rs, found {read_ok_count}"
+    "BUG-205: expected ≥2 occurrences of 'read credentials: OK' in refresh.rs, found {read_ok_count}"
   );
   assert!(
     write_ok_count >= 2,
-    "BUG-205: expected ≥2 occurrences of 'write credentials: OK' in account.rs, found {write_ok_count}"
+    "BUG-205: expected ≥2 occurrences of 'write credentials: OK' in refresh.rs, found {write_ok_count}"
   );
 }
 
@@ -247,14 +247,14 @@ fn bug_mre_bug205_refresh_token_read_write_ok_trace_structural()
 //   Same count==1 invariant, same regression semantics in both directions.
 fn bug_mre_bug221_some_branch_no_p_credentials_file_write()
 {
-  let account_rs = std::path::Path::new( env!( "CARGO_MANIFEST_DIR" ) ).join( "src/account.rs" );
+  let account_rs = std::path::Path::new( env!( "CARGO_MANIFEST_DIR" ) ).join( "src/account/refresh.rs" );
   let content    = std::fs::read_to_string( &account_rs )
     .unwrap_or_else( |e| panic!( "cannot read {}: {e}", account_rs.display() ) );
   let count = content.matches( "atomic_write_secret( &p.credentials_file()," ).count();
   assert!(
     count == 1,
     "BUG-221/BUG-318: expected exactly 1 occurrence of 'atomic_write_secret( &p.credentials_file(),' \
-     in account.rs (the BUG-318 is_still_active live sync); 0 = live sync removed, >1 = unconditional \
+     in refresh.rs (the BUG-318 is_still_active live sync); 0 = live sync removed, >1 = unconditional \
      clobber reintroduced. Found {count}"
   );
 }
@@ -332,18 +332,18 @@ fn mre_bug221_save_none_creds_copies_from_live_file()
 
 #[ test ]
 // test_kind: bug_reproducer(BUG-343)
-// Root Cause: save()'s oauthAccount merge (account.rs:367-377) reads the machine-local live
+// Root Cause: save()'s oauthAccount merge (store.rs; account.rs:367-377 at fix time) reads the machine-local live
 //   session file (paths.claude_json_file()) unconditionally and merges its `oauthAccount` into
 //   {name}.json with zero comparison against `name` — corrupting a non-active target account's
 //   own file with whichever identity happens to be locally active on this machine. Reachable
-//   via the unguarded save() call at account.rs:1209 inside refresh_token_with_live_path(),
+//   via the unguarded save() call inside refresh_token_with_live_path() (account.rs:1209 at fix time),
 //   which is routinely invoked for non-active accounts by apply_touch/apply_refresh's default
-//   (non-only_active) full-account-list loops (account.rs:1116-1118).
+//   (non-only_active) full-account-list loops (refresh.rs; account.rs:1116-1118 at fix time).
 // Why Not Caught: no existing test constructs a live session identity DIFFERENT from the
 //   `name` being saved — mre_bug221_save_* above use a single identity throughout and never
 //   populate paths.claude_json_file() with oauthAccount data at all.
 // Fix Applied: save()'s merge block now gates on the live session's own oauthAccount.emailAddress
-//   equaling `name` before merging (see Fix(BUG-343) comment in account.rs).
+//   equaling `name` before merging (see Fix(BUG-343) comment in refresh.rs).
 // Prevention: this test asserts the target's own oauthAccount is unaffected by a divergent live
 //   session identity; must keep passing for any future save() merge-block change.
 // Pitfall: a function that reads "the machine's live session" to enrich a named account's file
@@ -364,7 +364,7 @@ fn bug_reproducer_343_save_does_not_merge_live_identity_into_non_active_target()
   let paths = ClaudePaths::with_home( fake_home.path() );
 
   // save() invoked for a DIFFERENT, non-active account — the routine background-refresh
-  // scenario per account.rs:1116-1118 (refresh_token_with_live_path saves accounts that are
+  // scenario per refresh_token_with_live_path (account.rs:1116-1118 at fix time; saves accounts that are
   // "NOT yet the active account").
   account::save( "target@test.com", store.path(), &paths, false, Some( b"new_creds_bytes" ), None, None, None, account::AccountBackend::Anthropic, None, None, None ).unwrap();
 
@@ -508,13 +508,13 @@ fn ft23_live_sync_returns_live_creds_without_subprocess()
 #[ test ]
 fn ft22_manipulate_expires_at_called_before_run_isolated_structural()
 {
-  let account_rs = std::path::Path::new( env!( "CARGO_MANIFEST_DIR" ) ).join( "src/account.rs" );
+  let account_rs = std::path::Path::new( env!( "CARGO_MANIFEST_DIR" ) ).join( "src/account/refresh.rs" );
   let content    = std::fs::read_to_string( &account_rs )
     .unwrap_or_else( |e| panic!( "cannot read {}: {e}", account_rs.display() ) );
 
   // Locate refresh_account_token body (starts at `pub fn refresh_account_token(`)
   let fn_start = content.find( "pub fn refresh_account_token(" )
-    .expect( "refresh_account_token must exist in account.rs" );
+    .expect( "refresh_account_token must exist in refresh.rs" );
   let fn_body = &content[ fn_start.. ];
 
   let manip_pos = fn_body.find( "manipulate_expires_at(" )
@@ -545,14 +545,14 @@ fn ft22_manipulate_expires_at_called_before_run_isolated_structural()
 #[ test ]
 fn ft24_some_paths_branch_reads_credentials_file_twice_structural()
 {
-  let account_rs = std::path::Path::new( env!( "CARGO_MANIFEST_DIR" ) ).join( "src/account.rs" );
+  let account_rs = std::path::Path::new( env!( "CARGO_MANIFEST_DIR" ) ).join( "src/account/refresh.rs" );
   let content    = std::fs::read_to_string( &account_rs )
     .unwrap_or_else( |e| panic!( "cannot read {}: {e}", account_rs.display() ) );
 
   // Extract the refresh_token_with_live_path helper body.
   // This private function implements the Some(paths) branch logic after extraction.
   let helper_start = content.find( "fn refresh_token_with_live_path(" )
-    .expect( "refresh_token_with_live_path must exist in account.rs (private helper for Some(paths) branch)" );
+    .expect( "refresh_token_with_live_path must exist in refresh.rs (private helper for Some(paths) branch)" );
   // The helper ends at its closing brace; find the next top-level function or end of file.
   // Use the leading `\n}` that closes the helper body (followed by a blank line).
   let helper_body_start = content[ helper_start.. ].find( '{' )
@@ -768,8 +768,8 @@ fn mre_bug316_stale_is_active_race_recovery_copies_wrong_account_creds()
 {
   // test_kind: bug_reproducer(BUG-316)
   let src = std::fs::read_to_string(
-    concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/account.rs" )
-  ).expect( "read account.rs" );
+    concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/account/refresh.rs" )
+  ).expect( "read refresh.rs" );
 
   // Fix: race-recovery site must use a fresh re-read variable, not a cached bool.
   assert!(
@@ -804,7 +804,7 @@ fn mre_bug316_stale_is_active_race_recovery_copies_wrong_account_creds()
 /// # Why Not Caught
 ///
 /// The BUG-316 regression test matched `Fix(BUG-316)` annotations ANYWHERE in
-/// account.rs. The pre-sync site's own comment satisfied the count without the code
+/// refresh.rs. The pre-sync site's own comment satisfied the count without the code
 /// re-reading the marker — the test certified an annotation, not a control flow.
 ///
 /// # Fix Applied
@@ -832,13 +832,13 @@ fn mre_bug485_presync_marker_reread_gates_store_write()
 {
   // test_kind: bug_reproducer(BUG-485)
   let src = std::fs::read_to_string(
-    concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/account.rs" )
-  ).expect( "read account.rs" );
+    concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/account/refresh.rs" )
+  ).expect( "read refresh.rs" );
 
   // Bound the search to the pre-sync block: from the capture to the AC-32 call that
   // immediately follows the block's close.
   let start = src.find( "let is_active_pre_sync" )
-    .expect( "BUG-485: pre-sync capture `is_active_pre_sync` must exist in account.rs" );
+    .expect( "BUG-485: pre-sync capture `is_active_pre_sync` must exist in refresh.rs" );
   let end = start + src[ start.. ].find( "manipulate_expires_at" )
     .expect( "BUG-485: pre-sync block must be followed by the manipulate_expires_at call" );
   let block = &src[ start..end ];
@@ -890,7 +890,7 @@ fn mre_bug485_presync_marker_reread_gates_store_write()
 /// # Prevention
 ///
 /// This structural test verifies that `is_still_active` (the post-rotation live-sync variable)
-/// and `Fix(BUG-318)` annotation exist in `account.rs`. The BUG-221 structural test was
+/// and `Fix(BUG-318)` annotation exist in `refresh.rs`. The BUG-221 structural test was
 /// updated from `count == 0` to `count == 1` — one conditional live sync is correct; zero
 /// means the sync was removed; more than one means an unconditional clobber was reintroduced.
 ///
@@ -907,8 +907,8 @@ fn mre_bug318_rotation_live_sync_structural()
 {
   // test_kind: bug_reproducer(BUG-318)
   let src = std::fs::read_to_string(
-    concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/account.rs" )
-  ).expect( "read account.rs" );
+    concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/account/refresh.rs" )
+  ).expect( "read refresh.rs" );
 
   // Fix: post-rotation live sync variable must exist in the success path.
   assert!(
@@ -919,7 +919,7 @@ fn mre_bug318_rotation_live_sync_structural()
   // Fix: the live sync site must carry the Fix(BUG-318) annotation.
   assert!(
     src.contains( "Fix(BUG-318)" ),
-    "BUG-318 fix: `Fix(BUG-318)` annotation must appear at the live-sync write site in account.rs"
+    "BUG-318 fix: `Fix(BUG-318)` annotation must appear at the live-sync write site in refresh.rs"
   );
 }
 
@@ -935,12 +935,12 @@ fn mre_bug318_rotation_live_sync_structural()
 #[ test ]
 fn ft25_071_refresh_redirect_bypass_checked_before_run_isolated_structural()
 {
-  let account_rs = std::path::Path::new( env!( "CARGO_MANIFEST_DIR" ) ).join( "src/account.rs" );
+  let account_rs = std::path::Path::new( env!( "CARGO_MANIFEST_DIR" ) ).join( "src/account/refresh.rs" );
   let content    = std::fs::read_to_string( &account_rs )
     .unwrap_or_else( |e| panic!( "cannot read {}: {e}", account_rs.display() ) );
 
   let fn_start = content.find( "pub fn refresh_account_token(" )
-    .expect( "refresh_account_token must exist in account.rs" );
+    .expect( "refresh_account_token must exist in refresh.rs" );
   let fn_body = &content[ fn_start.. ];
 
   let bypass_pos = fn_body.find( "AccountBackend::Redirect" )
@@ -1037,13 +1037,13 @@ fn mre_bug483_refresh_write_back_must_guard_blank_credentials()
 {
   // test_kind: bug_reproducer(BUG-483)
   let src = std::fs::read_to_string(
-    concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/account.rs" )
-  ).expect( "read account.rs" );
+    concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/account/refresh.rs" )
+  ).expect( "read refresh.rs" );
 
   // Fix: the blank-credentials predicate must exist.
   assert!(
     src.contains( "fn credentials_usable(" ),
-    "BUG-483 fix: `fn credentials_usable(` must exist in account.rs — blank-payload guard \
+    "BUG-483 fix: `fn credentials_usable(` must exist in refresh.rs — blank-payload guard \
      for subprocess-returned credentials"
   );
 

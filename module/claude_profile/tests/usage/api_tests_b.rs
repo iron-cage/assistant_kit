@@ -100,8 +100,10 @@ fn mre_bug285_idle_check_uses_resets_at_as_wrong_oracle()
   );
 }
 
-/// `mre_bug288` — `apply_post_switch_touch` re-fetch is non-aborting when the credentials
-/// file has no `accessToken`; pre-re-fetch cache writes succeed regardless.
+/// `mre_bug288` — `apply_post_switch_touch` AC-21 re-fetch: a successful fetch is
+/// persisted via `write_quota_cache` (observed through the `CLAUDE_QUOTA_BASE_URL` seam);
+/// a missing `accessToken` skips the re-fetch non-abortingly, with pre-re-fetch cache
+/// writes succeeding regardless.
 ///
 /// # Root Cause
 /// `apply_post_switch_touch` discarded the `run_isolated` result with `let _ = ...` and
@@ -116,46 +118,88 @@ fn mre_bug285_idle_check_uses_resets_at_as_wrong_oracle()
 /// Added post-subprocess quota re-fetch block (AC-21) to `apply_post_switch_touch`, mirroring
 /// `apply_touch`'s AC-03 pattern. Reads credentials fresh from disk (not from
 /// `ctx.credentials_json`) to capture any post-subprocess token rotation. On `Ok(new_data)`:
-/// calls `write_quota_cache(paths.base(), name, ...)` to persist the updated quota. On
-/// failure: silently skips — non-aborting per AC-21.
+/// calls `write_quota_cache( credential_store, name, ... )` to persist the updated quota.
+/// On failure: silently skips — non-aborting per AC-21.
 ///
 /// # Prevention
-/// This test verifies the non-aborting invariant: when `accessToken` is absent from the
-/// credentials file, the re-fetch is silently skipped and the function returns normally.
-/// Also verifies that `last_touch_at` and `touch_idle` (written before the re-fetch block)
-/// are committed to disk even when the re-fetch is skipped.
+/// Success path (behavioral, via the `CLAUDE_QUOTA_BASE_URL` seam): a loopback server
+/// answers the re-fetch; the test asserts the `GET /api/oauth/usage` request happened
+/// with the on-disk token and that `read_cached_quota` afterwards returns the fetched
+/// `resets_at` — the exact observable whose staleness caused the double-subprocess race.
+/// Failure path (runtime): when `accessToken` is absent the re-fetch is silently skipped,
+/// the function returns normally, and `last_touch_at`/`touch_idle` (written before the
+/// re-fetch block) are still committed to disk.
 ///
 /// # Pitfall
-/// `apply_post_switch_touch` is `pub(crate)` — only testable inline in `src/usage/api.rs`.
-/// The re-fetch block reads credentials from `paths.base()/{name}.credentials.json` (fresh
-/// disk read), NOT from `ctx.credentials_json` — tests must write the credential file at
-/// that path, not just supply a non-empty string in the `TouchCtx`.
+/// The re-fetch block reads credentials from `credential_store/{name}.credentials.json`
+/// (fresh disk read — Fix(BUG-318)), NOT from `ctx.credentials_json` — tests must write
+/// the credential file at that path, not just supply a non-empty string in the `TouchCtx`.
+/// The success fixture sets `backend=redirect` metadata so `refresh_account_token`
+/// no-ops (Feature 071 AC-09) instead of spawning a live `claude` subprocess; the AC-21
+/// block itself has no backend gate, so the re-fetch still runs.
 #[ doc = "bug_reproducer(BUG-288)" ]
 #[ test ]
 fn mre_bug288_post_switch_touch_refetch_updates_quota()
 {
   use claude_quota::OauthUsageData;
 
-  // ── Success path (structural): write_quota_cache is called when re-fetch succeeds ──
-  // Verifies Fix(BUG-288) is present: apply_post_switch_touch must call write_quota_cache
-  // on a successful fetch_oauth_usage result so subsequent .usage sees the updated resets_at.
+  // ── Success path (behavioral): a successful re-fetch is persisted via write_quota_cache ──
+  // A loopback seam server (claude_quota::BASE_URL_ENV) answers the AC-21 re-fetch with
+  // canned quota; the cache must afterward carry that data through the production reader
+  // (read_cached_quota — the exact path .usage uses), proving apply_post_switch_touch
+  // called fetch_oauth_usage AND write_quota_cache. Fixture trick: `backend=redirect`
+  // metadata makes refresh_account_token an instant no-op (Feature 071 AC-09), skipping
+  // the claude-subprocess step — no live console.anthropic.com dependency; the AC-21
+  // block itself has no backend gate (guarded upstream in production), so it still runs.
   {
-    let src      = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/usage/api_switch.rs" ) );
-    let fn_start = src
-      .find( "pub fn apply_post_switch_touch(" )
-      .expect( "apply_post_switch_touch not found in api_switch.rs" );
-    let fn_end   = src[ fn_start + 1.. ]
-      .find( "\npub fn " )
-      .map_or( src.len(), |rel| fn_start + 1 + rel );
-    let fn_body  = &src[ fn_start..fn_end ];
-    assert!(
-      fn_body.contains( "fetch_oauth_usage" ),
-      "BUG-288: apply_post_switch_touch must call fetch_oauth_usage for AC-21 re-fetch",
+    let dir   = TempDir::new().unwrap();
+    let paths = claude_profile::ClaudePaths::with_home( dir.path() );
+    std::fs::create_dir_all( paths.base() ).unwrap();
+    let name = "refetch@example.com";
+    std::fs::write(
+      paths.base().join( format!( "{name}.credentials.json" ) ),
+      r#"{"accessToken":"tok-refetch","subscriptionType":"pro","expiresAt":9999999999999}"#,
+    ).unwrap();
+    std::fs::write(
+      paths.base().join( format!( "{name}.json" ) ),
+      r#"{"backend":"redirect"}"#,
+    ).unwrap();
+
+    let server = crate::quota_seam::QuotaSeamServer::start();
+    let ctx = TouchCtx::for_test(
+      OauthUsageData { five_hour : None, seven_day : None, seven_day_sonnet : None },
     );
+    crate::quota_seam::with_seam_env( server.origin(), ||
+    {
+      apply_post_switch_touch( name, ctx, "auto", "auto", false, &paths, paths.base() );
+    } );
+
+    // Anti-vacuity: the AC-21 re-fetch actually hit the usage endpoint...
     assert!(
-      fn_body.contains( "write_quota_cache" ),
-      "BUG-288: apply_post_switch_touch must call write_quota_cache on successful re-fetch \
-      so subsequent .usage sees the updated resets_at (no double-subprocess race)",
+      server.requests().iter().any( | r | r.line.starts_with( "GET /api/oauth/usage" ) ),
+      "BUG-288: apply_post_switch_touch must issue the AC-21 GET /api/oauth/usage re-fetch, got: {:?}",
+      server.requests(),
+    );
+    // ...with the token read fresh from disk, not from ctx (BUG-318 pitfall).
+    assert_eq!(
+      server.bearer_tokens(),
+      vec![ "tok-refetch".to_string() ],
+      "BUG-288: re-fetch must use the on-disk credential file's accessToken",
+    );
+    // The fetched quota must be persisted (write_quota_cache) and visible through the
+    // production reader — the "subsequent .usage sees the updated resets_at" claim itself.
+    let ( data, _age, _org ) =
+      claude_profile::usage::test_bridge::read_cached_quota( paths.base(), name, 0 )
+      .expect( "BUG-288: quota cache must exist after successful re-fetch" );
+    let five = data.five_hour.expect( "BUG-288: five_hour must be persisted from the re-fetch" );
+    assert!(
+      ( five.utilization - 12.5 ).abs() < 1e-9,
+      "BUG-288: persisted utilization must match the fetched 12.5, got {}", five.utilization,
+    );
+    assert_eq!(
+      five.resets_at.as_deref(),
+      Some( "2026-08-18T04:00:00+00:00" ),
+      "BUG-288: persisted resets_at must match the fetched value (no double-subprocess race)",
     );
   }
 
