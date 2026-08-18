@@ -33,6 +33,20 @@
 //! - INT-25: `limit::N` truncates main sessions
 //! - INT-51: `scope::` with invalid value rejected
 //! - INT-52: `agent::` with non-boolean value rejected
+//! - INT-53: `detail::projects` shows header line only, no session/family body lines
+//! - INT-54: `detail::` omitted reproduces exact `detail::sessions` output
+//! - INT-55: `detail::` with invalid value rejected
+//! - INT-56: `filter::` narrows to projects whose decoded path contains the substring
+//! - INT-57: `filter::` with no matching project shows empty listing, not an error
+//! - INT-58: `type::uuid` narrows to UUID-named projects only
+//! - INT-59: `type::path` narrows to path-named projects only
+//! - INT-60: `type::` with invalid value rejected
+//! - INT-61: `project::X ids::1` outputs one conversation ID per line
+//! - INT-62: `project::X ids::1 count::1` outputs a single bare integer
+//! - INT-63: `ids::1` without required `project::` rejected
+//! - INT-64: `type::` and `filter::` compose under `scope::global`
+//! - INT-65: `limit::`/`show_tree::`/`show_topic::` are no-ops under `detail::projects`
+//! - INT-66: `.list`'s `deprecation_message` edit does not alter runtime output
 //!
 //! Tests INT-26..INT-50: → `cli_cmd_projects_summary_test.rs`
 
@@ -972,5 +986,476 @@ fn int_52_agent_non_boolean_rejected()
     stdout( &out ).is_empty(),
     "INT-52: no project output on stdout when agent:: is rejected; got:\n{}",
     stdout( &out )
+  );
+}
+
+// ─── INT-53 ───────────────────────────────────────────────────────────────────
+
+/// INT-53: `detail::projects` shows header line only, no session/family body lines.
+#[ test ]
+fn int_53_detail_projects_header_only_no_body_lines()
+{
+  let root = TempDir::new().unwrap();
+  let storage_root = root.path().join( ".claude" );
+
+  let proj_a = root.path().join( "proj-a" );
+  let proj_b = root.path().join( "proj-b" );
+  fs::create_dir_all( &proj_a ).unwrap();
+  fs::create_dir_all( &proj_b ).unwrap();
+
+  let encoded_a = claude_storage_core::encode_path( &proj_a ).expect( "encode" );
+  common::write_hierarchical_session(
+    &storage_root, &encoded_a, "root-int53",
+    &[ ( "agent-int53-x", "general-purpose" ), ( "agent-int53-y", "general-purpose" ) ],
+    2
+  );
+  common::write_path_project_session( &storage_root, &proj_b, "session-int53-b", 2 );
+
+  let out = common::clg_cmd()
+    .env( "HOME", root.path() )
+    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+    .arg( ".projects" )
+    .arg( "scope::global" )
+    .arg( "detail::projects" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  assert!( s.contains( "Found 2 projects" ), "must show project count header; got:\n{s}" );
+  assert!( !s.contains( "root-int53" ), "must NOT show root session id in body; got:\n{s}" );
+  assert!( !s.contains( "agent-int53-x" ), "must NOT show agent session id; got:\n{s}" );
+  assert!( !s.contains( "session-int53-b" ), "must NOT show plain session id; got:\n{s}" );
+  assert!( !s.contains( "[2 agents" ), "must NOT show agent-count bracket; got:\n{s}" );
+}
+
+// ─── INT-54 ───────────────────────────────────────────────────────────────────
+
+/// INT-54: `detail::` omitted reproduces exact `detail::sessions` output.
+#[ test ]
+fn int_54_detail_omitted_matches_explicit_sessions()
+{
+  let root = TempDir::new().unwrap();
+  let storage_root = root.path().join( ".claude" );
+  let project = root.path().join( "proj" );
+  fs::create_dir_all( &project ).unwrap();
+  common::write_path_project_session( &storage_root, &project, "session-int54", 3 );
+
+  let out_default = common::clg_cmd()
+    .env( "HOME", root.path() )
+    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+    .arg( ".projects" )
+    .arg( "scope::global" )
+    .output()
+    .unwrap();
+
+  let out_explicit = common::clg_cmd()
+    .env( "HOME", root.path() )
+    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+    .arg( ".projects" )
+    .arg( "scope::global" )
+    .arg( "detail::sessions" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out_default, 0 );
+  assert_exit( &out_explicit, 0 );
+  assert_eq!(
+    stdout( &out_default ), stdout( &out_explicit ),
+    "detail:: omitted must byte-match explicit detail::sessions"
+  );
+  assert!(
+    stdout( &out_default ).contains( "session-int54" ),
+    "sanity: session must appear; got:\n{}", stdout( &out_default )
+  );
+}
+
+// ─── INT-55 ───────────────────────────────────────────────────────────────────
+
+/// INT-55: `detail::` with invalid value rejected.
+#[ test ]
+fn int_55_detail_invalid_value_rejected()
+{
+  let root = TempDir::new().unwrap();
+
+  let out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .current_dir( "/tmp" )
+    .arg( ".projects" )
+    .arg( "detail::bogus" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 1 );
+  let err = stderr( &out );
+  assert!(
+    err.contains( "detail must be projects|sessions, got bogus" ),
+    "INT-55: stderr must carry the canonical validate_detail_level() error; got: {err}"
+  );
+  assert!(
+    stdout( &out ).is_empty(),
+    "INT-55: no project output on stdout when detail:: is rejected; got:\n{}",
+    stdout( &out )
+  );
+}
+
+// ─── INT-56 ───────────────────────────────────────────────────────────────────
+
+/// INT-56: `filter::` narrows to projects whose decoded path contains the substring.
+#[ test ]
+fn int_56_filter_narrows_to_matching_substring()
+{
+  let root = TempDir::new().unwrap();
+  let storage_root = root.path().join( ".claude" );
+
+  let proj_alpha = root.path().join( "alpha" );
+  let proj_beta  = root.path().join( "beta" );
+  let proj_gamma = root.path().join( "gamma" );
+  fs::create_dir_all( &proj_alpha ).unwrap();
+  fs::create_dir_all( &proj_beta ).unwrap();
+  fs::create_dir_all( &proj_gamma ).unwrap();
+
+  common::write_path_project_session( &storage_root, &proj_alpha, "session-int56-alpha", 2 );
+  common::write_path_project_session( &storage_root, &proj_beta,  "session-int56-beta",  2 );
+  common::write_path_project_session( &storage_root, &proj_gamma, "session-int56-gamma", 2 );
+
+  let out = common::clg_cmd()
+    .env( "HOME", root.path() )
+    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+    .arg( ".projects" )
+    .arg( "scope::global" )
+    .arg( "filter::alpha" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  assert!( s.contains( "session-int56-alpha" ), "must include alpha project; got:\n{s}" );
+  assert!( !s.contains( "session-int56-beta" ),  "must NOT include beta project; got:\n{s}" );
+  assert!( !s.contains( "session-int56-gamma" ), "must NOT include gamma project; got:\n{s}" );
+}
+
+// ─── INT-57 ───────────────────────────────────────────────────────────────────
+
+/// INT-57: `filter::` with no matching project shows empty listing, not an error.
+#[ test ]
+fn int_57_filter_no_match_shows_empty_listing()
+{
+  let root = TempDir::new().unwrap();
+  let storage_root = root.path().join( ".claude" );
+  let project = root.path().join( "proj" );
+  fs::create_dir_all( &project ).unwrap();
+  common::write_path_project_session( &storage_root, &project, "session-int57", 2 );
+
+  let out = common::clg_cmd()
+    .env( "HOME", root.path() )
+    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+    .arg( ".projects" )
+    .arg( "scope::global" )
+    .arg( "filter::nonexistent-substring" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  assert!( s.contains( "Found 0 projects" ), "must show zero-count header, not an error; got:\n{s}" );
+  assert!( !s.contains( "session-int57" ), "must NOT include filtered-out session; got:\n{s}" );
+}
+
+// ─── INT-58 ───────────────────────────────────────────────────────────────────
+
+/// INT-58: `type::uuid` narrows to UUID-named projects only.
+#[ test ]
+fn int_58_type_uuid_narrows_to_uuid_projects()
+{
+  let root = TempDir::new().unwrap();
+  let storage_root = root.path().join( ".claude" );
+
+  // UUID-named project (no leading '-' prefix => ProjectId::Uuid)
+  common::write_test_session( &storage_root, "550e8400-e29b-41d4-a716-446655440000", "session-int58-uuid", 2 );
+
+  // Path-named project
+  let path_proj = root.path().join( "proj-int58" );
+  fs::create_dir_all( &path_proj ).unwrap();
+  common::write_path_project_session( &storage_root, &path_proj, "session-int58-path", 2 );
+
+  let out = common::clg_cmd()
+    .env( "HOME", root.path() )
+    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+    .arg( ".projects" )
+    .arg( "scope::global" )
+    .arg( "type::uuid" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  assert!( s.contains( "session-int58-uuid" ),  "must include UUID project; got:\n{s}" );
+  assert!( !s.contains( "session-int58-path" ), "must NOT include path project; got:\n{s}" );
+}
+
+// ─── INT-59 ───────────────────────────────────────────────────────────────────
+
+/// INT-59: `type::path` narrows to path-named projects only.
+#[ test ]
+fn int_59_type_path_narrows_to_path_projects()
+{
+  let root = TempDir::new().unwrap();
+  let storage_root = root.path().join( ".claude" );
+
+  common::write_test_session( &storage_root, "550e8400-e29b-41d4-a716-446655440001", "session-int59-uuid", 2 );
+
+  let path_proj = root.path().join( "proj-int59" );
+  fs::create_dir_all( &path_proj ).unwrap();
+  common::write_path_project_session( &storage_root, &path_proj, "session-int59-path", 2 );
+
+  let out = common::clg_cmd()
+    .env( "HOME", root.path() )
+    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+    .arg( ".projects" )
+    .arg( "scope::global" )
+    .arg( "type::path" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  assert!( s.contains( "session-int59-path" ), "must include path project; got:\n{s}" );
+  assert!( !s.contains( "session-int59-uuid" ), "must NOT include UUID project; got:\n{s}" );
+}
+
+// ─── INT-60 ───────────────────────────────────────────────────────────────────
+
+/// INT-60: `type::` with invalid value rejected.
+#[ test ]
+fn int_60_type_invalid_value_rejected()
+{
+  let root = TempDir::new().unwrap();
+
+  let out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .current_dir( "/tmp" )
+    .arg( ".projects" )
+    .arg( "type::bogus" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 1 );
+  let err = stderr( &out );
+  assert!(
+    err.contains( "type must be uuid|path|all, got bogus" ),
+    "INT-60: stderr must carry the canonical validate_project_type() error; got: {err}"
+  );
+  assert!(
+    stdout( &out ).is_empty(),
+    "INT-60: no project output on stdout when type:: is rejected; got:\n{}",
+    stdout( &out )
+  );
+}
+
+// ─── INT-61 ───────────────────────────────────────────────────────────────────
+
+/// INT-61: `project::X ids::1` outputs one conversation ID per line.
+#[ test ]
+fn int_61_ids_outputs_one_conversation_id_per_line()
+{
+  let root = TempDir::new().unwrap();
+  let storage_root = root.path().join( ".claude" );
+  let project = root.path().join( "proj-int61" );
+  fs::create_dir_all( &project ).unwrap();
+
+  let encoded = claude_storage_core::encode_path( &project ).expect( "encode" );
+  common::write_hierarchical_session(
+    &storage_root, &encoded, "root-int61-a", &[ ( "agent-int61-1", "general-purpose" ) ], 2
+  );
+  common::write_path_project_session( &storage_root, &project, "root-int61-b", 2 );
+
+  let out = common::clg_cmd()
+    .env( "HOME", root.path() )
+    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+    .arg( ".projects" )
+    .arg( format!( "project::{}", project.display() ) )
+    .arg( "ids::1" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  let lines : Vec< &str > = s.lines().filter( | l | !l.is_empty() ).collect();
+  assert_eq!( lines.len(), 2, "must output exactly 2 conversation ID lines; got:\n{s}" );
+  assert!( lines.contains( &"root-int61-a" ), "must list root-int61-a; got:\n{s}" );
+  assert!( lines.contains( &"root-int61-b" ), "must list root-int61-b; got:\n{s}" );
+  assert!( !s.contains( "Found" ), "must NOT show 'Found N projects' header; got:\n{s}" );
+  assert!( !s.contains( "agent-int61-1" ), "must NOT list agent id (only root conversation ids); got:\n{s}" );
+}
+
+// ─── INT-62 ───────────────────────────────────────────────────────────────────
+
+/// INT-62: `project::X ids::1 count::1` outputs a single bare integer.
+#[ test ]
+fn int_62_ids_count_outputs_bare_integer()
+{
+  let root = TempDir::new().unwrap();
+  let storage_root = root.path().join( ".claude" );
+  let project = root.path().join( "proj-int62" );
+  fs::create_dir_all( &project ).unwrap();
+
+  common::write_path_project_session( &storage_root, &project, "root-int62-a", 2 );
+  common::write_path_project_session( &storage_root, &project, "root-int62-b", 2 );
+  common::write_path_project_session( &storage_root, &project, "root-int62-c", 2 );
+
+  let out = common::clg_cmd()
+    .env( "HOME", root.path() )
+    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+    .arg( ".projects" )
+    .arg( format!( "project::{}", project.display() ) )
+    .arg( "ids::1" )
+    .arg( "count::1" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  assert_eq!( s.trim(), "3", "must output bare integer count and nothing else; got:\n{s}" );
+}
+
+// ─── INT-63 ───────────────────────────────────────────────────────────────────
+
+/// INT-63: `ids::1` without required `project::` rejected.
+#[ test ]
+fn int_63_ids_without_project_rejected()
+{
+  let root = TempDir::new().unwrap();
+
+  let out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .current_dir( "/tmp" )
+    .arg( ".projects" )
+    .arg( "ids::1" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 1 );
+  let err = stderr( &out );
+  assert!(
+    err.contains( "project parameter required for ids" ),
+    "INT-63: stderr must carry the specific ids::-requires-project:: validation error, \
+     not a generic unknown-parameter/help-hint message (that would coincidentally contain \
+     the substring \"project\" via the \"..projects ??\" hint text and pass for the wrong \
+     reason); got: {err}"
+  );
+  assert!(
+    stdout( &out ).is_empty(),
+    "INT-63: no conversation IDs on stdout; got:\n{}",
+    stdout( &out )
+  );
+}
+
+// ─── INT-64 ───────────────────────────────────────────────────────────────────
+
+/// INT-64: `type::` and `filter::` compose under `scope::global`.
+#[ test ]
+fn int_64_type_and_filter_compose()
+{
+  let root = TempDir::new().unwrap();
+  let storage_root = root.path().join( ".claude" );
+
+  let path_alpha = root.path().join( "alpha-int64" );
+  let path_beta  = root.path().join( "beta-int64" );
+  fs::create_dir_all( &path_alpha ).unwrap();
+  fs::create_dir_all( &path_beta ).unwrap();
+  common::write_path_project_session( &storage_root, &path_alpha, "session-int64-path-alpha", 2 );
+  common::write_path_project_session( &storage_root, &path_beta,  "session-int64-path-beta",  2 );
+
+  // UUID project whose raw id also contains "alpha" (would match filter:: if type:: didn't exclude it)
+  common::write_test_session( &storage_root, "alpha00000-uuid-look-alike-project-id", "session-int64-uuid-alpha", 2 );
+
+  let out = common::clg_cmd()
+    .env( "HOME", root.path() )
+    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+    .arg( ".projects" )
+    .arg( "scope::global" )
+    .arg( "type::path" )
+    .arg( "filter::alpha" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  assert!( s.contains( "session-int64-path-alpha" ),  "must include path+alpha project; got:\n{s}" );
+  assert!( !s.contains( "session-int64-path-beta" ),  "must exclude path+beta (filter:: mismatch); got:\n{s}" );
+  assert!( !s.contains( "session-int64-uuid-alpha" ), "must exclude uuid+alpha (type:: mismatch); got:\n{s}" );
+}
+
+// ─── INT-65 ───────────────────────────────────────────────────────────────────
+
+/// INT-65: `limit::`/`show_tree::`/`show_topic::` are no-ops under `detail::projects`.
+#[ test ]
+fn int_65_limit_show_tree_show_topic_noop_under_detail_projects()
+{
+  let root = TempDir::new().unwrap();
+  let storage_root = root.path().join( ".claude" );
+  let project = root.path().join( "proj-int65" );
+  fs::create_dir_all( &project ).unwrap();
+
+  let encoded = claude_storage_core::encode_path( &project ).expect( "encode" );
+  common::write_hierarchical_session(
+    &storage_root, &encoded, "root-int65", &[ ( "agent-int65", "general-purpose" ) ], 2
+  );
+
+  let out_plain = common::clg_cmd()
+    .env( "HOME", root.path() )
+    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+    .arg( ".projects" )
+    .arg( "scope::global" )
+    .arg( "detail::projects" )
+    .output()
+    .unwrap();
+
+  let out_with_noops = common::clg_cmd()
+    .env( "HOME", root.path() )
+    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+    .arg( ".projects" )
+    .arg( "scope::global" )
+    .arg( "detail::projects" )
+    .arg( "limit::1" )
+    .arg( "show_tree::1" )
+    .arg( "show_topic::1" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out_plain, 0 );
+  assert_exit( &out_with_noops, 0 );
+  assert_eq!(
+    stdout( &out_plain ), stdout( &out_with_noops ),
+    "limit::/show_tree::/show_topic:: must be no-ops under detail::projects"
+  );
+}
+
+// ─── INT-66 ───────────────────────────────────────────────────────────────────
+
+/// INT-66: `.list`'s `deprecation_message` edit does not alter runtime output.
+#[ test ]
+fn int_66_list_deprecation_message_preserves_output()
+{
+  let root = TempDir::new().unwrap();
+  let storage_root = root.path().join( ".claude" );
+  let project = root.path().join( "proj-int66" );
+  fs::create_dir_all( &project ).unwrap();
+  common::write_path_project_session( &storage_root, &project, "session-int66", 2 );
+
+  let out = common::clg_cmd()
+    .env( "HOME", root.path() )
+    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+    .arg( ".list" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  assert!( s.contains( "Found 1 project" ), "must show project count header; got:\n{s}" );
+  assert!(
+    s.lines().any( | l | l.starts_with( "Path(" ) ),
+    "must show Path(...) debug-format project id, unaffected by deprecation_message; got:\n{s}"
   );
 }

@@ -3,6 +3,8 @@
 Acceptance criteria tests for the developer persona auditing Claude Code session storage.
 Source: [001_audit_session_history.md](../../../../docs/cli/user_story/001_audit_session_history.md)
 
+> **Note:** `.list` is deprecated (see [`command/02_list.md`](../command/02_list.md)). RWS-3 exercises `.list show_sessions::1`; the equivalent workflow now uses plain `clg .projects` — no `show_sessions::1` needed, since `.projects` shows session detail by default unconditionally.
+
 ## Test Case Index
 
 | ID | Test Name | Criteria |

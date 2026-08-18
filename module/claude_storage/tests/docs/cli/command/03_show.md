@@ -16,9 +16,6 @@ Integration tests for the `.show` command. Tests verify project view, session vi
 | INT-6 | show_metadata::1 + show_entries::1 shows raw entry list | Display Mode |
 | INT-7 | Exit code 1 when cwd has no project | Exit Codes |
 | INT-8 | project:: with path-encoded ID | Project View |
-| INT-9 | detail::sessions appends full per-session list | Project Overview |
-| INT-10 | tail::N caps project-overview messages | Project Overview |
-| INT-11 | show_entries::1 renders project-overview tail as raw list | Project Overview |
 | INT-12 | show_entries::1 alone is a no-op in session-detail content mode | Display Mode |
 
 ## Test Coverage Summary
@@ -29,7 +26,6 @@ Integration tests for the `.show` command. Tests verify project view, session vi
 - Combined: 1 test (INT-4)
 - Display Mode: 3 tests (INT-5, INT-6, INT-12)
 - Exit Codes: 1 test (INT-7)
-- Project Overview: 3 tests (INT-9, INT-10, INT-11)
 
 ## Test Cases
 
@@ -44,7 +40,7 @@ CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .show
 
 **Expected behavior:**
 - Fixture: a project whose path-encoding matches the test's cwd, with 3 sessions; run from that cwd
-- A compact key:val summary block (path, storage dir, session counts, total entries, first/last timestamp) followed by the last `tail::` messages (default `10`) from the most-recently-active session; no per-session list (default `detail::projects`)
+- A summary block (project path, storage dir, session counts by type, total entries) followed by the full list of all sessions in the project (one line per session: ID, entry count, last-activity timestamp) — unconditional, no tail-window capping, no per-session-list gating
 - Exit code: 0
 - **Source:** [command/03_show.md](../../../../docs/cli/command/03_show.md)
 
@@ -149,52 +145,7 @@ CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .show project::-home-alice-projects-al
 
 **Expected behavior:**
 - Fixture: project stored with path-encoded ID `-home-alice-projects-alpha`, with 3 sessions
-- Overview (summary block + last `tail::` messages) for the project with path-encoded ID `-home-alice-projects-alpha`
-- Exit code: 0
-- **Source:** [command/03_show.md](../../../../docs/cli/command/03_show.md)
-
----
-
-### INT-9: detail::sessions appends full per-session list
-
-**Command:**
-```
-CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .show project::alpha detail::sessions
-```
-
-**Expected behavior:**
-- Fixture: project `alpha` with 3 sessions
-- Summary block and last `tail::` messages (same as bare `.show project::alpha`), followed by a full per-session list — one line per session with ID and basic metadata
-- Exit code: 0
-- **Source:** [command/03_show.md](../../../../docs/cli/command/03_show.md)
-
----
-
-### INT-10: tail::N caps project-overview messages
-
-**Command:**
-```
-CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .show project::alpha tail::2
-```
-
-**Expected behavior:**
-- Fixture: project `alpha` whose most-recently-active session has 5 messages
-- Summary block followed by exactly the last 2 messages from the most-recently-active session (not the default 10)
-- Exit code: 0
-- **Source:** [command/03_show.md](../../../../docs/cli/command/03_show.md)
-
----
-
-### INT-11: show_entries::1 renders project-overview tail as raw list
-
-**Command:**
-```
-CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .show project::alpha show_entries::1
-```
-
-**Expected behavior:**
-- Fixture: project `alpha` whose most-recently-active session has known entries
-- Summary block followed by the `tail::`-windowed entries rendered as a raw UUID/type/timestamp list instead of formatted chat content
+- Summary block followed by the full list of all sessions for the project with path-encoded ID `-home-alice-projects-alpha`
 - Exit code: 0
 - **Source:** [command/03_show.md](../../../../docs/cli/command/03_show.md)
 

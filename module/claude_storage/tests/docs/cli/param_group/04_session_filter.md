@@ -4,6 +4,8 @@ Interaction tests for the Session Filter group (`session::`, `agent::`, `min_ent
 
 **Source:** [param_group/04_session_filter.md](../../../../docs/cli/param_group/04_session_filter.md)
 
+> **Note:** `.list` is deprecated (see [`command/02_list.md`](../command/02_list.md)), superseded by [`.projects`](../command/07_projects.md). All 7 cases below test `.list`'s auto-enable mechanism (any of `session::`/`agent::`/`min_entries::` implicitly turning on session display, overridable via `show_sessions::0`) — `.projects` has no equivalent mechanism: it always shows session detail unconditionally, with no suppress/force toggle, so session filters simply narrow the already-visible lines. The underlying filter semantics of `session::`/`agent::`/`min_entries::` themselves (which sessions match) carry over unchanged to `.projects` — only the auto-enable/override interaction tested here is `.list`-specific.
+
 ## Test Case Index
 
 | ID | Test Name | Category |

@@ -5,7 +5,7 @@
 
 use core::fmt::Write as FmtWrite;
 use unilang::{ VerifiedCommand, ExecutionContext, OutputData, ErrorData, ErrorCode };
-use super::storage::create_storage;
+use super::storage::{ create_storage, load_project_for_param };
 use super::scope::{ validate_scope, resolve_scoped_projects, decode_project_display };
 
 // ─── constants ─────────────────────────────────────────────────────────────
@@ -378,6 +378,44 @@ fn aggregate_projects(
   summaries
 }
 
+/// Validate `type::` — narrows scoped projects by naming scheme.
+///
+/// # Errors
+///
+/// Returns error when the value is not one of `uuid`, `path`, `all`.
+fn validate_project_type( type_raw : Option< &str > ) -> core::result::Result< String, ErrorData >
+{
+  let raw = type_raw.unwrap_or( "all" );
+  let value = raw.to_lowercase();
+  if !matches!( value.as_str(), "uuid" | "path" | "all" )
+  {
+    return Err( ErrorData::new(
+      ErrorCode::InternalError,
+      format!( "type must be uuid|path|all, got {raw}" ),
+    ) );
+  }
+  Ok( value )
+}
+
+/// Validate `detail::` — selects header-only vs full session-detail rendering.
+///
+/// # Errors
+///
+/// Returns error when the value is not one of `projects`, `sessions`.
+fn validate_detail_level( detail_raw : Option< &str > ) -> core::result::Result< String, ErrorData >
+{
+  let raw = detail_raw.unwrap_or( "sessions" );
+  let value = raw.to_lowercase();
+  if !matches!( value.as_str(), "projects" | "sessions" )
+  {
+    return Err( ErrorData::new(
+      ErrorCode::InternalError,
+      format!( "detail must be projects|sessions, got {raw}" ),
+    ) );
+  }
+  Ok( value )
+}
+
 // ─── .projects routine ─────────────────────────────────────────────────────
 
 /// List sessions with scope control (session-first view).
@@ -406,11 +444,44 @@ pub fn projects_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   -> core::result::Result< OutputData, ErrorData >
 {
   use std::collections::BTreeMap;
-  use claude_storage_core::{ Session, SessionFilter };
+  use claude_storage_core::{ Session, SessionFilter, ProjectId };
+
+  // --- ids:: scripting-mode dispatch (bypasses scope-based listing entirely) ---
+
+  if cmd.get_boolean( "ids" ).unwrap_or( false )
+  {
+    let proj_id = cmd.get_string( "project" )
+      .ok_or_else( || ErrorData::new(
+        ErrorCode::InternalError,
+        "project parameter required for ids:: listing".to_string(),
+      ) )?;
+    let storage = create_storage()?;
+    let project = load_project_for_param( &storage, proj_id )?;
+    let sessions = project.all_sessions()
+      .map_err( | e | ErrorData::new( ErrorCode::InternalError, format!( "Failed to load sessions: {e}" ) ) )?;
+    let families = build_families( sessions );
+    let conversations = group_into_conversations( families );
+    let count_mode = cmd.get_boolean( "count" ).unwrap_or( false );
+    if count_mode
+    {
+      return Ok( OutputData::new( format!( "{}", conversations.len() ), "text" ) );
+    }
+    let mut out = String::new();
+    for conv in &conversations
+    {
+      if let Some( s ) = conv.root_session()
+      {
+        writeln!( out, "{}", s.id() ).unwrap();
+      }
+    }
+    return Ok( OutputData::new( out, "text" ) );
+  }
 
   // --- parameters ---
 
   let scope = validate_scope( cmd.get_string( "scope" ), "around" )?;
+  let project_type = validate_project_type( cmd.get_string( "type" ) )?;
+  let detail_level = validate_detail_level( cmd.get_string( "detail" ) )?;
 
   let show_tree = cmd.get_boolean( "show_tree" ).unwrap_or( false );
 
@@ -467,7 +538,32 @@ pub fn projects_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   // --- collect projects by scope ---
 
   let storage = create_storage()?;
-  let scoped_projects = resolve_scoped_projects( &storage, &scope, cmd.get_string( "path" ) )?;
+  let mut scoped_projects = resolve_scoped_projects( &storage, &scope, cmd.get_string( "path" ) )?;
+
+  // --- narrow by type:: / filter:: ---
+
+  let path_filter = cmd.get_string( "filter" ).map( str::to_lowercase );
+  if project_type != "all" || path_filter.is_some()
+  {
+    scoped_projects.retain( | project |
+    {
+      let type_ok = match project_type.as_str()
+      {
+        "uuid" => matches!( project.id(), ProjectId::Uuid( _ ) ),
+        "path" => matches!( project.id(), ProjectId::Path( _ ) ),
+        _ => true,
+      };
+      if !type_ok { return false; }
+      let Some( ref substr ) = path_filter else { return true };
+      let dir_name = project
+        .storage_dir()
+        .file_name()
+        .and_then( | n | n.to_str() )
+        .unwrap_or( "" )
+        .to_string();
+      decode_project_display( &dir_name ).to_lowercase().contains( substr.as_str() )
+    } );
+  }
 
   // --- build session filter ---
 
@@ -580,13 +676,16 @@ pub fn projects_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
         writeln!( output, "{display_path}: ({root_count} {r_noun})" ).unwrap();
       }
 
-      if show_tree
+      if detail_level == "sessions"
       {
-        render_families_v2( &mut output, &families );
-      }
-      else
-      {
-        render_families_v1( &mut output, &families, limit_cap, show_topic );
+        if show_tree
+        {
+          render_families_v2( &mut output, &families );
+        }
+        else
+        {
+          render_families_v1( &mut output, &families, limit_cap, show_topic );
+        }
       }
     }
     else
@@ -608,22 +707,25 @@ pub fn projects_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
       let group_count = displayable.len();
       let group_noun = if group_count == 1 { "conversation" } else { "conversations" };
       writeln!( output, "{display_path}: ({group_count} {group_noun})" ).unwrap();
-      let show_count = displayable.len().min( limit_cap );
-      for ( i, &session ) in displayable[ ..show_count ].iter().enumerate()
+      if detail_level == "sessions"
       {
-        let marker = if i == 0 { '*' } else { '-' };
-        let line = format_session_line( session, marker, show_topic );
-        writeln!( output, "{line}" ).unwrap();
-      }
-      if displayable.len() > limit_cap
-      {
-        let hidden = displayable.len() - limit_cap;
-        // "conversation" is the user-facing taxonomy noun; "session" is the internal storage term.
-        let hidden_noun = if hidden == 1 { "conversation" } else { "conversations" };
-        writeln!(
-          output,
-          "  ... and {hidden} more {hidden_noun}  (use limit::0 to list all)"
-        ).unwrap();
+        let show_count = displayable.len().min( limit_cap );
+        for ( i, &session ) in displayable[ ..show_count ].iter().enumerate()
+        {
+          let marker = if i == 0 { '*' } else { '-' };
+          let line = format_session_line( session, marker, show_topic );
+          writeln!( output, "{line}" ).unwrap();
+        }
+        if displayable.len() > limit_cap
+        {
+          let hidden = displayable.len() - limit_cap;
+          // "conversation" is the user-facing taxonomy noun; "session" is the internal storage term.
+          let hidden_noun = if hidden == 1 { "conversation" } else { "conversations" };
+          writeln!(
+            output,
+            "  ... and {hidden} more {hidden_noun}  (use limit::0 to list all)"
+          ).unwrap();
+        }
       }
     }
 

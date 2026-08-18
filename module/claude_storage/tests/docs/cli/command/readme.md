@@ -12,7 +12,7 @@
 | Name | Purpose | Status |
 |------|---------|--------|
 | 01_status.md | Integration tests for `.status` command | ✅ |
-| 02_list.md | Integration tests for `.list` command | ✅ |
+| 02_list.md | Integration tests for `.list` command (DEPRECATED, superseded by `.projects`) | ✅ |
 | 03_show.md | Integration tests for `.show` command | ✅ |
 | 04_count.md | Integration tests for `.count` command | ✅ |
 | 05_search.md | Integration tests for `.search` command | ✅ |

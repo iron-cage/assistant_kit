@@ -49,7 +49,7 @@
   tags: ["storage", "list"]
   permissions: []
   idempotent: true
-  deprecation_message: ""
+  deprecation_message: "Deprecated: use .projects instead — detail::projects (project-only view), filter:: (path substring), and ids::/count:: (conversation-ID scripting) cover .list's former capabilities."
   http_method_hint: "GET"
 
   arguments:
@@ -521,6 +521,35 @@
       aliases: []
       tags: ["scope", "filter"]
 
+    - name: "filter"
+      kind: "String"
+      description: "Filter resolved projects by decoded path substring (case-insensitive)"
+      hint: "Path substring filter"
+      optional: true
+      validation_rules: []
+      aliases: []
+      tags: ["filter"]
+
+    - name: "type"
+      kind: "String"
+      description: "Project naming filter (uuid, path, or all)"
+      hint: "Project naming filter"
+      optional: true
+      default: "all"
+      validation_rules: []
+      aliases: []
+      tags: []
+
+    - name: "detail"
+      kind: "String"
+      description: "Output detail: projects (terse header only) or sessions (full detail)"
+      hint: "Output detail level"
+      optional: true
+      default: "sessions"
+      validation_rules: []
+      aliases: []
+      tags: []
+
     - name: "session"
       kind: "String"
       description: "Filter sessions by ID substring (case-insensitive)"
@@ -547,6 +576,35 @@
       validation_rules: []
       aliases: []
       tags: ["filter"]
+
+    - name: "ids"
+      kind: "Boolean"
+      description: "Output raw conversation IDs for project:: (scripting mode)"
+      hint: "Conversation-ID scripting mode"
+      optional: true
+      default: "0"
+      validation_rules: []
+      aliases: []
+      tags: []
+
+    - name: "project"
+      kind: "String"
+      description: "Project ID; scopes ids:: output (required with ids::1)"
+      hint: "Project ID"
+      optional: true
+      validation_rules: []
+      aliases: []
+      tags: []
+
+    - name: "count"
+      kind: "Boolean"
+      description: "With ids::1: output only the count as a bare integer"
+      hint: "Count-only output"
+      optional: true
+      default: "0"
+      validation_rules: []
+      aliases: []
+      tags: []
 
     - name: "limit"
       kind: "Integer"
@@ -596,6 +654,11 @@
     - ".projects limit::5"
     - ".projects show_tree::1"
     - ".projects scope::global since_days::20 show_topic::1"
+    - ".projects scope::global detail::projects"
+    - ".projects scope::global filter::assistant"
+    - ".projects scope::global type::uuid detail::projects"
+    - ".projects project::abc123 ids::1"
+    - ".projects project::abc123 ids::1 count::1"
   auto_help_enabled: true
 
 - name: ".project.path"

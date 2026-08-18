@@ -1,5 +1,7 @@
 # Parameter :: `show_sessions::` (bool)
 
+> **Deprecated.** `.list` is deprecated (see [`command/02_list.md`](../command/02_list.md)); `show_sessions::` has no direct equivalent on `.projects`, but its suppress/force role is now covered by [`detail::`](../../../../docs/cli/param/30_detail.md): `detail::sessions` (default) shows session detail unconditionally, `detail::projects` suppresses it unconditionally. There is no auto-detect mode on `.projects` — `detail::` is always explicit, simpler than this parameter's auto-enable behavior. The test cases below are retained for historical/regression traceability.
+
 Edge case tests for the `show_sessions::` boolean override parameter in `.list`. Tests validate override behavior against auto-enable logic.
 
 **Source:** [param/15_sessions.md](../../../../docs/cli/param/15_sessions.md)

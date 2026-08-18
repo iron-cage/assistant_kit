@@ -4,6 +4,8 @@ Edge case tests for the `count::` parameter. Tests validate boolean enforcement,
 
 **Source:** [param/21_count.md](../../../../docs/cli/param/21_count.md)
 
+> **Note:** `.list` is deprecated (see [`command/02_list.md`](../command/02_list.md)), superseded by [`.projects`](../command/07_projects.md). `.list`'s `count::1` (EC-1–EC-6) counted all listed projects standalone, as a bare integer — that general project-counting role is now served by the `.count` command (`target::projects`) instead. `.projects` does reuse the `count::` name, but with narrower scope: only meaningful paired with `ids::1` (see [`31_ids.md`](../../../../docs/cli/param/31_ids.md)), where it outputs the bare-integer count of one `project::`-selected project's conversation IDs rather than a total project count — EC-1–EC-6 below do not carry over as-is.
+
 ## Test Case Index
 
 | ID | Test Name | Category |

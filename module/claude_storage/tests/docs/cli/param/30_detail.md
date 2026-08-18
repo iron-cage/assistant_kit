@@ -1,123 +1,73 @@
 # Parameter :: `detail::`
 
-Edge case tests for the `detail::` parameter. Tests validate enum enforcement, case-insensitivity, and per-command default behavior (`sessions` on `.projects`, `projects` on `.show`).
+Edge case tests for the `detail::` parameter on `.projects` and `.show`. Tests validate the `projects`/`sessions` output-verbosity toggle, its default, error handling, and its interaction with other output-shaping parameters.
 
 **Source:** [param/30_detail.md](../../../../docs/cli/param/30_detail.md)
+
+> **Note:** New in `.projects`, absorbed `.list`'s former project-only default view and its `show_sessions::` toggle into a single explicit parameter (see [`15_sessions.md`](15_sessions.md)). Coverage below is `.projects`-only — `.show`'s `detail::` branch is out of scope for this file (→ `command/03_show.md`'s own test surface).
 
 ## Test Case Index
 
 | ID | Test Name | Category |
 |----|-----------|----------|
-| EC-1 | No `detail::` given on `.projects` → full session detail | Default |
-| EC-2 | `detail::projects` on `.projects` → terse, project-only view | Happy Path |
-| EC-3 | `detail::sessions` on `.projects` → explicit full detail (same as default) | Happy Path |
-| EC-4 | `detail::` invalid value → rejected | Type Validation |
-| EC-5 | `detail::PROJECTS` (mixed case) → accepted, case-insensitive | Boundary Values |
-| EC-6 | No `detail::` given on `.show` → summary + tail only, no session list | Cross-Command Default |
-| EC-7 | `detail::sessions` on `.show` → summary + tail + full per-session list | Cross-Command Default |
-| EC-8 | `detail::` given with `session_id::` on `.show` → no effect | Non-Interference |
+| EC-1 | `detail::projects` shows header-only output, no session/family lines | Behavior |
+| EC-2 | Omitted matches explicit `detail::sessions` byte-for-byte | Default |
+| EC-3 | Invalid value rejected | Error Handling |
+| EC-4 | `limit::`/`show_tree::`/`show_topic::` are no-ops under `detail::projects` | Composition |
 
 ## Test Coverage Summary
 
-- Default: 1 test (EC-1)
-- Happy Path: 2 tests (EC-2, EC-3)
-- Type Validation: 1 test (EC-4)
-- Boundary Values: 1 test (EC-5)
-- Cross-Command Default: 2 tests (EC-6, EC-7)
-- Non-Interference: 1 test (EC-8)
+- Behavior: 1 test (EC-1)
+- Default: 1 test (EC-2)
+- Error Handling: 1 test (EC-3)
+- Composition: 1 test (EC-4)
 
-**Total:** 8 edge cases
+**Total:** 4 edge cases
 
-**Behavioral Divergence Pair:** EC-1 (`.projects` default `sessions`) ↔ EC-6 (`.show` default `projects`)
-
-Validation edge cases (EC-4, EC-5) are parameter-level (`DetailLevel` type) and shared across consuming commands — not re-tested per command. Only the default-value divergence (EC-1 vs EC-6) and its explicit-override counterpart (EC-3 vs EC-7) are command-specific and re-verified for `.show`.
+**Known gap:** case-insensitive parsing is a stated constraint (→ [`type/14_detail_level.md`](../../../../docs/cli/type/14_detail_level.md)) with no dedicated regression test yet — see that file's own note.
 
 ## Test Cases
 
 ---
 
-### EC-1: No `detail::` given on `.projects` → full session detail
+### EC-1: `detail::projects` shows header-only output, no session/family lines
 
 - **Commands:** `.projects`
-- **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture` (fixture: 2 projects, each with sessions)
-- **When:** `clg .projects`
-- **Then:** Project headers plus full session/family detail beneath each — unchanged pre-consolidation `.projects` behavior (default `sessions`)
+- **Given:** one project with a root session plus 2 agent sessions (family), one plain path-based project with a single session
+- **When:** `clg .projects scope::global detail::projects`
+- **Then:** stdout shows the `Found N projects` header; no session ids, agent ids, or `[N agents...]` bracket breakdowns appear anywhere in the body
 - **Exit:** 0
-- **Source:** [param/30_detail.md](../../../../docs/cli/param/30_detail.md)
+- **Source:** [param/30_detail.md](../../../../docs/cli/param/30_detail.md); same test as [command/07_projects.md INT-53](../command/07_projects.md) (`int_53_detail_projects_header_only_no_body_lines`)
 
 ---
 
-### EC-2: `detail::projects` on `.projects` → terse, project-only view
+### EC-2: Omitted matches explicit `detail::sessions` byte-for-byte
 
 - **Commands:** `.projects`
-- **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture` (fixture: 2 projects, each with sessions)
-- **When:** `clg .projects detail::projects`
-- **Then:** One header line per project only; no session or family lines beneath any project
+- **Given:** one path-based project with one session
+- **When:** `clg .projects scope::global` compared against `clg .projects scope::global detail::sessions`
+- **Then:** stdout is byte-identical between the two invocations
 - **Exit:** 0
-- **Source:** [param/30_detail.md](../../../../docs/cli/param/30_detail.md)
+- **Source:** [param/30_detail.md](../../../../docs/cli/param/30_detail.md); same test as [command/07_projects.md INT-54](../command/07_projects.md) (`int_54_detail_omitted_matches_explicit_sessions`)
 
 ---
 
-### EC-3: `detail::sessions` on `.projects` → explicit full detail
-
-- **Commands:** `.projects`
-- **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture` (fixture: 2 projects, each with sessions)
-- **When:** `clg .projects detail::sessions`
-- **Then:** Identical output to `clg .projects` with no `detail::` given (EC-1) — explicit value matches the default
-- **Exit:** 0
-- **Source:** [param/30_detail.md](../../../../docs/cli/param/30_detail.md)
-
----
-
-### EC-4: Invalid value rejected
+### EC-3: Invalid value rejected
 
 - **Commands:** `.projects`
 - **Given:** clean environment
 - **When:** `clg .projects detail::bogus`
-- **Then:** Exit 1; error message `detail must be projects|sessions, got bogus`
+- **Then:** stderr contains `detail must be projects|sessions, got bogus`; stdout is empty
 - **Exit:** 1
-- **Source:** [param/30_detail.md](../../../../docs/cli/param/30_detail.md)
+- **Source:** [param/30_detail.md](../../../../docs/cli/param/30_detail.md); same test as [command/07_projects.md INT-55](../command/07_projects.md) (`int_55_detail_invalid_value_rejected`)
 
 ---
 
-### EC-5: Mixed-case value accepted
+### EC-4: `limit::`/`show_tree::`/`show_topic::` are no-ops under `detail::projects`
 
 - **Commands:** `.projects`
-- **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture` (fixture: 2 projects, each with sessions)
-- **When:** `clg .projects detail::PROJECTS`
-- **Then:** Identical output to `clg .projects detail::projects` (EC-2) — value parsed case-insensitively
+- **Given:** one project with a root session plus one agent session (family)
+- **When:** `clg .projects scope::global detail::projects` compared against the same command plus `limit::1 show_tree::1 show_topic::1`
+- **Then:** stdout is byte-identical between the two invocations — these three parameters have nothing to act on once body lines are suppressed
 - **Exit:** 0
-- **Source:** [param/30_detail.md](../../../../docs/cli/param/30_detail.md)
-
----
-
-### EC-6: No `detail::` given on `.show` → summary + tail only
-
-- **Commands:** `.show`
-- **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture` (fixture: project with 3 sessions, run from its cwd)
-- **When:** `clg .show`
-- **Then:** Summary block and last `tail::` messages only; no per-session list appended — `.show`'s own default (`projects`), distinct from `.projects`'s default of `sessions` (see EC-1)
-- **Exit:** 0
-- **Source:** [param/30_detail.md](../../../../docs/cli/param/30_detail.md)
-
----
-
-### EC-7: `detail::sessions` on `.show` → full per-session list appended
-
-- **Commands:** `.show`
-- **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture` (fixture: project with 3 sessions, run from its cwd)
-- **When:** `clg .show detail::sessions`
-- **Then:** Summary block and last `tail::` messages (same as EC-6), followed by a full per-session list — one line per session with ID and basic metadata
-- **Exit:** 0
-- **Source:** [param/30_detail.md](../../../../docs/cli/param/30_detail.md)
-
----
-
-### EC-8: `detail::` given with `session_id::` on `.show` → no effect
-
-- **Commands:** `.show`
-- **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture` (fixture: session `-default_topic` with known entries)
-- **When:** `clg .show session_id::-default_topic detail::sessions` vs `clg .show session_id::-default_topic`
-- **Then:** Identical output in both — session-detail branches ignore `detail::` entirely
-- **Exit:** 0
-- **Source:** [param/30_detail.md](../../../../docs/cli/param/30_detail.md)
+- **Source:** [param/30_detail.md](../../../../docs/cli/param/30_detail.md); same test as [command/07_projects.md INT-65](../command/07_projects.md) (`int_65_limit_show_tree_show_topic_noop_under_detail_projects`)

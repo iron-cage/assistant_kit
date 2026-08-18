@@ -4,7 +4,7 @@
 
 - **Purpose**: Document edge case coverage for individual clg parameters.
 - **Responsibility**: Index of per-parameter edge case test files covering parameter-level behavior.
-- **In Scope**: All 28 clg parameter test files (of 31 documented parameters — 3 not yet implemented, see `docs/cli/param/readme.md`).
+- **In Scope**: All 30 clg parameter test files.
 - **Out of Scope**: Command-level tests (→ `command/`), parameter group interactions (→ `param_group/`).
 
 ### Responsibility Table
@@ -38,4 +38,6 @@
 | 25_tail.md | Edge case tests for `tail::` parameter | ✅ |
 | 27_since_days.md | Edge case tests for `since_days::` parameter | ✅ |
 | 28_show_topic.md | Edge case tests for `show_topic::` parameter | ✅ |
+| 29_filter.md | Edge case tests for `filter::` parameter | ✅ |
 | 30_detail.md | Edge case tests for `detail::` parameter | ✅ |
+| 31_ids.md | Edge case tests for `ids::` parameter | ✅ |

@@ -158,9 +158,3 @@ The root directory where Claude Code stores all data. Default: `~/.claude/`. Can
 ### Output Toggle
 
 A boolean parameter (0 or 1) enabling an optional output section. The CLI uses per-block toggles: `show_stat::` for statistics footer in `.show`, `show_tokens::` for token usage in `.show`/`.status`, `show_tree::` for agent tree display in `.projects`. See [Output Control group](param_group/01_output_control.md).
-
-### Provenance
-
-| File | Notes |
-|------|-------|
-| [dictionary.md](dictionary.md) | Original un-migrated source; retained as reference |

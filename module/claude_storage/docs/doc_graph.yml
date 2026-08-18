@@ -1,10 +1,10 @@
 meta:
   description: Cross-reference graph for all NNN-identified doc instances in claude_storage
-  node_count: 74
-  edge_count: 87
+  node_count: 75
+  edge_count: 88
   component_count: 15
-  generated: 2026-07-04
-  note: "param/29-31 and type/14 added for the .list->.projects consolidation; a pre-existing gap (param/25-28, command/12-13, user_story/006, pitfall/04) predates this update and is not yet graphed"
+  generated: 2026-08-18
+  note: "param/29-31 and type/14 added for the .list->.projects consolidation; param/25 added for the .show project-overview extension; a pre-existing gap (param/26-28, command/12-13, user_story/006, pitfall/04) predates this update and is not yet graphed"
 
 nodes:
   # feature/ entity (1)
@@ -211,7 +211,11 @@ nodes:
     file: cli/param/24_show_tree.md
     label: Show Tree
     entity: param
-  # cli/param/ entity, continued: 29-31 added (25-28 pre-existing gap, not yet graphed)
+  # cli/param/ entity, continued: 25 added for the .show project-overview extension (26-28 pre-existing gap, not yet graphed); 29-31 added for the .list->.projects consolidation
+  - id: param/25
+    file: cli/param/25_tail.md
+    label: Tail
+    entity: param
   - id: param/29
     file: cli/param/29_filter.md
     label: Filter
@@ -496,6 +500,9 @@ edges:
     to: param/24
     via: referenced_params
   - from: user_story/002
+    to: param/25
+    via: referenced_params
+  - from: user_story/002
     to: param/29
     via: referenced_params
   - from: user_story/002
@@ -650,6 +657,7 @@ components:
       - param/22
       - param/23
       - param/24
+      - param/25
       - param/29
       - param/30
       - param/31

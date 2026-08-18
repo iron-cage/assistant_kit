@@ -4,6 +4,8 @@ Edge case tests for the `scope::` parameter. Tests validate enum parsing and per
 
 **Source:** [param/12_scope.md](../../../../docs/cli/param/12_scope.md) | [type/07_scope_value.md](../../../../docs/cli/type/07_scope_value.md) | [param_group/05_scope_configuration.md](../../../../docs/cli/param_group/05_scope_configuration.md)
 
+> **Note:** `.list` is deprecated (see [`command/02_list.md`](../command/02_list.md)), superseded by [`.projects`](../command/07_projects.md). EC-1–EC-6, EC-8 exercise `scope::` enum parsing and behavior via `.list`; `.projects` accepts the same five values with the same semantics (EC-7/EC-9/EC-10/EC-11 below already test `.projects` directly), except `.projects`' own default is `around`, not `.list`'s former `global`.
+
 ## Test Case Index
 
 | ID | Test Name | Category |

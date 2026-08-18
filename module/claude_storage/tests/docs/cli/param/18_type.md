@@ -4,6 +4,8 @@ Edge case tests for the `type::` parameter. Tests validate enum parsing and proj
 
 **Source:** [param/18_type.md](../../../../docs/cli/param/18_type.md) | [type/06_project_type.md](../../../../docs/cli/type/06_project_type.md)
 
+> **Note:** `.list` is deprecated (see [`command/02_list.md`](../command/02_list.md)), superseded by [`.projects`](../command/07_projects.md). `type::`'s value semantics (EC-1–EC-7) carry over unchanged — `.projects` also filters projects by naming scheme via `type::`, with the identical `uuid`/`path`/`all` values and `all` default. `.list`'s dropped fourth value `conversation` has no equivalent value on `type::` — that capability is now the separate `ids::` parameter (see [`31_ids.md`](../../../../docs/cli/param/31_ids.md)), orthogonal to naming-scheme filtering rather than a value of it.
+
 ## Test Case Index
 
 | ID | Test Name | Category |

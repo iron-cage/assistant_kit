@@ -1,5 +1,7 @@
 # Command :: `.list`
 
+> **Deprecated.** Superseded by [`.projects`](07_projects.md). `.projects` currently absorbs `.list`'s session-filtering parameters (`agent::`, `min_entries::`, `session::`) and always shows session detail unconditionally (no `show_sessions::` toggle needed) — but has no equivalent yet for `.list`'s project-only listing mode, `path::`-as-filter, `type::` filtering, or `count::`. The test cases below are retained for historical/regression traceability against `.list`'s pre-deprecation behavior; do not add new test cases here — new coverage for capabilities `.projects` does absorb belongs in [`command/07_projects.md`](07_projects.md).
+
 Integration tests for the `.list` command. Tests verify project listing, session display, filtering, and smart auto-enable behavior.
 
 **Source:** [command/02_list.md](../../../../docs/cli/command/02_list.md)

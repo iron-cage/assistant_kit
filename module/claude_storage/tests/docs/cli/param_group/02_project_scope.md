@@ -4,6 +4,8 @@ Interaction tests for the Project Scope group (`project::`). Tests verify consis
 
 **Source:** [param_group/02_project_scope.md](../../../../docs/cli/param_group/02_project_scope.md)
 
+> **Note:** `.list` is deprecated (see [`command/02_list.md`](../command/02_list.md)), superseded by [`.projects`](../command/07_projects.md). `.projects` has no `project::` parameter — it is not a member of this group. CC-6 exercises `.list` alongside `.show`/`.search`/`.export`/`.count`; `.projects` is not included in that cross-command sweep.
+
 ## Test Case Index
 
 | ID | Test Name | Category |

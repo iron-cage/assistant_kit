@@ -1,6 +1,6 @@
 # Parameter :: `tail::`
 
-Edge case tests for the `tail::` parameter. Tests validate integer enforcement, entry-count capping, and per-command default behavior (`4` on `.tail`, `10` on `.show`'s project overview).
+Edge case tests for the `tail::` parameter. Tests validate integer enforcement and entry-count capping on `.tail`.
 
 **Source:** [param/25_tail.md](../../../../docs/cli/param/25_tail.md)
 
@@ -15,8 +15,6 @@ Edge case tests for the `tail::` parameter. Tests validate integer enforcement, 
 | EC-5 | `tail::` empty value → rejected | Boundary Values |
 | EC-6 | `tail::100` when session has fewer entries → all shown | Boundary Values |
 | EC-7 | `tail::` non-integer value → rejected | Type Validation |
-| EC-8 | No `tail::` given on `.show` → last 10 entries shown | Cross-Command Default |
-| EC-9 | `tail::0` on `.show` → all entries from most-recently-active session shown | Cross-Command Default |
 
 ## Test Coverage Summary
 
@@ -24,15 +22,10 @@ Edge case tests for the `tail::` parameter. Tests validate integer enforcement, 
 - Happy Path: 1 test (EC-2)
 - Boundary Values: 4 tests (EC-3, EC-4, EC-5, EC-6)
 - Type Validation: 1 test (EC-7)
-- Cross-Command Default: 2 tests (EC-8, EC-9)
 
-**Total:** 9 edge cases
-
-Validation edge cases (EC-4, EC-5, EC-7) are parameter-level and shared across consuming commands — not re-tested per command. Only the default-value divergence (EC-1 vs EC-8) and its uncapped boundary (EC-3 vs EC-9) are command-specific and re-verified for `.show`.
+**Total:** 7 edge cases
 
 **Behavioral Divergence Pair:** EC-2 (tail::2, capped) ↔ EC-3 (tail::0, uncapped)
-
-**Behavioral Divergence Pair:** EC-1 (`.tail` default 4) ↔ EC-8 (`.show` default 10)
 
 ## Test Cases
 
@@ -111,26 +104,4 @@ Validation edge cases (EC-4, EC-5, EC-7) are parameter-level and shared across c
 - **When:** `clg .tail tail::four`
 - **Then:** Exit 1; error indicating `tail` requires a non-negative integer
 - **Exit:** 1
-- **Source:** [param/25_tail.md](../../../../docs/cli/param/25_tail.md)
-
----
-
-### EC-8: No `tail::` given on `.show` → last 10 entries shown
-
-- **Commands:** `.show`
-- **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture` (fixture: project whose most-recently-active session has 15 entries)
-- **When:** `clg .show`
-- **Then:** Exactly the last 10 messages shown from the most-recently-active session — `.show`'s own default, distinct from `.tail`'s default of 4 (see EC-1)
-- **Exit:** 0
-- **Source:** [param/25_tail.md](../../../../docs/cli/param/25_tail.md)
-
----
-
-### EC-9: `tail::0` on `.show` → all entries from most-recently-active session shown
-
-- **Commands:** `.show`
-- **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture` (fixture: project whose most-recently-active session has 15 entries)
-- **When:** `clg .show tail::0`
-- **Then:** All 15 messages shown; no capping applied
-- **Exit:** 0
 - **Source:** [param/25_tail.md](../../../../docs/cli/param/25_tail.md)

@@ -129,7 +129,7 @@ Found N projects:
   * a1b2c3d4  2h ago  (347 entries)  [8 agents: 5×Explore, 2×general-purpose, 1×Plan]
   - e5f6a7b8  1d ago  (42 entries)   [4 agents: 3×Explore, 1×general-purpose]
 
-~/path/to/project-b: (1 session)
+~/path/to/project-b: (1 conversation)
   * c9d0e1f2  3d ago  (2 entries)
 ```
 
@@ -139,7 +139,7 @@ Found N projects:
 Found N projects:
 
 ~/path/to/project-a: (2 conversations, 12 agents)
-~/path/to/project-b: (1 session)
+~/path/to/project-b: (1 conversation)
 ```
 
 Family display (`detail::sessions`): agents are grouped by parent session into families. Each root session line shows an inline `[N agents: breakdown]` suffix. Roots with no agents show no bracket suffix. Orphan families (root deleted) use `?` marker. When `agent::` filter is set, family grouping is disabled — flat display.

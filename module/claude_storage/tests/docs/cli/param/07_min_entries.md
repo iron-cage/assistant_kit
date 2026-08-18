@@ -4,6 +4,8 @@ Edge case tests for the `min_entries::` parameter. Tests validate non-negative i
 
 **Source:** [param/07_min_entries.md](../../../../docs/cli/param/07_min_entries.md) | [type/01_entry_count.md](../../../../docs/cli/type/01_entry_count.md)
 
+> **Note:** `.list` is deprecated (see [`command/02_list.md`](../command/02_list.md)), superseded by [`.projects`](../command/07_projects.md). `min_entries::`'s value semantics (EC-1–EC-6, EC-8) carry over unchanged — `.projects` also filters sessions by `min_entries::`. EC-7 tests `.list`'s auto-enable side effect; `.projects` has no equivalent side effect since it always shows session detail by default unconditionally.
+
 ## Test Case Index
 
 | ID | Test Name | Category |

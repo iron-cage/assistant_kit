@@ -3,6 +3,8 @@
 Acceptance criteria tests for the developer persona querying storage from a script.
 Source: [004_query_storage_programmatically.md](../../../../docs/cli/user_story/004_query_storage_programmatically.md)
 
+> **Note:** `.list` is deprecated (see [`command/02_list.md`](../command/02_list.md)), superseded by [`.projects`](../command/07_projects.md). RWS-1's `.list type::conversation count::1 project::{project-id}` has no equivalent on `.projects` yet — `.projects` has neither a `type::` nor a `count::` parameter currently.
+
 ## Test Case Index
 
 | ID | Test Name | Criteria |

@@ -3,6 +3,8 @@
 Acceptance criteria tests for the developer persona locating a past Claude Code conversation.
 Source: [002_find_past_conversation.md](../../../../docs/cli/user_story/002_find_past_conversation.md)
 
+> **Note:** `.list` is deprecated (see [`command/02_list.md`](../command/02_list.md)), superseded by [`.projects`](../command/07_projects.md). RWS-1's bare `.list` maps to `clg .projects scope::global` (`.projects`'s own default scope is `around`, not `.list`'s former `global`). RWS-4's session-display toggle has no `.projects` equivalent needed — `clg .projects agent::0 min_entries::10` shows session detail by default unconditionally.
+
 ## Test Case Index
 
 | ID | Test Name | Criteria |

@@ -4,6 +4,8 @@ Edge case tests for the `path::` parameter. Tests validate semantics per-command
 
 **Source:** [param/09_path.md](../../../../docs/cli/param/09_path.md) | [type/10_storage_path.md](../../../../docs/cli/type/10_storage_path.md)
 
+> **Note:** `.list` is deprecated (see [`command/02_list.md`](../command/02_list.md)), superseded by [`.projects`](../command/07_projects.md). EC-5/EC-6 test `.list`'s `path::` acting as a path-substring filter — `.projects` has no equivalent path-substring-filter mechanism yet; its own `path::` keeps only the scope-anchor meaning already exercised by EC-1/EC-3/EC-7/EC-8 above.
+
 ## Test Case Index
 
 | ID | Test Name | Category |

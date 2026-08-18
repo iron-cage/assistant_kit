@@ -63,6 +63,20 @@ Integration tests for the `.projects` command. Tests verify summary mode output 
 | INT-50 | Double-topic key shows both topic components unconditionally | Topic Existence Guard (issue-035) |
 | INT-51 | scope:: with invalid value rejected | Invalid Parameter Rejection |
 | INT-52 | agent:: with non-boolean value rejected | Invalid Parameter Rejection |
+| INT-53 | detail::projects shows header line only, no session/family body lines | Detail Level (task-525) |
+| INT-54 | detail:: omitted reproduces exact pre-task detail::sessions output | Detail Level (task-525) |
+| INT-55 | detail:: with invalid value rejected | Detail Level (task-525) |
+| INT-56 | filter:: narrows to projects whose decoded path contains the substring | Filter Narrowing (task-525) |
+| INT-57 | filter:: with no matching project shows empty listing, not an error | Filter Narrowing (task-525) |
+| INT-58 | type::uuid narrows to UUID-named projects only | Type Narrowing (task-525) |
+| INT-59 | type::path narrows to path-named projects only | Type Narrowing (task-525) |
+| INT-60 | type:: with invalid value rejected | Type Narrowing (task-525) |
+| INT-61 | project::X ids::1 outputs one conversation ID per line | IDs Scripting Mode (task-525) |
+| INT-62 | project::X ids::1 count::1 outputs a single bare integer | IDs Scripting Mode (task-525) |
+| INT-63 | ids::1 without required project:: rejected | IDs Scripting Mode (task-525) |
+| INT-64 | type:: and filter:: compose under scope::global | Combined Narrowing (task-525) |
+| INT-65 | limit::/show_tree::/show_topic:: are no-ops under detail::projects | Detail Level (task-525) |
+| INT-66 | .list's deprecation_message edit does not alter runtime output | `.list` Deprecation (task-525) |
 
 ## Test Coverage Summary
 
@@ -81,9 +95,15 @@ Integration tests for the `.projects` command. Tests verify summary mode output 
 - Sibling Exclusion (issue-032): 1 test (INT-23)
 - Output Format (default mode enhancement): 3 tests (INT-24, INT-25, INT-26)
 - Family Display: 11 tests (INT-33 through INT-40, INT-41 through INT-43)
-- Project-Centric Output (task-016): 5 tests (INT-41b, INT-42b, INT-43b, INT-44, INT-45)
+- Project-Centric Output (task-016): 4 tests (INT-42b, INT-43b, INT-44, INT-45)
 - Topic Existence Guard (issue-035): 5 tests (INT-46 through INT-50)
 - Invalid Parameter Rejection: 2 tests (INT-51, INT-52)
+- Detail Level (task-525): 4 tests (INT-53, INT-54, INT-55, INT-65)
+- Filter Narrowing (task-525): 2 tests (INT-56, INT-57)
+- Type Narrowing (task-525): 3 tests (INT-58, INT-59, INT-60)
+- IDs Scripting Mode (task-525): 3 tests (INT-61, INT-62, INT-63)
+- Combined Narrowing (task-525): 1 test (INT-64)
+- `.list` Deprecation (task-525): 1 test (INT-66)
 
 ## Test Cases
 
@@ -302,12 +322,12 @@ CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects scope::global```
 - Fixture: two path-based projects (`/tmp/proj-a` and `/tmp/proj-b`), one session each
 - Output contains:
   ```
-  Found 2 sessions:
+  Found 2 projects:
 
-  /tmp/proj-a: (1 session)
+  /tmp/proj-a: (1 conversation)
     * session-id-a  Xs ago  (2 entries)
 
-  /tmp/proj-b: (1 session)
+  /tmp/proj-b: (1 conversation)
     * session-id-b  Xs ago  (2 entries)
   ```
 - Exit code: 0
@@ -323,7 +343,7 @@ CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects scope::local path::{project}
 
 **Expected behavior:**
 - Fixture: one path project at a known path; `path::` pointing to that project
-- stdout contains a line like `/path/to/project: (1 session)` followed by `  * {session-id}`
+- stdout contains a line like `/path/to/project: (1 conversation)` followed by `  * {session-id}`
 - Exit code: 0
 - **Source:** [command/07_projects.md](../../../../docs/cli/command/07_projects.md)
 
@@ -339,9 +359,9 @@ CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects scope::global```
 - Fixture: one project containing 2 main sessions (`session-main-a`, `session-main-b`) and 3 agent sessions (`agent-task-001`, `agent-task-002`, `agent-task-003`)
 - Output contains:
   ```
-  Found 5 sessions:
+  Found 5 projects:
 
-  /path/to/project: (5 sessions)
+  /path/to/project: (5 conversations)
     * session-main-a  Xs ago  (2 entries)
     - session-main-b  Xs ago  (2 entries)
     + 3 agent sessions (last: Xs ago)
@@ -377,7 +397,7 @@ CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects scope::global show_tree::1
 - Fixture: one project and one session containing exactly 4 entries
 - Output contains:
   ```
-  Found 1 session:
+  Found 1 project:
 
   ~/path/to/project:
     - session-id  (4 entries)
@@ -470,9 +490,9 @@ CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects scope::global```
 - Fixture: one project and one session containing exactly 4 entries
 - Output contains:
   ```
-  Found 1 session:
+  Found 1 project:
 
-  /path/to/project: (1 session)
+  /path/to/project: (1 conversation)
     * session-id  Xs ago  (4 entries)
   ```
 - Exit code: 0
@@ -958,4 +978,224 @@ clg .projects agent::invalid
 - Error message on stderr describing the argument error
 - No project output on stdout
 - Exit code: 1
+- **Source:** [command/07_projects.md](../../../../docs/cli/command/07_projects.md)
+
+---
+
+### INT-53: detail::projects shows header line only, no session/family body lines
+
+**Command:**
+```
+CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects scope::global detail::projects
+```
+
+**Expected behavior:**
+- Fixture: two projects in scope — one with 2 conversations and 12 total agents, one with 1 plain session
+- Output:
+  ```
+  Found 2 projects:
+
+  ~/path/to/project-a: (2 conversations, 12 agents)
+  ~/path/to/project-b: (1 conversation)
+  ```
+- Output does NOT contain any `*`/`-` session lines or `[N agents: ...]` breakdowns
+- Exit code: 0
+- **Source:** [command/07_projects.md](../../../../docs/cli/command/07_projects.md)
+
+---
+
+### INT-54: detail:: omitted reproduces exact pre-task detail::sessions output
+
+**Command:**
+```
+CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects scope::global
+```
+
+**Expected behavior:**
+- Fixture: same as INT-53
+- stdout is byte-for-byte identical to the same invocation with explicit `detail::sessions` appended — `detail::` defaults to `sessions`, not `projects`; this is a regression guard against a wrong default
+- Exit code: 0
+- **Source:** [command/07_projects.md](../../../../docs/cli/command/07_projects.md)
+
+---
+
+### INT-55: detail:: with invalid value rejected
+
+**Command:**
+```
+clg .projects detail::bogus
+```
+
+**Expected behavior:**
+- `bogus` is not a valid option for `detail::` (accepted: `projects`, `sessions`)
+- stderr contains the exact text `detail must be projects|sessions, got bogus`
+- No project output on stdout
+- Exit code: 1
+- **Source:** [command/07_projects.md](../../../../docs/cli/command/07_projects.md)
+
+---
+
+### INT-56: filter:: narrows to projects whose decoded path contains the substring
+
+**Command:**
+```
+CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects scope::global filter::alpha
+```
+
+**Expected behavior:**
+- Fixture: three projects in scope with decoded paths containing `alpha`, `beta`, and `gamma` respectively
+- stdout lists only the `alpha` project; the `beta` and `gamma` projects are absent
+- Exit code: 0
+- **Source:** [command/07_projects.md](../../../../docs/cli/command/07_projects.md)
+
+---
+
+### INT-57: filter:: with no matching project shows empty listing, not an error
+
+**Command:**
+```
+CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects scope::global filter::nonexistent-substring
+```
+
+**Expected behavior:**
+- Fixture: one or more projects in scope, none of whose decoded paths contain the filter substring
+- stdout contains `Found 0 projects:`
+- Exit code: 0 (an empty result is valid, not an error)
+- **Source:** [command/07_projects.md](../../../../docs/cli/command/07_projects.md)
+
+---
+
+### INT-58: type::uuid narrows to UUID-named projects only
+
+**Command:**
+```
+CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects scope::global type::uuid
+```
+
+**Expected behavior:**
+- Fixture: scope containing both a UUID-identified project and a path-identified project
+- stdout lists only the UUID-identified project; the path-identified project is absent
+- Exit code: 0
+- **Source:** [command/07_projects.md](../../../../docs/cli/command/07_projects.md)
+
+---
+
+### INT-59: type::path narrows to path-named projects only
+
+**Command:**
+```
+CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects scope::global type::path
+```
+
+**Expected behavior:**
+- Fixture: same as INT-58 (one UUID-identified project, one path-identified project)
+- stdout lists only the path-identified project; the UUID-identified project is absent
+- Exit code: 0
+- **Source:** [command/07_projects.md](../../../../docs/cli/command/07_projects.md)
+
+---
+
+### INT-60: type:: with invalid value rejected
+
+**Command:**
+```
+clg .projects type::bogus
+```
+
+**Expected behavior:**
+- `bogus` is not a valid option for `type::` (accepted: `uuid`, `path`, `all`)
+- stderr contains the exact text `type must be uuid|path|all, got bogus`
+- No project output on stdout
+- Exit code: 1
+- **Source:** [command/07_projects.md](../../../../docs/cli/command/07_projects.md)
+
+---
+
+### INT-61: project::X ids::1 outputs one conversation ID per line
+
+**Command:**
+```
+CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects project::abc123 ids::1
+```
+
+**Expected behavior:**
+- Fixture: project `abc123` containing N distinct root conversations (some with agent children)
+- stdout contains exactly N lines, each a bare conversation ID; no path headers, no `Found` line, no session-count aggregates
+- Exit code: 0
+- **Source:** [command/07_projects.md](../../../../docs/cli/command/07_projects.md)
+
+---
+
+### INT-62: project::X ids::1 count::1 outputs a single bare integer
+
+**Command:**
+```
+CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects project::abc123 ids::1 count::1
+```
+
+**Expected behavior:**
+- Fixture: same project as INT-61, with N root conversations
+- stdout is exactly the single line `N` — no conversation IDs, no other text
+- Exit code: 0
+- **Source:** [command/07_projects.md](../../../../docs/cli/command/07_projects.md)
+
+---
+
+### INT-63: ids::1 without required project:: rejected
+
+**Command:**
+```
+clg .projects ids::1
+```
+
+**Expected behavior:**
+- `ids::1` requires `project::`; omitting it is an argument error
+- stderr contains a non-empty error naming `project::` as required
+- No conversation IDs on stdout
+- Exit code: 1
+- **Source:** [command/07_projects.md](../../../../docs/cli/command/07_projects.md)
+
+---
+
+### INT-64: type:: and filter:: compose under scope::global
+
+**Command:**
+```
+CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects scope::global type::path filter::alpha
+```
+
+**Expected behavior:**
+- Fixture: scope containing a path-identified project matching `alpha`, a path-identified project matching `beta`, and a UUID-identified project whose decoded path also matches `alpha`
+- stdout lists only the path-identified `alpha` project — the path-identified `beta` project is excluded by `filter::`, the UUID-identified `alpha` project is excluded by `type::path`
+- Exit code: 0
+- **Source:** [command/07_projects.md](../../../../docs/cli/command/07_projects.md)
+
+---
+
+### INT-65: limit::/show_tree::/show_topic:: are no-ops under detail::projects
+
+**Command:**
+```
+CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects scope::global detail::projects limit::1 show_tree::1 show_topic::1
+```
+
+**Expected behavior:**
+- Fixture: same as INT-53
+- stdout is identical in shape to INT-53's output (header lines only, for both projects) — `limit::1` does not truncate the project list, and `show_tree::1`/`show_topic::1` have no visible effect since no session lines exist to tree-indent or annotate
+- Exit code: 0
+- **Source:** [command/07_projects.md](../../../../docs/cli/command/07_projects.md)
+
+---
+
+### INT-66: .list's deprecation_message edit does not alter runtime output
+
+**Command:**
+```
+CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .list
+```
+
+**Expected behavior:**
+- Fixture: any fixture producing non-trivial `.list` output (e.g. one project with sessions)
+- stdout is byte-for-byte identical to `.list`'s pre-task output — `unilang.commands.yaml`'s `deprecation_message` field is metadata consumed only by the `--help` generator and build-time registry code, never by the dispatch/execution path (part of the same `.list`→`.projects` absorption change as INT-53 through INT-65; see [command/02_list.md](../../../../docs/cli/command/02_list.md) for `.list`'s own deprecated-status documentation)
+- Exit code: 0
 - **Source:** [command/07_projects.md](../../../../docs/cli/command/07_projects.md)

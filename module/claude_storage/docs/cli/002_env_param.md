@@ -48,9 +48,3 @@ export CLAUDE_STORAGE_ROOT=/backup/.claude
 cls .status
 # Reads from /backup/.claude instead of ~/.claude/
 ```
-
-### Provenance
-
-| File | Notes |
-|------|-------|
-| [env_param.md](env_param.md) | Original un-migrated source; retained as reference |

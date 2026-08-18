@@ -1,6 +1,6 @@
 # Parameter :: `show_entries::`
 
-Edge case tests for the `show_entries::` parameter. Tests validate boolean enforcement and its three distinct contexts in `.show`: a no-op in session-detail content mode, a nested entry-list toggle inside session-detail metadata mode, and a rendering toggle in project-overview mode.
+Edge case tests for the `show_entries::` parameter. Tests validate boolean enforcement and its two distinct contexts in `.show`: a no-op in session-detail content mode, and a nested entry-list toggle inside session-detail metadata mode.
 
 **Source:** [param/03_entries.md](../../../../docs/cli/param/03_entries.md)
 
@@ -14,8 +14,6 @@ Edge case tests for the `show_entries::` parameter. Tests validate boolean enfor
 | EC-4 | show_metadata::1 + show_entries::0 (default) → metadata only, no entry list | Metadata-Mode Behavior |
 | EC-5 | show_metadata::1 + show_entries::1 → metadata + raw entry list | Metadata-Mode Behavior |
 | EC-6 | show_metadata::1 + show_entries::1 entry list includes UUID and timestamp | Output Format |
-| EC-7 | show_entries::0 (default), project overview → formatted tail messages | Project-Overview Behavior |
-| EC-8 | show_entries::1, project overview → tail window as raw list | Project-Overview Behavior |
 
 ## Test Coverage Summary
 
@@ -23,13 +21,10 @@ Edge case tests for the `show_entries::` parameter. Tests validate boolean enfor
 - Type Validation: 1 test (EC-3)
 - Metadata-Mode Behavior: 2 tests (EC-4, EC-5)
 - Output Format: 1 test (EC-6)
-- Project-Overview Behavior: 2 tests (EC-7, EC-8)
 
-**Total:** 8 edge cases
+**Total:** 6 edge cases
 
 **Behavioral Divergence Pair:** EC-2 (content mode, no-op) ↔ EC-5 (metadata mode, appends list) — same `show_entries::1` value, different effect depending on `show_metadata::`.
-
-**Behavioral Divergence Pair:** EC-7 (project overview, formatted) ↔ EC-8 (project overview, raw list)
 
 ## Test Cases
 
@@ -96,27 +91,5 @@ Edge case tests for the `show_entries::` parameter. Tests validate boolean enfor
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture` (fixture: session `-default_topic` with 4 known entries)
 - **When:** `clg .show session_id::-default_topic show_metadata::1 show_entries::1`
 - **Then:** Each line of the appended entry list includes a UUID-format string, an entry type, and a timestamp string
-- **Exit:** 0
-- **Source:** [param/03_entries.md](../../../../docs/cli/param/03_entries.md)
-
----
-
-### EC-7: show_entries::0 (default), project overview → formatted tail messages
-
-- **Commands:** `.show`
-- **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture` (fixture: project with 3 sessions, run from its cwd)
-- **When:** `clg .show`
-- **Then:** Summary block followed by the last `tail::` messages rendered as formatted chat content (default — `show_entries::0`)
-- **Exit:** 0
-- **Source:** [param/03_entries.md](../../../../docs/cli/param/03_entries.md)
-
----
-
-### EC-8: show_entries::1, project overview → tail window as raw list
-
-- **Commands:** `.show`
-- **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture` (fixture: project with 3 sessions, run from its cwd)
-- **When:** `clg .show show_entries::1`
-- **Then:** Summary block followed by the same `tail::`-windowed entries, rendered as a raw UUID/type/timestamp list instead of formatted chat content
 - **Exit:** 0
 - **Source:** [param/03_entries.md](../../../../docs/cli/param/03_entries.md)

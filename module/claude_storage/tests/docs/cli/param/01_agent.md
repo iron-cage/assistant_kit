@@ -4,6 +4,8 @@ Edge case tests for the `agent::` parameter. Tests validate boolean enforcement,
 
 **Source:** [param/01_agent.md](../../../../docs/cli/param/01_agent.md)
 
+> **Note:** `.list` is deprecated (see [`command/02_list.md`](../command/02_list.md)), superseded by [`.projects`](../command/07_projects.md). `agent::`'s value semantics (EC-1–EC-5) carry over unchanged — `.projects` also filters sessions by `agent::`. EC-6/EC-7 test `.list`'s auto-enable side effect (`agent::` implicitly turning on session display); `.projects` has no equivalent side effect since it always shows session detail by default unconditionally.
+
 ## Test Case Index
 
 | ID | Test Name | Category |

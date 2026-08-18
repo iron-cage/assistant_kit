@@ -76,8 +76,8 @@ claude_storage .show project::/home/alice/projects/my-app session_id::-default_t
 
 ```bash
 # Step 1: Find the session ID (if unknown)
-claude_storage .show
-# Output: lists sessions for current project; note the session ID
+claude_storage .show detail::sessions
+# Output: project overview (summary + last messages) plus a full per-session list; note the session ID
 
 # Step 2: Export it
 claude_storage .export session_id::-default_topic output::conversation.md
@@ -273,7 +273,7 @@ claude_storage .tail topic::work
 
 **Use `detail::projects` with session filters for project discovery:** `claude_storage .projects session::commit detail::projects` finds which projects have sessions matching "commit" without expanding the session list.
 
-**Session IDs from `.show` output:** When you see sessions listed by `.show` (project view), copy the session ID directly into `session_id::` for the next command.
+**Session IDs from `.show` output:** Bare `.show` (project view) shows a summary and recent messages, not a session list — pass `detail::sessions` to also see the full per-session list, then copy the session ID directly into `session_id::` for the next command.
 
 ### Provenance
 

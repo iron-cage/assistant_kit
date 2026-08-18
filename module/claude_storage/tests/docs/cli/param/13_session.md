@@ -4,6 +4,8 @@ Edge case tests for the `session::` parameter (filter, not `session_id::`). Test
 
 **Source:** [param/13_session.md](../../../../docs/cli/param/13_session.md) | [type/08_session_filter.md](../../../../docs/cli/type/08_session_filter.md)
 
+> **Note:** `.list` is deprecated (see [`command/02_list.md`](../command/02_list.md)), superseded by [`.projects`](../command/07_projects.md). `session::`'s substring-matching semantics (EC-1–EC-5) carry over unchanged — `.projects` also filters sessions by `session::` (case-insensitive substring). EC-6 tests `.list`'s auto-enable side effect; `.projects` has no equivalent side effect since it always shows session detail by default unconditionally. EC-7 (`.count`) is unaffected by the `.list` deprecation.
+
 ## Test Case Index
 
 | ID | Test Name | Category |
