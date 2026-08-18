@@ -1,6 +1,7 @@
 // Integration tests for sort_next.rs — relocated from src/usage/sort_next_tests.rs.
 // Accesses pub(crate) items through claude_profile::usage::test_bridge (testing feature).
 
+use claude_profile::account::TagFilter;
 use claude_profile::usage::test_bridge::find_next_for_strategy;
 use claude_profile::usage::test_bridge::sort_indices;
 use claude_profile::usage::test_bridge::types::{ SortStrategy, PreferStrategy };

@@ -79,7 +79,7 @@ for acct in account::list( &credential_store ).expect( "failed to list accounts"
 // Save current credentials as "work@acme.com"
 account::save(
   "work@acme.com", &credential_store, &claude, true, None, None, None, None,
-  account::AccountBackend::Anthropic, None, None, None,
+  account::AccountBackend::Anthropic, None, None, None, None,
 ).expect( "failed to save account" );
 
 // Switch to "personal@home.com"

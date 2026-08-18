@@ -421,17 +421,17 @@ fn identity_filter_t13_usage_reports_excluded_count()
     "FT-13/AC-09: rotation must pick the filter-passing account only; stdout: {}", stdout( &out ),
   );
 
-  let tmp2    = TempDir::new().unwrap();
-  let home2   = tmp2.path();
-  let home2_s = home2.to_str().unwrap();
-  write_credentials( home2, "max", "default_claude_max_20x", FAR_FUTURE_MS );
-  write_account( home2, "current@test.com", "max", "default_claude_max_20x", FAR_FUTURE_MS, false );
-  write_account( home2, "loser@test.com", "max", "default_claude_max_20x", FAR_FUTURE_MS, false );
-  write_active_marker( home2, TEST_SLUG, "current@test.com" );
-  write_account_quota_cache( home2, "loser@test.com", 10.0, 20.0, None );
-  write_account_tags( home2, "loser@test.com", &[ "ci" ] );
+  let bare_tmp    = TempDir::new().unwrap();
+  let bare_home   = bare_tmp.path();
+  let bare_home_s = bare_home.to_str().unwrap();
+  write_credentials( bare_home, "max", "default_claude_max_20x", FAR_FUTURE_MS );
+  write_account( bare_home, "current@test.com", "max", "default_claude_max_20x", FAR_FUTURE_MS, false );
+  write_account( bare_home, "loser@test.com", "max", "default_claude_max_20x", FAR_FUTURE_MS, false );
+  write_active_marker( bare_home, TEST_SLUG, "current@test.com" );
+  write_account_quota_cache( bare_home, "loser@test.com", 10.0, 20.0, None );
+  write_account_tags( bare_home, "loser@test.com", &[ "ci" ] );
 
-  let out = run_cs_with_env( &[ ".usage" ], &id_env( home2_s ) );
+  let out = run_cs_with_env( &[ ".usage" ], &id_env( bare_home_s ) );
   assert_exit( &out, 0 );
   assert!(
     !stdout( &out ).contains( "excluded by tag filter" ),
@@ -476,11 +476,11 @@ fn identity_filter_t14_identities_lists_union()
     "FT-14: rows must be sorted by Identity; stdout: {}", stdout( &out ),
   );
 
-  let tmp2    = TempDir::new().unwrap();
-  let home2   = tmp2.path();
-  let home2_s = home2.to_str().unwrap();
-  write_account( home2, "a@test.com", "max", "default_claude_max_20x", FAR_FUTURE_MS, false );
-  let out = run_cs_with_env( &[ ".identities" ], &id_env( home2_s ) );
+  let bare_tmp    = TempDir::new().unwrap();
+  let bare_home   = bare_tmp.path();
+  let bare_home_s = bare_home.to_str().unwrap();
+  write_account( bare_home, "a@test.com", "max", "default_claude_max_20x", FAR_FUTURE_MS, false );
+  let out = run_cs_with_env( &[ ".identities" ], &id_env( bare_home_s ) );
   assert_exit( &out, 0 );
   assert_eq!(
     stdout( &out ).trim(), "(no identities)",

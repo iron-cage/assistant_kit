@@ -366,7 +366,9 @@ fn param_defaults_in1_active_account_used_without_name_arg()
   assert_exit( &out, 0 );
 }
 
-// IN-2: require_nonempty_string_arg only called in .account.use and .account.delete handlers
+// IN-2: require_nonempty_string_arg only called in the documented-exception handlers
+// (.account.use, .account.delete, .account.renewal, .account.tag — see the Permitted
+// Exceptions table in docs/invariant/006_param_defaults.md).
 #[ test ]
 fn param_defaults_in2_require_nonempty_string_arg_only_in_use_delete()
 {
@@ -387,7 +389,7 @@ fn param_defaults_in2_require_nonempty_string_arg_only_in_use_delete()
     // Skip `use` import statements (e.g. `use super::cmd_args::{ require_nonempty_string_arg, ... }`)
     if line.trim_start().starts_with( "use " ) { continue; }
     assert!(
-      line.contains( "account_ops" ) || line.contains( "account_renewal" ),
+      line.contains( "account_ops" ) || line.contains( "account_renewal" ) || line.contains( "account_tag" ),
       "require_nonempty_string_arg called outside expected handlers — violates param-defaults invariant:\n{line}",
     );
   }

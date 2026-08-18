@@ -11,13 +11,14 @@ use crate::cli_runner::{
 use std::process::Command;
 use tempfile::TempDir;
 
-// ── as23: save writes {name}.json with host and role ──────────────────────────
+// ── as23: save writes {name}.json with host and tags ──────────────────────────
 
 #[ test ]
 fn as_save_writes_profile_json()
 {
-  // TSK-225 RED gate: `.account.save host::testbox role::dev` must create
-  // `{name}.json` containing the host and role values as JSON.
+  // TSK-225 RED gate (updated for Feature 075): `.account.save host::testbox tags::dev`
+  // must create `{name}.json` containing the host and tags values as JSON.
+  // (`role::` was removed by Feature 075 — a role value is now just a tag.)
   let dir   = TempDir::new().unwrap();
   let home  = dir.path().to_str().unwrap();
   let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
@@ -26,7 +27,7 @@ fn as_save_writes_profile_json()
   write_claude_json( dir.path(), "test@example.com" );
 
   let out = run_cs_with_env(
-    &[ ".account.save", "name::test@example.com", "host::testbox", "role::dev" ],
+    &[ ".account.save", "name::test@example.com", "host::testbox", "tags::dev" ],
     &[ ( "HOME", home ) ],
   );
   assert_exit( &out, 0 );
@@ -43,8 +44,8 @@ fn as_save_writes_profile_json()
     "{{name}}.json must contain host value, got: {content}",
   );
   assert!(
-    content.contains( r#""role": "dev""# ),
-    "{{name}}.json must contain role value, got: {content}",
+    content.contains( r#""dev""# ) && content.contains( r#""tags""# ),
+    "{{name}}.json must contain the saved tag, got: {content}",
   );
 }
 
@@ -521,40 +522,18 @@ fn as29_resave_credentials_unchanged()
   );
 }
 
-// ── as30: role:: writes {name}.json ──────────────────────────────────────────
+// ── as31: fresh save writes no legacy role field ─────────────────────────────
 
-/// as30 — Explicit `role::work` written to `{name}.json` as `"role":"work"`.
+/// as31 — A fresh `.account.save` writes no `role` field at all (Feature 075).
 ///
-/// Spec: [`tests/docs/cli/param/052_role.md` EC-1]
-#[ test ]
-fn as30_role_writes_profile_json()
-{
-  let dir   = TempDir::new().unwrap();
-  let home  = dir.path().to_str().unwrap();
-  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
-  write_credentials( dir.path(), "max", "standard", FAR_FUTURE_MS );
-  write_claude_json( dir.path(), "test@example.com" );
-
-  let out = run_cs_with_env(
-    &[ ".account.save", "name::test@example.com", "role::work" ],
-    &[ ( "HOME", home ) ],
-  );
-  assert_exit( &out, 0 );
-
-  let content = std::fs::read_to_string( store.join( "test@example.com.json" ) ).unwrap();
-  assert!(
-    content.contains( r#""role": "work""# ),
-    "explicit role::work must be stored in {{name}}.json, got: {content}",
-  );
-}
-
-// ── as31: omit role:: stores empty string ────────────────────────────────────
-
-/// as31 — Omitting `role::` stores `"role":""` in `{name}.json` (not absent).
+/// `role::` was removed — a role value is now just a tag. The rejection contract
+/// for a passed `role::` is covered by `account_tag_t04_role_param_exits_1_migration`
+/// (`tests/cli/account_tag_test.rs`); this case pins the storage side: a fresh
+/// profile JSON must not contain the legacy field, not even as an empty string.
 ///
-/// Spec: [`tests/docs/cli/param/052_role.md` EC-2]
+/// Spec: [`tests/docs/feature/075_account_tags.md` FT-02]
 #[ test ]
-fn as31_role_omit_stores_empty()
+fn as31_save_omits_role_field()
 {
   let dir   = TempDir::new().unwrap();
   let home  = dir.path().to_str().unwrap();
@@ -570,101 +549,8 @@ fn as31_role_omit_stores_empty()
 
   let content = std::fs::read_to_string( store.join( "test@example.com.json" ) ).unwrap();
   assert!(
-    content.contains( r#""role": """# ),
-    "omitting role:: must store empty string role in {{name}}.json, got: {content}",
-  );
-}
-
-// ── as32: role:: (empty) stores empty string ─────────────────────────────────
-
-/// as32 — `role::` with empty value stores `"role":""` — same as omitting.
-///
-/// Spec: [`tests/docs/cli/param/052_role.md` EC-3]
-#[ test ]
-fn as32_role_empty_stores_empty()
-{
-  let dir   = TempDir::new().unwrap();
-  let home  = dir.path().to_str().unwrap();
-  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
-  write_credentials( dir.path(), "max", "standard", FAR_FUTURE_MS );
-  write_claude_json( dir.path(), "test@example.com" );
-
-  let out = run_cs_with_env(
-    &[ ".account.save", "name::test@example.com", "role::" ],
-    &[ ( "HOME", home ) ],
-  );
-  assert_exit( &out, 0 );
-
-  let content = std::fs::read_to_string( store.join( "test@example.com.json" ) ).unwrap();
-  assert!(
-    content.contains( r#""role": """# ),
-    "empty role:: must store empty string in {{name}}.json, got: {content}",
-  );
-}
-
-// ── as33: re-save with different role:: overwrites ───────────────────────────
-
-/// as33 — Second save with a different `role::` overwrites the old role in `{name}.json`.
-///
-/// Spec: [`tests/docs/cli/param/052_role.md` EC-5]
-#[ test ]
-fn as33_role_resave_overwrites()
-{
-  let dir   = TempDir::new().unwrap();
-  let home  = dir.path().to_str().unwrap();
-  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
-  write_credentials( dir.path(), "max", "standard", FAR_FUTURE_MS );
-  write_claude_json( dir.path(), "test@example.com" );
-
-  // First save.
-  let out = run_cs_with_env(
-    &[ ".account.save", "name::test@example.com", "role::personal" ],
-    &[ ( "HOME", home ) ],
-  );
-  assert_exit( &out, 0 );
-
-  // Second save overwrites.
-  let out = run_cs_with_env(
-    &[ ".account.save", "name::test@example.com", "role::dev" ],
-    &[ ( "HOME", home ) ],
-  );
-  assert_exit( &out, 0 );
-
-  let content = std::fs::read_to_string( store.join( "test@example.com.json" ) ).unwrap();
-  assert!(
-    content.contains( r#""role": "dev""# ),
-    "re-save must overwrite old role value with dev, got: {content}",
-  );
-  assert!(
-    !content.contains( "personal" ),
-    "old role value personal must not be present after re-save, got: {content}",
-  );
-}
-
-// ── as34: role:: value with spaces stored verbatim ───────────────────────────
-
-/// as34 — `role::` value containing spaces is stored verbatim in `{name}.json`.
-///
-/// Spec: [`tests/docs/cli/param/052_role.md` EC-6]
-#[ test ]
-fn as34_role_with_spaces()
-{
-  let dir   = TempDir::new().unwrap();
-  let home  = dir.path().to_str().unwrap();
-  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
-  write_credentials( dir.path(), "max", "standard", FAR_FUTURE_MS );
-  write_claude_json( dir.path(), "test@example.com" );
-
-  let out = run_cs_with_env(
-    &[ ".account.save", "name::test@example.com", "role::dev ops team" ],
-    &[ ( "HOME", home ) ],
-  );
-  assert_exit( &out, 0 );
-
-  let content = std::fs::read_to_string( store.join( "test@example.com.json" ) ).unwrap();
-  assert!(
-    content.contains( r#""role": "dev ops team""# ),
-    "role:: value with spaces must be stored verbatim, got: {content}",
+    !content.contains( r#""role""# ),
+    "a fresh save must not write any legacy role field (Feature 075), got: {content}",
   );
 }
 

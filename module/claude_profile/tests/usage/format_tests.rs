@@ -335,6 +335,7 @@ fn test_status_emoji_five_hour_none_is_green()
     owner                 : String::new(),
     claim_lock : false, reserve : false,
     inference_provider    : String::new(),
+    tags : Vec::new(),
   };
   assert_eq!(
     status_emoji( &aq ), "🟢",

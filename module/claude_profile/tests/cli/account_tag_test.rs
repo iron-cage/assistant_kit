@@ -503,11 +503,11 @@ fn account_tag_t11_tags_lists_union_sorted()
     "FT-11: .tags is read-only — no store file may change",
   );
 
-  let tmp2    = TempDir::new().unwrap();
-  let home2   = tmp2.path();
-  let home2_s = home2.to_str().unwrap();
-  write_account( home2, "a@test.com", "max", "default_claude_max_20x", FAR_FUTURE_MS, false );
-  let out = run_cs_with_env( &[ ".tags" ], &[ ( "HOME", home2_s ) ] );
+  let bare_tmp    = TempDir::new().unwrap();
+  let bare_home   = bare_tmp.path();
+  let bare_home_s = bare_home.to_str().unwrap();
+  write_account( bare_home, "a@test.com", "max", "default_claude_max_20x", FAR_FUTURE_MS, false );
+  let out = run_cs_with_env( &[ ".tags" ], &[ ( "HOME", bare_home_s ) ] );
   assert_exit( &out, 0 );
   assert_eq!(
     stdout( &out ).trim(), "(no tags)",

@@ -93,6 +93,8 @@ fn display_from_slug( slug : &str ) -> String
 }
 
 /// Read an explicit-slug filter file: absent → permit-all default.
+// core::io::ErrorKind requires the unstable `core_io` feature (rust-lang/rust#154046) — not usable on stable.
+#[ allow( clippy::std_instead_of_core ) ]
 fn read_filter_at( path : &Path ) -> Result< ( Vec< String >, Vec< String > ), ErrorData >
 {
   match std::fs::read_to_string( path )
@@ -249,7 +251,7 @@ pub fn tags_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result<
         .max()
         .unwrap_or( 3 );
       let mut out = String::new();
-      let _ = writeln!( out, "{:<w_tag$}  {:<8}  {}", "Tag", "Accounts", "Filters" );
+      let _ = writeln!( out, "{:<w_tag$}  {:<8}  Filters", "Tag", "Accounts" );
       for ( tag, accounts_n, filters_n ) in &rows
       {
         let _ = writeln!( out, "{tag:<w_tag$}  {accounts_n:<8}  {filters_n}" );
@@ -459,6 +461,8 @@ fn warn_unknown_tags( store : &Path, include : &[ String ], exclude : &[ String 
 /// param (all exit 1); store IO failures and a malformed current-identity
 /// filter file exit 2.
 #[ inline ]
+// core::io::ErrorKind requires the unstable `core_io` feature (rust-lang/rust#154046) — not usable on stable.
+#[ allow( clippy::std_instead_of_core ) ]
 pub fn identity_filter_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
   let fmt              = parse_format( &cmd )?;
@@ -518,34 +522,34 @@ pub fn identity_filter_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
     // A filter may legitimately be the store's first file.
     std::fs::create_dir_all( &credential_store )
       .map_err( | e | io_err_to_error_data( &e, "identity filter write" ) )?;
-    let ( inc, exc ) = match &target
+    let ( inc, exc ) = if let Some( ( user, host ) ) = &target
     {
-      Some( ( user, host ) ) => write_filter_at(
+      write_filter_at(
         &explicit_filter_path( &credential_store, user, host ),
         include_arg.as_deref(),
         exclude_arg.as_deref(),
-      )?,
-      None =>
-      {
-        let stored = crate::account::write_filter( &credential_store, include_arg.as_deref(), exclude_arg.as_deref() )
-          .map_err( | e | io_err_to_error_data( &e, "identity filter write" ) )?;
-        ( stored.include, stored.exclude )
-      }
+      )?
+    }
+    else
+    {
+      let stored = crate::account::write_filter( &credential_store, include_arg.as_deref(), exclude_arg.as_deref() )
+        .map_err( | e | io_err_to_error_data( &e, "identity filter write" ) )?;
+      ( stored.include, stored.exclude )
     };
     warn_unknown_tags( &credential_store, &inc, &exc );
     return Ok( OutputData::new( render_filter( fmt, &identity_display, &inc, &exc ), "text" ) );
   }
 
   // Get.
-  let ( inc, exc ) = match &target
+  let ( inc, exc ) = if let Some( ( user, host ) ) = &target
   {
-    Some( ( user, host ) ) => read_filter_at( &explicit_filter_path( &credential_store, user, host ) )?,
-    None =>
-    {
-      let stored = crate::account::read_filter( &credential_store )
-        .map_err( | e | io_err_to_error_data( &e, "identity filter read" ) )?;
-      ( stored.include, stored.exclude )
-    }
+    read_filter_at( &explicit_filter_path( &credential_store, user, host ) )?
+  }
+  else
+  {
+    let stored = crate::account::read_filter( &credential_store )
+      .map_err( | e | io_err_to_error_data( &e, "identity filter read" ) )?;
+    ( stored.include, stored.exclude )
   };
   Ok( OutputData::new( render_filter( fmt, &identity_display, &inc, &exc ), "text" ) )
 }

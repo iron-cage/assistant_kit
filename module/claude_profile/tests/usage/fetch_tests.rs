@@ -289,6 +289,7 @@ fn test_mre_bug218_fetch_all_quota_no_duplicate_synthetic_row()
     claim_lock : false, reserve : false,
     org_created_at       : None,
     inference_provider   : String::new(),
+    tags : Vec::new(),
   };
   let mut results = vec![ stored_row ];
 
@@ -313,6 +314,7 @@ fn test_mre_bug218_fetch_all_quota_no_duplicate_synthetic_row()
     claim_lock : false, reserve : false,
     org_created_at       : None,
     inference_provider   : String::new(),
+    tags : Vec::new(),
   };
 
   // Fix(BUG-218): guarded injection — only insert when name is absent from results.
@@ -557,6 +559,7 @@ fn ft04_non_owned_uses_cache_not_http()
     host              : String::new(),
     role              : String::new(),
     owner             : String::new(),
+    tags              : Vec::new(),
     is_owned          : true,
     claim_lock        : false,
     reserve           : false,
@@ -565,7 +568,6 @@ fn ft04_non_owned_uses_cache_not_http()
     base_url          : None,
     redirect_model    : None,
     inference_provider : String::new(),
-    tags : Vec::new(),
   } ];
 
   // live_creds_file absent → graceful degradation; is_current=false for all accounts.
@@ -650,6 +652,7 @@ fn t500_03_fallback_renders_from_local_cache_only()
     host              : String::new(),
     role              : String::new(),
     owner             : String::new(),
+    tags              : Vec::new(),
     is_owned          : true,
     claim_lock        : false,
     reserve           : false,
@@ -658,7 +661,6 @@ fn t500_03_fallback_renders_from_local_cache_only()
     base_url          : None,
     redirect_model    : None,
     inference_provider : String::new(),
-    tags : Vec::new(),
   } ];
 
   let absent_live = store.path().join( ".absent_credentials.json" );
@@ -722,6 +724,7 @@ fn t500_04_non_owner_no_cache_degrades_without_tracked_write()
     host              : String::new(),
     role              : String::new(),
     owner             : String::new(),
+    tags              : Vec::new(),
     is_owned          : true,
     claim_lock        : false,
     reserve           : false,
@@ -730,7 +733,6 @@ fn t500_04_non_owner_no_cache_degrades_without_tracked_write()
     base_url          : None,
     redirect_model    : None,
     inference_provider : String::new(),
-    tags : Vec::new(),
   } ];
 
   let absent_live = store.path().join( ".absent_credentials.json" );
@@ -795,6 +797,7 @@ fn ft14_071_redirect_backend_produces_placeholder_no_http()
     host              : String::new(),
     role              : String::new(),
     owner             : String::new(),
+    tags              : Vec::new(),
     is_owned          : true,
     claim_lock        : false,
     reserve           : false,
@@ -803,7 +806,6 @@ fn ft14_071_redirect_backend_produces_placeholder_no_http()
     base_url          : Some( "https://api.moonshot.ai/anthropic".to_string() ),
     redirect_model    : Some( "kimi-k3".to_string() ),
     inference_provider : String::new(),
-    tags : Vec::new(),
   } ];
 
   // live_creds_file absent → graceful degradation; no bearing on the R1 gate itself.
@@ -879,6 +881,7 @@ fn ft14b_071_redirect_checked_before_not_owned_gate()
     host              : String::new(),
     role              : String::new(),
     owner             : String::new(),
+    tags              : Vec::new(),
     is_owned          : true,
     claim_lock        : false,
     reserve           : false,
@@ -887,7 +890,6 @@ fn ft14b_071_redirect_checked_before_not_owned_gate()
     base_url          : Some( "https://api.moonshot.ai/anthropic".to_string() ),
     redirect_model    : Some( "kimi-k3".to_string() ),
     inference_provider : String::new(),
-    tags : Vec::new(),
   } ];
 
   let absent_live = store.path().join( ".absent_credentials.json" );
@@ -1005,6 +1007,7 @@ fn mre_bug327_cache_first_surfaces_org_created_at()
     host              : String::new(),
     role              : String::new(),
     owner             : String::new(),
+    tags              : Vec::new(),
     is_owned          : true,
     claim_lock        : false,
     reserve           : false,
@@ -1013,7 +1016,6 @@ fn mre_bug327_cache_first_surfaces_org_created_at()
     base_url          : None,
     redirect_model    : None,
     inference_provider : String::new(),
-    tags : Vec::new(),
   } ];
 
   // live_creds_file absent → is_current=false, but cache-first fires before any HTTP path.
@@ -1111,6 +1113,7 @@ fn ft06_072_fetch_threads_inference_provider_and_defaults_empty_when_missing()
     host              : String::new(),
     role              : String::new(),
     owner             : String::new(),
+    tags              : Vec::new(),
     is_owned          : true,
     claim_lock        : false,
     reserve           : false,

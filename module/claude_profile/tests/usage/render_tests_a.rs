@@ -1,6 +1,7 @@
 // Integration tests for render.rs — Part A (split from src/usage/render_tests.rs).
 // Accesses pub(crate) items through claude_profile::usage::test_bridge (testing feature).
 
+use claude_profile::account::TagFilter;
 use claude_profile::usage::test_bridge::{ render_text, render_tsv, render_json, extract_get_field };
 use claude_profile::usage::test_bridge::types::{ AccountQuota, SortStrategy, PreferStrategy, ColsVisibility, GetField };
 use claude_profile::usage::test_bridge::FAR_FUTURE_MS;

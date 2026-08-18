@@ -27,10 +27,12 @@ exceptions require an explicit argument.
 
 ---
 
-### IN-2: Only .account.use and .account.delete require explicit name::
+### IN-2: Only documented-exception commands require explicit name::
 
 - **Given:** The `src/commands/` implementation tree at the current HEAD
 - **When:** `grep -rn "require_nonempty_string_arg" src/` is run
-- **Then:** The only call sites are within the `.account.use` and `.account.delete` command
-  handlers; no other command handler uses `require_nonempty_string_arg` for the `name` argument
+- **Then:** The only call sites are within the handlers listed in the Permitted Exceptions
+  table of `docs/invariant/006_param_defaults.md` (`.account.use`, `.account.delete`,
+  `.account.renewal`, `.account.tag`); no other command handler uses
+  `require_nonempty_string_arg` for the `name` argument
 - **Source:** [docs/invariant/006_param_defaults.md](../../../docs/invariant/006_param_defaults.md)

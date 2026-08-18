@@ -4,22 +4,22 @@
 
 - **Purpose**: Integration test cases for the `.identities` fleet-seat listing command.
 - **Source**: `docs/cli/command/011_identity.md`, `docs/feature/076_identity_tag_filter.md`
-- **Covers**: AC-14, AC-15 (📋 planned — no tests exist yet)
+- **Covers**: AC-14, AC-15 (✅ implemented)
 
 ### Test Cases
 
 | IT | AC | Scenario | Source fn |
 |----|----|----------|-----------|
-| IT-01 | AC-14 | Union of markers + filters + owners → one row per Identity | `t14_identities_lists_union` |
-| IT-02 | AC-14 | No markers/filters/owners → `(no identities)`, exit 0 | `t14_identities_lists_union` (empty assertion) |
-| IT-03 | AC-15 | `format::json` → array of `{"identity","active","owned","include","exclude"}` | `t15_identity_commands_json` |
-| IT-04 | AC-15 | Unsupported format (`format::table`) → exit 1 | `t15_identity_commands_json` (rejection assertion) |
-| IT-05 | AC-14 | Marker file matching no known raw Identity → filename-derived row (sanitized display) | `t18_identities_filename_derived_row` |
+| IT-01 | AC-14 | Union of markers + filters + owners → one row per Identity | `identity_filter_t14_identities_lists_union` |
+| IT-02 | AC-14 | No markers/filters/owners → `(no identities)`, exit 0 | `identity_filter_t14_identities_lists_union` (empty assertion) |
+| IT-03 | AC-15 | `format::json` → array of `{"identity","active","owned","include","exclude"}` | `identity_filter_t15_identity_commands_json` |
+| IT-04 | AC-15 | Unsupported format (`format::table`) → exit 1 | `identity_filter_t15_identity_commands_json` (rejection assertion) |
+| IT-05 | AC-14 | Marker file matching no known raw Identity → filename-derived row (sanitized display) | `identity_filter_t18_identities_filename_derived_row` |
 | IT-06 | — | `.identities` appears in `clp .help` after registration | `dot04_all_visible_commands_present` (extend on implementation) |
 
 ### Notes
 
-- **📋 Planned — implementation pending.** Source fn names are prescriptive for `tests/cli/identity_filter_test.rs` (IT-06: `tests/cli/dot_test.rs`); none exist yet. Correct drifted names here when implementation lands.
+- ✅ Implemented — source fns live in `tests/cli/identity_filter_test.rs` (fn names carry the `identity_filter_` file prefix); IT-06 in `tests/cli/dot_test.rs`.
 - All IT cases use a temporary isolated credential store with controlled `$USER`/`$HOSTNAME`.
 - IT-01/IT-03 share the FT fixture — see `tests/docs/feature/076_identity_tag_filter.md` FT-14/FT-15 (same underlying tests, indexed there for AC traceability).
 - IT-05 covers the reverse-derivation fallback in `docs/cli/command/011_identity.md`'s Algorithm step 3 (last-`_` split, sanitized display) — the case where a marker/filter file's Identity appears in no `owner` field.
@@ -33,7 +33,7 @@
 - **When:** `clp .identities`
 - **Then:** Three sorted rows with columns Identity/Active/Owned/Include/Exclude — `alice@desk` shows its active account; `bob@laptop` shows its filter sets; `carol@ws1` shows `Owned 1`. Exits 0.
 - **Exit:** 0
-- **Source fn:** `t14_identities_lists_union` *(planned)*
+- **Source fn:** `identity_filter_t14_identities_lists_union`
 - **Source:** [076_identity_tag_filter.md AC-14](../../../../docs/feature/076_identity_tag_filter.md)
 
 ---
@@ -44,7 +44,7 @@
 - **When:** `clp .identities`
 - **Then:** Stdout is `(no identities)`. Exits 0.
 - **Exit:** 0
-- **Source fn:** `t14_identities_lists_union` *(planned; empty assertion)*
+- **Source fn:** `identity_filter_t14_identities_lists_union` *(empty assertion)*
 - **Source:** [076_identity_tag_filter.md AC-14](../../../../docs/feature/076_identity_tag_filter.md)
 
 ---
@@ -55,7 +55,7 @@
 - **When:** `clp .identities format::json`
 - **Then:** Stdout is a JSON array of `{"identity": …, "active": …|null, "owned": N, "include": […], "exclude": […]}` objects. Exits 0.
 - **Exit:** 0
-- **Source fn:** `t15_identity_commands_json` *(planned)*
+- **Source fn:** `identity_filter_t15_identity_commands_json`
 - **Source:** [076_identity_tag_filter.md AC-15](../../../../docs/feature/076_identity_tag_filter.md)
 
 ---
@@ -66,7 +66,7 @@
 - **When:** `clp .identities format::table`
 - **Then:** Exits 1; stderr states `format::` must be `text` or `json`.
 - **Exit:** 1
-- **Source fn:** `t15_identity_commands_json` *(planned; rejection assertion)*
+- **Source fn:** `identity_filter_t15_identity_commands_json` *(rejection assertion)*
 - **Source:** [076_identity_tag_filter.md AC-15](../../../../docs/feature/076_identity_tag_filter.md)
 
 ---
@@ -77,7 +77,7 @@
 - **When:** `clp .identities`
 - **Then:** A row appears for `dave@devbox` (derived by last-`_` split of the filename suffix, sanitized display form), with its Active account populated from the marker.
 - **Exit:** 0
-- **Source fn:** `t18_identities_filename_derived_row` *(planned)*
+- **Source fn:** `identity_filter_t18_identities_filename_derived_row`
 - **Source:** [011_identity.md](../../../../docs/cli/command/011_identity.md)
 
 ---
@@ -88,5 +88,5 @@
 - **When:** `clp .help`
 - **Then:** Output contains `.identities`. Exits 0.
 - **Exit:** 0
-- **Source fn:** `dot04_all_visible_commands_present` *(extend on implementation — `tests/cli/dot_test.rs`)*
+- **Source fn:** `dot04_all_visible_commands_present` *(`tests/cli/dot_test.rs`)*
 - **Source:** [011_identity.md](../../../../docs/cli/command/011_identity.md)

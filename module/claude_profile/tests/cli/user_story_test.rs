@@ -165,18 +165,19 @@ fn onboarding_ua2_name_inference_and_missing_source()
   }
 }
 
-// UA-3: host:: and role:: captured in {name}.json; dry::1 previews without writing (a/b)
+// UA-3: host:: and tags:: captured in {name}.json; dry::1 previews without writing (a/b)
+// (`role::` was removed by Feature 075 — a role value is now just a tag.)
 #[ test ]
-fn onboarding_ua3_host_role_captured_and_dry_run()
+fn onboarding_ua3_host_tags_captured_and_dry_run()
 {
-  // (a) host:: and role:: captured
+  // (a) host:: and tags:: captured; no legacy role field written
   {
     let dir = TempDir::new().unwrap();
     let home = dir.path().to_str().unwrap();
     write_credentials( dir.path(), "max", "default", FAR_FUTURE_MS );
 
     let out = run_cs_with_env(
-      &[ ".account.save", "name::alice@acme.com", "host::laptop", "role::work" ],
+      &[ ".account.save", "name::alice@acme.com", "host::laptop", "tags::work" ],
       &[ ( "HOME", home ) ],
     );
     assert_exit( &out, 0 );
@@ -192,8 +193,13 @@ fn onboarding_ua3_host_role_captured_and_dry_run()
       "(a) host field must be captured in {{name}}.json",
     );
     assert_eq!(
-      content.get( "role" ).and_then( | v | v.as_str() ), Some( "work" ),
-      "(a) role field must be captured in {{name}}.json",
+      content.get( "tags" ).and_then( | v | v.as_array() ).map( Vec::as_slice ),
+      Some( &[ serde_json::Value::String( "work".to_string() ) ][ .. ] ),
+      "(a) tags field must be captured in {{name}}.json",
+    );
+    assert!(
+      content.get( "role" ).is_none(),
+      "(a) legacy role field must not be written by a fresh save (Feature 075)",
     );
   }
 

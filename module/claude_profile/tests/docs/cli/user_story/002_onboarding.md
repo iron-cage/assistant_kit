@@ -12,7 +12,7 @@ case maps to one Acceptance Criterion from
 |----|-----------|---------------------|
 | UA-1 | `.account.save` captures credentials to the credential store | AC-1 |
 | UA-2 | Name auto-inferred from `oauthAccount.emailAddress`; exits 1 if neither source present | AC-2 |
-| UA-3 | `host::` and `role::` captured in `{name}.json`; `dry::1` previews without writing | AC-3 |
+| UA-3 | `host::` and `tags::` captured in `{name}.json`; `dry::1` previews without writing | AC-3 |
 | UA-4 | `.account.delete` removes all account files from store | AC-4 |
 | UA-5 | `.account.relogin` spawns `claude` with TTY; propagates fresh credentials | AC-5 |
 | UA-6 | `.account.renewal` sets `_renewal_at` in `{name}.json` | AC-6 |
@@ -53,12 +53,12 @@ case maps to one Acceptance Criterion from
 
 ---
 
-### UA-3: `host::` and `role::` captured in `{name}.json`; `dry::1` previews without writing
+### UA-3: `host::` and `tags::` captured in `{name}.json`; `dry::1` previews without writing
 
 - **Given:** `~/.claude/.credentials.json` exists with valid credentials.
-- **When (a):** `clp .account.save name::alice@acme.com host::laptop role::work`
+- **When (a):** `clp .account.save name::alice@acme.com host::laptop tags::work`
 - **When (b):** `clp .account.save name::alice@acme.com dry::1`
-- **Then (a):** Exit 0. `{credential_store}/alice@acme.com.json` contains `host = "laptop"` and `role = "work"` fields.
+- **Then (a):** Exit 0. `{credential_store}/alice@acme.com.json` contains `host = "laptop"` and a `tags` array carrying `"work"`; no legacy `role` field is written (Feature 075 — `role::` removed, a role value is now just a tag).
 - **Then (b):** Exit 0. stdout: `[dry-run] would save current credentials as 'alice@acme.com'`. No files created.
 - **Exit:** 0
 - **Source:** [002_onboarding.md — AC-3](../../../../docs/cli/user_story/002_onboarding.md)

@@ -1,6 +1,7 @@
 // Integration tests for the usage module — render_text, render_json, sort/prefer strategy parsing.
 // Accesses pub(crate) items through claude_profile::usage::test_bridge (testing feature).
 
+use claude_profile::account::TagFilter;
 use tempfile::TempDir;
 use claude_profile::usage::test_bridge::{
   render_text, render_json, apply_refresh,
@@ -196,6 +197,7 @@ fn test_render_json_ft8_mixed_ok_and_err_both_present()
       claim_lock           : false,
       reserve              : false,
       inference_provider   : String::new(),
+      tags : Vec::new(),
           org_created_at : None,
     },
     AccountQuota
@@ -219,6 +221,7 @@ fn test_render_json_ft8_mixed_ok_and_err_both_present()
       claim_lock           : false,
       reserve              : false,
       inference_provider   : String::new(),
+      tags : Vec::new(),
           org_created_at : None,
     },
   ];

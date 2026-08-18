@@ -1,6 +1,7 @@
 // Integration tests for render.rs — Part B (split from src/usage/render_tests.rs).
 // Accesses pub(crate) items through claude_profile::usage::test_bridge (testing feature).
 
+use claude_profile::account::TagFilter;
 use claude_profile::usage::test_bridge::render_text;
 use claude_profile::usage::test_bridge::types::{ AccountQuota, SortStrategy, PreferStrategy, ColsVisibility };
 use claude_profile::usage::test_bridge::{ FAR_FUTURE_MS, mk_aq_sort, mk_aq_sort_weekly };
@@ -46,6 +47,7 @@ fn test_ft29_009_footer_session_effort_display()
         claim_lock            : false,
         reserve               : false,
         inference_provider    : String::new(),
+        tags : Vec::new(),
               org_created_at : None,
       },
       AccountQuota
@@ -74,6 +76,7 @@ fn test_ft29_009_footer_session_effort_display()
         claim_lock            : false,
         reserve               : false,
         inference_provider    : String::new(),
+        tags : Vec::new(),
               org_created_at : None,
       },
       AccountQuota
@@ -102,6 +105,7 @@ fn test_ft29_009_footer_session_effort_display()
         claim_lock            : false,
         reserve               : false,
         inference_provider    : String::new(),
+        tags : Vec::new(),
               org_created_at : None,
       },
     ]
@@ -554,6 +558,7 @@ fn cc_no_current_account_uses_legacy_footer()
       claim_lock            : false,
       reserve               : false,
       inference_provider    : String::new(),
+      tags : Vec::new(),
           org_created_at : None,
     }
   };
@@ -607,6 +612,7 @@ fn cc_effort_only_footer_shows_effort_without_model()
       claim_lock            : false,
       reserve               : false,
       inference_provider    : String::new(),
+      tags : Vec::new(),
           org_created_at : None,
     }
   };

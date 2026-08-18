@@ -42,12 +42,13 @@ Feature behavioral requirement test cases for `docs/feature/029_account_host_met
 
 ---
 
-### FT-01: `host::` and `role::` params write `{name}.json`
+### FT-01: `host::` (and `tags::`) params write `{name}.json`
 
 - **Given:** No pre-existing account for `test@example.com`.
-- **When:** `clp .account.save name::test@example.com host::mybox role::work`
-- **Then:** Exits 0. `{credential_store}/test@example.com.json` contains `{"host": "mybox", "role": "work"}`.
+- **When:** `clp .account.save name::test@example.com host::testbox tags::dev`
+- **Then:** Exits 0. `{credential_store}/test@example.com.json` contains `"host": "testbox"` and a `"tags"` array carrying `"dev"`.
 - **Exit:** 0
+- **Note:** Originally exercised `role::` alongside `host::`; `role::` was removed by Feature 075 (a role value is now just a tag), so the metadata companion in this case is `tags::`.
 - **Source fn:** `as_save_writes_profile_json` (in `account_renewal_test_b.rs`)
 - **Source:** [feature/029_account_host_metadata.md AC-01](../../../docs/feature/029_account_host_metadata.md)
 
@@ -77,12 +78,12 @@ Feature behavioral requirement test cases for `docs/feature/029_account_host_met
 
 ### FT-04: Re-save overwrites `{name}.json`
 
-- **Given:** Account `test@example.com` already saved with `host::oldbox` (separately, also with `role::personal`).
-- **When:** `clp .account.save name::test@example.com host::newbox` (host re-save); `clp .account.save name::test@example.com role::dev` (role re-save — separate command, separate test)
-- **Then:** Exits 0 (both). `{credential_store}/test@example.com.json` contains `"host": "newbox"` with `oldbox` gone (verified by `as26`); separately, `"role": "dev"` with `personal` gone (verified by `as33`).
+- **Given:** Account `test@example.com` already saved with `host::oldbox`.
+- **When:** `clp .account.save name::test@example.com host::newbox` (host re-save)
+- **Then:** Exits 0. `{credential_store}/test@example.com.json` contains `"host": "newbox"` with `oldbox` gone (verified by `as26`).
 - **Exit:** 0
-- **Note:** No single test re-saves both `host::` and `role::` together in one command as this FT case's Given/When originally implied — `as26_host_resave_overwrites` covers host-only re-save and never passes `role::`; `as33_role_resave_overwrites` covers role-only re-save and never passes `host::`. Both are cited below.
-- **Source fn:** `as26_host_resave_overwrites` (host overwrite, in `account_renewal_test_b.rs`); `as33_role_resave_overwrites` (role overwrite, in `account_renewal_test_b.rs`)
+- **Note:** Originally also covered role-only re-save via `as33_role_resave_overwrites`; `role::` was removed by Feature 075, so overwrite semantics for the tag-based replacement are covered by `account_tag_t07_tag_replace_and_mutual_exclusion` (`tests/cli/account_tag_test.rs`).
+- **Source fn:** `as26_host_resave_overwrites` (host overwrite, in `account_renewal_test_b.rs`)
 - **Source:** [feature/029_account_host_metadata.md AC-04](../../../docs/feature/029_account_host_metadata.md)
 
 ---

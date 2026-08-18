@@ -26,10 +26,13 @@ format compliance, and append-only history behavior.
 - **When:** `.account.save` is invoked again for the same account (without specifying `_renewal_at`, `host::`, or `role::`)
 - **Then:** All 3 preserved-only fields remain in `{name}.json` unchanged — `save()` performs a read-merge, not a clobber
 - **Note:** Direct test evidence covers `_renewal_at` preservation only (shared with SC-2).
-  `host` and `role` traverse the same `save()` read-merge code path but are independently
-  tested only for their EXPLICIT-overwrite behavior (`as26_host_resave_overwrites`,
-  `as33_role_resave_overwrites` in `tests/cli/account_renewal_test_b.rs`), not
-  omission-preservation specifically.
+  `host` traverses the same `save()` read-merge code path but is independently tested only
+  for its EXPLICIT-overwrite behavior (`as26_host_resave_overwrites` in
+  `tests/cli/account_renewal_test_b.rs`), not omission-preservation specifically. `role`
+  became a preserved-only legacy field with Feature 075 (`role::` removed; the CLI always
+  passes `None`, so `save()` never writes it) — a stored legacy value survives re-saves
+  until the first tag write migrates it to a tag
+  (`account_tag_t09_first_tag_write_migrates_role` in `tests/cli/account_tag_test.rs`).
 - **Source fn:** `as22_save_preserves_renewal_at` in `tests/cli/account_renewal_test.rs`
 - **Source:** [docs/schema/002_account_json.md §Format §Preserved-Only Fields](../../../docs/schema/002_account_json.md)
 
