@@ -20,12 +20,14 @@ workspace = true
 default = [ "enabled" ]
 full = [ "enabled" ]
 enabled = [ "dep:error_tools", "error_tools/enabled", "error_tools/error_untyped", "dep:serde", "dep:serde_json" ]
-# Table-rendering helpers for process listings (`render_ps_table`). Kept out of
-# `enabled` so plain consumers never pull in `data_fmt`.
-ps_table = [ "dep:data_fmt", "data_fmt/enabled" ]
+# Table-rendering helpers for process listings (`render_ps_table`,
+# `render_active_sessions_table`). Kept out of `enabled` so plain consumers
+# never pull in `data_fmt`.
+ps_table = [ "dep:data_fmt", "data_fmt/enabled", "dep:claude_storage_core", "claude_storage_core/enabled" ]
 
 [dependencies]
 claude_core = { workspace = true }
+claude_storage_core = { workspace = true, optional = true }
 error_tools   = { workspace = true, optional = true }
 serde         = { workspace = true, optional = true, features = [ "std", "derive" ] }
 serde_json    = { workspace = true, optional = true }

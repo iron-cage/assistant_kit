@@ -51,6 +51,7 @@ enabled = [
   "dep:claude_core",
   "dep:claude_runner_core",
   "claude_runner_core/enabled",
+  "claude_runner_core/ps_table",
   "claude_core/enabled",
   "dep:claude_storage_core",
   "dep:error_tools",

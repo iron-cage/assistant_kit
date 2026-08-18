@@ -11,7 +11,7 @@
 //! | IT-7 | `.ps v::3` → exit 1, out of range | N | 1 |
 //! | IT-8 | stdout non-empty, stderr empty | P | 0 |
 //! | T01 (TSK-463) | `.ps v::1` with ≥1 process (fake, deterministic) → PID column header | P | 0 |
-//! | T02 (TSK-463) | `.ps` zero processes (deterministic) → `"no active processes"` | P | 0 |
+//! | T02 (TSK-463) | `.ps` zero processes (deterministic) → `"No active Claude Code sessions."` | P | 0 |
 //! | T05 (TSK-463) | `.ps v::2` → exit 0, non-empty verbose output | P | 0 |
 
 use crate::subprocess_helpers::{ assert_exit, fake_claude_process, run_clv, run_clv_with_env, stderr, stdout };
@@ -115,7 +115,9 @@ fn t01_ps_v1_table_shows_pid_header_with_fake_process()
 }
 
 // T02 (TSK-463): zero processes (deterministic, CLR_PROC_DIR empty) → the
-// table-rendering path's own "no active processes" message, text format.
+// shared claude_runner_core::ps_table empty-state message (identical text to
+// `clr ps`'s own empty state). Default verbosity (no v:: given) is 1, which
+// hits the rich "Active Sessions" table path shared with `clr ps`.
 #[ test ]
 fn t02_ps_text_zero_processes_no_active()
 {
@@ -125,7 +127,7 @@ fn t02_ps_text_zero_processes_no_active()
     &[ ( "CLR_PROC_DIR", fake_proc.path().to_str().unwrap() ) ],
   );
   assert_exit( &out, 0 );
-  assert!( stdout( &out ).contains( "no active processes" ), "stdout: {}", stdout( &out ) );
+  assert!( stdout( &out ).contains( "No active Claude Code sessions." ), "stdout: {}", stdout( &out ) );
 }
 
 // T05 (TSK-463): v::2 → exit 0, non-empty verbose output, no crash.

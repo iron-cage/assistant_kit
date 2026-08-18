@@ -313,7 +313,17 @@ fn test_no_code_duplication()
   //   `function_count` but collapses them to one name in `unique_count`, adding +1 duplicate
   // Pitfall: a `#[cfg]`-gated same-name function pair (only one variant ever compiles for a
   //   given target) reads as genuine duplication to this heuristic — not a copy-paste problem
-  let duplication_threshold = 19;
+  //
+  // Fix(ps-table-code-sharing): Raised from 19 to 20 after `ps_table.rs` gained `PsTableOptions`
+  // Root cause: `PsTableOptions` (the shared config struct that lets `claude_version` and
+  //   `claude_runner` render the same "Active Sessions" table via one `render_active_sessions_table`
+  //   function instead of two duplicated implementations) needs non-zero numeric defaults
+  //   (`ancient_secs: 28_800`, `high_ram_mb: 400`), so `Default` is a manual `impl` rather than
+  //   `#[derive(Default)]` — its `fn default()` adds +1 to the pre-existing 6-instance cluster
+  //   in `types.rs` that the heuristic already tolerates
+  // Pitfall: this threshold must be updated each time a new struct gains a standard trait impl
+  //   (Default, Display, FromStr, etc.) whose method name is already shared by an existing type
+  let duplication_threshold = 20;
   let duplicates = function_count.saturating_sub( unique_count );
 
   assert!

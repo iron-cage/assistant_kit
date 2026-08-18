@@ -1,9 +1,17 @@
 //! `clr ps` — list active Claude Code sessions and queued `clr` waiters in two
 //! plain-style tables.
+//!
+//! Active-sessions table rendering is shared with `claude_version`'s `.ps` command
+//! via `claude_runner_core::ps_table` — the single definition both CLIs render from.
 
 use claude_core::process::{ find_claude_processes, ProcessInfo };
+use claude_runner_core::ps_table::
+{
+  classify_mode, elapsed_label, parse_json_u64, render_active_sessions_table,
+  resolve_task, shorten_path, PsTableOptions, COLUMN_KEYS, DEFAULT_COLUMNS,
+};
 #[ cfg( target_os = "linux" ) ]
-use claude_core::process::ProcessMetrics;
+use claude_runner_core::ps_table::ram_label;
 use data_fmt::{ RowBuilder, TableFormatter, TableConfig, Heading, Format };
 
 // Runtime configuration for `clr ps`, assembled from env-var defaults (applied
@@ -26,44 +34,6 @@ struct PsConfig
   ancient_secs : u64,
   /// RAM megabytes threshold above which the 🐘 (High RAM) flag fires. Default: 400 MB.
   high_ram_mb  : u64,
-}
-
-// Classify a process's execution mode from its cmdline args.
-//
-// Returns `"query"` when the args carry the exact 3-condition control-session
-// signature `spawn_control_session()` itself validates (`--input-format stream-json`
-// + `--output-format stream-json` + `--verbose`) — task 418's `clr query` daemon is
-// currently the only caller of that method, so this signature is unique in practice.
-// Returns `"print"` when `--print` or `-p` appears as a discrete argument in `args[1..]`.
-// Returns `"interactive"` otherwise.
-//
-// Must use `args` (NUL-split) — NOT `cmdline` (space-joined) — because a path
-// component could contain the substring "--print" producing a false positive.
-//
-// `pub(super)`: also called from `gate.rs` to count print-mode sessions only.
-pub( super ) fn classify_mode( args : &[ String ] ) -> &str
-{
-  if has_flag_pair( args, "--input-format", "stream-json" )
-    && has_flag_pair( args, "--output-format", "stream-json" )
-    && args.iter().any( | a | a == "--verbose" )
-  {
-    "query"
-  }
-  else if args.iter().any( | a | a == "--print" || a == "-p" )
-  {
-    "print"
-  }
-  else
-  {
-    "interactive"
-  }
-}
-
-// Detect an adjacent `flag value` pair anywhere in `args` (order-sensitive, matching
-// `spawn_control_session()`'s own `has_flag_pair` validation shape in claude_runner_core).
-fn has_flag_pair( args : &[ String ], flag : &str, value : &str ) -> bool
-{
-  args.windows( 2 ).any( | w | w[ 0 ] == flag && w[ 1 ] == value )
 }
 
 /// Dispatch `clr ps`: list active Claude Code sessions and queued `clr` waiters
@@ -173,7 +143,7 @@ pub( crate ) fn dispatch_ps( tokens : &[ String ] ) -> !
   }
 
   // Eagerly validate --columns so unknown keys are caught even when no active
-  // sessions exist (build_active_table returns None early for empty proc lists).
+  // sessions exist (render_active_sessions_table returns None early for empty proc lists).
   if let Some( ref csv ) = config.columns
   {
     if let Err( msg ) = super::column_validate::validate_columns( csv, COLUMN_KEYS )
@@ -217,33 +187,17 @@ pub( crate ) fn dispatch_ps( tokens : &[ String ] ) -> !
     std::process::exit( 0 );
   }
 
-  // Two-sample CPU delta pre-pass (1 s window).  Skip the 1 s sleep when no
-  // processes are found — the table builder returns None immediately anyway.
-  #[ cfg( target_os = "linux" ) ]
-  let deltas : std::collections::HashMap< u32, u64 > = if procs.is_empty()
+  let resolved_columns = resolve_columns( &config );
+  let opts = PsTableOptions
   {
-    std::collections::HashMap::new()
-  }
-  else
-  {
-    let first : std::collections::HashMap< u32, u64 > = procs.iter()
-      .filter_map( |p| read_cpu_ticks( p.pid ).map( |t| ( p.pid, t ) ) )
-      .collect();
-    std::thread::sleep( core::time::Duration::from_secs( 1 ) );
-    procs.iter()
-      .filter_map( |p|
-      {
-        let t1 = first.get( &p.pid )?;
-        let t2 = read_cpu_ticks( p.pid )?;
-        Some( ( p.pid, t2.saturating_sub( *t1 ) ) )
-      } )
-      .collect()
+    mode         : config.mode,
+    columns      : Some( resolved_columns ),
+    pids         : config.pids,
+    ancient_secs : config.ancient_secs,
+    high_ram_mb  : config.high_ram_mb,
   };
-  #[ cfg( not( target_os = "linux" ) ) ]
-  let deltas : std::collections::HashMap< u32, u64 > = std::collections::HashMap::new();
-
-  let active_result = build_active_table( &procs, &config, &deltas );
-  let queued_table  = build_queued_table();
+  let active_result = render_active_sessions_table( &procs, &opts );
+  let queued_table   = build_queued_table();
 
   match ( active_result, queued_table )
   {
@@ -299,27 +253,6 @@ fn render_plain_table( builder : RowBuilder, heading : Heading ) -> String
     &builder.build_view(),
   ).unwrap_or_default()
 }
-
-// All 11 column keys in display order, paired with their table header strings.
-const COLUMN_KEYS : &[ ( &str, &str ) ] = &[
-  ( "idx",     "#" ),
-  ( "pid",     "PID" ),
-  ( "elapsed", "Elapsed" ),
-  ( "cpu",     "CPU%" ),
-  ( "ram",     "RAM" ),
-  ( "state",   "State" ),
-  ( "path",    "Absolute Path" ),
-  ( "task",    "Task" ),
-  ( "mode",    "Mode" ),
-  ( "cmd",     "Command" ),
-  ( "binary",  "Binary" ),
-];
-
-// Default column set (9 columns) shown when neither `--wide` nor `--columns` is given.
-// `mode` is inserted after `state` so session type is visible in the default view.
-const DEFAULT_COLUMNS : &[ &str ] = &[
-  "idx", "pid", "elapsed", "cpu", "ram", "state", "mode", "path", "task",
-];
 
 // Resolve the ordered list of column keys from PsConfig.
 //
@@ -413,452 +346,6 @@ fn build_inspect_output( procs : &[ &ProcessInfo ] ) -> String
   out.trim_end_matches( '\n' ).to_string()
 }
 
-// Per-flag metadata in canonical display order (👈🖨⚡🕰🐘⚠🐳).
-// Only used on Linux because compute_flags is Linux-only.
-#[ cfg( target_os = "linux" ) ]
-const FLAG_LEGEND : &[ ( &str, &str ) ] = &[
-  ( "👈", "This session" ),
-  ( "🖨",  "Print mode"   ),
-  ( "🔌", "Query mode"   ),
-  ( "⚡", "Active"       ),
-  ( "🕰",  "Ancient"      ),
-  ( "🐘", "High RAM"     ),
-  ( "⚠",  "Dead metrics" ),
-  ( "🐳", "Container"    ),
-];
-
-// Read cumulative CPU ticks (utime + stime) from `/proc/{pid}/stat`.
-// Returns `None` if the process exited or fields are unreadable.
-//
-// WHY two-sample delta instead of kernel state R (field 3):
-// State R is a microsecond snapshot — it detected only 1-2 of 20 active sessions
-// in live testing.  Cumulative ticks delta over 1 s reliably identifies sustained
-// CPU use; a threshold of 3 ticks (≈ 30 ms) separates real work from BUG-304
-// timer noise (1-2 ticks) with no observed false positives or false negatives.
-#[ cfg( target_os = "linux" ) ]
-fn read_cpu_ticks( pid : u32 ) -> Option< u64 >
-{
-  let data = std::fs::read_to_string( format!( "/proc/{pid}/stat" ) ).ok()?;
-  // Field 1 is (comm) which may contain spaces — find closing ')' first.
-  let close_paren = data.find( ')' )?;
-  let after_comm = &data[ close_paren + 2.. ]; // skip ") "
-  let rest : Vec< &str > = after_comm.split_whitespace().collect();
-  // rest[0] = state (field 3), rest[11] = utime (field 14), rest[12] = stime (field 15).
-  let utime : u64 = rest.get( 11 )?.parse().ok()?;
-  let stime : u64 = rest.get( 12 )?.parse().ok()?;
-  Some( utime + stime )
-}
-
-// Compute session-flag emoji string for a single process row.
-//
-// Flags in canonical order 👈🖨⚡🕰🐘⚠🐳 (only symbols that fire are included).
-// Pure computation — no filesystem I/O beyond what the caller already has in `metrics` and
-// `cpu_delta_ticks` (both pre-computed by the caller in `dispatch_ps()`).
-// The `/proc/{my_ppid}/cmdline` read for 👈 is inexpensive and done once per `clr ps` run.
-#[ cfg( target_os = "linux" ) ]
-fn push_flag( flags : &mut String, c : char )
-{
-  if !flags.is_empty() { flags.push( ' ' ); }
-  flags.push( c );
-}
-
-#[ cfg( target_os = "linux" ) ]
-fn compute_flags(
-  proc            : &ProcessInfo,
-  metrics         : Option< &ProcessMetrics >,
-  home            : &str,
-  ancient_secs    : u64,
-  high_ram_mb     : u64,
-  my_ppid         : u32,
-  cpu_delta_ticks : u64,
-) -> String
-{
-  let mut flags = String::new();
-
-  // 👈 This session: clr ps is a direct child of this claude process.
-  if proc.pid == my_ppid
-  {
-    // Verify the parent's cmdline arg[0] basename == "claude".
-    let is_claude = std::fs::read( format!( "/proc/{my_ppid}/cmdline" ) )
-      .ok()
-      .and_then( | b |
-      {
-        let arg0 : Vec< u8 > = b.split( | &c | c == b'\0' )
-          .next()
-          .unwrap_or( &[] )
-          .to_vec();
-        String::from_utf8( arg0 ).ok()
-      } )
-      .is_some_and( | s |
-      {
-        std::path::Path::new( &s )
-          .file_name()
-          .and_then( | n | n.to_str() )
-          == Some( "claude" )
-      } );
-    if is_claude { push_flag( &mut flags, '👈' ); }
-  }
-
-  // 🖨 Print mode: cmdline contains --print or -p.
-  if classify_mode( &proc.args ) == "print" { push_flag( &mut flags, '🖨' ); }
-
-  // 🔌 Query mode: PID-addressed control session (clr query), task 418.
-  if classify_mode( &proc.args ) == "query" { push_flag( &mut flags, '🔌' ); }
-
-  // ⚡ Active: CPU delta >= 3 ticks in 1-second sample window.
-  // Threshold separates active sessions (6-100 ticks) from BUG-304 timer noise (1-2 ticks).
-  if cpu_delta_ticks >= 3 { push_flag( &mut flags, '⚡' ); }
-
-  if let Some( m ) = metrics
-  {
-    // 🕰 Ancient: elapsed seconds exceed the configured threshold.
-    let elapsed = super::gate::unix_now().saturating_sub( m.started_at );
-    if elapsed > ancient_secs { push_flag( &mut flags, '🕰' ); }
-
-    // 🐘 High RAM: RSS exceeds threshold. Comparison in KB to avoid integer-division
-    //   truncation (e.g. 512 KB / 1024 = 0 MB, which would never exceed a 0 MB threshold).
-    if m.ram_kb > high_ram_mb.saturating_mul( 1_024 ) { push_flag( &mut flags, '🐘' ); }
-  }
-  else
-  {
-    // ⚠ Dead metrics: read_process_metrics returned None (TOCTOU race or zombie).
-    push_flag( &mut flags, '⚠' );
-  }
-
-  // 🐳 Container: working directory is outside $HOME.
-  // Fix(BUG-383): path-component-aware check — cwd is "inside home" only if it
-  // equals home exactly, or the byte immediately after the shared prefix is a
-  // path separator. A plain `starts_with` wrongly matched a sibling directory
-  // like /home/alice2 against home=/home/alice.
-  // Root cause: `starts_with` is a byte-sequence test, not a path-component test.
-  // Pitfall: never use raw `str::starts_with` to test path descendance — always
-  // verify a `/` boundary (or exact equality) after the shared prefix.
-  let cwd_str = proc.cwd.to_str().unwrap_or( "" );
-  let is_inside_home = !home.is_empty() && (
-    cwd_str == home
-    || cwd_str.strip_prefix( home ).is_some_and( | rest | rest.starts_with( '/' ) )
-  );
-  if !home.is_empty() && !is_inside_home
-  {
-    push_flag( &mut flags, '🐳' );
-  }
-
-  flags
-}
-
-// Build the legend line from the collected per-row flag strings.
-//
-// Only symbols that appeared in at least one row are included, in canonical order.
-// Returns an empty string when `flags_per_row` contains no non-empty entries
-// (caller should check `any_flags` before calling to avoid the empty-string case).
-#[ cfg( target_os = "linux" ) ]
-fn build_legend( flags_per_row : &[ String ] ) -> String
-{
-  let all_flags : String = flags_per_row.concat();
-  FLAG_LEGEND.iter()
-    .filter( | ( emoji, _ ) | all_flags.contains( *emoji ) )
-    .map( | ( emoji, name ) | format!( "{emoji} {name}" ) )
-    .collect::< Vec< _ > >()
-    .join( "  " )
-}
-
-// Build the active sessions table, returning None when no sessions match.
-//
-// Returns `Some((table_string, legend))` where `legend` is `Some(line)` when ≥1 flag
-// fired across all displayed rows, or `None` when all rows are flag-free.
-// The caller must print the legend after the active table (separated by a blank line).
-fn build_active_table(
-  procs  : &[ ProcessInfo ],
-  config : &PsConfig,
-  deltas : &std::collections::HashMap< u32, u64 >,
-) -> Option< ( String, Option< String > ) >
-{
-  // Apply mode filter before checking emptiness.
-  let mode = config.mode.as_deref().unwrap_or( "all" );
-  let mode_filtered : Vec< &ProcessInfo > = if mode == "all"
-  {
-    procs.iter().collect()
-  }
-  else
-  {
-    procs.iter().filter( | p | classify_mode( &p.args ) == mode ).collect()
-  };
-
-  // Apply PID filter after mode filter (AND semantics).
-  let filtered : Vec< &ProcessInfo > = if config.pids.is_empty()
-  {
-    mode_filtered
-  }
-  else
-  {
-    mode_filtered.into_iter().filter( | p | config.pids.contains( &p.pid ) ).collect()
-  };
-
-  if filtered.is_empty() { return None; }
-
-  // `deltas` is only consumed inside `#[cfg(target_os = "linux")]` below.
-  #[ cfg( not( target_os = "linux" ) ) ]
-  let _ = &deltas;
-
-  // Sort oldest-first (AC-012): smallest started_at = longest running = row #1.
-  #[ cfg( target_os = "linux" ) ]
-  let sorted : Vec< &ProcessInfo > = {
-    use claude_core::process::read_process_metrics;
-    let mut v : Vec< &ProcessInfo > = filtered;
-    v.sort_by_key( |p| read_process_metrics( p.pid )
-      .map_or( u64::MAX, |m| m.started_at ) );
-    v
-  };
-  #[ cfg( not( target_os = "linux" ) ) ]
-  let sorted : Vec< &ProcessInfo > = filtered;
-
-  // Pass 1: compute flags per row (Linux only; always empty on other platforms).
-  #[ cfg( target_os = "linux" ) ]
-  let flags_per_row : Vec< String > = {
-    use claude_core::process::read_process_metrics;
-    let home    = std::env::var( "HOME" ).unwrap_or_default();
-    let my_ppid : u32 = std::os::unix::process::parent_id();
-    sorted.iter().map( | proc |
-    {
-      let m = read_process_metrics( proc.pid );
-      let cpu_delta = deltas.get( &proc.pid ).copied().unwrap_or( 0 );
-      compute_flags( proc, m.as_ref(), &home, config.ancient_secs, config.high_ram_mb, my_ppid, cpu_delta )
-    } ).collect()
-  };
-  #[ cfg( not( target_os = "linux" ) ) ]
-  let flags_per_row : Vec< String > = sorted.iter().map( |_| String::new() ).collect();
-
-  let any_flags = flags_per_row.iter().any( | f | !f.is_empty() );
-
-  let cols = resolve_columns( config );
-
-  // Find insertion position for the Flags column — immediately after "state".
-  let flags_insert_pos : Option< usize > = if any_flags
-  {
-    cols.iter().position( | &k | k == "state" ).map( | p | p + 1 )
-  }
-  else
-  {
-    None
-  };
-
-  // Build headers, inserting "Flags" after "State" when any flag fired.
-  let mut headers : Vec< String > = cols.iter().map( |k|
-  {
-    COLUMN_KEYS.iter()
-      .find( | ( ck, _ ) | ck == k )
-      .map_or_else( || ( *k ).to_string(), | ( _, h ) | ( *h ).to_string() )
-  } ).collect();
-  if let Some( p ) = flags_insert_pos { headers.insert( p, "Flags".to_string() ); }
-
-  // Pass 2: build rows, injecting flags value at insertion position.
-  let mut builder = RowBuilder::new( headers );
-  for ( ( idx, proc ), flags_str ) in sorted.iter().enumerate().zip( flags_per_row.iter() )
-  {
-    let mut row = build_row( idx + 1, proc, &cols );
-    if let Some( p ) = flags_insert_pos { row.insert( p, flags_str.clone() ); }
-    builder = builder.add_row( row.into_iter().map( Into::into ).collect() );
-  }
-
-  // Interactive/print breakdown only when unfiltered (AC per task 367) — a mode-filtered
-  // view already restricts rows to one mode, so the breakdown would be redundant.
-  let running_field = if mode == "all"
-  {
-    let interactive = sorted.iter().filter( | p | classify_mode( &p.args ) == "interactive" ).count();
-    let query       = sorted.iter().filter( | p | classify_mode( &p.args ) == "query" ).count();
-    let print       = sorted.len() - interactive - query;
-    format!( "{} running ({interactive} interactive, {print} print, {query} query)", sorted.len() )
-  }
-  else
-  {
-    format!( "{} running", sorted.len() )
-  };
-  let heading = Heading::new( "Active Sessions" )
-    .with_field( running_field );
-  let table_str = render_plain_table( builder, heading );
-
-  // Build legend from flags present across all rows (Linux only).
-  #[ cfg( target_os = "linux" ) ]
-  let legend = if any_flags { Some( build_legend( &flags_per_row ) ) } else { None };
-  #[ cfg( not( target_os = "linux" ) ) ]
-  let legend : Option< String > = None;
-
-  Some( ( table_str, legend ) )
-}
-
-// Build one table row for the given process, emitting only the requested columns.
-fn build_row( idx : usize, proc : &ProcessInfo, cols : &[ &str ] ) -> Vec< String >
-{
-  let pid = proc.pid;
-
-  #[ cfg( target_os = "linux" ) ]
-  let ( elapsed, cpu, ram, state ) =
-  {
-    use claude_core::process::read_process_metrics;
-    match read_process_metrics( pid )
-    {
-      Some( m ) => (
-        elapsed_label( m.started_at ),
-        format!( "{:.1}%", m.cpu_pct ),
-        ram_label( m.ram_kb ),
-        m.state.to_string(),
-      ),
-      None => ( "-".to_string(), "-".to_string(), "-".to_string(), "-".to_string() ),
-    }
-  };
-
-  #[ cfg( not( target_os = "linux" ) ) ]
-  let ( elapsed, cpu, ram, state ) =
-    ( "-".to_string(), "-".to_string(), "-".to_string(), "-".to_string() );
-
-  let path    = shorten_path( &proc.cwd.display().to_string() );
-  let task    = resolve_task( proc );
-  let mode    = classify_mode( &proc.args ).to_string();
-  let command = proc.args.get( 1.. ).unwrap_or( &[] ).join( " " );
-  let binary  = proc.args.first().cloned().unwrap_or_default();
-
-  cols.iter().map( |col| match *col
-  {
-    "idx"     => idx.to_string(),
-    "pid"     => pid.to_string(),
-    "elapsed" => elapsed.clone(),
-    "cpu"     => cpu.clone(),
-    "ram"     => ram.clone(),
-    "state"   => state.clone(),
-    "path"    => path.clone(),
-    "task"    => task.clone(),
-    "mode"    => mode.clone(),
-    "cmd"     => command.clone(),
-    "binary"  => binary.clone(),
-    _         => String::new(),
-  } ).collect()
-}
-
-// Replace the $PRO prefix in a path with the literal "$PRO" when the PRO env var is set.
-//
-// Keeps path strings short in the table without information loss: the user already knows
-// what $PRO expands to. Falls back to the full path when PRO is unset or empty.
-fn shorten_path( path : &str ) -> String
-{
-  if let Ok( pro ) = std::env::var( "PRO" )
-  {
-    // Fix(BUG-432): raw `starts_with` treated sibling directories whose names share
-    // a prefix with `$PRO` (e.g. `$PROtools`) as if they were descendants of `$PRO`,
-    // producing garbled paths like `$PROtools`.
-    // Root cause: byte-sequence prefix match has no path-boundary awareness; a sibling
-    // `/a/pro` and `/a/protools` share the prefix `/a/pro` but are unrelated paths.
-    // Pitfall: always check that the remainder after stripping the prefix starts with '/'
-    // (or that the path equals PRO exactly); `strip_prefix + is_some_and` mirrors the
-    // boundary-aware pattern established for home-dir detection in BUG-383.
-    if !pro.is_empty()
-      && ( path == pro.as_str()
-        || path.strip_prefix( pro.as_str() ).is_some_and( | rest | rest.starts_with( '/' ) ) )
-    {
-      let rest = &path[ pro.len().. ];
-      return format!( "$PRO{rest}" );
-    }
-  }
-  path.to_string()
-}
-
-// Format elapsed seconds since `started_at` as a human-readable duration.
-fn elapsed_label( started_at : u64 ) -> String
-{
-  let elapsed = super::gate::unix_now().saturating_sub( started_at );
-  if elapsed < 60
-  {
-    format!( "{elapsed}s" )
-  }
-  else if elapsed < 3_600
-  {
-    let m = elapsed / 60;
-    let s = elapsed % 60;
-    format!( "{m}m {s}s" )
-  }
-  else
-  {
-    let h = elapsed / 3_600;
-    let m = ( elapsed % 3_600 ) / 60;
-    format!( "{h}h {m}m" )
-  }
-}
-
-// Format RAM in kilobytes as a human-readable label (K or M suffix).
-#[ cfg( target_os = "linux" ) ]
-fn ram_label( kb : u64 ) -> String
-{
-  if kb >= 1_024 { format!( "{}M", kb / 1_024 ) }
-  else            { format!( "{kb}K" ) }
-}
-
-// Resolve the Task column value for a process, falling back to "interactive".
-fn resolve_task( proc : &ProcessInfo ) -> String
-{
-  try_jsonl_task( proc ).unwrap_or_else( || "interactive".to_string() )
-}
-
-// Try to read the last user message from the session JSONL for this process's CWD.
-//
-// Returns None if no JSONL is found, the directory does not exist, or parsing fails.
-fn try_jsonl_task( proc : &ProcessInfo ) -> Option< String >
-{
-  let home    = std::env::var( "HOME" ).ok()?;
-  let encoded = claude_storage_core::encode_path( &proc.cwd ).ok()?;
-  let dir     = std::path::Path::new( &home )
-    .join( ".claude" )
-    .join( "projects" )
-    .join( &encoded );
-
-  // Find the most-recently-modified JSONL file in the project dir.
-  let jsonl_path = std::fs::read_dir( &dir )
-    .ok()?
-    .flatten()
-    .filter( | e |
-    {
-      e.path().extension().and_then( | x | x.to_str() ) == Some( "jsonl" )
-    } )
-    .max_by_key( | e |
-    {
-      e.metadata().and_then( | m | m.modified() ).ok()
-    } )?
-    .path();
-
-  // Scan for the last Form A user line (string `"content"`, not array).
-  //
-  // Fix(BUG-297): require `"content":"` (string) and exclude `"content":[` (array).
-  // Root cause: `.find(|l| l.contains("\"type\":\"user\""))` returned the last user line,
-  //   which in any active session is a Form B tool_result with `"content":[...]`, not the
-  //   human's question — the old predicate did not distinguish Form A from Form B.
-  // Pitfall: tool_result messages have `"type":"user"` but array content; must exclude
-  //   `"content":[` to distinguish Form A (human question) from Form B (tool result).
-  let content   = std::fs::read_to_string( jsonl_path ).ok()?;
-  let last_user = content.lines().rev()
-    .find( | l |
-      l.contains( r#""type":"user""# )
-        && l.contains( r#""content":""# )
-        && !l.contains( r#""content":["# )
-    )?;
-
-  // Fix(BUG-296): Claude Form A stores human text in `"content":"..."`, not `"text":"..."`.
-  // Root cause: old marker used `"text":"..."` (Messages API array-element key), but Form A
-  //   serialises the entire human turn as `"content":"<text>"` at the message level.
-  // Pitfall: Messages API uses `"text"` inside content arrays; Form A uses `"content"` directly
-  //   as a string value — searching for `"text":"..."` always returns None for Form A lines.
-  let marker     = r#""content":""#;
-  let text_start = last_user.find( marker ).map( | i | i + marker.len() )?;
-  let rest       = &last_user[ text_start .. ];
-  // Fix(BUG-394): a bare rest.find('"') stops at the first escaped `\"` inside
-  // the human's message text (e.g. `He said \"hi\"`), truncating well before the
-  // true closing quote. Root cause: no escape-state tracking at this site, unlike
-  // summary.rs's extract_str()/extract_json_value(). Pitfall: never assume
-  // user-authored message text cannot contain a literal `"`.
-  let text_end   = super::summary::find_unescaped_quote( rest )?;
-  let text       = &rest[ .. text_end ];
-  let truncated  : String = text.chars().take( 35 ).collect();
-  if truncated.is_empty() { return None; }
-  Some( truncated )
-}
-
 // Extract a string value for `key` from a compact JSON object in `content`.
 //
 // Fix(BUG-394): this is the unpaired read side of a round-trip whose write side
@@ -875,19 +362,6 @@ fn parse_json_str( content : &str, key : &str ) -> Option< String >
   let rest   = &content[ start.. ];
   let end    = super::summary::find_unescaped_quote( rest )?;
   Some( rest[ ..end ].to_string() )
-}
-
-// Extract a u64 value for `key` from a compact JSON object in `content`.
-//
-// `pub(super)`: also called from `gate.rs` to read a slot reservation file's
-// `pid` field for staleness checks (Fix(BUG-387)).
-pub( super ) fn parse_json_u64( content : &str, key : &str ) -> Option< u64 >
-{
-  let marker = format!( r#""{key}":"# );
-  let start  = content.find( marker.as_str() )? + marker.len();
-  let rest   = &content[ start.. ];
-  let end    = rest.find( [ ',', '}' ] )?;
-  rest[ ..end ].trim().parse().ok()
 }
 
 // Read the gate state dir and build the queued CLR processes table.

@@ -2,4 +2,6 @@
 //!
 //! Re-exported from `claude_core` — the authoritative implementation lives there.
 
-pub use claude_core::process::{ ProcessInfo, find_claude_processes, send_sigterm, send_sigkill };
+pub use claude_core::process::{
+  ProcessInfo, ProcessMetrics, find_claude_processes, read_process_metrics, send_sigterm, send_sigkill,
+};

@@ -7,7 +7,7 @@ use unilang::types::Value;
 
 use crate::output::{ OutputFormat, OutputOptions, json_escape, trim_trailing_whitespace };
 use claude_runner_core::process::{ ProcessInfo, find_claude_processes, send_sigkill, send_sigterm };
-use claude_runner_core::ps_table::render_ps_table;
+use claude_runner_core::ps_table::{ render_ps_table, render_active_sessions_table, PsTableOptions };
 use claude_runner_core::OutputFormat as CoreOutputFormat;
 
 /// `.ps` — list all running Claude Code processes.
@@ -50,7 +50,22 @@ pub fn ps_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< O
       // Task 463: table rendering delegated to claude_runner_core::ps_table,
       // which knows nothing about CLI-specific trailing-newline conventions —
       // normalize exactly one trailing newline here, at the CLI output layer.
-      let rendered = render_ps_table( &procs, CoreOutputFormat::Text, opts.verbosity );
+      // v::0 keeps the compact 3-column table; v::1+ renders the same rich
+      // "Active Sessions" table `clr ps` uses, so both CLIs render sessions
+      // identically (elapsed/CPU/RAM/state/flags/task columns).
+      let rendered = if opts.verbosity == 0
+      {
+        render_ps_table( &procs, CoreOutputFormat::Text, opts.verbosity )
+      }
+      else
+      {
+        match render_active_sessions_table( &procs, &PsTableOptions::default() )
+        {
+          Some( ( table, Some( legend ) ) ) => format!( "{table}\n\n{legend}" ),
+          Some( ( table, None ) ) => table,
+          None => "No active Claude Code sessions.".to_string(),
+        }
+      };
       let mut content = trim_trailing_whitespace( &rendered );
       if !content.ends_with( '\n' ) { content.push( '\n' ); }
       content

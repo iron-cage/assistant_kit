@@ -1,4 +1,5 @@
 use claude_core::process::find_claude_processes;
+use claude_runner_core::ps_table::{ classify_mode, parse_json_u64 };
 use core::fmt::Write as _;
 use std::path::{ Path, PathBuf };
 use claude_journal::{ EventRecord, EventType, JournalWriter };
@@ -231,9 +232,9 @@ fn claim_test_delay()
 fn read_slot_owner_record( path : &Path ) -> Option< ( u32, u64, Option< u64 > ) >
 {
   let content   = std::fs::read_to_string( path ).ok()?;
-  let pid       = u32::try_from( super::ps::parse_json_u64( &content, "pid" )? ).ok()?;
-  let since     = super::ps::parse_json_u64( &content, "since" )?;
-  let starttime = super::ps::parse_json_u64( &content, "starttime" );
+  let pid       = u32::try_from( parse_json_u64( &content, "pid" )? ).ok()?;
+  let since     = parse_json_u64( &content, "since" )?;
+  let starttime = parse_json_u64( &content, "starttime" );
   Some( ( pid, since, starttime ) )
 }
 
@@ -862,7 +863,7 @@ pub( super ) fn wait_for_session_slot(
       // Print-mode only: interactive sessions never contend for a print-mode slot.
       let count = find_claude_processes()
         .iter()
-        .filter( | p | super::ps::classify_mode( &p.args ) == "print" )
+        .filter( | p | classify_mode( &p.args ) == "print" )
         .count();
       let count_u32 = u32::try_from( count ).unwrap_or( u32::MAX );
       // BUG-422: this count can transiently over-read by 1 due to a fork→exec
