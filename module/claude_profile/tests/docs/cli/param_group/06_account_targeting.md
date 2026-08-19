@@ -68,5 +68,5 @@ See [param_group/006_account_targeting.md](../../../../docs/cli/param_group/006_
 - **When:** `clp .account.save name::test@example.com host::workbox tags::dev inference_provider::kimi`
 - **Then:** Exits 0. `{name}.json` contains `"host": "workbox"`, `"tags": ["dev"]`, and `"inference_provider": "kimi"` — three independent metadata fields, no interaction between them. A subsequent `clp .accounts name::test@example.com` (no `cols::`) shows the `Provider` column with `kimi` — unlike `host`/`tags`, `inference_provider` is in the default identity set and needs no `cols::+` to appear.
 - **Exit:** 0
-- **Source fn:** *(planned — not yet implemented)*
+- **Source fn:** `t19_save_host_tags_inference_provider_combined_default_column` (in `tests/cli/account_provider_test.rs`)
 - **Source:** [feature/072_inference_provider_selection.md AC-01, AC-05](../../../../docs/feature/072_inference_provider_selection.md), [param_group/006_account_targeting.md](../../../../docs/cli/param_group/006_account_targeting.md)

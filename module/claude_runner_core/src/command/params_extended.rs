@@ -104,7 +104,13 @@ impl ClaudeCommand {
 
   /// Set explicit session directory
   ///
-  /// Default: None (auto-detect). Overrides default session storage location.
+  /// Default: None (auto-detect). Exports `CLAUDE_CODE_SESSION_DIR` to the subprocess.
+  ///
+  /// **Warning:** claude >= 2.x ignores `CLAUDE_CODE_SESSION_DIR` for both reads and
+  /// writes (BUG-490 control test on claude 2.1.220) — against current claude versions
+  /// this export has no effect; session storage always derives from the working
+  /// directory. The `clr` CLI's `--session-dir` parameter was deprecated for this
+  /// reason (BUG-493) and no longer calls this method.
   ///
   /// # Example
   ///

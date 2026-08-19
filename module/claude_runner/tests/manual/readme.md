@@ -106,12 +106,12 @@ cargo run -p claude_runner -- -p --verbose "test"
 
 **Expected:** `--verbose` flag appears in the command passed to Claude. Exit code depends on Claude availability.
 
-### TC-13: Session Directory
+### TC-13: Session Directory (Deprecated, Inert — BUG-493)
 ```sh
 cargo run -p claude_runner -- --dry-run --session-dir /tmp/sessions "test"
 ```
 
-**Expected:** Dry-run output shows `CLAUDE_CODE_SESSION_DIR=/tmp/sessions`. Exit code 0.
+**Expected:** Dry-run output does NOT contain `CLAUDE_CODE_SESSION_DIR=` (parameter is inert). Stderr contains the one-line `--session-dir is deprecated` warning. Exit code 0.
 
 ### TC-14: Bare Dry Run (No Message)
 ```sh
@@ -244,7 +244,7 @@ cargo run -p claude_runner -- --dry-run --no-skip-permissions "test"
 cargo run -p claude_runner -- --dry-run --model claude-haiku-4-5-20251001 --max-tokens 10000 --dir /tmp --session-dir /tmp/s --system-prompt "Be brief." --new-session --trace "all flags"
 ```
 
-**Expected:** All flags appear in dry-run output. No crash. `--dangerously-skip-permissions` present (default). Exit code 0.
+**Expected:** All effective flags appear in dry-run output (`--session-dir` is inert: no `CLAUDE_CODE_SESSION_DIR=` line, one deprecation warning on stderr — BUG-493). No crash. `--dangerously-skip-permissions` present (default). Exit code 0.
 
 ### TC-32: Print + Dry-Run (With Message)
 ```sh
@@ -356,19 +356,22 @@ cargo run -p claude_runner -- run --dry-run "question"
 
 **Expected:** Both commands produce **identical** dry-run output — `--effort max`, `CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000`, `-c` continuation, `--dangerously-skip-permissions`, ultrathink suffix; `--chrome` absent (print mode — BUG-304 suppression). `ask` is a pure semantic alias for `run` since plan-007; all old ask-specific overrides (effort high, 16384 tokens, no `-c`, no skip-permissions) were removed. Exit code 0 on both.
 
-### TC-46: Empty Session Dir — No `-c` Injected (BUG-214 regression guard)
+### TC-46: Empty Source Storage — No `-c` Injected (BUG-214 regression guard)
 ```sh
-TMPDIR=$(mktemp -d) && cargo run -p claude_runner -- --dry-run --session-dir "$TMPDIR" "test"
+CLAUDE_HOME=$(mktemp -d) cargo run -p claude_runner -- --dry-run "test"
 ```
 
-**Expected:** Dry-run output does NOT contain `-c` (empty session dir means no prior session to continue). Exit code 0.
+**Expected:** Dry-run output does NOT contain `-c` (an empty `CLAUDE_HOME` means no project has a prior session to continue). Exit code 0. (Fix(BUG-493): the former `--session-dir <empty dir>` lever is deprecated and inert; the empty-storage case is forced via `CLAUDE_HOME` instead.)
 
-### TC-47: Non-Empty Session Dir — `-c` Injected
+### TC-47: Non-Empty Source Storage — `-c` Injected
 ```sh
-cargo run -p claude_runner -- --dry-run --session-dir /tmp "test"
+CH=$(mktemp -d); SRC=$(mktemp -d)
+STORAGE=$(CLAUDE_HOME="$CH" cargo run -q -p claude_runner -- scope --dir "$SRC" | grep CLAUDE_SESSION_DIR= | cut -d= -f2-)
+mkdir -p "$STORAGE" && echo '{"type":"user","message":{"role":"user","content":"hi"}}' > "$STORAGE/abc-123.jsonl"
+CLAUDE_HOME="$CH" cargo run -p claude_runner -- --dry-run --from "$SRC" "test"
 ```
 
-**Expected:** Dry-run output contains `-c` (non-empty `/tmp` means session history present). Exit code 0.
+**Expected:** Dry-run output contains `-c` (the `--from` source storage holds a qualifying session). Exit code 0. (Fix(BUG-493): `--from` is the working lever; the deprecated `--session-dir` no longer gates `-c`.)
 
 ### TC-48: Output-File — Runner-Internal, Not Forwarded to Claude
 ```sh
@@ -727,14 +730,17 @@ CLR_FROM="$SRC" cargo run -p claude_runner -- --to "$TGT" --dry-run "x"
 
 **Expected:** Dry-run output contains `# session-transplant:` referencing `abc-123.jsonl` — `CLR_FROM` supplies the source when `--from` is not given on the CLI. Exit code 0.
 
-### TC-90: Session Transplant — `--session-dir` Takes Precedence Over `--from`
+### TC-90: Session Transplant — Deprecated `--session-dir` Is Inert; `--from` Governs (BUG-493)
 
 ```sh
-SRC=$(mktemp -d); OVERRIDE=$(mktemp -d)
-cargo run -p claude_runner -- --from "$SRC" --session-dir "$OVERRIDE" --dry-run "x"
+CH=$(mktemp -d); SRC=$(mktemp -d); OVERRIDE=$(mktemp -d)
+STORAGE=$(CLAUDE_HOME="$CH" cargo run -q -p claude_runner -- scope --dir "$SRC" | grep CLAUDE_SESSION_DIR= | cut -d= -f2-)
+mkdir -p "$STORAGE" && echo '{"type":"user","message":{"role":"user","content":"hi"}}' > "$STORAGE/abc-123.jsonl"
+echo '{}' > "$OVERRIDE/xyz-789.jsonl"
+CLAUDE_HOME="$CH" cargo run -p claude_runner -- --from "$SRC" --to "$(mktemp -d)" --session-dir "$OVERRIDE" --dry-run "x"
 ```
 
-**Expected:** Dry-run output contains `CLAUDE_CODE_SESSION_DIR=$OVERRIDE`. Does NOT contain `# session-transplant:` — the raw `--session-dir` override suppresses cross-loading entirely. Exit code 0.
+**Expected:** Dry-run output does NOT contain `CLAUDE_CODE_SESSION_DIR=` and DOES contain `# session-transplant:` referencing `abc-123.jsonl` — the deprecated `--session-dir` neither exports the env var nor suppresses cross-loading; `--from`'s source storage governs. Stderr contains the one-line deprecation warning. Exit code 0.
 
 ## Pass Criteria
 
@@ -790,8 +796,8 @@ These are exhaustively tested by the integration test suite (not manual). Listed
 - **CC-37/38:** `--no-effort-max` wins over `--effort medium` regardless of order
 - **CC-39/39b:** Duplicate `--system-prompt` → last value wins
 - **CC-40:** `--system-prompt` + `--append-system-prompt` together → both appear
-- **CC-41:** `--session-dir /nonexistent` → no `-c`
-- **CC-42:** `--session-dir /path/to/file` (not a dir) → no `-c`
+- **CC-41:** `--session-dir /nonexistent` → accepted, inert, warns; no `-c` (param no longer gates it — BUG-493)
+- **CC-42:** `--session-dir /path/to/file` (not a dir) → accepted, inert, warns; no `-c` (param no longer gates it — BUG-493)
 
 ### Subcommand help
 

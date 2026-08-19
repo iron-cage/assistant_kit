@@ -134,7 +134,7 @@ Columns: JSON Key | CLI Flag | CLR_* Env Var | Type | Supported By
 
 | JSON Key | CLI Flag | CLR_* Env Var | Type | Supported By |
 |----------|----------|---------------|------|--------------|
-| `"session-dir"` | `--session-dir` | `CLR_SESSION_DIR` | string | run, ask, topic |
+| `"session-dir"` | `--session-dir` | `CLR_SESSION_DIR` | string | run, ask, topic (DEPRECATED, no effect — BUG-493) |
 | `"no-persist"` | `--no-persist` | `CLR_NO_PERSIST` | bool | run, ask, topic |
 | `"dir"` | `--dir` | `CLR_DIR` | string | run, ask, topic, isolated |
 | `"subdir"` | `--subdir` | `CLR_SUBDIR` | string | run, ask, topic |

@@ -139,4 +139,8 @@
 
 | File | Relationship |
 |------|--------------|
-| `tests/cli/account_redirect_backend_test.rs` | AC-01–AC-07, AC-09–AC-17 — redirect save (happy path + missing-param errors), anthropic-path non-regression, pre-existing-account default, env.* write on switch-to-redirect, env.* clear on switch-to-anthropic (with unrelated-key preservation), static classification, refresh no-op, model-override no-op, limits/inspect guards, accounts/credentials.status backend field, re-save backend change, touch/quota-fetch skip on switch, usage/accounts redirect-row placeholder |
+| `tests/cli/account_redirect_backend_test.rs` | AC-01–AC-07, AC-11–AC-16 (CLI surface) — redirect save (happy path + missing-param errors), anthropic-path non-regression, pre-existing-account default, env.* write/clear on switch (with unrelated-key preservation), limits/inspect guards, backend column, static classification, re-save backend change, touch/quota-fetch skip |
+| `claude_profile_core/tests/account_backend_test.rs` | `ft01`–`ft12_071` — `AccountBackend` parsing/defaults (absent/unrecognized/corrupt → `anthropic`), redirect save minimal credentials + live-file untouched, switch env write/clear/empty-`env`-prune/unrelated-subkey-preserve |
+| `claude_profile_core/tests/account_refresh_test.rs` | `ft26_071` — AC-09 `refresh_account_token()` redirect no-op, credentials byte-for-byte unchanged |
+| `tests/usage/api_tests_a.rs` | `ft22_071` — AC-10 `apply_model_override()` redirect no-op |
+| `tests/usage/fetch_tests.rs` | `ft14`/`ft14b_071` — AC-17 redirect-row placeholder with no HTTP call, bypass ordered before the non-owned gate |

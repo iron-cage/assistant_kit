@@ -43,7 +43,7 @@
 use std::process::Command;
 
 mod cli_binary_test_helpers;
-use cli_binary_test_helpers::{ fake_claude, fake_claude_dir, make_session_dir, run_with_path, run_with_path_stdin };
+use cli_binary_test_helpers::{ fake_claude, fake_claude_dir, make_session_for, run_with_path, run_with_path_env, run_with_path_stdin };
 
 // E01: Interactive mode: binary not found exits 1 with error on stderr.
 #[ test ]
@@ -180,23 +180,26 @@ fn e08_print_not_found_quiet_flag()
 // `clr "hello world"` routes to print mode (execute() + --print), but this test only asserts
 // that the message and -c are present — not that --print is absent — so it covers both paths.
 // Uses a fake binary that echoes its arguments to a file, then verifies.
-// Uses --session-dir pointing to a non-empty dir to guarantee -c injection regardless of host
-// session state (fixes fragile environment dependency — session_exists() requires a prior session).
+// Uses make_session_for (--from + CLAUDE_HOME) to guarantee -c injection regardless
+// of host session state (fixes fragile environment dependency — session_exists() requires
+// a prior session in the source storage).
 #[ test ]
 fn e10_interactive_message_forwarded()
 {
-  let args_file                  = tempfile::NamedTempFile::new().expect( "create args file" );
-  let args_path                  = args_file.path().display().to_string();
-  let script                     = format!( "echo \"$@\" > \"{args_path}\"\n" );
-  let ( _tmp, path )             = fake_claude_dir( &script );
-  let ( _session, session_path ) = make_session_dir();
+  let args_file      = tempfile::NamedTempFile::new().expect( "create args file" );
+  let args_path      = args_file.path().display().to_string();
+  let script         = format!( "echo \"$@\" > \"{args_path}\"\n" );
+  let ( _tmp, path ) = fake_claude_dir( &script );
+  let ch             = tempfile::TempDir::new().expect( "tmpdir" );
+  let from           = "/tmp/e10-src";
+  let _              = make_session_for( ch.path(), from, "e10-0001" );
+  let home           = ch.path().display().to_string();
 
-  let bin = env!( "CARGO_BIN_EXE_clr" );
-  let out = Command::new( bin )
-    .args( [ "--session-dir", &session_path, "--max-sessions", "0", "hello world" ] )
-    .env( "PATH", &path )
-    .output()
-    .expect( "invoke" );
+  let out = run_with_path_env(
+    &[ "--from", from, "--max-sessions", "0", "hello world" ],
+    &path,
+    &[ ( "CLAUDE_HOME", home.as_str() ) ],
+  );
 
   assert!( out.status.success(), "must exit 0. stderr: {}", String::from_utf8_lossy( &out.stderr ) );
 

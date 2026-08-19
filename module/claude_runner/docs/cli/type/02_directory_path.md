@@ -1,7 +1,8 @@
 # CLI Type: DirectoryPath
 
 Filesystem path to a directory. Passed as-is to the subprocess working
-directory or session storage environment variable.
+directory (`--dir`); for the deprecated `--session-dir` the value is parsed
+but inert (BUG-493).
 
 - **Purpose:** Filesystem path to a directory
 - **Fundamental Type:** String
@@ -12,19 +13,19 @@ directory or session storage environment variable.
 
 ```sh
 clr --dir /home/user/project "Fix bug"
-clr --session-dir /tmp/sessions "test"
+clr --session-dir /tmp/sessions "test"  # deprecated — accepted but inert (BUG-493)
 ```
 
 ### Referenced Commands
 
 | # | Command | Via Parameter |
 |---|---------|---------------|
-| 1 | [`run`](../command/01_run.md) | `--dir`, `--session-dir` |
-| 5 | [`ask`](../command/05_ask.md) | `--dir`, `--session-dir` |
+| 1 | [`run`](../command/01_run.md) | `--dir`, `--session-dir` (deprecated) |
+| 5 | [`ask`](../command/05_ask.md) | `--dir`, `--session-dir` (deprecated) |
 
 ### Referenced Parameters
 
 | # | Parameter | Commands |
 |---|-----------|----------|
 | 8 | [`--dir`](../param/008_dir.md) | 2 |
-| 10 | [`--session-dir`](../param/010_session_dir.md) | 2 |
+| 10 | [`--session-dir`](../param/010_session_dir.md) (deprecated — inert, BUG-493) | 2 |

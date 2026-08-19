@@ -6,14 +6,14 @@ use claude_runner_core::{ ClaudeCommand, EffortLevel };
 use claude_storage_core::{ SessionId, continuation };
 
 /// Return the `SessionId` of the most-recently-modified qualifying session when prior
-/// conversation history exists for the resolved session directory, or `None` when
-/// no prior session is found.
+/// conversation history exists in `storage_dir` (a project's encoded session storage,
+/// e.g. `$HOME/.claude/projects/{encoded(dir)}/`), or `None` when no prior session is found.
 ///
-/// Fix(BUG-214-reopen): use project-specific storage path when no `--session-dir` is given.
-/// Root cause: the previous fallback checked `$HOME/.claude/` (always non-empty — holds
+/// Fix(BUG-214-reopen): use project-specific storage path, never `$HOME/.claude/` itself.
+/// Root cause: an earlier fallback checked `$HOME/.claude/` (always non-empty — holds
 /// credentials, projects/ dir, etc.) so `-c` was injected even for fresh project directories.
 /// Pitfall: `$HOME/.claude/` is Claude's global config dir, not per-project session storage;
-/// actual project sessions live at `$HOME/.claude/projects/{encoded(cwd)}/`.
+///   actual project sessions live at `$HOME/.claude/projects/{encoded(cwd)}/`.
 ///
 /// Fix(BUG-320): returns `Option<SessionId>` instead of `bool` so the caller can record
 /// which session UUID it expects claude to resume — enabling post-execution mismatch detection.
@@ -21,38 +21,16 @@ use claude_storage_core::{ SessionId, continuation };
 /// Pitfall: do not use `claude_storage_core::continuation::check_continuation` here —
 ///   it detects legacy `conversation.json` / `.claude*` formats that produce no UUID.
 ///
-/// Fix(BUG-493): `explicit_dir` is now populated only from `--from`'s resolved source
-///   storage, never from raw `--session-dir` — claude ignores that override entirely
-///   and always reads/writes its own cwd-derived storage, so gating on the override's
-///   contents could inject or suppress `-c` against a directory claude never touches.
-/// Root cause: same dead `CLAUDE_CODE_SESSION_DIR` mechanism as BUG-490.
-/// Pitfall: `--from` legitimately scans its target directly, because BUG-490's fix
-///   physically copies the source session into the target's own storage before spawn —
-///   that transplant is what makes direct-scan correct for `--from` specifically.
-///
-/// - With an explicit scan dir (`--from`'s resolved source storage): scan it directly
-///   via `most_recent_session_in_dir`.
-/// - Without one: encode the effective dir and use `most_recent_session_id`.
-fn session_exists
-(
-  explicit_dir  : Option< &std::path::Path >,
-  effective_dir : Option< &std::path::Path >,
-) -> Option< SessionId >
+/// Fix(BUG-493): takes the source storage dir directly — the `--session-dir` raw-override
+///   branch is gone along with the parameter's effect.
+/// Root cause: `--session-dir` only redirected this scan and a `CLAUDE_CODE_SESSION_DIR`
+///   export claude ≥2.x ignores, so `-c` was gated off a directory claude never reads.
+/// Pitfall: the caller always resolves a storage dir (`--from` or cwd default), so the
+///   former `most_recent_session_id(cwd)` fallback branch was already unreachable —
+///   both paths encode the identical canonical cwd via the same `encode_path()` call.
+fn session_exists( storage_dir : &std::path::Path ) -> Option< SessionId >
 {
-  if let Some( dir ) = explicit_dir
-  {
-    // --from's resolved source storage (BUG-490 transplant target) — scan it directly.
-    continuation::most_recent_session_in_dir( dir )
-  }
-  else
-  {
-    // Default: project sessions live at $HOME/.claude/projects/{encoded(cwd)}/
-    let cwd = effective_dir.map_or_else(
-      || std::env::current_dir().unwrap_or_else( | _ | std::path::PathBuf::from( "." ) ),
-      std::path::Path::to_path_buf,
-    );
-    continuation::most_recent_session_id( &cwd )
-  }
+  continuation::most_recent_session_in_dir( storage_dir )
 }
 
 /// Resolve the effective working directory from `--dir` and `--subdir` args.
@@ -233,6 +211,17 @@ pub( crate ) fn build_claude_command( cli : &CliArgs )
 {
   let mut builder = ClaudeCommand::new();
 
+  // Fix(BUG-493): --session-dir is deprecated and inert — this function applies no effect
+  //   from it anywhere below. The user-facing warning is emitted once by
+  //   `warn_deprecated_session_dir()` in `mod.rs`, which gates it on `--quiet`; emitting
+  //   it here as well would print it twice on every run.
+  // Root cause: the parameter's only mechanisms were a CLAUDE_CODE_SESSION_DIR export
+  //   claude ≥2.x ignores (proven by BUG-490's control test) and a -c injection gate
+  //   scanning the override dir — a directory claude never reads, so -c could be
+  //   wrongly injected or wrongly suppressed.
+  // Pitfall: keep the parameter parsed (CLI flag, CLR_SESSION_DIR, json "session-dir")
+  //   so existing invocations don't hard-fail; the warning is the only behavior.
+
   let effective_working_dir = resolve_effective_dir( cli );
   if let Some( ref dir ) = effective_working_dir
   {
@@ -242,9 +231,12 @@ pub( crate ) fn build_claude_command( cli : &CliArgs )
   {
     builder = builder.with_max_output_tokens( n );
   }
-  // --from: resolve source session dir. Computes scope_for(source_dir).claude_session_dir
-  // — the source project's encoded storage path — used below for expected-session lookup
-  // and the transplant plan.
+  // --from: resolve source session dir.
+  // Computes scope_for(source_dir).claude_session_dir — the source project's encoded
+  // storage path — used below for expected-session lookup and the transplant plan.
+  // Fix(BUG-493): the former `--session-dir wins when both are present` rule is gone —
+  //   the deprecated parameter no longer suppresses this resolution (see the warning
+  //   at the top of this function), so the source storage dir is always computed.
   //
   // Defaults to the current working directory when --from is omitted or empty — the
   // same default-to-cwd rule --to/--dir already applies (see `resolve_effective_dir`).
@@ -269,15 +261,9 @@ pub( crate ) fn build_claude_command( cli : &CliArgs )
   //   after the copy claude continues that same uuid in the target, so the source's
   //   most-recent session id remains the correct expected id.
   //
-  // Fix(BUG-493): previously gated behind `cli.session_dir.is_none()` so a --session-dir
-  //   present alongside --from silently suppressed the whole transplant mechanism.
-  //   --session-dir is inert (see session_exists doc comment above) so it must never
-  //   disable the one mechanism (--from) that actually works.
-  // Root cause: --session-dir was treated as if it meaningfully "won" over --from, but
-  //   it has no observable effect on claude ≥2.x at all.
-  // Pitfall: this computation must run unconditionally now — do not reintroduce a
-  //   cli.session_dir guard here.
-  let session_from_dir : Option< std::path::PathBuf > =
+  // Pitfall: this computation must run unconditionally — do not reintroduce a
+  //   cli.session_dir guard here (see Fix(BUG-493) note above).
+  let session_from_dir : std::path::PathBuf =
   {
     let src_path = match cli.from.as_deref().filter( | src | !src.is_empty() )
     {
@@ -285,7 +271,7 @@ pub( crate ) fn build_claude_command( cli : &CliArgs )
       None => std::env::current_dir().unwrap_or_else( | _ | std::path::PathBuf::from( "." ) ),
     };
     let abs = physical_abs( &src_path );
-    Some( claude_storage_core::scope_for( &abs ).claude_session_dir )
+    claude_storage_core::scope_for( &abs ).claude_session_dir
   };
   // Determine print mode early — used for -c injection, effort injection, and chrome
   // suppression.  Must precede expected_id so all three guards below can reference use_print.
@@ -324,18 +310,16 @@ pub( crate ) fn build_claude_command( cli : &CliArgs )
   let expected_id = if cli.new_session { None }
   else
   {
-    session_exists( session_from_dir.as_deref(), effective_working_dir.as_deref() )
+    session_exists( &session_from_dir )
   };
-  // Transplant plan (BUG-490): session_from_dir is now always Some (BUG-493 made its
-  // computation above unconditional); expected_id is Some only when not --new-session
-  // and a qualifying source session exists — together with the self-copy guard below
-  // (same storage -> no-op) they decide whether to physically copy the source session
+  // Transplant plan (BUG-490): expected_id is Some only when not --new-session and a
+  // qualifying source session exists — it gates the physical copy of the source session
   // file into the TARGET's own encoded storage.
   // Pitfall: when source and target encode to the same storage dir, no copy is planned —
   //   fs::copy onto the same path truncates the file it is reading from.
-  let transplant = if let ( Some( src_storage ), Some( id ) )
-    = ( &session_from_dir, &expected_id )
+  let transplant = if let Some( id ) = &expected_id
   {
+    let src_storage = &session_from_dir;
     let target_dir = effective_working_dir.as_deref().map_or_else(
       || std::env::current_dir().unwrap_or_else( | _ | std::path::PathBuf::from( "." ) ),
       std::path::Path::to_path_buf,

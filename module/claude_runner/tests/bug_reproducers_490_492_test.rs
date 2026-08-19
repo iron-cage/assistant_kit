@@ -113,7 +113,9 @@ fn target_storage( claude_home : &std::path::Path, target : &std::path::Path ) -
 /// session file into the *target's own* storage dir (same filename → same session
 /// id, fresh mtime → `-c` selects it); the dispatch path executes the copy after
 /// the dry-run exit and before spawn.  The env export is dropped for
-/// `--from` (it remains for raw `--session-dir` — BUG-493's own report).
+/// `--from` (at the time of this fix it remained for raw `--session-dir`;
+/// Fix(BUG-493) later removed that last export too — the parameter is now
+/// deprecated and fully inert).
 ///
 /// ## Prevention
 /// A NEG-ONLY contract must never be a feature's sole load-bearing mechanism —

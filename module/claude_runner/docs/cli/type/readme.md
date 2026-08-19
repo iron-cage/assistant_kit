@@ -31,7 +31,7 @@
 | # | Type | Fundamental Type | Parameters / Source | Purpose |
 |---|------|-----------------|---------------------|---------|
 | 1 | `MessageText` | String | [`[MESSAGE]`](../param/001_message.md) | Free-form prompt text sent to the `claude` subprocess |
-| 2 | `DirectoryPath` | String | [`--dir`](../param/008_dir.md), [`--session-dir`](../param/010_session_dir.md) | Filesystem path to a directory |
+| 2 | `DirectoryPath` | String | [`--dir`](../param/008_dir.md), [`--session-dir`](../param/010_session_dir.md) (deprecated — inert, BUG-493) | Filesystem path to a directory |
 | 3 | `TokenLimit` | unsigned 32-bit integer | [`--max-tokens`](../param/009_max_tokens.md) | Maximum output token count |
 | 4 | `ModelName` | String | [`--model`](../param/003_model.md) | Claude model identifier string |
 | 5 | ~~`VerbosityLevel`~~ | ~~unsigned 8-bit integer~~ | ~~[`--verbosity`](../param/012_verbosity.md)~~ | **DEPRECATED** — removed; replaced by `--quiet` bool |

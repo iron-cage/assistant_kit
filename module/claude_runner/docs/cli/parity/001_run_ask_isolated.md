@@ -91,7 +91,7 @@
 | `--dir` (working directory) | Yes (default: cwd) | Yes | Yes (validated before spawn; `CLR_DIR` env fallback) |
 | `--subdir` | Yes | Yes | No |
 | `--add-dir` | Yes | Yes | Yes (repeatable; `CLR_ADD_DIR` env fallback) |
-| `--session-dir` | Yes | Yes | No |
+| `--session-dir` (deprecated, inert) | Yes | Yes | No |
 | **--- System Prompt ---** | | | |
 | `--system-prompt` | Yes | Yes | Yes |
 | `--append-system-prompt` | Yes | Yes | Yes |

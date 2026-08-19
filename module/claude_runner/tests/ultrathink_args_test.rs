@@ -153,12 +153,21 @@ fn t53_help_lists_no_ultrathink()
 #[ test ]
 fn t54_empty_positional_arg_ignored()
 {
-  // Empty session dir → no -c (session_exists returns `None` for empty dir).
+  // Empty source storage → no -c (session_exists returns `None` under an empty CLAUDE_HOME).
   // Fix(BUG-246): last_line now starts with "env -u CLAUDECODE" (default unset_claudecode=true).
-  // Do NOT use make_session_dir() here — that writes a .jsonl causing -c injection.
-  let empty_dir = tempfile::TempDir::new().expect( "create empty session dir" );
-  let session_path = empty_dir.path().to_str().expect( "session dir path valid utf-8" );
-  let out = run_cli( &[ "--dry-run", "--session-dir", session_path, "" ] );
+  // Fix(BUG-493): the no-session lever is an empty CLAUDE_HOME, not the deprecated
+  //   (now inert) --session-dir override. Do NOT use make_session_for() here —
+  //   that seeds a .jsonl causing -c injection.
+  let empty_home = tempfile::TempDir::new().expect( "create empty CLAUDE_HOME" );
+  let home = empty_home.path().to_str().expect( "CLAUDE_HOME path valid utf-8" );
+  let out = std::process::Command::new( env!( "CARGO_BIN_EXE_clr" ) )
+    .args( [ "--dry-run", "" ] )
+    .env( "HOME", "/tmp/clr-isolated-home" ) // Fix(BUG-008) isolation: prevent host prefs from injecting --model
+    .env( "CLAUDE_HOME", home )
+    .env_remove( "CLR_DIR" )
+    .env_remove( "CLR_SESSION_DIR" )
+    .output()
+    .expect( "Failed to invoke clr binary" );
   assert!(
     out.status.success(),
     "empty positional arg must not error. stderr: {}",
@@ -169,7 +178,7 @@ fn t54_empty_positional_arg_ignored()
   assert_eq!(
     last_line,
     "env -u CLAUDECODE -u CLAUDE_CODE_CHILD_SESSION claude --dangerously-skip-permissions --effort max --print --output-format json",
-    "empty positional arg under non-TTY stdin must route to print mode (no -c in empty session dir). Got:\n{stdout}"
+    "empty positional arg under non-TTY stdin must route to print mode (no -c with empty source storage). Got:\n{stdout}"
   );
   assert!(
     !stdout.contains( "\"ultrathink \"" ),
@@ -286,11 +295,20 @@ fn t56_help_wins_over_preceding_unknown_flag()
 #[ test ]
 fn t57_empty_positional_after_double_dash_ignored()
 {
-  // Empty session dir → no -c (session_exists returns `None` for empty dir).
+  // Empty source storage → no -c (session_exists returns `None` under an empty CLAUDE_HOME).
   // Fix(BUG-246): last_line now starts with "env -u CLAUDECODE" (default unset_claudecode=true).
-  let empty_dir = tempfile::TempDir::new().expect( "create empty session dir" );
-  let session_path = empty_dir.path().to_str().expect( "session dir path valid utf-8" );
-  let out = run_cli( &[ "--dry-run", "--session-dir", session_path, "--", "" ] );
+  // Fix(BUG-493): the no-session lever is an empty CLAUDE_HOME, not the deprecated
+  //   (now inert) --session-dir override.
+  let empty_home = tempfile::TempDir::new().expect( "create empty CLAUDE_HOME" );
+  let home = empty_home.path().to_str().expect( "CLAUDE_HOME path valid utf-8" );
+  let out = std::process::Command::new( env!( "CARGO_BIN_EXE_clr" ) )
+    .args( [ "--dry-run", "--", "" ] )
+    .env( "HOME", "/tmp/clr-isolated-home" ) // Fix(BUG-008) isolation: prevent host prefs from injecting --model
+    .env( "CLAUDE_HOME", home )
+    .env_remove( "CLR_DIR" )
+    .env_remove( "CLR_SESSION_DIR" )
+    .output()
+    .expect( "Failed to invoke clr binary" );
   assert!(
     out.status.success(),
     "empty arg after -- must not error. stderr: {}",
@@ -301,7 +319,7 @@ fn t57_empty_positional_after_double_dash_ignored()
   assert_eq!(
     last_line,
     "env -u CLAUDECODE -u CLAUDE_CODE_CHILD_SESSION claude --dangerously-skip-permissions --effort max --print --output-format json",
-    "empty arg after -- under non-TTY stdin must route to print mode (no -c in empty session dir). Got:\n{stdout}"
+    "empty arg after -- under non-TTY stdin must route to print mode (no -c with empty source storage). Got:\n{stdout}"
   );
   assert!(
     !stdout.contains( "\"ultrathink \"" ),

@@ -45,7 +45,7 @@ invalid values (parse failure → field stays at default). Exception: `CLR_RETRY
 | 7 | `CLR_NEW_SESSION` | [`--new-session`](param/007_new_session.md) | bool | `"new-session"` | |
 | 8 | `CLR_DIR` | [`--dir`](param/008_dir.md) | string | `"dir"` | |
 | 9 | `CLR_MAX_TOKENS` | [`--max-tokens`](param/009_max_tokens.md) | u32 | `"max-tokens"` | Invalid values silently ignored |
-| 10 | `CLR_SESSION_DIR` | [`--session-dir`](param/010_session_dir.md) | string | `"session-dir"` | |
+| 10 | `CLR_SESSION_DIR` | [`--session-dir`](param/010_session_dir.md) | string | `"session-dir"` | DEPRECATED, no effect — parsed, warns on stderr (BUG-493) |
 | 11 | `CLR_DRY_RUN` | [`--dry-run`](param/011_dry_run.md) | bool | `"dry-run"` | |
 | 12 | `CLR_QUIET` | [`--quiet`](param/074_quiet.md) | bool | `"quiet"` | Applied only when `--quiet` is absent from CLI |
 | 13 | `CLR_TRACE` | [`--trace`](param/013_trace.md) | bool | `"trace"` | |

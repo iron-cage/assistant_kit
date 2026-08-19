@@ -839,6 +839,35 @@ pub fn run_with_path( args : &[ &str ], path : &str ) -> std::process::Output
     .expect( "Failed to invoke clr binary" )
 }
 
+/// Invoke `clr` binary with `args`, a custom `PATH`, and extra environment variables.
+///
+/// Mirrors `run_with_path` but additionally injects `env` pairs via `Command::envs()`
+/// and scrubs `CLR_DIR`/`CLR_SESSION_DIR`/`CLR_FROM` — used by tests that pin session
+/// storage deterministically by setting `CLAUDE_HOME` alongside a fake `claude` binary
+/// on `PATH` (see `make_session_for`), where an ambient override var would otherwise
+/// change which storage `session_exists()` scans.
+///
+/// # Panics
+///
+/// Panics if the `clr` binary cannot be launched.
+#[must_use]
+#[inline]
+#[allow(dead_code)]
+pub fn run_with_path_env( args : &[ &str ], path : &str, env : &[ ( &str, &str ) ] ) -> std::process::Output
+{
+  assert_container();
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  Command::new( bin )
+    .args( args )
+    .env( "PATH", path )
+    .envs( env.iter().copied() )
+    .env_remove( "CLR_DIR" )
+    .env_remove( "CLR_SESSION_DIR" )
+    .env_remove( "CLR_FROM" )
+    .output()
+    .expect( "Failed to invoke clr binary" )
+}
+
 /// Invoke `clr` binary with `args`, a custom `PATH`, and piped `stdin` content; return raw `Output`.
 ///
 /// Mirrors `run_with_path` but additionally writes `stdin` to the child's stdin pipe before

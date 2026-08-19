@@ -14,6 +14,7 @@ Edge case tests for the session directory parameter — deprecated and inert (BU
 | EC-4 | `--session-dir` + `--new-session` → both accepted (`--session-dir` deprecated, inert) | Interaction |
 | EC-5 | `--help` lists `--session-dir` | Documentation |
 | EC-6 | Non-existent path accepted without validation at runner layer | Permissive |
+| EC-7 | Override dir WITH a session gates nothing: no `-c` when real storage is empty | Deprecation |
 
 ## Test Coverage Summary
 
@@ -22,8 +23,9 @@ Edge case tests for the session directory parameter — deprecated and inert (BU
 - Interaction: 1 test (EC-4)
 - Documentation: 1 test (EC-5)
 - Permissive: 1 test (EC-6)
+- Deprecation: 1 test (EC-7)
 
-**Total:** 6 edge cases
+**Total:** 7 edge cases
 
 
 ## Test Cases
@@ -84,6 +86,17 @@ Edge case tests for the session directory parameter — deprecated and inert (BU
 - **Given:** clean environment
 - **When:** `clr --dry-run --session-dir /no/such/dir "Fix bug"`
 - **Then:** Exit 0; no path validation error (runner accepts any string as session dir value)
+- **Exit:** 0
+- **Source:** [010_session_dir.md](../../../../docs/cli/param/010_session_dir.md)
+- **Commands:** run, ask
+
+---
+
+### EC-7: Override dir contents gate nothing (bug_reproducer(BUG-493))
+
+- **Given:** override dir containing a `.jsonl` session; empty `CLAUDE_HOME` (real source storage has no session)
+- **When:** `clr --dry-run --session-dir <override_dir> "test"`
+- **Then:** No `CLAUDE_CODE_SESSION_DIR=` export; no `-c` (the override dir's contents must not gate continuation); deprecation warning on stderr
 - **Exit:** 0
 - **Source:** [010_session_dir.md](../../../../docs/cli/param/010_session_dir.md)
 - **Commands:** run, ask
