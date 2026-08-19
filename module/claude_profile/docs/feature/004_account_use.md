@@ -4,8 +4,8 @@
 
 - **Purpose**: Atomically rotate the active credential set to a named account without credential corruption risk.
 - **Responsibility**: Documents the `account::switch_account()` API and `.account.use` CLI command (FR-9).
-- **In Scope**: Atomic write-then-rename, active marker (`_active_{hostname}_{user}`) update, best-effort `oauthAccount` patch in `~/.claude.json`, not-found guard, dry-run, ownership guard (exit 1 when target account is owned by a different identity — G5 gate from [036_account_ownership.md](036_account_ownership.md)).
-- **Out of Scope**: Selecting which account to switch to (→ 008_auto_rotate.md), process termination (caller responsibility), post-switch subprocess activation (→ 027_account_use_post_switch_touch.md).
+- **In Scope**: Atomic write-then-rename, active marker (`_active_{hostname}_{user}`) update, best-effort `oauthAccount` patch in `~/.claude.json`, not-found guard, dry-run, ownership guard (exit 1 when target account is owned by a different identity — G5 gate from [036_account_ownership.md](036_account_ownership.md)), running-session stderr advisory after a successful switch (AC-12/AC-13).
+- **Out of Scope**: Selecting which account to switch to (→ 008_auto_rotate.md), process termination (caller responsibility — the advisory only informs; it never signals or kills), post-switch subprocess activation (→ 027_account_use_post_switch_touch.md).
 
 ### Design
 
@@ -25,6 +25,8 @@
 **Atomicity guarantee:** The rename in step 3 ensures that a crash between steps 2 and 4 leaves either the old credentials or the new ones in place — never a partially-written file. Step 4 (active marker) is a best-effort metadata update; step 5 is a best-effort `oauthAccount` patch. A crash after step 3 always leaves the credentials correct; the marker and companion files may be stale but are not load-bearing for authentication.
 
 **Model preference restore (BUG-222 fix):** `switch_account()` reads `model` from `{credential_store}/{name}.json` and updates `~/.claude/settings.json` accordingly. When the snapshot contains a `model` field, that value is written into `~/.claude/settings.json`, restoring the per-account preference. When the snapshot lacks `model`, the `model` key is removed from `~/.claude/settings.json` to prevent the prior account's model from persisting. All other keys in `~/.claude/settings.json` are preserved.
+
+**Running-session advisory:** switching rewrites `~/.claude/.credentials.json` for future launches only — an already-running `claude` session holds its token in memory and keeps using (and billing) the previous account until restarted, which users read as "it said it switched but didn't". After a successful non-dry switch, `account_use_routine()` scans the process table via `claude_core::process::find_claude_processes()` (proc root overridable with `CLR_PROC_DIR` for tests) and, when ≥1 `claude` process is found, prints to stderr: `warning: N running claude session(s) keep(s) using the previous account — restart to pick up '{name}'` (singular/plural verb agreement). stdout's `switched to '{name}'` line and the exit code are unchanged — the advisory never affects scripting. Best-effort: an unreadable proc root silently omits the advisory (the switch itself already succeeded).
 
 **Dry-run mode** (`dry::1`): Print `[dry-run] would switch to '{name}'` without modifying any files.
 
@@ -49,6 +51,8 @@
 - **AC-09**: `.account.use name::bob@acme.com` when `{credential_store}/bob@acme.com.json` does not exist still patches `~/.claude.json oauthAccount.emailAddress` to `"bob@acme.com"`. All other `oauthAccount` fields and machine-global keys in `~/.claude.json` are preserved. (BUG-254 regression guard.)
 - **AC-10**: `clp .account.use name::alice@corp.com` when `alice@corp.com.json` has `owner` ≠ `current_identity()` exits 1 with `"ownership violation: this account is owned by {owner}"`. No files are modified. (G5 ownership gate — [036_account_ownership.md](036_account_ownership.md) AC-08.)
 - **AC-11**: Ownership check runs before `dry::1` output — `clp .account.use name::alice@corp.com dry::1` with ownership violation exits 1 without printing the dry-run message.
+- **AC-12**: After a successful switch with ≥1 running `claude` process detected, stderr contains `warning: N running claude session(s) keep(s) using the previous account — restart to pick up '{name}'`; stdout still contains `switched to '{name}'` and exit code is 0. Verb agrees in number (`1 … session keeps` / `N … sessions keep`).
+- **AC-13**: With zero running `claude` processes (or an unreadable proc root), no advisory line appears — stderr carries no `warning:` text from this path; exit 0 and stdout unchanged.
 
 ### Bugs
 
@@ -104,3 +108,4 @@
 |------|--------------|
 | `tests/cli/account_mutations_test.rs` (aw01–aw11) | Verifies atomic overwrite, active marker update, dry-run, path-unsafe char rejection, edge cases |
 | `tests/cli/account_mutations_test.rs::switch_restores_claude_json` | Verifies `~/.claude.json` restored after switch (issue-122) |
+| `tests/cli/account_mutations_test_b.rs` (aw18, aw19) | AC-12/AC-13 — running-session advisory fires with a fake `CLR_PROC_DIR` claude entry; absent with an empty proc dir |

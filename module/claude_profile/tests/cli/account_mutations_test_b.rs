@@ -646,6 +646,72 @@ fn aw17_use_prefix_ambiguous_no_exact_local_part_exits_1()
   );
 }
 
+// ── aw18 ──────────────────────────────────────────────────────────────────────
+
+/// aw18 (Feature 004 AC-12): a running claude session at switch time produces a
+/// stderr advisory — the switch rewrites credentials for FUTURE launches only, so
+/// live sessions keep the previous account (w003 report: "does not actually switch
+/// despite it say so"). Exit stays 0; stdout's `switched to` line is unchanged.
+///
+/// Proc scan is hermetic: `CLR_PROC_DIR` points at a fake proc tree containing one
+/// numeric PID dir whose NUL-delimited cmdline basename is exactly `claude`.
+#[ test ]
+fn aw18_switch_warns_on_running_sessions()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
+  write_account( dir.path(), "alice@home.com", "max", "tier4", FAR_FUTURE_MS, false );
+
+  let proc_dir = TempDir::new().unwrap();
+  let pid_dir  = proc_dir.path().join( "999999" );
+  std::fs::create_dir_all( &pid_dir ).unwrap();
+  std::fs::write( pid_dir.join( "cmdline" ), b"/usr/bin/claude\0--continue\0" ).unwrap();
+  let proc_path = proc_dir.path().to_str().unwrap();
+
+  let out = run_cs_with_env(
+    &[ ".account.use", "name::alice@home.com", "touch::0" ],
+    &[ ( "HOME", home ), ( "CLR_PROC_DIR", proc_path ) ],
+  );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "switched to 'alice@home.com'" ), "stdout confirmation unchanged, got:\n{text}" );
+  let err = stderr( &out );
+  assert!(
+    err.contains( "warning: 1 running claude session keeps using the previous account" )
+      && err.contains( "restart to pick up 'alice@home.com'" ),
+    "stderr must carry the running-session advisory, got:\n{err}",
+  );
+}
+
+// ── aw19 ──────────────────────────────────────────────────────────────────────
+
+/// aw19 (Feature 004 AC-13): zero running claude sessions → no advisory line.
+/// `CLR_PROC_DIR` points at an empty dir so the ambient host/container process
+/// table cannot leak a false positive into the assertion.
+#[ test ]
+fn aw19_switch_no_warning_without_sessions()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
+  write_account( dir.path(), "alice@home.com", "max", "tier4", FAR_FUTURE_MS, false );
+
+  let proc_dir  = TempDir::new().unwrap();
+  let proc_path = proc_dir.path().to_str().unwrap();
+
+  let out = run_cs_with_env(
+    &[ ".account.use", "name::alice@home.com", "touch::0" ],
+    &[ ( "HOME", home ), ( "CLR_PROC_DIR", proc_path ) ],
+  );
+  assert_exit( &out, 0 );
+  let err = stderr( &out );
+  assert!(
+    !err.contains( "warning:" ) && !err.contains( "running claude" ),
+    "no advisory expected with an empty proc dir, got:\n{err}",
+  );
+}
+
 // ── ad13 ──────────────────────────────────────────────────────────────────────
 
 #[ test ]

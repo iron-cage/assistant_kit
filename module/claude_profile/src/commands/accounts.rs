@@ -156,6 +156,19 @@ pub( crate ) fn accounts_routine( cmd : VerifiedCommand, _ctx : ExecutionContext
       "active:: REMOVED — use assignee::USER@MACHINE name::X (or assignee::0 name::X for current machine)".to_string(),
     ) );
   }
+  // Fix(audit-next-removed): .accounts silently accepted next:: while .usage exits 1 with
+  // a migration message — the registry description promises "kept for migration error" on both.
+  // Root cause: the next:: check lived only in usage params parsing (src/usage/params.rs:134);
+  // accounts_routine() never read the key, so the REMOVED param no-opped here.
+  // Pitfall: a param registered on two commands needs its rejection enforced in BOTH routines —
+  // registration-level parity (Feature 037) does not propagate runtime checks.
+  if cmd.arguments.contains_key( "next" )
+  {
+    return Err( ErrorData::new(
+      ErrorCode::ArgumentTypeMismatch,
+      "next:: parameter has been removed; use sort:: instead (valid values: `name`, `renew`, `renews`)".to_string(),
+    ) );
+  }
 
   // ── assignee:: dispatch (Feature 065) ──────────────────────────────────────
   if let Some( Value::String( av ) ) = cmd.arguments.get( "assignee" )

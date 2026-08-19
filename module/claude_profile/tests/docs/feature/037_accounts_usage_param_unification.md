@@ -10,7 +10,7 @@
 
 | FT | AC | Scenario | Source fn |
 |----|----|----------|-----------|
-| FT-01 | AC-01 | `.accounts` accepts all 32 unified params; unknown param exits 1 | `ft01_accounts_accepts_32_params` |
+| FT-01 | AC-01 | `.accounts` accepts active unified params; unknown param and REMOVED `next::` exit 1 | `ft01_accounts_accepts_32_params` |
 | FT-02 | AC-02 | `.usage` accepts all 32 unified params; unknown param exits 1 | `f37_ft02_usage_accepts_32_params` (`usage_feature_test.rs`) |
 | FT-03 | AC-03 | `.accounts` defaults: `refresh::0`, `touch::0`, `sort::name`, `cols::` = identity set; no HTTP fetch or subprocess without explicit flags | `ft03_accounts_default_profile` |
 | FT-04 | AC-04 | `.usage` defaults: `refresh::1`, `touch::1`, `sort::renew`, `cols::` = quota set with Owner column | `f37_ft04_usage_default_profile` (`usage_feature_test.rs`) |
@@ -24,7 +24,7 @@
 | FT-12 | AC-12 | `.account.assign name::alice` exits 1 with targeted `assignee::` migration hint — registered as redirect stub (Feature 037) | *(coverage gap — no `accounts_test.rs` exists and no `fully_deregistered`-named function exists anywhere; see body section)* |
 | FT-13 | AC-13 | `.accounts` rejects all 15 legacy field toggles (`active::`, `current::`, `sub::`, `tier::`, `expires::`, `email::`, `display_name::`, `host::`, `role::`, `billing::`, `model::`, `uuid::`, `capabilities::`, `org_uuid::`, `org_name::`); each exits 1 directing to `cols::` | `ft13_accounts_legacy_toggles_rejected` |
 | FT-14 | AC-14 | `.accounts cols::+host,-tier` adds host column and removes tier from identity default set | `ft14_accounts_cols_modifier` |
-| FT-15 | AC-15 | `.accounts refresh::1` fetches live quota; `.accounts touch::1` activates idle sessions — same algorithm as `.usage` | `lim_it_ft15_accounts_refresh_live (accounts_ft_test.rs)` — refresh::1 case only partially covered (account shown, not trace/quota-value comparison); touch::1 case is a coverage gap |
+| FT-15 | AC-15 | `.accounts refresh::1 touch::1` accepted but inert — no fetch/touch trace lines, local-only output | `ft15_accounts_refresh_touch_inert (accounts_ft_test.rs)` |
 | FT-16 | AC-16 | `.usage owner::0 name::X` clears owner field — identical result to `.accounts owner::0 name::X` (Feature 064; formerly `usage unclaim::1 name::X`) | `f37_ft16_usage_unclaim_mirrors_accounts` (`usage_feature_test.rs`) |
 | FT-17 | AC-17 | `.usage assignee::user1@w003 name::X` writes marker — identical result to `.accounts assignee::user1@w003 name::X` (Feature 065; formerly `active::USER@MACHINE name::X` — Feature 064) | `f37_ft17_usage_assign_mirrors_accounts` (`usage_feature_test.rs`) |
 | FT-18 | AC-18 | `.accounts dry::1 owner::0 name::X` prints `[dry-run] would clear owner of X`; exits 0; no files modified; G8 gate runs (Feature 064; formerly `dry::1 unclaim::1`) | `ft17_unclaim_dry_run (account_ownership_test.rs)` |
@@ -37,7 +37,7 @@
 
 ### Notes
 
-- FT-01 and FT-02 are structural registration tests: run `.accounts` and `.usage` with each of the 32 params set to a valid value and verify exit 0; then try an unknown param and verify exit 1 with error message.
+- FT-01 and FT-02 are structural registration tests: run `.accounts` and `.usage` with each active unified param set to a valid value and verify exit 0; then try an unknown param and verify exit 1 with error message. `next::` is excluded from the accepted set — it is a REMOVED migration stub that exits 1 with a `sort::` migration message on BOTH commands (audit 2026-08: `.accounts` formerly accepted it silently while `.usage` rejected it; now rejected identically).
 - FT-03 verifies `.accounts` default behavior without `refresh::1` or `touch::1`: no network calls, no subprocesses. Use `trace::1` to assert no timestamped `fetch` or `touch` diagnostic lines appear.
 - FT-04 verifies `.usage` default behavior includes Owner column in output and that `sort::renew` ordering is applied without explicit `sort::` param.
 - FT-05 is an integration test via `./verb/test` — identical to the former FT-02 in `36_account_ownership.md` but via `accounts owner::0 name::alice` (Feature 064; formerly `unclaim::1`).
@@ -48,7 +48,7 @@
 - FT-11 and FT-12 are integration tests via `./verb/test` — verify exit 1 and that stderr contains the targeted migration hint. These commands are registered as redirect stubs (Feature 037): `.account.unclaim` exits 1 with `"owner::0"` hint; `.account.assign` exits 1 with `"assignee::"` hint. NOT generic "unknown command" errors.
 - FT-13 uses one sub-case per legacy toggle — 15 invocations; each exits 1 with a message mentioning `cols::`.
 - FT-14 is a render test verifying column set modification: identity default is Account, Owner, Active, Current, Sub, Tier, Expires, Email. After `cols::+host,-tier`: Tier removed, Host added.
-- FT-15 is an integration test: `.accounts refresh::1` must produce live quota output matching what `.usage` produces for the same accounts. The only live test, `lim_it_ft15_accounts_refresh_live`, asserts exit 0 and that the account appears in output — it does not assert quota-value or trace-line parity against `.usage trace::1`, and no test anywhere exercises `.accounts touch::1` (see FT-15 body for the coverage-gap detail).
+- FT-15 pins the revised AC-15 (audit 2026-08): `.accounts refresh::1 touch::1 trace::1` exits 0, lists accounts from the local store, and emits NO ` · fetch`/` · touch` trace lines — the params are accepted for registration parity but inert. The former live test (`lim_it_ft15_accounts_refresh_live`) was vacuous: it asserted only exit 0 + account presence, both trivially true without any fetch, so it passed while the original "same algorithm as `.usage`" criterion was never implemented.
 - FT-18 verifies G8 gate still runs in dry mode: (a) owned by caller → `[dry-run] would clear owner of X` printed, exits 0; (b) owned by other → exits 1, no dry-run line. Uses `owner::0 name::X dry::1` (Feature 064; formerly `dry::1 unclaim::1`).
 - FT-19 verifies Owner column: set up alice with `owner: "testuser@testmachine"`, bob with `owner: ""`. `.accounts` text output: alice row shows `testuser@testmachine` in Owner column, bob shows `—`. `.accounts cols::-owner` output: no Owner column header.
 - FT-20 verifies G8 bypass via force: same non-owned setup as FT-06; with `force::1` added to `owner::0 name::X`, exits 0 and `alice.json` has `"owner": ""`. (Feature 064; formerly `unclaim::1 force::1`.)
@@ -59,14 +59,16 @@
 
 ---
 
-### FT-01: `.accounts` accepts all 32 unified parameters; unknown param exits 1
+### FT-01: `.accounts` accepts active unified parameters; unknown param and REMOVED `next::` exit 1
 
 - **Given:** Credential store with at least one account.
-- **When:** `.accounts` called with each of the 32 unified params (see Feature 037 Design table) set to a valid value.
-- **Then:** Exits 0 for all 32 param invocations. No "unknown parameter" error.
+- **When:** `.accounts` called with each active unified param (see Feature 037 Design table) set to a valid value.
+- **Then:** Exits 0 for all active-param invocations. No "unknown parameter" error.
+- **When:** `.accounts next::renew` called.
+- **Then:** Exits 1 with the `next:: parameter has been removed; use sort:: instead` migration message — identical to `.usage next::renew` (audit 2026-08: formerly silently accepted on `.accounts` only).
 - **When:** `.accounts unknown_param::1` called.
 - **Then:** Exits 1 with error message referencing the unknown parameter.
-- **Exit:** 0 (32 valid cases), 1 (unknown param)
+- **Exit:** 0 (active params), 1 (`next::`, unknown param)
 - **Source fn:** `ft01_accounts_accepts_32_params`
 - **Source:** [037_accounts_usage_param_unification.md AC-01](../../../docs/feature/037_accounts_usage_param_unification.md)
 
@@ -220,15 +222,15 @@
 
 ---
 
-### FT-15: `.accounts refresh::1` and `.accounts touch::1` use same algorithm as `.usage`
+### FT-15: `.accounts refresh::1 touch::1` accepted but inert — no fetch/touch pipeline runs
 
-- **Given:** Credential store with at least one owned account. Network accessible.
-- **When (case A):** `clp .accounts refresh::1 trace::1` is executed; separately, `clp .usage trace::1` is executed.
-- **Then (case A):** Both produce timestamped `fetch` diagnostic lines; quota columns in `.accounts refresh::1` output match values in `.usage` output for same accounts.
-- **When (case B):** `clp .accounts touch::1 trace::1` is executed.
-- **Then (case B):** timestamped `touch` diagnostic lines appear; same accounts touched as `.usage touch::1` would touch.
+*(Revised — audit 2026-08. The original FT-15 specified "same algorithm as `.usage`" live fetch/touch parity; that behavior was never implemented — `accounts_routine()` never reads either param — and the former live test `lim_it_ft15_accounts_refresh_live` passed vacuously by asserting only exit 0 + account presence. AC-15 is now the truthful inert-acceptance contract.)*
+
+- **Given:** Credential store with one account. Offline — no network, no live token.
+- **When:** `clp .accounts refresh::1 touch::1 trace::1` is executed.
+- **Then:** Exits 0. Account listed from the local store. stderr contains NO ` · fetch` and NO ` · touch` timestamped trace lines — both params are accepted (registration parity, Feature 037) but inert; the live pipeline is `.usage`-only.
 - **Exit:** 0
-- **Source fn:** `lim_it_ft15_accounts_refresh_live` (`accounts_ft_test.rs`) — file annotation corrected from `accounts_test.rs` (does not exist). Covers case A only partially: asserts `.accounts refresh::1 trace::1` exits 0 and shows the account, but does NOT assert the `fetch` trace-line diagnostic content or compare against `.usage trace::1` output. Case B (`.accounts touch::1 trace::1`) is a coverage gap — no test anywhere in the suite invokes `.accounts touch::1`.
+- **Source fn:** `ft15_accounts_refresh_touch_inert` (`accounts_ft_test.rs`)
 - **Source:** [037_accounts_usage_param_unification.md AC-15](../../../docs/feature/037_accounts_usage_param_unification.md)
 
 ---

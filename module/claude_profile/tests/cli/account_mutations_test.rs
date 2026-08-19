@@ -41,6 +41,8 @@
 //! | aw15 | `aw15_use_prefix_ambiguous_exits_1` | ambiguous prefix → exit 1 | N |
 //! | aw16 | `aw16_exact_local_part_wins_over_ambiguous_prefix` | exact local part wins | P |
 //! | aw17 | `aw17_use_prefix_ambiguous_no_exact_local_part_exits_1` | no exact match → exit 1 | N |
+//! | aw18 | `aw18_switch_warns_on_running_sessions` | running claude → stderr advisory, exit 0 | P |
+//! | aw19 | `aw19_switch_no_warning_without_sessions` | empty proc dir → no advisory | P |
 //! | ad01 | `ad01_delete_inactive_removes_file` | delete inactive removes file | P |
 //! | ad02 | `ad02_delete_dry_run_keeps_file` | `dry::1` → file kept | P |
 //! | ad03 | `ad03_delete_active_exits_0` | delete active account → exit 0 | P |

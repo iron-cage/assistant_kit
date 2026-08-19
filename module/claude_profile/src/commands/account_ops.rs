@@ -150,6 +150,20 @@ pub fn account_use_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> 
     if trace { eprintln!( "{}account.use  {name}  set_model: {sm}", trace_ts() ) }
   }
 
+  // Feature 004 AC-12: running-session advisory. Switching rewrites
+  // ~/.claude/.credentials.json for FUTURE launches only — already-running claude
+  // sessions hold the previous token in memory and keep billing the old account,
+  // which reads as "it said it switched but didn't" (w003 report). Best-effort
+  // scan (CLR_PROC_DIR overrides the proc root in tests); stderr so scripts
+  // parsing stdout's "switched to" line are unaffected; exit code stays 0.
+  let running = claude_core::process::find_claude_processes();
+  if !running.is_empty()
+  {
+    let n = running.len();
+    let ( noun, verb ) = if n == 1 { ( "session", "keeps" ) } else { ( "sessions", "keep" ) };
+    eprintln!( "warning: {n} running claude {noun} {verb} using the previous account — restart to pick up '{name}'" );
+  }
+
   Ok( OutputData::new( format!( "switched to '{name}'\n" ), "text" ) )
 }
 

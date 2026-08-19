@@ -4,12 +4,12 @@
 //!
 //! | ID | Test Function | Condition | P/N |
 //! |----|---------------|-----------|-----|
-//! | ft01 | `ft01_accounts_accepts_32_params` | `.accounts` accepts all 32 registered params | P |
+//! | ft01 | `ft01_accounts_accepts_32_params` | `.accounts` accepts active params; REMOVED `next::` exits 1 | P |
 //! | ft03 | `ft03_accounts_default_profile` | `.accounts` default output includes Owner column | P |
 //! | ft07 | `ft07_accounts_unclaim_batch` | `unclaim::1` no name → clears all owned accounts | P |
 //! | ft13 | `ft13_accounts_legacy_toggles_rejected` | removed toggle param → exit 1 + migration message | N |
 //! | ft14 | `ft14_accounts_cols_modifier` | `cols::+display_name` → Display: line present | P |
-//! | ft15 | `lim_it_ft15_accounts_refresh_live` | `refresh::1` with live token → account shown | P |
+//! | ft15 | `ft15_accounts_refresh_touch_inert` | `refresh::1 touch::1` inert — no fetch/touch trace | N |
 //! | ft19 | `ft19_owner_column_default_visible` | Owner: line visible by default | P |
 //! | ft20 | `ft20_accounts_unclaim_force_bypasses_g8` | `unclaim::1 force::1` → clears regardless | P |
 //! | ft21 | `ft21_force_no_effect_without_unclaim` | `force::1` alone → accepted, no mutation | P |
@@ -19,10 +19,9 @@
 use crate::cli_runner::{
   run_cs_with_env,
   stdout, stderr, assert_exit,
-  write_account, write_account_with_token,
+  write_account,
   write_account_profile_json, write_account_owner,
   write_account_renewal_json, write_account_roles_json,
-  live_active_token, require_live_api,
   FAR_FUTURE_MS,
 };
 use tempfile::TempDir;
@@ -66,12 +65,27 @@ fn ft01_accounts_accepts_32_params()
   );
   assert_exit( &out, 0 );
 
-  // prefer/next/imodel/effort accepted (no-op when refresh::0).
+  // prefer/imodel/effort accepted (no-op when refresh::0).
   let out = run_cs_with_env(
-    &[ ".accounts", "prefer::any", "next::renew", "imodel::auto", "effort::auto" ],
+    &[ ".accounts", "prefer::any", "imodel::auto", "effort::auto" ],
     &[ ( "HOME", home ) ],
   );
   assert_exit( &out, 0 );
+
+  // Fix(audit-next-removed): next:: is a REMOVED param ("kept for migration error" per its
+  // registry description) — .usage already exited 1 with the migration message, but .accounts
+  // silently accepted it (this test formerly pinned the buggy exit-0). Both commands must
+  // reject identically now.
+  let out = run_cs_with_env(
+    &[ ".accounts", "next::renew" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 1 );
+  let err = stderr( &out );
+  assert!(
+    err.contains( "next:: parameter has been removed" ) && err.contains( "sort::" ),
+    "expected next:: migration message, got stderr:\n{err}"
+  );
 
   // assignee:: + name:: + dry::1 accepted (Feature 065 ownership mutation).
   let out = run_cs_with_env(
@@ -243,30 +257,42 @@ fn ft14_accounts_cols_modifier()
 }
 
 #[ test ]
-/// FT-15 (AC-15, `lim_it`): `.accounts refresh::1` uses same fetch algorithm as `.usage`.
+/// FT-15 (AC-15): `.accounts refresh::1 touch::1` is inert — accepted, but no fetch/touch runs.
 ///
-/// Requires live API access. With a valid token, timestamped ` · fetch` lines appear in stderr.
+/// Fix(audit-ac15-vacuous-test): the former `lim_it_ft15_accounts_refresh_live` asserted only
+/// exit 0 + account name — both trivially true because `accounts_routine()` never reads
+/// `refresh::`/`touch::` (no fetch pipeline exists on `.accounts`), so the live test passed
+/// while verifying nothing and AC-15's "same algorithm as `.usage`" claim stayed unimplemented.
+/// Root cause: Feature 037 unified param REGISTRATION but the `.accounts` branch never gained
+/// the fetch/touch calls; the test pinned the vacuous subset of the claim.
+/// Fix applied: AC-15 rewritten to the truthful contract (params accepted, inert, local-only);
+/// this offline test pins that contract — exit 0, account listed, and NO ` · fetch`/` · touch`
+/// trace lines even with both params explicitly enabled.
+/// Prevention: assert the distinguishing observable (trace lines), not just exit codes.
+/// Pitfall: a live-gated test whose assertions also hold offline verifies nothing live.
 ///
 /// Spec: [`tests/docs/feature/37_accounts_usage_param_unification.md` FT-15]
-fn lim_it_ft15_accounts_refresh_live()
+fn ft15_accounts_refresh_touch_inert()
 {
-  require_live_api( "ft15" );
-  let token = live_active_token().expect( "live API token required — no ~/.claude/.credentials.json" );
-
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  write_account_with_token( dir.path(), "live@test.com", &token, true );
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
 
   let out = run_cs_with_env(
-    &[ ".accounts", "refresh::1", "trace::1" ],
+    &[ ".accounts", "refresh::1", "touch::1", "trace::1" ],
     &[ ( "HOME", home ) ],
   );
   assert_exit( &out, 0 );
 
   let text = stdout( &out );
   assert!(
-    text.contains( "live@test.com" ),
-    "FT-15: refresh::1 with live token must show account; got stdout:\n{text}",
+    text.contains( "alice@acme.com" ),
+    "FT-15: account must still be listed; got stdout:\n{text}",
+  );
+  let err = stderr( &out );
+  assert!(
+    !err.contains( " · fetch" ) && !err.contains( " · touch" ),
+    "FT-15: refresh::1/touch::1 are inert on .accounts — no fetch/touch trace lines expected; got stderr:\n{err}",
   );
 }
 
