@@ -80,6 +80,29 @@ fn common_prefix_len( a : &str, b : &str ) -> usize
 /// under this construction, not an independent condition to re-check;
 /// length exceeding 200 alone is already both necessary and sufficient to
 /// know the string check is unsound for that side.
+///
+/// Fix(BUG-519)
+/// Root cause: the Pitfall note directly above was wrong on the sufficiency
+/// half of its own claim. "Length exceeding 200 alone" is necessary for a
+/// genuine relationship (proven above) but not SUFFICIENT to rule out a
+/// coincidence: two UNRELATED paths that merely share a shallow REAL
+/// filesystem ancestor (e.g. both several long-named levels under the same
+/// tmp root) can each independently exceed 200 chars without being nested in
+/// each other at all. Once this unconditional bypass fires for such a pair,
+/// the caller's `decode_path_via_fs`-based real verification (`matches_under`'s
+/// `Partial` arm, Fix(BUG-512)) falsely includes it: `walk_fs` legitimately
+/// cannot get past that shared real ancestor when the "unrelated" candidate's
+/// own deeper subtree was never materialized on disk, and the conservative
+/// `base_path.starts_with(&p)` disjunct then fires on that shared ancestor
+/// alone.
+/// Fix: `double_truncated_and_related` (defined below, after this function)
+/// adds back a cheap, discriminating precondition — the two encodings'
+/// literal first-200-char bodies must match, not just both exceed 200 chars.
+/// See that function's own doc comment for why this boundary is both
+/// necessary and sufficient for the confirmed failure shape, unlike the
+/// plain length check it replaces.
+/// Pitfall: see `double_truncated_and_related`'s own doc comment for the one
+/// residual case this does NOT close.
 fn is_relevant_encoded( dir_name : &str, encoded_base : &str ) -> bool
 {
   let check = | candidate : &str | -> bool
@@ -87,12 +110,85 @@ fn is_relevant_encoded( dir_name : &str, encoded_base : &str ) -> bool
     encoded_base == candidate || encoded_base.starts_with( &format!( "{candidate}-" ) )
   };
   if check( dir_name ) { return true; }
-  if dir_name.len() > 200 && encoded_base.len() > 200 { return true; }
+  if double_truncated_and_related( dir_name, encoded_base ) { return true; }
   let lcp_len = common_prefix_len( dir_name, encoded_base );
   if lcp_len == 0 || lcp_len >= dir_name.len() { return false; }
   let ( before, after ) = ( &dir_name[ ..lcp_len ], &dir_name[ lcp_len.. ] );
   if !before.ends_with( '-' ) || !after.starts_with( '-' ) { return false; }
   check( &dir_name[ ..lcp_len - 1 ] )
+}
+
+/// Whether `a` and `b` are both independently truncated by `encode_path`'s
+/// 200-char cap (`path.rs` Fix(BUG-366)) AND share an identical literal
+/// first-200-char body — the only combination that actually signals a
+/// genuine ancestor/descendant relationship rather than a coincidence.
+///
+/// `encode_path` concatenates one `encode_component_piece` per path
+/// component, strictly additively, before ever truncating — so whenever a
+/// real ancestor's OWN pre-truncation encoding already exceeds 200 chars,
+/// every real descendant's pre-truncation encoding necessarily starts with
+/// that same literal string, and truncating both to their first 200 chars
+/// yields IDENTICAL bodies (only the trailing hash-of-the-full-untruncated-
+/// path suffix differs). Two paths that merely happen to both encode past
+/// 200 chars, sharing only a shallow REAL common ancestor, diverge as soon as
+/// their components differ — almost always well before char 200 — so their
+/// bodies do NOT match.
+///
+/// Fix(BUG-519): both call sites (`is_relevant_encoded` above,
+/// `matches_under` below) previously bypassed their fast-reject whenever
+/// both sides merely exceeded 200 chars, with no relatedness check at all —
+/// see each call site's own Fix(BUG-519) note for the false-inclusion this
+/// let through (an unrelated double-truncated sibling falsely absorbed by
+/// the `Partial`-arm conservative-include disjunct, Fix(BUG-512)).
+///
+/// Pitfall: this does not prove soundness against every possible truncation
+/// shape. If the paths' shared REAL ancestor is itself deep enough that ITS
+/// OWN pre-truncation encoding already exceeds 200 chars, two genuinely
+/// UNRELATED siblings under that ancestor would still inherit an identical
+/// first-200-char body from it, despite neither being nested in the other.
+/// This narrower case is CONFIRMED reachable (BUG-520, MAAV Round 11 Primary)
+/// and is NOT closeable by any finite-prefix-length string comparison: proof
+/// — once the query anchor's own pre-truncation encoding alone exceeds 200
+/// chars, the ENTIRE 200-byte comparison window this function (or any
+/// variant of it) could ever inspect is consumed by the anchor's own prefix;
+/// there is no remaining character budget left to observe anything past that
+/// boundary, for either a genuine descendant OR an unrelated sibling — the
+/// two are informationally indistinguishable from the stored (truncated)
+/// strings alone. See BUG-520's own report for the full proof and why this is
+/// an accepted, documented architectural limitation of the lossy
+/// truncation+hash encoding scheme (`docs/invariant/001_path_encoding.md`),
+/// not a fixable code defect — closing it would require storing full
+/// untruncated paths, a storage-format change out of scope here. Do not treat
+/// this function's `true` result as a final verdict; it only gates whether
+/// the caller's own filesystem-backed check should run at all, exactly like
+/// the length-only check it replaces.
+///
+/// Fix(BUG-521)
+/// Root cause: the original `a[ ..200 ] == b[ ..200 ]` raw byte-index slicing
+/// assumed BOTH arguments are pure-ASCII `encode_path` output. That is
+/// guaranteed for the `encoded_base`/`eb` argument (always freshly produced
+/// by `encode_path` in `resolve_scoped_projects`, and `encode_component_piece`
+/// maps every non-ASCII-alphanumeric character to a single ASCII `-`) but was
+/// NEVER guaranteed for the `dir_name` argument, which is read directly off
+/// the real filesystem (`Storage::list_projects()` → `fs::read_dir()`) with
+/// no validation that it actually conforms to the encoding contract. A real
+/// (non-conforming) storage directory name containing a multi-byte UTF-8
+/// character whose byte range straddles byte offset 200 made `a[ ..200 ]`
+/// panic ("byte index 200 is not a char boundary"), crashing the entire
+/// `.projects` command for every project in the same call, not just the
+/// malformed one (confirmed: MAAV Round 11 Dimension Adversary).
+/// Fix: compare via `common_prefix_len` (defined above in this file, already
+/// char-boundary-safe by construction) instead of raw byte slicing —
+/// `common_prefix_len(a, b) >= 200` is exactly equivalent to
+/// `a[..200] == b[..200]` whenever both ARE valid 200+-byte ASCII strings
+/// (the common case), but never panics regardless of either argument's
+/// encoding, since it only ever advances by whole `char`s.
+/// Pitfall: do not reintroduce direct byte-index slicing (`&s[..N]`) on
+/// either argument anywhere in this function — `dir_name` must always be
+/// treated as untrusted, non-guaranteed-ASCII input.
+fn double_truncated_and_related( a : &str, b : &str ) -> bool
+{
+  a.len() > 200 && b.len() > 200 && common_prefix_len( a, b ) >= 200
 }
 
 /// Decode a storage directory name into a human-readable display path.
@@ -163,7 +259,7 @@ fn tilde_compress( path : &std::path::Path ) -> String
 fn decode_path_via_fs( encoded : &str ) -> FsDecodeOutcome
 {
   let inner = &encoded[ 1.. ]; // strip leading `-`
-  let ( outcome, _consumed ) = walk_fs( std::path::Path::new( "/" ), inner, true );
+  let ( outcome, _consumed ) = walk_fs( std::path::Path::new( "/" ), inner, true, inner.len() );
   match outcome
   {
     // Fix(BUG-512), Fix(BUG-513): zero real progress past the root is
@@ -174,11 +270,16 @@ fn decode_path_via_fs( encoded : &str ) -> FsDecodeOutcome
     FsDecodeOutcome::Partial( p ) if p == std::path::Path::new( "/" ) => FsDecodeOutcome::NotFound,
     // Fix(BUG-515): single, correctly-anchored fallback — see this
     // function's own doc comment above.
+    // Fix(BUG-523): `search_encoded_subtree` now returns `FsDecodeOutcome`
+    // directly (ambiguity-preserving) instead of `Option<PathBuf>` — see its
+    // own doc comment. `Partial`/`NotFound` from the subtree search both mean
+    // "the fallback found nothing better," so both fall back to the
+    // already-verified `p` anchor unchanged, same as the old `None` arm.
     FsDecodeOutcome::Partial( p ) if encoded.len() > 200 =>
       match search_encoded_subtree( &p, encoded )
       {
-        Some( found ) => FsDecodeOutcome::Full( found ),
-        None => FsDecodeOutcome::Partial( p ),
+        found @ ( FsDecodeOutcome::Full( _ ) | FsDecodeOutcome::AmbiguousFull( _ ) ) => found,
+        FsDecodeOutcome::Partial( _ ) | FsDecodeOutcome::NotFound => FsDecodeOutcome::Partial( p ),
       },
     other => other,
   }
@@ -279,9 +380,17 @@ fn decode_storage_base( base_encoded : &str ) -> Option< std::path::PathBuf >
 /// individually with the same `starts_with(base_path)` relationship `Full` uses, and
 /// include when at least one qualifies. Do not collapse the set to a shared ancestor
 /// first (that is precisely the false-inclusion this variant exists to avoid).
+///
+/// Fix(BUG-519)
+/// Same root cause and fix as `is_relevant_encoded`'s own Fix(BUG-519) note (mirrored in
+/// the descendant direction) — see `double_truncated_and_related`'s doc comment for the
+/// full explanation. The prior unconditional both-exceed-200-chars bypass let an
+/// unrelated double-truncated sibling fall through to the `Partial` arm's
+/// conservative-include disjunct above (Fix(BUG-512)), which then falsely fired on their
+/// shared real ancestor.
 fn matches_under( dir_name : &str, eb : &str, base_path : &std::path::Path ) -> bool
 {
-  let double_truncated = dir_name.len() > 200 && eb.len() > 200;
+  let double_truncated = double_truncated_and_related( dir_name, eb );
   if !double_truncated && dir_name != eb && !dir_name.starts_with( &format!( "{eb}-" ) ) { return false; }
   if dir_name == eb { return true; }
   match decode_path_via_fs( dir_name )
@@ -307,6 +416,12 @@ fn matches_under( dir_name : &str, eb : &str, base_path : &std::path::Path ) -> 
 /// `AmbiguousFull` mirrors `matches_under`'s own Fix(BUG-518) note in the ancestor
 /// direction: check `base_path.starts_with(p)` against each tied candidate individually
 /// rather than collapsing the set to a shared ancestor first.
+///
+/// Fix(BUG-519)
+/// No code change here — this function has no `double_truncated` logic of its own and
+/// inherits the fix entirely through `is_relevant_encoded`'s own Fix(BUG-519) gate. Noted
+/// for traceability only, since this function was independently probed for the same
+/// false-inclusion shape during the MAAV re-verification that found BUG-519.
 fn matches_relevant( dir_name : &str, eb : &str, base_path : &std::path::Path ) -> bool
 {
   if !is_relevant_encoded( dir_name, eb ) { return false; }
@@ -499,21 +614,193 @@ enum FsDecodeOutcome
 /// once per recursion LEVEL (the original BUG-513 shape) caused an
 /// unbounded filesystem walk from shallow bases when no real match exists
 /// anywhere for the target string.
-fn search_encoded_subtree( base : &std::path::Path, target : &str ) -> Option< std::path::PathBuf >
+///
+/// Fix(BUG-522)
+/// Root cause: this function only ever recognized EXACT equality
+/// (`encode_path(candidate) == target`) — but `target` is not always a bare
+/// project encoding; it can be a real, truncation-affected project's own
+/// encoding PLUS a trailing synthetic `--topic` suffix (the same topic-tag
+/// convention `matches_local`'s own fast-reject already recognizes via
+/// `dir_name.starts_with("{eb}--")`). When a REAL project sits deep enough
+/// that its OWN per-component piece no longer fits within `walk_fs`'s
+/// truncated `remaining` budget (the exact BUG-516 shape, one level deeper —
+/// here the "too-long" candidate has no shorter sibling `best` to extend at
+/// all, since it may be the ONLY real child at that level), `walk_fs` never
+/// even sees it as a candidate and falls back to `Partial(shallower_anchor)`.
+/// The old exact-match-only search then found nothing for a topic-suffixed
+/// target (no real directory's OWN encoding is EVER exactly equal to
+/// `nested_encoding + "--topic"`), silently leaving the caller with the
+/// too-shallow anchor — which `matches_local` (`p == base_path`) then wrongly
+/// treated as "the anchor itself, with a bare metadata tag," when the true
+/// target was a genuinely SEPARATE, deeper real project's topic-tagged
+/// session (confirmed: MAAV Round 11 Fresh Challenger, `scope::local`
+/// wrongly including a nested project's session under a shallow, untruncated
+/// anchor).
+/// Fix: also recognize `target.starts_with("{encoded}--")` (candidate's own
+/// encoding, followed by a genuine topic boundary) as a match — mirroring
+/// `matches_local`'s own already-established topic-boundary convention, just
+/// applied here to the real-filesystem search instead of a bare string
+/// fast-reject. Recursing into children BEFORE checking `base` itself is
+/// load-bearing, not stylistic: since a shallower real ancestor's own
+/// encoding is, by construction, always ALSO a literal prefix of a deeper
+/// real descendant's encoding, a shallow candidate can spuriously satisfy
+/// this new looser `--`-boundary condition too (whenever the descendant's
+/// own next component happens to start with a special character) — checking
+/// children first ensures the DEEPEST, most-specific real match wins,
+/// exactly the specificity guarantee `walk_fs`'s own `best_partial` deepest-
+/// consumed comparison (Fix(BUG-514)) already provides elsewhere in this
+/// file. This reordering is safe for the pre-existing exact-match case too:
+/// an exact `encode_path` match is unique across the whole subtree (barring
+/// an astronomically unlikely hash collision), so traversal order never
+/// changes which candidate exact-matches, only which is found first when
+/// BOTH the new prefix condition and (at a different, deeper level) an exact
+/// match are in play.
+/// Pitfall: do not narrow the new condition to a specific expected suffix
+/// (e.g. checking for `"--faketopic"` literally) — any `--`-bounded
+/// remainder must qualify, matching `matches_local`'s own suffix-agnostic
+/// fast-reject; do not drop the children-first ordering in favor of
+/// checking `base` first for a "fast path" — see the specificity argument
+/// above for why that would silently resurrect the shallow-anchor bug.
+///
+/// Fix(BUG-523)
+/// Root cause: this function returned `Option<PathBuf>` and short-circuited
+/// on the FIRST match found anywhere in ANY sibling's own subtree
+/// (`return Some(found)` inside the `for entry in entries.flatten()` loop,
+/// never examining the remaining siblings). Two real, DIFFERENT sibling
+/// directories whose own `encode_path()` output collides identically —
+/// e.g. one named with a leading `!` and one with a leading `_`, both
+/// mapped to the same `--` escape by `encode_component_piece` — each
+/// independently satisfy `encoded == target`, but only whichever
+/// `std::fs::read_dir` happens to enumerate first (a platform-unspecified,
+/// unstable order) was ever reported; the other was silently never checked
+/// at all. This is the exact same collision class `walk_fs`'s own
+/// `full_matches`/`AmbiguousFull` machinery already exists to catch
+/// (Fix(BUG-518)) — this function simply never received the equivalent
+/// treatment, because it predates BUG-518 and was never revisited when
+/// `FsDecodeOutcome` gained its ambiguity-preserving variant (confirmed:
+/// MAAV Round 12 Primary).
+/// Fix: return `FsDecodeOutcome` (reusing the existing type, not a parallel
+/// one) instead of `Option<PathBuf>`. Complete the FULL loop over every
+/// sibling at each level — never return early — collecting every match
+/// found across ALL sibling subtrees at this level into `child_matches`; a
+/// single collected match returns `Full`, 2+ DISTINCT ones return
+/// `AmbiguousFull` (flattening a nested call's own `AmbiguousFull`, same
+/// convention `walk_fs` already uses), and only when `child_matches` is
+/// completely empty does this level fall through to checking `base` itself.
+/// Checking `base` only after ALL children (across ALL siblings, not just
+/// the first-tried one) are exhausted preserves the load-bearing
+/// children-first-wins-over-self priority this function's own Fix(BUG-522)
+/// note establishes, while now also catching genuine same-level sibling
+/// ties the old early-return could never reach.
+/// Pitfall: do not reintroduce an early `return` inside the `for entry in
+/// entries.flatten()` loop — that is precisely the short-circuit this fix
+/// removes. Do not collapse `AmbiguousFull` back to a single arbitrary
+/// candidate; propagate the full set exactly like `walk_fs` does.
+///
+/// A first version of this fix collected every match into `child_matches`
+/// and treated `len() > 1` alone as `AmbiguousFull` — this over-collects:
+/// two real SIBLINGS whose names are unrelated except that one is a literal
+/// text prefix of the other (e.g. `anchor` and `anchor__<...>`) produce a
+/// SHORT candidate that spuriously satisfies the very same
+/// `target.starts_with("{encoded}--")` boundary check as the true, longer,
+/// correct candidate — not because the short one has any real topic-tagged
+/// session, but because the LONG sibling's own real name, once encoded,
+/// happens to textually extend the short one's encoding across what looks
+/// like a topic boundary but is actually just the "__" mid-name separator
+/// of a wholly unrelated real directory (confirmed: MAAV Round 12 Dimension
+/// Adversary, re-run against the first version of this fix — a real
+/// sibling's own untagged session at the long candidate wrongly leaked into
+/// a query anchored at the unrelated short candidate). Unlike the Primary's
+/// own collision fixture (two siblings with BYTE-IDENTICAL encodings — a
+/// genuine, irreducible ambiguity), this shape has a real, more-specific
+/// answer available: the long candidate's own match consumes strictly more
+/// of `target`, and when it is an EXACT match it is definitionally correct
+/// in a way a same-level sibling's merely-loose prefix match cannot
+/// outrank.
+/// Fix (revised): rank collected candidates by specificity
+/// (`rank_subtree_candidates`) before treating a multi-candidate result as
+/// genuinely ambiguous — an EXACT match (`encode_path(candidate) ==
+/// target`) always outranks a loose (`target.starts_with("{encoded}--")`)
+/// match, and among same-tier candidates the LONGEST `encode_path` output
+/// wins (mirrors `walk_fs`'s own `Partial` disambiguation, which already
+/// tie-breaks by consumed length rather than treating any 2+ partial
+/// candidates as automatically tied). Only candidates that remain tied
+/// after BOTH rankings — same exactness tier AND same encoded length, e.g.
+/// the Primary's own byte-identical-encoding fixture — produce
+/// `AmbiguousFull`.
+/// Pitfall: do not rank by raw string content or `read_dir` order — only by
+/// (`is_exact`, `encoded_len`), computed fresh via `encode_path` on each
+/// collected candidate; a length-only rank without the exactness tier would
+/// wrongly let a long LOOSE match outrank a short EXACT one on some other
+/// input shape even though exact equality is strictly more certain than any
+/// prefix heuristic.
+fn search_encoded_subtree( base : &std::path::Path, target : &str ) -> FsDecodeOutcome
 {
-  if let Ok( encoded ) = claude_storage_core::encode_path( base )
+  let mut child_matches : Vec< std::path::PathBuf > = Vec::new();
+  if let Ok( entries ) = std::fs::read_dir( base )
   {
-    if encoded == target { return Some( base.to_path_buf() ); }
-  }
-  let Ok( entries ) = std::fs::read_dir( base ) else { return None };
-  for entry in entries.flatten()
-  {
-    if let Some( found ) = search_encoded_subtree( &entry.path(), target )
+    for entry in entries.flatten()
     {
-      return Some( found );
+      match search_encoded_subtree( &entry.path(), target )
+      {
+        FsDecodeOutcome::Full( p ) => { if !child_matches.contains( &p ) { child_matches.push( p ); } }
+        FsDecodeOutcome::AmbiguousFull( found ) =>
+        {
+          for p in found { if !child_matches.contains( &p ) { child_matches.push( p ); } }
+        }
+        FsDecodeOutcome::Partial( _ ) | FsDecodeOutcome::NotFound => {}
+      }
     }
   }
-  None
+  if !child_matches.is_empty()
+  {
+    return rank_subtree_candidates( child_matches, target );
+  }
+  if let Ok( encoded ) = claude_storage_core::encode_path( base )
+  {
+    if encoded == target || target.starts_with( &format!( "{encoded}--" ) )
+    {
+      return FsDecodeOutcome::Full( base.to_path_buf() );
+    }
+  }
+  FsDecodeOutcome::NotFound
+}
+
+/// Ranks `search_encoded_subtree`'s collected same-level candidates by
+/// specificity — see that function's own Fix(BUG-523) doc comment for why a
+/// flat `len() > 1 == ambiguous` collection over-collects unrelated
+/// sibling-prefix matches. An exact `encode_path` match always outranks a
+/// loose topic-boundary match; among same-tier candidates, the longest
+/// `encode_path` output wins. Only candidates tied on BOTH axes are
+/// genuinely ambiguous.
+fn rank_subtree_candidates( candidates : Vec< std::path::PathBuf >, target : &str ) -> FsDecodeOutcome
+{
+  let mut ranked : Vec< ( std::path::PathBuf, usize, bool ) > = candidates.into_iter()
+    .filter_map( | p |
+    {
+      let encoded = claude_storage_core::encode_path( &p ).ok()?;
+      Some( ( p, encoded.len(), encoded == target ) )
+    } )
+    .collect();
+
+  if ranked.is_empty()
+  {
+    return FsDecodeOutcome::NotFound;
+  }
+
+  let any_exact = ranked.iter().any( | ( _, _, exact ) | *exact );
+  if any_exact
+  {
+    ranked.retain( | ( _, _, exact ) | *exact );
+  }
+  let max_len = ranked.iter().map( | ( _, len, _ ) | *len ).max().expect( "ranked non-empty" );
+  ranked.retain( | ( _, len, _ ) | *len == max_len );
+
+  if ranked.len() == 1
+  {
+    return FsDecodeOutcome::Full( ranked.into_iter().next().expect( "len checked == 1" ).0 );
+  }
+  FsDecodeOutcome::AmbiguousFull( ranked.into_iter().map( | ( p, _, _ ) | p ).collect() )
 }
 
 /// Recursive helper for `decode_path_via_fs`, resolving the encoding by
@@ -695,7 +982,69 @@ fn search_encoded_subtree( base : &std::path::Path, target : &str ) -> Option< s
 /// possibly have been truncation's doing; a shorter one that fails to
 /// forward-match was never a truncation victim, just a non-match, and must
 /// not be resurrected here.
-fn walk_fs( base : &std::path::Path, remaining : &str, is_first : bool ) -> ( FsDecodeOutcome, usize )
+///
+/// Fix(BUG-524)
+/// Two independent, compounding defects were found in the paragraph above's
+/// extension-sibling mechanism, by two independent MAAV Round 12 dispatches:
+///
+/// (1) Root cause (Dimension Adversary): the `piece.len() > remaining.len()`
+/// gate uses `remaining`'s own CURRENT length as a proxy for "was this piece
+/// truncated by `encode_path`'s outer 200-char cut" — but once truncation
+/// has actually happened, `remaining`'s tail is no longer real per-component
+/// data at all; it is `encode_path`'s own appended `-<djb2-hash>` suffix
+/// (`path.rs:241-245`) plus, when a topic tag was appended on top (the
+/// standard `{encoded}--topic` convention), that tag's own bytes too. Both
+/// inflate `remaining.len()` with bytes that belong to no real candidate's
+/// piece at all, which can push it PAST a genuinely-truncated candidate's
+/// own (shorter) untruncated piece length — silently defeating the gate for
+/// the exact case it exists to catch (confirmed: a candidate whose own
+/// untruncated piece is 68 bytes, while `remaining` — inflated by a 60+-byte
+/// hash-plus-topic-tail — measures 70, so `68 > 70` is false and the
+/// candidate that SHOULD be rescued never is).
+///
+/// (2) Root cause (Fresh Challenger): even when the gate DOES fire, the
+/// candidate it selects is promoted with NO verification of its own
+/// (no recursive `walk_fs` call — deliberately, see Pitfall 1 above — so
+/// nothing confirms the promoted candidate is actually the correct target
+/// rather than just the first structural match) and NO tie-detection when
+/// 2+ real siblings simultaneously qualify (the loop's `piece.len() >
+/// cur_consumed` comparison is a strict `>`, so among equal-length
+/// qualifying candidates only the first one iterated ever wins — silent,
+/// `read_dir`-order-dependent, unlike every OTHER ambiguity-resolution path
+/// in this function, which all explicitly detect and report ties).
+///
+/// Fix: stop trying to pick a winning candidate via in-memory string-length
+/// heuristics entirely. Instead, detect whether a real sibling might
+/// plausibly have been cut off by the truncation boundary using an EXACT
+/// check against `encode_path`'s own known, fixed 200-character constant —
+/// `consumed_so_far + piece.len() > 199` (199, not 200: `total_len` is
+/// measured on `inner`, which has already had the encoding's leading `-`
+/// stripped by `decode_path_via_fs`, so the boundary shifts down by exactly
+/// one) — rather than comparing against `remaining.len()`, which (1) above
+/// proves is untrustworthy once truncation has occurred. `consumed_so_far`
+/// is exact by construction (`total_len - remaining.len()`, and `remaining`
+/// is always `inner` with a `consumed_so_far`-length real prefix already
+/// stripped), so this check is immune to whatever garbage bytes actually
+/// occupy the untrustworthy tail — it never inspects them at all. When this
+/// fires for ANY real sibling other than the current `best` that also
+/// textually extends `best`'s own piece, do not promote that sibling (or
+/// any other candidate) — instead return `Partial(base)` unconditionally,
+/// deferring to the PARENT level. This is always safe: `decode_path_via_fs`'s
+/// existing single `search_encoded_subtree` fallback (Fix(BUG-515)), once
+/// anchored at this returned `base`, searches base's ENTIRE real subtree —
+/// every sibling, not just the one this function might have guessed — and,
+/// since Fix(BUG-523), safely reports a genuine tie instead of guessing
+/// among candidates the same way this function used to. Deferring is
+/// strictly more correct than a heuristic guess and costs nothing extra:
+/// the exact same single subtree search was always going to run once
+/// `encoded.len() > 200`; only WHERE it is anchored changes.
+/// Pitfall: do not reintroduce a length comparison against `remaining` for
+/// this decision — (1) above is a proof, not a probabilistic argument, that
+/// `remaining.len()` cannot be trusted once truncation has occurred. Do not
+/// try to verify the deferred candidate from inside this function (see
+/// Pitfall 1 on the original Fix(BUG-516) note — still applies unchanged:
+/// exactly one `search_encoded_subtree` call site, in `decode_path_via_fs`).
+fn walk_fs( base : &std::path::Path, remaining : &str, is_first : bool, total_len : usize ) -> ( FsDecodeOutcome, usize )
 {
   if remaining.is_empty() { return ( FsDecodeOutcome::Full( base.to_path_buf() ), 0 ); }
   let Ok( entries ) = std::fs::read_dir( base ) else { return ( FsDecodeOutcome::NotFound, 0 ) };
@@ -756,7 +1105,7 @@ fn walk_fs( base : &std::path::Path, remaining : &str, is_first : bool ) -> ( Fs
   for ( path, piece ) in &candidates
   {
     let Some( rest ) = remaining.strip_prefix( piece.as_str() ) else { continue };
-    match walk_fs( path, rest, false )
+    match walk_fs( path, rest, false, total_len )
     {
       ( FsDecodeOutcome::Full( p ), _ ) =>
       {
@@ -801,26 +1150,28 @@ fn walk_fs( base : &std::path::Path, remaining : &str, is_first : bool ) -> ( Fs
     _ => {}
   }
 
-  // Fix(BUG-516): let any real sibling that textually extends the winning
-  // match's piece win outright, but ONLY when `remaining` is too short to
-  // have ever let that sibling's own full piece forward-match — see this
-  // function's own doc comment above.
-  if let Some( ( winning_path, _ ) ) = best.clone()
+  // Fix(BUG-524): rather than guessing which real sibling should win via an
+  // in-memory string-length heuristic (the original Fix(BUG-516) design,
+  // proven unsound by both its missing verification/tie-detection and its
+  // corruptible `remaining.len()` gate — see this function's own Fix(BUG-524)
+  // doc comment above), detect whether ANY real sibling might plausibly have
+  // been cut off by `encode_path`'s 200-char truncation using an exact check
+  // against that known, fixed boundary, and defer entirely to the parent
+  // level when so — never promote a guessed candidate.
+  if let Some( ( winning_path, _ ) ) = &best
   {
-    let winning_piece = candidates.iter().find( | ( p, _ ) | *p == winning_path ).map( | ( _, pc ) | pc.clone() );
+    let winning_piece = candidates.iter().find( | ( p, _ ) | p == winning_path ).map( | ( _, pc ) | pc.clone() );
     if let Some( winning_piece ) = winning_piece
     {
-      for ( path, piece ) in &candidates
-      {
-        if *path == winning_path { continue }
-        let cur_consumed = best.as_ref().map_or( 0, | ( _, c ) | *c );
-        if piece.len() > cur_consumed
-          && piece.len() > remaining.len()
+      let consumed_so_far = total_len - remaining.len();
+      let truncation_ambiguous = candidates.iter().any( | ( path, piece ) |
+        path != winning_path
           && piece.starts_with( winning_piece.as_str() )
-        {
-          best = Some( ( path.clone(), piece.len() ) );
-          tied = false;
-        }
+          && consumed_so_far + piece.len() > 199
+      );
+      if truncation_ambiguous
+      {
+        return ( FsDecodeOutcome::Partial( base.to_path_buf() ), 0 );
       }
     }
   }
