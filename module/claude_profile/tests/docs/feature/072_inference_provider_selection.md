@@ -21,16 +21,16 @@
 | FT-09 | AC-09 | `.provider.select id::` (empty) → exits 1 | `t10_provider_select_empty_id_exits_1` |
 | FT-10 | AC-10 | `.provider.select id::kimi reset::1` → exits 1, mutually exclusive | `t11_provider_select_id_and_reset_mutually_exclusive` |
 | FT-11 | AC-11 | `.provider.select reset::1` with selection set → key removed, others preserved | `t09_provider_select_reset_preserves_model_key` |
-| FT-12 | AC-12 | `.provider.select reset::1` with no `config.toml` → idempotent exit 0 | *(none — coverage gap; no test calls `reset::1` against a never-created `config.toml`)* |
+| FT-12 | AC-12 | `.provider.select reset::1` with no `config.toml` → idempotent exit 0 | `t17_provider_select_reset_without_config_idempotent` |
 | FT-13 | AC-13 | `.provider.select format::json` → `{"provider":"anthropic"}` | `t12_provider_select_json_format` |
 | FT-14 | AC-14 | `provider = "kimi"` selected; mixed-provider account list; rotation never selects `anthropic`-tagged account, `force::1` included | `test_cc_gate10_provider_mismatch_skips_account`, `test_cc_gate10_mismatch_not_bypassed_by_force_equivalent` |
 | FT-15 | AC-15 | No selection made (default `anthropic`); account tagged `inference_provider: "kimi"` never selected by rotation | `test_cc_gate10_provider_mismatch_skips_account`, `test_cc_gate10_empty_and_explicit_anthropic_are_equivalent` |
-| FT-16 | AC-16 | `.provider.select` get-mode value unaffected by which account is currently active | *(none — coverage gap; no test switches the active account and re-reads `.provider.select` get-mode)* |
+| FT-16 | AC-16 | `.provider.select` get-mode value unaffected by which account is currently active | `t18_provider_select_get_ignores_active_account_provider` |
 
 ### Notes
 
-- **Source fn staleness note:** FT-01 through FT-16 originally cited `ft01`–`ft16`-prefixed function names in files `tests/cli/inference_provider_test.rs`, `tests/cli/provider_select_test.rs`, and `tests/usage/sort_next_test.rs` — none of these files or names were ever created (confirmed via `git log -S`: the commit that introduced this doc touched no matching `.rs` files). Real coverage exists under different names in `tests/cli/account_provider_test.rs` (FT-01–FT-13) and `tests/usage/sort_next_tests_b.rs` (FT-14–FT-15); citations below have been corrected to the real function names. FT-12 and FT-16 are genuine coverage gaps — no backing test exists for either.
-- All FT cases are integration tests in `tests/cli/account_provider_test.rs` (FT-01–FT-13, shared with `tests/docs/cli/command/21_provider_select.md`'s IT-01–IT-12 for FT-07–FT-13), and `tests/usage/sort_next_tests_b.rs` (FT-14–FT-15; FT-16 is a coverage gap).
+- **Source fn staleness note:** FT-01 through FT-16 originally cited `ft01`–`ft16`-prefixed function names in files `tests/cli/inference_provider_test.rs`, `tests/cli/provider_select_test.rs`, and `tests/usage/sort_next_test.rs` — none of these files or names were ever created (confirmed via `git log -S`: the commit that introduced this doc touched no matching `.rs` files). Real coverage exists under different names in `tests/cli/account_provider_test.rs` (FT-01–FT-13) and `tests/usage/sort_next_tests_b.rs` (FT-14–FT-15); citations below have been corrected to the real function names. FT-12 and FT-16 lacked backing tests until Task 533 added both (`t17`/`t18`, 2026-08-19).
+- All FT cases are integration tests in `tests/cli/account_provider_test.rs` (FT-01–FT-13 plus FT-12/FT-16 via `t17`/`t18`, shared with `tests/docs/cli/command/21_provider_select.md`'s IT-01–IT-12 for FT-07–FT-13), and `tests/usage/sort_next_tests_b.rs` (FT-14–FT-15).
 - All FT cases use a temporary isolated `~/.clr/` directory and/or temporary account store to avoid touching the real user environment.
 - FT-01–FT-06 exercise the `{name}.json` field and `.accounts` rendering side of this feature — see `docs/schema/002_account_json.md` SC-7 for the on-disk field contract and `docs/cli/param/073_inference_provider.md` for the parameter contract.
 - FT-07–FT-13 exercise `.provider.select` itself — near-identical in content to `tests/docs/cli/command/21_provider_select.md`'s IT-01–IT-12 (same underlying test functions), indexed here under the feature entity for full-feature AC traceability rather than duplicated as distinct tests.
@@ -167,13 +167,11 @@
 
 ### FT-12: `reset::1` with no `config.toml` is idempotent
 
-> **Coverage gap** — no test exercises this scenario. `t09_provider_select_reset_preserves_model_key` is the only `reset::1` test and always seeds `config.toml` first; no test calls `reset::1` against a directory where `~/.clr/config.toml` was never created. Same gap as `tests/docs/cli/command/21_provider_select.md`'s IT-06.
-
-- **Given:** `~/.clr/config.toml` does not exist.
-- **When:** `clp .provider.select reset::1`
-- **Then:** Stdout is `provider.select: anthropic (reset to default)\n`. Exits 0.
+- **Given:** `~/.clr/config.toml` does not exist (never created in the sandbox).
+- **When:** `clp .provider.select reset::1` — twice consecutively.
+- **Then:** Both invocations exit 0 with stdout `provider.select: anthropic (reset to default)\n`; neither call creates `config.toml` (reset on an absent config is a no-op write per `toml_io::remove_user_tier`'s NotFound-as-empty semantics). Shares the scenario with `tests/docs/cli/command/21_provider_select.md`'s IT-06.
 - **Exit:** 0
-- **Source fn:** *(none — coverage gap)*
+- **Source fn:** `t17_provider_select_reset_without_config_idempotent` (in `tests/cli/account_provider_test.rs`)
 - **Source:** [072_inference_provider_selection.md AC-12](../../../docs/feature/072_inference_provider_selection.md)
 
 ---
@@ -213,11 +211,9 @@
 
 ### FT-16: `.provider.select` never derives from the current account
 
-> **Coverage gap** — no test exercises this scenario. No existing test switches the active account and then re-reads `.provider.select` get-mode to confirm independence from the account's own `inference_provider` tag.
-
-- **Given:** Current active account has `inference_provider: "kimi"`; `~/.clr/config.toml` has no `provider` key.
+- **Given:** Current active account (machine-specific `_active` marker set) has `inference_provider: "kimi"`; `~/.clr/config.toml` has no `provider` key. The test asserts both preconditions in place before the get call.
 - **When:** `clp .provider.select`
-- **Then:** Stdout is `provider.select: anthropic\n` — unaffected by the current account's own `inference_provider` tag.
+- **Then:** Stdout is `provider.select: anthropic\n` — unaffected by the current account's own `inference_provider` tag; get-mode is a pure read of `config.toml`'s `provider` key.
 - **Exit:** 0
-- **Source fn:** *(none — coverage gap)*
+- **Source fn:** `t18_provider_select_get_ignores_active_account_provider` (in `tests/cli/account_provider_test.rs`)
 - **Source:** [072_inference_provider_selection.md AC-16](../../../docs/feature/072_inference_provider_selection.md)

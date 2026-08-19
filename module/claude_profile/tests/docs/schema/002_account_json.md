@@ -16,7 +16,7 @@ format compliance, and append-only history behavior.
 | SC-4 | JSON format: 2-space pretty-print, trailing newline | Encoding | ✅ |
 | SC-5 | `history` array appended — never truncated by successful fetch | Append-Only | ✅ |
 | SC-6 | `cache` updated atomically on successful API call | Cache Write | ✅ |
-| SC-7 | `inference_provider` written only when explicitly given; preserved by unrelated saves | Preserved-Only Fields | 🔲 |
+| SC-7 | `inference_provider` written only when explicitly given; preserved by unrelated saves | Preserved-Only Fields | ✅ |
 | SC-8 | `tags` written sorted/deduplicated when given; key absent when never given | Write Semantics | ✅ |
 
 ---
@@ -94,7 +94,7 @@ format compliance, and append-only history behavior.
 - **Given:** `{name}.json` does not yet contain an `inference_provider` key.
 - **When:** `.account.save` is invoked without `inference_provider::` — then, in a second scenario, `{name}.json` already has `"inference_provider": "kimi"` and `.account.save` is invoked again without `inference_provider::`.
 - **Then:** First scenario: `{name}.json` still has no `inference_provider` key at all — the field is never written as the literal default `"anthropic"`. Second scenario: `"inference_provider": "kimi"` remains unchanged — `save()`'s read-merge preserves it exactly like `_renewal_at`, `owner`, `host`, and `role` (SC-1, SC-2, SC-3).
-- **Source fn:** *(planned — not yet implemented)*
+- **Source fn:** `ft03_072_save_none_inference_provider_no_prior_key_writes_no_key` (never written when not given), `ft02_072_save_none_inference_provider_preserves_existing` (read-merge preservation) — domain-level `save()` calls in `claude_profile_core/tests/account_backend_test.rs`; CLI-surface counterparts `t01_inference_provider_kimi_writes_key`/`t02_inference_provider_omitted_writes_no_key` in `tests/cli/account_provider_test.rs`
 - **Source:** [docs/schema/002_account_json.md §Preserved-Only Fields](../../../docs/schema/002_account_json.md), [feature/072_inference_provider_selection.md AC-02](../../../docs/feature/072_inference_provider_selection.md)
 
 ---

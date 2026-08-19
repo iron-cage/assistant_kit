@@ -6,7 +6,7 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 
 - **Purpose**: Document FT-N test cases for each feature behavioral requirement.
 - **Responsibility**: Index of per-feature test case planning files covering AC coverage.
-- **In Scope**: All 53 specs enumerated in the Responsibility Table below — the collection-level `000_doc_structure.md` (DT cases) plus per-feature FT specs for Features 001–040, 061–069, 072, and 075–076 (Feature 023 deprecated, absorbed into Feature 020; Features 070–071 do not yet have FT specs — pending). The Responsibility Table is the authoritative enumeration of covered elements; the Coverage Summary table below cross-references each entry to its source feature doc and case range.
+- **In Scope**: All 55 specs enumerated in the Responsibility Table below — the collection-level `000_doc_structure.md` (DT cases) plus per-feature FT specs for Features 001–040, 061–069, 071–073, and 075–076 (Feature 023 deprecated, absorbed into Feature 020; Feature 070 does not yet have an FT spec — pending). The Responsibility Table is the authoritative enumeration of covered elements; the Coverage Summary table below cross-references each entry to its source feature doc and case range.
 - **Out of Scope**: CLI command tests (→ `cli/command/`), parameter edge cases (→ `cli/param/`), automated test implementations (→ `tests/cli/`).
 
 ### Responsibility Table
@@ -63,7 +63,9 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | 067_trace_timestamps.md | FT cases for Feature 067 — Trace Timestamp Prefix |
 | 068_models_list_command.md | FT cases for Feature 068 — Models List Command |
 | 069_model_select_command.md | FT cases for Feature 069 — Model Select Command |
+| 071_redirect_backend_accounts.md | FT cases for Feature 071 — Redirect Backend Accounts |
 | 072_inference_provider_selection.md | FT cases for Feature 072 — Inference Provider Selection |
+| 073_kimi_provider_preset.md | FT cases for Feature 073 — Kimi Provider Preset |
 | 075_account_tags.md | FT cases for Feature 075 — Account Tags |
 | 076_identity_tag_filter.md | FT cases for Feature 076 — Identity Tag Filter |
 
@@ -121,11 +123,13 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | 067_trace_timestamps | [067_trace_timestamps.md](067_trace_timestamps.md) | FT-01 … FT-07 | ✅ |
 | 068_models_list_command | [068_models_list_command.md](068_models_list_command.md) | FT-01 … FT-10 | 🔲 |
 | 069_model_select_command | [069_model_select_command.md](069_model_select_command.md) | FT-01 … FT-12 | 🔲 |
-| 072_inference_provider_selection | [072_inference_provider_selection.md](072_inference_provider_selection.md) | FT-01 … FT-16 | 🔲 |
-| 075_account_tags | [075_account_tags.md](075_account_tags.md) | FT-01 … FT-16 | 🔲 |
-| 076_identity_tag_filter | [076_identity_tag_filter.md](076_identity_tag_filter.md) | FT-01 … FT-16 | 🔲 |
+| 071_redirect_backend_accounts | [071_redirect_backend_accounts.md](071_redirect_backend_accounts.md) | FT-01 … FT-17 | ✅ |
+| 072_inference_provider_selection | [072_inference_provider_selection.md](072_inference_provider_selection.md) | FT-01 … FT-16 | ✅ |
+| 073_kimi_provider_preset | [073_kimi_provider_preset.md](073_kimi_provider_preset.md) | FT-01 … FT-10 | ✅ |
+| 075_account_tags | [075_account_tags.md](075_account_tags.md) | FT-01 … FT-16 | ✅ |
+| 076_identity_tag_filter | [076_identity_tag_filter.md](076_identity_tag_filter.md) | FT-01 … FT-16 | ✅ |
 
-**Total:** 53 specs — 52 per-feature FT specs (behavioral) + 1 collection-level DT spec (doc structure compliance). Features 070–071 have `docs/feature/` instances but no FT spec yet (pre-existing gap, not introduced by Feature 072).
+**Total:** 55 specs — 54 per-feature FT specs (behavioral) + 1 collection-level DT spec (doc structure compliance). Feature 070 has a `docs/feature/` instance but no FT spec yet (pre-existing gap).
 
 ### Cross-Reference Depth
 

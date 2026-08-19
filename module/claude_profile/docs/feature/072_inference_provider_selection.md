@@ -110,8 +110,8 @@
 
 | File | Relationship |
 |------|--------------|
-| `tests/cli/provider_select_test.rs` (new) | AC-07–AC-13, AC-16 — get/set/reset behavior, mutual exclusion, JSON format, idempotent reset, no cross-account derivation |
+| `tests/cli/account_provider_test.rs` | AC-01–AC-13, AC-16 — `inference_provider::` write/omit/empty-reject, default `Provider` column + `cols::-inference_provider` opt-out + JSON always-includes, `.provider.select` get/set/reset/mutual-exclusion/JSON format, no-config `reset::1` idempotence (`t17`), get-mode never derives from the active account (`t18`), combined `host::`/`tags::`/`inference_provider::` save (`t19`) |
+| `tests/usage/sort_next_tests_b.rs` | AC-14–AC-15 — Gate 10 (`test_cc_gate10_*`): provider-mismatch exclusion, no force-equivalent bypass, empty ≡ explicit `anthropic` default |
+| `tests/usage/fetch_tests.rs` | `ft06_072` — `AccountQuota.inference_provider` threaded from `{name}.json` at fetch time, empty default when absent |
+| `claude_profile_core/tests/account_backend_test.rs` | `ft01`–`ft05_072` — domain-level `save()`/`list()`: write-when-given, preserve-on-`None`, absent-writes-no-key, list threading |
 | `tests/cli/accounts_help_test.rs` | Regression coverage — `.accounts.help`'s 32-parameter Help Rendering Scheme unaffected by `inference_provider` (no new toggle param added) |
-| `tests/cli/account_save_test.rs` | AC-01–AC-04 — `inference_provider::` write path, empty-value rejection, absent-field default |
-| `tests/cli/accounts_render_test.rs` | AC-05–AC-06 — default `Provider` column display and `cols::-inference_provider` opt-out |
-| `tests/usage/sort_next_test.rs` | AC-14–AC-15 — Gate 10 exclusion under mixed-provider account lists, with and without an explicit `.provider.select` |
