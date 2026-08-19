@@ -76,7 +76,7 @@ fn t493_override_with_session_no_export_no_continue()
   );
   let stderr = String::from_utf8_lossy( &out.stderr );
   assert!(
-    stderr.contains( "--session-dir is deprecated" ),
+    stderr.contains( "--session-dir" ) && stderr.contains( "is deprecated and has no effect" ),
     "deprecated --session-dir must warn loudly on stderr. Got:\n{stderr}"
   );
 }
