@@ -16,7 +16,7 @@ Test case planning for [invariant/009_session_mismatch_detection.md](../../../do
 | SV-1 | Fake claude emits matching UUID → no warning on stderr, exit 0 | Invariant Hold |
 | SV-2 | Fake claude emits differing UUID → `[Runner] warning: session mismatch` on stderr, exit 0 | Invariant Statement |
 | SV-3 | `--new-session` (no prior session, `expected_session_id=None`) → no warning regardless of binary output | Invariant Boundary |
-| SV-4 | Empty session dir (`session_exists()` returns `None`) → no warning, comparison skipped | Invariant Boundary |
+| SV-4 | Empty session source (`--from`, `session_exists()` returns `None`) → no warning, comparison skipped | Invariant Boundary |
 
 ## Test Coverage Summary
 
@@ -32,7 +32,7 @@ Test case planning for [invariant/009_session_mismatch_detection.md](../../../do
 
 IT-1, IT-2, IT-3 are unit tests in `tests/summary_unit_test.rs` that call `extract_session_id()` directly with crafted JSON strings — no subprocess needed.
 
-SV-1 through SV-4 are integration tests in `tests/session_verification_test.rs` using a fake `claude` binary (reusing `fake_claude_dir()` from `tests/cli_binary_test_helpers.rs`). Each test creates a separate temp storage directory with a `{UUID_A}.jsonl` file (non-empty) and passes `--session-dir <temp>` to `clr`; this makes `session_exists()` return `Some(SessionId("UUID_A"))` without any live session scanning. The fake `claude` script unconditionally prints a hardcoded CLR JSON envelope to stdout and ignores its arguments; sv1 emits UUID_A (match), sv2 emits UUID_B (mismatch). The warning block in `run_print_mode()` fires — or does not fire — based solely on the `expected_session_id` vs. `actual` comparison, not on the binary's knowledge of the test's temp dir.
+SV-1 through SV-4 are integration tests in `tests/session_verification_test.rs` using a fake `claude` binary (reusing `fake_claude_dir()` from `tests/cli_binary_test_helpers.rs`). Each test seeds a `{UUID_A}.jsonl` session file under an isolated `CLAUDE_HOME` for a source path via `make_session_for()`, then passes `--from <src>` to `clr`; this makes `session_exists()` return `Some(SessionId("UUID_A"))` via `--from`'s resolved source storage, without any live session scanning. Fix(BUG-493): `expected_session_id` (and therefore the BUG-320 mismatch check) is fed exclusively by `--from`'s resolved source storage, never by raw `--session-dir` — `--session-dir` is deprecated and inert and is explicitly excluded from these tests' environment (`env_remove("CLR_SESSION_DIR")`). The fake `claude` script unconditionally prints a hardcoded CLR JSON envelope to stdout and ignores its arguments; sv1 emits UUID_A (match), sv2 emits UUID_B (mismatch). The warning block in `run_print_mode()` fires — or does not fire — based solely on the `expected_session_id` vs. `actual` comparison, not on the binary's knowledge of the test's temp dir.
 
 ## Implementation Notes
 
@@ -91,8 +91,8 @@ SV-1 through SV-4 are integration tests in `tests/session_verification_test.rs` 
 
 ### SV-1: Fake claude emits matching UUID → no warning, exit 0
 
-- **Given:** Temp storage dir with `UUID_A.jsonl` (non-empty); `--session-dir <temp>`; fake claude emits `{"type":"result","session_id":"UUID_A","result":"hello","is_error":false}`; default `--output-style summary`
-- **When:** `clr -p --max-sessions 0 --session-dir <temp> "x"` with fake claude binary in PATH
+- **Given:** `UUID_A.jsonl` session seeded under an isolated `CLAUDE_HOME` for source path `src` (via `make_session_for()`); `--from <src>`; fake claude emits `{"type":"result","session_id":"UUID_A","result":"hello","is_error":false}`; default `--output-style summary`
+- **When:** `clr -p --max-sessions 0 --from <src> "x"` with fake claude binary in PATH
 - **Then:** Exit 0; stderr does NOT contain `"session mismatch"`; `expected_session_id == actual` comparison is equal; warning block not entered
 - **Exit:** 0
 - **Source:** [invariant/009_session_mismatch_detection.md](../../../docs/invariant/009_session_mismatch_detection.md) Invariant Statement table row 2 (match → silent success)
@@ -101,8 +101,8 @@ SV-1 through SV-4 are integration tests in `tests/session_verification_test.rs` 
 
 ### SV-2: Fake claude emits differing UUID → `[Runner] warning` on stderr, exit 0
 
-- **Given:** Temp storage dir with `UUID_A.jsonl` (non-empty); `--session-dir <temp>`; fake claude emits `{"type":"result","session_id":"UUID_B","result":"hello","is_error":false}` (UUID_B ≠ UUID_A); default `--output-style summary`
-- **When:** `clr -p --max-sessions 0 --session-dir <temp> "x"` with fake claude binary in PATH
+- **Given:** `UUID_A.jsonl` session seeded under an isolated `CLAUDE_HOME` for source path `src`; `--from <src>`; fake claude emits `{"type":"result","session_id":"UUID_B","result":"hello","is_error":false}` (UUID_B ≠ UUID_A); default `--output-style summary`
+- **When:** `clr -p --max-sessions 0 --from <src> "x"` with fake claude binary in PATH
 - **Then:** Exit 0 (non-fatal — warning is diagnostic only); stderr contains exactly one line matching `"[Runner] warning: session mismatch — expected UUID_A, got UUID_B (BUG-320 detected)"`
 - **Exit:** 0
 - **Source:** [invariant/009_session_mismatch_detection.md](../../../docs/invariant/009_session_mismatch_detection.md) Invariant Statement table row 3; Warning Format section
@@ -111,18 +111,18 @@ SV-1 through SV-4 are integration tests in `tests/session_verification_test.rs` 
 
 ### SV-3: `--new-session` → no warning, `expected_session_id=None`, exit 0
 
-- **Given:** Fresh temp storage dir (no `.jsonl` files); `--session-dir <temp>`; `--new-session`; fake claude emits a CLR JSON envelope; default `--output-style summary`
-- **When:** `clr -p --new-session --max-sessions 0 --session-dir <temp> "x"` with fake claude binary
+- **Given:** `UUID_A.jsonl` session seeded under an isolated `CLAUDE_HOME` for source path `src`; `--from <src>`; `--new-session`; fake claude emits a CLR JSON envelope; default `--output-style summary`
+- **When:** `clr -p --new-session --max-sessions 0 --from <src> "x"` with fake claude binary
 - **Then:** Exit 0; stderr does NOT contain `"session mismatch"`; `session_exists()` returns `None`; `-c` not injected; `expected_session_id = None`; `if let Some(expected)` guard short-circuits before `extract_session_id()` is ever called
 - **Exit:** 0
 - **Source:** [invariant/009_session_mismatch_detection.md](../../../docs/invariant/009_session_mismatch_detection.md) Invariant Statement table row 1 (`expected_session_id` is `None` → no comparison)
 
 ---
 
-### SV-4: Empty session dir → no warning, `expected_session_id=None`, exit 0
+### SV-4: Empty session source → no warning, `expected_session_id=None`, exit 0
 
-- **Given:** Empty temp storage dir (no `.jsonl` files); `--session-dir <temp>`; fake claude emits a CLR JSON envelope with `session_id=UUID_B`; `--output-style raw`
-- **When:** `clr --max-sessions 0 --session-dir <temp> --output-style raw "x"` with fake claude binary
-- **Then:** Exit 0; stderr does NOT contain `"session mismatch"`; `session_exists()` returns `None` for empty dir; `expected_session_id = None`; `if let Some(expected)` guard short-circuits before `extract_session_id()` is ever called
+- **Given:** Source path `src` with no session seeded (never called `make_session_for()`); `--from <src>`; fake claude emits a CLR JSON envelope with `session_id=UUID_B`; `--output-style raw`
+- **When:** `clr --max-sessions 0 --from <src> --output-style raw "x"` with fake claude binary
+- **Then:** Exit 0; stderr does NOT contain `"session mismatch"`; `session_exists()` returns `None` for the unseeded source; `expected_session_id = None`; `if let Some(expected)` guard short-circuits before `extract_session_id()` is ever called
 - **Exit:** 0
 - **Source:** [invariant/009_session_mismatch_detection.md](../../../docs/invariant/009_session_mismatch_detection.md) Invariant Statement table row 1 (`expected_session_id` is `None` → no comparison)

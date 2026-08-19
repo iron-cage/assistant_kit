@@ -23,7 +23,7 @@ Integration test planning for the `run` command. See [command/01_run.md](../../.
 | IT-15 | Default → `--dangerously-skip-permissions` injected | Default Injection |
 | IT-16 | `--effort invalid` → exit 1, error message | Error Handling |
 | IT-17 | `clr run "msg"` → identical to `clr "msg"` (BUG-212 coverage) | Explicit run alias |
-| IT-18 | Empty `--session-dir` → no `-c` in assembled command (BUG-214 regression) | First-use edge case |
+| IT-18 | Empty session source (`--from`) → no `-c` in assembled command (BUG-214 regression) | First-use edge case |
 | IT-19 | `--subdir NAME` → dry-run effective dir ends with `/-NAME` | Subdir |
 | IT-20 | Print mode subprocess exits 42 → clr exits 42 (BUG-239 regression) | Exit Code Passthrough |
 | IT-21 | SIGTERM-killed subprocess → clr exits 143 (128+15) (BUG-242, unix-only) | Exit Code Passthrough |
@@ -209,12 +209,12 @@ Integration test planning for the `run` command. See [command/01_run.md](../../.
 
 ---
 
-### IT-18: Empty `--session-dir` → no `-c` in assembled command (BUG-214 regression)
+### IT-18: Empty session source (`--from`) → no `-c` in assembled command (BUG-214 regression)
 
-- **Command:** `clr --dry-run --session-dir /tmp/mre214_empty "Fix bug"`
+- **Command:** `clr --dry-run --from /tmp/mre214_empty "Fix bug"`
 - **Expected behavior:** Assembled command does NOT include `-c`; `session_exists()` guard detects empty directory and suppresses injection
 - **Exit:** 0
-- **Source:** [invariant/001_default_flags.md § Fixed Defects](../../../../docs/invariant/001_default_flags.md), [--session-dir](../../../../docs/cli/param/010_session_dir.md)
+- **Source:** [invariant/001_default_flags.md § Fixed Defects](../../../../docs/invariant/001_default_flags.md), [--from](../../../../docs/cli/param/076_from.md)
 
 ---
 

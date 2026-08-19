@@ -28,7 +28,7 @@
 #![ cfg( feature = "enabled" ) ]
 
 mod cli_binary_test_helpers;
-use cli_binary_test_helpers::{ fake_claude_dir, stderr_str };
+use cli_binary_test_helpers::{ fake_claude_dir, make_session_for, stderr_str };
 
 /// UUID written to the session dir `.jsonl` file — the "expected" session.
 const UUID_A : &str = "11111111-1111-1111-1111-111111111111";
@@ -44,24 +44,19 @@ fn clr_envelope( session_id : &str ) -> String
   )
 }
 
-/// Create a temp session dir with one `.jsonl` file whose stem is `uuid`.
-///
-/// Returns `(TempDir, dir_path_str)`.  The caller must keep `TempDir` alive.
-fn make_session_dir_with_uuid( uuid : &str ) -> ( tempfile::TempDir, String )
-{
-  let dir  = tempfile::TempDir::new().expect( "tmpdir" );
-  let file = dir.path().join( format!( "{uuid}.jsonl" ) );
-  std::fs::write( &file, b"{}" ).expect( "write session jsonl" );
-  let path = dir.path().to_str().expect( "utf-8 path" ).to_owned();
-  ( dir, path )
-}
-
 /// Run `clr` with a fake claude that emits `envelope` as stdout.
 ///
-/// Injects `--max-sessions 0` (unlimited gate) and `_CLR_DEFAULT_TIMEOUT=10`
-/// (short watchdog for fast failure).  Returns raw `Output`.
+/// Injects `--max-sessions 0` (unlimited gate), `_CLR_DEFAULT_TIMEOUT=10` (short
+/// watchdog for fast failure), and `claude_home` as `CLAUDE_HOME`.  Returns raw `Output`.
+///
+/// Fix(BUG-493): `expected_id` (and therefore the BUG-320 mismatch check) is now fed
+/// exclusively by `--from`'s resolved source storage, never by raw `--session-dir` —
+/// see `builder.rs`'s `session_exists`/`session_from_dir`.  Callers seed the expected
+/// session via `make_session_for()` under an isolated `CLAUDE_HOME`, not a raw
+/// `--session-dir` path.
 fn run_with_fake_claude(
   envelope    : &str,
+  claude_home : &std::path::Path,
   extra_args  : &[ &str ],
   extra_envs  : &[ ( &str, &str ) ],
 ) -> std::process::Output
@@ -72,6 +67,7 @@ fn run_with_fake_claude(
   std::process::Command::new( bin )
     .args( extra_args )
     .env( "PATH", &path )
+    .env( "CLAUDE_HOME", claude_home )
     .env( "_CLR_DEFAULT_TIMEOUT", "10" )
     .envs( extra_envs.iter().copied() )
     .env_remove( "CLR_SESSION_DIR" )
@@ -82,19 +78,22 @@ fn run_with_fake_claude(
 
 // sv1 — matching UUIDs: no mismatch warning emitted
 //
-// Session dir contains UUID_A.jsonl → expected = UUID_A.
-// Fake claude returns session_id = UUID_A → match.
+// `--from <src>` storage (under an isolated CLAUDE_HOME) contains UUID_A.jsonl →
+// expected = UUID_A. Fake claude returns session_id = UUID_A → match.
 // Expected: exit 0, stderr does NOT contain "session mismatch".
 #[ test ]
 fn sv1_matching_uuid_emits_no_warning()
 {
-  let ( _dir, session_path ) = make_session_dir_with_uuid( UUID_A );
+  let claude_home = tempfile::TempDir::new().expect( "tmpdir" );
+  let src = "/tmp/sv1-session-verification-src";
+  let _ = make_session_for( claude_home.path(), src, UUID_A );
   let envelope = clr_envelope( UUID_A );
 
   let out = run_with_fake_claude(
     &envelope,
+    claude_home.path(),
     &[
-      "--session-dir", &session_path,
+      "--from", src,
       "hello",
       "--max-sessions", "0",
       "--output-style", "raw",
@@ -115,19 +114,22 @@ fn sv1_matching_uuid_emits_no_warning()
 
 // sv2 — mismatched UUIDs: warning emitted, exit 0 (non-fatal)
 //
-// Session dir contains UUID_A.jsonl → expected = UUID_A.
+// `--from <src>` storage contains UUID_A.jsonl → expected = UUID_A.
 // Fake claude returns session_id = UUID_B → mismatch.
 // Expected: exit 0, stderr contains "[Runner] warning: session mismatch".
 #[ test ]
 fn sv2_mismatched_uuid_emits_warning_but_exits_zero()
 {
-  let ( _dir, session_path ) = make_session_dir_with_uuid( UUID_A );
+  let claude_home = tempfile::TempDir::new().expect( "tmpdir" );
+  let src = "/tmp/sv2-session-verification-src";
+  let _ = make_session_for( claude_home.path(), src, UUID_A );
   let envelope = clr_envelope( UUID_B );
 
   let out = run_with_fake_claude(
     &envelope,
+    claude_home.path(),
     &[
-      "--session-dir", &session_path,
+      "--from", src,
       "hello",
       "--max-sessions", "0",
       "--output-style", "raw",
@@ -156,19 +158,22 @@ fn sv2_mismatched_uuid_emits_warning_but_exits_zero()
 
 // sv3 — `--new-session` set: no mismatch check (expected_id is None)
 //
-// Session dir contains UUID_A.jsonl, but `--new-session` forces expected_id = None.
-// Fake claude returns session_id = UUID_B.
+// `--from <src>` storage contains UUID_A.jsonl, but `--new-session` forces
+// expected_id = None. Fake claude returns session_id = UUID_B.
 // Expected: exit 0, NO mismatch warning (expected_id is None → check skipped).
 #[ test ]
 fn sv3_new_session_flag_skips_mismatch_check()
 {
-  let ( _dir, session_path ) = make_session_dir_with_uuid( UUID_A );
+  let claude_home = tempfile::TempDir::new().expect( "tmpdir" );
+  let src = "/tmp/sv3-session-verification-src";
+  let _ = make_session_for( claude_home.path(), src, UUID_A );
   let envelope = clr_envelope( UUID_B );
 
   let out = run_with_fake_claude(
     &envelope,
+    claude_home.path(),
     &[
-      "--session-dir", &session_path,
+      "--from", src,
       "hello",
       "--max-sessions", "0",
       "--new-session",
@@ -190,20 +195,21 @@ fn sv3_new_session_flag_skips_mismatch_check()
 
 // sv4 — empty session dir: no mismatch check (expected_id is None)
 //
-// Session dir has no `.jsonl` files → session_exists() returns None → expected_id = None.
-// Fake claude returns session_id = UUID_B.
+// `--from <src>` storage has no `.jsonl` files (never seeded) → session_exists()
+// returns None → expected_id = None. Fake claude returns session_id = UUID_B.
 // Expected: exit 0, NO mismatch warning.
 #[ test ]
 fn sv4_empty_session_dir_skips_mismatch_check()
 {
-  let empty_dir = tempfile::TempDir::new().expect( "tmpdir" );
-  let session_path = empty_dir.path().to_str().expect( "utf-8 path" ).to_owned();
+  let claude_home = tempfile::TempDir::new().expect( "tmpdir" );
+  let src = "/tmp/sv4-session-verification-src";
   let envelope = clr_envelope( UUID_B );
 
   let out = run_with_fake_claude(
     &envelope,
+    claude_home.path(),
     &[
-      "--session-dir", &session_path,
+      "--from", src,
       "hello",
       "--max-sessions", "0",
       "--output-style", "raw",

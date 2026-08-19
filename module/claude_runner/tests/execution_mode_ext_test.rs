@@ -12,7 +12,7 @@
 
 
 mod cli_binary_test_helpers;
-use cli_binary_test_helpers::{ fake_claude, fake_claude_dir, make_session_dir, make_zero_turn_session_dir, run_dry, run_with_path, run_with_path_stdin };
+use cli_binary_test_helpers::{ fake_claude, fake_claude_dir, make_session_dir, make_session_for, make_zero_turn_session_dir, run_cli_with_env, run_dry, run_with_path, run_with_path_stdin };
 
 
 // BUG-425: completely empty piped stdin (`echo -n "" | clr`), no message, must also
@@ -108,8 +108,16 @@ fn bug_reproducer_425_empty_stdin_no_tty()
 #[ test ]
 fn bug_reproducer_426_c_injected_without_message()
 {
-  let ( _session, session_path ) = make_session_dir();
-  let output = run_dry( &[ "--session-dir", &session_path ] );
+  let claude_home = tempfile::TempDir::new().expect( "create claude home" );
+  let src = "/tmp/bug426-no-message-src";
+  let _jsonl = make_session_for( claude_home.path(), src, "44444444-4444-4444-4444-444444444441" );
+  let claude_home_str = claude_home.path().to_str().expect( "claude home path valid utf-8" );
+  let out = run_cli_with_env(
+    &[ "--dry-run", "--from", src ],
+    &[ ( "CLAUDE_HOME", claude_home_str ) ],
+  );
+  assert!( out.status.success(), "dry-run must succeed. stderr: {}", String::from_utf8_lossy( &out.stderr ) );
+  let output = String::from_utf8_lossy( &out.stdout );
   assert!(
     !output.contains( " -c" ),
     "-c must not be injected when no message/--print/--file/--interactive is given, \
@@ -157,8 +165,16 @@ fn bug_reproducer_426_c_injected_without_message()
 #[ test ]
 fn bug_reproducer_426_interactive_resume_unaffected()
 {
-  let ( _session, session_path ) = make_session_dir();
-  let output = run_dry( &[ "--session-dir", &session_path, "--interactive" ] );
+  let claude_home = tempfile::TempDir::new().expect( "create claude home" );
+  let src = "/tmp/bug426-interactive-resume-src";
+  let _jsonl = make_session_for( claude_home.path(), src, "44444444-4444-4444-4444-444444444442" );
+  let claude_home_str = claude_home.path().to_str().expect( "claude home path valid utf-8" );
+  let out = run_cli_with_env(
+    &[ "--dry-run", "--from", src, "--interactive" ],
+    &[ ( "CLAUDE_HOME", claude_home_str ) ],
+  );
+  assert!( out.status.success(), "dry-run must succeed. stderr: {}", String::from_utf8_lossy( &out.stderr ) );
+  let output = String::from_utf8_lossy( &out.stdout );
   assert!(
     output.contains( " -c" ),
     "-c must still be injected for an explicit --interactive resume with no message \

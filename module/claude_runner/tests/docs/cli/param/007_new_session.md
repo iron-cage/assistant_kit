@@ -13,7 +13,7 @@ Edge case tests for the new session flag. Tests validate continuation suppressio
 | EC-3 | `--new-session` without message → accepted, no error | Edge Case |
 | EC-4 | `--new-session` + message → both handled correctly | Interaction |
 | EC-5 | `--help` lists `--new-session` | Documentation |
-| EC-6 | `--new-session` + `--session-dir` → both accepted, no conflict | Interaction |
+| EC-6 | `--new-session` + `--session-dir` → both accepted (`--session-dir` deprecated, inert) | Interaction |
 
 ## Test Coverage Summary
 
@@ -78,11 +78,11 @@ Edge case tests for the new session flag. Tests validate continuation suppressio
 - **Commands:** run, ask
 ---
 
-### EC-6: `--new-session` + `--session-dir` → no conflict
+### EC-6: `--new-session` + `--session-dir` → both accepted (`--session-dir` deprecated, inert — BUG-493)
 
 - **Given:** clean environment
 - **When:** `clr --dry-run --new-session --session-dir /tmp/sessions "Fix bug"`
-- **Then:** Both flags accepted; assembled command contains `--session-dir` and no `-c`
+- **Then:** Both flags accepted, no conflict; env block does NOT contain `CLAUDE_CODE_SESSION_DIR=` (`--session-dir` has zero effect on session storage); no `-c` in assembled command
 - **Exit:** 0
 - **Source:** [007_new_session.md](../../../../docs/cli/param/007_new_session.md)
 - **Commands:** run, ask

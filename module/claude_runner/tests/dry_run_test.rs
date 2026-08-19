@@ -21,7 +21,7 @@
 //! - `--dir` emits `cd <path>` prefix line
 //! - `--max-tokens N` overrides the default token env var
 //! - `--model NAME` appears in command args
-//! - `--session-dir PATH` appears as `CLAUDE_CODE_SESSION_DIR` env var
+//! - `--session-dir PATH` is deprecated and inert (BUG-493) — no env var, warns on stderr
 //! - Combined flags produce correct combined output (no explicit `-c` needed)
 //! - Message becomes quoted in command output — FR-1
 //! - Message with embedded double quotes is properly escaped
@@ -43,7 +43,7 @@
 //! - T-C: bare `--dry-run --session-dir <nonempty>` (print mode, no message) does NOT inject `-c` (D-10 preserved)
 
 mod cli_binary_test_helpers;
-use cli_binary_test_helpers::{ run_cli, run_dry, stdout_str };
+use cli_binary_test_helpers::{ run_cli, run_cli_with_env, run_dry, stdout_str };
 use std::process::Command;
 
 #[ test ]
@@ -91,12 +91,18 @@ fn model_param_appears_in_command()
 }
 
 #[ test ]
-fn session_dir_appears_as_env_var()
+fn session_dir_no_longer_sets_env_var()
 {
-  let output = run_dry( &[ "--session-dir", "/tmp/sessions", "test" ] );
+  let out = run_cli( &[ "--dry-run", "--session-dir", "/tmp/sessions", "test" ] );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  let stderr = String::from_utf8_lossy( &out.stderr );
   assert!(
-    output.contains( "CLAUDE_CODE_SESSION_DIR=/tmp/sessions" ),
-    "--session-dir must set CLAUDE_CODE_SESSION_DIR. Got:\n{output}"
+    !stdout.contains( "CLAUDE_CODE_SESSION_DIR=" ),
+    "--session-dir is deprecated and inert — must never set the env var. Got:\n{stdout}"
+  );
+  assert!(
+    stderr.contains( "deprecated" ) && stderr.contains( "/tmp/sessions" ),
+    "--session-dir must emit a deprecation warning naming the value. Got:\n{stderr}"
   );
 }
 
@@ -599,7 +605,7 @@ fn empty_positional_arg_produces_bare_command()
   );
 }
 
-// T-A: `--interactive --session-dir <nonempty>` injects `-c`
+// T-A: `--interactive --from <session with history>` injects `-c`
 //
 // ## Root Cause (BUG-435)
 //
@@ -624,24 +630,32 @@ fn empty_positional_arg_produces_bare_command()
 //
 // ## Prevention
 //
-// Assert that `--interactive --session-dir <nonempty>` produces ` -c` in dry-run output.
-// In test context `--interactive` forces `use_print=false` (the same path real bare
-// TTY invocations take via `!is_tty`).
+// Assert that `--interactive --from <src with history>` produces ` -c` in dry-run
+// output.  In test context `--interactive` forces `use_print=false` (the same path
+// real bare TTY invocations take via `!is_tty`).
 //
 // ## Pitfall
 //
 // In the test harness (non-TTY subprocess), bare `--dry-run` without `--interactive`
 // routes to print mode (`use_print=true`); `!use_print=false`.  `--interactive` is
-// required to reach the interactive path in the test harness.
+// required to reach the interactive path in the test harness.  Fix(BUG-493):
+// `expected_id` now comes exclusively from `--from`'s resolved storage under
+// `CLAUDE_HOME` — seed via `make_session_for()`, never raw `--session-dir` (inert).
 // test_kind: bug_reproducer(BUG-435)
 #[ test ]
 fn ta_interactive_with_session_injects_continue_flag()
 {
-  let ( _dir, session_path ) = cli_binary_test_helpers::make_session_dir();
-  let out = run_cli( &[ "--dry-run", "--interactive", "--session-dir", &session_path ] );
+  let claude_home = tempfile::TempDir::new().expect( "create claude home" );
+  let src = "/tmp/ta-interactive-with-session-src";
+  let _jsonl = cli_binary_test_helpers::make_session_for( claude_home.path(), src, "11111111-1111-1111-1111-111111111111" );
+  let claude_home_str = claude_home.path().to_str().expect( "claude home path valid utf-8" );
+  let out = run_cli_with_env(
+    &[ "--dry-run", "--interactive", "--from", src ],
+    &[ ( "CLAUDE_HOME", claude_home_str ) ],
+  );
   assert!(
     out.status.success(),
-    "--interactive --session-dir <nonempty> dry-run must succeed. stderr: {}",
+    "--interactive --from <session with history> dry-run must succeed. stderr: {}",
     String::from_utf8_lossy( &out.stderr )
   );
   let stdout = String::from_utf8_lossy( &out.stdout );
@@ -651,7 +665,7 @@ fn ta_interactive_with_session_injects_continue_flag()
   );
 }
 
-// T-B: `--interactive --session-dir <empty>` does NOT inject `-c`
+// T-B: `--interactive --from <no session>` does NOT inject `-c`
 //
 // ## Root Cause (BUG-435)
 //
@@ -668,33 +682,38 @@ fn ta_interactive_with_session_injects_continue_flag()
 // ## Fix Applied
 //
 // The `expected_id.is_some()` outer guard remains unchanged; `!use_print` only gates
-// the inner condition.  With an empty session dir, `session_exists()` returns `None`
+// the inner condition.  With no seeded session, `session_exists()` returns `None`
 // → -c is never injected.
 //
 // ## Prevention
 //
-// Assert that `--interactive --session-dir <empty>` produces no ` -c` in dry-run output.
+// Assert that `--interactive --from <src with no history>` produces no ` -c` in
+// dry-run output.
 //
 // ## Pitfall
 //
-// Always use a fresh `tempfile::TempDir::new()` (no .jsonl files) for the no-session
-// case — never rely on the ambient cwd, which may have prior sessions on the host.
+// Always use a fresh, unseeded `CLAUDE_HOME` temp dir for the no-session case —
+// never rely on the ambient host `~/.claude`, which may have prior sessions.
+// Fix(BUG-493): `--session-dir` no longer provides isolation; `CLAUDE_HOME` does.
 // test_kind: bug_reproducer(BUG-435)
 #[ test ]
 fn tb_interactive_without_session_no_continue_flag()
 {
-  let empty_dir = tempfile::TempDir::new().expect( "create empty session dir" );
-  let session_path = empty_dir.path().to_str().expect( "session dir path valid utf-8" );
-  let out = run_cli( &[ "--dry-run", "--interactive", "--session-dir", session_path ] );
+  let claude_home = tempfile::TempDir::new().expect( "create empty claude home" );
+  let claude_home_str = claude_home.path().to_str().expect( "claude home path valid utf-8" );
+  let out = run_cli_with_env(
+    &[ "--dry-run", "--interactive", "--from", "/tmp/tb-interactive-no-session-src" ],
+    &[ ( "CLAUDE_HOME", claude_home_str ) ],
+  );
   assert!(
     out.status.success(),
-    "--interactive --session-dir <empty> dry-run must succeed. stderr: {}",
+    "--interactive --from <no session> dry-run must succeed. stderr: {}",
     String::from_utf8_lossy( &out.stderr )
   );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(
     !stdout.contains( " -c" ),
-    "--interactive with empty session dir must NOT inject -c. Got:\n{stdout}"
+    "--interactive with no existing session must NOT inject -c. Got:\n{stdout}"
   );
 }
 
@@ -720,22 +739,28 @@ fn tb_interactive_without_session_no_continue_flag()
 //
 // ## Prevention
 //
-// Assert that bare `--dry-run --session-dir <nonempty>` (no `--interactive`, no message)
-// does NOT inject -c in dry-run output.
+// Assert that bare `--dry-run --from <src with history>` (no `--interactive`, no
+// message) does NOT inject -c in dry-run output.
 //
 // ## Pitfall
 //
-// In test context (non-TTY subprocess), bare `--dry-run --session-dir <path>` routes
-// to print mode (`use_print=true`), so `!use_print=false`.  Do NOT add `--interactive`
+// In test context (non-TTY subprocess), bare `--dry-run --from <src>` routes to
+// print mode (`use_print=true`), so `!use_print=false`.  Do NOT add `--interactive`
 // here — that changes the mode to interactive and would test T-A instead.
 #[ test ]
 fn tc_print_mode_with_session_no_continue_flag()
 {
-  let ( _dir, session_path ) = cli_binary_test_helpers::make_session_dir();
-  let out = run_cli( &[ "--dry-run", "--session-dir", &session_path ] );
+  let claude_home = tempfile::TempDir::new().expect( "create claude home" );
+  let src = "/tmp/tc-print-mode-with-session-src";
+  let _jsonl = cli_binary_test_helpers::make_session_for( claude_home.path(), src, "33333333-3333-3333-3333-333333333333" );
+  let claude_home_str = claude_home.path().to_str().expect( "claude home path valid utf-8" );
+  let out = run_cli_with_env(
+    &[ "--dry-run", "--from", src ],
+    &[ ( "CLAUDE_HOME", claude_home_str ) ],
+  );
   assert!(
     out.status.success(),
-    "bare --dry-run --session-dir <nonempty> must succeed. stderr: {}",
+    "bare --dry-run --from <session with history> must succeed. stderr: {}",
     String::from_utf8_lossy( &out.stderr )
   );
   let stdout = String::from_utf8_lossy( &out.stdout );

@@ -4,7 +4,7 @@
 
 - **Purpose**: Document the `--from <DIR>` parameter — session cross-loading source directory.
 - **Responsibility**: Specify the type, default-to-cwd behavior, interaction with `--session-dir`, and usage examples.
-- **In Scope**: `--from` semantics, default-to-cwd rule (shared with `--to`/`--dir`), precedence vs `--session-dir`, applicable commands.
+- **In Scope**: `--from` semantics, default-to-cwd rule (shared with `--to`/`--dir`), `--session-dir`'s deprecation (inert, never suppresses `--from`), applicable commands.
 - **Out of Scope**: `scope_for()` internals (→ `../feature/005_session_path_resolution.md`); isolation contract (→ `../invariant/011_session_source_isolation.md`); `--dir`/`--to` (→ `008_dir.md`).
 
 ### Definition
@@ -35,11 +35,11 @@
 
 This is a one-time cross-load; the runner reads the source directory's session files but never modifies them — the transplant is a copy outward. See `../../invariant/011_session_source_isolation.md` for the read/write isolation contract.
 
-**Higher-level than `--session-dir`:**
-- `--session-dir /path` takes the raw path verbatim as the session storage directory.
-- `--from /home/alice/project` computes `Df("/home/alice/project")` and uses `~/.claude/projects/-home-alice-project` as the session storage path. Ergonomically equivalent but requires only the project directory, not the encoded storage path.
+**`--session-dir` is deprecated and inert:**
+- `--session-dir /path`/`CLR_SESSION_DIR` used to override the raw session storage directory via a `CLAUDE_CODE_SESSION_DIR` export; claude ≥2.x ignores that override entirely for both reads and writes (BUG-490), so setting it has no effect on where sessions load from or save to.
+- `--from /home/alice/project` (via the physical transplant above) is the only mechanism that still works for cross-loading another project's session history.
 
-**Precedence:** If both `--from` and `--session-dir` are given, `--session-dir` takes precedence (raw path wins over computed path).
+**Precedence:** `--session-dir` never suppresses `--from` — its transplant proceeds exactly as if `--session-dir` were absent. Setting `--session-dir`/`CLR_SESSION_DIR` to a non-empty value emits a deprecation warning (unless `--quiet`) naming the value; see [`010_session_dir.md`](010_session_dir.md).
 
 **No backward-compatible alias:** the pre-rename flag name `--session-from` (and its env var `CLR_SESSION_FROM`) is no longer recognized — a breaking rename, not an alias. `--session-from` now fails parsing with the standard unknown-option error.
 
@@ -69,7 +69,7 @@ CLR_FROM=/home/alice/project-a clr "Continue"
 
 | Parameter | Interaction |
 |-----------|-------------|
-| `--session-dir` | `--session-dir` takes precedence; `--from` ignored when both given |
+| `--session-dir` | deprecated and inert (BUG-493); never suppresses `--from`'s transplant, emits a deprecation warning naming its value |
 | `--dir` / `--to` | `--dir`/`--to` sets where Claude runs (also defaults to cwd); `--from` sets where the session is loaded from — independent flags that share the same default-to-cwd rule |
 | `--new-session` | `--new-session` suppresses `-c` injection; if both given, `--new-session` wins (no session loaded) |
 | `--from` (no session history) | If the source dir has no qualifying session files, no `-c` is injected (no cross-loading occurs; Claude starts fresh in target dir) |
@@ -78,7 +78,7 @@ CLR_FROM=/home/alice/project-a clr "Continue"
 
 | # | Parameter | Relationship |
 |---|-----------|--------------|
-| 010 | [`--session-dir`](010_session_dir.md) | Raw session storage path override; takes precedence over `--from` |
+| 010 | [`--session-dir`](010_session_dir.md) | Deprecated, inert raw storage override (BUG-493); never suppresses `--from` |
 | 008 | [`--dir`](008_dir.md) | Target directory where Claude runs; `--to` is an alias; shares the same default-to-cwd rule as `--from` |
 | 007 | [`--new-session`](007_new_session.md) | Suppresses session continuation; takes precedence over `--from` |
 

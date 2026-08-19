@@ -50,7 +50,7 @@ If any default injection is removed:
 ### Fixed Defects
 
 **BUG-214 (fixed 2026-05-28) — `-c` was injected unconditionally regardless of session existence:**
-`build_claude_command()` now calls `session_exists()` before injecting `-c`. On first invocation or with an empty `--session-dir`, `-c` is suppressed and the REPL opens unconditionally. The invariant above (`-c` on by default) now carries the implicit precondition: session storage must be non-empty.
+`build_claude_command()` now calls `session_exists()` before injecting `-c`. On first invocation, or whenever the effective session source (`--from`, defaulting to CWD) has no prior session, `-c` is suppressed and the REPL opens unconditionally. The invariant above (`-c` on by default) now carries the implicit precondition: session storage must be non-empty.
 
 - **Root cause:** `src/cli/builder.rs` — `session_exists()` + `check_continuation()`, `Fix(BUG-214-reopen)` comment; original `cli/mod.rs` path is now `builder.rs` after refactor
 - **Bug report:** `agent_kit/task/claude_runner/bug/214_bare_clr_exits_no_session.md` (external to crate)
@@ -82,7 +82,7 @@ If any default injection is removed:
 | `../../tests/cli_args_ext_test.rs` | T36–T49, S58–S79; --keep-claudecode and extended flag coverage |
 | `../../tests/ultrathink_args_test.rs` | T50–T58 ultrathink suffix injection, idempotent guard, and --no-ultrathink opt-out |
 | `../../tests/effort_args_test.rs` | T59–T70 --effort max default injection and override behavior |
-| `../../tests/param_edge_cases_test.rs` | `bug_214_empty_session_dir_suppresses_continue_flag` — BUG-214 regression (empty `--session-dir` → no `-c`) |
+| `../../tests/param_edge_cases_test.rs` | `bug_214_empty_session_source_suppresses_continue_flag` — BUG-214 regression (empty session source via `--from` → no `-c`) |
 | `../../tests/dry_run_test.rs` | `bug_reproducer_214_no_session_dir_fresh_cwd_no_continue_flag` — BUG-214-reopen regression (fresh CWD, no `--session-dir` → no `-c`) |
 
 ### Provenance

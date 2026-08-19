@@ -69,7 +69,7 @@ fn runner_option_group() -> cli_fmt::help::OptionGroup
       OptionEntry { name : "--dir <PATH>, --to <PATH>".into(),       desc : "Working directory (alias: --to)".into() },
       OptionEntry { name : "--subdir <NAME>".into(),                 desc : "Named subdirectory appended to --dir as /-NAME; . = identity".into() },
       OptionEntry { name : "--message <MSG>".into(),                  desc : "Message to send (alternative to positional argument)".into() },
-      OptionEntry { name : "--session-dir <PATH>".into(),            desc : "Session storage directory".into() },
+      OptionEntry { name : "--session-dir <PATH>".into(),            desc : "Session storage directory — DEPRECATED, inert (BUG-493); use --from".into() },
       OptionEntry { name : "--from <DIR>".into(),                     desc : "Cross-load most-recent session from source directory (default: current directory) [env: CLR_FROM]".into() },
       OptionEntry { name : "--dry-run".into(),                       desc : "Print command without executing".into() },
       OptionEntry { name : "--trace".into(),                         desc : "Print command to stderr then execute (like set -x)".into() },
@@ -361,7 +361,7 @@ pub( crate ) fn print_ask_help() -> !
   println!( "  --dir <PATH>, --to <PATH>          Working directory (alias: --to)" );
   println!( "  --subdir <NAME>                    Named subdirectory appended to --dir as /-NAME; . = identity" );
   println!( "  --message <MSG>                    Message to send (alternative to positional argument)" );
-  println!( "  --session-dir <PATH>               Session storage directory" );
+  println!( "  --session-dir <PATH>               Session storage directory — DEPRECATED, inert (BUG-493); use --from" );
   println!( "  --from <DIR>                       Cross-load most-recent session from source directory (default: current directory) [env: CLR_FROM]" );
   println!( "  --quiet                            Suppress non-fatal diagnostics (gate-wait, retry, keep-claudecode) [env: CLR_QUIET]" );
   println!( "  --args-file <PATH>                 Load clr params from JSON file (or stdin JSON); env: CLR_ARGS_FILE" );
@@ -419,7 +419,7 @@ pub( crate ) fn print_topic_help() -> !
   println!( "  --dir <PATH>, --to <PATH>          Working directory (alias: --to)" );
   println!( "  --subdir <NAME>                    Named subdirectory (default: auto-generated slug)" );
   println!( "  --message <MSG>                    Message to send (alternative to positional argument)" );
-  println!( "  --session-dir <PATH>               Session storage directory" );
+  println!( "  --session-dir <PATH>               Session storage directory — DEPRECATED, inert (BUG-493); use --from" );
   println!( "  --from <DIR>                       Cross-load most-recent session from source directory (default: current directory) [env: CLR_FROM]" );
   println!( "  --quiet                            Suppress non-fatal diagnostics (gate-wait, retry, keep-claudecode) [env: CLR_QUIET]" );
   println!( "  --args-file <PATH>                 Load clr params from JSON file (or stdin JSON); env: CLR_ARGS_FILE" );

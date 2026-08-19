@@ -12,7 +12,7 @@ Test case planning for [invariant/001_default_flags.md](../../../docs/invariant/
 | IN-4 | `--effort max` present by default | Default Present |
 | IN-5 | Message has `ultrathink` suffix by default | Default Present |
 | IN-6 | All opt-outs together remove all suppressible defaults | Combined Suppression |
-| IN-7 | Empty `--session-dir` → `-c` absent from assembled command (BUG-214 regression) | First-use guard |
+| IN-7 | Empty session source (`--from`) → `-c` absent from assembled command (BUG-214 regression) | First-use guard |
 | IN-8 | Fresh CWD, no `--session-dir` → `-c` absent from assembled command (BUG-214-reopen regression) | First-use guard |
 
 ## Test Coverage Summary
@@ -87,14 +87,14 @@ Test case planning for [invariant/001_default_flags.md](../../../docs/invariant/
 
 ---
 
-### IN-7: Empty `--session-dir` → `-c` absent from assembled command (BUG-214 regression)
+### IN-7: Empty session source (`--from`) → `-c` absent from assembled command (BUG-214 regression)
 
-- **Given:** clean environment; `--session-dir` points to a freshly created empty directory
-- **When:** `clr --dry-run --session-dir /tmp/mre214_empty "Fix bug"`
-- **Then:** Assembled command does NOT contain ` -c`; `session_exists()` guard detected empty directory and suppressed `-c` injection
+- **Given:** clean environment; `--from` points to a freshly created empty directory
+- **When:** `clr --dry-run --from /tmp/mre214_empty "Fix bug"`
+- **Then:** Assembled command does NOT contain ` -c`; `session_exists()` guard detected empty source directory and suppressed `-c` injection
 - **Exit:** 0
 - **Source:** [invariant/001_default_flags.md § Fixed Defects](../../../docs/invariant/001_default_flags.md)
-- **Implementation:** `tests/param_edge_cases_test.rs` — `bug_214_empty_session_dir_suppresses_continue_flag`
+- **Implementation:** `tests/param_edge_cases_test.rs` — `bug_214_empty_session_source_suppresses_continue_flag`
 
 ---
 

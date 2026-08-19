@@ -29,7 +29,7 @@
 //! - T04: bare `--dry-run` contains `-c` when session dir is non-empty
 //! - T05: `--dangerously-skip-permissions` appears in command by default (no explicit flag needed)
 //! - T06: `--verbose` appears in command
-//! - T07: `--session-dir` appears as env var
+//! - T07: `--session-dir` is deprecated and inert (BUG-493) — no env var, warns on stderr
 //! - T08: `--dir` produces `cd <path>` prefix
 //! - T09: `--dry-run` alone accepted (no message required)
 //! - T10: multiple flags combined with session-dir containing files → `-c` injected
@@ -46,7 +46,7 @@
 //! - T21: `--max-tokens -1` rejected (negative)
 //! - T22: duplicate `--dir` last-wins
 //! - T23: duplicate `--model` last-wins
-//! - T24: duplicate `--session-dir` last-wins
+//! - T24: duplicate `--session-dir` last-wins (deprecation warning names the winning value)
 //! - T25: duplicate `--max-tokens` last-wins
 //! - T26: `--help` after valid flags shows help
 //! - T27: `--` separator makes everything after positional
@@ -142,16 +142,21 @@ fn t06_verbose_flag_passed_to_claude()
   );
 }
 
-// T07: --session-dir appears as env var
+// T07: --session-dir is deprecated and inert (BUG-493) — no env var, deprecation warning on stderr
 #[ test ]
 fn t07_session_dir_flag()
 {
   let out = run_cli( &[ "--dry-run", "--session-dir", "/tmp/sess", "test" ] );
   assert!( out.status.success(), "exit={} stderr={}", out.status.code().unwrap_or( -1 ), String::from_utf8_lossy( &out.stderr ) );
   let stdout = String::from_utf8_lossy( &out.stdout );
+  let stderr = String::from_utf8_lossy( &out.stderr );
   assert!(
-    stdout.contains( "CLAUDE_CODE_SESSION_DIR=/tmp/sess" ),
-    "--session-dir must set env var. Got:\n{stdout}"
+    !stdout.contains( "CLAUDE_CODE_SESSION_DIR=" ),
+    "--session-dir is deprecated and inert — must never set the env var. Got:\n{stdout}"
+  );
+  assert!(
+    stderr.contains( "deprecated" ) && stderr.contains( "/tmp/sess" ),
+    "--session-dir must emit a deprecation warning naming the value. Got:\n{stderr}"
   );
 }
 
@@ -348,15 +353,17 @@ fn t23_duplicate_model_uses_last_value()
   assert!( !stdout.contains( "first-model" ), "first --model must be overridden. Got:\n{stdout}" );
 }
 
-// T24: duplicate --session-dir last-wins
+// T24: duplicate --session-dir last-wins (deprecation warning names the winning value, BUG-493)
 #[ test ]
 fn t24_duplicate_session_dir_uses_last_value()
 {
   let out = run_cli( &[ "--dry-run", "--session-dir", "/first", "--session-dir", "/last", "test" ] );
   assert!( out.status.success(), "duplicate --session-dir must exit 0 (last wins)" );
   let stdout = String::from_utf8_lossy( &out.stdout );
-  assert!( stdout.contains( "CLAUDE_CODE_SESSION_DIR=/last" ), "last --session-dir must win. Got:\n{stdout}" );
-  assert!( !stdout.contains( "CLAUDE_CODE_SESSION_DIR=/first" ), "first must be overridden. Got:\n{stdout}" );
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert!( !stdout.contains( "CLAUDE_CODE_SESSION_DIR=" ), "--session-dir is deprecated and inert — must never set the env var. Got:\n{stdout}" );
+  assert!( stderr.contains( "/last" ), "deprecation warning must name the last (winning) value. Got:\n{stderr}" );
+  assert!( !stderr.contains( "/first" ), "deprecation warning must not carry the overridden first value. Got:\n{stderr}" );
 }
 
 // T25: duplicate --max-tokens last-wins

@@ -1,7 +1,7 @@
 # User Story: Project-specific Execution
 
 - **Source:** [docs/cli/user_story/005_project_specific_execution.md](../../../../docs/cli/user_story/005_project_specific_execution.md)
-- **Primary flags:** `--dir`, `--session-dir`
+- **Primary flags:** `--dir`, `--session-dir` (DEPRECATED, inert → BUG-493)
 - **Command:** `run`
 
 ## Test Case Index
@@ -9,7 +9,7 @@
 | ID | Category | Summary |
 |----|----------|---------|
 | US-1 | Happy path | `--dir` sets subprocess working directory |
-| US-2 | Parameter interaction | `--dir` with `--session-dir` for full project isolation |
+| US-2 | Parameter interaction | `--dir` alone gives full project isolation; `--session-dir` deprecated, inert |
 | US-3 | Failure path | `--dir` with non-existent path errors |
 | US-4 | Boundary | `--dir` combined with `--new-session` prevents context bleed |
 
@@ -22,11 +22,11 @@
 - **Then:** Assembled command includes `--dir /tmp/my_project`; subprocess would execute in that directory
 - **Exit:** 0
 
-### US-2: full project isolation with session-dir
+### US-2: full project isolation is automatic via `--dir` (`--session-dir` deprecated, inert — BUG-493)
 
-- **Given:** Directories `/tmp/project_a` and `/tmp/sessions_a` exist
-- **When:** `clr --dir /tmp/project_a --session-dir /tmp/sessions_a --dry-run "analyze"`
-- **Then:** Assembled command includes both `--dir /tmp/project_a` and `--session-dir /tmp/sessions_a`; session state isolated from default location
+- **Given:** Directory `/tmp/project_a` exists
+- **When:** `clr --dir /tmp/project_a --dry-run "analyze"`
+- **Then:** Assembled command includes `--dir /tmp/project_a`; session storage is automatically isolated to that project via `Df()`-encoding of `/tmp/project_a` — no manual `--session-dir` override needed; passing `--session-dir` alongside has zero effect on storage and only emits a deprecation warning
 - **Exit:** 0
 
 ### US-3: non-existent directory path

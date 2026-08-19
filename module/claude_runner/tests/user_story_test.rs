@@ -58,7 +58,7 @@ use cli_binary_test_helpers::make_proc_dir;
 ///   non-TTY case, matching every other subprocess-spawning test in this suite.
 /// Note: -c is NOT asserted here — the test cwd has no prior Claude session so
 /// `session_exists()` correctly returns `None`. Session continuation is tested
-/// separately in `us01_2` (which uses --session-dir with a dummy session file).
+/// separately in `us01_2` (which seeds a prior session via `--from` + `CLAUDE_HOME`).
 #[ test ]
 fn us01_1_bare_clr_repl_defaults()
 {
@@ -79,27 +79,33 @@ fn us01_1_bare_clr_repl_defaults()
 ///
 /// Fix(BUG-426): retitled from `us01_2_session_continuation_flag_present` and inverted
 ///   the assertion — this test's own scenario is exactly Task 429's Test Matrix T07/T08
-///   (`--dry-run --session-dir <dir-with-prior-session>`, no message, no `--print`), whose
-///   fixed-code expected behavior is "`-c` is suppressed (no message/print-mode/file/
-///   stdin-content present)". The pre-fix assertion (`-c` must be present) was literally
-///   asserting BUG-426's own defect as correct — `-c` firing with nothing to accompany it.
+///   (a prior session present, no message, no `--print`), whose fixed-code expected
+///   behavior is "`-c` is suppressed (no message/print-mode/file/stdin-content present)".
+///   The pre-fix assertion (`-c` must be present) was literally asserting BUG-426's own
+///   defect as correct — `-c` firing with nothing to accompany it.
 /// Root cause: this test predates BUG-426's fix, when an existing session alone (with no
 ///   message-presence check) was assumed sufficient to justify `-c`.
 /// Pitfall: this scenario still composes a valid command — non-TTY stdin (Fix(BUG-425))
 ///   routes it to print mode instead of erroring, so `--print` appears without `-c` or a
-///   message. Uses --session-dir pointing to a non-empty temp dir so `session_exists()`
+///   message. Fix(BUG-493): seeds the prior session via `--from` + `CLAUDE_HOME` (not
+///   `--session-dir`, which no longer feeds `session_exists()` at all) so `session_exists()`
 ///   returns `Some(SessionId)`.
 #[ test ]
 fn us01_2_session_continuation_requires_message_to_inject_c()
 {
-  let session_dir = tempfile::tempdir().expect( "create temp session dir" );
-  std::fs::write( session_dir.path().join( "00000000-0000-0000-0000-000000000000.jsonl" ), b"{}" )
-    .expect( "write dummy session file" );
-  let session_dir_str = session_dir.path().to_str().expect( "session dir path is valid utf-8" );
-  let output = run_dry( &[ "--session-dir", session_dir_str ] );
+  let claude_home = tempfile::TempDir::new().expect( "create claude home" );
+  let src = "/tmp/us01-2-session-continuation-src";
+  let _jsonl = cli_binary_test_helpers::make_session_for( claude_home.path(), src, "00000000-0000-0000-0000-000000000000" );
+  let claude_home_str = claude_home.path().to_str().expect( "claude home path valid utf-8" );
+  let out = run_cli_with_env(
+    &[ "--dry-run", "--from", src ],
+    &[ ( "CLAUDE_HOME", claude_home_str ) ],
+  );
+  assert!( out.status.success(), "must exit 0. stderr: {}", String::from_utf8_lossy( &out.stderr ) );
+  let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(
-    !output.contains( " -c" ),
-    "non-empty --session-dir without a message must NOT inject -c. Got:\n{output}"
+    !stdout.contains( " -c" ),
+    "prior session without a message must NOT inject -c. Got:\n{stdout}"
   );
 }
 
@@ -129,7 +135,8 @@ fn us01_4_repl_with_custom_dir()
     "--dir must produce 'cd /tmp' prefix. Got:\n{output}"
   );
   // Note: -c is NOT asserted here — /tmp has no prior Claude session so session_exists()
-  // correctly returns `None`. Session continuation is tested separately in us01_2 (default cwd).
+  // correctly returns `None`. Session continuation is tested separately in us01_2
+  // (seeds a prior session via --from + CLAUDE_HOME).
 }
 
 // ── US02: Print Mode Capture ────────────────────────────────────────────────
@@ -332,22 +339,30 @@ fn us05_1_dir_sets_working_directory()
   );
 }
 
-/// US-2: --dir with --session-dir for full project isolation.
+/// US-2: --dir with --session-dir → cd prefix present; --session-dir deprecated and inert (BUG-493).
 #[ test ]
 fn us05_2_dir_with_session_dir()
 {
-  let output = run_dry( &[
+  let out = run_cli( &[
+    "--dry-run",
     "--dir", "/tmp/project_a",
     "--session-dir", "/tmp/sessions_a",
     "analyze",
   ] );
+  assert!( out.status.success(), "must exit 0. stderr: {}", stderr_str( &out ) );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  let stderr = stderr_str( &out );
   assert!(
-    output.contains( "cd /tmp/project_a" ),
-    "cd prefix must appear. Got:\n{output}"
+    stdout.contains( "cd /tmp/project_a" ),
+    "cd prefix must appear. Got:\n{stdout}"
   );
   assert!(
-    output.contains( "CLAUDE_CODE_SESSION_DIR=/tmp/sessions_a" ),
-    "session dir env var must appear. Got:\n{output}"
+    !stdout.contains( "CLAUDE_CODE_SESSION_DIR=" ),
+    "--session-dir is deprecated and inert — must never set the env var. Got:\n{stdout}"
+  );
+  assert!(
+    stderr.contains( "deprecated" ) && stderr.contains( "/tmp/sessions_a" ),
+    "--session-dir must emit a deprecation warning naming the value. Got:\n{stderr}"
   );
 }
 

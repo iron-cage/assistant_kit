@@ -21,17 +21,27 @@ use claude_storage_core::{ SessionId, continuation };
 /// Pitfall: do not use `claude_storage_core::continuation::check_continuation` here —
 ///   it detects legacy `conversation.json` / `.claude*` formats that produce no UUID.
 ///
-/// - With `--session-dir <dir>`: scan `<dir>` directly via `most_recent_session_in_dir`.
-/// - Without `--session-dir`: encode the effective dir and use `most_recent_session_id`.
+/// Fix(BUG-493): `explicit_dir` is now populated only from `--from`'s resolved source
+///   storage, never from raw `--session-dir` — claude ignores that override entirely
+///   and always reads/writes its own cwd-derived storage, so gating on the override's
+///   contents could inject or suppress `-c` against a directory claude never touches.
+/// Root cause: same dead `CLAUDE_CODE_SESSION_DIR` mechanism as BUG-490.
+/// Pitfall: `--from` legitimately scans its target directly, because BUG-490's fix
+///   physically copies the source session into the target's own storage before spawn —
+///   that transplant is what makes direct-scan correct for `--from` specifically.
+///
+/// - With an explicit scan dir (`--from`'s resolved source storage): scan it directly
+///   via `most_recent_session_in_dir`.
+/// - Without one: encode the effective dir and use `most_recent_session_id`.
 fn session_exists
 (
-  session_dir   : Option< &std::path::Path >,
+  explicit_dir  : Option< &std::path::Path >,
   effective_dir : Option< &std::path::Path >,
 ) -> Option< SessionId >
 {
-  if let Some( dir ) = session_dir
+  if let Some( dir ) = explicit_dir
   {
-    // Custom --session-dir: claude stores sessions directly inside this directory.
+    // --from's resolved source storage (BUG-490 transplant target) — scan it directly.
     continuation::most_recent_session_in_dir( dir )
   }
   else
@@ -232,9 +242,9 @@ pub( crate ) fn build_claude_command( cli : &CliArgs )
   {
     builder = builder.with_max_output_tokens( n );
   }
-  // --from: resolve source session dir (--session-dir wins when both are present).
-  // Computes scope_for(source_dir).claude_session_dir — the source project's encoded
-  // storage path — used below for expected-session lookup and the transplant plan.
+  // --from: resolve source session dir. Computes scope_for(source_dir).claude_session_dir
+  // — the source project's encoded storage path — used below for expected-session lookup
+  // and the transplant plan.
   //
   // Defaults to the current working directory when --from is omitted or empty — the
   // same default-to-cwd rule --to/--dir already applies (see `resolve_effective_dir`).
@@ -258,7 +268,16 @@ pub( crate ) fn build_claude_command( cli : &CliArgs )
   // Pitfall: -c injection and expected-id logic still key off the SOURCE storage dir —
   //   after the copy claude continues that same uuid in the target, so the source's
   //   most-recent session id remains the correct expected id.
-  let session_from_dir : Option< std::path::PathBuf > = if cli.session_dir.is_none()
+  //
+  // Fix(BUG-493): previously gated behind `cli.session_dir.is_none()` so a --session-dir
+  //   present alongside --from silently suppressed the whole transplant mechanism.
+  //   --session-dir is inert (see session_exists doc comment above) so it must never
+  //   disable the one mechanism (--from) that actually works.
+  // Root cause: --session-dir was treated as if it meaningfully "won" over --from, but
+  //   it has no observable effect on claude ≥2.x at all.
+  // Pitfall: this computation must run unconditionally now — do not reintroduce a
+  //   cli.session_dir guard here.
+  let session_from_dir : Option< std::path::PathBuf > =
   {
     let src_path = match cli.from.as_deref().filter( | src | !src.is_empty() )
     {
@@ -267,8 +286,7 @@ pub( crate ) fn build_claude_command( cli : &CliArgs )
     };
     let abs = physical_abs( &src_path );
     Some( claude_storage_core::scope_for( &abs ).claude_session_dir )
-  }
-  else { None };
+  };
   // Determine print mode early — used for -c injection, effort injection, and chrome
   // suppression.  Must precede expected_id so all three guards below can reference use_print.
   // Fix(BUG-227): message without -p was silently using TTY passthrough,
@@ -295,19 +313,24 @@ pub( crate ) fn build_claude_command( cli : &CliArgs )
   // Fix(BUG-320): capture expected session UUID — returned to caller for mismatch detection.
   // Root cause: bool return made the expected UUID inaccessible after -c injection.
   // Pitfall: expected_id is None when new_session is set OR when no qualifying session exists.
+  // Fix(BUG-493): dropped `cli.session_dir` from this lookup entirely — it used to feed
+  //   `session_exists` directly (taking priority over session_from_dir), gating -c on
+  //   the contents of a directory claude never actually reads or writes.
+  // Root cause: raw --session-dir was treated as an equally-valid "scan this dir
+  //   directly" source alongside --from's transplant-target dir, but only the latter
+  //   is backed by a real mechanism (BUG-490's physical copy).
+  // Pitfall: session_from_dir alone is correct here — it already defaults to cwd's own
+  //   storage when --from is absent, so this is a strict fix, not a behavior removal.
   let expected_id = if cli.new_session { None }
   else
   {
-    session_exists(
-      cli.session_dir.as_deref().map( std::path::Path::new )
-        .or( session_from_dir.as_deref() ),
-      effective_working_dir.as_deref(),
-    )
+    session_exists( session_from_dir.as_deref(), effective_working_dir.as_deref() )
   };
-  // Transplant plan (BUG-490): session_from_dir is Some only when --session-dir is
-  // absent; expected_id is Some only when not --new-session and a qualifying source
-  // session exists — together they gate the physical copy of the source session file
-  // into the TARGET's own encoded storage.
+  // Transplant plan (BUG-490): session_from_dir is now always Some (BUG-493 made its
+  // computation above unconditional); expected_id is Some only when not --new-session
+  // and a qualifying source session exists — together with the self-copy guard below
+  // (same storage -> no-op) they decide whether to physically copy the source session
+  // file into the TARGET's own encoded storage.
   // Pitfall: when source and target encode to the same storage dir, no copy is planned —
   //   fs::copy onto the same path truncates the file it is reading from.
   let transplant = if let ( Some( src_storage ), Some( id ) )
@@ -436,10 +459,14 @@ pub( crate ) fn build_claude_command( cli : &CliArgs )
   {
     builder = builder.with_model( model.clone() );
   }
-  if let Some( ref sd ) = cli.session_dir
-  {
-    builder = builder.with_session_dir( sd.clone() );
-  }
+  // Fix(BUG-493): with_session_dir()'s CLAUDE_CODE_SESSION_DIR export removed —
+  //   claude ≥2.x ignores it entirely (same dead mechanism as BUG-490's --from), so
+  //   exporting it accomplished nothing but implying a working redirect. The parameter
+  //   remains parseable (see cli.session_dir uses above: dropped from -c gating,
+  //   dropped from suppressing --from) and triggers a deprecation warning in mod.rs.
+  // Root cause: the feature's only mechanism was an env contract claude dropped; no
+  //   runner-side emulation exists for a raw storage redirect (unlike --from, whose
+  //   transplant BUG-490 already fixed).
   if let Some( ref sp ) = cli.system_prompt
   {
     builder = builder.with_system_prompt( sp.clone() );

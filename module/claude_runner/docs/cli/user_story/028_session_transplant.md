@@ -18,7 +18,7 @@
 - **AC-3 (No source history):** When `--from <DIR>` points to a directory with no qualifying session files, Claude starts a fresh session in the target directory (no error, no crash).
 - **AC-4 (Default to CWD):** `clr run --to /project-b "message"` (no `--from`) defaults the session source to CWD — Claude runs in `/project-b`, loading the most recent session from the directory `clr` was invoked in. Equivalent to explicitly passing `--from <cwd>`.
 - **AC-5 (Alias `--to`):** `--to <DIR>` is accepted as an alias for `--dir <DIR>` with identical behavior.
-- **AC-6 (Precedence):** When both `--from` and `--session-dir` are given, `--session-dir` takes precedence.
+- **AC-6 (Precedence):** `--session-dir` is deprecated and inert (claude ≥2.x ignores the override) — when both `--from` and `--session-dir` are given, `--session-dir` never suppresses the transplant, and emits a deprecation warning naming its value.
 - **AC-7 (Isolation):** The source directory's session files are never modified by the cross-loaded run.
 - **AC-8 (Bare invocation no-op):** `clr run "message"` (neither `--from` nor `--to`) plans no session transplant — both default to CWD, so source and target storage are identical and the self-copy guard suppresses the transplant plan. Ordinary `-c` continuation (unrelated to cross-loading) still applies independently.
 

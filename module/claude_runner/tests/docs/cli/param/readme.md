@@ -22,7 +22,7 @@ Per-parameter edge case indices for `clr`. See [param/readme.md](../../../../doc
 | `007_new_session.md` | Edge cases for `--new-session` flag | ✅ |
 | `008_dir.md` | Edge cases for `--dir` flag | ✅ |
 | `009_max_tokens.md` | Edge cases for `--max-tokens` flag | ✅ |
-| `010_session_dir.md` | Edge cases for `--session-dir` flag | ✅ |
+| `010_session_dir.md` | Edge cases for `--session-dir` flag (DEPRECATED, inert — BUG-493) | ✅ |
 | `011_dry_run.md` | Edge cases for `--dry-run` flag | ✅ |
 | `012_verbosity.md` | Edge cases for `--verbosity` flag (DEPRECATED — `--verbosity` removed) | ⚠️ |
 | `074_quiet.md` | Edge cases for `--quiet` flag (suppress non-fatal runner diagnostics) | ✅ |

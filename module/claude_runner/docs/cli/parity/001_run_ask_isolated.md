@@ -138,7 +138,7 @@ Params not in the gap closure table are excluded by design. Four categories:
 
 | Category | Params | Reason |
 |----------|--------|--------|
-| **Temp HOME = meaningless** | `--subdir`, `--session-dir`, `--new-session`, `--no-persist`, `-c` | Temp HOME has no session history; these params control session state that does not exist |
+| **Temp HOME = meaningless** | `--subdir`, `--session-dir`, `--new-session`, `--no-persist`, `-c` | Temp HOME has no session history; these params control session state that does not exist (`--session-dir` is additionally deprecated and inert everywhere — BUG-493 — so its exclusion needs no temp-HOME-specific rationale at all) |
 | **One-shot = no retry** | 20 retry params, `--expect-retries`, `--fallback-model` | No retry loop in `run_isolated_command()`; retrying bad credentials is pointless |
 | **Passthrough covers it** | `--output-format` | The only remaining native-flag gap after TSK-443; no CLR-level validation or transformation; override via `-- --output-format json` |
 | **Architecture mismatch** | `--interactive`, `--verbose`, Ultrathink suffix | `--interactive` conflicts with message-present contract; `--verbose` is a claude-native passthrough (no CLR-internal gating); ultrathink conflicts with "execute immediately" CLAUDE.md directive |

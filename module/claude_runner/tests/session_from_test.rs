@@ -26,7 +26,7 @@
 //! computes.  The `df()` helper implements the same `Df()` encoding algorithm.
 
 mod cli_binary_test_helpers;
-use cli_binary_test_helpers::run_cli;
+use cli_binary_test_helpers::{ df, make_session_for, run_cli };
 
 // ── Shared helpers ─────────────────────────────────────────────────────────────
 
@@ -44,27 +44,10 @@ fn container_check()
   );
 }
 
-/// Encode a path using the `Df()` algorithm from `algorithm/001_path_encoding.md`.
-///
-/// Delegates to the real production encoder — see `Fix(BUG-391)` below.
-// Fix(BUG-391): delegate to the real production encoder instead of reimplementing
-// it — the prior hand-rolled body only substituted '_', which diverged from
-// claude_storage_core::encode_path()'s full non-alphanumeric substitution the
-// moment a fixture (e.g. tempfile::TempDir's ".tmp"-prefixed path) contained a '.'.
-// Root cause: this was a duplicate encoder (also flagged by BUG-366, already fixed
-// for scope_command_test.rs by BUG-386) reimplementing production logic instead of
-// calling it, so it silently diverged when encode_path()'s substitution scope widened.
-// Pitfall: never hand-roll a test-local copy of a production encoding/formatting
-// function — call the real function so the fixture cannot drift from production.
-fn df( path : &str ) -> String
-{
-  claude_storage_core::encode_path( std::path::Path::new( path ) )
-    .expect( "df(): path must encode successfully in test fixtures" )
-}
-
-/// BUG-391 regression guard: `df()` must match production `encode_path()` for a
-/// dot-containing path (e.g. `tempfile::TempDir::new()`'s literal `.tmp` prefix) —
-/// the exact input class that exposed the two encoders' prior divergence.
+/// BUG-391 regression guard: `df()` (now shared via `cli_binary_test_helpers`,
+/// Fix(BUG-493)) must match production `encode_path()` for a dot-containing path
+/// (e.g. `tempfile::TempDir::new()`'s literal `.tmp` prefix) — the exact input
+/// class that exposed the two encoders' prior divergence.
 ///
 /// ## Root Cause
 /// `df()` hand-rolled a duplicate of `claude_storage_core::encode_path()`, only
@@ -78,8 +61,8 @@ fn df( path : &str ) -> String
 /// widened `encode_path()`'s substitution scope.
 ///
 /// ## Fix Applied
-/// `df()` now delegates to `claude_storage_core::encode_path()` directly instead
-/// of reimplementing it, so it cannot drift from production behavior.
+/// `df()` delegates to `claude_storage_core::encode_path()` directly instead of
+/// reimplementing it, so it cannot drift from production behavior.
 ///
 /// ## Prevention
 /// This test locks in parity for the specific input class (dot-containing paths)
@@ -102,18 +85,6 @@ fn df_matches_production_encode_path_for_dot_containing_path()
     "test df() helper must match production encode_path() for dot-containing paths \
      (BUG-391 regression guard)"
   );
-}
-
-/// Create `<claude_home>/projects/<df(src_dir)>/<uuid>.jsonl` with non-empty content.
-///
-/// Returns the `.jsonl` path.  The caller must keep the `TempDir` alive.
-fn make_session_for( claude_home : &std::path::Path, src_dir : &str, uuid : &str ) -> std::path::PathBuf
-{
-  let session_dir = claude_home.join( "projects" ).join( df( src_dir ) );
-  std::fs::create_dir_all( &session_dir ).expect( "create session dir" );
-  let file = session_dir.join( format!( "{uuid}.jsonl" ) );
-  std::fs::write( &file, b"{}" ).expect( "write session jsonl" );
-  file
 }
 
 /// Run `clr --dry-run <args>` with extra env vars; return stdout.
@@ -192,7 +163,7 @@ fn ec2_session_from_no_longer_recognized()
   container_check();
   let ch  = tempfile::TempDir::new().expect( "tmpdir" );
   let src = "/tmp/076ec2-src";
-  make_session_for( ch.path(), src, "bbb-222" );
+  let _ = make_session_for( ch.path(), src, "bbb-222" );
   let ch_str = ch.path().to_str().expect( "utf-8" );
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = std::process::Command::new( bin )
@@ -240,43 +211,56 @@ fn ec3_empty_source_no_continue()
   );
 }
 
-// ── EC-4: --session-dir wins over --from ────────────────────────────────────────
+// ── EC-4: --session-dir no longer suppresses --from (BUG-493) ──────────────────
 
-/// EC-4: `--session-dir` takes precedence over `--from`.
+/// EC-4: `--session-dir` no longer takes precedence over `--from`.
 ///
-/// When both are given, `CLAUDE_CODE_SESSION_DIR` must be the raw `--session-dir`
-/// path; the computed source storage path from `--from` must not appear.
+/// Fix(BUG-493): `--session-dir` is deprecated and inert — claude ≥2.x ignores
+/// the `CLAUDE_CODE_SESSION_DIR` export it used to trigger, so it must never
+/// suppress `--from`'s transplant, the only mechanism that still works.
 #[ test ]
-fn ec4_session_dir_wins_over_from()
+fn ec4_session_dir_no_longer_wins_over_from()
 {
   let ch  = tempfile::TempDir::new().expect( "tmpdir" );
   let src = "/tmp/076ec4-src";
-  // Source session (should be ignored — --session-dir wins)
-  make_session_for( ch.path(), src, "ccc-333" );
-  // Override session dir (raw path wins)
+  let jsonl = make_session_for( ch.path(), src, "ccc-333" );
+  // Override session dir — must be inert now (BUG-493), not suppress --from.
   let override_dir = tempfile::TempDir::new().expect( "override tmpdir" );
   std::fs::write( override_dir.path().join( "xyz-789.jsonl" ), b"{}" )
     .expect( "write override session" );
   let override_str = override_dir.path().to_str().expect( "utf-8" );
   let ch_str = ch.path().to_str().expect( "utf-8" );
-  let stdout = run_dry_env(
-    &[ "--from", src, "--session-dir", override_str, "test" ],
-    &[ ( "CLAUDE_HOME", ch_str ) ],
-  );
-  // Raw --session-dir path must be used
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = std::process::Command::new( bin )
+    .args( [ "--dry-run", "--from", src, "--session-dir", override_str, "test" ] )
+    .env( "CLAUDE_HOME", ch_str )
+    .env_remove( "CLR_DIR" )
+    .env_remove( "CLR_SESSION_DIR" )
+    .env_remove( "CLR_FROM" )
+    .output()
+    .expect( "failed to invoke clr binary" );
   assert!(
-    stdout.contains( &format!( "CLAUDE_CODE_SESSION_DIR={override_str}" ) ),
-    "`--session-dir` raw path must win. Got:\n{stdout}"
+    out.status.success(),
+    "dry-run failed (exit {})\nstderr: {}",
+    out.status.code().unwrap_or( -1 ),
+    String::from_utf8_lossy( &out.stderr ),
   );
-  // Computed source storage path must NOT appear
-  let src_dir = format!( "{ch_str}/projects/{}", df( src ) );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  // --from's transplant plan must proceed — --session-dir no longer suppresses it.
   assert!(
-    !stdout.contains( &src_dir ),
-    "`--from` computed path `{src_dir}` must NOT appear. Got:\n{stdout}"
+    stdout.contains( &format!( "# session-transplant: {} -> ", jsonl.display() ) ),
+    "`--from` transplant must proceed even with --session-dir present. Got:\n{stdout}"
   );
+  // The dead env export must never appear.
   assert!(
-    !stdout.contains( "# session-transplant:" ),
-    "`--session-dir` override must suppress the transplant plan. Got:\n{stdout}"
+    !stdout.contains( "CLAUDE_CODE_SESSION_DIR=" ),
+    "the dead CLAUDE_CODE_SESSION_DIR export must never appear (BUG-493). Got:\n{stdout}"
+  );
+  // --session-dir's own deprecation warning must fire, naming its value.
+  assert!(
+    stderr.contains( "deprecated" ) && stderr.contains( override_str ),
+    "--session-dir must emit a deprecation warning naming its value. Got:\n{stderr}"
   );
 }
 
@@ -291,7 +275,7 @@ fn ec5_new_session_suppresses_from()
 {
   let ch  = tempfile::TempDir::new().expect( "tmpdir" );
   let src = "/tmp/076ec5-src";
-  make_session_for( ch.path(), src, "ddd-444" );
+  let _ = make_session_for( ch.path(), src, "ddd-444" );
   let stdout = run_dry_env(
     &[ "--from", src, "--new-session", "fresh" ],
     &[ ( "CLAUDE_HOME", ch.path().to_str().expect( "utf-8" ) ) ],
@@ -550,7 +534,7 @@ fn us5_to_alias_sets_working_dir()
 {
   let ch  = tempfile::TempDir::new().expect( "tmpdir" );
   let src = "/tmp/us28-proj-a-to";
-  make_session_for( ch.path(), src, "abc-123" );
+  let _ = make_session_for( ch.path(), src, "abc-123" );
   let tgt = tempfile::TempDir::new().expect( "tgt tmpdir" );
   let tgt_str = tgt.path().to_str().expect( "utf-8" );
   let stdout = run_dry_env(
@@ -563,42 +547,53 @@ fn us5_to_alias_sets_working_dir()
   );
 }
 
-// ── US-6: --session-dir wins over --from ────────────────────────────────────────
+// ── US-6: --session-dir no longer wins over --from (BUG-493) ───────────────────
 
-/// US-6: `--session-dir` raw path wins over `--from` computed path.
+/// US-6: `--session-dir` no longer takes precedence over `--from`.
 ///
-/// `CLAUDE_CODE_SESSION_DIR` must equal the raw `--session-dir` path (that raw
-/// export is BUG-493's domain and still emitted); no transplant plan appears.
+/// Fix(BUG-493): the raw override is deprecated and inert — `--from`'s transplant
+/// must proceed exactly as if `--session-dir` were absent, and a deprecation
+/// warning naming the value must fire instead of the dead env export.
 #[ test ]
-fn us6_session_dir_wins_over_from()
+fn us6_session_dir_no_longer_wins_over_from()
 {
   let ch  = tempfile::TempDir::new().expect( "tmpdir" );
   let src = "/tmp/us28-proj-a-prec";
-  // Source session (should be ignored — --session-dir wins)
-  make_session_for( ch.path(), src, "abc-123" );
-  // Override session dir (raw path)
+  let jsonl = make_session_for( ch.path(), src, "abc-123" );
+  // Override session dir — must be inert now (BUG-493), not suppress --from.
   let override_dir = tempfile::TempDir::new().expect( "override tmpdir" );
   std::fs::write( override_dir.path().join( "xyz-789.jsonl" ), b"{}" )
     .expect( "write override session" );
   let override_str = override_dir.path().to_str().expect( "utf-8" );
   let ch_str = ch.path().to_str().expect( "utf-8" );
-  let stdout = run_dry_env(
-    &[ "--from", src, "--session-dir", override_str, "test" ],
-    &[ ( "CLAUDE_HOME", ch_str ) ],
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = std::process::Command::new( bin )
+    .args( [ "--dry-run", "--from", src, "--session-dir", override_str, "test" ] )
+    .env( "CLAUDE_HOME", ch_str )
+    .env_remove( "CLR_DIR" )
+    .env_remove( "CLR_SESSION_DIR" )
+    .env_remove( "CLR_FROM" )
+    .output()
+    .expect( "failed to invoke clr binary" );
+  assert!(
+    out.status.success(),
+    "dry-run failed (exit {})\nstderr: {}",
+    out.status.code().unwrap_or( -1 ),
+    String::from_utf8_lossy( &out.stderr ),
+  );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert!(
+    stdout.contains( &format!( "# session-transplant: {} -> ", jsonl.display() ) ),
+    "`--from` transplant must proceed even with --session-dir present. Got:\n{stdout}"
   );
   assert!(
-    stdout.contains( &format!( "CLAUDE_CODE_SESSION_DIR={override_str}" ) ),
-    "`--session-dir` raw path must be used. Got:\n{stdout}"
-  );
-  // Source computed path must NOT appear
-  let src_dir = format!( "{ch_str}/projects/{}", df( src ) );
-  assert!(
-    !stdout.contains( &src_dir ),
-    "source computed path `{src_dir}` must NOT appear. Got:\n{stdout}"
+    !stdout.contains( "CLAUDE_CODE_SESSION_DIR=" ),
+    "the dead CLAUDE_CODE_SESSION_DIR export must never appear (BUG-493). Got:\n{stdout}"
   );
   assert!(
-    !stdout.contains( "# session-transplant:" ),
-    "`--session-dir` override must suppress the transplant plan. Got:\n{stdout}"
+    stderr.contains( "deprecated" ) && stderr.contains( override_str ),
+    "--session-dir must emit a deprecation warning naming its value. Got:\n{stderr}"
   );
 }
 
@@ -658,7 +653,7 @@ fn us8_bare_invocation_neither_flag_is_noop()
   let ch  = tempfile::TempDir::new().expect( "tmpdir" );
   let cwd = std::fs::canonicalize( std::env::current_dir().expect( "cwd" ) )
     .expect( "canonicalize cwd" );
-  make_session_for( ch.path(), cwd.to_str().expect( "utf-8" ), "us8-bare-cwd" );
+  let _ = make_session_for( ch.path(), cwd.to_str().expect( "utf-8" ), "us8-bare-cwd" );
   let ch_str = ch.path().to_str().expect( "utf-8" );
   let stdout = run_dry_env(
     &[ "Continue" ],
@@ -695,7 +690,7 @@ fn ec9_relative_source_path_resolves_against_cwd()
   std::fs::create_dir_all( &src_abs ).expect( "create relative source dir" );
   // Expected encoding uses the canonicalized physical path — immune to /tmp symlinks.
   let src_canon = std::fs::canonicalize( &src_abs ).expect( "canonicalize source" );
-  make_session_for( ch.path(), src_canon.to_str().expect( "utf-8" ), "rel-901" );
+  let _ = make_session_for( ch.path(), src_canon.to_str().expect( "utf-8" ), "rel-901" );
   let ch_str = ch.path().to_str().expect( "utf-8" );
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = std::process::Command::new( bin )

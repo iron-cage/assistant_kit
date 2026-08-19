@@ -22,7 +22,7 @@
 //! | E07  | `CLR_NEW_SESSION`          | stdout NOT contains `-c`                                    |
 //! | E08  | `CLR_DIR`                  | stdout contains the dir path                                |
 //! | E09  | `CLR_MAX_TOKENS`           | stdout contains `3000`                                      |
-//! | E10  | `CLR_SESSION_DIR`          | stdout contains the session dir path                        |
+//! | E10  | `CLR_SESSION_DIR`          | deprecated and inert (BUG-493) — no env var, warns on stderr |
 //! | E11  | `CLR_DRY_RUN`              | exit 0 and stdout contains `--effort`                       |
 //! | E12  | `CLR_QUIET`                | diagnostic warning suppressed with CLR_QUIET=true           |
 //! | E13  | `CLR_TRACE`                | stderr contains `--effort` (trace preview)                  |
@@ -239,13 +239,13 @@ fn e09_clr_max_tokens_sets_limit()
 
 // ─── E10: CLR_SESSION_DIR ─────────────────────────────────────────────────────
 
-/// E10: `CLR_SESSION_DIR` sets the session storage directory.
-///
-/// Session dir appears as `CLAUDE_CODE_SESSION_DIR=<path>` in dry-run env output.
+/// E10: `CLR_SESSION_DIR` is deprecated and inert (BUG-493) — claude ignores the
+/// override entirely, so it no longer sets any env var; only a stderr warning
+/// naming the value remains as an externally-observable signal.
 ///
 /// Spec: `148_env_var_all_params.md` param 10
 #[ test ]
-fn e10_clr_session_dir_sets_session_directory()
+fn e10_clr_session_dir_is_deprecated_and_inert()
 {
   let out = run_cli_with_env(
     &[ "--dry-run", "task" ],
@@ -253,9 +253,14 @@ fn e10_clr_session_dir_sets_session_directory()
   );
   assert!( out.status.success(), "exit must be 0: {out:?}" );
   let stdout = String::from_utf8_lossy( &out.stdout );
+  let stderr = String::from_utf8_lossy( &out.stderr );
   assert!(
-    stdout.contains( "/tmp/e10sess" ),
-    "CLR_SESSION_DIR must appear in assembled command or env block: {stdout}",
+    !stdout.contains( "CLAUDE_CODE_SESSION_DIR=" ),
+    "CLR_SESSION_DIR is deprecated and inert — must never set the env var. Got:\n{stdout}",
+  );
+  assert!(
+    stderr.contains( "deprecated" ) && stderr.contains( "/tmp/e10sess" ),
+    "CLR_SESSION_DIR must emit a deprecation warning naming the value. Got:\n{stderr}",
   );
 }
 

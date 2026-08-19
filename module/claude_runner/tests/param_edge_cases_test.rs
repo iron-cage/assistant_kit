@@ -40,15 +40,15 @@
 //!
 //! --new-session:
 //! - S16: `--new-session` without message → exit 0, no `-c` (`007_new_session.md` EC-3)
-//! - S17: `--new-session --session-dir /path "msg"` → both accepted (`007_new_session.md` EC-6)
+//! - S17: `--new-session --session-dir /path "msg"` → both accepted; `--session-dir` deprecated and inert (`007_new_session.md` EC-6)
 //!
 //! --dir:
 //! - S18: without `--dir` → no `cd` line in output (`008_dir.md` EC-3)
 //! - S19: `--dir /no/such/path` → accepted without validation (`008_dir.md` EC-4)
 //!
-//! --session-dir:
+//! --session-dir (deprecated and inert, BUG-493):
 //! - S20: without `--session-dir` → `CLAUDE_CODE_SESSION_DIR` absent (`010_session_dir.md` EC-3)
-//! - S21: `--session-dir --new-session` → both accepted (`010_session_dir.md` EC-4)
+//! - S21: `--session-dir --new-session` → both accepted; no env var, warns on stderr (`010_session_dir.md` EC-4)
 //! - S22: `--session-dir /no/such/dir` → accepted without validation (`010_session_dir.md` EC-6)
 //!
 //! --dry-run:
@@ -272,16 +272,21 @@ fn s16_new_session_without_message_accepted()
   );
 }
 
-// S17: --new-session + --session-dir → both accepted; CLAUDE_CODE_SESSION_DIR present, no -c
+// S17: --new-session + --session-dir → both accepted; --session-dir deprecated (no env var, warns), no -c
 #[ test ]
 fn s17_new_session_with_session_dir_accepted()
 {
   let out = run_cli( &[ "--dry-run", "--new-session", "--session-dir", "/tmp/sessions", "Fix bug" ] );
   assert!( out.status.success(), "must exit 0. stderr: {}", String::from_utf8_lossy( &out.stderr ) );
   let stdout = String::from_utf8_lossy( &out.stdout );
+  let stderr = String::from_utf8_lossy( &out.stderr );
   assert!(
-    stdout.contains( "CLAUDE_CODE_SESSION_DIR=/tmp/sessions" ),
-    "--session-dir must set env var. Got:\n{stdout}"
+    !stdout.contains( "CLAUDE_CODE_SESSION_DIR=" ),
+    "--session-dir is deprecated and inert — must never set the env var. Got:\n{stdout}"
+  );
+  assert!(
+    stderr.contains( "deprecated" ) && stderr.contains( "/tmp/sessions" ),
+    "--session-dir must emit a deprecation warning naming the value. Got:\n{stderr}"
   );
   assert!(
     !stdout.contains( " -c" ),
@@ -332,16 +337,21 @@ fn s20_session_dir_absent_from_default_output()
   );
 }
 
-// S21: --session-dir + --new-session → both accepted; env var present, no -c
+// S21: --session-dir + --new-session → both accepted; --session-dir deprecated (no env var, warns), no -c
 #[ test ]
 fn s21_session_dir_with_new_session_accepted()
 {
   let out = run_cli( &[ "--dry-run", "--session-dir", "/tmp/s", "--new-session", "Fix bug" ] );
   assert!( out.status.success(), "must exit 0. stderr: {}", String::from_utf8_lossy( &out.stderr ) );
   let stdout = String::from_utf8_lossy( &out.stdout );
+  let stderr = String::from_utf8_lossy( &out.stderr );
   assert!(
-    stdout.contains( "CLAUDE_CODE_SESSION_DIR=/tmp/s" ),
-    "--session-dir must set env var. Got:\n{stdout}"
+    !stdout.contains( "CLAUDE_CODE_SESSION_DIR=" ),
+    "--session-dir is deprecated and inert — must never set the env var. Got:\n{stdout}"
+  );
+  assert!(
+    stderr.contains( "deprecated" ) && stderr.contains( "/tmp/s" ),
+    "--session-dir must emit a deprecation warning naming the value. Got:\n{stderr}"
   );
   assert!(
     !stdout.contains( " -c" ),
@@ -589,31 +599,34 @@ fn ec7_max_sessions_no_gate_messages_below_limit()
   );
 }
 
-/// BUG-214 reproducer: empty `--session-dir` must suppress `-c` injection.
+/// BUG-214 reproducer: empty session source must suppress `-c` injection.
 ///
 /// ## Root Cause
 ///
 /// `build_claude_command()` injected `-c` unconditionally whenever `--new-session`
-/// was not set.  On first use — or any time `--session-dir` points to an empty
-/// directory — there is no conversation to resume.  Claude exits immediately with
-/// "No conversation found to continue" rather than starting a new session.
+/// was not set.  On first use — or any time the effective session source (`--from`,
+/// defaulting to CWD) has no prior session — there is no conversation to resume.
+/// Claude exits immediately with "No conversation found to continue" rather than
+/// starting a new session.
 ///
 /// ## Why Not Caught
 ///
-/// All pre-existing dry-run tests used no `--session-dir`, so the existence check
+/// All pre-existing dry-run tests used no `--from` override, so the existence check
 /// resolved to `~/.claude/`, which always contains files on a development machine.
-/// The guard path (empty dir → no `-c`) was never exercised.
+/// The guard path (empty source → no `-c`) was never exercised.
 ///
 /// ## Fix Applied
 ///
-/// `session_exists( session_dir )` reads the target directory and returns
-/// `Some(SessionId)` when at least one qualifying `.jsonl` entry is present.
-/// The guard `!cli.new_session && expected_id.is_some()` gates `-c` injection.
+/// `session_exists( session_from_dir, effective_dir )` reads the source directory's
+/// storage and returns `Some(SessionId)` when at least one qualifying `.jsonl` entry
+/// is present.  The guard `!cli.new_session && expected_id.is_some()` gates `-c`
+/// injection.  BUG-493 dropped `--session-dir` from this computation entirely —
+/// `session_from_dir` is now always derived from `--from` (or its CWD default).
 ///
 /// ## Prevention
 ///
-/// Always test `--session-dir` pointing to an empty temp directory when the
-/// feature involves session continuation — the empty-dir case is the canonical
+/// Always test `--from` pointing to an empty temp directory when the feature
+/// involves session continuation — the empty-source case is the canonical
 /// first-use scenario that the guard must handle.
 ///
 /// ## Pitfall
@@ -624,11 +637,11 @@ fn ec7_max_sessions_no_gate_messages_below_limit()
 /// no prior session actually exists.
 // test_kind: bug_reproducer(BUG-214)
 #[ test ]
-fn bug_214_empty_session_dir_suppresses_continue_flag()
+fn bug_214_empty_session_source_suppresses_continue_flag()
 {
   let session_dir = TempDir::new().expect( "temp dir creation must succeed" );
   let path        = session_dir.path().to_str().expect( "temp dir path must be valid UTF-8" );
-  let out = run_cli( &[ "--dry-run", "--session-dir", path, "Fix bug" ] );
+  let out = run_cli( &[ "--dry-run", "--from", path, "Fix bug" ] );
   assert!(
     out.status.success(),
     "must exit 0. stderr: {}",
@@ -637,7 +650,7 @@ fn bug_214_empty_session_dir_suppresses_continue_flag()
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(
     !stdout.contains( " -c" ),
-    "empty --session-dir must suppress -c (no prior session to resume). Got:\n{stdout}"
+    "empty --from source must suppress -c (no prior session to resume). Got:\n{stdout}"
   );
 }
 

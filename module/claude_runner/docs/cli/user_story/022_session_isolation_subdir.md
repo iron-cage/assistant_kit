@@ -1,7 +1,7 @@
 # Isolate Claude sessions by named subdirectory
 
 **Persona:** Developer working on multiple parallel tasks in the same project who needs Claude sessions isolated by task name without changing the base project directory or managing session paths manually.
-**Goal:** Run Claude in a named subdirectory of the current project directory so each task maintains its own conversation history without any `--session-dir` bookkeeping.
+**Goal:** Run Claude in a named subdirectory of the current project directory so each task maintains its own conversation history, isolated automatically without manual session-path bookkeeping — `--session-dir`, the old manual mechanism, is now deprecated and inert (BUG-493).
 **Benefit:** Keeps per-task conversation histories separate without managing session paths manually.
 **Priority:** Medium
 

@@ -21,7 +21,7 @@ coexist without conflict and are consumed by the runner, not forwarded to claude
 | ID | Test Name | Category |
 |----|-----------|----------|
 | CC-1 | `--dry-run` + `--no-ultrathink` → both applied in preview | Interaction |
-| CC-2 | `--new-session` + `--session-dir` → both accepted | Interaction |
+| CC-2 | `--new-session` + `--session-dir` → both accepted (`--session-dir` deprecated, inert) | Interaction |
 | CC-3 | `--no-skip-permissions` + `--no-effort-max` → both suppressed | Interaction |
 | CC-4 | All runner control flags together → no conflict | Combined |
 | CC-5 | `--file` + `--strip-fences` + `--keep-claudecode` together → all accepted | Interaction |
@@ -47,11 +47,11 @@ coexist without conflict and are consumed by the runner, not forwarded to claude
 - **Commands:** run, ask
 ---
 
-### CC-2: `--new-session` + `--session-dir` → both accepted
+### CC-2: `--new-session` + `--session-dir` → both accepted (`--session-dir` deprecated, inert — BUG-493)
 
 - **Given:** clean environment
 - **When:** `clr --dry-run --new-session --session-dir /tmp/sessions "Fix bug"`
-- **Then:** Env block contains `CLAUDE_CODE_SESSION_DIR=/tmp/sessions`; no `-c` flag in assembled command
+- **Then:** Both flags accepted, no conflict; env block does NOT contain `CLAUDE_CODE_SESSION_DIR=` (`--session-dir` has zero effect on session storage); no `-c` flag in assembled command; stderr carries a deprecation warning naming `/tmp/sessions`
 - **Exit:** 0
 - **Source:** [param_group/02_runner_control.md](../../../../docs/cli/param_group/02_runner_control.md)
 - **Commands:** run, ask

@@ -98,7 +98,7 @@ Complements Universal Params above by summarizing the opposite extreme — param
 |-------|-----------|-------|
 | `isolated`-only | passthrough (`--`) | Sole route to `--output-format` on `isolated` — the only remaining native-flag gap after TSK-443 (all other formerly-passthrough-only params now have native flags); ergonomic gap only (last-wins arg order means passthrough already reaches it), not a functional one — see [`../parity/001_run_ask_isolated.md`](../parity/001_run_ask_isolated.md) Exclusion Rationale |
 | `isolated` + `refresh` only | `--creds` | Credential-isolated execution config; see [`04_credential_operations.md`](04_credential_operations.md) |
-| `run` + `ask` + `topic` only | `--output-format`, `--subdir`, `--new-session`, `--session-dir`, `--retry-on-transient`/`--transient-delay`, `--retry-on-auth`/`--auth-delay` | Session control, retries, and format negotiation — no passthrough equivalent exists for `isolated`/`refresh` since these configure the runner itself, not the `claude` subprocess |
+| `run` + `ask` + `topic` only | `--output-format`, `--subdir`, `--new-session`, `--session-dir`, `--retry-on-transient`/`--transient-delay`, `--retry-on-auth`/`--auth-delay` | Session control, retries, and format negotiation — no passthrough equivalent exists for `isolated`/`refresh` since these configure the runner itself, not the `claude` subprocess (`--session-dir` itself is deprecated and inert — BUG-493 — retained here only because it remains an exclusively run/ask/topic-parseable flag, not because it still configures anything) |
 
 ### Invariants
 

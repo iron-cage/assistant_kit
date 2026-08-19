@@ -1,6 +1,6 @@
 # Test: Invariant — Session Source Isolation
 
-Test case planning for [invariant/011_session_source_isolation.md](../../../docs/invariant/011_session_source_isolation.md). Tests verify that session reads use the source directory's storage, Claude runs in the target directory, source files are never modified, cross-loading is one-time, and `--session-dir` takes precedence over `--from`.
+Test case planning for [invariant/011_session_source_isolation.md](../../../docs/invariant/011_session_source_isolation.md). Tests verify that session reads use the source directory's storage, Claude runs in the target directory, source files are never modified, cross-loading is one-time, and `--session-dir` is deprecated and inert (never suppresses `--from`).
 
 **Source:** [invariant/011_session_source_isolation.md](../../../docs/invariant/011_session_source_isolation.md)
 
@@ -11,7 +11,7 @@ Test case planning for [invariant/011_session_source_isolation.md](../../../docs
 | IN-1 | Transplant source comes from source dir's `CLAUDE_SESSION_DIR`, never from target | Read isolation |
 | IN-2 | Subprocess working directory is target dir, not source dir | Run isolation |
 | IN-3 | Source session file mtime and size unchanged after cross-loaded run | Write isolation |
-| IN-4 | `--session-dir` takes precedence over `--from` (raw path wins) | Precedence |
+| IN-4 | `--session-dir` no longer suppresses `--from` (deprecated, inert) | Deprecation |
 | IN-5 | `--from` + `--to`: transplant source from source, cwd is target | Combined |
 
 ## Test Coverage Summary
@@ -19,7 +19,7 @@ Test case planning for [invariant/011_session_source_isolation.md](../../../docs
 - Read isolation: 1 test (IN-1)
 - Run isolation: 1 test (IN-2)
 - Write isolation: 1 test (IN-3)
-- Precedence: 1 test (IN-4)
+- Deprecation: 1 test (IN-4)
 - Combined: 1 test (IN-5)
 
 **Total:** 5 invariant test cases
@@ -56,11 +56,11 @@ Test case planning for [invariant/011_session_source_isolation.md](../../../docs
 
 ---
 
-### IN-4: `--session-dir` takes precedence over `--from` (raw path wins)
+### IN-4: `--session-dir` no longer suppresses `--from` (deprecated, inert)
 
-- **Given:** source dir `/tmp/011it4-src` has session `ooo-004.jsonl`; a raw session dir (a temp dir) has session `ppp-005.jsonl`; fake claude binary in PATH
+- **Given:** source dir `/tmp/011it4-src` has session `ooo-004.jsonl`; a raw override dir (a temp dir) has session `ppp-005.jsonl`; fake claude binary in PATH
 - **When:** `clr --from /tmp/011it4-src --session-dir <raw dir> --dry-run "test"`
-- **Then:** dry-run output contains `CLAUDE_CODE_SESSION_DIR=<raw dir>` (the raw path verbatim — the raw `--session-dir` export is BUG-493's own domain and still emitted); the source's computed storage path does NOT appear; `--session-dir` raw path wins over `--from` computed path
+- **Then:** dry-run stdout still shows the `--from` transplant plan (`# session-transplant: <source storage>/ooo-004.jsonl -> ...`), proceeding exactly as if `--session-dir` were absent; `CLAUDE_CODE_SESSION_DIR=` never appears (BUG-490's dead export stays gone); stderr carries a deprecation warning naming the raw `--session-dir` value
 - **Exit:** 0
 - **Source:** [invariant/011_session_source_isolation.md](../../../docs/invariant/011_session_source_isolation.md) point 5
 

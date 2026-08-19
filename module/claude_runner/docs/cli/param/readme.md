@@ -13,7 +13,7 @@
 | 007_new_session.md | `--new-session` flag spec |
 | 008_dir.md | `--dir` / `--to` parameter spec |
 | 009_max_tokens.md | `--max-tokens` parameter spec |
-| 010_session_dir.md | `--session-dir` parameter spec |
+| 010_session_dir.md | `--session-dir` parameter spec (DEPRECATED, inert → BUG-493) |
 | 011_dry_run.md | `--dry-run` flag spec |
 | 012_verbosity.md | `--verbosity` parameter spec (DEPRECATED → see 074_quiet.md) |
 | 013_trace.md | `--trace` flag spec |
@@ -111,7 +111,7 @@ These parameter IDs exist in the sequence but have no corresponding file. The ID
 | 7 | `--new-session` | bool | false | present/absent | Start fresh session (disables default continuation) | 1 cmd |
 | 8 | `--dir` | [`DirectoryPath`](../type/02_directory_path.md) | cwd | Any path | Working directory | 1 cmd |
 | 9 | `--max-tokens` | [`TokenLimit`](../type/03_token_limit.md) | 128000 | 0 to 4294967295 | Max output tokens | 1 cmd |
-| 10 | `--session-dir` | [`DirectoryPath`](../type/02_directory_path.md) | — | Any path | Session storage directory | 1 cmd |
+| 10 | `--session-dir` | [`DirectoryPath`](../type/02_directory_path.md) | — | Any path | Session storage directory — **DEPRECATED**, inert (BUG-493) | 1 cmd |
 | 11 | `--dry-run` | bool | false | present/absent | Print command without executing | 1 cmd |
 | 12 | `--verbosity` | ~~[`VerbosityLevel`](../type/05_verbosity_level.md)~~ | ~~3~~ | ~~0 to 5~~ | **DEPRECATED** — see `--quiet` (74) | — |
 | 13 | `--trace` | bool | false | present/absent | Print diagnostic details to stderr then execute | 3 cmds |

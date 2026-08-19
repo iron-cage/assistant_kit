@@ -11,7 +11,7 @@ Test case spec for [028_session_transplant.md](../../../../docs/cli/user_story/0
 | US-3 | No source history → no `-c`; fresh session starts | AC-3 | ✅ |
 | US-4 | `--to` alone defaults `--from` to CWD; clones outward | AC-4 | ✅ |
 | US-5 | `--to` alias accepted; behavior identical to `--dir` | AC-5 | ✅ |
-| US-6 | `--session-dir` takes precedence over `--from` | AC-6 | ✅ |
+| US-6 | `--session-dir` no longer suppresses `--from` (deprecated, inert) | AC-6 | ✅ |
 | US-7 | Source session files not modified after cross-loaded run | AC-7 | ✅ |
 | US-8 | Bare invocation (neither flag) is a no-op; ordinary `-c` still applies | AC-8 | ✅ |
 
@@ -72,14 +72,14 @@ Test case spec for [028_session_transplant.md](../../../../docs/cli/user_story/0
 
 ---
 
-### US-6: `--session-dir` takes precedence over `--from`
+### US-6: `--session-dir` no longer suppresses `--from`
 
 - **Given:** source dir `/tmp/us28-proj-a-prec` has session `abc-123.jsonl`; a raw override session dir has session `xyz-789.jsonl`
 - **When:** `clr --from /tmp/us28-proj-a-prec --session-dir <override dir> --dry-run "test"`
-- **Then:** dry-run output includes `CLAUDE_CODE_SESSION_DIR=<override dir>` (raw path — the raw export is BUG-493's own domain and still emitted); the source's computed storage path does NOT appear; no `# session-transplant:` plan line (raw override suppresses the transplant); `--session-dir` wins
+- **Then:** dry-run output includes the `# session-transplant:` plan line for the source session exactly as if `--session-dir` were absent (Fix(BUG-493): the raw override is deprecated and inert); stdout contains NO `CLAUDE_CODE_SESSION_DIR=` export; stderr contains a deprecation warning naming the override value — `--from` wins, unconditionally
 - **Exit:** 0
 - **Verifies:** AC-6
-- **Implemented by:** `session_from_test.rs::us6_session_dir_wins_over_from`
+- **Implemented by:** `session_from_test.rs::us6_session_dir_no_longer_wins_over_from`
 
 ---
 

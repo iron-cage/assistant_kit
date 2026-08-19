@@ -50,7 +50,7 @@
 | 002 | Print Mode Capture | `[MESSAGE]`, `--print` | `run` |
 | 003 | Interactive With Message | `--interactive` | `run` |
 | 004 | Dry-run Preview | `--dry-run` | `run` |
-| 005 | Project-specific Execution | `--dir`, `--session-dir` | `run` |
+| 005 | Project-specific Execution | `--dir`, `--session-dir` (deprecated) | `run` |
 | 006 | Quiet Mode and Diagnostic Control | `--quiet` | `run` |
 | 007 | Fresh Session | `--new-session` | `run` |
 | 008 | Trace Execution | `--trace` | `run` |

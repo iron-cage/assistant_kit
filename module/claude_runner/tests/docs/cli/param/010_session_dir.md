@@ -1,6 +1,6 @@
 # Parameter :: `--session-dir`
 
-Edge case tests for the session directory parameter. Tests validate path forwarding, missing-value rejection, and help documentation.
+Edge case tests for the session directory parameter — deprecated and inert (BUG-493): claude ≥2.x ignores the `CLAUDE_CODE_SESSION_DIR` export this flag used to set, so it has zero effect on session storage. Tests validate the deprecation-warning/no-op behavior, missing-value rejection, and help documentation.
 
 **Source:** [010_session_dir.md](../../../../docs/cli/param/010_session_dir.md)
 
@@ -8,10 +8,10 @@ Edge case tests for the session directory parameter. Tests validate path forward
 
 | ID | Test Name | Category |
 |----|-----------|----------|
-| EC-1 | `--session-dir /path` → sets `CLAUDE_CODE_SESSION_DIR` env var | Behavioral Divergence |
+| EC-1 | `--session-dir /path` → deprecated, inert; `CLAUDE_CODE_SESSION_DIR` never set (BUG-493) | Behavioral Divergence |
 | EC-2 | `--session-dir` without value → exit 1 | Missing Value |
 | EC-3 | Default (no `--session-dir`) → `CLAUDE_CODE_SESSION_DIR` absent from env block | Behavioral Divergence |
-| EC-4 | `--session-dir` + `--new-session` → both accepted | Interaction |
+| EC-4 | `--session-dir` + `--new-session` → both accepted (`--session-dir` deprecated, inert) | Interaction |
 | EC-5 | `--help` lists `--session-dir` | Documentation |
 | EC-6 | Non-existent path accepted without validation at runner layer | Permissive |
 
@@ -29,11 +29,11 @@ Edge case tests for the session directory parameter. Tests validate path forward
 ## Test Cases
 ---
 
-### EC-1: `--session-dir /path` sets env var
+### EC-1: `--session-dir /path` deprecated, inert; env var never set (BUG-493)
 
 - **Given:** clean environment
 - **When:** `clr --dry-run --session-dir /tmp/sessions "Fix bug"`
-- **Then:** Env block contains `CLAUDE_CODE_SESSION_DIR=/tmp/sessions` (runner converts flag to env var for subprocess)
+- **Then:** Env block does NOT contain `CLAUDE_CODE_SESSION_DIR=` — claude ≥2.x ignores this export for both reads and writes, so the flag no longer has any effect on session storage; stderr carries a deprecation warning naming `/tmp/sessions`
 - **Exit:** 0
 - **Source:** [010_session_dir.md](../../../../docs/cli/param/010_session_dir.md)
 - **Commands:** run, ask
@@ -59,11 +59,11 @@ Edge case tests for the session directory parameter. Tests validate path forward
 - **Commands:** run, ask
 ---
 
-### EC-4: `--session-dir` + `--new-session` → no conflict
+### EC-4: `--session-dir` + `--new-session` → both accepted (`--session-dir` deprecated, inert)
 
 - **Given:** clean environment
 - **When:** `clr --dry-run --session-dir /tmp/sessions --new-session "Fix bug"`
-- **Then:** Env block contains `CLAUDE_CODE_SESSION_DIR=/tmp/sessions`; no `-c` flag; exit 0
+- **Then:** Both flags accepted, no conflict; env block does NOT contain `CLAUDE_CODE_SESSION_DIR=` (deprecated, zero effect — BUG-493); no `-c` flag (suppressed by `--new-session`); exit 0
 - **Exit:** 0
 - **Source:** [010_session_dir.md](../../../../docs/cli/param/010_session_dir.md)
 - **Commands:** run, ask

@@ -187,7 +187,8 @@ fn g2cc1_dry_run_and_no_ultrathink_preview_suppressed()
 
 /// G2CC2: `--new-session` + `--session-dir` → both accepted; `-c` default suppressed.
 ///
-/// `--session-dir` path appears in assembled command; `--new-session` suppresses `-c`.
+/// `--session-dir` is deprecated and inert (BUG-493) — no env var, warns on stderr;
+/// `--new-session` suppresses `-c`.
 ///
 /// Spec: `02_runner_control.md` CC-2
 #[ test ]
@@ -198,10 +199,14 @@ fn g2cc2_new_session_and_session_dir_both_accepted()
   ] );
   assert!( out.status.success(), "exit must be 0: {out:?}" );
   let stdout = String::from_utf8_lossy( &out.stdout );
-  // --session-dir is converted to CLAUDE_CODE_SESSION_DIR env var in dry-run output
+  let stderr = String::from_utf8_lossy( &out.stderr );
   assert!(
-    stdout.contains( "CLAUDE_CODE_SESSION_DIR=/tmp/sessions" ),
-    "output must contain CLAUDE_CODE_SESSION_DIR env var: {stdout}",
+    !stdout.contains( "CLAUDE_CODE_SESSION_DIR=" ),
+    "--session-dir is deprecated and inert — must never set the env var: {stdout}",
+  );
+  assert!(
+    stderr.contains( "deprecated" ) && stderr.contains( "/tmp/sessions" ),
+    "--session-dir must emit a deprecation warning naming the value: {stderr}",
   );
   assert!(
     !stdout.contains( " -c" ),

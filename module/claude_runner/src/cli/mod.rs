@@ -330,6 +330,37 @@ pub( super ) fn run_built_command(
   }
 }
 
+/// Warn on stderr when `--session-dir`/`CLR_SESSION_DIR` is set to a non-empty value.
+///
+/// Fix(BUG-493): claude ≥2.x ignores the `CLAUDE_CODE_SESSION_DIR` override entirely
+///   (same dead mechanism as BUG-490's `--from`), so the flag no longer redirects
+///   storage or gates `-c` continuation (see builder.rs's `session_exists`/`session_from_dir`
+///   fix). Extracted from `dispatch_run` to keep that function under clippy's
+///   `too_many_lines` threshold.
+/// Root cause: the parameter's only mechanism was an env var claude does not honor,
+///   with no runner-side emulation possible for a raw storage redirect (unlike --from,
+///   whose transplant BUG-490 already fixed).
+/// Pitfall: gate on !cli.quiet like the BUG-248 warning in `dispatch_run`, and call
+///   this before the dry-run check so it fires in all execution modes including
+///   --dry-run. Filter empty values (BUG-229 empty-is-identity precedent: an explicit
+///   "" behaves as absent) and interpolate the value into the message — it is the only
+///   remaining externally-observable signal that the flag was actually consumed, now
+///   that the env export is gone.
+fn warn_deprecated_session_dir( cli : &CliArgs )
+{
+  if let Some( sd ) = cli.session_dir.as_deref().filter( | s | !s.is_empty() )
+  {
+    if !cli.quiet
+    {
+      eprintln!(
+        "Warning: --session-dir/CLR_SESSION_DIR ({sd}) is deprecated and has no effect; \
+         claude ignores this override and continues using its own session storage. \
+         Use --from to seed continuation from another project's session history instead."
+      );
+    }
+  }
+}
+
 /// Parse, validate, and execute the `run` subcommand (default mode).  Never returns.
 ///
 /// Shared implementation for both `clr run` and `clr ask` — called from both
@@ -424,6 +455,8 @@ pub( super ) fn dispatch_run( tokens : &[ String ] ) -> !
   }
 
   let ( builder, expected_id, prep ) = build_claude_command( &cli );
+
+  warn_deprecated_session_dir( &cli );
 
   // Fix(BUG-248): warn when --keep-claudecode is set while CLAUDECODE is present in
   //   the parent environment — the child will run in nested-agent mode unintentionally.

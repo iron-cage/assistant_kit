@@ -11,7 +11,7 @@ Edge case tests for the `--from <DIR>` parameter, which enables session cross-lo
 | EC-1 | `--from` plans a transplant of the source session + bare `-c` when source has session | Behavioral Divergence |
 | EC-2 | `--session-from` (pre-rename flag name) is no longer recognized | Rejection |
 | EC-3 | Source dir with no `.jsonl` → no `-c` injected, no transplant; fresh session | Behavioral Divergence |
-| EC-4 | `--session-dir` takes precedence over `--from` | Precedence |
+| EC-4 | `--session-dir` no longer suppresses `--from` (deprecated, inert) | Deprecation |
 | EC-5 | `--new-session` takes precedence over `--from` | Precedence |
 | EC-6 | `--to` + `--from`: Claude runs in target dir, loads from source | Behavioral |
 | EC-7 | `CLR_FROM` env var equivalent to `--from` | EnvFallback |
@@ -26,7 +26,8 @@ Edge case tests for the `--from <DIR>` parameter, which enables session cross-lo
 - Behavioral Divergence: 2 tests (EC-1, EC-3)
 - Behavioral: 1 test (EC-6)
 - Rejection: 2 tests (EC-2, EC-12)
-- Precedence: 2 tests (EC-4, EC-5)
+- Precedence: 1 test (EC-5)
+- Deprecation: 1 test (EC-4)
 - EnvFallback: 1 test (EC-7)
 - Discovery: 1 test (EC-8)
 - PathResolution: 1 test (EC-9)
@@ -74,14 +75,14 @@ Edge case tests for the `--from <DIR>` parameter, which enables session cross-lo
 
 ---
 
-### EC-4: `--session-dir` takes precedence over `--from`
+### EC-4: `--session-dir` no longer suppresses `--from`
 
 - **Given:** source dir `/tmp/076ec4-src` storage holds `ccc-333.jsonl`; raw override dir (a temp dir) holds `xyz-789.jsonl`
 - **When:** `clr --from /tmp/076ec4-src --session-dir <override> --dry-run "test"`
-- **Then:** dry-run output contains `CLAUDE_CODE_SESSION_DIR=<override>` (the raw path verbatim — the raw `--session-dir` export is BUG-493's own domain and still emitted); the computed source storage path does NOT appear anywhere in the output; no `# session-transplant:` plan line appears (the raw override suppresses the transplant)
+- **Then:** dry-run output contains the `# session-transplant: <source storage>/ccc-333.jsonl -> ` plan prefix exactly as if `--session-dir` were absent (Fix(BUG-493): the raw override is deprecated and inert — claude ignores the `CLAUDE_CODE_SESSION_DIR` export it used to trigger, so it must never suppress `--from`'s transplant); stdout contains NO `CLAUDE_CODE_SESSION_DIR=` export; stderr contains a deprecation warning naming the override value
 - **Exit:** 0
 - **Source:** [param/076_from.md](../../../../docs/cli/param/076_from.md)
-- **Implemented by:** `session_from_test.rs::ec4_session_dir_wins_over_from`
+- **Implemented by:** `session_from_test.rs::ec4_session_dir_no_longer_wins_over_from`
 
 ---
 

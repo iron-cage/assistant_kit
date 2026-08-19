@@ -100,7 +100,7 @@ not an error. Unknown arguments exit 1. See [cli/command/08_tools.md](../cli/com
 
 **Session mismatch detection (BUG-320 hardening):** When `-c` is injected, `session_exists()` captures the UUID of the most-recently-modified `.jsonl` file in the session storage directory as `expected_session_id: Option<SessionId>`. On the success path in `run_print_mode()`, `extract_session_id()` in `summary.rs` parses the `session_id` field from claude's JSON result envelope. If `expected_session_id` is `Some` and the actual UUID differs, a `[Runner] warning: session mismatch` line is emitted to stderr. The run is not failed — the warning is diagnostic only. See [invariant/009_session_mismatch_detection.md](../invariant/009_session_mismatch_detection.md).
 
-**Separation of concerns:** `clr` owns CLI flag translation and automation defaults only. Process execution is delegated to `claude_runner_core`. Session storage paths come from `claude_profile` (via `--session-dir` flag passthrough or resolved externally).
+**Separation of concerns:** `clr` owns CLI flag translation and automation defaults only. Process execution is delegated to `claude_runner_core`. Session storage paths come from `claude_profile`'s `scope_for()` — derived automatically from the effective working directory (or `--from`'s source dir); `--session-dir` passthrough is deprecated and inert (BUG-493).
 
 ### Features
 

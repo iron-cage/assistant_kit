@@ -4,7 +4,7 @@
 
 - **Purpose**: FT- test cases verifying `scope_for()` output correctness and session cross-loading behaviors for `clr`.
 - **Responsibility**: Acceptance criteria confirming CLAUDE_HOME/memory-path override handling, git-root anchoring, the `clr scope` command output, and `--from`/`--to` precedence and defaults.
-- **In Scope**: `scope_for()` defaults and overrides (`CLAUDE_HOME`, `CLAUDE_COWORK_MEMORY_PATH_OVERRIDE`), git-root memory anchoring, `clr scope` 6-variable output, `--from` (default-to-cwd), `--to` alias (default-to-cwd), `--session-dir` precedence.
+- **In Scope**: `scope_for()` defaults and overrides (`CLAUDE_HOME`, `CLAUDE_COWORK_MEMORY_PATH_OVERRIDE`), git-root memory anchoring, `clr scope` 6-variable output, `--from` (default-to-cwd), `--to` alias (default-to-cwd), `--session-dir` deprecation (inert, never suppresses `--from`).
 - **Out of Scope**: JSON/stdin config loading (-> `004_json_config.md`), default command assembly (-> `001_runner_tool.md`).
 
 Test case planning for [feature/005_session_path_resolution.md](../../../docs/feature/005_session_path_resolution.md). Tests validate `scope_for()` output correctness, CLAUDE_HOME and memory path override handling, git-root anchoring for memory dir, the `clr scope` command, and the `--from`/`--to` cross-loading behaviors.
@@ -22,7 +22,7 @@ Test case planning for [feature/005_session_path_resolution.md](../../../docs/fe
 | FT-7 | `--from` plans a transplant of the most-recent source session | cross-loading |
 | FT-8 | `--to` + `--from`: Claude runs in target, loads from source | cross-loading |
 | FT-9 | `--to` is an alias for `--dir`; behavior is identical | alias |
-| FT-10 | `--session-dir` takes precedence over `--from` | precedence |
+| FT-10 | `--session-dir` no longer suppresses `--from` (deprecated, inert) | deprecation |
 
 ## Test Coverage Summary
 
@@ -30,7 +30,7 @@ Test case planning for [feature/005_session_path_resolution.md](../../../docs/fe
 - clr scope: 1 test (FT-6)
 - cross-loading: 2 tests (FT-7, FT-8)
 - alias: 1 test (FT-9)
-- precedence: 1 test (FT-10)
+- deprecation: 1 test (FT-10)
 
 **Total:** 10 tests
 
@@ -135,11 +135,11 @@ Test case planning for [feature/005_session_path_resolution.md](../../../docs/fe
 
 ---
 
-### FT-10: `--session-dir` takes precedence over `--from`
+### FT-10: `--session-dir` no longer suppresses `--from` (deprecated, inert)
 
-- **Given:** source dir `/tmp/sf10_src` has session `jjj-303.jsonl`; raw session dir `/tmp/sf10_raw` has session `kkk-404.jsonl`; fake claude binary in PATH
+- **Given:** source dir `/tmp/sf10_src` has session `jjj-303.jsonl`; raw override dir `/tmp/sf10_raw` has session `kkk-404.jsonl`; fake claude binary in PATH
 - **When:** `clr --from /tmp/sf10_src --session-dir /tmp/sf10_raw --dry-run "test"`
-- **Then:** dry-run output contains `CLAUDE_CODE_SESSION_DIR=<raw dir>` (raw path verbatim — the raw export is BUG-493's own domain and still emitted); the source's computed storage path does NOT appear; `--session-dir` (raw path) wins
+- **Then:** dry-run stdout still shows the `--from` transplant plan (`# session-transplant: <source storage>/jjj-303.jsonl -> ...`), proceeding exactly as if `--session-dir` were absent; `CLAUDE_CODE_SESSION_DIR=` never appears (BUG-490's dead export stays gone); stderr carries a deprecation warning naming the raw `--session-dir` value
 - **Exit:** 0
 - **Source:** [feature/005_session_path_resolution.md](../../../docs/feature/005_session_path_resolution.md) AC-10
-- **Implemented by:** `session_path_resolution_test.rs::ft10_session_dir_wins_over_from`
+- **Implemented by:** `session_path_resolution_test.rs::ft10_session_dir_no_longer_wins_over_from`

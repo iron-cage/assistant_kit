@@ -7,8 +7,10 @@
 //! | `run_cli` | `cli_args_test`, `cli_args_ext_test`, `dry_run_test`, `ultrathink_args_test`, `effort_args_test`, `param_edge_cases_test`, `param_extended_flags_test`, `param_group_test`, `execution_mode_test`, `quiet_test`, `ask_command_test`, `user_story_test`, `user_story_creds_isolated_test`, `user_story_output_test`, `user_story_ps_test`, `user_story_kill_test`, `ps_command_test`, `kill_command_test`, `ps_mode_test`, `ps_columns_test`, `ps_wide_test`, `ps_pid_test`, `ps_inspect_test`, `ps_flags_test`, `output_style_test`, `summary_fields_test`, `no_compact_window_test`, `json_config_test` |
 //! | `run_cli_with_env` | `env_var_test`, `env_var_ext_test`, `invariant_trace_universality_test`, `param_trace_edge_cases_test`, `param_group_test`, `isolated_test`, `user_story_creds_isolated_test`, `user_story_output_test`, `bug_reproducers_239_244_test`, `error_classification_test`, `ps_command_test`, `user_story_ps_test`, `output_style_test`, `summary_fields_test`, `no_compact_window_test`, `json_config_test`, `config_file_test` |
 //! | `run_cli_in_dir` | `config_file_test` |
-//! | `make_session_dir` | `cli_args_test`, `ultrathink_args_test`, `user_story_test`, `dry_run_test` |
-//! | `make_zero_turn_session_dir` | `execution_mode_test` |
+//! | `make_session_dir` (deprecated for new use) | `cli_args_test`, `ultrathink_args_test`, `user_story_test`, `dry_run_test` |
+//! | `make_zero_turn_session_dir` (deprecated for new use) | `execution_mode_test` |
+//! | `df` | `session_from_test`, `session_verification_test`, `session_path_resolution_test`, `session_source_isolation_test` |
+//! | `make_session_for` | `session_from_test`, `session_verification_test`, `session_path_resolution_test`, `session_source_isolation_test` |
 //! | `exit_code` | `refresh_test`, `bug_reproducers_239_244_test`, `user_story_test`, `user_story_creds_isolated_test`, `isolated_test`, `json_config_test`, `config_file_test` |
 //! | `stderr_str` | `refresh_test`, `bug_reproducers_239_244_test`, `invariant_trace_universality_test`, `error_classification_test`, `user_story_test`, `user_story_creds_isolated_test`, `isolated_correctness_test`, `isolated_test`, `ps_command_test`, `user_story_ps_test`, `kill_command_test`, `user_story_kill_test`, `ps_mode_test`, `ps_columns_test`, `output_format_test`, `no_compact_window_test`, `json_config_test`, `config_file_test` |
 //! | `stdout_str` | `refresh_test`, `isolated_correctness_test`, `isolated_test`, `dry_run_test`, `ps_command_test`, `user_story_ps_test`, `kill_command_test`, `user_story_kill_test`, `ps_mode_test`, `ps_columns_test`, `ps_wide_test`, `output_format_test`, `no_compact_window_test`, `json_config_test`, `config_file_test` |
@@ -46,10 +48,13 @@
 //!   subprocess spawn attempt follows (typically fails if `claude` binary absent).
 //! - **`PATH=/nonexistent`**: Force binary-not-found for deterministic failure
 //!   testing — trace output fires before subprocess invocation attempt.
-//! - **`make_session_dir`**: Create a temp session dir with a dummy `.jsonl` file so
-//!   `session_exists()` returns `Some(SessionId)` regardless of the ambient host environment.  Tests that assert
-//!   `-c` injection must use `--session-dir <path>` with this helper; otherwise they
-//!   are fragile and fail in clean container environments with no prior Claude sessions.
+//! - **`make_session_for`**: Fix(BUG-493) replacement for the retired `--session-dir`
+//!   isolation trick. Seeds `<claude_home>/projects/<df(src_dir)>/<uuid>.jsonl` so
+//!   `session_exists()` returns `Some(SessionId)` deterministically. Tests that assert
+//!   `-c` injection must set `CLAUDE_HOME` to the seeded temp dir and pass
+//!   `--from <src_dir>` (or arrange `src_dir` to equal the subprocess's own cwd);
+//!   otherwise they are fragile and fail in clean container environments with no
+//!   prior Claude sessions, or unstable in dirty ones with leftover host sessions.
 
 use std::process::Command;
 
@@ -166,13 +171,93 @@ pub fn run_cli_in_dir
     .expect( "failed to execute clr binary" )
 }
 
+/// Encode a path using the `Df()` algorithm from `algorithm/001_path_encoding.md`.
+///
+/// Delegates to the real production encoder rather than reimplementing it —
+/// see `Fix(BUG-391)` in `session_from_test.rs` for the regression a hand-rolled
+/// duplicate caused (silent divergence from `encode_path()`'s substitution scope
+/// the moment a fixture path contained a `.`, e.g. `tempfile::TempDir`'s `.tmp` prefix).
+///
+/// # Panics
+///
+/// Panics if `path` cannot be encoded by the production `encode_path()` algorithm.
+#[must_use]
+#[inline]
+#[allow(dead_code)]
+pub fn df( path : &str ) -> String
+{
+  claude_storage_core::encode_path( std::path::Path::new( path ) )
+    .expect( "df(): path must encode successfully in test fixtures" )
+}
+
+/// Create `<claude_home>/projects/<df(src_dir)>/<uuid>.jsonl` with non-empty content.
+///
+/// Fix(BUG-493): the deterministic replacement for the old `make_session_dir()` +
+/// raw `--session-dir` isolation trick. `--session-dir` is deprecated and inert —
+/// `session_exists()` no longer scans it — so forcing a match now requires seeding
+/// the storage location `session_from_dir` actually computes: `--from <src_dir>`
+/// (or cwd, if `--from` is omitted) resolved through `CLAUDE_HOME`. Callers must
+/// set `CLAUDE_HOME` to `claude_home` on the subprocess and pass `--from src_dir`
+/// (or arrange `src_dir` to equal the subprocess's own cwd) to make `session_exists()`
+/// find the seeded file deterministically, regardless of ambient host session state.
+///
+/// Returns the `.jsonl` path. The caller must keep the `TempDir` alive.
+///
+/// # Panics
+///
+/// Panics if the session directory or file cannot be created.
+#[must_use]
+#[inline]
+#[allow(dead_code)]
+pub fn make_session_for( claude_home : &std::path::Path, src_dir : &str, uuid : &str ) -> std::path::PathBuf
+{
+  let session_dir = claude_home.join( "projects" ).join( df( src_dir ) );
+  std::fs::create_dir_all( &session_dir ).expect( "create session dir" );
+  let file = session_dir.join( format!( "{uuid}.jsonl" ) );
+  std::fs::write( &file, b"{}" ).expect( "write session jsonl" );
+  file
+}
+
+/// Create `<claude_home>/projects/<df(src_dir)>/<uuid>.jsonl` shaped like a
+/// zero-model-turn transcript (BUG-428): structurally qualifies as a resume
+/// candidate under `most_recent_session_in_dir()`'s 4 checks (correct extension,
+/// no `agent-` prefix, non-zero size, valid UTF-8 stem) but records no model
+/// turns — the exact shape claude's real `--resume` logic rejects with
+/// `"No conversation found to continue"`.
+///
+/// Fix(BUG-493): encoded-path counterpart to `make_session_for()`, for BUG-428
+/// reproducer tests that specifically need zero-turn content rather than the
+/// generic `{}` placeholder — see that function's doc comment for the isolation
+/// contract (`CLAUDE_HOME` + `--from src_dir`).
+///
+/// Returns the `.jsonl` path. The caller must keep the `TempDir` alive.
+///
+/// # Panics
+///
+/// Panics if the session directory or file cannot be created.
+#[must_use]
+#[inline]
+#[allow(dead_code)]
+pub fn make_zero_turn_session_for( claude_home : &std::path::Path, src_dir : &str, uuid : &str ) -> std::path::PathBuf
+{
+  let session_dir = claude_home.join( "projects" ).join( df( src_dir ) );
+  std::fs::create_dir_all( &session_dir ).expect( "create session dir" );
+  let file = session_dir.join( format!( "{uuid}.jsonl" ) );
+  std::fs::write( &file, b"{\"type\":\"system\",\"subtype\":\"init\"}\n" )
+    .expect( "write zero-turn session jsonl" );
+  file
+}
+
 /// Create a temp session directory with one dummy `.jsonl` file; returns `(dir, path_string)`.
 ///
 /// The caller must keep the returned `TempDir` alive for the duration of the test —
 /// the directory and its contents are deleted when the `TempDir` is dropped.
-/// Pass the returned `path_string` as the value of `--session-dir` to force
-/// `session_exists()` to return `Some(SessionId)`, making `-c` injection deterministic
-/// regardless of the ambient host session state.
+///
+/// Fix(BUG-493): `--session-dir` is deprecated and inert — `session_exists()` no
+/// longer scans it, so passing the returned path as `--session-dir` no longer
+/// forces `-c` injection. New tests needing deterministic `-c` injection must use
+/// `make_session_for()` (seeds the `--from`/cwd-derived storage location instead).
+/// Kept only for existing callers not yet migrated; do not add new callers.
 ///
 /// Pitfall: if the caller drops `TempDir` before passing the path to the subprocess,
 /// the directory is deleted and `session_exists()` returns `None`.
