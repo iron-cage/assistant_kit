@@ -400,6 +400,22 @@ pub( crate ) fn accounts_routine( cmd : VerifiedCommand, _ctx : ExecutionContext
       render_accounts_table( &accounts, &owners, &cols, current_name.as_deref() )
     }
   };
+  // Fix(audit-accounts-no-color): no_color:: is registered for .accounts and documented in
+  //   its parameter list, but was never parsed — `format::table no_color::1` leaked the
+  //   ✓/🔒 glyphs with no plain fallback.
+  // Root cause: only OutputOptions (format::) was extracted from the command; no_color::
+  //   had no read site in this routine.
+  // Pitfall: Json is exempt — machine format; a string-level replace would corrupt user
+  //   data inside JSON values (mirrors `.usage`'s Tsv/Json exemption).
+  let no_color = crate::output::parse_int_flag( &cmd, "no_color", 0 )? != 0;
+  let content = if no_color && opts.format != OutputFormat::Json
+  {
+    crate::usage::apply_no_color( content )
+  }
+  else
+  {
+    content
+  };
   Ok( OutputData::new( content, "text" ) )
 }
 

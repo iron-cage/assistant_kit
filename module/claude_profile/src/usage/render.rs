@@ -430,7 +430,7 @@ pub( crate ) fn render_plain(
 
 /// Strip emoji and replace status symbols with plain-text equivalents.
 ///
-/// Replaces: `🟢`→`ok`, `🟡`→`warn`, `🔴`→`err`, `⚪`→`static`, `🔒`→`(locked)`, `→`→`->`, `✓`→`*`.
+/// Replaces: `🟢`→`ok`, `🟡`→`warn`, `🔴`→`err`, `⚪`→`static`, `🔒`→`(locked)`, `●`→`status`, `→`→`->`, `✓`→`*`.
 /// Sole definition — used by `render_plain` above and by `api.rs` for `no_color::1`
 /// (AC-14 / TSK-224); the two sites previously carried verbatim copies of the
 /// replacement chain (audit-no-color-dup).
@@ -445,6 +445,11 @@ pub( crate ) fn apply_no_color( s : String ) -> String
     .replace( "⚪", "static" )
     // Feature 070 lock visibility: name-cell claim-lock marker (with_lock_marker).
     .replace( "\u{1F512}", "(locked)" )
+    // Fix(audit-header-glyph): the ● status-column header survived no_color::1 while every
+    //   other non-ASCII glyph was mapped. Root cause: header glyphs were never audited when
+    //   the replacement chain was built from body-cell emoji. Pitfall: "status" matches the
+    //   TSV header vocabulary — do not invent a second word for the same column.
+    .replace( '●', "status" )
     .replace( '→', "->" )
     .replace( '✓', "*" )
 }
