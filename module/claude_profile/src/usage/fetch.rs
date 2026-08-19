@@ -23,6 +23,20 @@ pub(super) fn read_token( credential_store : &std::path::Path, name : &str ) -> 
   claude_profile_core::account::read_access_token_from_file( &path )
 }
 
+/// Determine whether a stored account's token matches the live session token (AC-02).
+///
+/// Shared by the anthropic path and the R1 redirect branch: `switch_account` installs
+/// any account's credentials file as the live one regardless of backend, so stored-vs-live
+/// token equality identifies the installed account for both backends. Never call this for
+/// non-owned accounts — G1 deliberately avoids reading foreign credential files at all.
+fn is_token_current( credential_store : &std::path::Path, name : &str, live_token : Option< &String > ) -> bool
+{
+  live_token.is_some_and( | live |
+  {
+    read_token( credential_store, name ).is_ok_and( | stored | stored == *live )
+  } )
+}
+
 /// Prepend `row` to `results` only when no entry with the same `name` is already present.
 ///
 /// Enforces the at-most-one-row-per-name invariant for the synthetic current-session row
@@ -109,12 +123,19 @@ pub fn fetch_quota_for_list(
     {
       let ( host, role ) = read_profile_metadata( credential_store, &acct.name );
       let renewal_at     = read_renewal_at( credential_store, &acct.name );
+      // Fix(BUG-537): resolve is_current via the same AC-02 live-token comparison as the
+      //   anthropic path — switch_account installs a redirect account's credentials file
+      //   as the live one, so token equality correctly identifies it and ✓ becomes reachable.
+      // Root cause: this branch continues before the shared is_current computation and
+      //   hardcoded false; a switched-to redirect account could never show ✓.
+      // Pitfall: do not apply the same change to the G1 not-owned branch below — G1
+      //   deliberately avoids reading foreign credential files at all; its false stands.
       results.push( AccountQuota
       {
         fallback_reason : None,
         touched_recently : false,
         name                  : acct.name.clone(),
-        is_current            : false,
+        is_current            : is_token_current( credential_store, &acct.name, live_token.as_ref() ),
         is_active             : acct.is_active,
         is_occupied_elsewhere : occupied_elsewhere.contains( &acct.name ),
         expires_at_ms         : acct.expires_at_ms,
@@ -182,11 +203,7 @@ pub fn fetch_quota_for_list(
     }
 
     // Determine whether this account's stored token matches the live session.
-    let is_current = live_token.as_ref().is_some_and( |live|
-    {
-      read_token( credential_store, &acct.name )
-        .is_ok_and( |stored| stored == *live )
-    } );
+    let is_current = is_token_current( credential_store, &acct.name, live_token.as_ref() );
 
     // Solo gate: skip HTTP for non-current accounts when solo::1 — use cached/approximated data.
     // Fires after G1 (non-owned already handled above) and after is_current is resolved.

@@ -917,6 +917,134 @@ fn ft14b_071_redirect_checked_before_not_owned_gate()
   );
 }
 
+// ── BUG-537: redirect account is_current hardcoded false ────────────────────
+
+/// MRE: a `backend: redirect` account whose stored `accessToken` matches the live
+/// credentials token must get `is_current: true` (✓ flag column), per
+/// `docs/feature/009_token_usage.md` AC-02 — "the saved account whose `accessToken`
+/// matches the live `~/.claude/.credentials.json` token". The R1 branch hardcoded
+/// `is_current: false`, so a successfully switched-to redirect account (`switch_account`
+/// installs its credentials file as the live one, same as any account) could never
+/// display ✓ — the row kept showing `*`/blank and looked unswitched.
+///
+/// # Root Cause
+/// `fetch.rs`'s R1 redirect branch `continue`s before the shared live-token
+/// comparison and hardcoded `is_current: false` in its `AccountQuota` literal.
+///
+/// # Why Not Caught
+/// ft14/ft14b (the R1 gate tests) use an absent live-credentials file, under which
+/// `is_current` is false on every path — the hardcoded value and a correct computation
+/// are indistinguishable with that fixture. No test paired a redirect account with a
+/// matching live token until the kimi VM binding (docs/guide/001) exercised it live.
+///
+/// # Fix Applied
+/// Fix(BUG-537): R1 resolves `is_current` via the same stored-vs-live token comparison
+/// the anthropic path uses (shared `is_token_current` helper) instead of a hardcoded
+/// `false`.
+///
+/// # Prevention
+/// Every `AccountQuota` construction for a real stored account must receive an
+/// `is_current` computed from the AC-02 live-token comparison; a hardcoded value is
+/// legitimate only where a documented gate deliberately precedes the comparison (G1 —
+/// see Pitfall).
+///
+/// # Pitfall
+/// The G1 not-owned branch also hardcodes `is_current: false` — deliberately: G1 exists
+/// to avoid reading foreign credential files at all, so the comparison must not be
+/// added there. Do not "fix" G1 the same way. A pre-fix execution of this test also
+/// fires one real guaranteed-401 Anthropic call — with no row current, the synthetic-row
+/// path constructs a current-session row from the unmatched live token (that call IS
+/// symptom E-8); post-fix the path is never reached and the test is fully network-free.
+#[ doc = "bug_reproducer(BUG-537)" ]
+#[ test ]
+fn mre_bug537_redirect_account_is_current_when_token_matches_live()
+{
+  let store = tempfile::TempDir::new().unwrap();
+
+  std::fs::write(
+    store.path().join( "kimi@moonshot.ai.json" ),
+    r#"{"backend":"redirect","base_url":"https://api.moonshot.ai/anthropic","redirect_model":"kimi-k3"}"#,
+  ).unwrap();
+  std::fs::write(
+    store.path().join( "kimi@moonshot.ai.credentials.json" ),
+    r#"{"accessToken":"sk-kimi-key-abc123"}"#,
+  ).unwrap();
+  // What a successful `.account.use name::kimi` leaves behind: switch_account installs
+  // the account's own credentials file verbatim as the live one.
+  let live = store.path().join( "live.credentials.json" );
+  std::fs::write( &live, r#"{"accessToken":"sk-kimi-key-abc123"}"# ).unwrap();
+
+  let accounts = vec![ claude_profile::account::Account
+  {
+    name              : "kimi@moonshot.ai".to_string(),
+    subscription_type : String::new(),
+    rate_limit_tier   : String::new(),
+    expires_at_ms     : u64::MAX / 2,
+    is_active         : false,
+    email             : String::new(),
+    display_name      : String::new(),
+    billing           : String::new(),
+    model             : String::new(),
+    tagged_id         : String::new(),
+    uuid              : String::new(),
+    capabilities      : Vec::new(),
+    organization_uuid : String::new(),
+    organization_name : String::new(),
+    org_role          : String::new(),
+    workspace_uuid    : String::new(),
+    workspace_name    : String::new(),
+    host              : String::new(),
+    role              : String::new(),
+    owner             : String::new(),
+    tags              : Vec::new(),
+    is_owned          : true,
+    claim_lock        : false,
+    reserve           : false,
+    renewal_at        : None,
+    backend           : claude_profile::account::AccountBackend::Redirect,
+    base_url          : Some( "https://api.moonshot.ai/anthropic".to_string() ),
+    redirect_model    : Some( "kimi-k3".to_string() ),
+    inference_provider : String::new(),
+  } ];
+
+  let results = fetch_quota_for_list( &accounts, store.path(), &live, false, false, false, None );
+
+  // Find by name: pre-fix a synthetic "(current session)" row is ALSO injected (the E-8
+  // side effect), so positional indexing is unreliable against the buggy code.
+  let kimi = results.iter()
+    .find( |r| r.name == "kimi@moonshot.ai" )
+    .expect( "BUG-537: the stored redirect account's row must exist" );
+  assert!(
+    kimi.is_current,
+    "BUG-537: redirect account whose accessToken matches the live token must be is_current \
+     (AC-02 ✓); got false — R1's hardcoded value",
+  );
+  // The fix must not route the account into the HTTP path — the R1 placeholder stands.
+  match &kimi.result
+  {
+    Err( reason ) => assert_eq!(
+      reason, "redirect backend — no Anthropic quota",
+      "BUG-537: R1 placeholder reason must survive the is_current fix; got: {reason}",
+    ),
+    Ok( _ ) => panic!( "BUG-537: redirect account must never take the HTTP path, got Ok" ),
+  }
+  // E-8 guard: once the redirect account is current, the synthetic current-session row
+  // (and its guaranteed-401 fetch with the redirect key) must never be constructed.
+  assert_eq!(
+    results.len(), 1,
+    "BUG-537: no synthetic row may be injected once the redirect account is current; got {} rows", results.len(),
+  );
+
+  // Negative control: an unreadable/absent live token must NOT mark the account current —
+  // pins the fix to a real comparison, ruling out a tautological `is_current: true`.
+  let absent_live = store.path().join( ".absent_credentials.json" );
+  let results = fetch_quota_for_list( &accounts, store.path(), &absent_live, false, false, false, None );
+  assert!(
+    !results[ 0 ].is_current,
+    "BUG-537: redirect account must not be is_current when no live token is readable; got true",
+  );
+}
+
 /// FT-15/033 — the cache-first branch (`fetch.rs`'s `CACHE_FRESH_SECS` guard) must surface
 /// a cache-persisted `org_created_at` on the returned `AccountQuota`, so `renews_label()` can
 /// compute an estimated renewal date instead of falling back to "?" (AC-15).
