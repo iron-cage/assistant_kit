@@ -25,7 +25,7 @@
 //! | `run_topic_dry` | `topic_command_test` |
 //! | `spawn_fake_claude` (unix) | `ps_command_test`, `user_story_ps_test`, `kill_command_test`, `user_story_kill_test`, `ps_mode_test`, `ps_columns_test`, `ps_wide_test`, `ps_pid_test`, `ps_inspect_test`, `param_group_test`, `ps_flags_test` |
 //! | `spawn_print_claude` (unix) | `ps_command_test`, `user_story_ps_test`, `ps_mode_test`, `ps_columns_test`, `ps_inspect_test`, `param_group_test`, `concurrency_gate_test`, `concurrency_gate_ext2_test`, `config_file_test` |
-//! | `spawn_print_claude_for` (unix) | `concurrency_gate_test`, `concurrency_gate_ext_test`, `concurrency_gate_ext2_test`, `concurrency_gate_ext3_test`, `journal_integration_ext_test`, `config_file_test` |
+//! | `spawn_print_claude_for` (unix) | `concurrency_gate_test`, `concurrency_gate_ext_test`, `concurrency_gate_ext2_test`, `concurrency_gate_ext3_test`, `concurrency_gate_deadline_test`, `journal_integration_ext_test`, `config_file_test` |
 //! | `run_clr_ps` (unix) | `ps_command_test`, `user_story_ps_test` |
 //! | `run_clr_kill` (unix) | `kill_command_test`, `user_story_kill_test` |
 //! | `run_isolated` | `isolated_test`, `isolated_plan034_test`, `isolated_plan035_test` |

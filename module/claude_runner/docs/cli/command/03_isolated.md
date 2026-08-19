@@ -113,7 +113,11 @@ If the subprocess times out but already wrote refreshed credentials, `clr isolat
 `--max-sessions` gates `isolated` through the same concurrency mechanism as `run`/`ask` (see
 [user_story/025_concurrency_gate.md](../user_story/025_concurrency_gate.md)) as a 3-tier chain:
 CLI flag + `"max-sessions"` JSON key (via `--args-file`) + `CLR_MAX_SESSIONS` env var —
-no config-file tier (consistent with `isolated` having no config-file tier for any parameter). The 3 gate-tuning knobs (`CLR_GATE_POLL_SECS`, `CLR_GATE_MAX_ATTEMPTS`,
+no config-file tier. `--model` is the one and only `isolated` parameter that reaches the config
+file (see the injected-defaults list above, and
+[`config_param.md` § Out of Scope](../config_param.md); it is read by
+`resolve_isolated_default_model()`, not by the `ConfigDefaults` tier that serves `run`/`ask`/`topic`) —
+every other `isolated` parameter, `--max-sessions` included, stops at the env-var tier. The 3 gate-tuning knobs (`CLR_GATE_POLL_SECS`, `CLR_GATE_MAX_ATTEMPTS`,
 `CLR_GATE_STALE_SECS`) also apply to `isolated` env-var-only — no `--gate-poll-secs`/
 `--gate-max-attempts`/`--gate-stale-secs` CLI flags exist for `isolated` (contrast `run`/`ask`,
 which have full 5-tier parity for these 3 — see

@@ -14,7 +14,7 @@
 //! wording, and the T33/T34 diagnostic-wording checks (INV-013 IN-4/IN-5).
 //!
 //! See `concurrency_gate_test.rs`'s own header for the full Test Case Index
-//! across all 4 split files.
+//! across all 5 split files.
 
 mod cli_binary_test_helpers;
 use cli_binary_test_helpers::
@@ -559,7 +559,7 @@ fn t28_isolated_gate_does_not_trigger_below_capacity()
 
 // ── trace_gate_wait_exposure() on the `isolated` gate call site (BUG-445 Fix
 // Location #3) — not T-numbered, same idiom as the `t_gate_*` override-tier
-// matrix below; see `concurrency_gate_ext3_test.rs`'s "086" section for the
+// matrix below; see `concurrency_gate_deadline_test.rs`'s "086" section for the
 // run/ask-path coverage of the same diagnostic. ──────────────────────────────
 
 /// `clr isolated --trace` with NO expressed timeout and unset
@@ -640,7 +640,7 @@ fn t_gate_isolated_trace_exposure_silent_when_timeout_zero()
 /// unset must default the gate-wait budget from the flag (BUG-445 Fix
 /// Location #2), pinning the isolated call site's
 /// `if cli.timeout_expressed { cli.timeout_secs } else { 0 }` threading —
-/// the run/ask-path reproducer lives in `concurrency_gate_ext3_test.rs`
+/// the run/ask-path reproducer lives in `concurrency_gate_deadline_test.rs`
 /// (086/FIX-2). Denial fixture per T39: the sole slot pre-seeded with this
 /// test process's own live pid, empty census.
 // test_kind: edge_case
