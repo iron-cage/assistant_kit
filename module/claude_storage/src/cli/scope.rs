@@ -57,6 +57,29 @@ fn common_prefix_len( a : &str, b : &str ) -> usize
 /// for the topic-boundary decision — any boundary search that ignores
 /// `encoded_base` re-opens this hole. Also do not assume the naive prefix
 /// check is filesystem-independent-safe; only the topic-boundary alignment is.
+///
+/// Fix(BUG-517)
+/// Root cause: `encode_path`'s 200-char truncation (`path.rs` Fix(BUG-366))
+/// hashes the ORIGINAL, untruncated path string — by design, so two
+/// DIFFERENT paths sharing the same first-200-char body still disambiguate.
+/// But once BOTH `dir_name` and `encoded_base` independently exceed 200
+/// chars (each carries its OWN hash-of-its-OWN-full-path-string suffix),
+/// that same by-design disambiguation defeats this function's literal-prefix
+/// assumption even for a GENUINE ancestor/descendant pair: appending more
+/// path components only ever lengthens an encoding, so a real ancestor whose
+/// own encoding already exceeds 200 chars forces every real descendant's
+/// encoding to exceed 200 chars too — meaning single-sided truncation
+/// (the only shape every prior fixture exercises) can never hide a real
+/// relationship, but double-sided truncation always CAN, unconditionally.
+/// Fix: once both sides are independently truncated, the string check can no
+/// longer prove a negative — conservatively return `true` and let the
+/// caller's `decode_path_via_fs`-based real filesystem verification decide,
+/// same conservative-defer philosophy as everywhere else in this file.
+/// Pitfall: do not narrow this to "only when the shared 200-char body
+/// matches" — that is a necessary CONSEQUENCE of a genuine relationship
+/// under this construction, not an independent condition to re-check;
+/// length exceeding 200 alone is already both necessary and sufficient to
+/// know the string check is unsound for that side.
 fn is_relevant_encoded( dir_name : &str, encoded_base : &str ) -> bool
 {
   let check = | candidate : &str | -> bool
@@ -64,6 +87,7 @@ fn is_relevant_encoded( dir_name : &str, encoded_base : &str ) -> bool
     encoded_base == candidate || encoded_base.starts_with( &format!( "{candidate}-" ) )
   };
   if check( dir_name ) { return true; }
+  if dir_name.len() > 200 && encoded_base.len() > 200 { return true; }
   let lcp_len = common_prefix_len( dir_name, encoded_base );
   if lcp_len == 0 || lcp_len >= dir_name.len() { return false; }
   let ( before, after ) = ( &dir_name[ ..lcp_len ], &dir_name[ lcp_len.. ] );
@@ -96,17 +120,68 @@ fn tilde_compress( path : &std::path::Path ) -> String
 /// function resolves the ambiguity against the real filesystem — see
 /// `walk_fs`'s own doc comment (Fix(BUG-511)) for the resolution algorithm.
 ///
-/// Returns `None` if no matching path is found (project deleted, remote, or unmounted).
+/// Returns `FsDecodeOutcome::NotFound` when no real filesystem entry
+/// corresponds to even the first component of `encoded` (project deleted,
+/// remote, or unmounted) — see `FsDecodeOutcome`'s own doc comment
+/// (Fix(BUG-512), Fix(BUG-513)) for the `Full`/`Partial` distinction this
+/// now also reports.
 ///
 /// # Why only as fallback
 ///
 /// Requires the project directory to exist on disk. Always call heuristic decode first
 /// and only reach here when that result does not exist. This avoids unnecessary stat
 /// calls for paths the heuristic already handles correctly.
-fn decode_path_via_fs( encoded : &str ) -> Option< std::path::PathBuf >
+///
+/// Fix(BUG-515)
+/// Root cause: `search_encoded_subtree` used to be invoked from INSIDE
+/// `walk_fs`, once per recursion level, on that level's own `base` — so a
+/// target that could never be found (e.g. a real sibling's encoding plus a
+/// synthetic, non-real topic suffix — no real path can ever match it) forced
+/// every ancestor level, all the way up to `walk_fs`'s own root call at `/`,
+/// to ALSO exhaustively search its own (progressively larger) subtree before
+/// giving up. At the `/`-level call this meant walking the entire real
+/// filesystem — `/proc`, `/sys`, every mounted volume — with no bound, an
+/// unbounded hang (confirmed: 20+ minutes sustained CPU, `scope::under`/
+/// `scope::around`, MAAV Round 8 Dimension Adversary).
+/// Fix: call `search_encoded_subtree` exactly ONCE here, after the plain
+/// incremental walk (`walk_fs`) has already run to completion, anchored at
+/// the DEEPEST real path the incremental walk actually verified. That anchor
+/// is always correct and never too shallow: per-component matching against
+/// `encode_component_piece` is lossless (not approximate) for any portion of
+/// `encoded` before `encode_path`'s outer truncation step, so the point
+/// incremental matching gets stuck is, by construction, exactly where the
+/// lossless information runs out and only the truncated-hash tail remains —
+/// there is no shallower point worth searching from, and no deeper one is
+/// reachable without already having a real match. This bounds the search to
+/// the smallest subtree that could possibly contain the answer, instead of
+/// the whole filesystem.
+/// Pitfall: do not move this call back inside `walk_fs`'s own recursion, and
+/// do not call it more than once per `decode_path_via_fs` invocation — either
+/// change reintroduces the same redundant, unbounded-at-shallow-levels search
+/// this fix removes. `walk_fs` itself no longer knows about `encoded`'s full,
+/// untruncated length at all; only this function does.
+fn decode_path_via_fs( encoded : &str ) -> FsDecodeOutcome
 {
   let inner = &encoded[ 1.. ]; // strip leading `-`
-  walk_fs( std::path::Path::new( "/" ), inner, true )
+  let ( outcome, _consumed ) = walk_fs( std::path::Path::new( "/" ), inner, true );
+  match outcome
+  {
+    // Fix(BUG-512), Fix(BUG-513): zero real progress past the root is
+    // exactly the classic "deleted/remote project" case the original
+    // conservative-include fallback existed for — normalize it to
+    // `NotFound` rather than a near-meaningless `Partial("/")`, so callers
+    // keep conservatively including it, same as before either bug existed.
+    FsDecodeOutcome::Partial( p ) if p == std::path::Path::new( "/" ) => FsDecodeOutcome::NotFound,
+    // Fix(BUG-515): single, correctly-anchored fallback — see this
+    // function's own doc comment above.
+    FsDecodeOutcome::Partial( p ) if encoded.len() > 200 =>
+      match search_encoded_subtree( &p, encoded )
+      {
+        Some( found ) => FsDecodeOutcome::Full( found ),
+        None => FsDecodeOutcome::Partial( p ),
+      },
+    other => other,
+  }
 }
 
 /// Decode the base-encoded component of a storage dir name to a real filesystem path.
@@ -125,7 +200,24 @@ fn decode_storage_base( base_encoded : &str ) -> Option< std::path::PathBuf >
   else
   {
     // Fix(issue-029): heuristic maps '_' to '/', try filesystem-guided decode.
-    Some( decode_path_via_fs( base_encoded ).unwrap_or( h ) )
+    // Fix(BUG-512), Fix(BUG-513): only a FULL match is preferable to the
+    // heuristic here. A `Partial` match is, by definition, missing
+    // information (an unresolved topic suffix or truncated remainder) that
+    // the heuristic's own '--'-chain decoding already reconstructs for
+    // display purposes — preferring it over `h` would silently drop that
+    // suffix from the displayed path (see
+    // `projects_shows_topic_path_when_topic_dir_absent` and siblings, which
+    // require the heuristic's topic-inclusive guess).
+    // Fix(BUG-518): `AmbiguousFull` has no single unambiguous real path to
+    // prefer either — same "missing information" shape as `Partial` for
+    // display purposes (here, which of 2+ real candidates), so it falls
+    // back to the heuristic `h` alongside `Partial`/`NotFound` rather than
+    // arbitrarily picking one tied candidate.
+    Some( match decode_path_via_fs( base_encoded )
+    {
+      FsDecodeOutcome::Full( p ) => p,
+      FsDecodeOutcome::AmbiguousFull( _ ) | FsDecodeOutcome::Partial( _ ) | FsDecodeOutcome::NotFound => h,
+    } )
   }
 }
 
@@ -142,15 +234,63 @@ fn decode_storage_base( base_encoded : &str ) -> Option< std::path::PathBuf >
 /// Fix: decode `dir_name` directly — `decode_path_via_fs` already treats an
 /// unverifiable/nonexistent path as `true` (conservative include), which covers the
 /// case where a genuine topic suffix would have made the raw decode fail to exist.
+///
+/// Fix(BUG-512)
+/// Root cause: the `map_or(true, ...)` fallback this doc comment describes above used
+/// to fire on EVERY unresolvable `decode_path_via_fs` result, including one where
+/// `walk_fs` had already fully verified a REAL base directory along the way (e.g. a
+/// genuine sibling project) and only failed to consume a trailing, non-real `--topic`
+/// suffix. `walk_fs`'s old `Option<PathBuf>` return type could not tell that case apart
+/// from "nothing real at all" — both collapsed to `None`, both triggered blind
+/// inclusion, letting an unrelated sibling's topic-tagged session leak into
+/// `scope::under`'s results.
+/// Fix: `decode_path_via_fs` now returns `FsDecodeOutcome`, distinguishing a fully-verified
+/// real base with an unresolved remainder (`Partial`) from genuinely nothing real at all
+/// (`NotFound`). A `Full` match is unambiguous — use the plain `starts_with` relationship
+/// check. A `Partial` match, though backed by a real, verified path, only tells us where the
+/// incremental walk RAN OUT of real filesystem to check against — that terminal path is
+/// always at-or-shallower-than whatever `dir_name` truly represents, since the walk can never
+/// skip ahead of real evidence. So a `Partial` path can land in one of two shapes: either it
+/// diverged from `base_path`'s own ancestor chain entirely (a real, different, conflicting
+/// path — e.g. an unrelated sibling with a topic suffix), which is genuine evidence of
+/// exclusion; or it simply ran out of real entries to confirm/deny a deeper, still-plausible
+/// nesting under `base_path` (e.g. a session recorded for a project whose directory has since
+/// been deleted, where only some shallower ancestor of it still exists on disk) — in which
+/// case there is no real conflict, only missing evidence, and the original conservative-include
+/// philosophy still applies. `base_path.starts_with(&p)` (`p` is an ancestor of, or equal to,
+/// `base_path`) distinguishes the second shape from the first.
 /// Pitfall: this simplification is only sound because no current test combines
 /// `scope::under` with a project that has a genuine topic suffix; if such a test is
-/// added, re-verify this fallback still selects the correct base.
+/// added, re-verify this fallback still selects the correct base. Do not collapse the
+/// `Full`/`Partial` arms back into one shared check — a `Full` match is unambiguous and must
+/// use the strict `starts_with` check alone; only `Partial` needs the extra ancestor-of
+/// disjunct, precisely because it is missing evidence a `Full` match already has.
+///
+/// Fix(BUG-517)
+/// Same root cause and fix as `is_relevant_encoded`'s own Fix(BUG-517) note (mirrored in
+/// the descendant direction: `dir_name` is the potential descendant, `eb` the anchor) —
+/// once both are independently truncated past 200 chars, the literal-prefix fast-reject
+/// below cannot prove `dir_name` is NOT under `eb`, so it must defer to real verification
+/// instead of rejecting.
+///
+/// Fix(BUG-518)
+/// `AmbiguousFull` (see `FsDecodeOutcome`'s own doc comment) carries the full set of
+/// real, mutually-exclusive candidates a tied `walk_fs` resolution could be — check each
+/// individually with the same `starts_with(base_path)` relationship `Full` uses, and
+/// include when at least one qualifies. Do not collapse the set to a shared ancestor
+/// first (that is precisely the false-inclusion this variant exists to avoid).
 fn matches_under( dir_name : &str, eb : &str, base_path : &std::path::Path ) -> bool
 {
-  if dir_name != eb && !dir_name.starts_with( &format!( "{eb}-" ) ) { return false; }
+  let double_truncated = dir_name.len() > 200 && eb.len() > 200;
+  if !double_truncated && dir_name != eb && !dir_name.starts_with( &format!( "{eb}-" ) ) { return false; }
   if dir_name == eb { return true; }
-  decode_path_via_fs( dir_name )
-    .map_or( true, | p | p.starts_with( base_path ) )
+  match decode_path_via_fs( dir_name )
+  {
+    FsDecodeOutcome::Full( p ) => p.starts_with( base_path ),
+    FsDecodeOutcome::AmbiguousFull( candidates ) => candidates.iter().any( | p | p.starts_with( base_path ) ),
+    FsDecodeOutcome::Partial( p ) => p.starts_with( base_path ) || base_path.starts_with( &p ),
+    FsDecodeOutcome::NotFound => true,
+  }
 }
 
 /// Return true if `dir_name` encodes a project path that is an ancestor of `base_path`
@@ -159,12 +299,24 @@ fn matches_under( dir_name : &str, eb : &str, base_path : &std::path::Path ) -> 
 /// Fix(BUG-003)
 /// Root cause/Pitfall: see `matches_under` — same topic-suffix-stripping removal,
 /// same conservative-include fallback in `decode_path_via_fs`.
+///
+/// Fix(BUG-512)
+/// Same root cause and fix as `matches_under`'s own Fix(BUG-512) note — mirrored in the
+/// ancestor direction (`base_path.starts_with(p)` instead of `p.starts_with(base_path)`).
+/// Fix(BUG-518)
+/// `AmbiguousFull` mirrors `matches_under`'s own Fix(BUG-518) note in the ancestor
+/// direction: check `base_path.starts_with(p)` against each tied candidate individually
+/// rather than collapsing the set to a shared ancestor first.
 fn matches_relevant( dir_name : &str, eb : &str, base_path : &std::path::Path ) -> bool
 {
   if !is_relevant_encoded( dir_name, eb ) { return false; }
   if dir_name == eb { return true; }
-  decode_path_via_fs( dir_name )
-    .map_or( true, | p | base_path.starts_with( &p ) )
+  match decode_path_via_fs( dir_name )
+  {
+    FsDecodeOutcome::Full( p ) | FsDecodeOutcome::Partial( p ) => base_path.starts_with( &p ),
+    FsDecodeOutcome::AmbiguousFull( candidates ) => candidates.iter().any( | p | base_path.starts_with( p ) ),
+    FsDecodeOutcome::NotFound => true,
+  }
 }
 
 /// Return true if `dir_name` encodes a project path that is exactly `base_path`
@@ -190,14 +342,178 @@ fn matches_relevant( dir_name : &str, eb : &str, base_path : &std::path::Path ) 
 /// no real directory on disk) is conservatively included, same fallback
 /// philosophy as `matches_under`/`matches_relevant`.
 /// Pitfall: do not reuse `matches_under`'s `starts_with(base_path)` check
-/// here — `scope::local` means the anchor itself, so the comparison must be
-/// equality, not a `starts_with`/ancestor relationship.
+/// for the `Full` case — `scope::local` means the anchor itself, so a `Full`
+/// match's comparison must be equality, not a `starts_with`/ancestor
+/// relationship.
+///
+/// Fix(BUG-513)
+/// Root cause: `walk_fs`'s per-component matching only ever knew
+/// `encode_component_piece` — the PER-COMPONENT half of `encode_path`'s
+/// rule. It had no knowledge of `encode_path`'s separate, outer
+/// 200-character truncation + djb2-hash-suffix step (`path.rs:234-246`,
+/// applied ONCE to the fully concatenated string). Any real project whose
+/// encoded path crossed that boundary could never be matched by incremental
+/// per-component consumption — `decode_path_via_fs` unconditionally returned
+/// unresolvable for it, and the `map_or(true, ...)` fallback then admitted
+/// it into `scope::local`'s results even though it was a distinct, deeply
+/// nested project, not the anchor itself.
+/// Fix: `walk_fs` now also tries the REAL `encode_path` (truncation
+/// included) directly against real candidate paths once incremental
+/// per-component matching gets stuck (see `walk_fs`'s own doc comment) —
+/// this recognizes a truncated-hash match by asking the actual production
+/// encoder, never by reimplementing its truncation rule locally.
+///
+/// Fix(BUG-513) (continued — Partial-directionality correction)
+/// Root cause: the initial BUG-512/BUG-513 fix used the identical
+/// `p == base_path` check for BOTH `Full` and `Partial` outcomes. A `Partial`
+/// path is only ever at-or-shallower-than `dir_name`'s true (possibly
+/// unresolvable) target — so a `Partial` terminating strictly above
+/// `base_path` (e.g. a session recorded against a since-deleted nested
+/// directory, where only some real shallower ancestor still exists on disk)
+/// could never equal `base_path` exactly, wrongly EXCLUDING a case the
+/// original conservative-include fallback existed to protect — mirroring
+/// `matches_under`'s own T02 regression (`cli_cmd_show_test.rs`) one
+/// directory level up.
+/// Fix: for `Partial` only, also accept `base_path.starts_with(&p)` (`p` is
+/// an ancestor of, or equal to, `base_path`) — see `matches_under`'s own
+/// Fix(BUG-512) doc comment for the full disjunct rationale, mirrored here
+/// unchanged. A `Partial` landing on a real path that DIVERGES from
+/// `base_path`'s own ancestor chain (neither equal nor an ancestor) is still
+/// genuine conflicting evidence and is excluded, same as before.
+/// Pitfall: do not collapse the `Full`/`Partial` arms back into one shared
+/// check — a `Full` match is unambiguous and must use strict equality alone;
+/// only `Partial` needs the extra ancestor-of disjunct, precisely because it
+/// is missing evidence a `Full` match already has (see `matches_under`'s
+/// identical pitfall note).
+///
+/// Fix(BUG-518)
+/// `AmbiguousFull` mirrors `matches_under`'s own Fix(BUG-518) note, using the same
+/// exact-equality relationship `Full` uses (`scope::local` means the anchor itself) —
+/// check each tied candidate individually rather than collapsing the set to a shared
+/// ancestor first.
 fn matches_local( dir_name : &str, eb : &str, base_path : &std::path::Path ) -> bool
 {
   if dir_name == eb { return true; }
   if !dir_name.starts_with( &format!( "{eb}--" ) ) { return false; }
-  decode_path_via_fs( dir_name )
-    .map_or( true, | p | p == base_path )
+  match decode_path_via_fs( dir_name )
+  {
+    FsDecodeOutcome::Full( p ) => p == base_path,
+    FsDecodeOutcome::AmbiguousFull( candidates ) => candidates.iter().any( | p | *p == base_path ),
+    FsDecodeOutcome::Partial( p ) => p == base_path || base_path.starts_with( &p ),
+    FsDecodeOutcome::NotFound => true,
+  }
+}
+
+/// Outcome of walking the filesystem to resolve an encoded storage-dir name
+/// (`walk_fs`/`decode_path_via_fs`) against real directory entries.
+///
+/// Fix(BUG-512), Fix(BUG-513)
+/// Root cause: the pre-BUG-512/513 design returned a plain `Option<PathBuf>`
+/// — found (full match) or not — with no way to express "walked into and
+/// fully verified a REAL base directory, but a trailing remainder of the
+/// encoded string couldn't be matched to any further real subdirectory".
+/// That collapsed two structurally different situations into the same
+/// `None`: genuinely nothing real on disk (deleted/remote project — the
+/// origin of the conservative-include fallback in `matches_local`/
+/// `matches_under`/`matches_relevant`) versus a real, verified, but
+/// DIFFERENT project (a sibling with a topic suffix, or one past
+/// `encode_path`'s 200-character truncation boundary). Both callers'
+/// fallback then admitted the second case too, causing a cross-project data
+/// leak.
+/// Fix: report which situation actually occurred. `Full`/`Partial` are both
+/// backed by a real, filesystem-verified path, but they are NOT equally
+/// informative: `dir_name`'s true target (real or hypothetical) is always
+/// at-or-under a `Partial` path, since the walk only ever advances by
+/// matching real prefixes — so a `Partial` path is never deeper than reality
+/// can support, only ever at-or-shallower-than the truth. That means a
+/// caller checking a DESCENDANT-direction relationship (`scope::local`'s
+/// equality, `scope::under`'s `starts_with(base_path)`) cannot always trust
+/// a bare `Full`-style check on a `Partial` result: the walk may simply have
+/// run out of real filesystem before reaching `base_path`'s own depth (e.g.
+/// a session recorded against a since-deleted nested directory, with only a
+/// shallower real ancestor left on disk) — not because it found a
+/// conflicting real path, but for lack of evidence either way. Those two
+/// callers additionally accept `base_path.starts_with(&p)` (`p` is an
+/// ancestor of, or equal to, `base_path`) for the `Partial` case specifically
+/// — see the full rationale in `matches_under`'s and `matches_local`'s own
+/// Fix(BUG-512)/mirror doc comments. `scope::relevant`'s own check
+/// (`base_path.starts_with(&p)`)
+/// already has this shape by construction and needs no such split between
+/// `Full` and `Partial`. Only `NotFound` — zero real progress past the very
+/// first component — still conservatively includes outright, preserving the
+/// original deleted/remote-project rationale for exactly the case it was
+/// meant for.
+enum FsDecodeOutcome
+{
+  /// `encoded`'s full string was consumed and verified — the path is
+  /// unambiguously what it represents.
+  Full( std::path::PathBuf ),
+  /// `encoded`'s full string was consumed, but by 2+ DIFFERENT real
+  /// candidates (an `encode_component_piece` collision spanning a
+  /// component boundary — see `walk_fs`'s own Fix(BUG-518) doc comment).
+  /// Each entry is itself a COMPLETE, mutually-exclusive resolution of the
+  /// entire encoded string — the true target is exactly one of them, just
+  /// unknowable which. Deliberately NOT collapsed to the candidates' common
+  /// ancestor as a `Partial`: that ancestor is almost always related to
+  /// unrelated queries too (nearly everything shares SOME ancestor),
+  /// silently reintroducing false-inclusion. Callers must check their own
+  /// relationship predicate against EVERY candidate and conservatively
+  /// include only when AT LEAST ONE satisfies it.
+  AmbiguousFull( Vec< std::path::PathBuf > ),
+  /// A real, filesystem-verified base path was found, but a nonempty
+  /// remainder past it could not be matched to any further real
+  /// subdirectory (unresolvable topic tag, or a deleted/renamed
+  /// descendant). Safe for relationship checks; not safe for an
+  /// exact-identity conclusion beyond what the caller's own check expresses.
+  Partial( std::path::PathBuf ),
+  /// No real filesystem entry corresponds to even the first component —
+  /// nothing on disk can confirm or refute this candidate at all.
+  NotFound,
+}
+
+/// Exhaustively search the real subtree rooted at `base` (`base` included)
+/// for a real path whose FULL encoding — via the actual, truncating
+/// `claude_storage_core::encode_path` — equals `target` exactly.
+///
+/// Fix(BUG-513)
+/// Used as a fallback once `walk_fs`'s cheap incremental per-component walk
+/// can no longer make progress: `encode_path`'s 200-character truncation +
+/// djb2-hash-suffix step (`path.rs:234-246`) is applied ONCE to the fully
+/// concatenated string, so it can cut a real component's own encoding off
+/// mid-way and append an opaque hash — no per-component prefix match can
+/// ever reconstruct that. Rather than reimplementing the truncation rule
+/// locally (the exact anti-pattern `walk_fs`'s own Fix(BUG-511) doc comment
+/// warns against), this calls the REAL encoder on every real candidate path
+/// in the subtree and compares directly — correct by construction for any
+/// truncation length or hash value, because it never needs to guess the
+/// rule, only ask the function that already implements it.
+///
+/// Bounded by the real, currently-existing filesystem subtree under `base`
+/// — never broader, and only invoked when `target` is long enough
+/// (`> 200` chars) that truncation could plausibly have produced it.
+///
+/// Fix(BUG-515): the call site lives in `decode_path_via_fs`, invoked
+/// exactly ONCE per decode, anchored at the deepest path `walk_fs`'s
+/// incremental walk already verified — never inside `walk_fs`'s own
+/// recursion. See `decode_path_via_fs`'s doc comment for why calling this
+/// once per recursion LEVEL (the original BUG-513 shape) caused an
+/// unbounded filesystem walk from shallow bases when no real match exists
+/// anywhere for the target string.
+fn search_encoded_subtree( base : &std::path::Path, target : &str ) -> Option< std::path::PathBuf >
+{
+  if let Ok( encoded ) = claude_storage_core::encode_path( base )
+  {
+    if encoded == target { return Some( base.to_path_buf() ); }
+  }
+  let Ok( entries ) = std::fs::read_dir( base ) else { return None };
+  for entry in entries.flatten()
+  {
+    if let Some( found ) = search_encoded_subtree( &entry.path(), target )
+    {
+      return Some( found );
+    }
+  }
+  None
 }
 
 /// Recursive helper for `decode_path_via_fs`, resolving the encoding by
@@ -254,22 +570,267 @@ fn matches_local( dir_name : &str, eb : &str, base_path : &std::path::Path ) -> 
 /// characters identically. If the encoding rule itself changes, change
 /// `encode_component_piece` (shared with `encode_path`) and this function
 /// picks up the new rule automatically — never re-derive the rule locally.
-fn walk_fs( base : &std::path::Path, remaining : &str, is_first : bool ) -> Option< std::path::PathBuf >
+///
+/// Fix(BUG-512), Fix(BUG-513)
+/// Root cause: this BUG-511 redesign was complete against the ambiguity
+/// class it targeted (finite-candidate-character guessing) but incomplete
+/// against two OTHER ambiguity sources it never considered: (a) a genuine
+/// topic suffix (or a deleted/renamed descendant) leaving a nonempty,
+/// unmatchable remainder after a REAL base was already fully verified —
+/// the old `Option<PathBuf>` return type discarded that verified progress
+/// entirely, returning bare `None`, indistinguishable from finding nothing
+/// real at all; (b) `encode_path`'s separate 200-character truncation +
+/// djb2-hash-suffix step, applied to the fully concatenated string, which
+/// no per-component match can ever reconstruct.
+/// Fix: return `FsDecodeOutcome` instead of `Option<PathBuf>`, tracking the
+/// DEEPEST verified real path reached even when the full string isn't
+/// consumed (fixes (a) — see `FsDecodeOutcome`'s own doc comment), and fall
+/// back to `search_encoded_subtree`'s real-encoder-based exhaustive search
+/// once incremental matching is stuck and `full_target` is long enough to
+/// have been truncated (fixes (b)).
+/// Pitfall: do not reintroduce a hardcoded candidate-character list (see the
+/// Fix(BUG-511) pitfall above — still applies unchanged). Do not drop the
+/// `best_partial` depth comparison in the loop below in favor of just
+/// returning `base`'s own `Partial` on any non-`Full` result — among
+/// multiple real sibling candidates, only the DEEPEST verified partial is a
+/// meaningful (most-specific) proof; falling back to `base` itself throws
+/// that specificity away (see BUG-512's own regression test for a
+/// sibling-vs-anchor case where this exact simplification would reintroduce
+/// the leak).
+///
+/// Fix(BUG-514)
+/// Root cause: `best_partial`'s tie-break compared candidates by their
+/// `PathBuf`'s raw OS-string BYTE length, using it as a proxy for "most
+/// specific real match." But `encode_component_piece` normalizes every
+/// non-alphanumeric character to exactly one ASCII `-` regardless of the
+/// source character's own UTF-8 byte width — a component name built from
+/// multi-byte characters (e.g. emoji, 3-4 bytes each) has a large `PathBuf`
+/// byte length but encodes to relatively FEW bytes of `remaining` consumed,
+/// while a shorter plain-ASCII sibling can consume MORE. Byte-length
+/// comparison can therefore select the wrong candidate as "more specific,"
+/// even discarding a candidate that is the true, most-specific real match
+/// for the string actually being decoded (confirmed: MAAV Round 8 Fresh
+/// Challenger, 10-underscore vs. 10-emoji sibling directories).
+/// Fix: track how many bytes of the ENCODED `remaining` string each
+/// candidate's own subtree actually consumed (`piece.len()` at this level
+/// plus the callee's own reported consumed length, returned as this
+/// function's second tuple element) and compare THAT instead of `PathBuf`
+/// byte length — this is the metric that actually means "more specific" for
+/// a decode of an encoded string. When two distinct real candidates consume
+/// the identical number of encoded bytes, this is a genuine, unresolvable
+/// tie — collapse to `base`'s own `Partial`, matching the conservative
+/// inclusion `matches_local`/`matches_under` already apply to `NotFound`.
+/// Pitfall: do not swap the byte-length metric for
+/// `PathBuf::components().count()` (directory-tree depth) either — two
+/// real, DIFFERENT siblings at the same tree depth (e.g. `anchor75` and
+/// `anchor75_extra`, both direct children of the same parent) can consume
+/// very different amounts of the encoded string, and treating them as tied
+/// on depth alone silently reintroduces the BUG-512 sibling-leak this file
+/// already fixed (hand-verified against IT-75's own fixture before writing
+/// this fix — depth-based tie-break would have collapsed `anchor75`/
+/// `anchor75_extra` to their shared parent, re-including the topic-suffixed
+/// sibling IT-75 asserts must be excluded). Do not reintroduce the
+/// `full_target: &str` parameter this function used to take — the single,
+/// correctly-anchored `search_encoded_subtree` fallback now lives in
+/// `decode_path_via_fs` instead (Fix(BUG-515), see that function's own doc
+/// comment); this function no longer needs to know the untruncated target
+/// at all.
+///
+/// Fix(BUG-516)
+/// Root cause: a real sibling whose OWN name textually EXTENDS the winning
+/// match's name (e.g. `ancX8` matches, `ancX8-extra-<220 z's>` is a real,
+/// separate, non-nested sibling) can defeat BOTH Fix(BUG-514)'s tie-break
+/// AND Fix(BUG-515)'s single-anchor fallback at once: it never becomes a
+/// forward-matching candidate in this loop (its own piece is LONGER than
+/// what fits in `remaining` once `encode_path`'s 200-char truncation has cut
+/// the target off mid-way through encoding it), so there is no tie to
+/// break — only the shorter match (`ancX8`) ever appears as a candidate at
+/// all. And the resulting `Partial(ancX8)` is USELESS as a
+/// `search_encoded_subtree` anchor in `decode_path_via_fs`, because the true
+/// candidate (the sibling) is not inside `ancX8`'s own subtree — it is a
+/// sibling of it, unreachable from that anchor no matter how the subtree is
+/// searched. `matches_local`/`matches_under`/`matches_relevant` then
+/// conservatively include the sibling's session under the shorter match, an
+/// exact repeat of the BUG-512 sibling-leak this file already fixed, just
+/// reintroduced through a gap neither BUG-514 nor BUG-515's fix covered
+/// (confirmed: MAAV Round 8 Dimension Adversary, and the same construction
+/// with no topic suffix at all — a sibling's OWN un-suffixed, exact
+/// encoding, past the truncation boundary — regressed a case Fix(BUG-513)
+/// itself originally covered, because the OLD code's call-`search_encoded_
+/// subtree`-at-every-level approach incidentally found it from a SHALLOWER
+/// level than the deepest partial, a property Fix(BUG-515)'s relocation to
+/// a single deepest-anchor call silently dropped).
+/// Fix: detect real siblings whose piece textually extends the winning
+/// match's piece AND whose piece is itself LONGER than `remaining` — a
+/// purely structural, in-memory string comparison against already-
+/// `read_dir`'d entries, no filesystem search and no knowledge of the
+/// untruncated target required — and let the LONGEST such extension win the
+/// specificity comparison outright (its bare piece length always beats the
+/// shorter match's total consumed length, so no change to the comparison
+/// logic itself is needed, only to what counts as a candidate). This
+/// relocates `walk_fs`'s own returned `Partial` anchor to the more specific
+/// real sibling, so `decode_path_via_fs`'s EXISTING single
+/// `search_encoded_subtree` call — already anchored at whatever `walk_fs`
+/// returns — transparently gets a chance to resolve the sibling's own
+/// subtree instead of the shorter match's dead-end one. No second call site
+/// is introduced.
+/// Pitfall 1: do not call `search_encoded_subtree` from inside this function
+/// to verify an extension-sibling exactly — that would require re-threading
+/// the untruncated target string back into `walk_fs`'s own recursion,
+/// undoing Fix(BUG-515)'s entire point (exactly one call site, in
+/// `decode_path_via_fs`). Let the extension win purely on the structural
+/// piece-vs-piece comparison; `decode_path_via_fs`'s own existing fallback
+/// call resolves (or fails to resolve) it exactly on its own, same as any
+/// other returned `Partial` anchor.
+/// Pitfall 2: the `piece.len() > remaining.len()` gate is NOT optional —
+/// without it this fix regresses IT-76 (`scope::relevant`, mirror-direction
+/// of IT-75): when the winning match's OWN name is itself a literal prefix
+/// of a real sibling's name (e.g. `it76siba` matches, `it76siba_extra` is a
+/// real, unrelated sibling that ALSO happens to be the query's own
+/// `path::` target), that sibling always textually extends the winning
+/// piece, but `remaining` here is short — never truncated — and the sibling
+/// was ALREADY, definitively rejected as a forward-match candidate by this
+/// function's own main loop above (its full piece does not literally
+/// prefix-match `remaining`). Only a piece LONGER than `remaining` could
+/// possibly have been truncation's doing; a shorter one that fails to
+/// forward-match was never a truncation victim, just a non-match, and must
+/// not be resurrected here.
+fn walk_fs( base : &std::path::Path, remaining : &str, is_first : bool ) -> ( FsDecodeOutcome, usize )
 {
-  if remaining.is_empty() { return Some( base.to_path_buf() ); }
-  let Ok( entries ) = std::fs::read_dir( base ) else { return None };
-  for entry in entries.flatten()
+  if remaining.is_empty() { return ( FsDecodeOutcome::Full( base.to_path_buf() ), 0 ); }
+  let Ok( entries ) = std::fs::read_dir( base ) else { return ( FsDecodeOutcome::NotFound, 0 ) };
+
+  // Collected once (rather than streamed) so the Fix(BUG-516) extension
+  // check below can cross-reference every real sibling at this level
+  // regardless of `read_dir`'s own (unspecified, platform-dependent) order.
+  let candidates : Vec< ( std::path::PathBuf, String ) > = entries
+  .flatten()
+  .filter_map( | entry |
   {
     let name = entry.file_name();
-    let Some( name_str ) = name.to_str() else { continue };
-    let piece = claude_storage_core::encode_component_piece( name_str, is_first );
+    let name_str = name.to_str()?;
+    Some( ( entry.path(), claude_storage_core::encode_component_piece( name_str, is_first ) ) )
+  } )
+  .collect();
+
+  // Fix(BUG-518): a `Full` result used to win the whole call on its FIRST
+  // occurrence. But another, not-yet-tried sibling candidate later in this
+  // same loop can ALSO recursively resolve `remaining` to `Full` at a
+  // DIFFERENT real path whenever `encode_component_piece` collides across
+  // sibling names spanning a component boundary (the same collision class
+  // Fix(BUG-514) already tie-breaks for Partial-vs-Partial) — so returning
+  // on the first hit silently depended on `std::fs::read_dir`'s
+  // platform-unspecified enumeration order rather than any documented rule.
+  //
+  // Fix(BUG-518) (continued — Partial(base) collapse was itself too lossy)
+  // Root cause: the first version of this fix collapsed a detected tie to
+  // `Partial(base)` (`base` = the tied candidates' own common parent). But
+  // a Full-tie is not the same shape of uncertainty as a Partial-vs-Partial
+  // tie: each tied candidate is already a COMPLETE resolution of the whole
+  // encoded string, not an incomplete prefix — collapsing to their shared
+  // parent discards exactly which real paths are in play, and a caller's
+  // own ancestor check (`matches_under`'s `base_path.starts_with(&p)`)
+  // against that overly-broad shared parent can be satisfied even when
+  // NEITHER individual tied candidate relates to the query (confirmed:
+  // MAAV Round 9 Fresh Challenger's own probe fixture, where `anchor-foo`
+  // and `anchor.foo` — both real siblings of query anchor `anchor`, neither
+  // nested under it — collide with each other one level shallower than the
+  // probe's own intended three-way `bar`-child collision; collapsing to
+  // their shared parent `fc9parent` falsely satisfied
+  // `anchor.starts_with(fc9parent)`, including both siblings' sessions
+  // under `scope::under(anchor)` even though neither individually
+  // qualifies).
+  // Fix: preserve the full tied-candidate set as `FsDecodeOutcome::
+  // AmbiguousFull` (see its own doc comment) instead of collapsing to a
+  // single `Partial` path, and push the relationship check down to each
+  // caller, which checks its own predicate against EVERY tied candidate
+  // and includes only when at least one satisfies it.
+  // Pitfall: do not re-collapse `AmbiguousFull` back to a single `Partial`
+  // anchor anywhere in this file. A nested call's own `AmbiguousFull` must
+  // be flattened into the current level's `full_matches` (not treated as a
+  // single opaque `Full`/discarded) so a multi-level collision still
+  // surfaces its complete real leaf-candidate set at the top.
+  let mut full_matches : Vec< std::path::PathBuf > = Vec::new();
+  let mut best : Option< ( std::path::PathBuf, usize ) > = None;
+  let mut tied = false;
+  for ( path, piece ) in &candidates
+  {
     let Some( rest ) = remaining.strip_prefix( piece.as_str() ) else { continue };
-    if let Some( result ) = walk_fs( &entry.path(), rest, false )
+    match walk_fs( path, rest, false )
     {
-      return Some( result );
+      ( FsDecodeOutcome::Full( p ), _ ) =>
+      {
+        if !full_matches.contains( &p ) { full_matches.push( p ); }
+      }
+      ( FsDecodeOutcome::AmbiguousFull( inner ), _ ) =>
+      {
+        for p in inner { if !full_matches.contains( &p ) { full_matches.push( p ); } }
+      }
+      ( FsDecodeOutcome::Partial( p ), inner_consumed ) =>
+      {
+        let consumed = piece.len() + inner_consumed;
+        match &best
+        {
+          None => { best = Some( ( p, consumed ) ); }
+          Some( ( _, cur_consumed ) ) if consumed > *cur_consumed =>
+          {
+            best = Some( ( p, consumed ) );
+            tied = false;
+          }
+          Some( ( cur_p, cur_consumed ) ) if consumed == *cur_consumed && *cur_p != p =>
+          {
+            tied = true;
+          }
+          _ => {}
+        }
+      }
+      ( FsDecodeOutcome::NotFound, _ ) => {}
     }
   }
-  None
+
+  // An unambiguous Full match (never conflicted with another real path) is
+  // strictly more informative than any Partial candidate and wins outright.
+  // 2+ distinct full matches are STILL more informative than any Partial
+  // candidate (each is a complete resolution, not a prefix) — see
+  // Fix(BUG-518)'s continued doc comment above for why this returns the
+  // full tied set rather than collapsing to a shared-ancestor Partial.
+  match full_matches.len()
+  {
+    1 => return ( FsDecodeOutcome::Full( full_matches.into_iter().next().expect( "len checked == 1" ) ), 0 ),
+    n if n > 1 => return ( FsDecodeOutcome::AmbiguousFull( full_matches ), 0 ),
+    _ => {}
+  }
+
+  // Fix(BUG-516): let any real sibling that textually extends the winning
+  // match's piece win outright, but ONLY when `remaining` is too short to
+  // have ever let that sibling's own full piece forward-match — see this
+  // function's own doc comment above.
+  if let Some( ( winning_path, _ ) ) = best.clone()
+  {
+    let winning_piece = candidates.iter().find( | ( p, _ ) | *p == winning_path ).map( | ( _, pc ) | pc.clone() );
+    if let Some( winning_piece ) = winning_piece
+    {
+      for ( path, piece ) in &candidates
+      {
+        if *path == winning_path { continue }
+        let cur_consumed = best.as_ref().map_or( 0, | ( _, c ) | *c );
+        if piece.len() > cur_consumed
+          && piece.len() > remaining.len()
+          && piece.starts_with( winning_piece.as_str() )
+        {
+          best = Some( ( path.clone(), piece.len() ) );
+          tied = false;
+        }
+      }
+    }
+  }
+
+  if tied { return ( FsDecodeOutcome::Partial( base.to_path_buf() ), 0 ); }
+  match best
+  {
+    Some( ( p, consumed ) ) => ( FsDecodeOutcome::Partial( p ), consumed ),
+    None => ( FsDecodeOutcome::Partial( base.to_path_buf() ), 0 ),
+  }
 }
 
 /// Decode a storage dir name to the longest real filesystem path it represents.
