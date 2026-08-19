@@ -37,6 +37,10 @@ pub enum StatusGroup
 #[ must_use ]
 pub fn status_group_of( aq : &AccountQuota ) -> StatusGroup
 {
+  // Feature 071: redirect-backend rows (⚪ glyph, placeholder Err) intentionally land in the
+  // last group via this same Err guard — the 4-group partition orders anthropic candidates
+  // by usability, and a redirect row is never a candidate. Deliberate glyph/group pairing
+  // (⚪ row in the Red-positioned group), not the 🔴-in-🟡 divergence BUG-321 warns about.
   if aq.result.is_err() { return StatusGroup::Red; }
   // Fix(BUG-317): cancelled subscription is permanently unusable → Red regardless of quota.
   // Root cause: billing_type was not checked; accounts with billing_type="none" appeared 🟡

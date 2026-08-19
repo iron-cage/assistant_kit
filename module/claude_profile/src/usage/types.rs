@@ -276,7 +276,24 @@ impl AccountQuota
   {
     self.account.as_ref().is_some_and( |a| a.billing_type == "none" ) && self.result.is_err()
   }
+
+  /// `true` when this row is a redirect-backend account (Feature 071) — identified by the
+  /// canonical `REDIRECT_NO_QUOTA_REASON` placeholder that `fetch_quota_for_list`'s R1
+  /// bypass is the single writer of. A method rather than a struct field: `AccountQuota`
+  /// has ~100 full struct-literal construction sites (src + tests) and the redirect fact
+  /// is already carried losslessly by the placeholder `result`; both ends reference the
+  /// shared const, so the coupling is compiler-checked, never a free-text string match.
+  #[ must_use ]
+  pub fn is_redirect_backend( &self ) -> bool
+  {
+    matches!( &self.result, Err( e ) if e == REDIRECT_NO_QUOTA_REASON )
+  }
 }
+
+/// Canonical `result` placeholder for redirect-backend rows (Feature 071/AC-17).
+/// Written only by `fetch_quota_for_list`'s R1 bypass; read back by
+/// `AccountQuota::is_redirect_backend`. Displayed verbatim as the row's reason string.
+pub const REDIRECT_NO_QUOTA_REASON : &str = "redirect backend — no Anthropic quota";
 
 // ── Command handler ────────────────────────────────────────────────────────────
 

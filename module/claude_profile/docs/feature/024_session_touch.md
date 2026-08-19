@@ -36,6 +36,14 @@ if touch_param == 1:
         seven_ds_running = seven_day_sonnet field absent OR seven_day_sonnet.resets_at is Some
         all_running      = five_h_running AND seven_d_running AND seven_ds_running
 
+        if account_quota.is_redirect_backend():
+            // Skip: redirect account has no Anthropic quota timers to start (Feature 071).
+            // Checked BEFORE the error guard — the placeholder result is an Err, but a
+            // redirect account is not in an error state.
+            if trace:
+                emit "... · touch  <name>  skipped (reason: redirect backend)"
+            continue
+
         if account_quota.result is Err:
             // Skip: no valid quota
             if trace:

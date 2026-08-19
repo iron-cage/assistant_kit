@@ -41,6 +41,9 @@ pub fn render_json( accounts : &[ AccountQuota ] ) -> String
     let is_active_str             = if aq.is_active             { "true" } else { "false" };
     let is_occupied_elsewhere_str = if aq.is_occupied_elsewhere { "true" } else { "false" };
     let is_owned_str              = if aq.is_owned              { "true" } else { "false" };
+    // Feature 070 lock visibility: JSON carries the raw boolean (the text/TSV name-cell
+    // 🔒 marker is display-only; machine consumers read this field instead).
+    let claim_lock_str            = if aq.claim_lock            { "true" } else { "false" };
     let owner_esc                 = json_escape( &aq.owner );
     // Fix(BUG-345): this duplicated compute_expires_cell's arithmetic instead of sharing it.
     // Root cause: render_json.rs reimplemented the expires calculation inline rather than
@@ -106,6 +109,7 @@ pub fn render_json( accounts : &[ AccountQuota ] ) -> String
         format!(
           "{{\"account\":\"{name_esc}\",\"is_current\":{is_current_str},\"is_active\":{is_active_str},\
 \"is_occupied_elsewhere\":{is_occupied_elsewhere_str},\"is_owned\":{is_owned_str},\
+\"claim_lock\":{claim_lock_str},\
 \"owner\":\"{owner_esc}\",\"expires_in_secs\":{expires_in_secs},\
 \"billing_type\":{billing_type_str},\"has_max\":{has_max_str},\
 \"renewal_secs\":{renewal_secs_str},\"renewal_is_estimate\":{renewal_is_estimate_str},\
@@ -134,6 +138,7 @@ pub fn render_json( accounts : &[ AccountQuota ] ) -> String
         format!(
           "{{\"account\":\"{name_esc}\",\"is_current\":{is_current_str},\"is_active\":{is_active_str},\
 \"is_occupied_elsewhere\":{is_occupied_elsewhere_str},\"is_owned\":{is_owned_str},\
+\"claim_lock\":{claim_lock_str},\
 \"owner\":\"{owner_esc}\",\"expires_in_secs\":{expires_in_secs},\
 \"billing_type\":{billing_type_str},\"has_max\":{has_max_str},\
 \"renewal_secs\":{renewal_secs_str},\"renewal_is_estimate\":{renewal_is_estimate_str},\

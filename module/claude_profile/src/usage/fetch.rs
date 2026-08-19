@@ -109,16 +109,26 @@ pub fn fetch_quota_for_list(
     {
       let ( host, role ) = read_profile_metadata( credential_store, &acct.name );
       let renewal_at     = read_renewal_at( credential_store, &acct.name );
+      // Same token comparison as the main path below: after a switch-to-redirect the live
+      // credentials file holds the account's own static key, so the ✓ current marker works
+      // identically. Local file read only — no HTTP, consistent with this branch's no-fetch
+      // guarantee (the hardcoded `false` here previously made the active redirect seat
+      // render without its ✓).
+      let is_current = live_token.as_ref().is_some_and( |live|
+      {
+        read_token( credential_store, &acct.name )
+          .is_ok_and( |stored| stored == *live )
+      } );
       results.push( AccountQuota
       {
         fallback_reason : None,
         touched_recently : false,
         name                  : acct.name.clone(),
-        is_current            : false,
+        is_current,
         is_active             : acct.is_active,
         is_occupied_elsewhere : occupied_elsewhere.contains( &acct.name ),
         expires_at_ms         : acct.expires_at_ms,
-        result                : Err( "redirect backend — no Anthropic quota".to_string() ),
+        result                : Err( super::types::REDIRECT_NO_QUOTA_REASON.to_string() ),
         account               : None,
         host,
         role,

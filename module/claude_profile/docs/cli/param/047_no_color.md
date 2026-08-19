@@ -6,7 +6,7 @@ Strips emoji and ANSI color sequences from `.usage` output, producing plain text
 - **Constraints:** `0`, `1`, `false`, `true`
 - **Purpose:** Produce color-free and emoji-free output.
 
-**Behavior:** When `no_color::1`, all emoji (🟢, 🟡, 🔴, ✓, *) are replaced with plain text equivalents and all ANSI escape sequences are stripped. The table structure (columns, alignment, separators) is preserved. Equivalent to `format::plain` for text output.
+**Behavior:** When `no_color::1`, all emoji (🟢, 🟡, 🔴, ⚪, 🔒, ✓, *) are replaced with plain text equivalents and all ANSI escape sequences are stripped. The table structure (columns, alignment, separators) is preserved. Equivalent to `format::plain` for text output.
 
 **Plain text equivalents:**
 
@@ -15,6 +15,8 @@ Strips emoji and ANSI color sequences from `.usage` output, producing plain text
 | `🟢` (status ok) | `ok` |
 | `🟡` (status warn) | `warn` |
 | `🔴` (status err) | `err` |
+| `⚪` (status static — redirect backend, Feature 071) | `static` |
+| `🔒` (claim-locked account name suffix, Feature 070) | `(locked)` |
 | `→` (arrow) | `->` |
 | `✓` (current) | `*` |
 | `*` (active) | `*` (unchanged — same as the current marker; the two become visually indistinguishable under `no_color::1`) |
@@ -23,7 +25,7 @@ Strips emoji and ANSI color sequences from `.usage` output, producing plain text
 
 ```text
 no_color::1      -> plain text output without emoji
-no_color::1 get::status -> plain status label: "ok", "warn", or "err"
+no_color::1 get::status -> plain status label: "ok", "warn", "err", or "static"
 ```
 
 **See Also:** [feature/028_usage_row_filtering.md](../../feature/028_usage_row_filtering.md).

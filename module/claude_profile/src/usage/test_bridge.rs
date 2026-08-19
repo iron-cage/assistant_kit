@@ -11,6 +11,7 @@ pub mod types
     AccountQuota, SortStrategy, PreferStrategy, ColsVisibility,
     SubprocessModel, SubprocessEffort, GetField,
     OPUS_OVERRIDE_THRESHOLD, H_EXHAUSTED_THRESHOLD, WEEKLY_EXHAUSTION_THRESHOLD,
+    REDIRECT_NO_QUOTA_REASON,
   };
 }
 
@@ -37,7 +38,8 @@ pub use super::touch::{ apply_touch, touch_skip_reason, mark_touched, touched_wi
 
 // ── Format ────────────────────────────────────────────────────────────────
 pub use super::format::{
-  token_exp_label, compute_expires_cell, compute_expires_cell_cached, expires_remaining_secs,
+  token_exp_label, compute_expires_cell, compute_expires_cell_cached, expires_cell_for, expires_remaining_secs,
+  with_lock_marker,
   unix_to_date, renewal_secs,
   renews_label, next_event_raw, next_event_label, sub_label, shorten_error,
   five_hour_left, seven_day_left, relevant_quotas, prefer_weekly,

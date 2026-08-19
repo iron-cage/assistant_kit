@@ -4,7 +4,7 @@
 
 - **Purpose**: Give a caller two independent, non-ownership account-management flags — `claim_lock` ("not allowed to be taken, but still usable for quota/refresh/touch") and `reserve` ("usable, but deprioritized for automatic rotation unless nothing else is left") — closing a gap where `owner`/`assignee` alone cannot express either semantic.
 - **Responsibility**: Documents the `claim_lock` and `reserve` fields in `{name}.json`; the `lock::`/`reserve::` mutation params on `.accounts`/`.usage`; Gate 9 (unconditional eligibility exclusion for `claim_lock`, inside `find_first_eligible()`); G9 (force::1-bypassable explicit-command gate for `claim_lock`, on `.account.use` and `.accounts assignee::` target-side); the `reserve` leading sort key in `find_next_for_strategy()`; and the consolidated properties table covering every attribute that currently governs account selection behavior.
-- **In Scope**: `claim_lock: bool` and `reserve: bool` fields in `{name}.json`; `lock::`/`reserve::` mutation params (comma-list batch, `dry::1` preview, ungated writes); Gate 9 inside `find_first_eligible()` (unconditional, no `force::1` bypass — mirrors Gate 3's scope); G9 on `.account.use` direct target and `.accounts assignee::` target-side (force::1-bypassable — mirrors G5–G8's pattern); `reserve` as a leading sort key prepended to all three strategies (name/renew/renews) in `find_next_for_strategy()`.
+- **In Scope**: `claim_lock: bool` and `reserve: bool` fields in `{name}.json`; `lock::`/`reserve::` mutation params (comma-list batch, `dry::1` preview, ungated writes); Gate 9 inside `find_first_eligible()` (unconditional, no `force::1` bypass — mirrors Gate 3's scope); G9 on `.account.use` direct target and `.accounts assignee::` target-side (force::1-bypassable — mirrors G5–G8's pattern); `reserve` as a leading sort key prepended to all three strategies (name/renew/renews) in `find_next_for_strategy()`; default-visible lock display — 🔒 account-name suffix in `.usage` text/TSV (`(locked)` under `no_color::1`/`format::plain`), `"claim_lock"` in `.usage format::json`, presence-driven `Lock: yes` text line + 🔒 Account-cell suffix + `"claim_lock"`/`"reserve"` JSON fields in `.accounts`.
 - **Out of Scope**: Ownership-gating of `lock::`/`reserve::` writes themselves — no concrete need identified; any caller may set either flag on any account regardless of `owner`, mirroring `assignee::`'s ungated write path rather than `owner::`'s G8-guarded one (deferred until a real requirement emerges). `claim_lock` gating of `.account.delete` (G6), `.account.relogin` (G7), or `.accounts owner::` (G8) — deliberately excluded; `claim_lock` covers only claim-type operations (becoming the active account), not destructive or ownership-transfer operations, which remain governed solely by the existing ownership gates ([036_account_ownership.md](036_account_ownership.md)). Any change to `owner` or `assignee` semantics — both are untouched by this feature.
 
 ### Design
@@ -36,6 +36,8 @@
 
 **Batch and dry-run:** Both params follow `owner::`'s comma-list batch pattern (`name::X,Y,Z`; absent `name::` applies to the current filtered set) and support `dry::1` preview. Because neither write is gated, batch operations always succeed for every matched account — there is no per-account rejection path to report.
 
+**Lock visibility — default-visible, name-cell suffix:** A lock that gates selection must be visible in the default views, not behind an opt-in column — otherwise a locked account looks identical to a free one until a switch mysteriously refuses it. `.usage` text and TSV append ` 🔒` to the account-name cell via `with_lock_marker()` (`src/usage/format.rs`); `.accounts` text emits a presence-driven `Lock:    yes` field line (like `Tags:` — no `Lock: no` noise on unlocked accounts) and the table appends the same 🔒 to the Account cell. Suffix rather than prefix or a flag-column glyph: the name cell keeps `starts_with`-style machine matching intact for TSV consumers (same convention as the cache-fallback reason suffix), and the flag column stays single-purpose — a locked *current* account shows both `✓` and 🔒 instead of one masking the other. Under `no_color::1`/`format::plain` the marker renders as `(locked)`. JSON carries the raw booleans instead of the display marker: `"claim_lock"` in `.usage format::json` (both Ok and Err rows) and `"claim_lock"`/`"reserve"` in `.accounts format::json` — these were the only `Account` fields previously absent from the `.accounts` object.
+
 ### Acceptance Criteria
 
 - **AC-01**: `clp .accounts lock::1 name::X` writes `claim_lock: true` to `X.json`; exits 0. No credential files modified.
@@ -55,6 +57,8 @@
 - **AC-15**: An account with `reserve: true` IS selected by `find_next_for_strategy()` when it is the only remaining eligible candidate (all non-reserved accounts are gated out or exhausted) — reserve deprioritizes, it does not exclude.
 - **AC-16**: `clp .accounts lock::1 name::X dry::1` / `clp .accounts reserve::1 name::X dry::1` preview the write (`[dry-run]` message) without modifying `X.json`.
 - **AC-17**: `clp .accounts lock::1 name::X` and `clp .accounts reserve::1 name::X` succeed regardless of `X`'s `owner` field — neither write is gated by ownership (no G8-style check).
+- **AC-18**: An account with `claim_lock: true` is visibly marked in every default `.usage` view with no extra params: text and `format::tsv` append ` 🔒` to the account-name cell (suffix — name-prefix matching stays intact); `no_color::1`/`format::plain` render it as `(locked)` with no 🔒 leak; `format::json` includes `"claim_lock": true`/`false` on every row (Ok and Err alike). Unlocked accounts are byte-identical to pre-Feature-070 output.
+- **AC-19**: `clp .accounts` marks locked accounts in all three formats: default text emits a presence-driven `Lock:    yes` line only for locked accounts (no `Lock: no` on others); `format::table` appends ` 🔒` to the Account cell; `format::json` includes `"claim_lock"` and `"reserve"` booleans on every account object.
 
 ### Bugs
 
@@ -83,6 +87,7 @@
 | [cli/param/004_dry.md](../cli/param/004_dry.md) | `dry::` — preview without writing |
 | [cli/param/058_force.md](../cli/param/058_force.md) | `force::` — bypasses G9 only; never bypasses Gate 9; no effect on `lock::`/`reserve::` writes |
 | [cli/param/062_owner.md](../cli/param/062_owner.md) | `owner::` — independent field; contrast for the ungated-write design choice |
+| [cli/param/047_no_color.md](../cli/param/047_no_color.md) | `no_color::` — renders the 🔒 name-cell marker as `(locked)` |
 
 ### Commands
 
@@ -120,9 +125,15 @@
 | `claude_profile_core/src/account/` | `Account` struct — new `claim_lock`/`reserve` fields; new `write_claim_lock()`/`write_reserve()` functions mirroring `write_owner()` (fields are written directly, not threaded through `save()`'s parameter list) |
 | `src/commands/accounts.rs` | New `lock::`/`reserve::` mutation dispatch (comma-list batch, `dry::1`), alongside existing `owner::`/`assignee::` dispatch; new G9 check in the `assignee::` target-side path |
 | `src/commands/account_ops.rs` | `account_use_routine()` — new G9 `claim_lock` check alongside the existing G5 ownership check |
+| `src/usage/format.rs` | `with_lock_marker()` — appends the ` 🔒` suffix to an account-name cell when `claim_lock` is set |
+| `src/usage/render.rs` | Text renderer — name-cell 🔒 via `with_lock_marker()` (Ok and Err rows); `apply_no_color()` maps 🔒 → `(locked)` |
+| `src/usage/render_tsv.rs` | TSV renderer — name-cell 🔒 via `with_lock_marker()` (suffix keeps name-prefix matching intact) |
+| `src/usage/render_json.rs` | `.usage` JSON — `"claim_lock"` boolean on every row (Ok and Err arms) |
+| `src/commands/accounts_render.rs` | `.accounts` renderers — presence-driven `Lock:    yes` text line; table Account-cell 🔒 suffix; `"claim_lock"`/`"reserve"` JSON fields |
 
 ### Tests
 
 | File | Relationship |
 |------|--------------|
-| `tests/cli/account_claim_lock_reserve_test.rs` | t01–t17 — lock::/reserve:: set/clear/batch, Gate 9 (footer + rotate, force-unbypassable), G9 (.account.use + assignee:: on both .accounts/.usage, force-bypassable), reserve sort/fallback, ungated write, read-side non-effect, dry-run preview |
+| `tests/cli/account_claim_lock_reserve_test.rs` | t01–t17 — lock::/reserve:: set/clear/batch, Gate 9 (footer + rotate, force-unbypassable), G9 (.account.use + assignee:: on both .accounts/.usage, force-bypassable), reserve sort/fallback, ungated write, read-side non-effect, dry-run preview; t18 — AC-18 `.usage` lock marker across text/TSV/no_color/JSON; t19 — AC-19 `.accounts` lock visibility across text/table/JSON |
+| `tests/usage/format_tests.rs` | `test_with_lock_marker_suffix_only_when_locked` — 🔒 suffix appended only when `claim_lock` is set; unlocked name byte-identical |

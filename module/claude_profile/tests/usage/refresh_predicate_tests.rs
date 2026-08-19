@@ -744,3 +744,23 @@ fn sr14_http_4013_is_not_401()
     "SR-14: 'HTTP 4013' must not match 401 — trailing digit breaks the boundary",
   );
 }
+
+/// SR-15 / Feature 071 — the redirect-backend placeholder must NOT trigger a refresh.
+///
+/// Load-bearing contract (see `refresh_predicate.rs`'s Feature 071 note): if any arm
+/// ever matched the placeholder, `apply_refresh`'s None-arm would overwrite it with
+/// `Err("refresh token expired")`, breaking `is_redirect_backend()` and every display
+/// gate keyed on it (⚪ status, `static` expires, touch reason). Uses the strongest
+/// configuration — locally-expired `expires_at_ms=0` — proving no arm (401/403,
+/// "token expired (local)", 429+expired, cached+expired) matches the placeholder.
+#[ test ]
+fn sr15_071_redirect_placeholder_never_refreshes()
+{
+  use claude_profile::usage::test_bridge::types::REDIRECT_NO_QUOTA_REASON;
+
+  let aq = err_aq( REDIRECT_NO_QUOTA_REASON, 0 );
+  assert!(
+    !should_refresh( &aq, 9_999_999_999 ),
+    "SR-15: redirect placeholder must match no refresh arm even when locally expired",
+  );
+}

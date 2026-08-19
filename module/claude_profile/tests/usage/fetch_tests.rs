@@ -1148,3 +1148,83 @@ fn ft06_072_fetch_threads_inference_provider_and_defaults_empty_when_missing()
   );
   assert!( legacy.result.is_ok(), "T04: legacy (missing-key) row must not error, got: {:?}", legacy.result );
 }
+
+/// Feature 071: R1's `is_current` uses the same token comparison as the main path —
+/// after a switch-to-redirect the live credentials file holds the account's own static
+/// key, so the active redirect seat must render with its ✓ marker. The previously
+/// hardcoded `false` hid the ✓ for the account the user had just switched to.
+///
+/// Two calls, local reads only (R1 never does HTTP):
+/// 1. live token == stored key → `is_current` must be true;
+/// 2. live token differs        → `is_current` must be false.
+#[ test ]
+fn ft14c_071_redirect_is_current_by_token_comparison()
+{
+  let store = tempfile::TempDir::new().unwrap();
+
+  std::fs::write(
+    store.path().join( "kimi@moonshot.ai.json" ),
+    r#"{"backend":"redirect","base_url":"https://api.moonshot.ai/anthropic","redirect_model":"kimi-k3"}"#,
+  ).unwrap();
+  std::fs::write(
+    store.path().join( "kimi@moonshot.ai.credentials.json" ),
+    r#"{"accessToken":"sk-foreign-key-abc123"}"#,
+  ).unwrap();
+
+  let accounts = vec![ claude_profile::account::Account
+  {
+    name              : "kimi@moonshot.ai".to_string(),
+    subscription_type : String::new(),
+    rate_limit_tier   : String::new(),
+    expires_at_ms     : u64::MAX / 2,
+    is_active         : false,
+    email             : String::new(),
+    display_name      : String::new(),
+    billing           : String::new(),
+    model             : String::new(),
+    tagged_id         : String::new(),
+    uuid              : String::new(),
+    capabilities      : Vec::new(),
+    organization_uuid : String::new(),
+    organization_name : String::new(),
+    org_role          : String::new(),
+    workspace_uuid    : String::new(),
+    workspace_name    : String::new(),
+    host              : String::new(),
+    role              : String::new(),
+    owner             : String::new(),
+    tags              : Vec::new(),
+    is_owned          : true,
+    claim_lock        : false,
+    reserve           : false,
+    renewal_at        : None,
+    backend           : claude_profile::account::AccountBackend::Redirect,
+    base_url          : Some( "https://api.moonshot.ai/anthropic".to_string() ),
+    redirect_model    : Some( "kimi-k3".to_string() ),
+    inference_provider : String::new(),
+  } ];
+
+  // Live session file holds the SAME key as the stored per-account copy → current.
+  let live = store.path().join( ".live_credentials.json" );
+  std::fs::write( &live, r#"{"accessToken":"sk-foreign-key-abc123"}"# ).unwrap();
+
+  let results = fetch_quota_for_list( &accounts, store.path(), &live, false, false, false, None );
+  assert_eq!( results.len(), 1 );
+  assert!(
+    results[ 0 ].is_current,
+    "ft14c: matching live token must mark the redirect row current (✓); got is_current=false",
+  );
+
+  // Different live token → some other account is live; redirect row must not claim ✓.
+  // Key by name: with no current row, inject_synthetic_row_if_needed adds a synthetic
+  // row for the unknown live token, so positional indexing would hit the wrong row.
+  std::fs::write( &live, r#"{"accessToken":"anthropic-oauth-token-xyz"}"# ).unwrap();
+
+  let results = fetch_quota_for_list( &accounts, store.path(), &live, false, false, false, None );
+  let kimi = results.iter().find( |aq| aq.name == "kimi@moonshot.ai" )
+    .expect( "ft14c: kimi row must survive the synthetic injection" );
+  assert!(
+    !kimi.is_current,
+    "ft14c: mismatched live token must leave the redirect row not-current",
+  );
+}

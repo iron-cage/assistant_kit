@@ -160,8 +160,15 @@ fn patch_live_state_after_switch( name : &str, credential_store : &Path, paths :
     let _ = atomic_write( &live_path, &serde_json::to_string_pretty( &live_val ).map( | s | s + "\n" ).unwrap_or_default() );
   }
 
-  // Restore model preference into live ~/.claude/settings.json.
-  let model = parse_string_field( &meta_text, "model" );
+  let backend = AccountBackend::parse( &parse_string_field( &meta_text, "backend" ).unwrap_or_default() );
+
+  // Restore model preference into live ~/.claude/settings.json — anthropic accounts only.
+  // A redirect account's meta never stores `model` (save() strips it), and a stray value
+  // there is foreign — snapshotted from whichever account was live before. Restoring it
+  // would leave a top-level pin that takes over whenever the env block is absent
+  // (env.ANTHROPIC_MODEL outranks it only while present). Redirect ⇒ remove the key.
+  let model = if backend == AccountBackend::Redirect { None }
+    else { parse_string_field( &meta_text, "model" ) };
   let live_settings_path = paths.settings_file();
   let mut live_settings = std::fs::read_to_string( &live_settings_path )
     .ok()
@@ -182,7 +189,6 @@ fn patch_live_state_after_switch( name : &str, credential_store : &Path, paths :
   // file. Anthropic: removes all three, then prunes the whole `env` object if now empty —
   // remove_env_var() alone leaves `"env": {}` behind; this composition lives here, not in
   // the shared claude_core::settings_io formatter (see docs/feature/071 design note).
-  let backend = AccountBackend::parse( &parse_string_field( &meta_text, "backend" ).unwrap_or_default() );
   if backend == AccountBackend::Redirect
   {
     let creds_text   = std::fs::read_to_string( src ).unwrap_or_default();

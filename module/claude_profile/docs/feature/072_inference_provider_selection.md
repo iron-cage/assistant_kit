@@ -24,7 +24,7 @@
 | Property | Type | Storage | Purpose | Set via | Governs |
 |---|---|---|---|---|---|
 | `inference_provider` | `String` | `{name}.json` / `Account` / `AccountQuota` | Tags an account with the provider it authenticates against | `.account.save inference_provider::` | `.accounts` default identity column; Gate 10 comparison operand |
-| `provider` | `String` (TOML key) | `~/.clr/config.toml` user tier | The single active global provider | `.provider.select id::` | Gate 10 comparison operand; `.provider.select` get-mode read value |
+| `provider` | `String` (TOML key) | `~/.clr/config.toml` user tier | The single active global provider | `.provider.select id::` | Gate 10 comparison operand; `.provider.select` get-mode read value; `clr`'s config-tier Provider Gate (non-anthropic value suppresses config `model`/`fallback_model`) |
 
 ### Acceptance Criteria
 
@@ -91,6 +91,7 @@
 |------|--------------|
 | [schema/002_account_json.md](../schema/002_account_json.md) | `inference_provider` field in `{name}.json` |
 | [../../claude_core/docs/api/002_toml_io.md](../../../claude_core/docs/api/002_toml_io.md) | `~/.clr/config.toml`'s tiered flat-TOML format storing the `provider` key |
+| [../../claude_runner/docs/cli/config_param.md](../../../claude_runner/docs/cli/config_param.md) | Consumer — `clr`'s Provider Gate ignores config-tier `model`/`fallback_model` when `provider` is non-anthropic |
 
 ### Sources
 

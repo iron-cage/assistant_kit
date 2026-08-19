@@ -5,7 +5,7 @@
 use crate::output::format_duration_secs;
 use super::types::{ AccountQuota, SortStrategy, PreferStrategy, ColsVisibility };
 use super::format::{
-  compute_expires_cell_cached, sub_label, shorten_error,
+  expires_cell_for, sub_label, shorten_error, with_lock_marker,
   quota_text_cells, status_emoji, renews_label, next_event_label, renewal_secs,
 };
 use super::sort::sort_indices;
@@ -65,12 +65,16 @@ pub fn render_tsv(
     {
       "🟢" => "ok",
       "🟡" => "warn",
+      // Feature 071: redirect-backend row — no Anthropic quota semantics; matches
+      // `.credentials.status`'s `Token: static` vocabulary, distinct from a real "err".
+      "⚪" => "static",
       _    => "err",
     };
     // Fix(BUG-345): compute_expires_cell alone cannot show cache-fallback staleness.
     // Root cause: aq.cached (fetch provenance) was never combined with expires_at_ms here.
-    // Pitfall: use the cache-aware wrapper, not compute_expires_cell directly, wherever aq.cached is in scope.
-    let expires_str = compute_expires_cell_cached( aq.expires_at_ms, now_secs, aq.cached );
+    // Pitfall: use the aq-aware wrapper (cache `~`-prefix + redirect `static`), not
+    //   compute_expires_cell directly, wherever an aq is in scope.
+    let expires_str = expires_cell_for( aq, now_secs );
     let sub_str     = sub_label( aq.account.as_ref() ).to_string();
     // Fix(BUG-232): billing_type=="none" → no active subscription → no renewal date to show.
     // Root cause: renews_label uses org_created_at unconditionally; has no billing_type param.
@@ -102,7 +106,9 @@ pub fn render_tsv(
       Some( reason ) => format!( "{} ({})", aq.name, shorten_error( reason ) ),
       None           => aq.name.clone(),
     };
-    row.push( name_cell );
+    // Feature 070 lock visibility: 🔒 suffix keeps name-prefix matching intact for
+    // TSV consumers (same suffix convention as the fallback-reason cell above).
+    row.push( with_lock_marker( aq, name_cell ) );
 
     match &aq.result
     {

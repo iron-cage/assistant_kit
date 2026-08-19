@@ -787,3 +787,33 @@ fn test_bug488_derive_pass_wired_after_touch_loop()
      dispatch (touch_loop={touch_loop_pos}, derive={derive_pos}, render={render_dispatch_pos})",
   );
 }
+
+/// Feature 071: redirect-backend row → touch skipped with reason "redirect backend".
+///
+/// The redirect guard fires BEFORE the generic error guard: the placeholder `result`
+/// is an `Err`, so without the dedicated guard the row would report the misleading
+/// "error account" — a redirect account is not in an error state, it just has no
+/// Anthropic quota to touch. Wording matches `.account.use`'s pre-switch skip trace.
+#[ test ]
+fn test_touch_skip_reason_redirect_backend_not_error_account()
+{
+  use claude_profile::usage::test_bridge::mk_aq_err;
+  use claude_profile::usage::test_bridge::types::REDIRECT_NO_QUOTA_REASON;
+
+  let store = tempfile::TempDir::new().unwrap();
+
+  let mut aq = mk_aq_err();
+  aq.result = Err( REDIRECT_NO_QUOTA_REASON.to_string() );
+  assert_eq!(
+    touch_skip_reason( &aq, store.path(), false ),
+    Some( "skipped (reason: redirect backend)" ),
+    "redirect placeholder must get its own reason, not the generic error-account one",
+  );
+
+  // Control: a generic Err row still reports "error account".
+  assert_eq!(
+    touch_skip_reason( &mk_aq_err(), store.path(), false ),
+    Some( "skipped (reason: error account)" ),
+    "generic Err row must keep the error-account reason",
+  );
+}

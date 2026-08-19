@@ -34,6 +34,7 @@ Source: `src/usage/touch.rs`
 
 | Reason (exact literal) | Condition |
 |--------|-----------|
+| `"skipped (reason: redirect backend)"` | `aq.is_redirect_backend()` — redirect-backend row (Feature 071); checked before the error guard so a redirect account is never mislabeled "error account" |
 | `"skipped (reason: error account)"` | `aq.result` is `Err` |
 | `"skipped (reason: touch_idle=false)"` | Cache flag indicates already activated |
 | `"skipped (reason: already active)"` | All three timers have active windows |
