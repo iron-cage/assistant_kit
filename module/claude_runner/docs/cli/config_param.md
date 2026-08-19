@@ -4,7 +4,7 @@
 
 - **Purpose**: Document the config-file parameter tier (`~/.clr/config.toml` user-level, `.clr.toml` project-level) — the 4th of 5 levels in the CLI parameter resolution chain.
 - **Responsibility**: Specify the eligible parameter set, TOML key names, file discovery rules, precedence, and error handling.
-- **In Scope**: `ConfigDefaults` eligible-parameter enumeration, TOML key reference, discovery order (project > user), `CLR_CONFIG_DIR` test-injection override, example `config.toml`, error handling (malformed TOML, missing file, unknown key).
+- **In Scope**: `ConfigDefaults` eligible-parameter enumeration, TOML key reference, discovery order (project > user), `CLR_CONFIG_DIR` test-injection override, example `config.toml`, error handling (malformed TOML, missing file, unknown key), provider-gate suppression of the two model keys ([Provider Gate](#provider-gate)).
 - **Out of Scope**: CLI parameter semantics (→ `param/`), `CLR_*` env var fallbacks (→ [003_env_param.md](003_env_param.md)), JSON `--args-file` config (→ [../feature/004_json_config.md](../feature/004_json_config.md)), `isolated`/`refresh`/`ps` participation in the `ConfigDefaults` tier (not implemented — separate dispatch paths, revisit only if a concrete need arises).
 
 **One narrow exception, easy to misread as a contradiction:** `isolated` never goes through `load_config()`/`apply_config_defaults()` — the mechanism this document specifies — but it does read the same two files for exactly one key. When no model is set by the CLI flag, by an `--args-file` `"model"` key, or by `CLR_MODEL`, `resolve_isolated_default_model()` (`claude_runner_core::isolated`) reads `model` from project `.clr.toml`, then user `~/.clr/config.toml`, via a separate `get_tiered()` lookup that predates and bypasses `ConfigDefaults`. The practical effect is that `isolated --model` resolves through the same 5 *levels* as `run`/`ask`, reaching level 4 by a different route; only the level-5 built-in differs (`ISOLATED_DEFAULT_MODEL`, the `opus` alias, rather than deferring to the claude binary's own default). So "`isolated` has no config-file tier" is true of the tier defined here and false as a statement about the files; state which one is meant. `refresh` touches neither: it pins `REFRESH_DEFAULT_MODEL`. See [parity/001_run_ask_isolated.md](parity/001_run_ask_isolated.md) for the full three-way model cascade comparison. The behaviour is pinned by a regression test — `tests/isolated_defaults_test.rs` writes `model = "cfg-pinned-model"` into a temp-dir `.clr.toml` and asserts the isolated subprocess is invoked with it (Fix(BUG-485)); run `./verb/test_only bug485` to see it pass. To watch the same resolution by hand: `printf 'model = "cfg-pinned-model"\n' > .clr.toml && clr isolated --creds <creds> --dry-run` prints `--model cfg-pinned-model`, and adding `--model sonnet` overrides it.
@@ -48,11 +48,11 @@ TOML keys are **snake_case**, matching `ConfigDefaults` struct field names exact
 
 | TOML Key | CLI Flag | CLR_* Env Var | Type | Notes |
 |----------|----------|---------------|------|-------|
-| `model` | [`--model`](param/003_model.md) | `CLR_MODEL` | string | |
+| `model` | [`--model`](param/003_model.md) | `CLR_MODEL` | string | Ignored when `provider` is non-anthropic — see [Provider Gate](#provider-gate) |
 | `max_tokens` | [`--max-tokens`](param/009_max_tokens.md) | `CLR_MAX_TOKENS` | u32 | |
 | `effort` | [`--effort`](param/017_effort.md) | `CLR_EFFORT` | string | Parsed as `EffortLevel` (`low`/`medium`/`high`/`max`); invalid values silently ignored |
 | `no_effort_max` | [`--no-effort-max`](param/018_no_effort_max.md) | `CLR_NO_EFFORT_MAX` | bool | |
-| `fallback_model` | [`--fallback-model`](param/067_fallback_model.md) | `CLR_FALLBACK_MODEL` | string | |
+| `fallback_model` | [`--fallback-model`](param/067_fallback_model.md) | `CLR_FALLBACK_MODEL` | string | Ignored when `provider` is non-anthropic — see [Provider Gate](#provider-gate) |
 
 **Concurrency**
 
@@ -146,11 +146,39 @@ All other `CliArgs` fields not listed in [Eligible Parameters](#eligible-paramet
 
 `isolated`, `refresh`, and `ps` subcommands do not read config files at all — separate `CliArgs`-shaped structs and dispatch paths.
 
+### Provider Gate
+
+`provider` is a recognized **config-only control key** — not one of the 41 eligible parameters (it has no CLI flag or `CLR_*` env counterpart and never reaches `CliArgs`). Its sole writer is `clp .provider.select` (user tier); hand edits and a project-level `.clr.toml` merge like any other key (project wins).
+
+When `provider` is set, non-empty, and not `"anthropic"`, `apply_config_defaults()` ignores the config tier's `model` and `fallback_model` keys. Rationale: a seat pinned to another inference provider routes its sessions through the `ANTHROPIC_*` env block that `clp .account.use` writes into `~/.claude/settings.json`; a config-tier model would be promoted to an explicit `--model` flag — the strongest model source the claude binary knows — silently overriding that seat binding on every launch. Suppressing the config tier restores the intended strength ordering: launcher defaults stay defaults.
+
+Unaffected by the gate:
+
+- Levels 1–3 (CLI `--model`/`--fallback-model`, `--args-file` JSON, `CLR_MODEL`/`CLR_FALLBACK_MODEL`) — explicit per-invocation intent still wins.
+- Every non-model config key (`effort`, `max_sessions`, …) — applies as usual on any seat.
+- `isolated`'s separate `resolve_isolated_default_model()` lookup (the narrow exception above) — isolated probes run with explicit credentials and a stripped env, so the seat binding does not apply to them; pinned by `tests/isolated_defaults_test.rs` (BUG-485).
+- `refresh` — pins `REFRESH_DEFAULT_MODEL`, reads no config.
+
+With `--trace`, each ignored key is named on stderr — e.g. `config model 'claude-sonnet-5' ignored (provider: kimi)`.
+
+Verify by hand:
+
+```sh
+printf 'provider = "kimi"\nmodel = "claude-sonnet-5"\n' > .clr.toml
+clr --dry-run "task"                          # preview contains no --model
+clr --trace --dry-run "task"                  # stderr: config model 'claude-sonnet-5' ignored (provider: kimi)
+clr --model claude-opus-4-8 --dry-run "task"  # CLI flag survives the gate
+```
+
+Undo: `clp .provider.select reset::1` removes the key (user tier); the config-tier model applies again on the next launch.
+
 ### Example `config.toml`
 
 ```toml
 # ~/.clr/config.toml (user-level) or .clr.toml (project-level, cwd)
 model = "claude-opus-4-8"
+# provider = "kimi"   # config-only key, written by `clp .provider.select` —
+#                     # when non-anthropic, `model`/`fallback_model` above are ignored
 max_sessions = 4
 effort = "high"
 timeout = 600
@@ -185,4 +213,4 @@ Test-injection override for user-level discovery only — mirrors the existing `
 
 | File | Relationship |
 |------|--------------|
-| `../../tests/config_file_test.rs` | T01–T16: precedence (CLI/JSON/env/config/default), project-over-user, `CLR_CONFIG_DIR` scope, malformed TOML, unknown key, dry-run reflection, invalid `output_style`/`journal`/`summary_fields` rejection, config-only `gate_poll_secs`/`gate_max_attempts` timing (T16) |
+| `../../tests/config_file_test.rs` | T01–T20: precedence (CLI/JSON/env/config/default), project-over-user, `CLR_CONFIG_DIR` scope, malformed TOML, unknown key, dry-run reflection, invalid `output_style`/`journal`/`summary_fields` rejection, config-only `gate_poll_secs`/`gate_max_attempts` timing (T16), provider gate — suppression, explicit-anthropic no-op, CLI-wins, trace note (T17–T20) |

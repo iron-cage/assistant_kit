@@ -32,6 +32,10 @@
 //! | T14 | invalid `journal` config value → exit 1                         | Error Handling  |
 //! | T15 | invalid `summary_fields` config value → exit 1                  | Error Handling  |
 //! | T16 | config-only `gate_poll_secs`/`gate_max_attempts` change real gate timing | Precedence |
+//! | T17 | non-anthropic `provider` suppresses config `model`/`fallback_model`      | Provider Gate |
+//! | T18 | `provider = "anthropic"` leaves config `model` effective                 | Provider Gate |
+//! | T19 | CLI `--model` still wins on a provider-pinned seat                       | Provider Gate |
+//! | T20 | `--trace` names the suppressed config model and provider                 | Provider Gate |
 
 mod cli_binary_test_helpers;
 use cli_binary_test_helpers::
@@ -610,5 +614,124 @@ fn t16_config_only_sets_gate_poll_secs_and_max_attempts()
       "Error: [Runner] session gate timed out — 1 print sessions, max-sessions=1 — retries exhausted (exit 1)"
     ),
     "T16: exact exhaustion message required. Got:\n{stderr}"
+  );
+}
+
+// ── T17: non-anthropic provider suppresses config-tier model keys ─────────────────
+
+/// T17: user config sets `provider = "kimi"` alongside `model` and `fallback_model`;
+/// no higher-tier model source. The dry-run preview must contain neither `--model`
+/// nor `--fallback-model` — a seat pinned to a non-anthropic provider routes its
+/// sessions through the `ANTHROPIC_*` env block in `~/.claude/settings.json`, and a
+/// config-tier model would be promoted to an explicit `--model` flag silently
+/// overriding that binding on every launch (`docs/cli/config_param.md § Provider Gate`).
+#[ test ]
+fn t17_non_anthropic_provider_suppresses_config_model()
+{
+  let config_dir = tempfile::TempDir::new().expect( "config dir" );
+  write_config_file(
+    config_dir.path(),
+    "provider = \"kimi\"\nmodel = \"claude-sonnet-5\"\nfallback_model = \"claude-opus-4-8\"\n",
+  );
+
+  let out = run_cli_with_env(
+    &[ "--dry-run", "hi" ],
+    &[ ( "CLR_CONFIG_DIR", config_dir.path().to_str().expect( "utf8" ) ) ],
+  );
+  assert_eq!( exit_code( &out ), 0, "T17: must exit 0; stderr: {}", stderr_str( &out ) );
+  let stdout = stdout_str( &out );
+  assert!(
+    !stdout.contains( "--model" ) && !stdout.contains( "claude-sonnet-5" ),
+    "T17: config model must be suppressed on a kimi-provider seat. Got:\n{stdout}"
+  );
+  assert!(
+    !stdout.contains( "--fallback-model" ) && !stdout.contains( "claude-opus-4-8" ),
+    "T17: config fallback_model must be suppressed on a kimi-provider seat. Got:\n{stdout}"
+  );
+}
+
+// ── T18: explicit anthropic provider leaves config model effective ────────────────
+
+/// T18: `provider = "anthropic"` (the default, stated explicitly) must NOT trigger
+/// suppression — config `model` applies exactly as with no provider key at all
+/// (which T12 already pins).
+#[ test ]
+fn t18_anthropic_provider_leaves_config_model_effective()
+{
+  let config_dir = tempfile::TempDir::new().expect( "config dir" );
+  write_config_file(
+    config_dir.path(),
+    "provider = \"anthropic\"\nmodel = \"claude-sonnet-5\"\n",
+  );
+
+  let out = run_cli_with_env(
+    &[ "--dry-run", "hi" ],
+    &[ ( "CLR_CONFIG_DIR", config_dir.path().to_str().expect( "utf8" ) ) ],
+  );
+  assert_eq!( exit_code( &out ), 0, "T18: must exit 0; stderr: {}", stderr_str( &out ) );
+  let stdout = stdout_str( &out );
+  assert!(
+    stdout.contains( "--model" ) && stdout.contains( "claude-sonnet-5" ),
+    "T18: explicit anthropic provider must not suppress config model. Got:\n{stdout}"
+  );
+}
+
+// ── T19: CLI --model still wins on a provider-pinned seat ─────────────────────────
+
+/// T19: `provider = "kimi"` with config `model = "claude-sonnet-5"`, but the CLI
+/// passes `--model claude-opus-4-8`. The explicit flag is user intent — it must
+/// survive the provider gate (only the config tier is suppressed, never levels 1-3).
+#[ test ]
+fn t19_cli_model_wins_over_provider_gate()
+{
+  let config_dir = tempfile::TempDir::new().expect( "config dir" );
+  write_config_file(
+    config_dir.path(),
+    "provider = \"kimi\"\nmodel = \"claude-sonnet-5\"\n",
+  );
+
+  let out = run_cli_with_env(
+    &[ "--model", "claude-opus-4-8", "--dry-run", "hi" ],
+    &[ ( "CLR_CONFIG_DIR", config_dir.path().to_str().expect( "utf8" ) ) ],
+  );
+  assert_eq!( exit_code( &out ), 0, "T19: must exit 0; stderr: {}", stderr_str( &out ) );
+  let stdout = stdout_str( &out );
+  assert!(
+    stdout.contains( "--model" ) && stdout.contains( "claude-opus-4-8" ),
+    "T19: explicit CLI --model must survive the provider gate. Got:\n{stdout}"
+  );
+  assert!(
+    !stdout.contains( "claude-sonnet-5" ),
+    "T19: the suppressed config model must not leak into the command. Got:\n{stdout}"
+  );
+}
+
+// ── T20: --trace names the suppressed config model ────────────────────────────────
+
+/// T20: same config as T17 plus `--trace` — stderr must carry one suppression note
+/// per ignored key, naming both the value and the provider, so a `clr --trace` user
+/// can see why the config model vanished instead of silently missing it.
+#[ test ]
+fn t20_trace_names_suppressed_config_model()
+{
+  let config_dir = tempfile::TempDir::new().expect( "config dir" );
+  write_config_file(
+    config_dir.path(),
+    "provider = \"kimi\"\nmodel = \"claude-sonnet-5\"\nfallback_model = \"claude-opus-4-8\"\n",
+  );
+
+  let out = run_cli_with_env(
+    &[ "--trace", "--dry-run", "hi" ],
+    &[ ( "CLR_CONFIG_DIR", config_dir.path().to_str().expect( "utf8" ) ) ],
+  );
+  assert_eq!( exit_code( &out ), 0, "T20: must exit 0; stderr: {}", stderr_str( &out ) );
+  let stderr = stderr_str( &out );
+  assert!(
+    stderr.contains( "config model 'claude-sonnet-5' ignored (provider: kimi)" ),
+    "T20: trace must name the suppressed model and provider. Got:\n{stderr}"
+  );
+  assert!(
+    stderr.contains( "config fallback_model 'claude-opus-4-8' ignored (provider: kimi)" ),
+    "T20: trace must name the suppressed fallback_model too. Got:\n{stderr}"
   );
 }

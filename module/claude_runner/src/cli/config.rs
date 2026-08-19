@@ -14,6 +14,10 @@ use std::path::PathBuf;
 /// explicit `false` are indistinguishable at the struct level; project-vs-user
 /// precedence correctness instead comes from merging raw TOML tables before this
 /// struct is deserialized (see `load_config`).
+///
+/// One exception to the mirror: `provider` is a config-only control key with no
+/// CLI flag or `CLR_*` env counterpart — written by `clp .provider.select`, read
+/// here solely to gate the two model keys (see `apply_config_defaults`).
 #[ allow( clippy::struct_excessive_bools ) ]
 #[ derive( Default, serde::Deserialize ) ]
 #[ serde( default ) ]
@@ -60,6 +64,7 @@ pub( crate ) struct ConfigDefaults
   pub( crate ) disallowed_tools     : Option< String >,
   pub( crate ) max_budget_usd       : Option< String >,
   pub( crate ) fallback_model       : Option< String >,
+  pub( crate ) provider             : Option< String >,
 }
 
 /// Resolve the user-level config directory: `$CLR_CONFIG_DIR` if set and
@@ -140,7 +145,35 @@ pub( crate ) fn load_config() -> Result< ConfigDefaults >
 #[ allow( clippy::too_many_lines ) ] // config-field mapping is inherently wide — one branch per field, mirrors apply_env_vars.
 pub( crate ) fn apply_config_defaults( parsed : &mut CliArgs, config : &ConfigDefaults ) -> Result< () >
 {
-  if parsed.model.is_none() { parsed.model.clone_from( &config.model ); }
+  // A seat pinned to a non-anthropic provider (`provider` key, written by
+  // `clp .provider.select`) routes its sessions through the `ANTHROPIC_*` env block
+  // in `~/.claude/settings.json`. A config-tier model would be promoted to an explicit
+  // `--model` flag — the strongest model source claude knows — silently overriding
+  // that seat binding on every launch. On such seats the config tier's two model keys
+  // are ignored: higher tiers (CLI flag, `--args-file`, `CLR_MODEL`) still win when
+  // explicitly set, and `isolated`'s separate `resolve_isolated_default_model()` path
+  // (explicit creds, env stripped) is deliberately unaffected.
+  let non_anthropic_seat = config.provider.as_deref()
+    .is_some_and( | p | !p.is_empty() && p != "anthropic" );
+  if non_anthropic_seat && parsed.trace
+  {
+    let provider = config.provider.as_deref().unwrap_or_default();
+    if parsed.model.is_none() && config.model.is_some()
+    {
+      eprintln!(
+        "config model '{}' ignored (provider: {provider})",
+        config.model.as_deref().unwrap_or_default()
+      );
+    }
+    if parsed.fallback_model.is_none() && config.fallback_model.is_some()
+    {
+      eprintln!(
+        "config fallback_model '{}' ignored (provider: {provider})",
+        config.fallback_model.as_deref().unwrap_or_default()
+      );
+    }
+  }
+  if parsed.model.is_none() && !non_anthropic_seat { parsed.model.clone_from( &config.model ); }
   if parsed.max_tokens.is_none() { parsed.max_tokens = config.max_tokens; }
   if parsed.effort.is_none()
   {
@@ -220,6 +253,6 @@ pub( crate ) fn apply_config_defaults( parsed : &mut CliArgs, config : &ConfigDe
   if parsed.allowed_tools.is_none() { parsed.allowed_tools.clone_from( &config.allowed_tools ); }
   if parsed.disallowed_tools.is_none() { parsed.disallowed_tools.clone_from( &config.disallowed_tools ); }
   if parsed.max_budget_usd.is_none() { parsed.max_budget_usd.clone_from( &config.max_budget_usd ); }
-  if parsed.fallback_model.is_none() { parsed.fallback_model.clone_from( &config.fallback_model ); }
+  if parsed.fallback_model.is_none() && !non_anthropic_seat { parsed.fallback_model.clone_from( &config.fallback_model ); }
   Ok( () )
 }

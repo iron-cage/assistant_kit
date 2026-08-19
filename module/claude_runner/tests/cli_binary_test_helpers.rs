@@ -7,10 +7,11 @@
 //! | `run_cli` | `cli_args_test`, `cli_args_ext_test`, `dry_run_test`, `ultrathink_args_test`, `effort_args_test`, `param_edge_cases_test`, `param_extended_flags_test`, `param_group_test`, `execution_mode_test`, `quiet_test`, `ask_command_test`, `user_story_test`, `user_story_creds_isolated_test`, `user_story_output_test`, `user_story_ps_test`, `user_story_kill_test`, `ps_command_test`, `kill_command_test`, `ps_mode_test`, `ps_columns_test`, `ps_wide_test`, `ps_pid_test`, `ps_inspect_test`, `ps_flags_test`, `output_style_test`, `summary_fields_test`, `no_compact_window_test`, `json_config_test` |
 //! | `run_cli_with_env` | `env_var_test`, `env_var_ext_test`, `invariant_trace_universality_test`, `param_trace_edge_cases_test`, `param_group_test`, `isolated_test`, `user_story_creds_isolated_test`, `user_story_output_test`, `bug_reproducers_239_244_test`, `error_classification_test`, `ps_command_test`, `user_story_ps_test`, `output_style_test`, `summary_fields_test`, `no_compact_window_test`, `json_config_test`, `config_file_test` |
 //! | `run_cli_in_dir` | `config_file_test` |
-//! | `make_session_dir` (deprecated for new use) | `cli_args_test`, `ultrathink_args_test`, `user_story_test`, `dry_run_test` |
-//! | `make_zero_turn_session_dir` (deprecated for new use) | `execution_mode_test` |
-//! | `df` | `session_from_test`, `session_verification_test`, `session_path_resolution_test`, `session_source_isolation_test` |
-//! | `make_session_for` | `session_from_test`, `session_verification_test`, `session_path_resolution_test`, `session_source_isolation_test` |
+//! | `make_session_dir` (deprecated for new use) | `dry_run_test`, `execution_mode_ext_test`, `user_story_test` |
+//! | `make_zero_turn_session_dir` (deprecated for new use) | `execution_mode_ext_test` |
+//! | `df` | `session_from_test`, `session_path_resolution_test`, `session_source_isolation_test`, `scope_command_test`, `bug_reproducers_490_492_test`, `topic_command_test` |
+//! | `make_session_for` | `cli_args_ext_test`, `dry_run_test`, `ultrathink_args_test`, `session_from_test`, `execution_mode_test`, `execution_mode_ext_test`, `session_path_resolution_test`, `session_source_isolation_test`, `session_verification_test`, `user_story_test` |
+//! | `make_zero_turn_session_for` | none yet — encoded-path successor to `make_zero_turn_session_dir` |
 //! | `exit_code` | `refresh_test`, `bug_reproducers_239_244_test`, `user_story_test`, `user_story_creds_isolated_test`, `isolated_test`, `json_config_test`, `config_file_test` |
 //! | `stderr_str` | `refresh_test`, `bug_reproducers_239_244_test`, `invariant_trace_universality_test`, `error_classification_test`, `user_story_test`, `user_story_creds_isolated_test`, `isolated_correctness_test`, `isolated_test`, `ps_command_test`, `user_story_ps_test`, `kill_command_test`, `user_story_kill_test`, `ps_mode_test`, `ps_columns_test`, `output_format_test`, `no_compact_window_test`, `json_config_test`, `config_file_test` |
 //! | `stdout_str` | `refresh_test`, `isolated_correctness_test`, `isolated_test`, `dry_run_test`, `ps_command_test`, `user_story_ps_test`, `kill_command_test`, `user_story_kill_test`, `ps_mode_test`, `ps_columns_test`, `ps_wide_test`, `output_format_test`, `no_compact_window_test`, `json_config_test`, `config_file_test` |
@@ -19,6 +20,7 @@
 //! | `fake_claude_binary_dir` (unix) | `ps_command_test`, `user_story_ps_test`, `kill_command_test`, `user_story_kill_test`, `ps_mode_test`, `ps_columns_test`, `ps_wide_test`, `ps_flags_test`, `config_file_test` |
 //! | `fake_claude` (unix) | `execution_mode_test`, `expect_validation_test` |
 //! | `run_with_path` | `execution_mode_test`, `expect_validation_test`, `exit_code_contract_test`, `output_format_test` |
+//! | `run_with_path_env` | `execution_mode_test` |
 //! | `run_with_path_stdin` | `execution_mode_test` |
 //! | `run_with_path_proc` (unix) | `expect_validation_test` |
 //! | `make_proc_dir` (unix) | `kill_command_test`, `expect_validation_test`, `config_file_test` |

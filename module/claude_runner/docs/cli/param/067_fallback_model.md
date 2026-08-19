@@ -8,6 +8,7 @@ Specify a fallback model to use when the primary model is unavailable.
 - **Group:** [Claude-Native Flags](../param_group/01_claude_native_flags.md)
 - **Validation:** requires a value; `--fallback-model` at end of argv → error
 - **JSON Key:** `"fallback-model"`
+- **Provider Gate:** the config-tier `fallback_model` key is ignored when the config `provider` key is non-anthropic — see [Provider Gate](../config_param.md#provider-gate); the CLI flag and `CLR_FALLBACK_MODEL` are unaffected.
 
 ```sh
 clr "Fix bug" --model opus --fallback-model sonnet
