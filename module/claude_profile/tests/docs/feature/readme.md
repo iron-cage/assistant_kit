@@ -64,8 +64,8 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | 068_models_list_command.md | FT cases for Feature 068 — Models List Command |
 | 069_model_select_command.md | FT cases for Feature 069 — Model Select Command |
 | 072_inference_provider_selection.md | FT cases for Feature 072 — Inference Provider Selection |
-| 075_account_tags.md | FT cases for Feature 075 — Account Tags (📋 planned) |
-| 076_identity_tag_filter.md | FT cases for Feature 076 — Identity Tag Filter (📋 planned) |
+| 075_account_tags.md | FT cases for Feature 075 — Account Tags |
+| 076_identity_tag_filter.md | FT cases for Feature 076 — Identity Tag Filter |
 
 ### Coverage Summary
 

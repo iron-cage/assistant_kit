@@ -98,8 +98,6 @@ _(none yet)_
 
 ### Sources
 
-*(planned locations — implementation pending)*
-
 | File | Role |
 |------|------|
 | `../claude_profile_core/src/account/filter.rs` | Filter file read/write, predicate evaluation, filename derivation (new) |
@@ -114,4 +112,4 @@ _(none yet)_
 | [tests/docs/feature/076_identity_tag_filter.md](../../tests/docs/feature/076_identity_tag_filter.md) | FT-level AC coverage plan |
 | [tests/docs/cli/command/23_identities.md](../../tests/docs/cli/command/23_identities.md) | `.identities` integration test cases |
 | [tests/docs/cli/command/24_identity_filter.md](../../tests/docs/cli/command/24_identity_filter.md) | `.identity.filter` integration test cases |
-| `tests/cli/identity_filter_test.rs`, `tests/usage/sort_next_tests_b.rs` | Planned integration test implementations (Gate 11 cases join the existing gate test file) |
+| `tests/cli/identity_filter_test.rs`, `tests/usage/sort_next_tests_b.rs` | Integration test implementations (Gate 11 cases join the existing gate test file) |

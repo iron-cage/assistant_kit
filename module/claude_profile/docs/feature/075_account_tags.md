@@ -102,8 +102,6 @@ _(none yet)_
 
 ### Sources
 
-*(planned locations — implementation pending)*
-
 | File | Role |
 |------|------|
 | `../claude_profile_core/src/account/tags.rs` | Tag normalization/validation, set operations, `role`→tag lazy migration, `{name}.json` read/write (new) |
@@ -118,4 +116,4 @@ _(none yet)_
 | [tests/docs/feature/075_account_tags.md](../../tests/docs/feature/075_account_tags.md) | FT-level AC coverage plan |
 | [tests/docs/cli/command/25_account_tag.md](../../tests/docs/cli/command/25_account_tag.md) | `.account.tag` integration test cases |
 | [tests/docs/cli/command/22_tags.md](../../tests/docs/cli/command/22_tags.md) | `.tags` integration test cases |
-| `tests/cli/account_tag_test.rs` | Planned integration test implementation |
+| `tests/cli/account_tag_test.rs` | Integration test implementation |

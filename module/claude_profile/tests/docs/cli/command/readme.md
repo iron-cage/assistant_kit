@@ -33,7 +33,7 @@
 | 19_models.md | Test cases for `.models` command |
 | 20_model_select.md | DEPRECATED — `.model.select` reduced to a migration-error stub, replaced by `.model scope::subprocess` (Feature 035/Task 465); historical test cases retained |
 | 21_provider_select.md | Test cases for `.provider.select` command |
-| 22_tags.md | Test cases for `.tags` command (📋 planned) |
-| 23_identities.md | Test cases for `.identities` command (📋 planned) |
-| 24_identity_filter.md | Test cases for `.identity.filter` command (📋 planned) |
-| 25_account_tag.md | Test cases for `.account.tag` command (📋 planned) |
+| 22_tags.md | Test cases for `.tags` command |
+| 23_identities.md | Test cases for `.identities` command |
+| 24_identity_filter.md | Test cases for `.identity.filter` command |
+| 25_account_tag.md | Test cases for `.account.tag` command |

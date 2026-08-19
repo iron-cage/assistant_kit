@@ -15,7 +15,7 @@
 | IT-03 | AC-15 | `format::json` → array of `{"identity","active","owned","include","exclude"}` | `identity_filter_t15_identity_commands_json` |
 | IT-04 | AC-15 | Unsupported format (`format::table`) → exit 1 | `identity_filter_t15_identity_commands_json` (rejection assertion) |
 | IT-05 | AC-14 | Marker file matching no known raw Identity → filename-derived row (sanitized display) | `identity_filter_t18_identities_filename_derived_row` |
-| IT-06 | — | `.identities` appears in `clp .help` after registration | `dot04_all_visible_commands_present` (extend on implementation) |
+| IT-06 | — | `.identities` appears in `clp .help` after registration | `dot04_all_visible_commands_present` |
 
 ### Notes
 

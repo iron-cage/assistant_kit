@@ -17,6 +17,7 @@ format compliance, and append-only history behavior.
 | SC-5 | `history` array appended — never truncated by successful fetch | Append-Only | ✅ |
 | SC-6 | `cache` updated atomically on successful API call | Cache Write | ✅ |
 | SC-7 | `inference_provider` written only when explicitly given; preserved by unrelated saves | Preserved-Only Fields | 🔲 |
+| SC-8 | `tags` written sorted/deduplicated when given; key absent when never given | Write Semantics | ✅ |
 
 ---
 
@@ -95,3 +96,13 @@ format compliance, and append-only history behavior.
 - **Then:** First scenario: `{name}.json` still has no `inference_provider` key at all — the field is never written as the literal default `"anthropic"`. Second scenario: `"inference_provider": "kimi"` remains unchanged — `save()`'s read-merge preserves it exactly like `_renewal_at`, `owner`, `host`, and `role` (SC-1, SC-2, SC-3).
 - **Source fn:** *(planned — not yet implemented)*
 - **Source:** [docs/schema/002_account_json.md §Preserved-Only Fields](../../../docs/schema/002_account_json.md), [feature/072_inference_provider_selection.md AC-02](../../../docs/feature/072_inference_provider_selection.md)
+
+---
+
+### SC-8: `tags` written sorted/deduplicated when given; key absent when never given
+
+- **Given:** No pre-existing account — then, second scenario, a fresh save that never passes `tags::`.
+- **When:** `.account.save tags::kimi_pool,ci,ci` — then `.account.save` without `tags::`.
+- **Then:** First scenario: `{name}.json` contains `"tags": ["ci", "kimi_pool"]` — lowercased, deduplicated, sorted at write. Second scenario: no `tags` key at all — absence ≡ empty set on every read path, never written as a literal `[]`.
+- **Source fn:** `account_tag_t01_save_tags_writes_sorted_dedup`, `account_tag_t02_save_without_tags_omits_field` (in `tests/cli/account_tag_test.rs`)
+- **Source:** [docs/schema/002_account_json.md §Field Table (tags)](../../../docs/schema/002_account_json.md), [feature/075_account_tags.md AC-01, AC-02](../../../docs/feature/075_account_tags.md)

@@ -41,9 +41,9 @@ format::plain  → text layout with no emoji or ANSI colors (.usage only; equiva
 | 4 | [`.credentials.status`](../command/002_credentials.md#command-10-credentialsstatus) | Credential status output format (including token expiry classification) |
 | 5 | [`.account.limits`](../command/001_account.md#command-11-accountlimits) | Account limits output format |
 | 6 | [`.account.inspect`](../command/001_account.md#command-15-accountinspect) | Account inspection output format |
-| 7 | [`.tags`](../command/010_tag.md#command-22-tags) | Tag listing output format (📋 planned) |
-| 8 | [`.identities`](../command/011_identity.md#command-23-identities) | Identity listing output format (📋 planned) |
-| 9 | [`.identity.filter`](../command/011_identity.md#command-24-identityfilter) | Filter get-mode output format (📋 planned) |
+| 7 | [`.tags`](../command/010_tag.md#command-22-tags) | Tag listing output format |
+| 8 | [`.identities`](../command/011_identity.md#command-23-identities) | Identity listing output format |
+| 9 | [`.identity.filter`](../command/011_identity.md#command-24-identityfilter) | Filter get-mode output format |
 
 ### Referenced User Stories
 

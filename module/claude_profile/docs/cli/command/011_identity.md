@@ -6,8 +6,6 @@ Identity commands: fleet-seat listing and per-Identity tag filter administration
 
 ### Command: 23. `.identities`
 
-> **Status: 📋 planned** — specified by [feature/076](../../feature/076_identity_tag_filter.md); not yet implemented.
-
 Lists every [Identity](../../type/002_identity.md) (`user@machine`) observed anywhere in the credential store — the union of Identities appearing in `_active_*` markers, `_filter_*` files, and account `owner` fields — one sorted row per Identity with its active account, owned-account count, and tag filter halves. This is the fleet-seat overview the `user@host` concept never had.
 
 -- **Parameters:** [`format::`](../param/002_format.md)
@@ -64,8 +62,6 @@ clp .identities        # store with no markers, filters, or owners
 ---
 
 ### Command: 24. `.identity.filter`
-
-> **Status: 📋 planned** — specified by [feature/076](../../feature/076_identity_tag_filter.md); not yet implemented.
 
 Get, set, or clear an Identity's [Tag Filter](../../type/004_tag_filter.md) — the per-seat include/exclude tag-set pair constraining automatic account selection (Gate 11, [algorithm/004](../../algorithm/004_eligibility_gates.md)). Without operation params, prints the target Identity's filter. With `include::`/`exclude::`, writes — each given side fully replaces that side. With `clear::1`, deletes the filter file (revert to permit-all). Filter files are store-resident (`_filter_{machine}_{user}`, [schema/009](../../schema/009_identity_filter_json.md)) and sync with the store; `identity::` administers another seat's filter centrally.
 

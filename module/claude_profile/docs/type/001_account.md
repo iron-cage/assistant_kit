@@ -15,7 +15,7 @@ A named credential profile. Identity is the unique `name` within the credential 
 |-----------|---------------------|
 | `backend` | [Backend (006)](006_backend.md) |
 | `inference_provider` | [Provider (005)](005_provider.md) |
-| `tags` (planned) | [Tag (003)](003_tag.md) |
+| `tags` | [Tag (003)](003_tag.md) |
 | credential payload | [Token (009)](009_token.md) |
 | quota measurement | [Quota Snapshot (008)](008_quota_snapshot.md) |
 | `owner`, `claim_lock`, `reserve` | [Identity (002)](002_identity.md), [feature/070](../feature/070_account_claim_and_reservation_control.md) |

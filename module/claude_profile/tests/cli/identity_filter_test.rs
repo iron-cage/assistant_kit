@@ -157,11 +157,15 @@ fn identity_filter_t03_filter_both_sides_replace()
 // ── FT-04: include/exclude overlap exits 1 (AC-04) ────────────────────────────
 
 /// FT-04 — a write producing non-empty `include ∩ exclude` exits 1 naming the
-/// overlap; the file is unchanged (or still absent).
+/// overlap; the file is unchanged (or still absent). Covers both write paths:
+/// the core current-Identity path and the CLI-local explicit-`identity::` path
+/// (`write_filter_at`), whose fresh-write and read-merge branches each carry
+/// their own overlap check.
 ///
 /// ## Assert
 /// `include::a exclude::a` on a fresh store → exit 1, no file; `include::x`
 /// against an existing `{"exclude": ["x"]}` → exit 1, file byte-identical.
+/// Both assertions repeated with `identity::bob@laptop` targeting.
 ///
 /// Spec: `tests/docs/feature/076_identity_tag_filter.md` FT-04 (AC-04)
 #[ test ]
@@ -190,6 +194,34 @@ fn identity_filter_t04_filter_overlap_exits_1()
   assert_eq!(
     std::fs::read( filter_path( home, TEST_SLUG ) ).unwrap(), before,
     "FT-04: an overlap against the preserved side must leave the file unchanged",
+  );
+
+  // The explicit-`identity::` path runs its own CLI-local overlap check
+  // (`write_filter_at`) — pin the same rejection on both of its branches.
+  let out = run_cs_with_env(
+    &[ ".identity.filter", "identity::bob@laptop", "include::a", "exclude::a" ],
+    &id_env( home_s ),
+  );
+  assert_exit( &out, 1 );
+  assert!(
+    stderr( &out ).contains( "overlap" ),
+    "FT-04: identity:: rejection must name the overlap; stderr: {}", stderr( &out ),
+  );
+  assert!(
+    !filter_path( home, "laptop_bob" ).exists(),
+    "FT-04: a rejected contradictory identity:: write must create nothing",
+  );
+
+  write_filter_file( home, "laptop_bob", &[], &[ "x" ] );
+  let before = std::fs::read( filter_path( home, "laptop_bob" ) ).unwrap();
+  let out = run_cs_with_env(
+    &[ ".identity.filter", "identity::bob@laptop", "include::x" ],
+    &id_env( home_s ),
+  );
+  assert_exit( &out, 1 );
+  assert_eq!(
+    std::fs::read( filter_path( home, "laptop_bob" ) ).unwrap(), before,
+    "FT-04: identity:: overlap against the preserved side must leave the file unchanged",
   );
 }
 

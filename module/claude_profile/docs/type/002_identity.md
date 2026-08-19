@@ -22,7 +22,7 @@ An Identity owns, per credential store:
 |-----------------|-----------|
 | account ownership claims | `owner` field on [Account (001)](001_account.md) — empty or matching Identity ⇒ `is_owned = true` |
 | current-account pointer | per-machine active marker file ([schema/005](../schema/005_active_marker.md)) |
-| rotation tag filter (planned) | [Tag Filter (004)](004_tag_filter.md) |
+| rotation tag filter | [Tag Filter (004)](004_tag_filter.md) |
 
 ### Validation
 
@@ -36,4 +36,4 @@ Consumed by Gate 8 (Foreign-owned) in [algorithm/004](../algorithm/004_eligibili
 
 ### Serialization
 
-Plain string in `owner` fields of `{name}.json`; sanitized-embedded in `_active_{host}_{user}` filenames; key for the planned per-Identity tag filter file.
+Plain string in `owner` fields of `{name}.json`; sanitized-embedded in `_active_{host}_{user}` filenames; key for the per-Identity tag filter file.

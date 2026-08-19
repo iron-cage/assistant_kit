@@ -75,7 +75,7 @@
 ### FT-04: Include/exclude overlap exits 1
 
 - **Given:** Any state (including a pre-existing exclude the new include would collide with).
-- **When:** `clp .identity.filter include::a exclude::a`; also `clp .identity.filter include::x` against an existing `{"exclude": ["x"]}`
+- **When:** `clp .identity.filter include::a exclude::a`; also `clp .identity.filter include::x` against an existing `{"exclude": ["x"]}`; both repeated with explicit `identity::USER@MACHINE` targeting (separate CLI-local write path).
 - **Then:** Exits 1; stderr names the overlapping tag(s); the filter file is unchanged (or still absent).
 - **Exit:** 1
 - **Source fn:** `identity_filter_t04_filter_overlap_exits_1`

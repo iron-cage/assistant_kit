@@ -51,11 +51,11 @@ Group 2 ranks above group 3 because 5h exhaustion recovers in hours; 7d exhausti
 
 ### Tagging and Identity
 
-**Identity** — The `user@machine` pair identifying an acting seat: who, on which machine. The value the rest of the system already keys on — active markers, `owner` fields, `assignee::` values, and (📋 planned) tag filter files. The current Identity resolves as `$USER@$HOSTNAME` (same resolution chain as the active marker). Listed fleet-wide via `.identities` (📋 planned). See [type/002_identity.md](../type/002_identity.md).
+**Identity** — The `user@machine` pair identifying an acting seat: who, on which machine. The value the rest of the system already keys on — active markers, `owner` fields, `assignee::` values, and tag filter files. The current Identity resolves as `$USER@$HOSTNAME` (same resolution chain as the active marker). Listed fleet-wide via `.identities`. See [type/002_identity.md](../type/002_identity.md).
 
-**Tag** — 📋 planned. A normalized label (charset `[a-z0-9_-]`, 1–64 chars, lowercased at write) carried in an account's `tags` set for fleet partitioning (e.g. `kimi_pool`, `ci`, `personal`). Written via `.account.save tags::` or `.account.tag`; listed via `.tags`; supersedes the legacy single `role` label. See [type/003_tag.md](../type/003_tag.md), [feature/075_account_tags.md](../feature/075_account_tags.md).
+**Tag** — A normalized label (charset `[a-z0-9_-]`, 1–64 chars, lowercased at write) carried in an account's `tags` set for fleet partitioning (e.g. `kimi_pool`, `ci`, `personal`). Written via `.account.save tags::` or `.account.tag`; listed via `.tags`; supersedes the legacy single `role` label. See [type/003_tag.md](../type/003_tag.md), [feature/075_account_tags.md](../feature/075_account_tags.md).
 
-**Tag Filter** — 📋 planned. A per-Identity include/exclude pair of tag sets stored in `{credential_store}/_filter_{machine}_{user}`, constraining automatic account selection to accounts satisfying `T ⊇ include ∧ T ∩ exclude = ∅` (Gate 11, unconditional). Absent file = permit-all; explicit `.account.use name::X` is never filtered. Managed via `.identity.filter`. See [type/004_tag_filter.md](../type/004_tag_filter.md), [feature/076_identity_tag_filter.md](../feature/076_identity_tag_filter.md).
+**Tag Filter** — A per-Identity include/exclude pair of tag sets stored in `{credential_store}/_filter_{machine}_{user}`, constraining automatic account selection to accounts satisfying `T ⊇ include ∧ T ∩ exclude = ∅` (Gate 11, unconditional). Absent file = permit-all; explicit `.account.use name::X` is never filtered. Managed via `.identity.filter`. See [type/004_tag_filter.md](../type/004_tag_filter.md), [feature/076_identity_tag_filter.md](../feature/076_identity_tag_filter.md).
 
 ### Operational Modes
 

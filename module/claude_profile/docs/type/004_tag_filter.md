@@ -1,7 +1,5 @@
 # Type: Tag Filter
 
-> **Status: 📋 planned** — designed, not yet implemented. This instance is the authoritative contract for implementation.
-
 ### Scope
 
 - **Purpose**: Define Tag Filter — the per-Identity include/exclude tag set pair that gates rotation eligibility.

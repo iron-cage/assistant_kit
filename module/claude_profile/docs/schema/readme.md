@@ -4,7 +4,7 @@
 
 - **Purpose**: Define the on-disk file formats written and read by `claude_profile`, including field names, types, and default values.
 - **Responsibility**: Authoritative structural reference for every JSON/text file clp touches — credential snapshots, account metadata, settings, and state markers.
-- **In Scope**: All files under the credential store (`{name}.credentials.json`, `{name}.json`, `_active_*`, `_filter_*` 📋 planned), all global Claude files clp reads or writes (`~/.claude/.credentials.json`, `~/.claude/settings.json`, `~/.claude.json`), and path resolution schemas (`PersistPaths`, `ClaudePaths`). `~/.clr/prefs.json` (schema 008) is retained as a deprecated entry — see `claude_core/docs/api/002_toml_io.md` for its superseding `~/.clr/config.toml` format.
+- **In Scope**: All files under the credential store (`{name}.credentials.json`, `{name}.json`, `_active_*`, `_filter_*`), all global Claude files clp reads or writes (`~/.claude/.credentials.json`, `~/.claude/settings.json`, `~/.claude.json`), and path resolution schemas (`PersistPaths`, `ClaudePaths`). `~/.clr/prefs.json` (schema 008) is retained as a deprecated entry — see `claude_core/docs/api/002_toml_io.md` for its superseding `~/.clr/config.toml` format.
 - **Out of Scope**: HTTP API request/response payloads; in-memory type definitions (see `claude_profile_core/src/account/types.rs`); read-only paths owned by `claude` binary.
 
 ### Type Declaration
@@ -28,4 +28,4 @@
 | 006 | [Session Settings (`~/.claude/settings.json`)](006_settings_json.md) | Fields in `settings.json` that `clp` reads or writes | ✅ |
 | 007 | [Claude State (`~/.claude.json`)](007_claude_json.md) | Fields in `~/.claude.json` that `clp` reads or writes (`oauthAccount` patched on `.account.use`) | ✅ |
 | 008 | [CLR Preferences (`~/.clr/prefs.json`)](008_clr_prefs_json.md) | **Deprecated** — subprocess model preference and other clr runtime prefs formerly written/read by `clp .model.select`; superseded by `~/.clr/config.toml`'s `model` key via `clp .model scope::subprocess` (Feature 035) | ❌ |
-| 009 | [Identity Filter (`_filter_{machine}_{user}`)](009_identity_filter_json.md) | Per-Identity include/exclude tag-set filter file constraining automatic account selection (Gate 11) | 📋 |
+| 009 | [Identity Filter (`_filter_{machine}_{user}`)](009_identity_filter_json.md) | Per-Identity include/exclude tag-set filter file constraining automatic account selection (Gate 11) | ✅ |

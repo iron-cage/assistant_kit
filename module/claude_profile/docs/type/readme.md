@@ -14,8 +14,8 @@
 | — | [procedure](procedure.md) | — | — | Workflow for maintaining type instances | ✅ |
 | 001 | [Account](001_account.md) | account | aggregate_root | Named credential profile — the central aggregate all operations revolve around | ✅ |
 | 002 | [Identity](002_identity.md) | identity | value_object | `user@host` pair naming one acting user seat on one machine | ✅ |
-| 003 | [Tag](003_tag.md) | labeling | value_object | Normalized label attached to accounts for pool partitioning | 📋 planned |
-| 004 | [Tag Filter](004_tag_filter.md) | labeling | value_object | Per-Identity include/exclude tag set pair gating rotation eligibility | 📋 planned |
+| 003 | [Tag](003_tag.md) | labeling | value_object | Normalized label attached to accounts for pool partitioning | ✅ implemented |
+| 004 | [Tag Filter](004_tag_filter.md) | labeling | value_object | Per-Identity include/exclude tag set pair gating rotation eligibility | ✅ implemented |
 | 005 | [Provider](005_provider.md) | provider | value_object | Inference provider id — account credential origin and machine-global selection | ✅ |
 | 006 | [Backend](006_backend.md) | account | value_object | Credential/traffic mechanism enum: `anthropic` \| `redirect` | ✅ |
 | 007 | [Preset](007_preset.md) | configuration | value_object | Named save-time default bundle for known foreign providers | ✅ |

@@ -5,7 +5,7 @@
 | File | Responsibility |
 |------|----------------|
 | [003_meta.md](003_meta.md) | Meta-commands: `.`, `.help`, `--version` flag |
-| [001_account.md](001_account.md) | Account namespace: `.accounts`, `.account.save`, `.account.use`, `.account.delete`, `.account.limits`, `.account.relogin`, `.account.renewal`, `.account.inspect`, `.account.tag` (📋) |
+| [001_account.md](001_account.md) | Account namespace: `.accounts`, `.account.save`, `.account.use`, `.account.delete`, `.account.limits`, `.account.relogin`, `.account.renewal`, `.account.inspect`, `.account.tag` |
 | [005_token.md](005_token.md) | **DEPRECATED** — Token namespace: `.token.status` (removed; see `.credentials.status`) |
 | [002_credentials.md](002_credentials.md) | Credentials namespace: `.credentials.status` |
 | [006_usage.md](006_usage.md) | Usage namespace: `.usage` |
@@ -13,10 +13,10 @@
 | [007_model.md](007_model.md) | Model namespace: `.model` (unified session + subprocess, `scope::`-routed); `.model.select` (removed, merged into `.model`) |
 | [008_models.md](008_models.md) | Models discovery: `.models` |
 | [009_provider.md](009_provider.md) | Provider namespace: `.provider.select` |
-| [010_tag.md](010_tag.md) | Tag namespace: `.tags` (📋 planned) |
-| [011_identity.md](011_identity.md) | Identity namespace: `.identities`, `.identity.filter` (📋 planned) |
+| [010_tag.md](010_tag.md) | Tag namespace: `.tags` |
+| [011_identity.md](011_identity.md) | Identity namespace: `.identities`, `.identity.filter` |
 
-**Total:** 25 commands (15 visible + 4 planned 📋: `.tags`, `.identities`, `.identity.filter`, `.account.tag` (Features 075/076) + 1 hidden: `.` + 1 DEPRECATED: `.account.rotate` (Feature 038) + 4 REMOVED: `.account.assign`, `.account.unclaim`, `.token.status`, `.model.select` (Feature 035))
+**Total:** 25 commands (19 visible + 1 hidden: `.` + 1 DEPRECATED: `.account.rotate` (Feature 038) + 4 REMOVED: `.account.assign`, `.account.unclaim`, `.token.status`, `.model.select` (Feature 035))
 
 ### All Commands
 
@@ -43,33 +43,33 @@
 | 19 | `.models` | List available Claude models via live API or static offline catalog | 3 | `clp .models offline::1` |
 | 20 | `.model.select` | **REMOVED** (Feature 035) — merged into `.model`; use `.model scope::subprocess model::VALUE` | 0 | `clp .model.select id::claude-opus-4-8` |
 | 21 | `.provider.select` | Get/set/reset global inference provider in `~/.clr/config.toml` | 3 | `clp .provider.select id::kimi` |
-| 22 | `.tags` | 📋 planned (Feature 075) — list every distinct tag with account and filter counts | 1 | `clp .tags` |
-| 23 | `.identities` | 📋 planned (Feature 076) — list every Identity with active account, owned count, and filter | 1 | `clp .identities` |
-| 24 | `.identity.filter` | 📋 planned (Feature 076) — get/set/clear an Identity's rotation tag filter | 5 | `clp .identity.filter include::kimi_pool` |
-| 25 | `.account.tag` | 📋 planned (Feature 075) — add/remove/replace an account's tag set | 5 | `clp .account.tag name::alice@acme.com add::ci` |
+| 22 | `.tags` | List every distinct tag with account and filter counts (Feature 075) | 1 | `clp .tags` |
+| 23 | `.identities` | List every Identity with active account, owned count, and filter (Feature 076) | 1 | `clp .identities` |
+| 24 | `.identity.filter` | Get/set/clear an Identity's rotation tag filter (Feature 076) | 5 | `clp .identity.filter include::kimi_pool` |
+| 25 | `.account.tag` | Add/remove/replace an account's tag set (Feature 075) | 5 | `clp .account.tag name::alice@acme.com add::ci` |
 
 ### Quick Reference
 
 **Required Parameters:**
-- `name::` — required on `.account.use`, `.account.delete`, `.account.renewal`, `.account.tag` (📋); optional on `.account.save` (inferred), `.accounts`, `.account.limits`, `.account.relogin` (defaults to active account), `.account.inspect` (defaults to active account). For ownership release, use `.accounts owner::0 name::X` (Feature 064).
+- `name::` — required on `.account.use`, `.account.delete`, `.account.renewal`, `.account.tag`; optional on `.account.save` (inferred), `.accounts`, `.account.limits`, `.account.relogin` (defaults to active account), `.account.inspect` (defaults to active account). For ownership release, use `.accounts owner::0 name::X` (Feature 064).
 
 **Most-Used Parameters:**
-- `format::` — 12 commands (`.accounts`, `.paths`, `.usage`, `.credentials.status`, `.account.limits`, `.account.inspect`, `.models`, `.model`, `.provider.select`, plus 📋 planned `.tags`, `.identities`, `.identity.filter`)
+- `format::` — 12 commands (`.accounts`, `.paths`, `.usage`, `.credentials.status`, `.account.limits`, `.account.inspect`, `.models`, `.model`, `.provider.select`, `.tags`, `.identities`, `.identity.filter`)
 
 **Commands by Parameter Count:**
 
 | Count | Commands |
 |-------|----------|
 | 0 | `.`, `.help` |
-| 1 | `.tags` 📋, `.identities` 📋 |
+| 1 | `.tags`, `.identities` |
 | 3 | `.paths`, `.account.limits`, `.models`, `.provider.select` |
 | 4 | `.account.inspect`, `.account.delete`, `.account.relogin` |
-| 5 | `.identity.filter` 📋, `.account.tag` 📋 |
+| 5 | `.identity.filter`, `.account.tag` |
 | 6 | `.account.renewal`, `.model` |
 | 9 | `.account.use` |
 | 11 | `.account.save` |
 | 20 | `.credentials.status` |
-| 32 | `.accounts` (includes 📋 `tags::`) |
+| 32 | `.accounts` (includes `tags::`) |
 | 36 | `.usage` |
 
 ### See Also

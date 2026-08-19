@@ -55,7 +55,7 @@ All `clp` CLI parameters with type, default, and command coverage.
 | [049_at.md](049_at.md) | `at::` — absolute ISO-8601 UTC renewal timestamp for `.account.renewal` |
 | [050_from_now.md](050_from_now.md) | `from_now::` — signed duration delta from now for `.account.renewal` |
 | [051_clear.md](051_clear.md) | `clear::` — remove billing renewal override from `{name}.json` |
-| [052_role.md](052_role.md) | `role::` (metadata label) — **REMOVED** (Feature 075, 📋 planned); superseded by `tags::` (082) with lazy field migration |
+| [052_role.md](052_role.md) | `role::` (metadata label) — **REMOVED** (Feature 075); superseded by `tags::` (082) with lazy field migration |
 | [053_for.md](053_for.md) | `for::` — **REMOVED** (Feature 064); absorbed into `active::` value |
 | [054_set_model.md](054_set_model.md) | `set_model::` — explicit Claude Code session model write to `settings.json` |
 | [055_set.md](055_set.md) | `set::` — **RETIRED** (Feature 035); replaced by `model::` (076) on the unified `.model` |
@@ -85,14 +85,14 @@ All `clp` CLI parameters with type, default, and command coverage.
 | [079_reset_effort_level.md](079_reset_effort_level.md) | `reset_effort_level::` — remove the effort key for the selected `scope::` on `.model`; new, no prior equivalent on either store |
 | [080_stalest.md](080_stalest.md) | `stalest::` — restrict HTTP fetch to the K accounts with the oldest quota cache; others render from cache |
 | [081_max_age.md](081_max_age.md) | `max_age::` — staleness eligibility threshold for `stalest::`; fully-fresh fleet fetches nothing |
-| [082_tags.md](082_tags.md) | `tags::` 📋 — tag set write (`.account.save`/`.account.tag` replace) and subset row filter (`.accounts`) |
-| [083_add.md](083_add.md) | `add::` 📋 — union tags into an account's set on `.account.tag` |
-| [084_remove.md](084_remove.md) | `remove::` 📋 — remove tags from an account's set on `.account.tag`; idempotent |
-| [085_include.md](085_include.md) | `include::` 📋 — replace a Tag Filter's include side on `.identity.filter` |
-| [086_exclude.md](086_exclude.md) | `exclude::` 📋 — replace a Tag Filter's exclude side on `.identity.filter` |
-| [087_identity.md](087_identity.md) | `identity::` 📋 — target another seat's Tag Filter on `.identity.filter` |
+| [082_tags.md](082_tags.md) | `tags::` — tag set write (`.account.save`/`.account.tag` replace) and subset row filter (`.accounts`) |
+| [083_add.md](083_add.md) | `add::` — union tags into an account's set on `.account.tag` |
+| [084_remove.md](084_remove.md) | `remove::` — remove tags from an account's set on `.account.tag`; idempotent |
+| [085_include.md](085_include.md) | `include::` — replace a Tag Filter's include side on `.identity.filter` |
+| [086_exclude.md](086_exclude.md) | `exclude::` — replace a Tag Filter's exclude side on `.identity.filter` |
+| [087_identity.md](087_identity.md) | `identity::` — target another seat's Tag Filter on `.identity.filter` |
 
-**Total:** 74 active parameters — 79 once Features 075/076 land 📋 (Feature 023 deprecated: param 032 `next::` REMOVED, absorbed into feature 020's `sort::`; Feature 065: param 013 `active::` REMOVED; param 063 `assignee::` added as replacement; Feature 064: params 053 `for::`, 056 `unclaim::`, 057 `assign::` REMOVED; param 062 `owner::` extended with `owner::0` sentinel + batch; Feature 070: params 067 `lock::`, 068 `reserve::` added; Feature 071: params 069 `backend::`, 070 `base_url::`, 071 `api_key::`, 072 `redirect_model::` added; Feature 072: param 073 `inference_provider::` added; Feature 073: param 074 `preset::` added; Feature 035: param 055 `set::` RETIRED — `.model`/`.model.select` merged; params 064 `id::`/066 `reset::` narrowed to `.provider.select` only; params 075 `scope::`, 076 `model::`, 077 `effort_level::`, 078 `reset_model::`, 079 `reset_effort_level::` added; task 499: params 080 `stalest::`, 081 `max_age::` added; audit remediation: param 046 `abs::` REMOVED — registered no-op, absolute-count display never implemented; Features 075/076 📋 planned: params 082 `tags::`, 083 `add::`, 084 `remove::`, 085 `include::`, 086 `exclude::`, 087 `identity::` added; param 052 `role::` REMOVED when Feature 075 lands — 74 currently implemented; 74 + 6 planned − 1 removed = 79 active once 075/076 land)
+**Total:** 79 active parameters (Feature 023 deprecated: param 032 `next::` REMOVED, absorbed into feature 020's `sort::`; Feature 065: param 013 `active::` REMOVED; param 063 `assignee::` added as replacement; Feature 064: params 053 `for::`, 056 `unclaim::`, 057 `assign::` REMOVED; param 062 `owner::` extended with `owner::0` sentinel + batch; Feature 070: params 067 `lock::`, 068 `reserve::` added; Feature 071: params 069 `backend::`, 070 `base_url::`, 071 `api_key::`, 072 `redirect_model::` added; Feature 072: param 073 `inference_provider::` added; Feature 073: param 074 `preset::` added; Feature 035: param 055 `set::` RETIRED — `.model`/`.model.select` merged; params 064 `id::`/066 `reset::` narrowed to `.provider.select` only; params 075 `scope::`, 076 `model::`, 077 `effort_level::`, 078 `reset_model::`, 079 `reset_effort_level::` added; task 499: params 080 `stalest::`, 081 `max_age::` added; audit remediation: param 046 `abs::` REMOVED — registered no-op, absolute-count display never implemented; Features 075/076: params 082 `tags::`, 083 `add::`, 084 `remove::`, 085 `include::`, 086 `exclude::`, 087 `identity::` added; param 052 `role::` REMOVED — superseded by `tags::` with lazy field migration)
 
 ### Overview Table
 
@@ -149,7 +149,7 @@ All `clp` CLI parameters with type, default, and command coverage.
 | 49 | `at::` | `string` | *(omit)* | ISO-8601 UTC datetime | Absolute renewal timestamp for `.account.renewal` | 1 cmd |
 | 50 | `from_now::` | `string` | *(omit)* | `+`/`-` duration (e.g., `+3h30m`) | Signed delta from now for `.account.renewal` | 1 cmd |
 | 51 | `clear::` | `bool` | `0` | `0`, `1` | Remove billing renewal override | 1 cmd |
-| 52 | `role::` (metadata label) | — | — | — | REMOVED (Feature 075, 📋 planned) — use `tags::` (82); lazy field migration on first tag write | — |
+| 52 | `role::` (metadata label) | — | — | — | REMOVED (Feature 075) — use `tags::` (82); lazy field migration on first tag write | — |
 | 53 | `for::` | — | — | — | REMOVED (Feature 064) — absorbed into `active::` value (Feature 065: `active::` also REMOVED — use `assignee::`) | — |
 | 54 | `set_model::` | `enum` | *(omit)* | `opus`, `sonnet`, `haiku`, `default` | Explicit session model write to `settings.json` | 2 cmds |
 | 55 | `set::` | — | — | — | RETIRED (Feature 035) — use `model::` (76) on the unified `.model` | — |
@@ -179,14 +179,14 @@ All `clp` CLI parameters with type, default, and command coverage.
 | 79 | `reset_effort_level::` | `bool` | `0` | `0`, `1` | Remove the effort key for the selected `scope::`; mutually exclusive with `effort_level::` | `.model` |
 | 80 | `stalest::` | `u32` | *(omit)* | Integer ≥ 1 | Fetch only the K accounts with the oldest quota cache; others render from cache; mutually exclusive with `only_active::1`; bypassed by `rotate::1` | `.usage` |
 | 81 | `max_age::` | `u64` | `0` | Seconds ≥ 0 | With `stalest::`, only accounts with cache age > SECS are fetch-eligible; standalone use exits 1 | `.usage` |
-| 82 | `tags::` 📋 | `string` | *(omit)* | Comma-separated tag list (`[a-z0-9_-]`, 1–64 each) | Tag set write at save / full replace on `.account.tag` / subset row filter on `.accounts` | `.account.save`, `.account.tag`, `.accounts` |
-| 83 | `add::` 📋 | `string` | *(omit)* | Comma-separated tag list | Union tags into the account's set; one operation per invocation | `.account.tag` |
-| 84 | `remove::` 📋 | `string` | *(omit)* | Comma-separated tag list | Remove tags from the account's set; absent tags are a no-op | `.account.tag` |
-| 85 | `include::` 📋 | `string` | *(omit)* | Comma-separated tag list | Replace the Tag Filter's include side; overlap with exclude exits 1 | `.identity.filter` |
-| 86 | `exclude::` 📋 | `string` | *(omit)* | Comma-separated tag list | Replace the Tag Filter's exclude side; overlap with include exits 1 | `.identity.filter` |
-| 87 | `identity::` 📋 | `string` | *(omit — current `$USER@$HOSTNAME`)* | `USER@MACHINE` | Target another seat's Tag Filter for get/set/clear | `.identity.filter` |
+| 82 | `tags::` | `string` | *(omit)* | Comma-separated tag list (`[a-z0-9_-]`, 1–64 each) | Tag set write at save / full replace on `.account.tag` / subset row filter on `.accounts` | `.account.save`, `.account.tag`, `.accounts` |
+| 83 | `add::` | `string` | *(omit)* | Comma-separated tag list | Union tags into the account's set; one operation per invocation | `.account.tag` |
+| 84 | `remove::` | `string` | *(omit)* | Comma-separated tag list | Remove tags from the account's set; absent tags are a no-op | `.account.tag` |
+| 85 | `include::` | `string` | *(omit)* | Comma-separated tag list | Replace the Tag Filter's include side; overlap with exclude exits 1 | `.identity.filter` |
+| 86 | `exclude::` | `string` | *(omit)* | Comma-separated tag list | Replace the Tag Filter's exclude side; overlap with include exits 1 | `.identity.filter` |
+| 87 | `identity::` | `string` | *(omit — current `$USER@$HOSTNAME`)* | `USER@MACHINE` | Target another seat's Tag Filter for get/set/clear | `.identity.filter` |
 
-*Param 1 = cross-command account selector (no formal group); params 48, 52, 73 = Group 006 Account Targeting; params 49–51 = ungrouped (`.account.renewal`-specific); param 53 = ungrouped (`.account.assign`-specific); param 55 = RETIRED (Feature 035, see row above); param 2 = Output Control group; params 5–18, 28–31 = Field Presence group; params 19–23, 34–36, 54, 60, 80–81 = Fetch Behavior group; param 24 = ungrouped; params 25–27, 32 = Sort Control group; params 33, 37–47 = Display Control group (contains both display-toggle params and pipeline-coupled request-constraint row filters — see Pipeline Stage attribute in each param file); params 64, 66 = ungrouped (`.provider.select`-specific, narrowed Feature 035); param 65 = ungrouped (`.models`-specific); params 69–72, 74 = Group 007 Redirect Backend Config; params 75–79 = ungrouped (`.model`-specific, Feature 035); param 82 = Group 006 Account Targeting (📋 planned, supersedes 52); params 83–84 = ungrouped (`.account.tag`-specific, 📋 planned); params 85–87 = ungrouped (`.identity.filter`-specific, 📋 planned)*
+*Param 1 = cross-command account selector (no formal group); params 48, 52, 73 = Group 006 Account Targeting; params 49–51 = ungrouped (`.account.renewal`-specific); param 53 = ungrouped (`.account.assign`-specific); param 55 = RETIRED (Feature 035, see row above); param 2 = Output Control group; params 5–18, 28–31 = Field Presence group; params 19–23, 34–36, 54, 60, 80–81 = Fetch Behavior group; param 24 = ungrouped; params 25–27, 32 = Sort Control group; params 33, 37–47 = Display Control group (contains both display-toggle params and pipeline-coupled request-constraint row filters — see Pipeline Stage attribute in each param file); params 64, 66 = ungrouped (`.provider.select`-specific, narrowed Feature 035); param 65 = ungrouped (`.models`-specific); params 69–72, 74 = Group 007 Redirect Backend Config; params 75–79 = ungrouped (`.model`-specific, Feature 035); param 82 = Group 006 Account Targeting (supersedes 52); params 83–84 = ungrouped (`.account.tag`-specific); params 85–87 = ungrouped (`.identity.filter`-specific)*
 
 ### See Also
 

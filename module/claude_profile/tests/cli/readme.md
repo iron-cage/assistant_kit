@@ -47,5 +47,5 @@
 | `command_verb_test.rs` | Command-verb behavioral contracts for all 10 verbs: save, use, delete, limits, relogin, rotate, renewal, inspect, assign, status (BV-1..3 each; BV-4 for status). |
 | `command_noun_test.rs` | Command-noun contracts for account, token, credentials nouns: lifecycle, JSON output schema, error codes (NC-1..3 each). |
 | `user_story_test.rs` | User acceptance tests: account rotation (UA-1..5), onboarding (UA-1..6), quota monitoring (UA-1..5), scripted automation (UA-1..4), credential diagnostics (UA-1..4). |
-| `account_tag_test.rs` | Feature 075 `.account.tag`, `.accounts tags::`, save `tags::`/role removal (t01–t20). |
-| `identity_filter_test.rs` | Feature 076 `.identity.filter`, `.tags`, `.identities` routines (t01–t17). |
+| `account_tag_test.rs` | Feature 075 `.account.tag`, `.accounts tags::`, save `tags::`/role removal (t01–t17, t19–t20). |
+| `identity_filter_test.rs` | Feature 076 `.identity.filter`, `.tags`, `.identities` routines (t01–t08, t10, t13–t16, t18; Gate 11 cases live in `tests/usage/sort_next_tests_b.rs`). |

@@ -10,7 +10,7 @@ Removes the stored override the host command manages. One name, two per-command 
 | Command | Clears | Mutually exclusive with | After clearing |
 |---------|--------|-------------------------|----------------|
 | `.account.renewal` | `_renewal_at` key in `{name}.json` | `at::`, `from_now::` | `.usage` reverts to the `~`-prefixed estimate from `org_created_at` |
-| `.identity.filter` (📋 planned) | The Identity's `_filter_{hostname}_{user}` file | `include::`, `exclude::` | Permit-all — automatic selection unfiltered for that Identity; idempotent when no file exists |
+| `.identity.filter` | The Identity's `_filter_{hostname}_{user}` file | `include::`, `exclude::` | Permit-all — automatic selection unfiltered for that Identity; idempotent when no file exists |
 
 **Usage:**
 
@@ -33,7 +33,7 @@ clp .identity.filter identity::bob@laptop clear::1
 | # | Command | Role |
 |---|---------|------|
 | 1 | [`.account.renewal`](../command/001_account.md#command-14-accountrenewal) | Remove billing renewal override |
-| 2 | [`.identity.filter`](../command/011_identity.md#command-24-identityfilter) | Delete the Identity's Tag Filter file (📋 planned) |
+| 2 | [`.identity.filter`](../command/011_identity.md#command-24-identityfilter) | Delete the Identity's Tag Filter file |
 
 ### Referenced User Stories
 

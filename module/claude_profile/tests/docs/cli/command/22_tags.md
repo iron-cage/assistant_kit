@@ -15,7 +15,7 @@
 | IT-03 | AC-11 | Filter-only tag → row with `Accounts = 0`, `Filters ≥ 1` | `account_tag_t11_tags_lists_union_sorted` (typo-hazard assertion) |
 | IT-04 | AC-12 | `format::json` → array of `{"tag","accounts","filters"}` | `account_tag_t12_tags_json_shape` |
 | IT-05 | — | Unsupported format (`format::table`) → exit 1 | `account_tag_t17_tags_bad_format_exits_1` |
-| IT-06 | — | `.tags` appears in `clp .help` after registration | `dot04_all_visible_commands_present` (extend on implementation) |
+| IT-06 | — | `.tags` appears in `clp .help` after registration | `dot04_all_visible_commands_present` |
 
 ### Notes
 

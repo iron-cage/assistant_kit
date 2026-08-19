@@ -131,12 +131,16 @@ fn account_tag_t02_save_without_tags_omits_field()
 
 /// FT-03 — an invalid tag (charset violation, >64 chars, empty comma item)
 /// exits 1 naming the offending tag in its post-lowercased form; nothing written.
+/// Covers both write commands: `.account.save tags::` and `.account.tag`
+/// (`add::`/`remove::`/`tags::` each fast-fail validation before any write).
 ///
 /// ## Assert
-/// All three variants exit 1; the charset error names `bad!tag`; no account
-/// file is created by any of them.
+/// All three save variants exit 1; the charset error names `bad!tag`; no
+/// account file is created. All three `.account.tag` operations exit 1 on the
+/// same invalid tag; the stored set stays unchanged.
 ///
-/// Spec: `tests/docs/feature/075_account_tags.md` FT-03 (AC-03)
+/// Spec: `tests/docs/feature/075_account_tags.md` FT-03 (AC-03);
+/// `tests/docs/cli/command/25_account_tag.md` IT-07
 #[ test ]
 fn account_tag_t03_invalid_tag_exits_1_no_write()
 {
@@ -172,6 +176,29 @@ fn account_tag_t03_invalid_tag_exits_1_no_write()
     !account_exists( home, "alice@test.com" ),
     "FT-03: a rejected save must not create the account",
   );
+
+  // IT-07: the same invalid tag through every `.account.tag` operation —
+  // validation fires before resolution or write, so the stored set is untouched.
+  write_account( home, "bob@test.com", "max", "default_claude_max_20x", FAR_FUTURE_MS, false );
+  write_account_tags( home, "bob@test.com", &[ "ci" ] );
+
+  for op in [ "add::Bad!Tag", "remove::Bad!Tag", "tags::Bad!Tag" ]
+  {
+    let out = run_cs_with_env(
+      &[ ".account.tag", "name::bob@test.com", op ],
+      &[ ( "HOME", home_s ) ],
+    );
+    assert_exit( &out, 1 );
+    assert!(
+      stderr( &out ).contains( "bad!tag" ),
+      "IT-07: `.account.tag {op}` rejection must name the post-lowercased tag; stderr: {}",
+      stderr( &out ),
+    );
+    assert_eq!(
+      meta_tags( home, "bob@test.com" ), Some( vec![ "ci".to_string() ] ),
+      "IT-07: `.account.tag {op}` rejection must leave the stored set unchanged",
+    );
+  }
 }
 
 // ── FT-04: `role::` exits 1 with migration message (AC-04) ────────────────────

@@ -36,7 +36,7 @@ Captures the current active session credentials as a named account profile in th
 | `name::` | Account name (email); defaults to email from active credentials | No |
 | `host::` | Override store host label for multi-machine profiles | No |
 | `role::` | Annotate account with a role label (e.g. `work`, `personal`) — REMOVED when Feature 075 lands, superseded by `tags::` | No |
-| `tags::` 📋 | Replace account's tag set (comma-separated; planned — Feature 075) | No |
+| `tags::` | Replace account's tag set (comma-separated; Feature 075) | No |
 | `backend::` | Discriminate `anthropic` (default, OAuth capture) vs `redirect` (static API key) | No |
 | `base_url::` | Redirect target's API base URL | Conditional (`backend::redirect`) |
 | `api_key::` | Redirect target's static API key, written as `accessToken` | Conditional (`backend::redirect`) |

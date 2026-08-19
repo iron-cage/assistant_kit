@@ -62,7 +62,7 @@
 | [035_model_command.md](035_model_command.md) | `.model scope::subprocess` — current `~/.clr/config.toml`-backed get/set/reset sibling that `.provider.select` mirrors (absorbed `.model.select`'s role) |
 | [070_account_claim_and_reservation_control.md](070_account_claim_and_reservation_control.md) | Gate 9 (`claim_lock`, unconditional) — the precedent Gate 10 mirrors |
 | [071_redirect_backend_accounts.md](071_redirect_backend_accounts.md) | `backend` field — independent of and orthogonal to `inference_provider` |
-| [076_identity_tag_filter.md](076_identity_tag_filter.md) | Gate 11 (📋 planned) — sibling unconditional "which pool" gate mirroring Gate 10's doctrine; runs after Gate 10 |
+| [076_identity_tag_filter.md](076_identity_tag_filter.md) | Gate 11 — sibling unconditional "which pool" gate mirroring Gate 10's doctrine; runs after Gate 10 |
 
 ### Parameters
 

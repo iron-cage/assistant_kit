@@ -16,10 +16,10 @@
 | IT-04 | AC-08 | No operation given → exit 1 naming `add::`/`remove::`/`tags::` | `account_tag_t08_tag_no_operation_exits_1` |
 | IT-05 | AC-09 | First tag write (incl. `remove::`) migrates legacy `role` to tag, deletes field | `account_tag_t09_first_tag_write_migrates_role` |
 | IT-06 | AC-10 | Ungated (non-owner OK); `name::X,Y` batch; `dry::1` touches nothing | `account_tag_t10_tag_ungated_batch_dry` |
-| IT-07 | AC-03 | Invalid tag in any operation → exit 1 naming it, no write | `account_tag_t03_invalid_tag_exits_1_no_write` (extend with `.account.tag` assertion) |
+| IT-07 | AC-03 | Invalid tag in any operation → exit 1 naming it, no write | `account_tag_t03_invalid_tag_exits_1_no_write` |
 | IT-08 | — | Unknown account name → exit 2, nothing written | `account_tag_t19_account_tag_unknown_account_exits_2` |
 | IT-09 | — | Missing required `name::` → exit 1 | `account_tag_t20_account_tag_missing_name_exits_1` |
-| IT-10 | — | `.account.tag` appears in `clp .help` after registration | `dot04_all_visible_commands_present` (extend on implementation) |
+| IT-10 | — | `.account.tag` appears in `clp .help` after registration | `dot04_all_visible_commands_present` |
 
 ### Notes
 
@@ -37,7 +37,7 @@
 - **When:** `clp .account.tag name::alice@test.com add::Bad!Tag` (also via `remove::`/`tags::`)
 - **Then:** Exits 1; stderr names the offending tag (post-lowercasing form); the stored set is unchanged.
 - **Exit:** 1
-- **Source fn:** `account_tag_t03_invalid_tag_exits_1_no_write` *(extend with `.account.tag` path assertion)*
+- **Source fn:** `account_tag_t03_invalid_tag_exits_1_no_write` *(covers all three `.account.tag` operations plus the `.account.save tags::` path)*
 - **Source:** [075_account_tags.md AC-03](../../../../docs/feature/075_account_tags.md)
 
 ---

@@ -1,6 +1,6 @@
 # Parameter: 52. `role::` (metadata label)
 
-> **REMOVED (Feature 075, 📋 planned):** The `role::` parameter is removed from `.account.save` — the single free-form role label is superseded by the tag set ([`tags::`](082_tags.md), [type/003](../../type/003_tag.md)).
+> **REMOVED (Feature 075):** The `role::` parameter is removed from `.account.save` — the single free-form role label is superseded by the tag set ([`tags::`](082_tags.md), [type/003](../../type/003_tag.md)).
 >
 > **Migration:**
 > - `role::work` → `tags::work` (a role is just a tag; tag charset applies — lowercase `[a-z0-9_-]`)

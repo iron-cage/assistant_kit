@@ -1,7 +1,5 @@
 # Schema: Identity Tag Filter — `_filter_{host}_{user}`
 
-> **Status: 📋 planned** — designed, not yet implemented ([feature/076](../feature/076_identity_tag_filter.md)). This instance is the authoritative on-disk contract for implementation.
-
 ### Scope
 
 - **Purpose**: Define the per-Identity tag filter file format and naming convention.

@@ -4,7 +4,7 @@
 
 - **Purpose**: Unified field table for the per-account supplementary metadata file stored alongside `{name}.credentials.json`.
 - **Responsibility**: Documents all fields in the per-account supplementary metadata file `{name}.json` across all features.
-- **In Scope**: All fields written or read by `clp` across all features — core identity, OAuth metadata, org identity, extended snapshot fields, host label, tags (📋 planned; supersede the legacy `role` label), renewal override, ownership, and low-churn quota metadata (top-level keys since TSK-500; the legacy `cache` subtree is documented for pre-migration files).
+- **In Scope**: All fields written or read by `clp` across all features — core identity, OAuth metadata, org identity, extended snapshot fields, host label, tags (supersede the legacy `role` label), renewal override, ownership, and low-churn quota metadata (top-level keys since TSK-500; the legacy `cache` subtree is documented for pre-migration files).
 - **Out of Scope**: `{name}.credentials.json` (→ [schema/001](001_credentials_json.md)); the untracked local volatile cache `-cache/{name}.json` (→ [feature/033](../feature/033_quota_cache.md) — volatile quota fields and measurement history live there since TSK-500); HTTP API response shapes.
 
 ### File Location
@@ -41,7 +41,7 @@
 | `workspace_name` | string | Endpoint 005 at save time | `save()` | `list()` → `Account.workspace_name`; `format::json` as `"workspace_name"` key; empty for personal accounts | [022](../feature/022_org_identity_snapshot.md) |
 | `host` | string | `$HOSTNAME`/`/etc/hostname`/`"local"` | `save()` when `host::` param given or auto-captured | `list()` → `host` field (opt-in `cols::+host`) | [029](../feature/029_account_host_metadata.md) |
 | `role` | string — **DEPRECATED (superseded by `tags`, Feature 075)** | formerly `role::` CLI param at save time (param REMOVED) | no current writer — removed lazily: converted to a tag and deleted on first tag write to the account ([type/003](../type/003_tag.md) migration rule) | `list()` → `role` metadata label (opt-in `cols::+role`, legacy display until migration erases the field) | [029](../feature/029_account_host_metadata.md), [075](../feature/075_account_tags.md) |
-| `tags` 📋 | array of strings | `tags::`/`add::`/`remove::` CLI params | `save()` when `tags::` given; `.account.tag` mutations | `list()` → `tags` field (`Tags:` line, opt-in `cols::+tags`, `tags::` subset filter); Gate 11 (eligibility, 📋 planned) evaluates against the current Identity's filter | [075](../feature/075_account_tags.md), [076](../feature/076_identity_tag_filter.md) |
+| `tags` | array of strings | `tags::`/`add::`/`remove::` CLI params | `save()` when `tags::` given; `.account.tag` mutations | `list()` → `tags` field (`Tags:` line, opt-in `cols::+tags`, `tags::` subset filter); Gate 11 (eligibility) evaluates against the current Identity's filter | [075](../feature/075_account_tags.md), [076](../feature/076_identity_tag_filter.md) |
 | `inference_provider` | string | `inference_provider::` CLI param at save time | `save()` when `inference_provider::` param given | `list()` → `inference_provider` field (default identity column, `cols::-inference_provider` to hide); Gate 10 (eligibility) compares against the active `provider` config value | [072](../feature/072_inference_provider_selection.md) |
 | `_renewal_at` | string (ISO 8601) | `at::` or `from_now::` CLI param | `.account.renewal` command | `list()` → `~Renews` / `→ Next` columns | [030](../feature/030_account_renewal_override.md) |
 | `owner` | string | `owner::` CLI param or `current_identity()` | `.accounts owner::`, `.account.assign` (removed in F037) | `list()` → ownership gate checks; `current_identity()` comparison | [036](../feature/036_account_ownership.md), [063](../feature/063_explicit_ownership_claim.md) |
@@ -62,7 +62,7 @@ These fields are written by one caller and never touched by others (preserved vi
 - `claim_lock`, `reserve` — written only by `.accounts lock::`/`reserve::`; preserved by save; both default to `false` when absent
 - `host` — written at save time with explicit param; preserved on re-save without it
 - `role` — **legacy**: no current writer (`role::` REMOVED, Feature 075); preserved on re-save until the first tag write converts it to a tag and deletes it
-- `tags` 📋 — written by `.account.save tags::` and `.account.tag`; preserved on re-save without `tags::`; absent ≡ empty set; deduplicated and sorted at write ([type/003](../type/003_tag.md))
+- `tags` — written by `.account.save tags::` and `.account.tag`; preserved on re-save without `tags::`; absent ≡ empty set; deduplicated and sorted at write ([type/003](../type/003_tag.md))
 - `inference_provider` — written at save time with explicit `inference_provider::` param; preserved on re-save without that param; defaults to `"anthropic"` when absent (pre-existing accounts, and all accounts created before Feature 072)
 - `backend` — written only at `.account.save` creation time; preserved on re-save; defaults to `"anthropic"` when absent (pre-existing accounts, and all accounts created before Feature 071)
 - `base_url`, `redirect_model` — written only at `.account.save` creation time for `backend::redirect` accounts; preserved on re-save; absent entirely for `anthropic` accounts
@@ -139,7 +139,7 @@ A `backend::redirect` account (see [feature/071](../feature/071_redirect_backend
 | [feature/070_account_claim_and_reservation_control.md](../feature/070_account_claim_and_reservation_control.md) | `claim_lock`, `reserve` fields |
 | [feature/071_redirect_backend_accounts.md](../feature/071_redirect_backend_accounts.md) | `backend`, `base_url`, `redirect_model` fields |
 | [feature/072_inference_provider_selection.md](../feature/072_inference_provider_selection.md) | `inference_provider` field |
-| [feature/075_account_tags.md](../feature/075_account_tags.md) | `tags` array field (📋 planned); `role` deprecation and lazy removal |
+| [feature/075_account_tags.md](../feature/075_account_tags.md) | `tags` array field; `role` deprecation and lazy removal |
 
 ### Invariants
 

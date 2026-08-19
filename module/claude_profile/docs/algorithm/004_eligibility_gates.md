@@ -4,7 +4,7 @@
 
 - **Purpose**: Define the eligibility gate filter applied before next-account recommendation and auto-switch.
 - **Responsibility**: Documents all 11 eligibility gates, their skip conditions, and the `gate_ownership` context by call site.
-- **In Scope**: `find_first_eligible()` gates 1–6, 9, 10, 11; `extra` closure gates 7–8; `gate_ownership` semantics; `is_owned` definition; `claim_lock` unconditional exclusion (Gate 9); selected-provider unconditional exclusion (Gate 10); Identity tag-filter unconditional exclusion (Gate 11, 📋 planned).
+- **In Scope**: `find_first_eligible()` gates 1–6, 9, 10, 11; `extra` closure gates 7–8; `gate_ownership` semantics; `is_owned` definition; `claim_lock` unconditional exclusion (Gate 9); selected-provider unconditional exclusion (Gate 10); Identity tag-filter unconditional exclusion (Gate 11).
 - **Out of Scope**: Positive selection after gating (→ algorithm/005); sort strategies, `reserve` leading sort key (→ algorithm/007); explicit-command `claim_lock` gate G9 (→ state_machine/004).
 
 ### Abstract
@@ -15,8 +15,8 @@ Filter candidates for next-account recommendation and auto-switch. An account is
 
 #### Entry Points
 
-- `src/usage/sort_next.rs:24-35` — `find_first_eligible()` (gates 1–6, 9, 10; 11 planned)
-- `src/usage/sort_next.rs:59` — `extra` closure passed by `find_next_for_strategy()` (gates 7–8)
+- `src/usage/sort_next.rs:19` — `find_first_eligible()` (gates 1–6, 9, 10, 11)
+- `src/usage/sort_next.rs:91,109,114` — `extra` closure passed by `find_next_for_strategy()` (gates 7–8)
 
 #### Gate Table
 
@@ -33,7 +33,7 @@ Filter candidates for next-account recommendation and auto-switch. An account is
 | 8 | Foreign-owned | `is_owned = false AND gate_ownership = true` | `sort_next.rs:59` (extra) |
 | 9 | Claim-locked | `claim_lock = true` | `sort_next.rs` — inside `find_first_eligible()` (unconditional, not part of `extra`) |
 | 10 | Provider-mismatch | `inference_provider != selected_provider` | `sort_next.rs` — inside `find_first_eligible()` (unconditional, not part of `extra`) |
-| 11 | Tag-mismatch 📋 | `NOT (tags ⊇ filter.include AND tags ∩ filter.exclude = ∅)` | planned — inside `find_first_eligible()` (unconditional, not part of `extra`); [feature/076](../feature/076_identity_tag_filter.md) |
+| 11 | Tag-mismatch | `NOT (tags ⊇ filter.include AND tags ∩ filter.exclude = ∅)` | `sort_next.rs:61` — inside `find_first_eligible()` (unconditional, not part of `extra`); [feature/076](../feature/076_identity_tag_filter.md) |
 
 #### Gate 8 Context — `gate_ownership` varies by call site
 
@@ -65,7 +65,7 @@ Gate 10 (Provider-mismatch) fires unconditionally inside `find_first_eligible()`
 
 A provider-mismatched account cannot be selected by `find_next_for_strategy()` under any `force::1` combination — same absolute-exclusion property as Gate 3 and Gate 9. See [feature/072_inference_provider_selection.md](../feature/072_inference_provider_selection.md) for the full picture.
 
-#### Gate 11 Context — unconditional, mirrors Gate 10 *(📋 planned — [feature/076](../feature/076_identity_tag_filter.md))*
+#### Gate 11 Context — unconditional, mirrors Gate 10
 
 Gate 11 (Tag-mismatch) fires unconditionally inside `find_first_eligible()`, after Gate 10 — it is not part of the `extra` predicate and has no `force::1` bypass at the eligibility layer. The current Identity's Tag Filter ([type/004](../type/004_tag_filter.md), stored per [schema/009](../schema/009_identity_filter_json.md)) supplies an `include`/`exclude` tag-set pair; an account whose tag set `T` fails `T ⊇ include ∧ T ∩ exclude = ∅` is categorically ineligible for automatic selection. Same doctrine as Gate 10: `force::1` bypasses "who may act" gates (Gate 8 ownership), never "which pool" gates — an operator's declared fleet partition must not be silently violated by an unattended `rotate::1 force::1` invocation. Absent filter file = permit-all: Gate 11 passes every account, preserving pre-feature behavior exactly.
 
@@ -90,7 +90,7 @@ A tag-mismatched account cannot be selected by `find_next_for_strategy()` under 
 | [feature/070_account_claim_and_reservation_control.md](../feature/070_account_claim_and_reservation_control.md) | Gate 9 (`claim_lock`, unconditional) — full properties table |
 | [feature/072_inference_provider_selection.md](../feature/072_inference_provider_selection.md) | Gate 10 (`inference_provider` mismatch, unconditional) — full properties table |
 | [feature/075_account_tags.md](../feature/075_account_tags.md) | Account-side `tags` set Gate 11 evaluates |
-| [feature/076_identity_tag_filter.md](../feature/076_identity_tag_filter.md) | Gate 11 (Identity tag-filter mismatch, unconditional, 📋 planned) — filter semantics and loud exclusion reporting |
+| [feature/076_identity_tag_filter.md](../feature/076_identity_tag_filter.md) | Gate 11 (Identity tag-filter mismatch, unconditional) — filter semantics and loud exclusion reporting |
 
 ### Algorithms
 
