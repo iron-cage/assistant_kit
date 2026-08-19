@@ -10,7 +10,7 @@ for up to 1000 attempts, then exits with code 1. Setting `0` disables the gate e
 - **Type:** u32
 - **Default:** 8
 - **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md), [`topic`](../command/11_topic.md), [`isolated`](../command/03_isolated.md)
-- **JSON Key:** `"max-sessions"` (run/ask/isolated all three — `isolated` sets it via `apply_json_config_isolated()` same as run/ask; no config-file tier for `isolated`, which has no config-file tier for any parameter)
+- **JSON Key:** `"max-sessions"` (run/ask/isolated all three — `isolated` sets it via `apply_json_config_isolated()` same as run/ask; no config-file tier for `isolated` — `--model` is the only `isolated` parameter that reads the config file, and it does so outside the `ConfigDefaults` tier; see [../config_param.md § Out of Scope](../config_param.md))
 
 ```sh
 clr --max-sessions 5 "refactor module"      # block if >=5 Claude sessions active

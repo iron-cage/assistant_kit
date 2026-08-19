@@ -6,8 +6,11 @@
 //!
 //! T15–T22 (slot-wait messaging, reclaim-ticket chains) live in `concurrency_gate_ext_test.rs`.
 //! T21 (staleness threshold) onward through T34 (progress-message wording) live in
-//! `concurrency_gate_ext2_test.rs`. T35/T36 and all `t_gate_*` override-tier tests
-//! live in `concurrency_gate_ext3_test.rs`.
+//! `concurrency_gate_ext2_test.rs`. The `t_gate_*` override-tier tests for the three
+//! tunable knobs (`gate-poll-secs`, `gate-max-attempts`, `gate-stale-secs`) live in
+//! `concurrency_gate_ext3_test.rs`. T35/T36, T39–T41, and the remaining-timeout /
+//! trace-exposure / expressed-`--timeout` deadline-budget tests live in
+//! `concurrency_gate_deadline_test.rs`.
 //!
 //! # Test Case Index
 //!
@@ -59,14 +62,16 @@
 //! `CLR_GATE_POLL_SECS` var) is covered by those same tests post-rename — no
 //! separate function.
 //!
-//! Note: this Test Case Index enumerates every T-ID across all 4 split files
-//! (`concurrency_gate_test.rs`, `_ext_test.rs`, `_ext2_test.rs`, `_ext3_test.rs`);
-//! it is kept whole in this file only to preserve its pre-existing cross-references
-//! rather than being torn across files. Some T-IDs below (e.g. T21, T22) label two
-//! distinct functions in different files — a pre-existing quirk, not introduced by
-//! this split. `t_gate_*` override-tier tests (T35/T36 plus the poll-secs/max-attempts/
-//! stale-secs/remaining-timeout variants) are not T-numbered and are listed by fn name
-//! only in `concurrency_gate_ext3_test.rs`'s own header.
+//! Note: this Test Case Index enumerates every T-ID across all 5 split files
+//! (`concurrency_gate_test.rs`, `_ext_test.rs`, `_ext2_test.rs`, `_ext3_test.rs`,
+//! `_deadline_test.rs`); it is kept whole in this file only to preserve its
+//! pre-existing cross-references rather than being torn across files. Some T-IDs
+//! below (e.g. T21, T22) label two distinct functions in different files — a
+//! pre-existing quirk, not introduced by this split. `t_gate_*` override-tier tests
+//! are not T-numbered and are listed by fn name only in their own file's header:
+//! the poll-secs/max-attempts/stale-secs variants in `concurrency_gate_ext3_test.rs`,
+//! the remaining-timeout/trace-exposure/expressed-timeout variants in
+//! `concurrency_gate_deadline_test.rs`.
 
 // BUG-387 — T01-T07 above all pre-seed a static synthetic /proc snapshot and
 // invoke exactly one clr binary; none launch N concurrent clr invocations

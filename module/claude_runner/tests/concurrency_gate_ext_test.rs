@@ -20,7 +20,7 @@
 //! where no race exists to be lost and no timing margin is involved.
 //!
 //! See `concurrency_gate_test.rs`'s own header for the full Test Case Index
-//! across all 4 split files.
+//! across all 5 split files.
 
 mod cli_binary_test_helpers;
 use cli_binary_test_helpers::

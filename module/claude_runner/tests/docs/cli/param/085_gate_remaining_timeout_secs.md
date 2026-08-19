@@ -29,16 +29,16 @@ polling does not outlive a wrapping job-runner deadline.
 
 ## Implementation Notes
 
-<!-- BUG-481 task/claude_runner/bug/481_silent_off_env_protection_boundary.md — fixed: File column corrected to concurrency_gate_ext3_test.rs (all rows; previously routed to concurrency_gate_test.rs, where none of the implementations live) and EC-5/6/7 registered for the resolution-announcement contract -->
+<!-- BUG-481 task/claude_runner/bug/481_silent_off_env_protection_boundary.md — fixed: File column corrected to concurrency_gate_ext3_test.rs (all rows; previously routed to concurrency_gate_test.rs, where none of the implementations live) and EC-5/6/7 registered for the resolution-announcement contract. All 7 rows later moved again, unchanged, to concurrency_gate_deadline_test.rs when ext3 was split at the 1500-line threshold -->
 | EC | Test Function | File |
 |----|---------------|------|
-| EC-1 | `t35_remaining_timeout_budget_clamps_gate_attempts` | `concurrency_gate_ext3_test.rs` |
-| EC-2 | `t36_remaining_timeout_below_poll_interval_still_makes_one_attempt` | `concurrency_gate_ext3_test.rs` |
-| EC-3 | `t_gate_remaining_timeout_absent_uses_normal_max_attempts` | `concurrency_gate_ext3_test.rs` |
-| EC-4 | `t_gate_remaining_timeout_non_numeric_resolves_to_none` | `concurrency_gate_ext3_test.rs` |
-| EC-5 | `t39_deadline_resolution_states_announced_and_distinguishable` | `concurrency_gate_ext3_test.rs` |
-| EC-6 | `t40_deadline_boundary_inputs_resolve_and_announce` | `concurrency_gate_ext3_test.rs` |
-| EC-7 | `t41_poll_secs_zero_with_numeric_budget_does_not_panic` | `concurrency_gate_ext3_test.rs` |
+| EC-1 | `t35_remaining_timeout_budget_clamps_gate_attempts` | `concurrency_gate_deadline_test.rs` |
+| EC-2 | `t36_remaining_timeout_below_poll_interval_still_makes_one_attempt` | `concurrency_gate_deadline_test.rs` |
+| EC-3 | `t_gate_remaining_timeout_absent_uses_normal_max_attempts` | `concurrency_gate_deadline_test.rs` |
+| EC-4 | `t_gate_remaining_timeout_non_numeric_resolves_to_none` | `concurrency_gate_deadline_test.rs` |
+| EC-5 | `t39_deadline_resolution_states_announced_and_distinguishable` | `concurrency_gate_deadline_test.rs` |
+| EC-6 | `t40_deadline_boundary_inputs_resolve_and_announce` | `concurrency_gate_deadline_test.rs` |
+| EC-7 | `t41_poll_secs_zero_with_numeric_budget_does_not_panic` | `concurrency_gate_deadline_test.rs` |
 
 ## Test Cases
 
