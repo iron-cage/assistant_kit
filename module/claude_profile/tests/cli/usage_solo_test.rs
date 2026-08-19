@@ -1,4 +1,4 @@
-//! Integration tests: IT-247–IT-271 — `.usage` `solo::` parameter, cross-feature corner cases.
+//! Integration tests: IT-247–IT-272 — `.usage` `solo::` parameter, cross-feature corner cases.
 //!
 //! Covers Feature 037 owner-column in `.usage` (IT-74), Feature 038 `rotate::1`
 //! strategy-driven rotation removal, `solo::` parameter EC tests (Feature 061),
@@ -11,6 +11,7 @@ use crate::cli_runner::{
   run_cs_with_env,
   stdout, stderr, assert_exit,
   write_account, write_account_with_token, write_account_owner,
+  write_account_quota_cache,
   write_live_credentials_with_token, live_active_token, require_live_api,
   FAR_FUTURE_MS,
 };
@@ -974,4 +975,62 @@ fn mre_bug307_approx_det0_quadratic_fit_correct()
      caused quadratic fit to clamp to 100.0 for linear data with large normalized timestamps; \
      fix: use s2*r1 in the det0 minor (col-3 is replaced by RHS, so the minor uses r1 not r2).",
   );
+}
+
+// ── it271 ──────────────────────────────────────────────────────────────────────
+
+/// it271 (Fix audit-get-no-color + audit-header-glyph): `no_color::1` reaches the `get::`
+/// early-return path and the `●` status-column header.
+///
+/// `get::status no_color::1` must emit the plain word (`ok`), not the raw 🟢 emoji —
+/// param/047_no_color.md documents exactly this invocation, but the `get::` path returned
+/// before the shared `apply_no_color` gate. The full table under `no_color::1` must map
+/// the `●` header to `status` like every other non-ASCII glyph in the chain.
+///
+/// Offline: cached quota (non-expired token) resolves without any HTTP fetch or subprocess.
+#[ test ]
+fn it271_no_color_get_status_word_and_header()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "max", "default", FAR_FUTURE_MS, false );
+  write_account_quota_cache( dir.path(), "alice@acme.com", 20.0, 30.0, None );
+
+  // Control: without no_color the raw emoji is the documented get::status output.
+  let out = run_cs_with_env( &[ ".usage", "get::status" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  assert_eq!( stdout( &out ).trim(), "🟢", "it271: bare get::status must emit the raw emoji" );
+
+  let out = run_cs_with_env( &[ ".usage", "get::status", "no_color::1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  assert_eq!( stdout( &out ).trim(), "ok", "it271: get::status no_color::1 must emit the plain word" );
+
+  let out = run_cs_with_env( &[ ".usage", "no_color::1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let plain = stdout( &out );
+  assert!( !plain.contains( '●' ), "it271: no_color output must not leak the ● header, got:\n{plain}" );
+  assert!( plain.contains( "status" ), "it271: no_color header must carry the `status` word, got:\n{plain}" );
+}
+
+// ── it272 ──────────────────────────────────────────────────────────────────────
+
+/// it272 (Fix audit-json-no-color): `format::json` is exempt from `no_color::1` — machine
+/// formats must never pass through the blanket glyph replacement.
+///
+/// Setup: an account whose name contains `→`. Under the old gate (`format != Tsv` only),
+/// `format::json no_color::1` rewrote the name to `->` inside JSON string values —
+/// corrupting user data in a machine-readable format.
+#[ test ]
+fn it272_json_exempt_from_no_color()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "team→x@acme.com", "max", "default", FAR_FUTURE_MS, false );
+  write_account_quota_cache( dir.path(), "team→x@acme.com", 20.0, 30.0, None );
+
+  let out = run_cs_with_env( &[ ".usage", "format::json", "no_color::1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let json = stdout( &out );
+  assert!( json.contains( "team→x@acme.com" ), "it272: JSON must preserve the account name verbatim, got:\n{json}" );
+  assert!( !json.contains( "team->x@acme.com" ), "it272: no_color must not rewrite JSON string values, got:\n{json}" );
 }

@@ -33,6 +33,9 @@ pub( crate ) use api::{
 };
 pub( crate ) use types::{ validate_set_model, map_model_shorthand };
 pub( crate ) use fetch_cache::read_cached_quota;
+// Fix(audit-accounts-no-color): shared with `.accounts` (commands/accounts.rs), which
+// registers no_color:: but previously never applied it — sole emoji→plain mapping.
+pub( crate ) use render::apply_no_color;
 pub use api::usage_routine;
 
 // ── Test support ──────────────────────────────────────────────────────────────

@@ -279,6 +279,14 @@ pub( crate ) fn render_accounts_text(
       {
         let _ = writeln!( out, "  Lock:    yes" );
       }
+      // Fix(audit-reserve-invisible): `reserve` deprioritizes rotation yet had no default-view
+      //   indicator anywhere — the same "no highlight in any way" gap the Lock line closes.
+      //   Presence-driven like Lock/Tags; JSON carries the raw boolean; table deliberately
+      //   unmarked (soft flag — no second name-cell glyph).
+      if a.reserve
+      {
+        let _ = writeln!( out, "  Reserve: yes" );
+      }
       // Feature 075 AC-14: presence-driven, not cols-gated — a tagged account always
       // shows its tags; an untagged account emits no line at all (byte-stable, AC-16).
       if !a.tags.is_empty()

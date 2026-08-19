@@ -75,7 +75,7 @@
 
 **`no_color::`:**
 
-- `no_color::1` is equivalent to `format::plain` for text output — strips all emoji and ANSI sequences from the output regardless of format.
+- `no_color::1` is equivalent to `format::plain` for text output — strips all emoji and ANSI sequences from human-readable output, including the `get::` single-value path. Machine formats are exempt: `format::tsv` already uses plain labels, and `format::json` must never pass through the glyph replacement (it would rewrite user data inside JSON string values, e.g. an account name containing `→`).
 
 ### Acceptance Criteria
 
@@ -90,9 +90,9 @@
 - **AC-09**: Multiple row filters combine with AND: `clp .usage only_valid::1 min_7d::30` shows only 🟢/🟡 rows where `7d Left ≥ 30%`.
 - **AC-10**: `clp .usage get::7d_left` outputs the `7d Left` value of the first row (top of sorted, filtered result) as a bare string with no headers, separators, or footer. Exit 0. Implies `format::value`.
 - **AC-11**: `clp .usage only_next::1 get::7d_left` outputs the `7d Left` value for the recommended account. Exit 0.
-- **AC-12**: `clp .usage get::status` outputs one of `🟢`, `🟡`, `🔴`, or `⚪` (redirect-backend row — Feature 071) for the first row.
+- **AC-12**: `clp .usage get::status` outputs one of `🟢`, `🟡`, `🔴`, or `⚪` (redirect-backend row — Feature 071) for the first row; with `no_color::1` the corresponding plain label (`ok`/`warn`/`err`/`static`) instead — the `get::` path applies the same mapping as the full table.
 - **AC-13**: `clp .usage format::tsv` produces tab-separated output with a header row; status column uses `ok`/`warn`/`err`/`static` text labels instead of emoji (`static` = redirect-backend row — Feature 071).
-- **AC-14**: `clp .usage no_color::1` produces output with no emoji and no ANSI sequences; status column renders as plain text labels.
+- **AC-14**: `clp .usage no_color::1` produces output with no emoji and no ANSI sequences; status column renders as plain text labels and its `●` header renders as `status` (no non-ASCII glyph survives, header row included). `format::tsv` and `format::json` are exempt from the replacement (machine formats — see the `no_color::` design note above).
 - **AC-15**: Invalid `get::` field ID exits 1 with an error listing the valid field IDs.
 - **AC-16**: `count::`, `offset::`, filter params, and `get::` all work combined with `sort::`, `prefer::`, and `cols::`.
 - **AC-17**: `clp .usage only_active::1 get::status` on an N-account store performs exactly 1 HTTP request to the OAuth usage API regardless of N. The active account is identified from the `_active_{hostname}_{user}` filesystem marker before any HTTP call; non-active accounts are excluded from the fetch set at step 2.
@@ -146,6 +146,12 @@
 
 | File | Relationship |
 |------|--------------|
-| `src/usage/api.rs` | filter pipeline application and orchestration |
-| `src/usage/render.rs` | `get::` field extraction, `format::value`/`tsv`/`plain` rendering |
+| `src/usage/api.rs` | filter pipeline application and orchestration; `no_color::` gate (`get::` path included; `format::tsv`/`format::json` exempt) |
+| `src/usage/render.rs` | `get::` field extraction, `format::value`/`tsv`/`plain` rendering; `apply_no_color()` glyph→plain mapping |
 | `src/usage/stalest.rs` | `stalest::`/`max_age::` selection: `select_stalest`, `reduction_applies` |
+
+### Tests
+
+| File | Relationship |
+|------|--------------|
+| `tests/cli/usage_solo_test.rs` | it271 — AC-12/AC-14: `no_color::1` reaches the `get::` path (`get::status` → `ok`) and maps the `●` header to `status`; it272 — AC-14: `format::json` exempt from `no_color::1` (JSON string values never rewritten) |

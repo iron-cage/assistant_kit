@@ -251,6 +251,13 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
     let value = accounts.first()
       .map_or_else( String::new, |aq| extract_get_field( aq, field, now_secs ) );
     let content = if value.is_empty() { String::new() } else { format!( "{value}\n" ) };
+    // Fix(audit-get-no-color): `get::status no_color::1` leaked the raw status emoji.
+    // Root cause: this early return sits above the shared apply_no_color gate below, which
+    //   therefore only ever covered full-table formats — param/047_no_color.md documents
+    //   plain `ok`/`warn`/`err`/`static` for exactly this invocation.
+    // Pitfall: any new early-returned output path must apply the no_color gate itself;
+    //   the shared gate at the bottom of this function cannot see it.
+    let content = if params.no_color { apply_no_color( content ) } else { content };
     return Ok( OutputData::new( content, "text" ) );
   }
 
@@ -276,7 +283,15 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
     UsageOutputFormat::Text  => render_text( &accounts, params.sort, params.desc, params.prefer, &params.cols, session_model, session_effort, Some( &credential_store ), params.who, params.rotate && !params.force, &tag_filter ),
   };
 
-  let content = if params.no_color && params.format != UsageOutputFormat::Tsv
+  // Fix(audit-json-no-color): machine formats are uniformly exempt from no_color.
+  // Root cause: the gate excluded only Tsv, so `format::json no_color::1` ran the blanket
+  //   emoji/glyph replacement over JSON string values — corrupting user data (an account
+  //   name containing `→` or `✓` was rewritten inside the JSON output).
+  // Pitfall: no_color governs human-readable formats only (text/plain); never let a
+  //   string-level replace touch a structured machine format.
+  let content = if params.no_color
+    && params.format != UsageOutputFormat::Tsv
+    && params.format != UsageOutputFormat::Json
   {
     apply_no_color( content )
   }

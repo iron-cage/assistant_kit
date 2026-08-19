@@ -30,8 +30,8 @@
 //! | `t15_lock_ungated_despite_foreign_owner` | T15 | `lock::` write ungated despite non-ownership | P |
 //! | `t16_read_side_unaffected_by_claim_lock_or_reserve` | T16 | quota display unaffected by either field | P |
 //! | `t17_lock_dry_run_preview_no_write` | T17 | `dry::1` preview; `alice.json` unchanged on disk | P |
-//! | `t18_usage_lock_marker_visible_text_tsv_json_no_color` | T18 | `.usage` highlights locked rows: 🔒 name suffix (text/TSV), `(locked)` under `no_color::1`, `claim_lock` JSON field | P |
-//! | `t19_accounts_lock_visible_text_table_json` | T19 | `.accounts` highlights locked account: `Lock: yes` line (text), 🔒 suffix (table), `claim_lock`/`reserve` JSON fields | P |
+//! | `t18_usage_lock_marker_visible_text_tsv_json_no_color` | T18 | `.usage` highlights locked rows: 🔒 name suffix (text/TSV), `(locked)` under `no_color::1`, `claim_lock`/`reserve` JSON fields | P |
+//! | `t19_accounts_lock_visible_text_table_json` | T19 | `.accounts` highlights locked/reserved accounts: `Lock:`/`Reserve:` lines (text), 🔒 suffix (table), `(locked)` under `no_color::1`, `claim_lock`/`reserve` JSON fields | P |
 
 use crate::cli_runner::
 {
@@ -607,12 +607,21 @@ fn t18_usage_lock_marker_visible_text_tsv_json_no_color()
     json.lines().any( |l| l.contains( "\"account\":\"bob@test.com\"" ) && l.contains( "\"claim_lock\":false" ) ),
     "T18: bob JSON object must carry claim_lock:false, got:\n{json}",
   );
+  // Fix(audit-usage-json-reserve): reserve rides along with claim_lock on every row —
+  // it was populated on AccountQuota and emitted by .accounts json but absent here.
+  assert!(
+    json.lines().any( |l| l.contains( "\"account\":\"alice@test.com\"" ) && l.contains( "\"reserve\":false" ) ),
+    "T18: alice JSON object must carry reserve:false, got:\n{json}",
+  );
 }
 
 /// T19 / Feature 070 lock visibility: `.accounts` highlights the lock on all three
 /// formats — presence-driven `Lock: yes` field line (text, like Tags: no `Lock: no`
 /// noise on unlocked rows), 🔒 name suffix (table), and raw `claim_lock`/`reserve`
 /// booleans (json — previously the only `Account` fields absent from the object).
+/// Also covers the presence-driven `Reserve: yes` line (Fix audit-reserve-invisible)
+/// and `format::table no_color::1` mapping 🔒 → `(locked)` (Fix audit-accounts-no-color:
+/// no_color:: was registered for .accounts but never applied).
 #[ test ]
 fn t19_accounts_lock_visible_text_table_json()
 {
@@ -622,6 +631,7 @@ fn t19_accounts_lock_visible_text_table_json()
   write_account( dir.path(), "alice@test.com", "max", "tier-alice", FAR_FUTURE_MS, false );
   write_account( dir.path(), "bob@test.com",   "max", "tier-bob",   FAR_FUTURE_MS, false );
   write_account_claim_lock( dir.path(), "alice@test.com", true );
+  write_account_reserve( dir.path(), "bob@test.com", true );
 
   // Text (default format): presence-driven Lock line under alice only.
   let text_out = run_cs_with_env( &[ ".accounts" ], &[ ( "HOME", home ) ] );
@@ -635,6 +645,13 @@ fn t19_accounts_lock_visible_text_table_json()
     text.matches( "Lock:" ).count(), 1,
     "T19: only the locked account gets a Lock line (presence-driven), got:\n{text}",
   );
+  // Fix(audit-reserve-invisible): reserve gets the same presence-driven treatment as Lock.
+  let bob_block = &text[ bob_pos.. ];
+  assert!( bob_block.contains( "Reserve: yes" ), "T19: bob block must show Reserve: yes, got:\n{text}" );
+  assert_eq!(
+    text.matches( "Reserve:" ).count(), 1,
+    "T19: only the reserved account gets a Reserve line (presence-driven), got:\n{text}",
+  );
 
   // Table: 🔒 suffix on the locked row's Account cell.
   let table_out = run_cs_with_env( &[ ".accounts", "format::table" ], &[ ( "HOME", home ) ] );
@@ -646,6 +663,16 @@ fn t19_accounts_lock_visible_text_table_json()
     .unwrap_or_else( || panic!( "T19: no bob row in table output, got:\n{table}" ) );
   assert!( alice_row.contains( '\u{1F512}' ), "T19: locked alice table row must carry 🔒, got:\n{alice_row}" );
   assert!( !bob_row.contains( '\u{1F512}' ), "T19: unlocked bob table row must not carry 🔒, got:\n{bob_row}" );
+
+  // Table + no_color::1 (Fix audit-accounts-no-color): .accounts registered no_color:: but
+  // never applied it — the 🔒 glyph leaked into output that promises to be emoji-free.
+  let plain_out = run_cs_with_env( &[ ".accounts", "format::table", "no_color::1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &plain_out, 0 );
+  let plain = stdout( &plain_out );
+  assert!( !plain.contains( '\u{1F512}' ), "T19: .accounts no_color table must not leak 🔒, got:\n{plain}" );
+  let plain_alice = plain.lines().find( |l| l.contains( "alice@test.com" ) )
+    .unwrap_or_else( || panic!( "T19: no alice row in no_color table, got:\n{plain}" ) );
+  assert!( plain_alice.contains( "(locked)" ), "T19: no_color alice row must carry (locked), got:\n{plain_alice}" );
 
   // JSON: both Feature 070 booleans present and correct.
   let json_out = run_cs_with_env( &[ ".accounts", "format::json" ], &[ ( "HOME", home ) ] );
@@ -659,4 +686,5 @@ fn t19_accounts_lock_visible_text_table_json()
   assert_eq!( alice[ "claim_lock" ], serde_json::json!( true ),  "T19: alice claim_lock must be true, got: {alice}" );
   assert_eq!( alice[ "reserve" ],    serde_json::json!( false ), "T19: alice reserve must be false, got: {alice}" );
   assert_eq!( bob[ "claim_lock" ],   serde_json::json!( false ), "T19: bob claim_lock must be false, got: {bob}" );
+  assert_eq!( bob[ "reserve" ],      serde_json::json!( true ),  "T19: bob reserve must be true, got: {bob}" );
 }
