@@ -6,7 +6,7 @@ Account management commands: list, save, use, delete, limits, relogin, and tag.
 
 ### Command: 3. `.accounts`
 
-List all saved accounts (identity view) or run per-account mutations (`assignee::USER@MACHINE`, `owner::0`, `owner::USER@MACHINE`, `lock::0`/`lock::1`, `reserve::0`/`reserve::1`). Without `name::`: shows all accounts; with `name::EMAIL`: shows that account only; with `tags::a,b` ([feature/075](../../feature/075_account_tags.md)): only accounts carrying **all** listed tags. Column visibility controlled via `cols::` (modifies from default identity set: Account, Owner, Active, Current, Sub, Tier, Expires, Email, Provider). When data-source params are active (`refresh::1`, `touch::1`), fetches live quota using the same pipeline as `.usage` — defaults to local-only read with no HTTP fetch.
+List all saved accounts (identity view) or run per-account mutations (`assignee::USER@MACHINE`, `owner::0`, `owner::USER@MACHINE`, `lock::0`/`lock::1`, `reserve::0`/`reserve::1`). Without `name::`: shows all accounts; with `name::EMAIL`: shows that account only; with `tags::a,b` ([feature/075](../../feature/075_account_tags.md)): only accounts carrying **all** listed tags. Column visibility controlled via `cols::` (modifies from default identity set: Account, Owner, Active, Current, Sub, Tier, Expires, Email, Provider). Data-source and display-pipeline params inherited from `.usage` (`refresh::`, `touch::`, `sort::`, row filters, `get::`, `live::`, `set_model::`, …) are accepted for param-set parity (Feature 037) but are **inert** — `.accounts` always reads local identity data only, with no HTTP fetch, sorting, filtering, or extraction (see Notes).
 
 -- **Parameters:** [`name::`](../param/001_name.md) *(optional)*, [`cols::`](../param/033_cols.md), [`tags::`](../param/082_tags.md), [`assignee::`](../param/063_assignee.md), [`owner::`](../param/062_owner.md), [`lock::`](../param/067_lock.md), [`reserve::`](../param/068_reserve.md), [`force::`](../param/058_force.md), [`dry::`](../param/004_dry.md), [`set_model::`](../param/054_set_model.md), [`refresh::`](../param/019_refresh.md), [`touch::`](../param/034_touch.md), [`imodel::`](../param/035_imodel.md), [`effort::`](../param/036_effort.md), [`sort::`](../param/025_sort.md), [`desc::`](../param/026_desc.md), [`prefer::`](../param/027_prefer.md), [`count::`](../param/037_count.md), [`offset::`](../param/038_offset.md), [`only_active::`](../param/039_only_active.md), [`only_next::`](../param/040_only_next.md), [`min_5h::`](../param/041_min_5h.md), [`min_7d::`](../param/042_min_7d.md), [`only_valid::`](../param/043_only_valid.md), [`exclude_exhausted::`](../param/044_exclude_exhausted.md), [`get::`](../param/045_get.md), [`no_color::`](../param/047_no_color.md), [`live::`](../param/020_live.md), [`interval::`](../param/021_interval.md), [`jitter::`](../param/022_jitter.md), [`format::`](../param/002_format.md), [`trace::`](../param/023_trace.md)
 -- **Exit:** 0 (success) | 1 (usage: invalid `name::` chars, legacy field-toggle param used, unknown `cols::` id, invalid `tags::` item, REMOVED_TOGGLE param used (`assign::`, `for::`, `unclaim::`, `active::`) — exits 1 with migration message, G8 ownership violation on `owner::0` or `owner::USER@MACHINE`, G9 claim-lock violation on `assignee::` target-side) | 2 (runtime: account not found or credential store unreadable)
@@ -52,27 +52,27 @@ clp .accounts format::table
 | `reserve::` | `bool` | `0` | Set/clear `reserve` in `{name}.json`; ungated write (no ownership check); comma-list `name::X,Y,Z` batch; absent `name::` batch-applies to filtered set. Leading sort key in `find_next_for_strategy()` — deprioritizes without excluding. Feature 070. |
 | `force::` | `bool` | `0` | Bypass G8 ownership gate on `owner::0`/`owner::USER@MACHINE` and G9 claim-lock gate on `assignee::` target-side; allows any identity to modify ownership or override a lock; no effect on `lock::`/`reserve::` writes themselves (ungated) |
 | `dry::` | `bool` | `0` | Preview mutations without writing; G8 gate still runs on `owner::0 name::X dry::1` (Feature 064) |
-| `set_model::` | `enum` | *(omit)* | Write session model to `settings.json`: `opus`, `sonnet`, `haiku`, `default` |
-| `refresh::` | `bool` | **`0`** | Attempt OAuth token refresh via subprocess (default `0`; differs from `.usage` default of `1`) |
-| `touch::` | `bool` | **`0`** | Activate idle 5h session windows via subprocess (default `0`; differs from `.usage` default of `1`) |
-| `imodel::` | `enum` | `auto` | Subprocess model: `auto`, `sonnet`, `opus`, `haiku`, `keep` |
-| `effort::` | `enum` | `auto` | Subprocess effort: `auto`, `low`, `normal`, `high`, `max` |
-| `sort::` | `enum` | **`name`** | Row ordering and footer recommendation: `name` (default for `.accounts`), `renew`, `renews` |
-| `desc::` | `bool` | `0` | Sort direction: 0 = ascending, 1 = descending |
-| `prefer::` | `enum` | `any` | Weekly quota column for sort heuristics: `any`, `opus`, `sonnet` |
-| `count::` | `u64` | `0` | Max rows to display (0 = all) |
-| `offset::` | `u64` | `0` | Skip first N rows |
-| `only_active::` | `bool` | `0` | Show only the per-machine active account |
-| `only_next::` | `bool` | `0` | Show only the recommended next account |
-| `min_5h::` | `f64` | `0` | Hide accounts with `5h Left` below this percentage |
-| `min_7d::` | `f64` | `0` | Hide accounts with `7d Left` below this percentage |
-| `only_valid::` | `bool` | `0` | Hide 🔴 (invalid/expired) rows |
-| `exclude_exhausted::` | `bool` | `0` | Hide 🟡 and 🔴 rows |
-| `get::` | `string` | `""` | Extract bare field value for first row |
-| `no_color::` | `bool` | `0` | Strip emoji and ANSI colors |
-| `live::` | `bool` | `0` | Continuous monitor mode |
-| `interval::` | `u64` | `30` | Seconds between live refresh cycles (≥ 30) |
-| `jitter::` | `u64` | `0` | Max random seconds added to interval |
+| `set_model::` | `enum` | *(omit)* | *Inert — accepted for `.usage` param-set parity (Feature 037); never read by `.accounts` (see Notes)* |
+| `refresh::` | `bool` | `0` | *Inert — accepted for `.usage` param-set parity (Feature 037); never read by `.accounts` (see Notes)* |
+| `touch::` | `bool` | `0` | *Inert — accepted for `.usage` param-set parity (Feature 037); never read by `.accounts` (see Notes)* |
+| `imodel::` | `enum` | `auto` | *Inert — accepted for `.usage` param-set parity (Feature 037); never read by `.accounts` (see Notes)* |
+| `effort::` | `enum` | `auto` | *Inert — accepted for `.usage` param-set parity (Feature 037); never read by `.accounts` (see Notes)* |
+| `sort::` | `enum` | `name` | *Inert — accepted for `.usage` param-set parity (Feature 037); never read by `.accounts`; rows are always alphabetical (see Notes)* |
+| `desc::` | `bool` | `0` | *Inert — accepted for `.usage` param-set parity (Feature 037); never read by `.accounts` (see Notes)* |
+| `prefer::` | `enum` | `any` | *Inert — accepted for `.usage` param-set parity (Feature 037); never read by `.accounts` (see Notes)* |
+| `count::` | `u64` | `0` | *Inert — accepted for `.usage` param-set parity (Feature 037); never read by `.accounts` (see Notes)* |
+| `offset::` | `u64` | `0` | *Inert — accepted for `.usage` param-set parity (Feature 037); never read by `.accounts` (see Notes)* |
+| `only_active::` | `bool` | `0` | *Inert — accepted for `.usage` param-set parity (Feature 037); never read by `.accounts` (see Notes)* |
+| `only_next::` | `bool` | `0` | *Inert — accepted for `.usage` param-set parity (Feature 037); never read by `.accounts` (see Notes)* |
+| `min_5h::` | `f64` | `0` | *Inert — accepted for `.usage` param-set parity (Feature 037); never read by `.accounts` (see Notes)* |
+| `min_7d::` | `f64` | `0` | *Inert — accepted for `.usage` param-set parity (Feature 037); never read by `.accounts` (see Notes)* |
+| `only_valid::` | `bool` | `0` | *Inert — accepted for `.usage` param-set parity (Feature 037); never read by `.accounts` (see Notes)* |
+| `exclude_exhausted::` | `bool` | `0` | *Inert — accepted for `.usage` param-set parity (Feature 037); never read by `.accounts` (see Notes)* |
+| `get::` | `string` | `""` | *Inert — accepted for `.usage` param-set parity (Feature 037); never read by `.accounts` (see Notes)* |
+| `no_color::` | `bool` | `0` | Strip emoji and ANSI colors from text/table output (`format::json` exempt) |
+| `live::` | `bool` | `0` | *Inert — accepted for `.usage` param-set parity (Feature 037); never read by `.accounts` (see Notes)* |
+| `interval::` | `u64` | `30` | *Inert — accepted for `.usage` param-set parity (Feature 037); never read by `.accounts` (see Notes)* |
+| `jitter::` | `u64` | `0` | *Inert — accepted for `.usage` param-set parity (Feature 037); never read by `.accounts` (see Notes)* |
 | `format::` | [`OutputFormat`](../type/002_output_format.md) | `text` | Output format: `text`, `json`, `table` |
 | `trace::` | `bool` | `0` | Print timestamped diagnostic lines to stderr |
 
