@@ -146,9 +146,12 @@ fn test_show_with_project_only()
     fs::write( &file, r#"{"type":"user","text":"test"}"# ).unwrap();
   }
 
+  // task 526: per-session enumeration moved behind `detail::sessions` — pass
+  // it explicitly to keep verifying that project::-selected sessions are
+  // all listed, matching this test's original intent.
   let output = common::clg_cmd()
     .env( "CLAUDE_STORAGE_ROOT", storage.path() )
-    .args( [ ".show", &format!( "project::{}", project_path.path().display() ) ] )
+    .args( [ ".show", &format!( "project::{}", project_path.path().display() ), "detail::sessions" ] )
     .output()
     .unwrap();
 

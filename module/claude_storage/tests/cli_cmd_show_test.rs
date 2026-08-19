@@ -20,6 +20,18 @@
 //! - T04: `scope::bogus` rejected with the canonical `validate_scope()` error
 //! - T05: `project::` given → `scope::` is ignored (Case 4 unchanged)
 //! - T06: no `session_id::` → `scope::` is ignored (Case 1 unchanged)
+//! - T07: bare `.show` → summary block + last 10 messages from most-recently-active session, no per-session list
+//! - T08: `detail::sessions` → T07 output plus the full per-session list appended (byte-for-byte)
+//! - T09: `detail::bogus` → exit 1, canonical validation error
+//! - T10: `tail::25` → last 25 messages instead of the default 10
+//! - T11: `tail::0` → all messages from the most-recently-active session, uncapped
+//! - T12: `show_entries::1` (bare) → tail window rendered as a raw UUID/type/timestamp list
+//! - T13: multiple sessions of differing recency → tail window comes from the latest-`last_timestamp` session specifically
+//! - T14: `project::X` (no `session_id::`) → identical summary+tail+detail behavior as Case 1
+//! - T15: `session_id::ID` → `detail::`/`tail::`/`show_entries::` are no-ops; session-detail output unchanged
+//! - T16: hyphen-encoded storage dir → summary path line shows the decoded human path, never `Project: {:?}`
+//! - T17: `detail::sessions tail::0` combined → both effects apply together
+//! - T18: project with zero sessions → summary shows zero counts, no tail-window section, no crash
 
 mod common;
 
@@ -46,19 +58,20 @@ fn assert_exit( out : &std::process::Output, code : i32 )
   );
 }
 
-/// INT-1: No args shows current project's sessions.
+/// INT-1: No args shows current project's overview.
 ///
 /// ## Purpose
 /// Verify that `.show` with no arguments uses the cwd to identify the
-/// current project and lists its sessions.
+/// current project and shows its overview (task 526: summary + tail window;
+/// per-session enumeration moved behind `detail::sessions`).
 ///
 /// ## Coverage
-/// Session IDs for cwd-matched project appear; exit 0.
+/// Tail-window content for the cwd-matched project's session appears; exit 0.
 ///
 /// ## Validation Strategy
 /// Write a path-encoded project whose path is the temp dir itself.
 /// Run `.show` with `current_dir` set to that path and `CLAUDE_STORAGE_ROOT`
-/// pointing to the fixture. Assert session ID appears in output.
+/// pointing to the fixture. Assert the session's tail-window content appears.
 ///
 /// ## Related Requirements
 /// `tests/docs/cli/command/03_show.md` — INT-1
@@ -86,9 +99,12 @@ fn int_1_no_args_shows_current_project_sessions()
     "INT-1: .show with no args must produce output for cwd project; stderr: {}",
     stderr( &out )
   );
+  // Task 526: default project-overview output no longer enumerates session IDs
+  // (that moved behind detail::sessions) — the cwd project's resolution is now
+  // proven by its tail-window content instead.
   assert!(
-    s.contains( "-default_topic" ) || s.contains( "default_topic" ),
-    "INT-1: session '-default_topic' must appear in .show output; got:\n{s}"
+    s.contains( "entry 0" ),
+    "INT-1: cwd project's tail-window content must appear in .show output; got:\n{s}"
   );
 }
 
@@ -136,15 +152,18 @@ fn int_2_session_id_shows_conversation_content()
 /// INT-3: `project::` selects explicit project.
 ///
 /// ## Purpose
-/// Verify that `project::alpha` shows sessions from alpha regardless of cwd,
-/// without mixing in sessions from other projects.
+/// Verify that `project::alpha` shows the overview for alpha regardless of
+/// cwd, without mixing in content from other projects.
 ///
 /// ## Coverage
-/// Alpha's session appears; beta's session absent; cwd is unrelated; exit 0.
+/// Alpha's own path appears; beta's path absent; cwd is unrelated; exit 0.
 ///
 /// ## Validation Strategy
 /// Write projects alpha and beta. Run `.show ``project::alph``a` from a cwd that
-/// matches neither. Assert alpha session appears and beta session absent.
+/// matches neither. Assert alpha's path segment appears and beta's is absent —
+/// per-session IDs no longer appear in default output (task 526: moved behind
+/// `detail::sessions`), so project identity is proven via the summary block's
+/// own `Path:`/`Storage:` lines instead.
 ///
 /// ## Related Requirements
 /// `tests/docs/cli/command/03_show.md` — INT-3
@@ -171,12 +190,12 @@ fn int_3_project_param_selects_explicit_project()
   assert_exit( &out, 0 );
   let s = stdout( &out );
   assert!(
-    s.contains( "alpha-sess" ),
-    "INT-3: alpha session must appear with project:: selector; got:\n{s}"
+    s.contains( "show3-alpha" ),
+    "INT-3: alpha's own path must appear with project:: selector; got:\n{s}"
   );
   assert!(
-    !s.contains( "beta-sess" ),
-    "INT-3: beta session must be absent when project::alpha selected; got:\n{s}"
+    !s.contains( "show3-beta" ),
+    "INT-3: beta's path must be absent when project::alpha selected; got:\n{s}"
   );
 }
 
@@ -668,5 +687,585 @@ fn t06_no_session_id_scope_ignored()
   assert_eq!(
     without_scope.stdout, with_scope.stdout,
     "T06: scope:: must be ignored when session_id:: is absent (Case 1)"
+  );
+}
+
+/// Write a single-entry session with an explicit timestamp and content.
+///
+/// Unlike `write_test_session`/`write_test_session_with_last_message`, both the
+/// `timestamp` and the message `content` are caller-controlled independently —
+/// needed to build fixtures where cross-session recency ordering must be
+/// explicit and unambiguous rather than derived from write order or file mtime.
+///
+/// # Panics
+///
+/// Panics if directory creation or file write fails.
+fn write_dated_session(
+  root       : &std::path::Path,
+  project_id : &str,
+  session_id : &str,
+  timestamp  : &str,
+  content    : &str,
+)
+{
+  use std::io::Write as _;
+
+  let dir = root.join( "projects" ).join( project_id );
+  std::fs::create_dir_all( &dir ).expect( "create project dir" );
+  let path = dir.join( format!( "{session_id}.jsonl" ) );
+  let mut file = std::fs::File::create( &path ).expect( "create session file" );
+
+  writeln!(
+    file,
+    r#"{{"type":"user","uuid":"dated-uuid-0","parentUuid":null,"timestamp":"{timestamp}","cwd":"/tmp","sessionId":"{session_id}","version":"2.0.0","gitBranch":"master","userType":"human","isSidechain":false,"message":{{"role":"user","content":"{content}"}}}}"#
+  ).expect( "write dated entry" );
+}
+
+/// Compute the exact decoded display string `decode_project_display` produces
+/// for a path-encoded project whose real directory does not exist on disk.
+///
+/// Mirrors `scope.rs`'s `tilde_compress` plus the no-filesystem-match branch of
+/// `decode_storage_base` independently, using the public `decode_path` — the
+/// same heuristic `decode_project_display` itself wraps.
+fn expected_decoded_display( encoded : &str ) -> String
+{
+  let decoded = claude_storage_core::decode_path( encoded ).expect( "decode_path" );
+  if let Ok( home ) = std::env::var( "HOME" )
+  {
+    if let Ok( rel ) = decoded.strip_prefix( std::path::Path::new( &home ) )
+    {
+      return format!( "~/{}", rel.display() );
+    }
+  }
+  decoded.display().to_string()
+}
+
+/// T07: bare `.show` → summary block + last 10 messages, no per-session list.
+///
+/// ## Purpose
+/// Verify the redesigned project-overview default: a summary block (path,
+/// storage dir, counts, first/last timestamp) followed by the tail window
+/// from the most-recently-active session — never the old unconditional
+/// per-session list.
+///
+/// ## Coverage
+/// Summary fields present; tail content present; per-session list absent; exit 0.
+///
+/// ## Validation Strategy
+/// Write one 4-entry session under the cwd-encoded project. Run bare `.show`.
+/// Assert summary fields, tail content, and absence of the per-session-list marker.
+///
+/// ## Related Requirements
+/// `task/claude_storage/526_show_project_overview_tail_detail.md` — T07
+#[ test ]
+fn t07_bare_show_summary_block_and_tail_window()
+{
+  let root = TempDir::new().unwrap();
+  let cwd  = TempDir::new().unwrap();
+
+  common::write_path_project_session( root.path(), cwd.path(), "t07-session", 4 );
+
+  let out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .current_dir( cwd.path() )
+    .arg( ".show" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  assert!( s.contains( "Path:" ), "T07: summary block must show Path:; got:\n{s}" );
+  assert!( s.contains( "Storage:" ), "T07: summary block must show Storage:; got:\n{s}" );
+  assert!(
+    s.contains( "Sessions: 1 (Main: 1, Agent: 0)" ),
+    "T07: summary block must show session counts; got:\n{s}"
+  );
+  assert!( s.contains( "Total Entries: 4" ), "T07: summary block must show total entries; got:\n{s}" );
+  assert!( s.contains( "First Entry:" ), "T07: summary block must show First Entry:; got:\n{s}" );
+  assert!( s.contains( "Last Entry:" ), "T07: summary block must show Last Entry:; got:\n{s}" );
+  assert!(
+    s.contains( "entry 0" ),
+    "T07: tail window must show session content (4 entries fit within default tail::10); got:\n{s}"
+  );
+  assert!(
+    !s.contains( "entries, last:" ),
+    "T07: default detail::projects must NOT append the per-session list; got:\n{s}"
+  );
+}
+
+/// T08: `detail::sessions` → T07 output plus the full per-session list.
+///
+/// ## Purpose
+/// Prove `detail::sessions` output is exactly the default output with the
+/// per-session list appended — a byte-for-byte comparison (AF2), not a
+/// length/substring check.
+///
+/// ## Coverage
+/// `detail::sessions` stdout equals the default-mode baseline plus the exact
+/// expected appended per-session-list line.
+///
+/// ## Validation Strategy
+/// Capture the default (T07-equivalent) baseline against a known 4-entry
+/// fixture, then assert the `detail::sessions` invocation's stdout equals that
+/// baseline plus a fully hand-specified appended suffix (fixture-derived, not
+/// approximated).
+///
+/// ## Related Requirements
+/// `task/claude_storage/526_show_project_overview_tail_detail.md` — T08, AF2
+#[ test ]
+fn t08_detail_sessions_appends_full_list_byte_for_byte()
+{
+  let root = TempDir::new().unwrap();
+  let cwd  = TempDir::new().unwrap();
+
+  common::write_path_project_session( root.path(), cwd.path(), "t08-session", 4 );
+
+  let baseline = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .current_dir( cwd.path() )
+    .arg( ".show" )
+    .output()
+    .unwrap();
+  assert_exit( &baseline, 0 );
+
+  let with_detail = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .current_dir( cwd.path() )
+    .arg( ".show" )
+    .arg( "detail::sessions" )
+    .output()
+    .unwrap();
+  assert_exit( &with_detail, 0 );
+
+  let baseline_s = stdout( &baseline );
+  let with_detail_s = stdout( &with_detail );
+
+  // Fixture-derived, fully hand-specified: entry_count=4 (i=0..3) → last
+  // timestamp is literally "2025-01-01T00:00:03Z" (write_test_session's own
+  // unpadded-but-single-digit format), and 4 entries → plural "entries".
+  let expected_appended = "Sessions:\n  - t08-session (4 entries, last: 2025-01-01T00:00:03Z)\n";
+  assert_eq!(
+    with_detail_s,
+    format!( "{baseline_s}{expected_appended}" ),
+    "T08: detail::sessions stdout must equal the default baseline plus the exact per-session list"
+  );
+}
+
+/// T09: `detail::bogus` → exit 1, canonical validation error.
+///
+/// ## Purpose
+/// Verify Phase 1's `detail::` validation is already in force (expected to
+/// pass immediately, before Phase 3's rendering rewrite).
+///
+/// ## Coverage
+/// Exit 1; exact canonical error text on stderr.
+///
+/// ## Related Requirements
+/// `task/claude_storage/526_show_project_overview_tail_detail.md` — T09
+#[ test ]
+fn t09_detail_bogus_rejected_with_canonical_error()
+{
+  let root = TempDir::new().unwrap();
+
+  let out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .current_dir( "/tmp" )
+    .arg( ".show" )
+    .arg( "detail::bogus" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 1 );
+  let err = stderr( &out );
+  assert!(
+    err.contains( "detail must be projects|sessions, got bogus" ),
+    "T09: detail::bogus must produce the canonical error; got: {err}"
+  );
+}
+
+/// T10: `tail::25` → last 25 messages instead of the default 10.
+///
+/// ## Purpose
+/// Verify `tail::N` overrides the default window size.
+///
+/// ## Coverage
+/// A 31-entry session's `tail::25` window includes entry 6 (window start) and
+/// excludes entry 5 (just outside); exit 0.
+///
+/// ## Validation Strategy
+/// Write 30 numbered entries + 1 marker (31 total). `tail::25` keeps the last
+/// 25 of 31 (indices 6..31). Assert the boundary precisely, not just "some
+/// messages shown."
+///
+/// ## Related Requirements
+/// `task/claude_storage/526_show_project_overview_tail_detail.md` — T10
+#[ test ]
+fn t10_tail_25_shows_25_messages()
+{
+  let root = TempDir::new().unwrap();
+  let cwd  = TempDir::new().unwrap();
+
+  common::write_path_project_session_with_last_message(
+    root.path(), cwd.path(), "t10-session", 30, "T10_MARKER"
+  );
+
+  let out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .current_dir( cwd.path() )
+    .arg( ".show" )
+    .arg( "tail::25" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  assert!( s.contains( "entry 6" ), "T10: tail::25 must include entry 6 (25-window boundary); got:\n{s}" );
+  assert!( !s.contains( "entry 5" ), "T10: tail::25 must exclude entry 5 (outside 25-window); got:\n{s}" );
+  assert!( s.contains( "T10_MARKER" ), "T10: tail window must include the final marker entry; got:\n{s}" );
+}
+
+/// T11: `tail::0` → all messages from the most-recently-active session, uncapped.
+///
+/// ## Purpose
+/// Verify `tail::0` disables the default 10-message cap entirely.
+///
+/// ## Coverage
+/// A 16-entry session's `tail::0` window includes entry 0 (would be excluded
+/// under the default cap); exit 0.
+///
+/// ## Related Requirements
+/// `task/claude_storage/526_show_project_overview_tail_detail.md` — T11
+#[ test ]
+fn t11_tail_0_shows_all_messages_uncapped()
+{
+  let root = TempDir::new().unwrap();
+  let cwd  = TempDir::new().unwrap();
+
+  common::write_path_project_session_with_last_message(
+    root.path(), cwd.path(), "t11-session", 15, "T11_MARKER"
+  );
+
+  let out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .current_dir( cwd.path() )
+    .arg( ".show" )
+    .arg( "tail::0" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  assert!(
+    s.contains( "entry 0" ),
+    "T11: tail::0 must show all messages including the very first (16 total, default cap would exclude it); got:\n{s}"
+  );
+  assert!( s.contains( "T11_MARKER" ), "T11: tail::0 must include the final marker entry; got:\n{s}" );
+}
+
+/// T12: `show_entries::1` (bare) → tail window rendered as a raw list.
+///
+/// ## Purpose
+/// Verify `show_entries::1` in project-overview mode renders the tail window
+/// as a raw UUID/type/timestamp list instead of formatted chat content.
+///
+/// ## Coverage
+/// Raw UUID substring present; formatted message content absent; exit 0.
+///
+/// ## Related Requirements
+/// `task/claude_storage/526_show_project_overview_tail_detail.md` — T12
+#[ test ]
+fn t12_show_entries_1_renders_raw_list_in_overview()
+{
+  let root = TempDir::new().unwrap();
+  let cwd  = TempDir::new().unwrap();
+
+  common::write_path_project_session( root.path(), cwd.path(), "t12-session", 4 );
+
+  let out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .current_dir( cwd.path() )
+    .arg( ".show" )
+    .arg( "show_entries::1" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  assert!(
+    s.contains( "test-uuid-000" ),
+    "T12: show_entries::1 in project-overview must render the raw UUID list; got:\n{s}"
+  );
+  assert!(
+    !s.contains( "entry 0" ),
+    "T12: raw-list rendering must not show formatted message content; got:\n{s}"
+  );
+}
+
+/// T13: multiple sessions of differing recency → tail window from the latest.
+///
+/// ## Purpose
+/// Prove the most-recently-active session is selected by latest
+/// `SessionStats.last_timestamp` specifically — not the first/alphabetically-
+/// first session, not write order, not filesystem mtime (AF1).
+///
+/// ## Coverage
+/// Content unique to the later-timestamped session appears; content unique to
+/// the earlier-timestamped session is absent; exit 0.
+///
+/// ## Validation Strategy
+/// Write two sessions with explicit, fixed, clearly-ordered `timestamp` fields
+/// (not relying on write order or mtime) and distinct content markers. Assert
+/// only the later session's marker appears.
+///
+/// ## Related Requirements
+/// `task/claude_storage/526_show_project_overview_tail_detail.md` — T13, AF1
+#[ test ]
+fn t13_selects_most_recently_active_session_by_last_timestamp()
+{
+  let root = TempDir::new().unwrap();
+  let cwd  = TempDir::new().unwrap();
+
+  let encoded = claude_storage_core::encode_path( cwd.path() ).expect( "encode project path" );
+
+  // Written in reverse-recency order on purpose — write order must not matter.
+  write_dated_session(
+    root.path(), &encoded, "t13-session-new", "2025-06-01T00:00:00Z", "T13_NEW_MARKER"
+  );
+  write_dated_session(
+    root.path(), &encoded, "t13-session-old", "2025-01-01T00:00:00Z", "T13_OLD_MARKER"
+  );
+
+  let out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .current_dir( cwd.path() )
+    .arg( ".show" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  assert!(
+    s.contains( "T13_NEW_MARKER" ),
+    "T13: tail window must show content from the session with the latest last_timestamp; got:\n{s}"
+  );
+  assert!(
+    !s.contains( "T13_OLD_MARKER" ),
+    "T13: tail window must NOT show content from the older session; got:\n{s}"
+  );
+}
+
+/// T14: `project::X` (no `session_id::`) → identical behavior to Case 1.
+///
+/// ## Purpose
+/// Verify Case 3 (explicit `project::`, no `session_id::`) renders the same
+/// summary+tail+detail shape as Case 1 (bare `.show`).
+///
+/// ## Coverage
+/// Summary fields present; tail content present; per-session list absent
+/// (default `detail::projects`); exit 0.
+///
+/// ## Related Requirements
+/// `task/claude_storage/526_show_project_overview_tail_detail.md` — T14
+#[ test ]
+fn t14_project_param_shows_same_overview_as_case_1()
+{
+  let root = TempDir::new().unwrap();
+  let proj = root.path().join( "t14-proj" );
+  let encoded = common::write_path_project_session( root.path(), &proj, "t14-session", 4 );
+
+  let out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .current_dir( root.path() ) // cwd matches no project — proves project:: drives the result
+    .arg( ".show" )
+    .arg( format!( "project::{encoded}" ) )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  assert!( s.contains( "Path:" ), "T14: Case 3 must show the same summary block as Case 1; got:\n{s}" );
+  assert!( s.contains( "Total Entries: 4" ), "T14: Case 3 summary must show total entries; got:\n{s}" );
+  assert!( s.contains( "entry 0" ), "T14: Case 3 tail window must show session content; got:\n{s}" );
+  assert!(
+    !s.contains( "entries, last:" ),
+    "T14: Case 3 default detail::projects must not append the per-session list; got:\n{s}"
+  );
+}
+
+/// T15: `session_id::ID` → new params are no-ops in session-detail mode.
+///
+/// ## Purpose
+/// Regression guard — `detail::`/`tail::`/`show_entries::`'s project-overview
+/// effects must not leak into session-detail output (Cases 2/4, untouched by
+/// this task).
+///
+/// ## Coverage
+/// Output byte-identical with and without the 3 new parameters at non-default
+/// values; exit 0.
+///
+/// ## Related Requirements
+/// `task/claude_storage/526_show_project_overview_tail_detail.md` — T15
+#[ test ]
+fn t15_session_detail_unaffected_by_new_params()
+{
+  let root = TempDir::new().unwrap();
+  let cwd  = TempDir::new().unwrap();
+
+  common::write_path_project_session( root.path(), cwd.path(), "t15-session", 4 );
+
+  let without_new_params = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .current_dir( cwd.path() )
+    .arg( ".show" )
+    .arg( "session_id::t15-session" )
+    .output()
+    .unwrap();
+
+  let with_new_params = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .current_dir( cwd.path() )
+    .arg( ".show" )
+    .arg( "session_id::t15-session" )
+    .arg( "tail::5" )
+    .arg( "detail::sessions" )
+    .arg( "show_entries::0" )
+    .output()
+    .unwrap();
+
+  assert_exit( &without_new_params, 0 );
+  assert_exit( &with_new_params, 0 );
+  assert_eq!(
+    without_new_params.stdout, with_new_params.stdout,
+    "T15: tail::/detail::/show_entries:: must be no-ops in session-detail mode (Cases 2/4)"
+  );
+}
+
+/// T16: hyphen-encoded storage dir → summary path shows the decoded path.
+///
+/// ## Purpose
+/// Verify the summary block's path line shows the decoded human path (via
+/// `decode_project_display`), never a Debug-formatted `ProjectId` (AF3).
+///
+/// ## Coverage
+/// Exact decoded path string present; no `Path("...")`/`Uuid(...)` Debug
+/// substring present; exit 0.
+///
+/// ## Validation Strategy
+/// Compute the expected decoded string independently via the public
+/// `claude_storage_core::decode_path` (the same heuristic
+/// `decode_project_display` wraps), not by asserting mere absence of a
+/// Debug-format pattern.
+///
+/// ## Related Requirements
+/// `task/claude_storage/526_show_project_overview_tail_detail.md` — T16, AF3
+#[ test ]
+fn t16_summary_path_shows_decoded_path_not_debug_format()
+{
+  let root = TempDir::new().unwrap();
+  let proj = root.path().join( "t16-hyphen-encoded-proj" );
+  let encoded = common::write_path_project_session( root.path(), &proj, "t16-session", 2 );
+
+  let out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .arg( ".show" )
+    .arg( format!( "project::{encoded}" ) )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  let expected = expected_decoded_display( &encoded );
+  assert!(
+    s.contains( &expected ),
+    "T16: summary path line must show the exact decoded path '{expected}'; got:\n{s}"
+  );
+  assert!(
+    !s.contains( "Path(\"" ) && !s.contains( "Uuid(" ),
+    "T16: summary path line must never show a Debug-formatted ProjectId; got:\n{s}"
+  );
+}
+
+/// T17: `detail::sessions tail::0` combined → both effects apply together.
+///
+/// ## Purpose
+/// Verify the two new parameters compose independently — `detail::sessions`
+/// appends the per-session list AND `tail::0` uncaps the tail window, in the
+/// same invocation.
+///
+/// ## Coverage
+/// Uncapped tail content present (entry 0); per-session list appended; exit 0.
+///
+/// ## Related Requirements
+/// `task/claude_storage/526_show_project_overview_tail_detail.md` — T17
+#[ test ]
+fn t17_detail_sessions_and_tail_0_combine()
+{
+  let root = TempDir::new().unwrap();
+  let cwd  = TempDir::new().unwrap();
+
+  common::write_path_project_session_with_last_message(
+    root.path(), cwd.path(), "t17-session", 15, "T17_MARKER"
+  );
+
+  let out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .current_dir( cwd.path() )
+    .arg( ".show" )
+    .arg( "detail::sessions" )
+    .arg( "tail::0" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  assert!( s.contains( "entry 0" ), "T17: tail::0 must show all messages including the first; got:\n{s}" );
+  assert!( s.contains( "T17_MARKER" ), "T17: tail window must include the final marker entry; got:\n{s}" );
+  assert!(
+    s.contains( "entries, last:" ),
+    "T17: detail::sessions must append the per-session list; got:\n{s}"
+  );
+}
+
+/// T18: project with zero sessions → zero counts, no crash.
+///
+/// ## Purpose
+/// Verify the zero-session edge case is handled gracefully — a project
+/// directory that exists but contains no session files.
+///
+/// ## Coverage
+/// Zero session/entry counts shown; exit 0 (no crash).
+///
+/// ## Validation Strategy
+/// Create the project storage directory directly (no session files written),
+/// bypassing the fixture helpers which always write at least one session.
+///
+/// ## Related Requirements
+/// `task/claude_storage/526_show_project_overview_tail_detail.md` — T18
+#[ test ]
+fn t18_zero_session_project_shows_zero_counts_no_crash()
+{
+  let root = TempDir::new().unwrap();
+  let cwd  = TempDir::new().unwrap();
+
+  let encoded = claude_storage_core::encode_path( cwd.path() ).expect( "encode project path" );
+  std::fs::create_dir_all( root.path().join( "projects" ).join( &encoded ) ).expect( "create empty project dir" );
+
+  let out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .current_dir( cwd.path() )
+    .arg( ".show" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  assert!(
+    s.contains( "Sessions: 0 (Main: 0, Agent: 0)" ),
+    "T18: zero-session project must show zero session counts; got:\n{s}"
+  );
+  assert!( s.contains( "Total Entries: 0" ), "T18: zero-session project must show zero total entries; got:\n{s}" );
+  assert!(
+    s.contains( "First Entry: unknown" ) && s.contains( "Last Entry: unknown" ),
+    "T18: zero-session project must show unknown First/Last Entry, not a tail window; got:\n{s}"
   );
 }

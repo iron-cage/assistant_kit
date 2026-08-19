@@ -3,7 +3,7 @@
 use core::fmt::Write as FmtWrite;
 use unilang::{ VerifiedCommand, ExecutionContext, OutputData, ErrorData, ErrorCode };
 use super::storage::{ create_storage, parse_project_parameter, find_session_mut };
-use super::scope::{ validate_scope, resolve_scoped_projects };
+use super::scope::{ validate_scope, resolve_scoped_projects, decode_project_display };
 use super::format::format_entry_content;
 
 /// Display control flags for session output.
@@ -27,6 +27,11 @@ struct SessionDisplayOptions
 ///
 /// Returns error if parameter combinations are invalid, storage creation
 /// fails, or project/session loading fails.
+///
+/// # Panics
+///
+/// Does not panic — the `tail_count` conversion below is only reached after the
+/// negative-value branch already returned, so the value is always non-negative.
 #[ allow( clippy::needless_pass_by_value ) ]
 #[ inline ]
 pub fn show_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
@@ -63,28 +68,10 @@ pub fn show_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
     show_tokens   : cmd.get_boolean( "show_tokens" ).unwrap_or( false ),
   };
 
-  // Fix(issue-001): Validate entries parameter requires session_id
-  //
-  // Root cause: entries parameter was accepted and parsed but silently ignored
-  // when displaying projects (cases 1 and 3). This created a "garbage parameter"
-  // that users could pass but had no effect, wasting debugging time.
-  //
-  // Pitfall: Always validate parameter compatibility. If parameter P only works
-  // with parameter Q, reject the combination where P is set but Q is not.
-  // Silent ignoring of valid-syntax parameters creates user frustration.
-  if opts.show_entries && session_id.is_none()
-  {
-    return Err
-    (
-      ErrorData::new
-      (
-        ErrorCode::InternalError,
-        "Parameter 'entries' requires 'session_id'. \
-         Use '.show session_id::<id> entries::1' to display session entries."
-          .to_string()
-      )
-    );
-  }
+  // Note: the show_entries-requires-session_id constraint (former Fix issue-001)
+  // is superseded by task 526's project-overview redesign — show_entries now
+  // also controls raw-list rendering of the tail window in Cases 1/3 (see
+  // docs/cli/command/03_show.md).
 
   // Fix(issue-022): Accept entries::1 in content mode as a no-op
   //
@@ -105,13 +92,33 @@ pub fn show_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   let scope_raw = cmd.get_string( "scope" );
   let path_raw = cmd.get_string( "path" );
 
+  // Validate `tail` before any storage access, mirroring `.tail`'s own
+  // validation shape (see tail.rs) independently — see Design Decision D3.
+  let tail_count_raw = cmd.get_integer( "tail" ).unwrap_or( 10 );
+  if tail_count_raw < 0
+  {
+    return Err( ErrorData::new( ErrorCode::InternalError, "tail must be non-negative".to_string() ) );
+  }
+  let tail_count = usize::try_from( tail_count_raw ).expect( "tail < 0 rejected above" );
+
+  // `detail::` is parsed locally rather than via a shared DetailLevel type:
+  // task 525 never introduced one (its own `detail::` validation in projects.rs
+  // is a private per-command function, not a shared type) — see task 526 checklist item C8.
+  let detail_raw = cmd.get_string( "detail" ).unwrap_or( "projects" ).to_lowercase();
+  let show_sessions_detail = match detail_raw.as_str()
+  {
+    "projects" => false,
+    "sessions" => true,
+    other => return Err( ErrorData::new( ErrorCode::InternalError, format!( "detail must be projects|sessions, got {other}" ) ) ),
+  };
+
   // Smart parameter detection (4 cases)
   match ( session_id, project_param )
   {
     // Case 1: No parameters → Show current directory project
     ( None, None ) =>
     {
-      show_project_for_cwd_impl()
+      show_project_for_cwd_impl( tail_count, show_sessions_detail, opts.show_entries )
     }
 
     // Case 2: session_id only → Show session in current project
@@ -123,7 +130,7 @@ pub fn show_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
     // Case 3: project only → Show that project
     ( None, Some( proj ) ) =>
     {
-      show_project_impl( proj )
+      show_project_impl( proj, tail_count, show_sessions_detail, opts.show_entries )
     }
 
     // Case 4: Both parameters → Show session in that project
@@ -187,7 +194,7 @@ fn show_session_in_project_impl(
 }
 
 /// Helper: Show project for current directory
-fn show_project_for_cwd_impl()
+fn show_project_for_cwd_impl( tail_count : usize, show_sessions_detail : bool, show_entries : bool )
   -> core::result::Result< OutputData, ErrorData >
 {
   let storage = create_storage()?;
@@ -199,11 +206,11 @@ fn show_project_for_cwd_impl()
       format!( "Failed to load project from current directory: {e}" )
     ))?;
 
-  format_project_output( &project )
+  format_project_output( &project, tail_count, show_sessions_detail, show_entries )
 }
 
 /// Helper: Show specific project
-fn show_project_impl( project_param : &str )
+fn show_project_impl( project_param : &str, tail_count : usize, show_sessions_detail : bool, show_entries : bool )
   -> core::result::Result< OutputData, ErrorData >
 {
   let storage = create_storage()?;
@@ -223,7 +230,7 @@ fn show_project_impl( project_param : &str )
       format!( "Failed to load project {proj_id:?}: {e}" )
     ))?;
 
-  format_project_output( &project )
+  format_project_output( &project, tail_count, show_sessions_detail, show_entries )
 }
 
 /// Helper: Format session output (extracted logic)
@@ -370,78 +377,193 @@ fn write_session_metadata_block(
   }
 }
 
-/// Helper: Format project output (extracted logic)
-fn format_project_output(
-  project : &claude_storage_core::Project,
-) -> core::result::Result< OutputData, ErrorData >
+/// Helper: Format one raw entry list line (index, type, uuid, timestamp).
+///
+/// Used by `format_project_output`'s `show_entries::1` tail-window rendering.
+/// Deliberately not shared with `format_session_output`'s own equivalent
+/// inline block — that function is Out of Scope for task 526 and must stay
+/// byte-for-byte untouched (see task 526's Verification Checklist item C9).
+fn format_entry_raw( idx : usize, entry : &claude_storage_core::Entry ) -> String
 {
-  // Get project statistics
-  let stats = project.project_stats()
-    .map_err( | e | ErrorData::new
-    (
-      ErrorCode::InternalError,
-      format!( "Failed to get project stats: {e}" )
-    ))?;
+  format!( "{}. [{:?}] {} ({})\n", idx + 1, entry.entry_type, entry.uuid, entry.timestamp )
+}
 
-  // Get all sessions
-  let mut sessions = project.sessions()
-    .map_err( | e | ErrorData::new
-    (
-      ErrorCode::InternalError,
-      format!( "Failed to list sessions: {e}" )
-    ))?;
+/// Result of `scan_sessions`: earliest `first_timestamp`, latest
+/// `last_timestamp`, and the index of the most-recently-active session.
+type SessionScanResult = core::result::Result< ( Option< String >, Option< String >, Option< usize > ), ErrorData >;
 
-  // Format output
-  let mut output = String::new();
+/// Helper: Single pass computing the project's aggregate first/last entry
+/// timestamps and the index of the most-recently-active session — keyed on
+/// each session's `SessionStats.last_timestamp`, never filesystem mtime.
+fn scan_sessions( sessions : &mut [ claude_storage_core::Session ] ) -> SessionScanResult
+{
+  let mut first : Option< String > = None;
+  let mut last : Option< String > = None;
+  let mut best_idx : Option< usize > = None;
+  for ( idx, session ) in sessions.iter_mut().enumerate()
+  {
+    let s = session.stats()
+      .map_err( | e | ErrorData::new( ErrorCode::InternalError, format!( "Failed to get session stats: {e}" ) ) )?;
+    if let Some( ft ) = &s.first_timestamp
+    {
+      if first.as_deref().map_or( true, | f | ft.as_str() < f ) { first = Some( ft.clone() ); }
+    }
+    if let Some( lt ) = &s.last_timestamp
+    {
+      if last.as_deref().map_or( true, | l | lt.as_str() > l ) { last = Some( lt.clone() ); best_idx = Some( idx ); }
+    }
+  }
+  Ok( ( first, last, best_idx ) )
+}
 
-  // Project header
-  writeln!( output, "Project: {:?}", project.id() ).unwrap();
+/// Helper: Write the project summary block (Path, Storage, session/entry
+/// counts, First/Last Entry) — shared by both `detail::` modes.
+fn write_project_summary_block(
+  output  : &mut String,
+  project : &claude_storage_core::Project,
+  stats   : &claude_storage_core::ProjectStats,
+  first   : Option< &str >,
+  last    : Option< &str >,
+)
+{
+  let dir_name = project.storage_dir()
+    .file_name()
+    .and_then( | n | n.to_str() )
+    .unwrap_or( "" )
+    .to_string();
+  writeln!( output, "Path: {}", decode_project_display( &dir_name ) ).unwrap();
   writeln!( output, "Storage: {}", project.storage_dir().display() ).unwrap();
   output.push( '\n' );
 
-  // Statistics
   writeln!( output, "Sessions: {} (Main: {}, Agent: {})",
     stats.session_count,
     stats.main_session_count,
     stats.agent_session_count
   ).unwrap();
-
   writeln!( output, "Total Entries: {}", stats.total_entries ).unwrap();
 
-  output.push( '\n' );
+  let first = first.unwrap_or( "unknown" );
+  let last = last.unwrap_or( "unknown" );
+  writeln!( output, "First Entry: {first}" ).unwrap();
+  writeln!( output, "Last Entry: {last}" ).unwrap();
+}
 
-  // Sessions list
-  if sessions.is_empty()
+/// Helper: Render the most-recently-active session's tail window (last
+/// `tail_count` entries; `0` = uncapped) — formatted chat-log content by
+/// default, or a raw uuid/type/timestamp list when `show_entries` is set.
+/// Mirrors `tail.rs`'s own slicing idiom independently (no shared helper).
+fn write_tail_window(
+  output       : &mut String,
+  session      : &mut claude_storage_core::Session,
+  tail_count   : usize,
+  show_entries : bool,
+) -> core::result::Result< (), ErrorData >
+{
+  let entries = session.entries()
+    .map_err( | e | ErrorData::new( ErrorCode::InternalError, format!( "Failed to load entries: {e}" ) ) )?;
+
+  let sliced = if tail_count == 0 || tail_count >= entries.len()
   {
-    output.push_str( "No sessions found in this project.\n" );
+    &entries[ .. ]
   }
   else
   {
-    output.push_str( "Sessions:\n" );
+    &entries[ entries.len() - tail_count.. ]
+  };
 
-    for session in &mut sessions
+  for ( idx, entry ) in sliced.iter().enumerate()
+  {
+    if show_entries
     {
-      let session_stats = session.stats()
-        .map_err( | e | ErrorData::new
-        (
-          ErrorCode::InternalError,
-          format!( "Failed to get session stats: {e}" )
-        ))?;
-
-      // Standard: ID + entry count + last timestamp
-      let last = session_stats.last_timestamp
-        .unwrap_or_else( || "unknown".to_string() );
-
-      // Fix(issue-028): derive "entry"/"entries" from count — sibling of session_count fix.
-      // Root cause: hardcoded "entries" produced "(1 entries, last: ...)".
-      // Pitfall: "entry" is irregular — singular differs from plural root.
-      let e_noun = if session_stats.total_entries == 1 { "entry" } else { "entries" };
-      writeln!( output, "  - {} ({} {e_noun}, last: {})",
-        session.id(),
-        session_stats.total_entries,
-        last
-      ).unwrap();
+      output.push_str( &format_entry_raw( idx, entry ) );
     }
+    else
+    {
+      output.push_str( &format_entry_content( entry, None ) );
+      output.push_str( "\n\n" );
+    }
+  }
+  Ok( () )
+}
+
+/// Helper: Append the full per-session list (`detail::sessions`) — ID, entry
+/// count, last timestamp. Rendering logic unchanged from the pre-task
+/// implementation; only its call site is now conditionally gated.
+fn write_per_session_list(
+  output   : &mut String,
+  sessions : &mut [ claude_storage_core::Session ],
+) -> core::result::Result< (), ErrorData >
+{
+  output.push_str( "Sessions:\n" );
+
+  for session in sessions.iter_mut()
+  {
+    let session_stats = session.stats()
+      .map_err( | e | ErrorData::new
+      (
+        ErrorCode::InternalError,
+        format!( "Failed to get session stats: {e}" )
+      ))?;
+
+    // Standard: ID + entry count + last timestamp
+    let last = session_stats.last_timestamp
+      .unwrap_or_else( || "unknown".to_string() );
+
+    // Fix(issue-028): derive "entry"/"entries" from count — sibling of session_count fix.
+    // Root cause: hardcoded "entries" produced "(1 entries, last: ...)".
+    // Pitfall: "entry" is irregular — singular differs from plural root.
+    let e_noun = if session_stats.total_entries == 1 { "entry" } else { "entries" };
+    writeln!( output, "  - {} ({} {e_noun}, last: {})",
+      session.id(),
+      session_stats.total_entries,
+      last
+    ).unwrap();
+  }
+  Ok( () )
+}
+
+/// Helper: Format project output (extracted logic)
+fn format_project_output(
+  project : &claude_storage_core::Project,
+  tail_count : usize,
+  show_sessions_detail : bool,
+  show_entries : bool,
+) -> core::result::Result< OutputData, ErrorData >
+{
+  let stats = project.project_stats()
+    .map_err( | e | ErrorData::new( ErrorCode::InternalError, format!( "Failed to get project stats: {e}" ) ) )?;
+
+  let mut sessions = project.sessions()
+    .map_err( | e | ErrorData::new( ErrorCode::InternalError, format!( "Failed to list sessions: {e}" ) ) )?;
+
+  let mut output = String::new();
+
+  // Zero-sessions edge case: summary only, skip scan/tail/list entirely.
+  if sessions.is_empty()
+  {
+    write_project_summary_block( &mut output, project, &stats, None, None );
+    return Ok( OutputData::new( output.trim_end().to_string(), "text" ) );
+  }
+
+  let ( first, last, best_idx ) = scan_sessions( &mut sessions )?;
+  write_project_summary_block( &mut output, project, &stats, first.as_deref(), last.as_deref() );
+  output.push( '\n' );
+
+  if let Some( idx ) = best_idx
+  {
+    write_tail_window( &mut output, &mut sessions[ idx ], tail_count, show_entries )?;
+  }
+
+  // cli_main.rs's println! contract requires content with no trailing '\n' —
+  // trim here so the two `detail::` modes share an identical checkpoint,
+  // regardless of how many blank lines the tail window itself ends with.
+  let mut output = output.trim_end().to_string();
+
+  if show_sessions_detail
+  {
+    output.push( '\n' );
+    write_per_session_list( &mut output, &mut sessions )?;
+    output = output.trim_end().to_string();
   }
 
   Ok( OutputData::new( output, "text" ) )

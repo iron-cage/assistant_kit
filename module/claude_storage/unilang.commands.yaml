@@ -243,6 +243,26 @@
       aliases: []
       tags: ["scope", "filter"]
 
+    - name: "tail"
+      kind: "Integer"
+      description: "Trailing messages shown from the most-recently-active session (0 = all)"
+      hint: "Tail window size"
+      optional: true
+      default: "10"
+      validation_rules: []
+      aliases: []
+      tags: []
+
+    - name: "detail"
+      kind: "String"
+      description: "Project-overview verbosity: summary only, or also list every session"
+      hint: "Detail level"
+      optional: true
+      default: "projects"
+      validation_rules: []
+      aliases: []
+      tags: []
+
   examples:
     - ".show"
     - ".show session_id::abc123"
@@ -253,6 +273,8 @@
     - ".show session_id::abc123 show_stat::1"
     - ".show session_id::abc123 show_tokens::1"
     - ".show session_id::abc123 scope::under path::/home/alice/workspace"
+    - ".show tail::25"
+    - ".show project::/path/to/project detail::sessions"
   auto_help_enabled: true
 
 

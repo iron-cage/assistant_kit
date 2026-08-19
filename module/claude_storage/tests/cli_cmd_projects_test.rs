@@ -1442,7 +1442,7 @@ fn int_66_list_deprecation_message_preserves_output()
   let storage_root = root.path().join( ".claude" );
   let project = root.path().join( "proj-int66" );
   fs::create_dir_all( &project ).unwrap();
-  common::write_path_project_session( &storage_root, &project, "session-int66", 2 );
+  let encoded = common::write_path_project_session( &storage_root, &project, "session-int66", 2 );
 
   let out = common::clg_cmd()
     .env( "HOME", root.path() )
@@ -1452,11 +1452,17 @@ fn int_66_list_deprecation_message_preserves_output()
     .unwrap();
 
   assert_exit( &out, 0 );
-  let s = stdout( &out );
-  assert!( s.contains( "Found 1 project" ), "must show project count header; got:\n{s}" );
-  assert!(
-    s.lines().any( | l | l.starts_with( "Path(" ) ),
-    "must show Path(...) debug-format project id, unaffected by deprecation_message; got:\n{s}"
+
+  // Byte-for-byte comparison (not a loose contains/starts_with check) so a stray
+  // deprecation_message leaking into runtime output would actually fail this test.
+  let decoded = claude_storage_core::decode_path( &encoded ).expect( "decode" );
+  let expected_id = claude_storage_core::ProjectId::Path( decoded );
+  // Trailing blank line is the CLI runtime's own print wrapper appending a newline
+  // after command output that already ends in one (see sibling tests' live stdout).
+  let expected = format!( "Found 1 project:\n\n{expected_id:?} (1 conversation)\n\n" );
+  assert_eq!(
+    stdout( &out ), expected,
+    "deprecation_message must not alter runtime output"
   );
 }
 
