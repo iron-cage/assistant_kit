@@ -14,7 +14,7 @@
 //! | IN-1 | Transplant source comes from source storage, never from target |
 //! | IN-2 | Subprocess working directory is target dir, not source |
 //! | IN-3 | Source session file mtime and size unchanged after cross-loaded run |
-//! | IN-4 | `--session-dir` raw path wins over `--from` computed path |
+//! | IN-4 | deprecated `--session-dir` is inert — `--from` computed path governs (BUG-493) |
 //! | IN-5 | `--from` + `--to`: transplant source from source, cwd is target |
 
 // IN-3 is the most critical: if source files are written to during a cross-loaded
@@ -242,19 +242,20 @@ fn in3_source_session_file_unchanged()
   );
 }
 
-// ── IN-4: --session-dir raw path wins over --from ──────────────────────────────
+// ── IN-4: deprecated --session-dir is inert; --from governs ────────────────────
 
-/// IN-4: `--session-dir` raw path wins over `--from` computed path.
+/// IN-4: the deprecated `--session-dir` is inert — `--from`'s computed path governs.
 ///
-/// `CLAUDE_CODE_SESSION_DIR` must equal the raw `--session-dir` path; the
-/// computed source storage path must not appear in the output.
+/// Fix(BUG-493): the former raw-path precedence is gone. No `CLAUDE_CODE_SESSION_DIR`
+/// export may appear, and the `--from` source storage still drives the transplant
+/// plan exactly as if `--session-dir` were absent.
 #[ test ]
-fn in4_session_dir_raw_path_wins()
+fn in4_session_dir_inert_from_governs()
 {
   let ch  = tempfile::TempDir::new().expect( "tmpdir" );
   let src = "/tmp/011it4-src";
-  make_session_for( ch.path(), src, "ooo-004" );
-  // Raw session dir override
+  let jsonl = make_session_for( ch.path(), src, "ooo-004" );
+  // Deprecated raw override dir (must be ignored entirely)
   let raw_dir = tempfile::TempDir::new().expect( "raw tmpdir" );
   std::fs::write( raw_dir.path().join( "ppp-005.jsonl" ), b"{}" )
     .expect( "write raw session" );
@@ -264,16 +265,15 @@ fn in4_session_dir_raw_path_wins()
     &[ "--from", src, "--session-dir", raw_str, "test" ],
     &[ ( "CLAUDE_HOME", ch_str ) ],
   );
-  // Raw path must be used as CLAUDE_CODE_SESSION_DIR
+  // The dead env export must never appear
   assert!(
-    stdout.contains( &format!( "CLAUDE_CODE_SESSION_DIR={raw_str}" ) ),
-    "`--session-dir` raw path must win. Got:\n{stdout}"
+    !stdout.contains( "CLAUDE_CODE_SESSION_DIR=" ),
+    "deprecated `--session-dir` must not export CLAUDE_CODE_SESSION_DIR. Got:\n{stdout}"
   );
-  // Source computed path must NOT appear
-  let src_dir = format!( "{ch_str}/projects/{}", df( src ) );
+  // Source storage still governs the transplant plan
   assert!(
-    !stdout.contains( &src_dir ),
-    "source computed path `{src_dir}` must NOT appear. Got:\n{stdout}"
+    stdout.contains( &format!( "# session-transplant: {} -> ", jsonl.display() ) ),
+    "`--from` source storage must govern despite `--session-dir`. Got:\n{stdout}"
   );
 }
 

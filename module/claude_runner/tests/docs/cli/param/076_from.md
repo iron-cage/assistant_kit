@@ -11,7 +11,7 @@ Edge case tests for the `--from <DIR>` parameter, which enables session cross-lo
 | EC-1 | `--from` plans a transplant of the source session + bare `-c` when source has session | Behavioral Divergence |
 | EC-2 | `--session-from` (pre-rename flag name) is no longer recognized | Rejection |
 | EC-3 | Source dir with no `.jsonl` → no `-c` injected, no transplant; fresh session | Behavioral Divergence |
-| EC-4 | `--session-dir` takes precedence over `--from` | Precedence |
+| EC-4 | deprecated `--session-dir` is inert alongside `--from` (BUG-493) | Deprecation |
 | EC-5 | `--new-session` takes precedence over `--from` | Precedence |
 | EC-6 | `--to` + `--from`: Claude runs in target dir, loads from source | Behavioral |
 | EC-7 | `CLR_FROM` env var equivalent to `--from` | EnvFallback |
@@ -74,14 +74,14 @@ Edge case tests for the `--from <DIR>` parameter, which enables session cross-lo
 
 ---
 
-### EC-4: `--session-dir` takes precedence over `--from`
+### EC-4: deprecated `--session-dir` is inert alongside `--from` (BUG-493)
 
-- **Given:** source dir `/tmp/076ec4-src` storage holds `ccc-333.jsonl`; raw override dir (a temp dir) holds `xyz-789.jsonl`
+- **Given:** source dir `/tmp/076ec4-src` storage holds `ccc-333.jsonl` (under a temp `CLAUDE_HOME`); raw override dir (a temp dir) holds `xyz-789.jsonl`
 - **When:** `clr --from /tmp/076ec4-src --session-dir <override> --dry-run "test"`
-- **Then:** dry-run output contains `CLAUDE_CODE_SESSION_DIR=<override>` (the raw path verbatim — the raw `--session-dir` export is BUG-493's own domain and still emitted); the computed source storage path does NOT appear anywhere in the output; no `# session-transplant:` plan line appears (the raw override suppresses the transplant)
+- **Then:** dry-run output does NOT contain `CLAUDE_CODE_SESSION_DIR=` (Fix(BUG-493) removed the last export); the transplant plan line `# session-transplant: <src storage>/ccc-333.jsonl -> ` appears — `--from` governs; the deprecated parameter neither exports nor suppresses anything
 - **Exit:** 0
 - **Source:** [param/076_from.md](../../../../docs/cli/param/076_from.md)
-- **Implemented by:** `session_from_test.rs::ec4_session_dir_wins_over_from`
+- **Implemented by:** `session_from_test.rs::ec4_session_dir_inert_alongside_from`
 
 ---
 

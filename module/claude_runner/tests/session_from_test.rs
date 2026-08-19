@@ -240,20 +240,21 @@ fn ec3_empty_source_no_continue()
   );
 }
 
-// ── EC-4: --session-dir wins over --from ────────────────────────────────────────
+// ── EC-4: --session-dir is inert alongside --from ───────────────────────────────
 
-/// EC-4: `--session-dir` takes precedence over `--from`.
+/// EC-4: `--session-dir` is deprecated and inert — `--from` governs when both are given.
 ///
-/// When both are given, `CLAUDE_CODE_SESSION_DIR` must be the raw `--session-dir`
-/// path; the computed source storage path from `--from` must not appear.
+/// Fix(BUG-493): the former precedence rule (`--session-dir` raw path wins) is gone.
+/// The deprecated parameter must neither export `CLAUDE_CODE_SESSION_DIR` nor
+/// suppress the `--from` transplant plan; the source storage governs `-c` gating.
 #[ test ]
-fn ec4_session_dir_wins_over_from()
+fn ec4_session_dir_inert_alongside_from()
 {
   let ch  = tempfile::TempDir::new().expect( "tmpdir" );
   let src = "/tmp/076ec4-src";
-  // Source session (should be ignored — --session-dir wins)
-  make_session_for( ch.path(), src, "ccc-333" );
-  // Override session dir (raw path wins)
+  // Source session — governs, despite --session-dir also being present
+  let jsonl = make_session_for( ch.path(), src, "ccc-333" );
+  // Deprecated override dir (must be ignored entirely)
   let override_dir = tempfile::TempDir::new().expect( "override tmpdir" );
   std::fs::write( override_dir.path().join( "xyz-789.jsonl" ), b"{}" )
     .expect( "write override session" );
@@ -263,20 +264,15 @@ fn ec4_session_dir_wins_over_from()
     &[ "--from", src, "--session-dir", override_str, "test" ],
     &[ ( "CLAUDE_HOME", ch_str ) ],
   );
-  // Raw --session-dir path must be used
+  // The dead env export must never appear (claude >= 2.x ignores it)
   assert!(
-    stdout.contains( &format!( "CLAUDE_CODE_SESSION_DIR={override_str}" ) ),
-    "`--session-dir` raw path must win. Got:\n{stdout}"
+    !stdout.contains( "CLAUDE_CODE_SESSION_DIR=" ),
+    "deprecated `--session-dir` must not export CLAUDE_CODE_SESSION_DIR. Got:\n{stdout}"
   );
-  // Computed source storage path must NOT appear
-  let src_dir = format!( "{ch_str}/projects/{}", df( src ) );
+  // --from still governs: transplant planned from the SOURCE storage
   assert!(
-    !stdout.contains( &src_dir ),
-    "`--from` computed path `{src_dir}` must NOT appear. Got:\n{stdout}"
-  );
-  assert!(
-    !stdout.contains( "# session-transplant:" ),
-    "`--session-dir` override must suppress the transplant plan. Got:\n{stdout}"
+    stdout.contains( &format!( "# session-transplant: {} -> ", jsonl.display() ) ),
+    "`--from` must govern the transplant plan despite `--session-dir`. Got:\n{stdout}"
   );
 }
 
@@ -563,20 +559,21 @@ fn us5_to_alias_sets_working_dir()
   );
 }
 
-// ── US-6: --session-dir wins over --from ────────────────────────────────────────
+// ── US-6: --session-dir is inert; --from governs ────────────────────────────────
 
-/// US-6: `--session-dir` raw path wins over `--from` computed path.
+/// US-6: the deprecated `--session-dir` never displaces `--from`'s computed path.
 ///
-/// `CLAUDE_CODE_SESSION_DIR` must equal the raw `--session-dir` path (that raw
-/// export is BUG-493's domain and still emitted); no transplant plan appears.
+/// Fix(BUG-493): `--session-dir` is inert — no `CLAUDE_CODE_SESSION_DIR` export, no
+/// transplant suppression. The `--from` source storage's session is transplanted
+/// exactly as if `--session-dir` were absent.
 #[ test ]
-fn us6_session_dir_wins_over_from()
+fn us6_session_dir_inert_from_governs()
 {
   let ch  = tempfile::TempDir::new().expect( "tmpdir" );
   let src = "/tmp/us28-proj-a-prec";
-  // Source session (should be ignored — --session-dir wins)
-  make_session_for( ch.path(), src, "abc-123" );
-  // Override session dir (raw path)
+  // Source session — governs, despite --session-dir also being present
+  let jsonl = make_session_for( ch.path(), src, "abc-123" );
+  // Deprecated override dir (must be ignored entirely)
   let override_dir = tempfile::TempDir::new().expect( "override tmpdir" );
   std::fs::write( override_dir.path().join( "xyz-789.jsonl" ), b"{}" )
     .expect( "write override session" );
@@ -587,18 +584,12 @@ fn us6_session_dir_wins_over_from()
     &[ ( "CLAUDE_HOME", ch_str ) ],
   );
   assert!(
-    stdout.contains( &format!( "CLAUDE_CODE_SESSION_DIR={override_str}" ) ),
-    "`--session-dir` raw path must be used. Got:\n{stdout}"
-  );
-  // Source computed path must NOT appear
-  let src_dir = format!( "{ch_str}/projects/{}", df( src ) );
-  assert!(
-    !stdout.contains( &src_dir ),
-    "source computed path `{src_dir}` must NOT appear. Got:\n{stdout}"
+    !stdout.contains( "CLAUDE_CODE_SESSION_DIR=" ),
+    "deprecated `--session-dir` must not export CLAUDE_CODE_SESSION_DIR. Got:\n{stdout}"
   );
   assert!(
-    !stdout.contains( "# session-transplant:" ),
-    "`--session-dir` override must suppress the transplant plan. Got:\n{stdout}"
+    stdout.contains( &format!( "# session-transplant: {} -> ", jsonl.display() ) ),
+    "`--from` must govern the transplant plan despite `--session-dir`. Got:\n{stdout}"
   );
 }
 

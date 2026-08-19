@@ -21,7 +21,7 @@ coexist without conflict and are consumed by the runner, not forwarded to claude
 | ID | Test Name | Category |
 |----|-----------|----------|
 | CC-1 | `--dry-run` + `--no-ultrathink` → both applied in preview | Interaction |
-| CC-2 | `--new-session` + `--session-dir` → both accepted | Interaction |
+| CC-2 | `--new-session` + `--session-dir` → both accepted (session-dir inert) | Interaction |
 | CC-3 | `--no-skip-permissions` + `--no-effort-max` → both suppressed | Interaction |
 | CC-4 | All runner control flags together → no conflict | Combined |
 | CC-5 | `--file` + `--strip-fences` + `--keep-claudecode` together → all accepted | Interaction |
@@ -47,11 +47,11 @@ coexist without conflict and are consumed by the runner, not forwarded to claude
 - **Commands:** run, ask
 ---
 
-### CC-2: `--new-session` + `--session-dir` → both accepted
+### CC-2: `--new-session` + `--session-dir` → both accepted (session-dir inert)
 
 - **Given:** clean environment
 - **When:** `clr --dry-run --new-session --session-dir /tmp/sessions "Fix bug"`
-- **Then:** Env block contains `CLAUDE_CODE_SESSION_DIR=/tmp/sessions`; no `-c` flag in assembled command
+- **Then:** Env block does NOT contain `CLAUDE_CODE_SESSION_DIR=` (deprecated parameter is inert — Fix(BUG-493)); no `-c` flag in assembled command
 - **Exit:** 0
 - **Source:** [param_group/02_runner_control.md](../../../../docs/cli/param_group/02_runner_control.md)
 - **Commands:** run, ask
@@ -71,7 +71,7 @@ coexist without conflict and are consumed by the runner, not forwarded to claude
 
 - **Given:** `/tmp/rc_test.txt` exists and is readable; clean environment
 - **When:** `clr --dry-run --no-skip-permissions --interactive --new-session --dir /tmp/test --subdir work --max-tokens 100000 --session-dir /tmp/sessions --quiet --trace --no-ultrathink --no-effort-max --no-chrome --no-persist --file /tmp/rc_test.txt --strip-fences --keep-claudecode --output-file /tmp/rc_out.txt --expect "yes|no" --expect-strategy fail --max-sessions 5 --retry-on-transient 3 --transient-delay 30 --timeout 60 --retry-on-account 1 --account-delay 0 --retry-on-auth 1 --auth-delay 0 --retry-on-service 1 --service-delay 0 --retry-on-process 1 --process-delay 0 --retry-on-validation 2 --validation-delay 0 --retry-on-runner 0 --runner-delay 0 --retry-on-unknown 1 --unknown-delay 0 --retry-override 3 --retry-override-delay 0 --retry-default 2 --retry-default-delay 30 --output-style summary --summary-fields standard --journal full --journal-dir /tmp/j "Fix bug"`
-- **Then:** Exit 0; all forty-six flags accepted without conflict; command assembled correctly; effective dir contains `/tmp/test/-work`; `--chrome` and `--dangerously-skip-permissions` are absent from assembled command; no unknown-flag error for any runner-control flag
+- **Then:** Exit 0; all forty-six flags accepted without conflict; command assembled correctly; effective dir contains `/tmp/test/-work`; `--chrome` and `--dangerously-skip-permissions` are absent from assembled command; no unknown-flag error for any runner-control flag; stderr consists of exactly one line — the `--session-dir is deprecated` warning (unconditional, not `--quiet`-gated — Fix(BUG-493)); dry-run still wins over `--trace` (no trace output)
 - **Exit:** 0
 - **Source:** [param_group/02_runner_control.md](../../../../docs/cli/param_group/02_runner_control.md)
 - **Commands:** run, ask

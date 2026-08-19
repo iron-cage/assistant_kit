@@ -22,7 +22,7 @@
 
 | # | Parameter Group | Role |
 |---|-----------------|------|
-| 2 | [Runner Control](../param_group/02_runner_control.md) | `--dir`, `--new-session`, `--session-dir` control REPL session |
+| 2 | [Runner Control](../param_group/02_runner_control.md) | `--dir` and `--new-session` control the REPL session (`--session-dir` is deprecated, inert) |
 
 ### Referenced Parameters
 
@@ -30,7 +30,7 @@
 |---|-----------|------|
 | 7 | [`--new-session`](../param/007_new_session.md) | Discard prior context; start fresh |
 | 8 | [`--dir`](../param/008_dir.md) | Set working directory for the REPL session |
-| 10 | [`--session-dir`](../param/010_session_dir.md) | Override session storage location |
+| 10 | [`--session-dir`](../param/010_session_dir.md) | Deprecated, inert (Fix(BUG-493)) — accepted with a stderr warning only |
 
 ### Workflow Steps
 

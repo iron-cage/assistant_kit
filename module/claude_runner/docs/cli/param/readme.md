@@ -111,7 +111,7 @@ These parameter IDs exist in the sequence but have no corresponding file. The ID
 | 7 | `--new-session` | bool | false | present/absent | Start fresh session (disables default continuation) | 1 cmd |
 | 8 | `--dir` | [`DirectoryPath`](../type/02_directory_path.md) | cwd | Any path | Working directory | 1 cmd |
 | 9 | `--max-tokens` | [`TokenLimit`](../type/03_token_limit.md) | 128000 | 0 to 4294967295 | Max output tokens | 1 cmd |
-| 10 | `--session-dir` | [`DirectoryPath`](../type/02_directory_path.md) | — | Any path | Session storage directory | 1 cmd |
+| 10 | `--session-dir` | ~~[`DirectoryPath`](../type/02_directory_path.md)~~ | — | Any path (inert) | **DEPRECATED**, no effect (BUG-493) — see `--from` (76) | 1 cmd |
 | 11 | `--dry-run` | bool | false | present/absent | Print command without executing | 1 cmd |
 | 12 | `--verbosity` | ~~[`VerbosityLevel`](../type/05_verbosity_level.md)~~ | ~~3~~ | ~~0 to 5~~ | **DEPRECATED** — see `--quiet` (74) | — |
 | 13 | `--trace` | bool | false | present/absent | Print diagnostic details to stderr then execute | 3 cmds |

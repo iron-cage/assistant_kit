@@ -12,8 +12,8 @@ Test case planning for [invariant/001_default_flags.md](../../../docs/invariant/
 | IN-4 | `--effort max` present by default | Default Present |
 | IN-5 | Message has `ultrathink` suffix by default | Default Present |
 | IN-6 | All opt-outs together remove all suppressible defaults | Combined Suppression |
-| IN-7 | Empty `--session-dir` → `-c` absent from assembled command (BUG-214 regression) | First-use guard |
-| IN-8 | Fresh CWD, no `--session-dir` → `-c` absent from assembled command (BUG-214-reopen regression) | First-use guard |
+| IN-7 | Empty session storage → `-c` absent from assembled command (BUG-214 regression) | First-use guard |
+| IN-8 | Fresh CWD, no prior session → `-c` absent from assembled command (BUG-214-reopen regression) | First-use guard |
 
 ## Test Coverage Summary
 
@@ -87,22 +87,22 @@ Test case planning for [invariant/001_default_flags.md](../../../docs/invariant/
 
 ---
 
-### IN-7: Empty `--session-dir` → `-c` absent from assembled command (BUG-214 regression)
+### IN-7: Empty session storage → `-c` absent from assembled command (BUG-214 regression)
 
-- **Given:** clean environment; `--session-dir` points to a freshly created empty directory
-- **When:** `clr --dry-run --session-dir /tmp/mre214_empty "Fix bug"`
-- **Then:** Assembled command does NOT contain ` -c`; `session_exists()` guard detected empty directory and suppressed `-c` injection
+- **Given:** clean environment; `CLAUDE_HOME` points at a freshly created empty temp dir (Fix(BUG-493): the former `--session-dir <empty dir>` lever is deprecated and inert)
+- **When:** `clr --dry-run "Fix bug"` with the empty `CLAUDE_HOME`
+- **Then:** Assembled command does NOT contain ` -c`; `session_exists()` guard detected empty source storage and suppressed `-c` injection
 - **Exit:** 0
 - **Source:** [invariant/001_default_flags.md § Fixed Defects](../../../docs/invariant/001_default_flags.md)
-- **Implementation:** `tests/param_edge_cases_test.rs` — `bug_214_empty_session_dir_suppresses_continue_flag`
+- **Implementation:** `tests/param_edge_cases_test.rs` — `bug_214_empty_source_storage_suppresses_continue_flag`
 
 ---
 
-### IN-8: Fresh CWD, no `--session-dir` → `-c` absent (BUG-214-reopen regression)
+### IN-8: Fresh CWD, no prior session → `-c` absent (BUG-214-reopen regression)
 
-- **Given:** fresh temporary directory with no prior Claude sessions; no `--session-dir` given
+- **Given:** fresh temporary directory with no prior Claude sessions
 - **When:** `clr --dry-run "Fix bug"` run from the fresh temporary directory
-- **Then:** Assembled command does NOT contain ` -c`; `check_continuation()` checked the project-specific path `$HOME/.claude/projects/{encoded(cwd)}/` and found no sessions — injection suppressed
+- **Then:** Assembled command does NOT contain ` -c`; `session_exists()` checked the project-specific storage `$HOME/.claude/projects/{encoded(cwd)}/` and found no sessions — injection suppressed
 - **Exit:** 0
 - **Source:** [invariant/001_default_flags.md § Fixed Defects](../../../docs/invariant/001_default_flags.md)
 - **Implementation:** `tests/dry_run_test.rs` — `bug_reproducer_214_no_session_dir_fresh_cwd_no_continue_flag`

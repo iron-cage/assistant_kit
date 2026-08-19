@@ -38,7 +38,7 @@ See `../algorithm/003_session_file_selection.md` for the complete algorithm.
 |-----------|-------|
 | Env var | none |
 
-`CLAUDE_SESSION_FILE` is purely read-only output from `scope_for()`. To inject a specific session, use `--session-dir` (raw path) or `--from <DIR>` (directory whose session is computed via `scope_for()`; defaults to cwd when omitted).
+`CLAUDE_SESSION_FILE` is purely read-only output from `scope_for()`. To inject a specific session, use `--from <DIR>` (directory whose session is computed via `scope_for()`; defaults to cwd when omitted). The deprecated `--session-dir` is inert (BUG-493).
 
 ### Examples
 
@@ -55,6 +55,6 @@ See `../algorithm/003_session_file_selection.md` for the complete algorithm.
 |------|--------------|
 | [`003_claude_session_dir.md`](003_claude_session_dir.md) | CLAUDE_SESSION_DIR — the directory scanned to produce CLAUDE_SESSION_FILE |
 | [`../algorithm/003_session_file_selection.md`](../algorithm/003_session_file_selection.md) | Session file selection algorithm — the exact scan and filter steps |
-| [`../cli/param/010_session_dir.md`](../cli/param/010_session_dir.md) | `--session-dir` — raw override for session storage path |
+| [`../cli/param/010_session_dir.md`](../cli/param/010_session_dir.md) | `--session-dir` — DEPRECATED, inert (BUG-493); kept for CLI compatibility |
 | [`../cli/param/076_from.md`](../cli/param/076_from.md) | `--from` — computes CLAUDE_SESSION_DIR for source dir |
 | [`../feature/005_session_path_resolution.md`](../feature/005_session_path_resolution.md) | Feature hub: `scope_for()` and session cross-loading |

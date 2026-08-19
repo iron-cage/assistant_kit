@@ -25,7 +25,7 @@ additionally exposes `COMMANDS_YAML` for consumers that register `clr` as a comm
 - Session continuation (`-c`) applied by default; `--new-session` starts fresh
 - Modes: interactive (default), print (`-p`), dry-run (`--dry-run`)
 - Flags: `-p`, `--interactive`, `--new-session`, `--model`, `--verbose`, `--quiet`, `--no-skip-permissions`,
-  `--max-tokens`, `--max-sessions`, `--session-dir`, `--dir`, `--dry-run`, `--trace`,
+  `--max-tokens`, `--max-sessions`, `--session-dir` (deprecated, inert), `--dir`, `--dry-run`, `--trace`,
   `--system-prompt`, `--append-system-prompt`, `-h`
 - Exit code propagation
 

@@ -18,7 +18,7 @@ Test files: `tests/env_var_test.rs` (E01–E17), `tests/env_var_ext_test.rs` (E1
 | E07 | `CLR_NEW_SESSION` suppresses `-c` | `CLR_NEW_SESSION` | ` -c` absent in assembled command |
 | E08 | `CLR_DIR` sets working directory | `CLR_DIR` | dir path appears in assembled command |
 | E09 | `CLR_MAX_TOKENS` sets limit | `CLR_MAX_TOKENS` | token value appears in assembled command |
-| E10 | `CLR_SESSION_DIR` sets session dir | `CLR_SESSION_DIR` | session dir path appears in assembled command |
+| E10 | `CLR_SESSION_DIR` deprecated and inert (BUG-493) | `CLR_SESSION_DIR` | value absent from assembled command; stderr warning |
 | E11 | `CLR_DRY_RUN` enables preview | `CLR_DRY_RUN` | exit 0 and command printed without execution |
 | E12 | `CLR_QUIET=true` suppresses diagnostic warning | `CLR_QUIET` | nested-agent warning absent from stderr |
 | E13 | `CLR_TRACE` prints command to stderr | `CLR_TRACE` | assembled command preview appears in stderr |
@@ -165,11 +165,11 @@ Test files: `tests/env_var_test.rs` (E01–E17), `tests/env_var_ext_test.rs` (E1
 
 ---
 
-### E10: CLR_SESSION_DIR sets session directory
+### E10: CLR_SESSION_DIR is deprecated and inert (BUG-493)
 
 - **Given:** `CLR_SESSION_DIR=/tmp/e10sess`
 - **When:** `clr --dry-run task`
-- **Then:** stdout contains `/tmp/e10sess`
+- **Then:** stdout does NOT contain `/tmp/e10sess` (value applies no effect); stderr contains the one-line `--session-dir is deprecated` warning
 - **Exit:** 0
 - **Source:** [003_env_param.md §1](../../../../docs/cli/003_env_param.md)
 

@@ -5,10 +5,11 @@
 //! | Helper | Used By |
 //! |--------|---------|
 //! | `run_cli` | `cli_args_test`, `cli_args_ext_test`, `dry_run_test`, `ultrathink_args_test`, `effort_args_test`, `param_edge_cases_test`, `param_extended_flags_test`, `param_group_test`, `execution_mode_test`, `quiet_test`, `ask_command_test`, `user_story_test`, `user_story_creds_isolated_test`, `user_story_output_test`, `user_story_ps_test`, `user_story_kill_test`, `ps_command_test`, `kill_command_test`, `ps_mode_test`, `ps_columns_test`, `ps_wide_test`, `ps_pid_test`, `ps_inspect_test`, `ps_flags_test`, `output_style_test`, `summary_fields_test`, `no_compact_window_test`, `json_config_test` |
-//! | `run_cli_with_env` | `env_var_test`, `env_var_ext_test`, `invariant_trace_universality_test`, `param_trace_edge_cases_test`, `param_group_test`, `isolated_test`, `user_story_creds_isolated_test`, `user_story_output_test`, `bug_reproducers_239_244_test`, `error_classification_test`, `ps_command_test`, `user_story_ps_test`, `output_style_test`, `summary_fields_test`, `no_compact_window_test`, `json_config_test`, `config_file_test` |
+//! | `run_cli_with_env` | `env_var_test`, `env_var_ext_test`, `invariant_trace_universality_test`, `param_trace_edge_cases_test`, `param_group_test`, `isolated_test`, `user_story_creds_isolated_test`, `user_story_output_test`, `bug_reproducers_239_244_test`, `error_classification_test`, `ps_command_test`, `user_story_ps_test`, `output_style_test`, `summary_fields_test`, `no_compact_window_test`, `json_config_test`, `config_file_test`, `cli_args_ext_test`, `param_edge_cases_test` |
 //! | `run_cli_in_dir` | `config_file_test` |
-//! | `make_session_dir` | `cli_args_test`, `ultrathink_args_test`, `user_story_test`, `dry_run_test` |
-//! | `make_zero_turn_session_dir` | `execution_mode_test` |
+//! | `make_continuable_from` | `cli_args_test`, `ultrathink_args_test`, `user_story_test`, `dry_run_test`, `execution_mode_ext_test`, `session_verification_test` |
+//! | `make_continuable_from_with` | `execution_mode_ext_test` (zero-turn transcripts), `session_verification_test` |
+//! | `run_dry_with_env` | `user_story_test`, `dry_run_test`, `execution_mode_ext_test`, `cli_args_test`, `ultrathink_args_test` |
 //! | `exit_code` | `refresh_test`, `bug_reproducers_239_244_test`, `user_story_test`, `user_story_creds_isolated_test`, `isolated_test`, `json_config_test`, `config_file_test` |
 //! | `stderr_str` | `refresh_test`, `bug_reproducers_239_244_test`, `invariant_trace_universality_test`, `error_classification_test`, `user_story_test`, `user_story_creds_isolated_test`, `isolated_correctness_test`, `isolated_test`, `ps_command_test`, `user_story_ps_test`, `kill_command_test`, `user_story_kill_test`, `ps_mode_test`, `ps_columns_test`, `output_format_test`, `no_compact_window_test`, `json_config_test`, `config_file_test` |
 //! | `stdout_str` | `refresh_test`, `isolated_correctness_test`, `isolated_test`, `dry_run_test`, `ps_command_test`, `user_story_ps_test`, `kill_command_test`, `user_story_kill_test`, `ps_mode_test`, `ps_columns_test`, `ps_wide_test`, `output_format_test`, `no_compact_window_test`, `json_config_test`, `config_file_test` |
@@ -17,10 +18,11 @@
 //! | `fake_claude_binary_dir` (unix) | `ps_command_test`, `user_story_ps_test`, `kill_command_test`, `user_story_kill_test`, `ps_mode_test`, `ps_columns_test`, `ps_wide_test`, `ps_flags_test`, `config_file_test` |
 //! | `fake_claude` (unix) | `execution_mode_test`, `expect_validation_test` |
 //! | `run_with_path` | `execution_mode_test`, `expect_validation_test`, `exit_code_contract_test`, `output_format_test` |
+//! | `run_with_path_env` | `execution_mode_test`, `execution_mode_ext_test` |
 //! | `run_with_path_stdin` | `execution_mode_test` |
 //! | `run_with_path_proc` (unix) | `expect_validation_test` |
 //! | `make_proc_dir` (unix) | `kill_command_test`, `expect_validation_test`, `config_file_test` |
-//! | `run_dry` | `user_story_test`, `user_story_creds_isolated_test`, `user_story_output_test`, `dry_run_test` |
+//! | `run_dry` | `user_story_test`, `user_story_creds_isolated_test`, `user_story_output_test`, `dry_run_test`, `execution_mode_ext_test` |
 //! | `run_ask_dry` | `ask_command_test`, `user_story_creds_isolated_test` |
 //! | `run_topic_dry` | `topic_command_test` |
 //! | `spawn_fake_claude` (unix) | `ps_command_test`, `user_story_ps_test`, `kill_command_test`, `user_story_kill_test`, `ps_mode_test`, `ps_columns_test`, `ps_wide_test`, `ps_pid_test`, `ps_inspect_test`, `param_group_test`, `ps_flags_test` |
@@ -46,10 +48,13 @@
 //!   subprocess spawn attempt follows (typically fails if `claude` binary absent).
 //! - **`PATH=/nonexistent`**: Force binary-not-found for deterministic failure
 //!   testing — trace output fires before subprocess invocation attempt.
-//! - **`make_session_dir`**: Create a temp session dir with a dummy `.jsonl` file so
-//!   `session_exists()` returns `Some(SessionId)` regardless of the ambient host environment.  Tests that assert
-//!   `-c` injection must use `--session-dir <path>` with this helper; otherwise they
-//!   are fragile and fail in clean container environments with no prior Claude sessions.
+//! - **`make_continuable_from`**: Create a fake `CLAUDE_HOME` with one session file in
+//!   the encoded storage of a fixture source dir so `session_exists()` returns
+//!   `Some(SessionId)` regardless of the ambient host environment. Tests that assert
+//!   `-c` injection must pass `--from <from_path>` plus `("CLAUDE_HOME", &home)` with
+//!   this fixture; otherwise they are fragile and fail in clean container environments
+//!   with no prior Claude sessions. (`--session-dir` is deprecated and inert — BUG-493 —
+//!   and can no longer serve as this lever.)
 
 use std::process::Command;
 
@@ -166,64 +171,64 @@ pub fn run_cli_in_dir
     .expect( "failed to execute clr binary" )
 }
 
-/// Create a temp session directory with one dummy `.jsonl` file; returns `(dir, path_string)`.
+/// Create a fake `CLAUDE_HOME` holding one session file (`<uuid>.jsonl` with `content`)
+/// in the encoded storage of a fixture source project dir; returns
+/// `( claude_home_tempdir, claude_home_path, from_path )`.
 ///
-/// The caller must keep the returned `TempDir` alive for the duration of the test —
-/// the directory and its contents are deleted when the `TempDir` is dropped.
-/// Pass the returned `path_string` as the value of `--session-dir` to force
-/// `session_exists()` to return `Some(SessionId)`, making `-c` injection deterministic
-/// regardless of the ambient host session state.
+/// Forces `session_exists()` to find a session deterministically under the BUG-493
+/// semantics (`--session-dir` is deprecated and inert): pass `--from <from_path>` in
+/// args and `( "CLAUDE_HOME", &claude_home_path )` in env. The session then lives at
+/// `<claude_home>/projects/<encode(from_path)>/<uuid>.jsonl` — exactly where the
+/// builder's source-storage resolution (`scope_for(physical_abs(from))`) looks.
 ///
-/// Pitfall: if the caller drops `TempDir` before passing the path to the subprocess,
-/// the directory is deleted and `session_exists()` returns `None`.
+/// The `from_path` is a fixture literal that never exists on disk — `physical_abs()`
+/// then normalizes it lexically instead of via `fs::canonicalize`, so the storage
+/// encoding never depends on symlink resolution of a real temp dir. Collisions across
+/// parallel tests are harmless: storage isolation comes from the per-test `CLAUDE_HOME`.
+///
+/// Pitfall: if the caller drops the `TempDir` before spawning the subprocess, the
+/// storage is deleted and `session_exists()` returns `None`.
 ///
 /// # Panics
 ///
-/// Panics if the temp directory or the dummy file cannot be created.
+/// Panics if the storage directory or the session file cannot be created.
 #[must_use]
 #[inline]
 #[allow(dead_code)]
-pub fn make_session_dir() -> ( tempfile::TempDir, String )
+pub fn make_continuable_from_with( uuid : &str, content : &[ u8 ] ) -> ( tempfile::TempDir, String, String )
 {
-  let dir = tempfile::TempDir::new().expect( "failed to create temp session dir" );
-  std::fs::write( dir.path().join( "00000000-0000-0000-0000-000000000000.jsonl" ), b"{}" )
-    .expect( "failed to write dummy session file" );
-  let path = dir.path().to_str().expect( "session dir path must be valid UTF-8" ).to_owned();
-  ( dir, path )
+  let ch   = tempfile::TempDir::new().expect( "failed to create temp CLAUDE_HOME" );
+  let from = "/tmp/clr-continuable-from".to_owned();
+  let encoded = claude_storage_core::encode_path( std::path::Path::new( &from ) )
+    .expect( "fixture from-path must encode" );
+  let storage = ch.path().join( "projects" ).join( encoded );
+  std::fs::create_dir_all( &storage ).expect( "failed to create session storage" );
+  std::fs::write( storage.join( format!( "{uuid}.jsonl" ) ), content )
+    .expect( "failed to write session file" );
+  let home = ch.path().to_str().expect( "CLAUDE_HOME path must be valid UTF-8" ).to_owned();
+  ( ch, home, from )
 }
 
-/// Create a temp session directory with one `.jsonl` file shaped like a zero-model-turn
-/// transcript (BUG-428): structurally qualifies as a resume candidate under
-/// `most_recent_session_in_dir()`'s 4 checks (correct extension, no `agent-` prefix,
-/// non-zero size, valid UTF-8 stem) but records no model turns — the exact shape claude's
-/// real `--resume` logic rejects with `"No conversation found to continue"`
-/// (`contract/claude_code/docs/version/088_v2_1_187.md:19`). Content mirrors BUG-428's own
-/// Minimum Reproducible Example (a lone `system`/`init` line, no `assistant` turn).
+/// Shorthand for [`make_continuable_from_with`] with a placeholder session
+/// (`00000000-0000-0000-0000-000000000000.jsonl` containing `{}`) — for callers that
+/// only need `session_exists()` to return `Some(SessionId)`, without caring about the
+/// transcript's shape.
 ///
-/// Distinct from `make_session_dir()`: that helper's placeholder `{}` content is never
-/// semantically inspected by its callers (only `session_exists()`'s structural checks
-/// matter to them) — this one specifically names and documents the zero-turn scenario for
-/// BUG-428's own reproducer tests, so a future reader does not have to re-derive why the
-/// content looks the way it does.
-///
-/// The caller must keep the returned `TempDir` alive for the duration of the test.
+/// For a zero-model-turn transcript (BUG-428's shape — structurally a resume candidate
+/// that claude's real `--resume` rejects with `"No conversation found to continue"`),
+/// call `make_continuable_from_with( uuid, b"{\"type\":\"system\",\"subtype\":\"init\"}\n" )`
+/// instead — content mirrors BUG-428's own Minimum Reproducible Example (a lone
+/// `system`/`init` line, no `assistant` turn).
 ///
 /// # Panics
 ///
-/// Panics if the temp directory or the fixture file cannot be created.
+/// Panics if the storage directory or the session file cannot be created.
 #[must_use]
 #[inline]
 #[allow(dead_code)]
-pub fn make_zero_turn_session_dir() -> ( tempfile::TempDir, String )
+pub fn make_continuable_from() -> ( tempfile::TempDir, String, String )
 {
-  let dir = tempfile::TempDir::new().expect( "failed to create temp session dir" );
-  std::fs::write(
-    dir.path().join( "00000000-0000-0000-0000-000000000001.jsonl" ),
-    b"{\"type\":\"system\",\"subtype\":\"init\"}\n",
-  )
-  .expect( "failed to write zero-turn session file" );
-  let path = dir.path().to_str().expect( "session dir path must be valid UTF-8" ).to_owned();
-  ( dir, path )
+  make_continuable_from_with( "00000000-0000-0000-0000-000000000000", b"{}" )
 }
 
 /// Extract the process exit code from a subprocess `Output`.
@@ -732,6 +737,43 @@ pub fn run_dry( args : &[ &str ] ) -> String
   String::from_utf8_lossy( &out.stdout ).into_owned()
 }
 
+/// Invoke `clr --dry-run` with `args` and extra env vars; assert exit 0, return stdout.
+///
+/// Mirrors [`run_dry`] (same `--dry-run` prefix, same `CLR_*` scrubbing and isolated
+/// `HOME`) but additionally applies `env` pairs after the fixed ones — needed by tests
+/// that pass a fake `CLAUDE_HOME` (e.g. via [`make_continuable_from`]) to control
+/// which session storage `session_exists()` scans.
+///
+/// # Panics
+///
+/// Panics if the subprocess cannot be launched or exits non-zero.
+#[ must_use ]
+#[ inline ]
+#[ allow( dead_code ) ]
+pub fn run_dry_with_env( args : &[ &str ], env : &[ ( &str, &str ) ] ) -> String
+{
+  assert_container();
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let mut full = vec![ "--dry-run" ];
+  full.extend_from_slice( args );
+  let out = Command::new( bin )
+    .args( &full )
+    .env( "HOME", "/tmp/clr-isolated-home" )
+    .env_remove( "CLR_DIR" )
+    .env_remove( "CLR_SESSION_DIR" )
+    .env_remove( "CLR_NO_COMPACT_WINDOW" )
+    .envs( env.iter().copied() )
+    .output()
+    .expect( "Failed to invoke clr binary" );
+  assert!(
+    out.status.success(),
+    "dry-run failed (exit {}): {}",
+    out.status.code().unwrap_or( -1 ),
+    String::from_utf8_lossy( &out.stderr )
+  );
+  String::from_utf8_lossy( &out.stdout ).into_owned()
+}
+
 /// Invoke `clr` binary with `args` and a custom `PATH`; return raw `Output`.
 ///
 /// Sets only the `PATH` environment variable; all other env vars are inherited.
@@ -750,6 +792,35 @@ pub fn run_with_path( args : &[ &str ], path : &str ) -> std::process::Output
   Command::new( bin )
     .args( args )
     .env( "PATH", path )
+    .output()
+    .expect( "Failed to invoke clr binary" )
+}
+
+/// Invoke `clr` binary with `args`, a custom `PATH`, and extra environment variables.
+///
+/// Mirrors `run_with_path` but additionally injects `env` pairs via `Command::envs()`
+/// and scrubs `CLR_DIR`/`CLR_SESSION_DIR`/`CLR_FROM` — used by tests that pin session
+/// storage deterministically by setting `CLAUDE_HOME` alongside a fake `claude` binary
+/// on `PATH` (see `make_continuable_from`), where an ambient override var would
+/// otherwise change which storage `session_exists()` scans.
+///
+/// # Panics
+///
+/// Panics if the `clr` binary cannot be launched.
+#[must_use]
+#[inline]
+#[allow(dead_code)]
+pub fn run_with_path_env( args : &[ &str ], path : &str, env : &[ ( &str, &str ) ] ) -> std::process::Output
+{
+  assert_container();
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  Command::new( bin )
+    .args( args )
+    .env( "PATH", path )
+    .envs( env.iter().copied() )
+    .env_remove( "CLR_DIR" )
+    .env_remove( "CLR_SESSION_DIR" )
+    .env_remove( "CLR_FROM" )
     .output()
     .expect( "Failed to invoke clr binary" )
 }

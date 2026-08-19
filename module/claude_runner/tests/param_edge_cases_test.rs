@@ -40,15 +40,15 @@
 //!
 //! --new-session:
 //! - S16: `--new-session` without message → exit 0, no `-c` (`007_new_session.md` EC-3)
-//! - S17: `--new-session --session-dir /path "msg"` → both accepted (`007_new_session.md` EC-6)
+//! - S17: `--new-session --session-dir /path "msg"` → both accepted; session-dir inert (`007_new_session.md` EC-6)
 //!
 //! --dir:
 //! - S18: without `--dir` → no `cd` line in output (`008_dir.md` EC-3)
 //! - S19: `--dir /no/such/path` → accepted without validation (`008_dir.md` EC-4)
 //!
-//! --session-dir:
+//! --session-dir (deprecated, inert — BUG-493):
 //! - S20: without `--session-dir` → `CLAUDE_CODE_SESSION_DIR` absent (`010_session_dir.md` EC-3)
-//! - S21: `--session-dir --new-session` → both accepted (`010_session_dir.md` EC-4)
+//! - S21: `--session-dir --new-session` → both accepted, session-dir inert (`010_session_dir.md` EC-4)
 //! - S22: `--session-dir /no/such/dir` → accepted without validation (`010_session_dir.md` EC-6)
 //!
 //! --dry-run:
@@ -81,7 +81,7 @@
 //! - EC-7: `--dry-run` with default max and 0 active sessions → no gate messages (`033_max_sessions.md` EC-7)
 
 mod cli_binary_test_helpers;
-use cli_binary_test_helpers::run_cli;
+use cli_binary_test_helpers::{ run_cli, run_cli_with_env };
 use tempfile::TempDir;
 
 #[ test ]
@@ -272,7 +272,7 @@ fn s16_new_session_without_message_accepted()
   );
 }
 
-// S17: --new-session + --session-dir → both accepted; CLAUDE_CODE_SESSION_DIR present, no -c
+// S17: --new-session + --session-dir → both accepted; session-dir inert (BUG-493), no -c
 #[ test ]
 fn s17_new_session_with_session_dir_accepted()
 {
@@ -280,8 +280,8 @@ fn s17_new_session_with_session_dir_accepted()
   assert!( out.status.success(), "must exit 0. stderr: {}", String::from_utf8_lossy( &out.stderr ) );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(
-    stdout.contains( "CLAUDE_CODE_SESSION_DIR=/tmp/sessions" ),
-    "--session-dir must set env var. Got:\n{stdout}"
+    !stdout.contains( "CLAUDE_CODE_SESSION_DIR" ),
+    "deprecated --session-dir must NOT set the env var (BUG-493). Got:\n{stdout}"
   );
   assert!(
     !stdout.contains( " -c" ),
@@ -332,7 +332,7 @@ fn s20_session_dir_absent_from_default_output()
   );
 }
 
-// S21: --session-dir + --new-session → both accepted; env var present, no -c
+// S21: --session-dir + --new-session → both accepted; session-dir inert (BUG-493), no -c
 #[ test ]
 fn s21_session_dir_with_new_session_accepted()
 {
@@ -340,8 +340,8 @@ fn s21_session_dir_with_new_session_accepted()
   assert!( out.status.success(), "must exit 0. stderr: {}", String::from_utf8_lossy( &out.stderr ) );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(
-    stdout.contains( "CLAUDE_CODE_SESSION_DIR=/tmp/s" ),
-    "--session-dir must set env var. Got:\n{stdout}"
+    !stdout.contains( "CLAUDE_CODE_SESSION_DIR" ),
+    "deprecated --session-dir must NOT set the env var (BUG-493). Got:\n{stdout}"
   );
   assert!(
     !stdout.contains( " -c" ),
@@ -589,32 +589,32 @@ fn ec7_max_sessions_no_gate_messages_below_limit()
   );
 }
 
-/// BUG-214 reproducer: empty `--session-dir` must suppress `-c` injection.
+/// BUG-214 reproducer: empty session storage must suppress `-c` injection.
 ///
 /// ## Root Cause
 ///
 /// `build_claude_command()` injected `-c` unconditionally whenever `--new-session`
-/// was not set.  On first use — or any time `--session-dir` points to an empty
-/// directory — there is no conversation to resume.  Claude exits immediately with
+/// was not set.  On first use — any time the scanned session storage is empty —
+/// there is no conversation to resume.  Claude exits immediately with
 /// "No conversation found to continue" rather than starting a new session.
 ///
 /// ## Why Not Caught
 ///
-/// All pre-existing dry-run tests used no `--session-dir`, so the existence check
-/// resolved to `~/.claude/`, which always contains files on a development machine.
-/// The guard path (empty dir → no `-c`) was never exercised.
+/// All pre-existing dry-run tests left the storage location defaulted, so the
+/// existence check resolved to `~/.claude/`, which always contains files on a
+/// development machine.  The guard path (empty storage → no `-c`) was never exercised.
 ///
 /// ## Fix Applied
 ///
-/// `session_exists( session_dir )` reads the target directory and returns
+/// `session_exists( storage_dir )` reads the storage directory and returns
 /// `Some(SessionId)` when at least one qualifying `.jsonl` entry is present.
 /// The guard `!cli.new_session && expected_id.is_some()` gates `-c` injection.
 ///
 /// ## Prevention
 ///
-/// Always test `--session-dir` pointing to an empty temp directory when the
-/// feature involves session continuation — the empty-dir case is the canonical
-/// first-use scenario that the guard must handle.
+/// Always test with a provably empty session storage when the feature involves
+/// session continuation — the empty-storage case is the canonical first-use
+/// scenario that the guard must handle.
 ///
 /// ## Pitfall
 ///
@@ -622,13 +622,21 @@ fn ec7_max_sessions_no_gate_messages_below_limit()
 /// They are independent: `--new-session` is a user intent signal; the existence
 /// guard is a safety net for cases where the user omitted `--new-session` but
 /// no prior session actually exists.
+///
+/// Fix(BUG-493) lever migration: the original fixture forced the empty-storage case
+/// via `--session-dir <empty tmpdir>`; that parameter is now deprecated and inert,
+/// so the same case is forced by pointing `CLAUDE_HOME` at an empty tmpdir — the
+/// storage the builder scans (`<CLAUDE_HOME>/projects/<encoded cwd>`) then never exists.
 // test_kind: bug_reproducer(BUG-214)
 #[ test ]
-fn bug_214_empty_session_dir_suppresses_continue_flag()
+fn bug_214_empty_source_storage_suppresses_continue_flag()
 {
-  let session_dir = TempDir::new().expect( "temp dir creation must succeed" );
-  let path        = session_dir.path().to_str().expect( "temp dir path must be valid UTF-8" );
-  let out = run_cli( &[ "--dry-run", "--session-dir", path, "Fix bug" ] );
+  let empty_home = TempDir::new().expect( "temp dir creation must succeed" );
+  let home       = empty_home.path().to_str().expect( "temp dir path must be valid UTF-8" );
+  let out = run_cli_with_env(
+    &[ "--dry-run", "Fix bug" ],
+    &[ ( "HOME", "/tmp/clr-isolated-home" ), ( "CLAUDE_HOME", home ) ],
+  );
   assert!(
     out.status.success(),
     "must exit 0. stderr: {}",
@@ -637,7 +645,7 @@ fn bug_214_empty_session_dir_suppresses_continue_flag()
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(
     !stdout.contains( " -c" ),
-    "empty --session-dir must suppress -c (no prior session to resume). Got:\n{stdout}"
+    "empty session storage must suppress -c (no prior session to resume). Got:\n{stdout}"
   );
 }
 

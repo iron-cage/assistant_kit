@@ -52,7 +52,7 @@ clr --trace "Fix bug" --dir /project
 | [`--dir`](../param/008_dir.md) | [`DirectoryPath`](../type/02_directory_path.md) | cwd | Working directory | Working directory for subprocess (alias: `--to`) |
 | [`--subdir`](../param/028_subdir.md) | string | `.` | Named workspace | Named subdirectory appended to `--dir` (`/-NAME`); `.` = identity |
 | [`--max-tokens`](../param/009_max_tokens.md) | [`TokenLimit`](../type/03_token_limit.md) | 128000 | Token cap | Max output tokens |
-| [`--session-dir`](../param/010_session_dir.md) | [`DirectoryPath`](../type/02_directory_path.md) | — | Session storage | Session storage directory |
+| [`--session-dir`](../param/010_session_dir.md) | [`DirectoryPath`](../type/02_directory_path.md) | — | Deprecated | DEPRECATED, no effect (warns; use `--from`) |
 | [`--dry-run`](../param/011_dry_run.md) | bool | false | Execution gate | Preview without executing |
 | [`--quiet`](../param/074_quiet.md) | bool | false | Diagnostic suppressor | Suppress non-fatal runner diagnostics |
 | [`--trace`](../param/013_trace.md) | bool | false | Trace mode | Print env+command to stderr then execute |

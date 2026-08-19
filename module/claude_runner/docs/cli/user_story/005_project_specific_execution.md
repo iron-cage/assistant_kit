@@ -8,21 +8,21 @@
 ### Acceptance Criteria
 
 - `--dir <path>` sets the subprocess working directory; Claude sees the given path as `cwd`
-- `--session-dir <path>` stores and resumes session state from a project-specific location
-- Both flags can be combined for full project isolation
+- Session state follows the working directory automatically: claude derives per-project storage from `cwd`, so `--dir` alone yields project isolation
+- The deprecated `--session-dir <path>` is accepted but inert (Fix(BUG-493)) — it warns on stderr and changes nothing; combining it with `--dir` behaves exactly like `--dir` alone
 - `--new-session` at the start of a new project task discards the previous session at that location
 
 ### Referenced Commands
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`run`](../command/01_run.md) | Default command; `--dir` and `--session-dir` scope execution |
+| 1 | [`run`](../command/01_run.md) | Default command; `--dir` scopes execution (session storage follows it automatically) |
 
 ### Referenced Parameter Groups
 
 | # | Parameter Group | Role |
 |---|-----------------|------|
-| 2 | [Runner Control](../param_group/02_runner_control.md) | `--dir` and `--session-dir` are runner control flags |
+| 2 | [Runner Control](../param_group/02_runner_control.md) | `--dir` (and the deprecated, inert `--session-dir`) are runner control flags |
 
 ### Referenced Parameters
 
@@ -31,12 +31,12 @@
 | 6 | [`--interactive`](../param/006_interactive.md) | Continue interactively in the project directory |
 | 7 | [`--new-session`](../param/007_new_session.md) | Discard prior session at that location |
 | 8 | [`--dir`](../param/008_dir.md) | Set subprocess working directory |
-| 10 | [`--session-dir`](../param/010_session_dir.md) | Set project-specific session storage path |
+| 10 | [`--session-dir`](../param/010_session_dir.md) | Deprecated, inert (Fix(BUG-493)) — accepted with a stderr warning only |
 
 ### Workflow Steps
 
 1. `clr --dir /path/to/project "task"` — run Claude with the project directory as working directory
-2. `clr --dir /path/to/project --session-dir /path/to/sessions "task"` — add project-specific session storage
+2. `clr --dir /path/to/project --session-dir /path/to/sessions "task"` — legacy invocation still accepted; `--session-dir` is inert (warns), behavior identical to step 1
 3. `clr --dir /path/to/project --new-session "task"` — start a new task session in that project directory
 
 ### Related User Stories

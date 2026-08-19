@@ -37,7 +37,7 @@
 #![ cfg( feature = "enabled" ) ]
 
 mod cli_binary_test_helpers;
-use cli_binary_test_helpers::{ make_creds_file, make_session_dir, run_cli, run_cli_with_env, run_dry, stderr_str };
+use cli_binary_test_helpers::{ make_continuable_from, make_creds_file, run_cli, run_cli_with_env, run_dry, run_dry_with_env, stderr_str };
 #[ cfg( unix ) ]
 use cli_binary_test_helpers::make_proc_dir;
 
@@ -58,12 +58,11 @@ use cli_binary_test_helpers::make_proc_dir;
 ///   non-TTY case, matching every other subprocess-spawning test in this suite.
 /// Note: -c is NOT asserted here — the test cwd has no prior Claude session so
 /// `session_exists()` correctly returns `None`. Session continuation is tested
-/// separately in `us01_2` (which uses --session-dir with a dummy session file).
+/// separately in `us01_2` (which uses a non-empty source storage fixture).
 #[ test ]
 fn us01_1_bare_clr_repl_defaults()
 {
-  let ( _session, session_path ) = make_session_dir();
-  let output = run_dry( &[ "--session-dir", &session_path ] );
+  let output = run_dry( &[] );
   assert!(
     output.contains( "--dangerously-skip-permissions" ),
     "print mode must still inject --dangerously-skip-permissions. Got:\n{output}"
@@ -87,19 +86,16 @@ fn us01_1_bare_clr_repl_defaults()
 ///   message-presence check) was assumed sufficient to justify `-c`.
 /// Pitfall: this scenario still composes a valid command — non-TTY stdin (Fix(BUG-425))
 ///   routes it to print mode instead of erroring, so `--print` appears without `-c` or a
-///   message. Uses --session-dir pointing to a non-empty temp dir so `session_exists()`
+///   message. Uses `make_continuable_from` (--from + `CLAUDE_HOME`) so `session_exists()`
 ///   returns `Some(SessionId)`.
 #[ test ]
 fn us01_2_session_continuation_requires_message_to_inject_c()
 {
-  let session_dir = tempfile::tempdir().expect( "create temp session dir" );
-  std::fs::write( session_dir.path().join( "00000000-0000-0000-0000-000000000000.jsonl" ), b"{}" )
-    .expect( "write dummy session file" );
-  let session_dir_str = session_dir.path().to_str().expect( "session dir path is valid utf-8" );
-  let output = run_dry( &[ "--session-dir", session_dir_str ] );
+  let ( _ch, home, from ) = make_continuable_from();
+  let output = run_dry_with_env( &[ "--from", &from ], &[ ( "CLAUDE_HOME", home.as_str() ) ] );
   assert!(
     !output.contains( " -c" ),
-    "non-empty --session-dir without a message must NOT inject -c. Got:\n{output}"
+    "non-empty source storage without a message must NOT inject -c. Got:\n{output}"
   );
 }
 
@@ -122,8 +118,7 @@ fn us01_3_non_interactive_no_message_errors()
 #[ test ]
 fn us01_4_repl_with_custom_dir()
 {
-  let ( _session, session_path ) = make_session_dir();
-  let output = run_dry( &[ "--dir", "/tmp", "--session-dir", &session_path ] );
+  let output = run_dry( &[ "--dir", "/tmp" ] );
   assert!(
     output.contains( "cd /tmp" ),
     "--dir must produce 'cd /tmp' prefix. Got:\n{output}"
@@ -255,8 +250,7 @@ fn us03_4_interactive_with_new_session()
 #[ test ]
 fn us04_1_dry_run_prints_command()
 {
-  let ( _session, session_path ) = make_session_dir();
-  let output = run_dry( &[ "--session-dir", &session_path, "test message" ] );
+  let output = run_dry( &[ "test message" ] );
   assert!(
     output.contains( "--dangerously-skip-permissions" ),
     "dry-run must show --dangerously-skip-permissions. Got:\n{output}"
@@ -332,9 +326,13 @@ fn us05_1_dir_sets_working_directory()
   );
 }
 
-/// US-2: --dir with --session-dir for full project isolation.
+/// US-2: --dir with deprecated --session-dir — the flag is accepted but inert (BUG-493).
+///
+/// Fix(BUG-493): inverted from asserting the `CLAUDE_CODE_SESSION_DIR` export to asserting
+///   its absence — sessions always follow the working directory's project storage now;
+///   `--dir` alone provides project isolation.
 #[ test ]
-fn us05_2_dir_with_session_dir()
+fn us05_2_dir_with_session_dir_inert()
 {
   let output = run_dry( &[
     "--dir", "/tmp/project_a",
@@ -346,8 +344,8 @@ fn us05_2_dir_with_session_dir()
     "cd prefix must appear. Got:\n{output}"
   );
   assert!(
-    output.contains( "CLAUDE_CODE_SESSION_DIR=/tmp/sessions_a" ),
-    "session dir env var must appear. Got:\n{output}"
+    !output.contains( "CLAUDE_CODE_SESSION_DIR" ),
+    "deprecated --session-dir must NOT export CLAUDE_CODE_SESSION_DIR (BUG-493). Got:\n{output}"
   );
 }
 

@@ -187,7 +187,8 @@ fn g2cc1_dry_run_and_no_ultrathink_preview_suppressed()
 
 /// G2CC2: `--new-session` + `--session-dir` → both accepted; `-c` default suppressed.
 ///
-/// `--session-dir` path appears in assembled command; `--new-session` suppresses `-c`.
+/// Deprecated `--session-dir` is inert (BUG-493) — no `CLAUDE_CODE_SESSION_DIR`
+/// export appears; `--new-session` suppresses `-c`.
 ///
 /// Spec: `02_runner_control.md` CC-2
 #[ test ]
@@ -198,10 +199,10 @@ fn g2cc2_new_session_and_session_dir_both_accepted()
   ] );
   assert!( out.status.success(), "exit must be 0: {out:?}" );
   let stdout = String::from_utf8_lossy( &out.stdout );
-  // --session-dir is converted to CLAUDE_CODE_SESSION_DIR env var in dry-run output
+  // Fix(BUG-493): deprecated --session-dir no longer exports CLAUDE_CODE_SESSION_DIR
   assert!(
-    stdout.contains( "CLAUDE_CODE_SESSION_DIR=/tmp/sessions" ),
-    "output must contain CLAUDE_CODE_SESSION_DIR env var: {stdout}",
+    !stdout.contains( "CLAUDE_CODE_SESSION_DIR" ),
+    "deprecated --session-dir must NOT export CLAUDE_CODE_SESSION_DIR (BUG-493): {stdout}",
   );
   assert!(
     !stdout.contains( " -c" ),
@@ -233,7 +234,8 @@ fn g2cc3_no_skip_permissions_and_no_effort_max_both_suppressed()
 /// G2CC4: All 44 runner control flags together → exit 0; no unknown-flag error.
 ///
 /// Every runner control flag accepted without conflict. `--dry-run` wins over `--trace`,
-/// so stderr is empty. `--no-chrome` suppresses the default `--chrome` injection.
+/// so the deprecated `--session-dir`'s one-line warning (BUG-493) is the only stderr
+/// output. `--no-chrome` suppresses the default `--chrome` injection.
 /// `--subdir work` produces an effective dir containing `/-work`.
 /// All 20 new retry params (3-tier: override, 8 class-specific pairs, fallback) plus
 /// `--output-file`, `--expect`, `--expect-strategy`, `--retry-on-validation`, `--max-sessions`,
@@ -314,10 +316,16 @@ fn g2cc4_all_runner_control_flags_no_conflict()
     out.status.success(),
     "all 46 runner control flags must be accepted without conflict: {out:?}",
   );
+  // Fix(BUG-493): deprecated --session-dir now emits a one-line stderr warning; the
+  // "dry-run wins over trace" claim holds as: that warning is the ONLY stderr line.
+  let stderr = String::from_utf8_lossy( &out.stderr );
   assert!(
-    out.stderr.is_empty(),
-    "stderr must be empty (dry-run wins over trace): {:?}",
-    String::from_utf8_lossy( &out.stderr ),
+    stderr.contains( "--session-dir is deprecated" ),
+    "deprecation warning must fire when --session-dir given (BUG-493): {stderr}",
+  );
+  assert_eq!(
+    stderr.trim_end().lines().count(), 1,
+    "stderr must hold only the deprecation warning (dry-run wins over trace): {stderr:?}",
   );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(

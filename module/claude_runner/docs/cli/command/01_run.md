@@ -31,7 +31,7 @@ The `run` token is optional — both forms are equivalent. When `run` appears as
 | [`--dir`](../param/008_dir.md) | [`DirectoryPath`](../type/02_directory_path.md) | cwd | Working directory (alias: `--to`) |
 | [`--subdir`](../param/028_subdir.md) | string | `.` | Named subdirectory appended to `--dir` (`/-NAME`); `.` = identity |
 | [`--max-tokens`](../param/009_max_tokens.md) | [`TokenLimit`](../type/03_token_limit.md) | 128000 | Max output tokens |
-| [`--session-dir`](../param/010_session_dir.md) | [`DirectoryPath`](../type/02_directory_path.md) | — | Session storage directory |
+| [`--session-dir`](../param/010_session_dir.md) | [`DirectoryPath`](../type/02_directory_path.md) | — | DEPRECATED, no effect (warns; use `--from`) |
 | [`--dry-run`](../param/011_dry_run.md) | bool | false | Print command without executing |
 | [`--quiet`](../param/074_quiet.md) | bool | false | Suppress non-fatal runner diagnostics |
 | [`--trace`](../param/013_trace.md) | bool | false | Print env+command to stderr then execute (like `set -x`) |

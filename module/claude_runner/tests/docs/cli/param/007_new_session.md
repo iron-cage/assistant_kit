@@ -13,7 +13,7 @@ Edge case tests for the new session flag. Tests validate continuation suppressio
 | EC-3 | `--new-session` without message → accepted, no error | Edge Case |
 | EC-4 | `--new-session` + message → both handled correctly | Interaction |
 | EC-5 | `--help` lists `--new-session` | Documentation |
-| EC-6 | `--new-session` + `--session-dir` → both accepted, no conflict | Interaction |
+| EC-6 | `--new-session` + deprecated `--session-dir` → both accepted, session-dir inert | Interaction |
 
 ## Test Coverage Summary
 
@@ -30,7 +30,7 @@ Edge case tests for the new session flag. Tests validate continuation suppressio
 
 ### EC-1: Default → `-c` in assembled command (when session storage non-empty)
 
-- **Given:** clean environment; project session dir (`~/.claude/projects/{encoded(cwd)}/`) contains at least one session file (post-BUG-214-reopen: `check_continuation()` checks the project-specific path, not `~/.claude/` globally)
+- **Given:** clean environment; project session dir (`~/.claude/projects/{encoded(cwd)}/`) contains at least one session file (post-BUG-214-reopen: `session_exists()` checks the project-specific storage path, not `~/.claude/` globally)
 - **When:** `clr --dry-run "Fix bug"`
 - **Then:** Assembled command contains `-c` (continuation flag)
 - **Exit:** 0
@@ -78,11 +78,11 @@ Edge case tests for the new session flag. Tests validate continuation suppressio
 - **Commands:** run, ask
 ---
 
-### EC-6: `--new-session` + `--session-dir` → no conflict
+### EC-6: `--new-session` + deprecated `--session-dir` → no conflict, session-dir inert
 
 - **Given:** clean environment
 - **When:** `clr --dry-run --new-session --session-dir /tmp/sessions "Fix bug"`
-- **Then:** Both flags accepted; assembled command contains `--session-dir` and no `-c`
+- **Then:** Both flags accepted; env block does NOT contain `CLAUDE_CODE_SESSION_DIR=` (deprecated parameter is inert — Fix(BUG-493)); no `-c` (suppressed by `--new-session`); stderr carries the one-line `--session-dir is deprecated` warning
 - **Exit:** 0
 - **Source:** [007_new_session.md](../../../../docs/cli/param/007_new_session.md)
 - **Commands:** run, ask

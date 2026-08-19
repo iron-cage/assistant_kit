@@ -16,18 +16,18 @@
 //!
 //! - Default env vars appear (`CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000`)
 //! - Default `-c` appears in dry-run output when session storage is non-empty (automatic session continuation)
-//! - Empty `--session-dir` suppresses `-c` even without `--new-session` (BUG-214 regression guard)
+//! - Empty source storage (empty `CLAUDE_HOME`) suppresses `-c` even without `--new-session` (BUG-214 regression guard)
 //! - `--new-session` suppresses `-c` from dry-run output
 //! - `--dir` emits `cd <path>` prefix line
 //! - `--max-tokens N` overrides the default token env var
 //! - `--model NAME` appears in command args
-//! - `--session-dir PATH` appears as `CLAUDE_CODE_SESSION_DIR` env var
+//! - Deprecated `--session-dir PATH` is inert — no `CLAUDE_CODE_SESSION_DIR` env var (BUG-493)
 //! - Combined flags produce correct combined output (no explicit `-c` needed)
 //! - Message becomes quoted in command output — FR-1
 //! - Message with embedded double quotes is properly escaped
 //! - `--dir` with spaces: `cd` output is unquoted (human-readable per FR-21, not shell-safe)
 //! - All 5 Tier-1 default env vars appear in output (not just max-tokens)
-//! - No message provided: `--dry-run` outputs bare `claude --dangerously-skip-permissions --chrome --effort max -c` command with no message arg (when default session dir has sessions)
+//! - No message provided: `--dry-run` outputs bare `claude --dangerously-skip-permissions --chrome --effort max -c` command with no message arg (when source storage has sessions)
 //! - `--dry-run --quiet` still shows output (--quiet does not gate dry-run; bug reproducer)
 //! - `--system-prompt TEXT` appears in command args (param 15 round-trip)
 //! - `--append-system-prompt TEXT` appears in command args (param 16 round-trip)
@@ -38,12 +38,12 @@
 //! - Idempotent guard: message ending with `"ultrathink"` is not double-suffixed
 //! - `--trace --dry-run` emits nothing to stderr (dry-run returns before trace fires)
 //! - `""` empty positional arg ignored — bare command, no message, no degenerate ultrathink suffix
-//! - T-A: `--interactive --session-dir <nonempty>` injects `-c` (BUG-435 fix)
-//! - T-B: `--interactive --session-dir <empty>` does NOT inject `-c` (no session → no -c)
-//! - T-C: bare `--dry-run --session-dir <nonempty>` (print mode, no message) does NOT inject `-c` (D-10 preserved)
+//! - T-A: `--interactive` with nonempty source storage injects `-c` (BUG-435 fix)
+//! - T-B: `--interactive` with empty source storage does NOT inject `-c` (no session → no -c)
+//! - T-C: bare `--dry-run` with nonempty source storage (print mode, no message) does NOT inject `-c` (D-10 preserved)
 
 mod cli_binary_test_helpers;
-use cli_binary_test_helpers::{ run_cli, run_dry, stdout_str };
+use cli_binary_test_helpers::{ make_continuable_from, run_cli, run_dry, run_dry_with_env, stdout_str };
 use std::process::Command;
 
 #[ test ]
@@ -90,13 +90,15 @@ fn model_param_appears_in_command()
   );
 }
 
+// Fix(BUG-493): inverted from asserting the CLAUDE_CODE_SESSION_DIR export to asserting
+//   its absence — --session-dir is deprecated and inert (claude >= 2.x ignores the var).
 #[ test ]
-fn session_dir_appears_as_env_var()
+fn session_dir_deprecated_sets_no_env_var()
 {
   let output = run_dry( &[ "--session-dir", "/tmp/sessions", "test" ] );
   assert!(
-    output.contains( "CLAUDE_CODE_SESSION_DIR=/tmp/sessions" ),
-    "--session-dir must set CLAUDE_CODE_SESSION_DIR. Got:\n{output}"
+    !output.contains( "CLAUDE_CODE_SESSION_DIR" ),
+    "deprecated --session-dir must NOT set CLAUDE_CODE_SESSION_DIR (BUG-493). Got:\n{output}"
   );
 }
 
@@ -185,11 +187,11 @@ fn dir_with_spaces_produces_unquoted_cd_line()
 }
 
 // No-message case: --dry-run with no message routes to print mode under this harness's
-// non-TTY subprocess stdin, but still WITHOUT -c because the session dir is empty →
-// session_exists() returns `None`. Fix(BUG-246): describe() now starts with
-// "env -u CLAUDECODE" (default unset_claudecode=true).
-// Do NOT use make_session_dir() here — that writes a dummy .jsonl making session_exists() return `Some(SessionId)`,
-// which would inject -c and break the "no -c" assertion.
+// non-TTY subprocess stdin, but still WITHOUT -c because the source storage under the
+// empty CLAUDE_HOME is empty → session_exists() returns `None`. Fix(BUG-246): describe()
+// now starts with "env -u CLAUDECODE" (default unset_claudecode=true).
+// Do NOT use make_continuable_from() here — that creates a session making session_exists()
+// return `Some(SessionId)`, which would inject -c and break the "no -c" assertion.
 //
 // Fix(BUG-425): corrected from asserting a bare/no-`--print` command to asserting the
 //   post-fix print-mode-routed command — this test's own subprocess stdin is non-TTY
@@ -202,13 +204,13 @@ fn dir_with_spaces_produces_unquoted_cd_line()
 #[ test ]
 fn dry_run_without_message_shows_bare_command()
 {
-  let empty_dir = tempfile::TempDir::new().expect( "create empty session dir" );
-  let session_path = empty_dir.path().to_str().expect( "session dir path valid utf-8" );
-  let output = run_dry( &[ "--session-dir", session_path ] );
+  let empty_home = tempfile::TempDir::new().expect( "create empty CLAUDE_HOME" );
+  let home = empty_home.path().to_str().expect( "CLAUDE_HOME path valid utf-8" );
+  let output = run_dry_with_env( &[], &[ ( "CLAUDE_HOME", home ) ] );
   let last_line = output.trim_end().lines().last().unwrap_or_default();
   assert_eq!(
     last_line, "env -u CLAUDECODE -u CLAUDE_CODE_CHILD_SESSION claude --dangerously-skip-permissions --effort max --print --output-format json",
-    "Bare --dry-run under non-TTY stdin must route to print mode (no message, no -c in empty session dir). Got:\n{output}"
+    "Bare --dry-run under non-TTY stdin must route to print mode (no message, no -c with empty source storage). Got:\n{output}"
   );
 }
 
@@ -223,23 +225,19 @@ fn new_session_suppresses_continue_flag()
   );
 }
 
-// Continuation: --dry-run shows -c when --session-dir has a qualifying .jsonl file.
-// session_exists(Some(dir)) scans for .jsonl files via most_recent_session_in_dir().
+// Continuation: --dry-run shows -c when the --from source storage has a qualifying
+// .jsonl file. session_exists() scans it via most_recent_session_in_dir().
 #[ test ]
-fn continuation_present_when_session_dir_nonempty()
+fn continuation_present_when_source_storage_nonempty()
 {
-  let session_dir = tempfile::tempdir().expect( "create temp session dir" );
-  std::fs::write( session_dir.path().join( "00000000-0000-0000-0000-000000000000.jsonl" ), b"{}" )
-    .expect( "write dummy session file" );
-  let session_dir_str = session_dir.path().to_str().expect( "session dir path is valid utf-8" );
-  let out = std::process::Command::new( env!( "CARGO_BIN_EXE_clr" ) )
-    .args( [ "--dry-run", "--session-dir", session_dir_str, "test" ] )
-    .output()
-    .expect( "invoke clr" );
-  let output = String::from_utf8_lossy( &out.stdout );
+  let ( _ch, home, from ) = make_continuable_from();
+  let output = run_dry_with_env(
+    &[ "--from", &from, "test" ],
+    &[ ( "CLAUDE_HOME", home.as_str() ) ],
+  );
   assert!(
     output.contains( " -c" ),
-    "non-empty --session-dir must inject -c. Got:\n{output}"
+    "non-empty source storage must inject -c. Got:\n{output}"
   );
 }
 
@@ -571,14 +569,17 @@ fn bug_reproducer_214_no_session_dir_fresh_cwd_no_continue_flag()
 #[ test ]
 fn empty_positional_arg_produces_bare_command()
 {
-  // Empty session dir → no -c (session_exists returns `None` for empty dir).
+  // Empty source storage → no -c (session_exists returns `None` under an empty CLAUDE_HOME).
   // Fix(BUG-246): last_line now starts with "env -u CLAUDECODE" (default unset_claudecode=true).
-  let empty_dir = tempfile::TempDir::new().expect( "create empty session dir" );
-  let session_path = empty_dir.path().to_str().expect( "session dir path valid utf-8" );
+  let empty_home = tempfile::TempDir::new().expect( "create empty CLAUDE_HOME" );
+  let home = empty_home.path().to_str().expect( "CLAUDE_HOME path valid utf-8" );
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = Command::new( bin )
-    .args( [ "--dry-run", "--session-dir", session_path, "" ] )
+    .args( [ "--dry-run", "" ] )
     .env( "HOME", "/tmp/clr-isolated-home" ) // Fix(BUG-008) isolation: prevent host prefs from injecting --model
+    .env( "CLAUDE_HOME", home )
+    .env_remove( "CLR_DIR" )
+    .env_remove( "CLR_SESSION_DIR" )
     .output()
     .expect( "Failed to invoke clr binary" );
   assert!( out.status.success(), "empty positional arg must exit 0. stderr: {}", String::from_utf8_lossy( &out.stderr ) );
@@ -591,7 +592,7 @@ fn empty_positional_arg_produces_bare_command()
   //   BUG-219) is the assertion immediately below, unaffected by this correction.
   assert_eq!(
     last_line, "env -u CLAUDECODE -u CLAUDE_CODE_CHILD_SESSION claude --dangerously-skip-permissions --effort max --print --output-format json",
-    "empty positional arg must produce no-message command (no -c in empty session dir). Got:\n{stdout}"
+    "empty positional arg must produce no-message command (no -c with empty source storage). Got:\n{stdout}"
   );
   assert!(
     !stdout.contains( "\"ultrathink \"" ),
@@ -599,7 +600,7 @@ fn empty_positional_arg_produces_bare_command()
   );
 }
 
-// T-A: `--interactive --session-dir <nonempty>` injects `-c`
+// T-A: `--interactive` with nonempty source storage injects `-c`
 //
 // ## Root Cause (BUG-435)
 //
@@ -624,9 +625,9 @@ fn empty_positional_arg_produces_bare_command()
 //
 // ## Prevention
 //
-// Assert that `--interactive --session-dir <nonempty>` produces ` -c` in dry-run output.
-// In test context `--interactive` forces `use_print=false` (the same path real bare
-// TTY invocations take via `!is_tty`).
+// Assert that `--interactive` with a nonempty `--from` source storage produces ` -c`
+// in dry-run output.  In test context `--interactive` forces `use_print=false` (the
+// same path real bare TTY invocations take via `!is_tty`).
 //
 // ## Pitfall
 //
@@ -637,11 +638,20 @@ fn empty_positional_arg_produces_bare_command()
 #[ test ]
 fn ta_interactive_with_session_injects_continue_flag()
 {
-  let ( _dir, session_path ) = cli_binary_test_helpers::make_session_dir();
-  let out = run_cli( &[ "--dry-run", "--interactive", "--session-dir", &session_path ] );
+  let ( _ch, home, from ) = make_continuable_from();
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = Command::new( bin )
+    .args( [ "--dry-run", "--interactive", "--from", from.as_str() ] )
+    .env( "HOME", "/tmp/clr-isolated-home" )
+    .env( "CLAUDE_HOME", &home )
+    .env_remove( "CLR_DIR" )
+    .env_remove( "CLR_SESSION_DIR" )
+    .env_remove( "CLR_FROM" )
+    .output()
+    .expect( "invoke clr" );
   assert!(
     out.status.success(),
-    "--interactive --session-dir <nonempty> dry-run must succeed. stderr: {}",
+    "--interactive with nonempty source storage dry-run must succeed. stderr: {}",
     String::from_utf8_lossy( &out.stderr )
   );
   let stdout = String::from_utf8_lossy( &out.stdout );
@@ -651,7 +661,7 @@ fn ta_interactive_with_session_injects_continue_flag()
   );
 }
 
-// T-B: `--interactive --session-dir <empty>` does NOT inject `-c`
+// T-B: `--interactive` with empty source storage does NOT inject `-c`
 //
 // ## Root Cause (BUG-435)
 //
@@ -668,33 +678,44 @@ fn ta_interactive_with_session_injects_continue_flag()
 // ## Fix Applied
 //
 // The `expected_id.is_some()` outer guard remains unchanged; `!use_print` only gates
-// the inner condition.  With an empty session dir, `session_exists()` returns `None`
+// the inner condition.  With empty source storage, `session_exists()` returns `None`
 // → -c is never injected.
 //
 // ## Prevention
 //
-// Assert that `--interactive --session-dir <empty>` produces no ` -c` in dry-run output.
+// Assert that `--interactive` with an empty `CLAUDE_HOME` (no source storage) produces
+// no ` -c` in dry-run output.
 //
 // ## Pitfall
 //
-// Always use a fresh `tempfile::TempDir::new()` (no .jsonl files) for the no-session
-// case — never rely on the ambient cwd, which may have prior sessions on the host.
+// Always use a fresh empty `tempfile::TempDir::new()` as `CLAUDE_HOME` for the
+// no-session case — never rely on the ambient claude home, which may have prior
+// sessions for the cwd on the host.
 // test_kind: bug_reproducer(BUG-435)
 #[ test ]
 fn tb_interactive_without_session_no_continue_flag()
 {
-  let empty_dir = tempfile::TempDir::new().expect( "create empty session dir" );
-  let session_path = empty_dir.path().to_str().expect( "session dir path valid utf-8" );
-  let out = run_cli( &[ "--dry-run", "--interactive", "--session-dir", session_path ] );
+  let empty_home = tempfile::TempDir::new().expect( "create empty CLAUDE_HOME" );
+  let home = empty_home.path().to_str().expect( "CLAUDE_HOME path valid utf-8" );
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = Command::new( bin )
+    .args( [ "--dry-run", "--interactive" ] )
+    .env( "HOME", "/tmp/clr-isolated-home" )
+    .env( "CLAUDE_HOME", home )
+    .env_remove( "CLR_DIR" )
+    .env_remove( "CLR_SESSION_DIR" )
+    .env_remove( "CLR_FROM" )
+    .output()
+    .expect( "invoke clr" );
   assert!(
     out.status.success(),
-    "--interactive --session-dir <empty> dry-run must succeed. stderr: {}",
+    "--interactive with empty source storage dry-run must succeed. stderr: {}",
     String::from_utf8_lossy( &out.stderr )
   );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(
     !stdout.contains( " -c" ),
-    "--interactive with empty session dir must NOT inject -c. Got:\n{stdout}"
+    "--interactive with empty source storage must NOT inject -c. Got:\n{stdout}"
   );
 }
 
@@ -720,22 +741,31 @@ fn tb_interactive_without_session_no_continue_flag()
 //
 // ## Prevention
 //
-// Assert that bare `--dry-run --session-dir <nonempty>` (no `--interactive`, no message)
-// does NOT inject -c in dry-run output.
+// Assert that bare `--dry-run` with a nonempty `--from` source storage (no
+// `--interactive`, no message) does NOT inject -c in dry-run output.
 //
 // ## Pitfall
 //
-// In test context (non-TTY subprocess), bare `--dry-run --session-dir <path>` routes
+// In test context (non-TTY subprocess), bare `--dry-run --from <dir>` routes
 // to print mode (`use_print=true`), so `!use_print=false`.  Do NOT add `--interactive`
 // here — that changes the mode to interactive and would test T-A instead.
 #[ test ]
 fn tc_print_mode_with_session_no_continue_flag()
 {
-  let ( _dir, session_path ) = cli_binary_test_helpers::make_session_dir();
-  let out = run_cli( &[ "--dry-run", "--session-dir", &session_path ] );
+  let ( _ch, home, from ) = make_continuable_from();
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = Command::new( bin )
+    .args( [ "--dry-run", "--from", from.as_str() ] )
+    .env( "HOME", "/tmp/clr-isolated-home" )
+    .env( "CLAUDE_HOME", &home )
+    .env_remove( "CLR_DIR" )
+    .env_remove( "CLR_SESSION_DIR" )
+    .env_remove( "CLR_FROM" )
+    .output()
+    .expect( "invoke clr" );
   assert!(
     out.status.success(),
-    "bare --dry-run --session-dir <nonempty> must succeed. stderr: {}",
+    "bare --dry-run with nonempty source storage must succeed. stderr: {}",
     String::from_utf8_lossy( &out.stderr )
   );
   let stdout = String::from_utf8_lossy( &out.stdout );

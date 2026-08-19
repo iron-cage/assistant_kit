@@ -12,7 +12,7 @@
 
 
 mod cli_binary_test_helpers;
-use cli_binary_test_helpers::{ fake_claude, fake_claude_dir, make_session_dir, make_zero_turn_session_dir, run_dry, run_with_path, run_with_path_stdin };
+use cli_binary_test_helpers::{ fake_claude, fake_claude_dir, make_continuable_from, make_continuable_from_with, run_dry, run_dry_with_env, run_with_path, run_with_path_env, run_with_path_stdin };
 
 
 // BUG-425: completely empty piped stdin (`echo -n "" | clr`), no message, must also
@@ -69,18 +69,19 @@ fn bug_reproducer_425_empty_stdin_no_tty()
 }
 
 // BUG-426: `-c` injection is coupled only to prior-session existence, not to
-// message/--print/--file/--interactive presence — a bare `--session-dir <dir>`
-// invocation with no message and no --print still gets `-c` injected today, even
-// though nothing in the invocation supplies content to resume. Verified via
-// --dry-run (composed args inspectable without a live subprocess).
+// message/--print/--file/--interactive presence — a bare invocation with a prior
+// session in the `--from` source storage and no message and no --print still gets
+// `-c` injected today, even though nothing in the invocation supplies content to
+// resume. Verified via --dry-run (composed args inspectable without a live
+// subprocess).
 // test_kind: bug_reproducer(BUG-426)
 //
 // ## Root Cause
 // `-c`/session-continuation injection was gated solely on `expected_id.is_some()`
 // (a prior session existing on disk) — it never checked whether the current
 // invocation carried a message, `--print`, `--file`, or stdin content, so a bare
-// `--session-dir <dir-with-prior-session>` invocation would compose `-c` with
-// nothing for Claude to resume with.
+// invocation against a source storage with a prior session would compose `-c`
+// with nothing for Claude to resume with.
 //
 // ## Why Not Caught
 // Existing composition tests either supplied a message (masking the gap, since
@@ -108,8 +109,8 @@ fn bug_reproducer_425_empty_stdin_no_tty()
 #[ test ]
 fn bug_reproducer_426_c_injected_without_message()
 {
-  let ( _session, session_path ) = make_session_dir();
-  let output = run_dry( &[ "--session-dir", &session_path ] );
+  let ( _ch, home, from ) = make_continuable_from();
+  let output = run_dry_with_env( &[ "--from", &from ], &[ ( "CLAUDE_HOME", home.as_str() ) ] );
   assert!(
     !output.contains( " -c" ),
     "-c must not be injected when no message/--print/--file/--interactive is given, \
@@ -157,8 +158,11 @@ fn bug_reproducer_426_c_injected_without_message()
 #[ test ]
 fn bug_reproducer_426_interactive_resume_unaffected()
 {
-  let ( _session, session_path ) = make_session_dir();
-  let output = run_dry( &[ "--session-dir", &session_path, "--interactive" ] );
+  let ( _ch, home, from ) = make_continuable_from();
+  let output = run_dry_with_env(
+    &[ "--from", &from, "--interactive" ],
+    &[ ( "CLAUDE_HOME", home.as_str() ) ],
+  );
   assert!(
     output.contains( " -c" ),
     "-c must still be injected for an explicit --interactive resume with no message \
@@ -358,15 +362,17 @@ fn chrome_suppression_holds_for_non_tty_file_only_invocation()
 #[ test ]
 fn bug_reproducer_428_resume_rejected_no_retry()
 {
-  let ( _session, session_path ) = make_zero_turn_session_dir();
+  let ( _ch, home, from ) =
+    make_continuable_from_with( "00000000-0000-0000-0000-000000000000", b"{\"type\":\"system\",\"subtype\":\"init\"}\n" );
   // Rejects any invocation carrying `-c` (simulating claude's real refusal to resume a
   // zero-model-turn transcript); succeeds once `-c` is dropped, simulating the
   // fresh-session fallback the fix must perform.
   let script = "#!/bin/sh\nfor a in \"$@\"; do\n  if [ \"$a\" = \"-c\" ]; then\n    echo 'No conversation found to continue' >&2\n    exit 1\n  fi\ndone\necho FRESH_SESSION_OK\nexit 0\n";
   let ( _tmp, path ) = fake_claude( script );
-  let out = run_with_path(
-    &[ "--session-dir", &session_path, "--retry-override", "0", "--max-sessions", "0", "test message" ],
+  let out = run_with_path_env(
+    &[ "--from", &from, "--retry-override", "0", "--max-sessions", "0", "test message" ],
     &path,
+    &[ ( "CLAUDE_HOME", home.as_str() ) ],
   );
   let stderr = String::from_utf8_lossy( &out.stderr );
   let stdout = String::from_utf8_lossy( &out.stdout );
@@ -432,18 +438,20 @@ fn bug_reproducer_428_retry_succeeds()
 {
   const ORIGINAL_MESSAGE : &str = "distinct-original-msg-428";
 
-  let ( _session, session_path ) = make_zero_turn_session_dir();
+  let ( _ch, home, from ) =
+    make_continuable_from_with( "00000000-0000-0000-0000-000000000000", b"{\"type\":\"system\",\"subtype\":\"init\"}\n" );
   let jdir = tempfile::TempDir::new().expect( "failed to create temp journal dir" );
   let jdir_s = jdir.path().to_str().expect( "journal dir path must be valid UTF-8" );
   let script = "#!/bin/sh\nfor a in \"$@\"; do\n  if [ \"$a\" = \"-c\" ]; then\n    echo 'No conversation found to continue' >&2\n    exit 1\n  fi\ndone\necho FRESH_SESSION_OK\nexit 0\n";
   let ( _tmp, path ) = fake_claude( script );
-  let out = run_with_path(
+  let out = run_with_path_env(
     &[
-      "--session-dir", &session_path, "--retry-override", "0", "--max-sessions", "0",
+      "--from", &from, "--retry-override", "0", "--max-sessions", "0",
       "--journal", "full", "--journal-dir", jdir_s,
       ORIGINAL_MESSAGE,
     ],
     &path,
+    &[ ( "CLAUDE_HOME", home.as_str() ) ],
   );
   let stderr = String::from_utf8_lossy( &out.stderr );
   assert!(
@@ -500,20 +508,21 @@ fn bug_reproducer_428_retry_succeeds()
 // important to verify as its presence.
 //
 // ## Pitfall
-// `make_session_dir()`'s placeholder content (`b"{}"`) is never semantically a "genuine"
+// `make_continuable_from()`'s placeholder content (`b"{}"`) is never semantically a "genuine"
 // transcript with real model turns — "genuineness" here is entirely simulated by the fake
 // claude script always succeeding regardless of `-c`, since `clr` itself never inspects
 // session file content (that is precisely BUG-428's own root cause).
 #[ test ]
 fn bug_reproducer_428_genuine_resume_unaffected()
 {
-  let ( _session, session_path ) = make_session_dir();
+  let ( _ch, home, from ) = make_continuable_from();
   // Always succeeds regardless of -c, simulating a genuinely resumable session.
   let script = "#!/bin/sh\nfor a in \"$@\"; do\n  if [ \"$a\" = \"-c\" ]; then\n    echo GOT_DASH_C\n  fi\ndone\nexit 0\n";
   let ( _tmp, path ) = fake_claude( script );
-  let out = run_with_path(
-    &[ "--session-dir", &session_path, "--retry-override", "0", "--max-sessions", "0", "test message" ],
+  let out = run_with_path_env(
+    &[ "--from", &from, "--retry-override", "0", "--max-sessions", "0", "test message" ],
     &path,
+    &[ ( "CLAUDE_HOME", home.as_str() ) ],
   );
   let stdout = String::from_utf8_lossy( &out.stdout );
   let stderr = String::from_utf8_lossy( &out.stderr );
@@ -564,12 +573,13 @@ fn bug_reproducer_428_genuine_resume_unaffected()
 #[ test ]
 fn bug_reproducer_428_unrelated_failure_no_overbroad_retry()
 {
-  let ( _session, session_path ) = make_session_dir();
+  let ( _ch, home, from ) = make_continuable_from();
   let script = "#!/bin/sh\necho 'some unrelated claude failure xyz' >&2\nexit 7\n";
   let ( _tmp, path ) = fake_claude( script );
-  let out = run_with_path(
-    &[ "--session-dir", &session_path, "--retry-override", "0", "--max-sessions", "0", "test message" ],
+  let out = run_with_path_env(
+    &[ "--from", &from, "--retry-override", "0", "--max-sessions", "0", "test message" ],
     &path,
+    &[ ( "CLAUDE_HOME", home.as_str() ) ],
   );
   let stderr = String::from_utf8_lossy( &out.stderr );
   assert_eq!(
@@ -633,14 +643,16 @@ fn bug_reproducer_428_unrelated_failure_no_overbroad_retry()
 #[ test ]
 fn bug_reproducer_428_fallback_also_rejected_falls_through()
 {
-  let ( _session, session_path ) = make_zero_turn_session_dir();
+  let ( _ch, home, from ) =
+    make_continuable_from_with( "00000000-0000-0000-0000-000000000000", b"{\"type\":\"system\",\"subtype\":\"init\"}\n" );
   // Rejects unconditionally regardless of -c presence, simulating an edge case where even
   // the post-fallback fresh-session attempt is rejected with the identical signature.
   let script = "#!/bin/sh\necho 'No conversation found to continue' >&2\nexit 1\n";
   let ( _tmp, path ) = fake_claude( script );
-  let out = run_with_path(
-    &[ "--session-dir", &session_path, "--retry-override", "0", "--max-sessions", "0", "test message" ],
+  let out = run_with_path_env(
+    &[ "--from", &from, "--retry-override", "0", "--max-sessions", "0", "test message" ],
     &path,
+    &[ ( "CLAUDE_HOME", home.as_str() ) ],
   );
   let stderr = String::from_utf8_lossy( &out.stderr );
   assert!(

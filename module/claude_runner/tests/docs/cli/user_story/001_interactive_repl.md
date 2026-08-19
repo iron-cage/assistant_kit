@@ -41,16 +41,16 @@
 
 - **Given:** Terminal with TTY; directory `/tmp/test_project` exists
 - **When:** `clr --dir /tmp/test_project`
-- **Then:** Dry-run output contains `cd /tmp/test_project`; working directory is set to `/tmp/test_project`. Session continuation (`-c`) is injected only when prior sessions exist for `/tmp/test_project` — not asserted here (see US-5 and T10 for session-dir coverage)
+- **Then:** Dry-run output contains `cd /tmp/test_project`; working directory is set to `/tmp/test_project`. Session continuation (`-c`) is injected only when prior sessions exist for `/tmp/test_project` — not asserted here (see US-5 and T10 for session-storage coverage)
 - **Exit:** 0
 
 ---
 
-### US-5: Empty session dir → REPL opens without error (BUG-214 regression)
+### US-5: Empty source storage → REPL opens without error (BUG-214 regression)
 
-- **Given:** Terminal with TTY attached; `--session-dir` points to a freshly created empty directory (no prior claude session)
-- **When:** `clr --session-dir /tmp/mre214_empty`
-- **Then:** Assembled command (dry-run) does NOT contain `-c`; `session_exists()` guard detected empty directory and suppressed injection; REPL opens without "No conversation found" error
+- **Given:** Terminal with TTY attached; `CLAUDE_HOME` points at an empty temp dir, so no project has a prior claude session (Fix(BUG-493): the former `--session-dir <empty dir>` lever is deprecated and inert)
+- **When:** `clr` with the empty `CLAUDE_HOME`
+- **Then:** Assembled command (dry-run) does NOT contain `-c`; `session_exists()` guard detected empty storage and suppressed injection; REPL opens without "No conversation found" error
 - **Exit:** 0
 - **Source:** [invariant/001_default_flags.md § Fixed Defects](../../../../docs/invariant/001_default_flags.md), [bug/214_bare_clr_exits_no_session.md](../../../../../../../task/claude_runner/completed/214_bare_clr_exits_no_session.md)
-- **Implementation:** `tests/param_edge_cases_test.rs:562` — `bug_214_empty_session_dir_suppresses_continue_flag` (located in param edge-case suite, not user_story_test.rs)
+- **Implementation:** `tests/param_edge_cases_test.rs` — `bug_214_empty_source_storage_suppresses_continue_flag` (located in param edge-case suite, not user_story_test.rs)

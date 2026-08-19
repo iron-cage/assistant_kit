@@ -34,7 +34,7 @@
 //! - BUG-302: `clr is` (common word, `"isolated".starts_with("is")`) does NOT trigger guard
 
 mod cli_binary_test_helpers;
-use cli_binary_test_helpers::run_cli;
+use cli_binary_test_helpers::{ run_cli, run_cli_with_env };
 
 // T36: flags after positional are still parsed
 #[ test ]
@@ -75,12 +75,16 @@ fn t37_multiple_positional_words_joined()
 #[ test ]
 fn t38_double_dash_only_no_message()
 {
-  // Empty session dir → no -c injection (session_exists returns `None` for empty dir).
-  // Do NOT use make_session_dir() here: that writes a dummy .jsonl so session_exists()
-  // returns `Some(SessionId)` and injects -c, which contradicts this test's "no -c" intent.
-  let empty_dir = tempfile::TempDir::new().expect( "create empty session dir" );
-  let session_path = empty_dir.path().to_str().expect( "session dir path valid utf-8" );
-  let out = run_cli( &[ "--dry-run", "--session-dir", session_path, "--" ] );
+  // Empty source storage → no -c injection (session_exists returns `None` under an
+  // empty CLAUDE_HOME). Do NOT use make_continuable_from() here: that creates a session
+  // so session_exists() returns `Some(SessionId)` and injects -c, which contradicts this
+  // test's "no -c" intent.
+  let empty_home = tempfile::TempDir::new().expect( "create empty CLAUDE_HOME" );
+  let home = empty_home.path().to_str().expect( "CLAUDE_HOME path valid utf-8" );
+  let out = run_cli_with_env(
+    &[ "--dry-run", "--" ],
+    &[ ( "HOME", "/tmp/clr-isolated-home" ), ( "CLAUDE_HOME", home ) ],
+  );
   assert!( out.status.success(), "-- as only arg must not error" );
   let stdout = String::from_utf8_lossy( &out.stdout );
   let last_line = stdout.trim_end().lines().last().unwrap_or_default();
@@ -89,7 +93,7 @@ fn t38_double_dash_only_no_message()
   assert_eq!(
     last_line,
     "env -u CLAUDECODE -u CLAUDE_CODE_CHILD_SESSION claude --dangerously-skip-permissions --effort max --print --output-format json",
-    "-- with nothing after, under non-TTY stdin, must route to print mode (no -c in empty session dir). Got:\n{stdout}"
+    "-- with nothing after, under non-TTY stdin, must route to print mode (no -c with empty source storage). Got:\n{stdout}"
   );
 }
 

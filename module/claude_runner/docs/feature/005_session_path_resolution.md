@@ -96,7 +96,7 @@ CLAUDE_SESSION_FILE=
 - **AC-7**: `clr run --from /src-dir "message"` causes Claude to resume the most recent session from `scope_for(/src-dir).claude_session_dir`, while running in CWD.
 - **AC-8**: `clr run --to /target-dir --from /src-dir "message"` causes Claude to run in `/target-dir` with the session from `scope_for(/src-dir).claude_session_dir`.
 - **AC-9**: `--to` is a usable alias for `--dir` in `run` and `ask`; behavior is identical; defaults to CWD when omitted.
-- **AC-10**: `--from` is a higher-level companion to `--session-dir`; when both are given, `--session-dir` takes precedence (raw path beats computed); like `--to`, `--from` defaults to CWD when omitted.
+- **AC-10**: the deprecated `--session-dir` is inert (Fix(BUG-493)); when both are given, `--from`'s computed source storage governs exactly as if `--session-dir` were absent (the former raw-path precedence is gone); like `--to`, `--from` defaults to CWD when omitted.
 
 ### Related Docs
 

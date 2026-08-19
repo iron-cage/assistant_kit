@@ -37,12 +37,12 @@ CLAUDE_SESSION_DIR  = /home/alice/.claude/projects/-home-alice-project
 | Mechanism | Value |
 |-----------|-------|
 | Env var | none |
-| `--session-dir` param | Raw path override — bypasses Df() entirely; takes a verbatim directory path |
+| `--session-dir` param | DEPRECATED, no effect (Fix(BUG-493)) — parsed, warns on stderr, never overrides the computed path |
 | `--from <DIR>` param | Computes `scope_for(DIR).claude_session_dir` and uses that for session lookup; defaults to cwd when omitted |
 
-**`--from` vs `--session-dir`:**
-- `--session-dir /path/to/dir` — takes the raw path verbatim as the session storage directory.
-- `--from /home/alice/project` — computes `Df("/home/alice/project")` → uses `~/.claude/projects/-home-alice-project` as the source session dir. Higher-level ergonomic wrapper; defaults to cwd when omitted.
+**`--from` vs the deprecated `--session-dir`:**
+- `--from /home/alice/project` — computes `Df("/home/alice/project")` → uses `~/.claude/projects/-home-alice-project` as the source session dir; defaults to cwd when omitted. The only working override.
+- `--session-dir /path/to/dir` — formerly a verbatim raw-path override; fully inert since Fix(BUG-493) because claude >= 2.x ignores the env export it relied on.
 
 ### Examples
 
@@ -61,6 +61,6 @@ CLAUDE_SESSION_DIR  = /home/alice/.claude/projects/-home-alice-project
 | [`006_claude_session_file.md`](006_claude_session_file.md) | CLAUDE_SESSION_FILE — highest-mtime `.jsonl` inside CLAUDE_SESSION_DIR |
 | [`../algorithm/001_path_encoding.md`](../algorithm/001_path_encoding.md) | Df() — converts target_dir to storage segment |
 | [`../algorithm/003_session_file_selection.md`](../algorithm/003_session_file_selection.md) | Session file selection — scans CLAUDE_SESSION_DIR |
-| [`../cli/param/010_session_dir.md`](../cli/param/010_session_dir.md) | `--session-dir` — raw path override |
+| [`../cli/param/010_session_dir.md`](../cli/param/010_session_dir.md) | `--session-dir` — deprecated, inert (Fix(BUG-493)) |
 | [`../cli/param/076_from.md`](../cli/param/076_from.md) | `--from` — computes CLAUDE_SESSION_DIR for source dir |
 | [`../feature/005_session_path_resolution.md`](../feature/005_session_path_resolution.md) | Feature hub: `scope_for()` and session cross-loading |
