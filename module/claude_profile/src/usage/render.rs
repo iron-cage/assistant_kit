@@ -13,7 +13,7 @@ use crate::account::{ TagFilter, eligible };
 use super::types::{ AccountQuota, SortStrategy, PreferStrategy, ColsVisibility, GetField };
 use super::format::{
   recommended_model,
-  compute_expires_cell_cached, sub_label, shorten_error,
+  expires_cell_for, sub_label, shorten_error, with_lock_marker,
   quota_text_cells, status_emoji, renews_label, next_event_label, next_event_raw, renewal_secs,
 };
 use super::sort::{ sort_indices, find_next_for_strategy, strategy_metric };
@@ -126,8 +126,9 @@ pub fn render_text(
 
     // Fix(BUG-345): compute_expires_cell alone cannot show cache-fallback staleness.
     // Root cause: aq.cached (fetch provenance) was never combined with expires_at_ms here.
-    // Pitfall: use the cache-aware wrapper, not compute_expires_cell directly, wherever aq.cached is in scope.
-    let expires_cell = compute_expires_cell_cached( aq.expires_at_ms, now_secs, aq.cached );
+    // Pitfall: use the aq-aware wrapper (cache `~`-prefix + redirect `static`), not
+    //   compute_expires_cell directly, wherever an aq is in scope.
+    let expires_cell = expires_cell_for( aq, now_secs );
     let sub_str      = sub_label( aq.account.as_ref() ).to_string();
     // Fix(BUG-232): billing_type=="none" → no active subscription → no renewal date to show.
     // Root cause: renews_label uses org_created_at unconditionally; has no billing_type param.
@@ -223,7 +224,7 @@ pub fn render_text(
         };
         let mut row : Vec< String > = vec![ flag_cell ];
         if cols.status       { row.push( status_emoji( aq ).to_string() ); }
-        row.push( name_display );
+        row.push( with_lock_marker( aq, name_display ) );
         if cols.h5_left      { row.push( cells[ 0 ].clone() ); }
         if cols.h5_reset     { row.push( cells[ 1 ].clone() ); }
         if cols.d7_left      { row.push( cells[ 2 ].clone() ); }
@@ -247,7 +248,7 @@ pub fn render_text(
 
         let mut row : Vec< String > = vec![ flag_cell ];
         if cols.status       { row.push( status_emoji( aq ).to_string() ); }
-        row.push( aq.name.clone() );
+        row.push( with_lock_marker( aq, aq.name.clone() ) );
         let structural_len = row.len();
         if cols.h5_left      { row.push( dash.clone() ); }
         if cols.h5_reset     { row.push( dash.clone() ); }
@@ -429,7 +430,7 @@ pub( crate ) fn render_plain(
 
 /// Strip emoji and replace status symbols with plain-text equivalents.
 ///
-/// Replaces: `🟢`→`ok`, `🟡`→`warn`, `🔴`→`err`, `→`→`->`, `✓`→`*`.
+/// Replaces: `🟢`→`ok`, `🟡`→`warn`, `🔴`→`err`, `⚪`→`static`, `🔒`→`(locked)`, `→`→`->`, `✓`→`*`.
 /// Sole definition — used by `render_plain` above and by `api.rs` for `no_color::1`
 /// (AC-14 / TSK-224); the two sites previously carried verbatim copies of the
 /// replacement chain (audit-no-color-dup).
@@ -439,6 +440,11 @@ pub( crate ) fn apply_no_color( s : String ) -> String
     .replace( "🟢", "ok" )
     .replace( "🟡", "warn" )
     .replace( "🔴", "err" )
+    // Feature 071: redirect-backend status glyph; word matches render_tsv's status arm
+    // and `.credentials.status`'s `Token: static` vocabulary.
+    .replace( "⚪", "static" )
+    // Feature 070 lock visibility: name-cell claim-lock marker (with_lock_marker).
+    .replace( "\u{1F512}", "(locked)" )
     .replace( '→', "->" )
     .replace( '✓', "*" )
 }
@@ -459,8 +465,9 @@ pub fn extract_get_field( aq : &AccountQuota, field : GetField, now_secs : u64 )
     GetField::Account => aq.name.clone(),
     // Fix(BUG-345): .get field::expires must reflect cache-fallback staleness like the table cell does.
     // Root cause: this extractor called the non-cache-aware compute_expires_cell directly.
-    // Pitfall: any new Expires accessor must use compute_expires_cell_cached, not compute_expires_cell.
-    GetField::Expires => compute_expires_cell_cached( aq.expires_at_ms, now_secs, aq.cached ),
+    // Pitfall: any new Expires accessor must use the aq-aware expires_cell_for (cache
+    //   `~`-prefix + redirect `static`), not compute_expires_cell.
+    GetField::Expires => expires_cell_for( aq, now_secs ),
     GetField::Sub    => sub_label( aq.account.as_ref() ).to_string(),
     // Fix(BUG-232): billing_type=="none" → no active subscription → no renewal date to show.
     // Root cause: renews_label uses org_created_at unconditionally; has no billing_type param.

@@ -79,6 +79,33 @@ pub fn compute_expires_cell_cached( expires_at_ms : u64, now_secs : u64, cached 
   if cached { format!( "~{cell}" ) } else { cell }
 }
 
+/// `Expires` cell from a full `AccountQuota` row — the preferred call form wherever an
+/// `aq` is in scope (supersedes calling `compute_expires_cell_cached` directly there).
+///
+/// Feature 071: a redirect-backend row shows `static` — its key has no OAuth expiry on
+/// `clp`'s clock (`expires_at_ms` is 0), and the raw arithmetic would render a healthy
+/// static-key account as `EXPIRED`. Matches `.credentials.status`'s `Token: static`
+/// vocabulary. All other rows delegate to `compute_expires_cell_cached` unchanged.
+pub fn expires_cell_for( aq : &AccountQuota, now_secs : u64 ) -> String
+{
+  if aq.is_redirect_backend() { return "static".to_string(); }
+  compute_expires_cell_cached( aq.expires_at_ms, now_secs, aq.cached )
+}
+
+/// Append the 🔒 claim-lock marker to an account-name cell when the row is locked.
+///
+/// Feature 070 lock visibility: a `claim_lock: true` account must be visibly
+/// highlighted in `.usage` output by default — the lock silently blocks rotation
+/// (Gate 9) and `.account.use`, so an invisible lock surprises the user at switch
+/// time. Suffix form composes with the cache-age/fallback-reason suffixes and keeps
+/// name-column prefix matching intact for TSV consumers. `no_color::1` maps the
+/// glyph to `(locked)` via `apply_no_color`.
+#[ must_use ]
+pub fn with_lock_marker( aq : &AccountQuota, name : String ) -> String
+{
+  if aq.claim_lock { format!( "{name} \u{1F512}" ) } else { name }
+}
+
 // ── Date helpers ──────────────────────────────────────────────────────────────
 
 /// Convert a Unix timestamp (seconds) to a Gregorian `(year, month, day)` tuple.
@@ -568,6 +595,10 @@ pub fn quota_text_cells( data : &claude_quota::OauthUsageData, now_secs : u64 ) 
 
 /// Return the single-glyph quota status emoji for an account row.
 ///
+/// - `"⚪"` — redirect-backend account (Feature 071): no Anthropic quota semantics at all;
+///   neither healthy-🟢 nor error-🔴 applies. Sorts in the last group regardless (see
+///   `status_group_of`) — a quota table orders anthropic candidates, and a redirect row
+///   is never one.
 /// - `"🔴"` — token is invalid or missing (`result` is `Err`), OR subscription is
 ///   cancelled (`billing_type="none"`).
 /// - `"🟡"` — token valid, subscription active, but `5h Left ≤ 15%` or `7d Left ≤ 3%`.
@@ -583,6 +614,10 @@ pub fn quota_text_cells( data : &claude_quota::OauthUsageData, now_secs : u64 ) 
 //   only fire the cancelled gate when account=Some(billing_type="none") is definitively present.
 pub fn status_emoji( aq : &AccountQuota ) -> &'static str
 {
+  // Feature 071: checked before the generic Err guard — a redirect row's placeholder Err
+  // is a backend fact, not a failure; 🔴 would misread a healthy static-key account as
+  // broken (the exact confusion observed on a live kimi seat).
+  if aq.is_redirect_backend() { return "⚪"; }
   if aq.result.is_err() { return "🔴"; }
   // Fix(BUG-317): cancelled subscription → permanently unusable → 🔴 regardless of quota.
   // Root cause: status_emoji() only checked quota thresholds — billing_type="none" accounts

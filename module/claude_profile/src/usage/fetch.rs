@@ -126,6 +126,7 @@ pub fn fetch_quota_for_list(
       // Fix(BUG-537): resolve is_current via the same AC-02 live-token comparison as the
       //   anthropic path — switch_account installs a redirect account's credentials file
       //   as the live one, so token equality correctly identifies it and ✓ becomes reachable.
+      //   Local file read only — no HTTP, consistent with this branch's no-fetch guarantee.
       // Root cause: this branch continues before the shared is_current computation and
       //   hardcoded false; a switched-to redirect account could never show ✓.
       // Pitfall: do not apply the same change to the G1 not-owned branch below — G1
@@ -139,7 +140,7 @@ pub fn fetch_quota_for_list(
         is_active             : acct.is_active,
         is_occupied_elsewhere : occupied_elsewhere.contains( &acct.name ),
         expires_at_ms         : acct.expires_at_ms,
-        result                : Err( "redirect backend — no Anthropic quota".to_string() ),
+        result                : Err( super::types::REDIRECT_NO_QUOTA_REASON.to_string() ),
         account               : None,
         host,
         role,

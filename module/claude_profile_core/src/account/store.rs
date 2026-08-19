@@ -364,8 +364,16 @@ pub fn save(
         }
       }
     }
-    // Merge model preference from live ~/.claude/settings.json (best-effort, both backends).
-    if let Ok( live_settings ) = std::fs::read_to_string( paths.settings_file() )
+    // Merge model preference from live ~/.claude/settings.json (best-effort, anthropic
+    // only). The live `model` key is whatever this machine's current session pinned — for
+    // a redirect save that is some other account's preference, and replaying it on the
+    // next switch would pin a foreign model. Removing (not merely skipping) also
+    // self-heals files saved before this gate existed.
+    if backend == AccountBackend::Redirect
+    {
+      obj.remove( "model" );
+    }
+    else if let Ok( live_settings ) = std::fs::read_to_string( paths.settings_file() )
     {
       if let Some( model ) = parse_string_field( &live_settings, "model" )
       {

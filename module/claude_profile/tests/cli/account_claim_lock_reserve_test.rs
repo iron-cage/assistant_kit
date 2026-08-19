@@ -30,6 +30,8 @@
 //! | `t15_lock_ungated_despite_foreign_owner` | T15 | `lock::` write ungated despite non-ownership | P |
 //! | `t16_read_side_unaffected_by_claim_lock_or_reserve` | T16 | quota display unaffected by either field | P |
 //! | `t17_lock_dry_run_preview_no_write` | T17 | `dry::1` preview; `alice.json` unchanged on disk | P |
+//! | `t18_usage_lock_marker_visible_text_tsv_json_no_color` | T18 | `.usage` highlights locked rows: 🔒 name suffix (text/TSV), `(locked)` under `no_color::1`, `claim_lock` JSON field | P |
+//! | `t19_accounts_lock_visible_text_table_json` | T19 | `.accounts` highlights locked account: `Lock: yes` line (text), 🔒 suffix (table), `claim_lock`/`reserve` JSON fields | P |
 
 use crate::cli_runner::
 {
@@ -542,4 +544,119 @@ fn t17_lock_dry_run_preview_no_write()
 
   let meta = read_account_meta( dir.path(), "alice@test.com" );
   assert_eq!( meta[ "claim_lock" ], serde_json::json!( false ), "T17: alice.json must be unchanged on disk (claim_lock stays false), got:\n{meta}" );
+}
+
+/// T18 / Feature 070 lock visibility: `.usage` must highlight claim-locked accounts by
+/// default — the lock silently blocks rotation (Gate 9) and `.account.use`, so an
+/// invisible lock surprises the user at switch time (the original field report: a locked
+/// account showed "no highlight in any way" in `.usage`).
+///
+/// Offline via the t06 cache pattern (cached rows, no refresh subprocess). Asserts all
+/// four surfaces: text 🔒 name suffix, TSV 🔒 name suffix, `no_color::1` `(locked)`
+/// mapping (emoji-free guarantee), JSON `claim_lock` boolean.
+#[ test ]
+fn t18_usage_lock_marker_visible_text_tsv_json_no_color()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "max", "tier-current", FAR_FUTURE_MS );
+  write_account( dir.path(), "alice@test.com", "max", "tier-alice", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "bob@test.com",   "max", "tier-bob",   FAR_FUTURE_MS, false );
+  write_account_quota_cache( dir.path(), "alice@test.com", 20.0, 30.0, None );
+  write_account_quota_cache( dir.path(), "bob@test.com",   20.0, 30.0, None );
+  write_account_claim_lock( dir.path(), "alice@test.com", true );
+
+  // Text table: 🔒 suffix on the locked row's name cell only.
+  let out = run_cs_with_env( &[ ".usage" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  let alice_line = text.lines().find( |l| l.contains( "alice@test.com" ) )
+    .unwrap_or_else( || panic!( "T18: no alice row in text output, got:\n{text}" ) );
+  let bob_line = text.lines().find( |l| l.contains( "bob@test.com" ) )
+    .unwrap_or_else( || panic!( "T18: no bob row in text output, got:\n{text}" ) );
+  assert!( alice_line.contains( '\u{1F512}' ), "T18: locked alice row must carry 🔒, got:\n{alice_line}" );
+  assert!( !bob_line.contains( '\u{1F512}' ), "T18: unlocked bob row must not carry 🔒, got:\n{bob_line}" );
+
+  // TSV: same suffix; name prefix stays machine-matchable.
+  let tsv_out = run_cs_with_env( &[ ".usage", "format::tsv" ], &[ ( "HOME", home ) ] );
+  assert_exit( &tsv_out, 0 );
+  let tsv = stdout( &tsv_out );
+  let alice_tsv = tsv.lines().find( |l| l.contains( "alice@test.com" ) )
+    .unwrap_or_else( || panic!( "T18: no alice row in TSV output, got:\n{tsv}" ) );
+  assert!( alice_tsv.contains( '\u{1F512}' ), "T18: TSV locked row must carry 🔒, got:\n{alice_tsv}" );
+
+  // no_color::1: emoji-free guarantee — 🔒 maps to the (locked) word.
+  let plain_out = run_cs_with_env( &[ ".usage", "no_color::1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &plain_out, 0 );
+  let plain = stdout( &plain_out );
+  assert!( !plain.contains( '\u{1F512}' ), "T18: no_color output must not leak 🔒, got:\n{plain}" );
+  assert!(
+    plain.lines().any( |l| l.contains( "alice@test.com" ) && l.contains( "(locked)" ) ),
+    "T18: no_color alice row must carry (locked), got:\n{plain}",
+  );
+
+  // JSON: raw boolean for machine consumers.
+  let json_out = run_cs_with_env( &[ ".usage", "format::json" ], &[ ( "HOME", home ) ] );
+  assert_exit( &json_out, 0 );
+  let json = stdout( &json_out );
+  assert!(
+    json.lines().any( |l| l.contains( "\"account\":\"alice@test.com\"" ) && l.contains( "\"claim_lock\":true" ) ),
+    "T18: alice JSON object must carry claim_lock:true, got:\n{json}",
+  );
+  assert!(
+    json.lines().any( |l| l.contains( "\"account\":\"bob@test.com\"" ) && l.contains( "\"claim_lock\":false" ) ),
+    "T18: bob JSON object must carry claim_lock:false, got:\n{json}",
+  );
+}
+
+/// T19 / Feature 070 lock visibility: `.accounts` highlights the lock on all three
+/// formats — presence-driven `Lock: yes` field line (text, like Tags: no `Lock: no`
+/// noise on unlocked rows), 🔒 name suffix (table), and raw `claim_lock`/`reserve`
+/// booleans (json — previously the only `Account` fields absent from the object).
+#[ test ]
+fn t19_accounts_lock_visible_text_table_json()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "max", "tier-current", FAR_FUTURE_MS );
+  write_account( dir.path(), "alice@test.com", "max", "tier-alice", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "bob@test.com",   "max", "tier-bob",   FAR_FUTURE_MS, false );
+  write_account_claim_lock( dir.path(), "alice@test.com", true );
+
+  // Text (default format): presence-driven Lock line under alice only.
+  let text_out = run_cs_with_env( &[ ".accounts" ], &[ ( "HOME", home ) ] );
+  assert_exit( &text_out, 0 );
+  let text = stdout( &text_out );
+  let alice_pos = text.find( "alice@test.com" ).expect( "T19: alice missing from text output" );
+  let bob_pos   = text.find( "bob@test.com" ).expect( "T19: bob missing from text output" );
+  let alice_block = &text[ alice_pos..bob_pos.max( alice_pos ) ];
+  assert!( alice_block.contains( "Lock:    yes" ), "T19: alice block must show Lock: yes, got:\n{text}" );
+  assert_eq!(
+    text.matches( "Lock:" ).count(), 1,
+    "T19: only the locked account gets a Lock line (presence-driven), got:\n{text}",
+  );
+
+  // Table: 🔒 suffix on the locked row's Account cell.
+  let table_out = run_cs_with_env( &[ ".accounts", "format::table" ], &[ ( "HOME", home ) ] );
+  assert_exit( &table_out, 0 );
+  let table = stdout( &table_out );
+  let alice_row = table.lines().find( |l| l.contains( "alice@test.com" ) )
+    .unwrap_or_else( || panic!( "T19: no alice row in table output, got:\n{table}" ) );
+  let bob_row = table.lines().find( |l| l.contains( "bob@test.com" ) )
+    .unwrap_or_else( || panic!( "T19: no bob row in table output, got:\n{table}" ) );
+  assert!( alice_row.contains( '\u{1F512}' ), "T19: locked alice table row must carry 🔒, got:\n{alice_row}" );
+  assert!( !bob_row.contains( '\u{1F512}' ), "T19: unlocked bob table row must not carry 🔒, got:\n{bob_row}" );
+
+  // JSON: both Feature 070 booleans present and correct.
+  let json_out = run_cs_with_env( &[ ".accounts", "format::json" ], &[ ( "HOME", home ) ] );
+  assert_exit( &json_out, 0 );
+  let json = stdout( &json_out );
+  let parsed : serde_json::Value = serde_json::from_str( json.trim() )
+    .unwrap_or_else( |e| panic!( "T19: .accounts json must parse ({e}), got:\n{json}" ) );
+  let arr = parsed.as_array().expect( "T19: json root must be an array" );
+  let alice = arr.iter().find( |a| a[ "name" ] == serde_json::json!( "alice@test.com" ) ).expect( "T19: alice missing from json" );
+  let bob   = arr.iter().find( |a| a[ "name" ] == serde_json::json!( "bob@test.com" ) ).expect( "T19: bob missing from json" );
+  assert_eq!( alice[ "claim_lock" ], serde_json::json!( true ),  "T19: alice claim_lock must be true, got: {alice}" );
+  assert_eq!( alice[ "reserve" ],    serde_json::json!( false ), "T19: alice reserve must be false, got: {alice}" );
+  assert_eq!( bob[ "claim_lock" ],   serde_json::json!( false ), "T19: bob claim_lock must be false, got: {bob}" );
 }

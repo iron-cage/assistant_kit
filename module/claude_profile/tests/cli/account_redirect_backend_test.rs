@@ -20,6 +20,9 @@
 //! | T16 | `t16_save_preset_unrecognized_value_exits_1`                | Feature 073: `preset::` value other than `kimi` → exit 1 | N |
 //! | T17 | `t17_use_preset_kimi_account_writes_kimi_tier_env_vars`     | Feature 073: `.account.use` on a `preset::kimi` account writes all 7 Kimi-tier env vars | P |
 //! | T18 | `t18_save_preset_kimi_with_explicit_backend_anthropic_does_not_force_redirect_fields` | Feature 073: explicit `backend::anthropic` wins — preset does not force base_url/inference_provider | P |
+//! | T19 | `t19_use_redirect_removes_stale_top_level_model_pin`        | redirect save never snapshots `model`; redirect switch removes a stale top-level pin | P |
+//! | T20 | `t20_save_redirect_self_heals_stray_model_in_meta`          | redirect re-save removes a stray pre-gate `model` field; anthropic snapshot unaffected | P |
+//! | T21 | `t21_usage_tsv_active_redirect_row_current_static`          | `.usage format::tsv` after switch-to-redirect → ✓ flag, `static` status, `static` expires | P |
 
 use crate::cli_runner::{
   run_cs_with_env,
@@ -570,4 +573,155 @@ fn t18_save_preset_kimi_with_explicit_backend_anthropic_does_not_force_redirect_
   assert_eq!( meta[ "backend" ], serde_json::json!( "anthropic" ), "T18: explicit backend::anthropic must win over preset::kimi, got:\n{meta}" );
   assert!( meta.get( "base_url" ).is_none(), "T18: preset::kimi must not force base_url onto an anthropic-backend save, got:\n{meta}" );
   assert!( meta.get( "inference_provider" ).is_none(), "T18: preset::kimi must not force inference_provider onto an anthropic-backend save, got:\n{meta}" );
+}
+
+#[ test ]
+fn t19_use_redirect_removes_stale_top_level_model_pin()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  // A stale explicit model pin from a previous (anthropic) session's /model pick.
+  let claude_dir = dir.path().join( ".claude" );
+  std::fs::create_dir_all( &claude_dir ).unwrap();
+  std::fs::write( claude_dir.join( "settings.json" ), r#"{"model":"claude-sonnet-5"}"# ).unwrap();
+
+  // Save-side gate: the live `model` pin must NOT be snapshotted into redirect meta.
+  let save_out = run_cs_with_env(
+    &[
+      ".account.save", "name::kimi", "backend::redirect",
+      "base_url::https://api.moonshot.ai/anthropic", "api_key::sk-test",
+      "redirect_model::kimi-k3",
+    ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &save_out, 0 );
+  let meta = read_account_meta( dir.path(), "kimi" );
+  assert!(
+    meta.get( "model" ).is_none(),
+    "T19: redirect save must not snapshot the live model pin into meta, got:\n{meta}",
+  );
+
+  // Switch-side gate: the stale top-level pin is removed — env.ANTHROPIC_MODEL is the
+  // only model routing a redirect seat gets; a leftover pin would shadow it in the
+  // /model UI and take over whenever the env block is absent.
+  let use_out = run_cs_with_env( &[ ".account.use", "name::kimi" ], &[ ( "HOME", home ) ] );
+  assert_exit( &use_out, 0 );
+
+  let settings_text = std::fs::read_to_string( claude_dir.join( "settings.json" ) ).unwrap();
+  let settings : serde_json::Value = serde_json::from_str( &settings_text ).unwrap();
+  assert!(
+    settings.get( "model" ).is_none(),
+    "T19: redirect switch must remove the stale top-level model pin, got:\n{settings_text}",
+  );
+  assert_eq!(
+    settings[ "env" ][ "ANTHROPIC_MODEL" ], serde_json::json!( "kimi-k3" ),
+    "T19: env.ANTHROPIC_MODEL must carry the redirect model, got:\n{settings_text}",
+  );
+}
+
+#[ test ]
+fn t20_save_redirect_self_heals_stray_model_in_meta()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  let save_out = run_cs_with_env(
+    &[
+      ".account.save", "name::kimi", "backend::redirect",
+      "base_url::https://api.moonshot.ai/anthropic", "api_key::sk-test",
+      "redirect_model::kimi-k3",
+    ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &save_out, 0 );
+
+  // A stray `model` field left behind by a save that predates the redirect gate.
+  let meta_path = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" ).join( "kimi.json" );
+  let mut meta : serde_json::Value = serde_json::from_str( &std::fs::read_to_string( &meta_path ).unwrap() ).unwrap();
+  meta.as_object_mut().unwrap().insert( "model".to_string(), serde_json::json!( "claude-fable-5[1m]" ) );
+  std::fs::write( &meta_path, serde_json::to_string_pretty( &meta ).unwrap() ).unwrap();
+
+  // Re-save removes (not merely skips) the stray field.
+  let resave_out = run_cs_with_env(
+    &[
+      ".account.save", "name::kimi", "backend::redirect",
+      "base_url::https://api.moonshot.ai/anthropic", "api_key::sk-test",
+      "redirect_model::kimi-k3",
+    ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &resave_out, 0 );
+  let healed = read_account_meta( dir.path(), "kimi" );
+  assert!(
+    healed.get( "model" ).is_none(),
+    "T20: redirect re-save must remove a stray pre-gate model field, got:\n{healed}",
+  );
+
+  // Anthropic control: the live model pin is still snapshotted for anthropic saves.
+  let claude_dir = dir.path().join( ".claude" );
+  std::fs::create_dir_all( &claude_dir ).unwrap();
+  std::fs::write( claude_dir.join( "settings.json" ), r#"{"model":"claude-sonnet-5"}"# ).unwrap();
+  write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
+  let alice_save = run_cs_with_env( &[ ".account.save", "name::alice@acme.com" ], &[ ( "HOME", home ) ] );
+  assert_exit( &alice_save, 0 );
+  let alice_meta = read_account_meta( dir.path(), "alice@acme.com" );
+  assert_eq!(
+    alice_meta[ "model" ], serde_json::json!( "claude-sonnet-5" ),
+    "T20: anthropic save must still snapshot the live model pin, got:\n{alice_meta}",
+  );
+}
+
+/// T21 / Feature 071: after switching to a redirect account, the `.usage` TSV row for
+/// that account carries the display quartet — ✓ flag (is_current by token comparison),
+/// `static` status word (⚪ tier, not `err`), and `static` in the expires column.
+///
+/// End-to-end over the real binary: save → use → usage. No HTTP: the redirect row is
+/// produced by the R1 bypass, `should_refresh` rejects the placeholder, and touch skips
+/// with the redirect reason.
+#[ test ]
+fn t21_usage_tsv_active_redirect_row_current_static()
+{
+  let dir = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  let save = run_cs_with_env(
+    &[
+      ".account.save", "name::kimi", "backend::redirect",
+      "base_url::https://api.moonshot.ai/anthropic", "api_key::sk-test",
+      "redirect_model::kimi-k3",
+    ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &save, 0 );
+
+  let use_out = run_cs_with_env( &[ ".account.use", "name::kimi" ], &[ ( "HOME", home ) ] );
+  assert_exit( &use_out, 0 );
+
+  let usage = run_cs_with_env( &[ ".usage", "format::tsv" ], &[ ( "HOME", home ) ] );
+  assert_exit( &usage, 0 );
+  let text = stdout( &usage );
+
+  let mut lines = text.lines();
+  let header : Vec< &str > = lines.next().expect( "T21: TSV must have a header line" ).split( '\t' ).collect();
+  let status_idx  = header.iter().position( |h| *h == "status" ).expect( "T21: status column missing" );
+  let expires_idx = header.iter().position( |h| *h == "expires" ).expect( "T21: expires column missing" );
+  let account_idx = header.iter().position( |h| *h == "account" ).expect( "T21: account column missing" );
+
+  let row : Vec< &str > = lines
+    .map( |l| l.split( '\t' ).collect::< Vec< _ > >() )
+    .find( |cells| cells.get( account_idx ).is_some_and( |name| name.starts_with( "kimi" ) ) )
+    .expect( "T21: no TSV row for the kimi account" );
+
+  assert_eq!( row[ 0 ], "\u{2713}", "T21: active redirect row must carry the ✓ current flag, got row: {row:?}" );
+  assert_eq!( row[ status_idx ], "static", "T21: status word must be `static`, not err, got row: {row:?}" );
+  assert_eq!( row[ expires_idx ], "static", "T21: expires cell must be `static`, not EXPIRED, got row: {row:?}" );
+
+  // no_color::1 must map the ⚪ redirect glyph to `static` — an unmapped glyph would
+  // leak raw emoji into output that guarantees to be emoji-free (apply_no_color).
+  let plain = run_cs_with_env( &[ ".usage", "no_color::1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &plain, 0 );
+  let plain_text = stdout( &plain );
+  assert!( !plain_text.contains( '\u{26AA}' ), "T21: no_color output must not leak ⚪, got:\n{plain_text}" );
+  assert!( plain_text.contains( "static" ), "T21: no_color output must carry the `static` word, got:\n{plain_text}" );
 }

@@ -2,14 +2,14 @@
 // Accesses pub(crate) items through claude_profile::usage::test_bridge (testing feature).
 
 use claude_profile::usage::test_bridge::{
-  token_exp_label, compute_expires_cell, renews_label, next_event_label,
+  token_exp_label, compute_expires_cell, expires_cell_for, renews_label, next_event_label,
   shorten_error, relevant_quotas,
   recommended_model, quota_text_cells, status_emoji,
   renewal_secs, unix_to_date,
   status_group_of, StatusGroup, apply_model_override,
 };
 use claude_profile::usage::test_bridge::{ FAR_FUTURE_MS, mk_aq_ok_both, mk_aq_sort, mk_aq_sort_weekly, mk_aq_err, mk_aq_cancelled };
-use claude_profile::usage::test_bridge::types::{ AccountQuota, PreferStrategy };
+use claude_profile::usage::test_bridge::types::{ AccountQuota, PreferStrategy, REDIRECT_NO_QUOTA_REASON };
 use tempfile::TempDir;
 
 // ── shorten_error ──────────────────────────────────────────────────────────
@@ -1428,4 +1428,64 @@ fn test_shorten_error_legacy_persisted_form_still_shortened()
 {
   assert_eq!( shorten_error( "HTTP transport error: HTTP 429 Too Many Requests" ), "rate limited (429)" );
   assert_eq!( shorten_error( "HTTP transport error: HTTP 403" ), "auth forbidden (403)" );
+}
+
+// ── Feature 071: redirect-backend display (⚪ status, static expires) ───────
+
+/// Feature 071: a redirect-backend row (canonical placeholder `result`) renders the
+/// neutral ⚪ glyph — "no Anthropic quota semantics", not an error state — while every
+/// other `Err` row keeps the 🔴 error glyph.
+#[ test ]
+fn test_status_emoji_redirect_neutral_not_error()
+{
+  let mut aq = mk_aq_err();
+  aq.result = Err( REDIRECT_NO_QUOTA_REASON.to_string() );
+  assert_eq!( status_emoji( &aq ), "⚪", "redirect placeholder row → ⚪, not 🔴" );
+  assert_eq!( status_emoji( &mk_aq_err() ), "🔴", "generic Err row must stay 🔴" );
+}
+
+/// Feature 071: `expires_cell_for` renders `static` for a redirect row. A redirect
+/// account's key never expires, but its `expires_at_ms` is 0 — the raw arithmetic
+/// (`compute_expires_cell_cached`) would print the misleading `EXPIRED`.
+/// Non-redirect rows are untouched: same field values still yield `EXPIRED`.
+#[ test ]
+fn test_expires_cell_for_redirect_static()
+{
+  let now_secs = 1_000_000;
+
+  let mut aq = mk_aq_err();
+  aq.result        = Err( REDIRECT_NO_QUOTA_REASON.to_string() );
+  aq.expires_at_ms = 0;
+  assert_eq!( expires_cell_for( &aq, now_secs ), "static", "redirect row → static" );
+
+  let mut plain = mk_aq_err();
+  plain.expires_at_ms = 0;
+  assert_eq!(
+    expires_cell_for( &plain, now_secs ), "EXPIRED",
+    "non-redirect expired row must keep the raw cell",
+  );
+}
+
+// ── Feature 070: claim-lock name-cell marker ────────────────────────────────
+
+/// Feature 070 lock visibility: `with_lock_marker` appends the 🔒 suffix to a locked
+/// row's name cell and leaves unlocked rows byte-identical. Suffix (not prefix) keeps
+/// name-column prefix matching intact for TSV consumers and composes with the
+/// cache-age/fallback-reason suffixes.
+#[ test ]
+fn test_with_lock_marker_suffix_only_when_locked()
+{
+  use claude_profile::usage::test_bridge::with_lock_marker;
+
+  let mut aq = mk_aq_err();
+  aq.claim_lock = true;
+  assert_eq!(
+    with_lock_marker( &aq, "alice (2h ago)".to_string() ), "alice (2h ago) \u{1F512}",
+    "locked row must get the 🔒 suffix after any existing suffixes",
+  );
+
+  assert_eq!(
+    with_lock_marker( &mk_aq_err(), "alice".to_string() ), "alice",
+    "unlocked row's cell must be byte-identical",
+  );
 }

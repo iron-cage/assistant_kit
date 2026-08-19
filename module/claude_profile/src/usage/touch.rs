@@ -127,6 +127,15 @@ pub fn touch_skip_reason(
     return Some( "skipped (reason: occupied elsewhere)" );
   }
 
+  // Feature 071: redirect-backend rows carry a placeholder Err, but "error account" is the
+  // wrong story — there is no Anthropic session to touch at all. Checked before the generic
+  // error guard so the trace names the real reason; wording matches `.account.use`'s own
+  // pre-switch skip ("skipped (reason: redirect backend)").
+  if aq.is_redirect_backend()
+  {
+    return Some( "skipped (reason: redirect backend)" );
+  }
+
   // Guard: errored accounts are never touched; trigger requires valid quota data.
   // Fix(BUG-202): bare return produced no trace for error-tier accounts.
   // Root cause: error guard preceded all trace emission points (lines 1506-1510).

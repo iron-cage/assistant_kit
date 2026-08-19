@@ -273,6 +273,12 @@ pub( crate ) fn render_accounts_text(
       {
         let _ = writeln!( out, "  Backend: {}", a.backend.as_str() );
       }
+      // Feature 070 lock visibility: presence-driven like Tags — a locked account always
+      // shows the line; an unlocked account emits none (no `Lock: no` noise on every row).
+      if a.claim_lock
+      {
+        let _ = writeln!( out, "  Lock:    yes" );
+      }
       // Feature 075 AC-14: presence-driven, not cols-gated — a tagged account always
       // shows its tags; an untagged account emits no line at all (byte-stable, AC-16).
       if !a.tags.is_empty()
@@ -309,7 +315,8 @@ pub( crate ) fn render_accounts_json( accounts : &[ &crate::account::Account ], 
        \"tagged_id\":\"{}\",\"capabilities\":{},\
        \"organization_uuid\":\"{}\",\"organization_name\":\"{}\",\
        \"organization_role\":\"{}\",\"workspace_uuid\":\"{}\",\"workspace_name\":\"{}\",\
-       \"host\":\"{}\",\"owner\":\"{}\",\"is_owned\":{},\"renewal_at\":{},\"inference_provider\":\"{}\",\
+       \"host\":\"{}\",\"owner\":\"{}\",\"is_owned\":{},\"claim_lock\":{},\"reserve\":{},\
+       \"renewal_at\":{},\"inference_provider\":\"{}\",\
        \"backend\":\"{}\",\"tags\":{}}}",
       json_escape( &a.name ),
       a.is_active,
@@ -332,6 +339,10 @@ pub( crate ) fn render_accounts_json( accounts : &[ &crate::account::Account ], 
       json_escape( &a.host ),
       json_escape( &a.owner ),
       a.is_owned,
+      // Feature 070: claim_lock/reserve were the only Account fields absent from the
+      // JSON object — machine consumers had no way to read the lock the 🔒 marker shows.
+      a.claim_lock,
+      a.reserve,
       renewal_at_json( a.renewal_at.as_deref() ),
       json_escape( if a.inference_provider.is_empty() { "anthropic" } else { &a.inference_provider } ),
       a.backend.as_str(),
@@ -392,7 +403,10 @@ pub( crate ) fn render_accounts_table(
       format!( "in {}", format_duration_secs( remaining ) )
     };
 
-    let mut row = vec![ flag_cell.into(), acct.name.clone().into() ];
+    // Feature 070 lock visibility: 🔒 name suffix, same convention as `.usage`'s
+    // with_lock_marker — visible by default without adding a mostly-empty column.
+    let name_cell = if acct.claim_lock { format!( "{} \u{1F512}", acct.name ) } else { acct.name.clone() };
+    let mut row = vec![ flag_cell.into(), name_cell.into() ];
     if cols.owner
     {
       let owner_raw = owners.get( idx ).map_or( "", String::as_str );

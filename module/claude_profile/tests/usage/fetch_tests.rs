@@ -954,7 +954,10 @@ fn ft14b_071_redirect_checked_before_not_owned_gate()
 /// added there. Do not "fix" G1 the same way. A pre-fix execution of this test also
 /// fires one real guaranteed-401 Anthropic call — with no row current, the synthetic-row
 /// path constructs a current-session row from the unmatched live token (that call IS
-/// symptom E-8); post-fix the path is never reached and the test is fully network-free.
+/// symptom E-8); post-fix the match case is network-free. The mismatch control below
+/// deliberately re-triggers that path (unmatched live token) to prove the comparison
+/// discriminates — its one discarded call touches no assertion and stays deterministic
+/// with or without network.
 #[ doc = "bug_reproducer(BUG-537)" ]
 #[ test ]
 fn mre_bug537_redirect_account_is_current_when_token_matches_live()
@@ -1033,6 +1036,20 @@ fn mre_bug537_redirect_account_is_current_when_token_matches_live()
   assert_eq!(
     results.len(), 1,
     "BUG-537: no synthetic row may be injected once the redirect account is current; got {} rows", results.len(),
+  );
+
+  // Discrimination control: a DIFFERENT live token (some other account is live) must
+  // leave the redirect row not-current — proves the fix actually compares tokens rather
+  // than merely detecting a readable live file. The unmatched live token re-triggers
+  // the synthetic-row path, so the row is looked up by name, not position.
+  std::fs::write( &live, r#"{"accessToken":"sk-ant-oat01-someone-else"}"# ).unwrap();
+  let results = fetch_quota_for_list( &accounts, store.path(), &live, false, false, false, None );
+  let kimi = results.iter()
+    .find( |r| r.name == "kimi@moonshot.ai" )
+    .expect( "BUG-537: kimi row must survive the synthetic injection" );
+  assert!(
+    !kimi.is_current,
+    "BUG-537: mismatched live token must leave the redirect row not-current; got true",
   );
 
   // Negative control: an unreadable/absent live token must NOT mark the account current —

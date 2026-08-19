@@ -70,7 +70,7 @@
 | Format | Behavior |
 |--------|----------|
 | `format::value` | Bare value output — no headers, no separator lines, no footer; implied by `get::` |
-| `format::tsv` | Tab-separated values with one header row; no emoji in status column (uses text labels: `ok`, `warn`, `err`) |
+| `format::tsv` | Tab-separated values with one header row; no emoji in status column (uses text labels: `ok`, `warn`, `err`, and `static` for redirect-backend rows — Feature 071) |
 | `format::plain` | Same layout as `format::text` but with no emoji and no ANSI colors |
 
 **`no_color::`:**
@@ -90,8 +90,8 @@
 - **AC-09**: Multiple row filters combine with AND: `clp .usage only_valid::1 min_7d::30` shows only 🟢/🟡 rows where `7d Left ≥ 30%`.
 - **AC-10**: `clp .usage get::7d_left` outputs the `7d Left` value of the first row (top of sorted, filtered result) as a bare string with no headers, separators, or footer. Exit 0. Implies `format::value`.
 - **AC-11**: `clp .usage only_next::1 get::7d_left` outputs the `7d Left` value for the recommended account. Exit 0.
-- **AC-12**: `clp .usage get::status` outputs one of `🟢`, `🟡`, or `🔴` for the first row.
-- **AC-13**: `clp .usage format::tsv` produces tab-separated output with a header row; status column uses `ok`/`warn`/`err` text labels instead of emoji.
+- **AC-12**: `clp .usage get::status` outputs one of `🟢`, `🟡`, `🔴`, or `⚪` (redirect-backend row — Feature 071) for the first row.
+- **AC-13**: `clp .usage format::tsv` produces tab-separated output with a header row; status column uses `ok`/`warn`/`err`/`static` text labels instead of emoji (`static` = redirect-backend row — Feature 071).
 - **AC-14**: `clp .usage no_color::1` produces output with no emoji and no ANSI sequences; status column renders as plain text labels.
 - **AC-15**: Invalid `get::` field ID exits 1 with an error listing the valid field IDs.
 - **AC-16**: `count::`, `offset::`, filter params, and `get::` all work combined with `sort::`, `prefer::`, and `cols::`.

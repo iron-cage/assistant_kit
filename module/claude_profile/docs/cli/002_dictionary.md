@@ -43,6 +43,8 @@
 
 Group 2 ranks above group 3 because 5h exhaustion recovers in hours; 7d exhaustion takes days. Group 3 (weekly-exhausted) ranks above group 4 (Dead) because it WILL recover — no external action needed. See [sort::](param/025_sort.md).
 
+Redirect-backend rows (Feature 071) also land in group 4 — they are never candidates in the anthropic-quota ordering — but display the neutral `⚪` glyph, not `🔴`: positioned last, yet not an error state. Deliberate glyph/group pairing, distinct from the 🔴-classification divergence BUG-321 corrected.
+
 ### Ownership and Assignment
 
 **Owner** — The `USER@MACHINE` identity that holds persistent ownership of an account, stored in the `owner` field of `{name}.json`. Ownership is managed via `owner::USER@MACHINE` (set) and `owner::0` (release). The ownership gate (G8) blocks credential operations by non-owners. See [feature/036_account_ownership.md](../feature/036_account_ownership.md).
