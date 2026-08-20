@@ -28,7 +28,12 @@ use claude_storage_core::{ SessionId, continuation };
 /// Pitfall: the caller always resolves a storage dir (`--from` or cwd default), so the
 ///   former `most_recent_session_id(cwd)` fallback branch was already unreachable —
 ///   both paths encode the identical canonical cwd via the same `encode_path()` call.
-fn session_exists( storage_dir : &std::path::Path ) -> Option< SessionId >
+///
+/// `pub( crate )`: also called from `topic.rs::disambiguate_slug` (Fix(BUG-542)) to probe
+/// whether an auto-name candidate's storage already holds a session before treating the
+/// name as free — the identical "does this storage have a qualifying session" question,
+/// reused rather than re-implemented.
+pub( crate ) fn session_exists( storage_dir : &std::path::Path ) -> Option< SessionId >
 {
   continuation::most_recent_session_in_dir( storage_dir )
 }
@@ -94,7 +99,12 @@ pub( crate ) struct RunPreparation
 /// claude derives storage names from its physical getcwd, so a relative or symlinked
 /// path must resolve to the same physical absolute form or the encoded name silently
 /// misses the real storage dir (`./src` would encode as `---src`).
-fn physical_abs( raw : &std::path::Path ) -> std::path::PathBuf
+///
+/// `pub( crate )`: also called from `topic.rs::disambiguate_slug` (Fix(BUG-542)) so its
+/// storage probe resolves an auto-name candidate identically to how this file resolves
+/// the same path once it becomes the real effective/source directory — two independent
+/// resolutions of the same path must never drift apart.
+pub( crate ) fn physical_abs( raw : &std::path::Path ) -> std::path::PathBuf
 {
   std::fs::canonicalize( raw ).unwrap_or_else( | _ |
   {
@@ -265,15 +275,50 @@ pub( crate ) fn build_claude_command( cli : &CliArgs )
   //
   // Pitfall: this computation must run unconditionally — do not reintroduce a
   //   cli.session_dir guard here (see Fix(BUG-493) note above).
+  //
+  // Fix(BUG-541): when --from is omitted AND --dir/--topic resolves the target to a
+  //   directory other than cwd, prefer that target's OWN storage as the source when it
+  //   already holds a qualifying session — only fall back to cwd when the target has
+  //   none yet (a genuine first use). Applies uniformly to --dir/--to and --topic; both
+  //   flow through the same `effective_working_dir`.
+  // Root cause: this always re-derived the source from literal cwd, blind to
+  //   effective_working_dir. A target directory used more than once (topic or plain
+  //   --dir) had its OWN established history silently bypassed whenever cwd's
+  //   unrelated most-recent session changed between calls — the first call's clone
+  //   correctly seeded the target, but every later call re-read cwd fresh instead of
+  //   the target's own copy, transplanting whatever was newest in cwd at that moment
+  //   and orphaning the target's actual accumulated conversation. This broke
+  //   `docs/cli/command/11_topic.md`'s documented contract that a repeat topic
+  //   invocation "finds the copy already in place and continues it... instead of
+  //   re-copying" — true only by coincidence, when cwd's own most-recent session
+  //   identity never happened to change between calls.
+  // Pitfall: only substitutes the source when the target ALREADY has a qualifying
+  //   session — an empty/fresh target must still fall through to the cwd-default so
+  //   the documented first-use clone is unaffected.
   let session_from_dir : std::path::PathBuf =
   {
-    let src_path = match cli.from.as_deref().filter( | src | !src.is_empty() )
+    match cli.from.as_deref().filter( | src | !src.is_empty() )
     {
-      Some( src ) => std::path::PathBuf::from( src ),
-      None => std::env::current_dir().unwrap_or_else( | _ | std::path::PathBuf::from( "." ) ),
-    };
-    let abs = physical_abs( &src_path );
-    claude_storage_core::scope_for( &abs ).claude_session_dir
+      Some( src ) =>
+      {
+        let abs = physical_abs( &std::path::PathBuf::from( src ) );
+        claude_storage_core::scope_for( &abs ).claude_session_dir
+      }
+      None =>
+      {
+        let own_target_storage = effective_working_dir.as_deref().map( | dir |
+          claude_storage_core::scope_for( &physical_abs( dir ) ).claude_session_dir );
+        match own_target_storage
+        {
+          Some( storage ) if session_exists( &storage ).is_some() => storage,
+          _ =>
+          {
+            let cwd = std::env::current_dir().unwrap_or_else( | _ | std::path::PathBuf::from( "." ) );
+            claude_storage_core::scope_for( &physical_abs( &cwd ) ).claude_session_dir
+          }
+        }
+      }
+    }
   };
   // Determine print mode early — used for -c injection, effort injection, and chrome
   // suppression.  Must precede expected_id so all three guards below can reference use_print.

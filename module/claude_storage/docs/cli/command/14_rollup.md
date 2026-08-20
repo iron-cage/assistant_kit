@@ -15,7 +15,7 @@ Print a flexible, aggregated token-usage table — grouped by session, project, 
 
 **Parameters:** `group::`, `sort::`, `order::`, `model::`, `columns::`, `scope::`, `path::`, `depth::`, `limit::`
 
-**Exit:** `0` success (including an empty, zero-row result for non-`local` scopes) | `1` argument error (invalid `group::`/`sort::`/`order::`/`columns::`/`scope::`/`depth::`/`limit::` value) | `2` storage error (`scope::local` and cwd has no project; or a storage read error)
+**Exit:** `0` success (including an empty, zero-row result for non-`local` scopes, or when `model::` filters out every candidate session — the header still prints, and the zero-total `percent` branch renders `0.0`, never `NaN`) | `1` argument error (invalid `group::`/`sort::`/`order::`/`columns::`/`scope::`/`depth::`/`limit::` value) | `2` storage error (`scope::local` and cwd has no project; or a storage read error)
 
 **Syntax:**
 ```bash

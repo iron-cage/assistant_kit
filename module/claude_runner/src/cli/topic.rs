@@ -62,15 +62,44 @@ fn slug_from_message( msg : &str ) -> Option< String >
   if slug.is_empty() { None } else { Some( slug ) }
 }
 
-/// Disambiguate `slug` against `base`: return it unchanged when `base/-{slug}` does
-/// not yet exist on disk; otherwise append `-2`, `-3`, ... until a free name is found.
+/// True when `name` is not safe to auto-assign: its working directory already exists
+/// on disk, OR its session storage already holds a qualifying session.
 ///
-/// Uses `topic_path::topic_dir` for the join, so the existence check is by construction
-/// the same path `resolve_effective_dir()` will later compute — previously both sites
-/// spelled the `<base>/-<sub>` formula out separately and were kept in sync by hand.
+/// Uses `topic_path::topic_dir` for the join, so the check is by construction the
+/// same path `resolve_effective_dir()` will later compute — previously the only site
+/// spelled the `<base>/-<sub>` formula out separately and was kept in sync by hand.
+///
+/// Fix(BUG-542): a name is "taken" when EITHER signal fires, not directory existence
+/// alone — a topic's working directory can be deleted (e.g. `rm -rf`) while its
+/// session storage survives untouched, since storage lives under
+/// `~/.claude/projects/`, entirely independent of the working directory's own
+/// filesystem lifetime. Auto-naming previously judged such a slug "fresh" from the
+/// directory check alone, and `builder.rs`'s Fix(BUG-541) prefer-target's-own-storage
+/// rule — deliberately authoritative once a target has ANY qualifying session — would
+/// then guarantee the recreated directory silently resumed that orphaned, unrelated
+/// history instead of starting fresh.
+/// Root cause: freshness was judged by directory existence only; session storage was
+/// never consulted despite persisting independently of the directory.
+/// Pitfall: only auto-naming (this function) needs the extra probe — an explicit
+/// `--topic NAME` bypasses `disambiguate_slug` entirely (`dispatch_topic`'s early
+/// return) and correctly continues existing storage by name; that is intended
+/// behavior, not this defect.
+fn name_is_taken( base : &std::path::Path, name : &str ) -> bool
+{
+  let dir = topic_dir( base, name );
+  if dir.exists()
+  {
+    return true;
+  }
+  let storage = claude_storage_core::scope_for( &super::builder::physical_abs( &dir ) ).claude_session_dir;
+  super::builder::session_exists( &storage ).is_some()
+}
+
+/// Disambiguate `slug` against `base`: return it unchanged when `base/-{slug}` is free
+/// per [`name_is_taken`]; otherwise append `-2`, `-3`, ... until a free name is found.
 fn disambiguate_slug( base : &std::path::Path, slug : &str ) -> String
 {
-  if !topic_dir( base, slug ).exists()
+  if !name_is_taken( base, slug )
   {
     return slug.to_string();
   }
@@ -78,7 +107,7 @@ fn disambiguate_slug( base : &std::path::Path, slug : &str ) -> String
   loop
   {
     let candidate = format!( "{slug}-{n}" );
-    if !topic_dir( base, &candidate ).exists()
+    if !name_is_taken( base, &candidate )
     {
       return candidate;
     }

@@ -648,3 +648,109 @@ fn sort_by_group_is_lexicographic()
   let order : Vec< &str > = rows.iter().map( | r | r.group.as_str() ).collect();
   assert_eq!( order, vec![ "alpha", "zulu" ], "must sort lexicographically, ignoring token totals; got: {order:?}" );
 }
+
+/// Test `limit::` truncates AFTER sort, keeping the correct top-N rows in order.
+///
+/// ## Purpose
+/// `percent_reflects_full_filtered_total_not_post_limit_rows` already covers
+/// `limit::1`'s percent side effect; it never checks that the SURVIVING row
+/// is the correct one. This closes that gap for a multi-row cap: `limit::2`
+/// must keep the two highest-ranked rows, in ranked order, not just any two.
+///
+/// ## Coverage
+/// Five distinctly-totaled rows, `limit::2`; the two largest survive, in
+/// descending order; the three smallest are cut entirely, not reordered.
+///
+/// ## Validation Strategy
+/// Five inputs with totals 10/20/30/40/50; `limit::2`; assert exactly 2 rows
+/// come back, ordered `50` then `40`, with `10`/`20`/`30` entirely absent.
+#[ test ]
+fn limit_caps_after_sort_keeps_highest_ranked_rows()
+{
+  let entries = vec!
+  [
+    input( "r10", "proj-x", None, 10, 0, 0, 0, 0, None, None ),
+    input( "r20", "proj-x", None, 20, 0, 0, 0, 0, None, None ),
+    input( "r30", "proj-x", None, 30, 0, 0, 0, 0, None, None ),
+    input( "r40", "proj-x", None, 40, 0, 0, 0, 0, None, None ),
+    input( "r50", "proj-x", None, 50, 0, 0, 0, 0, None, None ),
+  ];
+  let mut params = default_params();
+  params.limit = 2;
+  let rows = build_rollup( &entries, &params );
+
+  let order : Vec< &str > = rows.iter().map( | r | r.group.as_str() ).collect();
+  assert_eq!( order, vec![ "r50", "r40" ], "limit::2 must keep the top 2 in ranked order; got: {order:?}" );
+}
+
+/// Test `GroupKey::Day` falls back to `"unknown"` for a malformed, too-short
+/// timestamp — not just an absent (`None`) one.
+///
+/// ## Purpose
+/// `group_by_day_buckets_by_date_prefix` only covers the `None` (missing
+/// field) fallback path. `group_key_for`'s actual implementation reaches
+/// `"unknown"` via a DIFFERENT branch for a malformed value: `ts.get(0..10)`
+/// returns `None` on a string shorter than 10 bytes, which `.map_or_else`
+/// then folds to `"unknown"` — this is a distinct code path guarding against
+/// a corrupted/truncated timestamp field, not merely a missing one, and was
+/// previously untested.
+///
+/// ## Coverage
+/// A `Some("bad")` (3-byte) timestamp must bucket under `"unknown"` without
+/// panicking, exactly like a `None` timestamp does.
+///
+/// ## Validation Strategy
+/// One input with `first_ts: Some("bad")`; group by `Day`; assert the single
+/// row lands under `"unknown"` and `build_rollup` does not panic.
+#[ test ]
+fn group_by_day_falls_back_to_unknown_for_malformed_short_timestamp()
+{
+  let entries = vec![ input( "sess-a", "proj-x", None, 10, 0, 0, 0, 0, Some( "bad" ), None ) ];
+  let mut params = default_params();
+  params.group_by = GroupKey::Day;
+  let rows = build_rollup( &entries, &params );
+
+  assert_eq!( rows.len(), 1, "one row expected; got: {rows:?}" );
+  assert_eq!( rows[ 0 ].group, "unknown", "a too-short timestamp must fall back to unknown, not panic or truncate; got: {rows:?}" );
+}
+
+/// Test `model_filter` and `GroupKey::Model` compose correctly: filtering
+/// removes non-matching sessions before the SAME dimension groups by model.
+///
+/// ## Purpose
+/// `model_filter_drops_non_matching_sessions_before_grouping` only exercises
+/// the filter against `GroupKey::Project`. This checks the filter still
+/// applies before, not after, grouping when both operate on the identical
+/// dimension (model) — a plausible spot for an implementation to
+/// accidentally apply the filter post-grouping, or to leave a stray empty
+/// bucket behind for the filtered-out model.
+///
+/// ## Coverage
+/// Two models present; filter keeps only one; grouping by model must yield
+/// exactly one row (the surviving model), never a second "haiku" or
+/// "unknown" row for what got filtered out.
+///
+/// ## Validation Strategy
+/// Two `opus` sessions and one `haiku` session; `model_filter: "opus"`,
+/// `group_by: Model`; assert exactly 1 row, labeled `"claude-opus-5"`, with
+/// both opus sessions' tokens summed into it.
+#[ test ]
+fn model_filter_composes_with_group_by_model()
+{
+  let entries = vec!
+  [
+    input( "sess-a", "proj-x", Some( "claude-opus-5" ), 100, 0, 0, 0, 0, None, None ),
+    input( "sess-b", "proj-x", Some( "claude-opus-5" ), 50, 0, 0, 0, 0, None, None ),
+    input( "sess-c", "proj-x", Some( "claude-haiku-5" ), 900, 0, 0, 0, 0, None, None ),
+  ];
+  let mut params = default_params();
+  params.group_by = GroupKey::Model;
+  params.model_filter = Some( StringMatcher::new( "opus" ) );
+  let rows = build_rollup( &entries, &params );
+
+  assert_eq!( rows.len(), 1, "haiku must be filtered out before grouping, leaving exactly 1 row; got: {rows:?}" );
+  let row = &rows[ 0 ];
+  assert_eq!( row.group, "claude-opus-5", "surviving row must be the opus bucket; got: {rows:?}" );
+  assert_eq!( row.sessions, 2, "both opus sessions must merge into this one row" );
+  assert_eq!( row.input, 150, "opus sessions' tokens must sum (100 + 50)" );
+}

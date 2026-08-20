@@ -308,4 +308,199 @@ mod transplant
       "second call must continue via -c, not clone fresh. Got:\n{}", stderr_str( &out )
     );
   }
+
+  /// T09 (BUG-541): a second `clr topic --topic NAME "msg"` call — with `--from`
+  /// OMITTED, so the clone source defaults to cwd — must keep continuing the
+  /// topic's OWN established history even when cwd (the launching directory, not
+  /// the topic directory) has since gained a newer, unrelated session of its own.
+  ///
+  /// ## Root Cause
+  /// `session_from_dir`'s default-to-cwd fallback (`build_claude_command`,
+  /// `src/cli/builder.rs`) is blind to `--topic`: it always re-derives the clone
+  /// source from the literal launching cwd's own most-recently-modified session,
+  /// never from the topic directory's own storage. The first call clones cwd's
+  /// then-current session in, as documented — but every later call re-checks cwd
+  /// fresh rather than the topic's own copy, so if cwd's most-recent session
+  /// identity has since changed (ordinary, expected drift for any actively-used
+  /// launch directory), the topic silently transplants that unrelated newer
+  /// session in alongside its own history and resumes IT instead — orphaning the
+  /// topic's actual accumulated conversation. `docs/cli/command/11_topic.md`
+  /// documents the opposite: "every subsequent invocation of that same name finds
+  /// the copy already in place and continues it... instead of re-copying".
+  ///
+  /// ## Why Not Caught
+  /// T05 (above) already covers "second call, destination non-empty, never
+  /// overwritten" — but it passes an unchanging, explicit `--from src` both
+  /// calls, so the source's own most-recent session id never changes between
+  /// them; the transplant recomputes the identical source file path either way,
+  /// masking the defect. No existing test modeled the launching cwd's own most-
+  /// recent session identity changing BETWEEN two calls to the same topic name.
+  ///
+  /// ## Fix Applied
+  /// See `Fix(BUG-541)` in `src/cli/builder.rs`.
+  #[ test ]
+  fn t09_second_auto_topic_call_ignores_unrelated_source_session_drift()
+  {
+    container_check();
+    let ch   = tempfile::TempDir::new().expect( "claude home" );
+    let proj = tempfile::TempDir::new().expect( "launching project dir (acts as cwd)" );
+    let proj_canon = std::fs::canonicalize( proj.path() ).expect( "canonicalize proj" );
+    let uuid_a = "54109001-1111-2222-3333-444444444444";
+    let content_a = b"{\"seed\":\"pre-existing unrelated cwd session A\"}\n";
+    make_session( ch.path(), &proj_canon, uuid_a, content_a );
+
+    let effective_dir = proj.path().join( "-541-drift" );
+    let tgt_canon_precheck = {
+      // Pre-create so the topic storage path can be computed up front; resolve_effective_dir()'s
+      // own create_dir_all is idempotent, so this changes nothing about "first call" semantics.
+      std::fs::create_dir_all( &effective_dir ).expect( "pre-create effective dir" );
+      std::fs::canonicalize( &effective_dir ).expect( "canonicalize effective dir" )
+    };
+    let topic_storage = ch.path().join( "projects" ).join( df( &tgt_canon_precheck ) );
+    let dest_a = topic_storage.join( format!( "{uuid_a}.jsonl" ) );
+
+    // Call 1: first-ever use of this topic name — clones cwd's (proj's) then-current
+    // session A in, exactly as documented for a fresh topic.
+    let stub_body_1 = format!(
+      "printf '%s' '{{\"type\":\"result\",\"subtype\":\"success\",\"is_error\":false,\"result\":\"stub-ok\",\"session_id\":\"{uuid_a}\"}}'"
+    );
+    let ( _stub_dir_1, stub_path_1 ) = fake_claude_dir( &stub_body_1 );
+    let out1 = std::process::Command::new( env!( "CARGO_BIN_EXE_clr" ) )
+      .args
+      ([
+        "topic",
+        "--topic", "541-drift",
+        "--max-sessions", "0",
+        "--journal", "off",
+        "start the topic",
+      ])
+      .current_dir( proj.path() )
+      .env( "CLAUDE_HOME", ch.path() )
+      .env( "PATH", &stub_path_1 )
+      .env_remove( "CLR_DIR" ).env_remove( "CLR_SESSION_DIR" ).env_remove( "CLR_FROM" )
+      .output()
+      .expect( "invoke clr (call 1)" );
+    assert!(
+      out1.status.success(),
+      "first topic call must succeed. stdout: {}\nstderr: {}",
+      String::from_utf8_lossy( &out1.stdout ), String::from_utf8_lossy( &out1.stderr ),
+    );
+    let cloned_a = std::fs::read( &dest_a ).expect( "session A must be cloned into topic storage" );
+    assert_eq!( cloned_a, content_a, "first call must clone cwd's then-current session byte-identically" );
+
+    // Between calls: unrelated cwd-level work leaves a NEWER session B directly in
+    // proj's own storage — never touching the topic directory at all.
+    std::thread::sleep( core::time::Duration::from_millis( 50 ) );
+    let uuid_b = "54109002-1111-2222-3333-444444444444";
+    let content_b = b"{\"seed\":\"unrelated later cwd session B, nothing to do with the topic\"}\n";
+    make_session( ch.path(), &proj_canon, uuid_b, content_b );
+    let dest_b = topic_storage.join( format!( "{uuid_b}.jsonl" ) );
+
+    // Call 2: same topic name, same cwd — must continue the topic's OWN history
+    // (session A), never pull in B just because B is now cwd's most-recent.
+    let stub_body_2 = format!(
+      "printf '%s' '{{\"type\":\"result\",\"subtype\":\"success\",\"is_error\":false,\"result\":\"stub-ok\",\"session_id\":\"{uuid_a}\"}}'"
+    );
+    let ( _stub_dir_2, stub_path_2 ) = fake_claude_dir( &stub_body_2 );
+    let out2 = std::process::Command::new( env!( "CARGO_BIN_EXE_clr" ) )
+      .args
+      ([
+        "topic",
+        "--topic", "541-drift",
+        "--max-sessions", "0",
+        "--journal", "off",
+        "continue the topic",
+      ])
+      .current_dir( proj.path() )
+      .env( "CLAUDE_HOME", ch.path() )
+      .env( "PATH", &stub_path_2 )
+      .env_remove( "CLR_DIR" ).env_remove( "CLR_SESSION_DIR" ).env_remove( "CLR_FROM" )
+      .output()
+      .expect( "invoke clr (call 2)" );
+    assert!(
+      out2.status.success(),
+      "second topic call must succeed. stdout: {}\nstderr: {}",
+      String::from_utf8_lossy( &out2.stdout ), String::from_utf8_lossy( &out2.stderr ),
+    );
+
+    assert!(
+      !dest_b.exists(),
+      "second call must NOT transplant cwd's unrelated newer session B into the \
+       topic's own storage — the topic's continuity must not depend on cwd drift. \
+       Found: {}",
+      dest_b.display(),
+    );
+    let a_after = std::fs::read( &dest_a ).expect( "session A must still be present in topic storage" );
+    assert_eq!(
+      a_after, content_a,
+      "topic's own session A must remain the one continued, untouched by cwd drift"
+    );
+  }
+
+  /// T10 (BUG-542): a candidate auto-name whose WORKING directory does not exist but
+  /// whose SESSION STORAGE already holds a session (e.g. the directory was deleted
+  /// after use, or storage predates any `clr topic` use of that exact path) must
+  /// never be auto-selected as "fresh" — the namer must skip it and disambiguate to
+  /// the next candidate instead.
+  ///
+  /// ## Root Cause
+  /// `disambiguate_slug` (`src/cli/topic.rs`) judged a candidate free purely by
+  /// `topic_dir(base, name).exists()`. Session storage lives under
+  /// `~/.claude/projects/`, entirely independent of the working directory's own
+  /// filesystem lifetime, so a candidate with no working directory but a real,
+  /// unrelated session already in storage was wrongly judged "fresh". Combined with
+  /// `builder.rs`'s Fix(BUG-541) (deliberately authoritative once a target has ANY
+  /// qualifying session of its own), the "fresh" name would then silently resume
+  /// that orphaned, unrelated history on first use instead of starting clean.
+  ///
+  /// ## Fix Applied
+  /// See `Fix(BUG-542)` in `src/cli/topic.rs` (`name_is_taken`).
+  #[ test ]
+  fn t10_auto_naming_skips_candidate_with_orphaned_session_storage()
+  {
+    container_check();
+    let ch   = tempfile::TempDir::new().expect( "claude home" );
+    let base = tempfile::TempDir::new().expect( "topic base dir" );
+
+    // Simulate a topic whose working directory was deleted after use but whose
+    // session storage survived: the storage exists, the working directory does not.
+    let orphan_dir = base.path().join( "-orphan-topic" );
+    let uuid = "54209001-1111-2222-3333-444444444444";
+    make_session( ch.path(), &orphan_dir, uuid, b"{\"seed\":\"orphaned unrelated history\"}\n" );
+    assert!( !orphan_dir.exists(), "fixture setup: working directory must NOT exist on disk" );
+
+    let out = std::process::Command::new( env!( "CARGO_BIN_EXE_clr" ) )
+      .args
+      ([
+        "topic",
+        "--dry-run",
+        "--dir", base.path().to_str().expect( "utf-8" ),
+        "orphan topic",
+      ])
+      .env( "CLAUDE_HOME", ch.path() )
+      .env_remove( "CLR_DIR" ).env_remove( "CLR_SESSION_DIR" ).env_remove( "CLR_FROM" )
+      .output()
+      .expect( "invoke clr" );
+    assert!(
+      out.status.success(),
+      "dry-run must succeed. stderr: {}",
+      String::from_utf8_lossy( &out.stderr ),
+    );
+    let stdout = String::from_utf8_lossy( &out.stdout ).into_owned();
+
+    // Trailing `\n` boundary matters: "-orphan-topic" is itself a string prefix of
+    // the correct "-orphan-topic-2", so an unanchored `contains` on the shorter form
+    // would false-positive against the longer, correctly-disambiguated line.
+    let taken_cd = format!( "cd {}\n", orphan_dir.display() );
+    let free_cd  = format!( "cd {}\n", base.path().join( "-orphan-topic-2" ).display() );
+    assert!(
+      !stdout.contains( &taken_cd ),
+      "auto-naming must NOT select a candidate whose storage already has an orphaned \
+       session. Got:\n{stdout}"
+    );
+    assert!(
+      stdout.contains( &free_cd ),
+      "auto-naming must disambiguate past the orphaned candidate to -orphan-topic-2. Got:\n{stdout}"
+    );
+  }
 }

@@ -41,6 +41,9 @@
 //! | INT-19 | `int_19_invalid_columns_rejected` | Input Validation |
 //! | INT-20 | `int_20_negative_depth_rejected` | Input Validation |
 //! | INT-21 | `int_21_negative_limit_rejected` | Input Validation |
+//! | INT-22 | `int_22_multiple_parameters_compose_correctly_together` | Composition |
+//! | INT-23 | `int_23_model_filter_matching_zero_sessions_exits_0_header_only` | Filtering |
+//! | INT-24 | `int_24_columns_first_last_render_timestamps` | Column Projection |
 
 mod common;
 
@@ -1061,4 +1064,162 @@ fn int_21_negative_limit_rejected()
   assert_exit( &out, 1 );
   assert_eq!( stderr( &out ).trim(), "limit must be non-negative", "INT-21: stderr must be exactly the documented message" );
   assert!( stdout( &out ).is_empty(), "INT-21: no table output expected; got:\n{}", stdout( &out ) );
+}
+
+/// INT-22: Multiple parameters compose correctly in a single invocation.
+///
+/// ## Purpose
+/// Every INT-1 through INT-21 test varies exactly one parameter at a time.
+/// None of them prove `group::`/`sort::`/`order::`/`columns::`/`limit::`
+/// still behave correctly when all five are set together in one call — this
+/// closes that composition gap.
+///
+/// ## Coverage
+/// `group::model sort::sessions order::asc columns::group,sessions limit::1`
+/// together: grouping picks the model dimension, sorting picks the
+/// least-common metric ascending (opposite of every other test's `desc`),
+/// `limit::1` keeps only the ascending-sorted winner, and `columns::` hides
+/// every field except the two requested.
+///
+/// ## Validation Strategy
+/// Three models with distinct session counts (`opus`:1, `haiku`:2,
+/// `sonnet`:3); run all five parameters together; assert exactly 1 data row,
+/// it is the 1-session `opus` group, and only the `Group`/`Sessions` headers
+/// are present — no other column label leaks through.
+#[ test ]
+fn int_22_multiple_parameters_compose_correctly_together()
+{
+  let root = TempDir::new().unwrap();
+  let storage_root = root.path().join( ".claude" );
+  let project = root.path().join( "combo" );
+  std::fs::create_dir_all( &project ).unwrap();
+
+  for ( id, model ) in
+  [
+    ( "int22a01-1111-4abc-9def-000000000001", "claude-opus-5" ),
+    ( "int22b02-2222-4abc-9def-000000000002", "claude-haiku-5" ),
+    ( "int22b03-3333-4abc-9def-000000000003", "claude-haiku-5" ),
+    ( "int22c04-4444-4abc-9def-000000000004", "claude-sonnet-5" ),
+    ( "int22c05-5555-4abc-9def-000000000005", "claude-sonnet-5" ),
+    ( "int22c06-6666-4abc-9def-000000000006", "claude-sonnet-5" ),
+  ]
+  {
+    let mut fx = RollupSession::simple( project.to_str().unwrap() );
+    fx.model = model;
+    write_rollup_session( &storage_root, &project, id, &fx );
+  }
+
+  let out = common::clg_cmd()
+    .current_dir( &project )
+    .env( "HOME", root.path().to_str().unwrap() )
+    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+    .arg( ".rollup" )
+    .arg( "group::model" )
+    .arg( "sort::sessions" )
+    .arg( "order::asc" )
+    .arg( "columns::group,sessions" )
+    .arg( "limit::1" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  assert_eq!( data_rows( &s ), 1, "INT-22: limit::1 must cap to exactly 1 row; got:\n{s}" );
+  assert!( s.contains( "opus" ), "INT-22: ascending sort::sessions must keep the 1-session opus group first; got:\n{s}" );
+  assert!( !s.contains( "haiku" ) && !s.contains( "sonnet" ), "INT-22: only the winning row may appear; got:\n{s}" );
+  let header = s.lines().next().unwrap_or_default();
+  assert!( header.contains( "Group" ) && header.contains( "Sessions" ), "INT-22: requested columns must be present; got header:\n{header}" );
+  for absent in [ "Calls", "Input", "Output", "Cache", "MaxCtx", "Total", "Pct" ]
+  {
+    assert!( !header.contains( absent ), "INT-22: columns::group,sessions must hide {absent}; got header:\n{header}" );
+  }
+}
+
+/// INT-23: `model::` matching zero sessions exits 0 with header-only output.
+///
+/// ## Purpose
+/// INT-14 covers empty *storage* (no projects at all). This covers the
+/// distinct case where storage has real sessions but `model::` filters every
+/// one of them out — the zero-grand-total percent branch
+/// (`percent_is_zero_not_nan_when_grand_total_is_zero` at the unit level)
+/// exercised end-to-end through the CLI, confirming it never panics or
+/// prints `NaN`/`inf` when there is simply nothing left to divide.
+///
+/// ## Coverage
+/// One real session that exists but does not match `model::`.
+///
+/// ## Validation Strategy
+/// One `claude-opus-5` session; run `.rollup model::nonexistent-model-xyz`;
+/// assert exit 0, zero data rows, the header is still printed, and no
+/// `NaN`/`inf` leaks into stdout.
+#[ test ]
+fn int_23_model_filter_matching_zero_sessions_exits_0_header_only()
+{
+  let root = TempDir::new().unwrap();
+  let storage_root = root.path().join( ".claude" );
+  let project = root.path().join( "nomatch" );
+  std::fs::create_dir_all( &project ).unwrap();
+
+  let fx = RollupSession::simple( project.to_str().unwrap() );
+  write_rollup_session( &storage_root, &project, "int23xa1-1111-4abc-9def-000000000001", &fx );
+
+  let out = common::clg_cmd()
+    .current_dir( &project )
+    .env( "HOME", root.path().to_str().unwrap() )
+    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+    .arg( ".rollup" )
+    .arg( "model::nonexistent-model-xyz" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  assert_eq!( data_rows( &s ), 0, "INT-23: every session must be filtered out; got:\n{s}" );
+  assert!( s.contains( "Group" ), "INT-23: the header row must still print; got:\n{s}" );
+  assert!( !s.to_lowercase().contains( "nan" ) && !s.to_lowercase().contains( "inf" ), "INT-23: zero-total percent must never render NaN/inf; got:\n{s}" );
+}
+
+/// INT-24: `columns::` including `first`/`last` renders raw ISO-8601 timestamps.
+///
+/// ## Purpose
+/// INT-7/INT-8 only ever project *default-set* columns. Neither exercises
+/// the two columns excluded from the default (`first`/`last`) actually
+/// being requested and rendered — this closes that gap.
+///
+/// ## Coverage
+/// One session with known, distinct `first_ts`/`last_ts` values.
+///
+/// ## Validation Strategy
+/// Run `.rollup columns::group,first,last`; assert the header shows exactly
+/// those three labels and the data row contains both raw timestamp strings
+/// verbatim (no reformatting, no truncation).
+#[ test ]
+fn int_24_columns_first_last_render_timestamps()
+{
+  let root = TempDir::new().unwrap();
+  let storage_root = root.path().join( ".claude" );
+  let project = root.path().join( "tsproj" );
+  std::fs::create_dir_all( &project ).unwrap();
+
+  let mut fx = RollupSession::simple( project.to_str().unwrap() );
+  fx.first_ts = "2025-06-01T10:00:00Z";
+  fx.last_ts = "2025-06-01T10:00:45Z";
+  write_rollup_session( &storage_root, &project, "int24fla-1111-4abc-9def-000000000001", &fx );
+
+  let out = common::clg_cmd()
+    .current_dir( &project )
+    .env( "HOME", root.path().to_str().unwrap() )
+    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+    .arg( ".rollup" )
+    .arg( "columns::group,first,last" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  let header = s.lines().next().unwrap_or_default();
+  assert!( header.contains( "First" ) && header.contains( "Last" ), "INT-24: requested First/Last headers must be present; got:\n{header}" );
+  assert!( !header.contains( "Sessions" ) && !header.contains( "Calls" ), "INT-24: unrequested columns must be absent; got:\n{header}" );
+  assert!( s.contains( "2025-06-01T10:00:00Z" ), "INT-24: raw first_ts must render verbatim; got:\n{s}" );
+  assert!( s.contains( "2025-06-01T10:00:45Z" ), "INT-24: raw last_ts must render verbatim; got:\n{s}" );
 }
