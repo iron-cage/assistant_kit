@@ -5,8 +5,8 @@
 use crate::output::format_duration_secs;
 use super::types::{ AccountQuota, SortStrategy, PreferStrategy, ColsVisibility };
 use super::format::{
-  expires_cell_for, sub_label, shorten_error, with_lock_marker,
-  quota_text_cells, status_emoji, renews_label, next_event_label, renewal_secs,
+  expires_cell_for, sub_cell_for, renews_cell_for, shorten_error, with_lock_marker,
+  quota_text_cells, status_emoji, next_event_label, renewal_secs,
 };
 use super::sort::sort_indices;
 
@@ -75,28 +75,14 @@ pub fn render_tsv(
     // Pitfall: use the aq-aware wrapper (cache `~`-prefix + redirect `static`), not
     //   compute_expires_cell directly, wherever an aq is in scope.
     let expires_str = expires_cell_for( aq, now_secs );
-    let sub_str     = sub_label( aq.account.as_ref() ).to_string();
-    // Fix(BUG-232): billing_type=="none" → no active subscription → no renewal date to show.
-    // Root cause: renews_label uses org_created_at unconditionally; has no billing_type param.
-    // Pitfall: org_created_at may be present even when subscription is cancelled; must check
-    //   billing_type BEFORE passing org_created_at to renews_label.
-    // Fix(BUG-538): redirect rows rendered `?` here too — same both-None fallback as render.rs.
-    // Root cause: no Anthropic billing org exists for a redirect account by design; `?`
-    //   (unknown) asserts missing data where "no renewal" is the known fact.
-    // Pitfall: the TSV reason cell deliberately keeps the FULL redirect descriptor (unlike
-    //   the text table's compact `(redirect)`) — only the renews cell changes here.
-    let renews_str = if aq.is_no_subscription() || aq.is_redirect_backend()
-    {
-      "\u{2014}".to_string()
-    }
-    else
-    {
-      renews_label(
-        aq.renewal_at.as_deref(),
-        aq.org_created_at.as_deref(),
-        now_secs,
-      )
-    };
+    // Fix(BUG-540): sub/renews come from their aq-aware helpers — the known-absence
+    //   predicates (BUG-232 billing "none", BUG-538 redirect backend) live once in
+    //   format.rs; this file previously carried the second of three renews copies.
+    // Pitfall: the TSV reason cell deliberately keeps the FULL redirect descriptor
+    //   (unlike the text table's compact `(redirect)`) — only sub/renews cells
+    //   delegate to the helpers here.
+    let sub_str     = sub_cell_for( aq );
+    let renews_str  = renews_cell_for( aq, now_secs );
 
     let mut row = vec![ flag_cell.to_string() ];
     if cols.status { row.push( status_str.to_string() ); }

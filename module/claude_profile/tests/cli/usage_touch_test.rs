@@ -9,7 +9,7 @@ use crate::cli_runner::{
   run_cs, run_cs_with_env,
   stdout, stderr, assert_exit,
   write_account, write_account_with_token, write_live_credentials_with_token,
-  live_active_token, require_live_api,
+  live_active_token, require_live_api, clears_rotation_floors,
   FAR_FUTURE_MS,
 };
 use tempfile::TempDir;
@@ -243,46 +243,10 @@ fn it101_usage_help_shows_touch_param()
   );
 }
 
-/// Whether `acct-b` (the only Next-eligible candidate in the it102–it104 fixture)
-/// clears both rotation-eligibility quota floors right now.
-///
-/// Fix(audit-live-footer-fragile)
-/// Root cause: it102/it103/it104 asserted the footer recommendation unconditionally,
-///   but `find_first_eligible` (`sort_next.rs`) excludes h-exhausted (`5h ≤ 15%`) and
-///   weekly-exhausted (`7d ≤ 3%`) candidates BY DESIGN (BUG-292/BUG-324) — and the
-///   fixture caches mirror the host's LIVE account snapshot, so the tests' verdicts
-///   tracked the operator's real-time quota consumption: green at 4% weekly left,
-///   red at 3%, with no code change in between.
-/// Pitfall: parse the floors from the rendered TSV cells, never re-derive them from
-///   raw utilization — the displayed rounded value IS what eligibility compares
-///   (round-before-compare doctrine, BUG-331/BUG-336); a private re-computation here
-///   would reintroduce the exact drift audit-h-exhaustion-drift fixed in `sort_next.rs`.
-fn acct_b_clears_rotation_floors( home : &str ) -> bool
-{
-  use claude_profile::usage::test_bridge::types::{ H_EXHAUSTED_THRESHOLD, WEEKLY_EXHAUSTION_THRESHOLD };
-  let tsv = run_cs_with_env( &[ ".usage", "format::tsv" ], &[ ( "HOME", home ) ] );
-  assert_exit( &tsv, 0 );
-  let text = stdout( &tsv );
-  let mut lines = text.lines();
-  let header : Vec< &str > = lines.next().expect( "floors probe: TSV must have a header line" ).split( '\t' ).collect();
-  let account_idx = header.iter().position( |h| *h == "account" ).expect( "floors probe: account column missing" );
-  let h5_idx      = header.iter().position( |h| *h == "5h_left" ).expect( "floors probe: 5h_left column missing" );
-  let d7_idx      = header.iter().position( |h| *h == "7d_left" ).expect( "floors probe: 7d_left column missing" );
-  let row : Vec< &str > = lines
-    .map( |l| l.split( '\t' ).collect::< Vec< _ > >() )
-    .find( |cells| cells.get( account_idx ).is_some_and( |n| n.starts_with( "acct-b" ) ) )
-    .expect( "floors probe: no TSV row for acct-b" );
-  // `—` = absent window data on an Ok row → 100 in the canonical accessors
-  // (five_hour_left/seven_day_left: absent data ≠ exhausted).
-  let pct = | cell : &str | -> f64
-  {
-    if cell == "\u{2014}" { return 100.0; }
-    cell.strip_suffix( '%' )
-      .and_then( |n| n.parse::< f64 >().ok() )
-      .unwrap_or_else( || panic!( "floors probe: unparseable quota cell {cell:?}" ) )
-  };
-  pct( row[ h5_idx ] ) > H_EXHAUSTED_THRESHOLD && pct( row[ d7_idx ] ) > WEEKLY_EXHAUSTION_THRESHOLD
-}
+// The rotation-floors probe for the it102–it104 fixture lives in `cli_runner.rs`
+// (`clears_rotation_floors`) — hoisted there when the same audit found
+// `usage_core_test.rs` it011/it012 carrying the identical unconditional
+// footer assertions (Fix(audit-live-footer-fragile) doc on the helper).
 
 /// it102 `lim_it` (IT-51 / FT-03 of feature/020): `sort::renew` (default) footer recommendation.
 ///
@@ -291,7 +255,7 @@ fn acct_b_clears_rotation_floors( home : &str ) -> bool
 /// when it is h- or weekly-exhausted, the footer must be SUPPRESSED — recommending an
 /// exhausted account is the exact defect BUG-292/BUG-324 fixed. Both live states are
 /// legitimate; the test asserts the contract for whichever holds right now
-/// (Fix(audit-live-footer-fragile) — see `acct_b_clears_rotation_floors`).
+/// (Fix(audit-live-footer-fragile) — see `clears_rotation_floors` in `cli_runner.rs`).
 ///
 /// Spec: [`tests/docs/feature/020_usage_sort_strategies.md` FT-13/AC-09]
 ///       (former IT-51 ref in `tests/docs/cli/command/09_usage.md` is a REMOVED tombstone)
@@ -312,7 +276,7 @@ fn it102_lim_it_sort_renew_shows_recommendation()
   let text = stdout( &out );
 
   // Footer format: "Next (renew) · name · ..." uses · not :.
-  if acct_b_clears_rotation_floors( home )
+  if clears_rotation_floors( home, "acct-b" )
   {
     assert!(
       text.contains( "Next (renew)" ),
@@ -353,7 +317,7 @@ fn it103_lim_it_sort_renews_shows_recommendation()
   let text = stdout( &out );
 
   // Footer format: "Next (renews) · name · ..." uses · not :.
-  if acct_b_clears_rotation_floors( home )
+  if clears_rotation_floors( home, "acct-b" )
   {
     assert!(
       text.contains( "Next (renews)" ),
@@ -394,7 +358,7 @@ fn it104_lim_it_footer_shows_strategy_recommendation()
   assert_exit( &out, 0 );
   let text = stdout( &out );
 
-  if acct_b_clears_rotation_floors( home )
+  if clears_rotation_floors( home, "acct-b" )
   {
     assert!(
       text.contains( "Next (renew)" ),

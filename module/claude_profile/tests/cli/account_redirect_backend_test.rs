@@ -24,6 +24,7 @@
 //! | T20 | `t20_save_redirect_self_heals_stray_model_in_meta`          | redirect re-save removes a stray pre-gate `model` field; anthropic snapshot unaffected | P |
 //! | T21 | `t21_usage_tsv_active_redirect_row_current_static`          | `.usage format::tsv` after switch-to-redirect → ✓ flag, `static` status, `static` expires | P |
 //! | T22 | `t22_usage_text_redirect_row_compact_note_no_question_mark`  | BUG-538: text table shows compact `(redirect)` + `—` renews (no 40-char note, no `?`); TSV keeps full reason | P |
+//! | T23 | `t23_usage_sub_and_get_fields_redirect_known_absence`        | BUG-540: `cols::+sub` cell (text+TSV) and `get::sub`/`get::renews` emit `—`, never `?`, on a redirect row | P |
 
 use crate::cli_runner::{
   run_cs_with_env,
@@ -811,4 +812,96 @@ fn t22_usage_text_redirect_row_compact_note_no_question_mark()
     row.iter().any( |c| c.contains( "redirect backend — no Anthropic quota" ) ),
     "T22: TSV must keep the full canonical reason string, got row: {row:?}",
   );
+}
+
+/// T23 / BUG-540: the known-absence contract BUG-538 established for `~Renews` also
+/// governs the `Sub` column and the `get::` field extractors — a redirect row emits
+/// `—` (known absence), never `?` (unknown), on all four surfaces: text `cols::+sub`,
+/// TSV `cols::+sub`, `get::sub`, `get::renews`.
+///
+/// # Root Cause (BUG-540)
+/// The known-absence predicate was applied per call site instead of per value:
+/// BUG-538's fix patched 2 of the 3 duplicated renews computations (text + TSV tables)
+/// but missed `extract_get_field`'s `GetField::Renews` arm — breaking that function's
+/// own documented contract ("the same value that would appear in the corresponding
+/// cell of the text table") — and no `sub_label` site got the predicate at all, so a
+/// redirect row's `account: None` fell through to `sub_label`'s `?` fallback on every
+/// surface. `Sub` is hidden by default, which is why no redirect test ever saw it.
+///
+/// # Why Not Caught
+/// T22's text-table `?` sweep runs under default columns (Sub OFF) and its own comment
+/// scoped `?` to "exactly one possible source... the renews cell"; the `get::` surface
+/// had no redirect coverage at all.
+///
+/// # Fix Applied
+/// `format.rs`: aq-aware `sub_cell_for()` / `renews_cell_for()` helpers (the
+/// `expires_cell_for` pattern from BUG-345) own the predicate once; all six call
+/// sites (`render.rs` table + extractor, `render_tsv.rs`) delegate to them.
+///
+/// # Prevention
+/// A cell whose value depends on account state must be computed by exactly one
+/// aq-aware helper — per-call-site predicates guarantee the next surface (or the
+/// next state) misses one site. Same lesson as BUG-345's `expires_cell_for`.
+///
+/// # Pitfall
+/// Do not push the redirect check into `sub_label` itself — it takes
+/// `Option< &OauthAccountData >`, and `None` there legitimately means "fetch failed,
+/// genuinely unknown" for anthropic rows, where `?` is the truthful output.
+#[ doc = "bug_reproducer(BUG-540)" ]
+#[ test ]
+fn t23_usage_sub_and_get_fields_redirect_known_absence()
+{
+  let dir = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  let save = run_cs_with_env(
+    &[
+      ".account.save", "name::kimi", "backend::redirect",
+      "base_url::https://api.moonshot.ai/anthropic", "api_key::sk-test",
+      "redirect_model::kimi-k3",
+    ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &save, 0 );
+
+  // get:: extractors — kimi is the only account, so it is `accounts.first()`.
+  let get_sub = run_cs_with_env( &[ ".usage", "get::sub" ], &[ ( "HOME", home ) ] );
+  assert_exit( &get_sub, 0 );
+  assert_eq!(
+    stdout( &get_sub ).trim(), "\u{2014}",
+    "T23: get::sub on a redirect account must be — (no Anthropic subscription by design), not ?",
+  );
+
+  let get_renews = run_cs_with_env( &[ ".usage", "get::renews" ], &[ ( "HOME", home ) ] );
+  assert_exit( &get_renews, 0 );
+  assert_eq!(
+    stdout( &get_renews ).trim(), "\u{2014}",
+    "T23: get::renews must match the table cell (—) — extract_get_field's same-as-table contract",
+  );
+
+  // Text table with the Sub column enabled: the row stays ?-free.
+  let usage = run_cs_with_env( &[ ".usage", "cols::+sub" ], &[ ( "HOME", home ) ] );
+  assert_exit( &usage, 0 );
+  let text = stdout( &usage );
+  let kimi_line = text.lines()
+    .find( |l| l.contains( "kimi" ) )
+    .expect( "T23: no text-table row for the kimi account" );
+  assert!(
+    !kimi_line.contains( '?' ),
+    "T23: cols::+sub must not surface a `?` on the redirect row (sub is a known absence), got: {kimi_line}",
+  );
+
+  // TSV with the Sub column enabled: the sub cell itself is `—`.
+  let tsv = run_cs_with_env( &[ ".usage", "format::tsv", "cols::+sub" ], &[ ( "HOME", home ) ] );
+  assert_exit( &tsv, 0 );
+  let tsv_text = stdout( &tsv );
+  let mut tsv_lines = tsv_text.lines();
+  let header : Vec< &str > = tsv_lines.next().expect( "T23: TSV must have a header line" ).split( '\t' ).collect();
+  let sub_idx     = header.iter().position( |h| *h == "sub" ).expect( "T23: sub column missing" );
+  let account_idx = header.iter().position( |h| *h == "account" ).expect( "T23: account column missing" );
+  let row : Vec< &str > = tsv_lines
+    .map( |l| l.split( '\t' ).collect::< Vec< _ > >() )
+    .find( |cells| cells.get( account_idx ).is_some_and( |name| name.starts_with( "kimi" ) ) )
+    .expect( "T23: no TSV row for the kimi account" );
+  assert_eq!( row[ sub_idx ], "\u{2014}", "T23: TSV sub cell must be —, not ?, got row: {row:?}" );
 }

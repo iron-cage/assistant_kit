@@ -92,6 +92,54 @@ pub fn expires_cell_for( aq : &AccountQuota, now_secs : u64 ) -> String
   compute_expires_cell_cached( aq.expires_at_ms, now_secs, aq.cached )
 }
 
+/// `Sub` cell from a full `AccountQuota` row — the preferred call form wherever an
+/// `aq` is in scope (the `expires_cell_for` pattern from BUG-345).
+///
+/// Fix(BUG-540): redirect rows showed `?` on every Sub surface (text `cols::+sub`,
+///   TSV, `get::sub`) — their `account: None` fell through to `sub_label`'s unknown
+///   fallback.
+/// Root cause: a redirect account has no Anthropic subscription BY DESIGN — the same
+///   known-absence fact BUG-538 taught the `~Renews` cell — but no `sub_label` call
+///   site carried the predicate, because each surface computed the cell independently.
+/// Pitfall: do not push the redirect check into `sub_label` itself — its `None` input
+///   also means "fetch failed, genuinely unknown" for anthropic rows, where `?` is the
+///   truthful output.
+pub fn sub_cell_for( aq : &AccountQuota ) -> String
+{
+  if aq.is_redirect_backend() { return "\u{2014}".to_string(); }
+  sub_label( aq.account.as_ref() ).to_string()
+}
+
+/// `~Renews` cell from a full `AccountQuota` row — the preferred call form wherever an
+/// `aq` is in scope (the `expires_cell_for` pattern from BUG-345).
+///
+/// Fix(BUG-232): `billing_type == "none"` → no active subscription → no renewal date.
+/// Root cause: `renews_label` uses `org_created_at` unconditionally; it has no
+///   billing-type parameter, so the check must run before the call.
+/// Pitfall: `org_created_at` may be present even when the subscription is cancelled.
+///
+/// Fix(BUG-538/BUG-540): redirect rows rendered `?` — `renews_label`'s both-`None`
+///   fallback; a redirect account has no Anthropic billing org BY DESIGN, so "no
+///   renewal" is a known fact, not missing data.
+/// Root cause (BUG-540): BUG-538's fix patched this predicate at 2 of its 3 duplicated
+///   call sites (text + TSV tables) and missed `extract_get_field`'s Renews arm —
+///   `get::renews` said `?` while the table cell said `—`. Consolidated here so the
+///   next surface cannot miss a site.
+/// Pitfall: any new renews accessor must call this helper, never `renews_label`
+///   directly.
+pub fn renews_cell_for( aq : &AccountQuota, now_secs : u64 ) -> String
+{
+  if aq.is_no_subscription() || aq.is_redirect_backend()
+  {
+    return "\u{2014}".to_string();
+  }
+  renews_label(
+    aq.renewal_at.as_deref(),
+    aq.org_created_at.as_deref(),
+    now_secs,
+  )
+}
+
 /// Append the 🔒 claim-lock marker to an account-name cell when the row is locked.
 ///
 /// Feature 070 lock visibility: a `claim_lock: true` account must be visibly
