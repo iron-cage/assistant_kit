@@ -9,7 +9,7 @@
 
 ### Abstract
 
-The public API exposes the storage hierarchy (Storage, Project, Session, Entry), filter types (SessionFilter, ProjectFilter, StringMatcher), content search (SearchFilter, SearchMatch), export (ExportFormat, export_session), path utilities (encode_path, decode_path), and a JSON value type (JsonValue, parse_json). All fallible operations return `Result<T, Error>` with structured error variants.
+The public API exposes the storage hierarchy (Storage, Project, Session, Entry), filter types (SessionFilter, ProjectFilter, StringMatcher), content search (SearchFilter, SearchMatch), export (ExportFormat, export_session), a token-usage rollup engine (GroupKey, SortKey, SortOrder, RollupInput, RollupRow, RollupParams, build_rollup), path utilities (encode_path, decode_path), and a JSON value type (JsonValue, parse_json). All fallible operations return `Result<T, Error>` with structured error variants.
 
 ### Operations
 
@@ -19,6 +19,12 @@ The public API exposes the storage hierarchy (Storage, Project, Session, Entry),
 - Read entries from a `Session` — `entries()` (full parse) or `count_entries()` (fast byte-level count).
 - Append a new entry — `Session::append_entry()` (atomic, append-only).
 - Statistics — `stats()` on Session, Project, or Storage.
+
+**Token-usage rollup:**
+- Assemble `RollupInput` values (one per session) from already-computed `SessionStats`.
+- Call `build_rollup(entries, &RollupParams) -> Vec<RollupRow>` — pure aggregation, no I/O, cannot fail.
+- `RollupParams` selects `group_by: GroupKey` (Session/Project/Model/Day), `sort_by: SortKey` (Total/Input/Output/Cache/MaxContext/Calls/Sessions/Group), `order: SortOrder` (Asc/Desc), an optional `model_filter: StringMatcher`, and a `limit` row cap.
+- Each `RollupRow` reports `sessions`, `calls`, per-category token sums, `max_context`, `percent` (share of the full filtered grand total, computed before `limit` truncates), and `first`/`last` timestamps; `RollupRow::cache()`/`total()` combine fields.
 
 **Content search:**
 - Build a `SearchFilter` with query, case-sensitivity, optional role and content-type constraints.
@@ -62,6 +68,8 @@ Major version bumps are used for breaking changes. A changelog entry is required
 |------|------|----------------|
 | source | `../../src/lib.rs` | Public API re-exports |
 | source | `../../src/error.rs` | Error type definition |
+| source | `../../src/rollup.rs` | GroupKey, SortKey, SortOrder, RollupInput, RollupRow, RollupParams, build_rollup() |
+| doc | `../feature/005_token_usage_rollup.md` | Rollup engine design rationale |
 | doc | `../data_structure/001_storage_hierarchy.md` | Storage, Project, Session, Entry types |
 | doc | `../data_structure/002_filter_types.md` | Filter types |
 | doc | `../feature/004_continuation_detection.md` | Continuation detection API design and algorithm |

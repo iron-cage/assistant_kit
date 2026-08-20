@@ -15,4 +15,5 @@
 | 002 | [Content Search](002_content_search.md) | Streaming search across conversation sessions | ✅ |
 | 003 | [Export Formats](003_export_formats.md) | Markdown, JSON, and text conversation export | ✅ |
 | 004 | [Continuation Detection](004_continuation_detection.md) | CWD→encoded path→UUID detection; `SessionId` type; mtime-based selection | ✅ |
+| 005 | [Token-Usage Rollup](005_token_usage_rollup.md) | Flexible grouped/filtered/sorted/projected token-usage reporting | ✅ |
 | — | [procedure.md](procedure.md) | Workflow for creating and updating feature doc instances | ✅ |

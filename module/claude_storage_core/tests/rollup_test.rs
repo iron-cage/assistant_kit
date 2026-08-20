@@ -1,19 +1,19 @@
-//! Unit tests for `table::build_table()` — grouping, model filtering,
+//! Unit tests for `rollup::build_rollup()` — grouping, model filtering,
 //! percent computation, sorting, and `limit`.
 //!
-//! Pure-logic tests: every fixture is a synthetic `TableInput`/`SessionStats`
+//! Pure-logic tests: every fixture is a synthetic `RollupInput`/`SessionStats`
 //! value, no filesystem or JSONL involved. Filesystem-level coverage (the
 //! `message.id` dedup this engine consumes) lives in
 //! `session_stats_dedup_bug.rs`; CLI-level coverage lives in
-//! `claude_storage/tests/cli_cmd_table_test.rs`.
+//! `claude_storage/tests/cli_cmd_rollup_test.rs`.
 
 use claude_storage_core::
 {
-  GroupKey, SortKey, SortOrder, StringMatcher, TableInput, TableParams, TableRow, build_table,
+  GroupKey, SortKey, SortOrder, StringMatcher, RollupInput, RollupParams, RollupRow, build_rollup,
 };
 use claude_storage_core::SessionStats;
 
-/// Build a `TableInput` with only the fields a given test cares about;
+/// Build a `RollupInput` with only the fields a given test cares about;
 /// everything else starts at `SessionStats::new`'s zero/`None` baseline.
 // 10 independent, order-sensitive fixture fields read far more clearly as
 // positional args at every call site below than behind a builder — allow
@@ -30,7 +30,7 @@ fn input(
   max_context : u64,
   first_ts : Option< &str >,
   last_ts : Option< &str >,
-) -> TableInput
+) -> RollupInput
 {
   let mut stats = SessionStats::new( session_id.to_string() );
   stats.assistant_entries = 1;
@@ -43,16 +43,16 @@ fn input(
   stats.first_timestamp = first_ts.map( std::string::ToString::to_string );
   stats.last_timestamp = last_ts.map( std::string::ToString::to_string );
 
-  TableInput { session_id : session_id.to_string(), project_label : project_label.to_string(), stats }
+  RollupInput { session_id : session_id.to_string(), project_label : project_label.to_string(), stats }
 }
 
 /// Default params: group by session, sort by total descending, no filter, no limit.
-fn default_params() -> TableParams
+fn default_params() -> RollupParams
 {
-  TableParams { group_by : GroupKey::Session, sort_by : SortKey::Total, order : SortOrder::Desc, model_filter : None, limit : 0 }
+  RollupParams { group_by : GroupKey::Session, sort_by : SortKey::Total, order : SortOrder::Desc, model_filter : None, limit : 0 }
 }
 
-fn row_by_group< 'a >( rows : &'a [ TableRow ], group : &str ) -> &'a TableRow
+fn row_by_group< 'a >( rows : &'a [ RollupRow ], group : &str ) -> &'a RollupRow
 {
   rows.iter().find( | r | r.group == group ).unwrap_or_else( || panic!( "no row for group {group}; rows: {rows:?}" ) )
 }
@@ -66,7 +66,7 @@ fn row_by_group< 'a >( rows : &'a [ TableRow ], group : &str ) -> &'a TableRow
 /// Two distinct sessions in the same project yield two separate rows.
 ///
 /// ## Validation Strategy
-/// Two `TableInput`s sharing a `project_label`; group by `Session`; assert
+/// Two `RollupInput`s sharing a `project_label`; group by `Session`; assert
 /// row count and per-row token totals stay unmerged.
 #[ test ]
 fn group_by_session_one_row_per_input()
@@ -76,7 +76,7 @@ fn group_by_session_one_row_per_input()
     input( "sess-a", "proj-x", None, 100, 10, 0, 0, 100, None, None ),
     input( "sess-b", "proj-x", None, 200, 20, 0, 0, 200, None, None ),
   ];
-  let rows = build_table( &entries, &default_params() );
+  let rows = build_rollup( &entries, &default_params() );
 
   assert_eq!( rows.len(), 2, "one row per session; got: {rows:?}" );
   assert_eq!( row_by_group( &rows, "sess-a" ).input, 100 );
@@ -93,7 +93,7 @@ fn group_by_session_one_row_per_input()
 /// Two sessions in `proj-x`, one in `proj-y`; assert 2 rows, correct sums.
 ///
 /// ## Validation Strategy
-/// Three `TableInput`s; group by `Project`; assert row count, `sessions`,
+/// Three `RollupInput`s; group by `Project`; assert row count, `sessions`,
 /// and summed `input`/`calls`.
 #[ test ]
 fn group_by_project_aggregates_sessions()
@@ -106,7 +106,7 @@ fn group_by_project_aggregates_sessions()
   ];
   let mut params = default_params();
   params.group_by = GroupKey::Project;
-  let rows = build_table( &entries, &params );
+  let rows = build_rollup( &entries, &params );
 
   assert_eq!( rows.len(), 2, "2 project rows expected; got: {rows:?}" );
   let x = row_by_group( &rows, "proj-x" );
@@ -125,7 +125,7 @@ fn group_by_project_aggregates_sessions()
 /// Two `opus` sessions merge; one `None`-model session lands in `"unknown"`.
 ///
 /// ## Validation Strategy
-/// Three `TableInput`s; group by `Model`; assert bucket membership.
+/// Three `RollupInput`s; group by `Model`; assert bucket membership.
 #[ test ]
 fn group_by_model_buckets_with_unknown_fallback()
 {
@@ -137,7 +137,7 @@ fn group_by_model_buckets_with_unknown_fallback()
   ];
   let mut params = default_params();
   params.group_by = GroupKey::Model;
-  let rows = build_table( &entries, &params );
+  let rows = build_rollup( &entries, &params );
 
   assert_eq!( rows.len(), 2, "opus + unknown; got: {rows:?}" );
   assert_eq!( row_by_group( &rows, "opus" ).sessions, 2 );
@@ -169,7 +169,7 @@ fn group_by_day_buckets_by_date_prefix()
   ];
   let mut params = default_params();
   params.group_by = GroupKey::Day;
-  let rows = build_table( &entries, &params );
+  let rows = build_rollup( &entries, &params );
 
   assert_eq!( rows.len(), 3, "2026-08-19 + 2026-08-20 + unknown; got: {rows:?}" );
   assert_eq!( row_by_group( &rows, "2026-08-19" ).sessions, 2 );
@@ -204,7 +204,7 @@ fn model_filter_drops_non_matching_sessions_before_grouping()
   let mut params = default_params();
   params.group_by = GroupKey::Project;
   params.model_filter = Some( StringMatcher::new( "OPUS" ) );
-  let rows = build_table( &entries, &params );
+  let rows = build_rollup( &entries, &params );
 
   assert_eq!( rows.len(), 1, "only the opus session's project row should survive; got: {rows:?}" );
   let row = &rows[ 0 ];
@@ -237,7 +237,7 @@ fn percent_reflects_full_filtered_total_not_post_limit_rows()
   ];
   let mut params = default_params();
   params.limit = 1;
-  let rows = build_table( &entries, &params );
+  let rows = build_rollup( &entries, &params );
 
   assert_eq!( rows.len(), 1, "limit::1 must cap to one row; got: {rows:?}" );
   let percent = rows[ 0 ].percent;
@@ -262,11 +262,11 @@ fn percent_reflects_full_filtered_total_not_post_limit_rows()
 fn percent_is_zero_not_nan_when_grand_total_is_zero()
 {
   let entries = vec![ input( "sess-a", "proj-x", None, 0, 0, 0, 0, 0, None, None ) ];
-  let rows = build_table( &entries, &default_params() );
+  let rows = build_rollup( &entries, &default_params() );
 
   assert_eq!( rows.len(), 1 );
   // Exact comparison is intentional: the zero-total branch returns the `0.0`
-  // literal directly (see `build_table`'s doc), never a computed value that
+  // literal directly (see `build_rollup`'s doc), never a computed value that
   // could carry rounding error — bit-exact equality is the correct check.
   #[ allow( clippy::float_cmp ) ]
   { assert_eq!( rows[ 0 ].percent, 0.0, "zero grand total must yield 0.0, never NaN" ); }
@@ -291,7 +291,7 @@ fn sort_total_desc_orders_largest_first()
     input( "big", "proj-x", None, 999, 0, 0, 0, 0, None, None ),
     input( "mid", "proj-x", None, 50, 0, 0, 0, 0, None, None ),
   ];
-  let rows = build_table( &entries, &default_params() );
+  let rows = build_rollup( &entries, &default_params() );
 
   let order : Vec< &str > = rows.iter().map( | r | r.group.as_str() ).collect();
   assert_eq!( order, vec![ "big", "mid", "small" ], "must be largest-total-first; got: {order:?}" );
@@ -319,7 +319,7 @@ fn sort_order_asc_reverses_direction()
   ];
   let mut params = default_params();
   params.order = SortOrder::Asc;
-  let rows = build_table( &entries, &params );
+  let rows = build_rollup( &entries, &params );
 
   let order : Vec< &str > = rows.iter().map( | r | r.group.as_str() ).collect();
   assert_eq!( order, vec![ "small", "mid", "big" ], "ascending must reverse the default; got: {order:?}" );
@@ -349,7 +349,7 @@ fn sort_by_max_context_uses_correct_metric()
   ];
   let mut params = default_params();
   params.sort_by = SortKey::MaxContext;
-  let rows = build_table( &entries, &params );
+  let rows = build_rollup( &entries, &params );
 
   assert_eq!( rows[ 0 ].group, "big-window", "must sort by max_context, not total; got: {rows:?}" );
 }
@@ -376,7 +376,7 @@ fn max_context_takes_running_max_not_sum()
   ];
   let mut params = default_params();
   params.group_by = GroupKey::Project;
-  let rows = build_table( &entries, &params );
+  let rows = build_rollup( &entries, &params );
 
   assert_eq!( rows[ 0 ].max_context, 900, "must be max(50, 900), never their sum" );
 }
@@ -384,7 +384,7 @@ fn max_context_takes_running_max_not_sum()
 /// Test `limit::0` is unbounded (returns every grouped row).
 ///
 /// ## Purpose
-/// Validates the `0` sentinel documented on `TableParams::limit`.
+/// Validates the `0` sentinel documented on `RollupParams::limit`.
 ///
 /// ## Coverage
 /// Five distinct sessions, `limit::0`; all five rows survive.
@@ -394,10 +394,10 @@ fn max_context_takes_running_max_not_sum()
 #[ test ]
 fn limit_zero_is_unbounded()
 {
-  let entries : Vec< TableInput > = ( 0..5 )
+  let entries : Vec< RollupInput > = ( 0..5 )
     .map( | i | input( &format!( "sess-{i}" ), "proj-x", None, i, 0, 0, 0, 0, None, None ) )
     .collect();
-  let rows = build_table( &entries, &default_params() );
+  let rows = build_rollup( &entries, &default_params() );
 
   assert_eq!( rows.len(), 5, "limit::0 must return every row; got: {rows:?}" );
 }
@@ -405,7 +405,7 @@ fn limit_zero_is_unbounded()
 /// Test `cache()` and `total()` combine fields correctly.
 ///
 /// ## Purpose
-/// Validates the two `TableRow` helper methods' arithmetic directly.
+/// Validates the two `RollupRow` helper methods' arithmetic directly.
 ///
 /// ## Coverage
 /// `cache() == cache_read + cache_creation`; `total() == input + output + cache()`.
@@ -417,7 +417,7 @@ fn limit_zero_is_unbounded()
 fn cache_and_total_combine_fields_correctly()
 {
   let entries = vec![ input( "sess-a", "proj-x", None, 100, 20, 7, 3, 0, None, None ) ];
-  let rows = build_table( &entries, &default_params() );
+  let rows = build_rollup( &entries, &default_params() );
 
   let row = &rows[ 0 ];
   assert_eq!( row.cache(), 10, "cache_read(7) + cache_creation(3)" );
@@ -427,19 +427,19 @@ fn cache_and_total_combine_fields_correctly()
 /// Test empty input returns an empty result, not an error or panic.
 ///
 /// ## Purpose
-/// Validates the zero-row edge case — `build_table` cannot fail (it returns
-/// `Vec<TableRow>`, not `Result`), so the only valid empty-input outcome is
+/// Validates the zero-row edge case — `build_rollup` cannot fail (it returns
+/// `Vec<RollupRow>`, not `Result`), so the only valid empty-input outcome is
 /// an empty `Vec`.
 ///
 /// ## Coverage
 /// Zero-length `entries` slice under default params.
 ///
 /// ## Validation Strategy
-/// Call `build_table` with `&[]`; assert an empty `Vec` comes back.
+/// Call `build_rollup` with `&[]`; assert an empty `Vec` comes back.
 #[ test ]
 fn empty_input_returns_empty_output()
 {
-  let rows = build_table( &[], &default_params() );
+  let rows = build_rollup( &[], &default_params() );
   assert!( rows.is_empty(), "empty input must yield an empty result; got: {rows:?}" );
 }
 
@@ -467,7 +467,7 @@ fn first_last_widen_across_merged_group()
   ];
   let mut params = default_params();
   params.group_by = GroupKey::Project;
-  let rows = build_table( &entries, &params );
+  let rows = build_rollup( &entries, &params );
 
   let row = &rows[ 0 ];
   assert_eq!( row.first.as_deref(), Some( "2026-08-17T08:00:00Z" ), "first must be the true earliest" );
@@ -498,7 +498,7 @@ fn sort_by_input_uses_input_metric()
   ];
   let mut params = default_params();
   params.sort_by = SortKey::Input;
-  let rows = build_table( &entries, &params );
+  let rows = build_rollup( &entries, &params );
 
   assert_eq!( rows[ 0 ].group, "high-input", "must sort by input, not total; got: {rows:?}" );
 }
@@ -524,7 +524,7 @@ fn sort_by_output_uses_output_metric()
   ];
   let mut params = default_params();
   params.sort_by = SortKey::Output;
-  let rows = build_table( &entries, &params );
+  let rows = build_rollup( &entries, &params );
 
   assert_eq!( rows[ 0 ].group, "high-output", "must sort by output, not total; got: {rows:?}" );
 }
@@ -551,7 +551,7 @@ fn sort_by_cache_uses_cache_metric()
   ];
   let mut params = default_params();
   params.sort_by = SortKey::Cache;
-  let rows = build_table( &entries, &params );
+  let rows = build_rollup( &entries, &params );
 
   assert_eq!( rows[ 0 ].group, "high-cache", "must sort by cache_read+cache_creation, not total; got: {rows:?}" );
 }
@@ -584,7 +584,7 @@ fn sort_by_calls_uses_calls_metric()
   let mut params = default_params();
   params.group_by = GroupKey::Project;
   params.sort_by = SortKey::Calls;
-  let rows = build_table( &entries, &params );
+  let rows = build_rollup( &entries, &params );
 
   assert_eq!( rows[ 0 ].group, "proj-many-calls", "must sort by calls (3 vs 1); got: {rows:?}" );
 }
@@ -614,7 +614,7 @@ fn sort_by_sessions_uses_sessions_metric()
   let mut params = default_params();
   params.group_by = GroupKey::Project;
   params.sort_by = SortKey::Sessions;
-  let rows = build_table( &entries, &params );
+  let rows = build_rollup( &entries, &params );
 
   assert_eq!( rows[ 0 ].group, "proj-many-sessions", "must sort by sessions (3 vs 1); got: {rows:?}" );
 }
@@ -643,7 +643,7 @@ fn sort_by_group_is_lexicographic()
   let mut params = default_params();
   params.sort_by = SortKey::Group;
   params.order = SortOrder::Asc;
-  let rows = build_table( &entries, &params );
+  let rows = build_rollup( &entries, &params );
 
   let order : Vec< &str > = rows.iter().map( | r | r.group.as_str() ).collect();
   assert_eq!( order, vec![ "alpha", "zulu" ], "must sort lexicographically, ignoring token totals; got: {order:?}" );

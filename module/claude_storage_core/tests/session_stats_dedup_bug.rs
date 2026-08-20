@@ -12,7 +12,7 @@
 //! content-block multiplicity. Confirmed on real production storage: a manual audit of
 //! live session data found 2505 raw assistant lines collapsing to 1201 unique message
 //! ids — a ~2.1x over-count that was silently baked into every consumer of `stats()`
-//! (`.usage`, `.status` verbosity 2+, and the new `.table` command's token totals).
+//! (`.usage`, `.status` verbosity 2+, and the new `.rollup` command's token totals).
 //!
 //! ## Why Not Caught
 //!
@@ -31,7 +31,7 @@
 //! skipped), so malformed/legacy lines are never silently dropped from the totals. The
 //! same pass also added `SessionStats::max_context_tokens` (largest single deduplicated
 //! call's `input + cache_read + cache_creation`) and `SessionStats::model` (first-seen
-//! model, first-entry-wins like `cwd`) — both needed by the new `.table` command and
+//! model, first-entry-wins like `cwd`) — both needed by the new `.rollup` command and
 //! naturally computed in the same single-pass scan already doing the dedup.
 //!
 //! ## Prevention

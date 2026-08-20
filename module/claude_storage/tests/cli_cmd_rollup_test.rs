@@ -1,20 +1,20 @@
-//! Integration tests for the `.table` command.
+//! Integration tests for the `.rollup` command.
 //!
 //! ## Coverage
 //!
-//! INT-1 through INT-21 per `tests/docs/cli/command/14_table.md` — grouping
+//! INT-1 through INT-21 per `tests/docs/cli/command/14_rollup.md` — grouping
 //! (session/project/model/day), sort/order wiring, column projection
 //! (`columns::`), the `model::` filter's effect on per-row percentages,
 //! `limit::`'s post-aggregation cap semantics, the worked-example byte-exact
 //! table, and exit/validation codes.
 //!
 //! `scope::`/`depth::` themselves are NOT re-verified exhaustively here —
-//! `.table` reuses `validate_scope`/`resolve_scoped_projects`/
+//! `.rollup` reuses `validate_scope`/`resolve_scoped_projects`/
 //! `resolve_base_path`/`beyond_depth`/`component_distance` byte-for-byte from
 //! `.usage`, whose own `cli_cmd_usage_test.rs` (INT-1 through INT-11) already
 //! covers every scope value and the depth boundary exhaustively. INT-11/INT-12
 //! below are single representative smoke tests confirming the wiring reaches
-//! `.table`, not a re-derivation of `.usage`'s own coverage.
+//! `.rollup`, not a re-derivation of `.usage`'s own coverage.
 //!
 //! ## Test Case Index
 //!
@@ -67,7 +67,7 @@ fn assert_exit( out : &std::process::Output, code : i32 )
   );
 }
 
-/// Fully controlled session fixture: every value `.table` aggregates.
+/// Fully controlled session fixture: every value `.rollup` aggregates.
 ///
 /// Deliberately a local, parallel copy of `cli_cmd_usage_test.rs`'s own
 /// `UsageSession` — this file adds a per-session `model` field that
@@ -75,7 +75,7 @@ fn assert_exit( out : &std::process::Output, code : i32 )
 /// model), so the two builders diverge rather than sharing one
 /// over-parameterized helper (same precedent `usage.rs`'s own
 /// `session_mtime`/`short_id` local-duplication comments establish).
-struct TableSession< 'a >
+struct RollupSession< 'a >
 {
   cwd : &'a str,
   model : &'a str,
@@ -87,7 +87,7 @@ struct TableSession< 'a >
   last_ts : &'a str,
 }
 
-impl< 'a > TableSession< 'a >
+impl< 'a > RollupSession< 'a >
 {
   /// One-turn session, `claude-opus-5`, small token counts.
   fn simple( cwd : &'a str ) -> Self
@@ -111,11 +111,11 @@ impl< 'a > TableSession< 'a >
 /// every line, all tokens on the first, `last_ts` on the final one).
 ///
 /// Returns the encoded project ID.
-fn write_table_session(
+fn write_rollup_session(
   storage_root : &std::path::Path,
   project_path : &std::path::Path,
   session_id   : &str,
-  fx           : &TableSession< '_ >,
+  fx           : &RollupSession< '_ >,
 ) -> String
 {
   use std::io::Write as _;
@@ -158,7 +158,7 @@ fn write_table_session(
   encoded
 }
 
-/// Count of data rows in a `.table` table (total lines minus the header).
+/// Count of data rows in a `.rollup` table (total lines minus the header).
 fn data_rows( s : &str ) -> usize
 {
   s.lines().count().saturating_sub( 1 )
@@ -167,18 +167,18 @@ fn data_rows( s : &str ) -> usize
 /// INT-1: Default `group::session` shows one row per session.
 ///
 /// ## Purpose
-/// Validates the default grouping dimension: bare `.table` behaves like
+/// Validates the default grouping dimension: bare `.rollup` behaves like
 /// `.usage`'s own granularity, one row per session.
 ///
 /// ## Coverage
 /// Two sessions in the same project both appear as separate rows.
 ///
 /// ## Validation Strategy
-/// Two sessions, same project; run bare `.table`; assert 2 data rows, both
+/// Two sessions, same project; run bare `.rollup`; assert 2 data rows, both
 /// short ids present.
 ///
 /// ## Related Requirements
-/// `tests/docs/cli/command/14_table.md` — INT-1
+/// `tests/docs/cli/command/14_rollup.md` — INT-1
 #[ test ]
 fn int_1_default_group_session_one_row_per_session()
 {
@@ -187,20 +187,20 @@ fn int_1_default_group_session_one_row_per_session()
   let project = root.path().join( "work" );
   std::fs::create_dir_all( &project ).unwrap();
 
-  write_table_session(
+  write_rollup_session(
     &storage_root, &project, "sessaaa1-1111-4abc-9def-000000000001",
-    &TableSession::simple( project.to_str().unwrap() ),
+    &RollupSession::simple( project.to_str().unwrap() ),
   );
-  write_table_session(
+  write_rollup_session(
     &storage_root, &project, "sessbbb2-2222-4abc-9def-000000000002",
-    &TableSession::simple( project.to_str().unwrap() ),
+    &RollupSession::simple( project.to_str().unwrap() ),
   );
 
   let out = common::clg_cmd()
     .current_dir( &project )
     .env( "HOME", root.path().to_str().unwrap() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
-    .arg( ".table" )
+    .arg( ".rollup" )
     .output()
     .unwrap();
 
@@ -226,7 +226,7 @@ fn int_1_default_group_session_one_row_per_session()
 /// `group::project`; assert exactly 1 row and the summed value.
 ///
 /// ## Related Requirements
-/// `tests/docs/cli/command/14_table.md` — INT-2
+/// `tests/docs/cli/command/14_rollup.md` — INT-2
 #[ test ]
 fn int_2_group_project_sums_sessions_into_one_row()
 {
@@ -235,21 +235,21 @@ fn int_2_group_project_sums_sessions_into_one_row()
   let project = root.path().join( "summed" );
   std::fs::create_dir_all( &project ).unwrap();
 
-  let mut fx1 = TableSession::simple( project.to_str().unwrap() );
+  let mut fx1 = RollupSession::simple( project.to_str().unwrap() );
   fx1.input_tokens = 600;
   fx1.output_tokens = 0;
-  let mut fx2 = TableSession::simple( project.to_str().unwrap() );
+  let mut fx2 = RollupSession::simple( project.to_str().unwrap() );
   fx2.input_tokens = 400;
   fx2.output_tokens = 0;
 
-  write_table_session( &storage_root, &project, "sumaaaa1-1111-4abc-9def-000000000001", &fx1 );
-  write_table_session( &storage_root, &project, "sumbbbb2-2222-4abc-9def-000000000002", &fx2 );
+  write_rollup_session( &storage_root, &project, "sumaaaa1-1111-4abc-9def-000000000001", &fx1 );
+  write_rollup_session( &storage_root, &project, "sumbbbb2-2222-4abc-9def-000000000002", &fx2 );
 
   let out = common::clg_cmd()
     .current_dir( &project )
     .env( "HOME", root.path().to_str().unwrap() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
-    .arg( ".table" )
+    .arg( ".rollup" )
     .arg( "group::project" )
     .output()
     .unwrap();
@@ -275,7 +275,7 @@ fn int_2_group_project_sums_sessions_into_one_row()
 /// both model names appear as row labels.
 ///
 /// ## Related Requirements
-/// `tests/docs/cli/command/14_table.md` — INT-3
+/// `tests/docs/cli/command/14_rollup.md` — INT-3
 #[ test ]
 fn int_3_group_model_separates_rows_by_model()
 {
@@ -284,19 +284,19 @@ fn int_3_group_model_separates_rows_by_model()
   let project = root.path().join( "models" );
   std::fs::create_dir_all( &project ).unwrap();
 
-  let mut fx1 = TableSession::simple( project.to_str().unwrap() );
+  let mut fx1 = RollupSession::simple( project.to_str().unwrap() );
   fx1.model = "claude-opus-5";
-  let mut fx2 = TableSession::simple( project.to_str().unwrap() );
+  let mut fx2 = RollupSession::simple( project.to_str().unwrap() );
   fx2.model = "claude-haiku-5";
 
-  write_table_session( &storage_root, &project, "modaaaa1-1111-4abc-9def-000000000001", &fx1 );
-  write_table_session( &storage_root, &project, "modbbbb2-2222-4abc-9def-000000000002", &fx2 );
+  write_rollup_session( &storage_root, &project, "modaaaa1-1111-4abc-9def-000000000001", &fx1 );
+  write_rollup_session( &storage_root, &project, "modbbbb2-2222-4abc-9def-000000000002", &fx2 );
 
   let out = common::clg_cmd()
     .current_dir( &project )
     .env( "HOME", root.path().to_str().unwrap() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
-    .arg( ".table" )
+    .arg( ".rollup" )
     .arg( "group::model" )
     .output()
     .unwrap();
@@ -322,7 +322,7 @@ fn int_3_group_model_separates_rows_by_model()
 /// assert both date labels appear.
 ///
 /// ## Related Requirements
-/// `tests/docs/cli/command/14_table.md` — INT-4
+/// `tests/docs/cli/command/14_rollup.md` — INT-4
 #[ test ]
 fn int_4_group_day_separates_rows_by_calendar_day()
 {
@@ -331,19 +331,19 @@ fn int_4_group_day_separates_rows_by_calendar_day()
   let project = root.path().join( "days" );
   std::fs::create_dir_all( &project ).unwrap();
 
-  let mut fx1 = TableSession::simple( project.to_str().unwrap() );
+  let mut fx1 = RollupSession::simple( project.to_str().unwrap() );
   fx1.first_ts = "2025-06-01T10:00:00Z";
-  let mut fx2 = TableSession::simple( project.to_str().unwrap() );
+  let mut fx2 = RollupSession::simple( project.to_str().unwrap() );
   fx2.first_ts = "2025-06-05T10:00:00Z";
 
-  write_table_session( &storage_root, &project, "dayaaaa1-1111-4abc-9def-000000000001", &fx1 );
-  write_table_session( &storage_root, &project, "daybbbb2-2222-4abc-9def-000000000002", &fx2 );
+  write_rollup_session( &storage_root, &project, "dayaaaa1-1111-4abc-9def-000000000001", &fx1 );
+  write_rollup_session( &storage_root, &project, "daybbbb2-2222-4abc-9def-000000000002", &fx2 );
 
   let out = common::clg_cmd()
     .current_dir( &project )
     .env( "HOME", root.path().to_str().unwrap() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
-    .arg( ".table" )
+    .arg( ".rollup" )
     .arg( "group::day" )
     .output()
     .unwrap();
@@ -371,7 +371,7 @@ fn int_4_group_day_separates_rows_by_calendar_day()
 /// `sort::calls order::desc`; assert byte-offset order S3 < S2 < S1.
 ///
 /// ## Related Requirements
-/// `tests/docs/cli/command/14_table.md` — INT-5
+/// `tests/docs/cli/command/14_rollup.md` — INT-5
 #[ test ]
 fn int_5_sort_calls_desc_orders_by_call_count()
 {
@@ -387,18 +387,18 @@ fn int_5_sort_calls_desc_orders_by_call_count()
     ( "sortccc3-3333-4abc-9def-000000000003", 5, 100 ),
   ]
   {
-    let mut fx = TableSession::simple( project.to_str().unwrap() );
+    let mut fx = RollupSession::simple( project.to_str().unwrap() );
     fx.turns = turns;
     fx.input_tokens = input;
     fx.output_tokens = 0;
-    write_table_session( &storage_root, &project, id, &fx );
+    write_rollup_session( &storage_root, &project, id, &fx );
   }
 
   let out = common::clg_cmd()
     .current_dir( &project )
     .env( "HOME", root.path().to_str().unwrap() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
-    .arg( ".table" )
+    .arg( ".rollup" )
     .arg( "sort::calls" )
     .arg( "order::desc" )
     .output()
@@ -427,7 +427,7 @@ fn int_5_sort_calls_desc_orders_by_call_count()
 /// byte-offset order S1 < S2 < S3.
 ///
 /// ## Related Requirements
-/// `tests/docs/cli/command/14_table.md` — INT-6
+/// `tests/docs/cli/command/14_rollup.md` — INT-6
 #[ test ]
 fn int_6_order_asc_reverses_sort_calls_result()
 {
@@ -443,18 +443,18 @@ fn int_6_order_asc_reverses_sort_calls_result()
     ( "sortccc3-3333-4abc-9def-000000000003", 5, 100 ),
   ]
   {
-    let mut fx = TableSession::simple( project.to_str().unwrap() );
+    let mut fx = RollupSession::simple( project.to_str().unwrap() );
     fx.turns = turns;
     fx.input_tokens = input;
     fx.output_tokens = 0;
-    write_table_session( &storage_root, &project, id, &fx );
+    write_rollup_session( &storage_root, &project, id, &fx );
   }
 
   let out = common::clg_cmd()
     .current_dir( &project )
     .env( "HOME", root.path().to_str().unwrap() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
-    .arg( ".table" )
+    .arg( ".rollup" )
     .arg( "sort::calls" )
     .arg( "order::asc" )
     .output()
@@ -483,7 +483,7 @@ fn int_6_order_asc_reverses_sort_calls_result()
 /// the two chosen labels.
 ///
 /// ## Related Requirements
-/// `tests/docs/cli/command/14_table.md` — INT-7
+/// `tests/docs/cli/command/14_rollup.md` — INT-7
 #[ test ]
 fn int_7_columns_custom_subset_projects_only_those()
 {
@@ -492,16 +492,16 @@ fn int_7_columns_custom_subset_projects_only_those()
   let project = root.path().join( "cols" );
   std::fs::create_dir_all( &project ).unwrap();
 
-  write_table_session(
+  write_rollup_session(
     &storage_root, &project, "colsaaa1-1111-4abc-9def-000000000001",
-    &TableSession::simple( project.to_str().unwrap() ),
+    &RollupSession::simple( project.to_str().unwrap() ),
   );
 
   let out = common::clg_cmd()
     .current_dir( &project )
     .env( "HOME", root.path().to_str().unwrap() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
-    .arg( ".table" )
+    .arg( ".rollup" )
     .arg( "columns::group,total" )
     .output()
     .unwrap();
@@ -526,11 +526,11 @@ fn int_7_columns_custom_subset_projects_only_those()
 /// Header contains all 9 default labels; `First`/`Last` are absent.
 ///
 /// ## Validation Strategy
-/// One session; run bare `.table`; assert the full default label set and the
+/// One session; run bare `.rollup`; assert the full default label set and the
 /// two omitted labels.
 ///
 /// ## Related Requirements
-/// `tests/docs/cli/command/14_table.md` — INT-8
+/// `tests/docs/cli/command/14_rollup.md` — INT-8
 #[ test ]
 fn int_8_columns_default_excludes_first_last()
 {
@@ -539,16 +539,16 @@ fn int_8_columns_default_excludes_first_last()
   let project = root.path().join( "defcols" );
   std::fs::create_dir_all( &project ).unwrap();
 
-  write_table_session(
+  write_rollup_session(
     &storage_root, &project, "defcaaa1-1111-4abc-9def-000000000001",
-    &TableSession::simple( project.to_str().unwrap() ),
+    &RollupSession::simple( project.to_str().unwrap() ),
   );
 
   let out = common::clg_cmd()
     .current_dir( &project )
     .env( "HOME", root.path().to_str().unwrap() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
-    .arg( ".table" )
+    .arg( ".rollup" )
     .output()
     .unwrap();
 
@@ -567,7 +567,7 @@ fn int_8_columns_default_excludes_first_last()
 ///
 /// ## Purpose
 /// Validates the filter-then-aggregate order documented on
-/// `TableParams::model_filter` (core engine): a non-matching session is
+/// `RollupParams::model_filter` (core engine): a non-matching session is
 /// dropped entirely — including from the percent denominator, not merely
 /// hidden from view.
 ///
@@ -581,7 +581,7 @@ fn int_8_columns_default_excludes_first_last()
 /// absent, and `50.0%` present (not `10.0%`).
 ///
 /// ## Related Requirements
-/// `tests/docs/cli/command/14_table.md` — INT-9
+/// `tests/docs/cli/command/14_rollup.md` — INT-9
 #[ test ]
 fn int_9_model_filter_recomputes_percent_against_filtered_total()
 {
@@ -597,18 +597,18 @@ fn int_9_model_filter_recomputes_percent_against_filtered_total()
     ( "haikccc3-3333-4abc-9def-000000000003", "claude-haiku-5", 800 ),
   ]
   {
-    let mut fx = TableSession::simple( project.to_str().unwrap() );
+    let mut fx = RollupSession::simple( project.to_str().unwrap() );
     fx.model = model;
     fx.input_tokens = input;
     fx.output_tokens = 0;
-    write_table_session( &storage_root, &project, id, &fx );
+    write_rollup_session( &storage_root, &project, id, &fx );
   }
 
   let out = common::clg_cmd()
     .current_dir( &project )
     .env( "HOME", root.path().to_str().unwrap() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
-    .arg( ".table" )
+    .arg( ".rollup" )
     .arg( "model::opus" )
     .output()
     .unwrap();
@@ -626,8 +626,8 @@ fn int_9_model_filter_recomputes_percent_against_filtered_total()
 /// INT-10: `limit::` caps the grouped row count, not the raw session count.
 ///
 /// ## Purpose
-/// Validates `limit::`'s post-aggregation semantics for `.table` — distinct
-/// from `.usage`'s flat per-session cap (`.table` caps AFTER `group::`
+/// Validates `limit::`'s post-aggregation semantics for `.rollup` — distinct
+/// from `.usage`'s flat per-session cap (`.rollup` caps AFTER `group::`
 /// collapses sessions into rows).
 ///
 /// ## Coverage
@@ -639,7 +639,7 @@ fn int_9_model_filter_recomputes_percent_against_filtered_total()
 /// limit::2`; assert exactly 2 rows and the specific totals kept/dropped.
 ///
 /// ## Related Requirements
-/// `tests/docs/cli/command/14_table.md` — INT-10
+/// `tests/docs/cli/command/14_rollup.md` — INT-10
 #[ test ]
 fn int_10_limit_caps_grouped_rows_not_raw_sessions()
 {
@@ -654,16 +654,16 @@ fn int_10_limit_caps_grouped_rows_not_raw_sessions()
   ]
   {
     let p = root.path().join( rel );
-    let mut fx = TableSession::simple( p.to_str().unwrap() );
+    let mut fx = RollupSession::simple( p.to_str().unwrap() );
     fx.input_tokens = input;
     fx.output_tokens = 0;
-    write_table_session( &storage_root, &p, id, &fx );
+    write_rollup_session( &storage_root, &p, id, &fx );
   }
 
   let out = common::clg_cmd()
     .env( "HOME", root.path().to_str().unwrap() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
-    .arg( ".table" )
+    .arg( ".rollup" )
     .arg( "scope::global" )
     .arg( "group::project" )
     .arg( "limit::2" )
@@ -678,10 +678,10 @@ fn int_10_limit_caps_grouped_rows_not_raw_sessions()
   assert!( !s.contains( "300" ), "INT-10: lowest-total row must be cut entirely; got:\n{s}" );
 }
 
-/// INT-11: `scope::global` reaches `.table` (representative smoke test).
+/// INT-11: `scope::global` reaches `.rollup` (representative smoke test).
 ///
 /// ## Purpose
-/// Confirms `.table` genuinely wires `scope::` into `resolve_scoped_projects`
+/// Confirms `.rollup` genuinely wires `scope::` into `resolve_scoped_projects`
 /// — not an exhaustive re-derivation of `.usage`'s own 5-scope-value
 /// coverage (`cli_cmd_usage_test.rs` INT-1 through INT-5).
 ///
@@ -693,7 +693,7 @@ fn int_10_limit_caps_grouped_rows_not_raw_sessions()
 /// appear.
 ///
 /// ## Related Requirements
-/// `tests/docs/cli/command/14_table.md` — INT-11
+/// `tests/docs/cli/command/14_rollup.md` — INT-11
 #[ test ]
 fn int_11_scope_global_smoke()
 {
@@ -703,13 +703,13 @@ fn int_11_scope_global_smoke()
   for ( rel, id ) in [ ( "ga", "glbtaaa1-1111-4abc-9def-000000000001" ), ( "gb", "glbtbbb2-2222-4abc-9def-000000000002" ) ]
   {
     let p = root.path().join( rel );
-    write_table_session( &storage_root, &p, id, &TableSession::simple( p.to_str().unwrap() ) );
+    write_rollup_session( &storage_root, &p, id, &RollupSession::simple( p.to_str().unwrap() ) );
   }
 
   let out = common::clg_cmd()
     .env( "HOME", root.path().to_str().unwrap() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
-    .arg( ".table" )
+    .arg( ".rollup" )
     .arg( "scope::global" )
     .output()
     .unwrap();
@@ -724,7 +724,7 @@ fn int_11_scope_global_smoke()
 /// (representative smoke test).
 ///
 /// ## Purpose
-/// Confirms `.table` genuinely wires `depth::` into the same
+/// Confirms `.rollup` genuinely wires `depth::` into the same
 /// `beyond_depth`/`component_distance` boundary check `.usage` already
 /// exhaustively tests (`cli_cmd_usage_test.rs` INT-7/INT-8) — not a
 /// re-derivation.
@@ -737,7 +737,7 @@ fn int_11_scope_global_smoke()
 /// assert the cut.
 ///
 /// ## Related Requirements
-/// `tests/docs/cli/command/14_table.md` — INT-12
+/// `tests/docs/cli/command/14_rollup.md` — INT-12
 #[ test ]
 fn int_12_depth_caps_component_distance_smoke()
 {
@@ -753,13 +753,13 @@ fn int_12_depth_caps_component_distance_smoke()
   ]
   {
     let p = root.path().join( rel );
-    write_table_session( &storage_root, &p, id, &TableSession::simple( p.to_str().unwrap() ) );
+    write_rollup_session( &storage_root, &p, id, &RollupSession::simple( p.to_str().unwrap() ) );
   }
 
   let out = common::clg_cmd()
     .env( "HOME", root.path().to_str().unwrap() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
-    .arg( ".table" )
+    .arg( ".rollup" )
     .arg( "scope::under" )
     .arg( format!( "path::{}", root.path().join( "a" ).display() ) )
     .arg( "depth::1" )
@@ -788,7 +788,7 @@ fn int_12_depth_caps_component_distance_smoke()
 /// input/output/cache); assert stdout equals the exact captured table.
 ///
 /// ## Related Requirements
-/// `tests/docs/cli/command/14_table.md` — INT-13
+/// `tests/docs/cli/command/14_rollup.md` — INT-13
 #[ test ]
 fn int_13_worked_example_byte_exact()
 {
@@ -797,7 +797,7 @@ fn int_13_worked_example_byte_exact()
   let project = root.path().join( "worked" );
   std::fs::create_dir_all( &project ).unwrap();
 
-  let s1 = TableSession
+  let s1 = RollupSession
   {
     cwd : project.to_str().unwrap(),
     model : "claude-opus-5",
@@ -808,7 +808,7 @@ fn int_13_worked_example_byte_exact()
     first_ts : "2025-06-01T10:00:00Z",
     last_ts : "2025-06-01T10:00:45Z",
   };
-  let s2 = TableSession
+  let s2 = RollupSession
   {
     cwd : project.to_str().unwrap(),
     model : "claude-opus-5",
@@ -820,14 +820,14 @@ fn int_13_worked_example_byte_exact()
     last_ts : "2025-06-01T09:00:10Z",
   };
 
-  write_table_session( &storage_root, &project, "aaaaaaaa-1111-4abc-9def-000000000001", &s1 );
-  write_table_session( &storage_root, &project, "bbbbbbbb-2222-4abc-9def-000000000002", &s2 );
+  write_rollup_session( &storage_root, &project, "aaaaaaaa-1111-4abc-9def-000000000001", &s1 );
+  write_rollup_session( &storage_root, &project, "bbbbbbbb-2222-4abc-9def-000000000002", &s2 );
 
   let out = common::clg_cmd()
     .current_dir( &project )
     .env( "HOME", root.path().to_str().unwrap() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
-    .arg( ".table" )
+    .arg( ".rollup" )
     .output()
     .unwrap();
 
@@ -856,7 +856,7 @@ bbbbbbbb                         1       2       100        50        50       1
 /// Empty storage, `scope::global`; assert exit 0 and header-only stdout.
 ///
 /// ## Related Requirements
-/// `tests/docs/cli/command/14_table.md` — INT-14
+/// `tests/docs/cli/command/14_rollup.md` — INT-14
 #[ test ]
 fn int_14_empty_non_local_scope_exits_0_header_only()
 {
@@ -867,7 +867,7 @@ fn int_14_empty_non_local_scope_exits_0_header_only()
   let out = common::clg_cmd()
     .env( "HOME", root.path().to_str().unwrap() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
-    .arg( ".table" )
+    .arg( ".rollup" )
     .arg( "scope::global" )
     .output()
     .unwrap();
@@ -890,11 +890,11 @@ fn int_14_empty_non_local_scope_exits_0_header_only()
 /// Exit 2; stderr names the missing current-directory project.
 ///
 /// ## Validation Strategy
-/// Valid empty storage, cwd with no project, bare `.table`; assert exit 2
+/// Valid empty storage, cwd with no project, bare `.rollup`; assert exit 2
 /// and the stderr message.
 ///
 /// ## Related Requirements
-/// `tests/docs/cli/command/14_table.md` — INT-15
+/// `tests/docs/cli/command/14_rollup.md` — INT-15
 #[ test ]
 fn int_15_local_without_project_exits_2()
 {
@@ -906,7 +906,7 @@ fn int_15_local_without_project_exits_2()
     .current_dir( root.path() )
     .env( "HOME", root.path().to_str().unwrap() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
-    .arg( ".table" )
+    .arg( ".rollup" )
     .output()
     .unwrap();
 
@@ -928,14 +928,14 @@ fn int_15_local_without_project_exits_2()
 /// Exit 1; stderr names `bogus`; no table on stdout.
 ///
 /// ## Validation Strategy
-/// Run `.table group::bogus`; assert exit, stderr content, empty stdout.
+/// Run `.rollup group::bogus`; assert exit, stderr content, empty stdout.
 ///
 /// ## Related Requirements
-/// `tests/docs/cli/command/14_table.md` — INT-16
+/// `tests/docs/cli/command/14_rollup.md` — INT-16
 #[ test ]
 fn int_16_invalid_group_rejected()
 {
-  let out = common::clg_cmd().arg( ".table" ).arg( "group::bogus" ).output().unwrap();
+  let out = common::clg_cmd().arg( ".rollup" ).arg( "group::bogus" ).output().unwrap();
 
   assert_exit( &out, 1 );
   assert!( stderr( &out ).contains( "bogus" ), "INT-16: stderr must name the invalid value; got: {}", stderr( &out ) );
@@ -952,14 +952,14 @@ fn int_16_invalid_group_rejected()
 /// Exit 1; stderr names `bogus`; no table on stdout.
 ///
 /// ## Validation Strategy
-/// Run `.table sort::bogus`; assert exit, stderr content, empty stdout.
+/// Run `.rollup sort::bogus`; assert exit, stderr content, empty stdout.
 ///
 /// ## Related Requirements
-/// `tests/docs/cli/command/14_table.md` — INT-17
+/// `tests/docs/cli/command/14_rollup.md` — INT-17
 #[ test ]
 fn int_17_invalid_sort_rejected()
 {
-  let out = common::clg_cmd().arg( ".table" ).arg( "sort::bogus" ).output().unwrap();
+  let out = common::clg_cmd().arg( ".rollup" ).arg( "sort::bogus" ).output().unwrap();
 
   assert_exit( &out, 1 );
   assert!( stderr( &out ).contains( "bogus" ), "INT-17: stderr must name the invalid value; got: {}", stderr( &out ) );
@@ -976,14 +976,14 @@ fn int_17_invalid_sort_rejected()
 /// Exit 1; stderr names `bogus`; no table on stdout.
 ///
 /// ## Validation Strategy
-/// Run `.table order::bogus`; assert exit, stderr content, empty stdout.
+/// Run `.rollup order::bogus`; assert exit, stderr content, empty stdout.
 ///
 /// ## Related Requirements
-/// `tests/docs/cli/command/14_table.md` — INT-18
+/// `tests/docs/cli/command/14_rollup.md` — INT-18
 #[ test ]
 fn int_18_invalid_order_rejected()
 {
-  let out = common::clg_cmd().arg( ".table" ).arg( "order::bogus" ).output().unwrap();
+  let out = common::clg_cmd().arg( ".rollup" ).arg( "order::bogus" ).output().unwrap();
 
   assert_exit( &out, 1 );
   assert!( stderr( &out ).contains( "bogus" ), "INT-18: stderr must name the invalid value; got: {}", stderr( &out ) );
@@ -1000,15 +1000,15 @@ fn int_18_invalid_order_rejected()
 /// Exit 1; stderr names `bogus`; no table on stdout.
 ///
 /// ## Validation Strategy
-/// Run `.table columns::group,bogus`; assert exit, stderr content, empty
+/// Run `.rollup columns::group,bogus`; assert exit, stderr content, empty
 /// stdout.
 ///
 /// ## Related Requirements
-/// `tests/docs/cli/command/14_table.md` — INT-19
+/// `tests/docs/cli/command/14_rollup.md` — INT-19
 #[ test ]
 fn int_19_invalid_columns_rejected()
 {
-  let out = common::clg_cmd().arg( ".table" ).arg( "columns::group,bogus" ).output().unwrap();
+  let out = common::clg_cmd().arg( ".rollup" ).arg( "columns::group,bogus" ).output().unwrap();
 
   assert_exit( &out, 1 );
   assert!( stderr( &out ).contains( "bogus" ), "INT-19: stderr must name the invalid value; got: {}", stderr( &out ) );
@@ -1025,14 +1025,14 @@ fn int_19_invalid_columns_rejected()
 /// Exit 1; stderr is exactly `depth must be non-negative`; no stdout table.
 ///
 /// ## Validation Strategy
-/// Run `.table depth::-1`; assert exit, exact stderr, empty stdout.
+/// Run `.rollup depth::-1`; assert exit, exact stderr, empty stdout.
 ///
 /// ## Related Requirements
-/// `tests/docs/cli/command/14_table.md` — INT-20
+/// `tests/docs/cli/command/14_rollup.md` — INT-20
 #[ test ]
 fn int_20_negative_depth_rejected()
 {
-  let out = common::clg_cmd().arg( ".table" ).arg( "depth::-1" ).output().unwrap();
+  let out = common::clg_cmd().arg( ".rollup" ).arg( "depth::-1" ).output().unwrap();
 
   assert_exit( &out, 1 );
   assert_eq!( stderr( &out ).trim(), "depth must be non-negative", "INT-20: stderr must be exactly the documented message" );
@@ -1049,14 +1049,14 @@ fn int_20_negative_depth_rejected()
 /// Exit 1; stderr is exactly `limit must be non-negative`; no stdout table.
 ///
 /// ## Validation Strategy
-/// Run `.table limit::-1`; assert exit, exact stderr, empty stdout.
+/// Run `.rollup limit::-1`; assert exit, exact stderr, empty stdout.
 ///
 /// ## Related Requirements
-/// `tests/docs/cli/command/14_table.md` — INT-21
+/// `tests/docs/cli/command/14_rollup.md` — INT-21
 #[ test ]
 fn int_21_negative_limit_rejected()
 {
-  let out = common::clg_cmd().arg( ".table" ).arg( "limit::-1" ).output().unwrap();
+  let out = common::clg_cmd().arg( ".rollup" ).arg( "limit::-1" ).output().unwrap();
 
   assert_exit( &out, 1 );
   assert_eq!( stderr( &out ).trim(), "limit must be non-negative", "INT-21: stderr must be exactly the documented message" );

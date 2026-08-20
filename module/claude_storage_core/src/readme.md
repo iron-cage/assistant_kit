@@ -17,7 +17,7 @@ Zero-dependency core library for reading Claude Code filesystem storage.
 | `search.rs` | Search conversation content full-text |
 | `export.rs` | Export session data to multiple formats |
 | `stats.rs` | Aggregate storage statistics |
-| `table.rs` | Group/filter/sort/project flexible token-usage tables |
+| `rollup.rs` | Group/filter/sort/project flexible token-usage rollups |
 | `continuation.rs` | Detect session continuation chains |
 | `session_id.rs` | Typed wrapper for session UUID stem |
 | `scope.rs` | Compute all 6 CLAUDE_* path variables via scope_for() |

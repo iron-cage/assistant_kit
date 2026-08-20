@@ -1,16 +1,16 @@
-//! Flexible grouped/filtered/sorted token-usage table engine.
+//! Flexible grouped/filtered/sorted token-usage rollup engine.
 //!
 //! Pure aggregation over already-computed [`SessionStats`] — no filesystem or
 //! CLI-argument-parsing dependency, so every grouping/sort/filter path is
 //! unit-testable in isolation without touching JSONL storage at all. Powers
-//! the `claude_storage` CLI's `.table` command; see
-//! `claude_storage/docs/cli/command/14_table.md` for the full CLI contract
+//! the `claude_storage` CLI's `.rollup` command; see
+//! `claude_storage/docs/cli/command/14_rollup.md` for the full CLI contract
 //! this engine is built to serve.
 
 use crate::{ SessionStats, StringMatcher };
 use std::collections::HashMap;
 
-/// Dimension a `.table` result set is grouped by.
+/// Dimension a `.rollup` result set is grouped by.
 #[ derive( Debug, Clone, Copy, PartialEq, Eq ) ]
 pub enum GroupKey
 {
@@ -60,14 +60,14 @@ pub enum SortOrder
   Desc,
 }
 
-/// One session's contribution to the table, assembled before grouping.
+/// One session's contribution to the rollup, assembled before grouping.
 ///
 /// Built by the CLI layer walking scope-resolved projects/sessions (mirrors
 /// `.usage`'s own `collect_rows` glue) — this engine never touches the
 /// filesystem itself, which is what keeps it unit-testable with plain
 /// synthetic values.
 #[ derive( Debug, Clone ) ]
-pub struct TableInput
+pub struct RollupInput
 {
   /// Session ID — used verbatim as the group key under [`GroupKey::Session`].
   pub session_id : String,
@@ -86,7 +86,7 @@ pub struct TableInput
 /// CLI layer, matching `.usage`'s existing core/CLI split (`render_row`/
 /// `format_tokens` live in `cli/usage.rs`, not here).
 #[ derive( Debug, Clone, PartialEq ) ]
-pub struct TableRow
+pub struct RollupRow
 {
   /// Group label: session id / project label / model name / day
   /// (`YYYY-MM-DD`) — `"unknown"` when the grouping field was absent on
@@ -108,7 +108,7 @@ pub struct TableRow
   /// (see `SessionStats::max_context_tokens`) — the "window size" metric.
   pub max_context : u64,
   /// `100.0 * total() / grand_total`, computed against the full filtered
-  /// result set — before `limit` truncates it (see [`build_table`]'s doc).
+  /// result set — before `limit` truncates it (see [`build_rollup`]'s doc).
   /// `0.0` when the grand total itself is `0`.
   pub percent : f64,
   /// Earliest `first_timestamp` among contributing sessions.
@@ -117,7 +117,7 @@ pub struct TableRow
   pub last : Option< String >,
 }
 
-impl TableRow
+impl RollupRow
 {
   /// `cache_read + cache_creation` combined.
   #[ must_use ]
@@ -155,13 +155,13 @@ impl TableRow
   }
 }
 
-/// Parameters controlling one [`build_table`] call.
+/// Parameters controlling one [`build_rollup`] call.
 ///
 /// Not `Clone`: `StringMatcher` doesn't implement it, and nothing in this
-/// engine needs to duplicate a `TableParams` — callers build one and pass it
+/// engine needs to duplicate a `RollupParams` — callers build one and pass it
 /// by reference.
 #[ derive( Debug ) ]
-pub struct TableParams
+pub struct RollupParams
 {
   /// Dimension to group rows by.
   pub group_by : GroupKey,
@@ -190,20 +190,20 @@ pub struct TableParams
 /// matched, not just of the other 4 rows shown alongside it.
 #[ must_use ]
 #[ inline ]
-pub fn build_table( entries : &[ TableInput ], params : &TableParams ) -> Vec< TableRow >
+pub fn build_rollup( entries : &[ RollupInput ], params : &RollupParams ) -> Vec< RollupRow >
 {
   let filtered = entries.iter().filter( | e | matches_model_filter( e, params.model_filter.as_ref() ) );
 
-  let mut groups : HashMap< String, TableRow > = HashMap::new();
+  let mut groups : HashMap< String, RollupRow > = HashMap::new();
   for entry in filtered
   {
     let key = group_key_for( entry, params.group_by );
-    let row = groups.entry( key.clone() ).or_insert_with( || TableRow::empty( key ) );
+    let row = groups.entry( key.clone() ).or_insert_with( || RollupRow::empty( key ) );
     accumulate( row, entry );
   }
 
-  let grand_total : u64 = groups.values().map( TableRow::total ).sum();
-  let mut rows : Vec< TableRow > = groups.into_values()
+  let grand_total : u64 = groups.values().map( RollupRow::total ).sum();
+  let mut rows : Vec< RollupRow > = groups.into_values()
     .map( | mut row |
     {
       row.percent = if grand_total == 0
@@ -231,13 +231,13 @@ pub fn build_table( entries : &[ TableInput ], params : &TableParams ) -> Vec< T
 
 /// Does `entry` survive `filter`? No filter (`None`) always matches; a set
 /// filter requires `entry.stats.model` to be present *and* match.
-fn matches_model_filter( entry : &TableInput, filter : Option< &StringMatcher > ) -> bool
+fn matches_model_filter( entry : &RollupInput, filter : Option< &StringMatcher > ) -> bool
 {
   let Some( matcher ) = filter else { return true };
   entry.stats.model.as_deref().is_some_and( | model | matcher.matches( model ) )
 }
 
-fn group_key_for( entry : &TableInput, group_by : GroupKey ) -> String
+fn group_key_for( entry : &RollupInput, group_by : GroupKey ) -> String
 {
   match group_by
   {
@@ -252,7 +252,7 @@ fn group_key_for( entry : &TableInput, group_by : GroupKey ) -> String
 
 /// Fold one `entry` into `row`: bump counts, sum tokens, track the running
 /// max context, and widen the `first`/`last` timestamp span.
-fn accumulate( row : &mut TableRow, entry : &TableInput )
+fn accumulate( row : &mut RollupRow, entry : &RollupInput )
 {
   row.sessions += 1;
   row.calls += entry.stats.assistant_entries;
@@ -283,7 +283,7 @@ fn accumulate( row : &mut TableRow, entry : &TableInput )
   }
 }
 
-fn sort_rows( rows : &mut [ TableRow ], sort_by : SortKey, order : SortOrder )
+fn sort_rows( rows : &mut [ RollupRow ], sort_by : SortKey, order : SortOrder )
 {
   rows.sort_by( | a, b |
   {

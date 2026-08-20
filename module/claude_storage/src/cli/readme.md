@@ -22,3 +22,4 @@ navigable.
 | `session.rs` | `.project.path`, `.project.exists`, `.session.dir`, `.session.ensure` commands |
 | `tail.rs` | `.tail` command — last N entries of a session |
 | `usage.rs` | `.usage` command — per-session usage table (turns, tokens, duration, dir) |
+| `rollup.rs` | `.rollup` command — flexible grouped/filtered/sorted/projected token-usage rollup |

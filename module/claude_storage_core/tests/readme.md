@@ -3,12 +3,15 @@
 ## Overview
 
 The claude_storage_core test suite covers the core storage library: JSON parsing, path
-encoding/decoding, session filtering, content search, and export. The suite is split between
-integration tests that exercise real `~/.claude/` storage and unit tests that run
-fully in-process. Ten of the eighteen files are bug reproducers — each documents a parse,
+encoding/decoding, session filtering, content search, export, and token-usage rollup. The suite
+is split between integration tests that exercise real `~/.claude/` storage and unit tests that
+run fully in-process. Eleven of the twenty files are bug reproducers — each documents a parse,
 encoding, or storage defect found in production data with 5-section root-cause documentation.
 `status_global_stats_fast_bug.rs` covers both issue-015 (performance) and issue-018 (agent
 session discovery for Claude Code v2.x format) with corner case tests for subagents/ traversal.
+`rollup_test.rs` is pure-logic unit tests (no bug reproducer); `session_stats_dedup_bug.rs`
+(issue-038) is the bug reproducer for the `message.id` dedup fix that both `rollup_test.rs`
+and `.rollup`/`.usage`/`.status` depend on.
 
 ## Test Structure
 
@@ -26,7 +29,9 @@ tests/
 ├── json_surrogate_pair_bug.rs             # Bug Reproducer (issue-001): UTF-16 surrogate pairs
 ├── path_decoding_hyphen_component_bug.rs  # Bug reproducer: hyphen-prefixed component decoding
 ├── path_encoding_double_slash_bug.rs      # Bug reproducer: double-slash from lossy encoding
+├── rollup_test.rs                         # Unit tests for rollup::build_rollup() — grouping, filtering, sorting, limit
 ├── search.rs                              # Content search integration tests
+├── session_stats_dedup_bug.rs             # Bug Reproducer (issue-038): stats() double-counted tokens/turns per JSONL line
 ├── sessions_filtered_corrupted_session_bug.rs # Bug Reproducer (BUG-506): sessions_filtered() discarded project on one corrupted session
 ├── stats_cwd_field_test.rs                # Feature tests (Task 510): SessionStats.cwd populated first-entry-wins
 ├── stats_malformed_line_bug.rs            # Bug Reproducer (BUG-489): stats() hard-fail on malformed line
@@ -50,7 +55,9 @@ tests/
 | `json_surrogate_pair_bug.rs` | Reproduce and verify fix for UTF-16 surrogate pair parsing |
 | `path_decoding_hyphen_component_bug.rs` | Reproduce and verify fix for hyphen component decode |
 | `path_encoding_double_slash_bug.rs` | Reproduce and verify fix for lossy path encoding |
+| `rollup_test.rs` | Unit tests for `rollup::build_rollup()`: grouping, model filtering, percent computation, sorting, `limit` |
 | `search.rs` | Content search across sessions integration tests |
+| `session_stats_dedup_bug.rs` | Reproduce and verify fix for `stats()` per-line (not per-`message.id`) double-counting |
 | `sessions_filtered_corrupted_session_bug.rs` | Lock in that one corrupted session must not discard a project's other valid sessions; regression guard for BUG-506 |
 | `stats_cwd_field_test.rs` | Task 510: SessionStats.cwd populated first-entry-wins from JSONL cwd field |
 | `stats_malformed_line_bug.rs` | Reproduce and verify fix for stats() hard-fail on malformed JSONL line |
@@ -308,6 +315,13 @@ cargo nextest run --all-features -- --include-ignored
 - **Issue**: `session.matches_filter( filter )?` hard-propagated a `Session::count_entries()` failure (e.g. a crash-truncated JSONL file failing UTF-8 validation) from `matches_filter()`'s `min_entries` branch, discarding every already-collected valid session in the project — not just the corrupted one
 - **Fix**: Changed the loop to `match session.matches_filter( filter ) { Ok(true) => ..., Ok(false) => {}, Err(e) => eprintln!("Warning: ...") }`, mirroring the graceful per-session skip already used by `sessions()`, `all_sessions()`, and `project_stats()` in the same file
 - **Root Cause**: `sessions_filtered()` was the sole outlier among 4 per-session loops in `project.rs` still using hard `?`-propagation instead of the file's own established catch-and-skip convention
+
+### issue-038: Session::stats() Double-Counted Tokens and Turns by JSONL Line, Not by API Call
+- **File**: `session_stats_dedup_bug.rs`
+- **Component**: `src/session.rs::stats()`
+- **Issue**: One Claude API response spans multiple `assistant` JSONL lines (one per content block), each repeating the identical `message.id`/`message.usage`; `stats()` summed usage and incremented entry counts per LINE with no dedup — confirmed on real production storage: 2505 raw assistant lines collapsed to 1201 unique message ids, a ~2.1x over-count silently baked into `.usage`, `.status` verbosity 2+, and the `.rollup` command's token totals
+- **Fix**: `stats()` now tracks a `HashSet<String>` of seen `message.id` values and gates both the entry-count increment and usage sum on "is this id new"; a line with no `message.id` is always treated as new (never skipped), so malformed/legacy lines are never silently dropped from the totals. The same pass added `SessionStats::max_context_tokens` and `SessionStats::model`, computed in the same single dedup scan
+- **Root Cause**: No existing test fixture ever wrote two JSONL lines sharing one `message.id` — every fixture (including `cli_cmd_usage_test.rs`'s `write_usage_session()`) assigned a distinct id per turn by construction, so no test exercised the real multi-content-block transcript shape
 
 ## Related Documentation
 

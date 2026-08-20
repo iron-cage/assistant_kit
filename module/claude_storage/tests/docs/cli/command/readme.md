@@ -24,7 +24,7 @@
 | 11_session_ensure.md | Integration tests for `.session.ensure` command | ✅ |
 | 12_tail.md | Integration tests for `.tail` command | ✅ |
 | 13_usage.md | Integration tests for `.usage` command | ✅ |
-| 14_table.md | Integration tests for `.table` command | ✅ |
+| 14_rollup.md | Integration tests for `.rollup` command | ✅ |
 
 ### Cross-Command Dispatch Coverage
 

@@ -1,15 +1,15 @@
-# Command :: 14. `.table`
+# Command :: 14. `.rollup`
 
 ### Scope
 
-- **Purpose**: Specify the `.table` CLI command.
-- **Responsibility**: Syntax, parameters, exit codes, and examples for `.table`.
+- **Purpose**: Specify the `.rollup` CLI command.
+- **Responsibility**: Syntax, parameters, exit codes, and examples for `.rollup`.
 - **In Scope**: Invocation syntax, accepted parameters, output structure, error conditions.
-- **Out of Scope**: Parameter definitions (→ `param/`), type constraints (→ `type/`), aggregation algorithm internals (→ `claude_storage_core/src/table.rs`).
+- **Out of Scope**: Parameter definitions (→ `param/`), type constraints (→ `type/`), aggregation algorithm internals (→ `claude_storage_core/src/rollup.rs`).
 
-Implemented in `src/cli/table.rs`; all grouping, filtering, sorting, and percent computation is delegated to `claude_storage_core::table::build_table()` (`claude_storage_core/src/table.rs`) — a pure function with no filesystem or CLI dependency, unit-tested independently of this command (see `claude_storage_core/tests/`). `src/cli/table.rs` itself only walks scope-resolved sessions into `TableInput`s, parses the 5 new parameters below, and renders the chosen column projection — it duplicates none of the core engine's grouping/sort/filter logic. This split places the aggregation logic at the leaf of the dependency tree (`claude_storage_core`, which nothing in this crate depends on) and keeps the CLI-facing file a thin routine, the same core/CLI division [`.usage`](13_usage.md) already establishes (`Session::stats()` there, `build_table()` here).
+Implemented in `src/cli/rollup.rs`; all grouping, filtering, sorting, and percent computation is delegated to `claude_storage_core::rollup::build_rollup()` (`claude_storage_core/src/rollup.rs`) — a pure function with no filesystem or CLI dependency, unit-tested independently of this command (see `claude_storage_core/tests/`). `src/cli/rollup.rs` itself only walks scope-resolved sessions into `RollupInput`s, parses the 5 new parameters below, and renders the chosen column projection — it duplicates none of the core engine's grouping/sort/filter logic. This split places the aggregation logic at the leaf of the dependency tree (`claude_storage_core`, which nothing in this crate depends on) and keeps the CLI-facing file a thin routine, the same core/CLI division [`.usage`](13_usage.md) already establishes (`Session::stats()` there, `build_rollup()` here).
 
-**Representation Absorption Test** (per [`command_group/readme.md`](../command_group/readme.md), the mandatory gate before adding any new command name): closest candidate is [`.usage`](13_usage.md) — it already implements `scope::`/`path::`/`depth::`/`limit::`, the same discovery machinery `.table` reuses verbatim. Fails both criteria: (1) *identical routine* — `table_routine()` delegates every grouping/sort/filter/percent step to `claude_storage_core::table::build_table()`, which `usage_routine()` never calls; `.usage`'s own rendering is a fixed, ungroupable, unsortable, unprojectable per-session table with `Command`/`Dir` columns `.table` has no equivalent of, while `.table`'s output is grouped/sorted/column-projected with a `Percent` column `.usage` has no equivalent of. Not reachable by changing `.usage`'s parameter defaults — `.usage` has no aggregation code path at all to redirect. (2) *identical parameter set* — `.table` registers `group::`/`sort::`/`order::`/`model::`/`columns::`, none of which `.usage` registers, and has no equivalent of `.usage`'s fixed `Command`/`Dur` columns. Confirmed as a genuinely new command, not a disguised `.usage` reparameterization.
+**Representation Absorption Test** (per [`command_group/readme.md`](../command_group/readme.md), the mandatory gate before adding any new command name): closest candidate is [`.usage`](13_usage.md) — it already implements `scope::`/`path::`/`depth::`/`limit::`, the same discovery machinery `.rollup` reuses verbatim. Fails both criteria: (1) *identical routine* — `rollup_routine()` delegates every grouping/sort/filter/percent step to `claude_storage_core::rollup::build_rollup()`, which `usage_routine()` never calls; `.usage`'s own rendering is a fixed, ungroupable, unsortable, unprojectable per-session table with `Command`/`Dir` columns `.rollup` has no equivalent of, while `.rollup`'s output is grouped/sorted/column-projected with a `Percent` column `.usage` has no equivalent of. Not reachable by changing `.usage`'s parameter defaults — `.usage` has no aggregation code path at all to redirect. (2) *identical parameter set* — `.rollup` registers `group::`/`sort::`/`order::`/`model::`/`columns::`, none of which `.usage` registers, and has no equivalent of `.usage`'s fixed `Command`/`Dur` columns. Confirmed as a genuinely new command, not a disguised `.usage` reparameterization.
 
 Print a flexible, aggregated token-usage table — grouped by session, project, model, or calendar day; filtered by model substring; sorted by any computed column in either direction; and projected to only the columns you want. Use this to compare cost across projects or models, find which day burned the most tokens, or audit context-window usage (`MaxCtx`) across a fleet of sessions — the cross-sectional counterpart to [`.usage`](13_usage.md)'s fixed per-session detail view.
 
@@ -19,10 +19,10 @@ Print a flexible, aggregated token-usage table — grouped by session, project, 
 
 **Syntax:**
 ```bash
-claude_storage .table
-claude_storage .table group::project sort::calls order::asc
-claude_storage .table model::opus columns::group,total,percent
-claude_storage .table scope::global group::day limit::10
+claude_storage .rollup
+claude_storage .rollup group::project sort::calls order::asc
+claude_storage .rollup model::opus columns::group,total,percent
+claude_storage .rollup scope::global group::day limit::10
 ```
 
 **Parameters:**
@@ -72,7 +72,7 @@ claude_storage .table scope::global group::day limit::10
 
 **`model::` semantics:** Case-insensitive substring match against each session's recorded `stats.model` (the same `StringMatcher` mechanism [`.projects`](07_projects.md)'s `filter::` uses against paths — see `claude_storage_core/src/filter.rs` — but applied to a different field; no dedicated type doc, matching the [`.usage`](13_usage.md)-precedent of not creating a type doc for a single-command constrained value; see [`35_model.md`](../param/35_model.md)). Applied at session granularity **before** grouping — a non-matching session is dropped entirely, including from the `percent` denominator (see Notes).
 
-**Column Projection (`columns::`):** A comma-separated, order-preserving list, e.g. `columns::group,total,calls`. Every column is always computed internally regardless of projection — `columns::` is a pure display concern, matching [`.usage`](13_usage.md)'s own core/CLI split (the core engine always populates every `TableRow` field; only the CLI layer decides which to print).
+**Column Projection (`columns::`):** A comma-separated, order-preserving list, e.g. `columns::group,total,calls`. Every column is always computed internally regardless of projection — `columns::` is a pure display concern, matching [`.usage`](13_usage.md)'s own core/CLI split (the core engine always populates every `RollupRow` field; only the CLI layer decides which to print).
 
 | Key | Header | In default set? |
 |-----|--------|:---:|
@@ -94,7 +94,7 @@ Default (`columns::` omitted): `group,sessions,calls,input,output,cache,max_cont
 1. Validate parameters, in order — `depth::` (default `3`, non-negative), `limit::` (default `0`, non-negative), `group::` (default `session`), `sort::` (default `total`), `order::` (default `desc`), `columns::` (default: the 9-column set above), `model::` (no validation — any string), `scope::` (default `local`), `path::` (default cwd) — identical parsing/error-message contract to [`.usage`](13_usage.md) for the four shared parameters
 2. Resolve candidate projects — reuses `resolve_scoped_projects()` unchanged from [`.usage`](13_usage.md); `scope::local` with zero resolved projects exits 2 immediately (before any further work), matching [`.usage`](13_usage.md)'s own bypass
 3. Apply the depth filter (`under`/`relevant`/`around` only) — reuses `beyond_depth()`/`component_distance()` unchanged from [`.usage`](13_usage.md); ignored for `local`/`global`
-4. Walk every candidate project's non-agent sessions into `TableInput`s — one per session, carrying `session_id`, `project_label` (the session's own recorded `cwd`, falling back to `"unknown"` — never the lossy-encoded storage directory name), and its already-deduplicated `SessionStats`
+4. Walk every candidate project's non-agent sessions into `RollupInput`s — one per session, carrying `session_id`, `project_label` (the session's own recorded `cwd`, falling back to `"unknown"` — never the lossy-encoded storage directory name), and its already-deduplicated `SessionStats`
 5. Filter by `model::` (if set) — a session whose `stats.model` doesn't match (or is absent while a filter is set) is dropped before it can contribute to any row
 6. Group the surviving sessions by `group::`'s dimension, summing `sessions`/`calls`/`input`/`output`/`cache_read`/`cache_creation` counts, tracking the running max of `max_context`, and widening each row's `first`/`last` timestamp span
 7. Compute `percent` per row against the grand total of the **entire filtered** result set (every group that survives `model::`, before `limit::` truncates rows) — see Notes
@@ -104,22 +104,22 @@ Default (`columns::` omitted): `group,sessions,calls,input,output,cache,max_cont
 **Examples:**
 ```bash
 # Default: one row per session, sorted by total tokens descending
-claude_storage .table
+claude_storage .rollup
 
 # Cost per project, most expensive first
-claude_storage .table group::project
+claude_storage .rollup group::project
 
 # Which model burned the most calls?
-claude_storage .table group::model sort::calls
+claude_storage .rollup group::model sort::calls
 
 # Busiest days by session count, oldest activity first
-claude_storage .table group::day sort::sessions order::asc
+claude_storage .rollup group::day sort::sessions order::asc
 
 # Compact cost-only view for a specific model
-claude_storage .table model::opus columns::group,total,percent
+claude_storage .rollup model::opus columns::group,total,percent
 
 # Top 10 rows, whole storage
-claude_storage .table scope::global group::project limit::10
+claude_storage .rollup scope::global group::project limit::10
 ```
 
 **Output** (default columns, `group::session`):
@@ -138,7 +138,7 @@ bbbbbbbb                         1       2       100        50        50       1
 - **`limit::`'s semantics differ from [`.usage`](13_usage.md)'s.** There, the cap is flat across raw sessions (no grouping exists to cap within). Here, `limit::` caps the **grouped, sorted row count** — a third distinct semantic alongside [`.projects`](07_projects.md)'s per-project cap and `.usage`'s flat-per-session cap (see [`22_limit.md`](../param/22_limit.md)). `group::project limit::10` shows the 10 highest-total projects, not the 10 most recent sessions.
 - **`percent` is computed against the full filtered set, not the visible one.** A `limit::5` view still reports each row's true share of everything `model::` let through — not just of the other 4 rows shown alongside it. This means the visible rows' `Pct` values do not necessarily sum to `100.0%` when `limit::` is active.
 - **`model::` filters before grouping, not after.** A session that doesn't match is invisible to every stage downstream, including the `percent` denominator — filtering out a heavy non-matching session raises the surviving rows' percentages, it does not just hide a row.
-- `max_context` (`MaxCtx` column) has no [`.usage`](13_usage.md) equivalent — that command's own Notes section explicitly deferred a `model` aggregate field as a "straightforward one-field future addition, not part of this command's initial scope"; `.table` is that later addition, applied to both `model` (as a `group::` dimension) and context-window size (as a sortable/projectable column), motivated by `Session::stats()` already carrying `max_context_tokens`/`model` fields from `Fix(issue-038)`.
+- `max_context` (`MaxCtx` column) has no [`.usage`](13_usage.md) equivalent — that command's own Notes section explicitly deferred a `model` aggregate field as a "straightforward one-field future addition, not part of this command's initial scope"; `.rollup` is that later addition, applied to both `model` (as a `group::` dimension) and context-window size (as a sortable/projectable column), motivated by `Session::stats()` already carrying `max_context_tokens`/`model` fields from `Fix(issue-038)`.
 - Agent/sidechain sessions never contribute a row, consistent with [`.usage`](13_usage.md)'s and [`.projects`](07_projects.md)'s own main/agent distinction.
 - `Group` truncation for non-session groupings can shorten a long project path with a trailing `…` — when the exact untruncated label matters, project a narrower column set via `columns::` (e.g. drop `first`/`last`) or cross-reference with [`.usage`](13_usage.md)'s own `Dir` column, which is never truncated.
 

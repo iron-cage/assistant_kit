@@ -20,9 +20,9 @@ Maximum path-component distance a `scope::under`/`relevant`/`around` walk may tr
 
 **Default:** `3`
 
-**Commands:** [`.usage`](../command/13_usage.md), [`.table`](../command/14_table.md) — two commands register this parameter, both reusing the identical parsing/validation/depth-walk code from `src/cli/scope.rs`; [`.table`](../command/14_table.md) does not redefine or extend the semantics below in any way.
+**Commands:** [`.usage`](../command/13_usage.md), [`.rollup`](../command/14_rollup.md) — two commands register this parameter, both reusing the identical parsing/validation/depth-walk code from `src/cli/scope.rs`; [`.rollup`](../command/14_rollup.md) does not redefine or extend the semantics below in any way.
 
-**Purpose:** Bounds how far a tree-walking `scope::` value (`under`, `relevant`, `around`) may travel from `path::` before a candidate project is excluded, counted in filesystem path components (e.g. `/a/b/c` is depth 3 from `/`). Introduced for [`.usage`](../command/13_usage.md) specifically — the other `scope::`/`path::` implementers (e.g. [`.projects`](../command/07_projects.md)) walk their ancestor/descendant trees uncapped, because they only list sessions (filesystem-cheap). `.usage` must open and parse every candidate session to compute its stats table, a materially higher per-candidate cost that justifies a depth safety-valve `.projects` doesn't need. [`.table`](../command/14_table.md) inherits the exact same justification unchanged — it walks and parses the same candidate sessions `.usage` does, just aggregates them differently afterward. Ignored when `scope::` is `local` (single project, no walk) or `global` (whole storage, no anchor to measure distance from).
+**Purpose:** Bounds how far a tree-walking `scope::` value (`under`, `relevant`, `around`) may travel from `path::` before a candidate project is excluded, counted in filesystem path components (e.g. `/a/b/c` is depth 3 from `/`). Introduced for [`.usage`](../command/13_usage.md) specifically — the other `scope::`/`path::` implementers (e.g. [`.projects`](../command/07_projects.md)) walk their ancestor/descendant trees uncapped, because they only list sessions (filesystem-cheap). `.usage` must open and parse every candidate session to compute its stats table, a materially higher per-candidate cost that justifies a depth safety-valve `.projects` doesn't need. [`.rollup`](../command/14_rollup.md) inherits the exact same justification unchanged — it walks and parses the same candidate sessions `.usage` does, just aggregates them differently afterward. Ignored when `scope::` is `local` (single project, no walk) or `global` (whole storage, no anchor to measure distance from).
 
 **Examples:**
 ```bash
@@ -38,8 +38,8 @@ Maximum path-component distance a `scope::under`/`relevant`/`around` walk may tr
 # Ignored — scope::local has no tree to walk
 .usage scope::local depth::5
 
-# Same depth semantics on .table
-.table scope::under path::/data/repos/yrd_review depth::1
+# Same depth semantics on .rollup
+.rollup scope::under path::/data/repos/yrd_review depth::1
 ```
 
 ### Referenced Type
@@ -50,13 +50,13 @@ Maximum path-component distance a `scope::under`/`relevant`/`around` walk may tr
 ### Referenced Parameter Groups
 | # | Group | Membership | Co-members |
 |---|-------|------------|------------|
-| 5 | [Scope Configuration](../param_group/05_scope_configuration.md) | Not a formal member — companion to `scope::`/`path::` for [`.usage`](../command/13_usage.md) and [`.table`](../command/14_table.md) only | `scope::`, `path::` |
+| 5 | [Scope Configuration](../param_group/05_scope_configuration.md) | Not a formal member — companion to `scope::`/`path::` for [`.usage`](../command/13_usage.md) and [`.rollup`](../command/14_rollup.md) only | `scope::`, `path::` |
 
 ### Referenced Commands
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
 | 13 | [`.usage`](../command/13_usage.md) | `3` | Applies to `under`/`relevant`/`around` scopes only |
-| 14 | [`.table`](../command/14_table.md) | `3` | Identical semantics to `.usage`, reused unchanged |
+| 14 | [`.rollup`](../command/14_rollup.md) | `3` | Identical semantics to `.usage`, reused unchanged |
 
 ### Referenced User Stories
 | # | User Story | Persona |

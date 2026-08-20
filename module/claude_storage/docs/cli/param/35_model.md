@@ -7,7 +7,7 @@
 - **In Scope**: Value constraints, default behavior, command interactions.
 - **Out of Scope**: Type definitions (→ `type/`), command behavior (→ `command/`).
 
-Model-name substring filter for [`.table`](../command/14_table.md), applied at session granularity before [`group::`](32_group.md) aggregation.
+Model-name substring filter for [`.rollup`](../command/14_rollup.md), applied at session granularity before [`group::`](32_group.md) aggregation.
 
 **Type:** String
 
@@ -20,23 +20,23 @@ Model-name substring filter for [`.table`](../command/14_table.md), applied at s
 
 **Default:** none (no filtering — every session's model is included)
 
-**Commands:** [`.table`](../command/14_table.md) — the only command registering this parameter.
+**Commands:** [`.rollup`](../command/14_rollup.md) — the only command registering this parameter.
 
-**Purpose:** Narrows the session set contributing to the table to those whose model name contains the given substring — e.g. `model::opus` matches `claude-opus-5`. Applied **before** grouping: a non-matching session is dropped entirely, including from the `percent` column's denominator (see [`14_table.md`](../command/14_table.md)'s Notes) — filtering out a heavy non-matching session raises the surviving rows' percentages, it does not just hide a row. Composes with [`group::`](32_group.md) freely, including `group::model` itself (filtering to one model then grouping by model collapses to at most one row, mainly useful for confirming a single model's own total/percent-of-everything-matched).
+**Purpose:** Narrows the session set contributing to the table to those whose model name contains the given substring — e.g. `model::opus` matches `claude-opus-5`. Applied **before** grouping: a non-matching session is dropped entirely, including from the `percent` column's denominator (see [`14_rollup.md`](../command/14_rollup.md)'s Notes) — filtering out a heavy non-matching session raises the surviving rows' percentages, it does not just hide a row. Composes with [`group::`](32_group.md) freely, including `group::model` itself (filtering to one model then grouping by model collapses to at most one row, mainly useful for confirming a single model's own total/percent-of-everything-matched).
 
 **Examples:**
 ```bash
 # Only Opus sessions, still grouped per-session (default group::)
-.table model::opus
+.rollup model::opus
 
 # Cost of Haiku usage specifically, one summary row
-.table model::haiku group::model
+.rollup model::haiku group::model
 
 # Compose with columns:: for a compact filtered view
-.table model::opus columns::group,total,percent
+.rollup model::opus columns::group,total,percent
 
 # No match — table has zero data rows, exit 0 (not an error)
-.table model::nonexistent-model-xyz
+.rollup model::nonexistent-model-xyz
 ```
 
 ### Referenced Type
@@ -47,7 +47,7 @@ Model-name substring filter for [`.table`](../command/14_table.md), applied at s
 ### Referenced Commands
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
-| 14 | [`.table`](../command/14_table.md) | none (unfiltered) | Applied before grouping; affects the `percent` denominator |
+| 14 | [`.rollup`](../command/14_rollup.md) | none (unfiltered) | Applied before grouping; affects the `percent` denominator |
 
 ### Referenced User Stories
 | # | User Story | Persona |

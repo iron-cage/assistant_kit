@@ -954,10 +954,10 @@
     - ".usage scope::global limit::20"
   auto_help_enabled: true
 
-- name: ".table"
+- name: ".rollup"
   namespace: ""
-  description: "Flexible token-usage table: group by session/project/model/day, filter by model, sort by any column, and project only the columns you want"
-  hint: "Flexible grouped/filtered/sorted token-usage table"
+  description: "Flexible token-usage rollup: group by session/project/model/day, filter by model, sort by any column, and project only the columns you want"
+  hint: "Flexible grouped/filtered/sorted token-usage rollup"
   version: "1.0.0"
   status: "stable"
   aliases: []
@@ -1015,7 +1015,7 @@
       default: "session"
       validation_rules: []
       aliases: []
-      tags: ["table"]
+      tags: ["rollup"]
 
     - name: "sort"
       kind: "String"
@@ -1025,7 +1025,7 @@
       default: "total"
       validation_rules: []
       aliases: []
-      tags: ["table"]
+      tags: ["rollup"]
 
     - name: "order"
       kind: "String"
@@ -1035,7 +1035,7 @@
       default: "desc"
       validation_rules: []
       aliases: []
-      tags: ["table"]
+      tags: ["rollup"]
 
     - name: "model"
       kind: "String"
@@ -1053,11 +1053,11 @@
       optional: true
       validation_rules: []
       aliases: []
-      tags: ["table"]
+      tags: ["rollup"]
 
   examples:
-    - ".table"
-    - ".table group::project sort::total order::desc"
-    - ".table group::model columns::group,calls,total,percent"
-    - ".table sort::max_context limit::10"
+    - ".rollup"
+    - ".rollup group::project sort::total order::desc"
+    - ".rollup group::model columns::group,calls,total,percent"
+    - ".rollup sort::max_context limit::10"
   auto_help_enabled: true

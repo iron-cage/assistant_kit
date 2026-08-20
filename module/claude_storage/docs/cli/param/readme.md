@@ -46,11 +46,11 @@ See [type/readme.md](../type/readme.md) for type definitions and [param_group/re
 | `29_filter.md` | filter:: — path-substring filter on resolved projects for .projects |
 | `30_detail.md` | detail:: — output detail level (projects vs sessions) for .projects and .show |
 | `31_ids.md` | ids:: — raw conversation-ID scripting output toggle for .projects |
-| `32_group.md` | group:: — aggregation dimension for .table |
-| `33_sort.md` | sort:: — sort column for .table's grouped rows |
-| `34_order.md` | order:: — sort direction for .table |
-| `35_model.md` | model:: — model-name substring filter for .table |
-| `36_columns.md` | columns:: — column projection for .table |
+| `32_group.md` | group:: — aggregation dimension for .rollup |
+| `33_sort.md` | sort:: — sort column for .rollup's grouped rows |
+| `34_order.md` | order:: — sort direction for .rollup |
+| `35_model.md` | model:: — model-name substring filter for .rollup |
+| `36_columns.md` | columns:: — column projection for .rollup |
 
 ### Parameters Table
 
@@ -87,10 +87,10 @@ See [type/readme.md](../type/readme.md) for type definitions and [param_group/re
 | 29 | [`filter::`](29_filter.md) | [`PathSubstring`](../type/04_path_substring.md) | — | any string | Path-substring filter on resolved projects | 1 |
 | 30 | [`detail::`](30_detail.md) | `DetailLevel` | varies | `projects`, `sessions` | Output detail level | 2 |
 | 31 | [`ids::`](31_ids.md) | Boolean | `0` | `0`, `1` | Raw conversation-ID scripting output | 1 |
-| 32 | [`group::`](32_group.md) | String enum | `session` | `session`, `project`, `model`, `day` | Aggregation dimension for `.table` | 1 |
-| 33 | [`sort::`](33_sort.md) | String enum | `total` | `total`, `input`, `output`, `cache`, `max_context`, `calls`, `sessions`, `group` | Sort column for `.table`'s grouped rows | 1 |
-| 34 | [`order::`](34_order.md) | String enum | `desc` | `asc`, `desc` | Sort direction for `.table` | 1 |
-| 35 | [`model::`](35_model.md) | String | — | any string | Model-name substring filter for `.table` | 1 |
-| 36 | [`columns::`](36_columns.md) | String (comma list) | 9-column default | 11 valid keys | Column projection for `.table` | 1 |
+| 32 | [`group::`](32_group.md) | String enum | `session` | `session`, `project`, `model`, `day` | Aggregation dimension for `.rollup` | 1 |
+| 33 | [`sort::`](33_sort.md) | String enum | `total` | `total`, `input`, `output`, `cache`, `max_context`, `calls`, `sessions`, `group` | Sort column for `.rollup`'s grouped rows | 1 |
+| 34 | [`order::`](34_order.md) | String enum | `desc` | `asc`, `desc` | Sort direction for `.rollup` | 1 |
+| 35 | [`model::`](35_model.md) | String | — | any string | Model-name substring filter for `.rollup` | 1 |
+| 36 | [`columns::`](36_columns.md) | String (comma list) | 9-column default | 11 valid keys | Column projection for `.rollup` | 1 |
 
-**Total:** 36 parameters, all implemented across their specified commands — including `depth::` (row 26) for `.usage` and `.table` (see `../command/13_usage.md`, `../command/14_table.md`); `filter::`, `detail::`, `ids::` (rows 29-31) for `.projects`' absorption of `.list` (see `../command/07_projects.md` and `../command_group/readme.md § Command Removal: .list -> .projects`); `tail::`/`detail::` (rows 25, 30) for `.show`'s project-overview branch (see `../command/03_show.md`); and `group::`/`sort::`/`order::`/`model::`/`columns::` (rows 32-36), introduced entirely for `.table` (see `../command/14_table.md`).
+**Total:** 36 parameters, all implemented across their specified commands — including `depth::` (row 26) for `.usage` and `.rollup` (see `../command/13_usage.md`, `../command/14_rollup.md`); `filter::`, `detail::`, `ids::` (rows 29-31) for `.projects`' absorption of `.list` (see `../command/07_projects.md` and `../command_group/readme.md § Command Removal: .list -> .projects`); `tail::`/`detail::` (rows 25, 30) for `.show`'s project-overview branch (see `../command/03_show.md`); and `group::`/`sort::`/`order::`/`model::`/`columns::` (rows 32-36), introduced entirely for `.rollup` (see `../command/14_rollup.md`).

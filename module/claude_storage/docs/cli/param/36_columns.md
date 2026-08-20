@@ -7,7 +7,7 @@
 - **In Scope**: Value constraints, default behavior, command interactions.
 - **Out of Scope**: Type definitions (→ `type/`), command behavior (→ `command/`).
 
-Column projection for [`.table`](../command/14_table.md) — which of the 11 always-computed columns to print, and in what order.
+Column projection for [`.rollup`](../command/14_rollup.md) — which of the 11 always-computed columns to print, and in what order.
 
 **Type:** String (comma-separated list)
 
@@ -23,9 +23,9 @@ Column projection for [`.table`](../command/14_table.md) — which of the 11 alw
 
 **Default:** `group,sessions,calls,input,output,cache,max_context,total,percent` (9 of the 11 keys — omits `first`/`last`)
 
-**Commands:** [`.table`](../command/14_table.md) — the only command registering this parameter.
+**Commands:** [`.rollup`](../command/14_rollup.md) — the only command registering this parameter.
 
-**Purpose:** Every column is always computed internally by `claude_storage_core::table::build_table()` regardless of projection — `columns::` is a pure display concern, matching [`.usage`](../command/13_usage.md)'s own core/CLI split (that command's core aggregation always populates every field; only the CLI layer's `render_row`/`format_tokens` decide what's printed). The default set favors count/token metrics (including `max_context`, the "window size" metric) and omits the two verbose ISO-8601 timestamp columns (`first`/`last`) that only matter for time-range auditing. A narrower explicit projection (e.g. `columns::group,total`) is useful for compact scripted output; a wider one (adding `first,last`) surfaces the timestamp span each row spans. Single-command, constrained-value parameter — no dedicated type doc, matching [`depth::`](26_depth.md)'s and [`limit::`](22_limit.md)'s own precedent; the 11-key constraint set is documented inline in the table below rather than via a `type/` file, since (unlike [`ScopeValue`](../type/07_scope_value.md)) no other command shares or could plausibly share this exact key set.
+**Purpose:** Every column is always computed internally by `claude_storage_core::rollup::build_rollup()` regardless of projection — `columns::` is a pure display concern, matching [`.usage`](../command/13_usage.md)'s own core/CLI split (that command's core aggregation always populates every field; only the CLI layer's `render_row`/`format_tokens` decide what's printed). The default set favors count/token metrics (including `max_context`, the "window size" metric) and omits the two verbose ISO-8601 timestamp columns (`first`/`last`) that only matter for time-range auditing. A narrower explicit projection (e.g. `columns::group,total`) is useful for compact scripted output; a wider one (adding `first,last`) surfaces the timestamp span each row spans. Single-command, constrained-value parameter — no dedicated type doc, matching [`depth::`](26_depth.md)'s and [`limit::`](22_limit.md)'s own precedent; the 11-key constraint set is documented inline in the table below rather than via a `type/` file, since (unlike [`ScopeValue`](../type/07_scope_value.md)) no other command shares or could plausibly share this exact key set.
 
 **Column keys:**
 
@@ -46,19 +46,19 @@ Column projection for [`.table`](../command/14_table.md) — which of the 11 alw
 **Examples:**
 ```bash
 # Default: 9 columns, First/Last omitted
-.table
+.rollup
 
 # Compact cost-only view
-.table columns::group,total,percent
+.rollup columns::group,total,percent
 
 # Add the timestamp span
-.table columns::group,total,first,last
+.rollup columns::group,total,first,last
 
 # Reordered — Total before Group
-.table columns::total,group
+.rollup columns::total,group
 
 # Invalid key
-.table columns::group,bogus
+.rollup columns::group,bogus
 # "unknown column 'bogus' — valid: group|sessions|calls|input|output|cache|max_context|total|percent|first|last"
 ```
 
@@ -70,7 +70,7 @@ Column projection for [`.table`](../command/14_table.md) — which of the 11 alw
 ### Referenced Commands
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
-| 14 | [`.table`](../command/14_table.md) | 9-column default (no `first`/`last`) | Pure display projection — every column is always computed |
+| 14 | [`.rollup`](../command/14_rollup.md) | 9-column default (no `first`/`last`) | Pure display projection — every column is always computed |
 
 ### Referenced User Stories
 | # | User Story | Persona |

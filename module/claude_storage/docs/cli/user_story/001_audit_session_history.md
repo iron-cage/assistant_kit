@@ -12,7 +12,7 @@
 - [ ] Can override the storage root to inspect an alternate location
 - [ ] Can view token usage breakdown with show_tokens::1
 - [ ] Can view a per-session usage table (turns, tokens, cache, duration, directory) across a scoped set of sessions — see [`.usage`](../command/13_usage.md)
-- [ ] Can view a grouped, sorted, column-projected token-usage table — by session, project, model, or day — to compare cost across dimensions rather than reading one row per session — see [`.table`](../command/14_table.md)
+- [ ] Can view a grouped, sorted, column-projected token-usage table — by session, project, model, or day — to compare cost across dimensions rather than reading one row per session — see [`.rollup`](../command/14_rollup.md)
 
 ### Referenced Commands
 | # | Command | Role |
@@ -21,7 +21,7 @@
 | 7 | [`.projects`](../command/07_projects.md) | Enumerate projects with per-project session expansion |
 | 4 | [`.count`](../command/04_count.md) | Precise item counts for specific targets |
 | 13 | [`.usage`](../command/13_usage.md) | Per-session usage table for detailed activity audit |
-| 14 | [`.table`](../command/14_table.md) | Grouped/sorted/projected token-usage table for cross-sectional cost comparison |
+| 14 | [`.rollup`](../command/14_rollup.md) | Grouped/sorted/projected token-usage table for cross-sectional cost comparison |
 
 ### Referenced Parameter Groups
 | # | Parameter Group | Role |
@@ -105,9 +105,9 @@ cls .usage scope::under path::/data/repos/yrd_review
 # bf61b676  /role        31   44.8k  105.8k   4.8M    5m24s  /data/repos/yrd_review/2026_troy_venue_pipeline_dev/pr_101
 ```
 
-**Cost comparison across projects (see [`.table`](../command/14_table.md)):**
+**Cost comparison across projects (see [`.rollup`](../command/14_rollup.md)):**
 ```bash
-cls .table scope::global group::project sort::total limit::10
+cls .rollup scope::global group::project sort::total limit::10
 # Group                     Sessions   Calls     Input    Output     Cache    MaxCtx     Total     Pct
 # /data/repos/yrd_review           1       4       500       300       200       700      1.0k   83.3%
 # /data/repos/other_app            1       2       100        50        50       150       200   16.7%

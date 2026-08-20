@@ -1,26 +1,26 @@
-//! `.table` command — flexible grouped/filtered/sorted/projected token-usage
+//! `.rollup` command — flexible grouped/filtered/sorted/projected token-usage
 //! table.
 //!
-//! See `docs/cli/command/14_table.md` for the full CLI contract this
+//! See `docs/cli/command/14_rollup.md` for the full CLI contract this
 //! implements. Aggregation itself (grouping, filtering, sorting, percent
-//! computation) is delegated entirely to `claude_storage_core::table` — this
-//! file only walks scope-resolved sessions into `TableInput`s, parses the 5
+//! computation) is delegated entirely to `claude_storage_core::rollup` — this
+//! file only walks scope-resolved sessions into `RollupInput`s, parses the 5
 //! new CLI parameters, and renders the chosen column projection. Never
 //! duplicates the core engine's own grouping/sort/filter logic (see
-//! `claude_storage_core/src/table.rs`'s own doc comment for that split).
+//! `claude_storage_core/src/rollup.rs`'s own doc comment for that split).
 
 use unilang::{ VerifiedCommand, ExecutionContext, OutputData, ErrorData, ErrorCode };
 use claude_storage_core::
 {
-  GroupKey, SortKey, SortOrder, StringMatcher, Project, TableInput, TableParams, TableRow,
-  build_table,
+  GroupKey, SortKey, SortOrder, StringMatcher, Project, RollupInput, RollupParams, RollupRow,
+  build_rollup,
 };
 use super::storage::create_storage;
 use super::scope::{ validate_scope, resolve_scoped_projects, resolve_base_path };
 
 /// Column selectable via `columns::` — a CLI-only projection concern,
 /// mirroring `.usage`'s own `render_row`/`format_tokens` split: the core
-/// engine always computes every [`TableRow`] field, this enum only picks
+/// engine always computes every [`RollupRow`] field, this enum only picks
 /// which subset to print and in what order.
 #[ derive( Debug, Clone, Copy, PartialEq, Eq ) ]
 enum ColumnKey
@@ -52,7 +52,7 @@ enum ColumnKey
 /// Default column set shown when `columns::` is not given. Omits `First`/
 /// `Last` (verbose, niche) but keeps every count/token metric visible,
 /// including `MaxContext` — the "window size" metric this command exists
-/// partly to surface (see `docs/cli/command/14_table.md`'s Notes).
+/// partly to surface (see `docs/cli/command/14_rollup.md`'s Notes).
 const DEFAULT_COLUMNS : &[ ColumnKey ] =
 &[
   ColumnKey::Group, ColumnKey::Sessions, ColumnKey::Calls,
@@ -64,7 +64,7 @@ const DEFAULT_COLUMNS : &[ ColumnKey ] =
 /// model substring, sort by any computed column, and project only the
 /// columns you want.
 ///
-/// Parameters (see `docs/cli/command/14_table.md`):
+/// Parameters (see `docs/cli/command/14_rollup.md`):
 /// - `group::` — grouping dimension (default `session`)
 /// - `sort::` — sort column (default `total`)
 /// - `order::` — sort direction (default `desc`)
@@ -92,7 +92,7 @@ const DEFAULT_COLUMNS : &[ ColumnKey ] =
 /// the negative-value branches already returned.
 #[ allow( clippy::needless_pass_by_value ) ]
 #[ inline ]
-pub fn table_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
+pub fn rollup_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   -> core::result::Result< OutputData, ErrorData >
 {
   // Validate arguments before any storage access, mirroring `.usage`
@@ -135,7 +135,7 @@ pub fn table_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   };
 
   let inputs = collect_inputs( &projects, depth_filter.as_ref() );
-  let params = TableParams
+  let params = RollupParams
   {
     group_by,
     sort_by,
@@ -143,7 +143,7 @@ pub fn table_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
     model_filter,
     limit : usize::try_from( limit ).expect( "limit < 0 rejected above" ),
   };
-  let rows = build_table( &inputs, &params );
+  let rows = build_rollup( &inputs, &params );
 
   let mut output = render_header( &columns );
   for row in &rows
@@ -177,7 +177,7 @@ fn exit_no_project( path_raw : Option< &str > ) -> !
   std::process::exit( 2 );
 }
 
-/// Build unsorted [`TableInput`]s for every non-agent session across
+/// Build unsorted [`RollupInput`]s for every non-agent session across
 /// `projects`, dropping sessions beyond the depth cap when one is set.
 ///
 /// `project_label` is each session's own recorded `stats.cwd` (falling back
@@ -192,7 +192,7 @@ fn exit_no_project( path_raw : Option< &str > ) -> !
 fn collect_inputs(
   projects     : &[ Project ],
   depth_filter : Option< &( usize, std::path::PathBuf ) >,
-) -> Vec< TableInput >
+) -> Vec< RollupInput >
 {
   let mut inputs = Vec::new();
   for project in projects
@@ -209,7 +209,7 @@ fn collect_inputs(
         if beyond_depth( &stats, *cap, base ) { continue; }
       }
       let project_label = stats.cwd.clone().unwrap_or_else( || "unknown".to_string() );
-      inputs.push( TableInput { session_id : session.id().to_string(), project_label, stats } );
+      inputs.push( RollupInput { session_id : session.id().to_string(), project_label, stats } );
     }
   }
   inputs
@@ -357,13 +357,13 @@ fn render_header( columns : &[ ColumnKey ] ) -> String
 }
 
 /// Render one data row for the chosen `columns::` projection.
-fn render_row( row : &TableRow, columns : &[ ColumnKey ] ) -> String
+fn render_row( row : &RollupRow, columns : &[ ColumnKey ] ) -> String
 {
   columns.iter().map( | &col | render_cell( row, col ) ).collect::< Vec< _ > >().join( "  " )
 }
 
 /// Render one cell, padded/truncated to its column's fixed width.
-fn render_cell( row : &TableRow, col : ColumnKey ) -> String
+fn render_cell( row : &RollupRow, col : ColumnKey ) -> String
 {
   let width = column_width( col );
   match col
