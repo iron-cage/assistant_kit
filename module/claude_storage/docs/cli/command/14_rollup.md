@@ -70,7 +70,7 @@ claude_storage .rollup scope::global group::day limit::10
 | `desc` (default) | Largest/last first |
 | `asc` | Smallest/first first |
 
-**`model::` semantics:** Case-insensitive substring match against each session's recorded `stats.model` (the same `StringMatcher` mechanism [`.projects`](07_projects.md)'s `filter::` uses against paths — see `claude_storage_core/src/filter.rs` — but applied to a different field; no dedicated type doc, matching the [`.usage`](13_usage.md)-precedent of not creating a type doc for a single-command constrained value; see [`35_model.md`](../param/35_model.md)). Applied at session granularity **before** grouping — a non-matching session is dropped entirely, including from the `percent` denominator (see Notes).
+**`model::` semantics:** Case-insensitive substring match against each session's recorded `stats.model` (the same `StringMatcher` mechanism [`.projects`](07_projects.md)'s `filter::` uses against paths — see `claude_storage_core/src/filter.rs` — but applied to a different field; no dedicated type doc, matching the [`.usage`](13_usage.md)-precedent of not creating a type doc for a single-command constrained value; see [`37_model.md`](../param/37_model.md)). Applied at session granularity **before** grouping — a non-matching session is dropped entirely, including from the `percent` denominator (see Notes).
 
 **Column Projection (`columns::`):** A comma-separated, order-preserving list, e.g. `columns::group,total,calls`. Every column is always computed internally regardless of projection — `columns::` is a pure display concern, matching [`.usage`](13_usage.md)'s own core/CLI split (the core engine always populates every `RollupRow` field; only the CLI layer decides which to print).
 
@@ -156,11 +156,11 @@ bbbbbbbb                         1       2       100        50        50       1
 | 12 | [`scope::`](../param/12_scope.md) | [`ScopeValue`](../type/07_scope_value.md) | optional |
 | 22 | [`limit::`](../param/22_limit.md) | Integer | optional |
 | 26 | [`depth::`](../param/26_depth.md) | Integer | optional |
-| 32 | [`group::`](../param/32_group.md) | String enum | optional |
-| 33 | [`sort::`](../param/33_sort.md) | String enum | optional |
-| 34 | [`order::`](../param/34_order.md) | String enum | optional |
-| 35 | [`model::`](../param/35_model.md) | String | optional |
-| 36 | [`columns::`](../param/36_columns.md) | String (comma list) | optional |
+| 34 | [`group::`](../param/34_group.md) | String enum | optional |
+| 35 | [`sort::`](../param/35_sort.md) | String enum | optional |
+| 36 | [`order::`](../param/36_order.md) | String enum | optional |
+| 37 | [`model::`](../param/37_model.md) | String | optional |
+| 38 | [`columns::`](../param/38_columns.md) | String (comma list) | optional |
 
 ### Referenced User Stories
 

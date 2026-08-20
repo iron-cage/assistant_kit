@@ -4,7 +4,7 @@
 
 - **Purpose**: Document semantic newtypes constraining CLI parameter values.
 - **Responsibility**: Per-type constraint and parsing reference for all CLI types.
-- **In Scope**: All 14 semantic types with validation rules, fundamental types, and parameter mappings.
+- **In Scope**: All 15 semantic types with validation rules, fundamental types, and parameter mappings.
 - **Out of Scope**: Parameter specifications (→ `param/`), command behavior (→ `command/`).
 
 Semantic newtypes for `claude_storage` CLI parameters. Every parameter uses a named type with validation constraints — never bare primitives.
@@ -29,6 +29,7 @@ See [param/readme.md](../param/readme.md) for which parameters use each type.
 | `12_topic_name.md` | TopicName — session topic identifier string |
 | `13_strategy_type.md` | StrategyType — resume strategy enum (resume/fresh) |
 | `14_detail_level.md` | DetailLevel — output verbosity enum (projects/sessions) |
+| `15_field_selector.md` | FieldSelector — comma-separated attribute-projection field list (or `all`) |
 
 ### Type Index
 
@@ -48,6 +49,7 @@ See [param/readme.md](../param/readme.md) for which parameters use each type.
 | 12 | [`TopicName`](12_topic_name.md) | String (identifier) | `topic::` |
 | 13 | [`StrategyType`](13_strategy_type.md) | String enum | `strategy::` |
 | 14 | [`DetailLevel`](14_detail_level.md) | String enum | `detail::` |
+| 15 | [`FieldSelector`](15_field_selector.md) | Comma-separated string list | `fields::` |
 
 ### Navigation
 
@@ -65,3 +67,4 @@ See [param/readme.md](../param/readme.md) for which parameters use each type.
 - [TopicName](12_topic_name.md)
 - [StrategyType](13_strategy_type.md)
 - [DetailLevel](14_detail_level.md)
+- [FieldSelector](15_field_selector.md)

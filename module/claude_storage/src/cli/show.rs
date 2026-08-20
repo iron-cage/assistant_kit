@@ -5,6 +5,8 @@ use unilang::{ VerifiedCommand, ExecutionContext, OutputData, ErrorData, ErrorCo
 use super::storage::{ create_storage, parse_project_parameter, find_session_mut };
 use super::scope::{ validate_scope, resolve_scoped_projects, decode_project_display };
 use super::format::format_entry_content;
+use super::field_selector::FieldSelector;
+use super::color;
 
 /// Display control flags for session output.
 #[ allow( clippy::struct_excessive_bools ) ]
@@ -13,6 +15,8 @@ struct SessionDisplayOptions
   show_entries  : bool,
   metadata_only : bool,
   show_tokens   : bool,
+  fields        : Option< FieldSelector >,
+  index         : Option< usize >,
 }
 
 /// Show session or project details (location-aware)
@@ -61,11 +65,29 @@ pub fn show_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
 
   let project_param = cmd.get_string( "project" );
   let metadata_only = cmd.get_boolean( "show_metadata" ).unwrap_or( false );
+
+  // `fields::`/`index::` are validated upfront (shape only — index range depends
+  // on entry count, known only once storage is loaded at each call site below),
+  // mirroring `tail`'s own upfront negative-value check just below.
+  let field_selector = match cmd.get_string( "fields" )
+  {
+    Some( s ) => Some( FieldSelector::parse( s ).map_err( | e | ErrorData::new( ErrorCode::InternalError, e ) )? ),
+    None => None,
+  };
+  let index : Option< usize > = match cmd.get_integer( "index" )
+  {
+    Some( v ) if v <= 0 => return Err( ErrorData::new( ErrorCode::InternalError, format!( "index must be a positive integer (1-based), got {v}" ) ) ),
+    Some( v ) => Some( usize::try_from( v ).expect( "index <= 0 rejected above" ) ),
+    None => None,
+  };
+
   let opts = SessionDisplayOptions
   {
     show_entries  : cmd.get_boolean( "show_entries" ).unwrap_or( false ),
     metadata_only,
     show_tokens   : cmd.get_boolean( "show_tokens" ).unwrap_or( false ),
+    fields        : field_selector,
+    index,
   };
 
   // Note: the show_entries-requires-session_id constraint (former Fix issue-001)
@@ -118,7 +140,7 @@ pub fn show_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
     // Case 1: No parameters → Show current directory project
     ( None, None ) =>
     {
-      show_project_for_cwd_impl( tail_count, show_sessions_detail, opts.show_entries )
+      show_project_for_cwd_impl( tail_count, show_sessions_detail, opts.show_entries, opts.fields.as_ref(), opts.index )
     }
 
     // Case 2: session_id only → Show session in current project
@@ -130,7 +152,7 @@ pub fn show_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
     // Case 3: project only → Show that project
     ( None, Some( proj ) ) =>
     {
-      show_project_impl( proj, tail_count, show_sessions_detail, opts.show_entries )
+      show_project_impl( proj, tail_count, show_sessions_detail, opts.show_entries, opts.fields.as_ref(), opts.index )
     }
 
     // Case 4: Both parameters → Show session in that project
@@ -187,15 +209,20 @@ fn show_session_in_project_impl(
     .map_err( | e | ErrorData::new
     (
       ErrorCode::InternalError,
-      format!( "Failed to load project {proj_id:?}: {e}" )
+      format!( "Failed to load project {}: {e}", format_project_id( &proj_id ) )
     ))?;
 
   format_session_output( &project, session_id, &opts )
 }
 
 /// Helper: Show project for current directory
-fn show_project_for_cwd_impl( tail_count : usize, show_sessions_detail : bool, show_entries : bool )
-  -> core::result::Result< OutputData, ErrorData >
+fn show_project_for_cwd_impl(
+  tail_count : usize,
+  show_sessions_detail : bool,
+  show_entries : bool,
+  fields : Option< &FieldSelector >,
+  index : Option< usize >,
+) -> core::result::Result< OutputData, ErrorData >
 {
   let storage = create_storage()?;
 
@@ -206,12 +233,18 @@ fn show_project_for_cwd_impl( tail_count : usize, show_sessions_detail : bool, s
       format!( "Failed to load project from current directory: {e}" )
     ))?;
 
-  format_project_output( &project, tail_count, show_sessions_detail, show_entries )
+  format_project_output( &project, tail_count, show_sessions_detail, show_entries, fields, index )
 }
 
 /// Helper: Show specific project
-fn show_project_impl( project_param : &str, tail_count : usize, show_sessions_detail : bool, show_entries : bool )
-  -> core::result::Result< OutputData, ErrorData >
+fn show_project_impl(
+  project_param : &str,
+  tail_count : usize,
+  show_sessions_detail : bool,
+  show_entries : bool,
+  fields : Option< &FieldSelector >,
+  index : Option< usize >,
+) -> core::result::Result< OutputData, ErrorData >
 {
   let storage = create_storage()?;
 
@@ -227,10 +260,22 @@ fn show_project_impl( project_param : &str, tail_count : usize, show_sessions_de
     .map_err( | e | ErrorData::new
     (
       ErrorCode::InternalError,
-      format!( "Failed to load project {proj_id:?}: {e}" )
+      format!( "Failed to load project {}: {e}", format_project_id( &proj_id ) )
     ))?;
 
-  format_project_output( &project, tail_count, show_sessions_detail, show_entries )
+  format_project_output( &project, tail_count, show_sessions_detail, show_entries, fields, index )
+}
+
+/// Helper: Render a `ProjectId` as the plain identifier text a user typed or
+/// would recognize — never `{:?}`, which leaks the enum variant name (e.g.
+/// `Uuid("does-not-exist-project")` instead of `does-not-exist-project`).
+fn format_project_id( id : &claude_storage_core::ProjectId ) -> String
+{
+  match id
+  {
+    claude_storage_core::ProjectId::Uuid( s ) => s.clone(),
+    claude_storage_core::ProjectId::Path( p ) => p.display().to_string(),
+  }
 }
 
 /// Helper: Format session output (extracted logic)
@@ -281,7 +326,7 @@ fn format_session_output(
   // Root cause: hardcoded plural "entries" produced "Session: abc (1 entries)".
   // Pitfall: "entry" is irregular — singular differs from plural root.
   let entry_noun = if stats.total_entries == 1 { "entry" } else { "entries" };
-  writeln!( output, "Session: {} ({} {entry_noun})", session_id, stats.total_entries ).unwrap();
+  writeln!( output, "Session: {} · {} {entry_noun}", session_id, stats.total_entries ).unwrap();
 
   // Metadata-only mode (show_metadata::1)
   if opts.metadata_only
@@ -297,7 +342,11 @@ fn format_session_output(
       writeln!( output, "- Cache Creation: {}", stats.total_cache_creation_tokens ).unwrap();
     }
 
-    // Old entries::1 behavior (UUID list) for backward compat
+    // Old entries::1 behavior (UUID list) for backward compat. `index::`
+    // narrows this list to one line (T18/EC-8); `fields::` swaps each line
+    // for the same field-projection block used elsewhere — per
+    // docs/cli/command/03_show.md, it projects "any per-entry rendering"
+    // show_metadata::1 includes, which covers this show_entries::1 list.
     if opts.show_entries
     {
       let entries = session.entries()
@@ -305,17 +354,26 @@ fn format_session_output(
 
       output.push_str( "\nEntries:\n" );
 
-      for ( idx, entry ) in entries.iter().enumerate()
+      let narrowed = narrow_by_index( entries, opts.index )?;
+      for ( idx, entry ) in narrowed
       {
-        writeln!
-        (
-          output,
-          "{}. [{:?}] {} ({})",
-          idx + 1,
-          entry.entry_type,
-          entry.uuid,
-          entry.timestamp
-        ).unwrap();
+        if let Some( selector ) = &opts.fields
+        {
+          output.push_str( &format_entry_fields( idx + 1, entry, selector ) );
+          output.push( '\n' );
+        }
+        else
+        {
+          let role_label = color::role( &format!( "{:?}", entry.entry_type ) );
+          writeln!
+          (
+            output,
+            "{}. {role_label} · {} · {}",
+            idx + 1,
+            entry.uuid,
+            entry.timestamp
+          ).unwrap();
+        }
       }
     }
   }
@@ -329,10 +387,17 @@ fn format_session_output(
     let entries = session.entries()
       .map_err( | e | ErrorData::new( ErrorCode::InternalError, format!( "Failed to load entries: {e}" ) ) )?;
 
-    // Format each entry as conversation
-    for entry in entries
+    // `index::` narrows the entry set to one message (original position
+    // preserved for display numbering); `fields::` swaps chat-log content
+    // for an explicit field-by-field block.
+    let narrowed = narrow_by_index( entries, opts.index )?;
+    for ( pos, entry ) in narrowed
     {
-      let formatted = format_entry_content( entry, None );
+      let formatted = match &opts.fields
+      {
+        Some( selector ) => format_entry_fields( pos + 1, entry, selector ),
+        None => format_entry_content( entry, None ),
+      };
       output.push_str( &formatted );
       output.push_str( "\n\n" );
     }
@@ -385,7 +450,207 @@ fn write_session_metadata_block(
 /// byte-for-byte untouched (see task 526's Verification Checklist item C9).
 fn format_entry_raw( idx : usize, entry : &claude_storage_core::Entry ) -> String
 {
-  format!( "{}. [{:?}] {} ({})\n", idx + 1, entry.entry_type, entry.uuid, entry.timestamp )
+  let role_label = color::role( &format!( "{:?}", entry.entry_type ) );
+  format!( "{}. {role_label} · {} · {}\n", idx + 1, entry.uuid, entry.timestamp )
+}
+
+/// Helper: Narrow an entry slice to the message at 1-based position `index`,
+/// or leave it unchanged when `index` is `None`. Each surviving pair keeps
+/// the entry's ORIGINAL 0-based position within `entries` — so display
+/// numbering (`pos + 1`) still reflects where the message sits in the
+/// caller's in-scope set, not "1" after narrowing away everything else.
+///
+/// # Errors
+///
+/// Returns the canonical out-of-range error (`docs/cli/param/33_index.md`)
+/// when `index` exceeds `entries.len()`.
+fn narrow_by_index(
+  entries : &[ claude_storage_core::Entry ],
+  index   : Option< usize >,
+) -> core::result::Result< Vec< ( usize, &claude_storage_core::Entry ) >, ErrorData >
+{
+  let Some( i ) = index else { return Ok( entries.iter().enumerate().collect() ); };
+
+  entries.get( i - 1 )
+    .map( | entry | vec![ ( i - 1, entry ) ] )
+    .ok_or_else( || ErrorData::new( ErrorCode::InternalError, format!( "index out of range: {i} ({} entries)", entries.len() ) ) )
+}
+
+/// Helper: Render one entry as an explicit field-by-field block — one
+/// `field · value` line per requested attribute, in request order — instead
+/// of `format_entry_content`'s chat-log format. `pos` is the entry's 1-based
+/// display position within the caller's in-scope set (survives `index::`
+/// narrowing — see `narrow_by_index`). See `docs/cli/type/15_field_selector.md`.
+fn format_entry_fields( pos : usize, entry : &claude_storage_core::Entry, selector : &FieldSelector ) -> String
+{
+  let role_label = color::role( &format!( "{:?}", entry.entry_type ) );
+  let mut out = format!( "{pos}. {role_label}" );
+  for field in selector.fields()
+  {
+    if field == "content"
+    {
+      push_content_field( &mut out, entry );
+    }
+    else
+    {
+      write!( out, "\n{} · {}", color::field_name( field ), field_value( entry, field ) ).unwrap();
+    }
+  }
+  out
+}
+
+/// Helper: Resolve one canonical field name (other than `content`, handled
+/// separately by `push_content_field`) to its display value for `entry`.
+/// Cross-role gaps (an assistant-only field on a `user` entry, or vice
+/// versa) render as `—` rather than erroring — see EC-11/EC-13.
+fn field_value( entry : &claude_storage_core::Entry, field : &str ) -> String
+{
+  match field
+  {
+    "uuid" => entry.uuid.clone(),
+    "parent_uuid" => entry.parent_uuid.clone().unwrap_or_else( || "—".to_string() ),
+    "timestamp" => entry.timestamp.clone(),
+    "entry_type" => format!( "{:?}", entry.entry_type ),
+    "cwd" => entry.cwd.display().to_string(),
+    "session_id" => entry.session_id.clone(),
+    "version" => entry.version.clone(),
+    "git_branch" => entry.git_branch.clone().unwrap_or_else( || "—".to_string() ),
+    "user_type" => entry.user_type.clone(),
+    "is_sidechain" => entry.is_sidechain.to_string(),
+    "thinking_level" | "thinking_disabled" => user_only_field_value( entry, field ),
+    "model" | "message_id" | "stop_reason" | "stop_sequence" | "request_id" => assistant_only_field_value( entry, field ),
+    _ => unreachable!( "content is handled by push_content_field; FieldSelector only yields canonical names otherwise" ),
+  }
+}
+
+/// Helper: Resolve `thinking_level`/`thinking_disabled` — present only on a
+/// `user` entry with `thinking_metadata` set; `—` otherwise (an `assistant`
+/// entry, or a `user` entry with no `thinking_metadata`). See EC-13.
+fn user_only_field_value( entry : &claude_storage_core::Entry, field : &str ) -> String
+{
+  let claude_storage_core::MessageContent::User( user_msg ) = &entry.message else { return "—".to_string(); };
+  let Some( tm ) = &user_msg.thinking_metadata else { return "—".to_string(); };
+  match field
+  {
+    "thinking_level" => tm.level.clone(),
+    _ => tm.disabled.to_string(),
+  }
+}
+
+/// Helper: Resolve `model`/`message_id`/`stop_reason`/`stop_sequence`/
+/// `request_id` — present only on an `assistant` entry; `—` on a `user`
+/// entry. See EC-11.
+fn assistant_only_field_value( entry : &claude_storage_core::Entry, field : &str ) -> String
+{
+  let claude_storage_core::MessageContent::Assistant( msg ) = &entry.message else { return "—".to_string(); };
+  match field
+  {
+    "model" => msg.model.clone(),
+    "message_id" => msg.message_id.clone(),
+    "stop_reason" => msg.stop_reason.clone().unwrap_or_else( || "—".to_string() ),
+    "stop_sequence" => msg.stop_sequence.clone().unwrap_or_else( || "—".to_string() ),
+    _ => msg.request_id.clone(),
+  }
+}
+
+/// Helper: Expand the `content` field into one line per content-block
+/// sub-field on an `assistant` entry (text/thinking/tool-use/tool-result —
+/// see `docs/cli/type/15_field_selector.md`'s `content` entry), or a single
+/// `content · {text}` line on a `user` entry (plain message text).
+fn push_content_field( out : &mut String, entry : &claude_storage_core::Entry )
+{
+  use claude_storage_core::{ MessageContent, ContentBlock };
+
+  match &entry.message
+  {
+    MessageContent::User( msg ) =>
+    {
+      write!( out, "\n{} · {}", color::field_name( "content" ), msg.content ).unwrap();
+    }
+    MessageContent::Assistant( msg ) =>
+    {
+      for block in &msg.content
+      {
+        match block
+        {
+          ContentBlock::Text { text } => write!( out, "\n{} · {text}", color::field_name( "content.text" ) ).unwrap(),
+          ContentBlock::Thinking { thinking, signature } =>
+          {
+            write!( out, "\n{} · {thinking}", color::field_name( "content.thinking" ) ).unwrap();
+            write!( out, "\n{} · {signature}", color::field_name( "content.thinking.signature" ) ).unwrap();
+          }
+          ContentBlock::ToolUse { id, name, input } =>
+          {
+            write!( out, "\n{} · {id}", color::field_name( "content.tool_use.id" ) ).unwrap();
+            write!( out, "\n{} · {name}", color::field_name( "content.tool_use.name" ) ).unwrap();
+            write!( out, "\n{} · {}", color::field_name( "content.tool_use.input" ), format_json_value( input ) ).unwrap();
+          }
+          ContentBlock::ToolResult { tool_use_id, content, is_error } =>
+          {
+            write!( out, "\n{} · {tool_use_id}", color::field_name( "content.tool_result.tool_use_id" ) ).unwrap();
+            write!( out, "\n{} · {content}", color::field_name( "content.tool_result.content" ) ).unwrap();
+            write!( out, "\n{} · {is_error}", color::field_name( "content.tool_result.is_error" ) ).unwrap();
+          }
+        }
+      }
+    }
+  }
+}
+
+/// Helper: Render a parsed `JsonValue` back to compact JSON text — object
+/// keys sorted for deterministic output, since `JsonValue::Object` is a
+/// `HashMap` with no stable iteration order of its own. Used in place of
+/// `{:?}` so `content.tool_use.input` prints valid JSON instead of Rust's
+/// internal `Object({"path": String("...")})` debug representation. Written
+/// locally rather than depending on `serde_json` — this crate deliberately
+/// has no `serde_json` dependency (see `src/cli/projects.rs`).
+fn format_json_value( value : &claude_storage_core::JsonValue ) -> String
+{
+  use claude_storage_core::JsonValue;
+
+  match value
+  {
+    JsonValue::Null => "null".to_string(),
+    JsonValue::Bool( b ) => b.to_string(),
+    JsonValue::Number( n ) => n.to_string(),
+    JsonValue::String( s ) => format_json_string( s ),
+    JsonValue::Array( items ) =>
+    {
+      let rendered : Vec< String > = items.iter().map( format_json_value ).collect();
+      format!( "[{}]", rendered.join( "," ) )
+    }
+    JsonValue::Object( obj ) =>
+    {
+      let mut keys : Vec< &String > = obj.keys().collect();
+      keys.sort();
+      let rendered : Vec< String > = keys.iter()
+        .map( | k | format!( "{}:{}", format_json_string( k ), format_json_value( &obj[ *k ] ) ) )
+        .collect();
+      format!( "{{{}}}", rendered.join( "," ) )
+    }
+  }
+}
+
+/// Helper: JSON-escape and quote a string literal for `format_json_value`.
+fn format_json_string( s : &str ) -> String
+{
+  let mut out = String::with_capacity( s.len() + 2 );
+  out.push( '"' );
+  for c in s.chars()
+  {
+    match c
+    {
+      '"' => out.push_str( "\\\"" ),
+      '\\' => out.push_str( "\\\\" ),
+      '\n' => out.push_str( "\\n" ),
+      '\r' => out.push_str( "\\r" ),
+      '\t' => out.push_str( "\\t" ),
+      c if ( c as u32 ) < 0x20 => write!( out, "\\u{:04x}", c as u32 ).unwrap(),
+      c => out.push( c ),
+    }
+  }
+  out.push( '"' );
+  out
 }
 
 /// Result of `scan_sessions`: earliest `first_timestamp`, latest
@@ -435,7 +700,7 @@ fn write_project_summary_block(
   writeln!( output, "Storage: {}", project.storage_dir().display() ).unwrap();
   output.push( '\n' );
 
-  writeln!( output, "Sessions: {} (Main: {}, Agent: {})",
+  writeln!( output, "Sessions: {} · Main: {} · Agent: {}",
     stats.session_count,
     stats.main_session_count,
     stats.agent_session_count
@@ -450,13 +715,18 @@ fn write_project_summary_block(
 
 /// Helper: Render the most-recently-active session's tail window (last
 /// `tail_count` entries; `0` = uncapped) — formatted chat-log content by
-/// default, or a raw uuid/type/timestamp list when `show_entries` is set.
+/// default, a field-projection block when `fields` is set, or a raw
+/// uuid/type/timestamp list when `show_entries` is set. `index` further
+/// narrows to exactly one message, counted within this tail-windowed slice
+/// (not the full session) — see `docs/cli/param/33_index.md`.
 /// Mirrors `tail.rs`'s own slicing idiom independently (no shared helper).
 fn write_tail_window(
   output       : &mut String,
   session      : &mut claude_storage_core::Session,
   tail_count   : usize,
   show_entries : bool,
+  fields       : Option< &FieldSelector >,
+  index        : Option< usize >,
 ) -> core::result::Result< (), ErrorData >
 {
   let entries = session.entries()
@@ -471,9 +741,16 @@ fn write_tail_window(
     &entries[ entries.len() - tail_count.. ]
   };
 
-  for ( idx, entry ) in sliced.iter().enumerate()
+  let narrowed = narrow_by_index( sliced, index )?;
+
+  for ( idx, entry ) in narrowed
   {
-    if show_entries
+    if let Some( selector ) = fields
+    {
+      output.push_str( &format_entry_fields( idx + 1, entry, selector ) );
+      output.push_str( "\n\n" );
+    }
+    else if show_entries
     {
       output.push_str( &format_entry_raw( idx, entry ) );
     }
@@ -513,7 +790,7 @@ fn write_per_session_list(
     // Root cause: hardcoded "entries" produced "(1 entries, last: ...)".
     // Pitfall: "entry" is irregular — singular differs from plural root.
     let e_noun = if session_stats.total_entries == 1 { "entry" } else { "entries" };
-    writeln!( output, "  - {} ({} {e_noun}, last: {})",
+    writeln!( output, "  - {} · {} {e_noun} · last: {}",
       session.id(),
       session_stats.total_entries,
       last
@@ -528,6 +805,8 @@ fn format_project_output(
   tail_count : usize,
   show_sessions_detail : bool,
   show_entries : bool,
+  fields : Option< &FieldSelector >,
+  index : Option< usize >,
 ) -> core::result::Result< OutputData, ErrorData >
 {
   let stats = project.project_stats()
@@ -539,8 +818,14 @@ fn format_project_output(
   let mut output = String::new();
 
   // Zero-sessions edge case: summary only, skip scan/tail/list entirely.
+  // index:: against an empty project still must reject — narrow_by_index
+  // on an empty slice yields the canonical out-of-range error (T21).
   if sessions.is_empty()
   {
+    if let Some( i ) = index
+    {
+      narrow_by_index( &[], Some( i ) )?;
+    }
     write_project_summary_block( &mut output, project, &stats, None, None );
     return Ok( OutputData::new( output.trim_end().to_string(), "text" ) );
   }
@@ -551,7 +836,7 @@ fn format_project_output(
 
   if let Some( idx ) = best_idx
   {
-    write_tail_window( &mut output, &mut sessions[ idx ], tail_count, show_entries )?;
+    write_tail_window( &mut output, &mut sessions[ idx ], tail_count, show_entries, fields, index )?;
   }
 
   // cli_main.rs's println! contract requires content with no trailing '\n' —

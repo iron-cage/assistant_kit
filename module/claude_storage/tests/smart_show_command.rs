@@ -448,16 +448,17 @@ fn test_show_session_single_entry_header_says_entry_not_entries()
     ".show with 1-entry session should succeed. stderr: {stderr}"
   );
 
-  // Before fix: "Session: ... (1 entries)" — wrong plural
-  // After fix:  "Session: ... (1 entry)"   — correct singular
+  // Before fix: "Session: ... · 1 entries" — wrong plural
+  // After fix:  "Session: ... · 1 entry"   — correct singular
+  // (trailing "\n" is the word-boundary marker distinguishing "entry" from "entries")
   assert!(
-    stdout.contains( "(1 entry)" ),
-    "1-entry session header should say '(1 entry)' not '(1 entries)'. stdout: {stdout}"
+    stdout.contains( "· 1 entry\n" ),
+    "1-entry session header should say '· 1 entry' not '· 1 entries'. stdout: {stdout}"
   );
 
   assert!(
-    !stdout.contains( "(1 entries)" ),
-    "1-entry session header must NOT say '(1 entries)'. stdout: {stdout}"
+    !stdout.contains( "· 1 entries" ),
+    "1-entry session header must NOT say '· 1 entries'. stdout: {stdout}"
   );
 }
 
@@ -497,8 +498,8 @@ fn test_show_session_multi_entry_header_still_says_entries()
   );
 
   assert!(
-    stdout.contains( "(3 entries)" ),
-    "3-entry session header should say '(3 entries)'. stdout: {stdout}"
+    stdout.contains( "· 3 entries" ),
+    "3-entry session header should say '· 3 entries'. stdout: {stdout}"
   );
 }
 

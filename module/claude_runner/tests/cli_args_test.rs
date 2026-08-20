@@ -26,13 +26,13 @@
 //! - T01: positional message accepted with `--dry-run`
 //! - T02: `--model` accepted, appears in command
 //! - T03: `--max-tokens` accepted, appears as env var
-//! - T04: bare `--dry-run` contains `-c` when session dir is non-empty
+//! - T04: bare `--dry-run` contains `-c` when the `--from` source storage has a prior session
 //! - T05: `--dangerously-skip-permissions` appears in command by default (no explicit flag needed)
 //! - T06: `--verbose` appears in command
 //! - T07: `--session-dir` is deprecated and inert (BUG-493) — no env var, warns on stderr
 //! - T08: `--dir` produces `cd <path>` prefix
 //! - T09: `--dry-run` alone accepted (no message required)
-//! - T10: multiple flags combined with session-dir containing files → `-c` injected
+//! - T10: multiple flags combined with a seeded `--from` source → `-c` injected
 //! - T11: unknown flag rejected
 //! - T12: `--max-tokens` non-numeric rejected
 //! - T13: `--print` without message rejected
@@ -63,7 +63,7 @@
 //! `ultrathink_args_test.rs` (T50–T58), and `effort_args_test.rs` (T59–T70).
 
 mod cli_binary_test_helpers;
-use cli_binary_test_helpers::run_cli;
+use cli_binary_test_helpers::{ make_session_for, run_cli, run_cli_with_env };
 
 // T01: positional message accepted with --dry-run
 #[ test ]
@@ -95,24 +95,32 @@ fn t03_max_tokens_flag_accepted()
   assert!( stdout.contains( "CLAUDE_CODE_MAX_OUTPUT_TOKENS=1000" ), "token env var must appear. Got:\n{stdout}" );
 }
 
-// T04: --dry-run contains -c when --session-dir has a qualifying .jsonl file.
-// session_exists(Some(dir)) scans for .jsonl files; a dummy .jsonl triggers -c injection.
+// T04: --dry-run contains -c when the --from source storage has a prior session.
+// Fix(BUG-538): fixture migrated from the inert --session-dir override to
+//   CLAUDE_HOME + --from seeding via make_session_for() — see
+//   dry_run_test.rs::continuation_present_when_prior_session_exists for the
+//   canonical 5-section reproducer documentation.
+// Root cause: BUG-493 made --session-dir fully inert (session_exists() no longer
+//   scans it), so the old fixture stopped triggering -c and this test pinned the
+//   removed contract.
+// Pitfall: session_exists() reads scope_for(--from|cwd).claude_session_dir under
+//   CLAUDE_HOME — seeding any other directory has no effect on -c injection.
 #[ test ]
 fn t04_dry_run_contains_continue_when_sessions_exist()
 {
-  let session_dir = tempfile::tempdir().expect( "create temp session dir" );
-  std::fs::write( session_dir.path().join( "00000000-0000-0000-0000-000000000000.jsonl" ), b"{}" )
-    .expect( "write dummy session file" );
-  let session_dir_str = session_dir.path().to_str().expect( "session dir path is valid utf-8" );
-  let out = std::process::Command::new( env!( "CARGO_BIN_EXE_clr" ) )
-    .args( [ "--dry-run", "--session-dir", session_dir_str, "test" ] )
-    .output()
-    .expect( "invoke clr" );
+  let claude_home = tempfile::tempdir().expect( "create temp claude home" );
+  let src = "/tmp/bug538-t04-src";
+  let _jsonl = make_session_for( claude_home.path(), src, "00000000-0000-0000-0000-000000000000" );
+  let claude_home_str = claude_home.path().to_str().expect( "claude home path is valid utf-8" );
+  let out = run_cli_with_env(
+    &[ "--dry-run", "--from", src, "test" ],
+    &[ ( "CLAUDE_HOME", claude_home_str ) ],
+  );
   assert!( out.status.success(), "exit={} stderr={}", out.status.code().unwrap_or( -1 ), String::from_utf8_lossy( &out.stderr ) );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(
     stdout.contains( " -c" ),
-    "non-empty --session-dir must inject -c. Got:\n{stdout}"
+    "prior session in the --from source storage must inject -c. Got:\n{stdout}"
   );
 }
 
@@ -180,29 +188,31 @@ fn t09_dry_run_without_message()
   assert!( stdout.contains( "claude" ), "dry-run output must contain 'claude'. Got:\n{stdout}" );
 }
 
-// T10: multiple flags combined — session-dir with a file triggers -c injection
+// T10: multiple flags combined — a seeded --from source triggers -c injection
+// Fix(BUG-538): fixture migrated from inert --session-dir to CLAUDE_HOME + --from
+//   seeding (BUG-493 made the override inert) — see T04's comment for the mechanism.
 #[ test ]
 fn t10_multiple_flags_combined()
 {
-  // Create a session dir with one dummy .jsonl file so session_exists returns Some(SessionId).
-  let session_dir = tempfile::tempdir().expect( "create temp session dir" );
-  std::fs::write( session_dir.path().join( "00000000-0000-0000-0000-000000000000.jsonl" ), b"{}" )
-    .expect( "write dummy session file" );
-  let session_dir_str = session_dir.path().to_str().expect( "session dir path is valid utf-8" );
+  // Seed a prior session in the --from source storage so session_exists returns Some(SessionId).
+  let claude_home = tempfile::tempdir().expect( "create temp claude home" );
+  let src = "/tmp/bug538-t10-src";
+  let _jsonl = make_session_for( claude_home.path(), src, "00000000-0000-0000-0000-000000000000" );
+  let claude_home_str = claude_home.path().to_str().expect( "claude home path is valid utf-8" );
 
-  let out = std::process::Command::new( env!( "CARGO_BIN_EXE_clr" ) )
-    .args( [
+  let out = run_cli_with_env(
+    &[
       "--dry-run", "--dir", "/tmp",
-      "--session-dir", session_dir_str,
+      "--from", src,
       "--model", "claude-sonnet-5", "fix it",
-    ] )
-    .output()
-    .expect( "invoke clr" );
+    ],
+    &[ ( "CLAUDE_HOME", claude_home_str ) ],
+  );
   assert!( out.status.success(), "multiple flags must be accepted" );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!( stdout.contains( "cd /tmp" ), "Must have cd line. Got:\n{stdout}" );
   assert!( stdout.contains( "--dangerously-skip-permissions" ), "Must have skip-permissions (default-on). Got:\n{stdout}" );
-  assert!( stdout.contains( " -c" ), "Must have -c when session-dir is non-empty. Got:\n{stdout}" );
+  assert!( stdout.contains( " -c" ), "Must have -c when the --from source has a prior session. Got:\n{stdout}" );
   assert!( stdout.contains( "claude-sonnet-5" ), "Must have model. Got:\n{stdout}" );
   assert!( stdout.contains( "\"fix it\n\nultrathink\"" ), "Must have ultrathink-suffixed quoted message. Got:\n{stdout}" );
 }

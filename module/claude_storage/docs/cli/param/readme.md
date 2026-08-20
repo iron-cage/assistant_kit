@@ -4,7 +4,7 @@
 
 - **Purpose**: Document individual parameter specifications for the `claude_storage` CLI.
 - **Responsibility**: Per-parameter detail pages with type, defaults, and command cross-refs.
-- **In Scope**: All 36 CLI parameters with type constraints, defaults, valid values, and command usage.
+- **In Scope**: All 38 CLI parameters with type constraints, defaults, valid values, and command usage.
 - **Out of Scope**: Type definitions (→ `type/`), parameter group semantics (→ `param_group/`), command-level behavior (→ `command/`).
 
 All parameters for the `claude_storage` CLI. Parameters use `param::value` syntax.
@@ -46,11 +46,13 @@ See [type/readme.md](../type/readme.md) for type definitions and [param_group/re
 | `29_filter.md` | filter:: — path-substring filter on resolved projects for .projects |
 | `30_detail.md` | detail:: — output detail level (projects vs sessions) for .projects and .show |
 | `31_ids.md` | ids:: — raw conversation-ID scripting output toggle for .projects |
-| `32_group.md` | group:: — aggregation dimension for .rollup |
-| `33_sort.md` | sort:: — sort column for .rollup's grouped rows |
-| `34_order.md` | order:: — sort direction for .rollup |
-| `35_model.md` | model:: — model-name substring filter for .rollup |
-| `36_columns.md` | columns:: — column projection for .rollup |
+| `32_fields.md` | fields:: — attribute-projection field selector for .show |
+| `33_index.md` | index:: — single-message position selector for .show |
+| `34_group.md` | group:: — aggregation dimension for .rollup |
+| `35_sort.md` | sort:: — sort column for .rollup's grouped rows |
+| `36_order.md` | order:: — sort direction for .rollup |
+| `37_model.md` | model:: — model-name substring filter for .rollup |
+| `38_columns.md` | columns:: — column projection for .rollup |
 
 ### Parameters Table
 
@@ -87,10 +89,12 @@ See [type/readme.md](../type/readme.md) for type definitions and [param_group/re
 | 29 | [`filter::`](29_filter.md) | [`PathSubstring`](../type/04_path_substring.md) | — | any string | Path-substring filter on resolved projects | 1 |
 | 30 | [`detail::`](30_detail.md) | `DetailLevel` | varies | `projects`, `sessions` | Output detail level | 2 |
 | 31 | [`ids::`](31_ids.md) | Boolean | `0` | `0`, `1` | Raw conversation-ID scripting output | 1 |
-| 32 | [`group::`](32_group.md) | String enum | `session` | `session`, `project`, `model`, `day` | Aggregation dimension for `.rollup` | 1 |
-| 33 | [`sort::`](33_sort.md) | String enum | `total` | `total`, `input`, `output`, `cache`, `max_context`, `calls`, `sessions`, `group` | Sort column for `.rollup`'s grouped rows | 1 |
-| 34 | [`order::`](34_order.md) | String enum | `desc` | `asc`, `desc` | Sort direction for `.rollup` | 1 |
-| 35 | [`model::`](35_model.md) | String | — | any string | Model-name substring filter for `.rollup` | 1 |
-| 36 | [`columns::`](36_columns.md) | String (comma list) | 9-column default | 11 valid keys | Column projection for `.rollup` | 1 |
+| 32 | [`fields::`](32_fields.md) | [`FieldSelector`](../type/15_field_selector.md) | — | 18 field names, or `all` | Attribute-projection field selector | 1 |
+| 33 | [`index::`](33_index.md) | Integer | — | Integer ≥ 1 | Single-message position selector | 1 |
+| 34 | [`group::`](34_group.md) | String enum | `session` | `session`, `project`, `model`, `day` | Aggregation dimension for `.rollup` | 1 |
+| 35 | [`sort::`](35_sort.md) | String enum | `total` | `total`, `input`, `output`, `cache`, `max_context`, `calls`, `sessions`, `group` | Sort column for `.rollup`'s grouped rows | 1 |
+| 36 | [`order::`](36_order.md) | String enum | `desc` | `asc`, `desc` | Sort direction for `.rollup` | 1 |
+| 37 | [`model::`](37_model.md) | String | — | any string | Model-name substring filter for `.rollup` | 1 |
+| 38 | [`columns::`](38_columns.md) | String (comma list) | 9-column default | 11 valid keys | Column projection for `.rollup` | 1 |
 
-**Total:** 36 parameters, all implemented across their specified commands — including `depth::` (row 26) for `.usage` and `.rollup` (see `../command/13_usage.md`, `../command/14_rollup.md`); `filter::`, `detail::`, `ids::` (rows 29-31) for `.projects`' absorption of `.list` (see `../command/07_projects.md` and `../command_group/readme.md § Command Removal: .list -> .projects`); `tail::`/`detail::` (rows 25, 30) for `.show`'s project-overview branch (see `../command/03_show.md`); and `group::`/`sort::`/`order::`/`model::`/`columns::` (rows 32-36), introduced entirely for `.rollup` (see `../command/14_rollup.md`).
+**Total:** 38 parameters, all implemented across their specified commands — including `depth::` (row 26) for `.usage` and `.rollup` (see `../command/13_usage.md`, `../command/14_rollup.md`); `filter::`, `detail::`, `ids::` (rows 29-31) for `.projects`' absorption of `.list` (see `../command/07_projects.md` and `../command_group/readme.md § Command Removal: .list -> .projects`); `tail::`/`detail::` (rows 25, 30) for `.show`'s project-overview branch (see `../command/03_show.md`); `fields::`/`index::` (rows 32-33) for `.show`'s attribute-projection and single-message selection (see `../command/03_show.md`); and `group::`/`sort::`/`order::`/`model::`/`columns::` (rows 34-38), introduced entirely for `.rollup` (see `../command/14_rollup.md`).

@@ -12,7 +12,7 @@
 
 
 mod cli_binary_test_helpers;
-use cli_binary_test_helpers::{ fake_claude, fake_claude_dir, make_session_dir, make_session_for, make_zero_turn_session_dir, run_cli_with_env, run_dry, run_with_path, run_with_path_stdin };
+use cli_binary_test_helpers::{ fake_claude, fake_claude_dir, make_session_for, make_zero_turn_session_for, run_cli_with_env, run_dry, run_with_path, run_with_path_env, run_with_path_stdin };
 
 
 // BUG-425: completely empty piped stdin (`echo -n "" | clr`), no message, must also
@@ -374,15 +374,21 @@ fn chrome_suppression_holds_for_non_tty_file_only_invocation()
 #[ test ]
 fn bug_reproducer_428_resume_rejected_no_retry()
 {
-  let ( _session, session_path ) = make_zero_turn_session_dir();
+  // Fix(BUG-538): fixture migrated from inert --session-dir to CLAUDE_HOME + --from
+  //   seeding (BUG-493) — see dry_run_test.rs::continuation_present_when_prior_session_exists.
+  let claude_home = tempfile::TempDir::new().expect( "create claude home" );
+  let src = "/tmp/bug428-resume-rejected-src";
+  let _jsonl = make_zero_turn_session_for( claude_home.path(), src, "00000000-0000-0000-0000-000000000001" );
+  let claude_home_str = claude_home.path().to_str().expect( "claude home path valid utf-8" );
   // Rejects any invocation carrying `-c` (simulating claude's real refusal to resume a
   // zero-model-turn transcript); succeeds once `-c` is dropped, simulating the
   // fresh-session fallback the fix must perform.
   let script = "#!/bin/sh\nfor a in \"$@\"; do\n  if [ \"$a\" = \"-c\" ]; then\n    echo 'No conversation found to continue' >&2\n    exit 1\n  fi\ndone\necho FRESH_SESSION_OK\nexit 0\n";
   let ( _tmp, path ) = fake_claude( script );
-  let out = run_with_path(
-    &[ "--session-dir", &session_path, "--retry-override", "0", "--max-sessions", "0", "test message" ],
+  let out = run_with_path_env(
+    &[ "--from", src, "--retry-override", "0", "--max-sessions", "0", "test message" ],
     &path,
+    &[ ( "CLAUDE_HOME", claude_home_str ) ],
   );
   let stderr = String::from_utf8_lossy( &out.stderr );
   let stdout = String::from_utf8_lossy( &out.stdout );
@@ -448,18 +454,24 @@ fn bug_reproducer_428_retry_succeeds()
 {
   const ORIGINAL_MESSAGE : &str = "distinct-original-msg-428";
 
-  let ( _session, session_path ) = make_zero_turn_session_dir();
+  // Fix(BUG-538): fixture migrated from inert --session-dir to CLAUDE_HOME + --from
+  //   seeding (BUG-493) — see dry_run_test.rs::continuation_present_when_prior_session_exists.
+  let claude_home = tempfile::TempDir::new().expect( "create claude home" );
+  let src = "/tmp/bug428-retry-succeeds-src";
+  let _jsonl = make_zero_turn_session_for( claude_home.path(), src, "00000000-0000-0000-0000-000000000001" );
+  let claude_home_str = claude_home.path().to_str().expect( "claude home path valid utf-8" );
   let jdir = tempfile::TempDir::new().expect( "failed to create temp journal dir" );
   let jdir_s = jdir.path().to_str().expect( "journal dir path must be valid UTF-8" );
   let script = "#!/bin/sh\nfor a in \"$@\"; do\n  if [ \"$a\" = \"-c\" ]; then\n    echo 'No conversation found to continue' >&2\n    exit 1\n  fi\ndone\necho FRESH_SESSION_OK\nexit 0\n";
   let ( _tmp, path ) = fake_claude( script );
-  let out = run_with_path(
+  let out = run_with_path_env(
     &[
-      "--session-dir", &session_path, "--retry-override", "0", "--max-sessions", "0",
+      "--from", src, "--retry-override", "0", "--max-sessions", "0",
       "--journal", "full", "--journal-dir", jdir_s,
       ORIGINAL_MESSAGE,
     ],
     &path,
+    &[ ( "CLAUDE_HOME", claude_home_str ) ],
   );
   let stderr = String::from_utf8_lossy( &out.stderr );
   assert!(
@@ -516,20 +528,26 @@ fn bug_reproducer_428_retry_succeeds()
 // important to verify as its presence.
 //
 // ## Pitfall
-// `make_session_dir()`'s placeholder content (`b"{}"`) is never semantically a "genuine"
+// `make_session_for()`'s placeholder content (`b"{}"`) is never semantically a "genuine"
 // transcript with real model turns — "genuineness" here is entirely simulated by the fake
 // claude script always succeeding regardless of `-c`, since `clr` itself never inspects
 // session file content (that is precisely BUG-428's own root cause).
 #[ test ]
 fn bug_reproducer_428_genuine_resume_unaffected()
 {
-  let ( _session, session_path ) = make_session_dir();
+  // Fix(BUG-538): fixture migrated from inert --session-dir to CLAUDE_HOME + --from
+  //   seeding (BUG-493) — see dry_run_test.rs::continuation_present_when_prior_session_exists.
+  let claude_home = tempfile::TempDir::new().expect( "create claude home" );
+  let src = "/tmp/bug428-genuine-resume-src";
+  let _jsonl = make_session_for( claude_home.path(), src, "00000000-0000-0000-0000-000000000000" );
+  let claude_home_str = claude_home.path().to_str().expect( "claude home path valid utf-8" );
   // Always succeeds regardless of -c, simulating a genuinely resumable session.
   let script = "#!/bin/sh\nfor a in \"$@\"; do\n  if [ \"$a\" = \"-c\" ]; then\n    echo GOT_DASH_C\n  fi\ndone\nexit 0\n";
   let ( _tmp, path ) = fake_claude( script );
-  let out = run_with_path(
-    &[ "--session-dir", &session_path, "--retry-override", "0", "--max-sessions", "0", "test message" ],
+  let out = run_with_path_env(
+    &[ "--from", src, "--retry-override", "0", "--max-sessions", "0", "test message" ],
     &path,
+    &[ ( "CLAUDE_HOME", claude_home_str ) ],
   );
   let stdout = String::from_utf8_lossy( &out.stdout );
   let stderr = String::from_utf8_lossy( &out.stderr );
@@ -580,12 +598,19 @@ fn bug_reproducer_428_genuine_resume_unaffected()
 #[ test ]
 fn bug_reproducer_428_unrelated_failure_no_overbroad_retry()
 {
-  let ( _session, session_path ) = make_session_dir();
+  // Fix(BUG-538): fixture migrated from inert --session-dir to CLAUDE_HOME + --from
+  //   seeding (BUG-493) — the seeded session makes the first attempt a genuine -c
+  //   resume again, restoring the "unrelated failure DURING resume" scenario.
+  let claude_home = tempfile::TempDir::new().expect( "create claude home" );
+  let src = "/tmp/bug428-unrelated-failure-src";
+  let _jsonl = make_session_for( claude_home.path(), src, "00000000-0000-0000-0000-000000000000" );
+  let claude_home_str = claude_home.path().to_str().expect( "claude home path valid utf-8" );
   let script = "#!/bin/sh\necho 'some unrelated claude failure xyz' >&2\nexit 7\n";
   let ( _tmp, path ) = fake_claude( script );
-  let out = run_with_path(
-    &[ "--session-dir", &session_path, "--retry-override", "0", "--max-sessions", "0", "test message" ],
+  let out = run_with_path_env(
+    &[ "--from", src, "--retry-override", "0", "--max-sessions", "0", "test message" ],
     &path,
+    &[ ( "CLAUDE_HOME", claude_home_str ) ],
   );
   let stderr = String::from_utf8_lossy( &out.stderr );
   assert_eq!(
@@ -649,14 +674,21 @@ fn bug_reproducer_428_unrelated_failure_no_overbroad_retry()
 #[ test ]
 fn bug_reproducer_428_fallback_also_rejected_falls_through()
 {
-  let ( _session, session_path ) = make_zero_turn_session_dir();
+  // Fix(BUG-538): fixture migrated from inert --session-dir to CLAUDE_HOME + --from
+  //   seeding (BUG-493) — the seeded session makes the first attempt a genuine -c
+  //   resume again, restoring the "resume rejected, then fallback also rejected" arc.
+  let claude_home = tempfile::TempDir::new().expect( "create claude home" );
+  let src = "/tmp/bug428-fallback-rejected-src";
+  let _jsonl = make_zero_turn_session_for( claude_home.path(), src, "00000000-0000-0000-0000-000000000001" );
+  let claude_home_str = claude_home.path().to_str().expect( "claude home path valid utf-8" );
   // Rejects unconditionally regardless of -c presence, simulating an edge case where even
   // the post-fallback fresh-session attempt is rejected with the identical signature.
   let script = "#!/bin/sh\necho 'No conversation found to continue' >&2\nexit 1\n";
   let ( _tmp, path ) = fake_claude( script );
-  let out = run_with_path(
-    &[ "--session-dir", &session_path, "--retry-override", "0", "--max-sessions", "0", "test message" ],
+  let out = run_with_path_env(
+    &[ "--from", src, "--retry-override", "0", "--max-sessions", "0", "test message" ],
     &path,
+    &[ ( "CLAUDE_HOME", claude_home_str ) ],
   );
   let stderr = String::from_utf8_lossy( &out.stderr );
   assert!(

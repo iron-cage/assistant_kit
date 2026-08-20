@@ -32,6 +32,25 @@
 //! - T16: hyphen-encoded storage dir → summary path line shows the decoded human path, never `Project: {:?}`
 //! - T17: `detail::sessions tail::0` combined → both effects apply together
 //! - T18: project with zero sessions → summary shows zero counts, no tail-window section, no crash
+//! - INT-13: `fields::timestamp` shows exactly one field per entry, no chat-log text
+//! - INT-14: `fields::model,uuid` renders fields in request order
+//! - INT-15: `fields::all` shows every one of the 18 fields, including ones content mode drops
+//! - INT-16: `fields::bogus` rejected with the canonical 18-field error
+//! - INT-17: `index::N` narrows session-detail to exactly one message's chat-log content
+//! - INT-18: out-of-range `index::` rejected, error names the actual entry count
+//! - INT-19: `fields::` composed with `index::` narrows projection to exactly one message
+//! - INT-20: `fields::` applies to the project-overview tail window, not just session-detail
+//! - EC-5 (fields): `all` combined with another token rejected
+//! - EC-6 (fields): empty `fields::` value rejected
+//! - EC-7 (fields): case-insensitive, whitespace-trimmed tokens match canonical byte-for-byte
+//! - EC-8 (fields): duplicate tokens collapse to one occurrence
+//! - EC-11 (fields): assistant-only field on a `user` entry renders as `—`
+//! - EC-13 (fields): user-only field on an `assistant` entry renders as `—`
+//! - EC-2/EC-3 (index): `index::1`/`index::4` boundary positions
+//! - EC-4/EC-5 (index): `index::0`/negative `index::` rejected
+//! - EC-7 (index): `index::` counts within the `tail::`-windowed slice, not the full session
+//! - EC-8 (index): `index::` composed with `show_entries::1` narrows the raw list to one line
+//! - T21: `index::` against a zero-session project rejected (canonical 0-entry error, no crash)
 
 mod common;
 
@@ -777,7 +796,7 @@ fn t07_bare_show_summary_block_and_tail_window()
   assert!( s.contains( "Path:" ), "T07: summary block must show Path:; got:\n{s}" );
   assert!( s.contains( "Storage:" ), "T07: summary block must show Storage:; got:\n{s}" );
   assert!(
-    s.contains( "Sessions: 1 (Main: 1, Agent: 0)" ),
+    s.contains( "Sessions: 1 · Main: 1 · Agent: 0" ),
     "T07: summary block must show session counts; got:\n{s}"
   );
   assert!( s.contains( "Total Entries: 4" ), "T07: summary block must show total entries; got:\n{s}" );
@@ -788,7 +807,7 @@ fn t07_bare_show_summary_block_and_tail_window()
     "T07: tail window must show session content (4 entries fit within default tail::10); got:\n{s}"
   );
   assert!(
-    !s.contains( "entries, last:" ),
+    !s.contains( "entries · last:" ),
     "T07: default detail::projects must NOT append the per-session list; got:\n{s}"
   );
 }
@@ -843,7 +862,7 @@ fn t08_detail_sessions_appends_full_list_byte_for_byte()
   // Fixture-derived, fully hand-specified: entry_count=4 (i=0..3) → last
   // timestamp is literally "2025-01-01T00:00:03Z" (write_test_session's own
   // unpadded-but-single-digit format), and 4 entries → plural "entries".
-  let expected_appended = "Sessions:\n  - t08-session (4 entries, last: 2025-01-01T00:00:03Z)\n";
+  let expected_appended = "Sessions:\n  - t08-session · 4 entries · last: 2025-01-01T00:00:03Z\n";
   assert_eq!(
     with_detail_s,
     format!( "{baseline_s}{expected_appended}" ),
@@ -1087,7 +1106,7 @@ fn t14_project_param_shows_same_overview_as_case_1()
   assert!( s.contains( "Total Entries: 4" ), "T14: Case 3 summary must show total entries; got:\n{s}" );
   assert!( s.contains( "entry 0" ), "T14: Case 3 tail window must show session content; got:\n{s}" );
   assert!(
-    !s.contains( "entries, last:" ),
+    !s.contains( "entries · last:" ),
     "T14: Case 3 default detail::projects must not append the per-session list; got:\n{s}"
   );
 }
@@ -1221,7 +1240,7 @@ fn t17_detail_sessions_and_tail_0_combine()
   assert!( s.contains( "entry 0" ), "T17: tail::0 must show all messages including the first; got:\n{s}" );
   assert!( s.contains( "T17_MARKER" ), "T17: tail window must include the final marker entry; got:\n{s}" );
   assert!(
-    s.contains( "entries, last:" ),
+    s.contains( "entries · last:" ),
     "T17: detail::sessions must append the per-session list; got:\n{s}"
   );
 }
@@ -1260,12 +1279,990 @@ fn t18_zero_session_project_shows_zero_counts_no_crash()
   assert_exit( &out, 0 );
   let s = stdout( &out );
   assert!(
-    s.contains( "Sessions: 0 (Main: 0, Agent: 0)" ),
+    s.contains( "Sessions: 0 · Main: 0 · Agent: 0" ),
     "T18: zero-session project must show zero session counts; got:\n{s}"
   );
   assert!( s.contains( "Total Entries: 0" ), "T18: zero-session project must show zero total entries; got:\n{s}" );
   assert!(
     s.contains( "First Entry: unknown" ) && s.contains( "Last Entry: unknown" ),
     "T18: zero-session project must show unknown First/Last Entry, not a tail window; got:\n{s}"
+  );
+}
+
+/// Fixture: fixed 4-entry session covering every attribute shape `fields::`
+/// must project — position 1 user w/ `thinkingMetadata`, position 2 simple
+/// assistant, position 3 rich assistant (thinking + text + `tool_use` +
+/// `tool_result`), position 4 plain user. See
+/// `docs/cli/pitfall/03_test_data_format.md` § Full-Attribute Shapes for the
+/// underlying JSON schema this mirrors.
+///
+/// # Panics
+///
+/// Panics if directory creation or file write fails.
+fn write_full_attribute_session( root : &std::path::Path, project_id : &str, session_id : &str )
+{
+  use std::io::Write as _;
+
+  let dir = root.join( "projects" ).join( project_id );
+  std::fs::create_dir_all( &dir ).expect( "create project dir" );
+  let path = dir.join( format!( "{session_id}.jsonl" ) );
+  let mut file = std::fs::File::create( &path ).expect( "create session file" );
+
+  let lines : [ &str; 4 ] =
+  [
+    r#"{"type":"user","uuid":"fa-uuid-1","parentUuid":null,"timestamp":"2025-11-24T10:00:00.000Z","cwd":"/tmp","sessionId":"FA_SID","version":"2.0.31","gitBranch":"main","userType":"external","isSidechain":false,"message":{"role":"user","content":"first user message"},"thinkingMetadata":{"level":"high","disabled":false}}"#,
+    r#"{"type":"assistant","uuid":"fa-uuid-2","parentUuid":"fa-uuid-1","timestamp":"2025-11-24T10:00:05.000Z","cwd":"/tmp","sessionId":"FA_SID","version":"2.0.31","gitBranch":"main","userType":"external","isSidechain":false,"requestId":"req-fa-2","message":{"model":"claude-fa-model-2","id":"msg-fa-2","role":"assistant","content":[{"type":"text","text":"simple reply"}],"stop_reason":"end_turn","stop_sequence":null}}"#,
+    r#"{"type":"assistant","uuid":"fa-uuid-3","parentUuid":"fa-uuid-2","timestamp":"2025-11-24T10:00:10.000Z","cwd":"/tmp","sessionId":"FA_SID","version":"2.0.31","gitBranch":"main","userType":"external","isSidechain":false,"requestId":"req-fa-3","message":{"model":"claude-fa-model-3","id":"msg-fa-3","role":"assistant","content":[{"type":"thinking","thinking":"reasoning text","signature":"sig-fa-3"},{"type":"text","text":"rich reply text"},{"type":"tool_use","id":"toolu-fa-3","name":"read_file","input":{"path":"/tmp/x"}},{"type":"tool_result","tool_use_id":"toolu-fa-3","content":"file contents ok","is_error":false}],"stop_reason":"tool_use","stop_sequence":null}}"#,
+    r#"{"type":"user","uuid":"fa-uuid-4","parentUuid":"fa-uuid-3","timestamp":"2025-11-24T10:00:15.000Z","cwd":"/tmp","sessionId":"FA_SID","version":"2.0.31","gitBranch":"main","userType":"external","isSidechain":false,"message":{"role":"user","content":"final user message"}}"#,
+  ];
+
+  for line in lines
+  {
+    writeln!( file, "{}", line.replace( "FA_SID", session_id ) ).expect( "write full-attribute entry" );
+  }
+}
+
+/// T01/INT-13/EC-1: `fields::timestamp` shows just that field for every entry.
+///
+/// ## Purpose
+/// Verify a single-field request renders exactly one `timestamp` line per
+/// entry — no message text, no other attribute.
+///
+/// ## Coverage
+/// One `timestamp ·` line per entry (4 total); message text and other
+/// attribute labels absent; exit 0.
+///
+/// ## Validation Strategy
+/// Write the full-attribute fixture (4 entries, distinct timestamps). Run
+/// `fields::timestamp`. Count `timestamp ·` occurrences and assert absence
+/// of message text / other field labels.
+///
+/// ## Related Requirements
+/// `tests/docs/cli/command/03_show.md` INT-13; `tests/docs/cli/param/32_fields.md` EC-1
+#[ test ]
+fn int_13_fields_single_field_every_entry()
+{
+  let root = TempDir::new().unwrap();
+  write_full_attribute_session( root.path(), "fa-proj", "fa-sess" );
+
+  let out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .arg( ".show" )
+    .arg( "session_id::fa-sess" )
+    .arg( "project::fa-proj" )
+    .arg( "fields::timestamp" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  assert_eq!(
+    s.matches( "timestamp · " ).count(), 4,
+    "T01: exactly one timestamp line per entry (4 entries); got:\n{s}"
+  );
+  for ts in [ "2025-11-24T10:00:00.000Z", "2025-11-24T10:00:05.000Z", "2025-11-24T10:00:10.000Z", "2025-11-24T10:00:15.000Z" ]
+  {
+    assert!( s.contains( ts ), "T01: timestamp {ts} must appear; got:\n{s}" );
+  }
+  assert!( !s.contains( "content ·" ) && !s.contains( "content." ), "T01: no content field expected; got:\n{s}" );
+  assert!( !s.contains( "model ·" ) && !s.contains( "uuid ·" ), "T01: no other field expected; got:\n{s}" );
+  assert!(
+    !s.contains( "simple reply" ) && !s.contains( "first user message" ),
+    "T01: no chat-log message text expected; got:\n{s}"
+  );
+}
+
+/// T02/INT-14/EC-2: `fields::model,uuid` shows fields in request order.
+///
+/// ## Purpose
+/// Verify multi-field requests render fields in the order requested, not
+/// canonical vocabulary order (`uuid` precedes `model` canonically).
+///
+/// ## Coverage
+/// `model ·` line appears before `uuid ·` line for the known assistant entry; exit 0.
+///
+/// ## Validation Strategy
+/// Write the full-attribute fixture. Run `fields::model,uuid`. Assert the
+/// byte offset of entry 2's `model ·` line is before its `uuid ·` line.
+///
+/// ## Related Requirements
+/// `tests/docs/cli/command/03_show.md` INT-14; `tests/docs/cli/param/32_fields.md` EC-2
+#[ test ]
+fn int_14_fields_multi_field_request_order()
+{
+  let root = TempDir::new().unwrap();
+  write_full_attribute_session( root.path(), "fa-proj", "fa-sess" );
+
+  let out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .arg( ".show" )
+    .arg( "session_id::fa-sess" )
+    .arg( "project::fa-proj" )
+    .arg( "fields::model,uuid" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  let model_pos = s.find( "model · claude-fa-model-2" ).expect( "T02: model line for entry 2 must appear" );
+  let uuid_pos = s.find( "uuid · fa-uuid-2" ).expect( "T02: uuid line for entry 2 must appear" );
+  assert!(
+    model_pos < uuid_pos,
+    "T02: model line must precede uuid line (request order); got:\n{s}"
+  );
+}
+
+/// T03/INT-15/EC-3: `fields::all` shows every one of the 18 fields.
+///
+/// ## Purpose
+/// Verify `fields::all` renders every canonical attribute — including ones
+/// the default chat-log content mode drops entirely (`parent_uuid`, `cwd`,
+/// `version`, `git_branch`, `request_id`, `thinking_level`/`thinking_disabled`,
+/// `tool_use`'s `id`/`input`, and a successful `tool_result`'s `content`).
+///
+/// ## Coverage
+/// All 18 field labels present for the relevant entries; exit 0.
+///
+/// ## Validation Strategy
+/// Write the full-attribute fixture (entry 1 has `thinking_metadata`, entry 3
+/// has `thinking`/`text`/`tool_use`/`tool_result` blocks). Run `fields::all`. Assert
+/// every attribute this fixture can exercise appears.
+///
+/// ## Related Requirements
+/// `tests/docs/cli/command/03_show.md` INT-15; `tests/docs/cli/param/32_fields.md` EC-3
+#[ test ]
+fn int_15_fields_all_shows_every_dropped_attribute()
+{
+  let root = TempDir::new().unwrap();
+  write_full_attribute_session( root.path(), "fa-proj", "fa-sess" );
+
+  let out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .arg( ".show" )
+    .arg( "session_id::fa-sess" )
+    .arg( "project::fa-proj" )
+    .arg( "fields::all" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  assert!( s.contains( "parent_uuid · fa-uuid-2" ), "T03: parent_uuid must appear; got:\n{s}" );
+  assert!( s.contains( "cwd · /tmp" ), "T03: cwd must appear; got:\n{s}" );
+  assert!( s.contains( "version · 2.0.31" ), "T03: version must appear; got:\n{s}" );
+  assert!( s.contains( "git_branch · main" ), "T03: git_branch must appear; got:\n{s}" );
+  assert!( s.contains( "request_id · req-fa-3" ), "T03: request_id must appear; got:\n{s}" );
+  assert!( s.contains( "thinking_level · high" ), "T03: thinking_level must appear; got:\n{s}" );
+  assert!( s.contains( "thinking_disabled · false" ), "T03: thinking_disabled must appear; got:\n{s}" );
+  assert!( s.contains( "content.tool_use.id · toolu-fa-3" ), "T03: tool_use id must appear; got:\n{s}" );
+  assert!( s.contains( "content.tool_use.name · read_file" ), "T03: tool_use name must appear; got:\n{s}" );
+  assert!(
+    s.contains( r#"content.tool_use.input · {"path":"/tmp/x"}"# ),
+    "T03: tool_use input must render as clean JSON, not Rust Debug format; got:\n{s}"
+  );
+  assert!(
+    !s.contains( "Object(" ) && !s.contains( "String(" ),
+    "T03: tool_use input must not leak Rust Debug-format internals; got:\n{s}"
+  );
+  assert!( s.contains( "content.tool_result.tool_use_id · toolu-fa-3" ), "T03: tool_result tool_use_id must appear; got:\n{s}" );
+  assert!( s.contains( "content.tool_result.content · file contents ok" ), "T03: successful tool_result content must appear; got:\n{s}" );
+  assert!( s.contains( "content.tool_result.is_error · false" ), "T03: tool_result is_error must appear; got:\n{s}" );
+  assert!( s.contains( "content.thinking · reasoning text" ), "T03: thinking block must appear; got:\n{s}" );
+  assert!( s.contains( "content.thinking.signature · sig-fa-3" ), "T03: thinking signature must appear; got:\n{s}" );
+}
+
+/// T04/INT-16/EC-4: `fields::` with an invalid token is rejected.
+///
+/// ## Purpose
+/// Verify an unrecognized field token is rejected with the canonical
+/// 18-field error message.
+///
+/// ## Coverage
+/// stderr contains the canonical error; stdout empty; exit 1.
+///
+/// ## Validation Strategy
+/// Write the full-attribute fixture. Run `fields::bogus`. Assert exact error text.
+///
+/// ## Related Requirements
+/// `tests/docs/cli/command/03_show.md` INT-16; `tests/docs/cli/param/32_fields.md` EC-4
+#[ test ]
+fn int_16_fields_invalid_token_rejected()
+{
+  let root = TempDir::new().unwrap();
+  write_full_attribute_session( root.path(), "fa-proj", "fa-sess" );
+
+  let out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .arg( ".show" )
+    .arg( "session_id::fa-sess" )
+    .arg( "project::fa-proj" )
+    .arg( "fields::bogus" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 1 );
+  assert!(
+    stderr( &out ).contains(
+      "unknown field 'bogus' — valid fields: uuid, parent_uuid, timestamp, entry_type, cwd, session_id, version, git_branch, user_type, is_sidechain, content, thinking_level, thinking_disabled, model, message_id, stop_reason, stop_sequence, request_id, or all"
+    ),
+    "T04: canonical 18-field error expected; got:\n{}", stderr( &out )
+  );
+  assert!( stdout( &out ).is_empty(), "T04: stdout must be empty on error" );
+}
+
+/// T05/EC-5: `all` combined with another token is rejected.
+///
+/// ## Purpose
+/// Verify `fields::all,uuid` is rejected — `all` cannot be combined.
+///
+/// ## Coverage
+/// stderr contains the canonical error; stdout empty; exit 1.
+///
+/// ## Validation Strategy
+/// Write the full-attribute fixture. Run `fields::all,uuid`. Assert exact error text.
+///
+/// ## Related Requirements
+/// `tests/docs/cli/param/32_fields.md` EC-5; `tests/docs/cli/type/15_field_selector.md` TC-5
+#[ test ]
+fn fields_all_combined_with_other_rejected()
+{
+  let root = TempDir::new().unwrap();
+  write_full_attribute_session( root.path(), "fa-proj", "fa-sess" );
+
+  let out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .arg( ".show" )
+    .arg( "session_id::fa-sess" )
+    .arg( "project::fa-proj" )
+    .arg( "fields::all,uuid" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 1 );
+  assert!(
+    stderr( &out ).contains( "'all' cannot be combined with other fields" ),
+    "T05: canonical error expected; got:\n{}", stderr( &out )
+  );
+  assert!( stdout( &out ).is_empty(), "T05: stdout must be empty on error" );
+}
+
+/// T06/EC-6: Empty `fields::` value is rejected.
+///
+/// ## Purpose
+/// Verify `fields::` with nothing after it is rejected.
+///
+/// ## Coverage
+/// stderr mentions the `fields` argument; stdout empty; exit 1.
+///
+/// ## Validation Strategy
+/// Write the full-attribute fixture. Run `fields::` (empty value). Assert
+/// rejection. A bare trailing `fields::` never reaches `FieldSelector::parse`
+/// — unilang's own instruction parser rejects the missing value first
+/// ("Expected value for named argument 'fields' but found end of
+/// instruction"), the same pre-existing behavior `ec_2_query_empty_rejected`
+/// (`cli_param_query_test.rs`) already accommodates for `query::`.
+/// `FieldSelector::parse("")`'s own `"fields must be non-empty"` message is
+/// covered directly at the unit level by `tc9_empty_string_rejected`
+/// (`field_selector.rs`), which bypasses the CLI parser entirely.
+///
+/// ## Related Requirements
+/// `tests/docs/cli/param/32_fields.md` EC-6; `tests/docs/cli/type/15_field_selector.md` TC-9
+#[ test ]
+fn fields_empty_value_rejected()
+{
+  let root = TempDir::new().unwrap();
+  write_full_attribute_session( root.path(), "fa-proj", "fa-sess" );
+
+  let out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .arg( ".show" )
+    .arg( "session_id::fa-sess" )
+    .arg( "project::fa-proj" )
+    .arg( "fields::" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 1 );
+  assert!(
+    stderr( &out ).contains( "fields" ),
+    "T06: error must mention the fields argument; got:\n{}", stderr( &out )
+  );
+  assert!( stdout( &out ).is_empty(), "T06: stdout must be empty on error" );
+}
+
+/// T07/EC-7: Case-insensitive, whitespace-trimmed tokens match canonical byte-for-byte.
+///
+/// ## Purpose
+/// Verify `fields:: UUID , Timestamp ` parses identically to
+/// `fields::uuid,timestamp` — same output byte-for-byte.
+///
+/// ## Coverage
+/// Two invocations produce byte-identical stdout; both exit 0.
+///
+/// ## Validation Strategy
+/// Write the full-attribute fixture. Run both forms. Compare stdout directly.
+///
+/// ## Related Requirements
+/// `tests/docs/cli/param/32_fields.md` EC-7; `tests/docs/cli/type/15_field_selector.md` TC-6, TC-7
+#[ test ]
+fn fields_case_insensitive_whitespace_trimmed_matches_canonical()
+{
+  let root = TempDir::new().unwrap();
+  write_full_attribute_session( root.path(), "fa-proj", "fa-sess" );
+
+  let out1 = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .arg( ".show" )
+    .arg( "session_id::fa-sess" )
+    .arg( "project::fa-proj" )
+    .arg( "fields:: UUID , Timestamp " )
+    .output()
+    .unwrap();
+
+  let out2 = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .arg( ".show" )
+    .arg( "session_id::fa-sess" )
+    .arg( "project::fa-proj" )
+    .arg( "fields::uuid,timestamp" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out1, 0 );
+  assert_exit( &out2, 0 );
+  assert_eq!( stdout( &out1 ), stdout( &out2 ), "T07: case/whitespace variance must not change output" );
+}
+
+/// T08/EC-8: Duplicate tokens collapse to one occurrence.
+///
+/// ## Purpose
+/// Verify `fields::uuid,uuid` behaves identically to `fields::uuid`.
+///
+/// ## Coverage
+/// Two invocations produce byte-identical stdout; both exit 0.
+///
+/// ## Validation Strategy
+/// Write the full-attribute fixture. Run both forms. Compare stdout directly.
+///
+/// ## Related Requirements
+/// `tests/docs/cli/param/32_fields.md` EC-8; `tests/docs/cli/type/15_field_selector.md` TC-8
+#[ test ]
+fn fields_duplicate_token_collapses()
+{
+  let root = TempDir::new().unwrap();
+  write_full_attribute_session( root.path(), "fa-proj", "fa-sess" );
+
+  let out1 = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .arg( ".show" )
+    .arg( "session_id::fa-sess" )
+    .arg( "project::fa-proj" )
+    .arg( "fields::uuid,uuid" )
+    .output()
+    .unwrap();
+
+  let out2 = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .arg( ".show" )
+    .arg( "session_id::fa-sess" )
+    .arg( "project::fa-proj" )
+    .arg( "fields::uuid" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out1, 0 );
+  assert_exit( &out2, 0 );
+  assert_eq!( stdout( &out1 ), stdout( &out2 ), "T08: duplicate token must collapse to one occurrence" );
+}
+
+/// T10/INT-20/EC-10: `fields::` applies to the project-overview tail window.
+///
+/// ## Purpose
+/// Verify `fields::` is not session-detail-only — it also projects the
+/// project-overview tail window's entries.
+///
+/// ## Coverage
+/// Summary block present; last 5 entries rendered as field-projection blocks
+/// (not chat-log content); exit 0.
+///
+/// ## Validation Strategy
+/// Write a 6-entry cwd-resolved project. Run bare `.show fields::timestamp
+/// tail::5`. Assert exactly 5 `timestamp ·` lines and the earliest entry's
+/// timestamp (outside the window) is absent.
+///
+/// ## Related Requirements
+/// `tests/docs/cli/command/03_show.md` INT-20; `tests/docs/cli/param/32_fields.md` EC-10
+#[ test ]
+fn int_20_fields_applies_to_project_overview_tail_window()
+{
+  let root = TempDir::new().unwrap();
+  let cwd  = TempDir::new().unwrap();
+  common::write_path_project_session( root.path(), cwd.path(), "-fa-tail", 6 );
+
+  let out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .current_dir( cwd.path() )
+    .arg( ".show" )
+    .arg( "fields::timestamp" )
+    .arg( "tail::5" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  assert!( s.contains( "Path:" ) || s.contains( "Sessions:" ), "T10: summary block must still appear; got:\n{s}" );
+  assert_eq!( s.matches( "timestamp · " ).count(), 5, "T10: exactly 5 field-projection blocks expected; got:\n{s}" );
+  // Entry 0's raw timestamp legitimately appears once, in the summary block's
+  // own "First Entry:" line (full-session bound, unaffected by tail::) — only
+  // a field-projection *line* for entry 0 would prove the tail window leaked it.
+  assert!(
+    !s.contains( "timestamp · 2025-01-01T00:00:00Z" ),
+    "T10: entry 0 (outside the 5-window) must not get its own field-projection line; got:\n{s}"
+  );
+  assert!( !s.contains( "entry 0\n" ) && !s.contains( "· User:\nentry 0" ), "T10: chat-log content must not appear; got:\n{s}" );
+}
+
+/// T11/EC-11: Assistant-only field on a `user` entry renders as `—`.
+///
+/// ## Purpose
+/// Verify requesting `model` (assistant-only) on entry 1 (a `user` message)
+/// renders `—` instead of erroring or panicking.
+///
+/// ## Coverage
+/// `model · —` appears; exit 0.
+///
+/// ## Validation Strategy
+/// Write the full-attribute fixture. Run `fields::model index::1`. Assert
+/// the em-dash rendering.
+///
+/// ## Related Requirements
+/// `tests/docs/cli/param/32_fields.md` EC-11; `tests/docs/cli/type/15_field_selector.md` role-gap coverage
+#[ test ]
+fn fields_assistant_only_field_on_user_entry_renders_em_dash()
+{
+  let root = TempDir::new().unwrap();
+  write_full_attribute_session( root.path(), "fa-proj", "fa-sess" );
+
+  let out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .arg( ".show" )
+    .arg( "session_id::fa-sess" )
+    .arg( "project::fa-proj" )
+    .arg( "fields::model" )
+    .arg( "index::1" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  assert!( s.contains( "model · —" ), "T11: assistant-only field on user entry must render em-dash; got:\n{s}" );
+}
+
+/// T12/INT-19/EC-12/EC-9(index): `fields::` composed with `index::` narrows to one message.
+///
+/// ## Purpose
+/// Verify `fields::uuid,model index::3` shows only entry 3's requested
+/// attributes — no other entry, no other field.
+///
+/// ## Coverage
+/// Entry 3's `uuid`/`model` lines present; entries 1/2/4 and other fields absent; exit 0.
+///
+/// ## Validation Strategy
+/// Write the full-attribute fixture. Run `fields::uuid,model index::3`.
+/// Assert entry 3's known values present, others absent.
+///
+/// ## Related Requirements
+/// `tests/docs/cli/command/03_show.md` INT-19; `tests/docs/cli/param/32_fields.md` EC-12; `tests/docs/cli/param/33_index.md` EC-9
+#[ test ]
+fn int_19_fields_index_composed_single_message_projection()
+{
+  let root = TempDir::new().unwrap();
+  write_full_attribute_session( root.path(), "fa-proj", "fa-sess" );
+
+  let out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .arg( ".show" )
+    .arg( "session_id::fa-sess" )
+    .arg( "project::fa-proj" )
+    .arg( "fields::uuid,model" )
+    .arg( "index::3" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  assert!( s.contains( "uuid · fa-uuid-3" ), "T12: entry 3's uuid must appear; got:\n{s}" );
+  assert!( s.contains( "model · claude-fa-model-3" ), "T12: entry 3's model must appear; got:\n{s}" );
+  assert!( !s.contains( "fa-uuid-1" ) && !s.contains( "fa-uuid-2" ) && !s.contains( "fa-uuid-4" ), "T12: other entries must be absent; got:\n{s}" );
+  assert!( !s.contains( "timestamp ·" ), "T12: only requested fields (uuid, model) expected; got:\n{s}" );
+}
+
+/// T13/INT-17/EC-1(index): `index::N` narrows session-detail to one message.
+///
+/// ## Purpose
+/// Verify `index::2` (no `fields::`) shows only entry 2's chat-log content.
+///
+/// ## Coverage
+/// Entry 2's content present; entries 1/3/4 content absent; exit 0.
+///
+/// ## Validation Strategy
+/// Write the full-attribute fixture. Run `index::2`. Assert only entry 2's
+/// known text appears.
+///
+/// ## Related Requirements
+/// `tests/docs/cli/command/03_show.md` INT-17; `tests/docs/cli/param/33_index.md` EC-1
+#[ test ]
+fn int_17_index_narrows_session_detail_one_message()
+{
+  let root = TempDir::new().unwrap();
+  write_full_attribute_session( root.path(), "fa-proj", "fa-sess" );
+
+  let out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .arg( ".show" )
+    .arg( "session_id::fa-sess" )
+    .arg( "project::fa-proj" )
+    .arg( "index::2" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  assert!( s.contains( "simple reply" ), "T13: entry 2's content must appear; got:\n{s}" );
+  assert!(
+    !s.contains( "first user message" ) && !s.contains( "rich reply text" ) && !s.contains( "final user message" ),
+    "T13: only entry 2's content expected; got:\n{s}"
+  );
+}
+
+/// T14a/EC-2: `index::1` selects the first message (boundary).
+///
+/// ## Purpose
+/// Verify the lower boundary of `index::` selects entry 1 exactly.
+///
+/// ## Coverage
+/// Entry 1's content present; other entries' content absent; exit 0.
+///
+/// ## Validation Strategy
+/// Write the full-attribute fixture. Run `index::1`. Assert only entry 1's known text appears.
+///
+/// ## Related Requirements
+/// `tests/docs/cli/param/33_index.md` EC-2
+#[ test ]
+fn index_boundary_first_position()
+{
+  let root = TempDir::new().unwrap();
+  write_full_attribute_session( root.path(), "fa-proj", "fa-sess" );
+
+  let out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .arg( ".show" )
+    .arg( "session_id::fa-sess" )
+    .arg( "project::fa-proj" )
+    .arg( "index::1" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  assert!( s.contains( "first user message" ), "T14a: entry 1's content must appear; got:\n{s}" );
+  assert!(
+    !s.contains( "simple reply" ) && !s.contains( "rich reply text" ) && !s.contains( "final user message" ),
+    "T14a: only entry 1's content expected; got:\n{s}"
+  );
+}
+
+/// T14b/EC-3(index): `index::` at the last valid position selects the last message (boundary).
+///
+/// ## Purpose
+/// Verify the upper boundary of `index::` selects the last entry exactly —
+/// the boundary immediately below the out-of-range case (T16).
+///
+/// ## Coverage
+/// Entry 4's content present; other entries' content absent; exit 0.
+///
+/// ## Validation Strategy
+/// Write the full-attribute fixture (4 entries). Run `index::4`. Assert only
+/// entry 4's known text appears.
+///
+/// ## Related Requirements
+/// `tests/docs/cli/param/33_index.md` EC-3
+#[ test ]
+fn index_boundary_last_position()
+{
+  let root = TempDir::new().unwrap();
+  write_full_attribute_session( root.path(), "fa-proj", "fa-sess" );
+
+  let out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .arg( ".show" )
+    .arg( "session_id::fa-sess" )
+    .arg( "project::fa-proj" )
+    .arg( "index::4" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  assert!( s.contains( "final user message" ), "T14b: entry 4's content must appear; got:\n{s}" );
+  assert!(
+    !s.contains( "first user message" ) && !s.contains( "simple reply" ) && !s.contains( "rich reply text" ),
+    "T14b: only entry 4's content expected; got:\n{s}"
+  );
+}
+
+/// T15a/EC-4: `index::0` is rejected.
+///
+/// ## Purpose
+/// Verify `index::0` fails validation (1-based, not 0-based).
+///
+/// ## Coverage
+/// stderr contains the canonical error; stdout empty; exit 1.
+///
+/// ## Validation Strategy
+/// Write the full-attribute fixture. Run `index::0`. Assert exact error text.
+///
+/// ## Related Requirements
+/// `tests/docs/cli/param/33_index.md` EC-4
+#[ test ]
+fn index_zero_rejected()
+{
+  let root = TempDir::new().unwrap();
+  write_full_attribute_session( root.path(), "fa-proj", "fa-sess" );
+
+  let out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .arg( ".show" )
+    .arg( "session_id::fa-sess" )
+    .arg( "project::fa-proj" )
+    .arg( "index::0" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 1 );
+  assert!(
+    stderr( &out ).contains( "index must be a positive integer (1-based), got 0" ),
+    "T15a: canonical error expected; got:\n{}", stderr( &out )
+  );
+  assert!( stdout( &out ).is_empty(), "T15a: stdout must be empty on error" );
+}
+
+/// T15b/EC-5: Negative `index::` is rejected.
+///
+/// ## Purpose
+/// Verify `index::-1` fails validation with the same error class as `index::0`.
+///
+/// ## Coverage
+/// stderr contains the canonical error; stdout empty; exit 1.
+///
+/// ## Validation Strategy
+/// Write the full-attribute fixture. Run `index::-1`. Assert exact error text.
+///
+/// ## Related Requirements
+/// `tests/docs/cli/param/33_index.md` EC-5
+#[ test ]
+fn index_negative_rejected()
+{
+  let root = TempDir::new().unwrap();
+  write_full_attribute_session( root.path(), "fa-proj", "fa-sess" );
+
+  let out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .arg( ".show" )
+    .arg( "session_id::fa-sess" )
+    .arg( "project::fa-proj" )
+    .arg( "index::-1" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 1 );
+  assert!(
+    stderr( &out ).contains( "index must be a positive integer (1-based), got -1" ),
+    "T15b: canonical error expected; got:\n{}", stderr( &out )
+  );
+  assert!( stdout( &out ).is_empty(), "T15b: stdout must be empty on error" );
+}
+
+/// T16/INT-18/EC-6: Out-of-range `index::` is rejected, error names the actual count.
+///
+/// ## Purpose
+/// Verify `index::99` against a 4-entry session fails with the exact count.
+///
+/// ## Coverage
+/// stderr contains the canonical error; stdout empty; exit 1.
+///
+/// ## Validation Strategy
+/// Write the full-attribute fixture (4 entries). Run `index::99`. Assert exact error text.
+///
+/// ## Related Requirements
+/// `tests/docs/cli/command/03_show.md` INT-18; `tests/docs/cli/param/33_index.md` EC-6
+#[ test ]
+fn int_18_index_out_of_range_rejected()
+{
+  let root = TempDir::new().unwrap();
+  write_full_attribute_session( root.path(), "fa-proj", "fa-sess" );
+
+  let out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .arg( ".show" )
+    .arg( "session_id::fa-sess" )
+    .arg( "project::fa-proj" )
+    .arg( "index::99" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 1 );
+  assert!(
+    stderr( &out ).contains( "index out of range: 99 (4 entries)" ),
+    "T16: canonical error expected; got:\n{}", stderr( &out )
+  );
+  assert!( stdout( &out ).is_empty(), "T16: stdout must be empty on error" );
+}
+
+/// T17/EC-7: `index::` counts within the `tail::`-windowed slice, not the full session.
+///
+/// ## Purpose
+/// Verify `tail::5 index::1` selects the 1st message of the 5-entry tail
+/// window — the 16th message of the full 20-entry session — not the 1st
+/// message of the session's complete history.
+///
+/// ## Coverage
+/// The windowed 1st message (`entry 15`, 0-based) appears; the session's
+/// true 1st message (`entry 0`) and the window's other members are absent; exit 0.
+///
+/// ## Validation Strategy
+/// Write a 20-entry cwd-resolved project (generic alternating content, 0-based
+/// `entry N` text). Run bare `.show tail::5 index::1`. Assert only `entry 15` appears.
+///
+/// ## Related Requirements
+/// `tests/docs/cli/param/33_index.md` EC-7
+#[ test ]
+fn index_counts_within_tail_window_not_full_session()
+{
+  let root = TempDir::new().unwrap();
+  let cwd  = TempDir::new().unwrap();
+  common::write_path_project_session( root.path(), cwd.path(), "-fa-window", 20 );
+
+  let out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .current_dir( cwd.path() )
+    .arg( ".show" )
+    .arg( "tail::5" )
+    .arg( "index::1" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  assert!( s.contains( "entry 15" ), "T17: the tail window's 1st message (entry 15) must appear; got:\n{s}" );
+  for other in [ "entry 0\n", "entry 16", "entry 17", "entry 18", "entry 19" ]
+  {
+    assert!( !s.contains( other ), "T17: only the windowed 1st message expected, found {other:?}; got:\n{s}" );
+  }
+}
+
+/// T18/EC-8: `index::` composed with `show_entries::1` narrows the raw list to one line.
+///
+/// ## Purpose
+/// Verify `show_metadata::1 show_entries::1 index::3` shows exactly one raw
+/// entry line — entry 3's — instead of all 4.
+///
+/// ## Coverage
+/// Entry 3's raw line present; entries 1/2/4's raw lines absent; exit 0.
+///
+/// ## Validation Strategy
+/// Write the full-attribute fixture. Run the `metadata_only` + `show_entries` +
+/// index combination. Assert only entry 3's uuid appears in the raw list.
+///
+/// ## Related Requirements
+/// `tests/docs/cli/command/03_show.md` INT-6 composition variant; `tests/docs/cli/param/33_index.md` EC-8
+#[ test ]
+fn index_narrows_raw_entries_list()
+{
+  let root = TempDir::new().unwrap();
+  write_full_attribute_session( root.path(), "fa-proj", "fa-sess" );
+
+  let out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .arg( ".show" )
+    .arg( "session_id::fa-sess" )
+    .arg( "project::fa-proj" )
+    .arg( "show_metadata::1" )
+    .arg( "show_entries::1" )
+    .arg( "index::3" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  assert!( s.contains( "3. Assistant · fa-uuid-3" ), "T18: entry 3's raw line must appear; got:\n{s}" );
+  assert!(
+    !s.contains( "fa-uuid-1" ) && !s.contains( "fa-uuid-2" ) && !s.contains( "fa-uuid-4" ),
+    "T18: only entry 3's raw line expected; got:\n{s}"
+  );
+}
+
+/// T20/EC-13: User-only field (`thinking_level`) on an `assistant` entry renders as `—`.
+///
+/// ## Purpose
+/// Verify requesting `thinking_level` (user-only) on entry 2 (an `assistant`
+/// message) renders `—` — the mirror image of T11/EC-11.
+///
+/// ## Coverage
+/// `thinking_level · —` appears; exit 0.
+///
+/// ## Validation Strategy
+/// Write the full-attribute fixture. Run `fields::thinking_level index::2`.
+/// Assert the em-dash rendering.
+///
+/// ## Related Requirements
+/// `tests/docs/cli/param/32_fields.md` EC-13; `tests/docs/cli/type/15_field_selector.md` role-gap coverage
+#[ test ]
+fn fields_user_only_field_on_assistant_entry_renders_em_dash()
+{
+  let root = TempDir::new().unwrap();
+  write_full_attribute_session( root.path(), "fa-proj", "fa-sess" );
+
+  let out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .arg( ".show" )
+    .arg( "session_id::fa-sess" )
+    .arg( "project::fa-proj" )
+    .arg( "fields::thinking_level" )
+    .arg( "index::2" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  assert!( s.contains( "thinking_level · —" ), "T20: user-only field on assistant entry must render em-dash; got:\n{s}" );
+}
+
+/// T21: `index::` against a zero-session project is rejected, not a crash.
+///
+/// ## Purpose
+/// Verify `index::` composed with a project that has zero sessions still
+/// produces the canonical out-of-range error (0 entries), never a panic or
+/// silent success.
+///
+/// ## Coverage
+/// stderr contains `index out of range: 1 (0 entries)`; stdout empty; exit 1.
+///
+/// ## Validation Strategy
+/// Create an empty path-encoded project directory (no session files). Run
+/// bare `.show index::1`. Assert the canonical zero-entry error.
+///
+/// ## Related Requirements
+/// `task/claude_storage/527_show_fields_index_projection.md` — T21 (pitfall-review addition)
+#[ test ]
+fn index_zero_session_project_out_of_range_rejected()
+{
+  let root = TempDir::new().unwrap();
+  let cwd  = TempDir::new().unwrap();
+
+  let encoded = claude_storage_core::encode_path( cwd.path() ).expect( "encode project path" );
+  std::fs::create_dir_all( root.path().join( "projects" ).join( &encoded ) ).expect( "create empty project dir" );
+
+  let out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .current_dir( cwd.path() )
+    .arg( ".show" )
+    .arg( "index::1" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 1 );
+  assert!(
+    stderr( &out ).contains( "index out of range: 1 (0 entries)" ),
+    "T21: canonical zero-entry error expected; got:\n{}", stderr( &out )
+  );
+  assert!( stdout( &out ).is_empty(), "T21: stdout must be empty on error" );
+}
+
+/// INT-21: `fields::` composed with `show_metadata::1 show_entries::1` projects
+/// each entry instead of being silently dropped.
+///
+/// ## Purpose
+/// Verify the F2 fix: `show_metadata::1 show_entries::1 fields::timestamp`
+/// renders each entry as a field-projection line, not the old raw
+/// uuid/type/timestamp list — per `docs/cli/command/03_show.md` lines 18/58
+/// ("`fields::` (any step) replaces that rendering").
+///
+/// ## Coverage
+/// 4 `timestamp ·` projection lines present, one per entry; the old raw-list
+/// format (`N. Role · uuid`) absent; exit 0.
+///
+/// ## Validation Strategy
+/// Write the full-attribute fixture. Run `show_metadata::1 show_entries::1
+/// fields::timestamp`. Assert field-projection rendering, not the raw list.
+///
+/// ## Related Requirements
+/// `docs/cli/command/03_show.md` lines 18, 58
+#[ test ]
+fn int_21_fields_composed_with_show_entries_projects_each_entry()
+{
+  let root = TempDir::new().unwrap();
+  write_full_attribute_session( root.path(), "fa-proj", "fa-sess" );
+
+  let out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .arg( ".show" )
+    .arg( "session_id::fa-sess" )
+    .arg( "project::fa-proj" )
+    .arg( "show_metadata::1" )
+    .arg( "show_entries::1" )
+    .arg( "fields::timestamp" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  assert_eq!(
+    s.matches( "timestamp · " ).count(), 4,
+    "F2: exactly one field-projection line per entry (4 entries) expected; got:\n{s}"
+  );
+  assert!(
+    !s.contains( "1. User · fa-uuid-1" ) && !s.contains( "2. Assistant · fa-uuid-2" ),
+    "F2: old raw uuid/type/timestamp list must not appear once fields:: is given; got:\n{s}"
+  );
+}
+
+/// F3b: A nonexistent `project::` renders the plain identifier, never the
+/// `ProjectId` enum's Debug format.
+///
+/// ## Purpose
+/// Verify the F3b fix: `project::does-not-exist-project` reports the error
+/// against the plain string the user typed, not `Uuid("does-not-exist-project")`
+/// (the internal enum variant leaking through `{:?}`).
+///
+/// ## Coverage
+/// stderr contains the plain identifier; stderr does not contain `Uuid(`; exit 1.
+///
+/// ## Validation Strategy
+/// Run `.show project::does-not-exist-project` against an empty storage root
+/// (no project directory created). Assert the error text.
+///
+/// ## Related Requirements
+/// UX/DX round 1, Finding F3
+#[ test ]
+fn f3b_project_not_found_error_omits_debug_format()
+{
+  let root = TempDir::new().unwrap();
+
+  let out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .arg( ".show" )
+    .arg( "project::does-not-exist-project" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 1 );
+  assert!(
+    stderr( &out ).contains( "Failed to load project does-not-exist-project:" ),
+    "F3b: error must report the plain identifier; got:\n{}", stderr( &out )
+  );
+  assert!(
+    !stderr( &out ).contains( "Uuid(" ),
+    "F3b: error must not leak ProjectId's Debug format; got:\n{}", stderr( &out )
   );
 }

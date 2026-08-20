@@ -37,7 +37,7 @@
 #![ cfg( feature = "enabled" ) ]
 
 mod cli_binary_test_helpers;
-use cli_binary_test_helpers::{ make_creds_file, make_session_dir, run_cli, run_cli_with_env, run_dry, stderr_str };
+use cli_binary_test_helpers::{ make_creds_file, run_cli, run_cli_with_env, run_dry, stderr_str };
 #[ cfg( unix ) ]
 use cli_binary_test_helpers::make_proc_dir;
 
@@ -62,8 +62,9 @@ use cli_binary_test_helpers::make_proc_dir;
 #[ test ]
 fn us01_1_bare_clr_repl_defaults()
 {
-  let ( _session, session_path ) = make_session_dir();
-  let output = run_dry( &[ "--session-dir", &session_path ] );
+  // Fix(BUG-538): dropped the dead --session-dir fixture — inert since BUG-493, and
+  //   this test never asserted -c (see the Note above).
+  let output = run_dry( &[] );
   assert!(
     output.contains( "--dangerously-skip-permissions" ),
     "print mode must still inject --dangerously-skip-permissions. Got:\n{output}"
@@ -128,8 +129,9 @@ fn us01_3_non_interactive_no_message_errors()
 #[ test ]
 fn us01_4_repl_with_custom_dir()
 {
-  let ( _session, session_path ) = make_session_dir();
-  let output = run_dry( &[ "--dir", "/tmp", "--session-dir", &session_path ] );
+  // Fix(BUG-538): dropped the dead --session-dir fixture — inert since BUG-493, and
+  //   this test never asserted -c (see the Note below).
+  let output = run_dry( &[ "--dir", "/tmp" ] );
   assert!(
     output.contains( "cd /tmp" ),
     "--dir must produce 'cd /tmp' prefix. Got:\n{output}"
@@ -262,8 +264,9 @@ fn us03_4_interactive_with_new_session()
 #[ test ]
 fn us04_1_dry_run_prints_command()
 {
-  let ( _session, session_path ) = make_session_dir();
-  let output = run_dry( &[ "--session-dir", &session_path, "test message" ] );
+  // Fix(BUG-538): dropped the dead --session-dir fixture — inert since BUG-493, and
+  //   this test never asserted -c (see the Note above).
+  let output = run_dry( &[ "test message" ] );
   assert!(
     output.contains( "--dangerously-skip-permissions" ),
     "dry-run must show --dangerously-skip-permissions. Got:\n{output}"

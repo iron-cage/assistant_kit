@@ -1,4 +1,4 @@
-# Parameter :: 35. `model::`
+# Parameter :: 37. `model::`
 
 ### Scope
 
@@ -7,7 +7,7 @@
 - **In Scope**: Value constraints, default behavior, command interactions.
 - **Out of Scope**: Type definitions (→ `type/`), command behavior (→ `command/`).
 
-Model-name substring filter for [`.rollup`](../command/14_rollup.md), applied at session granularity before [`group::`](32_group.md) aggregation.
+Model-name substring filter for [`.rollup`](../command/14_rollup.md), applied at session granularity before [`group::`](34_group.md) aggregation.
 
 **Type:** String
 
@@ -22,7 +22,7 @@ Model-name substring filter for [`.rollup`](../command/14_rollup.md), applied at
 
 **Commands:** [`.rollup`](../command/14_rollup.md) — the only command registering this parameter.
 
-**Purpose:** Narrows the session set contributing to the table to those whose model name contains the given substring — e.g. `model::opus` matches `claude-opus-5`. Applied **before** grouping: a non-matching session is dropped entirely, including from the `percent` column's denominator (see [`14_rollup.md`](../command/14_rollup.md)'s Notes) — filtering out a heavy non-matching session raises the surviving rows' percentages, it does not just hide a row. Composes with [`group::`](32_group.md) freely, including `group::model` itself (filtering to one model then grouping by model collapses to at most one row, mainly useful for confirming a single model's own total/percent-of-everything-matched).
+**Purpose:** Narrows the session set contributing to the table to those whose model name contains the given substring — e.g. `model::opus` matches `claude-opus-5`. Applied **before** grouping: a non-matching session is dropped entirely, including from the `percent` column's denominator (see [`14_rollup.md`](../command/14_rollup.md)'s Notes) — filtering out a heavy non-matching session raises the surviving rows' percentages, it does not just hide a row. Composes with [`group::`](34_group.md) freely, including `group::model` itself (filtering to one model then grouping by model collapses to at most one row, mainly useful for confirming a single model's own total/percent-of-everything-matched).
 
 **Examples:**
 ```bash

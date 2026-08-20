@@ -103,9 +103,9 @@ fn show_displays_content_by_default()
     );
   }
 
-  // Chat-log format: "[2025-11-29 10:00] User: ..." or "[...] Assistant: ..."
-  let has_timestamp_pattern = show_output.contains( "[20" )
-    && ( show_output.contains( "] User:" ) || show_output.contains( "] Assistant:" ) );
+  // Chat-log format: "2025-11-29 10:00 · User: ..." or "... · Assistant: ..."
+  let has_timestamp_pattern = show_output.contains( "2025-11-29" )
+    && ( show_output.contains( "· User:" ) || show_output.contains( "· Assistant:" ) );
   assert!(
     has_timestamp_pattern,
     "Should contain chat-log format with timestamps and roles. stdout: {show_output}"
@@ -201,7 +201,7 @@ fn show_metadata_only_parameter()
     "Should NOT show separator (content-first feature). stdout: {show_output}"
   );
 
-  let has_chat_format = show_output.contains( "] User:" ) || show_output.contains( "] Assistant:" );
+  let has_chat_format = show_output.contains( "· User:" ) || show_output.contains( "· Assistant:" );
   assert!(
     !has_chat_format,
     "Should NOT show chat-log format with metadata::1. stdout: {show_output}"
@@ -275,7 +275,7 @@ fn show_metadata_flag_is_metadata_only()
     "Should show metadata fields. stdout: {show_output}"
   );
 
-  let has_chat_format = show_output.contains( "] User:" ) || show_output.contains( "] Assistant:" );
+  let has_chat_format = show_output.contains( "· User:" ) || show_output.contains( "· Assistant:" );
   assert!(
     !has_chat_format,
     "show_metadata::1 should NOT show chat-log format. stdout: {show_output}"

@@ -118,7 +118,7 @@ CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .rollup sort::calls order::desc
 - Fixture: three sessions with calls/total deliberately inversely correlated — S1 (1 call, total 300), S2 (3 calls, total 200), S3 (5 calls, total 100)
 - Row order in stdout is S3, then S2, then S1 (most calls first) — proves `sort::` actually reorders away from the default `total`-descending order, since a total-based sort would produce the opposite order
 - Exit code: 0
-- **Source:** [command/14_rollup.md](../../../../docs/cli/command/14_rollup.md), [param/33_sort.md](../../../../docs/cli/param/33_sort.md)
+- **Source:** [command/14_rollup.md](../../../../docs/cli/command/14_rollup.md), [param/35_sort.md](../../../../docs/cli/param/35_sort.md)
 
 ---
 
@@ -133,7 +133,7 @@ CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .rollup sort::calls order::asc
 - Fixture: identical to INT-5 (S1/S2/S3 with 1/3/5 calls)
 - Row order in stdout is S1, then S2, then S3 (fewest calls first) — the exact reverse of INT-5's `order::desc` result under the same `sort::calls` key
 - Exit code: 0
-- **Source:** [command/14_rollup.md](../../../../docs/cli/command/14_rollup.md), [param/34_order.md](../../../../docs/cli/param/34_order.md)
+- **Source:** [command/14_rollup.md](../../../../docs/cli/command/14_rollup.md), [param/36_order.md](../../../../docs/cli/param/36_order.md)
 
 ---
 
@@ -148,7 +148,7 @@ CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .rollup columns::group,total
 - Fixture: one session
 - Header row contains exactly `Group` and `Total` labels; every other column label (`Sessions`, `Calls`, `Input`, `Output`, `Cache`, `MaxCtx`, `Pct`, `First`, `Last`) is absent
 - Exit code: 0
-- **Source:** [command/14_rollup.md](../../../../docs/cli/command/14_rollup.md), [param/36_columns.md](../../../../docs/cli/param/36_columns.md)
+- **Source:** [command/14_rollup.md](../../../../docs/cli/command/14_rollup.md), [param/38_columns.md](../../../../docs/cli/param/38_columns.md)
 
 ---
 
@@ -163,7 +163,7 @@ CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .rollup
 - Fixture: one session
 - Header row contains all 9 default labels (`Group`, `Sessions`, `Calls`, `Input`, `Output`, `Cache`, `MaxCtx`, `Total`, `Pct`); `First` and `Last` are both absent
 - Exit code: 0
-- **Source:** [command/14_rollup.md](../../../../docs/cli/command/14_rollup.md), [param/36_columns.md](../../../../docs/cli/param/36_columns.md)
+- **Source:** [command/14_rollup.md](../../../../docs/cli/command/14_rollup.md), [param/38_columns.md](../../../../docs/cli/param/38_columns.md)
 
 ---
 
@@ -178,7 +178,7 @@ CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .rollup model::opus
 - Fixture: two `claude-opus-5` sessions (100 tokens each) and one `claude-haiku-5` session (800 tokens) in the same project
 - Output has exactly 2 data rows (haiku session entirely absent, not merely hidden); each surviving row shows `50.0%`, computed against the filtered 200-token total — never `10.0%`, which is what the same row would show against the unfiltered 1000-token grand total
 - Exit code: 0
-- **Source:** [command/14_rollup.md](../../../../docs/cli/command/14_rollup.md), [param/35_model.md](../../../../docs/cli/param/35_model.md)
+- **Source:** [command/14_rollup.md](../../../../docs/cli/command/14_rollup.md), [param/37_model.md](../../../../docs/cli/param/37_model.md)
 
 ---
 
@@ -288,7 +288,7 @@ clg .rollup group::bogus
 - `bogus` is not a valid `group::` value (accepted: `session`, `project`, `model`, `day`)
 - stderr names the invalid value; no table output on stdout
 - Exit code: 1
-- **Source:** [command/14_rollup.md](../../../../docs/cli/command/14_rollup.md), [param/32_group.md](../../../../docs/cli/param/32_group.md)
+- **Source:** [command/14_rollup.md](../../../../docs/cli/command/14_rollup.md), [param/34_group.md](../../../../docs/cli/param/34_group.md)
 
 ---
 
@@ -303,7 +303,7 @@ clg .rollup sort::bogus
 - `bogus` is not a valid `sort::` value (accepted: `total`, `input`, `output`, `cache`, `max_context`, `calls`, `sessions`, `group`)
 - stderr names the invalid value; no table output on stdout
 - Exit code: 1
-- **Source:** [command/14_rollup.md](../../../../docs/cli/command/14_rollup.md), [param/33_sort.md](../../../../docs/cli/param/33_sort.md)
+- **Source:** [command/14_rollup.md](../../../../docs/cli/command/14_rollup.md), [param/35_sort.md](../../../../docs/cli/param/35_sort.md)
 
 ---
 
@@ -318,7 +318,7 @@ clg .rollup order::bogus
 - `bogus` is not a valid `order::` value (accepted: `asc`, `desc`)
 - stderr names the invalid value; no table output on stdout
 - Exit code: 1
-- **Source:** [command/14_rollup.md](../../../../docs/cli/command/14_rollup.md), [param/34_order.md](../../../../docs/cli/param/34_order.md)
+- **Source:** [command/14_rollup.md](../../../../docs/cli/command/14_rollup.md), [param/36_order.md](../../../../docs/cli/param/36_order.md)
 
 ---
 
@@ -333,7 +333,7 @@ clg .rollup columns::group,bogus
 - `bogus` is not a valid column key, even alongside the valid `group` entry in the same list
 - stderr names the invalid value; no table output on stdout
 - Exit code: 1
-- **Source:** [command/14_rollup.md](../../../../docs/cli/command/14_rollup.md), [param/36_columns.md](../../../../docs/cli/param/36_columns.md)
+- **Source:** [command/14_rollup.md](../../../../docs/cli/command/14_rollup.md), [param/38_columns.md](../../../../docs/cli/param/38_columns.md)
 
 ---
 
