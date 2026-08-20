@@ -16,7 +16,7 @@
 //!
 //! - Default env vars appear (`CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000`)
 //! - Default `-c` appears in dry-run output when session storage is non-empty (automatic session continuation)
-//! - Empty `--session-dir` suppresses `-c` even without `--new-session` (BUG-214 regression guard)
+//! - Empty session storage (fresh `CLAUDE_HOME`) suppresses `-c` even without `--new-session` (BUG-214 regression guard)
 //! - `--new-session` suppresses `-c` from dry-run output
 //! - `--dir` emits `cd <path>` prefix line
 //! - `--max-tokens N` overrides the default token env var
@@ -27,7 +27,7 @@
 //! - Message with embedded double quotes is properly escaped
 //! - `--dir` with spaces: `cd` output is unquoted (human-readable per FR-21, not shell-safe)
 //! - All 5 Tier-1 default env vars appear in output (not just max-tokens)
-//! - No message provided: `--dry-run` outputs bare `claude --dangerously-skip-permissions --chrome --effort max -c` command with no message arg (when default session dir has sessions)
+//! - No message provided: `--dry-run` routes to print mode (non-TTY stdin) with no message arg and no `-c` (BUG-425/BUG-426)
 //! - `--dry-run --quiet` still shows output (--quiet does not gate dry-run; bug reproducer)
 //! - `--system-prompt TEXT` appears in command args (param 15 round-trip)
 //! - `--append-system-prompt TEXT` appears in command args (param 16 round-trip)
@@ -38,12 +38,12 @@
 //! - Idempotent guard: message ending with `"ultrathink"` is not double-suffixed
 //! - `--trace --dry-run` emits nothing to stderr (dry-run returns before trace fires)
 //! - `""` empty positional arg ignored — bare command, no message, no degenerate ultrathink suffix
-//! - T-A: `--interactive --session-dir <nonempty>` injects `-c` (BUG-435 fix)
-//! - T-B: `--interactive --session-dir <empty>` does NOT inject `-c` (no session → no -c)
-//! - T-C: bare `--dry-run --session-dir <nonempty>` (print mode, no message) does NOT inject `-c` (D-10 preserved)
+//! - T-A: `--interactive --from <session with history>` injects `-c` (BUG-435 fix)
+//! - T-B: `--interactive --from <no session>` does NOT inject `-c` (no session → no -c)
+//! - T-C: bare `--dry-run` with a prior session in storage (print mode, no message) does NOT inject `-c` (D-10 preserved)
 
 mod cli_binary_test_helpers;
-use cli_binary_test_helpers::{ run_cli, run_cli_with_env, run_dry, stdout_str };
+use cli_binary_test_helpers::{ make_session_for, run_cli, run_cli_with_env, run_dry, stdout_str };
 use std::process::Command;
 
 #[ test ]
@@ -191,11 +191,13 @@ fn dir_with_spaces_produces_unquoted_cd_line()
 }
 
 // No-message case: --dry-run with no message routes to print mode under this harness's
-// non-TTY subprocess stdin, but still WITHOUT -c because the session dir is empty →
-// session_exists() returns `None`. Fix(BUG-246): describe() now starts with
+// non-TTY subprocess stdin, but still WITHOUT -c because the fresh, empty CLAUDE_HOME
+// guarantees session_exists() returns `None`. Fix(BUG-246): describe() now starts with
 // "env -u CLAUDECODE" (default unset_claudecode=true).
-// Do NOT use make_session_dir() here — that writes a dummy .jsonl making session_exists() return `Some(SessionId)`,
-// which would inject -c and break the "no -c" assertion.
+// Fix(BUG-538): isolation migrated from the inert --session-dir override (BUG-493) to an
+//   empty temp CLAUDE_HOME — the no-session guarantee must live in the storage
+//   session_exists() actually reads. Do NOT seed a session here (make_session_for());
+//   that would inject -c and break the "no -c" assertion.
 //
 // Fix(BUG-425): corrected from asserting a bare/no-`--print` command to asserting the
 //   post-fix print-mode-routed command — this test's own subprocess stdin is non-TTY
@@ -208,13 +210,14 @@ fn dir_with_spaces_produces_unquoted_cd_line()
 #[ test ]
 fn dry_run_without_message_shows_bare_command()
 {
-  let empty_dir = tempfile::TempDir::new().expect( "create empty session dir" );
-  let session_path = empty_dir.path().to_str().expect( "session dir path valid utf-8" );
-  let output = run_dry( &[ "--session-dir", session_path ] );
+  let claude_home = tempfile::TempDir::new().expect( "create empty claude home" );
+  let claude_home_str = claude_home.path().to_str().expect( "claude home path valid utf-8" );
+  let out = run_cli_with_env( &[ "--dry-run" ], &[ ( "CLAUDE_HOME", claude_home_str ) ] );
+  let output = stdout_str( &out );
   let last_line = output.trim_end().lines().last().unwrap_or_default();
   assert_eq!(
     last_line, "env -u CLAUDECODE -u CLAUDE_CODE_CHILD_SESSION claude --dangerously-skip-permissions --effort max --print --output-format json",
-    "Bare --dry-run under non-TTY stdin must route to print mode (no message, no -c in empty session dir). Got:\n{output}"
+    "Bare --dry-run under non-TTY stdin must route to print mode (no message, no -c with no prior session). Got:\n{output}"
   );
 }
 
@@ -229,23 +232,61 @@ fn new_session_suppresses_continue_flag()
   );
 }
 
-// Continuation: --dry-run shows -c when --session-dir has a qualifying .jsonl file.
-// session_exists(Some(dir)) scans for .jsonl files via most_recent_session_in_dir().
+// Continuation: --dry-run shows -c when the --from source storage has a prior session.
+// Canonical reproducer for BUG-538 — the migration of the 13 test call sites that BUG-493's
+// execution left relying on the inert --session-dir override (6 of them suite-failing).
+// test_kind: bug_reproducer(BUG-538)
+//
+// ## Root Cause
+// BUG-493 made --session-dir fully inert — session_exists() stopped scanning the override
+// dir and now reads only scope_for(--from|cwd).claude_session_dir, resolved under
+// CLAUDE_HOME. This test and 12 sibling call sites (cli_args_test T04/T10, the BUG-428
+// quintet in execution_mode_ext_test, three user_story fixtures, two empty-dir isolation
+// fixtures here) still relied on --session-dir as a fixture — seeding a raw temp directory,
+// or passing an empty one as a no-session guarantee: the six that assert -c-injection or
+// resume behavior pinned the REMOVED contract and failed against the correct post-493
+// binary; the other seven passed by accident with dead or ambient-dependent fixtures.
+//
+// ## Why Not Caught
+// BUG-493's execution migrated the tests that assert the deprecation contract itself and
+// retitled the user-story -c tests, but no mechanical sweep enumerated every
+// "--session-dir as fixture trigger" call site — and the full claude_runner suite was not
+// re-run in that window, so the six failures only surfaced at the next full gate
+// (verb/-0040_longrun.log, exit 1, 1380/1386).
+//
+// ## Fix Applied
+// Every remaining fixture call site migrated to the documented successor mechanism:
+// make_session_for()/make_zero_turn_session_for() seed
+// <CLAUDE_HOME>/projects/<encoded src>/, and the invocation carries --from <src> plus a
+// CLAUDE_HOME override pointing at the temp home. The caller-less make_session_dir()/
+// make_zero_turn_session_dir() helpers are deleted (Delete, Don't Archive).
+//
+// ## Prevention
+// When a parameter is deprecated to inert, grep the test tree for the flag string and
+// triage EVERY call site into "asserts the deprecation contract" vs "uses the flag as a
+// fixture trigger" — the second class breaks (or silently de-scopes coverage) only later,
+// at full-suite time, because nothing at migration time links it to the contract change.
+//
+// ## Pitfall
+// A test asserting -c injection must seed the storage session_exists() actually reads
+// (CLAUDE_HOME + --from|cwd encoding) — seeding an arbitrary directory and passing its raw
+// path is exactly the inert mechanism BUG-493 removed, and it fails silently: the dead
+// fixture still "looks like" session setup while contributing nothing.
 #[ test ]
-fn continuation_present_when_session_dir_nonempty()
+fn continuation_present_when_prior_session_exists()
 {
-  let session_dir = tempfile::tempdir().expect( "create temp session dir" );
-  std::fs::write( session_dir.path().join( "00000000-0000-0000-0000-000000000000.jsonl" ), b"{}" )
-    .expect( "write dummy session file" );
-  let session_dir_str = session_dir.path().to_str().expect( "session dir path is valid utf-8" );
-  let out = std::process::Command::new( env!( "CARGO_BIN_EXE_clr" ) )
-    .args( [ "--dry-run", "--session-dir", session_dir_str, "test" ] )
-    .output()
-    .expect( "invoke clr" );
-  let output = String::from_utf8_lossy( &out.stdout );
+  let claude_home = tempfile::tempdir().expect( "create temp claude home" );
+  let src = "/tmp/bug538-continuation-src";
+  let _jsonl = make_session_for( claude_home.path(), src, "00000000-0000-0000-0000-000000000000" );
+  let claude_home_str = claude_home.path().to_str().expect( "claude home path is valid utf-8" );
+  let out = run_cli_with_env(
+    &[ "--dry-run", "--from", src, "test" ],
+    &[ ( "CLAUDE_HOME", claude_home_str ) ],
+  );
+  let output = stdout_str( &out );
   assert!(
     output.contains( " -c" ),
-    "non-empty --session-dir must inject -c. Got:\n{output}"
+    "prior session in the --from source storage must inject -c. Got:\n{output}"
   );
 }
 
@@ -577,14 +618,17 @@ fn bug_reproducer_214_no_session_dir_fresh_cwd_no_continue_flag()
 #[ test ]
 fn empty_positional_arg_produces_bare_command()
 {
-  // Empty session dir → no -c (session_exists returns `None` for empty dir).
+  // Fresh empty CLAUDE_HOME → no prior session → no -c (session_exists returns `None`).
   // Fix(BUG-246): last_line now starts with "env -u CLAUDECODE" (default unset_claudecode=true).
-  let empty_dir = tempfile::TempDir::new().expect( "create empty session dir" );
-  let session_path = empty_dir.path().to_str().expect( "session dir path valid utf-8" );
+  // Fix(BUG-538): isolation migrated from the inert --session-dir override (BUG-493) to
+  //   an empty temp CLAUDE_HOME — the storage session_exists() actually reads.
+  let claude_home = tempfile::TempDir::new().expect( "create empty claude home" );
+  let claude_home_str = claude_home.path().to_str().expect( "claude home path valid utf-8" );
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = Command::new( bin )
-    .args( [ "--dry-run", "--session-dir", session_path, "" ] )
+    .args( [ "--dry-run", "" ] )
     .env( "HOME", "/tmp/clr-isolated-home" ) // Fix(BUG-008) isolation: prevent host prefs from injecting --model
+    .env( "CLAUDE_HOME", claude_home_str )
     .output()
     .expect( "Failed to invoke clr binary" );
   assert!( out.status.success(), "empty positional arg must exit 0. stderr: {}", String::from_utf8_lossy( &out.stderr ) );
@@ -597,7 +641,7 @@ fn empty_positional_arg_produces_bare_command()
   //   BUG-219) is the assertion immediately below, unaffected by this correction.
   assert_eq!(
     last_line, "env -u CLAUDECODE -u CLAUDE_CODE_CHILD_SESSION claude --dangerously-skip-permissions --effort max --print --output-format json",
-    "empty positional arg must produce no-message command (no -c in empty session dir). Got:\n{stdout}"
+    "empty positional arg must produce no-message command (no -c with no prior session). Got:\n{stdout}"
   );
   assert!(
     !stdout.contains( "\"ultrathink \"" ),

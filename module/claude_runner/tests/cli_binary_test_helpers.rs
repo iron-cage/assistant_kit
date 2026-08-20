@@ -5,13 +5,11 @@
 //! | Helper | Used By |
 //! |--------|---------|
 //! | `run_cli` | `cli_args_test`, `cli_args_ext_test`, `dry_run_test`, `ultrathink_args_test`, `effort_args_test`, `param_edge_cases_test`, `param_extended_flags_test`, `param_group_test`, `execution_mode_test`, `quiet_test`, `ask_command_test`, `user_story_test`, `user_story_creds_isolated_test`, `user_story_output_test`, `user_story_ps_test`, `user_story_kill_test`, `ps_command_test`, `kill_command_test`, `ps_mode_test`, `ps_columns_test`, `ps_wide_test`, `ps_pid_test`, `ps_inspect_test`, `ps_flags_test`, `output_style_test`, `summary_fields_test`, `no_compact_window_test`, `json_config_test` |
-//! | `run_cli_with_env` | `env_var_test`, `env_var_ext_test`, `invariant_trace_universality_test`, `param_trace_edge_cases_test`, `param_group_test`, `isolated_test`, `user_story_creds_isolated_test`, `user_story_output_test`, `bug_reproducers_239_244_test`, `error_classification_test`, `ps_command_test`, `user_story_ps_test`, `output_style_test`, `summary_fields_test`, `no_compact_window_test`, `json_config_test`, `config_file_test` |
+//! | `run_cli_with_env` | `cli_args_test`, `dry_run_test`, `user_story_test`, `execution_mode_ext_test`, `env_var_test`, `env_var_ext_test`, `invariant_trace_universality_test`, `param_trace_edge_cases_test`, `param_group_test`, `isolated_test`, `user_story_creds_isolated_test`, `user_story_output_test`, `bug_reproducers_239_244_test`, `error_classification_test`, `ps_command_test`, `user_story_ps_test`, `output_style_test`, `summary_fields_test`, `no_compact_window_test`, `json_config_test`, `config_file_test` |
 //! | `run_cli_in_dir` | `config_file_test` |
-//! | `make_session_dir` (deprecated for new use) | `dry_run_test`, `execution_mode_ext_test`, `user_story_test` |
-//! | `make_zero_turn_session_dir` (deprecated for new use) | `execution_mode_ext_test` |
 //! | `df` | `session_from_test`, `session_path_resolution_test`, `session_source_isolation_test`, `scope_command_test`, `bug_reproducers_490_492_test`, `topic_command_test` |
-//! | `make_session_for` | `cli_args_ext_test`, `dry_run_test`, `ultrathink_args_test`, `session_from_test`, `execution_mode_test`, `execution_mode_ext_test`, `session_path_resolution_test`, `session_source_isolation_test`, `session_verification_test`, `user_story_test` |
-//! | `make_zero_turn_session_for` | none yet — encoded-path successor to `make_zero_turn_session_dir` |
+//! | `make_session_for` | `cli_args_test`, `cli_args_ext_test`, `dry_run_test`, `ultrathink_args_test`, `session_from_test`, `execution_mode_test`, `execution_mode_ext_test`, `session_path_resolution_test`, `session_source_isolation_test`, `session_verification_test`, `user_story_test` |
+//! | `make_zero_turn_session_for` | `execution_mode_ext_test` |
 //! | `exit_code` | `refresh_test`, `bug_reproducers_239_244_test`, `user_story_test`, `user_story_creds_isolated_test`, `isolated_test`, `json_config_test`, `config_file_test` |
 //! | `stderr_str` | `refresh_test`, `bug_reproducers_239_244_test`, `invariant_trace_universality_test`, `error_classification_test`, `user_story_test`, `user_story_creds_isolated_test`, `isolated_correctness_test`, `isolated_test`, `ps_command_test`, `user_story_ps_test`, `kill_command_test`, `user_story_kill_test`, `ps_mode_test`, `ps_columns_test`, `output_format_test`, `no_compact_window_test`, `json_config_test`, `config_file_test` |
 //! | `stdout_str` | `refresh_test`, `isolated_correctness_test`, `isolated_test`, `dry_run_test`, `ps_command_test`, `user_story_ps_test`, `kill_command_test`, `user_story_kill_test`, `ps_mode_test`, `ps_columns_test`, `ps_wide_test`, `output_format_test`, `no_compact_window_test`, `json_config_test`, `config_file_test` |
@@ -20,7 +18,7 @@
 //! | `fake_claude_binary_dir` (unix) | `ps_command_test`, `user_story_ps_test`, `kill_command_test`, `user_story_kill_test`, `ps_mode_test`, `ps_columns_test`, `ps_wide_test`, `ps_flags_test`, `config_file_test` |
 //! | `fake_claude` (unix) | `execution_mode_test`, `expect_validation_test` |
 //! | `run_with_path` | `execution_mode_test`, `expect_validation_test`, `exit_code_contract_test`, `output_format_test` |
-//! | `run_with_path_env` | `execution_mode_test` |
+//! | `run_with_path_env` | `execution_mode_test`, `execution_mode_ext_test` |
 //! | `run_with_path_stdin` | `execution_mode_test` |
 //! | `run_with_path_proc` (unix) | `expect_validation_test` |
 //! | `make_proc_dir` (unix) | `kill_command_test`, `expect_validation_test`, `config_file_test` |
@@ -248,69 +246,6 @@ pub fn make_zero_turn_session_for( claude_home : &std::path::Path, src_dir : &st
   std::fs::write( &file, b"{\"type\":\"system\",\"subtype\":\"init\"}\n" )
     .expect( "write zero-turn session jsonl" );
   file
-}
-
-/// Create a temp session directory with one dummy `.jsonl` file; returns `(dir, path_string)`.
-///
-/// The caller must keep the returned `TempDir` alive for the duration of the test —
-/// the directory and its contents are deleted when the `TempDir` is dropped.
-///
-/// Fix(BUG-493): `--session-dir` is deprecated and inert — `session_exists()` no
-/// longer scans it, so passing the returned path as `--session-dir` no longer
-/// forces `-c` injection. New tests needing deterministic `-c` injection must use
-/// `make_session_for()` (seeds the `--from`/cwd-derived storage location instead).
-/// Kept only for existing callers not yet migrated; do not add new callers.
-///
-/// Pitfall: if the caller drops `TempDir` before passing the path to the subprocess,
-/// the directory is deleted and `session_exists()` returns `None`.
-///
-/// # Panics
-///
-/// Panics if the temp directory or the dummy file cannot be created.
-#[must_use]
-#[inline]
-#[allow(dead_code)]
-pub fn make_session_dir() -> ( tempfile::TempDir, String )
-{
-  let dir = tempfile::TempDir::new().expect( "failed to create temp session dir" );
-  std::fs::write( dir.path().join( "00000000-0000-0000-0000-000000000000.jsonl" ), b"{}" )
-    .expect( "failed to write dummy session file" );
-  let path = dir.path().to_str().expect( "session dir path must be valid UTF-8" ).to_owned();
-  ( dir, path )
-}
-
-/// Create a temp session directory with one `.jsonl` file shaped like a zero-model-turn
-/// transcript (BUG-428): structurally qualifies as a resume candidate under
-/// `most_recent_session_in_dir()`'s 4 checks (correct extension, no `agent-` prefix,
-/// non-zero size, valid UTF-8 stem) but records no model turns — the exact shape claude's
-/// real `--resume` logic rejects with `"No conversation found to continue"`
-/// (`contract/claude_code/docs/version/088_v2_1_187.md:19`). Content mirrors BUG-428's own
-/// Minimum Reproducible Example (a lone `system`/`init` line, no `assistant` turn).
-///
-/// Distinct from `make_session_dir()`: that helper's placeholder `{}` content is never
-/// semantically inspected by its callers (only `session_exists()`'s structural checks
-/// matter to them) — this one specifically names and documents the zero-turn scenario for
-/// BUG-428's own reproducer tests, so a future reader does not have to re-derive why the
-/// content looks the way it does.
-///
-/// The caller must keep the returned `TempDir` alive for the duration of the test.
-///
-/// # Panics
-///
-/// Panics if the temp directory or the fixture file cannot be created.
-#[must_use]
-#[inline]
-#[allow(dead_code)]
-pub fn make_zero_turn_session_dir() -> ( tempfile::TempDir, String )
-{
-  let dir = tempfile::TempDir::new().expect( "failed to create temp session dir" );
-  std::fs::write(
-    dir.path().join( "00000000-0000-0000-0000-000000000001.jsonl" ),
-    b"{\"type\":\"system\",\"subtype\":\"init\"}\n",
-  )
-  .expect( "failed to write zero-turn session file" );
-  let path = dir.path().to_str().expect( "session dir path must be valid UTF-8" ).to_owned();
-  ( dir, path )
 }
 
 /// Extract the process exit code from a subprocess `Output`.
