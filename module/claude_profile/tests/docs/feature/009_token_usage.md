@@ -569,3 +569,20 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 - **Note:** Both-exhausted accounts WILL recover when quota resets (7d resets, 5h will also have reset); dead accounts require external action. The 7d constraint is binding for both both-exhausted and weekly-exhausted — identical recovery behavior.
 - **Source fn:** `mre_bug321_both_exhausted_sorts_in_weekly_group` (in `tests/usage/sort_tests.rs`)
 - **Source:** [009_token_usage.md AC-24, AC-26](../../../docs/feature/009_token_usage.md)
+
+---
+
+### FT-36: Redirect-backend Err row renders compact `(redirect)` note and `—` renews
+
+- **Given (unit test):** Two `AccountQuota` entries:
+  - `kimi`: `result = Err(REDIRECT_NO_QUOTA_REASON)` (the Feature 071 placeholder), `expires_at_ms = 0` (static key), `account = None`, `org_created_at = None`, `renewal_at = None`, `claim_lock = true`, `inference_provider = "kimi"`.
+  - `i11@test.com`: `result = Err("rate limited (429)")` — transient-failure OAuth row (BUG-220 regression guard).
+- **When:** `render_text()` called with both accounts and default `ColsVisibility`.
+- **Then:**
+  - The `kimi` line contains `(redirect)` in the last visible quota column — NOT the full `"redirect backend — no Anthropic quota"` descriptor (40 chars, widens the column for the whole table with `auto_wrap` off).
+  - The `kimi` line's `~Renews` cell (first cell after the `static` Expires cell) is `—` — renewal is inapplicable for a redirect account, not unknown (`"?"`).
+  - The `i11@test.com` line still contains `(rate limited (429))` — non-redirect Err rows keep the full shortened reason (BUG-220 placement contract).
+- **Exit:** n/a (unit test — string content assertions)
+- **Note:** Fix(BUG-538). The full reason sentence remains correct in `trace::1` output (fetch layer); only the table cell is compacted. TSV/JSON surfaces are deliberately unchanged (machine consumers want the full reason).
+- **Source fn:** `mre_bug_538_redirect_row_compact_note_and_renews_dash` (in `tests/usage/render_tests_a.rs`)
+- **Source:** [009_token_usage.md AC-03](../../../docs/feature/009_token_usage.md); [071_redirect_backend_accounts.md](../../../docs/feature/071_redirect_backend_accounts.md)

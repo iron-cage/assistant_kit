@@ -3,7 +3,7 @@
 
 use claude_profile::account::TagFilter;
 use claude_profile::usage::test_bridge::{ render_text, render_tsv, render_json, extract_get_field };
-use claude_profile::usage::test_bridge::types::{ AccountQuota, SortStrategy, PreferStrategy, ColsVisibility, GetField };
+use claude_profile::usage::test_bridge::types::{ AccountQuota, SortStrategy, PreferStrategy, ColsVisibility, GetField, REDIRECT_NO_QUOTA_REASON };
 use claude_profile::usage::test_bridge::FAR_FUTURE_MS;
 
 /// FT-20/009 — `~Renews` must retain billing date (not error reason) for 429-errored accounts.
@@ -114,6 +114,118 @@ fn mre_bug_220_renews_preserved_for_429_accounts()
   assert!(
     text.contains( "(rate limited (429))" ),
     "BUG-220: error reason must appear in render_text output (in a quota column)",
+  );
+}
+
+/// FT-22/009 — redirect-backend Err row: compact `(redirect)` note in the last quota
+/// column (not the 40-char backend descriptor) and `—` in `~Renews` (not `?`).
+///
+/// # Root Cause
+/// The Err arm had no redirect branch when Feature 071 introduced the row type: the full
+/// `REDIRECT_NO_QUOTA_REASON` sentence rode BUG-220's last-quota-column error contract
+/// (sized for transient failure strings; with `auto_wrap` off it widened the column for
+/// the whole table), and `renews_label(None, None)`'s `"?"` ("data missing") reported a
+/// datum that is *inapplicable*, not missing — redirect accounts have no Anthropic
+/// billing org at all.
+///
+/// # Why Not Caught
+/// Feature 071's tests exercised fetch/refresh/touch skips, never the table's Err-arm
+/// cells; every prior Err-arm render fixture was a transient-failure OAuth row.
+///
+/// # Fix Applied
+/// The Err arm gates on `is_redirect_backend()`: note cell → `(redirect)`, renews cell
+/// → `—`. Non-redirect Err rows keep the full shortened reason (BUG-220 contract intact).
+///
+/// # Prevention
+/// A new account type must ship with an Err-arm render fixture; this test pins the
+/// redirect cell contract next to BUG-220's transient-failure contract.
+///
+/// # Pitfall
+/// Assert against the row *line* containing the account name — table-wide substring
+/// absence cannot distinguish "cell fixed" from "row not rendered at all".
+///
+/// Spec: [`tests/docs/feature/009_token_usage.md` FT-36]
+#[ doc = "bug_reproducer(BUG-538)" ]
+#[ test ]
+fn mre_bug_538_redirect_row_compact_note_and_renews_dash()
+{
+  // Redirect row (kimi-shaped): static key (expires_at_ms 0), no billing org, locked.
+  let redirect_aq = AccountQuota
+  {
+    fallback_reason : None,
+    touched_recently : false,
+    name          : "kimi".to_string(),
+    is_current    : false,
+    is_active             : true,
+    is_occupied_elsewhere : false,
+    expires_at_ms         : 0,
+    result                : Err( REDIRECT_NO_QUOTA_REASON.to_string() ),
+    account       : None,
+    host          : String::new(),
+    role          : String::new(),
+    renewal_at    : None,
+    cached        : false,
+    cache_age_secs : None,
+    org_created_at : None,
+    is_owned      : true,
+    owner                : String::new(),
+    claim_lock : true, reserve : false,
+    inference_provider : "kimi".to_string(),
+    tags : Vec::new(),
+  };
+  // BUG-220 regression guard: a transient-failure OAuth row keeps its full reason.
+  let err_aq = AccountQuota
+  {
+    fallback_reason : None,
+    touched_recently : false,
+    name          : "i11@test.com".to_string(),
+    is_current    : false,
+    is_active             : false,
+    is_occupied_elsewhere : false,
+    expires_at_ms         : FAR_FUTURE_MS,
+    result                : Err( "rate limited (429)".to_string() ),
+    account       : None,
+    host          : String::new(),
+    role          : String::new(),
+    renewal_at    : None,
+    cached        : false,
+    cache_age_secs : None,
+    org_created_at : None,
+    is_owned      : true,
+    owner                : String::new(),
+    claim_lock : false, reserve : false,
+    inference_provider : String::new(),
+    tags : Vec::new(),
+  };
+  let accounts = vec![ redirect_aq, err_aq ];
+  let cols     = ColsVisibility::default_set();
+  let text     = render_text(
+    &accounts, SortStrategy::Name, None, PreferStrategy::Any, &cols, None, None, None, None, false, &TagFilter::default() );
+
+  let kimi_line = text.lines().find( | l | l.contains( "kimi" ) ).expect( "redirect row must render" );
+  assert!(
+    kimi_line.contains( "(redirect)" ),
+    "BUG-538: redirect row's last quota cell must carry the compact (redirect) marker, got:\n{kimi_line}",
+  );
+  assert!(
+    !text.contains( "no Anthropic quota" ),
+    "BUG-538: the 40-char backend descriptor must not reach the table (it widens its column for every row), got:\n{text}",
+  );
+  // ~Renews is the first cell after Expires (`static` for redirect rows): it must be `—`.
+  let after_expires = kimi_line
+    .split( "static" )
+    .nth( 1 )
+    .expect( "redirect row must show static Expires (Feature 071 contract)" );
+  assert_eq!(
+    after_expires.split_whitespace().next(),
+    Some( "\u{2014}" ),
+    "BUG-538: redirect ~Renews must be — (renewal is inapplicable, not unknown), got:\n{kimi_line}",
+  );
+
+  let err_line = text.lines().find( | l | l.contains( "i11@test.com" ) ).expect( "OAuth Err row must render" );
+  assert!(
+    err_line.contains( "(rate limited (429))" ),
+    "BUG-220 regression guard: non-redirect Err rows keep the full shortened reason, got:\n{err_line}",
   );
 }
 

@@ -244,7 +244,19 @@ pub fn render_text(
       Err( reason ) =>
       {
         let dash      = "\u{2014}".to_string();
-        let error_str = format!( "({})", shorten_error( reason ) );
+        // Fix(BUG-538): a redirect-backend row is a by-design absence of Anthropic quota,
+        //   not a fetch failure — the generic Err contract misrepresents it twice.
+        // Root cause: no redirect branch existed when Feature 071 introduced the row type —
+        //   the 40-char backend descriptor rode BUG-220's last-quota-column contract (sized
+        //   for transient failure strings; auto_wrap off → widens the column for every row),
+        //   and renews_label's "?" ("data missing") reported an inapplicable datum (redirect
+        //   accounts have no Anthropic billing org at all).
+        // Pitfall: the full REDIRECT_NO_QUOTA_REASON sentence stays in trace output (fetch
+        //   layer); non-redirect Err rows must keep the full shortened reason — that is
+        //   BUG-220's placement contract.
+        let redirect    = aq.is_redirect_backend();
+        let error_str   = if redirect { "(redirect)".to_string() } else { format!( "({})", shorten_error( reason ) ) };
+        let renews_cell = if redirect { dash.clone() } else { renews_str };
 
         let mut row : Vec< String > = vec![ flag_cell ];
         if cols.status       { row.push( status_emoji( aq ).to_string() ); }
@@ -259,7 +271,7 @@ pub fn render_text(
         let quota_end_len = row.len();
         if cols.expires      { row.push( expires_cell ); }
         if cols.sub          { row.push( sub_str ); }
-        if cols.renews       { row.push( renews_str ); }
+        if cols.renews       { row.push( renews_cell ); }
         if cols.host         { row.push( aq.host.clone() ); }
         if cols.role         { row.push( aq.role.clone() ); }
         if cols.owner        { row.push( aq.owner.clone() ); }
