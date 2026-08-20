@@ -13,8 +13,8 @@ use crate::account::{ TagFilter, eligible };
 use super::types::{ AccountQuota, SortStrategy, PreferStrategy, ColsVisibility, GetField };
 use super::format::{
   recommended_model,
-  expires_cell_for, sub_label, shorten_error, with_lock_marker,
-  quota_text_cells, status_emoji, renews_label, next_event_label, next_event_raw, renewal_secs,
+  expires_cell_for, sub_cell_for, renews_cell_for, shorten_error, with_lock_marker,
+  quota_text_cells, status_emoji, next_event_label, next_event_raw, renewal_secs,
 };
 use super::sort::{ sort_indices, find_next_for_strategy, strategy_metric };
 use super::render_sessions::append_sessions_table;
@@ -129,28 +129,12 @@ pub fn render_text(
     // Pitfall: use the aq-aware wrapper (cache `~`-prefix + redirect `static`), not
     //   compute_expires_cell directly, wherever an aq is in scope.
     let expires_cell = expires_cell_for( aq, now_secs );
-    let sub_str      = sub_label( aq.account.as_ref() ).to_string();
-    // Fix(BUG-232): billing_type=="none" → no active subscription → no renewal date to show.
-    // Root cause: renews_label uses org_created_at unconditionally; has no billing_type param.
-    // Pitfall: org_created_at may be present even when subscription is cancelled; must check
-    //   billing_type BEFORE passing org_created_at to renews_label.
-    // Fix(BUG-538): redirect rows rendered `?` — renews_label's both-None "unknown" fallback.
-    // Root cause: a redirect account has no Anthropic billing org BY DESIGN — "no renewal"
-    //   is a known fact, not missing data, so the unknown marker asserts a falsehood.
-    // Pitfall: is_no_subscription() never covers redirect rows (billing_type is absent, not
-    //   "none") — the redirect predicate must be checked in its own right.
-    let renews_str = if aq.is_no_subscription() || aq.is_redirect_backend()
-    {
-      "\u{2014}".to_string()
-    }
-    else
-    {
-      renews_label(
-        aq.renewal_at.as_deref(),
-        aq.org_created_at.as_deref(),
-        now_secs,
-      )
-    };
+    // Fix(BUG-540): sub/renews come from their aq-aware helpers — the known-absence
+    //   predicates (BUG-232 billing "none", BUG-538 redirect backend) live once in
+    //   format.rs instead of being re-stated per surface, which is how the extractor's
+    //   copy missed the BUG-538 addition.
+    let sub_str      = sub_cell_for( aq );
+    let renews_str   = renews_cell_for( aq, now_secs );
 
     match &aq.result
     {
@@ -494,23 +478,15 @@ pub fn extract_get_field( aq : &AccountQuota, field : GetField, now_secs : u64 )
     // Pitfall: any new Expires accessor must use the aq-aware expires_cell_for (cache
     //   `~`-prefix + redirect `static`), not compute_expires_cell.
     GetField::Expires => expires_cell_for( aq, now_secs ),
-    GetField::Sub    => sub_label( aq.account.as_ref() ).to_string(),
-    // Fix(BUG-232): billing_type=="none" → no active subscription → no renewal date to show.
-    // Root cause: renews_label uses org_created_at unconditionally; has no billing_type param.
-    // Pitfall: org_created_at may be present even when subscription is cancelled; must check
-    //   billing_type BEFORE passing org_created_at to renews_label.
-    GetField::Renews => if aq.is_no_subscription()
-    {
-      "\u{2014}".to_string()
-    }
-    else
-    {
-      renews_label(
-        aq.renewal_at.as_deref(),
-        aq.org_created_at.as_deref(),
-        now_secs,
-      )
-    },
+    GetField::Sub    => sub_cell_for( aq ),
+    // Fix(BUG-540): this arm carried a third copy of the renews predicate and missed
+    //   BUG-538's redirect addition — `get::renews` said `?` while the table cell said
+    //   `—`, violating this function's own same-as-table contract stated above.
+    // Root cause: per-call-site predicate duplication; the fix that patched the two
+    //   table copies had no single definition to land in.
+    // Pitfall: every cell whose value depends on account state must be computed by its
+    //   aq-aware helper (`expires_cell_for`/`sub_cell_for`/`renews_cell_for`) here too.
+    GetField::Renews => renews_cell_for( aq, now_secs ),
     GetField::Host         => aq.host.clone(),
     GetField::Role         => aq.role.clone(),
     GetField::NextEventType | GetField::NextEventSecs =>

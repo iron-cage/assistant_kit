@@ -12,6 +12,7 @@ use crate::cli_runner::{
   stdout, stderr, assert_exit,
   write_account, write_account_with_token,
   write_live_credentials_with_token, live_active_token, require_live_api,
+  clears_rotation_floors,
   FAR_FUTURE_MS, PAST_MS,
 };
 use tempfile::TempDir;
@@ -328,8 +329,12 @@ fn it010_expired_token_shows_expired_in_expires_col()
 // ── Live: recommendation marker shown ────────────────────────────────────────
 
 /// Live: two accounts — one active, one non-active — both with real tokens.
-/// The non-active account is the only candidate and must be marked `→`.
-/// The active account must not be marked `→`.
+/// When the sole candidate (`acct-b`) clears both rotation quota floors, the footer
+/// must recommend it; when it is h- or weekly-exhausted, the footer must be
+/// SUPPRESSED (BUG-292/BUG-324) — the fixture cache mirrors the host's LIVE
+/// snapshot, so both states are legitimate (Fix(audit-live-footer-fragile) —
+/// same conditional contract as it102/it103; see `clears_rotation_floors`).
+/// The active account must never appear in a `Next` line, in either state.
 #[ test ]
 fn it011_lim_it_recommendation_marker_shown()
 {
@@ -352,10 +357,20 @@ fn it011_lim_it_recommendation_marker_shown()
   // Footer "Next (renew) · acct-b · ..." contains both "Next" and "acct-b".
   // The → column header and data rows never share a line with account names.
   let rec_marked = text.lines().any( |line| line.contains( "Next" ) && line.contains( "acct-b" ) );
-  assert!(
-    rec_marked,
-    "sort::renew: footer must recommend 'acct-b' (line containing 'Next' and 'acct-b'), got:\n{text}",
-  );
+  if clears_rotation_floors( home, "acct-b" )
+  {
+    assert!(
+      rec_marked,
+      "sort::renew: footer must recommend 'acct-b' (line containing 'Next' and 'acct-b'), got:\n{text}",
+    );
+  }
+  else
+  {
+    assert!(
+      !rec_marked,
+      "footer must be suppressed when the only candidate is quota-exhausted (BUG-292/BUG-324), got:\n{text}",
+    );
+  }
   let active_rec = text.lines().any( |line| line.contains( "Next" ) && line.contains( "acct-a" ) );
   assert!(
     !active_rec,
@@ -366,7 +381,11 @@ fn it011_lim_it_recommendation_marker_shown()
 // ── Live: footer shows valid count and next recommendation ───────────────────
 
 /// Live: two accounts with real tokens → at least two valid quota results →
-/// footer line shows "Valid: 2" and "Next:".
+/// footer shows `2/2` valid unconditionally (cache-served rows are `Ok` regardless
+/// of quota state). The `Next (` line is conditional: present when the sole
+/// candidate (`acct-b`, cache mirroring the host's LIVE snapshot) clears both
+/// rotation quota floors, suppressed when it is exhausted (BUG-292/BUG-324;
+/// Fix(audit-live-footer-fragile) — same conditional contract as it102/it103).
 #[ test ]
 fn it012_lim_it_footer_shows_valid_count()
 {
@@ -391,10 +410,20 @@ fn it012_lim_it_footer_shows_valid_count()
     "footer must show 2/2 valid accounts, got:\n{text}",
   );
   // Footer format: "Next (renew) · name · model · metric" uses · not :.
-  assert!(
-    text.contains( "Next (" ),
-    "footer must contain 'Next (' recommendation line, got:\n{text}",
-  );
+  if clears_rotation_floors( home, "acct-b" )
+  {
+    assert!(
+      text.contains( "Next (" ),
+      "footer must contain 'Next (' recommendation line, got:\n{text}",
+    );
+  }
+  else
+  {
+    assert!(
+      !text.contains( "Next (" ),
+      "footer must be suppressed when the only candidate is quota-exhausted (BUG-292/BUG-324), got:\n{text}",
+    );
+  }
 }
 
 // ── Offline: current-vs-active divergence ─────────────────────────────────────

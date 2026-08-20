@@ -36,7 +36,7 @@
 | 2 | [`--print`](../param/002_print.md) | Auto-enabled when message given (same as run) |
 | 17 | [`--effort`](../param/017_effort.md) | Same default as run (max); overridable |
 | 9 | [`--max-tokens`](../param/009_max_tokens.md) | Same default as run (128000); overridable |
-| 28 | [`--subdir`](../param/028_subdir.md) | Named workspace isolation within ask |
+| 28 | [`--topic`](../param/028_topic.md) | Named workspace isolation within ask |
 
 ### Workflow Steps
 
@@ -50,4 +50,4 @@
 |---|------------|--------------|
 | 2 | [Print Mode Capture](002_print_mode_capture.md) | `ask` uses print mode when message is given (same as run) |
 | 17 | [Model Selection](017_model_selection.md) | `ask` accepts `--model` to select the model |
-| 22 | [Session Isolation via Subdirectory](022_session_isolation_subdir.md) | `ask --subdir work` isolates session within a named workspace |
+| 22 | [Session Isolation via Topic Directory](022_session_isolation_topic.md) | `ask --topic work` isolates session within a named workspace |

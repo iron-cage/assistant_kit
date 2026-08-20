@@ -40,12 +40,12 @@ Rows are parameters or behaviors. Columns are the four commands. Key: ✅ = acti
 | `--expect` / `--expect-strategy` | ✅ supported | ✅ supported | ➖ not supported | ➖ not supported |
 | `--max-sessions` | ✅ supported | ✅ supported | ✅ supported (3-tier: CLI flag + `"max-sessions"` JSON key + `CLR_MAX_SESSIONS` env var; no config-file tier) | ➖ not supported |
 | `--retry-on-transient` / `--transient-delay` (+ all retry params) | ✅ supported | ✅ supported | ➖ not supported | ➖ not supported |
-| `--dir` / `--subdir` / `--session-dir` (deprecated, inert) | ✅ supported | ✅ supported | ➖ not supported | ➖ not supported |
+| `--dir` / `--topic` / `--session-dir` (deprecated, inert) | ✅ supported | ✅ supported | ➖ not supported | ➖ not supported |
 | `--system-prompt` / `--append-system-prompt` | ✅ supported | ✅ supported | via passthrough only | ➖ not supported |
 | `--json-schema` / `--mcp-config` | ✅ supported | ✅ supported | via passthrough only | ➖ not supported |
 | `--args-file` / `CLR_ARGS_FILE` / stdin JSON | ✅ supported | ✅ supported | ✅ supported | ✅ supported |
 
-**Note:** `topic` (the 3rd member of the run/ask command group — see [`command_group/01_run_ask.md`](command_group/01_run_ask.md)) has an injection profile byte-identical to `ask` in every row above; it is omitted as a separate column to avoid duplicating identical data. `topic`'s only divergence is its default `--subdir` value (auto-generated slug vs. `.`), documented in [`param/028_subdir.md`](param/028_subdir.md), not a Parameter Matrix injection default.
+**Note:** `topic` (the 3rd member of the run/ask command group — see [`command_group/01_run_ask.md`](command_group/01_run_ask.md)) has an injection profile byte-identical to `ask` in every row above; it is omitted as a separate column to avoid duplicating identical data. `topic`'s only divergence is its default `--topic` value (auto-generated slug vs. `.`), documented in [`param/028_topic.md`](param/028_topic.md), not a Parameter Matrix injection default.
 
 ---
 

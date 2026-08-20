@@ -33,11 +33,11 @@ fn session_exists( storage_dir : &std::path::Path ) -> Option< SessionId >
   continuation::most_recent_session_in_dir( storage_dir )
 }
 
-/// Resolve the effective working directory from `--dir` and `--subdir` args.
+/// Resolve the effective working directory from `--dir` and `--topic` args.
 ///
-/// Fix(BUG-229): guard empty string — `--subdir ""` must be identity, not degenerate `/-`
+/// Fix(BUG-229): guard empty string — `--topic ""` must be identity, not degenerate `/-`
 /// Root cause: only `"."` was checked; empty string passed the guard and produced bare-hyphen dir
-/// Pitfall: `env_str` already filters empty, but CLI path can deliver `""` via `--subdir ""`
+/// Pitfall: `env_str` already filters empty, but CLI path can deliver `""` via `--topic ""`
 ///
 /// Fix(BUG-231): skip `create_dir_all` in dry-run — dry-run must be side-effect-free
 /// Root cause: `build_claude_command` runs before the dry-run branch; mkdir executed unconditionally
@@ -45,20 +45,22 @@ fn session_exists( storage_dir : &std::path::Path ) -> Option< SessionId >
 fn resolve_effective_dir( cli : &CliArgs ) -> Option< std::path::PathBuf >
 {
   let base_dir = cli.dir.as_deref().map( std::path::PathBuf::from );
-  match cli.subdir.as_deref()
+  match cli.topic.as_deref()
   {
     Some( sub ) if sub != "." && !sub.is_empty() =>
     {
-      let base = base_dir.unwrap_or_else( ||
-        std::env::current_dir().unwrap_or_else( | _ | std::path::PathBuf::from( "." ) )
-      );
-      let effective = base.join( format!( "-{sub}" ) );
+      // Base and join both come from `topic_path` so this function, `topic.rs`'s
+      // free-name probe, and `topics.rs`'s listing/resolution can never disagree
+      // about where a given topic name lives.
+      let base = super::topic_path::topic_base( cli.dir.as_deref(), cli.global );
+      let effective = super::topic_path::topic_dir( &base, sub );
       if !cli.dry_run
       {
         let _ = std::fs::create_dir_all( &effective );
       }
       Some( effective )
     }
+    // No topic directory to place, so --global has nothing to redirect: --dir (or cwd) stands.
     _ => base_dir,
   }
 }
@@ -75,12 +77,12 @@ pub( crate ) struct SessionTransplant
 }
 
 /// Side-band data `build_claude_command` hands the run dispatcher: the effective
-/// working directory (post `--dir`/`--subdir` resolution) and the session
+/// working directory (post `--dir`/`--topic` resolution) and the session
 /// transplant plan, when one applies.
 #[ derive( Debug ) ]
 pub( crate ) struct RunPreparation
 {
-  /// Effective working directory after `--dir`/`--subdir` resolution; `None` = cwd.
+  /// Effective working directory after `--dir`/`--topic` resolution; `None` = cwd.
   pub( crate ) effective_working_dir : Option< std::path::PathBuf >,
   /// Physical session copy to perform before spawn (BUG-490), if applicable.
   pub( crate ) transplant : Option< SessionTransplant >,
@@ -249,7 +251,7 @@ pub( crate ) fn build_claude_command( cli : &CliArgs )
   //
   // The raw value is resolved to its physical absolute form before encoding (see
   // `physical_abs`). An explicitly-empty value is treated the same as omitted — same
-  // empty-is-identity rule as `--subdir ""` (BUG-229); without the filter an empty value
+  // empty-is-identity rule as `--topic ""` (BUG-229); without the filter an empty value
   // would encode to the `-unknown` fallback dir and actively target that storage.
   //
   // Fix(BUG-490): this dir is no longer exported as CLAUDE_CODE_SESSION_DIR — claude ≥2.x

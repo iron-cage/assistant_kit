@@ -68,7 +68,7 @@ clr ask --dir ~/project "What is the entry point?"
 | # | Command | Relationship |
 |---|---------|--------------|
 | 1 | [`run`](01_run.md) | `ask` is a pure semantic alias for `run` with identical behavior |
-| 2 | [`topic`](11_topic.md) | Sibling alias in the same command_group; `topic` differs from `ask` only in `--subdir`'s default |
+| 2 | [`topic`](11_topic.md) | Sibling alias in the same command_group; `topic` differs from `ask` only in `--topic`'s default |
 
 ### Referenced Parameter Groups
 
@@ -92,7 +92,7 @@ clr ask --dir ~/project "What is the entry point?"
 | 15 | [015_ask_mode.md](../user_story/015_ask_mode.md) | Developer |
 | 17 | [017_model_selection.md](../user_story/017_model_selection.md) | Developer |
 | 19 | [019_mcp_config_injection.md](../user_story/019_mcp_config_injection.md) | Developer |
-| 22 | [022_session_isolation_subdir.md](../user_story/022_session_isolation_subdir.md) | Developer |
+| 22 | [022_session_isolation_topic.md](../user_story/022_session_isolation_topic.md) | Developer |
 | 23 | [023_output_file_capture.md](../user_story/023_output_file_capture.md) | Developer |
 | 24 | [024_enum_output_validation.md](../user_story/024_enum_output_validation.md) | Developer |
 | 25 | [025_concurrency_gate.md](../user_story/025_concurrency_gate.md) | Developer |

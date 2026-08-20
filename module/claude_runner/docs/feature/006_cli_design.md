@@ -9,7 +9,7 @@
 
 ### Design
 
-**Command syntax:** `clr` uses bare-word subcommands (`run`, `isolated`, `refresh`, `help`, `ps`, `kill`, `tools`, `ask`, `scope`, `query`, `topic`) followed by `--flag value` pairs and an optional positional message. This mirrors POSIX CLI convention (like `git`) rather than a unilang-style `.command param::value` syntax. `topic` delegates to `run`'s handler with an auto-generated `--subdir` default — see [command/11_topic.md](../cli/command/11_topic.md).
+**Command syntax:** `clr` uses bare-word subcommands (`run`, `isolated`, `refresh`, `help`, `ps`, `kill`, `tools`, `ask`, `scope`, `query`, `topic`) followed by `--flag value` pairs and an optional positional message. This mirrors POSIX CLI convention (like `git`) rather than a unilang-style `.command param::value` syntax. `topic` delegates to `run`'s handler with an auto-generated `--topic` default — see [command/11_topic.md](../cli/command/11_topic.md).
 
 **Parsing:** A hand-rolled parser (no external CLI framework) validates an explicit whitelist of known flags; unknown flags produce an error with a `--help` hint. Positional arguments are joined with spaces to form the message. Duplicate value-flags resolve last-wins (matches curl/git convention).
 

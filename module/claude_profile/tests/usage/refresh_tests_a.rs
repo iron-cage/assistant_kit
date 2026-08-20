@@ -167,12 +167,44 @@ fn test_apply_refresh_empty_accounts()
   assert!( accounts.is_empty(), "empty slice must remain empty" );
 }
 
-/// C2 / FT-14 — `apply_refresh` `None`-paths: 401 + no credential file → result unchanged.
+/// C2 / FT-14 — `apply_refresh` `None`-path: 401 + no credential file → result becomes
+/// the cause-neutral `Err("token refresh failed")` (BUG-297 replaced the original error;
+/// BUG-539 fixed the label's wording).
 ///
 /// `should_refresh` fires (`should_retry=true`); `claude_profile::account::refresh_account_token`
 /// is called with `paths=None`; internally it reads `{store}/{name}.credentials.json`
-/// which is absent, so it returns `None`; `apply_refresh` skips the account via
-/// `continue` without modifying the result.
+/// which is absent, so it returns `None`; `apply_refresh` overwrites the result and
+/// skips the account via `continue`.
+///
+/// # Root Cause (BUG-539)
+/// The label was `"refresh token expired"` — a specific server-side cause this arm
+/// cannot observe. `refresh_account_token` returns `None` for every failure mode
+/// (account/credentials file absent, redirect backend, blank payload from a logged-out
+/// sandbox, subprocess failure, `invalid_grant` revocation, genuine RT expiry); no
+/// cause crosses the `Option` boundary.
+///
+/// # Why Not Caught
+/// The label was written when RT expiry was the only anticipated `None` cause and was
+/// never revisited as the other causes were added; every test asserted the literal
+/// string, so the suite pinned the misdiagnosis instead of catching it.
+///
+/// # Fix Applied
+/// `refresh.rs` `apply_refresh`: the `None` arm writes cause-neutral
+/// `Err("token refresh failed")`; all label assertions across
+/// `refresh_tests_a`/`refresh_tests_b`/`refresh_predicate_tests`/
+/// `usage_feature_test`/`account_refresh_test` updated to the new literal.
+///
+/// # Prevention
+/// An error label must claim no more than the observing code can actually know —
+/// when a boundary erases the cause (here: `Option`), the label stays cause-neutral
+/// unless a real cause is threaded through.
+///
+/// # Pitfall
+/// This string is a diagnosis presented to operators: asserting RT expiry sent a live
+/// investigation of three revoked grants down the wrong path (their
+/// `refreshTokenExpiresAt` was 15 days out; the grants had been revoked by RT-reuse
+/// detection, not expired).
+#[ doc = "bug_reproducer(BUG-539)" ]
 #[ test ]
 fn test_apply_refresh_401_no_cred_file()
 {

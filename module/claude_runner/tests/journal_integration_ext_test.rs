@@ -344,7 +344,7 @@ fn ec15_stdout_over_1mb_has_truncation_marker()
 /// ## Prevention
 /// This test asserts the custom `--journal-dir` path does NOT exist after dry-run.
 /// ## Pitfall
-/// Uses a unique subdirectory that does not exist before the test; existence check
+/// Uses a unique topic directory that does not exist before the test; existence check
 /// after dry-run detects the side effect.
 #[ test ]
 fn ec16_dry_run_does_not_create_journal_directory()

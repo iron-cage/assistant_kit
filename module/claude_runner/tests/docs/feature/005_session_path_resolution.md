@@ -16,7 +16,7 @@ Test case planning for [feature/005_session_path_resolution.md](../../../docs/fe
 | FT-1 | `scope_for()` default: uses `$HOME/.claude` when CLAUDE_HOME unset | scope_for |
 | FT-2 | `scope_for()` respects `CLAUDE_HOME` env var override | scope_for |
 | FT-3 | `scope_for()` respects `CLAUDE_COWORK_MEMORY_PATH_OVERRIDE` | scope_for |
-| FT-4 | `scope_for()` anchors memory dir to git root, not subdirectory | scope_for |
+| FT-4 | `scope_for()` anchors memory dir to git root, not topic directory | scope_for |
 | FT-5 | `scope_for()` returns `None` for session file when dir is empty | scope_for |
 | FT-6 | `clr scope` prints 6 `CLAUDE_*` vars in `key=value` format | clr scope |
 | FT-7 | `--from` plans a transplant of the most-recent source session | cross-loading |
@@ -69,9 +69,9 @@ Test case planning for [feature/005_session_path_resolution.md](../../../docs/fe
 
 ---
 
-### FT-4: `scope_for()` anchors memory dir to git root, not subdirectory
+### FT-4: `scope_for()` anchors memory dir to git root, not topic directory
 
-- **Given:** git repo at `/tmp/sf4_repo` with `.git`; target dir is `/tmp/sf4_repo/src` (a subdirectory)
+- **Given:** git repo at `/tmp/sf4_repo` with `.git`; target dir is `/tmp/sf4_repo/src` (a topic directory)
 - **When:** `clr scope --dir /tmp/sf4_repo/src`
 - **Then:** `CLAUDE_MEMORY_DIR` contains the encoded form of `/tmp/sf4_repo` (git root), NOT `/tmp/sf4_repo/src`; `CLAUDE_SESSION_DIR` uses `/tmp/sf4_repo/src` encoding
 - **Exit:** 0

@@ -3,7 +3,7 @@
 ### Scope
 
 **Responsibilities:** Behavioral requirements, API contracts, CLI reference, and structural constraints for the `claude_runner` crate.
-**In Scope:** Feature requirements (`feature/`), invariant constraints (`invariant/`), public API contracts (`api/`), CLI reference (`cli/`), algorithm specifications (`algorithm/`), variable definitions (`variable/`), design rationale, cross-entity index, and doc graph.
+**In Scope:** Feature requirements (`feature/`), invariant constraints (`invariant/`), public API contracts (`api/`), CLI reference (`cli/`), algorithm specifications (`algorithm/`), variable definitions (`variable/`), narrative operational walkthroughs (`guide/`), design rationale, cross-entity index, and doc graph.
 **Out of Scope:** Source code (→ `src/`), automated tests (→ `tests/`), manual testing plans (→ `tests/manual/`), build scripts (→ `verb/`).
 
 ### Responsibility Table
@@ -17,6 +17,7 @@
 | `001_design_decisions.md` | Rationale for key design choices made during the `--flag value` CLI redesign |
 | `entity.md` | Cross-entity index: Master Doc Entities Table and Master Doc Instances Table |
 | `feature/` | Runner tool design: execution modes, defaults, YAML library |
+| `guide/` | Narrative operational walkthroughs for reproducible multi-step tasks |
 | `invariant/` | Default flag injection, dependency constraints, and command naming convention |
 | `doc_graph.yml` | Cross-reference graph for all doc instances |
 

@@ -4,7 +4,7 @@
 
 - **Purpose**: Document integration and edge case test plans for all clr commands, parameters, and types.
 - **Responsibility**: Index of per-command, per-parameter, per-type, per-group, and per-env-param test case planning files.
-- **In Scope**: All 11 clr commands, all 75 parameters, all 14 types, all 7 parameter groups, 2 env parameter specs, 30 user story specs, 2 parity specs, 1 dictionary vocabulary check, and test surface for feature/invariant/api doc instances.
+- **In Scope**: All 12 clr commands, all 83 parameters, all 14 types, all 7 parameter groups, 2 env parameter specs, 31 user story specs, 2 parity specs, 1 dictionary vocabulary check, and test surface for feature/invariant/api doc instances.
 - **Out of Scope**: Automated test implementations (→ `tests/` in crate), spec documentation (→ `docs/feature/`).
 
 Test case planning for `clr` CLI. Each file contains a Test Case Index with coverage summary. Detailed test sections (executable specs) are added at L5.
@@ -51,6 +51,7 @@ Test case planning for `clr` CLI. Each file contains a Test Case Index with cove
 - [`scope`](command/09_scope.md)
 - [`query`](command/10_query.md)
 - [`topic`](command/11_topic.md)
+- [`topics`](command/12_topics.md)
 
 #### Parameters
 - [`[MESSAGE]`](param/001_message.md)
@@ -81,7 +82,7 @@ Test case planning for `clr` CLI. Each file contains a Test Case Index with cove
 - [`--file`](param/025_file.md)
 - [`--strip-fences`](param/026_strip_fences.md)
 - [`--keep-claudecode`](param/027_keep_claudecode.md)
-- [`--subdir`](param/028_subdir.md)
+- [`--topic`](param/028_topic.md)
 - [`--output-file`](param/029_output_file.md)
 - [`--expect`](param/030_expect.md)
 - [`--expect-strategy`](param/031_expect_strategy.md)
@@ -178,7 +179,7 @@ Test case planning for `clr` CLI. Each file contains a Test Case Index with cove
 - [MCP Config Injection](user_story/019_mcp_config_injection.md)
 - [Suppress Effort Max](user_story/020_suppress_effort_max.md)
 - [Keep ClaudeCode Context](user_story/021_keep_claudecode_context.md)
-- [Session Isolation via Subdirectory](user_story/022_session_isolation_subdir.md)
+- [Session Isolation via Topic Directory](user_story/022_session_isolation_topic.md)
 - [Output File Capture](user_story/023_output_file_capture.md)
 - [Enum Output Validation](user_story/024_enum_output_validation.md)
 - [Session Concurrency Gate](user_story/025_concurrency_gate.md)
@@ -187,6 +188,7 @@ Test case planning for `clr` CLI. Each file contains a Test Case Index with cove
 - [Session Cross-Loading](user_story/028_session_transplant.md)
 - [Scope Inspection](user_story/029_scope_inspection.md)
 - [Topic Creation](user_story/030_topic_creation.md)
+- [Topic Discovery](user_story/031_topic_discovery.md)
 
 #### Parity
 - [run / ask / isolated](parity/01_run_ask_isolated.md)

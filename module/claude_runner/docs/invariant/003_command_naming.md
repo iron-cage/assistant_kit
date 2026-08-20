@@ -30,7 +30,7 @@ Every `clr` command must be a bare word (no `-` or `--` prefix). Only parameters
 | `tools` | explicit first token | `clr tools` — list Claude Code built-in tools with version info |
 | `scope` | explicit first token | `clr scope` — print all 6 `CLAUDE_*` path variables for a directory |
 | `query` | explicit first token | `clr query` — start or dispatch against a persistent PID-addressed control session |
-| `topic` | explicit first token | `clr topic "prompt"` — create/continue a named, session-isolated subdirectory; delegates to `dispatch_run()` after computing `--subdir`'s auto-generated slug default |
+| `topic` | explicit first token | `clr topic "prompt"` — create/continue a named, session-isolated topic directory; delegates to `dispatch_run()` after computing `--topic`'s auto-generated slug default |
 
 **Convenience aliases:** `--help` and `-h` are parameter-form aliases for the `help` command. They trigger identical behavior (`print_help()` + exit 0). The canonical invocation is `clr help`; the flag aliases exist for POSIX convention compliance.
 

@@ -14,7 +14,7 @@
 | **Flag** | `--from <DIR>` |
 | **Type** | `DirectoryPath` — resolved to physical absolute form; need not exist (a nonexistent source has no sessions → no cross-load, fresh session) |
 | **Path resolution** | `fs::canonicalize` (symlinks + `..` resolved); lexical cwd-join fallback for nonexistent paths |
-| **Empty value** | ignored entirely — same empty-is-identity rule as `--subdir ""` |
+| **Empty value** | ignored entirely — same empty-is-identity rule as `--topic ""` |
 | **Default** | current working directory — same default-to-cwd rule as `--dir`/`--to`; when both `--from` and `--to` are omitted, source and target resolve to the same storage, so the self-copy guard (below) suppresses the transplant and the run is an ordinary no-op |
 | **Env var** | `CLR_FROM` |
 | **Config key** | `from` (args-file JSON) |

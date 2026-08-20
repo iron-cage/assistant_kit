@@ -307,18 +307,18 @@ fn ec02_help_contains_claude_code_options_section()
   );
 }
 
-// EC-03: help has twelve usage forms (one per command, including scope and
-// topic; query contributes two — start form and PID-dispatch form, task 418)
+// EC-03: help has thirteen usage forms (one per command, including scope, topic,
+// and topics; query contributes two — start form and PID-dispatch form, task 418)
 #[ test ]
-fn ec03_help_has_twelve_usage_forms()
+fn ec03_help_has_thirteen_usage_forms()
 {
   let out = run_cli( &[ "--help" ] );
   assert!( out.status.success() );
   let stdout = String::from_utf8_lossy( &out.stdout );
   let count = stdout.lines().filter( | l | l.starts_with( "  clr " ) ).count();
   assert_eq!(
-    count, 12,
-    "help must have 12 usage lines starting with '  clr '. Got {count}:\n{stdout}"
+    count, 13,
+    "help must have 13 usage lines starting with '  clr '. Got {count}:\n{stdout}"
   );
 }
 

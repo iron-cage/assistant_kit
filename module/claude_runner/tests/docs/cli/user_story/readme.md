@@ -4,7 +4,7 @@
 
 - **Purpose**: Test case specs for user story doc instances in `docs/cli/user_story/`.
 - **Responsibility**: Per-user-story test spec files covering end-to-end user workflows.
-- **In Scope**: All 30 user stories: Interactive REPL, Print Mode Capture, Interactive With Message, Dry-run Preview, Project-specific Execution, Verbose Debugging, Fresh Session, Trace Execution, Custom System Prompt, Credential-isolated Execution, File Input, Code Block Extraction, Structured JSON Pipeline, Credential Refresh, Ask Mode, CLI Discoverability, Model Selection, Env-var Configuration, MCP Config Injection, Suppress Effort Max, Keep ClaudeCode Context, Session Isolation via Subdirectory, Output File Capture, Enum Output Validation, Session Concurrency Gate, Session Listing, Session Termination, Session Cross-Loading, Scope Inspection, Topic Creation.
+- **In Scope**: All 31 user stories: Interactive REPL, Print Mode Capture, Interactive With Message, Dry-run Preview, Project-specific Execution, Verbose Debugging, Fresh Session, Trace Execution, Custom System Prompt, Credential-isolated Execution, File Input, Code Block Extraction, Structured JSON Pipeline, Credential Refresh, Ask Mode, CLI Discoverability, Model Selection, Env-var Configuration, MCP Config Injection, Suppress Effort Max, Keep ClaudeCode Context, Session Isolation via Topic Directory, Output File Capture, Enum Output Validation, Session Concurrency Gate, Session Listing, Session Termination, Session Cross-Loading, Scope Inspection, Topic Creation, Topic Discovery.
 - **Out of Scope**: Parameter-level edge cases (-> `param/`), command-level integration (-> `command/`), type validation (-> `type/`).
 
 ### Responsibility Table
@@ -32,7 +32,7 @@
 | `019_mcp_config_injection.md` | `user_story` spec for MCP Config Injection | ✅ |
 | `020_suppress_effort_max.md` | `user_story` spec for Suppress Effort Max | ✅ |
 | `021_keep_claudecode_context.md` | `user_story` spec for Keep ClaudeCode Context | ✅ |
-| `022_session_isolation_subdir.md` | `user_story` spec for Session Isolation via Subdirectory | ✅ |
+| `022_session_isolation_topic.md` | `user_story` spec for Session Isolation via Topic Directory | ✅ |
 | `023_output_file_capture.md` | `user_story` spec for Output File Capture | ✅ |
 | `024_enum_output_validation.md` | `user_story` spec for Enum Output Validation | ✅ |
 | `025_concurrency_gate.md` | `user_story` spec for Session Concurrency Gate | ✅ |
@@ -41,3 +41,4 @@
 | `028_session_transplant.md` | `user_story` spec for Session Cross-Loading (Transplant) | ✅ |
 | `029_scope_inspection.md` | `user_story` spec for Scope Inspection | ✅ |
 | `030_topic_creation.md` | `user_story` spec for Topic Creation | ✅ |
+| `031_topic_discovery.md` | `user_story` spec for Topic Discovery | ✅ |

@@ -45,7 +45,7 @@ Key: ✅ = supported, ⬜ = not injected/not applicable, ➖ = not accepted, `*`
 | **Working directory** | | | | | | |
 | `--dir` | ✅ | ✅ | ✅ | ✅ | ➖ | subprocess working directory |
 | `--add-dir` | ✅ | ✅ | ✅ | ✅ | ➖ | additional allowed directory |
-| `--subdir` | ✅ | ✅ | ✅ default: auto-slug | ➖ | ➖ | named subdirectory under `--dir`; `topic`'s default diverges (auto-generated slug, not `.`) |
+| `--topic` | ✅ | ✅ | ✅ default: auto-slug | ➖ | ➖ | named topic directory under `--dir`; `topic`'s default diverges (auto-generated slug, not `.`) |
 | **Session** | | | | | | |
 | `--new-session` | ✅ | ✅ | ✅ | ➖ | ➖ | isolated always uses fresh temp HOME |
 | `--session-dir` | ✅ | ✅ | ✅ | ➖ | ➖ | |
@@ -98,13 +98,13 @@ Complements Universal Params above by summarizing the opposite extreme — param
 |-------|-----------|-------|
 | `isolated`-only | passthrough (`--`) | Sole route to `--output-format` on `isolated` — the only remaining native-flag gap after TSK-443 (all other formerly-passthrough-only params now have native flags); ergonomic gap only (last-wins arg order means passthrough already reaches it), not a functional one — see [`../parity/001_run_ask_isolated.md`](../parity/001_run_ask_isolated.md) Exclusion Rationale |
 | `isolated` + `refresh` only | `--creds` | Credential-isolated execution config; see [`04_credential_operations.md`](04_credential_operations.md) |
-| `run` + `ask` + `topic` only | `--output-format`, `--subdir`, `--new-session`, `--session-dir`, `--retry-on-transient`/`--transient-delay`, `--retry-on-auth`/`--auth-delay` | Session control, retries, and format negotiation — no passthrough equivalent exists for `isolated`/`refresh` since these configure the runner itself, not the `claude` subprocess (`--session-dir` itself is deprecated and inert — BUG-493 — retained here only because it remains an exclusively run/ask/topic-parseable flag, not because it still configures anything) |
+| `run` + `ask` + `topic` only | `--output-format`, `--topic`, `--new-session`, `--session-dir`, `--retry-on-transient`/`--transient-delay`, `--retry-on-auth`/`--auth-delay` | Session control, retries, and format negotiation — no passthrough equivalent exists for `isolated`/`refresh` since these configure the runner itself, not the `claude` subprocess (`--session-dir` itself is deprecated and inert — BUG-493 — retained here only because it remains an exclusively run/ask/topic-parseable flag, not because it still configures anything) |
 
 ### Invariants
 
 1. All 5 running commands inject `CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000` and `CLAUDE_CODE_AUTO_COMPACT_WINDOW=300000` (opt-out via `--no-compact-window`).
 2. `--dry-run` and `--trace` use the same code path for all 5 commands — `emit_credential_trace` for `isolated`/`refresh`, `handle_dry_run` for `run`/`ask`/`topic`. Both emit WYSIWYG output matching actual subprocess arguments.
-3. `run`, `ask`, and `topic` are functionally identical except for `--subdir`'s default — `ask` is a pure alias for `run`; `topic` diverges only in auto-generating `--subdir`'s value. Formalized as a strict command_group (identical handler, identical parameter set save the one stated divergence) in [`command_group/01_run_ask.md`](../command_group/01_run_ask.md) — see that file for the Representation Absorption Test and default-divergence table backing this claim.
+3. `run`, `ask`, and `topic` are functionally identical except for `--topic`'s default — `ask` is a pure alias for `run`; `topic` diverges only in auto-generating `--topic`'s value. Formalized as a strict command_group (identical handler, identical parameter set save the one stated divergence) in [`command_group/01_run_ask.md`](../command_group/01_run_ask.md) — see that file for the Representation Absorption Test and default-divergence table backing this claim.
 4. `isolated` and `refresh` run in an isolated temp HOME; session persistence is always suppressed.
 
 ### Notes
@@ -113,7 +113,7 @@ Complements Universal Params above by summarizing the opposite extreme — param
 
 `clr ask` is a pure alias for `clr run` — it accepts all the same parameters, routing them through `dispatch_run` unchanged. Only `--help` output differs.
 
-`clr topic` also routes through `dispatch_run` — its only divergence is `--subdir`'s default (auto-generated slug instead of `.`); see [`11_topic.md`](../command/11_topic.md).
+`clr topic` also routes through `dispatch_run` — its only divergence is `--topic`'s default (auto-generated slug instead of `.`); see [`11_topic.md`](../command/11_topic.md).
 
 ### Referenced Commands
 
@@ -121,7 +121,7 @@ Complements Universal Params above by summarizing the opposite extreme — param
 |---|---------|------------|-------|
 | 1 | [`run`](../command/01_run.md) | Full — all running params apply | Default command |
 | 5 | [`ask`](../command/05_ask.md) | Full — identical to run | Pure alias for run |
-| 11 | [`topic`](../command/11_topic.md) | Full — identical to run/ask except `--subdir` default | Auto-naming alias |
+| 11 | [`topic`](../command/11_topic.md) | Full — identical to run/ask except `--topic` default | Auto-naming alias |
 | 2 | [`isolated`](../command/03_isolated.md) | Subset — no retries, no session control | Credential-isolated execution |
 | 3 | [`refresh`](../command/04_refresh.md) | Minimal — creds + timeout + trace/dry-run | OAuth token refresh only |
 

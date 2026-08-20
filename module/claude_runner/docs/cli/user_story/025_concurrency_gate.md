@@ -69,5 +69,5 @@
 
 | # | User Story | Relationship |
 |---|------------|--------------|
-| 22 | [022_session_isolation_subdir.md](022_session_isolation_subdir.md) | `--subdir` isolates sessions by topic; `--max-sessions` limits total concurrent count |
+| 22 | [022_session_isolation_topic.md](022_session_isolation_topic.md) | `--topic` isolates sessions by topic; `--max-sessions` limits total concurrent count |
 | 18 | [018_env_var_configuration.md](018_env_var_configuration.md) | `CLR_MAX_SESSIONS` is an instance of the CLR_* env var system |

@@ -4,7 +4,7 @@
 
 Execute Claude Code as a subprocess with configurable flags — the default command invoked whenever no explicit subcommand is given. Use `clr` for interactive REPL sessions or `clr "message"` for single-turn print-mode execution with automatic session continuation.
 
--- **Parameters:** `[MESSAGE]`, `--print`, `--model`, `--verbose`, `--no-skip-permissions`, `--interactive`, `--new-session`, `--dir`, `--subdir`, `--max-tokens`, `--session-dir`, `--dry-run`, `--quiet`, `--trace`, `--no-ultrathink`, `--system-prompt`, `--append-system-prompt`, `--effort`, `--no-effort-max`, `--no-chrome`, `--no-persist`, `--json-schema`, `--mcp-config`, `--file`, `--strip-fences`, `--keep-claudecode`, `--output-file`, `--expect`, `--expect-strategy`, `--max-sessions`, and retry/input/output flags
+-- **Parameters:** `[MESSAGE]`, `--print`, `--model`, `--verbose`, `--no-skip-permissions`, `--interactive`, `--new-session`, `--dir`, `--topic`, `--max-tokens`, `--session-dir`, `--dry-run`, `--quiet`, `--trace`, `--no-ultrathink`, `--system-prompt`, `--append-system-prompt`, `--effort`, `--no-effort-max`, `--no-chrome`, `--no-persist`, `--json-schema`, `--mcp-config`, `--file`, `--strip-fences`, `--keep-claudecode`, `--output-file`, `--expect`, `--expect-strategy`, `--max-sessions`, and retry/input/output flags
 -- **Exit Codes:** 0 (success) | 1 (error) | 2 (rate-limit/transient) | 3 (expect mismatch) | 4 (timeout) | N (subprocess passthrough) | 128+signal (signal)
 -- **Modes:** interactive, print, dry-run, trace
 
@@ -29,7 +29,8 @@ The `run` token is optional — both forms are equivalent. When `run` appears as
 | [`--interactive`](../param/006_interactive.md) | bool | false | Forces TTY passthrough, overriding all auto-print triggers |
 | [`--new-session`](../param/007_new_session.md) | bool | false | Start fresh session (disables default continuation) |
 | [`--dir`](../param/008_dir.md) | [`DirectoryPath`](../type/02_directory_path.md) | cwd | Working directory (alias: `--to`) |
-| [`--subdir`](../param/028_subdir.md) | string | `.` | Named subdirectory appended to `--dir` (`/-NAME`); `.` = identity |
+| [`--topic`](../param/028_topic.md) | string | `.` | Named topic directory appended to `--dir` (`/-NAME`); `.` = identity |
+| [`--global`](../param/087_global.md) | bool | false | Resolve `--topic`'s base to the global topic home instead of cwd (alias: `-g`) |
 | [`--max-tokens`](../param/009_max_tokens.md) | [`TokenLimit`](../type/03_token_limit.md) | 128000 | Max output tokens |
 | [`--session-dir`](../param/010_session_dir.md) | [`DirectoryPath`](../type/02_directory_path.md) | — | Session storage directory (deprecated, inert — BUG-493) |
 | [`--dry-run`](../param/011_dry_run.md) | bool | false | Print command without executing |
@@ -91,7 +92,7 @@ The `run` token is optional — both forms are equivalent. When `run` appears as
 1. Parse flags; apply JSON config (from `--args-file`/`CLR_ARGS_FILE`/stdin) for unset parameters; apply CLR_* env var fallbacks for still-unset parameters; apply config-file defaults (project `.clr.toml` overriding user `~/.clr/config.toml`) for still-unset parameters — this is the final tier for every parameter including `--model`.
 2. If invocation is non-interactive (print mode) and `--max-sessions > 0`, count active non-interactive `claude` processes; block in 30-second polling loop until slot available or 1000-attempt limit reached (exit 1 on limit). Interactive invocations skip this step entirely.
 3. If `--dry-run`, render command preview via `describe()` / `describe_env()`; emit to stdout; exit 0.
-4. Resolve execution directory (`--dir` + `--subdir`); create `/-NAME` subdirectory if `--subdir` set and not `"."`.
+4. Resolve execution directory (`--dir` + `--topic`); create `/-NAME` topic directory if `--topic` set and not `"."`.
 5. Assemble subprocess command with injected defaults (`--dangerously-skip-permissions`, `--effort max`, `ultrathink` suffix, `-c` continuation unless `--new-session`).
 6. Execute subprocess (`execute()` for print mode with `--timeout` watchdog, `execute_interactive()` for REPL) — except when `--output-format stream-json` is set, which takes a dedicated live-streaming path (see Notes) instead of steps 6–7 below.
 7. Post-process output: strip fences if `--strip-fences`; validate against `--expect` if set; tee to `--output-file` if set; propagate subprocess exit code.
@@ -163,7 +164,7 @@ clr --dry-run "Run tests" --max-tokens 50000
 | 1 | [`ask`](05_ask.md) | Pure semantic alias for `run` with identical behavior |
 | 2 | [`isolated`](03_isolated.md) | Credential-isolated variant; does not share session state |
 | 3 | [`refresh`](04_refresh.md) | Credential refresh only; no task execution |
-| 4 | [`topic`](11_topic.md) | Alias for `run` with an auto-naming `--subdir` default |
+| 4 | [`topic`](11_topic.md) | Alias for `run` with an auto-naming `--topic` default |
 
 ### Referenced Parameter Groups
 
@@ -200,7 +201,7 @@ clr --dry-run "Run tests" --max-tokens 50000
 | 19 | [019_mcp_config_injection.md](../user_story/019_mcp_config_injection.md) | Developer |
 | 20 | [020_suppress_effort_max.md](../user_story/020_suppress_effort_max.md) | Developer |
 | 21 | [021_keep_claudecode_context.md](../user_story/021_keep_claudecode_context.md) | Developer |
-| 22 | [022_session_isolation_subdir.md](../user_story/022_session_isolation_subdir.md) | Developer |
+| 22 | [022_session_isolation_topic.md](../user_story/022_session_isolation_topic.md) | Developer |
 | 23 | [023_output_file_capture.md](../user_story/023_output_file_capture.md) | Developer |
 | 24 | [024_enum_output_validation.md](../user_story/024_enum_output_validation.md) | Developer |
 | 25 | [025_concurrency_gate.md](../user_story/025_concurrency_gate.md) | Developer |

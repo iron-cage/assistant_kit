@@ -987,6 +987,63 @@ pub fn require_live_api( label : &str )
   );
 }
 
+/// Whether the account whose name starts with `account_prefix` clears both
+/// rotation-eligibility quota floors right now, in the fixture HOME `home`.
+///
+/// For live-lane footer tests whose sole `Next`-eligible candidate is seeded by
+/// `write_account_with_token` — its quota cache mirrors the host's LIVE snapshot,
+/// so footer presence tracks the operator's real-time consumption. Callers branch:
+/// floors clear → footer must recommend the candidate; floors not clear → footer
+/// must be SUPPRESSED (BUG-292/BUG-324) — both live states assert the real contract.
+///
+/// Fix(audit-live-footer-fragile)
+/// Root cause: it102/it103/it104 asserted the footer recommendation unconditionally,
+///   but `find_first_eligible` (`sort_next.rs`) excludes h-exhausted (`5h ≤ 15%`) and
+///   weekly-exhausted (`7d ≤ 3%`) candidates BY DESIGN (BUG-292/BUG-324) — and the
+///   fixture caches mirror the host's LIVE account snapshot, so the tests' verdicts
+///   tracked the operator's real-time quota consumption: green at 4% weekly left,
+///   red at 3%, with no code change in between. Hoisted here from `usage_touch_test.rs`
+///   when the same audit found `usage_core_test.rs` it011/it012 carrying the identical
+///   unconditional assertions the original fix missed.
+/// Pitfall: parse the floors from the rendered TSV cells, never re-derive them from
+///   raw utilization — the displayed rounded value IS what eligibility compares
+///   (round-before-compare doctrine, BUG-331/BUG-336); a private re-computation here
+///   would reintroduce the exact drift audit-h-exhaustion-drift fixed in `sort_next.rs`.
+///
+/// # Panics
+///
+/// Panics if the `.usage` TSV probe fails, lacks the expected columns, has no row
+/// for `account_prefix`, or a quota cell is unparseable — a broken probe must fail
+/// loudly, never default to either branch.
+#[ must_use ]
+#[ inline ]
+pub fn clears_rotation_floors( home : &str, account_prefix : &str ) -> bool
+{
+  use claude_profile::usage::test_bridge::types::{ H_EXHAUSTED_THRESHOLD, WEEKLY_EXHAUSTION_THRESHOLD };
+  let tsv = run_cs_with_env( &[ ".usage", "format::tsv" ], &[ ( "HOME", home ) ] );
+  assert_exit( &tsv, 0 );
+  let text = stdout( &tsv );
+  let mut lines = text.lines();
+  let header : Vec< &str > = lines.next().expect( "floors probe: TSV must have a header line" ).split( '\t' ).collect();
+  let account_idx = header.iter().position( |h| *h == "account" ).expect( "floors probe: account column missing" );
+  let h5_idx      = header.iter().position( |h| *h == "5h_left" ).expect( "floors probe: 5h_left column missing" );
+  let d7_idx      = header.iter().position( |h| *h == "7d_left" ).expect( "floors probe: 7d_left column missing" );
+  let row : Vec< &str > = lines
+    .map( |l| l.split( '\t' ).collect::< Vec< _ > >() )
+    .find( |cells| cells.get( account_idx ).is_some_and( |n| n.starts_with( account_prefix ) ) )
+    .unwrap_or_else( || panic!( "floors probe: no TSV row for {account_prefix}" ) );
+  // `—` = absent window data on an Ok row → 100 in the canonical accessors
+  // (five_hour_left/seven_day_left: absent data ≠ exhausted).
+  let pct = | cell : &str | -> f64
+  {
+    if cell == "\u{2014}" { return 100.0; }
+    cell.strip_suffix( '%' )
+      .and_then( |n| n.parse::< f64 >().ok() )
+      .unwrap_or_else( || panic!( "floors probe: unparseable quota cell {cell:?}" ) )
+  };
+  pct( row[ h5_idx ] ) > H_EXHAUSTED_THRESHOLD && pct( row[ d7_idx ] ) > WEEKLY_EXHAUSTION_THRESHOLD
+}
+
 /// Spawn the binary, wait `secs` seconds, kill it, and return all bytes written to stdout.
 ///
 /// Reads from the piped stdout using a background thread so bytes accumulate even

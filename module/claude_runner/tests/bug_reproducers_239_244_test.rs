@@ -15,8 +15,8 @@
 //! | (none — add spawn format test)         | BUG-298 | [Runner] prefix absent from spawn error output | No |
 //! | `signal_sigterm_exits_143`             | BUG-242 | `unwrap_or(1)` collapsed | No (Unix) |
 //! | `signal_sigkill_exits_137`             | BUG-242 | `unwrap_or(1)` collapsed | No (Unix) |
-//! | `storage_subdir_flag_accepted`         | BUG-244 | storage mirror behind | No |
-//! | `storage_subdir_env_var_applied`       | BUG-244 | storage mirror behind | No |
+//! | `storage_topic_flag_accepted`         | BUG-244 | storage mirror behind | No |
+//! | `storage_topic_env_var_applied`       | BUG-244 | storage mirror behind | No |
 //!
 //! # Root Cause (BUG-239)
 //!
@@ -129,26 +129,26 @@
 //!
 //! # Root Cause (BUG-244)
 //!
-//! `--subdir` and `CLR_SUBDIR` were added to `claude_runner` CLI parsing and env-var
+//! `--topic` and `CLR_TOPIC` were added to `claude_runner` CLI parsing and env-var
 //! application but the `claude_storage` mirror was not updated in the same session.
-//! The storage mirror diverged: it accepted the old arg surface, missing `--subdir` entirely.
+//! The storage mirror diverged: it accepted the old arg surface, missing `--topic` entirely.
 //!
 //! # Why Not Caught (BUG-244)
 //!
 //! No cross-crate parity test existed to verify that every arg present in `claude_runner`
 //! is also handled in `claude_storage`. The feature gap was only discovered when a
-//! dedicated `--subdir` regression test was added directly to the binary test suite.
+//! dedicated `--topic` regression test was added directly to the binary test suite.
 //!
 //! # Fix Applied (BUG-244)
 //!
-//! Synced `--subdir` flag parsing and `CLR_SUBDIR` env var application to the
+//! Synced `--topic` flag parsing and `CLR_TOPIC` env var application to the
 //! `claude_storage` mirror, restoring full parity with the `claude_runner` CLI surface.
 //!
 //! # Prevention (BUG-244)
 //!
 //! When adding a new CLI arg to `claude_runner`, always update the `claude_storage`
-//! mirror in the same session. Run `storage_subdir_flag_accepted` and
-//! `storage_subdir_env_var_applied` to confirm parity before closing the task.
+//! mirror in the same session. Run `storage_topic_flag_accepted` and
+//! `storage_topic_env_var_applied` to confirm parity before closing the task.
 //!
 //! # Pitfall (BUG-244)
 //!
@@ -298,38 +298,38 @@ fn signal_sigkill_exits_137()
 
 // ── BUG-244 ──────────────────────────────────────────────────────────────────
 
-/// BUG-244 regression T8: `--subdir foo` accepted without error via clr binary.
+/// BUG-244 regression T8: `--topic foo` accepted without error via clr binary.
 ///
-/// Verifies that the subdir feature (added after the storage mirror diverged)
+/// Verifies that the topic feature (added after the storage mirror diverged)
 /// is present in the synced copy.
 #[ test ]
-fn storage_subdir_flag_accepted()
+fn storage_topic_flag_accepted()
 {
-  let out = run_cli_with_env( &[ "--subdir", "foo", "--dry-run", "test" ], &[] );
+  let out = run_cli_with_env( &[ "--topic", "foo", "--dry-run", "test" ], &[] );
   assert_eq!(
     exit_code( &out ),
     0,
-    "BUG-244: --subdir foo must be accepted; got exit {}\nstderr: {}",
+    "BUG-244: --topic foo must be accepted; got exit {}\nstderr: {}",
     exit_code( &out ),
     stderr_str( &out ),
   );
 }
 
-/// BUG-244 regression T9: `CLR_SUBDIR=foo` env var applied correctly.
+/// BUG-244 regression T9: `CLR_TOPIC=foo` env var applied correctly.
 #[ test ]
-fn storage_subdir_env_var_applied()
+fn storage_topic_env_var_applied()
 {
-  let out = run_cli_with_env( &[ "--dry-run", "test" ], &[ ( "CLR_SUBDIR", "foo" ) ] );
+  let out = run_cli_with_env( &[ "--dry-run", "test" ], &[ ( "CLR_TOPIC", "foo" ) ] );
   assert_eq!(
     exit_code( &out ),
     0,
-    "BUG-244: CLR_SUBDIR=foo must be applied; got exit {}\nstderr: {}",
+    "BUG-244: CLR_TOPIC=foo must be applied; got exit {}\nstderr: {}",
     exit_code( &out ),
     stderr_str( &out ),
   );
   let stdout = String::from_utf8_lossy( &out.stdout ).to_string();
   assert!(
     stdout.contains( "foo" ),
-    "BUG-244: CLR_SUBDIR=foo must appear in dry-run output; got:\n{stdout}"
+    "BUG-244: CLR_TOPIC=foo must appear in dry-run output; got:\n{stdout}"
   );
 }

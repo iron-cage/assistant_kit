@@ -43,4 +43,4 @@
 
 | # | User Story | Relationship |
 |---|------------|--------------|
-| 22 | [022_session_isolation_subdir.md](022_session_isolation_subdir.md) | `--subdir` for task-level session isolation within the same project dir |
+| 22 | [022_session_isolation_topic.md](022_session_isolation_topic.md) | `--topic` for task-level session isolation within the same project dir |

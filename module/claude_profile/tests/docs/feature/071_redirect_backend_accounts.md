@@ -26,7 +26,7 @@
 | FT-14 | AC-14 | `.credentials.status` classifies active redirect account `Token: static` | `t12_credentials_status_active_redirect_account_classifies_static` |
 | FT-15 | AC-15 | Re-save same name with different `backend::` rewrites from scratch | `t13_save_resave_different_backend_rewrites_from_scratch` |
 | FT-16 | AC-16 | `.account.use` to redirect skips quota-fetch/touch unconditionally | `t06_use_redirect_account_writes_env_vars_and_skips_touch` (AC-16 assertions) |
-| FT-17 | AC-17 | `.usage`/`.accounts` render redirect row as placeholder, no HTTP; compact `(redirect)` + `—` renews in text, full reason in TSV (BUG-538) | `ft14_071_redirect_backend_produces_placeholder_no_http`, `ft14b_071_redirect_checked_before_not_owned_gate`, `t21_usage_tsv_active_redirect_row_current_static`, `t22_usage_text_redirect_row_compact_note_no_question_mark` |
+| FT-17 | AC-17 | `.usage`/`.accounts` render redirect row as placeholder, no HTTP; compact `(redirect)` + `—` renews in text, full reason in TSV (BUG-538); `—` Sub cell and `—` from `get::sub`/`get::renews` (BUG-540) | `ft14_071_redirect_backend_produces_placeholder_no_http`, `ft14b_071_redirect_checked_before_not_owned_gate`, `t21_usage_tsv_active_redirect_row_current_static`, `t22_usage_text_redirect_row_compact_note_no_question_mark`, `t23_usage_sub_and_get_fields_redirect_known_absence` |
 
 ### Notes
 
@@ -217,7 +217,7 @@
 
 - **Given:** Account list containing a redirect account among anthropic ones.
 - **When:** `fetch_quota_for_list()` runs (via `.usage`/`.accounts refresh::1`).
-- **Then:** The redirect row carries `result: Err("redirect backend — no Anthropic quota")` with no HTTP call, checked before the non-owned gate; anthropic rows unaffected. Rendered shape (BUG-538): the text table shows the compact `(redirect)` note in the last visible quota cell (never the full 40-char descriptor, which widened the column for every row) and `—` in `~Renews` (never `?`); TSV keeps the full canonical reason string and `—` renews; `Expires` is `static`, status is `⚪`/`static` (FT/T21).
+- **Then:** The redirect row carries `result: Err("redirect backend — no Anthropic quota")` with no HTTP call, checked before the non-owned gate; anthropic rows unaffected. Rendered shape (BUG-538): the text table shows the compact `(redirect)` note in the last visible quota cell (never the full 40-char descriptor, which widened the column for every row) and `—` in `~Renews` (never `?`); TSV keeps the full canonical reason string and `—` renews; `Expires` is `static`, status is `⚪`/`static` (FT/T21). Known-absence parity (BUG-540): the `Sub` cell under `cols::+sub` is `—` on text and TSV, and the `get::sub`/`get::renews` extractors return the same `—` as the table cells — the per-cell predicates live once in `format.rs`'s aq-aware `sub_cell_for`/`renews_cell_for`.
 - **Exit:** 0
-- **Source fn:** `ft14_071_redirect_backend_produces_placeholder_no_http`, `ft14b_071_redirect_checked_before_not_owned_gate` (`tests/usage/fetch_tests.rs`); `t21_usage_tsv_active_redirect_row_current_static`, `t22_usage_text_redirect_row_compact_note_no_question_mark` (`tests/cli/account_redirect_backend_test.rs` — T22 is the `bug_reproducer(BUG-538)`)
+- **Source fn:** `ft14_071_redirect_backend_produces_placeholder_no_http`, `ft14b_071_redirect_checked_before_not_owned_gate` (`tests/usage/fetch_tests.rs`); `t21_usage_tsv_active_redirect_row_current_static`, `t22_usage_text_redirect_row_compact_note_no_question_mark`, `t23_usage_sub_and_get_fields_redirect_known_absence` (`tests/cli/account_redirect_backend_test.rs` — T22 is the `bug_reproducer(BUG-538)`, T23 the `bug_reproducer(BUG-540)`)
 - **Source:** [071_redirect_backend_accounts.md AC-17](../../../docs/feature/071_redirect_backend_accounts.md)

@@ -1,20 +1,21 @@
 //! `clr topic` — an auto-named `run`/`ask` alias.
 //!
-//! When `--subdir` is not explicitly given, a directory-name slug is derived from the
-//! message and injected as `--subdir` (disambiguated with a `-2`, `-3`, ... counter
+//! When `--topic` is not explicitly given, a directory-name slug is derived from the
+//! message and injected as `--topic` (disambiguated with a `-2`, `-3`, ... counter
 //! suffix against what already exists on disk), then delegation proceeds through
-//! `dispatch_run()` exactly like `dispatch_ask()` does. An explicit `--subdir` bypasses
-//! slug generation entirely — `clr topic --subdir NAME "msg"` is then byte-identical to
-//! `clr ask --subdir NAME "msg"` (see IT-3, `tests/docs/cli/command/11_topic.md`).
+//! `dispatch_run()` exactly like `dispatch_ask()` does. An explicit `--topic` bypasses
+//! slug generation entirely — `clr topic --topic NAME "msg"` is then byte-identical to
+//! `clr ask --topic NAME "msg"` (see IT-3, `tests/docs/cli/command/11_topic.md`).
 //!
-//! No new session-management logic lives here: the existing `--subdir`+`--from`
+//! No new session-management logic lives here: the existing `--topic`+`--from`
 //! clone/continue mechanism in `builder.rs` already handles first-call-clones and
-//! repeat-call-continues generically for any `--subdir` value, whether the user
+//! repeat-call-continues generically for any `--topic` value, whether the user
 //! supplied it directly or `dispatch_topic` injected it (task 521 Out of Scope).
 
 use super::dispatch_run;
 use super::help::print_topic_help;
 use super::parse::parse_args;
+use super::topic_path::{ topic_base, topic_dir };
 
 /// Longest slug `slug_from_message` will produce before cutting back to a whole-word
 /// boundary. Chosen as a reasonable directory-name length — recorded here as the
@@ -27,7 +28,7 @@ const MAX_SLUG_LEN : usize = 40;
 /// nearest whole-word boundary at or under the limit (never a mid-word truncation).
 ///
 /// Returns `None` when the message yields no usable characters (e.g. an empty
-/// message, or one made entirely of punctuation) — the caller then leaves `--subdir`
+/// message, or one made entirely of punctuation) — the caller then leaves `--topic`
 /// unset, falling back to plain `ask`/`run` behavior for that message.
 fn slug_from_message( msg : &str ) -> Option< String >
 {
@@ -64,12 +65,12 @@ fn slug_from_message( msg : &str ) -> Option< String >
 /// Disambiguate `slug` against `base`: return it unchanged when `base/-{slug}` does
 /// not yet exist on disk; otherwise append `-2`, `-3`, ... until a free name is found.
 ///
-/// Mirrors `resolve_effective_dir()`'s own `<base>/-<sub>` join formula
-/// (`src/cli/builder.rs`) so the existence check matches exactly what the eventual
-/// effective working directory will be.
+/// Uses `topic_path::topic_dir` for the join, so the existence check is by construction
+/// the same path `resolve_effective_dir()` will later compute — previously both sites
+/// spelled the `<base>/-<sub>` formula out separately and were kept in sync by hand.
 fn disambiguate_slug( base : &std::path::Path, slug : &str ) -> String
 {
-  if !base.join( format!( "-{slug}" ) ).exists()
+  if !topic_dir( base, slug ).exists()
   {
     return slug.to_string();
   }
@@ -77,7 +78,7 @@ fn disambiguate_slug( base : &std::path::Path, slug : &str ) -> String
   loop
   {
     let candidate = format!( "{slug}-{n}" );
-    if !base.join( format!( "-{candidate}" ) ).exists()
+    if !topic_dir( base, &candidate ).exists()
     {
       return candidate;
     }
@@ -87,9 +88,9 @@ fn disambiguate_slug( base : &std::path::Path, slug : &str ) -> String
 
 /// Parse, validate, and execute the `topic` subcommand. Never returns.
 ///
-/// `topic` behaves exactly like `run`/`ask`, with one addition: when `--subdir` is
-/// not explicitly given, a slug generated from the message is injected as `--subdir`
-/// before delegating. An explicit `--subdir` disables slug generation entirely.
+/// `topic` behaves exactly like `run`/`ask`, with one addition: when `--topic` is
+/// not explicitly given, a slug generated from the message is injected as `--topic`
+/// before delegating. An explicit `--topic` disables slug generation entirely.
 pub( crate ) fn dispatch_topic( tokens : &[ String ] ) -> !
 {
   // tokens[0] == "topic"
@@ -112,8 +113,8 @@ pub( crate ) fn dispatch_topic( tokens : &[ String ] ) -> !
     print_topic_help();
   }
 
-  // Explicit --subdir: byte-identical to `ask` (IT-3) — no slug injection.
-  if cli.subdir.is_some()
+  // Explicit --topic: byte-identical to `ask` (IT-3) — no slug injection.
+  if cli.topic.is_some()
   {
     dispatch_run( &tokens[ 1 .. ] );
   }
@@ -124,15 +125,13 @@ pub( crate ) fn dispatch_topic( tokens : &[ String ] ) -> !
     dispatch_run( &tokens[ 1 .. ] );
   };
 
-  let base = match cli.dir.as_deref()
-  {
-    Some( d ) => std::path::PathBuf::from( d ),
-    None      => std::env::current_dir().unwrap_or_else( | _ | std::path::PathBuf::from( "." ) ),
-  };
+  // Same base resolution `resolve_effective_dir` will apply to the injected --topic,
+  // so an auto-named global topic probes the global home rather than the cwd.
+  let base = topic_base( cli.dir.as_deref(), cli.global );
   let final_slug = disambiguate_slug( &base, &slug );
 
   let mut injected : Vec< String > = tokens[ 1 .. ].to_vec();
-  injected.push( "--subdir".to_string() );
+  injected.push( "--topic".to_string() );
   injected.push( final_slug );
   dispatch_run( &injected );
 }

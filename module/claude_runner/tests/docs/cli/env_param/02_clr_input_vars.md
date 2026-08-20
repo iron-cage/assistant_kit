@@ -37,7 +37,7 @@ Test files: `tests/env_var_test.rs` (E01–E17), `tests/env_var_ext_test.rs` (E1
 | E26 | `CLR_STRIP_FENCES=1` strips fences | `CLR_STRIP_FENCES` | captured stdout has fences removed (same as `--strip-fences`) |
 | E27 | `CLAUDECODE=1 CLR_KEEP_CLAUDECODE=1` preserves env var | `CLR_KEEP_CLAUDECODE` | subprocess env contains `CLAUDECODE` (same as `--keep-claudecode`) |
 | E28 | `CLR_TRACE` enables trace for `isolated`/`refresh` | `CLR_TRACE` | trace output appears in stderr for credential ops (cross-command) |
-| E29 | `CLR_SUBDIR=NAME` appends subdirectory to base dir | `CLR_SUBDIR` | dry-run output contains effective dir ending in `/-NAME` |
+| E29 | `CLR_TOPIC=NAME` appends topic directory to base dir | `CLR_TOPIC` | dry-run output contains effective dir ending in `/-NAME` |
 | E30 | `CLR_MAX_SESSIONS=N` sets session limit; invalid value silently ignored | `CLR_MAX_SESSIONS` | gate uses N as limit; invalid value → default 8 used; CLI wins |
 | E31 | `CLR_OUTPUT_FILE=<path>` sets output file path | `CLR_OUTPUT_FILE` | dry-run exits 0; CLI flag wins over env var |
 | E32 | `CLR_EXPECT=val1\|val2` sets expect pattern | `CLR_EXPECT` | dry-run exits 0; CLI flag wins; same `|`-separated syntax |
@@ -353,13 +353,13 @@ Test files: `tests/env_var_test.rs` (E01–E17), `tests/env_var_ext_test.rs` (E1
 
 ---
 
-### E29: CLR_SUBDIR=NAME appends named subdirectory
+### E29: CLR_TOPIC=NAME appends named topic directory
 
-- **Given:** `CLR_SUBDIR=feature`; no `--subdir` on CLI
+- **Given:** `CLR_TOPIC=feature`; no `--topic` on CLI
 - **When:** `clr --dry-run task`
 - **Then:** dry-run output contains the effective dir ending in `/-feature`
 - **Exit:** 0
-- **CLI-wins:** `clr --dry-run --subdir cliname task` with `CLR_SUBDIR=envname` → effective dir ends in `/-cliname`, NOT `/-envname`
+- **CLI-wins:** `clr --dry-run --topic cliname task` with `CLR_TOPIC=envname` → effective dir ends in `/-cliname`, NOT `/-envname`
 - **Source:** [003_env_param.md §1](../../../../docs/cli/003_env_param.md)
 
 ---
