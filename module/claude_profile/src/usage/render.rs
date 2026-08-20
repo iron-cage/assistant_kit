@@ -134,7 +134,12 @@ pub fn render_text(
     // Root cause: renews_label uses org_created_at unconditionally; has no billing_type param.
     // Pitfall: org_created_at may be present even when subscription is cancelled; must check
     //   billing_type BEFORE passing org_created_at to renews_label.
-    let renews_str = if aq.is_no_subscription()
+    // Fix(BUG-538): redirect rows rendered `?` — renews_label's both-None "unknown" fallback.
+    // Root cause: a redirect account has no Anthropic billing org BY DESIGN — "no renewal"
+    //   is a known fact, not missing data, so the unknown marker asserts a falsehood.
+    // Pitfall: is_no_subscription() never covers redirect rows (billing_type is absent, not
+    //   "none") — the redirect predicate must be checked in its own right.
+    let renews_str = if aq.is_no_subscription() || aq.is_redirect_backend()
     {
       "\u{2014}".to_string()
     }
@@ -244,7 +249,23 @@ pub fn render_text(
       Err( reason ) =>
       {
         let dash      = "\u{2014}".to_string();
-        let error_str = format!( "({})", shorten_error( reason ) );
+        // Fix(BUG-538): the redirect placeholder is a permanent 40-char backend descriptor,
+        //   not a transient fetch error — injected verbatim it became the widest cell of the
+        //   last quota column and, with auto_wrap disabled, displaced every column right of
+        //   it for ALL rows in the table.
+        // Root cause: BUG-220's "reason into last quota column" contract was sized for short
+        //   transient failure strings; the by-design redirect state rode the same Err arm.
+        // Pitfall: compact only this text-table cell — TSV keeps the full reason (tab-
+        //   separated, no width coupling; the verbose form is accurate there), and trace
+        //   lines keep it too.
+        let error_str = if aq.is_redirect_backend()
+        {
+          "(redirect)".to_string()
+        }
+        else
+        {
+          format!( "({})", shorten_error( reason ) )
+        };
 
         let mut row : Vec< String > = vec![ flag_cell ];
         if cols.status       { row.push( status_emoji( aq ).to_string() ); }

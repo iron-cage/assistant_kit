@@ -983,7 +983,7 @@ fn mre_bug307_approx_det0_quadratic_fit_correct()
 /// early-return path and the `●` status-column header.
 ///
 /// `get::status no_color::1` must emit the plain word (`ok`), not the raw 🟢 emoji —
-/// param/047_no_color.md documents exactly this invocation, but the `get::` path returned
+/// `param/047_no_color.md` documents exactly this invocation, but the `get::` path returned
 /// before the shared `apply_no_color` gate. The full table under `no_color::1` must map
 /// the `●` header to `status` like every other non-ASCII glyph in the chain.
 ///

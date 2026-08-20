@@ -621,7 +621,7 @@ fn t18_usage_lock_marker_visible_text_tsv_json_no_color()
 /// booleans (json — previously the only `Account` fields absent from the object).
 /// Also covers the presence-driven `Reserve: yes` line (Fix audit-reserve-invisible)
 /// and `format::table no_color::1` mapping 🔒 → `(locked)` (Fix audit-accounts-no-color:
-/// no_color:: was registered for .accounts but never applied).
+/// `no_color::` was registered for `.accounts` but never applied).
 #[ test ]
 fn t19_accounts_lock_visible_text_table_json()
 {

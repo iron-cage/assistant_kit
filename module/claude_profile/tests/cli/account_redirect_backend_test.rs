@@ -23,6 +23,7 @@
 //! | T19 | `t19_use_redirect_removes_stale_top_level_model_pin`        | redirect save never snapshots `model`; redirect switch removes a stale top-level pin | P |
 //! | T20 | `t20_save_redirect_self_heals_stray_model_in_meta`          | redirect re-save removes a stray pre-gate `model` field; anthropic snapshot unaffected | P |
 //! | T21 | `t21_usage_tsv_active_redirect_row_current_static`          | `.usage format::tsv` after switch-to-redirect → ✓ flag, `static` status, `static` expires | P |
+//! | T22 | `t22_usage_text_redirect_row_compact_note_no_question_mark`  | BUG-538: text table shows compact `(redirect)` + `—` renews (no 40-char note, no `?`); TSV keeps full reason | P |
 
 use crate::cli_runner::{
   run_cs_with_env,
@@ -673,7 +674,7 @@ fn t20_save_redirect_self_heals_stray_model_in_meta()
 }
 
 /// T21 / Feature 071: after switching to a redirect account, the `.usage` TSV row for
-/// that account carries the display quartet — ✓ flag (is_current by token comparison),
+/// that account carries the display quartet — ✓ flag (`is_current` by token comparison),
 /// `static` status word (⚪ tier, not `err`), and `static` in the expires column.
 ///
 /// End-to-end over the real binary: save → use → usage. No HTTP: the redirect row is
@@ -724,4 +725,90 @@ fn t21_usage_tsv_active_redirect_row_current_static()
   let plain_text = stdout( &plain );
   assert!( !plain_text.contains( '\u{26AA}' ), "T21: no_color output must not leak ⚪, got:\n{plain_text}" );
   assert!( plain_text.contains( "static" ), "T21: no_color output must carry the `static` word, got:\n{plain_text}" );
+}
+
+/// T22 / BUG-538: the text-table redirect row is compact and truthful — `(redirect)` note,
+/// `—` renews — while the TSV surface deliberately keeps the full reason string.
+///
+/// # Root Cause (BUG-538)
+/// Two independent display defects on the same row: (a) the redirect placeholder — a
+/// permanent 40-char backend descriptor, not a transient fetch error — rode BUG-220's
+/// "reason into last quota column" contract verbatim; with `auto_wrap` disabled it became
+/// the widest cell of that column and displaced every column right of it for ALL rows.
+/// (b) `renews_label( None, None, _ )` returns `?` (unknown) — but a redirect account has
+/// no Anthropic billing org BY DESIGN, so "no renewal" is a known fact, not missing data.
+///
+/// # Why Not Caught
+/// The renderer test corpus predates redirect accounts — no test ever asserted the text
+/// table's redirect row shape (T21 covers TSV cells only), and `EXPIRED`/`?` look
+/// individually plausible in a table full of genuinely expired OAuth rows.
+///
+/// # Fix Applied
+/// `render.rs`: `Err` arm emits `(redirect)` when `is_redirect_backend()`; the shared
+/// `renews_str` gains the same predicate (→ `—`). `render_tsv.rs`: renews predicate only —
+/// the TSV reason cell keeps the full descriptor (machine surface, tab-separated, no
+/// width coupling).
+///
+/// # Prevention
+/// Every new account state/type needs a named rendering decision per surface
+/// (Text/Plain/TSV/JSON) in its feature ACs at introduction time — a state reaching the
+/// selection layer but not the render layer is an incomplete feature (see BUG-538).
+///
+/// # Pitfall
+/// Do not "fix" the TSV reason cell to `(redirect)` for symmetry — consumers key on the
+/// canonical `REDIRECT_NO_QUOTA_REASON` string there, and TSV has no column-width problem.
+/// And do not route the compact note through `shorten_error()` — that function serves
+/// genuine fetch errors shared by all rows.
+#[ doc = "bug_reproducer(BUG-538)" ]
+#[ test ]
+fn t22_usage_text_redirect_row_compact_note_no_question_mark()
+{
+  let dir = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  let save = run_cs_with_env(
+    &[
+      ".account.save", "name::kimi", "backend::redirect",
+      "base_url::https://api.moonshot.ai/anthropic", "api_key::sk-test",
+      "redirect_model::kimi-k3",
+    ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &save, 0 );
+
+  // Text table (default columns: ~Renews ON, Sub OFF — so `?` has exactly one possible
+  // source in this row, the renews cell).
+  let usage = run_cs_with_env( &[ ".usage" ], &[ ( "HOME", home ) ] );
+  assert_exit( &usage, 0 );
+  let text = stdout( &usage );
+  let kimi_line = text.lines()
+    .find( |l| l.contains( "kimi" ) )
+    .expect( "T22: no text-table row for the kimi account" );
+
+  assert!( kimi_line.contains( "(redirect)" ), "T22: row must carry the compact `(redirect)` note, got: {kimi_line}" );
+  assert!(
+    !kimi_line.contains( "(redirect backend" ),
+    "T22: the 40-char descriptor must not reach the text table (it widens every row), got: {kimi_line}",
+  );
+  assert!( !kimi_line.contains( '?' ), "T22: no `?` cell — redirect has no renewal by design, got: {kimi_line}" );
+
+  // TSV: renews is `—`, but the reason cell deliberately keeps the full canonical
+  // descriptor — machine consumers key on it and tabs carry no width coupling.
+  let tsv = run_cs_with_env( &[ ".usage", "format::tsv" ], &[ ( "HOME", home ) ] );
+  assert_exit( &tsv, 0 );
+  let tsv_text = stdout( &tsv );
+  let mut tsv_lines = tsv_text.lines();
+  let header : Vec< &str > = tsv_lines.next().expect( "T22: TSV must have a header line" ).split( '\t' ).collect();
+  let renews_idx  = header.iter().position( |h| *h == "renews" ).expect( "T22: renews column missing" );
+  let account_idx = header.iter().position( |h| *h == "account" ).expect( "T22: account column missing" );
+  let row : Vec< &str > = tsv_lines
+    .map( |l| l.split( '\t' ).collect::< Vec< _ > >() )
+    .find( |cells| cells.get( account_idx ).is_some_and( |name| name.starts_with( "kimi" ) ) )
+    .expect( "T22: no TSV row for the kimi account" );
+
+  assert_eq!( row[ renews_idx ], "\u{2014}", "T22: TSV renews must be —, not ?, got row: {row:?}" );
+  assert!(
+    row.iter().any( |c| c.contains( "redirect backend — no Anthropic quota" ) ),
+    "T22: TSV must keep the full canonical reason string, got row: {row:?}",
+  );
 }
