@@ -1016,7 +1016,7 @@ fn ft26_071_refresh_redirect_account_returns_none_credentials_unchanged()
 ///
 /// `credentials_usable()` predicate (accessToken AND refreshToken non-empty) gates the
 /// write-back in both branches: on a blank payload the refresh returns `None` (caller
-/// already maps that to `Err("refresh token expired")`) and the stored record is left
+/// already maps that to `Err("token refresh failed")`) and the stored record is left
 /// untouched for diagnosis and cross-machine self-heal. `Fix(BUG-483)` annotations at
 /// both guard sites.
 ///

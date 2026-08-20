@@ -134,7 +134,12 @@ pub fn render_text(
     // Root cause: renews_label uses org_created_at unconditionally; has no billing_type param.
     // Pitfall: org_created_at may be present even when subscription is cancelled; must check
     //   billing_type BEFORE passing org_created_at to renews_label.
-    let renews_str = if aq.is_no_subscription()
+    // Fix(BUG-538): redirect rows rendered `?` — renews_label's both-None "unknown" fallback.
+    // Root cause: a redirect account has no Anthropic billing org BY DESIGN — "no renewal"
+    //   is a known fact, not missing data, so the unknown marker asserts a falsehood.
+    // Pitfall: is_no_subscription() never covers redirect rows (billing_type is absent, not
+    //   "none") — the redirect predicate must be checked in its own right.
+    let renews_str = if aq.is_no_subscription() || aq.is_redirect_backend()
     {
       "\u{2014}".to_string()
     }
@@ -244,19 +249,23 @@ pub fn render_text(
       Err( reason ) =>
       {
         let dash      = "\u{2014}".to_string();
-        // Fix(BUG-538): a redirect-backend row is a by-design absence of Anthropic quota,
-        //   not a fetch failure — the generic Err contract misrepresents it twice.
-        // Root cause: no redirect branch existed when Feature 071 introduced the row type —
-        //   the 40-char backend descriptor rode BUG-220's last-quota-column contract (sized
-        //   for transient failure strings; auto_wrap off → widens the column for every row),
-        //   and renews_label's "?" ("data missing") reported an inapplicable datum (redirect
-        //   accounts have no Anthropic billing org at all).
-        // Pitfall: the full REDIRECT_NO_QUOTA_REASON sentence stays in trace output (fetch
-        //   layer); non-redirect Err rows must keep the full shortened reason — that is
-        //   BUG-220's placement contract.
-        let redirect    = aq.is_redirect_backend();
-        let error_str   = if redirect { "(redirect)".to_string() } else { format!( "({})", shorten_error( reason ) ) };
-        let renews_cell = if redirect { dash.clone() } else { renews_str };
+        // Fix(BUG-538): the redirect placeholder is a permanent 40-char backend descriptor,
+        //   not a transient fetch error — injected verbatim it became the widest cell of the
+        //   last quota column and, with auto_wrap disabled, displaced every column right of
+        //   it for ALL rows in the table.
+        // Root cause: BUG-220's "reason into last quota column" contract was sized for short
+        //   transient failure strings; the by-design redirect state rode the same Err arm.
+        // Pitfall: compact only this text-table cell — TSV keeps the full reason (tab-
+        //   separated, no width coupling; the verbose form is accurate there), and trace
+        //   lines keep it too.
+        let error_str = if aq.is_redirect_backend()
+        {
+          "(redirect)".to_string()
+        }
+        else
+        {
+          format!( "({})", shorten_error( reason ) )
+        };
 
         let mut row : Vec< String > = vec![ flag_cell ];
         if cols.status       { row.push( status_emoji( aq ).to_string() ); }
@@ -271,7 +280,7 @@ pub fn render_text(
         let quota_end_len = row.len();
         if cols.expires      { row.push( expires_cell ); }
         if cols.sub          { row.push( sub_str ); }
-        if cols.renews       { row.push( renews_cell ); }
+        if cols.renews       { row.push( renews_str ); }
         if cols.host         { row.push( aq.host.clone() ); }
         if cols.role         { row.push( aq.role.clone() ); }
         if cols.owner        { row.push( aq.owner.clone() ); }

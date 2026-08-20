@@ -243,13 +243,58 @@ fn it101_usage_help_shows_touch_param()
   );
 }
 
-/// it102 `lim_it` (IT-51 / FT-03 of feature/020): `sort::renew` (default) shows recommendation in footer.
+/// Whether `acct-b` (the only Next-eligible candidate in the it102–it104 fixture)
+/// clears both rotation-eligibility quota floors right now.
 ///
-/// With ≥2 accounts sharing a live token, the renew strategy selects one winner.
-/// The footer must show a `Next (renew):` recommendation line.
+/// Fix(audit-live-footer-fragile)
+/// Root cause: it102/it103/it104 asserted the footer recommendation unconditionally,
+///   but `find_first_eligible` (`sort_next.rs`) excludes h-exhausted (`5h ≤ 15%`) and
+///   weekly-exhausted (`7d ≤ 3%`) candidates BY DESIGN (BUG-292/BUG-324) — and the
+///   fixture caches mirror the host's LIVE account snapshot, so the tests' verdicts
+///   tracked the operator's real-time quota consumption: green at 4% weekly left,
+///   red at 3%, with no code change in between.
+/// Pitfall: parse the floors from the rendered TSV cells, never re-derive them from
+///   raw utilization — the displayed rounded value IS what eligibility compares
+///   (round-before-compare doctrine, BUG-331/BUG-336); a private re-computation here
+///   would reintroduce the exact drift audit-h-exhaustion-drift fixed in `sort_next.rs`.
+fn acct_b_clears_rotation_floors( home : &str ) -> bool
+{
+  use claude_profile::usage::test_bridge::types::{ H_EXHAUSTED_THRESHOLD, WEEKLY_EXHAUSTION_THRESHOLD };
+  let tsv = run_cs_with_env( &[ ".usage", "format::tsv" ], &[ ( "HOME", home ) ] );
+  assert_exit( &tsv, 0 );
+  let text = stdout( &tsv );
+  let mut lines = text.lines();
+  let header : Vec< &str > = lines.next().expect( "floors probe: TSV must have a header line" ).split( '\t' ).collect();
+  let account_idx = header.iter().position( |h| *h == "account" ).expect( "floors probe: account column missing" );
+  let h5_idx      = header.iter().position( |h| *h == "5h_left" ).expect( "floors probe: 5h_left column missing" );
+  let d7_idx      = header.iter().position( |h| *h == "7d_left" ).expect( "floors probe: 7d_left column missing" );
+  let row : Vec< &str > = lines
+    .map( |l| l.split( '\t' ).collect::< Vec< _ > >() )
+    .find( |cells| cells.get( account_idx ).is_some_and( |n| n.starts_with( "acct-b" ) ) )
+    .expect( "floors probe: no TSV row for acct-b" );
+  // `—` = absent window data on an Ok row → 100 in the canonical accessors
+  // (five_hour_left/seven_day_left: absent data ≠ exhausted).
+  let pct = | cell : &str | -> f64
+  {
+    if cell == "\u{2014}" { return 100.0; }
+    cell.strip_suffix( '%' )
+      .and_then( |n| n.parse::< f64 >().ok() )
+      .unwrap_or_else( || panic!( "floors probe: unparseable quota cell {cell:?}" ) )
+  };
+  pct( row[ h5_idx ] ) > H_EXHAUSTED_THRESHOLD && pct( row[ d7_idx ] ) > WEEKLY_EXHAUSTION_THRESHOLD
+}
+
+/// it102 `lim_it` (IT-51 / FT-03 of feature/020): `sort::renew` (default) footer recommendation.
 ///
-/// Spec: [`tests/docs/cli/command/009_usage.md` IT-51]
-///       [`tests/docs/feature/020_usage_sort_strategies.md` AC-09]
+/// With ≥2 accounts sharing a live token: when the sole candidate (acct-b) clears both
+/// rotation quota floors, the footer must show a `Next (renew)` recommendation line;
+/// when it is h- or weekly-exhausted, the footer must be SUPPRESSED — recommending an
+/// exhausted account is the exact defect BUG-292/BUG-324 fixed. Both live states are
+/// legitimate; the test asserts the contract for whichever holds right now
+/// (Fix(audit-live-footer-fragile) — see `acct_b_clears_rotation_floors`).
+///
+/// Spec: [`tests/docs/feature/020_usage_sort_strategies.md` FT-13/AC-09]
+///       (former IT-51 ref in `tests/docs/cli/command/09_usage.md` is a REMOVED tombstone)
 #[ test ]
 fn it102_lim_it_sort_renew_shows_recommendation()
 {
@@ -267,19 +312,30 @@ fn it102_lim_it_sort_renew_shows_recommendation()
   let text = stdout( &out );
 
   // Footer format: "Next (renew) · name · ..." uses · not :.
-  assert!(
-    text.contains( "Next (renew)" ),
-    "sort::renew must show 'Next (renew)' recommendation in footer (IT-51/020), got:\n{text}",
-  );
+  if acct_b_clears_rotation_floors( home )
+  {
+    assert!(
+      text.contains( "Next (renew)" ),
+      "sort::renew must show 'Next (renew)' recommendation in footer (IT-51/020), got:\n{text}",
+    );
+  }
+  else
+  {
+    assert!(
+      !text.contains( "Next (renew)" ),
+      "footer must be suppressed when the only candidate is quota-exhausted (BUG-292/BUG-324), got:\n{text}",
+    );
+  }
 }
 
-/// it103 `lim_it` (IT-52 / feature/020): `sort::renews` shows recommendation in footer.
+/// it103 `lim_it` (IT-52 / feature/020): `sort::renews` footer recommendation.
 ///
-/// With ≥2 accounts sharing a live token, the renews strategy selects the account with
-/// the soonest billing renewal. The footer must show a `Next (renews):` recommendation line.
+/// Same conditional contract as it102, for the `renews` strategy: footer present when
+/// acct-b clears both rotation quota floors, suppressed when it is exhausted
+/// (BUG-292/BUG-324; Fix(audit-live-footer-fragile)).
 ///
-/// Spec: [`tests/docs/cli/command/009_usage.md` IT-52]
-///       [`tests/docs/feature/020_usage_sort_strategies.md` AC-09]
+/// Spec: [`tests/docs/feature/020_usage_sort_strategies.md` FT-13/AC-09]
+///       (former IT-52 ref in `tests/docs/cli/command/09_usage.md` is a REMOVED tombstone)
 #[ test ]
 fn it103_lim_it_sort_renews_shows_recommendation()
 {
@@ -297,19 +353,31 @@ fn it103_lim_it_sort_renews_shows_recommendation()
   let text = stdout( &out );
 
   // Footer format: "Next (renews) · name · ..." uses · not :.
-  assert!(
-    text.contains( "Next (renews)" ),
-    "sort::renews must show 'Next (renews)' recommendation in footer (IT-52/020), got:\n{text}",
-  );
+  if acct_b_clears_rotation_floors( home )
+  {
+    assert!(
+      text.contains( "Next (renews)" ),
+      "sort::renews must show 'Next (renews)' recommendation in footer (IT-52/020), got:\n{text}",
+    );
+  }
+  else
+  {
+    assert!(
+      !text.contains( "Next (renews)" ),
+      "footer must be suppressed when the only candidate is quota-exhausted (BUG-292/BUG-324), got:\n{text}",
+    );
+  }
 }
 
 /// it104 `lim_it` (IT-54 / feature/020): footer shows one recommendation line for active sort strategy.
 ///
-/// With `sort::renew` (default), the footer shows a single recommendation line
-/// with the `→` winner for the active strategy.
+/// With `sort::renew` (default) and a floor-clearing candidate, the footer shows a single
+/// recommendation line with the winner for the active strategy; with an exhausted-only
+/// pool the footer is suppressed (BUG-292/BUG-324; Fix(audit-live-footer-fragile) — same
+/// conditional contract as it102/it103).
 ///
-/// Spec: [`tests/docs/cli/command/009_usage.md` IT-54]
-///       [`tests/docs/feature/020_usage_sort_strategies.md` AC-09]
+/// Spec: [`tests/docs/feature/020_usage_sort_strategies.md` FT-13/AC-09]
+///       (former IT-54 ref in `tests/docs/cli/command/09_usage.md` is a REMOVED tombstone)
 #[ test ]
 fn it104_lim_it_footer_shows_strategy_recommendation()
 {
@@ -326,10 +394,20 @@ fn it104_lim_it_footer_shows_strategy_recommendation()
   assert_exit( &out, 0 );
   let text = stdout( &out );
 
-  assert!(
-    text.contains( "renew" ),
-    "footer must show renew strategy recommendation line (IT-54/020), got:\n{text}",
-  );
+  if acct_b_clears_rotation_floors( home )
+  {
+    assert!(
+      text.contains( "Next (renew)" ),
+      "footer must show renew strategy recommendation line (IT-54/020), got:\n{text}",
+    );
+  }
+  else
+  {
+    assert!(
+      !text.contains( "Next (renew)" ),
+      "footer must be suppressed when the only candidate is quota-exhausted (BUG-292/BUG-324), got:\n{text}",
+    );
+  }
 }
 
 /// it105 `lim_it` (IT-58): per-column emoji prefix appears in `5h Left` column values.

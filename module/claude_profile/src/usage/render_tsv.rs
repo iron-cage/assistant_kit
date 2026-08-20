@@ -80,7 +80,12 @@ pub fn render_tsv(
     // Root cause: renews_label uses org_created_at unconditionally; has no billing_type param.
     // Pitfall: org_created_at may be present even when subscription is cancelled; must check
     //   billing_type BEFORE passing org_created_at to renews_label.
-    let renews_str = if aq.is_no_subscription()
+    // Fix(BUG-538): redirect rows rendered `?` here too — same both-None fallback as render.rs.
+    // Root cause: no Anthropic billing org exists for a redirect account by design; `?`
+    //   (unknown) asserts missing data where "no renewal" is the known fact.
+    // Pitfall: the TSV reason cell deliberately keeps the FULL redirect descriptor (unlike
+    //   the text table's compact `(redirect)`) — only the renews cell changes here.
+    let renews_str = if aq.is_no_subscription() || aq.is_redirect_backend()
     {
       "\u{2014}".to_string()
     }
