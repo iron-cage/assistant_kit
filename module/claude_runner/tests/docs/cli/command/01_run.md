@@ -24,7 +24,7 @@ Integration test planning for the `run` command. See [command/01_run.md](../../.
 | IT-16 | `--effort invalid` → exit 1, error message | Error Handling |
 | IT-17 | `clr run "msg"` → identical to `clr "msg"` (BUG-212 coverage) | Explicit run alias |
 | IT-18 | Empty session source (`--from`) → no `-c` in assembled command (BUG-214 regression) | First-use edge case |
-| IT-19 | `--subdir NAME` → dry-run effective dir ends with `/-NAME` | Subdir |
+| IT-19 | `--topic NAME` → dry-run effective dir ends with `/-NAME` | Topic |
 | IT-20 | Print mode subprocess exits 42 → clr exits 42 (BUG-239 regression) | Exit Code Passthrough |
 | IT-21 | SIGTERM-killed subprocess → clr exits 143 (128+15) (BUG-242, unix-only) | Exit Code Passthrough |
 | IT-22 | Binary not found → stderr contains install hint (BUG-241) | Error Diagnostics |
@@ -47,7 +47,7 @@ Integration test planning for the `run` command. See [command/01_run.md](../../.
 - Default Injection: 1 test
 - Explicit run alias: 1 test
 - First-use edge case: 1 test
-- Subdir: 1 test
+- Topic: 1 test
 - Exit Code Passthrough: 2 tests (IT-20, IT-21)
 - Error Diagnostics: 1 test (IT-22)
 - Expect Validation: 1 test (IT-23)
@@ -218,12 +218,12 @@ Integration test planning for the `run` command. See [command/01_run.md](../../.
 
 ---
 
-### IT-19: `--subdir NAME` → effective dir ends with `/-NAME`
+### IT-19: `--topic NAME` → effective dir ends with `/-NAME`
 
-- **Command:** `clr --dry-run --subdir build "Fix bug"`
+- **Command:** `clr --dry-run --topic build "Fix bug"`
 - **Expected behavior:** Dry-run output contains a path ending in `/-build`; exit 0
 - **Exit:** 0
-- **Source:** [--subdir](../../../../docs/cli/param/028_subdir.md), [user_story/022_session_isolation_subdir.md](../../../../docs/cli/user_story/022_session_isolation_subdir.md)
+- **Source:** [--topic](../../../../docs/cli/param/028_topic.md), [user_story/022_session_isolation_topic.md](../../../../docs/cli/user_story/022_session_isolation_topic.md)
 
 ---
 

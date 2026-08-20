@@ -7,7 +7,7 @@
 
 ### Semantic Coherence Test
 
-"Is this parameter consumed by the runner, not Claude?" — YES for all 53 (52 CLI flags + 1 env-var-only).
+"Is this parameter consumed by the runner, not Claude?" — YES for all 54 (53 CLI flags + 1 env-var-only).
 
 ### Why NOT X
 
@@ -38,9 +38,9 @@ clr --trace "Fix bug" --dir /project
 
 | # | Command | Membership | Excluded Params | Notes |
 |---|---------|------------|-----------------|-------|
-| 1 | [`run`](../command/01_run.md) | Full | — | All 50 params apply; default command |
-| 5 | [`ask`](../command/05_ask.md) | Full | — | All 50 params apply; identical behavior — pure alias for run |
-| 11 | [`topic`](../command/11_topic.md) | Full | — | All 50 params apply; `--subdir`'s default overridden with an auto-generated slug — see [`command_group/01_run_ask.md`](../command_group/01_run_ask.md) Default Divergence Table |
+| 1 | [`run`](../command/01_run.md) | Full | — | All 54 params apply; default command |
+| 5 | [`ask`](../command/05_ask.md) | Full | — | All 54 params apply; identical behavior — pure alias for run |
+| 11 | [`topic`](../command/11_topic.md) | Full | — | All 54 params apply; `--topic`'s default overridden with an auto-generated slug — see [`command_group/01_run_ask.md`](../command_group/01_run_ask.md) Default Divergence Table |
 
 ### Referenced Parameters
 
@@ -50,7 +50,8 @@ clr --trace "Fix bug" --dir /project
 | [`--interactive`](../param/006_interactive.md) | bool | false | Mode selector | Forces TTY passthrough, overriding all auto-print triggers |
 | [`--new-session`](../param/007_new_session.md) | bool | false | Session mode | Start fresh session (disable default continuation) |
 | [`--dir`](../param/008_dir.md) | [`DirectoryPath`](../type/02_directory_path.md) | cwd | Working directory | Working directory for subprocess (alias: `--to`) |
-| [`--subdir`](../param/028_subdir.md) | string | `.` | Named workspace | Named subdirectory appended to `--dir` (`/-NAME`); `.` = identity |
+| [`--topic`](../param/028_topic.md) | string | `.` | Named workspace | Named topic directory appended to `--dir` (`/-NAME`); `.` = identity |
+| [`--global`](../param/087_global.md) | bool | false | Named workspace | Resolve `--topic`'s base to the global topic home instead of cwd (alias: `-g`); inert without a topic; `--dir` outranks it |
 | [`--max-tokens`](../param/009_max_tokens.md) | [`TokenLimit`](../type/03_token_limit.md) | 128000 | Token cap | Max output tokens |
 | [`--session-dir`](../param/010_session_dir.md) | [`DirectoryPath`](../type/02_directory_path.md) | — | Session storage | Deprecated, inert (BUG-493) — session storage directory |
 | [`--dry-run`](../param/011_dry_run.md) | bool | false | Execution gate | Preview without executing |
@@ -124,7 +125,7 @@ clr --trace "Fix bug" --dir /project
 | 18 | [018_env_var_configuration.md](../user_story/018_env_var_configuration.md) | Developer |
 | 20 | [020_suppress_effort_max.md](../user_story/020_suppress_effort_max.md) | Developer |
 | 21 | [021_keep_claudecode_context.md](../user_story/021_keep_claudecode_context.md) | Developer |
-| 22 | [022_session_isolation_subdir.md](../user_story/022_session_isolation_subdir.md) | Developer |
+| 22 | [022_session_isolation_topic.md](../user_story/022_session_isolation_topic.md) | Developer |
 | 23 | [023_output_file_capture.md](../user_story/023_output_file_capture.md) | Developer |
 | 24 | [024_enum_output_validation.md](../user_story/024_enum_output_validation.md) | Developer |
 | 25 | [025_concurrency_gate.md](../user_story/025_concurrency_gate.md) | Developer |

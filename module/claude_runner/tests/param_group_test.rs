@@ -239,7 +239,7 @@ fn g2cc3_no_skip_permissions_and_no_effort_max_both_suppressed()
 ///
 /// Every runner control flag accepted without conflict. `--dry-run` wins over `--trace`,
 /// so stderr is empty. `--no-chrome` suppresses the default `--chrome` injection.
-/// `--subdir work` produces an effective dir containing `/-work`.
+/// `--topic work` produces an effective dir containing `/-work`.
 /// All 20 new retry params (3-tier: override, 8 class-specific pairs, fallback) plus
 /// `--output-file`, `--expect`, `--expect-strategy`, `--retry-on-validation`, `--max-sessions`,
 /// and `--timeout` are all parsed and accepted; `--dry-run` short-circuits before execution.
@@ -265,7 +265,7 @@ fn g2cc4_all_runner_control_flags_no_conflict()
       "--interactive",
       "--new-session",
       "--dir", "/tmp/test",
-      "--subdir", "work",
+      "--topic", "work",
       "--max-tokens", "100000",
       "--session-dir", "/tmp/sessions",
       "--quiet",
@@ -360,14 +360,14 @@ fn g2cc5_file_strip_fences_keep_claudecode_accepted()
   assert!( stdout.contains( path ), "output must reference file path: {stdout}" );
 }
 
-/// G2CC6: `--dir PATH` + `--subdir NAME` → effective dir is `PATH/-NAME`.
+/// G2CC6: `--dir PATH` + `--topic NAME` → effective dir is `PATH/-NAME`.
 ///
 /// Spec: `02_runner_control.md` CC-6
 #[ cfg( unix ) ]
 #[ test ]
-fn g2cc6_dir_plus_subdir_effective_dir()
+fn g2cc6_dir_plus_topic_effective_dir()
 {
-  let out = run_cli( &[ "--dry-run", "--dir", "/tmp", "--subdir", "build", "task" ] );
+  let out = run_cli( &[ "--dry-run", "--dir", "/tmp", "--topic", "build", "task" ] );
   assert!( out.status.success(), "exit must be 0: {out:?}" );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(

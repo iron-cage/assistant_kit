@@ -742,10 +742,114 @@ CLAUDE_HOME="$CH" cargo run -p claude_runner -- --from "$SRC" --to "$(mktemp -d)
 
 **Expected:** Dry-run output does NOT contain `CLAUDE_CODE_SESSION_DIR=` and DOES contain `# session-transplant:` referencing `abc-123.jsonl` — the deprecated `--session-dir` neither exports the env var nor suppresses cross-loading; `--from`'s source storage governs. Stderr contains the one-line deprecation warning. Exit code 0.
 
+### TC-91: Topics — Empty Base Reports on stderr and Still Succeeds
+
+```sh
+cargo build -q -p claude_runner
+TARGET_DIR="${CARGO_TARGET_DIR:-$(pwd)/target}"; BIN="$TARGET_DIR/debug/clr"
+BASE=$(mktemp -d)
+(cd "$BASE" && "$BIN" topics); echo "exit=$?"
+```
+
+**Expected:** stdout empty; stderr reads `no topics in <BASE>`; `exit=0`. An empty result is not an error — the command is safe under `set -e`.
+
+### TC-92: Topics — Listing Is Sorted and Excludes Non-Topics
+
+```sh
+cargo build -q -p claude_runner
+TARGET_DIR="${CARGO_TARGET_DIR:-$(pwd)/target}"; BIN="$TARGET_DIR/debug/clr"
+BASE=$(mktemp -d); mkdir -p "$BASE/-zebra" "$BASE/-alpha" "$BASE/src"
+(cd "$BASE" && "$BIN" topics); echo "exit=$?"
+```
+
+**Expected:** A `NAME  SESSIONS  PATH` header followed by exactly two rows, `alpha` before `zebra`, each with `SESSIONS` = `0` (created on disk, never entered) and an absolute `PATH` of `<BASE>/-<name>`. The plain `src/` directory is absent — only `-`-prefixed directories are topics. `exit=0`.
+
+### TC-93: Topics — `--path` Is a Pure Computation
+
+```sh
+cargo build -q -p claude_runner
+TARGET_DIR="${CARGO_TARGET_DIR:-$(pwd)/target}"; BIN="$TARGET_DIR/debug/clr"
+BASE=$(mktemp -d)
+(cd "$BASE" && "$BIN" topics --path never-made); echo "exit=$?"
+ls -A "$BASE"; echo "entries=$(ls -A "$BASE" | wc -l)"
+```
+
+**Expected:** stdout is exactly one line, `<BASE>/-never-made`, and `exit=0` — yet `entries=0`. The resolver never touches the disk, so a name resolves identically whether or not the topic exists. This is what makes `cd "$(clr topics --path X --global)"` safe to run before the topic is ever created.
+
+### TC-94: Topics — `--global` Reads the Global Topic Home
+
+```sh
+cargo build -q -p claude_runner
+TARGET_DIR="${CARGO_TARGET_DIR:-$(pwd)/target}"; BIN="$TARGET_DIR/debug/clr"
+BASE=$(mktemp -d); export CLR_TOPIC_HOME=$(mktemp -d); mkdir -p "$CLR_TOPIC_HOME/-notes"
+(cd "$BASE" && "$BIN" topics --global); echo "exit=$?"
+(cd "$BASE" && "$BIN" topics --global --path notes); echo "exit=$?"
+```
+
+**Expected:** The listing shows one row, `notes`, at `$CLR_TOPIC_HOME/-notes` — the cwd's own topics are not consulted. The resolver prints that same path. Both `exit=0`. With `CLR_TOPIC_HOME` unset the home would instead be `<system temp dir>/clr-topic`.
+
+### TC-95: Topics — `--dir` Outranks `--global`
+
+```sh
+cargo build -q -p claude_runner
+TARGET_DIR="${CARGO_TARGET_DIR:-$(pwd)/target}"; BIN="$TARGET_DIR/debug/clr"
+BASE=$(mktemp -d); mkdir -p "$BASE/-alpha"
+export CLR_TOPIC_HOME=$(mktemp -d); mkdir -p "$CLR_TOPIC_HOME/-notes"
+(cd / && "$BIN" topics --global --dir "$BASE"); echo "exit=$?"
+```
+
+**Expected:** The listing shows `alpha` from `$BASE` and never `notes` from the global home — an explicit path beats a named default. Base precedence is `--dir` > `--global` > cwd, and cwd here is `/`, which is consulted by neither. `exit=0`.
+
+### TC-96: Topics — Resolver and Runner Never Disagree
+
+```sh
+cargo build -q -p claude_runner
+TARGET_DIR="${CARGO_TARGET_DIR:-$(pwd)/target}"; BIN="$TARGET_DIR/debug/clr"
+BASE=$(mktemp -d); export CLR_TOPIC_HOME=$(mktemp -d)
+P=$(cd "$BASE" && "$BIN" topics --global --path cross); echo "resolved: $P"
+(cd "$BASE" && "$BIN" --dry-run --global --topic cross "x") | grep -c -- "$P"
+```
+
+**Expected:** `resolved:` prints `$CLR_TOPIC_HOME/-cross`, and `grep -c` reports at least `1` — the dry-run's effective working directory is byte-identical to the path the resolver computed. Both sides go through `topic_path::topic_dir()`; this case fails the moment either caller stops.
+
+### TC-97: Topics — Argument Errors
+
+```sh
+cargo build -q -p claude_runner
+TARGET_DIR="${CARGO_TARGET_DIR:-$(pwd)/target}"; BIN="$TARGET_DIR/debug/clr"
+"$BIN" topics --path a/b; echo "slash=$?"
+"$BIN" topics --bogus;    echo "unknown=$?"
+"$BIN" topics --path;     echo "missing=$?"
+```
+
+**Expected:** All three exit `1` with nothing on stdout. Messages: `Error: --path must be a single topic name (no '/' separators)` (a topic name is a directory name, never a path — same guard as `--topic`); `Error: unknown option '--bogus'`; `Error: --path requires a value` — the following token is never silently swallowed and no default is assumed.
+
+### TC-98: Topics — All Three Help Forms
+
+```sh
+cargo build -q -p claude_runner
+TARGET_DIR="${CARGO_TARGET_DIR:-$(pwd)/target}"; BIN="$TARGET_DIR/debug/clr"
+for f in help --help -h; do "$BIN" topics "$f" >/dev/null; echo "topics $f exit=$?"; done
+"$BIN" topics --help | head -8
+```
+
+**Expected:** All three exit `0` and print topics-specific help — the bare positional `help` needs its own intercept or it parses as an unknown option. The help shows both usage forms (`clr topics [--dir <PATH>] [--global]` and `clr topics --path <NAME> ...`) and a `BASE DIRECTORY (highest precedence first)` block naming `--dir`, `--global`, and cwd in that order.
+
+### TC-99: Topics — `CLR_GLOBAL` Env Var Reaches the Same Field as `--global`
+
+```sh
+cargo build -q -p claude_runner
+TARGET_DIR="${CARGO_TARGET_DIR:-$(pwd)/target}"; BIN="$TARGET_DIR/debug/clr"
+BASE=$(mktemp -d); export CLR_TOPIC_HOME=$(mktemp -d)
+(cd "$BASE" && CLR_GLOBAL=1 "$BIN" --dry-run --topic envtopic "x") | grep -c -- "$CLR_TOPIC_HOME/-envtopic"
+```
+
+**Expected:** `grep -c` reports at least `1` — with no `--global` on the command line, `CLR_GLOBAL=1` still redirects the topic base to the global home. Note the two env vars are distinct: `CLR_GLOBAL` turns the flag on, `CLR_TOPIC_HOME` chooses where the global base is.
+
 ## Pass Criteria
 
-All TC-1 through TC-90 must pass without unexpected errors or panics.
-TC-7 through TC-11, TC-13 through TC-20, TC-23 through TC-90 are runnable without a configured Claude API key (except TC-61 requires container, TC-62/TC-63 require live sessions).
+All TC-1 through TC-99 must pass without unexpected errors or panics.
+TC-7 through TC-11, TC-13 through TC-20, TC-23 through TC-99 are runnable without a configured Claude API key (except TC-61 requires container, TC-62/TC-63 require live sessions).
 TC-1 through TC-6, TC-12, TC-21, TC-22 require Claude binary and API key for full execution test.
 CC-1 through CC-231 are automated — listed for traceability only.
 
@@ -765,18 +869,18 @@ These are exhaustively tested by the integration test suite (not manual). Listed
 - **CC-11/12:** `--max-tokens 1.5` and `--max-tokens ""` → exit 1
 - **CC-13/14:** `--quiet` accepted (bool flag, exit 0); `--quiet --dry-run "x"` still shows dry-run output on stdout
 - **CC-15/16:** `CLR_QUIET=true` sets quiet suppression; `CLR_QUIET=false` is NOT recognised as false (only `1`/`true` are truthy — env_bool semantics)
-- **CC-17/18:** `--subdir a/b` (slash) → exit 1, mentions "subdir"
-- **CC-19:** `--subdir .` → identity (no `-prefix` join)
-- **CC-20:** `--subdir ""` → identity (empty string filtered)
-- **CC-21:** `--subdir mywork` → path contains `-mywork`
-- **CC-22:** `--dir /tmp --subdir mywork` → `/tmp/-mywork`
+- **CC-17/18:** `--topic a/b` (slash) → exit 1, mentions "topic"
+- **CC-19:** `--topic .` → identity (no `-prefix` join)
+- **CC-20:** `--topic ""` → identity (empty string filtered)
+- **CC-21:** `--topic mywork` → path contains `-mywork`
+- **CC-22:** `--dir /tmp --topic mywork` → `/tmp/-mywork`
 
 ### Env vars
 
 - **CC-23:** `CLR_MAX_TOKENS=bad` → silently ignored (default preserved)
 - **CC-24:** `CLR_QUIET=true` → quiet suppression active; gate-wait/retry messages suppressed when triggered
 - **CC-25:** `CLR_EFFORT=invalid` → silently ignored (default max used)
-- **CC-26:** `CLR_SUBDIR=a/b` → silently ignored (slash rejected)
+- **CC-26:** `CLR_TOPIC=a/b` → silently ignored (slash rejected)
 - **CC-27:** `CLR_NEW_SESSION=1` → suppresses `-c`
 - **CC-28:** `CLR_PRINT=1` without message → exit 1 ("--print requires a message")
 - **CC-29:** `CLR_PRINT=1` with message → `--print` in output

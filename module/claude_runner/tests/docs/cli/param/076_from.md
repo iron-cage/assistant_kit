@@ -145,7 +145,7 @@ Edge case tests for the `--from <DIR>` parameter, which enables session cross-lo
 
 - **Given:** no session storage; `--from` given an empty string
 - **When:** `clr --from "" --dry-run "task"`
-- **Then:** dry-run output contains NO `CLAUDE_CODE_SESSION_DIR=` export, no `# session-transplant:` plan line, and no `-unknown` path — an unfiltered empty value would fall through `encode_path()`'s error path into the `-unknown` fallback storage name (same empty-is-identity rule as `--subdir ""`)
+- **Then:** dry-run output contains NO `CLAUDE_CODE_SESSION_DIR=` export, no `# session-transplant:` plan line, and no `-unknown` path — an unfiltered empty value would fall through `encode_path()`'s error path into the `-unknown` fallback storage name (same empty-is-identity rule as `--topic ""`)
 - **Exit:** 0
 - **Source:** [param/076_from.md](../../../../docs/cli/param/076_from.md)
 - **Implemented by:** `session_from_test.rs::ec10_empty_source_value_ignored`

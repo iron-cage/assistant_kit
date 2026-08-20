@@ -18,7 +18,7 @@
 | Effort flags (T59–T70) | `effort_args_test.rs` | Default max injection, overrides, suppression |
 | Param edge cases (EC-N) | `param_edge_cases_test.rs` | Per-param positive/negative edge cases: help, model, verbose, no-skip-permissions, interactive, new-session, dir, session-dir, dry-run, quiet, print, system-prompt, append-system-prompt, no-effort-max, invariant |
 | Trace edge cases (S04–S06, S58–S60) | `param_trace_edge_cases_test.rs` | `--trace` parameter edge cases including isolated/refresh credential trace format |
-| Extended flag edge cases (S34–S57, S81–S89) | `param_extended_flags_test.rs` | Per-param edge cases for `--no-chrome`, `--no-persist`, `--json-schema`, `--mcp-config`, `--subdir`; S89: raw+json-schema structured output (BUG-318 fix) |
+| Extended flag edge cases (S34–S57, S81–S89) | `param_extended_flags_test.rs` | Per-param edge cases for `--no-chrome`, `--no-persist`, `--json-schema`, `--mcp-config`, `--topic`; S89: raw+json-schema structured output (BUG-318 fix) |
 | Param groups (CC-N) | `param_group_test.rs` | Combined-flag interaction tests for param groups |
 | Dry-run output | `dry_run_test.rs` | Env vars, command line structure, message quoting |
 | Execution modes (E01–E14, S76–S78, S80) | `execution_mode_test.rs` | Interactive/print routing, exit codes, stderr; S76 `--strip-fences`, S77 `--keep-claudecode`, S78 `--file` stdin pipe, S80 `--file` nonexistent path |
@@ -44,7 +44,7 @@
 | Gate max-attempts unit (none/invalid/valid fallback) | `gate_unit_test.rs` | `gate_max_attempts_from` unit: literal-value fallback assertions closing the AC-010 precision gap |
 | Session verification (SV-1–SV-4) | `session_verification_test.rs` | BUG-320 hardening: expected/actual UUID match, mismatch warning format, non-fatal exit, `--new-session` short-circuit, raw-output no-parse |
 | CLR_* env vars (E01–E17) | `env_var_test.rs` | CLR_* env var fallback for vars 1–17, CLI-wins checks |
-| CLR_* env vars extended (E18–E57, BUG-233) | `env_var_ext_test.rs` | CLR_* env var fallback for vars 18–57, BUG-233 subdir slash guard |
+| CLR_* env vars extended (E18–E57, BUG-233) | `env_var_ext_test.rs` | CLR_* env var fallback for vars 18–57, BUG-233 topic slash guard |
 | Output file capture (T01–T06) | `output_file_test.rs` | `--output-file` tee behavior, write errors, dry-run skip |
 | Expect output validation (T01–T17) | `expect_validation_test.rs` | `--expect`/`--expect-strategy`/`--retry-on-validation` validation loop |
 | Bug reproducers BUG-247 | `bug_reproducers_247_test.rs` | Stdout-to-stderr forwarding on subprocess failure |
@@ -104,7 +104,8 @@
 | Bug reproducer BUG-327 | `bug_reproducers_327_test.rs` | Stale deferred-tool-marker fallback retry: one-shot "Continue." substitution fires and succeeds; non-marker errors unaffected |
 | Bug reproducers BUG-490/491/492 | `bug_reproducers_490_492_test.rs` | Physical session transplant (dry-run plan line, pre-spawn copy, dest-preserved mtime refresh), nonexistent working-dir fast failure, `--no-stdin` held-open-pipe opt-out |
 | Bug reproducer BUG-493 | `bug_reproducers_493_test.rs` | Deprecated `--session-dir` fully inert: no `CLAUDE_CODE_SESSION_DIR` export, no `-c` gating from the override dir, loud one-line stderr warning only when given |
-| `clr topic` subcommand (T01–T08) | `topic_command_test.rs` | Auto-named `run`/`ask` alias: auto-generated `--subdir` slug from message + `-2`/`-3` disambiguation, explicit `--subdir` byte-identical to `ask`, unknown-flag/help handling, `--effort` passthrough, real (non-dry-run) session clone-then-continue transplant |
+| `clr topics` subcommand (TP-01–TP-17) | `topics_command_test.rs` | Read-only topic listing and name→path resolution: base precedence (`--dir` > `--global` > cwd), what counts as a topic, empty-base exit 0, resolver purity, real session counts, and the resolver/runner cross-check |
+| `clr topic` subcommand (T01–T08) | `topic_command_test.rs` | Auto-named `run`/`ask` alias: auto-generated `--topic` slug from message + `-2`/`-3` disambiguation, explicit `--topic` byte-identical to `ask`, unknown-flag/help handling, `--effort` passthrough, real (non-dry-run) session clone-then-continue transplant |
 | Shared helpers | `cli_binary_test_helpers.rs` | Shared test helper: `run_cli()` and `run_cli_with_env()` invocation |
 
 ### Responsibility Table
@@ -138,7 +139,7 @@
 | `error_classification_test.rs` | Bug reproducer BUG-037: labeled per-type stderr diagnostics from classify_error() (T09–T10); BUG-495: verbatim captured quota-message forms route end-to-end to `[Account]` (T11a–T11b). |
 | `param_edge_cases_test.rs` | Per-param edge cases (S01–S33): help, core param flags, and invariant checks. |
 | `param_trace_edge_cases_test.rs` | Trace edge cases (S04–S06, S58–S60): basic trace behavior and credential trace format. |
-| `param_extended_flags_test.rs` | Extended flag edge cases (S34–S57, S81–S89): `--no-chrome`, `--no-persist`, `--json-schema`, `--mcp-config`, `--subdir`; S89 (unix): raw+json-schema structured output BUG-318 fix. |
+| `param_extended_flags_test.rs` | Extended flag edge cases (S34–S57, S81–S89): `--no-chrome`, `--no-persist`, `--json-schema`, `--mcp-config`, `--topic`; S89 (unix): raw+json-schema structured output BUG-318 fix. |
 | `param_group_test.rs` | Param group combined invocations (CC-N): multi-flag interaction tests. |
 | `fence_test.rs` | `strip_fences` unit tests: fence-pair stripping, pass-through, edge cases (sf01–sf08). |
 | `summary_unit_test.rs` | `render_summary`/`resolve_fields`/`extract_session_id` unit tests: CLR envelope parsing, field profiles, BUG-309/310/320 regression guards (EC-14, IT-1, IT-4–IT-6, IT-7; +3 extract_session_id). |
@@ -162,7 +163,7 @@
 | `retry_default_test.rs` | `--retry-default` and `--retry-default-delay` integration: parse, env var, CLI-wins, Tier 3 fallback fires when no override/class-specific (EC-1–EC-8 param 56, EC-1–EC-6 param 57). |
 | `timeout_test.rs` | `--timeout` (run/ask) integration: parse, env var, CLI-wins, fake-subprocess watchdog kill and fast-exit no-fire (EC-1–EC-8); default watchdog path: constant value, no-fire, 2s survivor, explicit-above-default, unlimited flag/env, `_CLR_DEFAULT_TIMEOUT=2` kill (TSK-227/228); BUG-317 retry double-emission guard (`ec_timeout_retry_no_double_emission`). |
 | `env_var_test.rs` | CLR_* env var fallback: E01–E17, one per CLR_* variable, CLI-wins verification. |
-| `env_var_ext_test.rs` | CLR_* env var fallback extended: E18–E57, BUG-233 subdir slash validation. |
+| `env_var_ext_test.rs` | CLR_* env var fallback extended: E18–E57, BUG-233 topic slash validation. |
 | `user_story_test.rs` | User story end-to-end workflows: US01–US09 (core run/ask/model/verbose stories). |
 | `user_story_creds_isolated_test.rs` | User story end-to-end workflows: US10–US18 (credential, isolated, refresh stories). |
 | `user_story_output_test.rs` | User story end-to-end workflows: US19–US25 (MCP config, output file, concurrency gate). |
@@ -201,6 +202,7 @@
 | `bug_reproducers_327_test.rs` | Bug reproducer BUG-327: stale deferred-tool-marker one-shot fallback retry fires and substitutes "Continue."; non-marker errors unaffected. |
 | `bug_reproducers_490_492_test.rs` | Bug reproducers BUG-490/491/492: physical session transplant (plan preview, pre-spawn copy, dest never overwritten), nonexistent `--dir`/`--to` fast loud failure without the binary-missing misdiagnosis, `--no-stdin`/`CLR_NO_STDIN` opt-out under a held-open stdin pipe. |
 | `bug_reproducers_493_test.rs` | Bug reproducer BUG-493: deprecated `--session-dir` is fully inert (no env export, no `-c` gating from the override dir) and warns loudly on stderr only when given. |
-| `topic_command_test.rs` | `clr topic` subcommand (task 521): auto-generated `--subdir` slug from message with `-2`/`-3` disambiguation counter (T01–T02), explicit `--subdir` parity with `ask` (T03), unknown-flag/help handling (T06–T07), `--effort` passthrough (T08), real non-dry-run session clone-then-continue transplant via a stubbed `claude` binary (T04–T05, unix only). |
+| `topics_command_test.rs` | `clr topics` subcommand: listing under cwd/`--dir`/`--global` with `--dir` outranking `--global` (TP-01, TP-05–TP-07), topic recognition — `-`-prefixed dirs only, bare `-` excluded (TP-03–TP-04), empty base to stderr with exit 0 (TP-02), `--path` name→path resolution including the pure/no-side-effect guarantee (TP-08–TP-10), error handling for slash/unknown-option/missing-value (TP-11–TP-13), help forms (TP-14), session counting against real seeded `.jsonl` storage (TP-15), and the resolver/runner determinism cross-check (TP-16) plus a dispatch guard (TP-17). |
+| `topic_command_test.rs` | `clr topic` subcommand (task 521): auto-generated `--topic` slug from message with `-2`/`-3` disambiguation counter (T01–T02), explicit `--topic` parity with `ask` (T03), unknown-flag/help handling (T06–T07), `--effort` passthrough (T08), real non-dry-run session clone-then-continue transplant via a stubbed `claude` binary (T04–T05, unix only). |
 | `docs/` | Test documentation mirroring `docs/` — test case planning for CLI commands, params, groups. |
 | `manual/` | Manual testing plan for live Claude Code invocation. |

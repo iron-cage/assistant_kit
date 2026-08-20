@@ -16,6 +16,7 @@ pub( crate ) fn print_help()
     "clr kill <PID>".to_string(),
     "clr tools".to_string(),
     "clr scope [--dir <PATH>]".to_string(),
+    "clr topics [--path <NAME>] [--global]".to_string(),
     "clr isolated [OPTIONS]".to_string(),
     "clr refresh [OPTIONS]".to_string(),
     "clr query \"<MSG>\" [--dir <PATH>]".to_string(),
@@ -30,7 +31,8 @@ pub( crate ) fn print_help()
       [
         CommandEntry { name : "run".to_string(),      desc : "Execute Claude Code (default mode)".to_string() },
         CommandEntry { name : "ask".to_string(),      desc : "Semantic alias for run (identical behavior)".to_string() },
-        CommandEntry { name : "topic".to_string(),    desc : "Auto-named topic session (run/ask + generated --subdir)".to_string() },
+        CommandEntry { name : "topic".to_string(),    desc : "Auto-named topic session (run/ask + generated --topic)".to_string() },
+        CommandEntry { name : "topics".to_string(),   desc : "List topic sessions, or resolve one topic name to its path".to_string() },
         CommandEntry { name : "isolated".to_string(), desc : "Run with credential-isolated temp HOME".to_string() },
         CommandEntry { name : "refresh".to_string(),  desc : "Refresh OAuth credentials without a task".to_string() },
         CommandEntry { name : "ps".to_string(),       desc : "List running Claude Code sessions".to_string() },
@@ -67,7 +69,8 @@ fn runner_option_group() -> cli_fmt::help::OptionGroup
       OptionEntry { name : "--verbose".into(),                       desc : "Enable verbose output".into() },
       OptionEntry { name : "--quiet".into(),                         desc : "Suppress non-fatal CLR diagnostics (gate-wait, retry progress, keep-claudecode warning) [env: CLR_QUIET]".into() },
       OptionEntry { name : "--dir <PATH>, --to <PATH>".into(),       desc : "Working directory (alias: --to)".into() },
-      OptionEntry { name : "--subdir <NAME>".into(),                 desc : "Named subdirectory appended to --dir as /-NAME; . = identity".into() },
+      OptionEntry { name : "--topic <NAME>".into(),                 desc : "Named topic directory appended to --dir as /-NAME; . = identity".into() },
+      OptionEntry { name : "-g, --global".into(),                    desc : "Resolve --topic under $CLR_TOPIC_HOME instead of cwd [env: CLR_GLOBAL]".into() },
       OptionEntry { name : "--message <MSG>".into(),                  desc : "Message to send (alternative to positional argument)".into() },
       OptionEntry { name : "--session-dir <PATH>".into(),            desc : "Session storage directory — DEPRECATED, inert (BUG-493); use --from".into() },
       OptionEntry { name : "--from <DIR>".into(),                     desc : "Cross-load most-recent session from source directory (default: current directory) [env: CLR_FROM]".into() },
@@ -359,7 +362,8 @@ pub( crate ) fn print_ask_help() -> !
   println!( "  --system-prompt <TEXT>             Set system prompt" );
   println!( "  --append-system-prompt <TEXT>      Append to default system prompt" );
   println!( "  --dir <PATH>, --to <PATH>          Working directory (alias: --to)" );
-  println!( "  --subdir <NAME>                    Named subdirectory appended to --dir as /-NAME; . = identity" );
+  println!( "  --topic <NAME>                    Named topic directory appended to --dir as /-NAME; . = identity" );
+  println!( "  -g, --global                       Resolve --topic under $CLR_TOPIC_HOME instead of cwd [env: CLR_GLOBAL]" );
   println!( "  --message <MSG>                    Message to send (alternative to positional argument)" );
   println!( "  --session-dir <PATH>               Session storage directory — DEPRECATED, inert (BUG-493); use --from" );
   println!( "  --from <DIR>                       Cross-load most-recent session from source directory (default: current directory) [env: CLR_FROM]" );
@@ -391,7 +395,7 @@ pub( crate ) fn print_ask_help() -> !
 /// before delegating to `dispatch_run`.
 pub( crate ) fn print_topic_help() -> !
 {
-  println!( "clr topic — Auto-named topic session: `run`/`ask` with a generated --subdir" );
+  println!( "clr topic — Auto-named topic session: `run`/`ask` with a generated --topic" );
   println!();
   println!( "USAGE:" );
   println!( "  clr topic [OPTIONS] [MESSAGE]" );
@@ -399,12 +403,12 @@ pub( crate ) fn print_topic_help() -> !
   println!( "ARGUMENTS:" );
   println!( "  [MESSAGE]                          Message to send to Claude" );
   println!();
-  println!( "`clr topic` behaves exactly like `clr ask`, with one addition: when --subdir" );
+  println!( "`clr topic` behaves exactly like `clr ask`, with one addition: when --topic" );
   println!( "is not given, an auto-generated directory-name slug is derived from MESSAGE" );
   println!( "(lowercase, hyphenated, disambiguated with a -2, -3, ... counter suffix" );
-  println!( "against what already exists on disk) and applied as if --subdir <slug> had" );
-  println!( "been passed. An explicit --subdir always wins — `clr topic --subdir NAME" );
-  println!( "\"msg\"` is then byte-identical to `clr ask --subdir NAME \"msg\"`." );
+  println!( "against what already exists on disk) and applied as if --topic <slug> had" );
+  println!( "been passed. An explicit --topic always wins — `clr topic --topic NAME" );
+  println!( "\"msg\"` is then byte-identical to `clr ask --topic NAME \"msg\"`." );
   println!( "See `clr --help` or `clr run --help` for the full option list." );
   println!();
   println!( "OPTIONS:" );
@@ -417,7 +421,8 @@ pub( crate ) fn print_topic_help() -> !
   println!( "  --system-prompt <TEXT>             Set system prompt" );
   println!( "  --append-system-prompt <TEXT>      Append to default system prompt" );
   println!( "  --dir <PATH>, --to <PATH>          Working directory (alias: --to)" );
-  println!( "  --subdir <NAME>                    Named subdirectory (default: auto-generated slug)" );
+  println!( "  --topic <NAME>                    Named topic directory (default: auto-generated slug)" );
+  println!( "  -g, --global                       Place the topic under $CLR_TOPIC_HOME instead of cwd [env: CLR_GLOBAL]" );
   println!( "  --message <MSG>                    Message to send (alternative to positional argument)" );
   println!( "  --session-dir <PATH>               Session storage directory — DEPRECATED, inert (BUG-493); use --from" );
   println!( "  --from <DIR>                       Cross-load most-recent session from source directory (default: current directory) [env: CLR_FROM]" );
@@ -447,6 +452,47 @@ pub( crate ) fn print_topic_help() -> !
 ///
 /// Called when `--help` or `-h` is detected in `dispatch_scope`.
 /// Terminates the process via `std::process::exit(0)`.
+/// Print help for the `topics` subcommand and exit 0.
+///
+/// Called when `--help`/`-h` or positional `help` is detected in `dispatch_topics`.
+pub( crate ) fn print_topics_help() -> !
+{
+  println!( "clr topics — List topic sessions, or resolve one topic name to its path" );
+  println!();
+  println!( "USAGE:" );
+  println!( "  clr topics [--dir <PATH>] [--global]" );
+  println!( "  clr topics --path <NAME> [--dir <PATH>] [--global]" );
+  println!();
+  println!( "Read-only counterpart to `clr topic`. Without --path, lists every topic" );
+  println!( "directory under the base as NAME / SESSIONS / PATH columns. A topic with" );
+  println!( "0 sessions exists on disk but has never been entered." );
+  println!();
+  println!( "With --path, prints one absolute path and exits. That form is a pure" );
+  println!( "computation of <base>/-<NAME> — it never reads the disk, so the same name" );
+  println!( "always yields the same path whether or not the topic exists yet:" );
+  println!();
+  println!( "  cd \"$(clr topics --path my-topic --global)\"" );
+  println!();
+  println!( "BASE DIRECTORY (highest precedence first):" );
+  println!( "  --dir <PATH>         Explicit base — outranks --global" );
+  println!( "  --global             $CLR_TOPIC_HOME, else <system temp dir>/clr-topic" );
+  println!( "  (neither)            Current working directory" );
+  println!();
+  println!( "OPTIONS:" );
+  println!( "  --dir <PATH>, --to <PATH>  Base directory to list/resolve under" );
+  println!( "  -g, --global               Use the global topic home as the base [env: CLR_GLOBAL]" );
+  println!( "  --path <NAME>              Print the absolute path for NAME and exit" );
+  println!( "  -h, --help                 Show this help" );
+  println!();
+  println!( "ENVIRONMENT:" );
+  println!( "  CLR_TOPIC_HOME             Global topic home (default: <system temp dir>/clr-topic)" );
+  println!();
+  println!( "EXIT CODES:" );
+  println!( "  0  Success — including an empty base (note printed to stderr)" );
+  println!( "  1  Error — unknown option, or a flag given without its value" );
+  std::process::exit( 0 );
+}
+
 pub( crate ) fn print_scope_help() -> !
 {
   println!( "clr scope — Print all 6 CLAUDE_* path variables for a directory" );

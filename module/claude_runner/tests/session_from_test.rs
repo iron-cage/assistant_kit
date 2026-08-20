@@ -726,7 +726,7 @@ fn ec9_relative_source_path_resolves_against_cwd()
 // ── EC-10: empty source value is ignored ──────────────────────────────────────
 
 /// EC-10: `--from ""` is treated as absent — same empty-is-identity rule
-/// as `--subdir ""` (BUG-229 precedent).
+/// as `--topic ""` (BUG-229 precedent).
 ///
 /// Without the filter, the empty value fell through `encode_path()`'s error path
 /// into the `-unknown` fallback storage name, actively exporting

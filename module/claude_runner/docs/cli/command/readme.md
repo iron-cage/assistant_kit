@@ -21,24 +21,26 @@
 | 08_tools.md | Command spec: list Claude Code tools with version information |
 | 09_scope.md | Command spec: print all 6 CLAUDE_* path variables for a directory |
 | 10_query.md | Command spec: start or dispatch PID-addressed bidirectional control sessions |
-| 11_topic.md | Command spec: `run`/`ask` alias with an auto-naming `--subdir` default |
+| 11_topic.md | Command spec: `run`/`ask` alias with an auto-naming `--topic` default |
+| 12_topics.md | Command spec: list topic directories, or resolve one topic name to its path |
 
-### All Commands (11 total)
+### All Commands (12 total)
 
 | # | Command | Description | Params | Example |
 |---|---------|-------------|--------|---------|
-| 1 | `run` (default) | Execute Claude Code with given parameters | 63 | `clr "Fix bug" --model sonnet` |
+| 1 | `run` (default) | Execute Claude Code with given parameters | 64 | `clr "Fix bug" --model sonnet` |
 | 2 | `isolated` | Run Claude with credential-isolated temp HOME | 17 | `clr isolated --creds creds.json "Fix bug"` |
 | 3 | `refresh` | Refresh OAuth credentials without running a task | 6 | `clr refresh --creds creds.json` |
 | 4 | `help` | Print usage information and exit | 0 | `clr help` |
-| 5 | `ask` | Semantic alias for run (identical defaults) | 63 | `clr ask "What does X do?"` |
+| 5 | `ask` | Semantic alias for run (identical defaults) | 64 | `clr ask "What does X do?"` |
 | 6 | `ps` | List running Claude Code sessions | 5 | `clr ps` |
 | 7 | `kill` | Terminate a running Claude Code session by PID | 0 | `clr kill 12345` |
 | 8 | `tools` | List Claude Code tools with filter/projection/inspect controls | 5 | `clr tools --category Web --inspect` |
 | 9 | `scope` | Print all 6 CLAUDE_* path variables for a directory | 1 | `clr scope --dir /project` |
 | 10 | `query` | Start or dispatch PID-addressed bidirectional control sessions | 1 | `clr query "Fix bug"` |
-| 11 | `topic` | `run`/`ask` alias with an auto-naming `--subdir` default | 63 | `clr topic "Investigate the flaky test"` |
+| 11 | `topic` | `run`/`ask` alias with an auto-naming `--topic` default | 64 | `clr topic "Investigate the flaky test"` |
+| 12 | `topics` | List topic directories, or resolve one topic name to its path | 3 | `clr topics --global --path auth-refactor` |
 
-**Total:** 11 commands
+**Total:** 12 commands
 
 **Maintenance note:** When a new param is added to the Runner Control group (`docs/cli/param_group/02_runner_control.md`), these files must ALL be updated manually: (1) `01_run.md` Parameters table, (2) the Params count column above, (3) `docs/entity.md` param count + row, (4) `docs/cli/003_env_param.md` if it has an env var, (5) `tests/docs/cli/param/readme.md` status. `ask` inherits all `run` params automatically via the "All parameters from run are accepted" shortcut — no separate table update needed for `05_ask.md`.

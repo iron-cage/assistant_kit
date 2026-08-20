@@ -2,7 +2,7 @@
 
 Structural-equivalence tests for the run/ask/topic command group: verifying `ask` truly
 shares `run`'s handler function and parameter set with zero default divergence, and that
-`topic` shares the same handler with exactly one documented default divergence (`--subdir`).
+`topic` shares the same handler with exactly one documented default divergence (`--topic`).
 
 **Source:** [command_group/01_run_ask.md](../../../../docs/cli/command_group/01_run_ask.md)
 
@@ -12,7 +12,7 @@ shares `run`'s handler function and parameter set with zero default divergence, 
 |----|-----------|----------|
 | CG-1 | `clr ask "q"` dry-run output identical to `clr "q"` dry-run output | Equivalence |
 | CG-2 | `clr ask --dry-run` (no message) identical to `clr --dry-run` | Equivalence |
-| CG-3 | `clr topic --subdir NAME "q"` dry-run identical to `clr ask --subdir NAME "q"` dry-run | Equivalence |
+| CG-3 | `clr topic --topic NAME "q"` dry-run identical to `clr ask --topic NAME "q"` dry-run | Equivalence |
 
 ## Test Coverage Summary
 
@@ -21,7 +21,7 @@ shares `run`'s handler function and parameter set with zero default divergence, 
 **Total:** 3 test cases. CG-1/CG-2 are already fully specified as `command/05_ask.md` IT-1/IT-2;
 CG-3 is already fully specified as `command/11_topic.md` IT-3 — this file indexes them under the
 command_group entity rather than re-specifying identical Given/When/Then content. CG-3 neutralizes
-the group's one documented default divergence (explicit `--subdir` overrides `topic`'s auto-slug),
+the group's one documented default divergence (explicit `--topic` overrides `topic`'s auto-slug),
 confirming the shared handler is otherwise identical. See
 [command/05_ask.md](../command/05_ask.md) and [command/11_topic.md](../command/11_topic.md) for
 full case detail.
@@ -48,7 +48,7 @@ Full specification: [command/05_ask.md](../command/05_ask.md) IT-2.
 
 ---
 
-### CG-3: `clr topic --subdir NAME "q"` dry-run identical to `clr ask --subdir NAME "q"` dry-run
+### CG-3: `clr topic --topic NAME "q"` dry-run identical to `clr ask --topic NAME "q"` dry-run
 
 Full specification: [command/11_topic.md](../command/11_topic.md) IT-3.
 

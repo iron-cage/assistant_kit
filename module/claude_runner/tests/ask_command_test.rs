@@ -22,7 +22,7 @@
 //! - T07: `clr ask --dry-run "X"` — uses `CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000` (run default)
 //! - T08: `clr ask --new-session --dry-run "X"` — explicit flag respected (no `-c` in output)
 //! - T09: `clr ask --unknown-flag "X"` — unknown flag rejected (exit 1, stderr error)
-//! - T10: `clr ask --subdir NAME "X"` — effective dir ends with `/-NAME`
+//! - T10: `clr ask --topic NAME "X"` — effective dir ends with `/-NAME`
 //! - T12: `clr assk …` — edit-distance-1 typo caught by guard; exits 1, "Did you mean 'ask'?"
 //! - T13: `clr ask --dry-run --effort high "q"` — explicit `--effort high` preserved unchanged (passthrough)
 
@@ -219,15 +219,15 @@ fn t11_ask_positional_help_shows_help()
   );
 }
 
-// T10: --subdir NAME produces effective dir ending in /-NAME
+// T10: --topic NAME produces effective dir ending in /-NAME
 #[ test ]
-fn t10_ask_subdir_effective_dir()
+fn t10_ask_topic_effective_dir()
 {
-  let output = run_ask_dry( &[ "--subdir", "feature", "What is X?" ] );
+  let output = run_ask_dry( &[ "--topic", "feature", "What is X?" ] );
   let sep = std::path::MAIN_SEPARATOR;
   assert!(
     output.contains( &format!( "{sep}-feature" ) ),
-    "ask --subdir feature must produce path ending in {sep}-feature. Got:\n{output}"
+    "ask --topic feature must produce path ending in {sep}-feature. Got:\n{output}"
   );
 }
 

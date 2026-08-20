@@ -1,6 +1,6 @@
 //! Unix-only integration tests.
 #![ cfg( unix ) ]
-//! User Story Integration Tests — Output, Effort, Context, Subdir, Concurrency (US19–US25)
+//! User Story Integration Tests — Output, Effort, Context, Topic, Concurrency (US19–US25)
 //!
 //! ## Purpose
 //!
@@ -27,7 +27,7 @@
 //! | 19 | MCP Config Injection | US-1..4 | dry-run / env var |
 //! | 20 | Suppress Effort Max | US-1..4 | dry-run / env var |
 //! | 21 | Keep ClaudeCode Context | US-1..4 | dry-run / env var |
-//! | 22 | Session Isolation via Subdirectory | US-1..5 | dry-run / env var |
+//! | 22 | Session Isolation via Topic Directory | US-1..5 | dry-run / env var |
 //! | 23 | Output File Capture | US-1..4 | dry-run / fake claude / error path |
 //! | 24 | Enum Output Validation | US-1..4 | fake claude / parse error |
 //! | 25 | Session Concurrency Gate | US-1..6 | dry-run / env var / `$CLR_PROC_DIR` fixture |
@@ -237,80 +237,80 @@ fn us21_4_env_var_yes_silently_rejected()
   );
 }
 
-// ── US22: Session Isolation via Subdirectory ──────────────────────────────────
-// Source: tests/docs/cli/user_story/22_session_isolation_subdir.md
+// ── US22: Session Isolation via Topic Directory ──────────────────────────────────
+// Source: tests/docs/cli/user_story/022_session_isolation_topic.md
 
-/// US-1: `--subdir NAME` appends `/-NAME` to the effective working directory.
+/// US-1: `--topic NAME` appends `/-NAME` to the effective working directory.
 #[ test ]
-fn us22_us1_subdir_name_appends_hyphen_name()
+fn us22_us1_topic_name_appends_hyphen_name()
 {
-  let output = run_dry( &[ "--subdir", "build", "Fix bug" ] );
+  let output = run_dry( &[ "--topic", "build", "Fix bug" ] );
   assert!(
     output.contains( "/-build" ),
-    "--subdir build must produce path ending in /-build. Got:\n{output}"
+    "--topic build must produce path ending in /-build. Got:\n{output}"
   );
 }
 
-/// US-2: `--subdir .` is identity — no `/-` suffix in effective dir.
+/// US-2: `--topic .` is identity — no `/-` suffix in effective dir.
 #[ test ]
-fn us22_us2_subdir_dot_identity()
+fn us22_us2_topic_dot_identity()
 {
-  let output = run_dry( &[ "--subdir", ".", "Fix bug" ] );
+  let output = run_dry( &[ "--topic", ".", "Fix bug" ] );
   assert!(
     !output.contains( "/-" ),
-    "--subdir . must not append any /-NAME suffix. Got:\n{output}"
+    "--topic . must not append any /-NAME suffix. Got:\n{output}"
   );
 }
 
-/// US-3: `CLR_SUBDIR=feature` env var accepted; effective dir ends in `/-feature`.
+/// US-3: `CLR_TOPIC=feature` env var accepted; effective dir ends in `/-feature`.
 #[ test ]
-fn us22_us3_clr_subdir_env_var()
+fn us22_us3_clr_topic_env_var()
 {
   let out = run_cli_with_env(
     &[ "--dry-run", "Fix bug" ],
-    &[ ( "CLR_SUBDIR", "feature" ) ],
+    &[ ( "CLR_TOPIC", "feature" ) ],
   );
-  assert!( out.status.success(), "CLR_SUBDIR must exit 0. Got: {:?}", out.status.code() );
+  assert!( out.status.success(), "CLR_TOPIC must exit 0. Got: {:?}", out.status.code() );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(
     stdout.contains( "/-feature" ),
-    "CLR_SUBDIR=feature must produce path ending in /-feature. Got:\n{stdout}"
+    "CLR_TOPIC=feature must produce path ending in /-feature. Got:\n{stdout}"
   );
 }
 
-/// US-4: `CLR_SUBDIR=.` env var identity — no `/-` suffix in effective dir.
+/// US-4: `CLR_TOPIC=.` env var identity — no `/-` suffix in effective dir.
 #[ test ]
-fn us22_us4_clr_subdir_dot_identity()
+fn us22_us4_clr_topic_dot_identity()
 {
   let out = run_cli_with_env(
     &[ "--dry-run", "Fix bug" ],
-    &[ ( "CLR_SUBDIR", "." ) ],
+    &[ ( "CLR_TOPIC", "." ) ],
   );
-  assert!( out.status.success(), "CLR_SUBDIR=. must exit 0. Got: {:?}", out.status.code() );
+  assert!( out.status.success(), "CLR_TOPIC=. must exit 0. Got: {:?}", out.status.code() );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(
     !stdout.contains( "/-" ),
-    "CLR_SUBDIR=. must not append any /-NAME suffix. Got:\n{stdout}"
+    "CLR_TOPIC=. must not append any /-NAME suffix. Got:\n{stdout}"
   );
 }
 
-/// US-5: CLI `--subdir cliname` wins over `CLR_SUBDIR=envname`.
+/// US-5: CLI `--topic cliname` wins over `CLR_TOPIC=envname`.
 #[ test ]
 fn us22_us5_cli_wins_over_env_var()
 {
   let out = run_cli_with_env(
-    &[ "--dry-run", "--subdir", "cliname", "Fix bug" ],
-    &[ ( "CLR_SUBDIR", "envname" ) ],
+    &[ "--dry-run", "--topic", "cliname", "Fix bug" ],
+    &[ ( "CLR_TOPIC", "envname" ) ],
   );
-  assert!( out.status.success(), "CLI --subdir with CLR_SUBDIR must exit 0: {:?}", out.status.code() );
+  assert!( out.status.success(), "CLI --topic with CLR_TOPIC must exit 0: {:?}", out.status.code() );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(
     stdout.contains( "/-cliname" ),
-    "CLI --subdir cliname must win over CLR_SUBDIR=envname. Got:\n{stdout}"
+    "CLI --topic cliname must win over CLR_TOPIC=envname. Got:\n{stdout}"
   );
   assert!(
     !stdout.contains( "/-envname" ),
-    "CLR_SUBDIR=envname must be suppressed by CLI --subdir. Got:\n{stdout}"
+    "CLR_TOPIC=envname must be suppressed by CLI --topic. Got:\n{stdout}"
   );
 }
 

@@ -70,7 +70,8 @@ pub( crate ) struct CliArgs
   pub( crate ) stdin_content        : Option< Vec< u8 > >,
   pub( crate ) strip_fences         : bool,
   pub( crate ) keep_claudecode      : bool,
-  pub( crate ) subdir               : Option< String >,
+  pub( crate ) topic               : Option< String >,
+  pub( crate ) global               : bool,
   pub( crate ) output_file          : Option< String >,
   pub( crate ) expect               : Option< String >,
   pub( crate ) expect_strategy      : Option< ExpectStrategy >,
@@ -281,20 +282,20 @@ fn parse_value_flag(
     {
       parsed.file = Some( next_value( tokens, next, "--file" )?.to_string() );
     }
-    // Fix(BUG-230): reject subdir names containing `/` — spec requires single name component
+    // Fix(BUG-230): reject topic names containing `/` — spec requires single name component
     // Root cause: no validation; `create_dir_all` silently created nested dirs for `a/b`
     // Pitfall: must reject `/` in the value, not just leading `/` — any separator violates
-    // the "directory name component" type constraint in 028_subdir.md
-    "--subdir" =>
+    // the "directory name component" type constraint in 028_topic.md
+    "--topic" =>
     {
-      let val = next_value( tokens, next, "--subdir" )?;
+      let val = next_value( tokens, next, "--topic" )?;
       if val.contains( '/' )
       {
         return Err( Error::msg(
-          "--subdir must be a single directory name component (no '/' separators)"
+          "--topic must be a single directory name component (no '/' separators)"
         ) );
       }
-      parsed.subdir = Some( val.to_string() );
+      parsed.topic = Some( val.to_string() );
     }
     "--output-format" =>
     {
@@ -616,7 +617,8 @@ pub( crate ) fn parse_args( tokens : &[ String ] ) -> Result< CliArgs >
       stdin_content        : None,
       strip_fences         : false,
       keep_claudecode      : false,
-      subdir               : None,
+      topic               : None,
+      global               : false,
       output_file          : None,
       expect               : None,
       expect_strategy      : None,
@@ -682,6 +684,16 @@ pub( crate ) fn parse_args( tokens : &[ String ] ) -> Result< CliArgs >
       "--interactive" =>
       {
         parsed.interactive = true;
+      }
+      // Resolves --topic's base to the global topic home instead of the current directory.
+      // Inert without --topic: with no topic directory to place, there is no base to redirect.
+      // An explicit --dir outranks it (see topic_path::topic_base).
+      // Belongs in this bool-flag match, NOT parse_value_flag — that parser's Result<bool>
+      // return signals "a value was consumed", so a valueless flag placed there would make
+      // the caller skip the following token.
+      "--global" | "-g" =>
+      {
+        parsed.global = true;
       }
       "--new-session" =>
       {

@@ -50,7 +50,7 @@ clr -p "Fix bug" --model sonnet --verbose
 | 1 | [`run`](../command/01_run.md) | Full | — | All 14 params apply; default command |
 | 5 | [`ask`](../command/05_ask.md) | Full | — | All 14 params apply; only defaults differ |
 | 3 | [`isolated`](../command/03_isolated.md) | Partial (9/14) | `--print` (auto-injected), `--verbose`, `--output-format`, `--input-format`, `--fallback-model` | `--model`, `--effort`, `--json-schema`, `--mcp-config`, `--max-turns`, `--allowed-tools`, `--disallowed-tools`, `--max-budget-usd`, `--add-dir` apply as native flags (TSK-443) |
-| 11 | [`topic`](../command/11_topic.md) | Full | — | All 14 params apply; identical to `ask`'s Full membership — topic's only divergence (`--subdir` default) lives in the Runner Control group, not here |
+| 11 | [`topic`](../command/11_topic.md) | Full | — | All 14 params apply; identical to `ask`'s Full membership — topic's only divergence (`--topic` default) lives in the Runner Control group, not here |
 
 ### Referenced Parameters
 

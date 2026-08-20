@@ -19,9 +19,9 @@
 //! | E24  | `CLR_TIMEOUT`              | stderr NOT contains `missing required argument: --creds`    |
 //! | E25–E27 | `CLR_FILE`, `CLR_STRIP_FENCES`, `CLR_KEEP_CLAUDECODE` | dry-run accepted |
 //! | E28  | `CLR_TRACE` (isolated)     | stderr contains trace output for isolated subcommand        |
-//! | E29  | `CLR_SUBDIR`               | stdout contains `/-feature` path suffix                     |
+//! | E29  | `CLR_TOPIC`               | stdout contains `/-feature` path suffix                     |
 //! | E30  | `CLR_MAX_SESSIONS`         | dry-run exit 0; invalid value silently ignored              |
-//! | BUG-233 | `CLR_SUBDIR` with slash | silently ignored — no partial application                  |
+//! | BUG-233 | `CLR_TOPIC` with slash | silently ignored — no partial application                  |
 //! | E31  | `CLR_OUTPUT_FILE`          | dry-run exit 0; CLI wins over env                           |
 //! | E32  | `CLR_EXPECT`               | dry-run exit 0; CLI wins over env                           |
 //! | E33  | `CLR_EXPECT_STRATEGY`      | dry-run exit 0; CLI wins; invalid value → exit 1            |
@@ -306,41 +306,41 @@ fn e28_clr_trace_applies_to_isolated()
   );
 }
 
-// ─── E29: CLR_SUBDIR ──────────────────────────────────────────────────────────
+// ─── E29: CLR_TOPIC ──────────────────────────────────────────────────────────
 
-/// E29: `CLR_SUBDIR` appends `/-NAME` to the effective working directory.
+/// E29: `CLR_TOPIC` appends `/-NAME` to the effective working directory.
 ///
-/// CLI-wins: explicit `--subdir build` takes precedence over `CLR_SUBDIR=debug`.
+/// CLI-wins: explicit `--topic build` takes precedence over `CLR_TOPIC=debug`.
 ///
-/// Spec: `tests/docs/cli/user_story/22_session_isolation_subdir.md` US-3, US-4, US-5
+/// Spec: `tests/docs/cli/user_story/022_session_isolation_topic.md` US-3, US-4, US-5
 #[ test ]
-fn e29_clr_subdir_sets_effective_dir()
+fn e29_clr_topic_sets_effective_dir()
 {
   let out = run_cli_with_env(
     &[ "--dry-run", "t" ],
-    &[ ( "CLR_SUBDIR", "feature" ) ],
+    &[ ( "CLR_TOPIC", "feature" ) ],
   );
   assert!( out.status.success(), "exit must be 0: {out:?}" );
   let stdout = String::from_utf8_lossy( &out.stdout );
   let sep = std::path::MAIN_SEPARATOR;
   assert!(
     stdout.contains( &format!( "{sep}-feature" ) ),
-    "CLR_SUBDIR=feature must produce path ending in {sep}-feature: {stdout}",
+    "CLR_TOPIC=feature must produce path ending in {sep}-feature: {stdout}",
   );
-  // CLI-wins: --subdir build must take precedence over CLR_SUBDIR=debug
+  // CLI-wins: --topic build must take precedence over CLR_TOPIC=debug
   let out2 = run_cli_with_env(
-    &[ "--dry-run", "--subdir", "build", "t" ],
-    &[ ( "CLR_SUBDIR", "debug" ) ],
+    &[ "--dry-run", "--topic", "build", "t" ],
+    &[ ( "CLR_TOPIC", "debug" ) ],
   );
-  assert!( out2.status.success(), "CLI --subdir with CLR_SUBDIR must exit 0: {out2:?}" );
+  assert!( out2.status.success(), "CLI --topic with CLR_TOPIC must exit 0: {out2:?}" );
   let stdout2 = String::from_utf8_lossy( &out2.stdout );
   assert!(
     stdout2.contains( &format!( "{sep}-build" ) ),
-    "CLI --subdir build must win over CLR_SUBDIR=debug: {stdout2}",
+    "CLI --topic build must win over CLR_TOPIC=debug: {stdout2}",
   );
   assert!(
     !stdout2.contains( &format!( "{sep}-debug" ) ),
-    "CLR_SUBDIR=debug must be suppressed by CLI --subdir: {stdout2}",
+    "CLR_TOPIC=debug must be suppressed by CLI --topic: {stdout2}",
   );
 }
 
@@ -390,19 +390,19 @@ fn e30_clr_max_sessions_accepted_in_dry_run()
   );
 }
 
-// ─── BUG-233 CLR_SUBDIR slash validation (bug reproducer) ──────────────────────
+// ─── BUG-233 CLR_TOPIC slash validation (bug reproducer) ──────────────────────
 
-/// Fix(BUG-233): `CLR_SUBDIR=a/b` must be silently ignored — same constraint as `--subdir`.
+/// Fix(BUG-233): `CLR_TOPIC=a/b` must be silently ignored — same constraint as `--topic`.
 ///
 /// ## Root Cause
-/// `apply_env_vars` assigned `CLR_SUBDIR` directly to `parsed.subdir` without the
-/// `contains('/')` check that `parse_value_flag` applies to CLI `--subdir`.
+/// `apply_env_vars` assigned `CLR_TOPIC` directly to `parsed.topic` without the
+/// `contains('/')` check that `parse_value_flag` applies to CLI `--topic`.
 ///
 /// ## Why Not Caught
 /// BUG-230 only fixed the CLI parse path; env-var path was not tested for slashes.
 ///
 /// ## Fix Applied
-/// Added `!v.contains('/')` guard in `apply_env_vars` for `CLR_SUBDIR`.
+/// Added `!v.contains('/')` guard in `apply_env_vars` for `CLR_TOPIC`.
 ///
 /// ## Prevention
 /// When adding validation to a CLI flag, audit the corresponding env-var path too.
@@ -412,19 +412,19 @@ fn e30_clr_max_sessions_accepted_in_dry_run()
 /// not rejected with an error. This matches the existing convention (see `CLR_EFFORT`).
 // test_kind: bug_reproducer(BUG-233)
 #[ test ]
-fn bug233_clr_subdir_slash_silently_ignored()
+fn bug233_clr_topic_slash_silently_ignored()
 {
-  // CLR_SUBDIR=a/b should be silently dropped — no /-a/b in output
+  // CLR_TOPIC=a/b should be silently dropped — no /-a/b in output
   let out = run_cli_with_env(
     &[ "--dry-run", "t" ],
-    &[ ( "CLR_SUBDIR", "a/b" ) ],
+    &[ ( "CLR_TOPIC", "a/b" ) ],
   );
-  assert!( out.status.success(), "must exit 0 even with invalid CLR_SUBDIR: {out:?}" );
+  assert!( out.status.success(), "must exit 0 even with invalid CLR_TOPIC: {out:?}" );
   let stdout = String::from_utf8_lossy( &out.stdout );
   let sep = std::path::MAIN_SEPARATOR;
   assert!(
     !stdout.contains( &format!( "{sep}-a" ) ),
-    "CLR_SUBDIR=a/b must be silently ignored — no {sep}-a in output: {stdout}",
+    "CLR_TOPIC=a/b must be silently ignored — no {sep}-a in output: {stdout}",
   );
 }
 

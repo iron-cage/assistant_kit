@@ -19,30 +19,30 @@ clr <command> [OPTIONS] [MESSAGE]
 
 | File | Responsibility |
 |------|----------------|
-| `command/` | Command reference: run, ask, isolated, refresh, help, ps, kill, tools, scope, query, topic (11 commands) |
+| `command/` | Command reference: run, ask, isolated, refresh, help, ps, kill, tools, scope, query, topic, topics (12 commands) |
 | `001_dictionary.md` | Domain vocabulary for clr CLI concepts |
 | `002_command_defaults.md` | Cross-command parameter default matrix and isolated/refresh design targets |
 | `parity/` | Cross-command behavioral parity comparisons (2 instances) |
-| `003_env_param.md` | CLR_* env var fallbacks, gate/query runtime config (dir/poll/attempts/config-dir/query-dir), and CLAUDE_CODE_* subprocess vars (93 vars) |
+| `003_env_param.md` | CLR_* env var fallbacks, gate/query runtime config (dir/poll/attempts/config-dir/query-dir), and CLAUDE_CODE_* subprocess vars (95 vars) |
 | `config_param.md` | Config-file parameter tier: eligible parameters, TOML key reference, discovery/precedence |
 | `param_group/` | Logical parameter groupings (7 groups) |
-| `command_group/` | Every command partitioned into exactly one group (Total Partition); shared handler + parameter set when multi-member (9 groups: 1 triple + 8 singletons) |
+| `command_group/` | Every command partitioned into exactly one group (Total Partition); shared handler + parameter set when multi-member (10 groups: 1 triple + 9 singletons) |
 | `type/` | Semantic type definitions (13 active types; 1 deprecated) |
-| `param/` | Individual parameter reference docs (81 active; 1 deprecated) |
-| `user_story/` | User goal and usage pattern docs (30 user stories) |
+| `param/` | Individual parameter reference docs (82 active; 1 deprecated) |
+| `user_story/` | User goal and usage pattern docs (31 user stories) |
 
 ### Completion Matrix
 
 | Entity | L1 | L2 | L3 | L4 | L5 | Status |
 |--------|----|----|----|----|----|----|
 | readme.md | ✅ | ✅ | ➖ | ➖ | ➖ | Complete |
-| command/ (11 instances) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
-| param/ (82 instances; 1 deprecated) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
+| command/ (12 instances) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
+| param/ (83 instances; 1 deprecated) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
 | 001_dictionary.md | ✅ | ✅ | ➖ | ➖ | ➖ | Complete |
 | type/ (14 instances; 1 deprecated) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
 | param_group/ (7 instances) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
-| command_group/ (9 groups; 1 multi-member detail file) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
-| user_story/ (30 instances) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
+| command_group/ (10 groups; 1 multi-member detail file) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
+| user_story/ (31 instances) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
 | 003_env_param.md | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
 | parity/ (2 instances) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
 | config_param.md | ✅ | ✅ | ➖ | ➖ | ➖ | Complete |
@@ -64,14 +64,14 @@ clr <command> [OPTIONS] [MESSAGE]
 
 ### Navigation
 
-- [Commands](command/readme.md) — command reference (11 commands)
+- [Commands](command/readme.md) — command reference (12 commands)
 - [Parameters](param/readme.md) — flag and argument reference (81 active; 1 deprecated)
 - [Types](type/readme.md) — semantic type definitions (13 active types; 1 deprecated)
 - [Parameter Groups](param_group/readme.md) — logical parameter groupings (7 groups)
-- [Command Groups](command_group/readme.md) — every command in exactly one group; shared handler + parameter set when multi-member (9 groups: 1 triple + 8 singletons)
+- [Command Groups](command_group/readme.md) — every command in exactly one group; shared handler + parameter set when multi-member (10 groups: 1 triple + 9 singletons)
 - [Dictionary](001_dictionary.md) — domain vocabulary
-- [User Stories](user_story/readme.md) — user goals and usage patterns (30 user stories)
-- [Env Parameters](003_env_param.md) — input, runtime config, and subprocess environment variables (93 variables)
+- [User Stories](user_story/readme.md) — user goals and usage patterns (31 user stories)
+- [Env Parameters](003_env_param.md) — input, runtime config, and subprocess environment variables (95 variables)
 - [Config File Parameters](config_param.md) — TOML config-file parameter tier (41 eligible parameters)
 - [Parity](parity/readme.md) — cross-command behavioral parity comparisons (2 instances)
 

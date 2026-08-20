@@ -45,18 +45,28 @@
 //! - S56: `--mcp-config` + `--model` → both forwarded (`024_mcp_config.md` EC-5)
 //! - S57: `--mcp-config` without message → exit 0; path in assembled command (`024_mcp_config.md` EC-6)
 //!
-//! --subdir:
-//! - S81: default (no `--subdir`) → no `/-` path component in dry-run output (`028_subdir.md` EC-1)
-//! - S82: `--subdir NAME` → effective dir ends with `/-NAME` (`028_subdir.md` EC-2)
-//! - S83: `--subdir .` → identity; no `/-` suffix in dry-run output (`028_subdir.md` EC-3)
-//! - S84: `--help` output contains `--subdir` (`028_subdir.md` EC-4)
-//! - S85: `--subdir NAME` + `--dir PATH` → effective dir is `PATH/-NAME` (`028_subdir.md` EC-5)
-//! - S86: `--subdir ""` → identity (BUG-229 reproducer)
-//! - S87: `--subdir "a/b"` → rejected, slash in name (BUG-230 reproducer)
-//! - S88: `--dry-run --subdir NAME` → no directory created (BUG-231 reproducer)
+//! --topic:
+//! - S81: default (no `--topic`) → no `/-` path component in dry-run output (`028_topic.md` EC-1)
+//! - S82: `--topic NAME` → effective dir ends with `/-NAME` (`028_topic.md` EC-2)
+//! - S83: `--topic .` → identity; no `/-` suffix in dry-run output (`028_topic.md` EC-3)
+//! - S84: `--help` output contains `--topic` (`028_topic.md` EC-4)
+//! - S85: `--topic NAME` + `--dir PATH` → effective dir is `PATH/-NAME` (`028_topic.md` EC-5)
+//! - S86: `--topic ""` → identity (BUG-229 reproducer)
+//! - S87: `--topic "a/b"` → rejected, slash in name (BUG-230 reproducer)
+//! - S88: `--dry-run --topic NAME` → no directory created (BUG-231 reproducer)
+//!
+//! --global:
+//! - S90: `--global --topic NAME` → effective dir is `$CLR_TOPIC_HOME/-NAME` (`087_global.md` EC-1)
+//! - S91: `--global` with no topic to place → byte-identical output; inert (`087_global.md` EC-2)
+//! - S92: `--dir PATH` outranks `--global` (`087_global.md` EC-3)
+//! - S93: `-g` is an exact alias for `--global` (`087_global.md` EC-4)
+//! - S94: `--help` output contains `--global` and the `-g` alias (`087_global.md` EC-5)
+//! - S95: `CLR_GLOBAL=1` applied when `--global` absent (`087_global.md` EC-6)
+//! - S96: `CLR_TOPIC_HOME` unset → falls back to `<temp-dir>/clr-topic` (`087_global.md` EC-7)
+//! - S97: `--global --topic .` → identity; nothing placed under the global home (`087_global.md` EC-8)
 
 mod cli_binary_test_helpers;
-use cli_binary_test_helpers::run_cli;
+use cli_binary_test_helpers::{ run_cli, run_cli_in_dir };
 #[ cfg( unix ) ]
 use cli_binary_test_helpers::fake_claude_dir;
 
@@ -459,13 +469,13 @@ fn s57_mcp_config_without_message_accepted()
   );
 }
 
-// ─── --subdir ─────────────────────────────────────────────────────────────────
-// Source: tests/docs/cli/param/028_subdir.md
+// ─── --topic ─────────────────────────────────────────────────────────────────
+// Source: tests/docs/cli/param/028_topic.md
 // EC-6 (env var) and EC-7 (CLI-wins) are covered by env_var_ext_test.rs E29.
 
-// S81: default (no `--subdir`) → no `/-` path component in dry-run output (`028_subdir.md` EC-1)
+// S81: default (no `--topic`) → no `/-` path component in dry-run output (`028_topic.md` EC-1)
 #[ test ]
-fn s81_default_no_subdir_no_hyphen_prefix()
+fn s81_default_no_topic_no_hyphen_prefix()
 {
   let out = run_cli( &[ "--dry-run", "task" ] );
   assert!( out.status.success(), "must exit 0: {out:?}" );
@@ -473,68 +483,68 @@ fn s81_default_no_subdir_no_hyphen_prefix()
   let sep = std::path::MAIN_SEPARATOR;
   assert!(
     !stdout.contains( &format!( "{sep}-" ) ),
-    "without --subdir, no {sep}- path component must appear. Got:\n{stdout}"
+    "without --topic, no {sep}- path component must appear. Got:\n{stdout}"
   );
 }
 
-// S82: `--subdir NAME` → effective dir ends with `/-NAME` (`028_subdir.md` EC-2)
+// S82: `--topic NAME` → effective dir ends with `/-NAME` (`028_topic.md` EC-2)
 #[ test ]
-fn s82_subdir_name_appends_hyphen_prefix()
+fn s82_topic_name_appends_hyphen_prefix()
 {
-  let out = run_cli( &[ "--dry-run", "--subdir", "build", "task" ] );
+  let out = run_cli( &[ "--dry-run", "--topic", "build", "task" ] );
   assert!( out.status.success(), "must exit 0: {out:?}" );
   let stdout = String::from_utf8_lossy( &out.stdout );
   let sep = std::path::MAIN_SEPARATOR;
   assert!(
     stdout.contains( &format!( "{sep}-build" ) ),
-    "--subdir build must produce path ending in {sep}-build. Got:\n{stdout}"
+    "--topic build must produce path ending in {sep}-build. Got:\n{stdout}"
   );
 }
 
-// S83: `--subdir .` → identity; no `/-` suffix in dry-run output (`028_subdir.md` EC-3)
+// S83: `--topic .` → identity; no `/-` suffix in dry-run output (`028_topic.md` EC-3)
 #[ test ]
-fn s83_subdir_dot_identity_no_suffix()
+fn s83_topic_dot_identity_no_suffix()
 {
-  let out = run_cli( &[ "--dry-run", "--subdir", ".", "task" ] );
+  let out = run_cli( &[ "--dry-run", "--topic", ".", "task" ] );
   assert!( out.status.success(), "must exit 0: {out:?}" );
   let stdout = String::from_utf8_lossy( &out.stdout );
   let sep = std::path::MAIN_SEPARATOR;
   assert!(
     !stdout.contains( &format!( "{sep}-" ) ),
-    "--subdir . must not append any {sep}- suffix. Got:\n{stdout}"
+    "--topic . must not append any {sep}- suffix. Got:\n{stdout}"
   );
 }
 
-// S84: `--help` output contains `--subdir` (`028_subdir.md` EC-4)
+// S84: `--help` output contains `--topic` (`028_topic.md` EC-4)
 #[ test ]
-fn s84_help_lists_subdir()
+fn s84_help_lists_topic()
 {
   let out = run_cli( &[ "--help" ] );
   assert!( out.status.success(), "exit={} stderr={}", out.status.code().unwrap_or( -1 ), String::from_utf8_lossy( &out.stderr ) );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(
-    stdout.contains( "--subdir" ),
-    "--help must mention --subdir. Got:\n{stdout}"
+    stdout.contains( "--topic" ),
+    "--help must mention --topic. Got:\n{stdout}"
   );
 }
 
-// S85: `--subdir NAME` + `--dir PATH` → effective dir is `PATH/-NAME` (`028_subdir.md` EC-5)
+// S85: `--topic NAME` + `--dir PATH` → effective dir is `PATH/-NAME` (`028_topic.md` EC-5)
 #[ cfg( unix ) ]
 #[ test ]
-fn s85_subdir_with_dir_combined()
+fn s85_topic_with_dir_combined()
 {
-  let out = run_cli( &[ "--dry-run", "--dir", "/tmp/project", "--subdir", "debug", "task" ] );
+  let out = run_cli( &[ "--dry-run", "--dir", "/tmp/project", "--topic", "debug", "task" ] );
   assert!( out.status.success(), "must exit 0: {out:?}" );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(
     stdout.contains( "/tmp/project/-debug" ),
-    "--dir /tmp/project --subdir debug must produce /tmp/project/-debug. Got:\n{stdout}"
+    "--dir /tmp/project --topic debug must produce /tmp/project/-debug. Got:\n{stdout}"
   );
 }
 
-// ─── --subdir bug-fix reproducing tests ─────────────────────────────────────
+// ─── --topic bug-fix reproducing tests ─────────────────────────────────────
 
-/// Fix(BUG-229): `--subdir ""` must be identity — no degenerate `/-` directory.
+/// Fix(BUG-229): `--topic ""` must be identity — no degenerate `/-` directory.
 ///
 /// ## Root Cause
 /// Only `"."` was checked; empty string passed the guard and produced a bare-hyphen dir.
@@ -552,19 +562,19 @@ fn s85_subdir_with_dir_combined()
 /// `env_str` already filters empty strings — only the CLI path can deliver `""`.
 // test_kind: bug_reproducer(BUG-229)
 #[ test ]
-fn s86_subdir_empty_string_is_identity()
+fn s86_topic_empty_string_is_identity()
 {
-  let out = run_cli( &[ "--dry-run", "--subdir", "", "task" ] );
+  let out = run_cli( &[ "--dry-run", "--topic", "", "task" ] );
   assert!( out.status.success(), "must exit 0: {out:?}" );
   let stdout = String::from_utf8_lossy( &out.stdout );
   let sep = std::path::MAIN_SEPARATOR;
   assert!(
     !stdout.contains( &format!( "{sep}-" ) ),
-    "--subdir '' (empty) must be identity — no {sep}- suffix. Got:\n{stdout}"
+    "--topic '' (empty) must be identity — no {sep}- suffix. Got:\n{stdout}"
   );
 }
 
-/// Fix(BUG-230): `--subdir` must reject names containing `/`.
+/// Fix(BUG-230): `--topic` must reject names containing `/`.
 ///
 /// ## Root Cause
 /// No validation; `create_dir_all` silently created nested dirs for `a/b`.
@@ -573,7 +583,7 @@ fn s86_subdir_empty_string_is_identity()
 /// All prior tests used simple alphanumeric names; slash input was never tested.
 ///
 /// ## Fix Applied
-/// Added `val.contains('/')` validation in `parse_value_flag` for `--subdir`.
+/// Added `val.contains('/')` validation in `parse_value_flag` for `--topic`.
 ///
 /// ## Prevention
 /// Validate all string-typed params against their documented type constraints.
@@ -582,22 +592,22 @@ fn s86_subdir_empty_string_is_identity()
 /// The type constraint is "directory name component (no `/` separators)" in the spec.
 // test_kind: bug_reproducer(BUG-230)
 #[ test ]
-fn s87_subdir_rejects_slash()
+fn s87_topic_rejects_slash()
 {
-  let out = run_cli( &[ "--dry-run", "--subdir", "a/b", "task" ] );
+  let out = run_cli( &[ "--dry-run", "--topic", "a/b", "task" ] );
   assert!(
     !out.status.success(),
-    "--subdir a/b must be rejected (contains '/'). Got exit: {:?}",
+    "--topic a/b must be rejected (contains '/'). Got exit: {:?}",
     out.status.code()
   );
   let stderr = String::from_utf8_lossy( &out.stderr );
   assert!(
     stderr.contains( "no '/' separators" ),
-    "--subdir a/b error must mention slash constraint. Got:\n{stderr}"
+    "--topic a/b error must mention slash constraint. Got:\n{stderr}"
   );
 }
 
-/// Fix(BUG-231): `--dry-run --subdir NAME` must NOT create the directory.
+/// Fix(BUG-231): `--dry-run --topic NAME` must NOT create the directory.
 ///
 /// ## Root Cause
 /// `build_claude_command` runs `create_dir_all` before the dry-run branch in `lib.rs`.
@@ -615,7 +625,7 @@ fn s87_subdir_rejects_slash()
 /// Builder computes the path for display; only the run path needs the physical directory.
 // test_kind: bug_reproducer(BUG-231)
 #[ test ]
-fn s88_dryrun_subdir_no_mkdir()
+fn s88_dryrun_topic_no_mkdir()
 {
   let unique = format!( "clr_drytest_{}", std::process::id() );
   let base = std::env::temp_dir().join( unique );
@@ -625,7 +635,7 @@ fn s88_dryrun_subdir_no_mkdir()
   let out = run_cli( &[
     "--dry-run",
     "--dir", base.to_str().unwrap(),
-    "--subdir", "probe",
+    "--topic", "probe",
     "task",
   ] );
   assert!( out.status.success(), "must exit 0: {out:?}" );
@@ -694,5 +704,178 @@ fn s89_raw_style_with_json_schema_outputs_structured_result()
   assert!(
     stdout.contains( "hello" ),
     "stdout must contain 'hello' from structured_output value (BUG-318). Got:\n{stdout}"
+  );
+}
+
+// ─── --global ────────────────────────────────────────────────────────────────
+// Source: tests/docs/cli/param/087_global.md
+//
+// Every case pins CLR_TOPIC_HOME (or TMPDIR, for the default-home case) at a
+// tempdir and runs from a tempdir cwd, so no case can read or write the host's
+// real <temp-dir>/clr-topic.
+
+/// Standard env for a `--global` case: isolated HOME plus an explicit topic home.
+fn global_env( home : &str ) -> [ ( &str, &str ); 2 ]
+{
+  [ ( "HOME", "/tmp/clr-isolated-home" ), ( "CLR_TOPIC_HOME", home ) ]
+}
+
+// S90: `--global --topic NAME` → effective dir is `$CLR_TOPIC_HOME/-NAME`, not `cwd/-NAME`
+// (`087_global.md` EC-1)
+#[ test ]
+fn s90_global_redirects_topic_base_to_topic_home()
+{
+  let cwd  = tempfile::TempDir::new().expect( "cwd" );
+  let home = tempfile::TempDir::new().expect( "topic home" );
+  let home_str = home.path().to_str().expect( "utf8 home" );
+
+  let out = run_cli_in_dir( &[ "--dry-run", "--global", "--topic", "notes", "task" ], cwd.path(), &global_env( home_str ) );
+  assert!( out.status.success(), "must exit 0: {out:?}" );
+  let stdout   = String::from_utf8_lossy( &out.stdout );
+  let expected = home.path().join( "-notes" );
+  assert!(
+    stdout.contains( expected.to_str().expect( "utf8 expected" ) ),
+    "--global --topic notes must resolve under $CLR_TOPIC_HOME. Got:\n{stdout}"
+  );
+  assert!(
+    !stdout.contains( cwd.path().join( "-notes" ).to_str().expect( "utf8 cwd" ) ),
+    "--global must not resolve under cwd. Got:\n{stdout}"
+  );
+}
+
+// S91: `--global` with no topic to place is inert — byte-identical output
+// (`087_global.md` EC-2)
+#[ test ]
+fn s91_global_without_topic_is_inert()
+{
+  let cwd  = tempfile::TempDir::new().expect( "cwd" );
+  let home = tempfile::TempDir::new().expect( "topic home" );
+  let home_str = home.path().to_str().expect( "utf8 home" );
+  let env = global_env( home_str );
+
+  let without = run_cli_in_dir( &[ "--dry-run", "task" ], cwd.path(), &env );
+  let with    = run_cli_in_dir( &[ "--dry-run", "--global", "task" ], cwd.path(), &env );
+  assert!( without.status.success() && with.status.success(), "both must exit 0" );
+  assert_eq!(
+    String::from_utf8_lossy( &without.stdout ), String::from_utf8_lossy( &with.stdout ),
+    "--global with no --topic must change nothing"
+  );
+}
+
+// S92: an explicit `--dir` outranks `--global` (`087_global.md` EC-3)
+#[ test ]
+fn s92_dir_outranks_global()
+{
+  let cwd  = tempfile::TempDir::new().expect( "cwd" );
+  let home = tempfile::TempDir::new().expect( "topic home" );
+  let base = tempfile::TempDir::new().expect( "explicit base" );
+  let home_str = home.path().to_str().expect( "utf8 home" );
+  let base_str = base.path().to_str().expect( "utf8 base" );
+
+  let out = run_cli_in_dir(
+    &[ "--dry-run", "--global", "--dir", base_str, "--topic", "notes", "task" ],
+    cwd.path(),
+    &global_env( home_str ),
+  );
+  assert!( out.status.success(), "must exit 0: {out:?}" );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  assert!(
+    stdout.contains( base.path().join( "-notes" ).to_str().expect( "utf8 expected" ) ),
+    "--dir must win over --global. Got:\n{stdout}"
+  );
+  assert!(
+    !stdout.contains( home.path().join( "-notes" ).to_str().expect( "utf8 home dir" ) ),
+    "$CLR_TOPIC_HOME must be ignored when --dir is given. Got:\n{stdout}"
+  );
+}
+
+// S93: `-g` is an exact alias for `--global` (`087_global.md` EC-4)
+#[ test ]
+fn s93_g_alias_matches_global()
+{
+  let cwd  = tempfile::TempDir::new().expect( "cwd" );
+  let home = tempfile::TempDir::new().expect( "topic home" );
+  let home_str = home.path().to_str().expect( "utf8 home" );
+  let env = global_env( home_str );
+
+  let long  = run_cli_in_dir( &[ "--dry-run", "--global", "--topic", "notes", "task" ], cwd.path(), &env );
+  let short = run_cli_in_dir( &[ "--dry-run", "-g", "--topic", "notes", "task" ], cwd.path(), &env );
+  assert!( long.status.success() && short.status.success(), "both must exit 0" );
+  assert_eq!(
+    String::from_utf8_lossy( &long.stdout ), String::from_utf8_lossy( &short.stdout ),
+    "-g must behave identically to --global"
+  );
+}
+
+// S94: `--help` output contains `--global` (`087_global.md` EC-5)
+#[ test ]
+fn s94_help_lists_global()
+{
+  let out = run_cli( &[ "--help" ] );
+  assert!( out.status.success(), "must exit 0: {out:?}" );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  assert!( stdout.contains( "--global" ), "--help must mention --global. Got:\n{stdout}" );
+  assert!( stdout.contains( "-g," ), "--help must mention the -g alias. Got:\n{stdout}" );
+}
+
+// S95: `CLR_GLOBAL=1` is applied when `--global` is absent (`087_global.md` EC-6)
+#[ test ]
+fn s95_clr_global_env_var_applied()
+{
+  let cwd  = tempfile::TempDir::new().expect( "cwd" );
+  let home = tempfile::TempDir::new().expect( "topic home" );
+  let home_str = home.path().to_str().expect( "utf8 home" );
+
+  let out = run_cli_in_dir(
+    &[ "--dry-run", "--topic", "notes", "task" ],
+    cwd.path(),
+    &[ ( "HOME", "/tmp/clr-isolated-home" ), ( "CLR_TOPIC_HOME", home_str ), ( "CLR_GLOBAL", "1" ) ],
+  );
+  assert!( out.status.success(), "must exit 0: {out:?}" );
+  assert!(
+    String::from_utf8_lossy( &out.stdout ).contains( home.path().join( "-notes" ).to_str().expect( "utf8" ) ),
+    "CLR_GLOBAL=1 must redirect the topic base. Got:\n{}", String::from_utf8_lossy( &out.stdout )
+  );
+}
+
+// S96: with `CLR_TOPIC_HOME` unset, the global home falls back to
+// `<system temp dir>/clr-topic` (`087_global.md` EC-7)
+#[ cfg( unix ) ]
+#[ test ]
+fn s96_default_topic_home_is_temp_dir_clr_topic()
+{
+  let cwd = tempfile::TempDir::new().expect( "cwd" );
+  let tmp = tempfile::TempDir::new().expect( "fake temp dir" );
+  let tmp_str = tmp.path().to_str().expect( "utf8 tmpdir" );
+
+  // TMPDIR is what std::env::temp_dir() reads on unix — pinning it keeps this case
+  // off the host's real /tmp/clr-topic while still exercising the real fallback.
+  let out = run_cli_in_dir(
+    &[ "--dry-run", "--global", "--topic", "notes", "task" ],
+    cwd.path(),
+    &[ ( "HOME", "/tmp/clr-isolated-home" ), ( "TMPDIR", tmp_str ) ],
+  );
+  assert!( out.status.success(), "must exit 0: {out:?}" );
+  let expected = tmp.path().join( "clr-topic" ).join( "-notes" );
+  assert!(
+    String::from_utf8_lossy( &out.stdout ).contains( expected.to_str().expect( "utf8 expected" ) ),
+    "unset CLR_TOPIC_HOME must fall back to <temp-dir>/clr-topic. Got:\n{}", String::from_utf8_lossy( &out.stdout )
+  );
+}
+
+// S97: `--global --topic .` stays identity — --global never places a directory of
+// its own (`087_global.md` EC-8)
+#[ test ]
+fn s97_global_with_identity_topic_places_nothing()
+{
+  let cwd  = tempfile::TempDir::new().expect( "cwd" );
+  let home = tempfile::TempDir::new().expect( "topic home" );
+  let home_str = home.path().to_str().expect( "utf8 home" );
+
+  let out = run_cli_in_dir( &[ "--dry-run", "--global", "--topic", ".", "task" ], cwd.path(), &global_env( home_str ) );
+  assert!( out.status.success(), "must exit 0: {out:?}" );
+  assert!(
+    !String::from_utf8_lossy( &out.stdout ).contains( home_str ),
+    "--topic . is identity — --global must have nothing to redirect. Got:\n{}", String::from_utf8_lossy( &out.stdout )
   );
 }

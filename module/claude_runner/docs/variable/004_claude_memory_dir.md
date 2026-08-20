@@ -37,7 +37,7 @@ Df(git_root)           = -home-alice-project
 CLAUDE_MEMORY_DIR      = /home/alice/.claude/projects/-home-alice-project/memory/
 ```
 
-**Why git root (not target_dir)?** All subdirectories of a project share the same MEMORY.md. Running Claude from `/project/src` and from `/project` should use the same memory file. Anchoring to the git root achieves this.
+**Why git root (not target_dir)?** All topic directories of a project share the same MEMORY.md. Running Claude from `/project/src` and from `/project` should use the same memory file. Anchoring to the git root achieves this.
 
 ### Override
 

@@ -13,7 +13,7 @@ structural equivalence and shared behavior.
 | IT-2 | `clr ask --dry-run` (no message) identical to `clr --dry-run` | Equivalence |
 | IT-3 | Unknown flag → exit 1, error message | Error Handling |
 | IT-4 | `clr ask --trace "q"` → stderr contains assembled command | Trace |
-| IT-5 | `clr ask --subdir NAME "q"` → effective dir ends with `/-NAME` | Subdir |
+| IT-5 | `clr ask --topic NAME "q"` → effective dir ends with `/-NAME` | Topic |
 | IT-6 | `clr ask --dry-run --effort high "q"` → contains `--effort high` | Param Passthrough |
 | IT-7 | `clr ask --dry-run --model sonnet "q"` → contains `--model sonnet` | Param Passthrough |
 | IT-8 | `clr ask help` → dispatches to help, exit 0 | Help |
@@ -23,7 +23,7 @@ structural equivalence and shared behavior.
 - Equivalence: 2 tests (IT-1, IT-2)
 - Error Handling: 1 test (IT-3)
 - Trace: 1 test (IT-4)
-- Subdir: 1 test (IT-5)
+- Topic: 1 test (IT-5)
 - Param Passthrough: 2 tests (IT-6, IT-7)
 - Help: 1 test (IT-8)
 
@@ -68,12 +68,12 @@ structural equivalence and shared behavior.
 
 ---
 
-### IT-5: `clr ask --subdir NAME "q"` → effective dir ends with `/-NAME`
+### IT-5: `clr ask --topic NAME "q"` → effective dir ends with `/-NAME`
 
-- **Command:** `clr ask --dry-run --subdir feature "What is X?"`
+- **Command:** `clr ask --dry-run --topic feature "What is X?"`
 - **Expected behavior:** Dry-run output contains a path ending in `/-feature`
 - **Exit:** 0
-- **Source:** [--subdir](../../../../docs/cli/param/028_subdir.md), [command/05_ask.md](../../../../docs/cli/command/05_ask.md)
+- **Source:** [--topic](../../../../docs/cli/param/028_topic.md), [command/05_ask.md](../../../../docs/cli/command/05_ask.md)
 
 ---
 

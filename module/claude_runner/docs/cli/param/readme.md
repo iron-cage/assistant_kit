@@ -31,7 +31,7 @@
 | 025_file.md | `--file` parameter spec |
 | 026_strip_fences.md | `--strip-fences` flag spec |
 | 027_keep_claudecode.md | `--keep-claudecode` flag spec |
-| 028_subdir.md | `--subdir` parameter spec |
+| 028_topic.md | `--topic` parameter spec |
 | 029_output_file.md | `--output-file` parameter spec |
 | 030_expect.md | `--expect` parameter spec |
 | 031_expect_strategy.md | `--expect-strategy` parameter spec |
@@ -86,6 +86,7 @@
 | 084_gate_stale_secs.md | `--gate-stale-secs` parameter spec (concurrency gate staleness reclaim threshold) |
 | 085_gate_remaining_timeout_secs.md | `CLR_REMAINING_TIMEOUT_SECS` env-var spec (gate remaining timeout budget clamp) |
 | 086_no_stdin.md | `--no-stdin` flag spec (disable all stdin reading — JSON config detection and forwarding) |
+| 087_global.md | `--global` flag spec (resolve `--topic`'s base to the global topic home) |
 
 ### Retired Parameter IDs
 
@@ -98,7 +99,7 @@ These parameter IDs exist in the sequence but have no corresponding file. The ID
 | 038 | Retired — parameter removed; gap predates current tracking |
 | 039 | Retired — parameter removed; gap predates current tracking |
 
-### All Parameters (82 total)
+### All Parameters (83 total)
 
 | # | Parameter | Type | Default | Valid Values | Description | Used In |
 |---|-----------|------|---------|--------------|-------------|---------|
@@ -129,7 +130,7 @@ These parameter IDs exist in the sequence but have no corresponding file. The ID
 | 25 | `--file` | [`FilePath`](../type/12_file_path.md) | — | Any readable file path | File content piped as subprocess stdin | 1 cmd |
 | 26 | `--strip-fences` | bool | false | present/absent | Strip outermost markdown code fences from stdout | 1 cmd |
 | 27 | `--keep-claudecode` | bool | false | present/absent | Preserve `CLAUDECODE` env var in subprocess (default: removed) | 1 cmd |
-| 28 | `--subdir` | string | `.` | `.` or any name | Named subdirectory appended to `--dir` (`/-NAME`); `.` = identity | 2 cmds |
+| 28 | `--topic` | string | `.` | `.` or any name | Named topic directory appended to `--dir` (`/-NAME`); `.` = identity | 2 cmds |
 | 29 | `--output-file` | string | — | Any writable path | Write stdout to file in addition to printing (tee behavior) | 2 cmds |
 | 30 | `--expect` | string | — | `val1\|val2\|…` | Pipe-separated enum values; stdout must match one after trim+lowercase | 2 cmds |
 | 31 | `--expect-strategy` | enum | `fail` | `fail`/`retry`/`default:<V>` | Mismatch handling: exit 3, retry N times, or output fallback value | 2 cmds |
@@ -185,7 +186,7 @@ These parameter IDs exist in the sequence but have no corresponding file. The ID
 | 85 | `CLR_REMAINING_TIMEOUT_SECS` | u64 | absent | Positive integer | Remaining external timeout budget (sec); clamps effective gate attempt count; env-var-only (no CLI flag) | all cmds |
 | 86 | `--no-stdin` | bool | false | present/absent | Never read piped stdin — disables stdin JSON config detection and stdin forwarding; checked pre-parse (raw token/env scan) so a held-open pipe cannot hang clr (BUG-492) | 2 cmds |
 
-**Total:** 82 parameters (param 12 deprecated → replaced by 74; net count unchanged for that swap; params 75–77 added; params 78–80 added for the `clr tools` filter/projection redesign; params 81–85 added for `--input-format` and gate tuning knobs; param 86 added for the stdin opt-out)
+**Total:** 83 parameters (param 12 deprecated → replaced by 74; net count unchanged for that swap; params 75–77 added; params 78–80 added for the `clr tools` filter/projection redesign; params 81–85 added for `--input-format` and gate tuning knobs; param 86 added for the stdin opt-out; param 87 added for the global topic base)
 
 **Groups:** Parameters 2–4, 17, 23, 24, 61–67, and 81 form [Claude-Native Flags](../param_group/01_claude_native_flags.md). Parameters 5–11, 13, 14, 18, 21, 22, 25–36, 40–57, 70–76, 82–86 form [Runner Control](../param_group/02_runner_control.md). Parameters 15–16 form [System Prompt](../param_group/03_system_prompt.md). Parameters 19–20 form [Credential Operations](../param_group/04_credential_operations.md). Parameters 58–60, 68–69 form [Session Listing](../param_group/05_session_listing.md). Parameter 77 (and `--timeout`, `--trace`, `--dry-run`, `--journal`, `--journal-dir`) form [Running Commands](../param_group/06_running_commands.md). Parameters 78–80 (plus shared members 59 `--columns` and 69 `--inspect`) form [Tool Listing](../param_group/07_tool_listing.md).
 
@@ -218,7 +219,7 @@ These parameter IDs exist in the sequence but have no corresponding file. The ID
 - [`--file`](025_file.md)
 - [`--strip-fences`](026_strip_fences.md)
 - [`--keep-claudecode`](027_keep_claudecode.md)
-- [`--subdir`](028_subdir.md)
+- [`--topic`](028_topic.md)
 - [`--output-file`](029_output_file.md)
 - [`--expect`](030_expect.md)
 - [`--expect-strategy`](031_expect_strategy.md)
@@ -273,6 +274,7 @@ These parameter IDs exist in the sequence but have no corresponding file. The ID
 - [`--gate-stale-secs`](084_gate_stale_secs.md)
 - [`CLR_REMAINING_TIMEOUT_SECS`](085_gate_remaining_timeout_secs.md)
 - [`--no-stdin`](086_no_stdin.md)
+- [`--global`](087_global.md)
 
 ### Quick Reference
 
@@ -280,6 +282,6 @@ These parameter IDs exist in the sequence but have no corresponding file. The ID
 
 **Required parameters:** `[MESSAGE]` is required for print mode (which is the default when a message is given).
 
-**Most used parameters:** `--model` (model selection), `--dir` (project targeting), `--subdir` (session isolation by task name), `--dry-run` (debugging), `--new-session` (fresh start), `--interactive` (TTY passthrough with prompt), `--file` (stdin from file), `--strip-fences` (extract code block content).
+**Most used parameters:** `--model` (model selection), `--dir` (project targeting), `--topic` (session isolation by task name), `--dry-run` (debugging), `--new-session` (fresh start), `--interactive` (TTY passthrough with prompt), `--file` (stdin from file), `--strip-fences` (extract code block content).
 
-**Commands by parameter count:** `run` = 65, `ask` = 65, `topic` = 65, `ps` = 5, `isolated` = 18, `refresh` = 8, `kill` = 0, `tools` = 5, `help` = 0.
+**Commands by parameter count:** `run` = 66, `ask` = 66, `topic` = 66, `topics` = 3, `ps` = 5, `isolated` = 18, `refresh` = 8, `kill` = 0, `tools` = 5, `help` = 0.

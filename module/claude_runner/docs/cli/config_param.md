@@ -139,7 +139,7 @@ The following categories of `CliArgs` fields are excluded by the Eligibility Rul
 | Positional message | `[MESSAGE]` | The task text itself; never a default |
 | File I/O paths | `--file`, `--output-file`, `--mcp-config`, `--json-schema` | Path is specific to one invocation |
 | One-shot behavior flags | `--dry-run`, `--new-session`, `--interactive`, `--trace` | Meaningless as a persistent default |
-| Call-specific values | `--expect`, `--expect-strategy`, `--subdir`, `--session-dir`, `--from`, `--add-dir`, `--dir` | Tied to one task's working context |
+| Call-specific values | `--expect`, `--expect-strategy`, `--topic`, `--session-dir`, `--from`, `--add-dir`, `--dir` | Tied to one task's working context |
 | Meta and self-referential | `--help`, `--args-file` | `--help` exits before resolution; `--args-file` chaining is not supported |
 
 All other `CliArgs` fields not listed in [Eligible Parameters](#eligible-parameters-41-total) above (e.g. `--verbose`, `--no-skip-permissions`, `--no-ultrathink`, `--keep-claudecode`, `--strip-fences`, `--system-prompt`, `--append-system-prompt`, `--output-format`, `--max-turns`) are simply not part of this task's scope — extending config-file coverage to additional parameters is a separate follow-up if a concrete need arises.

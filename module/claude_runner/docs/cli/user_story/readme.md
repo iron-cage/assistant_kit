@@ -32,7 +32,7 @@
 | 019_mcp_config_injection.md | User story: forward MCP server configs to subprocess |
 | 020_suppress_effort_max.md | User story: suppress automatic --effort max injection |
 | 021_keep_claudecode_context.md | User story: preserve CLAUDECODE in subprocess env |
-| 022_session_isolation_subdir.md | User story: named workspace session isolation via --subdir |
+| 022_session_isolation_topic.md | User story: named workspace session isolation via --topic |
 | 023_output_file_capture.md | User story: tee captured stdout to a file with --output-file |
 | 024_enum_output_validation.md | User story: validate print-mode output against a fixed enum with --expect |
 | 025_concurrency_gate.md | User story: limit concurrent Claude Code sessions with --max-sessions |
@@ -41,6 +41,7 @@
 | 028_session_transplant.md | User story: run Claude in target dir while loading session from source dir |
 | 029_scope_inspection.md | User story: inspect all 6 CLAUDE_* path variables for any directory |
 | 030_topic_creation.md | User story: auto-named or explicitly-named topic workspace via clr topic |
+| 031_topic_discovery.md | User story: list topic sessions and resolve a topic name to its path via clr topics |
 
 ### Index
 
@@ -67,7 +68,7 @@
 | 019 | MCP Config Injection | `--mcp-config` | `run` |
 | 020 | Suppress Effort Max | `--no-effort-max` | `run` |
 | 021 | Keep ClaudeCode Context | `--keep-claudecode` | `run` |
-| 022 | Session Isolation via Subdirectory | `--subdir` | `run`, `ask` |
+| 022 | Session Isolation via Topic Directory | `--topic` | `run`, `ask` |
 | 023 | Output File Capture | `--output-file` | `run`, `ask` |
 | 024 | Enum Output Validation | `--expect`, `--expect-strategy`, `--retry-on-validation` | `run`, `ask` |
 | 025 | Session Concurrency Gate | `--max-sessions` | `run`, `ask`, `isolated` |
@@ -75,7 +76,8 @@
 | 027 | Session Termination | `<PID>` | `kill` |
 | 028 | Session Cross-Loading | `--from`, `--to` | `run`, `ask` |
 | 029 | Scope Inspection | `--dir` | `scope` |
-| 030 | Topic Creation | `--subdir`, `--from` | `topic` |
+| 030 | Topic Creation | `--topic`, `--from` | `topic` |
+| 031 | Topic Discovery | `--path`, `--global`, `--dir` | `topics` |
 
 ### Adding User Stories
 
