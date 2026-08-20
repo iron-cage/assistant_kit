@@ -74,6 +74,12 @@ enabled = [
   "dep:claude_quota",
   "dep:data_fmt",
   "data_fmt/enabled",
+  # Fix(BUG-537, task/claude_runner registry): pair enabled with terminal_size.
+  # Root cause: data_fmt/enabled alone compiles out the TTY width probe —
+  #   resolve_terminal_width() hard-falls back to 120 and every table wraps there.
+  # Pitfall: $COLUMNS is a non-exported shell variable — it never reaches child
+  #   processes and cannot substitute for compiled-in detection.
+  "data_fmt/terminal_size",
   "dep:claude_journal",
   "dep:json_redact",
 ]

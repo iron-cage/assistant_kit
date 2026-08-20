@@ -20,7 +20,7 @@
 | Trace edge cases (S04–S06, S58–S60) | `param_trace_edge_cases_test.rs` | `--trace` parameter edge cases including isolated/refresh credential trace format |
 | Extended flag edge cases (S34–S57, S81–S89) | `param_extended_flags_test.rs` | Per-param edge cases for `--no-chrome`, `--no-persist`, `--json-schema`, `--mcp-config`, `--topic`; S89: raw+json-schema structured output (BUG-318 fix) |
 | Param groups (CC-N) | `param_group_test.rs` | Combined-flag interaction tests for param groups |
-| Dry-run output | `dry_run_test.rs` | Env vars, command line structure, message quoting |
+| Dry-run output | `dry_run_test.rs` | Env vars, command line structure, message quoting; BUG-538 reproducer (stale `--session-dir` fixture migration) |
 | Execution modes (E01–E14, S76–S78, S80) | `execution_mode_test.rs` | Interactive/print routing, exit codes, stderr; S76 `--strip-fences`, S77 `--keep-claudecode`, S78 `--file` stdin pipe, S80 `--file` nonexistent path |
 | Execution modes extended, BUG-424–428 reproducers | `execution_mode_ext_test.rs` | Extension of `execution_mode_test.rs`: `--strip-fences`/`--keep-claudecode`/`--file`/piped-stdin routing and `-c` injection rule reproducers |
 | Quiet gate (QT-1–QT-6) | `quiet_test.rs` | Non-fatal diagnostic suppression, fatal error passthrough, dry-run independence |
@@ -104,6 +104,7 @@
 | Bug reproducer BUG-327 | `bug_reproducers_327_test.rs` | Stale deferred-tool-marker fallback retry: one-shot "Continue." substitution fires and succeeds; non-marker errors unaffected |
 | Bug reproducers BUG-490/491/492 | `bug_reproducers_490_492_test.rs` | Physical session transplant (dry-run plan line, pre-spawn copy, dest-preserved mtime refresh), nonexistent working-dir fast failure, `--no-stdin` held-open-pipe opt-out |
 | Bug reproducer BUG-493 | `bug_reproducers_493_test.rs` | Deprecated `--session-dir` fully inert: no `CLAUDE_CODE_SESSION_DIR` export, no `-c` gating from the override dir, loud one-line stderr warning only when given |
+| Bug reproducer BUG-537 | `bug_reproducers_537_test.rs` | Every workspace manifest enabling `data_fmt/enabled` pairs it with `data_fmt/terminal_size` — without it, all tables hard-wrap at the 120-column fallback on every terminal |
 | `clr topics` subcommand (TP-01–TP-17) | `topics_command_test.rs` | Read-only topic listing and name→path resolution: base precedence (`--dir` > `--global` > cwd), what counts as a topic, empty-base exit 0, resolver purity, real session counts, and the resolver/runner cross-check |
 | `clr topic` subcommand (T01–T08) | `topic_command_test.rs` | Auto-named `run`/`ask` alias: auto-generated `--topic` slug from message + `-2`/`-3` disambiguation, explicit `--topic` byte-identical to `ask`, unknown-flag/help handling, `--effort` passthrough, real (non-dry-run) session clone-then-continue transplant |
 | Shared helpers | `cli_binary_test_helpers.rs` | Shared test helper: `run_cli()` and `run_cli_with_env()` invocation |
@@ -118,7 +119,7 @@
 | `cli_args_ext_test.rs` | CLI flag parsing extended: T36–T47, T49 (positional, session combos, new flags); EC01–EC06 (help section); S58–S69, S79 (strip-fences, keep-claudecode, file flags); BUG-212, BUG-215, BUG-302 reproducers. |
 | `ultrathink_args_test.rs` | Ultrathink suffix injection and `--no-ultrathink` opt-out (T50–T58). |
 | `effort_args_test.rs` | Effort flag defaults, overrides, suppression, and corner cases (T59–T70). |
-| `dry_run_test.rs` | Dry-run output: env vars and command line structure. |
+| `dry_run_test.rs` | Dry-run output: env vars, command line structure, BUG-538 reproducer. |
 | `execution_mode_test.rs` | Execution modes: interactive/print paths, error handling, exit codes (E01–E14); `--strip-fences` (S76), `--keep-claudecode` (S77), `--file` stdin pipe (S78), `--file` nonexistent path (S80). |
 | `execution_mode_ext_test.rs` | Extension of `execution_mode_test.rs`: BUG-424–428 piped-stdin-no-message/no-session reproducers. |
 | `quiet_test.rs` | Quiet gate: `--quiet`/`CLR_QUIET` non-fatal suppression, fatal error passthrough, dry-run and trace independence (QT-1–QT-6). |
@@ -202,6 +203,7 @@
 | `bug_reproducers_327_test.rs` | Bug reproducer BUG-327: stale deferred-tool-marker one-shot fallback retry fires and substitutes "Continue."; non-marker errors unaffected. |
 | `bug_reproducers_490_492_test.rs` | Bug reproducers BUG-490/491/492: physical session transplant (plan preview, pre-spawn copy, dest never overwritten), nonexistent `--dir`/`--to` fast loud failure without the binary-missing misdiagnosis, `--no-stdin`/`CLR_NO_STDIN` opt-out under a held-open stdin pipe. |
 | `bug_reproducers_493_test.rs` | Bug reproducer BUG-493: deprecated `--session-dir` is fully inert (no env export, no `-c` gating from the override dir) and warns loudly on stderr only when given. |
+| `bug_reproducers_537_test.rs` | Bug reproducer BUG-537: every workspace manifest enabling `data_fmt/enabled` also enables `data_fmt/terminal_size`, keeping the TTY width probe compiled in (tables otherwise hard-wrap at the 120-column fallback). |
 | `topics_command_test.rs` | `clr topics` subcommand: listing under cwd/`--dir`/`--global` with `--dir` outranking `--global` (TP-01, TP-05–TP-07), topic recognition — `-`-prefixed dirs only, bare `-` excluded (TP-03–TP-04), empty base to stderr with exit 0 (TP-02), `--path` name→path resolution including the pure/no-side-effect guarantee (TP-08–TP-10), error handling for slash/unknown-option/missing-value (TP-11–TP-13), help forms (TP-14), session counting against real seeded `.jsonl` storage (TP-15), and the resolver/runner determinism cross-check (TP-16) plus a dispatch guard (TP-17). |
 | `topic_command_test.rs` | `clr topic` subcommand (task 521): auto-generated `--topic` slug from message with `-2`/`-3` disambiguation counter (T01–T02), explicit `--topic` parity with `ask` (T03), unknown-flag/help handling (T06–T07), `--effort` passthrough (T08), real non-dry-run session clone-then-continue transplant via a stubbed `claude` binary (T04–T05, unix only). |
 | `docs/` | Test documentation mirroring `docs/` — test case planning for CLI commands, params, groups. |

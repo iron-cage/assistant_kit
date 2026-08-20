@@ -23,7 +23,12 @@ enabled = [ "dep:error_tools", "error_tools/enabled", "error_tools/error_untyped
 # Table-rendering helpers for process listings (`render_ps_table`,
 # `render_active_sessions_table`). Kept out of `enabled` so plain consumers
 # never pull in `data_fmt`.
-ps_table = [ "dep:data_fmt", "data_fmt/enabled", "dep:claude_storage_core", "claude_storage_core/enabled" ]
+# Fix(BUG-537, task/claude_runner registry): terminal_size paired with enabled.
+# Root cause: data_fmt/enabled alone compiles out the TTY width probe —
+#   resolve_terminal_width() hard-falls back to 120 and every table wraps there.
+# Pitfall: $COLUMNS is a non-exported shell variable — it never reaches child
+#   processes and cannot substitute for compiled-in detection.
+ps_table = [ "dep:data_fmt", "data_fmt/enabled", "data_fmt/terminal_size", "dep:claude_storage_core", "claude_storage_core/enabled" ]
 
 [dependencies]
 claude_core = { workspace = true }
