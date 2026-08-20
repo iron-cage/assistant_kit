@@ -279,8 +279,32 @@ fn decode_path_via_fs( encoded : &str ) -> FsDecodeOutcome
       match search_encoded_subtree( &p, encoded )
       {
         found @ ( FsDecodeOutcome::Full( _ ) | FsDecodeOutcome::AmbiguousFull( _ ) ) => found,
-        FsDecodeOutcome::Partial( _ ) | FsDecodeOutcome::NotFound => FsDecodeOutcome::Partial( p ),
+        FsDecodeOutcome::Partial( _ ) | FsDecodeOutcome::AmbiguousPartial( _ ) | FsDecodeOutcome::NotFound => FsDecodeOutcome::Partial( p ),
       },
+    // Fix(BUG-526): same single-rescue rationale as the `Partial` arm above
+    // (Fix(BUG-515)), but anchored at the tied candidates' COMMON ANCESTOR —
+    // the deepest point verified to contain ALL of them — rather than any
+    // single candidate. Skipped when that ancestor is the filesystem root,
+    // mirroring the `Partial("/")` intercept above exactly: an unbounded
+    // whole-filesystem search must never run. A search that finds nothing
+    // better falls back to the already-verified tied set unchanged.
+    FsDecodeOutcome::AmbiguousPartial( candidates ) if encoded.len() > 200 =>
+    {
+      let anchor = common_ancestor( &candidates );
+      if anchor == std::path::Path::new( "/" )
+      {
+        FsDecodeOutcome::AmbiguousPartial( candidates )
+      }
+      else
+      {
+        match search_encoded_subtree( &anchor, encoded )
+        {
+          found @ ( FsDecodeOutcome::Full( _ ) | FsDecodeOutcome::AmbiguousFull( _ ) ) => found,
+          FsDecodeOutcome::Partial( _ ) | FsDecodeOutcome::AmbiguousPartial( _ ) | FsDecodeOutcome::NotFound =>
+            FsDecodeOutcome::AmbiguousPartial( candidates ),
+        }
+      }
+    }
     other => other,
   }
 }
@@ -314,10 +338,13 @@ fn decode_storage_base( base_encoded : &str ) -> Option< std::path::PathBuf >
     // display purposes (here, which of 2+ real candidates), so it falls
     // back to the heuristic `h` alongside `Partial`/`NotFound` rather than
     // arbitrarily picking one tied candidate.
+    // Fix(BUG-526): `AmbiguousPartial` shares that same shape exactly (2+
+    // tied incomplete prefixes, no single unambiguous real path), so it
+    // falls back to `h` here too.
     Some( match decode_path_via_fs( base_encoded )
     {
       FsDecodeOutcome::Full( p ) => p,
-      FsDecodeOutcome::AmbiguousFull( _ ) | FsDecodeOutcome::Partial( _ ) | FsDecodeOutcome::NotFound => h,
+      FsDecodeOutcome::AmbiguousFull( _ ) | FsDecodeOutcome::Partial( _ ) | FsDecodeOutcome::AmbiguousPartial( _ ) | FsDecodeOutcome::NotFound => h,
     } )
   }
 }
@@ -388,6 +415,13 @@ fn decode_storage_base( base_encoded : &str ) -> Option< std::path::PathBuf >
 /// unrelated double-truncated sibling fall through to the `Partial` arm's
 /// conservative-include disjunct above (Fix(BUG-512)), which then falsely fired on their
 /// shared real ancestor.
+///
+/// Fix(BUG-526)
+/// `AmbiguousPartial` mirrors this function's own Fix(BUG-518) note one confidence level
+/// down: apply BOTH `Partial` disjuncts (`p.starts_with(base_path)` and
+/// `base_path.starts_with(p)`) to EVERY tied candidate individually rather than collapsing
+/// the set to a shared ancestor first — see `FsDecodeOutcome::AmbiguousPartial`'s own doc
+/// comment for the no-collapse rationale.
 fn matches_under( dir_name : &str, eb : &str, base_path : &std::path::Path ) -> bool
 {
   let double_truncated = double_truncated_and_related( dir_name, eb );
@@ -397,6 +431,8 @@ fn matches_under( dir_name : &str, eb : &str, base_path : &std::path::Path ) -> 
   {
     FsDecodeOutcome::Full( p ) => p.starts_with( base_path ),
     FsDecodeOutcome::AmbiguousFull( candidates ) => candidates.iter().any( | p | p.starts_with( base_path ) ),
+    FsDecodeOutcome::AmbiguousPartial( candidates ) =>
+      candidates.iter().any( | p | p.starts_with( base_path ) || base_path.starts_with( p ) ),
     FsDecodeOutcome::Partial( p ) => p.starts_with( base_path ) || base_path.starts_with( &p ),
     FsDecodeOutcome::NotFound => true,
   }
@@ -422,6 +458,12 @@ fn matches_under( dir_name : &str, eb : &str, base_path : &std::path::Path ) -> 
 /// inherits the fix entirely through `is_relevant_encoded`'s own Fix(BUG-519) gate. Noted
 /// for traceability only, since this function was independently probed for the same
 /// false-inclusion shape during the MAAV re-verification that found BUG-519.
+///
+/// Fix(BUG-526)
+/// `AmbiguousPartial` mirrors `matches_under`'s own Fix(BUG-526) note in the ancestor
+/// direction: check `base_path.starts_with(p)` against each tied candidate individually
+/// (the same predicate the `Full`/`Partial` arm shares), never against a collapsed shared
+/// ancestor.
 fn matches_relevant( dir_name : &str, eb : &str, base_path : &std::path::Path ) -> bool
 {
   if !is_relevant_encoded( dir_name, eb ) { return false; }
@@ -430,6 +472,7 @@ fn matches_relevant( dir_name : &str, eb : &str, base_path : &std::path::Path ) 
   {
     FsDecodeOutcome::Full( p ) | FsDecodeOutcome::Partial( p ) => base_path.starts_with( &p ),
     FsDecodeOutcome::AmbiguousFull( candidates ) => candidates.iter().any( | p | base_path.starts_with( p ) ),
+    FsDecodeOutcome::AmbiguousPartial( candidates ) => candidates.iter().any( | p | base_path.starts_with( p ) ),
     FsDecodeOutcome::NotFound => true,
   }
 }
@@ -506,6 +549,12 @@ fn matches_relevant( dir_name : &str, eb : &str, base_path : &std::path::Path ) 
 /// exact-equality relationship `Full` uses (`scope::local` means the anchor itself) —
 /// check each tied candidate individually rather than collapsing the set to a shared
 /// ancestor first.
+///
+/// Fix(BUG-526)
+/// `AmbiguousPartial` mirrors this function's own Fix(BUG-518) note one confidence level
+/// down: check `p == base_path || base_path.starts_with(p)` (the `Partial` arm's own
+/// conservative pair) against each tied candidate individually rather than collapsing the
+/// set to a shared ancestor first.
 fn matches_local( dir_name : &str, eb : &str, base_path : &std::path::Path ) -> bool
 {
   if dir_name == eb { return true; }
@@ -514,6 +563,8 @@ fn matches_local( dir_name : &str, eb : &str, base_path : &std::path::Path ) -> 
   {
     FsDecodeOutcome::Full( p ) => p == base_path,
     FsDecodeOutcome::AmbiguousFull( candidates ) => candidates.iter().any( | p | *p == base_path ),
+    FsDecodeOutcome::AmbiguousPartial( candidates ) =>
+      candidates.iter().any( | p | *p == base_path || base_path.starts_with( p ) ),
     FsDecodeOutcome::Partial( p ) => p == base_path || base_path.starts_with( &p ),
     FsDecodeOutcome::NotFound => true,
   }
@@ -581,6 +632,20 @@ enum FsDecodeOutcome
   /// descendant). Safe for relationship checks; not safe for an
   /// exact-identity conclusion beyond what the caller's own check expresses.
   Partial( std::path::PathBuf ),
+  /// A real, filesystem-verified prefix was found, but 2+ DIFFERENT real
+  /// candidates consumed the SAME maximal portion of `encoded` (a
+  /// Partial-vs-Partial tie — the same collision class as `AmbiguousFull`,
+  /// but each candidate is an INCOMPLETE prefix of the target, not a
+  /// complete resolution). Carries the full tied set rather than collapsing
+  /// to the candidates' shared parent: that parent is related to unrelated
+  /// queries too, so a caller's conservative ancestor check against it can
+  /// be satisfied even when NEITHER tied candidate relates to the query
+  /// (Fix(BUG-526) — the exact shape `AmbiguousFull`'s own doc above
+  /// describes, one confidence level down). Callers must apply their own
+  /// `Partial`-semantics predicate to EVERY candidate and include when AT
+  /// LEAST ONE qualifies — per-candidate, each entry follows the same
+  /// relationship rules as a plain `Partial` path.
+  AmbiguousPartial( Vec< std::path::PathBuf > ),
   /// No real filesystem entry corresponds to even the first component —
   /// nothing on disk can confirm or refute this candidate at all.
   NotFound,
@@ -734,21 +799,68 @@ enum FsDecodeOutcome
 /// wrongly let a long LOOSE match outrank a short EXACT one on some other
 /// input shape even though exact equality is strictly more certain than any
 /// prefix heuristic.
+///
+/// Fix(BUG-527)
+/// Root cause: the loose `target.starts_with("{encoded}--")` self-match
+/// (Fix(BUG-522)) fired at EVERY level of the search, including the search
+/// ROOT — the exact point `walk_fs` had already verified as the deepest
+/// real prefix. When the query anchor is a DELETED intermediate directory
+/// whose first component below a surviving real ancestor starts with a
+/// special character (`.config`, `_build`, ...), that component's own `--`
+/// leading-character escape makes the deleted path's encoding textually
+/// indistinguishable from "the surviving ancestor's own encoding plus a
+/// synthetic topic suffix": the root's loose self-match then promoted the
+/// ancestor to a confident `Full(ancestor)`, silently stripping the
+/// conservative-include disjunct (`base_path.starts_with(&p)`) that only a
+/// `Partial` result carries — `matches_under`'s and `matches_local`'s
+/// strict `Full` arms then EXCLUDED a session whose true project genuinely
+/// sits under the deleted anchor (confirmed: MAAV Round 13 Fresh
+/// Challenger — a regression introduced by Fix(BUG-522)'s own loose match;
+/// the pre-BUG-522 exact-only search returned nothing in this shape,
+/// leaving `Partial` and its conservative include intact). The loose match
+/// alone cannot distinguish "candidate's own synthetic topic suffix" from
+/// "a deeper deleted path's own special-leading component" — but at the
+/// ROOT the walk has already answered exactly that question negatively (it
+/// verified that no real descendant below the anchor consumes any more of
+/// the target), while a DEEPER level's loose self-match remains
+/// Fix(BUG-522)'s load-bearing mechanism: a real descendant the
+/// children-first recursion actually reached is filesystem-verified
+/// specificity, not a guess.
+/// Fix: suppress the loose self-match at the search root only (the
+/// `is_root` parameter, threaded through the recursion); exact equality
+/// stays enabled at every level, and every proper-descendant level keeps
+/// the loose `--`-boundary match unchanged.
+/// Pitfall: do not remove the loose match entirely — that reintroduces
+/// BUG-522's own `matches_local` nested-descendant leak (see IT-90); and do
+/// not try to discriminate the two textual shapes by narrowing the suffix
+/// pattern — a synthetic topic tag and an escaped special-leading component
+/// are stringwise identical by construction, only the walk's own stall
+/// point distinguishes them.
 fn search_encoded_subtree( base : &std::path::Path, target : &str ) -> FsDecodeOutcome
+{
+  // Fix(BUG-527): the search ROOT is distinguished from every deeper level
+  // for the loose `--`-boundary self-match — see this function's own
+  // Fix(BUG-527) doc comment above.
+  search_encoded_subtree_inner( base, target, true )
+}
+
+/// Recursive body of `search_encoded_subtree`; `is_root` is true only at the
+/// search's anchor level (Fix(BUG-527) — see the wrapper's doc comment).
+fn search_encoded_subtree_inner( base : &std::path::Path, target : &str, is_root : bool ) -> FsDecodeOutcome
 {
   let mut child_matches : Vec< std::path::PathBuf > = Vec::new();
   if let Ok( entries ) = std::fs::read_dir( base )
   {
     for entry in entries.flatten()
     {
-      match search_encoded_subtree( &entry.path(), target )
+      match search_encoded_subtree_inner( &entry.path(), target, false )
       {
         FsDecodeOutcome::Full( p ) => { if !child_matches.contains( &p ) { child_matches.push( p ); } }
         FsDecodeOutcome::AmbiguousFull( found ) =>
         {
           for p in found { if !child_matches.contains( &p ) { child_matches.push( p ); } }
         }
-        FsDecodeOutcome::Partial( _ ) | FsDecodeOutcome::NotFound => {}
+        FsDecodeOutcome::Partial( _ ) | FsDecodeOutcome::AmbiguousPartial( _ ) | FsDecodeOutcome::NotFound => {}
       }
     }
   }
@@ -758,7 +870,15 @@ fn search_encoded_subtree( base : &std::path::Path, target : &str ) -> FsDecodeO
   }
   if let Ok( encoded ) = claude_storage_core::encode_path( base )
   {
-    if encoded == target || target.starts_with( &format!( "{encoded}--" ) )
+    // Fix(BUG-527): the loose `--`-boundary self-match is suppressed at the
+    // search ROOT — there, `walk_fs` has already verified that no real
+    // descendant consumes any more of `target`, so a root-level loose match
+    // cannot distinguish a genuine topic suffix from a deleted deeper
+    // path's own special-leading component, and the overconfident `Full` it
+    // produced silently stripped the conservative-include disjunct only
+    // `Partial` carries. Exact equality stays enabled at every level;
+    // deeper levels keep the loose match unchanged (Fix(BUG-522)).
+    if encoded == target || ( !is_root && target.starts_with( &format!( "{encoded}--" ) ) )
     {
       return FsDecodeOutcome::Full( base.to_path_buf() );
     }
@@ -801,6 +921,54 @@ fn rank_subtree_candidates( candidates : Vec< std::path::PathBuf >, target : &st
     return FsDecodeOutcome::Full( ranked.into_iter().next().expect( "len checked == 1" ).0 );
   }
   FsDecodeOutcome::AmbiguousFull( ranked.into_iter().map( | ( p, _, _ ) | p ).collect() )
+}
+
+/// Longest common ancestor of a non-empty candidate set, used to anchor
+/// `decode_path_via_fs`'s single `search_encoded_subtree` rescue for
+/// `FsDecodeOutcome::AmbiguousPartial` (Fix(BUG-526)): every tied candidate
+/// lies somewhere under the level where `walk_fs` detected the tie, so
+/// their common ancestor is the deepest point guaranteed to contain all of
+/// them — and any truncation-hidden target among their extending siblings.
+/// Component-wise (never raw-byte) comparison via `starts_with`/`pop`, so
+/// `anc-foo` and `anc.foo` correctly yield their parent, never a string
+/// prefix that is not itself a real directory.
+fn common_ancestor( candidates : &[ std::path::PathBuf ] ) -> std::path::PathBuf
+{
+  let mut iter = candidates.iter();
+  let Some( first ) = iter.next() else { return std::path::PathBuf::new() };
+  let mut ancestor = first.clone();
+  for p in iter
+  {
+    while !p.starts_with( &ancestor ) && ancestor.pop() {}
+  }
+  ancestor
+}
+
+/// Adds one verified-`Partial` candidate to `walk_fs`'s best-prefix
+/// competition, keeping only the candidates holding the maximal consumed
+/// length and collecting (rather than merely flagging) every distinct path
+/// tied at that maximum — a genuine Partial-vs-Partial tie is reported as
+/// `FsDecodeOutcome::AmbiguousPartial` with the full set preserved
+/// (Fix(BUG-526)); see `walk_fs`'s own Fix(BUG-514)/Fix(BUG-526) doc
+/// comments for the consumed-length metric and the no-collapse rationale.
+fn consider_partial( best_candidates : &mut Vec< std::path::PathBuf >, best_consumed : &mut Option< usize >, p : std::path::PathBuf, consumed : usize )
+{
+  match *best_consumed
+  {
+    None =>
+    {
+      *best_consumed = Some( consumed );
+      best_candidates.push( p );
+    }
+    Some( cur ) if consumed > cur =>
+    {
+      *best_consumed = Some( consumed );
+      best_candidates.clear();
+      best_candidates.push( p );
+    }
+    Some( cur ) if consumed == cur && !best_candidates.contains( &p ) => best_candidates.push( p ),
+    _ => {}
+  }
 }
 
 /// Recursive helper for `decode_path_via_fs`, resolving the encoding by
@@ -1044,6 +1212,75 @@ fn rank_subtree_candidates( candidates : Vec< std::path::PathBuf >, target : &st
 /// try to verify the deferred candidate from inside this function (see
 /// Pitfall 1 on the original Fix(BUG-516) note — still applies unchanged:
 /// exactly one `search_encoded_subtree` call site, in `decode_path_via_fs`).
+///
+/// Fix(BUG-525)
+/// Root cause: Fix(BUG-524)'s boundary check compared `consumed_so_far +
+/// piece.len()` against `encode_path`'s fixed 200-character truncation
+/// boundary but never asked whether the encoding being decoded actually
+/// REACHES that boundary — so a long real sibling piece (~195 bytes) at a
+/// shallow level (`consumed_so_far` ~19) tripped the defer on a ~34-char
+/// encoding where truncation is impossible by construction. `walk_fs` then
+/// retreated to a `Partial` anchor one level SHALLOWER than the candidate
+/// it had actually verified, and because `encoded.len() <= 200`,
+/// `decode_path_via_fs`'s `search_encoded_subtree` rescue gate — whose
+/// opening Fix(BUG-524)'s own defer rationale silently assumed ("the exact
+/// same single subtree search was always going to run once
+/// `encoded.len() > 200`", above) — never opened. The spuriously-retreated anchor flowed
+/// straight to callers, whose conservative `Partial` disjuncts fired on it:
+/// falsely INCLUDING an unrelated session via `matches_under`'s
+/// `base_path.starts_with(&p)` (an underscore-sibling's ghost descendant
+/// leaking into `scope::under`) and via `matches_local`'s
+/// `p == base_path` (a nested project's topic-tagged session leaking into
+/// the parent's `scope::local`, the BUG-509 class) (confirmed: MAAV Round
+/// 13 Primary, two real-filesystem fixtures).
+/// Fix: gate the defer on `total_len >= 200` — `total_len` is `inner.len()`
+/// = `encoded.len() - 1`, so this is exactly `decode_path_via_fs`'s own
+/// `encoded.len() > 200` rescue-gate condition restated. The defer now
+/// fires ONLY in the regime where the rescue search is guaranteed to run,
+/// which is precisely what Fix(BUG-524)'s zero-cost defer rationale always
+/// assumed.
+/// Pitfall: do not drop this guard to "tighten" the boundary arithmetic —
+/// an UNRESCUED defer is strictly worse than none at all, and any defer
+/// that can fire while `encoded.len() <= 200` is unrescued by construction.
+///
+/// Fix(BUG-526)
+/// Root cause: Fix(BUG-514)'s tie handling collapsed a genuine
+/// Partial-vs-Partial tie to `Partial(base)` — the tied candidates' shared
+/// parent — discarding exactly which real subtrees were in play. That is
+/// the precise false-inclusion shape Fix(BUG-518)'s continued note above
+/// already eliminated for the FULL arm (`AmbiguousFull`): a caller's
+/// conservative ancestor check (`matches_under`'s
+/// `base_path.starts_with(&p)`) against the overly-broad shared parent is
+/// satisfied even when NEITHER tied candidate relates to the query. The
+/// Partial arm survived unpatched because BUG-518 only amended the
+/// `full_matches` path — and a synthetic `--topic` suffix (Fix(BUG-512)'s
+/// mechanism) forces resolution through the Partial arm by preventing
+/// `remaining.is_empty()` from ever being reached (confirmed: MAAV Round 13
+/// Dimension Adversary — real siblings `anc-foo`/`anc.foo` with identical
+/// encodings tied at equal consumed length; collapsing to their shared
+/// parent leaked the unrelated sibling's session into the query anchor's
+/// `scope::under` results).
+/// Fix: preserve the tied candidate set as
+/// `FsDecodeOutcome::AmbiguousPartial` (Partial semantics per candidate —
+/// each is an incomplete prefix, not the complete resolutions
+/// `AmbiguousFull` carries; see its own doc comment) and push the
+/// relationship check to each caller, exactly as Fix(BUG-518) did for
+/// `AmbiguousFull`. Consumed-length credit reported to the parent call is
+/// still 0 on a tie, unchanged from the collapse version: a tie's deeper
+/// consumption is ambiguous, so it must not outrank an undisputed sibling's
+/// verified progress at the parent level. Fix(BUG-524)'s defer block below
+/// now runs only for a single undisputed best — a tied set is preserved
+/// verbatim, and the rescue search from the tied candidates' common
+/// ancestor (see `decode_path_via_fs`'s own Fix(BUG-526) note) covers any
+/// truncation victim among their extending siblings.
+/// Pitfall: do not re-collapse this set to `Partial(base)` anywhere, and do
+/// not reuse `AmbiguousFull` for it — callers apply STRICT per-candidate
+/// checks to `AmbiguousFull` (each candidate fully resolved the encoding),
+/// which would falsely EXCLUDE the conservative `base_path.starts_with(&p)`
+/// direction these incomplete prefixes legitimately require (see IT-79's
+/// fixture: the query anchor itself sits inside the tied set — per-candidate
+/// `Partial` semantics keep it included exactly as the pre-fix collapse
+/// did, with no shared-parent broadening).
 fn walk_fs( base : &std::path::Path, remaining : &str, is_first : bool, total_len : usize ) -> ( FsDecodeOutcome, usize )
 {
   if remaining.is_empty() { return ( FsDecodeOutcome::Full( base.to_path_buf() ), 0 ); }
@@ -1100,8 +1337,15 @@ fn walk_fs( base : &std::path::Path, remaining : &str, is_first : bool, total_le
   // single opaque `Full`/discarded) so a multi-level collision still
   // surfaces its complete real leaf-candidate set at the top.
   let mut full_matches : Vec< std::path::PathBuf > = Vec::new();
-  let mut best : Option< ( std::path::PathBuf, usize ) > = None;
-  let mut tied = false;
+  // Fix(BUG-526): a Partial-vs-Partial tie at this level is no longer
+  // collapsed to `Partial(base)` (see this function's own Fix(BUG-526) doc
+  // comment above) — tied candidates are COLLECTED with their consumed
+  // lengths instead of tracking a single `best` plus a bare `tied` flag, so
+  // the full set can be returned as `AmbiguousPartial`. A nested call's own
+  // `AmbiguousPartial` is flattened into this same competition exactly like
+  // `AmbiguousFull` above: each tied leaf competes on its own merits.
+  let mut best_candidates : Vec< std::path::PathBuf > = Vec::new();
+  let mut best_consumed : Option< usize > = None;
   for ( path, piece ) in &candidates
   {
     let Some( rest ) = remaining.strip_prefix( piece.as_str() ) else { continue };
@@ -1117,20 +1361,13 @@ fn walk_fs( base : &std::path::Path, remaining : &str, is_first : bool, total_le
       }
       ( FsDecodeOutcome::Partial( p ), inner_consumed ) =>
       {
-        let consumed = piece.len() + inner_consumed;
-        match &best
+        consider_partial( &mut best_candidates, &mut best_consumed, p, piece.len() + inner_consumed );
+      }
+      ( FsDecodeOutcome::AmbiguousPartial( inner ), inner_consumed ) =>
+      {
+        for p in inner
         {
-          None => { best = Some( ( p, consumed ) ); }
-          Some( ( _, cur_consumed ) ) if consumed > *cur_consumed =>
-          {
-            best = Some( ( p, consumed ) );
-            tied = false;
-          }
-          Some( ( cur_p, cur_consumed ) ) if consumed == *cur_consumed && *cur_p != p =>
-          {
-            tied = true;
-          }
-          _ => {}
+          consider_partial( &mut best_candidates, &mut best_consumed, p, piece.len() + inner_consumed );
         }
       }
       ( FsDecodeOutcome::NotFound, _ ) => {}
@@ -1150,21 +1387,27 @@ fn walk_fs( base : &std::path::Path, remaining : &str, is_first : bool, total_le
     _ => {}
   }
 
-  // Fix(BUG-524): rather than guessing which real sibling should win via an
-  // in-memory string-length heuristic (the original Fix(BUG-516) design,
-  // proven unsound by both its missing verification/tie-detection and its
-  // corruptible `remaining.len()` gate — see this function's own Fix(BUG-524)
-  // doc comment above), detect whether ANY real sibling might plausibly have
-  // been cut off by `encode_path`'s 200-char truncation using an exact check
-  // against that known, fixed boundary, and defer entirely to the parent
-  // level when so — never promote a guessed candidate.
-  if let Some( ( winning_path, _ ) ) = &best
+  // Fix(BUG-524), Fix(BUG-525): rather than guessing which real sibling
+  // should win via an in-memory string-length heuristic (the original
+  // Fix(BUG-516) design, proven unsound by both its missing
+  // verification/tie-detection and its corruptible `remaining.len()` gate —
+  // see this function's own Fix(BUG-524) doc comment above), detect whether
+  // ANY real sibling might plausibly have been cut off by `encode_path`'s
+  // 200-char truncation using an exact check against that known, fixed
+  // boundary, and defer entirely to the parent level when so — never
+  // promote a guessed candidate. Fix(BUG-525): the defer is gated on
+  // `total_len >= 200`, so it can only fire when `decode_path_via_fs`'s
+  // rescue search is guaranteed to run. Fix(BUG-526): the defer runs only
+  // for a single undisputed best — a tied set is preserved verbatim as
+  // `AmbiguousPartial` below.
+  if best_candidates.len() == 1
   {
+    let winning_path = &best_candidates[ 0 ];
     let winning_piece = candidates.iter().find( | ( p, _ ) | p == winning_path ).map( | ( _, pc ) | pc.clone() );
     if let Some( winning_piece ) = winning_piece
     {
       let consumed_so_far = total_len - remaining.len();
-      let truncation_ambiguous = candidates.iter().any( | ( path, piece ) |
+      let truncation_ambiguous = total_len >= 200 && candidates.iter().any( | ( path, piece ) |
         path != winning_path
           && piece.starts_with( winning_piece.as_str() )
           && consumed_so_far + piece.len() > 199
@@ -1176,11 +1419,18 @@ fn walk_fs( base : &std::path::Path, remaining : &str, is_first : bool, total_le
     }
   }
 
-  if tied { return ( FsDecodeOutcome::Partial( base.to_path_buf() ), 0 ); }
-  match best
+  // Fix(BUG-526): a genuine tie (2+ distinct real candidates at the same
+  // maximal consumed length) preserves the full set as `AmbiguousPartial`
+  // rather than collapsing to `Partial(base)` — see this function's own
+  // Fix(BUG-526) doc comment above. Consumed-length credit stays 0 on a
+  // tie, unchanged from the collapse version: a tie's deeper consumption is
+  // ambiguous and must not outrank an undisputed sibling's verified
+  // progress at the parent level.
+  match best_candidates.len()
   {
-    Some( ( p, consumed ) ) => ( FsDecodeOutcome::Partial( p ), consumed ),
-    None => ( FsDecodeOutcome::Partial( base.to_path_buf() ), 0 ),
+    0 => ( FsDecodeOutcome::Partial( base.to_path_buf() ), 0 ),
+    1 => ( FsDecodeOutcome::Partial( best_candidates.into_iter().next().expect( "len checked == 1" ) ), best_consumed.expect( "set when candidates non-empty" ) ),
+    _ => ( FsDecodeOutcome::AmbiguousPartial( best_candidates ), 0 ),
   }
 }
 

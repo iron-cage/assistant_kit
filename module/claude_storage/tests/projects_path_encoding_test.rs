@@ -54,6 +54,13 @@
 //! | IT-101 | BUG-524 | `scope::relevant` — same extension-named decoy sibling fix, ancestor-claim direction |
 //! | IT-102 | BUG-524 | `scope::local` includes anchor's own topic session despite two tied extension-named decoy siblings |
 //! | IT-103 | BUG-524 | `scope::local` isolation control — a long, non-extending sibling does not trigger the defect |
+//! | IT-104 | BUG-525 | `scope::under` excludes a ghost descendant despite a defer-tripping long extension sibling on a short encoding |
+//! | IT-105 | BUG-525 | `scope::local` excludes a nested project's topic session despite the same spurious short-encoding defer |
+//! | IT-106 | BUG-526 | `scope::under` excludes a topic-suffixed session ambiguous between two tied Partial candidates unrelated to the anchor |
+//! | IT-107 | BUG-524 | `scope::relevant` control — equal-length truncated twin siblings resolve independently in both directions |
+//! | IT-108 | BUG-527 | `scope::under` includes a session whose deleted project nests under a deleted intermediate anchor with a special-leading component |
+//! | IT-109 | BUG-527 | `scope::around` — same deleted-intermediate-anchor inclusion, under∪relevant entry point |
+//! | IT-110 | BUG-524 | `scope::under` control — equal-length truncated extension siblings resolve independently; the shorter bait anchor excludes both |
 //!
 //! Note: IT-60..IT-64 follow IT-59 (`scope::around` tests in `projects_scope_around_test.rs`).
 //! IT-27..IT-30 were already allocated in `tests/docs/cli/command/007_projects.md`
@@ -154,6 +161,41 @@
 //! via full filesystem verification. BUG-523/524 were both found during the
 //! same MAAV Cycle's Round 12 re-verification of BUG-520/521/522's own
 //! fixes.
+//!
+//! IT-104/IT-105 continue the sequence for BUG-525 (Round 13 Primary's
+//! finding: BUG-524's defer-to-parent compared `consumed_so_far +
+//! piece.len()` against the fixed 200-char truncation boundary but never
+//! checked whether the encoding being decoded could have been truncated at
+//! all — a ~195-byte extension sibling at a shallow level tripped the
+//! defer on a ~34-char encoding, and with `encoded.len() <= 200` the
+//! `search_encoded_subtree` rescue the defer's own rationale assumed never
+//! ran, so the spuriously-retreated anchor flowed straight to callers'
+//! conservative `Partial` disjuncts). IT-106 continues the sequence for
+//! BUG-526 (Round 13 Dimension Adversary's finding: the Partial-vs-Partial
+//! tie arm still collapsed a genuine tie to the tied candidates' shared
+//! parent — the exact false-inclusion shape BUG-518 had already eliminated
+//! for the Full arm — because a synthetic `--topic` suffix forces
+//! resolution through the Partial arm by preventing
+//! `remaining.is_empty()` from ever being reached). The fix preserves the
+//! tied set as the new `FsDecodeOutcome::AmbiguousPartial` variant and
+//! pushes each caller's relationship check down to the individual
+//! candidates, exactly as BUG-518 did for `AmbiguousFull`. IT-108/IT-109
+//! continue the sequence for BUG-527 (Round 13 Fresh Challenger's finding:
+//! BUG-522's loose `target.starts_with("{encoded}--")` self-match fired at
+//! the subtree-search ROOT too, where a deleted deeper path's own
+//! special-leading component is stringwise indistinguishable from a
+//! synthetic topic suffix — the overconfident `Full` it produced silently
+//! stripped the conservative-include disjunct only `Partial` carries,
+//! falsely EXCLUDING a session whose true project genuinely nested under
+//! the deleted query anchor). The fix suppresses the loose self-match at
+//! the search root only, where `walk_fs` has already verified no real
+//! descendant consumes any more of the target. IT-107 and IT-110 are
+//! PASS-side guards for the equal-length truncated twin/extension shapes
+//! (each sibling's own session resolves independently, no cross-leak in
+//! either direction, and the shorter bait anchor excludes both), pinning
+//! the BUG-524 defer + BUG-523 ranked-search machinery the BUG-526
+//! competition rework inherits. BUG-525/526/527 were all found during the
+//! same MAAV Cycle's Round 13 re-verification of BUG-523/524's own fixes.
 #![ cfg( unix ) ]
 
 mod common;
@@ -3553,5 +3595,761 @@ fn it_103_scope_local_control_includes_anchor_topic_session_with_non_extending_s
     s.contains( "session-it103-anchor-topic" ),
     "a long sibling whose piece does NOT extend the winning piece must not affect \
      the anchor's own topic-tagged session inclusion; got:\n{s}"
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// scope::under — Spurious Truncation-Boundary Defer on a Short Encoding
+// False-Includes a Ghost Descendant (BUG-525)
+//
+// Root Cause: `walk_fs`'s Fix(BUG-524) defer detected "a real sibling might
+// plausibly have been cut off by encode_path's 200-char truncation" via
+// `consumed_so_far + piece.len() > 199` — an exact check against the fixed
+// boundary constant, but with NO check that the encoded string being
+// decoded actually reached that boundary (`total_len` was never consulted).
+// When the full encoding is short (~34 chars), truncation is impossible by
+// construction, yet a long real sibling (~195-byte piece) at a shallow
+// level (`consumed_so_far` ~19) still tripped `19 + 195 = 214 > 199`. The
+// defer then returned `Partial(base)` one level SHALLOWER than the truly
+// verified candidate (`main_sub`), and `decode_path_via_fs`'s
+// `Partial(p) if encoded.len() > 200` gate — the only path to the
+// `search_encoded_subtree` rescue the defer's own rationale relied on —
+// did not fire, because the encoding was short. `matches_under`'s Partial
+// arm then evaluated `base_path.starts_with(&p)` against the retreated
+// anchor `/T/it104parent` (true) instead of the verified
+// `/T/it104parent/main_sub` (false), including a session whose true
+// project path `/T/it104parent/main_sub/ghost` is NOT under the query
+// anchor `/T/it104parent/main`.
+//
+// Why Not Caught: IT-99..IT-102's decoy siblings are 42 bytes — they
+// exercise the boundary check only in its negative regime
+// (`25 + 42 < 199`, defer never fires). IT-80..IT-83's long extension
+// siblings only ever appear alongside genuinely >200-char (truncated)
+// targets, where the defer is legitimate and the subtree search rescues
+// the outcome. No prior fixture combined a defer-tripping sibling length
+// with a SHORT total encoding — the only regime where the defer was both
+// spurious and unrescued.
+//
+// Fix Applied: the defer is gated on `total_len >= 200` — exactly
+// `decode_path_via_fs`'s own `encoded.len() > 200` rescue-gate condition
+// restated (`total_len` is measured on the leading-`-`-stripped `inner`),
+// so the defer can now fire only in the regime where the rescue search is
+// guaranteed to run.
+//
+// Prevention: this fixture combines a ~195-byte extension sibling with a
+// ~34-char total encoding and asserts the ghost session stays excluded;
+// the sibling's own session and the anchor's own session act as controls
+// proving the decoy's presence is purely structural.
+//
+// Pitfall: do not "fix" this by shortening the sibling-length threshold or
+// comparing against `remaining.len()` (BUG-524 defect #1's own corruptible
+// proxy) — the discriminating fact is whether the encoded string being
+// decoded could have been truncated at all, which only `total_len` knows.
+// ─────────────────────────────────────────────────────────────────────────────
+#[ test ]
+// bug_reproducer(BUG-525)
+fn it_104_scope_under_excludes_ghost_descendant_despite_long_extension_sibling()
+{
+  let root = TempDir::new().unwrap();
+  let storage_root = root.path().join( ".claude" );
+
+  let parent  = root.path().join( "it104parent" );
+  let anchor  = parent.join( "main" );
+  // Real, unrelated underscore-sibling of the anchor (encodes to the same
+  // `-main-sub` prefix shape a nested `main/sub` would) — exists on disk,
+  // but its `ghost` child deliberately does NOT (deleted-project shape).
+  let sibling = parent.join( "main_sub" );
+  let ghost   = sibling.join( "ghost" );
+  // Decoy: real sibling whose own name textually extends `main_sub`'s piece
+  // (`-main-sub`) and is long enough (~195-byte piece) to trip
+  // `consumed_so_far + piece.len() > 199` at a shallow level even though the
+  // whole encoding is ~34 chars and truncation is impossible.
+  let decoy   = parent.join( format!( "main_sub{}", "x".repeat( 185 ) ) );
+
+  std::fs::create_dir_all( &anchor ).expect( "create anchor dir" );
+  std::fs::create_dir_all( &sibling ).expect( "create sibling dir" );
+  std::fs::create_dir_all( &decoy ).expect( "create decoy dir" );
+  // Deliberately do NOT create `ghost` — the session below simulates a
+  // project whose directory was deleted after recording.
+
+  common::write_path_project_session( &storage_root, &anchor, "session-it104-anchor", 2 );
+  // Attack: session recorded for the sibling's since-deleted `ghost` child.
+  // Its storage key shares the anchor's encoded prefix (`-main-` collides
+  // with `-main-sub`'s start), so it passes `matches_under`'s fast-reject
+  // and reaches the filesystem-verified decode this test exercises.
+  common::write_path_project_session( &storage_root, &ghost, "session-it104-ghost", 2 );
+  // Control: the decoy's OWN session must be excluded on its own merits,
+  // proving any leak of `session-it104-ghost` is the defer's side-effect,
+  // not a generally-broken decode of this directory level.
+  common::write_path_project_session( &storage_root, &decoy, "session-it104-decoy", 2 );
+
+  let out = common::clg_cmd()
+    .env( "HOME", root.path().to_str().unwrap() )
+    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+    .arg( ".projects" )
+    .arg( "scope::under" )
+    .arg( format!( "path::{}", anchor.display() ) )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  assert!( s.contains( "session-it104-anchor" ), "must include anchor itself; got:\n{s}" );
+  assert!(
+    !s.contains( "session-it104-decoy" ),
+    "CONTROL: the long decoy sibling's own session must be excluded \
+     (main_sub<x185> is not under main); got:\n{s}"
+  );
+  assert!(
+    !s.contains( "session-it104-ghost" ),
+    "must NOT contain session-it104-ghost: /it104parent/main_sub/ghost is NOT under \
+     /it104parent/main. A spurious BUG-524 defer-to-parent \
+     (consumed_so_far ~19 + decoy piece ~195 > 199 on a ~34-char encoding where \
+     truncation is impossible) would retreat walk_fs's verified Partial anchor from \
+     main_sub to its parent it104parent, where matches_under's \
+     base_path.starts_with(&p) disjunct would falsely fire; got:\n{s}"
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// scope::local — Spurious Truncation-Boundary Defer on a Short Encoding
+// False-Includes a Real Nested Project's Topic-Tagged Session (BUG-525)
+//
+// Root Cause: same defer defect as IT-104 (the `total_len >= 200` gate was
+// missing), one recursion level down and through `matches_local`'s Partial
+// arm instead. The candidate storage key is
+// `encode_path(anchor/.hid) + "--it105topic"` — a topic-tagged session of
+// the REAL nested project `anchor/.hid`, the exact BUG-509/BUG-522
+// exclusion class. With a ~196-byte extension sibling `.hid<x190>` present
+// beside `.hid`, the defer tripped at the anchor's own level
+// (`consumed_so_far` ~19 + 196 > 199, total encoding ~34 chars),
+// retreating the verified `Partial(anchor/.hid)` to `Partial(anchor)`.
+// `matches_local` then evaluated `p == base_path` — TRUE for the retreated
+// anchor — and included a nested project's session into the anchor's
+// strictest scope, the cross-project data leak BUG-509 exists to prevent.
+// Sound code keeps `Partial(anchor/.hid)`, where both `p == base_path` and
+// `base_path.starts_with(&p)` are false and the session is excluded.
+//
+// Why Not Caught: IT-99/IT-102 (`scope::local`, extension-sibling decoys)
+// use 42-byte decoys against the anchor's OWN topic session — the defer
+// never fires, and the correct Partial(anchor) is what inclusion depends
+// on. No prior fixture placed the decoy beside a NESTED real project
+// (where the correct Partial is deeper than the anchor, and retreating it
+// flips exclusion to inclusion) with a decoy long enough to trip the
+// boundary on a short encoding.
+//
+// Fix Applied: identical to IT-104 — the defer is gated on
+// `total_len >= 200` (truncation actually possible), so a short encoding
+// can never retreat a verified Partial anchor.
+//
+// Prevention: this fixture pins the `scope::local` entry point with the
+// decoy beside a nested real project; IT-104 pins the same defect through
+// `scope::under` one level up.
+//
+// Pitfall: the conservative `p == base_path || base_path.starts_with(&p)`
+// disjunct is correct for GENUINELY unverifiable remainders (synthetic
+// topic tags on the anchor itself) — the defect was purely that the defer
+// handed it a shallower `p` than the filesystem actually verified, not the
+// disjunct itself.
+// ─────────────────────────────────────────────────────────────────────────────
+#[ test ]
+// bug_reproducer(BUG-525)
+fn it_105_scope_local_excludes_nested_project_topic_despite_long_extension_sibling()
+{
+  let root = TempDir::new().unwrap();
+  let storage_root = root.path().join( ".claude" );
+
+  let anchor = root.path().join( "it105main" );
+  // Real nested project, dot-prefixed (its piece is `--hid`, the `--`
+  // topic-boundary shape) — a genuine, separate project from the anchor.
+  let nested = anchor.join( ".hid" );
+  // Decoy: real sibling of `.hid` whose piece (`--hid-x...`, ~196 bytes)
+  // textually extends `--hid` and would trip the 199 boundary at the
+  // anchor's level on a short (~34-char) total encoding.
+  let decoy  = anchor.join( format!( ".hid{}", "x".repeat( 190 ) ) );
+
+  std::fs::create_dir_all( &anchor ).expect( "create anchor dir" );
+  std::fs::create_dir_all( &nested ).expect( "create nested project dir" );
+  std::fs::create_dir_all( &decoy ).expect( "create decoy dir" );
+
+  common::write_path_project_session( &storage_root, &anchor, "session-it105-anchor", 2 );
+  // Attack: topic-tagged session of the REAL nested project — BUG-509/522's
+  // exclusion class. The topic tag is synthetic (no `-it105topic` dir on disk).
+  let nested_encoded = claude_storage_core::encode_path( &nested ).expect( "encode nested path" );
+  let nested_topic_id = format!( "{nested_encoded}--it105topic" );
+  common::write_test_session( &storage_root, &nested_topic_id, "session-it105-nested-topic", 2 );
+  // Control: the decoy's own plain session must be excluded on its own merits.
+  common::write_path_project_session( &storage_root, &decoy, "session-it105-decoy", 2 );
+
+  let out = common::clg_cmd()
+    .env( "HOME", root.path().to_str().unwrap() )
+    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+    .arg( ".projects" )
+    .arg( "scope::local" )
+    .arg( format!( "path::{}", anchor.display() ) )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  assert!( s.contains( "session-it105-anchor" ), "must include anchor itself; got:\n{s}" );
+  assert!(
+    !s.contains( "session-it105-decoy" ),
+    "CONTROL: the long decoy sibling's own session must be excluded \
+     (.hid<x190> is not the anchor); got:\n{s}"
+  );
+  assert!(
+    !s.contains( "session-it105-nested-topic" ),
+    "must NOT contain session-it105-nested-topic: a REAL nested project's \
+     topic-tagged session never belongs to the parent anchor's scope::local \
+     (BUG-509 class). A spurious BUG-524 defer (consumed_so_far ~19 \
+     + decoy piece ~196 > 199 on a ~34-char encoding) would retreat the verified \
+     Partial(anchor/.hid) to Partial(anchor), where matches_local's \
+     p == base_path disjunct would falsely fire; got:\n{s}"
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// scope::under — Partial-vs-Partial Tie Collapse Reintroduced the
+// Shared-Parent False-Inclusion BUG-518 Eliminated for the Full Arm
+// (BUG-526)
+//
+// Root Cause: Fix(BUG-518) patched only `walk_fs`'s full-match tie arm
+// (-> `AmbiguousFull`, preserving the full candidate set). The older
+// Partial-vs-Partial tie arm collapsed a genuine tie straight to the tied
+// candidates' shared PARENT with no equivalent protection — discarding
+// exactly which real subtrees were in play. A synthetic (non-real-dir)
+// `--topic` suffix (Fix(BUG-512)'s mechanism) forces resolution through
+// the Partial arm by preventing `remaining.is_empty()` from ever being
+// reached, so the SAME logical ambiguity IT-86 drives to a Full tie flowed
+// through the unprotected arm instead: collapsing `it106anc-foo` /
+// `it106anc.foo` (two real siblings of the anchor, NEITHER related to it)
+// to their shared parent `it106parent` wrongly satisfied
+// `anchor.starts_with(it106parent)`, including the ambiguous session.
+//
+// Why Not Caught: IT-86 (BUG-518's own regression test) only ever drives
+// the collision to a FULL match — each decoy gets a real `bar` child, so
+// `remaining.is_empty()` completes the resolution and the Partial-tie arm
+// is never reached. No prior fixture layered a synthetic topic suffix onto
+// a decoy-collision shape.
+//
+// Fix Applied: the tie arm preserves the full tied-candidate set as the
+// new `FsDecodeOutcome::AmbiguousPartial` variant — Partial semantics per
+// candidate (each is an incomplete prefix, not the complete resolutions
+// `AmbiguousFull` carries) — and each caller applies its own relationship
+// predicate to every candidate individually, exactly as Fix(BUG-518) did
+// for `AmbiguousFull`.
+//
+// Prevention: this fixture ties two real siblings unrelated to the anchor
+// under a synthetic topic suffix and asserts the ambiguous session stays
+// excluded; IT-79 pins the complementary conservative-include case (the
+// query anchor itself inside the tied set).
+//
+// Pitfall: do not collapse the set back to `Partial(base)` and do not
+// reuse `AmbiguousFull` for it — callers apply STRICT per-candidate checks
+// to `AmbiguousFull`, which would falsely exclude the conservative
+// `base_path.starts_with(&p)` direction these incomplete prefixes
+// legitimately require (see IT-79).
+// ─────────────────────────────────────────────────────────────────────────────
+#[ test ]
+// bug_reproducer(BUG-526)
+fn it_106_scope_under_excludes_partial_tie_ambiguous_topic_session()
+{
+  let root = TempDir::new().unwrap();
+  let storage_root = root.path().join( ".claude" );
+
+  let parent = root.path().join( "it106parent" );
+  let anchor = parent.join( "it106anc" );
+  // Two real siblings of `anchor`, colliding with EACH OTHER at their own
+  // standalone encoding (hyphen vs dot both normalize to `-`) — same
+  // "definitively-not-related" collision shape IT-86 uses for its decoy
+  // pair — but here NEITHER gets a real child; a synthetic topic suffix
+  // is layered on top of decoy1's own key instead.
+  let decoy1 = parent.join( "it106anc-foo" );
+  let decoy2 = parent.join( "it106anc.foo" );
+
+  std::fs::create_dir_all( &anchor ).expect( "create anchor dir" );
+  std::fs::create_dir_all( &decoy1 ).expect( "create decoy1 dir" );
+  std::fs::create_dir_all( &decoy2 ).expect( "create decoy2 dir" );
+
+  // Sanity: confirm decoy1/decoy2 collide via encode_component_piece
+  // (test-setup self-check, not the defect itself).
+  let enc_decoy1 = claude_storage_core::encode_path( &decoy1 ).expect( "encode decoy1" );
+  let enc_decoy2 = claude_storage_core::encode_path( &decoy2 ).expect( "encode decoy2" );
+  assert_eq!(
+    enc_decoy1, enc_decoy2,
+    "test setup sanity: it106anc-foo and it106anc.foo must encode identically; \
+     got enc_decoy1={enc_decoy1}, enc_decoy2={enc_decoy2}"
+  );
+
+  // Ambiguous session key: decoy1's own real encoding plus a SYNTHETIC,
+  // non-existent topic suffix — no real directory named "it106topic"
+  // exists under decoy1 or decoy2, so recursion can never reach
+  // `remaining.is_empty()` (Full) for either candidate; only a tied
+  // Partial is reachable.
+  let dir_name = format!( "{enc_decoy1}--it106topic" );
+
+  common::write_path_project_session( &storage_root, &anchor, "session-it106-anchor", 2 );
+  common::write_test_session( &storage_root, &dir_name, "session-it106-ambiguous-topic", 2 );
+
+  let out = common::clg_cmd()
+    .env( "HOME", root.path().to_str().unwrap() )
+    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+    .arg( ".projects" )
+    .arg( "scope::under" )
+    .arg( format!( "path::{}", anchor.display() ) )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  assert!( s.contains( "session-it106-anchor" ), "must include anchor itself; got:\n{s}" );
+  assert!(
+    !s.contains( "session-it106-ambiguous-topic" ),
+    "must NOT contain session-it106-ambiguous-topic: its key resolves ambiguously between \
+     it106anc-foo and it106anc.foo, TWO REAL SIBLINGS of anchor, NEITHER related to it — \
+     collapsing this Partial-vs-Partial tie to their shared parent (it106parent, itself an \
+     ancestor of anchor too) would wrongly satisfy anchor.starts_with(it106parent), \
+     reintroducing exactly the shared-parent false-inclusion class Fix(BUG-518) \
+     eliminated for the FULL-match arm; got:\n{s}"
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// scope::relevant — Equal-Length Truncated Twin Siblings Resolve
+// Independently (PASS-side control for the BUG-524 defer + BUG-523
+// ranked-search machinery)
+//
+// Round 13 Dimension Adversary probe, committed as a PASS-side guard: two
+// real sibling directories whose names are EXACTLY equal length and both
+// extend a shorter hub's name past the 200-char truncation boundary, each
+// with its OWN recorded session, must never cross-contaminate via
+// `scope::relevant` — checked symmetrically in both directions, so the
+// assertion holds regardless of `std::fs::read_dir`'s platform-unspecified
+// enumeration order (whichever twin "wins" any length-based tie-break, at
+// least one direction would observe a leak if one existed). The original
+// adversarial hypothesis targeted BUG-516's tie-blind promotion loop;
+// BUG-524 replaced that loop with an unconditional defer-to-parent backed
+// by BUG-523's ranked subtree search, against which the shape resolves
+// correctly — a refuted hypothesis, pinned here so the replacement
+// machinery (including BUG-526's reworked Partial competition) cannot
+// silently reintroduce order-dependent cross-contamination.
+// ─────────────────────────────────────────────────────────────────────────────
+#[ test ]
+fn it_107_scope_relevant_resolves_equal_length_truncated_twins_symmetrically()
+{
+  let root = TempDir::new().unwrap();
+  let storage_root = root.path().join( ".claude" );
+
+  let parent = root.path().join( "it107parent" );
+  let hub = parent.join( "it107hub" );
+  let tail = "z".repeat( 220 );
+  let twin_x = parent.join( format!( "it107hub-armX-{tail}" ) );
+  let twin_y = parent.join( format!( "it107hub-armY-{tail}" ) );
+  let target_x = twin_x.join( "leaf" );
+  let target_y = twin_y.join( "leaf" );
+
+  std::fs::create_dir_all( &hub ).expect( "create hub dir" );
+  std::fs::create_dir_all( &target_x ).expect( "create target_x dir (implies twin_x)" );
+  std::fs::create_dir_all( &target_y ).expect( "create target_y dir (implies twin_y)" );
+
+  // Sanity: both twins must be real, distinct, independently exceed the
+  // 200-char truncation boundary, and their OWN directory names must be
+  // equal length (the true tie prerequisite — encode_component_piece never
+  // truncates, so equal-length names guarantee equal-length pieces
+  // regardless of encode_path's own outer hash-suffix digit count).
+  let enc_twin_x = claude_storage_core::encode_path( &twin_x ).expect( "encode twin_x" );
+  let enc_twin_y = claude_storage_core::encode_path( &twin_y ).expect( "encode twin_y" );
+  assert!(
+    enc_twin_x.len() > 200 && enc_twin_y.len() > 200,
+    "test setup sanity: both twins must independently exceed 200 chars; \
+     twin_x len={}, twin_y len={}", enc_twin_x.len(), enc_twin_y.len()
+  );
+  assert_ne!( enc_twin_x, enc_twin_y, "test setup sanity: twins must be genuinely distinct real projects" );
+  assert_eq!(
+    twin_x.file_name().unwrap().len(), twin_y.file_name().unwrap().len(),
+    "test setup sanity: twin directory NAMES must be equal length (the true tie \
+     prerequisite for encode_component_piece's own, non-truncating output)"
+  );
+
+  common::write_path_project_session( &storage_root, &twin_x, "session-it107-twinx", 2 );
+  common::write_path_project_session( &storage_root, &twin_y, "session-it107-twiny", 2 );
+
+  // Query 1: twin_y's session must not be "relevant" (an ancestor) to
+  // target_x (twin_x's own child).
+  let out1 = common::clg_cmd()
+    .env( "HOME", root.path().to_str().unwrap() )
+    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+    .arg( ".projects" )
+    .arg( "scope::relevant" )
+    .arg( format!( "path::{}", target_x.display() ) )
+    .output()
+    .unwrap();
+  assert_exit( &out1, 0 );
+  let s1 = stdout( &out1 );
+  assert!(
+    !s1.contains( "session-it107-twiny" ),
+    "must NOT contain session-it107-twiny under scope::relevant(target_x): twin_y is a plain, \
+     unrelated SIBLING of twin_x, never an ancestor of target_x; got:\n{s1}"
+  );
+
+  // Query 2: twin_x's session must not be "relevant" (an ancestor) to
+  // target_y (twin_y's own child). Symmetric mirror of Query 1.
+  let out2 = common::clg_cmd()
+    .env( "HOME", root.path().to_str().unwrap() )
+    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+    .arg( ".projects" )
+    .arg( "scope::relevant" )
+    .arg( format!( "path::{}", target_y.display() ) )
+    .output()
+    .unwrap();
+  assert_exit( &out2, 0 );
+  let s2 = stdout( &out2 );
+  assert!(
+    !s2.contains( "session-it107-twinx" ),
+    "must NOT contain session-it107-twinx under scope::relevant(target_y): twin_x is a plain, \
+     unrelated SIBLING of twin_y, never an ancestor of target_y; got:\n{s2}"
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// scope::under — Loose Root Self-Match Promoted a Surviving Ancestor to
+// Full, Falsely EXCLUDING a Session That Belongs (BUG-527)
+//
+// Root Cause: `search_encoded_subtree`'s Fix(BUG-522) loose match treated
+// ANY `target.starts_with("{encoded}--")` as "this real candidate is the
+// session's project, with a synthetic topic suffix" — at EVERY level of
+// the search, including the search ROOT. But the `--` boundary inside a
+// TRUNCATED storage key is equally produced by the true (deleted)
+// project's own special-leading component one level below the surviving
+// real ancestor. With the session's project
+// `T = <C>/.yit108<90 y>/goneit108<90 g>` deleted below surviving real
+// ancestor `C`, `T`'s truncated encoding necessarily starts with
+// `encode(C) + "--"`; `walk_fs` stalled at `Partial(C)` (the deleted
+// `.yit108` cannot forward-match), the >200-char fallback searched `C`'s
+// subtree, found nothing below `C`, then loose-matched `C` ITSELF and
+// returned `Full(C)` — a confident, complete resolution that
+// `matches_under`'s strict Full arm evaluates as EXCLUDE when the query
+// anchor is the deleted intermediate `<C>/.yit108<...>`. The pre-BUG-522
+// exact-only search found nothing there, falling back to `Partial(C)`,
+// whose conservative `base_path.starts_with(&p)` disjunct correctly
+// INCLUDED the session — so BUG-522's own fix introduced this false
+// exclusion.
+//
+// Why Not Caught: every prior BUG-522/523/524 fixture keeps the query
+// anchor REAL and places the session's project as a REAL (existing) deep
+// directory — the loose match then fires on the genuinely-correct
+// candidate. No prior fixture deletes BOTH the session's project AND the
+// intermediate query anchor below a surviving special-boundary ancestor.
+//
+// Fix Applied: the loose self-match is suppressed at the search root only
+// (`is_root`), where `walk_fs` has already verified that no real
+// descendant consumes any more of the target; exact equality stays enabled
+// at every level, and every proper-descendant level keeps the loose
+// `--`-boundary match unchanged (IT-90 pins that side).
+//
+// Prevention: this fixture asserts the session IS included under the
+// deleted intermediate anchor (its true project IS nested there), with
+// discoverability (included under the surviving ancestor) and
+// non-absorption (excluded under an unrelated sibling) controls run first
+// so a claim failure cannot be explained away as a fixture artifact.
+//
+// Pitfall: do not remove the loose match entirely (that reintroduces
+// BUG-522's own `matches_local` nested-descendant leak — see IT-90), and
+// do not narrow the suffix pattern — a synthetic topic tag and an escaped
+// special-leading component are stringwise identical by construction; only
+// the walk's own stall point distinguishes them.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Build the BUG-527 fixture. Returns (tempdir guard, `storage_root`,
+/// real ancestor C, deleted intermediate anchor). The session for
+/// `T = <C>/.yit108<90y>/goneit108<90g>` is recorded in storage; neither
+/// the intermediate anchor nor T itself is created on the filesystem.
+fn it108_deleted_anchor_fixture() -> ( TempDir, std::path::PathBuf, std::path::PathBuf, std::path::PathBuf )
+{
+  let root = TempDir::new().unwrap();
+  let storage_root = root.path().join( ".claude" );
+
+  // Real surviving ancestor C; everything below it is "deleted" (never created).
+  let real_ancestor = root.path().join( "it108parent" );
+  std::fs::create_dir_all( &real_ancestor ).expect( "create real ancestor dir" );
+
+  let y_component = format!( ".yit108{}", "y".repeat( 90 ) );
+  let gone_component = format!( "goneit108{}", "g".repeat( 90 ) );
+  let deleted_anchor = real_ancestor.join( &y_component );
+  let session_project = deleted_anchor.join( &gone_component );
+
+  // Sanity: the fixture's encoding must actually cross the 200-char
+  // truncation boundary, and must carry the `encode(C) + "--"` loose-match
+  // shape the claim depends on — fail loudly if the constants ever drift.
+  let encoded_session = claude_storage_core::encode_path( &session_project )
+    .expect( "encode session project path" );
+  let encoded_ancestor = claude_storage_core::encode_path( &real_ancestor )
+    .expect( "encode real ancestor path" );
+  assert!(
+    encoded_session.len() > 200,
+    "fixture requires a truncated storage key (>200 chars); got {} chars: {encoded_session}",
+    encoded_session.len()
+  );
+  assert!(
+    encoded_session.starts_with( &format!( "{encoded_ancestor}--" ) ),
+    "fixture requires encode(T) to start with encode(C) + '--' (special-leading .yit108 piece);\n\
+     encode(C) = {encoded_ancestor}\nencode(T) = {encoded_session}"
+  );
+
+  common::write_path_project_session(
+    &storage_root,
+    &session_project,
+    "session-it108-probe1",
+    2,
+  );
+
+  ( root, storage_root, real_ancestor, deleted_anchor )
+}
+
+/// Run `.projects scope::<scope> path::<anchor>` against the fixture's
+/// storage and return stdout. Fails loudly on non-zero exit.
+fn it108_query(
+  root : &TempDir,
+  storage_root : &std::path::Path,
+  scope : &str,
+  anchor : &std::path::Path,
+) -> String
+{
+  let out = common::clg_cmd()
+    .env( "HOME", root.path().to_str().unwrap() )
+    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+    .arg( ".projects" )
+    .arg( format!( "scope::{scope}" ) )
+    .arg( format!( "path::{}", anchor.display() ) )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  stdout( &out )
+}
+
+/// Discoverability + non-absorption controls for the BUG-527 fixture: the
+/// recorded session MUST be included under the real surviving ancestor C
+/// (proving the project loads and is findable at all) and MUST NOT be
+/// absorbed by an unrelated real sibling anchor. Run FIRST in both tests
+/// so a claim failure cannot be explained away as a fixture/setup artifact.
+fn it108_controls(
+  root : &TempDir,
+  storage_root : &std::path::Path,
+  real_ancestor : &std::path::Path,
+)
+{
+  let s = it108_query( root, storage_root, "under", real_ancestor );
+  assert!(
+    s.contains( "session-it108-probe1" ),
+    "control: session must be INCLUDED under scope::under path::<real ancestor C> \
+     (proves the session is discoverable at all); got:\n{s}"
+  );
+
+  let unrelated = root.path().join( "it108unrelated" );
+  std::fs::create_dir_all( &unrelated ).expect( "create unrelated dir" );
+  let s = it108_query( root, storage_root, "under", &unrelated );
+  assert!(
+    !s.contains( "session-it108-probe1" ),
+    "negative control: session must be EXCLUDED under an unrelated anchor; got:\n{s}"
+  );
+}
+
+#[ test ]
+// bug_reproducer(BUG-527)
+fn it_108_scope_under_includes_session_under_deleted_intermediate_anchor()
+{
+  let ( root, storage_root, real_ancestor, deleted_anchor ) = it108_deleted_anchor_fixture();
+  it108_controls( &root, &storage_root, &real_ancestor );
+
+  // The session must be INCLUDED under the deleted intermediate anchor —
+  // its true project is genuinely nested there. A root-level loose
+  // self-match would resolve Full(C) and the strict Full arm would exclude.
+  let s = it108_query( &root, &storage_root, "under", &deleted_anchor );
+  assert!(
+    s.contains( "session-it108-probe1" ),
+    "session for deleted project <C>/.yit108/goneit108 must be INCLUDED under \
+     scope::under path::<C>/.yit108 (its true project IS nested under the anchor); \
+     exclusion here means search_encoded_subtree's BUG-522 loose match promoted the \
+     shallow surviving ancestor C to a confident Full(C), stripping the Partial arm's \
+     conservative-include disjunct; got:\n{s}"
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// scope::around — Same Deleted-Intermediate-Anchor Inclusion (BUG-527,
+// under ∪ relevant direction)
+//
+// Root Cause: see IT-108 — the same loose root self-match false exclusion,
+// queried through `scope::around` (under ∪ relevant); the under-arm
+// exclusion propagated.
+//
+// Why Not Caught: see IT-108 — prior fixtures never delete both the
+// session's project and the intermediate query anchor below a surviving
+// special-boundary ancestor.
+//
+// Fix Applied: see IT-108 — root-level suppression of the loose
+// `--`-boundary self-match.
+//
+// Prevention: this test pins the `around` entry point specifically, since
+// `scope::around`'s union means a regression in EITHER arm's handling of
+// the deleted-anchor shape is observable here.
+//
+// Pitfall: see IT-108 — only the walk's own stall point distinguishes a
+// synthetic topic tag from an escaped special-leading component.
+// ─────────────────────────────────────────────────────────────────────────────
+#[ test ]
+// bug_reproducer(BUG-527)
+fn it_109_scope_around_includes_session_under_deleted_intermediate_anchor()
+{
+  let ( root, storage_root, real_ancestor, deleted_anchor ) = it108_deleted_anchor_fixture();
+  it108_controls( &root, &storage_root, &real_ancestor );
+
+  // Same claim via scope::around: around = under || relevant; the
+  // under-arm exclusion would propagate.
+  let s = it108_query( &root, &storage_root, "around", &deleted_anchor );
+  assert!(
+    s.contains( "session-it108-probe1" ),
+    "session must be INCLUDED under scope::around anchored at the \
+     deleted intermediate path (under-arm); got:\n{s}"
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// scope::under — Tied Truncated Extension Siblings Resolve Independently
+// (PASS-side control for the BUG-524 defer + BUG-523 ranked search)
+//
+// Round 13 Fresh Challenger guard, committed as a PASS-side pin: two REAL,
+// equal-length sibling directories whose names both extend a shorter
+// bait's name past the 200-char truncation boundary
+// (`it110anc` vs `it110anc-A-<200 z>` vs `it110anc-B-<200 z>`), each with
+// its OWN recorded session, must resolve independently — each sibling's
+// session included under its own anchor, excluded under the other
+// sibling's anchor, BOTH excluded under the bait anchor (the bait is not
+// their ancestor), and both included under the shared parent. IT-102's
+// tied decoys are 40 chars and non-truncated; IT-80/81 use a single
+// extension sibling — no other committed test covers the equal-length
+// TRUNCATED tie shape the BUG-524 defer + BUG-523 ranked subtree search
+// (and BUG-526's reworked Partial competition, which inherits both)
+// resolve together.
+// ─────────────────────────────────────────────────────────────────────────────
+#[ test ]
+fn it_110_scope_under_resolves_tied_truncated_extension_siblings_independently()
+{
+  let root = TempDir::new().unwrap();
+  let storage_root = root.path().join( ".claude" );
+
+  let parent = root.path().join( "it110parent" );
+  let bait = parent.join( "it110anc" );
+  let sib_a = parent.join( format!( "it110anc-A-{}", "z".repeat( 200 ) ) );
+  let sib_b = parent.join( format!( "it110anc-B-{}", "z".repeat( 200 ) ) );
+
+  std::fs::create_dir_all( &bait ).expect( "create bait dir" );
+  std::fs::create_dir_all( &sib_a ).expect( "create sibling A dir" );
+  std::fs::create_dir_all( &sib_b ).expect( "create sibling B dir" );
+
+  // Sanity: both siblings must be independently truncated (>200) and
+  // diverge INSIDE the 200-char body (at the A/B position) so each
+  // sibling's truncated key is distinct — a genuine tie shape. Total
+  // encoded lengths are NOT compared: the `-<djb2-hash>` suffix is
+  // variable-width hex (`-{hash:x}`, claude_storage_core/src/path.rs), so
+  // a dropped leading zero nibble legitimately makes the totals differ by
+  // one depending on the random tempdir name.
+  let encoded_a = claude_storage_core::encode_path( &sib_a ).expect( "encode sibling A" );
+  let encoded_b = claude_storage_core::encode_path( &sib_b ).expect( "encode sibling B" );
+  assert!(
+    encoded_a.len() > 200 && encoded_b.len() > 200,
+    "fixture requires both siblings truncated; got {} and {}",
+    encoded_a.len(),
+    encoded_b.len()
+  );
+  let divergence = encoded_a.bytes().zip( encoded_b.bytes() ).position( | ( a, b ) | a != b );
+  assert!(
+    divergence.is_some_and( | i | i < 200 ),
+    "fixture requires sibling encodings to diverge inside the 200-char body (tie shape)"
+  );
+
+  common::write_path_project_session( &storage_root, &sib_a, "session-it110-siba", 2 );
+  common::write_path_project_session( &storage_root, &sib_b, "session-it110-sibb", 2 );
+
+  // Assertion 1: sibling A's own anchor — self included, sibling B excluded.
+  let out = common::clg_cmd()
+    .env( "HOME", root.path().to_str().unwrap() )
+    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+    .arg( ".projects" )
+    .arg( "scope::under" )
+    .arg( format!( "path::{}", sib_a.display() ) )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  assert!(
+    s.contains( "session-it110-siba" ),
+    "sibling A's own session must be included under its own anchor; got:\n{s}"
+  );
+  assert!(
+    !s.contains( "session-it110-sibb" ),
+    "sibling B's session must NOT leak into sibling A's anchor; got:\n{s}"
+  );
+
+  // Assertion 2: sibling B's own anchor — self included, sibling A excluded.
+  let out = common::clg_cmd()
+    .env( "HOME", root.path().to_str().unwrap() )
+    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+    .arg( ".projects" )
+    .arg( "scope::under" )
+    .arg( format!( "path::{}", sib_b.display() ) )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  assert!(
+    s.contains( "session-it110-sibb" ),
+    "sibling B's own session must be included under its own anchor; got:\n{s}"
+  );
+  assert!(
+    !s.contains( "session-it110-siba" ),
+    "sibling A's session must NOT leak into sibling B's anchor; got:\n{s}"
+  );
+
+  // Assertion 3: the bait anchor (NOT an ancestor of either sibling) —
+  // both sessions excluded. This is the BUG-516 leak shape guarded by the
+  // BUG-524 defer + BUG-523 ranked search: walk_fs defers at the parent
+  // level, search_encoded_subtree resolves each session's true sibling,
+  // and the strict starts_with(bait) check must reject both.
+  let out = common::clg_cmd()
+    .env( "HOME", root.path().to_str().unwrap() )
+    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+    .arg( ".projects" )
+    .arg( "scope::under" )
+    .arg( format!( "path::{}", bait.display() ) )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  assert!(
+    !s.contains( "session-it110-siba" ) && !s.contains( "session-it110-sibb" ),
+    "neither sibling's session may leak under the bait anchor (not their ancestor); got:\n{s}"
+  );
+
+  // Assertion 4: the shared parent anchor — both included.
+  let out = common::clg_cmd()
+    .env( "HOME", root.path().to_str().unwrap() )
+    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+    .arg( ".projects" )
+    .arg( "scope::under" )
+    .arg( format!( "path::{}", parent.display() ) )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  assert!(
+    s.contains( "session-it110-siba" ) && s.contains( "session-it110-sibb" ),
+    "both siblings' sessions must be included under the shared parent anchor; got:\n{s}"
   );
 }

@@ -50,7 +50,7 @@ real filesystem — not a simple linear DFS over a flat candidate list, but a co
 component walk (`walk_fs()`) that enumerates each level's ACTUAL `read_dir()` entries and
 forward-matches each entry's own re-encoding (via `claude_storage_core::encode_component_piece`)
 against the remaining unconsumed portion of the encoded key. Each recursive step resolves to one
-of four outcomes:
+of five outcomes:
 
 - **Full** — the remaining string was consumed by exactly ONE real candidate: an unambiguous
   complete resolution.
@@ -60,6 +60,13 @@ of four outcomes:
   ancestor; each caller (`matches_under`/`matches_relevant`/`matches_local`) checks its own
   directional relationship against every candidate individually and conservatively includes
   when at least one qualifies.
+- **AmbiguousPartial** — 2+ real candidates tie as the best (longest-consumed) Partial match
+  when the unconsumed remainder (e.g. a synthetic `--topic` suffix) prevents every candidate
+  from reaching Full. As with `AmbiguousFull`, the full candidate set is preserved rather than
+  collapsed to the candidates' common ancestor — collapsing reintroduces the shared-parent
+  false-inclusion shape one confidence level down (BUG-526) — and each caller checks its own
+  directional relationship against every candidate individually, conservatively including when
+  at least one qualifies.
 - **Partial** — the best (longest-consumed) real prefix found, tie-broken by consumed length
   (not raw byte length) when 2+ candidates tie. When a real sibling's own piece textually
   extends the current winner AND an exact `consumed_so_far + piece.len() > 199` check against
@@ -69,7 +76,11 @@ of four outcomes:
   is inflated by `encode_path()`'s appended hash-plus-topic bytes once truncation has actually
   occurred, silently defeating the comparison, BUG-524) — it instead defers unconditionally to
   the current level (`Partial(base)`), letting the single `search_encoded_subtree` fallback (see
-  below) make the final, filesystem-verified determination.
+  below) make the final, filesystem-verified determination. The entire defer is gated on
+  `total_len >= 200` — the total encoded key's own length reaching the truncation boundary at
+  all, identically the condition that opens the rescue search itself (`encoded.len() > 200`) —
+  so it can never fire on a short key where truncation is impossible by construction and the
+  retreat would go unrescued (BUG-525).
 - **NotFound** — no real filesystem entry corresponds to even the first component.
 
 **200-character truncation boundary**: once the fully-assembled encoded key exceeds 200
@@ -82,7 +93,13 @@ directly re-encoding real subtree entries — recursing into children BEFORE che
 level's own directory, and matching via topic-boundary-aware prefix
 (`target.starts_with("{encoded}--")`) in addition to exact equality, so a real descendant past
 the truncation boundary is still found when it additionally carries a synthetic topic suffix on
-top of its own already-truncated key (BUG-522) — to find the truncation-hidden target. This
+top of its own already-truncated key (BUG-522) — to find the truncation-hidden target. The loose
+prefix match fires only at proper-descendant levels of the search, never at the search ROOT: at
+the root the candidate is merely where `walk_fs()` stalled, so "candidate + `--`" is stringwise
+indistinguishable from a DELETED deeper path's own special-leading component, and promoting it
+to a confident `Full` would strip the `Partial` conservative-include disjunct and falsely
+EXCLUDE a session genuinely nested under a deleted query anchor (BUG-527); exact equality stays
+enabled at every level including the root. This
 subtree search examines every sibling to completion at each level rather than returning on the
 first match found (an early return silently depends on `read_dir()`'s platform-unspecified
 enumeration order to decide a genuine tie, BUG-523); when 2+ real candidates remain after the
@@ -129,9 +146,9 @@ algorithm's scope. This disposition, its unclosability proof, and its pinning re
 in BUG-520.
 
 The algorithm assumes the caller's working environment matches the storage origin. This decode
-algorithm's full evolution — 16 defects found (15 fixed; 1, BUG-520, resolved as an accepted
+algorithm's full evolution — 19 defects found (18 fixed; 1, BUG-520, resolved as an accepted
 architectural limitation rather than a fix) via this session's MAAV adversarial-verification
-process — is recorded in `task/claude_storage/bug/completed/509_*.md` through `524_*.md`
+process — is recorded in `task/claude_storage/bug/completed/509_*.md` through `527_*.md`
 (sibling directory to this repo root). Read those for detailed root-cause narratives; this
 section states only the CURRENT resulting contract.
 
@@ -141,9 +158,10 @@ section states only the CURRENT resulting contract.
   algorithm doc, linked above, for the full character-substitution and 200-char-truncation rule)
 - **Decode**: real-filesystem-guided, component-by-component candidate enumeration (see
   Disambiguation above) — NOT a simple "first match wins" search; a genuine, irreducible
-  ambiguity (`AmbiguousFull`) is preserved as a candidate SET rather than collapsed to an
-  arbitrary or common-ancestor winner, and each caller applies its own relationship check
-  per-candidate
+  ambiguity (`AmbiguousFull`, or `AmbiguousPartial` when the unconsumed remainder itself
+  prevents every candidate from reaching Full) is preserved as a candidate SET rather than
+  collapsed to an arbitrary or common-ancestor winner, and each caller applies its own
+  relationship check per-candidate
 - **Round-trip guarantee**: `encode(decode(k)) == k` always holds
 - **Inverse guarantee**: `decode(encode(p)) == p` holds only when the filesystem contains
   exactly one candidate matching the encoded key; when 2+ real candidates exist, decode
