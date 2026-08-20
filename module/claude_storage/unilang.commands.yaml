@@ -263,11 +263,31 @@
       aliases: []
       tags: []
 
+    - name: "fields"
+      kind: "String"
+      description: "Attribute-projection field list (18 canonical names, or 'all'); switches per-entry rendering to an explicit field block"
+      hint: "Field selector (optional)"
+      optional: true
+      validation_rules: []
+      aliases: []
+      tags: []
+
+    - name: "index"
+      kind: "Integer"
+      description: "1-based position narrowing the in-scope message set to exactly one message"
+      hint: "Message index (optional)"
+      optional: true
+      validation_rules: []
+      aliases: []
+      tags: []
+
   examples:
     - ".show"
     - ".show session_id::abc123"
     - ".show project::/home/alice/project"
     - ".show session_id::abc123 project::/home/alice/project"
+    - ".show session_id::abc123 fields::timestamp"
+    - ".show session_id::abc123 fields::all index::3"
     - ".show session_id::abc123 show_metadata::1"
     - ".show session_id::abc123 show_entries::1"
     - ".show session_id::abc123 show_stat::1"

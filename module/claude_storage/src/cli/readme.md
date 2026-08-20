@@ -11,7 +11,9 @@ navigable.
 | `mod.rs` | Module declarations and public re-exports |
 | `storage.rs` | Shared storage factory, path resolution, project + session address helpers |
 | `scope.rs` | Shared `scope::`/`path::` validation and project resolution |
+| `color.rs` | Hand-rolled ANSI color helpers for `.show`/`.tail` output |
 | `format.rs` | Entry content formatting, timestamp formatting, safe UTF-8 truncation |
+| `field_selector.rs` | `FieldSelector` type — `.show`'s `fields::` attribute-projection parsing/validation |
 | `status.rs` | `.status` command — project stats for a path |
 | `list.rs` | `.list` command — session/conversation listing with filters |
 | `show.rs` | `.show` command — session and project content viewer |

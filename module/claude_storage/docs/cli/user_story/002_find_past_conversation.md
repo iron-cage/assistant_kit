@@ -112,7 +112,7 @@ cls .projects filter::my_app min_entries::10 agent::0
 **Step 5: View session details**
 ```bash
 cls .show session_id::abc123
-# Session: abc123 (24 entries)
+# Session: abc123 · 24 entries
 # Path: /home/user/projects/my_app
 # Agent Session: false
 # Total Entries: 24
@@ -121,10 +121,10 @@ cls .show session_id::abc123
 # First Entry: 2024-01-15T14:30:22.000Z
 # Last Entry: 2024-01-15T15:10:03.000Z
 #
-# [2024-01-15 14:30] User:
+# 2024-01-15 14:30 · User:
 # The authentication flow needs to handle OAuth tokens properly
 #
-# [2024-01-15 14:30] Assistant:
+# 2024-01-15 14:30 · Assistant:
 # I'll help you implement the OAuth token handling. Let's start by...
 ```
 

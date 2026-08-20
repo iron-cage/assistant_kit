@@ -4,7 +4,7 @@
 
 - **Purpose**: Document individual parameter specifications for the `claude_storage` CLI.
 - **Responsibility**: Per-parameter detail pages with type, defaults, and command cross-refs.
-- **In Scope**: All 31 CLI parameters with type constraints, defaults, valid values, and command usage.
+- **In Scope**: All 33 CLI parameters with type constraints, defaults, valid values, and command usage.
 - **Out of Scope**: Type definitions (→ `type/`), parameter group semantics (→ `param_group/`), command-level behavior (→ `command/`).
 
 All parameters for the `claude_storage` CLI. Parameters use `param::value` syntax.
@@ -46,6 +46,8 @@ See [type/readme.md](../type/readme.md) for type definitions and [param_group/re
 | `29_filter.md` | filter:: — path-substring filter on resolved projects for .projects |
 | `30_detail.md` | detail:: — output detail level (projects vs sessions) for .projects and .show |
 | `31_ids.md` | ids:: — raw conversation-ID scripting output toggle for .projects |
+| `32_fields.md` | fields:: — attribute-projection field selector for .show |
+| `33_index.md` | index:: — single-message position selector for .show |
 
 ### Parameters Table
 
@@ -82,5 +84,7 @@ See [type/readme.md](../type/readme.md) for type definitions and [param_group/re
 | 29 | [`filter::`](29_filter.md) | [`PathSubstring`](../type/04_path_substring.md) | — | any string | Path-substring filter on resolved projects | 1 |
 | 30 | [`detail::`](30_detail.md) | `DetailLevel` | varies | `projects`, `sessions` | Output detail level | 2 |
 | 31 | [`ids::`](31_ids.md) | Boolean | `0` | `0`, `1` | Raw conversation-ID scripting output | 1 |
+| 32 | [`fields::`](32_fields.md) | [`FieldSelector`](../type/15_field_selector.md) | — | 18 field names, or `all` | Attribute-projection field selector | 1 |
+| 33 | [`index::`](33_index.md) | Integer | — | Integer ≥ 1 | Single-message position selector | 1 |
 
-**Total:** 31 parameters, all implemented across their specified commands — including `depth::` (row 26) for `.usage` (see `../command/13_usage.md`); `filter::`, `detail::`, `ids::` (rows 29-31) for `.projects`' absorption of `.list` (see `../command/07_projects.md` and `../command_group/readme.md § Command Removal: .list -> .projects`); and `tail::`/`detail::` (rows 25, 30) for `.show`'s project-overview branch (see `../command/03_show.md`).
+**Total:** 33 parameters, all implemented across their specified commands — including `depth::` (row 26) for `.usage` (see `../command/13_usage.md`); `filter::`, `detail::`, `ids::` (rows 29-31) for `.projects`' absorption of `.list` (see `../command/07_projects.md` and `../command_group/readme.md § Command Removal: .list -> .projects`); `tail::`/`detail::` (rows 25, 30) for `.show`'s project-overview branch (see `../command/03_show.md`); and `fields::`/`index::` (rows 32-33) for `.show`'s attribute-projection and single-message selection (see `../command/03_show.md`).

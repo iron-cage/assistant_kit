@@ -33,10 +33,10 @@ Reference documentation for the `claude_storage` CLI binary — a tool for explo
 | `command/readme.md` | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
 | `command/*.md` (13 files) | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
 | `param/readme.md` | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
-| `param/*.md` (28 files) | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
+| `param/*.md` (33 files) | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
 | `001_dictionary.md` | ➖ | ✅ | ✅ | ✅ | ✅ | L5 |
 | `type/readme.md` | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
-| `type/*.md` (13 files) | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
+| `type/*.md` (15 files) | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
 | `param_group/readme.md` | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
 | `param_group/*.md` (5 files) | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
 | `command_group/readme.md` (12 singleton groups) | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
@@ -78,3 +78,5 @@ Reference documentation for the `claude_storage` CLI binary — a tool for explo
 ### Local Style Conventions
 
 **Doc Instance H1 Title Format:** Doc instance files in `docs/cli/` use the format `# {DocEntityType} :: {N}. {Title}` (e.g., `# User Story :: 1. Audit Session History`). The `::` and `. ` separator is a project-specific convention for typing and sequencing instances within a doc entity; it is not a heading structure violation — the H1/H3-only rule governs heading levels, not title content.
+
+**Output Punctuation and Color Convention (`.show`/`.tail` only):** These two commands share one per-entry content formatter (`format_entry_content` in `src/cli/format.rs`) and render with a `·` (middot) separator in place of parenthetical `(...)` or bracket `[...]` annotations — e.g. `Sessions: 3 · Main: 2 · Agent: 1` rather than `Sessions: 3 (Main: 2, Agent: 1)`; `Thinking ·` rather than `[Thinking]`. Output is additionally colorized (role labels, field-name labels, error markers) via a small hand-rolled ANSI module — no color crate dependency — that auto-disables on `NO_COLOR` being set or stdout not being a TTY (piped/redirected output, including every integration test spawning the binary via `std::process::Command`, is always plain text). This convention is scoped to `.show`/`.tail` only: `.projects` and every other command keep their own independent, pre-existing `(N entries)`-style punctuation, deliberately untouched. See [`command/03_show.md`](command/03_show.md) for the field-projection mode (`fields::`/`index::`) that motivated the redesign.

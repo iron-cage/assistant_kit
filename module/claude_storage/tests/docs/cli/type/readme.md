@@ -1,13 +1,13 @@
 # Type Validation Tests
 
-Type constraint tests for all 14 semantic types in `docs/cli/type/`.
+Type constraint tests for all 15 semantic types in `docs/cli/type/`.
 Mirror of [type/](../../../../docs/cli/type/readme.md).
 
 ### Scope
 
 - **Purpose**: Verify parsing, constraint enforcement, and error messages for each semantic type.
 - **Responsibility**: TC-N validation test plans per type.
-- **In Scope**: All 14 types, valid inputs, boundary values, invalid inputs.
+- **In Scope**: All 15 types, valid inputs, boundary values, invalid inputs.
 - **Out of Scope**: Parameter edge cases (→ `param/`), command integration (→ `command/`).
 
 ### Responsibility Table
@@ -28,6 +28,7 @@ Mirror of [type/](../../../../docs/cli/type/readme.md).
 | `12_topic_name.md` | TC tests for `TopicName` — session topic identifier |
 | `13_strategy_type.md` | TC tests for `StrategyType` — resume strategy enum |
 | `14_detail_level.md` | TC tests for `DetailLevel` — output verbosity enum |
+| `15_field_selector.md` | TC tests for `FieldSelector` — comma-separated attribute-projection field list |
 
 ### Test ID Convention
 
@@ -53,7 +54,8 @@ Mirror of [type/](../../../../docs/cli/type/readme.md).
 | `12_topic_name.md` | 5 |
 | `13_strategy_type.md` | 5 |
 | `14_detail_level.md` | 4 |
-| **Total** | **68** |
+| `15_field_selector.md` | 9 |
+| **Total** | **77** |
 
 ### Related Documentation
 

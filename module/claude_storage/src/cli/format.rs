@@ -1,5 +1,7 @@
 //! Shared text formatting utilities for CLI output.
 
+use super::color;
+
 /// Format entry content for display
 ///
 /// ## Behavior
@@ -12,10 +14,10 @@
 /// ## Format
 ///
 /// ```text
-/// [2025-12-02 09:57] User:
+/// 2025-12-02 09:57 · User:
 /// message content here
 ///
-/// [2025-12-02 09:58] Assistant:
+/// 2025-12-02 09:58 · Assistant:
 /// response content here
 /// ```
 ///
@@ -24,7 +26,7 @@
 /// ```text
 /// let entry = session.entries()[0];
 /// let formatted = format_entry_content( &entry, None );
-/// // Output: "[2025-12-02 09:57] User:\nHello, Claude!"
+/// // Output: "2025-12-02 09:57 · User:\nHello, Claude!"
 /// ```
 pub( super ) fn format_entry_content( entry : &claude_storage_core::Entry, max_length : Option< usize > ) -> String
 {
@@ -51,18 +53,18 @@ pub( super ) fn format_entry_content( entry : &claude_storage_core::Entry, max_l
           ContentBlock::Thinking { thinking, .. } =>
           {
             // Show thinking blocks with prefix
-            Some( format!( "[Thinking]\n{thinking}" ) )
+            Some( format!( "Thinking ·\n{thinking}" ) )
           },
           ContentBlock::ToolUse { name, .. } =>
           {
             // Show tool use briefly
-            Some( format!( "[Using tool: {name}]" ) )
+            Some( format!( "Using tool · {name}" ) )
           },
           ContentBlock::ToolResult { is_error, content, .. } =>
           {
             if *is_error
             {
-              Some( format!( "[Tool error: {content}]" ) )
+              Some( color::error_marker( &format!( "Tool error · {content}" ) ) )
             }
             else
             {
@@ -82,7 +84,8 @@ pub( super ) fn format_entry_content( entry : &claude_storage_core::Entry, max_l
   let content = truncate_if_needed( &content, max_length );
 
   // Format as chat log entry
-  format!( "[{timestamp}] {role}:\n{content}" )
+  let role_label = color::role( &format!( "{role}:" ) );
+  format!( "{timestamp} · {role_label}\n{content}" )
 }
 
 /// Format timestamp for display
@@ -115,14 +118,14 @@ pub( super ) fn format_timestamp( timestamp : &str ) -> String
 
 /// Truncate text with indicator
 ///
-/// Truncates long text and adds "... [truncated]" indicator.
+/// Truncates long text and adds "... truncated" indicator.
 ///
 /// ## Examples
 ///
 /// ```text
 /// let text = "a".repeat( 1000 );
 /// let truncated = truncate_if_needed( &text, Some( 100 ) );
-/// assert!( truncated.contains( "[truncated" ) );
+/// assert!( truncated.contains( "truncated ·" ) );
 /// ```
 ///
 /// Fix(issue-018): Use char-boundary-safe truncation.
@@ -147,7 +150,7 @@ pub fn truncate_if_needed( text : &str, max_length : Option< usize > ) -> String
         end -= 1;
       }
       let truncated = &text[ ..end ];
-      format!( "{}... [truncated, {} more bytes]", truncated, text.len() - end )
+      format!( "{truncated}... truncated · {} more bytes", text.len() - end )
     }
   }
 }

@@ -6,9 +6,9 @@
 |------|---------|-------------|----------:|
 | `cli/command/` | Per-command detail pages with full parameter tables and cross-refs | [cli/command/readme.md](cli/command/readme.md) | 13 |
 | `cli/format/` | Index of format doc instances covering all export rendering modes | [cli/format/readme.md](cli/format/readme.md) | 3 |
-| `cli/param/` | Per-parameter detail pages with type, defaults, and command cross-refs | [cli/param/readme.md](cli/param/readme.md) | 31 |
+| `cli/param/` | Per-parameter detail pages with type, defaults, and command cross-refs | [cli/param/readme.md](cli/param/readme.md) | 33 |
 | `cli/param_group/` | Per-group detail pages with membership, examples, and cross-refs | [cli/param_group/readme.md](cli/param_group/readme.md) | 5 |
-| `cli/type/` | Per-type constraint and parsing reference | [cli/type/readme.md](cli/type/readme.md) | 14 |
+| `cli/type/` | Per-type constraint and parsing reference | [cli/type/readme.md](cli/type/readme.md) | 15 |
 | `cli/user_story/` | Index of user story instances capturing persona intent and acceptance criteria | [cli/user_story/readme.md](cli/user_story/readme.md) | 6 |
 | `feature/` | Index of feature doc instances covering CLI tool scope and design decisions | [feature/readme.md](feature/readme.md) | 1 |
 | `operation/` | Index of operation doc instances covering upgrade and migration procedures | [operation/readme.md](operation/readme.md) | 1 |
@@ -16,9 +16,9 @@
 | `invariant/` | System behavioral invariants | [invariant/readme.md](invariant/readme.md) | 3 |
 | `cli/pitfall/` | CLI implementation pitfall documentation | [cli/pitfall/readme.md](cli/pitfall/readme.md) | 4 |
 | `tests/docs/cli/command/` | Index of per-command integration test case files covering command-level behavior | [../../tests/docs/cli/command/readme.md](../tests/docs/cli/command/readme.md) | 13 |
-| `tests/docs/cli/param/` | Index of per-parameter edge case test files covering parameter-level behavior | [../../tests/docs/cli/param/readme.md](../tests/docs/cli/param/readme.md) | 27 |
+| `tests/docs/cli/param/` | Index of per-parameter edge case test files covering parameter-level behavior | [../../tests/docs/cli/param/readme.md](../tests/docs/cli/param/readme.md) | 32 |
 | `tests/docs/cli/param_group/` | Index of per-group interaction test files covering parameter group behavior | [../../tests/docs/cli/param_group/readme.md](../tests/docs/cli/param_group/readme.md) | 5 |
-| `tests/docs/cli/type/` | Index of per-type constraint test case files covering type parsing and validation | [../../tests/docs/cli/type/readme.md](../tests/docs/cli/type/readme.md) | 13 |
+| `tests/docs/cli/type/` | Index of per-type constraint test case files covering type parsing and validation | [../../tests/docs/cli/type/readme.md](../tests/docs/cli/type/readme.md) | 15 |
 | `tests/docs/cli/format/` | Index of per-format output verification test case files covering export format structure | [../../tests/docs/cli/format/readme.md](../tests/docs/cli/format/readme.md) | 3 |
 | `tests/docs/cli/user_story/` | Index of per-story acceptance test case files covering user story criteria | [../../tests/docs/cli/user_story/readme.md](../tests/docs/cli/user_story/readme.md) | 6 |
 | `tests/docs/feature/` | FT-prefixed test spec files mirroring each `docs/feature/` instance | [../../tests/docs/feature/readme.md](../tests/docs/feature/readme.md) | 1 |
@@ -86,6 +86,8 @@
 | cli/param | 29 | Filter | [cli/param/29_filter.md](cli/param/29_filter.md) |
 | cli/param | 30 | Detail | [cli/param/30_detail.md](cli/param/30_detail.md) |
 | cli/param | 31 | Ids | [cli/param/31_ids.md](cli/param/31_ids.md) |
+| cli/param | 32 | Fields | [cli/param/32_fields.md](cli/param/32_fields.md) |
+| cli/param | 33 | Index | [cli/param/33_index.md](cli/param/33_index.md) |
 | cli/param_group | 01 | Output Control | [cli/param_group/01_output_control.md](cli/param_group/01_output_control.md) |
 | cli/param_group | 02 | Project Scope | [cli/param_group/02_project_scope.md](cli/param_group/02_project_scope.md) |
 | cli/param_group | 03 | Session Identification | [cli/param_group/03_session_identification.md](cli/param_group/03_session_identification.md) |
@@ -105,6 +107,7 @@
 | cli/type | 12 | Topic Name | [cli/type/12_topic_name.md](cli/type/12_topic_name.md) |
 | cli/type | 13 | Strategy Type | [cli/type/13_strategy_type.md](cli/type/13_strategy_type.md) |
 | cli/type | 14 | Detail Level | [cli/type/14_detail_level.md](cli/type/14_detail_level.md) |
+| cli/type | 15 | Field Selector | [cli/type/15_field_selector.md](cli/type/15_field_selector.md) |
 | algorithm | 001 | Agent Session Tracking | [algorithm/001_agent_session_tracking.md](algorithm/001_agent_session_tracking.md) |
 | invariant | 001 | Path Encoding | [invariant/001_path_encoding.md](invariant/001_path_encoding.md) |
 | invariant | 002 | Session Family | [invariant/002_session_family.md](invariant/002_session_family.md) |

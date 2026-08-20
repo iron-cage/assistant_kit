@@ -42,6 +42,60 @@ Test JSONL entries must include **all** of:
  "timestamp": "2025-11-24T10:00:00.000Z"}
 ```
 
+### Full-Attribute Shapes
+
+The minimal example above covers the required-field floor, but omits several
+fields that exist only on richer entries — needed when a test fixture must
+exercise `fields::all` or any single one of `.show`'s 18 canonical attributes
+(see [`type/15_field_selector.md`](../type/15_field_selector.md)). Two gaps
+recur:
+
+**`thinkingMetadata` is a top-level sibling of `message`, not nested inside
+it** — mirroring `requestId` below, not `message.content`:
+
+```json
+{"type": "user", "uuid": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+ "parentUuid": null, "timestamp": "2025-11-24T10:00:00.000Z",
+ "cwd": "/tmp", "sessionId": "f0e1d2c3-b4a5-6789-0123-456789abcdef",
+ "version": "2.0.31", "gitBranch": "main", "userType": "external",
+ "isSidechain": false,
+ "message": {"role": "user", "content": "hello"},
+ "thinkingMetadata": {"level": "high", "disabled": false}}
+```
+
+**An assistant entry's `message.content` array holds heterogeneous content
+blocks** — `requestId` is top-level (sibling of `message`, like
+`thinkingMetadata` above); `message.model`/`message.id` are required:
+
+```json
+{"type": "assistant", "uuid": "56a226b5-0ec6-4214-af16-b13cc326f8dc",
+ "parentUuid": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+ "timestamp": "2025-11-24T10:00:05.000Z", "cwd": "/tmp",
+ "sessionId": "f0e1d2c3-b4a5-6789-0123-456789abcdef", "version": "2.0.31",
+ "gitBranch": "main", "userType": "external", "isSidechain": false,
+ "requestId": "req_01ABC",
+ "message":
+ {
+   "model": "claude-sonnet-4-5", "id": "msg_01ABC", "role": "assistant",
+   "content":
+   [
+     {"type": "thinking", "thinking": "Let me check...", "signature": "sig123"},
+     {"type": "text", "text": "Running the tool now."},
+     {"type": "tool_use", "id": "toolu_01", "name": "read_file", "input": {"path": "/tmp/x"}},
+     {"type": "tool_result", "tool_use_id": "toolu_01", "content": "file contents", "is_error": false}
+   ],
+   "stop_reason": "end_turn", "stop_sequence": null
+ }}
+```
+
+Each content-block `"type"` value maps to a distinct required-field set —
+`text` needs `text`; `thinking` needs `thinking` (`signature` optional,
+defaults to `""`); `tool_use` needs `id`/`name`/`input`; `tool_result` needs
+`tool_use_id`/`content` (`is_error` optional, defaults to `false`). Omitting
+a block's required field fails that block's parse the same way a missing
+top-level field fails the whole entry — see `parse_content_block` in
+`claude_storage_core/src/entry.rs`.
+
 ### Referenced Commands
 
 | # | Command | Notes |

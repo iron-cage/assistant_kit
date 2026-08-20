@@ -492,3 +492,44 @@ fn ec_7_non_integer_tail_value_rejected()
   assert_exit( &out, 1 );
   assert!( !stderr( &out ).is_empty(), "EC-7: expected non-empty stderr for non-integer tail value" );
 }
+
+/// F7: An unresolved `topic::` reports the plain topic, never the internal
+/// `-{topic}` session-ID form.
+///
+/// ## Purpose
+/// Validates that `topic::does-not-exist` reports the error against what the
+/// user typed, not `find_session_mut`'s internal `-{topic}` matching form —
+/// a caller-facing message must not leak an internal naming convention.
+///
+/// ## Coverage
+/// Exit 1; stderr contains `Session not found for topic: does-not-exist`;
+/// stderr does not contain the leaked `-does-not-exist` form.
+///
+/// ## Related Requirements
+/// UX/DX round 1, Finding F7
+#[ test ]
+fn f7_topic_not_found_error_omits_internal_hyphen_prefix()
+{
+  let root = tempfile::TempDir::new().unwrap();
+  let cwd  = tempfile::TempDir::new().unwrap();
+
+  common::write_path_project_session( root.path(), cwd.path(), "-default_topic", 3 );
+
+  let out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .current_dir( cwd.path() )
+    .arg( ".tail" )
+    .arg( "topic::does-not-exist" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 1 );
+  assert!(
+    stderr( &out ).contains( "Session not found for topic: does-not-exist" ),
+    "F7: error must report the plain topic; got:\n{}", stderr( &out )
+  );
+  assert!(
+    !stderr( &out ).contains( "-does-not-exist" ),
+    "F7: error must not leak the internal '-' prefix form; got:\n{}", stderr( &out )
+  );
+}

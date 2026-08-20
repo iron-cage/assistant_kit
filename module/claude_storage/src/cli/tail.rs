@@ -87,7 +87,12 @@ pub fn tail_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   let session = if let Some( topic ) = topic
   {
     let session_id = format!( "-{topic}" );
-    find_session_mut( &mut sessions, &session_id )?
+    // Report the error against `topic` (what the user typed), not
+    // `session_id` (the internally-prepended `-{topic}` form `find_session_mut`
+    // matches against) — a caller-facing message must not leak an internal
+    // naming convention the user never entered.
+    find_session_mut( &mut sessions, &session_id )
+      .map_err( | _ | ErrorData::new( ErrorCode::InternalError, format!( "Session not found for topic: {topic}" ) ) )?
   }
   else
   {
