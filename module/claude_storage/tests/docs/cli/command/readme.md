@@ -4,7 +4,7 @@
 
 - **Purpose**: Document integration test cases for each clg command.
 - **Responsibility**: Index of per-command integration test case files covering command-level behavior.
-- **In Scope**: All 13 clg command test files.
+- **In Scope**: All 14 clg command test files.
 - **Out of Scope**: Per-parameter edge cases (→ `param/`), parameter group interactions (→ `param_group/`).
 
 ### Responsibility Table
@@ -24,6 +24,7 @@
 | 11_session_ensure.md | Integration tests for `.session.ensure` command | ✅ |
 | 12_tail.md | Integration tests for `.tail` command | ✅ |
 | 13_usage.md | Integration tests for `.usage` command | ✅ |
+| 14_table.md | Integration tests for `.table` command | ✅ |
 
 ### Cross-Command Dispatch Coverage
 

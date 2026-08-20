@@ -404,6 +404,7 @@ impl Session
   pub fn stats( &mut self ) -> Result< SessionStats >
   {
     use crate::json::parse_json;
+    use std::collections::HashSet;
     use std::io::{ BufRead, BufReader };
 
     let mut stats = SessionStats::new( self.id.as_str().to_string() );
@@ -417,6 +418,21 @@ impl Session
         format!( "reading session file: {}", self.storage_path.display() )
       ))?;
     let reader = BufReader::new( file );
+
+    // Fix(issue-038)
+    // Root cause: one API response can span multiple JSONL lines (one per content
+    //   block — text, thinking, tool_use, ...), and every such line repeats the
+    //   identical `message.id` and `message.usage` object. The scan below used to sum
+    //   `usage` and increment `assistant_entries`/`total_entries` per LINE, not per
+    //   API call, so both entry counts and every token total were inflated by exactly
+    //   the response's content-block multiplicity. Confirmed on real production
+    //   storage (2505 raw assistant lines -> 1201 unique message ids).
+    // Pitfall: a session-file scanner reading raw JSONL lines must dedup by
+    //   `message.id` before counting or summing anything keyed to "one assistant
+    //   turn" — line count is not turn count in Claude Code's v2.0+ transcript
+    //   format. A missing `message.id` is treated as always-new (never skipped) so
+    //   malformed/legacy lines are never silently dropped from the totals.
+    let mut seen_message_ids : HashSet< String > = HashSet::new();
 
     // Process each line
     // Fix(BUG-508)
@@ -448,25 +464,35 @@ impl Session
       // Extract type - only count conversation entries, skip metadata entries
       // In Claude Code v2.0+, the top-level "type" field indicates entry type ("user" or "assistant")
       // Role is also available nested inside message.role, but we use type for consistency
-      if let Some( entry_type ) = json.get_str( "type" )
+      let Some( entry_type ) = json.get_str( "type" ) else { continue; };
+      let message = if entry_type == "assistant" { json.get( "message" ) } else { None };
+
+      // Fix(issue-038): dedup by message.id — see the block comment above the
+      // `seen_message_ids` declaration. A duplicate content-block line still
+      // updates timestamp/cwd below like any line; it just never re-counts as
+      // a turn and never re-sums its usage/context.
+      let msg_id = message.and_then( | m | m.get_str( "id" ) );
+      let is_new_message = msg_id.map_or( true, | id | seen_message_ids.insert( id.to_string() ) );
+
+      match entry_type
       {
-        match entry_type
+        "user" =>
         {
-          "user" =>
-          {
-            stats.user_entries += 1;
-            stats.total_entries += 1;
-          }
-          "assistant" =>
+          stats.user_entries += 1;
+          stats.total_entries += 1;
+        }
+        "assistant" =>
+        {
+          if is_new_message
           {
             stats.assistant_entries += 1;
             stats.total_entries += 1;
           }
-          _ =>
-          {
-            // Skip non-conversation entries (queue-operation, summary, etc.)
-            continue;
-          }
+        }
+        _ =>
+        {
+          // Skip non-conversation entries (queue-operation, summary, etc.)
+          continue;
         }
       }
 
@@ -487,35 +513,41 @@ impl Session
         stats.cwd = json.get_str( "cwd" ).map( std::string::ToString::to_string );
       }
 
-      // Extract token usage from assistant messages
-      if let Some( "assistant" ) = json.get_str( "type" )
+      // Extract model, token usage, and per-call context size from a new
+      // (non-duplicate) assistant message only.
+      if let Some( message ) = message
       {
-        if let Some( message ) = json.get( "message" )
+        if is_new_message
         {
+          // Model — first-entry-wins, mirroring the cwd guard above.
+          if stats.model.is_none()
+          {
+            stats.model = message.get_str( "model" ).map( std::string::ToString::to_string );
+          }
+
           if let Some( usage ) = message.get( "usage" )
           {
             // Token counts from JSON are always non-negative integers stored as f64.
             // The cast to u64 is safe: values are positive and well within u64 range.
             #[ allow( clippy::cast_possible_truncation, clippy::cast_sign_loss ) ]
             {
-              if let Some( input_tokens ) = usage.get_number( "input_tokens" )
-              {
-                stats.total_input_tokens += input_tokens as u64;
-              }
+              let input_tokens = usage.get_number( "input_tokens" ).unwrap_or( 0.0 ) as u64;
+              let output_tokens = usage.get_number( "output_tokens" ).unwrap_or( 0.0 ) as u64;
+              let cache_read = usage.get_number( "cache_read_input_tokens" ).unwrap_or( 0.0 ) as u64;
+              let cache_creation = usage.get_number( "cache_creation_input_tokens" ).unwrap_or( 0.0 ) as u64;
 
-              if let Some( output_tokens ) = usage.get_number( "output_tokens" )
-              {
-                stats.total_output_tokens += output_tokens as u64;
-              }
+              stats.total_input_tokens += input_tokens;
+              stats.total_output_tokens += output_tokens;
+              stats.total_cache_read_tokens += cache_read;
+              stats.total_cache_creation_tokens += cache_creation;
 
-              if let Some( cache_read ) = usage.get_number( "cache_read_input_tokens" )
+              // "Context size" for one call is the input side only (fresh input
+              // plus everything read from cache) — never the output side. This
+              // is the "window size" concept: how much this single call read.
+              let call_context = input_tokens + cache_read + cache_creation;
+              if call_context > stats.max_context_tokens
               {
-                stats.total_cache_read_tokens += cache_read as u64;
-              }
-
-              if let Some( cache_creation ) = usage.get_number( "cache_creation_input_tokens" )
-              {
-                stats.total_cache_creation_tokens += cache_creation as u64;
+                stats.max_context_tokens = call_context;
               }
             }
           }

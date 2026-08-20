@@ -34,6 +34,7 @@ mod projects;
 mod session;
 mod tail;
 mod usage;
+mod table;
 
 pub use storage::parse_project_parameter;
 pub use format::truncate_if_needed;
@@ -47,3 +48,4 @@ pub use export::export_routine;
 pub use session::{ project_path_routine, project_exists_routine, session_dir_routine, session_ensure_routine };
 pub use tail::tail_routine;
 pub use usage::usage_routine;
+pub use table::table_routine;

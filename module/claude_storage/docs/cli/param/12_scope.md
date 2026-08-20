@@ -20,7 +20,7 @@ Discovery scope for session and project operations.
 
 **Default:** varies by command (see table below)
 
-**Commands:** [`.projects`](../command/07_projects.md), [`.list`](../command/02_list.md) (deprecated), [`.count`](../command/04_count.md), [`.search`](../command/05_search.md), [`.show`](../command/03_show.md), [`.export`](../command/06_export.md), [`.usage`](../command/13_usage.md) — all seven implemented, each genuinely narrowing its discovery/search/count/lookup behavior per the semantics below. See the Status column below and [Scope Configuration](../param_group/05_scope_configuration.md) for the full per-command breakdown. `.list`'s role migrates to `.projects`, whose own `scope::` default is `around`, not `.list`'s former `global` — migrating a bare `.list` call requires explicit `scope::global` on `.projects` to preserve the old boundary.
+**Commands:** [`.projects`](../command/07_projects.md), [`.list`](../command/02_list.md) (deprecated), [`.count`](../command/04_count.md), [`.search`](../command/05_search.md), [`.show`](../command/03_show.md), [`.export`](../command/06_export.md), [`.usage`](../command/13_usage.md), [`.table`](../command/14_table.md) — all eight implemented, each genuinely narrowing its discovery/search/count/lookup behavior per the semantics below. See the Status column below and [Scope Configuration](../param_group/05_scope_configuration.md) for the full per-command breakdown. `.list`'s role migrates to `.projects`, whose own `scope::` default is `around`, not `.list`'s former `global` — migrating a bare `.list` call requires explicit `scope::global` on `.projects` to preserve the old boundary.
 
 **Purpose:** Controls which projects are searched or counted. `local` is the narrowest (current project only); `global` is the broadest (all projects). `relevant` walks the ancestor chain from cwd upward to `/`; `under` descends into the subtree; `around` combines both for a full neighborhood view — models "what governs this work and what lives under it."
 
@@ -35,6 +35,7 @@ Discovery scope for session and project operations.
 | `.export` | `local` | Project search boundary for source session lookup when `project::` is absent | Implemented |
 | `.projects` | `around` | Session discovery scope (ancestors + current + descendants) | Implemented |
 | `.usage` | `local` | Which sessions' stats are aggregated into the usage table | Implemented |
+| `.table` | `local` | Which sessions' stats are aggregated into the grouped table — identical boundary to `.usage`, different rendering afterward | Implemented |
 
 **Examples:**
 ```bash
@@ -71,6 +72,7 @@ scope::all        # "scope must be relevant|local|under|global|around, got all"
 | 6 | [`.export`](../command/06_export.md) | `local` | Project search boundary for source session lookup — implemented |
 | 7 | [`.projects`](../command/07_projects.md) | `around` | Session discovery scope — implemented |
 | 13 | [`.usage`](../command/13_usage.md) | `local` | Usage table aggregation boundary — implemented |
+| 14 | [`.table`](../command/14_table.md) | `local` | Grouped table aggregation boundary, same as `.usage` — implemented |
 
 ### Referenced User Stories
 | # | User Story | Persona |
