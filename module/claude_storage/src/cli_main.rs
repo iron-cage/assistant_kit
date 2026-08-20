@@ -32,6 +32,7 @@ fn build_command_registry() -> CommandRegistry
     ".show"           => cli::show_routine,
     ".tail"           => cli::tail_routine,
     ".usage"          => cli::usage_routine,
+    ".table"          => cli::table_routine,
     ".count"          => cli::count_routine,
     ".search"         => cli::search_routine,
     ".export"         => cli::export_routine,

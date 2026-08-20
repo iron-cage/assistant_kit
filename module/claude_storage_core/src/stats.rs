@@ -49,6 +49,17 @@ pub struct SessionStats
   /// field (first-entry-wins, mirroring `first_timestamp`). `None` when no
   /// line carries one.
   pub cwd : Option< String >,
+
+  /// Largest single API call's context size — `input_tokens +
+  /// cache_read_input_tokens + cache_creation_input_tokens` for one
+  /// deduplicated assistant message (see `Fix(issue-038)` in `session.rs`).
+  /// `0` when the session has no assistant messages.
+  pub max_context_tokens : u64,
+
+  /// Model name from the first parsed assistant message carrying one
+  /// (first-entry-wins, mirroring `cwd`). `None` when no assistant message
+  /// carries a `message.model` field.
+  pub model : Option< String >,
 }
 
 impl SessionStats
@@ -72,6 +83,8 @@ impl SessionStats
       first_timestamp : None,
       last_timestamp : None,
       cwd : None,
+      max_context_tokens : 0,
+      model : None,
     }
   }
 }

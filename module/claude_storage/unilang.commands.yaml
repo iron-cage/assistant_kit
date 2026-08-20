@@ -953,3 +953,111 @@
     - ".usage scope::around depth::5"
     - ".usage scope::global limit::20"
   auto_help_enabled: true
+
+- name: ".table"
+  namespace: ""
+  description: "Flexible token-usage table: group by session/project/model/day, filter by model, sort by any column, and project only the columns you want"
+  hint: "Flexible grouped/filtered/sorted token-usage table"
+  version: "1.0.0"
+  status: "stable"
+  aliases: []
+  tags: ["storage", "info"]
+  permissions: []
+  idempotent: true
+  deprecation_message: ""
+  http_method_hint: "GET"
+
+  arguments:
+    - name: "scope"
+      kind: "String"
+      description: "Project selection scope: relevant|local|under|global|around (default: local)"
+      hint: "Scope"
+      optional: true
+      default: "local"
+      validation_rules: []
+      aliases: []
+      tags: ["scope"]
+
+    - name: "path"
+      kind: "String"
+      description: "Anchor directory for scope resolution (default: current directory)"
+      hint: "Directory path"
+      optional: true
+      validation_rules: []
+      aliases: []
+      tags: ["scope"]
+
+    - name: "depth"
+      kind: "Integer"
+      description: "Component-distance cap for under/relevant/around scopes (0 = unbounded, default: 3)"
+      hint: "Depth cap"
+      optional: true
+      default: "3"
+      validation_rules: []
+      aliases: []
+      tags: ["scope"]
+
+    - name: "limit"
+      kind: "Integer"
+      description: "Maximum rows in the result set, after sorting (0 = all, default: 0)"
+      hint: "Row cap"
+      optional: true
+      default: "0"
+      validation_rules: []
+      aliases: []
+      tags: ["filter"]
+
+    - name: "group"
+      kind: "String"
+      description: "Grouping dimension: session|project|model|day (default: session)"
+      hint: "Group by"
+      optional: true
+      default: "session"
+      validation_rules: []
+      aliases: []
+      tags: ["table"]
+
+    - name: "sort"
+      kind: "String"
+      description: "Sort column: total|input|output|cache|max_context|calls|sessions|group (default: total)"
+      hint: "Sort by"
+      optional: true
+      default: "total"
+      validation_rules: []
+      aliases: []
+      tags: ["table"]
+
+    - name: "order"
+      kind: "String"
+      description: "Sort direction: asc|desc (default: desc)"
+      hint: "Sort direction"
+      optional: true
+      default: "desc"
+      validation_rules: []
+      aliases: []
+      tags: ["table"]
+
+    - name: "model"
+      kind: "String"
+      description: "Model substring filter, applied before grouping (default: no filter)"
+      hint: "Model filter"
+      optional: true
+      validation_rules: []
+      aliases: []
+      tags: ["filter"]
+
+    - name: "columns"
+      kind: "String"
+      description: "Comma-separated column projection: group,sessions,calls,input,output,cache,max_context,total,percent,first,last (default: group,sessions,calls,input,output,cache,max_context,total,percent)"
+      hint: "Columns to display"
+      optional: true
+      validation_rules: []
+      aliases: []
+      tags: ["table"]
+
+  examples:
+    - ".table"
+    - ".table group::project sort::total order::desc"
+    - ".table group::model columns::group,calls,total,percent"
+    - ".table sort::max_context limit::10"
+  auto_help_enabled: true

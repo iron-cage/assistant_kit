@@ -17,7 +17,7 @@ Path argument. Semantics differ by command — see command sections for exact be
 
 **Default:** Command-dependent
 
-**Commands:** `.status`, `.list` (deprecated), `.projects`, `.count`, `.show`, `.search`, `.export`, `.project.path`, `.project.exists`, `.session.dir`, `.session.ensure`, `.tail`, `.usage` — registered.
+**Commands:** `.status`, `.list` (deprecated), `.projects`, `.count`, `.show`, `.search`, `.export`, `.project.path`, `.project.exists`, `.session.dir`, `.session.ensure`, `.tail`, `.usage`, `.table` — registered.
 
 **Per-command semantics:**
 
@@ -36,8 +36,9 @@ Path argument. Semantics differ by command — see command sections for exact be
 | `.session.ensure` | StoragePath | cwd | Base directory |
 | `.tail` | StoragePath | cwd | Directory to resolve project from |
 | `.usage` | StoragePath | cwd | Scope anchor path (implemented) |
+| `.table` | StoragePath | cwd | Scope anchor path — identical role to `.usage` (implemented) |
 
-**Purpose:** Provides a path context appropriate to each command. In `.project.exists`, `.project.path`, `.session.dir`, and `.session.ensure`, it is a filesystem path to process. In `.list` (deprecated), it was a substring filter on project paths — that role is now `.projects`' [`filter::`](29_filter.md). In `.status` and `.count`, it overrides the storage root entirely. In `.projects`, `.search`, `.show`, `.export`, and [`.usage`](../command/13_usage.md), it anchors the scope discovery when paired with `scope::` (all five implemented).
+**Purpose:** Provides a path context appropriate to each command. In `.project.exists`, `.project.path`, `.session.dir`, and `.session.ensure`, it is a filesystem path to process. In `.list` (deprecated), it was a substring filter on project paths — that role is now `.projects`' [`filter::`](29_filter.md). In `.status` and `.count`, it overrides the storage root entirely. In `.projects`, `.search`, `.show`, `.export`, [`.usage`](../command/13_usage.md), and [`.table`](../command/14_table.md), it anchors the scope discovery when paired with `scope::` (all six implemented).
 
 **Examples:**
 ```bash
@@ -70,9 +71,12 @@ Path argument. Semantics differ by command — see command sections for exact be
 
 # .tail: directory to resolve project from
 .tail path::/home/alice/projects/my-app
+
+# .table: scope anchor, identical role to .usage
+.table scope::under path::/home/alice/projects
 ```
 
-**Group (scope anchor context):** [Scope Configuration](../param_group/05_scope_configuration.md) — `path::` acts as the scope anchor paired with `scope::` in `.projects`, `.search`, `.show`, `.export`, and [`.usage`](../command/13_usage.md) (all implemented). `.count` is a Partial member of this group via `scope::` alone — its own `path::` keeps a separate storage-root-override role, not the anchor role. `path::`'s role in `.status`, `.list` (deprecated), `.project.exists`, `.project.path`, `.session.dir`, and `.session.ensure` is independent and not part of this group.
+**Group (scope anchor context):** [Scope Configuration](../param_group/05_scope_configuration.md) — `path::` acts as the scope anchor paired with `scope::` in `.projects`, `.search`, `.show`, `.export`, [`.usage`](../command/13_usage.md), and [`.table`](../command/14_table.md) (all implemented). `.count` is a Partial member of this group via `scope::` alone — its own `path::` keeps a separate storage-root-override role, not the anchor role. `path::`'s role in `.status`, `.list` (deprecated), `.project.exists`, `.project.path`, `.session.dir`, and `.session.ensure` is independent and not part of this group.
 
 ### Referenced Type
 | Type | Kind | Fundamental | Key Constraint |
@@ -83,7 +87,7 @@ Path argument. Semantics differ by command — see command sections for exact be
 ### Referenced Parameter Groups
 | # | Group | Membership | Co-members |
 |---|-------|------------|------------|
-| 5 | [Scope Configuration](../param_group/05_scope_configuration.md) | Partial — anchor role implemented via `.projects`, `.search`, `.show`, `.export`, `.usage` | `scope::` |
+| 5 | [Scope Configuration](../param_group/05_scope_configuration.md) | Partial — anchor role implemented via `.projects`, `.search`, `.show`, `.export`, `.usage`, `.table` | `scope::` |
 
 ### Referenced Commands
 | # | Command | Default | Notes |
@@ -101,6 +105,7 @@ Path argument. Semantics differ by command — see command sections for exact be
 | 11 | [`.session.ensure`](../command/11_session_ensure.md) | cwd | Base directory |
 | 12 | [`.tail`](../command/12_tail.md) | cwd | Directory to resolve project from |
 | 13 | [`.usage`](../command/13_usage.md) | cwd | Scope anchor path — implemented |
+| 14 | [`.table`](../command/14_table.md) | cwd | Scope anchor path — implemented |
 
 ### Referenced User Stories
 | # | User Story | Persona |

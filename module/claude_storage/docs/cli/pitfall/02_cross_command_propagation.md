@@ -40,7 +40,7 @@ run the grep.
 
 | # | Command | Notes |
 |---|---------|-------|
-| All 13 (12 active) | *(all commands)* | Any bug found in one command may exist in all others |
+| All 14 (13 active) | *(all commands)* | Any bug found in one command may exist in all others |
 
 ### Sources
 
