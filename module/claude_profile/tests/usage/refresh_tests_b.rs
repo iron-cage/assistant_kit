@@ -93,11 +93,11 @@ fn test_apply_refresh_ft5_429_expired_refresh_path_entered_no_cred()
   apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto, false );
 
   // Fix(BUG-297): no cred file → refresh_account_token returns None → result is now
-  //   Err("refresh token expired"), not the original 429 error.
+  //   Err("token refresh failed"), not the original 429 error.
   assert!(
-    matches!( accounts[ 0 ].result, Err( ref e ) if e.contains( "refresh token expired" ) ),
+    matches!( accounts[ 0 ].result, Err( ref e ) if e.contains( "token refresh failed" ) ),
     "429+expired: no cred file → refresh_account_token None → \
-     result must be Err(\"refresh token expired\"); result: {:?}",
+     result must be Err(\"token refresh failed\"); result: {:?}",
     accounts[ 0 ].result,
   );
 }
@@ -390,7 +390,7 @@ fn mre_bug295_apply_refresh_trace_reason_not_owned()
 ///
 /// # Root Cause
 /// `refresh.rs:70-77` — the `else { continue; }` branch fires when `refresh_account_token`
-/// returns `None` (OAuth refresh token expired). Before the fix, it continued without mutating
+/// returns `None` (OAuth token refresh failed). Before the fix, it continued without mutating
 /// `aq.result`. Result stayed `Ok(cached_data)` — identical to a live healthy fetch — so
 /// `apply_touch` at `touch.rs:56` saw `Ok` and fired a redundant ~1.7s subprocess.
 ///
@@ -401,7 +401,7 @@ fn mre_bug295_apply_refresh_trace_reason_not_owned()
 /// (`should_refresh=false`).
 ///
 /// # Fix Applied
-/// Fix(BUG-297): added `aq.result = Err("refresh token expired".into());` before `continue;`
+/// Fix(BUG-297): added `aq.result = Err("token refresh failed".into());` before `continue;`
 /// in the None branch. Phase-contract invariant restored: every `continue` path in
 /// `apply_refresh` must leave `aq.result=Err` when the account cannot proceed.
 ///
@@ -409,7 +409,7 @@ fn mre_bug295_apply_refresh_trace_reason_not_owned()
 /// This test uses an empty `TempDir` as `credential_store`, so `refresh_account_token` returns
 /// `None` (no credential file). `should_refresh` fires because `cached=true` and
 /// `expires_at_ms=0` triggers the BUG-255 guard. After `apply_refresh`, asserts
-/// `aq.result = Err("refresh token expired")`.
+/// `aq.result = Err("token refresh failed")`.
 ///
 /// # Pitfall
 /// The empty `TempDir` means no credential file exists for the account, so
@@ -451,9 +451,9 @@ fn mre_bug297_refresh_none_sets_aq_result_err()
   apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto, false );
 
   assert!(
-    matches!( accounts[ 0 ].result, Err( ref e ) if e.contains( "refresh token expired" ) ),
+    matches!( accounts[ 0 ].result, Err( ref e ) if e.contains( "token refresh failed" ) ),
     "BUG-297: when refresh_account_token returns None, aq.result must be \
-     Err(\"refresh token expired\"); got: {:?}",
+     Err(\"token refresh failed\"); got: {:?}",
     accounts[ 0 ].result,
   );
 }
@@ -461,7 +461,7 @@ fn mre_bug297_refresh_none_sets_aq_result_err()
 // ── BUG-297 pipeline: refresh None → touch skips (no subprocess) ─────────────
 
 /// Pipeline integration test for BUG-297 fix: after `apply_refresh` sets
-/// `aq.result = Err("refresh token expired")`, `apply_touch` must skip the account
+/// `aq.result = Err("token refresh failed")`, `apply_touch` must skip the account
 /// emitting `"skipped (reason: error account)"` and must NOT spawn a subprocess.
 ///
 /// # Root Cause
@@ -476,7 +476,7 @@ fn mre_bug297_refresh_none_sets_aq_result_err()
 /// path in `apply_refresh` must leave `aq.result=Err`) was untested.
 ///
 /// # Fix Applied
-/// Fix(BUG-297): `refresh.rs:76-81` now sets `aq.result = Err("refresh token expired")`
+/// Fix(BUG-297): `refresh.rs:76-81` now sets `aq.result = Err("token refresh failed")`
 /// before `continue;`. `apply_touch` at `touch.rs:56` sees `Err` and emits
 /// `"skipped (reason: error account)"` without attempting any subprocess.
 ///
@@ -523,7 +523,7 @@ fn apply_touch_skips_after_refresh_none()
     },
   ];
 
-  // Phase 1: apply_refresh → sets aq.result = Err("refresh token expired").
+  // Phase 1: apply_refresh → sets aq.result = Err("token refresh failed").
   apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto, false );
 
   assert!(
@@ -608,7 +608,7 @@ fn mre_bug298_apply_refresh_trace_reason_cached_expired()
 /// EC-7 (061): `apply_refresh` solo gate — non-current owned account is skipped when `solo=true`.
 ///
 /// Behavioral proof: an account with 401+expired would be refreshed without solo
-/// (result changes to `Err("refresh token expired")` via BUG-297 None path).
+/// (result changes to `Err("token refresh failed")` via BUG-297 None path).
 /// With `solo=true`, the solo gate fires first — result stays at original `Err("401")`.
 /// Converted from gag-based stderr capture — gag captures fd 2 at OS level but Rust test
 /// harness intercepts eprintln at IO layer, making gag buffer always empty.
@@ -647,7 +647,7 @@ fn ec7_solo_gate_skips_non_current_with_trace()
 
   // Result must still be the original 401 — solo gate prevented refresh.
   // Without solo, should_refresh returns true (401+expired), refresh_account_token
-  // returns None (empty store), result becomes Err("refresh token expired").
+  // returns None (empty store), result becomes Err("token refresh failed").
   assert!(
     matches!( accounts[ 0 ].result, Err( ref e ) if e.contains( "401" ) ),
     "EC-7: solo gate must skip non-current account, preserving original error; got: {:?}",

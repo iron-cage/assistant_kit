@@ -110,7 +110,7 @@ fn ft01_missing_access_token_short_error()
 /// Uses `FAR_FUTURE_MS` (not `PAST_MS`) so the locally-valid expiry lets the code
 /// reach the live API call. Fix(BUG-233) skips the API for locally-expired tokens
 /// (guaranteed 401 path) and attempts OAuth refresh instead — `PAST_MS` would hit
-/// the refresh path and display "(refresh token expired)" rather than "auth expired (401)".
+/// the refresh path and display "(token refresh failed)" rather than "auth expired (401)".
 fn write_account_with_invalid_token( home : &std::path::Path, name : &str, token : &str )
 {
   let store = home.join( ".persistent" ).join( "claude" ).join( "credential" );
@@ -127,7 +127,7 @@ fn write_account_with_invalid_token( home : &std::path::Path, name : &str, token
 ///
 /// Originally verified "auth expired (401)" but `apply_refresh` now intercepts
 /// 401 errors and attempts an OAuth refresh; when the refresh fails (no valid
-/// refresh token in the fake credentials) the error becomes "refresh token expired".
+/// refresh token in the fake credentials) the error becomes "token refresh failed".
 /// When the USAGE endpoint is rate-limited, the server returns 429 → "rate limited (429)".
 /// The durable invariant is: no verbose `HTTP transport error:` prefix in output.
 ///

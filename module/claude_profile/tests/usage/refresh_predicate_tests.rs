@@ -749,7 +749,7 @@ fn sr14_http_4013_is_not_401()
 ///
 /// Load-bearing contract (see `refresh_predicate.rs`'s Feature 071 note): if any arm
 /// ever matched the placeholder, `apply_refresh`'s None-arm would overwrite it with
-/// `Err("refresh token expired")`, breaking `is_redirect_backend()` and every display
+/// `Err("token refresh failed")`, breaking `is_redirect_backend()` and every display
 /// gate keyed on it (⚪ status, `static` expires, touch reason). Uses the strongest
 /// configuration — locally-expired `expires_at_ms=0` — proving no arm (401/403,
 /// "token expired (local)", 429+expired, cached+expired) matches the placeholder.

@@ -130,7 +130,18 @@ pub fn apply_refresh(
       //   apply_touch at touch.rs:56 guards on Ok and fires a redundant subprocess.
       // Pitfall: Invariant — every continue path in apply_refresh must leave aq.result=Err
       //   if the account cannot proceed; apply_touch uses aq.result as its sole recoverability signal.
-      aq.result = Err( "refresh token expired".into() );
+      // Fix(BUG-539): label was "refresh token expired" — a specific server-side cause this
+      //   arm cannot observe. `refresh_account_token` returns None for every failure mode
+      //   (account/credentials file absent, redirect backend, blank payload from a logged-out
+      //   sandbox, subprocess failure, invalid_grant revocation, genuine RT expiry); it surfaces
+      //   no cause across the Option boundary.
+      // Root cause: the label was written when RT expiry was the only anticipated None cause,
+      //   and was never revisited as the other four were added.
+      // Pitfall: this string is a diagnosis presented to operators — asserting RT expiry sent a
+      //   live investigation of three revoked grants down the wrong path (their
+      //   refreshTokenExpiresAt was 15 days out; the grants had been revoked by RT-reuse
+      //   detection, not expired). Keep it cause-neutral unless a real cause is threaded through.
+      aq.result = Err( "token refresh failed".into() );
       continue;
     };
 

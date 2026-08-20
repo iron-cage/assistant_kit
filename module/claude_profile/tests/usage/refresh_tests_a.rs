@@ -68,11 +68,11 @@ fn test_apply_refresh_429_not_retried()
   apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto, false );
 
   // Fix(BUG-297): 429+expired fires should_refresh → refresh_account_token returns None
-  //   (no cred file) → result is now Err("refresh token expired"), not the original 429 error.
+  //   (no cred file) → result is now Err("token refresh failed"), not the original 429 error.
   assert!(
-    matches!( accounts[ 0 ].result, Err( ref e ) if e.contains( "refresh token expired" ) ),
+    matches!( accounts[ 0 ].result, Err( ref e ) if e.contains( "token refresh failed" ) ),
     "429+expired: no cred file → refresh_account_token returns None → \
-     result must be Err(\"refresh token expired\"); result: {:?}", accounts[ 0 ].result,
+     result must be Err(\"token refresh failed\"); result: {:?}", accounts[ 0 ].result,
   );
 }
 
@@ -204,11 +204,11 @@ fn test_apply_refresh_401_no_cred_file()
   ];
   apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto, false );
   // Fix(BUG-297): 401 fires should_refresh → refresh_account_token returns None
-  //   (no cred file) → result is now Err("refresh token expired"), not the original 401 error.
+  //   (no cred file) → result is now Err("token refresh failed"), not the original 401 error.
   assert!(
-    matches!( accounts[ 0 ].result, Err( ref e ) if e.contains( "refresh token expired" ) ),
+    matches!( accounts[ 0 ].result, Err( ref e ) if e.contains( "token refresh failed" ) ),
     "401: no cred file → refresh_account_token returns None → \
-     result must be Err(\"refresh token expired\"); result: {:?}", accounts[ 0 ].result,
+     result must be Err(\"token refresh failed\"); result: {:?}", accounts[ 0 ].result,
   );
 }
 
@@ -247,11 +247,11 @@ fn test_apply_refresh_403_no_cred_file()
   ];
   apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto, false );
   // Fix(BUG-297): 403 fires should_refresh → refresh_account_token returns None
-  //   (no cred file) → result is now Err("refresh token expired"), not the original 403 error.
+  //   (no cred file) → result is now Err("token refresh failed"), not the original 403 error.
   assert!(
-    matches!( accounts[ 0 ].result, Err( ref e ) if e.contains( "refresh token expired" ) ),
+    matches!( accounts[ 0 ].result, Err( ref e ) if e.contains( "token refresh failed" ) ),
     "403: no cred file → refresh_account_token returns None → \
-     result must be Err(\"refresh token expired\"); result: {:?}", accounts[ 0 ].result,
+     result must be Err(\"token refresh failed\"); result: {:?}", accounts[ 0 ].result,
   );
 }
 
@@ -307,15 +307,15 @@ fn test_apply_refresh_mixed_accounts()
 
   assert!( accounts[ 0 ].result.is_ok(), "Ok account must remain Ok" );
   // Fix(BUG-297): 429+expired and 401 both fire should_refresh → refresh_account_token
-  //   returns None (no cred file) → result is now Err("refresh token expired").
+  //   returns None (no cred file) → result is now Err("token refresh failed").
   assert!(
-    matches!( accounts[ 1 ].result, Err( ref e ) if e.contains( "refresh token expired" ) ),
-    "429+expired: no cred file → result must be Err(\"refresh token expired\"); result: {:?}",
+    matches!( accounts[ 1 ].result, Err( ref e ) if e.contains( "token refresh failed" ) ),
+    "429+expired: no cred file → result must be Err(\"token refresh failed\"); result: {:?}",
     accounts[ 1 ].result,
   );
   assert!(
-    matches!( accounts[ 2 ].result, Err( ref e ) if e.contains( "refresh token expired" ) ),
-    "401: no cred file → result must be Err(\"refresh token expired\"); result: {:?}",
+    matches!( accounts[ 2 ].result, Err( ref e ) if e.contains( "token refresh failed" ) ),
+    "401: no cred file → result must be Err(\"token refresh failed\"); result: {:?}",
     accounts[ 2 ].result,
   );
   assert!(
@@ -424,11 +424,11 @@ fn test_apply_refresh_lifecycle_switch_fails_result_unchanged()
   apply_refresh( &mut accounts, store.path(), Some( &paths ), false, SubprocessModel::Auto, SubprocessEffort::Auto, false );
 
   // Fix(BUG-297): switch_account fails (no cred file) → refresh_account_token returns None
-  //   → result is now Err("refresh token expired"), not the original 401 error.
+  //   → result is now Err("token refresh failed"), not the original 401 error.
   assert!(
-    matches!( accounts[ 0 ].result, Err( ref e ) if e.contains( "refresh token expired" ) ),
+    matches!( accounts[ 0 ].result, Err( ref e ) if e.contains( "token refresh failed" ) ),
     "lifecycle: 401 + switch fails → refresh_account_token None → \
-     result must be Err(\"refresh token expired\"); result: {:?}",
+     result must be Err(\"token refresh failed\"); result: {:?}",
     accounts[ 0 ].result,
   );
 }
@@ -565,11 +565,11 @@ fn test_apply_refresh_lifecycle_429_expired_switch_fails_unchanged()
   ];
   apply_refresh( &mut accounts, store.path(), Some( &paths ), false, SubprocessModel::Auto, SubprocessEffort::Auto, false );
   // Fix(BUG-297): switch_account fails (no cred file) → refresh_account_token returns None
-  //   → result is now Err("refresh token expired"), not the original 429 error.
+  //   → result is now Err("token refresh failed"), not the original 429 error.
   assert!(
-    matches!( accounts[ 0 ].result, Err( ref e ) if e.contains( "refresh token expired" ) ),
+    matches!( accounts[ 0 ].result, Err( ref e ) if e.contains( "token refresh failed" ) ),
     "lifecycle: 429+expired + switch fails → refresh_account_token None → \
-     result must be Err(\"refresh token expired\"); result: {:?}",
+     result must be Err(\"token refresh failed\"); result: {:?}",
     accounts[ 0 ].result,
   );
 }
@@ -617,11 +617,11 @@ fn test_apply_refresh_lifecycle_ft3_403_no_cred_result_unchanged()
   apply_refresh( &mut accounts, store.path(), Some( &paths ), false, SubprocessModel::Auto, SubprocessEffort::Auto, false );
 
   // Fix(BUG-297): switch_account fails (no cred file) → refresh_account_token returns None
-  //   → result is now Err("refresh token expired"), not the original 403 error.
+  //   → result is now Err("token refresh failed"), not the original 403 error.
   assert!(
-    matches!( accounts[ 0 ].result, Err( ref e ) if e.contains( "refresh token expired" ) ),
+    matches!( accounts[ 0 ].result, Err( ref e ) if e.contains( "token refresh failed" ) ),
     "lifecycle: 403 + switch fails → refresh_account_token None → \
-     result must be Err(\"refresh token expired\"); result: {:?}",
+     result must be Err(\"token refresh failed\"); result: {:?}",
     accounts[ 0 ].result,
   );
 }
@@ -671,11 +671,11 @@ fn test_apply_refresh_lifecycle_copy_fails_no_dot_claude_dir()
   ];
   apply_refresh( &mut accounts, store.path(), Some( &paths ), false, SubprocessModel::Auto, SubprocessEffort::Auto, false );
   // Fix(BUG-297): fs::copy fails (no .claude/ dir) → switch_account returns Err
-  //   → refresh_account_token returns None → result is now Err("refresh token expired").
+  //   → refresh_account_token returns None → result is now Err("token refresh failed").
   assert!(
-    matches!( accounts[ 0 ].result, Err( ref e ) if e.contains( "refresh token expired" ) ),
+    matches!( accounts[ 0 ].result, Err( ref e ) if e.contains( "token refresh failed" ) ),
     "lifecycle: 401 + fs::copy fails (no .claude/ dir) → refresh_account_token None → \
-     result must be Err(\"refresh token expired\"); result: {:?}",
+     result must be Err(\"token refresh failed\"); result: {:?}",
     accounts[ 0 ].result,
   );
 }
