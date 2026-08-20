@@ -9,7 +9,7 @@ Cross-command behavioral parity test planning for `clr run`, `clr ask`, and `clr
 | ID | Test Name | Category |
 |----|-----------|----------|
 | PC-1 | `clr ask --dry-run "X"` produces byte-identical output to `clr run --dry-run "X"` | Alias Equivalence |
-| PC-2 | ask carries through all common run flags unchanged (--effort, --model, --subdir) | Param Surface Parity |
+| PC-2 | ask carries through all common run flags unchanged (--effort, --model, --topic) | Param Surface Parity |
 | PC-3 | isolated injects hardcoded model (opus); run/ask inject no model by default | Model Injection Divergence |
 | PC-4 | isolated creates a fresh temp HOME; run/ask execute in real `$HOME` | HOME Divergence |
 | PC-5 | isolated print-mode timeout is 30 s; run/ask default is 0 = unlimited (TSK-503) | Timeout Divergence |
@@ -40,11 +40,11 @@ Cross-command behavioral parity test planning for `clr run`, `clr ask`, and `clr
 ### PC-2: ask carries all run params through unchanged
 
 - **Given:** clr binary; various run-control flags
-- **When:** `clr ask --dry-run --effort high "q"`, `clr ask --dry-run --model sonnet "q"`, `clr ask --dry-run --subdir feat "q"`
+- **When:** `clr ask --dry-run --effort high "q"`, `clr ask --dry-run --model sonnet "q"`, `clr ask --dry-run --topic feat "q"`
 - **Then:** each flag appears in assembled output identically to the same run invocation; ask does not force or suppress any param
 - **Exit:** 0
 - **Source:** [parity/001_run_ask_isolated.md](../../../../docs/cli/parity/001_run_ask_isolated.md), [command/05_ask.md](../../../../docs/cli/command/05_ask.md)
-- **Implemented by:** `ask_command_test.rs::t10_ask_subdir_effective_dir` (--subdir ✅), `user_story_creds_isolated_test.rs::us17_4_model_in_ask_command` (--model ✅), `ask_command_test.rs::t13_ask_explicit_effort_passthrough` (--effort ✅)
+- **Implemented by:** `ask_command_test.rs::t10_ask_topic_effective_dir` (--topic ✅), `user_story_creds_isolated_test.rs::us17_4_model_in_ask_command` (--model ✅), `ask_command_test.rs::t13_ask_explicit_effort_passthrough` (--effort ✅)
 
 ---
 

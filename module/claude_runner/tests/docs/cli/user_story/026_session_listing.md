@@ -77,7 +77,7 @@ Test case spec for [026_session_listing.md](../../../../docs/cli/user_story/026_
 
 ### US-5: `$PRO` prefix shortened in Absolute Path column
 
-- **Given:** temp dir as `$PRO` root; subdirectory `workspace` within it; fake `claude` ELF spawned in that subdir; `PRO` set to temp dir when running `clr ps`
+- **Given:** temp dir as `$PRO` root; topic directory `workspace` within it; fake `claude` ELF spawned in that topic; `PRO` set to temp dir when running `clr ps`
 - **When:** `clr ps` with `PRO=<temp_dir>` in env
 - **Then:** Exit 0; stdout contains `"$PRO"`; stdout does NOT contain the full temp dir path
 - **Exit:** 0
@@ -209,7 +209,7 @@ Test case spec for [026_session_listing.md](../../../../docs/cli/user_story/026_
 
 ### US-18: Flags column absent when no flags apply
 
-- **Given:** Fake `claude` ELF running in a subdirectory of `$HOME`; `CLR_PS_ANCIENT_SECS=999999`; `CLR_PS_HIGH_RAM_MB=999999`; interactive mode
+- **Given:** Fake `claude` ELF running in a topic directory of `$HOME`; `CLR_PS_ANCIENT_SECS=999999`; `CLR_PS_HIGH_RAM_MB=999999`; interactive mode
 - **When:** `clr ps`
 - **Then:** Exit 0; stdout does NOT contain `Flags` header; no flag emoji in output
 - **Exit:** 0

@@ -260,15 +260,22 @@ pub( super ) fn apply_json_config( parsed : &mut CliArgs, map : &Map< String, Va
           if let Value::Bool( b ) = v { if *b { parsed.keep_claudecode = true; } }
         }
       }
-      "subdir" =>
+      "topic" =>
       {
-        if parsed.subdir.is_none()
+        if parsed.topic.is_none()
         {
           if let Value::String( s ) = v
           {
             // Mirror CLI constraint: single name component, no '/' separators.
-            if !s.contains( '/' ) { parsed.subdir = Some( s.clone() ); }
+            if !s.contains( '/' ) { parsed.topic = Some( s.clone() ); }
           }
+        }
+      }
+      "global" =>
+      {
+        if !parsed.global
+        {
+          if let Value::Bool( b ) = v { if *b { parsed.global = true; } }
         }
       }
       "output-file" =>

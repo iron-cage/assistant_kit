@@ -20,7 +20,8 @@
 | tools | List all Claude Code built-in tools available to the subprocess; canonical form `clr tools` |
 | scope | Print all 6 `CLAUDE_*` path variables for a directory; canonical form `clr scope [--dir <DIR>]` |
 | query | Start or dispatch against a persistent PID-addressed control session; canonical form `clr query "<message>"` or `clr query <pid> <method>` |
-| topic | Create a hyphened-subdir topic session, or continue one if it already exists; auto-names via slug generation when `--subdir` is omitted; canonical form `clr topic "<prompt>"` |
+| topic | Create a hyphen-prefixed topic session, or continue one if it already exists; auto-names via slug generation when `--topic` is omitted; canonical form `clr topic "<prompt>"` |
+| topics | List the topic directories under a base, or resolve one topic name to its absolute path; read-only, spawns nothing; canonical form `clr topics` or `clr topics --path <NAME>` |
 | help | Display usage information and exit; canonical form `clr help`; `--help`/`-h` are parameter aliases |
 
 <!-- BUG-480 task/claude_runner/bug/480_gate_diagnostic_hides_slot_occupancy.md — fixed: the three per-surface "active" senses and "slot occupancy" are defined in § Architecture below -->

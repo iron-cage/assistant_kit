@@ -3,10 +3,10 @@
 //! ## Purpose
 //!
 //! Verify that `clr topic` behaves exactly like `clr ask`/`clr run`, with one
-//! addition: when `--subdir` is not explicitly given, a directory-name slug
-//! derived from the message is auto-injected as `--subdir`, disambiguated with a
+//! addition: when `--topic` is not explicitly given, a directory-name slug
+//! derived from the message is auto-injected as `--topic`, disambiguated with a
 //! `-2`, `-3`, ... counter suffix against what already exists on disk. An explicit
-//! `--subdir` bypasses slug generation entirely and makes `topic` byte-identical
+//! `--topic` bypasses slug generation entirely and makes `topic` byte-identical
 //! to `ask`.
 //!
 //! ## Strategy
@@ -21,13 +21,13 @@
 //!
 //! ## Corner Cases Covered (mirrors `tests/docs/cli/command/11_topic.md` IT-1..IT-8)
 //!
-//! - T01: `clr topic --dry-run "msg"` (no `--subdir`) — dry-run output shows an
-//!   auto-generated `--subdir` path derived from the message
+//! - T01: `clr topic --dry-run "msg"` (no `--topic`) — dry-run output shows an
+//!   auto-generated `--topic` path derived from the message
 //! - T02: two auto-named calls, same message, same `--dir` — second call's slug
 //!   is disambiguated with a `-2` suffix against a pre-existing target directory
-//! - T03: `clr topic --subdir NAME "msg" --dry-run` == `clr ask --subdir NAME
+//! - T03: `clr topic --topic NAME "msg" --dry-run` == `clr ask --topic NAME
 //!   "msg" --dry-run` (byte-identical, per IT-3's own spec wording)
-//! - T04: first `clr topic --subdir NAME "msg"` call (real, non-dry-run) with a
+//! - T04: first `clr topic --topic NAME "msg"` call (real, non-dry-run) with a
 //!   qualifying source session — session-transplant clone fires, `.jsonl` copied
 //! - T05: second call, same NAME, destination already non-empty — no re-copy
 //!   (pre-existing, possibly-diverged destination content is never overwritten)
@@ -35,23 +35,23 @@
 //! - T07: `clr topic help` / `--help` / `-h` — topic-specific help text, exit 0
 //!   (positional-`help` intercept per the BUG-249 pattern every subcommand
 //!   dispatcher delegating to `dispatch_run` must repeat independently)
-//! - T08: `clr topic --subdir NAME --effort high "msg" --dry-run` == the same
+//! - T08: `clr topic --topic NAME --effort high "msg" --dry-run` == the same
 //!   `ask` invocation — `--effort high` passthrough is visible and unbroken
 //!   (AF2: a parameter that would visibly change dry-run output if broken)
 
 mod cli_binary_test_helpers;
 use cli_binary_test_helpers::{ exit_code, fake_claude_dir, run_ask_dry, run_cli, run_topic_dry, stderr_str, stdout_str };
 
-/// T01 (IT-1): auto-generated `--subdir` path appears in dry-run output when
-/// `--subdir` is not explicitly given.
+/// T01 (IT-1): auto-generated `--topic` path appears in dry-run output when
+/// `--topic` is not explicitly given.
 #[ test ]
-fn t01_auto_generated_subdir_shown_in_dry_run()
+fn t01_auto_generated_topic_shown_in_dry_run()
 {
   let output = run_topic_dry( &[ "Investigate the flaky concurrency-gate test" ] );
   let sep = std::path::MAIN_SEPARATOR;
   assert!(
     output.contains( &format!( "{sep}-investigate" ) ),
-    "topic dry-run must show an auto-generated --subdir path derived from the message. Got:\n{output}"
+    "topic dry-run must show an auto-generated --topic path derived from the message. Got:\n{output}"
   );
 }
 
@@ -76,16 +76,16 @@ fn t02_repeated_auto_naming_disambiguates_via_counter()
   );
 }
 
-/// T03 (IT-3): explicit `--subdir` bypasses slug generation — `topic` produces
+/// T03 (IT-3): explicit `--topic` bypasses slug generation — `topic` produces
 /// byte-identical dry-run output to `ask` given the same trailing arguments.
 #[ test ]
-fn t03_explicit_subdir_matches_ask_byte_for_byte()
+fn t03_explicit_topic_matches_ask_byte_for_byte()
 {
-  let topic_out = run_topic_dry( &[ "--subdir", "auth-refactor", "q" ] );
-  let ask_out   = run_ask_dry( &[ "--subdir", "auth-refactor", "q" ] );
+  let topic_out = run_topic_dry( &[ "--topic", "auth-refactor", "q" ] );
+  let ask_out   = run_ask_dry( &[ "--topic", "auth-refactor", "q" ] );
   assert_eq!(
     topic_out, ask_out,
-    "topic --subdir NAME must produce identical dry-run output to ask --subdir NAME.\ntopic:\n{topic_out}\nask:\n{ask_out}"
+    "topic --topic NAME must produce identical dry-run output to ask --topic NAME.\ntopic:\n{topic_out}\nask:\n{ask_out}"
   );
 }
 
@@ -133,8 +133,8 @@ fn t07_positional_and_flag_help_forms_print_topic_help_and_exit_0()
 #[ test ]
 fn t08_effort_high_passthrough_matches_ask_dry_run()
 {
-  let topic_out = run_topic_dry( &[ "--subdir", "effort-check", "--effort", "high", "msg" ] );
-  let ask_out   = run_ask_dry( &[ "--subdir", "effort-check", "--effort", "high", "msg" ] );
+  let topic_out = run_topic_dry( &[ "--topic", "effort-check", "--effort", "high", "msg" ] );
+  let ask_out   = run_ask_dry( &[ "--topic", "effort-check", "--effort", "high", "msg" ] );
   assert_eq!(
     topic_out, ask_out,
     "topic --effort high must pass through identically to ask --effort high.\ntopic:\n{topic_out}\nask:\n{ask_out}"
@@ -151,7 +151,7 @@ fn t08_effort_high_passthrough_matches_ask_dry_run()
 // (CLAUDE_HOME override + `claude_storage_core::encode_path()` + a stubbed `claude`
 // executable) — that file already exhaustively covers the transplant mechanism
 // itself; these two tests confirm it still fires correctly when reached via `clr
-// topic --subdir NAME` instead of raw `--dir`/`--from`, per task 521 Out of Scope
+// topic --topic NAME` instead of raw `--dir`/`--from`, per task 521 Out of Scope
 // ("topic inherits [transplant behavior] as-is").
 
 #[ cfg( unix ) ]
@@ -193,12 +193,12 @@ mod transplant
     file
   }
 
-  /// T04 (IT-4): first `clr topic --subdir NAME "msg"` call, a qualifying source
+  /// T04 (IT-4): first `clr topic --topic NAME "msg"` call, a qualifying source
   /// session present at `--from`, real (non-dry-run) invocation — the session-
   /// transplant plan fires and the source `.jsonl` is copied byte-identically
   /// into the target's own storage before the (stubbed) subprocess spawns.
   #[ test ]
-  fn t04_first_explicit_subdir_call_clones_session()
+  fn t04_first_explicit_topic_call_clones_session()
   {
     container_check();
     let ch   = tempfile::TempDir::new().expect( "claude home" );
@@ -228,7 +228,7 @@ mod transplant
       ([
         "topic",
         "--dir", base.path().to_str().expect( "utf-8" ),
-        "--subdir", "521-topic-clone",
+        "--topic", "521-topic-clone",
         "--from", src.path().to_str().expect( "utf-8" ),
         "--max-sessions", "0",
         "--journal", "off",
@@ -251,11 +251,11 @@ mod transplant
     assert_eq!( src_after, content, "source session must never be modified by a clone run" );
   }
 
-  /// T05 (IT-5): a second `clr topic --subdir NAME "msg"` call against the same
+  /// T05 (IT-5): a second `clr topic --topic NAME "msg"` call against the same
   /// NAME never overwrites the (possibly-diverged) destination already there —
   /// proof that continuation, not re-copy, is used on repeat use.
   #[ test ]
-  fn t05_second_explicit_subdir_call_never_recopies_existing_destination()
+  fn t05_second_explicit_topic_call_never_recopies_existing_destination()
   {
     container_check();
     let ch   = tempfile::TempDir::new().expect( "claude home" );
@@ -283,7 +283,7 @@ mod transplant
       ([
         "topic",
         "--dir", base.path().to_str().expect( "utf-8" ),
-        "--subdir", "521-topic-continue",
+        "--topic", "521-topic-continue",
         "--from", src.path().to_str().expect( "utf-8" ),
         "--max-sessions", "0",
         "--journal", "off",

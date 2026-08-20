@@ -106,7 +106,7 @@ Every clr parameter configurable via JSON config has three synonymous forms: CLI
 - **Repeatable flags** (`--mcp-config`, `--add-dir`): provide a single string value; multiple values require CLI flags
 - **Self-referential**: `"args-file"` key in a loaded JSON config is ignored — chaining is not performed
 
-### Complete Parity Table (77 active parameters)
+### Complete Parity Table (69 JSON keys)
 
 Columns: JSON Key | CLI Flag | CLR_* Env Var | Type | Supported By
 
@@ -137,7 +137,9 @@ Columns: JSON Key | CLI Flag | CLR_* Env Var | Type | Supported By
 | `"session-dir"` | `--session-dir` | `CLR_SESSION_DIR` | string | run, ask, topic (DEPRECATED, no effect — BUG-493) |
 | `"no-persist"` | `--no-persist` | `CLR_NO_PERSIST` | bool | run, ask, topic |
 | `"dir"` | `--dir` | `CLR_DIR` | string | run, ask, topic, isolated |
-| `"subdir"` | `--subdir` | `CLR_SUBDIR` | string | run, ask, topic |
+| `"topic"` | `--topic` | `CLR_TOPIC` | string | run, ask, topic |
+| `"global"` | `--global` / `-g` | `CLR_GLOBAL` | bool | run, ask, topic |
+| `"from"` | `--from` | `CLR_FROM` | string | run, ask, topic |
 | `"add-dir"` | `--add-dir` | `CLR_ADD_DIR` | string | run, ask, topic, isolated |
 
 **Permissions and Chrome**

@@ -20,7 +20,7 @@
 | `kill.rs` | `dispatch_kill`, `print_kill_help` — SIGTERM delivery to a validated claude PID. |
 | `tools.rs` | `dispatch_tools` — list all 26 Claude Code built-in tools in a plain-style table. |
 | `scope.rs` | `dispatch_scope` — print all 6 CLAUDE_* path variables for a directory. |
-| `topic.rs` | `clr topic` — derive a `--subdir` slug from the message, then delegate to `run`. |
+| `topic.rs` | `clr topic` — derive a `--topic` slug from the message, then delegate to `run`. |
 | `summary.rs` | `render_summary` — parse CLR result envelope, render key:val header + text body for `--output-style summary`. |
 | `json_config.rs` | JSON config loading: `load_json_source`, `parse_json_object`, `apply_json_config`, `load_and_apply`. |
 | `json_config_isolated.rs` | JSON config application for `isolated`/`refresh` subcommands: `apply_json_config_isolated`, `apply_json_config_refresh`, `load_and_apply_isolated`, `load_and_apply_refresh`. |

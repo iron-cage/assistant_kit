@@ -7,23 +7,23 @@
 - **In Scope**: CLR_* input vars for run/isolated/refresh, CLR_* runtime config overrides (`CLR_GATE_DIR`, `CLR_GATE_POLL_SECS`, `CLR_GATE_MAX_ATTEMPTS`, `CLR_GATE_STALE_SECS`, `CLR_CONFIG_DIR`, `CLR_QUERY_DIR`), and the 5 `CLAUDE_CODE_*` subprocess variables `clr` injects by default (`CLAUDE_CODE_MAX_OUTPUT_TOKENS`, `CLAUDE_CODE_AUTO_COMPACT_WINDOW`, `CLAUDE_CODE_BASH_TIMEOUT`, `CLAUDE_CODE_BASH_MAX_TIMEOUT`, `CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS`), precedence, bool/parsed type semantics.
 - **Out of Scope**: CLI parameter descriptions (→ param/), subprocess behavior beyond env injection, config-file TOML key reference (→ [config_param.md](config_param.md)).
 
-### All Env Parameters (93 total)
+### All Env Parameters (95 total)
 
 | Category | Count | Purpose |
 |----------|-------|---------|
-| Input (CLR_*) — `run` subcommand | 64 | Caller env fallbacks for `run` parameters |
+| Input (CLR_*) — `run` subcommand | 65 | Caller env fallbacks for `run` parameters |
 | Input (CLR_*) — `isolated` and `refresh` subcommands | 13 | Caller env fallbacks for credential operation parameters |
 | Input (CLR_*) — `ps` subcommand | 5 | Caller env fallbacks for session listing display and flag thresholds |
-| Runtime config (CLR_*) | 6 | Runtime configuration overrides (not CLI parameter fallbacks) |
+| Runtime config (CLR_*) | 7 | Runtime configuration overrides (not CLI parameter fallbacks) |
 | Subprocess (CLAUDE_CODE_*) — injected | 5 | Set by `clr` before spawning the `claude` subprocess |
 
-**Total:** 93 environment variables
+**Total:** 95 environment variables
 
 ---
 
 ### Env Param 1: CLR_* Input Parameters — `run` Subcommand
 
-Environment variable fallbacks for all 64 `run` subcommand parameters (62 standard + `CLR_ARGS_FILE` + `CLR_NO_COMPACT_WINDOW`).
+Environment variable fallbacks for all 65 `run` subcommand parameters (63 standard + `CLR_ARGS_FILE` + `CLR_NO_COMPACT_WINDOW`).
 `apply_env_vars()` in `src/cli/env.rs` reads these immediately after CLI parsing, before command
 dispatch. Each variable is applied **only when the corresponding CLI field is still at its
 zero/absent value** — the CLI flag always wins when both are present.
@@ -61,7 +61,7 @@ invalid values (parse failure → field stays at default). Exception: `CLR_RETRY
 | 23 | `CLR_FILE` | [`--file`](param/025_file.md) | string | `"file"` | Applied when `--file` absent; value is the file path |
 | 24 | `CLR_STRIP_FENCES` | [`--strip-fences`](param/026_strip_fences.md) | bool | `"strip-fences"` | |
 | 25 | `CLR_KEEP_CLAUDECODE` | [`--keep-claudecode`](param/027_keep_claudecode.md) | bool | `"keep-claudecode"` | |
-| 26 | `CLR_SUBDIR` | [`--subdir`](param/028_subdir.md) | string | `"subdir"` | Applied when `--subdir` absent and `CLR_SUBDIR` non-empty; `.` = identity; values containing `/` silently ignored (Fix: BUG-233) |
+| 26 | `CLR_TOPIC` | [`--topic`](param/028_topic.md) | string | `"topic"` | Applied when `--topic` absent and `CLR_TOPIC` non-empty; `.` = identity; values containing `/` silently ignored (Fix: BUG-233) |
 | 27 | `CLR_OUTPUT_FILE` | [`--output-file`](param/029_output_file.md) | string | `"output-file"` | Applied when `--output-file` absent; value is the output file path |
 | 28 | `CLR_EXPECT` | [`--expect`](param/030_expect.md) | string | `"expect"` | Applied when `--expect` absent; same `val1\|val2\|…` syntax |
 | 29 | `CLR_EXPECT_STRATEGY` | [`--expect-strategy`](param/031_expect_strategy.md) | string | `"expect-strategy"` | Applied when `--expect-strategy` absent; accepts `fail`, `retry`, or `default:<V>` |
@@ -100,6 +100,7 @@ invalid values (parse failure → field stays at default). Exception: `CLR_RETRY
 | 62 | `CLR_JOURNAL_DIR` | [`--journal-dir`](param/073_journal_dir.md) | string | `"journal-dir"` | Applied when `--journal-dir` absent; path to journal JSONL directory; default `~/.clr/journal/` |
 | 63 | `CLR_ARGS_FILE` | [`--args-file`](param/075_args_file.md) | string | `"args-file"` | Path to a JSON config file; applied when `--args-file` absent from CLI; JSON source overrides all other CLR_* vars but is overridden by explicit CLI flags. **Cross-command:** applies to `run`, `ask`, `isolated`, and `refresh` subcommands |
 | 64 | `CLR_NO_COMPACT_WINDOW` | `--no-compact-window` | bool | `"no-compact-window"` | Suppresses `CLAUDE_CODE_AUTO_COMPACT_WINDOW` injection — subprocess inherits caller env or uses model native window |
+| 65 | `CLR_GLOBAL` | [`--global`](param/087_global.md) | bool | `"global"` | Resolves `--topic`'s base to the global topic home instead of CWD; inert without a topic; an explicit `--dir` still outranks it. Where that home *is* comes from `CLR_TOPIC_HOME` (Env Param 12) |
 
 **Precedence (current — 5 levels):**
 
@@ -479,3 +480,35 @@ CLR_QUERY_DIR=/tmp/my-test-query-dir clr query "task" &
 and dispatch forms, plus the liveness watchdog's socket cleanup).
 
 **No precedence rule** — always applied; there is no corresponding CLI flag or JSON key.
+
+---
+
+### Env Param 12: `CLR_TOPIC_HOME` — Global Topic Home
+
+Runtime configuration override for the base directory `--global` resolves to
+(`topic_path.rs::topic_home()`). No corresponding CLI flag or `--args-file` JSON key —
+env-var-only, matching the `CLR_GATE_DIR` precedent (Env Param 5).
+
+| Variable | Default | Type | Notes |
+|----------|---------|------|-------|
+| `CLR_TOPIC_HOME` | `<temp-dir>/clr-topic` | path | Base for `--global` topic directories; read by `topic_home()` in `topic_path.rs` |
+
+**`CLR_TOPIC_HOME`:** Chooses *where* the global topic home is; [`CLR_GLOBAL`](param/087_global.md)
+(Env Param 1, #65) chooses *whether* it is used at all. Empty or unset falls back to
+`<system temp dir>/clr-topic`. Because most systems clear the temp dir on reboot, set this
+explicitly for topics that must survive one.
+
+```sh
+CLR_TOPIC_HOME=~/.clr/topic clr --global --topic notes "Jot this down"
+# effective dir = ~/.clr/topic/-notes instead of <temp-dir>/clr-topic/-notes
+
+CLR_TOPIC_HOME=~/.clr/topic clr topics --global --path notes
+# ~/.clr/topic/-notes
+```
+
+**Commands affected:** `run`, `ask`, `topic`, `topics` — every consumer of
+`topic_path::topic_base()`, and only when `--global` is in effect.
+
+**No precedence rule** — always applied when `--global` is in effect; there is no
+corresponding CLI flag or JSON key. An explicit `--dir` bypasses it entirely by outranking
+`--global` itself.

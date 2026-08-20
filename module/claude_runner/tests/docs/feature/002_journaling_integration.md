@@ -188,7 +188,7 @@ FT-8 requires a fake `claude` subprocess that emits >1 MB of repeated output on 
 
 ### FT-12: `--dry-run` does NOT create journal directory (BUG-319)
 
-- **Given:** parent temp dir with a non-existent subdirectory `must_not_exist`
+- **Given:** parent temp dir with a non-existent topic directory `must_not_exist`
 - **When:** `clr --dry-run --journal-dir <parent>/must_not_exist "test"`
 - **Then:** `<parent>/must_not_exist` does NOT exist on disk; dry-run output shown on stdout
 - **Exit:** 0
@@ -238,7 +238,7 @@ FT-8 requires a fake `claude` subprocess that emits >1 MB of repeated output on 
 
 ### FT-17: `--journal off --journal-dir <dir>` → no JSONL
 
-- **Given:** parent temp dir with non-existent subdirectory; fake claude exits 0
+- **Given:** parent temp dir with non-existent topic directory; fake claude exits 0
 - **When:** `clr -p --max-sessions 0 --journal off --journal-dir <parent>/should_not_appear "x"`
 - **Then:** `<parent>/should_not_appear` does NOT exist (off short-circuits before dir creation)
 - **Exit:** 0
@@ -248,7 +248,7 @@ FT-8 requires a fake `claude` subprocess that emits >1 MB of repeated output on 
 
 ### FT-18: `CLR_JOURNAL=off` + `CLR_JOURNAL_DIR=<dir>` → no JSONL
 
-- **Given:** parent temp dir with non-existent subdirectory; fake claude exits 0; `CLR_JOURNAL=off` + `CLR_JOURNAL_DIR=<parent>/env_off_should_not_appear`
+- **Given:** parent temp dir with non-existent topic directory; fake claude exits 0; `CLR_JOURNAL=off` + `CLR_JOURNAL_DIR=<parent>/env_off_should_not_appear`
 - **When:** `clr -p --max-sessions 0 "x"` with env vars set
 - **Then:** `<parent>/env_off_should_not_appear` does NOT exist
 - **Exit:** 0

@@ -155,17 +155,18 @@ pub( crate ) fn apply_env_vars( parsed : &mut CliArgs ) -> Result< () >
   if parsed.file.is_none()             { parsed.file             = env_str( "CLR_FILE" ); }
   if !parsed.strip_fences              { parsed.strip_fences     = env_bool( "CLR_STRIP_FENCES" ); }
   if !parsed.keep_claudecode           { parsed.keep_claudecode  = env_bool( "CLR_KEEP_CLAUDECODE" ); }
-  // Fix(BUG-233): validate CLR_SUBDIR same as --subdir — reject `/` in the value.
-  // Root cause: CLR_SUBDIR env var was accepted without the slash-rejection guard applied to --subdir.
+  // Fix(BUG-233): validate CLR_TOPIC same as --topic — reject `/` in the value.
+  // Root cause: CLR_TOPIC env var was accepted without the slash-rejection guard applied to --topic.
   // Pitfall: env-var fallbacks for validated flags must replicate the same validation as the flag parser.
   // Matches apply_env_vars convention: silently ignore invalid env values.
-  if parsed.subdir.is_none()
+  if parsed.topic.is_none()
   {
-    if let Some( v ) = env_str( "CLR_SUBDIR" )
+    if let Some( v ) = env_str( "CLR_TOPIC" )
     {
-      if !v.contains( '/' ) { parsed.subdir = Some( v ); }
+      if !v.contains( '/' ) { parsed.topic = Some( v ); }
     }
   }
+  if !parsed.global                { parsed.global       = env_bool( "CLR_GLOBAL" ); }
   if parsed.output_file.is_none()  { parsed.output_file  = env_str( "CLR_OUTPUT_FILE" ); }
   if parsed.expect.is_none()       { parsed.expect        = env_str( "CLR_EXPECT" ); }
   if parsed.expect_strategy.is_none()
