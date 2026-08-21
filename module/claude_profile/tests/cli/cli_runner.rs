@@ -409,8 +409,9 @@ pub fn write_account_renewal_json( home : &std::path::Path, name : &str, renewal
 /// - `d7_util` : consumed 7d quota percent (0–100). Gate 6 requires `100 - d7_util > 3.0`.
 /// - `d7_resets_at` : optional ISO-8601 reset timestamp for the 7d period.
 ///
-/// The cache uses the `left_pct` field (actual stored name per `quota_cache.rs:period_json`)
-/// which stores the consumed utilization percentage despite the name suggesting "left".
+/// This fixture still writes the legacy `left_pct` key; since BUG-540 the writer
+/// (`quota_cache.rs:period_json`) stores the same consumed percentage under `utilization`,
+/// and the reader accepts both — keeping this fixture as permanent legacy-path coverage.
 ///
 /// # Panics
 ///

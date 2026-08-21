@@ -1,6 +1,6 @@
 # Group: 5. Display Control
 
-**Parameters:** `cols::`, `count::`, `offset::`, `only_active::`, `only_next::`, `min_5h::`, `min_7d::`, `only_valid::`, `exclude_exhausted::`, `no_color::`, `alert::`
+**Parameters:** `cols::`, `count::`, `offset::`, `only_active::`, `only_next::`, `min_5h::`, `min_7d::`, `only_valid::`, `exclude_exhausted::`, `no_color::`, `who::`, `alert::`
 **Pattern:** Column visibility, row filtering, and display modifiers for `.usage` and `.accounts`
 **Purpose:** Controls which columns appear, which rows survive filtering, pagination/truncation, and display rendering (color stripping) for the `.usage` and `.accounts` quota tables.
 
@@ -16,14 +16,15 @@
 | [`only_valid::`](../param/043_only_valid.md) | `bool` | `0` | Keep only 🟢 rows (non-exhausted, non-expired) |
 | [`exclude_exhausted::`](../param/044_exclude_exhausted.md) | `bool` | `0` | Remove 🔴 exhausted rows |
 | [`no_color::`](../param/047_no_color.md) | `bool` | `0` | Strip emoji and ANSI sequences from output |
+| [`who::`](../param/061_who.md) | `bool` | auto | Sessions table visibility in `.usage` output; omit = auto (>1 active marker → shown) |
 | [`alert::`](../param/088_alert.md) | `u64` | `15` | Burn-rate alert horizon in minutes for `.usage` footer warnings; `0` = off |
 
 ### Referenced Commands
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.usage`](../command/006_usage.md#command-9-usage) | All 11 display and filter params |
-| 2 | [`.accounts`](../command/001_account.md#command-3-accounts) | All except `alert::` (accepted but `.usage`-effective only) |
+| 1 | [`.usage`](../command/006_usage.md#command-9-usage) | All 12 display and filter params |
+| 2 | [`.accounts`](../command/001_account.md#command-3-accounts) | All except `who::` and `alert::` (accepted but `.usage`-effective only) |
 
 **Typical Patterns:**
 

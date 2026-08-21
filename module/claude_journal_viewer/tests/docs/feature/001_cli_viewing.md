@@ -112,5 +112,5 @@ FT-8 requires synthetic journal files with known dates (past files) to verify pr
 
 - **Given:** journal dir with `2020-01-01.jsonl` (old) and today's file
 - **When:** `clj .prune keep::30d --journal-dir <dir>`
-- **Then:** exit 0 after confirmation; `2020-01-01.jsonl` deleted; today's file present; stdout reports 1 file deleted
+- **Then:** exit 0; `2020-01-01.jsonl` deleted immediately (no confirmation prompt per AC-007); today's file present; stdout reports 1 file deleted
 - **Source:** [feature/001_cli_viewing.md](../../../docs/feature/001_cli_viewing.md) AC-007
