@@ -32,10 +32,11 @@
 //! | T14 | invalid `journal` config value → exit 1                         | Error Handling  |
 //! | T15 | invalid `summary_fields` config value → exit 1                  | Error Handling  |
 //! | T16 | config-only `gate_poll_secs`/`gate_max_attempts` change real gate timing | Precedence |
-//! | T17 | non-anthropic `provider` suppresses config `model`/`fallback_model`      | Provider Gate |
-//! | T18 | `provider = "anthropic"` leaves config `model` effective                 | Provider Gate |
-//! | T19 | CLI `--model` still wins on a provider-pinned seat                       | Provider Gate |
-//! | T20 | `--trace` names the suppressed config model and provider                 | Provider Gate |
+//! | T17 | live seat env block suppresses config `model`/`fallback_model`           | Provider Gate |
+//! | T18 | settings.json without `env.ANTHROPIC_MODEL` leaves config `model` effective | Provider Gate |
+//! | T19 | CLI `--model` still wins on an env-pinned seat                           | Provider Gate |
+//! | T20 | `--trace` names the suppressed config model and the seat's pinned model  | Provider Gate |
+//! | T21 | stale `provider` pin alone no longer suppresses (MRE BUG-548)            | Provider Gate |
 
 mod cli_binary_test_helpers;
 use cli_binary_test_helpers::
@@ -51,6 +52,20 @@ fn write_config_file( dir : &std::path::Path, content : &str )
 {
   std::fs::write( dir.join( "config.toml" ), content ).expect( "write config.toml" );
 }
+
+/// Write `<home>/.claude/settings.json` with raw JSON `content` — the live seat-state
+/// artifact the Provider Gate reads (`docs/cli/config_param.md § Provider Gate`).
+fn write_seat_settings( home : &std::path::Path, content : &str )
+{
+  let dir = home.join( ".claude" );
+  std::fs::create_dir_all( &dir ).expect( "create .claude dir" );
+  std::fs::write( dir.join( "settings.json" ), content ).expect( "write settings.json" );
+}
+
+/// A Feature-071-shaped redirect seat env block, as `clp .account.use` writes it
+/// when activating a redirect (kimi) account.
+const KIMI_SEAT_ENV : &str =
+  r#"{ "env" : { "ANTHROPIC_BASE_URL" : "https://api.moonshot.ai/anthropic", "ANTHROPIC_MODEL" : "kimi-k3" } }"#;
 
 // ── T01: user-level config.toml alone sets max_sessions ─────────────────────────
 
@@ -465,10 +480,16 @@ fn t12_dry_run_reflects_config_supplied_model()
 {
   let config_dir = tempfile::TempDir::new().expect( "config dir" );
   write_config_file( config_dir.path(), "model = \"claude-opus-4-8\"\n" );
+  // Empty HOME = anthropic seat: the Provider Gate must not interfere here even
+  // when the developer's real seat happens to carry a live env block.
+  let home = tempfile::TempDir::new().expect( "home dir" );
 
   let out = run_cli_with_env(
     &[ "--dry-run", "hi" ],
-    &[ ( "CLR_CONFIG_DIR", config_dir.path().to_str().expect( "utf8" ) ) ],
+    &[
+      ( "CLR_CONFIG_DIR", config_dir.path().to_str().expect( "utf8" ) ),
+      ( "HOME", home.path().to_str().expect( "utf8" ) ),
+    ],
   );
   assert_eq!( exit_code( &out ), 0, "T12: must exit 0; stderr: {}", stderr_str( &out ) );
   let stdout = stdout_str( &out );
@@ -617,82 +638,102 @@ fn t16_config_only_sets_gate_poll_secs_and_max_attempts()
   );
 }
 
-// ── T17: non-anthropic provider suppresses config-tier model keys ─────────────────
+// ── T17: live seat env block suppresses config-tier model keys ────────────────────
 
-/// T17: user config sets `provider = "kimi"` alongside `model` and `fallback_model`;
-/// no higher-tier model source. The dry-run preview must contain neither `--model`
-/// nor `--fallback-model` — a seat pinned to a non-anthropic provider routes its
-/// sessions through the `ANTHROPIC_*` env block in `~/.claude/settings.json`, and a
-/// config-tier model would be promoted to an explicit `--model` flag silently
-/// overriding that binding on every launch (`docs/cli/config_param.md § Provider Gate`).
+/// T17: `HOME/.claude/settings.json` carries a Feature-071 env block pinning
+/// `ANTHROPIC_MODEL=kimi-k3`; user config sets `model` and `fallback_model` (no
+/// `provider` key — the live block alone must trigger the gate). The dry-run preview
+/// must contain neither `--model` nor `--fallback-model` — a config-tier model would
+/// be promoted to an explicit `--model` flag silently overriding the seat binding on
+/// every launch (`docs/cli/config_param.md § Provider Gate`). This is also the
+/// BUG-536-resurfacing desync direction of BUG-548: redirect seat active but no
+/// standing pin — the old pin-keyed gate would not have suppressed here.
 #[ test ]
-fn t17_non_anthropic_provider_suppresses_config_model()
+fn t17_seat_env_block_suppresses_config_model()
 {
   let config_dir = tempfile::TempDir::new().expect( "config dir" );
   write_config_file(
     config_dir.path(),
-    "provider = \"kimi\"\nmodel = \"claude-sonnet-5\"\nfallback_model = \"claude-opus-4-8\"\n",
+    "model = \"claude-sonnet-5\"\nfallback_model = \"claude-opus-4-8\"\n",
   );
+  let home = tempfile::TempDir::new().expect( "home dir" );
+  write_seat_settings( home.path(), KIMI_SEAT_ENV );
 
   let out = run_cli_with_env(
     &[ "--dry-run", "hi" ],
-    &[ ( "CLR_CONFIG_DIR", config_dir.path().to_str().expect( "utf8" ) ) ],
+    &[
+      ( "CLR_CONFIG_DIR", config_dir.path().to_str().expect( "utf8" ) ),
+      ( "HOME", home.path().to_str().expect( "utf8" ) ),
+    ],
   );
   assert_eq!( exit_code( &out ), 0, "T17: must exit 0; stderr: {}", stderr_str( &out ) );
   let stdout = stdout_str( &out );
   assert!(
     !stdout.contains( "--model" ) && !stdout.contains( "claude-sonnet-5" ),
-    "T17: config model must be suppressed on a kimi-provider seat. Got:\n{stdout}"
+    "T17: config model must be suppressed while the seat env block is live. Got:\n{stdout}"
   );
   assert!(
     !stdout.contains( "--fallback-model" ) && !stdout.contains( "claude-opus-4-8" ),
-    "T17: config fallback_model must be suppressed on a kimi-provider seat. Got:\n{stdout}"
+    "T17: config fallback_model must be suppressed while the seat env block is live. Got:\n{stdout}"
   );
 }
 
-// ── T18: explicit anthropic provider leaves config model effective ────────────────
+// ── T18: settings.json without ANTHROPIC_MODEL leaves config model effective ──────
 
-/// T18: `provider = "anthropic"` (the default, stated explicitly) must NOT trigger
-/// suppression — config `model` applies exactly as with no provider key at all
-/// (which T12 already pins).
+/// T18: a settings.json that does NOT pin `env.ANTHROPIC_MODEL` must not trigger
+/// suppression — config `model` applies exactly as with no settings.json at all
+/// (which T12 pins). Two sub-cases: (a) settings.json present with unrelated keys
+/// and no `env` block; (b) an `env` block present but without `ANTHROPIC_MODEL`.
 #[ test ]
-fn t18_anthropic_provider_leaves_config_model_effective()
+fn t18_settings_without_model_pin_leaves_config_model_effective()
 {
-  let config_dir = tempfile::TempDir::new().expect( "config dir" );
-  write_config_file(
-    config_dir.path(),
-    "provider = \"anthropic\"\nmodel = \"claude-sonnet-5\"\n",
-  );
+  for ( label, settings ) in
+  [
+    ( "no env block", r#"{ "permissions" : { "allow" : [] } }"# ),
+    ( "env block without ANTHROPIC_MODEL", r#"{ "env" : { "ANTHROPIC_BASE_URL" : "https://api.moonshot.ai/anthropic" } }"# ),
+  ]
+  {
+    let config_dir = tempfile::TempDir::new().expect( "config dir" );
+    write_config_file( config_dir.path(), "model = \"claude-sonnet-5\"\n" );
+    let home = tempfile::TempDir::new().expect( "home dir" );
+    write_seat_settings( home.path(), settings );
 
-  let out = run_cli_with_env(
-    &[ "--dry-run", "hi" ],
-    &[ ( "CLR_CONFIG_DIR", config_dir.path().to_str().expect( "utf8" ) ) ],
-  );
-  assert_eq!( exit_code( &out ), 0, "T18: must exit 0; stderr: {}", stderr_str( &out ) );
-  let stdout = stdout_str( &out );
-  assert!(
-    stdout.contains( "--model" ) && stdout.contains( "claude-sonnet-5" ),
-    "T18: explicit anthropic provider must not suppress config model. Got:\n{stdout}"
-  );
+    let out = run_cli_with_env(
+      &[ "--dry-run", "hi" ],
+      &[
+        ( "CLR_CONFIG_DIR", config_dir.path().to_str().expect( "utf8" ) ),
+        ( "HOME", home.path().to_str().expect( "utf8" ) ),
+      ],
+    );
+    assert_eq!( exit_code( &out ), 0, "T18 ({label}): must exit 0; stderr: {}", stderr_str( &out ) );
+    let stdout = stdout_str( &out );
+    assert!(
+      stdout.contains( "--model" ) && stdout.contains( "claude-sonnet-5" ),
+      "T18 ({label}): settings.json without an ANTHROPIC_MODEL pin must not suppress config model. Got:\n{stdout}"
+    );
+  }
 }
 
-// ── T19: CLI --model still wins on a provider-pinned seat ─────────────────────────
+// ── T19: CLI --model still wins on an env-pinned seat ─────────────────────────────
 
-/// T19: `provider = "kimi"` with config `model = "claude-sonnet-5"`, but the CLI
-/// passes `--model claude-opus-4-8`. The explicit flag is user intent — it must
-/// survive the provider gate (only the config tier is suppressed, never levels 1-3).
+/// T19: seat env block pins `ANTHROPIC_MODEL=kimi-k3`, config sets
+/// `model = "claude-sonnet-5"`, but the CLI passes `--model claude-opus-4-8`. The
+/// explicit flag is user intent — it must survive the Provider Gate (only the config
+/// tier is suppressed, never levels 1-3).
 #[ test ]
 fn t19_cli_model_wins_over_provider_gate()
 {
   let config_dir = tempfile::TempDir::new().expect( "config dir" );
-  write_config_file(
-    config_dir.path(),
-    "provider = \"kimi\"\nmodel = \"claude-sonnet-5\"\n",
-  );
+  write_config_file( config_dir.path(), "model = \"claude-sonnet-5\"\n" );
+  let home = tempfile::TempDir::new().expect( "home dir" );
+  write_seat_settings( home.path(), KIMI_SEAT_ENV );
 
   let out = run_cli_with_env(
     &[ "--model", "claude-opus-4-8", "--dry-run", "hi" ],
-    &[ ( "CLR_CONFIG_DIR", config_dir.path().to_str().expect( "utf8" ) ) ],
+    &[
+      ( "CLR_CONFIG_DIR", config_dir.path().to_str().expect( "utf8" ) ),
+      ( "HOME", home.path().to_str().expect( "utf8" ) ),
+    ],
   );
   assert_eq!( exit_code( &out ), 0, "T19: must exit 0; stderr: {}", stderr_str( &out ) );
   let stdout = stdout_str( &out );
@@ -706,32 +747,117 @@ fn t19_cli_model_wins_over_provider_gate()
   );
 }
 
-// ── T20: --trace names the suppressed config model ────────────────────────────────
+// ── T20: --trace names the suppressed config model and the seat's pinned model ────
 
-/// T20: same config as T17 plus `--trace` — stderr must carry one suppression note
-/// per ignored key, naming both the value and the provider, so a `clr --trace` user
-/// can see why the config model vanished instead of silently missing it.
+/// T20: same setup as T17 plus `--trace` — stderr must carry one suppression note
+/// per ignored key, naming both the config value and the live `ANTHROPIC_MODEL` the
+/// seat is pinned to, so a `clr --trace` user can see why the config model vanished
+/// and what the seat actually routes to.
 #[ test ]
 fn t20_trace_names_suppressed_config_model()
 {
   let config_dir = tempfile::TempDir::new().expect( "config dir" );
   write_config_file(
     config_dir.path(),
-    "provider = \"kimi\"\nmodel = \"claude-sonnet-5\"\nfallback_model = \"claude-opus-4-8\"\n",
+    "model = \"claude-sonnet-5\"\nfallback_model = \"claude-opus-4-8\"\n",
   );
+  let home = tempfile::TempDir::new().expect( "home dir" );
+  write_seat_settings( home.path(), KIMI_SEAT_ENV );
 
   let out = run_cli_with_env(
     &[ "--trace", "--dry-run", "hi" ],
-    &[ ( "CLR_CONFIG_DIR", config_dir.path().to_str().expect( "utf8" ) ) ],
+    &[
+      ( "CLR_CONFIG_DIR", config_dir.path().to_str().expect( "utf8" ) ),
+      ( "HOME", home.path().to_str().expect( "utf8" ) ),
+    ],
   );
   assert_eq!( exit_code( &out ), 0, "T20: must exit 0; stderr: {}", stderr_str( &out ) );
   let stderr = stderr_str( &out );
   assert!(
-    stderr.contains( "config model 'claude-sonnet-5' ignored (provider: kimi)" ),
-    "T20: trace must name the suppressed model and provider. Got:\n{stderr}"
+    stderr.contains( "config model 'claude-sonnet-5' ignored (seat env pins ANTHROPIC_MODEL=kimi-k3)" ),
+    "T20: trace must name the suppressed model and the seat's pinned model. Got:\n{stderr}"
   );
   assert!(
-    stderr.contains( "config fallback_model 'claude-opus-4-8' ignored (provider: kimi)" ),
+    stderr.contains( "config fallback_model 'claude-opus-4-8' ignored (seat env pins ANTHROPIC_MODEL=kimi-k3)" ),
     "T20: trace must name the suppressed fallback_model too. Got:\n{stderr}"
+  );
+}
+
+// ── T21: stale provider pin alone no longer suppresses (MRE BUG-548) ──────────────
+
+/// T21: MRE for BUG-548 — the user's incident direction. Config carries a stale
+/// `provider = "kimi"` pin AND `model = "claude-sonnet-5"`, but the seat has switched
+/// back to anthropic (settings.json absent — `clp .account.use <anthropic>` removed
+/// the env block per Feature 071). The config model MUST apply: the seat routes to
+/// api.anthropic.com and nothing would be overridden.
+///
+/// ## Root Cause
+/// The BUG-536 Provider Gate keyed `non_anthropic_seat` on the standing `provider`
+/// pin in `~/.clr/config.toml` — written only by `clp .provider.select` and reset by
+/// no switch-back path (`clp .account.use <anthropic>` clears the env block but never
+/// touches the pin). After a kimi→anthropic switch the stale pin kept suppressing the
+/// config model on a fully-anthropic seat: `clr --trace` printed
+/// `config model 'claude-sonnet-5' ignored (provider: kimi)` while no kimi routing
+/// existed anywhere.
+///
+/// ## Why Not Caught
+/// T17-T20 constructed the pin and asserted suppression — they tested the predicate's
+/// input, not the property it stood for. No test constructed the two desync states
+/// (stale pin + anthropic seat; live env block + no pin), because the pin was assumed
+/// to track the seat. It tracks standing intent, which survives switch-backs.
+///
+/// ## Fix Applied
+/// `apply_config_defaults` now derives `non_anthropic_seat` from the live per-launch
+/// routing state — `seat_env_model()` reads `env.ANTHROPIC_MODEL` from
+/// `$HOME/.claude/settings.json`, the artifact the child actually inherits and the one
+/// Feature 071 maintains transactionally on every switch. The `provider` config key is
+/// no longer read by clr at all (unknown-key forward compat absorbs existing files).
+///
+/// ## Prevention
+/// When a gate protects a per-launch property ("would this flag shadow the child's
+/// env?"), its predicate must read the same artifact the child inherits — never a
+/// standing config value that merely correlates with it. Standing intent and live
+/// state need separate carriers; test both desync directions whenever a predicate is
+/// derived from a proxy.
+///
+/// ## Pitfall
+/// Do not "fix" this by having switch-back paths reset the pin: `clp .provider.select`
+/// is the pin's sole writer by Feature 072 design (standing user intent), and adding
+/// writers reintroduces the desync from the other side. The pin remains meaningful to
+/// clp (rotation scoping); clr just must not route on it.
+#[ doc = "bug_reproducer(BUG-548)" ]
+#[ test ]
+fn t21_mre_bug548_stale_provider_pin_does_not_suppress_on_anthropic_seat()
+{
+  let config_dir = tempfile::TempDir::new().expect( "config dir" );
+  write_config_file(
+    config_dir.path(),
+    "provider = \"kimi\"\nmodel = \"claude-sonnet-5\"\nfallback_model = \"claude-opus-4-8\"\n",
+  );
+  // Anthropic seat: HOME has no .claude/settings.json at all — exactly the state
+  // `clp .account.use <anthropic>` leaves behind after removing the env block.
+  let home = tempfile::TempDir::new().expect( "home dir" );
+
+  let out = run_cli_with_env(
+    &[ "--trace", "--dry-run", "hi" ],
+    &[
+      ( "CLR_CONFIG_DIR", config_dir.path().to_str().expect( "utf8" ) ),
+      ( "HOME", home.path().to_str().expect( "utf8" ) ),
+    ],
+  );
+  assert_eq!( exit_code( &out ), 0, "T21: must exit 0; stderr: {}", stderr_str( &out ) );
+  let stdout = stdout_str( &out );
+  assert!(
+    stdout.contains( "--model" ) && stdout.contains( "claude-sonnet-5" ),
+    "T21: config model must apply on an anthropic seat despite a stale provider pin. Got:\n{stdout}"
+  );
+  assert!(
+    stdout.contains( "--fallback-model" ) && stdout.contains( "claude-opus-4-8" ),
+    "T21: config fallback_model must apply too. Got:\n{stdout}"
+  );
+  let stderr = stderr_str( &out );
+  assert!(
+    !stderr.contains( "ignored" ),
+    "T21: no suppression trace may fire on an anthropic seat. Got:\n{stderr}"
   );
 }

@@ -10,12 +10,71 @@ use claude_storage_core::SessionId;
 // Journal helpers
 // -------------------------------------------------------------------
 
+// Resolve the process-wide attribution triple `(user, host, account)` once.
+//
+// `user`/`host` come from claude_profile_core's env fallback chains
+// (`$USER` → `$USERNAME` → `"user"`; `$HOSTNAME` → `/etc/hostname` → `"local"`).
+// `account` resolution hierarchy (first hit wins, task 542): non-empty
+// `CLR_ACCOUNT` env override → this machine's active-account marker in the
+// default credential store → `None`. The marker holds only the account NAME
+// (email or redirect profile name) — never token material — so journaling it
+// leaks no secret. All three are stable for the life of the process; caching
+// keeps the store read off the per-event path.
+fn attribution() -> &'static ( String, String, Option< String > )
+{
+  static ATTR : std::sync::OnceLock< ( String, String, Option< String > ) > = std::sync::OnceLock::new();
+  ATTR.get_or_init( ||
+  {
+    let user    = claude_profile_core::account::resolve_user();
+    let host    = claude_profile_core::account::resolve_hostname();
+    let account = resolve_account();
+    ( user, host, account )
+  } )
+}
+
+// Resolve the account identity for journal attribution; `None` when unknown.
+fn resolve_account() -> Option< String >
+{
+  if let Ok( v ) = std::env::var( "CLR_ACCOUNT" )
+  {
+    if !v.is_empty() { return Some( v ); }
+  }
+  let store = claude_profile_core::account::default_credential_store()?;
+  claude_profile_core::account::active_account( &store )
+}
+
+// Stamp attribution fields onto an event before it is appended (task 542).
+//
+// Ordering matters: `dir` falls back to the process cwd first (explicit
+// `--dir`/`--to` values already in the field always win), then `agent_id` is
+// composed from the effective dir — so both fields describe the same location.
+// `agent_id` stays `None` only when the cwd itself is unresolvable (deleted
+// cwd); `user`/`host` are always set, `account` when an identity resolved.
+pub( super ) fn stamp_attribution( ev : &mut EventRecord )
+{
+  if ev.fields.dir.is_none()
+  {
+    ev.fields.dir = std::env::current_dir().ok().map( | p | p.display().to_string() );
+  }
+  let ( user, host, account ) = attribution();
+  ev.fields.user = Some( user.clone() );
+  ev.fields.host = Some( host.clone() );
+  ev.fields.account.clone_from( account );
+  ev.fields.agent_id = ev.fields.dir.as_deref()
+    .map( | d | claude_journal::compose_agent_id( user, host, d ) );
+}
+
 // Emit a journal event; silently ignores write errors.
 //
 // Journaling is best-effort — a write failure must never abort the runner.
-fn emit( writer : Option< &JournalWriter >, ev : &EventRecord )
+// Attribution stamping happens here so every emission helper inherits it.
+fn emit( writer : Option< &JournalWriter >, ev : &mut EventRecord )
 {
-  if let Some( w ) = writer { let _ = w.append( ev ); }
+  if let Some( w ) = writer
+  {
+    stamp_attribution( ev );
+    let _ = w.append( ev );
+  }
 }
 
 // Return true if the journal level is "full" (stdout/stderr included in events).
@@ -64,7 +123,7 @@ fn emit_execution(
       ev.fields.stderr = Some( s );
     }
   }
-  emit( writer, &ev );
+  emit( writer, &mut ev );
 }
 
 // Emit a Timeout event.
@@ -78,7 +137,7 @@ fn emit_timeout(
   ev.fields.exit_code    = Some( 4 );
   ev.fields.timeout_secs = Some( timeout_secs );
   ev.fields.message.clone_from( &cli.message );
-  emit( writer, &ev );
+  emit( writer, &mut ev );
 }
 
 // Emit a Retry event.
@@ -97,7 +156,7 @@ fn emit_retry(
   ev.fields.limit         = Some( limit );
   ev.fields.delay_secs    = Some( delay_secs );
   ev.fields.error_message = Some( error_message.to_string() );
-  emit( writer, &ev );
+  emit( writer, &mut ev );
 }
 
 // Emit a ValidationRetry event.
@@ -114,22 +173,32 @@ fn emit_validation_retry(
   ev.fields.limit         = Some( limit );
   ev.fields.delay_secs    = Some( delay_secs );
   ev.fields.error_message = Some( msg.to_string() );
-  emit( writer, &ev );
+  emit( writer, &mut ev );
 }
 
 // Emit an Interactive event.
+//
+// Fix(BUG-539): interactive events now carry the session duration (AC-012).
+// Root cause: run_interactive() never captured a start instant, so no elapsed
+//   time could cross this call boundary — every interactive event journaled only
+//   exit_code/message/dir/model while the schema's duration_ms sat unused.
+// Pitfall: duration must come from a monotonic Instant captured at
+//   run_interactive() entry — never from subtracting event `ts` wall-clock
+//   strings, and never from the polling path's `deadline` (that is start+timeout).
 fn emit_interactive(
-  writer    : Option< &JournalWriter >,
-  cli       : &CliArgs,
-  exit_code : i32,
+  writer      : Option< &JournalWriter >,
+  cli         : &CliArgs,
+  exit_code   : i32,
+  duration_ms : u64,
 )
 {
-  let mut ev           = EventRecord::new( EventType::Interactive );
-  ev.fields.exit_code  = Some( exit_code );
+  let mut ev             = EventRecord::new( EventType::Interactive );
+  ev.fields.exit_code    = Some( exit_code );
+  ev.fields.duration_ms  = Some( duration_ms );
   ev.fields.message.clone_from( &cli.message );
   ev.fields.dir.clone_from( &cli.dir );
   ev.fields.model.clone_from( &cli.model );
-  emit( writer, &ev );
+  emit( writer, &mut ev );
 }
 
 // -------------------------------------------------------------------
@@ -448,7 +517,7 @@ pub( super ) fn apply_runner_retry(
       ev.fields.limit         = Some( u32::from( count ) + 1 );
       ev.fields.delay_secs    = Some( delay );
       ev.fields.error_message = Some( msg.clone() );
-      emit( journal, &ev );
+      emit( journal, &mut ev );
     }
     if delay > 0
     {
@@ -904,6 +973,8 @@ pub( super ) fn run_interactive(
   //   scope; never collapse the TTY/non-TTY split even while both default to 0.
   let is_tty = std::io::stdin().is_terminal();
   let timeout_secs = cli.timeout.unwrap_or_else( || if is_tty { 0 } else { default_print_timeout() } );
+  let started = std::time::Instant::now();
+  let elapsed_ms = || u64::try_from( started.elapsed().as_millis() ).unwrap_or( u64::MAX );
 
   if timeout_secs == 0
   {
@@ -919,7 +990,7 @@ pub( super ) fn run_interactive(
       Err( e ) => { eprintln!( "Error: [Runner] {e}" ); std::process::exit( 1 ); }
     };
     let code = signal_exit_code( &status );
-    emit_interactive( journal, cli, code );
+    emit_interactive( journal, cli, code, elapsed_ms() );
     if !status.success()
     {
       std::process::exit( code );
@@ -944,7 +1015,7 @@ pub( super ) fn run_interactive(
       Ok( Some( status ) ) =>
       {
         let code = signal_exit_code( &status );
-        emit_interactive( journal, cli, code );
+        emit_interactive( journal, cli, code, elapsed_ms() );
         if !status.success()
         {
           std::process::exit( code );

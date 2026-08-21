@@ -1395,3 +1395,74 @@ ls "${CARGO_TARGET_DIR:-target}/debug/clr"
 
 **Expected:** Inside the container, `CARGO_TARGET_DIR` prints `/tmp/claude_profile_targets` and the binary exists at `/tmp/claude_profile_targets/debug/clr`. On host (or any environment without the override), `CARGO_TARGET_DIR` is unset and the binary falls back to the crate/workspace `target/debug/clr` as usual. A script invoking the built binary directly (rather than via `cargo run`) should resolve the path via `${CARGO_TARGET_DIR:-target}/debug/clr` instead of hardcoding `target/debug/clr`, to work in both environments.
 
+## Manual Testing Plan — Journal Attribution & Interactive Duration (Tasks 541/542, BUG-539)
+
+Fully sandboxed — no real `claude`, no live journal, no live credential store. Uses
+a fake shim so every scenario is reproducible on any machine.
+
+### Prerequisites
+
+```sh
+SB=$(mktemp -d)                        # sandbox root
+mkdir -p "$SB"/{bin,home,wd1,wd2,journal}
+printf '#!/bin/sh\necho "fake claude ok"\nexit 0\n' > "$SB/bin/claude"
+chmod 755 "$SB/bin/claude"
+E="env PATH=$SB/bin:$PATH HOME=$SB/home USER=mtuser HOSTNAME=mthost"
+CLR=${CARGO_TARGET_DIR:-target}/debug/clr
+```
+
+Identity is pinned via `USER`/`HOSTNAME` so journal assertions are deterministic;
+`HOME` is isolated so a host `~/.clr/config.toml` cannot inject settings.
+
+### MT-1a: Print-Mode Execution Event Carries Full Attribution (Tasks 541/542)
+
+```sh
+( cd "$SB/wd1" && $E "$CLR" --max-sessions 0 --journal full --journal-dir "$SB/journal" -p hello </dev/null )
+tail -1 "$SB/journal/"*.jsonl | jq '{type, user, host, dir, agent_id, account}'
+```
+
+**Expected:** Exit 0. The `execution` event has top-level keys (flat, not nested):
+`user:"mtuser"`, `host:"mthost"`, `dir` = the invocation cwd (`$SB/wd1`), and
+`agent_id:"mtuser@mthost<abs-dir>/"` (`{user}@{host}{abs_dir}/` — trailing slash).
+`account` is absent/null when neither `CLR_ACCOUNT` nor an active-account marker
+exists. `duration_ms` is absent on execution events by design — it is stamped only
+on `interactive` events (AC-012). Verified 2026-08-20.
+
+### MT-1b: `CLR_ACCOUNT` Env Override Stamps `account`
+
+```sh
+( cd "$SB/wd1" && $E CLR_ACCOUNT=manual.acct "$CLR" --max-sessions 0 --journal full --journal-dir "$SB/journal" -p hi2 </dev/null )
+tail -1 "$SB/journal/"*.jsonl | jq '.account'
+```
+
+**Expected:** Exit 0; newest event has `account:"manual.acct"`. Resolution order
+(task 542): non-empty `CLR_ACCOUNT` → active-account marker in the default
+credential store → absent. Run each invocation singly with `</dev/null` — chaining
+a print run and an interactive run in one compound command can deadlock on shared
+stdin. Verified 2026-08-20.
+
+### MT-1c: Interactive Event Carries `duration_ms` (BUG-539)
+
+```sh
+( cd "$SB/wd1" && $E "$CLR" --interactive --max-sessions 0 --journal full --journal-dir "$SB/journal" x </dev/null )
+tail -1 "$SB/journal/"*.jsonl | jq '{type, duration_ms, exit_code, agent_id}'
+```
+
+**Expected:** Exit 0. The `interactive` event has a numeric `duration_ms` (≥ 0 —
+with the instant fake shim, typically 0–5), plus the same user/host/dir/agent_id
+attribution as execution events. Verified 2026-08-20 (`duration_ms: 1`).
+
+### MT-2: Viewer Groups by Dir and Agent (`clj .stats by::dir|by::agent`, Task 543)
+
+```sh
+( cd "$SB/wd2" && $E "$CLR" --max-sessions 0 --journal full --journal-dir "$SB/journal" -p hi3 </dev/null )
+CLJ=${CARGO_TARGET_DIR:-target}/debug/clj
+NO_COLOR=1 "$CLJ" .stats by::dir   dir::"$SB/journal"
+NO_COLOR=1 "$CLJ" .stats by::agent dir::"$SB/journal"
+```
+
+**Expected:** Exit 0 twice. `by::dir` prints one row per distinct `dir` (here:
+`wd1` with the earlier events, `wd2` with 1) with COUNT/COST columns; `by::agent`
+prints the same events grouped by the full composed agent id
+(`mtuser@mthost<dir>/`). Totals equal the journal's event count. Verified 2026-08-20.
+

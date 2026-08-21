@@ -70,6 +70,8 @@ enabled = [
   "dep:cli_fmt",
   "cli_fmt/cli_help_template",
   "dep:claude_journal",
+  "dep:claude_profile_core",
+  "claude_profile_core/enabled",
   "dep:serde_json",
   "dep:serde",
   "dep:toml",
@@ -84,6 +86,7 @@ unilang             = { workspace = true, optional = true }
 data_fmt            = { workspace = true, optional = true }
 cli_fmt             = { workspace = true, optional = true }
 claude_journal      = { workspace = true, optional = true }
+claude_profile_core = { workspace = true, optional = true }
 serde_json          = { workspace = true, optional = true }
 serde               = { workspace = true, optional = true, features = [ "std", "derive" ] }
 toml                = { workspace = true, optional = true }

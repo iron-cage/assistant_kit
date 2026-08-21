@@ -21,6 +21,12 @@ pub use super::test_support::*;
 // ── Approx ────────────────────────────────────────────────────────────────
 pub use super::approx::approximate_utilization;
 
+// ── Forecast (task 544) ───────────────────────────────────────────────────
+pub use super::forecast::{
+  h5_in_window_samples, time_to_exhaustion, burn_warnings, BurnEstimate,
+  DEFAULT_ALERT_WITHIN_MIN, WINDOW_IDENTITY_TOLERANCE_S,
+};
+
 // ── Sort ──────────────────────────────────────────────────────────────────
 pub use super::sort::{ sort_indices, status_group_of, StatusGroup };
 

@@ -243,6 +243,14 @@ pub fn parse_usage_params( cmd : &VerifiedCommand ) -> Result< UsageParams, Erro
       "stalest:: and only_active::1 are mutually exclusive".to_string(),
     ) );
   }
+  // ── Burn-rate alert horizon (task 544) ──────────────────────────────────────
+  // Minutes; 0 disables the forecast footer entirely; default 15.
+  let alert = match cmd.arguments.get( "alert" )
+  {
+    None                        => super::forecast::DEFAULT_ALERT_WITHIN_MIN,
+    Some( Value::Integer( n ) ) => u64::try_from( *n ).map_err( |_| ErrorData::new( ErrorCode::ArgumentTypeMismatch, "alert:: must be a non-negative integer (minutes)".to_string() ) )?,
+    _ => return Err( ErrorData::new( ErrorCode::ArgumentTypeMismatch, "alert:: must be a non-negative integer (minutes)".to_string() ) ),
+  };
   // ── Format / extraction (TSK-224) ───────────────────────────────────────────
   let format = match cmd.arguments.get( "format" )
   {
@@ -298,7 +306,7 @@ pub fn parse_usage_params( cmd : &VerifiedCommand ) -> Result< UsageParams, Erro
     refresh, live, interval, jitter, trace, sort, desc : desc_param, prefer, cols, touch, imodel, effort,
     count, offset, only_active, only_next, min_5h : h5_min, min_7d : d7_min, only_valid, exclude_exhausted,
     format, get, no_color, set_model,
-    rotate, force, who, solo, stalest, max_age,
+    rotate, force, who, solo, stalest, max_age, alert,
   } )
 }
 

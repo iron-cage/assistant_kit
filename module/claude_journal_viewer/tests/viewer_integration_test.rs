@@ -1,4 +1,4 @@
-//! Integration tests for the `clj` binary — EC-1 through EC-20.
+//! Integration tests for the `clj` binary — EC-1 through EC-24.
 //!
 //! Each test writes fixture events via `JournalWriter`, runs the `clj` binary
 //! against the temporary journal directory, and asserts on stdout/stderr/exit.
@@ -618,5 +618,102 @@ fn ec20_prune_filename_date_semantics()
   assert!(
     dir.path().join( claude_journal::rotation::today_filename() ).exists(),
     "today's journal file must survive even keep::0s"
+  );
+}
+
+// ── Fixture for grouping tests (task 543) ────────────────────────────────────
+
+/// Write events with uneven `dir`/`agent_id` distributions plus one field-less
+/// event: 3× alpha, 2× beta, 1× neither — so ranked output order is testable.
+fn write_grouping_fixture( dir : &Path )
+{
+  let writer = JournalWriter::new( dir.to_path_buf() );
+  let stamp = | d : &str |
+  {
+    let mut ev = EventRecord::new( EventType::Execution );
+    ev.fields.command  = Some( "run".to_owned() );
+    ev.fields.exit_code = Some( 0 );
+    ev.fields.dir      = Some( format!( "/tmp/{d}" ) );
+    ev.fields.agent_id = Some( format!( "tester@testhost/tmp/{d}/" ) );
+    ev
+  };
+  for _ in 0..3 { writer.append( &stamp( "alpha" ) ).expect( "append alpha" ); }
+  for _ in 0..2 { writer.append( &stamp( "beta" ) ).expect( "append beta" ); }
+  let bare = EventRecord::new( EventType::Execution );
+  writer.append( &bare ).expect( "append bare" );
+}
+
+// ── EC-21 : .stats by::dir ranks rows by descending count ────────────────────
+
+#[ test ]
+fn ec21_stats_by_dir_ranked_rows()
+{
+  let dir = tempfile::TempDir::new().unwrap();
+  write_grouping_fixture( dir.path() );
+
+  let out = run_clj( &[ ".stats", "by::dir", "since::9999d" ], dir.path() );
+  assert!( out.status.success(), "exit non-zero: {}", stderr_str( &out ) );
+
+  let stdout = stdout_str( &out );
+  assert!( stdout.contains( "DIR" ), "missing DIR header: {stdout}" );
+  let alpha = stdout.find( "/tmp/alpha" ).expect( "alpha row missing" );
+  let beta  = stdout.find( "/tmp/beta" ).expect( "beta row missing" );
+  let none  = stdout.find( "(no dir)" ).expect( "(no dir) row missing" );
+  assert!( alpha < beta && beta < none, "rows not in descending count order: {stdout}" );
+  assert!( stdout.contains( "Total: 6 event(s)" ), "wrong total: {stdout}" );
+}
+
+// ── EC-22 : .stats by::agent ranks rows by descending count ──────────────────
+
+#[ test ]
+fn ec22_stats_by_agent_ranked_rows()
+{
+  let dir = tempfile::TempDir::new().unwrap();
+  write_grouping_fixture( dir.path() );
+
+  let out = run_clj( &[ ".stats", "by::agent", "since::9999d" ], dir.path() );
+  assert!( out.status.success(), "exit non-zero: {}", stderr_str( &out ) );
+
+  let stdout = stdout_str( &out );
+  assert!( stdout.contains( "AGENT" ), "missing AGENT header: {stdout}" );
+  let alpha = stdout.find( "tester@testhost/tmp/alpha/" ).expect( "alpha agent row missing" );
+  let beta  = stdout.find( "tester@testhost/tmp/beta/" ).expect( "beta agent row missing" );
+  let none  = stdout.find( "(no agent)" ).expect( "(no agent) row missing" );
+  assert!( alpha < beta && beta < none, "rows not in descending count order: {stdout}" );
+}
+
+// ── EC-23 : field-less events aggregate under visible buckets with counts ────
+
+#[ test ]
+fn ec23_stats_missing_field_buckets_carry_counts()
+{
+  let dir = tempfile::TempDir::new().unwrap();
+  write_grouping_fixture( dir.path() );
+
+  let by_dir = stdout_str( &run_clj( &[ ".stats", "by::dir", "since::9999d" ], dir.path() ) );
+  let bucket_line = by_dir.lines()
+    .find( | l | l.contains( "(no dir)" ) )
+    .expect( "(no dir) bucket missing" );
+  assert!( bucket_line.contains( '1' ), "(no dir) bucket lacks count 1: {bucket_line}" );
+
+  let by_agent = stdout_str( &run_clj( &[ ".stats", "by::agent", "since::9999d" ], dir.path() ) );
+  let bucket_line = by_agent.lines()
+    .find( | l | l.contains( "(no agent)" ) )
+    .expect( "(no agent) bucket missing" );
+  assert!( bucket_line.contains( '1' ), "(no agent) bucket lacks count 1: {bucket_line}" );
+}
+
+// ── EC-24 : .stats by::bogus error lists dir and agent as valid values ───────
+
+#[ test ]
+fn ec24_stats_by_bogus_lists_valid_values()
+{
+  let dir = tempfile::TempDir::new().unwrap();
+  let out = run_clj( &[ ".stats", "by::bogus" ], dir.path() );
+  assert!( !out.status.success(), "expected non-zero exit" );
+  let stderr = stderr_str( &out );
+  assert!(
+    stderr.contains( "valid: day, model, dir, agent" ),
+    "error must list all valid by values: {stderr}"
   );
 }

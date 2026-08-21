@@ -241,6 +241,7 @@ Next (renew)     · alice@example.com   · sonnet/high · in 3h 47m $ren
 | [033_quota_cache.md](033_quota_cache.md) | Quota cache fallback — persist last-known quota in `{name}.json`; display cached values with `~` prefix when live fetch fails |
 | [036_account_ownership.md](036_account_ownership.md) | G1 gate: non-owned accounts bypass token read and HTTP; use cache as primary source; `is_owned` JSON field |
 | [066_dual_source_quota_parsing.md](066_dual_source_quota_parsing.md) | Dual-source parsing — restores `7d(Son)` column when Anthropic re-enables per-model `limits` array entries (Feature 066) |
+| [077_burn_rate_alert.md](077_burn_rate_alert.md) | `⚠ 5h burn` footer warning lines appended to text/plain output when exhaustion is forecast within `alert::` minutes |
 
 ### Invariants
 

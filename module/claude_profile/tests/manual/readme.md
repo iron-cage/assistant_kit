@@ -234,3 +234,84 @@ Note: `.account.save` stamps `current_identity()` as owner on every interactive 
 All scenarios succeed with correct exit codes. Ownership enforcement prevents
 cross-machine credential mutation while allowing cache reads. Unclaim correctly
 disables all enforcement.
+
+## Manual Testing Plan — Burn-Rate Alert & Telemetry Attribution (Tasks 544/547, BUG-540)
+
+Fully sandboxed — no live store, no external HTTP. `PRO` points the default
+credential store at a temp fixture; `CLAUDE_QUOTA_BASE_URL=http://127.0.0.1:9`
+makes every quota fetch fail instantly (connection refused), forcing the
+cache-fallback path.
+
+### Prerequisites
+
+```sh
+SB=$(mktemp -d)
+mkdir -p "$SB"/{home,wd1,journal2} "$SB/pro/.persistent/claude/credential/cache/mthost_mtuser"
+CS=$SB/pro/.persistent/claude/credential
+printf '{"claudeAiOauth":{"accessToken":"mt-fake-token"}}\n' > "$CS/manual.acct.credentials.json"
+printf 'manual.acct\n' > "$CS/_active_mthost_mtuser"
+NOW=$(date -u +%s); iso() { date -u -d "@$1" +%Y-%m-%dT%H:%M:%SZ; }
+RESET=$((NOW+3600))
+cat > "$CS/cache/mthost_mtuser/manual.acct.json" <<EOF
+{
+  "fetched_at": "$(iso $((NOW-300)))",
+  "five_hour": {"utilization": 70.0, "resets_at": "$(iso $RESET)"},
+  "seven_day": {"utilization": 20.0, "resets_at": "$(iso $((NOW+500000)))"},
+  "history": [
+    {"t": $((NOW-900)), "h5": [40.0, "$(iso $RESET)"]},
+    {"t": $((NOW-600)), "h5": [55.0, "$(iso $RESET)"]},
+    {"t": $((NOW-300)), "h5": [70.0, "$(iso $RESET)"]}
+  ]
+}
+EOF
+E="env HOME=$SB/home USER=mtuser HOSTNAME=mthost PRO=$SB/pro CLAUDE_QUOTA_BASE_URL=http://127.0.0.1:9"
+CLP=${CARGO_TARGET_DIR:-target}/debug/clp
+```
+
+The ring encodes a linear burn: 40→55→70% over 10 minutes (3.0 %/min,
+last-two-sample slope), all samples sharing the current window's `resets_at`.
+
+### IT-14: `.usage` Text Format Renders the Burn Footer (Task 544)
+
+```sh
+( cd "$SB/wd1" && $E "$CLP" .usage alert::99999 format::text </dev/null )
+```
+
+Expected: exit 0. Below the table, a footer line
+`⚠ 5h burn · manual.acct · ~4m to exhaustion (≈3.0%/min)` (minutes vary with
+run timing; rate ≈3.0). The account row itself shows the refresh-failure state
+(`token refresh failed` — the fake token cannot refresh) — the footer is
+computed from the cache ring regardless. Verified 2026-08-20.
+
+### IT-15: `alert::0` Disables the Footer
+
+```sh
+( cd "$SB/wd1" && $E "$CLP" .usage alert::0 format::text </dev/null )
+```
+
+Expected: exit 0, table renders, NO `⚠ 5h burn` line anywhere. Verified 2026-08-20.
+
+### IT-16: `format::json` Stays Byte-Clean and Records Cache Fallback (BUG-540)
+
+```sh
+( cd "$SB/wd1" && $E "$CLP" .usage alert::99999 format::json </dev/null ) | jq -r 'type, .[0].cached, .[0].cache_age_secs'
+```
+
+Expected: `array`, `true`, and a plausible age in seconds — valid JSON with no
+footer contamination. The fixture's `"utilization"` cache key is BUG-540's fixed
+writer key; renaming both period keys to legacy `"left_pct"` and re-running must
+produce identical results (dual-key reader compatibility). Verified 2026-08-20
+both ways.
+
+### IT-17: `clp` Telemetry Command Event Carries Full Attribution (Task 547)
+
+```sh
+( cd "$SB/wd1" && $E CLR_JOURNAL=full CLR_JOURNAL_DIR="$SB/journal2" "$CLP" .usage alert::0 format::text </dev/null )
+head -1 "$SB/journal2/"*.jsonl | jq '{type, args, user, host, account, dir, agent_id, duration_ms, exit_code}'
+```
+
+Expected: a `command` event with `args` = the full invocation tokens,
+`user:"mtuser"`, `host:"mthost"`, `dir` = invocation cwd,
+`agent_id:"mtuser@mthost<abs-dir>/"`, numeric `duration_ms`, `exit_code:0`, and
+`account:"manual.acct"` resolved from the `_active_mthost_mtuser` marker (no
+`CLR_ACCOUNT` env set). Verified 2026-08-20.

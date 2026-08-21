@@ -210,12 +210,17 @@ pub fn list_output< S : ::core::hash::BuildHasher >( params : &HashMap< String, 
   }
 }
 
-/// `.stats` — return a stats table aggregated by `by` (day or model).
+/// `.stats` — return a stats table aggregated by `by` (day, model, dir, or agent).
+///
+/// `day`/`model` rows are ordered by key (chronological / alphabetical);
+/// `dir`/`agent` rows are ranked by descending event count — "top agents by
+/// activity" (task 543). Events without the grouping field aggregate under a
+/// visible `(no dir)` / `(no agent)` row, never silently dropped.
 ///
 /// # Errors
 ///
-/// Returns `Err` when any filter param is invalid or `by` is not `"day"` or
-/// `"model"`.
+/// Returns `Err` when any filter param is invalid or `by` is not one of
+/// `"day"`, `"model"`, `"dir"`, `"agent"`.
 #[ inline ]
 pub fn stats_output< S : ::core::hash::BuildHasher >( params : &HashMap< String, String, S >, dir : PathBuf ) -> Result< String, String >
 {
@@ -229,7 +234,12 @@ pub fn stats_output< S : ::core::hash::BuildHasher >( params : &HashMap< String,
   {
     "day"   =>
     {
-      out.push_str( &stats_table( &events, | ev | ev.ts.get( ..10 ).unwrap_or( "unknown" ).to_owned(), "DATE" ) );
+      out.push_str( &stats_table(
+        &events,
+        | ev | ev.ts.get( ..10 ).unwrap_or( "unknown" ).to_owned(),
+        "DATE",
+        StatsOrder::KeyAscending,
+      ) );
     }
     "model" =>
     {
@@ -237,17 +247,46 @@ pub fn stats_output< S : ::core::hash::BuildHasher >( params : &HashMap< String,
         &events,
         | ev | ev.fields.model.clone().unwrap_or_else( || "unknown".to_owned() ),
         "MODEL",
+        StatsOrder::KeyAscending,
       ) );
     }
-    other => return Err( format!( "invalid by '{other}' (valid: day, model)" ) ),
+    "dir" =>
+    {
+      out.push_str( &stats_table(
+        &events,
+        | ev | ev.fields.dir.clone().unwrap_or_else( || "(no dir)".to_owned() ),
+        "DIR",
+        StatsOrder::CountDescending,
+      ) );
+    }
+    "agent" =>
+    {
+      out.push_str( &stats_table(
+        &events,
+        | ev | ev.fields.agent_id.clone().unwrap_or_else( || "(no agent)".to_owned() ),
+        "AGENT",
+        StatsOrder::CountDescending,
+      ) );
+    }
+    other => return Err( format!( "invalid by '{other}' (valid: day, model, dir, agent)" ) ),
   }
   out.push( '\n' );
   let _ = write!( out, "\nTotal: {} event(s)", events.len() );
   Ok( out )
 }
 
+/// Row ordering for `stats_table`.
+#[ derive( Clone, Copy ) ]
+enum StatsOrder
+{
+  /// Ascending by group key — chronological for dates, alphabetical for models.
+  KeyAscending,
+  /// Descending by event count, ties broken by key — ranking groupings (`dir`, `agent`).
+  CountDescending,
+}
+
 /// Build a stats table string grouped by the key returned by `key_fn`.
-fn stats_table< F >( events : &[ EventRecord ], key_fn : F, col_label : &str ) -> String
+fn stats_table< F >( events : &[ EventRecord ], key_fn : F, col_label : &str, order : StatsOrder ) -> String
 where
   F : Fn( &EventRecord ) -> String,
 {
@@ -262,7 +301,11 @@ where
   out.push_str( &bold( &format!( "{col_label:<24}  COUNT     COST" ) ) );
   out.push( '\n' );
   let mut rows : Vec< _ > = buckets.into_iter().collect();
-  rows.sort_by( | a, b | a.0.cmp( &b.0 ) );
+  match order
+  {
+    StatsOrder::KeyAscending    => rows.sort_by( | a, b | a.0.cmp( &b.0 ) ),
+    StatsOrder::CountDescending => rows.sort_by( | a, b | b.1.1.cmp( &a.1.1 ).then_with( || a.0.cmp( &b.0 ) ) ),
+  }
   for ( key, ( cost, count ) ) in &rows
   {
     let _ = writeln!( out, "{key:<24}  {count:<8}  ${cost:.4}" );

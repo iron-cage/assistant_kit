@@ -12,10 +12,11 @@
 | 6 | `.prune` | 2 | Delete journal files older than an age window | `clj .prune keep::30d` |
 | 7 | `.status` | 2 | Show journal health, size, configuration | `clj .status` |
 | 8 | `.export` | 6 | Export filtered events to file | `clj .export format::csv since::7d` |
+| 9 | `.chart` | 3 | Render a usage SVG chart, optionally opened in browser | `clj .chart out::usage.svg open::1` |
 
 ### Quick Reference
 
-- **Total commands:** 8
+- **Total commands:** 9
 - **Total unique parameters:** 28
 - **Parameters without defaults:** 13 (since, until, type, command, exit, model, dir, creds, pattern, keep, columns, output, by)
 - **Most-used parameter:** `journal_dir` (8 commands), `since` (4 commands)

@@ -92,7 +92,13 @@ pub struct EventFields
   pub user : Option< String >,
   pub host : Option< String >,
   pub args : Option< Vec< String > >,
+  pub account : Option< String >,
+  pub agent_id : Option< String >,
 }
+
+/// Compose the canonical agent identity string: `{user}@{host}{abs_dir}/`.
+/// Single format owner — emitters call this instead of concatenating by hand.
+pub fn compose_agent_id( user : &str, host : &str, dir : &str ) -> String;
 ```
 
 ## Behavioral Contract
@@ -102,6 +108,8 @@ pub struct EventFields
 - `EventFields::default()` returns all fields as `None`
 - `EventRecord` serializes to a single JSON line (no embedded newlines in string fields — newlines in stdout/stderr are JSON-escaped as `\n`)
 - The `retry_class_counts` array indices map to `[Transient, Account, Auth, Service, Process, Unknown]` matching `ErrorClass` variant order in `claude_runner`
+- `compose_agent_id()` always yields exactly one trailing slash: a `dir` already ending in `/` (or several) is normalized, never double-slashed
+- `account` and `agent_id` are attribution fields valid on any event type; `account` carries a non-secret identifier only (email or profile name), never a token
 
 ## Sources
 

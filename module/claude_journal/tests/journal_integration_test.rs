@@ -1,4 +1,4 @@
-//! Integration tests for `claude_journal` — IT-1 through IT-14.
+//! Integration tests for `claude_journal` — IT-1 through IT-23.
 //!
 //! Tests cover:
 //! - IT-1: `JournalWriter::append()` creates the daily JSONL file on first call
@@ -19,8 +19,14 @@
 //! - IT-16: `tail()` defers a torn (partially-written) line and delivers it once completed
 //! - IT-17: Unparseable `ts` excluded under `since`/`until`, included when unbounded
 //! - IT-18: `since: Duration::MAX` degrades to unbounded instead of panicking
+//! - IT-19: `account`/`agent_id` serialize with correct values when `Some`
+//! - IT-20: `account`/`agent_id` are omitted from JSON when `None`
+//! - IT-21: Legacy JSONL line without `account`/`agent_id` still deserializes
+//! - IT-22: `compose_agent_id()` produces the exact `{user}@{host}{abs_dir}/` format
+//! - IT-23: `compose_agent_id()` never double-slashes an already-slashed dir
 
 use claude_journal::{
+  compose_agent_id,
   EventFields, EventRecord, EventType,
   JournalFilter, JournalReader, JournalWriter,
 };
@@ -629,4 +635,89 @@ fn it18_huge_since_duration_does_not_panic()
   };
   let events = reader.query( &filter );
   assert_eq!( events.len(), 1, "a since window larger than all of time must include every event" );
+}
+
+// ── IT-19: account/agent_id serialize when present ────────────────────────────
+
+/// IT-19: `account` and `agent_id` serialize with their correct values when `Some`.
+///
+/// **Root Cause Coverage:** TSK-541 — attribution field serialization.
+#[ test ]
+fn it19_attribution_fields_serialize_when_present()
+{
+  let fields = EventFields
+  {
+    account  : Some( "mykola.nn@wbox.pro".to_owned() ),
+    agent_id : Some( "user1@w003/a/b/".to_owned() ),
+    ..EventFields::default()
+  };
+  let json = serde_json::to_value( &fields ).expect( "serialize" );
+
+  assert_eq!( json[ "account" ], "mykola.nn@wbox.pro", "account key must be present with correct value" );
+  assert_eq!( json[ "agent_id" ], "user1@w003/a/b/", "agent_id key must be present with correct value" );
+}
+
+// ── IT-20: account/agent_id omitted when None ─────────────────────────────────
+
+/// IT-20: `account` and `agent_id` are omitted entirely (not serialized as
+/// `null`) from JSON output when `None`, matching every other `Option` field.
+///
+/// **Root Cause Coverage:** TSK-541 — omit-when-None serialization.
+#[ test ]
+fn it20_attribution_fields_omitted_when_none()
+{
+  let fields = EventFields::default();
+  let json = serde_json::to_value( &fields ).expect( "serialize" );
+
+  assert!( json.get( "account" ).is_none(), "account key must be omitted when None" );
+  assert!( json.get( "agent_id" ).is_none(), "agent_id key must be omitted when None" );
+}
+
+// ── IT-21: legacy line without attribution fields still parses ────────────────
+
+/// IT-21: A pre-TSK-541 JSONL line (no `account`/`agent_id` keys) deserializes
+/// into an `EventRecord` with both fields `None` — additive schema change,
+/// backward compatible with every existing journal file.
+///
+/// **Root Cause Coverage:** TSK-541 — legacy-line backward compatibility.
+#[ test ]
+fn it21_legacy_line_without_attribution_fields_parses()
+{
+  let line = r#"{"v":1,"ts":"2026-08-19T12:00:00.000Z","type":"execution","exit_code":0}"#;
+  let ev : EventRecord = serde_json::from_str( line ).expect( "legacy line must parse" );
+
+  assert_eq!( ev.fields.account, None, "account must be None on a legacy line" );
+  assert_eq!( ev.fields.agent_id, None, "agent_id must be None on a legacy line" );
+  assert_eq!( ev.fields.exit_code, Some( 0 ), "legacy fields must survive unchanged" );
+}
+
+// ── IT-22: compose_agent_id exact format ──────────────────────────────────────
+
+/// IT-22: `compose_agent_id()` produces exactly `{user}@{host}{abs_dir}/` —
+/// no separator between host and dir, exactly one trailing slash.
+///
+/// **Root Cause Coverage:** TSK-541 — single format owner for agent identity.
+#[ test ]
+fn it22_compose_agent_id_exact_format()
+{
+  assert_eq!( compose_agent_id( "user1", "w003", "/a/b" ), "user1@w003/a/b/" );
+  assert_eq!
+  (
+    compose_agent_id( "user1", "w003", "/home/user1/pro/lib/yrd_core/assistant_kit/claude_runner/module/claude_runner" ),
+    "user1@w003/home/user1/pro/lib/yrd_core/assistant_kit/claude_runner/module/claude_runner/",
+    "format must match the canonical AGENT_ID shape"
+  );
+}
+
+// ── IT-23: compose_agent_id never double-slashes ──────────────────────────────
+
+/// IT-23: A `dir` already carrying a trailing slash (or several) yields the
+/// same result as its unslashed form — exactly one trailing slash, always.
+///
+/// **Root Cause Coverage:** TSK-541 — trailing-slash normalization.
+#[ test ]
+fn it23_compose_agent_id_never_double_slashes()
+{
+  assert_eq!( compose_agent_id( "user1", "w003", "/a/b/" ), "user1@w003/a/b/" );
+  assert_eq!( compose_agent_id( "user1", "w003", "/a/b//" ), "user1@w003/a/b/" );
 }

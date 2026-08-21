@@ -335,10 +335,17 @@ pub fn write_cache_string_if_changed(
 }
 
 /// Build a period cache JSON value from utilization + optional `resets_at`.
+// Fix(BUG-540, task/claude_profile_core registry):
+// Root cause: the utilization value was serialized under the key `left_pct` —
+//   the stored name asserted percent-REMAINING while the value is percent-CONSUMED,
+//   inverting the meaning for every raw-JSON consumer (a 100%-burned quota read as
+//   "100 left"). The symmetric reader made the inversion invisible from inside clp.
+// Pitfall: never invert the stored VALUE to match the old name — history rings and
+//   cross-host caches already hold utilization; the key rename preserves them.
 fn period_json( utilization : f64, resets_at : Option< &str > ) -> serde_json::Value
 {
   let mut m = serde_json::Map::new();
-  m.insert( "left_pct".into(), serde_json::Value::from( utilization ) );
+  m.insert( "utilization".into(), serde_json::Value::from( utilization ) );
   if let Some( r ) = resets_at
   {
     m.insert( "resets_at".into(), serde_json::Value::String( r.to_string() ) );
@@ -347,12 +354,16 @@ fn period_json( utilization : f64, resets_at : Option< &str > ) -> serde_json::V
 }
 
 /// Extract a period tuple from a cache object.
+///
+/// Reads `utilization` first; falls back to the pre-BUG-540 `left_pct` key so
+/// legacy cache files (own host or another host's subtree) stay readable —
+/// both names always held the same utilization value, only the old name lied.
 fn read_period( cache : &serde_json::Map< String, serde_json::Value >, key : &str ) -> Option< ( f64, Option< String > ) >
 {
   let p = cache.get( key )?.as_object()?;
-  let left_pct = p.get( "left_pct" )?.as_f64()?;
+  let utilization = p.get( "utilization" ).or_else( || p.get( "left_pct" ) )?.as_f64()?;
   let resets_at = p.get( "resets_at" ).and_then( |v| v.as_str() ).map( str::to_string );
-  Some( ( left_pct, resets_at ) )
+  Some( ( utilization, resets_at ) )
 }
 
 /// Parse an ISO-8601 UTC timestamp to seconds since epoch.

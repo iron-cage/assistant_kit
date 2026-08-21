@@ -13,12 +13,12 @@
 | `cli/command_noun/` | Domain noun documentation (account, token, credentials) | [cli/command_noun/readme.md](../cli/command_noun/readme.md) | 3 |
 | `cli/command_verb/` | Domain verb documentation (save, use, delete, limits, relogin, rotate, renewal, inspect, status) — 006 rotate DEPRECATED (Feature 038); 009 assign and 011 unclaim REMOVED | [cli/command_verb/readme.md](../cli/command_verb/readme.md) | 11 |
 | `cli/format/` | CLI output format specifications | [cli/format/readme.md](../cli/format/readme.md) | 3 |
-| `cli/param/` | CLI parameter specifications | [cli/param/readme.md](../cli/param/readme.md) | 87 |
+| `cli/param/` | CLI parameter specifications | [cli/param/readme.md](../cli/param/readme.md) | 88 |
 | `cli/param_group/` | CLI parameter group definitions | [cli/param_group/readme.md](../cli/param_group/readme.md) | 7 |
 | `cli/type/` | CLI type definitions | [cli/type/readme.md](../cli/type/readme.md) | 5 |
 | `cli/user_story/` | Canonical user stories mapping personas and goals to commands | [cli/user_story/readme.md](../cli/user_story/readme.md) | 5 |
 | `cli/workflow_scenario/` | **ELIMINATED** (`cli_doc.rulebook` v1.7) — all instances migrated to `cli/user_story/`; directory retained only as an archived migration map | [cli/workflow_scenario/readme.md](../cli/workflow_scenario/readme.md) | 0 |
-| `feature/` | Functional requirements for claude_profile capabilities | [readme.md](../feature/readme.md) | 53 |
+| `feature/` | Functional requirements for claude_profile capabilities | [readme.md](../feature/readme.md) | 54 |
 | `invariant/` | Measurable constraints and architectural guarantees | [invariant/readme.md](../invariant/readme.md) | 12 |
 | `pattern/` | Reusable design solutions applied at more than one call site | [pattern/readme.md](../pattern/readme.md) | 1 |
 | `pitfall/` | Systemic pitfall catalog — recurring design traps revealed by bug history | [pitfall/readme.md](../pitfall/readme.md) | 7 |
@@ -102,6 +102,7 @@
 | feature | 074 | CLI Invocation Telemetry | [feature/074_cli_invocation_telemetry.md](../feature/074_cli_invocation_telemetry.md) |
 | feature | 075 | Account Tags | [feature/075_account_tags.md](../feature/075_account_tags.md) |
 | feature | 076 | Identity Tag Filter | [feature/076_identity_tag_filter.md](../feature/076_identity_tag_filter.md) |
+| feature | 077 | Burn-Rate Alert (Time-to-Exhaustion) | [feature/077_burn_rate_alert.md](../feature/077_burn_rate_alert.md) |
 | cli | 001 | Config Parameters | [cli/001_config_param.md](../cli/001_config_param.md) |
 | cli | 002 | Dictionary | [cli/002_dictionary.md](../cli/002_dictionary.md) |
 | cli | 003 | Environment Parameters | [cli/003_env_param.md](../cli/003_env_param.md) |
@@ -204,6 +205,7 @@
 | param | 085 | `include::` (filter include side) | [cli/param/085_include.md](../cli/param/085_include.md) |
 | param | 086 | `exclude::` (filter exclude side) | [cli/param/086_exclude.md](../cli/param/086_exclude.md) |
 | param | 087 | `identity::` (filter seat targeting) | [cli/param/087_identity.md](../cli/param/087_identity.md) |
+| param | 088 | `alert::` (burn-rate alert horizon) | [cli/param/088_alert.md](../cli/param/088_alert.md) |
 | param_group | 001 | Output Control | [cli/param_group/001_output_control.md](../cli/param_group/001_output_control.md) |
 | param_group | 002 | Field Presence | [cli/param_group/002_field_presence.md](../cli/param_group/002_field_presence.md) |
 | param_group | 003 | Fetch Behavior | [cli/param_group/003_fetch_behavior.md](../cli/param_group/003_fetch_behavior.md) |

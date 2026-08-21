@@ -1,6 +1,6 @@
 //! Credential-store CRUD — listing, the store-wide mutation lock, `save()`, and `delete()`.
 
-use std::path::Path;
+use std::path::{ Path, PathBuf };
 use claude_core::ClaudePaths;
 use claude_core::file_io::{ atomic_write, atomic_write_secret };
 use super::types::{ Account, AccountBackend };
@@ -8,6 +8,35 @@ use super::validate::{ credential_stem, validate_name, validate_name_for_save };
 use super::ownership::{ active_marker_filename, all_marker_files, current_identity, read_active_marker };
 use super::json_field::{ parse_bool_field, parse_string_array_field, parse_string_field, parse_u64_field };
 use super::tags::{ TagOp, apply_tag_write, normalize_tag_set };
+
+/// Credential store location under a storage root: `{root}/.persistent/claude/credential/`.
+///
+/// Single owner of the store-suffix convention — `claude_profile`'s
+/// `PersistPaths::credential_store()` and external consumers (e.g. `clr`'s
+/// journal attribution) all derive the path here.
+#[ inline ]
+#[ must_use ]
+pub fn credential_store_for_root( root : &Path ) -> PathBuf
+{
+  root.join( ".persistent" ).join( "claude" ).join( "credential" )
+}
+
+/// Default credential store for this machine: `$PRO` (when set and an existing
+/// directory) else `$HOME`/`$USERPROFILE`, suffixed per [`credential_store_for_root`].
+///
+/// Mirrors `claude_profile`'s `PersistPaths` root resolution. Returns `None`
+/// when no root environment variable resolves. Pure env + path computation —
+/// no I/O beyond the `$PRO` directory check, no network.
+#[ inline ]
+#[ must_use ]
+pub fn default_credential_store() -> Option< PathBuf >
+{
+  let root = std::env::var_os( "PRO" )
+    .map( PathBuf::from )
+    .filter( | p | p.is_dir() )
+    .or_else( || std::env::var_os( "HOME" ).or_else( || std::env::var_os( "USERPROFILE" ) ).map( PathBuf::from ) )?;
+  Some( credential_store_for_root( &root ) )
+}
 
 /// List all accounts in `credential_store`.
 ///

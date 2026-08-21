@@ -58,7 +58,7 @@ pub fn list_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
     .map_err( | e | err( format!( "Error: {e}" ) ) )
 }
 
-/// `.journal.stats` — aggregate statistics by day or model.
+/// `.journal.stats` — aggregate statistics by day, model, dir, or agent.
 ///
 /// # Errors
 ///

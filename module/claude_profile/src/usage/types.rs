@@ -373,6 +373,10 @@ pub struct UsageParams
   /// With `stalest`, only accounts whose cache age exceeds SECS are fetch-eligible;
   /// 0 = no eligibility threshold. Rejected at parse time without `stalest`.
   pub max_age   : u64,
+  // ── Burn-rate alert (task 544) ────────────────────────────────────────────
+  /// Alert horizon in minutes: warn when a 5h window is forecast to exhaust
+  /// within this many minutes (default 15); 0 disables the forecast footer.
+  pub alert     : u64,
 }
 
 // ── Output format ─────────────────────────────────────────────────────────────
