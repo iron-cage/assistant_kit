@@ -18,6 +18,8 @@
 //! | OV-8  | Empty storage renders the summary line alone, no header row       |
 //! | OV-9  | `detail::sessions` still renders the full listing unchanged       |
 //! | OV-10 | Full project paths are printed, never factored to a shared prefix |
+//! | OV-11 | The tree layout marks an absent decoded path `⚠ gone` too         |
+//! | OV-12 | A single-child directory run collapses into one tree node         |
 
 mod common;
 
@@ -453,4 +455,103 @@ fn ov_10_flat_layout_prints_full_paths()
   );
   assert!( s.contains( "ov10-shared/alpha" ), "alpha row must show its full path; got:\n{s}" );
   assert!( s.contains( "ov10-shared/beta" ), "beta row must show its full path; got:\n{s}" );
+}
+
+// ─── OV-11 ────────────────────────────────────────────────────────────────────
+
+/// OV-11: The tree layout marks an absent decoded path `⚠ gone` too.
+///
+/// ## Purpose
+/// `render_tree` computes the marker independently of `render_flat` — it resolves
+/// each node back to its row rather than iterating rows directly. OV-5 pins the
+/// flat path only, so the tree branch could regress without failing any test.
+/// The guess-versus-fact distinction matters identically in both layouts.
+///
+/// ## Coverage
+/// Two siblings under one parent, one of them never created on disk: the tree
+/// draws connectors, marks only the absent sibling, and leaves the live one clean.
+///
+/// The fixture root is built with an explicit dot-free prefix rather than
+/// `TempDir::new()`. `encode_path` collapses `.` to `-` exactly as it does `/`,
+/// so under the default `.tmpXXXX` root the absent sibling has no directory left
+/// on disk to disambiguate against and decodes to a mangled flat name — which
+/// then sorts nowhere near its live sibling and the tree never branches. That is
+/// real decoder behavior, not a rendering defect, so the fixture avoids the
+/// ambiguity instead of asserting around it.
+#[ test ]
+fn ov_11_tree_layout_marks_absent_decoded_path_gone()
+{
+  let root = tempfile::Builder::new().prefix( "ov11" ).tempdir().unwrap();
+  let storage_root = root.path().join( ".claude" );
+  let parent = root.path().join( "ov11-parent" );
+  let live = parent.join( "live" );
+  // Deliberately NOT created on disk — the sibling that must carry the marker.
+  let vanished = parent.join( "vanished" );
+  std::fs::create_dir_all( &live ).unwrap();
+  common::write_path_project_session( &storage_root, &live, "session-ov11-a", 2 );
+  common::write_path_project_session( &storage_root, &vanished, "session-ov11-b", 2 );
+
+  let out = common::clg_cmd()
+    .env( "HOME", root.path() )
+    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+    .arg( ".projects" )
+    .arg( "scope::global" )
+    .arg( "show_tree::1" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  assert!(
+    s.contains( '├' ) || s.contains( '└' ),
+    "siblings must render as a tree, else this asserts nothing about render_tree; got:\n{s}"
+  );
+  let marked : Vec< &str > = s.lines().filter( | l | l.contains( "⚠ gone" ) ).collect();
+  assert_eq!( marked.len(), 1, "exactly the absent sibling must be marked; got:\n{s}" );
+  assert!( marked[ 0 ].contains( "vanished" ), "the marked row must be the absent one; got:\n{s}" );
+}
+
+// ─── OV-12 ────────────────────────────────────────────────────────────────────
+
+/// OV-12: A single-child directory run collapses into one tree node.
+///
+/// ## Purpose
+/// Without `collapse`, a project buried N directories deep draws N nested levels
+/// carrying no information — the tree becomes taller than the flat table it was
+/// meant to compress. OV-7 proves nesting happens at a branch point but never
+/// exercises a run with nothing to branch on.
+///
+/// ## Coverage
+/// One project under a three-deep single-child chain: the chain's segments appear
+/// on a single line, and no connector is drawn for the intermediate directories.
+#[ test ]
+fn ov_12_single_child_chain_collapses_to_one_node()
+{
+  let root = TempDir::new().unwrap();
+  let storage_root = root.path().join( ".claude" );
+  let deep = root.path().join( "ov12-a" ).join( "b" ).join( "c" ).join( "leaf" );
+  std::fs::create_dir_all( &deep ).unwrap();
+  common::write_path_project_session( &storage_root, &deep, "session-ov12", 2 );
+
+  let out = common::clg_cmd()
+    .env( "HOME", root.path() )
+    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+    .arg( ".projects" )
+    .arg( "scope::global" )
+    .arg( "show_tree::1" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  let chain : Vec< &str > = s.lines().filter( | l | l.contains( "ov12-a" ) ).collect();
+  assert_eq!( chain.len(), 1, "the whole single-child run must occupy one line; got:\n{s}" );
+  assert!(
+    chain[ 0 ].contains( "ov12-a/b/c/leaf" ),
+    "collapsed label must carry every segment of the run; got:\n{s}"
+  );
+  assert!(
+    !s.contains( '├' ) && !s.contains( '└' ),
+    "a collapsed chain has no branch point, so no connector may be drawn; got:\n{s}"
+  );
 }

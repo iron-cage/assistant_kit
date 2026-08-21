@@ -90,6 +90,8 @@ Integration tests for the `.projects` command. Tests verify summary mode output 
 | OV-8 | Empty storage renders the summary line alone, no header row | Terse Overview |
 | OV-9 | detail::sessions still renders the full listing unchanged | Terse Overview |
 | OV-10 | Full project paths are printed, never factored to a shared prefix | Terse Overview |
+| OV-11 | The tree layout marks an absent decoded path `⚠ gone` too | Terse Overview |
+| OV-12 | A single-child directory run collapses into one tree node | Terse Overview |
 
 ## Test Coverage Summary
 
@@ -118,7 +120,7 @@ Integration tests for the `.projects` command. Tests verify summary mode output 
 - Combined Narrowing (task-525): 1 test (INT-64)
 - `.list` Deprecation (task-525): 1 test (INT-66)
 - Case Insensitivity (task-525): 2 tests (INT-67, INT-68)
-- Terse Overview: 10 tests (OV-1 through OV-10) — `tests/projects_overview_test.rs`
+- Terse Overview: 12 tests (OV-1 through OV-12) — `tests/projects_overview_test.rs`
 
 ## Test Cases
 
@@ -1267,7 +1269,7 @@ CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects scope::global filter::ALPHA-
 
 ---
 
-## Terse Overview (OV-1 – OV-10)
+## Terse Overview (OV-1 – OV-12)
 
 Rendering cases for `detail::projects` — the default view since the terse overview
 became `.projects`' primary answer. Implemented in `tests/projects_overview_test.rs`
@@ -1431,3 +1433,36 @@ CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects scope::global
 - Rationale: a project path is the command's primary output and must stay usable in `cd`, `grep`, and `project::`. Prefix factoring is `show_tree::1`'s job, where nesting carries the shared segment without truncating any row
 - Exit code: 0
 - **Source:** [command/07_projects.md](../../../../docs/cli/command/07_projects.md); test: `ov_10_flat_layout_prints_full_paths`
+
+---
+
+### OV-11: The tree layout marks an absent decoded path `⚠ gone` too
+
+**Command:**
+```
+CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects scope::global show_tree::1
+```
+
+**Expected behavior:**
+- Fixture: two siblings under one parent (`parent/live`, `parent/vanished`), only `live` created on disk
+- Tree connectors are drawn; exactly one line carries `⚠ gone`, and it is the `vanished` row
+- Rationale: `render_tree` resolves each node back to its row rather than iterating rows, so it computes the marker on a code path OV-5 never reaches
+- The fixture root must be dot-free. `encode_path` collapses `.` to `-` exactly as it does `/`, so under a `.tmpXXXX` root the absent sibling has no directory left to disambiguate against, decodes to a mangled flat name, and never nests — real decoder behavior, avoided rather than asserted around
+- Exit code: 0
+- **Source:** [command/07_projects.md](../../../../docs/cli/command/07_projects.md); test: `ov_11_tree_layout_marks_absent_decoded_path_gone`
+
+---
+
+### OV-12: A single-child directory run collapses into one tree node
+
+**Command:**
+```
+CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects scope::global show_tree::1
+```
+
+**Expected behavior:**
+- Fixture: one project under a three-deep single-child chain (`a/b/c/leaf`)
+- The whole run occupies a single line labelled `a/b/c/leaf`; no connector is drawn, since a collapsed chain has no branch point
+- Rationale: without `collapse`, a deeply-nested project draws one level per directory carrying no information, making the tree taller than the flat table it compresses. OV-7 proves nesting at a branch point but never exercises a run with nothing to branch on
+- Exit code: 0
+- **Source:** [command/07_projects.md](../../../../docs/cli/command/07_projects.md); test: `ov_12_single_child_chain_collapses_to_one_node`

@@ -45,7 +45,7 @@ tests/
 ├── projects_output_format_test.rs         # .projects output format: path headers, agent collapse (IT-17..IT-22); list-mode redesign (IT-52..IT-53)
 ├── projects_scope_around_test.rs          # .projects scope::around bidirectional neighborhood semantics (IT-57..IT-59)
 ├── projects_zero_byte_count_bug.rs        # .projects zero-byte session exclusion from header count (issue-034, IT-54..IT-56)
-├── projects_overview_test.rs              # .projects terse overview rendering — flat table and tree (OV-1..OV-10)
+├── projects_overview_test.rs              # .projects terse overview rendering — flat table and tree (OV-1..OV-12)
 ├── smart_show_command.rs                  # .show smart parameter detection tests
 ├── status_path_test.rs                    # .status path parameter tests (Phase 1D)
 ├── truncate_utf8_bug.rs                   # Truncation safety on multibyte UTF-8 (issue-018)
@@ -91,7 +91,7 @@ tests/
 | `projects_output_format_test.rs` | Test .projects output format: path headers, agent collapse (IT-17..22); list-mode redesign (IT-52..53) |
 | `projects_scope_around_test.rs` | Test .projects scope::around bidirectional neighborhood semantics (IT-57..IT-59) |
 | `projects_zero_byte_count_bug.rs` | Test zero-byte session exclusion from .projects list-mode header count (issue-034) |
-| `projects_overview_test.rs` | Test .projects terse overview rendering — flat recency table and directory tree (OV-1..OV-10) |
+| `projects_overview_test.rs` | Test .projects terse overview rendering — flat recency table and directory tree (OV-1..OV-12) |
 | `smart_show_command.rs` | Test location-aware .show command |
 | `status_path_test.rs` | Test path parameter in .status command |
 | `truncate_utf8_bug.rs` | Test truncation safety on multibyte UTF-8 (issue-018) |
