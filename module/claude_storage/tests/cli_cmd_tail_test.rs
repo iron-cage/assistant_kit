@@ -33,6 +33,7 @@
 //! - INT-16: Empty text and thinking blocks render nothing, not a bare label
 //! - INT-17: Turns past 8 body lines fold; `full::1` unfolds them (also covers `42_full.md` EC-1)
 //! - INT-18: `compact::1` prints one line per turn (also covers `43_compact.md` EC-1)
+//! - INT-18b: `compact::1 full::1` — compact wins (also covers `42_full.md` and `43_compact.md` EC-2)
 //! - INT-19: Session header reports project, session id, and turn span
 //! - INT-20: Output ends with exactly one newline
 //! - INT-21: An unmodelled block type is marked, not dropped along with its record
@@ -641,24 +642,49 @@ fn assistant_entry( index : usize, message_id : &str, content_json : &str ) -> S
   )
 }
 
-/// Run `.tail` with the given extra args against a session built from `lines`.
+/// A storage root plus a cwd whose project holds one raw-JSONL session.
+///
+/// Held as a value rather than hidden inside a one-shot helper because two runs
+/// that are compared byte-for-byte must share one fixture: the session header
+/// carries the project label, which is derived from the temp directory's own
+/// random name, so a second fixture would differ in the header alone.
+struct Fixture
+{
+  root : tempfile::TempDir,
+  cwd  : tempfile::TempDir,
+}
+
+impl Fixture
+{
+  /// Build a project whose sole session is exactly `lines`.
+  fn new( lines : &[ String ] ) -> Self
+  {
+    let root = tempfile::TempDir::new().unwrap();
+    let cwd  = tempfile::TempDir::new().unwrap();
+    common::write_raw_session( root.path(), cwd.path(), RENDER_SESSION, lines );
+    Self { root, cwd }
+  }
+
+  /// Run `.tail` against this fixture with the given extra args.
+  fn tail( &self, args : &[ &str ] ) -> std::process::Output
+  {
+    let mut cmd = common::clg_cmd();
+    cmd
+      .env( "CLAUDE_STORAGE_ROOT", self.root.path() )
+      .current_dir( self.cwd.path() )
+      .arg( ".tail" );
+    for arg in args
+    {
+      cmd.arg( arg );
+    }
+    cmd.output().unwrap()
+  }
+}
+
+/// Run `.tail` once with the given extra args against a session built from `lines`.
 fn tail_over( lines : &[ String ], args : &[ &str ] ) -> std::process::Output
 {
-  let root = tempfile::TempDir::new().unwrap();
-  let cwd  = tempfile::TempDir::new().unwrap();
-
-  common::write_raw_session( root.path(), cwd.path(), RENDER_SESSION, lines );
-
-  let mut cmd = common::clg_cmd();
-  cmd
-    .env( "CLAUDE_STORAGE_ROOT", root.path() )
-    .current_dir( cwd.path() )
-    .arg( ".tail" );
-  for arg in args
-  {
-    cmd.arg( arg );
-  }
-  cmd.output().unwrap()
+  Fixture::new( lines ).tail( args )
 }
 
 /// Count turn-boundary rule lines in `.tail` output.
@@ -910,9 +936,11 @@ fn int_18_compact_prints_one_line_per_turn()
 /// silently produce the folded layout instead.
 ///
 /// ## Coverage
-/// Exit 0; `compact::1 full::1` output is byte-identical to `compact::1` alone,
+/// Exit 0; `compact::1 full::1` renders the same rows as `compact::1` alone,
 /// over a fixture whose long turn would fold without `full::` and expand with
-/// it — so the two would differ if `full::` were consulted at all.
+/// it — so the two would differ if `full::` were consulted at all. Both runs go
+/// through one `Fixture`, which is what lets the whole output be compared,
+/// header included.
 ///
 /// ## Related Requirements
 /// `tests/docs/cli/param/43_compact.md` — EC-2
@@ -930,8 +958,9 @@ fn int_18b_compact_wins_over_full()
     assistant_entry( 2, "msg_long", &format!( r#"[{{"type":"text","text":"{body}"}}]"# ) ),
   ];
 
-  let compact_only = tail_over( &lines, &[ "compact::1" ] );
-  let compact_full = tail_over( &lines, &[ "compact::1", "full::1" ] );
+  let fixture = Fixture::new( &lines );
+  let compact_only = fixture.tail( &[ "compact::1" ] );
+  let compact_full = fixture.tail( &[ "compact::1", "full::1" ] );
 
   assert_exit( &compact_only, 0 );
   assert_exit( &compact_full, 0 );

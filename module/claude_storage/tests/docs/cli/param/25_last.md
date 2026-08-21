@@ -1,6 +1,8 @@
 # Parameter :: `last::`
 
-Edge case tests for the `last::` parameter. Tests validate integer enforcement and entry-count capping on `.tail`.
+Edge case tests for the `last::` parameter. Tests validate integer enforcement and window capping on `.tail`.
+
+**Unit note:** on `.tail`, `last::` caps **turns**, not raw entries (`docs/cli/command/12_tail.md § Turn Grouping`). These fixtures are built with one entry per turn, so the two coincide here and "entries" below reads correctly; the turn-vs-entry distinction itself is covered by `command/12_tail.md` INT-12 and INT-15.
 
 **Source:** [param/25_last.md](../../../../docs/cli/param/25_last.md)
 

@@ -38,8 +38,8 @@ Edge case tests for the `full::` parameter. Tests validate that `.tail`'s per-tu
 ### EC-2: `compact::1 full::1` → compact wins
 
 - **Commands:** `.tail`
-- **Given:** the same multi-turn fixture used by `compact::`'s own EC-1
+- **Given:** a two-turn session whose assistant turn carries the same 20-line body as EC-1 — so `full::1` demonstrably changes the default layout and its inertness here is a real observation, not a vacuous one
 - **When:** `clg .tail compact::1 full::1`
-- **Then:** output is one line per turn — identical to `compact::1` alone; `full::1` cannot re-expand bodies that compact mode never prints
+- **Then:** the rendered rows are one line per turn — identical to `compact::1` alone; `full::1` cannot re-expand bodies that compact mode never prints
 - **Exit:** 0
 - **Source:** [param/43_compact.md](../../../../docs/cli/param/43_compact.md)

@@ -38,8 +38,8 @@ Edge case tests for the `compact::` parameter. Tests validate `.tail`'s one-line
 ### EC-2: `compact::1 full::1` → compact wins
 
 - **Commands:** `.tail`
-- **Given:** the same three-turn fixture as EC-1
+- **Given:** a two-turn session whose assistant turn carries a 20-line body — long enough that `full::` is observable in the default layout, which is what gives this case its teeth (EC-1's short fixture would leave `full::` inert either way)
 - **When:** `clg .tail compact::1 full::1`
-- **Then:** output is identical to `compact::1` alone — one row per turn; `full::` is inert because compact mode never prints the bodies it would unfold
+- **Then:** the rendered rows are identical to `compact::1` alone — one row per turn, no rule lines, no unfolded body; `full::` is inert because compact mode never prints the bodies it would unfold
 - **Exit:** 0
 - **Source:** [param/42_full.md](../../../../docs/cli/param/42_full.md)

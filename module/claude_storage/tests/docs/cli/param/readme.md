@@ -4,7 +4,7 @@
 
 - **Purpose**: Document edge case coverage for individual clg parameters.
 - **Responsibility**: Index of per-parameter edge case test files covering parameter-level behavior.
-- **In Scope**: All 32 clg parameter test files.
+- **In Scope**: All 34 clg parameter test files.
 - **Out of Scope**: Command-level tests (→ `command/`), parameter group interactions (→ `param_group/`).
 
 > **Known gap:** `26_depth.md` (the `depth::` parameter, documented at [`docs/cli/param/26_depth.md`](../../../../docs/cli/param/26_depth.md) and implemented for `.usage`) has no corresponding file in this directory — pre-existing staleness, not introduced by the `fields::`/`index::` additions (`32_fields.md`, `33_index.md`). Out of scope for this change; flagged here rather than silently left implicit.
@@ -45,3 +45,5 @@
 | 31_ids.md | Edge case tests for `ids::` parameter | ✅ |
 | 32_fields.md | Edge case tests for `fields::` parameter | ✅ |
 | 33_index.md | Edge case tests for `index::` parameter | ✅ |
+| 42_full.md | Edge case tests for `full::` parameter | ✅ |
+| 43_compact.md | Edge case tests for `compact::` parameter | ✅ |

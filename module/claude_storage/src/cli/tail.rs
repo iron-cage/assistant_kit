@@ -302,10 +302,11 @@ fn render
 ) -> String
 {
   let now = now_epoch_seconds();
-  let mut out = String::new();
 
-  out.push_str( &session_header( project_label, session_id, turns, window, now ) );
-  out.push( '\n' );
+  // No trailing newline anywhere in here: the caller prints this through
+  // `println!`, which supplies exactly one. Ending the string with `\n` too is
+  // what produced the stray blank line at the bottom of every invocation.
+  let mut out = session_header( project_label, session_id, turns, window, now );
 
   if window.is_empty()
   {
@@ -331,9 +332,8 @@ fn render
 
   // One join, not a push-per-turn: a trailing separator after the last turn is
   // what left the old output ending in stray blank lines.
-  out.push( '\n' );
+  out.push_str( "\n\n" );
   out.push_str( &blocks.join( if options.compact { "\n" } else { "\n\n" } ) );
-  out.push( '\n' );
 
   out
 }
