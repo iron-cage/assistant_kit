@@ -1,5 +1,11 @@
 //! Integration tests for the `.usage` command.
 //!
+//! ## Source
+//!
+//! - Command spec: `tests/docs/cli/command/13_usage.md`
+//! - Param spec: `tests/docs/cli/param/26_depth.md` — carries the exhaustive
+//!   `depth::` coverage that `.rollup`'s own smoke tests defer to
+//!
 //! ## Coverage
 //!
 //! INT-1 through INT-21 per `tests/docs/cli/command/13_usage.md` — scope

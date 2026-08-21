@@ -100,6 +100,7 @@ claude_storage .show session_id::abc123 fields::all index::3
 - `session_id::` matches a leading prefix of the session ID, never a substring found elsewhere in the ID — a matching predicate shared with `.export`/`.search`/`.tail` that briefly matched substrings anywhere in the ID (risking a silent match on the wrong session) is fixed (BUG-490)
 - `fields::` and `index::` compose: `index::` first narrows the in-scope message set to one message, then `fields::` (if also given) projects that one message's requested attributes; `fields::` alone projects every in-scope message; `index::` alone narrows to one message still shown in its normal format (chat-log content, or one raw-list line under `show_entries::1`)
 - `.show` and `.tail` share their per-entry content formatter (`format_entry_content` in `src/cli/format.rs`) — the middot-punctuation and color conventions described in [`../readme.md` § Local Style Conventions](../readme.md) apply to both commands identically; `.projects` and every other command keep their own independent output punctuation, unaffected by this convention
+- Chat-log mode suppresses successful `tool_result` blocks, which shows what was asked rather than what came back. When that leaves an entry with nothing to print — typically a user record holding only tool results — the body reads `↳ tool result` rather than nothing: a header standing over a blank line costs two lines, says nothing, and gives the reader no way to tell an empty entry from a broken one. `.tail` has no equivalent case, since it folds each result onto the `⚙` line of the call it answers and drops turns that render nothing (see [`12_tail.md` § Turn Grouping](12_tail.md))
 
 ### Referenced Parameter Groups
 
@@ -126,6 +127,10 @@ claude_storage .show session_id::abc123 fields::all index::3
 | 30 | [`detail::`](../param/30_detail.md) | [`DetailLevel`](../type/14_detail_level.md) | optional |
 | 32 | [`fields::`](../param/32_fields.md) | [`FieldSelector`](../type/15_field_selector.md) | optional |
 | 33 | [`index::`](../param/33_index.md) | Integer | optional |
+
+### Referenced Command Group
+
+Evaluated against `.tail` under the strict [command_group](../command_group/readme.md) identity test (same dispatch function, same parameter set) — does not qualify. `show_routine()` (`src/cli/show.rs:41`) has zero cross-calls with `tail_routine()` (`src/cli/tail.rs:110`). The two commands independently validate `last::` the same way — `show_routine()`'s own doc comment states this mirrors `.tail`'s validation shape "independently" — and share the per-entry content formatter noted in this doc's Notes section above (`format_entry_content()`, `src/cli/format.rs`), but a shared formatter is ordinary code reuse, not command identity (fails criterion 1). Parameter sets also differ sharply: `.show` accepts 12 parameters against `.tail`'s 3, and the one parameter name both share beyond `last::` — `path::` — means something different in each: `.show`'s `path::` is a scope anchor feeding `resolve_scoped_projects()` alongside `scope::`, while `.tail`'s `path::` is a standalone project selector feeding `resolve_path_parameter()` directly; `.tail` has no `scope::` parameter at all (fails criterion 2). Command Group Minimization outcome: **(2) Keep separate, documented** — the `path::` role divergence is load-bearing, so absorbing `.tail` into a `.show` Preset (or vice versa) was rejected. See [`command_group/readme.md`](../command_group/readme.md) Evaluated, Not Qualifying for the full analysis.
 
 ### Referenced User Stories
 

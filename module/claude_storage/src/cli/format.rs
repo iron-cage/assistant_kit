@@ -10,10 +10,18 @@ use claude_storage_core::{ ContentBlock, JsonValue };
 /// `Grep`/`Glob`, and the tail covers the task/agent/web tools. The first key
 /// present on a block wins, so `pattern` precedes `path` to keep `Grep` showing
 /// what it searched for rather than where.
-const TOOL_SUMMARY_KEYS : [ &str; 11 ] =
+///
+/// The trailing four are the task-tool tail, appended after a survey of the
+/// local store found 5.1% of tool calls rendering as a bare `⚙ Name`, 87% of
+/// them `TaskUpdate`. `status` precedes `taskId` because `⚙ TaskUpdate ·
+/// completed` says what happened and `⚙ TaskUpdate · 42` does not. What stays
+/// bare is what has no string worth showing: `TaskList` takes no input at all,
+/// and `TodoWrite`/`AskUserQuestion` carry only structured arrays.
+const TOOL_SUMMARY_KEYS : [ &str; 15 ] =
 [
   "command", "file_path", "notebook_path", "pattern", "path",
   "query", "url", "skill", "subject", "description", "prompt",
+  "status", "recipient", "taskId", "task_id",
 ];
 
 /// Longest tool-input summary rendered beside a tool name, in characters.
@@ -99,9 +107,36 @@ pub( super ) fn format_entry_content( entry : &claude_storage_core::Entry, max_l
   // Apply truncation if needed
   let content = truncate_if_needed( &content, max_length );
 
+  // A header over a blank line is the worst outcome: it costs two lines and
+  // says nothing, and the reader cannot tell an empty entry from a broken one.
+  let content = if content.is_empty() { empty_body_note( entry.content_blocks() ) } else { content };
+
   // Format as chat log entry
   let role_label = color::role( &format!( "{role}:" ) );
   format!( "{timestamp} · {role_label}\n{content}" )
+}
+
+/// What to print in place of a body that rendered nothing.
+///
+/// Naming which kind of block was suppressed is what makes the gap legible.
+/// The common case by far is a user entry holding only tool results, which the
+/// conversation view deliberately does not print — `.tail` folds those onto the
+/// `⚙` line of the call they answer, but `.show` has no call to fold them onto.
+fn empty_body_note( blocks : &[ ContentBlock ] ) -> String
+{
+  let note = if blocks.is_empty()
+  {
+    "no content"
+  }
+  else if blocks.iter().all( | block | matches!( block, ContentBlock::ToolResult { .. } ) )
+  {
+    "tool result"
+  }
+  else
+  {
+    "nothing to display"
+  };
+  color::muted( &format!( "↳ {note}" ) )
 }
 
 /// Render content blocks into displayable pieces, one per meaningful block.

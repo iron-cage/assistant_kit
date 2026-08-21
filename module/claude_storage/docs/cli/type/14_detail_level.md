@@ -7,14 +7,14 @@
 - **In Scope**: Parsing rules, valid/invalid values, error messages.
 - **Out of Scope**: Parameter usage (→ `param/`), command context (→ `command/`).
 
-**Purpose:** Output verbosity selector — terse vs full detail. On `.projects`: project headers only vs project headers plus session/family detail; introduced when `.projects` absorbed `.list`'s project-only view (see [`02_list.md`](../command/02_list.md)). On `.show`'s project-overview branches: summary block only vs summary block plus the full per-session list.
+**Purpose:** Output verbosity selector — terse vs full detail. On `.projects`: a one-line-per-project overview vs a full per-project session/family listing; introduced when `.projects` absorbed `.list`'s project-only view (see [`02_list.md`](../command/02_list.md)). On `.show`'s project-overview branches: summary block only vs summary block plus the full per-session list.
 
 **Fundamental Type:** Wrapper around string enum
 
 **Constants:**
-- PROJECTS = `"projects"` (header line only, no session/family lines)
-- SESSIONS = `"sessions"` (header line plus full session/family detail — default, matches pre-consolidation `.projects` behavior)
-- DEFAULT = SESSIONS
+- PROJECTS = `"projects"` (terse overview — one line per project, no session/family lines — default)
+- SESSIONS = `"sessions"` (`Found N projects:` header plus full session/family detail, matching pre-consolidation `.projects` behavior)
+- DEFAULT = PROJECTS
 
 **Constraints:**
 - Valid values: `projects`, `sessions`
@@ -31,7 +31,7 @@ Parse string to enum variant (case-insensitive):
 
 **Methods:**
 - `get() -> string` — Canonical lowercase variant name
-- `is_projects() -> boolean` — True when terse (header-only) view selected
+- `is_projects() -> boolean` — True when the terse overview is selected
 
 **Commands:** [`.projects`](../command/07_projects.md), [`.show`](../command/03_show.md)
 
@@ -46,4 +46,4 @@ Parse string to enum variant (case-insensitive):
 
 | # | Parameter | Commands |
 |---|-----------|----------|
-| 30 | [`detail::`](../param/30_detail.md) | 1 |
+| 30 | [`detail::`](../param/30_detail.md) | 2 |

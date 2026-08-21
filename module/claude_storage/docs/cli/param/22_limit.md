@@ -22,7 +22,7 @@ Maximum number of rows to display. Zero means unlimited. Scope of the cap (per-p
 
 **Commands:** `.projects`, [`.usage`](../command/13_usage.md), [`.rollup`](../command/14_rollup.md)
 
-**Purpose:** Caps how many rows are shown, largest/most-recent first. Three distinct scopes exist across the three implementers — none share the same cap semantics: In `.projects`, the cap applies **per project** in the default view — useful when a project has many sessions and you only want a preview; does not apply in `show_tree::1` mode. In `.usage`, the cap applies **flat across the whole result set** (after `scope::`/`depth::` filtering, before rendering) — there is no per-project grouping to cap within, so every session competes for the same N slots. In [`.rollup`](../command/14_rollup.md), the cap applies **after [`group::`](34_group.md) aggregation and [`sort::`](35_sort.md)/[`order::`](36_order.md) ranking** — a third distinct scope: `group::project limit::10` keeps the 10 highest-ranked *projects* (each already a sum of potentially many sessions), not the 10 most recent raw sessions [`.usage`](../command/13_usage.md)'s own `limit::` would have kept from the same data.
+**Purpose:** Caps how many rows are shown, largest/most-recent first. Three distinct scopes exist across the three implementers — none share the same cap semantics: In `.projects`, the cap applies **per project** under `detail::sessions` — useful when a project has many sessions and you only want a preview; it does not apply in `show_tree::1` mode, and it is a no-op under the default `detail::projects`, whose overview has no per-session lines to cap. In `.usage`, the cap applies **flat across the whole result set** (after `scope::`/`depth::` filtering, before rendering) — there is no per-project grouping to cap within, so every session competes for the same N slots. In [`.rollup`](../command/14_rollup.md), the cap applies **after [`group::`](34_group.md) aggregation and [`sort::`](35_sort.md)/[`order::`](36_order.md) ranking** — a third distinct scope: `group::project limit::10` keeps the 10 highest-ranked *projects* (each already a sum of potentially many sessions), not the 10 most recent raw sessions [`.usage`](../command/13_usage.md)'s own `limit::` would have kept from the same data.
 
 **Examples:**
 ```bash
@@ -50,7 +50,7 @@ Maximum number of rows to display. Zero means unlimited. Scope of the cap (per-p
 ### Referenced Commands
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
-| 7 | [`.projects`](../command/07_projects.md) | `0` | Caps sessions per project in default display |
+| 7 | [`.projects`](../command/07_projects.md) | `0` | Caps sessions per project under `detail::sessions`; no-op under the default `detail::projects` |
 | 13 | [`.usage`](../command/13_usage.md) | `0` | Caps the flat result set (not per-project) |
 | 14 | [`.rollup`](../command/14_rollup.md) | `0` | Caps the grouped row count, applied after sort — a third distinct scope from the two above |
 

@@ -139,7 +139,7 @@ Session files have no explicit cross-file links — no `parentUuid` or `continue
 
 ### Session Family
 
-A root (main) session together with all agent sessions it spawned, treated as a single display unit. In the current implementation, one Session Family corresponds to one Conversation — each root `.jsonl` file is one conversation, and its agent sessions are part of that conversation. By default, `.projects` shows one family per root: the root line carries an inline `[N agents: type breakdown]` suffix and the agents are collapsed. With `show_tree::1`, agents are tree-indented under their root. An orphan family is one whose root session file has been deleted; it is shown with a `?` marker. A childless root (no agents) shows no bracket suffix.
+A root (main) session together with all agent sessions it spawned, treated as a single display unit. In the current implementation, one Session Family corresponds to one Conversation — each root `.jsonl` file is one conversation, and its agent sessions are part of that conversation. Families are not shown by bare `.projects`, whose default `detail::projects` overview reports only a per-project agent count. Under `detail::sessions`, `.projects` shows one family per root: the root line carries an inline `[N agents: type breakdown]` suffix and the agents are collapsed; adding `show_tree::1` tree-indents the agents under their root. An orphan family is one whose root session file has been deleted; it is shown with a `?` marker. A childless root (no agents) shows no bracket suffix.
 
 ---
 

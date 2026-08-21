@@ -35,7 +35,7 @@
 | # | Parameter | Role |
 |---|-----------|------|
 | 9 | [`path::`](../param/09_path.md) | Override default storage root for inspection |
-| 30 | [`detail::`](../param/30_detail.md) | Select terse (`projects`) or full (`sessions`, default) view in `.projects` |
+| 30 | [`detail::`](../param/30_detail.md) | Select terse overview (`projects`, default) or full session listing (`sessions`) in `.projects` |
 | 16 | [`target::`](../param/16_target.md) | Specify count target (projects, sessions, entries) |
 | 23 | [`show_tokens::`](../param/23_show_tokens.md) | Show token usage section in .status |
 

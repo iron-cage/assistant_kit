@@ -44,7 +44,7 @@
 | 14 | [`session_id::`](../param/14_session_id.md) | Identify specific session for detailed view |
 | 25 | [`last::`](../param/25_last.md) | Cap trailing messages shown in `.show`'s project overview (default `10`) |
 | 29 | [`filter::`](../param/29_filter.md) | Narrow the project set by path substring (replaces `.list`'s `path::`) |
-| 30 | [`detail::`](../param/30_detail.md) | Select terse (`projects`) or full (`sessions`) view — default varies: `sessions` in `.projects`, `projects` in `.show` |
+| 30 | [`detail::`](../param/30_detail.md) | Select terse (`projects`, the default on both commands) or full (`sessions`) view |
 | 17 | [`topic::`](../param/17_topic.md) | Filter by session topic suffix |
 | 18 | [`type::`](../param/18_type.md) | Filter projects by naming scheme |
 | 19 | [`show_stat::`](../param/19_show_stat.md) | Append statistics footer in session view |

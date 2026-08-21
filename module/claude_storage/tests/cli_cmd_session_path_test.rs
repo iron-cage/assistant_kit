@@ -3,6 +3,7 @@
 //! ## Source
 //!
 //! - Spec: `tests/docs/cli/command/16_session_path.md`
+//! - Param spec: `tests/docs/cli/param/41_latest.md`
 //!
 //! ## Coverage
 //!

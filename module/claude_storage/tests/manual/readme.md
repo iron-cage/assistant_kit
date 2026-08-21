@@ -21,7 +21,7 @@ Current command set (12 commands as of v1.4.0):
 9. `.project.exists` - Exit-code check whether a topic has session history
 10. `.session.dir` - Print or create session directory for a topic
 11. `.session.ensure` - Ensure session directory exists for a topic
-12. `.tail` - Print last N conversation entries for current directory (not yet implemented — see task system)
+12. `.tail` - Print last N conversation turns for current directory (turn-grouped renderer manually verified 2026-08-21 — see below)
 
 **Removed commands (do not test):**
 - `.show.project` — removed in task-013 (deprecated stub)
@@ -418,3 +418,52 @@ All PASS unless noted:
 | `.list` | min_entries::10 performance | ✅ PASS ~35s with 2429 sessions |
 | `.search` | query with spaces | ⚠️ pre-existing: unilang splits at spaces |
 | paths with spaces | any command | ⚠️ pre-existing: unilang splits at spaces |
+
+## `.tail` turn-grouped renderer — manual session (2026-08-21)
+
+Ran against the real local store (`~/.claude/projects/`), inside the runbox container, on session `bff63952` (357 entries → 229 turns) plus two other real projects. 24 cases; the two failures found were fixed and covered by regression tests before this record was written.
+
+### Why manual testing was needed here
+
+Integration tests assert on synthetic fixtures, which is exactly what makes them cheap and exactly what makes them blind to real-store distributions. Three of the findings below could not have come from a fixture: the tool-summary gap is a property of *which tools this store actually uses*, the empty `.show` body is a property of *how real sessions interleave tool results*, and width discipline only means something measured against real paths and real commands.
+
+### Results
+
+| # | Case | Result |
+|---|------|--------|
+| M1 | Zero-arg default | ✅ 4 turns, header + rule lines, 27 lines |
+| M2 | Trailing bytes | ✅ ends with exactly one `\n` — no stray blank line |
+| M3 | Chrome width in characters | ✅ rule lines exactly 76, tool lines exactly 76, fold hint 60, header 63, compact rows ≤76; nothing overflows |
+| M4 | ANSI absence when piped | ✅ zero escape sequences in redirected output |
+| M5 | `last::1` | ✅ 1 turn; header uses the singular form `turn 229 of 229` |
+| M6 | `l::` alias | ✅ byte-identical to `last::` |
+| M7 | `full::1` vs default | ✅ 23 lines / 1 fold → 144 lines / 0 folds over the same window |
+| M8 | `compact::1 last::12` | ✅ exactly 12 rows, zero rule lines, widest row 76 chars |
+| M9 | `compact::1 full::1` | ✅ byte-identical to `compact::1` — `full::` inert, as documented |
+| M10 | `last::0` (whole session) | ✅ 229 turns, 862 lines, sub-second |
+| M11 | `last::0 compact::1` | ✅ 229 rows, sub-second — a 12-day session on two screens |
+| M12 | Header span vs actual | ✅ `turns 1-229 of 229` matches 229 rule lines exactly |
+| M13 | `last::-1` / `last::abc` | ✅ exit 1 both; `last must be non-negative` / unilang coercion error |
+| M14 | Nonexistent `topic::` | ✅ exit 1, `Session not found for topic: …` |
+| M15 | `path::/etc` (no project) | ✅ exit 2, `No project found for path: /etc` |
+| M16 | `path::` to another real project | ✅ resolves and renders; project label switches to `kit` |
+| M17 | Fold-hint round trip | ✅ the emitted `clg .show session_id::bff63952 index::616` runs and lands on the folded entry |
+| M18 | `.show` regression | ⚠️ **defect found** — see below; ✅ after fix |
+| M19 | Tool-line integrity | ⚠️ **defect found** — see below; ✅ 0/212 bare after fix |
+| M20 | Result annotations | ✅ `↳ 1 line` ×97, `↳ 56 lines`, `↳ error` ×6 — plural/singular both correct |
+| M21 | Unmodelled blocks | ✅ 0 in this session (the `⧉` path is covered by INT-21 instead) |
+| M22 | Colour on a pty / `NO_COLOR` | ✅ colour present under `script(1)`; `NO_COLOR=1` suppresses it |
+| M23 | `path::` above any project root | ✅ exit-2 path, no crash |
+
+### Defects found and fixed
+
+| # | Symptom | Root cause | Fix | Regression test |
+|---|---------|------------|-----|-----------------|
+| T1 | `.show last::2` printed `2026-08-21 10:31 · User:` over a blank line | Chat-log mode suppresses successful `tool_result` blocks. That was written when only assistant entries reached the renderer; once user entries did too, a tool-result-only user record rendered to nothing under a header. | `format_entry_content` emits `↳ tool result` when the body renders empty, naming which kind of block was suppressed | `cli_cmd_show_test.rs::int_24_show_marks_a_tool_result_only_entry_instead_of_leaving_it_blank` |
+| T2 | 22 of 212 tool lines rendered as a bare `⚙ TaskUpdate` with no summary | `TOOL_SUMMARY_KEYS` was drawn from the file/shell/web tools; none of the task tools carry any of those keys. A store-wide survey put this at 5.1% of all tool calls, 87% of them `TaskUpdate`. | Appended `status`, `recipient`, `taskId`, `task_id`; `status` deliberately outranks `taskId` so the line reads `completed`, not `42` | `cli_cmd_tail_test.rs::int_24_task_tool_summarises_by_status_not_id` |
+
+Residual bare `⚙ Name` lines are intentional: `TaskList` takes no input at all, and `TodoWrite`/`AskUserQuestion` carry only structured arrays with no single telling string. Store-wide this is 0.7% of tool calls, down from 5.1%.
+
+### Reproducing
+
+The battery is a disposable script, not a committed fixture — it reads the operator's own store, so its expected values are local. To rebuild it, drive `clg .tail` through the case list above via `runbox .live` and compare against the Results table; character-width checks (M3) must count characters, not bytes, since every glyph in the chrome is multi-byte UTF-8.

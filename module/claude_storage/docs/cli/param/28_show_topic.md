@@ -17,7 +17,7 @@ Append each conversation's topic — the first user message text — to its sess
 
 **Commands:** `.projects`
 
-**Purpose:** When set to `1`, each root-session line in the compact family view (and each session line in the flat `agent::`-filtered view) gains the conversation's topic: the text of the session's first `user` entry, with newlines flattened to spaces, trimmed, and truncated to 90 characters. Sessions whose transcript has no readable user text show no topic. The tree view (`show_tree::1`) is unaffected.
+**Purpose:** When set to `1`, each root-session line in the compact family view (and each session line in the flat `agent::`-filtered view) gains the conversation's topic: the text of the session's first `user` entry, with newlines flattened to spaces, trimmed, and truncated to 90 characters. Sessions whose transcript has no readable user text show no topic. The tree view (`show_tree::1`) is unaffected, and so is the default `detail::projects` overview — it has no session lines to annotate, so the parameter is a no-op there.
 
 Default (0): session lines are unchanged — short UUID, mtime, entry count only.
 

@@ -25,6 +25,7 @@ Integration tests for the `.show` command. Tests verify project view, session vi
 | INT-18 | index:: beyond the entry count is rejected | Exit Codes |
 | INT-19 | fields:: + index:: composed project one message's requested attributes | Field Projection |
 | INT-20 | fields:: applies to the project-overview tail window, not just session-detail | Field Projection |
+| INT-24 | A user entry holding only a successful tool result is named, not left blank | Content Rendering |
 
 ## Test Coverage Summary
 
@@ -35,6 +36,7 @@ Integration tests for the `.show` command. Tests verify project view, session vi
 - Display Mode: 3 tests (INT-5, INT-6, INT-12)
 - Exit Codes: 3 tests (INT-7, INT-16, INT-18)
 - Field Projection: 5 tests (INT-13, INT-14, INT-15, INT-19, INT-20)
+- Content Rendering: 1 test (INT-24)
 - Message Selection: 1 test (INT-17)
 
 > **Known gap:** this catalog's `INT-N` numbering stops short of the `T01`–`T18` and later cases actually present in `tests/cli_cmd_show_test.rs` (added by tasks 513/525/526) — pre-existing staleness, not introduced by the `fields::`/`index::` additions below (`INT-13`–`INT-20`). Out of scope for this change; flagged here rather than silently left implicit.
@@ -295,3 +297,19 @@ CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .show fields::timestamp last::5
 - Project summary block unchanged, followed by field-projection blocks (not chat-log content) for the last 5 entries — proves `fields::` is not session-detail-only
 - Exit code: 0
 - **Source:** [command/03_show.md](../../../../docs/cli/command/03_show.md); [param/32_fields.md](../param/32_fields.md) EC-10
+
+---
+
+### INT-24: A user entry holding only a successful tool result is named, not left blank
+
+**Command:**
+```
+CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .show last::2
+```
+
+**Expected behavior:**
+- Fixture: a raw two-record session — an assistant `tool_use` and the user `tool_result` answering it
+- The user entry's `TIMESTAMP · User:` header is followed by `↳ tool result`; the output contains no header standing over a blank line
+- Exit code: 0
+- `.tail` folds a successful `tool_result` onto the `⚙` line of the call it answers, so it never prints one alone. `.show`'s chat-log view has no call to fold onto — suppressing the block there left two lines that said nothing, and no way to distinguish an empty entry from a broken one
+- **Source:** [command/03_show.md](../../../../docs/cli/command/03_show.md)
