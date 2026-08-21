@@ -13,7 +13,7 @@
 |-----------|-------|
 | **Flag** | `--from <DIR>` |
 | **Type** | `DirectoryPath` — resolved to physical absolute form; need not exist (a nonexistent source has no sessions → no cross-load, fresh session) |
-| **Path resolution** | `fs::canonicalize` (symlinks + `..` resolved); lexical cwd-join fallback for nonexistent paths |
+| **Path resolution** | `fs::canonicalize` (symlinks + `..` resolved); for nonexistent paths, the deepest existing prefix is canonicalized and the nonexistent tail appended literally, matching claude's own physical-getcwd key once the directory is created (Fix(BUG-543)) |
 | **Empty value** | ignored entirely — same empty-is-identity rule as `--topic ""` |
 | **Default** | when the target (`--dir`/`--to`/`--topic`, or its own default of cwd) already has a qualifying session of its own, that target IS the source — no re-derivation from cwd (Fix(BUG-541); see step 1 below); otherwise, current working directory — same default-to-cwd rule as `--dir`/`--to`. When both `--from` and `--to` are omitted, source and target resolve to the same storage, so the self-copy guard (below) suppresses the transplant and the run is an ordinary no-op |
 | **Env var** | `CLR_FROM` |

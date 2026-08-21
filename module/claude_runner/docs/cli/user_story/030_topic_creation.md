@@ -13,7 +13,7 @@
 
 ### Acceptance Criteria
 
-- **AC-001 (Auto-named topic):** `clr topic "message"` (no `--topic`) generates a concise slug from `message`, disambiguates it against existing topic directories of the effective `--dir` via a numeric counter suffix, and uses it as `--topic`'s value — always a fresh, previously-unused name.
+- **AC-001 (Auto-named topic):** `clr topic "message"` (no `--topic`) generates a concise slug from `message`, disambiguates it via a numeric counter suffix against BOTH freshness signals under the effective `--dir` — existing topic directories AND session storage already holding a qualifying session (probed under the canonical storage key, symlink/`..`-safe — Fix(BUG-542), Fix(BUG-543)) — and uses it as `--topic`'s value: always a fresh name on both signals.
 - **AC-002 (Explicit topic name):** `clr topic --topic NAME "message"` uses `NAME` directly as `--topic`'s value, bypassing slug generation entirely.
 - **AC-003 (Clone on first use):** The first invocation of a given topic name (auto-generated or explicit) has no session file yet in that topic directory — the runner clones the most recent session from `--from`'s effective source (default: cwd) into the new topic directory before spawn.
 - **AC-004 (Continue on reuse):** A later invocation of the same explicit topic name finds a session file already present in that topic directory — the runner continues that topic's own accumulated conversation instead of re-cloning.

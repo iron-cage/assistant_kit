@@ -73,7 +73,7 @@ clr topic --topic shared-fix --from ~/project-a "Port this fix"
 
 **Clone vs. continue:** whether a given topic name clones a fresh session or continues an existing one is determined entirely by the pre-existing `--topic` + `--from` session-transplant mechanism (see [`../param/076_from.md`](../param/076_from.md) § Behavior) — `topic` introduces no new session-management code for this. The first invocation of a given topic directory name has no session file there yet, so `--from`'s (default: cwd) most recent session is physically copied in (clone). Every subsequent invocation of that same name finds the copy already in place and continues it (`-c`) instead of re-copying.
 
-**Auto-naming is always fresh:** the slug+counter algorithm only ever selects a name that does not yet exist as a topic directory — an auto-named invocation therefore always clones, never continues. To continue an auto-named topic later, pass its generated name back explicitly via `--topic`.
+**Auto-naming is always fresh:** the slug+counter algorithm only ever selects a name that is free on BOTH freshness signals — no topic directory exists for it AND its session storage holds no qualifying session (probed under the same canonical storage key claude itself derives, so a symlinked or `..`-carrying `--dir` base cannot hide surviving storage — Fix(BUG-542), Fix(BUG-543)). A deleted working directory with surviving session storage therefore counts as taken, and an auto-named invocation always clones, never continues. To continue an auto-named topic later, pass its generated name back explicitly via `--topic`.
 
 `--output-format stream-json` streaming behavior is identical to `run` — see [`run`'s Notes](01_run.md#notes) for details.
 

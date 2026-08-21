@@ -38,6 +38,13 @@
 //! - T08: `clr topic --topic NAME --effort high "msg" --dry-run` == the same
 //!   `ask` invocation — `--effort high` passthrough is visible and unbroken
 //!   (AF2: a parameter that would visibly change dry-run output if broken)
+//! - T09: `bug_reproducer(BUG-541)` — second call to the same topic name (no
+//!   `--from`) continues the topic's OWN history even after cwd's most-recent
+//!   session identity drifted between the calls
+//! - T10: `bug_reproducer(BUG-542)` — a candidate auto-name with no working
+//!   directory but surviving session storage is skipped, never selected "fresh"
+//! - T11: `bug_reproducer(BUG-543)` — the freshness probe reaches the CANONICAL
+//!   storage key through a symlinked base, same as the real run will
 
 mod cli_binary_test_helpers;
 use cli_binary_test_helpers::{ exit_code, fake_claude_dir, run_ask_dry, run_cli, run_topic_dry, stderr_str, stdout_str };
@@ -145,14 +152,16 @@ fn t08_effort_high_passthrough_matches_ask_dry_run()
   );
 }
 
-// ── T04/T05: real session-transplant clone/continue via `clr topic` ───────────
+// ── T04/T05 + T09–T11: session-transplant / storage-probe tests via `clr topic` ──
 //
 // Mirrors `tests/bug_reproducers_490_492_test.rs`'s own BUG-490 fixture technique
 // (CLAUDE_HOME override + `claude_storage_core::encode_path()` + a stubbed `claude`
 // executable) — that file already exhaustively covers the transplant mechanism
-// itself; these two tests confirm it still fires correctly when reached via `clr
-// topic --topic NAME` instead of raw `--dir`/`--from`, per task 521 Out of Scope
-// ("topic inherits [transplant behavior] as-is").
+// itself; T04/T05 confirm it still fires correctly when reached via `clr topic
+// --topic NAME` instead of raw `--dir`/`--from`, per task 521 Out of Scope
+// ("topic inherits [transplant behavior] as-is"). T09–T11 are the BUG-541/542/543
+// reproducers: source-selection drift and auto-name freshness probing against the
+// same CLAUDE_HOME-overridden storage fixtures.
 
 #[ cfg( unix ) ]
 mod transplant
@@ -338,6 +347,16 @@ mod transplant
   ///
   /// ## Fix Applied
   /// See `Fix(BUG-541)` in `src/cli/builder.rs`.
+  ///
+  /// ## Prevention
+  /// Any change to `session_from_dir`'s source-selection order must keep a fixture
+  /// where the launching cwd's most-recent session identity CHANGES between two
+  /// calls to the same target — an unchanging `--from` (T05) cannot see this class.
+  ///
+  /// ## Pitfall
+  /// Assert on `dest_b`'s ABSENCE in topic storage, not on `dest_a`'s content alone —
+  /// the buggy transplant copies B alongside A, so A's bytes survive either way.
+  // test_kind: bug_reproducer(BUG-541)
   #[ test ]
   fn t09_second_auto_topic_call_ignores_unrelated_source_session_drift()
   {
@@ -455,6 +474,22 @@ mod transplant
   ///
   /// ## Fix Applied
   /// See `Fix(BUG-542)` in `src/cli/topic.rs` (`name_is_taken`).
+  ///
+  /// ## Why Not Caught
+  /// T02 (the only prior disambiguation test) pre-creates the candidate's WORKING
+  /// directory — no fixture ever modeled the inverse state this bug lives in:
+  /// storage present, directory absent.
+  ///
+  /// ## Prevention
+  /// Freshness has two independent signals (directory existence, session storage);
+  /// every disambiguation fixture must state which signal it exercises — this test
+  /// pins the storage-only signal, T02 the directory-only one.
+  ///
+  /// ## Pitfall
+  /// Anchor `cd`-line assertions with the trailing `\n` — `-orphan-topic` is itself
+  /// a string prefix of the correct `-orphan-topic-2`, so an unanchored `contains`
+  /// on the shorter form false-positives against the longer.
+  // test_kind: bug_reproducer(BUG-542)
   #[ test ]
   fn t10_auto_naming_skips_candidate_with_orphaned_session_storage()
   {
@@ -501,6 +536,91 @@ mod transplant
     assert!(
       stdout.contains( &free_cd ),
       "auto-naming must disambiguate past the orphaned candidate to -orphan-topic-2. Got:\n{stdout}"
+    );
+  }
+
+  /// T11 (BUG-543): the freshness probe must consult the storage claude will ACTUALLY
+  /// use — reached through a symlinked base, the candidate's CANONICAL storage key —
+  /// not the storage named by a lexical rendering of the not-yet-existing candidate.
+  ///
+  /// ## Root Cause
+  /// `fs::canonicalize()` fails for any path whose leaf does not exist — true of every
+  /// auto-name candidate by definition — so `name_is_taken()`'s probe always resolved
+  /// candidates through `physical_abs()`'s LEXICAL fallback (symlinked ancestors kept,
+  /// `..` kept), while the real run canonicalizes after `resolve_effective_dir()`'s
+  /// `create_dir_all`. Divergent storage keys under symlinked/`..` bases: the probe
+  /// missed the orphaned storage BUG-542 exists to detect, re-selected the "fresh"
+  /// name, and the run resumed the orphaned history.
+  ///
+  /// ## Why Not Caught
+  /// T10's fixture base is a plain `TempDir` — canonical by construction, so the
+  /// lexical and canonical encodings coincide and the probe worked. No fixture routed
+  /// the base through a symlink.
+  ///
+  /// ## Fix Applied
+  /// See `Fix(BUG-543)` in `src/cli/builder.rs` — `physical_abs`'s fallback now
+  /// canonicalizes the deepest existing prefix and appends the nonexistent tail
+  /// literally, matching what `create_dir_all` + claude's physical getcwd will yield.
+  ///
+  /// ## Prevention
+  /// Pins the symlinked-base probe next to T10's canonical-base probe so the two
+  /// resolution paths cannot drift apart again.
+  ///
+  /// ## Pitfall
+  /// The seeded storage key MUST be derived from the REAL (canonical) base, never from
+  /// the symlink — seeding under the symlink's own lexical encoding would let the
+  /// buggy probe "find" it and the test would pass for the wrong reason.
+  // test_kind: bug_reproducer(BUG-543)
+  #[ test ]
+  fn t11_auto_naming_probes_storage_through_symlinked_base()
+  {
+    container_check();
+    let ch     = tempfile::TempDir::new().expect( "claude home" );
+    let real   = tempfile::TempDir::new().expect( "real topic base dir" );
+    let holder = tempfile::TempDir::new().expect( "symlink holder dir" );
+    let link   = holder.path().join( "base-link" );
+    std::os::unix::fs::symlink( real.path(), &link ).expect( "create base symlink" );
+
+    // Orphaned storage lives under the CANONICAL candidate path — the key claude's own
+    // physical getcwd produces; the working directory itself is never created.
+    let real_canon = std::fs::canonicalize( real.path() ).expect( "canonicalize real base" );
+    let orphan_canonical = real_canon.join( "-orphan-topic" );
+    let uuid = "54309001-1111-2222-3333-444444444444";
+    make_session( ch.path(), &orphan_canonical, uuid, b"{\"seed\":\"orphaned history under canonical key\"}\n" );
+    assert!( !orphan_canonical.exists(), "fixture setup: working directory must NOT exist on disk" );
+
+    let out = std::process::Command::new( env!( "CARGO_BIN_EXE_clr" ) )
+      .args
+      ([
+        "topic",
+        "--dry-run",
+        "--dir", link.to_str().expect( "utf-8" ),
+        "orphan topic",
+      ])
+      .env( "CLAUDE_HOME", ch.path() )
+      .env_remove( "CLR_DIR" ).env_remove( "CLR_SESSION_DIR" ).env_remove( "CLR_FROM" )
+      .output()
+      .expect( "invoke clr" );
+    assert!(
+      out.status.success(),
+      "dry-run must succeed. stderr: {}",
+      String::from_utf8_lossy( &out.stderr ),
+    );
+    let stdout = String::from_utf8_lossy( &out.stdout ).into_owned();
+
+    // Same trailing-`\n` anchoring as T10: "-orphan-topic" is itself a string prefix
+    // of the correct "-orphan-topic-2".
+    let taken_cd = format!( "cd {}\n", link.join( "-orphan-topic" ).display() );
+    let free_cd  = format!( "cd {}\n", link.join( "-orphan-topic-2" ).display() );
+    assert!(
+      !stdout.contains( &taken_cd ),
+      "BUG-543: the probe must find the orphaned storage through the symlinked base \
+       (canonical key), never select the orphaned candidate. Got:\n{stdout}"
+    );
+    assert!(
+      stdout.contains( &free_cd ),
+      "BUG-543: auto-naming must disambiguate past the orphaned candidate to \
+       -orphan-topic-2 through a symlinked base. Got:\n{stdout}"
     );
   }
 }

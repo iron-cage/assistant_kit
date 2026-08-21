@@ -94,7 +94,8 @@ pub( crate ) struct RunPreparation
 }
 
 /// Resolve `raw` to its physical absolute form: `canonicalize` when the path exists,
-/// else a lexical cwd-join that drops `.` components.
+/// else canonicalize the deepest existing prefix and append the nonexistent tail
+/// literally (`.` dropped, `..` popped against the already-canonical prefix).
 ///
 /// claude derives storage names from its physical getcwd, so a relative or symlinked
 /// path must resolve to the same physical absolute form or the encoded name silently
@@ -114,7 +115,34 @@ pub( crate ) fn physical_abs( raw : &std::path::Path ) -> std::path::PathBuf
       std::env::current_dir()
         .map_or_else( | _ | raw.to_path_buf(), | cwd | cwd.join( raw ) )
     };
-    joined.components().collect()
+    // Fix(BUG-543): rebuild component-by-component, canonicalizing the deepest
+    //   existing prefix as it grows — the nonexistent tail is appended literally,
+    //   which is exactly what a later `create_dir_all` + claude's physical getcwd
+    //   yield for it (a fresh mkdir cannot introduce symlinks).
+    // Root cause: the old fallback (`joined.components().collect()`) was purely
+    //   lexical — symlinked ancestors and `..` survived verbatim, so pre-creation
+    //   probes (`topic.rs::name_is_taken`, dry-run's `own_target_storage`) encoded
+    //   a different storage name than the real, post-`create_dir_all` run used,
+    //   silently re-opening BUG-542's orphaned-history resume under symlinked/`..`
+    //   bases.
+    // Pitfall: `..` must be popped against the already-canonical prefix (kernel
+    //   semantics: a symlinked ancestor resolves FIRST, then `..` applies to its
+    //   target) — never left in the raw lexical text.
+    let mut resolved = std::path::PathBuf::new();
+    for comp in joined.components()
+    {
+      match comp
+      {
+        std::path::Component::CurDir => {}
+        std::path::Component::ParentDir => { resolved.pop(); }
+        other => resolved.push( other ),
+      }
+      if let Ok( canon ) = std::fs::canonicalize( &resolved )
+      {
+        resolved = canon;
+      }
+    }
+    resolved
   } )
 }
 
@@ -296,30 +324,25 @@ pub( crate ) fn build_claude_command( cli : &CliArgs )
   //   session — an empty/fresh target must still fall through to the cwd-default so
   //   the documented first-use clone is unaffected.
   let session_from_dir : std::path::PathBuf =
-  {
-    match cli.from.as_deref().filter( | src | !src.is_empty() )
+    if let Some( src ) = cli.from.as_deref().filter( | src | !src.is_empty() )
     {
-      Some( src ) =>
+      let abs = physical_abs( &std::path::PathBuf::from( src ) );
+      claude_storage_core::scope_for( &abs ).claude_session_dir
+    }
+    else
+    {
+      let own_target_storage = effective_working_dir.as_deref().map( | dir |
+        claude_storage_core::scope_for( &physical_abs( dir ) ).claude_session_dir );
+      match own_target_storage
       {
-        let abs = physical_abs( &std::path::PathBuf::from( src ) );
-        claude_storage_core::scope_for( &abs ).claude_session_dir
-      }
-      None =>
-      {
-        let own_target_storage = effective_working_dir.as_deref().map( | dir |
-          claude_storage_core::scope_for( &physical_abs( dir ) ).claude_session_dir );
-        match own_target_storage
+        Some( storage ) if session_exists( &storage ).is_some() => storage,
+        _ =>
         {
-          Some( storage ) if session_exists( &storage ).is_some() => storage,
-          _ =>
-          {
-            let cwd = std::env::current_dir().unwrap_or_else( | _ | std::path::PathBuf::from( "." ) );
-            claude_storage_core::scope_for( &physical_abs( &cwd ) ).claude_session_dir
-          }
+          let cwd = std::env::current_dir().unwrap_or_else( | _ | std::path::PathBuf::from( "." ) );
+          claude_storage_core::scope_for( &physical_abs( &cwd ) ).claude_session_dir
         }
       }
-    }
-  };
+    };
   // Determine print mode early — used for -c injection, effort injection, and chrome
   // suppression.  Must precede expected_id so all three guards below can reference use_print.
   // Fix(BUG-227): message without -p was silently using TTY passthrough,
