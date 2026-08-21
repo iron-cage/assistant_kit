@@ -87,7 +87,7 @@ See [type/readme.md](../type/readme.md) for type definitions and [param_group/re
 | 22 | [`limit::`](22_limit.md) | Integer | `0` | Integer ≥ 0 | Row display cap (per-project, flat, or grouped, command-dependent) | 3 |
 | 23 | [`show_tokens::`](23_show_tokens.md) | Boolean | `0` | `0`, `1` | Token usage section in output | 2 |
 | 24 | [`show_tree::`](24_show_tree.md) | Boolean | `0` | `0`, `1` | Agent tree-indented display | 1 |
-| 25 | [`last::`](25_last.md) | Integer | varies | Integer ≥ 0 | Number of trailing entries to print | 2 |
+| 25 | [`last::`](25_last.md) | Integer | varies | Integer ≥ 0 | Number of trailing turns (`.tail`) or messages (`.show`) to print | 2 |
 | 26 | [`depth::`](26_depth.md) | Integer | `3` | Integer ≥ 0 | Path-component depth cap for scope walks | 2 |
 | 27 | [`since_days::`](27_since_days.md) | Integer | — | Integer ≥ 0 | Recency window in days (`0` = last 24 hours) | 1 |
 | 28 | [`show_topic::`](28_show_topic.md) | Boolean | `0` | `0`, `1` | First user message text on session lines | 1 |

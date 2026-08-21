@@ -31,7 +31,7 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 | FT-17 | No `switch_account` in `apply_refresh`; `_active` unchanged confirms no restore occurred | AC-28 | test_apply_refresh_mre_bug208_restore_trace_emitted |
 | FT-18 | After refresh re-fetch succeeds, `aq.account` re-populated via `fetch_oauth_account()` | AC-27 | mre_bug_171_account_populated_after_refresh |
 | FT-13+ | `apply_refresh` does not write `~/.claude/.credentials.json`; file unchanged after cycle | AC-29 | (structural — FT-06/AC-20 mechanism + FT-13/FT-17 verification) |
-| FT-19 | `refresh_account_token` returns `None` (RT expired) → `aq.result = Err("refresh token expired")` before `continue;` | AC-30 | — |
+| FT-19 | `refresh_account_token` returns `None` (any failure mode) → `aq.result = Err("token refresh failed")` before `continue;` (label cause-neutral since BUG-539) | AC-30 | — |
 | FT-20 | `should_refresh()` returns `false` for owned account with `is_occupied_elsewhere == true` | AC-31 | — |
 | FT-21 | `apply_refresh` trace emits `reason: cached-expired` (not `reason: ok`) for owned+cached+expired account | Algorithm | — |
 | FT-22 | `refresh_account_token` sets `expiresAt=1` before `run_isolated` — RT rotates on every call | AC-32 | — |
@@ -62,7 +62,7 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 | FT-16 | Post-refresh `expires_at_ms` from `expiresAt` field for opaque `sk-ant-oat01-*` token | AC-25 | JWT Expiry (Opaque) |
 | FT-17 | No `switch_account` in `apply_refresh`; `_active` unchanged confirms no restore occurred | AC-28 | Restore Absent |
 | FT-18 | After refresh, `aq.account` re-populated via `fetch_oauth_account(new_token)` | AC-27 | BUG-171 MRE |
-| FT-19 | `refresh_account_token` returns `None` → `aq.result = Err("refresh token expired")` (BUG-297 MRE) | AC-30 | BUG-297 MRE |
+| FT-19 | `refresh_account_token` returns `None` → `aq.result = Err("token refresh failed")` (BUG-297 MRE; label per BUG-539) | AC-30 | BUG-297 MRE |
 | FT-20 | `should_refresh()` returns `false` for owned account with `is_occupied_elsewhere == true` (BUG-303 MRE) | AC-31 | G2 Occupancy Guard |
 | FT-21 | `apply_refresh` trace emits `reason: cached-expired` (not `reason: ok`) for owned+cached+expired account (BUG-298 MRE) | Algorithm | BUG-298 MRE |
 | FT-22 | `refresh_account_token` sets `expiresAt=1` before `run_isolated` — RT rotates | AC-32 | RT Rotation |
@@ -204,9 +204,9 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 
 - **Given:** `claude_paths = Some(paths)` (lifecycle mode); one saved account with a 401 error result; no per-account credential file exists in the persistent store for that account.
 - **When:** `apply_refresh(&mut accounts, store.path(), Some(&paths), false)` is called (unit test context; equivalent to `clp .usage refresh::1` when the lifecycle path is active)
-- **Then:** `refresh_account_token(name, store, Some(&paths))` returns `None` (no per-account credential file in store); the account is skipped via `continue`. Per BUG-297 (`src/usage/refresh.rs:133`), the original 401 error is NOT left unchanged — `apply_refresh` overwrites `aq.result` to the definitive `Err("refresh token expired")` before the `continue`.
+- **Then:** `refresh_account_token(name, store, Some(&paths))` returns `None` (no per-account credential file in store); the account is skipped via `continue`. Per BUG-297 (`apply_refresh`'s `None` arm), the original 401 error is NOT left unchanged — `apply_refresh` overwrites `aq.result` to `Err("token refresh failed")` (cause-neutral label per BUG-539) before the `continue`.
 - **Source fn:** `test_apply_refresh_lifecycle_switch_fails_result_unchanged`
-- **Note:** BUG-165 regression guard; covers the `Some(paths)` early-exit path not testable at CLI level without spawning live subprocess. Despite the function's `_result_unchanged` name suffix, the cited test's own assertion (and inline comment) confirms `result` changes to `Err("refresh token expired")`, not that it stays byte-identical to the original 401 message — "unchanged" in the name refers to the account remaining an `Err` (not silently recovered to `Ok`).
+- **Note:** BUG-165 regression guard; covers the `Some(paths)` early-exit path not testable at CLI level without spawning live subprocess. Despite the function's `_result_unchanged` name suffix, the cited test's own assertion (and inline comment) confirms `result` changes to `Err("token refresh failed")`, not that it stays byte-identical to the original 401 message — "unchanged" in the name refers to the account remaining an `Err` (not silently recovered to `Ok`).
 - **Source:** [017_token_refresh.md Algorithm](../../../docs/feature/017_token_refresh.md)
 
 ---
@@ -226,9 +226,9 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 
 - **Given:** `claude_paths = None` (persistent-store mode); one saved account with a 401 error result; no per-account credential file (`{name}.credentials.json`) exists in the persistent store.
 - **When:** `apply_refresh(&mut accounts, store.path(), None, false)` is called (unit test context; equivalent to `clp .usage refresh::1` with no live session)
-- **Then:** `refresh_account_token(name, store, None)` returns `None` (credential file absent in persistent store); the account is skipped via `continue`. Per BUG-297 (`src/usage/refresh.rs:133`), the original 401 error is NOT left unchanged — `apply_refresh` overwrites `aq.result` to the definitive `Err("refresh token expired")` before the `continue`.
+- **Then:** `refresh_account_token(name, store, None)` returns `None` (credential file absent in persistent store); the account is skipped via `continue`. Per BUG-297 (`apply_refresh`'s `None` arm), the original 401 error is NOT left unchanged — `apply_refresh` overwrites `aq.result` to `Err("token refresh failed")` (cause-neutral label per BUG-539) before the `continue`.
 - **Source fn:** `test_apply_refresh_401_no_cred_file` (C2 — covers None-paths + no credential file)
-- **Note:** Symmetric to FT-12 for the `None`-paths branch; verifies the persistent-store fallback path exits cleanly when the per-account credential file is absent. The test's own inline comment confirms `result` changes to `Err("refresh token expired")`, not that it stays byte-identical to the original 401 message.
+- **Note:** Symmetric to FT-12 for the `None`-paths branch; verifies the persistent-store fallback path exits cleanly when the per-account credential file is absent. The test's own inline comment confirms `result` changes to `Err("token refresh failed")`, not that it stays byte-identical to the original 401 message.
 - **Source:** [017_token_refresh.md Algorithm](../../../docs/feature/017_token_refresh.md)
 
 ---
@@ -279,11 +279,11 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 
 ---
 
-### FT-19: `refresh_account_token` returns `None` → `aq.result = Err("refresh token expired")` (BUG-297 MRE)
+### FT-19: `refresh_account_token` returns `None` → `aq.result = Err("token refresh failed")` (BUG-297 MRE; label per BUG-539)
 
 - **Given:** One `AccountQuota` with `cached: true` and `result: Ok(cached_data)` (cache fallback masked the original auth error); `refresh_account_token` returns `None` — the OAuth refresh token has expired and `run_isolated` exits without writing new credentials.
 - **When:** `apply_refresh(&mut accounts, store.path(), None, false)` processes the account and the `None` branch executes.
-- **Then:** `account_quota.result` is set to `Err("refresh token expired")` before `continue;` — it is NOT left as `Ok(cached_data)`. Downstream phases (`apply_touch`) see `Err` and skip the account, preventing a redundant subprocess on an unrecoverable account.
+- **Then:** `account_quota.result` is set to `Err("token refresh failed")` before `continue;` — it is NOT left as `Ok(cached_data)`. Downstream phases (`apply_touch`) see `Err` and skip the account, preventing a redundant subprocess on an unrecoverable account. Label is cause-neutral per BUG-539: `refresh_account_token` surfaces no cause across the `Option` boundary.
 - **Source fn:** `mre_bug297_refresh_none_sets_aq_result_err` (in `tests/usage/refresh_tests_b.rs`)
 - **Note:** Fix for BUG-297. Pre-fix: `apply_refresh` left `aq.result=Ok(cached_data)` when refresh returned `None`, causing `apply_touch` to fire a subprocess on an account that cannot recover without manual browser re-authentication.
 - **Source:** [017_token_refresh.md AC-30](../../../docs/feature/017_token_refresh.md)

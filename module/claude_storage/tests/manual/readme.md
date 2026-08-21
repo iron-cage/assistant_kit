@@ -1,4 +1,4 @@
-# manual testing plan - claude_storage v1.4.0
+# manual testing plan - claude_storage v1.9.1
 
 ## responsibility
 
@@ -8,10 +8,10 @@ Comprehensive manual testing coverage for all CLI commands, parameter combinatio
 
 ### commands to test
 
-Current command set (12 commands as of v1.4.0):
+Current command set (16 commands as of v1.9.1), numbered to match `docs/cli/command/`:
 
 1. `.status` - Storage statistics (path parameter tested in Phase 1D)
-2. `.list` - Project/session listing with filtering
+2. `.list` - Project/session listing with filtering (DEPRECATED — superseded by `.projects`)
 3. `.show` - Session/project display (location-aware)
 4. `.count` - Fast counting operations (target parameter tested in Phase 1A)
 5. `.search` - Full-text search (parameter validation tested in Phase 1B)
@@ -22,6 +22,10 @@ Current command set (12 commands as of v1.4.0):
 10. `.session.dir` - Print or create session directory for a topic
 11. `.session.ensure` - Ensure session directory exists for a topic
 12. `.tail` - Print last N conversation turns for current directory (turn-grouped renderer manually verified 2026-08-21 — see below)
+13. `.usage` - Per-session usage table — turns, tokens, cache, duration, dir
+14. `.rollup` - Grouped/filtered/sorted/projected token-usage table
+15. `.cost` - Per-conversation cost table with agent sessions folded in
+16. `.session.path` - Resolve a session's absolute transcript file path
 
 **Removed commands (do not test):**
 - `.show.project` — removed in task-013 (deprecated stub)

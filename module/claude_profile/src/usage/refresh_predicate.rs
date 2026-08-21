@@ -55,8 +55,8 @@ pub fn should_refresh( aq : &AccountQuota, now_secs : u64 ) -> bool
 {
   // Feature 071: a redirect-backend row's placeholder Err (REDIRECT_NO_QUOTA_REASON) must
   // return false here — matching none of the arms below is what protects it. If any arm
-  // ever matched, apply_refresh's None-arm would overwrite the placeholder with "refresh
-  // token expired", breaking is_redirect_backend() and every display gate keyed on it.
+  // ever matched, apply_refresh's None-arm would overwrite the placeholder with "token
+  // refresh failed" (BUG-539), breaking is_redirect_backend() and every display gate keyed on it.
   // No explicit guard needed today (the reason string matches no arm); this note is the
   // contract that keeps it that way.
   // G2: Non-owned accounts must never be refreshed — credential mutation forbidden.

@@ -86,7 +86,7 @@ including the `expiresAt=1` forcing mechanism and the no-valid→refreshed bound
 - **Given:** An account whose refresh token has expired server-side. `refresh_account_token()`
   is called (e.g., for a 401 response) but the subprocess exits without updating credentials.
 - **When:** `refresh_account_token()` returns `None`.
-- **Then:** `aq.result` is set to `Err("refresh token expired")`. This prevents downstream
+- **Then:** `aq.result` is set to `Err("token refresh failed")` (cause-neutral label per BUG-539). This prevents downstream
   `apply_touch()` from firing on the unrecoverable account (Fix BUG-297). The account transitions
   to `rt_expired` state — only browser relogin (`.account.relogin`) can recover it.
 - **Source fn:** `mre_bug297_refresh_none_sets_aq_result_err` in

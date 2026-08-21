@@ -49,8 +49,8 @@ post-touch cache write, refresh-before-touch ordering, and Sonnet model requirem
 
 ### AC-3: Error account skipped before `touch_idle` guard
 
-- **Given:** An account where `aq.result` is `Err(...)` (quota fetch failed or refresh token
-  expired).
+- **Given:** An account where `aq.result` is `Err(...)` (quota fetch failed, or token refresh
+  failed — the cause-neutral label per BUG-539).
 - **When:** `apply_touch()` evaluates the error-early-exit predicate.
 - **Then:** Touch is skipped immediately, BEFORE the `touch_idle` cache guard is checked.
   `reason: error account` is emitted. Only accounts with `Ok(data)` quota results are eligible for touch.

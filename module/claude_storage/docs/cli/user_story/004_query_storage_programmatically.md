@@ -19,6 +19,7 @@
 | 2 | [`.list`](../command/02_list.md) (deprecated) | Historical; superseded by `.projects` |
 | 7 | [`.projects`](../command/07_projects.md) | Enumerate projects for scripted iteration; `ids::`+`project::` for raw conversation-ID output |
 | 4 | [`.count`](../command/04_count.md) | Bare integer count output for comparison and thresholds |
+| 16 | [`.session.path`](../command/16_session_path.md) | Resolve a session transcript file path for direct tool consumption (`jq`, `tail`) |
 
 ### Referenced Formats
 | # | Format | Role |
@@ -38,6 +39,7 @@
 | 16 | [`target::`](../param/16_target.md) | Specify what to count (projects, sessions, entries) |
 | 21 | [`count::`](../param/21_count.md) | Output count only as bare integer for scripting |
 | 31 | [`ids::`](../param/31_ids.md) | Raw conversation-ID output for scripted iteration over a project's conversations |
+| 41 | [`latest::`](../param/41_latest.md) | Explicit most-recent-session selector for `.session.path` in scripts |
 
 ### Related User Stories
 | # | User Story | Relationship |

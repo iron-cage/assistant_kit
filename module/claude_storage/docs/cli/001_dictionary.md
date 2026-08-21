@@ -83,7 +83,9 @@ A top-level Claude Code conversation, as opposed to an agent session. Stored as 
 
 ### Path Encoding
 
-The algorithm Claude Code uses to convert a filesystem path into a safe directory name for `~/.claude/projects/`. Slashes (`/`) become hyphens (`-`); no other transformation is applied. Example: `/home/alice/projects` → `-home-alice-projects`. Path-encoded IDs are accepted by the `project::` parameter.
+The algorithm Claude Code uses to convert a filesystem path into a safe directory name for `~/.claude/projects/`. **Every** non-alphanumeric character becomes a hyphen (`-`) — the real algorithm is a blanket `${path//[^a-zA-Z0-9]/-}` substitution, so path separators, underscores, and dots are all indistinguishable in the result. Example: `/home/alice/my_app` and `/home/alice/my/app` both encode to `-home-alice-my-app`. Path-encoded IDs are accepted by the `project::` parameter.
+
+The encoding is therefore **lossy and not invertible**. `decode_path` applies a heuristic, and callers that need a real path fall back to a filesystem-guided walk when the heuristic's guess does not exist on disk (`src/cli/scope.rs` `decode_storage_base`). When neither resolves, the displayed path is a guess — `.projects` marks such rows `⚠ gone`. See `Fix(BUG-366)` in `claude_storage_core::encode_path` for the character class, and issue-024/029/030/031/032/035 for the ambiguity cases this creates.
 
 See [storage/readme.md](../../../../contract/claude_code/docs/storage/readme.md) for the encoding specification.
 
@@ -115,7 +117,7 @@ The human-readable name component of a session directory. Stored without the lea
 
 ### Fork-Mode Topic
 
-A named session INSIDE a base directory's own storage, rather than a `-{topic}` sibling directory. The topic name maps deterministically to a session file via UUIDv5: `{storage}/{UUIDv5( canonical base path + NUL + name )}.jsonl`. Used only by `.session.path topic::` — every other `topic::` consumer keeps the Session Topic dir-suffix sense above. Because all fork-mode topics share the base directory's storage (and therefore its path-keyed prompt cache), forking preserves cache where a Session Directory switch invalidates it. The name-to-UUID mapping is one-way; the `clr` runner keeps a name registry for listing. See [`command/15_session_path.md`](command/15_session_path.md) § Topic Sense Collision.
+A named session INSIDE a base directory's own storage, rather than a `-{topic}` sibling directory. The topic name maps deterministically to a session file via UUIDv5: `{storage}/{UUIDv5( canonical base path + NUL + name )}.jsonl`. Used only by `.session.path topic::` — every other `topic::` consumer keeps the Session Topic dir-suffix sense above. Because all fork-mode topics share the base directory's storage (and therefore its path-keyed prompt cache), forking preserves cache where a Session Directory switch invalidates it. The name-to-UUID mapping is one-way; the `clr` runner keeps a name registry for listing. See [`command/16_session_path.md`](command/16_session_path.md) § Topic Sense Collision.
 
 ---
 
