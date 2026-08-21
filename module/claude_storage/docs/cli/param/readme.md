@@ -4,7 +4,7 @@
 
 - **Purpose**: Document individual parameter specifications for the `claude_storage` CLI.
 - **Responsibility**: Per-parameter detail pages with type, defaults, and command cross-refs.
-- **In Scope**: All 38 CLI parameters with type constraints, defaults, valid values, and command usage.
+- **In Scope**: All 39 CLI parameters with type constraints, defaults, valid values, and command usage.
 - **Out of Scope**: Type definitions (→ `type/`), parameter group semantics (→ `param_group/`), command-level behavior (→ `command/`).
 
 All parameters for the `claude_storage` CLI. Parameters use `param::value` syntax.
@@ -53,6 +53,7 @@ See [type/readme.md](../type/readme.md) for type definitions and [param_group/re
 | `36_order.md` | order:: — sort direction for .rollup |
 | `37_model.md` | model:: — model-name substring filter for .rollup |
 | `38_columns.md` | columns:: — column projection for .rollup |
+| `39_latest.md` | latest:: — most-recent session selector for .session.path |
 
 ### Parameters Table
 
@@ -96,5 +97,6 @@ See [type/readme.md](../type/readme.md) for type definitions and [param_group/re
 | 36 | [`order::`](36_order.md) | String enum | `desc` | `asc`, `desc` | Sort direction for `.rollup` | 1 |
 | 37 | [`model::`](37_model.md) | String | — | any string | Model-name substring filter for `.rollup` | 1 |
 | 38 | [`columns::`](38_columns.md) | String (comma list) | 9-column default | 11 valid keys | Column projection for `.rollup` | 1 |
+| 39 | [`latest::`](39_latest.md) | Boolean | `0` (effective default) | `0`, `1` | Most-recent session selector for `.session.path` | 1 |
 
-**Total:** 38 parameters, all implemented across their specified commands — including `depth::` (row 26) for `.usage` and `.rollup` (see `../command/13_usage.md`, `../command/14_rollup.md`); `filter::`, `detail::`, `ids::` (rows 29-31) for `.projects`' absorption of `.list` (see `../command/07_projects.md` and `../command_group/readme.md § Command Removal: .list -> .projects`); `tail::`/`detail::` (rows 25, 30) for `.show`'s project-overview branch (see `../command/03_show.md`); `fields::`/`index::` (rows 32-33) for `.show`'s attribute-projection and single-message selection (see `../command/03_show.md`); and `group::`/`sort::`/`order::`/`model::`/`columns::` (rows 34-38), introduced entirely for `.rollup` (see `../command/14_rollup.md`).
+**Total:** 39 parameters, all implemented across their specified commands — including `latest::` (row 39), introduced for `.session.path` (see `../command/15_session_path.md`); `depth::` (row 26) for `.usage` and `.rollup` (see `../command/13_usage.md`, `../command/14_rollup.md`); `filter::`, `detail::`, `ids::` (rows 29-31) for `.projects`' absorption of `.list` (see `../command/07_projects.md` and `../command_group/readme.md § Command Removal: .list -> .projects`); `tail::`/`detail::` (rows 25, 30) for `.show`'s project-overview branch (see `../command/03_show.md`); `fields::`/`index::` (rows 32-33) for `.show`'s attribute-projection and single-message selection (see `../command/03_show.md`); and `group::`/`sort::`/`order::`/`model::`/`columns::` (rows 34-38), introduced entirely for `.rollup` (see `../command/14_rollup.md`).
