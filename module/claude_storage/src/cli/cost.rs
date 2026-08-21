@@ -43,7 +43,7 @@ struct ModelRates
 /// Model pricing, matched by case-insensitive substring against the
 /// recorded model ID; FIRST match wins, so more specific needles must
 /// precede the generic ones they contain (`opus-4-1` before `opus-4`).
-/// USD per MTok, from the published API price list as of [`PRICES_AS_OF`].
+/// USD per `MTok`, from the published API price list as of [`PRICES_AS_OF`].
 const MODEL_RATES : &[ ( &str, ModelRates ) ] =
 &[
   ( "fable",      ModelRates { input : 10.0, write_5m : 12.5,   write_1h : 20.0, read : 1.0,  output : 50.0 } ),

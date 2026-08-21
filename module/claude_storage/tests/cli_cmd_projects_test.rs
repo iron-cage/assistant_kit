@@ -1484,9 +1484,15 @@ fn int_65b_show_tree_selects_tree_layout_under_detail_projects()
 {
   let root = TempDir::new().unwrap();
   let storage_root = root.path().join( ".claude" );
-  let project = root.path().join( "proj-int65b" );
-  fs::create_dir_all( &project ).unwrap();
-  common::write_path_project_session( &storage_root, &project, "session-int65b", 2 );
+  // Two siblings, not one: a lone project collapses to a single top-level node,
+  // which by construction draws no connector — the tree only becomes visibly
+  // distinct from the flat table once something actually nests.
+  let alpha = root.path().join( "proj-int65b" ).join( "alpha" );
+  let beta = root.path().join( "proj-int65b" ).join( "beta" );
+  fs::create_dir_all( &alpha ).unwrap();
+  fs::create_dir_all( &beta ).unwrap();
+  common::write_path_project_session( &storage_root, &alpha, "session-int65b-a", 2 );
+  common::write_path_project_session( &storage_root, &beta, "session-int65b-b", 2 );
 
   let out_flat = common::clg_cmd()
     .env( "HOME", root.path() )

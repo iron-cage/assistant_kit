@@ -64,7 +64,7 @@
 //! | IT-111 | BUG-528 | `scope::under` includes a session whose true project resolves via a genuine Partial tie one level below an unrelated, coincidentally-colliding sibling |
 //!
 //! Note: IT-60..IT-64 follow IT-59 (`scope::around` tests in `projects_scope_around_test.rs`).
-//! IT-27..IT-30 were already allocated in `tests/docs/cli/command/007_projects.md`
+//! IT-27..IT-30 were already allocated in `tests/docs/cli/command/07_projects.md`
 //! for unrelated tests, so the next available block was used here. IT-65 follows
 //! IT-64 (next free ID in the shared `.projects` IT-N sequence). IT-66 is
 //! allocated to `scope_under_finds_project_with_dot_prefixed_path` in

@@ -12,7 +12,7 @@ navigable.
 | `storage.rs` | Shared storage factory, path resolution, project + session address helpers |
 | `scope.rs` | Shared `scope::`/`path::` validation and project resolution |
 | `color.rs` | Hand-rolled ANSI color helpers for `.show`/`.tail` output |
-| `format.rs` | Entry content formatting, timestamp formatting, safe UTF-8 truncation |
+| `format.rs` | Content-block rendering, relative/absolute time formatting, width-aware eliding |
 | `field_selector.rs` | `FieldSelector` type — `.show`'s `fields::` attribute-projection parsing/validation |
 | `status.rs` | `.status` command — project stats for a path |
 | `list.rs` | `.list` command — session/conversation listing with filters |
@@ -23,7 +23,7 @@ navigable.
 | `projects.rs` | `.projects` command — agent-aware session-first view; family/conversation types |
 | `projects_overview.rs` | `.projects` terse rendering — flat recency table and directory tree |
 | `session.rs` | `.project.path`, `.project.exists`, `.session.dir`, `.session.ensure` commands |
-| `tail.rs` | `.tail` command — last N entries of a session |
+| `tail.rs` | `.tail` command — last N conversation turns of a session |
 | `usage.rs` | `.usage` command — per-session usage table (turns, tokens, duration, dir) |
 | `rollup.rs` | `.rollup` command — flexible grouped/filtered/sorted/projected token-usage rollup |
 | `cost.rs` | `.cost` command — per-conversation cost table with agent fold-in and pricing |

@@ -1,6 +1,6 @@
 # Command :: 2. `.list` — DEPRECATED
 
-> **Deprecated.** Superseded by [`.projects`](07_projects.md). `.projects` absorbs every capability `.list` provided — project-only listing (`detail::projects`), session display (`detail::sessions`, the new default), path-substring filtering (`filter::`), and the raw conversation-ID scripting shortcut (`ids::`, paired with the existing `count::`). This file is retained for traceability; do not add new cross-references to it. See `docs/cli/command_group/readme.md § Command Removal: .list -> .projects` for the consolidation rationale.
+> **Deprecated.** Superseded by [`.projects`](07_projects.md). `.projects` absorbs every capability `.list` provided — project-only listing (`detail::projects`, now the default), session display (`detail::sessions`), path-substring filtering (`filter::`), and the raw conversation-ID scripting shortcut (`ids::`, paired with the existing `count::`). This file is retained for traceability; do not add new cross-references to it. See `docs/cli/command_group/readme.md § Command Removal: .list -> .projects` for the consolidation rationale.
 
 ### Scope
 

@@ -239,12 +239,12 @@ fn cost_int_1_default_current_single_row_no_total()
 /// ## Purpose
 /// Validates multi-conversation selection: request order (not mtime or
 /// alphabetical) drives row order, and the TOTAL row sums every additive
-/// column while showing `—` for the non-additive MaxCtx.
+/// column while showing `—` for the non-additive `MaxCtx`.
 ///
 /// ## Coverage
 /// Two conversations in different projects requested B-then-A; rows appear
 /// B, A, TOTAL; TOTAL is byte-exact (Req 3, Input 300, Output 120, Total
-/// 420, MaxCtx `—`); body-row count 3.
+/// 420, `MaxCtx` `—`); body-row count 3.
 ///
 /// ## Validation Strategy
 /// Fully line-controlled fixtures with distinct token totals; assert both
@@ -584,14 +584,14 @@ fn cost_int_9_empty_session_ids_rejected()
 /// conversation: 5m/1h TTL buckets billed at their own multipliers, a
 /// TTL-less write billed at the 5m (API default TTL) rate, a second model
 /// summed into the same row, a `<synthetic>` entry contributing nothing,
-/// a compaction marker counted, and MaxCtx taking the largest single call.
+/// a compaction marker counted, and `MaxCtx` taking the largest single call.
 ///
 /// ## Coverage
 /// haiku-4-5: 1M in ($1.00) + 200k out ($1.00) + 3M read ($0.30) + 400k 5m
 /// write ($0.50) + 100k 1h write ($0.20) + 200k unknown-TTL write at 5m
 /// rate ($0.25) = $3.25; sonnet-5: 500k in ($1.00) + 100k out ($1.00) =
 /// $2.00; row total $5.25. Req 3 (synthetic excluded), Input 1,500,000,
-/// CacheW 700,000, Total 5,500,000, MaxCtx 4,500,000, Compact 1. No
+/// `CacheW` 700,000, Total 5,500,000, `MaxCtx` 4,500,000, Compact 1. No
 /// footnote (every priced).
 ///
 /// ## Validation Strategy

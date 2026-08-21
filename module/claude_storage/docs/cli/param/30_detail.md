@@ -7,7 +7,7 @@
 - **In Scope**: Value constraints, default behavior, command interactions.
 - **Out of Scope**: Type definitions (→ `type/`), command behavior (→ `command/`).
 
-Output verbosity selector — terse project/summary headers only, or full session detail. On `.projects`, absorbed `.list`'s former project-only default view and its `show_sessions::` toggle into a single explicit parameter (see [`02_list.md`](../command/02_list.md), [`15_sessions.md`](15_sessions.md)). On `.show`'s project-overview branches, gates the full per-session list beneath the project summary block.
+Output verbosity selector — terse project overview, or full session detail. On `.projects`, absorbed `.list`'s former project-only default view and its `show_sessions::` toggle into a single explicit parameter (see [`02_list.md`](../command/02_list.md), [`15_sessions.md`](15_sessions.md)). On `.show`'s project-overview branches, gates the full per-session list beneath the project summary block.
 
 **Type:** [`DetailLevel`](../type/14_detail_level.md)
 
@@ -18,22 +18,27 @@ Output verbosity selector — terse project/summary headers only, or full sessio
 - Case-insensitive on input
 - Error on invalid: `"detail must be projects|sessions, got {value}"`
 
-**Default:** `sessions` for `.projects` (preserves its pre-consolidation behavior — bare invocation always showed session detail); `projects` for `.show` (context-dependent — see Referenced Commands)
+**Default:** `projects` for both `.projects` and `.show` (context-dependent — see Referenced Commands)
+
+`.projects` defaulted to `sessions` while `.list` was being absorbed, purely to keep bare `.projects` behaving as it had pre-consolidation. That rationale expired with `.list`: a command named `.projects` should answer "which projects?", and on a real machine the session-detail default expands that into thousands of lines. `detail::sessions` is now the opt-in.
 
 **Commands:** [`.projects`](../command/07_projects.md), [`.show`](../command/03_show.md)
 
-**Purpose:** `detail::projects` gives the terse, project-only view `.list`'s bare invocation used to provide — one header line per project, no session or family lines. `detail::sessions` is full family/tree session detail beneath each project header (`.projects`' unchanged pre-consolidation behavior, and its default). On `.projects`, because `sessions` is already the default, no auto-enable logic is needed — passing a session filter (`session::`, `agent::`, `min_entries::`) just narrows what the already-visible session lines show; use `detail::projects` explicitly to suppress session lines regardless of filters. On `.show`'s project-overview branches (no `session_id::`), the same two values gate the full per-session list beneath the summary block and `last::`-windowed messages — `detail::projects` (the default here) omits it, `detail::sessions` appends it; no effect when `session_id::` is given.
+**Purpose:** On `.projects`, `detail::projects` (the default) renders the terse overview — one line per project carrying recency, conversation count, agent count, and path, under a totals summary line. [`show_tree::`](24_show_tree.md) picks the layout: flat recency table by default, directory tree at `show_tree::1`. `detail::sessions` is full family/tree session detail beneath a `Found N projects:` header, one block per project. Session filters (`session::`, `agent::`, `min_entries::`) do not auto-enable session lines — they narrow the counts under `detail::projects` and the visible lines under `detail::sessions`; pass `detail::sessions` explicitly to see individual sessions. On `.show`'s project-overview branches (no `session_id::`), the same two values gate the full per-session list beneath the summary block and `last::`-windowed messages — `detail::projects` (also the default there) omits it, `detail::sessions` appends it; no effect when `session_id::` is given.
 
 **Examples:**
 ```bash
-# Full detail (default) — unchanged from pre-consolidation .projects
+# Terse overview (default) — one line per project
 .projects
 
-# Terse project-only view — replaces bare `.list`
-.projects detail::projects
+# Same rows, nested by directory
+.projects show_tree::1
 
-# Terse view narrowed by scope and filter
-.projects scope::global filter::assistant detail::projects
+# Full session detail beneath each project
+.projects detail::sessions
+
+# Terse overview narrowed by scope and filter
+.projects scope::global filter::assistant
 
 # Project overview, summary + tail messages only (default on .show)
 .show
@@ -53,7 +58,7 @@ Output verbosity selector — terse project/summary headers only, or full sessio
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
 | 3 | [`.show`](../command/03_show.md) | `projects` | Gates the full per-session list in project-overview branches; no effect when `session_id::` given |
-| 7 | [`.projects`](../command/07_projects.md) | `sessions` | Absorbed from `.list`'s default view and `show_sessions::` |
+| 7 | [`.projects`](../command/07_projects.md) | `projects` | Terse overview; `show_tree::` picks flat table vs directory tree |
 
 ### Referenced User Stories
 | # | User Story | Persona |

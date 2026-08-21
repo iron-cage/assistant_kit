@@ -376,7 +376,7 @@ fn cost_report_malformed_lines_skipped()
 /// Asserts the larger input side wins and output is excluded.
 ///
 /// ## Related Requirements
-/// `docs/cli/command/15_cost.md` — MaxCtx column
+/// `docs/cli/command/15_cost.md` — `MaxCtx` column
 #[ test ]
 fn cost_report_max_context_input_side_only()
 {
@@ -445,7 +445,7 @@ fn aggregate_reports_folds_family()
 /// Test `aggregate_reports` with the root alone
 ///
 /// ## Purpose
-/// Validates the degenerate (agents::0 / no-agents) case: aggregation of a
+/// Validates the degenerate (`agents::0` / no-agents) case: aggregation of a
 /// single non-agent report is the identity, with `agent_count == 0`.
 ///
 /// ## Coverage
@@ -455,7 +455,7 @@ fn aggregate_reports_folds_family()
 /// Asserts `agent_count == 0` and totals equal the root's own.
 ///
 /// ## Related Requirements
-/// `docs/cli/command/15_cost.md` — agents::0
+/// `docs/cli/command/15_cost.md` — `agents::0`
 #[ test ]
 fn aggregate_reports_root_only()
 {

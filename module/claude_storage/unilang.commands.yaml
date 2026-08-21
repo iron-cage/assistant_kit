@@ -925,8 +925,8 @@
 
 - name: ".tail"
   namespace: ""
-  description: "Print the last N entries of the current directory's conversation (default: 4)"
-  hint: "Print last N conversation entries"
+  description: "Print the last N conversation turns of the current directory's session (default: 4)"
+  hint: "Print last N conversation turns"
   version: "1.0.0"
   status: "stable"
   aliases: []
@@ -939,12 +939,30 @@
   arguments:
     - name: "last"
       kind: "Integer"
-      description: "Number of trailing entries to print (0 = show all, default: 4)"
-      hint: "Entry count"
+      description: "Number of trailing turns to print (0 = show all, default: 4)"
+      hint: "Turn count"
       optional: true
       default: "4"
       validation_rules: []
       aliases: ["l"]
+      tags: []
+
+    - name: "full"
+      kind: "Boolean"
+      description: "Print every body line instead of folding long turns after 8 lines"
+      hint: "Unfold long turns"
+      optional: true
+      validation_rules: []
+      aliases: []
+      tags: []
+
+    - name: "compact"
+      kind: "Boolean"
+      description: "One line per turn: ordinal, age, speaker, and an elided first line"
+      hint: "One line per turn"
+      optional: true
+      validation_rules: []
+      aliases: []
       tags: []
 
     - name: "path"
@@ -969,6 +987,8 @@
     - ".tail"
     - ".tail last::10"
     - ".tail l::10"
+    - ".tail full::1"
+    - ".tail compact::1 last::20"
     - ".tail topic::work"
     - ".tail last::0"
   auto_help_enabled: true

@@ -32,7 +32,7 @@ Note: In `.count` and `.search`, `session::` behaves as a `SessionId` (exact mat
 - Different semantic level: tier visibility vs session predicate — this is also why `detail::` (like `show_sessions::` before it) is not a member of this group either
 
 
-**Auto-enable behavior (historical — `.list` only, deprecated):** In `.list`, providing any of `session::`, `agent::`, or `min_entries::` automatically enabled `show_sessions::1`, overridable with `show_sessions::0`. `.projects` has no equivalent auto-enable: `detail::sessions` is already the default, so a session filter simply narrows the already-visible session lines; use `detail::projects` explicitly to suppress them regardless of filters (see [`30_detail.md`](../param/30_detail.md)).
+**Auto-enable behavior (historical — `.list` only, deprecated):** In `.list`, providing any of `session::`, `agent::`, or `min_entries::` automatically enabled `show_sessions::1`, overridable with `show_sessions::0`. `.projects` has no equivalent auto-enable: a session filter narrows the per-project counts shown by the default `detail::projects` view; pass `detail::sessions` explicitly to see individual session lines (see [`30_detail.md`](../param/30_detail.md)).
 
 **Parameter Details:**
 

@@ -138,14 +138,16 @@ fn render_blocks_impl( blocks : &[ ContentBlock ], results : Option< &ToolResult
         non_blank( thinking ).map( | body | format!( "Thinking ·\n{body}" ) ),
       ContentBlock::ToolUse { id, name, input } =>
       {
-        let headline = tool_use_line( name, input );
         let Some( summary ) = results.and_then( | r | r.get( id ) )
         else
         {
-          return Some( color::tool( &headline ) );
+          return Some( color::tool( &tool_use_line( name, input, RULE_WIDTH ) ) );
         };
 
+        // Budget the headline around the annotation rather than let the two run
+        // together — a tool name plus a long path exceeds the width on its own.
         let label = summary.label();
+        let headline = tool_use_line( name, input, RULE_WIDTH.saturating_sub( label.chars().count() + 2 ) );
         let gap = " ".repeat( right_gap( &headline, &label ) );
         Some( format!( "{}{gap}{}", color::tool( &headline ), color::muted( &label ) ) )
       }
@@ -171,6 +173,29 @@ fn render_blocks_impl( blocks : &[ ContentBlock ], results : Option< &ToolResult
     .collect()
 }
 
+/// Join rendered blocks into a turn body.
+///
+/// A blank line separates two pieces only when at least one of them spans
+/// multiple lines. Consecutive one-liners — a run of tool calls, typically —
+/// stay packed, so a turn that made four calls reads as a list of four rather
+/// than four paragraphs.
+pub( super ) fn join_pieces( pieces : &[ String ] ) -> String
+{
+  let mut out = String::new();
+
+  for ( position, piece ) in pieces.iter().enumerate()
+  {
+    if position > 0
+    {
+      let previous_spans = pieces[ position - 1 ].contains( '\n' );
+      out.push_str( if previous_spans || piece.contains( '\n' ) { "\n\n" } else { "\n" } );
+    }
+    out.push_str( piece );
+  }
+
+  out
+}
+
 /// Spaces needed to push `right` against the [`RULE_WIDTH`] edge after `left`.
 ///
 /// Never returns less than 2, so an overlong left side degrades to a visible
@@ -182,11 +207,17 @@ pub( super ) fn right_gap( left : &str, right : &str ) -> usize
 }
 
 /// Render a `tool_use` block's one-line headline: `⚙ Bash · git status --short`.
-pub( super ) fn tool_use_line( name : &str, input : &JsonValue ) -> String
+///
+/// The whole line is held to `budget` characters, with the summary — never the
+/// tool name — absorbing the loss.
+pub( super ) fn tool_use_line( name : &str, input : &JsonValue, budget : usize ) -> String
 {
-  match tool_summary( input )
+  let prefix = format!( "⚙ {name} · " );
+  let room = budget.saturating_sub( prefix.chars().count() ).min( TOOL_SUMMARY_MAX );
+
+  match tool_summary( input, room )
   {
-    Some( summary ) => format!( "⚙ {name} · {summary}" ),
+    Some( summary ) => format!( "{prefix}{summary}" ),
     None => format!( "⚙ {name}" ),
   }
 }
@@ -195,13 +226,19 @@ pub( super ) fn tool_use_line( name : &str, input : &JsonValue ) -> String
 ///
 /// Returns `None` when the input carries no string under any known key —
 /// parameterless tools (`TaskList`, `AskUserQuestion`) legitimately have none.
-fn tool_summary( input : &JsonValue ) -> Option< String >
+///
+/// Filesystem paths elide from the front (`…/src/cli/tail.rs`) because the
+/// filename is the identifying part; everything else elides from the back,
+/// where a command's or query's opening words carry the meaning.
+fn tool_summary( input : &JsonValue, room : usize ) -> Option< String >
 {
+  const PATH_KEYS : [ &str; 3 ] = [ "file_path", "notebook_path", "path" ];
+
   let obj = input.as_object()?;
 
-  let raw = TOOL_SUMMARY_KEYS
+  let ( key, raw ) = TOOL_SUMMARY_KEYS
     .iter()
-    .find_map( | key | obj.get( *key ).and_then( | v | v.as_str() ) )?;
+    .find_map( | key | obj.get( *key ).and_then( | v | v.as_str() ).map( | value | ( *key, value ) ) )?;
 
   let flattened = raw.split_whitespace().collect::< Vec< _ > >().join( " " );
   if flattened.is_empty()
@@ -209,7 +246,24 @@ fn tool_summary( input : &JsonValue ) -> Option< String >
     return None;
   }
 
-  Some( ellipsize( &flattened, TOOL_SUMMARY_MAX ) )
+  // Below this there is no room for anything recognisable — drop the summary
+  // rather than emit a lone ellipsis.
+  if room < 8
+  {
+    return None;
+  }
+
+  Some
+  (
+    if PATH_KEYS.contains( &key )
+    {
+      ellipsize_start( &flattened, room )
+    }
+    else
+    {
+      ellipsize( &flattened, room )
+    }
+  )
 }
 
 /// Trim trailing whitespace, discarding the piece entirely when nothing is left.
@@ -232,6 +286,22 @@ pub( super ) fn ellipsize( text : &str, max_chars : usize ) -> String
 
   let kept : String = text.chars().take( max_chars.saturating_sub( 1 ) ).collect();
   format!( "{kept}…" )
+}
+
+/// Shorten to `max_chars` characters by dropping the *front*, prefixing `…`.
+///
+/// For a path, the last segments identify the file; the leading directories are
+/// the part a reader can afford to lose.
+pub( super ) fn ellipsize_start( text : &str, max_chars : usize ) -> String
+{
+  let total = text.chars().count();
+  if total <= max_chars
+  {
+    return text.to_string();
+  }
+
+  let kept : String = text.chars().skip( total - max_chars.saturating_sub( 1 ) ).collect();
+  format!( "…{kept}" )
 }
 
 /// Format timestamp for display
@@ -270,8 +340,10 @@ pub( super ) fn format_clock( timestamp : &str ) -> String
 {
   timestamp
     .split_once( 'T' )
-    .map( | ( _, time ) | time.split( ':' ).take( 2 ).collect::< Vec< _ > >().join( ":" ) )
-    .unwrap_or_else( || timestamp.to_string() )
+    .map_or_else(
+      || timestamp.to_string(),
+      | ( _, time ) | time.split( ':' ).take( 2 ).collect::< Vec< _ > >().join( ":" ),
+    )
 }
 
 /// Current wall clock as whole seconds since the Unix epoch.

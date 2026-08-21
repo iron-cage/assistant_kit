@@ -334,17 +334,13 @@ pub fn session_path_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
 
   // Default / latest::1 — the only selector that reads the disk.
   let ( _canonical_base, storage ) = resolve_storage_for_cmd( &cmd )?;
-  match claude_storage_core::continuation::most_recent_session_in_dir( &storage )
+  let Some( id ) = claude_storage_core::continuation::most_recent_session_in_dir( &storage )
+  else
   {
-    Some( id ) =>
-    {
-      let file = storage.join( format!( "{}.jsonl", id.as_str() ) );
-      Ok( OutputData::new( format!( "{}", file.display() ), "text" ) )
-    }
-    None =>
-    {
-      eprintln!( "no sessions in {}", storage.display() );
-      std::process::exit( 2 );
-    }
-  }
+    eprintln!( "no sessions in {}", storage.display() );
+    std::process::exit( 2 );
+  };
+
+  let file = storage.join( format!( "{}.jsonl", id.as_str() ) );
+  Ok( OutputData::new( format!( "{}", file.display() ), "text" ) )
 }

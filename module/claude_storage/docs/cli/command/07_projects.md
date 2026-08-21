@@ -7,9 +7,11 @@
 - **In Scope**: Invocation syntax, accepted parameters, output structure, error conditions.
 - **Out of Scope**: Parameter definitions (→ `param/`), type constraints (→ `type/`).
 
-Project list with scope control; conversations are grouped by project directory and one entry is shown per project (not per session file). Bare invocation shows all projects in the bidirectional neighborhood (ancestors + current + descendants via `scope::around`).
+Project list with scope control; conversations are grouped by project directory and one entry is shown per project (not per session file). Bare invocation shows all projects in the bidirectional neighborhood (ancestors + current + descendants via `scope::around`) as a terse one-line-per-project overview.
 
-**Absorbed from `.list` (deprecated, see [`02_list.md`](02_list.md)):** `.projects` is now the single command for both project-only and session-detail views. `detail::` selects the view (`projects` = terse, `sessions` = full detail, default); `filter::` provides the path-substring narrowing `.list`'s `path::` used to; `ids::` (paired with `count::`) provides the raw conversation-ID scripting shortcut `.list type::conversation` used to; `type::` (narrowed to `uuid`/`path`/`all`) filters by project naming scheme. This is a deliberate consolidation, not a Representation Absorption Test merge — see `../command_group/readme.md § Command Removal: .list -> .projects` for why the two commands never qualified as an automatic merge and why they were consolidated anyway.
+**What a "project" is here:** one directory under the storage root, created per distinct working directory `claude` was launched from — a *cwd bucket*, not a repository, crate, or workspace. One repo entered from five subdirectories produces five projects; a scratch directory used once produces one. This is why the tree layout (`show_tree::1`) is useful: it re-assembles those buckets into the directory structure they actually came from.
+
+**Absorbed from `.list` (deprecated, see [`02_list.md`](02_list.md)):** `.projects` is now the single command for both project-only and session-detail views. `detail::` selects the view (`projects` = terse overview, default; `sessions` = full detail); `filter::` provides the path-substring narrowing `.list`'s `path::` used to; `ids::` (paired with `count::`) provides the raw conversation-ID scripting shortcut `.list type::conversation` used to; `type::` (narrowed to `uuid`/`path`/`all`) filters by project naming scheme. This is a deliberate consolidation, not a Representation Absorption Test merge — see `../command_group/readme.md § Command Removal: .list -> .projects` for why the two commands never qualified as an automatic merge and why they were consolidated anyway.
 
 **Parameters:** `scope::`, `path::`, `filter::`, `type::`, `detail::`, `session::`, `agent::`, `min_entries::`, `ids::`, `project::`, `count::`, `limit::`, `show_tree::`, `since_days::`, `show_topic::`
 
@@ -24,7 +26,8 @@ claude_storage .projects scope::under path::PATH
 claude_storage .projects scope::global [agent::1] [min_entries::N]
 claude_storage .projects limit::5
 claude_storage .projects scope::global since_days::20 show_topic::1
-claude_storage .projects scope::global detail::projects
+claude_storage .projects scope::global detail::sessions
+claude_storage .projects scope::global show_tree::1
 claude_storage .projects scope::global filter::SUBSTR
 claude_storage .projects scope::global type::uuid
 claude_storage .projects project::PROJECT ids::1
@@ -39,7 +42,7 @@ claude_storage .projects project::PROJECT ids::1 count::1
 | `path::` | [`StoragePath`](../type/10_storage_path.md) | optional | cwd | Base path for scope resolution |
 | `filter::` | [`PathSubstring`](../type/04_path_substring.md) | optional | — | Filter resolved projects by path substring |
 | `type::` | [`ProjectType`](../type/06_project_type.md) | optional | `all` | Project naming filter (`uuid`, `path`, `all`) |
-| `detail::` | `DetailLevel` (new type — `type/`) | optional | `sessions` | Output detail: `projects` (terse) or `sessions` (full, current default) |
+| `detail::` | `DetailLevel` (new type — `type/`) | optional | `projects` | Output detail: `projects` (terse overview, default) or `sessions` (every session listed) |
 | `session::` | [`SessionFilter`](../type/08_session_filter.md) | optional | — | Filter sessions by ID substring |
 | `agent::` | Boolean | optional | — | Session type filter (`0`=main, `1`=agent) |
 | `min_entries::` | [`EntryCount`](../type/01_entry_count.md) | optional | — | Minimum entry count threshold |
@@ -47,7 +50,7 @@ claude_storage .projects project::PROJECT ids::1 count::1
 | `project::` | String | required with `ids::1` | — | Project ID; scopes `ids::` output |
 | `count::` | Boolean | optional | `0` | With `ids::1`: output only the count as a bare integer |
 | `limit::` | Integer | optional | `0` | Max main sessions per project (`0` = unlimited) |
-| `show_tree::` | Boolean | optional | `0` | Tree-indent agent sessions under root sessions |
+| `show_tree::` | Boolean | optional | `0` | Tree layout: projects nested by directory (`detail::projects`) or agents under roots (`detail::sessions`) |
 | `since_days::` | Integer | optional | — | Only sessions modified within the last N days (`0` = last 24 hours) |
 | `show_topic::` | Boolean | optional | `0` | Append first user message text to session lines |
 
@@ -59,11 +62,13 @@ claude_storage .projects project::PROJECT ids::1 count::1
 3. Filter projects by scope predicate — `local`: exact match + topic variants; `relevant`: ancestor chain (component-wise); `under`: subtree (component-wise); `around`: union of under + relevant; `global`: all projects — then narrow by `type::` naming scheme (`uuid`/`path`/`all`) and `filter::` path substring
 4. Collect sessions per matching project — apply session filter (agent, min_entries, session ID substring), then the `since_days::` mtime window (cutoff `now - max(N,1) × 24h`; unreadable mtime = excluded); group by decoded display path (filesystem-guided decode resolves `_` vs `/` ambiguity)
 5. Sort and aggregate — sessions by mtime descending within each project; projects by most-recent session mtime descending; exclude zero-byte placeholder sessions
-6. Format output per `detail::` — `detail::projects`: header line only (path + counts), no session/family lines; `detail::sessions` (default): family display (agents grouped under root sessions with `[N agents: breakdown]` brackets) or tree display (`show_tree::1`: `├─`/`└─` connectors); with `show_topic::1`, append each session's first user message (flattened, max 90 chars); apply `limit::` cap with `... and N more` hint
+6. Format output per `detail::` — `detail::projects` (default): terse overview, one row per project under a totals summary line, laid out as a flat recency table or (`show_tree::1`) a directory tree; `detail::sessions`: family display (agents grouped under root sessions with `[N agents: breakdown]` brackets) or tree display (`show_tree::1`: `├─`/`└─` connectors); with `show_topic::1`, append each session's first user message (flattened, max 90 chars); apply `limit::` cap with `... and N more` hint
 
 **Default invocation:**
 
-Bare `clg .projects` uses `scope::around` and `detail::sessions` — showing all projects in the bidirectional neighborhood of cwd (ancestors upward to `/` plus all descendants), each with its full session detail (identical to current pre-consolidation behavior). No sessions in scope → `No active project found.`
+Bare `clg .projects` uses `scope::around` and `detail::projects` — showing all projects in the bidirectional neighborhood of cwd (ancestors upward to `/` plus all descendants), one line each. No sessions in scope → `No active project found.`
+
+The default was `detail::sessions` while `.list` was being absorbed, purely to keep bare `.projects` behaving as it had before the merge. That rationale expired with `.list`: a command named `.projects` should answer "which projects?", and on a machine with hundreds of cwd buckets the session-detail default expands that answer into thousands of lines. Pass `detail::sessions` to get the old view.
 
 **Examples:**
 ```bash
@@ -88,14 +93,20 @@ claude_storage .projects scope::global limit::5
 # Conversations active in the last 20 days, with their opening topic
 claude_storage .projects scope::global since_days::20 show_topic::1
 
-# Terse project-only view (all projects, no session lines) — replaces bare `.list`
-claude_storage .projects scope::global detail::projects
+# Every project on the machine, one line each
+claude_storage .projects scope::global
+
+# Same rows, nested by directory
+claude_storage .projects scope::global show_tree::1
+
+# Full session detail beneath each project — the pre-flip default
+claude_storage .projects scope::global detail::sessions
 
 # Filter projects by path substring — replaces `.list path::SUBSTR`
 claude_storage .projects scope::global filter::assistant
 
 # List only UUID-identified projects — replaces `.list type::uuid`
-claude_storage .projects scope::global type::uuid detail::projects
+claude_storage .projects scope::global type::uuid
 
 # List conversation IDs for a specific project (scripting) — replaces `.list type::conversation`
 claude_storage .projects project::abc123 ids::1
@@ -107,10 +118,10 @@ claude_storage .projects project::abc123 ids::1 count::1
 **Notes:**
 - `scope::relevant` walks UP from cwd to `/`, collecting sessions from every project at each ancestor level
 - Distinct from `.project.exists`: that checks existence (exit 0/1); this lists conversations
-- `session::`, `agent::`, or `min_entries::` no longer needs an auto-enable step: `detail::sessions` is already the default, so session filters simply narrow what's shown. Use `detail::projects` explicitly to suppress session lines regardless of filters.
+- `session::`, `agent::`, and `min_entries::` never auto-enable session lines — under the default `detail::projects` they narrow the per-project counts; pass `detail::sessions` to see individual sessions
 - `type::uuid`/`type::path` narrow which projects are considered, independent of `scope::`'s discovery boundary — the two compose (scope resolves candidates, `type::` and `filter::` narrow them further)
 - `ids::1` requires `project::` and lists one conversation ID per line; `count::1` with `ids::1` outputs only the count as a bare integer (useful for scripting)
-- `limit::`, `show_tree::`, and `show_topic::` only affect rendering under `detail::sessions` — they are no-ops under `detail::projects` (no session lines to cap, tree-indent, or annotate)
+- `limit::` and `show_topic::` only affect rendering under `detail::sessions` — they are no-ops under `detail::projects` (no session lines to cap or annotate). `show_tree::` applies to both, selecting the tree layout at each level: projects nested by directory under `detail::projects`, agents nested under root sessions under `detail::sessions`
 - **Fixed (issue-024)**: `scope::local/relevant/under` previously returned 0 results when the base path contained underscores (e.g., `my_project`). Root cause: lossy encoding mapped `_` and `/` identically; decoded paths diverged from real paths. Fixed by comparing encoded paths directly against raw storage directory names.
 - **Fixed (issue-029)**: `scope::under` (and all scopes) previously displayed project path headers with underscore-named directories split as path separators (e.g., `my_project` → `my/project`). Root cause: `decode_project_display` heuristic defaulted to `/` for every `-` boundary; underscore-named dirs were indistinguishable from path separators in the encoded form. Fixed by adding a filesystem-guided fallback that walks the real directory tree to resolve ambiguous boundaries.
 - **Fixed (issue-030)**: Session path headers previously showed only the base directory, truncating hyphen-prefixed topic components (e.g., `src/-default_topic` was shown as `src`). Root cause: `decode_project_display` stripped all `--topic` suffixes before decoding. Fixed by decoding the base path with filesystem guidance (resolves `_` vs `/` ambiguity per issue-029), then appending topic components as hyphen-prefixed directory names. **Display-path invariant**: topic components must always be appended regardless of whether the directory currently exists on disk — the storage key encodes the actual CWD at session time and must be decoded as-is.
@@ -120,7 +131,52 @@ claude_storage .projects project::abc123 ids::1 count::1
 
 **Output format:**
 
-`detail::sessions` (default) uses the full list format. Path header always shown:
+`detail::projects` (default) renders a totals summary line followed by one row per project. The default layout is a flat table sorted by recency descending:
+
+```
+5 projects · 6 conversations · 19 agents
+
+  LAST      CONV  AGENTS          PROJECT
+▸ 2h ago  2 conv   12 ag          ~/pro/lib/assistant_kit/claude_storage
+  5h ago  1 conv    3 ag          ~/pro/lib/assistant_kit
+  1d ago  1 conv       ·          ~/pro/lib/assistant_kit/module/claude_storage/docs
+  3d ago  1 conv    4 ag          ~/pro/lib/wtools
+  6d ago  1 conv       ·  ⚠ gone  ~/pro/lib/assistant/kit/-commit
+```
+
+Column widths adapt to content, and the `⚠ gone` column is reserved only when at least one row needs it.
+
+Column semantics:
+
+| Column | Meaning |
+|--------|---------|
+| gutter | `▸` marks the project matching the current working directory |
+| `LAST` | Relative age of the most recent non-empty session |
+| `CONV` | Root conversations in the project |
+| `AGENTS` | Agent sessions across those conversations; `·` when zero |
+| `⚠ gone` | The decoded path names a directory that no longer exists — see below |
+| `PROJECT` | Full decoded path, always printed in full (never factored against a shared prefix, so every row stays copyable into `cd`, `grep`, or `project::`) |
+
+The `⚠ gone` marker exists because path encoding is lossy: `/`, `_`, and `.` all collapse to `-`, so a decoded path is only trustworthy while the directory it names still exists to disambiguate it. Once deleted — typically a `-commit` scratch directory — the rendered path is a reconstruction, and is labelled as one rather than presented as fact. The path is still shown; it is the only identifier the storage key carries.
+
+With `show_tree::1`, the same rows nest by directory. Shared ancestors become nodes, single-child runs collapse into one segment, and every level is sorted by subtree recency descending:
+
+```
+5 projects · 6 conversations · 19 agents
+
+  ~/pro/lib
+  ├─ assistant_kit                          1 conv   3 ag  5h ago
+▸ │  ├─ claude_storage                      2 conv  12 ag  2h ago
+  │  └─ module/claude_storage/docs          1 conv      ·  1d ago
+  ├─ wtools                                 1 conv   4 ag  3d ago
+  └─ assistant/kit/-commit          ⚠ gone  1 conv      ·  6d ago
+```
+
+Structural nodes — directories that are ancestors of several projects but hold no sessions of their own — render as a label with empty count columns; `~/pro/lib` above is one. Sibling leaves under one node are the common case: a repository entered from several subdirectories becomes several projects, and the tree is what makes that visible. Single-child runs collapse into one segment, so `module/claude_storage/docs` is one node rather than three.
+
+The last row shows what a lossy decode looks like once the directory is gone: `assistant_kit/-commit` was recorded, but with the directory deleted the `_` could no longer be distinguished from a `/`, so it renders as `assistant/kit/-commit` — hence its position as a sibling of `assistant_kit` rather than a child, and hence the marker. Ordering is by recency descending at every level, including among structural nodes (a node sorts by the most recent session anywhere beneath it).
+
+`detail::sessions` uses the full list format. Path header always shown:
 
 ```
 Found N projects:
@@ -133,18 +189,9 @@ Found N projects:
   * c9d0e1f2  3d ago  (2 entries)
 ```
 
-`detail::projects` uses the header line only — no session/family body lines:
-
-```
-Found N projects:
-
-~/path/to/project-a: (2 conversations, 12 agents)
-~/path/to/project-b: (1 conversation)
-```
-
 Family display (`detail::sessions`): agents are grouped by parent session into families. Each root session line shows an inline `[N agents: breakdown]` suffix. Roots with no agents show no bracket suffix. Orphan families (root deleted) use `?` marker. When `agent::` filter is set, family grouping is disabled — flat display.
 
-With `show_tree::1` (`detail::sessions` only), agents are tree-indented under their parent:
+With `detail::sessions show_tree::1`, agents are tree-indented under their parent:
 ```
 ~/path/to/project-a: (2 conversations, 12 agents)
   - a1b2c3d4-e5f6-7890-abcd-ef1234567890  (347 entries)
@@ -168,10 +215,15 @@ e5f6a7b8-1234-5678-90ab-cdef12345678
 - Family display: agents grouped by parent; inline `[N agents: N×Type, …]` per root
 - Orphan families (no root): `  ? (orphan)  [N agents: breakdown]`
 - `limit::N` caps families per project; truncated projects show `... and N more sessions` hint (`detail::sessions` only)
-- `show_tree::1` — agents tree-indented under parent (`├─`/`└─`); full IDs shown (`detail::sessions` only)
+- `show_tree::1` — under `detail::sessions`, agents tree-indented under parent (`├─`/`└─`) with full IDs; under `detail::projects`, projects nested by directory
 - `since_days::N` — sessions outside the mtime window dropped before aggregation; a project with no surviving session disappears entirely
 - `show_topic::1` — first user message text appended to session lines (newlines flattened, truncated at 90 chars); compact and flat views only, tree view unchanged (`detail::sessions` only)
-- `detail::projects` — header line only per project; `limit::`, `show_tree::`, `show_topic::` do not apply
+- `detail::projects` — one row per project under a totals summary line; `limit::` and `show_topic::` do not apply, `show_tree::` does
+- `detail::projects` counts — `CONV` counts root conversations, `AGENTS` counts agent sessions across them; zero renders as `·`, and the agents segment of the summary line is omitted entirely at zero
+- `detail::projects` ordering — recency descending, both as flat row order and as sibling order at every tree level
+- `▸` gutter — marks the project whose path equals the current working directory; absent when cwd matches no listed project
+- `⚠ gone` — the decoded path names no existing directory; the path is still shown, but is a reconstruction rather than a verified location
+- `detail::projects` paths — always printed in full; rows are never factored against a shared prefix, so each stays usable in `cd`, `grep`, or `project::`. Prefix factoring is what `show_tree::1` provides, via nesting rather than truncation
 - `ids::1` — one conversation ID per line, or (with `count::1`) a single bare integer; no path headers
 
 ### Algorithms

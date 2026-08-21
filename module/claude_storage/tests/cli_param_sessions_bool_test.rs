@@ -2,7 +2,7 @@
 //!
 //! ## Source
 //!
-//! - Spec: `tests/docs/cli/param/15_sessions_bool.md`
+//! - Spec: `tests/docs/cli/param/15_sessions.md`
 //!
 //! ## Coverage
 //!
@@ -53,7 +53,7 @@ fn assert_exit( out : &std::process::Output, code : i32 )
 /// Assert exit 0 and session rows appear.
 ///
 /// ## Related Requirements
-/// `tests/docs/cli/param/15_sessions_bool.md` — EC-1
+/// `tests/docs/cli/param/15_sessions.md` — EC-1
 #[ test ]
 fn ec_1_sessions_1_forces_display()
 {
@@ -88,7 +88,7 @@ fn ec_1_sessions_1_forces_display()
 /// Assert exit 0 and no session rows in output.
 ///
 /// ## Related Requirements
-/// `tests/docs/cli/param/15_sessions_bool.md` — EC-2
+/// `tests/docs/cli/param/15_sessions.md` — EC-2
 #[ test ]
 fn ec_2_sessions_0_suppresses_with_session_filter()
 {
@@ -137,7 +137,7 @@ fn ec_2_sessions_0_suppresses_with_session_filter()
 /// Assert exit 0 and output is no longer than without `show_sessions::0`.
 ///
 /// ## Related Requirements
-/// `tests/docs/cli/param/15_sessions_bool.md` — EC-3
+/// `tests/docs/cli/param/15_sessions.md` — EC-3
 #[ test ]
 fn ec_3_sessions_0_suppresses_with_agent_filter()
 {
@@ -185,7 +185,7 @@ fn ec_3_sessions_0_suppresses_with_agent_filter()
 /// Assert exit 0 and no session rows.
 ///
 /// ## Related Requirements
-/// `tests/docs/cli/param/15_sessions_bool.md` — EC-4
+/// `tests/docs/cli/param/15_sessions.md` — EC-4
 #[ test ]
 fn ec_4_sessions_0_suppresses_with_min_entries_filter()
 {
@@ -233,7 +233,7 @@ fn ec_4_sessions_0_suppresses_with_min_entries_filter()
 /// Assert exit 0 and no session-level rows expanded.
 ///
 /// ## Related Requirements
-/// `tests/docs/cli/param/15_sessions_bool.md` — EC-5
+/// `tests/docs/cli/param/15_sessions.md` — EC-5
 #[ test ]
 fn ec_5_sessions_omitted_no_filters_no_sessions_shown()
 {
@@ -262,7 +262,7 @@ fn ec_5_sessions_omitted_no_filters_no_sessions_shown()
 /// Assert exit 0 and session visible in output.
 ///
 /// ## Related Requirements
-/// `tests/docs/cli/param/15_sessions_bool.md` — EC-6
+/// `tests/docs/cli/param/15_sessions.md` — EC-6
 #[ test ]
 fn ec_6_sessions_omitted_with_session_filter_auto_shown()
 {
@@ -297,7 +297,7 @@ fn ec_6_sessions_omitted_with_session_filter_auto_shown()
 /// Run `.list ``show_sessions::ye``s`. Assert exit 0.
 ///
 /// ## Related Requirements
-/// `tests/docs/cli/param/15_sessions_bool.md` — EC-7
+/// `tests/docs/cli/param/15_sessions.md` — EC-7
 #[ test ]
 fn ec_7_sessions_yes_rejected()
 {

@@ -11,20 +11,21 @@ Edge case tests for the `detail::` parameter on `.projects` and `.show`. Tests v
 | ID | Test Name | Category |
 |----|-----------|----------|
 | EC-1 | `detail::projects` shows header-only output, no session/family lines | Behavior |
-| EC-2 | Omitted matches explicit `detail::sessions` byte-for-byte | Default |
+| EC-2 | Omitted matches explicit `detail::projects` byte-for-byte | Default |
 | EC-3 | Invalid value rejected | Error Handling |
-| EC-4 | `limit::`/`show_tree::`/`show_topic::` are no-ops under `detail::projects` | Composition |
+| EC-4 | `limit::`/`show_topic::` are no-ops under `detail::projects` | Composition |
 | EC-5 | Mixed-case value (`detail::PROJECTS`) matches lowercase byte-for-byte | Case Insensitivity |
+| EC-6 | `show_tree::1` selects the tree layout under `detail::projects` | Composition |
 
 ## Test Coverage Summary
 
 - Behavior: 1 test (EC-1)
 - Default: 1 test (EC-2)
 - Error Handling: 1 test (EC-3)
-- Composition: 1 test (EC-4)
+- Composition: 2 tests (EC-4, EC-6)
 - Case Insensitivity: 1 test (EC-5)
 
-**Total:** 5 edge cases
+**Total:** 6 edge cases
 
 ## Test Cases
 
@@ -35,20 +36,20 @@ Edge case tests for the `detail::` parameter on `.projects` and `.show`. Tests v
 - **Commands:** `.projects`
 - **Given:** one project with a root session plus 2 agent sessions (family), one plain path-based project with a single session
 - **When:** `clg .projects scope::global detail::projects`
-- **Then:** stdout shows the `Found N projects` header; no session ids, agent ids, or `[N agents...]` bracket breakdowns appear anywhere in the body
+- **Then:** stdout shows the terse summary line (`N projects · …`); no session ids, agent ids, or `[N agents...]` bracket breakdowns appear anywhere in the body
 - **Exit:** 0
 - **Source:** [param/30_detail.md](../../../../docs/cli/param/30_detail.md); same test as [command/07_projects.md INT-53](../command/07_projects.md) (`int_53_detail_projects_header_only_no_body_lines`)
 
 ---
 
-### EC-2: Omitted matches explicit `detail::sessions` byte-for-byte
+### EC-2: Omitted matches explicit `detail::projects` byte-for-byte
 
 - **Commands:** `.projects`
 - **Given:** one path-based project with one session
-- **When:** `clg .projects scope::global` compared against `clg .projects scope::global detail::sessions`
-- **Then:** stdout is byte-identical between the two invocations
+- **When:** `clg .projects scope::global` compared against `clg .projects scope::global detail::projects`
+- **Then:** stdout is byte-identical between the two invocations, and contains no session ids
 - **Exit:** 0
-- **Source:** [param/30_detail.md](../../../../docs/cli/param/30_detail.md); same test as [command/07_projects.md INT-54](../command/07_projects.md) (`int_54_detail_omitted_matches_explicit_sessions`)
+- **Source:** [param/30_detail.md](../../../../docs/cli/param/30_detail.md); same test as [command/07_projects.md INT-54](../command/07_projects.md) (`int_54_detail_omitted_matches_explicit_projects`)
 
 ---
 
@@ -63,14 +64,14 @@ Edge case tests for the `detail::` parameter on `.projects` and `.show`. Tests v
 
 ---
 
-### EC-4: `limit::`/`show_tree::`/`show_topic::` are no-ops under `detail::projects`
+### EC-4: `limit::`/`show_topic::` are no-ops under `detail::projects`
 
 - **Commands:** `.projects`
 - **Given:** one project with a root session plus one agent session (family)
-- **When:** `clg .projects scope::global detail::projects` compared against the same command plus `limit::1 show_tree::1 show_topic::1`
-- **Then:** stdout is byte-identical between the two invocations — these three parameters have nothing to act on once body lines are suppressed
+- **When:** `clg .projects scope::global detail::projects` compared against the same command plus `limit::1 show_topic::1`
+- **Then:** stdout is byte-identical between the two invocations — both parameters have nothing to act on once body lines are suppressed
 - **Exit:** 0
-- **Source:** [param/30_detail.md](../../../../docs/cli/param/30_detail.md); same test as [command/07_projects.md INT-65](../command/07_projects.md) (`int_65_limit_show_tree_show_topic_noop_under_detail_projects`)
+- **Source:** [param/30_detail.md](../../../../docs/cli/param/30_detail.md); same test as [command/07_projects.md INT-65](../command/07_projects.md) (`int_65_limit_show_topic_noop_under_detail_projects`)
 
 ---
 
@@ -82,3 +83,14 @@ Edge case tests for the `detail::` parameter on `.projects` and `.show`. Tests v
 - **Then:** stdout is byte-identical between the two invocations — `validate_detail_level` lowercases input before matching
 - **Exit:** 0
 - **Source:** [param/30_detail.md](../../../../docs/cli/param/30_detail.md); same test as [command/07_projects.md INT-67](../command/07_projects.md) (`int_67_detail_uppercase_matches_lowercase`)
+
+---
+
+### EC-6: `show_tree::1` selects the tree layout under `detail::projects`
+
+- **Commands:** `.projects`
+- **Given:** two sibling projects under a common parent directory — nesting is required, since a lone project collapses to a single top-level node that by construction draws no connector
+- **When:** `clg .projects scope::global detail::projects` compared against the same command plus `show_tree::1`
+- **Then:** stdout differs between the two invocations; the flat output contains no `├`/`└` connectors and the tree output contains at least one
+- **Exit:** 0
+- **Source:** [param/30_detail.md](../../../../docs/cli/param/30_detail.md); same test as [command/07_projects.md INT-65b](../command/07_projects.md) (`int_65b_show_tree_selects_tree_layout_under_detail_projects`)
