@@ -338,6 +338,21 @@ mod transplant
   ///
   /// ## Fix Applied
   /// See `Fix(BUG-541)` in `src/cli/builder.rs`.
+  ///
+  /// ## Prevention
+  /// When a "first use vs. repeat use" default resolution exists, always test
+  /// BOTH calls in sequence with an *intervening state change in the fallback
+  /// source* (here: cwd gaining a new unrelated session) — a test that only
+  /// ever calls once, or calls twice without disturbing the fallback source in
+  /// between, cannot distinguish "derives from the right place" from "derives
+  /// from cwd, which happens to still be right by coincidence".
+  ///
+  /// ## Pitfall
+  /// A transplant test that calls its target only once, or twice with an
+  /// unchanging `--from`, can never observe cwd-drift blindness — the defect
+  /// only manifests when the *fallback* source's own identity changes between
+  /// calls, not when it stays fixed throughout the test.
+  // test_kind: bug_reproducer(BUG-541)
   #[ test ]
   fn t09_second_auto_topic_call_ignores_unrelated_source_session_drift()
   {
@@ -453,8 +468,30 @@ mod transplant
   /// qualifying session of its own), the "fresh" name would then silently resume
   /// that orphaned, unrelated history on first use instead of starting clean.
   ///
+  /// ## Why Not Caught
+  /// No existing test exercised the specific combination of "a candidate topic
+  /// name's WORKING DIRECTORY has never existed (or no longer exists) AND its
+  /// SESSION STORAGE already has a qualifying session" — prior auto-naming tests
+  /// only varied directory existence, never storage state independently of it,
+  /// since the two had never been observed to diverge in any test fixture.
+  ///
   /// ## Fix Applied
   /// See `Fix(BUG-542)` in `src/cli/topic.rs` (`name_is_taken`).
+  ///
+  /// ## Prevention
+  /// Whenever a "does X already exist" freshness check has more than one
+  /// storage location backing the same logical resource (here: a working
+  /// directory AND independently-persistent session storage for the same
+  /// path), the check must probe every location, not just the one most
+  /// visible to the immediate code path — directory existence is an obvious,
+  /// easy check but is not the only place state can persist.
+  ///
+  /// ## Pitfall
+  /// Session storage under `~/.claude/projects/` outlives its working
+  /// directory's own deletion — `rm -rf`'ing a topic dir does not touch its
+  /// storage, so any freshness check keyed on directory existence alone is
+  /// silently wrong the moment a directory is ever removed and its name reused.
+  // test_kind: bug_reproducer(BUG-542)
   #[ test ]
   fn t10_auto_naming_skips_candidate_with_orphaned_session_storage()
   {
@@ -501,6 +538,102 @@ mod transplant
     assert!(
       stdout.contains( &free_cd ),
       "auto-naming must disambiguate past the orphaned candidate to -orphan-topic-2. Got:\n{stdout}"
+    );
+  }
+
+  /// T11 (BUG-543): an auto-name candidate whose orphaned session storage lives
+  /// under a symlinked `--dir` base must still be detected — the freshness probe
+  /// must resolve the SAME canonical storage key the real run would use, not the
+  /// symlink's own literal path.
+  ///
+  /// ## Root Cause
+  /// `physical_abs()`'s fallback branch (taken by any pre-creation probe, since
+  /// `fs::canonicalize` fails whenever the leaf does not yet exist) was purely
+  /// lexical: `cwd.join(raw).components().collect()` kept `..`/symlinked
+  /// components verbatim instead of resolving them, so `name_is_taken()`'s
+  /// storage probe encoded a different key than the one the real run derives
+  /// post-`create_dir_all` (which DOES canonicalize, since the leaf then exists).
+  ///
+  /// ## Why Not Caught
+  /// T10's fixture builds directly from a plain `TempDir` — canonical by
+  /// construction, so the lexical and canonical encodings coincide there and the
+  /// probe finds the orphaned storage despite the bug. No test exercised the
+  /// probe through a symlinked base, where the two encodings diverge.
+  ///
+  /// ## Fix Applied
+  /// See `Fix(BUG-543)` in `src/cli/builder.rs` (`canonicalize_deepest_prefix`).
+  ///
+  /// ## Prevention
+  /// A path-resolution helper with an existence-dependent happy path
+  /// (`canonicalize`) and a lexical fallback must make the fallback approximate
+  /// the happy path — canonicalize the deepest existing prefix, append the
+  /// nonexistent tail literally — never skip resolution entirely just because
+  /// the full path doesn't exist yet.
+  ///
+  /// ## Pitfall
+  /// Two independent call sites resolving "the same" path (a pre-creation probe
+  /// and the real post-creation run) can silently diverge the moment one of them
+  /// takes an existence-dependent code path the other doesn't — always test both
+  /// through the SAME non-canonical input (symlink, `..`), not just through a
+  /// fixture that happens to already be canonical.
+  // test_kind: bug_reproducer(BUG-543)
+  #[ test ]
+  fn t11_auto_naming_probes_storage_through_symlinked_base()
+  {
+    container_check();
+    let ch = tempfile::TempDir::new().expect( "claude home" );
+    let real_base = tempfile::TempDir::new().expect( "real topic base dir" );
+    let real_base_canon = std::fs::canonicalize( real_base.path() ).expect( "canonicalize real base" );
+
+    // Convenience symlink standing in for the `--dir` base, mirroring `~/proj -> /data/projects`.
+    // Lives inside its OWN fresh TempDir (never a fixed shared name) so repeated/parallel runs
+    // never collide on a leftover symlink from a prior invocation.
+    let link_parent = tempfile::TempDir::new().expect( "symlink parent dir" );
+    let link_base = link_parent.path().join( "topic-base-link" );
+    std::os::unix::fs::symlink( &real_base_canon, &link_base ).expect( "create symlink base" );
+
+    // Seed the orphaned session under the CANONICAL path — the working directory was
+    // deleted after use, its storage survives, keyed by the real (non-symlink) path.
+    let orphan_dir_canon = real_base_canon.join( "-orphan-topic" );
+    let uuid = "54309001-1111-2222-3333-444444444444";
+    make_session( ch.path(), &orphan_dir_canon, uuid, b"{\"seed\":\"orphaned unrelated history\"}\n" );
+    assert!( !orphan_dir_canon.exists(), "fixture setup: working directory must NOT exist on disk" );
+
+    let out = std::process::Command::new( env!( "CARGO_BIN_EXE_clr" ) )
+      .args
+      ([
+        "topic",
+        "--dry-run",
+        "--dir", link_base.to_str().expect( "utf-8" ),
+        "orphan topic",
+      ])
+      .env( "CLAUDE_HOME", ch.path() )
+      .env_remove( "CLR_DIR" ).env_remove( "CLR_SESSION_DIR" ).env_remove( "CLR_FROM" )
+      .output()
+      .expect( "invoke clr" );
+    assert!(
+      out.status.success(),
+      "dry-run must succeed. stderr: {}",
+      String::from_utf8_lossy( &out.stderr ),
+    );
+    let stdout = String::from_utf8_lossy( &out.stdout ).into_owned();
+
+    // The dry-run's `cd` line echoes the effective dir built from the literal `--dir`
+    // input (dry-run never creates anything, so it can't canonicalize the not-yet-
+    // existing candidate) — assert against the symlink-relative form actually printed,
+    // matching T10's trailing-`\n` boundary discipline (the orphaned name is a string
+    // prefix of the correctly-disambiguated one).
+    let taken_cd = format!( "cd {}\n", link_base.join( "-orphan-topic" ).display() );
+    let free_cd  = format!( "cd {}\n", link_base.join( "-orphan-topic-2" ).display() );
+    assert!(
+      !stdout.contains( &taken_cd ),
+      "auto-naming must NOT select a candidate whose CANONICAL storage already has an \
+       orphaned session, even when probed through a symlinked base. Got:\n{stdout}"
+    );
+    assert!(
+      stdout.contains( &free_cd ),
+      "auto-naming must disambiguate past the orphaned candidate to -orphan-topic-2 \
+       when probed through a symlinked base. Got:\n{stdout}"
     );
   }
 }

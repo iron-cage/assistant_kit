@@ -94,7 +94,8 @@ pub( crate ) struct RunPreparation
 }
 
 /// Resolve `raw` to its physical absolute form: `canonicalize` when the path exists,
-/// else a lexical cwd-join that drops `.` components.
+/// else a cwd-join whose deepest EXISTING prefix is still canonicalized component-wise
+/// (Fix(BUG-543)) — only the nonexistent tail is appended literally.
 ///
 /// claude derives storage names from its physical getcwd, so a relative or symlinked
 /// path must resolve to the same physical absolute form or the encoded name silently
@@ -114,8 +115,56 @@ pub( crate ) fn physical_abs( raw : &std::path::Path ) -> std::path::PathBuf
       std::env::current_dir()
         .map_or_else( | _ | raw.to_path_buf(), | cwd | cwd.join( raw ) )
     };
-    joined.components().collect()
+    canonicalize_deepest_prefix( &joined )
   } )
+}
+
+/// Fix(BUG-543): component-wise fallback for a path whose leaf does not yet exist
+/// (`physical_abs`'s own `canonicalize` already failed, which is expected for any
+/// pre-creation probe — an auto-name freshness check, `--dry-run` planning).
+///
+/// Walks `joined` from the root, re-canonicalizing the growing prefix for as long as
+/// each grown prefix still exists on disk — resolving any symlinked ancestor along the
+/// way — then, once a component is missing, appends it and everything after it
+/// literally (a nonexistent parent can never have an existing child, so canonicalize
+/// is never re-attempted past the first miss). `.` is skipped throughout; `..` pops
+/// the last pushed component against whatever prefix has been accumulated so far
+/// (canonical while it still exists, literal once it doesn't).
+///
+/// This mirrors what `create_dir_all` + a later `canonicalize` will yield once the
+/// nonexistent tail is actually created, since a fresh `mkdir` cannot introduce
+/// symlinks of its own — so a pre-creation probe and the real post-creation run agree
+/// on the same storage key even when the base path traverses a symlink or carries an
+/// unnormalized `..`.
+fn canonicalize_deepest_prefix( joined : &std::path::Path ) -> std::path::PathBuf
+{
+  use std::path::Component;
+
+  let mut canonical = std::path::PathBuf::new();
+  let mut still_existing = true;
+
+  for component in joined.components()
+  {
+    match component
+    {
+      Component::RootDir | Component::Prefix( _ ) => canonical.push( component.as_os_str() ),
+      Component::CurDir => {}
+      Component::ParentDir => { canonical.pop(); }
+      Component::Normal( part ) =>
+      {
+        canonical.push( part );
+        if still_existing
+        {
+          match std::fs::canonicalize( &canonical )
+          {
+            Ok( resolved ) => canonical = resolved,
+            Err( _ ) => still_existing = false,
+          }
+        }
+      }
+    }
+  }
+  canonical
 }
 
 /// Locate the on-disk file for session `id` inside `storage`: exact `<id>.jsonl` join
@@ -295,28 +344,26 @@ pub( crate ) fn build_claude_command( cli : &CliArgs )
   // Pitfall: only substitutes the source when the target ALREADY has a qualifying
   //   session — an empty/fresh target must still fall through to the cwd-default so
   //   the documented first-use clone is unaffected.
+  // Fix(BUG-541 clippy follow-up): rewritten from a `match` with a single real pattern
+  //   (`Some`) plus a catch-all `None` arm to `if let`/`else` — clippy::single_match_else
+  //   under -D warnings; behavior is unchanged, only the outer dispatch shape.
   let session_from_dir : std::path::PathBuf =
+  if let Some( src ) = cli.from.as_deref().filter( | src | !src.is_empty() )
   {
-    match cli.from.as_deref().filter( | src | !src.is_empty() )
+    let abs = physical_abs( &std::path::PathBuf::from( src ) );
+    claude_storage_core::scope_for( &abs ).claude_session_dir
+  }
+  else
+  {
+    let own_target_storage = effective_working_dir.as_deref().map( | dir |
+      claude_storage_core::scope_for( &physical_abs( dir ) ).claude_session_dir );
+    match own_target_storage
     {
-      Some( src ) =>
+      Some( storage ) if session_exists( &storage ).is_some() => storage,
+      _ =>
       {
-        let abs = physical_abs( &std::path::PathBuf::from( src ) );
-        claude_storage_core::scope_for( &abs ).claude_session_dir
-      }
-      None =>
-      {
-        let own_target_storage = effective_working_dir.as_deref().map( | dir |
-          claude_storage_core::scope_for( &physical_abs( dir ) ).claude_session_dir );
-        match own_target_storage
-        {
-          Some( storage ) if session_exists( &storage ).is_some() => storage,
-          _ =>
-          {
-            let cwd = std::env::current_dir().unwrap_or_else( | _ | std::path::PathBuf::from( "." ) );
-            claude_storage_core::scope_for( &physical_abs( &cwd ) ).claude_session_dir
-          }
-        }
+        let cwd = std::env::current_dir().unwrap_or_else( | _ | std::path::PathBuf::from( "." ) );
+        claude_storage_core::scope_for( &physical_abs( &cwd ) ).claude_session_dir
       }
     }
   };

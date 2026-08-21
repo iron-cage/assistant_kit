@@ -29,18 +29,22 @@ Integration tests for the `.rollup` command, implemented in `tests/cli_cmd_rollu
 | INT-19 | Invalid columns:: entry rejected | Input Validation |
 | INT-20 | Negative depth:: is rejected | Input Validation |
 | INT-21 | Negative limit:: is rejected | Input Validation |
+| INT-22 | Multiple parameters compose correctly in one invocation | Composition |
+| INT-23 | model:: matching zero sessions exits 0 with header-only output | Filtering |
+| INT-24 | columns:: including first/last renders raw timestamps | Column Projection |
 
 ## Test Coverage Summary
 
 - Grouping: 4 tests (INT-1 through INT-4)
 - Sorting & Order: 2 tests (INT-5, INT-6)
-- Column Projection: 2 tests (INT-7, INT-8)
-- Filtering: 1 test (INT-9)
+- Column Projection: 3 tests (INT-7, INT-8, INT-24)
+- Filtering: 2 tests (INT-9, INT-23)
 - Limit Semantics: 1 test (INT-10)
 - Reused Scope Machinery: 2 tests (INT-11, INT-12)
 - Worked Example: 1 test (INT-13)
 - Exit Codes: 2 tests (INT-14, INT-15)
 - Input Validation: 6 tests (INT-16 through INT-21)
+- Composition: 1 test (INT-22)
 
 ## Test Cases
 
@@ -364,3 +368,49 @@ clg .rollup limit::-1
 - No table output on stdout
 - Exit code: 1
 - **Source:** [command/14_rollup.md](../../../../docs/cli/command/14_rollup.md), [param/22_limit.md](../../../../docs/cli/param/22_limit.md)
+
+---
+
+### INT-22: Multiple parameters compose correctly in one invocation
+
+**Command:**
+```
+CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .rollup group::model sort::sessions order::asc columns::group,sessions limit::1
+```
+
+**Expected behavior:**
+- Fixture: three models with distinct session counts — `opus` (1 session), `haiku` (2 sessions), `sonnet` (3 sessions)
+- Every prior INT test varies exactly one parameter; this is the first to combine `group::`/`sort::`/`order::`/`columns::`/`limit::` in a single call and confirm they still compose correctly rather than interfering
+- Output has exactly 1 data row (the `opus` group — fewest sessions, kept by ascending `sort::sessions` plus `limit::1`); the header contains only `Group` and `Sessions`, every other column label absent
+- Exit code: 0
+- **Source:** [command/14_rollup.md](../../../../docs/cli/command/14_rollup.md)
+
+---
+
+### INT-23: model:: matching zero sessions exits 0 with header-only output
+
+**Command:**
+```
+CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .rollup model::nonexistent-model-xyz
+```
+
+**Expected behavior:**
+- Fixture: one real session that exists but does not match the filter — distinct from INT-14, where storage itself is empty; here storage has data but `model::` filters all of it out
+- stdout is header-only, zero data rows; exit 0, not an error — exercises the zero-grand-total `percent` branch end-to-end through the CLI, confirming no `NaN`/`inf` ever reaches stdout
+- Exit code: 0
+- **Source:** [command/14_rollup.md](../../../../docs/cli/command/14_rollup.md), [param/37_model.md](../../../../docs/cli/param/37_model.md)
+
+---
+
+### INT-24: columns:: including first/last renders raw timestamps
+
+**Command:**
+```
+CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .rollup columns::group,first,last
+```
+
+**Expected behavior:**
+- Fixture: one session with known, distinct `first_ts`/`last_ts` values
+- INT-7/INT-8 only ever project default-set columns; this is the first to request `first`/`last` (excluded from the default 9) and confirm they render — header shows exactly `Group`/`First`/`Last`; the data row contains both raw ISO-8601 timestamps verbatim, no reformatting or truncation
+- Exit code: 0
+- **Source:** [command/14_rollup.md](../../../../docs/cli/command/14_rollup.md), [param/38_columns.md](../../../../docs/cli/param/38_columns.md)

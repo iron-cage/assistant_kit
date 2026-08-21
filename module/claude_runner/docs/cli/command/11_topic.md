@@ -23,7 +23,7 @@ All parameters from [`run`](01_run.md) are accepted with identical defaults, wit
 
 **Algorithm (2 steps):**
 1. If `--topic` is explicitly given (any non-identity value), skip to step 2 with that value unchanged — `topic` behaves exactly like `ask` from here.
-2. Otherwise, derive a slug from `MESSAGE` (lowercase; first few words; non-alphanumeric runs collapsed to a single `-`; truncated to a concise length) and disambiguate it against existing topic directories of the effective `--dir` by appending `-2`, `-3`, ... until the candidate name does not already exist on disk. Use the disambiguated slug as `--topic`'s value, then delegate to `run`'s execution path unchanged.
+2. Otherwise, derive a slug from `MESSAGE` (lowercase; first few words; non-alphanumeric runs collapsed to a single `-`; truncated to a concise length) and disambiguate it against candidate topic names of the effective `--dir` by appending `-2`, `-3`, ... until a candidate is found where BOTH its working directory does not already exist on disk AND its session storage holds no qualifying session (Fix(BUG-542) — storage outlives a deleted working directory, so directory existence alone is not a reliable freshness signal). Use the disambiguated slug as `--topic`'s value, then delegate to `run`'s execution path unchanged.
 
 ### Execution Modes
 
@@ -73,7 +73,7 @@ clr topic --topic shared-fix --from ~/project-a "Port this fix"
 
 **Clone vs. continue:** whether a given topic name clones a fresh session or continues an existing one is determined entirely by the pre-existing `--topic` + `--from` session-transplant mechanism (see [`../param/076_from.md`](../param/076_from.md) § Behavior) — `topic` introduces no new session-management code for this. The first invocation of a given topic directory name has no session file there yet, so `--from`'s (default: cwd) most recent session is physically copied in (clone). Every subsequent invocation of that same name finds the copy already in place and continues it (`-c`) instead of re-copying.
 
-**Auto-naming is always fresh:** the slug+counter algorithm only ever selects a name that does not yet exist as a topic directory — an auto-named invocation therefore always clones, never continues. To continue an auto-named topic later, pass its generated name back explicitly via `--topic`.
+**Auto-naming is always fresh:** the slug+counter algorithm only ever selects a name whose working directory does not yet exist on disk AND whose session storage holds no qualifying session (Fix(BUG-542); see Algorithm step 2 above) — an auto-named invocation therefore always clones, never continues. To continue an auto-named topic later, pass its generated name back explicitly via `--topic`.
 
 `--output-format stream-json` streaming behavior is identical to `run` — see [`run`'s Notes](01_run.md#notes) for details.
 
