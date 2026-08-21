@@ -29,6 +29,15 @@ Nine event types are defined in schema v1:
 
 Timestamps use ISO 8601 format with millisecond precision in UTC (`2026-06-27T14:30:00.123Z`).
 
+**Attribution fields** — `user`, `host`, `account`, and `agent_id` may appear on ANY event type (emitters populate them uniformly, not per-type):
+
+| Field | Content |
+|-------|---------|
+| `user` | Username the event was produced by |
+| `host` | Hostname the event was produced on |
+| `account` | Non-secret account identifier the event was produced under (email or profile name) — never a token or secret |
+| `agent_id` | Canonical agent identity `{user}@{host}{abs_dir}/` (e.g. `user1@w003/home/user1/pro/lib/yrd_core/assistant_kit/claude_runner/module/claude_runner/`), composed via `compose_agent_id()` — the single format owner |
+
 The `v` field enables forward-compatible parsing: readers skip unknown fields; schema v2 events can add structure without breaking v1 readers. Unknown event types are preserved as raw JSON on read.
 
 ## Acceptance Criteria
@@ -41,6 +50,9 @@ The `v` field enables forward-compatible parsing: readers skip unknown fields; s
 - AC-006: Unknown fields in a JSON line are silently ignored on deserialization (forward compat)
 - AC-007: The `retry_class_counts` field is a 6-element array `[Transient, Account, Auth, Service, Process, Unknown]`
 - AC-008: Numeric fields (`cost_usd`, `duration_ms`, `input_tokens`, `output_tokens`) use their native JSON types (number), not strings
+- AC-009: `agent_id`, when present, matches `{user}@{host}{abs_dir}/` with exactly one trailing slash — composed via `compose_agent_id()`, never hand-concatenated
+- AC-010: `account`, when present, is a non-secret identifier (email or profile name) — never a token, secret, or credential material
+- AC-011: A pre-attribution JSONL line (no `account`/`agent_id` keys) still deserializes; both fields read as absent (additive, backward-compatible schema change)
 
 ## Sources
 

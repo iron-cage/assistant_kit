@@ -4,7 +4,7 @@
 
 - **Purpose**: Test cases for quota cache fallback behavior — write-on-success, read-on-failure, staleness display, and side-effect persistence.
 - **Source**: `docs/feature/033_quota_cache.md`
-- **Covers**: AC-01 through AC-15
+- **Covers**: AC-01 through AC-15, AC-19
 
 ### Test Cases
 
@@ -25,10 +25,12 @@
 | FT-13 | AC-13 | Cache entry ≤ `CACHE_FRESH_SECS` (30 s) old → live API call skipped, row served from cache (`cached: true`) | `mre_bug327_cache_first_surfaces_org_created_at` (guard-firing assertion; see FT-13 Note) |
 | FT-14 | AC-14 | Cache-fallback row preserves the original failure reason and surfaces it via `shorten_error()` in text, TSV, and JSON render formats (text combines it with the AC-03 age suffix; TSV has no age suffix to combine with, so it stands alone) | `mre_bug335_cache_fallback_reason_surfaced_on_all_render_surfaces` |
 | FT-15 | AC-15 | Non-live-fetch branch (cache-first, G1-not-owned, or `approximate_quota()`) surfaces a cached `org_created_at` through `AccountQuota.org_created_at`, producing a real `~Renews` Estimate value instead of `"?"`; absent/pre-migration cache gracefully falls back to `None` | `mre_bug327_cache_first_surfaces_org_created_at` (cache-first branch only — see Notes) |
+| FT-16 | AC-19 | Freshly-written per-host cache file serializes period values under `utilization`, never `left_pct` | `bug_540_period_key_is_utilization_not_left_pct` |
+| FT-17 | AC-19 | Legacy per-host cache file carrying the pre-BUG-540 `left_pct` key still reads via the dual-key reader | `bug_540_legacy_left_pct_cache_file_still_reads` |
 
 ### Notes
 
-- FT-01 through FT-07 are implemented as unit tests in `claude_profile_core/tests/account_test.rs`.
+- FT-01 through FT-07, FT-16, and FT-17 are implemented as unit tests in `claude_profile_core/tests/account_quota_cache_test.rs`.
 - FT-03 and FT-09 are implemented as render integration tests in `tests/usage/render_tests_a.rs`.
 - FT-08 is structural: cached rows are stored as `result: Ok(data)` with `cached: true` — all sort/strategy/next logic operates on `Ok` rows identically regardless of the `cached` flag.
 - FT-10 is implemented as an integration test in `tests/usage/refresh_predicate_tests.rs` (via `claude_profile::usage::test_bridge`, since `should_refresh` is `pub(super)`) — not a `#[cfg(test)]` module inside `src/usage/refresh_predicate.rs`, which itself notes "Tests live in tests/usage/refresh_predicate_tests.rs". MRE for BUG-255.
@@ -43,7 +45,7 @@
 
 - **Given:** Account `alice@acme.com` has `alice@acme.com.json` containing `{"host":"wbox","role":"dev"}`. A quota update payload is ready to cache.
 - **When:** `write_quota_cache()` is called for `alice@acme.com` with a `five_hour`/`seven_day` payload.
-- **Then:** `alice@acme.com.json` retains `"host": "wbox"` and `"role": "dev"`; a `"cache"` sub-object is present containing `fetched_at`, `five_hour` (with `left_pct`), and `seven_day`.
+- **Then:** `alice@acme.com.json` retains `"host": "wbox"` and `"role": "dev"`; the per-host `cache/{host}_{user}/alice@acme.com.json` exists containing `fetched_at`, `five_hour` (with `utilization` — AC-19), and `seven_day`.
 - **Exit:** n/a (`write_quota_cache` returns `()`)
 - **Note:** Corrected the preserved-field example — `expires_at_ms`/`token_count` do not appear anywhere in the cited test; the actual pre-existing fixture fields are `host`/`role` (Feature 029 profile metadata).
 - **Source fn:** `cache_write_preserves_existing_fields`
@@ -53,7 +55,7 @@
 
 ### FT-02: Cache read returns cached quota on fetch failure
 
-- **Given:** `carol@acme.com.json` contains a fully-populated `"cache"` object (`fetched_at`, `status`, `five_hour.left_pct`/`resets_at`, `seven_day.left_pct`, `model_override`, `last_touch_at`, `touch_idle`) — written directly, not via a simulated fetch failure.
+- **Given:** `carol@acme.com.json` contains a fully-populated legacy `"cache"` object (`fetched_at`, `status`, `five_hour.left_pct`/`resets_at`, `seven_day.left_pct`, `model_override`, `last_touch_at`, `touch_idle`) — written directly, not via a simulated fetch failure. The fixture intentionally keeps the legacy pre-BUG-540 `left_pct` key: it exercises the dual-key read path (AC-19; see FT-17 for the per-host-file variant).
 - **When:** `read_quota_cache(store.path(), name)` is called directly.
 - **Then:** Returns `Some(QuotaCacheEntry)` with every field matching the written values; `seven_day_sonnet` is `None` (absent from the fixture).
 - **Exit:** `Some(entry)`
@@ -215,3 +217,26 @@
 - **Source fn:** `mre_bug327_cache_first_surfaces_org_created_at` (in `tests/usage/fetch_tests.rs`) — covers the cache-first branch only; the G1-not-owned and `approximate_quota()` branches named in this case's Given are NOT exercised by this or any other test
 - **Note:** Fix for BUG-327. A second scenario in the same test (or a sibling test) must cover the absent-cache / pre-migration-cache case: no `org_created_at` key present → `AccountQuota.org_created_at` is `None` → `~Renews` renders `"?"` unchanged (no regression, AC-15's graceful-fallback clause). A `claude_profile_core/tests/account_test.rs` unit test must separately cover `write_quota_cache()`/`read_quota_cache()` round-tripping the new field. Both remain unimplemented coverage gaps.
 - **Source:** [033_quota_cache.md AC-15](../../../docs/feature/033_quota_cache.md)
+
+---
+
+### FT-16: Freshly-written cache file serializes `utilization`, never `left_pct`
+
+- **Given:** A temp credential store. `write_quota_cache()` is invoked for `alice` with a `five_hour` payload whose utilization is `83.0`.
+- **When:** The per-host `cache/{host}_{user}/alice.json` is read back as raw JSON (bypassing `read_quota_cache`).
+- **Then:** `five_hour` carries the key `utilization` with value `83.0`; the string `left_pct` appears nowhere in the file.
+- **Exit:** raw JSON contains `"utilization": 83.0`, contains no `"left_pct"`
+- **Source fn:** `bug_540_period_key_is_utilization_not_left_pct`
+- **Note:** MRE for BUG-540 — the writer previously inserted the raw utilization value under the display-side name `left_pct`, inverting the on-disk meaning for every raw-JSON consumer.
+- **Source:** [033_quota_cache.md AC-19](../../../docs/feature/033_quota_cache.md)
+
+---
+
+### FT-17: Legacy `left_pct` cache file still reads via the dual-key reader
+
+- **Given:** A temp credential store with a hand-written per-host cache file `cache/legacyhost_legacyuser/alice.json` whose `five_hour` object carries the pre-BUG-540 key `left_pct: 42.5` (no `utilization` key).
+- **When:** `read_quota_cache(store, "alice")` merges volatile candidates.
+- **Then:** The entry surfaces `five_hour` utilization `42.5` — the reader accepts `utilization` first, falling back to the legacy `left_pct` key; existing cache files written before the rename remain readable without migration.
+- **Exit:** `Some(entry)` with `five_hour.0 == 42.5`
+- **Source fn:** `bug_540_legacy_left_pct_cache_file_still_reads`
+- **Source:** [033_quota_cache.md AC-19](../../../docs/feature/033_quota_cache.md)

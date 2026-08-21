@@ -16,8 +16,11 @@
 //! | T05 | `CLR_JOURNAL_DIR` unset                        | event lands under `~/.clr/journal`                |
 //! | T06 | failing command                                | event still written, with the real non-zero exit_code |
 //! | M01 | measurement                                    | `JournalReader::query` count before/after → exactly 1 |
+//! | T07 | any invocation (task 547)                      | `dir` == invocation cwd; `agent_id` == `{user}@{host}{cwd}/` |
+//! | T08 | active-account marker present (task 547)       | `account` == marker name (never token material)    |
+//! | T09 | no store / no marker (task 547)                | `account` absent; event still written with `agent_id` |
 
-use crate::cli_runner::{ assert_exit, run_cs_with_env, run_cs_with_env_removing, stdout };
+use crate::cli_runner::{ assert_exit, run_cs_with_env, run_cs_with_env_removing, stdout, write_active_marker };
 use claude_journal::{ EventType, JournalFilter, JournalReader };
 use tempfile::TempDir;
 
@@ -159,4 +162,61 @@ fn m01_exactly_one_event_per_invocation()
 
   let after = command_events( &journal_dir ).len();
   assert_eq!( after, before + 1, "exactly one Command event must be appended per invocation" );
+}
+
+/// T07 — the event carries `dir` (invocation cwd) and `agent_id` composed from it (task 547).
+#[ test ]
+fn t07_attribution_agent_id_and_dir_from_cwd()
+{
+  let home = TempDir::new().expect( "tempdir" );
+  let out  = run_cs_with_env(
+    &[ ".paths" ],
+    &[ ( "HOME", home.path().to_str().unwrap() ), ( "USER", "tester" ), ( "HOSTNAME", "testhost" ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let events = command_events( &home.path().join( ".clr" ).join( "journal" ) );
+  assert_eq!( events.len(), 1 );
+  let event = &events[ 0 ];
+
+  // The child inherits this test process's cwd — no current_dir override in the runner.
+  let cwd = std::env::current_dir().unwrap().display().to_string();
+  assert_eq!( event.fields.dir.as_deref(), Some( cwd.as_str() ), "dir must be the invocation cwd" );
+  let expected = format!( "tester@testhost{}/", cwd.trim_end_matches( '/' ) );
+  assert_eq!( event.fields.agent_id.as_deref(), Some( expected.as_str() ), "agent_id must be composed from user/host/cwd" );
+}
+
+/// T08 — `account` resolves from this machine's active-account marker (task 547).
+#[ test ]
+fn t08_account_resolves_from_active_marker()
+{
+  let home = TempDir::new().expect( "tempdir" );
+  write_active_marker( home.path(), "testhost_tester", "kimi" );
+
+  let out = run_cs_with_env(
+    &[ ".paths" ],
+    &[ ( "HOME", home.path().to_str().unwrap() ), ( "USER", "tester" ), ( "HOSTNAME", "testhost" ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let events = command_events( &home.path().join( ".clr" ).join( "journal" ) );
+  assert_eq!( events.len(), 1 );
+  assert_eq!( events[ 0 ].fields.account.as_deref(), Some( "kimi" ), "account must be the marker's account name" );
+}
+
+/// T09 — with no marker anywhere, `account` is absent but the event is still written (task 547).
+#[ test ]
+fn t09_no_active_account_leaves_account_absent()
+{
+  let home = TempDir::new().expect( "tempdir" );
+  let out  = run_cs_with_env(
+    &[ ".paths" ],
+    &[ ( "HOME", home.path().to_str().unwrap() ), ( "USER", "tester" ), ( "HOSTNAME", "testhost" ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let events = command_events( &home.path().join( ".clr" ).join( "journal" ) );
+  assert_eq!( events.len(), 1, "event must be written even without a resolvable account" );
+  assert!( events[ 0 ].fields.account.is_none(), "account must be absent when nothing resolves" );
+  assert!( events[ 0 ].fields.agent_id.is_some(), "agent_id must be present independently of account" );
 }

@@ -64,16 +64,42 @@ fn redact_args( argv : &[ String ] ) -> Vec< String >
   redacted.split( ' ' ).map( ToOwned::to_owned ).collect()
 }
 
+/// The active account name from clp's own credential store, or `None` when no
+/// store root or marker resolves.
+///
+/// Same store the CLI commands operate on: root from `$PRO` (if a directory)
+/// else `$HOME`, suffix owned by `credential_store_for_root`. The marker holds
+/// only the account name — never token material (task 547).
+fn active_account_name() -> Option< String >
+{
+  let store = claude_profile_core::account::default_credential_store()?;
+  claude_profile_core::account::active_account( &store )
+}
+
 /// Append one redacted `Command` event to the journal for this invocation.
 ///
 /// Failure isolation: any error resolving the directory or writing the event is
 /// swallowed — telemetry must never change the underlying command's exit code or
 /// abort it (Delivery Requirement).
+///
+/// Attribution (task 547): every event carries `dir` (invocation cwd),
+/// `agent_id` (`{user}@{host}{abs_dir}/` via `claude_journal::compose_agent_id`,
+/// absent only when the cwd is unresolvable), and `account` (the active account
+/// name, absent when none resolves) — completing the attribution set so clp and
+/// clr events are uniformly attributable. `agent_id` reuses the same
+/// user/host/dir values stamped on the event, so all fields describe one identity.
 pub( crate ) fn record( argv : &[ String ], exit_code : i32, duration_ms : u64 )
 {
+  let user = current_user();
+  let host = current_host();
+  let dir  = std::env::current_dir().ok().map( | p | p.display().to_string() );
+
   let mut event = EventRecord::new( EventType::Command );
-  event.fields.user        = Some( current_user() );
-  event.fields.host        = Some( current_host() );
+  event.fields.agent_id    = dir.as_deref().map( | d | claude_journal::compose_agent_id( &user, &host, d ) );
+  event.fields.dir         = dir;
+  event.fields.account     = active_account_name();
+  event.fields.user        = Some( user );
+  event.fields.host        = Some( host );
   event.fields.args        = Some( redact_args( argv ) );
   event.fields.exit_code   = Some( exit_code );
   event.fields.duration_ms = Some( duration_ms );

@@ -15,7 +15,7 @@
 
 #### Account CRUD and identity
 
-`Account` (parsed store entry), `AccountBackend` (`Oauth`/`Redirect`), `list`, `save`, `delete`, `check_delete_preconditions`, `validate_name`, `validate_redirect_name`, `validate_name_for_save`, `credential_stem`, `lock_store` + `StoreLock` (blocking exclusive `flock` on `{store}/-store.lock`, RAII release; taken internally by `save`/`switch_account`/`delete` so their multi-file sequences never interleave across processes). A store entry is `{name}.credentials.json` plus sidecar metadata in `{name}.json`.
+`Account` (parsed store entry), `AccountBackend` (`Oauth`/`Redirect`), `list`, `save`, `delete`, `check_delete_preconditions`, `validate_name`, `validate_redirect_name`, `validate_name_for_save`, `credential_stem`, `lock_store` + `StoreLock` (blocking exclusive `flock` on `{store}/-store.lock`, RAII release; taken internally by `save`/`switch_account`/`delete` so their multi-file sequences never interleave across processes). A store entry is `{name}.credentials.json` plus sidecar metadata in `{name}.json`. Store location helpers (TSK-542): `credential_store_for_root` (single owner of the `{root}/.persistent/claude/credential` suffix — `claude_profile::PersistPaths::credential_store` delegates here) and `default_credential_store` (env-derived root: `$PRO` if it is an existing directory, else `$HOME`/`$USERPROFILE`, else `None`) let external consumers such as `claude_runner` locate the store without duplicating the path convention.
 
 #### Switching and session overrides
 
@@ -27,7 +27,7 @@
 
 #### Ownership, claim, and reservation (multi-machine)
 
-`resolve_hostname`, `current_identity` (`{hostname}_{user}`), `read_owner`, `write_owner`, `is_owned`, `read_claim_lock`, `write_claim_lock`, `write_reserve`, `read_backend`, `active_marker_filename` (`_active_{hostname}_{user}`), `other_machines_active`.
+`resolve_hostname`, `resolve_user` (`$USER` → `$USERNAME` → `"user"`; single source for the user half of every identity string), `current_identity` (`{hostname}_{user}`), `read_owner`, `write_owner`, `is_owned`, `read_claim_lock`, `write_claim_lock`, `write_reserve`, `read_backend`, `active_marker_filename` (`_active_{hostname}_{user}`), `active_account` (reads this machine's active marker → `Some(account_name)`, absent or empty → `None`; non-secret — the marker holds only the account name, TSK-542), `other_machines_active`.
 
 #### Renewal override
 
@@ -67,3 +67,5 @@ Fallible operations return `std::io::Error`; validation failures use `InvalidInp
 |------|--------------|
 | `../../tests/account_test.rs` | Deletion, snapshot cleanup, quota-cache storage (TSK-500 two-tier) |
 | `../../tests/account_refresh_test.rs` | `refresh_account_token` failure paths |
+| `../../tests/account_ownership_test.rs` | Identity/marker helpers incl. `resolve_user`, `active_account`, `credential_store_for_root` (TSK-542) |
+| `../../tests/account_quota_cache_test.rs` | Quota-cache write/read incl. `utilization` key + legacy `left_pct` dual-key read (BUG-540) |

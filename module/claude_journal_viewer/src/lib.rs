@@ -1,7 +1,7 @@
 //! `claude_journal_viewer` — CLI and web viewer for CLR journal events.
 //!
 //! Provides the `clj` binary with `.list`, `.tail`, `.stats`, `.search`,
-//! `.serve`, `.prune`, `.status`, and `.export` commands.
+//! `.serve`, `.prune`, `.status`, `.export`, and `.chart` commands.
 //! Journal data is read via `claude_journal::JournalReader`.
 //!
 //! # Feature: `routines`

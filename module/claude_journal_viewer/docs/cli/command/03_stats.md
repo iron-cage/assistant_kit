@@ -27,17 +27,16 @@ clj .stats [since::DURATION] [until::DURATION] [type::EVENT_TYPE] [by::GROUP_BY]
 
 1. Construct filter with `since` (default 7d), `until`, and `type` (default execution)
 2. Query all matching events via `JournalReader`
-3. Group events by the `by` dimension and compute aggregates: count, ok/fail, retries, total cost, total in/out tokens, average duration
-4. Render summary table with totals row and success rate
+3. Group events by the `by` dimension and compute per-bucket aggregates: event count and total cost
+4. Render the bucket table plus a `Total: N event(s)` footer — `day`/`model` rows ordered by key, `dir`/`agent` rows ranked by descending count (task 543); events missing the grouping field aggregate under a visible `(no dir)` / `(no agent)` row
 
 ### Examples
 
 ```bash
 clj .stats                           # Daily stats for last 7 days
 clj .stats by::model since::30d      # By model, last 30 days
-clj .stats by::error since::7d       # Error class distribution
-clj .stats by::command               # Run vs ask vs isolated breakdown
-clj .stats by::hour since::1d        # Hourly activity today
+clj .stats by::dir since::1d         # Top working directories by activity today
+clj .stats by::agent since::7d       # Top agents (user@host+dir identity) by activity
 ```
 
 ### Referenced User Stories

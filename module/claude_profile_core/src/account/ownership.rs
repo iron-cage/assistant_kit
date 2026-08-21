@@ -21,18 +21,30 @@ pub fn resolve_hostname() -> String
     } )
 }
 
+/// Resolve the current username via fallback chain: `$USER` → `$USERNAME` → `"user"`.
+///
+/// Single owner of the user-resolution chain — shared by [`current_identity`],
+/// the per-machine marker/cache slug, and external attribution consumers
+/// (e.g. `clr`'s journal identity stamping).
+#[ inline ]
+#[ must_use ]
+pub fn resolve_user() -> String
+{
+  std::env::var( "USER" )
+    .or_else( |_| std::env::var( "USERNAME" ) )
+    .unwrap_or_else( |_| "user".to_string() )
+}
+
 /// Return the `"USER@hostname"` identity for the current machine.
 ///
 /// Used as the `owner` value written by `.account.save`. Shares the same
-/// fallback chain as [`resolve_hostname`]: `$USER` → `$USERNAME` → `"user"`,
-/// and `$HOSTNAME` → `/etc/hostname` → `"local"`.
+/// fallback chain as [`resolve_user`] and [`resolve_hostname`]:
+/// `$USER` → `$USERNAME` → `"user"`, and `$HOSTNAME` → `/etc/hostname` → `"local"`.
 #[ inline ]
 #[ must_use ]
 pub fn current_identity() -> String
 {
-  let user = std::env::var( "USER" )
-    .or_else( |_| std::env::var( "USERNAME" ) )
-    .unwrap_or_else( |_| "user".to_string() );
+  let user = resolve_user();
   let hostname = resolve_hostname();
   format!( "{user}@{hostname}" )
 }
@@ -212,9 +224,7 @@ pub fn active_marker_filename() -> String
 pub( super ) fn host_user_slug() -> String
 {
   let hostname = resolve_hostname();
-  let user = std::env::var( "USER" )
-    .or_else( |_| std::env::var( "USERNAME" ) )
-    .unwrap_or_else( |_| "user".to_string() );
+  let user = resolve_user();
   let clean = | s : &str | -> String
   {
     s.chars()
@@ -245,6 +255,21 @@ pub fn other_machines_active( credential_store : &Path ) -> std::collections::Ha
     .map( | ( _, content ) | content )
     .filter( | s | !s.is_empty() )
     .collect()
+}
+
+/// Read the account name active on THIS machine — the per-machine
+/// `_active_{hostname}_{user}` marker in `credential_store`.
+///
+/// Public counterpart of the crate-internal marker read for external
+/// attribution consumers (e.g. `clr`'s journal identity stamping). Returns
+/// `None` when the marker is absent, unreadable, or empty. Reads only the
+/// marker file — never credential contents; the marker holds the account
+/// NAME (non-secret), never a token.
+#[ inline ]
+#[ must_use ]
+pub fn active_account( credential_store : &Path ) -> Option< String >
+{
+  read_active_marker( credential_store ).filter( | s | !s.is_empty() )
 }
 
 /// Read this machine's own active marker, trimmed; `None` when absent/unreadable.

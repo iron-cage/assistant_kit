@@ -4,24 +4,25 @@ Enumeration of grouping dimensions for `.stats` aggregation.
 
 - **Kind:** Enum
 - **Fundamental:** String
-- **Key Constraint:** One of 7 variants
+- **Key Constraint:** One of 4 implemented variants (4 more planned)
 
 ### Variants
 
-| Variant | Groups Events By | Typical Columns |
-|---------|------------------|-----------------|
-| `day` | Calendar date (YYYY-MM-DD) | Count, OK, Fail, Cost, Tokens |
-| `hour` | Hour of day (00-23) | Count, OK, Fail, Avg Duration |
-| `model` | Claude model name | Count, Cost, Tokens In/Out |
-| `command` | CLR command (run/ask/isolated/...) | Count, OK, Fail, Avg Duration |
-| `error` | Error class (RateLimit/Auth/...) | Count, Retries, Last Seen |
-| `creds` | Credential file name | Count, Cost, Duration |
-| `dir` | Working directory | Count, Cost, Duration |
+| Variant | Status | Groups Events By | Columns / Ordering |
+|---------|--------|------------------|--------------------|
+| `day` | Implemented | Calendar date (YYYY-MM-DD) | Count, Cost — ordered by date |
+| `model` | Implemented | Claude model name | Count, Cost — ordered by name |
+| `dir` | Implemented (task 543) | Working directory (`dir` field); field-less events under `(no dir)` | Count, Cost — ranked by descending count |
+| `agent` | Implemented (task 543) | Agent identity (`agent_id` field, `{user}@{host}{abs_dir}/`); field-less events under `(no agent)` | Count, Cost — ranked by descending count |
+| `hour` | Planned | Hour of day (00-23) | — |
+| `command` | Planned | CLR command (run/ask/isolated/...) | — |
+| `error` | Planned | Error class (RateLimit/Auth/...) | — |
+| `creds` | Planned | Credential file name | — |
 
 ### Validation
 
-- Case-insensitive matching
-- Invalid variant causes exit 1 listing valid options
+- Exact lowercase matching (`by::MODEL` is invalid)
+- Invalid variant causes exit 1 listing the implemented values: `day, model, dir, agent`
 
 ### Referenced Parameters
 

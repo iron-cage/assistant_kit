@@ -21,6 +21,7 @@ Tests access `pub(crate)` items through `claude_profile::usage::test_bridge` (re
 | `fetch_tests.rs` | Tests for fetch.rs: inject_synthetic_if_new, parse_u64_from_str, read_cached_quota (Part A). |
 | `fetch_tests_b.rs` | Tests for fetch.rs: CC-7+ (Part B). |
 | `approx_tests.rs` | Tests for approx.rs: approximate_utilization polynomial extrapolation. |
+| `forecast_tests.rs` | Tests for forecast.rs: burn-rate forecast, alert lines (task 544). |
 | `live_tests.rs` | Tests for live.rs: secs_to_hms_utc UTC formatting. |
 | `mod_tests.rs` | Tests for mod.rs: render_text, render_json, SortStrategy, three-tier grouping. |
 | `params_tests.rs` | Tests for params.rs: parse_usage_params parameter parsing. |

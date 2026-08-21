@@ -457,6 +457,8 @@ pub( crate ) fn apply_no_color( s : String ) -> String
     .replace( '●', "status" )
     .replace( '→', "->" )
     .replace( '✓', "*" )
+    // Task 544 burn-rate alert marker (forecast.rs::burn_warnings).
+    .replace( '⚠', "!" )
 }
 
 // ── Field extractor ────────────────────────────────────────────────────────────

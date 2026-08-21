@@ -220,13 +220,41 @@ pub struct EventFields
   /// Human-readable error message for runner-retry events.
   #[ serde( skip_serializing_if = "Option::is_none" ) ]
   pub error_message     : Option< String >,
-  /// Username invoking the CLI command (`command` events).
+  /// Username the event was produced by (attribution; any event type).
   #[ serde( skip_serializing_if = "Option::is_none" ) ]
   pub user              : Option< String >,
-  /// Hostname the CLI command was invoked from (`command` events).
+  /// Hostname the event was produced on (attribution; any event type).
   #[ serde( skip_serializing_if = "Option::is_none" ) ]
   pub host              : Option< String >,
   /// Full argument list the CLI command was invoked with (`command` events).
   #[ serde( skip_serializing_if = "Option::is_none" ) ]
   pub args              : Option< Vec< String > >,
+  /// Non-secret account identifier the event was produced under (email or
+  /// profile name; attribution; any event type). Never a token or secret.
+  #[ serde( skip_serializing_if = "Option::is_none" ) ]
+  pub account           : Option< String >,
+  /// Canonical agent identity `{user}@{host}{abs_dir}/`, composed via
+  /// [`compose_agent_id`] (attribution; any event type).
+  #[ serde( skip_serializing_if = "Option::is_none" ) ]
+  pub agent_id          : Option< String >,
+}
+
+/// Compose the canonical agent identity string: `{user}@{host}{abs_dir}/`.
+///
+/// Single owner of the agent-id format across the workspace — emitters call
+/// this instead of concatenating by hand. `dir` must be an absolute path; the
+/// result always carries exactly one trailing slash, whether or not `dir`
+/// already ends with one.
+///
+/// ```rust
+/// use claude_journal::compose_agent_id;
+/// assert_eq!( compose_agent_id( "user1", "w003", "/a/b" ),  "user1@w003/a/b/" );
+/// assert_eq!( compose_agent_id( "user1", "w003", "/a/b/" ), "user1@w003/a/b/" );
+/// ```
+#[ inline ]
+#[ must_use ]
+pub fn compose_agent_id( user : &str, host : &str, dir : &str ) -> String
+{
+  let trimmed = dir.trim_end_matches( '/' );
+  format!( "{user}@{host}{trimmed}/" )
 }

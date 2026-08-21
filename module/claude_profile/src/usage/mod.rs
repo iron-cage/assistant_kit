@@ -25,6 +25,7 @@ mod api_switch;
 mod api_dispatch;
 mod api;
 pub( crate ) mod approx;
+pub( crate ) mod forecast;
 
 pub( crate ) use api::{
   validate_imodel_str, validate_effort_str, pre_switch_touch_ctx, apply_post_switch_touch,

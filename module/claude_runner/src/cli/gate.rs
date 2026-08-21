@@ -93,6 +93,7 @@ fn emit_gate_wait_event(
     ev.fields.wait_ms       = Some( wait_ms );
     ev.fields.gate_attempts = Some( attempt.saturating_sub( 1 ) );
     ev.fields.gate_outcome  = Some( "acquired".to_string() );
+    super::execution::stamp_attribution( &mut ev );
     let _ = w.append( &ev );
   }
 }

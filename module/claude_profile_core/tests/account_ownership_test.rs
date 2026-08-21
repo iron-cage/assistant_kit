@@ -22,6 +22,10 @@
 //! | `cc4_read_owner_null_value` | read_owner with "owner": null → "" |
 //! | `cc5_read_owner_numeric_value` | read_owner with "owner": 42 → "" |
 //! | `cc6_background_save_new_account_no_owner` | background save on new account (owner:None) → no owner field |
+//! | `t542_01_active_account_reads_own_marker` | active_account() returns the trimmed name from this machine's own `_active_*` marker |
+//! | `t542_02_active_account_none_when_absent_or_empty` | active_account() → None on missing marker and on empty/whitespace marker |
+//! | `t542_03_credential_store_for_root_canonical_suffix` | credential_store_for_root() appends `.persistent/claude/credential` |
+//! | `t542_04_current_identity_composes_resolve_user_and_hostname` | current_identity() == `{resolve_user()}@{resolve_hostname()}` |
 
 use tempfile::TempDir;
 use claude_profile_core::account;
@@ -583,5 +587,64 @@ fn cc6_background_save_new_account_no_owner()
     "CC-6: background save on new account must not create owner field; got: {owner:?}",
   );
   assert!( account::is_owned( &owner ), "CC-6: absent owner must pass is_owned() gate" );
+}
+
+// ── TSK-542: public attribution accessors ────────────────────────────────────
+
+/// T542-01: `active_account()` reads this machine's own `_active_*` marker and
+/// returns the trimmed account name — the non-secret identity used by journal
+/// attribution.
+#[ test ]
+fn t542_01_active_account_reads_own_marker()
+{
+  let tmp   = TempDir::new().unwrap();
+  let store = tmp.path();
+  std::fs::write( store.join( account::active_marker_filename() ), "kimi\n" ).unwrap();
+
+  assert_eq!(
+    account::active_account( store ).as_deref(),
+    Some( "kimi" ),
+    "T542-01: active_account must return the trimmed marker content",
+  );
+}
+
+/// T542-02: `active_account()` returns `None` when the marker file is absent,
+/// and when it exists but is empty/whitespace — an empty name is no identity.
+#[ test ]
+fn t542_02_active_account_none_when_absent_or_empty()
+{
+  let tmp   = TempDir::new().unwrap();
+  let store = tmp.path();
+
+  assert_eq!( account::active_account( store ), None, "T542-02: absent marker → None" );
+
+  std::fs::write( store.join( account::active_marker_filename() ), "  \n" ).unwrap();
+  assert_eq!( account::active_account( store ), None, "T542-02: whitespace-only marker → None" );
+}
+
+/// T542-03: `credential_store_for_root()` appends the canonical
+/// `.persistent/claude/credential` suffix — the single owner of the store
+/// location convention shared with `claude_profile::PersistPaths`.
+#[ test ]
+fn t542_03_credential_store_for_root_canonical_suffix()
+{
+  let store = account::credential_store_for_root( std::path::Path::new( "/srv/pro" ) );
+  assert_eq!(
+    store,
+    std::path::PathBuf::from( "/srv/pro/.persistent/claude/credential" ),
+    "T542-03: suffix must be .persistent/claude/credential",
+  );
+}
+
+/// T542-04: `current_identity()` is exactly `{resolve_user()}@{resolve_hostname()}`
+/// — the refactor to a shared `resolve_user()` must not change composition.
+#[ test ]
+fn t542_04_current_identity_composes_resolve_user_and_hostname()
+{
+  let expected = format!( "{}@{}", account::resolve_user(), account::resolve_hostname() );
+  assert_eq!(
+    account::current_identity(), expected,
+    "T542-04: current_identity must compose resolve_user + resolve_hostname",
+  );
 }
 

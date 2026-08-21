@@ -19,9 +19,9 @@ Each successful `fetch_oauth_usage` call appends a timestamped measurement to th
 {
   "fetched_at": "2026-06-21T12:00:00Z",
   "status": "ok",
-  "five_hour": { "left_pct": 58.0, "resets_at": "2026-06-21T14:00:00+00:00" },
-  "seven_day": { "left_pct": 65.0, "resets_at": "2026-06-25T00:00:00+00:00" },
-  "seven_day_sonnet": { "left_pct": 80.0, "resets_at": "2026-06-25T00:00:00+00:00" },
+  "five_hour": { "utilization": 42.0, "resets_at": "2026-06-21T14:00:00+00:00" },
+  "seven_day": { "utilization": 35.0, "resets_at": "2026-06-25T00:00:00+00:00" },
+  "seven_day_sonnet": { "utilization": 20.0, "resets_at": "2026-06-25T00:00:00+00:00" },
   "history": [
     { "t": 1750520000, "h5": [38.0, "2026-06-21T14:00:00+00:00"], "d7": [33.0, "2026-06-25T00:00:00+00:00"], "sn": [18.0, "2026-06-25T00:00:00+00:00"] },
     { "t": 1750521800, "h5": [42.0, "2026-06-21T14:00:00+00:00"], "d7": [35.0, "2026-06-25T00:00:00+00:00"], "sn": [20.0, "2026-06-25T00:00:00+00:00"] }
@@ -38,7 +38,7 @@ Fields per entry:
 | `d7` | `[f64, string]` or `null` | 7d period: `[utilization, resets_at]` |
 | `sn` | `[f64, string]` or `null` | 7d-sonnet period: `[utilization, resets_at]` |
 
-Short keys (`h5`, `d7`, `sn`) minimize JSON size in a 10-entry array.
+Short keys (`h5`, `d7`, `sn`) minimize JSON size in a 10-entry array. The sibling period objects (`five_hour`/`seven_day`/`seven_day_sonnet`) store the same utilization semantics under the key `utilization` — pre-BUG-540 files carry the misnamed legacy key `left_pct` for the same value, accepted on read (Feature 033 AC-19); the ring tuples were always positional and are unaffected.
 
 **Approximation Algorithm**
 
@@ -116,6 +116,7 @@ This prevents quadratic divergence (a2 > 0 shooting to infinity).
 | [036_account_ownership.md](036_account_ownership.md) | Non-owned accounts skip history append (G1 gate) |
 | [039_decision_algorithms.md](039_decision_algorithms.md) | Approximation algorithm documented as Table 6 |
 | [061_solo_token_conservation.md](061_solo_token_conservation.md) | `approximate_quota()` in Feature 061 calls this feature's polynomial approximation for solo-skipped accounts |
+| [077_burn_rate_alert.md](077_burn_rate_alert.md) | Consumes the measurement ring via `read_history()` to forecast 5h-window time-to-exhaustion |
 
 ### Bugs
 

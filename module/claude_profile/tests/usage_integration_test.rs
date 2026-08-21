@@ -20,6 +20,7 @@
 //! | `fetch_tests` | inject_synthetic_if_new, parse_u64_from_str, read_cached_quota Part A |
 //! | `fetch_tests_b` | read_cached_quota CC-7+ Part B |
 //! | `approx_tests` | approximate_utilization polynomial extrapolation |
+//! | `forecast_tests` | burn-rate time-to-exhaustion forecast and alert lines (task 544) |
 //! | `live_tests` | secs_to_hms_utc UTC formatting |
 //! | `mod_tests` | render_text/render_json, SortStrategy, three-tier grouping |
 //! | `params_tests` | parse_usage_params parameter parsing |
@@ -70,6 +71,9 @@ mod fetch_tests_b;
 
 #[ path = "usage/approx_tests.rs" ]
 mod approx_tests;
+
+#[ path = "usage/forecast_tests.rs" ]
+mod forecast_tests;
 
 #[ path = "usage/live_tests.rs" ]
 mod live_tests;

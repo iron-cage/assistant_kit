@@ -14,7 +14,7 @@
 //! | `stderr_str` | `refresh_test`, `bug_reproducers_239_244_test`, `invariant_trace_universality_test`, `error_classification_test`, `user_story_test`, `user_story_creds_isolated_test`, `isolated_correctness_test`, `isolated_test`, `ps_command_test`, `user_story_ps_test`, `kill_command_test`, `user_story_kill_test`, `ps_mode_test`, `ps_columns_test`, `output_format_test`, `no_compact_window_test`, `json_config_test`, `config_file_test` |
 //! | `stdout_str` | `refresh_test`, `isolated_correctness_test`, `isolated_test`, `dry_run_test`, `ps_command_test`, `user_story_ps_test`, `kill_command_test`, `user_story_kill_test`, `ps_mode_test`, `ps_columns_test`, `ps_wide_test`, `output_format_test`, `no_compact_window_test`, `json_config_test`, `config_file_test` |
 //! | `make_creds_file` | `refresh_test`, `param_trace_edge_cases_test`, `invariant_trace_universality_test`, `user_story_test`, `user_story_creds_isolated_test`, `isolated_correctness_test`, `isolated_test`, `no_compact_window_test`, `json_config_test` |
-//! | `fake_claude_dir` (unix) | `bug_reproducers_239_244_test`, `error_classification_test`, `execution_mode_test`, `bug_reproducers_247_test`, `exit_code_contract_test`, `output_format_test`, `output_style_test`, `summary_fields_test`, `journal_integration_test`, `journal_integration_ext_test`, `param_extended_flags_test` (S89 only), `config_file_test` |
+//! | `fake_claude_dir` (unix) | `bug_reproducers_239_244_test`, `error_classification_test`, `execution_mode_test`, `bug_reproducers_247_test`, `exit_code_contract_test`, `output_format_test`, `output_style_test`, `summary_fields_test`, `journal_integration_test`, `journal_integration_ext_test`, `param_extended_flags_test` (S89 only), `config_file_test`, `bug_reproducers_539_test`, `journal_attribution_test` |
 //! | `fake_claude_binary_dir` (unix) | `ps_command_test`, `user_story_ps_test`, `kill_command_test`, `user_story_kill_test`, `ps_mode_test`, `ps_columns_test`, `ps_wide_test`, `ps_flags_test`, `config_file_test` |
 //! | `fake_claude` (unix) | `execution_mode_test`, `expect_validation_test` |
 //! | `run_with_path` | `execution_mode_test`, `expect_validation_test`, `exit_code_contract_test`, `output_format_test` |
@@ -32,7 +32,7 @@
 //! | `run_clr_kill` (unix) | `kill_command_test`, `user_story_kill_test` |
 //! | `run_isolated` | `isolated_test`, `isolated_plan034_test`, `isolated_plan035_test` |
 //! | `find_jsonl_files` (unix) | `journal_integration_test`, `journal_integration_ext_test` |
-//! | `read_journal_content` (unix) | `journal_integration_test`, `journal_integration_ext_test` |
+//! | `read_journal_content` (unix) | `journal_integration_test`, `journal_integration_ext_test`, `bug_reproducers_539_test`, `journal_attribution_test` |
 //! | `run_with_journal` (unix) | `journal_integration_test`, `journal_integration_ext_test` |
 //! | `build_argv_tolerant_sleeper` | `concurrency_gate_test`, `concurrency_gate_ext2_test` |
 //! | `slot_owner_pid` | `concurrency_gate_ext_test`, `concurrency_gate_ext2_test` |

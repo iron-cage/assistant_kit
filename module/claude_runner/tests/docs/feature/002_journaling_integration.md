@@ -35,6 +35,15 @@ Test case planning for [feature/002_journaling_integration.md](../../../docs/fea
 | FT-20 | Retry event emitted with `error_class` before successful second attempt | Retry Emission |
 | FT-21 | Timeout event emitted with `exit_code:4` when watchdog kills subprocess | Timeout Emission |
 | FT-22 | Default journal dir resolves to `~/.clr/journal/` when no flag or env set | Default Dir |
+| FT-23 | Interactive event carries `duration_ms` on the blocking (`timeout == 0`) path (AC-012, BUG-539) | Duration Emission |
+| FT-24 | Interactive event carries `duration_ms` on the timeout-polling path (AC-012, BUG-539) | Duration Emission |
+| FT-25 | Execution without `--dir` → `dir` == process cwd; `agent_id` composed from it (AC-018/AC-019) | Attribution |
+| FT-26 | Execution with `--dir Y` → `dir` == Y preserved; `agent_id` uses Y (AC-018) | Attribution |
+| FT-27 | `CLR_ACCOUNT=test.acct` → `account == "test.acct"` (env override wins, AC-020) | Attribution |
+| FT-28 | Identity unresolvable → `account` absent; `user`/`host`/`agent_id` still set (AC-019/AC-020) | Attribution |
+| FT-29 | Active-marker redirect seat → `account` == profile name, never a token (AC-020) | Attribution |
+| FT-30 | `retry` event carries the same `account`/`agent_id` as its `execution` (AC-019/AC-020) | Attribution |
+| FT-31 | Interactive from dir X → `dir` == X, `agent_id` == `{user}@{host}X/`, `account` set (AC-018–AC-020) | Attribution |
 
 ## Test Coverage Summary
 
@@ -56,11 +65,18 @@ Test case planning for [feature/002_journaling_integration.md](../../../docs/fea
 - Retry Emission: 1 test (FT-20)
 - Timeout Emission: 1 test (FT-21)
 - Default Dir: 1 test (FT-22)
+- Duration Emission: 2 tests (FT-23, FT-24)
+- Attribution: 7 tests (FT-25 through FT-31)
 
-**Total:** 22 tests
+**Total:** 31 tests
 
-> **Implementation note:** The actual test file uses EC-N identifiers (EC-1..EC-22)
-> mapped to integration test scenarios. FT-N here is the spec-level identifier.
+> **Implementation note:** The actual test files use EC-N identifiers mapped to
+> integration test scenarios; FT-N here is the spec-level identifier. Coverage
+> spans three integration files plus one reproducer file:
+> `journal_integration_test.rs` (EC-1..EC-10), `journal_integration_ext_test.rs`
+> (EC-11..EC-22), `journal_attribution_test.rs` (EC-23..EC-29 = FT-25..FT-31,
+> task 542), and `bug_reproducers_539_test.rs` (FT-23/FT-24, marked
+> `bug_reproducer(BUG-539)`).
 > CLI-wins-over-env is implemented as `ec14_journal_dir_cli_wins_over_env`;
 > truncation marker as `ec15_stdout_over_1mb_has_truncation_marker`;
 > gate_wait emission as `ec11_gate_wait_event_emitted_when_gate_blocks`;
@@ -293,3 +309,93 @@ FT-8 requires a fake `claude` subprocess that emits >1 MB of repeated output on 
 - **Then:** exit 0; `<fake_home>/.clr/journal/YYYY-MM-DD.jsonl` exists and contains an execution event; no other journal location is used
 - **Exit:** 0
 - **Source:** `param/073_journal_dir.md` — 3-tier resolution: CLI > `CLR_JOURNAL_DIR` env > `~/.clr/journal/` default; test validates the default tier by setting `HOME` and clearing the env var
+
+---
+
+### FT-23: Interactive event carries `duration_ms` — blocking path (BUG-539)
+
+- **Given:** temporary journal dir; fake claude that exits 0 immediately; no `--timeout` flag and `CLR_TIMEOUT`/`_CLR_DEFAULT_TIMEOUT` removed from env (interactive default timeout is 0 → blocking `wait()` path)
+- **When:** `clr --interactive --max-sessions 0 --journal full --journal-dir <tmpdir> "x"`
+- **Then:** exactly one `"type":"interactive"` line exists; it contains a `"duration_ms":<n>` key; `n < 60_000` (sanity bound — the session lasted well under a minute)
+- **Exit:** 0
+- **Source:** [feature/002_journaling_integration.md](../../../docs/feature/002_journaling_integration.md) AC-012; implemented as `bug_539_blocking_path_interactive_event_carries_duration_ms` in `bug_reproducers_539_test.rs`
+
+---
+
+### FT-24: Interactive event carries `duration_ms` — timeout-polling path (BUG-539)
+
+- **Given:** temporary journal dir; fake claude that exits 0 immediately; `--timeout 30` (nonzero timeout → polling path with deadline)
+- **When:** `clr --interactive --timeout 30 --max-sessions 0 --journal full --journal-dir <tmpdir> "x"`
+- **Then:** exactly one `"type":"interactive"` line exists; it contains a `"duration_ms":<n>` key; `n < 60_000` (real elapsed time, never the timeout deadline)
+- **Exit:** 0
+- **Source:** [feature/002_journaling_integration.md](../../../docs/feature/002_journaling_integration.md) AC-012; implemented as `bug_539_timeout_path_interactive_event_carries_duration_ms` in `bug_reproducers_539_test.rs`
+
+---
+
+### FT-25: Execution without `--dir` → `dir` falls back to process cwd; `agent_id` composed from it
+
+- **Given:** temporary journal dir; fake claude; child spawned with `.current_dir(<X>)` and no `--dir`/`--to` flag; `USER=tester`/`HOSTNAME=testhost` pinned in env
+- **When:** `clr -p --max-sessions 0 --journal full --journal-dir <tmpdir> "x"` from cwd `<X>`
+- **Then:** execution event has `"dir":"<X>"` (canonicalized cwd), `"user":"tester"`, `"host":"testhost"`, and `"agent_id":"tester@testhost<X>/"`
+- **Exit:** 0
+- **Source:** [feature/002_journaling_integration.md](../../../docs/feature/002_journaling_integration.md) AC-018/AC-019; implemented as `ec23_*` in `journal_attribution_test.rs`
+
+---
+
+### FT-26: Execution with explicit `--dir Y` → `dir` preserved verbatim; `agent_id` uses Y
+
+- **Given:** temporary journal dir; fake claude; a second temp dir `<Y>` passed as `--dir <Y>` (canonicalized before passing)
+- **When:** `clr -p --dir <Y> --max-sessions 0 --journal full --journal-dir <tmpdir> "x"`
+- **Then:** execution event has `"dir":"<Y>"` exactly as passed (cwd fallback did NOT overwrite it) and `"agent_id":"tester@testhost<Y>/"`
+- **Exit:** 0
+- **Source:** [feature/002_journaling_integration.md](../../../docs/feature/002_journaling_integration.md) AC-018 (explicit values always win); implemented as `ec24_*` in `journal_attribution_test.rs`
+
+---
+
+### FT-27: `CLR_ACCOUNT` env override wins the account hierarchy
+
+- **Given:** temporary journal dir; fake claude; `CLR_ACCOUNT=test.acct` set in the child env (store not consulted)
+- **When:** `clr -p --max-sessions 0 --journal full --journal-dir <tmpdir> "x"`
+- **Then:** execution event has `"account":"test.acct"`
+- **Exit:** 0
+- **Source:** [feature/002_journaling_integration.md](../../../docs/feature/002_journaling_integration.md) AC-020 (hierarchy: `CLR_ACCOUNT` first); implemented as `ec25_*` in `journal_attribution_test.rs`
+
+---
+
+### FT-28: Unresolvable account → `account` absent; `user`/`host`/`agent_id` still stamped
+
+- **Given:** temporary journal dir; fake claude; `CLR_ACCOUNT` removed; `PRO` points at an empty temp root (no active-account marker anywhere)
+- **When:** `clr -p --max-sessions 0 --journal full --journal-dir <tmpdir> "x"`
+- **Then:** execution event contains NO `"account":` key, but `"user"`, `"host"`, and `"agent_id"` are all present
+- **Exit:** 0
+- **Source:** [feature/002_journaling_integration.md](../../../docs/feature/002_journaling_integration.md) AC-019/AC-020 (absent, never empty; identity fields independent of account resolution); implemented as `ec26_*` in `journal_attribution_test.rs`
+
+---
+
+### FT-29: Active-account marker in the credential store resolves `account`
+
+- **Given:** temporary journal dir; fake claude; `CLR_ACCOUNT` removed; `PRO=<root>` where `<root>/.persistent/claude/credential/_active_testhost_tester` contains `kimi\n` (marker holds the profile NAME only — no token material anywhere in the fixture)
+- **When:** `clr -p --max-sessions 0 --journal full --journal-dir <tmpdir> "x"`
+- **Then:** execution event has `"account":"kimi"` (marker content trimmed)
+- **Exit:** 0
+- **Source:** [feature/002_journaling_integration.md](../../../docs/feature/002_journaling_integration.md) AC-020 (store-marker tier of the hierarchy); implemented as `ec27_*` in `journal_attribution_test.rs`
+
+---
+
+### FT-30: `retry` event carries the same attribution as its `execution` event
+
+- **Given:** temporary journal dir; counter-script fake claude (exit 2 first call, exit 0 second); `--retry-on-transient 1 --transient-delay 0`; `CLR_ACCOUNT=retry.acct`
+- **When:** `clr -p --retry-on-transient 1 --transient-delay 0 --max-sessions 0 --journal full --journal-dir <tmpdir> "x"`
+- **Then:** both the `"type":"retry"` and `"type":"execution"` lines exist; both carry `"account":"retry.acct"` and identical `"agent_id"` values (stamping is uniform across event types)
+- **Exit:** 0
+- **Source:** [feature/002_journaling_integration.md](../../../docs/feature/002_journaling_integration.md) AC-019/AC-020 (every event type stamped, not just execution); implemented as `ec28_*` in `journal_attribution_test.rs`
+
+---
+
+### FT-31: Interactive event fully attributed (dir, agent_id, account)
+
+- **Given:** temporary journal dir; fake claude; child spawned with `.current_dir(<X>)`; `CLR_ACCOUNT=session.acct`
+- **When:** `clr --interactive --max-sessions 0 --journal full --journal-dir <tmpdir> "x"` from cwd `<X>`
+- **Then:** the `"type":"interactive"` line has `"dir":"<X>"`, `"agent_id":"tester@testhost<X>/"`, and `"account":"session.acct"`
+- **Exit:** 0
+- **Source:** [feature/002_journaling_integration.md](../../../docs/feature/002_journaling_integration.md) AC-018–AC-020 on the interactive path; implemented as `ec29_*` in `journal_attribution_test.rs`

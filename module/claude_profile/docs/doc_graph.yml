@@ -282,6 +282,11 @@ nodes:
     label: Identity Tag Filter
     entity: feature
 
+  - id: feature/077
+    file: feature/077_burn_rate_alert.md
+    label: Burn-Rate Alert (Time-to-Exhaustion)
+    entity: feature
+
   - id: invariant/001
     file: invariant/001_zero_third_party_deps.md
     label: Zero Third-Party Dependencies
@@ -866,6 +871,10 @@ edges:
   - {from: feature/076, to: feature/072, label: "Gate 10 doctrine Gate 11 mirrors; automatic selection only"}
   - {from: feature/076, to: feature/075, label: "companion — account-side tag sets this filter evaluates"}
 
+  # ── feature/077: Burn-Rate Alert (Time-to-Exhaustion) ──────────────────────
+  - {from: feature/077, to: feature/040, label: "consumes the measurement ring via read_history() to forecast exhaustion"}
+  - {from: feature/077, to: feature/009, label: "footer warning lines appended to .usage text/plain output"}
+
   - {from: invariant/002, to: feature/010, label: "$USERPROFILE fallback for Windows"}
 
   - {from: invariant/004, to: invariant/008, label: "related boundary: single entry point for token refresh delegates to run_isolated() in claude_runner_core"}
@@ -875,7 +884,7 @@ edges:
 
 components:
   - id: 1
-    size: 65
+    size: 66
     isolated: false
     nodes:
       - feature/001
@@ -931,6 +940,7 @@ components:
       - feature/074
       - feature/075
       - feature/076
+      - feature/077
       - invariant/001
       - invariant/002
       - invariant/003

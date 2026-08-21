@@ -5,7 +5,7 @@
 - **Purpose**: Unified field table for the per-account supplementary metadata file stored alongside `{name}.credentials.json`.
 - **Responsibility**: Documents all fields in the per-account supplementary metadata file `{name}.json` across all features.
 - **In Scope**: All fields written or read by `clp` across all features — core identity, OAuth metadata, org identity, extended snapshot fields, host label, tags (supersede the legacy `role` label), renewal override, ownership, and low-churn quota metadata (top-level keys since TSK-500; the legacy `cache` subtree is documented for pre-migration files).
-- **Out of Scope**: `{name}.credentials.json` (→ [schema/001](001_credentials_json.md)); the untracked local volatile cache `-cache/{name}.json` (→ [feature/033](../feature/033_quota_cache.md) — volatile quota fields and measurement history live there since TSK-500); HTTP API response shapes.
+- **Out of Scope**: `{name}.credentials.json` (→ [schema/001](001_credentials_json.md)); the per-host volatile cache `cache/{host}_{user}/{name}.json` (→ [feature/033](../feature/033_quota_cache.md) — volatile quota fields and measurement history live there since TSK-502; the TSK-500-era untracked `-cache/{name}.json` is its self-cleaning legacy predecessor); HTTP API response shapes.
 
 ### File Location
 
@@ -100,7 +100,9 @@ These fields are written by one caller and never touched by others (preserved vi
 }
 ```
 
-Volatile quota fields (`fetched_at`, `status`, `five_hour`, `seven_day`, `seven_day_sonnet`, `history`) live in the untracked local `-cache/{name}.json` since TSK-500 — see [feature/033](../feature/033_quota_cache.md) for its structure. A pre-migration file instead carries all of these plus the four low-churn keys nested in a legacy `cache{}` subtree.
+Volatile quota fields (`fetched_at`, `status`, `five_hour`, `seven_day`, `seven_day_sonnet`, `history`) live in the per-host tracked `cache/{host}_{user}/{name}.json` since TSK-502 (the TSK-500-era untracked `-cache/{name}.json` is a legacy candidate, self-cleaned after the first per-host write) — see [feature/033](../feature/033_quota_cache.md) for its structure. A pre-migration file instead carries all of these plus the four low-churn keys nested in a legacy `cache{}` subtree.
+
+Each period object (`five_hour`, `seven_day`, `seven_day_sonnet`) — wherever it appears, per-host file or legacy `cache{}` subtree — has the shape `{ "utilization": f64, "resets_at": string | absent }`, where `utilization` is percent **consumed** (0 = untouched, 100 = exhausted; same semantics as the `history[]` tuples) and `resets_at` is an ISO 8601 timestamp. Files written before BUG-540 — including every frozen legacy `cache{}` subtree — store the same consumed-percent value under the misnamed key `left_pct`; readers accept both keys, writers emit only `utilization` (feature/033 AC-19). Never read `left_pct` as percent-remaining.
 
 ### Redirect Backend Example
 

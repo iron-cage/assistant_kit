@@ -1,7 +1,9 @@
 # Type :: `GroupBy`
 
-Validation tests for the `GroupBy` enum. Tests validate all 7 grouping
-dimensions, case-insensitive matching, and invalid-variant error handling.
+Validation tests for the `GroupBy` enum — the 4 implemented grouping
+dimensions (`day`, `model`, `dir`, `agent`), missing-field bucket handling,
+and invalid-variant error handling. The 4 planned dimensions (`hour`,
+`command`, `error`, `creds`) have no test cases until implemented.
 
 **Source:** [type/09_group_by.md](../../../../docs/cli/type/09_group_by.md)
 
@@ -10,21 +12,25 @@ dimensions, case-insensitive matching, and invalid-variant error handling.
 | ID | Test Name | Category |
 |----|-----------|----------|
 | TC-1 | `day` -> grouped by calendar date | Parsing |
-| TC-2 | `hour` -> grouped by hour of day | Parsing |
-| TC-3 | `model` -> grouped by model name | Parsing |
-| TC-4 | `command` -> grouped by CLR command | Parsing |
-| TC-5 | `error` -> grouped by error class | Parsing |
-| TC-6 | `creds`, `dir` -> grouped by credential/directory | Parsing |
-| TC-7 | Case-insensitive matching (`MODEL` = `model`) | Case Insensitivity |
-| TC-8 | Invalid variant -> exit 1 listing valid options | Error Handling |
+| TC-2 | `model` -> grouped by model name | Parsing |
+| TC-3 | `dir` -> rows ranked by descending event count | Ranking |
+| TC-4 | `agent` -> rows ranked by descending event count | Ranking |
+| TC-5 | Field-less events -> visible `(no dir)` / `(no agent)` buckets | Bucketing |
+| TC-6 | Invalid variant -> exit 1 listing implemented values | Error Handling |
 
 ## Test Coverage Summary
 
-- Parsing: 6 tests (TC-1 through TC-6)
-- Case Insensitivity: 1 test (TC-7)
-- Error Handling: 1 test (TC-8)
+- Parsing: 2 tests (TC-1, TC-2)
+- Ranking: 2 tests (TC-3, TC-4)
+- Bucketing: 1 test (TC-5)
+- Error Handling: 1 test (TC-6)
 
-**Total:** 8 test cases
+**Total:** 6 test cases
+
+> **Implementation note:** TC-3 through TC-6 are implemented as
+> `ec21`–`ec24` in `viewer_integration_test.rs` (task 543); `day`/`model`
+> grouping is exercised by `ec4_stats_by_model_shows_aggregation` there.
+> Matching is exact lowercase — `by::MODEL` takes the invalid-variant path.
 
 ## Test Cases
 
@@ -40,70 +46,50 @@ dimensions, case-insensitive matching, and invalid-variant error handling.
 
 ---
 
-### TC-2: `hour` -> grouped by hour of day
-
-- **Given:** journal with events spread across multiple hours
-- **When:** `clj .stats by::hour`
-- **Then:** exit 0; one row per hour (00-23), each with count/OK/fail/avg duration
-- **Exit:** 0
-- **Source:** [type/09_group_by.md](../../../../docs/cli/type/09_group_by.md)
-
----
-
-### TC-3: `model` -> grouped by model name
+### TC-2: `model` -> grouped by model name
 
 - **Given:** journal with events across multiple models
 - **When:** `clj .stats by::model`
-- **Then:** exit 0; one row per model, each with count/cost/tokens in/out
+- **Then:** exit 0; one row per model with count and cost, ordered by model name
 - **Exit:** 0
 - **Source:** [type/09_group_by.md](../../../../docs/cli/type/09_group_by.md)
 
 ---
 
-### TC-4: `command` -> grouped by CLR command
+### TC-3: `dir` -> rows ranked by descending event count
 
-- **Given:** journal with events across multiple commands (run/ask/isolated)
-- **When:** `clj .stats by::command`
-- **Then:** exit 0; one row per command, each with count/OK/fail/avg duration
+- **Given:** journal with 3 events in `/tmp/alpha`, 2 in `/tmp/beta`, 1 with no `dir` field
+- **When:** `clj .stats by::dir since::9999d`
+- **Then:** exit 0; `DIR` header; rows appear in order `/tmp/alpha`, `/tmp/beta`, `(no dir)` (descending count); `Total: 6 event(s)` footer
 - **Exit:** 0
-- **Source:** [type/09_group_by.md](../../../../docs/cli/type/09_group_by.md)
+- **Source:** [type/09_group_by.md](../../../../docs/cli/type/09_group_by.md); task 543 AC-01
 
 ---
 
-### TC-5: `error` -> grouped by error class
+### TC-4: `agent` -> rows ranked by descending event count
 
-- **Given:** journal with failed events of varying error classes
-- **When:** `clj .stats by::error`
-- **Then:** exit 0; one row per error class, each with count/retries/last seen
+- **Given:** journal with 3 events for agent `tester@testhost/tmp/alpha/`, 2 for `tester@testhost/tmp/beta/`, 1 with no `agent_id` field
+- **When:** `clj .stats by::agent since::9999d`
+- **Then:** exit 0; `AGENT` header; rows appear in descending count order with `(no agent)` last
 - **Exit:** 0
-- **Source:** [type/09_group_by.md](../../../../docs/cli/type/09_group_by.md)
+- **Source:** [type/09_group_by.md](../../../../docs/cli/type/09_group_by.md); task 543 AC-01
 
 ---
 
-### TC-6: `creds`, `dir` -> grouped by credential/directory
+### TC-5: Field-less events aggregate under visible buckets
 
-- **Given:** journal with events across multiple credential files and working directories
-- **When:** `clj .stats by::creds` and `clj .stats by::dir`
-- **Then:** exit 0 for both; one row per credential name (for `creds`) or working directory (for `dir`)
+- **Given:** the TC-3/TC-4 fixture (one event lacking both `dir` and `agent_id`)
+- **When:** `clj .stats by::dir` and `clj .stats by::agent`
+- **Then:** the `(no dir)` / `(no agent)` row is present and carries count 1 — field-less events are never silently dropped
 - **Exit:** 0 for both
-- **Source:** [type/09_group_by.md](../../../../docs/cli/type/09_group_by.md)
+- **Source:** [type/09_group_by.md](../../../../docs/cli/type/09_group_by.md); task 543 AC-02
 
 ---
 
-### TC-7: Case-insensitive matching (`MODEL` = `model`)
-
-- **Given:** journal with events across multiple models
-- **When:** `clj .stats by::MODEL` compared to `clj .stats by::model`
-- **Then:** both produce identical grouped output
-- **Exit:** 0 for both
-- **Source:** [type/09_group_by.md](../../../../docs/cli/type/09_group_by.md)
-
----
-
-### TC-8: Invalid variant -> exit 1 listing valid options
+### TC-6: Invalid variant -> exit 1 listing implemented values
 
 - **Given:** clean environment
-- **When:** `clj .stats by::region`
-- **Then:** exit 1; stderr lists the 7 valid `GroupBy` variants
+- **When:** `clj .stats by::bogus`
+- **Then:** exit 1; stderr contains `valid: day, model, dir, agent`
 - **Exit:** 1
-- **Source:** [type/09_group_by.md](../../../../docs/cli/type/09_group_by.md)
+- **Source:** [type/09_group_by.md](../../../../docs/cli/type/09_group_by.md); task 543 AC-03

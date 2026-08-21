@@ -71,7 +71,9 @@ impl PersistPaths
   /// The credential store directory: `{root}/.persistent/claude/credential/`.
   ///
   /// This is the canonical location for saved account credential files.
-  /// Computed independently from `base()` so the two paths can evolve separately.
+  /// Computed independently from `base()` so the two paths can evolve separately;
+  /// the suffix convention is owned by
+  /// `claude_profile_core::account::credential_store_for_root`.
   ///
   /// # Panics
   ///
@@ -88,7 +90,7 @@ impl PersistPaths
       .expect( "base must have a .persistent parent" )
       .parent()
       .expect( ".persistent must have a root parent" );
-    root.join( ".persistent" ).join( "claude" ).join( "credential" )
+    claude_profile_core::account::credential_store_for_root( root )
   }
 
   /// Create the base directory if it does not exist.
