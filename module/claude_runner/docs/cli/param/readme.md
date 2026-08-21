@@ -87,6 +87,7 @@
 | 085_gate_remaining_timeout_secs.md | `CLR_REMAINING_TIMEOUT_SECS` env-var spec (gate remaining timeout budget clamp) |
 | 086_no_stdin.md | `--no-stdin` flag spec (disable all stdin reading — JSON config detection and forwarding) |
 | 087_global.md | `--global` flag spec (resolve `--topic`'s base to the global topic home) |
+| 088_topic_mode.md | `--topic-mode` parameter spec (force fork or dir topic mechanism) |
 
 ### Retired Parameter IDs
 
@@ -130,7 +131,7 @@ These parameter IDs exist in the sequence but have no corresponding file. The ID
 | 25 | `--file` | [`FilePath`](../type/12_file_path.md) | — | Any readable file path | File content piped as subprocess stdin | 1 cmd |
 | 26 | `--strip-fences` | bool | false | present/absent | Strip outermost markdown code fences from stdout | 1 cmd |
 | 27 | `--keep-claudecode` | bool | false | present/absent | Preserve `CLAUDECODE` env var in subprocess (default: removed) | 1 cmd |
-| 28 | `--topic` | string | `.` | `.` or any name | Named topic directory appended to `--dir` (`/-NAME`); `.` = identity | 2 cmds |
+| 28 | `--topic` | string | `.` | `.` or any name | Named isolated conversation: new topics default to a same-dir session fork; existing `-NAME` dirs, `--from`, `--global` keep the legacy dir mechanism; `.` = identity | 3 cmds |
 | 29 | `--output-file` | string | — | Any writable path | Write stdout to file in addition to printing (tee behavior) | 2 cmds |
 | 30 | `--expect` | string | — | `val1\|val2\|…` | Pipe-separated enum values; stdout must match one after trim+lowercase | 2 cmds |
 | 31 | `--expect-strategy` | enum | `fail` | `fail`/`retry`/`default:<V>` | Mismatch handling: exit 3, retry N times, or output fallback value | 2 cmds |
@@ -185,8 +186,10 @@ These parameter IDs exist in the sequence but have no corresponding file. The ID
 | 84 | `--gate-stale-secs` | u64 | absent | Positive integer | Staleness threshold (sec) for reclaiming a live-but-stalled slot; absent = feature off; `run`/`ask`/`topic` full 5-tier; `isolated` env-var-only | 3 cmds |
 | 85 | `CLR_REMAINING_TIMEOUT_SECS` | u64 | absent | Positive integer | Remaining external timeout budget (sec); clamps effective gate attempt count; env-var-only (no CLI flag) | all cmds |
 | 86 | `--no-stdin` | bool | false | present/absent | Never read piped stdin — disables stdin JSON config detection and stdin forwarding; checked pre-parse (raw token/env scan) so a held-open pipe cannot hang clr (BUG-492) | 2 cmds |
+| 87 | `--global` | bool | false | present/absent | Resolve `--topic`'s base to the global topic home instead of cwd (alias: `-g`); inert without a topic; `--dir` outranks it | 4 cmds |
+| 88 | `--topic-mode` | enum | absent (auto) | `fork`, `dir` | Force `--topic`'s mechanism: `fork` (same-dir session fork) or `dir` (legacy `-NAME` directory); overrides automatic selection | 3 cmds |
 
-**Total:** 83 parameters (param 12 deprecated → replaced by 74; net count unchanged for that swap; params 75–77 added; params 78–80 added for the `clr tools` filter/projection redesign; params 81–85 added for `--input-format` and gate tuning knobs; param 86 added for the stdin opt-out; param 87 added for the global topic base)
+**Total:** 84 parameters (param 12 deprecated → replaced by 74; net count unchanged for that swap; params 75–77 added; params 78–80 added for the `clr tools` filter/projection redesign; params 81–85 added for `--input-format` and gate tuning knobs; param 86 added for the stdin opt-out; param 87 added for the global topic base; param 88 added for the fork/dir topic mechanism override)
 
 **Groups:** Parameters 2–4, 17, 23, 24, 61–67, and 81 form [Claude-Native Flags](../param_group/01_claude_native_flags.md). Parameters 5–11, 13, 14, 18, 21, 22, 25–36, 40–57, 70–76, 82–86 form [Runner Control](../param_group/02_runner_control.md). Parameters 15–16 form [System Prompt](../param_group/03_system_prompt.md). Parameters 19–20 form [Credential Operations](../param_group/04_credential_operations.md). Parameters 58–60, 68–69 form [Session Listing](../param_group/05_session_listing.md). Parameter 77 (and `--timeout`, `--trace`, `--dry-run`, `--journal`, `--journal-dir`) form [Running Commands](../param_group/06_running_commands.md). Parameters 78–80 (plus shared members 59 `--columns` and 69 `--inspect`) form [Tool Listing](../param_group/07_tool_listing.md).
 
@@ -275,6 +278,7 @@ These parameter IDs exist in the sequence but have no corresponding file. The ID
 - [`CLR_REMAINING_TIMEOUT_SECS`](085_gate_remaining_timeout_secs.md)
 - [`--no-stdin`](086_no_stdin.md)
 - [`--global`](087_global.md)
+- [`--topic-mode`](088_topic_mode.md)
 
 ### Quick Reference
 
@@ -284,4 +288,4 @@ These parameter IDs exist in the sequence but have no corresponding file. The ID
 
 **Most used parameters:** `--model` (model selection), `--dir` (project targeting), `--topic` (session isolation by task name), `--dry-run` (debugging), `--new-session` (fresh start), `--interactive` (TTY passthrough with prompt), `--file` (stdin from file), `--strip-fences` (extract code block content).
 
-**Commands by parameter count:** `run` = 66, `ask` = 66, `topic` = 66, `topics` = 3, `ps` = 5, `isolated` = 18, `refresh` = 8, `kill` = 0, `tools` = 5, `help` = 0.
+**Commands by parameter count:** `run` = 67, `ask` = 67, `topic` = 67, `topics` = 4, `ps` = 5, `isolated` = 18, `refresh` = 8, `kill` = 0, `tools` = 5, `help` = 0.

@@ -90,6 +90,7 @@
 | **--- Directory ---** | | | |
 | `--dir` (working directory) | Yes (default: cwd) | Yes | Yes (validated before spawn; `CLR_DIR` env fallback) |
 | `--topic` | Yes | Yes | No |
+| `--topic-mode` | Yes | Yes | No |
 | `--add-dir` | Yes | Yes | Yes (repeatable; `CLR_ADD_DIR` env fallback) |
 | `--session-dir` (deprecated, inert) | Yes | Yes | No |
 | **--- System Prompt ---** | | | |
@@ -124,7 +125,7 @@
 
 - `run` and `ask` resolve `model` from the config file (project `.clr.toml` overriding user `~/.clr/config.toml`) as a fourth and final tier, when `--model` is absent and `CLR_MODEL` is unset — task 408 removed the `prefs.json` fifth tier that previously ran here (BUG-008's original fix), since it was a no-op for anyone with `config.toml`'s `model` key set (that tier already resolves earlier in the same sequence); any pre-existing `prefs.json` pin was carried forward into `config.toml` once as part of that change. `isolated` resolves its own separate 2-tier cascade via `resolve_isolated_default_model()` (project `.clr.toml` → user `~/.clr/config.toml`, TSK-407/410), falling back to `ISOLATED_DEFAULT_MODEL` (`opus` alias) only when neither tier sets a value — task 410 retired the `prefs.json` tier this cascade previously fell through to. The remaining difference: `isolated` now has `--model` as a native flag with `CLR_MODEL` env fallback (TSK-443), but its terminal fallback is still the `opus` alias rather than the claude binary's own default — `run`/`ask` fall through to the claude binary's default when no config tier sets a value; `isolated` falls through to the `opus` alias. One further asymmetry: while the seat's env block pins `ANTHROPIC_MODEL` (`~/.claude/settings.json`), `run`/`ask`/`topic` ignore the config-tier `model`/`fallback_model` entirely ([Provider Gate](../config_param.md#provider-gate)); `isolated`'s cascade is deliberately unaffected (explicit creds, temp `HOME` strips the env block).
 - `run` vs `ask` — zero behavioral difference; `ask` is a pure documentation signal for "this is a question".
-- `isolated` shares 21+ params with `run`/`ask` after TSK-443 added 12 native flags; remaining gaps: `--output-format` (passthrough-only), `--verbose`, `--quiet`, `--interactive`, all retry params, and session-control params (`-c`, `--new-session`, `--session-dir`, `--topic`, `--no-persist`) — all excluded by design (see Exclusion Rationale).
+- `isolated` shares 21+ params with `run`/`ask` after TSK-443 added 12 native flags; remaining gaps: `--output-format` (passthrough-only), `--verbose`, `--quiet`, `--interactive`, all retry params, and session-control params (`-c`, `--new-session`, `--session-dir`, `--topic`, `--topic-mode`, `--no-persist`) — all excluded by design (see Exclusion Rationale).
 - The defining `isolated`-specific behaviors: temp HOME lifecycle, credential writeback, timeout exits as `2` (not `4`), and `--dangerously-skip-permissions` conditional on MESSAGE presence.
 - Passthrough (`-- <args>`) remains available for `--output-format` and any other claude-native flag not covered natively; last-wins ordering means passthrough still overrides any native flag.
 - Both `run` and `ask` suppress `--chrome` automatically in print mode (BUG-304 fix); `isolated` injects `--chrome` unconditionally unless `--no-chrome` is set.
@@ -138,7 +139,7 @@ Params not in the gap closure table are excluded by design. Four categories:
 
 | Category | Params | Reason |
 |----------|--------|--------|
-| **Temp HOME = meaningless** | `--topic`, `--session-dir`, `--new-session`, `--no-persist`, `-c` | Temp HOME has no session history; these params control session state that does not exist (`--session-dir` is additionally deprecated and inert everywhere — BUG-493 — so its exclusion needs no temp-HOME-specific rationale at all) |
+| **Temp HOME = meaningless** | `--topic`, `--topic-mode`, `--session-dir`, `--new-session`, `--no-persist`, `-c` | Temp HOME has no session history; these params control session state that does not exist (`--topic-mode` only configures `--topic`'s mechanism, so it is excluded for the same reason as `--topic` itself; `--session-dir` is additionally deprecated and inert everywhere — BUG-493 — so its exclusion needs no temp-HOME-specific rationale at all) |
 | **One-shot = no retry** | 20 retry params, `--expect-retries`, `--fallback-model` | No retry loop in `run_isolated_command()`; retrying bad credentials is pointless |
 | **Passthrough covers it** | `--output-format` | The only remaining native-flag gap after TSK-443; no CLR-level validation or transformation; override via `-- --output-format json` |
 | **Architecture mismatch** | `--interactive`, `--verbose`, Ultrathink suffix | `--interactive` conflicts with message-present contract; `--verbose` is a claude-native passthrough (no CLR-internal gating); ultrathink conflicts with "execute immediately" CLAUDE.md directive |

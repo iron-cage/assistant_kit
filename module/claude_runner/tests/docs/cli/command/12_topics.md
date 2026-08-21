@@ -2,10 +2,14 @@
 
 Integration test planning for the `topics` command. See [command/12_topics.md](../../../../docs/cli/command/12_topics.md) for specification.
 
-`topics` is the read-only counterpart to `topic`: a listing form and a `--path NAME`
-resolver form, neither of which spawns a subprocess or creates a directory. Tests focus
+`topics` is the read-only counterpart to `topic`: a listing form and two resolver forms
+(`--path NAME` for dir-mode directories, `--file NAME` for fork-mode session files),
+none of which spawns a subprocess or creates a directory. Tests here (TP-1..TP-17) focus
 on base resolution, what counts as a topic, the resolver's purity, and the cross-check
-that the resolver and the runner never disagree.
+that the resolver and the runner never disagree — all planned before fork mode existed
+and still accurate for the dir-mode surface. Fork-mode additions — `--file`, its guards,
+and the listing's MODE-column merge of registry (fork) and scan (dir) rows — are planned
+as F15–F17 in [param/088_topic_mode.md](../param/088_topic_mode.md); no TP renumbering.
 
 Every case pins its base at a `tempfile::TempDir` — via `run_cli_in_dir` for the cwd
 default, or `CLR_TOPIC_HOME` for `--global` — so no case reads or writes the host's real
@@ -15,7 +19,7 @@ default, or `CLR_TOPIC_HOME` for `--global` — so no case reads or writes the h
 
 | ID | Test Name | Category |
 |----|-----------|----------|
-| TP-1 | Two topic dirs under cwd listed, sorted, under a `NAME SESSIONS PATH` header | Listing |
+| TP-1 | Two topic dirs under cwd listed, sorted, under a `NAME MODE SESSIONS PATH` header | Listing |
 | TP-2 | Base with no topics → `no topics in <base>` on stderr, stdout empty, exit 0 | Listing |
 | TP-3 | Plain directories and `-`-prefixed *files* are not topics | Recognition |
 | TP-4 | A bare `-` directory is not a topic | Recognition |
@@ -54,7 +58,7 @@ default, or `CLR_TOPIC_HOME` for `--global` — so no case reads or writes the h
 ### TP-1: Topics under cwd are listed and sorted
 
 - **Command:** `clr topics`, run in a base holding `-zebra` and `-alpha`
-- **Expected behavior:** stdout begins with a header naming `NAME`, `SESSIONS`, and `PATH`; exactly 2 data rows follow, `alpha` first then `zebra`
+- **Expected behavior:** stdout begins with a header naming `NAME`, `MODE`, `SESSIONS`, and `PATH`; exactly 2 data rows follow, `alpha` first then `zebra`
 - **Exit:** 0
 - **Source:** [command/12_topics.md](../../../../docs/cli/command/12_topics.md)
 

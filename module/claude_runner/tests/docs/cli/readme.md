@@ -4,7 +4,7 @@
 
 - **Purpose**: Document integration and edge case test plans for all clr commands, parameters, and types.
 - **Responsibility**: Index of per-command, per-parameter, per-type, per-group, and per-env-param test case planning files.
-- **In Scope**: All 12 clr commands, all 83 parameters, all 14 types, all 7 parameter groups, 2 env parameter specs, 31 user story specs, 2 parity specs, 1 dictionary vocabulary check, and test surface for feature/invariant/api doc instances.
+- **In Scope**: All 12 clr commands, all 84 parameters, all 14 types, all 7 parameter groups, 3 env parameter specs, 32 user story specs, 2 parity specs, 1 dictionary vocabulary check, and test surface for feature/invariant/api doc instances.
 - **Out of Scope**: Automated test implementations (→ `tests/` in crate), spec documentation (→ `docs/feature/`).
 
 Test case planning for `clr` CLI. Each file contains a Test Case Index with coverage summary. Detailed test sections (executable specs) are added at L5.
@@ -27,14 +27,14 @@ Test case planning for `clr` CLI. Each file contains a Test Case Index with cove
 
 | Scope | Files | Min Tests |
 |-------|-------|-----------|
-| Commands | 11 | ≥8 IT each |
-| Parameters | 76 (75 active + 1 deprecated) | ≥6 EC each |
+| Commands | 12 | ≥8 IT each |
+| Parameters | 84 (83 active + 1 deprecated) | ≥6 EC each |
 | Parameter groups | 7 | ≥4 CC each |
 | Command groups | 1 | 3 CG (indexed from `command/05_ask.md`, `command/11_topic.md`) |
 | Types | 14 | ≥4 TC each |
-| Env params | 2 | ≥6 EC each |
+| Env params | 3 | ≥6 EC each |
 | Parity | 2 | ≥5 PC each |
-| User stories | 30 | ≥4 US each |
+| User stories | 32 | ≥4 US each |
 | Dictionary | 1 | ≥4 DT total |
 
 ### Navigation
@@ -125,9 +125,19 @@ Test case planning for `clr` CLI. Each file contains a Test Case Index with cove
 - [`--journal`](param/072_journal.md)
 - [`--journal-dir`](param/073_journal_dir.md)
 - [`--args-file`](param/075_args_file.md)
+- [`--from`](param/076_from.md)
+- [`--no-compact-window`](param/077_no_compact_window.md)
 - [`--name`](param/078_name.md)
 - [`--category`](param/079_category.md)
 - [`--value`](param/080_value.md)
+- [`--input-format`](param/081_input_format.md)
+- [`--gate-poll-secs`](param/082_gate_poll_secs.md)
+- [`--gate-max-attempts`](param/083_gate_max_attempts.md)
+- [`--gate-stale-secs`](param/084_gate_stale_secs.md)
+- [`--gate-remaining-timeout-secs`](param/085_gate_remaining_timeout_secs.md)
+- [`--no-stdin`](param/086_no_stdin.md)
+- [`--global`](param/087_global.md)
+- [`--topic-mode`](param/088_topic_mode.md)
 
 #### Parameter Groups
 - [Claude-Native Flags](param_group/01_claude_native_flags.md)

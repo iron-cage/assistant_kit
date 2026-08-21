@@ -53,14 +53,14 @@ fn make_topic( base : &std::path::Path, name : &str ) -> std::path::PathBuf
   dir
 }
 
-/// Data rows of a listing: everything after the `NAME SESSIONS PATH` header.
+/// Data rows of a listing: everything after the `NAME MODE SESSIONS PATH` header.
 fn rows( stdout : &str ) -> Vec< &str >
 {
   stdout.lines().skip( 1 ).filter( | l | !l.trim().is_empty() ).collect()
 }
 
 /// TP-01: two topic directories under the cwd are both listed, sorted by name,
-/// beneath a `NAME SESSIONS PATH` header.
+/// beneath a `NAME MODE SESSIONS PATH` header.
 #[ test ]
 fn tp01_lists_topics_in_cwd_sorted()
 {
@@ -73,7 +73,10 @@ fn tp01_lists_topics_in_cwd_sorted()
   let stdout = stdout_str( &out );
 
   assert!( stdout.starts_with( "NAME" ), "listing must start with a NAME header. Got:\n{stdout}" );
-  assert!( stdout.contains( "SESSIONS" ) && stdout.contains( "PATH" ), "header must name all 3 columns. Got:\n{stdout}" );
+  assert!(
+    stdout.contains( "MODE" ) && stdout.contains( "SESSIONS" ) && stdout.contains( "PATH" ),
+    "header must name all 4 columns. Got:\n{stdout}"
+  );
 
   let data = rows( &stdout );
   assert_eq!( data.len(), 2, "exactly 2 topics expected. Got:\n{stdout}" );

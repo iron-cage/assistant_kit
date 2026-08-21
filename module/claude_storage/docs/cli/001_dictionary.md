@@ -113,6 +113,12 @@ The human-readable name component of a session directory. Stored without the lea
 
 ---
 
+### Fork-Mode Topic
+
+A named session INSIDE a base directory's own storage, rather than a `-{topic}` sibling directory. The topic name maps deterministically to a session file via UUIDv5: `{storage}/{UUIDv5( canonical base path + NUL + name )}.jsonl`. Used only by `.session.path topic::` — every other `topic::` consumer keeps the Session Topic dir-suffix sense above. Because all fork-mode topics share the base directory's storage (and therefore its path-keyed prompt cache), forking preserves cache where a Session Directory switch invalidates it. The name-to-UUID mapping is one-way; the `clr` runner keeps a name registry for listing. See [`command/15_session_path.md`](command/15_session_path.md) § Topic Sense Collision.
+
+---
+
 ### Conversation Topic
 
 The first user message text of a conversation, used as its one-line display preview. Rendered by `.projects show_topic::1` — newlines flattened to spaces, trimmed, truncated to 90 characters. Distinct from Session Topic (above): a Session Topic names the working directory a session is keyed to; a Conversation Topic summarizes what the conversation is about.
