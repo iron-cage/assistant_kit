@@ -19,6 +19,7 @@
 
 **Operation steps:**
 1. Resolve name: use explicit `name::` if provided; otherwise read `oauthAccount.emailAddress` from `~/.claude.json` as primary inference source; if absent or empty, fall back to the per-machine active marker file (`{credential_store}/_active_{hostname}_{user}` via `active_marker_filename()` — see Feature 025); if neither source provides a non-empty name, exit 1.
+1a. Redirect skip gate: if `backend::` and `preset::` are both absent and the resolved name's stored `{name}.json` holds `backend: redirect`, exit 0 with a skip notice and touch no store file — a redirect account holds a static key with no live OAuth session to snapshot, and proceeding would re-backend it destructively (see [071](071_redirect_backend_accounts.md) AC-19, BUG-549).
 2. Validate `name` against the rules above (exit 1 on violation).
 3. Resolve credential store directory and ensure it exists (`create_dir_all` — see FR-6).
 4. Read `~/.claude/.credentials.json`.
@@ -62,6 +63,7 @@
 | File | Relationship |
 |------|--------------|
 | BUG-222 | BUG-222 ✅ Fixed (TSK-234): `save()` now writes model to `{name}.json` (step 7); `switch_account()` restores model on switch |
+| BUG-549 | BUG-549 ✅ Fixed: bare save (no `backend::`/`preset::`) on a stored-redirect target silently re-backended it to anthropic (absent `backend::` → type default) and destroyed the redirect record via 071 AC-15's delete-and-rewrite; step 1a's redirect skip gate (071 AC-19) now exits 0 without touching the store |
 
 ### Related Commands
 

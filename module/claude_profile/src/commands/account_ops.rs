@@ -340,6 +340,33 @@ pub fn account_save_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) ->
   }
   let backend = crate::account::AccountBackend::parse( &backend_raw.to_lowercase() );
 
+  // Fix(BUG-549): bare save (no backend::, no preset::) on a stored-redirect target is a
+  // no-op skip, never an implicit re-backend — 071 AC-19.
+  // Root cause: absent backend:: resolved to AccountBackend::Anthropic by type default
+  //   before the stored record was consulted; a stored-redirect target then rode the AC-15
+  //   delete-and-rewrite path, so the watchdog's routine per-tick bare `.account.save`
+  //   destroyed the redirect record (base_url/redirect_model/inference_provider/claim_lock)
+  //   and overwrote its static key with the live OAuth session — silently, fleet-synced.
+  // Pitfall: do NOT default absent backend:: to the stored backend instead — save()'s
+  //   redirect branch writes accessToken from the (absent) api_key:: bytes, clobbering the
+  //   stored static key with an empty string. A redirect account has no live OAuth session
+  //   to snapshot; skip is the only non-destructive meaning for a snapshot-style bare call.
+  //   Explicit backend::redirect re-saves and explicit backend::anthropic re-backends (AC-15)
+  //   are deliberate acts and stay untouched.
+  if backend_raw.is_empty() && !preset_is_kimi
+  {
+    let meta_text      = std::fs::read_to_string( credential_store.join( format!( "{name}.json" ) ) ).unwrap_or_default();
+    let stored_backend = crate::account::parse_string_field( &meta_text, "backend" ).unwrap_or_default();
+    if stored_backend == "redirect"
+    {
+      if trace { eprintln!( "{}account.save  skipped (reason: redirect backend — static credentials, nothing to snapshot)", trace_ts() ) }
+      return Ok( OutputData::new(
+        format!( "'{name}' is a redirect account (static credentials) — nothing to snapshot; save skipped\n" ),
+        "text",
+      ) );
+    }
+  }
+
   // Validate name before dry-run check so dry-run rejects invalid names instead of reporting
   // "[dry-run] would save" for names that would fail. AC-15: an already-saved account's name
   // is not re-validated against a newly requested backend's stricter shape rule on re-save.

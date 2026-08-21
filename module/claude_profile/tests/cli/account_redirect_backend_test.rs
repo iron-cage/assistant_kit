@@ -25,6 +25,7 @@
 //! | T21 | `t21_usage_tsv_active_redirect_row_current_static`          | `.usage format::tsv` after switch-to-redirect → ✓ flag, `static` status, `static` expires | P |
 //! | T22 | `t22_usage_text_redirect_row_compact_note_no_question_mark`  | BUG-538: text table shows compact `(redirect)` + `—` renews (no 40-char note, no `?`); TSV keeps full reason | P |
 //! | T23 | `t23_usage_sub_and_get_fields_redirect_known_absence`        | BUG-540: `cols::+sub` cell (text+TSV) and `get::sub`/`get::renews` emit `—`, never `?`, on a redirect row | P |
+//! | MRE | `mre_bug549_bare_save_preserves_redirect_account`            | BUG-549 / 071 AC-19: bare save (no `backend::`/`preset::`) on a stored-redirect target skips — record intact, static key intact, loud notice | P |
 
 use crate::cli_runner::{
   run_cs_with_env,
@@ -904,4 +905,105 @@ fn t23_usage_sub_and_get_fields_redirect_known_absence()
     .find( |cells| cells.get( account_idx ).is_some_and( |name| name.starts_with( "kimi" ) ) )
     .expect( "T23: no TSV row for the kimi account" );
   assert_eq!( row[ sub_idx ], "\u{2014}", "T23: TSV sub cell must be —, not ?, got row: {row:?}" );
+}
+
+/// MRE for BUG-549: a bare `.account.save` (no `backend::`, no `preset::`) whose
+/// resolved target is a stored `backend: redirect` account must NOT destroy the
+/// redirect record.
+///
+/// ## Root Cause
+/// `.account.save` resolved an absent `backend::` to `AccountBackend::Anthropic` by
+/// type-level default (`types.rs` `parse("")` → `Anthropic`) before ever consulting
+/// the stored record of the target name. For a stored-redirect target the AC-15
+/// different-backend path then fired: `{name}.json` deleted, `save()` rewrote both
+/// files from scratch as an anthropic record — `base_url`/`redirect_model`/
+/// `inference_provider`/`claim_lock` destroyed, credentials overwritten with the
+/// live OAuth session. The watchdog's per-tick bare `clp .account.save` supplied
+/// this input automatically whenever a redirect account was the active one
+/// (production incident: pro-repo commit `3d9a5480d9`, 2026-08-20 12:06).
+///
+/// ## Why Not Caught
+/// 071's AC-15 test (T13) covers the *explicit* `backend::anthropic` re-save only.
+/// Bare save with a stored-redirect target fell between Feature 002 (bare save =
+/// snapshot live OAuth session; anthropic-centric) and Feature 071 (redirect saves
+/// fully explicit) — neither spec defined the intersection, so no test existed.
+///
+/// ## Fix Applied
+/// `account_save_routine()` skips the save when `backend::` and `preset::` are both
+/// absent AND the resolved name's stored backend is `redirect` — a redirect account
+/// holds a static key; there is no live OAuth session to snapshot. Exit 0 with a
+/// skip notice (mirrors the backend-driven touch/refresh skip family, 071 AC-16).
+/// Explicit `backend::redirect …` re-saves and explicit AC-15 re-backends are
+/// untouched (071 AC-19).
+///
+/// ## Prevention
+/// A parameter whose absence resolves to a concrete default (not "preserve stored")
+/// must be audited at every automated call site — a scheduler replaying the bare
+/// form normalizes every record that disagrees with the default.
+///
+/// ## Pitfall
+/// Do not "fix" this by defaulting absent `backend::` to the stored backend: for a
+/// stored-redirect target `save()`'s redirect branch would write `accessToken` from
+/// the absent `api_key::` bytes — clobbering the stored static key with an empty
+/// string. Skip is the only non-destructive resolution for a snapshot-style call.
+#[ test ]
+#[ doc = "bug_reproducer(BUG-549)" ]
+fn mre_bug549_bare_save_preserves_redirect_account()
+{
+  let dir = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  // 1. Create the redirect record (guide Step 1 shape).
+  let out = run_cs_with_env(
+    &[
+      ".account.save", "name::kimi", "backend::redirect",
+      "base_url::https://api.moonshot.ai/anthropic", "api_key::sk-static-redirect-key",
+      "redirect_model::kimi-k3",
+    ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+
+  // 2. Live OAuth credentials present — the anthropic-path capture source the
+  //    destructive rewrite would snapshot (mirrors production machine state).
+  write_credentials( dir.path(), "max", "default_claude_max_20x", FAR_FUTURE_MS );
+
+  // 3. Mark kimi active so the incident's bare-save name inference shape is also
+  //    represented; the explicit name:: below enters the identical resolution path.
+  let marker = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" )
+    .join( claude_profile::account::active_marker_filename() );
+  std::fs::write( &marker, "kimi" ).unwrap();
+
+  // 4. Bare re-save — the watchdog's per-tick shape: no backend::, no preset::.
+  let bare = run_cs_with_env( &[ ".account.save", "name::kimi" ], &[ ( "HOME", home ) ] );
+  assert_exit( &bare, 0 );
+
+  // 5. The redirect record must survive intact.
+  let meta = read_account_meta( dir.path(), "kimi" );
+  assert_eq!(
+    meta[ "backend" ], serde_json::json!( "redirect" ),
+    "BUG-549: bare save must not re-backend a redirect account to anthropic, got:\n{meta}",
+  );
+  assert_eq!(
+    meta[ "base_url" ], serde_json::json!( "https://api.moonshot.ai/anthropic" ),
+    "BUG-549: base_url destroyed by bare save, got:\n{meta}",
+  );
+  assert_eq!(
+    meta[ "redirect_model" ], serde_json::json!( "kimi-k3" ),
+    "BUG-549: redirect_model destroyed by bare save, got:\n{meta}",
+  );
+
+  // 6. The static credential must survive — not be replaced by the live OAuth session.
+  let creds_text = std::fs::read_to_string( credentials_path( dir.path(), "kimi" ) ).unwrap();
+  assert!(
+    creds_text.contains( "sk-static-redirect-key" ),
+    "BUG-549: stored static key clobbered by live-session capture, got:\n{creds_text}",
+  );
+
+  // 7. The skip is loud, not silent — stdout names the account and the reason.
+  let text = stdout( &bare );
+  assert!(
+    text.contains( "kimi" ) && text.contains( "skip" ),
+    "BUG-549: bare save on a redirect target must report the skip (name + 'skip'), got:\n{text}",
+  );
 }
