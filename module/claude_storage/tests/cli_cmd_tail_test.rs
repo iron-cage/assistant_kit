@@ -39,6 +39,7 @@
 //! - INT-21: An unmodelled block type is marked, not dropped along with its record
 //! - INT-22: A failed tool call is annotated `↳ error`
 //! - INT-23: Array-form `tool_result.content` flattens instead of rejecting the record
+//! - INT-24: A tool with no path/command key still summarises (`status` outranks `taskId`)
 //! - EC-5: Empty value rejected
 //! - EC-7: Non-integer value rejected
 //! - EC-8: `l::N` alias produces byte-identical output to `last::N`
@@ -1110,4 +1111,34 @@ fn int_23_nested_tool_result_content_is_flattened()
   assert_exit( &out, 0 );
   assert!( text.contains( "⚙ Read · /tmp/x.rs" ), "INT-23: tool line missing:\n{text}" );
   assert!( text.contains( "↳ 2 lines" ), "INT-23: nested content must flatten to 2 lines:\n{text}" );
+}
+
+/// INT-24: A tool whose input carries no path or command still summarises.
+///
+/// ## Purpose
+/// `TaskUpdate` is the single most common tool in the local store after the
+/// file and shell tools, and none of its inputs carry `command`, `file_path`,
+/// or any other originally-listed key — every one of its calls rendered as a
+/// bare `⚙ TaskUpdate`. `status` is what makes the line worth reading.
+///
+/// ## Coverage
+/// Exit 0; output contains `⚙ TaskUpdate · completed`; `status` outranks
+/// `taskId`, which would render an opaque number.
+///
+/// ## Related Requirements
+/// `tests/docs/cli/command/12_tail.md` — INT-24
+#[ test ]
+fn int_24_task_tool_summarises_by_status_not_id()
+{
+  let lines = vec!
+  [
+    assistant_entry( 1, "msg_task", r#"[{"type":"tool_use","id":"toolu_21","name":"TaskUpdate","input":{"taskId":"42","status":"completed"}}]"# ),
+  ];
+
+  let out = tail_over( &lines, &[] );
+  let text = stdout( &out );
+
+  assert_exit( &out, 0 );
+  assert!( text.contains( "⚙ TaskUpdate · completed" ), "INT-24: status must be the summary:\n{text}" );
+  assert!( !text.contains( "· 42" ), "INT-24: the opaque id must not win over status:\n{text}" );
 }

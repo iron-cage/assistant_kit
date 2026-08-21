@@ -1,5 +1,11 @@
 //! Integration tests for the `.cost` command.
 //!
+//! ## Source
+//!
+//! - Command spec: `tests/docs/cli/command/15_cost.md`
+//! - Param specs: `tests/docs/cli/param/39_session_ids.md`,
+//!   `tests/docs/cli/param/40_agents.md`
+//!
 //! ## Coverage
 //!
 //! INT-1 through INT-14 per `tests/docs/cli/command/15_cost.md` — default

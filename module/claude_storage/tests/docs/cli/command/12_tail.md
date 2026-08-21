@@ -36,6 +36,7 @@ Integration tests for the `.tail` command, in two families.
 | INT-21 | An unmodelled block type is marked, not dropped with its record | Content Parsing |
 | INT-22 | A failed tool call is annotated `↳ error` | Tool Rendering |
 | INT-23 | Array-form `tool_result.content` flattens instead of rejecting the record | Content Parsing |
+| INT-24 | A tool with no path/command key still summarises (`status` outranks `taskId`) | Tool Rendering |
 
 ## Test Coverage Summary
 
@@ -49,10 +50,10 @@ Integration tests for the `.tail` command, in two families.
 - Recency Fallback: 3 tests (INT-9, INT-10, INT-11)
 - Turn Grouping: 3 tests (INT-12, INT-15, INT-16)
 - Content Parsing: 3 tests (INT-13, INT-21, INT-23)
-- Tool Rendering: 2 tests (INT-14, INT-22)
+- Tool Rendering: 3 tests (INT-14, INT-22, INT-24)
 - Layout: 5 tests (INT-17, INT-18, INT-18b, INT-19, INT-20)
 
-**Total:** 24 integration cases
+**Total:** 25 integration cases
 
 ## Test Cases
 
@@ -431,4 +432,20 @@ CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .tail
 - Output contains `⚙ Read · /tmp/x.rs` and `↳ 2 lines` — the nested blocks joined with a newline
 - Exit code: 0
 - The second of the two shapes Claude Code writes for `tool_result.content`; requiring a string rejected the whole record
+- **Source:** [command/12_tail.md](../../../../docs/cli/command/12_tail.md)
+
+---
+
+### INT-24: A tool with no path/command key still summarises
+
+**Command:**
+```
+CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .tail
+```
+
+**Expected behavior:**
+- Fixture: one assistant `tool_use` record for `TaskUpdate`, whose input is `{"taskId": "42", "status": "completed"}` — no `command`, no `file_path`, no other originally-listed summary key
+- Output contains `⚙ TaskUpdate · completed`; the opaque `42` does not appear as the summary
+- Exit code: 0
+- `TaskUpdate` is the most common tool in the local store after the file and shell tools, and every one of its calls rendered as a bare `⚙ TaskUpdate` before `status` was listed; the key order is what decides whether the line says what happened or shows an id
 - **Source:** [command/12_tail.md](../../../../docs/cli/command/12_tail.md)

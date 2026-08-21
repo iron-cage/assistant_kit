@@ -1,5 +1,12 @@
 //! Integration tests for the `.rollup` command.
 //!
+//! ## Source
+//!
+//! - Command spec: `tests/docs/cli/command/14_rollup.md`
+//! - Param specs: `tests/docs/cli/param/34_group.md`, `35_sort.md`, `36_order.md`,
+//!   `37_model.md`, `38_columns.md`, `26_depth.md` — each maps its EC cases onto
+//!   the INT tests below by function name
+//!
 //! ## Coverage
 //!
 //! INT-1 through INT-28 per `tests/docs/cli/command/14_rollup.md` — grouping

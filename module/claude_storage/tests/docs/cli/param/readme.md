@@ -4,10 +4,10 @@
 
 - **Purpose**: Document edge case coverage for individual clg parameters.
 - **Responsibility**: Index of per-parameter edge case test files covering parameter-level behavior.
-- **In Scope**: All 34 clg parameter test files.
+- **In Scope**: All 43 clg parameter test files.
 - **Out of Scope**: Command-level tests (→ `command/`), parameter group interactions (→ `param_group/`).
 
-> **Known gap:** `26_depth.md` (the `depth::` parameter, documented at [`docs/cli/param/26_depth.md`](../../../../docs/cli/param/26_depth.md) and implemented for `.usage`) has no corresponding file in this directory — pre-existing staleness, not introduced by the `fields::`/`index::` additions (`32_fields.md`, `33_index.md`). Out of scope for this change; flagged here rather than silently left implicit.
+Every parameter documented in [`docs/cli/param/`](../../../../docs/cli/param/readme.md) has a mirror here — the directory is a complete 1:1 mirror, with no numbering gaps.
 
 ### Responsibility Table
 
@@ -38,6 +38,7 @@
 | 23_show_tokens.md | Edge case tests for `show_tokens::` parameter | ✅ |
 | 24_show_tree.md | Edge case tests for `show_tree::` parameter | ✅ |
 | 25_last.md | Edge case tests for `last::` parameter | ✅ |
+| 26_depth.md | Edge case tests for `depth::` parameter | ✅ |
 | 27_since_days.md | Edge case tests for `since_days::` parameter | ✅ |
 | 28_show_topic.md | Edge case tests for `show_topic::` parameter | ✅ |
 | 29_filter.md | Edge case tests for `filter::` parameter | ✅ |
@@ -45,5 +46,13 @@
 | 31_ids.md | Edge case tests for `ids::` parameter | ✅ |
 | 32_fields.md | Edge case tests for `fields::` parameter | ✅ |
 | 33_index.md | Edge case tests for `index::` parameter | ✅ |
+| 34_group.md | Edge case tests for `group::` parameter | ✅ |
+| 35_sort.md | Edge case tests for `sort::` parameter | ✅ |
+| 36_order.md | Edge case tests for `order::` parameter | ✅ |
+| 37_model.md | Edge case tests for `model::` parameter | ✅ |
+| 38_columns.md | Edge case tests for `columns::` parameter | ✅ |
+| 39_session_ids.md | Edge case tests for `session_ids::` parameter | ✅ |
+| 40_agents.md | Edge case tests for `agents::` parameter | ✅ |
+| 41_latest.md | Edge case tests for `latest::` parameter | ✅ |
 | 42_full.md | Edge case tests for `full::` parameter | ✅ |
 | 43_compact.md | Edge case tests for `compact::` parameter | ✅ |

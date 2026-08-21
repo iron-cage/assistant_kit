@@ -2325,3 +2325,53 @@ fn f3b_project_not_found_error_omits_debug_format()
     "F3b: error must not leak ProjectId's Debug format; got:\n{}", stderr( &out )
   );
 }
+
+/// INT-24: A user entry holding only a successful tool result says so.
+///
+/// ## Purpose
+/// `.tail` folds a successful `tool_result` onto the `⚙` line of the call it
+/// answers, so it never prints one on its own. `.show`'s chat-log view has no
+/// call to fold onto, and suppressing the block there left a `User:` header
+/// standing over a blank line — two lines that say nothing, and no way to tell
+/// an empty entry from a broken one.
+///
+/// ## Coverage
+/// Exit 0; the entry's header is followed by `↳ tool result`, not a blank line.
+///
+/// ## Validation Strategy
+/// Write a raw two-record session — an assistant `tool_use` and the user
+/// `tool_result` answering it — then read it back with `.show last::2`.
+///
+/// ## Related Requirements
+/// UX/DX round 2 — manual testing observation M18
+#[ test ]
+fn int_24_show_marks_a_tool_result_only_entry_instead_of_leaving_it_blank()
+{
+  let root = TempDir::new().unwrap();
+  let cwd  = TempDir::new().unwrap();
+  let session = "cccccccc-dddd-eeee-ffff-000000000000";
+
+  let lines = vec!
+  [
+    format!(
+      r#"{{"type":"assistant","uuid":"a-1","parentUuid":null,"timestamp":"2025-01-01T00:01:00Z","cwd":"/tmp","sessionId":"{session}","version":"2.0.0","gitBranch":"master","userType":"external","isSidechain":false,"requestId":"r-1","message":{{"role":"assistant","model":"claude-test","id":"m-1","content":[{{"type":"tool_use","id":"toolu_31","name":"Bash","input":{{"command":"true"}}}}],"stop_reason":"tool_use","stop_sequence":null,"usage":{{"input_tokens":1,"output_tokens":1,"cache_read_input_tokens":0,"cache_creation_input_tokens":0}}}}}}"#
+    ),
+    format!(
+      r#"{{"type":"user","uuid":"u-1","parentUuid":null,"timestamp":"2025-01-01T00:02:00Z","cwd":"/tmp","sessionId":"{session}","version":"2.0.0","gitBranch":"master","userType":"human","isSidechain":false,"message":{{"role":"user","content":[{{"type":"tool_result","tool_use_id":"toolu_31","content":"ok","is_error":false}}]}}}}"#
+    ),
+  ];
+  common::write_raw_session( root.path(), cwd.path(), session, &lines );
+
+  let out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .current_dir( cwd.path() )
+    .arg( ".show" )
+    .arg( "last::2" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "↳ tool result" ), "INT-24: suppressed body must be named:\n{text}" );
+  assert!( !text.contains( "User:\n\n" ), "INT-24: no bare header over a blank line:\n{text}" );
+}

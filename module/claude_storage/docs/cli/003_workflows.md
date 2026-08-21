@@ -184,11 +184,12 @@ clg .project.exists path::/home/alice/projects
 
 ```bash
 # Find sessions with at least 20 entries
-claude_storage .projects min_entries::20
-# Output: projects with sessions meeting the threshold (session detail shown by default)
+claude_storage .projects min_entries::20 detail::sessions
+# Output: projects with sessions meeting the threshold, each session listed
+#         (without detail::sessions the filter only narrows the overview's counts)
 
 # Find substantive agent sessions
-claude_storage .projects agent::1 min_entries::10
+claude_storage .projects agent::1 min_entries::10 detail::sessions
 # Output: agent sessions with 10+ entries
 
 # Find substantial sessions in a specific project by path
