@@ -18,6 +18,7 @@ mod tools;
 mod scope;
 mod topic;
 mod topic_path;
+mod topic_registry;
 mod topics;
 mod query;
 mod summary;
@@ -78,7 +79,7 @@ pub( super ) use help::print_help;
 // Fix(BUG-228): always emit; verbosity must not suppress --dry-run output
 // Root cause: prior version gated on shows_progress() (≥3); --verbosity 0–2 produced silent exit
 // Pitfall: Verbosity gates runner diagnostics only, never core feature output like --dry-run
-pub( super ) fn handle_dry_run( builder : &ClaudeCommand, transplant : Option< &builder::SessionTransplant > )
+pub( super ) fn handle_dry_run( builder : &ClaudeCommand, prep : &builder::RunPreparation )
 {
   println!( "{}", builder.describe_full() );
   // Fix(BUG-490): preview the planned session transplant — dry-run performs no copy,
@@ -86,12 +87,34 @@ pub( super ) fn handle_dry_run( builder : &ClaudeCommand, transplant : Option< &
   // Root cause: dropping the dead CLAUDE_CODE_SESSION_DIR export removed the only
   //   describe_full() trace of --from, leaving the flag invisible in previews.
   // Pitfall: keep this a preview only — dry-run must stay side-effect-free (BUG-231/319).
-  if let Some( plan ) = transplant
+  if let Some( plan ) = prep.transplant.as_ref()
   {
     println!(
       "# session-transplant: {} -> {}",
       plan.source_file.display(),
       plan.target_storage_dir.display()
+    );
+  }
+  // Fork-mode topic preview: the resume/fork/create arguments are already visible in
+  // describe_full() above; this line names the plan in topic terms — which topic, which
+  // deterministic session id, forked from what — the same way the transplant line names
+  // the dir-mode plan. Same preview-only rule: the registry write is a run-path effect.
+  if let Some( fork ) = prep.fork.as_ref()
+  {
+    let action = if fork.repeat { "resume" } else { "fork" };
+    let source = if fork.repeat
+    {
+      String::new()
+    }
+    else
+    {
+      format!( " source={}", fork.source.as_ref().map_or( "fresh", claude_storage_core::SessionId::as_str ) )
+    };
+    println!(
+      "# topic-{action}: topic={} session={}{source} base={}",
+      fork.topic,
+      fork.session_id.as_str(),
+      fork.canonical_base.display()
     );
   }
 }
@@ -479,7 +502,7 @@ pub( super ) fn dispatch_run( tokens : &[ String ] ) -> !
 
   if cli.dry_run
   {
-    handle_dry_run( &builder, prep.transplant.as_ref() );
+    handle_dry_run( &builder, &prep );
     std::process::exit( 0 );
   }
 
@@ -508,6 +531,16 @@ pub( super ) fn dispatch_run( tokens : &[ String ] ) -> !
   if let Some( ref plan ) = prep.transplant
   {
     builder::execute_session_transplant( plan );
+  }
+
+  // Record the fork topic's name in the listing registry — the UUIDv5 identity is
+  // one-way, so without this `clr topics` could never show the name again. Placed
+  // after the dry-run exit (dry-run stays side-effect-free, BUG-231/319) and before
+  // spawn: recording keyed on intent rather than outcome keeps the registry a
+  // superset of reality, and listing filters by actual session-file existence anyway.
+  if let Some( ref fork ) = prep.fork
+  {
+    topic_registry::record( &fork.canonical_base, &fork.topic );
   }
 
   // Fix(BUG-319): resolve journal writer AFTER the dry-run exit so that `--dry-run`

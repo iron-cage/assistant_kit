@@ -166,6 +166,14 @@ pub( crate ) fn apply_env_vars( parsed : &mut CliArgs ) -> Result< () >
       if !v.contains( '/' ) { parsed.topic = Some( v ); }
     }
   }
+  // Matches apply_env_vars convention: silently ignore invalid env values (same as CLR_TOPIC).
+  if parsed.topic_mode.is_none()
+  {
+    if let Some( v ) = env_str( "CLR_TOPIC_MODE" )
+    {
+      parsed.topic_mode = v.parse::< super::topic_path::TopicMode >().ok();
+    }
+  }
   if !parsed.global                { parsed.global       = env_bool( "CLR_GLOBAL" ); }
   if parsed.output_file.is_none()  { parsed.output_file  = env_str( "CLR_OUTPUT_FILE" ); }
   if parsed.expect.is_none()       { parsed.expect        = env_str( "CLR_EXPECT" ); }

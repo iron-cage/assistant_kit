@@ -4,16 +4,20 @@ Integration test planning for the `topic` command. See [command/11_topic.md](../
 
 `topic` is a `run`/`ask` alias that overrides `--topic`'s default with a generated slug.
 Tests focus on slug generation, disambiguation, and delegation to `run`'s execution path.
+New topics default to fork mode (deterministic UUIDv5 session file, no `-slug` directory);
+explicit `--from` forces dir mode — IT-4/IT-5 exercise the dir-mode transplant path that
+way. Fork-mode first-use/repeat-use mechanics (F01–F17) are planned separately in
+[param/088_topic_mode.md](../param/088_topic_mode.md).
 
 ## Test Case Index
 
 | ID | Test Name | Category |
 |----|-----------|----------|
-| IT-1 | `clr topic "msg"` dry-run output contains a generated `--topic` path | Slug Generation |
+| IT-1 | `clr topic "msg"` dry-run output contains a generated topic slug (fork-mode preview line) | Slug Generation |
 | IT-2 | Two auto-named `clr topic` calls with the same message produce distinct topics | Disambiguation |
 | IT-3 | `clr topic --topic NAME "msg"` dry-run identical to `clr ask --topic NAME "msg"` dry-run | Equivalence |
-| IT-4 | `clr topic --topic NAME "msg"` (first call) plans a session-transplant clone | Clone |
-| IT-5 | `clr topic --topic NAME "msg"` (second call, same NAME) continues via `-c`, no re-clone | Continue |
+| IT-4 | `clr topic --topic NAME --from SRC "msg"` (first call; `--from` forces dir mode) plans a session-transplant clone | Clone |
+| IT-5 | `clr topic --topic NAME --from SRC "msg"` (second call, same NAME) continues via `-c`, no re-clone | Continue |
 | IT-6 | Unknown flag → exit 1, error message | Error Handling |
 | IT-7 | `clr topic help` → dispatches to help, exit 0 | Help |
 | IT-8 | `clr topic --dry-run --effort high "msg"` → contains `--effort high` | Param Passthrough |
@@ -33,10 +37,10 @@ Tests focus on slug generation, disambiguation, and delegation to `run`'s execut
 
 ---
 
-### IT-1: Auto-generated `--topic` path appears in dry-run output
+### IT-1: Auto-generated topic slug appears in dry-run output
 
 - **Command:** `clr topic --dry-run "Investigate the flaky concurrency-gate test"`
-- **Expected behavior:** stdout contains a path ending in `/-<slug>` where `<slug>` is derived from the message text (non-empty, lowercase, hyphenated)
+- **Expected behavior:** stdout contains a `# topic-fork: topic=<slug> session=<uuid> source=fresh base=<dir>` preview line where `<slug>` is derived from the message text (non-empty, lowercase, hyphenated) — new topics default to fork mode, so no `/-<slug>` directory path appears
 - **Exit:** 0
 - **Source:** [command/11_topic.md](../../../../docs/cli/command/11_topic.md)
 
@@ -44,9 +48,9 @@ Tests focus on slug generation, disambiguation, and delegation to `run`'s execut
 
 ### IT-2: Repeated auto-naming disambiguates via counter
 
-- **Setup:** run IT-1's command once for real (non-dry-run, or with a shared fixture dir) so the first slug's topic directory exists on disk
+- **Setup:** the first slug's topic directory exists on disk (pre-created fixture dir simulating a prior dir-mode claim)
 - **Command:** `clr topic --dry-run "Investigate the flaky concurrency-gate test"` (same message, second call)
-- **Expected behavior:** stdout contains a path ending in `/-<slug>-2` (or next free counter) — distinct from the first call's path
+- **Expected behavior:** stdout's `# topic-fork:` preview line names `<slug>-2` (or next free counter) — the pre-existing `-<slug>` directory marks the first name taken (one of three freshness signals: dir exists, dir-mode storage has a qualifying session, fork session file non-empty); the fresh disambiguated slug itself starts in fork mode
 - **Exit:** 0
 - **Source:** [command/11_topic.md](../../../../docs/cli/command/11_topic.md)
 
@@ -61,21 +65,21 @@ Tests focus on slug generation, disambiguation, and delegation to `run`'s execut
 
 ---
 
-### IT-4: First call to an explicit topic name plans a clone
+### IT-4: First call to an explicit topic name plans a clone (dir mode via `--from`)
 
-- **Given:** source dir (cwd) has a qualifying `.jsonl` session file; target topic directory does not yet exist
-- **Command:** `clr topic --dry-run --topic fresh-topic "Start this"`
-- **Expected behavior:** dry-run output includes a `# session-transplant:` plan line copying the source session into the new topic directory's storage
+- **Given:** source dir named by `--from` has a qualifying `.jsonl` session file; target topic directory does not yet exist
+- **Command:** `clr topic --topic fresh-topic --from <src> "Start this"` — explicit `--from` forces dir mode (a fork-mode session file has nothing to transplant into a directory)
+- **Expected behavior:** the session-transplant plan fires: the source session `.jsonl` is copied byte-identically into the new topic directory's storage
 - **Exit:** 0
-- **Source:** [command/11_topic.md](../../../../docs/cli/command/11_topic.md), [param/076_from.md](../../../../docs/cli/param/076_from.md)
+- **Source:** [command/11_topic.md](../../../../docs/cli/command/11_topic.md), [param/076_from.md](../../../../docs/cli/param/076_from.md), [param/088_topic_mode.md](../../../../docs/cli/param/088_topic_mode.md)
 
 ---
 
-### IT-5: Second call to the same explicit topic name continues
+### IT-5: Second call to the same explicit topic name continues (dir mode via `--from`)
 
-- **Given:** target topic directory from IT-4 now has its own session file (from the first, non-dry-run call)
-- **Command:** `clr topic --dry-run --topic fresh-topic "Continue this"`
-- **Expected behavior:** dry-run output does NOT include a `# session-transplant:` plan line (source and target storage already match); output DOES include `-c "` — the topic's own conversation continues
+- **Given:** target topic directory from IT-4 now has its own (possibly diverged) session file
+- **Command:** `clr topic --topic fresh-topic --from <src> "Continue this"` — same dir-mode forcing as IT-4
+- **Expected behavior:** no re-copy — the pre-existing destination session content is never overwritten; the topic's own conversation continues via `-c`
 - **Exit:** 0
 - **Source:** [command/11_topic.md](../../../../docs/cli/command/11_topic.md)
 

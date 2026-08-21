@@ -53,12 +53,12 @@ claude_storage .status show_tokens::1
 **Scenario:** You remember working on a specific project last week and want to find the session.
 
 ```bash
-# Step 1: List projects matching path keyword (terse, project-only view)
-claude_storage .projects filter::assistant detail::projects
-# Output: projects whose paths contain "assistant"
-
-# Step 2: List sessions for a matching project (detail::sessions is the default)
+# Step 1: List projects matching path keyword (terse overview — the default)
 claude_storage .projects filter::assistant
+# Output: projects whose paths contain "assistant", one line each
+
+# Step 2: List sessions for a matching project
+claude_storage .projects filter::assistant detail::sessions
 # Output: same projects, now with their sessions listed
 
 # Step 3: Show the session content
@@ -253,7 +253,7 @@ claude_storage .tail
 # Output: last 4 conversation entries, oldest-first
 
 # See more context
-claude_storage .tail tail::10
+claude_storage .tail last::10
 
 # Check a non-default topic
 claude_storage .tail topic::work

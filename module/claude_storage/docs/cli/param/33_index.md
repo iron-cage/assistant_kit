@@ -16,13 +16,13 @@ Single-message selector for `.show` — narrows whatever set of messages was abo
 **Constraints:**
 - Must be a positive integer (1-based — matches the existing entry-numbering convention used by `show_entries::1`'s raw list)
 - Error on non-positive: `"index must be a positive integer (1-based), got {value}"`
-- Error on out-of-range: `"index out of range: {value} ({n} entries)"`, where `{n}` is the count of the in-scope entry set (post-`tail::`-windowing in project-overview branches)
+- Error on out-of-range: `"index out of range: {value} ({n} entries)"`, where `{n}` is the count of the in-scope entry set (post-`last::`-windowing in project-overview branches)
 
 **Default:** — (omitted) — every in-scope message is shown, unchanged
 
 **Commands:** [`.show`](../command/03_show.md)
 
-**Purpose:** Applied after any windowing already in effect — in project-overview branches, `index::` counts within the `tail::`-sliced window (1 = the first message of that window), not the session's full history; in session-detail branches, `index::` counts within the session's complete entry list. Composes with [`fields::`](32_fields.md) (project specific attributes from just that one message) or stands alone (show that one message's normal chat-log content, or its one raw-list line under `show_entries::1`).
+**Purpose:** Applied after any windowing already in effect — in project-overview branches, `index::` counts within the `last::`-sliced window (1 = the first message of that window), not the session's full history; in session-detail branches, `index::` counts within the session's complete entry list. Composes with [`fields::`](32_fields.md) (project specific attributes from just that one message) or stands alone (show that one message's normal chat-log content, or its one raw-list line under `show_entries::1`).
 
 **Examples:**
 ```bash
@@ -33,7 +33,7 @@ Single-message selector for `.show` — narrows whatever set of messages was abo
 .show session_id::abc123 fields::uuid,model index::3
 
 # The 1st message of the tail window (project overview)
-.show tail::10 index::1
+.show last::10 index::1
 
 # Out of range (session has 5 entries) — errors, does not clamp
 .show session_id::abc123 index::99
@@ -47,7 +47,7 @@ Single-message selector for `.show` — narrows whatever set of messages was abo
 ### Referenced Commands
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
-| 3 | [`.show`](../command/03_show.md) | — (all in-scope messages shown) | Counts within the `tail::`-windowed slice in project-overview branches, or the full entry list in session-detail branches |
+| 3 | [`.show`](../command/03_show.md) | — (all in-scope messages shown) | Counts within the `last::`-windowed slice in project-overview branches, or the full entry list in session-detail branches |
 
 ### Referenced User Stories
 | # | User Story | Persona |

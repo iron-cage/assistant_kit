@@ -22,9 +22,12 @@
 //! ## Corner Cases Covered (mirrors `tests/docs/cli/command/11_topic.md` IT-1..IT-8)
 //!
 //! - T01: `clr topic --dry-run "msg"` (no `--topic`) — dry-run output shows an
-//!   auto-generated `--topic` path derived from the message
+//!   auto-generated topic slug derived from the message in the `# topic-fork:`
+//!   preview line (new topics default to fork mode — no `-slug` directory)
 //! - T02: two auto-named calls, same message, same `--dir` — second call's slug
 //!   is disambiguated with a `-2` suffix against a pre-existing target directory
+//!   (an existing `-slug` dir marks the name taken even though the fresh
+//!   disambiguated slug itself starts in fork mode)
 //! - T03: `clr topic --topic NAME "msg" --dry-run` == `clr ask --topic NAME
 //!   "msg" --dry-run` (byte-identical, per IT-3's own spec wording)
 //! - T04: first `clr topic --topic NAME "msg"` call (real, non-dry-run) with a
@@ -49,21 +52,25 @@
 mod cli_binary_test_helpers;
 use cli_binary_test_helpers::{ exit_code, fake_claude_dir, run_ask_dry, run_cli, run_topic_dry, stderr_str, stdout_str };
 
-/// T01 (IT-1): auto-generated `--topic` path appears in dry-run output when
-/// `--topic` is not explicitly given.
+/// T01 (IT-1): an auto-generated topic slug derived from the message appears in
+/// dry-run output when `--topic` is not explicitly given. New topics default to
+/// fork mode, so the slug surfaces in the `# topic-fork:` preview line rather
+/// than as a `-slug` directory path.
 #[ test ]
 fn t01_auto_generated_topic_shown_in_dry_run()
 {
   let output = run_topic_dry( &[ "Investigate the flaky concurrency-gate test" ] );
-  let sep = std::path::MAIN_SEPARATOR;
   assert!(
-    output.contains( &format!( "{sep}-investigate" ) ),
-    "topic dry-run must show an auto-generated --topic path derived from the message. Got:\n{output}"
+    output.contains( "# topic-fork: topic=investigate" ),
+    "topic dry-run must show an auto-generated fork-mode topic slug derived from the message. Got:\n{output}"
   );
 }
 
 /// T02 (IT-2): repeated auto-naming with the same message disambiguates via a
 /// `-2` counter suffix once the first slug's target directory already exists.
+/// The pre-existing `-slug` dir marks the first name taken (freshness signal 1);
+/// the disambiguated slug is a brand-new topic and therefore fork-mode, so it
+/// shows up in the `# topic-fork:` preview line, not as a directory path.
 #[ test ]
 fn t02_repeated_auto_naming_disambiguates_via_counter()
 {
@@ -75,11 +82,10 @@ fn t02_repeated_auto_naming_disambiguates_via_counter()
   // Simulate a prior real (non-dry-run) `clr topic` call having already claimed this slug.
   std::fs::create_dir_all( tmp.path().join( "-flaky-gate-test" ) ).expect( "pre-create fixture dir" );
 
-  let sep    = std::path::MAIN_SEPARATOR;
   let second = run_topic_dry( &[ "--dir", &base, msg ] );
   assert!(
-    second.contains( &format!( "{sep}-flaky-gate-test-2" ) ),
-    "second call with an existing slug dir must disambiguate to -flaky-gate-test-2. Got:\n{second}"
+    second.contains( "# topic-fork: topic=flaky-gate-test-2 " ),
+    "second call with an existing slug dir must disambiguate to flaky-gate-test-2 (fork mode). Got:\n{second}"
   );
 }
 

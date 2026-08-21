@@ -1,40 +1,71 @@
 # CLI Parameter: --topic
 
-Appends a named topic directory under the effective working directory to produce the
-actual execution directory passed to the Claude subprocess. Default `.` is the
-identity value — the working directory is used as-is, with no topic directory appended.
+Names an isolated conversation for the effective working directory. A NEW topic
+defaults to a same-directory session **fork** (no topic directory is created); a
+topic with an existing `-<name>` directory, a `--from` source, or `--global` keeps
+the legacy **dir** mechanism, where `/-<name>` is appended to the base to form the
+execution directory. Default `.` is the identity value — no topic at all.
 
-- **Type:** string (single directory name component; no `/` separators; `.` or `""` = identity)
-- **Default:** `.` (identity — no topic directory appended)
+- **Type:** string (single name component; no `/` separators; `.` or `""` = identity)
+- **Default:** `.` (identity — no topic)
 - **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md), [`topic`](../command/11_topic.md)
 - **Group:** [Runner Control](../param_group/02_runner_control.md)
 - **JSON Key:** `"topic"`
+- **Mode override:** [`--topic-mode`](088_topic_mode.md) (`fork`/`dir`)
 
 ```sh
-clr "Fix bug"                           # effective dir = cwd (default: --topic .)
-clr --topic build "Fix bug"            # effective dir = cwd/-build (auto-created)
-clr --dir /project --topic debug "x"  # effective dir = /project/-debug
+clr "Fix bug"                           # no topic (default: --topic .)
+clr --topic build "Fix bug"            # NEW topic: same-dir session fork (fork mode)
+clr --dir /project --topic debug "x"  # /project/-debug exists? dir mode : fork mode
 clr --topic . "Fix bug"               # explicit identity — same as default
 ```
 
-**How it works:** When `--topic` is a non-identity value, `/-<name>` is appended to the
-base directory (`--dir` value or cwd). The resulting directory is created automatically
-(`create_dir_all`) before subprocess spawn — no manual `mkdir` needed. In dry-run mode,
-directory creation is suppressed so `--dry-run` remains side-effect-free.
+**Mode selection (fork vs dir):** decided per invocation by
+`topic_path::effective_topic_mode`, precedence highest first:
+
+1. Explicit [`--topic-mode`](088_topic_mode.md) / `CLR_TOPIC_MODE` / json `"topic-mode"`.
+2. `--global` → dir — a global topic is shared across callers' working directories, so
+   fork mode's same-directory cache premise never holds.
+3. Non-empty `--from` → dir — an explicit cross-directory source needs the transplant
+   machinery.
+4. Existing `<base>/-<name>` directory → dir — a legacy topic keeps its accumulated
+   directory-based history; fork mode will not orphan it with a parallel same-name session.
+5. Otherwise → fork — the default for every new topic.
+
+**Fork mode (default for new topics):** the subprocess stays in the base directory; the
+topic lives as a deterministically-named session file
+`{storage of base}/{UUIDv5( canonical base, name )}.jsonl` inside the base's own storage.
+First use forks the base's most recent session
+(`--resume <source> --fork-session --session-id <topic-uuid>`; with no source:
+`--session-id <topic-uuid>` alone); every repeat use resumes it (`--resume <topic-uuid>`).
+Staying in the base keeps the prompt-cache prefix byte-identical, so a fork re-reads the
+base session's cache (~5% of a cold prime) instead of re-priming the whole history
+(~77% after a directory change). The name → session-file mapping is resolvable via
+[`topics --file NAME`](../command/12_topics.md); names are recorded (append-only,
+warn-never-fatal) in the topics registry (`CLR_TOPIC_REGISTRY_DIR` > `~/.clr/topics/`)
+so the listing can recover them from the one-way UUID. Dry-run previews the plan as
+`# topic-fork: ...` / `# topic-resume: ...` and writes nothing.
+
+**Dir mode (legacy):** `/-<name>` is appended to the base directory (`--dir` value or
+cwd) and created automatically (`create_dir_all`) before subprocess spawn — no manual
+`mkdir` needed. Claude Code session state is keyed by working directory, so each topic
+directory holds an independent conversation history; first use physically transplants
+the source session into it (see [`--from`](076_from.md)). In dry-run mode, directory
+creation is suppressed so `--dry-run` remains side-effect-free.
 
 **Identity values:** Both `.` (explicit) and `""` (empty string) are treated as identity —
-no `/-` suffix is appended and no directory is created.
+no fork plan, no `/-` suffix, no directory created.
 
 **Validation:** Values containing `/` are rejected at parse time (`--topic must be a
 single directory name component (no '/' separators)`). Use `--dir` for base directory
 scoping; `--topic` is the final name only.
 
-**Session isolation:** Claude Code session state is keyed by working directory, so
-`--topic build` and `--topic debug` within the same `--dir` produce independent
-conversation histories. This is the mechanism wplan uses to isolate per-topic workspaces:
-`dream .claude topic::build` resolves to `clr --dir /project/-build "..."`.
+**Session isolation:** both modes give `--topic build` and `--topic debug` within the
+same `--dir` independent conversation histories — dir mode by working directory, fork
+mode by deterministic session id. This is the mechanism wplan uses to isolate per-topic
+workspaces: `dream .claude topic::build` resolves to `clr --dir /project/-build "..."`.
 
-**Note:** The `-` prefix in the generated topic directory name (`/-build`) follows the
+**Note:** The `-` prefix in a dir-mode topic directory name (`/-build`) follows the
 project transient-directory convention — directories beginning with `-` are git-excluded
 by `.gitignore` patterns.
 

@@ -18,7 +18,7 @@ Reference documentation for the `claude_storage` CLI binary — a tool for explo
 | `type/` | Per-type constraint and parsing reference (14 type pages) |
 | `001_dictionary.md` | Domain vocabulary and term definitions |
 | `param_group/` | Per-group detail pages with membership, examples, and cross-refs |
-| `command_group/` | Every command partitioned into exactly one group (Total Partition); shared handler + parameter set when multi-member (14 groups, all singletons) |
+| `command_group/` | Every command partitioned into exactly one group (Total Partition); shared handler + parameter set when multi-member (16 groups, all singletons) |
 | `003_workflows.md` | Usage scenarios, best practices, complexity matrix |
 | `format/` | Output format catalog for export rendering modes |
 | `002_env_param.md` | Environment variable catalog with precedence rules |
@@ -31,15 +31,15 @@ Reference documentation for the `claude_storage` CLI binary — a tool for explo
 |------|----|----|----|----|----|----|
 | `readme.md` | ✅ | ✅ | ✅ | ✅ | ✅ | L5 |
 | `command/readme.md` | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
-| `command/*.md` (14 files) | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
+| `command/*.md` (16 files) | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
 | `param/readme.md` | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
-| `param/*.md` (38 files) | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
+| `param/*.md` (43 files) | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
 | `001_dictionary.md` | ➖ | ✅ | ✅ | ✅ | ✅ | L5 |
 | `type/readme.md` | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
 | `type/*.md` (15 files) | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
 | `param_group/readme.md` | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
 | `param_group/*.md` (5 files) | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
-| `command_group/readme.md` (14 singleton groups) | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
+| `command_group/readme.md` (16 singleton groups) | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
 | `003_workflows.md` | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
 | `format/readme.md` | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
 | `format/*.md` (3 files) | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
@@ -50,7 +50,7 @@ Reference documentation for the `claude_storage` CLI binary — a tool for explo
 | `pitfall/*.md` (3 files) | ➖ | ➖ | ✅ | ➖ | ➖ | L3 |
 **Current Level:** L5 (Test Detail Complete)
 **Design Completeness:** 100%
-**Implementation Status:** 100% (14/14 commands implemented)
+**Implementation Status:** 100% (16/16 commands implemented)
 
 ### Navigation
 
@@ -59,7 +59,7 @@ Reference documentation for the `claude_storage` CLI binary — a tool for explo
 - [Types](type/readme.md) — Semantic type constraints and validation rules
 - [Dictionary](001_dictionary.md) — Domain vocabulary
 - [Parameter Groups](param_group/readme.md) — Related parameter sets and their coherence
-- [Command Groups](command_group/readme.md) — every command in exactly one group; 14 singleton groups, zero cross-calls found (Total Partition)
+- [Command Groups](command_group/readme.md) — every command in exactly one group; 16 singleton groups, zero cross-calls found (Total Partition)
 - [Workflows](003_workflows.md) — Common usage patterns and best practices
 - [Formats](format/readme.md) — Export output format rendering specifications
 - [Environment Parameters](002_env_param.md) — Environment variables and precedence rules
@@ -79,4 +79,8 @@ Reference documentation for the `claude_storage` CLI binary — a tool for explo
 
 **Doc Instance H1 Title Format:** Doc instance files in `docs/cli/` use the format `# {DocEntityType} :: {N}. {Title}` (e.g., `# User Story :: 1. Audit Session History`). The `::` and `. ` separator is a project-specific convention for typing and sequencing instances within a doc entity; it is not a heading structure violation — the H1/H3-only rule governs heading levels, not title content.
 
-**Output Punctuation and Color Convention (`.show`/`.tail` only):** These two commands share one per-entry content formatter (`format_entry_content` in `src/cli/format.rs`) and render with a `·` (middot) separator in place of parenthetical `(...)` or bracket `[...]` annotations — e.g. `Sessions: 3 · Main: 2 · Agent: 1` rather than `Sessions: 3 (Main: 2, Agent: 1)`; `Thinking ·` rather than `[Thinking]`. Output is additionally colorized (role labels, field-name labels, error markers) via a small hand-rolled ANSI module — no color crate dependency — that auto-disables on `NO_COLOR` being set or stdout not being a TTY (piped/redirected output, including every integration test spawning the binary via `std::process::Command`, is always plain text). This convention is scoped to `.show`/`.tail` only: `.projects` and every other command keep their own independent, pre-existing `(N entries)`-style punctuation, deliberately untouched. See [`command/03_show.md`](command/03_show.md) for the field-projection mode (`fields::`/`index::`) that motivated the redesign.
+**Output Punctuation and Color Convention (`.show`/`.tail` only):** These two commands share one content-block renderer (`render_blocks` in `src/cli/format.rs`) and render with a `·` (middot) separator in place of parenthetical `(...)` or bracket `[...]` annotations — e.g. `Sessions: 3 · Main: 2 · Agent: 1` rather than `Sessions: 3 (Main: 2, Agent: 1)`; `Thinking ·` rather than `[Thinking]`. Output is additionally colorized (speaker labels by role, field-name labels, tool lines, error markers, dimmed chrome) via a small hand-rolled ANSI module — no color crate dependency — that auto-disables on `NO_COLOR` being set or stdout not being a TTY (piped/redirected output, including every integration test spawning the binary via `std::process::Command`, is always plain text). This convention is scoped to `.show`/`.tail` only: `.projects` and every other command keep their own independent, pre-existing `(N entries)`-style punctuation, deliberately untouched. See [`command/03_show.md`](command/03_show.md) for the field-projection mode (`fields::`/`index::`) that motivated the redesign.
+
+**Structure Is Glyphs, Never Colour:** every structural element in `.tail`'s layout — the `──` rule line, the `⚙` tool marker, the `↳` result annotation, the `⋯` fold hint, the `⧉` unmodelled-block marker — is a printable character, not an escape sequence. Colour is decoration layered on top and is stripped under `NO_COLOR` or a non-TTY stdout. The consequence is that piped output has the *same structure* a terminal shows, merely undecorated, so integration tests assert against exactly what a reader sees. Never encode a distinction in colour alone.
+
+**Fixed Render Width:** `.tail` lays out against a fixed 76-column nominal width (`RULE_WIDTH` in `src/cli/format.rs`), not a probed terminal size. This crate carries no terminal-size dependency, and a fixed width is what keeps piped output byte-identical to terminal output. Bodies are never hard-wrapped — the terminal soft-wraps them, which is what preserves copy-paste fidelity; only chrome and single-line summaries are width-aware.

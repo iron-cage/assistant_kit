@@ -1,6 +1,6 @@
 # Parameter :: 15. `show_sessions::` — DEPRECATED
 
-> **Deprecated.** `.list` is deprecated (see [`02_list.md`](../command/02_list.md)); this parameter had no equivalent role on `.projects` because `.projects` never needed auto-detection — it always showed session detail. Use [`detail::`](30_detail.md) instead: `detail::sessions` (default) shows session detail unconditionally, `detail::projects` suppresses it unconditionally. There is no auto-detect mode on `.projects` — `detail::` is always explicit, which is simpler than the auto-enable behavior this parameter provided.
+> **Deprecated.** `.list` is deprecated (see [`02_list.md`](../command/02_list.md)); this parameter has no equivalent on `.projects`, which never needed auto-detection. Use [`detail::`](30_detail.md) instead: `detail::projects` (default) shows the terse overview, `detail::sessions` shows session detail — both unconditional. There is no auto-detect mode on `.projects` — `detail::` is always explicit, which is simpler than the auto-enable behavior this parameter provided.
 
 ### Scope
 
@@ -34,7 +34,7 @@ show_sessions::1    # Force on (show even with no filters)
                # (unset) — auto-detect from other params
 ```
 
-**Migration:** `show_sessions::0` → `detail::projects`; `show_sessions::1` or unset → `detail::sessions` (the new default).
+**Migration:** `show_sessions::0` → `detail::projects` (now the default, so it can simply be dropped); `show_sessions::1` or unset → `detail::sessions`.
 
 ### Referenced Type
 | Type | Kind | Fundamental | Key Constraint |

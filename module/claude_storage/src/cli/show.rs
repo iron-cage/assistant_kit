@@ -114,14 +114,22 @@ pub fn show_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   let scope_raw = cmd.get_string( "scope" );
   let path_raw = cmd.get_string( "path" );
 
-  // Validate `tail` before any storage access, mirroring `.tail`'s own
+  // Validate `last` before any storage access, mirroring `.tail`'s own
   // validation shape (see tail.rs) independently — see Design Decision D3.
-  let tail_count_raw = cmd.get_integer( "tail" ).unwrap_or( 10 );
-  if tail_count_raw < 0
+  //
+  // `get_integer( "last" )` covers the `l::` alias too: unilang binds an alias to
+  // its canonical argument name during semantic analysis, so the routine only ever
+  // reads the canonical name (see unilang `semantic/argument_binding.rs`).
+  //
+  // The CLI-facing name is `last::`; the internal name stays `tail_count` because
+  // it is the size of the *tail window* this module renders (`write_tail_window`) —
+  // an algorithmic term that outlives whatever the parameter happens to be called.
+  let last_raw = cmd.get_integer( "last" ).unwrap_or( 10 );
+  if last_raw < 0
   {
-    return Err( ErrorData::new( ErrorCode::InternalError, "tail must be non-negative".to_string() ) );
+    return Err( ErrorData::new( ErrorCode::InternalError, "last must be non-negative".to_string() ) );
   }
-  let tail_count = usize::try_from( tail_count_raw ).expect( "tail < 0 rejected above" );
+  let tail_count = usize::try_from( last_raw ).expect( "last < 0 rejected above" );
 
   // `detail::` is parsed locally rather than via a shared DetailLevel type:
   // task 525 never introduced one (its own `detail::` validation in projects.rs
@@ -557,6 +565,10 @@ fn assistant_only_field_value( entry : &claude_storage_core::Entry, field : &str
 /// sub-field on an `assistant` entry (text/thinking/tool-use/tool-result —
 /// see `docs/cli/type/15_field_selector.md`'s `content` entry), or a single
 /// `content · {text}` line on a `user` entry (plain message text).
+///
+/// A `user` entry also carries content blocks since tool-result turns are
+/// array-form, but its documented rendering stays one flattened line — the
+/// per-block sub-field expansion is an `assistant`-entry contract.
 fn push_content_field( out : &mut String, entry : &claude_storage_core::Entry )
 {
   use claude_storage_core::{ MessageContent, ContentBlock };
@@ -565,7 +577,7 @@ fn push_content_field( out : &mut String, entry : &claude_storage_core::Entry )
   {
     MessageContent::User( msg ) =>
     {
-      write!( out, "\n{} · {}", color::field_name( "content" ), msg.content ).unwrap();
+      write!( out, "\n{} · {}", color::field_name( "content" ), msg.text() ).unwrap();
     }
     MessageContent::Assistant( msg ) =>
     {
@@ -590,6 +602,10 @@ fn push_content_field( out : &mut String, entry : &claude_storage_core::Entry )
             write!( out, "\n{} · {tool_use_id}", color::field_name( "content.tool_result.tool_use_id" ) ).unwrap();
             write!( out, "\n{} · {content}", color::field_name( "content.tool_result.content" ) ).unwrap();
             write!( out, "\n{} · {is_error}", color::field_name( "content.tool_result.is_error" ) ).unwrap();
+          }
+          ContentBlock::Other { kind } =>
+          {
+            write!( out, "\n{} · {kind}", color::field_name( "content.other.type" ) ).unwrap();
           }
         }
       }

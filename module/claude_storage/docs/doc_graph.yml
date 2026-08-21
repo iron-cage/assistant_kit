@@ -4,7 +4,7 @@ meta:
   edge_count: 88
   component_count: 15
   generated: 2026-08-18
-  note: "param/29-31 and type/14 added for the .list->.projects consolidation; param/25 added for the .show project-overview extension; a pre-existing gap (param/26-28, command/12-13, user_story/006, pitfall/04) predates this update and is not yet graphed"
+  note: "param/29-31 and type/14 added for the .list->.projects consolidation; param/25 added for the .show project-overview extension; a pre-existing gap (param/26-28 and 32-39, command/12-15, user_story/006, pitfall/04) predates or follows this update and is not yet graphed"
 
 nodes:
   # feature/ entity (1)
@@ -213,8 +213,8 @@ nodes:
     entity: param
   # cli/param/ entity, continued: 25 added for the .show project-overview extension (26-28 pre-existing gap, not yet graphed); 29-31 added for the .list->.projects consolidation
   - id: param/25
-    file: cli/param/25_tail.md
-    label: Tail
+    file: cli/param/25_last.md
+    label: Last
     entity: param
   - id: param/29
     file: cli/param/29_filter.md

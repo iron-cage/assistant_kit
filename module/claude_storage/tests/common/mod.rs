@@ -143,6 +143,45 @@ pub fn write_path_project_session(
   encoded
 }
 
+/// Write a session from caller-supplied raw JSONL lines, auto-encoding the project path.
+///
+/// The counterpart to [`write_path_project_session`] for cases where the entries'
+/// *shape* is the thing under test — shared `message.id` across records, array-form
+/// user content, `tool_use`/`tool_result` pairs, unmodelled block types. Those cannot
+/// be expressed through an entry count, and hand-rolling the directory encoding in
+/// each test file would duplicate this five-line body per test.
+///
+/// Returns the path-encoded project ID so callers can use it in assertions.
+///
+/// # Panics
+///
+/// Panics if path encoding, directory creation, or file write fails.
+#[ allow( dead_code ) ]
+pub fn write_raw_session(
+  root         : &std::path::Path,
+  project_path : &std::path::Path,
+  session_id   : &str,
+  lines        : &[ String ],
+) -> String
+{
+  use std::io::Write as _;
+
+  let encoded = claude_storage_core::encode_path( project_path )
+    .expect( "encode project path" );
+
+  let dir = root.join( "projects" ).join( &encoded );
+  std::fs::create_dir_all( &dir ).expect( "create project dir" );
+  let path = dir.join( format!( "{session_id}.jsonl" ) );
+  let mut file = std::fs::File::create( &path ).expect( "create session file" );
+
+  for line in lines
+  {
+    writeln!( file, "{line}" ).expect( "write raw entry" );
+  }
+
+  encoded
+}
+
 /// Write a synthetic session with a specific last message text.
 ///
 /// Writes `n_before` standard entries (alternating user/assistant) followed by

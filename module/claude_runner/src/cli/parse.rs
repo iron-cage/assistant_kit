@@ -71,6 +71,7 @@ pub( crate ) struct CliArgs
   pub( crate ) strip_fences         : bool,
   pub( crate ) keep_claudecode      : bool,
   pub( crate ) topic               : Option< String >,
+  pub( crate ) topic_mode           : Option< super::topic_path::TopicMode >,
   pub( crate ) global               : bool,
   pub( crate ) output_file          : Option< String >,
   pub( crate ) expect               : Option< String >,
@@ -296,6 +297,11 @@ fn parse_value_flag(
         ) );
       }
       parsed.topic = Some( val.to_string() );
+    }
+    "--topic-mode" =>
+    {
+      let val = next_value( tokens, next, "--topic-mode" )?;
+      parsed.topic_mode = Some( val.parse::< super::topic_path::TopicMode >().map_err( Error::msg )? );
     }
     "--output-format" =>
     {
@@ -618,6 +624,7 @@ pub( crate ) fn parse_args( tokens : &[ String ] ) -> Result< CliArgs >
       strip_fences         : false,
       keep_claudecode      : false,
       topic               : None,
+      topic_mode           : None,
       global               : false,
       output_file          : None,
       expect               : None,

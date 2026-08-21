@@ -7,6 +7,7 @@ use core::fmt::Write as FmtWrite;
 use unilang::{ VerifiedCommand, ExecutionContext, OutputData, ErrorData, ErrorCode };
 use super::storage::{ create_storage, load_project_for_param };
 use super::scope::{ validate_scope, resolve_scoped_projects, decode_project_display };
+use super::projects_overview::{ OverviewRow, render_flat, render_tree };
 
 // ─── constants ─────────────────────────────────────────────────────────────
 
@@ -48,7 +49,7 @@ fn short_id( id : &str ) -> &str
   else { id }
 }
 
-fn format_relative_time( mtime : std::time::SystemTime ) -> String
+pub( super ) fn format_relative_time( mtime : std::time::SystemTime ) -> String
 {
   let elapsed = std::time::SystemTime::now()
     .duration_since( mtime )
@@ -397,14 +398,19 @@ fn validate_project_type( type_raw : Option< &str > ) -> core::result::Result< S
   Ok( value )
 }
 
-/// Validate `detail::` — selects header-only vs full session-detail rendering.
+/// Validate `detail::` — selects terse overview vs full session-detail rendering.
+///
+/// Defaults to `projects` (terse). This fallback must stay in step with the
+/// `detail` argument's `default:` in `unilang.commands.yaml` — the YAML default
+/// applies to CLI dispatch, this one to any call that omits the argument
+/// entirely (REPL paths, direct routine invocation in tests).
 ///
 /// # Errors
 ///
 /// Returns error when the value is not one of `projects`, `sessions`.
 fn validate_detail_level( detail_raw : Option< &str > ) -> core::result::Result< String, ErrorData >
 {
-  let raw = detail_raw.unwrap_or( "sessions" );
+  let raw = detail_raw.unwrap_or( "projects" );
   let value = raw.to_lowercase();
   if !matches!( value.as_str(), "projects" | "sessions" )
   {
@@ -626,8 +632,18 @@ pub fn projects_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   // into families under their root sessions instead of shown flat.
   let use_families = agent_filter.is_none();
 
-  let p_noun = if total_projects == 1 { "project" } else { "projects" };
-  writeln!( output, "Found {total_projects} {p_noun}:\n" ).unwrap();
+  // `detail::projects` renders through `super::projects_overview`, which needs
+  // every row's counts up front to size its columns and build its tree — so the
+  // loop below collects rows instead of streaming lines. `detail::sessions`
+  // keeps streaming, one project block at a time.
+  let terse = detail_level == "projects";
+  let mut overview_rows : Vec< OverviewRow > = Vec::new();
+
+  if !terse
+  {
+    let p_noun = if total_projects == 1 { "project" } else { "projects" };
+    writeln!( output, "Found {total_projects} {p_noun}:\n" ).unwrap();
+  }
 
   for summary in summaries
   {
@@ -661,15 +677,28 @@ pub fn projects_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
         .flat_map( | c | c.families )
         .collect();
 
-      let r_noun = if root_count == 1 { "conversation" } else { "conversations" };
-      if agent_count > 0
+      if terse
       {
-        let a_noun = if agent_count == 1 { "agent" } else { "agents" };
-        writeln!( output, "{display_path}: ({root_count} {r_noun}, {agent_count} {a_noun})" ).unwrap();
+        overview_rows.push( OverviewRow
+        {
+          display_path  : display_path.clone(),
+          conversations : root_count,
+          agents        : agent_count,
+          last_mtime    : summary.last_mtime,
+        } );
       }
       else
       {
-        writeln!( output, "{display_path}: ({root_count} {r_noun})" ).unwrap();
+        let r_noun = if root_count == 1 { "conversation" } else { "conversations" };
+        if agent_count > 0
+        {
+          let a_noun = if agent_count == 1 { "agent" } else { "agents" };
+          writeln!( output, "{display_path}: ({root_count} {r_noun}, {agent_count} {a_noun})" ).unwrap();
+        }
+        else
+        {
+          writeln!( output, "{display_path}: ({root_count} {r_noun})" ).unwrap();
+        }
       }
 
       if detail_level == "sessions"
@@ -701,8 +730,25 @@ pub fn projects_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
         .filter( | &s | s.is_agent_session() || !is_zero_byte_session( s ) )
         .collect();
       let group_count = displayable.len();
-      let group_noun = if group_count == 1 { "conversation" } else { "conversations" };
-      writeln!( output, "{display_path}: ({group_count} {group_noun})" ).unwrap();
+      if terse
+      {
+        // Family grouping is off here (agent:: was set explicitly), so the
+        // conversation/agent split does not apply — attribute the count to
+        // whichever column the filter actually selected.
+        let is_agent_view = agent_filter == Some( true );
+        overview_rows.push( OverviewRow
+        {
+          display_path  : display_path.clone(),
+          conversations : if is_agent_view { 0 } else { group_count },
+          agents        : if is_agent_view { group_count } else { 0 },
+          last_mtime    : summary.last_mtime,
+        } );
+      }
+      else
+      {
+        let group_noun = if group_count == 1 { "conversation" } else { "conversations" };
+        writeln!( output, "{display_path}: ({group_count} {group_noun})" ).unwrap();
+      }
       if detail_level == "sessions"
       {
         let show_count = displayable.len().min( limit_cap );
@@ -725,7 +771,18 @@ pub fn projects_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
       }
     }
 
-    writeln!( output ).unwrap();
+    // Block separator between per-project session listings. Terse rows are one
+    // line each, so a separator there would only double the output height.
+    if !terse
+    {
+      writeln!( output ).unwrap();
+    }
+  }
+
+  if terse
+  {
+    output = if show_tree { render_tree( &overview_rows ) }
+             else { render_flat( &overview_rows ) };
   }
 
   Ok( OutputData::new( output, "text" ) )

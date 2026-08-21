@@ -7,7 +7,7 @@
 
 ### Semantic Coherence Test
 
-"Is this parameter consumed by the runner, not Claude?" — YES for all 54 (53 CLI flags + 1 env-var-only).
+"Is this parameter consumed by the runner, not Claude?" — YES for all 55 (54 CLI flags + 1 env-var-only).
 
 ### Why NOT X
 
@@ -38,9 +38,9 @@ clr --trace "Fix bug" --dir /project
 
 | # | Command | Membership | Excluded Params | Notes |
 |---|---------|------------|-----------------|-------|
-| 1 | [`run`](../command/01_run.md) | Full | — | All 54 params apply; default command |
-| 5 | [`ask`](../command/05_ask.md) | Full | — | All 54 params apply; identical behavior — pure alias for run |
-| 11 | [`topic`](../command/11_topic.md) | Full | — | All 54 params apply; `--topic`'s default overridden with an auto-generated slug — see [`command_group/01_run_ask.md`](../command_group/01_run_ask.md) Default Divergence Table |
+| 1 | [`run`](../command/01_run.md) | Full | — | All 55 params apply; default command |
+| 5 | [`ask`](../command/05_ask.md) | Full | — | All 55 params apply; identical behavior — pure alias for run |
+| 11 | [`topic`](../command/11_topic.md) | Full | — | All 55 params apply; `--topic`'s default overridden with an auto-generated slug — see [`command_group/01_run_ask.md`](../command_group/01_run_ask.md) Default Divergence Table |
 
 ### Referenced Parameters
 
@@ -52,6 +52,7 @@ clr --trace "Fix bug" --dir /project
 | [`--dir`](../param/008_dir.md) | [`DirectoryPath`](../type/02_directory_path.md) | cwd | Working directory | Working directory for subprocess (alias: `--to`) |
 | [`--topic`](../param/028_topic.md) | string | `.` | Named workspace | Named topic directory appended to `--dir` (`/-NAME`); `.` = identity |
 | [`--global`](../param/087_global.md) | bool | false | Named workspace | Resolve `--topic`'s base to the global topic home instead of cwd (alias: `-g`); inert without a topic; `--dir` outranks it |
+| [`--topic-mode`](../param/088_topic_mode.md) | enum | auto | Named workspace | Force `--topic`'s mechanism: `fork` (same-dir session fork) or `dir` (legacy `-NAME` directory); inert without a topic |
 | [`--max-tokens`](../param/009_max_tokens.md) | [`TokenLimit`](../type/03_token_limit.md) | 128000 | Token cap | Max output tokens |
 | [`--session-dir`](../param/010_session_dir.md) | [`DirectoryPath`](../type/02_directory_path.md) | — | Session storage | Deprecated, inert (BUG-493) — session storage directory |
 | [`--dry-run`](../param/011_dry_run.md) | bool | false | Execution gate | Preview without executing |

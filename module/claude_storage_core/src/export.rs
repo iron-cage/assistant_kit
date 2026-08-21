@@ -5,7 +5,7 @@
 //! - JSON: Machine-readable structured format
 //! - Text: Simple conversation transcript
 
-use crate::{ Session, Entry, ContentBlock, MessageContent, EntryType, Result, Error };
+use crate::{ Session, Entry, ContentBlock, EntryType, Result, Error };
 use std::io::Write;
 use std::path::Path;
 use std::fs::File;
@@ -202,47 +202,41 @@ fn write_markdown_entry< W : Write >
   writeln!( writer, "## Entry {entry_num} - {role_name}" )?;
   writeln!( writer, "*{}*\n", entry.timestamp )?;
 
-  match &entry.message
+  // Both roles carry content blocks, so both render through the same loop.
+  for block in entry.content_blocks()
   {
-    MessageContent::User( user_msg ) =>
+    match block
     {
-      writeln!( writer, "{}\n", user_msg.content )?;
-    }
-    MessageContent::Assistant( assistant_msg ) =>
-    {
-      // Process content blocks
-      for block in &assistant_msg.content
+      ContentBlock::Thinking { thinking, .. } =>
       {
-        match block
-        {
-          ContentBlock::Thinking { thinking, .. } =>
-          {
-            // Collapsible thinking block
-            let token_count = thinking.split_whitespace().count();
-            writeln!( writer, "<details>" )?;
-            writeln!( writer, "<summary>Thinking ({token_count} tokens)</summary>\n" )?;
-            writeln!( writer, "{thinking}" )?;
-            writeln!( writer, "</details>\n" )?;
-          }
-          ContentBlock::Text { text } =>
-          {
-            writeln!( writer, "{text}\n" )?;
-          }
-          ContentBlock::ToolUse { name, input, .. } =>
-          {
-            writeln!( writer, "**Tool Use**: `{name}`" )?;
-            writeln!( writer, "```json" )?;
-            writeln!( writer, "{input:#?}" )?;
-            writeln!( writer, "```\n" )?;
-          }
-          ContentBlock::ToolResult { content, .. } =>
-          {
-            writeln!( writer, "**Tool Result**:" )?;
-            writeln!( writer, "```" )?;
-            writeln!( writer, "{content}" )?;
-            writeln!( writer, "```\n" )?;
-          }
-        }
+        // Collapsible thinking block
+        let token_count = thinking.split_whitespace().count();
+        writeln!( writer, "<details>" )?;
+        writeln!( writer, "<summary>Thinking ({token_count} tokens)</summary>\n" )?;
+        writeln!( writer, "{thinking}" )?;
+        writeln!( writer, "</details>\n" )?;
+      }
+      ContentBlock::Text { text } =>
+      {
+        writeln!( writer, "{text}\n" )?;
+      }
+      ContentBlock::ToolUse { name, input, .. } =>
+      {
+        writeln!( writer, "**Tool Use**: `{name}`" )?;
+        writeln!( writer, "```json" )?;
+        writeln!( writer, "{input:#?}" )?;
+        writeln!( writer, "```\n" )?;
+      }
+      ContentBlock::ToolResult { content, .. } =>
+      {
+        writeln!( writer, "**Tool Result**:" )?;
+        writeln!( writer, "```" )?;
+        writeln!( writer, "{content}" )?;
+        writeln!( writer, "```\n" )?;
+      }
+      ContentBlock::Other { kind } =>
+      {
+        writeln!( writer, "*[{kind}]*\n" )?;
       }
     }
   }
@@ -356,26 +350,15 @@ fn write_text_entry< W : Write >
 
   writeln!( writer, "[{}] {}", role_name, entry.timestamp )?;
 
-  match &entry.message
+  // Extract text content only (skip thinking, tool use, and tool results), for both roles
+  for block in entry.content_blocks()
   {
-    MessageContent::User( user_msg ) =>
+    if let ContentBlock::Text { text } = block
     {
-      writeln!( writer, "{}\n", user_msg.content )?;
-    }
-    MessageContent::Assistant( assistant_msg ) =>
-    {
-      // Extract text content only (skip thinking blocks and tool use)
-      for block in &assistant_msg.content
-      {
-        if let ContentBlock::Text { text } = block
-        {
-          writeln!( writer, "{text}" )?;
-        }
-        // Skip thinking, tool use, tool results in text format
-      }
-      writeln!( writer )?;
+      writeln!( writer, "{text}" )?;
     }
   }
+  writeln!( writer )?;
 
   writeln!( writer, "---\n" )?;
 
