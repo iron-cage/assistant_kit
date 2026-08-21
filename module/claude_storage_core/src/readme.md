@@ -19,6 +19,8 @@ Zero-dependency core library for reading Claude Code filesystem storage.
 | `stats.rs` | Aggregate storage statistics |
 | `rollup.rs` | Group/filter/sort/project flexible token-usage rollups |
 | `continuation.rs` | Detect session continuation chains |
+| `canonical.rs` | Resolve paths to canonical physical absolute form |
+| `topic_session.rs` | Deterministic topic-name to session-UUID rule (UUIDv5) |
 | `session_id.rs` | Typed wrapper for session UUID stem |
 | `scope.rs` | Compute all 6 CLAUDE_* path variables via scope_for() |
 | `error.rs` | Define crate error types |

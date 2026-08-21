@@ -865,6 +865,64 @@
     - ".session.ensure path::/home/user/project topic::work strategy::fresh"
   auto_help_enabled: true
 
+- name: ".session.path"
+  namespace: ""
+  description: "Print the absolute session .jsonl file path for a directory: latest session (default), an explicit session:: UUID, or a fork-mode topic:: name (UUIDv5 rule — NOT the -topic dir suffix other commands' topic:: means)"
+  hint: "Resolve session file path"
+  version: "1.0.0"
+  status: "stable"
+  aliases: []
+  tags: ["storage", "session", "path"]
+  permissions: []
+  idempotent: true
+  deprecation_message: ""
+  http_method_hint: "GET"
+
+  arguments:
+    - name: "path"
+      kind: "String"
+      description: "Project directory the session belongs to (default: current directory)"
+      hint: "Project directory"
+      optional: true
+      validation_rules: []
+      aliases: []
+      tags: []
+
+    - name: "session"
+      kind: "String"
+      description: "Explicit session UUID — pure computation, the file need not exist (mutually exclusive with latest::/topic::)"
+      hint: "Session UUID"
+      optional: true
+      validation_rules: []
+      aliases: []
+      tags: []
+
+    - name: "latest"
+      kind: "Boolean"
+      description: "Most recent qualifying session — the default selector; exit 2 when the storage has none (mutually exclusive with session::/topic::)"
+      hint: "Latest session"
+      optional: true
+      validation_rules: []
+      aliases: []
+      tags: []
+
+    - name: "topic"
+      kind: "String"
+      description: "Fork-mode topic name, resolved via the shared UUIDv5 rule keyed on the canonical physical directory — pure computation, byte-identical to clr topics --file NAME (mutually exclusive with session::/latest::)"
+      hint: "Fork-topic name"
+      optional: true
+      validation_rules: []
+      aliases: []
+      tags: []
+
+  examples:
+    - ".session.path"
+    - ".session.path latest::1"
+    - ".session.path path::/home/user/project"
+    - ".session.path path::/home/user/project session::e36d752a-341e-5db1-94c5-c8b91cccbfff"
+    - ".session.path path::/home/user/project topic::review"
+  auto_help_enabled: true
+
 - name: ".tail"
   namespace: ""
   description: "Print the last N entries of the current directory's conversation (default: 4)"

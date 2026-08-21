@@ -82,8 +82,8 @@ pub( crate ) struct SessionTransplant
 }
 
 /// Side-band data `build_claude_command` hands the run dispatcher: the effective
-/// working directory (post `--dir`/`--topic` resolution) and the session
-/// transplant plan, when one applies.
+/// working directory (post `--dir`/`--topic` resolution), the session
+/// transplant plan, and the fork-mode topic plan, when each applies.
 #[ derive( Debug ) ]
 pub( crate ) struct RunPreparation
 {
@@ -91,11 +91,157 @@ pub( crate ) struct RunPreparation
   pub( crate ) effective_working_dir : Option< std::path::PathBuf >,
   /// Physical session copy to perform before spawn (BUG-490), if applicable.
   pub( crate ) transplant : Option< SessionTransplant >,
+  /// Fork-mode topic plan (`TopicMode::Fork`), if applicable. Mutually exclusive
+  /// with `transplant` — fork mode never copies session files.
+  pub( crate ) fork : Option< TopicFork >,
 }
 
-/// Resolve `raw` to its physical absolute form: `canonicalize` when the path exists,
-/// else a cwd-join whose deepest EXISTING prefix is still canonicalized component-wise
-/// (Fix(BUG-543)) — only the nonexistent tail is appended literally.
+/// Fork-mode topic plan: the deterministic session identity for a `--topic`
+/// invocation resolved to `TopicMode::Fork`, plus everything the dispatcher
+/// needs downstream (dry-run preview, registry recording).
+///
+/// Fork mode replaces the legacy `<base>/-<name>` directory + transplant with a
+/// same-directory session fork: the topic lives as a session file named by
+/// `UUIDv5( canonical base path, topic name )` inside the base directory's own
+/// storage. Staying in the base directory keeps the prompt-cache prefix
+/// byte-identical, so the fork reuses the base session's cache instead of
+/// re-priming the whole history.
+#[ derive( Debug ) ]
+pub( crate ) struct TopicFork
+{
+  /// Topic name as given on the CLI.
+  pub( crate ) topic : String,
+  /// Canonical physical base directory the identity is keyed on.
+  pub( crate ) canonical_base : std::path::PathBuf,
+  /// Deterministic topic session id — `topic_session_id( canonical_base, topic )`.
+  pub( crate ) session_id : SessionId,
+  /// Base's most recent qualifying session to fork from. `None` on repeat use
+  /// (the topic session already exists — nothing to fork), under `--new-session`
+  /// (fresh start explicitly requested), and on a base with no session yet.
+  pub( crate ) source : Option< SessionId >,
+  /// Whether the topic session file already exists non-empty (repeat use).
+  pub( crate ) repeat : bool,
+}
+
+/// Resolve a `--topic` invocation to its fork-mode plan, or `None` when no topic
+/// is given (`--topic` absent, `""`, or `"."` — the same identity guard as
+/// `resolve_effective_dir`, BUG-229) or the effective mode is `TopicMode::Dir`
+/// (legacy directory topics keep the transplant path).
+///
+/// Exits the process loudly (code 1) on contradictions rather than guessing:
+/// - explicit `--topic-mode fork` with `--global` or a non-empty `--from` — the
+///   auto rules select Dir for both precisely because fork mode's same-directory
+///   cache-identity premise cannot hold for them, so forcing fork past that is a
+///   contradiction, not a preference;
+/// - `--new-session` on an EXISTING fork topic — the topic's session identity is
+///   deterministic and claude rejects `--session-id` reuse, so "start this topic
+///   over" requires deleting the session file (path: `clr topics --file NAME`)
+///   or switching to `--topic-mode dir`. On a topic that does not exist yet,
+///   `--new-session` is honored instead: it suppresses the fork source, creating
+///   the topic fresh rather than forking the base's history.
+/// - an unresolvable identity (non-UTF-8 base path, or no resolvable storage
+///   dir) — the session id cannot be computed, so the run cannot proceed.
+///
+/// Probes disk (session-file existence, most-recent-session scan) but never
+/// writes — dry-run safe (BUG-231's rule: side effects belong to the run path).
+fn plan_topic_fork( cli : &CliArgs ) -> Option< TopicFork >
+{
+  let topic = cli.topic.as_deref().filter( | t | *t != "." && !t.is_empty() )?;
+  let mode = super::topic_path::effective_topic_mode
+  (
+    cli.topic_mode,
+    cli.global,
+    cli.from.as_deref(),
+    cli.dir.as_deref(),
+    topic,
+  );
+  if mode == super::topic_path::TopicMode::Dir
+  {
+    return None;
+  }
+  if cli.global
+  {
+    eprintln!
+    (
+      "Error: --topic-mode fork cannot be combined with --global\n\
+       Global topics are shared across callers' working directories, so the\n\
+       same-directory fork premise never holds for them. Drop --topic-mode fork\n\
+       (global topics use dir mode) or drop --global."
+    );
+    std::process::exit( 1 );
+  }
+  if cli.from.as_deref().is_some_and( | f | !f.is_empty() )
+  {
+    eprintln!
+    (
+      "Error: --topic-mode fork cannot be combined with --from\n\
+       An explicit cross-directory source needs the directory-topic transplant\n\
+       machinery. Drop --topic-mode fork (--from topics use dir mode) or drop --from."
+    );
+    std::process::exit( 1 );
+  }
+
+  let base = super::topic_path::topic_base( cli.dir.as_deref(), false );
+  let canonical_base = physical_abs( &base );
+  let session_id = match claude_storage_core::topic_session_id( &canonical_base, topic )
+  {
+    Ok( id ) => id,
+    Err( e ) =>
+    {
+      eprintln!( "Error: cannot compute topic session id for '{topic}': {e}" );
+      std::process::exit( 1 );
+    }
+  };
+  let Some( session_file ) = claude_storage_core::topic_session_file( &canonical_base, topic )
+  else
+  {
+    eprintln!
+    (
+      "Error: cannot resolve session storage for topic '{topic}' (is HOME set?)"
+    );
+    std::process::exit( 1 );
+  };
+  let storage = session_file.parent()
+    .expect( "storage join always has a parent" )
+    .to_path_buf();
+  // Existence probe via session_file_path, not a bare exact-join check, so a
+  // case-variant extension still counts as the topic already existing — the
+  // same case-insensitive qualification rule the continuation scan uses.
+  let repeat = session_file_path( &storage, session_id.as_str() )
+    .and_then( | path | std::fs::metadata( path ).ok() )
+    .is_some_and( | meta | meta.len() > 0 );
+  if repeat && cli.new_session
+  {
+    eprintln!
+    (
+      "Error: --new-session cannot restart fork-mode topic '{topic}'\n\
+       Its session identity is deterministic ({id}) and already exists.\n\
+       To start over, delete the session file (path: clr topics --file {topic})\n\
+       or use --topic-mode dir.",
+      id = session_id.as_str()
+    );
+    std::process::exit( 1 );
+  }
+  let source = if repeat || cli.new_session { None }
+  else
+  {
+    session_exists( &storage )
+  };
+  Some( TopicFork
+  {
+    topic : topic.to_string(),
+    canonical_base,
+    session_id,
+    source,
+    repeat,
+  } )
+}
+
+/// Resolve `raw` to its physical absolute form — thin delegation to
+/// `claude_storage_core::physical_abs`, where the implementation (including the
+/// Fix(BUG-543) deepest-existing-prefix fallback) now lives so `clr` and
+/// `claude_storage` can never drift apart on the canonical form that storage
+/// keys and topic-session identities are computed from.
 ///
 /// claude derives storage names from its physical getcwd, so a relative or symlinked
 /// path must resolve to the same physical absolute form or the encoded name silently
@@ -103,68 +249,10 @@ pub( crate ) struct RunPreparation
 ///
 /// `pub( crate )`: also called from `topic.rs::disambiguate_slug` (Fix(BUG-542)) so its
 /// storage probe resolves an auto-name candidate identically to how this file resolves
-/// the same path once it becomes the real effective/source directory — two independent
-/// resolutions of the same path must never drift apart.
+/// the same path once it becomes the real effective/source directory.
 pub( crate ) fn physical_abs( raw : &std::path::Path ) -> std::path::PathBuf
 {
-  std::fs::canonicalize( raw ).unwrap_or_else( | _ |
-  {
-    let joined = if raw.is_absolute() { raw.to_path_buf() }
-    else
-    {
-      std::env::current_dir()
-        .map_or_else( | _ | raw.to_path_buf(), | cwd | cwd.join( raw ) )
-    };
-    canonicalize_deepest_prefix( &joined )
-  } )
-}
-
-/// Fix(BUG-543): component-wise fallback for a path whose leaf does not yet exist
-/// (`physical_abs`'s own `canonicalize` already failed, which is expected for any
-/// pre-creation probe — an auto-name freshness check, `--dry-run` planning).
-///
-/// Walks `joined` from the root, re-canonicalizing the accumulated prefix after every
-/// component while it exists on disk — resolving any symlinked ancestor along the way —
-/// so only the genuinely nonexistent tail is appended literally. `.` is skipped
-/// throughout; `..` pops the last pushed component against the accumulated prefix, and
-/// a pop that lands back inside existing territory re-canonicalizes there.
-///
-/// This mirrors what `create_dir_all` + a later `canonicalize` will yield once the
-/// nonexistent tail is actually created, since a fresh `mkdir` cannot introduce
-/// symlinks of its own — so a pre-creation probe and the real post-creation run agree
-/// on the same storage key even when the base path traverses a symlink or carries an
-/// unnormalized `..`.
-///
-/// Root cause: the old fallback (`joined.components().collect()`) was purely lexical —
-/// symlinked ancestors and `..` survived verbatim, so pre-creation probes
-/// (`topic.rs::name_is_taken`, dry-run's `own_target_storage`) encoded a different
-/// storage name than the real, post-`create_dir_all` run used, silently re-opening
-/// BUG-542's orphaned-history resume under symlinked/`..` bases.
-/// Pitfall: `..` must be popped against the already-canonical prefix (kernel
-/// semantics: a symlinked ancestor resolves FIRST, then `..` applies to its target) —
-/// never left in the raw lexical text — and the canonicalize re-attempt must not stop
-/// permanently at the first miss: a later `..` can pop back into existing space where
-/// a symlink still needs resolving for both runs to agree.
-fn canonicalize_deepest_prefix( joined : &std::path::Path ) -> std::path::PathBuf
-{
-  use std::path::Component;
-
-  let mut canonical = std::path::PathBuf::new();
-
-  for component in joined.components()
-  {
-    match component
-    {
-      Component::CurDir => {}
-      Component::ParentDir => { canonical.pop(); }
-      other => canonical.push( other.as_os_str() ),
-    }
-    if let Ok( resolved ) = std::fs::canonicalize( &canonical )
-    {
-      canonical = resolved;
-    }
-  }
-  canonical
+  claude_storage_core::physical_abs( raw )
 }
 
 /// Locate the on-disk file for session `id` inside `storage`: exact `<id>.jsonl` join
@@ -283,7 +371,19 @@ pub( crate ) fn build_claude_command( cli : &CliArgs )
   // Pitfall: keep the parameter parsed (CLI flag, CLR_SESSION_DIR, json "session-dir")
   //   so existing invocations don't hard-fail; the warning is the only behavior.
 
-  let effective_working_dir = resolve_effective_dir( cli );
+  // Fork-mode topics stay in the base directory — no `-<name>` dir is created or
+  // entered; the topic is a deterministically-named session inside the base's own
+  // storage. Only dir-mode invocations go through resolve_effective_dir's
+  // topic-dir join + create_dir_all.
+  let fork = plan_topic_fork( cli );
+  let effective_working_dir = if fork.is_some()
+  {
+    cli.dir.as_deref().map( std::path::PathBuf::from )
+  }
+  else
+  {
+    resolve_effective_dir( cli )
+  };
   if let Some( ref dir ) = effective_working_dir
   {
     builder = builder.with_working_directory( dir.to_string_lossy().into_owned() );
@@ -401,7 +501,26 @@ pub( crate ) fn build_claude_command( cli : &CliArgs )
   //   is backed by a real mechanism (BUG-490's physical copy).
   // Pitfall: session_from_dir alone is correct here — it already defaults to cwd's own
   //   storage when --from is absent, so this is a strict fix, not a behavior removal.
-  let expected_id = if cli.new_session { None }
+  //
+  // resume_allowed is the BUG-426/435 message-presence condition, shared verbatim by
+  // the legacy -c injection and the fork-mode resume/fork argument injection below —
+  // both describe the same question ("will something follow the resumed session as a
+  // prompt, or is this an interactive entry?") and must never disagree.
+  let resume_allowed = !use_print
+    || cli.message.is_some() || cli.print_mode || cli.file.is_some() || cli.interactive
+    || cli.stdin_content.as_ref().is_some_and( | v | !v.is_empty() );
+  // Fork mode: the expected id is the deterministic topic session id whenever the
+  // fork/resume arguments are actually injected (resume_allowed) — including the
+  // fresh-create case (`--session-id` alone), where claude is expected to create
+  // exactly that file, so the BUG-320 mismatch check verifies creation too. This
+  // branch deliberately precedes the new_session one: a first-use fork topic under
+  // --new-session still creates the deterministic id (plan_topic_fork only drops
+  // the fork SOURCE for it; repeat use under --new-session already exited loudly).
+  let expected_id = if let Some( ref fork_plan ) = fork
+  {
+    if resume_allowed { Some( fork_plan.session_id.clone() ) } else { None }
+  }
+  else if cli.new_session { None }
   else
   {
     session_exists( &session_from_dir )
@@ -411,7 +530,12 @@ pub( crate ) fn build_claude_command( cli : &CliArgs )
   // file into the TARGET's own encoded storage.
   // Pitfall: when source and target encode to the same storage dir, no copy is planned —
   //   fs::copy onto the same path truncates the file it is reading from.
-  let transplant = if let Some( id ) = &expected_id
+  //
+  // Fork mode never transplants: source and topic session live in the SAME storage
+  // (that is the whole point — identical directory, identical cache prefix), and the
+  // fork itself is claude's own `--fork-session`, not a file copy.
+  let transplant = if fork.is_some() { None }
+  else if let Some( id ) = &expected_id
   {
     let src_storage = &session_from_dir;
     let target_dir = effective_working_dir.as_deref().map_or_else(
@@ -461,10 +585,40 @@ pub( crate ) fn build_claude_command( cli : &CliArgs )
   //   interactive mode); D-10's guard was too broad and excluded bare TTY interactive.
   // Pitfall: always use !use_print to detect interactive mode, not cli.interactive —
   //   the flag is an explicit opt-in, not the ground truth about the invocation's mode.
-  if expected_id.is_some()
-    && ( !use_print
-      || cli.message.is_some() || cli.print_mode || cli.file.is_some() || cli.interactive
-      || cli.stdin_content.as_ref().is_some_and( | v | !v.is_empty() ) )
+  // The message-presence terms live in resume_allowed (defined with expected_id
+  // above) so this gate and fork-mode injection can never drift apart.
+  if let Some( ref fork_plan ) = fork
+  {
+    // Fork-mode topic: address the deterministic session directly instead of -c.
+    //   repeat use          → --resume <topic-uuid>                    (continue the topic)
+    //   first use, source   → --resume <src> --fork-session --session-id <topic-uuid>
+    //                         (branch the base's history under the topic's identity)
+    //   first use, no source → --session-id <topic-uuid>              (create it fresh)
+    // Gated by the same resume_allowed condition as -c: with nothing following as a
+    // prompt and print mode active, injecting resume/create args would reproduce
+    // BUG-426's empty-resume failure shape.
+    if resume_allowed
+    {
+      if fork_plan.repeat
+      {
+        builder = builder
+          .with_arg( "--resume" ).with_arg( fork_plan.session_id.as_str() );
+      }
+      else if let Some( ref src ) = fork_plan.source
+      {
+        builder = builder
+          .with_arg( "--resume" ).with_arg( src.as_str() )
+          .with_arg( "--fork-session" )
+          .with_arg( "--session-id" ).with_arg( fork_plan.session_id.as_str() );
+      }
+      else
+      {
+        builder = builder
+          .with_arg( "--session-id" ).with_arg( fork_plan.session_id.as_str() );
+      }
+    }
+  }
+  else if expected_id.is_some() && resume_allowed
   {
     builder = builder.with_continue_conversation( true );
   }
@@ -625,6 +779,15 @@ pub( crate ) fn build_claude_command( cli : &CliArgs )
     builder = builder.with_compact_window( None );
   }
 
+  // Hand the fork plan downstream (dry-run preview, registry recording) only when
+  // the fork/resume arguments were actually injected — a gated-off invocation
+  // (print mode, nothing following as a prompt) runs bare, so previewing or
+  // registering a topic session that will not be touched would misstate the run.
+  // The gating must happen HERE, after every internal use: the working-dir and
+  // transplant decisions above key off the original plan (fork mode never creates
+  // a topic dir and never transplants, injected or not).
+  let fork = if resume_allowed { fork } else { None };
+
   (
     builder,
     expected_id,
@@ -632,6 +795,7 @@ pub( crate ) fn build_claude_command( cli : &CliArgs )
     {
       effective_working_dir,
       transplant,
+      fork,
     },
   )
 }

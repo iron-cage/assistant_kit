@@ -105,6 +105,7 @@ tests/
 | `cli_cmd_project_exists_test.rs` | Spec-driven integration tests for `.project.exists` command |
 | `cli_cmd_session_dir_test.rs` | Spec-driven integration tests for `.session.dir` command |
 | `cli_cmd_session_ensure_test.rs` | Spec-driven integration tests for `.session.ensure` command |
+| `cli_cmd_session_path_test.rs` | Spec-driven integration tests for `.session.path` command |
 | `cli_cmd_tail_test.rs` | Spec-driven integration tests for `.tail` command (INT-1..INT-8) |
 | `cli_cmd_usage_test.rs` | Spec-driven integration tests for `.usage` command (INT-1..INT-21) |
 | `cli_repl_eof_test.rs` | REPL EOF clean-exit reproducers, timeout-guarded (task-482) |

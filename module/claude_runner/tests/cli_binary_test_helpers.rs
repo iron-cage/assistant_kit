@@ -7,6 +7,7 @@
 //! | `run_cli` | `cli_args_test`, `cli_args_ext_test`, `dry_run_test`, `ultrathink_args_test`, `effort_args_test`, `param_edge_cases_test`, `param_extended_flags_test`, `param_group_test`, `execution_mode_test`, `quiet_test`, `ask_command_test`, `user_story_test`, `user_story_creds_isolated_test`, `user_story_output_test`, `user_story_ps_test`, `user_story_kill_test`, `ps_command_test`, `kill_command_test`, `ps_mode_test`, `ps_columns_test`, `ps_wide_test`, `ps_pid_test`, `ps_inspect_test`, `ps_flags_test`, `output_style_test`, `summary_fields_test`, `no_compact_window_test`, `json_config_test` |
 //! | `run_cli_with_env` | `cli_args_test`, `dry_run_test`, `user_story_test`, `execution_mode_ext_test`, `env_var_test`, `env_var_ext_test`, `invariant_trace_universality_test`, `param_trace_edge_cases_test`, `param_group_test`, `isolated_test`, `user_story_creds_isolated_test`, `user_story_output_test`, `bug_reproducers_239_244_test`, `error_classification_test`, `ps_command_test`, `user_story_ps_test`, `output_style_test`, `summary_fields_test`, `no_compact_window_test`, `json_config_test`, `config_file_test` |
 //! | `run_cli_in_dir` | `config_file_test` |
+//! | `run_cli_in_dir_isolated` | `topic_fork_test` |
 //! | `df` | `session_from_test`, `session_path_resolution_test`, `session_source_isolation_test`, `scope_command_test`, `bug_reproducers_490_492_test`, `topic_command_test` |
 //! | `make_session_for` | `cli_args_test`, `cli_args_ext_test`, `dry_run_test`, `ultrathink_args_test`, `session_from_test`, `execution_mode_test`, `execution_mode_ext_test`, `session_path_resolution_test`, `session_source_isolation_test`, `session_verification_test`, `user_story_test` |
 //! | `make_zero_turn_session_for` | `execution_mode_ext_test` |
@@ -166,6 +167,47 @@ pub fn run_cli_in_dir
   Command::new( bin )
     .args( args )
     .current_dir( dir )
+    .envs( env.iter().copied() )
+    .output()
+    .expect( "failed to execute clr binary" )
+}
+
+/// Invoke `clr` inside `dir` with a fully topic-isolated environment.
+///
+/// Mirrors `run_cli_in_dir` but scrubs every env var that can retarget topic
+/// resolution — `CLR_DIR`, `CLR_SESSION_DIR`, `CLR_FROM`, `CLR_TOPIC`,
+/// `CLR_TOPIC_MODE`, `CLR_TOPIC_REGISTRY_DIR`, `CLR_NO_COMPACT_WINDOW`, and
+/// `CLAUDE_HOME` — and pins `HOME` to the empty isolation path. Caller-supplied
+/// `env` pairs are applied LAST, so a test re-adds exactly the vars it exercises
+/// (typically `CLAUDE_HOME` for seeded storage and `CLR_TOPIC_REGISTRY_DIR`).
+///
+/// # Panics
+///
+/// Panics if the `clr` binary cannot be launched (process spawn failure).
+#[must_use]
+#[inline]
+#[allow(dead_code)]
+pub fn run_cli_in_dir_isolated
+(
+  args : &[ &str ],
+  dir  : &std::path::Path,
+  env  : &[ ( &str, &str ) ],
+) -> std::process::Output
+{
+  assert_container();
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  Command::new( bin )
+    .args( args )
+    .current_dir( dir )
+    .env( "HOME", "/tmp/clr-isolated-home" )
+    .env_remove( "CLR_DIR" )
+    .env_remove( "CLR_SESSION_DIR" )
+    .env_remove( "CLR_FROM" )
+    .env_remove( "CLR_TOPIC" )
+    .env_remove( "CLR_TOPIC_MODE" )
+    .env_remove( "CLR_TOPIC_REGISTRY_DIR" )
+    .env_remove( "CLR_NO_COMPACT_WINDOW" )
+    .env_remove( "CLAUDE_HOME" )
     .envs( env.iter().copied() )
     .output()
     .expect( "failed to execute clr binary" )

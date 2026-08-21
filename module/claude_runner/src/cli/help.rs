@@ -16,7 +16,7 @@ pub( crate ) fn print_help()
     "clr kill <PID>".to_string(),
     "clr tools".to_string(),
     "clr scope [--dir <PATH>]".to_string(),
-    "clr topics [--path <NAME>] [--global]".to_string(),
+    "clr topics [--path <NAME> | --file <NAME>] [--global]".to_string(),
     "clr isolated [OPTIONS]".to_string(),
     "clr refresh [OPTIONS]".to_string(),
     "clr query \"<MSG>\" [--dir <PATH>]".to_string(),
@@ -69,8 +69,9 @@ fn runner_option_group() -> cli_fmt::help::OptionGroup
       OptionEntry { name : "--verbose".into(),                       desc : "Enable verbose output".into() },
       OptionEntry { name : "--quiet".into(),                         desc : "Suppress non-fatal CLR diagnostics (gate-wait, retry progress, keep-claudecode warning) [env: CLR_QUIET]".into() },
       OptionEntry { name : "--dir <PATH>, --to <PATH>".into(),       desc : "Working directory (alias: --to)".into() },
-      OptionEntry { name : "--topic <NAME>".into(),                 desc : "Named topic directory appended to --dir as /-NAME; . = identity".into() },
-      OptionEntry { name : "-g, --global".into(),                    desc : "Resolve --topic under $CLR_TOPIC_HOME instead of cwd [env: CLR_GLOBAL]".into() },
+      OptionEntry { name : "--topic <NAME>".into(),                 desc : "Named topic session under the base dir (new topics: same-dir session fork; legacy -NAME dirs keep dir mode); . = identity".into() },
+      OptionEntry { name : "--topic-mode <MODE>".into(),            desc : "Force topic mechanism: fork (same-dir session fork) or dir (legacy -NAME directory) [env: CLR_TOPIC_MODE]".into() },
+      OptionEntry { name : "-g, --global".into(),                    desc : "Resolve --topic under $CLR_TOPIC_HOME instead of cwd (implies dir mode) [env: CLR_GLOBAL]".into() },
       OptionEntry { name : "--message <MSG>".into(),                  desc : "Message to send (alternative to positional argument)".into() },
       OptionEntry { name : "--session-dir <PATH>".into(),            desc : "Session storage directory — DEPRECATED, inert (BUG-493); use --from".into() },
       OptionEntry { name : "--from <DIR>".into(),                     desc : "Cross-load most-recent session from source directory (default: current directory) [env: CLR_FROM]".into() },
@@ -362,8 +363,9 @@ pub( crate ) fn print_ask_help() -> !
   println!( "  --system-prompt <TEXT>             Set system prompt" );
   println!( "  --append-system-prompt <TEXT>      Append to default system prompt" );
   println!( "  --dir <PATH>, --to <PATH>          Working directory (alias: --to)" );
-  println!( "  --topic <NAME>                    Named topic directory appended to --dir as /-NAME; . = identity" );
-  println!( "  -g, --global                       Resolve --topic under $CLR_TOPIC_HOME instead of cwd [env: CLR_GLOBAL]" );
+  println!( "  --topic <NAME>                    Named topic session under the base dir (new: same-dir fork; legacy -NAME dirs: dir mode); . = identity" );
+  println!( "  --topic-mode <MODE>                Force topic mechanism: fork or dir [env: CLR_TOPIC_MODE]" );
+  println!( "  -g, --global                       Resolve --topic under $CLR_TOPIC_HOME instead of cwd (implies dir mode) [env: CLR_GLOBAL]" );
   println!( "  --message <MSG>                    Message to send (alternative to positional argument)" );
   println!( "  --session-dir <PATH>               Session storage directory — DEPRECATED, inert (BUG-493); use --from" );
   println!( "  --from <DIR>                       Cross-load most-recent session from source directory (default: current directory) [env: CLR_FROM]" );
@@ -421,8 +423,9 @@ pub( crate ) fn print_topic_help() -> !
   println!( "  --system-prompt <TEXT>             Set system prompt" );
   println!( "  --append-system-prompt <TEXT>      Append to default system prompt" );
   println!( "  --dir <PATH>, --to <PATH>          Working directory (alias: --to)" );
-  println!( "  --topic <NAME>                    Named topic directory (default: auto-generated slug)" );
-  println!( "  -g, --global                       Place the topic under $CLR_TOPIC_HOME instead of cwd [env: CLR_GLOBAL]" );
+  println!( "  --topic <NAME>                    Named topic session (default: auto-generated slug)" );
+  println!( "  --topic-mode <MODE>                Force topic mechanism: fork or dir [env: CLR_TOPIC_MODE]" );
+  println!( "  -g, --global                       Place the topic under $CLR_TOPIC_HOME instead of cwd (implies dir mode) [env: CLR_GLOBAL]" );
   println!( "  --message <MSG>                    Message to send (alternative to positional argument)" );
   println!( "  --session-dir <PATH>               Session storage directory — DEPRECATED, inert (BUG-493); use --from" );
   println!( "  --from <DIR>                       Cross-load most-recent session from source directory (default: current directory) [env: CLR_FROM]" );
@@ -462,16 +465,26 @@ pub( crate ) fn print_topics_help() -> !
   println!( "USAGE:" );
   println!( "  clr topics [--dir <PATH>] [--global]" );
   println!( "  clr topics --path <NAME> [--dir <PATH>] [--global]" );
+  println!( "  clr topics --file <NAME> [--dir <PATH>] [--global]" );
   println!();
-  println!( "Read-only counterpart to `clr topic`. Without --path, lists every topic" );
-  println!( "directory under the base as NAME / SESSIONS / PATH columns. A topic with" );
-  println!( "0 sessions exists on disk but has never been entered." );
+  println!( "Read-only counterpart to `clr topic`. Without --path/--file, lists every" );
+  println!( "topic under the base as NAME / MODE / SESSIONS / PATH columns. MODE is" );
+  println!( "`dir` for a legacy -NAME topic directory (PATH = the directory, SESSIONS =" );
+  println!( "its storage's session count) or `fork` for a same-directory session-fork" );
+  println!( "topic (PATH = its session file, SESSIONS = 1 when that file exists). The" );
+  println!( "same name can appear once per mode." );
   println!();
-  println!( "With --path, prints one absolute path and exits. That form is a pure" );
-  println!( "computation of <base>/-<NAME> — it never reads the disk, so the same name" );
+  println!( "With --path, prints the dir-mode topic DIRECTORY and exits: a pure" );
+  println!( "computation of <base>/-<NAME> that never reads the disk, so the same name" );
   println!( "always yields the same path whether or not the topic exists yet:" );
   println!();
   println!( "  cd \"$(clr topics --path my-topic --global)\"" );
+  println!();
+  println!( "With --file, prints the fork-mode topic SESSION FILE and exits — equally" );
+  println!( "pure: <storage of base>/<UUIDv5(canonical base, NAME)>.jsonl, byte-identical" );
+  println!( "to `claude_storage .session.path path::<base> topic::NAME`:" );
+  println!();
+  println!( "  jq '.message.usage' \"$(clr topics --file my-topic)\"" );
   println!();
   println!( "BASE DIRECTORY (highest precedence first):" );
   println!( "  --dir <PATH>         Explicit base — outranks --global" );
@@ -481,15 +494,18 @@ pub( crate ) fn print_topics_help() -> !
   println!( "OPTIONS:" );
   println!( "  --dir <PATH>, --to <PATH>  Base directory to list/resolve under" );
   println!( "  -g, --global               Use the global topic home as the base [env: CLR_GLOBAL]" );
-  println!( "  --path <NAME>              Print the absolute path for NAME and exit" );
+  println!( "  --path <NAME>              Print the dir-mode topic directory for NAME and exit" );
+  println!( "  --file <NAME>              Print the fork-mode topic session file for NAME and exit" );
   println!( "  -h, --help                 Show this help" );
   println!();
   println!( "ENVIRONMENT:" );
   println!( "  CLR_TOPIC_HOME             Global topic home (default: <system temp dir>/clr-topic)" );
+  println!( "  CLR_TOPIC_REGISTRY_DIR     Fork-topic name registry root (default: ~/.clr/topics)" );
   println!();
   println!( "EXIT CODES:" );
   println!( "  0  Success — including an empty base (note printed to stderr)" );
-  println!( "  1  Error — unknown option, or a flag given without its value" );
+  println!( "  1  Error — unknown option, a flag without its value, --path with --file," );
+  println!( "     or unresolvable session storage for --file" );
   std::process::exit( 0 );
 }
 

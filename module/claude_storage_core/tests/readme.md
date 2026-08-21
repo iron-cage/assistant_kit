@@ -23,6 +23,8 @@ tests/
 ├── scope_test.rs                          # Unit tests for scope_for(), git_root_for(), ClaudeScope
 ├── continuation_tests.rs                  # Integration tests for continuation detection and UUID selection
 ├── session_id_tests.rs                    # Unit tests for SessionId newtype
+├── topic_session_tests.rs                 # Golden-vector tests for the topic→UUIDv5 session rule
+├── canonical_tests.rs                     # Unit tests for physical_abs canonical path resolution
 ├── count_entries_bug.rs                   # Bug Reproducer (issue-016): count_entries vs stats mismatch
 ├── export.rs                              # Export integration tests (markdown, JSON, text)
 ├── filtering.rs                           # Session and project filtering integration tests

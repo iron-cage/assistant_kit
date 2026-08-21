@@ -45,7 +45,7 @@ pub use show::show_routine;
 pub use count::count_routine;
 pub use search::search_routine;
 pub use export::export_routine;
-pub use session::{ project_path_routine, project_exists_routine, session_dir_routine, session_ensure_routine };
+pub use session::{ project_path_routine, project_exists_routine, session_dir_routine, session_ensure_routine, session_path_routine };
 pub use tail::tail_routine;
 pub use usage::usage_routine;
 pub use rollup::rollup_routine;
