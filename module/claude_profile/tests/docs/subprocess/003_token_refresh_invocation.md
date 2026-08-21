@@ -104,7 +104,7 @@ by ownership/occupation gates, and the approaching-expiry prohibition.
 - **Given:** `refresh_account_token()` is called for a 401 account but the subprocess exits
   without credential update (i.e., the refresh token is expired server-side).
 - **When:** `refresh_account_token()` returns `None`.
-- **Then:** `aq.result` is set to `Err("refresh token expired")`. This prevents downstream
+- **Then:** `aq.result` is set to `Err("token refresh failed")` (cause-neutral label per BUG-539). This prevents downstream
   `apply_touch()` from firing on the unrecoverable account — touch after a failed refresh
   would trigger a new subprocess call that cannot succeed. Fix BUG-297.
 - **Source fn:** `mre_bug297_refresh_none_sets_aq_result_err` in

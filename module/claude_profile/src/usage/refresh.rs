@@ -136,7 +136,7 @@ pub fn apply_refresh(
       //   sandbox, subprocess failure, invalid_grant revocation, genuine RT expiry); it surfaces
       //   no cause across the Option boundary.
       // Root cause: the label was written when RT expiry was the only anticipated None cause,
-      //   and was never revisited as the other four were added.
+      //   and was never revisited as the other five were added.
       // Pitfall: this string is a diagnosis presented to operators — asserting RT expiry sent a
       //   live investigation of three revoked grants down the wrong path (their
       //   refreshTokenExpiresAt was 15 days out; the grants had been revoked by RT-reuse
