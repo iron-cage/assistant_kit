@@ -253,7 +253,7 @@ claude_storage .tail
 # Output: last 4 conversation entries, oldest-first
 
 # See more context
-claude_storage .tail tail::10
+claude_storage .tail last::10
 
 # Check a non-default topic
 claude_storage .tail topic::work

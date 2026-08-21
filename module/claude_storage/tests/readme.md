@@ -22,6 +22,7 @@ tests/
 ├── count_command_bug_fix.rs               # .count context-awareness bug fix (Bug #003)
 ├── count_command_test.rs                  # .count target::conversations tests (IT-T04..IT-T05)
 ├── export_command_test.rs                 # .export parameter validation tests (Phase 1C)
+├── help_command_coverage_test.rs          # Every registered command appears in `clg .` help
 ├── lib_test.rs                            # Library API smoke tests
 ├── list_command_test.rs                   # .list parameter bounds and combinations
 ├── list_smart_session_display.rs          # .list smart session display tests
@@ -44,6 +45,7 @@ tests/
 ├── projects_output_format_test.rs         # .projects output format: path headers, agent collapse (IT-17..IT-22); list-mode redesign (IT-52..IT-53)
 ├── projects_scope_around_test.rs          # .projects scope::around bidirectional neighborhood semantics (IT-57..IT-59)
 ├── projects_zero_byte_count_bug.rs        # .projects zero-byte session exclusion from header count (issue-034, IT-54..IT-56)
+├── projects_overview_test.rs              # .projects terse overview rendering — flat table and tree (OV-1..OV-10)
 ├── smart_show_command.rs                  # .show smart parameter detection tests
 ├── status_path_test.rs                    # .status path parameter tests (Phase 1D)
 ├── truncate_utf8_bug.rs                   # Truncation safety on multibyte UTF-8 (issue-018)
@@ -67,6 +69,7 @@ tests/
 | `count_command_bug_fix.rs` | Test .count context-awareness and path projects |
 | `count_command_test.rs` | Test .count target::conversations (IT-T04..IT-T05) |
 | `export_command_test.rs` | Validate .export command parameters |
+| `help_command_coverage_test.rs` | Verify every `unilang.commands.yaml` command appears in `clg .` help |
 | `list_command_test.rs` | Validate .list command parameter bounds and combinations |
 | `list_smart_session_display.rs` | Test smart session display in .list |
 | `parameter_validation_test.rs` | Validate CLI parameter handling |
@@ -88,6 +91,7 @@ tests/
 | `projects_output_format_test.rs` | Test .projects output format: path headers, agent collapse (IT-17..22); list-mode redesign (IT-52..53) |
 | `projects_scope_around_test.rs` | Test .projects scope::around bidirectional neighborhood semantics (IT-57..IT-59) |
 | `projects_zero_byte_count_bug.rs` | Test zero-byte session exclusion from .projects list-mode header count (issue-034) |
+| `projects_overview_test.rs` | Test .projects terse overview rendering — flat recency table and directory tree (OV-1..OV-10) |
 | `smart_show_command.rs` | Test location-aware .show command |
 | `status_path_test.rs` | Test path parameter in .status command |
 | `truncate_utf8_bug.rs` | Test truncation safety on multibyte UTF-8 (issue-018) |
@@ -107,6 +111,7 @@ tests/
 | `cli_cmd_session_ensure_test.rs` | Spec-driven integration tests for `.session.ensure` command |
 | `cli_cmd_tail_test.rs` | Spec-driven integration tests for `.tail` command (INT-1..INT-8) |
 | `cli_cmd_usage_test.rs` | Spec-driven integration tests for `.usage` command (INT-1..INT-21) |
+| `cli_cmd_cost_test.rs` | Spec-driven integration tests for `.cost` command (INT-1..INT-14) |
 | `cli_repl_eof_test.rs` | REPL EOF clean-exit reproducers, timeout-guarded (task-482) |
 | `cli_param_agent_test.rs` | Edge case tests for `agent::` parameter |
 | `cli_param_case_sensitive_test.rs` | Edge case tests for `case_sensitive::` parameter |

@@ -1,9 +1,9 @@
-# Parameter :: 25. `tail::`
+# Parameter :: 25. `last::`
 
 ### Scope
 
-- **Purpose**: Specify the `tail::` CLI parameter.
-- **Responsibility**: Type, defaults, valid values, and command usage for `tail::`.
+- **Purpose**: Specify the `last::` CLI parameter.
+- **Responsibility**: Type, defaults, valid values, and command usage for `last::`.
 - **In Scope**: Value constraints, default behavior, command interactions.
 - **Out of Scope**: Type definitions (→ `type/`), command behavior (→ `command/`).
 
@@ -16,11 +16,13 @@ Number of trailing entries to print for `.tail`, or trailing messages shown in `
 **Constraints:**
 - Must be a non-negative integer
 - `0` means no cap (all entries/messages shown)
-- Error on negative: `"tail must be non-negative"`
+- Error on negative: `"last must be non-negative"`
 
 **Default:** `4` for `.tail`; `10` for `.show` (context-dependent — see Referenced Commands)
 
 **Commands:** `.tail`, `.show`
+
+**Alias:** `l`
 
 **Purpose:** Caps how many trailing conversation entries are printed. Mirrors `limit::`'s "0 = unlimited" convention, applied to entries within a single resolved session rather than sessions within a project. On `.tail`, caps the resolved session's own entries. On `.show`'s project-overview branches (no `session_id::`), caps the messages shown from the project's most-recently-active session, beneath the project summary block; no effect when `session_id::` is given (see [`03_show.md`](../command/03_show.md)).
 
@@ -30,16 +32,19 @@ Number of trailing entries to print for `.tail`, or trailing messages shown in `
 .tail
 
 # Print the last 10 entries
-.tail tail::10
+.tail last::10
+
+# Same, using the alias
+.tail l::10
 
 # Print all entries
-.tail tail::0
+.tail last::0
 
 # Project overview with the default last 10 messages
 .show
 
 # Project overview with the last 25 messages instead
-.show tail::25
+.show last::25
 ```
 
 ### Referenced Type

@@ -31,10 +31,12 @@ mod count;
 mod search;
 mod export;
 mod projects;
+mod projects_overview;
 mod session;
 mod tail;
 mod usage;
 mod rollup;
+mod cost;
 
 pub use storage::parse_project_parameter;
 pub use format::truncate_if_needed;
@@ -49,3 +51,4 @@ pub use session::{ project_path_routine, project_exists_routine, session_dir_rou
 pub use tail::tail_routine;
 pub use usage::usage_routine;
 pub use rollup::rollup_routine;
+pub use cost::cost_routine;

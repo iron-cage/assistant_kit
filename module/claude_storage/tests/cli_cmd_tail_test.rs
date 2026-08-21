@@ -3,23 +3,24 @@
 //! ## Source
 //!
 //! - Command spec: `tests/docs/cli/command/12_tail.md`
-//! - Param spec: `tests/docs/cli/param/25_tail.md`
+//! - Param spec: `tests/docs/cli/param/25_last.md`
 //!
 //! ## Coverage
 //!
 //! - INT-1: No args prints last 4 entries of `default_topic` session (also covers EC-1)
-//! - INT-2: `tail::N` controls entry count (also covers EC-2)
-//! - INT-3: `tail::0` prints all entries (also covers EC-3)
+//! - INT-2: `last::N` controls entry count (also covers EC-2)
+//! - INT-3: `last::0` prints all entries (also covers EC-3)
 //! - INT-4: `topic::` resolves a non-default session
 //! - INT-5: `path::` resolves a different directory's project
 //! - INT-6: Fewer entries than requested prints all available (also covers EC-6)
 //! - INT-7: Exit code 2 when cwd has no project
-//! - INT-8: Negative `tail::` is rejected with exit code 1 (also covers EC-4)
+//! - INT-8: Negative `last::` is rejected with exit code 1 (also covers EC-4)
 //! - INT-9: No args falls back to the most recent session when no `-default_topic` session exists
 //! - INT-10: No args picks the most recently modified session among multiple candidates
 //! - INT-11: No args excludes agent sessions from the most-recent fallback
 //! - EC-5: Empty value rejected
 //! - EC-7: Non-integer value rejected
+//! - EC-8: `l::N` alias produces byte-identical output to `last::N`
 // BUG-002 — real assertions replacing the "didn't hang" cheating tests
 // BUG-488 — INT-9..INT-11 added for the -default_topic fallback fix
 
@@ -54,11 +55,11 @@ fn assert_exit( out : &std::process::Output, code : i32 )
 ///
 /// ## Coverage
 /// Exit 0; last 4 of 6 entries shown (entries 2-5), oldest-first; entries 0-1 absent.
-/// Also covers EC-1 (`tests/docs/cli/param/25_tail.md`) — identical scenario.
+/// Also covers EC-1 (`tests/docs/cli/param/25_last.md`) — identical scenario.
 ///
 /// ## Related Requirements
 /// `tests/docs/cli/command/12_tail.md` — INT-1
-/// `tests/docs/cli/param/25_tail.md` — EC-1
+/// `tests/docs/cli/param/25_last.md` — EC-1
 #[ test ]
 fn int_1_no_args_shows_last_4_of_default_topic()
 {
@@ -86,20 +87,20 @@ fn int_1_no_args_shows_last_4_of_default_topic()
   }
 }
 
-/// INT-2: `tail::N` controls entry count.
+/// INT-2: `last::N` controls entry count.
 ///
 /// ## Purpose
-/// Validates that `tail::2` shows exactly the last 2 entries.
+/// Validates that `last::2` shows exactly the last 2 entries.
 ///
 /// ## Coverage
 /// Exit 0; last 2 of 6 entries shown (entries 4-5); entries 0-3 absent.
-/// Also covers EC-2 (`tests/docs/cli/param/25_tail.md`) — identical scenario.
+/// Also covers EC-2 (`tests/docs/cli/param/25_last.md`) — identical scenario.
 ///
 /// ## Related Requirements
 /// `tests/docs/cli/command/12_tail.md` — INT-2
-/// `tests/docs/cli/param/25_tail.md` — EC-2
+/// `tests/docs/cli/param/25_last.md` — EC-2
 #[ test ]
-fn int_2_tail_n_controls_entry_count()
+fn int_2_last_n_controls_entry_count()
 {
   let root = tempfile::TempDir::new().unwrap();
   let cwd  = tempfile::TempDir::new().unwrap();
@@ -110,7 +111,7 @@ fn int_2_tail_n_controls_entry_count()
     .env( "CLAUDE_STORAGE_ROOT", root.path() )
     .current_dir( cwd.path() )
     .arg( ".tail" )
-    .arg( "tail::2" )
+    .arg( "last::2" )
     .output()
     .unwrap();
 
@@ -126,20 +127,20 @@ fn int_2_tail_n_controls_entry_count()
   }
 }
 
-/// INT-3: `tail::0` prints all entries.
+/// INT-3: `last::0` prints all entries.
 ///
 /// ## Purpose
-/// Validates that `tail::0` disables the cap and shows every entry.
+/// Validates that `last::0` disables the cap and shows every entry.
 ///
 /// ## Coverage
 /// Exit 0; all 6 entries shown, oldest-first.
-/// Also covers EC-3 (`tests/docs/cli/param/25_tail.md`) — identical scenario.
+/// Also covers EC-3 (`tests/docs/cli/param/25_last.md`) — identical scenario.
 ///
 /// ## Related Requirements
 /// `tests/docs/cli/command/12_tail.md` — INT-3
-/// `tests/docs/cli/param/25_tail.md` — EC-3
+/// `tests/docs/cli/param/25_last.md` — EC-3
 #[ test ]
-fn int_3_tail_zero_prints_all_entries()
+fn int_3_last_zero_prints_all_entries()
 {
   let root = tempfile::TempDir::new().unwrap();
   let cwd  = tempfile::TempDir::new().unwrap();
@@ -150,7 +151,7 @@ fn int_3_tail_zero_prints_all_entries()
     .env( "CLAUDE_STORAGE_ROOT", root.path() )
     .current_dir( cwd.path() )
     .arg( ".tail" )
-    .arg( "tail::0" )
+    .arg( "last::0" )
     .output()
     .unwrap();
 
@@ -238,12 +239,12 @@ fn int_5_path_resolves_different_directory_project()
 /// Validates that requesting more entries than exist shows all available, no error.
 ///
 /// ## Coverage
-/// Exit 0; all 3 entries shown when `tail::10` is requested against a 3-entry session.
-/// Also covers EC-6 (`tests/docs/cli/param/25_tail.md`) — same boundary condition.
+/// Exit 0; all 3 entries shown when `last::10` is requested against a 3-entry session.
+/// Also covers EC-6 (`tests/docs/cli/param/25_last.md`) — same boundary condition.
 ///
 /// ## Related Requirements
 /// `tests/docs/cli/command/12_tail.md` — INT-6
-/// `tests/docs/cli/param/25_tail.md` — EC-6
+/// `tests/docs/cli/param/25_last.md` — EC-6
 #[ test ]
 fn int_6_fewer_entries_than_requested_shows_all()
 {
@@ -256,7 +257,7 @@ fn int_6_fewer_entries_than_requested_shows_all()
     .env( "CLAUDE_STORAGE_ROOT", root.path() )
     .current_dir( cwd.path() )
     .arg( ".tail" )
-    .arg( "tail::10" )
+    .arg( "last::10" )
     .output()
     .unwrap();
 
@@ -298,22 +299,22 @@ fn int_7_exit_2_when_no_project_for_cwd()
   assert!( !stderr( &out ).is_empty(), "INT-7: expected non-empty stderr for missing project" );
 }
 
-/// INT-8: Negative `tail::` is rejected with exit code 1.
+/// INT-8: Negative `last::` is rejected with exit code 1.
 ///
 /// ## Purpose
-/// Validates the exact stderr wording and exit code for negative tail counts.
+/// Validates the exact stderr wording and exit code for negative `last::` counts.
 ///
 /// ## Coverage
-/// Exit 1; stderr exactly `"tail must be non-negative"`. Rejection happens before
+/// Exit 1; stderr exactly `"last must be non-negative"`. Rejection happens before
 /// entries (or the project) are loaded — a valid project/session fixture is present
 /// to prove the rejection is not a side effect of a missing project.
-/// Also covers EC-4 (`tests/docs/cli/param/25_tail.md`) — same scenario, stricter assertion.
+/// Also covers EC-4 (`tests/docs/cli/param/25_last.md`) — same scenario, stricter assertion.
 ///
 /// ## Related Requirements
 /// `tests/docs/cli/command/12_tail.md` — INT-8
-/// `tests/docs/cli/param/25_tail.md` — EC-4
+/// `tests/docs/cli/param/25_last.md` — EC-4
 #[ test ]
-fn int_8_negative_tail_rejected_exit_1()
+fn int_8_negative_last_rejected_exit_1()
 {
   let root = tempfile::TempDir::new().unwrap();
   let cwd  = tempfile::TempDir::new().unwrap();
@@ -324,12 +325,12 @@ fn int_8_negative_tail_rejected_exit_1()
     .env( "CLAUDE_STORAGE_ROOT", root.path() )
     .current_dir( cwd.path() )
     .arg( ".tail" )
-    .arg( "tail::-1" )
+    .arg( "last::-1" )
     .output()
     .unwrap();
 
   assert_exit( &out, 1 );
-  assert_eq!( stderr( &out ).trim_end(), "tail must be non-negative" );
+  assert_eq!( stderr( &out ).trim_end(), "last must be non-negative" );
 }
 
 /// INT-9: No args falls back to the most recent session when no `-default_topic`
@@ -445,52 +446,112 @@ fn int_11_no_args_excludes_agent_sessions_from_fallback()
   assert!( !text.contains( "agent session marker" ), "did not expect the agent session's content: {text}" );
 }
 
-/// EC-5: Empty `tail::` value is rejected.
+/// EC-5: Empty `last::` value is rejected.
 ///
 /// ## Purpose
-/// Validates that an empty value for the Integer-typed `tail` parameter is
+/// Validates that an empty value for the Integer-typed `last` parameter is
 /// rejected by the framework's own type parsing, before the routine ever runs.
 ///
 /// ## Coverage
 /// Exit 1; stderr non-empty.
 ///
 /// ## Related Requirements
-/// `tests/docs/cli/param/25_tail.md` — EC-5
+/// `tests/docs/cli/param/25_last.md` — EC-5
 #[ test ]
-fn ec_5_empty_tail_value_rejected()
+fn ec_5_empty_last_value_rejected()
 {
   let out = common::clg_cmd()
     .arg( ".tail" )
-    .arg( "tail::" )
+    .arg( "last::" )
     .output()
     .unwrap();
 
   assert_exit( &out, 1 );
-  assert!( !stderr( &out ).is_empty(), "EC-5: expected non-empty stderr for empty tail value" );
+  assert!( !stderr( &out ).is_empty(), "EC-5: expected non-empty stderr for empty `last::` value" );
 }
 
-/// EC-7: Non-integer `tail::` value is rejected.
+/// EC-7: Non-integer `last::` value is rejected.
 ///
 /// ## Purpose
-/// Validates that a non-integer value for the Integer-typed `tail` parameter is
+/// Validates that a non-integer value for the Integer-typed `last` parameter is
 /// rejected by the framework's own type parsing, before the routine ever runs.
 ///
 /// ## Coverage
 /// Exit 1; stderr non-empty.
 ///
 /// ## Related Requirements
-/// `tests/docs/cli/param/25_tail.md` — EC-7
+/// `tests/docs/cli/param/25_last.md` — EC-7
 #[ test ]
-fn ec_7_non_integer_tail_value_rejected()
+fn ec_7_non_integer_last_value_rejected()
 {
   let out = common::clg_cmd()
     .arg( ".tail" )
-    .arg( "tail::four" )
+    .arg( "last::four" )
     .output()
     .unwrap();
 
   assert_exit( &out, 1 );
-  assert!( !stderr( &out ).is_empty(), "EC-7: expected non-empty stderr for non-integer tail value" );
+  assert!( !stderr( &out ).is_empty(), "EC-7: expected non-empty stderr for non-integer `last::` value" );
+}
+
+/// EC-8: `l::N` alias produces byte-identical output to `last::N`.
+///
+/// ## Purpose
+/// Validates that the `l` alias declared on `last` in `unilang.commands.yaml`
+/// reaches the routine as the canonical `last` argument.
+///
+/// ## Coverage
+/// Exit 0 for both spellings; stdout byte-identical between `l::2` and `last::2`
+/// against the same fixture.
+///
+/// ## Validation Strategy
+/// Byte-equality rather than a second copy of INT-2's entry assertions: unilang
+/// binds an alias to its canonical argument name during semantic analysis
+/// (`semantic/argument_binding.rs` inserts under `arg_def.name` regardless of
+/// which spelling matched), so the routine is structurally incapable of telling
+/// the two apart. Any observable difference means the alias never bound at all —
+/// which byte-equality catches, while re-asserting "entries 4-5 present" would
+/// also pass if `l::2` were silently ignored and the default 4 applied. A
+/// 6-entry fixture makes that failure mode concrete: the default window (4) and
+/// the requested window (2) select different entry sets.
+///
+/// ## Related Requirements
+/// `tests/docs/cli/param/25_last.md` — EC-8
+#[ test ]
+fn ec_8_l_alias_matches_canonical_last()
+{
+  let root = tempfile::TempDir::new().unwrap();
+  let cwd  = tempfile::TempDir::new().unwrap();
+
+  common::write_path_project_session( root.path(), cwd.path(), "-default_topic", 6 );
+
+  let run = | arg : &str |
+  {
+    common::clg_cmd()
+      .env( "CLAUDE_STORAGE_ROOT", root.path() )
+      .current_dir( cwd.path() )
+      .arg( ".tail" )
+      .arg( arg )
+      .output()
+      .unwrap()
+  };
+
+  let aliased   = run( "l::2" );
+  let canonical = run( "last::2" );
+
+  assert_exit( &aliased, 0 );
+  assert_exit( &canonical, 0 );
+
+  assert_eq!(
+    stdout( &aliased ),
+    stdout( &canonical ),
+    "EC-8: `l::2` must produce byte-identical output to `last::2`"
+  );
+
+  // Guard against both spellings silently falling back to the default of 4:
+  // with 6 entries, a 2-window excludes entries 0-3 and a 4-window does not.
+  let text = stdout( &aliased );
+  assert!( !text.contains( "entry 3" ), "EC-8: `l::2` must not fall back to the default 4-entry window; got:\n{text}" );
 }
 
 /// F7: An unresolved `topic::` reports the plain topic, never the internal

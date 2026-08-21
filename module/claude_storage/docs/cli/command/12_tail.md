@@ -9,23 +9,23 @@
 
 Print the last N entries of the current directory's conversation. Resolves cwd to its project and, by default, the most recently modified non-agent session, then prints the last 4 entries — no parameters required. Use this for a quick content refresher without running a lookup command first.
 
-**Parameters:** `tail::`, `path::`, `topic::`
+**Parameters:** `last::`, `path::`, `topic::`
 
 **Exit:** `0` success | `1` argument error | `2` storage read error or project not found
 
 **Syntax:**
 ```bash
 claude_storage .tail
-claude_storage .tail tail::N
+claude_storage .tail last::N
 claude_storage .tail topic::TOPIC
-claude_storage .tail path::PATH tail::N topic::TOPIC
+claude_storage .tail path::PATH last::N topic::TOPIC
 ```
 
 **Parameters:**
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
-| `tail::` | Integer | optional | `4` | Number of trailing entries to print; `0` shows all entries |
+| `last::` (alias `l::`) | Integer | optional | `4` | Number of trailing entries to print; `0` shows all entries |
 | `path::` | [`StoragePath`](../type/10_storage_path.md) | optional | cwd | Directory to resolve the project from |
 | `topic::` | [`TopicName`](../type/12_topic_name.md) | optional | unset | Session topic suffix to resolve; when omitted, falls back to the most recently modified non-agent session |
 
@@ -33,7 +33,7 @@ claude_storage .tail path::PATH tail::N topic::TOPIC
 1. Resolve `path::` (default cwd) to a project ID
 2. Resolve the session for `topic::` if given; otherwise fall back to the most recently modified non-agent session in that project
 3. Load session entries; exit `2` if the project or session is not found
-4. Take the last `tail::` entries (default `4`); `tail::0` takes all entries; fewer available entries than requested yields all available
+4. Take the last `last::` entries (default `4`); `last::0` takes all entries; fewer available entries than requested yields all available
 5. Format and print entries as conversation chat-log content, oldest-first
 
 **Examples:**
@@ -42,21 +42,24 @@ claude_storage .tail path::PATH tail::N topic::TOPIC
 claude_storage .tail
 
 # Print the last 10 entries
-claude_storage .tail tail::10
+claude_storage .tail last::10
+
+# Same, using the `l::` alias
+claude_storage .tail l::10
 
 # Print all entries, oldest-first
-claude_storage .tail tail::0
+claude_storage .tail last::0
 
 # Print the last 4 entries of a non-default topic
 claude_storage .tail topic::work
 
 # Resolve a different directory
-claude_storage .tail path::/home/alice/projects/my-app tail::6
+claude_storage .tail path::/home/alice/projects/my-app last::6
 ```
 
 **Notes:**
 - Zero-parameter invocation always works: cwd → project → most recently modified non-agent session → last 4 entries (agent sidecar sessions are excluded from this fallback even when they are the newest file — BUG-488)
-- `tail::0` prints all entries, oldest-first — the full-history equivalent within the resolved session
+- `last::0` prints all entries, oldest-first — the full-history equivalent within the resolved session
 - Exits `2` when the resolved project or session has no history, matching `.show`'s not-found convention
 - Deliberately minimal parameter surface — does not expose `session_id::`, `project::`, or display-mode toggles; use `.show` for full inspection
 
@@ -72,11 +75,11 @@ claude_storage .tail path::/home/alice/projects/my-app tail::6
 |---|-----------|------|----------|
 | 9 | [`path::`](../param/09_path.md) | [`StoragePath`](../type/10_storage_path.md) | optional |
 | 17 | [`topic::`](../param/17_topic.md) | [`TopicName`](../type/12_topic_name.md) | optional |
-| 25 | [`tail::`](../param/25_tail.md) | Integer | optional |
+| 25 | [`last::`](../param/25_last.md) | Integer | optional |
 
 ### Referenced Command Group
 
-Evaluated against `.status` under the strict [command_group](../command_group/readme.md) identity test (same dispatch function, same parameter set) — does not qualify. `tail_routine()` (`src/cli/tail.rs:32`) has zero cross-calls with `status_routine()` (`src/cli/status.rs:19`). The exit-2 "not found" convention noted in this doc's Notes section is, per `tail_routine()`'s own doc comment (`src/cli/tail.rs:23-24`), matched against `.status` — not `.show` as this doc's own Notes line states; `show_routine()` (`src/cli/show.rs:32`) never calls `std::process::exit(2)` at all, it returns `Err(ErrorData)` for its not-found case (`src/cli/show.rs:173`). `.tail` and `.status` are the only two routines in the crate that independently call `std::process::exit(2)` (`src/cli/status.rs:45`, `src/cli/tail.rs:61,71`) — two separately-written call sites, not a shared function. Parameter sets also differ (`.tail` adds `tail::`/`topic::`; `.status` adds `show_tokens::`). See [`command_group/readme.md`](../command_group/readme.md) Evaluated, Not Qualifying for the full analysis.
+Evaluated against `.status` under the strict [command_group](../command_group/readme.md) identity test (same dispatch function, same parameter set) — does not qualify. `tail_routine()` (`src/cli/tail.rs:32`) has zero cross-calls with `status_routine()` (`src/cli/status.rs:19`). The exit-2 "not found" convention noted in this doc's Notes section is, per `tail_routine()`'s own doc comment (`src/cli/tail.rs:23-24`), matched against `.status` — not `.show` as this doc's own Notes line states; `show_routine()` (`src/cli/show.rs:32`) never calls `std::process::exit(2)` at all, it returns `Err(ErrorData)` for its not-found case (`src/cli/show.rs:173`). `.tail` and `.status` are the only two routines in the crate that independently call `std::process::exit(2)` (`src/cli/status.rs:45`, `src/cli/tail.rs:61,71`) — two separately-written call sites, not a shared function. Parameter sets also differ (`.tail` adds `last::`/`topic::`; `.status` adds `show_tokens::`). See [`command_group/readme.md`](../command_group/readme.md) Evaluated, Not Qualifying for the full analysis.
 
 ### Referenced User Stories
 

@@ -16,7 +16,7 @@
 | # | Command | Role |
 |---|---------|------|
 | 2 | [`.list`](../command/02_list.md) (deprecated) | Historical; superseded by `.projects` below |
-| 3 | [`.show`](../command/03_show.md) | Display full details of a specific session, or a project overview (summary + last `tail::` messages) |
+| 3 | [`.show`](../command/03_show.md) | Display full details of a specific session, or a project overview (summary + last `last::` messages) |
 | 5 | [`.search`](../command/05_search.md) | Full-text search across session content |
 | 7 | [`.projects`](../command/07_projects.md) | Browse all projects and their sessions; view per-project conversation tree |
 
@@ -42,7 +42,7 @@
 | 12 | [`scope::`](../param/12_scope.md) | Discovery scope for search and listing — implemented for both `.projects` and `.search` |
 | 13 | [`session::`](../param/13_session.md) | Filter sessions by ID substring |
 | 14 | [`session_id::`](../param/14_session_id.md) | Identify specific session for detailed view |
-| 25 | [`tail::`](../param/25_tail.md) | Cap trailing messages shown in `.show`'s project overview (default `10`) |
+| 25 | [`last::`](../param/25_last.md) | Cap trailing messages shown in `.show`'s project overview (default `10`) |
 | 29 | [`filter::`](../param/29_filter.md) | Narrow the project set by path substring (replaces `.list`'s `path::`) |
 | 30 | [`detail::`](../param/30_detail.md) | Select terse (`projects`) or full (`sessions`) view — default varies: `sessions` in `.projects`, `projects` in `.show` |
 | 17 | [`topic::`](../param/17_topic.md) | Filter by session topic suffix |

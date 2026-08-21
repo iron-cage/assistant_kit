@@ -10,13 +10,13 @@ use super::format::format_entry_content;
 /// Smart behavior based on parameters (see `docs/cli/command/12_tail.md`):
 /// - No parameters → current directory's project, most recently modified
 ///   non-agent session, last 4 entries
-/// - `tail::N` → last N entries (`tail::0` = all entries, uncapped)
+/// - `last::N` (alias `l::N`) → last N entries (`last::0` = all entries, uncapped)
 /// - `topic::NAME` → session `-NAME` explicitly, instead of the recency fallback
 /// - `path::DIR` → resolve the project from `DIR` instead of the current directory
 ///
 /// # Errors
 ///
-/// Returns error (exit 1) if `tail` is negative, or if the session cannot be located.
+/// Returns error (exit 1) if `last` is negative, or if the session cannot be located.
 ///
 /// # Exit Codes
 ///
@@ -26,21 +26,25 @@ use super::format::format_entry_content;
 ///
 /// # Panics
 ///
-/// Does not panic — the `tail_count` conversion below is only reached after the
+/// Does not panic — the `last_count` conversion below is only reached after the
 /// negative-value branch already returned, so the value is always non-negative.
 #[ allow( clippy::needless_pass_by_value ) ]
 #[ inline ]
 pub fn tail_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   -> core::result::Result< OutputData, ErrorData >
 {
-  // Validate `tail` before any storage access — rejection happens before entries
+  // Validate `last` before any storage access — rejection happens before entries
   // (or even the project) are loaded, per docs/cli/command/12_tail.md INT-8.
-  let tail_count = cmd.get_integer( "tail" ).unwrap_or( 4 );
-  if tail_count < 0
+  //
+  // `get_integer( "last" )` covers the `l::` alias too: unilang binds an alias to
+  // its canonical argument name during semantic analysis, so the routine only ever
+  // reads the canonical name (see unilang `semantic/argument_binding.rs`).
+  let last_count = cmd.get_integer( "last" ).unwrap_or( 4 );
+  if last_count < 0
   {
-    return Err( ErrorData::new( ErrorCode::InternalError, "tail must be non-negative".to_string() ) );
+    return Err( ErrorData::new( ErrorCode::InternalError, "last must be non-negative".to_string() ) );
   }
-  let tail_count = usize::try_from( tail_count ).expect( "tail < 0 rejected above" );
+  let last_count = usize::try_from( last_count ).expect( "last < 0 rejected above" );
 
   let topic = cmd.get_string( "topic" );
 
@@ -102,15 +106,15 @@ pub fn tail_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   let entries = session.entries()
     .map_err( | e | ErrorData::new( ErrorCode::InternalError, format!( "Failed to load entries: {e}" ) ) )?;
 
-  // Entries are stored oldest-first (append-only JSONL); a tail slice therefore
+  // Entries are stored oldest-first (append-only JSONL); a trailing slice therefore
   // needs no reordering — the suffix is already oldest-first.
-  let sliced = if tail_count == 0 || tail_count >= entries.len()
+  let sliced = if last_count == 0 || last_count >= entries.len()
   {
     &entries[ .. ]
   }
   else
   {
-    &entries[ entries.len() - tail_count.. ]
+    &entries[ entries.len() - last_count.. ]
   };
 
   let mut output = String::new();

@@ -33,6 +33,7 @@ fn build_command_registry() -> CommandRegistry
     ".tail"           => cli::tail_routine,
     ".usage"          => cli::usage_routine,
     ".rollup"         => cli::rollup_routine,
+    ".cost"           => cli::cost_routine,
     ".count"          => cli::count_routine,
     ".search"         => cli::search_routine,
     ".export"         => cli::export_routine,
@@ -100,6 +101,16 @@ fn print_usage( binary : &str )
         CommandEntry { name : ".project.exists".to_string(), desc : "Check whether a project has any sessions".to_string() },
       ],
     },
+    // Fix(help-listing-drift)
+    // Root cause: this Vec is a hand-maintained copy of the command list also
+    // declared in `unilang.commands.yaml` and wired in `build_command_registry()`
+    // (below). `.tail`, `.usage`, and `.rollup` were added to both of those but
+    // never added here, so they worked perfectly yet stayed invisible in `clg .`.
+    // Pitfall: adding a routine to `build_command_registry()` does not surface it
+    // in the grouped help listing — this Vec must be updated in the same change.
+    // `tests/help_command_coverage_test.rs` now asserts every command declared in
+    // `unilang.commands.yaml` appears in `clg .` output, so a future drift fails
+    // the test instead of shipping silently.
     CommandGroup
     {
       name    : "Query".to_string(),
@@ -110,6 +121,10 @@ fn print_usage( binary : &str )
         CommandEntry { name : ".count".to_string(),  desc : "Count sessions or entries matching criteria".to_string() },
         CommandEntry { name : ".search".to_string(), desc : "Search conversation content across sessions".to_string() },
         CommandEntry { name : ".export".to_string(), desc : "Export session data in various formats".to_string() },
+        CommandEntry { name : ".tail".to_string(),   desc : "Print last N conversation entries for current directory".to_string() },
+        CommandEntry { name : ".usage".to_string(),  desc : "Per-session usage table \u{2014} turns, tokens, cache, duration, dir".to_string() },
+        CommandEntry { name : ".rollup".to_string(), desc : "Grouped/filtered/sorted/projected token-usage table".to_string() },
+        CommandEntry { name : ".cost".to_string(),   desc : "Per-conversation cost table with agent sessions folded in".to_string() },
       ],
     },
   ];

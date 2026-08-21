@@ -9,13 +9,13 @@ Integration tests for the `.tail` command. Tests verify zero-parameter defaults,
 | ID | Test Name | Category |
 |----|-----------|----------|
 | INT-1 | No args, single session present, prints its last 4 entries | Location-Aware |
-| INT-2 | tail::N controls entry count | Entry Count |
-| INT-3 | tail::0 prints all entries | Entry Count |
+| INT-2 | last::N controls entry count | Entry Count |
+| INT-3 | last::0 prints all entries | Entry Count |
 | INT-4 | topic:: resolves a non-default session | Topic Resolution |
 | INT-5 | path:: resolves a different directory's project | Project Scope |
 | INT-6 | Fewer entries than requested prints all available | Boundary |
 | INT-7 | Exit code 2 when cwd has no project | Exit Codes |
-| INT-8 | Negative tail:: is rejected with exit code 1 | Input Validation |
+| INT-8 | Negative last:: is rejected with exit code 1 | Input Validation |
 | INT-9 | No args falls back to the most recent session when no `-default_topic` session exists | Recency Fallback |
 | INT-10 | No args picks the most recently modified session among multiple candidates | Recency Fallback |
 | INT-11 | No args excludes agent sessions from the most-recent fallback | Recency Fallback |
@@ -51,11 +51,11 @@ CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .tail
 
 ---
 
-### INT-2: tail::N controls entry count
+### INT-2: last::N controls entry count
 
 **Command:**
 ```
-CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .tail tail::2
+CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .tail last::2
 ```
 
 **Expected behavior:**
@@ -66,11 +66,11 @@ CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .tail tail::2
 
 ---
 
-### INT-3: tail::0 prints all entries
+### INT-3: last::0 prints all entries
 
 **Command:**
 ```
-CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .tail tail::0
+CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .tail last::0
 ```
 
 **Expected behavior:**
@@ -115,7 +115,7 @@ CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .tail path::/home/alice/projects/alpha
 
 **Command:**
 ```
-CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .tail tail::10
+CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .tail last::10
 ```
 
 **Expected behavior:**
@@ -141,18 +141,18 @@ CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .tail
 
 ---
 
-### INT-8: Negative tail:: is rejected with exit code 1
+### INT-8: Negative last:: is rejected with exit code 1
 
 **Command:**
 ```
-CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .tail tail::-1
+CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .tail last::-1
 ```
 
 **Expected behavior:**
 - Fixture: same project, `-default_topic` session with 6 known entries (rejection happens before entries are loaded)
-- Error message on stderr: exactly `"tail must be non-negative"`
+- Error message on stderr: exactly `"last must be non-negative"`
 - Exit code: 1
-- **Source:** [command/12_tail.md](../../../../docs/cli/command/12_tail.md), [param/25_tail.md](../../../../docs/cli/param/25_tail.md)
+- **Source:** [command/12_tail.md](../../../../docs/cli/command/12_tail.md), [param/25_last.md](../../../../docs/cli/param/25_last.md)
 
 ---
 

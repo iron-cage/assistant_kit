@@ -18,6 +18,8 @@ Zero-dependency core library for reading Claude Code filesystem storage.
 | `export.rs` | Export session data to multiple formats |
 | `stats.rs` | Aggregate storage statistics |
 | `rollup.rs` | Group/filter/sort/project flexible token-usage rollups |
+| `cost.rs` | Per-model cost-relevant usage scanning and aggregation |
+| `family.rs` | Discover root session plus its agent children |
 | `continuation.rs` | Detect session continuation chains |
 | `session_id.rs` | Typed wrapper for session UUID stem |
 | `scope.rs` | Compute all 6 CLAUDE_* path variables via scope_for() |

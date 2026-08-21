@@ -23,14 +23,14 @@
 //! - T07: bare `.show` → summary block + last 10 messages from most-recently-active session, no per-session list
 //! - T08: `detail::sessions` → T07 output plus the full per-session list appended (byte-for-byte)
 //! - T09: `detail::bogus` → exit 1, canonical validation error
-//! - T10: `tail::25` → last 25 messages instead of the default 10
-//! - T11: `tail::0` → all messages from the most-recently-active session, uncapped
+//! - T10: `last::25` → last 25 messages instead of the default 10
+//! - T11: `last::0` → all messages from the most-recently-active session, uncapped
 //! - T12: `show_entries::1` (bare) → tail window rendered as a raw UUID/type/timestamp list
 //! - T13: multiple sessions of differing recency → tail window comes from the latest-`last_timestamp` session specifically
 //! - T14: `project::X` (no `session_id::`) → identical summary+tail+detail behavior as Case 1
-//! - T15: `session_id::ID` → `detail::`/`tail::`/`show_entries::` are no-ops; session-detail output unchanged
+//! - T15: `session_id::ID` → `detail::`/`last::`/`show_entries::` are no-ops; session-detail output unchanged
 //! - T16: hyphen-encoded storage dir → summary path line shows the decoded human path, never `Project: {:?}`
-//! - T17: `detail::sessions tail::0` combined → both effects apply together
+//! - T17: `detail::sessions last::0` combined → both effects apply together
 //! - T18: project with zero sessions → summary shows zero counts, no tail-window section, no crash
 //! - INT-13: `fields::timestamp` shows exactly one field per entry, no chat-log text
 //! - INT-14: `fields::model,uuid` renders fields in request order
@@ -48,9 +48,10 @@
 //! - EC-13 (fields): user-only field on an `assistant` entry renders as `—`
 //! - EC-2/EC-3 (index): `index::1`/`index::4` boundary positions
 //! - EC-4/EC-5 (index): `index::0`/negative `index::` rejected
-//! - EC-7 (index): `index::` counts within the `tail::`-windowed slice, not the full session
+//! - EC-7 (index): `index::` counts within the `last::`-windowed slice, not the full session
 //! - EC-8 (index): `index::` composed with `show_entries::1` narrows the raw list to one line
 //! - T21: `index::` against a zero-session project rejected (canonical 0-entry error, no crash)
+//! - EC-8 (last): `l::N` alias produces byte-identical output to `last::N`
 
 mod common;
 
@@ -804,7 +805,7 @@ fn t07_bare_show_summary_block_and_tail_window()
   assert!( s.contains( "Last Entry:" ), "T07: summary block must show Last Entry:; got:\n{s}" );
   assert!(
     s.contains( "entry 0" ),
-    "T07: tail window must show session content (4 entries fit within default tail::10); got:\n{s}"
+    "T07: tail window must show session content (4 entries fit within default last::10); got:\n{s}"
   );
   assert!(
     !s.contains( "entries · last:" ),
@@ -902,17 +903,17 @@ fn t09_detail_bogus_rejected_with_canonical_error()
   );
 }
 
-/// T10: `tail::25` → last 25 messages instead of the default 10.
+/// T10: `last::25` → last 25 messages instead of the default 10.
 ///
 /// ## Purpose
-/// Verify `tail::N` overrides the default window size.
+/// Verify `last::N` overrides the default window size.
 ///
 /// ## Coverage
-/// A 31-entry session's `tail::25` window includes entry 6 (window start) and
+/// A 31-entry session's `last::25` window includes entry 6 (window start) and
 /// excludes entry 5 (just outside); exit 0.
 ///
 /// ## Validation Strategy
-/// Write 30 numbered entries + 1 marker (31 total). `tail::25` keeps the last
+/// Write 30 numbered entries + 1 marker (31 total). `last::25` keeps the last
 /// 25 of 31 (indices 6..31). Assert the boundary precisely, not just "some
 /// messages shown."
 ///
@@ -932,24 +933,82 @@ fn t10_tail_25_shows_25_messages()
     .env( "CLAUDE_STORAGE_ROOT", root.path() )
     .current_dir( cwd.path() )
     .arg( ".show" )
-    .arg( "tail::25" )
+    .arg( "last::25" )
     .output()
     .unwrap();
 
   assert_exit( &out, 0 );
   let s = stdout( &out );
-  assert!( s.contains( "entry 6" ), "T10: tail::25 must include entry 6 (25-window boundary); got:\n{s}" );
-  assert!( !s.contains( "entry 5" ), "T10: tail::25 must exclude entry 5 (outside 25-window); got:\n{s}" );
+  assert!( s.contains( "entry 6" ), "T10: last::25 must include entry 6 (25-window boundary); got:\n{s}" );
+  assert!( !s.contains( "entry 5" ), "T10: last::25 must exclude entry 5 (outside 25-window); got:\n{s}" );
   assert!( s.contains( "T10_MARKER" ), "T10: tail window must include the final marker entry; got:\n{s}" );
 }
 
-/// T11: `tail::0` → all messages from the most-recently-active session, uncapped.
+/// EC-8: `l::N` alias produces byte-identical output to `last::N` on `.show`.
 ///
 /// ## Purpose
-/// Verify `tail::0` disables the default 10-message cap entirely.
+/// Verify the `l` alias declared on `last` in `unilang.commands.yaml` reaches
+/// `.show` as the canonical `last` argument, not just `.tail`.
 ///
 /// ## Coverage
-/// A 16-entry session's `tail::0` window includes entry 0 (would be excluded
+/// Exit 0 for both spellings; stdout byte-identical between `l::25` and
+/// `last::25` against T10's 31-entry fixture.
+///
+/// ## Validation Strategy
+/// Byte-equality against the same fixture, plus T10's own 25-window boundary
+/// assertion applied to the aliased run. The boundary check is what makes the
+/// equality meaningful: if `l::25` were silently ignored, both runs would still
+/// differ (one windowed at 25, one at the default 10), and if BOTH somehow fell
+/// back to the default they would be equal but wrong — `entry 6` present /
+/// `entry 5` absent pins the window to exactly 25.
+///
+/// ## Related Requirements
+/// `tests/docs/cli/param/25_last.md` — EC-8
+#[ test ]
+fn ec_8_l_alias_matches_canonical_last()
+{
+  let root = TempDir::new().unwrap();
+  let cwd  = TempDir::new().unwrap();
+
+  common::write_path_project_session_with_last_message(
+    root.path(), cwd.path(), "ec8-session", 30, "EC8_MARKER"
+  );
+
+  let run = | arg : &str |
+  {
+    common::clg_cmd()
+      .env( "CLAUDE_STORAGE_ROOT", root.path() )
+      .current_dir( cwd.path() )
+      .arg( ".show" )
+      .arg( arg )
+      .output()
+      .unwrap()
+  };
+
+  let aliased   = run( "l::25" );
+  let canonical = run( "last::25" );
+
+  assert_exit( &aliased, 0 );
+  assert_exit( &canonical, 0 );
+
+  assert_eq!(
+    stdout( &aliased ),
+    stdout( &canonical ),
+    "EC-8: `.show l::25` must produce byte-identical output to `.show last::25`"
+  );
+
+  let s = stdout( &aliased );
+  assert!( s.contains( "entry 6" ), "EC-8: `l::25` must include entry 6 (25-window boundary); got:\n{s}" );
+  assert!( !s.contains( "entry 5" ), "EC-8: `l::25` must exclude entry 5 (outside 25-window); got:\n{s}" );
+}
+
+/// T11: `last::0` → all messages from the most-recently-active session, uncapped.
+///
+/// ## Purpose
+/// Verify `last::0` disables the default 10-message cap entirely.
+///
+/// ## Coverage
+/// A 16-entry session's `last::0` window includes entry 0 (would be excluded
 /// under the default cap); exit 0.
 ///
 /// ## Related Requirements
@@ -968,7 +1027,7 @@ fn t11_tail_0_shows_all_messages_uncapped()
     .env( "CLAUDE_STORAGE_ROOT", root.path() )
     .current_dir( cwd.path() )
     .arg( ".show" )
-    .arg( "tail::0" )
+    .arg( "last::0" )
     .output()
     .unwrap();
 
@@ -976,9 +1035,9 @@ fn t11_tail_0_shows_all_messages_uncapped()
   let s = stdout( &out );
   assert!(
     s.contains( "entry 0" ),
-    "T11: tail::0 must show all messages including the very first (16 total, default cap would exclude it); got:\n{s}"
+    "T11: last::0 must show all messages including the very first (16 total, default cap would exclude it); got:\n{s}"
   );
-  assert!( s.contains( "T11_MARKER" ), "T11: tail::0 must include the final marker entry; got:\n{s}" );
+  assert!( s.contains( "T11_MARKER" ), "T11: last::0 must include the final marker entry; got:\n{s}" );
 }
 
 /// T12: `show_entries::1` (bare) → tail window rendered as a raw list.
@@ -1114,7 +1173,7 @@ fn t14_project_param_shows_same_overview_as_case_1()
 /// T15: `session_id::ID` → new params are no-ops in session-detail mode.
 ///
 /// ## Purpose
-/// Regression guard — `detail::`/`tail::`/`show_entries::`'s project-overview
+/// Regression guard — `detail::`/`last::`/`show_entries::`'s project-overview
 /// effects must not leak into session-detail output (Cases 2/4, untouched by
 /// this task).
 ///
@@ -1145,7 +1204,7 @@ fn t15_session_detail_unaffected_by_new_params()
     .current_dir( cwd.path() )
     .arg( ".show" )
     .arg( "session_id::t15-session" )
-    .arg( "tail::5" )
+    .arg( "last::5" )
     .arg( "detail::sessions" )
     .arg( "show_entries::0" )
     .output()
@@ -1155,7 +1214,7 @@ fn t15_session_detail_unaffected_by_new_params()
   assert_exit( &with_new_params, 0 );
   assert_eq!(
     without_new_params.stdout, with_new_params.stdout,
-    "T15: tail::/detail::/show_entries:: must be no-ops in session-detail mode (Cases 2/4)"
+    "T15: last::/detail::/show_entries:: must be no-ops in session-detail mode (Cases 2/4)"
   );
 }
 
@@ -1204,11 +1263,11 @@ fn t16_summary_path_shows_decoded_path_not_debug_format()
   );
 }
 
-/// T17: `detail::sessions tail::0` combined → both effects apply together.
+/// T17: `detail::sessions last::0` combined → both effects apply together.
 ///
 /// ## Purpose
 /// Verify the two new parameters compose independently — `detail::sessions`
-/// appends the per-session list AND `tail::0` uncaps the tail window, in the
+/// appends the per-session list AND `last::0` uncaps the tail window, in the
 /// same invocation.
 ///
 /// ## Coverage
@@ -1231,13 +1290,13 @@ fn t17_detail_sessions_and_tail_0_combine()
     .current_dir( cwd.path() )
     .arg( ".show" )
     .arg( "detail::sessions" )
-    .arg( "tail::0" )
+    .arg( "last::0" )
     .output()
     .unwrap();
 
   assert_exit( &out, 0 );
   let s = stdout( &out );
-  assert!( s.contains( "entry 0" ), "T17: tail::0 must show all messages including the first; got:\n{s}" );
+  assert!( s.contains( "entry 0" ), "T17: last::0 must show all messages including the first; got:\n{s}" );
   assert!( s.contains( "T17_MARKER" ), "T17: tail window must include the final marker entry; got:\n{s}" );
   assert!(
     s.contains( "entries · last:" ),
@@ -1687,7 +1746,7 @@ fn fields_duplicate_token_collapses()
 ///
 /// ## Validation Strategy
 /// Write a 6-entry cwd-resolved project. Run bare `.show fields::timestamp
-/// tail::5`. Assert exactly 5 `timestamp ·` lines and the earliest entry's
+/// last::5`. Assert exactly 5 `timestamp ·` lines and the earliest entry's
 /// timestamp (outside the window) is absent.
 ///
 /// ## Related Requirements
@@ -1704,7 +1763,7 @@ fn int_20_fields_applies_to_project_overview_tail_window()
     .current_dir( cwd.path() )
     .arg( ".show" )
     .arg( "fields::timestamp" )
-    .arg( "tail::5" )
+    .arg( "last::5" )
     .output()
     .unwrap();
 
@@ -1713,7 +1772,7 @@ fn int_20_fields_applies_to_project_overview_tail_window()
   assert!( s.contains( "Path:" ) || s.contains( "Sessions:" ), "T10: summary block must still appear; got:\n{s}" );
   assert_eq!( s.matches( "timestamp · " ).count(), 5, "T10: exactly 5 field-projection blocks expected; got:\n{s}" );
   // Entry 0's raw timestamp legitimately appears once, in the summary block's
-  // own "First Entry:" line (full-session bound, unaffected by tail::) — only
+  // own "First Entry:" line (full-session bound, unaffected by last::) — only
   // a field-projection *line* for entry 0 would prove the tail window leaked it.
   assert!(
     !s.contains( "timestamp · 2025-01-01T00:00:00Z" ),
@@ -2019,10 +2078,10 @@ fn int_18_index_out_of_range_rejected()
   assert!( stdout( &out ).is_empty(), "T16: stdout must be empty on error" );
 }
 
-/// T17/EC-7: `index::` counts within the `tail::`-windowed slice, not the full session.
+/// T17/EC-7: `index::` counts within the `last::`-windowed slice, not the full session.
 ///
 /// ## Purpose
-/// Verify `tail::5 index::1` selects the 1st message of the 5-entry tail
+/// Verify `last::5 index::1` selects the 1st message of the 5-entry tail
 /// window — the 16th message of the full 20-entry session — not the 1st
 /// message of the session's complete history.
 ///
@@ -2032,7 +2091,7 @@ fn int_18_index_out_of_range_rejected()
 ///
 /// ## Validation Strategy
 /// Write a 20-entry cwd-resolved project (generic alternating content, 0-based
-/// `entry N` text). Run bare `.show tail::5 index::1`. Assert only `entry 15` appears.
+/// `entry N` text). Run bare `.show last::5 index::1`. Assert only `entry 15` appears.
 ///
 /// ## Related Requirements
 /// `tests/docs/cli/param/33_index.md` EC-7
@@ -2047,7 +2106,7 @@ fn index_counts_within_tail_window_not_full_session()
     .env( "CLAUDE_STORAGE_ROOT", root.path() )
     .current_dir( cwd.path() )
     .arg( ".show" )
-    .arg( "tail::5" )
+    .arg( "last::5" )
     .arg( "index::1" )
     .output()
     .unwrap();

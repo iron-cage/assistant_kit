@@ -287,7 +287,7 @@ CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .show session_id::-default_topic field
 
 **Command:**
 ```
-CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .show fields::timestamp tail::5
+CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .show fields::timestamp last::5
 ```
 
 **Expected behavior:**

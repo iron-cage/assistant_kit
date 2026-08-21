@@ -37,7 +37,7 @@
 | 22_limit.md | Edge case tests for `limit::` parameter | ✅ |
 | 23_show_tokens.md | Edge case tests for `show_tokens::` parameter | ✅ |
 | 24_show_tree.md | Edge case tests for `show_tree::` parameter | ✅ |
-| 25_tail.md | Edge case tests for `tail::` parameter | ✅ |
+| 25_last.md | Edge case tests for `last::` parameter | ✅ |
 | 27_since_days.md | Edge case tests for `since_days::` parameter | ✅ |
 | 28_show_topic.md | Edge case tests for `show_topic::` parameter | ✅ |
 | 29_filter.md | Edge case tests for `filter::` parameter | ✅ |

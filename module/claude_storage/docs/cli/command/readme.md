@@ -4,7 +4,7 @@
 
 - **Purpose**: Document all CLI commands for the `claude_storage` binary.
 - **Responsibility**: Per-command detail pages with full parameter tables and cross-refs.
-- **In Scope**: All 14 registered commands with syntax, parameters, examples, and exit codes (13 active, 1 deprecated).
+- **In Scope**: All 15 registered commands with syntax, parameters, examples, and exit codes (14 active, 1 deprecated).
 - **Out of Scope**: Parameter definitions (→ `param/`), type constraints (→ `type/`), parameter groups (→ `param_group/`).
 
 All commands for the `claude_storage` CLI. Parameters use `param::value` syntax. All commands are read-only except `.session.ensure`, which creates the session working directory on disk.
@@ -29,6 +29,7 @@ See [param/readme.md](../param/readme.md) for full parameter specs and [type/rea
 | `12_tail.md` | .tail — print last N conversation entries for current directory |
 | `13_usage.md` | .usage — per-session usage table (turns/tokens/cache/duration/dir) |
 | `14_rollup.md` | .rollup — grouped/filtered/sorted/projected token-usage table |
+| `15_cost.md` | .cost — per-conversation cost table with agent fold-in |
 
 ### Commands Table
 
@@ -48,5 +49,6 @@ See [param/readme.md](../param/readme.md) for full parameter specs and [type/rea
 | 12 | [`.tail`](12_tail.md) | Print last N conversation entries for current directory | 3 | `claude_storage .tail` |
 | 13 | [`.usage`](13_usage.md) | Per-session usage table — turns, tokens, cache, duration, dir | 4 | `claude_storage .usage` |
 | 14 | [`.rollup`](14_rollup.md) | Grouped/filtered/sorted/projected token-usage table | 9 | `claude_storage .rollup` |
+| 15 | [`.cost`](15_cost.md) | Per-conversation cost table with agent sessions folded in | 3 | `claude_storage .cost` |
 
-**Total:** 14 commands registered (13 active, 1 deprecated — `.list`, superseded by `.projects`)
+**Total:** 15 commands registered (14 active, 1 deprecated — `.list`, superseded by `.projects`)

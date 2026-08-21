@@ -80,7 +80,7 @@
 | cli/param | 22 | Limit | [cli/param/22_limit.md](cli/param/22_limit.md) |
 | cli/param | 23 | Show Tokens | [cli/param/23_show_tokens.md](cli/param/23_show_tokens.md) |
 | cli/param | 24 | Show Tree | [cli/param/24_show_tree.md](cli/param/24_show_tree.md) |
-| cli/param | 25 | Tail | [cli/param/25_tail.md](cli/param/25_tail.md) |
+| cli/param | 25 | Last | [cli/param/25_last.md](cli/param/25_last.md) |
 | cli/param | 26 | Depth | [cli/param/26_depth.md](cli/param/26_depth.md) |
 | cli/param | 27 | Since Days | [cli/param/27_since_days.md](cli/param/27_since_days.md) |
 | cli/param | 28 | Show Topic | [cli/param/28_show_topic.md](cli/param/28_show_topic.md) |

@@ -38,7 +38,7 @@ Path argument. Semantics differ by command — see command sections for exact be
 | `.usage` | StoragePath | cwd | Scope anchor path (implemented) |
 | `.rollup` | StoragePath | cwd | Scope anchor path — identical role to `.usage` (implemented) |
 
-**Purpose:** Provides a path context appropriate to each command. In `.project.exists`, `.project.path`, `.session.dir`, and `.session.ensure`, it is a filesystem path to process. In `.list` (deprecated), it was a substring filter on project paths — that role is now `.projects`' [`filter::`](29_filter.md). In `.status` and `.count`, it overrides the storage root entirely. In `.projects`, `.search`, `.show`, `.export`, [`.usage`](../command/13_usage.md), and [`.rollup`](../command/14_rollup.md), it anchors the scope discovery when paired with `scope::` (all six implemented).
+**Purpose:** Provides a path context appropriate to each command. In `.project.exists`, `.project.path`, `.session.dir`, and `.session.ensure`, it is a filesystem path to process. In `.list` (deprecated), it was a substring filter on project paths — that role is now `.projects`' [`filter::`](29_filter.md). In `.status` and `.count`, it overrides the storage root entirely. In `.projects`, `.search`, `.show`, `.export`, [`.usage`](../command/13_usage.md), and [`.rollup`](../command/14_rollup.md), it anchors the scope discovery when paired with `scope::` (all six implemented). In [`.cost`](../command/15_cost.md), it selects the project whose most recent session becomes the default conversation when `session_ids::` is omitted — a project-selector role like `.tail`'s, not a scope anchor (`.cost` registers no `scope::`).
 
 **Examples:**
 ```bash
@@ -106,6 +106,7 @@ Path argument. Semantics differ by command — see command sections for exact be
 | 12 | [`.tail`](../command/12_tail.md) | cwd | Directory to resolve project from |
 | 13 | [`.usage`](../command/13_usage.md) | cwd | Scope anchor path — implemented |
 | 14 | [`.rollup`](../command/14_rollup.md) | cwd | Scope anchor path — implemented |
+| 15 | [`.cost`](../command/15_cost.md) | cwd | Project selector for default conversation resolution (no `scope::` pairing) |
 
 ### Referenced User Stories
 | # | User Story | Persona |
