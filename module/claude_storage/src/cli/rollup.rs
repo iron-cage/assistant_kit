@@ -25,6 +25,10 @@ use super::scope::{ validate_scope, resolve_scoped_projects, resolve_base_path }
 #[ derive( Debug, Clone, Copy, PartialEq, Eq ) ]
 enum ColumnKey
 {
+  /// 1-indexed row position in the final rendered output (after `sort::`
+  /// and `limit::` have both already applied) — a CLI-synthesized display
+  /// position, not a `RollupRow` field the core engine computes (`Fix(BUG-530)`).
+  Rank,
   /// Group label (session id / project cwd / model / day).
   Group,
   /// Number of distinct contributing sessions.
@@ -37,6 +41,12 @@ enum ColumnKey
   Output,
   /// Combined `cache_read + cache_creation` tokens.
   Cache,
+  /// Tokens written to prompt cache (`RollupRow.cache_creation`) — the split
+  /// counterpart of the combined `Cache` column (`Fix(BUG-530)`).
+  CacheWrite,
+  /// Tokens read from prompt cache (`RollupRow.cache_read`) — the split
+  /// counterpart of the combined `Cache` column (`Fix(BUG-530)`).
+  CacheRead,
   /// Largest single call's context size (the "window size" metric).
   MaxContext,
   /// `input + output + cache`.
@@ -146,10 +156,10 @@ pub fn rollup_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   let rows = build_rollup( &inputs, &params );
 
   let mut output = render_header( &columns );
-  for row in &rows
+  for ( idx, row ) in rows.iter().enumerate()
   {
     output.push( '\n' );
-    output.push_str( &render_row( row, &columns ) );
+    output.push_str( &render_row( row, &columns, idx + 1 ) );
   }
   Ok( OutputData::new( output, "text" ) )
 }
@@ -189,12 +199,33 @@ fn exit_no_project( path_raw : Option< &str > ) -> !
 ///
 /// Deliberately a local copy of `.usage`'s own `collect_rows` shape (same
 /// precedent as `exit_no_project` above).
+///
+/// Deduplicates by `session_id` across the ENTIRE `projects` walk (not
+/// per-project): when the same session physically exists as a top-level
+/// file in more than one project directory (git-worktree-style forked
+/// history), only the richest copy (greatest `stats.total_entries`)
+/// contributes — see `Fix(BUG-528)` below.
 fn collect_inputs(
   projects     : &[ Project ],
   depth_filter : Option< &( usize, std::path::PathBuf ) >,
 ) -> Vec< RollupInput >
 {
-  let mut inputs = Vec::new();
+  // Fix(BUG-528): dedupe by `session_id` across the whole `projects` walk
+  // instead of pushing one `RollupInput` per physical file unconditionally.
+  //
+  // Root cause: the original per-project loop had no cross-project
+  // `session_id` awareness — a session duplicated as a top-level file in N
+  // project directories produced N `RollupInput`s that `accumulate()` (see
+  // `claude_storage_core::rollup`) summed into the same `GroupKey` bucket
+  // regardless of grouping dimension, inflating `sessions`/every token
+  // field and violating `RollupRow.sessions`'s own "distinct sessions" doc
+  // invariant.
+  //
+  // Pitfall: an aggregation engine's "distinct N" invariant is a claim
+  // about its caller's input discipline, not something the engine itself
+  // can enforce — dedup belongs here, at the boundary where physical
+  // duplication is actually knowable, not inside `accumulate()`.
+  let mut by_session : std::collections::HashMap< String, RollupInput > = std::collections::HashMap::new();
   for project in projects
   {
     let Ok( sessions ) = project.sessions() else { continue };
@@ -209,10 +240,16 @@ fn collect_inputs(
         if beyond_depth( &stats, *cap, base ) { continue; }
       }
       let project_label = stats.cwd.clone().unwrap_or_else( || "unknown".to_string() );
-      inputs.push( RollupInput { session_id : session.id().to_string(), project_label, stats } );
+      let session_id = session.id().to_string();
+      let candidate = RollupInput { session_id : session_id.clone(), project_label, stats };
+      match by_session.get( &session_id )
+      {
+        Some( existing ) if existing.stats.total_entries >= candidate.stats.total_entries => {}
+        _ => { by_session.insert( session_id, candidate ); }
+      }
     }
   }
-  inputs
+  by_session.into_values().collect()
 }
 
 /// Is the session's recorded cwd more than `cap` path components from `base`?
@@ -289,19 +326,22 @@ fn parse_column( name : &str ) -> core::result::Result< ColumnKey, ErrorData >
 {
   match name.to_lowercase().as_str()
   {
+    "rank" => Ok( ColumnKey::Rank ),
     "group" => Ok( ColumnKey::Group ),
     "sessions" => Ok( ColumnKey::Sessions ),
     "calls" => Ok( ColumnKey::Calls ),
     "input" => Ok( ColumnKey::Input ),
     "output" => Ok( ColumnKey::Output ),
     "cache" => Ok( ColumnKey::Cache ),
+    "cache_write" => Ok( ColumnKey::CacheWrite ),
+    "cache_read" => Ok( ColumnKey::CacheRead ),
     "max_context" => Ok( ColumnKey::MaxContext ),
     "total" => Ok( ColumnKey::Total ),
     "percent" => Ok( ColumnKey::Percent ),
     "first" => Ok( ColumnKey::First ),
     "last" => Ok( ColumnKey::Last ),
     other => Err( ErrorData::new( ErrorCode::InternalError, format!(
-      "unknown column '{other}' — valid: group|sessions|calls|input|output|cache|max_context|total|percent|first|last"
+      "unknown column '{other}' — valid: rank|group|sessions|calls|input|output|cache|cache_write|cache_read|max_context|total|percent|first|last"
     ) ) ),
   }
 }
@@ -313,8 +353,9 @@ fn column_width( col : ColumnKey ) -> usize
   match col
   {
     ColumnKey::Group => 24,
-    ColumnKey::Sessions | ColumnKey::Input | ColumnKey::Output | ColumnKey::Cache | ColumnKey::MaxContext | ColumnKey::Total => 8,
-    ColumnKey::Calls | ColumnKey::Percent => 6,
+    ColumnKey::Sessions | ColumnKey::Input | ColumnKey::Output | ColumnKey::Cache
+      | ColumnKey::CacheWrite | ColumnKey::CacheRead | ColumnKey::MaxContext | ColumnKey::Total => 8,
+    ColumnKey::Rank | ColumnKey::Calls | ColumnKey::Percent => 6,
     ColumnKey::First | ColumnKey::Last => 20,
   }
 }
@@ -331,12 +372,15 @@ fn column_header( col : ColumnKey ) -> &'static str
 {
   match col
   {
+    ColumnKey::Rank => "Rank",
     ColumnKey::Group => "Group",
     ColumnKey::Sessions => "Sessions",
     ColumnKey::Calls => "Calls",
     ColumnKey::Input => "Input",
     ColumnKey::Output => "Output",
     ColumnKey::Cache => "Cache",
+    ColumnKey::CacheWrite => "CacheW",
+    ColumnKey::CacheRead => "CacheR",
     ColumnKey::MaxContext => "MaxCtx",
     ColumnKey::Total => "Total",
     ColumnKey::Percent => "Pct",
@@ -357,17 +401,23 @@ fn render_header( columns : &[ ColumnKey ] ) -> String
 }
 
 /// Render one data row for the chosen `columns::` projection.
-fn render_row( row : &RollupRow, columns : &[ ColumnKey ] ) -> String
+///
+/// `rank` is the row's 1-indexed position in the final rendered output
+/// (after `sort::` and `limit::` have both already applied by the caller) —
+/// see [`ColumnKey::Rank`].
+fn render_row( row : &RollupRow, columns : &[ ColumnKey ], rank : usize ) -> String
 {
-  columns.iter().map( | &col | render_cell( row, col ) ).collect::< Vec< _ > >().join( "  " )
+  columns.iter().map( | &col | render_cell( row, col, rank ) ).collect::< Vec< _ > >().join( "  " )
 }
 
-/// Render one cell, padded/truncated to its column's fixed width.
-fn render_cell( row : &RollupRow, col : ColumnKey ) -> String
+/// Render one cell, padded/truncated to its column's fixed width. `rank` is
+/// only consulted by [`ColumnKey::Rank`] — see `render_row`'s doc comment.
+fn render_cell( row : &RollupRow, col : ColumnKey, rank : usize ) -> String
 {
   let width = column_width( col );
   match col
   {
+    ColumnKey::Rank => format!( "{rank:>width$}" ),
     ColumnKey::Group =>
     {
       let text = truncate_str( short_id( &row.group ), width );
@@ -378,6 +428,8 @@ fn render_cell( row : &RollupRow, col : ColumnKey ) -> String
     ColumnKey::Input => format!( "{:>width$}", format_tokens( row.input ) ),
     ColumnKey::Output => format!( "{:>width$}", format_tokens( row.output ) ),
     ColumnKey::Cache => format!( "{:>width$}", format_tokens( row.cache() ) ),
+    ColumnKey::CacheWrite => format!( "{:>width$}", format_tokens( row.cache_creation ) ),
+    ColumnKey::CacheRead => format!( "{:>width$}", format_tokens( row.cache_read ) ),
     ColumnKey::MaxContext => format!( "{:>width$}", format_tokens( row.max_context ) ),
     ColumnKey::Total => format!( "{:>width$}", format_tokens( row.total() ) ),
     ColumnKey::Percent => format!( "{:>width$}", format!( "{:.1}%", row.percent ) ),

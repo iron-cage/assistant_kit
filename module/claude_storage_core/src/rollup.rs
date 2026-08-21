@@ -283,6 +283,24 @@ fn accumulate( row : &mut RollupRow, entry : &RollupInput )
   }
 }
 
+// Fix(BUG-529): append a secondary, always-ascending tie-break on `group`
+// after the `order`-adjusted primary comparison.
+//
+// Root cause: rows arrive here from `HashMap::into_values()` (see
+// `build_rollup`), whose iteration order is process-randomized by `HashMap`'s
+// default `RandomState` hasher. `sort_by` is a *stable* sort, but stability
+// only preserves the incoming order for elements that compare `Equal` — it
+// supplies no ordering of its own. Two rows tied on `sort_by`'s metric (e.g.
+// two projects with identical `total()`) therefore surfaced in whatever
+// arbitrary order `HashMap` handed them in, changing on every fresh process
+// invocation despite unchanged underlying data.
+//
+// Pitfall: "stable sort" reads like a determinism guarantee; it only
+// relocates non-determinism from "tie order after sorting" to "arrival order
+// before sorting" — which is exactly as random as its source. Any pipeline
+// that sorts a `Vec` sourced from a `HashMap` needs an explicit secondary key
+// wherever a *total* order (not just a partial order by the primary metric)
+// is actually part of the contract.
 fn sort_rows( rows : &mut [ RollupRow ], sort_by : SortKey, order : SortOrder )
 {
   rows.sort_by( | a, b |
@@ -298,10 +316,15 @@ fn sort_rows( rows : &mut [ RollupRow ], sort_by : SortKey, order : SortOrder )
       SortKey::Sessions => a.sessions.cmp( &b.sessions ),
       SortKey::Group => a.group.cmp( &b.group ),
     };
-    match order
+    let ordered = match order
     {
       SortOrder::Asc => ord,
       SortOrder::Desc => ord.reverse(),
-    }
+    };
+    // Tie-break is always ascending by group, regardless of `order::` — it's
+    // a display-stability concern, not part of the user's requested
+    // direction. Group labels are unique per row, so this always yields a
+    // total order with no further ties possible.
+    ordered.then_with( || a.group.cmp( &b.group ) )
   });
 }

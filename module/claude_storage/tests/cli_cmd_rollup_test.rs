@@ -2,11 +2,13 @@
 //!
 //! ## Coverage
 //!
-//! INT-1 through INT-21 per `tests/docs/cli/command/14_rollup.md` — grouping
+//! INT-1 through INT-28 per `tests/docs/cli/command/14_rollup.md` — grouping
 //! (session/project/model/day), sort/order wiring, column projection
-//! (`columns::`), the `model::` filter's effect on per-row percentages,
-//! `limit::`'s post-aggregation cap semantics, the worked-example byte-exact
-//! table, and exit/validation codes.
+//! (`columns::`, including the `rank`/`cache_write`/`cache_read` columns
+//! added by `Fix(BUG-530)`), the `model::` filter's effect on per-row
+//! percentages, `limit::`'s post-aggregation cap semantics (and its
+//! interaction with `rank`), the worked-example byte-exact table, and
+//! exit/validation codes.
 //!
 //! `scope::`/`depth::` themselves are NOT re-verified exhaustively here —
 //! `.rollup` reuses `validate_scope`/`resolve_scoped_projects`/
@@ -44,6 +46,11 @@
 //! | INT-22 | `int_22_multiple_parameters_compose_correctly_together` | Composition |
 //! | INT-23 | `int_23_model_filter_matching_zero_sessions_exits_0_header_only` | Filtering |
 //! | INT-24 | `int_24_columns_first_last_render_timestamps` | Column Projection |
+//! | INT-25 | `int_25_columns_rank_numbers_rows_by_sorted_position` | Column Projection |
+//! | INT-26 | `int_26_rank_reflects_post_limit_position` | Column Projection |
+//! | INT-27 | `int_27_columns_cache_write_cache_read_split_sums_to_cache` | Column Projection |
+//! | INT-28 | `int_28_columns_default_excludes_rank_and_cache_split` | Column Projection |
+//! | B528 | `bug_528_cross_project_session_id_duplication_inflates_totals` | Bug Reproducer |
 
 mod common;
 
@@ -85,7 +92,13 @@ struct RollupSession< 'a >
   turns : usize,
   input_tokens : u64,
   output_tokens : u64,
-  cache_tokens : u64,
+  /// Tokens read from prompt cache (`cache_read_input_tokens`) — the `cache_read`/
+  /// `CacheR` column. Split from a single `cache_tokens` field (`Fix(BUG-530)`)
+  /// once `columns::` gained separate `cache_write`/`cache_read` projections.
+  cache_read_tokens : u64,
+  /// Tokens written to prompt cache (`cache_creation_input_tokens`) — the
+  /// `cache_write`/`CacheW` column (`Fix(BUG-530)`).
+  cache_write_tokens : u64,
   first_ts : &'a str,
   last_ts : &'a str,
 }
@@ -102,7 +115,8 @@ impl< 'a > RollupSession< 'a >
       turns : 1,
       input_tokens : 10,
       output_tokens : 7,
-      cache_tokens : 0,
+      cache_read_tokens : 0,
+      cache_write_tokens : 0,
       first_ts : "2025-06-01T10:00:00Z",
       last_ts : "2025-06-01T10:00:45Z",
     }
@@ -140,18 +154,18 @@ fn write_rollup_session(
 
   for i in 0..fx.turns
   {
-    let ( input, output, cache ) = if i == 0
+    let ( input, output, cache_read, cache_write ) = if i == 0
     {
-      ( fx.input_tokens, fx.output_tokens, fx.cache_tokens )
+      ( fx.input_tokens, fx.output_tokens, fx.cache_read_tokens, fx.cache_write_tokens )
     }
     else
     {
-      ( 0, 0, 0 )
+      ( 0, 0, 0, 0 )
     };
     let ts = if i + 1 == fx.turns { fx.last_ts } else { fx.first_ts };
     writeln!(
       file,
-      r#"{{"type":"assistant","uuid":"a-{i}","parentUuid":"u-000","timestamp":"{ts}","cwd":"{cwd}","sessionId":"{session_id}","version":"2.0.0","gitBranch":"master","userType":"external","isSidechain":false,"requestId":"req_{i}","message":{{"role":"assistant","model":"{model}","id":"msg_{session_id}_{i}","content":[{{"type":"text","text":"ok"}}],"stop_reason":"end_turn","stop_sequence":null,"usage":{{"input_tokens":{input},"output_tokens":{output},"cache_read_input_tokens":{cache},"cache_creation_input_tokens":0}}}}}}"#,
+      r#"{{"type":"assistant","uuid":"a-{i}","parentUuid":"u-000","timestamp":"{ts}","cwd":"{cwd}","sessionId":"{session_id}","version":"2.0.0","gitBranch":"master","userType":"external","isSidechain":false,"requestId":"req_{i}","message":{{"role":"assistant","model":"{model}","id":"msg_{session_id}_{i}","content":[{{"type":"text","text":"ok"}}],"stop_reason":"end_turn","stop_sequence":null,"usage":{{"input_tokens":{input},"output_tokens":{output},"cache_read_input_tokens":{cache_read},"cache_creation_input_tokens":{cache_write}}}}}}}"#,
       cwd = fx.cwd,
       model = fx.model,
     )
@@ -807,7 +821,8 @@ fn int_13_worked_example_byte_exact()
     turns : 4,
     input_tokens : 500,
     output_tokens : 300,
-    cache_tokens : 200,
+    cache_read_tokens : 200,
+    cache_write_tokens : 0,
     first_ts : "2025-06-01T10:00:00Z",
     last_ts : "2025-06-01T10:00:45Z",
   };
@@ -818,7 +833,8 @@ fn int_13_worked_example_byte_exact()
     turns : 2,
     input_tokens : 100,
     output_tokens : 50,
-    cache_tokens : 50,
+    cache_read_tokens : 50,
+    cache_write_tokens : 0,
     first_ts : "2025-06-01T09:00:00Z",
     last_ts : "2025-06-01T09:00:10Z",
   };
@@ -1000,7 +1016,9 @@ fn int_18_invalid_order_rejected()
 /// argument error naming the bad value, even alongside valid entries.
 ///
 /// ## Coverage
-/// Exit 1; stderr names `bogus`; no table on stdout.
+/// Exit 1; stderr names `bogus` and lists every one of the 14 valid keys,
+/// including the 3 opt-in-only ones (`rank`/`cache_write`/`cache_read`); no
+/// table on stdout.
 ///
 /// ## Validation Strategy
 /// Run `.rollup columns::group,bogus`; assert exit, stderr content, empty
@@ -1014,7 +1032,12 @@ fn int_19_invalid_columns_rejected()
   let out = common::clg_cmd().arg( ".rollup" ).arg( "columns::group,bogus" ).output().unwrap();
 
   assert_exit( &out, 1 );
-  assert!( stderr( &out ).contains( "bogus" ), "INT-19: stderr must name the invalid value; got: {}", stderr( &out ) );
+  let err = stderr( &out );
+  assert!( err.contains( "bogus" ), "INT-19: stderr must name the invalid value; got: {err}" );
+  for key in [ "rank", "cache_write", "cache_read" ]
+  {
+    assert!( err.contains( key ), "INT-19: valid-keys list must include the opt-in column {key} (Fix(BUG-530)); got: {err}" );
+  }
   assert!( stdout( &out ).is_empty(), "INT-19: no table output expected; got:\n{}", stdout( &out ) );
 }
 
@@ -1222,4 +1245,347 @@ fn int_24_columns_first_last_render_timestamps()
   assert!( !header.contains( "Sessions" ) && !header.contains( "Calls" ), "INT-24: unrequested columns must be absent; got:\n{header}" );
   assert!( s.contains( "2025-06-01T10:00:00Z" ), "INT-24: raw first_ts must render verbatim; got:\n{s}" );
   assert!( s.contains( "2025-06-01T10:00:45Z" ), "INT-24: raw last_ts must render verbatim; got:\n{s}" );
+}
+
+/// INT-25: `columns::rank` renders each row's 1-indexed sorted position.
+///
+/// ## Purpose
+/// Validates the new `rank` column (`Fix(BUG-530)`): the CLI-synthesized
+/// display position tracks `sort::`'s actual output order, not input order
+/// or group-label order.
+///
+/// ## Coverage
+/// Three projects with distinct totals (900/600/300); default `sort::total
+/// order::desc` must number them `1`, `2`, `3` top to bottom.
+///
+/// ## Validation Strategy
+/// Three single-session projects with distinct totals; run `group::project
+/// columns::rank,group,total`; split each data line on whitespace and assert
+/// the `Rank` field is `1`/`2`/`3` in row order, paired with the matching
+/// total.
+///
+/// ## Related Requirements
+/// `tests/docs/cli/command/14_rollup.md` — INT-25
+#[ test ]
+fn int_25_columns_rank_numbers_rows_by_sorted_position()
+{
+  let root = TempDir::new().unwrap();
+  let storage_root = root.path().join( ".claude" );
+
+  for ( rel, id, input ) in
+  [
+    ( "r1", "rankaaa1-1111-4abc-9def-000000000001", 900_u64 ),
+    ( "r2", "rankbbb2-2222-4abc-9def-000000000002", 600 ),
+    ( "r3", "rankccc3-3333-4abc-9def-000000000003", 300 ),
+  ]
+  {
+    let p = root.path().join( rel );
+    let mut fx = RollupSession::simple( p.to_str().unwrap() );
+    fx.input_tokens = input;
+    fx.output_tokens = 0;
+    write_rollup_session( &storage_root, &p, id, &fx );
+  }
+
+  let out = common::clg_cmd()
+    .env( "HOME", root.path().to_str().unwrap() )
+    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+    .arg( ".rollup" )
+    .arg( "scope::global" )
+    .arg( "group::project" )
+    .arg( "columns::rank,group,total" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  let lines : Vec< &str > = s.lines().skip( 1 ).collect();
+  assert_eq!( lines.len(), 3, "INT-25: 3 projects must yield 3 rows; got:\n{s}" );
+  for ( expected_rank, expected_total ) in [ ( "1", "900" ), ( "2", "600" ), ( "3", "300" ) ]
+  {
+    let line = lines.iter().find( | l | l.contains( expected_total ) )
+      .unwrap_or_else( || panic!( "INT-25: row with total {expected_total} must exist; got:\n{s}" ) );
+    let fields : Vec< &str > = line.split_whitespace().collect();
+    assert_eq!( fields[ 0 ], expected_rank, "INT-25: row with total {expected_total} must carry rank {expected_rank}; got row:\n{line}" );
+  }
+}
+
+/// INT-26: `rank` reflects final rendered position after `limit::` truncates,
+/// not the row's position in the full unlimited set.
+///
+/// ## Purpose
+/// `limit::` truncation happens inside `build_rollup()` (core engine, per
+/// Algorithm step 8) BEFORE the CLI's render loop ever sees the rows — this
+/// locks in that `rank` is computed from the already-limited slice, never
+/// leaking a pre-limit index. Regression guard: a future refactor that moved
+/// rank computation earlier (e.g. before `limit::` applied) would silently
+/// break this without a dedicated assertion.
+///
+/// ## Coverage
+/// Four projects (totals 900/700/500/300); `limit::2` must keep only the top
+/// 2 by total, numbered `1`/`2` — never `3`/`4`, and the 2 dropped totals
+/// must be entirely absent.
+///
+/// ## Validation Strategy
+/// Four single-session projects with distinct totals; run `group::project
+/// limit::2 columns::rank,total`; assert exactly 2 rows, ranks `1`/`2` paired
+/// with totals `900`/`700`, and totals `500`/`300` absent from stdout.
+///
+/// ## Related Requirements
+/// `tests/docs/cli/command/14_rollup.md` — INT-26
+#[ test ]
+fn int_26_rank_reflects_post_limit_position()
+{
+  let root = TempDir::new().unwrap();
+  let storage_root = root.path().join( ".claude" );
+
+  for ( rel, id, input ) in
+  [
+    ( "l1", "ranklim1-1111-4abc-9def-000000000001", 900_u64 ),
+    ( "l2", "ranklim2-2222-4abc-9def-000000000002", 700 ),
+    ( "l3", "ranklim3-3333-4abc-9def-000000000003", 500 ),
+    ( "l4", "ranklim4-4444-4abc-9def-000000000004", 300 ),
+  ]
+  {
+    let p = root.path().join( rel );
+    let mut fx = RollupSession::simple( p.to_str().unwrap() );
+    fx.input_tokens = input;
+    fx.output_tokens = 0;
+    write_rollup_session( &storage_root, &p, id, &fx );
+  }
+
+  let out = common::clg_cmd()
+    .env( "HOME", root.path().to_str().unwrap() )
+    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+    .arg( ".rollup" )
+    .arg( "scope::global" )
+    .arg( "group::project" )
+    .arg( "limit::2" )
+    .arg( "columns::rank,total" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  assert_eq!( data_rows( &s ), 2, "INT-26: limit::2 must cap to exactly 2 rows; got:\n{s}" );
+  assert!( !s.contains( "500" ), "INT-26: dropped row's total must be entirely absent; got:\n{s}" );
+  assert!( !s.contains( "300" ), "INT-26: dropped row's total must be entirely absent; got:\n{s}" );
+
+  let lines : Vec< &str > = s.lines().skip( 1 ).collect();
+  for ( expected_rank, expected_total ) in [ ( "1", "900" ), ( "2", "700" ) ]
+  {
+    let line = lines.iter().find( | l | l.contains( expected_total ) )
+      .unwrap_or_else( || panic!( "INT-26: surviving row with total {expected_total} must exist; got:\n{s}" ) );
+    let fields : Vec< &str > = line.split_whitespace().collect();
+    assert_eq!( fields[ 0 ], expected_rank, "INT-26: surviving row with total {expected_total} must carry rank {expected_rank}, never a pre-limit index; got row:\n{line}" );
+  }
+}
+
+/// INT-27: `columns::cache_write,cache_read` renders the two components
+/// `cache` already sums, and their sum always equals `cache`.
+///
+/// ## Purpose
+/// Validates the new `cache_write`/`cache_read` columns (`Fix(BUG-530)`):
+/// they must read off `RollupRow.cache_creation`/`RollupRow.cache_read`
+/// respectively (never swapped), and — since `RollupRow.cache()` is defined
+/// as their sum — `cache_write + cache_read` must always equal `cache` for
+/// the same row.
+///
+/// ## Coverage
+/// One session with deliberately distinct, unambiguous
+/// `cache_write`/`cache_read` values (`50`/`200`, summing to `250`).
+///
+/// ## Validation Strategy
+/// One session; run `columns::cache,cache_write,cache_read`; split the single
+/// data row on whitespace and assert each field exactly (`250`/`50`/`200`).
+///
+/// ## Related Requirements
+/// `tests/docs/cli/command/14_rollup.md` — INT-27
+#[ test ]
+fn int_27_columns_cache_write_cache_read_split_sums_to_cache()
+{
+  let root = TempDir::new().unwrap();
+  let storage_root = root.path().join( ".claude" );
+  let project = root.path().join( "cachesplit" );
+  std::fs::create_dir_all( &project ).unwrap();
+
+  let mut fx = RollupSession::simple( project.to_str().unwrap() );
+  fx.cache_write_tokens = 50;
+  fx.cache_read_tokens = 200;
+  write_rollup_session( &storage_root, &project, "cachspl1-1111-4abc-9def-000000000001", &fx );
+
+  let out = common::clg_cmd()
+    .current_dir( &project )
+    .env( "HOME", root.path().to_str().unwrap() )
+    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+    .arg( ".rollup" )
+    .arg( "columns::cache,cache_write,cache_read" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  let header = s.lines().next().unwrap_or_default();
+  assert!( header.contains( "CacheW" ) && header.contains( "CacheR" ), "INT-27: CacheW/CacheR headers must be present; got:\n{header}" );
+
+  let data_line = s.lines().nth( 1 ).unwrap_or_else( || panic!( "INT-27: data row must exist; got:\n{s}" ) );
+  let fields : Vec< &str > = data_line.split_whitespace().collect();
+  assert_eq!( fields.len(), 3, "INT-27: expected exactly 3 projected columns; got: {fields:?}" );
+  assert_eq!( fields[ 0 ], "250", "INT-27: Cache must be cache_write+cache_read=50+200=250; got row:\n{data_line}" );
+  assert_eq!( fields[ 1 ], "50", "INT-27: CacheW must be the cache_write value, never swapped with CacheR; got row:\n{data_line}" );
+  assert_eq!( fields[ 2 ], "200", "INT-27: CacheR must be the cache_read value, never swapped with CacheW; got row:\n{data_line}" );
+}
+
+/// INT-28: Default `columns::` excludes `Rank`/`CacheW`/`CacheR`.
+///
+/// ## Purpose
+/// Mirrors INT-8 for the 3 columns added by `Fix(BUG-530)`: they are opt-in
+/// only and must never appear unless explicitly requested via `columns::`.
+///
+/// ## Coverage
+/// Header contains all 9 default labels (same set INT-8 already checks);
+/// `Rank`/`CacheW`/`CacheR` are absent.
+///
+/// ## Validation Strategy
+/// One session; run bare `.rollup`; assert the 9 default labels and the 3
+/// newly-added opt-in labels are absent.
+///
+/// ## Related Requirements
+/// `tests/docs/cli/command/14_rollup.md` — INT-28
+#[ test ]
+fn int_28_columns_default_excludes_rank_and_cache_split()
+{
+  let root = TempDir::new().unwrap();
+  let storage_root = root.path().join( ".claude" );
+  let project = root.path().join( "defcols2" );
+  std::fs::create_dir_all( &project ).unwrap();
+
+  write_rollup_session(
+    &storage_root, &project, "defc2aa1-1111-4abc-9def-000000000001",
+    &RollupSession::simple( project.to_str().unwrap() ),
+  );
+
+  let out = common::clg_cmd()
+    .current_dir( &project )
+    .env( "HOME", root.path().to_str().unwrap() )
+    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+    .arg( ".rollup" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let header = stdout( &out ).lines().next().unwrap_or_default().to_string();
+  for present in [ "Group", "Sessions", "Calls", "Input", "Output", "Cache", "MaxCtx", "Total", "Pct" ]
+  {
+    assert!( header.contains( present ), "INT-28: default column {present} must appear; got:\n{header}" );
+  }
+  assert!( !header.contains( "Rank" ), "INT-28: Rank must be excluded by default (Fix(BUG-530)); got:\n{header}" );
+  assert!( !header.contains( "CacheW" ), "INT-28: CacheW must be excluded by default (Fix(BUG-530)); got:\n{header}" );
+  assert!( !header.contains( "CacheR" ), "INT-28: CacheR must be excluded by default (Fix(BUG-530)); got:\n{header}" );
+}
+
+/// BUG-528: cross-project `session_id` duplication inflates every grouping
+/// dimension.
+///
+/// ## Root Cause
+/// `collect_inputs()` (`src/cli/rollup.rs`) walks every scope-resolved
+/// `Project` independently, pushing one `RollupInput` per physical session
+/// file with no `session_id`-level deduplication across projects. When the
+/// same `session_id` exists as a top-level file in more than one project
+/// directory (the git-worktree-style pattern: a session's history forked
+/// into a sibling working-tree directory and continued diverging from
+/// there — confirmed occurring in real `~/.claude` data), each physical copy
+/// becomes its own `RollupInput`, and `accumulate()` sums every one of them
+/// into the same `GroupKey` bucket, inflating `sessions`/`calls`/every token
+/// field by the duplicate-file count.
+///
+/// ## Why Not Caught
+/// Every prior `.rollup` fixture used `session_ids` unique across the whole
+/// test — none constructed the specific shape this bug requires (identical
+/// `session_id` under two different `project_path`s). `scope::local` (the
+/// CLI's own default) is structurally immune since one project directory
+/// can never contain the same `session_id` twice, so casual single-project
+/// testing never exercises this path at all.
+///
+/// ## Fix Applied
+/// `collect_inputs()` now deduplicates by `session_id` across the entire
+/// `projects` walk, keeping — for any `session_id` seen more than once —
+/// the copy with the greatest `stats.total_entries` (the richer/more-
+/// complete transcript) and discarding the rest, before any `RollupInput`
+/// reaches `build_rollup()`.
+///
+/// ## Prevention
+/// A wide-scope aggregation command needs at least one fixture with a
+/// deliberately duplicated identity across its scope units — this test is
+/// that fixture, pinned permanently as a regression guard.
+///
+/// ## Pitfall
+/// An aggregation engine's own "distinct N" invariant (`RollupRow.sessions`'
+/// doc comment) is a claim about its *caller's* input discipline, not
+/// something the aggregation function itself can enforce — the fix belongs
+/// at the boundary where physical duplication is actually knowable
+/// (`collect_inputs()`), not inside `accumulate()`, which has no way to
+/// detect it.
+///
+/// ## Coverage
+/// Two projects, `proj-a`/`proj-b`, each holding a session file with the
+/// **identical** `session_id` but different content (`proj-a`: 1 turn,
+/// 100/50 input/output; `proj-b`: 3 turns, 300/150 input/output on the first
+/// turn — the richer copy). Default `group::session scope::global` must
+/// show exactly 1 row, `Sessions: 1` (not 2), and the kept totals must be
+/// `proj-b`'s own numbers (300/150/450) — never the summed 400/200/600.
+///
+/// ## Validation Strategy
+/// Write the same `session_id` under two distinct `project_path`s with
+/// deliberately different `total_entries`; run bare `.rollup scope::global
+/// columns::group,sessions,input,output,total`; split the single data row
+/// on whitespace and assert each field exactly.
+// test_kind: bug_reproducer(BUG-528)
+#[ test ]
+fn bug_528_cross_project_session_id_duplication_inflates_totals()
+{
+  let root = TempDir::new().unwrap();
+  let storage_root = root.path().join( ".claude" );
+  let proj_a = root.path().join( "proj-a" );
+  let proj_b = root.path().join( "proj-b" );
+  std::fs::create_dir_all( &proj_a ).unwrap();
+  std::fs::create_dir_all( &proj_b ).unwrap();
+
+  let dup_id = "dupeaaa1-1111-4abc-9def-000000000001";
+
+  let mut fx_a = RollupSession::simple( proj_a.to_str().unwrap() );
+  fx_a.turns = 1;
+  fx_a.input_tokens = 100;
+  fx_a.output_tokens = 50;
+
+  let mut fx_b = RollupSession::simple( proj_b.to_str().unwrap() );
+  fx_b.turns = 3;
+  fx_b.input_tokens = 300;
+  fx_b.output_tokens = 150;
+
+  // Same session_id, two distinct project directories — the git-worktree-
+  // style forked-history shape confirmed in real production data.
+  write_rollup_session( &storage_root, &proj_a, dup_id, &fx_a );
+  write_rollup_session( &storage_root, &proj_b, dup_id, &fx_b );
+
+  let out = common::clg_cmd()
+    .env( "HOME", root.path().to_str().unwrap() )
+    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+    .arg( ".rollup" )
+    .arg( "scope::global" )
+    .arg( "columns::group,sessions,input,output,total" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  assert_eq!( data_rows( &s ), 1, "BUG-528: one physical session duplicated across 2 projects must still be exactly 1 row; got:\n{s}" );
+
+  let data_line = s.lines().find( | l | l.contains( "dupeaaa1" ) )
+    .unwrap_or_else( || panic!( "BUG-528: data row must exist; got:\n{s}" ) );
+  let fields : Vec< &str > = data_line.split_whitespace().collect();
+  assert_eq!( fields.len(), 5, "BUG-528: expected exactly 5 projected columns; got: {fields:?}" );
+  assert_eq!( fields[ 1 ], "1", "BUG-528: Sessions must be 1 (distinct session), not 2 (physical-file count); got row:\n{data_line}" );
+  assert_eq!( fields[ 2 ], "300", "BUG-528: Input must be proj-b's own 300, never the summed 400; got row:\n{data_line}" );
+  assert_eq!( fields[ 3 ], "150", "BUG-528: Output must be proj-b's own 150, never the summed 200; got row:\n{data_line}" );
+  assert_eq!( fields[ 4 ], "450", "BUG-528: Total must be 300+150=450, never the summed 400+200=600; got row:\n{data_line}" );
 }

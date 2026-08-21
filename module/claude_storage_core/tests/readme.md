@@ -5,13 +5,15 @@
 The claude_storage_core test suite covers the core storage library: JSON parsing, path
 encoding/decoding, session filtering, content search, export, and token-usage rollup. The suite
 is split between integration tests that exercise real `~/.claude/` storage and unit tests that
-run fully in-process. Eleven of the twenty files are bug reproducers — each documents a parse,
+run fully in-process. Twelve of the twenty-one files are bug reproducers — each documents a parse,
 encoding, or storage defect found in production data with 5-section root-cause documentation.
 `status_global_stats_fast_bug.rs` covers both issue-015 (performance) and issue-018 (agent
 session discovery for Claude Code v2.x format) with corner case tests for subagents/ traversal.
 `rollup_test.rs` is pure-logic unit tests (no bug reproducer); `session_stats_dedup_bug.rs`
 (issue-038) is the bug reproducer for the `message.id` dedup fix that both `rollup_test.rs`
-and `.rollup`/`.usage`/`.status` depend on.
+and `.rollup`/`.usage`/`.status` depend on. `rollup_sort_tiebreak_nondeterminism_bug.rs`
+(BUG-529) is the bug reproducer for `sort_rows()`'s missing tie-break key, which `rollup_test.rs`
+never exercised since every one of its sort tests deliberately uses distinct, non-tied values.
 
 ## Test Structure
 
@@ -29,6 +31,7 @@ tests/
 ├── json_surrogate_pair_bug.rs             # Bug Reproducer (issue-001): UTF-16 surrogate pairs
 ├── path_decoding_hyphen_component_bug.rs  # Bug reproducer: hyphen-prefixed component decoding
 ├── path_encoding_double_slash_bug.rs      # Bug reproducer: double-slash from lossy encoding
+├── rollup_sort_tiebreak_nondeterminism_bug.rs # Bug Reproducer (BUG-529): sort_rows() had no tie-break, order varied run-to-run
 ├── rollup_test.rs                         # Unit tests for rollup::build_rollup() — grouping, filtering, sorting, limit
 ├── search.rs                              # Content search integration tests
 ├── session_stats_dedup_bug.rs             # Bug Reproducer (issue-038): stats() double-counted tokens/turns per JSONL line
@@ -55,6 +58,7 @@ tests/
 | `json_surrogate_pair_bug.rs` | Reproduce and verify fix for UTF-16 surrogate pair parsing |
 | `path_decoding_hyphen_component_bug.rs` | Reproduce and verify fix for hyphen component decode |
 | `path_encoding_double_slash_bug.rs` | Reproduce and verify fix for lossy path encoding |
+| `rollup_sort_tiebreak_nondeterminism_bug.rs` | Reproduce and verify fix for `sort_rows()`'s missing tie-break key (BUG-529) |
 | `rollup_test.rs` | Unit tests for `rollup::build_rollup()`: grouping, model filtering, percent computation, sorting, `limit` |
 | `search.rs` | Content search across sessions integration tests |
 | `session_stats_dedup_bug.rs` | Reproduce and verify fix for `stats()` per-line (not per-`message.id`) double-counting |

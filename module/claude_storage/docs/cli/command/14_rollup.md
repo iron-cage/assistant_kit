@@ -63,6 +63,11 @@ claude_storage .rollup scope::global group::day limit::10
 | `sessions` | Number of distinct contributing sessions |
 | `group` | Lexicographic by the row's group label |
 
+Rows exactly tied on `sort::`'s chosen metric break the tie deterministically by ascending group
+label, regardless of `order::` — this guarantees byte-identical output across repeated invocations
+against unchanged data (`Fix(BUG-529)`; previously ties fell back to `HashMap` iteration order,
+which is process-randomized and produced a different row order on every run).
+
 **`order::` semantics** (reuses `claude_storage_core::SortOrder`):
 
 | Value | Direction |
@@ -72,26 +77,31 @@ claude_storage .rollup scope::global group::day limit::10
 
 **`model::` semantics:** Case-insensitive substring match against each session's recorded `stats.model` (the same `StringMatcher` mechanism [`.projects`](07_projects.md)'s `filter::` uses against paths — see `claude_storage_core/src/filter.rs` — but applied to a different field; no dedicated type doc, matching the [`.usage`](13_usage.md)-precedent of not creating a type doc for a single-command constrained value; see [`37_model.md`](../param/37_model.md)). Applied at session granularity **before** grouping — a non-matching session is dropped entirely, including from the `percent` denominator (see Notes).
 
-**Column Projection (`columns::`):** A comma-separated, order-preserving list, e.g. `columns::group,total,calls`. Every column is always computed internally regardless of projection — `columns::` is a pure display concern, matching [`.usage`](13_usage.md)'s own core/CLI split (the core engine always populates every `RollupRow` field; only the CLI layer decides which to print).
+**Column Projection (`columns::`):** A comma-separated, order-preserving list, e.g. `columns::group,total,calls`. Every column but `rank` is always computed internally regardless of projection — `columns::` is a pure display concern, matching [`.usage`](13_usage.md)'s own core/CLI split (the core engine always populates every `RollupRow` field; only the CLI layer decides which to print). `rank` is the one exception: a display-only position the CLI synthesizes from each row's place in the final output, not a `RollupRow` field (see the table's note below).
 
 | Key | Header | In default set? |
 |-----|--------|:---:|
+| `rank` | `Rank` | — |
 | `group` | `Group` | ✓ |
 | `sessions` | `Sessions` | ✓ |
 | `calls` | `Calls` | ✓ |
 | `input` | `Input` | ✓ |
 | `output` | `Output` | ✓ |
 | `cache` | `Cache` | ✓ |
+| `cache_write` | `CacheW` | — |
+| `cache_read` | `CacheR` | — |
 | `max_context` | `MaxCtx` | ✓ |
 | `total` | `Total` | ✓ |
 | `percent` | `Pct` | ✓ |
 | `first` | `First` | — |
 | `last` | `Last` | — |
 
-Default (`columns::` omitted): `group,sessions,calls,input,output,cache,max_context,total,percent` — every count/token metric, including `max_context` (the "window size" metric this command exists partly to surface), but not the verbose `first`/`last` timestamps.
+Default (`columns::` omitted): `group,sessions,calls,input,output,cache,max_context,total,percent` — every count/token metric, including `max_context` (the "window size" metric this command exists partly to surface), but not the verbose `first`/`last` timestamps, nor the opt-in `rank`/`cache_write`/`cache_read` columns (see Notes).
+
+`rank` and the `cache_write`/`cache_read` split are opt-in only (`Fix(BUG-530)`) — request them explicitly, e.g. `columns::rank,group,total,cache_write,cache_read`. `rank` is a display-only position, synthesized by the CLI after `sort::`/`order::`/`limit::` have all already applied — it has no `RollupRow` field and cannot be used as a `sort::` value (same precedent as `first`/`last`, which are likewise column-only). `cache_write`/`cache_read` are simply the two components `cache` already sums (`RollupRow.cache_creation`/`RollupRow.cache_read`, both computed by the core engine regardless of projection) exposed as separate columns — `cache_write + cache_read` always equals `cache`.
 
 **Algorithm (9 steps):**
-1. Validate parameters, in order — `depth::` (default `3`, non-negative), `limit::` (default `0`, non-negative), `group::` (default `session`), `sort::` (default `total`), `order::` (default `desc`), `columns::` (default: the 9-column set above), `model::` (no validation — any string), `scope::` (default `local`), `path::` (default cwd) — identical parsing/error-message contract to [`.usage`](13_usage.md) for the four shared parameters
+1. Validate parameters, in order — `depth::` (default `3`, non-negative), `limit::` (default `0`, non-negative), `group::` (default `session`), `sort::` (default `total`), `order::` (default `desc`), `columns::` (default: the 9-column set above, out of 14 valid keys total), `model::` (no validation — any string), `scope::` (default `local`), `path::` (default cwd) — identical parsing/error-message contract to [`.usage`](13_usage.md) for the four shared parameters
 2. Resolve candidate projects — reuses `resolve_scoped_projects()` unchanged from [`.usage`](13_usage.md); `scope::local` with zero resolved projects exits 2 immediately (before any further work), matching [`.usage`](13_usage.md)'s own bypass
 3. Apply the depth filter (`under`/`relevant`/`around` only) — reuses `beyond_depth()`/`component_distance()` unchanged from [`.usage`](13_usage.md); ignored for `local`/`global`
 4. Walk every candidate project's non-agent sessions into `RollupInput`s — one per session, carrying `session_id`, `project_label` (the session's own recorded `cwd`, falling back to `"unknown"` — never the lossy-encoded storage directory name), and its already-deduplicated `SessionStats`
@@ -120,6 +130,9 @@ claude_storage .rollup model::opus columns::group,total,percent
 
 # Top 10 rows, whole storage
 claude_storage .rollup scope::global group::project limit::10
+
+# Leaderboard: rank, split cache read/write, project — top 5 by total tokens
+claude_storage .rollup group::project limit::5 columns::rank,total,percent,input,output,cache_write,cache_read,calls,group
 ```
 
 **Output** (default columns, `group::session`):
@@ -133,6 +146,8 @@ bbbbbbbb                         1       2       100        50        50       1
 - `Input`/`Output`/`Cache`/`MaxCtx`/`Total`: `< 1000` shown as a bare integer; `1000` to `999999` shown as `N.Nk`; `≥ 1000000` shown as `N.NM` (one decimal place) — identical formatting rule to [`.usage`](13_usage.md)'s own `In`/`Out`/`Cache` columns
 - `Pct`: one decimal place, e.g. `83.3%`
 - `First`/`Last` (when projected via `columns::`): raw ISO-8601 timestamp, or `-` when the row has none
+- `Rank` (when projected via `columns::`): the row's 1-indexed position among the rows actually printed — always `1, 2, 3, …` top to bottom regardless of which `sort::`/`order::` produced that order, and reflecting `limit::`'s truncation (a `limit::5` view's ranks run `1`–`5`, never referencing rows cut by the limit)
+- `CacheW`/`CacheR` (when projected via `columns::`): `cache_write`/`cache_read`, formatted identically to `Cache`; always sum to `Cache`'s value for the same row
 
 **Notes:**
 - **`limit::`'s semantics differ from [`.usage`](13_usage.md)'s.** There, the cap is flat across raw sessions (no grouping exists to cap within). Here, `limit::` caps the **grouped, sorted row count** — a third distinct semantic alongside [`.projects`](07_projects.md)'s per-project cap and `.usage`'s flat-per-session cap (see [`22_limit.md`](../param/22_limit.md)). `group::project limit::10` shows the 10 highest-total projects, not the 10 most recent sessions.

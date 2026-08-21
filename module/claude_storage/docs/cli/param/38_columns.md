@@ -7,7 +7,7 @@
 - **In Scope**: Value constraints, default behavior, command interactions.
 - **Out of Scope**: Type definitions (→ `type/`), command behavior (→ `command/`).
 
-Column projection for [`.rollup`](../command/14_rollup.md) — which of the 11 always-computed columns to print, and in what order.
+Column projection for [`.rollup`](../command/14_rollup.md) — which of 14 columns to print, and in what order. 13 map to a `RollupRow` field the core engine always computes regardless of projection; `rank` is the one exception, synthesized by the CLI from each printed row's final position instead of read off `RollupRow` (see Constraints).
 
 **Type:** String (comma-separated list)
 
@@ -15,28 +15,33 @@ Column projection for [`.rollup`](../command/14_rollup.md) — which of the 11 a
 
 **Constraints:**
 - Comma-separated list of column keys, e.g. `columns::group,total,calls`; whitespace around each entry is trimmed
-- Valid keys: `group`, `sessions`, `calls`, `input`, `output`, `cache`, `max_context`, `total`, `percent`, `first`, `last`
+- Valid keys: `rank`, `group`, `sessions`, `calls`, `input`, `output`, `cache`, `cache_write`, `cache_read`, `max_context`, `total`, `percent`, `first`, `last`
+- `rank` is display-only (each printed row's 1-indexed position after `sort::`/`order::`/`limit::` have all applied) and, like `first`/`last`, has no matching `sort::` value — it cannot itself be sorted on
+- `cache_write`/`cache_read` are `cache`'s two components (`RollupRow.cache_creation`/`RollupRow.cache_read`) exposed separately; `cache_write + cache_read` always equals `cache` for the same row
 - Case-insensitive on input
 - Order-preserving — columns print left-to-right in the order given, not a fixed canonical order
 - Duplicates are not rejected but are not deduplicated either — repeating a key prints it twice
-- Error on unknown key: `"unknown column '{value}' — valid: group|sessions|calls|input|output|cache|max_context|total|percent|first|last"`
+- Error on unknown key: `"unknown column '{value}' — valid: rank|group|sessions|calls|input|output|cache|cache_write|cache_read|max_context|total|percent|first|last"`
 
-**Default:** `group,sessions,calls,input,output,cache,max_context,total,percent` (9 of the 11 keys — omits `first`/`last`)
+**Default:** `group,sessions,calls,input,output,cache,max_context,total,percent` (9 of the 14 keys — omits `rank`, `cache_write`, `cache_read`, `first`, `last`, all opt-in only)
 
 **Commands:** [`.rollup`](../command/14_rollup.md) — the only command registering this parameter.
 
-**Purpose:** Every column is always computed internally by `claude_storage_core::rollup::build_rollup()` regardless of projection — `columns::` is a pure display concern, matching [`.usage`](../command/13_usage.md)'s own core/CLI split (that command's core aggregation always populates every field; only the CLI layer's `render_row`/`format_tokens` decide what's printed). The default set favors count/token metrics (including `max_context`, the "window size" metric) and omits the two verbose ISO-8601 timestamp columns (`first`/`last`) that only matter for time-range auditing. A narrower explicit projection (e.g. `columns::group,total`) is useful for compact scripted output; a wider one (adding `first,last`) surfaces the timestamp span each row spans. Single-command, constrained-value parameter — no dedicated type doc, matching [`depth::`](26_depth.md)'s and [`limit::`](22_limit.md)'s own precedent; the 11-key constraint set is documented inline in the table below rather than via a `type/` file, since (unlike [`ScopeValue`](../type/07_scope_value.md)) no other command shares or could plausibly share this exact key set.
+**Purpose:** Every column is always computed internally by `claude_storage_core::rollup::build_rollup()` regardless of projection — `columns::` is a pure display concern, matching [`.usage`](../command/13_usage.md)'s own core/CLI split (that command's core aggregation always populates every field; only the CLI layer's `render_row`/`format_tokens` decide what's printed). The default set favors count/token metrics (including `max_context`, the "window size" metric) and omits the two verbose ISO-8601 timestamp columns (`first`/`last`) that only matter for time-range auditing. A narrower explicit projection (e.g. `columns::group,total`) is useful for compact scripted output; a wider one (adding `first,last`) surfaces the timestamp span each row spans. Single-command, constrained-value parameter — no dedicated type doc, matching [`depth::`](26_depth.md)'s and [`limit::`](22_limit.md)'s own precedent; the 14-key constraint set is documented inline in the table below rather than via a `type/` file, since (unlike [`ScopeValue`](../type/07_scope_value.md)) no other command shares or could plausibly share this exact key set.
 
 **Column keys:**
 
 | Key | Header | In default set? |
 |-----|--------|:---:|
+| `rank` | `Rank` | — |
 | `group` | `Group` | ✓ |
 | `sessions` | `Sessions` | ✓ |
 | `calls` | `Calls` | ✓ |
 | `input` | `Input` | ✓ |
 | `output` | `Output` | ✓ |
 | `cache` | `Cache` | ✓ |
+| `cache_write` | `CacheW` | — |
+| `cache_read` | `CacheR` | — |
 | `max_context` | `MaxCtx` | ✓ |
 | `total` | `Total` | ✓ |
 | `percent` | `Pct` | ✓ |
@@ -45,7 +50,7 @@ Column projection for [`.rollup`](../command/14_rollup.md) — which of the 11 a
 
 **Examples:**
 ```bash
-# Default: 9 columns, First/Last omitted
+# Default: 9 columns, Rank/CacheW/CacheR/First/Last omitted
 .rollup
 
 # Compact cost-only view
@@ -57,20 +62,23 @@ Column projection for [`.rollup`](../command/14_rollup.md) — which of the 11 a
 # Reordered — Total before Group
 .rollup columns::total,group
 
+# Leaderboard: rank column plus split cache read/write
+.rollup columns::rank,group,total,cache_write,cache_read
+
 # Invalid key
 .rollup columns::group,bogus
-# "unknown column 'bogus' — valid: group|sessions|calls|input|output|cache|max_context|total|percent|first|last"
+# "unknown column 'bogus' — valid: rank|group|sessions|calls|input|output|cache|cache_write|cache_read|max_context|total|percent|first|last"
 ```
 
 ### Referenced Type
 | Type | Kind | Fundamental | Key Constraint |
 |------|------|-------------|----------------|
-| String (comma list) | Base type | String | 11 valid keys, order-preserving, case-insensitive |
+| String (comma list) | Base type | String | 14 valid keys, order-preserving, case-insensitive |
 
 ### Referenced Commands
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
-| 14 | [`.rollup`](../command/14_rollup.md) | 9-column default (no `first`/`last`) | Pure display projection — every column is always computed |
+| 14 | [`.rollup`](../command/14_rollup.md) | 9-column default (no `rank`/`cache_write`/`cache_read`/`first`/`last`) | Pure display projection — every column but `rank` is always computed |
 
 ### Referenced User Stories
 | # | User Story | Persona |
