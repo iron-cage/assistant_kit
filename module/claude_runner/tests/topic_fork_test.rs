@@ -26,6 +26,7 @@
 //! | F15 | `topics --file NAME` output == core `topic_session_file` (parity contract) | Parity |
 //! | F16 | `topics --file` guards: slash name, missing value, `--path` exclusivity | Guards |
 //! | F17 | `topics` listing shows fork (registry) and dir (scan) rows with MODE column | Listing |
+//! | F18 | auto-naming skips a candidate whose fork session file already exists | Auto-naming |
 //!
 //! ## Isolation contract
 //!
@@ -466,7 +467,7 @@ fn fork_f14_no_message_print_gating_suppresses_fork()
 
 /// F15: `topics --file NAME` == core `topic_session_file` (parity contract).
 ///
-/// The claude_storage side pins `.session.path path::<base> topic::NAME` to the
+/// The `claude_storage` side pins `.session.path path::<base> topic::NAME` to the
 /// same core value (SP-6 in `cli_cmd_session_path_test.rs`), so the two CLIs
 /// are byte-identical by transitivity.
 #[ test ]
@@ -551,8 +552,50 @@ fn fork_f17_topics_listing_shows_fork_and_dir_rows()
   assert_eq!( exit_code( &out ), 0, "stderr: {}", stderr_str( &out ) );
   let s = stdout_str( &out );
   assert!( s.contains( "MODE" ), "header must show the MODE column; got:\n{s}" );
-  let fork_row = s.lines().find( | l | l.starts_with( "x" ) ).unwrap_or_else( || panic!( "no row for fork topic x; got:\n{s}" ) );
+  let fork_row = s.lines().find( | l | l.starts_with( 'x' ) ).unwrap_or_else( || panic!( "no row for fork topic x; got:\n{s}" ) );
   assert!( fork_row.contains( "fork" ), "topic x must list as fork; got: {fork_row}" );
-  let dir_row = s.lines().find( | l | l.starts_with( "y" ) ).unwrap_or_else( || panic!( "no row for dir topic y; got:\n{s}" ) );
+  let dir_row = s.lines().find( | l | l.starts_with( 'y' ) ).unwrap_or_else( || panic!( "no row for dir topic y; got:\n{s}" ) );
   assert!( dir_row.contains( "dir" ), "topic y must list as dir; got: {dir_row}" );
+}
+
+// ─── F18 ────────────────────────────────────────────────────────────────────
+
+/// F18: auto-naming skips a candidate whose FORK session file already exists.
+///
+/// Fork topics create no `-<name>` directory, so `name_is_taken`'s first two
+/// probes (directory existence, dir-mode session storage) are blind to them —
+/// only the third probe (the candidate's own `UUIDv5` session file, non-empty)
+/// detects the collision. Without it, `clr topic "orphan topic"` after
+/// `clr --topic orphan-topic` would silently resume the existing fork topic's
+/// conversation instead of starting a fresh one.
+///
+/// Companion to `topic_command_test.rs` T02 (directory-existence signal) and
+/// T10/T11 (dir-mode-storage signal): this pins the fork-session signal.
+#[ test ]
+fn fork_f18_auto_naming_skips_existing_fork_topic()
+{
+  let claude_home = TempDir::new().unwrap();
+  let ( _project, canon, taken_uuid ) = fork_fixture( "orphan-topic" );
+  // Seed the taken candidate's fork session file in the BASE's own storage —
+  // exactly where a real `clr --topic orphan-topic` run would have left it.
+  let _seeded = make_session_for( claude_home.path(), canon.to_str().unwrap(), &taken_uuid );
+
+  let out = run_cli_in_dir_isolated(
+    &[ "topic", "--dry-run", "orphan topic" ],
+    &canon,
+    &[ ( "CLAUDE_HOME", claude_home.path().to_str().unwrap() ) ],
+  );
+
+  assert_eq!( exit_code( &out ), 0, "stderr: {}", stderr_str( &out ) );
+  let s = stdout_str( &out );
+  // Trailing-space boundary: `orphan-topic` is a string prefix of `orphan-topic-2`,
+  // and the preview always follows the name with ` session=`.
+  assert!(
+    !s.contains( "topic=orphan-topic " ),
+    "auto-naming must NOT hand out a name whose fork session already exists; got:\n{s}"
+  );
+  assert!(
+    s.contains( "topic=orphan-topic-2 " ),
+    "auto-naming must disambiguate past the existing fork topic to orphan-topic-2; got:\n{s}"
+  );
 }

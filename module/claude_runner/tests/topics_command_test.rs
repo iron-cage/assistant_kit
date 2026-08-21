@@ -338,12 +338,18 @@ fn tp15_session_count_reflects_real_storage()
   let virgin_row  = rows( &stdout ).into_iter().find( | l | l.starts_with( "virgin" ) )
     .unwrap_or_else( || panic!( "virgin topic must be listed. Got:\n{stdout}" ) ).to_string();
 
+  // Column layout: NAME MODE SESSIONS PATH — SESSIONS is the third token. Both rows
+  // are dir-mode topics (created as `-<name>` directories), pinning MODE en route.
   assert!(
-    entered_row.split_whitespace().nth( 1 ) == Some( "1" ),
+    entered_row.split_whitespace().nth( 1 ) == Some( "dir" ),
+    "a `-<name>` directory topic must list as mode dir. Got row: {entered_row}"
+  );
+  assert!(
+    entered_row.split_whitespace().nth( 2 ) == Some( "1" ),
     "a topic with one session file must report 1. Got row: {entered_row}"
   );
   assert!(
-    virgin_row.split_whitespace().nth( 1 ) == Some( "0" ),
+    virgin_row.split_whitespace().nth( 2 ) == Some( "0" ),
     "a never-entered topic must report 0. Got row: {virgin_row}"
   );
 }

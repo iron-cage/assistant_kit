@@ -331,8 +331,8 @@ fn g2cc4_all_runner_control_flags_no_conflict()
   );
   #[ cfg( unix ) ]
   assert!(
-    stdout.contains( "/tmp/test/-work" ),
-    "effective dir must contain /tmp/test/-work: {stdout}",
+    stdout.contains( "topic=work " ) && stdout.contains( "base=/tmp/test" ),
+    "topic work must be planned against base /tmp/test (fork mode for a fresh name): {stdout}",
   );
 }
 
@@ -360,7 +360,10 @@ fn g2cc5_file_strip_fences_keep_claudecode_accepted()
   assert!( stdout.contains( path ), "output must reference file path: {stdout}" );
 }
 
-/// G2CC6: `--dir PATH` + `--topic NAME` → effective dir is `PATH/-NAME`.
+/// G2CC6: `--dir PATH` + `--topic NAME` → PATH is the topic's base. A fresh
+/// name defaults to fork mode, so the composition surfaces as `topic=NAME` +
+/// `base=PATH` in the preview line (dir mode's `PATH/-NAME` appears only for a
+/// pre-existing `-NAME` dir under PATH).
 ///
 /// Spec: `02_runner_control.md` CC-6
 #[ cfg( unix ) ]
@@ -371,8 +374,12 @@ fn g2cc6_dir_plus_topic_effective_dir()
   assert!( out.status.success(), "exit must be 0: {out:?}" );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(
-    stdout.contains( "/tmp/-build" ),
-    "effective dir must be /tmp/-build (not /tmp alone, not /tmp/build): {stdout}",
+    stdout.contains( "topic=build " ),
+    "--dir + --topic must plan a topic session named build: {stdout}",
+  );
+  assert!(
+    stdout.contains( "base=/tmp" ),
+    "--dir /tmp must be the topic's base (not cwd): {stdout}",
   );
 }
 

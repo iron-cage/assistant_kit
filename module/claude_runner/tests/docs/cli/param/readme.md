@@ -96,4 +96,4 @@ Per-parameter edge case indices for `clr`. See [param/readme.md](../../../../doc
 | `085_gate_remaining_timeout_secs.md` | Edge cases for `CLR_REMAINING_TIMEOUT_SECS` env var (gate remaining timeout budget) | ✅ |
 | `086_no_stdin.md` | Edge cases for `--no-stdin` flag (stdin opt-out; BUG-492 reproducers) | ✅ |
 | `087_global.md` | Edge cases for `--global` flag (topic base redirection, precedence, env pair) | ✅ |
-| `088_topic_mode.md` | Fork-topic suite: mode selection, fork/resume argv, guards, registry, `topics --file`/listing (F01–F17) | ✅ |
+| `088_topic_mode.md` | Fork-topic suite: mode selection, fork/resume argv, guards, registry, `topics --file`/listing, auto-naming (F01–F18) | ✅ |

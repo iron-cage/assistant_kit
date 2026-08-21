@@ -240,14 +240,16 @@ fn us21_4_env_var_yes_silently_rejected()
 // ── US22: Session Isolation via Topic Directory ──────────────────────────────────
 // Source: tests/docs/cli/user_story/022_session_isolation_topic.md
 
-/// US-1: `--topic NAME` appends `/-NAME` to the effective working directory.
+/// US-1: `--topic NAME` names an isolated topic conversation. A fresh name
+/// defaults to fork mode, so the dry-run preview line carries `topic=NAME`
+/// (dir mode's `/-NAME` path appears only for pre-existing `-NAME` dirs).
 #[ test ]
 fn us22_us1_topic_name_appends_hyphen_name()
 {
   let output = run_dry( &[ "--topic", "build", "Fix bug" ] );
   assert!(
-    output.contains( "/-build" ),
-    "--topic build must produce path ending in /-build. Got:\n{output}"
+    output.contains( "topic=build " ),
+    "--topic build must plan a topic session named build. Got:\n{output}"
   );
 }
 
@@ -262,7 +264,8 @@ fn us22_us2_topic_dot_identity()
   );
 }
 
-/// US-3: `CLR_TOPIC=feature` env var accepted; effective dir ends in `/-feature`.
+/// US-3: `CLR_TOPIC=feature` env var accepted; the topic plan names `feature`
+/// (fork-mode preview line for a fresh name).
 #[ test ]
 fn us22_us3_clr_topic_env_var()
 {
@@ -273,8 +276,8 @@ fn us22_us3_clr_topic_env_var()
   assert!( out.status.success(), "CLR_TOPIC must exit 0. Got: {:?}", out.status.code() );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(
-    stdout.contains( "/-feature" ),
-    "CLR_TOPIC=feature must produce path ending in /-feature. Got:\n{stdout}"
+    stdout.contains( "topic=feature " ),
+    "CLR_TOPIC=feature must plan a topic session named feature. Got:\n{stdout}"
   );
 }
 
@@ -305,11 +308,11 @@ fn us22_us5_cli_wins_over_env_var()
   assert!( out.status.success(), "CLI --topic with CLR_TOPIC must exit 0: {:?}", out.status.code() );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(
-    stdout.contains( "/-cliname" ),
+    stdout.contains( "topic=cliname " ),
     "CLI --topic cliname must win over CLR_TOPIC=envname. Got:\n{stdout}"
   );
   assert!(
-    !stdout.contains( "/-envname" ),
+    !stdout.contains( "topic=envname" ),
     "CLR_TOPIC=envname must be suppressed by CLI --topic. Got:\n{stdout}"
   );
 }

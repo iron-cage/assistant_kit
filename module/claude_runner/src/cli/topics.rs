@@ -94,11 +94,18 @@ fn collect_fork_topics( base : &std::path::Path ) -> Vec< TopicEntry >
     .collect()
 }
 
-/// Parse, validate, and execute the `topics` subcommand. Never returns.
-///
-/// Two forms: `--path NAME` resolves one name to its absolute path and exits; otherwise
-/// every topic under the resolved base is listed.
-pub( crate ) fn dispatch_topics( tokens : &[ String ] ) -> !
+/// Parsed `topics` flags: base override, resolver selections, and global switch.
+struct TopicsArgs
+{
+  dir : Option< String >,
+  path : Option< String >,
+  file : Option< String >,
+  global : bool,
+}
+
+/// Parse the `topics` token stream; prints help or an error and exits on
+/// `help`/`--help`, unknown options, missing values, and invalid names.
+fn parse_topics_args( tokens : &[ String ] ) -> TopicsArgs
 {
   // tokens[0] == "topics"
   // Fix(BUG-249 pattern): bare positional `help` must print help, not be parsed as a value —
@@ -174,13 +181,27 @@ pub( crate ) fn dispatch_topics( tokens : &[ String ] ) -> !
     }
   }
 
-  if path_arg.is_some() && file_arg.is_some()
+  TopicsArgs { dir : dir_arg, path : path_arg, file : file_arg, global }
+}
+
+/// Parse, validate, and execute the `topics` subcommand. Never returns.
+///
+/// Three forms: `--path NAME` resolves one name to its dir-mode directory, `--file NAME`
+/// to its fork-mode session file — each printed and exited; otherwise every topic under
+/// the resolved base is listed.
+pub( crate ) fn dispatch_topics( tokens : &[ String ] ) -> !
+{
+  let args = parse_topics_args( tokens );
+
+  if args.path.is_some() && args.file.is_some()
   {
     eprintln!( "Error: --path and --file are mutually exclusive (dir-mode directory vs fork-mode session file)\nRun with --help for usage." );
     std::process::exit( 1 );
   }
 
-  let base = topic_base( dir_arg.as_deref(), global );
+  let base = topic_base( args.dir.as_deref(), args.global );
+  let path_arg = args.path;
+  let file_arg = args.file;
 
   // Resolve forms: pure computations, always exit 0 on success.
   // --path: the dir-mode topic directory — no filesystem access at all.

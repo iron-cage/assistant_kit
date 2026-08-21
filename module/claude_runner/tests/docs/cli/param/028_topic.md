@@ -7,11 +7,11 @@ Edge case coverage for the `--topic` parameter. See [028_topic.md](../../../../d
 | ID | Test Name | Category |
 |----|-----------|----------|
 | EC-1 | Default (no `--topic`) → effective dir equals `--dir` base | Behavioral Divergence |
-| EC-2 | `--topic NAME` → effective dir ends with `/-NAME` | Behavioral Divergence |
+| EC-2 | `--topic NAME` → fresh name plans a fork-mode topic session named NAME | Behavioral Divergence |
 | EC-3 | `--topic .` (explicit identity) → effective dir equals `--dir` base | Edge Case |
 | EC-4 | `--help` output contains `--topic` | Documentation |
-| EC-5 | `--topic NAME` + `--dir PATH` → effective dir is `PATH/-NAME` | Interaction |
-| EC-6 | `CLR_TOPIC=NAME` env var → effective dir ends with `/-NAME` (CLI absent) | Env Var |
+| EC-5 | `--topic NAME` + `--dir PATH` → PATH is the topic's base | Interaction |
+| EC-6 | `CLR_TOPIC=NAME` env var → topic session named NAME (CLI absent) | Env Var |
 | EC-7 | `--topic NAME` CLI wins over `CLR_TOPIC=OTHER` env var | CLI-wins |
 | EC-8 | `--topic ""` (empty string) → identity; no `/-` suffix in dry-run output | Edge Case |
 | EC-9 | `--topic "a/b"` (slash in name) → exit 1; error mentions no separators | Validation |
@@ -43,11 +43,11 @@ Edge case coverage for the `--topic` parameter. See [028_topic.md](../../../../d
 
 ---
 
-### EC-2: --topic NAME → effective dir ends with /-NAME
+### EC-2: --topic NAME → fresh name plans a fork-mode topic session
 
-- **Given:** No prior `--dir`; cwd is base
+- **Given:** No prior `--dir`; cwd is base; no pre-existing `-build` dir (fresh name → fork mode)
 - **When:** `clr --topic build --dry-run "task"`
-- **Then:** Dry-run output contains effective dir ending in `/-build`
+- **Then:** Dry-run output contains `topic=build ` in the `# topic-fork:`/`# topic-resume:` preview line; no `/-build` directory path appears
 - **Exit:** 0
 - **Source:** [--topic](../../../../docs/cli/param/028_topic.md)
 - **Commands:** run, ask
@@ -76,22 +76,22 @@ Edge case coverage for the `--topic` parameter. See [028_topic.md](../../../../d
 
 ---
 
-### EC-5: --topic NAME + --dir PATH → PATH/-NAME
+### EC-5: --topic NAME + --dir PATH → PATH is the topic's base
 
-- **Given:** `--dir /tmp/project` and `--topic debug`
+- **Given:** `--dir /tmp/project` and `--topic debug`; no pre-existing `/tmp/project/-debug` dir
 - **When:** `clr --dir /tmp/project --topic debug --dry-run "task"`
-- **Then:** Dry-run output shows effective dir `/tmp/project/-debug`
+- **Then:** Dry-run preview shows `topic=debug ` and `base=/tmp/project` — the base composes from `--dir`, not cwd (dir mode would show `/tmp/project/-debug` instead)
 - **Exit:** 0
 - **Source:** [--topic](../../../../docs/cli/param/028_topic.md)
 - **Commands:** run, ask
 
 ---
 
-### EC-6: CLR_TOPIC=NAME env var → effective dir ends with /-NAME
+### EC-6: CLR_TOPIC=NAME env var → topic session named NAME
 
 - **Given:** `CLR_TOPIC=feature` set; no `--topic` CLI flag
 - **When:** `CLR_TOPIC=feature clr --dry-run "task"`
-- **Then:** Dry-run output contains effective dir ending in `/-feature`
+- **Then:** Dry-run output contains `topic=feature ` in the preview line
 - **Exit:** 0
 - **Source:** [--topic](../../../../docs/cli/param/028_topic.md)
 - **Commands:** run, ask
@@ -102,7 +102,7 @@ Edge case coverage for the `--topic` parameter. See [028_topic.md](../../../../d
 
 - **Given:** `CLR_TOPIC=envname` set; `--topic cliname` on CLI
 - **When:** `CLR_TOPIC=envname clr --topic cliname --dry-run "task"`
-- **Then:** Dry-run output contains effective dir ending in `/-cliname`, NOT `/-envname`
+- **Then:** Dry-run output contains `topic=cliname `, NOT `topic=envname`
 - **Exit:** 0
 - **Source:** [--topic](../../../../docs/cli/param/028_topic.md)
 - **Commands:** run, ask
@@ -135,7 +135,7 @@ Edge case coverage for the `--topic` parameter. See [028_topic.md](../../../../d
 
 - **Given:** clean directory (no pre-existing `/-NAME` topic); cwd is base
 - **When:** `clr --dry-run --topic sidecheck "task"`
-- **Then:** Exit 0; dry-run output shows effective dir ending in `/-sidecheck`; but `cwd/-sidecheck` directory does NOT exist on the filesystem after the invocation (Fix: BUG-231)
+- **Then:** Exit 0; dry-run output shows the `topic=sidecheck` fork preview; no `cwd/-sidecheck` directory and no topics-registry entry exist after the invocation (Fix: BUG-231; fork-mode side-effect coverage: F12 in [088_topic_mode.md](088_topic_mode.md))
 - **Exit:** 0
 - **Source:** [--topic](../../../../docs/cli/param/028_topic.md)
 - **Commands:** run, ask

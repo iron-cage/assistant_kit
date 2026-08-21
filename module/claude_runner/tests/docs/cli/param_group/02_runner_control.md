@@ -25,7 +25,7 @@ coexist without conflict and are consumed by the runner, not forwarded to claude
 | CC-3 | `--no-skip-permissions` + `--no-effort-max` → both suppressed | Interaction |
 | CC-4 | All runner control flags together → no conflict | Combined |
 | CC-5 | `--file` + `--strip-fences` + `--keep-claudecode` together → all accepted | Interaction |
-| CC-6 | `--dir PATH` + `--topic NAME` → effective dir is `PATH/-NAME` | Interaction |
+| CC-6 | `--dir PATH` + `--topic NAME` → PATH is the topic's base | Interaction |
 
 ## Test Coverage Summary
 
@@ -71,7 +71,7 @@ coexist without conflict and are consumed by the runner, not forwarded to claude
 
 - **Given:** `/tmp/rc_test.txt` exists and is readable; clean environment
 - **When:** `clr --dry-run --no-skip-permissions --interactive --new-session --dir /tmp/test --topic work --max-tokens 100000 --session-dir /tmp/sessions --quiet --trace --no-ultrathink --no-effort-max --no-chrome --no-persist --file /tmp/rc_test.txt --strip-fences --keep-claudecode --output-file /tmp/rc_out.txt --expect "yes|no" --expect-strategy fail --max-sessions 5 --retry-on-transient 3 --transient-delay 30 --timeout 60 --retry-on-account 1 --account-delay 0 --retry-on-auth 1 --auth-delay 0 --retry-on-service 1 --service-delay 0 --retry-on-process 1 --process-delay 0 --retry-on-validation 2 --validation-delay 0 --retry-on-runner 0 --runner-delay 0 --retry-on-unknown 1 --unknown-delay 0 --retry-override 3 --retry-override-delay 0 --retry-default 2 --retry-default-delay 30 --output-style summary --summary-fields standard --journal full --journal-dir /tmp/j "Fix bug"`
-- **Then:** Exit 0; all forty-six flags accepted without conflict; command assembled correctly; effective dir contains `/tmp/test/-work`; `--chrome` and `--dangerously-skip-permissions` are absent from assembled command; no unknown-flag error for any runner-control flag
+- **Then:** Exit 0; all forty-six flags accepted without conflict; command assembled correctly; the preview plans topic `work` against base `/tmp/test` (`topic=work ` + `base=/tmp/test`, fork mode for a fresh name); `--chrome` and `--dangerously-skip-permissions` are absent from assembled command; no unknown-flag error for any runner-control flag
 - **Exit:** 0
 - **Source:** [param_group/02_runner_control.md](../../../../docs/cli/param_group/02_runner_control.md)
 - **Commands:** run, ask
@@ -89,11 +89,11 @@ coexist without conflict and are consumed by the runner, not forwarded to claude
 
 ---
 
-### CC-6: `--dir PATH` + `--topic NAME` → effective dir is `PATH/-NAME`
+### CC-6: `--dir PATH` + `--topic NAME` → PATH is the topic's base
 
-- **Given:** clean environment
+- **Given:** clean environment; no pre-existing `/tmp/-build` dir (fresh name → fork mode)
 - **When:** `clr --dry-run --dir /tmp --topic build "task"`
-- **Then:** Exit 0; dry-run output contains `cd /tmp/-build`; effective dir is `PATH/-NAME` (not `PATH` alone, not `/tmp/build`)
+- **Then:** Exit 0; dry-run preview contains `topic=build ` and `base=/tmp` — the topic composes with `--dir` as its base, not cwd (dir mode would show `cd /tmp/-build` instead)
 - **Exit:** 0
 - **Source:** [param_group/02_runner_control.md](../../../../docs/cli/param_group/02_runner_control.md)
 - **Commands:** run, ask

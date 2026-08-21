@@ -13,7 +13,7 @@ structural equivalence and shared behavior.
 | IT-2 | `clr ask --dry-run` (no message) identical to `clr --dry-run` | Equivalence |
 | IT-3 | Unknown flag → exit 1, error message | Error Handling |
 | IT-4 | `clr ask --trace "q"` → stderr contains assembled command | Trace |
-| IT-5 | `clr ask --topic NAME "q"` → effective dir ends with `/-NAME` | Topic |
+| IT-5 | `clr ask --topic NAME "q"` → plans a topic session named NAME (fork mode for a fresh name) | Topic |
 | IT-6 | `clr ask --dry-run --effort high "q"` → contains `--effort high` | Param Passthrough |
 | IT-7 | `clr ask --dry-run --model sonnet "q"` → contains `--model sonnet` | Param Passthrough |
 | IT-8 | `clr ask help` → dispatches to help, exit 0 | Help |
@@ -68,10 +68,10 @@ structural equivalence and shared behavior.
 
 ---
 
-### IT-5: `clr ask --topic NAME "q"` → effective dir ends with `/-NAME`
+### IT-5: `clr ask --topic NAME "q"` → plans a topic session named NAME
 
 - **Command:** `clr ask --dry-run --topic feature "What is X?"`
-- **Expected behavior:** Dry-run output contains a path ending in `/-feature`
+- **Expected behavior:** Dry-run preview contains `topic=feature ` (fork mode for a fresh name; a pre-existing `-feature` dir would select dir mode and a `/-feature` path instead)
 - **Exit:** 0
 - **Source:** [--topic](../../../../docs/cli/param/028_topic.md), [command/05_ask.md](../../../../docs/cli/command/05_ask.md)
 

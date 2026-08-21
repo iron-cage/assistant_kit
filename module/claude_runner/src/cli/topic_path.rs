@@ -18,7 +18,7 @@
 /// How a `--topic` value maps onto a Claude session.
 ///
 /// `Fork` is the default for a NEW topic: no working directory is created — the
-/// topic lives as a deterministically-named session file (UUIDv5 of canonical
+/// topic lives as a deterministically-named session file (`UUIDv5` of canonical
 /// base path + topic name, `claude_storage_core::topic_session_id`) inside the
 /// base directory's own storage, created by forking the base's most recent
 /// session. Staying in the base directory keeps the prompt-cache prefix

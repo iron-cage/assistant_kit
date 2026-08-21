@@ -32,6 +32,7 @@ own TP-1..TP-17 plan for the pre-fork behaviors and cross-links here.
 | F15 | `topics --file NAME` output == core `topic_session_file` (parity contract) | Parity |
 | F16 | `topics --file` guards: slash name, missing value, `--path` exclusivity | Guards |
 | F17 | `topics` listing shows fork (registry) and dir (scan) rows with MODE column | Listing |
+| F18 | auto-naming skips a candidate whose fork session file already exists | Auto-naming |
 
 ## Test Coverage Summary
 
@@ -45,10 +46,11 @@ own TP-1..TP-17 plan for the pre-fork behaviors and cross-links here.
 - Parity: 1 test (F15)
 - Guards: 1 test (F16)
 - Listing: 1 test (F17)
+- Auto-naming: 1 test (F18)
 
-**Total:** 17 tests
+**Total:** 18 tests
 
-**Implemented by:** `tests/topic_fork_test.rs::fork_f01`–`fork_f17`
+**Implemented by:** `tests/topic_fork_test.rs::fork_f01`–`fork_f18`
 
 **Isolation contract:** every case runs via `run_cli_in_dir_isolated` — cwd pinned to a
 canonicalized tempdir (the fork rule hashes the CANONICAL physical base, so a symlinked
@@ -218,3 +220,13 @@ by calling env-reading helpers whose env differs from the subprocess's.
 - **Expected behavior:** header shows the MODE column; row `x` lists as `fork` (sessions 0 — a registry entry whose session file was never created still lists; the name stays reserved), row `y` lists as `dir`
 - **Exit:** 0
 - **Source:** [command/12_topics.md](../../../../docs/cli/command/12_topics.md)
+
+---
+
+### F18: Auto-naming skips a candidate whose fork session file already exists
+
+- **Given:** the base's storage holds a non-empty session file at the `UUIDv5` path for name `orphan-topic` (as a prior `clr --topic orphan-topic` run would leave); no `-orphan-topic` dir, no dir-mode storage
+- **Command:** `clr topic --dry-run "orphan topic"`
+- **Expected behavior:** the auto-generated slug `orphan-topic` is judged taken by the fork-session freshness signal (the third probe — the only one that can see a fork topic, which creates no directory); preview plans `topic=orphan-topic-2 ` instead. Companion signals: directory existence (`topic_command_test.rs` T02), dir-mode storage (T10/T11)
+- **Exit:** 0
+- **Source:** [param/028_topic.md](../../../../docs/cli/param/028_topic.md)

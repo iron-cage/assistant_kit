@@ -308,7 +308,8 @@ fn e28_clr_trace_applies_to_isolated()
 
 // ─── E29: CLR_TOPIC ──────────────────────────────────────────────────────────
 
-/// E29: `CLR_TOPIC` appends `/-NAME` to the effective working directory.
+/// E29: `CLR_TOPIC` names the topic — a fresh name plans a fork-mode topic
+/// session, visible as `topic=NAME` in the dry-run preview line.
 ///
 /// CLI-wins: explicit `--topic build` takes precedence over `CLR_TOPIC=debug`.
 ///
@@ -322,10 +323,9 @@ fn e29_clr_topic_sets_effective_dir()
   );
   assert!( out.status.success(), "exit must be 0: {out:?}" );
   let stdout = String::from_utf8_lossy( &out.stdout );
-  let sep = std::path::MAIN_SEPARATOR;
   assert!(
-    stdout.contains( &format!( "{sep}-feature" ) ),
-    "CLR_TOPIC=feature must produce path ending in {sep}-feature: {stdout}",
+    stdout.contains( "topic=feature " ),
+    "CLR_TOPIC=feature must plan a topic session named feature: {stdout}",
   );
   // CLI-wins: --topic build must take precedence over CLR_TOPIC=debug
   let out2 = run_cli_with_env(
@@ -335,11 +335,11 @@ fn e29_clr_topic_sets_effective_dir()
   assert!( out2.status.success(), "CLI --topic with CLR_TOPIC must exit 0: {out2:?}" );
   let stdout2 = String::from_utf8_lossy( &out2.stdout );
   assert!(
-    stdout2.contains( &format!( "{sep}-build" ) ),
+    stdout2.contains( "topic=build " ),
     "CLI --topic build must win over CLR_TOPIC=debug: {stdout2}",
   );
   assert!(
-    !stdout2.contains( &format!( "{sep}-debug" ) ),
+    !stdout2.contains( "topic=debug" ),
     "CLR_TOPIC=debug must be suppressed by CLI --topic: {stdout2}",
   );
 }

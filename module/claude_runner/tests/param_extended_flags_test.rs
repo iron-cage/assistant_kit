@@ -487,17 +487,16 @@ fn s81_default_no_topic_no_hyphen_prefix()
   );
 }
 
-// S82: `--topic NAME` → effective dir ends with `/-NAME` (`028_topic.md` EC-2)
+// S82: `--topic NAME` → fresh name plans a fork-mode topic session (`028_topic.md` EC-2)
 #[ test ]
 fn s82_topic_name_appends_hyphen_prefix()
 {
   let out = run_cli( &[ "--dry-run", "--topic", "build", "task" ] );
   assert!( out.status.success(), "must exit 0: {out:?}" );
   let stdout = String::from_utf8_lossy( &out.stdout );
-  let sep = std::path::MAIN_SEPARATOR;
   assert!(
-    stdout.contains( &format!( "{sep}-build" ) ),
-    "--topic build must produce path ending in {sep}-build. Got:\n{stdout}"
+    stdout.contains( "topic=build " ),
+    "--topic build must plan a topic session named build. Got:\n{stdout}"
   );
 }
 
@@ -528,7 +527,7 @@ fn s84_help_lists_topic()
   );
 }
 
-// S85: `--topic NAME` + `--dir PATH` → effective dir is `PATH/-NAME` (`028_topic.md` EC-5)
+// S85: `--topic NAME` + `--dir PATH` → PATH is the topic's fork base (`028_topic.md` EC-5)
 #[ cfg( unix ) ]
 #[ test ]
 fn s85_topic_with_dir_combined()
@@ -537,8 +536,8 @@ fn s85_topic_with_dir_combined()
   assert!( out.status.success(), "must exit 0: {out:?}" );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(
-    stdout.contains( "/tmp/project/-debug" ),
-    "--dir /tmp/project --topic debug must produce /tmp/project/-debug. Got:\n{stdout}"
+    stdout.contains( "topic=debug " ) && stdout.contains( "base=/tmp/project" ),
+    "--dir /tmp/project --topic debug must plan topic debug against base /tmp/project. Got:\n{stdout}"
   );
 }
 

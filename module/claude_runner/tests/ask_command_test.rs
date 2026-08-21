@@ -219,15 +219,14 @@ fn t11_ask_positional_help_shows_help()
   );
 }
 
-// T10: --topic NAME produces effective dir ending in /-NAME
+// T10: --topic NAME plans a topic session named NAME (fork mode for a fresh name)
 #[ test ]
 fn t10_ask_topic_effective_dir()
 {
   let output = run_ask_dry( &[ "--topic", "feature", "What is X?" ] );
-  let sep = std::path::MAIN_SEPARATOR;
   assert!(
-    output.contains( &format!( "{sep}-feature" ) ),
-    "ask --topic feature must produce path ending in {sep}-feature. Got:\n{output}"
+    output.contains( "topic=feature " ),
+    "ask --topic feature must plan a topic session named feature. Got:\n{output}"
   );
 }
 

@@ -6,7 +6,7 @@ Integration test planning for the `topic` command. See [command/11_topic.md](../
 Tests focus on slug generation, disambiguation, and delegation to `run`'s execution path.
 New topics default to fork mode (deterministic UUIDv5 session file, no `-slug` directory);
 explicit `--from` forces dir mode — IT-4/IT-5 exercise the dir-mode transplant path that
-way. Fork-mode first-use/repeat-use mechanics (F01–F17) are planned separately in
+way. Fork-mode first-use/repeat-use mechanics (F01–F18) are planned separately in
 [param/088_topic_mode.md](../param/088_topic_mode.md).
 
 ## Test Case Index

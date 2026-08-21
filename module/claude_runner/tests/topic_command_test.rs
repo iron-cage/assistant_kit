@@ -252,6 +252,7 @@ mod transplant
       .env( "CLAUDE_HOME", ch.path() )
       .env( "PATH", &stub_path_val )
       .env_remove( "CLR_DIR" ).env_remove( "CLR_SESSION_DIR" ).env_remove( "CLR_FROM" )
+      .env_remove( "CLR_TOPIC" ).env_remove( "CLR_TOPIC_MODE" ).env_remove( "CLR_TOPIC_REGISTRY_DIR" )
       .output()
       .expect( "invoke clr" );
     assert!(
@@ -308,6 +309,7 @@ mod transplant
       .env( "CLAUDE_HOME", ch.path() )
       .env( "PATH", &stub_path_val )
       .env_remove( "CLR_DIR" ).env_remove( "CLR_SESSION_DIR" ).env_remove( "CLR_FROM" )
+      .env_remove( "CLR_TOPIC" ).env_remove( "CLR_TOPIC_MODE" ).env_remove( "CLR_TOPIC_REGISTRY_DIR" )
       .output()
       .expect( "invoke clr" );
     assert!(
@@ -403,6 +405,7 @@ mod transplant
       .env( "CLAUDE_HOME", ch.path() )
       .env( "PATH", &stub_path_1 )
       .env_remove( "CLR_DIR" ).env_remove( "CLR_SESSION_DIR" ).env_remove( "CLR_FROM" )
+      .env_remove( "CLR_TOPIC" ).env_remove( "CLR_TOPIC_MODE" ).env_remove( "CLR_TOPIC_REGISTRY_DIR" )
       .output()
       .expect( "invoke clr (call 1)" );
     assert!(
@@ -440,6 +443,7 @@ mod transplant
       .env( "CLAUDE_HOME", ch.path() )
       .env( "PATH", &stub_path_2 )
       .env_remove( "CLR_DIR" ).env_remove( "CLR_SESSION_DIR" ).env_remove( "CLR_FROM" )
+      .env_remove( "CLR_TOPIC" ).env_remove( "CLR_TOPIC_MODE" ).env_remove( "CLR_TOPIC_REGISTRY_DIR" )
       .output()
       .expect( "invoke clr (call 2)" );
     assert!(
@@ -487,14 +491,16 @@ mod transplant
   /// See `Fix(BUG-542)` in `src/cli/topic.rs` (`name_is_taken`).
   ///
   /// ## Prevention
-  /// Freshness has two independent signals (directory existence, session storage);
-  /// every disambiguation fixture must state which signal it exercises — this test
-  /// pins the storage-only signal, T02 the directory-only one.
+  /// Freshness has three independent signals (directory existence, dir-mode session
+  /// storage, fork-mode session file); every disambiguation fixture must state which
+  /// signal it exercises — this test pins the dir-mode-storage signal, T02 the
+  /// directory-existence one, and `topic_fork_test.rs` the fork-session one.
   ///
   /// ## Pitfall
-  /// Anchor `cd`-line assertions with the trailing `\n` — `-orphan-topic` is itself
-  /// a string prefix of the correct `-orphan-topic-2`, so an unanchored `contains`
-  /// on the shorter form false-positives against the longer. And session storage
+  /// Anchor chosen-name assertions with the trailing space (`topic=orphan-topic `) —
+  /// `orphan-topic` is itself a string prefix of the correct `orphan-topic-2`, so an
+  /// unanchored `contains` on the shorter form false-positives against the longer,
+  /// and the fork preview always follows the name with ` session=`. And session storage
   /// under `~/.claude/projects/` outlives its working directory's own deletion —
   /// `rm -rf`'ing a topic dir does not touch its storage, so any freshness check
   /// keyed on directory existence alone is silently wrong the moment a directory
@@ -524,6 +530,7 @@ mod transplant
       ])
       .env( "CLAUDE_HOME", ch.path() )
       .env_remove( "CLR_DIR" ).env_remove( "CLR_SESSION_DIR" ).env_remove( "CLR_FROM" )
+      .env_remove( "CLR_TOPIC" ).env_remove( "CLR_TOPIC_MODE" ).env_remove( "CLR_TOPIC_REGISTRY_DIR" )
       .output()
       .expect( "invoke clr" );
     assert!(
@@ -533,19 +540,19 @@ mod transplant
     );
     let stdout = String::from_utf8_lossy( &out.stdout ).into_owned();
 
-    // Trailing `\n` boundary matters: "-orphan-topic" is itself a string prefix of
-    // the correct "-orphan-topic-2", so an unanchored `contains` on the shorter form
-    // would false-positive against the longer, correctly-disambiguated line.
-    let taken_cd = format!( "cd {}\n", orphan_dir.display() );
-    let free_cd  = format!( "cd {}\n", base.path().join( "-orphan-topic-2" ).display() );
+    // A fresh disambiguated name plans in fork mode, so the chosen name surfaces in the
+    // `# topic-fork: topic=<name> session=...` preview. Trailing-space boundary matters:
+    // "orphan-topic" is itself a string prefix of the correct "orphan-topic-2", and the
+    // preview always follows the name with ` session=`, so anchoring on the space keeps
+    // the shorter form from false-positive matching the longer, correctly-chosen one.
     assert!(
-      !stdout.contains( &taken_cd ),
+      !stdout.contains( "topic=orphan-topic " ),
       "auto-naming must NOT select a candidate whose storage already has an orphaned \
        session. Got:\n{stdout}"
     );
     assert!(
-      stdout.contains( &free_cd ),
-      "auto-naming must disambiguate past the orphaned candidate to -orphan-topic-2. Got:\n{stdout}"
+      stdout.contains( "topic=orphan-topic-2 " ),
+      "auto-naming must disambiguate past the orphaned candidate to orphan-topic-2. Got:\n{stdout}"
     );
   }
 
@@ -616,6 +623,7 @@ mod transplant
       ])
       .env( "CLAUDE_HOME", ch.path() )
       .env_remove( "CLR_DIR" ).env_remove( "CLR_SESSION_DIR" ).env_remove( "CLR_FROM" )
+      .env_remove( "CLR_TOPIC" ).env_remove( "CLR_TOPIC_MODE" ).env_remove( "CLR_TOPIC_REGISTRY_DIR" )
       .output()
       .expect( "invoke clr" );
     assert!(
@@ -625,22 +633,24 @@ mod transplant
     );
     let stdout = String::from_utf8_lossy( &out.stdout ).into_owned();
 
-    // The dry-run's `cd` line echoes the effective dir built from the literal `--dir`
-    // input (dry-run never creates anything, so it can't canonicalize the not-yet-
-    // existing candidate) — assert against the symlink-relative form actually printed,
-    // matching T10's trailing-`\n` boundary discipline (the orphaned name is a string
-    // prefix of the correctly-disambiguated one).
-    let taken_cd = format!( "cd {}\n", link_base.join( "-orphan-topic" ).display() );
-    let free_cd  = format!( "cd {}\n", link_base.join( "-orphan-topic-2" ).display() );
+    // A fresh disambiguated name plans in fork mode, whose preview names the chosen
+    // topic (`topic=<name> session=...`, trailing-space boundary per T10 — the orphaned
+    // name is a string prefix of the correctly-disambiguated one) and the CANONICAL
+    // base (`base=` is `physical_abs` of `--dir`, so the symlink must resolve to the
+    // real base — the same canonical key the storage probe must have used).
     assert!(
-      !stdout.contains( &taken_cd ),
+      !stdout.contains( "topic=orphan-topic " ),
       "BUG-543: auto-naming must NOT select a candidate whose CANONICAL storage already \
        has an orphaned session, even when probed through a symlinked base. Got:\n{stdout}"
     );
     assert!(
-      stdout.contains( &free_cd ),
+      stdout.contains( "topic=orphan-topic-2 " ),
       "BUG-543: auto-naming must disambiguate past the orphaned candidate to \
-       -orphan-topic-2 when probed through a symlinked base. Got:\n{stdout}"
+       orphan-topic-2 when probed through a symlinked base. Got:\n{stdout}"
+    );
+    assert!(
+      stdout.contains( &format!( "base={}", real_base_canon.display() ) ),
+      "fork preview must key the topic on the CANONICAL base, not the symlink. Got:\n{stdout}"
     );
   }
 }
