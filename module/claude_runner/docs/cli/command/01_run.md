@@ -4,7 +4,7 @@
 
 Execute Claude Code as a subprocess with configurable flags — the default command invoked whenever no explicit subcommand is given. Use `clr` for interactive REPL sessions or `clr "message"` for single-turn print-mode execution with automatic session continuation.
 
--- **Parameters:** `[MESSAGE]`, `--print`, `--model`, `--verbose`, `--no-skip-permissions`, `--interactive`, `--new-session`, `--dir`, `--topic`, `--topic-mode`, `--max-tokens`, `--session-dir`, `--dry-run`, `--quiet`, `--trace`, `--no-ultrathink`, `--system-prompt`, `--append-system-prompt`, `--effort`, `--no-effort-max`, `--no-chrome`, `--no-persist`, `--json-schema`, `--mcp-config`, `--file`, `--strip-fences`, `--keep-claudecode`, `--output-file`, `--expect`, `--expect-strategy`, `--max-sessions`, and retry/input/output flags
+-- **Parameters:** `[MESSAGE]`, `--print`, `--model`, `--verbose`, `--no-skip-permissions`, `--interactive`, `--new-session`, `--dir`, `--topic`, `--topic-mode`, `--max-tokens`, `--session-dir`, `--dry-run`, `--quiet`, `--trace`, `--no-ultrathink`, `--system-prompt`, `--append-system-prompt`, `--effort`, `--no-effort-max`, `--no-chrome`, `--no-persist`, `--json-schema`, `--mcp-config`, `--file`, `--strip-fences`, `--keep-claudecode`, `--keep-clone`, `--output-file`, `--expect`, `--expect-strategy`, `--max-sessions`, and retry/input/output flags
 -- **Exit Codes:** 0 (success) | 1 (error) | 2 (rate-limit/transient) | 3 (expect mismatch) | 4 (timeout) | N (subprocess passthrough) | 128+signal (signal)
 -- **Modes:** interactive, print, dry-run, trace
 
@@ -88,6 +88,7 @@ The `run` token is optional — both forms are equivalent. When `run` appears as
 | [`--fallback-model`](../param/067_fallback_model.md) | string | — | Fallback model when primary unavailable |
 | [`--args-file`](../param/075_args_file.md) | [`FilePath`](../type/12_file_path.md) | — | Load clr params from JSON config file; stdin JSON auto-detected when no TTY |
 | [`--from`](../param/076_from.md) | [`DirectoryPath`](../type/02_directory_path.md) | cwd | Source directory for session cross-loading (`-c` transplant); see [User Story 028](../user_story/028_session_transplant.md) |
+| [`--keep-clone`](../param/089_keep_clone.md) | bool | false | Preserve an existing destination session copy on a `--from` transplant instead of the default re-clone |
 
 **Algorithm (7 steps):**
 1. Parse flags; apply JSON config (from `--args-file`/`CLR_ARGS_FILE`/stdin) for unset parameters; apply CLR_* env var fallbacks for still-unset parameters; apply config-file defaults (project `.clr.toml` overriding user `~/.clr/config.toml`) for still-unset parameters — this is the final tier for every parameter including `--model`.

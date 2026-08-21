@@ -530,7 +530,7 @@ pub( super ) fn dispatch_run( tokens : &[ String ] ) -> !
   //   before spawn so the injected -c continues the transplanted history.
   if let Some( ref plan ) = prep.transplant
   {
-    builder::execute_session_transplant( plan );
+    builder::execute_session_transplant( plan, cli.quiet );
   }
 
   // Record the fork topic's name in the listing registry — the UUIDv5 identity is

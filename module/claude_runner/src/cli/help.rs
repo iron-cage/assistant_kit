@@ -75,6 +75,7 @@ fn runner_option_group() -> cli_fmt::help::OptionGroup
       OptionEntry { name : "--message <MSG>".into(),                  desc : "Message to send (alternative to positional argument)".into() },
       OptionEntry { name : "--session-dir <PATH>".into(),            desc : "Session storage directory — DEPRECATED, inert (BUG-493); use --from".into() },
       OptionEntry { name : "--from <DIR>".into(),                     desc : "Cross-load most-recent session from source directory (default: current directory) [env: CLR_FROM]".into() },
+      OptionEntry { name : "--keep-clone".into(),                    desc : "Keep the target's existing (possibly diverged) session copy on a --from re-clone (default: overwrite with a fresh copy) [env: CLR_KEEP_CLONE]".into() },
       OptionEntry { name : "--dry-run".into(),                       desc : "Print command without executing".into() },
       OptionEntry { name : "--trace".into(),                         desc : "Print command to stderr then execute (like set -x)".into() },
       OptionEntry { name : "--file <PATH>".into(),                   desc : "Pipe file content to subprocess stdin".into() },
@@ -369,6 +370,7 @@ pub( crate ) fn print_ask_help() -> !
   println!( "  --message <MSG>                    Message to send (alternative to positional argument)" );
   println!( "  --session-dir <PATH>               Session storage directory — DEPRECATED, inert (BUG-493); use --from" );
   println!( "  --from <DIR>                       Cross-load most-recent session from source directory (default: current directory) [env: CLR_FROM]" );
+  println!( "  --keep-clone                       Keep the target's existing session copy on a --from re-clone (default: overwrite with a fresh copy) [env: CLR_KEEP_CLONE]" );
   println!( "  --quiet                            Suppress non-fatal diagnostics (gate-wait, retry, keep-claudecode) [env: CLR_QUIET]" );
   println!( "  --args-file <PATH>                 Load clr params from JSON file (or stdin JSON); env: CLR_ARGS_FILE" );
   println!( "  --json-schema <SCHEMA>             JSON schema for structured output" );
@@ -429,6 +431,7 @@ pub( crate ) fn print_topic_help() -> !
   println!( "  --message <MSG>                    Message to send (alternative to positional argument)" );
   println!( "  --session-dir <PATH>               Session storage directory — DEPRECATED, inert (BUG-493); use --from" );
   println!( "  --from <DIR>                       Cross-load most-recent session from source directory (default: current directory) [env: CLR_FROM]" );
+  println!( "  --keep-clone                       Keep the target's existing session copy on a --from re-clone (default: overwrite with a fresh copy) [env: CLR_KEEP_CLONE]" );
   println!( "  --quiet                            Suppress non-fatal diagnostics (gate-wait, retry, keep-claudecode) [env: CLR_QUIET]" );
   println!( "  --args-file <PATH>                 Load clr params from JSON file (or stdin JSON); env: CLR_ARGS_FILE" );
   println!( "  --json-schema <SCHEMA>             JSON schema for structured output" );

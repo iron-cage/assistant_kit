@@ -106,7 +106,7 @@ Every clr parameter configurable via JSON config has three synonymous forms: CLI
 - **Repeatable flags** (`--mcp-config`, `--add-dir`): provide a single string value; multiple values require CLI flags
 - **Self-referential**: `"args-file"` key in a loaded JSON config is ignored — chaining is not performed
 
-### Complete Parity Table (70 JSON keys)
+### Complete Parity Table (71 JSON keys)
 
 Columns: JSON Key | CLI Flag | CLR_* Env Var | Type | Supported By
 
@@ -150,6 +150,7 @@ Columns: JSON Key | CLI Flag | CLR_* Env Var | Type | Supported By
 | `"no-skip-permissions"` | `--no-skip-permissions` | `CLR_NO_SKIP_PERMISSIONS` | bool | run, ask, topic |
 | `"no-chrome"` | `--no-chrome` | `CLR_NO_CHROME` | bool | run, ask, topic |
 | `"keep-claudecode"` | `--keep-claudecode` | `CLR_KEEP_CLAUDECODE` | bool | run, ask, topic |
+| `"keep-clone"` | `--keep-clone` | `CLR_KEEP_CLONE` | bool | run, ask, topic |
 
 **System Prompt**
 

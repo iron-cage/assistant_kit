@@ -260,6 +260,13 @@ pub( super ) fn apply_json_config( parsed : &mut CliArgs, map : &Map< String, Va
           if let Value::Bool( b ) = v { if *b { parsed.keep_claudecode = true; } }
         }
       }
+      "keep-clone" =>
+      {
+        if !parsed.keep_clone
+        {
+          if let Value::Bool( b ) = v { if *b { parsed.keep_clone = true; } }
+        }
+      }
       "topic" =>
       {
         if parsed.topic.is_none()

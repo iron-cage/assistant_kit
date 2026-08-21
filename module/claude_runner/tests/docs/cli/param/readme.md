@@ -97,3 +97,4 @@ Per-parameter edge case indices for `clr`. See [param/readme.md](../../../../doc
 | `086_no_stdin.md` | Edge cases for `--no-stdin` flag (stdin opt-out; BUG-492 reproducers) | ✅ |
 | `087_global.md` | Edge cases for `--global` flag (topic base redirection, precedence, env pair) | ✅ |
 | `088_topic_mode.md` | Fork-topic suite: mode selection, fork/resume argv, guards, registry, `topics --file`/listing, auto-naming (F01–F18) | ✅ |
+| `089_keep_clone.md` | Edge cases for `--keep-clone` (preserve vs default re-clone of an existing destination session copy) | ✅ |

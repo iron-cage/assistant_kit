@@ -31,7 +31,7 @@
 4. **Self-copy guard**: if source and target storage resolve to the same directory (true whenever both `--from` and `--to` are omitted, or when they're explicitly given the same effective directory), no transplant is planned — the session is already in place, and ordinary continuation detection (bare `-c` when the target's own storage already has a qualifying session) applies unchanged.
 5. Otherwise, the runner checks the source storage dir for the most recently modified qualifying `.jsonl` (see `../algorithm/003_session_file_selection.md`).
 6. If one exists, bare `-c` (continue) is injected into the subprocess arguments — no UUID is passed on the command line; session selection inside claude is steered by the physical transplant below.
-7. The source session file is physically copied into the **target's own** storage dir (`scope_for(target).claude_session_dir`) before spawn, so plain `-c` continues the transplanted history in place under the same UUID. If a file with the same name already exists in target storage, it is never overwritten — only its mtime is refreshed so `-c` selects it. A failed copy warns loudly (`[Runner] warning:`) and proceeds, degrading to a fresh session. Under `--dry-run` no copy happens; the plan is previewed as `# session-transplant: <src_file> -> <target_storage_dir>`. (The former mechanism — exporting `CLAUDE_CODE_SESSION_DIR=<source storage>` — is inert on claude 2.x, which ignores that variable for both reads and writes; see BUG-490. [Contract B23](../../../../../contract/claude_code/docs/behavior/023_b23_session_dir_override.md)'s NEG-ONLY grading anticipated exactly this: "not rejected at startup" never implied "honored".)
+7. The source session file is physically copied into the **target's own** storage dir (`scope_for(target).claude_session_dir`) before spawn, so plain `-c` continues the transplanted history in place under the same UUID. If a non-empty file with the same name already exists in target storage (a prior clone, possibly since diverged), the default is to **re-clone**: the stale copy is overwritten with a fresh copy of the source, announced on stderr (`[Runner] re-cloning over existing session copy … (use --keep-clone to preserve it)`, suppressed by `--quiet`) — an explicit `--from` means "clone from there, now". Pass [`--keep-clone`](089_keep_clone.md) (env `CLR_KEEP_CLONE`) to preserve the existing copy instead — only its mtime is refreshed so `-c` selects it, also announced (`[Runner] kept existing session copy … (--keep-clone; source not re-copied)`). A failed copy warns loudly (`[Runner] warning:`) and proceeds, degrading to a fresh session. Under `--dry-run` no copy happens; the plan is previewed as `# session-transplant: <src_file> -> <target_storage_dir>`. (The former mechanism — exporting `CLAUDE_CODE_SESSION_DIR=<source storage>` — is inert on claude 2.x, which ignores that variable for both reads and writes; see BUG-490. [Contract B23](../../../../../contract/claude_code/docs/behavior/023_b23_session_dir_override.md)'s NEG-ONLY grading anticipated exactly this: "not rejected at startup" never implied "honored".)
 8. Claude runs in the **target** directory (`--dir`/`--to` or CWD), not in `<DIR>`.
 
 This is a one-time cross-load; the runner reads the source directory's session files but never modifies them — the transplant is a copy outward. See `../../invariant/011_session_source_isolation.md` for the read/write isolation contract.
@@ -73,6 +73,7 @@ CLR_FROM=/home/alice/project-a clr "Continue"
 | `--session-dir` | deprecated and inert (BUG-493); never suppresses `--from`'s transplant, emits a deprecation warning naming its value |
 | `--dir` / `--to` | `--dir`/`--to` sets where Claude runs (also defaults to cwd); `--from` sets where the session is loaded from — independent flags that share the same default-to-cwd rule |
 | `--new-session` | `--new-session` suppresses `-c` injection; if both given, `--new-session` wins (no session loaded) |
+| `--keep-clone` | opts out of the default re-clone when the target already holds a non-empty copy of the same session — the existing (possibly diverged) copy is preserved, mtime refresh only |
 | `--from` (no session history) | If the source dir has no qualifying session files, no `-c` is injected (no cross-loading occurs; Claude starts fresh in target dir) |
 
 ### Related Parameters
@@ -82,6 +83,7 @@ CLR_FROM=/home/alice/project-a clr "Continue"
 | 010 | [`--session-dir`](010_session_dir.md) | Deprecated, inert raw storage override (BUG-493); never suppresses `--from` |
 | 008 | [`--dir`](008_dir.md) | Target directory where Claude runs; `--to` is an alias; shares the same default-to-cwd rule as `--from` |
 | 007 | [`--new-session`](007_new_session.md) | Suppresses session continuation; takes precedence over `--from` |
+| 089 | [`--keep-clone`](089_keep_clone.md) | Preserves an existing destination copy instead of the default re-clone |
 
 ### Referenced Doc Instances
 

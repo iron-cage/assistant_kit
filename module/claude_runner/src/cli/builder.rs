@@ -79,6 +79,9 @@ pub( crate ) struct SessionTransplant
   pub( crate ) source_file : std::path::PathBuf,
   /// Target project's encoded storage directory the copy lands in.
   pub( crate ) target_storage_dir : std::path::PathBuf,
+  /// `--keep-clone`: preserve a non-empty destination copy (refresh mtime only)
+  /// instead of the default overwrite-with-fresh-copy.
+  pub( crate ) keep_existing : bool,
 }
 
 /// Side-band data `build_claude_command` hands the run dispatcher: the effective
@@ -295,11 +298,15 @@ fn refresh_mtime( path : &std::path::Path ) -> std::io::Result< () >
 /// Fix(BUG-490): physical copy replaces the dead `CLAUDE_CODE_SESSION_DIR` export.
 /// Root cause: claude ≥2.x ignores `CLAUDE_CODE_SESSION_DIR` for both reads and writes,
 ///   so the env-var redirect `--from` relied on was a silent no-op.
-/// Pitfall: never overwrite a non-empty destination — the target copy may have diverged
-///   since an earlier clone; only its mtime is refreshed so `-c` still selects it.
+/// A non-empty destination is overwritten with a fresh copy of the source by default —
+///   an explicit `--from` means "clone from there, now", so a stale copy left by an
+///   earlier clone must not silently take precedence over the re-clone. `--keep-clone`
+///   inverts this: the (possibly diverged) target copy is preserved and only its mtime
+///   refreshed so `-c` still selects it. Both branches announce themselves on stderr
+///   (suppressed by `--quiet`) — the collision is never resolved silently.
 ///   Failures warn loudly and proceed: `-c` against an empty target trips claude's own
 ///   rejection (BUG-428 fallback), a stale non-empty one trips the BUG-320 mismatch check.
-pub( crate ) fn execute_session_transplant( plan : &SessionTransplant )
+pub( crate ) fn execute_session_transplant( plan : &SessionTransplant, quiet : bool )
 {
   let Some( file_name ) = plan.source_file.file_name() else
   {
@@ -323,17 +330,41 @@ pub( crate ) fn execute_session_transplant( plan : &SessionTransplant )
   let dest_len = std::fs::metadata( &dest ).ok().map( | meta | meta.len() );
   if dest_len.is_some_and( | len | len > 0 )
   {
-    // Non-empty destination = (possibly diverged) history already present for this
-    // session id — refresh its mtime so continuation selection picks it, never overwrite.
-    if let Err( e ) = refresh_mtime( &dest )
+    // Non-empty destination = history already present for this session id, left by an
+    // earlier clone and possibly diverged since (continued in the target).
+    if plan.keep_existing
+    {
+      // --keep-clone: preserve the target's own branch — refresh its mtime so
+      // continuation selection picks it, never overwrite.
+      if let Err( e ) = refresh_mtime( &dest )
+      {
+        eprintln!
+        (
+          "[Runner] warning: session transplant mtime refresh failed for {}: {e}",
+          dest.display()
+        );
+      }
+      if !quiet
+      {
+        eprintln!
+        (
+          "[Runner] kept existing session copy {} (--keep-clone; source not re-copied)",
+          dest.display()
+        );
+      }
+      return;
+    }
+    // Default: an explicit --from asks for a fresh clone — replace the stale copy.
+    // Any turns added to the target copy after the earlier clone are lost; that is
+    // exactly what --keep-clone preserves instead.
+    if !quiet
     {
       eprintln!
       (
-        "[Runner] warning: session transplant mtime refresh failed for {}: {e}",
+        "[Runner] re-cloning over existing session copy {} (use --keep-clone to preserve it)",
         dest.display()
       );
     }
-    return;
   }
   if let Err( e ) = std::fs::copy( &plan.source_file, &dest )
   {
@@ -551,6 +582,7 @@ pub( crate ) fn build_claude_command( cli : &CliArgs )
       {
         source_file,
         target_storage_dir : target_storage,
+        keep_existing : cli.keep_clone,
       } )
     }
   }

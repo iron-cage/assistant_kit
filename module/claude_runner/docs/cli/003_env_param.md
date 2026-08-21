@@ -17,7 +17,7 @@
 | Runtime config (CLR_*) | 8 | Runtime configuration overrides (not CLI parameter fallbacks) |
 | Subprocess (CLAUDE_CODE_*) — injected | 5 | Set by `clr` before spawning the `claude` subprocess |
 
-**Total:** 97 environment variables
+**Total:** 98 environment variables
 
 ---
 
@@ -102,6 +102,7 @@ invalid values (parse failure → field stays at default). Exception: `CLR_RETRY
 | 64 | `CLR_NO_COMPACT_WINDOW` | `--no-compact-window` | bool | `"no-compact-window"` | Suppresses `CLAUDE_CODE_AUTO_COMPACT_WINDOW` injection — subprocess inherits caller env or uses model native window |
 | 65 | `CLR_GLOBAL` | [`--global`](param/087_global.md) | bool | `"global"` | Resolves `--topic`'s base to the global topic home instead of CWD; inert without a topic; an explicit `--dir` still outranks it. Where that home *is* comes from `CLR_TOPIC_HOME` (Env Param 12) |
 | 66 | `CLR_TOPIC_MODE` | [`--topic-mode`](param/088_topic_mode.md) | string | `"topic-mode"` | Forces `--topic`'s mechanism (`fork` or `dir`); applied when `--topic-mode` absent; invalid values silently ignored (same convention as `CLR_TOPIC`); inert without a topic |
+| 67 | `CLR_KEEP_CLONE` | [`--keep-clone`](param/089_keep_clone.md) | bool | `"keep-clone"` | Preserves an existing non-empty destination session copy on a `--from` transplant (mtime refresh only) instead of the default overwrite-with-fresh-copy; applied when `--keep-clone` absent |
 
 **Precedence (current — 5 levels):**
 

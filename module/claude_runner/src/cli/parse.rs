@@ -70,6 +70,7 @@ pub( crate ) struct CliArgs
   pub( crate ) stdin_content        : Option< Vec< u8 > >,
   pub( crate ) strip_fences         : bool,
   pub( crate ) keep_claudecode      : bool,
+  pub( crate ) keep_clone           : bool,
   pub( crate ) topic               : Option< String >,
   pub( crate ) topic_mode           : Option< super::topic_path::TopicMode >,
   pub( crate ) global               : bool,
@@ -623,6 +624,7 @@ pub( crate ) fn parse_args( tokens : &[ String ] ) -> Result< CliArgs >
       stdin_content        : None,
       strip_fences         : false,
       keep_claudecode      : false,
+      keep_clone           : false,
       topic               : None,
       topic_mode           : None,
       global               : false,
@@ -754,6 +756,10 @@ pub( crate ) fn parse_args( tokens : &[ String ] ) -> Result< CliArgs >
       "--keep-claudecode" =>
       {
         parsed.keep_claudecode = true;
+      }
+      "--keep-clone" =>
+      {
+        parsed.keep_clone = true;
       }
       "--no-compact-window" =>
       {

@@ -17,7 +17,7 @@ way. Fork-mode first-use/repeat-use mechanics (F01–F18) are planned separately
 | IT-2 | Two auto-named `clr topic` calls with the same message produce distinct topics | Disambiguation |
 | IT-3 | `clr topic --topic NAME "msg"` dry-run identical to `clr ask --topic NAME "msg"` dry-run | Equivalence |
 | IT-4 | `clr topic --topic NAME --from SRC "msg"` (first call; `--from` forces dir mode) plans a session-transplant clone | Clone |
-| IT-5 | `clr topic --topic NAME --from SRC "msg"` (second call, same NAME) continues via `-c`, no re-clone | Continue |
+| IT-5 | `clr topic --topic NAME --from SRC "msg"` (second call, same NAME) re-clones the stale copy by default, then continues via `-c` (`--keep-clone` preserves it) | Continue |
 | IT-6 | Unknown flag → exit 1, error message | Error Handling |
 | IT-7 | `clr topic help` → dispatches to help, exit 0 | Help |
 | IT-8 | `clr topic --dry-run --effort high "msg"` → contains `--effort high` | Param Passthrough |
@@ -79,9 +79,9 @@ way. Fork-mode first-use/repeat-use mechanics (F01–F18) are planned separately
 
 - **Given:** target topic directory from IT-4 now has its own (possibly diverged) session file
 - **Command:** `clr topic --topic fresh-topic --from <src> "Continue this"` — same dir-mode forcing as IT-4
-- **Expected behavior:** no re-copy — the pre-existing destination session content is never overwritten; the topic's own conversation continues via `-c`
+- **Expected behavior:** the explicit `--from` re-clones by default — the stale destination copy is overwritten with a fresh copy of the source, announced on stderr (`re-cloning over existing session copy`); the conversation then continues via `-c`. `--keep-clone` (or `CLR_KEEP_CLONE=1`) preserves the diverged destination instead — see [param/089_keep_clone.md](../param/089_keep_clone.md) KC-2/KC-3
 - **Exit:** 0
-- **Source:** [command/11_topic.md](../../../../docs/cli/command/11_topic.md)
+- **Source:** [command/11_topic.md](../../../../docs/cli/command/11_topic.md), [param/076_from.md](../../../../docs/cli/param/076_from.md) step 7, [param/089_keep_clone.md](../../../../docs/cli/param/089_keep_clone.md)
 
 ---
 

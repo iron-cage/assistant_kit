@@ -13,7 +13,7 @@
 //!
 //! T01–T03, T06–T08 invoke `clr topic --dry-run` (via `run_topic_dry`) and compare
 //! against `clr ask --dry-run` (via `run_ask_dry`) — no real Claude invocation.
-//! T04/T05 (`#[cfg(unix)]`) prove the session-transplant clone/continue transition
+//! T04/T05/T12/T13 (`#[cfg(unix)]`) prove the session-transplant clone/continue transition
 //! against a real `.jsonl` file with a real (non-dry-run) subprocess spawn, per
 //! task 521's AF1 requirement — a stubbed `claude` executable (`fake_claude_dir`)
 //! stands in for the real binary, and `CLAUDE_HOME` is overridden so the fixture
@@ -32,8 +32,12 @@
 //!   "msg" --dry-run` (byte-identical, per IT-3's own spec wording)
 //! - T04: first `clr topic --topic NAME "msg"` call (real, non-dry-run) with a
 //!   qualifying source session — session-transplant clone fires, `.jsonl` copied
-//! - T05: second call, same NAME, destination already non-empty — no re-copy
-//!   (pre-existing, possibly-diverged destination content is never overwritten)
+//! - T05: second call, same NAME, destination already non-empty — explicit
+//!   `--from` re-clones by default, overwriting the stale copy (announced on
+//!   stderr; `--keep-clone` opts out)
+//! - T12: `--keep-clone` preserves the diverged destination copy byte-for-byte
+//!   (mtime refresh only), with a stderr announcement
+//! - T13: `CLR_KEEP_CLONE=1` — env form of T12, same preserve outcome
 //! - T06: `clr topic --not-a-real-flag "msg"` — unknown flag rejected, exit 1
 //! - T07: `clr topic help` / `--help` / `-h` — topic-specific help text, exit 0
 //!   (positional-`help` intercept per the BUG-249 pattern every subcommand
@@ -253,6 +257,7 @@ mod transplant
       .env( "PATH", &stub_path_val )
       .env_remove( "CLR_DIR" ).env_remove( "CLR_SESSION_DIR" ).env_remove( "CLR_FROM" )
       .env_remove( "CLR_TOPIC" ).env_remove( "CLR_TOPIC_MODE" ).env_remove( "CLR_TOPIC_REGISTRY_DIR" )
+      .env_remove( "CLR_KEEP_CLONE" )
       .output()
       .expect( "invoke clr" );
     assert!(
@@ -267,11 +272,15 @@ mod transplant
     assert_eq!( src_after, content, "source session must never be modified by a clone run" );
   }
 
-  /// T05 (IT-5): a second `clr topic --topic NAME "msg"` call against the same
-  /// NAME never overwrites the (possibly-diverged) destination already there —
-  /// proof that continuation, not re-copy, is used on repeat use.
+  /// T05 (IT-5): a second `clr topic --topic NAME "msg"` call with an explicit
+  /// `--from` RE-CLONES: the (possibly-diverged) destination copy already there is
+  /// overwritten with a fresh copy of the source, and the overwrite is announced
+  /// on stderr. An explicit `--from` means "clone from there, now" — a stale copy
+  /// left by an earlier clone must not silently take precedence (the pre-change
+  /// behavior, which kept the stale copy with only an mtime refresh, made exactly
+  /// that happen). `--keep-clone` restores the preserving behavior (T12/T13).
   #[ test ]
-  fn t05_second_explicit_topic_call_never_recopies_existing_destination()
+  fn t05_second_explicit_from_call_recopies_existing_destination()
   {
     container_check();
     let ch   = tempfile::TempDir::new().expect( "claude home" );
@@ -310,6 +319,7 @@ mod transplant
       .env( "PATH", &stub_path_val )
       .env_remove( "CLR_DIR" ).env_remove( "CLR_SESSION_DIR" ).env_remove( "CLR_FROM" )
       .env_remove( "CLR_TOPIC" ).env_remove( "CLR_TOPIC_MODE" ).env_remove( "CLR_TOPIC_REGISTRY_DIR" )
+      .env_remove( "CLR_KEEP_CLONE" )
       .output()
       .expect( "invoke clr" );
     assert!(
@@ -319,10 +329,143 @@ mod transplant
     );
 
     let after = std::fs::read( &dest_file ).expect( "dest must still exist" );
-    assert_eq!( after, diverged, "existing destination (diverged prior clone) must never be overwritten" );
+    assert_eq!(
+      after, b"{\"seed\":\"original\"}\n",
+      "explicit --from must overwrite the stale destination with a fresh copy of the source"
+    );
+    assert!(
+      stderr_str( &out ).contains( "re-cloning over existing session copy" ),
+      "the overwrite must be announced, never silent. Got:\n{}", stderr_str( &out )
+    );
     assert!(
       stderr_str( &out ).contains( " -c \"" ),
-      "second call must continue via -c, not clone fresh. Got:\n{}", stderr_str( &out )
+      "second call must still continue the uuid via -c after the re-clone. Got:\n{}", stderr_str( &out )
+    );
+  }
+
+  /// T12: `--keep-clone` opts out of T05's default re-clone — the diverged
+  /// destination copy is preserved byte-for-byte (only its mtime is refreshed so
+  /// continuation selection still picks it), and the preservation is announced.
+  #[ test ]
+  fn t12_keep_clone_flag_preserves_existing_destination()
+  {
+    container_check();
+    let ch   = tempfile::TempDir::new().expect( "claude home" );
+    let src  = tempfile::TempDir::new().expect( "source project" );
+    let base = tempfile::TempDir::new().expect( "target base dir" );
+    let src_canon = std::fs::canonicalize( src.path() ).expect( "canonicalize source" );
+    let uuid = "52120012-1111-2222-3333-444444444444";
+    make_session( ch.path(), &src_canon, uuid, b"{\"seed\":\"original\"}\n" );
+
+    let effective_dir = base.path().join( "-521-topic-keep" );
+    std::fs::create_dir_all( &effective_dir ).expect( "pre-create effective dir" );
+    let tgt_canon = std::fs::canonicalize( &effective_dir ).expect( "canonicalize effective dir" );
+    let diverged = b"{\"seed\":\"original\"}\n{\"turn\":\"topic-local divergence\"}\n";
+    let dest_file = make_session( ch.path(), &tgt_canon, uuid, diverged );
+
+    let stub_body = format!(
+      "printf '%s' '{{\"type\":\"result\",\"subtype\":\"success\",\"is_error\":false,\"result\":\"stub-ok\",\"session_id\":\"{uuid}\"}}'"
+    );
+    let ( _stub_dir, stub_path_val ) = fake_claude_dir( &stub_body );
+
+    let out = std::process::Command::new( env!( "CARGO_BIN_EXE_clr" ) )
+      .args
+      ([
+        "topic",
+        "--dir", base.path().to_str().expect( "utf-8" ),
+        "--topic", "521-topic-keep",
+        "--from", src.path().to_str().expect( "utf-8" ),
+        "--keep-clone",
+        "--max-sessions", "0",
+        "--journal", "off",
+        "--trace",
+        "continue my own divergence",
+      ])
+      .env( "CLAUDE_HOME", ch.path() )
+      .env( "PATH", &stub_path_val )
+      .env_remove( "CLR_DIR" ).env_remove( "CLR_SESSION_DIR" ).env_remove( "CLR_FROM" )
+      .env_remove( "CLR_TOPIC" ).env_remove( "CLR_TOPIC_MODE" ).env_remove( "CLR_TOPIC_REGISTRY_DIR" )
+      .env_remove( "CLR_KEEP_CLONE" )
+      .output()
+      .expect( "invoke clr" );
+    assert!(
+      out.status.success(),
+      "real topic run must succeed. stderr: {}",
+      String::from_utf8_lossy( &out.stderr ),
+    );
+
+    let after = std::fs::read( &dest_file ).expect( "dest must still exist" );
+    assert_eq!(
+      after, diverged,
+      "--keep-clone must preserve the diverged destination copy untouched"
+    );
+    assert!(
+      stderr_str( &out ).contains( "kept existing session copy" ),
+      "the preservation must be announced. Got:\n{}", stderr_str( &out )
+    );
+    assert!(
+      stderr_str( &out ).contains( " -c \"" ),
+      "the preserved copy must be continued via -c. Got:\n{}", stderr_str( &out )
+    );
+  }
+
+  /// T13: `CLR_KEEP_CLONE=1` is the env-var form of T12's `--keep-clone` — same
+  /// preserve-don't-overwrite outcome with no CLI flag on the command line.
+  #[ test ]
+  fn t13_keep_clone_env_preserves_existing_destination()
+  {
+    container_check();
+    let ch   = tempfile::TempDir::new().expect( "claude home" );
+    let src  = tempfile::TempDir::new().expect( "source project" );
+    let base = tempfile::TempDir::new().expect( "target base dir" );
+    let src_canon = std::fs::canonicalize( src.path() ).expect( "canonicalize source" );
+    let uuid = "52130013-1111-2222-3333-444444444444";
+    make_session( ch.path(), &src_canon, uuid, b"{\"seed\":\"original\"}\n" );
+
+    let effective_dir = base.path().join( "-521-topic-keep-env" );
+    std::fs::create_dir_all( &effective_dir ).expect( "pre-create effective dir" );
+    let tgt_canon = std::fs::canonicalize( &effective_dir ).expect( "canonicalize effective dir" );
+    let diverged = b"{\"seed\":\"original\"}\n{\"turn\":\"topic-local divergence\"}\n";
+    let dest_file = make_session( ch.path(), &tgt_canon, uuid, diverged );
+
+    let stub_body = format!(
+      "printf '%s' '{{\"type\":\"result\",\"subtype\":\"success\",\"is_error\":false,\"result\":\"stub-ok\",\"session_id\":\"{uuid}\"}}'"
+    );
+    let ( _stub_dir, stub_path_val ) = fake_claude_dir( &stub_body );
+
+    let out = std::process::Command::new( env!( "CARGO_BIN_EXE_clr" ) )
+      .args
+      ([
+        "topic",
+        "--dir", base.path().to_str().expect( "utf-8" ),
+        "--topic", "521-topic-keep-env",
+        "--from", src.path().to_str().expect( "utf-8" ),
+        "--max-sessions", "0",
+        "--journal", "off",
+        "--trace",
+        "continue my own divergence via env",
+      ])
+      .env( "CLAUDE_HOME", ch.path() )
+      .env( "PATH", &stub_path_val )
+      .env( "CLR_KEEP_CLONE", "1" )
+      .env_remove( "CLR_DIR" ).env_remove( "CLR_SESSION_DIR" ).env_remove( "CLR_FROM" )
+      .env_remove( "CLR_TOPIC" ).env_remove( "CLR_TOPIC_MODE" ).env_remove( "CLR_TOPIC_REGISTRY_DIR" )
+      .output()
+      .expect( "invoke clr" );
+    assert!(
+      out.status.success(),
+      "real topic run must succeed. stderr: {}",
+      String::from_utf8_lossy( &out.stderr ),
+    );
+
+    let after = std::fs::read( &dest_file ).expect( "dest must still exist" );
+    assert_eq!(
+      after, diverged,
+      "CLR_KEEP_CLONE=1 must preserve the diverged destination copy untouched"
+    );
+    assert!(
+      stderr_str( &out ).contains( "kept existing session copy" ),
+      "the preservation must be announced. Got:\n{}", stderr_str( &out )
     );
   }
 
@@ -406,6 +549,7 @@ mod transplant
       .env( "PATH", &stub_path_1 )
       .env_remove( "CLR_DIR" ).env_remove( "CLR_SESSION_DIR" ).env_remove( "CLR_FROM" )
       .env_remove( "CLR_TOPIC" ).env_remove( "CLR_TOPIC_MODE" ).env_remove( "CLR_TOPIC_REGISTRY_DIR" )
+      .env_remove( "CLR_KEEP_CLONE" )
       .output()
       .expect( "invoke clr (call 1)" );
     assert!(
@@ -444,6 +588,7 @@ mod transplant
       .env( "PATH", &stub_path_2 )
       .env_remove( "CLR_DIR" ).env_remove( "CLR_SESSION_DIR" ).env_remove( "CLR_FROM" )
       .env_remove( "CLR_TOPIC" ).env_remove( "CLR_TOPIC_MODE" ).env_remove( "CLR_TOPIC_REGISTRY_DIR" )
+      .env_remove( "CLR_KEEP_CLONE" )
       .output()
       .expect( "invoke clr (call 2)" );
     assert!(
@@ -531,6 +676,7 @@ mod transplant
       .env( "CLAUDE_HOME", ch.path() )
       .env_remove( "CLR_DIR" ).env_remove( "CLR_SESSION_DIR" ).env_remove( "CLR_FROM" )
       .env_remove( "CLR_TOPIC" ).env_remove( "CLR_TOPIC_MODE" ).env_remove( "CLR_TOPIC_REGISTRY_DIR" )
+      .env_remove( "CLR_KEEP_CLONE" )
       .output()
       .expect( "invoke clr" );
     assert!(
@@ -624,6 +770,7 @@ mod transplant
       .env( "CLAUDE_HOME", ch.path() )
       .env_remove( "CLR_DIR" ).env_remove( "CLR_SESSION_DIR" ).env_remove( "CLR_FROM" )
       .env_remove( "CLR_TOPIC" ).env_remove( "CLR_TOPIC_MODE" ).env_remove( "CLR_TOPIC_REGISTRY_DIR" )
+      .env_remove( "CLR_KEEP_CLONE" )
       .output()
       .expect( "invoke clr" );
     assert!(

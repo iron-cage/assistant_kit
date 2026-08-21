@@ -155,6 +155,7 @@ pub( crate ) fn apply_env_vars( parsed : &mut CliArgs ) -> Result< () >
   if parsed.file.is_none()             { parsed.file             = env_str( "CLR_FILE" ); }
   if !parsed.strip_fences              { parsed.strip_fences     = env_bool( "CLR_STRIP_FENCES" ); }
   if !parsed.keep_claudecode           { parsed.keep_claudecode  = env_bool( "CLR_KEEP_CLAUDECODE" ); }
+  if !parsed.keep_clone                { parsed.keep_clone       = env_bool( "CLR_KEEP_CLONE" ); }
   // Fix(BUG-233): validate CLR_TOPIC same as --topic — reject `/` in the value.
   // Root cause: CLR_TOPIC env var was accepted without the slash-rejection guard applied to --topic.
   // Pitfall: env-var fallbacks for validated flags must replicate the same validation as the flag parser.
