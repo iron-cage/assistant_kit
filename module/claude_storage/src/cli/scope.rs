@@ -159,7 +159,7 @@ fn is_relevant_encoded( dir_name : &str, encoded_base : &str ) -> bool
 /// that ancestor inherit an identical first-200-char body from it, despite
 /// neither being nested in the other (`it_91`/`it_92`).
 /// (2) Shallow ancestor plus a component-boundary escape collision (BUG-520
-/// scope broadened, MAAV Round 15 Fresh Challenger): even with a SHORT shared
+/// scope broadened, MAAV Round 15 Fresh Challenger, filed as BUG-533): even with a SHORT shared
 /// ancestor, one side's own diverging tail can independently exceed 200 chars
 /// and collide, byte-for-byte, with an unrelated real multi-component chain
 /// on the other side — because `encode_component_piece` maps a literal

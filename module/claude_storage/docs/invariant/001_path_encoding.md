@@ -71,7 +71,13 @@ of five outcomes:
   verified, shared consumed length — never a hardcoded placeholder — since which candidate wins
   the tie is ambiguous but how much every tied candidate consumed reaching it is not; crediting
   it as though it were unresolved starves a genuinely deeper tied subtree against an unrelated,
-  less-verified sibling one level up (BUG-528).
+  less-verified sibling one level up (BUG-528). When the single-candidate rescue search (below)
+  resolves a result reachable through only ONE of the tied candidates' own subtree, that result
+  is MERGED with — never substituted wholesale for — the original tied set: a candidate the
+  rescue's own recursion never actually traversed keeps its own prior, unresolved status and is
+  preserved as an `AmbiguousPartial` member rather than silently dropped, since narrowing through
+  one candidate's subtree says nothing about a sibling candidate the rescue never visited
+  (BUG-532).
 - **Partial** — the best (longest-consumed) real prefix found, tie-broken by consumed length
   (not raw byte length) when 2+ candidates tie. When the winning candidate is a single best
   match (no tie) AND `total_len >= 200` (the total encoded key's own length reaching the
@@ -108,8 +114,13 @@ prefix match fires only at proper-descendant levels of the search, never at any 
 own **stall points** — every directory the search's own entry function already stalled at
 without further filesystem descent: for the single-candidate rescue (`search_encoded_subtree`)
 this is the one candidate itself; for the tied-candidate rescue (`search_encoded_subtree_tied`,
-invoked when `walk_fs()` found 2+ tied best candidates) this is BOTH the tied candidates
-themselves AND their shared common ancestor. At a stall point the candidate is merely where the
+invoked when `walk_fs()` found 2+ tied best candidates) this is the tied candidates themselves,
+their shared common ancestor, AND every real intermediate directory strictly between an
+asymmetric-depth candidate and that ancestor (BUG-531) — when one tied candidate is reached
+through one or more real intermediate directories rather than directly from the ancestor, each
+intermediate directory's own encoding is, by construction, a literal prefix of the deeper
+candidate's own encoding, exposing it to the identical loose-match risk unless also suppressed.
+At a stall point the candidate is merely where the
 search itself stalled — nothing deeper was verified — so "candidate + `--`" is stringwise
 indistinguishable from a DELETED deeper path's own special-leading component, and promoting it
 to a confident `Full` would strip the `Partial`/tie conservative-include disjunct and falsely
@@ -167,11 +178,11 @@ shared ancestor, one side's own diverging tail can independently exceed 200 char
 collide, byte-for-byte, with an unrelated real multi-component chain on the other side, because
 the encoding step maps a literal hyphen WITHIN one component to the same output byte as the
 separator BETWEEN two components — the same non-injectivity already documented below for
-untruncated paths, now compounded by truncation (`it_117`). Ancestor depth is therefore not the
+untruncated paths, now compounded by truncation (`it_121`). Ancestor depth is therefore not the
 operative condition; a shared 200-character encoded body is, however it was produced. Closing
 either cause would require storing full, untruncated paths — a storage-format (encode-side)
 change outside this decode-side algorithm's scope. This disposition, its unclosability proof, and
-its pinning regression tests (`it_91`/`it_92`/`it_117`, each asserting the CURRENT, tolerated
+its pinning regression tests (`it_91`/`it_92`/`it_121`, each asserting the CURRENT, tolerated
 inclusion rather than exclusion) are recorded in BUG-520 and BUG-533.
 
 The algorithm assumes the caller's working environment matches the storage origin. This decode
