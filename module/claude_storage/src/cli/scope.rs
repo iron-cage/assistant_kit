@@ -142,20 +142,32 @@ fn is_relevant_encoded( dir_name : &str, encoded_base : &str ) -> bool
 /// the `Partial`-arm conservative-include disjunct, Fix(BUG-512)).
 ///
 /// Pitfall: this does not prove soundness against every possible truncation
-/// shape. If the paths' shared REAL ancestor is itself deep enough that ITS
-/// OWN pre-truncation encoding already exceeds 200 chars, two genuinely
-/// UNRELATED siblings under that ancestor would still inherit an identical
-/// first-200-char body from it, despite neither being nested in the other.
-/// This narrower case is CONFIRMED reachable (BUG-520, MAAV Round 11 Primary)
-/// and is NOT closeable by any finite-prefix-length string comparison: proof
-/// — once the query anchor's own pre-truncation encoding alone exceeds 200
-/// chars, the ENTIRE 200-byte comparison window this function (or any
-/// variant of it) could ever inspect is consumed by the anchor's own prefix;
-/// there is no remaining character budget left to observe anything past that
-/// boundary, for either a genuine descendant OR an unrelated sibling — the
-/// two are informationally indistinguishable from the stored (truncated)
-/// strings alone. See BUG-520's own report for the full proof and why this is
-/// an accepted, documented architectural limitation of the lossy
+/// shape. A shared literal first-200-char body can arise from more than one
+/// real-world cause, and NONE of them are closeable by any finite-prefix-
+/// length string comparison: proof — once the first 200 chars of two paths'
+/// pre-truncation encodings are already forced identical (for whatever
+/// reason), the ENTIRE 200-byte comparison window this function (or any
+/// variant of it) could ever inspect is exhausted before either side's own
+/// distinguishing structure appears; there is no remaining character budget
+/// left to observe anything past that boundary, for either a genuine
+/// descendant OR an unrelated path — the two are informationally
+/// indistinguishable from the stored (truncated) strings alone. Two confirmed
+/// causes producing this shape:
+/// (1) Deep shared ancestor (BUG-520, MAAV Round 11 Primary): if the paths'
+/// shared REAL ancestor is itself deep enough that ITS OWN pre-truncation
+/// encoding already exceeds 200 chars, two genuinely UNRELATED siblings under
+/// that ancestor inherit an identical first-200-char body from it, despite
+/// neither being nested in the other (`it_91`/`it_92`).
+/// (2) Shallow ancestor plus a component-boundary escape collision (BUG-520
+/// scope broadened, MAAV Round 15 Fresh Challenger): even with a SHORT shared
+/// ancestor, one side's own diverging tail can independently exceed 200 chars
+/// and collide, byte-for-byte, with an unrelated real multi-component chain
+/// on the other side — because `encode_component_piece` maps a literal
+/// hyphen WITHIN one component to the same output byte as the separator
+/// BETWEEN two components (the same non-injectivity already documented for
+/// untruncated paths, e.g. `/home/foo/bar` vs `/home/foo_bar`, now compounded
+/// by truncation) (`it_117`). See BUG-520's own report for the full proof and
+/// why this is an accepted, documented architectural limitation of the lossy
 /// truncation+hash encoding scheme (`docs/invariant/001_path_encoding.md`),
 /// not a fixable code defect — closing it would require storing full
 /// untruncated paths, a storage-format change out of scope here. Do not treat
@@ -288,6 +300,16 @@ fn decode_path_via_fs( encoded : &str ) -> FsDecodeOutcome
     // mirroring the `Partial("/")` intercept above exactly: an unbounded
     // whole-filesystem search must never run. A search that finds nothing
     // better falls back to the already-verified tied set unchanged.
+    // Fix(BUG-530): use `search_encoded_subtree_tied`, passing `candidates`
+    // itself (not just `anchor`) — the tied candidates, not their shallower
+    // common ancestor, are where `walk_fs`'s own matching actually stalled;
+    // see that function's own doc comment.
+    // Fix(BUG-532): a `Full`/`AmbiguousFull` rescue result is only ever
+    // reachable through ONE original candidate's own subtree at a time (the
+    // recursion that found it necessarily descended from a specific real
+    // directory) — replacing the WHOLE original tied set with it silently
+    // drops every OTHER original candidate that the rescue neither confirmed
+    // nor disproved. See `merge_tied_rescue_findings`'s own doc comment.
     FsDecodeOutcome::AmbiguousPartial( candidates ) if encoded.len() > 200 =>
     {
       let anchor = common_ancestor( &candidates );
@@ -297,9 +319,10 @@ fn decode_path_via_fs( encoded : &str ) -> FsDecodeOutcome
       }
       else
       {
-        match search_encoded_subtree( &anchor, encoded )
+        match search_encoded_subtree_tied( &anchor, encoded, &candidates )
         {
-          found @ ( FsDecodeOutcome::Full( _ ) | FsDecodeOutcome::AmbiguousFull( _ ) ) => found,
+          FsDecodeOutcome::Full( p ) => merge_tied_rescue_findings( vec![ p ], candidates ),
+          FsDecodeOutcome::AmbiguousFull( found ) => merge_tied_rescue_findings( found, candidates ),
           FsDecodeOutcome::Partial( _ ) | FsDecodeOutcome::AmbiguousPartial( _ ) | FsDecodeOutcome::NotFound =>
             FsDecodeOutcome::AmbiguousPartial( candidates ),
         }
@@ -841,19 +864,124 @@ fn search_encoded_subtree( base : &std::path::Path, target : &str ) -> FsDecodeO
   // Fix(BUG-527): the search ROOT is distinguished from every deeper level
   // for the loose `--`-boundary self-match — see this function's own
   // Fix(BUG-527) doc comment above.
-  search_encoded_subtree_inner( base, target, true )
+  search_encoded_subtree_inner( base, target, &[ base.to_path_buf() ] )
 }
 
-/// Recursive body of `search_encoded_subtree`; `is_root` is true only at the
-/// search's anchor level (Fix(BUG-527) — see the wrapper's doc comment).
-fn search_encoded_subtree_inner( base : &std::path::Path, target : &str, is_root : bool ) -> FsDecodeOutcome
+/// Fix(BUG-530): rescue entry point for `decode_path_via_fs`'s own
+/// `AmbiguousPartial` arm. The search still starts at the tied candidates'
+/// common ancestor (the only single directory guaranteed to contain the
+/// whole tied set), and marks EVERY tied candidate as a stall point for
+/// `search_encoded_subtree_inner`'s own suppression logic, same as before —
+/// but ALSO adds the ancestor (`base`) itself to that same stall-point set.
+/// Root cause of the missing ancestor suppression (originally, incorrectly,
+/// argued to be unnecessary — see `search_encoded_subtree_inner`'s own
+/// current Fix(BUG-530) doc comment for the corrected reasoning): when both
+/// tied candidates collide via a special-LEADING-character escape (e.g. `!x`
+/// and `_x` both stripping to the same piece), that escape's own `--`
+/// separator is, BY CONSTRUCTION, exactly the ancestor's encoding's own
+/// trailing boundary — so the ancestor's encoding, extended by `--`, is
+/// always a textual prefix of BOTH tied candidates' encodings in this shape,
+/// not a coincidence specific to one fixture (confirmed: `/tst_fix`
+/// continuation of the BUG-530 investigation, IT-96 — a genuine
+/// byte-identical sibling collision via special-leading-character escape,
+/// same fixture class BUG-523 established, newly regressed by BUG-530's own
+/// incomplete fix). Since the ancestor is by definition SHALLOWER than the
+/// tied candidates that `walk_fs` already found consuming strictly more of
+/// `target`, a `Full(ancestor)` verdict is never more informative than the
+/// tied set itself — the ancestor's loose match must be suppressed
+/// unconditionally here, not only at the candidates.
+///
+/// Fix(BUG-531)
+/// Root cause: the stall-point set covered only the tied candidates
+/// themselves plus their common ancestor — never any REAL intermediate
+/// directory strictly between the two. When one tied candidate sits at
+/// GREATER depth than the other relative to `base` (an asymmetric-depth tie,
+/// e.g. `base/mid/.a` tied against `base/b__a`), `mid` is a real directory
+/// `search_encoded_subtree_inner`'s own children-first recursion walks
+/// through en route to the deeper candidate, but `mid` is a member of
+/// neither the candidate set nor the ancestor singleton — its own loose
+/// `--`-boundary self-match stayed live, and since `mid`'s encoding is, by
+/// construction, always a literal prefix of the deeper candidate's own
+/// encoding, the same false-promotion shape Fix(BUG-527)/Fix(BUG-530)
+/// eliminated at the documented stall points reappeared one level shallower,
+/// at an undocumented non-stall-point neither fix's set was ever extended to
+/// cover (confirmed: `/tst_fix` MAAV Round 15 re-verification, Primary).
+/// Fix: walk from each tied candidate up to `base` via `Path::parent`,
+/// adding every directory on that chain — not just the candidate's own
+/// endpoint — to `stall_points`. `base` is guaranteed to terminate this walk
+/// exactly (never `parent() == None` first) because `common_ancestor`
+/// (this function's own caller) constructs `base` as a literal,
+/// component-wise prefix ancestor of every candidate via repeated `pop()` on
+/// a real `PathBuf`.
+/// Pitfall: do not special-case only ONE level of intermediate nesting —
+/// arbitrarily deep asymmetric ties (candidate reached via 2+ real
+/// intermediate directories) need every one of them suppressed, not just the
+/// immediate parent.
+fn search_encoded_subtree_tied( base : &std::path::Path, target : &str, candidates : &[ std::path::PathBuf ] ) -> FsDecodeOutcome
+{
+  let mut stall_points = vec![ base.to_path_buf() ];
+  for candidate in candidates
+  {
+    let mut cur = candidate.as_path();
+    while cur != base
+    {
+      if !stall_points.iter().any( | p | p.as_path() == cur )
+      {
+        stall_points.push( cur.to_path_buf() );
+      }
+      cur = cur.parent().expect( "candidate is a real descendant of base per common_ancestor's own construction" );
+    }
+  }
+  search_encoded_subtree_inner( base, target, &stall_points )
+}
+
+/// Recursive body of `search_encoded_subtree`/`search_encoded_subtree_tied`.
+///
+/// Fix(BUG-530)
+/// Root cause: `is_root` was a single `bool`, true only at the search's own
+/// top-level `base` — correct for the single-`Partial` rescue
+/// (`search_encoded_subtree`'s `base` IS exactly where `walk_fs`'s
+/// incremental matching stalled), but wrong for the `AmbiguousPartial`/tied
+/// rescue: there, the search is anchored at the tied candidates' COMMON
+/// ANCESTOR — a directory `walk_fs` matched UNAMBIGUOUSLY, one level
+/// shallower than the real stall point, which occurred independently at
+/// EACH tied candidate. A single root-level `bool` cannot mark 2+ non-root
+/// children as stall-equivalent, so the loose `--`-boundary self-match
+/// (Fix(BUG-522)) stayed live at the tied candidates themselves,
+/// manufacturing an overconfident `Full`/`AmbiguousFull` out of a deleted
+/// deep descendant's own special-leading component — exactly the
+/// false-confidence shape Fix(BUG-527) eliminated for the single-candidate
+/// case, surviving intact for the tied case (confirmed: `/tst_fix` MAAV
+/// Round 14 re-verification, P2b).
+/// Fix: replace `is_root : bool` with `stall_points : &[PathBuf]` — every
+/// directory `walk_fs` actually stalled at (one entry via
+/// `search_encoded_subtree`), PLUS the tied candidates' own common ancestor
+/// (`search_encoded_subtree_tied` adds its own `base` to the set alongside
+/// the candidates themselves — see that function's own doc comment). The
+/// loose self-match is suppressed whenever the CURRENT recursion level's own
+/// `base` is a member of that set, regardless of depth — every other level,
+/// including any real descendant reached via the children-first loop below,
+/// keeps the loose match exactly as Fix(BUG-522) intended.
+/// Pitfall: do not suppress the loose match ONLY at the tied candidates,
+/// omitting their common ancestor — an earlier version of this fix did
+/// exactly that, reasoning the ancestor was "already genuinely,
+/// unambiguously verified by `walk_fs`" and suppressing there "changes
+/// nothing observable." That reasoning is false whenever the tied candidates
+/// collide via a special-LEADING-character escape (IT-96): the escape's own
+/// `--` separator IS the ancestor's encoding's own trailing boundary by
+/// construction, so the ancestor's loose match fires there just as
+/// spuriously as it did at the candidates pre-BUG-530, silently discarding
+/// the tied set for an overconfident, strictly-less-specific `Full(ancestor)`.
+/// The ancestor is never deeper than the candidates `walk_fs` already found
+/// tied on consuming more of `target` — suppress it unconditionally too.
+fn search_encoded_subtree_inner( base : &std::path::Path, target : &str, stall_points : &[ std::path::PathBuf ] ) -> FsDecodeOutcome
 {
   let mut child_matches : Vec< std::path::PathBuf > = Vec::new();
   if let Ok( entries ) = std::fs::read_dir( base )
   {
     for entry in entries.flatten()
     {
-      match search_encoded_subtree_inner( &entry.path(), target, false )
+      match search_encoded_subtree_inner( &entry.path(), target, stall_points )
       {
         FsDecodeOutcome::Full( p ) => { if !child_matches.contains( &p ) { child_matches.push( p ); } }
         FsDecodeOutcome::AmbiguousFull( found ) =>
@@ -870,15 +998,18 @@ fn search_encoded_subtree_inner( base : &std::path::Path, target : &str, is_root
   }
   if let Ok( encoded ) = claude_storage_core::encode_path( base )
   {
-    // Fix(BUG-527): the loose `--`-boundary self-match is suppressed at the
-    // search ROOT — there, `walk_fs` has already verified that no real
-    // descendant consumes any more of `target`, so a root-level loose match
-    // cannot distinguish a genuine topic suffix from a deleted deeper
-    // path's own special-leading component, and the overconfident `Full` it
-    // produced silently stripped the conservative-include disjunct only
-    // `Partial` carries. Exact equality stays enabled at every level;
-    // deeper levels keep the loose match unchanged (Fix(BUG-522)).
-    if encoded == target || ( !is_root && target.starts_with( &format!( "{encoded}--" ) ) )
+    // Fix(BUG-527), Fix(BUG-530): the loose `--`-boundary self-match is
+    // suppressed at every stall point (see this function's own Fix(BUG-530)
+    // doc comment above) — there, `walk_fs` has already verified that no
+    // real descendant consumes any more of `target` for that specific
+    // candidate, so a stall-point-level loose match cannot distinguish a
+    // genuine topic suffix from a deleted deeper path's own special-leading
+    // component, and the overconfident `Full` it produced would silently
+    // strip the conservative-include disjunct only `Partial`/`AmbiguousPartial`
+    // carry. Exact equality stays enabled at every level; every OTHER level
+    // keeps the loose match unchanged (Fix(BUG-522)).
+    let is_stall_point = stall_points.iter().any( | p | p.as_path() == base );
+    if encoded == target || ( !is_stall_point && target.starts_with( &format!( "{encoded}--" ) ) )
     {
       return FsDecodeOutcome::Full( base.to_path_buf() );
     }
@@ -921,6 +1052,71 @@ fn rank_subtree_candidates( candidates : Vec< std::path::PathBuf >, target : &st
     return FsDecodeOutcome::Full( ranked.into_iter().next().expect( "len checked == 1" ).0 );
   }
   FsDecodeOutcome::AmbiguousFull( ranked.into_iter().map( | ( p, _, _ ) | p ).collect() )
+}
+
+/// Fix(BUG-532)
+/// Root cause: `decode_path_via_fs`'s `AmbiguousPartial` arm handed
+/// `search_encoded_subtree_tied`'s `Full`/`AmbiguousFull` result straight
+/// back to its caller, unconditionally REPLACING the whole original tied
+/// candidate set. That rescue result is only ever reachable through ONE
+/// original candidate's own subtree at a time — the recursion that found it
+/// necessarily descended from a specific real directory — so wholesale
+/// replacement silently discards every OTHER original candidate the rescue
+/// neither confirmed nor disproved, even though `AmbiguousPartial`'s own
+/// documented contract (`invariant/001_path_encoding.md`, Contract section)
+/// is to conservatively include when at least one tied candidate still
+/// qualifies (confirmed: `/tst_fix` MAAV Round 15 re-verification, Dimension
+/// Adversary).
+/// Fix: partition the original candidates into those COVERED by a found path
+/// (the found path is the candidate itself or a real descendant of it —
+/// `found.starts_with(candidate)`) and those left uncovered. When every
+/// original candidate is covered, the found result already accounts for the
+/// whole tied set — return it unchanged (`Full` singular, `AmbiguousFull`
+/// otherwise), preserving today's behavior for the common case (e.g.
+/// IT-96's byte-identical, equally-terminal sibling pair). When any
+/// candidate is left uncovered, its own epistemic status is UNCHANGED by the
+/// rescue — still merely a real, verified stall point with unknown content
+/// below it, exactly as uncertain after the rescue as before it ran — so
+/// merge it into the result as an `AmbiguousPartial` (never `AmbiguousFull`)
+/// member alongside the found path(s), preserving its own ancestor-OR-
+/// descendant conservative-include disjunct rather than silently dropping or
+/// promoting it.
+/// Pitfall: do not return `AmbiguousFull` for the merged result merely
+/// because it also contains genuinely `Full`-confidence found path(s) —
+/// `AmbiguousPartial` and `AmbiguousFull` differ in more than name
+/// (`matches_local`'s own arms: `AmbiguousFull` checks equality alone,
+/// `AmbiguousPartial` additionally allows `base_path.starts_with(candidate)`
+/// — see that function's own Fix(BUG-526) doc comment); collapsing an
+/// uncovered candidate into `AmbiguousFull` would silently strip the
+/// conservative disjunct its own continued uncertainty still requires,
+/// re-introducing the false-exclusion shape this fix exists to close for any
+/// not-yet-discovered deleted content below it. A `Full`-confidence found
+/// path folded into `AmbiguousPartial` loses nothing observable in exchange:
+/// every relationship `AmbiguousFull` would have matched is a subset of what
+/// `AmbiguousPartial` also matches (its checks are a strict superset), so
+/// this never drops a case the stricter variant would have caught, only
+/// widens a genuinely real, filesystem-confirmed leaf's inclusion to also
+/// (rarely, harmlessly) cover a hypothetical query anchored strictly deeper
+/// than that leaf's own confirmed-empty subtree.
+fn merge_tied_rescue_findings( found : Vec< std::path::PathBuf >, original : Vec< std::path::PathBuf > ) -> FsDecodeOutcome
+{
+  let uncovered : Vec< _ > = original.into_iter()
+    .filter( | c | !found.iter().any( | f | f.starts_with( c ) ) )
+    .collect();
+  if uncovered.is_empty()
+  {
+    return match found.len()
+    {
+      1 => FsDecodeOutcome::Full( found.into_iter().next().expect( "len checked == 1" ) ),
+      _ => FsDecodeOutcome::AmbiguousFull( found ),
+    };
+  }
+  let mut merged = found;
+  for c in uncovered
+  {
+    if !merged.contains( &c ) { merged.push( c ); }
+  }
+  FsDecodeOutcome::AmbiguousPartial( merged )
 }
 
 /// Longest common ancestor of a non-empty candidate set, used to anchor
@@ -1400,22 +1596,58 @@ fn walk_fs( base : &std::path::Path, remaining : &str, is_first : bool, total_le
   // rescue search is guaranteed to run. Fix(BUG-526): the defer runs only
   // for a single undisputed best — a tied set is preserved verbatim as
   // `AmbiguousPartial` below.
+  //
+  // Fix(BUG-529): `total_len >= 200` alone answers "is the STORED KEY long
+  // enough", not "could `encode_path`'s truncation have actually fired on
+  // the REAL PATH". The two diverge whenever a synthetic `--topic` suffix
+  // (Fix(BUG-512)'s mechanism, appended AFTER `encode_path` already ran) is
+  // long enough to push `total_len` past 200 on its own, even though the
+  // real path's own encoding is short and genuinely complete (confirmed:
+  // MAAV Round 14 Dimension Adversary — a deleted-project ghost session
+  // whose own path encoding is well under 200 chars, paired with a long
+  // synthetic topic tag, false-included a session under an unrelated
+  // anchor through this exact gap).
+  //
+  // A first attempt gated the defer on the WINNING candidate's own verified
+  // depth (`consumed_so_far + winning_piece.len() >= 199`) — the wrong
+  // candidate to key on. It is a COMPETING (non-winning) candidate whose
+  // piece extends the winner's that might be a truncation victim, never the
+  // winner itself, which is already a complete, verified forward-match.
+  // Gating on the winner's own depth regressed the BUG-516 extension-sibling
+  // class (IT-80/81/83) and this file's own IT-110: there, the winning
+  // candidate is a short, verified real anchor — just as shallow as this
+  // fixture's `main_extra` — so a signal keyed to the winner's own depth
+  // cannot tell the two shapes apart, and blocking the defer for one
+  // necessarily blocks it for the other.
+  //
+  // Fix: measure how much of `remaining` ITSELF (not the winning piece) a
+  // competing candidate's own on-disk piece can account for before the two
+  // diverge. `remaining`'s real content ends at a FIXED position —
+  // `inner`'s first 199 chars, before the djb2-hash suffix and any topic
+  // tag riding after it — so once a competitor's piece agrees with
+  // `remaining` all the way out to that boundary, `encode_path`'s
+  // truncation could plausibly have cut its own tail short: genuine
+  // ambiguity worth deferring for. When a competitor's agreement with
+  // `remaining` ends well short of the boundary — a real but unrelated
+  // sibling that merely shares a short textual prefix with the winner, e.g.
+  // this fixture's `decoy` — the defer must not fire: there is no
+  // truncation in play, just an early, definitive mismatch.
+  // Pitfall: do not key this check to `winning_piece` at all, neither its
+  // own length nor as a `starts_with` filter on the competing candidate —
+  // the winner's own depth says nothing about whether ANOTHER candidate was
+  // truncated, and requiring textual overlap with the winner specifically
+  // excludes nothing a direct `remaining`-agreement check doesn't already
+  // cover more precisely.
   if best_candidates.len() == 1
   {
     let winning_path = &best_candidates[ 0 ];
-    let winning_piece = candidates.iter().find( | ( p, _ ) | p == winning_path ).map( | ( _, pc ) | pc.clone() );
-    if let Some( winning_piece ) = winning_piece
+    let consumed_so_far = total_len - remaining.len();
+    let truncation_ambiguous = total_len >= 200 && candidates.iter().any( | ( path, piece ) |
+      path != winning_path && consumed_so_far + common_prefix_len( piece, remaining ) >= 199
+    );
+    if truncation_ambiguous
     {
-      let consumed_so_far = total_len - remaining.len();
-      let truncation_ambiguous = total_len >= 200 && candidates.iter().any( | ( path, piece ) |
-        path != winning_path
-          && piece.starts_with( winning_piece.as_str() )
-          && consumed_so_far + piece.len() > 199
-      );
-      if truncation_ambiguous
-      {
-        return ( FsDecodeOutcome::Partial( base.to_path_buf() ), 0 );
-      }
+      return ( FsDecodeOutcome::Partial( base.to_path_buf() ), 0 );
     }
   }
 

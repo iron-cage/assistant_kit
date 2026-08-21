@@ -62,6 +62,11 @@
 //! | IT-109 | BUG-527 | `scope::around` — same deleted-intermediate-anchor inclusion, under∪relevant entry point |
 //! | IT-110 | BUG-524 | `scope::under` control — equal-length truncated extension siblings resolve independently; the shorter bait anchor excludes both |
 //! | IT-111 | BUG-528 | `scope::under` includes a session whose true project resolves via a genuine Partial tie one level below an unrelated, coincidentally-colliding sibling |
+//! | IT-112 | BUG-529 | `scope::under` excludes a long-topic ghost despite a verified conflicting sibling — a synthetic topic tag alone must not re-arm the truncation-ambiguity defer |
+//! | IT-113 | BUG-529 | `scope::under` includes a session under a deleted anchor despite a long decoy sibling — same defective defer, observed via anchor-retreat false-exclusion |
+//! | IT-114 | BUG-529 | `scope::under` no-decoy control for IT-113 — isolates the decoy (via the defer) as the sole trigger |
+//! | IT-115 | BUG-530 | `scope::under` includes a session under a deleted anchor nested below one of two tied, byte-identically-encoded siblings |
+//! | IT-116 | —     | `scope::relevant`/`scope::around` never panic on a non-UTF-8 storage project directory name (verified clean, no fix needed) |
 //!
 //! Note: IT-60..IT-64 follow IT-59 (`scope::around` tests in `projects_scope_around_test.rs`).
 //! IT-27..IT-30 were already allocated in `tests/docs/cli/command/007_projects.md`
@@ -3061,6 +3066,17 @@ fn it_95_scope_local_no_panic_control_unaffected_by_bug_521()
 // Pitfall: do not reintroduce an early `return` inside the sibling loop --
 // that is precisely the short-circuit this fix removes. Do not collapse
 // `AmbiguousFull` back to a single arbitrary candidate.
+//
+// Also guards (BUG-530): this fixture's collision arises via a
+// special-LEADING-character escape ('!' vs '_', both stripped to the same
+// piece) -- the escape's own "--" separator is, by construction, exactly
+// the shared anchor's own encoding's trailing boundary. BUG-530's first
+// version suppressed the loose "--"-boundary self-match only at the tied
+// candidates themselves, leaving it live at their common ancestor -- which
+// this fixture's shape spuriously satisfies, manufacturing a false
+// `Full(anchor)` that silently discarded the genuine tie. See
+// `search_encoded_subtree_tied`'s own doc comment (scope.rs) for the
+// corrected fix.
 // ─────────────────────────────────────────────────────────────────────────────
 #[ test ]
 // bug_reproducer(BUG-523)
@@ -4525,5 +4541,1053 @@ fn it_111_scope_under_includes_true_project_despite_zero_credited_partial_tie()
      px (px = it111p_it111x is an unrelated sibling of p whose name merely collides with the \
      p/it111x-foo chain's encoding). Inclusion means the under-credited tie accounting \
      anchored the decode at px instead of the deeper verified tied set; got:\n{s}"
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// scope::under — A Long Synthetic Topic Tag Re-Arms the Truncation-Ambiguity
+// Defer on an Otherwise SHORT, UNTRUNCATED Winning Candidate, Falsely
+// Including an Unrelated Sibling's Deleted Descendant (BUG-529)
+//
+// Root Cause: `walk_fs`'s truncation-ambiguity defer check (guarding against
+// genuine truncation-induced ambiguity whenever `total_len >= 200`) keyed on
+// the WINNING candidate's own verified depth
+// (`consumed_so_far + winning_piece.len() >= 199`) rather than on whether a
+// COMPETING candidate's own piece could plausibly have been truncated. That
+// signal cannot distinguish "the stored key is long because encode_path's
+// own 200-char truncation cut the real path short" from "the stored key is
+// long purely because a synthetic topic tag (Fix(BUG-512)'s mechanism,
+// appended AFTER encode_path already ran) rides on an otherwise short,
+// genuinely complete encoding" — in both cases the winning candidate is
+// equally shallow.
+//
+// Why Not Caught: prior probes (IT-75) used a topic tag short enough to
+// keep the untruncated key's total length under 200, so the defer path was
+// never exercised for a genuinely-complete-but-long-KEYED session at all;
+// only a topic tag long enough on its own to cross 200 — independent of any
+// real truncation — exposes that `total_len >= 200` alone is the wrong
+// signal.
+//
+// Fix Applied: replaced the defer check with one keyed on whether a
+// COMPETING (non-winning) candidate's own on-disk piece agrees with
+// `remaining` itself out to the FIXED 199-char real-content boundary (via
+// the pre-existing `common_prefix_len` helper) — not the winning candidate's
+// depth, and not a `starts_with(winning_piece)` textual relationship.
+//
+// Prevention: any future defer-boundary fixture must isolate "long via
+// topic tag" from "long via real truncation" as two independent axes —
+// pairing a long-topic short-real-path case (this test) against the
+// extension-sibling truncation case (IT-80/81/83/IT-110) is what exposed
+// that a signal satisfying one shape but not the other was needed.
+//
+// Pitfall: do not key the defer on the winning candidate's own depth, nor on
+// `competing_piece.starts_with(winning_piece)` — neither can distinguish
+// this fixture's shape from the genuine-truncation shape, since the winning
+// candidate is equally short/shallow in both; only a direct
+// `remaining`-agreement check on the COMPETING candidate is precise enough.
+// ─────────────────────────────────────────────────────────────────────────────
+#[ test ]
+// bug_reproducer(BUG-529)
+fn it_112_scope_under_excludes_long_topic_ghost_despite_verified_conflicting_sibling()
+{
+  let root = TempDir::new().unwrap();
+  let storage_root = root.path().join( ".claude" );
+
+  let parent  = root.path().join( "it112parent" );
+  let anchor  = parent.join( "it112main" );
+  let sibling = parent.join( "it112main-extra" );
+  let ghost   = sibling.join( "it112ghost" );
+  let decoy   = parent.join( format!( "it112main-extra{}", "x".repeat( 190 ) ) );
+
+  std::fs::create_dir_all( &anchor ).expect( "create anchor dir" );
+  std::fs::create_dir_all( &sibling ).expect( "create sibling dir" );
+  std::fs::create_dir_all( &decoy ).expect( "create decoy dir" );
+  // ghost deliberately NOT created (deleted-project shape).
+
+  let ghost_encoded = claude_storage_core::encode_path( &ghost ).expect( "encode ghost path" );
+  let ghost_short_topic = format!( "{ghost_encoded}--st" );
+  let ghost_long_topic  = format!( "{ghost_encoded}--{}", "t".repeat( 180 ) );
+
+  assert!(
+    ghost_short_topic.len() < 200,
+    "fixture sanity: short-topic key must stay < 200 chars; got {}",
+    ghost_short_topic.len()
+  );
+  assert!(
+    ghost_long_topic.len() > 200,
+    "fixture sanity: long-topic key must exceed 200 chars; got {}",
+    ghost_long_topic.len()
+  );
+  let decoy_encoded = claude_storage_core::encode_path( &decoy ).expect( "encode decoy path" );
+  assert!(
+    decoy_encoded.len() > 200,
+    "fixture sanity: decoy's own encoding must be truncated; got {}",
+    decoy_encoded.len()
+  );
+
+  common::write_path_project_session( &storage_root, &anchor, "session-it112-anchor", 2 );
+  common::write_test_session( &storage_root, &ghost_short_topic, "session-it112-ghost-short", 2 );
+  common::write_test_session( &storage_root, &ghost_long_topic, "session-it112-ghost-long", 2 );
+  common::write_path_project_session( &storage_root, &decoy, "session-it112-decoy", 2 );
+
+  let out = common::clg_cmd()
+    .env( "HOME", root.path().to_str().unwrap() )
+    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+    .arg( ".projects" )
+    .arg( "scope::under" )
+    .arg( format!( "path::{}", anchor.display() ) )
+    .output()
+    .unwrap();
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+
+  assert!( s.contains( "session-it112-anchor" ), "control: anchor's own session included; got:\n{s}" );
+  assert!(
+    !s.contains( "session-it112-ghost-short" ),
+    "control: SHORT-topic ghost must be excluded (isolates the long topic as the sole \
+     trigger); got:\n{s}"
+  );
+  assert!(
+    !s.contains( "session-it112-decoy" ),
+    "control: decoy's own session must be excluded on its own merits; got:\n{s}"
+  );
+  assert!(
+    !s.contains( "session-it112-ghost-long" ),
+    "GROUND TRUTH: the long-topic ghost session must be EXCLUDED — its true project \
+     (parent/it112main-extra/it112ghost) is not under the anchor, and walk_fs VERIFIED the \
+     conflicting sibling it112main-extra. A defective defer re-armed by the long synthetic \
+     topic must not discard that verified conflict; got:\n{s}"
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// scope::under — Same Defective Defer (BUG-529), Observed Through Its Other
+// Consequence: Retreating the Search Anchor Falsely EXCLUDES a Session Under
+// a Deleted Intermediate Anchor
+//
+// Root Cause: identical defective signal to BUG-529 (it_112) — when the
+// defer wrongly fires here, it discards the correctly-verified
+// `Partial(surviving-ancestor)` result and retreats the search anchor UP to
+// its parent, one level above the point `search_encoded_subtree`'s own
+// root-level loose-match suppression (BUG-527) actually protects —
+// re-exposing the surviving ancestor's own loose `--`-boundary match as a
+// NON-ROOT check inside the rescue.
+//
+// Why Not Caught: BUG-527's own regression tests (IT-108/109) never
+// exercised a fixture where the original `Partial` anchor could itself be
+// discarded and replaced with a shallower substitute by a SEPARATE, earlier
+// mechanism (the defer) — they assumed the anchor handed to the rescue is
+// exactly where `walk_fs` stalled, never a retreated stand-in.
+//
+// Fix Applied: the SAME corrected `common_prefix_len`-based defer check
+// (BUG-529) that stops the false fire in it_112 also stops it here — once
+// the defer no longer wrongly retreats the anchor, the rescue starts
+// exactly at the verified surviving ancestor, where BUG-527's root-level
+// suppression already applies correctly. See it_114 for the no-decoy
+// control isolating the decoy (via the defer) as the sole trigger.
+//
+// Prevention: pair every defer-boundary fixture with a check that the
+// search anchor handed downstream is the DEEPEST verified `Partial`, never a
+// retreated shallower substitute — a decoy sibling long enough to satisfy
+// the defective defer signal is the shape that exposes an incorrect
+// retreat.
+//
+// Pitfall: do not treat this as a bug distinct from BUG-529 requiring its
+// own fix — it is the identical defective signal, observed through its
+// OTHER consequence (false-exclude via anchor retreat, rather than
+// false-include via the conservative `Partial` fallback in it_112).
+// ─────────────────────────────────────────────────────────────────────────────
+#[ test ]
+// bug_reproducer(BUG-529)
+fn it_113_scope_under_includes_session_under_deleted_anchor_despite_long_decoy_sibling()
+{
+  let root = TempDir::new().unwrap();
+  let storage_root = root.path().join( ".claude" );
+
+  let parent = root.path().join( "it113parent" );
+  let s_ancestor = parent.join( "it113s" );
+  let decoy  = parent.join( format!( "it113s{}", "x".repeat( 190 ) ) );
+  let deleted_anchor = s_ancestor.join( format!( ".it113y{}", "y".repeat( 90 ) ) );
+  let session_project = deleted_anchor.join( format!( "it113gone{}", "g".repeat( 90 ) ) );
+
+  std::fs::create_dir_all( &s_ancestor ).expect( "create surviving ancestor dir" );
+  std::fs::create_dir_all( &decoy ).expect( "create decoy dir" );
+  // deleted_anchor and session_project deliberately NOT created.
+
+  let enc_s = claude_storage_core::encode_path( &s_ancestor ).expect( "encode surviving ancestor" );
+  let enc_t = claude_storage_core::encode_path( &session_project ).expect( "encode session project" );
+  let enc_a = claude_storage_core::encode_path( &deleted_anchor ).expect( "encode deleted anchor" );
+  assert!( enc_t.len() > 200, "fixture sanity: session key must be truncated; got {}", enc_t.len() );
+  assert!(
+    enc_t.starts_with( &format!( "{enc_s}--" ) ),
+    "fixture sanity: enc(T) must start with enc(s) + '--' (special-leading deleted component);\n\
+     enc(s) = {enc_s}\nenc(T) = {enc_t}"
+  );
+  assert!( enc_a.len() <= 200, "fixture sanity: deleted anchor's own encoding must stay untruncated; got {}", enc_a.len() );
+
+  common::write_path_project_session( &storage_root, &session_project, "session-it113-probe", 2 );
+
+  // Discoverability control: included under the real surviving ancestor.
+  let out = common::clg_cmd()
+    .env( "HOME", root.path().to_str().unwrap() )
+    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+    .arg( ".projects" )
+    .arg( "scope::under" )
+    .arg( format!( "path::{}", s_ancestor.display() ) )
+    .output()
+    .unwrap();
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  assert!(
+    s.contains( "session-it113-probe" ),
+    "control: session must be INCLUDED under scope::under path::<surviving ancestor s>; got:\n{s}"
+  );
+
+  // Non-absorption control: excluded under an unrelated real anchor.
+  let unrelated = root.path().join( "it113unrelated" );
+  std::fs::create_dir_all( &unrelated ).expect( "create unrelated dir" );
+  let out = common::clg_cmd()
+    .env( "HOME", root.path().to_str().unwrap() )
+    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+    .arg( ".projects" )
+    .arg( "scope::under" )
+    .arg( format!( "path::{}", unrelated.display() ) )
+    .output()
+    .unwrap();
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  assert!(
+    !s.contains( "session-it113-probe" ),
+    "control: session must be EXCLUDED under an unrelated anchor; got:\n{s}"
+  );
+
+  // The claim: INCLUDED under the deleted intermediate anchor.
+  let out = common::clg_cmd()
+    .env( "HOME", root.path().to_str().unwrap() )
+    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+    .arg( ".projects" )
+    .arg( "scope::under" )
+    .arg( format!( "path::{}", deleted_anchor.display() ) )
+    .output()
+    .unwrap();
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  assert!(
+    s.contains( "session-it113-probe" ),
+    "GROUND TRUTH: session for deleted <s>/.it113y<90>/it113gone<90> must be INCLUDED under \
+     scope::under path::<s>/.it113y<90> — its true project IS nested under the deleted anchor. \
+     Exclusion means the defective defer retreated the search anchor above the surviving \
+     ancestor s, re-arming the loose '--' self-match at a NON-ROOT level; got:\n{s}"
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// scope::under — No-Decoy Control for it_113: Without a Long Decoy Sibling,
+// the Defer Never Fires, the Rescue Stays Anchored at the Surviving
+// Ancestor, and the Session Is Correctly Included
+//
+// Identical fixture to it_113 WITHOUT the long decoy sibling — isolates the
+// decoy (via the defer) as the SOLE trigger of it_113's exclusion. Not a
+// `bug_reproducer` itself: this fixture never exercised the defective defer
+// even pre-fix, since nothing in it is long enough to satisfy the check.
+// ─────────────────────────────────────────────────────────────────────────────
+#[ test ]
+fn it_114_scope_under_includes_session_under_deleted_anchor_without_decoy()
+{
+  let root = TempDir::new().unwrap();
+  let storage_root = root.path().join( ".claude" );
+
+  let parent = root.path().join( "it114parent" );
+  let s_ancestor = parent.join( "it114s" );
+  let deleted_anchor = s_ancestor.join( format!( ".it114y{}", "y".repeat( 90 ) ) );
+  let session_project = deleted_anchor.join( format!( "it114gone{}", "g".repeat( 90 ) ) );
+
+  std::fs::create_dir_all( &s_ancestor ).expect( "create surviving ancestor dir" );
+
+  let enc_t = claude_storage_core::encode_path( &session_project ).expect( "encode session project" );
+  assert!( enc_t.len() > 200, "fixture sanity: session key must be truncated; got {}", enc_t.len() );
+
+  common::write_path_project_session( &storage_root, &session_project, "session-it114-probe", 2 );
+
+  let out = common::clg_cmd()
+    .env( "HOME", root.path().to_str().unwrap() )
+    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+    .arg( ".projects" )
+    .arg( "scope::under" )
+    .arg( format!( "path::{}", deleted_anchor.display() ) )
+    .output()
+    .unwrap();
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  assert!(
+    s.contains( "session-it114-probe" ),
+    "control (no decoy): session must be INCLUDED under the deleted intermediate anchor \
+     (BUG-527's root suppression intact when no defer fires); got:\n{s}"
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// scope::under — Tied-Candidate Rescue Correctly Includes a Session Under a
+// Deleted Anchor Nested Below One of Two Real, Byte-Identically-Encoded
+// Siblings (BUG-530)
+//
+// Root Cause: `search_encoded_subtree_tied`'s rescue (for `decode_path_via_fs`'s
+// `AmbiguousPartial` arm) originally suppressed the loose `--`-boundary
+// self-match ONLY at the search's own root — mirroring
+// `search_encoded_subtree`'s single-candidate design (BUG-527) one level too
+// shallow for the tied case. The tied case's search root is the candidates'
+// COMMON ANCESTOR, one level ABOVE where `walk_fs` actually stalled
+// independently at EACH tied candidate — so the loose match stayed live at
+// the candidates themselves (a non-root level under this recursion),
+// manufacturing an overconfident `AmbiguousFull` out of a deleted deep
+// descendant's own special-leading component.
+//
+// Why Not Caught: BUG-527's own regression tests (IT-108/109) exercise only
+// the SINGLE-candidate `Partial` rescue, where root-only suppression is
+// already correct; no prior fixture drove the `AmbiguousPartial`/tied
+// rescue path with a deleted descendant nested under one of 2+ tied
+// siblings specifically.
+//
+// Fix Applied: replaced the single root-level `bool` with a
+// `stall_points: &[PathBuf]` set threaded through
+// `search_encoded_subtree_inner`, suppressing the loose match at every point
+// `walk_fs` actually stalled — the tied candidates themselves, for
+// `search_encoded_subtree_tied`.
+//
+// Prevention: any future subtree-rescue fixture covering the tied/
+// `AmbiguousPartial` path must nest the deleted target under ONE SPECIFIC
+// member of a tied sibling set (not the set's shared ancestor), to confirm
+// suppression reaches the actual stall points rather than only the
+// shallower root.
+//
+// Pitfall: do not suppress the loose match only at the tied candidates'
+// common ancestor while leaving the candidates themselves live (or vice
+// versa) — this fixture's tied siblings collide via a TRAILING suffix
+// difference, so their shared ancestor's own loose match was never at risk
+// here; see it_96 for the companion fixture where the ancestor's OWN
+// suppression is ALSO required (tied siblings colliding via a
+// special-LEADING-character escape instead).
+// ─────────────────────────────────────────────────────────────────────────────
+#[ test ]
+// bug_reproducer(BUG-530)
+fn it_115_scope_under_includes_session_under_deleted_anchor_below_tied_sibling()
+{
+  let root = TempDir::new().unwrap();
+  let storage_root = root.path().join( ".claude" );
+
+  let parent = root.path().join( "it115parent" );
+  let sib1 = parent.join( "it115x-foo" );
+  let sib2 = parent.join( "it115x.foo" );
+  let deleted_anchor = sib1.join( format!( ".it115y{}", "y".repeat( 90 ) ) );
+  let session_project = deleted_anchor.join( format!( "it115gone{}", "g".repeat( 90 ) ) );
+
+  std::fs::create_dir_all( &sib1 ).expect( "create sibling 1 dir" );
+  std::fs::create_dir_all( &sib2 ).expect( "create sibling 2 dir" );
+
+  let enc1 = claude_storage_core::encode_path( &sib1 ).expect( "encode sibling 1" );
+  let enc2 = claude_storage_core::encode_path( &sib2 ).expect( "encode sibling 2" );
+  assert_eq!( enc1, enc2, "fixture sanity: the two siblings must encode identically (collision)" );
+
+  let enc_t = claude_storage_core::encode_path( &session_project ).expect( "encode session project" );
+  assert!( enc_t.len() > 200, "fixture sanity: session key must be truncated; got {}", enc_t.len() );
+  assert!(
+    enc_t.starts_with( &format!( "{enc1}--" ) ),
+    "fixture sanity: enc(T) must start with enc(sib1) + '--' (special-leading deleted component)"
+  );
+
+  common::write_path_project_session( &storage_root, &session_project, "session-it115-probe", 2 );
+
+  // Discoverability control: included under sibling 1 (real).
+  let out = common::clg_cmd()
+    .env( "HOME", root.path().to_str().unwrap() )
+    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+    .arg( ".projects" )
+    .arg( "scope::under" )
+    .arg( format!( "path::{}", sib1.display() ) )
+    .output()
+    .unwrap();
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  assert!(
+    s.contains( "session-it115-probe" ),
+    "control: session must be INCLUDED under scope::under path::<sib1> (AmbiguousFull \
+     per-candidate starts_with(sib1) holds for sib1 itself); got:\n{s}"
+  );
+
+  // The claim: INCLUDED under the deleted intermediate anchor.
+  let out = common::clg_cmd()
+    .env( "HOME", root.path().to_str().unwrap() )
+    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+    .arg( ".projects" )
+    .arg( "scope::under" )
+    .arg( format!( "path::{}", deleted_anchor.display() ) )
+    .output()
+    .unwrap();
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  assert!(
+    s.contains( "session-it115-probe" ),
+    "GROUND TRUTH: session must be INCLUDED under scope::under path::<sib1>/.it115y<90> — \
+     under the sib1-origin hypothesis its true project IS nested under the deleted anchor, and \
+     conservative include-any semantics over the tied set require inclusion; got:\n{s}"
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// scope::relevant / scope::around — A Non-UTF-8 Storage Project Directory
+// Name Never Panics a Scoped Query (Verified Clean, No Fix Required)
+//
+// Hypothesis investigated: a non-UTF-8 storage project directory name
+// degrades to `""` at `project_matches`'s `.unwrap_or( "" )` (scope.rs),
+// `matches_relevant`'s `is_relevant_encoded( "", eb )` gate passes trivially
+// (every absolute-path encoding starts with `-`, so `eb.starts_with(
+// "{candidate}-" )` holds for candidate `""`), and `decode_path_via_fs( "" )`
+// slices `&encoded[ 1.. ]` on an empty string -> panic ("byte index 1 is out
+// of bounds"). Verified NOT to reproduce: `scope::relevant` and
+// `scope::around` both exit 0 with no panic for a stray non-UTF-8 project
+// directory — `scope::under` is included as a no-panic control (its
+// `"{eb}-"` gate rejects `""` before any decode is attempted).
+// ─────────────────────────────────────────────────────────────────────────────
+#[ test ]
+fn it_116_scope_relevant_and_around_never_panic_on_non_utf8_project_dir()
+{
+  use std::os::unix::ffi::OsStrExt as _;
+
+  let root = TempDir::new().unwrap();
+  let storage_root = root.path().join( ".claude" );
+
+  let anchor = root.path().join( "it116anchor" );
+  std::fs::create_dir_all( &anchor ).expect( "create anchor dir" );
+  common::write_path_project_session( &storage_root, &anchor, "session-it116-anchor", 2 );
+
+  // Stray non-UTF-8 project directory (Unix filenames are arbitrary bytes).
+  let bad_name = std::ffi::OsStr::from_bytes( b"it116-bad-\xFF-dir" );
+  let bad_dir = storage_root.join( "projects" ).join( bad_name );
+  std::fs::create_dir_all( &bad_dir ).expect( "create non-UTF-8 project dir" );
+  std::fs::write( bad_dir.join( "session-it116-bad.jsonl" ), "" ).expect( "write dummy session file" );
+
+  for scope in [ "relevant", "around", "under" ]
+  {
+    let out = common::clg_cmd()
+      .env( "HOME", root.path().to_str().unwrap() )
+      .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+      .arg( ".projects" )
+      .arg( format!( "scope::{scope}" ) )
+      .arg( format!( "path::{}", anchor.display() ) )
+      .output()
+      .unwrap();
+    assert_eq!(
+      out.status.code().unwrap_or( -1 ),
+      0,
+      "GROUND TRUTH: scope::{scope} must exit 0 despite a non-UTF-8 storage dir name — \
+       the directory simply cannot match any path-based scope; stderr: {}",
+      stderr( &out )
+    );
+    assert!(
+      !stderr( &out ).contains( "byte index 1 is out of bounds" ),
+      "scope::{scope} panicked with the predicted empty-slice panic; stderr: {}",
+      stderr( &out )
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// scope::local / scope::under — Tied-Candidate Rescue Correctly Resolves an
+// Asymmetric-Depth Candidate Reached Through a Real Intermediate Directory
+// (BUG-531; found by MAAV Round 15 Primary)
+//
+// Root Cause: `search_encoded_subtree_tied`'s `stall_points` set (scope.rs)
+// only ever covered the tied candidates themselves plus their common
+// ancestor — never the REAL intermediate directories strictly between them.
+// When one tied candidate sits at a DEEPER level than its sibling relative
+// to their common ancestor (reached via a real intermediate directory on the
+// way down), that intermediate directory's own encoding is, by construction,
+// a literal prefix of the deeper candidate's own encoding — so its loose
+// `--`-boundary self-match stayed live, reproducing the exact false-
+// promotion shape BUG-527/BUG-530 fixed for actual stall points, one level
+// shallower, at a non-stall-point neither fix's `stall_points` set covered.
+//
+// Why Not Caught: BUG-527/BUG-530's own regression tests (IT-108/109/115)
+// all construct tied candidates at SYMMETRIC depth relative to their common
+// ancestor — each a single direct hop away. None constructs an ASYMMETRIC-
+// depth tie where one candidate is reached through a real intermediate
+// directory strictly between the common ancestor and the candidate itself.
+//
+// Fix Applied: `search_encoded_subtree_tied` now walks each tied candidate's
+// own ancestor chain up to the common base via repeated `.parent()`, adding
+// every real intermediate directory encountered to `stall_points` — not just
+// the candidates and the base endpoint.
+//
+// Prevention: any future stall-point set (single-candidate or tied) must
+// include every real directory the incremental walk actually passes through
+// on the way to each candidate, not merely its start and end points.
+//
+// Pitfall: `common_ancestor`'s own construction (repeated `.pop()` on a real
+// `PathBuf`) guarantees each candidate is a genuine, component-wise
+// descendant of the returned base — this is what lets the walk-up loop
+// terminate via a plain `cur != base` check with no separate depth bound.
+// ─────────────────────────────────────────────────────────────────────────────
+#[ test ]
+// bug_reproducer(BUG-531)
+fn it_117_scope_local_and_under_include_tied_candidate_via_intermediate_directory()
+{
+  let root = TempDir::new().unwrap();
+  let storage_root = root.path().join( ".claude" );
+
+  let ancestor = root.path().join( "it117anc" );
+  let mid      = ancestor.join( "b" );
+  let cand_a   = mid.join( ".a" );
+  let cand_b   = ancestor.join( "b__a" );
+
+  std::fs::create_dir_all( &cand_a ).expect( "create cand_a (nested via intermediate 'mid')" );
+  std::fs::create_dir_all( &cand_b ).expect( "create cand_b (direct sibling of 'mid')" );
+
+  let enc_mid    = claude_storage_core::encode_path( &mid ).expect( "encode mid" );
+  let enc_cand_a = claude_storage_core::encode_path( &cand_a ).expect( "encode cand_a" );
+  let enc_cand_b = claude_storage_core::encode_path( &cand_b ).expect( "encode cand_b" );
+
+  assert_eq!(
+    enc_cand_a, enc_cand_b,
+    "fixture sanity: cand_a (via mid) and cand_b (direct sibling) must encode identically \
+     (the tied-candidate shape this test needs); got enc_cand_a={enc_cand_a}, enc_cand_b={enc_cand_b}"
+  );
+  assert!(
+    enc_cand_a.starts_with( &format!( "{enc_mid}--" ) ),
+    "fixture sanity: enc(cand_a) must extend enc(mid) with a '--' boundary; \
+     enc_mid={enc_mid}, enc_cand_a={enc_cand_a}"
+  );
+
+  // dir_name = cand_a's own encoding + a synthetic topic tag long enough to
+  // cross the 200-char rescue-gate boundary (mirrors IT-98/99's
+  // `{encoded_anchor}--topic` convention).
+  let dir_name = format!( "{enc_cand_a}--{}", "z".repeat( 200 ) );
+  assert!(
+    dir_name.len() > 200,
+    "fixture sanity: dir_name must exceed 200 chars to trigger the tied-candidate rescue; got {}",
+    dir_name.len()
+  );
+
+  common::write_test_session( &storage_root, &dir_name, "session-it117-probe", 2 );
+
+  // CLAIM 1: session must be INCLUDED under scope::local path::<cand_a> --
+  // dir_name IS exactly cand_a's own topic-tagged session. If the loose
+  // `--`-boundary self-match spuriously fires at the unlisted intermediate
+  // "mid" directory, decode_path_via_fs returns an overconfident Full(mid)
+  // instead of Partial/AmbiguousPartial, and matches_local's strict
+  // `p == base_path` check on Full then excludes it (mid != cand_a).
+  let out = common::clg_cmd()
+    .env( "HOME", root.path().to_str().unwrap() )
+    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+    .arg( ".projects" )
+    .arg( "scope::local" )
+    .arg( format!( "path::{}", cand_a.display() ) )
+    .output()
+    .unwrap();
+  assert_exit( &out, 0 );
+  let s1 = stdout( &out );
+  assert!(
+    s1.contains( "session-it117-probe" ),
+    "CLAIM 1: session must be INCLUDED under scope::local path::<cand_a> -- dir_name is \
+     cand_a's OWN topic-tagged session; got:\n{s1}"
+  );
+
+  // CLAIM 2 (confirmation): session must also be INCLUDED under
+  // scope::under path::<cand_a> -- observed via matches_under's
+  // `p.starts_with(base_path)` check instead of matches_local's equality
+  // check. A false Full(mid) fails this too, since mid is an ANCESTOR of
+  // cand_a (mid.starts_with(cand_a) is false).
+  let out = common::clg_cmd()
+    .env( "HOME", root.path().to_str().unwrap() )
+    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+    .arg( ".projects" )
+    .arg( "scope::under" )
+    .arg( format!( "path::{}", cand_a.display() ) )
+    .output()
+    .unwrap();
+  assert_exit( &out, 0 );
+  let s2 = stdout( &out );
+  assert!(
+    s2.contains( "session-it117-probe" ),
+    "CLAIM 2: session must be INCLUDED under scope::under path::<cand_a> -- same false-Full(mid) \
+     shape, observed via matches_under's ancestor-or-descendant check; got:\n{s2}"
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// scope::under — Tied-Candidate Rescue Correctly Scales to a Genuine 3-Way
+// Encode Collision (Verified Clean, Extends IT-96/111/115's 2-Way Coverage)
+//
+// Hypothesis investigated: IT-96/111/115's own tied-candidate fixtures all
+// construct exactly 2 colliding siblings. Does `search_encoded_subtree_tied`
+// correctly generalize to a genuine 3-WAY collision (3 siblings encoding
+// identically), with a deleted anchor + session nested under the THIRD
+// member specifically? Verified NOT to reproduce a defect: the deleted
+// session is correctly included when queried under its own real ancestor
+// (the third tied sibling) — the arity-3 case is handled by the same
+// candidate-set mechanism as arity-2, with no special-casing needed.
+// ─────────────────────────────────────────────────────────────────────────────
+#[ test ]
+fn it_118_scope_under_includes_session_under_deleted_anchor_below_three_way_tie()
+{
+  let root = TempDir::new().unwrap();
+  let storage_root = root.path().join( ".claude" );
+
+  let anchor = root.path().join( "it118anc" );
+  std::fs::create_dir_all( &anchor ).expect( "create anchor dir" );
+
+  let tail = "a".repeat( 140 );
+  let sib1 = anchor.join( format!( "!{tail}" ) );
+  let sib2 = anchor.join( format!( "_{tail}" ) );
+  let sib3 = anchor.join( format!( ".{tail}" ) );
+  std::fs::create_dir_all( &sib1 ).expect( "create sib1" );
+  std::fs::create_dir_all( &sib2 ).expect( "create sib2" );
+  std::fs::create_dir_all( &sib3 ).expect( "create sib3" );
+
+  let enc1 = claude_storage_core::encode_path( &sib1 ).expect( "encode sib1" );
+  let enc2 = claude_storage_core::encode_path( &sib2 ).expect( "encode sib2" );
+  let enc3 = claude_storage_core::encode_path( &sib3 ).expect( "encode sib3" );
+  assert_eq!( enc1, enc2, "fixture sanity: sib1/sib2 must encode identically" );
+  assert_eq!( enc2, enc3, "fixture sanity: sib2/sib3 must encode identically (genuine 3-way collision)" );
+  assert!( enc1.len() < 200, "fixture sanity: siblings must stay untruncated; got {}", enc1.len() );
+
+  // Deleted anchor + session nested under sib3 SPECIFICALLY (the third
+  // member -- sib1/sib2 have nothing nested at all).
+  let deleted_anchor = sib3.join( format!( "y{}", "y".repeat( 90 ) ) );
+  let session_project = deleted_anchor.join( format!( "gone{}", "g".repeat( 90 ) ) );
+  let enc_t = claude_storage_core::encode_path( &session_project ).expect( "encode session project" );
+  assert!( enc_t.len() > 200, "fixture sanity: session key must be truncated; got {}", enc_t.len() );
+
+  common::write_path_project_session( &storage_root, &session_project, "session-it118-probe", 2 );
+
+  // Control: discoverable under sib3 itself (direct real ancestor).
+  let out = common::clg_cmd()
+    .env( "HOME", root.path().to_str().unwrap() )
+    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+    .arg( ".projects" )
+    .arg( "scope::under" )
+    .arg( format!( "path::{}", sib3.display() ) )
+    .output()
+    .unwrap();
+  assert_exit( &out, 0 );
+  let s_sib3 = stdout( &out );
+  assert!(
+    s_sib3.contains( "session-it118-probe" ),
+    "control: session must be discoverable under sib3 (its real ancestor); got:\n{s_sib3}"
+  );
+
+  // The claim: discoverable under the deleted anchor nested below sib3.
+  let out = common::clg_cmd()
+    .env( "HOME", root.path().to_str().unwrap() )
+    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+    .arg( ".projects" )
+    .arg( "scope::under" )
+    .arg( format!( "path::{}", deleted_anchor.display() ) )
+    .output()
+    .unwrap();
+  assert_exit( &out, 0 );
+  let s_deleted = stdout( &out );
+  assert!(
+    s_deleted.contains( "session-it118-probe" ),
+    "session must be INCLUDED under the deleted anchor nested below sib3 (one of a genuine \
+     3-way tie) -- confirms the tied-rescue's stall_points set scales to arity 3; got:\n{s_deleted}"
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// scope::under — Tied-Candidate Rescue No Longer Silently Drops an
+// Unresolved Sibling When It Finds a Real Descendant Through Only One Tied
+// Candidate's Own Subtree (BUG-532; found by MAAV Round 15 Dimension
+// Adversary)
+//
+// Root Cause: `decode_path_via_fs`'s `AmbiguousPartial(candidates)` arm
+// (scope.rs) handed the whole common-ancestor subtree (covering every tied
+// candidate's own descendants) to `search_encoded_subtree_tied`, then
+// unconditionally REPLACED the original tied set with whatever
+// `Full`/`AmbiguousFull` it found -- even when that find is reachable ONLY
+// through ONE original candidate's own subtree, silently discarding every
+// OTHER original candidate that was never actually proven unrelated, just
+// structurally distinct from wherever the rescue happened to search.
+//
+// Why Not Caught: IT-96/111/115 (BUG-528/530's own coverage) all construct
+// fixtures where the rescue finds NOTHING (`search_encoded_subtree_tied`
+// returns `NotFound`), so the original tied set survives unchanged
+// trivially. None constructs a fixture where the rescue DOES find something
+// through only one tied candidate's own subtree while an equally-tied other
+// candidate remains completely unexplored.
+//
+// Fix Applied: new `merge_tied_rescue_findings` helper (scope.rs) partitions
+// the original tied candidates into covered (the rescue's found path(s) are
+// nested under it) and uncovered; if every original candidate is covered,
+// returns the rescue's `Full`/`AmbiguousFull` result unchanged (preserves
+// IT-96's existing behavior); if any candidate is uncovered, merges it into
+// the result as `AmbiguousPartial` (never `AmbiguousFull`) -- the uncovered
+// candidate's own epistemic status is unchanged by an unrelated rescue
+// elsewhere, and `AmbiguousPartial`'s per-candidate checks (`matches_local`/
+// `matches_under`/`matches_relevant`) are already a strict superset of
+// `AmbiguousFull`'s, so folding a Full-confidence found path into
+// `AmbiguousPartial` loses nothing observable.
+//
+// Prevention: any candidate-set-narrowing rescue must partition by actual
+// coverage before replacing a multi-candidate set -- never assume "the
+// rescue found something better" implies "for every original candidate."
+//
+// Pitfall: this fixture's own first-draft `scope::local` sub-assertion was a
+// false premise, caught via an independent diagnostic `scope::local` query
+// at the REAL owning sibling -- `scope::local`'s own "exact anchor only,
+// never a nested real child" contract (BUG-509) excludes a genuinely nested
+// real descendant regardless of any tie, and must not be conflated with
+// THIS bug's own tied-candidate-drop symptom, which is specific to
+// `scope::under`/`scope::relevant`'s ancestor-or-descendant check.
+// ─────────────────────────────────────────────────────────────────────────────
+#[ test ]
+// bug_reproducer(BUG-532)
+fn it_119_scope_under_preserves_unresolved_tied_sibling_after_one_sided_rescue()
+{
+  let root = TempDir::new().unwrap();
+  let storage_root = root.path().join( ".claude" );
+
+  let anc = root.path().join( "it119anc" );
+  let tail = "a".repeat( 140 );
+  let sib1 = anc.join( format!( "!{tail}" ) ); // leaf -- nothing nested
+  let sib2 = anc.join( format!( "_{tail}" ) ); // same encoding as sib1
+  std::fs::create_dir_all( &sib1 ).expect( "create sib1" );
+
+  // Real child of sib2 ONLY -- long enough that sib2's own escape piece plus
+  // this child's own piece crosses the 200-char truncation boundary INSIDE
+  // the child's own piece, so incremental matching cannot follow it -- only
+  // the rescue's independent, freshly recomputed `encode_path()` can.
+  let deep_name = format!( "d{}", "d".repeat( 100 ) );
+  let deep = sib2.join( &deep_name );
+  std::fs::create_dir_all( &deep ).expect( "create deep" );
+
+  let enc1 = claude_storage_core::encode_path( &sib1 ).expect( "encode sib1" );
+  let enc2 = claude_storage_core::encode_path( &sib2 ).expect( "encode sib2" );
+  assert_eq!( enc1, enc2, "fixture sanity: sib1/sib2 must encode identically (escape collision)" );
+  assert!( enc1.len() < 200, "fixture sanity: sib1/sib2 must stay untruncated; got {}", enc1.len() );
+
+  let enc_deep = claude_storage_core::encode_path( &deep ).expect( "encode deep" );
+  assert!( enc_deep.len() > 200, "fixture sanity: deep's own encoding must be truncated; got {}", enc_deep.len() );
+
+  let naive_full_piece_of_deep = format!( "-{deep_name}" );
+  assert!(
+    !enc_deep.starts_with( &format!( "{enc2}{naive_full_piece_of_deep}" ) ),
+    "fixture sanity: truncation must corrupt deep's own piece before it fully appears \
+     (this is what makes the rescue -- not incremental matching -- the only way to discover \
+     `deep`); if this fails, lengthen deep_name and retry"
+  );
+
+  // Loose (topic-boundary) session key: enc_deep + "--" + topic, mirroring
+  // IT-96/IT-115's own topic-tag convention.
+  let topic_tag = "z".repeat( 5 );
+  let dir_name = format!( "{enc_deep}--{topic_tag}" );
+  assert!( dir_name.len() > 200, "fixture sanity: full session key must exceed 200; got {}", dir_name.len() );
+  assert!(
+    dir_name.len() < 255,
+    "fixture sanity: dir_name must stay under the OS filename limit to be creatable on disk; got {}",
+    dir_name.len()
+  );
+
+  common::write_test_session( &storage_root, &dir_name, "session-it119-probe", 2 );
+
+  let query = | scope : &str, base : &std::path::Path | -> String
+  {
+    let out = common::clg_cmd()
+      .env( "HOME", root.path().to_str().unwrap() )
+      .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+      .arg( ".projects" )
+      .arg( format!( "scope::{scope}" ) )
+      .arg( format!( "path::{}", base.display() ) )
+      .output()
+      .unwrap();
+    assert_exit( &out, 0 );
+    stdout( &out )
+  };
+
+  // Ground truth controls: discoverable under sib2 (deep's real parent) and
+  // under deep itself (the truncation-hidden real candidate).
+  let s_sib2 = query( "under", &sib2 );
+  assert!( s_sib2.contains( "session-it119-probe" ), "control failed: must be discoverable under sib2; got:\n{s_sib2}" );
+  let s_deep = query( "under", &deep );
+  assert!( s_deep.contains( "session-it119-probe" ), "control failed: must be discoverable under deep itself; got:\n{s_deep}" );
+
+  // THE CLAIM: sib1 is sib2's escape-collision twin, equally unresolved at
+  // the walk_fs level -- a genuine tie, not an ordinary specificity win.
+  // Nothing was ever found OR disproven under sib1. Per AmbiguousPartial's
+  // documented conservative-include philosophy, a query at sib1 must still
+  // include this session even though the rescue's own find sits entirely
+  // under sib2's subtree.
+  let s_sib1 = query( "under", &sib1 );
+  assert!(
+    s_sib1.contains( "session-it119-probe" ),
+    "scope::under at sib1 -- the OTHER member of a genuine, still-unresolved encode-collision \
+     tie with sib2 -- must INCLUDE a session whose rescue-found real project (`deep`) is \
+     reachable only through sib2's own subtree; got:\n{s_sib1}"
+  );
+
+  // scope::local excludes at BOTH siblings -- `deep` is a real nested child
+  // of sib2 (single-hyphen real-path continuation), never sib2's own anchor
+  // session, so matches_local's `p == base_path` contract (BUG-509)
+  // correctly excludes it at sib2, and therefore at sib1 too.
+  let sib2_local_included = query( "local", &sib2 ).contains( "session-it119-probe" );
+  let sib1_local_included = query( "local", &sib1 ).contains( "session-it119-probe" );
+  assert!( !sib2_local_included, "sanity: scope::local at sib2 (the real owning sibling) must exclude a nested-child session (BUG-509)" );
+  assert!( !sib1_local_included, "sanity: scope::local at sib1 must likewise exclude it -- same contract" );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// encode_component_piece — Escape-Shaped and Normal/Trailing-Shaped Pieces
+// Can Never Be Mutually Prefix-Compatible (Verified Clean, Structural
+// Confirmation)
+//
+// Hypothesis investigated: is it possible for an escape-shaped encoded piece
+// (leading `--`) and a normal/trailing-shaped piece (leading `-` followed by
+// an alnum char) to be a prefix of one another, which would let a same-level
+// candidate tie mix collision shapes? Verified NOT reachable: position 1
+// (0-indexed) is a hard categorical fork -- `-` for escape shape, alnum for
+// normal/trailing shape -- so the two can never share a common prefix beyond
+// position 0, confirming this structurally rather than relying on inference
+// alone.
+// ─────────────────────────────────────────────────────────────────────────────
+#[ test ]
+fn it_120_encode_component_piece_escape_and_normal_shapes_never_prefix_compatible()
+{
+  let escape_piece = claude_storage_core::encode_component_piece( "!foo", false );
+  let normal_piece = claude_storage_core::encode_component_piece( "foo-bar", false );
+  let trailing_piece_a = claude_storage_core::encode_component_piece( "abc-def", false );
+  let trailing_piece_b = claude_storage_core::encode_component_piece( "abc.def", false );
+
+  assert_eq!( trailing_piece_a, trailing_piece_b, "sanity: trailing-suffix collision must hold" );
+
+  let escape_bytes : Vec< u8 > = escape_piece.bytes().collect();
+  let normal_bytes : Vec< u8 > = normal_piece.bytes().collect();
+  assert_eq!( escape_bytes[ 0 ], b'-' );
+  assert_eq!( escape_bytes[ 1 ], b'-', "escape shape's own second char must be '-'" );
+  assert_eq!( normal_bytes[ 0 ], b'-' );
+  assert_ne!( normal_bytes[ 1 ], b'-', "normal/trailing shape's second char must NOT be '-'" );
+
+  assert!(
+    !escape_piece.starts_with( normal_piece.as_str() ) && !normal_piece.starts_with( escape_piece.as_str() ),
+    "escape-shaped and normal-shaped pieces must never be mutually prefix-compatible \
+     ({escape_piece:?} vs {normal_piece:?}) -- otherwise mixed-shape same-level ties would be \
+     constructible"
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// scope::under — Shallow-Ancestor Escape-Collision False Inclusion, Accepted
+// Limitation, Broadened Trigger Condition (BUG-533 -- WON'T FIX, extends
+// BUG-520)
+//
+// `docs/invariant/001_path_encoding.md` and IT-91/IT-92 (BUG-520) document
+// the false-inclusion boundary as requiring the two siblings' shared real
+// ancestor to itself be deep enough that its own pre-truncation encoding
+// already exceeds 200 chars. `double_truncated_and_related` (scope.rs),
+// however, only ever inspects the two full encoded strings' lengths and
+// common prefix -- it has no notion of "how deep the real shared ancestor
+// is" at all. This test confirms the trigger condition is broader than
+// documented: a SHALLOW real ancestor (well under 200 chars) combined with a
+// `/`-vs-literal-`-` lossy collision in the DIVERGING tail -- one sibling is
+// a single real directory component joining N words with literal hyphens,
+// the other is the SAME N words as N separate nested real directories --
+// produces two encodings that are byte-identical for their entire
+// pre-truncation length (not merely a shared 200-char prefix), diverging
+// only in the trailing djb2-hash suffix (hashed over the differing REAL path
+// strings). This reproduces BUG-520's documented symptom without a deep
+// shared ancestor.
+//
+// Disposition (confirmed via a Tier 2 Dual-Role Self-Check against IT-91/92
+// as precedent, MAAV Round 15 Fresh Challenger): NOT independently fixable.
+// Any check strong enough to reject this false inclusion -- e.g. comparing a
+// freshly-recomputed hash suffix for the query anchor against the stored
+// key's own trailing bytes -- would apply equally to IT-91/92's own fixture
+// (whose query anchor's encoding ALSO exceeds 200 chars there), silently
+// reversing BUG-520's own already-accepted, deliberate won't-fix disposition
+// without authorization to do so. The two root causes (sheer ancestor depth
+// vs. a shallow ancestor plus an escape collision) produce the identical
+// observable shape and are proven unclosable by the identical argument --
+// see `double_truncated_and_related`'s own doc comment (scope.rs) and
+// `docs/invariant/001_path_encoding.md` for the broadened, combined proof.
+// This assertion pins the CURRENT, tolerated inclusion so any future change
+// is deliberate, not silent -- see IT-91's own framing for the precedent.
+// ─────────────────────────────────────────────────────────────────────────────
+#[ test ]
+fn it_121_scope_under_shallow_ancestor_escape_collision_false_inclusion_accepted_limitation()
+{
+  let root = TempDir::new().unwrap();
+  let storage_root = root.path().join( ".claude" );
+
+  // shared_ancestor: SHORT real directory -- deliberately the OPPOSITE of
+  // IT-91's own fixture (which requires this to independently exceed 200
+  // raw chars).
+  let shared_ancestor = root.path().join( "it121anc" );
+  std::fs::create_dir_all( &shared_ancestor ).expect( "create SHORT shared ancestor" );
+  let encoded_shared_ancestor = claude_storage_core::encode_path( &shared_ancestor )
+    .expect( "encode shared ancestor" );
+  assert!(
+    encoded_shared_ancestor.len() < 100,
+    "test setup sanity: shared_ancestor's OWN encoding must be SHORT (opposite of IT-91's \
+     deep-ancestor precondition); got len={}",
+    encoded_shared_ancestor.len()
+  );
+
+  // 12 pseudo-word components, 20 alphanumeric chars each -- long enough
+  // together to push the TAIL alone (not the ancestor) past 200 chars.
+  let words : Vec< String > = ( 0..12_u8 )
+    .map( | i | format!( "{}{}", ( b'a' + i ) as char, "x".repeat( 19 ) ) )
+    .collect();
+
+  // "alice" -- unrelated sibling under shared_ancestor, encoded as ONE real
+  // path component joining all words with LITERAL hyphens. Deliberately NOT
+  // created on disk, mirroring IT-91's own unmaterialized alice -- required
+  // so the exhaustive `search_encoded_subtree` rescue cannot trivially
+  // re-derive it via an exact `encode_path` re-match.
+  let alice_tail = words.join( "-" );
+  let alice_path = shared_ancestor.join( &alice_tail );
+
+  // "bob" -- query anchor, a genuine sibling of alice under the SAME SHORT
+  // shared_ancestor. Encodes the SAME words as SEPARATE nested real
+  // directories (the `/`-vs-literal-`-` lossy collision). Created for real.
+  let mut bob_path = shared_ancestor.clone();
+  for w in &words { bob_path = bob_path.join( w ); }
+  std::fs::create_dir_all( &bob_path ).expect( "create bob path" );
+
+  let encoded_alice = claude_storage_core::encode_path( &alice_path ).expect( "encode alice" );
+  let encoded_bob = claude_storage_core::encode_path( &bob_path ).expect( "encode bob" );
+
+  assert!(
+    encoded_alice.len() > 200 && encoded_bob.len() > 200,
+    "test setup sanity: both sides must independently exceed 200 chars; alice len={}, bob len={}",
+    encoded_alice.len(), encoded_bob.len()
+  );
+  assert!(
+    !bob_path.starts_with( &alice_path ) && !alice_path.starts_with( &bob_path ),
+    "test setup sanity: alice and bob must be genuine siblings, neither an ancestor nor \
+     descendant of the other"
+  );
+  assert_eq!(
+    encoded_alice[ ..200 ], encoded_bob[ ..200 ],
+    "test setup sanity: alice and bob share a first-200-char body via the /-vs-literal-- lossy \
+     collision in their DIVERGING tail, NOT via a deep shared ancestor (shared_ancestor's own \
+     encoding is only {} chars); alice={encoded_alice}, bob={encoded_bob}",
+    encoded_shared_ancestor.len()
+  );
+  assert_ne!(
+    encoded_alice, encoded_bob,
+    "test setup sanity: full keys must still differ (independent hash-of-real-path suffixes)"
+  );
+
+  common::write_path_project_session( &storage_root, &alice_path, "session-it121-alice-UNRELATED", 2 );
+  common::write_path_project_session( &storage_root, &bob_path, "session-it121-bob-anchor", 2 );
+
+  let out = common::clg_cmd()
+    .env( "HOME", root.path().to_str().unwrap() )
+    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+    .arg( ".projects" )
+    .arg( "scope::under" )
+    .arg( format!( "path::{}", bob_path.display() ) )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  assert!( s.contains( "session-it121-bob-anchor" ), "must include bob (the anchor) itself; got:\n{s}" );
+  assert!(
+    s.contains( "session-it121-alice-UNRELATED" ),
+    "ACCEPTED LIMITATION (BUG-520 broadened by BUG-533, won't-fix): alice -- a genuine SIBLING \
+     of bob under a SHORT shared ancestor, never nested under bob at all -- is currently, \
+     tolerably, still included whenever both independently >200-char-truncated paths share a \
+     first-200-char body, REGARDLESS of whether that comes from ancestor depth (IT-91/92) or a \
+     shallow-ancestor escape collision (this test); this assertion pins that known behavior so \
+     any future change is deliberate, not silent. If this assertion starts failing (alice no \
+     longer appears), the limitation may have been closed -- update this test's framing rather \
+     than treating the failure as a regression; got:\n{s}"
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// scope::under — Nested AmbiguousPartial Tie-of-Ties Correctly Merges Credit
+// Across Two Stacked Collision Levels (Verified Clean, Extends IT-111/BUG-528
+// Coverage)
+//
+// Hypothesis investigated: IT-111 (BUG-528) exercises exactly ONE level of
+// `AmbiguousPartial` tie. Does a STACKED tie -- a level-1 collision (two
+// real directories both encoding to the same piece) each containing its OWN
+// level-2 collision beneath it -- correctly merge into a flat 4-candidate
+// `AmbiguousPartial`, or does credit silently drop one nested tie's own
+// candidates when combined with a sibling tie one level up? Verified NOT to
+// reproduce a defect: both Claim A and Claim B below pass, confirming credit
+// correctly passes through an intermediate AmbiguousPartial-into-
+// AmbiguousPartial merge, not just a single Partial-into-competition step.
+// ─────────────────────────────────────────────────────────────────────────────
+#[ test ]
+fn it_122_scope_under_merges_credit_across_stacked_ambiguous_partial_ties()
+{
+  let root = TempDir::new().unwrap();
+  let storage_root = root.path().join( ".claude" );
+
+  let anc = root.path().join( "it122anc" );
+  let mid_a = anc.join( "mid-a" );
+  let mid_dot_a = anc.join( "mid.a" );
+  for mid in [ &mid_a, &mid_dot_a ]
+  {
+    for leaf in [ "leaf-x", "leaf.x" ]
+    {
+      let p = mid.join( leaf ).join( "d1" ).join( "d2" );
+      std::fs::create_dir_all( &p ).expect( "create leaf/d1/d2 chain" );
+    }
+  }
+
+  let enc_mid_a = claude_storage_core::encode_path( &mid_a ).expect( "encode mid-a" );
+  let enc_mid_dot_a = claude_storage_core::encode_path( &mid_dot_a ).expect( "encode mid.a" );
+  assert_eq!( enc_mid_a, enc_mid_dot_a, "fixture sanity: mid-a/mid.a must collide in encoding" );
+
+  // Manually-crafted stored key: real, verified prefix down to one of the 4
+  // tied d2 leaves, plus a synthetic unresolvable tail -- forces `Partial`
+  // resolution (never `Full`).
+  let real_prefix = claude_storage_core::encode_path( &mid_a.join( "leaf-x" ).join( "d1" ).join( "d2" ) )
+    .expect( "encode real prefix" );
+  let stored_key = format!( "{real_prefix}--faketag" );
+
+  common::write_test_session( &storage_root, &stored_key, "session-it122-tie", 2 );
+
+  let query = | base : &std::path::Path | -> String
+  {
+    let out = common::clg_cmd()
+      .env( "HOME", root.path().to_str().unwrap() )
+      .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+      .arg( ".projects" )
+      .arg( "scope::under" )
+      .arg( format!( "path::{}", base.display() ) )
+      .output()
+      .unwrap();
+    assert_exit( &out, 0 );
+    stdout( &out )
+  };
+
+  // Claim A: scope::under path::<mid_a> must include it (2 of the 4 tied
+  // candidates ARE genuinely under mid_a).
+  let s = query( &mid_a );
+  assert!( s.contains( "session-it122-tie" ), "must include under mid_a (2/4 tied candidates ARE under it); got:\n{s}" );
+
+  // Claim B: scope::under path::<mid_dot_a> must ALSO include it (the OTHER
+  // 2 tied candidates ARE under mid.a) -- proves the level-1 tie's own
+  // candidate set was not dropped when merging with the level-2 tie beneath it.
+  let s = query( &mid_dot_a );
+  assert!(
+    s.contains( "session-it122-tie" ),
+    "must ALSO include under mid_dot_a -- if this fails while Claim A passes, the level-1 tie's \
+     OWN candidate set was truncated/dropped when merging with the level-2 tie beneath it; got:\n{s}"
+  );
+
+  // Control (exclusion): an UNRELATED sibling of `anc` itself must NOT see
+  // this session -- rules out "everything gets included regardless" as a
+  // trivial explanation for Claims A/B both passing above.
+  let unrelated_sibling = root.path().join( "it122_unrelated_sibling" );
+  std::fs::create_dir_all( &unrelated_sibling ).expect( "create unrelated sibling of anc" );
+  let s = query( &unrelated_sibling );
+  assert!(
+    !s.contains( "session-it122-tie" ),
+    "control: session must be EXCLUDED under an unrelated sibling of anc -- if this fails, \
+     Claims A/B above are meaningless; got:\n{s}"
   );
 }

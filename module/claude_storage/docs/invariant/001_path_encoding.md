@@ -66,21 +66,31 @@ of five outcomes:
   collapsed to the candidates' common ancestor — collapsing reintroduces the shared-parent
   false-inclusion shape one confidence level down (BUG-526) — and each caller checks its own
   directional relationship against every candidate individually, conservatively including when
-  at least one qualifies.
+  at least one qualifies. The consumed length credited to a PARENT level's own competition when
+  this result is itself a nested (non-outermost) recursive step is the tied candidates' own
+  verified, shared consumed length — never a hardcoded placeholder — since which candidate wins
+  the tie is ambiguous but how much every tied candidate consumed reaching it is not; crediting
+  it as though it were unresolved starves a genuinely deeper tied subtree against an unrelated,
+  less-verified sibling one level up (BUG-528).
 - **Partial** — the best (longest-consumed) real prefix found, tie-broken by consumed length
-  (not raw byte length) when 2+ candidates tie. When a real sibling's own piece textually
-  extends the current winner AND an exact `consumed_so_far + piece.len() > 199` check against
-  `encode_path()`'s own fixed 200-character truncation boundary confirms truncation could
-  plausibly be in play, `walk_fs()` does NOT guess which candidate is correct — guessing via an
-  in-memory `piece.len() > remaining.len()` comparison was found unsound (`remaining`'s own tail
-  is inflated by `encode_path()`'s appended hash-plus-topic bytes once truncation has actually
-  occurred, silently defeating the comparison, BUG-524) — it instead defers unconditionally to
-  the current level (`Partial(base)`), letting the single `search_encoded_subtree` fallback (see
-  below) make the final, filesystem-verified determination. The entire defer is gated on
-  `total_len >= 200` — the total encoded key's own length reaching the truncation boundary at
-  all, identically the condition that opens the rescue search itself (`encoded.len() > 200`) —
-  so it can never fire on a short key where truncation is impossible by construction and the
-  retreat would go unrescued (BUG-525).
+  (not raw byte length) when 2+ candidates tie. When the winning candidate is a single best
+  match (no tie) AND `total_len >= 200` (the total encoded key's own length reaching the
+  truncation boundary at all, identically the condition that opens the rescue search itself,
+  `encoded.len() > 200` — so the defer can never fire on a short key where truncation is
+  impossible by construction and the retreat would go unrescued, BUG-525) AND some OTHER,
+  non-winning candidate's own on-disk piece agrees with the unconsumed remainder ITSELF
+  (`common_prefix_len(piece, remaining)` — never the winning candidate's own piece length or
+  verified depth) out to the fixed 199-character real-content boundary, `walk_fs()` does NOT
+  guess which candidate is correct — guessing via an in-memory `piece.len() > remaining.len()`
+  comparison was found unsound (`remaining`'s own tail is inflated by `encode_path()`'s appended
+  hash-plus-topic bytes once truncation has actually occurred, silently defeating the comparison,
+  BUG-524), and keying the defer on the WINNING candidate's own verified depth was found unable
+  to distinguish genuine truncation ambiguity from an unrelated long synthetic `--topic` tag
+  riding on an otherwise short, already-complete winning encoding — appended entirely AFTER
+  `encode_path()` already ran, inflating `total_len` with no real truncation in play (BUG-529) —
+  it instead defers unconditionally to the current level (`Partial(base)`), letting the single
+  `search_encoded_subtree` fallback (see below) make the final, filesystem-verified
+  determination.
 - **NotFound** — no real filesystem entry corresponds to even the first component.
 
 **200-character truncation boundary**: once the fully-assembled encoded key exceeds 200
@@ -94,12 +104,21 @@ level's own directory, and matching via topic-boundary-aware prefix
 (`target.starts_with("{encoded}--")`) in addition to exact equality, so a real descendant past
 the truncation boundary is still found when it additionally carries a synthetic topic suffix on
 top of its own already-truncated key (BUG-522) — to find the truncation-hidden target. The loose
-prefix match fires only at proper-descendant levels of the search, never at the search ROOT: at
-the root the candidate is merely where `walk_fs()` stalled, so "candidate + `--`" is stringwise
+prefix match fires only at proper-descendant levels of the search, never at any of the search's
+own **stall points** — every directory the search's own entry function already stalled at
+without further filesystem descent: for the single-candidate rescue (`search_encoded_subtree`)
+this is the one candidate itself; for the tied-candidate rescue (`search_encoded_subtree_tied`,
+invoked when `walk_fs()` found 2+ tied best candidates) this is BOTH the tied candidates
+themselves AND their shared common ancestor. At a stall point the candidate is merely where the
+search itself stalled — nothing deeper was verified — so "candidate + `--`" is stringwise
 indistinguishable from a DELETED deeper path's own special-leading component, and promoting it
-to a confident `Full` would strip the `Partial` conservative-include disjunct and falsely
-EXCLUDE a session genuinely nested under a deleted query anchor (BUG-527); exact equality stays
-enabled at every level including the root. This
+to a confident `Full` would strip the `Partial`/tie conservative-include disjunct and falsely
+EXCLUDE a session genuinely nested under a deleted query anchor (BUG-527, single-candidate case;
+BUG-530, tied-candidate case — including the tied candidates' own common ancestor, which a
+special-leading-character-escape collision between the tied siblings can otherwise expose to the
+identical false-promotion risk, since that escape's own `--` separator sits immediately after the
+ancestor's own encoding by construction); exact equality stays enabled at every level including
+every stall point. This
 subtree search examines every sibling to completion at each level rather than returning on the
 first match found (an early return silently depends on `read_dir()`'s platform-unspecified
 enumeration order to decide a genuine tie, BUG-523); when 2+ real candidates remain after the
@@ -133,24 +152,34 @@ disk and `walk_fs()` can only confirm the shared, shallow, real ancestor.
 
 This body-match precondition does not prove soundness against every possible truncation shape,
 and this residual gap is now formally resolved (not merely flagged) as an **accepted,
-documented limitation, not a defect**: if the paths' shared real ancestor is itself deep enough
-that its OWN pre-truncation encoding already exceeds 200 characters, two genuinely unrelated
-siblings under that ancestor still inherit an identical first-200-character body from it, and no
-finite-prefix-length string comparison can distinguish them from the stored (truncated) strings
-alone — once the anchor's own encoding alone exceeds 200 characters, the entire comparison
-window any such check could inspect is already consumed by the anchor's own shared prefix,
-leaving zero budget to observe anything past that boundary. Closing this would require storing
-full, untruncated paths — a storage-format (encode-side) change outside this decode-side
-algorithm's scope. This disposition, its unclosability proof, and its pinning regression tests
-(`it_91`/`it_92`, asserting the CURRENT, tolerated inclusion rather than exclusion) are recorded
-in BUG-520.
+documented limitation, not a defect**. Two confirmed causes produce an identical first-200-
+character body without a genuine ancestor/descendant relationship, and neither is closeable by
+any finite-prefix-length string comparison: once the first 200 characters of two paths'
+pre-truncation encodings are already forced identical (for whatever reason), the entire
+comparison window any such check could inspect is exhausted before either side's own
+distinguishing structure ever appears, leaving zero budget to observe anything past that
+boundary. (1) **Deep shared ancestor** (BUG-520): if the paths' shared real ancestor is itself
+deep enough that its OWN pre-truncation encoding already exceeds 200 characters, two genuinely
+unrelated siblings under that ancestor inherit an identical first-200-character body from it,
+despite neither being nested in the other (`it_91`/`it_92`). (2) **Shallow ancestor plus a
+component-boundary escape collision** (BUG-520 scope broadened by BUG-533): even with a SHORT
+shared ancestor, one side's own diverging tail can independently exceed 200 characters and
+collide, byte-for-byte, with an unrelated real multi-component chain on the other side, because
+the encoding step maps a literal hyphen WITHIN one component to the same output byte as the
+separator BETWEEN two components — the same non-injectivity already documented below for
+untruncated paths, now compounded by truncation (`it_117`). Ancestor depth is therefore not the
+operative condition; a shared 200-character encoded body is, however it was produced. Closing
+either cause would require storing full, untruncated paths — a storage-format (encode-side)
+change outside this decode-side algorithm's scope. This disposition, its unclosability proof, and
+its pinning regression tests (`it_91`/`it_92`/`it_117`, each asserting the CURRENT, tolerated
+inclusion rather than exclusion) are recorded in BUG-520 and BUG-533.
 
 The algorithm assumes the caller's working environment matches the storage origin. This decode
-algorithm's full evolution — 19 defects found (18 fixed; 1, BUG-520, resolved as an accepted
-architectural limitation rather than a fix) via this session's MAAV adversarial-verification
-process — is recorded in `task/claude_storage/bug/completed/509_*.md` through `527_*.md`
-(sibling directory to this repo root). Read those for detailed root-cause narratives; this
-section states only the CURRENT resulting contract.
+algorithm's full evolution — 25 defects found (23 fixed; 2, BUG-520 and BUG-533, resolved as
+accepted architectural limitations rather than fixes) via this session's MAAV adversarial-
+verification process — is recorded in `task/claude_storage/bug/completed/509_*.md` through
+`533_*.md` (sibling directory to this repo root). Read those for detailed root-cause narratives;
+this section states only the CURRENT resulting contract.
 
 ### Contract
 
@@ -166,10 +195,12 @@ section states only the CURRENT resulting contract.
 - **Inverse guarantee**: `decode(encode(p)) == p` holds only when the filesystem contains
   exactly one candidate matching the encoded key; when 2+ real candidates exist, decode
   correctly reports the ambiguity (`AmbiguousFull`) rather than silently picking one
-- **Known accepted imprecision**: when two unrelated paths share a real filesystem ancestor
-  whose OWN pre-truncation encoding independently exceeds 200 characters, decode may
+- **Known accepted imprecision**: when two unrelated paths share an identical first-200-character
+  encoded body — whether because a real shared ancestor's OWN pre-truncation encoding
+  independently exceeds 200 characters, or because a shallow ancestor's diverging tail collides
+  byte-for-byte with an unrelated real chain via a component-boundary escape — decode may
   conservatively over-include the unrelated candidate — proven unclosable by any finite-prefix
-  string comparison on the decode side (see Disambiguation above, and BUG-520). This is a
+  string comparison on the decode side (see Disambiguation above, and BUG-520/BUG-533). This is a
   documented, accepted limitation of the contract, not a violation of it.
 
 ### Violation Conditions
