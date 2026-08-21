@@ -1422,15 +1422,28 @@ fn walk_fs( base : &std::path::Path, remaining : &str, is_first : bool, total_le
   // Fix(BUG-526): a genuine tie (2+ distinct real candidates at the same
   // maximal consumed length) preserves the full set as `AmbiguousPartial`
   // rather than collapsing to `Partial(base)` — see this function's own
-  // Fix(BUG-526) doc comment above. Consumed-length credit stays 0 on a
-  // tie, unchanged from the collapse version: a tie's deeper consumption is
-  // ambiguous and must not outrank an undisputed sibling's verified
-  // progress at the parent level.
+  // Fix(BUG-526) doc comment above.
+  //
+  // Fix(BUG-528): consumed-length credit reports the tie's own verified
+  // `best_consumed` value, not a hardcoded 0. BUG-526's original credit
+  // conflated two DIFFERENT kinds of ambiguity — WHICH candidate wins the
+  // tie is genuinely ambiguous, but HOW MANY bytes every tied candidate
+  // consumed is not (by construction, every entry in `best_candidates`
+  // consumed exactly `best_consumed` bytes — that equality is what makes it
+  // a tie). Reporting 0 discarded a verified quantity because a different,
+  // unrelated quantity was unresolved, starving this function's own
+  // per-child `consider_partial` competition above: a nested
+  // `AmbiguousPartial` propagated at credit 0 could never outrank an
+  // unrelated shallower sibling with ANY nonzero partial progress, even
+  // when the tied subtree's real, undisputed depth was far greater.
+  // Pitfall: do not revert to crediting 0 here — the ambiguity this arm
+  // exists to preserve is the winning PATH's identity (`AmbiguousPartial`'s
+  // own `Vec<PathBuf>`), never the consumed count.
   match best_candidates.len()
   {
     0 => ( FsDecodeOutcome::Partial( base.to_path_buf() ), 0 ),
     1 => ( FsDecodeOutcome::Partial( best_candidates.into_iter().next().expect( "len checked == 1" ) ), best_consumed.expect( "set when candidates non-empty" ) ),
-    _ => ( FsDecodeOutcome::AmbiguousPartial( best_candidates ), 0 ),
+    _ => ( FsDecodeOutcome::AmbiguousPartial( best_candidates ), best_consumed.expect( "set when candidates non-empty" ) ),
   }
 }
 

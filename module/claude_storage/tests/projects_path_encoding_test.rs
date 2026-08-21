@@ -61,6 +61,7 @@
 //! | IT-108 | BUG-527 | `scope::under` includes a session whose deleted project nests under a deleted intermediate anchor with a special-leading component |
 //! | IT-109 | BUG-527 | `scope::around` — same deleted-intermediate-anchor inclusion, under∪relevant entry point |
 //! | IT-110 | BUG-524 | `scope::under` control — equal-length truncated extension siblings resolve independently; the shorter bait anchor excludes both |
+//! | IT-111 | BUG-528 | `scope::under` includes a session whose true project resolves via a genuine Partial tie one level below an unrelated, coincidentally-colliding sibling |
 //!
 //! Note: IT-60..IT-64 follow IT-59 (`scope::around` tests in `projects_scope_around_test.rs`).
 //! IT-27..IT-30 were already allocated in `tests/docs/cli/command/007_projects.md`
@@ -196,6 +197,19 @@
 //! the BUG-524 defer + BUG-523 ranked-search machinery the BUG-526
 //! competition rework inherits. BUG-525/526/527 were all found during the
 //! same MAAV Cycle's Round 13 re-verification of BUG-523/524's own fixes.
+//!
+//! IT-111 continues the sequence for BUG-528 (Round 14 Dimension Adversary's
+//! finding: BUG-526's `AmbiguousPartial` tie arm reported consumed length 0
+//! to the parent level regardless of how many bytes the tied candidates had
+//! actually, verifiably consumed — conflating "which candidate wins the tie"
+//! (genuinely ambiguous) with "how many bytes every tied candidate consumed"
+//! (not ambiguous at all, since a tie requires them to be equal). A tied
+//! subtree's own real depth was thus invisible to the parent-level
+//! `consider_partial` competition, letting an unrelated shallower sibling
+//! whose piece merely lossy-collided with the target win by any nonzero
+//! margin). The fix credits the tie's own verified `best_consumed` value
+//! instead of a hardcoded 0. Found during the same MAAV Cycle's Round 14
+//! re-verification of BUG-525/526/527's own fixes.
 #![ cfg( unix ) ]
 
 mod common;
@@ -4351,5 +4365,165 @@ fn it_110_scope_under_resolves_tied_truncated_extension_siblings_independently()
   assert!(
     s.contains( "session-it110-siba" ) && s.contains( "session-it110-sibb" ),
     "both siblings' sessions must be included under the shared parent anchor; got:\n{s}"
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// scope::under — Genuine Partial-vs-Partial Tie Under-Reports Its Own
+// Verified Consumed Length as 0, Letting an Unrelated Shallower Collision
+// Sibling Outrank the Deeper, Correctly-Resolved Tied Set (BUG-528)
+//
+// Root Cause: `walk_fs`'s final tie arm returned
+// `(FsDecodeOutcome::AmbiguousPartial(best_candidates), 0)` whenever 2+ real
+// candidates tied at the same maximal consumed length — Fix(BUG-526)'s own
+// design. The parent level's per-child loop (the `AmbiguousPartial(inner)`
+// arm's `consider_partial` call) then credited every tied candidate with
+// only `piece.len() + 0` when competing one level up, discarding however
+// many bytes were verifiably consumed INSIDE the child's own recursion
+// before the tie was detected. BUG-526 conflated two distinct kinds of
+// ambiguity: WHICH tied candidate eventually wins is genuinely unresolved,
+// but HOW MANY bytes every tied candidate consumed is NOT — by
+// construction, every entry collected into `best_candidates` tied at
+// exactly `best_consumed` bytes. Crediting 0 let an unrelated, shallower
+// real sibling whose piece merely happens to prefix-match the target by
+// coincidence (not because it is genuinely part of the resolution) win the
+// parent-level `consider_partial` competition purely because ANY nonzero
+// credit outranks a hardcoded 0, even when the tied subtree's own real,
+// undisputed depth was far greater.
+//
+// Why Not Caught: IT-106 and IT-110 (BUG-526's own regression tests) both
+// resolve their tie at the TOP level of the relevant recursion — nothing
+// shallower ever competes against the tied set's credit, so a 0-vs-nonzero
+// discrepancy never surfaces. This fixture nests the tie one level deeper
+// (under a parent `p`) with a SEPARATE, unrelated real sibling (`px`) one
+// level shallower whose name coincidentally lossy-collides with the tied
+// candidates' own encoded prefix — the shape needed to expose that a tied
+// subtree's credit is compared against a sibling's credit at all.
+//
+// Fix Applied: `walk_fs`'s tie arm now reports the tie's own verified
+// `best_consumed` value instead of a hardcoded 0 — every tied candidate, by
+// definition, consumed that many bytes; only the winning PATH's identity
+// (carried in `AmbiguousPartial`'s own `Vec<PathBuf>`) remains ambiguous.
+//
+// Prevention: this fixture places the genuine tie ONE LEVEL BELOW an
+// unrelated, coincidentally-colliding sibling specifically so the tied
+// set's credit must compete upward through `consider_partial` — a tie
+// fixture that resolves at the search's own top level (like IT-106/IT-110)
+// can never catch a credit-accounting regression in that upward
+// competition.
+//
+// Pitfall: do not revert to crediting 0 on this arm — the ambiguity it
+// exists to preserve is the winning candidate's PATH identity, never its
+// consumed byte count; those are independent quantities and only one of
+// them is actually unresolved by a tie.
+// ─────────────────────────────────────────────────────────────────────────────
+#[ test ]
+// bug_reproducer(BUG-528)
+fn it_111_scope_under_includes_true_project_despite_zero_credited_partial_tie()
+{
+  let root = TempDir::new().unwrap();
+  let storage_root = root.path().join( ".claude" );
+
+  let p_dir = root.path().join( "it111p" );
+  let px = root.path().join( "it111p_it111x" );
+  let sib1 = p_dir.join( "it111x-foo" );
+  let sib2 = p_dir.join( "it111x.foo" );
+  let deleted_anchor = sib1.join( format!( "it111y{}", "y".repeat( 90 ) ) );
+  let session_project = deleted_anchor.join( format!( "it111gone{}", "g".repeat( 90 ) ) );
+
+  std::fs::create_dir_all( &sib1 ).expect( "create sibling 1 dir" );
+  std::fs::create_dir_all( &sib2 ).expect( "create sibling 2 dir" );
+  std::fs::create_dir_all( &px ).expect( "create collision sibling dir" );
+
+  let enc1 = claude_storage_core::encode_path( &sib1 ).expect( "encode sibling 1" );
+  let enc2 = claude_storage_core::encode_path( &sib2 ).expect( "encode sibling 2" );
+  assert_eq!( enc1, enc2, "fixture sanity: the two siblings must encode identically (collision)" );
+
+  let enc_t = claude_storage_core::encode_path( &session_project ).expect( "encode session project" );
+  assert!( enc_t.len() > 200, "fixture sanity: session key must be truncated; got {}", enc_t.len() );
+  let enc_px = claude_storage_core::encode_path( &px ).expect( "encode collision sibling" );
+  assert!(
+    enc_t.starts_with( &enc_px ),
+    "fixture sanity: px's encoding must prefix-match the session key (lossy-collision forward match)"
+  );
+  // The deleted intermediate is NORMAL-leading — no "--" boundary after
+  // enc(sib1), so the rescue's loose match (BUG-522/527) can never fire in
+  // this fixture; isolates the credit accounting from that separate gap.
+  assert!(
+    !enc_t.starts_with( &format!( "{enc1}--" ) ),
+    "fixture sanity: enc(T) must NOT have a '--' boundary after enc(sib1)"
+  );
+
+  common::write_path_project_session( &storage_root, &session_project, "session-it111-probe", 2 );
+
+  // Discoverability control: included under the tempdir root.
+  let out = common::clg_cmd()
+    .env( "HOME", root.path().to_str().unwrap() )
+    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+    .arg( ".projects" )
+    .arg( "scope::under" )
+    .arg( format!( "path::{}", root.path().display() ) )
+    .output()
+    .unwrap();
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  assert!(
+    s.contains( "session-it111-probe" ),
+    "control: session must be discoverable under the tempdir root; got:\n{s}"
+  );
+
+  // Claim 1: INCLUDED under p (the true project's real grandparent).
+  let out = common::clg_cmd()
+    .env( "HOME", root.path().to_str().unwrap() )
+    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+    .arg( ".projects" )
+    .arg( "scope::under" )
+    .arg( format!( "path::{}", p_dir.display() ) )
+    .output()
+    .unwrap();
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  assert!(
+    s.contains( "session-it111-probe" ),
+    "session must be INCLUDED under scope::under path::<p> — its true project \
+     p/it111x-foo/it111y<90>/it111gone<90> IS under p; exclusion means the genuine tie's \
+     verified deeper consumption was under-credited, letting the shallower collision \
+     sibling px outrank the deeper tied set; got:\n{s}"
+  );
+
+  // Claim 2: INCLUDED under the deleted intermediate anchor.
+  let out = common::clg_cmd()
+    .env( "HOME", root.path().to_str().unwrap() )
+    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+    .arg( ".projects" )
+    .arg( "scope::under" )
+    .arg( format!( "path::{}", deleted_anchor.display() ) )
+    .output()
+    .unwrap();
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  assert!(
+    s.contains( "session-it111-probe" ),
+    "session must be INCLUDED under the deleted anchor p/it111x-foo/it111y<90> — its true \
+     project IS nested there; got:\n{s}"
+  );
+
+  // Claim 3: EXCLUDED under px (an unrelated collision sibling).
+  let out = common::clg_cmd()
+    .env( "HOME", root.path().to_str().unwrap() )
+    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+    .arg( ".projects" )
+    .arg( "scope::under" )
+    .arg( format!( "path::{}", px.display() ) )
+    .output()
+    .unwrap();
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  assert!(
+    !s.contains( "session-it111-probe" ),
+    "session must be EXCLUDED under scope::under path::<px> — its true project is NOT under \
+     px (px = it111p_it111x is an unrelated sibling of p whose name merely collides with the \
+     p/it111x-foo chain's encoding). Inclusion means the under-credited tie accounting \
+     anchored the decode at px instead of the deeper verified tied set; got:\n{s}"
   );
 }
