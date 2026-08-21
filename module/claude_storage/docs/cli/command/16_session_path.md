@@ -1,4 +1,4 @@
-# Command :: 15. `.session.path`
+# Command :: 16. `.session.path`
 
 ### Scope
 
@@ -74,7 +74,7 @@ jq '.message.usage' "$( claude_storage .session.path )"
 |---|-----------|------|----------|
 | 9 | [`path::`](../param/09_path.md) | [`StoragePath`](../type/10_storage_path.md) | optional |
 | 13 | [`session::`](../param/13_session.md) | [`SessionId`](../type/09_session_id.md) | optional |
-| 39 | [`latest::`](../param/39_latest.md) | Boolean | optional |
+| 41 | [`latest::`](../param/41_latest.md) | Boolean | optional |
 | 17 | [`topic::`](../param/17_topic.md) | [`TopicName`](../type/12_topic_name.md) | optional |
 
 ### Referenced User Stories

@@ -2,7 +2,6 @@
 //!
 //! An entry represents a single message in a conversation (user or assistant).
 
-use core::fmt::Write as FmtWrite;
 use std::path::PathBuf;
 use crate::{ json::{ JsonValue, parse_json }, Error, Result };
 
@@ -65,14 +64,29 @@ pub enum MessageContent
 }
 
 /// User message content
+///
+/// `message.content` in the JSONL is either a plain string (a typed prompt) or an
+/// array of content blocks (a tool-result turn). Both forms land here as blocks —
+/// the string form becomes a single [`ContentBlock::Text`].
 #[derive( Debug, Clone )]
 pub struct UserMessage
 {
-  /// User's message text
-  pub content : String,
+  /// Content blocks (text, `tool_result`)
+  pub content : Vec< ContentBlock >,
 
   /// Thinking metadata (if extended thinking was enabled)
   pub thinking_metadata : Option< ThinkingMetadata >,
+}
+
+impl UserMessage
+{
+  /// Flatten this message's blocks into displayable text
+  #[ must_use ]
+  #[ inline ]
+  pub fn text( &self ) -> String
+  {
+    ContentBlock::flatten_text( &self.content )
+  }
 }
 
 /// Assistant message content
@@ -98,7 +112,7 @@ pub struct AssistantMessage
   pub request_id : String,
 }
 
-/// Content block in assistant message
+/// Content block in a user or assistant message
 #[derive( Debug, Clone )]
 pub enum ContentBlock
 {
@@ -136,6 +150,49 @@ pub enum ContentBlock
     /// Whether this is an error result
     is_error : bool,
   },
+  /// A block whose `type` this parser does not model (`image`, `fallback`, …)
+  ///
+  /// Kept rather than rejected so one unmodelled block never drops the whole entry.
+  Other
+  {
+    /// The block's declared `type` field
+    kind : String,
+  },
+}
+
+impl ContentBlock
+{
+  /// Flatten a block sequence into a single searchable text string
+  ///
+  /// Blocks contributing no text (`Other`) are skipped; the rest are joined with
+  /// newlines. Shared by [`UserMessage::text`] and [`Entry::content_text`] so both
+  /// roles flatten identically.
+  #[ must_use ]
+  #[ inline ]
+  pub fn flatten_text( blocks : &[ Self ] ) -> String
+  {
+    let mut text = String::new();
+
+    for block in blocks
+    {
+      let piece = match block
+      {
+        Self::Text { text : block_text } => block_text.clone(),
+        Self::Thinking { thinking, .. } => thinking.clone(),
+        Self::ToolUse { name, input, .. } => format!( "Tool: {name} Input: {input:?}" ),
+        Self::ToolResult { content, .. } => content.clone(),
+        Self::Other { .. } => continue,
+      };
+
+      if !text.is_empty()
+      {
+        text.push( '\n' );
+      }
+      text.push_str( &piece );
+    }
+
+    text
+  }
 }
 
 /// Metadata about thinking/reasoning process
@@ -245,16 +302,40 @@ impl Entry
   }
 
   /// Parse user message from JSON object
+  ///
+  /// Accepts both `message.content` forms Claude Code writes: a plain string (typed
+  /// prompt) and an array of content blocks (tool-result turn).
+  ///
+  /// Fix(user-content-array): the array form was rejected outright, so
+  /// `load_entries`' skip-unparseable-line policy silently discarded every
+  /// tool-result turn — 903187 of 959017 user lines (94%) across the local store.
+  /// Root cause: `parse_user_message` assumed `message.content` was always a string,
+  /// which holds only for typed prompts.
+  /// Pitfall: a parse error here is invisible — the caller drops the line rather
+  /// than surfacing it, so a narrow schema assumption reads as missing history.
   fn parse_user_message( obj : &std::collections::HashMap< String, JsonValue >, line : &str ) -> Result< UserMessage >
   {
     let message_obj = obj.get( "message" )
       .and_then( | v | v.as_object() )
       .ok_or_else( || Error::parse( 0, line, "missing 'message' object in user entry" ) )?;
 
-    let content = message_obj.get( "content" )
-      .and_then( | v | v.as_str() )
-      .ok_or_else( || Error::parse( 0, line, "missing 'message.content' in user entry" ) )?
-      .to_string();
+    let content_value = message_obj.get( "content" )
+      .ok_or_else( || Error::parse( 0, line, "missing 'message.content' in user entry" ) )?;
+
+    let content = if let Some( text ) = content_value.as_str()
+    {
+      vec![ ContentBlock::Text { text : text.to_string() } ]
+    }
+    else if let Some( blocks ) = content_value.as_array()
+    {
+      blocks.iter()
+        .map( | block | Self::parse_content_block( block, line ) )
+        .collect::< Result< Vec< _ > > >()?
+    }
+    else
+    {
+      return Err( Error::parse( 0, line, "'message.content' in user entry is neither string nor array" ) );
+    };
 
     let thinking_metadata = obj.get( "thinkingMetadata" )
       .and_then( | v | v.as_object() )
@@ -383,9 +464,8 @@ impl Entry
           .to_string();
 
         let content = obj.get( "content" )
-          .and_then( | v | v.as_str() )
-          .ok_or_else( || Error::parse( 0, line, "missing 'content' in tool_result block" ) )?
-          .to_string();
+          .map( Self::tool_result_text )
+          .unwrap_or_default();
 
         let is_error = obj.get( "is_error" )
           .and_then( super::json::JsonValue::as_bool )
@@ -393,8 +473,29 @@ impl Entry
 
         Ok( ContentBlock::ToolResult { tool_use_id, content, is_error } )
       }
-      _ => Err( Error::parse( 0, line, &format!( "unknown content block type: {block_type}" ) ) ),
+      other => Ok( ContentBlock::Other { kind : other.to_string() } ),
     }
+  }
+
+  /// Flatten a `tool_result` block's `content` field into text
+  ///
+  /// The field is a string for most tools and an array of nested blocks (`text`,
+  /// `tool_reference`, `image`) for others — 22167 of 897837 local tool results.
+  /// Only nested `text` contributes; other nested kinds carry no displayable text.
+  fn tool_result_text( value : &JsonValue ) -> String
+  {
+    if let Some( text ) = value.as_str()
+    {
+      return text.to_string();
+    }
+
+    let Some( blocks ) = value.as_array() else { return String::new() };
+
+    blocks.iter()
+      .filter_map( | block | block.as_object() )
+      .filter_map( | block | block.get( "text" ).and_then( | v | v.as_str() ) )
+      .collect::< Vec< _ > >()
+      .join( "\n" )
   }
 
   /// Extract all text content from entry for searching
@@ -404,55 +505,18 @@ impl Entry
   #[inline]
   pub fn content_text( &self ) -> String
   {
+    ContentBlock::flatten_text( self.content_blocks() )
+  }
+
+  /// Borrow this entry's content blocks, whichever role wrote them
+  #[ must_use ]
+  #[ inline ]
+  pub fn content_blocks( &self ) -> &[ ContentBlock ]
+  {
     match &self.message
     {
-      MessageContent::User( user_msg ) =>
-      {
-        user_msg.content.clone()
-      }
-      MessageContent::Assistant( assistant_msg ) =>
-      {
-        let mut text = String::new();
-        for block in &assistant_msg.content
-        {
-          match block
-          {
-            ContentBlock::Text { text : block_text } =>
-            {
-              if !text.is_empty()
-              {
-                text.push( '\n' );
-              }
-              text.push_str( block_text );
-            }
-            ContentBlock::Thinking { thinking, .. } =>
-            {
-              if !text.is_empty()
-              {
-                text.push( '\n' );
-              }
-              text.push_str( thinking );
-            }
-            ContentBlock::ToolUse { name, input, .. } =>
-            {
-              if !text.is_empty()
-              {
-                text.push( '\n' );
-              }
-              write!( text, "Tool: {name} Input: {input:?}" ).unwrap();
-            }
-            ContentBlock::ToolResult { content, .. } =>
-            {
-              if !text.is_empty()
-              {
-                text.push( '\n' );
-              }
-              text.push_str( content );
-            }
-          }
-        }
-        text
-      }
+      MessageContent::User( user_msg ) => &user_msg.content,
+      MessageContent::Assistant( assistant_msg ) => &assistant_msg.content,
     }
   }
 
@@ -545,11 +609,52 @@ mod tests
     {
       MessageContent::User( user_msg ) =>
       {
-        assert_eq!( user_msg.content, "Hello" );
+        assert_eq!( user_msg.text(), "Hello" );
         assert!( user_msg.thinking_metadata.is_some() );
       }
       _ => panic!( "expected user message" ),
     }
+  }
+
+  #[test]
+  fn test_parse_user_entry_with_tool_result_array()
+  {
+    let json = r#"{"uuid":"u1","parentUuid":null,"timestamp":"2025-11-08T23:30:10.039Z","type":"user","cwd":"/tmp","sessionId":"s1","version":"2.0.31","gitBranch":null,"userType":"external","isSidechain":false,"message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_01","content":"ok","is_error":false}]}}"#;
+
+    let entry = Entry::from_json_line( json ).unwrap();
+
+    assert_eq!( entry.content_text(), "ok" );
+    assert_eq!( entry.content_blocks().len(), 1 );
+  }
+
+  #[test]
+  fn test_parse_user_entry_with_nested_tool_result_content()
+  {
+    let json = r#"{"uuid":"u2","parentUuid":null,"timestamp":"2025-11-08T23:30:10.039Z","type":"user","cwd":"/tmp","sessionId":"s1","version":"2.0.31","gitBranch":null,"userType":"external","isSidechain":false,"message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_02","content":[{"type":"text","text":"first"},{"type":"image","source":{}},{"type":"text","text":"second"}]}]}}"#;
+
+    let entry = Entry::from_json_line( json ).unwrap();
+
+    assert_eq!( entry.content_text(), "first\nsecond" );
+  }
+
+  #[test]
+  fn test_parse_unknown_block_type_is_retained_not_rejected()
+  {
+    let json = r#"{"uuid":"u3","parentUuid":null,"timestamp":"2025-11-08T23:30:10.039Z","type":"user","cwd":"/tmp","sessionId":"s1","version":"2.0.31","gitBranch":null,"userType":"external","isSidechain":false,"message":{"role":"user","content":[{"type":"image","source":{}},{"type":"text","text":"caption"}]}}"#;
+
+    let entry = Entry::from_json_line( json ).unwrap();
+
+    assert_eq!( entry.content_blocks().len(), 2 );
+    assert!( matches!( &entry.content_blocks()[ 0 ], ContentBlock::Other { kind } if kind == "image" ) );
+    assert_eq!( entry.content_text(), "caption" );
+  }
+
+  #[test]
+  fn test_parse_user_entry_rejects_non_string_non_array_content()
+  {
+    let json = r#"{"uuid":"u4","parentUuid":null,"timestamp":"2025-11-08T23:30:10.039Z","type":"user","cwd":"/tmp","sessionId":"s1","version":"2.0.31","gitBranch":null,"userType":"external","isSidechain":false,"message":{"role":"user","content":42}}"#;
+
+    assert!( Entry::from_json_line( json ).is_err() );
   }
 
   #[test]

@@ -243,14 +243,14 @@
       aliases: []
       tags: ["scope", "filter"]
 
-    - name: "tail"
+    - name: "last"
       kind: "Integer"
       description: "Trailing messages shown from the most-recently-active session (0 = all)"
-      hint: "Tail window size"
+      hint: "Trailing window size"
       optional: true
       default: "10"
       validation_rules: []
-      aliases: []
+      aliases: ["l"]
       tags: []
 
     - name: "detail"
@@ -293,7 +293,7 @@
     - ".show session_id::abc123 show_stat::1"
     - ".show session_id::abc123 show_tokens::1"
     - ".show session_id::abc123 scope::under path::/home/alice/workspace"
-    - ".show tail::25"
+    - ".show last::25"
     - ".show project::/path/to/project detail::sessions"
   auto_help_enabled: true
 
@@ -584,10 +584,10 @@
 
     - name: "detail"
       kind: "String"
-      description: "Output detail: projects (terse header only) or sessions (full detail)"
+      description: "Output detail: projects (one line per project, default) or sessions (every session listed)"
       hint: "Output detail level"
       optional: true
-      default: "sessions"
+      default: "projects"
       validation_rules: []
       aliases: []
       tags: []
@@ -659,8 +659,8 @@
 
     - name: "show_tree"
       kind: "Boolean"
-      description: "Show agent sessions tree-indented under their root session"
-      hint: "Show agent tree"
+      description: "Tree layout: projects nested by directory (detail::projects) or agents under their root session (detail::sessions)"
+      hint: "Tree layout"
       optional: true
       default: "0"
       validation_rules: []
@@ -925,8 +925,8 @@
 
 - name: ".tail"
   namespace: ""
-  description: "Print the last N entries of the current directory's conversation (default: 4)"
-  hint: "Print last N conversation entries"
+  description: "Print the last N conversation turns of the current directory's session (default: 4)"
+  hint: "Print last N conversation turns"
   version: "1.0.0"
   status: "stable"
   aliases: []
@@ -937,12 +937,30 @@
   http_method_hint: "GET"
 
   arguments:
-    - name: "tail"
+    - name: "last"
       kind: "Integer"
-      description: "Number of trailing entries to print (0 = show all, default: 4)"
-      hint: "Entry count"
+      description: "Number of trailing turns to print (0 = show all, default: 4)"
+      hint: "Turn count"
       optional: true
       default: "4"
+      validation_rules: []
+      aliases: ["l"]
+      tags: []
+
+    - name: "full"
+      kind: "Boolean"
+      description: "Print every body line instead of folding long turns after 8 lines"
+      hint: "Unfold long turns"
+      optional: true
+      validation_rules: []
+      aliases: []
+      tags: []
+
+    - name: "compact"
+      kind: "Boolean"
+      description: "One line per turn: ordinal, age, speaker, and an elided first line"
+      hint: "One line per turn"
+      optional: true
       validation_rules: []
       aliases: []
       tags: []
@@ -967,9 +985,12 @@
 
   examples:
     - ".tail"
-    - ".tail tail::10"
+    - ".tail last::10"
+    - ".tail l::10"
+    - ".tail full::1"
+    - ".tail compact::1 last::20"
     - ".tail topic::work"
-    - ".tail tail::0"
+    - ".tail last::0"
   auto_help_enabled: true
 
 - name: ".usage"
@@ -1138,4 +1159,53 @@
     - ".rollup group::project sort::total order::desc"
     - ".rollup group::model columns::group,calls,total,percent"
     - ".rollup sort::max_context limit::10"
+  auto_help_enabled: true
+
+- name: ".cost"
+  namespace: ""
+  description: "Per-conversation cost table: exact token counts, cache read/write split, compactions, max context, and estimated USD cost, with agent sessions folded in"
+  hint: "Per-conversation token/cost accounting"
+  version: "1.0.0"
+  status: "stable"
+  aliases: []
+  tags: ["storage", "info"]
+  permissions: []
+  idempotent: true
+  deprecation_message: ""
+  http_method_hint: "GET"
+
+  arguments:
+    - name: "session_ids"
+      kind: "String"
+      description: "Comma-separated session IDs or unique ID prefixes, searched across all projects (default: most recent session of the current directory's project)"
+      hint: "Session IDs"
+      optional: true
+      validation_rules: []
+      aliases: []
+      tags: ["filter"]
+
+    - name: "path"
+      kind: "String"
+      description: "Directory whose project anchors default session resolution when session_ids is omitted (default: current directory)"
+      hint: "Directory path"
+      optional: true
+      validation_rules: []
+      aliases: []
+      tags: ["scope"]
+
+    - name: "agents"
+      kind: "Integer"
+      description: "Fold agent (subagent) sessions into each conversation's row: 1 = fold in, 0 = root session only (default: 1)"
+      hint: "Include agents"
+      optional: true
+      default: "1"
+      validation_rules: []
+      aliases: []
+      tags: ["filter"]
+
+  examples:
+    - ".cost"
+    - ".cost session_ids::3cf8fab1"
+    - ".cost session_ids::aaaa1111,bbbb2222 agents::0"
+    - ".cost path::/data/repos/myproject"
   auto_help_enabled: true

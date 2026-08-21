@@ -24,7 +24,7 @@ Filter sessions by minimum entry count threshold.
 
 **Purpose:** Excludes sessions with fewer entries than the threshold. Useful for finding substantive conversations (skip one-message sessions) or for performance (only load sessions known to have content).
 
-**Side effect (historical — `.list` only, deprecated):** Auto-enabled `show_sessions::1` in `.list`. No equivalent side effect in `.projects` — session display is unconditional by default (`detail::sessions`); see [Session Filter group](../param_group/04_session_filter.md).
+**Side effect (historical — `.list` only, deprecated):** Auto-enabled `show_sessions::1` in `.list`. No equivalent side effect in `.projects` — session display is never auto-enabled; pass `detail::sessions` explicitly (see [Session Filter group](../param_group/04_session_filter.md)).
 
 **Examples:**
 ```bash

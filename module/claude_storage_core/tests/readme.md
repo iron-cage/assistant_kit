@@ -3,9 +3,11 @@
 ## Overview
 
 The claude_storage_core test suite covers the core storage library: JSON parsing, path
-encoding/decoding, session filtering, content search, export, and token-usage rollup. The suite
+encoding/decoding, session filtering, content search, export, token-usage rollup, session-family
+discovery, per-conversation cost accounting, topic→UUIDv5 session-ID derivation, and canonical
+path resolution. The suite
 is split between integration tests that exercise real `~/.claude/` storage and unit tests that
-run fully in-process. Twelve of the twenty-one files are bug reproducers — each documents a parse,
+run fully in-process. Twelve of the twenty-five files are bug reproducers — each documents a parse,
 encoding, or storage defect found in production data with 5-section root-cause documentation.
 `status_global_stats_fast_bug.rs` covers both issue-015 (performance) and issue-018 (agent
 session discovery for Claude Code v2.x format) with corner case tests for subagents/ traversal.
@@ -23,10 +25,12 @@ tests/
 ├── scope_test.rs                          # Unit tests for scope_for(), git_root_for(), ClaudeScope
 ├── continuation_tests.rs                  # Integration tests for continuation detection and UUID selection
 ├── session_id_tests.rs                    # Unit tests for SessionId newtype
+├── cost_report_test.rs                    # Unit tests for cost::cost_report() and aggregate_reports()
 ├── topic_session_tests.rs                 # Golden-vector tests for the topic→UUIDv5 session rule
 ├── canonical_tests.rs                     # Unit tests for physical_abs canonical path resolution
 ├── count_entries_bug.rs                   # Bug Reproducer (issue-016): count_entries vs stats mismatch
 ├── export.rs                              # Export integration tests (markdown, JSON, text)
+├── family_test.rs                         # Unit tests for family::find_family() — both agent layouts
 ├── filtering.rs                           # Session and project filtering integration tests
 ├── is_agent_session_doc_mismatch_bug.rs   # Bug Reproducer (BUG-491): doc comment claimed isSidechain check that never existed
 ├── json_multibyte_bug.rs                  # Bug Reproducer (bug-1): byte/char index mismatch
@@ -52,8 +56,12 @@ tests/
 | `scope_test.rs` | Unit tests for `scope_for()`, `git_root_for()`, and `ClaudeScope` path computation |
 | `continuation_tests.rs` | Integration tests for `check_continuation`, `most_recent_session_id`, `most_recent_session_in_dir`, and `to_storage_path_for` |
 | `session_id_tests.rs` | Unit tests for `SessionId` newtype: construction, display, clone, and `From` conversions |
+| `cost_report_test.rs` | Unit tests for `cost::cost_report()`/`aggregate_reports()`: per-model attribution, TTL split, compactions, dedup |
+| `topic_session_tests.rs` | Golden-vector tests for the topic→UUIDv5 session rule |
+| `canonical_tests.rs` | Unit tests for `physical_abs()` canonical path resolution |
 | `count_entries_bug.rs` | Reproduce and verify fix for count_entries() vs stats() mismatch |
 | `export.rs` | Integration tests for session export (markdown, JSON, text formats) |
+| `family_test.rs` | Unit tests for `find_family()`: hierarchical and flat agent association |
 | `filtering.rs` | Session and project filter composition integration tests |
 | `is_agent_session_doc_mismatch_bug.rs` | Lock in filename-only `is_agent_session()` contract; regression guard for BUG-491 |
 | `json_multibyte_bug.rs` | Reproduce and verify fix for multi-byte UTF-8 parser bug |

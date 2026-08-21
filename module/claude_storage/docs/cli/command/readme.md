@@ -4,7 +4,7 @@
 
 - **Purpose**: Document all CLI commands for the `claude_storage` binary.
 - **Responsibility**: Per-command detail pages with full parameter tables and cross-refs.
-- **In Scope**: All 15 registered commands with syntax, parameters, examples, and exit codes (14 active, 1 deprecated).
+- **In Scope**: All 16 registered commands with syntax, parameters, examples, and exit codes (15 active, 1 deprecated).
 - **Out of Scope**: Parameter definitions (→ `param/`), type constraints (→ `type/`), parameter groups (→ `param_group/`).
 
 All commands for the `claude_storage` CLI. Parameters use `param::value` syntax. All commands are read-only except `.session.ensure`, which creates the session working directory on disk.
@@ -26,10 +26,11 @@ See [param/readme.md](../param/readme.md) for full parameter specs and [type/rea
 | `09_project_exists.md` | .project.exists — check conversation history exists |
 | `10_session_dir.md` | .session.dir — compute session working directory path |
 | `11_session_ensure.md` | .session.ensure — ensure session directory exists |
-| `12_tail.md` | .tail — print last N conversation entries for current directory |
+| `12_tail.md` | .tail — print last N conversation turns for current directory |
 | `13_usage.md` | .usage — per-session usage table (turns/tokens/cache/duration/dir) |
 | `14_rollup.md` | .rollup — grouped/filtered/sorted/projected token-usage table |
-| `15_session_path.md` | .session.path — resolve a session's absolute transcript file path |
+| `15_cost.md` | .cost — per-conversation cost table with agent fold-in |
+| `16_session_path.md` | .session.path — resolve a session's absolute transcript file path |
 
 ### Commands Table
 
@@ -37,7 +38,7 @@ See [param/readme.md](../param/readme.md) for full parameter specs and [type/rea
 |---|---------|---------|--------|---------|
 | 1 | [`.status`](01_status.md) | Show storage overview and statistics | 2 | `claude_storage .status` |
 | 2 | [`.list`](02_list.md) | DEPRECATED — superseded by [`.projects`](07_projects.md) | 9 | `claude_storage .list` |
-| 3 | [`.show`](03_show.md) | Display session or project details | 8 | `claude_storage .show session_id::ID` |
+| 3 | [`.show`](03_show.md) | Display session or project details | 12 | `claude_storage .show session_id::ID` |
 | 4 | [`.count`](04_count.md) | Fast counting of items | 5 | `claude_storage .count` |
 | 5 | [`.search`](05_search.md) | Search session content by query | 7 | `claude_storage .search query::QUERY` |
 | 6 | [`.export`](06_export.md) | Export session to file | 6 | `claude_storage .export session_id::ID output::PATH` |
@@ -46,9 +47,10 @@ See [param/readme.md](../param/readme.md) for full parameter specs and [type/rea
 | 9 | [`.project.exists`](09_project_exists.md) | Check conversation history exists (exits 1 when absent) | 2 | `claude_storage .project.exists` |
 | 10 | [`.session.dir`](10_session_dir.md) | Compute session working directory path | 2 | `claude_storage .session.dir` |
 | 11 | [`.session.ensure`](11_session_ensure.md) | Ensure session directory exists, report resume strategy | 3 | `claude_storage .session.ensure` |
-| 12 | [`.tail`](12_tail.md) | Print last N conversation entries for current directory | 3 | `claude_storage .tail` |
+| 12 | [`.tail`](12_tail.md) | Print last N conversation turns for current directory | 5 | `claude_storage .tail` |
 | 13 | [`.usage`](13_usage.md) | Per-session usage table — turns, tokens, cache, duration, dir | 4 | `claude_storage .usage` |
 | 14 | [`.rollup`](14_rollup.md) | Grouped/filtered/sorted/projected token-usage table | 9 | `claude_storage .rollup` |
-| 15 | [`.session.path`](15_session_path.md) | Resolve a session's absolute transcript file path | 4 | `claude_storage .session.path` |
+| 15 | [`.cost`](15_cost.md) | Per-conversation cost table with agent sessions folded in | 3 | `claude_storage .cost` |
+| 16 | [`.session.path`](16_session_path.md) | Resolve a session's absolute transcript file path | 4 | `claude_storage .session.path` |
 
-**Total:** 15 commands registered (14 active, 1 deprecated — `.list`, superseded by `.projects`)
+**Total:** 16 commands registered (15 active, 1 deprecated — `.list`, superseded by `.projects`)

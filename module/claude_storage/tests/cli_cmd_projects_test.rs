@@ -34,7 +34,7 @@
 //! - INT-51: `scope::` with invalid value rejected
 //! - INT-52: `agent::` with non-boolean value rejected
 //! - INT-53: `detail::projects` shows header line only, no session/family body lines
-//! - INT-54: `detail::` omitted reproduces exact `detail::sessions` output
+//! - INT-54: `detail::` omitted reproduces exact `detail::projects` output
 //! - INT-55: `detail::` with invalid value rejected
 //! - INT-56: `filter::` narrows to projects whose decoded path contains the substring
 //! - INT-57: `filter::` with no matching project shows empty listing, not an error
@@ -45,7 +45,8 @@
 //! - INT-62: `project::X ids::1 count::1` outputs a single bare integer
 //! - INT-63: `ids::1` without required `project::` rejected
 //! - INT-64: `type::` and `filter::` compose under `scope::global`
-//! - INT-65: `limit::`/`show_tree::`/`show_topic::` are no-ops under `detail::projects`
+//! - INT-65: `limit::`/`show_topic::` are no-ops under `detail::projects`
+//! - INT-65b: `show_tree::1` selects the tree layout under `detail::projects`
 //! - INT-66: `.list`'s `deprecation_message` edit does not alter runtime output
 //!
 //! Tests INT-26..INT-50: → `cli_cmd_projects_summary_test.rs`
@@ -101,6 +102,7 @@ fn int_1_default_no_args_exits_0_with_output()
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
     .current_dir( &project )
     .arg( ".projects" )
+    .arg( "detail::sessions" )
     .output()
     .unwrap();
 
@@ -134,6 +136,7 @@ fn int_2_scope_relevant_includes_ancestors()
     .env( "HOME", root.path() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
     .arg( ".projects" )
+    .arg( "detail::sessions" )
     .arg( "scope::relevant" )
     .arg( format!( "path::{}", path_abc.display() ) )
     .output()
@@ -171,6 +174,7 @@ fn int_3_scope_under_includes_descendants()
     .env( "HOME", root.path() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
     .arg( ".projects" )
+    .arg( "detail::sessions" )
     .arg( "scope::under" )
     .arg( format!( "path::{}", base.display() ) )
     .output()
@@ -205,6 +209,7 @@ fn int_4_scope_global_returns_all()
     .env( "HOME", root.path() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
     .arg( ".projects" )
+    .arg( "detail::sessions" )
     .arg( "scope::global" )
     .output()
     .unwrap();
@@ -238,6 +243,7 @@ fn int_5_path_overrides_cwd()
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
     .current_dir( std::env::temp_dir() )
     .arg( ".projects" )
+    .arg( "detail::sessions" )
     .arg( "scope::local" )
     .arg( format!( "path::{}", target.display() ) )
     .output()
@@ -267,6 +273,7 @@ fn int_6_session_filter_narrows_results()
     .env( "HOME", root.path() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
     .arg( ".projects" )
+    .arg( "detail::sessions" )
     .arg( "scope::local" )
     .arg( format!( "path::{}", project.display() ) )
     .arg( "session::commit" )
@@ -300,6 +307,7 @@ fn int_7_min_entries_filter_excludes_short_sessions()
     .env( "HOME", root.path() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
     .arg( ".projects" )
+    .arg( "detail::sessions" )
     .arg( "scope::local" )
     .arg( format!( "path::{}", project.display() ) )
     .arg( "min_entries::10" )
@@ -327,6 +335,7 @@ fn int_8_no_matching_sessions_exits_0()
     .env( "HOME", root.path() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
     .arg( ".projects" )
+    .arg( "detail::sessions" )
     .arg( "scope::global" )
     .output()
     .unwrap();
@@ -352,6 +361,7 @@ fn int_9_scope_local_underscore_path()
     .env( "HOME", root.path() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
     .arg( ".projects" )
+    .arg( "detail::sessions" )
     .arg( "scope::local" )
     .arg( format!( "path::{}", project.display() ) )
     .output()
@@ -382,6 +392,7 @@ fn int_10_scope_under_underscore_base_path()
     .env( "HOME", root.path() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
     .arg( ".projects" )
+    .arg( "detail::sessions" )
     .arg( "scope::under" )
     .arg( format!( "path::{}", base.display() ) )
     .output()
@@ -413,6 +424,7 @@ fn int_11_scope_relevant_underscore_ancestor()
     .env( "HOME", root.path() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
     .arg( ".projects" )
+    .arg( "detail::sessions" )
     .arg( "scope::relevant" )
     .arg( format!( "path::{}", current.display() ) )
     .output()
@@ -451,6 +463,7 @@ fn int_12_scope_relevant_topic_scoped_underscore_ancestor()
     .env( "HOME", root.path() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
     .arg( ".projects" )
+    .arg( "detail::sessions" )
     .arg( "scope::relevant" )
     .arg( format!( "path::{}", current.display() ) )
     .output()
@@ -487,6 +500,7 @@ fn int_13_scope_under_multiple_underscore_components()
     .env( "HOME", root.path() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
     .arg( ".projects" )
+    .arg( "detail::sessions" )
     .arg( "scope::under" )
     .arg( format!( "path::{}", base.display() ) )
     .output()
@@ -520,6 +534,7 @@ fn int_14_v1_groups_sessions_under_path_headers()
     .env( "HOME", root.path() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
     .arg( ".projects" )
+    .arg( "detail::sessions" )
     .arg( "scope::global" )
     .output()
     .unwrap();
@@ -548,6 +563,7 @@ fn int_15_v1_path_header_present_for_scope_local()
     .env( "HOME", root.path() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
     .arg( ".projects" )
+    .arg( "detail::sessions" )
     .arg( "scope::local" )
     .arg( format!( "path::{}", project.display() ) )
     .output()
@@ -587,6 +603,7 @@ fn int_16_v1_agent_sessions_collapsed_without_filter()
     .env( "HOME", root.path() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
     .arg( ".projects" )
+    .arg( "detail::sessions" )
     .arg( "scope::global" )
     .output()
     .unwrap();
@@ -626,6 +643,7 @@ fn int_17_v2_agent_sessions_shown_individually()
     .env( "HOME", root.path() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
     .arg( ".projects" )
+    .arg( "detail::sessions" )
     .arg( "scope::global" )
     .arg( "show_tree::1" )
     .output()
@@ -656,6 +674,7 @@ fn int_18_v2_entry_count_shown_per_session()
     .env( "HOME", root.path() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
     .arg( ".projects" )
+    .arg( "detail::sessions" )
     .arg( "scope::global" )
     .output()
     .unwrap();
@@ -690,6 +709,7 @@ fn int_19_v1_agent_filter_disables_collapse()
     .env( "HOME", root.path() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
     .arg( ".projects" )
+    .arg( "detail::sessions" )
     .arg( "scope::global" )
     .arg( "agent::1" )
     .output()
@@ -722,6 +742,7 @@ fn int_20_scope_under_underscore_dirs_display_correctly()
     .env( "HOME", root.path() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
     .arg( ".projects" )
+    .arg( "detail::sessions" )
     .arg( "scope::under" )
     .arg( format!( "path::{}", base.display() ) )
     .output()
@@ -752,6 +773,7 @@ fn int_21_scope_global_hyphen_topic_dir_in_header()
     .env( "HOME", root.path() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
     .arg( ".projects" )
+    .arg( "detail::sessions" )
     .arg( "scope::global" )
     .output()
     .unwrap();
@@ -790,6 +812,7 @@ fn int_22_scope_under_excludes_underscore_suffix_sibling()
     .env( "HOME", root.path() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
     .arg( ".projects" )
+    .arg( "detail::sessions" )
     .arg( "scope::under" )
     .arg( format!( "path::{}", base.display() ) )
     .output()
@@ -822,6 +845,7 @@ fn int_23_scope_relevant_excludes_underscore_suffix_sibling()
     .env( "HOME", root.path() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
     .arg( ".projects" )
+    .arg( "detail::sessions" )
     .arg( "scope::relevant" )
     .arg( format!( "path::{}", target.display() ) )
     .output()
@@ -849,6 +873,7 @@ fn int_24_v1_entry_count_shown_per_session()
     .env( "HOME", root.path() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
     .arg( ".projects" )
+    .arg( "detail::sessions" )
     .arg( "scope::global" )
     .output()
     .unwrap();
@@ -881,6 +906,7 @@ fn int_25_v1_limit_truncates_sessions()
     .env( "HOME", root.path() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
     .arg( ".projects" )
+    .arg( "detail::sessions" )
     .arg( "scope::global" )
     .arg( "limit::2" )
     .output()
@@ -921,6 +947,7 @@ fn int_51_scope_invalid_value_rejected()
     .env( "CLAUDE_STORAGE_ROOT", root.path() )
     .current_dir( "/tmp" )
     .arg( ".projects" )
+    .arg( "detail::sessions" )
     .arg( "scope::badvalue" )
     .output()
     .unwrap();
@@ -968,6 +995,7 @@ fn int_52_agent_non_boolean_rejected()
     .env( "CLAUDE_STORAGE_ROOT", root.path() )
     .current_dir( "/tmp" )
     .arg( ".projects" )
+    .arg( "detail::sessions" )
     .arg( "agent::invalid" )
     .output()
     .unwrap();
@@ -1022,7 +1050,7 @@ fn int_53_detail_projects_header_only_no_body_lines()
 
   assert_exit( &out, 0 );
   let s = stdout( &out );
-  assert!( s.contains( "Found 2 projects" ), "must show project count header; got:\n{s}" );
+  assert!( s.contains( "2 projects" ), "must show project count in summary; got:\n{s}" );
   assert!( !s.contains( "root-int53" ), "must NOT show root session id in body; got:\n{s}" );
   assert!( !s.contains( "agent-int53-x" ), "must NOT show agent session id; got:\n{s}" );
   assert!( !s.contains( "session-int53-b" ), "must NOT show plain session id; got:\n{s}" );
@@ -1031,9 +1059,13 @@ fn int_53_detail_projects_header_only_no_body_lines()
 
 // ─── INT-54 ───────────────────────────────────────────────────────────────────
 
-/// INT-54: `detail::` omitted reproduces exact `detail::sessions` output.
+/// INT-54: `detail::` omitted reproduces exact `detail::projects` output.
+///
+/// The default flipped from `sessions` to `projects` when the terse overview
+/// became the primary view — bare `.projects` answers "which projects?", and
+/// `detail::sessions` is the opt-in for per-session listings.
 #[ test ]
-fn int_54_detail_omitted_matches_explicit_sessions()
+fn int_54_detail_omitted_matches_explicit_projects()
 {
   let root = TempDir::new().unwrap();
   let storage_root = root.path().join( ".claude" );
@@ -1054,7 +1086,7 @@ fn int_54_detail_omitted_matches_explicit_sessions()
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
     .arg( ".projects" )
     .arg( "scope::global" )
-    .arg( "detail::sessions" )
+    .arg( "detail::projects" )
     .output()
     .unwrap();
 
@@ -1062,11 +1094,11 @@ fn int_54_detail_omitted_matches_explicit_sessions()
   assert_exit( &out_explicit, 0 );
   assert_eq!(
     stdout( &out_default ), stdout( &out_explicit ),
-    "detail:: omitted must byte-match explicit detail::sessions"
+    "detail:: omitted must byte-match explicit detail::projects"
   );
   assert!(
-    stdout( &out_default ).contains( "session-int54" ),
-    "sanity: session must appear; got:\n{}", stdout( &out_default )
+    !stdout( &out_default ).contains( "session-int54" ),
+    "default must NOT list session ids; got:\n{}", stdout( &out_default )
   );
 }
 
@@ -1123,6 +1155,7 @@ fn int_56_filter_narrows_to_matching_substring()
     .env( "HOME", root.path() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
     .arg( ".projects" )
+    .arg( "detail::sessions" )
     .arg( "scope::global" )
     .arg( "filter::alpha" )
     .output()
@@ -1151,6 +1184,7 @@ fn int_57_filter_no_match_shows_empty_listing()
     .env( "HOME", root.path() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
     .arg( ".projects" )
+    .arg( "detail::sessions" )
     .arg( "scope::global" )
     .arg( "filter::nonexistent-substring" )
     .output()
@@ -1183,6 +1217,7 @@ fn int_58_type_uuid_narrows_to_uuid_projects()
     .env( "HOME", root.path() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
     .arg( ".projects" )
+    .arg( "detail::sessions" )
     .arg( "scope::global" )
     .arg( "type::uuid" )
     .output()
@@ -1213,6 +1248,7 @@ fn int_59_type_path_narrows_to_path_projects()
     .env( "HOME", root.path() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
     .arg( ".projects" )
+    .arg( "detail::sessions" )
     .arg( "scope::global" )
     .arg( "type::path" )
     .output()
@@ -1236,6 +1272,7 @@ fn int_60_type_invalid_value_rejected()
     .env( "CLAUDE_STORAGE_ROOT", root.path() )
     .current_dir( "/tmp" )
     .arg( ".projects" )
+    .arg( "detail::sessions" )
     .arg( "type::bogus" )
     .output()
     .unwrap();
@@ -1274,6 +1311,7 @@ fn int_61_ids_outputs_one_conversation_id_per_line()
     .env( "HOME", root.path() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
     .arg( ".projects" )
+    .arg( "detail::sessions" )
     .arg( format!( "project::{}", project.display() ) )
     .arg( "ids::1" )
     .output()
@@ -1308,6 +1346,7 @@ fn int_62_ids_count_outputs_bare_integer()
     .env( "HOME", root.path() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
     .arg( ".projects" )
+    .arg( "detail::sessions" )
     .arg( format!( "project::{}", project.display() ) )
     .arg( "ids::1" )
     .arg( "count::1" )
@@ -1331,6 +1370,7 @@ fn int_63_ids_without_project_rejected()
     .env( "CLAUDE_STORAGE_ROOT", root.path() )
     .current_dir( "/tmp" )
     .arg( ".projects" )
+    .arg( "detail::sessions" )
     .arg( "ids::1" )
     .output()
     .unwrap();
@@ -1374,6 +1414,7 @@ fn int_64_type_and_filter_compose()
     .env( "HOME", root.path() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
     .arg( ".projects" )
+    .arg( "detail::sessions" )
     .arg( "scope::global" )
     .arg( "type::path" )
     .arg( "filter::alpha" )
@@ -1389,9 +1430,13 @@ fn int_64_type_and_filter_compose()
 
 // ─── INT-65 ───────────────────────────────────────────────────────────────────
 
-/// INT-65: `limit::`/`show_tree::`/`show_topic::` are no-ops under `detail::projects`.
+/// INT-65: `limit::`/`show_topic::` are no-ops under `detail::projects`.
+///
+/// `show_tree::` was in this no-op set until the terse overview gained a tree
+/// layout — it now selects between the flat table and the directory tree, so it
+/// is asserted separately below as a live parameter, not a no-op.
 #[ test ]
-fn int_65_limit_show_tree_show_topic_noop_under_detail_projects()
+fn int_65_limit_show_topic_noop_under_detail_projects()
 {
   let root = TempDir::new().unwrap();
   let storage_root = root.path().join( ".claude" );
@@ -1419,7 +1464,6 @@ fn int_65_limit_show_tree_show_topic_noop_under_detail_projects()
     .arg( "scope::global" )
     .arg( "detail::projects" )
     .arg( "limit::1" )
-    .arg( "show_tree::1" )
     .arg( "show_topic::1" )
     .output()
     .unwrap();
@@ -1428,7 +1472,60 @@ fn int_65_limit_show_tree_show_topic_noop_under_detail_projects()
   assert_exit( &out_with_noops, 0 );
   assert_eq!(
     stdout( &out_plain ), stdout( &out_with_noops ),
-    "limit::/show_tree::/show_topic:: must be no-ops under detail::projects"
+    "limit::/show_topic:: must be no-ops under detail::projects"
+  );
+}
+
+// ─── INT-65b ──────────────────────────────────────────────────────────────────
+
+/// INT-65b: `show_tree::1` selects the tree layout under `detail::projects`.
+#[ test ]
+fn int_65b_show_tree_selects_tree_layout_under_detail_projects()
+{
+  let root = TempDir::new().unwrap();
+  let storage_root = root.path().join( ".claude" );
+  // Two siblings, not one: a lone project collapses to a single top-level node,
+  // which by construction draws no connector — the tree only becomes visibly
+  // distinct from the flat table once something actually nests.
+  let alpha = root.path().join( "proj-int65b" ).join( "alpha" );
+  let beta = root.path().join( "proj-int65b" ).join( "beta" );
+  fs::create_dir_all( &alpha ).unwrap();
+  fs::create_dir_all( &beta ).unwrap();
+  common::write_path_project_session( &storage_root, &alpha, "session-int65b-a", 2 );
+  common::write_path_project_session( &storage_root, &beta, "session-int65b-b", 2 );
+
+  let out_flat = common::clg_cmd()
+    .env( "HOME", root.path() )
+    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+    .arg( ".projects" )
+    .arg( "scope::global" )
+    .arg( "detail::projects" )
+    .output()
+    .unwrap();
+
+  let out_tree = common::clg_cmd()
+    .env( "HOME", root.path() )
+    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+    .arg( ".projects" )
+    .arg( "scope::global" )
+    .arg( "detail::projects" )
+    .arg( "show_tree::1" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out_flat, 0 );
+  assert_exit( &out_tree, 0 );
+  assert_ne!(
+    stdout( &out_flat ), stdout( &out_tree ),
+    "show_tree::1 must change the layout under detail::projects, not be a no-op"
+  );
+  assert!(
+    !stdout( &out_flat ).contains( '└' ) && !stdout( &out_flat ).contains( '├' ),
+    "flat layout must not draw tree connectors; got:\n{}", stdout( &out_flat )
+  );
+  assert!(
+    stdout( &out_tree ).contains( '└' ) || stdout( &out_tree ).contains( '├' ),
+    "tree layout must draw tree connectors; got:\n{}", stdout( &out_tree )
   );
 }
 
@@ -1509,8 +1606,8 @@ fn int_67_detail_uppercase_matches_lowercase()
     "detail::PROJECTS (mixed-case) must byte-match detail::projects"
   );
   assert!(
-    stdout( &out_mixed ).contains( "Found 2 projects" ),
-    "sanity: header must still show project count; got:\n{}", stdout( &out_mixed )
+    stdout( &out_mixed ).contains( "2 projects" ),
+    "sanity: summary must still show project count; got:\n{}", stdout( &out_mixed )
   );
 }
 
@@ -1535,6 +1632,7 @@ fn int_68_filter_uppercase_matches_lowercase()
     .env( "HOME", root.path() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
     .arg( ".projects" )
+    .arg( "detail::sessions" )
     .arg( "scope::global" )
     .arg( "filter::ALPHA-INT68" )
     .output()

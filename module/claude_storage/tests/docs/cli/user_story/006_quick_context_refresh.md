@@ -8,7 +8,7 @@ Source: [006_quick_context_refresh.md](../../../../docs/cli/user_story/006_quick
 | ID | Test Name | Criteria |
 |----|-----------|---------|
 | RWS-1 | Zero-parameter tail shows recent entries in current directory | AC: view last few entries with zero parameters |
-| RWS-2 | tail:: controls how many entries are shown | AC: control how many recent entries are shown |
+| RWS-2 | last:: controls how many entries are shown | AC: control how many recent entries are shown |
 | RWS-3 | topic:: views a non-default session | AC: view recent entries for a non-default session topic |
 | RWS-4 | No history reports a clear error | AC: clear error when directory has no history |
 
@@ -32,7 +32,7 @@ clg .tail
 
 ---
 
-### RWS-2: tail:: controls how many entries are shown
+### RWS-2: last:: controls how many entries are shown
 
 **Scenario:** Developer wants more context than the default 4 entries.
 
@@ -40,7 +40,7 @@ clg .tail
 
 **Command:**
 ```bash
-clg .tail tail::6
+clg .tail last::6
 ```
 
 **Expected:**

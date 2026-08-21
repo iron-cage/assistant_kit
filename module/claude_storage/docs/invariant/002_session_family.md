@@ -53,9 +53,10 @@ Both layouts coexist within a single project directory. Neither is deprecated.
 | 2 | [`.list`](../cli/command/02_list.md) | Lists sessions with optional agent inclusion |
 | 3 | [`.show`](../cli/command/03_show.md) | Displays a single session (root or agent) |
 | 7 | [`.projects`](../cli/command/07_projects.md) | Groups sessions into families for tree display |
+| 15 | [`.cost`](../cli/command/15_cost.md) | Folds agent sessions into per-conversation cost totals (`agents::1`) |
 
 ### Sources
 
 | File | Relationship |
 |------|--------------|
-| `claude_storage_core` | `SessionFamily` Domain Type definition |
+| `claude_storage_core/src/family.rs` | `SessionFamily` Domain Type definition and `find_family()` discovery across both layouts |

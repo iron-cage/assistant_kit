@@ -34,7 +34,7 @@ Session identifier parameter — acts as substring filter in listing commands, a
 
 **Purpose:** Narrows results by session identity. In listing contexts (`.list`, `.projects`), acts as a substring filter for discovery. In counting/search contexts (`.count`, `.search`), acts as an exact scope pin to a specific session.
 
-**Side effect (historical — `.list` only, deprecated):** Auto-enabled `show_sessions::1` in `.list`. No equivalent side effect in `.projects` — session display is unconditional by default (`detail::sessions`); see [Session Filter group](../param_group/04_session_filter.md).
+**Side effect (historical — `.list` only, deprecated):** Auto-enabled `show_sessions::1` in `.list`. No equivalent side effect in `.projects` — session display is never auto-enabled; pass `detail::sessions` explicitly (see [Session Filter group](../param_group/04_session_filter.md)).
 
 **Examples:**
 ```bash
@@ -67,7 +67,7 @@ session::default      # Matches -default_topic.jsonl
 | 4 | [`.count`](../command/04_count.md) | unset | SessionId: exact scope pin to a specific session |
 | 5 | [`.search`](../command/05_search.md) | unset | SessionId: exact scope pin to a specific session |
 | 7 | [`.projects`](../command/07_projects.md) | unset | SessionFilter: substring filter |
-| 15 | [`.session.path`](../command/15_session_path.md) | unset | SessionId: pure file-path join, no existence check |
+| 16 | [`.session.path`](../command/16_session_path.md) | unset | SessionId: pure file-path join, no existence check |
 
 ### Referenced User Stories
 | # | User Story | Persona |

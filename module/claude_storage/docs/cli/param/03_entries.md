@@ -22,13 +22,13 @@ Render the currently-displayed entry window as a raw UUID/type/timestamp list in
 
 **Commands:** `.show`
 
-**Purpose:** When enabled, renders entries as a numbered UUID/type/timestamp list instead of formatted conversation content — useful for inspecting session structure or counting messages without loading full content. Effect depends on which `.show` branch is active: in session-detail metadata mode (`show_metadata::1`), it appends the raw list to the metadata block; in session-detail content mode (default, no `show_metadata::1`), it has no effect — content mode always shows full formatted entries regardless; in project-overview branches (no `session_id::`), it renders the `tail::`-windowed message view (see [`tail::`](25_tail.md)) as the same raw list instead of formatted chat.
+**Purpose:** When enabled, renders entries as a numbered UUID/type/timestamp list instead of formatted conversation content — useful for inspecting session structure or counting messages without loading full content. Effect depends on which `.show` branch is active: in session-detail metadata mode (`show_metadata::1`), it appends the raw list to the metadata block; in session-detail content mode (default, no `show_metadata::1`), it has no effect — content mode always shows full formatted entries regardless; in project-overview branches (no `session_id::`), it renders the `last::`-windowed message view (see [`last::`](25_last.md)) as the same raw list instead of formatted chat.
 
 **Examples:**
 ```bash
 show_entries::0                                    # Formatted content (default)
 show_entries::1 show_metadata::1 session_id::ID     # Raw entry list appended to the metadata block
-show_entries::1                                     # Project overview: last tail:: messages rendered as a raw list
+show_entries::1                                     # Project overview: last last:: messages rendered as a raw list
 ```
 
 ### Referenced Type

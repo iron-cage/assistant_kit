@@ -2,7 +2,7 @@
 //!
 //! ## Source
 //!
-//! - Spec: `tests/docs/cli/command/15_session_path.md`
+//! - Spec: `tests/docs/cli/command/16_session_path.md`
 //!
 //! ## Coverage
 //!
@@ -11,15 +11,15 @@
 //! - SP-3: latest with empty storage → exit 2, "no sessions" on stderr
 //! - SP-4: latest picks the newer of two sessions (mtime ordering)
 //! - SP-5: `session::UUID` is pure computation — no existence check on file or storage
-//! - SP-6: `topic::NAME` resolves via the fork-mode UUIDv5 rule (NOT the `-{topic}` dir sense)
+//! - SP-6: `topic::NAME` resolves via the fork-mode `UUIDv5` rule (NOT the `-{topic}` dir sense)
 //! - SP-7: `session::` / `latest::` / `topic::` are mutually exclusive (any pair → exit 1)
 //! - SP-8: selector validation — empty or slash-containing `topic::` / `session::` rejected
-//! - SP-9: golden vector — `path::/tmp/x topic::a` ends in the published UUIDv5 filename
+//! - SP-9: golden vector — `path::/tmp/x topic::a` ends in the published `UUIDv5` filename
 //!
 //! ## Topic Sense Collision (deliberate)
 //!
-//! Every other claude_storage command's `topic::` means the legacy dir-suffix
-//! `{base}/-{topic}`. THIS command's `topic::` means the fork-mode UUIDv5
+//! Every other `claude_storage` command's `topic::` means the legacy dir-suffix
+//! `{base}/-{topic}`. THIS command's `topic::` means the fork-mode `UUIDv5`
 //! session file inside the BASE dir's storage. SP-6 pins the fork sense.
 
 mod common;
@@ -47,8 +47,8 @@ fn assert_exit( out : &std::process::Output, code : i32 )
   );
 }
 
-/// Command with isolated HOME and scrubbed CLAUDE_HOME (storage resolution
-/// honors CLAUDE_HOME first — ambient leakage would silently retarget tests).
+/// Command with isolated HOME and scrubbed `CLAUDE_HOME` (storage resolution
+/// honors `CLAUDE_HOME` first — ambient leakage would silently retarget tests).
 fn cmd_with_home( home : &std::path::Path ) -> std::process::Command
 {
   let mut cmd = common::clg_cmd();
@@ -182,7 +182,7 @@ fn sp_4_latest_picks_newer_session()
 
   common::write_path_project_session( &root, &canon, "33333333-3333-3333-3333-333333333333", 2 );
   // mtime granularity guard: ensure the second write is strictly newer.
-  std::thread::sleep( std::time::Duration::from_millis( 1100 ) );
+  std::thread::sleep( core::time::Duration::from_millis( 1100 ) );
   common::write_path_project_session( &root, &canon, "44444444-4444-4444-4444-444444444444", 2 );
 
   let out = cmd_with_home( home.path() )
@@ -230,7 +230,7 @@ fn sp_5_session_selector_is_pure()
 
 // ─── SP-6 ────────────────────────────────────────────────────────────────────
 
-/// SP-6: `topic::NAME` resolves via the fork-mode UUIDv5 rule.
+/// SP-6: `topic::NAME` resolves via the fork-mode `UUIDv5` rule.
 ///
 /// Expected file = base storage / UUIDv5(canonical base NUL topic).jsonl —
 /// NOT the legacy `{base}/-{topic}` dir sense used by other commands.
@@ -334,7 +334,7 @@ fn sp_8_selector_validation()
 // ─── SP-9 ────────────────────────────────────────────────────────────────────
 
 /// SP-9: golden vector — `path::/tmp/x topic::a` resolves to the published
-/// UUIDv5 filename `41299c24-a8f5-589f-9fce-8474fc855532.jsonl`.
+/// `UUIDv5` filename `41299c24-a8f5-589f-9fce-8474fc855532.jsonl`.
 ///
 /// Pins the cross-implementation contract (namespace + NUL name layout)
 /// end-to-end through the CLI, matching the core golden-vector unit tests.

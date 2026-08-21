@@ -1,6 +1,6 @@
 # Parameter :: `fields::`
 
-Edge case tests for the `fields::` parameter on `.show`. Tests validate the attribute-projection field selector — valid/invalid tokens, `all`, normalization, defaults, and composition with `index::`, `tail::`, and `show_metadata::`.
+Edge case tests for the `fields::` parameter on `.show`. Tests validate the attribute-projection field selector — valid/invalid tokens, `all`, normalization, defaults, and composition with `index::`, `last::`, and `show_metadata::`.
 
 **Source:** [param/32_fields.md](../../../../docs/cli/param/32_fields.md)
 
@@ -141,7 +141,7 @@ Edge case tests for the `fields::` parameter on `.show`. Tests validate the attr
 
 - **Commands:** `.show`
 - **Given:** cwd-resolved project, most-recently-active session with ≥5 known entries
-- **When:** `clg .show fields::timestamp tail::5`
+- **When:** `clg .show fields::timestamp last::5`
 - **Then:** stdout shows the project summary block unchanged, followed by field-projection blocks (not chat-log content) for the last 5 entries
 - **Exit:** 0
 - **Source:** [param/32_fields.md](../../../../docs/cli/param/32_fields.md); same test as [command/03_show.md INT-20](../command/03_show.md) (`int_20_fields_applies_to_project_overview_tail_window`)

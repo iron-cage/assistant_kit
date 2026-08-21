@@ -213,8 +213,8 @@ nodes:
     entity: param
   # cli/param/ entity, continued: 25 added for the .show project-overview extension (26-28 pre-existing gap, not yet graphed); 29-31 added for the .list->.projects consolidation
   - id: param/25
-    file: cli/param/25_tail.md
-    label: Tail
+    file: cli/param/25_last.md
+    label: Last
     entity: param
   - id: param/29
     file: cli/param/29_filter.md

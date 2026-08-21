@@ -1,6 +1,6 @@
 # Parameter :: `index::`
 
-Edge case tests for the `index::` parameter on `.show`. Tests validate the 1-based single-message selector — boundaries, error handling, and composition with `tail::`, `show_entries::`, and `fields::`.
+Edge case tests for the `index::` parameter on `.show`. Tests validate the 1-based single-message selector — boundaries, error handling, and composition with `last::`, `show_entries::`, and `fields::`.
 
 **Source:** [param/33_index.md](../../../../docs/cli/param/33_index.md)
 
@@ -14,7 +14,7 @@ Edge case tests for the `index::` parameter on `.show`. Tests validate the 1-bas
 | EC-4 | `index::0` rejected | Error Handling |
 | EC-5 | Negative `index::` rejected | Error Handling |
 | EC-6 | Out-of-range `index::` rejected, error names the actual count | Error Handling |
-| EC-7 | Counts within the `tail::`-windowed slice in project-overview, not the full session | Composition |
+| EC-7 | Counts within the `last::`-windowed slice in project-overview, not the full session | Composition |
 | EC-8 | Composed with `show_entries::1` narrows the raw list to one line | Composition |
 | EC-9 | Composed with `fields::` projects one message's requested attributes | Composition |
 | EC-10 | Omitted `index::` leaves every in-scope message shown, unchanged | Default |
@@ -99,11 +99,11 @@ Edge case tests for the `index::` parameter on `.show`. Tests validate the 1-bas
 
 ---
 
-### EC-7: Counts within the `tail::`-windowed slice in project-overview, not the full session
+### EC-7: Counts within the `last::`-windowed slice in project-overview, not the full session
 
 - **Commands:** `.show`
 - **Given:** cwd-resolved project, most-recently-active session with 20 known entries
-- **When:** `clg .show tail::5 index::1`
+- **When:** `clg .show last::5 index::1`
 - **Then:** stdout shows the 1st message of the 5-entry tail window (i.e., the 16th message of the full session) — not the 1st message of the session's complete history
 - **Exit:** 0
 - **Source:** [param/33_index.md](../../../../docs/cli/param/33_index.md); same test as [command/03_show.md](../command/03_show.md) composition coverage (`index_counts_within_tail_window_not_full_session`)

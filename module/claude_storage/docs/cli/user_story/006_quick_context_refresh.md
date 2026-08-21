@@ -21,7 +21,7 @@
 |---|-----------|------|
 | 9 | [`path::`](../param/09_path.md) | Directory to resolve the project from (default cwd) |
 | 17 | [`topic::`](../param/17_topic.md) | Session topic suffix (default: unset — falls back to the most recently modified session) |
-| 25 | [`tail::`](../param/25_tail.md) | Number of trailing entries to print (default 4) |
+| 25 | [`last::`](../param/25_last.md) | Number of trailing entries to print (default 4) |
 
 ### Related User Stories
 | # | User Story | Relationship |
@@ -40,13 +40,13 @@ cls .tail
 
 **Step 2: Show more (or fewer) entries**
 ```bash
-cls .tail tail::10
+cls .tail last::10
 # Prints the last 10 entries
 ```
 
 **Step 3: Check a non-default topic**
 ```bash
-cls .tail topic::work tail::4
+cls .tail topic::work last::4
 # Prints the last 4 entries of the "work" topic session
 ```
 
@@ -60,14 +60,14 @@ cls .tail
 
 **Negative tail count:**
 ```bash
-cls .tail tail::-1
-# Exit 1: "tail must be non-negative"
+cls .tail last::-1
+# Exit 1: "last must be non-negative"
 ```
 
 ### Workflow Variations
 
 **Show all entries instead of a fixed count:**
 ```bash
-cls .tail tail::0
+cls .tail last::0
 # 0 means show all entries, oldest-first
 ```

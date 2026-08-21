@@ -13,6 +13,7 @@
 - [ ] Can view token usage breakdown with show_tokens::1
 - [ ] Can view a per-session usage table (turns, tokens, cache, duration, directory) across a scoped set of sessions — see [`.usage`](../command/13_usage.md)
 - [ ] Can view a grouped, sorted, column-projected token-usage table — by session, project, model, or day — to compare cost across dimensions rather than reading one row per session — see [`.rollup`](../command/14_rollup.md)
+- [ ] Can view per-conversation token totals and estimated USD cost with agent sessions folded in — see [`.cost`](../command/15_cost.md)
 
 ### Referenced Commands
 | # | Command | Role |
@@ -22,6 +23,7 @@
 | 4 | [`.count`](../command/04_count.md) | Precise item counts for specific targets |
 | 13 | [`.usage`](../command/13_usage.md) | Per-session usage table for detailed activity audit |
 | 14 | [`.rollup`](../command/14_rollup.md) | Grouped/sorted/projected token-usage table for cross-sectional cost comparison |
+| 15 | [`.cost`](../command/15_cost.md) | Per-conversation token totals and estimated USD cost with agent fold-in |
 
 ### Referenced Parameter Groups
 | # | Parameter Group | Role |

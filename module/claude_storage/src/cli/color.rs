@@ -11,6 +11,8 @@ const RESET  : &str = "\u{1b}[0m";
 const CYAN   : &str = "\u{1b}[36m";
 const YELLOW : &str = "\u{1b}[33m";
 const RED    : &str = "\u{1b}[31m";
+const GREEN  : &str = "\u{1b}[32m";
+const DIM    : &str = "\u{1b}[2m";
 
 fn enabled() -> bool
 {
@@ -45,4 +47,27 @@ pub( super ) fn field_name( text : &str ) -> String
 pub( super ) fn error_marker( text : &str ) -> String
 {
   wrap( RED, text )
+}
+
+/// Colorize a role label by who is speaking — the two roles get distinct hues
+/// so a turn's author is readable at a glance without reading the word.
+pub( super ) fn speaker( entry_type : claude_storage_core::EntryType, text : &str ) -> String
+{
+  match entry_type
+  {
+    claude_storage_core::EntryType::User => wrap( GREEN, text ),
+    claude_storage_core::EntryType::Assistant => wrap( CYAN, text ),
+  }
+}
+
+/// Colorize secondary chrome (rule lines, relative times, continuation hints).
+pub( super ) fn muted( text : &str ) -> String
+{
+  wrap( DIM, text )
+}
+
+/// Colorize a tool invocation line.
+pub( super ) fn tool( text : &str ) -> String
+{
+  wrap( YELLOW, text )
 }

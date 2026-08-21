@@ -26,7 +26,7 @@ Session topic name appended as a `-{name}` suffix to the base directory path.
 
 **Purpose:** Identifies a named session topic within a base directory. Claude Code uses hyphen-prefixed directories (`-default_topic`, `-work`, `-commit`) as session working directories. `topic::` takes the name without the leading hyphen and appends it as `{base}/-{topic}`.
 
-**Sense collision (deliberate):** the paragraph above is the legacy dir-suffix sense, shared by every command EXCEPT `.session.path`. In [`.session.path`](../command/15_session_path.md), `topic::` instead names a fork-mode topic — the value selects the deterministic session file `{storage}/{UUIDv5( canonical base, name )}.jsonl` inside the BASE directory's own storage, never a `-{topic}` sibling directory. Same name, same value constraints, disjoint resolution rule; see `15_session_path.md § Topic Sense Collision` for the rationale.
+**Sense collision (deliberate):** the paragraph above is the legacy dir-suffix sense, shared by every command EXCEPT `.session.path`. In [`.session.path`](../command/16_session_path.md), `topic::` instead names a fork-mode topic — the value selects the deterministic session file `{storage}/{UUIDv5( canonical base, name )}.jsonl` inside the BASE directory's own storage, never a `-{topic}` sibling directory. Same name, same value constraints, disjoint resolution rule; see `16_session_path.md § Topic Sense Collision` for the rationale.
 
 **Examples:**
 ```bash
@@ -54,7 +54,7 @@ topic::-default_topic   # (legal — creates /-default_topic... but convention i
 | 10 | [`.session.dir`](../command/10_session_dir.md) | `default_topic` | Appends `-{topic}` to base directory |
 | 11 | [`.session.ensure`](../command/11_session_ensure.md) | `default_topic` | Appends `-{topic}` to base directory |
 | 12 | [`.tail`](../command/12_tail.md) | unset | Session topic suffix for the resolved session; omitted falls back to the most recently modified non-agent session |
-| 15 | [`.session.path`](../command/15_session_path.md) | unset | **Fork-mode sense** — UUIDv5 session file in the base's storage, not a `-{topic}` dir suffix |
+| 16 | [`.session.path`](../command/16_session_path.md) | unset | **Fork-mode sense** — UUIDv5 session file in the base's storage, not a `-{topic}` dir suffix |
 
 ### Referenced User Stories
 | # | User Story | Persona |

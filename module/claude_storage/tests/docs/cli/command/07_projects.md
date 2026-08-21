@@ -64,7 +64,7 @@ Integration tests for the `.projects` command. Tests verify summary mode output 
 | INT-51 | scope:: with invalid value rejected | Invalid Parameter Rejection |
 | INT-52 | agent:: with non-boolean value rejected | Invalid Parameter Rejection |
 | INT-53 | detail::projects shows header line only, no session/family body lines | Detail Level (task-525) |
-| INT-54 | detail:: omitted reproduces exact pre-task detail::sessions output | Detail Level (task-525) |
+| INT-54 | detail:: omitted reproduces exact detail::projects output | Detail Level (task-525) |
 | INT-55 | detail:: with invalid value rejected | Detail Level (task-525) |
 | INT-56 | filter:: narrows to projects whose decoded path contains the substring | Filter Narrowing (task-525) |
 | INT-57 | filter:: with no matching project shows empty listing, not an error | Filter Narrowing (task-525) |
@@ -75,10 +75,21 @@ Integration tests for the `.projects` command. Tests verify summary mode output 
 | INT-62 | project::X ids::1 count::1 outputs a single bare integer | IDs Scripting Mode (task-525) |
 | INT-63 | ids::1 without required project:: rejected | IDs Scripting Mode (task-525) |
 | INT-64 | type:: and filter:: compose under scope::global | Combined Narrowing (task-525) |
-| INT-65 | limit::/show_tree::/show_topic:: are no-ops under detail::projects | Detail Level (task-525) |
+| INT-65 | limit::/show_topic:: are no-ops under detail::projects | Detail Level (task-525) |
+| INT-65b | show_tree::1 selects the tree layout under detail::projects | Detail Level (task-525) |
 | INT-66 | .list's deprecation_message edit does not alter runtime output | `.list` Deprecation (task-525) |
 | INT-67 | detail::PROJECTS (mixed-case) matches detail::projects byte-for-byte | Case Insensitivity (task-525) |
 | INT-68 | filter::ALPHA-INT68 (mixed-case) matches lowercase-equivalent projects | Case Insensitivity (task-525) |
+| OV-1 | Bare .projects renders the terse overview, not session listings | Terse Overview |
+| OV-2 | Flat layout emits the LAST/CONV/AGENTS/PROJECT header | Terse Overview |
+| OV-3 | Zero agents render as `·`, non-zero as `N ag` | Terse Overview |
+| OV-4 | Summary line uses singular nouns at a count of one | Terse Overview |
+| OV-5 | A project whose decoded path is absent carries `⚠ gone` | Terse Overview |
+| OV-6 | The project matching the process cwd carries the `▸` gutter | Terse Overview |
+| OV-7 | show_tree::1 nests projects by directory with tree connectors | Terse Overview |
+| OV-8 | Empty storage renders the summary line alone, no header row | Terse Overview |
+| OV-9 | detail::sessions still renders the full listing unchanged | Terse Overview |
+| OV-10 | Full project paths are printed, never factored to a shared prefix | Terse Overview |
 
 ## Test Coverage Summary
 
@@ -100,13 +111,14 @@ Integration tests for the `.projects` command. Tests verify summary mode output 
 - Project-Centric Output (task-016): 4 tests (INT-42b, INT-43b, INT-44, INT-45)
 - Topic Existence Guard (issue-035): 5 tests (INT-46 through INT-50)
 - Invalid Parameter Rejection: 2 tests (INT-51, INT-52)
-- Detail Level (task-525): 4 tests (INT-53, INT-54, INT-55, INT-65)
+- Detail Level (task-525): 5 tests (INT-53, INT-54, INT-55, INT-65, INT-65b)
 - Filter Narrowing (task-525): 2 tests (INT-56, INT-57)
 - Type Narrowing (task-525): 3 tests (INT-58, INT-59, INT-60)
 - IDs Scripting Mode (task-525): 3 tests (INT-61, INT-62, INT-63)
 - Combined Narrowing (task-525): 1 test (INT-64)
 - `.list` Deprecation (task-525): 1 test (INT-66)
 - Case Insensitivity (task-525): 2 tests (INT-67, INT-68)
+- Terse Overview: 10 tests (OV-1 through OV-10) — `tests/projects_overview_test.rs`
 
 ## Test Cases
 
@@ -996,10 +1008,11 @@ CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects scope::global detail::projec
 - Fixture: two projects in scope — one with 2 conversations and 12 total agents, one with 1 plain session
 - Output:
   ```
-  Found 2 projects:
+  2 projects · 3 conversations · 12 agents
 
-  ~/path/to/project-a: (2 conversations, 12 agents)
-  ~/path/to/project-b: (1 conversation)
+    LAST      CONV  AGENTS  PROJECT
+    2h ago  2 conv   12 ag  ~/path/to/project-a
+    1d ago  1 conv       ·  ~/path/to/project-b
   ```
 - Output does NOT contain any `*`/`-` session lines or `[N agents: ...]` breakdowns
 - Exit code: 0
@@ -1007,7 +1020,7 @@ CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects scope::global detail::projec
 
 ---
 
-### INT-54: detail:: omitted reproduces exact pre-task detail::sessions output
+### INT-54: detail:: omitted reproduces exact detail::projects output
 
 **Command:**
 ```
@@ -1016,7 +1029,8 @@ CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects scope::global
 
 **Expected behavior:**
 - Fixture: same as INT-53
-- stdout is byte-for-byte identical to the same invocation with explicit `detail::sessions` appended — `detail::` defaults to `sessions`, not `projects`; this is a regression guard against a wrong default
+- stdout is byte-for-byte identical to the same invocation with explicit `detail::projects` appended — `detail::` defaults to `projects`, not `sessions`; this is a regression guard against a wrong default. It pinned the opposite default before the terse overview became the primary view: `sessions` was the default only to preserve `.list`'s behavior through its absorption into `.projects`, and that rationale expired with `.list`
+- stdout does NOT contain session ids
 - Exit code: 0
 - **Source:** [command/07_projects.md](../../../../docs/cli/command/07_projects.md)
 
@@ -1175,18 +1189,35 @@ CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects scope::global type::path fil
 
 ---
 
-### INT-65: limit::/show_tree::/show_topic:: are no-ops under detail::projects
+### INT-65: limit::/show_topic:: are no-ops under detail::projects
 
 **Command:**
 ```
-CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects scope::global detail::projects limit::1 show_tree::1 show_topic::1
+CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects scope::global detail::projects limit::1 show_topic::1
 ```
 
 **Expected behavior:**
 - Fixture: same as INT-53
-- stdout is identical in shape to INT-53's output (header lines only, for both projects) — `limit::1` does not truncate the project list, and `show_tree::1`/`show_topic::1` have no visible effect since no session lines exist to tree-indent or annotate
+- stdout is byte-for-byte identical to the same command without `limit::1 show_topic::1` — `limit::1` does not truncate the project list, and `show_topic::1` has no visible effect since no session lines exist to annotate
+- `show_tree::` was in this no-op set until the terse overview gained a tree layout; it is now a live parameter here, covered by INT-65b
 - Exit code: 0
 - **Source:** [command/07_projects.md](../../../../docs/cli/command/07_projects.md)
+
+---
+
+### INT-65b: show_tree::1 selects the tree layout under detail::projects
+
+**Command:**
+```
+CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects scope::global detail::projects show_tree::1
+```
+
+**Expected behavior:**
+- Fixture: two sibling projects under a common parent directory (nesting is required — a lone project collapses to a single top-level node, which by construction draws no connector)
+- stdout differs from the same command without `show_tree::1`
+- Flat output contains no `├`/`└` connectors; tree output contains at least one
+- Exit code: 0
+- **Source:** [command/07_projects.md](../../../../docs/cli/command/07_projects.md); test: `int_65b_show_tree_selects_tree_layout_under_detail_projects`
 
 ---
 
@@ -1215,6 +1246,7 @@ CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects scope::global detail::PROJEC
 **Expected behavior:**
 - Fixture: one hierarchical family project (root + 2 agent sessions) plus one plain path-based project (single session)
 - stdout is byte-for-byte identical to the same command run with `detail::projects` (lowercase) — `validate_detail_level` calls `.to_lowercase()` on the raw value before matching against `projects`/`sessions`
+- Sanity: the summary line still reports `2 projects`
 - Exit code: 0
 - **Source:** [command/07_projects.md](../../../../docs/cli/command/07_projects.md); scope amendment to task-525 (case-insensitivity regression coverage for `detail::`); test: `int_67_detail_uppercase_matches_lowercase`
 
@@ -1232,3 +1264,170 @@ CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects scope::global filter::ALPHA-
 - stdout includes only the `alpha-int68` project; the `beta-int68` project is absent — both the supplied filter substring and the decoded display path are lowercased before the `contains` check, so casing never affects the match
 - Exit code: 0
 - **Source:** [command/07_projects.md](../../../../docs/cli/command/07_projects.md); scope amendment to task-525 (case-insensitivity regression coverage for `filter::`); test: `int_68_filter_uppercase_matches_lowercase`
+
+---
+
+## Terse Overview (OV-1 – OV-10)
+
+Rendering cases for `detail::projects` — the default view since the terse overview
+became `.projects`' primary answer. Implemented in `tests/projects_overview_test.rs`
+against `src/cli/projects_overview.rs`. OV-9 is the only case here that exercises
+`detail::sessions`, as a guard that the terse renderer did not leak into that path.
+
+---
+
+### OV-1: Bare .projects renders the terse overview, not session listings
+
+**Command:**
+```
+CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects scope::global
+```
+
+**Expected behavior:**
+- Fixture: one project with a root session plus one agent session
+- stdout contains the summary line (`1 project · …`)
+- stdout does NOT contain `Found 1 project:`, the root session id, or the agent session id
+- Exit code: 0
+- **Source:** [command/07_projects.md](../../../../docs/cli/command/07_projects.md); test: `ov_1_bare_projects_renders_terse_overview`
+
+---
+
+### OV-2: Flat layout emits the LAST/CONV/AGENTS/PROJECT header
+
+**Command:**
+```
+CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects scope::global
+```
+
+**Expected behavior:**
+- Fixture: one path-based project with a single session
+- stdout contains all four column names, and the header line precedes every project row
+- Exit code: 0
+- **Source:** [command/07_projects.md](../../../../docs/cli/command/07_projects.md); test: `ov_2_flat_layout_emits_column_header`
+
+---
+
+### OV-3: Zero agents render as `·`, non-zero as `N ag`
+
+**Command:**
+```
+CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects scope::global
+```
+
+**Expected behavior:**
+- Fixture: one agentless project plus one project with a single agent
+- stdout contains `·` for the agentless row and `1 ag` for the other; `0 ag` never appears
+- Rationale: a column of zeroes is noise in a list where most projects never spawn an agent
+- Exit code: 0
+- **Source:** [command/07_projects.md](../../../../docs/cli/command/07_projects.md); test: `ov_3_zero_agents_render_as_middot`
+
+---
+
+### OV-4: Summary line uses singular nouns at a count of one
+
+**Command:**
+```
+CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects scope::global
+```
+
+**Expected behavior:**
+- Fixture: one project with one session and no agents
+- First line reads `1 project · 1 conversation` — never `1 projects` or `1 conversations`
+- The agents segment is omitted entirely rather than rendered as `0 agents`
+- Exit code: 0
+- **Source:** [command/07_projects.md](../../../../docs/cli/command/07_projects.md); test: `ov_4_summary_line_uses_singular_nouns`
+
+---
+
+### OV-5: A project whose decoded path is absent carries `⚠ gone`
+
+**Command:**
+```
+CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects scope::global
+```
+
+**Expected behavior:**
+- Fixture: a storage entry for a directory that was never created on disk — the deleted-scratch-directory case
+- stdout contains `⚠ gone` on that row, and still shows the path itself
+- Rationale: encoding is lossy (`/`, `_`, and `.` all collapse to `-`), so a decoded path is only trustworthy while the directory it names exists to disambiguate it
+- Exit code: 0
+- **Source:** [command/07_projects.md](../../../../docs/cli/command/07_projects.md); test: `ov_5_absent_decoded_path_marked_gone`
+
+---
+
+### OV-6: The project matching the process cwd carries the `▸` gutter
+
+**Command:**
+```
+cd <project> && CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects scope::global
+```
+
+**Expected behavior:**
+- Fixture: one project whose directory exists on disk
+- Run with cwd inside that project: stdout contains `▸`
+- Run with cwd matching no listed project: stdout contains no `▸`
+- Exit code: 0
+- **Source:** [command/07_projects.md](../../../../docs/cli/command/07_projects.md); test: `ov_6_cwd_project_carries_gutter_marker`
+
+---
+
+### OV-7: show_tree::1 nests projects by directory with tree connectors
+
+**Command:**
+```
+CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects scope::global show_tree::1
+```
+
+**Expected behavior:**
+- Fixture: two sibling projects (`parent/alpha`, `parent/beta`)
+- stdout contains `├`/`└` connectors and both leaf names
+- The shared parent segment appears exactly once, as a node — not repeated per row
+- Exit code: 0
+- **Source:** [command/07_projects.md](../../../../docs/cli/command/07_projects.md); test: `ov_7_show_tree_nests_projects_by_directory`
+
+---
+
+### OV-8: Empty storage renders the summary line alone, no header row
+
+**Command:**
+```
+CLAUDE_STORAGE_ROOT=/tmp/empty-fixture clg .projects scope::global
+```
+
+**Expected behavior:**
+- Fixture: a storage root containing an empty `projects/` directory
+- stdout reports `0 projects` and contains neither `LAST` nor `PROJECT` — a column header over zero rows is a phantom table
+- Exit code: 0, not an error
+- **Source:** [command/07_projects.md](../../../../docs/cli/command/07_projects.md); test: `ov_8_empty_storage_renders_summary_only`
+
+---
+
+### OV-9: detail::sessions still renders the full listing unchanged
+
+**Command:**
+```
+CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects scope::global detail::sessions
+```
+
+**Expected behavior:**
+- Fixture: one path-based project with a single session
+- stdout contains `Found 1 project:` and the session id
+- stdout contains neither the terse column header nor the terse summary line's `·` separator
+- Exit code: 0
+- **Source:** [command/07_projects.md](../../../../docs/cli/command/07_projects.md); test: `ov_9_detail_sessions_renders_full_listing`
+
+---
+
+### OV-10: Full project paths are printed, never factored to a shared prefix
+
+**Command:**
+```
+CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects scope::global
+```
+
+**Expected behavior:**
+- Fixture: two projects sharing an ancestor directory (`shared/alpha`, `shared/beta`)
+- The shared ancestor appears in both rows in full — not factored out into a `base` line with relative row labels
+- Rationale: a project path is the command's primary output and must stay usable in `cd`, `grep`, and `project::`. Prefix factoring is `show_tree::1`'s job, where nesting carries the shared segment without truncating any row
+- Exit code: 0
+- **Source:** [command/07_projects.md](../../../../docs/cli/command/07_projects.md); test: `ov_10_flat_layout_prints_full_paths`

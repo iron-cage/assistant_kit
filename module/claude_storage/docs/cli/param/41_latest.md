@@ -1,4 +1,4 @@
-# Parameter :: 39. `latest::`
+# Parameter :: 41. `latest::`
 
 ### Scope
 
@@ -35,7 +35,7 @@ claude_storage .session.path latest::1 topic::review   # exit 1, mutually exclus
 ### Referenced Commands
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
-| 15 | [`.session.path`](../command/15_session_path.md) | effective default | Most recently modified non-`agent-` non-empty `.jsonl`; exit 2 when none |
+| 16 | [`.session.path`](../command/16_session_path.md) | effective default | Most recently modified non-`agent-` non-empty `.jsonl`; exit 2 when none |
 
 ### Referenced User Stories
 | # | User Story | Persona |
