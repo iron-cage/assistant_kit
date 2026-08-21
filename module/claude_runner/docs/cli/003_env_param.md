@@ -4,20 +4,20 @@
 
 - **Purpose**: Document CLR_* environment variable fallbacks, runtime configuration overrides, and CLAUDE_CODE_* subprocess variables.
 - **Responsibility**: Specify env var names, corresponding CLI parameters, precedence rules, and type handling.
-- **In Scope**: CLR_* input vars for run/isolated/refresh, CLR_* runtime config overrides (`CLR_GATE_DIR`, `CLR_GATE_POLL_SECS`, `CLR_GATE_MAX_ATTEMPTS`, `CLR_GATE_STALE_SECS`, `CLR_CONFIG_DIR`, `CLR_QUERY_DIR`), and the 5 `CLAUDE_CODE_*` subprocess variables `clr` injects by default (`CLAUDE_CODE_MAX_OUTPUT_TOKENS`, `CLAUDE_CODE_AUTO_COMPACT_WINDOW`, `CLAUDE_CODE_BASH_TIMEOUT`, `CLAUDE_CODE_BASH_MAX_TIMEOUT`, `CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS`), precedence, bool/parsed type semantics.
+- **In Scope**: CLR_* input vars for run/isolated/refresh, CLR_* runtime config overrides (`CLR_GATE_DIR`, `CLR_GATE_POLL_SECS`, `CLR_GATE_MAX_ATTEMPTS`, `CLR_GATE_STALE_SECS`, `CLR_CONFIG_DIR`, `CLR_QUERY_DIR`, `CLR_TOPIC_HOME`, `CLR_TOPIC_REGISTRY_DIR`), and the 5 `CLAUDE_CODE_*` subprocess variables `clr` injects by default (`CLAUDE_CODE_MAX_OUTPUT_TOKENS`, `CLAUDE_CODE_AUTO_COMPACT_WINDOW`, `CLAUDE_CODE_BASH_TIMEOUT`, `CLAUDE_CODE_BASH_MAX_TIMEOUT`, `CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS`), precedence, bool/parsed type semantics.
 - **Out of Scope**: CLI parameter descriptions (→ param/), subprocess behavior beyond env injection, config-file TOML key reference (→ [config_param.md](config_param.md)).
 
-### All Env Parameters (95 total)
+### All Env Parameters (97 total)
 
 | Category | Count | Purpose |
 |----------|-------|---------|
-| Input (CLR_*) — `run` subcommand | 65 | Caller env fallbacks for `run` parameters |
+| Input (CLR_*) — `run` subcommand | 66 | Caller env fallbacks for `run` parameters |
 | Input (CLR_*) — `isolated` and `refresh` subcommands | 13 | Caller env fallbacks for credential operation parameters |
 | Input (CLR_*) — `ps` subcommand | 5 | Caller env fallbacks for session listing display and flag thresholds |
-| Runtime config (CLR_*) | 7 | Runtime configuration overrides (not CLI parameter fallbacks) |
+| Runtime config (CLR_*) | 8 | Runtime configuration overrides (not CLI parameter fallbacks) |
 | Subprocess (CLAUDE_CODE_*) — injected | 5 | Set by `clr` before spawning the `claude` subprocess |
 
-**Total:** 95 environment variables
+**Total:** 97 environment variables
 
 ---
 
@@ -101,6 +101,7 @@ invalid values (parse failure → field stays at default). Exception: `CLR_RETRY
 | 63 | `CLR_ARGS_FILE` | [`--args-file`](param/075_args_file.md) | string | `"args-file"` | Path to a JSON config file; applied when `--args-file` absent from CLI; JSON source overrides all other CLR_* vars but is overridden by explicit CLI flags. **Cross-command:** applies to `run`, `ask`, `isolated`, and `refresh` subcommands |
 | 64 | `CLR_NO_COMPACT_WINDOW` | `--no-compact-window` | bool | `"no-compact-window"` | Suppresses `CLAUDE_CODE_AUTO_COMPACT_WINDOW` injection — subprocess inherits caller env or uses model native window |
 | 65 | `CLR_GLOBAL` | [`--global`](param/087_global.md) | bool | `"global"` | Resolves `--topic`'s base to the global topic home instead of CWD; inert without a topic; an explicit `--dir` still outranks it. Where that home *is* comes from `CLR_TOPIC_HOME` (Env Param 12) |
+| 66 | `CLR_TOPIC_MODE` | [`--topic-mode`](param/088_topic_mode.md) | string | `"topic-mode"` | Forces `--topic`'s mechanism (`fork` or `dir`); applied when `--topic-mode` absent; invalid values silently ignored (same convention as `CLR_TOPIC`); inert without a topic |
 
 **Precedence (current — 5 levels):**
 
@@ -512,3 +513,36 @@ CLR_TOPIC_HOME=~/.clr/topic clr topics --global --path notes
 **No precedence rule** — always applied when `--global` is in effect; there is no
 corresponding CLI flag or JSON key. An explicit `--dir` bypasses it entirely by outranking
 `--global` itself.
+
+---
+
+### Env Param 13: `CLR_TOPIC_REGISTRY_DIR` — Fork-Topic Name Registry Root
+
+Runtime configuration override for where fork-mode topic names are recorded
+(`topic_registry.rs::registry_root()`). No corresponding CLI flag or `--args-file` JSON
+key — env-var-only, matching the `CLR_TOPIC_HOME` precedent (Env Param 12).
+
+| Variable | Default | Type | Notes |
+|----------|---------|------|-------|
+| `CLR_TOPIC_REGISTRY_DIR` | `~/.clr/topics/` (relative `.clr/topics` when HOME unset) | path | Root holding one plain-text file per base directory (named by the base's storage encoding), one fork-topic name per line |
+
+**Why it exists:** a fork-mode topic's session identity is `UUIDv5( canonical base, name )` —
+one-way, so `clr topics` cannot recover names from session files. The registry is the name
+side-channel. It is a convenience index, never an authority: recording is append-if-missing
+and warn-never-fatal (a failed write cannot break the run that triggered it), and the
+authoritative existence signal for a fork topic remains its session file.
+
+```sh
+CLR_TOPIC_REGISTRY_DIR=/srv/clr-registry clr --topic x "task"
+# records "x" in /srv/clr-registry/<encoded-base> instead of ~/.clr/topics/<encoded-base>
+
+CLR_TOPIC_REGISTRY_DIR=/srv/clr-registry clr topics
+# lists fork topics from the same override
+```
+
+**Commands affected:** `run`, `ask`, `topic` (recording, on real fork-mode runs only —
+dry-run never writes), and `topics` (listing). `topics --file` does NOT read it — the
+name → file mapping is pure UUIDv5 computation.
+
+**No precedence rule** — read directly wherever the registry is touched; there is no
+CLI flag or JSON key tier above it.

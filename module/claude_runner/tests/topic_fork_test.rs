@@ -3,7 +3,7 @@
 //! ## Source
 //!
 //! - Command docs: `tests/docs/cli/command/11_topic.md`, `12_topics.md`
-//! - Param docs: `tests/docs/cli/param/012_topic.md`, `088_topic_mode.md`
+//! - Param docs: `tests/docs/cli/param/028_topic.md`, `088_topic_mode.md`
 //!
 //! ## Coverage
 //!

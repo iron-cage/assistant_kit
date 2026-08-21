@@ -2,7 +2,7 @@
 
 ### Description
 
-Creates or continues a named workspace session: a hyphenated topic directory of the current working directory with its own isolated Claude Code conversation history. Reuses `run`'s entire parameter set and execution path — the only behavioral difference is `--topic`'s default.
+Creates or continues a named workspace session with its own isolated Claude Code conversation history. A NEW topic defaults to a same-directory session **fork** (a deterministic UUIDv5-named session in the base's own storage — no topic directory is created, and the base session's prompt cache is reused); a topic with an existing `-<name>` directory, a `--from` source, or `--global` uses the legacy **dir** mechanism (a hyphenated topic directory of the base). See [`--topic`](../param/028_topic.md) § Mode selection and [`--topic-mode`](../param/088_topic_mode.md). Reuses `run`'s entire parameter set and execution path — the only behavioral difference is `--topic`'s default.
 
 -- **Parameters:** all parameters from `run` (identical defaults, except `--topic` — see below)
 -- **Exit Codes:** 0 (success) | 1 (error) | 2 (rate-limit/transient) | 3 (expect mismatch) | 4 (timeout) | N (subprocess passthrough) | 128+signal (signal)
@@ -23,7 +23,7 @@ All parameters from [`run`](01_run.md) are accepted with identical defaults, wit
 
 **Algorithm (2 steps):**
 1. If `--topic` is explicitly given (any non-identity value), skip to step 2 with that value unchanged — `topic` behaves exactly like `ask` from here.
-2. Otherwise, derive a slug from `MESSAGE` (lowercase; first few words; non-alphanumeric runs collapsed to a single `-`; truncated to a concise length) and disambiguate it against candidate topic names of the effective `--dir` by appending `-2`, `-3`, ... until a candidate is found where BOTH its working directory does not already exist on disk AND its session storage holds no qualifying session (Fix(BUG-542) — storage outlives a deleted working directory, so directory existence alone is not a reliable freshness signal). Use the disambiguated slug as `--topic`'s value, then delegate to `run`'s execution path unchanged.
+2. Otherwise, derive a slug from `MESSAGE` (lowercase; first few words; non-alphanumeric runs collapsed to a single `-`; truncated to a concise length) and disambiguate it against candidate topic names of the effective `--dir` by appending `-2`, `-3`, ... until a candidate is found where ALL THREE freshness signals are clear: its working directory does not already exist on disk, its session storage holds no qualifying session (Fix(BUG-542) — storage outlives a deleted working directory, so directory existence alone is not a reliable freshness signal), and no non-empty fork-mode session file exists for the name (fork topics create no directory, so the first two probes are blind to them). Use the disambiguated slug as `--topic`'s value, then delegate to `run`'s execution path unchanged.
 
 ### Execution Modes
 
@@ -49,31 +49,37 @@ All parameters from [`run`](01_run.md) are accepted with identical defaults, wit
 ### Examples
 
 ```sh
-# Auto-named topic: slug generated from the message
+# Auto-named topic: slug generated from the message; new name -> fork mode
 clr topic "Investigate the flaky concurrency-gate test"
-# -> effective dir ends with /-investigate-the-flaky (example slug)
+# -> same-dir fork; session file named UUIDv5(base, "investigate-the-flaky")
 
-# Explicit topic name — first call clones the current session into it
+# Explicit NEW topic name — first call forks the base's most recent session
 clr topic --topic auth-refactor "Start refactoring the auth module"
 
-# Same explicit name — second call continues that topic's own conversation
+# Same explicit name — second call resumes that topic's own conversation
 clr topic --topic auth-refactor "What did we change so far?"
 
 # Auto-naming with a collision: counter suffix disambiguates
 clr topic "Investigate the flaky concurrency-gate test"
-# -> a second, independent topic: /-investigate-the-flaky-2
+# -> a second, independent topic: investigate-the-flaky-2 (fork mode)
 
-# Cross-load into a topic from a different source project
+# Cross-load into a topic from a different source project — dir mode
 clr topic --topic shared-fix --from ~/project-a "Port this fix"
+# -> works in /-shared-fix; the source session is physically transplanted in
+
+# Force the legacy directory mechanism for a new topic
+clr topic --topic-mode dir --topic scratch "Try something in a real subdir"
 ```
 
 ### Notes
 
 `topic` is a pre-configured alias of `run`/`ask` — it changes only `--topic`'s default value, per the [Representation Absorption Test](../command_group/01_run_ask.md#representation-absorption-test); no new dispatch logic beyond the slug-generation step exists.
 
-**Clone vs. continue:** whether a given topic name clones a fresh session or continues an existing one is determined entirely by the pre-existing `--topic` + `--from` session-transplant mechanism (see [`../param/076_from.md`](../param/076_from.md) § Behavior) — `topic` introduces no new session-management code for this. The first invocation of a given topic directory name has no session file there yet, so `--from`'s (default: cwd) most recent session is physically copied in (clone). Every subsequent invocation of that same name finds the copy already in place and continues it (`-c`) instead of re-copying.
+**First use vs. repeat use (fork mode, the default for new topics):** the topic's session identity is deterministic — `UUIDv5( canonical base, name )` — so no registry lookup is needed to tell the two apart: the session file either exists non-empty (repeat: `--resume <topic-uuid>`) or not (first use: `--resume <source> --fork-session --session-id <topic-uuid>`, where source is the base's most recent qualifying session; with no source, `--session-id <topic-uuid>` alone). `--new-session` on first use suppresses the fork source (topic starts fresh); on repeat use it exits 1 — the deterministic identity cannot be re-created (delete the file at `clr topics --file NAME`, or switch to `--topic-mode dir`). Dry-run prints the plan as `# topic-fork: ...` / `# topic-resume: ...`.
 
-**Auto-naming is always fresh:** the slug+counter algorithm only ever selects a name that is free on BOTH freshness signals — no topic directory exists for it AND its session storage holds no qualifying session (probed under the same canonical storage key claude itself derives, so a symlinked or `..`-carrying `--dir` base cannot hide surviving storage — Fix(BUG-542), Fix(BUG-543)). A deleted working directory with surviving session storage therefore counts as taken, and an auto-named invocation always clones, never continues. To continue an auto-named topic later, pass its generated name back explicitly via `--topic`.
+**Clone vs. continue (dir mode):** whether a given topic name clones a fresh session or continues an existing one is determined entirely by the pre-existing `--topic` + `--from` session-transplant mechanism (see [`../param/076_from.md`](../param/076_from.md) § Behavior) — `topic` introduces no new session-management code for this. The first invocation of a given topic directory name has no session file there yet, so `--from`'s (default: cwd) most recent session is physically copied in (clone). Every subsequent invocation of that same name finds the copy already in place and continues it (`-c`) instead of re-copying.
+
+**Auto-naming is always fresh:** the slug+counter algorithm only ever selects a name that is free on ALL THREE freshness signals — no topic directory exists for it, its session storage holds no qualifying session (probed under the same canonical storage key claude itself derives, so a symlinked or `..`-carrying `--dir` base cannot hide surviving storage — Fix(BUG-542), Fix(BUG-543)), and no non-empty fork-mode session file exists for it. A deleted working directory with surviving session storage therefore counts as taken, and an auto-named invocation always starts a new conversation (fork or clone), never continues one. To continue an auto-named topic later, pass its generated name back explicitly via `--topic`.
 
 `--output-format stream-json` streaming behavior is identical to `run` — see [`run`'s Notes](01_run.md#notes) for details.
 

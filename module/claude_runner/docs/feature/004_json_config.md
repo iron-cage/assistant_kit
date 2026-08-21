@@ -106,7 +106,7 @@ Every clr parameter configurable via JSON config has three synonymous forms: CLI
 - **Repeatable flags** (`--mcp-config`, `--add-dir`): provide a single string value; multiple values require CLI flags
 - **Self-referential**: `"args-file"` key in a loaded JSON config is ignored — chaining is not performed
 
-### Complete Parity Table (69 JSON keys)
+### Complete Parity Table (70 JSON keys)
 
 Columns: JSON Key | CLI Flag | CLR_* Env Var | Type | Supported By
 
@@ -139,6 +139,7 @@ Columns: JSON Key | CLI Flag | CLR_* Env Var | Type | Supported By
 | `"dir"` | `--dir` | `CLR_DIR` | string | run, ask, topic, isolated |
 | `"topic"` | `--topic` | `CLR_TOPIC` | string | run, ask, topic |
 | `"global"` | `--global` / `-g` | `CLR_GLOBAL` | bool | run, ask, topic |
+| `"topic-mode"` | `--topic-mode` | `CLR_TOPIC_MODE` | string (`fork`/`dir`) | run, ask, topic |
 | `"from"` | `--from` | `CLR_FROM` | string | run, ask, topic |
 | `"add-dir"` | `--add-dir` | `CLR_ADD_DIR` | string | run, ask, topic, isolated |
 
