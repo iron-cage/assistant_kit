@@ -68,6 +68,7 @@
 | 074 | [CLI Invocation Telemetry](074_cli_invocation_telemetry.md) | `run_cli()` appends one redacted `Command` event to the `claude_journal` log per invocation; `cli::run()` returns `i32` instead of calling `std::process::exit` internally so the real exit code can be observed and logged | ✅ |
 | 075 | [Account Tags](075_account_tags.md) | `tags` set in `{name}.json`; `.account.save tags::`, `.account.tag` mutation command, `.tags` listing, `.accounts tags::` filter, `cols::+tags`; supersedes `role::` with lazy migration | ✅ |
 | 076 | [Identity Tag Filter](076_identity_tag_filter.md) | Per-Identity `_filter_{machine}_{user}` include/exclude tag sets; `.identity.filter` get/set/clear; `.identities` listing; Gate 11 unconditional rotation exclusion; loud exclusion reporting | ✅ |
+| 077 | [Burn-Rate Alert (Time-to-Exhaustion)](077_burn_rate_alert.md) | Forecast 5h-window exhaustion from the measurement ring (Feature 040); `⚠ 5h burn` footer warning on `.usage` text/plain when predicted within `alert::` minutes (default 15; 0 = off) | ✅ |
 
 ### Organization
 

@@ -8,7 +8,7 @@ Live quota utilization commands.
 
 Fetches live quota utilization for every saved account via `claude_quota::fetch_oauth_usage()` (`GET /api/oauth/usage`) and account billing state via `claude_quota::fetch_oauth_account()` (`GET /api/oauth/account`, parallel thread). Renders results as a `data_fmt` table with a status emoji column (`●`: 🟢/🟡/🔴), plus 5h Left, 5h Reset, 7d Left, 7d Reset, Expires, ~Renews, Owner, and → Next columns, and a footer recommendation line. `7d(Son)` is hidden by default (show via `cols::+7d_son`; see Notes). `~Renews` shows a duration countdown (exact `in Xh Ym` when `_renewal_at` override is set, estimated `~in Xd` from `org_created_at`). `→ Next` shows the soonest strategic quota reset event (`+7d`/`$ren`); token expiry and 5h resets are not included since they are already shown in `Expires` and `5h Reset`. Supports optional token refresh on auth errors (`refresh::1`) and continuous live-monitor mode (`live::1`).
 
--- **Parameters:** [`name::`](../param/001_name.md) *(optional)*, [`format::`](../param/002_format.md), [`dry::`](../param/004_dry.md), [`refresh::`](../param/019_refresh.md), [`live::`](../param/020_live.md), [`interval::`](../param/021_interval.md), [`jitter::`](../param/022_jitter.md), [`trace::`](../param/023_trace.md), [`sort::`](../param/025_sort.md), [`desc::`](../param/026_desc.md), [`prefer::`](../param/027_prefer.md), [`cols::`](../param/033_cols.md), [`touch::`](../param/034_touch.md), [`imodel::`](../param/035_imodel.md), [`effort::`](../param/036_effort.md), [`count::`](../param/037_count.md), [`offset::`](../param/038_offset.md), [`only_active::`](../param/039_only_active.md), [`only_next::`](../param/040_only_next.md), [`min_5h::`](../param/041_min_5h.md), [`min_7d::`](../param/042_min_7d.md), [`only_valid::`](../param/043_only_valid.md), [`exclude_exhausted::`](../param/044_exclude_exhausted.md), [`get::`](../param/045_get.md), [`no_color::`](../param/047_no_color.md), [`set_model::`](../param/054_set_model.md), [`assignee::`](../param/063_assignee.md), [`owner::`](../param/062_owner.md), [`lock::`](../param/067_lock.md), [`reserve::`](../param/068_reserve.md), [`force::`](../param/058_force.md), [`rotate::`](../param/059_rotate.md), [`solo::`](../param/060_solo.md), [`who::`](../param/061_who.md), [`stalest::`](../param/080_stalest.md), [`max_age::`](../param/081_max_age.md)
+-- **Parameters:** [`name::`](../param/001_name.md) *(optional)*, [`format::`](../param/002_format.md), [`dry::`](../param/004_dry.md), [`refresh::`](../param/019_refresh.md), [`live::`](../param/020_live.md), [`interval::`](../param/021_interval.md), [`jitter::`](../param/022_jitter.md), [`trace::`](../param/023_trace.md), [`sort::`](../param/025_sort.md), [`desc::`](../param/026_desc.md), [`prefer::`](../param/027_prefer.md), [`cols::`](../param/033_cols.md), [`touch::`](../param/034_touch.md), [`imodel::`](../param/035_imodel.md), [`effort::`](../param/036_effort.md), [`count::`](../param/037_count.md), [`offset::`](../param/038_offset.md), [`only_active::`](../param/039_only_active.md), [`only_next::`](../param/040_only_next.md), [`min_5h::`](../param/041_min_5h.md), [`min_7d::`](../param/042_min_7d.md), [`only_valid::`](../param/043_only_valid.md), [`exclude_exhausted::`](../param/044_exclude_exhausted.md), [`get::`](../param/045_get.md), [`no_color::`](../param/047_no_color.md), [`set_model::`](../param/054_set_model.md), [`assignee::`](../param/063_assignee.md), [`owner::`](../param/062_owner.md), [`lock::`](../param/067_lock.md), [`reserve::`](../param/068_reserve.md), [`force::`](../param/058_force.md), [`rotate::`](../param/059_rotate.md), [`solo::`](../param/060_solo.md), [`who::`](../param/061_who.md), [`stalest::`](../param/080_stalest.md), [`max_age::`](../param/081_max_age.md), [`alert::`](../param/088_alert.md)
 -- **Exit:** 0 (success) | 1 (usage: invalid param combination; G9 claim-lock violation on `assignee::` target-side unless `force::1`) | 2 (runtime: credential store unreadable, HOME unset)
 
 **Syntax:**
@@ -81,6 +81,7 @@ clp .usage solo::1 live::1 interval::60
 | `stalest::` | `u32` | *(omit)* | Stale-first fetch reduction: fetch only the K accounts with the oldest quota cache; all others render from cache via `approximate_quota()`; `stalest::0` exits 1; mutually exclusive with `only_active::1`; bypassed by `rotate::1` |
 | `max_age::` | `u64` | `0` | With `stalest::`, only accounts with cache age > SECS seconds are fetch-eligible (fetch set may be empty → zero HTTP); standalone use exits 1 |
 | `who::` | `bool` | auto | Sessions table visibility: auto (shown when >1 `_active_*` marker), `1` (force on), `0` (force off) |
+| `alert::` | `u64` | `15` | Burn-rate alert horizon in minutes: render a `⚠ 5h burn` warning line under the table for each account whose 5h window is forecast (Feature 077) to exhaust within N minutes; `0` = off; text/plain formats only |
 
 **Algorithm (12 steps):**
 1. Enumerate `{credential_store}/*.credentials.json` alphabetically; build account list
@@ -93,7 +94,7 @@ clp .usage solo::1 live::1 interval::60
 8. Post-filter: apply `only_next::`, `only_valid::`, `exclude_exhausted::`, `min_5h::`, `min_7d::`, `count::`, `offset::` predicates
 9. Compute derived fields: status emoji, `→ Next` column, `~Renews`, flag column priority (`✓`/`*`/`@`)
 10. Four-group status partition (`🟢`→`🟡 h-exhausted`→`🟡 weekly-exhausted`→`🔴 Dead`); apply `sort::` strategy + `desc::` direction within each group
-11. `(when format::text)` Render table + footer; `(when get:: provided)` extract single field from first match; `(when live::1)` loop with `interval::` + `jitter::` delay
+11. `(when format::text)` Render table + footer; `(when format::text|plain and alert:: > 0)` append `⚠ 5h burn` warning lines for accounts forecast to exhaust their 5h window within `alert::` minutes ([feature/077](../../feature/077_burn_rate_alert.md)); `(when get:: provided)` extract single field from first match; `(when live::1)` loop with `interval::` + `jitter::` delay
 12. `(when rotate::1)` Rotation dispatch: call `find_next_for_strategy()` winner — Gate 8 (foreign-owned, `force::1`-bypassable) and Gate 9 (claim-locked, unconditional — never bypassed) are applied inside this call, so a claim-locked account can never be `winner`; Gate 11 ([feature/076](../../feature/076_identity_tag_filter.md)) — tag-filter mismatch against the current Identity's `_filter_*` file — also applies inside the winner selection (`find_first_eligible()`), unconditional like Gate 9, and when it excluded ≥1 account the output includes `N excluded by tag filter include=[…] exclude=[…]`; if no winner → exit 1 (`"no eligible account to rotate to"`); if `dry::1` → append `"[dry-run] would switch to '{name}'"` and exit 0; call `switch_account(winner)`; apply post-switch touch from in-memory `AccountQuota` (no re-fetch); append `"switched to '{name}'"` to output
 
 **Examples:**
@@ -190,6 +191,7 @@ clp .usage live::1 interval::60 jitter::10
 | 34 | [reserve::](../param/068_reserve.md) | Set or clear `reserve` (ungated write) |
 | 35 | [stalest::](../param/080_stalest.md) | Fetch only the K oldest-cache accounts |
 | 36 | [max_age::](../param/081_max_age.md) | Cache-age threshold for `stalest::` refresh |
+| 37 | [alert::](../param/088_alert.md) | Burn-rate alert horizon for footer warnings |
 
 ### Referenced Features
 
@@ -211,6 +213,7 @@ clp .usage live::1 interval::60 jitter::10
 | 14 | [Accounts/Usage Parameter Set Unification](../../feature/037_accounts_usage_param_unification.md) | `Owner` column default-visible (AC-19); unified `cols::` default set shared with `.accounts` |
 | 15 | [Redirect Backend Accounts](../../feature/071_redirect_backend_accounts.md) | `backend: redirect` accounts skip quota-fetch entirely — `—` columns, no HTTP call, in `fetch_quota_for_list()` |
 | 16 | [Identity Tag Filter](../../feature/076_identity_tag_filter.md) | Gate 11 — per-Identity tag filter constraining `rotate::1`/recommendation; loud exclusion line |
+| 17 | [Burn-Rate Alert](../../feature/077_burn_rate_alert.md) | `alert::` — `⚠ 5h burn` footer warning when a 5h window is forecast to exhaust within the horizon |
 | 17 | [Account Tags](../../feature/075_account_tags.md) | `cols::+tags` opt-in column |
 
 ### Referenced User Stories

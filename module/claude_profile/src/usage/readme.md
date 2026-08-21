@@ -9,6 +9,7 @@
 | `fetch.rs` | Quota HTTP fetch, token reads, and per-account error formatting. |
 | `fetch_cache.rs` | Centralized quota cache read with polynomial approximation. |
 | `approx.rs` | Quota measurement polynomial approximation (Feature 040). |
+| `forecast.rs` | Burn-rate time-to-exhaustion forecast and alert lines (task 544). |
 | `format.rs` | Quota metric helpers: five_hour_left, prefer_weekly, renewal_secs. |
 | `sort.rs` | Quota display sort strategies; sort_indices entry point. |
 | `sort_next.rs` | Next-account recommendation strategies; find_next_for_strategy, strategy_metric. |

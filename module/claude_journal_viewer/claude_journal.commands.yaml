@@ -116,7 +116,7 @@
   arguments:
     - name: "by"
       kind: "String"
-      description: "Group results by: day (default) or model"
+      description: "Group results by: day (default), model, dir, or agent"
       hint: "Group by"
       optional: true
       default: "day"

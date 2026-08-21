@@ -19,6 +19,8 @@ Test case planning for [feature/002_event_schema.md](../../../docs/feature/002_e
 | FT-4 | `ts` field matches ISO 8601 UTC millisecond format `YYYY-MM-DDTHH:MM:SS.sssZ` (AC-004) | Timestamp Format |
 | FT-5 | `retry_class_counts` serializes as a 6-element JSON array (AC-007) | Array Field |
 | FT-6 | Numeric fields (`cost_usd`, `duration_ms`, `input_tokens`) serialize as JSON numbers, not strings (AC-008) | Numeric Types |
+| FT-7 | `account`/`agent_id` serialize when present, omitted when `None`, and legacy lines without them still parse (AC-005, AC-011) | Attribution Fields |
+| FT-8 | `compose_agent_id()` yields exact `{user}@{host}{abs_dir}/` format with exactly one trailing slash (AC-009) | Attribution Fields |
 
 ## Test Coverage Summary
 
@@ -28,8 +30,9 @@ Test case planning for [feature/002_event_schema.md](../../../docs/feature/002_e
 - Timestamp Format: 1 test (FT-4)
 - Array Field: 1 test (FT-5)
 - Numeric Types: 1 test (FT-6)
+- Attribution Fields: 2 tests (FT-7, FT-8)
 
-**Total:** 6 tests
+**Total:** 8 tests
 
 ## Architectural Constraint
 
@@ -90,3 +93,21 @@ FT-3 verifies the 8 known type strings: `"execution"`, `"credential"`, `"gate_wa
 - **When:** serialize; parse the values
 - **Then:** `value["cost_usd"]` is `Value::Number(0.001)` (not a string `"0.001"`); `value["duration_ms"]` is `Value::Number(1234)`; `value["input_tokens"]` is `Value::Number(100)`
 - **Source:** [feature/002_event_schema.md](../../../docs/feature/002_event_schema.md) AC-008
+
+---
+
+### FT-7: `account`/`agent_id` attribution fields serialize, omit, and back-parse correctly
+
+- **Given:** (a) `EventFields` with `account = Some("mykola.nn@wbox.pro")`, `agent_id = Some("user1@w003/a/b/")`; (b) `EventFields::default()`; (c) a raw pre-attribution JSONL line with no `account`/`agent_id` keys
+- **When:** serialize (a) and (b) to JSON; deserialize (c) via `serde_json::from_str::<EventRecord>`
+- **Then:** (a) both keys present with exact values; (b) both keys absent (not `null`); (c) parses successfully with both fields `None` and legacy fields intact
+- **Source:** [feature/002_event_schema.md](../../../docs/feature/002_event_schema.md) AC-005, AC-011 — implemented as IT-19, IT-20, IT-21
+
+---
+
+### FT-8: `compose_agent_id()` format ownership
+
+- **Given:** `compose_agent_id("user1", "w003", dir)` for `dir` in `"/a/b"`, `"/a/b/"`, `"/a/b//"`
+- **When:** compare each result against the canonical string
+- **Then:** all three yield exactly `"user1@w003/a/b/"` — no host/dir separator, exactly one trailing slash regardless of input slashing
+- **Source:** [feature/002_event_schema.md](../../../docs/feature/002_event_schema.md) AC-009 — implemented as IT-22, IT-23

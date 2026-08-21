@@ -23,12 +23,14 @@ When the usage API (`GET /api/oauth/usage`) returns an error for an account, the
 {
   "fetched_at": "2026-06-07T07:52:00Z",
   "status": "ok",
-  "five_hour": { "left_pct": 86.0, "resets_at": "2026-06-07T11:49:00Z" },
-  "seven_day": { "left_pct": 16.0, "resets_at": "2026-06-07T16:00:00Z" },
-  "seven_day_sonnet": { "left_pct": 0.0, "resets_at": "2026-06-07T16:00:00Z" },
+  "five_hour": { "utilization": 14.0, "resets_at": "2026-06-07T11:49:00Z" },
+  "seven_day": { "utilization": 84.0, "resets_at": "2026-06-07T16:00:00Z" },
+  "seven_day_sonnet": { "utilization": 100.0, "resets_at": "2026-06-07T16:00:00Z" },
   "history": [ { "t": 1749900000, "h5": [ 14.0, "2026-06-07T11:49:00Z" ], "d7": null, "sn": null } ]
 }
 ```
+
+Each period object stores `utilization` — percent **consumed** (0 = untouched, 100 = exhausted), the same semantics as the `history[]` tuples; the "% left" shown in display output is derived downstream as `100 − utilization`. Files written before BUG-540 carry the same value under the misnamed legacy key `left_pct`; the reader accepts both keys, the writer emits only `utilization` (AC-19).
 
 **Tracked low-churn keys** (top level of `{name}.json`, alongside `host`, `model`, etc.):
 
@@ -91,6 +93,7 @@ When the usage API (`GET /api/oauth/usage`) returns an error for an account, the
 - **AC-16**: A successful fetch-and-persist sequence (`write_quota_cache` + `write_history_entry`) performs zero writes to the tracked `{name}.json` once the account is migrated — the file is byte-identical before/after (verified by content hash, not merely git-status silence). Steady-state quota sweeps leave the credential store clean for git. TSK-500.
 - **AC-17**: Volatile fields (`fetched_at`, `status`, `five_hour`, `seven_day`, `seven_day_sonnet`, `history`) live flat in this host's `{credential_store}/cache/{host}_{user}/{name}.json` — no path component is hyphen-prefixed, so the global `-*` gitignore rule cannot match it and the tree is tracked by construction. The `{host}_{user}` slug is single-sourced with the `_active_` marker sanitization (`host_user_slug()`); each subtree has exactly one writer. Reads merge freshest-`fetched_at`-wins across all subtrees; a TSK-500-era gitignored `-cache/{name}.json` participates as a candidate and is deleted after the first successful per-host write (self-cleaning — its values and history survive in the per-host file). The file follows [invariant/007](../invariant/007_json_storage_format.md) (2-space pretty JSON + trailing newline); the subtree is created on demand. TSK-502.
 - **AC-18**: The first `write_quota_cache` against a legacy account (tracked `cache{}` present) migrates in a single tracked write: low-churn keys (`model_override`, `last_touch_at`, `touch_idle`, `org_created_at`) are relocated to top level (existing top-level values win), the `cache` key is removed entirely, and the legacy `history` seeds the per-host file. Before migration, the legacy `cache{}` remains fully readable through the merged read path; after migration, the tracked JSON contains no `cache` key. TSK-500.
+- **AC-19**: Each period object (`five_hour`, `seven_day`, `seven_day_sonnet`) serializes its value under the key `utilization` — percent consumed (0 = untouched, 100 = exhausted), matching the `history[]` tuple semantics and the variable's own name. The reader accepts the legacy pre-BUG-540 key `left_pct` for the same value, so existing cache files (including the frozen legacy `cache{}` subtree) stay readable; the writer emits only `utilization`. The stored value is never inverted to percent-remaining — one file must not carry both semantics. Fix for BUG-540.
 
 ### Bugs
 
@@ -103,6 +106,7 @@ When the usage API (`GET /api/oauth/usage`) returns an error for an account, the
 | BUG-304 🟢 Fixed (TSK-316) | Three independent cache-read paths reconstructed `OauthUsageData` for utilization; G1 (non-owned) applied no approximation, HTTP-error fallback and `approximate_quota()` each inlined 40–55 lines of duplicated approximation. Fixed: centralized `read_cached_quota()` function |
 | BUG-327 🟢 Fixed (TSK-368) | `QuotaCacheEntry` (`claude_profile_core/src/account/quota_cache.rs`; account.rs:1506-1522 pre-split) had no `org_created_at` field — every non-live-fetch branch in `fetch.rs` hardcoded `account: None`, so `~Renews` showed `?` for 15/18 accounts. Fixed per AC-15: `org_created_at` now persisted to `cache.org_created_at` and surfaced via a new independent `AccountQuota.org_created_at` field on all 3 non-live branches. Two accounts still separately escape via the fully-decoupled `_renewal_at` manual override (unaffected by this fix). |
 | BUG-335 🟢 Fixed (TSK-416) | Cache-fallback `Ok(data)` render row never called `shorten_error()` — the original fetch-failure reason (e.g. HTTP 429) was discarded once the fallback arm converted `Err` to `Ok(cached_data)`, so text/TSV/JSON render paths showed only the `~` prefix and age suffix with zero trace of why the row was stale. Fixed via new `AccountQuota.fallback_reason` field, populated only in `fetch.rs`'s cache-fallback arm; fix = AC-14 |
+| BUG-540 🟢 Fixed | Period objects serialized utilization (percent consumed) under the key `left_pct` — the on-disk name asserted the opposite of the stored value, so any raw-JSON consumer misread quota by exactly `100 − x` (a 100%-burned account read as "100 left"). Fixed per AC-19: writer key renamed to `utilization`, reader accepts both keys, stored value never inverted (history rings already hold utilization) |
 
 ### Features
 

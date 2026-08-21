@@ -48,11 +48,11 @@ TOML keys are **snake_case**, matching `ConfigDefaults` struct field names exact
 
 | TOML Key | CLI Flag | CLR_* Env Var | Type | Notes |
 |----------|----------|---------------|------|-------|
-| `model` | [`--model`](param/003_model.md) | `CLR_MODEL` | string | Ignored when `provider` is non-anthropic — see [Provider Gate](#provider-gate) |
+| `model` | [`--model`](param/003_model.md) | `CLR_MODEL` | string | Ignored while the seat's env block pins `ANTHROPIC_MODEL` — see [Provider Gate](#provider-gate) |
 | `max_tokens` | [`--max-tokens`](param/009_max_tokens.md) | `CLR_MAX_TOKENS` | u32 | |
 | `effort` | [`--effort`](param/017_effort.md) | `CLR_EFFORT` | string | Parsed as `EffortLevel` (`low`/`medium`/`high`/`max`); invalid values silently ignored |
 | `no_effort_max` | [`--no-effort-max`](param/018_no_effort_max.md) | `CLR_NO_EFFORT_MAX` | bool | |
-| `fallback_model` | [`--fallback-model`](param/067_fallback_model.md) | `CLR_FALLBACK_MODEL` | string | Ignored when `provider` is non-anthropic — see [Provider Gate](#provider-gate) |
+| `fallback_model` | [`--fallback-model`](param/067_fallback_model.md) | `CLR_FALLBACK_MODEL` | string | Ignored while the seat's env block pins `ANTHROPIC_MODEL` — see [Provider Gate](#provider-gate) |
 
 **Concurrency**
 
@@ -148,37 +148,39 @@ All other `CliArgs` fields not listed in [Eligible Parameters](#eligible-paramet
 
 ### Provider Gate
 
-`provider` is a recognized **config-only control key** — not one of the 41 eligible parameters (it has no CLI flag or `CLR_*` env counterpart and never reaches `CliArgs`). Its sole writer is `clp .provider.select` (user tier); hand edits and a project-level `.clr.toml` merge like any other key (project wins).
+The gate keys on the seat's **live routing state**: a non-empty `env.ANTHROPIC_MODEL` in `~/.claude/settings.json` — the block `clp .account.use` writes when activating a redirect account and removes when switching back to an anthropic one (Feature 071's transactional contract). While that block is live, `apply_config_defaults()` ignores the config tier's `model` and `fallback_model` keys. Rationale: a config-tier model would be promoted to an explicit `--model` flag — the strongest model source the claude binary knows — silently overriding that seat binding on every launch. Suppressing the config tier restores the intended strength ordering: launcher defaults stay defaults.
 
-When `provider` is set, non-empty, and not `"anthropic"`, `apply_config_defaults()` ignores the config tier's `model` and `fallback_model` keys. Rationale: a seat pinned to another inference provider routes its sessions through the `ANTHROPIC_*` env block that `clp .account.use` writes into `~/.claude/settings.json`; a config-tier model would be promoted to an explicit `--model` flag — the strongest model source the claude binary knows — silently overriding that seat binding on every launch. Suppressing the config tier restores the intended strength ordering: launcher defaults stay defaults.
+The standing `provider` pin in `~/.clr/config.toml` (written by `clp .provider.select`) is **not** read by `clr` — it records standing rotation intent for `clp`, survives seat switch-backs by design, and therefore cannot stand in for per-launch routing state (BUG-548: keying the gate on the pin suppressed the config model on a fully-anthropic seat after a kimi→anthropic switch, and failed to suppress on a redirect seat activated without `.provider.select`). A `provider` key in a config file is treated like any unknown key: silently ignored.
 
 Unaffected by the gate:
 
 - Levels 1–3 (CLI `--model`/`--fallback-model`, `--args-file` JSON, `CLR_MODEL`/`CLR_FALLBACK_MODEL`) — explicit per-invocation intent still wins.
 - Every non-model config key (`effort`, `max_sessions`, …) — applies as usual on any seat.
-- `isolated`'s separate `resolve_isolated_default_model()` lookup (the narrow exception above) — isolated probes run with explicit credentials and a stripped env, so the seat binding does not apply to them; pinned by `tests/isolated_defaults_test.rs` (BUG-485).
+- `isolated`'s separate `resolve_isolated_default_model()` lookup (the narrow exception above) — isolated probes run with explicit credentials and a temp `HOME` that strips the env block by construction, so the seat binding does not apply to them; pinned by `tests/isolated_defaults_test.rs` (BUG-485).
 - `refresh` — pins `REFRESH_DEFAULT_MODEL`, reads no config.
 
-With `--trace`, each ignored key is named on stderr — e.g. `config model 'claude-sonnet-5' ignored (provider: kimi)`.
+With `--trace`, each ignored key is named on stderr with the live signal that caused it — e.g. `config model 'claude-sonnet-5' ignored (seat env pins ANTHROPIC_MODEL=kimi-k3)`.
 
-Verify by hand:
+Verify by hand (on a seat with a live redirect env block — check with the first command):
 
 ```sh
-printf 'provider = "kimi"\nmodel = "claude-sonnet-5"\n' > .clr.toml
+grep -o '"ANTHROPIC_MODEL"[^,}]*' ~/.claude/settings.json   # e.g. "ANTHROPIC_MODEL" : "kimi-k3"
+printf 'model = "claude-sonnet-5"\n' > .clr.toml
 clr --dry-run "task"                          # preview contains no --model
-clr --trace --dry-run "task"                  # stderr: config model 'claude-sonnet-5' ignored (provider: kimi)
+clr --trace --dry-run "task"                  # stderr: config model 'claude-sonnet-5' ignored (seat env pins ANTHROPIC_MODEL=kimi-k3)
 clr --model claude-opus-4-8 --dry-run "task"  # CLI flag survives the gate
 ```
 
-Undo: `clp .provider.select reset::1` removes the key (user tier); the config-tier model applies again on the next launch.
+Counterpart (anthropic seat): after `clp .account.use <anthropic-account>` removes the env block, the same `.clr.toml` yields a preview **with** `--model claude-sonnet-5` and no trace note — the config tier applies again with no further action.
 
 ### Example `config.toml`
 
 ```toml
 # ~/.clr/config.toml (user-level) or .clr.toml (project-level, cwd)
 model = "claude-opus-4-8"
-# provider = "kimi"   # config-only key, written by `clp .provider.select` —
-#                     # when non-anthropic, `model`/`fallback_model` above are ignored
+# A `provider` key (written by `clp .provider.select` for clp's rotation scoping)
+# is ignored by clr like any unknown key — the model gate reads the live seat
+# state in ~/.claude/settings.json instead (see Provider Gate).
 max_sessions = 4
 effort = "high"
 timeout = 600
@@ -213,4 +215,4 @@ Test-injection override for user-level discovery only — mirrors the existing `
 
 | File | Relationship |
 |------|--------------|
-| `../../tests/config_file_test.rs` | T01–T20: precedence (CLI/JSON/env/config/default), project-over-user, `CLR_CONFIG_DIR` scope, malformed TOML, unknown key, dry-run reflection, invalid `output_style`/`journal`/`summary_fields` rejection, config-only `gate_poll_secs`/`gate_max_attempts` timing (T16), provider gate — suppression, explicit-anthropic no-op, CLI-wins, trace note (T17–T20) |
+| `../../tests/config_file_test.rs` | T01–T21: precedence (CLI/JSON/env/config/default), project-over-user, `CLR_CONFIG_DIR` scope, malformed TOML, unknown key, dry-run reflection, invalid `output_style`/`journal`/`summary_fields` rejection, config-only `gate_poll_secs`/`gate_max_attempts` timing (T16), provider gate — live-env suppression, no-pin no-op, CLI-wins, trace note, stale-pin MRE (T17–T21, BUG-548) |

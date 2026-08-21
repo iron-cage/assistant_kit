@@ -275,6 +275,7 @@ pub( super ) fn run_isolated_command
         ev.fields.exit_code    = Some( exit_code );
         ev.fields.creds        = Some( creds_path.to_string() );
         ev.fields.timeout_secs = Some( u32::try_from( timeout_secs ).unwrap_or( u32::MAX ) );
+        super::execution::stamp_attribution( &mut ev );
         let _ = w.append( &ev );
       }
       std::process::exit( exit_code );
@@ -295,6 +296,7 @@ pub( super ) fn run_isolated_command
         ev.fields.exit_code    = Some( 2 );
         ev.fields.creds        = Some( creds_path.to_string() );
         ev.fields.timeout_secs = Some( u32::try_from( secs ).unwrap_or( u32::MAX ) );
+        super::execution::stamp_attribution( &mut ev );
         let _ = w.append( &ev );
       }
       std::process::exit( 2 );

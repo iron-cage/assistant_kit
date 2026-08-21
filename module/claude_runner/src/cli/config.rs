@@ -15,9 +15,10 @@ use std::path::PathBuf;
 /// precedence correctness instead comes from merging raw TOML tables before this
 /// struct is deserialized (see `load_config`).
 ///
-/// One exception to the mirror: `provider` is a config-only control key with no
-/// CLI flag or `CLR_*` env counterpart — written by `clp .provider.select`, read
-/// here solely to gate the two model keys (see `apply_config_defaults`).
+/// A `provider` key may still appear in config files (written by
+/// `clp .provider.select` for clp's own rotation scoping) — it is ignored here
+/// like any unknown key; the model-key gate in `apply_config_defaults` reads the
+/// live seat state (`seat_env_model`) instead.
 #[ allow( clippy::struct_excessive_bools ) ]
 #[ derive( Default, serde::Deserialize ) ]
 #[ serde( default ) ]
@@ -64,7 +65,35 @@ pub( crate ) struct ConfigDefaults
   pub( crate ) disallowed_tools     : Option< String >,
   pub( crate ) max_budget_usd       : Option< String >,
   pub( crate ) fallback_model       : Option< String >,
-  pub( crate ) provider             : Option< String >,
+}
+
+/// The seat's live `env.ANTHROPIC_MODEL` from `~/.claude/settings.json`, or
+/// `None` when the file, the `env` block, or the key is absent/empty/unreadable.
+///
+/// Fix(BUG-548): the Provider Gate keys on this live routing state, not the
+/// standing `provider` pin in `~/.clr/config.toml`.
+/// Root cause: the BUG-536 fix suppressed the config-tier model "on a
+///   non-anthropic seat" but defined the seat by the config pin — a value only
+///   `clp .provider.select` ever writes, which no switch-back path resets. After
+///   `clp .account.use <anthropic>` cleared the env block, the stale pin kept
+///   suppressing the config model on a fully-anthropic seat (and, symmetrically,
+///   a redirect account activated without `.provider.select` got no suppression
+///   at all — BUG-536 resurfacing).
+/// Pitfall: the property the gate protects is per-launch — "would an emitted
+///   `--model` shadow the child's `ANTHROPIC_MODEL`?" — so the predicate must
+///   read the artifact the child will actually inherit (`settings.json`'s env
+///   block, maintained transactionally by `clp .account.use` per Feature 071),
+///   never a standing config value that merely correlates with it.
+fn seat_env_model() -> Option< String >
+{
+  let home = std::env::var( "HOME" ).ok().filter( | h | !h.is_empty() )?;
+  let settings = PathBuf::from( home ).join( ".claude" ).join( "settings.json" );
+  let env_raw = claude_core::settings_io::get_setting( &settings, "env" ).ok().flatten()?;
+  claude_core::settings_io::json_parse_flat_object( &env_raw ).ok()?
+    .into_iter()
+    .find( | ( k, _, _ ) | k == "ANTHROPIC_MODEL" )
+    .map( | ( _, v, _ ) | v )
+    .filter( | v | !v.is_empty() )
 }
 
 /// Resolve the user-level config directory: `$CLR_CONFIG_DIR` if set and
@@ -145,30 +174,32 @@ pub( crate ) fn load_config() -> Result< ConfigDefaults >
 #[ allow( clippy::too_many_lines ) ] // config-field mapping is inherently wide — one branch per field, mirrors apply_env_vars.
 pub( crate ) fn apply_config_defaults( parsed : &mut CliArgs, config : &ConfigDefaults ) -> Result< () >
 {
-  // A seat pinned to a non-anthropic provider (`provider` key, written by
-  // `clp .provider.select`) routes its sessions through the `ANTHROPIC_*` env block
-  // in `~/.claude/settings.json`. A config-tier model would be promoted to an explicit
-  // `--model` flag — the strongest model source claude knows — silently overriding
-  // that seat binding on every launch. On such seats the config tier's two model keys
-  // are ignored: higher tiers (CLI flag, `--args-file`, `CLR_MODEL`) still win when
-  // explicitly set, and `isolated`'s separate `resolve_isolated_default_model()` path
-  // (explicit creds, env stripped) is deliberately unaffected.
-  let non_anthropic_seat = config.provider.as_deref()
-    .is_some_and( | p | !p.is_empty() && p != "anthropic" );
+  // A seat routed to a non-anthropic provider (redirect account activated via
+  // `clp .account.use`) pins its sessions through the `env.ANTHROPIC_MODEL` block in
+  // `~/.claude/settings.json` — written on switch-to-redirect, removed on switch-back
+  // (Feature 071's transactional contract). A config-tier model would be promoted to an
+  // explicit `--model` flag — the strongest model source claude knows — silently
+  // overriding that seat binding on every launch. While that block is live the config
+  // tier's two model keys are ignored: higher tiers (CLI flag, `--args-file`,
+  // `CLR_MODEL`) still win when explicitly set, and `isolated`'s separate
+  // `resolve_isolated_default_model()` path (explicit creds, temp HOME strips the env
+  // block by construction) is deliberately unaffected.
+  let seat_model = seat_env_model();
+  let non_anthropic_seat = seat_model.is_some();
   if non_anthropic_seat && parsed.trace
   {
-    let provider = config.provider.as_deref().unwrap_or_default();
+    let pinned = seat_model.as_deref().unwrap_or_default();
     if parsed.model.is_none() && config.model.is_some()
     {
       eprintln!(
-        "config model '{}' ignored (provider: {provider})",
+        "config model '{}' ignored (seat env pins ANTHROPIC_MODEL={pinned})",
         config.model.as_deref().unwrap_or_default()
       );
     }
     if parsed.fallback_model.is_none() && config.fallback_model.is_some()
     {
       eprintln!(
-        "config fallback_model '{}' ignored (provider: {provider})",
+        "config fallback_model '{}' ignored (seat env pins ANTHROPIC_MODEL={pinned})",
         config.fallback_model.as_deref().unwrap_or_default()
       );
     }

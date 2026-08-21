@@ -472,23 +472,29 @@ mod transplant
   /// qualifying session of its own), the "fresh" name would then silently resume
   /// that orphaned, unrelated history on first use instead of starting clean.
   ///
+  /// ## Why Not Caught
+  /// No existing test exercised the specific combination of "a candidate topic
+  /// name's WORKING DIRECTORY has never existed (or no longer exists) AND its
+  /// SESSION STORAGE already has a qualifying session" — prior auto-naming tests
+  /// only varied directory existence, never storage state independently of it,
+  /// since the two had never been observed to diverge in any test fixture.
+  ///
   /// ## Fix Applied
   /// See `Fix(BUG-542)` in `src/cli/topic.rs` (`name_is_taken`).
   ///
-  /// ## Why Not Caught
-  /// T02 (the only prior disambiguation test) pre-creates the candidate's WORKING
-  /// directory — no fixture ever modeled the inverse state this bug lives in:
-  /// storage present, directory absent.
-  ///
   /// ## Prevention
-  /// Freshness has two independent signals (directory existence, session storage);
-  /// every disambiguation fixture must state which signal it exercises — this test
-  /// pins the storage-only signal, T02 the directory-only one.
+  /// Whenever a "does X already exist" freshness check has more than one
+  /// storage location backing the same logical resource (here: a working
+  /// directory AND independently-persistent session storage for the same
+  /// path), the check must probe every location, not just the one most
+  /// visible to the immediate code path — directory existence is an obvious,
+  /// easy check but is not the only place state can persist.
   ///
   /// ## Pitfall
-  /// Anchor `cd`-line assertions with the trailing `\n` — `-orphan-topic` is itself
-  /// a string prefix of the correct `-orphan-topic-2`, so an unanchored `contains`
-  /// on the shorter form false-positives against the longer.
+  /// Session storage under `~/.claude/projects/` outlives its working
+  /// directory's own deletion — `rm -rf`'ing a topic dir does not touch its
+  /// storage, so any freshness check keyed on directory existence alone is
+  /// silently wrong the moment a directory is ever removed and its name reused.
   // test_kind: bug_reproducer(BUG-542)
   #[ test ]
   fn t10_auto_naming_skips_candidate_with_orphaned_session_storage()
@@ -539,62 +545,70 @@ mod transplant
     );
   }
 
-  /// T11 (BUG-543): the freshness probe must consult the storage claude will ACTUALLY
-  /// use — reached through a symlinked base, the candidate's CANONICAL storage key —
-  /// not the storage named by a lexical rendering of the not-yet-existing candidate.
+  /// T11 (BUG-543): an auto-name candidate whose orphaned session storage lives
+  /// under a symlinked `--dir` base must still be detected — the freshness probe
+  /// must resolve the SAME canonical storage key the real run would use, not the
+  /// symlink's own literal path.
   ///
   /// ## Root Cause
-  /// `fs::canonicalize()` fails for any path whose leaf does not exist — true of every
-  /// auto-name candidate by definition — so `name_is_taken()`'s probe always resolved
-  /// candidates through `physical_abs()`'s LEXICAL fallback (symlinked ancestors kept,
-  /// `..` kept), while the real run canonicalizes after `resolve_effective_dir()`'s
-  /// `create_dir_all`. Divergent storage keys under symlinked/`..` bases: the probe
-  /// missed the orphaned storage BUG-542 exists to detect, re-selected the "fresh"
-  /// name, and the run resumed the orphaned history.
+  /// `physical_abs()`'s fallback branch (taken by any pre-creation probe, since
+  /// `fs::canonicalize` fails whenever the leaf does not yet exist) was purely
+  /// lexical: `cwd.join(raw).components().collect()` kept `..`/symlinked
+  /// components verbatim instead of resolving them, so `name_is_taken()`'s
+  /// storage probe encoded a different key than the one the real run derives
+  /// post-`create_dir_all` (which DOES canonicalize, since the leaf then exists).
   ///
   /// ## Why Not Caught
-  /// T10's fixture base is a plain `TempDir` — canonical by construction, so the
-  /// lexical and canonical encodings coincide and the probe worked. No fixture routed
-  /// the base through a symlink.
+  /// T10's fixture builds directly from a plain `TempDir` — canonical by
+  /// construction, so the lexical and canonical encodings coincide there and the
+  /// probe finds the orphaned storage despite the bug. No test exercised the
+  /// probe through a symlinked base, where the two encodings diverge.
   ///
   /// ## Fix Applied
-  /// See `Fix(BUG-543)` in `src/cli/builder.rs` — `physical_abs`'s fallback now
-  /// canonicalizes the deepest existing prefix and appends the nonexistent tail
-  /// literally, matching what `create_dir_all` + claude's physical getcwd will yield.
+  /// See `Fix(BUG-543)` in `src/cli/builder.rs` (`canonicalize_deepest_prefix`).
   ///
   /// ## Prevention
-  /// Pins the symlinked-base probe next to T10's canonical-base probe so the two
-  /// resolution paths cannot drift apart again.
+  /// A path-resolution helper with an existence-dependent happy path
+  /// (`canonicalize`) and a lexical fallback must make the fallback approximate
+  /// the happy path — canonicalize the deepest existing prefix, append the
+  /// nonexistent tail literally — never skip resolution entirely just because
+  /// the full path doesn't exist yet.
   ///
   /// ## Pitfall
-  /// The seeded storage key MUST be derived from the REAL (canonical) base, never from
-  /// the symlink — seeding under the symlink's own lexical encoding would let the
-  /// buggy probe "find" it and the test would pass for the wrong reason.
+  /// Two independent call sites resolving "the same" path (a pre-creation probe
+  /// and the real post-creation run) can silently diverge the moment one of them
+  /// takes an existence-dependent code path the other doesn't — always test both
+  /// through the SAME non-canonical input (symlink, `..`), not just through a
+  /// fixture that happens to already be canonical.
   // test_kind: bug_reproducer(BUG-543)
   #[ test ]
   fn t11_auto_naming_probes_storage_through_symlinked_base()
   {
     container_check();
-    let ch     = tempfile::TempDir::new().expect( "claude home" );
-    let real   = tempfile::TempDir::new().expect( "real topic base dir" );
-    let holder = tempfile::TempDir::new().expect( "symlink holder dir" );
-    let link   = holder.path().join( "base-link" );
-    std::os::unix::fs::symlink( real.path(), &link ).expect( "create base symlink" );
+    let ch = tempfile::TempDir::new().expect( "claude home" );
+    let real_base = tempfile::TempDir::new().expect( "real topic base dir" );
+    let real_base_canon = std::fs::canonicalize( real_base.path() ).expect( "canonicalize real base" );
 
-    // Orphaned storage lives under the CANONICAL candidate path — the key claude's own
-    // physical getcwd produces; the working directory itself is never created.
-    let real_canon = std::fs::canonicalize( real.path() ).expect( "canonicalize real base" );
-    let orphan_canonical = real_canon.join( "-orphan-topic" );
+    // Convenience symlink standing in for the `--dir` base, mirroring `~/proj -> /data/projects`.
+    // Lives inside its OWN fresh TempDir (never a fixed shared name) so repeated/parallel runs
+    // never collide on a leftover symlink from a prior invocation.
+    let link_parent = tempfile::TempDir::new().expect( "symlink parent dir" );
+    let link_base = link_parent.path().join( "topic-base-link" );
+    std::os::unix::fs::symlink( &real_base_canon, &link_base ).expect( "create symlink base" );
+
+    // Seed the orphaned session under the CANONICAL path — the working directory was
+    // deleted after use, its storage survives, keyed by the real (non-symlink) path.
+    let orphan_dir_canon = real_base_canon.join( "-orphan-topic" );
     let uuid = "54309001-1111-2222-3333-444444444444";
-    make_session( ch.path(), &orphan_canonical, uuid, b"{\"seed\":\"orphaned history under canonical key\"}\n" );
-    assert!( !orphan_canonical.exists(), "fixture setup: working directory must NOT exist on disk" );
+    make_session( ch.path(), &orphan_dir_canon, uuid, b"{\"seed\":\"orphaned unrelated history\"}\n" );
+    assert!( !orphan_dir_canon.exists(), "fixture setup: working directory must NOT exist on disk" );
 
     let out = std::process::Command::new( env!( "CARGO_BIN_EXE_clr" ) )
       .args
       ([
         "topic",
         "--dry-run",
-        "--dir", link.to_str().expect( "utf-8" ),
+        "--dir", link_base.to_str().expect( "utf-8" ),
         "orphan topic",
       ])
       .env( "CLAUDE_HOME", ch.path() )
@@ -608,19 +622,22 @@ mod transplant
     );
     let stdout = String::from_utf8_lossy( &out.stdout ).into_owned();
 
-    // Same trailing-`\n` anchoring as T10: "-orphan-topic" is itself a string prefix
-    // of the correct "-orphan-topic-2".
-    let taken_cd = format!( "cd {}\n", link.join( "-orphan-topic" ).display() );
-    let free_cd  = format!( "cd {}\n", link.join( "-orphan-topic-2" ).display() );
+    // The dry-run's `cd` line echoes the effective dir built from the literal `--dir`
+    // input (dry-run never creates anything, so it can't canonicalize the not-yet-
+    // existing candidate) — assert against the symlink-relative form actually printed,
+    // matching T10's trailing-`\n` boundary discipline (the orphaned name is a string
+    // prefix of the correctly-disambiguated one).
+    let taken_cd = format!( "cd {}\n", link_base.join( "-orphan-topic" ).display() );
+    let free_cd  = format!( "cd {}\n", link_base.join( "-orphan-topic-2" ).display() );
     assert!(
       !stdout.contains( &taken_cd ),
-      "BUG-543: the probe must find the orphaned storage through the symlinked base \
-       (canonical key), never select the orphaned candidate. Got:\n{stdout}"
+      "auto-naming must NOT select a candidate whose CANONICAL storage already has an \
+       orphaned session, even when probed through a symlinked base. Got:\n{stdout}"
     );
     assert!(
       stdout.contains( &free_cd ),
-      "BUG-543: auto-naming must disambiguate past the orphaned candidate to \
-       -orphan-topic-2 through a symlinked base. Got:\n{stdout}"
+      "auto-naming must disambiguate past the orphaned candidate to -orphan-topic-2 \
+       when probed through a symlinked base. Got:\n{stdout}"
     );
   }
 }

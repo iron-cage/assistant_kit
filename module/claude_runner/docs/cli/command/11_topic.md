@@ -23,7 +23,7 @@ All parameters from [`run`](01_run.md) are accepted with identical defaults, wit
 
 **Algorithm (2 steps):**
 1. If `--topic` is explicitly given (any non-identity value), skip to step 2 with that value unchanged — `topic` behaves exactly like `ask` from here.
-2. Otherwise, derive a slug from `MESSAGE` (lowercase; first few words; non-alphanumeric runs collapsed to a single `-`; truncated to a concise length) and disambiguate it against existing topic directories of the effective `--dir` by appending `-2`, `-3`, ... until the candidate name does not already exist on disk. Use the disambiguated slug as `--topic`'s value, then delegate to `run`'s execution path unchanged.
+2. Otherwise, derive a slug from `MESSAGE` (lowercase; first few words; non-alphanumeric runs collapsed to a single `-`; truncated to a concise length) and disambiguate it against candidate topic names of the effective `--dir` by appending `-2`, `-3`, ... until a candidate is found where BOTH its working directory does not already exist on disk AND its session storage holds no qualifying session (Fix(BUG-542) — storage outlives a deleted working directory, so directory existence alone is not a reliable freshness signal). Use the disambiguated slug as `--topic`'s value, then delegate to `run`'s execution path unchanged.
 
 ### Execution Modes
 

@@ -12,6 +12,7 @@ use super::types::UsageOutputFormat;
 use super::fetch::fetch_quota_for_list;
 use super::render::{ render_text, render_json, render_tsv, render_plain, extract_get_field, resolve_selected_provider, apply_no_color };
 use super::live::execute_live_mode;
+use super::forecast::burn_warnings;
 use super::refresh::apply_refresh;
 use super::touch::{ apply_touch, derive_touched_recently };
 use super::params::parse_usage_params;
@@ -274,13 +275,27 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
   let session_model  = session_model_str.as_deref();
   let session_effort = session_effort_str.as_deref();
 
+  // Burn-rate forecast (task 544): sub-threshold time-to-exhaustion warnings for
+  // the human-readable surfaces only — machine formats (json/tsv/value) stay
+  // byte-stable for scripting consumers.
+  let burn = if matches!( params.format, UsageOutputFormat::Text | UsageOutputFormat::Plain )
+  {
+    use std::time::{ SystemTime, UNIX_EPOCH };
+    let now_secs = SystemTime::now().duration_since( UNIX_EPOCH ).unwrap_or_default().as_secs();
+    burn_warnings( &accounts, &credential_store, params.alert, now_secs )
+  }
+  else
+  {
+    String::new()
+  };
+
   let content = match params.format
   {
     UsageOutputFormat::Json  => render_json( &accounts ),
     UsageOutputFormat::Tsv   => render_tsv( &accounts, params.sort, params.desc, params.prefer, &params.cols ),
-    UsageOutputFormat::Plain => render_plain( &accounts, params.sort, params.desc, params.prefer, &params.cols, session_model, session_effort, Some( &credential_store ), params.who, params.rotate && !params.force, &tag_filter ),
+    UsageOutputFormat::Plain => format!( "{}{}", render_plain( &accounts, params.sort, params.desc, params.prefer, &params.cols, session_model, session_effort, Some( &credential_store ), params.who, params.rotate && !params.force, &tag_filter ), apply_no_color( burn.clone() ) ),
     UsageOutputFormat::Value => String::new(),
-    UsageOutputFormat::Text  => render_text( &accounts, params.sort, params.desc, params.prefer, &params.cols, session_model, session_effort, Some( &credential_store ), params.who, params.rotate && !params.force, &tag_filter ),
+    UsageOutputFormat::Text  => format!( "{}{burn}", render_text( &accounts, params.sort, params.desc, params.prefer, &params.cols, session_model, session_effort, Some( &credential_store ), params.who, params.rotate && !params.force, &tag_filter ) ),
   };
 
   // Fix(audit-json-no-color): machine formats are uniformly exempt from no_color.

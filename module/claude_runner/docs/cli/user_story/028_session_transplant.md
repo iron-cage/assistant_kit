@@ -29,7 +29,7 @@
 
 | Flag | Role |
 |------|------|
-| `--from <DIR>` | Source directory for session lookup; defaults to CWD when omitted |
+| `--from <DIR>` | Source directory for session lookup; defaults to the target's own storage once established (AC-9), else CWD (AC-4) |
 | `--to <DIR>` | Alias for `--dir` (target directory where Claude runs); defaults to CWD when omitted |
 | `--dir <DIR>` | Target directory where Claude runs |
 
@@ -45,7 +45,8 @@ clr "Continue this feature in the new project" \
 clr "What did you implement in project-b?" \
   --from /home/alice/project-b
 
-# --to alone: source defaults to CWD
+# --to alone: source defaults to CWD on first use; repeat calls continue
+# project-b's own history instead (AC-9), regardless of CWD drift
 clr "Continue this feature" --to /home/alice/project-b
 
 # Bare invocation: no transplant (both default to CWD, self-copy guard suppresses it)

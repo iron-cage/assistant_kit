@@ -111,7 +111,7 @@ fn cmd_tail( params : &HashMap< String, String >, dir : PathBuf )
   }
 }
 
-/// `.stats` — aggregate statistics by `by::day` or `by::model`.
+/// `.stats` — aggregate statistics by `by::day`, `by::model`, `by::dir`, or `by::agent`.
 fn cmd_stats( params : &HashMap< String, String >, dir : PathBuf )
 {
   match claude_journal_viewer::output::stats_output( params, dir )
@@ -249,7 +249,7 @@ fn print_help()
   println!();
   println!( "{}", bold( "Command-specific params:" ) );
   println!( "  .list    format::table|json" );
-  println!( "  .stats   by::day|model" );
+  println!( "  .stats   by::day|model|dir|agent" );
   println!( "  .search  pattern::<str>               (required)" );
   println!( "  .prune   keep::<dur>  dry_run::0|1" );
   println!( "  .export  output::<path>  format::json|jsonl|csv|table" );

@@ -19,6 +19,8 @@
 //! | `t502_03_legacy_gitignored_cache_read_then_self_cleaned` | TSK-502/T04: legacy `-cache/{name}.json` readable as fallback; the next write relocates values + history to the per-host file and deletes it |
 //! | `t502_04_no_cache_anywhere_returns_none` | TSK-502/T05 (regression guard): empty store → read_quota_cache None — the no-cache contract unchanged |
 //! | `t502_05_history_ring_continues_across_hosts` | TSK-502/T06: another host's ring is carried into the own-host file by write_quota_cache and continued by write_history_entry |
+//! | `bug_540_period_key_is_utilization_not_left_pct` | BUG-540: serialized period key is `utilization` (what the value is), never the inverted `left_pct` |
+//! | `bug_540_legacy_left_pct_cache_file_still_reads` | BUG-540: legacy cache files carrying `left_pct` stay readable via the dual-key reader |
 
 use tempfile::TempDir;
 use claude_profile_core::account;
@@ -54,7 +56,7 @@ fn cache_write_preserves_existing_fields()
   let local   = store.path().join( "cache" ).join( host_slug() ).join( format!( "{name}.json" ) );
   let content = std::fs::read_to_string( &local ).expect( "local cache file must exist" );
   assert!( content.contains( r#""fetched_at""# ), "fetched_at present: {content}" );
-  assert!( content.contains( r#""left_pct""# ), "left_pct present: {content}" );
+  assert!( content.contains( r#""utilization""# ), "utilization present: {content}" );
   assert!( content.contains( r#""five_hour""# ), "five_hour present: {content}" );
   assert!( content.contains( r#""seven_day""# ), "seven_day present: {content}" );
 }
@@ -365,7 +367,7 @@ fn t502_01_volatile_cache_lands_in_per_host_tracked_file()
   }
   let json : serde_json::Value = serde_json::from_str( &std::fs::read_to_string( &local ).unwrap() ).unwrap();
   assert!( json[ "fetched_at" ].is_string(), "T01: per-host cache carries fetched_at" );
-  let u = json[ "five_hour" ][ "left_pct" ].as_f64().expect( "left_pct" );
+  let u = json[ "five_hour" ][ "utilization" ].as_f64().expect( "utilization" );
   assert!( ( u - 55.5 ).abs() < 1e-9, "T01: utilization stored per-host, got {u}" );
   assert!(
     !store.path().join( format!( "{name}.json" ) ).exists(),
@@ -490,7 +492,7 @@ fn t500_06_legacy_cache_migrates_prunes_and_preserves()
   // AF2 leg 2: volatile + history present in the per-host file post-migration.
   let local = store.path().join( "cache" ).join( host_slug() ).join( format!( "{name}.json" ) );
   let ljson : serde_json::Value = serde_json::from_str( &std::fs::read_to_string( &local ).unwrap() ).unwrap();
-  let u = ljson[ "five_hour" ][ "left_pct" ].as_f64().expect( "left_pct" );
+  let u = ljson[ "five_hour" ][ "utilization" ].as_f64().expect( "utilization" );
   assert!( ( u - 60.0 ).abs() < 1e-9, "T06: new fetch values in local file, got {u}" );
   assert_eq!(
     ljson[ "history" ].as_array().map( Vec::len ), Some( 1 ),
@@ -935,5 +937,93 @@ fn history_duplicate_timestamp_overwrites()
     ( h5.0 - 99.0 ).abs() < 1e-9,
     "FT-13: last entry updated to new value (99.0), not 30.0; got {}", h5.0,
   );
+}
+
+// ── BUG-540: cache period key must be `utilization`, not `left_pct` ──────────
+
+/// bug_reproducer(BUG-540): the serialized period key must be named for what
+/// the value IS — utilization (percent consumed) — not `left_pct` (percent
+/// remaining), which inverts the meaning for every raw-JSON consumer.
+///
+/// # Root Cause
+///
+/// `period_json()` stored the utilization value under the key `left_pct`:
+/// a 100%-consumed quota serialized as `"left_pct": 100.0` while the CLI
+/// displayed "0% left" — the stored name asserted the exact opposite of the
+/// stored value. `read_period()` read it back symmetrically, so clp itself
+/// rendered correctly and the inversion was invisible from inside the crate.
+///
+/// # Why Not Caught
+///
+/// All existing tests exercised the write→read round-trip through
+/// `write_quota_cache`/`read_quota_cache`, where the symmetric misnaming
+/// cancels out. No test asserted the raw serialized key name against the
+/// value's documented meaning.
+///
+/// # Fix Applied
+///
+/// `period_json()` now writes the key `utilization`; `read_period()` reads
+/// `utilization` first and falls back to `left_pct` for legacy cache files.
+///
+/// # Prevention
+///
+/// When a field's name encodes a direction (left/used, remaining/consumed),
+/// assert the raw serialized name in a test — round-trip tests alone cancel
+/// out symmetric naming errors.
+///
+/// # Pitfall
+///
+/// Do NOT "fix" this by inverting the stored value to match the old name —
+/// every history ring and cross-host cache already holds utilization values;
+/// renaming the key preserves them, inverting the value would corrupt them.
+#[ test ]
+fn bug_540_period_key_is_utilization_not_left_pct()
+{
+  let tmp   = TempDir::new().unwrap();
+  let store = tmp.path();
+
+  account::write_quota_cache( store, "alice", Some( ( 83.0, Some( "2026-08-20T12:00:00Z" ) ) ), None, None );
+
+  let raw : serde_json::Value = serde_json::from_str(
+    &std::fs::read_to_string( store.join( "cache" ).join( host_slug() ).join( "alice.json" ) ).expect( "cache file readable" )
+  ).expect( "cache file is JSON" );
+  let period = raw.get( "five_hour" ).expect( "five_hour period present" );
+
+  assert!(
+    period.get( "left_pct" ).is_none(),
+    "BUG-540: the misleading `left_pct` key must not be written; got {period}"
+  );
+  let utilization = period.get( "utilization" )
+    .and_then( serde_json::Value::as_f64 )
+    .expect( "BUG-540: period must carry a numeric `utilization` key" );
+  assert!(
+    ( utilization - 83.0 ).abs() < 1e-9,
+    "BUG-540: stored utilization must equal the written value; got {utilization}"
+  );
+}
+
+/// bug_reproducer(BUG-540): a legacy cache file that still carries the old
+/// `left_pct` key must remain readable — the dual-key reader surfaces its
+/// value unchanged (it always held utilization, only the name lied).
+#[ test ]
+fn bug_540_legacy_left_pct_cache_file_still_reads()
+{
+  let tmp   = TempDir::new().unwrap();
+  let store = tmp.path();
+
+  let legacy_dir = store.join( "cache" ).join( "legacyhost_legacyuser" );
+  std::fs::create_dir_all( &legacy_dir ).unwrap();
+  std::fs::write(
+    legacy_dir.join( "alice.json" ),
+    r#"{"fetched_at":"2026-08-19T10:00:00Z","status":"ok","five_hour":{"left_pct":42.5,"resets_at":"2026-08-19T15:00:00Z"}}"#,
+  ).unwrap();
+
+  let entry = account::read_quota_cache( store, "alice" ).expect( "legacy cache must be readable" );
+  let ( utilization, resets_at ) = entry.five_hour.expect( "five_hour present" );
+  assert!(
+    ( utilization - 42.5 ).abs() < 1e-9,
+    "BUG-540: legacy left_pct value must surface as utilization; got {utilization}"
+  );
+  assert_eq!( resets_at.as_deref(), Some( "2026-08-19T15:00:00Z" ) );
 }
 

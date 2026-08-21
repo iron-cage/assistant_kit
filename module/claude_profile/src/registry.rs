@@ -120,6 +120,7 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
       reg_arg_opt( "rotate",            Kind::Integer ).with_description( "Switch to the → winner after rendering (0 = off, default; 1 = on); .usage only" ),
       reg_arg_opt( "who",               Kind::Integer ).with_description( "Sessions table visibility: auto (default), 0 = suppress, 1 = force on; .usage only" ),
       reg_arg_opt( "solo",              Kind::Integer ).with_description( "Token conservation: restrict fetch to current+owned account only (0 = off, default; 1 = on); .usage only" ),
+      reg_arg_opt( "alert",             Kind::Integer ).with_description( "Burn-rate alert horizon in minutes (default 15; 0 = off); .usage only" ),
       // Legacy field-toggle params (removed by Feature 037; kept registered so the routine
       // can emit a helpful cols:: migration message instead of a generic framework error).
       bfd( "current",      "REMOVED — use cols::-current instead"      ),
@@ -326,6 +327,8 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
       // Stale-first fetch reduction (task 499)
       reg_arg_opt( "stalest", Kind::Integer ).with_description( "Fetch only the K accounts with the oldest cache (K >= 1); others render from cache; mutually exclusive with only_active::1; ignored with rotate::1" ),
       reg_arg_opt( "max_age", Kind::Integer ).with_description( "With stalest::, only refresh accounts whose cache is older than SECS seconds (default 0 = no threshold); requires stalest::" ),
+      // Burn-rate alert (task 544)
+      reg_arg_opt( "alert", Kind::Integer ).with_description( "Burn-rate alert horizon in minutes: warn under the table when a 5h window is forecast to exhaust within N minutes (default 15; 0 = off)" ),
     ],
     Box::new( accounts_view_routine   ) );
 }
