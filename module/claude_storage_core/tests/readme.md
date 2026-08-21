@@ -4,9 +4,10 @@
 
 The claude_storage_core test suite covers the core storage library: JSON parsing, path
 encoding/decoding, session filtering, content search, export, token-usage rollup, session-family
-discovery, and per-conversation cost accounting. The suite
+discovery, per-conversation cost accounting, topic→UUIDv5 session-ID derivation, and canonical
+path resolution. The suite
 is split between integration tests that exercise real `~/.claude/` storage and unit tests that
-run fully in-process. Twelve of the twenty-three files are bug reproducers — each documents a parse,
+run fully in-process. Twelve of the twenty-five files are bug reproducers — each documents a parse,
 encoding, or storage defect found in production data with 5-section root-cause documentation.
 `status_global_stats_fast_bug.rs` covers both issue-015 (performance) and issue-018 (agent
 session discovery for Claude Code v2.x format) with corner case tests for subagents/ traversal.
@@ -25,6 +26,8 @@ tests/
 ├── continuation_tests.rs                  # Integration tests for continuation detection and UUID selection
 ├── session_id_tests.rs                    # Unit tests for SessionId newtype
 ├── cost_report_test.rs                    # Unit tests for cost::cost_report() and aggregate_reports()
+├── topic_session_tests.rs                 # Golden-vector tests for the topic→UUIDv5 session rule
+├── canonical_tests.rs                     # Unit tests for physical_abs canonical path resolution
 ├── count_entries_bug.rs                   # Bug Reproducer (issue-016): count_entries vs stats mismatch
 ├── export.rs                              # Export integration tests (markdown, JSON, text)
 ├── family_test.rs                         # Unit tests for family::find_family() — both agent layouts
@@ -54,6 +57,8 @@ tests/
 | `continuation_tests.rs` | Integration tests for `check_continuation`, `most_recent_session_id`, `most_recent_session_in_dir`, and `to_storage_path_for` |
 | `session_id_tests.rs` | Unit tests for `SessionId` newtype: construction, display, clone, and `From` conversions |
 | `cost_report_test.rs` | Unit tests for `cost::cost_report()`/`aggregate_reports()`: per-model attribution, TTL split, compactions, dedup |
+| `topic_session_tests.rs` | Golden-vector tests for the topic→UUIDv5 session rule |
+| `canonical_tests.rs` | Unit tests for `physical_abs()` canonical path resolution |
 | `count_entries_bug.rs` | Reproduce and verify fix for count_entries() vs stats() mismatch |
 | `export.rs` | Integration tests for session export (markdown, JSON, text formats) |
 | `family_test.rs` | Unit tests for `find_family()`: hierarchical and flat agent association |

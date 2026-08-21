@@ -42,6 +42,7 @@ fn build_command_registry() -> CommandRegistry
     ".project.exists" => cli::project_exists_routine,
     ".session.dir"    => cli::session_dir_routine,
     ".session.ensure" => cli::session_ensure_routine,
+    ".session.path"   => cli::session_path_routine,
   };
 
   let mut registry = CommandRegistry::new();
@@ -89,6 +90,7 @@ fn print_usage( binary : &str )
       [
         CommandEntry { name : ".session.dir".to_string(),    desc : "Print the filesystem path of a session directory".to_string() },
         CommandEntry { name : ".session.ensure".to_string(), desc : "Ensure a session directory exists (create if missing)".to_string() },
+        CommandEntry { name : ".session.path".to_string(),   desc : "Print a session .jsonl file path (latest, session:: UUID, or fork topic::)".to_string() },
       ],
     },
     CommandGroup

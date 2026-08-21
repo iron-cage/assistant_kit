@@ -21,6 +21,9 @@
 | `tools.rs` | `dispatch_tools` — list all 26 Claude Code built-in tools in a plain-style table. |
 | `scope.rs` | `dispatch_scope` — print all 6 CLAUDE_* path variables for a directory. |
 | `topic.rs` | `clr topic` — derive a `--topic` slug from the message, then delegate to `run`. |
+| `topics.rs` | `clr topics` — list existing topics or resolve one topic's directory/session path. |
+| `topic_path.rs` | Topic path formula (`<base>/-<name>`), base resolution, and `TopicMode` selection. |
+| `topic_registry.rs` | Fork-topic name registry under `~/.clr/topics/` — record and list per base dir. |
 | `summary.rs` | `render_summary` — parse CLR result envelope, render key:val header + text body for `--output-style summary`. |
 | `json_config.rs` | JSON config loading: `load_json_source`, `parse_json_object`, `apply_json_config`, `load_and_apply`. |
 | `json_config_isolated.rs` | JSON config application for `isolated`/`refresh` subcommands: `apply_json_config_isolated`, `apply_json_config_refresh`, `load_and_apply_isolated`, `load_and_apply_refresh`. |

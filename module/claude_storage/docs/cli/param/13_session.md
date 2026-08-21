@@ -20,7 +20,7 @@ Session identifier parameter — acts as substring filter in listing commands, a
 
 **Default:** unset (no filter / no scope restriction)
 
-**Commands:** `.list` (deprecated), `.count`, `.search`, `.projects`
+**Commands:** `.list` (deprecated), `.count`, `.search`, `.projects`, `.session.path`
 
 **Per-command semantics:**
 
@@ -30,6 +30,7 @@ Session identifier parameter — acts as substring filter in listing commands, a
 | `.projects` | SessionFilter | Substring filter — shows sessions whose ID contains this string |
 | `.count` | SessionId | Exact scope — counts entries within this specific session |
 | `.search` | SessionId | Exact scope — restricts search to this specific session |
+| `.session.path` | SessionId | Exact identifier — pure `{storage}/{id}.jsonl` join, no existence check; mutually exclusive with `latest::`/`topic::` |
 
 **Purpose:** Narrows results by session identity. In listing contexts (`.list`, `.projects`), acts as a substring filter for discovery. In counting/search contexts (`.count`, `.search`), acts as an exact scope pin to a specific session.
 
@@ -66,6 +67,7 @@ session::default      # Matches -default_topic.jsonl
 | 4 | [`.count`](../command/04_count.md) | unset | SessionId: exact scope pin to a specific session |
 | 5 | [`.search`](../command/05_search.md) | unset | SessionId: exact scope pin to a specific session |
 | 7 | [`.projects`](../command/07_projects.md) | unset | SessionFilter: substring filter |
+| 15 | [`.session.path`](../command/15_session_path.md) | unset | SessionId: pure file-path join, no existence check |
 
 ### Referenced User Stories
 | # | User Story | Persona |

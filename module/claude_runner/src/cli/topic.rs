@@ -92,7 +92,18 @@ fn name_is_taken( base : &std::path::Path, name : &str ) -> bool
     return true;
   }
   let storage = claude_storage_core::scope_for( &super::builder::physical_abs( &dir ) ).claude_session_dir;
-  super::builder::session_exists( &storage ).is_some()
+  if super::builder::session_exists( &storage ).is_some()
+  {
+    return true;
+  }
+  // Third signal: a FORK-mode topic of this name already exists — its session file
+  // (UUIDv5 of canonical base + name, in the base's own storage) is non-empty. Fork
+  // topics create no directory, so the two probes above are blind to them; without
+  // this probe auto-naming would hand out a slug that silently resumes an existing
+  // fork topic's conversation.
+  claude_storage_core::topic_session_file( &super::builder::physical_abs( base ), name )
+    .and_then( | file | std::fs::metadata( file ).ok() )
+    .is_some_and( | meta | meta.len() > 0 )
 }
 
 /// Disambiguate `slug` against `base`: return it unchanged when `base/-{slug}` is free

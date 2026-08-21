@@ -1,4 +1,5 @@
-//! `.project.path`, `.project.exists`, `.session.dir`, `.session.ensure` commands.
+//! `.project.path`, `.project.exists`, `.session.dir`, `.session.ensure`,
+//! `.session.path` commands.
 
 use unilang::{ VerifiedCommand, ExecutionContext, OutputData, ErrorData, ErrorCode };
 use super::storage::resolve_path_parameter;
@@ -233,4 +234,117 @@ pub fn session_ensure_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   let strategy = if is_resume { "resume" } else { "fresh" };
 
   Ok( OutputData::new( format!( "{}\n{strategy}", session_dir.display() ), "text" ) )
+}
+
+// ─── .session.path routine ────────────────────────────────────────────────────
+
+/// Resolve `path::` (or cwd) to the canonical physical base plus its Claude
+/// session storage directory, shared by every `.session.path` selector branch.
+///
+/// Canonicalization goes through `claude_storage_core::physical_abs` — the same
+/// rule `clr` keys storage names and topic identities on — so a relative or
+/// symlinked `path::` resolves to the identical storage dir the real run used.
+/// Storage resolution goes through `to_storage_path_for` (CLAUDE_HOME-aware),
+/// matching what `topic_session_file` uses internally.
+fn resolve_storage_for_cmd(
+  cmd : &VerifiedCommand,
+) -> core::result::Result< ( std::path::PathBuf, std::path::PathBuf ), ErrorData >
+{
+  let base = resolve_cmd_path( cmd )?;
+  let canonical_base = claude_storage_core::physical_abs( &base );
+  let storage = claude_storage_core::continuation::to_storage_path_for( &canonical_base )
+    .ok_or_else( || ErrorData::new(
+      ErrorCode::InternalError,
+      "Failed to compute storage path (HOME not set or invalid path)".to_string(),
+    ) )?;
+  Ok( ( canonical_base, storage ) )
+}
+
+/// Print the absolute session `.jsonl` file path for a directory.
+///
+/// Three mutually exclusive selectors; `latest` is the default when none is given:
+///   - `latest::1` (default) — the most recent qualifying session in the
+///     directory's storage. The one disk-reading selector; when the storage
+///     holds no qualifying session, prints a note to stderr and exits 2
+///     (nothing-found = usage outcome, matching `.status`'s exit-2 precedent).
+///   - `session::UUID` — `{storage}/{UUID}.jsonl`, pure computation; the file
+///     need not exist.
+///   - `topic::NAME` — the FORK-mode topic session file:
+///     `{storage}/{UUIDv5(canonical base, NAME)}.jsonl` via the shared
+///     `claude_storage_core::topic_session_file` rule. Pure computation,
+///     byte-identical to `clr topics --file NAME` run from the same directory.
+///
+/// TOPIC SENSE COLLISION — deliberate and documented: every OTHER command's
+/// `topic::` (`.project.path`, `.project.exists`, `.session.dir`,
+/// `.session.ensure`) means the legacy dir-mode suffix `{base}/-{topic}` — a
+/// WORKING-DIRECTORY transform. This command's `topic::` instead names a
+/// fork-mode topic — a SESSION-FILE identity inside the base's own storage,
+/// with no `-{topic}` dir involved. The two senses are different mechanisms for
+/// different topic kinds; do not "fix" one to match the other.
+///
+/// # Errors
+///
+/// Returns error when more than one selector is given, path resolution fails,
+/// `session::`/`topic::` is malformed, or the storage dir cannot be computed.
+#[ allow( clippy::needless_pass_by_value ) ]
+#[ inline ]
+pub fn session_path_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
+  -> core::result::Result< OutputData, ErrorData >
+{
+  let session = cmd.get_string( "session" );
+  let topic = cmd.get_string( "topic" );
+  let latest = cmd.get_boolean( "latest" ).unwrap_or( false );
+
+  let selector_count = usize::from( session.is_some() )
+    + usize::from( topic.is_some() )
+    + usize::from( latest );
+  if selector_count > 1
+  {
+    return Err( ErrorData::new(
+      ErrorCode::InternalError,
+      "session::, latest::, and topic:: are mutually exclusive selectors".to_string(),
+    ) );
+  }
+
+  if let Some( id ) = session
+  {
+    if id.is_empty() || id.contains( '/' )
+    {
+      return Err( ErrorData::new(
+        ErrorCode::InternalError,
+        "session must be a non-empty UUID (no path separators)".to_string(),
+      ) );
+    }
+    let ( _canonical_base, storage ) = resolve_storage_for_cmd( &cmd )?;
+    let file = storage.join( format!( "{id}.jsonl" ) );
+    return Ok( OutputData::new( format!( "{}", file.display() ), "text" ) );
+  }
+
+  if let Some( name ) = topic
+  {
+    validate_topic( name )?;
+    let ( canonical_base, _storage ) = resolve_storage_for_cmd( &cmd )?;
+    let file = claude_storage_core::topic_session_file( &canonical_base, name )
+      .ok_or_else( || ErrorData::new(
+        ErrorCode::InternalError,
+        "Failed to compute storage path (HOME not set or invalid path)".to_string(),
+      ) )?;
+    return Ok( OutputData::new( format!( "{}", file.display() ), "text" ) );
+  }
+
+  // Default / latest::1 — the only selector that reads the disk.
+  let ( _canonical_base, storage ) = resolve_storage_for_cmd( &cmd )?;
+  match claude_storage_core::continuation::most_recent_session_in_dir( &storage )
+  {
+    Some( id ) =>
+    {
+      let file = storage.join( format!( "{}.jsonl", id.as_str() ) );
+      Ok( OutputData::new( format!( "{}", file.display() ), "text" ) )
+    }
+    None =>
+    {
+      eprintln!( "no sessions in {}", storage.display() );
+      std::process::exit( 2 );
+    }
+  }
 }
