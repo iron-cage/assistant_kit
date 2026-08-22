@@ -2,14 +2,14 @@
 
 Aggregate statistics over journal events.
 
--- **Parameters:** since::, until::, type::, by::, verbosity::, journal_dir::
+-- **Parameters:** since::, until::, type::, by::, dir::
 -- **Exit Codes:** 0 (success), 1 (invalid param)
 
 ### Syntax
 
 ```
 clj .stats [since::DURATION] [until::DURATION] [type::EVENT_TYPE] [by::GROUP_BY]
-           [verbosity::LEVEL] [journal_dir::PATH]
+           [dir::PATH]
 ```
 
 ### Parameters
@@ -20,8 +20,7 @@ clj .stats [since::DURATION] [until::DURATION] [type::EVENT_TYPE] [by::GROUP_BY]
 | `until` | Duration | -- | No | Time window end |
 | `type` | EventType | execution | No | Event type to aggregate |
 | `by` | GroupBy | day | No | Grouping dimension |
-| `verbosity` | Integer | 1 | No | Output detail level |
-| `journal_dir` | Path | ~/.clr/journal/ | No | Journal directory override |
+| `dir` | Path | ~/.clr/journal/ | No | Journal directory override (falls back to `CLR_JOURNAL_DIR` env, then the default) |
 
 **Algorithm (4 steps):**
 

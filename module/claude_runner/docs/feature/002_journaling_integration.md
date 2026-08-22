@@ -26,7 +26,7 @@ Also configurable via `CLR_JOURNAL_DIR` env var. Resolution: CLI > env > default
 | Event Type | Emission Point | Source Function |
 |------------|----------------|-----------------|
 | `execution` | After `run_print_mode()` subprocess completes | `execution.rs` |
-| `credential` | After `dispatch_isolated()`/`dispatch_refresh()` completes | `cred_parse.rs` |
+| `credential` | After `dispatch_isolated()`/`dispatch_refresh()` completes | `credential.rs` |
 | `gate_wait` | When `wait_for_session_slot()` blocks | `gate.rs` |
 | `retry` | On each retry attempt in `run_print_mode()` | `execution.rs` |
 | `timeout` | On `poll_timeout()` firing (exit 4) | `execution.rs` |
@@ -37,7 +37,7 @@ Also configurable via `CLR_JOURNAL_DIR` env var. Resolution: CLI > env > default
 **Attribution stamping (task 542):** Every event, regardless of type, is stamped
 with attribution fields at the append boundary (`stamp_attribution()` in
 `execution.rs` — called by the shared `emit()` helper and by `gate.rs`'s and
-`cred_parse.rs`'s direct appends). Stamping order matters: `dir` first falls back
+`credential.rs`'s direct appends). Stamping order matters: `dir` first falls back
 to the process cwd when no explicit `--dir`/`--to` populated it (explicit values
 always win), then `agent_id` is composed from that effective dir via
 `claude_journal::compose_agent_id( user, host, dir )` — so both fields always
