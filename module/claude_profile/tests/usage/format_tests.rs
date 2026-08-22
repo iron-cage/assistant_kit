@@ -7,6 +7,7 @@ use claude_profile::usage::test_bridge::{
   recommended_model, quota_text_cells, status_emoji,
   renewal_secs, unix_to_date,
   status_group_of, StatusGroup, apply_model_override,
+  projected_window_end_secs,
 };
 use claude_profile::usage::test_bridge::{ FAR_FUTURE_MS, mk_aq_ok_both, mk_aq_sort, mk_aq_sort_weekly, mk_aq_err, mk_aq_cancelled };
 use claude_profile::usage::test_bridge::types::{ AccountQuota, PreferStrategy, REDIRECT_NO_QUOTA_REASON };
@@ -317,7 +318,7 @@ fn test_status_emoji_five_hour_none_is_green()
   let aq = AccountQuota
   {
     fallback_reason : None,
-    touched_recently : false,
+    touched_at_secs : None,
     name                  : String::new(),
     is_current            : false,
     is_active             : false,
@@ -1487,5 +1488,35 @@ fn test_with_lock_marker_suffix_only_when_locked()
   assert_eq!(
     with_lock_marker( &mk_aq_err(), "alice".to_string() ), "alice",
     "unlocked row's cell must be byte-identical",
+  );
+}
+
+/// BUG-551: `projected_window_end_secs` floors the touch instant to the 10-minute boundary
+/// Anthropic snaps 5h windows to, then adds one window length.
+///
+/// Validated against 19 live accounts on 2026-08-22: `floor10(last_touch_at) + 5h`
+/// reproduced the endpoint's own `resets_at` within a second for all 16 whose touch fell
+/// inside the grace window, while the unfloored `last_touch_at + 5h` matched none of them.
+/// The flooring is the whole difference between an exact projection and a wrong one.
+#[ test ]
+fn test_bug551_projected_window_end_floors_to_ten_minute_boundary()
+{
+  // 2026-08-22T17:30:54Z — i13's touch; the endpoint reported 22:30:00Z.
+  assert_eq!(
+    projected_window_end_secs( 1_787_419_854 ), 1_787_437_800,
+    "a touch at :30:54 must project the window end at :30:00 + 5h (22:30:00Z)",
+  );
+
+  // 2026-08-22T17:27:41Z — i2's touch; the endpoint reported 22:19:59Z, i.e. the 17:20
+  // boundary, not 17:27. Flooring is what lands on the right one.
+  assert_eq!(
+    projected_window_end_secs( 1_787_419_661 ), 1_787_437_200,
+    "a touch at :27:41 must floor back to :20:00, not round to :30:00",
+  );
+
+  // Exactly on a boundary — flooring must be a no-op, never a 10-minute rollback.
+  assert_eq!(
+    projected_window_end_secs( 1_787_419_800 ), 1_787_437_800,
+    "a touch exactly on a 10-minute boundary must not floor to the previous one",
   );
 }

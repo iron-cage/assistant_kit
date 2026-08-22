@@ -316,6 +316,41 @@ pub fn renews_label(
   }
 }
 
+// ── Projected 5h window end ──────────────────────────────────────────────────
+
+/// Project the end of the 5h session window a touch at `touch_secs` opened.
+///
+/// Anthropic snaps 5h windows to 10-minute boundaries: the window starts at the last
+/// 10-minute mark at or before the session's first request and runs `WINDOW_5H_S` from
+/// there. Flooring is what makes this exact rather than approximate — validated against
+/// 19 live accounts, where `floor10(last_touch_at) + 5h` reproduced the endpoint's own
+/// `resets_at` within a second for all 16 whose touch fell inside the grace window, while
+/// the unfloored `last_touch_at + 5h` matched none.
+// Fix(BUG-551): the 5h Reset cell was the one estimate-capable column with no estimator,
+//   so a row whose window the endpoint had not yet reported rendered the opaque literal
+//   "(touched)" instead of a countdown.
+// Root cause: no `start + 5h -> reset instant` helper existed anywhere in src/; the
+//   sibling `~Renews` column's renewal_secs/renews_label pair already established the
+//   derive-from-anchor-and-flag-with-`~` pattern this column never received.
+// Pitfall: display-only — the projection must never be written back into
+//   `five_hour.resets_at`, or sort, skip and forecast logic stop seeing the API's own state.
+#[ must_use ]
+pub fn projected_window_end_secs( touch_secs : u64 ) -> u64
+{
+  ( touch_secs / 600 ) * 600 + super::forecast::WINDOW_5H_S
+}
+
+/// Render a projected 5h window end as the `5h Reset` cell: `"~in Xh Ym"`.
+///
+/// The `~` marks the value as derived rather than endpoint-reported, matching the
+/// convention `renews_label` established for the `~Renews` column.
+#[ must_use ]
+pub fn projected_reset_label( touch_secs : u64, now_secs : u64 ) -> String
+{
+  let end = projected_window_end_secs( touch_secs );
+  format!( "~in {}", format_duration_secs( end.saturating_sub( now_secs ) ) )
+}
+
 // ── Next event label ─────────────────────────────────────────────────────────
 
 /// Return the winning next-event candidate as `(secs, prefix, is_estimate)`.

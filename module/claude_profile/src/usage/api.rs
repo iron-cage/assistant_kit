@@ -147,9 +147,9 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
   }
 
   // Fix(BUG-488): carry the touched signal across invocations — a touch recorded in the
-  //   cache within TOUCH_GRACE_SECS renders "(touched)" even when this invocation ran no
-  //   touch (touch::0, or the skip guard fired), so a just-touched account never reads
-  //   as plain idle while the quota endpoint lags.
+  //   cache within TOUCH_GRACE_SECS renders a projected "~in Xh Ym" countdown even when
+  //   this invocation ran no touch (touch::0, or the skip guard fired), so a just-touched
+  //   account never reads as plain idle while the quota endpoint lags.
   // Pitfall: must run unconditionally (outside the touch::1 block) and after it — the
   //   touching invocation's own fresh flags are covered in-memory by apply_touch, but
   //   every later invocation only has the cache to go on.

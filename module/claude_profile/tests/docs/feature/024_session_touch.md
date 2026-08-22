@@ -4,7 +4,7 @@
 
 - **Purpose**: Test cases for session touch via isolated subprocess.
 - **Source**: `docs/feature/024_session_touch.md`
-- **Covers**: AC-01 through AC-19
+- **Covers**: AC-01 through AC-21
 
 Feature behavioral requirement test cases for `docs/feature/024_session_touch.md`. Each FT case maps to one acceptance criterion. Parameter edge cases are in [cli/param/034_touch.md](../cli/param/34_touch.md). Command-level tests (IT-N) are in [cli/command/009_usage.md](../cli/command/09_usage.md).
 
@@ -65,6 +65,10 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 | FT-22 | Owned account occupied elsewhere skipped by apply_touch; trace line emitted (G4 occupancy guard) | AC-17 | G4 Occupancy Guard |
 | FT-23 | apply_touch re-fetch writes cache + clears cached flag (BUG-309 structural) | AC-18 | BUG-309 MRE |
 | FT-24 | h-exhausted guard threshold is 0.0% (full exhaustion), not 15%; 11%-remaining account fires touch | AC-19 | TSK-418 MRE |
+| FT-25 | Touched row with absent `resets_at` renders `~in Xh Ym`, never the literal `(touched)` | AC-20 | BUG-551 MRE |
+| FT-26 | Projected window end floors the touch instant to a 10-minute boundary before adding 5h | AC-20 | BUG-551 Arithmetic |
+| FT-27 | Touch refuted by a later window-less fetch yields no corroboration (`None`) | AC-21 | BUG-552 MRE |
+| FT-28 | Display and re-touch skip guard both call `corroborated_touch_at` (single predicate) | AC-21 | BUG-552 Structural |
 
 **Total:** 24 FT cases
 
@@ -101,7 +105,8 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 - **Exit:** 0
 - **Live:** yes (lim_it — requires live credential + idle 5h window)
 - **Source fn:** `it111_lim_it_touch_1_5h_reset_changes_from_dash_to_time` (in `usage_touch_test.rs`)
-- **Source:** [feature/024_session_touch.md AC-03](../../../docs/feature/024_session_touch.md)
+- **Note:** Two outcomes both satisfy this case, distinguished by the `~` prefix. When the post-touch re-fetch returns `resets_at`, the countdown is exact (`in 4h 59m`, no `~`). When the server has not yet propagated the new window, AC-20's projection renders instead (`~in 4h 5xm`) — still a countdown, still not `—`. The assertion is "no longer the idle em-dash", not "no `~`"; treating the projected form as a failure would make this test flaky against ordinary propagation lag.
+- **Source:** [feature/024_session_touch.md AC-03, AC-20](../../../docs/feature/024_session_touch.md)
 
 ---
 
@@ -349,3 +354,52 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 - **Source fn:** `test_tsk418_apply_touch_fires_at_partial_exhaustion_skips_at_full_exhaustion` (in `tests/usage/touch_tests.rs`)
 - **Note:** TSK-418 corrective MRE. BUG-178/TSK-196 originally added the h-exhausted guard by reusing `H_EXHAUSTED_THRESHOLD = 15.0`, over-broadly skipping touch for any account ≤15% remaining rather than only fully-exhausted (0%) ones — never covered by a dedicated FT (see `touch_tests.rs` BUG-214 MRE doc comment: "the h-exhausted guard was added in isolation without extending the test surface"). This test closes that gap.
 - **Source:** [feature/024_session_touch.md AC-19](../../../docs/feature/024_session_touch.md)
+
+---
+
+### FT-25: Touched row with absent `resets_at` renders a projected countdown, never the literal `(touched)`
+
+- **Given:** One account `touched@x.com` whose quota result carries no `five_hour.resets_at`, with `touched_at_secs = Some(now - 600)` — a corroborated touch record 10 minutes old.
+- **When:** `render_text` produces the table.
+- **Then:** The row's `5h Reset` cell contains no occurrence of the substring `(touched)`, contains `~in `, and specifically contains `~in 4h`. The last assertion pins the projection arithmetic end to end: flooring a 10-minute-old touch leaves between 4h40m and 4h50m, so the countdown must still name hours — a `~in 4h` that became `~in 0h` or a bare minute value would signal an imminent reset that is not happening.
+- **Exit:** N/A (unit test — no exit code)
+- **Source fn:** `test_mre_bug551_touched_row_renders_projected_countdown_not_placeholder` (in `render_tests_b.rs`)
+- **Companion:** `test_bug551_get_field_and_table_agree_on_touched_row` (same file) uses the same fixture and asserts twice — `extract_get_field( .., FiveHourReset, now )` starts with `~in `, and the rendered table row carries the same projection. The table half brackets `render_text`'s clock (`before`/`after` reads around the call) and accepts either resulting label, because `render_text` samples its own clock with no injection point: comparing the table against a single `now`-derived string races the countdown's minute tick and fails intermittently. `projected_reset_label` is monotonic in `now_secs`, so the cell must equal the label at some instant in `[before, after]` — the two candidates collapse to one string in the common case and straddle exactly one boundary otherwise, which is what makes the equality exact rather than approximate.
+- **Note:** BUG-551 MRE. RED→GREEN verified: with the `(touched)` literal temporarily restored in `render.rs`, this test fails with the exact reported symptom (`(touched)` in the `5h Reset` column). The companion `get::` test exists because BUG-551's original defect was surface-divergent — the placeholder appeared only in the text table, while `get::`, JSON, and TSV silently emitted the plain absent form.
+- **Source:** [feature/024_session_touch.md AC-20](../../../docs/feature/024_session_touch.md)
+
+---
+
+### FT-26: Projected window end floors the touch instant to a 10-minute boundary before adding 5h
+
+- **Given:** Three touch instants: one at `:30:54` past the hour, one at `:27:41`, and one already exactly on a 10-minute boundary.
+- **When:** `projected_window_end_secs( touch_secs )` is evaluated for each.
+- **Then:** The `:30:54` instant projects to `+5h` from `:30:00` (seconds discarded); the `:27:41` instant floors *back* to `:20:00`, not forward to `:30:00`; the already-aligned instant is unchanged by the floor. Each result equals `floor_to_10_minutes(touch) + WINDOW_5H_S`.
+- **Exit:** N/A (unit test — no exit code)
+- **Source fn:** `test_bug551_projected_window_end_floors_to_ten_minute_boundary` (in `format_tests.rs`)
+- **Note:** Pins the arithmetic AC-20's ±60s accuracy claim depends on. The floor direction matters: rounding to the *nearest* boundary rather than flooring would push a `:27:41` touch's projected end 10 minutes late, outside the tolerance. Fixture values are taken from live accounts i13 (`:30:54`) and i2 (`:27:41`), the two whose real `resets_at` most directly discriminate floor-vs-round.
+- **Source:** [feature/024_session_touch.md AC-20](../../../docs/feature/024_session_touch.md)
+
+---
+
+### FT-27: A touch refuted by a later window-less fetch yields no corroboration
+
+- **Given:** Five deterministic cache fixtures over a fixed clock, all sharing `last_touch_at = 2026-08-22T17:30:00Z`: (A) quota fetched 1s after the touch, no 5h window; (B) fetched 22 minutes after, no window; (C) fetched 22 minutes after, window present; (D) fetched exactly 300s after, no window; (E) same as A but evaluated after `TOUCH_GRACE_SECS` has elapsed.
+- **When:** `corroborated_touch_at( &cache, now_secs )` is evaluated for each.
+- **Then:** A returns `Some(touch_at)` — a fetch 1s later is uninformative, so the touch is not refuted. B returns `None` — a fetch 22 minutes later still showing no window refutes the touch (this is the live i15 state). C returns `Some(touch_at)` — the window's presence corroborates regardless of fetch timing. D returns `Some(touch_at)` — the boundary is exclusive, exactly `TOUCH_PROPAGATION_SECS` does not refute. E returns `None` — the grace window governs independently of refutation.
+- **Exit:** N/A (unit test — no exit code)
+- **Source fn:** `test_mre_bug552_refuted_touch_yields_no_corroboration` (in `touch_tests_b.rs`)
+- **Note:** BUG-552 MRE. Scenario D pins the boundary as `>` not `>=`, so the constant's stated value is testable rather than incidental. Fixtures use literal ISO-8601 strings and a fixed `now_secs` rather than deriving timestamps, keeping the test independent of both wall clock and any date-formatting helper.
+- **Source:** [feature/024_session_touch.md AC-21](../../../docs/feature/024_session_touch.md)
+
+---
+
+### FT-28: Display and re-touch skip guard both call the same corroboration predicate
+
+- **Given:** `src/usage/touch.rs` source.
+- **When:** The file is scanned for corroboration call sites.
+- **Then:** `corroborated_touch_at( &cache` appears exactly twice — once in `derive_touched_recently` (the display path) and once in `touch_skip_reason` (the re-touch skip guard) — and the superseded bare-grace call the skip guard previously used is absent.
+- **Exit:** N/A (structural source-inspection test — no exit code)
+- **Source fn:** `test_bug552_both_consumers_share_the_corroboration_predicate` (in `touch_tests_b.rs`)
+- **Note:** BUG-552 structural guard. The bug's severity came from the two consumers agreeing on a *wrong* answer: the same unverified flag both fabricated a window on screen and suppressed the re-touch that would have corrected it. Keeping them on one predicate is what makes AC-21 hold; a refactor that reintroduces a second, laxer check would restore the self-sustaining failure, so the count is asserted rather than the mere presence of a call.
+- **Source:** [feature/024_session_touch.md AC-21](../../../docs/feature/024_session_touch.md)

@@ -40,7 +40,7 @@ pub use super::render::{ render_text, render_tsv, render_json, extract_get_field
 pub use super::refresh::{ apply_refresh, reason_label };
 
 // ── Touch ─────────────────────────────────────────────────────────────────
-pub use super::touch::{ apply_touch, touch_skip_reason, mark_touched, touched_within_grace, derive_touched_recently, TOUCH_GRACE_SECS };
+pub use super::touch::{ apply_touch, touch_skip_reason, mark_touched, touch_instant_within_grace, corroborated_touch_at, derive_touched_recently, TOUCH_GRACE_SECS, TOUCH_PROPAGATION_SECS };
 
 // ── Format ────────────────────────────────────────────────────────────────
 pub use super::format::{
@@ -50,6 +50,7 @@ pub use super::format::{
   renews_label, next_event_raw, next_event_label, sub_label, shorten_error,
   five_hour_left, seven_day_left, relevant_quotas, prefer_weekly,
   recommended_model, quota_text_cells, status_emoji,
+  projected_window_end_secs, projected_reset_label,
 };
 
 // ── API ───────────────────────────────────────────────────────────────────

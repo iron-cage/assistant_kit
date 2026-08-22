@@ -50,6 +50,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 | — | Table output rendered by `data_fmt` crate (`use data_fmt::…` in `render.rs`) | AC-04 | Structural (code review — all render paths use `data_fmt`) |
 | — | `Expires` column: `"in Xh Ym"` / `"EXPIRED"` from `compute_expires_cell()` | AC-07 | IT-003, IT-010 (command-level coverage) |
 | — | `5h Left`, `7d Left`, `7d(Son)`, `5h Reset`, `7d Reset` from `OauthUsageData` | AC-08 | Indirect — FT-07/FT-08/FT-11/FT-14/FT-15/FT-16 all depend on these columns |
+| — | `5h Reset` falls back to a `~`-prefixed projected countdown when `resets_at` is absent but a touch is corroborated; table cell and `get::5h_reset` agree | AC-08 | Cross-feature: Feature 024 FT-25, FT-26 (BUG-551) |
 | — | Footer appended when ≥2 valid accounts; absent when 0 or 1 | AC-10 | Live-only (IT-012); IT-036 covers no-footer offline |
 | — | Synthetic row for unsaved live credentials | AC-11 | Cross-feature: Feature 016 FT-09 |
 | — | Credentials unreadable → no `✓` on any row | AC-12 | Cross-feature: Feature 016 FT-07 |

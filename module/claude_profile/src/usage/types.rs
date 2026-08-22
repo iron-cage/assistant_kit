@@ -214,19 +214,21 @@ pub struct AccountQuota
   /// `Some` only when `fetch.rs`'s cache-fallback arm converted a transient `Err` to `Ok`;
   /// `None` on live-fetch success, auth errors, and all non-fallback cache reads.
   pub fallback_reason       : Option< String >,
-  // Fix(BUG-488): a just-touched account whose re-fetch still reported the 5h window
-  //   idle rendered "5h Reset —" — indistinguishable from never-touched — because no
-  //   field carried the "touch recently succeeded" fact to the render layer.
-  //   Root cause: the quota endpoint lags session starts; apply_touch's single AC-03
-  //   re-fetch races that lag and can lose, and render only sees the (lagged) API view.
-  //   Pitfall: two writers, one meaning — `apply_touch` flips it in-memory for the
-  //   touching invocation; `derive_touched_recently` re-derives it on every invocation
-  //   from the cache flags `mark_touched` persisted (`last_touch_at`/`touch_idle`),
-  //   trusted for TOUCH_GRACE_SECS. Every constructor sets `false`.
-  /// `true` when a successful touch subprocess for this account is on record within
-  /// `TOUCH_GRACE_SECS` — this invocation's own, or a prior invocation's via the cache
-  /// flags. Display-only signal for the `5h Reset` cell.
-  pub touched_recently           : bool,
+  // Fix(BUG-551): was `touched_recently : bool`, which could express *that* a touch
+  //   happened but never *when the window ends* — so the 5h Reset cell had nothing to
+  //   format and fell back to the opaque literal "(touched)".
+  // Root cause: `derive_touched_recently` parsed `last_touch_at` to Unix seconds, used
+  //   it for a grace comparison, then discarded it; the render layer received only the
+  //   boolean verdict and could not recover the instant.
+  // Pitfall: two writers, one meaning — `apply_touch` sets it in-memory for the touching
+  //   invocation; `derive_touched_recently` re-derives it on every later invocation from
+  //   the cache flags `mark_touched` persisted (`last_touch_at`/`touch_idle`), trusted
+  //   for TOUCH_GRACE_SECS and only while unrefuted (BUG-552). Constructors set `None`.
+  /// `Some(instant)` — Unix seconds of a touch on record for this account within
+  /// `TOUCH_GRACE_SECS` and not refuted by a later fetch: this invocation's own, or a
+  /// prior invocation's via the cache flags. The instant is the anchor the `5h Reset`
+  /// cell projects the window end from; `None` means no corroborated touch.
+  pub touched_at_secs            : Option< u64 >,
   /// `true` when `owner` in `{name}.json` is empty or matches `current_identity()`.
   /// `false` for accounts owned by a different machine — G1–G7 enforcement gates apply.
   pub is_owned              : bool,

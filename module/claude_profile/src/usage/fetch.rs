@@ -134,7 +134,7 @@ pub fn fetch_quota_for_list(
       results.push( AccountQuota
       {
         fallback_reason : None,
-        touched_recently : false,
+        touched_at_secs : None,
         name                  : acct.name.clone(),
         is_current            : is_token_current( credential_store, &acct.name, live_token.as_ref() ),
         is_active             : acct.is_active,
@@ -176,7 +176,7 @@ pub fn fetch_quota_for_list(
       results.push( AccountQuota
       {
         fallback_reason : None,
-        touched_recently : false,
+        touched_at_secs : None,
         name                  : acct.name.clone(),
         is_current            : false,
         is_active             : acct.is_active,
@@ -269,7 +269,7 @@ pub fn fetch_quota_for_list(
       results.push( AccountQuota
       {
         fallback_reason : None,
-        touched_recently : false,
+        touched_at_secs : None,
         name                  : acct.name.clone(),
         is_current,
         is_active             : acct.is_active,
@@ -457,7 +457,7 @@ pub fn fetch_quota_for_list(
       is_current,
       is_active             : acct.is_active,
       fallback_reason,
-      touched_recently : false,
+      touched_at_secs : None,
       is_occupied_elsewhere : occupied_elsewhere.contains( &acct.name ),
       expires_at_ms         : acct.expires_at_ms,
       result,
@@ -532,7 +532,7 @@ fn inject_synthetic_row_if_needed(
   inject_synthetic_if_new( results, AccountQuota
   {
     fallback_reason : None,
-    touched_recently : false,
+    touched_at_secs : None,
     name                  : synthetic_name,
     is_current            : true,
     is_active             : false,
@@ -585,7 +585,7 @@ fn approximate_quota(
   AccountQuota
   {
     fallback_reason : None,
-    touched_recently : false,
+    touched_at_secs : None,
     name                  : acct.name.clone(),
     is_current,
     is_active             : acct.is_active,

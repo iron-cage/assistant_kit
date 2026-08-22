@@ -20,7 +20,7 @@ fn test_apply_refresh_ft4_429_valid_token_not_retried()
     AccountQuota
     {
       fallback_reason : None,
-      touched_recently : false,
+      touched_at_secs : None,
       name          : "alice@example.com".to_string(),
       is_current    : false,
       is_active             : false,
@@ -68,7 +68,7 @@ fn test_apply_refresh_ft5_429_expired_refresh_path_entered_no_cred()
     AccountQuota
     {
       fallback_reason : None,
-      touched_recently : false,
+      touched_at_secs : None,
       name          : "alice@example.com".to_string(),
       is_current    : false,
       is_active             : false,
@@ -199,7 +199,7 @@ fn test_apply_refresh_mre_bug208_restore_trace_emitted()
     AccountQuota
     {
       fallback_reason : None,
-      touched_recently : false,
+      touched_at_secs : None,
       name          : "bob@example.com".to_string(),
       is_current    : false,
       is_active             : false,
@@ -355,7 +355,7 @@ fn mre_bug295_apply_refresh_trace_reason_not_owned()
   let aq = AccountQuota
   {
     fallback_reason : None,
-    touched_recently : false,
+    touched_at_secs : None,
     name                  : "alice@remote.com".to_string(),
     is_current            : false,
     is_active             : false,
@@ -426,7 +426,7 @@ fn mre_bug297_refresh_none_sets_aq_result_err()
     AccountQuota
     {
       fallback_reason : None,
-      touched_recently : false,
+      touched_at_secs : None,
       name                  : "rt-expired-acct".to_string(),
       is_current            : false,
       is_active             : false,
@@ -501,7 +501,7 @@ fn apply_touch_skips_after_refresh_none()
     AccountQuota
     {
       fallback_reason : None,
-      touched_recently : false,
+      touched_at_secs : None,
       name                  : "rt-expired-touch-pipeline".to_string(),
       is_current            : false,
       is_active             : false,
@@ -577,7 +577,7 @@ fn mre_bug298_apply_refresh_trace_reason_cached_expired()
   let aq = AccountQuota
   {
     fallback_reason : None,
-    touched_recently : false,
+    touched_at_secs : None,
     name                  : "cached-owned@box.pro".to_string(),
     is_current            : false,
     is_active             : false,
@@ -621,7 +621,7 @@ fn ec7_solo_gate_skips_non_current_with_trace()
   let mut accounts = vec![ AccountQuota
   {
     fallback_reason : None,
-    touched_recently : false,
+    touched_at_secs : None,
     name                  : "noncurrent@example.com".to_string(),
     is_current            : false,
     is_active             : false,
@@ -673,7 +673,7 @@ fn mre_bug_gap20_refresh_trace_reason_ok_owned_non_cached_ok()
   let aq = AccountQuota
   {
     fallback_reason : None,
-    touched_recently : false,
+    touched_at_secs : None,
     name                  : "healthy@example.com".to_string(),
     is_current            : false,
     is_active             : false,
@@ -739,7 +739,7 @@ fn mre_bug306_refresh_trace_reason_occupied_elsewhere()
   let aq = AccountQuota
   {
     fallback_reason : None,
-    touched_recently : false,
+    touched_at_secs : None,
     name                  : "occ@example.com".to_string(),
     is_current            : false,
     is_active             : false,
@@ -797,7 +797,7 @@ fn mre_bug333_occupied_elsewhere_not_masked_by_cached()
   let aq = AccountQuota
   {
     fallback_reason : None,
-    touched_recently : false,
+    touched_at_secs : None,
     name                  : "occ-cached@example.com".to_string(),
     is_current            : false,
     is_active             : false,
@@ -832,7 +832,7 @@ fn reason_label_not_owned()
   let aq = AccountQuota
   {
     fallback_reason : None,
-    touched_recently : false,
+    touched_at_secs : None,
     name : "x".into(), is_current : false, is_active : false,
     is_occupied_elsewhere : false, expires_at_ms : 0,
     result : Ok( claude_quota::OauthUsageData { five_hour : None, seven_day : None, seven_day_sonnet : None } ),
@@ -854,7 +854,7 @@ fn reason_label_cached_expired()
   let aq = AccountQuota
   {
     fallback_reason : None,
-    touched_recently : false,
+    touched_at_secs : None,
     name : "x".into(), is_current : false, is_active : false,
     is_occupied_elsewhere : false, expires_at_ms : 0,
     result : Ok( claude_quota::OauthUsageData { five_hour : None, seven_day : None, seven_day_sonnet : None } ),
@@ -879,7 +879,7 @@ fn reason_label_cached_valid()
   let aq = AccountQuota
   {
     fallback_reason : None,
-    touched_recently : false,
+    touched_at_secs : None,
     name : "x".into(), is_current : false, is_active : false,
     is_occupied_elsewhere : false, expires_at_ms : FAR_FUTURE_MS,
     result : Ok( claude_quota::OauthUsageData { five_hour : None, seven_day : None, seven_day_sonnet : None } ),
@@ -901,7 +901,7 @@ fn reason_label_ok()
   let aq = AccountQuota
   {
     fallback_reason : None,
-    touched_recently : false,
+    touched_at_secs : None,
     name : "x".into(), is_current : false, is_active : false,
     is_occupied_elsewhere : false, expires_at_ms : 0,
     result : Ok( claude_quota::OauthUsageData { five_hour : None, seven_day : None, seven_day_sonnet : None } ),
@@ -923,7 +923,7 @@ fn reason_label_err()
   let aq = AccountQuota
   {
     fallback_reason : None,
-    touched_recently : false,
+    touched_at_secs : None,
     name : "x".into(), is_current : false, is_active : false,
     is_occupied_elsewhere : false, expires_at_ms : 0,
     result : Err( "HTTP 401 Unauthorized".to_string() ),

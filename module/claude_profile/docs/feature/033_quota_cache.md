@@ -58,7 +58,7 @@ Each period object stores `utilization` — percent **consumed** (0 = untouched,
 **Display with cached data:**
 
 - Quota percentages are prefixed with `~` to indicate stale data: `~86%` instead of `86%`
-- The `5h Reset` / `7d Reset` columns show the cached `resets_at` countdown (which may be in the past if stale — display `(stale)` when computed countdown is negative)
+- The `5h Reset` / `7d Reset` columns show the cached `resets_at` countdown (which may be in the past if stale — display `(stale)` when computed countdown is negative). This branch requires a cached `resets_at` to *exist*; it never collides with the touch projection in [024 AC-20](024_session_touch.md), which fires only when `resets_at` is absent. The `5h Reset` fallback ladder, in order: server `resets_at` → `in Xh Ym`; cached `resets_at` already elapsed → `(stale)`; no `resets_at` but a corroborated touch → `~in Xh Ym`; nothing → `—`.
 - The composite status emoji `●` is computed from cached values (same thresholds as live)
 - A row-level age indicator shows time since last successful fetch: `(12m ago)` appended to the account name in the NAME cell (not an error-reason position — see AC-03)
 - When the display originates from a cache-fallback conversion (a transient fetch error substituted with cached data — AC-02), the original failure reason is also preserved on the in-memory result and surfaced via `shorten_error()` in every render format (text table, TSV, JSON) — see AC-14. The text table combines it with the existing NAME-cell age suffix in one parenthetical; TSV has no pre-existing age-suffix mechanism, so it appends the shortened reason as its own standalone parenthetical instead. Live successes never carry a failure reason and render unchanged.

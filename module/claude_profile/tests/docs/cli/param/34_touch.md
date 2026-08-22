@@ -88,11 +88,12 @@ Edge case coverage for the `touch::` parameter on `.usage`. For `.account.use` t
 
 - **Given:** One saved account with valid token and quota data where `five_hour.resets_at` is absent (idle — no active 5h window; would be touched with `touch::1`).
 - **When:** `clp .usage touch::0`
-- **Then:** Exits 0. No subprocess spawned. The 5h Reset column shows `—` unchanged (still idle). `touch::0` disables the touch trigger regardless of account state.
+- **Then:** Exits 0. No subprocess spawned. The 5h Reset column is unchanged from its pre-invocation value — `—` for this fixture, since the account is idle with no corroborated touch record (see Note). `touch::0` disables the touch trigger regardless of account state.
 - **Exit:** 0
 - **Live:** yes (requires live quota data with idle account)
 - **Source fn:** `it109_lim_it_touch_0_no_subprocess_idle_account_unchanged` (in `usage_touch_test.rs`)
-- **Source:** [feature/024_session_touch.md AC-01](../../../../docs/feature/024_session_touch.md)
+- **Note:** "Shows `—`" holds because the account is idle *and* carries no corroborated touch record. Display and trigger are independent: `touch::0` suppresses the subprocess, not the rendering, so an account touched by an earlier run within `TOUCH_GRACE_SECS` renders AC-20's projected `~in Xh Ym` here too. What `touch::0` guarantees is that no *new* subprocess runs — never that the cell reads `—`.
+- **Source:** [feature/024_session_touch.md AC-01, AC-20](../../../../docs/feature/024_session_touch.md)
 
 ---
 

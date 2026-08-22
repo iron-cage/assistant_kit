@@ -43,7 +43,7 @@ fn test_apply_refresh_429_not_retried()
     AccountQuota
     {
       fallback_reason : None,
-      touched_recently : false,
+      touched_at_secs : None,
       name          : "test-acct".to_string(),
       is_current    : false,
       is_active             : false,
@@ -89,7 +89,7 @@ fn test_apply_refresh_ok_result_unchanged()
     AccountQuota
     {
       fallback_reason : None,
-      touched_recently : false,
+      touched_at_secs : None,
       name          : "ok-acct".to_string(),
       is_current    : false,
       is_active             : false,
@@ -127,7 +127,7 @@ fn test_apply_refresh_generic_error_unchanged()
     AccountQuota
     {
       fallback_reason : None,
-      touched_recently : false,
+      touched_at_secs : None,
       name          : "net-acct".to_string(),
       is_current    : false,
       is_active             : false,
@@ -213,7 +213,7 @@ fn test_apply_refresh_401_no_cred_file()
     AccountQuota
     {
       fallback_reason : None,
-      touched_recently : false,
+      touched_at_secs : None,
       name          : "ghost@example.com".to_string(),
       is_current    : false,
       is_active             : false,
@@ -256,7 +256,7 @@ fn test_apply_refresh_403_no_cred_file()
     AccountQuota
     {
       fallback_reason : None,
-      touched_recently : false,
+      touched_at_secs : None,
       name          : "ghost@example.com".to_string(),
       is_current    : false,
       is_active             : false,
@@ -293,7 +293,7 @@ fn mixed_account( name : &str, result : Result< claude_quota::OauthUsageData, St
   AccountQuota
   {
     fallback_reason : None,
-    touched_recently : false,
+    touched_at_secs : None,
     name          : name.to_string(),
     is_current    : false,
     is_active             : false,
@@ -368,7 +368,7 @@ fn test_apply_refresh_trace_does_not_panic()
     AccountQuota
     {
       fallback_reason : None,
-      touched_recently : false,
+      touched_at_secs : None,
       name          : "trace@test.com".to_string(),
       is_current    : false,
       is_active             : false,
@@ -431,7 +431,7 @@ fn test_apply_refresh_lifecycle_switch_fails_result_unchanged()
     AccountQuota
     {
       fallback_reason : None,
-      touched_recently : false,
+      touched_at_secs : None,
       name          : "alice@example.com".to_string(),
       is_current    : false,
       is_active             : false,
@@ -521,7 +521,7 @@ fn test_apply_refresh_lifecycle_active_marker_unchanged()
     AccountQuota
     {
       fallback_reason : None,
-      touched_recently : false,
+      touched_at_secs : None,
       name          : "bob@example.com".to_string(),
       is_current    : false,
       is_active             : false,
@@ -574,7 +574,7 @@ fn test_apply_refresh_lifecycle_429_expired_switch_fails_unchanged()
     AccountQuota
     {
       fallback_reason : None,
-      touched_recently : false,
+      touched_at_secs : None,
       name          : "alice@example.com".to_string(),
       is_current    : false,
       is_active             : false,
@@ -624,7 +624,7 @@ fn test_apply_refresh_lifecycle_ft3_403_no_cred_result_unchanged()
     AccountQuota
     {
       fallback_reason : None,
-      touched_recently : false,
+      touched_at_secs : None,
       name          : "alice@example.com".to_string(),
       is_current    : false,
       is_active             : false,
@@ -680,7 +680,7 @@ fn test_apply_refresh_lifecycle_copy_fails_no_dot_claude_dir()
     AccountQuota
     {
       fallback_reason : None,
-      touched_recently : false,
+      touched_at_secs : None,
       name          : "alice@example.com".to_string(),
       is_current    : false,
       is_active             : false,
@@ -746,7 +746,7 @@ fn test_apply_refresh_lifecycle_trace_switch_fails_no_panic()
     AccountQuota
     {
       fallback_reason : None,
-      touched_recently : false,
+      touched_at_secs : None,
       name          : "trace@example.com".to_string(),
       is_current    : false,
       is_active             : false,
@@ -879,7 +879,7 @@ fn test_apply_refresh_lifecycle_l10_trace_run_isolated_invoked_no_panic()
     AccountQuota
     {
       fallback_reason : None,
-      touched_recently : false,
+      touched_at_secs : None,
       name          : "alice@example.com".to_string(),
       is_current    : false,
       is_active             : false,

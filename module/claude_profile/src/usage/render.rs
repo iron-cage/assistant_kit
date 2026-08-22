@@ -15,6 +15,7 @@ use super::format::{
   recommended_model,
   expires_cell_for, sub_cell_for, renews_cell_for, shorten_error, with_lock_marker,
   quota_text_cells, status_emoji, next_event_label, next_event_raw, renewal_secs,
+  projected_reset_label,
 };
 use super::sort::{ sort_indices, find_next_for_strategy, strategy_metric };
 use super::render_sessions::append_sessions_table;
@@ -153,17 +154,20 @@ pub fn render_text(
           if is_past( data.five_hour.as_ref().and_then( |p| p.resets_at.as_deref() ) ) { cells[ 1 ] = "(stale)".to_string(); }
           if is_past( data.seven_day.as_ref().and_then( |p| p.resets_at.as_deref() ) ) { cells[ 4 ] = "(stale)".to_string(); }
         }
-        // Fix(BUG-488): a just-touched row whose re-fetch still reports the 5h window idle
-        //   renders "(touched)" — not the idle "—", which reads as "touch never happened"
-        //   and directly contradicts the touch trace lines above the table.
-        // Root cause: the quota endpoint lags session starts; apply_touch's single AC-03
-        //   re-fetch races that lag, so resets_at can still be None seconds after a
-        //   successful touch subprocess.
-        // Pitfall: display-only — never fabricate a resets_at into `data` itself; sort and
-        //   skip logic must keep seeing the API's own (lagged) state.
-        if aq.touched_recently && data.five_hour.as_ref().and_then( |p| p.resets_at.as_deref() ).is_none()
+        // Fix(BUG-551): a corroborated-touch row whose re-fetch still reports the 5h window
+        //   idle renders the projected countdown "~in Xh Ym" — replacing BUG-488's opaque
+        //   "(touched)", which named the cause but withheld the value the column exists
+        //   to show, on a row where that value is exactly derivable from the touch instant.
+        // Root cause: `touched_recently` was a bool, so render had no instant to project
+        //   from; `touched_at_secs` now carries the anchor `derive_touched_recently` parses.
+        // Pitfall: display-only — never fabricate a resets_at into `data` itself; sort,
+        //   skip and forecast logic must keep seeing the API's own (lagged) state.
+        if let Some( touched_at ) = aq.touched_at_secs
         {
-          cells[ 1 ] = "(touched)".to_string();
+          if data.five_hour.as_ref().and_then( |p| p.resets_at.as_deref() ).is_none()
+          {
+            cells[ 1 ] = projected_reset_label( touched_at, now_secs );
+          }
         }
         let son_unix  = data.seven_day_sonnet.as_ref()
           .and_then( |p| p.resets_at.as_deref() )
@@ -538,7 +542,22 @@ pub fn extract_get_field( aq : &AccountQuota, field : GetField, now_secs : u64 )
       match field
       {
         GetField::FiveHourLeft  => pct_bare( data.five_hour.as_ref().map( |p| p.utilization ) ),
-        GetField::FiveHourReset => reset_cell( data.five_hour.as_ref().and_then( |p| p.resets_at.as_deref() ) ),
+        // Fix(BUG-551): the extractor rendered the em-dash for a corroborated-touch row
+        //   while the text table rendered "(touched)" for that same row — `get::5h_reset`
+        //   and the human table disagreed about one account.
+        // Root cause: extract_get_field carries its own `reset_cell` closure and never saw
+        //   the touched-row branch render_text applies after quota_text_cells.
+        // Pitfall: both surfaces must project from the same anchor — route through
+        //   projected_reset_label rather than re-deriving the window end here.
+        GetField::FiveHourReset =>
+        {
+          let api_reset = data.five_hour.as_ref().and_then( |p| p.resets_at.as_deref() );
+          match ( api_reset, aq.touched_at_secs )
+          {
+            ( None, Some( touched_at ) ) => projected_reset_label( touched_at, now_secs ),
+            _                            => reset_cell( api_reset ),
+          }
+        },
         GetField::SevenDayLeft  => pct_bare( data.seven_day.as_ref().map( |p| p.utilization ) ),
         GetField::SevenDaySon   => pct_bare( data.seven_day_sonnet.as_ref().map( |p| p.utilization ) ),
         GetField::SevenDayReset => reset_cell( data.seven_day.as_ref().and_then( |p| p.resets_at.as_deref() ) ),

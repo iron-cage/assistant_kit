@@ -38,7 +38,9 @@ pub const DEFAULT_ALERT_WITHIN_MIN : u64 = 15;
 pub const WINDOW_IDENTITY_TOLERANCE_S : u64 = 300;
 
 /// 5h window duration in seconds (matches Feature 040's reset-boundary table).
-const WINDOW_5H_S : u64 = 18_000;
+/// Shared with `format::projected_window_end_secs`, which projects a window end from a
+/// touch instant — one window-length constant, never a second literal beside it.
+pub const WINDOW_5H_S : u64 = 18_000;
 
 /// A time-to-exhaustion estimate derived from the history ring.
 #[ derive( Debug, Clone, Copy ) ]

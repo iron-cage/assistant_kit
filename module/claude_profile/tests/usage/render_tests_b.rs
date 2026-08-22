@@ -24,7 +24,7 @@ fn test_ft29_009_footer_session_effort_display()
       AccountQuota
       {
         fallback_reason : None,
-        touched_recently : false,
+        touched_at_secs : None,
         name                  : "cur@x.com".to_string(),
         is_current            : true,
         is_active             : false,
@@ -53,7 +53,7 @@ fn test_ft29_009_footer_session_effort_display()
       AccountQuota
       {
         fallback_reason : None,
-        touched_recently : false,
+        touched_at_secs : None,
         name                  : "a@x.com".to_string(),
         is_current            : false,
         is_active             : false,
@@ -82,7 +82,7 @@ fn test_ft29_009_footer_session_effort_display()
       AccountQuota
       {
         fallback_reason : None,
-        touched_recently : false,
+        touched_at_secs : None,
         name                  : "b@x.com".to_string(),
         is_current            : false,
         is_active             : false,
@@ -535,7 +535,7 @@ fn cc_no_current_account_uses_legacy_footer()
     AccountQuota
     {
       fallback_reason : None,
-      touched_recently : false,
+      touched_at_secs : None,
       name                  : name.to_string(),
       is_current            : false,
       is_active             : false,
@@ -589,7 +589,7 @@ fn cc_effort_only_footer_shows_effort_without_model()
     AccountQuota
     {
       fallback_reason : None,
-      touched_recently : false,
+      touched_at_secs : None,
       name                  : name.to_string(),
       is_current            : cur,
       is_active             : false,
@@ -848,7 +848,9 @@ fn mre_bug320_footer_excludes_non_owned_when_rotate_force_0()
 // ── BUG-488: touched-now display signal in the 5h Reset column ────────────
 
 /// BUG-488 render: a just-touched account whose re-fetch still reports the 5h window
-/// idle shows `(touched)` in the `5h Reset` cell — not the idle `—`.
+/// idle renders distinguishably in the `5h Reset` cell — not the idle `—`. The cell's
+/// *value* is BUG-551's concern (a `~in Xh Ym` projection, once the opaque `(touched)`
+/// literal was replaced); what this test pins is only that the two states differ at all.
 ///
 /// # Root Cause
 ///
@@ -861,36 +863,46 @@ fn mre_bug320_footer_excludes_non_owned_when_rotate_force_0()
 /// # Why Not Caught
 ///
 /// No render test built an `AccountQuota` in the touched-but-lagging state — the field
-/// carrying that state (`touched_recently`) did not exist before Fix(BUG-488).
+/// carrying that state did not exist before Fix(BUG-488).
 ///
 /// # Fix Applied
 ///
-/// Fix(BUG-488): `apply_touch` sets `aq.touched_recently = true` after a successful touch
-/// subprocess; `render_text` overrides `cells[ 1 ]` with `"(touched)"` when
-/// `touched_recently && five_hour.resets_at.is_none()`.
+/// Fix(BUG-488): `apply_touch` records the touch on the row after a successful touch
+/// subprocess; `render_text` overrides `cells[ 1 ]` when a touch is on record and
+/// `five_hour.resets_at.is_none()`, so the row cannot read as never-touched.
+///
+/// Fix(BUG-551): the override's *value* changed from the opaque literal `"(touched)"` to
+/// the projected countdown `"~in Xh Ym"`. This test asserts BUG-488's own requirement —
+/// distinguishability from a never-touched idle row — rather than the literal, because
+/// pinning the literal is exactly what let BUG-551 hide here for so long.
 ///
 /// # Prevention
 ///
 /// Any state the render layer must distinguish needs a field on `AccountQuota` — a
 /// successful side effect that leaves API-visible state unchanged is otherwise invisible.
+/// Assert the requirement the field exists to serve, never the specific string the
+/// implementation happened to choose.
 ///
 /// # Pitfall
 ///
 /// Display-only: the override never fabricates a `resets_at` into the data itself, so
 /// sort/recommendation logic still sees the account as idle. The control account below
-/// proves `touched_recently=false` keeps the plain `—`.
+/// proves a row with no touch on record keeps the plain `—`.
 #[ doc = "bug_reproducer(BUG-488)" ]
 #[ test ]
-fn test_bug488_touched_recently_renders_touched_marker()
+fn test_bug488_touched_row_distinguishable_from_never_touched_idle()
 {
   use claude_profile::usage::test_bridge::mk_aq_ok;
+
+  let now = std::time::SystemTime::now()
+    .duration_since( std::time::UNIX_EPOCH ).unwrap().as_secs();
 
   // Touched account: subprocess succeeded this invocation, endpoint still reports idle.
   let mut touched = mk_aq_ok( 0.0 );
   touched.name = "touched@x.com".to_string();
-  touched.touched_recently = true;
+  touched.touched_at_secs = Some( now );
 
-  // Control: identical idle state, not touched this invocation.
+  // Control: identical idle state, no touch on record.
   let mut idle = mk_aq_ok( 0.0 );
   idle.name = "idle@x.com".to_string();
 
@@ -905,11 +917,176 @@ fn test_bug488_touched_recently_renders_touched_marker()
     .expect( "idle control row must be present" );
 
   assert!(
-    touched_line.contains( "(touched)" ),
-    "BUG-488: touched_recently=true + resets_at=None must render '(touched)' in 5h Reset;\n  row: {touched_line:?}",
+    touched_line != idle_line,
+    "BUG-488: a row with a touch on record must not render identically to a never-touched \
+     idle row;\n  touched: {touched_line:?}\n  idle:    {idle_line:?}",
   );
   assert!(
-    !idle_line.contains( "(touched)" ),
-    "BUG-488 (control): touched_recently=false must keep the idle marker, never '(touched)';\n  row: {idle_line:?}",
+    idle_line.contains( '\u{2014}' ),
+    "BUG-488 (control): a row with no touch on record must keep the idle em-dash;\n  row: {idle_line:?}",
+  );
+}
+
+/// BUG-551: the `5h Reset` cell rendered the opaque literal `(touched)` on a row whose
+/// window end is exactly derivable, withholding the one value the column exists to show.
+///
+/// # Root Cause
+///
+/// `AccountQuota` carried the touch as a bare `bool`. `derive_touched_recently` parsed
+/// `last_touch_at` into Unix seconds, used it for the grace comparison, then discarded it,
+/// so the render layer received only the verdict "a touch happened" and had no instant to
+/// project a window end from. `quota_text_cells`'s `reset_cell` accepts only an ISO string,
+/// so no projection could enter through the normal path either.
+///
+/// # Why Not Caught
+///
+/// The BUG-488 render test asserted the literal `"(touched)"` as its expected output,
+/// pinning the placeholder as the specification — a test whose expected value is a string
+/// the implementation invented cannot detect that the string was the wrong answer.
+///
+/// # Fix Applied
+///
+/// Fix(BUG-551): `touched_recently : bool` became `touched_at_secs : Option<u64>` carrying
+/// the parsed instant; `format::projected_reset_label` renders
+/// `floor10(touch) + WINDOW_5H_S` as `"~in Xh Ym"`, the `~` marking it derived per the
+/// convention `renews_label` established for `~Renews`.
+///
+/// # Prevention
+///
+/// When a predicate parses a rich value and returns only a boolean verdict, every consumer
+/// past that boundary is permanently limited to expressing the verdict. Return the parsed
+/// value alongside it.
+///
+/// # Pitfall
+///
+/// The projection floors to the 10-minute boundary Anthropic snaps windows to — validated
+/// against 19 live accounts, where the unfloored `touch + 5h` matched none of them.
+/// Display-only: never written back into `five_hour.resets_at`.
+#[ doc = "bug_reproducer(BUG-551)" ]
+#[ test ]
+fn test_mre_bug551_touched_row_renders_projected_countdown_not_placeholder()
+{
+  use claude_profile::usage::test_bridge::mk_aq_ok;
+
+  let now = std::time::SystemTime::now()
+    .duration_since( std::time::UNIX_EPOCH ).unwrap().as_secs();
+
+  // Touched 10 minutes ago; the endpoint still reports no window.
+  let mut touched = mk_aq_ok( 0.0 );
+  touched.name = "touched@x.com".to_string();
+  touched.touched_at_secs = Some( now - 600 );
+
+  let accounts = vec![ touched ];
+  let text = render_text(
+    &accounts, SortStrategy::Name, None, PreferStrategy::Any,
+    &ColsVisibility::default_set(), None, None, None, None, false, &TagFilter::default() );
+
+  let row = text.lines().find( |l| l.contains( "touched@x.com" ) )
+    .expect( "touched account row must be present" );
+
+  assert!(
+    !row.contains( "(touched)" ),
+    "BUG-551: the opaque placeholder must not survive where the window end is derivable;\n  row: {row:?}",
+  );
+  assert!(
+    row.contains( "~in " ),
+    "BUG-551: a touched row with no endpoint-reported window must render the projected \
+     countdown '~in Xh Ym' in 5h Reset;\n  row: {row:?}",
+  );
+  // A touch 10 min ago projects a window end ~4h50m out — the countdown must name hours,
+  // not collapse to a bare minute/second value that would signal an imminent reset.
+  assert!(
+    row.contains( "~in 4h" ),
+    "BUG-551: projection must be floor10(touch) + 5h, leaving ~4h50m after a 10-minute-old \
+     touch;\n  row: {row:?}",
+  );
+}
+
+/// BUG-551 (surface consistency): `get::5h_reset` must project the same window end the
+/// text table shows for the same row — the two surfaces previously disagreed.
+///
+/// # Root Cause
+/// `extract_get_field` carries its own `reset_cell` closure and never saw the touched-row
+/// branch `render_text` applies after `quota_text_cells`, so a row rendering `(touched)` in
+/// the table extracted as the bare em-dash. `render_json` / `render_tsv` had the same gap.
+///
+/// # Why Not Caught
+/// Every `GetField::FiveHourReset` assertion used a row with an endpoint-reported
+/// `resets_at`, where both paths agree trivially; none used the touched-with-no-window row.
+///
+/// # Fix Applied
+/// Fix(BUG-551): the `FiveHourReset` arm routes through `projected_reset_label` when the
+/// endpoint reports no window and a corroborated touch is on record, so both surfaces
+/// project from the same anchor.
+///
+/// # Prevention
+/// A per-surface closure duplicating a display rule is how one surface silently misses an
+/// addition to it — the same shape as BUG-540's Sub/renews extractor divergence.
+///
+/// # Pitfall
+/// A row with an endpoint-reported `resets_at` must keep the plain `in Xh Ym` with no `~`
+/// on either surface — the projection applies only where the endpoint reported nothing.
+#[ doc = "bug_reproducer(BUG-551)" ]
+#[ test ]
+fn test_bug551_get_field_and_table_agree_on_touched_row()
+{
+  use claude_profile::usage::test_bridge::{ mk_aq_ok, extract_get_field, projected_reset_label };
+  use claude_profile::usage::test_bridge::types::GetField;
+
+  let now_unix = || std::time::SystemTime::now()
+    .duration_since( std::time::UNIX_EPOCH ).unwrap().as_secs();
+
+  let now        = now_unix();
+  let touched_at = now - 600;
+  let mut touched = mk_aq_ok( 0.0 );
+  touched.name = "touched@x.com".to_string();
+  touched.touched_at_secs = Some( touched_at );
+
+  let field = extract_get_field( &touched, GetField::FiveHourReset, now );
+  assert!(
+    field.starts_with( "~in " ),
+    "BUG-551: get::5h_reset must project the window end for a touched row, not fall back \
+     to the em-dash the table no longer shows; got {field:?}",
+  );
+
+  // `render_text` samples its own clock with no injection point (render.rs:73), so the
+  // table's countdown is computed at some instant strictly after `now` — and the rendered
+  // minute ticks down as that gap grows. Comparing the table against a single `now`-derived
+  // string is therefore a race that fails whenever the two reads straddle a minute boundary.
+  // Bracket render's clock instead: `projected_reset_label` is monotonic in `now_secs`, so
+  // the cell must equal the label for some instant in [before, after]. Both ends collapse to
+  // the same string in the common case and straddle exactly one boundary otherwise.
+  let accounts = vec![ touched ];
+  let before   = now_unix();
+  let text = render_text(
+    &accounts, SortStrategy::Name, None, PreferStrategy::Any,
+    &ColsVisibility::default_set(), None, None, None, None, false, &TagFilter::default() );
+  let after = now_unix();
+
+  let at_before = projected_reset_label( touched_at, before );
+  let at_after  = projected_reset_label( touched_at, after );
+
+  let row = text.lines().find( |l| l.contains( "touched@x.com" ) ).expect( "row present" );
+  assert!(
+    row.contains( &at_before ) || row.contains( &at_after ),
+    "BUG-551: the table cell and get::5h_reset must be the same projected value;\n  \
+     get: {field:?}\n  table candidates: {at_before:?} | {at_after:?}\n  row: {row:?}",
+  );
+
+  // Control: an endpoint-reported window keeps the plain countdown on both surfaces.
+  let mut reported = mk_aq_ok( 0.0 );
+  reported.touched_at_secs = Some( now - 600 );
+  if let Ok( ref mut data ) = reported.result
+  {
+    if let Some( ref mut p ) = data.five_hour
+    {
+      p.resets_at = Some( "2099-01-01T00:00:00Z".to_string() );
+    }
+  }
+  let reported_field = extract_get_field( &reported, GetField::FiveHourReset, now );
+  assert!(
+    reported_field.starts_with( "in " ),
+    "BUG-551 (control): an endpoint-reported reset must stay exact, never marked `~`; \
+     got {reported_field:?}",
   );
 }

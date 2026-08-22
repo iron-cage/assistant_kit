@@ -614,8 +614,8 @@ fn test_bug488_mark_touched_roundtrip_survives_write_quota_cache()
   );
 }
 
-/// BUG-488 structural: `apply_touch`'s success block calls `mark_touched` and sets
-/// `aq.touched_recently` — gated on `new_creds`, before the AC-03 re-fetch.
+/// BUG-488 structural: `apply_touch`'s success block calls `mark_touched` and records
+/// the touch instant on the row — gated on `new_creds`, before the AC-03 re-fetch.
 ///
 /// `refresh_account_token` returns `None` on any failure, so anchoring both statements
 /// inside the `if let Some( ref creds ) = new_creds` block proves a failed touch writes
@@ -634,8 +634,8 @@ fn test_bug488_apply_touch_success_block_marks_touched()
     .find( "mark_touched( credential_store, &aq.name );" )
     .expect( "BUG-488: mark_touched call not found in apply_touch" );
   let touched_pos = body
-    .find( "aq.touched_recently = true;" )
-    .expect( "BUG-488: touched_recently assignment not found in apply_touch" );
+    .find( "aq.touched_at_secs = Some( now_unix_secs() );" )
+    .expect( "BUG-488: touched_at_secs assignment not found in apply_touch" );
   let refetch_pos = body
     .find( "if let Ok( new_data ) = claude_quota::fetch_oauth_usage(" )
     .expect( "AC-03 re-fetch block not found in apply_touch" );
@@ -647,7 +647,7 @@ fn test_bug488_apply_touch_success_block_marks_touched()
   );
   assert!(
     guard_pos < touched_pos && touched_pos < refetch_pos,
-    "BUG-488: aq.touched_recently must be set inside the new_creds success block only",
+    "BUG-488: aq.touched_at_secs must be set inside the new_creds success block only",
   );
   assert_eq!(
     body.matches( "mark_touched(" ).count(), 1,
@@ -656,12 +656,12 @@ fn test_bug488_apply_touch_success_block_marks_touched()
 }
 
 /// BUG-488 (cross-invocation): `derive_touched_recently` re-derives the display signal
-/// from the persisted cache flags, so the `(touched)` marker survives past the touching
-/// invocation for as long as the flags are fresh.
+/// from the persisted cache flags, so the touched marker survives past the touching
+/// invocation for as long as the flags are fresh and unrefuted (BUG-552).
 ///
 /// # Root Cause
 ///
-/// `touched_recently` was set only in-memory by `apply_touch` — it died with the touching
+/// The touch signal was set only in-memory by `apply_touch` — it died with the touching
 /// invocation. The very next `.usage` run (skip guard correctly preventing a re-touch)
 /// rendered the just-touched account as plain idle (`5h Reset —`) again until the quota
 /// endpoint caught up — re-creating the original misleading-table symptom for every run
@@ -677,9 +677,13 @@ fn test_bug488_apply_touch_success_block_marks_touched()
 ///
 /// Fix(BUG-488): `derive_touched_recently( &mut accounts, credential_store )` runs
 /// unconditionally in the `.usage` pipeline after the touch loop; it sets
-/// `touched_recently` for every account whose cache carries `touch_idle=false` plus a
-/// `last_touch_at` within `TOUCH_GRACE_SECS`, sharing the `touched_within_grace`
-/// predicate with the skip guard so display and skip semantics can never drift.
+/// `touched_at_secs` for every account whose cache carries a `last_touch_at` within
+/// `TOUCH_GRACE_SECS`, sharing the `corroborated_touch_at` predicate with the skip guard
+/// so display and skip semantics can never drift.
+///
+/// Fix(BUG-552): the shared predicate is `corroborated_touch_at`, not a bare grace check,
+/// and it does not consult `touch_idle` — that flag gates only the skip guard's own
+/// `touch_idle == Some( false )` condition, never the display derivation.
 ///
 /// # Prevention
 ///
@@ -709,8 +713,8 @@ fn test_bug488_derive_touched_recently_from_cache_flags()
     let mut accounts = vec![ mk_aq_with_resets_at( None ) ];
     derive_touched_recently( &mut accounts, store.path() );
     assert!(
-      accounts[ 0 ].touched_recently,
-      "A: fresh cache flags must derive touched_recently=true on a later invocation",
+      accounts[ 0 ].touched_at_secs.is_some(),
+      "A: fresh cache flags must derive the touch instant on a later invocation",
     );
   }
 
@@ -729,7 +733,7 @@ fn test_bug488_derive_touched_recently_from_cache_flags()
     let mut accounts = vec![ mk_aq_with_resets_at( None ) ];
     derive_touched_recently( &mut accounts, store.path() );
     assert!(
-      !accounts[ 0 ].touched_recently,
+      accounts[ 0 ].touched_at_secs.is_none(),
       "B: stale last_touch_at must not derive the display signal",
     );
   }
@@ -743,7 +747,7 @@ fn test_bug488_derive_touched_recently_from_cache_flags()
     let mut accounts = vec![ mk_aq_with_resets_at( None ) ];
     derive_touched_recently( &mut accounts, store.path() );
     assert!(
-      !accounts[ 0 ].touched_recently,
+      accounts[ 0 ].touched_at_secs.is_none(),
       "C: no touch on record must not derive the display signal",
     );
   }
@@ -753,11 +757,11 @@ fn test_bug488_derive_touched_recently_from_cache_flags()
   {
     let store = tempfile::TempDir::new().unwrap();
     let mut aq = mk_aq_with_resets_at( None );
-    aq.touched_recently = true;
+    aq.touched_at_secs = Some( 1_700_000_000 );
     let mut accounts = vec![ aq ];
     derive_touched_recently( &mut accounts, store.path() );
     assert!(
-      accounts[ 0 ].touched_recently,
+      accounts[ 0 ].touched_at_secs == Some( 1_700_000_000 ),
       "D: in-memory signal from apply_touch must survive the derive pass unchanged",
     );
   }
@@ -815,5 +819,125 @@ fn test_touch_skip_reason_redirect_backend_not_error_account()
     touch_skip_reason( &mk_aq_err(), store.path(), false ),
     Some( "skipped (reason: error account)" ),
     "generic Err row must keep the error-account reason",
+  );
+}
+
+/// BUG-552: a touch that refreshed the OAuth token but opened no 5h session window still
+/// stamped the coordination flags — the row claimed a window that did not exist, and the
+/// shared grace predicate then refused to re-touch the account for the full 5h.
+///
+/// # Root Cause
+///
+/// `apply_touch` gates `mark_touched` on `refresh_account_token` returning `Some`, which
+/// proves only that the OAuth token refreshed. Per `refresh.rs`'s own comment, Claude
+/// performs that refresh at subprocess startup *before* the API call, and credentials are
+/// written regardless of whether that call succeeded or timed out. The gate therefore reads
+/// a token-refresh outcome as a session-creation outcome. Nothing ever reconciled the claim
+/// against later evidence: no path clears the flags when a subsequent fetch proves no window
+/// opened, and `touch_idle = true` is never written by anything.
+///
+/// # Why Not Caught
+///
+/// Every touch test asserted the *recording* behaviour, never the *outcome* it claims to
+/// record — no test constructs the state "token refreshed, session not opened", because
+/// `refresh_account_token`'s `Option` boundary erases the distinction (the same erasure
+/// BUG-539 documented on the `None` side). The 5h grace also exceeds any realistic test
+/// window, so the retry-suppression consequence never surfaced in a test run.
+///
+/// # Fix Applied
+///
+/// Fix(BUG-552): `corroborated_touch_at` replaces the bare grace check at both consumers.
+/// A touch claim is refuted when a fetch made more than `TOUCH_PROPAGATION_SECS` after the
+/// touch still reports no 5h window — the endpoint had the opportunity to report one and
+/// did not. A refuted claim yields `None`: the row renders idle and the account becomes
+/// eligible for re-touch instead of being pinned for the whole grace window.
+///
+/// # Prevention
+///
+/// Never read a success signal from an earlier, cheaper stage of a multi-stage operation as
+/// proof the later stage succeeded. Gate on evidence of the effect actually claimed — here,
+/// the window's own appearance in a later fetch.
+///
+/// # Pitfall
+///
+/// Absence of a window is evidence only once a fetch strictly later than the touch has had
+/// the chance to observe one — compare against `fetched_at`, never wall clock, or a merely
+/// slow sweep reads as a refutation. Scenario A below pins that boundary.
+#[ doc = "bug_reproducer(BUG-552)" ]
+#[ test ]
+fn test_mre_bug552_refuted_touch_yields_no_corroboration()
+{
+  use claude_profile::usage::test_bridge::corroborated_touch_at;
+
+  // Fixed clock and literal ISO fixtures — the predicate takes `now_secs` injected, so no
+  // scenario here reads the wall clock or depends on how long the suite takes to run.
+  let touch_at = 1_787_419_800_u64; // 2026-08-22T17:30:00Z
+  let now      = 1_787_421_600_u64; // 2026-08-22T18:00:00Z — 30 min after the touch
+
+  let entry = | fetched_at : &str, resets_at : Option< &str > |
+    claude_profile_core::account::QuotaCacheEntry
+    {
+      fetched_at       : fetched_at.to_string(),
+      five_hour        : Some( ( 0.0, resets_at.map( str::to_string ) ) ),
+      seven_day        : None,
+      seven_day_sonnet : None,
+      model_override   : None,
+      last_touch_at    : Some( "2026-08-22T17:30:00Z".to_string() ),
+      touch_idle       : Some( false ),
+      org_created_at   : None,
+    };
+
+  // A: the fetch raced the touch (+1s) and saw no window — uninformative, not refuting.
+  // This is the genuine propagation-lag case BUG-488 was filed for.
+  assert_eq!(
+    corroborated_touch_at( &entry( "2026-08-22T17:30:01Z", None ), now ), Some( touch_at ),
+    "A: a fetch inside the propagation allowance cannot refute the touch",
+  );
+
+  // B: the fetch ran 22 min after the touch and still saw no window — the endpoint had
+  // ample opportunity and reported none. This is the live i15 state from the incident.
+  assert_eq!(
+    corroborated_touch_at( &entry( "2026-08-22T17:52:00Z", None ), now ), None,
+    "B: a fetch well past the propagation allowance reporting no window refutes the touch",
+  );
+
+  // C: the window is present — corroborated regardless of how late the fetch was.
+  assert_eq!(
+    corroborated_touch_at( &entry( "2026-08-22T17:52:00Z", Some( "2026-08-22T22:30:00Z" ) ), now ),
+    Some( touch_at ),
+    "C: an observed window corroborates the touch at any fetch age",
+  );
+
+  // D: boundary — exactly TOUCH_PROPAGATION_SECS (300s) is still within the allowance.
+  assert_eq!(
+    corroborated_touch_at( &entry( "2026-08-22T17:35:00Z", None ), now ), Some( touch_at ),
+    "D: the allowance boundary itself is not a refutation",
+  );
+
+  // E: out of grace entirely (5h35m after the touch) — no claim left to corroborate.
+  assert_eq!(
+    corroborated_touch_at( &entry( "2026-08-22T17:30:01Z", None ), 1_787_439_900 ), None,
+    "E: a touch older than TOUCH_GRACE_SECS carries no claim",
+  );
+}
+
+/// BUG-552 (consumer wiring): a refuted touch must reach neither the display derivation
+/// nor the skip guard — both consumers share `corroborated_touch_at`, so a claim refuted
+/// for one is refuted for the other. Structural, because the file-level state requires a
+/// `fetched_at`/`last_touch_at` gap larger than the suite's own runtime.
+#[ doc = "bug_reproducer(BUG-552)" ]
+#[ test ]
+fn test_bug552_both_consumers_share_the_corroboration_predicate()
+{
+  let src = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/usage/touch.rs" ) );
+
+  assert_eq!(
+    src.matches( "corroborated_touch_at( &cache" ).count(), 2,
+    "BUG-552: both derive_touched_recently and touch_skip_reason must judge a touch claim \
+     by the same evidence — a bare grace check at either site lets a refuted touch through",
+  );
+  assert!(
+    !src.contains( "touch_idle == Some( false ) && touched_within_grace( &cache )" ),
+    "BUG-552: the un-refutable bare grace check must not survive at any consumer",
   );
 }

@@ -90,7 +90,7 @@ fn minimal_resolution_aq( name : &str, result : Result< OauthUsageData, String >
   AccountQuota
   {
     fallback_reason : None,
-    touched_recently : false,
+    touched_at_secs : None,
     name                 : name.to_string(),
     is_current           : false,
     is_active            : false,
