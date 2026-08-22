@@ -717,3 +717,72 @@ fn ec24_stats_by_bogus_lists_valid_values()
     "error must list all valid by values: {stderr}"
   );
 }
+
+// ── EC-25 : empty HOME never resolves the journal relative to cwd ────────────
+
+/// EC-25 — `bug_reproducer(BUG-550)`
+///
+/// # Root Cause
+/// `resolve_journal_dir`'s `/tmp` fallback used `unwrap_or_else`, which fires only on
+/// `Err` (HOME genuinely unset). `HOME=""` returns `Ok("")`, and `PathBuf::from("")
+/// .join(".clr")` is RELATIVE — so `clj` silently read from (and reported on) a journal
+/// under the invocation cwd instead of the documented absolute default.
+///
+/// # Why Not Caught
+/// Every other integration test passes an explicit `dir::` (see `run_clj`), which
+/// short-circuits resolution at the first tier — no test ever exercised the HOME tier.
+///
+/// # Fix Applied
+/// `resolve_journal_dir` filters an empty HOME into the same `/tmp` fallback as an unset
+/// one (`src/output.rs`), matching the `is_empty()` guard the `CLR_JOURNAL_DIR` arm
+/// directly above it already had.
+///
+/// # Prevention
+/// The probe event is uniquely named and the test carries its own positive control, so
+/// the absence assertion cannot pass vacuously through a broken fixture.
+///
+/// # Pitfall
+/// `env::var` distinguishes unset (`Err`) from empty (`Ok("")`) — an empty path prefix
+/// silently converts an absolute join into a relative one.
+#[ test ]
+fn ec25_empty_home_does_not_resolve_relative_journal()
+{
+  assert_container();
+
+  let cwd              = tempfile::TempDir::new().unwrap();
+  let relative_journal = cwd.path().join( ".clr" ).join( "journal" );
+  std::fs::create_dir_all( &relative_journal ).unwrap();
+
+  // A uniquely-named event that can only surface if the cwd-relative path was resolved.
+  let writer = JournalWriter::new( relative_journal.clone() );
+  let mut ev = EventRecord::new( EventType::Execution );
+  ev.fields.command   = Some( "ec25_relative_probe".to_owned() );
+  ev.fields.exit_code = Some( 0 );
+  writer.append( &ev ).expect( "append probe event" );
+
+  // Positive control: read the fixture explicitly via `dir::`. The probe IS visible here,
+  // so its later absence means the path was genuinely not resolved — not that the fixture
+  // is unreadable or the marker misspelled.
+  let control = run_clj( &[ ".list" ], &relative_journal );
+  assert!(
+    stdout_str( &control ).contains( "ec25_relative_probe" ),
+    "positive control failed — probe event unreadable via explicit dir::: {}",
+    stdout_str( &control ),
+  );
+
+  // The defect: no `dir::`, empty HOME, `CLR_JOURNAL_DIR` removed, cwd = fixture's parent.
+  let out = Command::new( CLJ )
+    .arg( ".list" )
+    .current_dir( cwd.path() )
+    .env( "HOME", "" )
+    .env_remove( "CLR_JOURNAL_DIR" )
+    .env_remove( "NO_COLOR" )
+    .output()
+    .expect( "failed to run clj" );
+
+  assert!(
+    !stdout_str( &out ).contains( "ec25_relative_probe" ),
+    "empty HOME resolved the journal relative to cwd (BUG-550): {}",
+    stdout_str( &out ),
+  );
+}

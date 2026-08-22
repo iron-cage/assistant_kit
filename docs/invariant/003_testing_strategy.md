@@ -9,7 +9,10 @@
 
 ### Invariant Statement
 
-All tests live in each crate's `tests/` directory. Manual tests live in `tests/manual/readme.md`.
+Black-box integration and CLI tests live in each crate's `tests/` directory, exercising only the
+crate's public API or its compiled binary. White-box unit tests that need access to private
+internals may live inline in `src/`, colocated with the code they test inside a
+`#[ cfg( test ) ] mod tests { ... }` block. Manual tests live in `tests/manual/readme.md`.
 
 **TDD baseline rule:** Before any change, record the passing test count. After the change, the passing count must be ≥ baseline. The skipped count must not increase — skips are a proxy for capability loss. A skip increase is treated as a regression even if the passing count is stable.
 
@@ -17,7 +20,7 @@ All tests live in each crate's `tests/` directory. Manual tests live in `tests/m
 
 ### Enforcement Mechanism
 
-**Test placement:** Only `tests/` directories are scanned by nextest. Tests in `src/` are doc tests, run separately via `cargo test --doc`. Tests in any other location are not discovered.
+**Test placement:** `cargo nextest run` discovers both kinds: `#[ test ]` functions in `tests/*.rs` (one binary per file) and `#[ test ]` functions inline in `src/` (compiled into the crate's own `--lib` test binary, e.g. `claude_storage_core project::tests::test_project_id_path`). Doc tests are a separate, third mechanism — ```` ```rust ```` fences inside `///`/`//!` doc comments, wherever the comment lives — run only via `cargo test --doc`, never by nextest.
 
 **Baseline enforcement:** Before committing any change, run `ctest3`. Record the pass/skip/fail counts. The change is not complete until pass count ≥ baseline and skip count = baseline.
 
@@ -29,7 +32,7 @@ All tests live in each crate's `tests/` directory. Manual tests live in `tests/m
 ### Violation Consequences
 
 - A skip count increase signals a test was silently disabled to make the suite pass — this masks real capability loss
-- Tests outside `tests/` are invisible to the standard test commands and will not be discovered
+- A test placed outside `tests/` and outside the crate's own `src/` module tree (e.g. a stray file never declared with `mod`) is invisible to `cargo nextest run`/`cargo test` and will not be discovered
 
 ### Features
 

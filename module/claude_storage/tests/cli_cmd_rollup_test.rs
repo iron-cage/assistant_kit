@@ -58,6 +58,7 @@
 //! | INT-27 | `int_27_columns_cache_write_cache_read_split_sums_to_cache` | Column Projection |
 //! | INT-28 | `int_28_columns_default_excludes_rank_and_cache_split` | Column Projection |
 //! | B528 | `bug_528_cross_project_session_id_duplication_inflates_totals` | Bug Reproducer |
+//! | B544 | `bug_544_group_header_tracks_dimension_and_sessions_name_project` | Bug Reproducer |
 
 mod common;
 
@@ -514,9 +515,11 @@ fn int_7_columns_custom_subset_projects_only_those()
 
   common::assert_exit( &out, 0 );
   let header = common::stdout( &out ).lines().next().unwrap_or_default().to_string();
-  assert!( header.contains( "Group" ), "INT-7: Group column must appear; got:\n{header}" );
+  // `Fix(BUG-544)`: the group column's header is the active grouping dimension,
+  // so the default `group::session` labels it `Session`, not a constant `Group`.
+  assert!( header.starts_with( "Session " ), "INT-7: group column must be labelled Session; got:\n{header}" );
   assert!( header.contains( "Total" ), "INT-7: Total column must appear; got:\n{header}" );
-  for absent in [ "Sessions", "Calls", "Input", "Output", "Cache", "MaxCtx", "Pct", "First", "Last" ]
+  for absent in [ "Project", "Sessions", "Calls", "Input", "Output", "Cache", "MaxCtx", "Pct", "First", "Last" ]
   {
     assert!( !header.contains( absent ), "INT-7: {absent} must be excluded; got:\n{header}" );
   }
@@ -560,7 +563,11 @@ fn int_8_columns_default_excludes_first_last()
 
   common::assert_exit( &out, 0 );
   let header = common::stdout( &out ).lines().next().unwrap_or_default().to_string();
-  for present in [ "Group", "Sessions", "Calls", "Input", "Output", "Cache", "MaxCtx", "Total", "Pct" ]
+  // `Fix(BUG-544)`: under the default `group::session` the group column is
+  // labelled `Session` and a `Project` column follows it, so a bare session id
+  // is always attributable to a directory.
+  assert!( header.starts_with( "Session " ), "INT-8: group column must be labelled Session; got:\n{header}" );
+  for present in [ "Project", "Sessions", "Calls", "Input", "Output", "Cache", "MaxCtx", "Total", "Pct" ]
   {
     assert!( header.contains( present ), "INT-8: default column {present} must appear; got:\n{header}" );
   }
@@ -783,7 +790,8 @@ fn int_12_depth_caps_component_distance_smoke()
 ///
 /// ## Purpose
 /// Locks in the exact column widths, alignment, and formatting of the
-/// default-column render.
+/// metric-column render (`Fix(BUG-544)` moved default-set column *order* into
+/// INT-14, whose header-only output stays deterministic).
 ///
 /// ## Coverage
 /// Full-table equality — header plus 2 data rows — against real captured
@@ -836,12 +844,19 @@ fn int_13_worked_example_byte_exact()
     .env( "HOME", root.path().to_str().unwrap() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
     .arg( ".rollup" )
+    // `Fix(BUG-544)`: the bare default now also renders `Project`, whose value
+    // is the session's recorded cwd — a per-run `TempDir` path, so it cannot
+    // appear in a byte-exact literal. Pinning the metric projection explicitly
+    // keeps this test's actual subject (widths, alignment, number formatting)
+    // deterministic; the default set's own column order stays byte-locked by
+    // INT-14, which renders the header with no data rows.
+    .arg( "columns::group,sessions,calls,input,output,cache,max_context,total,percent" )
     .output()
     .unwrap();
 
   common::assert_exit( &out, 0 );
   let expected = "\
-Group                     Sessions   Calls     Input    Output     Cache    MaxCtx     Total     Pct\n\
+Session                   Sessions   Calls     Input    Output     Cache    MaxCtx     Total     Pct\n\
 aaaaaaaa                         1       4       500       300       200       700      1.0k   83.3%\n\
 bbbbbbbb                         1       2       100        50        50       150       200   16.7%\n";
   assert_eq!(
@@ -883,7 +898,11 @@ fn int_14_empty_non_local_scope_exits_0_header_only()
   common::assert_exit( &out, 0 );
   assert_eq!(
     common::stdout( &out ),
-    "Group                     Sessions   Calls     Input    Output     Cache    MaxCtx     Total     Pct\n",
+    // `Fix(BUG-544)`: default `group::session` labels the group column `Session`
+    // and inserts `Project` after it. With zero data rows this line is fully
+    // deterministic, so it — not INT-13 — is the byte-exact lock on default
+    // column order.
+    "Session                   Project                   Sessions   Calls     Input    Output     Cache    MaxCtx     Total     Pct\n",
     "INT-14: zero-row result must print exactly the header row"
   );
   assert!( common::stderr( &out ).is_empty(), "INT-14: no error output expected; got: {}", common::stderr( &out ) );
@@ -1140,7 +1159,8 @@ fn int_22_multiple_parameters_compose_correctly_together()
   assert!( s.contains( "opus" ), "INT-22: ascending sort::sessions must keep the 1-session opus group first; got:\n{s}" );
   assert!( !s.contains( "haiku" ) && !s.contains( "sonnet" ), "INT-22: only the winning row may appear; got:\n{s}" );
   let header = s.lines().next().unwrap_or_default();
-  assert!( header.contains( "Group" ) && header.contains( "Sessions" ), "INT-22: requested columns must be present; got header:\n{header}" );
+  // `Fix(BUG-544)`: with `group::model` the group column is labelled `Model`.
+  assert!( header.starts_with( "Model " ) && header.contains( "Sessions" ), "INT-22: requested columns must be present; got header:\n{header}" );
   for absent in [ "Calls", "Input", "Output", "Cache", "MaxCtx", "Total", "Pct" ]
   {
     assert!( !header.contains( absent ), "INT-22: columns::group,sessions must hide {absent}; got header:\n{header}" );
@@ -1187,7 +1207,11 @@ fn int_23_model_filter_matching_zero_sessions_exits_0_header_only()
   common::assert_exit( &out, 0 );
   let s = common::stdout( &out );
   assert_eq!( data_rows( &s ), 0, "INT-23: every session must be filtered out; got:\n{s}" );
-  assert!( s.contains( "Group" ), "INT-23: the header row must still print; got:\n{s}" );
+  // `Fix(BUG-544)`: default `group::session` labels the group column `Session`.
+  assert!(
+    s.lines().next().unwrap_or_default().starts_with( "Session " ),
+    "INT-23: the header row must still print; got:\n{s}"
+  );
   assert!( !s.to_lowercase().contains( "nan" ) && !s.to_lowercase().contains( "inf" ), "INT-23: zero-total percent must never render NaN/inf; got:\n{s}" );
 }
 
@@ -1463,7 +1487,9 @@ fn int_28_columns_default_excludes_rank_and_cache_split()
 
   common::assert_exit( &out, 0 );
   let header = common::stdout( &out ).lines().next().unwrap_or_default().to_string();
-  for present in [ "Group", "Sessions", "Calls", "Input", "Output", "Cache", "MaxCtx", "Total", "Pct" ]
+  // `Fix(BUG-544)`: default group label is `Session`, followed by `Project`.
+  assert!( header.starts_with( "Session " ), "INT-28: group column must be labelled Session; got:\n{header}" );
+  for present in [ "Project", "Sessions", "Calls", "Input", "Output", "Cache", "MaxCtx", "Total", "Pct" ]
   {
     assert!( header.contains( present ), "INT-28: default column {present} must appear; got:\n{header}" );
   }
@@ -1577,4 +1603,143 @@ fn bug_528_cross_project_session_id_duplication_inflates_totals()
   assert_eq!( fields[ 2 ], "300", "BUG-528: Input must be proj-b's own 300, never the summed 400; got row:\n{data_line}" );
   assert_eq!( fields[ 3 ], "150", "BUG-528: Output must be proj-b's own 150, never the summed 200; got row:\n{data_line}" );
   assert_eq!( fields[ 4 ], "450", "BUG-528: Total must be 300+150=450, never the summed 400+200=600; got row:\n{data_line}" );
+}
+
+/// BUG-544: the group column's header ignores `group::`, and session rows
+/// carry no project attribution.
+///
+/// ## Root Cause
+/// Two independent defects in `src/cli/rollup.rs`, both rooted in the same
+/// omission — the renderer never consulted `group_by`:
+///
+/// 1. `column_header()` matched on `ColumnKey` alone and returned a constant
+///    `"Group"` for `ColumnKey::Group`. The same column holds session ids,
+///    project paths, model names or dates depending on `group::`, so every
+///    non-default grouping printed an unlabelled dimension.
+/// 2. `DEFAULT_COLUMNS` was a flat `const` with no project column at all.
+///    Under the default `group::session` the group label is a bare 8-char
+///    session id, which names no directory — so the default table could not
+///    answer "which project is this row from?" even in `scope::global`, where
+///    that is the first question a reader has.
+///
+/// ## Why Not Caught
+/// Every prior header assertion (INT-7, INT-8, INT-22, INT-23, INT-28) tested
+/// `header.contains( "Group" )` — a literal that was correct *because* the
+/// header was hardcoded, so the tests pinned the defect in place rather than
+/// exposing it. INT-22 even ran `group::model` and still asserted `"Group"`,
+/// which is precisely the mislabelled case, and passed. No test compared the
+/// header against the requested `group::` value, and none asserted project
+/// attribution on a session row.
+///
+/// ## Fix Applied
+/// `column_header()` and `render_header()` take `group_by`, mapping
+/// `ColumnKey::Group` to `Session`/`Project`/`Model`/`Day`. `DEFAULT_COLUMNS`
+/// became `default_columns( group_by )`, inserting the new
+/// `ColumnKey::Project` after the group label only under `group::session`.
+/// `Project` resolves through a `session_id -> project_label` map built in
+/// `rollup_routine()` from the `RollupInput`s, captured before `build_rollup()`
+/// aggregates them away.
+///
+/// ## Prevention
+/// Assert a rendered header against the *parameter that determines it*, never
+/// against a literal copied from current output — a hardcoded label and a
+/// correctly-derived one are indistinguishable to `contains()` at the default
+/// setting, and only diverge on the non-default paths tests rarely cover.
+///
+/// ## Pitfall
+/// A column whose value is not a `RollupRow` field must be resolved before the
+/// aggregation step that discards it. `RollupRow` carries only `group`, so by
+/// render time the owning project of a session is unrecoverable — the map has
+/// to be built in `rollup_routine()` while the `RollupInput`s are still in
+/// hand. `ColumnKey::Rank` set the same precedent for CLI-synthesized columns.
+///
+/// ## Coverage
+/// Two projects, `bug544-x`/`bug544-y`, one distinct session each. Part 1:
+/// bare `.rollup scope::global` — each session row names its own project and
+/// not its sibling's. Part 2: all four `group::` values — each labels the
+/// group column with its own dimension, and none prints the literal `Group`.
+///
+/// ## Validation Strategy
+/// One fixture, two runs. Part 1 locates each data row by its `short_id`
+/// prefix and asserts the owning project path appears in it (and the sibling's
+/// does not). Part 2 loops the four `group::` values, asserting the header
+/// starts with the expected label and never contains `Group`.
+// test_kind: bug_reproducer(BUG-544)
+#[ test ]
+fn bug_544_group_header_tracks_dimension_and_sessions_name_project()
+{
+  let root = TempDir::new().unwrap();
+  let storage_root = root.path().join( ".claude" );
+  let proj_x = root.path().join( "bug544-x" );
+  let proj_y = root.path().join( "bug544-y" );
+  std::fs::create_dir_all( &proj_x ).unwrap();
+  std::fs::create_dir_all( &proj_y ).unwrap();
+
+  write_rollup_session(
+    &storage_root, &proj_x, "bug544xa-1111-4abc-9def-000000000001",
+    &RollupSession::simple( proj_x.to_str().unwrap() ),
+  );
+  write_rollup_session(
+    &storage_root, &proj_y, "bug544yb-2222-4abc-9def-000000000002",
+    &RollupSession::simple( proj_y.to_str().unwrap() ),
+  );
+
+  // ── Part 1: session rows are attributable to a project ──────────────────
+  let out = common::clg_cmd()
+    .env( "HOME", root.path().to_str().unwrap() )
+    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+    .arg( ".rollup" )
+    .arg( "scope::global" )
+    .output()
+    .unwrap();
+
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
+  assert_eq!( data_rows( &s ), 2, "BUG-544: both sessions must render; got:\n{s}" );
+
+  for ( id_prefix, own, sibling ) in
+  [
+    ( "bug544xa", "bug544-x", "bug544-y" ),
+    ( "bug544yb", "bug544-y", "bug544-x" ),
+  ]
+  {
+    let row = s.lines().find( | l | l.starts_with( id_prefix ) )
+      .unwrap_or_else( || panic!( "BUG-544: row for {id_prefix} must exist; got:\n{s}" ) );
+    assert!(
+      row.contains( own ),
+      "BUG-544: session row must name its owning project {own}; got row:\n{row}"
+    );
+    assert!(
+      !row.contains( sibling ),
+      "BUG-544: session row must not name the sibling project {sibling}; got row:\n{row}"
+    );
+  }
+
+  // ── Part 2: the group column's header tracks `group::` ──────────────────
+  for ( group, label ) in
+  [
+    ( "session", "Session" ), ( "project", "Project" ),
+    ( "model", "Model" ),     ( "day", "Day" ),
+  ]
+  {
+    let out = common::clg_cmd()
+      .env( "HOME", root.path().to_str().unwrap() )
+      .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+      .arg( ".rollup" )
+      .arg( "scope::global" )
+      .arg( format!( "group::{group}" ) )
+      .output()
+      .unwrap();
+
+    common::assert_exit( &out, 0 );
+    let header = common::stdout( &out ).lines().next().unwrap_or_default().to_string();
+    assert!(
+      header.starts_with( &format!( "{label} " ) ),
+      "BUG-544: group::{group} must label the group column {label}; got header:\n{header}"
+    );
+    assert!(
+      !header.contains( "Group" ),
+      "BUG-544: the constant 'Group' header must never appear; got header:\n{header}"
+    );
+  }
 }

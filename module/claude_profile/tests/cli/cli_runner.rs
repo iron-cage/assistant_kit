@@ -97,6 +97,34 @@ pub fn run_cs_with_env_removing( args : &[ &str ], env : &[ ( &str, &str ) ], re
   cmd.output().expect( "failed to execute claude_profile binary" )
 }
 
+/// Run the binary with env overrides, explicit removals, AND an explicit working directory.
+///
+/// The cwd-controlling counterpart of [`run_cs_with_env_removing`]: every other helper
+/// lets the child inherit the test process's own cwd, which is precisely what a test
+/// asserting on cwd-relative filesystem side effects must not do (BUG-550).
+///
+/// # Panics
+///
+/// Panics if the binary cannot be executed.
+#[ inline ]
+#[ must_use ]
+pub fn run_cs_in_dir(
+  args   : &[ &str ],
+  env    : &[ ( &str, &str ) ],
+  remove : &[ &str ],
+  cwd    : &std::path::Path,
+) -> Output
+{
+  assert_container();
+  let mut cmd = Command::new( BIN );
+  cmd.args( args );
+  cmd.current_dir( cwd );
+  cmd.env_remove( "PRO" );
+  for name in remove { cmd.env_remove( name ); }
+  for ( k, v ) in env { cmd.env( k, v ); }
+  cmd.output().expect( "failed to execute claude_profile binary" )
+}
+
 /// Run the binary with HOME and PRO removed from the environment.
 ///
 /// Removes both `HOME` and `PRO` so the binary cannot locate any credential

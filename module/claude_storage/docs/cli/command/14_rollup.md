@@ -82,7 +82,8 @@ which is process-randomized and produced a different row order on every run).
 | Key | Header | In default set? |
 |-----|--------|:---:|
 | `rank` | `Rank` | — |
-| `group` | `Group` | ✓ |
+| `group` | `Session` / `Project` / `Model` / `Day` — tracks `group::` | ✓ |
+| `project` | `Project` | ✓ under `group::session` only |
 | `sessions` | `Sessions` | ✓ |
 | `calls` | `Calls` | ✓ |
 | `input` | `Input` | ✓ |
@@ -96,12 +97,21 @@ which is process-randomized and produced a different row order on every run).
 | `first` | `First` | — |
 | `last` | `Last` | — |
 
-Default (`columns::` omitted): `group,sessions,calls,input,output,cache,max_context,total,percent` — every count/token metric, including `max_context` (the "window size" metric this command exists partly to surface), but not the verbose `first`/`last` timestamps, nor the opt-in `rank`/`cache_write`/`cache_read` columns (see Notes).
+Default (`columns::` omitted) depends on `group::` (`Fix(BUG-544)`):
+
+| `group::` | Default column list |
+|-----------|---------------------|
+| `session` | `group,project,sessions,calls,input,output,cache,max_context,total,percent` |
+| `project` / `model` / `day` | `group,sessions,calls,input,output,cache,max_context,total,percent` |
+
+Either way: every count/token metric, including `max_context` (the "window size" metric this command exists partly to surface), but not the verbose `first`/`last` timestamps, nor the opt-in `rank`/`cache_write`/`cache_read` columns (see Notes). `project` joins the default set under `group::session` alone, because there the group label is a bare 8-character session id that names no directory — the other three groupings already carry their dimension in the group label itself.
 
 `rank` and the `cache_write`/`cache_read` split are opt-in only (`Fix(BUG-530)`) — request them explicitly, e.g. `columns::rank,group,total,cache_write,cache_read`. `rank` is a display-only position, synthesized by the CLI after `sort::`/`order::`/`limit::` have all already applied — it has no `RollupRow` field and cannot be used as a `sort::` value (same precedent as `first`/`last`, which are likewise column-only). `cache_write`/`cache_read` are simply the two components `cache` already sums (`RollupRow.cache_creation`/`RollupRow.cache_read`, both computed by the core engine regardless of projection) exposed as separate columns — `cache_write + cache_read` always equals `cache`.
 
+`project` (`Fix(BUG-544)`) is the second CLI-synthesized column after `rank`, and for the same structural reason: `RollupRow` carries only the group label, so a row's owning project is resolved from the pre-aggregation `RollupInput`s (`session_id → project_label`) rather than read off the row. It renders the session's recorded `cwd` under `group::session`, the group label itself under `group::project`, and `-` under `group::model`/`group::day`, where one row can span many projects and no single label would be truthful. Like `rank`, it cannot be used as a `sort::` value. An explicit `columns::` list is honoured verbatim under every grouping, so `columns::project` is always available as an opt-in even where it is not a default.
+
 **Algorithm (9 steps):**
-1. Validate parameters, in order — `depth::` (default `3`, non-negative), `limit::` (default `0`, non-negative), `group::` (default `session`), `sort::` (default `total`), `order::` (default `desc`), `columns::` (default: the 9-column set above, out of 14 valid keys total), `model::` (no validation — any string), `scope::` (default `local`), `path::` (default cwd) — identical parsing/error-message contract to [`.usage`](13_usage.md) for the four shared parameters
+1. Validate parameters, in order — `depth::` (default `3`, non-negative), `limit::` (default `0`, non-negative), `group::` (default `session`), `sort::` (default `total`), `order::` (default `desc`), `columns::` (default: the `group::`-dependent set above — 10 columns under `group::session`, 9 otherwise, out of 15 valid keys total), `model::` (no validation — any string), `scope::` (default `local`), `path::` (default cwd) — identical parsing/error-message contract to [`.usage`](13_usage.md) for the four shared parameters
 2. Resolve candidate projects — reuses `resolve_scoped_projects()` unchanged from [`.usage`](13_usage.md); `scope::local` with zero resolved projects exits 2 immediately (before any further work), matching [`.usage`](13_usage.md)'s own bypass
 3. Apply the depth filter (`under`/`relevant`/`around` only) — reuses `beyond_depth()`/`component_distance()` unchanged from [`.usage`](13_usage.md); ignored for `local`/`global`
 4. Walk every candidate project's non-agent sessions into `RollupInput`s — one per session, carrying `session_id`, `project_label` (the session's own recorded `cwd`, falling back to `"unknown"` — never the lossy-encoded storage directory name), and its already-deduplicated `SessionStats`
@@ -109,7 +119,7 @@ Default (`columns::` omitted): `group,sessions,calls,input,output,cache,max_cont
 6. Group the surviving sessions by `group::`'s dimension, summing `sessions`/`calls`/`input`/`output`/`cache_read`/`cache_creation` counts, tracking the running max of `max_context`, and widening each row's `first`/`last` timestamp span
 7. Compute `percent` per row against the grand total of the **entire filtered** result set (every group that survives `model::`, before `limit::` truncates rows) — see Notes
 8. Sort by `sort::`/`order::`, then apply `limit::` as a flat cap on the **grouped row count** (not the raw session count — see Notes)
-9. Render the header and one line per surviving row, using only the columns named in `columns::`
+9. Render the header — labelling the group column with the active `group::` dimension — and one line per surviving row, using only the columns named in `columns::`; a projected `project` column resolves through the `session_id → project_label` map captured at step 4, before step 6 aggregated the inputs away
 
 **Examples:**
 ```bash
@@ -137,11 +147,13 @@ claude_storage .rollup group::project limit::5 columns::rank,total,percent,input
 
 **Output** (default columns, `group::session`):
 ```
-Group                     Sessions   Calls     Input    Output     Cache    MaxCtx     Total     Pct
-aaaaaaaa                         1       4       500       300       200       700      1.0k   83.3%
-bbbbbbbb                         1       2       100        50        50       150       200   16.7%
+Session                   Project                   Sessions   Calls     Input    Output     Cache    MaxCtx     Total     Pct
+aaaaaaaa                  …/pro/lib/yrd_core/api           1       4       500       300       200       700      1.0k   83.3%
+bbbbbbbb                  …/pro/lib/yrd_core/cli           1       2       100        50        50       150       200   16.7%
 ```
-- `Group`: for `group::session`, the 8-character short form (same `short_id()` helper [`.usage`](13_usage.md)/[`.projects`](07_projects.md) already use); for other `group::` values, the raw label (project cwd / model name / `YYYY-MM-DD`), truncated to the column's fixed width with a trailing `…` when longer
+- Group column header: the active `group::` dimension — `Session`, `Project`, `Model`, or `Day` (`Fix(BUG-544)`), never a constant `Group`
+- Group column value: for `group::session`, the 8-character short form (same `short_id()` helper [`.usage`](13_usage.md)/[`.projects`](07_projects.md) already use); for other `group::` values, the raw label (project cwd / model name / `YYYY-MM-DD`), truncated to the column's fixed width with a trailing `…` when longer
+- `Project`: the session's recorded `cwd`, truncated from the **left** with a leading `…` when longer than the column — the mirror image of every other column's truncation, because sibling project directories share long absolute prefixes and it is the path's tail that distinguishes them
 - Numeric columns (`Sessions`/`Calls`/`Input`/`Output`/`Cache`/`MaxCtx`/`Total`): right-aligned, fixed width regardless of which `columns::` are chosen
 - `Input`/`Output`/`Cache`/`MaxCtx`/`Total`: `< 1000` shown as a bare integer; `1000` to `999999` shown as `N.Nk`; `≥ 1000000` shown as `N.NM` (one decimal place) — identical formatting rule to [`.usage`](13_usage.md)'s own `In`/`Out`/`Cache` columns
 - `Pct`: one decimal place, e.g. `83.3%`
@@ -155,7 +167,7 @@ bbbbbbbb                         1       2       100        50        50       1
 - **`model::` filters before grouping, not after.** A session that doesn't match is invisible to every stage downstream, including the `percent` denominator — filtering out a heavy non-matching session raises the surviving rows' percentages, it does not just hide a row.
 - `max_context` (`MaxCtx` column) has no [`.usage`](13_usage.md) equivalent — that command's own Notes section explicitly deferred a `model` aggregate field as a "straightforward one-field future addition, not part of this command's initial scope"; `.rollup` is that later addition, applied to both `model` (as a `group::` dimension) and context-window size (as a sortable/projectable column), motivated by `Session::stats()` already carrying `max_context_tokens`/`model` fields from `Fix(issue-038)`.
 - Agent/sidechain sessions never contribute a row, consistent with [`.usage`](13_usage.md)'s and [`.projects`](07_projects.md)'s own main/agent distinction.
-- `Group` truncation for non-session groupings can shorten a long project path with a trailing `…` — when the exact untruncated label matters, project a narrower column set via `columns::` (e.g. drop `first`/`last`) or cross-reference with [`.usage`](13_usage.md)'s own `Dir` column, which is never truncated.
+- Group-column truncation for non-session groupings can shorten a long project path with a trailing `…`, and the `Project` column truncates from the left — when the exact untruncated path matters, cross-reference with [`.usage`](13_usage.md)'s own `Dir` column, which is never truncated.
 
 ### Referenced Parameter Groups
 

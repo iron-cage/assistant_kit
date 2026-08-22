@@ -19,8 +19,9 @@
 //! | T07 | any invocation (task 547)                      | `dir` == invocation cwd; `agent_id` == `{user}@{host}{cwd}/` |
 //! | T08 | active-account marker present (task 547)       | `account` == marker name (never token material)    |
 //! | T09 | no store / no marker (task 547)                | `account` absent; event still written with `agent_id` |
+//! | T10 | `HOME` empty, `CLR_JOURNAL_DIR` unset (BUG-550) | no cwd-relative `.clr/` is created                 |
 
-use crate::cli_runner::{ assert_exit, run_cs_with_env, run_cs_with_env_removing, stdout, write_active_marker };
+use crate::cli_runner::{ assert_exit, run_cs_in_dir, run_cs_with_env, run_cs_with_env_removing, stdout, write_active_marker };
 use claude_journal::{ EventType, JournalFilter, JournalReader };
 use tempfile::TempDir;
 
@@ -219,4 +220,55 @@ fn t09_no_active_account_leaves_account_absent()
   assert_eq!( events.len(), 1, "event must be written even without a resolvable account" );
   assert!( events[ 0 ].fields.account.is_none(), "account must be absent when nothing resolves" );
   assert!( events[ 0 ].fields.agent_id.is_some(), "agent_id must be present independently of account" );
+}
+
+/// T10 — an empty `HOME` never routes the journal to a cwd-relative path.
+///
+/// `bug_reproducer(BUG-550)`
+///
+/// # Root Cause
+/// `journal_dir()`'s `/tmp` fallback used `unwrap_or_else`, which fires only on `Err`
+/// (HOME genuinely unset). `HOME=""` returns `Ok("")`, and `PathBuf::from("").join(".clr")`
+/// is RELATIVE — so every telemetry append landed under whatever cwd the process ran from.
+///
+/// # Why Not Caught
+/// The three existing `HOME=""` tests (`cross_cutting_test.rs` e03/e03b, `token_paths_test.rs`
+/// p08) assert only on command output, never on filesystem side effects, and no helper
+/// controlled the child's working directory — so the stray `.clr/` tree materialized in the
+/// harness's own directory (a source tree) entirely unobserved.
+///
+/// # Fix Applied
+/// `journal_dir()` now filters an empty HOME into the same `/tmp` fallback as an unset one
+/// (`src/telemetry.rs`), matching the `is_empty()` guard the `CLR_JOURNAL_DIR` arm directly
+/// above it already had.
+///
+/// # Prevention
+/// This is the only telemetry test that observes the resolved path's *absoluteness* rather
+/// than the command's output: it runs the binary from a temp cwd with `CLR_JOURNAL_DIR`
+/// removed and asserts no `.clr` appears there.
+///
+/// # Pitfall
+/// `env::var` distinguishes unset (`Err`) from empty (`Ok("")`) — `unwrap_or_else` on an
+/// env-derived path root covers only the former, and an empty path prefix silently
+/// converts an absolute join into a relative one.
+#[ test ]
+fn t10_empty_home_never_writes_relative_journal()
+{
+  let cwd = TempDir::new().expect( "tempdir" );
+
+  let out = run_cs_in_dir(
+    &[ ".paths" ],
+    &[ ( "HOME", "" ) ],
+    &[ "CLR_JOURNAL_DIR" ],
+    cwd.path(),
+  );
+  // `.paths` exits 2 under an empty HOME (cross_cutting e03); telemetry is emitted
+  // regardless of the command's own exit code (T06), so the append still runs.
+  assert_exit( &out, 2 );
+
+  assert!(
+    !cwd.path().join( ".clr" ).exists(),
+    "empty HOME routed the journal to a cwd-relative .clr/ (BUG-550) — found {}",
+    cwd.path().join( ".clr" ).display(),
+  );
 }

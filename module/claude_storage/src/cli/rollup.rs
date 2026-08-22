@@ -29,8 +29,19 @@ enum ColumnKey
   /// and `limit::` have both already applied) — a CLI-synthesized display
   /// position, not a `RollupRow` field the core engine computes (`Fix(BUG-530)`).
   Rank,
-  /// Group label (session id / project cwd / model / day).
+  /// Group label (session id / project cwd / model / day). Its rendered header
+  /// tracks the active `group::` dimension rather than reading `Group`
+  /// unconditionally (`Fix(BUG-544)`) — see [`column_header`].
   Group,
+  /// Absolute project directory owning this row's sessions. Like [`Rank`], a
+  /// CLI-synthesized column rather than a `RollupRow` field: the core engine
+  /// aggregates sessions into rows and does not carry `project_label` through,
+  /// so this is resolved from the pre-aggregation [`RollupInput`]s instead
+  /// (`Fix(BUG-544)`). Renders `-` under groupings that do not resolve one
+  /// project per row (`model`, `day`).
+  ///
+  /// [`Rank`]: ColumnKey::Rank
+  Project,
   /// Number of distinct contributing sessions.
   Sessions,
   /// Number of deduplicated assistant turns.
@@ -63,12 +74,27 @@ enum ColumnKey
 /// `Last` (verbose, niche) but keeps every count/token metric visible,
 /// including `MaxContext` — the "window size" metric this command exists
 /// partly to surface (see `docs/cli/command/14_rollup.md`'s Notes).
-const DEFAULT_COLUMNS : &[ ColumnKey ] =
-&[
-  ColumnKey::Group, ColumnKey::Sessions, ColumnKey::Calls,
-  ColumnKey::Input, ColumnKey::Output, ColumnKey::Cache,
-  ColumnKey::MaxContext, ColumnKey::Total, ColumnKey::Percent,
-];
+///
+/// Depends on `group_by` rather than being a flat constant (`Fix(BUG-544)`):
+/// under the default `group::session` a bare session id identifies no
+/// project, so [`ColumnKey::Project`] is inserted straight after the group
+/// label to restore traceability. Every other grouping already names its own
+/// dimension in the group label and gets the unchanged set.
+fn default_columns( group_by : GroupKey ) -> Vec< ColumnKey >
+{
+  let mut columns = vec![ ColumnKey::Group ];
+  if group_by == GroupKey::Session
+  {
+    columns.push( ColumnKey::Project );
+  }
+  columns.extend_from_slice(
+  &[
+    ColumnKey::Sessions, ColumnKey::Calls,
+    ColumnKey::Input, ColumnKey::Output, ColumnKey::Cache,
+    ColumnKey::MaxContext, ColumnKey::Total, ColumnKey::Percent,
+  ] );
+  columns
+}
 
 /// Flexible token-usage table: group by session/project/model/day, filter by
 /// model substring, sort by any computed column, and project only the
@@ -80,7 +106,7 @@ const DEFAULT_COLUMNS : &[ ColumnKey ] =
 /// - `order::` — sort direction (default `desc`)
 /// - `model::` — model substring filter, applied before grouping
 /// - `columns::` — comma-separated column projection (default: see
-///   [`DEFAULT_COLUMNS`])
+///   [`default_columns`], which varies with `group::`)
 /// - `scope::`, `path::`, `depth::`, `limit::` — reused unchanged from
 ///   `.usage` (see `docs/cli/command/13_usage.md`)
 ///
@@ -120,7 +146,7 @@ pub fn rollup_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   let group_by = parse_group( cmd.get_string( "group" ) )?;
   let sort_by = parse_sort( cmd.get_string( "sort" ) )?;
   let order = parse_order( cmd.get_string( "order" ) )?;
-  let columns = parse_columns( cmd.get_string( "columns" ) )?;
+  let columns = parse_columns( cmd.get_string( "columns" ), group_by )?;
   let model_filter = cmd.get_string( "model" ).map( StringMatcher::new );
   let scope = validate_scope( cmd.get_string( "scope" ), "local" )?;
   let path_raw = cmd.get_string( "path" );
@@ -145,6 +171,13 @@ pub fn rollup_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   };
 
   let inputs = collect_inputs( &projects, depth_filter.as_ref() );
+  // Session -> owning project, captured before `build_rollup` aggregates the
+  // inputs away — `RollupRow` carries only the group label, so this is the one
+  // point where both are still in hand (`Fix(BUG-544)`).
+  let project_labels : std::collections::HashMap< String, String > = inputs
+  .iter()
+  .map( | input | ( input.session_id.clone(), input.project_label.clone() ) )
+  .collect();
   let params = RollupParams
   {
     group_by,
@@ -155,11 +188,11 @@ pub fn rollup_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   };
   let rows = build_rollup( &inputs, &params );
 
-  let mut output = render_header( &columns );
+  let mut output = render_header( &columns, group_by );
   for ( idx, row ) in rows.iter().enumerate()
   {
     output.push( '\n' );
-    output.push_str( &render_row( row, &columns, idx + 1 ) );
+    output.push_str( &render_row( row, &columns, idx + 1, group_by, &project_labels ) );
   }
   Ok( OutputData::new( output, "text" ) )
 }
@@ -313,11 +346,17 @@ fn parse_order( raw : Option< &str > ) -> core::result::Result< SortOrder, Error
   }
 }
 
-/// Parse `columns::` (default: [`DEFAULT_COLUMNS`]) to an ordered column
+/// Parse `columns::` (default: [`default_columns`]) to an ordered column
 /// list — a bare comma-separated list, e.g. `columns::group,total,calls`.
-fn parse_columns( raw : Option< &str > ) -> core::result::Result< Vec< ColumnKey >, ErrorData >
+///
+/// `group_by` is consulted only to build the default set; an explicit
+/// `columns::` list is honoured verbatim under every grouping, so
+/// `columns::project` stays available as an opt-in even where it is not a
+/// default (`Fix(BUG-544)`).
+fn parse_columns( raw : Option< &str >, group_by : GroupKey )
+  -> core::result::Result< Vec< ColumnKey >, ErrorData >
 {
-  let Some( raw ) = raw else { return Ok( DEFAULT_COLUMNS.to_vec() ) };
+  let Some( raw ) = raw else { return Ok( default_columns( group_by ) ) };
   raw.split( ',' ).map( str::trim ).map( parse_column ).collect()
 }
 
@@ -328,6 +367,7 @@ fn parse_column( name : &str ) -> core::result::Result< ColumnKey, ErrorData >
   {
     "rank" => Ok( ColumnKey::Rank ),
     "group" => Ok( ColumnKey::Group ),
+    "project" => Ok( ColumnKey::Project ),
     "sessions" => Ok( ColumnKey::Sessions ),
     "calls" => Ok( ColumnKey::Calls ),
     "input" => Ok( ColumnKey::Input ),
@@ -341,7 +381,7 @@ fn parse_column( name : &str ) -> core::result::Result< ColumnKey, ErrorData >
     "first" => Ok( ColumnKey::First ),
     "last" => Ok( ColumnKey::Last ),
     other => Err( ErrorData::new( ErrorCode::InternalError, format!(
-      "unknown column '{other}' — valid: rank|group|sessions|calls|input|output|cache|cache_write|cache_read|max_context|total|percent|first|last"
+      "unknown column '{other}' — valid: rank|group|project|sessions|calls|input|output|cache|cache_write|cache_read|max_context|total|percent|first|last"
     ) ) ),
   }
 }
@@ -352,7 +392,7 @@ fn column_width( col : ColumnKey ) -> usize
 {
   match col
   {
-    ColumnKey::Group => 24,
+    ColumnKey::Group | ColumnKey::Project => 24,
     ColumnKey::Sessions | ColumnKey::Input | ColumnKey::Output | ColumnKey::Cache
       | ColumnKey::CacheWrite | ColumnKey::CacheRead | ColumnKey::MaxContext | ColumnKey::Total => 8,
     ColumnKey::Rank | ColumnKey::Calls | ColumnKey::Percent => 6,
@@ -364,16 +404,29 @@ fn column_width( col : ColumnKey ) -> usize
 /// column is right-aligned.
 fn is_left_aligned( col : ColumnKey ) -> bool
 {
-  matches!( col, ColumnKey::Group | ColumnKey::First | ColumnKey::Last )
+  matches!( col, ColumnKey::Group | ColumnKey::Project | ColumnKey::First | ColumnKey::Last )
 }
 
 /// Header text for one column.
-fn column_header( col : ColumnKey ) -> &'static str
+///
+/// `group_by` is consulted only by [`ColumnKey::Group`], whose label is the
+/// active grouping dimension rather than a fixed `Group` (`Fix(BUG-544)`):
+/// the same column holds session ids, project paths, model names or dates
+/// depending on `group::`, and a constant header left every non-default
+/// grouping unlabelled in the output.
+fn column_header( col : ColumnKey, group_by : GroupKey ) -> &'static str
 {
   match col
   {
     ColumnKey::Rank => "Rank",
-    ColumnKey::Group => "Group",
+    ColumnKey::Group => match group_by
+    {
+      GroupKey::Session => "Session",
+      GroupKey::Project => "Project",
+      GroupKey::Model => "Model",
+      GroupKey::Day => "Day",
+    },
+    ColumnKey::Project => "Project",
     ColumnKey::Sessions => "Sessions",
     ColumnKey::Calls => "Calls",
     ColumnKey::Input => "Input",
@@ -390,12 +443,12 @@ fn column_header( col : ColumnKey ) -> &'static str
 }
 
 /// Render the full header line for the chosen `columns::` projection.
-fn render_header( columns : &[ ColumnKey ] ) -> String
+fn render_header( columns : &[ ColumnKey ], group_by : GroupKey ) -> String
 {
   columns.iter().map( | &col |
   {
     let width = column_width( col );
-    let label = column_header( col );
+    let label = column_header( col, group_by );
     if is_left_aligned( col ) { format!( "{label:<width$}" ) } else { format!( "{label:>width$}" ) }
   } ).collect::< Vec< _ > >().join( "  " )
 }
@@ -404,15 +457,33 @@ fn render_header( columns : &[ ColumnKey ] ) -> String
 ///
 /// `rank` is the row's 1-indexed position in the final rendered output
 /// (after `sort::` and `limit::` have both already applied by the caller) —
-/// see [`ColumnKey::Rank`].
-fn render_row( row : &RollupRow, columns : &[ ColumnKey ], rank : usize ) -> String
+/// see [`ColumnKey::Rank`]. `projects` maps session id to owning project
+/// directory and is consulted only by [`ColumnKey::Project`].
+fn render_row
+(
+  row      : &RollupRow,
+  columns  : &[ ColumnKey ],
+  rank     : usize,
+  group_by : GroupKey,
+  projects : &std::collections::HashMap< String, String >,
+) -> String
 {
-  columns.iter().map( | &col | render_cell( row, col, rank ) ).collect::< Vec< _ > >().join( "  " )
+  columns.iter()
+  .map( | &col | render_cell( row, col, rank, group_by, projects ) )
+  .collect::< Vec< _ > >().join( "  " )
 }
 
 /// Render one cell, padded/truncated to its column's fixed width. `rank` is
-/// only consulted by [`ColumnKey::Rank`] — see `render_row`'s doc comment.
-fn render_cell( row : &RollupRow, col : ColumnKey, rank : usize ) -> String
+/// only consulted by [`ColumnKey::Rank`] and `projects`/`group_by` only by
+/// [`ColumnKey::Project`] — see `render_row`'s doc comment.
+fn render_cell
+(
+  row      : &RollupRow,
+  col      : ColumnKey,
+  rank     : usize,
+  group_by : GroupKey,
+  projects : &std::collections::HashMap< String, String >,
+) -> String
 {
   let width = column_width( col );
   match col
@@ -421,6 +492,20 @@ fn render_cell( row : &RollupRow, col : ColumnKey, rank : usize ) -> String
     ColumnKey::Group =>
     {
       let text = truncate_str( short_id( &row.group ), width );
+      format!( "{text:<width$}" )
+    }
+    ColumnKey::Project =>
+    {
+      // Only `session` needs the lookup; `project` grouping already holds the
+      // project in `row.group`, and `model`/`day` rows can span many projects
+      // so no single label is truthful for them (`Fix(BUG-544)`).
+      let label = match group_by
+      {
+        GroupKey::Session => projects.get( &row.group ).map_or( "-", String::as_str ),
+        GroupKey::Project => row.group.as_str(),
+        GroupKey::Model | GroupKey::Day => "-",
+      };
+      let text = truncate_path_tail( label, width );
       format!( "{text:<width$}" )
     }
     ColumnKey::Sessions => format!( "{:>width$}", row.sessions ),
@@ -490,5 +575,26 @@ fn truncate_str( text : &str, max_chars : usize ) -> String
   let keep = max_chars.saturating_sub( 1 );
   let mut truncated : String = text.chars().take( keep ).collect();
   truncated.push( '…' );
+  truncated
+}
+
+/// Cut `text` at `max_chars` characters keeping its **tail**, marking the cut
+/// with a leading `…`.
+///
+/// Deliberately the mirror image of [`truncate_str`] rather than a reuse of it
+/// (`Fix(BUG-544)`): sibling project directories share long absolute prefixes,
+/// so head-truncating them to a column width renders every row identically and
+/// destroys exactly the traceability [`ColumnKey::Project`] exists to provide.
+/// The distinguishing part of a path is its tail.
+fn truncate_path_tail( text : &str, max_chars : usize ) -> String
+{
+  let count = text.chars().count();
+  if count <= max_chars
+  {
+    return text.to_string();
+  }
+  let keep = max_chars.saturating_sub( 1 );
+  let mut truncated = String::from( '…' );
+  truncated.extend( text.chars().skip( count - keep ) );
   truncated
 }
