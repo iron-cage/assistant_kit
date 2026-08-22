@@ -29,26 +29,8 @@ mod common;
 
 use tempfile::TempDir;
 
-fn stdout( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stdout ).into_owned()
-}
 
-fn stderr( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stderr ).into_owned()
-}
 
-fn assert_exit( out : &std::process::Output, code : i32 )
-{
-  assert_eq!(
-    out.status.code().unwrap_or( -1 ),
-    code,
-    "expected exit {code}, got {:?}; stderr: {}",
-    out.status.code(),
-    stderr( out )
-  );
-}
 
 /// INT-1: `query::` required — missing arg exits with 1.
 ///
@@ -75,8 +57,8 @@ fn int_1_query_required_missing_arg_exits_1()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
-  let err = stderr( &out );
+  common::assert_exit( &out, 1 );
+  let err = common::stderr( &out );
   assert!(
     !err.is_empty(),
     "INT-1: missing query:: must produce error on stderr; got silence"
@@ -116,13 +98,13 @@ fn int_2_case_insensitive_match_by_default()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     !s.is_empty(),
     "INT-2: case-insensitive search must find 'SessionManagement' via lowercase query; \
     stderr: {}",
-    stderr( &out )
+    common::stderr( &out )
   );
 }
 
@@ -161,8 +143,8 @@ fn int_3_case_sensitive_1_enables_exact_case_matching()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   // case_sensitive::1 with lowercase query must NOT match "SessionManagement"
   // Output should be empty results or "Found 0 matches"
   assert!(
@@ -213,13 +195,13 @@ fn int_4_entry_type_user_limits_to_user_messages()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     !s.is_empty(),
     "INT-4: entry_type::user must find user message containing query; \
     stderr: {}",
-    stderr( &out )
+    common::stderr( &out )
   );
 }
 
@@ -259,10 +241,10 @@ fn int_5_entry_type_assistant_limits_to_assistant_messages()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
   // Assistant entry with "entry 1" must be found; command must not error
-  let s = stdout( &out );
-  let err = stderr( &out );
+  let s = common::stdout( &out );
+  let err = common::stderr( &out );
   assert!(
     !err.contains( "Invalid entry_type" ),
     "INT-5: entry_type::assistant must not produce a validation error; stderr:\n{err}"
@@ -311,8 +293,8 @@ fn int_6_project_restricts_search_to_one_project()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "alpha" ),
     "INT-6: project::alpha search must reference project alpha in output; got:\n{s}"
@@ -362,8 +344,8 @@ fn int_7_session_restricts_search_to_one_session()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "s1" ),
     "INT-7: session::s1 filter must show s1 in results; got:\n{s}"
@@ -416,12 +398,12 @@ fn int_8_q_alias_works_same_as_query()
     .output()
     .unwrap();
 
-  assert_exit( &out_query, 0 );
-  assert_exit( &out_q, 0 );
+  common::assert_exit( &out_query, 0 );
+  common::assert_exit( &out_q, 0 );
 
   assert_eq!(
-    stdout( &out_q ),
-    stdout( &out_query ),
+    common::stdout( &out_q ),
+    common::stdout( &out_query ),
     "INT-8: q:: alias must produce identical output to query::"
   );
 }
@@ -460,13 +442,13 @@ fn int_9_phrase_query_with_spaces_returns_results()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     !s.is_empty(),
     "INT-9: hyphenated query must find session containing matching text; \
     stderr: {}",
-    stderr( &out )
+    common::stderr( &out )
   );
 }
 
@@ -502,12 +484,12 @@ fn int_10_exit_code_0_when_results_found()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     !s.is_empty(),
     "INT-10: .search must produce output when results found; stderr: {}",
-    stderr( &out )
+    common::stderr( &out )
   );
 }
 
@@ -545,8 +527,8 @@ fn t01_default_scope_global_neither_given_regression_guard()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "t01-unique-content" ),
     "T01: default scope (neither project:: nor session:: given) must find the session \
@@ -590,8 +572,8 @@ fn t02_default_scope_global_session_given_found_in_cwd_project()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "t02-unique-content" ),
     "T02: default scope with session:: given must find a session living in cwd's own \
@@ -637,8 +619,8 @@ fn t03_scope_global_default_broadens_session_given_to_unrelated_project()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "t03-unique-content" ),
     "T03: default global scope must broaden session:: lookup to an unrelated project \
@@ -683,8 +665,8 @@ fn t04_scope_local_reproduces_pre_retrofit_narrow_behavior()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
-  let err = stderr( &out );
+  common::assert_exit( &out, 1 );
+  let err = common::stderr( &out );
   assert!(
     err.contains( "Session not found" ),
     "T04: scope::local must reproduce the pre-retrofit 'Session not found' error when \
@@ -721,8 +703,8 @@ fn t05_scope_bogus_rejected_with_canonical_error()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
-  let err = stderr( &out );
+  common::assert_exit( &out, 1 );
+  let err = common::stderr( &out );
   assert!(
     err.contains( "scope must be relevant|local|under|global|around, got bogus" ),
     "T05: scope::bogus must produce the canonical validate_scope() error; got: {err}"
@@ -770,8 +752,8 @@ fn t06_project_given_scope_ignored()
     .output()
     .unwrap();
 
-  assert_exit( &without_scope, 0 );
-  assert_exit( &with_scope, 0 );
+  common::assert_exit( &without_scope, 0 );
+  common::assert_exit( &with_scope, 0 );
   assert_eq!(
     without_scope.stdout, with_scope.stdout,
     "T06: scope:: must be ignored when project:: is given"
@@ -815,8 +797,8 @@ fn t07_path_anchor_override_scopes_resolution()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "t07-unique-content" ),
     "T07: path:: must anchor scope resolution to the given directory, independent of cwd; \
@@ -871,14 +853,14 @@ fn t08_session_ambiguous_across_scoped_projects_rejected()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
-  let err = stderr( &out );
+  common::assert_exit( &out, 1 );
+  let err = common::stderr( &out );
   assert!(
     err.contains( "Ambiguous" ) && err.contains( "t08-shared-session" ),
     "T08: session:: matching the same id in 2+ scoped projects must be rejected as \
     ambiguous, naming the session id; got: {err}"
   );
-  let s = stdout( &out );
+  let s = common::stdout( &out );
   assert!(
     !s.contains( "t08-content-in-a" ) && !s.contains( "t08-content-in-b" ),
     "T08: an ambiguous session:: match must not silently return either candidate's \

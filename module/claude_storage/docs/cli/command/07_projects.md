@@ -54,7 +54,7 @@ claude_storage .projects project::PROJECT ids::1 count::1
 | `since_days::` | Integer | optional | — | Only sessions modified within the last N days (`0` = last 24 hours) |
 | `show_topic::` | Boolean | optional | `0` | Append first user message text to session lines |
 
-`scope::` and `path::` belong to the [Scope Configuration group](../param_group/05_scope_configuration.md). Session filters belong to [Session Filter](../param_group/04_session_filter.md). `show_tree::` and `show_topic::` belong to [Output Control](../param_group/01_output_control.md). `project::` belongs to [Project Scope](../param_group/02_project_scope.md). `filter::`, `type::`, `detail::`, `ids::`, and `count::` are standalone `.projects`-only parameters with no group (see [`30_detail.md`](../param/30_detail.md) for why `detail::` specifically doesn't join Output Control despite looking like a display-shaping toggle).
+`scope::` and `path::` belong to the [Scope Configuration group](../param_group/05_scope_configuration.md). Session filters belong to [Session Filter](../param_group/04_session_filter.md). `show_tree::` and `show_topic::` belong to [Output Control](../param_group/01_output_control.md). `project::` belongs to [Project Scope](../param_group/02_project_scope.md). `filter::`, `type::`, `detail::`, `ids::`, and `count::` are standalone `.projects`-only parameters with no group (see [`../param/30_detail.md`](../param/30_detail.md) for why `detail::` specifically doesn't join Output Control despite looking like a display-shaping toggle).
 
 **Algorithm (6 steps):**
 1. Early dispatch — if `ids::1`: require `project::`, load project, build session families, group into conversations, output conversation IDs (or bare count when `count::1`); ported unchanged from `.list`'s former `type::conversation` path
@@ -230,7 +230,7 @@ e5f6a7b8-1234-5678-90ab-cdef12345678
 
 | File | Relationship |
 |------|-------------|
-| `../algorithm/001_agent_session_tracking.md` | Agent session discovery algorithm this command displays |
+| `../../algorithm/001_agent_session_tracking.md` | Agent session discovery algorithm this command displays |
 
 ### Referenced Parameter Groups
 

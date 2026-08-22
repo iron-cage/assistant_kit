@@ -16,26 +16,8 @@ mod common;
 
 use tempfile::TempDir;
 
-fn stdout( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stdout ).into_owned()
-}
 
-fn stderr( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stderr ).into_owned()
-}
 
-fn assert_exit( out : &std::process::Output, code : i32 )
-{
-  assert_eq!(
-    out.status.code().unwrap_or( -1 ),
-    code,
-    "expected exit {code}, got {:?}; stderr: {}",
-    out.status.code(),
-    stderr( out )
-  );
-}
 
 /// RWS-1: Basic status shows project and session totals.
 ///
@@ -63,12 +45,12 @@ fn rws_1_basic_status_shows_project_and_session_totals()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     !s.is_empty(),
     "RWS-1: .status must produce summary output; stderr: {}",
-    stderr( &out )
+    common::stderr( &out )
   );
   assert!(
     s.contains( '2' ),
@@ -109,11 +91,11 @@ fn rws_2_show_tokens_reveals_token_consumption()
     .output()
     .unwrap();
 
-  assert_exit( &default_out, 0 );
-  assert_exit( &tokens_out, 0 );
+  common::assert_exit( &default_out, 0 );
+  common::assert_exit( &tokens_out, 0 );
 
-  let s_tokens = stdout( &tokens_out );
-  let s_default = stdout( &default_out );
+  let s_tokens = common::stdout( &tokens_out );
+  let s_default = common::stdout( &default_out );
 
   assert!(
     s_tokens.len() > s_default.len(),
@@ -147,8 +129,8 @@ fn rws_3_status_outputs_machine_readable_format()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   // The output uses "Projects:" (capital P) and "Sessions:" keys
   let s_lower = s.to_lowercase();
   assert!(
@@ -195,8 +177,8 @@ fn rws_4_count_target_sessions_returns_bare_integer()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   let trimmed = s.trim();
   assert!(
     trimmed.parse::< u64 >().is_ok(),
@@ -234,12 +216,12 @@ fn rws_5_path_override_inspects_alternate_storage_root()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     !s.is_empty(),
     "RWS-5: .status path:: must produce output for the alternate root; stderr: {}",
-    stderr( &out )
+    common::stderr( &out )
   );
   // Must reflect the alternate fixture (1 project, 2 sessions)
   assert!(

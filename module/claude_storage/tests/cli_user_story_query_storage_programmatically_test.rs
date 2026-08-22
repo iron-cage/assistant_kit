@@ -16,26 +16,8 @@ mod common;
 
 use tempfile::TempDir;
 
-fn stdout( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stdout ).into_owned()
-}
 
-fn stderr( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stderr ).into_owned()
-}
 
-fn assert_exit( out : &std::process::Output, code : i32 )
-{
-  assert_eq!(
-    out.status.code().unwrap_or( -1 ),
-    code,
-    "expected exit {code}, got {:?}; stderr: {}",
-    out.status.code(),
-    stderr( out )
-  );
-}
 
 /// RWS-1: status outputs key=value pairs.
 ///
@@ -67,8 +49,8 @@ fn rws_1_status_outputs_key_value_pairs()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.to_lowercase().contains( "projects: 2" ),
     "RWS-1: .status must output 'projects: 2' (case-insensitive); got:\n{s}"
@@ -112,8 +94,8 @@ fn rws_2_count_outputs_bare_integer()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   let trimmed = s.trim();
   assert!(
     trimmed.parse::< u64 >().is_ok(),
@@ -157,8 +139,8 @@ fn rws_3_count_target_specifies_what_to_count()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   let trimmed = s.trim();
   assert!(
     trimmed.parse::< u64 >().is_ok(),
@@ -195,8 +177,8 @@ fn rws_4_path_scopes_query_to_alternate_storage_root()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   let trimmed = s.trim();
   assert!(
     trimmed.parse::< u64 >().is_ok(),
@@ -229,11 +211,11 @@ fn rws_5_non_existent_storage_root_exits_non_zero()
     .output()
     .unwrap();
 
-  assert_exit( &out, 2 );
-  let err = stderr( &out );
+  common::assert_exit( &out, 2 );
+  let err = common::stderr( &out );
   assert!(
     !err.is_empty(),
     "RWS-5: .status on non-existent path must emit error on stderr; stdout: {}",
-    stdout( &out )
+    common::stdout( &out )
   );
 }

@@ -17,22 +17,7 @@ mod common;
 use std::fs;
 use tempfile::TempDir;
 
-fn stdout( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stdout ).into_owned()
-}
 
-fn assert_exit( out : &std::process::Output, code : i32 )
-{
-  let stderr = String::from_utf8_lossy( &out.stderr );
-  assert_eq!(
-    out.status.code().unwrap_or( -1 ),
-    code,
-    "expected exit {code}, got {:?}; stderr: {}",
-    out.status.code(),
-    stderr
-  );
-}
 
 /// Write a 0-byte JSONL placeholder under `<root>/projects/<project_id>/<session_id>.jsonl`.
 ///
@@ -116,8 +101,8 @@ fn it54_use_families_zero_byte_excluded_from_header_count()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
 
   // Header must reflect only the 1 displayable (non-zero-byte) conversation.
   assert!(
@@ -184,8 +169,8 @@ fn it55_flat_branch_zero_byte_excluded_from_header_count()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
 
   // Header must reflect only the 1 non-agent, non-zero-byte conversation.
   assert!(
@@ -254,8 +239,8 @@ fn it56_zero_byte_only_project_excluded_from_list_output()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
 
   // proj56_real must appear with "Found 1 project" (only real project visible)
   assert!(

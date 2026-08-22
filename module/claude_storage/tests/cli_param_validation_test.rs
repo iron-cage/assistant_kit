@@ -11,21 +11,7 @@ mod common;
 
 use tempfile::TempDir;
 
-fn stderr( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stderr ).into_owned()
-}
 
-fn assert_exit( out : &std::process::Output, code : i32 )
-{
-  assert_eq!(
-    out.status.code().unwrap_or( -1 ),
-    code,
-    "expected exit {code}, got {:?}; stderr: {}",
-    out.status.code(),
-    stderr( out )
-  );
-}
 
 /// PF-1: Boolean param rejects values other than `"0"` and `"1"`.
 ///
@@ -46,8 +32,8 @@ fn pf_1_boolean_param_rejects_non_zero_one_value()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
-  let err = stderr( &out );
+  common::assert_exit( &out, 1 );
+  let err = common::stderr( &out );
   assert!(
     !err.is_empty(),
     "PF-1: boolean param 'agent::banana' must produce error output; stderr was empty"
@@ -78,8 +64,8 @@ fn pf_2_integer_param_rejects_non_integer_and_negative()
     .output()
     .unwrap();
 
-  assert_exit( &out_abc, 1 );
-  let err_abc = stderr( &out_abc );
+  common::assert_exit( &out_abc, 1 );
+  let err_abc = common::stderr( &out_abc );
   assert!(
     !err_abc.is_empty(),
     "PF-2: integer param 'min_entries::abc' must produce error output; stderr was empty"
@@ -93,8 +79,8 @@ fn pf_2_integer_param_rejects_non_integer_and_negative()
     .output()
     .unwrap();
 
-  assert_exit( &out_neg, 1 );
-  let err_neg = stderr( &out_neg );
+  common::assert_exit( &out_neg, 1 );
+  let err_neg = common::stderr( &out_neg );
   assert!(
     !err_neg.is_empty(),
     "PF-2: integer param 'min_entries::-5' (negative) must produce error output; stderr was empty"
@@ -120,8 +106,8 @@ fn pf_3_enum_param_rejects_unrecognized_value()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
-  let err = stderr( &out );
+  common::assert_exit( &out, 1 );
+  let err = common::stderr( &out );
   assert!(
     !err.is_empty(),
     "PF-3: enum param 'type::invalid_enum' must produce error output; stderr was empty"
@@ -148,8 +134,8 @@ fn pf_4_string_param_trims_and_rejects_whitespace_only()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
-  let err = stderr( &out );
+  common::assert_exit( &out, 1 );
+  let err = common::stderr( &out );
   assert!(
     !err.is_empty(),
     "PF-4: string param 'query::   ' (whitespace-only) must produce error output; stderr was empty"

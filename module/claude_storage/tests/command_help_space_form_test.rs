@@ -35,26 +35,8 @@ mod common;
 
 use std::io::Write;
 
-fn stdout( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stdout ).into_owned()
-}
 
-fn stderr( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stderr ).into_owned()
-}
 
-fn assert_exit( out : &std::process::Output, code : i32 )
-{
-  assert_eq!(
-    out.status.code().unwrap_or( -1 ),
-    code,
-    "expected exit {code}, got {:?}; stderr: {}",
-    out.status.code(),
-    stderr( out )
-  );
-}
 
 /// Run the binary in `--repl` mode with piped stdin, returning captured output.
 ///
@@ -115,7 +97,7 @@ fn repl_run( cmd : &mut std::process::Command, input : &str ) -> std::process::O
 /// ## Prevention
 /// Any new help-invocation syntax must add both a matcher function and a
 /// Test Matrix entry proving its output is byte-identical to the existing
-/// dot-suffix baseline (`assert_eq!(stdout(&new_form), stdout(&dot_form))`),
+/// dot-suffix baseline (`assert_eq!(common::stdout(&new_form), common::stdout(&dot_form))`),
 /// not merely "renders something."
 ///
 /// ## Pitfall
@@ -134,12 +116,12 @@ fn t01_list_help_one_shot_intercepted()
   let space_form = common::clg_cmd().arg( ".list" ).arg( "help" ).output().unwrap();
   let dot_form = common::clg_cmd().arg( ".list.help" ).output().unwrap();
 
-  assert_exit( &dot_form, 0 );
-  assert_exit( &space_form, 0 );
+  common::assert_exit( &dot_form, 0 );
+  common::assert_exit( &space_form, 0 );
   assert_eq!(
-    stdout( &space_form ), stdout( &dot_form ),
+    common::stdout( &space_form ), common::stdout( &dot_form ),
     "`.list help` must render byte-identical to `.list.help`;\n  space-form:\n{}\n  dot-form:\n{}",
-    stdout( &space_form ), stdout( &dot_form )
+    common::stdout( &space_form ), common::stdout( &dot_form )
   );
 }
 
@@ -174,7 +156,7 @@ fn t02_list_help_repl_intercepted()
   cmd.env( "CLAUDE_STORAGE_ROOT", root.path() );
 
   let out = repl_run( &mut cmd, ".list help\n.status\nexit\n" );
-  let s = stdout( &out );
+  let s = common::stdout( &out );
 
   assert!(
     s.contains( "Usage: clg .list" ),
@@ -217,12 +199,12 @@ fn t03_show_help_one_shot_generality()
   let space_form = common::clg_cmd().arg( ".show" ).arg( "help" ).output().unwrap();
   let dot_form = common::clg_cmd().arg( ".show.help" ).output().unwrap();
 
-  assert_exit( &dot_form, 0 );
-  assert_exit( &space_form, 0 );
+  common::assert_exit( &dot_form, 0 );
+  common::assert_exit( &space_form, 0 );
   assert_eq!(
-    stdout( &space_form ), stdout( &dot_form ),
+    common::stdout( &space_form ), common::stdout( &dot_form ),
     "`.show help` must render byte-identical to `.show.help`;\n  space-form:\n{}\n  dot-form:\n{}",
-    stdout( &space_form ), stdout( &dot_form )
+    common::stdout( &space_form ), common::stdout( &dot_form )
   );
 }
 
@@ -251,11 +233,11 @@ fn t04_nonexistent_help_unchanged()
 {
   let out = common::clg_cmd().arg( ".nonexistent" ).arg( "help" ).output().unwrap();
 
-  assert_exit( &out, 1 );
+  common::assert_exit( &out, 1 );
   assert!(
-    stderr( &out ).contains( "The command '.nonexistent' was not found" ),
+    common::stderr( &out ).contains( "The command '.nonexistent' was not found" ),
     "T04: `.nonexistent help` must remain unintercepted (unregistered command falls through); got stderr:\n{}",
-    stderr( &out )
+    common::stderr( &out )
   );
 }
 
@@ -286,11 +268,11 @@ fn t05_list_uuid_help_three_token_unchanged()
 {
   let out = common::clg_cmd().arg( ".list" ).arg( "uuid" ).arg( "help" ).output().unwrap();
 
-  assert_exit( &out, 1 );
+  common::assert_exit( &out, 1 );
   assert!(
-    stderr( &out ).contains( "Cannot coerce value for argument 'show_sessions' to Boolean" ),
+    common::stderr( &out ).contains( "Cannot coerce value for argument 'show_sessions' to Boolean" ),
     "T05: `.list uuid help` must remain unintercepted (three-token positional binding); got stderr:\n{}",
-    stderr( &out )
+    common::stderr( &out )
   );
 }
 
@@ -321,11 +303,11 @@ fn t06_list_help_uppercase_unchanged()
 {
   let out = common::clg_cmd().arg( ".list" ).arg( "HELP" ).output().unwrap();
 
-  assert_exit( &out, 1 );
+  common::assert_exit( &out, 1 );
   assert!(
-    stderr( &out ).contains( "Unexpected token 'HELP'" ),
+    common::stderr( &out ).contains( "Unexpected token 'HELP'" ),
     "T06: `.list HELP` must remain unintercepted (case-sensitive match); got stderr:\n{}",
-    stderr( &out )
+    common::stderr( &out )
   );
 }
 
@@ -353,11 +335,11 @@ fn t07_list_helpme_content_near_miss_unchanged()
 {
   let out = common::clg_cmd().arg( ".list" ).arg( "helpme" ).output().unwrap();
 
-  assert_exit( &out, 1 );
+  common::assert_exit( &out, 1 );
   assert!(
-    stderr( &out ).contains( "Invalid type: helpme" ),
+    common::stderr( &out ).contains( "Invalid type: helpme" ),
     "T07: `.list helpme` must remain unintercepted (exact-match only); got stderr:\n{}",
-    stderr( &out )
+    common::stderr( &out )
   );
 }
 
@@ -391,14 +373,14 @@ fn t08_repl_irregular_whitespace_intercepted()
   let out = repl_run( &mut cmd, ".list  help\nexit\n" );
 
   assert!(
-    stdout( &out ).contains( "Usage: clg .list" ),
+    common::stdout( &out ).contains( "Usage: clg .list" ),
     "T08: `.list  help` (irregular whitespace) must render .list's help text in REPL; got stdout:\n{}",
-    stdout( &out )
+    common::stdout( &out )
   );
   assert!(
-    !stderr( &out ).contains( "Invalid type: help" ),
+    !common::stderr( &out ).contains( "Invalid type: help" ),
     "T08: must not fall through to the pre-fix dispatch error; got stderr:\n{}",
-    stderr( &out )
+    common::stderr( &out )
   );
 }
 
@@ -430,12 +412,12 @@ fn t09_search_help_one_shot_reserved_word_tradeoff()
   let space_form = common::clg_cmd().arg( ".search" ).arg( "help" ).output().unwrap();
   let dot_form = common::clg_cmd().arg( ".search.help" ).output().unwrap();
 
-  assert_exit( &dot_form, 0 );
-  assert_exit( &space_form, 0 );
+  common::assert_exit( &dot_form, 0 );
+  common::assert_exit( &space_form, 0 );
   assert_eq!(
-    stdout( &space_form ), stdout( &dot_form ),
+    common::stdout( &space_form ), common::stdout( &dot_form ),
     "`.search help` must render byte-identical to `.search.help` (AGG-01 accepted trade-off);\n  space-form:\n{}\n  dot-form:\n{}",
-    stdout( &space_form ), stdout( &dot_form )
+    common::stdout( &space_form ), common::stdout( &dot_form )
   );
 }
 
@@ -473,16 +455,16 @@ fn t10_search_query_help_named_param_unaffected()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
   assert!(
-    !stdout( &out ).contains( "Usage:" ),
+    !common::stdout( &out ).contains( "Usage:" ),
     "T10: `.search query::help` must not render help; got stdout:\n{}",
-    stdout( &out )
+    common::stdout( &out )
   );
   assert!(
-    stdout( &out ).contains( "matches" ),
+    common::stdout( &out ).contains( "matches" ),
     "T10: `.search query::help` must still perform a real search; got stdout:\n{}",
-    stdout( &out )
+    common::stdout( &out )
   );
 }
 
@@ -532,12 +514,12 @@ fn t11_list_help_single_joined_argv_intercepted()
   let space_form = common::clg_cmd().arg( ".list help" ).output().unwrap();
   let dot_form = common::clg_cmd().arg( ".list.help" ).output().unwrap();
 
-  assert_exit( &dot_form, 0 );
-  assert_exit( &space_form, 0 );
+  common::assert_exit( &dot_form, 0 );
+  common::assert_exit( &space_form, 0 );
   assert_eq!(
-    stdout( &space_form ), stdout( &dot_form ),
+    common::stdout( &space_form ), common::stdout( &dot_form ),
     "`.list help` as a single joined argv element must render byte-identical to `.list.help`;\n  space-form:\n{}\n  dot-form:\n{}",
-    stdout( &space_form ), stdout( &dot_form )
+    common::stdout( &space_form ), common::stdout( &dot_form )
   );
 }
 
@@ -588,18 +570,18 @@ fn t12_three_argv_whitespace_corrupted_intercepted()
   let trailing_space_tok1 = common::clg_cmd().arg( ".list" ).arg( "help " ).output().unwrap();
   let dot_form = common::clg_cmd().arg( ".list.help" ).output().unwrap();
 
-  assert_exit( &dot_form, 0 );
-  assert_exit( &trailing_space_tok0, 0 );
-  assert_exit( &trailing_space_tok1, 0 );
+  common::assert_exit( &dot_form, 0 );
+  common::assert_exit( &trailing_space_tok0, 0 );
+  common::assert_exit( &trailing_space_tok1, 0 );
   assert_eq!(
-    stdout( &trailing_space_tok0 ), stdout( &dot_form ),
+    common::stdout( &trailing_space_tok0 ), common::stdout( &dot_form ),
     "`.list ` + `help` (trailing space in first element) must render byte-identical to `.list.help`;\n  got:\n{}\n  dot-form:\n{}",
-    stdout( &trailing_space_tok0 ), stdout( &dot_form )
+    common::stdout( &trailing_space_tok0 ), common::stdout( &dot_form )
   );
   assert_eq!(
-    stdout( &trailing_space_tok1 ), stdout( &dot_form ),
+    common::stdout( &trailing_space_tok1 ), common::stdout( &dot_form ),
     "`.list` + `help ` (trailing space in second element) must render byte-identical to `.list.help`;\n  got:\n{}\n  dot-form:\n{}",
-    stdout( &trailing_space_tok1 ), stdout( &dot_form )
+    common::stdout( &trailing_space_tok1 ), common::stdout( &dot_form )
   );
 }
 
@@ -645,18 +627,18 @@ fn t13_leading_whitespace_and_tab_intercepted()
   let tab_separated = common::clg_cmd().arg( ".list" ).arg( "\thelp" ).output().unwrap();
   let dot_form = common::clg_cmd().arg( ".list.help" ).output().unwrap();
 
-  assert_exit( &dot_form, 0 );
-  assert_exit( &leading_space, 0 );
-  assert_exit( &tab_separated, 0 );
+  common::assert_exit( &dot_form, 0 );
+  common::assert_exit( &leading_space, 0 );
+  common::assert_exit( &tab_separated, 0 );
   assert_eq!(
-    stdout( &leading_space ), stdout( &dot_form ),
+    common::stdout( &leading_space ), common::stdout( &dot_form ),
     "` .list` + `help` (leading space in first element) must render byte-identical to `.list.help`;\n  got:\n{}\n  dot-form:\n{}",
-    stdout( &leading_space ), stdout( &dot_form )
+    common::stdout( &leading_space ), common::stdout( &dot_form )
   );
   assert_eq!(
-    stdout( &tab_separated ), stdout( &dot_form ),
+    common::stdout( &tab_separated ), common::stdout( &dot_form ),
     "`.list` + `\\thelp` (tab-prefixed second element) must render byte-identical to `.list.help`;\n  got:\n{}\n  dot-form:\n{}",
-    stdout( &tab_separated ), stdout( &dot_form )
+    common::stdout( &tab_separated ), common::stdout( &dot_form )
   );
 }
 
@@ -707,11 +689,11 @@ fn t14_show_help_single_joined_argv_intercepted()
   let space_form = common::clg_cmd().arg( ".show help" ).output().unwrap();
   let dot_form = common::clg_cmd().arg( ".show.help" ).output().unwrap();
 
-  assert_exit( &dot_form, 0 );
-  assert_exit( &space_form, 0 );
+  common::assert_exit( &dot_form, 0 );
+  common::assert_exit( &space_form, 0 );
   assert_eq!(
-    stdout( &space_form ), stdout( &dot_form ),
+    common::stdout( &space_form ), common::stdout( &dot_form ),
     "`.show help` as a single joined argv element must render byte-identical to `.show.help`;\n  space-form:\n{}\n  dot-form:\n{}",
-    stdout( &space_form ), stdout( &dot_form )
+    common::stdout( &space_form ), common::stdout( &dot_form )
   );
 }

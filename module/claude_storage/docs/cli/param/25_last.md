@@ -24,7 +24,7 @@ Number of trailing turns to print for `.tail`, or trailing messages shown in `.s
 
 **Alias:** `l`
 
-**Purpose:** Caps how many trailing conversation units are printed. Mirrors `limit::`'s "0 = unlimited" convention, applied within a single resolved session rather than to sessions within a project. On `.tail`, counts **turns** — displayable groups of records, not raw JSONL records (see [`12_tail.md`](../command/12_tail.md)'s Turn Grouping). On `.show`'s project-overview branches (no `session_id::`), caps the messages shown from the project's most-recently-active session, beneath the project summary block; no effect when `session_id::` is given (see [`03_show.md`](../command/03_show.md)).
+**Purpose:** Caps how many trailing conversation units are printed. Mirrors `limit::`'s "0 = unlimited" convention, applied within a single resolved session rather than to sessions within a project. On `.tail`, counts **turns** — displayable groups of records, not raw JSONL records (see [`../command/12_tail.md`](../command/12_tail.md)'s Turn Grouping). On `.show`'s project-overview branches (no `session_id::`), caps the messages shown from the project's most-recently-active session, beneath the project summary block; no effect when `session_id::` is given (see [`../command/03_show.md`](../command/03_show.md)).
 
 **Unit differs by command:** `.tail`'s unit is a turn; `.show`'s is a raw entry. One assistant response commonly spans several records, so `.tail last::4` and `.show last::4` do not select the same amount of history.
 

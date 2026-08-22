@@ -18,26 +18,8 @@ mod common;
 
 use tempfile::TempDir;
 
-fn stdout( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stdout ).into_owned()
-}
 
-fn stderr( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stderr ).into_owned()
-}
 
-fn assert_exit( out : &std::process::Output, code : i32 )
-{
-  assert_eq!(
-    out.status.code().unwrap_or( -1 ),
-    code,
-    "expected exit {code}, got {:?}; stderr: {}",
-    out.status.code(),
-    stderr( out )
-  );
-}
 
 /// EC-1: Value "projects" accepted.
 ///
@@ -66,8 +48,8 @@ fn ec_1_target_projects_accepted()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let output = stdout( &out ).trim().to_owned();
+  common::assert_exit( &out, 0 );
+  let output = common::stdout( &out ).trim().to_owned();
   let count : i64 = output.parse().unwrap_or( -1 );
   assert!(
     count >= 0,
@@ -103,8 +85,8 @@ fn ec_2_target_sessions_accepted()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let output = stdout( &out ).trim().to_owned();
+  common::assert_exit( &out, 0 );
+  let output = common::stdout( &out ).trim().to_owned();
   let count : i64 = output.parse().unwrap_or( -1 );
   assert!(
     count >= 0,
@@ -141,8 +123,8 @@ fn ec_3_target_entries_accepted()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let output = stdout( &out ).trim().to_owned();
+  common::assert_exit( &out, 0 );
+  let output = common::stdout( &out ).trim().to_owned();
   let count : i64 = output.parse().unwrap_or( -1 );
   assert!(
     count >= 0,
@@ -177,8 +159,8 @@ fn ec_4_target_uppercase_accepted()
     .output()
     .unwrap();
 
-  assert_exit( &out_upper, 1 );
-  let err = stderr( &out_upper );
+  common::assert_exit( &out_upper, 1 );
+  let err = common::stderr( &out_upper );
   assert!(
     err.contains( "SESSIONS" ) || err.contains( "target" ) || err.contains( "Invalid" ),
     "EC-4: error must mention SESSIONS or target or Invalid; got: {err}"
@@ -207,8 +189,8 @@ fn ec_5_target_files_rejected()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
-  let err = stderr( &out );
+  common::assert_exit( &out, 1 );
+  let err = common::stderr( &out );
   assert!(
     err.contains( "target" ) && err.contains( "files" ),
     "EC-5: expected 'target' and 'files' in stderr; got: {err}"
@@ -248,11 +230,11 @@ fn ec_6_target_omitted_defaults_to_projects()
     .output()
     .unwrap();
 
-  assert_exit( &out_default, 0 );
-  assert_exit( &out_explicit, 0 );
+  common::assert_exit( &out_default, 0 );
+  common::assert_exit( &out_explicit, 0 );
   assert_eq!(
-    stdout( &out_default ).trim(),
-    stdout( &out_explicit ).trim(),
+    common::stdout( &out_default ).trim(),
+    common::stdout( &out_explicit ).trim(),
     "EC-6: omitted target must match target::projects output"
   );
 }
@@ -285,8 +267,8 @@ fn ec_7_target_sessions_counts_all_without_project()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let output = stdout( &out ).trim().to_owned();
+  common::assert_exit( &out, 0 );
+  let output = common::stdout( &out ).trim().to_owned();
   let count : i64 = output.parse().unwrap_or( 0 );
   assert!(
     count >= 2,

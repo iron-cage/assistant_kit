@@ -41,26 +41,8 @@ mod common;
 use std::fs;
 use tempfile::TempDir;
 
-fn stdout( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stdout ).into_owned()
-}
 
-fn stderr( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stderr ).into_owned()
-}
 
-fn assert_exit( out : &std::process::Output, code : i32 )
-{
-  assert_eq!(
-    out.status.code().unwrap_or( -1 ),
-    code,
-    "expected exit {code}, got {:?}; stderr: {}",
-    out.status.code(),
-    stderr( out )
-  );
-}
 
 // ─── INT-26 ───────────────────────────────────────────────────────────────────
 
@@ -89,8 +71,8 @@ fn int_26_v1_zero_byte_sessions_excluded()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "session-real" ),        "real session must appear; got:\n{s}" );
   assert!( !s.contains( "session-placeholder" ), "zero-byte placeholder must be absent; got:\n{s}" );
 }
@@ -122,8 +104,8 @@ fn int_27_list_mode_shows_project_and_session_info()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   // List mode header must be present (summary mode was removed in task-019).
   assert!( s.contains( "Found" ),          "list-mode header must be present; got:\n{s}" );
   assert!( !s.contains( "Active project" ), "summary block must be absent (task-019); got:\n{s}" );
@@ -161,8 +143,8 @@ fn int_28_short_last_message_produces_valid_list_output()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "Found" ),     "list-mode header must be present; got:\n{s}" );
   assert!( !s.contains( "Last message" ), "summary 'Last message:' section must be absent; got:\n{s}" );
 }
@@ -195,8 +177,8 @@ fn int_29_long_last_message_produces_valid_list_output()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "Found" ),     "list-mode header must be present; got:\n{s}" );
   assert!( !s.contains( "Last message" ), "summary 'Last message:' section must be absent; got:\n{s}" );
 }
@@ -224,8 +206,8 @@ fn int_30_no_sessions_shows_zero_result_header()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   // After task-019: list-mode zero-result header replaces the summary sentinel.
   assert!(
     s.contains( "Found 0" ) || s.is_empty(),
@@ -235,7 +217,7 @@ fn int_30_no_sessions_shows_zero_result_header()
     !s.contains( "No active project found" ),
     "legacy summary sentinel must be absent; got:\n{s}"
   );
-  assert!( stderr( &out ).is_empty(), "stderr must be empty; got: {}", stderr( &out ) );
+  assert!( common::stderr( &out ).is_empty(), "stderr must be empty; got: {}", common::stderr( &out ) );
 }
 
 // ─── INT-31 ───────────────────────────────────────────────────────────────────
@@ -263,8 +245,8 @@ fn int_31_explicit_scope_local_shows_list_output()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "Found" ),          "scope::local must emit list-mode header; got:\n{s}" );
   assert!( !s.contains( "Active project" ), "summary block must be absent; got:\n{s}" );
 }
@@ -295,8 +277,8 @@ fn int_32_explicit_limit_shows_list_output()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "Found" ),          "limit::N must emit list-mode header; got:\n{s}" );
   assert!( !s.contains( "Active project" ), "summary block must be absent; got:\n{s}" );
 }
@@ -327,8 +309,8 @@ fn int_33_family_header_includes_conversations_and_agents()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "conversation" ), "header must contain 'conversation(s)'; got:\n{s}" );
   assert!( s.contains( "agent" ),        "header must contain 'agent(s)'; got:\n{s}" );
   assert!( !s.contains( "+ " ),          "old collapse format must be absent; got:\n{s}" );
@@ -361,8 +343,8 @@ fn int_34_per_root_agent_breakdown_shows_type_summary()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "[3 agents:" ),      "must show '[3 agents:' bracket; got:\n{s}" );
   assert!( s.contains( "Explore" ),          "must show 'Explore' type; got:\n{s}" );
   assert!( s.contains( "general-purpose" ),  "must show 'general-purpose' type; got:\n{s}" );
@@ -401,8 +383,8 @@ fn int_35_hierarchical_format_each_root_shows_own_agent_count()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "[2 agents:" ), "root-35-alpha must show '[2 agents:'; got:\n{s}" );
   assert!( s.contains( "[1 agent:" ),  "root-35-beta must show '[1 agent:'; got:\n{s}" );
 }
@@ -433,8 +415,8 @@ fn int_36_flat_format_agents_attributed_by_session_id()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "[2 agents:" ), "flat agents must be attributed to parent; got:\n{s}" );
 }
 
@@ -478,8 +460,8 @@ fn int_37_orphan_family_shows_question_mark()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( '?' ), "orphan family must show '?' marker; got:\n{s}" );
 }
 
@@ -505,8 +487,8 @@ fn int_38_childless_root_has_no_bracket_suffix()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   let session_line = s.lines().find( | l | l.contains( "root-38" ) );
   assert!( session_line.is_some(), "root-38 must appear in output; got:\n{s}" );
   assert!(
@@ -541,8 +523,8 @@ fn int_39_meta_json_agent_type_appears_in_breakdown()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "Plan" ), "meta.json agentType 'Plan' must appear in breakdown; got:\n{s}" );
 }
 
@@ -585,8 +567,8 @@ fn int_40_empty_meta_json_falls_back_to_unknown()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "unknown" ), "empty meta.json must show 'unknown' type; got:\n{s}" );
 }
 
@@ -615,8 +597,8 @@ fn int_41_v1_orphan_shows_orphan_label()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "? (orphan)" ),
     "v1 orphan line must show '? (orphan)' label per spec; got:\n{s}"
@@ -646,8 +628,8 @@ fn int_42_show_tree_root_entry_count_singular()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "(1 entry)" ),  "show_tree root with 1 entry must show '(1 entry)'; got:\n{s}" );
   assert!( !s.contains( "(1 entries)" ), "must NOT show '(1 entries)'; got:\n{s}" );
 }
@@ -679,8 +661,8 @@ fn int_43_show_tree_agent_entry_count_singular()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "1 entry" ),   "show_tree agent with 1 entry must show '1 entry'; got:\n{s}" );
   assert!( !s.contains( "1 entries" ), "must NOT show '1 entries'; got:\n{s}" );
 }
@@ -710,8 +692,8 @@ fn int_42b_bare_projects_shows_found_header_not_active_project()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "Found" ),          "bare .projects must emit list-mode header; got:\n{s}" );
   assert!( !s.contains( "Active project" ), "legacy 'Active project' header must be absent; got:\n{s}" );
 }
@@ -744,8 +726,8 @@ fn int_43b_list_output_contains_session_info()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "Found" ), "must emit list-mode header; got:\n{s}" );
   assert!(
     !s.is_empty(),
@@ -792,8 +774,8 @@ fn int_44_list_mode_projects_sorted_by_recency()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   let pos_beta  = s.find( "proj_beta" ).expect( "proj_beta must appear" );
   let pos_alpha = s.find( "proj_alpha" ).expect( "proj_alpha must appear" );
   assert!(
@@ -826,8 +808,8 @@ fn int_46_topic_path_shown_when_topic_dir_absent()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "/-commit" ),
     "topic '/-commit' must appear even when dir is absent from disk; got:\n{s}"
@@ -858,8 +840,8 @@ fn int_47_topic_path_shown_when_topic_dir_present()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "/-commit" ),
     "topic '/-commit' must appear when dir is present on disk; got:\n{s}"
@@ -890,8 +872,8 @@ fn int_48_default_topic_path_shown_when_absent()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "/-default_topic" ),
     "topic '/-default_topic' must appear even when dir is absent; got:\n{s}"
@@ -919,8 +901,8 @@ fn int_49_base_path_shown_with_no_topic()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "session-int49-no-topic" ), "session must appear; got:\n{s}" );
   assert!( !s.contains( "/-commit" ),        "no topic — must not show /-commit; got:\n{s}" );
   assert!( !s.contains( "/-default_topic" ), "no topic — must not show /-default_topic; got:\n{s}" );
@@ -950,8 +932,8 @@ fn int_50_double_topic_key_shows_both_components()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "/-default_topic" ),
     "double-topic key must include first topic '/-default_topic'; got:\n{s}"

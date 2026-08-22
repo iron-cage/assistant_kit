@@ -17,26 +17,8 @@ mod common;
 
 use tempfile::TempDir;
 
-fn stdout( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stdout ).into_owned()
-}
 
-fn stderr( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stderr ).into_owned()
-}
 
-fn assert_exit( out : &std::process::Output, code : i32 )
-{
-  assert_eq!(
-    out.status.code().unwrap_or( -1 ),
-    code,
-    "expected exit {code}, got {:?}; stderr: {}",
-    out.status.code(),
-    stderr( out )
-  );
-}
 
 /// EC-1: Value 0 shows conversation content.
 ///
@@ -73,8 +55,8 @@ fn ec_1_metadata_0_shows_content()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let output = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let output = common::stdout( &out );
   assert!(
     output.contains( "hello world content" ) || output.contains( "entry" ),
     "EC-1: show_metadata::0 must show conversation content; got: {output}"
@@ -116,8 +98,8 @@ fn ec_2_metadata_1_suppresses_content()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let output = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let output = common::stdout( &out );
   assert!(
     !output.contains( "unique-sentinel-text-xyzabc" ),
     "EC-2: show_metadata::1 must suppress conversation content; got: {output}"
@@ -149,7 +131,7 @@ fn ec_3_metadata_true_accepted()
     .output()
     .unwrap();
 
-  let err = stderr( &out );
+  let err = common::stderr( &out );
   assert!(
     !err.contains( "Invalid boolean" ) && !err.contains( "Type Error" ),
     "EC-3: show_metadata::true must not cause a type validation error; got: {err}"
@@ -190,8 +172,8 @@ fn ec_4_metadata_omitted_defaults_to_content()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let output = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let output = common::stdout( &out );
   assert!(
     output.contains( "default content display" ) || output.contains( "entry" ),
     "EC-4: omitted metadata must show content; got: {output}"
@@ -227,8 +209,8 @@ fn ec_5_metadata_1_includes_entry_count()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let output = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let output = common::stdout( &out );
   assert!(
     output.contains( '4' ) || output.contains( "entries" ) || output.contains( "count" ),
     "EC-5: show_metadata::1 must show entry count; got: {output}"
@@ -264,8 +246,8 @@ fn ec_6_metadata_1_includes_timestamps()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let output = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let output = common::stdout( &out );
   // Synthetic sessions use "2025-01-01T..." timestamps
   assert!(
     output.contains( "2025" ) || output.contains( "timestamp" ) || output.contains( "first" ),

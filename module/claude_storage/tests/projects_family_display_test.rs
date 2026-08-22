@@ -27,26 +27,8 @@ mod common;
 
 use tempfile::TempDir;
 
-fn stdout( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stdout ).into_owned()
-}
 
-fn stderr( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stderr ).into_owned()
-}
 
-fn assert_exit( out : &std::process::Output, code : i32 )
-{
-  assert_eq!(
-    out.status.code().unwrap_or( -1 ),
-    code,
-    "expected exit {code}, got {:?}; stderr: {}",
-    out.status.code(),
-    stderr( out )
-  );
-}
 
 // ────────────────────────────────────────────────────────────────────────────
 // IT-1 / T01: Default (no args) shows list output, not a single-project summary
@@ -81,8 +63,8 @@ fn it1_default_shows_list_output()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "Found" ),          "bare .projects must output 'Found N project(s):' format; got:\n{s}" );
   assert!( !s.contains( "Active project" ), "bare .projects must not output summary block; got:\n{s}" );
 }
@@ -120,13 +102,13 @@ fn it33_no_sessions_shows_zero_result_header()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "Found 0 projects:" ),
     "empty storage must produce list-mode zero-result header; got:\n{s}"
   );
-  assert!( stderr( &out ).is_empty(), "stderr must be empty; got: {}", stderr( &out ) );
+  assert!( common::stderr( &out ).is_empty(), "stderr must be empty; got: {}", common::stderr( &out ) );
 }
 
 
@@ -170,8 +152,8 @@ fn it36_family_header_format()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "conversation" ),
     "header must contain 'conversation(s)'; got:\n{s}"
@@ -221,8 +203,8 @@ fn it37_per_root_agent_breakdown()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "[3 agents:" ),
     "must show '[3 agents:' bracket breakdown; got:\n{s}"
@@ -277,8 +259,8 @@ fn it38_hierarchical_format_detection()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   // One root should show [2 agents:, the other [1 agent:
   assert!(
     s.contains( "[2 agents:" ),
@@ -331,8 +313,8 @@ fn it39_flat_format_detection()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "[2 agents:" ),
     "flat agents must be attributed to parent via sessionId; got:\n{s}"
@@ -390,8 +372,8 @@ fn it40_orphan_family_display()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( '?' ),
     "orphan family must show '?' marker; got:\n{s}"
@@ -427,8 +409,8 @@ fn it41_childless_root_no_bracket()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   // Find the session line and check it has no bracket
   let session_line = s.lines().find( | l | l.contains( "root-session-41" ) );
   assert!(
@@ -473,8 +455,8 @@ fn it42_meta_json_agent_type()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "Plan" ),
     "meta.json agentType 'Plan' must appear in breakdown; got:\n{s}"
@@ -535,8 +517,8 @@ fn it43_empty_meta_json_fallback()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "unknown" ),
     "empty meta.json must show 'unknown' type; got:\n{s}"
@@ -591,8 +573,8 @@ fn it44_v1_orphan_shows_orphan_label()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "? (orphan)" ),
     "v1 orphan line must show '? (orphan)' label per spec; got:\n{s}"
@@ -637,8 +619,8 @@ fn it45_v2_root_entry_count_singular()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "(1 entry)" ),
     "v2 root with 1 entry must show '(1 entry)' not '(1 entries)'; got:\n{s}"
@@ -696,8 +678,8 @@ fn it46_v2_agent_entry_count_singular()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "1 entry" ),
     "v2 agent with 1 entry must show '1 entry' not '1 entries'; got:\n{s}"
@@ -771,8 +753,8 @@ fn it47_empty_string_agent_type_falls_back_to_unknown()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "unknown" ),
     "agentType empty string must display as 'unknown'; got:\n{s}"
@@ -842,8 +824,8 @@ fn it48_whitespace_agent_type_falls_back_to_unknown()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "unknown" ),
     "whitespace agentType must display as 'unknown'; got:\n{s}"

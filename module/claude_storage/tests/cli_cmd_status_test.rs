@@ -20,26 +20,8 @@ mod common;
 
 use tempfile::TempDir;
 
-fn stdout( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stdout ).into_owned()
-}
 
-fn stderr( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stderr ).into_owned()
-}
 
-fn assert_exit( out : &std::process::Output, code : i32 )
-{
-  assert_eq!(
-    out.status.code().unwrap_or( -1 ),
-    code,
-    "expected exit {code}, got {:?}; stderr: {}",
-    out.status.code(),
-    stderr( out )
-  );
-}
 
 /// INT-1: Default output with real storage.
 ///
@@ -74,12 +56,12 @@ fn int_1_default_output_with_real_storage()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     !s.is_empty(),
     "INT-1: .status must produce output on stdout; stderr: {}",
-    stderr( &out )
+    common::stderr( &out )
   );
   assert!(
     s.contains( '2' ),
@@ -126,11 +108,11 @@ fn int_3_show_tokens_adds_tokens_section()
     .output()
     .unwrap();
 
-  assert_exit( &base_out, 0 );
-  assert_exit( &tokens_out, 0 );
+  common::assert_exit( &base_out, 0 );
+  common::assert_exit( &tokens_out, 0 );
 
-  let base = stdout( &base_out );
-  let tokens = stdout( &tokens_out );
+  let base = common::stdout( &base_out );
+  let tokens = common::stdout( &tokens_out );
 
   assert!(
     tokens.len() > base.len(),
@@ -174,8 +156,8 @@ fn int_4_custom_storage_path_via_path_param()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( '1' ),
     "INT-4: output must show 1 project from path:: fixture; got:\n{s}"
@@ -214,12 +196,12 @@ fn int_5_custom_storage_path_via_env()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     !s.is_empty(),
     "INT-5: CLAUDE_STORAGE_ROOT fixture must produce output; stderr: {}",
-    stderr( &out )
+    common::stderr( &out )
   );
 }
 
@@ -249,7 +231,7 @@ fn int_6_exit_code_0_on_success()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
 }
 
 /// INT-7: Exit code 2 on unreadable storage path.
@@ -277,9 +259,9 @@ fn int_7_exit_code_2_on_unreadable_storage_path()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
   // Nonexistent storage root → empty stats (lazy storage construction), not an error
-  let s = stdout( &out );
+  let s = common::stdout( &out );
   assert!(
     s.contains( '0' ),
     "INT-7: nonexistent path gives empty stats; got:\n{s}"
@@ -321,8 +303,8 @@ fn int_8_output_contains_project_and_session_count()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( '3' ),
     "INT-8: output must reference project count 3; got:\n{s}"
@@ -361,8 +343,8 @@ fn int_9_show_tokens_invalid_value_rejected()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
-  let err = stderr( &out );
+  common::assert_exit( &out, 1 );
+  let err = common::stderr( &out );
   assert!(
     !err.is_empty(),
     "INT-9: invalid show_tokens:: boolean must produce an error on stderr"
@@ -372,8 +354,8 @@ fn int_9_show_tokens_invalid_value_rejected()
     "INT-9: stderr must name the rejected show_tokens argument; got: {err}"
   );
   assert!(
-    stdout( &out ).is_empty(),
+    common::stdout( &out ).is_empty(),
     "INT-9: no storage output on stdout when the argument is rejected; got:\n{}",
-    stdout( &out )
+    common::stdout( &out )
   );
 }

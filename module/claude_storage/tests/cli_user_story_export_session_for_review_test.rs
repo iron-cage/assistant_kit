@@ -16,26 +16,8 @@ mod common;
 
 use tempfile::TempDir;
 
-fn stdout( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stdout ).into_owned()
-}
 
-fn stderr( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stderr ).into_owned()
-}
 
-fn assert_exit( out : &std::process::Output, code : i32 )
-{
-  assert_eq!(
-    out.status.code().unwrap_or( -1 ),
-    code,
-    "expected exit {code}, got {:?}; stderr: {}",
-    out.status.code(),
-    stderr( out )
-  );
-}
 
 /// RWS-1: Export as markdown writes output file.
 ///
@@ -67,11 +49,11 @@ fn rws_1_export_as_markdown_writes_output_file()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
   assert!(
     output_file.exists(),
     "RWS-1: .export must create the output file; stderr: {}",
-    stderr( &out )
+    common::stderr( &out )
   );
   let content = std::fs::read_to_string( &output_file ).unwrap();
   assert!(
@@ -117,11 +99,11 @@ fn rws_2_export_as_json_produces_jsonl_output()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
   assert!(
     output_file.exists(),
     "RWS-2: .export format::json must create the output file; stderr: {}",
-    stderr( &out )
+    common::stderr( &out )
   );
   let content = std::fs::read_to_string( &output_file ).unwrap();
   assert!(
@@ -169,11 +151,11 @@ fn rws_3_export_as_text_produces_plain_text_transcript()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
   assert!(
     output_file.exists(),
     "RWS-3: .export format::text must create the output file; stderr: {}",
-    stderr( &out )
+    common::stderr( &out )
   );
   let content = std::fs::read_to_string( &output_file ).unwrap();
   assert!(
@@ -216,8 +198,8 @@ fn rws_4_missing_session_id_exits_with_error()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
-  let err = stderr( &out );
+  common::assert_exit( &out, 1 );
+  let err = common::stderr( &out );
   assert!(
     !err.is_empty(),
     "RWS-4: .export without session_id:: must emit error on stderr"
@@ -255,11 +237,11 @@ fn rws_5_missing_output_exits_with_error()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
-  let err = stderr( &out );
+  common::assert_exit( &out, 1 );
+  let err = common::stderr( &out );
   assert!(
     !err.is_empty(),
     "RWS-5: .export without output:: must emit error on stderr; stdout: {}",
-    stdout( &out )
+    common::stdout( &out )
   );
 }

@@ -10,8 +10,8 @@
 //! - INT-2: cwd without history exits 1
 //! - INT-3: `path::` with history exits 0
 //! - INT-4: `path::` without history exits 1
-//! - INT-5: Exit 0 prints "sessions exist" to stdout (exact)
-//! - INT-6: Exit 1 prints "no sessions" to stderr (exact)
+//! - INT-5: Exit 0 prints "sessions exist" to `stdout` (exact)
+//! - INT-6: Exit 1 prints "no sessions" to `stderr` (exact)
 //! - INT-7: `topic::` filters to topic-specific storage
 //! - INT-8: `topic::` no history exits 1
 //! - INT-9: Nonexistent path exits 1 (not error)
@@ -23,26 +23,8 @@ use std::fs;
 use std::path::PathBuf;
 use tempfile::TempDir;
 
-fn stdout( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stdout ).into_owned()
-}
 
-fn stderr( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stderr ).into_owned()
-}
 
-fn assert_exit( out : &std::process::Output, code : i32 )
-{
-  assert_eq!(
-    out.status.code().unwrap_or( -1 ),
-    code,
-    "expected exit {code}, got {:?}; stderr: {}",
-    out.status.code(),
-    stderr( out )
-  );
-}
 
 /// Create storage history for a given directory path in `{home}/.claude/projects/`.
 fn setup_history( home : &std::path::Path, project_path : &std::path::Path )
@@ -72,8 +54,8 @@ fn int_1_cwd_with_history_exits_0()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "sessions exist" ),
     "must print 'sessions exist' on stdout; got:\n{s}"
@@ -97,8 +79,8 @@ fn int_2_cwd_without_history_exits_1()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
-  let e = stderr( &out );
+  common::assert_exit( &out, 1 );
+  let e = common::stderr( &out );
   assert!(
     e.contains( "no sessions" ),
     "must print 'no sessions' on stderr; got:\n{e}"
@@ -123,8 +105,8 @@ fn int_3_path_with_history_exits_0()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "sessions exist" ), "must print 'sessions exist'; got:\n{s}" );
 }
 
@@ -145,8 +127,8 @@ fn int_4_path_without_history_exits_1()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
-  let e = stderr( &out );
+  common::assert_exit( &out, 1 );
+  let e = common::stderr( &out );
   assert!( e.contains( "no sessions" ), "must print 'no sessions' on stderr; got:\n{e}" );
 }
 
@@ -170,16 +152,16 @@ fn int_5_exit_0_stdout_exact_sessions_exist()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
   assert_eq!(
-    stdout( &out ).as_str(),
+    common::stdout( &out ).as_str(),
     "sessions exist\n",
     "stdout must be exactly 'sessions exist\\n'"
   );
   assert!(
-    stderr( &out ).is_empty(),
+    common::stderr( &out ).is_empty(),
     "stderr must be empty on success; got:\n{}",
-    stderr( &out )
+    common::stderr( &out )
   );
 }
 
@@ -202,16 +184,16 @@ fn int_6_exit_1_stderr_exact_no_sessions()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
+  common::assert_exit( &out, 1 );
   assert_eq!(
-    stderr( &out ).as_str(),
+    common::stderr( &out ).as_str(),
     "no sessions\n",
     "stderr must be exactly 'no sessions\\n'"
   );
   assert!(
-    stdout( &out ).is_empty(),
+    common::stdout( &out ).is_empty(),
     "stdout must be empty when no history; got:\n{}",
-    stdout( &out )
+    common::stdout( &out )
   );
 }
 
@@ -240,8 +222,8 @@ fn int_7_topic_filters_to_topic_specific_storage()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "sessions exist" ), "must detect topic-specific history; got:\n{s}" );
 }
 
@@ -265,8 +247,8 @@ fn int_8_topic_no_history_exits_1()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
-  let e = stderr( &out );
+  common::assert_exit( &out, 1 );
+  let e = common::stderr( &out );
   assert!(
     e.contains( "no sessions" ),
     "must report 'no sessions' when topic-specific storage absent; got:\n{e}"
@@ -289,8 +271,8 @@ fn int_9_nonexistent_path_exits_1()
     .unwrap();
 
   // Must be exit 1 (no history), not exit 2 (storage error)
-  assert_exit( &out, 1 );
-  let e = stderr( &out );
+  common::assert_exit( &out, 1 );
+  let e = common::stderr( &out );
   assert!(
     e.contains( "no sessions" ),
     "nonexistent path must produce 'no sessions' not an error; got:\n{e}"
@@ -312,8 +294,8 @@ fn int_10_empty_topic_rejected_with_exit_1()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
-  let combined = format!( "{}{}", stderr( &out ), stdout( &out ) );
+  common::assert_exit( &out, 1 );
+  let combined = format!( "{}{}", common::stderr( &out ), common::stdout( &out ) );
   assert!(
     !combined.is_empty(),
     "must produce error output for empty topic::"

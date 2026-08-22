@@ -29,26 +29,8 @@ mod common;
 
 use tempfile::TempDir;
 
-fn stdout( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stdout ).into_owned()
-}
 
-fn stderr( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stderr ).into_owned()
-}
 
-fn assert_exit( out : &std::process::Output, code : i32 )
-{
-  assert_eq!(
-    out.status.code().unwrap_or( -1 ),
-    code,
-    "expected exit {code}, got {:?}; stderr: {}",
-    out.status.code(),
-    stderr( out )
-  );
-}
 
 /// INT-1: Default count returns project count.
 ///
@@ -83,8 +65,8 @@ fn int_1_default_count_returns_project_count()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out ).trim().to_string();
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out ).trim().to_string();
   let n : usize = s.parse().unwrap_or_else( |_| panic!(
     "INT-1: .count output must be a bare integer; got: '{s}'"
   ) );
@@ -124,8 +106,8 @@ fn int_2_target_sessions_with_project_returns_session_count()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out ).trim().to_string();
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out ).trim().to_string();
   let n : usize = s.parse().unwrap_or_else( |_| panic!(
     "INT-2: .count output must be a bare integer; got: '{s}'"
   ) );
@@ -163,8 +145,8 @@ fn int_3_target_entries_with_project_and_session_returns_entry_count()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out ).trim().to_string();
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out ).trim().to_string();
   let n : usize = s.parse().unwrap_or_else( |_| panic!(
     "INT-3: .count output must be a bare integer; got: '{s}'"
   ) );
@@ -201,8 +183,8 @@ fn int_4_output_is_single_integer_line()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let raw = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let raw = common::stdout( &out );
   let trimmed = raw.trim();
   assert_eq!(
     trimmed,
@@ -237,8 +219,8 @@ fn int_5_exit_code_0_on_success()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out ).trim().to_string();
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out ).trim().to_string();
   assert!(
     s.parse::< usize >().is_ok(),
     "INT-5: .count must produce integer on stdout; got: '{s}'"
@@ -271,8 +253,8 @@ fn int_6_exit_code_1_on_invalid_target_value()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
-  let err = stderr( &out );
+  common::assert_exit( &out, 1 );
+  let err = common::stderr( &out );
   assert!(
     !err.is_empty(),
     "INT-6: invalid target must produce error on stderr; got silence"
@@ -316,8 +298,8 @@ fn int_7_target_sessions_no_project_counts_all_sessions()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out ).trim().to_string();
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out ).trim().to_string();
   let n : usize = s.parse().unwrap_or_else( |_| panic!(
     "INT-7: .count target::sessions output must be a bare integer; got: '{s}'"
   ) );
@@ -355,8 +337,8 @@ fn int_8_target_entries_no_session_counts_all_entries_in_project()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out ).trim().to_string();
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out ).trim().to_string();
   let n : usize = s.parse().unwrap_or_else( |_| panic!(
     "INT-8: .count output must be a bare integer; got: '{s}'"
   ) );
@@ -398,8 +380,8 @@ fn t01_target_projects_default_scope_global_regression_guard()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out ).trim().to_string();
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out ).trim().to_string();
   let n : usize = s.parse().unwrap_or_else( |_| panic!(
     "T01: .count target::projects output must be a bare integer; got: '{s}'"
   ) );
@@ -457,14 +439,14 @@ fn t02_target_projects_scope_local_narrows_below_global()
     .output()
     .unwrap();
 
-  assert_exit( &global_out, 0 );
-  assert_exit( &local_out, 0 );
+  common::assert_exit( &global_out, 0 );
+  common::assert_exit( &local_out, 0 );
 
-  let global_n : usize = stdout( &global_out ).trim().parse().unwrap_or_else( |_| panic!(
-    "T02: global count must be a bare integer; got: '{}'", stdout( &global_out )
+  let global_n : usize = common::stdout( &global_out ).trim().parse().unwrap_or_else( |_| panic!(
+    "T02: global count must be a bare integer; got: '{}'", common::stdout( &global_out )
   ) );
-  let local_n : usize = stdout( &local_out ).trim().parse().unwrap_or_else( |_| panic!(
-    "T02: scope::local count must be a bare integer; got: '{}'", stdout( &local_out )
+  let local_n : usize = common::stdout( &local_out ).trim().parse().unwrap_or_else( |_| panic!(
+    "T02: scope::local count must be a bare integer; got: '{}'", common::stdout( &local_out )
   ) );
 
   assert_eq!( global_n, 3, "T02: expected global project count 3; got {global_n}" );
@@ -511,8 +493,8 @@ fn t03_target_sessions_default_scope_global_regression_guard()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out ).trim().to_string();
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out ).trim().to_string();
   let n : usize = s.parse().unwrap_or_else( |_| panic!(
     "T03: .count target::sessions output must be a bare integer; got: '{s}'"
   ) );
@@ -572,14 +554,14 @@ fn t04_target_sessions_scope_under_narrows_to_descendants()
     .output()
     .unwrap();
 
-  assert_exit( &global_out, 0 );
-  assert_exit( &under_out, 0 );
+  common::assert_exit( &global_out, 0 );
+  common::assert_exit( &under_out, 0 );
 
-  let global_n : usize = stdout( &global_out ).trim().parse().unwrap_or_else( |_| panic!(
-    "T04: global count must be a bare integer; got: '{}'", stdout( &global_out )
+  let global_n : usize = common::stdout( &global_out ).trim().parse().unwrap_or_else( |_| panic!(
+    "T04: global count must be a bare integer; got: '{}'", common::stdout( &global_out )
   ) );
-  let under_n : usize = stdout( &under_out ).trim().parse().unwrap_or_else( |_| panic!(
-    "T04: scope::under count must be a bare integer; got: '{}'", stdout( &under_out )
+  let under_n : usize = common::stdout( &under_out ).trim().parse().unwrap_or_else( |_| panic!(
+    "T04: scope::under count must be a bare integer; got: '{}'", common::stdout( &under_out )
   ) );
 
   assert_eq!( global_n, 5, "T04: expected global session count 5; got {global_n}" );
@@ -633,8 +615,8 @@ fn t05_issue_003a_shortcut_unaffected_by_scope()
     .output()
     .unwrap();
 
-  assert_exit( &no_scope_out, 0 );
-  assert_exit(
+  common::assert_exit( &no_scope_out, 0 );
+  common::assert_exit(
     &with_bogus_scope_out, 0
   );
   assert_eq!(
@@ -674,8 +656,8 @@ fn t06_target_projects_scope_bogus_rejected_with_canonical_error()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
-  let err = stderr( &out );
+  common::assert_exit( &out, 1 );
+  let err = common::stderr( &out );
   assert!(
     err.contains( "scope must be relevant|local|under|global|around, got bogus" ),
     "T06: scope::bogus must produce the canonical validate_scope() error; got: {err}"
@@ -727,14 +709,14 @@ fn t07_target_entries_ignores_scope()
     .output()
     .unwrap();
 
-  assert_exit( &no_scope_out, 0 );
-  assert_exit( &with_scope_out, 0 );
+  common::assert_exit( &no_scope_out, 0 );
+  common::assert_exit( &with_scope_out, 0 );
   assert_eq!(
     no_scope_out.stdout, with_scope_out.stdout,
     "T07: target::entries must ignore scope:: entirely — identical output with and without it"
   );
 
-  let s = stdout( &no_scope_out ).trim().to_string();
+  let s = common::stdout( &no_scope_out ).trim().to_string();
   let n : usize = s.parse().unwrap_or_else( |_| panic!(
     "T07: .count target::entries output must be a bare integer; got: '{s}'"
   ) );
@@ -803,14 +785,14 @@ fn t08_default_scope_fast_path_counts_unloadable_dir_resolver_path_skips_it()
     .output()
     .unwrap();
 
-  assert_exit( &global_out, 0 );
-  assert_exit( &local_out, 0 );
+  common::assert_exit( &global_out, 0 );
+  common::assert_exit( &local_out, 0 );
 
-  let global_n : usize = stdout( &global_out ).trim().parse().unwrap_or_else( |_| panic!(
-    "T08: global count must be a bare integer; got: '{}'", stdout( &global_out )
+  let global_n : usize = common::stdout( &global_out ).trim().parse().unwrap_or_else( |_| panic!(
+    "T08: global count must be a bare integer; got: '{}'", common::stdout( &global_out )
   ) );
-  let local_n : usize = stdout( &local_out ).trim().parse().unwrap_or_else( |_| panic!(
-    "T08: scope::local count must be a bare integer; got: '{}'", stdout( &local_out )
+  let local_n : usize = common::stdout( &local_out ).trim().parse().unwrap_or_else( |_| panic!(
+    "T08: scope::local count must be a bare integer; got: '{}'", common::stdout( &local_out )
   ) );
 
   assert_eq!(

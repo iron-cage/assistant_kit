@@ -1,8 +1,10 @@
 # Nextest configuration for assistant workspace
 #
-# Container-only enforcement (Invariant 009):
+# Container-only enforcement:
 # The setup-require-container script blocks bare-host test execution across
-# all workspace packages. See docs/invariant/009_container_only_test_execution.md
+# all workspace packages. Its own header documents the three container
+# detection signals and the VERB_LAYER=l0 escape hatch — see
+# .config/setup-require-container
 
 experimental = ["setup-scripts"]
 

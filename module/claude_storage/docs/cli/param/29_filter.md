@@ -7,7 +7,7 @@
 - **In Scope**: Value constraints, default behavior, command interactions.
 - **Out of Scope**: Type definitions (→ `type/`), command behavior (→ `command/`).
 
-Path-substring filter on projects already resolved by `scope::`/`path::`. Absorbed from `.list`'s former `path::` role (see [`02_list.md`](../command/02_list.md)) — kept as a distinct name on `.projects` because that command's own `path::` already means something else (the scope anchor).
+Path-substring filter on projects already resolved by `scope::`/`path::`. Absorbed from `.list`'s former `path::` role (see [`../command/02_list.md`](../command/02_list.md)) — kept as a distinct name on `.projects` because that command's own `path::` already means something else (the scope anchor).
 
 **Type:** [`PathSubstring`](../type/04_path_substring.md)
 

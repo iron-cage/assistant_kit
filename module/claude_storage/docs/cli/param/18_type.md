@@ -7,7 +7,7 @@
 - **In Scope**: Value constraints, default behavior, command interactions.
 - **Out of Scope**: Type definitions (→ `type/`), command behavior (→ `command/`).
 
-Project naming scheme filter for `.projects`. Absorbed from `.list` (see [`02_list.md`](../command/02_list.md)) with its `conversation` value dropped — that capability is now `ids::` (see [`31_ids.md`](31_ids.md)), which is orthogonal to naming-scheme filtering rather than a value of it.
+Project naming scheme filter for `.projects`. Absorbed from `.list` (see [`../command/02_list.md`](../command/02_list.md)) with its `conversation` value dropped — that capability is now `ids::` (see [`31_ids.md`](31_ids.md)), which is orthogonal to naming-scheme filtering rather than a value of it.
 
 **Type:** [`ProjectType`](../type/06_project_type.md)
 

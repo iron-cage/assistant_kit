@@ -27,21 +27,7 @@ mod common;
 
 use tempfile::TempDir;
 
-fn stderr( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stderr ).into_owned()
-}
 
-fn assert_exit( out : &std::process::Output, code : i32 )
-{
-  assert_eq!(
-    out.status.code().unwrap_or( -1 ),
-    code,
-    "expected exit {code}, got {:?}; stderr: {}",
-    out.status.code(),
-    stderr( out )
-  );
-}
 
 /// INT-1: `session_id::` required — missing arg exits with 1.
 ///
@@ -72,8 +58,8 @@ fn int_1_session_id_required_missing_arg_exits_1()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
-  let err = stderr( &out );
+  common::assert_exit( &out, 1 );
+  let err = common::stderr( &out );
   assert!(
     !err.is_empty(),
     "INT-1: missing session_id:: must produce error on stderr; got silence"
@@ -117,8 +103,8 @@ fn int_2_output_required_missing_arg_exits_1()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
-  let err = stderr( &out );
+  common::assert_exit( &out, 1 );
+  let err = common::stderr( &out );
   assert!(
     !err.is_empty(),
     "INT-2: missing output:: must produce error on stderr; got silence"
@@ -165,7 +151,7 @@ fn int_3_default_format_is_markdown()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
   assert!(
     out_file.exists(),
     "INT-3: output file must be created by default format export"
@@ -213,7 +199,7 @@ fn int_4_format_json_produces_json_array_output()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
   assert!(
     out_file.exists(),
     "INT-4: output file must be created with format::json"
@@ -263,7 +249,7 @@ fn int_5_format_text_produces_plain_transcript()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
   assert!(
     out_file.exists(),
     "INT-5: output file must be created with format::text"
@@ -321,11 +307,11 @@ fn int_6_output_file_is_created_at_output_path()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
   assert!(
     out_file.exists(),
     "INT-6: output file must be created at the specified path; stderr: {}",
-    stderr( &out )
+    common::stderr( &out )
   );
 }
 
@@ -367,7 +353,7 @@ fn int_7_output_file_is_overwritten_if_exists()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
   let content = std::fs::read_to_string( &out_file ).unwrap();
   assert!(
     !content.contains( "old content sentinel xyz" ),
@@ -409,8 +395,8 @@ fn int_8_exit_code_2_when_output_parent_dir_does_not_exist()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
-  let err = stderr( &out );
+  common::assert_exit( &out, 1 );
+  let err = common::stderr( &out );
   assert!(
     !err.is_empty(),
     "INT-8: nonexistent output dir must produce error on stderr; got silence"
@@ -467,7 +453,7 @@ fn int_9_project_selects_session_from_named_project()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
   assert!(
     out_file.exists(),
     "INT-9: output file must be created when project::alpha specified"
@@ -518,11 +504,11 @@ fn int_10_export_succeeds_with_valid_session_and_output_path()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
   assert!(
     out_file.exists(),
     "INT-10: export must create output file; stderr: {}",
-    stderr( &out )
+    common::stderr( &out )
   );
   let content = std::fs::read_to_string( &out_file ).unwrap();
   assert!(
@@ -569,11 +555,11 @@ fn t01_default_scope_local_exact_project_regression_guard()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
   assert!(
     out_file.exists(),
     "T01: default scope must find session in cwd project, matching pre-retrofit behavior; stderr: {}",
-    stderr( &out )
+    common::stderr( &out )
   );
   let content = std::fs::read_to_string( &out_file ).unwrap();
   assert!(
@@ -625,11 +611,11 @@ fn t02_scope_local_finds_session_in_topic_suffixed_project()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
   assert!(
     out_file.exists(),
     "T02: default local scope must find session in topic-suffixed project; stderr: {}",
-    stderr( &out )
+    common::stderr( &out )
   );
   let content = std::fs::read_to_string( &out_file ).unwrap();
   assert!(
@@ -676,11 +662,11 @@ fn t03_scope_global_finds_session_in_unrelated_project()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
   assert!(
     out_file.exists(),
     "T03: scope::global must find session in an unrelated project regardless of cwd; stderr: {}",
-    stderr( &out )
+    common::stderr( &out )
   );
   let content = std::fs::read_to_string( &out_file ).unwrap();
   assert!(
@@ -721,8 +707,8 @@ fn t04_scope_bogus_rejected_with_canonical_error()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
-  let err = stderr( &out );
+  common::assert_exit( &out, 1 );
+  let err = common::stderr( &out );
   assert!(
     err.contains( "scope must be relevant|local|under|global|around, got bogus" ),
     "T04: scope::bogus must produce the canonical validate_scope() error; got: {err}"
@@ -782,8 +768,8 @@ fn t05_project_given_scope_ignored()
     .output()
     .unwrap();
 
-  assert_exit( &without_scope, 0 );
-  assert_exit( &with_scope, 0 );
+  common::assert_exit( &without_scope, 0 );
+  common::assert_exit( &with_scope, 0 );
   let content_a = std::fs::read_to_string( &out_file_a ).unwrap();
   let content_b = std::fs::read_to_string( &out_file_b ).unwrap();
   assert_eq!(
@@ -841,11 +827,11 @@ fn t06_path_anchor_override_without_explicit_scope()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
   assert!(
     out_file.exists(),
     "T06: path:: must anchor scope resolution to the given directory; stderr: {}",
-    stderr( &out )
+    common::stderr( &out )
   );
   let content = std::fs::read_to_string( &out_file ).unwrap();
   assert!(

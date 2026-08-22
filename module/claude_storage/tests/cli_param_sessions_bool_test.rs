@@ -18,26 +18,8 @@ mod common;
 
 use tempfile::TempDir;
 
-fn stdout( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stdout ).into_owned()
-}
 
-fn stderr( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stderr ).into_owned()
-}
 
-fn assert_exit( out : &std::process::Output, code : i32 )
-{
-  assert_eq!(
-    out.status.code().unwrap_or( -1 ),
-    code,
-    "expected exit {code}, got {:?}; stderr: {}",
-    out.status.code(),
-    stderr( out )
-  );
-}
 
 /// EC-1: `show_sessions::1` forces session display with no filters.
 ///
@@ -67,8 +49,8 @@ fn ec_1_sessions_1_forces_display()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let output = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let output = common::stdout( &out );
   assert!(
     output.contains( "default" ),
     "EC-1: show_sessions::1 must force session display; got: {output}"
@@ -111,12 +93,12 @@ fn ec_2_sessions_0_suppresses_with_session_filter()
     .output()
     .unwrap();
 
-  assert_exit( &out_suppressed, 0 );
-  assert_exit( &out_enabled, 0 );
+  common::assert_exit( &out_suppressed, 0 );
+  common::assert_exit( &out_enabled, 0 );
 
   // The suppressed output should be shorter (no session rows)
-  let suppressed_len = stdout( &out_suppressed ).len();
-  let enabled_len = stdout( &out_enabled ).len();
+  let suppressed_len = common::stdout( &out_suppressed ).len();
+  let enabled_len = common::stdout( &out_enabled ).len();
   assert!(
     suppressed_len <= enabled_len,
     "EC-2: show_sessions::0 output must be no longer than show_sessions::1 output; suppressed={suppressed_len}, enabled={enabled_len}"
@@ -160,12 +142,12 @@ fn ec_3_sessions_0_suppresses_with_agent_filter()
     .output()
     .unwrap();
 
-  assert_exit( &out_suppressed, 0 );
-  assert_exit( &out_enabled, 0 );
+  common::assert_exit( &out_suppressed, 0 );
+  common::assert_exit( &out_enabled, 0 );
 
   // show_sessions::0 output must be no longer than show_sessions::1 output
-  let suppressed_len = stdout( &out_suppressed ).len();
-  let enabled_len = stdout( &out_enabled ).len();
+  let suppressed_len = common::stdout( &out_suppressed ).len();
+  let enabled_len = common::stdout( &out_enabled ).len();
   assert!(
     suppressed_len <= enabled_len,
     "EC-3: show_sessions::0 output must be no longer than show_sessions::1 output; suppressed={suppressed_len}, enabled={enabled_len}"
@@ -208,11 +190,11 @@ fn ec_4_sessions_0_suppresses_with_min_entries_filter()
     .output()
     .unwrap();
 
-  assert_exit( &out_suppressed, 0 );
-  assert_exit( &out_enabled, 0 );
+  common::assert_exit( &out_suppressed, 0 );
+  common::assert_exit( &out_enabled, 0 );
 
-  let suppressed_len = stdout( &out_suppressed ).len();
-  let enabled_len = stdout( &out_enabled ).len();
+  let suppressed_len = common::stdout( &out_suppressed ).len();
+  let enabled_len = common::stdout( &out_enabled ).len();
   assert!(
     suppressed_len <= enabled_len,
     "EC-4: show_sessions::0 output must be no longer than show_sessions::1 output; suppressed={suppressed_len}, enabled={enabled_len}"
@@ -246,7 +228,7 @@ fn ec_5_sessions_omitted_no_filters_no_sessions_shown()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
 }
 
 /// EC-6: Omitted + `session::` present = sessions auto-shown.
@@ -276,8 +258,8 @@ fn ec_6_sessions_omitted_with_session_filter_auto_shown()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let output = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let output = common::stdout( &out );
   assert!(
     output.contains( "default" ),
     "EC-6: session:: filter must auto-enable session display; got: {output}"
@@ -311,5 +293,5 @@ fn ec_7_sessions_yes_rejected()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
 }

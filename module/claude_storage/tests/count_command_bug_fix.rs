@@ -33,10 +33,40 @@ mod common;
 use std::fs;
 use tempfile::TempDir;
 
-/// Test Bug #003a: .count should be context-aware like .show
+/// Test Bug #003a: `.count` should be context-aware like `.show`.
 ///
 /// When called with NO parameters from within a project directory,
-/// .count should count entries in that project, not count all projects globally.
+/// `.count` should count entries in that project, not count all projects globally.
+///
+/// ## Root Cause
+///
+/// `.count` defaulted to `target::projects` when invoked without parameters,
+/// counting all projects globally, while `.show` reported stats for the current
+/// project. Users reasonably expected `.count` to count what `.show` shows.
+/// See the `Fix(issue-003a)` comment at `src/cli/count.rs:28`.
+///
+/// ## Why Not Caught
+///
+/// Every prior `.count` test supplied an explicit `target::` or `project::`
+/// parameter, so the zero-parameter default path was never exercised from
+/// inside a project directory — the only invocation shape that exposes the bug.
+///
+/// ## Fix Applied
+///
+/// When no parameters are supplied and the CWD resolves to a project, `.count`
+/// counts total entries in that project instead of counting projects globally.
+///
+/// ## Prevention
+///
+/// When a command gains a context-aware default, add a test that invokes it with
+/// no parameters at all from inside a project — defaults are only reachable by
+/// omitting arguments, so parameterized tests cannot cover them.
+///
+/// ## Pitfall
+///
+/// Related commands should have consistent default behaviors. If `.show` is
+/// context-aware (uses CWD), `.count` must be too — do not leave one global and
+/// one local.
 // test_kind: bug_reproducer(issue-003a)
 #[ test ]
 fn test_count_default_behavior_context_aware()
@@ -77,10 +107,40 @@ fn test_count_default_behavior_context_aware()
   );
 }
 
-/// Test Bug #003b: .count should handle path-based project parameters
+/// Test Bug #003b: `.count` should handle path-based project parameters.
 ///
-/// The .count command should use `parse_project_parameter()` to handle
+/// The `.count` command should use `parse_project_parameter()` to handle
 /// both UUID and path-based project parameters, not hardcode `ProjectId::uuid()`.
+///
+/// ## Root Cause
+///
+/// `count_routine` constructed the project id with a hardcoded
+/// `ProjectId::uuid()`, so a path-encoded project parameter never resolved.
+/// See the `Root cause:` notes at `src/cli/count.rs:120` and `:172` —
+/// "Hardcoded `ProjectId::uuid()` prevented path projects from working."
+///
+/// ## Why Not Caught
+///
+/// Existing `.count` coverage used UUID project ids exclusively. `ProjectId` has
+/// two constructors and only one was ever exercised, so the hardcoded call site
+/// looked correct against the whole suite.
+///
+/// ## Fix Applied
+///
+/// `count_routine` now routes the `project::` parameter through
+/// `parse_project_parameter()`, which resolves both UUID and path-encoded forms.
+///
+/// ## Prevention
+///
+/// Every command accepting `project::` needs coverage for both project id forms.
+/// A single-form test suite cannot distinguish a correct parser from a hardcoded
+/// constructor.
+///
+/// ## Pitfall
+///
+/// When a domain type offers several constructors, hardcoding one silently
+/// disables the others for that call site — the code compiles and passes any
+/// test that happens to use the hardcoded form.
 // test_kind: bug_reproducer(issue-003b)
 #[ test ]
 fn test_count_with_path_project_parameter()
@@ -225,10 +285,40 @@ fn test_count_skips_unreadable_sessions()
   );
 }
 
-/// Verification test: .count with explicit `target::projects` should still work
+/// Verification test: `.count` with explicit `target::projects` should still work.
 ///
-/// After fixing Bug #003a to make default context-aware, the explicit
+/// After fixing Bug #003a to make the default context-aware, the explicit
 /// `target::projects` should still count all projects globally.
+///
+/// ## Root Cause
+///
+/// Same defect as `test_count_default_behavior_context_aware` — `.count`
+/// defaulted to global project counting (`src/cli/count.rs:28`). This test guards
+/// the opposite edge: the fix must narrow only the no-parameter default, leaving
+/// the explicit `target::projects` path counting globally as before.
+///
+/// ## Why Not Caught
+///
+/// Nothing pinned the explicit-parameter path, so a fix that made `.count`
+/// context-aware unconditionally — rather than only when parameters are absent —
+/// would have silently broken global counting with the suite still green.
+///
+/// ## Fix Applied
+///
+/// Context-awareness is gated on the absence of parameters; an explicit
+/// `target::projects` continues to count all projects globally.
+///
+/// ## Prevention
+///
+/// When changing a command's default behavior, add a companion test asserting
+/// the explicit form is unchanged. A default-behavior fix has two sides and only
+/// one of them is the reported bug.
+///
+/// ## Pitfall
+///
+/// Narrowing a default is not the same as changing the operation. Apply the new
+/// behavior only on the branch where the parameter is absent, never to the
+/// explicitly-parameterized branch.
 // test_kind: bug_reproducer(issue-003a)
 #[ test ]
 fn test_count_explicit_target_projects()

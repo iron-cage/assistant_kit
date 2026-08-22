@@ -29,26 +29,8 @@ mod common;
 
 use tempfile::TempDir;
 
-fn stdout( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stdout ).into_owned()
-}
 
-fn stderr( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stderr ).into_owned()
-}
 
-fn assert_exit( out : &std::process::Output, code : i32 )
-{
-  assert_eq!(
-    out.status.code().unwrap_or( -1 ),
-    code,
-    "expected exit {code}, got {:?}; stderr: {}",
-    out.status.code(),
-    stderr( out )
-  );
-}
 
 // ─── INT-1 ────────────────────────────────────────────────────────────────────
 
@@ -69,10 +51,10 @@ fn int_1_path_with_default_topic_produces_default_topic_dir()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
   let expected = format!( "{base}/-default_topic\n" );
   assert_eq!(
-    stdout( &out ).as_str(),
+    common::stdout( &out ).as_str(),
     expected.as_str(),
     "output must be {{base}}/-default_topic"
   );
@@ -98,10 +80,10 @@ fn int_2_path_with_custom_topic_produces_topic_dir()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
   let expected = format!( "{base}/-work\n" );
   assert_eq!(
-    stdout( &out ).as_str(),
+    common::stdout( &out ).as_str(),
     expected.as_str(),
     "output must be {{base}}/-work"
   );
@@ -156,8 +138,8 @@ fn int_4_output_is_single_absolute_line()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   let content = s.trim_end_matches( '\n' );
   let lines : Vec< &str > = content.split( '\n' ).filter( | l | !l.is_empty() ).collect();
   assert_eq!(
@@ -188,8 +170,8 @@ fn int_5_tilde_expanded_in_path()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     !s.contains( '~' ),
     "output must not contain literal '~'; got:\n{s}"
@@ -231,11 +213,11 @@ fn int_6_path_dot_resolves_to_cwd()
     .output()
     .unwrap();
 
-  assert_exit( &out_dot, 0 );
-  assert_exit( &out_explicit, 0 );
+  common::assert_exit( &out_dot, 0 );
+  common::assert_exit( &out_explicit, 0 );
   assert_eq!(
-    stdout( &out_dot ),
-    stdout( &out_explicit ),
+    common::stdout( &out_dot ),
+    common::stdout( &out_explicit ),
     "path::. must produce same output as explicit cwd path"
   );
 }
@@ -260,8 +242,8 @@ fn int_7_empty_topic_rejected()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
-  let combined = format!( "{}{}", stderr( &out ), stdout( &out ) );
+  common::assert_exit( &out, 1 );
+  let combined = format!( "{}{}", common::stderr( &out ), common::stdout( &out ) );
   assert!(
     !combined.is_empty(),
     "must produce error output for empty topic::"
@@ -288,8 +270,8 @@ fn int_8_topic_with_slash_rejected()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
-  let combined = format!( "{}{}", stderr( &out ), stdout( &out ) );
+  common::assert_exit( &out, 1 );
+  let combined = format!( "{}{}", common::stderr( &out ), common::stdout( &out ) );
   assert!(
     !combined.is_empty(),
     "must produce error output for slash-containing topic::"
@@ -316,7 +298,7 @@ fn int_9_does_not_create_directory()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
 
   // The session directory must NOT have been created
   let session_dir = project.path().join( "-default_topic" );
@@ -343,8 +325,8 @@ fn int_10_exits_0_for_nonexistent_path()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     !s.trim().is_empty(),
     "must output computed path even for nonexistent base; got empty stdout"

@@ -17,26 +17,8 @@ mod common;
 
 use tempfile::TempDir;
 
-fn stdout( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stdout ).into_owned()
-}
 
-fn stderr( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stderr ).into_owned()
-}
 
-fn assert_exit( out : &std::process::Output, code : i32 )
-{
-  assert_eq!(
-    out.status.code().unwrap_or( -1 ),
-    code,
-    "expected exit {code}, got {:?}; stderr: {}",
-    out.status.code(),
-    stderr( out )
-  );
-}
 
 /// CC-1: `session_id::` in .show displays session content.
 ///
@@ -65,12 +47,12 @@ fn cc_1_session_id_in_show_displays_session_content()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     !s.is_empty(),
     "CC-1: .show session_id:: must produce content; stderr: {}",
-    stderr( &out )
+    common::stderr( &out )
   );
 }
 
@@ -105,11 +87,11 @@ fn cc_2_session_id_in_export_exports_the_same_session()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
   assert!(
     output_file.exists(),
     "CC-2: .export session_id:: must create output file; stderr: {}",
-    stderr( &out )
+    common::stderr( &out )
   );
   let content = std::fs::read_to_string( &output_file ).unwrap();
   assert!(
@@ -164,11 +146,11 @@ fn cc_3_same_session_id_resolves_same_session_in_both_commands()
     .output()
     .unwrap();
 
-  assert_exit( &show_out, 0 );
-  assert_exit( &export_out, 0 );
+  common::assert_exit( &show_out, 0 );
+  common::assert_exit( &export_out, 0 );
 
   assert!(
-    !stdout( &show_out ).is_empty(),
+    !common::stdout( &show_out ).is_empty(),
     "CC-3: .show must produce content for the session"
   );
   assert!(
@@ -212,9 +194,9 @@ fn cc_4_session_id_required_in_export_optional_in_show()
     .output()
     .unwrap();
 
-  assert_exit( &export_out, 1 );
+  common::assert_exit( &export_out, 1 );
   assert!(
-    !stderr( &export_out ).is_empty(),
+    !common::stderr( &export_out ).is_empty(),
     "CC-4: .export without session_id:: must emit error on stderr"
   );
 
@@ -226,11 +208,11 @@ fn cc_4_session_id_required_in_export_optional_in_show()
     .output()
     .unwrap();
 
-  assert_exit( &show_out, 0 );
+  common::assert_exit( &show_out, 0 );
   assert!(
-    !stdout( &show_out ).is_empty(),
+    !common::stdout( &show_out ).is_empty(),
     "CC-4: .show without session_id:: must produce project-level output; stderr: {}",
-    stderr( &show_out )
+    common::stderr( &show_out )
   );
 }
 
@@ -275,8 +257,8 @@ fn cc_5_session_id_depends_on_project_for_scoping()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "project-a" ) || s.contains( "content from project-a" ),
     "CC-5: session must resolve to project-a scope; got:\n{s}"
@@ -314,10 +296,10 @@ fn cc_6_session_id_without_project_resolves_via_cwd()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
   assert!(
-    !stdout( &out ).is_empty(),
+    !common::stdout( &out ).is_empty(),
     "CC-6: .show session_id:: via cwd must produce content; stderr: {}",
-    stderr( &out )
+    common::stderr( &out )
   );
 }

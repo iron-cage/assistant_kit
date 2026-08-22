@@ -48,26 +48,8 @@ mod common;
 
 use tempfile::TempDir;
 
-fn stdout( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stdout ).into_owned()
-}
 
-fn stderr( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stderr ).into_owned()
-}
 
-fn assert_exit( out : &std::process::Output, code : i32 )
-{
-  assert_eq!(
-    out.status.code().unwrap_or( -1 ),
-    code,
-    "expected exit {code}, got {:?}; stderr: {}",
-    out.status.code(),
-    stderr( out )
-  );
-}
 
 /// Expected `.cost` table line, using the command's exact column widths
 /// (12/6/7/14×5/11/7/10, two-space separators). Building expectations
@@ -220,8 +202,8 @@ fn cost_int_1_default_current_single_row_no_total()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   let header = row( "Conversation", "Agents", "Req", "Input", "Output", "CacheR", "CacheW",
     "Total", "MaxCtx", "Compact", "Cost" );
   assert!( s.starts_with( &header ), "INT-1: exact header expected; got:\n{s}" );
@@ -288,8 +270,8 @@ fn cost_int_2_multi_row_total_row()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   let row_b = row( "bbbb2222", "0", "2", "200", "70", "0", "0", "270", "150", "0", "$0.00" );
   let row_a = row( "aaaa1111", "0", "1", "100", "50", "0", "0", "150", "100", "0", "$0.00" );
   let row_total = row( "TOTAL", "0", "3", "300", "120", "0", "0", "420", "—", "0", "$0.00" );
@@ -337,8 +319,8 @@ fn cost_int_3_unique_prefix_resolves()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "aaaa1111" ), "INT-3: resolved conversation row expected; got:\n{s}" );
   assert_eq!( data_rows( &s ), 1, "INT-3: exactly one body row expected; got:\n{s}" );
 }
@@ -385,13 +367,13 @@ fn cost_int_4_ambiguous_prefix_rejected()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
+  common::assert_exit( &out, 1 );
   assert!(
-    stderr( &out ).contains( &format!( "ambiguous session ID prefix 'aaaa': matches {id_1}, {id_2}" ) ),
+    common::stderr( &out ).contains( &format!( "ambiguous session ID prefix 'aaaa': matches {id_1}, {id_2}" ) ),
     "INT-4: stderr must list every match in sorted order; got: {}",
-    stderr( &out )
+    common::stderr( &out )
   );
-  assert!( stdout( &out ).is_empty(), "INT-4: no table output expected; got:\n{}", stdout( &out ) );
+  assert!( common::stdout( &out ).is_empty(), "INT-4: no table output expected; got:\n{}", common::stdout( &out ) );
 }
 
 /// INT-5: A session ID matching nothing is rejected.
@@ -423,13 +405,13 @@ fn cost_int_5_unknown_id_rejected()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
+  common::assert_exit( &out, 1 );
   assert!(
-    stderr( &out ).contains( "Session not found: zzzz" ),
+    common::stderr( &out ).contains( "Session not found: zzzz" ),
     "INT-5: stderr must name the unmatched request; got: {}",
-    stderr( &out )
+    common::stderr( &out )
   );
-  assert!( stdout( &out ).is_empty(), "INT-5: no table output expected; got:\n{}", stdout( &out ) );
+  assert!( common::stdout( &out ).is_empty(), "INT-5: no table output expected; got:\n{}", common::stdout( &out ) );
 }
 
 /// INT-6: Agent sessions from BOTH layouts fold into the conversation row
@@ -472,8 +454,8 @@ fn cost_int_6_agents_folded_by_default()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   let expected = row( "cccc3333", "3", "8", "80", "40", "0", "0", "120", "10", "0", "$0.00" );
   assert!( s.contains( &expected ), "INT-6: exact folded row expected:\n{expected}\ngot:\n{s}" );
 }
@@ -515,8 +497,8 @@ fn cost_int_7_agents_zero_root_only()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   let expected = row( "cccc3333", "0", "2", "20", "10", "0", "0", "30", "10", "0", "$0.00" );
   assert!( s.contains( &expected ), "INT-7: exact root-only row expected:\n{expected}\ngot:\n{s}" );
 }
@@ -541,13 +523,13 @@ fn cost_int_8_agents_invalid_rejected()
 {
   let out = common::clg_cmd().arg( ".cost" ).arg( "agents::2" ).output().unwrap();
 
-  assert_exit( &out, 1 );
+  common::assert_exit( &out, 1 );
   assert!(
-    stderr( &out ).contains( "agents must be 0 or 1" ),
+    common::stderr( &out ).contains( "agents must be 0 or 1" ),
     "INT-8: stderr must name the constraint; got: {}",
-    stderr( &out )
+    common::stderr( &out )
   );
-  assert!( stdout( &out ).is_empty(), "INT-8: no table output expected; got:\n{}", stdout( &out ) );
+  assert!( common::stdout( &out ).is_empty(), "INT-8: no table output expected; got:\n{}", common::stdout( &out ) );
 }
 
 /// INT-9: `session_ids::` with no non-empty ID is rejected.
@@ -572,13 +554,13 @@ fn cost_int_9_empty_session_ids_rejected()
 {
   let out = common::clg_cmd().arg( ".cost" ).arg( "session_ids::," ).output().unwrap();
 
-  assert_exit( &out, 1 );
+  common::assert_exit( &out, 1 );
   assert!(
-    stderr( &out ).contains( "session_ids must contain at least one session ID" ),
+    common::stderr( &out ).contains( "session_ids must contain at least one session ID" ),
     "INT-9: stderr must name the emptiness constraint; got: {}",
-    stderr( &out )
+    common::stderr( &out )
   );
-  assert!( stdout( &out ).is_empty(), "INT-9: no table output expected; got:\n{}", stdout( &out ) );
+  assert!( common::stdout( &out ).is_empty(), "INT-9: no table output expected; got:\n{}", common::stdout( &out ) );
 }
 
 /// INT-10: Golden pricing example — cache-TTL split, unknown-TTL fallback,
@@ -633,8 +615,8 @@ fn cost_int_10_golden_pricing_ttl_synthetic_compaction()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   let expected = row( "dddd4444", "0", "3", "1,500,000", "300,000", "3,000,000", "700,000",
     "5,500,000", "4,500,000", "1", "$5.25" );
   assert!( s.contains( &expected ), "INT-10: exact golden row expected:\n{expected}\ngot:\n{s}" );
@@ -676,11 +658,11 @@ fn cost_int_11_no_project_exits_2()
     .output()
     .unwrap();
 
-  assert_exit( &out, 2 );
+  common::assert_exit( &out, 2 );
   assert!(
-    stderr( &out ).contains( "No project found for current directory" ),
+    common::stderr( &out ).contains( "No project found for current directory" ),
     "INT-11: stderr must name the missing cwd project; got: {}",
-    stderr( &out )
+    common::stderr( &out )
   );
 }
 
@@ -724,8 +706,8 @@ fn cost_int_12_path_parameter_selects_project()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "eeee5555" ), "INT-12: path-selected conversation row expected; got:\n{s}" );
   assert_eq!( data_rows( &s ), 1, "INT-12: exactly one body row expected; got:\n{s}" );
 }
@@ -768,8 +750,8 @@ fn cost_int_13_duplicate_requests_collapse()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert_eq!( data_rows( &s ), 1, "INT-13: duplicate requests must collapse to one row; got:\n{s}" );
   assert!( !s.contains( "TOTAL" ), "INT-13: no TOTAL row for a single collapsed conversation; got:\n{s}" );
 }
@@ -823,8 +805,8 @@ fn cost_int_14_cross_project_duplicate_picks_richest()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   let expected = row( "ffff6666", "0", "3", "30", "15", "0", "0", "45", "10", "0", "$0.00" );
   assert!( s.contains( &expected ), "INT-14: richest copy's exact row expected:\n{expected}\ngot:\n{s}" );
   assert_eq!( data_rows( &s ), 1, "INT-14: exactly one body row expected; got:\n{s}" );

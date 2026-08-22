@@ -31,26 +31,8 @@ use claude_storage_core::
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
-fn stdout( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stdout ).into_owned()
-}
 
-fn stderr( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stderr ).into_owned()
-}
 
-fn assert_exit( out : &std::process::Output, code : i32 )
-{
-  assert_eq!(
-    out.status.code().unwrap_or( -1 ),
-    code,
-    "expected exit {code}, got {:?}; stderr: {}",
-    out.status.code(),
-    stderr( out )
-  );
-}
 
 /// Full JSONL line with all required fields for a user entry.
 fn user_jsonl_line( uuid : &str, session_id : &str, content : &str ) -> String
@@ -150,8 +132,8 @@ fn in_4_encode_decode_round_trip_via_cli()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "my_proj" ),
     "IN-4: display path must contain 'my_proj' (underscore preserved by FS-guided decode); got:\n{s}"
@@ -197,8 +179,8 @@ fn in_5_collision_paths_disambiguated_by_dfs()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   // DFS resolves the encoded key to the real underscore directory on disk
   assert!(
     s.contains( "my_app" ),
@@ -457,17 +439,17 @@ fn in_6_empty_meta_json_parsed_without_error()
     .output()
     .unwrap();
 
-  assert_exit(
+  common::assert_exit(
     &out,
     0,
     // 0-byte meta.json must not cause a parse error
   );
   // Verify project appears in output (confirms it was processed)
-  let s = stdout( &out );
+  let s = common::stdout( &out );
   assert!(
     !s.is_empty(),
     "IN-6: .projects must produce non-empty output when meta.json is empty; stderr: {}",
-    stderr( &out )
+    common::stderr( &out )
   );
 }
 

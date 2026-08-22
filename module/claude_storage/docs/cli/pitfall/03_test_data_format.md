@@ -47,7 +47,7 @@ Test JSONL entries must include **all** of:
 The minimal example above covers the required-field floor, but omits several
 fields that exist only on richer entries — needed when a test fixture must
 exercise `fields::all` or any single one of `.show`'s 18 canonical attributes
-(see [`type/15_field_selector.md`](../type/15_field_selector.md)). Two gaps
+(see [`../type/15_field_selector.md`](../type/15_field_selector.md)). Two gaps
 recur:
 
 **`thinkingMetadata` is a top-level sibling of `message`, not nested inside
@@ -109,4 +109,4 @@ top-level field fails the whole entry — see `parse_content_block` in
 
 - `tests/cli_commands.rs:85` — Known Pitfalls section with production format validation
 - `changelog.md:106` — pitfall documented after issue-011
-- [`invariant/003_entry_type_format.md`](../../invariant/003_entry_type_format.md) — formal entry type contract
+- [`../../invariant/003_entry_type_format.md`](../../invariant/003_entry_type_format.md) — formal entry type contract

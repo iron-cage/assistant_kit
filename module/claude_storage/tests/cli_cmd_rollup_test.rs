@@ -64,26 +64,8 @@ mod common;
 
 use tempfile::TempDir;
 
-fn stdout( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stdout ).into_owned()
-}
 
-fn stderr( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stderr ).into_owned()
-}
 
-fn assert_exit( out : &std::process::Output, code : i32 )
-{
-  assert_eq!(
-    out.status.code().unwrap_or( -1 ),
-    code,
-    "expected exit {code}, got {:?}; stderr: {}",
-    out.status.code(),
-    stderr( out )
-  );
-}
 
 /// Fully controlled session fixture: every value `.rollup` aggregates.
 ///
@@ -229,8 +211,8 @@ fn int_1_default_group_session_one_row_per_session()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "sessaaa1" ), "INT-1: first session must appear; got:\n{s}" );
   assert!( s.contains( "sessbbb2" ), "INT-1: second session must appear; got:\n{s}" );
   assert_eq!( data_rows( &s ), 2, "INT-1: one row per session expected; got:\n{s}" );
@@ -279,8 +261,8 @@ fn int_2_group_project_sums_sessions_into_one_row()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert_eq!( data_rows( &s ), 1, "INT-2: two sessions in one project must collapse to 1 row; got:\n{s}" );
   assert!( s.contains( "1.0k" ), "INT-2: summed total (600+400=1000) must appear as 1.0k; got:\n{s}" );
 }
@@ -326,8 +308,8 @@ fn int_3_group_model_separates_rows_by_model()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "claude-opus-5" ), "INT-3: opus row must appear; got:\n{s}" );
   assert!( s.contains( "claude-haiku-5" ), "INT-3: haiku row must appear; got:\n{s}" );
   assert_eq!( data_rows( &s ), 2, "INT-3: distinct models must not merge; got:\n{s}" );
@@ -373,8 +355,8 @@ fn int_4_group_day_separates_rows_by_calendar_day()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "2025-06-01" ), "INT-4: first day must appear; got:\n{s}" );
   assert!( s.contains( "2025-06-05" ), "INT-4: second day must appear; got:\n{s}" );
   assert_eq!( data_rows( &s ), 2, "INT-4: distinct days must not merge; got:\n{s}" );
@@ -429,8 +411,8 @@ fn int_5_sort_calls_desc_orders_by_call_count()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   let a = s.find( "sortaaa1" ).expect( "sortaaa1 row must exist" );
   let b = s.find( "sortbbb2" ).expect( "sortbbb2 row must exist" );
   let c = s.find( "sortccc3" ).expect( "sortccc3 row must exist" );
@@ -485,8 +467,8 @@ fn int_6_order_asc_reverses_sort_calls_result()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   let a = s.find( "sortaaa1" ).expect( "sortaaa1 row must exist" );
   let b = s.find( "sortbbb2" ).expect( "sortbbb2 row must exist" );
   let c = s.find( "sortccc3" ).expect( "sortccc3 row must exist" );
@@ -531,8 +513,8 @@ fn int_7_columns_custom_subset_projects_only_those()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let header = stdout( &out ).lines().next().unwrap_or_default().to_string();
+  common::assert_exit( &out, 0 );
+  let header = common::stdout( &out ).lines().next().unwrap_or_default().to_string();
   // `Fix(BUG-544)`: the group column's header is the active grouping dimension,
   // so the default `group::session` labels it `Session`, not a constant `Group`.
   assert!( header.starts_with( "Session " ), "INT-7: group column must be labelled Session; got:\n{header}" );
@@ -579,8 +561,8 @@ fn int_8_columns_default_excludes_first_last()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let header = stdout( &out ).lines().next().unwrap_or_default().to_string();
+  common::assert_exit( &out, 0 );
+  let header = common::stdout( &out ).lines().next().unwrap_or_default().to_string();
   // `Fix(BUG-544)`: under the default `group::session` the group column is
   // labelled `Session` and a `Project` column follows it, so a bare session id
   // is always attributable to a directory.
@@ -644,8 +626,8 @@ fn int_9_model_filter_recomputes_percent_against_filtered_total()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "opusaaa1" ), "INT-9: first opus session must survive; got:\n{s}" );
   assert!( s.contains( "opusbbb2" ), "INT-9: second opus session must survive; got:\n{s}" );
   assert!( !s.contains( "haikccc3" ), "INT-9: haiku session must be filtered out; got:\n{s}" );
@@ -701,8 +683,8 @@ fn int_10_limit_caps_grouped_rows_not_raw_sessions()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert_eq!( data_rows( &s ), 2, "INT-10: limit::2 must cap grouped rows to 2; got:\n{s}" );
   assert!( s.contains( "900" ), "INT-10: highest-total row must survive; got:\n{s}" );
   assert!( s.contains( "600" ), "INT-10: second-highest row must survive; got:\n{s}" );
@@ -745,8 +727,8 @@ fn int_11_scope_global_smoke()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "glbtaaa1" ), "INT-11: first unrelated project must appear; got:\n{s}" );
   assert!( s.contains( "glbtbbb2" ), "INT-11: second unrelated project must appear; got:\n{s}" );
 }
@@ -797,8 +779,8 @@ fn int_12_depth_caps_component_distance_smoke()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "deptaaa1" ), "INT-12: distance-0 project must survive depth::1; got:\n{s}" );
   assert!( s.contains( "deptbbb2" ), "INT-12: distance-1 project must survive depth::1; got:\n{s}" );
   assert!( !s.contains( "deptccc3" ), "INT-12: distance-2 project must be dropped by depth::1; got:\n{s}" );
@@ -872,13 +854,13 @@ fn int_13_worked_example_byte_exact()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
   let expected = "\
 Session                   Sessions   Calls     Input    Output     Cache    MaxCtx     Total     Pct\n\
 aaaaaaaa                         1       4       500       300       200       700      1.0k   83.3%\n\
 bbbbbbbb                         1       2       100        50        50       150       200   16.7%\n";
   assert_eq!(
-    stdout( &out ),
+    common::stdout( &out ),
     expected,
     "INT-13: full table must match the captured worked example byte-for-byte"
   );
@@ -913,9 +895,9 @@ fn int_14_empty_non_local_scope_exits_0_header_only()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
   assert_eq!(
-    stdout( &out ),
+    common::stdout( &out ),
     // `Fix(BUG-544)`: default `group::session` labels the group column `Session`
     // and inserts `Project` after it. With zero data rows this line is fully
     // deterministic, so it — not INT-13 — is the byte-exact lock on default
@@ -923,7 +905,7 @@ fn int_14_empty_non_local_scope_exits_0_header_only()
     "Session                   Project                   Sessions   Calls     Input    Output     Cache    MaxCtx     Total     Pct\n",
     "INT-14: zero-row result must print exactly the header row"
   );
-  assert!( stderr( &out ).is_empty(), "INT-14: no error output expected; got: {}", stderr( &out ) );
+  assert!( common::stderr( &out ).is_empty(), "INT-14: no error output expected; got: {}", common::stderr( &out ) );
 }
 
 /// INT-15: `scope::local` with no project at cwd exits 2.
@@ -955,11 +937,11 @@ fn int_15_local_without_project_exits_2()
     .output()
     .unwrap();
 
-  assert_exit( &out, 2 );
+  common::assert_exit( &out, 2 );
   assert!(
-    stderr( &out ).contains( "No project found for current directory" ),
+    common::stderr( &out ).contains( "No project found for current directory" ),
     "INT-15: stderr must name the missing cwd project; got: {}",
-    stderr( &out )
+    common::stderr( &out )
   );
 }
 
@@ -982,9 +964,9 @@ fn int_16_invalid_group_rejected()
 {
   let out = common::clg_cmd().arg( ".rollup" ).arg( "group::bogus" ).output().unwrap();
 
-  assert_exit( &out, 1 );
-  assert!( stderr( &out ).contains( "bogus" ), "INT-16: stderr must name the invalid value; got: {}", stderr( &out ) );
-  assert!( stdout( &out ).is_empty(), "INT-16: no table output expected; got:\n{}", stdout( &out ) );
+  common::assert_exit( &out, 1 );
+  assert!( common::stderr( &out ).contains( "bogus" ), "INT-16: stderr must name the invalid value; got: {}", common::stderr( &out ) );
+  assert!( common::stdout( &out ).is_empty(), "INT-16: no table output expected; got:\n{}", common::stdout( &out ) );
 }
 
 /// INT-17: Invalid `sort::` value rejected.
@@ -1006,9 +988,9 @@ fn int_17_invalid_sort_rejected()
 {
   let out = common::clg_cmd().arg( ".rollup" ).arg( "sort::bogus" ).output().unwrap();
 
-  assert_exit( &out, 1 );
-  assert!( stderr( &out ).contains( "bogus" ), "INT-17: stderr must name the invalid value; got: {}", stderr( &out ) );
-  assert!( stdout( &out ).is_empty(), "INT-17: no table output expected; got:\n{}", stdout( &out ) );
+  common::assert_exit( &out, 1 );
+  assert!( common::stderr( &out ).contains( "bogus" ), "INT-17: stderr must name the invalid value; got: {}", common::stderr( &out ) );
+  assert!( common::stdout( &out ).is_empty(), "INT-17: no table output expected; got:\n{}", common::stdout( &out ) );
 }
 
 /// INT-18: Invalid `order::` value rejected.
@@ -1030,9 +1012,9 @@ fn int_18_invalid_order_rejected()
 {
   let out = common::clg_cmd().arg( ".rollup" ).arg( "order::bogus" ).output().unwrap();
 
-  assert_exit( &out, 1 );
-  assert!( stderr( &out ).contains( "bogus" ), "INT-18: stderr must name the invalid value; got: {}", stderr( &out ) );
-  assert!( stdout( &out ).is_empty(), "INT-18: no table output expected; got:\n{}", stdout( &out ) );
+  common::assert_exit( &out, 1 );
+  assert!( common::stderr( &out ).contains( "bogus" ), "INT-18: stderr must name the invalid value; got: {}", common::stderr( &out ) );
+  assert!( common::stdout( &out ).is_empty(), "INT-18: no table output expected; got:\n{}", common::stdout( &out ) );
 }
 
 /// INT-19: Invalid `columns::` entry rejected.
@@ -1057,14 +1039,14 @@ fn int_19_invalid_columns_rejected()
 {
   let out = common::clg_cmd().arg( ".rollup" ).arg( "columns::group,bogus" ).output().unwrap();
 
-  assert_exit( &out, 1 );
-  let err = stderr( &out );
+  common::assert_exit( &out, 1 );
+  let err = common::stderr( &out );
   assert!( err.contains( "bogus" ), "INT-19: stderr must name the invalid value; got: {err}" );
   for key in [ "rank", "cache_write", "cache_read" ]
   {
     assert!( err.contains( key ), "INT-19: valid-keys list must include the opt-in column {key} (Fix(BUG-530)); got: {err}" );
   }
-  assert!( stdout( &out ).is_empty(), "INT-19: no table output expected; got:\n{}", stdout( &out ) );
+  assert!( common::stdout( &out ).is_empty(), "INT-19: no table output expected; got:\n{}", common::stdout( &out ) );
 }
 
 /// INT-20: Negative `depth::` is rejected.
@@ -1086,9 +1068,9 @@ fn int_20_negative_depth_rejected()
 {
   let out = common::clg_cmd().arg( ".rollup" ).arg( "depth::-1" ).output().unwrap();
 
-  assert_exit( &out, 1 );
-  assert_eq!( stderr( &out ).trim(), "depth must be non-negative", "INT-20: stderr must be exactly the documented message" );
-  assert!( stdout( &out ).is_empty(), "INT-20: no table output expected; got:\n{}", stdout( &out ) );
+  common::assert_exit( &out, 1 );
+  assert_eq!( common::stderr( &out ).trim(), "depth must be non-negative", "INT-20: stderr must be exactly the documented message" );
+  assert!( common::stdout( &out ).is_empty(), "INT-20: no table output expected; got:\n{}", common::stdout( &out ) );
 }
 
 /// INT-21: Negative `limit::` is rejected.
@@ -1110,9 +1092,9 @@ fn int_21_negative_limit_rejected()
 {
   let out = common::clg_cmd().arg( ".rollup" ).arg( "limit::-1" ).output().unwrap();
 
-  assert_exit( &out, 1 );
-  assert_eq!( stderr( &out ).trim(), "limit must be non-negative", "INT-21: stderr must be exactly the documented message" );
-  assert!( stdout( &out ).is_empty(), "INT-21: no table output expected; got:\n{}", stdout( &out ) );
+  common::assert_exit( &out, 1 );
+  assert_eq!( common::stderr( &out ).trim(), "limit must be non-negative", "INT-21: stderr must be exactly the documented message" );
+  assert!( common::stdout( &out ).is_empty(), "INT-21: no table output expected; got:\n{}", common::stdout( &out ) );
 }
 
 /// INT-22: Multiple parameters compose correctly in a single invocation.
@@ -1171,8 +1153,8 @@ fn int_22_multiple_parameters_compose_correctly_together()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert_eq!( data_rows( &s ), 1, "INT-22: limit::1 must cap to exactly 1 row; got:\n{s}" );
   assert!( s.contains( "opus" ), "INT-22: ascending sort::sessions must keep the 1-session opus group first; got:\n{s}" );
   assert!( !s.contains( "haiku" ) && !s.contains( "sonnet" ), "INT-22: only the winning row may appear; got:\n{s}" );
@@ -1222,8 +1204,8 @@ fn int_23_model_filter_matching_zero_sessions_exits_0_header_only()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert_eq!( data_rows( &s ), 0, "INT-23: every session must be filtered out; got:\n{s}" );
   // `Fix(BUG-544)`: default `group::session` labels the group column `Session`.
   assert!(
@@ -1269,8 +1251,8 @@ fn int_24_columns_first_last_render_timestamps()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   let header = s.lines().next().unwrap_or_default();
   assert!( header.contains( "First" ) && header.contains( "Last" ), "INT-24: requested First/Last headers must be present; got:\n{header}" );
   assert!( !header.contains( "Sessions" ) && !header.contains( "Calls" ), "INT-24: unrequested columns must be absent; got:\n{header}" );
@@ -1327,8 +1309,8 @@ fn int_25_columns_rank_numbers_rows_by_sorted_position()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   let lines : Vec< &str > = s.lines().skip( 1 ).collect();
   assert_eq!( lines.len(), 3, "INT-25: 3 projects must yield 3 rows; got:\n{s}" );
   for ( expected_rank, expected_total ) in [ ( "1", "900" ), ( "2", "600" ), ( "3", "300" ) ]
@@ -1395,8 +1377,8 @@ fn int_26_rank_reflects_post_limit_position()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert_eq!( data_rows( &s ), 2, "INT-26: limit::2 must cap to exactly 2 rows; got:\n{s}" );
   assert!( !s.contains( "500" ), "INT-26: dropped row's total must be entirely absent; got:\n{s}" );
   assert!( !s.contains( "300" ), "INT-26: dropped row's total must be entirely absent; got:\n{s}" );
@@ -1453,8 +1435,8 @@ fn int_27_columns_cache_write_cache_read_split_sums_to_cache()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   let header = s.lines().next().unwrap_or_default();
   assert!( header.contains( "CacheW" ) && header.contains( "CacheR" ), "INT-27: CacheW/CacheR headers must be present; got:\n{header}" );
 
@@ -1503,8 +1485,8 @@ fn int_28_columns_default_excludes_rank_and_cache_split()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let header = stdout( &out ).lines().next().unwrap_or_default().to_string();
+  common::assert_exit( &out, 0 );
+  let header = common::stdout( &out ).lines().next().unwrap_or_default().to_string();
   // `Fix(BUG-544)`: default group label is `Session`, followed by `Project`.
   assert!( header.starts_with( "Session " ), "INT-28: group column must be labelled Session; got:\n{header}" );
   for present in [ "Project", "Sessions", "Calls", "Input", "Output", "Cache", "MaxCtx", "Total", "Pct" ]
@@ -1609,8 +1591,8 @@ fn bug_528_cross_project_session_id_duplication_inflates_totals()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert_eq!( data_rows( &s ), 1, "BUG-528: one physical session duplicated across 2 projects must still be exactly 1 row; got:\n{s}" );
 
   let data_line = s.lines().find( | l | l.contains( "dupeaaa1" ) )
@@ -1711,8 +1693,8 @@ fn bug_544_group_header_tracks_dimension_and_sessions_name_project()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert_eq!( data_rows( &s ), 2, "BUG-544: both sessions must render; got:\n{s}" );
 
   for ( id_prefix, own, sibling ) in
@@ -1749,8 +1731,8 @@ fn bug_544_group_header_tracks_dimension_and_sessions_name_project()
       .output()
       .unwrap();
 
-    assert_exit( &out, 0 );
-    let header = stdout( &out ).lines().next().unwrap_or_default().to_string();
+    common::assert_exit( &out, 0 );
+    let header = common::stdout( &out ).lines().next().unwrap_or_default().to_string();
     assert!(
       header.starts_with( &format!( "{label} " ) ),
       "BUG-544: group::{group} must label the group column {label}; got header:\n{header}"

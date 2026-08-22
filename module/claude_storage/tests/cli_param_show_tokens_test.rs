@@ -17,26 +17,8 @@ mod common;
 
 use tempfile::TempDir;
 
-fn stdout( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stdout ).into_owned()
-}
 
-fn stderr( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stderr ).into_owned()
-}
 
-fn assert_exit( out : &std::process::Output, code : i32 )
-{
-  assert_eq!(
-    out.status.code().unwrap_or( -1 ),
-    code,
-    "expected exit {code}, got {:?}; stderr: {}",
-    out.status.code(),
-    stderr( out )
-  );
-}
 
 /// EC-1: `show_tokens::0` → no token section.
 ///
@@ -71,8 +53,8 @@ fn ec_1_show_tokens_0_no_token_section()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let output = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let output = common::stdout( &out );
   assert!(
     !output.to_lowercase().contains( "input tokens" ),
     "EC-1: show_tokens::0 should not show token usage; got: {output}"
@@ -115,8 +97,8 @@ fn ec_2_show_tokens_1_in_show()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let output = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let output = common::stdout( &out );
   assert!(
     output.contains( "Token Usage:" ),
     "EC-2: show_tokens::1 in .show should include token usage section; got: {output}"
@@ -152,7 +134,7 @@ fn ec_3_show_tokens_non_boolean_rejected()
     out.status.code().unwrap_or( -1 ),
     0,
     "EC-3: show_tokens::abc should be rejected; stderr: {}",
-    stderr( &out )
+    common::stderr( &out )
   );
 }
 
@@ -189,7 +171,7 @@ fn ec_4_show_tokens_omitted_default_0()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
 }
 
 /// EC-5: `show_tokens::1` in `.status` triggers full JSONL parse.
@@ -226,8 +208,8 @@ fn ec_5_show_tokens_1_in_status_full_parse()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let output = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let output = common::stdout( &out );
   assert!(
     output.contains( "Tokens:" ) || output.contains( "Input:" ),
     "EC-5: show_tokens::1 in .status should include token information; got: {output}"
@@ -270,8 +252,8 @@ fn ec_6_show_tokens_1_appends_to_show()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let output = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let output = common::stdout( &out );
   assert!(
     output.contains( "Token Usage:" ),
     "EC-6: show_tokens::1 should append token usage to .show output; got: {output}"

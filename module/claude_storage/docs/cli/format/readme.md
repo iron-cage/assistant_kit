@@ -5,7 +5,7 @@
 - **Purpose**: Document the three named export rendering modes for the `.export` command.
 - **Responsibility**: Index of format doc instances covering all export rendering modes.
 - **In Scope**: Three named export formats (markdown, json, text) produced by `.export`.
-- **Out of Scope**: Per-command output toggles (→ `command/` per-command, `param_group/01_output_control.md`), parameter specs (→ `param/`).
+- **Out of Scope**: Per-command output toggles (→ `command/` per-command, `../param_group/01_output_control.md`), parameter specs (→ `param/`).
 
 ### Responsibility Table
 

@@ -48,26 +48,8 @@
 
 mod common;
 
-fn stdout( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stdout ).into_owned()
-}
 
-fn stderr( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stderr ).into_owned()
-}
 
-fn assert_exit( out : &std::process::Output, code : i32 )
-{
-  assert_eq!(
-    out.status.code().unwrap_or( -1 ),
-    code,
-    "expected exit {code}, got {:?}; stderr: {}",
-    out.status.code(),
-    stderr( out )
-  );
-}
 
 /// INT-1: No args prints last 4 entries of `default_topic` session.
 ///
@@ -97,8 +79,8 @@ fn int_1_no_args_shows_last_4_of_default_topic()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let text = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let text = common::stdout( &out );
   for i in 2..6
   {
     assert!( text.contains( &format!( "entry {i}" ) ), "expected entry {i} in output: {text}" );
@@ -137,8 +119,8 @@ fn int_2_last_n_controls_entry_count()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let text = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let text = common::stdout( &out );
   for i in 4..6
   {
     assert!( text.contains( &format!( "entry {i}" ) ), "expected entry {i} in output: {text}" );
@@ -177,8 +159,8 @@ fn int_3_last_zero_prints_all_entries()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let text = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let text = common::stdout( &out );
   for i in 0..6
   {
     assert!( text.contains( &format!( "entry {i}" ) ), "expected entry {i} in output: {text}" );
@@ -213,8 +195,8 @@ fn int_4_topic_resolves_non_default_session()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let text = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let text = common::stdout( &out );
   assert!( text.contains( "WORKTOPICMARKER" ), "expected -work session marker in output: {text}" );
   assert!( !text.contains( "DEFAULTTOPICMARKER" ), "did not expect -default_topic marker in output: {text}" );
 }
@@ -247,8 +229,8 @@ fn int_5_path_resolves_different_directory_project()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let text = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let text = common::stdout( &out );
   for i in 2..6
   {
     assert!( text.contains( &format!( "entry {i}" ) ), "expected entry {i} in output: {text}" );
@@ -283,8 +265,8 @@ fn int_6_fewer_entries_than_requested_shows_all()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let text = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let text = common::stdout( &out );
   for i in 0..3
   {
     assert!( text.contains( &format!( "entry {i}" ) ), "expected entry {i} in output: {text}" );
@@ -317,8 +299,8 @@ fn int_7_exit_2_when_no_project_for_cwd()
     .output()
     .unwrap();
 
-  assert_exit( &out, 2 );
-  assert!( !stderr( &out ).is_empty(), "INT-7: expected non-empty stderr for missing project" );
+  common::assert_exit( &out, 2 );
+  assert!( !common::stderr( &out ).is_empty(), "INT-7: expected non-empty stderr for missing project" );
 }
 
 /// INT-8: Negative `last::` is rejected with exit code 1.
@@ -351,8 +333,8 @@ fn int_8_negative_last_rejected_exit_1()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
-  assert_eq!( stderr( &out ).trim_end(), "last must be non-negative" );
+  common::assert_exit( &out, 1 );
+  assert_eq!( common::stderr( &out ).trim_end(), "last must be non-negative" );
 }
 
 /// INT-9: No args falls back to the most recent session when no `-default_topic`
@@ -385,8 +367,8 @@ fn int_9_no_args_falls_back_to_most_recent_session_when_no_default_topic()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let text = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let text = common::stdout( &out );
   for i in 2..6
   {
     assert!( text.contains( &format!( "entry {i}" ) ), "expected entry {i} in output: {text}" );
@@ -427,8 +409,8 @@ fn int_10_no_args_picks_most_recently_modified_session_among_multiple()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let text = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let text = common::stdout( &out );
   assert!( text.contains( "newer session marker" ), "expected the more recently modified session's content: {text}" );
 }
 
@@ -462,8 +444,8 @@ fn int_11_no_args_excludes_agent_sessions_from_fallback()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let text = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let text = common::stdout( &out );
   assert!( text.contains( "main session marker" ), "expected the main session's content: {text}" );
   assert!( !text.contains( "agent session marker" ), "did not expect the agent session's content: {text}" );
 }
@@ -488,8 +470,8 @@ fn ec_5_empty_last_value_rejected()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
-  assert!( !stderr( &out ).is_empty(), "EC-5: expected non-empty stderr for empty `last::` value" );
+  common::assert_exit( &out, 1 );
+  assert!( !common::stderr( &out ).is_empty(), "EC-5: expected non-empty stderr for empty `last::` value" );
 }
 
 /// EC-7: Non-integer `last::` value is rejected.
@@ -512,8 +494,8 @@ fn ec_7_non_integer_last_value_rejected()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
-  assert!( !stderr( &out ).is_empty(), "EC-7: expected non-empty stderr for non-integer `last::` value" );
+  common::assert_exit( &out, 1 );
+  assert!( !common::stderr( &out ).is_empty(), "EC-7: expected non-empty stderr for non-integer `last::` value" );
 }
 
 /// EC-8: `l::N` alias produces byte-identical output to `last::N`.
@@ -561,18 +543,18 @@ fn ec_8_l_alias_matches_canonical_last()
   let aliased   = run( "l::2" );
   let canonical = run( "last::2" );
 
-  assert_exit( &aliased, 0 );
-  assert_exit( &canonical, 0 );
+  common::assert_exit( &aliased, 0 );
+  common::assert_exit( &canonical, 0 );
 
   assert_eq!(
-    stdout( &aliased ),
-    stdout( &canonical ),
+    common::stdout( &aliased ),
+    common::stdout( &canonical ),
     "EC-8: `l::2` must produce byte-identical output to `last::2`"
   );
 
   // Guard against both spellings silently falling back to the default of 4:
   // with 6 entries, a 2-window excludes entries 0-3 and a 4-window does not.
-  let text = stdout( &aliased );
+  let text = common::stdout( &aliased );
   assert!( !text.contains( "entry 3" ), "EC-8: `l::2` must not fall back to the default 4-entry window; got:\n{text}" );
 }
 
@@ -606,14 +588,14 @@ fn f7_topic_not_found_error_omits_internal_hyphen_prefix()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
+  common::assert_exit( &out, 1 );
   assert!(
-    stderr( &out ).contains( "Session not found for topic: does-not-exist" ),
-    "F7: error must report the plain topic; got:\n{}", stderr( &out )
+    common::stderr( &out ).contains( "Session not found for topic: does-not-exist" ),
+    "F7: error must report the plain topic; got:\n{}", common::stderr( &out )
   );
   assert!(
-    !stderr( &out ).contains( "-does-not-exist" ),
-    "F7: error must not leak the internal '-' prefix form; got:\n{}", stderr( &out )
+    !common::stderr( &out ).contains( "-does-not-exist" ),
+    "F7: error must not leak the internal '-' prefix form; got:\n{}", common::stderr( &out )
   );
 }
 
@@ -719,9 +701,9 @@ fn int_12_records_sharing_message_id_form_one_turn()
   ];
 
   let out = tail_over( &lines, &[ "last::1" ] );
-  let text = stdout( &out );
+  let text = common::stdout( &out );
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
   assert!( text.contains( "FRAGMENTONE" ), "INT-12: first fragment missing:\n{text}" );
   assert!( text.contains( "FRAGMENTTWO" ), "INT-12: second fragment missing:\n{text}" );
   assert!( !text.contains( "EARLIERTURN" ), "INT-12: last::1 must not reach the previous turn:\n{text}" );
@@ -751,9 +733,9 @@ fn int_13_array_form_user_content_is_parsed()
   ];
 
   let out = tail_over( &lines, &[] );
-  let text = stdout( &out );
+  let text = common::stdout( &out );
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
   assert!( text.contains( "STRINGFORMMARKER" ), "INT-13: string-form content missing:\n{text}" );
   assert!( text.contains( "ARRAYFORMMARKER" ), "INT-13: array-form content missing:\n{text}" );
 }
@@ -781,9 +763,9 @@ fn int_14_tool_call_shows_input_summary_and_result_size()
   ];
 
   let out = tail_over( &lines, &[] );
-  let text = stdout( &out );
+  let text = common::stdout( &out );
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
   assert!( text.contains( "⚙ Bash · git status --short" ), "INT-14: tool input summary missing:\n{text}" );
   assert!( text.contains( "↳ 3 lines" ), "INT-14: result size annotation missing:\n{text}" );
   assert!( !text.contains( "RESULTLINEB" ), "INT-14: successful result body must not be printed:\n{text}" );
@@ -814,9 +796,9 @@ fn int_15_tool_result_only_turn_is_absorbed()
   ];
 
   let out = tail_over( &lines, &[] );
-  let text = stdout( &out );
+  let text = common::stdout( &out );
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
   assert_eq!( rule_lines( &text ), 3, "INT-15: tool-result record must not form its own turn:\n{text}" );
   assert!( text.contains( "turns 1-3 of 3" ), "INT-15: header must count 3 displayable turns:\n{text}" );
   assert!( text.contains( "QUESTIONMARKER" ), "INT-15: first turn missing:\n{text}" );
@@ -847,9 +829,9 @@ fn int_16_empty_blocks_render_nothing()
   ];
 
   let out = tail_over( &lines, &[] );
-  let text = stdout( &out );
+  let text = common::stdout( &out );
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
   assert!( !text.contains( "Thinking ·" ), "INT-16: empty thinking block must not print a label:\n{text}" );
   assert!( text.contains( "REALCONTENT" ), "INT-16: non-empty sibling block missing:\n{text}" );
   assert_eq!( rule_lines( &text ), 1, "INT-16: the empty-only turn must be dropped:\n{text}" );
@@ -876,18 +858,18 @@ fn int_17_long_turn_folds_by_default_and_unfolds_with_full()
   let lines = vec![ assistant_entry( 1, "msg_long", &format!( r#"[{{"type":"text","text":"{body}"}}]"# ) ) ];
 
   let folded = tail_over( &lines, &[] );
-  let folded_text = stdout( &folded );
+  let folded_text = common::stdout( &folded );
 
-  assert_exit( &folded, 0 );
+  common::assert_exit( &folded, 0 );
   assert!( folded_text.contains( "BODYLINE08" ), "INT-17: eighth line must survive folding:\n{folded_text}" );
   assert!( !folded_text.contains( "BODYLINE09" ), "INT-17: ninth line must be folded away:\n{folded_text}" );
   assert!( folded_text.contains( "⋯ 12 more lines" ), "INT-17: fold hint missing:\n{folded_text}" );
   assert!( folded_text.contains( ".show session_id::aaaaaaaa index::1" ), "INT-17: fold hint must name a working .show call:\n{folded_text}" );
 
   let unfolded = tail_over( &lines, &[ "full::1" ] );
-  let unfolded_text = stdout( &unfolded );
+  let unfolded_text = common::stdout( &unfolded );
 
-  assert_exit( &unfolded, 0 );
+  common::assert_exit( &unfolded, 0 );
   assert!( unfolded_text.contains( "BODYLINE20" ), "INT-17: full::1 must print every line:\n{unfolded_text}" );
   assert!( !unfolded_text.contains( '⋯' ), "INT-17: full::1 must not fold:\n{unfolded_text}" );
 }
@@ -916,9 +898,9 @@ fn int_18_compact_prints_one_line_per_turn()
   ];
 
   let out = tail_over( &lines, &[ "compact::1" ] );
-  let text = stdout( &out );
+  let text = common::stdout( &out );
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
   assert_eq!( rule_lines( &text ), 0, "INT-18: compact mode must not draw rule lines:\n{text}" );
 
   let rows : Vec< &str > = text.lines().filter( | line | line.contains( "MARKER" ) ).collect();
@@ -963,16 +945,16 @@ fn int_18b_compact_wins_over_full()
   let compact_only = fixture.tail( &[ "compact::1" ] );
   let compact_full = fixture.tail( &[ "compact::1", "full::1" ] );
 
-  assert_exit( &compact_only, 0 );
-  assert_exit( &compact_full, 0 );
+  common::assert_exit( &compact_only, 0 );
+  common::assert_exit( &compact_full, 0 );
 
   assert_eq!(
-    stdout( &compact_full ),
-    stdout( &compact_only ),
+    common::stdout( &compact_full ),
+    common::stdout( &compact_only ),
     "INT-18b: `full::1` must be inert alongside `compact::1`"
   );
 
-  let text = stdout( &compact_full );
+  let text = common::stdout( &compact_full );
   assert!( !text.contains( "BODYLINE20" ), "INT-18b: compact rows must not carry unfolded bodies:\n{text}" );
   assert_eq!( rule_lines( &text ), 0, "INT-18b: compact mode must not draw rule lines:\n{text}" );
 }
@@ -998,10 +980,10 @@ fn int_19_session_header_reports_provenance_and_span()
     .collect();
 
   let out = tail_over( &lines, &[ "last::2" ] );
-  let text = stdout( &out );
+  let text = common::stdout( &out );
   let header = text.lines().next().unwrap_or_default();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
   assert!( header.contains( "aaaaaaaa" ), "INT-19: header must carry the short session id: {header}" );
   assert!( header.contains( "turns 4-5 of 5" ), "INT-19: header must report the displayed span: {header}" );
 }
@@ -1024,9 +1006,9 @@ fn int_20_output_has_no_trailing_blank_lines()
   let lines = vec![ assistant_entry( 1, "msg_a", r#"[{"type":"text","text":"ONLYLINE"}]"# ) ];
 
   let out = tail_over( &lines, &[] );
-  let text = stdout( &out );
+  let text = common::stdout( &out );
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
   assert!( text.ends_with( "ONLYLINE\n" ), "INT-20: expected exactly one trailing newline; got {:?}", &text[ text.len().saturating_sub( 20 ).. ] );
 }
 
@@ -1049,9 +1031,9 @@ fn int_21_unmodelled_block_type_does_not_drop_the_record()
   let lines = vec![ user_entry( 1, r#"[{"type":"image","source":{}},{"type":"text","text":"CAPTIONMARKER"}]"# ) ];
 
   let out = tail_over( &lines, &[] );
-  let text = stdout( &out );
+  let text = common::stdout( &out );
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
   assert!( text.contains( "CAPTIONMARKER" ), "INT-21: record must survive the unmodelled block:\n{text}" );
   assert!( text.contains( "⧉ image" ), "INT-21: unmodelled block must be marked:\n{text}" );
 }
@@ -1077,9 +1059,9 @@ fn int_22_failed_tool_call_is_marked_as_an_error()
   ];
 
   let out = tail_over( &lines, &[] );
-  let text = stdout( &out );
+  let text = common::stdout( &out );
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
   assert!( text.contains( "↳ error" ), "INT-22: error annotation missing:\n{text}" );
 }
 
@@ -1106,9 +1088,9 @@ fn int_23_nested_tool_result_content_is_flattened()
   ];
 
   let out = tail_over( &lines, &[] );
-  let text = stdout( &out );
+  let text = common::stdout( &out );
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
   assert!( text.contains( "⚙ Read · /tmp/x.rs" ), "INT-23: tool line missing:\n{text}" );
   assert!( text.contains( "↳ 2 lines" ), "INT-23: nested content must flatten to 2 lines:\n{text}" );
 }
@@ -1136,9 +1118,9 @@ fn int_24_task_tool_summarises_by_status_not_id()
   ];
 
   let out = tail_over( &lines, &[] );
-  let text = stdout( &out );
+  let text = common::stdout( &out );
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
   assert!( text.contains( "⚙ TaskUpdate · completed" ), "INT-24: status must be the summary:\n{text}" );
   assert!( !text.contains( "· 42" ), "INT-24: the opaque id must not win over status:\n{text}" );
 }

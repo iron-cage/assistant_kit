@@ -27,7 +27,7 @@
 | 42 | [`full::`](../param/42_full.md) | Print every body line instead of folding turns past 8 lines |
 | 43 | [`compact::`](../param/43_compact.md) | One line per turn instead of full bodies |
 
-**Unit note:** `.tail` counts *turns*, not raw JSONL entries — one assistant response spans several records sharing a `message.id` and renders as a single turn. `.tail last::4` and `.show last::4` therefore select different amounts of history; see [`command/12_tail.md`](../command/12_tail.md) § Turn Grouping.
+**Unit note:** `.tail` counts *turns*, not raw JSONL entries — one assistant response spans several records sharing a `message.id` and renders as a single turn. `.tail last::4` and `.show last::4` therefore select different amounts of history; see [`../command/12_tail.md`](../command/12_tail.md) § Turn Grouping.
 
 ### Related User Stories
 | # | User Story | Relationship |

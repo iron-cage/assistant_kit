@@ -22,26 +22,8 @@ mod common;
 
 use tempfile::TempDir;
 
-fn stdout( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stdout ).into_owned()
-}
 
-fn stderr( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stderr ).into_owned()
-}
 
-fn assert_exit( out : &std::process::Output, code : i32 )
-{
-  assert_eq!(
-    out.status.code().unwrap_or( -1 ),
-    code,
-    "expected exit {code}, got {:?}; stderr: {}",
-    out.status.code(),
-    stderr( out )
-  );
-}
 
 /// EC-1: Valid simple name accepted.
 ///
@@ -68,8 +50,8 @@ fn ec_1_topic_simple_name_accepted()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let output = stdout( &out ).trim().to_owned();
+  common::assert_exit( &out, 0 );
+  let output = common::stdout( &out ).trim().to_owned();
   assert!(
     output.ends_with( "/-work" ),
     "EC-1: topic::work must produce path ending in '/-work'; got: {output}"
@@ -101,8 +83,8 @@ fn ec_2_topic_empty_rejected()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
-  let combined = format!( "{}{}", stderr( &out ), stdout( &out ) );
+  common::assert_exit( &out, 1 );
+  let combined = format!( "{}{}", common::stderr( &out ), common::stdout( &out ) );
   assert!(
     combined.contains( "topic" ) || combined.contains( "empty" ),
     "EC-2: error must mention topic or empty; got: {combined}"
@@ -134,8 +116,8 @@ fn ec_3_topic_slash_rejected()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
-  let combined = format!( "{}{}", stderr( &out ), stdout( &out ) );
+  common::assert_exit( &out, 1 );
+  let combined = format!( "{}{}", common::stderr( &out ), common::stdout( &out ) );
   assert!(
     combined.contains( "topic" ) || combined.contains( '/' ) || combined.contains( "slash" ) || combined.contains( "separator" ),
     "EC-3: error must mention topic or slash; got: {combined}"
@@ -202,8 +184,8 @@ fn ec_5_topic_default_in_session_dir()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let output = stdout( &out ).trim().to_owned();
+  common::assert_exit( &out, 0 );
+  let output = common::stdout( &out ).trim().to_owned();
   assert!(
     output.ends_with( "/-default_topic" ),
     "EC-5: absent topic must default to '/-default_topic'; got: {output}"
@@ -237,8 +219,8 @@ fn ec_6_topic_default_in_session_ensure()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let output = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let output = common::stdout( &out );
   let first_line = output.lines().next().unwrap_or( "" );
   assert!(
     first_line.ends_with( "/-default_topic" ),
@@ -271,8 +253,8 @@ fn ec_7_topic_absent_in_project_path_no_suffix()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let output = stdout( &out ).trim().to_owned();
+  common::assert_exit( &out, 0 );
+  let output = common::stdout( &out ).trim().to_owned();
   assert!(
     !output.ends_with( "/-default_topic" ),
     "EC-7: absent topic in .project.path must produce no topic suffix; got: {output}"
@@ -309,8 +291,8 @@ fn ec_8_topic_absent_in_exists_checks_base()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let output = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let output = common::stdout( &out );
   assert!(
     output.contains( "sessions exist" ),
     "EC-8: base path with storage must report 'sessions exist'; got: {output}"
@@ -342,8 +324,8 @@ fn ec_9_topic_with_hyphen_accepted()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let output = stdout( &out ).trim().to_owned();
+  common::assert_exit( &out, 0 );
+  let output = common::stdout( &out ).trim().to_owned();
   assert!(
     output.ends_with( "/-my-topic" ),
     "EC-9: topic::my-topic must produce path ending in '/-my-topic'; got: {output}"
@@ -375,8 +357,8 @@ fn ec_10_topic_with_underscore_accepted()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let output = stdout( &out ).trim().to_owned();
+  common::assert_exit( &out, 0 );
+  let output = common::stdout( &out ).trim().to_owned();
   assert!(
     output.ends_with( "/-default_topic" ),
     "EC-10: topic::default_topic must produce path ending in '/-default_topic'; got: {output}"

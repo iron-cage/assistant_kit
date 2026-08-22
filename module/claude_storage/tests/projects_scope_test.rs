@@ -34,26 +34,8 @@ use tempfile::TempDir;
 // Helpers
 // ────────────────────────────────────────────────────────────────────────────
 
-fn stdout( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stdout ).into_owned()
-}
 
-fn stderr( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stderr ).into_owned()
-}
 
-fn assert_exit( out : &std::process::Output, code : i32 )
-{
-  assert_eq!(
-    out.status.code().unwrap_or( -1 ),
-    code,
-    "expected exit {code}, got {:?}; stderr: {}",
-    out.status.code(),
-    stderr( out )
-  );
-}
 
 // ────────────────────────────────────────────────────────────────────────────
 // Behavioural: scope::local returns only sessions for the exact matching project
@@ -79,8 +61,8 @@ fn local_scope_returns_only_matching_project_sessions()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "session-local-a" ),  "must contain session-local-a; got:\n{s}" );
   assert!( !s.contains( "session-local-b" ), "must NOT contain session-local-b; got:\n{s}" );
 }
@@ -113,8 +95,8 @@ fn under_scope_returns_all_projects_in_subtree()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "session-under-a" ),    "must contain session-under-a; got:\n{s}" );
   assert!( s.contains( "session-under-b" ),    "must contain session-under-b; got:\n{s}" );
   assert!( !s.contains( "session-under-out" ), "must NOT contain session-under-out; got:\n{s}" );
@@ -149,8 +131,8 @@ fn relevant_scope_includes_ancestor_projects()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "session-rel-cwd" ),    "must contain session-rel-cwd; got:\n{s}" );
   assert!( s.contains( "session-rel-parent" ), "must contain session-rel-parent; got:\n{s}" );
   assert!( s.contains( "session-rel-grand" ),  "must contain session-rel-grand; got:\n{s}" );
@@ -181,8 +163,8 @@ fn global_scope_returns_all_sessions()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "session-glob-a" ), "must contain session-glob-a; got:\n{s}" );
   assert!( s.contains( "session-glob-b" ), "must contain session-glob-b; got:\n{s}" );
 }
@@ -238,8 +220,8 @@ fn scope_local_finds_project_with_underscore_path()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "session-local-underscore" ),
     "scope::local must find underscore-path project; got:\n{s}"
@@ -276,8 +258,8 @@ fn scope_under_finds_project_with_underscore_path()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "session-under-base" ),
     "scope::under must include base project itself; got:\n{s}"
@@ -324,8 +306,8 @@ fn scope_under_finds_project_with_dot_prefixed_path()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "session-dotunder-base" ),
     "scope::under must include dot-prefixed base project itself; got:\n{s}"
@@ -366,8 +348,8 @@ fn scope_relevant_finds_ancestor_with_underscore_path()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "session-rel-ancestor" ),
     "scope::relevant must find ancestor with underscore path; got:\n{s}"
@@ -422,8 +404,8 @@ fn scope_relevant_finds_topic_scoped_ancestor()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "session-topic-ancestor" ),
     "scope::relevant must find topic-scoped ancestor with underscore path; got:\n{s}"
@@ -465,8 +447,8 @@ fn scope_under_finds_deeply_nested_with_multiple_underscore_components()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "session-multi-base" ),
     "scope::under must include multi-underscore base itself; got:\n{s}"
@@ -510,8 +492,8 @@ fn uuid_project_only_matches_global_scope()
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
     .arg( ".projects" ).arg( "detail::sessions" ).arg( "scope::global" )
     .output().unwrap();
-  assert_exit( &out_global, 0 );
-  let s_global = stdout( &out_global );
+  common::assert_exit( &out_global, 0 );
+  let s_global = common::stdout( &out_global );
   assert!( s_global.contains( "deadbeef-1234-5678" ), "global must include UUID project path; got:\n{s_global}" );
   assert!( s_global.contains( "proj" ), "global must include path project; got:\n{s_global}" );
 
@@ -522,8 +504,8 @@ fn uuid_project_only_matches_global_scope()
     .arg( ".projects" ).arg( "detail::sessions" ).arg( "scope::local" )
     .arg( format!( "path::{}", project.display() ) )
     .output().unwrap();
-  assert_exit( &out_local, 0 );
-  let s_local = stdout( &out_local );
+  common::assert_exit( &out_local, 0 );
+  let s_local = common::stdout( &out_local );
   assert!( !s_local.contains( "deadbeef" ), "local must exclude UUID project; got:\n{s_local}" );
   assert!( s_local.contains( "proj" ), "local must include path project; got:\n{s_local}" );
 }
@@ -582,8 +564,8 @@ fn scope_local_matches_topic_scoped_directory()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "session-plain-dir" ), "scope::local must include session in plain dir; got:\n{s}" );
   assert!( s.contains( "session-topic-dir" ), "scope::local must include session in topic-scoped dir; got:\n{s}" );
   assert!( !s.contains( "session-other" ),    "scope::local must exclude unrelated project; got:\n{s}" );

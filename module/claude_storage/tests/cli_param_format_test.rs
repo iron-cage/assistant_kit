@@ -18,21 +18,7 @@ mod common;
 
 use tempfile::TempDir;
 
-fn stderr( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stderr ).into_owned()
-}
 
-fn assert_exit( out : &std::process::Output, code : i32 )
-{
-  assert_eq!(
-    out.status.code().unwrap_or( -1 ),
-    code,
-    "expected exit {code}, got {:?}; stderr: {}",
-    out.status.code(),
-    stderr( out )
-  );
-}
 
 /// EC-1: Value "markdown" accepted.
 ///
@@ -66,11 +52,11 @@ fn ec_1_format_markdown_accepted()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
   assert!(
     out_path.exists(),
     "EC-1: output file must exist after format::markdown export; stderr: {}",
-    stderr( &out )
+    common::stderr( &out )
   );
 }
 
@@ -106,11 +92,11 @@ fn ec_2_format_json_accepted()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
   assert!(
     out_path.exists(),
     "EC-2: output file must exist after format::json export; stderr: {}",
-    stderr( &out )
+    common::stderr( &out )
   );
   let content = std::fs::read_to_string( &out_path ).unwrap();
   assert!(
@@ -151,11 +137,11 @@ fn ec_3_format_text_accepted()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
   assert!(
     out_path.exists(),
     "EC-3: output file must exist after format::text export; stderr: {}",
-    stderr( &out )
+    common::stderr( &out )
   );
 }
 
@@ -190,11 +176,11 @@ fn ec_4_format_uppercase_accepted()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
   assert!(
     out_path.exists(),
     "EC-4: output file must exist after format::MARKDOWN export; stderr: {}",
-    stderr( &out )
+    common::stderr( &out )
   );
 }
 
@@ -222,8 +208,8 @@ fn ec_5_format_html_rejected()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
-  let err = stderr( &out );
+  common::assert_exit( &out, 1 );
+  let err = common::stderr( &out );
   assert!(
     err.contains( "format" ) && err.contains( "html" ),
     "EC-5: expected 'format' and 'html' in stderr; got: {err}"
@@ -254,8 +240,8 @@ fn ec_6_format_pdf_rejected()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
-  let err = stderr( &out );
+  common::assert_exit( &out, 1 );
+  let err = common::stderr( &out );
   assert!(
     err.contains( "format" ) && err.contains( "pdf" ),
     "EC-6: expected 'format' and 'pdf' in stderr; got: {err}"
@@ -293,11 +279,11 @@ fn ec_7_format_omitted_defaults_to_markdown()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
   assert!(
     out_path.exists(),
     "EC-7: output file must exist with default format; stderr: {}",
-    stderr( &out )
+    common::stderr( &out )
   );
   let content = std::fs::read_to_string( &out_path ).unwrap();
   // Markdown output should contain heading markers or bold markers

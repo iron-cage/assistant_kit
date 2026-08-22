@@ -36,7 +36,7 @@ Parse string to enum variant (case-insensitive):
 - `is_all() -> boolean` — True when no filter applied
 - `matches(project: &Project) -> boolean` — True when project naming matches type
 
-**Commands:** [`.projects`](../command/07_projects.md) (absorbed from `.list`, see [`02_list.md`](../command/02_list.md))
+**Commands:** [`.projects`](../command/07_projects.md) (absorbed from `.list`, see [`../command/02_list.md`](../command/02_list.md))
 
 ### Referenced Commands
 

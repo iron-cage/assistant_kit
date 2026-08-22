@@ -19,26 +19,8 @@ mod common;
 
 use tempfile::TempDir;
 
-fn stdout( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stdout ).into_owned()
-}
 
-fn stderr( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stderr ).into_owned()
-}
 
-fn assert_exit( out : &std::process::Output, code : i32 )
-{
-  assert_eq!(
-    out.status.code().unwrap_or( -1 ),
-    code,
-    "expected exit {code}, got {:?}; stderr: {}",
-    out.status.code(),
-    stderr( out )
-  );
-}
 
 /// EC-1: Absolute path format resolves correctly.
 ///
@@ -68,7 +50,7 @@ fn ec_1_project_absolute_path_resolves()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
 }
 
 /// EC-2: Path-encoded ID format resolves correctly.
@@ -99,7 +81,7 @@ fn ec_2_project_encoded_id_resolves()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
 }
 
 /// EC-3: UUID format resolves correctly.
@@ -130,7 +112,7 @@ fn ec_3_project_uuid_format_resolves()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
 }
 
 /// EC-4: Path(...) form from .list resolves correctly.
@@ -161,7 +143,7 @@ fn ec_4_project_path_form_resolves()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
 }
 
 /// EC-5: Unknown project value exits with error.
@@ -189,8 +171,8 @@ fn ec_5_project_unknown_exits_with_error()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
-  let combined = format!( "{}{}", stderr( &out ), stdout( &out ) );
+  common::assert_exit( &out, 1 );
+  let combined = format!( "{}{}", common::stderr( &out ), common::stdout( &out ) );
   assert!(
     combined.contains( "project" ) && ( combined.contains( "not found" ) || combined.contains( "nonexistent" ) ),
     "EC-5: error must mention 'project not found'; got: {combined}"
@@ -219,8 +201,8 @@ fn ec_6_project_empty_rejected()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
-  let combined = format!( "{}{}", stderr( &out ), stdout( &out ) );
+  common::assert_exit( &out, 1 );
+  let combined = format!( "{}{}", common::stderr( &out ), common::stdout( &out ) );
   assert!(
     combined.contains( "project" ),
     "EC-6: error must mention 'project'; got: {combined}"
@@ -255,7 +237,7 @@ fn ec_7_project_default_resolves_to_cwd()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
 }
 
 /// EC-8: Default exits with 1 when cwd has no project.
@@ -286,5 +268,5 @@ fn ec_8_project_default_no_project_exits_2()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
+  common::assert_exit( &out, 1 );
 }

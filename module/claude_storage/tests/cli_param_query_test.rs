@@ -18,26 +18,8 @@ mod common;
 
 use tempfile::TempDir;
 
-fn stdout( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stdout ).into_owned()
-}
 
-fn stderr( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stderr ).into_owned()
-}
 
-fn assert_exit( out : &std::process::Output, code : i32 )
-{
-  assert_eq!(
-    out.status.code().unwrap_or( -1 ),
-    code,
-    "expected exit {code}, got {:?}; stderr: {}",
-    out.status.code(),
-    stderr( out )
-  );
-}
 
 /// EC-1: Required — missing `query::` exits with 1.
 ///
@@ -64,8 +46,8 @@ fn ec_1_query_required_missing_exits_1()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
-  let combined = format!( "{}{}", stderr( &out ), stdout( &out ) );
+  common::assert_exit( &out, 1 );
+  let combined = format!( "{}{}", common::stderr( &out ), common::stdout( &out ) );
   assert!(
     combined.contains( "query" ),
     "EC-1: error must mention 'query'; got: {combined}"
@@ -94,8 +76,8 @@ fn ec_2_query_empty_rejected()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
-  let combined = format!( "{}{}", stderr( &out ), stdout( &out ) );
+  common::assert_exit( &out, 1 );
+  let combined = format!( "{}{}", common::stderr( &out ), common::stdout( &out ) );
   assert!(
     combined.contains( "query" ) || combined.contains( "empty" ),
     "EC-2: error must mention query or empty; got: {combined}"
@@ -136,8 +118,8 @@ fn ec_3_query_single_word_accepted()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let output = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let output = common::stdout( &out );
   assert!(
     output.contains( "error" ),
     "EC-3: single-word query must find matching entries; got: {output}"
@@ -179,7 +161,7 @@ fn ec_4_query_multi_word_accepted()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
 }
 
 /// EC-5: Alias `q::` accepted same as `query::`.
@@ -224,11 +206,11 @@ fn ec_5_query_alias_q_accepted()
     .output()
     .unwrap();
 
-  assert_exit( &out_query, 0 );
-  assert_exit( &out_alias, 0 );
+  common::assert_exit( &out_query, 0 );
+  common::assert_exit( &out_alias, 0 );
   assert_eq!(
-    stdout( &out_query ),
-    stdout( &out_alias ),
+    common::stdout( &out_query ),
+    common::stdout( &out_alias ),
     "EC-5: q:: alias must produce identical results to query::"
   );
 }
@@ -261,8 +243,8 @@ fn ec_6_query_whitespace_only_rejected()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
-  let combined = format!( "{}{}", stderr( &out ), stdout( &out ) );
+  common::assert_exit( &out, 1 );
+  let combined = format!( "{}{}", common::stderr( &out ), common::stdout( &out ) );
   assert!(
     combined.contains( "query" ) || combined.contains( "empty" ),
     "EC-6: error must mention query or empty; got: {combined}"
@@ -303,8 +285,8 @@ fn ec_7_query_special_chars_accepted()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let output = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let output = common::stdout( &out );
   assert!(
     output.contains( "param::value" ),
     "EC-7: query with :: must search for literal param::value; got: {output}"

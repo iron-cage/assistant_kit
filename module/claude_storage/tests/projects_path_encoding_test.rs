@@ -221,26 +221,8 @@ mod common;
 
 use tempfile::TempDir;
 
-fn stdout( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stdout ).into_owned()
-}
 
-fn stderr( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stderr ).into_owned()
-}
 
-fn assert_exit( out : &std::process::Output, code : i32 )
-{
-  assert_eq!(
-    out.status.code().unwrap_or( -1 ),
-    code,
-    "expected exit {code}, got {:?}; stderr: {}",
-    out.status.code(),
-    stderr( out )
-  );
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Decode Display — Hyphen-Prefixed Topic Directory (issue-030)
@@ -288,8 +270,8 @@ fn it_24_decode_display_includes_hyphen_prefixed_topic_dir()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "-default_topic" ),
     "display path must include hyphen-prefixed topic dir '-default_topic'; got:\n{s}"
@@ -347,8 +329,8 @@ fn it_23_decode_display_preserves_underscore_named_dirs()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "my_project" ),
     "display path must preserve underscore: 'my_project' not 'wip/core'; got:\n{s}"
@@ -420,8 +402,8 @@ fn it_25_scope_under_excludes_underscore_named_sibling()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "session-it25-child" ),
     "must contain session-it25-child (child base/sub is under base); got:\n{s}"
@@ -492,8 +474,8 @@ fn it_26_scope_relevant_excludes_underscore_named_sibling()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "session-it26-target" ),
     "must contain session-it26-target (current project at base_extra); got:\n{s}"
@@ -572,8 +554,8 @@ fn it_69_scope_local_excludes_nested_dot_prefixed_project()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "session-it69-anchor" ),
     "must contain session-it69-anchor (anchor is the scope::local target); got:\n{s}"
@@ -637,8 +619,8 @@ fn projects_shows_topic_path_when_topic_dir_absent()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "/-commit" ),
     "display path must include topic '/-commit' even when dir is absent from disk; got:\n{s}"
@@ -674,8 +656,8 @@ fn projects_shows_topic_path_when_topic_dir_present()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "/-commit" ),
     "display path must include topic '/-commit' when dir is present on disk; got:\n{s}"
@@ -707,8 +689,8 @@ fn projects_shows_default_topic_path_when_topic_dir_absent()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "/-default_topic" ),
     "display path must include '/-default_topic' even when dir is absent; got:\n{s}"
@@ -738,8 +720,8 @@ fn projects_shows_base_path_with_no_topic()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "session-t04-no-topic" ), "session must appear; got:\n{s}" );
   // No topic suffix in storage key — path must not include any topic component.
   assert!(
@@ -799,8 +781,8 @@ fn projects_shows_both_topic_components_for_double_topic_key()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "/-default_topic" ),
     "display path must include first topic '/-default_topic'; got:\n{s}"
@@ -859,8 +841,8 @@ fn it_65_decode_display_resolves_dot_prefixed_path_component()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "/.hidden_base/child" ),
     "display path must resolve the dot-prefixed component; got:\n{s}"
@@ -910,8 +892,8 @@ fn it_67_scope_under_excludes_dot_prefixed_similar_named_sibling()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "session-it67-base" ),  "must include base itself; got:\n{s}" );
   assert!( s.contains( "session-it67-child" ), "must include child of base; got:\n{s}" );
   assert!(
@@ -951,8 +933,8 @@ fn it_68_scope_relevant_excludes_dot_prefixed_similar_named_sibling()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "session-it68-base" ), "must include base project; got:\n{s}" );
   assert!(
     !s.contains( "session-it68-sibling" ),
@@ -1020,8 +1002,8 @@ fn it_70_scope_local_excludes_single_char_nested_project()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "session-it70-anchor" ),
     "must contain session-it70-anchor (anchor is the scope::local target); got:\n{s}"
@@ -1095,8 +1077,8 @@ fn it_71_scope_local_excludes_trailing_special_char_anchor_nested_project()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "session-it71-anchor" ),
     "must contain session-it71-anchor (anchor is the scope::local target); got:\n{s}"
@@ -1165,8 +1147,8 @@ fn it_72_scope_local_excludes_nested_project_with_arbitrary_special_leading_char
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "session-it72-anchor" ),
     "must contain session-it72-anchor (anchor is the scope::local target); got:\n{s}"
@@ -1238,8 +1220,8 @@ fn it_73_scope_under_excludes_sibling_with_embedded_double_hyphen()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "session-it73-anchor" ),
     "must contain session-it73-anchor (anchor is the scope::under target); got:\n{s}"
@@ -1305,8 +1287,8 @@ fn it_74_scope_local_excludes_nested_project_with_consecutive_leading_specials()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "session-it74-anchor" ),
     "must contain session-it74-anchor (anchor is the scope::local target); got:\n{s}"
@@ -1385,8 +1367,8 @@ fn it_75_scope_under_excludes_sibling_with_synthetic_topic_suffix()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "session-it75-anchor" ), "must include anchor itself; got:\n{s}" );
   assert!( s.contains( "session-it75-child" ),  "must include child under anchor; got:\n{s}" );
   assert!(
@@ -1457,8 +1439,8 @@ fn it_76_scope_relevant_excludes_sibling_with_synthetic_topic_suffix()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "session-it76-target" ), "must include target project itself; got:\n{s}" );
   assert!(
     !s.contains( "session-it76-sibling-plain" ),
@@ -1512,8 +1494,8 @@ fn it_77_count_target_projects_scope_under_excludes_sibling_with_synthetic_topic
     .output()
     .unwrap();
 
-  assert_exit( &under_out, 0 );
-  let out_str = stdout( &under_out );
+  common::assert_exit( &under_out, 0 );
+  let out_str = common::stdout( &under_out );
   let n : usize = out_str.trim().parse().unwrap_or_else( |_| panic!(
     "count output must be a bare integer; got: '{out_str}'"
   ));
@@ -1608,8 +1590,8 @@ fn it_78_scope_local_excludes_project_past_200_char_truncation_boundary()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "session-it78-anchor" ),
     "must contain session-it78-anchor (anchor is the scope::local target); got:\n{s}"
@@ -1695,8 +1677,8 @@ fn it_79_scope_under_multibyte_sibling_wins_best_partial_over_real_anchor()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "session-it79-anchor" ),
     "must contain session-it79-anchor (anchor itself is always scope::under-relevant); got:\n{s}"
@@ -1775,8 +1757,8 @@ fn it_80_scope_under_excludes_extension_named_sibling_past_200_char_truncation_b
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "session-it80-anchor" ), "must include anchor itself; got:\n{s}" );
   assert!(
     !s.contains( "session-it80-sibling-plain" ),
@@ -1837,8 +1819,8 @@ fn it_81_scope_under_excludes_extension_named_sibling_with_synthetic_topic_suffi
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "session-it81-anchor" ), "must include anchor itself; got:\n{s}" );
   assert!(
     !s.contains( "session-it81-sibling-topic" ),
@@ -1894,8 +1876,8 @@ fn it_82_scope_local_excludes_extension_named_sibling_with_synthetic_topic_suffi
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "session-it82-anchor" ), "must include anchor itself; got:\n{s}" );
   assert!(
     !s.contains( "session-it82-sibling-topic" ),
@@ -1952,8 +1934,8 @@ fn it_83_scope_around_excludes_extension_named_sibling_with_synthetic_topic_suff
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "session-it83-anchor" ), "must include anchor itself; got:\n{s}" );
   assert!(
     !s.contains( "session-it83-sibling-topic" ),
@@ -2056,8 +2038,8 @@ fn it_84_scope_relevant_includes_independently_truncated_ancestor()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "session-it84-descendant" ), "must include descendant itself; got:\n{s}" );
   assert!(
     s.contains( "session-it84-ancestor" ),
@@ -2126,8 +2108,8 @@ fn it_85_scope_under_includes_independently_truncated_descendant()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "session-it85-ancestor" ), "must include ancestor itself; got:\n{s}" );
   assert!(
     s.contains( "session-it85-descendant" ),
@@ -2252,8 +2234,8 @@ fn it_86_scope_under_ambiguous_full_match_includes_genuine_excludes_unrelated_ti
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "session-it86-anchor" ), "must include anchor itself; got:\n{s}" );
   assert!(
     s.contains( "session-it86-ambiguous-child" ),
@@ -2387,8 +2369,8 @@ fn it_87_scope_under_excludes_unrelated_double_truncated_sibling()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "session-it87-bob-anchor" ), "must include bob (the anchor) itself; got:\n{s}" );
   assert!(
     !s.contains( "session-it87-alice-UNRELATED" ),
@@ -2456,8 +2438,8 @@ fn it_88_scope_under_single_sided_truncation_control()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "session-it88-bob-anchor" ), "must include bob (the anchor) itself; got:\n{s}" );
   assert!(
     !s.contains( "session-it88-alice-UNRELATED" ),
@@ -2540,8 +2522,8 @@ fn it_89_scope_relevant_excludes_unrelated_double_truncated_sibling()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "session-it89-bob-anchor" ), "must include bob (the anchor) itself; got:\n{s}" );
   assert!(
     !s.contains( "session-it89-alice-UNRELATED" ),
@@ -2681,8 +2663,8 @@ fn it_90_scope_local_excludes_nested_project_topic_session_past_200_char_boundar
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "session-it90-anchor" ), "must include anchor itself; got:\n{s}" );
   assert!(
     !s.contains( "session-it90-nested-topic-LEAK" ),
@@ -2801,8 +2783,8 @@ fn it_91_scope_under_deep_shared_ancestor_false_inclusion_accepted_limitation()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "session-it91-bob-anchor" ), "must include bob (the anchor) itself; got:\n{s}" );
   assert!(
     s.contains( "session-it91-alice-UNRELATED" ),
@@ -2862,8 +2844,8 @@ fn it_92_scope_relevant_deep_shared_ancestor_false_inclusion_accepted_limitation
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "session-it92-bob-anchor" ), "must include bob itself; got:\n{s}" );
   assert!(
     s.contains( "session-it92-alice-UNRELATED" ),
@@ -2958,8 +2940,8 @@ fn it_93_scope_under_no_panic_on_non_ascii_dir_name_straddling_200_byte_boundary
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "session-it93-anchor" ), "must include the anchor itself; got:\n{s}" );
 }
 
@@ -3014,8 +2996,8 @@ fn it_94_scope_relevant_no_panic_on_non_ascii_dir_name_straddling_200_byte_bound
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "session-it94-anchor" ), "must include the anchor itself; got:\n{s}" );
 }
 
@@ -3062,8 +3044,8 @@ fn it_95_scope_local_no_panic_control_unaffected_by_bug_521()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "session-it95-anchor" ), "must include the anchor itself; got:\n{s}" );
 }
 
@@ -3177,8 +3159,8 @@ fn it_96_scope_local_search_encoded_subtree_preserves_genuine_sibling_collision_
       .arg( format!( "path::{}", base.display() ) )
       .output()
       .unwrap();
-    assert_exit( &out, 0 );
-    stdout( &out )
+    common::assert_exit( &out, 0 );
+    common::stdout( &out )
   };
 
   let s_sib1 = query( &sib1 );
@@ -3319,8 +3301,8 @@ fn it_97_scope_local_search_encoded_subtree_prefers_specific_match_over_sibling_
     .arg( format!( "path::{}", y2.display() ) )
     .output()
     .unwrap();
-  assert_exit( &out_y2, 0 );
-  let s_y2 = stdout( &out_y2 );
+  common::assert_exit( &out_y2, 0 );
+  let s_y2 = common::stdout( &out_y2 );
 
   // Query 2: scope::local at y3 -- must include y3's own session AND its
   // topic-tagged session (a real project's own topic-suffixed session
@@ -3334,8 +3316,8 @@ fn it_97_scope_local_search_encoded_subtree_prefers_specific_match_over_sibling_
     .arg( format!( "path::{}", y3.display() ) )
     .output()
     .unwrap();
-  assert_exit( &out_y3, 0 );
-  let s_y3 = stdout( &out_y3 );
+  common::assert_exit( &out_y3, 0 );
+  let s_y3 = common::stdout( &out_y3 );
 
   assert!( s_y2.contains( "session-it97-y2-own" ), "scope::local@y2 must include y2's own session; got:\n{s_y2}" );
   assert!(
@@ -3383,8 +3365,8 @@ fn it_98_scope_local_control_includes_anchor_topic_session_without_decoy()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "session-it98-anchor-topic" ),
     "control: anchor's own topic-tagged session must be included when no decoy \
@@ -3471,8 +3453,8 @@ fn it_99_scope_local_includes_anchor_topic_session_despite_extension_sibling_dec
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "session-it99-anchor-topic" ),
     "anchor's own topic-tagged session must still be included when an unrelated \
@@ -3518,8 +3500,8 @@ fn it_100_scope_under_includes_anchor_topic_session_despite_extension_sibling_de
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "session-it100-anchor-topic" ),
     "scope::under must still include anchor's own topic-tagged session (anchor is \
@@ -3566,8 +3548,8 @@ fn it_101_scope_relevant_includes_ancestor_topic_session_despite_extension_sibli
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "session-it101-anchor-topic" ),
     "scope::relevant queried from anchor/child must still include the ancestor's \
@@ -3617,8 +3599,8 @@ fn it_102_scope_local_includes_anchor_topic_session_despite_two_tied_extension_s
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "session-it102-anchor-topic" ),
     "anchor's own topic-tagged session must be included even with TWO \
@@ -3666,8 +3648,8 @@ fn it_103_scope_local_control_includes_anchor_topic_session_with_non_extending_s
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "session-it103-anchor-topic" ),
     "a long sibling whose piece does NOT extend the winning piece must not affect \
@@ -3770,8 +3752,8 @@ fn it_104_scope_under_excludes_ghost_descendant_despite_long_extension_sibling()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "session-it104-anchor" ), "must include anchor itself; got:\n{s}" );
   assert!(
     !s.contains( "session-it104-decoy" ),
@@ -3869,8 +3851,8 @@ fn it_105_scope_local_excludes_nested_project_topic_despite_long_extension_sibli
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "session-it105-anchor" ), "must include anchor itself; got:\n{s}" );
   assert!(
     !s.contains( "session-it105-decoy" ),
@@ -3981,8 +3963,8 @@ fn it_106_scope_under_excludes_partial_tie_ambiguous_topic_session()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "session-it106-anchor" ), "must include anchor itself; got:\n{s}" );
   assert!(
     !s.contains( "session-it106-ambiguous-topic" ),
@@ -4066,8 +4048,8 @@ fn it_107_scope_relevant_resolves_equal_length_truncated_twins_symmetrically()
     .arg( format!( "path::{}", target_x.display() ) )
     .output()
     .unwrap();
-  assert_exit( &out1, 0 );
-  let s1 = stdout( &out1 );
+  common::assert_exit( &out1, 0 );
+  let s1 = common::stdout( &out1 );
   assert!(
     !s1.contains( "session-it107-twiny" ),
     "must NOT contain session-it107-twiny under scope::relevant(target_x): twin_y is a plain, \
@@ -4085,8 +4067,8 @@ fn it_107_scope_relevant_resolves_equal_length_truncated_twins_symmetrically()
     .arg( format!( "path::{}", target_y.display() ) )
     .output()
     .unwrap();
-  assert_exit( &out2, 0 );
-  let s2 = stdout( &out2 );
+  common::assert_exit( &out2, 0 );
+  let s2 = common::stdout( &out2 );
   assert!(
     !s2.contains( "session-it107-twinx" ),
     "must NOT contain session-it107-twinx under scope::relevant(target_y): twin_x is a plain, \
@@ -4208,8 +4190,8 @@ fn it108_query(
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  stdout( &out )
+  common::assert_exit( &out, 0 );
+  common::stdout( &out )
 }
 
 /// Discoverability + non-absorption controls for the BUG-527 fixture: the
@@ -4367,8 +4349,8 @@ fn it_110_scope_under_resolves_tied_truncated_extension_siblings_independently()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "session-it110-siba" ),
     "sibling A's own session must be included under its own anchor; got:\n{s}"
@@ -4389,8 +4371,8 @@ fn it_110_scope_under_resolves_tied_truncated_extension_siblings_independently()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "session-it110-sibb" ),
     "sibling B's own session must be included under its own anchor; got:\n{s}"
@@ -4415,8 +4397,8 @@ fn it_110_scope_under_resolves_tied_truncated_extension_siblings_independently()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     !s.contains( "session-it110-siba" ) && !s.contains( "session-it110-sibb" ),
     "neither sibling's session may leak under the bait anchor (not their ancestor); got:\n{s}"
@@ -4433,8 +4415,8 @@ fn it_110_scope_under_resolves_tied_truncated_extension_siblings_independently()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "session-it110-siba" ) && s.contains( "session-it110-sibb" ),
     "both siblings' sessions must be included under the shared parent anchor; got:\n{s}"
@@ -4539,8 +4521,8 @@ fn it_111_scope_under_includes_true_project_despite_zero_credited_partial_tie()
     .arg( format!( "path::{}", root.path().display() ) )
     .output()
     .unwrap();
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "session-it111-probe" ),
     "control: session must be discoverable under the tempdir root; got:\n{s}"
@@ -4556,8 +4538,8 @@ fn it_111_scope_under_includes_true_project_despite_zero_credited_partial_tie()
     .arg( format!( "path::{}", p_dir.display() ) )
     .output()
     .unwrap();
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "session-it111-probe" ),
     "session must be INCLUDED under scope::under path::<p> — its true project \
@@ -4576,8 +4558,8 @@ fn it_111_scope_under_includes_true_project_despite_zero_credited_partial_tie()
     .arg( format!( "path::{}", deleted_anchor.display() ) )
     .output()
     .unwrap();
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "session-it111-probe" ),
     "session must be INCLUDED under the deleted anchor p/it111x-foo/it111y<90> — its true \
@@ -4594,8 +4576,8 @@ fn it_111_scope_under_includes_true_project_despite_zero_credited_partial_tie()
     .arg( format!( "path::{}", px.display() ) )
     .output()
     .unwrap();
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     !s.contains( "session-it111-probe" ),
     "session must be EXCLUDED under scope::under path::<px> — its true project is NOT under \
@@ -4700,8 +4682,8 @@ fn it_112_scope_under_excludes_long_topic_ghost_despite_verified_conflicting_sib
     .arg( format!( "path::{}", anchor.display() ) )
     .output()
     .unwrap();
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
 
   assert!( s.contains( "session-it112-anchor" ), "control: anchor's own session included; got:\n{s}" );
   assert!(
@@ -4799,8 +4781,8 @@ fn it_113_scope_under_includes_session_under_deleted_anchor_despite_long_decoy_s
     .arg( format!( "path::{}", s_ancestor.display() ) )
     .output()
     .unwrap();
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "session-it113-probe" ),
     "control: session must be INCLUDED under scope::under path::<surviving ancestor s>; got:\n{s}"
@@ -4818,8 +4800,8 @@ fn it_113_scope_under_includes_session_under_deleted_anchor_despite_long_decoy_s
     .arg( format!( "path::{}", unrelated.display() ) )
     .output()
     .unwrap();
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     !s.contains( "session-it113-probe" ),
     "control: session must be EXCLUDED under an unrelated anchor; got:\n{s}"
@@ -4835,8 +4817,8 @@ fn it_113_scope_under_includes_session_under_deleted_anchor_despite_long_decoy_s
     .arg( format!( "path::{}", deleted_anchor.display() ) )
     .output()
     .unwrap();
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "session-it113-probe" ),
     "GROUND TRUTH: session for deleted <s>/.it113y<90>/it113gone<90> must be INCLUDED under \
@@ -4883,8 +4865,8 @@ fn it_114_scope_under_includes_session_under_deleted_anchor_without_decoy()
     .arg( format!( "path::{}", deleted_anchor.display() ) )
     .output()
     .unwrap();
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "session-it114-probe" ),
     "control (no decoy): session must be INCLUDED under the deleted intermediate anchor \
@@ -4973,8 +4955,8 @@ fn it_115_scope_under_includes_session_under_deleted_anchor_below_tied_sibling()
     .arg( format!( "path::{}", sib1.display() ) )
     .output()
     .unwrap();
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "session-it115-probe" ),
     "control: session must be INCLUDED under scope::under path::<sib1> (AmbiguousFull \
@@ -4991,8 +4973,8 @@ fn it_115_scope_under_includes_session_under_deleted_anchor_below_tied_sibling()
     .arg( format!( "path::{}", deleted_anchor.display() ) )
     .output()
     .unwrap();
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "session-it115-probe" ),
     "GROUND TRUTH: session must be INCLUDED under scope::under path::<sib1>/.it115y<90> — \
@@ -5049,12 +5031,12 @@ fn it_116_scope_relevant_and_around_never_panic_on_non_utf8_project_dir()
       0,
       "GROUND TRUTH: scope::{scope} must exit 0 despite a non-UTF-8 storage dir name — \
        the directory simply cannot match any path-based scope; stderr: {}",
-      stderr( &out )
+      common::stderr( &out )
     );
     assert!(
-      !stderr( &out ).contains( "byte index 1 is out of bounds" ),
+      !common::stderr( &out ).contains( "byte index 1 is out of bounds" ),
       "scope::{scope} panicked with the predicted empty-slice panic; stderr: {}",
-      stderr( &out )
+      common::stderr( &out )
     );
   }
 }
@@ -5152,8 +5134,8 @@ fn it_117_scope_local_and_under_include_tied_candidate_via_intermediate_director
     .arg( format!( "path::{}", cand_a.display() ) )
     .output()
     .unwrap();
-  assert_exit( &out, 0 );
-  let s1 = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s1 = common::stdout( &out );
   assert!(
     s1.contains( "session-it117-probe" ),
     "CLAIM 1: session must be INCLUDED under scope::local path::<cand_a> -- dir_name is \
@@ -5174,8 +5156,8 @@ fn it_117_scope_local_and_under_include_tied_candidate_via_intermediate_director
     .arg( format!( "path::{}", cand_a.display() ) )
     .output()
     .unwrap();
-  assert_exit( &out, 0 );
-  let s2 = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s2 = common::stdout( &out );
   assert!(
     s2.contains( "session-it117-probe" ),
     "CLAIM 2: session must be INCLUDED under scope::under path::<cand_a> -- same false-Full(mid) \
@@ -5239,8 +5221,8 @@ fn it_118_scope_under_includes_session_under_deleted_anchor_below_three_way_tie(
     .arg( format!( "path::{}", sib3.display() ) )
     .output()
     .unwrap();
-  assert_exit( &out, 0 );
-  let s_sib3 = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s_sib3 = common::stdout( &out );
   assert!(
     s_sib3.contains( "session-it118-probe" ),
     "control: session must be discoverable under sib3 (its real ancestor); got:\n{s_sib3}"
@@ -5256,8 +5238,8 @@ fn it_118_scope_under_includes_session_under_deleted_anchor_below_three_way_tie(
     .arg( format!( "path::{}", deleted_anchor.display() ) )
     .output()
     .unwrap();
-  assert_exit( &out, 0 );
-  let s_deleted = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s_deleted = common::stdout( &out );
   assert!(
     s_deleted.contains( "session-it118-probe" ),
     "session must be INCLUDED under the deleted anchor nested below sib3 (one of a genuine \
@@ -5372,8 +5354,8 @@ fn it_119_scope_under_preserves_unresolved_tied_sibling_after_one_sided_rescue()
       .arg( format!( "path::{}", base.display() ) )
       .output()
       .unwrap();
-    assert_exit( &out, 0 );
-    stdout( &out )
+    common::assert_exit( &out, 0 );
+    common::stdout( &out )
   };
 
   // Ground truth controls: discoverable under sib2 (deep's real parent) and
@@ -5562,8 +5544,8 @@ fn it_121_scope_under_shallow_ancestor_escape_collision_false_inclusion_accepted
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "session-it121-bob-anchor" ), "must include bob (the anchor) itself; got:\n{s}" );
   assert!(
     s.contains( "session-it121-alice-UNRELATED" ),
@@ -5635,8 +5617,8 @@ fn it_122_scope_under_merges_credit_across_stacked_ambiguous_partial_ties()
       .arg( format!( "path::{}", base.display() ) )
       .output()
       .unwrap();
-    assert_exit( &out, 0 );
-    stdout( &out )
+    common::assert_exit( &out, 0 );
+    common::stdout( &out )
   };
 
   // Claim A: scope::under path::<mid_a> must include it (2 of the 4 tied

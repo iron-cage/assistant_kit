@@ -1,10 +1,15 @@
 meta:
   description: Cross-reference graph for all NNN-identified doc instances in claude_storage
-  node_count: 75
-  edge_count: 88
-  component_count: 15
-  generated: 2026-08-18
-  note: "param/29-31 and type/14 added for the .list->.projects consolidation; param/25 added for the .show project-overview extension; a pre-existing gap (param/26-28 and 32-39, command/12-15, user_story/006, pitfall/04) predates or follows this update and is not yet graphed"
+  node_count: 98
+  edge_count: 121
+  component_count: 25
+  generated: 2026-08-22
+  derivation: "Nodes are every NNN-identified instance under feature/, operation/, algorithm/,
+    invariant/ and cli/*/ (readme.md and procedure.md excluded). An edge a->b exists when a's
+    text references b's file by a resolvable relative path AND at least one endpoint is a
+    design-level doc (feature, invariant, algorithm, operation, pitfall) or a is a user_story.
+    The dense command<->param<->type reference web internal to cli/ is intentionally excluded:
+    this graph tracks design-level navigability, not CLI reference boilerplate."
 
 nodes:
   # feature/ entity (1)
@@ -35,7 +40,7 @@ nodes:
     file: invariant/003_entry_type_format.md
     label: Entry Type Format
     entity: invariant
-  # cli/user_story/ entity (5)
+  # cli/user_story/ entity (6)
   - id: user_story/001
     file: cli/user_story/001_audit_session_history.md
     label: Audit Session History
@@ -56,7 +61,11 @@ nodes:
     file: cli/user_story/005_resume_claude_session.md
     label: Resume Claude Session
     entity: user_story
-  # cli/command/ entity (11)
+  - id: user_story/006
+    file: cli/user_story/006_quick_context_refresh.md
+    label: Quick Context Refresh
+    entity: user_story
+  # cli/command/ entity (16)
   - id: command/01
     file: cli/command/01_status.md
     label: Status
@@ -101,6 +110,26 @@ nodes:
     file: cli/command/11_session_ensure.md
     label: Session Ensure
     entity: command
+  - id: command/12
+    file: cli/command/12_tail.md
+    label: Tail
+    entity: command
+  - id: command/13
+    file: cli/command/13_usage.md
+    label: Usage
+    entity: command
+  - id: command/14
+    file: cli/command/14_rollup.md
+    label: Rollup
+    entity: command
+  - id: command/15
+    file: cli/command/15_cost.md
+    label: Cost
+    entity: command
+  - id: command/16
+    file: cli/command/16_session_path.md
+    label: Session Path
+    entity: command
   # cli/format/ entity (3)
   - id: format/01
     file: cli/format/01_markdown.md
@@ -114,7 +143,7 @@ nodes:
     file: cli/format/03_text.md
     label: Text
     entity: format
-  # cli/param/ entity (24)
+  # cli/param/ entity (43)
   - id: param/01
     file: cli/param/01_agent.md
     label: Agent
@@ -211,10 +240,21 @@ nodes:
     file: cli/param/24_show_tree.md
     label: Show Tree
     entity: param
-  # cli/param/ entity, continued: 25 added for the .show project-overview extension (26-28 pre-existing gap, not yet graphed); 29-31 added for the .list->.projects consolidation
   - id: param/25
     file: cli/param/25_last.md
     label: Last
+    entity: param
+  - id: param/26
+    file: cli/param/26_depth.md
+    label: Depth
+    entity: param
+  - id: param/27
+    file: cli/param/27_since_days.md
+    label: Since Days
+    entity: param
+  - id: param/28
+    file: cli/param/28_show_topic.md
+    label: Show Topic
     entity: param
   - id: param/29
     file: cli/param/29_filter.md
@@ -227,6 +267,54 @@ nodes:
   - id: param/31
     file: cli/param/31_ids.md
     label: Ids
+    entity: param
+  - id: param/32
+    file: cli/param/32_fields.md
+    label: Fields
+    entity: param
+  - id: param/33
+    file: cli/param/33_index.md
+    label: Index
+    entity: param
+  - id: param/34
+    file: cli/param/34_group.md
+    label: Group
+    entity: param
+  - id: param/35
+    file: cli/param/35_sort.md
+    label: Sort
+    entity: param
+  - id: param/36
+    file: cli/param/36_order.md
+    label: Order
+    entity: param
+  - id: param/37
+    file: cli/param/37_model.md
+    label: Model
+    entity: param
+  - id: param/38
+    file: cli/param/38_columns.md
+    label: Columns
+    entity: param
+  - id: param/39
+    file: cli/param/39_session_ids.md
+    label: Session Ids
+    entity: param
+  - id: param/40
+    file: cli/param/40_agents.md
+    label: Agents
+    entity: param
+  - id: param/41
+    file: cli/param/41_latest.md
+    label: Latest
+    entity: param
+  - id: param/42
+    file: cli/param/42_full.md
+    label: Full
+    entity: param
+  - id: param/43
+    file: cli/param/43_compact.md
+    label: Compact
     entity: param
   # cli/param_group/ entity (5)
   - id: param_group/01
@@ -249,7 +337,7 @@ nodes:
     file: cli/param_group/05_scope_configuration.md
     label: Scope Configuration
     entity: param_group
-  # cli/type/ entity (13)
+  # cli/type/ entity (15)
   - id: type/01
     file: cli/type/01_entry_count.md
     label: Entry Count
@@ -306,7 +394,11 @@ nodes:
     file: cli/type/14_detail_level.md
     label: Detail Level
     entity: type
-  # cli/pitfall/ entity (3)
+  - id: type/15
+    file: cli/type/15_field_selector.md
+    label: Field Selector
+    entity: type
+  # cli/pitfall/ entity (4)
   - id: pitfall/01
     file: cli/pitfall/01_parameter_validation.md
     label: Parameter Validation Not Implied By Default
@@ -319,290 +411,387 @@ nodes:
     file: cli/pitfall/03_test_data_format.md
     label: Test Data Must Match Production Format
     entity: pitfall
+  - id: pitfall/04
+    file: cli/pitfall/04_vacuous_assertions_mask_stubs.md
+    label: Vacuous Assertions Mask Stubs
+    entity: pitfall
 
 edges:
-  # feature ↔ operation
+  # from feature/
   - from: feature/001
     to: operation/001
     via: cross_references
-  - from: operation/001
-    to: feature/001
-    via: cross_references
-  # algorithm ↔ feature
-  - from: algorithm/001
-    to: feature/001
-    via: cross_references
   - from: feature/001
     to: algorithm/001
     via: cross_references
-  # algorithm ↔ invariants
+  # from algorithm/
+  - from: algorithm/001
+    to: feature/001
+    via: cross_references
   - from: algorithm/001
     to: invariant/002
     via: cross_references
-  - from: invariant/002
-    to: algorithm/001
-    via: cross_references
-  # algorithm ↔ commands
   - from: algorithm/001
     to: command/07
     via: cross_references
+  # from invariant/
+  - from: invariant/001
+    to: algorithm/001
+    via: cross_references
+  - from: invariant/001
+    to: command/08
+    via: cross_references
+  - from: invariant/001
+    to: command/10
+    via: cross_references
+  - from: invariant/001
+    to: command/11
+    via: cross_references
+  - from: invariant/002
+    to: algorithm/001
+    via: cross_references
+  - from: invariant/002
+    to: command/02
+    via: cross_references
+  - from: invariant/002
+    to: command/03
+    via: cross_references
+  - from: invariant/002
+    to: command/07
+    via: cross_references
+  - from: invariant/002
+    to: command/15
+    via: cross_references
+  - from: invariant/003
+    to: command/01
+    via: cross_references
+  - from: invariant/003
+    to: command/03
+    via: cross_references
+  - from: invariant/003
+    to: command/04
+    via: cross_references
+  - from: invariant/003
+    to: command/05
+    via: cross_references
+  # from cli/user_story/
+  - from: user_story/001
+    to: user_story/004
+    via: cross_references
+  - from: user_story/001
+    to: command/01
+    via: cross_references
+  - from: user_story/001
+    to: command/04
+    via: cross_references
+  - from: user_story/001
+    to: command/07
+    via: cross_references
+  - from: user_story/001
+    to: command/13
+    via: cross_references
+  - from: user_story/001
+    to: command/14
+    via: cross_references
+  - from: user_story/001
+    to: command/15
+    via: cross_references
+  - from: user_story/001
+    to: param/09
+    via: cross_references
+  - from: user_story/001
+    to: param/16
+    via: cross_references
+  - from: user_story/001
+    to: param/23
+    via: cross_references
+  - from: user_story/001
+    to: param/30
+    via: cross_references
+  - from: user_story/001
+    to: param_group/01
+    via: cross_references
+  - from: user_story/001
+    to: param_group/05
+    via: cross_references
+  - from: user_story/002
+    to: user_story/001
+    via: cross_references
+  - from: user_story/002
+    to: user_story/003
+    via: cross_references
+  - from: user_story/002
+    to: user_story/005
+    via: cross_references
+  - from: user_story/002
+    to: user_story/006
+    via: cross_references
+  - from: user_story/002
+    to: command/02
+    via: cross_references
+  - from: user_story/002
+    to: command/03
+    via: cross_references
+  - from: user_story/002
+    to: command/05
+    via: cross_references
+  - from: user_story/002
+    to: command/07
+    via: cross_references
+  - from: user_story/002
+    to: param/01
+    via: cross_references
+  - from: user_story/002
+    to: param/02
+    via: cross_references
+  - from: user_story/002
+    to: param/03
+    via: cross_references
+  - from: user_story/002
+    to: param/04
+    via: cross_references
+  - from: user_story/002
+    to: param/07
+    via: cross_references
+  - from: user_story/002
+    to: param/09
+    via: cross_references
+  - from: user_story/002
+    to: param/10
+    via: cross_references
+  - from: user_story/002
+    to: param/11
+    via: cross_references
+  - from: user_story/002
+    to: param/12
+    via: cross_references
+  - from: user_story/002
+    to: param/13
+    via: cross_references
+  - from: user_story/002
+    to: param/14
+    via: cross_references
+  - from: user_story/002
+    to: param/17
+    via: cross_references
+  - from: user_story/002
+    to: param/18
+    via: cross_references
+  - from: user_story/002
+    to: param/19
+    via: cross_references
+  - from: user_story/002
+    to: param/22
+    via: cross_references
+  - from: user_story/002
+    to: param/24
+    via: cross_references
+  - from: user_story/002
+    to: param/25
+    via: cross_references
+  - from: user_story/002
+    to: param/27
+    via: cross_references
+  - from: user_story/002
+    to: param/28
+    via: cross_references
+  - from: user_story/002
+    to: param/29
+    via: cross_references
+  - from: user_story/002
+    to: param/30
+    via: cross_references
+  - from: user_story/002
+    to: param_group/02
+    via: cross_references
+  - from: user_story/002
+    to: param_group/03
+    via: cross_references
+  - from: user_story/002
+    to: param_group/04
+    via: cross_references
+  - from: user_story/002
+    to: param_group/05
+    via: cross_references
+  - from: user_story/003
+    to: user_story/002
+    via: cross_references
+  - from: user_story/003
+    to: command/06
+    via: cross_references
+  - from: user_story/003
+    to: format/01
+    via: cross_references
+  - from: user_story/003
+    to: format/02
+    via: cross_references
+  - from: user_story/003
+    to: format/03
+    via: cross_references
+  - from: user_story/003
+    to: param/05
+    via: cross_references
+  - from: user_story/003
+    to: param/06
+    via: cross_references
+  - from: user_story/003
+    to: param/08
+    via: cross_references
+  - from: user_story/003
+    to: param/09
+    via: cross_references
+  - from: user_story/003
+    to: param/14
+    via: cross_references
+  - from: user_story/003
+    to: param_group/03
+    via: cross_references
+  - from: user_story/003
+    to: param_group/05
+    via: cross_references
+  - from: user_story/004
+    to: user_story/001
+    via: cross_references
+  - from: user_story/004
+    to: command/01
+    via: cross_references
+  - from: user_story/004
+    to: command/02
+    via: cross_references
+  - from: user_story/004
+    to: command/04
+    via: cross_references
+  - from: user_story/004
+    to: command/07
+    via: cross_references
+  - from: user_story/004
+    to: command/16
+    via: cross_references
+  - from: user_story/004
+    to: format/02
+    via: cross_references
+  - from: user_story/004
+    to: param/09
+    via: cross_references
+  - from: user_story/004
+    to: param/12
+    via: cross_references
+  - from: user_story/004
+    to: param/16
+    via: cross_references
+  - from: user_story/004
+    to: param/21
+    via: cross_references
+  - from: user_story/004
+    to: param/31
+    via: cross_references
+  - from: user_story/004
+    to: param/41
+    via: cross_references
+  - from: user_story/004
+    to: param_group/05
+    via: cross_references
+  - from: user_story/005
+    to: user_story/002
+    via: cross_references
+  - from: user_story/005
+    to: user_story/006
+    via: cross_references
+  - from: user_story/005
+    to: command/08
+    via: cross_references
+  - from: user_story/005
+    to: command/09
+    via: cross_references
+  - from: user_story/005
+    to: command/10
+    via: cross_references
+  - from: user_story/005
+    to: command/11
+    via: cross_references
+  - from: user_story/005
+    to: param/09
+    via: cross_references
+  - from: user_story/005
+    to: param/17
+    via: cross_references
+  - from: user_story/005
+    to: param/20
+    via: cross_references
+  - from: user_story/005
+    to: param_group/05
+    via: cross_references
+  - from: user_story/006
+    to: user_story/002
+    via: cross_references
+  - from: user_story/006
+    to: user_story/005
+    via: cross_references
+  - from: user_story/006
+    to: command/12
+    via: cross_references
+  - from: user_story/006
+    to: param/09
+    via: cross_references
+  - from: user_story/006
+    to: param/17
+    via: cross_references
+  - from: user_story/006
+    to: param/25
+    via: cross_references
+  - from: user_story/006
+    to: param/42
+    via: cross_references
+  - from: user_story/006
+    to: param/43
+    via: cross_references
+  # from cli/command/
   - from: command/07
     to: algorithm/001
     via: cross_references
-  # invariants → feature
-  - from: invariant/001
-    to: feature/001
+  - from: command/13
+    to: invariant/001
     via: cross_references
-  - from: invariant/002
-    to: feature/001
+  - from: command/15
+    to: invariant/002
     via: cross_references
-  - from: invariant/003
-    to: feature/001
+  # from cli/param/
+  - from: param/40
+    to: invariant/002
     via: cross_references
-  # pitfall/03 → invariant/003 (unidirectional: pitfall references invariant as its formal contract)
+  # from cli/pitfall/
   - from: pitfall/03
     to: invariant/003
     via: cross_references
-  # pitfalls → feature
-  - from: pitfall/01
-    to: feature/001
-    via: cross_references
-  - from: pitfall/02
-    to: feature/001
-    via: cross_references
-  # user_story ↔ user_story
-  - from: user_story/001
-    to: user_story/004
-    via: related_user_stories
-  - from: user_story/002
-    to: user_story/001
-    via: related_user_stories
-  - from: user_story/002
-    to: user_story/003
-    via: related_user_stories
-  - from: user_story/002
-    to: user_story/005
-    via: related_user_stories
-  - from: user_story/003
-    to: user_story/002
-    via: related_user_stories
-  - from: user_story/004
-    to: user_story/001
-    via: related_user_stories
-  - from: user_story/005
-    to: user_story/002
-    via: related_user_stories
-  # user_story/001 → commands, param_groups, params
-  - from: user_story/001
+  - from: pitfall/03
     to: command/01
-    via: referenced_commands
-  - from: user_story/001
-    to: command/02
-    via: referenced_commands
-  - from: user_story/001
-    to: command/04
-    via: referenced_commands
-  - from: user_story/001
-    to: param_group/01
-    via: referenced_param_groups
-  - from: user_story/001
-    to: param_group/05
-    via: referenced_param_groups
-  - from: user_story/001
-    to: param/09
-    via: referenced_params
-  - from: user_story/001
-    to: param/15
-    via: referenced_params
-  - from: user_story/001
-    to: param/16
-    via: referenced_params
-  - from: user_story/001
-    to: param/23
-    via: referenced_params
-  - from: user_story/001
-    to: param/30
-    via: referenced_params
-  # user_story/002 → commands, param_groups, params
-  - from: user_story/002
-    to: command/02
-    via: referenced_commands
-  - from: user_story/002
+    via: cross_references
+  - from: pitfall/03
     to: command/03
-    via: referenced_commands
-  - from: user_story/002
-    to: command/05
-    via: referenced_commands
-  - from: user_story/002
-    to: command/07
-    via: referenced_commands
-  - from: user_story/002
-    to: param_group/02
-    via: referenced_param_groups
-  - from: user_story/002
-    to: param_group/03
-    via: referenced_param_groups
-  - from: user_story/002
-    to: param_group/04
-    via: referenced_param_groups
-  - from: user_story/002
-    to: param_group/05
-    via: referenced_param_groups
-  - from: user_story/002
-    to: param/01
-    via: referenced_params
-  - from: user_story/002
-    to: param/02
-    via: referenced_params
-  - from: user_story/002
-    to: param/03
-    via: referenced_params
-  - from: user_story/002
-    to: param/04
-    via: referenced_params
-  - from: user_story/002
-    to: param/07
-    via: referenced_params
-  - from: user_story/002
-    to: param/09
-    via: referenced_params
-  - from: user_story/002
-    to: param/10
-    via: referenced_params
-  - from: user_story/002
-    to: param/11
-    via: referenced_params
-  - from: user_story/002
-    to: param/12
-    via: referenced_params
-  - from: user_story/002
-    to: param/13
-    via: referenced_params
-  - from: user_story/002
-    to: param/14
-    via: referenced_params
-  - from: user_story/002
-    to: param/15
-    via: referenced_params
-  - from: user_story/002
-    to: param/17
-    via: referenced_params
-  - from: user_story/002
-    to: param/18
-    via: referenced_params
-  - from: user_story/002
-    to: param/19
-    via: referenced_params
-  - from: user_story/002
-    to: param/22
-    via: referenced_params
-  - from: user_story/002
-    to: param/24
-    via: referenced_params
-  - from: user_story/002
-    to: param/25
-    via: referenced_params
-  - from: user_story/002
-    to: param/29
-    via: referenced_params
-  - from: user_story/002
-    to: param/30
-    via: referenced_params
-  # user_story/003 → command, param_groups, formats, params
-  - from: user_story/003
-    to: command/06
-    via: referenced_commands
-  - from: user_story/003
-    to: param_group/03
-    via: referenced_param_groups
-  - from: user_story/003
-    to: param_group/05
-    via: referenced_param_groups
-  - from: user_story/003
-    to: format/01
-    via: referenced_formats
-  - from: user_story/003
-    to: format/02
-    via: referenced_formats
-  - from: user_story/003
-    to: format/03
-    via: referenced_formats
-  - from: user_story/003
-    to: param/05
-    via: referenced_params
-  - from: user_story/003
-    to: param/06
-    via: referenced_params
-  - from: user_story/003
-    to: param/08
-    via: referenced_params
-  - from: user_story/003
-    to: param/09
-    via: referenced_params
-  - from: user_story/003
-    to: param/14
-    via: referenced_params
-  # user_story/004 → commands, param_groups, formats, params
-  - from: user_story/004
-    to: command/01
-    via: referenced_commands
-  - from: user_story/004
-    to: command/02
-    via: referenced_commands
-  - from: user_story/004
+    via: cross_references
+  - from: pitfall/03
     to: command/04
-    via: referenced_commands
-  - from: user_story/004
-    to: param_group/05
-    via: referenced_param_groups
-  - from: user_story/004
-    to: format/02
-    via: referenced_formats
-  - from: user_story/004
-    to: param/09
-    via: referenced_params
-  - from: user_story/004
-    to: param/12
-    via: referenced_params
-  - from: user_story/004
-    to: param/16
-    via: referenced_params
-  - from: user_story/004
-    to: param/21
-    via: referenced_params
-  - from: user_story/004
-    to: param/31
-    via: referenced_params
-  # user_story/005 → commands, param_groups, params
-  - from: user_story/005
-    to: command/08
-    via: referenced_commands
-  - from: user_story/005
-    to: command/09
-    via: referenced_commands
-  - from: user_story/005
-    to: command/10
-    via: referenced_commands
-  - from: user_story/005
-    to: command/11
-    via: referenced_commands
-  - from: user_story/005
-    to: param_group/05
-    via: referenced_param_groups
-  - from: user_story/005
-    to: param/09
-    via: referenced_params
-  - from: user_story/005
-    to: param/17
-    via: referenced_params
-  - from: user_story/005
-    to: param/20
-    via: referenced_params
+    via: cross_references
+  - from: pitfall/03
+    to: command/05
+    via: cross_references
+  - from: pitfall/03
+    to: type/15
+    via: cross_references
+  - from: pitfall/04
+    to: pitfall/01
+    via: cross_references
+  - from: pitfall/04
+    to: pitfall/02
+    via: cross_references
+  - from: pitfall/04
+    to: pitfall/03
+    via: cross_references
 
 components:
   - id: 1
-    label: CLI Tool + Algorithms + Invariants + Pitfalls + User Stories + Commands + Params + Param Groups + Formats
-    size: 60
+    label: Feature + Operation + Algorithm + Invariant + User Story + Command + Format + Param + Param Group + Type + Pitfall
+    size: 74
     isolated: false
     nodes:
       - feature/001
@@ -611,14 +800,12 @@ components:
       - invariant/001
       - invariant/002
       - invariant/003
-      - pitfall/01
-      - pitfall/02
-      - pitfall/03
       - user_story/001
       - user_story/002
       - user_story/003
       - user_story/004
       - user_story/005
+      - user_story/006
       - command/01
       - command/02
       - command/03
@@ -630,6 +817,11 @@ components:
       - command/09
       - command/10
       - command/11
+      - command/12
+      - command/13
+      - command/14
+      - command/15
+      - command/16
       - format/01
       - format/02
       - format/03
@@ -647,7 +839,6 @@ components:
       - param/12
       - param/13
       - param/14
-      - param/15
       - param/16
       - param/17
       - param/18
@@ -658,93 +849,164 @@ components:
       - param/23
       - param/24
       - param/25
+      - param/27
+      - param/28
       - param/29
       - param/30
       - param/31
+      - param/40
+      - param/41
+      - param/42
+      - param/43
       - param_group/01
       - param_group/02
       - param_group/03
       - param_group/04
       - param_group/05
+      - type/15
+      - pitfall/01
+      - pitfall/02
+      - pitfall/03
+      - pitfall/04
   - id: 2
+    label: "CLI Param: Show Sessions (no inter-entity cross-references yet)"
+    size: 1
+    isolated: true
+    nodes:
+      - param/15
+  - id: 3
+    label: "CLI Param: Depth (no inter-entity cross-references yet)"
+    size: 1
+    isolated: true
+    nodes:
+      - param/26
+  - id: 4
+    label: "CLI Param: Fields (no inter-entity cross-references yet)"
+    size: 1
+    isolated: true
+    nodes:
+      - param/32
+  - id: 5
+    label: "CLI Param: Index (no inter-entity cross-references yet)"
+    size: 1
+    isolated: true
+    nodes:
+      - param/33
+  - id: 6
+    label: "CLI Param: Group (no inter-entity cross-references yet)"
+    size: 1
+    isolated: true
+    nodes:
+      - param/34
+  - id: 7
+    label: "CLI Param: Sort (no inter-entity cross-references yet)"
+    size: 1
+    isolated: true
+    nodes:
+      - param/35
+  - id: 8
+    label: "CLI Param: Order (no inter-entity cross-references yet)"
+    size: 1
+    isolated: true
+    nodes:
+      - param/36
+  - id: 9
+    label: "CLI Param: Model (no inter-entity cross-references yet)"
+    size: 1
+    isolated: true
+    nodes:
+      - param/37
+  - id: 10
+    label: "CLI Param: Columns (no inter-entity cross-references yet)"
+    size: 1
+    isolated: true
+    nodes:
+      - param/38
+  - id: 11
+    label: "CLI Param: Session Ids (no inter-entity cross-references yet)"
+    size: 1
+    isolated: true
+    nodes:
+      - param/39
+  - id: 12
     label: "CLI Type: Entry Count (no inter-entity cross-references yet)"
     size: 1
     isolated: true
     nodes:
       - type/01
-  - id: 3
+  - id: 13
     label: "CLI Type: Entry Type (no inter-entity cross-references yet)"
     size: 1
     isolated: true
     nodes:
       - type/02
-  - id: 4
+  - id: 14
     label: "CLI Type: Export Format (no inter-entity cross-references yet)"
     size: 1
     isolated: true
     nodes:
       - type/03
-  - id: 5
+  - id: 15
     label: "CLI Type: Path Substring (no inter-entity cross-references yet)"
     size: 1
     isolated: true
     nodes:
       - type/04
-  - id: 6
+  - id: 16
     label: "CLI Type: Project ID (no inter-entity cross-references yet)"
     size: 1
     isolated: true
     nodes:
       - type/05
-  - id: 7
+  - id: 17
     label: "CLI Type: Project Type (no inter-entity cross-references yet)"
     size: 1
     isolated: true
     nodes:
       - type/06
-  - id: 8
+  - id: 18
     label: "CLI Type: Scope Value (no inter-entity cross-references yet)"
     size: 1
     isolated: true
     nodes:
       - type/07
-  - id: 9
+  - id: 19
     label: "CLI Type: Session Filter (no inter-entity cross-references yet)"
     size: 1
     isolated: true
     nodes:
       - type/08
-  - id: 10
+  - id: 20
     label: "CLI Type: Session ID (no inter-entity cross-references yet)"
     size: 1
     isolated: true
     nodes:
       - type/09
-  - id: 11
+  - id: 21
     label: "CLI Type: Storage Path (no inter-entity cross-references yet)"
     size: 1
     isolated: true
     nodes:
       - type/10
-  - id: 12
+  - id: 22
     label: "CLI Type: Target Type (no inter-entity cross-references yet)"
     size: 1
     isolated: true
     nodes:
       - type/11
-  - id: 13
+  - id: 23
     label: "CLI Type: Topic Name (no inter-entity cross-references yet)"
     size: 1
     isolated: true
     nodes:
       - type/12
-  - id: 14
+  - id: 24
     label: "CLI Type: Strategy Type (no inter-entity cross-references yet)"
     size: 1
     isolated: true
     nodes:
       - type/13
-  - id: 15
+  - id: 25
     label: "CLI Type: Detail Level (no inter-entity cross-references yet)"
     size: 1
     isolated: true

@@ -13,7 +13,7 @@
 
 **Purpose:** Restricts an operation to a specific project, identified by multiple accepted formats.
 
-**Used By:** `.list` (deprecated), `.show`, `.count`, `.search`, `.export`, `.projects` (6 commands total, 1 deprecated) — `.projects` uses `project::` to pin the `ids::` scripting path (see [`31_ids.md`](../param/31_ids.md))
+**Used By:** `.list` (deprecated), `.show`, `.count`, `.search`, `.export`, `.projects` (6 commands total, 1 deprecated) — `.projects` uses `project::` to pin the `ids::` scripting path (see [`../param/31_ids.md`](../param/31_ids.md))
 
 **Semantic Coherence Test:**
 - "Does `project::` control which project is operated on?" → YES

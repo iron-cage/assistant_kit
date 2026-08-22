@@ -21,26 +21,8 @@ mod common;
 
 use tempfile::TempDir;
 
-fn stdout( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stdout ).into_owned()
-}
 
-fn stderr( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stderr ).into_owned()
-}
 
-fn assert_exit( out : &std::process::Output, code : i32 )
-{
-  assert_eq!(
-    out.status.code().unwrap_or( -1 ),
-    code,
-    "expected exit {code}, got {:?}; stderr: {}",
-    out.status.code(),
-    stderr( out )
-  );
-}
 
 // ─── INT-1 ────────────────────────────────────────────────────────────────────
 
@@ -61,8 +43,8 @@ fn int_1_default_cwd_computes_storage_path()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( ".claude" ) || s.contains( "projects" ),
     "output must contain storage path components; got:\n{s}"
@@ -91,8 +73,8 @@ fn int_2_path_override_computes_storage_path()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "consumer-app" ) || s.contains( "projects" ),
     "output must contain encoded path components; got:\n{s}"
@@ -117,8 +99,8 @@ fn int_3_topic_appended_as_suffix_to_encoded_path()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "--default-topic" ) || s.contains( "default-topic" ) || s.contains( "default_topic" ),
     "output must contain topic suffix for 'default_topic'; got:\n{s}"
@@ -145,8 +127,8 @@ fn int_4_path_with_topic_combines_both()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "--work" ) || s.contains( "work" ),
     "output must contain '--work' topic suffix; got:\n{s}"
@@ -168,8 +150,8 @@ fn int_5_output_is_single_line_ending_with_slash()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   let content = s.trim_end_matches( '\n' );
   let lines : Vec< &str > = content.split( '\n' ).filter( | l | !l.is_empty() ).collect();
   assert_eq!(
@@ -199,8 +181,8 @@ fn int_6_exits_0_for_nonexistent_path()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     !s.trim().is_empty(),
     "must output computed path even for nonexistent dir; got empty stdout"
@@ -225,8 +207,8 @@ fn int_7_tilde_expanded_in_path()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     !s.contains( '~' ),
     "output must not contain literal '~' after expansion; got:\n{s}"
@@ -264,11 +246,11 @@ fn int_8_path_dot_resolves_to_cwd()
     .output()
     .unwrap();
 
-  assert_exit( &out_bare, 0 );
-  assert_exit( &out_dot,  0 );
+  common::assert_exit( &out_bare, 0 );
+  common::assert_exit( &out_dot,  0 );
   assert_eq!(
-    stdout( &out_dot ),
-    stdout( &out_bare ),
+    common::stdout( &out_dot ),
+    common::stdout( &out_bare ),
     "path::. must produce same output as bare .project.path from same cwd"
   );
 }
@@ -290,8 +272,8 @@ fn int_9_empty_topic_rejected()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
-  let combined = format!( "{}{}", stderr( &out ), stdout( &out ) );
+  common::assert_exit( &out, 1 );
+  let combined = format!( "{}{}", common::stderr( &out ), common::stdout( &out ) );
   assert!(
     !combined.is_empty(),
     "must produce error output for empty topic::"
@@ -315,8 +297,8 @@ fn int_10_topic_with_slash_rejected()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
-  let combined = format!( "{}{}", stderr( &out ), stdout( &out ) );
+  common::assert_exit( &out, 1 );
+  let combined = format!( "{}{}", common::stderr( &out ), common::stdout( &out ) );
   assert!(
     !combined.is_empty(),
     "must produce error output for slash-containing topic::"
