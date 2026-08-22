@@ -8,14 +8,12 @@
 //! modules and are re-exported here for callers. All consumed by `api.rs::usage_routine`.
 
 use data_fmt::{ RowBuilder, TableFormatter, TableConfig, Format };
-use crate::output::format_duration_secs;
 use crate::account::{ TagFilter, eligible };
 use super::types::{ AccountQuota, SortStrategy, PreferStrategy, ColsVisibility, GetField };
 use super::format::{
   recommended_model,
   expires_cell_for, sub_cell_for, renews_cell_for, shorten_error, with_lock_marker,
-  quota_text_cells, status_emoji, next_event_label, next_event_raw, renewal_secs,
-  projected_reset_label,
+  quota_cells_for, PctStyle, status_emoji, next_event_label, next_event_raw, renewal_secs,
 };
 use super::sort::{ sort_indices, find_next_for_strategy, strategy_metric };
 use super::render_sessions::append_sessions_table;
@@ -141,47 +139,15 @@ pub fn render_text(
     {
       Ok( data ) =>
       {
-        let mut cells = quota_text_cells( data, now_secs );
-        if aq.cached
-        {
-          prefix_tilde( &mut cells );
-          // For cached rows: saturating_sub clamps negative countdowns to 0 in quota_text_cells,
-          // making "in 0s" indistinguishable from a future event. Re-check timestamps here.
-          let is_past = |iso : Option< &str >| -> bool
-          {
-            iso.and_then( claude_quota::iso_to_unix_secs ).is_some_and( |t| t < now_secs )
-          };
-          if is_past( data.five_hour.as_ref().and_then( |p| p.resets_at.as_deref() ) ) { cells[ 1 ] = "(stale)".to_string(); }
-          if is_past( data.seven_day.as_ref().and_then( |p| p.resets_at.as_deref() ) ) { cells[ 4 ] = "(stale)".to_string(); }
-        }
-        // Fix(BUG-551): a corroborated-touch row whose re-fetch still reports the 5h window
-        //   idle renders the projected countdown "~in Xh Ym" — replacing BUG-488's opaque
-        //   "(touched)", which named the cause but withheld the value the column exists
-        //   to show, on a row where that value is exactly derivable from the touch instant.
-        // Root cause: `touched_recently` was a bool, so render had no instant to project
-        //   from; `touched_at_secs` now carries the anchor `derive_touched_recently` parses.
-        // Pitfall: display-only — never fabricate a resets_at into `data` itself; sort,
-        //   skip and forecast logic must keep seeing the API's own (lagged) state.
-        if let Some( touched_at ) = aq.touched_at_secs
-        {
-          if data.five_hour.as_ref().and_then( |p| p.resets_at.as_deref() ).is_none()
-          {
-            cells[ 1 ] = projected_reset_label( touched_at, now_secs );
-          }
-        }
-        let son_unix  = data.seven_day_sonnet.as_ref()
-          .and_then( |p| p.resets_at.as_deref() )
-          .and_then( claude_quota::iso_to_unix_secs );
-        let son_reset = match son_unix
-        {
-          None                                    => "\u{2014}".to_string(),
-          Some( t ) if aq.cached && t < now_secs => "(stale)".to_string(),
-          Some( t ) =>
-          {
-            let label = format!( "in {}", format_duration_secs( t.saturating_sub( now_secs ) ) );
-            if aq.cached { format!( "~{label}" ) } else { label }
-          }
-        };
+        // Fix(BUG-553): every account-dependent quota rule — the cache `~`/`(stale)` pass and
+        //   BUG-551's touch projection — now lives inside `quota_cells_for` instead of being
+        //   applied here, post-hoc, to a shared helper's output. That post-hoc shape is exactly
+        //   why TSV, JSON and `get::` each silently missed rules this surface had.
+        // Root cause: `quota_text_cells` takes only `data`, so an account-dependent rule could
+        //   only ever be a per-caller addition — and only this caller made them.
+        // Pitfall: never reach for `quota_text_cells` at a call site that has an `aq` in scope.
+        let cells     = quota_cells_for( aq, data, now_secs, PctStyle::Emoji );
+        let son_reset = cells[ 5 ].clone();
         let ( ren_secs, ren_est ) = renewal_secs(
           aq.renewal_at.as_deref(),
           aq.org_created_at.as_deref(),
@@ -393,19 +359,6 @@ pub fn render_text(
 
 // ── Staleness display helpers ─────────────────────────────────────────────────
 
-/// Prefix each non-dash cell with `~` to indicate cached (stale) data.
-fn prefix_tilde( cells : &mut [ String; 5 ] )
-{
-  let dash = "\u{2014}";
-  for cell in cells.iter_mut()
-  {
-    if *cell != dash
-    {
-      *cell = format!( "~{cell}" );
-    }
-  }
-}
-
 /// Format a cache age as a human-readable suffix: `(Nm ago)` or `(Nh ago)`.
 fn cache_age_label( secs : u64 ) -> String
 {
@@ -470,8 +423,16 @@ pub( crate ) fn apply_no_color( s : String ) -> String
 /// Extract the value of one column for `aq` as a bare string with no table chrome.
 ///
 /// The returned string is the same value that would appear in the corresponding
-/// cell of the text table — but without trailing whitespace or ANSI sequences.
+/// cell of the text table — but without trailing whitespace or ANSI sequences, and
+/// with the bare percentage in place of the table's emoji-prefixed form.
 /// `host` and `role` return the values from `{name}.json`, empty when absent.
+///
+/// That equality is structural, not a promise this function keeps by remembering to:
+/// every account-dependent cell is produced by the same helper the table calls —
+/// `quota_cells_for` for the quota columns, `expires_cell_for` / `sub_cell_for` /
+/// `renews_cell_for` for the metadata ones. It was a promise this function repeatedly
+/// broke while it still built cells from its own local closures (BUG-345, BUG-540,
+/// BUG-551, BUG-553), which is why none of those closures remain.
 pub fn extract_get_field( aq : &AccountQuota, field : GetField, now_secs : u64 ) -> String
 {
   let dash = "\u{2014}".to_string();
@@ -528,39 +489,24 @@ pub fn extract_get_field( aq : &AccountQuota, field : GetField, now_secs : u64 )
     _ =>
     {
       let Ok( data ) = &aq.result else { return dash; };
-      let pct_bare = |util : Option< f64 >| -> String
-      {
-        util.map_or_else( || dash.clone(), |u| format!( "{:.0}%", 100.0 - u ) )
-      };
-      let reset_cell = |iso : Option< &str >| -> String
-      {
-        iso.and_then( claude_quota::iso_to_unix_secs )
-          .map_or_else( || dash.clone(), |t|
-            format!( "in {}", format_duration_secs( t.saturating_sub( now_secs ) ) )
-          )
-      };
+      // Fix(BUG-553 S2/S4): this arm carried its own `pct_bare` and `reset_cell` closures and so
+      //   ignored cache staleness entirely — `get::5h_left` answered `88%` where the table cell
+      //   said `~88%`, breaking this function's own same-as-the-table contract stated above.
+      //   Its `pct_bare` also omitted the `.round()` BUG-331 mandated, making it a third,
+      //   disagreeing rounding of one value. BUG-551's projection had to be hand-patched into
+      //   the 5h arm for the same reason: no shared aq-aware helper existed to land it in once.
+      // Root cause: per-surface closure duplication — the same mechanism BUG-540 and BUG-345
+      //   already fixed for `Sub`/`~Renews`/`Expires` via shared `*_cell_for` helpers.
+      // Pitfall: every quota cell whose value depends on account state must come from
+      //   `quota_cells_for` here too, never from a locally rebuilt closure.
+      let cells = quota_cells_for( aq, data, now_secs, PctStyle::Bare );
       match field
       {
-        GetField::FiveHourLeft  => pct_bare( data.five_hour.as_ref().map( |p| p.utilization ) ),
-        // Fix(BUG-551): the extractor rendered the em-dash for a corroborated-touch row
-        //   while the text table rendered "(touched)" for that same row — `get::5h_reset`
-        //   and the human table disagreed about one account.
-        // Root cause: extract_get_field carries its own `reset_cell` closure and never saw
-        //   the touched-row branch render_text applies after quota_text_cells.
-        // Pitfall: both surfaces must project from the same anchor — route through
-        //   projected_reset_label rather than re-deriving the window end here.
-        GetField::FiveHourReset =>
-        {
-          let api_reset = data.five_hour.as_ref().and_then( |p| p.resets_at.as_deref() );
-          match ( api_reset, aq.touched_at_secs )
-          {
-            ( None, Some( touched_at ) ) => projected_reset_label( touched_at, now_secs ),
-            _                            => reset_cell( api_reset ),
-          }
-        },
-        GetField::SevenDayLeft  => pct_bare( data.seven_day.as_ref().map( |p| p.utilization ) ),
-        GetField::SevenDaySon   => pct_bare( data.seven_day_sonnet.as_ref().map( |p| p.utilization ) ),
-        GetField::SevenDayReset => reset_cell( data.seven_day.as_ref().and_then( |p| p.resets_at.as_deref() ) ),
+        GetField::FiveHourLeft  => cells[ 0 ].clone(),
+        GetField::FiveHourReset => cells[ 1 ].clone(),
+        GetField::SevenDayLeft  => cells[ 2 ].clone(),
+        GetField::SevenDaySon   => cells[ 3 ].clone(),
+        GetField::SevenDayReset => cells[ 4 ].clone(),
         _ => dash,
       }
     }

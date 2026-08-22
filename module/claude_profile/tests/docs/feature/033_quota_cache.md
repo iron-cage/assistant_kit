@@ -4,7 +4,7 @@
 
 - **Purpose**: Test cases for quota cache fallback behavior — write-on-success, read-on-failure, staleness display, and side-effect persistence.
 - **Source**: `docs/feature/033_quota_cache.md`
-- **Covers**: AC-01 through AC-15, AC-19
+- **Covers**: AC-01 through AC-15, AC-19, AC-20
 
 ### Test Cases
 
@@ -27,6 +27,9 @@
 | FT-15 | AC-15 | Non-live-fetch branch (cache-first, G1-not-owned, or `approximate_quota()`) surfaces a cached `org_created_at` through `AccountQuota.org_created_at`, producing a real `~Renews` Estimate value instead of `"?"`; absent/pre-migration cache gracefully falls back to `None` | `mre_bug327_cache_first_surfaces_org_created_at` (cache-first branch only — see Notes) |
 | FT-16 | AC-19 | Freshly-written per-host cache file serializes period values under `utilization`, never `left_pct` | `bug_540_period_key_is_utilization_not_left_pct` |
 | FT-17 | AC-19 | Legacy per-host cache file carrying the pre-BUG-540 `left_pct` key still reads via the dual-key reader | `bug_540_legacy_left_pct_cache_file_still_reads` |
+| FT-18 | AC-20 | One cached fixture rendered through all four surfaces agrees on every quota cell — text and TSV both carry the `~` staleness prefix, `get::` matches the table cell, JSON discloses staleness via its own `cached` field and emits no `~` | `test_bug553_all_surfaces_agree_on_cached_row` |
+| FT-19 | AC-20 | A corroborated-touch row projects the same `~in Xh Ym` countdown on TSV and `get::` as on the text table; JSON emits the countdown with `session_5h_reset_is_estimate: true` | `test_bug553_tsv_and_json_project_touched_row` |
+| FT-20 | AC-20 | A `*.5` percentage rounds identically on every surface — one shared closure, `.round()` half-away, no per-surface copy | `test_bug553_one_rounding_across_surfaces` |
 
 ### Notes
 
@@ -240,3 +243,39 @@
 - **Exit:** `Some(entry)` with `five_hour.0 == 42.5`
 - **Source fn:** `bug_540_legacy_left_pct_cache_file_still_reads`
 - **Source:** [033_quota_cache.md AC-19](../../../docs/feature/033_quota_cache.md)
+
+---
+
+### FT-18: All four surfaces agree on every quota cell for a cached row
+
+- **Given:** One `AccountQuota` with `cached = true`, `cache_age_secs = Some(7200)`, `five_hour.utilization = 12.0` and `seven_day.utilization = 4.0`. The same object is rendered by `render_text`, `render_tsv`, `render_json`, and `extract_get_field` — not four separate fixtures, so no drift between them is possible.
+- **When:** Each surface renders the row.
+- **Then:** The text table shows `~🟢 88%` / `~🟢 96%` (`prefix_tilde` marks the whole cell, so the `~` precedes the emoji); TSV shows `~88%` / `~96%` — the `~` is TSV's *only* staleness signal, since unlike JSON it has no `cached` column; `get::5h_left` and `get::7d_left` return exactly the TSV strings, satisfying `extract_get_field`'s documented same-as-the-table contract; JSON emits `"cached":true` with `"session_5h_left_pct":88` and contains no `~` anywhere — its numbers stay parseable.
+- **Exit:** all four assertions pass; `!json.contains("~")`
+- **Source fn:** `test_bug553_all_surfaces_agree_on_cached_row`
+- **Note:** MRE for BUG-553 S1/S2. Percentage cells do not depend on the clock, so cross-surface equality on them is exact and race-free even though each renderer samples its own `SystemTime::now()`. This is the surface-vs-surface shape the pre-existing per-surface tests lacked: asserting "TSV shows `88%`" passes whether or not the table shows `~88%` for the same account.
+- **Source:** [033_quota_cache.md AC-20](../../../docs/feature/033_quota_cache.md)
+
+---
+
+### FT-19: TSV and JSON project a corroborated-touch row
+
+- **Given:** An `AccountQuota` with `touched_at_secs = Some(now - 600)` and `five_hour.resets_at = None` — a corroborated touch the endpoint has not yet reflected.
+- **When:** `render_tsv`, `render_json`, and `extract_get_field(GetField::FiveHourReset)` render the row.
+- **Then:** TSV's `5h_reset` and `get::5h_reset` both start with `~in `; JSON emits `"session_5h_reset_is_estimate":true` and a non-null `session_5h_resets_in_secs`. Controls: a row with a server-reported `resets_at` flags `false`, and a row with neither source emits `null` for both the value and the flag — "not an estimate" is a positive claim that cannot be made about an absent reading.
+- **Exit:** four assertions plus two control assertions pass
+- **Source fn:** `test_bug553_tsv_and_json_project_touched_row`
+- **Note:** MRE for BUG-553 S3. BUG-551 added this projection by patching the two surfaces it was reported against; the other two kept answering `—`/`null` for the same account. See [024_session_touch.md AC-20](../../../docs/feature/024_session_touch.md).
+- **Source:** [033_quota_cache.md AC-20](../../../docs/feature/033_quota_cache.md)
+
+---
+
+### FT-20: One percentage, one rounding, on every surface
+
+- **Given:** An `AccountQuota` whose `five_hour`, `seven_day`, and `seven_day_sonnet` all carry `utilization = 11.5` → 88.5% remaining, the only class of input that separates half-away rounding (`89`) from half-to-even (`88`). `cols::+7d_son` is enabled explicitly, since that column is off by default (BUG-334).
+- **When:** `render_tsv`, `extract_get_field`, and `render_text` render the row.
+- **Then:** All three columns read `89%` on TSV; `get::` returns the identical string for each; the text table contains `89%` and does not contain `88%`.
+- **Exit:** six equality assertions plus the text-table check pass
+- **Source fn:** `test_bug553_one_rounding_across_surfaces`
+- **Note:** MRE for BUG-553 S4. Four percentage closures existed for one logical value and only two applied BUG-331's round-once doctrine — `quota_text_cells`'s `pct_cell` (the `7d(Son)` path) and `extract_get_field`'s `pct_bare` both let the format string round half-to-even. A duplicated formatting closure is a latent divergence even when every copy looks correct today: the next doctrine change lands in whichever copies someone finds.
+- **Source:** [033_quota_cache.md AC-20](../../../docs/feature/033_quota_cache.md)

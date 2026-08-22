@@ -630,18 +630,44 @@ pub fn recommended_model( aq : &AccountQuota ) -> &'static str
 
 // ── Cell renderers ────────────────────────────────────────────────────────────
 
+/// Whether the `5h Left` / `7d Left` percentage cells carry their `🟢`/`🟡` prefix.
+///
+/// The text table shows the emoji; TSV and `get::<field>` want the bare number so a
+/// consumer can parse it. This is the *only* legitimate difference between the surfaces'
+/// quota cells — every other rule is shared (`quota_cells_for`).
+#[ derive( Debug, Clone, Copy, PartialEq, Eq ) ]
+pub enum PctStyle
+{
+  /// `🟢 88%` — the text table.
+  Emoji,
+  /// `88%` — TSV and `get::<field>`.
+  Bare,
+}
+
 /// Compute the 5 quota display cells for a successful OAuth usage fetch.
 ///
 /// Returns `[5h_left, 5h_reset, 7d_left, 7d_son, 7d_reset]` as display strings.
 /// `5h Left` and `7d Left` cells carry a `🟢`/`🟡` prefix (same threshold as `status_emoji`).
 /// Absent periods render as em-dash; absent reset timestamps render as em-dash.
+///
+/// Pitfall: this is the *data*-only layer — it cannot see the account, so it cannot apply
+///   cache staleness or the touch projection. Never call it from a render surface that has
+///   an `aq` in scope; call `quota_cells_for` there (BUG-553), exactly as `expires_cell_for`
+///   supersedes `compute_expires_cell` at such call sites.
 pub fn quota_text_cells( data : &claude_quota::OauthUsageData, now_secs : u64 ) -> [ String; 5 ]
 {
-  let dash      = "\u{2014}".to_string();
-  let pct_cell  = |util : Option< f64 >| -> String
-  {
-    util.map_or_else( || dash.clone(), |u| format!( "{:.0}%", 100.0 - u ) )
-  };
+  quota_data_cells( data, now_secs, PctStyle::Emoji )
+}
+
+/// `quota_text_cells` with the percentage style selectable — the shared core behind both.
+fn quota_data_cells
+(
+  data     : &claude_quota::OauthUsageData,
+  now_secs : u64,
+  style    : PctStyle,
+) -> [ String; 5 ]
+{
+  let dash = "\u{2014}".to_string();
   // Fix(BUG-331): compared raw `left` against threshold but rounded only for display, so any
   //   account whose raw `left` landed within floating-point noise of a threshold could show
   //   identical rounded percentage text with a different color than another account on the
@@ -651,13 +677,28 @@ pub fn quota_text_cells( data : &claude_quota::OauthUsageData, now_secs : u64 ) 
   //   Pitfall: always round once and reuse the rounded value for both the threshold comparison
   //   and the display text; never compare a raw float against a threshold when the display
   //   shows a rounded value derived from the same float.
-  let pct_emoji = |util : Option< f64 >, threshold : f64| -> String
+  //
+  // Fix(BUG-553 S4): `7d Son` used a separate unrounded closure here while `render_tsv`'s own
+  //   copy rounded and `extract_get_field`'s did not — three roundings of one value, disagreeing
+  //   by 1% at *.5 (bare `{:.0}` rounds half-to-even, `.round()` half-away).
+  //   Root cause: each surface carried its own percentage closure, so BUG-331's round-once
+  //   doctrine had to be re-applied per copy and was applied to only some of them.
+  //   Pitfall: round once here, in the one shared closure — never in a format string, and
+  //   never in a per-surface copy.
+  let pct = |util : Option< f64 >, threshold : Option< f64 >| -> String
   {
     util.map_or_else( || dash.clone(), |u|
     {
-      let left  = ( 100.0 - u ).round();
-      let emoji = if left > threshold { "🟢" } else { "🟡" };
-      format!( "{emoji} {left:.0}%" )
+      let left = ( 100.0 - u ).round();
+      match ( style, threshold )
+      {
+        ( PctStyle::Emoji, Some( t ) ) =>
+        {
+          let emoji = if left > t { "🟢" } else { "🟡" };
+          format!( "{emoji} {left:.0}%" )
+        }
+        _ => format!( "{left:.0}%" ),
+      }
     } )
   };
   let reset_cell = |iso : Option< &str >| -> String
@@ -668,12 +709,102 @@ pub fn quota_text_cells( data : &claude_quota::OauthUsageData, now_secs : u64 ) 
       )
   };
   [
-    pct_emoji( data.five_hour.as_ref().map( |p| p.utilization ), H_EXHAUSTED_THRESHOLD ),
+    pct( data.five_hour.as_ref().map( |p| p.utilization ), Some( H_EXHAUSTED_THRESHOLD ) ),
     reset_cell( data.five_hour.as_ref().and_then( |p| p.resets_at.as_deref() ) ),
-    pct_emoji( data.seven_day.as_ref().map( |p| p.utilization ), WEEKLY_EXHAUSTION_THRESHOLD ),
-    pct_cell(  data.seven_day_sonnet.as_ref().map( |p| p.utilization ) ),
+    pct( data.seven_day.as_ref().map( |p| p.utilization ), Some( WEEKLY_EXHAUSTION_THRESHOLD ) ),
+    // `7d Son` never carries an emoji on any surface — no threshold, hence no prefix.
+    pct( data.seven_day_sonnet.as_ref().map( |p| p.utilization ), None ),
     reset_cell( data.seven_day.as_ref().and_then( |p| p.resets_at.as_deref() ) ),
   ]
+}
+
+/// Prefix every non-em-dash cell with `~`, marking the whole row as cache-derived.
+fn prefix_tilde( cells : &mut [ String ] )
+{
+  let dash = "\u{2014}";
+  for cell in cells.iter_mut()
+  {
+    if *cell != dash
+    {
+      *cell = format!( "~{cell}" );
+    }
+  }
+}
+
+/// The 6 quota display cells for a successful fetch, **with every account-dependent display
+/// rule applied** — the preferred call form wherever an `aq` is in scope (supersedes calling
+/// `quota_text_cells` there).
+///
+/// Returns `[5h_left, 5h_reset, 7d_left, 7d_son, 7d_reset, 7d_son_reset]`. On top of
+/// `quota_text_cells`'s data-only rendering it applies, in order:
+///
+/// 1. **Cache staleness** (`aq.cached`) — every non-dash cell gains a `~` prefix, and any
+///    reset timestamp that has already elapsed becomes `(stale)` rather than a countdown
+///    `saturating_sub` would clamp to a misleading `in 0s`.
+/// 2. **Touch projection** (`aq.touched_at_secs`, BUG-551) — a corroborated-touch row whose
+///    fetch still reports the 5h window idle shows the projected `~in Xh Ym` instead of the
+///    em-dash the API's lagged state would produce.
+///
+/// Fix(BUG-553): three of the four render surfaces rebuilt these cells from local closures and
+///   so silently missed both rules — TSV showed a cached row as live, `get::` disagreed with
+///   the table cell it documents itself as equalling, and neither TSV nor JSON projected a
+///   touched row.
+/// Root cause: `quota_text_cells` takes only `data` + the clock, so any rule depending on the
+///   *account* had to be bolted on per caller; only `render_text` did. Each new aq-dependent
+///   rule multiplied the divergence by three.
+/// Pitfall: add every future account-dependent quota rule here, never at a call site — a rule
+///   applied after a shared helper returns exists on exactly the surfaces someone remembered.
+pub fn quota_cells_for
+(
+  aq       : &AccountQuota,
+  data     : &claude_quota::OauthUsageData,
+  now_secs : u64,
+  style    : PctStyle,
+) -> [ String; 6 ]
+{
+  let dash       = "\u{2014}".to_string();
+  let base       = quota_data_cells( data, now_secs, style );
+  let son_reset  = data.seven_day_sonnet.as_ref().and_then( |p| p.resets_at.as_deref() );
+  let mut cells  =
+  [
+    base[ 0 ].clone(), base[ 1 ].clone(), base[ 2 ].clone(), base[ 3 ].clone(), base[ 4 ].clone(),
+    son_reset.and_then( claude_quota::iso_to_unix_secs )
+      .map_or_else( || dash.clone(), |t|
+        format!( "in {}", format_duration_secs( t.saturating_sub( now_secs ) ) )
+      ),
+  ];
+
+  if aq.cached
+  {
+    prefix_tilde( &mut cells );
+    // `saturating_sub` clamps an elapsed countdown to 0 in `quota_data_cells`, making "in 0s"
+    // indistinguishable from an imminent future event. Re-check the raw timestamps here.
+    let is_past = |iso : Option< &str >| -> bool
+    {
+      iso.and_then( claude_quota::iso_to_unix_secs ).is_some_and( |t| t < now_secs )
+    };
+    if is_past( data.five_hour.as_ref().and_then( |p| p.resets_at.as_deref() ) ) { cells[ 1 ] = "(stale)".to_string(); }
+    if is_past( data.seven_day.as_ref().and_then( |p| p.resets_at.as_deref() ) ) { cells[ 4 ] = "(stale)".to_string(); }
+    if is_past( son_reset )                                                      { cells[ 5 ] = "(stale)".to_string(); }
+  }
+
+  // Fix(BUG-551): a corroborated-touch row whose re-fetch still reports the 5h window idle
+  //   renders the projected countdown "~in Xh Ym" — replacing BUG-488's opaque "(touched)",
+  //   which named the cause but withheld the value the column exists to show, on a row where
+  //   that value is exactly derivable from the touch instant.
+  // Root cause: `touched_recently` was a bool, so render had no instant to project from;
+  //   `touched_at_secs` now carries the anchor `derive_touched_recently` parses.
+  // Pitfall: display-only — never fabricate a `resets_at` into `data` itself; sort, skip and
+  //   forecast logic must keep seeing the API's own (lagged) state.
+  if let Some( touched_at ) = aq.touched_at_secs
+  {
+    if data.five_hour.as_ref().and_then( |p| p.resets_at.as_deref() ).is_none()
+    {
+      cells[ 1 ] = projected_reset_label( touched_at, now_secs );
+    }
+  }
+
+  cells
 }
 
 /// Return the single-glyph quota status emoji for an account row.

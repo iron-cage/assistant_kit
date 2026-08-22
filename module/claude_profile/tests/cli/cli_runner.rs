@@ -1061,10 +1061,21 @@ pub fn clears_rotation_floors( home : &str, account_prefix : &str ) -> bool
     .map( |l| l.split( '\t' ).collect::< Vec< _ > >() )
     .find( |cells| cells.get( account_idx ).is_some_and( |n| n.starts_with( account_prefix ) ) )
     .unwrap_or_else( || panic!( "floors probe: no TSV row for {account_prefix}" ) );
-  // `—` = absent window data on an Ok row → 100 in the canonical accessors
-  // (five_hour_left/seven_day_left: absent data ≠ exhausted).
   let pct = | cell : &str | -> f64
   {
+    // Fix(BUG-553): TSV quota cells gained the cache-staleness `~` prefix once BUG-553
+    //   routed this surface through `quota_cells_for`; before that only the text table
+    //   carried it, so this probe parsed a bare `NN%` and panicked on `~44%`.
+    //   Root cause: the probe encoded "TSV percentages are bare" — an assumption that held
+    //   only because TSV was missing a rule the text table already applied.
+    //   Pitfall: strip the marker before BOTH branches, not just the parse. A cached row
+    //   prefixes every quota cell, so absent window data arrives as `~—`, not `—`; checking
+    //   the dash first would fall through to the parse and panic. And never map a `~` cell
+    //   to the 100.0 absent-data default — that silently promotes a cache-stale exhausted
+    //   account into one that clears the floors.
+    let cell = cell.trim_start_matches( '~' );
+    // `—` = absent window data on an Ok row → 100 in the canonical accessors
+    // (five_hour_left/seven_day_left: absent data ≠ exhausted).
     if cell == "\u{2014}" { return 100.0; }
     cell.strip_suffix( '%' )
       .and_then( |n| n.parse::< f64 >().ok() )

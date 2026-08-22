@@ -49,7 +49,7 @@ pub use super::format::{
   unix_to_date, renewal_secs,
   renews_label, next_event_raw, next_event_label, sub_label, shorten_error,
   five_hour_left, seven_day_left, relevant_quotas, prefer_weekly,
-  recommended_model, quota_text_cells, status_emoji,
+  recommended_model, quota_text_cells, quota_cells_for, PctStyle, status_emoji,
   projected_window_end_secs, projected_reset_label,
 };
 

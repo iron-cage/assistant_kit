@@ -1090,3 +1090,334 @@ fn test_bug551_get_field_and_table_agree_on_touched_row()
      got {reported_field:?}",
   );
 }
+
+/// FT-29/553 — `bug_reproducer(BUG-553)` — one cached fixture rendered through all four
+/// surfaces must agree on every quota cell.
+///
+/// # Root Cause
+/// `quota_text_cells( data, now_secs )` takes only the raw usage data and the clock, so any
+/// display rule depending on the *account* — cache staleness (`aq.cached`), BUG-551's touch
+/// projection (`aq.touched_at_secs`) — could not live inside it and had to be re-applied by
+/// each caller afterward. Only `render_text` applied them. `render_tsv` referenced `aq.cached`
+/// nowhere in its Ok arm and `extract_get_field` carried its own `pct_bare`/`reset_cell`
+/// closures, so both rendered a cache-fallback row as if it were live.
+///
+/// # Why Not Caught
+/// Every pre-existing per-surface test asserted a surface against a *literal* expectation,
+/// never against another surface: "TSV shows `88%`" passes whether or not the text table
+/// shows `~88%` for that same account. No test constructed a `cached = true` fixture and
+/// rendered it through TSV or `get::` at all.
+///
+/// # Fix Applied
+/// `format.rs` gained `quota_cells_for( aq, data, now_secs, style )` — the aq-aware layer that
+/// applies every account-dependent rule once, mirroring how `expires_cell_for` supersedes
+/// `compute_expires_cell` (BUG-345) and `renews_cell_for` supersedes the three inline renews
+/// copies (BUG-540). All three display surfaces now take their cells from it; `PctStyle`
+/// carries the one legitimate difference between them (emoji prefix vs bare number).
+///
+/// # Prevention
+/// Assert surfaces against **each other**, not against literals — as this test does. A rule
+/// applied after a shared helper returns exists on exactly the surfaces someone remembered,
+/// and the count of forgotten surfaces grows with every rule added. The percentage cells are
+/// clock-independent, so cross-surface equality on them is exact and race-free even though
+/// each renderer samples its own `SystemTime::now()`.
+///
+/// # Pitfall
+/// Widen the shared helper's input until the account-dependent rule fits inside it; never
+/// re-apply the rule per call site. Taking `aq` as the parameter is what makes skipping a
+/// rule a compile-time impossibility rather than an omission nobody notices.
+#[ doc = "bug_reproducer(BUG-553)" ]
+#[ test ]
+fn test_bug553_all_surfaces_agree_on_cached_row()
+{
+  use claude_profile::usage::test_bridge::{ render_tsv, render_json, extract_get_field, mk_aq_ok_both };
+  use claude_profile::usage::test_bridge::types::GetField;
+
+  let now = std::time::SystemTime::now()
+    .duration_since( std::time::UNIX_EPOCH ).unwrap().as_secs();
+
+  // 12% used → 88% left on the 5h window; 4% used → 96% left on the weekly.
+  let mut aq = mk_aq_ok_both( 12.0, 4.0 );
+  aq.name   = "cached@x.com".to_string();
+  aq.cached = true;
+  aq.cache_age_secs = Some( 7200 );
+
+  let accounts = vec![ aq ];
+  // Both surfaces read the *same* account object — no chance of a fixture drifting apart.
+  let aq       = &accounts[ 0 ];
+  let cols     = ColsVisibility::default_set();
+
+  let text = render_text(
+    &accounts, SortStrategy::Name, None, PreferStrategy::Any, &cols,
+    None, None, None, None, false, &TagFilter::default() );
+  let tsv  = render_tsv( &accounts, SortStrategy::Name, None, PreferStrategy::Any, &cols );
+
+  // S1 — TSV must disclose staleness. It is the one surface with no `cached` column of its
+  // own (JSON emits `cached`/`cache_age_secs` outright), so the `~` prefix is its *only*
+  // staleness signal; without it a watchdog cannot tell a live reading from a cached one.
+  let tsv_fields = |header : &str| -> String
+  {
+    let mut lines = tsv.lines();
+    let heads : Vec< &str > = lines.next().expect( "TSV header" ).split( '\t' ).collect();
+    let vals  : Vec< &str > = lines.next().expect( "TSV data row" ).split( '\t' ).collect();
+    let idx = heads.iter().position( |h| *h == header )
+      .unwrap_or_else( || panic!( "TSV column {header:?} must exist; headers: {heads:?}" ) );
+    ( *vals.get( idx ).unwrap_or( &"" ) ).to_string()
+  };
+
+  // The reset columns are included deliberately: this fixture carries `resets_at: None` on both
+  // windows, so they render `—` and a cached row must mark them `~—`. That is the shape S2 named
+  // (`get::` dropped staleness on the pct *and* 7d-reset fields), and it is also the only place
+  // the whole-cell prefix lands on a non-numeric cell — any consumer that strips `~` only when it
+  // precedes a digit, or checks for a bare `—` before stripping, breaks precisely here.
+  for ( col, expect ) in
+  [
+    ( "5h_left", "~88%" ), ( "7d_left", "~96%" ),
+    ( "5h_reset", "~\u{2014}" ), ( "7d_reset", "~\u{2014}" ),
+  ]
+  {
+    let got = tsv_fields( col );
+    assert_eq!(
+      got, expect,
+      "BUG-553 S1: TSV {col} must carry the `~` cache-staleness prefix the text table shows — \
+       TSV has no `cached` column, so this is its only staleness signal; got {got:?}\n{tsv}",
+    );
+  }
+
+  // S2 — `get::` must equal the table cell, which is its own documented contract.
+  for ( field, expect ) in
+  [
+    ( GetField::FiveHourLeft, "~88%" ),
+    ( GetField::SevenDayLeft, "~96%" ),
+    ( GetField::FiveHourReset, "~\u{2014}" ),
+    ( GetField::SevenDayReset, "~\u{2014}" ),
+  ]
+  {
+    let got = extract_get_field( aq, field, now );
+    assert_eq!(
+      got, expect,
+      "BUG-553 S2: extract_get_field documents itself as returning the same value as the \
+       corresponding table cell; for a cached row it dropped the `~`. got {got:?}",
+    );
+  }
+
+  // Cross-surface agreement: the same percentage string appears on every display surface,
+  // differing only by the emoji `PctStyle::Emoji` attaches — `prefix_tilde` marks the whole
+  // cell, so the text form is `~🟢 88%` against TSV's `~88%`. Percentages do not depend on
+  // the clock, so this comparison is exact despite each renderer sampling its own `now`.
+  for expect in [ "~🟢 88%", "~🟢 96%" ]
+  {
+    assert!(
+      text.contains( expect ),
+      "BUG-553: text table must show {expect:?} for the cached row; got:\n{text}",
+    );
+  }
+
+  // JSON discloses staleness through its own `cached` field rather than a `~` prefix — the
+  // numbers stay plain and parseable. Assert that contract explicitly so a future change
+  // cannot quietly start emitting `~` into a numeric field.
+  let json = render_json( &accounts );
+  assert!(
+    json.contains( "\"cached\":true" ) && json.contains( "\"session_5h_left_pct\":88" ),
+    "BUG-553: JSON must keep quota numbers plain and disclose staleness via its own \
+     `cached` field; got:\n{json}",
+  );
+  assert!(
+    !json.contains( '~' ),
+    "BUG-553: the `~` convention is display-only — JSON must never emit it into a numeric \
+     field; got:\n{json}",
+  );
+}
+
+/// FT-30/553 — `bug_reproducer(BUG-553)` — TSV and JSON must apply BUG-551's touch projection.
+///
+/// # Root Cause
+/// BUG-551 added the projected `~in Xh Ym` countdown for a corroborated-touch row by patching
+/// `render_text` and `extract_get_field` individually — the only two surfaces it was tested
+/// against. `render_tsv` and `render_json` were never touched, so the same account answered
+/// `—` / `null` there while the human table showed a concrete countdown.
+///
+/// # Why Not Caught
+/// BUG-551's own regression test asserted exactly one field pair (`get::5h_reset` vs the table
+/// cell) — the pair that bug touched. Nothing exercised the other two surfaces.
+///
+/// # Fix Applied
+/// The projection moved inside `quota_cells_for`, which TSV now calls. JSON cannot carry the
+/// `~` marker (its reset field is a number), so it follows the established
+/// `renewal_secs`/`renewal_is_estimate` pairing and gained `session_5h_reset_is_estimate`.
+///
+/// # Prevention
+/// A projected value must never be emitted indistinguishably from a server-reported one. On
+/// display surfaces the `~` prefix carries that; on JSON it needs a companion boolean, and the
+/// flag must be `null` exactly when the value is — "not an estimate" is a positive claim that
+/// cannot be made about an absent reading.
+///
+/// # Pitfall
+/// Adding a display rule to the surface where the bug was *reported* leaves it missing from
+/// every other surface. Land the rule in the shared aq-aware helper instead.
+#[ doc = "bug_reproducer(BUG-553)" ]
+#[ test ]
+fn test_bug553_tsv_and_json_project_touched_row()
+{
+  use claude_profile::usage::test_bridge::{ render_tsv, render_json, extract_get_field, mk_aq_ok };
+  use claude_profile::usage::test_bridge::types::GetField;
+
+  let now = std::time::SystemTime::now()
+    .duration_since( std::time::UNIX_EPOCH ).unwrap().as_secs();
+
+  // Corroborated touch 10 minutes ago, endpoint still reporting the 5h window idle.
+  let mut aq = mk_aq_ok( 0.0 );
+  aq.name            = "touched@x.com".to_string();
+  aq.touched_at_secs = Some( now - 600 );
+
+  let accounts = vec![ aq ];
+  // Both surfaces read the *same* account object — no chance of a fixture drifting apart.
+  let aq       = &accounts[ 0 ];
+  let cols     = ColsVisibility::default_set();
+
+  let tsv    = render_tsv( &accounts, SortStrategy::Name, None, PreferStrategy::Any, &cols );
+  let heads  : Vec< &str > = tsv.lines().next().expect( "TSV header" ).split( '\t' ).collect();
+  let vals   : Vec< &str > = tsv.lines().nth( 1 ).expect( "TSV data row" ).split( '\t' ).collect();
+  let idx    = heads.iter().position( |h| *h == "5h_reset" ).expect( "5h_reset column" );
+  let cell   = *vals.get( idx ).unwrap_or( &"" );
+
+  assert!(
+    cell.starts_with( "~in " ),
+    "BUG-553 S3: TSV 5h_reset must show the projected countdown for a corroborated-touch row, \
+     not the em-dash the endpoint's lagged state would produce; got {cell:?}\n{tsv}",
+  );
+
+  // The projection must be the same value `get::` and the table already show.
+  let field = extract_get_field( aq, GetField::FiveHourReset, now );
+  assert!(
+    field.starts_with( "~in " ),
+    "BUG-553 S3: get::5h_reset must project the same window end; got {field:?}",
+  );
+
+  // JSON: a number plus its estimate flag, never a bare number indistinguishable from a
+  // server-reported reset.
+  let json = render_json( &accounts );
+  assert!(
+    json.contains( "\"session_5h_reset_is_estimate\":true" ),
+    "BUG-553 S3: JSON must flag a projected reset as an estimate, mirroring \
+     `renewal_secs`/`renewal_is_estimate`; got:\n{json}",
+  );
+  assert!(
+    !json.contains( "\"session_5h_resets_in_secs\":null" ),
+    "BUG-553 S3: JSON emitted null for a row the other surfaces project a countdown for; \
+     got:\n{json}",
+  );
+
+  // Control: an endpoint-reported reset is not an estimate, and an absent one flags `null`
+  // rather than falsely claiming "not an estimate" about a value that does not exist.
+  let mut reported = mk_aq_ok( 0.0 );
+  reported.name = "reported@x.com".to_string();
+  if let Ok( ref mut data ) = reported.result
+  {
+    if let Some( ref mut p ) = data.five_hour { p.resets_at = Some( "2099-01-01T00:00:00Z".to_string() ); }
+  }
+  let reported_json = render_json( &[ reported ] );
+  assert!(
+    reported_json.contains( "\"session_5h_reset_is_estimate\":false" ),
+    "BUG-553 (control): a server-reported reset must flag `false`; got:\n{reported_json}",
+  );
+
+  let absent_json = render_json( &[ mk_aq_ok( 0.0 ) ] );
+  assert!(
+    absent_json.contains( "\"session_5h_resets_in_secs\":null" )
+      && absent_json.contains( "\"session_5h_reset_is_estimate\":null" ),
+    "BUG-553 (control): the estimate flag must be null exactly when the value is — \
+     `false` would assert something about a reading that does not exist; got:\n{absent_json}",
+  );
+}
+
+/// FT-31/553 — `bug_reproducer(BUG-553)` — one percentage, one rounding, on every surface.
+///
+/// # Root Cause
+/// Three independent percentage closures existed for one logical value. `quota_text_cells`'s
+/// `pct_emoji` applied `.round()` (BUG-331's round-once doctrine); its sibling `pct_cell` for
+/// `7d(Son)` did not; `render_tsv`'s local `pct_bare` did; `extract_get_field`'s local
+/// `pct_bare` did not. Bare `{:.0}` formatting rounds half-to-even, `.round()` rounds
+/// half-away — so at a `*.5` value the surfaces disagreed by a full percent.
+///
+/// # Why Not Caught
+/// `tests/docs/algorithm/011_rounding_boundary_classification_hazards.md` covers the emoji
+/// path's rounding thoroughly, but only within `quota_text_cells`. No test compared the
+/// rounded value across surfaces, and no test exercised `7d(Son)` at a half-percent boundary.
+///
+/// # Fix Applied
+/// A single `pct` closure inside `quota_data_cells` rounds once for every cell and every
+/// surface; `PctStyle` selects only whether the emoji prefix is attached.
+///
+/// # Prevention
+/// Round once, in the shared closure — never in a format string, and never in a per-surface
+/// copy. A `*.5` input is the only value that separates the two modes, so it is the only
+/// input that can detect the divergence: `11.5` used → `88.5` left renders `88` under
+/// half-to-even and `89` under half-away.
+///
+/// # Pitfall
+/// A duplicated formatting closure is a latent divergence even when both copies look correct
+/// today — the next doctrine change lands in whichever copies someone finds.
+#[ doc = "bug_reproducer(BUG-553)" ]
+#[ test ]
+fn test_bug553_one_rounding_across_surfaces()
+{
+  use claude_profile::usage::test_bridge::{ render_tsv, extract_get_field, mk_aq_ok_both };
+  use claude_profile::usage::test_bridge::types::GetField;
+
+  let now = std::time::SystemTime::now()
+    .duration_since( std::time::UNIX_EPOCH ).unwrap().as_secs();
+
+  // 11.5 used → 88.5 left. Half-away (.round()) → 89; half-to-even (bare `{:.0}`) → 88.
+  let mut aq = mk_aq_ok_both( 11.5, 11.5 );
+  aq.name = "half@x.com".to_string();
+  if let Ok( ref mut data ) = aq.result
+  {
+    data.seven_day_sonnet = Some( claude_quota::PeriodUsage { utilization : 11.5, resets_at : None } );
+  }
+
+  let accounts = vec![ aq ];
+  // Both surfaces read the *same* account object — no chance of a fixture drifting apart.
+  let aq       = &accounts[ 0 ];
+  // `7d_son` is off by default (BUG-334: the upstream field has been universally None since
+  // the 2026-06-25 API restructuring) — enable it explicitly, since its unrounded `pct_cell`
+  // was one of the three disagreeing copies this test exists to collapse.
+  let mut cols = ColsVisibility::default_set();
+  cols.apply_modifier( "+7d_son" ).expect( "7d_son is a valid cols modifier" );
+  let tsv      = render_tsv( &accounts, SortStrategy::Name, None, PreferStrategy::Any, &cols );
+  let heads    : Vec< &str > = tsv.lines().next().expect( "TSV header" ).split( '\t' ).collect();
+  let vals     : Vec< &str > = tsv.lines().nth( 1 ).expect( "TSV data row" ).split( '\t' ).collect();
+
+  for ( col, field ) in
+  [
+    ( "5h_left", GetField::FiveHourLeft ),
+    ( "7d_left", GetField::SevenDayLeft ),
+    ( "7d_son",  GetField::SevenDaySon  ),
+  ]
+  {
+    let idx      = heads.iter().position( |h| *h == col ).expect( "column present" );
+    let tsv_cell = *vals.get( idx ).unwrap_or( &"" );
+    let get_cell = extract_get_field( aq, field, now );
+
+    assert_eq!(
+      tsv_cell, "89%",
+      "BUG-553 S4: TSV {col} must round half-away (89%), matching BUG-331's round-once \
+       doctrine; got {tsv_cell:?}",
+    );
+    assert_eq!(
+      get_cell, tsv_cell,
+      "BUG-553 S4: get::{col} and TSV {col} rendered one value through two closures and \
+       disagreed; got {get_cell:?} vs {tsv_cell:?}",
+    );
+  }
+
+  // The text table carries the same number behind its emoji prefix.
+  let text = render_text(
+    &accounts, SortStrategy::Name, None, PreferStrategy::Any, &cols,
+    None, None, None, None, false, &TagFilter::default() );
+  assert!(
+    text.contains( "89%" ) && !text.contains( "88%" ),
+    "BUG-553 S4: the text table must show the same rounded percentage as TSV and `get::`; \
+     got:\n{text}",
+  );
+}

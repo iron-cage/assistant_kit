@@ -2,11 +2,10 @@
 #![ allow( clippy::missing_inline_in_public_items, clippy::must_use_candidate, clippy::missing_panics_doc ) ]
 //! TSV renderer for quota results.
 
-use crate::output::format_duration_secs;
 use super::types::{ AccountQuota, SortStrategy, PreferStrategy, ColsVisibility };
 use super::format::{
   expires_cell_for, sub_cell_for, renews_cell_for, shorten_error, with_lock_marker,
-  quota_text_cells, status_emoji, next_event_label, renewal_secs,
+  quota_cells_for, PctStyle, status_emoji, next_event_label, renewal_secs,
 };
 use super::sort::sort_indices;
 
@@ -105,26 +104,18 @@ pub fn render_tsv(
     {
       Ok( data ) =>
       {
-        // Plain percentage cells (no emoji prefix).
-        let dash     = "\u{2014}".to_string();
-        // Fix(audit-tsv-round-divergence)
-        // Root cause: bare "{:.0}" formatting rounds half-to-even (16.5 → "16") while the
-        //   canonical accessors round half-away via .round() (BUG-331/BUG-336 doctrine), so
-        //   the TSV percentage could disagree with the text table by 1% at *.5 values.
-        // Pitfall: .round() first, then the now-exact "{:.0}" — never let the format string
-        //   perform the rounding.
-        let pct_bare = |util : Option< f64 >| -> String
-        {
-          util.map_or_else( || dash.clone(), |u| format!( "{:.0}%", ( 100.0 - u ).round() ) )
-        };
-        let cells = quota_text_cells( data, now_secs );
-        // cells[0] = "🟢 88%" — strip emoji; use bare pct_bare instead.
-        let h5_left_bare  = pct_bare( data.five_hour.as_ref().map( |p| p.utilization ) );
-        let d7_left_bare  = pct_bare( data.seven_day.as_ref().map( |p| p.utilization ) );
-        let d7_son_reset  = data.seven_day_sonnet.as_ref()
-          .and_then( |p| p.resets_at.as_deref() )
-          .and_then( claude_quota::iso_to_unix_secs )
-          .map_or_else( || dash.clone(), |t| format!( "in {}", format_duration_secs( t.saturating_sub( now_secs ) ) ) );
+        // Fix(BUG-553 S1/S3): this arm rebuilt every quota cell from `quota_text_cells` plus a
+        //   local `pct_bare`, and so referenced `aq.cached` nowhere — a cache-fallback row read
+        //   as live on the one surface with no `cached` column to disclose it otherwise (unlike
+        //   JSON, which emits `cached`/`cache_age_secs` outright). BUG-551's touch projection
+        //   was absent here for the same reason. The metadata cells below (`expires_str`,
+        //   `sub_str`, `renews_str`) already routed through their shared aq-aware helpers — the
+        //   quota block was the outlier within its own function.
+        // Root cause: `quota_text_cells` takes only `data`, so no account-dependent rule could
+        //   live inside it; every surface had to re-apply them by hand, and this one never did.
+        // Pitfall: take the cells from `quota_cells_for` — `PctStyle::Bare` already covers the
+        //   only legitimate TSV difference (no emoji), so nothing here needs rebuilding.
+        let cells = quota_cells_for( aq, data, now_secs, PctStyle::Bare );
 
         let ( ren_secs, ren_est ) = renewal_secs(
           aq.renewal_at.as_deref(),
@@ -138,12 +129,12 @@ pub fn render_tsv(
           ren_secs,
           ren_est.unwrap_or( false ),
         );
-        if cols.h5_left      { row.push( h5_left_bare ); }
+        if cols.h5_left      { row.push( cells[ 0 ].clone() ); }
         if cols.h5_reset     { row.push( cells[ 1 ].clone() ); }
-        if cols.d7_left      { row.push( d7_left_bare ); }
+        if cols.d7_left      { row.push( cells[ 2 ].clone() ); }
         if cols.d7_son       { row.push( cells[ 3 ].clone() ); }
         if cols.d7_reset     { row.push( cells[ 4 ].clone() ); }
-        if cols.d7_son_reset { row.push( d7_son_reset ); }
+        if cols.d7_son_reset { row.push( cells[ 5 ].clone() ); }
         if cols.expires      { row.push( expires_str ); }
         if cols.sub          { row.push( sub_str ); }
         if cols.renews       { row.push( renews_str ); }
