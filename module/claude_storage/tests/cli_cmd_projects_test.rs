@@ -56,6 +56,43 @@ mod common;
 use std::fs;
 use tempfile::TempDir;
 
+/// Replace every `<digits><unit> ago` relative-time token (e.g. `0s ago`,
+/// `5m ago`, `2mo ago`) with a fixed placeholder.
+///
+/// `format_relative_time` (`src/cli/projects.rs`) computes elapsed time from
+/// `SystemTime::now()` fresh on every call. Tests below invoke the binary
+/// twice and byte-compare stdout; if the two calls straddle a wall-clock
+/// second boundary, the "LAST" column legitimately differs (`0s ago` vs
+/// `1s ago`) even though the two outputs are structurally identical. Compare
+/// after normalizing this one volatile column instead of the raw bytes.
+fn normalize_relative_time( s : &str ) -> String
+{
+  let mut out = String::with_capacity( s.len() );
+  let mut rest = s;
+  while let Some( digit_pos ) = rest.find( | c : char | c.is_ascii_digit() )
+  {
+    out.push_str( &rest[ ..digit_pos ] );
+    let tail = &rest[ digit_pos.. ];
+    let digits_len = tail.find( | c : char | !c.is_ascii_digit() ).unwrap_or( tail.len() );
+    let after_digits = &tail[ digits_len.. ];
+    let unit_len = after_digits.find( | c : char | !c.is_ascii_alphabetic() ).unwrap_or( after_digits.len() );
+    let unit = &after_digits[ ..unit_len ];
+    let after_unit = &after_digits[ unit_len.. ];
+    if matches!( unit, "s" | "m" | "h" | "d" | "mo" ) && after_unit.starts_with( " ago" )
+    {
+      out.push_str( "<AGE> ago" );
+      rest = &after_unit[ " ago".len().. ];
+    }
+    else
+    {
+      out.push_str( &tail[ ..digits_len + unit_len ] );
+      rest = after_unit;
+    }
+  }
+  out.push_str( rest );
+  out
+}
+
 
 
 
@@ -1075,8 +1112,9 @@ fn int_54_detail_omitted_matches_explicit_projects()
   common::assert_exit( &out_default, 0 );
   common::assert_exit( &out_explicit, 0 );
   assert_eq!(
-    common::stdout( &out_default ), common::stdout( &out_explicit ),
-    "detail:: omitted must byte-match explicit detail::projects"
+    normalize_relative_time( &common::stdout( &out_default ) ),
+    normalize_relative_time( &common::stdout( &out_explicit ) ),
+    "detail:: omitted must match explicit detail::projects (ignoring relative-time drift)"
   );
   assert!(
     !common::stdout( &out_default ).contains( "session-int54" ),
@@ -1453,8 +1491,9 @@ fn int_65_limit_show_topic_noop_under_detail_projects()
   common::assert_exit( &out_plain, 0 );
   common::assert_exit( &out_with_noops, 0 );
   assert_eq!(
-    common::stdout( &out_plain ), common::stdout( &out_with_noops ),
-    "limit::/show_topic:: must be no-ops under detail::projects"
+    normalize_relative_time( &common::stdout( &out_plain ) ),
+    normalize_relative_time( &common::stdout( &out_with_noops ) ),
+    "limit::/show_topic:: must be no-ops under detail::projects (ignoring relative-time drift)"
   );
 }
 
@@ -1584,8 +1623,9 @@ fn int_67_detail_uppercase_matches_lowercase()
   common::assert_exit( &out_lower, 0 );
   common::assert_exit( &out_mixed, 0 );
   assert_eq!(
-    common::stdout( &out_lower ), common::stdout( &out_mixed ),
-    "detail::PROJECTS (mixed-case) must byte-match detail::projects"
+    normalize_relative_time( &common::stdout( &out_lower ) ),
+    normalize_relative_time( &common::stdout( &out_mixed ) ),
+    "detail::PROJECTS (mixed-case) must match detail::projects (ignoring relative-time drift)"
   );
   assert!(
     common::stdout( &out_mixed ).contains( "2 projects" ),

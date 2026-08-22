@@ -1,6 +1,7 @@
 //! Shared text formatting utilities for CLI output.
 
 use super::color;
+use chrono::{ DateTime, Local, Utc };
 use claude_storage_core::{ ContentBlock, JsonValue };
 
 /// Tool-input keys surfaced beside a tool name, most-specific first.
@@ -339,46 +340,57 @@ pub( super ) fn ellipsize_start( text : &str, max_chars : usize ) -> String
   format!( "…{kept}" )
 }
 
-/// Format timestamp for display
+/// Format timestamp for display, converted to the machine's local timezone.
 ///
-/// Converts ISO 8601 timestamp to readable format:
-/// "2025-12-02T09:57:02.237Z" → "2025-12-02 09:57"
+/// Converts an ISO 8601 UTC timestamp to a readable local date and clock:
+/// "2025-12-02T09:57:02.237Z" → "2025-12-02 04:57" (e.g. in UTC-5).
 ///
-/// ## Examples
-///
-/// ```text
-/// let ts = "2025-12-02T09:57:02.237Z";
-/// assert_eq!( format_timestamp( ts ), "2025-12-02 09:57" );
-/// ```
+/// Falls back to the raw timestamp when it does not parse as RFC 3339, so a
+/// malformed value stays visible rather than silently rendering blank.
 pub( super ) fn format_timestamp( timestamp : &str ) -> String
 {
-  // Try to parse ISO 8601
-  if let Some( datetime_part ) = timestamp.split( '.' ).next()
-  {
-    if let Some( ( date, time ) ) = datetime_part.split_once( 'T' )
-    {
-      // Extract HH:MM from time
-      let time_short = time.split( ':' ).take( 2 ).collect::< Vec< _ > >().join( ":" );
-      return format!( "{date} {time_short}" );
-    }
-  }
-
-  // Fallback: use raw timestamp
-  timestamp.to_string()
+  parse_utc( timestamp ).map_or_else
+  (
+    || timestamp.to_string(),
+    | dt | dt.with_timezone( &Local ).format( "%Y-%m-%d %H:%M" ).to_string(),
+  )
 }
 
-/// Extract just the wall clock from an ISO 8601 timestamp: `…T09:57:02.237Z` → `09:57`
+/// Extract the wall clock from an ISO 8601 UTC timestamp, converted to the
+/// machine's local timezone: `…T09:57:02.237Z` → `04:57` (e.g. in UTC-5).
 ///
 /// Falls back to the whole timestamp when it does not parse, so a malformed
 /// value stays visible rather than silently rendering blank.
+///
+/// Fix(BUG — time-not-local): previously sliced `HH:MM` straight out of the
+/// raw UTC string, so the displayed clock was silently mislabeled as local
+/// time while actually being UTC — correct only for readers in UTC+0.
+/// Root cause: no timezone conversion was ever applied; the value looked
+/// like a wall clock but was never converted off the wire format it arrived
+/// in. `relative_time` below was unaffected — epoch-second subtraction is
+/// timezone-agnostic by construction.
+/// Pitfall: a bare `HH:MM` with no UTC/zone marker reads as local time to
+/// any user — never display one without converting first.
 pub( super ) fn format_clock( timestamp : &str ) -> String
 {
-  timestamp
-    .split_once( 'T' )
-    .map_or_else(
-      || timestamp.to_string(),
-      | ( _, time ) | time.split( ':' ).take( 2 ).collect::< Vec< _ > >().join( ":" ),
-    )
+  parse_utc( timestamp ).map_or_else
+  (
+    || timestamp.to_string(),
+    | dt | dt.with_timezone( &Local ).format( "%H:%M" ).to_string(),
+  )
+}
+
+/// Parse an ISO 8601 UTC timestamp for local-time display conversion.
+///
+/// Returns `None` on anything that isn't valid RFC 3339 — callers fall back
+/// to the raw string rather than guess. Distinct from `epoch_seconds` below:
+/// that hand-rolled parser stays UTC-only because it only ever feeds
+/// timezone-agnostic epoch-second subtraction (`relative_time`), whereas
+/// display formatting genuinely needs a real zone-aware conversion, which is
+/// what pulls `chrono` into this file.
+fn parse_utc( timestamp : &str ) -> Option< DateTime< Utc > >
+{
+  timestamp.parse::< DateTime< Utc > >().ok()
 }
 
 /// Current wall clock as whole seconds since the Unix epoch.
@@ -410,10 +422,12 @@ pub( super ) fn relative_time( timestamp : &str, now_epoch : i64 ) -> String
 
 /// Convert an ISO 8601 UTC timestamp to seconds since the Unix epoch.
 ///
-/// Hand-rolled rather than pulling in a date crate — this crate deliberately
-/// carries no such dependency (see `src/cli/show.rs`'s `format_json_value` for
-/// the same reasoning applied to JSON rendering). Claude Code always writes UTC
-/// with a `Z` suffix, so no zone-offset handling is needed.
+/// Hand-rolled rather than routing through `chrono` (used elsewhere in this
+/// file for local-time *display* formatting, see `parse_utc` above) — this
+/// function only ever feeds timezone-agnostic epoch-second subtraction
+/// (`relative_time` below), so a zone-aware parse would be pure overhead.
+/// Claude Code always writes UTC with a `Z` suffix, so no zone-offset
+/// handling is needed here specifically.
 fn epoch_seconds( timestamp : &str ) -> Option< i64 >
 {
   let ( date, rest ) = timestamp.split_once( 'T' )?;
@@ -484,5 +498,54 @@ pub fn truncate_if_needed( text : &str, max_length : Option< usize > ) -> String
       let truncated = &text[ ..end ];
       format!( "{truncated}... truncated · {} more bytes", text.len() - end )
     }
+  }
+}
+
+#[ cfg( test ) ]
+mod format_tests
+{
+  use super::{ format_clock, format_timestamp };
+  use chrono::{ DateTime, Local, Utc };
+
+  /// `format_clock` must convert to local time, not slice raw UTC digits.
+  ///
+  /// Computes the expected value via the same `chrono` conversion `format_clock`
+  /// itself performs, so the assertion holds regardless of the machine's own
+  /// timezone — it fails if the conversion is dropped (regressing to a raw UTC
+  /// slice) or the format string changes, not because of where it runs.
+  ///
+  /// Caveat: on a runner whose local timezone is UTC, this assertion is
+  /// trivially true under both the fixed and the pre-fix (raw-slice) code, so
+  /// it cannot catch a regression back to raw slicing on such a runner
+  /// specifically. Forcing a non-UTC zone deterministically would need `TZ`
+  /// env mutation (`std::env::set_var`, `unsafe` on newer toolchains) — not
+  /// justified for a Non-Blocking gap when every realistic non-UTC machine,
+  /// including the one this bug was originally reported from, is covered.
+  #[test]
+  fn test_format_clock_converts_to_local_timezone()
+  {
+    let ts = "2025-12-02T09:57:02.237Z";
+    let expected = ts.parse::< DateTime< Utc > >().unwrap().with_timezone( &Local ).format( "%H:%M" ).to_string();
+    assert_eq!( format_clock( ts ), expected );
+  }
+
+  #[test]
+  fn test_format_clock_falls_back_to_raw_on_unparseable_input()
+  {
+    assert_eq!( format_clock( "not-a-timestamp" ), "not-a-timestamp" );
+  }
+
+  #[test]
+  fn test_format_timestamp_converts_to_local_timezone()
+  {
+    let ts = "2025-12-02T09:57:02.237Z";
+    let expected = ts.parse::< DateTime< Utc > >().unwrap().with_timezone( &Local ).format( "%Y-%m-%d %H:%M" ).to_string();
+    assert_eq!( format_timestamp( ts ), expected );
+  }
+
+  #[test]
+  fn test_format_timestamp_falls_back_to_raw_on_unparseable_input()
+  {
+    assert_eq!( format_timestamp( "not-a-timestamp" ), "not-a-timestamp" );
   }
 }
