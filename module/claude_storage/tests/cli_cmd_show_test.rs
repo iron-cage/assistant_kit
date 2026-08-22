@@ -57,26 +57,8 @@ mod common;
 
 use tempfile::TempDir;
 
-fn stdout( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stdout ).into_owned()
-}
 
-fn stderr( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stderr ).into_owned()
-}
 
-fn assert_exit( out : &std::process::Output, code : i32 )
-{
-  assert_eq!(
-    out.status.code().unwrap_or( -1 ),
-    code,
-    "expected exit {code}, got {:?}; stderr: {}",
-    out.status.code(),
-    stderr( out )
-  );
-}
 
 /// INT-1: No args shows current project's overview.
 ///
@@ -112,12 +94,12 @@ fn int_1_no_args_shows_current_project_sessions()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     !s.is_empty(),
     "INT-1: .show with no args must produce output for cwd project; stderr: {}",
-    stderr( &out )
+    common::stderr( &out )
   );
   // Task 526: default project-overview output no longer enumerates session IDs
   // (that moved behind detail::sessions) — the cwd project's resolution is now
@@ -161,8 +143,8 @@ fn int_2_session_id_shows_conversation_content()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "-default_topic" ) || s.contains( "default_topic" ),
     "INT-2: session_id::-default_topic must appear in .show output; got:\n{s}"
@@ -207,8 +189,8 @@ fn int_3_project_param_selects_explicit_project()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "show3-alpha" ),
     "INT-3: alpha's own path must appear with project:: selector; got:\n{s}"
@@ -264,8 +246,8 @@ fn int_4_session_id_and_project_show_session_in_named_project()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "s1" ),
     "INT-4: session s1 header must appear; got:\n{s}"
@@ -306,13 +288,13 @@ fn int_5_metadata_1_suppresses_content_shows_metadata()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   // show_metadata::1 must produce output (metadata rows)
   assert!(
     !s.is_empty(),
     "INT-5: show_metadata::1 must produce output; stderr: {}",
-    stderr( &out )
+    common::stderr( &out )
   );
   // actual entry text must be suppressed
   assert!(
@@ -355,12 +337,12 @@ fn int_6_entries_1_shows_all_session_entries()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     !s.is_empty(),
     "INT-6: show_entries::1 must show entry content; stderr: {}",
-    stderr( &out )
+    common::stderr( &out )
   );
   // At least one entry's text must appear
   assert!(
@@ -397,8 +379,8 @@ fn int_7_exit_code_1_when_cwd_has_no_project()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
-  let err = stderr( &out );
+  common::assert_exit( &out, 1 );
+  let err = common::stderr( &out );
   assert!(
     !err.is_empty(),
     "INT-7: .show from unmatched cwd must emit error on stderr; got silence"
@@ -436,8 +418,8 @@ fn int_8_project_param_with_path_encoded_id()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "enc-session" ) || s.contains( &encoded ),
     "INT-8: session for path-encoded project must appear; got:\n{s}"
@@ -475,8 +457,8 @@ fn t01_default_scope_local_matches_pre_retrofit_behavior()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "t01-session" ),
     "T01: default (no scope::) must find session in cwd project, matching pre-retrofit behavior; got:\n{s}"
@@ -529,8 +511,8 @@ fn t02_scope_under_finds_session_in_descendant_project()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "t02-session" ),
     "T02: scope::under path::<ancestor> must find session in descendant project, from a cwd \
@@ -571,8 +553,8 @@ fn t03_scope_global_finds_session_in_unrelated_project()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "t03-session" ),
     "T03: scope::global must find session in an unrelated project regardless of cwd; got:\n{s}"
@@ -608,8 +590,8 @@ fn t04_scope_bogus_rejected_with_canonical_error()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
-  let err = stderr( &out );
+  common::assert_exit( &out, 1 );
+  let err = common::stderr( &out );
   assert!(
     err.contains( "scope must be relevant|local|under|global|around, got bogus" ),
     "T04: scope::bogus must produce the canonical validate_scope() error; got: {err}"
@@ -656,8 +638,8 @@ fn t05_project_given_scope_ignored()
     .output()
     .unwrap();
 
-  assert_exit( &without_scope, 0 );
-  assert_exit( &with_scope, 0 );
+  common::assert_exit( &without_scope, 0 );
+  common::assert_exit( &with_scope, 0 );
   assert_eq!(
     without_scope.stdout, with_scope.stdout,
     "T05: scope:: must be ignored when project:: is given"
@@ -702,8 +684,8 @@ fn t06_no_session_id_scope_ignored()
     .output()
     .unwrap();
 
-  assert_exit( &without_scope, 0 );
-  assert_exit( &with_scope, 0 );
+  common::assert_exit( &without_scope, 0 );
+  common::assert_exit( &with_scope, 0 );
   assert_eq!(
     without_scope.stdout, with_scope.stdout,
     "T06: scope:: must be ignored when session_id:: is absent (Case 1)"
@@ -792,8 +774,8 @@ fn t07_bare_show_summary_block_and_tail_window()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "Path:" ), "T07: summary block must show Path:; got:\n{s}" );
   assert!( s.contains( "Storage:" ), "T07: summary block must show Storage:; got:\n{s}" );
   assert!(
@@ -846,7 +828,7 @@ fn t08_detail_sessions_appends_full_list_byte_for_byte()
     .arg( ".show" )
     .output()
     .unwrap();
-  assert_exit( &baseline, 0 );
+  common::assert_exit( &baseline, 0 );
 
   let with_detail = common::clg_cmd()
     .env( "CLAUDE_STORAGE_ROOT", root.path() )
@@ -855,10 +837,10 @@ fn t08_detail_sessions_appends_full_list_byte_for_byte()
     .arg( "detail::sessions" )
     .output()
     .unwrap();
-  assert_exit( &with_detail, 0 );
+  common::assert_exit( &with_detail, 0 );
 
-  let baseline_s = stdout( &baseline );
-  let with_detail_s = stdout( &with_detail );
+  let baseline_s = common::stdout( &baseline );
+  let with_detail_s = common::stdout( &with_detail );
 
   // Fixture-derived, fully hand-specified: entry_count=4 (i=0..3) → last
   // timestamp is literally "2025-01-01T00:00:03Z" (write_test_session's own
@@ -895,8 +877,8 @@ fn t09_detail_bogus_rejected_with_canonical_error()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
-  let err = stderr( &out );
+  common::assert_exit( &out, 1 );
+  let err = common::stderr( &out );
   assert!(
     err.contains( "detail must be projects|sessions, got bogus" ),
     "T09: detail::bogus must produce the canonical error; got: {err}"
@@ -937,8 +919,8 @@ fn t10_tail_25_shows_25_messages()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "entry 6" ), "T10: last::25 must include entry 6 (25-window boundary); got:\n{s}" );
   assert!( !s.contains( "entry 5" ), "T10: last::25 must exclude entry 5 (outside 25-window); got:\n{s}" );
   assert!( s.contains( "T10_MARKER" ), "T10: tail window must include the final marker entry; got:\n{s}" );
@@ -988,16 +970,16 @@ fn ec_8_l_alias_matches_canonical_last()
   let aliased   = run( "l::25" );
   let canonical = run( "last::25" );
 
-  assert_exit( &aliased, 0 );
-  assert_exit( &canonical, 0 );
+  common::assert_exit( &aliased, 0 );
+  common::assert_exit( &canonical, 0 );
 
   assert_eq!(
-    stdout( &aliased ),
-    stdout( &canonical ),
+    common::stdout( &aliased ),
+    common::stdout( &canonical ),
     "EC-8: `.show l::25` must produce byte-identical output to `.show last::25`"
   );
 
-  let s = stdout( &aliased );
+  let s = common::stdout( &aliased );
   assert!( s.contains( "entry 6" ), "EC-8: `l::25` must include entry 6 (25-window boundary); got:\n{s}" );
   assert!( !s.contains( "entry 5" ), "EC-8: `l::25` must exclude entry 5 (outside 25-window); got:\n{s}" );
 }
@@ -1031,8 +1013,8 @@ fn t11_tail_0_shows_all_messages_uncapped()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "entry 0" ),
     "T11: last::0 must show all messages including the very first (16 total, default cap would exclude it); got:\n{s}"
@@ -1067,8 +1049,8 @@ fn t12_show_entries_1_renders_raw_list_in_overview()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "test-uuid-000" ),
     "T12: show_entries::1 in project-overview must render the raw UUID list; got:\n{s}"
@@ -1120,8 +1102,8 @@ fn t13_selects_most_recently_active_session_by_last_timestamp()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "T13_NEW_MARKER" ),
     "T13: tail window must show content from the session with the latest last_timestamp; got:\n{s}"
@@ -1159,8 +1141,8 @@ fn t14_project_param_shows_same_overview_as_case_1()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "Path:" ), "T14: Case 3 must show the same summary block as Case 1; got:\n{s}" );
   assert!( s.contains( "Total Entries: 4" ), "T14: Case 3 summary must show total entries; got:\n{s}" );
   assert!( s.contains( "entry 0" ), "T14: Case 3 tail window must show session content; got:\n{s}" );
@@ -1210,8 +1192,8 @@ fn t15_session_detail_unaffected_by_new_params()
     .output()
     .unwrap();
 
-  assert_exit( &without_new_params, 0 );
-  assert_exit( &with_new_params, 0 );
+  common::assert_exit( &without_new_params, 0 );
+  common::assert_exit( &with_new_params, 0 );
   assert_eq!(
     without_new_params.stdout, with_new_params.stdout,
     "T15: last::/detail::/show_entries:: must be no-ops in session-detail mode (Cases 2/4)"
@@ -1250,8 +1232,8 @@ fn t16_summary_path_shows_decoded_path_not_debug_format()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   let expected = expected_decoded_display( &encoded );
   assert!(
     s.contains( &expected ),
@@ -1294,8 +1276,8 @@ fn t17_detail_sessions_and_tail_0_combine()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "entry 0" ), "T17: last::0 must show all messages including the first; got:\n{s}" );
   assert!( s.contains( "T17_MARKER" ), "T17: tail window must include the final marker entry; got:\n{s}" );
   assert!(
@@ -1335,8 +1317,8 @@ fn t18_zero_session_project_shows_zero_counts_no_crash()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "Sessions: 0 · Main: 0 · Agent: 0" ),
     "T18: zero-session project must show zero session counts; got:\n{s}"
@@ -1413,8 +1395,8 @@ fn int_13_fields_single_field_every_entry()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert_eq!(
     s.matches( "timestamp · " ).count(), 4,
     "T01: exactly one timestamp line per entry (4 entries); got:\n{s}"
@@ -1461,8 +1443,8 @@ fn int_14_fields_multi_field_request_order()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   let model_pos = s.find( "model · claude-fa-model-2" ).expect( "T02: model line for entry 2 must appear" );
   let uuid_pos = s.find( "uuid · fa-uuid-2" ).expect( "T02: uuid line for entry 2 must appear" );
   assert!(
@@ -1504,8 +1486,8 @@ fn int_15_fields_all_shows_every_dropped_attribute()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "parent_uuid · fa-uuid-2" ), "T03: parent_uuid must appear; got:\n{s}" );
   assert!( s.contains( "cwd · /tmp" ), "T03: cwd must appear; got:\n{s}" );
   assert!( s.contains( "version · 2.0.31" ), "T03: version must appear; got:\n{s}" );
@@ -1559,14 +1541,14 @@ fn int_16_fields_invalid_token_rejected()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
+  common::assert_exit( &out, 1 );
   assert!(
-    stderr( &out ).contains(
+    common::stderr( &out ).contains(
       "unknown field 'bogus' — valid fields: uuid, parent_uuid, timestamp, entry_type, cwd, session_id, version, git_branch, user_type, is_sidechain, content, thinking_level, thinking_disabled, model, message_id, stop_reason, stop_sequence, request_id, or all"
     ),
-    "T04: canonical 18-field error expected; got:\n{}", stderr( &out )
+    "T04: canonical 18-field error expected; got:\n{}", common::stderr( &out )
   );
-  assert!( stdout( &out ).is_empty(), "T04: stdout must be empty on error" );
+  assert!( common::stdout( &out ).is_empty(), "T04: stdout must be empty on error" );
 }
 
 /// T05/EC-5: `all` combined with another token is rejected.
@@ -1597,12 +1579,12 @@ fn fields_all_combined_with_other_rejected()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
+  common::assert_exit( &out, 1 );
   assert!(
-    stderr( &out ).contains( "'all' cannot be combined with other fields" ),
-    "T05: canonical error expected; got:\n{}", stderr( &out )
+    common::stderr( &out ).contains( "'all' cannot be combined with other fields" ),
+    "T05: canonical error expected; got:\n{}", common::stderr( &out )
   );
-  assert!( stdout( &out ).is_empty(), "T05: stdout must be empty on error" );
+  assert!( common::stdout( &out ).is_empty(), "T05: stdout must be empty on error" );
 }
 
 /// T06/EC-6: Empty `fields::` value is rejected.
@@ -1641,12 +1623,12 @@ fn fields_empty_value_rejected()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
+  common::assert_exit( &out, 1 );
   assert!(
-    stderr( &out ).contains( "fields" ),
-    "T06: error must mention the fields argument; got:\n{}", stderr( &out )
+    common::stderr( &out ).contains( "fields" ),
+    "T06: error must mention the fields argument; got:\n{}", common::stderr( &out )
   );
-  assert!( stdout( &out ).is_empty(), "T06: stdout must be empty on error" );
+  assert!( common::stdout( &out ).is_empty(), "T06: stdout must be empty on error" );
 }
 
 /// T07/EC-7: Case-insensitive, whitespace-trimmed tokens match canonical byte-for-byte.
@@ -1687,9 +1669,9 @@ fn fields_case_insensitive_whitespace_trimmed_matches_canonical()
     .output()
     .unwrap();
 
-  assert_exit( &out1, 0 );
-  assert_exit( &out2, 0 );
-  assert_eq!( stdout( &out1 ), stdout( &out2 ), "T07: case/whitespace variance must not change output" );
+  common::assert_exit( &out1, 0 );
+  common::assert_exit( &out2, 0 );
+  assert_eq!( common::stdout( &out1 ), common::stdout( &out2 ), "T07: case/whitespace variance must not change output" );
 }
 
 /// T08/EC-8: Duplicate tokens collapse to one occurrence.
@@ -1729,9 +1711,9 @@ fn fields_duplicate_token_collapses()
     .output()
     .unwrap();
 
-  assert_exit( &out1, 0 );
-  assert_exit( &out2, 0 );
-  assert_eq!( stdout( &out1 ), stdout( &out2 ), "T08: duplicate token must collapse to one occurrence" );
+  common::assert_exit( &out1, 0 );
+  common::assert_exit( &out2, 0 );
+  assert_eq!( common::stdout( &out1 ), common::stdout( &out2 ), "T08: duplicate token must collapse to one occurrence" );
 }
 
 /// T10/INT-20/EC-10: `fields::` applies to the project-overview tail window.
@@ -1767,8 +1749,8 @@ fn int_20_fields_applies_to_project_overview_tail_window()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "Path:" ) || s.contains( "Sessions:" ), "T10: summary block must still appear; got:\n{s}" );
   assert_eq!( s.matches( "timestamp · " ).count(), 5, "T10: exactly 5 field-projection blocks expected; got:\n{s}" );
   // Entry 0's raw timestamp legitimately appears once, in the summary block's
@@ -1812,8 +1794,8 @@ fn fields_assistant_only_field_on_user_entry_renders_em_dash()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "model · —" ), "T11: assistant-only field on user entry must render em-dash; got:\n{s}" );
 }
 
@@ -1848,8 +1830,8 @@ fn int_19_fields_index_composed_single_message_projection()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "uuid · fa-uuid-3" ), "T12: entry 3's uuid must appear; got:\n{s}" );
   assert!( s.contains( "model · claude-fa-model-3" ), "T12: entry 3's model must appear; got:\n{s}" );
   assert!( !s.contains( "fa-uuid-1" ) && !s.contains( "fa-uuid-2" ) && !s.contains( "fa-uuid-4" ), "T12: other entries must be absent; got:\n{s}" );
@@ -1885,8 +1867,8 @@ fn int_17_index_narrows_session_detail_one_message()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "simple reply" ), "T13: entry 2's content must appear; got:\n{s}" );
   assert!(
     !s.contains( "first user message" ) && !s.contains( "rich reply text" ) && !s.contains( "final user message" ),
@@ -1922,8 +1904,8 @@ fn index_boundary_first_position()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "first user message" ), "T14a: entry 1's content must appear; got:\n{s}" );
   assert!(
     !s.contains( "simple reply" ) && !s.contains( "rich reply text" ) && !s.contains( "final user message" ),
@@ -1961,8 +1943,8 @@ fn index_boundary_last_position()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "final user message" ), "T14b: entry 4's content must appear; got:\n{s}" );
   assert!(
     !s.contains( "first user message" ) && !s.contains( "simple reply" ) && !s.contains( "rich reply text" ),
@@ -1998,12 +1980,12 @@ fn index_zero_rejected()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
+  common::assert_exit( &out, 1 );
   assert!(
-    stderr( &out ).contains( "index must be a positive integer (1-based), got 0" ),
-    "T15a: canonical error expected; got:\n{}", stderr( &out )
+    common::stderr( &out ).contains( "index must be a positive integer (1-based), got 0" ),
+    "T15a: canonical error expected; got:\n{}", common::stderr( &out )
   );
-  assert!( stdout( &out ).is_empty(), "T15a: stdout must be empty on error" );
+  assert!( common::stdout( &out ).is_empty(), "T15a: stdout must be empty on error" );
 }
 
 /// T15b/EC-5: Negative `index::` is rejected.
@@ -2034,12 +2016,12 @@ fn index_negative_rejected()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
+  common::assert_exit( &out, 1 );
   assert!(
-    stderr( &out ).contains( "index must be a positive integer (1-based), got -1" ),
-    "T15b: canonical error expected; got:\n{}", stderr( &out )
+    common::stderr( &out ).contains( "index must be a positive integer (1-based), got -1" ),
+    "T15b: canonical error expected; got:\n{}", common::stderr( &out )
   );
-  assert!( stdout( &out ).is_empty(), "T15b: stdout must be empty on error" );
+  assert!( common::stdout( &out ).is_empty(), "T15b: stdout must be empty on error" );
 }
 
 /// T16/INT-18/EC-6: Out-of-range `index::` is rejected, error names the actual count.
@@ -2070,12 +2052,12 @@ fn int_18_index_out_of_range_rejected()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
+  common::assert_exit( &out, 1 );
   assert!(
-    stderr( &out ).contains( "index out of range: 99 (4 entries)" ),
-    "T16: canonical error expected; got:\n{}", stderr( &out )
+    common::stderr( &out ).contains( "index out of range: 99 (4 entries)" ),
+    "T16: canonical error expected; got:\n{}", common::stderr( &out )
   );
-  assert!( stdout( &out ).is_empty(), "T16: stdout must be empty on error" );
+  assert!( common::stdout( &out ).is_empty(), "T16: stdout must be empty on error" );
 }
 
 /// T17/EC-7: `index::` counts within the `last::`-windowed slice, not the full session.
@@ -2111,8 +2093,8 @@ fn index_counts_within_tail_window_not_full_session()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "entry 15" ), "T17: the tail window's 1st message (entry 15) must appear; got:\n{s}" );
   for other in [ "entry 0\n", "entry 16", "entry 17", "entry 18", "entry 19" ]
   {
@@ -2152,8 +2134,8 @@ fn index_narrows_raw_entries_list()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "3. Assistant · fa-uuid-3" ), "T18: entry 3's raw line must appear; got:\n{s}" );
   assert!(
     !s.contains( "fa-uuid-1" ) && !s.contains( "fa-uuid-2" ) && !s.contains( "fa-uuid-4" ),
@@ -2192,8 +2174,8 @@ fn fields_user_only_field_on_assistant_entry_renders_em_dash()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "thinking_level · —" ), "T20: user-only field on assistant entry must render em-dash; got:\n{s}" );
 }
 
@@ -2230,12 +2212,12 @@ fn index_zero_session_project_out_of_range_rejected()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
+  common::assert_exit( &out, 1 );
   assert!(
-    stderr( &out ).contains( "index out of range: 1 (0 entries)" ),
-    "T21: canonical zero-entry error expected; got:\n{}", stderr( &out )
+    common::stderr( &out ).contains( "index out of range: 1 (0 entries)" ),
+    "T21: canonical zero-entry error expected; got:\n{}", common::stderr( &out )
   );
-  assert!( stdout( &out ).is_empty(), "T21: stdout must be empty on error" );
+  assert!( common::stdout( &out ).is_empty(), "T21: stdout must be empty on error" );
 }
 
 /// INT-21: `fields::` composed with `show_metadata::1 show_entries::1` projects
@@ -2274,8 +2256,8 @@ fn int_21_fields_composed_with_show_entries_projects_each_entry()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert_eq!(
     s.matches( "timestamp · " ).count(), 4,
     "F2: exactly one field-projection line per entry (4 entries) expected; got:\n{s}"
@@ -2315,14 +2297,14 @@ fn f3b_project_not_found_error_omits_debug_format()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
+  common::assert_exit( &out, 1 );
   assert!(
-    stderr( &out ).contains( "Failed to load project does-not-exist-project:" ),
-    "F3b: error must report the plain identifier; got:\n{}", stderr( &out )
+    common::stderr( &out ).contains( "Failed to load project does-not-exist-project:" ),
+    "F3b: error must report the plain identifier; got:\n{}", common::stderr( &out )
   );
   assert!(
-    !stderr( &out ).contains( "Uuid(" ),
-    "F3b: error must not leak ProjectId's Debug format; got:\n{}", stderr( &out )
+    !common::stderr( &out ).contains( "Uuid(" ),
+    "F3b: error must not leak ProjectId's Debug format; got:\n{}", common::stderr( &out )
   );
 }
 
@@ -2370,8 +2352,8 @@ fn int_24_show_marks_a_tool_result_only_entry_instead_of_leaving_it_blank()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let text = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let text = common::stdout( &out );
   assert!( text.contains( "↳ tool result" ), "INT-24: suppressed body must be named:\n{text}" );
   assert!( !text.contains( "User:\n\n" ), "INT-24: no bare header over a blank line:\n{text}" );
 }

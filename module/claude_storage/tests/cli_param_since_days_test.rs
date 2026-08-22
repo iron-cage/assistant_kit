@@ -21,26 +21,8 @@ mod common;
 
 use tempfile::TempDir;
 
-fn stdout( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stdout ).into_owned()
-}
 
-fn stderr( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stderr ).into_owned()
-}
 
-fn assert_exit( out : &std::process::Output, code : i32 )
-{
-  assert_eq!(
-    out.status.code().unwrap_or( -1 ),
-    code,
-    "expected exit {code}, got {:?}; stderr: {}",
-    out.status.code(),
-    stderr( out )
-  );
-}
 
 /// Set a session file's modification time to `now - days` days.
 fn set_mtime_days_ago( path : &std::path::Path, days : u64 )
@@ -92,8 +74,8 @@ fn ec_1_since_days_window_includes_recent_excludes_old()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "recent11" ), "EC-1: session 5 days old must be inside a 20-day window; got:\n{s}" );
   assert!( !s.contains( "older222" ), "EC-1: session 25 days old must be outside a 20-day window; got:\n{s}" );
   assert!( s.contains( "1 conversation" ), "EC-1: header must count only the windowed session; got:\n{s}" );
@@ -133,8 +115,8 @@ fn ec_2_since_days_zero_shows_today()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "todayaaa" ), "EC-2: session touched now must survive since_days::0; got:\n{s}" );
 }
 
@@ -162,8 +144,8 @@ fn ec_3_since_days_negative_rejected()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
-  let combined = format!( "{}{}", stderr( &out ), stdout( &out ) );
+  common::assert_exit( &out, 1 );
+  let combined = format!( "{}{}", common::stderr( &out ), common::stdout( &out ) );
   assert!(
     combined.contains( "since_days" ),
     "EC-3: error must mention 'since_days'; got: {combined}"
@@ -208,8 +190,8 @@ fn ec_4_since_days_omitted_no_filtering()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "recent11" ), "EC-4: recent session must appear without a window; got:\n{s}" );
   assert!( s.contains( "older222" ), "EC-4: old session must appear without a window; got:\n{s}" );
   assert!( s.contains( "2 conversations" ), "EC-4: header must count both sessions; got:\n{s}" );
@@ -242,6 +224,6 @@ fn ec_5_since_days_non_integer_rejected()
     out.status.code().unwrap_or( -1 ),
     0,
     "EC-5: since_days::abc should be rejected; stderr: {}",
-    stderr( &out )
+    common::stderr( &out )
   );
 }

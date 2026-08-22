@@ -18,26 +18,8 @@ mod common;
 
 use tempfile::TempDir;
 
-fn stdout( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stdout ).into_owned()
-}
 
-fn stderr( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stderr ).into_owned()
-}
 
-fn assert_exit( out : &std::process::Output, code : i32 )
-{
-  assert_eq!(
-    out.status.code().unwrap_or( -1 ),
-    code,
-    "expected exit {code}, got {:?}; stderr: {}",
-    out.status.code(),
-    stderr( out )
-  );
-}
 
 /// EC-1: Value "user" accepted.
 ///
@@ -75,7 +57,7 @@ fn ec_1_entry_type_user_accepted()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
 }
 
 /// EC-2: Value "assistant" accepted.
@@ -106,7 +88,7 @@ fn ec_2_entry_type_assistant_accepted()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
 }
 
 /// EC-3: Value "all" accepted.
@@ -137,7 +119,7 @@ fn ec_3_entry_type_all_accepted()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
 }
 
 /// EC-4: Value "USER" rejected (case-sensitive enum parsing).
@@ -170,8 +152,8 @@ fn ec_4_entry_type_uppercase_rejected()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
-  let err = stderr( &out );
+  common::assert_exit( &out, 1 );
+  let err = common::stderr( &out );
   assert!(
     err.contains( "entry_type" ) || err.contains( "Invalid" ),
     "EC-4: expected error mentioning 'entry_type' or 'Invalid' for uppercase USER; got: {err}"
@@ -201,8 +183,8 @@ fn ec_5_entry_type_both_rejected()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
-  let err = stderr( &out );
+  common::assert_exit( &out, 1 );
+  let err = common::stderr( &out );
   assert!(
     err.contains( "entry_type" ) && err.contains( "both" ),
     "EC-5: expected 'entry_type' and 'both' in stderr; got: {err}"
@@ -232,8 +214,8 @@ fn ec_6_entry_type_system_rejected()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
-  let err = stderr( &out );
+  common::assert_exit( &out, 1 );
+  let err = common::stderr( &out );
   assert!(
     err.contains( "entry_type" ) && err.contains( "system" ),
     "EC-6: expected 'entry_type' and 'system' in stderr; got: {err}"
@@ -267,8 +249,8 @@ fn ec_7_entry_type_omitted_defaults_to_all()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let output = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let output = common::stdout( &out );
   assert!(
     !output.is_empty() || output.is_empty(),
     "EC-7: default entry_type::all must not error; got: {output}"

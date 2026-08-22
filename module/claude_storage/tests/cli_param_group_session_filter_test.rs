@@ -18,26 +18,8 @@ mod common;
 
 use tempfile::TempDir;
 
-fn stdout( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stdout ).into_owned()
-}
 
-fn stderr( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stderr ).into_owned()
-}
 
-fn assert_exit( out : &std::process::Output, code : i32 )
-{
-  assert_eq!(
-    out.status.code().unwrap_or( -1 ),
-    code,
-    "expected exit {code}, got {:?}; stderr: {}",
-    out.status.code(),
-    stderr( out )
-  );
-}
 
 /// CC-1: `session::` alone auto-enables session display.
 ///
@@ -66,8 +48,8 @@ fn cc_1_session_alone_auto_enables_session_display()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "commit" ),
     "CC-1: session::commit must appear in output; got:\n{s}"
@@ -107,8 +89,8 @@ fn cc_2_agent_alone_auto_enables_session_display()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "agent" ),
     "CC-2: agent sessions must appear with agent::1 filter; got:\n{s}"
@@ -146,8 +128,8 @@ fn cc_3_min_entries_alone_auto_enables_session_display()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "large-session" ),
     "CC-3: large-session (10 entries) must appear with min_entries::5; got:\n{s}"
@@ -198,17 +180,17 @@ fn cc_4_sessions_0_suppresses_display_even_with_all_three_filters()
     .output()
     .unwrap();
 
-  assert_exit( &out_suppressed, 0 );
-  assert_exit( &out_enabled, 0 );
+  common::assert_exit( &out_suppressed, 0 );
+  common::assert_exit( &out_enabled, 0 );
 
   // show_sessions::0 must produce output no longer than show_sessions::1
-  let suppressed_len = stdout( &out_suppressed ).len();
-  let enabled_len = stdout( &out_enabled ).len();
+  let suppressed_len = common::stdout( &out_suppressed ).len();
+  let enabled_len = common::stdout( &out_enabled ).len();
   assert!(
     suppressed_len <= enabled_len,
     "CC-4: show_sessions::0 output must be no longer than show_sessions::1; suppressed={suppressed_len}, enabled={enabled_len}\nsuppressed:\n{}\nenabled:\n{}",
-    stdout( &out_suppressed ),
-    stdout( &out_enabled )
+    common::stdout( &out_suppressed ),
+    common::stdout( &out_enabled )
   );
 }
 
@@ -244,8 +226,8 @@ fn cc_5_session_and_agent_combined_filters_by_both()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "agent-commit-123" ),
     "CC-5: agent-commit-123 must appear (matches both filters); got:\n{s}"
@@ -288,8 +270,8 @@ fn cc_6_session_and_min_entries_combined_filters_by_both_criteria()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "commit-long" ),
     "CC-6: -commit-long must appear (matches both criteria); got:\n{s}"
@@ -333,8 +315,8 @@ fn cc_7_all_three_filters_are_and_combined_not_or()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "agent-commit-5entries" ),
     "CC-7: agent-commit-5entries must appear (satisfies all three filters); got:\n{s}"

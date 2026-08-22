@@ -32,26 +32,8 @@ mod common;
 
 use tempfile::TempDir;
 
-fn stdout( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stdout ).into_owned()
-}
 
-fn stderr( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stderr ).into_owned()
-}
 
-fn assert_exit( out : &std::process::Output, code : i32 )
-{
-  assert_eq!(
-    out.status.code().unwrap_or( -1 ),
-    code,
-    "expected exit {code}, got {:?}; stderr: {}",
-    out.status.code(),
-    stderr( out )
-  );
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Output Format Redesign (plan-004)
@@ -96,8 +78,8 @@ fn it_17_v1_groups_sessions_by_project_path()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   // Must have at least one path header line: ends with ':' and contains '/' or '~'
   assert!(
     s.lines().any( | l | l.contains( ':' ) && ( l.contains( '/' ) || l.contains( '~' ) ) ),
@@ -127,8 +109,8 @@ fn it_18_path_header_present_at_v1_single_project()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.lines().any( | l | l.contains( ':' ) && ( l.contains( '/' ) || l.contains( '~' ) ) ),
     "path header must be shown at v1 even for single-project local scope; got:\n{s}"
@@ -164,8 +146,8 @@ fn it_19_agent_sessions_collapsed_at_v1_no_filter()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   // Agent IDs must NOT appear individually at v1
   assert!( !s.contains( "agent-task-001" ), "agent-task-001 must NOT appear individually at v1; got:\n{s}" );
   assert!( !s.contains( "agent-task-002" ), "agent-task-002 must NOT appear individually at v1; got:\n{s}" );
@@ -208,8 +190,8 @@ fn it_20_agent_sessions_shown_individually_at_v2()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   // All agent sessions must appear individually (tree-indented with show_tree::1)
   assert!( s.contains( "agent-task-001" ), "agent-task-001 must appear individually with show_tree::1; got:\n{s}" );
   assert!( s.contains( "agent-task-002" ), "agent-task-002 must appear individually with show_tree::1; got:\n{s}" );
@@ -247,8 +229,8 @@ fn it_21_entry_count_shown_at_v2()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "(4 entries)" ),
     "show_tree::1 must show '(4 entries)' for a 4-entry session; got:\n{s}"
@@ -278,8 +260,8 @@ fn it_22_agent_filter_disables_collapse_at_v1()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   // agent::1 shows only agent sessions individually, no collapse
   assert!( s.contains( "agent-task-001" ), "agent-task-001 must appear individually with agent::1; got:\n{s}" );
   assert!( s.contains( "agent-task-002" ), "agent-task-002 must appear individually with agent::1; got:\n{s}" );
@@ -329,8 +311,8 @@ fn it_27_entry_count_shown_at_v1()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "(4 entries)" ),
     "must show '(4 entries)' for a 4-entry session; got:\n{s}"
@@ -376,8 +358,8 @@ fn it_28_limit_truncates_display()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   // Truncation hint must appear
   assert!(
     s.contains( "and 3 more" ),
@@ -429,8 +411,8 @@ fn it_29_zero_byte_sessions_excluded_at_v1()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   // Zero-byte placeholder must NOT appear in default display
   assert!(
     !s.contains( "session-placeholder" ),
@@ -508,8 +490,8 @@ fn it_list_mode_shows_projects_sorted_by_recency()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
 
   let pos_beta  = s.find( "proj_beta" ).expect( "proj_beta must appear in output" );
   let pos_alpha = s.find( "proj_alpha" ).expect( "proj_alpha must appear in output" );
@@ -559,8 +541,8 @@ fn it_truncation_noun_singular_one_hidden()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "1 more conversation" ),
     "limit::1 with 2 sessions must show '1 more conversation' (singular); got:\n{s}"
@@ -593,8 +575,8 @@ fn it_truncation_noun_plural_two_hidden()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "2 more conversations" ),
     "limit::1 with 3 sessions must show '2 more conversations' (plural); got:\n{s}"

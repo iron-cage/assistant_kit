@@ -17,26 +17,8 @@ mod common;
 
 use tempfile::TempDir;
 
-fn stdout( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stdout ).into_owned()
-}
 
-fn stderr( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stderr ).into_owned()
-}
 
-fn assert_exit( out : &std::process::Output, code : i32 )
-{
-  assert_eq!(
-    out.status.code().unwrap_or( -1 ),
-    code,
-    "expected exit {code}, got {:?}; stderr: {}",
-    out.status.code(),
-    stderr( out )
-  );
-}
 
 /// EC-1: `limit::5` → max 5 sessions per project.
 ///
@@ -77,8 +59,8 @@ fn ec_1_limit_5_caps_sessions()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let output = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let output = common::stdout( &out );
   // Count how many session lines appear (each session appears as "sess-NN")
   let session_count = ( 0..10 )
     .filter( |i| output.contains( &format!( "sess-{i:02}" ) ) )
@@ -136,10 +118,10 @@ fn ec_2_limit_0_no_cap()
     .output()
     .unwrap();
 
-  assert_exit( &out_uncapped, 0 );
-  assert_exit( &out_capped, 0 );
-  let uncapped_len = stdout( &out_uncapped ).len();
-  let capped_len = stdout( &out_capped ).len();
+  common::assert_exit( &out_uncapped, 0 );
+  common::assert_exit( &out_capped, 0 );
+  let uncapped_len = common::stdout( &out_uncapped ).len();
+  let capped_len = common::stdout( &out_capped ).len();
   assert!(
     uncapped_len >= capped_len,
     "EC-2: limit::0 output must be at least as long as limit::5 output; uncapped={uncapped_len}, capped={capped_len}"
@@ -169,8 +151,8 @@ fn ec_3_limit_negative_rejected()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
-  let combined = format!( "{}{}", stderr( &out ), stdout( &out ) );
+  common::assert_exit( &out, 1 );
+  let combined = format!( "{}{}", common::stderr( &out ), common::stdout( &out ) );
   assert!(
     combined.contains( "limit" ),
     "EC-3: error must mention 'limit'; got: {combined}"
@@ -200,8 +182,8 @@ fn ec_4_limit_empty_rejected()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
-  let combined = format!( "{}{}", stderr( &out ), stdout( &out ) );
+  common::assert_exit( &out, 1 );
+  let combined = format!( "{}{}", common::stderr( &out ), common::stdout( &out ) );
   assert!(
     combined.contains( "limit" ),
     "EC-4: error must mention 'limit'; got: {combined}"
@@ -246,8 +228,8 @@ fn ec_5_limit_exceeds_session_count_shows_all()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let output = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let output = common::stdout( &out );
   // All 3 sessions must appear
   for i in 0..3
   {
@@ -281,8 +263,8 @@ fn ec_6_limit_non_integer_rejected()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
-  let combined = format!( "{}{}", stderr( &out ), stdout( &out ) );
+  common::assert_exit( &out, 1 );
+  let combined = format!( "{}{}", common::stderr( &out ), common::stdout( &out ) );
   assert!(
     !combined.is_empty(),
     "EC-6: expected non-empty error for non-integer limit value; got empty output"

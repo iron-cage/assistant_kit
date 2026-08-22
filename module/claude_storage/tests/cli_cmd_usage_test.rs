@@ -45,26 +45,8 @@ mod common;
 
 use tempfile::TempDir;
 
-fn stdout( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stdout ).into_owned()
-}
 
-fn stderr( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stderr ).into_owned()
-}
 
-fn assert_exit( out : &std::process::Output, code : i32 )
-{
-  assert_eq!(
-    out.status.code().unwrap_or( -1 ),
-    code,
-    "expected exit {code}, got {:?}; stderr: {}",
-    out.status.code(),
-    stderr( out )
-  );
-}
 
 /// Fully controlled session fixture: every value the `.usage` table renders.
 struct UsageSession< 'a >
@@ -210,8 +192,8 @@ fn int_1_default_local_single_session()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.lines().next().is_some_and( | l | l.starts_with( "Session" ) ),
     "INT-1: header row must lead the table; got:\n{s}" );
   assert!( s.contains( "localaa1" ), "INT-1: cwd project's session must appear; got:\n{s}" );
@@ -257,8 +239,8 @@ fn int_2_relevant_includes_ancestors()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   for id in [ "relaaaa1", "relbbbb2", "relcccc3" ]
   {
     assert!( s.contains( id ), "INT-2: ancestor-chain session {id} must appear; got:\n{s}" );
@@ -308,8 +290,8 @@ fn int_3_under_includes_descendants()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   for id in [ "undaaaa1", "undbbbb2", "undcccc3" ]
   {
     assert!( s.contains( id ), "INT-3: subtree session {id} must appear; got:\n{s}" );
@@ -354,8 +336,8 @@ fn int_4_around_includes_both_directions()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   for id in [ "aroaaaa1", "arobbbb2", "arocccc3" ]
   {
     assert!( s.contains( id ), "INT-4: neighborhood session {id} must appear; got:\n{s}" );
@@ -399,8 +381,8 @@ fn int_5_global_ignores_path_and_depth()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   for id in [ "glbaaaa1", "glbbbbb2", "glbcccc3" ]
   {
     assert!( s.contains( id ), "INT-5: global must list {id} despite path::/depth::; got:\n{s}" );
@@ -445,8 +427,8 @@ fn int_6_path_overrides_cwd_anchor()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "anchccc3" ), "INT-6: path::-anchored project must appear; got:\n{s}" );
   assert!( !s.contains( "anchaaa1" ) && !s.contains( "anchbbb2" ),
     "INT-6: non-anchored projects must be excluded; got:\n{s}" );
@@ -491,8 +473,8 @@ fn int_7_depth_caps_component_distance()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "depaaaa1" ), "INT-7: distance-0 project must survive depth::1; got:\n{s}" );
   assert!( s.contains( "depbbbb2" ), "INT-7: distance-1 project must survive depth::1; got:\n{s}" );
   assert!( !s.contains( "depcccc3" ), "INT-7: distance-2 project must be dropped by depth::1; got:\n{s}" );
@@ -535,8 +517,8 @@ fn int_8_depth_zero_is_unbounded()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   for id in [ "unbaaaa1", "unbbbbb2", "unbcccc3" ]
   {
     assert!( s.contains( id ), "INT-8: depth::0 must keep {id} (unbounded); got:\n{s}" );
@@ -582,8 +564,8 @@ fn int_9_agent_sessions_excluded()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "beefcafe" ), "INT-9: main session must appear; got:\n{s}" );
   assert!( !s.contains( "agent-deadbeef" ), "INT-9: agent session must never be a row; got:\n{s}" );
   assert_eq!( data_rows( &s ), 1, "INT-9: exactly one data row expected; got:\n{s}" );
@@ -635,8 +617,8 @@ fn int_10_limit_caps_flat_result_set()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "limaaa01" ), "INT-10: newest session must survive the cap; got:\n{s}" );
   assert!( s.contains( "limbbb02" ), "INT-10: second-newest must survive the cap; got:\n{s}" );
   assert!( !s.contains( "limccc03" ), "INT-10: oldest must be cut by limit::2; got:\n{s}" );
@@ -681,8 +663,8 @@ fn int_11_most_recent_mtime_first()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   let newer = s.find( "newer111" ).expect( "newer session row must exist" );
   let older = s.find( "older222" ).expect( "older session row must exist" );
   assert!( newer < older, "INT-11: newer mtime must sort first; got:\n{s}" );
@@ -723,8 +705,8 @@ fn int_12_session_column_short_id()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "bf61b676" ), "INT-12: 8-char short id must appear; got:\n{s}" );
   assert!( !s.contains( "bf61b676-1234" ), "INT-12: full UUID must never appear; got:\n{s}" );
 }
@@ -764,8 +746,8 @@ fn int_13_command_truncated_at_35_chars()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   let expected : String = fifty.chars().take( 35 ).collect();
   assert!(
     s.contains( &format!( "{expected}…" ) ),
@@ -810,8 +792,8 @@ fn int_14_token_columns_k_m_suffixes()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "500" ), "INT-14: sub-1000 count must render bare; got:\n{s}" );
   assert!( s.contains( "44.8k" ), "INT-14: mid-range count must render as N.Nk; got:\n{s}" );
   assert!( s.contains( "4.8M" ), "INT-14: million-range count must render as N.NM; got:\n{s}" );
@@ -861,8 +843,8 @@ fn int_15_duration_band_boundaries()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "45s" ), "INT-15: sub-minute span must render as Ns; got:\n{s}" );
   assert!( s.contains( "5m24s" ), "INT-15: sub-hour span must render as NmNNs; got:\n{s}" );
   assert!( s.contains( "1h01m" ), "INT-15: hour-plus span must render as NhNNm; got:\n{s}" );
@@ -935,13 +917,13 @@ fn int_16_worked_example_byte_exact()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
   let expected = "\
 Session   Command                            Turns      In     Out   Cache      Dur  Dir\n\
 bf61b676  /role                                 31   44.8k  105.8k   4.8M    5m24s  /data/repos/yrd_review/2026_troy_venue_pipeline_dev/pr_101\n\
 a2201ceb  /role                                 35   55.2k  109.2k   5.0M    4m22s  /data/repos/yrd_review/2026_troy_venue_pipeline_dev/pr_144\n";
   assert_eq!(
-    stdout( &out ),
+    common::stdout( &out ),
     expected,
     "INT-16: full table must match docs/cli/command/13_usage.md's worked example byte-for-byte"
   );
@@ -976,14 +958,14 @@ fn int_17_empty_non_local_scope_exits_0()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert_eq!(
     s,
     "Session   Command                            Turns      In     Out   Cache      Dur  Dir\n",
     "INT-17: zero-row result must print exactly the header row"
   );
-  assert!( stderr( &out ).is_empty(), "INT-17: no error output expected; got: {}", stderr( &out ) );
+  assert!( common::stderr( &out ).is_empty(), "INT-17: no error output expected; got: {}", common::stderr( &out ) );
 }
 
 /// INT-18: `scope::local` with no project at cwd exits 2.
@@ -1016,11 +998,11 @@ fn int_18_local_without_project_exits_2()
     .output()
     .unwrap();
 
-  assert_exit( &out, 2 );
+  common::assert_exit( &out, 2 );
   assert!(
-    stderr( &out ).contains( "No project found for current directory" ),
+    common::stderr( &out ).contains( "No project found for current directory" ),
     "INT-18: stderr must name the missing cwd project; got: {}",
-    stderr( &out )
+    common::stderr( &out )
   );
 }
 
@@ -1047,13 +1029,13 @@ fn int_19_invalid_scope_rejected()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
+  common::assert_exit( &out, 1 );
   assert!(
-    stderr( &out ).contains( "badvalue" ),
+    common::stderr( &out ).contains( "badvalue" ),
     "INT-19: stderr must name the invalid value; got: {}",
-    stderr( &out )
+    common::stderr( &out )
   );
-  assert!( stdout( &out ).is_empty(), "INT-19: no table output expected; got:\n{}", stdout( &out ) );
+  assert!( common::stdout( &out ).is_empty(), "INT-19: no table output expected; got:\n{}", common::stdout( &out ) );
 }
 
 /// INT-20: Negative `depth::` is rejected.
@@ -1079,13 +1061,13 @@ fn int_20_negative_depth_rejected()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
+  common::assert_exit( &out, 1 );
   assert_eq!(
-    stderr( &out ).trim(),
+    common::stderr( &out ).trim(),
     "depth must be non-negative",
     "INT-20: stderr must be exactly the documented message"
   );
-  assert!( stdout( &out ).is_empty(), "INT-20: no table output expected; got:\n{}", stdout( &out ) );
+  assert!( common::stdout( &out ).is_empty(), "INT-20: no table output expected; got:\n{}", common::stdout( &out ) );
 }
 
 /// INT-21: Negative `limit::` is rejected.
@@ -1111,11 +1093,11 @@ fn int_21_negative_limit_rejected()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
+  common::assert_exit( &out, 1 );
   assert_eq!(
-    stderr( &out ).trim(),
+    common::stderr( &out ).trim(),
     "limit must be non-negative",
     "INT-21: stderr must be exactly the documented message"
   );
-  assert!( stdout( &out ).is_empty(), "INT-21: no table output expected; got:\n{}", stdout( &out ) );
+  assert!( common::stdout( &out ).is_empty(), "INT-21: no table output expected; got:\n{}", common::stdout( &out ) );
 }

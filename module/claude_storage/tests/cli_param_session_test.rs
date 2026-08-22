@@ -18,26 +18,8 @@ mod common;
 
 use tempfile::TempDir;
 
-fn stdout( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stdout ).into_owned()
-}
 
-fn stderr( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stderr ).into_owned()
-}
 
-fn assert_exit( out : &std::process::Output, code : i32 )
-{
-  assert_eq!(
-    out.status.code().unwrap_or( -1 ),
-    code,
-    "expected exit {code}, got {:?}; stderr: {}",
-    out.status.code(),
-    stderr( out )
-  );
-}
 
 /// EC-1: Partial match at start of session ID.
 ///
@@ -66,8 +48,8 @@ fn ec_1_session_partial_match_at_start()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let output = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let output = common::stdout( &out );
   assert!(
     output.contains( "default" ),
     "EC-1: session with 'default' prefix must appear; got: {output}"
@@ -101,8 +83,8 @@ fn ec_2_session_partial_match_in_middle()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let output = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let output = common::stdout( &out );
   assert!(
     output.contains( "topic" ),
     "EC-2: session containing 'topic' must appear; got: {output}"
@@ -143,11 +125,11 @@ fn ec_3_session_case_insensitive_match()
     .output()
     .unwrap();
 
-  assert_exit( &out_lower, 0 );
-  assert_exit( &out_upper, 0 );
+  common::assert_exit( &out_lower, 0 );
+  common::assert_exit( &out_upper, 0 );
   assert_eq!(
-    stdout( &out_lower ),
-    stdout( &out_upper ),
+    common::stdout( &out_lower ),
+    common::stdout( &out_upper ),
     "EC-3: case-insensitive session filter must return identical results"
   );
 }
@@ -179,8 +161,8 @@ fn ec_4_session_no_match_returns_empty()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let output = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let output = common::stdout( &out );
   assert!(
     !output.contains( "default" ),
     "EC-4: non-matching session filter must return empty list; got: {output}"
@@ -209,8 +191,8 @@ fn ec_5_session_empty_rejected()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
-  let combined = format!( "{}{}", stderr( &out ), stdout( &out ) );
+  common::assert_exit( &out, 1 );
+  let combined = format!( "{}{}", common::stderr( &out ), common::stdout( &out ) );
   assert!(
     combined.contains( "session" ),
     "EC-5: error must mention 'session'; got: {combined}"
@@ -243,8 +225,8 @@ fn ec_6_session_auto_enables_display()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let output = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let output = common::stdout( &out );
   // Session filter auto-enables display; the matching session should appear
   assert!(
     output.contains( "default" ),
@@ -284,8 +266,8 @@ fn ec_7_session_in_count_restricts_scope()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let output = stdout( &out ).trim().to_owned();
+  common::assert_exit( &out, 0 );
+  let output = common::stdout( &out ).trim().to_owned();
   let count : usize = output.parse().unwrap_or( 999 );
   assert!(
     count < 10,

@@ -22,26 +22,8 @@ mod common;
 
 use tempfile::TempDir;
 
-fn stdout( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stdout ).into_owned()
-}
 
-fn stderr( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stderr ).into_owned()
-}
 
-fn assert_exit( out : &std::process::Output, code : i32 )
-{
-  assert_eq!(
-    out.status.code().unwrap_or( -1 ),
-    code,
-    "expected exit {code}, got {:?}; stderr: {}",
-    out.status.code(),
-    stderr( out )
-  );
-}
 
 /// EC-1: Value "local" accepted.
 ///
@@ -72,7 +54,7 @@ fn ec_1_scope_local_accepted()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
 }
 
 /// EC-2: Value "relevant" accepted.
@@ -104,7 +86,7 @@ fn ec_2_scope_relevant_accepted()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
 }
 
 /// EC-3: Value "under" accepted.
@@ -134,7 +116,7 @@ fn ec_3_scope_under_accepted()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
 }
 
 /// EC-4: Value "global" accepted.
@@ -164,7 +146,7 @@ fn ec_4_scope_global_accepted()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
 }
 
 /// EC-5: Value "RELEVANT" accepted (case-insensitive).
@@ -196,7 +178,7 @@ fn ec_5_scope_uppercase_accepted()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
 }
 
 /// EC-6: Invalid value "all" rejected with error.
@@ -221,8 +203,8 @@ fn ec_6_scope_all_rejected()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
-  let err = stderr( &out );
+  common::assert_exit( &out, 1 );
+  let err = common::stderr( &out );
   assert!(
     err.contains( "scope" ) && err.contains( "all" ),
     "EC-6: expected 'scope' and 'all' in stderr; got: {err}"
@@ -265,8 +247,8 @@ fn ec_7_scope_omitted_defaults_to_under()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let output = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let output = common::stdout( &out );
   assert!(
     output.contains( "child" ),
     "EC-7: default .projects from parent dir must show child project; got: {output}"
@@ -301,7 +283,7 @@ fn ec_8_scope_global_ignores_path()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
 }
 
 /// EC-9: Invalid value rejected with the documented error-message word order.
@@ -329,8 +311,8 @@ fn ec_9_scope_error_message_word_order()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
-  let err = stderr( &out );
+  common::assert_exit( &out, 1 );
+  let err = common::stderr( &out );
   assert!(
     err.contains( "scope must be relevant|local|under|global|around, got bogus" ),
     "EC-9: expected documented word order (ending global|around) in stderr; got: {err}"
@@ -368,7 +350,7 @@ fn ec_10_scope_uppercase_around_accepted()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
 }
 
 /// EC-11: Global help describes `scope::` with the real value set.
@@ -396,8 +378,8 @@ fn ec_11_global_help_scope_values_accurate()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let output = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let output = common::stdout( &out );
   assert!(
     output.contains( "relevant|local|under|global|around" ),
     "EC-11: expected corrected scope value set in global help; got: {output}"

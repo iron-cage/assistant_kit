@@ -17,26 +17,8 @@ mod common;
 
 use tempfile::TempDir;
 
-fn stdout( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stdout ).into_owned()
-}
 
-fn stderr( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stderr ).into_owned()
-}
 
-fn assert_exit( out : &std::process::Output, code : i32 )
-{
-  assert_eq!(
-    out.status.code().unwrap_or( -1 ),
-    code,
-    "expected exit {code}, got {:?}; stderr: {}",
-    out.status.code(),
-    stderr( out )
-  );
-}
 
 /// EC-1: Value 0 uses case-insensitive matching.
 ///
@@ -73,8 +55,8 @@ fn ec_1_case_insensitive_finds_uppercase()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let output = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let output = common::stdout( &out );
   assert!(
     !output.is_empty() || output.is_empty(),
     "EC-1: command must succeed; got: {output}"
@@ -116,8 +98,8 @@ fn ec_2_case_sensitive_exact_match()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let output = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let output = common::stdout( &out );
   assert!(
     output.contains( "Error" ),
     "EC-2: exact-case 'Error' must appear in results; got: {output}"
@@ -160,8 +142,8 @@ fn ec_3_case_sensitive_true_rejected()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let err = stderr( &out );
+  common::assert_exit( &out, 0 );
+  let err = common::stderr( &out );
   assert!(
     !err.contains( "Invalid boolean" ) && !err.contains( "Type Error" ),
     "EC-3: case_sensitive::true must not cause a type validation error; got: {err}"
@@ -202,8 +184,8 @@ fn ec_4_omitted_defaults_to_case_insensitive()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let output = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let output = common::stdout( &out );
   assert!(
     output.contains( "Error" ),
     "EC-4: default case-insensitive must find 'Error' when searching 'error'; got: {output}"
@@ -245,8 +227,8 @@ fn ec_5_case_sensitive_misses_different_case()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let output = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let output = common::stdout( &out );
   assert!(
     !output.contains( "ERROR OCCURRED" ),
     "EC-5: uppercase 'ERROR' must NOT appear when searching lowercase 'error' with case_sensitive::1; got: {output}"
@@ -302,8 +284,8 @@ fn ec_6_case_insensitive_finds_all_variants()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let output = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let output = common::stdout( &out );
   assert!(
     output.contains( "ERROR" ) || output.contains( "Error" ) || output.contains( "error" ),
     "EC-6: at least one case variant must appear; got: {output}"

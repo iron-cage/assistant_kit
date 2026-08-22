@@ -7,7 +7,7 @@
 - **In Scope**: Value constraints, default behavior, command interactions.
 - **Out of Scope**: Type definitions (→ `type/`), command behavior (→ `command/`).
 
-Output verbosity selector — terse project overview, or full session detail. On `.projects`, absorbed `.list`'s former project-only default view and its `show_sessions::` toggle into a single explicit parameter (see [`02_list.md`](../command/02_list.md), [`15_sessions.md`](15_sessions.md)). On `.show`'s project-overview branches, gates the full per-session list beneath the project summary block.
+Output verbosity selector — terse project overview, or full session detail. On `.projects`, absorbed `.list`'s former project-only default view and its `show_sessions::` toggle into a single explicit parameter (see [`../command/02_list.md`](../command/02_list.md), [`15_sessions.md`](15_sessions.md)). On `.show`'s project-overview branches, gates the full per-session list beneath the project summary block.
 
 **Type:** [`DetailLevel`](../type/14_detail_level.md)
 

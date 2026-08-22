@@ -33,26 +33,8 @@ mod common;
 
 use tempfile::TempDir;
 
-fn stdout( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stdout ).into_owned()
-}
 
-fn stderr( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stderr ).into_owned()
-}
 
-fn assert_exit( out : &std::process::Output, code : i32 )
-{
-  assert_eq!(
-    out.status.code().unwrap_or( -1 ),
-    code,
-    "expected exit {code}, got {:?}; stderr: {}",
-    out.status.code(),
-    stderr( out )
-  );
-}
 
 /// INT-1: Default list shows all projects.
 ///
@@ -86,8 +68,8 @@ fn int_1_default_list_shows_all_projects()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "alpha" ),
     "INT-1: project 'alpha' must appear in .list output; got:\n{s}"
@@ -137,8 +119,8 @@ fn int_2_type_uuid_filters_to_uuid_projects_only()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( uuid_id ) || s.contains( "a1b2c3d4" ),
     "INT-2: UUID project must appear with type::uuid filter; got:\n{s}"
@@ -184,8 +166,8 @@ fn int_3_type_path_filters_to_path_encoded_projects_only()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "encoded" ),
     "INT-3: path-encoded projects must appear with type::path filter; got:\n{s}"
@@ -228,8 +210,8 @@ fn int_4_sessions_1_expands_session_list_per_project()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "s-alpha-001" ),
     "INT-4: session 's-alpha-001' must appear with show_sessions::1; got:\n{s}"
@@ -284,8 +266,8 @@ fn int_5_path_substring_filters_project_list()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "alpha" ) || s.contains( "beta" ),
     "INT-5: projects under 'projects/' must appear with path::projects filter; got:\n{s}"
@@ -328,8 +310,8 @@ fn int_6_session_filter_auto_enables_sessions_display()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "abc-session" ),
     "INT-6: session 'abc-session' must appear when session::abc filter auto-enables display; got:\n{s}"
@@ -372,8 +354,8 @@ fn int_7_agent_1_filters_to_agent_sessions_only()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "agent-001" ),
     "INT-7: agent session 'agent-001' must appear with agent::1; got:\n{s}"
@@ -419,8 +401,8 @@ fn int_8_agent_0_filters_to_main_sessions_only()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "main-session-002" ),
     "INT-8: main session must appear with agent::0 filter; got:\n{s}"
@@ -462,8 +444,8 @@ fn int_9_min_entries_auto_enables_sessions_display()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "s1-many" ),
     "INT-9: session with 15 entries must appear with min_entries::10; got:\n{s}"
@@ -505,8 +487,8 @@ fn int_10_sessions_0_suppresses_display_even_with_session_filter()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   // session:: filter auto-enables sessions display regardless of show_sessions::0
   assert!(
     s.contains( "abc-override" ),
@@ -564,8 +546,8 @@ fn int_11_combined_path_session_filter()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "alpha" ),
     "INT-11: project 'alpha' (path contains 'projects') must appear; got:\n{s}"
@@ -626,8 +608,8 @@ fn bug_007_collision_prefix_root_does_not_break_path_filter_isolation()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "alpha" ),
     "B007: project 'alpha' (path contains 'projects') must appear; got:\n{s}"
@@ -666,7 +648,7 @@ fn int_12_exit_code_0_on_empty_storage()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
 }
 
 /// T01: Default (no `scope::`) regression guard.
@@ -701,8 +683,8 @@ fn t01_default_scope_global_regression_guard()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "t01alpha" ) && s.contains( "t01beta" ),
     "T01: default (no scope::) must list all projects, matching pre-retrofit behavior; got:\n{s}"
@@ -750,8 +732,8 @@ fn t02_scope_global_explicit_byte_identical_to_default()
     .output()
     .unwrap();
 
-  assert_exit( &default_out, 0 );
-  assert_exit( &explicit_out, 0 );
+  common::assert_exit( &default_out, 0 );
+  common::assert_exit( &explicit_out, 0 );
   assert_eq!(
     default_out.stdout, explicit_out.stdout,
     "T02: scope::global explicit must be byte-for-byte identical to the omitted default \
@@ -797,8 +779,8 @@ fn t03_scope_local_narrows_to_cwd_project()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "t03targetmarker" ),
     "T03: scope::local from the target project's own cwd must include it; got:\n{s}"
@@ -850,8 +832,8 @@ fn t04_scope_under_narrows_to_descendants()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "t04nestedchild" ),
     "T04: scope::under from the ancestor cwd must include the nested descendant project; got:\n{s}"
@@ -890,8 +872,8 @@ fn t05_scope_bogus_rejected_with_canonical_error()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
-  let err = stderr( &out );
+  common::assert_exit( &out, 1 );
+  let err = common::stderr( &out );
   assert!(
     err.contains( "scope must be relevant|local|under|global|around, got bogus" ),
     "T05: scope::bogus must produce the canonical validate_scope() error; got: {err}"
@@ -937,8 +919,8 @@ fn t06_scope_local_composes_with_path_filter()
     .output()
     .unwrap();
 
-  assert_exit( &matching, 0 );
-  let s_match = stdout( &matching );
+  common::assert_exit( &matching, 0 );
+  let s_match = common::stdout( &matching );
   assert!(
     s_match.contains( "t06assistantproject" ),
     "T06: scope::local + a matching path:: substring must include the project; got:\n{s_match}"
@@ -953,8 +935,8 @@ fn t06_scope_local_composes_with_path_filter()
     .output()
     .unwrap();
 
-  assert_exit( &non_matching, 0 );
-  let s_non_match = stdout( &non_matching );
+  common::assert_exit( &non_matching, 0 );
+  let s_non_match = common::stdout( &non_matching );
   assert!(
     !s_non_match.contains( "t06assistantproject" ),
     "T06: scope::local narrowed set must still be filtered by a non-matching path::; got:\n{s_non_match}"
@@ -990,8 +972,8 @@ fn int_13_type_invalid_value_rejected()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
-  let err = stderr( &out );
+  common::assert_exit( &out, 1 );
+  let err = common::stderr( &out );
   assert!(
     !err.is_empty(),
     "INT-13: invalid type:: value must produce an error on stderr"
@@ -1001,9 +983,9 @@ fn int_13_type_invalid_value_rejected()
     "INT-13: stderr must name the invalid type:: value; got: {err}"
   );
   assert!(
-    stdout( &out ).is_empty(),
+    common::stdout( &out ).is_empty(),
     "INT-13: no listing output on stdout when type:: is rejected; got:\n{}",
-    stdout( &out )
+    common::stdout( &out )
   );
 }
 
@@ -1037,8 +1019,8 @@ fn int_14_agent_non_boolean_rejected()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
-  let err = stderr( &out );
+  common::assert_exit( &out, 1 );
+  let err = common::stderr( &out );
   assert!(
     !err.is_empty(),
     "INT-14: non-boolean agent:: value must produce an error on stderr"
@@ -1048,8 +1030,8 @@ fn int_14_agent_non_boolean_rejected()
     "INT-14: stderr must name the rejected agent argument; got: {err}"
   );
   assert!(
-    stdout( &out ).is_empty(),
+    common::stdout( &out ).is_empty(),
     "INT-14: no listing output on stdout when agent:: is rejected; got:\n{}",
-    stdout( &out )
+    common::stdout( &out )
   );
 }

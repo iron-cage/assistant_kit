@@ -27,26 +27,8 @@ mod common;
 
 use tempfile::TempDir;
 
-fn stdout( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stdout ).into_owned()
-}
 
-fn stderr( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stderr ).into_owned()
-}
 
-fn assert_exit( out : &std::process::Output, code : i32 )
-{
-  assert_eq!(
-    out.status.code().unwrap_or( -1 ),
-    code,
-    "expected exit {code}, got {:?}; stderr: {}",
-    out.status.code(),
-    stderr( out )
-  );
-}
 
 /// Command with isolated HOME and scrubbed `CLAUDE_HOME` (storage resolution
 /// honors `CLAUDE_HOME` first — ambient leakage would silently retarget tests).
@@ -99,13 +81,13 @@ fn sp_1_default_selector_resolves_latest()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
   let expected = format!(
     "{}\n",
     expected_session_file( home.path(), &canon, "11111111-1111-1111-1111-111111111111" )
   );
-  assert_eq!( stdout( &out ), expected, "default selector must print the latest session file" );
-  assert!( stdout( &out ).starts_with( '/' ), "output must be absolute" );
+  assert_eq!( common::stdout( &out ), expected, "default selector must print the latest session file" );
+  assert!( common::stdout( &out ).starts_with( '/' ), "output must be absolute" );
 }
 
 // ─── SP-2 ────────────────────────────────────────────────────────────────────
@@ -134,11 +116,11 @@ fn sp_2_latest_explicit_matches_default()
     .output()
     .unwrap();
 
-  assert_exit( &out_default, 0 );
-  assert_exit( &out_latest, 0 );
+  common::assert_exit( &out_default, 0 );
+  common::assert_exit( &out_latest, 0 );
   assert_eq!(
-    stdout( &out_default ),
-    stdout( &out_latest ),
+    common::stdout( &out_default ),
+    common::stdout( &out_latest ),
     "latest::1 must be byte-identical to the default selector"
   );
 }
@@ -161,13 +143,13 @@ fn sp_3_empty_storage_exits_2()
     .output()
     .unwrap();
 
-  assert_exit( &out, 2 );
+  common::assert_exit( &out, 2 );
   assert!(
-    stderr( &out ).contains( "no sessions" ),
+    common::stderr( &out ).contains( "no sessions" ),
     "stderr must mention 'no sessions'; got: {}",
-    stderr( &out )
+    common::stderr( &out )
   );
-  assert!( stdout( &out ).trim().is_empty(), "stdout must be empty on exit 2" );
+  assert!( common::stdout( &out ).trim().is_empty(), "stdout must be empty on exit 2" );
 }
 
 // ─── SP-4 ────────────────────────────────────────────────────────────────────
@@ -192,11 +174,11 @@ fn sp_4_latest_picks_newer_session()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
   assert!(
-    stdout( &out ).contains( "44444444-4444-4444-4444-444444444444" ),
+    common::stdout( &out ).contains( "44444444-4444-4444-4444-444444444444" ),
     "latest must pick the newer session; got: {}",
-    stdout( &out )
+    common::stdout( &out )
   );
 }
 
@@ -217,13 +199,13 @@ fn sp_5_session_selector_is_pure()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
   let expected = format!(
     "{}\n",
     expected_session_file( home.path(), &canon, "55555555-5555-5555-5555-555555555555" )
   );
   assert_eq!(
-    stdout( &out ),
+    common::stdout( &out ),
     expected,
     "session:: must join storage/<id>.jsonl without any existence check"
   );
@@ -251,21 +233,21 @@ fn sp_6_topic_selector_uses_fork_rule()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
   let uuid = claude_storage_core::topic_session_id( &canon, "alpha" ).unwrap();
   let expected = format!(
     "{}\n",
     expected_session_file( home.path(), &canon, uuid.as_str() )
   );
   assert_eq!(
-    stdout( &out ),
+    common::stdout( &out ),
     expected,
     "topic:: must resolve via UUIDv5 in the BASE storage (fork sense, not -{{topic}} dir sense)"
   );
   assert!(
-    !stdout( &out ).contains( "/-alpha" ),
+    !common::stdout( &out ).contains( "/-alpha" ),
     "topic:: must NOT use the legacy -{{topic}} dir sense; got: {}",
-    stdout( &out )
+    common::stdout( &out )
   );
 }
 
@@ -295,8 +277,8 @@ fn sp_7_selectors_mutually_exclusive()
       cmd.arg( arg );
     }
     let out = cmd.output().unwrap();
-    assert_exit( &out, 1 );
-    let combined = format!( "{}{}", stderr( &out ), stdout( &out ) );
+    common::assert_exit( &out, 1 );
+    let combined = format!( "{}{}", common::stderr( &out ), common::stdout( &out ) );
     assert!(
       combined.contains( "mutually exclusive" ),
       "error for {pair:?} must mention mutual exclusion; got: {combined}"
@@ -323,8 +305,8 @@ fn sp_8_selector_validation()
       .output()
       .unwrap();
 
-    assert_exit( &out, 1 );
-    let combined = format!( "{}{}", stderr( &out ), stdout( &out ) );
+    common::assert_exit( &out, 1 );
+    let combined = format!( "{}{}", common::stderr( &out ), common::stdout( &out ) );
     assert!(
       !combined.is_empty(),
       "must produce error output for {bad}"
@@ -354,8 +336,8 @@ fn sp_9_golden_vector_tmp_x_topic_a()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.trim_end().ends_with( "/-tmp-x/41299c24-a8f5-589f-9fce-8474fc855532.jsonl" ),
     "golden vector mismatch; got: {s}"

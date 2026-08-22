@@ -18,26 +18,8 @@ mod common;
 
 use tempfile::TempDir;
 
-fn stdout( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stdout ).into_owned()
-}
 
-fn stderr( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stderr ).into_owned()
-}
 
-fn assert_exit( out : &std::process::Output, code : i32 )
-{
-  assert_eq!(
-    out.status.code().unwrap_or( -1 ),
-    code,
-    "expected exit {code}, got {:?}; stderr: {}",
-    out.status.code(),
-    stderr( out )
-  );
-}
 
 /// EC-1: `count::1` → project list output (count mode on list shows list).
 ///
@@ -66,8 +48,8 @@ fn ec_1_count_1_integer_only()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let output = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let output = common::stdout( &out );
   assert!(
     !output.is_empty(),
     "EC-1: count::1 must produce output; got empty stdout"
@@ -106,11 +88,11 @@ fn ec_2_count_0_full_list_output()
     .output()
     .unwrap();
 
-  assert_exit( &out_count0, 0 );
-  assert_exit( &out_default, 0 );
+  common::assert_exit( &out_count0, 0 );
+  common::assert_exit( &out_default, 0 );
   assert_eq!(
-    stdout( &out_count0 ),
-    stdout( &out_default ),
+    common::stdout( &out_count0 ),
+    common::stdout( &out_default ),
     "EC-2: count::0 must produce identical output to no-count list"
   );
 }
@@ -137,8 +119,8 @@ fn ec_3_count_2_rejected()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
-  let err = stderr( &out );
+  common::assert_exit( &out, 1 );
+  let err = common::stderr( &out );
   assert!(
     !err.is_empty(),
     "EC-3: expected non-empty error for count::2 (out-of-range boolean); got empty stderr"
@@ -170,7 +152,7 @@ fn ec_4_count_yes_accepted()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
 }
 
 /// EC-5: `count::1` with empty storage → exits 0 (empty list).
@@ -199,7 +181,7 @@ fn ec_5_count_1_empty_storage_outputs_zero()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
 }
 
 /// EC-6: `count::1` exits 0 even with no results.
@@ -227,5 +209,5 @@ fn ec_6_count_1_always_exits_0()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
 }

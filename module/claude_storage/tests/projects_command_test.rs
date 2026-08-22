@@ -27,26 +27,8 @@ use tempfile::TempDir;
 // Helpers
 // ────────────────────────────────────────────────────────────────────────────
 
-fn stdout( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stdout ).into_owned()
-}
 
-fn stderr( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stderr ).into_owned()
-}
 
-fn assert_exit( out : &std::process::Output, code : i32 )
-{
-  assert_eq!(
-    out.status.code().unwrap_or( -1 ),
-    code,
-    "expected exit {code}, got {:?}; stderr: {}",
-    out.status.code(),
-    stderr( out )
-  );
-}
 
 // ────────────────────────────────────────────────────────────────────────────
 // Behavioural: session:: filter narrows results
@@ -72,8 +54,8 @@ fn session_filter_narrows_results()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "session-keep-001" ),  "must contain matching session; got:\n{s}" );
   assert!( !s.contains( "session-drop-002" ), "must exclude non-matching session; got:\n{s}" );
 }
@@ -89,11 +71,11 @@ fn invalid_min_entries_rejected()
     .env( "HOME", root.path().to_str().unwrap() )
     .arg( ".projects" ).arg( "detail::sessions" ).arg( "min_entries::-1" )
     .output().unwrap();
-  assert_exit( &out, 1 );
+  common::assert_exit( &out, 1 );
   assert!(
-    stderr( &out ).contains( "min_entries" ),
+    common::stderr( &out ).contains( "min_entries" ),
     "error must mention min_entries; got: {}",
-    stderr( &out )
+    common::stderr( &out )
   );
 }
 
@@ -121,8 +103,8 @@ fn agent_filter_includes_only_agent_sessions()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "agent-task-001" ), "agent::1 must include agent session; got:\n{s}" );
   assert!( !s.contains( "session-main" ), "agent::1 must exclude main session; got:\n{s}" );
 }
@@ -148,8 +130,8 @@ fn agent_filter_excludes_agent_sessions()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "session-main" ), "agent::0 must include main session; got:\n{s}" );
   assert!( !s.contains( "agent-task-002" ), "agent::0 must exclude agent session; got:\n{s}" );
 }
@@ -178,8 +160,8 @@ fn min_entries_filters_by_entry_count()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "session-long" ), "min_entries::3 must include 6-entry session; got:\n{s}" );
   assert!( !s.contains( "session-short" ), "min_entries::3 must exclude 2-entry session; got:\n{s}" );
 }
@@ -205,8 +187,8 @@ fn show_tree_includes_project_label()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "Found" ), "show_tree::1 must emit 'Found N sessions' header; got:\n{s}" );
   assert!(
     s.lines().any( | l | l.contains( ':' ) && ( l.contains( '/' ) || l.contains( '~' ) ) ),
@@ -258,8 +240,8 @@ fn output_uses_singular_noun_when_exactly_one_session_found()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "Found 1 project:" ),
     "with 1 result, header must use singular 'project' (not 'projects'); got:\n{s}"
@@ -295,8 +277,8 @@ fn output_uses_plural_noun_when_multiple_sessions_found()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "Found 2 projects:" ),
     "with 2 distinct projects, header must use plural 'projects'; got:\n{s}"
@@ -322,8 +304,8 @@ fn output_uses_plural_noun_when_zero_sessions_found()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "Found 0 projects:" ),
     "with 0 results, header must use plural 'projects' (zero takes plural in English); got:\n{s}"
@@ -356,7 +338,7 @@ fn agent_value_out_of_range_rejected()
     .env( "HOME", root.path().to_str().unwrap() )
     .arg( ".projects" ).arg( "detail::sessions" ).arg( "agent::2" )
     .output().unwrap();
-  assert_exit( &out, 1 );
+  common::assert_exit( &out, 1 );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -398,8 +380,8 @@ fn min_entries_zero_includes_all_sessions()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "session-one-entry" ),  "min_entries::0 must include 1-entry session; got:\n{s}" );
   assert!( s.contains( "session-four-entry" ), "min_entries::0 must include 4-entry session; got:\n{s}" );
 }
@@ -430,8 +412,8 @@ fn it_header_uses_conversations_not_sessions()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     !s.contains( "sessions)" ),
     "Project header must not contain 'sessions)' — must say 'conversations)'\nOutput: {s}",

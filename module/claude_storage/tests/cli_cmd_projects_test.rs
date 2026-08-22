@@ -56,26 +56,8 @@ mod common;
 use std::fs;
 use tempfile::TempDir;
 
-fn stdout( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stdout ).into_owned()
-}
 
-fn stderr( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stderr ).into_owned()
-}
 
-fn assert_exit( out : &std::process::Output, code : i32 )
-{
-  assert_eq!(
-    out.status.code().unwrap_or( -1 ),
-    code,
-    "expected exit {code}, got {:?}; stderr: {}",
-    out.status.code(),
-    stderr( out )
-  );
-}
 
 // ─── INT-1 ────────────────────────────────────────────────────────────────────
 
@@ -106,8 +88,8 @@ fn int_1_default_no_args_exits_0_with_output()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     !s.is_empty(),
     "output must not be empty when project has sessions; got empty stdout"
@@ -142,8 +124,8 @@ fn int_2_scope_relevant_includes_ancestors()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "session-int2-a" ),   "must include ancestor /a; got:\n{s}" );
   assert!( s.contains( "session-int2-ab" ),  "must include ancestor /a/b; got:\n{s}" );
   assert!( s.contains( "session-int2-abc" ), "must include current /a/b/c; got:\n{s}" );
@@ -180,8 +162,8 @@ fn int_3_scope_under_includes_descendants()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "session-int3-base" ),  "must include base; got:\n{s}" );
   assert!( s.contains( "session-int3-child" ), "must include child; got:\n{s}" );
   assert!( s.contains( "session-int3-grand" ), "must include grandchild; got:\n{s}" );
@@ -214,8 +196,8 @@ fn int_4_scope_global_returns_all()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "session-int4-ab" ), "must include /a/b; got:\n{s}" );
   assert!( s.contains( "session-int4-cd" ), "must include /c/d; got:\n{s}" );
   assert!( s.contains( "session-int4-ef" ), "must include /e/f; got:\n{s}" );
@@ -249,8 +231,8 @@ fn int_5_path_overrides_cwd()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "session-int5-target" ), "must include target session; got:\n{s}" );
   assert!( !s.contains( "session-int5-other" ),  "must NOT include other (/a/b); got:\n{s}" );
 }
@@ -280,8 +262,8 @@ fn int_6_session_filter_narrows_results()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "commit" ), "must include -commit session; got:\n{s}" );
   assert!(
     !s.contains( "default_topic" ),
@@ -314,8 +296,8 @@ fn int_7_min_entries_filter_excludes_short_sessions()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "session-long" ),  "must include 15-entry session; got:\n{s}" );
   assert!( !s.contains( "session-short" ), "must NOT include 3-entry session; got:\n{s}" );
 }
@@ -340,8 +322,8 @@ fn int_8_no_matching_sessions_exits_0()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let e = stderr( &out );
+  common::assert_exit( &out, 0 );
+  let e = common::stderr( &out );
   assert!( e.is_empty(), "stderr must be empty on no-results; got:\n{e}" );
 }
 
@@ -367,8 +349,8 @@ fn int_9_scope_local_underscore_path()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "session-int9" ), "must include session for my_project; got:\n{s}" );
 }
 
@@ -398,8 +380,8 @@ fn int_10_scope_under_underscore_base_path()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "session-int10-base" ),  "must include base; got:\n{s}" );
   assert!( s.contains( "session-int10-child" ), "must include child; got:\n{s}" );
 }
@@ -430,8 +412,8 @@ fn int_11_scope_relevant_underscore_ancestor()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "session-int11-ancestor" ), "must include underscore ancestor; got:\n{s}" );
   assert!( s.contains( "session-int11-current" ),  "must include current; got:\n{s}" );
 }
@@ -469,8 +451,8 @@ fn int_12_scope_relevant_topic_scoped_underscore_ancestor()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "session-int12-topic-ancestor" ),
     "must include topic-scoped ancestor; got:\n{s}"
@@ -506,8 +488,8 @@ fn int_13_scope_under_multiple_underscore_components()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "session-int13-base" ),  "must include base; got:\n{s}" );
   assert!( s.contains( "session-int13-child" ), "must include feature_x child; got:\n{s}" );
   assert!(
@@ -539,8 +521,8 @@ fn int_14_v1_groups_sessions_under_path_headers()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   // Path-encoded display converts hyphens to path separators: proj-a → proj/a
   assert!( s.contains( "proj" ),         "must include proj path component; got:\n{s}" );
   assert!( s.contains( "session-id-a" ), "must include session-id-a; got:\n{s}" );
@@ -569,8 +551,8 @@ fn int_15_v1_path_header_present_for_scope_local()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   // Path-encoded display converts hyphens to path separators: known-proj → known/proj
   assert!( s.contains( "known" ),         "path header must include 'known' component; got:\n{s}" );
   assert!( s.contains( "session-int15" ), "session must appear; got:\n{s}" );
@@ -608,8 +590,8 @@ fn int_16_v1_agent_sessions_collapsed_without_filter()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   // Agents must be collapsed — a count line instead of individual rows
   assert!(
     s.contains( "agent" ),
@@ -649,8 +631,8 @@ fn int_17_v2_agent_sessions_shown_individually()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   // With show_tree::1 agents appear tree-indented, not as a collapse summary line
   assert!(
     !s.contains( "+ 2 agent sessions" ),
@@ -679,8 +661,8 @@ fn int_18_v2_entry_count_shown_per_session()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "4 entries" ) || s.contains( "4 entry" ),
     "must show entry count by default; got:\n{s}"
@@ -715,8 +697,8 @@ fn int_19_v1_agent_filter_disables_collapse()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   // With agent::1 at v1, agents must appear individually
   assert!(
     s.contains( "a19-001" ) || s.contains( "a19-002" ) || !s.contains( "+ 2 agent sessions" ),
@@ -748,8 +730,8 @@ fn int_20_scope_under_underscore_dirs_display_correctly()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "my_project" ),
     "output must contain 'my_project' not a split form; got:\n{s}"
@@ -778,8 +760,8 @@ fn int_21_scope_global_hyphen_topic_dir_in_header()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "-default_topic" ),
     "header must include '-default_topic'; got:\n{s}"
@@ -818,8 +800,8 @@ fn int_22_scope_under_excludes_underscore_suffix_sibling()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "session-it25-child" ),   "must include child; got:\n{s}" );
   assert!( !s.contains( "session-it25-sibling" ), "must NOT include sibling; got:\n{s}" );
 }
@@ -851,8 +833,8 @@ fn int_23_scope_relevant_excludes_underscore_suffix_sibling()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "session-it26-current" ),  "must include current; got:\n{s}" );
   assert!( !s.contains( "session-it26-sibling" ), "must NOT include sibling; got:\n{s}" );
 }
@@ -878,8 +860,8 @@ fn int_24_v1_entry_count_shown_per_session()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "4 entries" ) || s.contains( "4 entry" ),
     "must show entry count at v1; got:\n{s}"
@@ -912,8 +894,8 @@ fn int_25_v1_limit_truncates_sessions()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   // A truncation hint should appear when limit < total
   assert!(
     s.contains( "more" ) || s.contains( "truncat" ) || s.contains( "conversation" ),
@@ -952,8 +934,8 @@ fn int_51_scope_invalid_value_rejected()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
-  let err = stderr( &out );
+  common::assert_exit( &out, 1 );
+  let err = common::stderr( &out );
   assert!(
     !err.is_empty(),
     "INT-51: invalid scope:: value must produce an error on stderr"
@@ -963,9 +945,9 @@ fn int_51_scope_invalid_value_rejected()
     "INT-51: stderr must carry the canonical validate_scope() error; got: {err}"
   );
   assert!(
-    stdout( &out ).is_empty(),
+    common::stdout( &out ).is_empty(),
     "INT-51: no project output on stdout when scope:: is rejected; got:\n{}",
-    stdout( &out )
+    common::stdout( &out )
   );
 }
 
@@ -1000,8 +982,8 @@ fn int_52_agent_non_boolean_rejected()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
-  let err = stderr( &out );
+  common::assert_exit( &out, 1 );
+  let err = common::stderr( &out );
   assert!(
     !err.is_empty(),
     "INT-52: non-boolean agent:: value must produce an error on stderr"
@@ -1011,9 +993,9 @@ fn int_52_agent_non_boolean_rejected()
     "INT-52: stderr must name the rejected agent argument; got: {err}"
   );
   assert!(
-    stdout( &out ).is_empty(),
+    common::stdout( &out ).is_empty(),
     "INT-52: no project output on stdout when agent:: is rejected; got:\n{}",
-    stdout( &out )
+    common::stdout( &out )
   );
 }
 
@@ -1048,8 +1030,8 @@ fn int_53_detail_projects_header_only_no_body_lines()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "2 projects" ), "must show project count in summary; got:\n{s}" );
   assert!( !s.contains( "root-int53" ), "must NOT show root session id in body; got:\n{s}" );
   assert!( !s.contains( "agent-int53-x" ), "must NOT show agent session id; got:\n{s}" );
@@ -1090,15 +1072,15 @@ fn int_54_detail_omitted_matches_explicit_projects()
     .output()
     .unwrap();
 
-  assert_exit( &out_default, 0 );
-  assert_exit( &out_explicit, 0 );
+  common::assert_exit( &out_default, 0 );
+  common::assert_exit( &out_explicit, 0 );
   assert_eq!(
-    stdout( &out_default ), stdout( &out_explicit ),
+    common::stdout( &out_default ), common::stdout( &out_explicit ),
     "detail:: omitted must byte-match explicit detail::projects"
   );
   assert!(
-    !stdout( &out_default ).contains( "session-int54" ),
-    "default must NOT list session ids; got:\n{}", stdout( &out_default )
+    !common::stdout( &out_default ).contains( "session-int54" ),
+    "default must NOT list session ids; got:\n{}", common::stdout( &out_default )
   );
 }
 
@@ -1118,16 +1100,16 @@ fn int_55_detail_invalid_value_rejected()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
-  let err = stderr( &out );
+  common::assert_exit( &out, 1 );
+  let err = common::stderr( &out );
   assert!(
     err.contains( "detail must be projects|sessions, got bogus" ),
     "INT-55: stderr must carry the canonical validate_detail_level() error; got: {err}"
   );
   assert!(
-    stdout( &out ).is_empty(),
+    common::stdout( &out ).is_empty(),
     "INT-55: no project output on stdout when detail:: is rejected; got:\n{}",
-    stdout( &out )
+    common::stdout( &out )
   );
 }
 
@@ -1161,8 +1143,8 @@ fn int_56_filter_narrows_to_matching_substring()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "session-int56-alpha" ), "must include alpha project; got:\n{s}" );
   assert!( !s.contains( "session-int56-beta" ),  "must NOT include beta project; got:\n{s}" );
   assert!( !s.contains( "session-int56-gamma" ), "must NOT include gamma project; got:\n{s}" );
@@ -1190,8 +1172,8 @@ fn int_57_filter_no_match_shows_empty_listing()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "Found 0 projects" ), "must show zero-count header, not an error; got:\n{s}" );
   assert!( !s.contains( "session-int57" ), "must NOT include filtered-out session; got:\n{s}" );
 }
@@ -1223,8 +1205,8 @@ fn int_58_type_uuid_narrows_to_uuid_projects()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "session-int58-uuid" ),  "must include UUID project; got:\n{s}" );
   assert!( !s.contains( "session-int58-path" ), "must NOT include path project; got:\n{s}" );
 }
@@ -1254,8 +1236,8 @@ fn int_59_type_path_narrows_to_path_projects()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "session-int59-path" ), "must include path project; got:\n{s}" );
   assert!( !s.contains( "session-int59-uuid" ), "must NOT include UUID project; got:\n{s}" );
 }
@@ -1277,16 +1259,16 @@ fn int_60_type_invalid_value_rejected()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
-  let err = stderr( &out );
+  common::assert_exit( &out, 1 );
+  let err = common::stderr( &out );
   assert!(
     err.contains( "type must be uuid|path|all, got bogus" ),
     "INT-60: stderr must carry the canonical validate_project_type() error; got: {err}"
   );
   assert!(
-    stdout( &out ).is_empty(),
+    common::stdout( &out ).is_empty(),
     "INT-60: no project output on stdout when type:: is rejected; got:\n{}",
-    stdout( &out )
+    common::stdout( &out )
   );
 }
 
@@ -1317,8 +1299,8 @@ fn int_61_ids_outputs_one_conversation_id_per_line()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   let lines : Vec< &str > = s.lines().filter( | l | !l.is_empty() ).collect();
   assert_eq!( lines.len(), 2, "must output exactly 2 conversation ID lines; got:\n{s}" );
   assert!( lines.contains( &"root-int61-a" ), "must list root-int61-a; got:\n{s}" );
@@ -1353,8 +1335,8 @@ fn int_62_ids_count_outputs_bare_integer()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert_eq!( s.trim(), "3", "must output bare integer count and nothing else; got:\n{s}" );
 }
 
@@ -1375,8 +1357,8 @@ fn int_63_ids_without_project_rejected()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
-  let err = stderr( &out );
+  common::assert_exit( &out, 1 );
+  let err = common::stderr( &out );
   assert!(
     err.contains( "project parameter required for ids" ),
     "INT-63: stderr must carry the specific ids::-requires-project:: validation error, \
@@ -1385,9 +1367,9 @@ fn int_63_ids_without_project_rejected()
      reason); got: {err}"
   );
   assert!(
-    stdout( &out ).is_empty(),
+    common::stdout( &out ).is_empty(),
     "INT-63: no conversation IDs on stdout; got:\n{}",
-    stdout( &out )
+    common::stdout( &out )
   );
 }
 
@@ -1421,8 +1403,8 @@ fn int_64_type_and_filter_compose()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "session-int64-path-alpha" ),  "must include path+alpha project; got:\n{s}" );
   assert!( !s.contains( "session-int64-path-beta" ),  "must exclude path+beta (filter:: mismatch); got:\n{s}" );
   assert!( !s.contains( "session-int64-uuid-alpha" ), "must exclude uuid+alpha (type:: mismatch); got:\n{s}" );
@@ -1468,10 +1450,10 @@ fn int_65_limit_show_topic_noop_under_detail_projects()
     .output()
     .unwrap();
 
-  assert_exit( &out_plain, 0 );
-  assert_exit( &out_with_noops, 0 );
+  common::assert_exit( &out_plain, 0 );
+  common::assert_exit( &out_with_noops, 0 );
   assert_eq!(
-    stdout( &out_plain ), stdout( &out_with_noops ),
+    common::stdout( &out_plain ), common::stdout( &out_with_noops ),
     "limit::/show_topic:: must be no-ops under detail::projects"
   );
 }
@@ -1513,19 +1495,19 @@ fn int_65b_show_tree_selects_tree_layout_under_detail_projects()
     .output()
     .unwrap();
 
-  assert_exit( &out_flat, 0 );
-  assert_exit( &out_tree, 0 );
+  common::assert_exit( &out_flat, 0 );
+  common::assert_exit( &out_tree, 0 );
   assert_ne!(
-    stdout( &out_flat ), stdout( &out_tree ),
+    common::stdout( &out_flat ), common::stdout( &out_tree ),
     "show_tree::1 must change the layout under detail::projects, not be a no-op"
   );
   assert!(
-    !stdout( &out_flat ).contains( '└' ) && !stdout( &out_flat ).contains( '├' ),
-    "flat layout must not draw tree connectors; got:\n{}", stdout( &out_flat )
+    !common::stdout( &out_flat ).contains( '└' ) && !common::stdout( &out_flat ).contains( '├' ),
+    "flat layout must not draw tree connectors; got:\n{}", common::stdout( &out_flat )
   );
   assert!(
-    stdout( &out_tree ).contains( '└' ) || stdout( &out_tree ).contains( '├' ),
-    "tree layout must draw tree connectors; got:\n{}", stdout( &out_tree )
+    common::stdout( &out_tree ).contains( '└' ) || common::stdout( &out_tree ).contains( '├' ),
+    "tree layout must draw tree connectors; got:\n{}", common::stdout( &out_tree )
   );
 }
 
@@ -1548,7 +1530,7 @@ fn int_66_list_deprecation_message_preserves_output()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
 
   // Byte-for-byte comparison (not a loose contains/starts_with check) so a stray
   // deprecation_message leaking into runtime output would actually fail this test.
@@ -1558,7 +1540,7 @@ fn int_66_list_deprecation_message_preserves_output()
   // after command output that already ends in one (see sibling tests' live stdout).
   let expected = format!( "Found 1 project:\n\n{expected_id:?} (1 conversation)\n\n" );
   assert_eq!(
-    stdout( &out ), expected,
+    common::stdout( &out ), expected,
     "deprecation_message must not alter runtime output"
   );
 }
@@ -1599,15 +1581,15 @@ fn int_67_detail_uppercase_matches_lowercase()
     .output()
     .unwrap();
 
-  assert_exit( &out_lower, 0 );
-  assert_exit( &out_mixed, 0 );
+  common::assert_exit( &out_lower, 0 );
+  common::assert_exit( &out_mixed, 0 );
   assert_eq!(
-    stdout( &out_lower ), stdout( &out_mixed ),
+    common::stdout( &out_lower ), common::stdout( &out_mixed ),
     "detail::PROJECTS (mixed-case) must byte-match detail::projects"
   );
   assert!(
-    stdout( &out_mixed ).contains( "2 projects" ),
-    "sanity: summary must still show project count; got:\n{}", stdout( &out_mixed )
+    common::stdout( &out_mixed ).contains( "2 projects" ),
+    "sanity: summary must still show project count; got:\n{}", common::stdout( &out_mixed )
   );
 }
 
@@ -1638,8 +1620,8 @@ fn int_68_filter_uppercase_matches_lowercase()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "session-int68-alpha" ), "must include alpha project via uppercase filter; got:\n{s}" );
   assert!( !s.contains( "session-int68-beta" ),  "must NOT include beta project; got:\n{s}" );
 }

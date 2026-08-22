@@ -18,26 +18,8 @@ mod common;
 
 use tempfile::TempDir;
 
-fn stdout( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stdout ).into_owned()
-}
 
-fn stderr( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stderr ).into_owned()
-}
 
-fn assert_exit( out : &std::process::Output, code : i32 )
-{
-  assert_eq!(
-    out.status.code().unwrap_or( -1 ),
-    code,
-    "expected exit {code}, got {:?}; stderr: {}",
-    out.status.code(),
-    stderr( out )
-  );
-}
 
 /// EC-1: Value "uuid" accepted.
 ///
@@ -66,8 +48,8 @@ fn ec_1_type_uuid_accepted()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let output = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let output = common::stdout( &out );
   assert!(
     output.contains( uuid ) || output.is_empty(),
     "EC-1: type::uuid must list UUID project; got: {output}"
@@ -105,8 +87,8 @@ fn ec_2_type_path_accepted()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let output = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let output = common::stdout( &out );
   assert!(
     !output.is_empty() || output.is_empty(),
     "EC-2: type::path must not error; got: {output}"
@@ -147,8 +129,8 @@ fn ec_3_type_all_accepted()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let output = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let output = common::stdout( &out );
   assert!(
     output.contains( uuid ),
     "EC-3: type::all must list UUID project; got: {output}"
@@ -186,8 +168,8 @@ fn ec_4_type_uppercase_accepted()
     .output()
     .unwrap();
 
-  assert_exit( &out_upper, 1 );
-  let err = stderr( &out_upper );
+  common::assert_exit( &out_upper, 1 );
+  let err = common::stderr( &out_upper );
   assert!(
     !err.is_empty(),
     "EC-4: error must be non-empty for uppercase type value; got empty stderr"
@@ -216,8 +198,8 @@ fn ec_5_type_both_rejected()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
-  let err = stderr( &out );
+  common::assert_exit( &out, 1 );
+  let err = common::stderr( &out );
   assert!(
     err.contains( "type" ) && err.contains( "both" ),
     "EC-5: expected 'type' and 'both' in stderr; got: {err}"
@@ -264,11 +246,11 @@ fn ec_6_type_omitted_defaults_to_all()
     .output()
     .unwrap();
 
-  assert_exit( &out_default, 0 );
-  assert_exit( &out_all, 0 );
+  common::assert_exit( &out_default, 0 );
+  common::assert_exit( &out_all, 0 );
   assert_eq!(
-    stdout( &out_default ),
-    stdout( &out_all ),
+    common::stdout( &out_default ),
+    common::stdout( &out_all ),
     "EC-6: omitted type must match type::all output"
   );
 }
@@ -307,8 +289,8 @@ fn ec_7_type_uuid_returns_only_uuid_projects()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let output = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let output = common::stdout( &out );
   assert!(
     output.contains( uuid ),
     "EC-7: type::uuid must include the UUID project; got: {output}"

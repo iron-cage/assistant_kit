@@ -5,7 +5,7 @@
 - **Purpose**: Specify the `FieldSelector` semantic type.
 - **Responsibility**: Validation rules, fundamental type, and parameter mapping for `FieldSelector`.
 - **In Scope**: Parsing rules, canonical field vocabulary, valid/invalid values, error messages.
-- **Out of Scope**: Parameter usage (→ `param/`), command context (→ `command/`), exact rendered layout of projected fields (→ `command/03_show.md`).
+- **Out of Scope**: Parameter usage (→ `param/`), command context (→ `command/`), exact rendered layout of projected fields (→ `../command/03_show.md`).
 
 **Purpose:** Attribute-projection selector for `.show`'s entry rendering — names which `Entry`/message attributes to print for each in-scope message, instead of the default chat-log content format. Introduced to satisfy "total control over formatting, projection and filtering" — every attribute the storage layer parses is addressable, individually or in any combination, via this type.
 
@@ -16,7 +16,7 @@
 *Entry-level (present on every entry, regardless of role):*
 - `uuid`, `parent_uuid`, `timestamp`, `entry_type`, `cwd`, `session_id`, `version`, `git_branch`, `user_type`, `is_sidechain`
 
-*Content (present on every entry; internal shape depends on role — see `command/03_show.md`'s projection-mode rendering):*
+*Content (present on every entry; internal shape depends on role — see `../command/03_show.md`'s projection-mode rendering):*
 - `content` — for an assistant entry, expands to every `ContentBlock`'s own fields: text block `text`; thinking block `thinking` and `signature`; tool-use block `id`, `name`, and full JSON `input`; tool-result block `tool_use_id`, `content`, and `is_error` (successful results included, not just errors)
 
 *User-only (renders as `—` on an `assistant` entry, or on a `user` entry with no `thinking_metadata` present):*

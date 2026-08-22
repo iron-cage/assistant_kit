@@ -7,7 +7,7 @@
 - **In Scope**: Value constraints, default behavior, command interactions.
 - **Out of Scope**: Type definitions (→ `type/`), command behavior (→ `command/`).
 
-Boolean mode flag for `.projects` that suppresses the full listing and outputs only the count as a bare integer. Absorbed from `.list` (see [`02_list.md`](../command/02_list.md)); now pairs with `ids::` instead of `type::conversation`.
+Boolean mode flag for `.projects` that suppresses the full listing and outputs only the count as a bare integer. Absorbed from `.list` (see [`../command/02_list.md`](../command/02_list.md)); now pairs with `ids::` instead of `type::conversation`.
 
 **Type:** Boolean
 

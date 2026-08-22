@@ -7,7 +7,7 @@ encoding/decoding, session filtering, content search, export, token-usage rollup
 discovery, per-conversation cost accounting, topic→UUIDv5 session-ID derivation, and canonical
 path resolution. The suite
 is split between integration tests that exercise real `~/.claude/` storage and unit tests that
-run fully in-process. Twelve of the twenty-five files are bug reproducers — each documents a parse,
+run fully in-process. Fourteen of the twenty-seven files are bug reproducers — each documents a parse,
 encoding, or storage defect found in production data with 5-section root-cause documentation.
 `status_global_stats_fast_bug.rs` covers both issue-015 (performance) and issue-018 (agent
 session discovery for Claude Code v2.x format) with corner case tests for subagents/ traversal.
@@ -29,6 +29,7 @@ tests/
 ├── topic_session_tests.rs                 # Golden-vector tests for the topic→UUIDv5 session rule
 ├── canonical_tests.rs                     # Unit tests for physical_abs canonical path resolution
 ├── count_entries_bug.rs                   # Bug Reproducer (issue-016): count_entries vs stats mismatch
+├── entries_count_stats_line_read_failure_bug.rs # Bug Reproducer (BUG-508): entries()/count_entries()/stats() hard-failed whole file on one non-UTF-8 line
 ├── export.rs                              # Export integration tests (markdown, JSON, text)
 ├── family_test.rs                         # Unit tests for family::find_family() — both agent layouts
 ├── filtering.rs                           # Session and project filtering integration tests
@@ -40,6 +41,7 @@ tests/
 ├── rollup_sort_tiebreak_nondeterminism_bug.rs # Bug Reproducer (BUG-529): sort_rows() had no tie-break, order varied run-to-run
 ├── rollup_test.rs                         # Unit tests for rollup::build_rollup() — grouping, filtering, sorting, limit
 ├── search.rs                              # Content search integration tests
+├── search_export_line_read_failure_bug.rs # Bug Reproducer (BUG-503): search()/export_json() dropped matches on one non-UTF-8 line
 ├── session_stats_dedup_bug.rs             # Bug Reproducer (issue-038): stats() double-counted tokens/turns per JSONL line
 ├── sessions_filtered_corrupted_session_bug.rs # Bug Reproducer (BUG-506): sessions_filtered() discarded project on one corrupted session
 ├── stats_cwd_field_test.rs                # Feature tests (Task 510): SessionStats.cwd populated first-entry-wins
@@ -60,6 +62,7 @@ tests/
 | `topic_session_tests.rs` | Golden-vector tests for the topic→UUIDv5 session rule |
 | `canonical_tests.rs` | Unit tests for `physical_abs()` canonical path resolution |
 | `count_entries_bug.rs` | Reproduce and verify fix for count_entries() vs stats() mismatch |
+| `entries_count_stats_line_read_failure_bug.rs` | Lock in per-line skip for `entries()`/`count_entries()`/`stats()` on a non-UTF-8 line; regression guard for BUG-508 |
 | `export.rs` | Integration tests for session export (markdown, JSON, text formats) |
 | `family_test.rs` | Unit tests for `find_family()`: hierarchical and flat agent association |
 | `filtering.rs` | Session and project filter composition integration tests |
@@ -71,6 +74,7 @@ tests/
 | `rollup_sort_tiebreak_nondeterminism_bug.rs` | Reproduce and verify fix for `sort_rows()`'s missing tie-break key (BUG-529) |
 | `rollup_test.rs` | Unit tests for `rollup::build_rollup()`: grouping, model filtering, percent computation, sorting, `limit` |
 | `search.rs` | Content search across sessions integration tests |
+| `search_export_line_read_failure_bug.rs` | Lock in per-line skip for `search()`/`export_json()` on a non-UTF-8 line; regression guard for BUG-503 |
 | `session_stats_dedup_bug.rs` | Reproduce and verify fix for `stats()` per-line (not per-`message.id`) double-counting |
 | `sessions_filtered_corrupted_session_bug.rs` | Lock in that one corrupted session must not discard a project's other valid sessions; regression guard for BUG-506 |
 | `stats_cwd_field_test.rs` | Task 510: SessionStats.cwd populated first-entry-wins from JSONL cwd field |

@@ -25,26 +25,8 @@ mod common;
 
 use tempfile::TempDir;
 
-fn stdout( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stdout ).into_owned()
-}
 
-fn stderr( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stderr ).into_owned()
-}
 
-fn assert_exit( out : &std::process::Output, code : i32 )
-{
-  assert_eq!(
-    out.status.code().unwrap_or( -1 ),
-    code,
-    "expected exit {code}, got {:?}; stderr: {}",
-    out.status.code(),
-    stderr( out )
-  );
-}
 
 // ─── OV-1 ─────────────────────────────────────────────────────────────────────
 
@@ -79,8 +61,8 @@ fn ov_1_bare_projects_renders_terse_overview()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "1 project" ), "must show the summary line; got:\n{s}" );
   assert!( !s.contains( "Found 1 project:" ), "must not show the sessions-mode header; got:\n{s}" );
   assert!( !s.contains( "root-ov1" ), "must not list root session ids; got:\n{s}" );
@@ -114,8 +96,8 @@ fn ov_2_flat_layout_emits_column_header()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   for column in [ "LAST", "CONV", "AGENTS", "PROJECT" ]
   {
     assert!( s.contains( column ), "must show the {column} column header; got:\n{s}" );
@@ -163,8 +145,8 @@ fn ov_3_zero_agents_render_as_middot()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( '·' ), "agentless project must show the middot placeholder; got:\n{s}" );
   assert!( s.contains( "1 ag" ), "project with one agent must show `1 ag`; got:\n{s}" );
   assert!( !s.contains( " 0 ag" ), "zero must never render as `0 ag`; got:\n{s}" );
@@ -198,8 +180,8 @@ fn ov_4_summary_line_uses_singular_nouns()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   let summary = s.lines().next().expect( "summary line must exist" );
   assert!( summary.contains( "1 project ·" ), "project noun must be singular; got: {summary}" );
   assert!( summary.contains( "1 conversation" ), "conversation noun must be singular; got: {summary}" );
@@ -239,8 +221,8 @@ fn ov_5_absent_decoded_path_marked_gone()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "⚠ gone" ), "absent decoded path must be marked; got:\n{s}" );
   assert!( s.contains( "ov5" ), "path must still be shown alongside the marker; got:\n{s}" );
 }
@@ -282,15 +264,15 @@ fn ov_6_cwd_project_carries_gutter_marker()
     .output()
     .unwrap();
 
-  assert_exit( &out_inside, 0 );
-  assert_exit( &out_outside, 0 );
+  common::assert_exit( &out_inside, 0 );
+  common::assert_exit( &out_outside, 0 );
   assert!(
-    stdout( &out_inside ).contains( '▸' ),
-    "cwd project must carry the gutter marker; got:\n{}", stdout( &out_inside )
+    common::stdout( &out_inside ).contains( '▸' ),
+    "cwd project must carry the gutter marker; got:\n{}", common::stdout( &out_inside )
   );
   assert!(
-    !stdout( &out_outside ).contains( '▸' ),
-    "no marker when cwd matches no listed project; got:\n{}", stdout( &out_outside )
+    !common::stdout( &out_outside ).contains( '▸' ),
+    "no marker when cwd matches no listed project; got:\n{}", common::stdout( &out_outside )
   );
 }
 
@@ -328,8 +310,8 @@ fn ov_7_show_tree_nests_projects_by_directory()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( '├' ) || s.contains( '└' ),
     "tree layout must draw connectors; got:\n{s}"
@@ -367,8 +349,8 @@ fn ov_8_empty_storage_renders_summary_only()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "0 projects" ), "must report zero projects; got:\n{s}" );
   assert!( !s.contains( "PROJECT" ), "must not draw a header over zero rows; got:\n{s}" );
   assert!( !s.contains( "LAST" ), "must not draw a header over zero rows; got:\n{s}" );
@@ -404,8 +386,8 @@ fn ov_9_detail_sessions_renders_full_listing()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "Found 1 project:" ), "sessions mode keeps its header; got:\n{s}" );
   assert!( s.contains( "session-ov9" ), "sessions mode lists session ids; got:\n{s}" );
   assert!( !s.contains( "PROJECT" ), "terse column header must not leak in; got:\n{s}" );
@@ -447,8 +429,8 @@ fn ov_10_flat_layout_prints_full_paths()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert_eq!(
     s.matches( "ov10-shared" ).count(), 2,
     "both rows must carry the shared ancestor in full; got:\n{s}"
@@ -500,8 +482,8 @@ fn ov_11_tree_layout_marks_absent_decoded_path_gone()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( '├' ) || s.contains( '└' ),
     "siblings must render as a tree, else this asserts nothing about render_tree; got:\n{s}"
@@ -542,8 +524,8 @@ fn ov_12_single_child_chain_collapses_to_one_node()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   let chain : Vec< &str > = s.lines().filter( | l | l.contains( "ov12-a" ) ).collect();
   assert_eq!( chain.len(), 1, "the whole single-child run must occupy one line; got:\n{s}" );
   assert!(

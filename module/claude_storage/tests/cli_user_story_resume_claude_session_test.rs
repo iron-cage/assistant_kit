@@ -16,26 +16,8 @@ mod common;
 
 use tempfile::TempDir;
 
-fn stdout( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stdout ).into_owned()
-}
 
-fn stderr( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stderr ).into_owned()
-}
 
-fn assert_exit( out : &std::process::Output, code : i32 )
-{
-  assert_eq!(
-    out.status.code().unwrap_or( -1 ),
-    code,
-    "expected exit {code}, got {:?}; stderr: {}",
-    out.status.code(),
-    stderr( out )
-  );
-}
 
 /// Write a session into the HOME-based claude storage for a given project path.
 ///
@@ -72,8 +54,8 @@ fn rws_1_project_exists_exits_0_when_project_has_history()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "sessions exist" ),
     "RWS-1: .project.exists must print 'sessions exist' when history found; got:\n{s}"
@@ -105,8 +87,8 @@ fn rws_2_project_exists_exits_1_when_project_has_no_history()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
-  let err = stderr( &out );
+  common::assert_exit( &out, 1 );
+  let err = common::stderr( &out );
   assert!(
     err.contains( "no sessions" ),
     "RWS-2: .project.exists must print 'no sessions' on stderr when no history; got:\n{err}"
@@ -136,13 +118,13 @@ fn rws_3_project_path_outputs_encoded_storage_path()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   let trimmed = s.trim();
   assert!(
     !trimmed.is_empty(),
     "RWS-3: .project.path must produce output; stderr: {}",
-    stderr( &out )
+    common::stderr( &out )
   );
   // Output must be an absolute path containing storage path components
   assert!(
@@ -182,8 +164,8 @@ fn rws_4_session_dir_outputs_session_working_directory_path()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   let expected = format!( "{base}/-work\n" );
   assert_eq!(
     s,
@@ -227,8 +209,8 @@ fn rws_5_session_ensure_creates_directory_and_reports_strategy()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   let lines : Vec< &str > = s.lines().collect();
 
   assert_eq!(

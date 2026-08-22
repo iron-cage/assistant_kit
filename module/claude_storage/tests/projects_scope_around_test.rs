@@ -23,21 +23,13 @@ mod common;
 
 use tempfile::TempDir;
 
-fn stdout( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stdout ).into_owned()
-}
 
-fn stderr( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stderr ).into_owned()
-}
 
 fn assert_exit_0( out : &std::process::Output )
 {
   assert_eq!(
     out.status.code().unwrap_or( -1 ), 0,
-    "expected exit 0; stderr: {}", stderr( out )
+    "expected exit 0; stderr: {}", common::stderr( out )
   );
 }
 
@@ -96,7 +88,7 @@ fn it57_scope_around_includes_ancestor_self_descendant_excludes_sibling()
     .unwrap();
 
   assert_exit_0( &out );
-  let s = stdout( &out );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "session-57-ancestor" ),
     "scope::around must include ancestor project; got:\n{s}"
@@ -172,7 +164,7 @@ fn it58_default_scope_equals_around_when_path_is_explicit()
     .unwrap();
 
   assert_exit_0( &out );
-  let s = stdout( &out );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "session-58-ancestor" ),
     "default scope must include ancestor (scope::around); got:\n{s}"
@@ -233,7 +225,7 @@ fn it59_scope_around_degenerate_shows_only_self_when_no_relatives()
     .unwrap();
 
   assert_exit_0( &out );
-  let s = stdout( &out );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "session-59-only" ),
     "scope::around must include the cwd project in the degenerate case; got:\n{s}"

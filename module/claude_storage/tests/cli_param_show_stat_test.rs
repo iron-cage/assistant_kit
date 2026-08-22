@@ -17,26 +17,8 @@ mod common;
 
 use tempfile::TempDir;
 
-fn stdout( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stdout ).into_owned()
-}
 
-fn stderr( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stderr ).into_owned()
-}
 
-fn assert_exit( out : &std::process::Output, code : i32 )
-{
-  assert_eq!(
-    out.status.code().unwrap_or( -1 ),
-    code,
-    "expected exit {code}, got {:?}; stderr: {}",
-    out.status.code(),
-    stderr( out )
-  );
-}
 
 /// EC-1: `show_stat::0` → no statistics footer.
 ///
@@ -78,8 +60,8 @@ fn ec_1_show_stat_0_no_footer()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let output = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let output = common::stdout( &out );
   assert!(
     !output.contains( "Session Metadata:" ),
     "EC-1: show_stat::0 should not show statistics footer; got: {output}"
@@ -135,8 +117,8 @@ fn ec_2_show_stat_1_no_op_no_footer()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let output = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let output = common::stdout( &out );
   assert!(
     !output.contains( "Session Metadata:" ),
     "EC-2: show_stat::1 is a no-op and should not show a separate statistics footer; got: {output}"
@@ -176,7 +158,7 @@ fn ec_3_show_stat_non_boolean_rejected()
     out.status.code().unwrap_or( -1 ),
     0,
     "EC-3: show_stat::abc should be rejected; stderr: {}",
-    stderr( &out )
+    common::stderr( &out )
   );
 }
 
@@ -218,8 +200,8 @@ fn ec_4_show_stat_omitted_default_0()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let output = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let output = common::stdout( &out );
   assert!(
     !output.contains( "Session Metadata:" ),
     "EC-4: omitting show_stat should not show statistics footer; got: {output}"
@@ -271,8 +253,8 @@ fn ec_5_show_stat_no_effect_in_metadata_mode()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let output = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let output = common::stdout( &out );
   assert!(
     !output.contains( "Session Metadata:" ),
     "EC-5: show_stat::1 in metadata mode should not show content-mode footer; got: {output}"
@@ -318,8 +300,8 @@ fn ec_6_show_stat_combined_with_show_tokens()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let output = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let output = common::stdout( &out );
   assert!(
     output.contains( "Token Usage:" ),
     "EC-6: combined mode should include token usage section; got: {output}"

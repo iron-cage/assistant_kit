@@ -239,4 +239,4 @@ this section states only the CURRENT resulting contract.
 |------|--------------|
 | `../../src/cli/scope.rs` | `decode_path_via_fs()`/`walk_fs()` real-filesystem-guided decode implementation (`claude_storage`, not `claude_storage_core`) |
 | `../../../claude_storage_core/src/path.rs` | `encode_path()`/`encode_component_piece()` encoding implementation |
-| [`algorithm/001_agent_session_tracking.md`](../algorithm/001_agent_session_tracking.md) | Layout examples and detection algorithms |
+| [`../algorithm/001_agent_session_tracking.md`](../algorithm/001_agent_session_tracking.md) | Layout examples and detection algorithms |

@@ -7,7 +7,7 @@
 - **In Scope**: Parsing rules, valid/invalid values, error messages.
 - **Out of Scope**: Parameter usage (→ `param/`), command context (→ `command/`).
 
-**Purpose:** Output verbosity selector — terse vs full detail. On `.projects`: a one-line-per-project overview vs a full per-project session/family listing; introduced when `.projects` absorbed `.list`'s project-only view (see [`02_list.md`](../command/02_list.md)). On `.show`'s project-overview branches: summary block only vs summary block plus the full per-session list.
+**Purpose:** Output verbosity selector — terse vs full detail. On `.projects`: a one-line-per-project overview vs a full per-project session/family listing; introduced when `.projects` absorbed `.list`'s project-only view (see [`../command/02_list.md`](../command/02_list.md)). On `.show`'s project-overview branches: summary block only vs summary block plus the full per-session list.
 
 **Fundamental Type:** Wrapper around string enum
 

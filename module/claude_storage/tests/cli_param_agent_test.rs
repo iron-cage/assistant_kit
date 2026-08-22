@@ -19,26 +19,8 @@ mod common;
 
 use tempfile::TempDir;
 
-fn stdout( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stdout ).into_owned()
-}
 
-fn stderr( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stderr ).into_owned()
-}
 
-fn assert_exit( out : &std::process::Output, code : i32 )
-{
-  assert_eq!(
-    out.status.code().unwrap_or( -1 ),
-    code,
-    "expected exit {code}, got {:?}; stderr: {}",
-    out.status.code(),
-    stderr( out )
-  );
-}
 
 /// EC-1: Value 0 accepted (main sessions only).
 ///
@@ -69,8 +51,8 @@ fn ec_1_agent_0_main_sessions_only()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let output = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let output = common::stdout( &out );
   assert!(
     !output.contains( "agent-abc123" ),
     "EC-1: agent session must not appear with agent::0; got: {output}"
@@ -105,8 +87,8 @@ fn ec_2_agent_1_agent_sessions_only()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let output = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let output = common::stdout( &out );
   assert!(
     !output.contains( "main-session" ),
     "EC-2: main session must not appear with agent::1; got: {output}"
@@ -135,8 +117,8 @@ fn ec_3_agent_2_rejected()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
-  let err = stderr( &out );
+  common::assert_exit( &out, 1 );
+  let err = common::stderr( &out );
   assert!(
     !err.is_empty(),
     "EC-3: expected non-empty error for agent::2 (out-of-range boolean); got empty stderr"
@@ -171,7 +153,7 @@ fn ec_4_agent_yes_accepted()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
 }
 
 /// EC-5: Unset returns all session types.
@@ -201,7 +183,7 @@ fn ec_5_unset_returns_all_session_types()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
 }
 
 /// EC-6: `agent::1` auto-enables sessions display in .list.
@@ -231,7 +213,7 @@ fn ec_6_agent_1_auto_enables_sessions_display()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
 }
 
 /// EC-7: `agent::0` auto-enables sessions display in .list.
@@ -261,5 +243,5 @@ fn ec_7_agent_0_auto_enables_sessions_display()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
 }

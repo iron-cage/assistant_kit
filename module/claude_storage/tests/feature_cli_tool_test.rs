@@ -18,26 +18,8 @@ mod common;
 
 use tempfile::TempDir;
 
-fn stdout( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stdout ).into_owned()
-}
 
-fn stderr( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stderr ).into_owned()
-}
 
-fn assert_exit( out : &std::process::Output, code : i32 )
-{
-  assert_eq!(
-    out.status.code().unwrap_or( -1 ),
-    code,
-    "expected exit {code}, got {:?}; stderr: {}",
-    out.status.code(),
-    stderr( out )
-  );
-}
 
 /// FT-1: One-shot command executes and exits cleanly.
 ///
@@ -67,11 +49,11 @@ fn ft_1_one_shot_command_executes_and_exits_cleanly()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
   assert!(
-    !stdout( &out ).is_empty(),
+    !common::stdout( &out ).is_empty(),
     "FT-1: .status must produce output; got silence; stderr: {}",
-    stderr( &out )
+    common::stderr( &out )
   );
 }
 
@@ -99,8 +81,8 @@ fn ft_2_unknown_command_rejected_with_non_zero_exit()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
-  let err = stderr( &out );
+  common::assert_exit( &out, 1 );
+  let err = common::stderr( &out );
   assert!(
     !err.is_empty(),
     "FT-2: unknown command must emit error on stderr; got silence"
@@ -138,8 +120,8 @@ fn ft_3_path_encoded_project_returned_in_project_list()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "myproject" ),
     "FT-3: path-encoded project must appear in .list output; got:\n{s}"
@@ -177,8 +159,8 @@ fn ft_4_uuid_named_project_returned_in_project_list()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( uuid ) || s.contains( "8d795a1c" ),
     "FT-4: UUID project must appear in .list output; got:\n{s}"
@@ -219,9 +201,9 @@ fn ft_5_flat_layout_project_sessions_accessible()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
-  let err = stderr( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
+  let err = common::stderr( &out );
   assert!(
     !s.is_empty(),
     "FT-5: flat-layout sessions must appear in .list show_sessions::1; stderr: {err}"
@@ -272,9 +254,9 @@ fn ft_6_hierarchical_layout_project_sessions_accessible()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
-  let err = stderr( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
+  let err = common::stderr( &out );
   assert!(
     !s.is_empty(),
     "FT-6: hierarchical-layout sessions must appear in .list show_sessions::1; stderr: {err}"

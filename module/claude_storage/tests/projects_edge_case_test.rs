@@ -24,21 +24,7 @@ use tempfile::TempDir;
 // Helpers
 // ────────────────────────────────────────────────────────────────────────────
 
-fn stderr( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stderr ).into_owned()
-}
 
-fn assert_exit( out : &std::process::Output, code : i32 )
-{
-  assert_eq!(
-    out.status.code().unwrap_or( -1 ),
-    code,
-    "expected exit {code}, got {:?}; stderr: {}",
-    out.status.code(),
-    stderr( out )
-  );
-}
 
 // ────────────────────────────────────────────────────────────────────────────
 // EC-1: scope::local accepted — exit 0
@@ -54,7 +40,7 @@ fn ec1_scope_local_accepted()
     .arg( "scope::local" )
     .output()
     .unwrap();
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -71,7 +57,7 @@ fn ec2_scope_relevant_accepted()
     .arg( "scope::relevant" )
     .output()
     .unwrap();
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -89,7 +75,7 @@ fn ec3_scope_under_accepted()
     .arg( format!( "path::{}", root.path().display() ) )
     .output()
     .unwrap();
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -106,7 +92,7 @@ fn ec4_scope_global_accepted()
     .arg( "scope::global" )
     .output()
     .unwrap();
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -128,8 +114,8 @@ fn ec5_scope_case_insensitive()
     .arg( ".projects" ).arg( "detail::sessions" ).arg( "scope::RELEVANT" )
     .output().unwrap();
 
-  assert_exit( &lower, 0 );
-  assert_exit( &upper, 0 );
+  common::assert_exit( &lower, 0 );
+  common::assert_exit( &upper, 0 );
   assert_eq!(
     lower.stdout, upper.stdout,
     "scope::relevant and scope::RELEVANT must produce identical stdout"
@@ -151,8 +137,8 @@ fn ec6_invalid_scope_rejected()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
-  let err = stderr( &out );
+  common::assert_exit( &out, 1 );
+  let err = common::stderr( &out );
   assert!(
     err.contains( "scope must be relevant|local|under|global|around, got all" ),
     "error must contain exact message; got: {err}"
@@ -194,7 +180,7 @@ fn ec7_omitted_scope_defaults_to_around()
     .arg( format!( "path::{}", parent.display() ) )
     .output().unwrap();
 
-  assert_exit( &implicit, 0 );
+  common::assert_exit( &implicit, 0 );
   let s = core::str::from_utf8( &implicit.stdout ).unwrap();
   // default scope must include descendant sessions (around includes under direction)
   assert!(
@@ -226,8 +212,8 @@ fn ec8_global_ignores_path()
     .arg( ".projects" ).arg( "detail::sessions" ).arg( "scope::global" ).arg( "path::/nonexistent-subpath" )
     .output().unwrap();
 
-  assert_exit( &without_path, 0 );
-  assert_exit( &with_path, 0 );
+  common::assert_exit( &without_path, 0 );
+  common::assert_exit( &with_path, 0 );
   assert_eq!(
     without_path.stdout, with_path.stdout,
     "scope::global must produce identical output regardless of path::"
@@ -261,10 +247,10 @@ fn root_path_rejected_for_non_global_scope()
     "scope::under path::/ must exit non-zero; got exit 0"
   );
   assert!(
-    stderr( &out_under ).contains( "path is empty after normalization" )
-      || stderr( &out_under ).contains( "Failed to encode" ),
+    common::stderr( &out_under ).contains( "path is empty after normalization" )
+      || common::stderr( &out_under ).contains( "Failed to encode" ),
     "error must mention path encoding failure; got: {}",
-    stderr( &out_under )
+    common::stderr( &out_under )
   );
 
   // scope::global with path::/ must still succeed (global ignores path)
@@ -277,5 +263,5 @@ fn root_path_rejected_for_non_global_scope()
     .output()
     .unwrap();
 
-  assert_exit( &out_global, 0 );
+  common::assert_exit( &out_global, 0 );
 }

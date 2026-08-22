@@ -19,26 +19,8 @@ mod common;
 
 use tempfile::TempDir;
 
-fn stdout( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stdout ).into_owned()
-}
 
-fn stderr( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stderr ).into_owned()
-}
 
-fn assert_exit( out : &std::process::Output, code : i32 )
-{
-  assert_eq!(
-    out.status.code().unwrap_or( -1 ),
-    code,
-    "expected exit {code}, got {:?}; stderr: {}",
-    out.status.code(),
-    stderr( out )
-  );
-}
 
 /// EC-1: Value 0 accepted (no minimum).
 ///
@@ -68,7 +50,7 @@ fn ec_1_min_entries_0_no_minimum()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
 }
 
 /// EC-2: Value 1 accepted.
@@ -97,7 +79,7 @@ fn ec_2_min_entries_1_accepted()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
 }
 
 /// EC-3: Large value (e.g., 10000) accepted.
@@ -127,7 +109,7 @@ fn ec_3_min_entries_large_value_accepted()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
 }
 
 /// EC-4: Negative value rejected.
@@ -152,8 +134,8 @@ fn ec_4_min_entries_negative_rejected()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
-  let err = stderr( &out );
+  common::assert_exit( &out, 1 );
+  let err = common::stderr( &out );
   assert!(
     err.contains( "min_entries" ),
     "EC-4: expected 'min_entries' in stderr; got: {err}"
@@ -182,8 +164,8 @@ fn ec_5_min_entries_float_rejected()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
-  let err = stderr( &out );
+  common::assert_exit( &out, 1 );
+  let err = common::stderr( &out );
   assert!(
     !err.is_empty(),
     "EC-5: expected non-empty error for float min_entries value; got empty stderr"
@@ -212,8 +194,8 @@ fn ec_6_min_entries_string_rejected()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
-  let err = stderr( &out );
+  common::assert_exit( &out, 1 );
+  let err = common::stderr( &out );
   assert!(
     !err.is_empty(),
     "EC-6: expected non-empty error for string min_entries value; got empty stderr"
@@ -248,8 +230,8 @@ fn ec_7_min_entries_auto_enables_sessions()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let output = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let output = common::stdout( &out );
   // Session with 6 entries must appear; 1-entry session filtered
   assert!(
     output.contains( "sess-many" ) || !output.contains( "sess-one" ) || output.is_empty(),
@@ -284,5 +266,5 @@ fn ec_8_min_entries_unset_shows_all()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
 }

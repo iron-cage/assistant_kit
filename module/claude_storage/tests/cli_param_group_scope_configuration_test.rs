@@ -17,26 +17,8 @@ mod common;
 
 use tempfile::TempDir;
 
-fn stdout( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stdout ).into_owned()
-}
 
-fn stderr( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stderr ).into_owned()
-}
 
-fn assert_exit( out : &std::process::Output, code : i32 )
-{
-  assert_eq!(
-    out.status.code().unwrap_or( -1 ),
-    code,
-    "expected exit {code}, got {:?}; stderr: {}",
-    out.status.code(),
-    stderr( out )
-  );
-}
 
 /// CC-1: `scope::local` uses `path::` as directory anchor.
 ///
@@ -74,8 +56,8 @@ fn cc_1_scope_local_uses_path_as_directory_anchor()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
 
   // Only the exact path project should appear
   assert!(
@@ -131,8 +113,8 @@ fn cc_2_scope_relevant_starts_ancestor_walk_from_path()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
 
   // All three levels must appear
   assert!(
@@ -186,8 +168,8 @@ fn cc_3_scope_under_searches_subtree_rooted_at_path()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
 
   assert!(
     s.contains( 'u' ) && s.contains( 'b' ),
@@ -234,8 +216,8 @@ fn cc_4_scope_global_ignores_path_value()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
 
   // All three projects must appear despite path:: pointing to only /g/b
   assert!(
@@ -286,8 +268,8 @@ fn cc_5_scope_under_without_path_defaults_to_cwd()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
 
   assert!(
     s.contains( "cwdscope" ),
@@ -334,8 +316,8 @@ fn cc_6_path_without_scope_defaults_to_under_scope()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
 
   assert!(
     s.contains( "anchor" ),

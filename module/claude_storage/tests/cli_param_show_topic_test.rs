@@ -21,26 +21,8 @@ mod common;
 
 use tempfile::TempDir;
 
-fn stdout( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stdout ).into_owned()
-}
 
-fn stderr( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stderr ).into_owned()
-}
 
-fn assert_exit( out : &std::process::Output, code : i32 )
-{
-  assert_eq!(
-    out.status.code().unwrap_or( -1 ),
-    code,
-    "expected exit {code}, got {:?}; stderr: {}",
-    out.status.code(),
-    stderr( out )
-  );
-}
 
 /// Write a session whose FIRST entry is a user message with `first_msg` as
 /// its content, followed by one assistant entry. The topic renderer reads
@@ -128,8 +110,8 @@ fn ec_1_show_topic_appends_first_user_message()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   let line = s.lines().find( | l | l.contains( "topicaa1" ) )
     .expect( "session line with short ID must exist" );
   assert!(
@@ -174,8 +156,8 @@ fn ec_2_show_topic_flattens_newlines_and_truncates()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
 
   let flat = long_msg.replace( '\n', " " );
   let expected : String = flat.chars().take( 90 ).collect();
@@ -235,8 +217,8 @@ fn ec_3_show_topic_off_shows_no_topic()
     }
     let out = cmd.output().unwrap();
 
-    assert_exit( &out, 0 );
-    let s = stdout( &out );
+    common::assert_exit( &out, 0 );
+    let s = common::stdout( &out );
     assert!( s.contains( "topicaa1" ), "EC-3: session must still be listed; got:\n{s}" );
     assert!(
       !s.contains( "fix retry timeouts" ),
@@ -273,7 +255,7 @@ fn ec_4_show_topic_non_boolean_rejected()
     out.status.code().unwrap_or( -1 ),
     0,
     "EC-4: show_topic::abc should be rejected; stderr: {}",
-    stderr( &out )
+    common::stderr( &out )
   );
 }
 
@@ -322,8 +304,8 @@ fn ec_5_show_topic_combined_with_since_days()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!( s.contains( "freshaa1" ), "EC-5: windowed session must appear; got:\n{s}" );
   assert!( s.contains( "recent window topic" ), "EC-5: its topic must appear; got:\n{s}" );
   assert!( !s.contains( "older222" ), "EC-5: out-of-window session must be excluded; got:\n{s}" );

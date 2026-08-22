@@ -5,7 +5,7 @@
 - **Purpose**: Document the clg command-line interface for Claude Code conversation storage exploration.
 - **Responsibility**: Reference documentation for commands, parameters, types, workflows, and test planning.
 - **In Scope**: commands, params, types, parameter groups, command groups, dictionary, workflows, format/, user_story/.
-- **Out of Scope**: CLI tool design (→ `feature/001_cli_tool.md`), quality constraints (→ `invariant/`).
+- **Out of Scope**: CLI tool design (→ `../feature/001_cli_tool.md`), quality constraints (→ `invariant/`).
 
 Reference documentation for the `claude_storage` CLI binary — a tool for exploring Claude Code conversation storage. All commands are read-only except `.session.ensure`, which creates the session working directory on disk.
 

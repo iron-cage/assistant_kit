@@ -34,26 +34,8 @@ mod common;
 use std::fs;
 use tempfile::TempDir;
 
-fn stdout( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stdout ).into_owned()
-}
 
-fn stderr( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stderr ).into_owned()
-}
 
-fn assert_exit( out : &std::process::Output, code : i32 )
-{
-  assert_eq!(
-    out.status.code().unwrap_or( -1 ),
-    code,
-    "expected exit {code}, got {:?}; stderr: {}",
-    out.status.code(),
-    stderr( out )
-  );
-}
 
 /// Create storage history for a directory in `{home}/.claude/projects/`.
 fn setup_history( home : &std::path::Path, project_path : &std::path::Path )
@@ -111,13 +93,13 @@ fn int_2_creates_directory_when_absent()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
   let session_dir = project.path().join( "-default_topic" );
   assert!(
     session_dir.exists(),
     ".session.ensure must create session directory; path: {session_dir:?}"
   );
-  let s = stdout( &out );
+  let s = common::stdout( &out );
   let lines : Vec< &str > = s.lines().collect();
   assert_eq!( lines.len(), 2, "must output exactly 2 lines; got:\n{s}" );
 }
@@ -144,7 +126,7 @@ fn int_3_idempotent_when_directory_exists()
     .arg( format!( "path::{base}" ) )
     .output()
     .unwrap();
-  assert_exit( &out1, 0 );
+  common::assert_exit( &out1, 0 );
 
   let out2 = common::clg_cmd()
     .env( "HOME", home.path() )
@@ -152,7 +134,7 @@ fn int_3_idempotent_when_directory_exists()
     .arg( format!( "path::{base}" ) )
     .output()
     .unwrap();
-  assert_exit(
+  common::assert_exit(
     &out2, 0,
   );
 }
@@ -183,8 +165,8 @@ fn int_4_auto_detects_resume_when_history_exists()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   let lines : Vec< &str > = s.lines().collect();
   assert_eq!( lines.len(), 2, "must output exactly 2 lines; got:\n{s}" );
   assert_eq!(
@@ -213,8 +195,8 @@ fn int_5_auto_detects_fresh_when_no_history()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   let lines : Vec< &str > = s.lines().collect();
   assert_eq!( lines.len(), 2, "must output exactly 2 lines; got:\n{s}" );
   assert_eq!(
@@ -248,8 +230,8 @@ fn int_6_line_1_is_absolute_session_dir_path()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   let lines : Vec< &str > = s.lines().collect();
   assert_eq!( lines.len(), 2, "must output exactly 2 lines; got:\n{s}" );
 
@@ -280,8 +262,8 @@ fn int_7_line_2_is_strategy_resume_or_fresh()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   let lines : Vec< &str > = s.lines().collect();
   assert_eq!( lines.len(), 2, "must output exactly 2 lines; got:\n{s}" );
   assert!(
@@ -311,8 +293,8 @@ fn int_8_strategy_resume_forces_resume_without_history()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   let lines : Vec< &str > = s.lines().collect();
   assert_eq!( lines.len(), 2, "must output exactly 2 lines; got:\n{s}" );
   assert_eq!(
@@ -349,8 +331,8 @@ fn int_9_strategy_fresh_forces_fresh_with_history()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   let lines : Vec< &str > = s.lines().collect();
   assert_eq!( lines.len(), 2, "must output exactly 2 lines; got:\n{s}" );
   assert_eq!(
@@ -382,8 +364,8 @@ fn int_10_default_topic_is_default_topic()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   let lines : Vec< &str > = s.lines().collect();
   assert_eq!( lines.len(), 2, "must output exactly 2 lines; got:\n{s}" );
   assert!(
@@ -412,8 +394,8 @@ fn int_11_custom_topic_produces_topic_dir()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   let lines : Vec< &str > = s.lines().collect();
   assert_eq!( lines.len(), 2, "must output exactly 2 lines; got:\n{s}" );
 
@@ -443,8 +425,8 @@ fn int_12_empty_topic_rejected()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
-  let combined = format!( "{}{}", stderr( &out ), stdout( &out ) );
+  common::assert_exit( &out, 1 );
+  let combined = format!( "{}{}", common::stderr( &out ), common::stdout( &out ) );
   assert!(
     !combined.is_empty(),
     "must produce error output for empty topic::"
@@ -469,8 +451,8 @@ fn int_13_topic_with_slash_rejected()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
-  let combined = format!( "{}{}", stderr( &out ), stdout( &out ) );
+  common::assert_exit( &out, 1 );
+  let combined = format!( "{}{}", common::stderr( &out ), common::stdout( &out ) );
   assert!(
     !combined.is_empty(),
     "must produce error output for slash-containing topic::"
@@ -497,8 +479,8 @@ fn int_14_invalid_strategy_rejected()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
-  let combined = format!( "{}{}", stderr( &out ), stdout( &out ) );
+  common::assert_exit( &out, 1 );
+  let combined = format!( "{}{}", common::stderr( &out ), common::stdout( &out ) );
   assert!(
     combined.contains( "strategy" ),
     "error must mention 'strategy'; got:\n{combined}"
@@ -524,8 +506,8 @@ fn int_15_exits_0_on_success()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   let lines : Vec< &str > = s.lines().collect();
   assert_eq!(
     lines.len(), 2,

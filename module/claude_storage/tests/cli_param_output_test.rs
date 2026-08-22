@@ -19,26 +19,8 @@ mod common;
 
 use tempfile::TempDir;
 
-fn stdout( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stdout ).into_owned()
-}
 
-fn stderr( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stderr ).into_owned()
-}
 
-fn assert_exit( out : &std::process::Output, code : i32 )
-{
-  assert_eq!(
-    out.status.code().unwrap_or( -1 ),
-    code,
-    "expected exit {code}, got {:?}; stderr: {}",
-    out.status.code(),
-    stderr( out )
-  );
-}
 
 /// EC-1: Required — missing `output::` exits with 1.
 ///
@@ -68,8 +50,8 @@ fn ec_1_output_required_missing_exits_1()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
-  let combined = format!( "{}{}", stderr( &out ), stdout( &out ) );
+  common::assert_exit( &out, 1 );
+  let combined = format!( "{}{}", common::stderr( &out ), common::stdout( &out ) );
   assert!(
     combined.contains( "output" ),
     "EC-1: error must mention 'output'; got: {combined}"
@@ -106,11 +88,11 @@ fn ec_2_output_absolute_path_accepted()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
   assert!(
     out_path.exists(),
     "EC-2: file must exist at absolute path; stderr: {}",
-    stderr( &out )
+    common::stderr( &out )
   );
 }
 
@@ -146,11 +128,11 @@ fn ec_3_output_tilde_path_accepted()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
   assert!(
     out_path.exists(),
     "EC-3: file must exist at output path; stderr: {}",
-    stderr( &out )
+    common::stderr( &out )
   );
 }
 
@@ -185,11 +167,11 @@ fn ec_4_output_relative_path_accepted()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
   assert!(
     cwd.path().join( "session-output.md" ).exists(),
     "EC-4: file must exist at relative path; stderr: {}",
-    stderr( &out )
+    common::stderr( &out )
   );
 }
 
@@ -216,8 +198,8 @@ fn ec_5_output_empty_rejected()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
-  let combined = format!( "{}{}", stderr( &out ), stdout( &out ) );
+  common::assert_exit( &out, 1 );
+  let combined = format!( "{}{}", common::stderr( &out ), common::stdout( &out ) );
   assert!(
     combined.contains( "output" ) || combined.contains( "path" ) || combined.contains( "empty" ),
     "EC-5: error must mention output or empty path; got: {combined}"
@@ -253,7 +235,7 @@ fn ec_6_output_nonexistent_parent_exits_2()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
+  common::assert_exit( &out, 1 );
 }
 
 /// EC-7: Existing file is overwritten without error.
@@ -288,7 +270,7 @@ fn ec_7_output_overwrites_existing_file()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
   let content = std::fs::read_to_string( &out_path ).unwrap();
   assert!(
     !content.contains( "ORIGINAL SENTINEL CONTENT" ),
@@ -319,6 +301,6 @@ fn ec_8_output_whitespace_only_rejected()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
-  let _ = stdout( &out );
+  common::assert_exit( &out, 1 );
+  let _ = common::stdout( &out );
 }

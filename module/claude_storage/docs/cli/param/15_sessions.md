@@ -1,6 +1,6 @@
 # Parameter :: 15. `show_sessions::` — DEPRECATED
 
-> **Deprecated.** `.list` is deprecated (see [`02_list.md`](../command/02_list.md)); this parameter has no equivalent on `.projects`, which never needed auto-detection. Use [`detail::`](30_detail.md) instead: `detail::projects` (default) shows the terse overview, `detail::sessions` shows session detail — both unconditional. There is no auto-detect mode on `.projects` — `detail::` is always explicit, which is simpler than the auto-enable behavior this parameter provided.
+> **Deprecated.** `.list` is deprecated (see [`../command/02_list.md`](../command/02_list.md)); this parameter has no equivalent on `.projects`, which never needed auto-detection. Use [`detail::`](30_detail.md) instead: `detail::projects` (default) shows the terse overview, `detail::sessions` shows session detail — both unconditional. There is no auto-detect mode on `.projects` — `detail::` is always explicit, which is simpler than the auto-enable behavior this parameter provided.
 
 ### Scope
 

@@ -7,7 +7,7 @@
 - **In Scope**: Value constraints, default behavior, command interactions.
 - **Out of Scope**: Type definitions (→ `type/`), command behavior (→ `command/`).
 
-Raw conversation-ID scripting output mode for `.projects`, paired with `project::`. Absorbed from `.list`'s former `type::conversation` early-dispatch path (see [`02_list.md`](../command/02_list.md)).
+Raw conversation-ID scripting output mode for `.projects`, paired with `project::`. Absorbed from `.list`'s former `type::conversation` early-dispatch path (see [`../command/02_list.md`](../command/02_list.md)).
 
 **Type:** Boolean
 

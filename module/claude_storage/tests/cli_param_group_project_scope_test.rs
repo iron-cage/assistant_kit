@@ -17,26 +17,8 @@ mod common;
 
 use tempfile::TempDir;
 
-fn stdout( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stdout ).into_owned()
-}
 
-fn stderr( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stderr ).into_owned()
-}
 
-fn assert_exit( out : &std::process::Output, code : i32 )
-{
-  assert_eq!(
-    out.status.code().unwrap_or( -1 ),
-    code,
-    "expected exit {code}, got {:?}; stderr: {}",
-    out.status.code(),
-    stderr( out )
-  );
-}
 
 /// CC-1: `project::` resolves same project in .show and .search.
 ///
@@ -79,17 +61,17 @@ fn cc_1_project_resolves_same_project_in_show_and_search()
     .output()
     .unwrap();
 
-  assert_exit( &show_out, 0 );
-  assert_exit( &search_out, 0 );
+  common::assert_exit( &show_out, 0 );
+  common::assert_exit( &search_out, 0 );
 
-  let show_s = stdout( &show_out );
+  let show_s = common::stdout( &show_out );
   assert!(
     !show_s.is_empty(),
     "CC-1: .show with project:: must produce output; stderr: {}",
-    stderr( &show_out )
+    common::stderr( &show_out )
   );
 
-  let search_s = stdout( &search_out );
+  let search_s = common::stdout( &search_out );
   assert!(
     search_s.contains( "hello" ) || search_s.contains( "myproject" ),
     "CC-1: .search must find 'hello' in project-scoped results; got:\n{search_s}"
@@ -125,11 +107,11 @@ fn cc_2_project_with_absolute_path_works_in_export()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
   assert!(
     output_file.exists(),
     "CC-2: .export with project:: must create the output file; stderr: {}",
-    stderr( &out )
+    common::stderr( &out )
   );
   let content = std::fs::read_to_string( &output_file ).unwrap();
   assert!(
@@ -164,12 +146,12 @@ fn cc_3_project_with_uuid_format_works_in_count()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     !s.trim().is_empty(),
     "CC-3: .count with UUID project:: must produce output; stderr: {}",
-    stderr( &out )
+    common::stderr( &out )
   );
   // The output should be a numeric count
   let trimmed = s.trim();
@@ -206,11 +188,11 @@ fn cc_4_absent_project_defaults_to_cwd_in_show()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
   assert!(
-    !stdout( &out ).is_empty(),
+    !common::stdout( &out ).is_empty(),
     "CC-4: .show without project:: must resolve via cwd and produce output; stderr: {}",
-    stderr( &out )
+    common::stderr( &out )
   );
 }
 
@@ -244,11 +226,11 @@ fn cc_5_absent_project_defaults_to_cwd_in_export()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
   assert!(
     output_file.exists(),
     "CC-5: .export without project:: must create output file via cwd resolution; stderr: {}",
-    stderr( &out )
+    common::stderr( &out )
   );
 }
 
@@ -282,11 +264,11 @@ fn cc_6_same_project_value_returns_same_project_in_all_commands()
     .arg( &project_arg )
     .output()
     .unwrap();
-  assert_exit( &list_out, 0 );
+  common::assert_exit( &list_out, 0 );
   assert!(
-    stdout( &list_out ).contains( "allcmds" ),
+    common::stdout( &list_out ).contains( "allcmds" ),
     "CC-6: .list must show the specified project; got:\n{}",
-    stdout( &list_out )
+    common::stdout( &list_out )
   );
 
   // .count
@@ -296,7 +278,7 @@ fn cc_6_same_project_value_returns_same_project_in_all_commands()
     .arg( &project_arg )
     .output()
     .unwrap();
-  assert_exit( &count_out, 0 );
+  common::assert_exit( &count_out, 0 );
 
   // .show
   let show_out = common::clg_cmd()
@@ -306,7 +288,7 @@ fn cc_6_same_project_value_returns_same_project_in_all_commands()
     .arg( &project_arg )
     .output()
     .unwrap();
-  assert_exit( &show_out, 0 );
+  common::assert_exit( &show_out, 0 );
 
   // .export
   let export_out = common::clg_cmd()
@@ -317,7 +299,7 @@ fn cc_6_same_project_value_returns_same_project_in_all_commands()
     .arg( format!( "output::{}", output_file.display() ) )
     .output()
     .unwrap();
-  assert_exit( &export_out, 0 );
+  common::assert_exit( &export_out, 0 );
 
   // .search
   let search_out = common::clg_cmd()
@@ -327,5 +309,5 @@ fn cc_6_same_project_value_returns_same_project_in_all_commands()
     .arg( &project_arg )
     .output()
     .unwrap();
-  assert_exit( &search_out, 0 );
+  common::assert_exit( &search_out, 0 );
 }

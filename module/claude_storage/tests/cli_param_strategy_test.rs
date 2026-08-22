@@ -20,26 +20,8 @@ mod common;
 
 use tempfile::TempDir;
 
-fn stdout( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stdout ).into_owned()
-}
 
-fn stderr( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stderr ).into_owned()
-}
 
-fn assert_exit( out : &std::process::Output, code : i32 )
-{
-  assert_eq!(
-    out.status.code().unwrap_or( -1 ),
-    code,
-    "expected exit {code}, got {:?}; stderr: {}",
-    out.status.code(),
-    stderr( out )
-  );
-}
 
 /// Create storage history so .session.ensure reports "resume".
 ///
@@ -79,8 +61,8 @@ fn ec_1_strategy_resume_accepted()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let output = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let output = common::stdout( &out );
   let lines : Vec< &str > = output.lines().collect();
   assert_eq!( lines.len(), 2, "EC-1: must output exactly 2 lines; got: {output}" );
   assert_eq!( lines[ 1 ], "resume", "EC-1: line 2 must be 'resume'; got: {}", lines[ 1 ] );
@@ -114,8 +96,8 @@ fn ec_2_strategy_fresh_accepted()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let output = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let output = common::stdout( &out );
   let lines : Vec< &str > = output.lines().collect();
   assert_eq!( lines.len(), 2, "EC-2: must output exactly 2 lines; got: {output}" );
   assert_eq!( lines[ 1 ], "fresh", "EC-2: line 2 must be 'fresh'; got: {}", lines[ 1 ] );
@@ -146,8 +128,8 @@ fn ec_3_strategy_invalid_rejected()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
-  let err = stderr( &out );
+  common::assert_exit( &out, 1 );
+  let err = common::stderr( &out );
   assert!(
     err.contains( "strategy" ) && ( err.contains( "resume" ) || err.contains( "fresh" ) ),
     "EC-3: error must mention strategy and valid values; got: {err}"
@@ -181,8 +163,8 @@ fn ec_4_strategy_resume_case_insensitive()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let output = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let output = common::stdout( &out );
   let lines : Vec< &str > = output.lines().collect();
   assert_eq!( lines.len(), 2, "EC-4: must output exactly 2 lines; got: {output}" );
   assert_eq!( lines[ 1 ], "resume", "EC-4: line 2 must be 'resume'; got: {}", lines[ 1 ] );
@@ -215,8 +197,8 @@ fn ec_5_strategy_fresh_case_insensitive()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let output = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let output = common::stdout( &out );
   let lines : Vec< &str > = output.lines().collect();
   assert_eq!( lines.len(), 2, "EC-5: must output exactly 2 lines; got: {output}" );
   assert_eq!( lines[ 1 ], "fresh", "EC-5: line 2 must be 'fresh'; got: {}", lines[ 1 ] );
@@ -249,8 +231,8 @@ fn ec_6_strategy_absent_fresh_when_no_history()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let output = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let output = common::stdout( &out );
   let lines : Vec< &str > = output.lines().collect();
   assert_eq!( lines.len(), 2, "EC-6: must output exactly 2 lines; got: {output}" );
   assert_eq!( lines[ 1 ], "fresh", "EC-6: line 2 must be 'fresh' with no history; got: {}", lines[ 1 ] );
@@ -286,8 +268,8 @@ fn ec_7_strategy_absent_resume_when_history_exists()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let output = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let output = common::stdout( &out );
   let lines : Vec< &str > = output.lines().collect();
   assert_eq!( lines.len(), 2, "EC-7: must output exactly 2 lines; got: {output}" );
   assert_eq!( lines[ 1 ], "resume", "EC-7: line 2 must be 'resume' with history; got: {}", lines[ 1 ] );
@@ -322,8 +304,8 @@ fn ec_8_strategy_resume_overrides_auto_fresh()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let output = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let output = common::stdout( &out );
   let lines : Vec< &str > = output.lines().collect();
   assert_eq!( lines.len(), 2, "EC-8: must output exactly 2 lines; got: {output}" );
   assert_eq!( lines[ 1 ], "resume", "EC-8: strategy::resume must force 'resume' even without history; got: {}", lines[ 1 ] );
@@ -360,8 +342,8 @@ fn ec_9_strategy_fresh_overrides_auto_resume()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let output = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let output = common::stdout( &out );
   let lines : Vec< &str > = output.lines().collect();
   assert_eq!( lines.len(), 2, "EC-9: must output exactly 2 lines; got: {output}" );
   assert_eq!( lines[ 1 ], "fresh", "EC-9: strategy::fresh must force 'fresh' despite history; got: {}", lines[ 1 ] );

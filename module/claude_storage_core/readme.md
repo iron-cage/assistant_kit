@@ -84,12 +84,19 @@ fn main() -> claude_storage_core::Result< () >
 
 ## testing
 
-**51 tests total** (45 unit + 3 bug + 3 doc):
+**259 tests** — 71 unit tests inline in `src/` (covering the private parsing and encoding
+internals that integration tests cannot reach through the public API) plus 188 integration
+tests in `tests/`, 14 of whose files are bug reproducers. Doc examples add ~26 more.
+
 ```bash
-cargo nextest run --all-features  # 48 tests
-cargo test --doc --all-features   # 3 doc tests
+cargo nextest run --all-features  # 259 unit + integration
+cargo test --doc --all-features   # doc examples
 cargo clippy --all-targets --all-features -- -D warnings
 ```
+
+Two `canonical_tests.rs` cases are `#[ cfg( unix ) ]`-gated. No test is `#[ ignore ]`d —
+environment-dependent tests skip at runtime with a printed reason instead, per the policy in
+[tests/readme.md](tests/readme.md).
 
 ## related crates
 

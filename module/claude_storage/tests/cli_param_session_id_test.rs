@@ -18,26 +18,8 @@ mod common;
 
 use tempfile::TempDir;
 
-fn stdout( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stdout ).into_owned()
-}
 
-fn stderr( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stderr ).into_owned()
-}
 
-fn assert_exit( out : &std::process::Output, code : i32 )
-{
-  assert_eq!(
-    out.status.code().unwrap_or( -1 ),
-    code,
-    "expected exit {code}, got {:?}; stderr: {}",
-    out.status.code(),
-    stderr( out )
-  );
-}
 
 /// EC-1: Named session ID (e.g., -`default_topic`) accepted.
 ///
@@ -67,8 +49,8 @@ fn ec_1_session_id_named_accepted()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let output = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let output = common::stdout( &out );
   assert!(
     !output.is_empty(),
     "EC-1: named session_id must produce output; got empty"
@@ -104,8 +86,8 @@ fn ec_2_session_id_uuid_accepted()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let output = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let output = common::stdout( &out );
   assert!(
     !output.is_empty(),
     "EC-2: UUID session_id must produce output; got empty"
@@ -134,8 +116,8 @@ fn ec_3_session_id_empty_rejected()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
-  let combined = format!( "{}{}", stderr( &out ), stdout( &out ) );
+  common::assert_exit( &out, 1 );
+  let combined = format!( "{}{}", common::stderr( &out ), common::stdout( &out ) );
   assert!(
     combined.contains( "session" ),
     "EC-3: error must mention 'session'; got: {combined}"
@@ -169,8 +151,8 @@ fn ec_4_session_id_unknown_exits_with_error()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
-  let combined = format!( "{}{}", stderr( &out ), stdout( &out ) );
+  common::assert_exit( &out, 1 );
+  let combined = format!( "{}{}", common::stderr( &out ), common::stdout( &out ) );
   assert!(
     combined.contains( "session" ) && ( combined.contains( "not found" ) || combined.contains( "nonexistent" ) ),
     "EC-4: error must mention session not found; got: {combined}"
@@ -205,8 +187,8 @@ fn ec_5_session_id_required_in_export()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
-  let combined = format!( "{}{}", stderr( &out ), stdout( &out ) );
+  common::assert_exit( &out, 1 );
+  let combined = format!( "{}{}", common::stderr( &out ), common::stdout( &out ) );
   assert!(
     combined.contains( "session" ) || combined.contains( "output" ),
     "EC-5: error must mention session_id or output requirement; got: {combined}"
@@ -241,7 +223,7 @@ fn ec_6_session_id_optional_in_show_shows_project()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
 }
 
 /// EC-7: Whitespace-only value rejected.
@@ -266,8 +248,8 @@ fn ec_7_session_id_whitespace_only_rejected()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
-  let combined = format!( "{}{}", stderr( &out ), stdout( &out ) );
+  common::assert_exit( &out, 1 );
+  let combined = format!( "{}{}", common::stderr( &out ), common::stdout( &out ) );
   let combined_lower = combined.to_lowercase();
   assert!(
     combined_lower.contains( "session" ) || combined_lower.contains( "empty" ),

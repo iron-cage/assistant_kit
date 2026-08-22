@@ -17,26 +17,8 @@ mod common;
 
 use tempfile::TempDir;
 
-fn stdout( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stdout ).into_owned()
-}
 
-fn stderr( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stderr ).into_owned()
-}
 
-fn assert_exit( out : &std::process::Output, code : i32 )
-{
-  assert_eq!(
-    out.status.code().unwrap_or( -1 ),
-    code,
-    "expected exit {code}, got {:?}; stderr: {}",
-    out.status.code(),
-    stderr( out )
-  );
-}
 
 /// EC-1: Value 0 shows summary view.
 ///
@@ -68,8 +50,8 @@ fn ec_1_entries_0_shows_summary_view()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let output = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let output = common::stdout( &out );
   assert!(
     !output.is_empty(),
     "EC-1: summary output must be non-empty; got: {output}"
@@ -105,8 +87,8 @@ fn ec_2_entries_1_shows_all_records()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let output = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let output = common::stdout( &out );
   assert!(
     !output.is_empty(),
     "EC-2: show_entries::1 output must be non-empty; got: {output}"
@@ -138,7 +120,7 @@ fn ec_3_entries_yes_accepted()
     .output()
     .unwrap();
 
-  let err = stderr( &out );
+  let err = common::stderr( &out );
   assert!(
     !err.contains( "Invalid boolean" ) && !err.contains( "Type Error" ),
     "EC-3: show_entries::yes must not cause a type validation error; got: {err}"
@@ -173,7 +155,7 @@ fn ec_4_omitted_defaults_to_summary_view()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
 }
 
 /// EC-5: `show_entries::1` with small session shows all entries.
@@ -205,8 +187,8 @@ fn ec_5_entries_1_small_session_shows_all()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let output = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let output = common::stdout( &out );
   assert!(
     !output.is_empty(),
     "EC-5: show_entries::1 output must be non-empty for 3-entry session; got: {output}"
@@ -242,8 +224,8 @@ fn ec_6_entries_1_includes_uuid_and_timestamp()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let output = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let output = common::stdout( &out );
   // Synthetic entries use "test-uuid-NNN" — check that UUID-like content appears
   assert!(
     output.contains( "uuid" ) || output.contains( "2025" ) || output.contains( "test-uuid" ),

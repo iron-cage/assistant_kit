@@ -416,3 +416,35 @@ pub fn write_path_project_session_with_last_message(
   write_test_session_with_last_message( root, &encoded, session_id, n_before, last_msg );
   encoded
 }
+
+/// Decode a finished process's stdout as UTF-8, replacing invalid sequences.
+#[ allow( dead_code ) ]
+pub fn stdout( out : &std::process::Output ) -> String
+{
+  String::from_utf8_lossy( &out.stdout ).into_owned()
+}
+
+/// Decode a finished process's stderr as UTF-8, replacing invalid sequences.
+#[ allow( dead_code ) ]
+pub fn stderr( out : &std::process::Output ) -> String
+{
+  String::from_utf8_lossy( &out.stderr ).into_owned()
+}
+
+/// Assert a finished process exited with `code`, reporting stderr on mismatch.
+///
+/// # Panics
+///
+/// Panics if the exit code differs from `code`, or the process was killed by a
+/// signal (reported as `-1`).
+#[ allow( dead_code ) ]
+pub fn assert_exit( out : &std::process::Output, code : i32 )
+{
+  assert_eq!(
+    out.status.code().unwrap_or( -1 ),
+    code,
+    "expected exit {code}, got {:?}; stderr: {}",
+    out.status.code(),
+    stderr( out )
+  );
+}

@@ -19,26 +19,8 @@ mod common;
 
 use tempfile::TempDir;
 
-fn stdout( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stdout ).into_owned()
-}
 
-fn stderr( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stderr ).into_owned()
-}
 
-fn assert_exit( out : &std::process::Output, code : i32 )
-{
-  assert_eq!(
-    out.status.code().unwrap_or( -1 ),
-    code,
-    "expected exit {code}, got {:?}; stderr: {}",
-    out.status.code(),
-    stderr( out )
-  );
-}
 
 /// EC-1: Absolute path accepted in .status.
 ///
@@ -66,7 +48,7 @@ fn ec_1_path_absolute_accepted_in_status()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
 }
 
 /// EC-2: ~ prefix expanded in .status.
@@ -96,7 +78,7 @@ fn ec_2_path_tilde_expanded_in_status()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
 }
 
 /// EC-3: Relative path accepted in .project.exists.
@@ -156,8 +138,8 @@ fn ec_4_path_empty_rejected()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
-  let combined = format!( "{}{}", stderr( &out ), stdout( &out ) );
+  common::assert_exit( &out, 1 );
+  let combined = format!( "{}{}", common::stderr( &out ), common::stdout( &out ) );
   assert!(
     combined.contains( "path" ),
     "EC-4: error must mention 'path'; got: {combined}"
@@ -205,12 +187,12 @@ fn ec_5_path_list_substring_case_insensitive()
     .output()
     .unwrap();
 
-  assert_exit( &out_upper, 0 );
-  assert_exit( &out_lower, 0 );
+  common::assert_exit( &out_upper, 0 );
+  common::assert_exit( &out_lower, 0 );
   // Both should return the same result (case-insensitive match)
   assert_eq!(
-    stdout( &out_upper ),
-    stdout( &out_lower ),
+    common::stdout( &out_upper ),
+    common::stdout( &out_lower ),
     "EC-5: uppercase and lowercase path filter must produce identical results"
   );
 }
@@ -242,8 +224,8 @@ fn ec_6_path_list_no_match_returns_empty()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let output = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let output = common::stdout( &out );
   assert!(
     !output.contains( "proj-path6" ),
     "EC-6: non-matching path filter must return empty list; got: {output}"
@@ -286,8 +268,8 @@ fn ec_7_path_default_resolves_to_cwd()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let output = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let output = common::stdout( &out );
   assert!(
     output.contains( "sessions exist" ),
     "EC-7: cwd with history must report 'sessions exist'; got: {output}"
@@ -320,8 +302,8 @@ fn ec_8_path_nonexistent_exists_exits_1()
     .output()
     .unwrap();
 
-  assert_exit( &out, 1 );
-  let err = stderr( &out );
+  common::assert_exit( &out, 1 );
+  let err = common::stderr( &out );
   assert!(
     !err.contains( "panic" ) && !err.contains( "thread" ),
     "EC-8: nonexistent path must produce graceful not-found, not a panic; got: {err}"

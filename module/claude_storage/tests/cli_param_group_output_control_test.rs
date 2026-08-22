@@ -13,26 +13,8 @@ mod common;
 
 use tempfile::TempDir;
 
-fn stdout( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stdout ).into_owned()
-}
 
-fn stderr( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stderr ).into_owned()
-}
 
-fn assert_exit( out : &std::process::Output, code : i32 )
-{
-  assert_eq!(
-    out.status.code().unwrap_or( -1 ),
-    code,
-    "expected exit {code}, got {:?}; stderr: {}",
-    out.status.code(),
-    stderr( out )
-  );
-}
 
 /// CC-1: Default output is non-empty in .status and .list.
 ///
@@ -63,18 +45,18 @@ fn cc_1_default_output_consistent_across_commands()
     .output()
     .unwrap();
 
-  assert_exit( &status_out, 0 );
-  assert_exit( &list_out, 0 );
+  common::assert_exit( &status_out, 0 );
+  common::assert_exit( &list_out, 0 );
 
   assert!(
-    !stdout( &status_out ).is_empty(),
+    !common::stdout( &status_out ).is_empty(),
     "CC-1: default .status must produce output; stderr: {}",
-    stderr( &status_out )
+    common::stderr( &status_out )
   );
   assert!(
-    !stdout( &list_out ).is_empty(),
+    !common::stdout( &list_out ).is_empty(),
     "CC-1: default .list must produce output; stderr: {}",
-    stderr( &list_out )
+    common::stderr( &list_out )
   );
 }
 
@@ -112,11 +94,11 @@ fn cc_2_show_tokens_adds_tokens_section_in_status()
     .output()
     .unwrap();
 
-  assert_exit( &base_out, 0 );
-  assert_exit( &tokens_out, 0 );
+  common::assert_exit( &base_out, 0 );
+  common::assert_exit( &tokens_out, 0 );
 
-  let base = stdout( &base_out );
-  let tokens = stdout( &tokens_out );
+  let base = common::stdout( &base_out );
+  let tokens = common::stdout( &tokens_out );
 
   assert!(
     tokens.len() > base.len(),

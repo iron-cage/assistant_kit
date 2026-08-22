@@ -17,26 +17,8 @@ mod common;
 
 use tempfile::TempDir;
 
-fn stdout( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stdout ).into_owned()
-}
 
-fn stderr( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stderr ).into_owned()
-}
 
-fn assert_exit( out : &std::process::Output, code : i32 )
-{
-  assert_eq!(
-    out.status.code().unwrap_or( -1 ),
-    code,
-    "expected exit {code}, got {:?}; stderr: {}",
-    out.status.code(),
-    stderr( out )
-  );
-}
 
 /// EC-1: `show_tree::0` → compact family summary.
 ///
@@ -73,8 +55,8 @@ fn ec_1_show_tree_0_compact_format()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let output = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let output = common::stdout( &out );
   // Compact format should not contain tree connectors
   assert!(
     !output.contains( "├─" ) && !output.contains( "└─" ),
@@ -119,7 +101,7 @@ fn ec_2_show_tree_1_tree_format()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
 }
 
 /// EC-3: Non-boolean value rejected.
@@ -149,7 +131,7 @@ fn ec_3_show_tree_non_boolean_rejected()
     out.status.code().unwrap_or( -1 ),
     0,
     "EC-3: show_tree::abc should be rejected; stderr: {}",
-    stderr( &out )
+    common::stderr( &out )
   );
 }
 
@@ -188,7 +170,7 @@ fn ec_4_show_tree_omitted_default_0()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
+  common::assert_exit( &out, 0 );
 }
 
 /// EC-5: Tree format shows agent connectors.
@@ -228,8 +210,8 @@ fn ec_5_show_tree_agent_connectors()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let output = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let output = common::stdout( &out );
   // With 2 agents, tree format should show connectors
   let has_connectors = output.contains( "├" ) || output.contains( "└" );
   assert!(
@@ -275,8 +257,8 @@ fn ec_6_show_tree_single_root_no_agents()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let output = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let output = common::stdout( &out );
   assert!(
     !output.contains( "├" ) && !output.contains( "└" ),
     "EC-6: show_tree::1 with no agents should have no tree connectors; got: {output}"

@@ -29,7 +29,7 @@ Validate non-empty string:
 - `get() -> string` — Raw substring value
 - `matches(path: string) -> boolean` — True if path contains substring (case-insensitive)
 
-**Commands:** [`.projects`](../command/07_projects.md) (via `filter::`; absorbed from `.list`'s former `path::` role, see [`02_list.md`](../command/02_list.md))
+**Commands:** [`.projects`](../command/07_projects.md) (via `filter::`; absorbed from `.list`'s former `path::` role, see [`../command/02_list.md`](../command/02_list.md))
 
 ### Referenced Commands
 

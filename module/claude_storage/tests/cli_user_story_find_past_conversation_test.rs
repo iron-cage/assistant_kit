@@ -16,26 +16,8 @@ mod common;
 
 use tempfile::TempDir;
 
-fn stdout( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stdout ).into_owned()
-}
 
-fn stderr( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stderr ).into_owned()
-}
 
-fn assert_exit( out : &std::process::Output, code : i32 )
-{
-  assert_eq!(
-    out.status.code().unwrap_or( -1 ),
-    code,
-    "expected exit {code}, got {:?}; stderr: {}",
-    out.status.code(),
-    stderr( out )
-  );
-}
 
 /// RWS-1: List all projects shows projects in storage.
 ///
@@ -69,8 +51,8 @@ fn rws_1_list_all_projects_shows_projects_in_storage()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "findprojone" ),
     "RWS-1: findprojone must appear in .list; got:\n{s}"
@@ -122,8 +104,8 @@ fn rws_2_search_by_keyword_finds_matching_sessions()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "authentication" ) || s.contains( "searchprojA" ),
     "RWS-2: search must return the matching session or project; got:\n{s}"
@@ -171,8 +153,8 @@ fn rws_3_project_filter_restricts_search_to_one_project()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "search-target" ) || s.contains( "config" ),
     "RWS-3: search must return results from the target project; got:\n{s}"
@@ -217,8 +199,8 @@ fn rws_4_session_metadata_filters_narrow_listing()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     s.contains( "main-large" ),
     "RWS-4: main-large (12 entries) must appear; got:\n{s}"
@@ -260,12 +242,12 @@ fn rws_5_show_session_displays_full_session_details()
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
   assert!(
     !s.is_empty(),
     "RWS-5: .show must produce session detail output; stderr: {}",
-    stderr( &out )
+    common::stderr( &out )
   );
   // Should contain entry count or session metadata
   assert!(
