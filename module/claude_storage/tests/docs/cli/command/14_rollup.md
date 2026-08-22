@@ -32,12 +32,18 @@ Integration tests for the `.rollup` command, implemented in `tests/cli_cmd_rollu
 | INT-22 | Multiple parameters compose correctly in one invocation | Composition |
 | INT-23 | model:: matching zero sessions exits 0 with header-only output | Filtering |
 | INT-24 | columns:: including first/last renders raw timestamps | Column Projection |
+| INT-25 | columns::rank numbers rows by sorted position | Column Projection |
+| INT-26 | Rank reflects post-limit position | Column Projection |
+| INT-27 | columns:: cache_write/cache_read split sums to cache | Column Projection |
+| INT-28 | Default columns:: excludes Rank/CacheW/CacheR | Column Projection |
+| B528 | Cross-project session_id duplication inflates totals | Bug Reproducer |
+| B544 | Group header tracks group:: and session rows name their project | Bug Reproducer |
 
 ## Test Coverage Summary
 
 - Grouping: 4 tests (INT-1 through INT-4)
 - Sorting & Order: 2 tests (INT-5, INT-6)
-- Column Projection: 3 tests (INT-7, INT-8, INT-24)
+- Column Projection: 7 tests (INT-7, INT-8, INT-24 through INT-28)
 - Filtering: 2 tests (INT-9, INT-23)
 - Limit Semantics: 1 test (INT-10)
 - Reused Scope Machinery: 2 tests (INT-11, INT-12)
@@ -45,6 +51,7 @@ Integration tests for the `.rollup` command, implemented in `tests/cli_cmd_rollu
 - Exit Codes: 2 tests (INT-14, INT-15)
 - Input Validation: 6 tests (INT-16 through INT-21)
 - Composition: 1 test (INT-22)
+- Bug Reproducer: 2 tests (B528, B544)
 
 ## Test Cases
 
@@ -150,7 +157,7 @@ CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .rollup columns::group,total
 
 **Expected behavior:**
 - Fixture: one session
-- Header row contains exactly `Group` and `Total` labels; every other column label (`Sessions`, `Calls`, `Input`, `Output`, `Cache`, `MaxCtx`, `Pct`, `First`, `Last`) is absent
+- Header row contains exactly the group label (`Session` under the default `group::session`) and `Total`; every other column label (`Project`, `Sessions`, `Calls`, `Input`, `Output`, `Cache`, `MaxCtx`, `Pct`, `First`, `Last`) is absent
 - Exit code: 0
 - **Source:** [command/14_rollup.md](../../../../docs/cli/command/14_rollup.md), [param/38_columns.md](../../../../docs/cli/param/38_columns.md)
 
@@ -165,7 +172,7 @@ CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .rollup
 
 **Expected behavior:**
 - Fixture: one session
-- Header row contains all 9 default labels (`Group`, `Sessions`, `Calls`, `Input`, `Output`, `Cache`, `MaxCtx`, `Total`, `Pct`); `First` and `Last` are both absent
+- Header row contains all 10 default labels for `group::session` (`Session`, `Project`, `Sessions`, `Calls`, `Input`, `Output`, `Cache`, `MaxCtx`, `Total`, `Pct`); `First` and `Last` are both absent
 - Exit code: 0
 - **Source:** [command/14_rollup.md](../../../../docs/cli/command/14_rollup.md), [param/38_columns.md](../../../../docs/cli/param/38_columns.md)
 
@@ -235,14 +242,15 @@ CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .rollup scope::under path::/a depth::1
 
 **Command:**
 ```
-CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .rollup
+CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .rollup columns::group,sessions,calls,input,output,cache,max_context,total,percent
 ```
 
 **Expected behavior:**
 - Fixture: project at cwd with two sessions built to match the doc's worked example exactly: session 1 (4 calls, In=500, Out=300, Cache=200), session 2 (2 calls, In=100, Out=50, Cache=50)
+- The metric projection is named explicitly because the default set now also renders `Project` (`Fix(BUG-544)`), whose value is a per-run temp path and so cannot appear in a byte-exact literal; default column *order* is byte-locked by INT-14's header-only output instead
 - stdout equals, byte-for-byte:
 ```
-Group                     Sessions   Calls     Input    Output     Cache    MaxCtx     Total     Pct
+Session                   Sessions   Calls     Input    Output     Cache    MaxCtx     Total     Pct
 aaaaaaaa                         1       4       500       300       200       700      1.0k   83.3%
 bbbbbbbb                         1       2       100        50        50       150       200   16.7%
 ```
@@ -260,7 +268,7 @@ CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .rollup scope::global
 
 **Expected behavior:**
 - Fixture: empty storage — no projects
-- stdout is exactly the header row (`Group  Sessions  Calls  Input  Output  Cache  MaxCtx  Total  Pct`, correctly widthed); no data rows; stderr is empty
+- stdout is exactly the header row (`Session  Project  Sessions  Calls  Input  Output  Cache  MaxCtx  Total  Pct`, correctly widthed); no data rows; stderr is empty
 - Exit code: 0
 - **Source:** [command/14_rollup.md](../../../../docs/cli/command/14_rollup.md)
 
@@ -381,7 +389,7 @@ CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .rollup group::model sort::sessions or
 **Expected behavior:**
 - Fixture: three models with distinct session counts — `opus` (1 session), `haiku` (2 sessions), `sonnet` (3 sessions)
 - Every prior INT test varies exactly one parameter; this is the first to combine `group::`/`sort::`/`order::`/`columns::`/`limit::` in a single call and confirm they still compose correctly rather than interfering
-- Output has exactly 1 data row (the `opus` group — fewest sessions, kept by ascending `sort::sessions` plus `limit::1`); the header contains only `Group` and `Sessions`, every other column label absent
+- Output has exactly 1 data row (the `opus` group — fewest sessions, kept by ascending `sort::sessions` plus `limit::1`); the header contains only `Model` (the active `group::` dimension) and `Sessions`, every other column label absent
 - Exit code: 0
 - **Source:** [command/14_rollup.md](../../../../docs/cli/command/14_rollup.md)
 
@@ -411,6 +419,6 @@ CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .rollup columns::group,first,last
 
 **Expected behavior:**
 - Fixture: one session with known, distinct `first_ts`/`last_ts` values
-- INT-7/INT-8 only ever project default-set columns; this is the first to request `first`/`last` (excluded from the default 9) and confirm they render — header shows exactly `Group`/`First`/`Last`; the data row contains both raw ISO-8601 timestamps verbatim, no reformatting or truncation
+- INT-7/INT-8 only ever project default-set columns; this is the first to request `first`/`last` (excluded from the default set) and confirm they render — header shows exactly `Session`/`First`/`Last`; the data row contains both raw ISO-8601 timestamps verbatim, no reformatting or truncation
 - Exit code: 0
 - **Source:** [command/14_rollup.md](../../../../docs/cli/command/14_rollup.md), [param/38_columns.md](../../../../docs/cli/param/38_columns.md)

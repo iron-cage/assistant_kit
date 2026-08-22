@@ -9,10 +9,14 @@ use claude_journal::{ EventRecord, EventType, JournalWriter };
 use json_redact::RedactionPolicy;
 
 /// Resolve the journal directory: `CLR_JOURNAL_DIR` env var if set and non-empty,
-/// else `~/.clr/journal`.
+/// else `$HOME/.clr/journal`, else `/tmp/.clr/journal` when `HOME` is unset or empty.
 ///
 /// Mirrors the env/default tiers of `claude_journal_viewer::output::resolve_journal_dir`
 /// (there is no `dir::` CLI param here for `clp` to mirror that function's third tier).
+///
+/// The result is always absolute: every tier either yields a caller-supplied path or
+/// joins onto an absolute root, so telemetry can never be written relative to the
+/// process cwd.
 fn journal_dir() -> std::path::PathBuf
 {
   if let Ok( d ) = std::env::var( "CLR_JOURNAL_DIR" )
@@ -22,7 +26,16 @@ fn journal_dir() -> std::path::PathBuf
       return std::path::PathBuf::from( d );
     }
   }
-  let home = std::env::var( "HOME" ).unwrap_or_else( | _ | "/tmp".to_owned() );
+  // Fix(BUG-550): route an empty HOME to the /tmp fallback instead of joining onto it.
+  // Root cause: `unwrap_or_else` fires only on Err (HOME unset); HOME="" yields Ok(""),
+  //   and `PathBuf::from( "" ).join( ".clr" )` is RELATIVE — the journal then materialized
+  //   under whatever cwd the process happened to run from, including source trees.
+  // Pitfall: `env::var` distinguishes unset (Err) from empty (Ok("")); any env-derived
+  //   path root must guard `is_empty()` too, exactly as the CLR_JOURNAL_DIR arm above does.
+  let home = std::env::var( "HOME" )
+  .ok()
+  .filter( | h | !h.is_empty() )
+  .unwrap_or_else( || "/tmp".to_owned() );
   std::path::PathBuf::from( home ).join( ".clr" ).join( "journal" )
 }
 

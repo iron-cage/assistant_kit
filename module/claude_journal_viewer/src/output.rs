@@ -13,7 +13,8 @@ use std::{ collections::HashMap, path::PathBuf, time::SystemTime };
 // ── Directory resolution ──────────────────────────────────────────────────────
 
 /// Resolve the journal directory from `dir::` param, `CLR_JOURNAL_DIR` env,
-/// or the default `~/.clr/journal/`.
+/// or the default `~/.clr/journal/` — falling back to `/tmp/.clr/journal` when
+/// `HOME` is unset or empty.
 #[ must_use ]
 #[ inline ]
 pub fn resolve_journal_dir< S : ::core::hash::BuildHasher >( params : &HashMap< String, String, S > ) -> PathBuf
@@ -26,7 +27,16 @@ pub fn resolve_journal_dir< S : ::core::hash::BuildHasher >( params : &HashMap< 
   {
     if !d.is_empty() { return PathBuf::from( d ); }
   }
-  let home = std::env::var( "HOME" ).unwrap_or_else( | _ | "/tmp".to_owned() );
+  // Fix(BUG-550): route an empty HOME to the /tmp fallback instead of joining onto it.
+  // Root cause: `unwrap_or_else` fires only on Err (HOME unset); HOME="" yields Ok(""),
+  //   and `PathBuf::from( "" ).join( ".clr" )` is RELATIVE, so `clj` silently read from
+  //   (and reported) a cwd-relative journal instead of the documented absolute default.
+  // Pitfall: `env::var` distinguishes unset (Err) from empty (Ok("")); the CLR_JOURNAL_DIR
+  //   arm directly above already guards `is_empty()` — the HOME arm must match it.
+  let home = std::env::var( "HOME" )
+  .ok()
+  .filter( | h | !h.is_empty() )
+  .unwrap_or_else( || "/tmp".to_owned() );
   PathBuf::from( home ).join( ".clr" ).join( "journal" )
 }
 
