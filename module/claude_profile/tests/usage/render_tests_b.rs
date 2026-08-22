@@ -1165,15 +1165,15 @@ fn test_bug553_all_surfaces_agree_on_cached_row()
     ( *vals.get( idx ).unwrap_or( &"" ) ).to_string()
   };
 
-  // The reset columns are included deliberately: this fixture carries `resets_at: None` on both
-  // windows, so they render `—` and a cached row must mark them `~—`. That is the shape S2 named
-  // (`get::` dropped staleness on the pct *and* 7d-reset fields), and it is also the only place
-  // the whole-cell prefix lands on a non-numeric cell — any consumer that strips `~` only when it
-  // precedes a digit, or checks for a bare `—` before stripping, breaks precisely here.
+  // The reset columns are pinned here to lock in the dash exemption, not an oversight: this
+  // fixture carries `resets_at: None` on both windows, and `prefix_tilde` deliberately leaves a
+  // bare `—` unprefixed. `~` qualifies how fresh a *value* is, and `—` is the absence of one —
+  // `~—` would assert staleness about nothing. Asserting the exemption explicitly is what keeps
+  // a later "prefix every cell uniformly" simplification from silently introducing `~—`.
   for ( col, expect ) in
   [
     ( "5h_left", "~88%" ), ( "7d_left", "~96%" ),
-    ( "5h_reset", "~\u{2014}" ), ( "7d_reset", "~\u{2014}" ),
+    ( "5h_reset", "\u{2014}" ), ( "7d_reset", "\u{2014}" ),
   ]
   {
     let got = tsv_fields( col );
@@ -1189,8 +1189,8 @@ fn test_bug553_all_surfaces_agree_on_cached_row()
   [
     ( GetField::FiveHourLeft, "~88%" ),
     ( GetField::SevenDayLeft, "~96%" ),
-    ( GetField::FiveHourReset, "~\u{2014}" ),
-    ( GetField::SevenDayReset, "~\u{2014}" ),
+    ( GetField::FiveHourReset, "\u{2014}" ),
+    ( GetField::SevenDayReset, "\u{2014}" ),
   ]
   {
     let got = extract_get_field( aq, field, now );
@@ -1198,6 +1198,40 @@ fn test_bug553_all_surfaces_agree_on_cached_row()
       got, expect,
       "BUG-553 S2: extract_get_field documents itself as returning the same value as the \
        corresponding table cell; for a cached row it dropped the `~`. got {got:?}",
+    );
+  }
+
+  // S2, reset half: the loop above pins the dash exemption, so it cannot show that staleness
+  // reaches a reset cell that *does* carry a value — the case S2 actually named. A second
+  // cached fixture with a server-reported `resets_at` covers it. Assert only the `~` prefix,
+  // not the whole string: reset cells render a countdown, and TSV samples its own clock while
+  // `extract_get_field` is handed `now`, so an exact match would be a Fragile Test.
+  let mut with_reset = mk_aq_ok_both( 12.0, 4.0 );
+  with_reset.name           = "cached_reset@x.com".to_string();
+  with_reset.cached         = true;
+  with_reset.cache_age_secs = Some( 7200 );
+  if let Ok( ref mut data ) = with_reset.result
+  {
+    if let Some( ref mut p ) = data.seven_day { p.resets_at = Some( "2099-01-01T00:00:00Z".to_string() ); }
+  }
+  let reset_accounts = vec![ with_reset ];
+  let reset_aq       = &reset_accounts[ 0 ];
+  let reset_tsv      = render_tsv( &reset_accounts, SortStrategy::Name, None, PreferStrategy::Any, &cols );
+  let reset_tsv_cell =
+  {
+    let mut lines = reset_tsv.lines();
+    let heads : Vec< &str > = lines.next().expect( "TSV header" ).split( '\t' ).collect();
+    let vals  : Vec< &str > = lines.next().expect( "TSV data row" ).split( '\t' ).collect();
+    let idx = heads.iter().position( |h| *h == "7d_reset" ).expect( "7d_reset column" );
+    ( *vals.get( idx ).unwrap_or( &"" ) ).to_string()
+  };
+  let reset_get = extract_get_field( reset_aq, GetField::SevenDayReset, now );
+  for ( surface, got ) in [ ( "TSV 7d_reset", &reset_tsv_cell ), ( "get::7d_reset", &reset_get ) ]
+  {
+    assert!(
+      got.starts_with( '~' ),
+      "BUG-553 S2: {surface} must carry the `~` cache-staleness prefix on a reset cell that \
+       holds a real countdown — this is the field S2 named; got {got:?}\n{reset_tsv}",
     );
   }
 

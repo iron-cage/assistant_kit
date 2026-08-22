@@ -1040,11 +1040,11 @@ pub fn clears_rotation_floors( home : &str, account_prefix : &str ) -> bool
     //   carried it, so this probe parsed a bare `NN%` and panicked on `~44%`.
     //   Root cause: the probe encoded "TSV percentages are bare" — an assumption that held
     //   only because TSV was missing a rule the text table already applied.
-    //   Pitfall: strip the marker before BOTH branches, not just the parse. A cached row
-    //   prefixes every quota cell, so absent window data arrives as `~—`, not `—`; checking
-    //   the dash first would fall through to the parse and panic. And never map a `~` cell
-    //   to the 100.0 absent-data default — that silently promotes a cache-stale exhausted
-    //   account into one that clears the floors.
+    //   Pitfall: never map a `~` cell to the 100.0 absent-data default — that would silently
+    //   promote a cache-stale exhausted account into one that clears the floors. The strip runs
+    //   ahead of the dash check for robustness only; `prefix_tilde` currently exempts a bare
+    //   `—` (staleness qualifies a value, and `—` is the absence of one), so `~—` does not
+    //   occur today — this ordering just means the probe would not care if that ever changed.
     let cell = cell.trim_start_matches( '~' );
     // `—` = absent window data on an Ok row → 100 in the canonical accessors
     // (five_hour_left/seven_day_left: absent data ≠ exhausted).

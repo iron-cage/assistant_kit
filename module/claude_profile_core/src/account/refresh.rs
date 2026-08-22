@@ -198,7 +198,7 @@ fn refresh_token_with_live_path(
   //   regression test matched fix annotations anywhere in the file, not in this block.
   let is_active_pre_sync = {
     let marker = credential_store.join( active_marker_filename() );
-    std::fs::read_to_string( &marker ).ok().is_some_and( |s| s.trim() == name )
+    std::fs::read_to_string( &marker ).is_ok_and( |s| s.trim() == name )
   };
   if is_active_pre_sync
   {
@@ -208,7 +208,7 @@ fn refresh_token_with_live_path(
       {
         let is_active_at_write = {
           let marker = credential_store.join( active_marker_filename() );
-          std::fs::read_to_string( &marker ).ok().is_some_and( |s| s.trim() == name )
+          std::fs::read_to_string( &marker ).is_ok_and( |s| s.trim() == name )
         };
         if is_active_at_write
         {
@@ -293,7 +293,7 @@ fn refresh_token_with_live_path(
   //   the wrong credentials to LIVE.
   let is_still_active = {
     let marker = credential_store.join( active_marker_filename() );
-    std::fs::read_to_string( &marker ).ok().is_some_and( |s| s.trim() == name )
+    std::fs::read_to_string( &marker ).is_ok_and( |s| s.trim() == name )
   };
   if is_still_active
   {
@@ -320,7 +320,7 @@ fn recover_credentials_from_live( name : &str, credential_store : &Path, p : &Cl
 {
   let is_active_now = {
     let marker = credential_store.join( active_marker_filename() );
-    std::fs::read_to_string( &marker ).ok().is_some_and( |s| s.trim() == name )
+    std::fs::read_to_string( &marker ).is_ok_and( |s| s.trim() == name )
   };
   if is_active_now
   {
