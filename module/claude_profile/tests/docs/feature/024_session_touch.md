@@ -69,6 +69,7 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 | FT-26 | Projected window end floors the touch instant to a 10-minute boundary before adding 5h | AC-20 | BUG-551 Arithmetic |
 | FT-27 | Touch refuted by a later window-less fetch yields no corroboration (`None`) | AC-21 | BUG-552 MRE |
 | FT-28 | Display and re-touch skip guard both call `corroborated_touch_at` (single predicate) | AC-21 | BUG-552 Structural |
+| — | AC-20's projection reaches `format::tsv` and `format::json`, not only the text table and `get::5h_reset` | AC-20 | Cross-feature: Feature 033 FT-19 (BUG-553) |
 
 **Total:** 24 FT cases
 

@@ -51,6 +51,8 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 | — | `Expires` column: `"in Xh Ym"` / `"EXPIRED"` from `compute_expires_cell()` | AC-07 | IT-003, IT-010 (command-level coverage) |
 | — | `5h Left`, `7d Left`, `7d(Son)`, `5h Reset`, `7d Reset` from `OauthUsageData` | AC-08 | Indirect — FT-07/FT-08/FT-11/FT-14/FT-15/FT-16 all depend on these columns |
 | — | `5h Reset` falls back to a `~`-prefixed projected countdown when `resets_at` is absent but a touch is corroborated; table cell and `get::5h_reset` agree | AC-08 | Cross-feature: Feature 024 FT-25, FT-26 (BUG-551) |
+| — | Every quota cell comes from one aq-aware producer, so the text table, `format::tsv`, and `get::<field>` cannot disagree — including the cache `~`/`(stale)` markers and the touch projection | AC-08 | Cross-feature: Feature 033 FT-18, FT-19, FT-20 (BUG-553) |
+| — | `format::json` emits `session_5h_reset_is_estimate` alongside `session_5h_resets_in_secs`, `null` exactly when the value is | AC-05 | Cross-feature: Feature 033 FT-19 (BUG-553) |
 | — | Footer appended when ≥2 valid accounts; absent when 0 or 1 | AC-10 | Live-only (IT-012); IT-036 covers no-footer offline |
 | — | Synthetic row for unsaved live credentials | AC-11 | Cross-feature: Feature 016 FT-09 |
 | — | Credentials unreadable → no `✓` on any row | AC-12 | Cross-feature: Feature 016 FT-07 |

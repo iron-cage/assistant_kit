@@ -4,7 +4,7 @@
 
 use crate::output::json_escape;
 use super::types::AccountQuota;
-use super::format::{ renewal_secs, next_event_raw, shorten_error, expires_remaining_secs };
+use super::format::{ renewal_secs, next_event_raw, shorten_error, expires_remaining_secs, projected_window_end_secs };
 
 /// Produce the `"cached":bool,"cache_age_secs":N|null` JSON fragment.
 fn cache_json_fields( cached : bool, age : Option< u64 > ) -> String
@@ -84,7 +84,32 @@ pub fn render_json( accounts : &[ AccountQuota ] ) -> String
             .map_or_else( || "null".to_string(), |t| t.saturating_sub( now_secs ).to_string() )
         };
         let session_pct   = pct_str( data.five_hour.as_ref().map( |p| p.utilization ) );
-        let session_reset = reset_str( data.five_hour.as_ref().and_then( |p| p.resets_at.as_deref() ) );
+        // Fix(BUG-553 S3): a corroborated-touch row emitted `"session_5h_resets_in_secs": null`
+        //   here while the text table and `get::5h_reset` both showed the projected `~in Xh Ym`
+        //   — the same account answered differently depending on which surface asked.
+        // Root cause: BUG-551's projection was applied per-surface, after `quota_text_cells`
+        //   returned, so it reached only the two surfaces that were patched by hand.
+        // Pitfall: JSON is numeric and cannot carry the `~` the display surfaces use, so the
+        //   estimate must be disclosed by its own field — never emit a projected number that
+        //   is indistinguishable from a server-reported one. Follows the established
+        //   `renewal_secs`/`renewal_is_estimate` pairing rather than inventing a convention.
+        let api_5h_reset  = data.five_hour.as_ref().and_then( |p| p.resets_at.as_deref() );
+        let ( session_reset, session_reset_is_estimate ) =
+          if let ( None, Some( touched_at ) ) = ( api_5h_reset, aq.touched_at_secs )
+          {
+            (
+              projected_window_end_secs( touched_at ).saturating_sub( now_secs ).to_string(),
+              "true".to_string(),
+            )
+          }
+          else
+          {
+            // Flag is `null` exactly when the value is — never "not an estimate" for an
+            // absent reading, which would read as a positive claim about nothing.
+            let value = reset_str( api_5h_reset );
+            let flag  = if value == "null" { "null" } else { "false" };
+            ( value, flag.to_string() )
+          };
         let weekly_pct    = pct_str( data.seven_day.as_ref().map( |p| p.utilization ) );
         let sonnet_pct    = pct_str( data.seven_day_sonnet.as_ref().map( |p| p.utilization ) );
         let weekly_reset  = reset_str( data.seven_day.as_ref().and_then( |p| p.resets_at.as_deref() ) );
@@ -118,6 +143,7 @@ pub fn render_json( accounts : &[ AccountQuota ] ) -> String
 \"renewal_secs\":{renewal_secs_str},\"renewal_is_estimate\":{renewal_is_estimate_str},\
 \"next_event_type\":{next_type_str},\"next_event_secs\":{next_secs_str},\
 \"session_5h_left_pct\":{session_pct},\"session_5h_resets_in_secs\":{session_reset},\
+\"session_5h_reset_is_estimate\":{session_reset_is_estimate},\
 \"weekly_7d_left_pct\":{weekly_pct},\"weekly_7d_sonnet_left_pct\":{sonnet_pct},\
 \"weekly_7d_resets_in_secs\":{weekly_reset},\"fallback_reason\":{fallback_reason_json},{cached_json}}}",
           cached_json = cache_json_fields( aq.cached, aq.cache_age_secs ),
