@@ -510,6 +510,14 @@ cargo nextest run --all-features -- --include-ignored
 - **Root Cause**: Format strings hardcoded "entries" regardless of count — same pattern as issue-025/027 but for the irregular noun "entry"/"entries"
 - **Documentation**: Fix(issue-028) in `cli/mod.rs` (two locations) + 5-section test doc in both test files
 
+### issue-time-not-local: `format_clock`/`format_timestamp` displayed raw UTC digits mislabeled as local time
+
+- **Issue**: Displayed session timestamps sliced `HH:MM`/`{date} HH:MM` directly out of the raw UTC ISO 8601 string, so the displayed clock/timestamp was silently mislabeled as local time while actually being UTC — correct only for readers in UTC+0
+- **Tests**: `test_format_clock_converts_to_local_timezone`, `test_format_timestamp_converts_to_local_timezone` in `src/cli/format.rs`'s `format_tests` module; both marked `bug_reproducer(issue-time-not-local)`
+- **Fix**: Both functions now parse the timestamp as RFC 3339 via a new `parse_utc` helper (`chrono`, feature-gated behind `cli`), convert `with_timezone( &Local )`, then format
+- **Root Cause**: No timezone conversion was ever applied; the value looked like a wall clock but was never converted off the wire format it arrived in. `relative_time` was unaffected — epoch-second subtraction is timezone-agnostic by construction
+- **Documentation**: Fix(issue-time-not-local) comment on `format_clock` in `src/cli/format.rs:365`; 5-section test docs on both `_converts_to_local_timezone` tests in the same file's `format_tests` module
+
 ## Manual Testing
 
 See `tests/manual/readme.md` for manual testing plan and procedures.
