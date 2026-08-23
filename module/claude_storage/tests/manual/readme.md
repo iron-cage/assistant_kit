@@ -16,7 +16,7 @@ Current command set (16 commands as of v1.9.1), numbered to match `docs/cli/comm
 4. `.count` - Fast counting operations (target parameter tested in Phase 1A)
 5. `.search` - Full-text search (parameter validation tested in Phase 1B)
 6. `.export` - Export sessions to file (parameter validation tested in Phase 1C)
-7. `.projects` - Project-centric listing with scope filtering (renamed from `.sessions` in task-015; redesigned in task-016)
+7. `.projects` - Project-centric listing with scope filtering (renamed from `.sessions` in task-015; redesigned in task-016; session liveness manually verified 2026-08-23 — see below)
 8. `.project.path` - Print canonical storage path for a topic
 9. `.project.exists` - Exit-code check whether a topic has session history
 10. `.session.dir` - Print or create session directory for a topic
@@ -471,3 +471,53 @@ Residual bare `⚙ Name` lines are intentional: `TaskList` takes no input at all
 ### Reproducing
 
 The battery is a disposable script, not a committed fixture — it reads the operator's own store, so its expected values are local. To rebuild it, drive `clg .tail` through the case list above via `runbox .live` and compare against the Results table; character-width checks (M3) must count characters, not bytes, since every glyph in the chrome is multi-byte UTF-8.
+
+## Session liveness (`STATUS`, `detail::sessions` tags, `live::`) — manual session (2026-08-23)
+
+Ran against the real local store (914 projects, 39 of them live at the time), on the host rather than inside the container — the feature reads `/proc` and `~/.claude/history.jsonl`, neither of which the container sees the way the operator does. 22 cases; the four defects found were fixed and covered before this record was written.
+
+### Why manual testing was needed here
+
+This is the first feature in the crate whose inputs a fixture cannot construct. Liveness is *inferred* from the process table and the prompt history, and no test can conjure an attached Claude Code process whose cwd is a freshly-created temp directory. The integration tests therefore assert only the negative half of the contract (a fixture is never live, so every affordance must be absent), and `src/cli/liveness.rs`'s unit tests assert the positive half against a synthetic `/proc`-shaped tree. Neither can answer the questions that decided whether the feature was right: does the history join actually pin one session per live project across 39 of them, does a real store produce the state mix the renderer assumes, and do the two `detail::sessions` renderers agree. Three of the four defects below are invisible to both test layers.
+
+### Results
+
+| # | Case | Result |
+|---|------|--------|
+| M1 | `STATUS` column present with live rows, absent without | ✅ conditional, same convention as `⚠ gone` |
+| M2 | Column alignment with `STATUS` inserted | ✅ consistent across flat and `live::1` views |
+| M3 | Session tag under `detail::sessions`, flat layout | ✅ `● working` on the driven conversation |
+| M4 | Session tag under `detail::sessions`, tree layout | ⚠️ **defect found** — see L1; ✅ after fix |
+| M5 | One tag per live project across the whole store | ✅ 39/39 tagged exactly one session — 0 untagged, 0 multiply-tagged |
+| M6 | `ids::1 live::1` on a live project | ⚠️ **defect found** — see L2; ✅ after fix |
+| M7 | `ids::1 live::0` on a live project | ⚠️ same defect; ✅ suppresses correctly after fix |
+| M8 | `ids::1 count::1` with each `live::` value | ✅ counts agree with the id lines after fix |
+| M9 | Summary line with a mixed live set | ✅ `39 live (6 working, 33 waiting)` |
+| M10 | Summary line with a single-state live set | ⚠️ **defect found** — see L3; ✅ `1 live (working)` after fix |
+| M11 | Summary line with nothing live | ✅ clause absent entirely, never `0 live` |
+| M12 | Structural tree nodes (ancestors owning no session) | ✅ blank `STATUS` — a node never inherits a child's attachment |
+| M13 | `▸` cwd gutter alongside `STATUS` | ✅ both render, no collision |
+| M14 | Project-level vs session-level state agreement | ✅ consistent within one invocation; apparent drift across two invocations is the clock, not the logic |
+| M15 | Orphan families (no root session) and tag placement | ✅ orphans sort to the tail (`UNIX_EPOCH` key), never displacing a real root's rank |
+| M16 | `live::` with `filter::` | ✅ intersects rather than short-circuiting |
+| M17 | `live::` with `agent::0` / `agent::1` | ✅ agent sidecars never carry a tag under either |
+| M18 | `live::` with `limit::` / `show_topic::` | ✅ tag renders before the topic text |
+| M19 | `live::bogus`, `live::2` | ✅ exit 1, argument error before any storage access |
+| M20 | `.list live::1` | ✅ rejected — the parameter is registered on `.projects` only |
+| M21 | Help text | ✅ `live::` listed with both documented examples |
+| M22 | Future mtime on an attached project | ⚠️ **defect found** — see L4; ✅ after fix |
+
+### Defects found and fixed
+
+| # | Symptom | Root cause | Fix | Regression test |
+|---|---------|------------|-----|-----------------|
+| L1 | `detail::sessions show_tree::1` showed no state tag, while the flat layout showed `● working` for the same conversation at the same moment | `render_families_v2` was never passed the `LivenessMap` — only the flat renderer received it. Choosing a layout silently decided whether "is this one running" got answered at all. | Thread the map into `render_families_v2` and tag the root through the same `session_liveness` call the flat path uses | `cli_param_live_test.rs::ec_11_tree_and_flat_layouts_agree_on_the_state_tag` (pins the two paths to each other; the positive direction is unreachable from a fixture) |
+| L2 | `ids::1 live::1` and `ids::1 live::0` produced byte-identical output on a project that *was* live — one of them had to be wrong | The `ids::` branch returns at step 1, long before the listing path computes liveness at step 6, so `live::` was read by nobody. Worst case for a scripting mode: the caller has no rendered output to notice the discrepancy in. | Apply `live::` in the branch as a predicate on the named project; probe only when the parameter is set, so plain `ids::1` still costs no process-table walk. Unavailable detection exits non-zero with the reason on stderr rather than emitting an empty list a script would read as fact. | `cli_param_live_test.rs::ec_9_…` / `ec_10_…` |
+| L3 | Summary line rendered `1 live (1 working, 0 waiting)` and `6 live (0 working, 6 waiting)` | The live clause always spelled out both halves, contradicting the same line's own convention — asserted by OV-4 — that a zero `agents` segment is omitted entirely. | Collapse the breakdown to the single state's name when one half is zero: `1 live (working)` | `projects_overview.rs::overview_tests::test_live_clause_collapses_a_zero_half` |
+| L4 | An mtime ahead of the local clock classified as `waiting` — the freshest possible write reported as the least active | `SystemTime::now().duration_since( mtime )` returns `Err` for a future timestamp, and `is_ok_and` folds that error in with "too old". Reachable through ordinary clock skew against an NFS or container host, not just a deliberate `touch -d`. | Match on the result explicitly; `Err` means "at least as recent as now", so it is `Working` | `liveness.rs::liveness_tests::test_future_mtime_is_working_not_waiting` |
+
+One further defect surfaced during verification rather than from the feature itself: `projects_edge_case_test.rs`'s `ec5`/`ec7`/`ec8` byte-compared stdout from two separate spawns of an age-rendering command, so a run that straddled a second boundary failed on `1s ago` vs `3s ago`. It reproduced 2/2 under full-suite load and passed 3/3 in isolation. `cli_cmd_projects_test.rs` already carried a private `normalize_relative_time` for exactly this, so the fix was to promote that helper to `tests/common/mod.rs`, widen it to also absorb the column padding the age token drives, and route all three sites through it. 12 stress iterations against a concurrently-running full suite now pass 12/12.
+
+### Reproducing
+
+The battery is a disposable script, not a committed fixture — it reads the operator's own process table and prompt history, so its expected values are local and change minute to minute. To rebuild it, pin a built `clg` outside `target/` first: a concurrent `RUSTFLAGS`-differing cargo invocation changes the fingerprint and evicts the binary mid-run, which presents as `No such file or directory` from the middle of a case list. Run on the host, not in the container — inside it `/proc` lists the container's processes and every project reads as not-attached, which is the documented "detection never claims a negative" case rather than a bug. M5 is the case worth rebuilding first: it is the only one that exercises the history join at real scale, and it is what would catch a regression that tags every session in a live project instead of one.
