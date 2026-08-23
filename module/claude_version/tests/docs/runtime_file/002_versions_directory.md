@@ -20,19 +20,19 @@ Two `.version.install` invocations that produce different file system outcomes:
 
 | RF | Scenario | Source fn |
 |----|----------|-----------|
-| RF-1 | Path matches `$HOME/.local/share/claude/versions` exactly | ⏳ |
-| RF-2 | `.version.install` creates the directory and target subdirectory when absent | ⏳ |
-| RF-3 | Pinned install purges all subdirectories except the kept version | ⏳ |
-| RF-4 | `.version.install` succeeds after the directory is manually deleted (durability classification) | ⏳ |
+| RF-1 | Path matches `$HOME/.local/share/claude/versions` exactly | ✅ `path_key_tc2_versions_dir_resolves`, `it02_paths_single_versions_dir`, `ft3_single_key_returns_one_path` |
+| RF-2 | `.version.install` creates the directory and target subdirectory when absent | ⏳ blocked — requires network + real installer |
+| RF-3 | Pinned install purges all subdirectories except the kept version | ⏳ blocked — requires network + real installer |
+| RF-4 | `.version.install` succeeds after the directory is manually deleted (durability classification) | ⏳ blocked — requires network + real installer |
 
 ## Test Coverage Summary
 
-- Path correctness: 1 test (RF-1)
-- Lifecycle creation: 1 test (RF-2)
-- Purge behavior: 1 test (RF-3)
-- Durability: 1 test (RF-4)
+- Path correctness: 1 case (RF-1) — ✅ implemented
+- Lifecycle creation: 1 case (RF-2) — ⏳ blocked (network + real installer)
+- Purge behavior: 1 case (RF-3) — ⏳ blocked (network + real installer)
+- Durability: 1 case (RF-4) — ⏳ blocked (network + real installer)
 
-**Total:** 4 tests
+**Total:** 4 cases — 1 ✅ implemented, 3 ⏳ blocked
 
 ---
 
@@ -53,6 +53,7 @@ Two `.version.install` invocations that produce different file system outcomes:
 - **Then:** exit 0; `$HOME/.local/share/claude/versions/<resolved-version>/` exists on disk after the call
 - **Exit:** 0
 - **Source:** [runtime_file/002_versions_directory.md — Lifecycle: Created, Subdirectory added](../../../docs/runtime_file/002_versions_directory.md)
+- **Blocked (⏳):** requires network and a real Claude Code install — `perform_install()` (`claude_version_core/src/version.rs`) shells out to `curl -fsSL <INSTALL_URL> | bash`, and only that installer creates the version subdirectory. Every offline `.version.install` test in the suite uses `dry::1`, which returns before `perform_install()` is reached.
 
 ---
 
@@ -63,6 +64,7 @@ Two `.version.install` invocations that produce different file system outcomes:
 - **Then:** exit 0; only the newly installed version's subdirectory remains under the versions directory; the two prior subdirectories are removed
 - **Exit:** 0
 - **Source:** [runtime_file/002_versions_directory.md — Lifecycle: Subdirectory removed](../../../docs/runtime_file/002_versions_directory.md)
+- **Blocked (⏳):** requires network and a real Claude Code install — `purge_stale_versions()` runs only after `perform_install()` reports a verified successful install, which needs the live `curl … | bash` installer.
 
 ---
 
@@ -73,6 +75,7 @@ Two `.version.install` invocations that produce different file system outcomes:
 - **Then:** exit 0; command succeeds despite the missing directory; directory is re-created with the target version's subdirectory after the call
 - **Exit:** 0
 - **Source:** [runtime_file/002_versions_directory.md — Durability](../../../docs/runtime_file/002_versions_directory.md)
+- **Blocked (⏳):** requires network and a real Claude Code install — the "directory is re-created with the target version's subdirectory" clause is produced by the live installer invoked from `perform_install()`.
 
 ---
 
@@ -80,4 +83,7 @@ Two `.version.install` invocations that produce different file system outcomes:
 
 | Function | File | Test Cases |
 |----------|------|------------|
-| *(not yet implemented)* | `tests/cli/versions_dir_test.rs` | RF-1 through RF-4 |
+| `path_key_tc2_versions_dir_resolves` | `tests/cli/path_key_test.rs` | RF-1 |
+| `it02_paths_single_versions_dir` | `tests/cli/paths_test.rs` | RF-1 |
+| `ft3_single_key_returns_one_path` | `tests/cli/paths_test.rs` | RF-1 |
+| *(blocked — requires network + real installer)* | — | RF-2, RF-3, RF-4 |

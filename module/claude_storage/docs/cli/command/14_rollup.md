@@ -148,8 +148,8 @@ claude_storage .rollup group::project limit::5 columns::rank,total,percent,input
 **Output** (default columns, `group::session`):
 ```
 Session                   Project                   Sessions   Calls     Input    Output     Cache    MaxCtx     Total     Pct
-aaaaaaaa                  …/pro/lib/yrd_core/api           1       4       500       300       200       700      1.0k   83.3%
-bbbbbbbb                  …/pro/lib/yrd_core/cli           1       2       100        50        50       150       200   16.7%
+aaaaaaaa                  …/home/alice/repos/api           1       4       500       300       200       700      1.0k   83.3%
+bbbbbbbb                  …/home/alice/repos/cli           1       2       100        50        50       150       200   16.7%
 ```
 - Group column header: the active `group::` dimension — `Session`, `Project`, `Model`, or `Day` (`Fix(BUG-544)`), never a constant `Group`
 - Group column value: for `group::session`, the 8-character short form (same `short_id()` helper [`.usage`](13_usage.md)/[`.projects`](07_projects.md) already use); for other `group::` values, the raw label (project cwd / model name / `YYYY-MM-DD`), truncated to the column's fixed width with a trailing `…` when longer

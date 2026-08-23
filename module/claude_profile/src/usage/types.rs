@@ -62,6 +62,7 @@ impl PreferStrategy
 /// `flag` (first col) and `account` (name) are structural and always visible.
 /// All other columns follow the default set; `cols::` modifiers toggle each one.
 #[ derive( Debug ) ]
+// One bool per independently toggleable table column — that is the type's whole purpose.
 #[ allow( clippy::struct_excessive_bools ) ]
 pub struct ColsVisibility
 {
@@ -180,6 +181,8 @@ impl ColsVisibility
 // ── Per-account quota result ───────────────────────────────────────────────────
 
 /// Per-account quota fetch result, bundling identity, state flags, and the raw usage data.
+// is_current/is_active/is_occupied_elsewhere/cached/is_owned/claim_lock are orthogonal account
+// states that can hold in any combination — an enum would have to enumerate the product.
 #[ allow( clippy::struct_excessive_bools ) ]
 pub struct AccountQuota
 {
@@ -301,6 +304,8 @@ pub const REDIRECT_NO_QUOTA_REASON : &str = "redirect backend — no Anthropic q
 
 /// Parsed `.usage` parameters extracted from a `VerifiedCommand`.
 #[ derive( Debug ) ]
+// One field per `.usage` CLI parameter; the bools are independent flags (trace, only_active,
+// only_valid, exclude_exhausted, no_color, rotate, force, solo) that combine freely.
 #[ allow( clippy::struct_excessive_bools ) ]
 pub struct UsageParams
 {

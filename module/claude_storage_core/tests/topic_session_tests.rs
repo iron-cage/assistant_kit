@@ -18,7 +18,7 @@
 //! ```sh
 //! uuidgen --sha1 --namespace @dns --name clr.topic
 //! python3 -c 'import uuid; ns = uuid.uuid5( uuid.NAMESPACE_DNS, "clr.topic" ); \
-//!   print( uuid.uuid5( ns, "/home/user1/pro\0review" ) )'
+//!   print( uuid.uuid5( ns, "/home/alice/pro\0review" ) )'
 //! ```
 
 use std::path::Path;
@@ -28,8 +28,8 @@ use claude_storage_core::{ topic_session_id, topic_session_file };
 #[ test ]
 fn golden_vector_home_pro_review()
 {
-  let id = topic_session_id( Path::new( "/home/user1/pro" ), "review" ).unwrap();
-  assert_eq!( id.as_str(), "e36d752a-341e-5db1-94c5-c8b91cccbfff" );
+  let id = topic_session_id( Path::new( "/home/alice/pro" ), "review" ).unwrap();
+  assert_eq!( id.as_str(), "f3b6d066-be8c-5b43-8795-e0266def2440" );
 }
 
 /// Golden vector 2: short path and single-character topic.
@@ -44,8 +44,8 @@ fn golden_vector_tmp_x_a()
 #[ test ]
 fn golden_vector_suffixed_topic()
 {
-  let id = topic_session_id( Path::new( "/home/user1/pro" ), "review-2" ).unwrap();
-  assert_eq!( id.as_str(), "ec8f75ea-cf5e-5302-9327-1b5f15644864" );
+  let id = topic_session_id( Path::new( "/home/alice/pro" ), "review-2" ).unwrap();
+  assert_eq!( id.as_str(), "0fc172f5-60ba-5ad8-99fa-955e92fd85f5" );
 }
 
 /// The rule is a pure function: same inputs always yield the same UUID.
@@ -108,9 +108,9 @@ fn session_file_ends_with_uuid_jsonl()
 {
   // HOME is always set in the test environment; the storage prefix itself is
   // environment-dependent, so assert only the composed file name.
-  let file = topic_session_file( Path::new( "/home/user1/pro" ), "review" ).unwrap();
+  let file = topic_session_file( Path::new( "/home/alice/pro" ), "review" ).unwrap();
   assert!(
-    file.to_str().unwrap().ends_with( "/e36d752a-341e-5db1-94c5-c8b91cccbfff.jsonl" ),
+    file.to_str().unwrap().ends_with( "/f3b6d066-be8c-5b43-8795-e0266def2440.jsonl" ),
     "unexpected session file path: {}",
     file.display()
   );

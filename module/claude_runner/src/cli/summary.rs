@@ -501,6 +501,8 @@ pub fn resolve_fields( value : &str ) -> Result< Vec< &'static str >, String >
 /// CLR result envelope (caller should fall back to printing raw `json`).
 ///
 /// `fields` is the raw `--summary-fields` value (`None` defaults to `"full"`).
+// Flat envelope extraction: ~40 JSON fields pulled and rendered inline, in deliberately
+// paired locals (in_tok/out_tok, eph_1h/eph_5m, m_cr_tok/m_cc_tok) that read as similar.
 #[ inline ]
 #[ must_use ]
 #[ allow( clippy::too_many_lines, clippy::similar_names ) ]

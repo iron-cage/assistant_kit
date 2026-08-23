@@ -460,13 +460,13 @@ fn test_count_entries_session_empty()
 fn test_count_entries_partial_uuid_match()
 {
   let storage = TempDir::new().unwrap();
-  let session_uuid = "79f86582-1435-442c-935a-13f8d874918a";
-  let session_prefix = "79f86582";
+  let session_uuid = "feed0002-0000-4000-8000-000000000002";
+  let session_prefix = "feed0002";
 
   // Write 3 entries using the full session UUID
   common::write_test_session( storage.path(), "count-partial-proj", session_uuid, 3 );
 
-  // Bug: using 8-char prefix returns "Session not found: 79f86582"
+  // Bug: using 8-char prefix returns "Session not found: feed0002"
   // Fixed: returns "3" (prefix match, consistent with .show and .export)
   let output = common::clg_cmd()
     .args( [

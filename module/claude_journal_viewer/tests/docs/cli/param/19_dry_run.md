@@ -26,8 +26,8 @@ default (live deletion) and the preview mode.
 ### EC-1: Absent -> live deletion occurs
 
 - **Given:** journal directory with files older than 30 days
-- **When:** `clj .prune keep::30d confirm::1`
-- **Then:** exit 0; matching files are actually deleted from disk
+- **When:** `clj .prune keep::30d`
+- **Then:** exit 0; matching files are actually deleted from disk, immediately and with no confirmation prompt
 - **Exit:** 0
 - **Source:** [param/19_dry_run.md](../../../../docs/cli/param/19_dry_run.md)
 

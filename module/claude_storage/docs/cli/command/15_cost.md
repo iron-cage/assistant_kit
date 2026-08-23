@@ -20,7 +20,7 @@ Print a per-conversation cost accounting table: exact token counts (fresh input,
 **Syntax:**
 ```bash
 claude_storage .cost
-claude_storage .cost session_ids::3cf8fab1
+claude_storage .cost session_ids::feed0011
 claude_storage .cost session_ids::aaaa1111,bbbb2222 agents::0
 claude_storage .cost path::/data/repos/myproject
 ```
@@ -56,7 +56,7 @@ claude_storage .cost path::/data/repos/myproject
 claude_storage .cost
 
 # One conversation by unique ID prefix, searched across every project
-claude_storage .cost session_ids::3cf8fab1
+claude_storage .cost session_ids::feed0011
 
 # Compare two conversations, root sessions only — adds a TOTAL row
 claude_storage .cost session_ids::aaaa1111,bbbb2222 agents::0

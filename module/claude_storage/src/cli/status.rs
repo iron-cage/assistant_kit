@@ -13,7 +13,8 @@ use super::storage::{ create_storage, resolve_path_parameter };
 ///
 /// Returns error if path resolution fails, storage creation fails, or
 /// statistics retrieval fails.
-#[ allow( clippy::needless_pass_by_value ) ]
+// Sequential handler — path resolution, existence gate, statistics aggregation, then report
+// assembly; each stage consumes the previous stage's locals.
 #[ allow( clippy::too_many_lines ) ]
 #[ inline ]
 pub fn status_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )

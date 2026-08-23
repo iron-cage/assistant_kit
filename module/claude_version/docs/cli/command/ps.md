@@ -37,8 +37,8 @@ clv.ps [v::N] [format::FMT]
 
 ```
 #  PID     Elapsed  CPU%  RAM      State    Mode    Path                Task
-1  287807  0:42     0.1   45.2 MB  running  normal  ~/pro/lib/yrd_…     implement ps rename
-2  299134  2:17     0.0   38.7 MB  running  normal  ~/pro/lib/yrd_…     —
+1  287807  0:42     0.1   45.2 MB  running  normal  ~/assistant/mo…     implement ps rename
+2  299134  2:17     0.0   38.7 MB  running  normal  ~/assistant/mo…     —
 ```
 
 Columns: index, PID, elapsed wall-clock, CPU%, resident RAM, state (running/stopped), mode (normal/watch/dry), working directory (shortened), JSONL task preview.

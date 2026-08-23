@@ -654,6 +654,14 @@ pub enum PctStyle
 ///   cache staleness or the touch projection. Never call it from a render surface that has
 ///   an `aq` in scope; call `quota_cells_for` there (BUG-553), exactly as `expires_cell_for`
 ///   supersedes `compute_expires_cell` at such call sites.
+///
+/// Gated on `testing` because BUG-553 moved every render surface to `quota_cells_for`, leaving
+///   this wrapper reachable only through `test_bridge`. Without the gate it is `dead_code` in
+///   any dependent that does not enable `testing` (`assistant`, `assistant_kit`), and `-D
+///   warnings` turns that into a hard build failure there while `claude_profile` alone — which
+///   tests under `--all-features` — still passes. Pitfall: a `pub` item in a private module is
+///   only as alive as its in-crate callers; a per-crate gate cannot observe a dependent's build.
+#[ cfg( feature = "testing" ) ]
 pub fn quota_text_cells( data : &claude_quota::OauthUsageData, now_secs : u64 ) -> [ String; 5 ]
 {
   quota_data_cells( data, now_secs, PctStyle::Emoji )

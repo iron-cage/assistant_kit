@@ -264,9 +264,9 @@ Edge case coverage for the `name::` parameter. See [params.md](../../../../docs/
 
 ### EC-20: Name Inference Conflict — `oauthAccount.emailAddress` wins over stale `_active` marker (BUG-212)
 
-- **Given:** Active credentials exist at `~/.claude/.credentials.json`. `~/.claude.json` contains `{"oauthAccount":{"emailAddress":"i5@wbox.pro"}}` (fresh — written by external OAuth login). The per-machine active marker `{credential_store}/_active_{hostname}_{user}` contains `"i2@wbox.pro"` (stale — from a prior clp session). No `name::` argument is passed.
+- **Given:** Active credentials exist at `~/.claude/.credentials.json`. `~/.claude.json` contains `{"oauthAccount":{"emailAddress":"i5@example.com"}}` (fresh — written by external OAuth login). The per-machine active marker `{credential_store}/_active_{hostname}_{user}` contains `"i2@example.com"` (stale — from a prior clp session). No `name::` argument is passed.
 - **When:** `clp .account.save` (no `name::` argument)
-- **Then:** Exit 0; stdout: `saved current credentials as 'i5@wbox.pro'`. `{credential_store}/i5@wbox.pro.credentials.json` created. `{credential_store}/i2@wbox.pro.credentials.json` NOT created. The stale `_active` marker is NOT used when `oauthAccount.emailAddress` provides a valid name.
+- **Then:** Exit 0; stdout: `saved current credentials as 'i5@example.com'`. `{credential_store}/i5@example.com.credentials.json` created. `{credential_store}/i2@example.com.credentials.json` NOT created. The stale `_active` marker is NOT used when `oauthAccount.emailAddress` provides a valid name.
 - **Exit:** 0
 - **Commands:** `.account.save`
 - **Note:** BUG-212 regression guard. `oauthAccount.emailAddress` is updated by both clp ops (snapshot restore) and external OAuth login. `_active` is written only by clp ops — external login leaves it stale.

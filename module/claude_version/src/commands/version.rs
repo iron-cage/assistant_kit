@@ -25,6 +25,8 @@ use claude_version_core::version::{
 /// # Errors
 ///
 /// Returns `Err(InternalError)` if `claude` is not found in PATH.
+// Registered as a boxed unilang CommandRoutine (Box< dyn Fn >) — every call goes through
+// dynamic dispatch, so #[ inline ] could never apply at the call site.
 #[ allow( clippy::missing_inline_in_public_items ) ]
 pub fn version_show_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
@@ -132,6 +134,8 @@ pub fn version_show_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) ->
 /// Returns `Err(ArgumentMissing)` when `record_only::1` and `dry::1` are both set.
 /// Returns `Err(InternalError)` when `curl` is not found, the install fails, or
 /// (under `record_only::1`) the preference write fails.
+// Registered as a boxed unilang CommandRoutine (Box< dyn Fn >) — every call goes through
+// dynamic dispatch, so #[ inline ] could never apply at the call site.
 #[ allow( clippy::missing_inline_in_public_items ) ]
 pub fn version_install_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
@@ -381,6 +385,8 @@ fn install_installed_content(
 ///
 /// Returns `Err(ArgumentMissing)` when `version::` is present but empty.
 /// Returns `Err(InternalError)` when HOME is unset or the install fails.
+// Registered as a boxed unilang CommandRoutine (Box< dyn Fn >) — every call goes through
+// dynamic dispatch, so #[ inline ] could never apply at the call site.
 #[ allow( clippy::missing_inline_in_public_items ) ]
 pub fn version_guard_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
@@ -797,6 +803,8 @@ impl ListMode
 /// Returns `Err(ArgumentTypeMismatch)` for an unrecognised or empty `mode::` value (exit 1),
 /// or if `format::` has an unrecognised value.
 /// Returns `Err(InternalError)` under `mode::history` when `HOME` is unset (exit 2).
+// Registered as a boxed unilang CommandRoutine (Box< dyn Fn >) — every call goes through
+// dynamic dispatch, so #[ inline ] could never apply at the call site.
 #[ allow( clippy::missing_inline_in_public_items ) ]
 pub fn version_list_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
@@ -900,6 +908,8 @@ fn render_aliases_mode( opts : &OutputOptions ) -> OutputData
 /// # Errors
 ///
 /// Returns `Err` on invalid name, invalid version spec, or I/O failures.
+// Registered as a boxed unilang CommandRoutine (Box< dyn Fn >) — every call goes through
+// dynamic dispatch, so #[ inline ] could never apply at the call site.
 #[ allow( clippy::missing_inline_in_public_items ) ]
 pub fn version_mark_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {

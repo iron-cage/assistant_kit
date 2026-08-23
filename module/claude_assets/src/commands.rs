@@ -84,7 +84,6 @@ fn require_str( cmd : &VerifiedCommand, name : &str ) -> Result< String, ErrorDa
 ///
 /// Returns `ErrorData` with `InternalError` if `$PRO_CLAUDE` is unset or
 /// if the source or target directory cannot be read.
-#[ allow( clippy::needless_pass_by_value ) ]
 #[ inline ]
 pub fn list_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
@@ -139,7 +138,6 @@ pub fn list_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result<
 /// Returns `ErrorData` with `ArgumentTypeMismatch` (exit 1) if `kind::` is unknown.
 /// Returns `ErrorData` with `InternalError` (exit 2) if the source artifact is missing,
 /// the target is a non-symlink, or a filesystem error occurs.
-#[ allow( clippy::needless_pass_by_value ) ]
 #[ inline ]
 pub fn install_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
@@ -169,7 +167,6 @@ pub fn install_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Resu
 /// Returns `ErrorData` with `ArgumentTypeMismatch` (exit 1) if `kind::` is unknown.
 /// Returns `ErrorData` with `InternalError` (exit 2) if the target is a non-symlink
 /// regular file (data-loss guard) or a filesystem error occurs.
-#[ allow( clippy::needless_pass_by_value ) ]
 #[ inline ]
 pub fn uninstall_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
@@ -196,7 +193,6 @@ pub fn uninstall_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Re
 /// # Errors
 ///
 /// This routine never returns `Err` — it degrades gracefully when `$PRO_CLAUDE` is unset.
-#[ allow( clippy::needless_pass_by_value ) ]
 #[ inline ]
 pub fn kinds_routine( _cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {

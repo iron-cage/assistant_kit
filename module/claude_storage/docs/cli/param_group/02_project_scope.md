@@ -36,7 +36,7 @@
 ```bash
 project::/home/alice/projects/my-app         # Absolute path
 project::-home-alice-projects-my-app         # Path-encoded ID
-project::8d795a1c-c81d-4010-8d29-b4e678272419  # UUID
+project::feed0001-0000-4000-8000-000000000001  # UUID
 project::Path("/home/alice/projects/my-app") # Path(...) from .list output
 ```
 

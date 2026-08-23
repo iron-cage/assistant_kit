@@ -21,7 +21,7 @@
 **User-facing layer**: Project and Conversation are the concepts users reason about. A user opens Claude Code in a project directory, starts a conversation, and sends messages. These are the visible units.
 
 **Storage layer**: Session and Entry are storage implementation details. They exist on disk and are referenced internally, but users see conversations, not JSONL files. Surfacing session IDs in primary output adds noise without value:
-- Session IDs are UUIDs: `8d795a1c-c81d-4010-8d29-b4e678272419` — not human-meaningful
+- Session IDs are UUIDs: `feed0001-0000-4000-8000-000000000001` — not human-meaningful
 - Multiple sessions may represent the same logical conversation (chain)
 - Agent session IDs are even more opaque: `agent-a6061d6e2a0c37a78`
 

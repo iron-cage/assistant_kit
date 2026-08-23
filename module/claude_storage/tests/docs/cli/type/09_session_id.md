@@ -37,9 +37,9 @@ Type constraint tests for `SessionId` — exact session identifier.
 
 ### TC-2: UUID format accepted
 
-- **Given:** Input string `"8d795a1c-c81d-4010-8d29-b4e678272419"` and session file exists
+- **Given:** Input string `"feed0001-0000-4000-8000-000000000001"` and session file exists
 - **When:** `SessionId` is parsed and resolved
-- **Then:** Accepted; `is_uuid()` returns true; `filename()` returns `"8d795a1c-c81d-4010-8d29-b4e678272419.jsonl"`
+- **Then:** Accepted; `is_uuid()` returns true; `filename()` returns `"feed0001-0000-4000-8000-000000000001.jsonl"`
 
 ---
 

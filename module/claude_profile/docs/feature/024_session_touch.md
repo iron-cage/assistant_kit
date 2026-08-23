@@ -121,7 +121,7 @@ render results as table
 
 | File | Relationship |
 |------|--------------|
-| BUG-178 | BUG-178 (TSK-196, ✅ Fixed 2026-05-25; threshold corrected by TSK-418): `apply_touch` fired subprocess for literal-0%-quota accounts (i1@wbox.pro, i2@wbox.pro). TSK-196's fix added the h-exhausted guard but reused the human-facing `H_EXHAUSTED_THRESHOLD = 15.0` (TSK-190) rather than a true-exhaustion threshold, over-broadly skipping touch for any account ≤15% remaining instead of only fully-exhausted ones. See AC-19, TSK-418. |
+| BUG-178 | BUG-178 (TSK-196, ✅ Fixed 2026-05-25; threshold corrected by TSK-418): `apply_touch` fired subprocess for literal-0%-quota accounts (i1@example.com, i2@example.com). TSK-196's fix added the h-exhausted guard but reused the human-facing `H_EXHAUSTED_THRESHOLD = 15.0` (TSK-190) rather than a true-exhaustion threshold, over-broadly skipping touch for any account ≤15% remaining instead of only fully-exhausted ones. See AC-19, TSK-418. |
 | BUG-208 | BUG-208 (Closed): restore `switch_account` calls wrapped in `let _ = ...` — silent error discard; superseded by BUG-211 (restore removed from `apply_touch`) |
 | BUG-211 | BUG-211 (Fixed): snapshot+restore removed from `apply_touch`; `save(update_marker=false)` suppresses `_active` writes during per-account cycling |
 | BUG-214 | BUG-214 (TSK-217, ✅ Fixed): `apply_touch` fired subprocess for 7d-exhausted accounts — fixed via `seven_day_left()` guard |

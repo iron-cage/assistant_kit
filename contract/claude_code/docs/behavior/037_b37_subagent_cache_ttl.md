@@ -31,7 +31,7 @@ Same documentation section:
 
 > "Subagents use the five-minute TTL even on a subscription, since the automatic one-hour TTL applies to the main conversation."
 
-Observed in live session JSONL (session `3cf8fab1`, 2026-07-25, v2.1.197 — see E68):
+Observed in live session JSONL (session `feed0011`, 2026-07-25, v2.1.197 — see E68):
 
 | Context | `ephemeral_5m_input_tokens` | `ephemeral_1h_input_tokens` |
 |---------|------------------------------|------------------------------|
@@ -70,7 +70,7 @@ Cost magnitude, using Anthropic's published cache pricing (reads 0.1x base input
 | ID | Supports | Type | Source | Location | Content |
 |----|----------|------|--------|----------|---------|
 | E67 | B37 | Doc | Official Claude Code documentation (code.claude.com/docs/en/prompt-caching) | "Subagents and the cache" section | "A subagent starts its own conversation with its own system prompt and tool set. It builds its own cache, starting with no cache hits on its first call." And: "Subagents use the five-minute TTL even on a subscription, since the automatic one-hour TTL applies to the main conversation." Forks are the documented exception — a fork inherits the parent conversation's cache. Timer semantics: "Each request that hits the cache resets the timer." |
-| E68 | B37 | Observation | Live session JSONL — session `3cf8fab1` (2026-07-25, v2.1.197) | Main session file vs `subagents/agent-*.jsonl` siblings | Main-conversation assistant entries: `"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":4908}` — 1-hour tier only. All 13 subagent transcripts from the same session (`isSidechain: true`): 5-minute tier only (`ephemeral_1h` = 0), per-agent first-call prefix writes of 42,884–72,407 tokens (769,900 cache-write tokens total for prefixes the parent already held cached). |
+| E68 | B37 | Observation | Live session JSONL — session `feed0011` (2026-07-25, v2.1.197) | Main session file vs `subagents/agent-*.jsonl` siblings | Main-conversation assistant entries: `"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":4908}` — 1-hour tier only. All 13 subagent transcripts from the same session (`isSidechain: true`): 5-minute tier only (`ephemeral_1h` = 0), per-agent first-call prefix writes of 42,884–72,407 tokens (769,900 cache-write tokens total for prefixes the parent already held cached). |
 | E69 | B37 | Doc | Anthropic platform documentation (docs.anthropic.com — prompt caching pricing) + code.claude.com/docs/en/costs | Pricing multipliers; TTL policy | Cache writes bill 1.25x base input (5-minute TTL) / 2x (1-hour TTL); cache reads bill 0.1x. Costs doc: the 1-hour TTL applies to the main conversation on subscription and drops to 5 minutes when drawing on extra usage credits; `/usage` attributes a distinct "subagents" category and flags "cache misses" when ≥10% of recent usage. |
 | E70 | B37 | Test | `../../tests/behavior/b37_subagent_cache_ttl.rs` | `b37_plain_agent_transcripts_never_write_1h_tier`, `b37_main_sessions_write_1h_tier_on_subscription` | Full-storage scan (2026-07-26): 12,861 plain-hex non-fork agent transcripts, 742,911 `cache_creation` entries, 740,976 five-minute writes, zero 1-hour writes — hard assert. Excluded 20 fork agents and 1,016 typed-prefix system sidechains, which inherit the parent conversation's tier (18 forks and 1,014 sidechains carry 1-hour writes). Main-session 1-hour write confirmed on the same machine. |
 

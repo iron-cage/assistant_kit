@@ -65,7 +65,7 @@ for both project identifier schemes.
 
 ### FT-4: UUID-named project returned in project list
 
-- **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture` with a UUID-named project directory (e.g., `8d795a1c-c81d-4010-8d29-b4e678272419`)
+- **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture` with a UUID-named project directory (e.g., `feed0001-0000-4000-8000-000000000001`)
 - **When:** `clg .list`
 - **Then:** stdout includes the UUID-named project; both path-encoded and UUID projects appear in the same listing
 - **Exit:** 0

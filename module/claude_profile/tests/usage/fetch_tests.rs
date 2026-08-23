@@ -263,16 +263,16 @@ fn test_parse_u64_from_str_mre_bug170_extracts_expires_at()
 fn test_mre_bug218_fetch_all_quota_no_duplicate_synthetic_row()
 {
   // Simulate post-fetch state:
-  //   - stored account "i6@wbox.pro" present (is_current=false — live token differs)
+  //   - stored account "i6@example.com" present (is_current=false — live token differs)
   //   - any_current=false — no stored account matches the live session token
-  //   - synthetic_name derived from ~/.claude.json emailAddress = "i6@wbox.pro"
+  //   - synthetic_name derived from ~/.claude.json emailAddress = "i6@example.com"
   // BUG-218: fetch_all_quota() does results.insert(0, synthetic) unconditionally —
-  //   when synthetic_name == "i6@wbox.pro" which already exists, count becomes 2.
+  //   when synthetic_name == "i6@example.com" which already exists, count becomes 2.
   let stored_row = AccountQuota
   {
     fallback_reason : None,
     touched_at_secs : None,
-    name                 : "i6@wbox.pro".to_string(),
+    name                 : "i6@example.com".to_string(),
     is_current           : false,
     is_active            : false,
     is_occupied_elsewhere : false,
@@ -297,7 +297,7 @@ fn test_mre_bug218_fetch_all_quota_no_duplicate_synthetic_row()
   {
     fallback_reason : None,
     touched_at_secs : None,
-    name                 : "i6@wbox.pro".to_string(),
+    name                 : "i6@example.com".to_string(),
     is_current           : true,
     is_active            : false,
     is_occupied_elsewhere : false,
@@ -326,8 +326,8 @@ fn test_mre_bug218_fetch_all_quota_no_duplicate_synthetic_row()
   inject_synthetic_if_new( &mut results, synthetic );
 
   // Invariant: at most one row per unique account name.
-  // FAILS before fix: count == 2 (duplicate row for "i6@wbox.pro").
-  let i6_count = results.iter().filter( |r| r.name == "i6@wbox.pro" ).count();
+  // FAILS before fix: count == 2 (duplicate row for "i6@example.com").
+  let i6_count = results.iter().filter( |r| r.name == "i6@example.com" ).count();
   assert_eq!(
     i6_count, 1,
     "BUG-218: inject_synthetic creates duplicate — missing collision guard; count={i6_count}",

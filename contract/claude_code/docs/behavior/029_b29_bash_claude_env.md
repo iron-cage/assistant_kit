@@ -37,7 +37,7 @@ Every `rtk`/bash subprocess spawned by a Bash tool call inherits the **complete 
 | Node/NVM | `NVM_BIN`, `NVM_DIR`, `NVM_INC`, `NODE_OPTIONS=--max-old-space-size=8192`, `UV_THREADPOOL_SIZE=128` |
 | Desktop/system | `DISPLAY`, `DBUS_SESSION_BUS_ADDRESS`, `XDG_*`, `GNOME_*`, `TERM`, `SHELL`, `HOME`, `USER` |
 | Git | `GIT_EDITOR=true`, `GIT_MERGE_AUTOEDIT=no` |
-| RTK | `_=/home/user1/.cargo/bin/rtk` (last command = rtk binary) |
+| RTK | `_=/home/alice/.cargo/bin/rtk` (last command = rtk binary) |
 
 `CLAUDECODE=1` is the canonical signal that code is executing within a Claude Code tool call environment.
 

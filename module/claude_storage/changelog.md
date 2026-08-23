@@ -99,7 +99,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Finding #011: Partial UUID matching for .show session_id parameter** (2025-12-06)
   - Session lookup in .show and .export commands only supported exact UUID matching, not prefix matching
-  - Users had to type full 36-character UUID instead of convenient 8-character prefix (e.g., "79f86582" vs "79f86582-1435-442c-935a-13f8d874918a")
+  - Users had to type full 36-character UUID instead of convenient 8-character prefix (e.g., "feed0002" vs "feed0002-0000-4000-8000-000000000002")
   - Root cause: Implementation only checked `s.id() == session_id` without checking `s.id().starts_with(session_id)`
   - Fix applied to both format_session_output (line 892) and export routine (line 1448) with Fix(issue-011) comments
   - Added comprehensive test test_show_partial_uuid_matching with 5-section bug documentation

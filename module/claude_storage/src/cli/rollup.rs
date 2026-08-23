@@ -126,7 +126,6 @@ fn default_columns( group_by : GroupKey ) -> Vec< ColumnKey >
 ///
 /// Does not panic — both `usize` conversions below are only reached after
 /// the negative-value branches already returned.
-#[ allow( clippy::needless_pass_by_value ) ]
 #[ inline ]
 pub fn rollup_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   -> core::result::Result< OutputData, ErrorData >
@@ -534,13 +533,11 @@ fn format_tokens( n : u64 ) -> String
   }
   else if n < 1_000_000
   {
-    #[ allow( clippy::cast_precision_loss ) ]
     let k = n as f64 / 1_000.0;
     format!( "{k:.1}k" )
   }
   else
   {
-    #[ allow( clippy::cast_precision_loss ) ]
     let m = n as f64 / 1_000_000.0;
     format!( "{m:.1}M" )
   }

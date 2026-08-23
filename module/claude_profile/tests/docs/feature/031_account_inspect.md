@@ -91,7 +91,7 @@ Feature behavioral requirement test cases for `docs/feature/031_account_inspect.
 - **Then:** Output contains the `Account:`, `Status:`, `Tagged ID:`, and `UUID:` labels; `Tagged ID:` is not `N/A` (endpoint 002 succeeded).
 - **Exit:** 0
 - **Live:** yes
-- **Note:** The cited test hits the real Anthropic API, so it cannot assert specific fabricated values like `tagged_id: "user_01abc"` or `Account: alice@acme.com` — it only checks label presence and that `Tagged ID` isn't the `N/A` fallback. Excluded from Docker CI by the `!test(lim_it)` nextest filter; skips (returns early) when no live token is available.
+- **Note:** The cited test hits the real Anthropic API, so it cannot assert specific fabricated values like `tagged_id: "user_01abc"` or `Account: alice@acme.com` — it only checks label presence and that `Tagged ID` isn't the `N/A` fallback. Runs in-container against the live API (`~/.claude` is plugin-mounted); nextest puts it in the `live-api-serial` test group with exponential retries, and it fails loudly rather than skipping when the token is missing or the API is unreachable.
 - **Source fn:** `lim_it_ai14_identity_fields_from_endpoint_002`
 - **Source:** [031_account_inspect.md AC-01](../../../docs/feature/031_account_inspect.md)
 
@@ -104,7 +104,7 @@ Feature behavioral requirement test cases for `docs/feature/031_account_inspect.
 - **Then:** Output shows a `Memberships:` line whose value parses as a number.
 - **Exit:** 0
 - **Live:** yes
-- **Note:** The cited test cannot control or predict the live account's real membership count or per-membership fields — it only asserts the `Memberships:` label is present and its value is numeric, not the specific `[0]`/`[1]` index/billing_type/has_max/capabilities values this FT case originally claimed. Excluded from Docker CI (`!test(lim_it)`); skips when no live token is available.
+- **Note:** The cited test cannot control or predict the live account's real membership count or per-membership fields — it only asserts the `Memberships:` label is present and its value is numeric, not the specific `[0]`/`[1]` index/billing_type/has_max/capabilities values this FT case originally claimed. Runs in-container against the live API (`~/.claude` is plugin-mounted); nextest puts it in the `live-api-serial` test group with exponential retries, and it fails loudly rather than skipping when the token is missing or the API is unreachable.
 - **Source fn:** `lim_it_ai15_memberships_shown_with_count`
 - **Source:** [031_account_inspect.md AC-02](../../../docs/feature/031_account_inspect.md)
 
@@ -117,7 +117,7 @@ Feature behavioral requirement test cases for `docs/feature/031_account_inspect.
 - **Then:** If the parsed `Memberships:` count is greater than 1, output contains exactly one `← selected` marker.
 - **Exit:** 0
 - **Live:** yes
-- **Note:** The cited test branches on the live account's actual membership count at runtime — it cannot force a specific two-membership `[0]=none`/`[1]=stripe_subscription+claude_max` scenario, and does not check which specific index carries the marker or its `billing_type`/`has_max` values. The controlled priority-selection scenario this FT case describes is verified precisely by the offline unit test `mre_bug237_multi_membership_selects_stripe_max_over_none` in `claude_quota/src/lib.rs` instead (`billing_type="stripe_subscription"`, `has_max=true` selected over `billing_type="none"`). Excluded from Docker CI (`!test(lim_it)`); skips when no live token is available.
+- **Note:** The cited test branches on the live account's actual membership count at runtime — it cannot force a specific two-membership `[0]=none`/`[1]=stripe_subscription+claude_max` scenario, and does not check which specific index carries the marker or its `billing_type`/`has_max` values. The controlled priority-selection scenario this FT case describes is verified precisely by the offline unit test `mre_bug237_multi_membership_selects_stripe_max_over_none` in `claude_quota/src/lib.rs` instead (`billing_type="stripe_subscription"`, `has_max=true` selected over `billing_type="none"`). Runs in-container against the live API (`~/.claude` is plugin-mounted); nextest puts it in the `live-api-serial` test group with exponential retries, and it fails loudly rather than skipping when the token is missing or the API is unreachable.
 - **Source fn:** `lim_it_ai16_selected_marker_multi_membership` (live, structural marker-count check); `mre_bug237_multi_membership_selects_stripe_max_over_none` (offline unit test, in `claude_quota/src/lib.rs`, exact priority scenario)
 - **Source:** [031_account_inspect.md AC-03, AC-06](../../../docs/feature/031_account_inspect.md)
 
@@ -130,7 +130,7 @@ Feature behavioral requirement test cases for `docs/feature/031_account_inspect.
 - **Then:** If the parsed `Memberships:` count is 1 or fewer, output contains zero `← selected` markers.
 - **Exit:** 0
 - **Live:** yes
-- **Note:** `lim_it_ai16_selected_marker_multi_membership` is the same single test function cited for FT-03 — it branches at runtime on whichever count the live account actually has, rather than running FT-03's and FT-04's scenarios as two independently-controlled fixtures. The controlled single-membership scenario this FT case describes is verified precisely by the offline unit test `mre_bug237_single_membership_fallback_unchanged` in `claude_quota/src/lib.rs` instead. Excluded from Docker CI (`!test(lim_it)`); skips when no live token is available.
+- **Note:** `lim_it_ai16_selected_marker_multi_membership` is the same single test function cited for FT-03 — it branches at runtime on whichever count the live account actually has, rather than running FT-03's and FT-04's scenarios as two independently-controlled fixtures. The controlled single-membership scenario this FT case describes is verified precisely by the offline unit test `mre_bug237_single_membership_fallback_unchanged` in `claude_quota/src/lib.rs` instead. Runs in-container against the live API (`~/.claude` is plugin-mounted); nextest puts it in the `live-api-serial` test group with exponential retries, and it fails loudly rather than skipping when the token is missing or the API is unreachable.
 - **Source fn:** `lim_it_ai16_selected_marker_multi_membership` (live, structural marker-count check); `mre_bug237_single_membership_fallback_unchanged` (offline unit test, in `claude_quota/src/lib.rs`)
 - **Source:** [031_account_inspect.md AC-04](../../../docs/feature/031_account_inspect.md)
 
@@ -143,7 +143,7 @@ Feature behavioral requirement test cases for `docs/feature/031_account_inspect.
 - **Then:** Output contains the `Org:`, `Org UUID:`, `Org Role:`, `Workspace UUID:`, and `Workspace:` labels.
 - **Exit:** 0
 - **Live:** yes
-- **Note:** The cited test only checks that all five labels are present — it does not assert specific values (`alice's Org`, `admin`, etc.) or the `(none)` rendering for null workspace fields, since it cannot control what the real live org/workspace data is. Excluded from Docker CI (`!test(lim_it)`); skips when no live token is available.
+- **Note:** The cited test only checks that all five labels are present — it does not assert specific values (`alice's Org`, `admin`, etc.) or the `(none)` rendering for null workspace fields, since it cannot control what the real live org/workspace data is. Runs in-container against the live API (`~/.claude` is plugin-mounted); nextest puts it in the `live-api-serial` test group with exponential retries, and it fails loudly rather than skipping when the token is missing or the API is unreachable.
 - **Source fn:** `lim_it_ai17_org_fields_from_endpoint_005`
 - **Source:** [031_account_inspect.md AC-05](../../../docs/feature/031_account_inspect.md)
 
@@ -156,7 +156,7 @@ Feature behavioral requirement test cases for `docs/feature/031_account_inspect.
 - **Then:** Output contains the `Billing:` and `Has Max:` labels; `Billing:` is not the `N/A`-padded placeholder (`"Billing:         N/A"`).
 - **Exit:** 0
 - **Live:** yes
-- **Note:** The cited test cannot control the live account's real billing type, so it does not assert `Billing: stripe_subscription` or `Has Max: yes` specifically — only label presence and non-`N/A`. The controlled priority-selection scenario (index 1's `stripe_subscription+claude_max` beating index 0's `none`) is verified precisely by the offline unit test `mre_bug237_multi_membership_selects_stripe_max_over_none` in `claude_quota/src/lib.rs`. Excluded from Docker CI (`!test(lim_it)`); skips when no live token is available.
+- **Note:** The cited test cannot control the live account's real billing type, so it does not assert `Billing: stripe_subscription` or `Has Max: yes` specifically — only label presence and non-`N/A`. The controlled priority-selection scenario (index 1's `stripe_subscription+claude_max` beating index 0's `none`) is verified precisely by the offline unit test `mre_bug237_multi_membership_selects_stripe_max_over_none` in `claude_quota/src/lib.rs`. Runs in-container against the live API (`~/.claude` is plugin-mounted); nextest puts it in the `live-api-serial` test group with exponential retries, and it fails loudly rather than skipping when the token is missing or the API is unreachable.
 - **Source fn:** `lim_it_ai18_billing_from_selected_membership` (live, label presence); `mre_bug237_multi_membership_selects_stripe_max_over_none` (offline unit test, in `claude_quota/src/lib.rs`, exact priority scenario)
 - **Source:** [031_account_inspect.md AC-06](../../../docs/feature/031_account_inspect.md)
 
@@ -204,7 +204,7 @@ Feature behavioral requirement test cases for `docs/feature/031_account_inspect.
 - **Then:** `attempt_expired_token_refresh()` is attempted (per the `is_expired && refresh != 0` guard in `src/commands/account_inspect.rs`); it fails; the command does NOT panic or exit non-zero — `Status:` still shows `expired`. Exit 0.
 - **Exit:** 0
 - **Live:** yes
-- **Note:** This FT case previously claimed the refresh *succeeds* and `Status:` becomes `valid` — the opposite of what the cited test actually verifies. The cited test deliberately uses a fake token specifically so the refresh **fails**, to confirm graceful degradation (no panic, exit 0, status stays `expired`) rather than a successful refresh round-trip. Excluded from Docker CI (`!test(lim_it)`); skips when no live token is available.
+- **Note:** This FT case previously claimed the refresh *succeeds* and `Status:` becomes `valid` — the opposite of what the cited test actually verifies. The cited test deliberately uses a fake token specifically so the refresh **fails**, to confirm graceful degradation (no panic, exit 0, status stays `expired`) rather than a successful refresh round-trip. Runs in-container against the live API (`~/.claude` is plugin-mounted); nextest puts it in the `live-api-serial` test group with exponential retries, and it fails loudly rather than skipping when the token is missing or the API is unreachable.
 - **Source fn:** `lim_it_ai20_refresh_attempted_on_expired_token`
 - **Source:** [031_account_inspect.md AC-10](../../../docs/feature/031_account_inspect.md)
 
@@ -242,7 +242,7 @@ Feature behavioral requirement test cases for `docs/feature/031_account_inspect.
 - **Then:** `ai11` — JSON output contains the top-level field names `account`, `status`, `expires_in_secs`, `tagged_id`, `uuid`, `email_address`, `full_name`, `display_name`, `memberships`, `billing_type`, `has_max`, `capabilities`, `rate_limit_tier`, `session_5h_pct`/`_reset_ts`, `weekly_7d_pct`/`_reset_ts`, `sonnet_7d_pct`/`_reset_ts`, `organization_name`, `organization_uuid`, `organization_role`, `workspace_uuid`, `workspace_name`, `data_source`. `ai12` — `data_source` is `"snapshot"` when all endpoints fail. `lim_it_ai19` — `data_source` is `"live"` or `"partial_snapshot"` and `status` is `"valid"` with a real token. Exit 0 for all three; exit 1 for `ai05`/`ai30`.
 - **Exit:** 0 / 1
 - **Live:** partial (`lim_it_ai19` only)
-- **Note:** This FT case previously claimed a controlled two-membership scenario with per-element `index`/`billing_type`/`has_max`/`capabilities`/`selected` keys and `"selected": true`/`false` values — no cited test verifies the `memberships` array's internal per-element structure or a specific `selected` boolean; `ai11` only confirms the top-level field NAMES are present in the JSON schema (the account here has no memberships data at all, since it has no token). `lim_it_ai19` is excluded from Docker CI (`!test(lim_it)`) and skips when no live token is available.
+- **Note:** This FT case previously claimed a controlled two-membership scenario with per-element `index`/`billing_type`/`has_max`/`capabilities`/`selected` keys and `"selected": true`/`false` values — no cited test verifies the `memberships` array's internal per-element structure or a specific `selected` boolean; `ai11` only confirms the top-level field NAMES are present in the JSON schema (the account here has no memberships data at all, since it has no token). `lim_it_ai19` runs in-container against the live API (`~/.claude` is plugin-mounted); nextest puts it in the `live-api-serial` test group with exponential retries, and it fails loudly rather than skipping when the token is missing or the API is unreachable.
 - **Source fn:** `ai11_json_all_required_fields`, `ai12_json_data_source_snapshot_when_all_fail`, `ai05_format_invalid_exits_1`, `ai30_format_case_sensitive_uppercase_exits_1`, `lim_it_ai19_valid_token_live_data_source_json`
 - **Source:** [031_account_inspect.md AC-13](../../../docs/feature/031_account_inspect.md)
 
@@ -255,7 +255,7 @@ Feature behavioral requirement test cases for `docs/feature/031_account_inspect.
 - **Then:** `ai13` — stderr contains at least one ` · `-formatted trace line, including a status line. `lim_it_ai21` — stderr contains at least three ` · `-formatted trace lines (one per endpoint).
 - **Exit:** 0
 - **Live:** partial (`lim_it_ai21` only)
-- **Note:** The "at least three, one per endpoint, each showing URL and HTTP status" claim is verified only by the live test `lim_it_ai21` (which counts `>= 3` lines containing ` · `, without checking each shows a URL/HTTP-status pair specifically); the offline `ai13` only checks for a single generic trace-format line plus the word "status". `lim_it_ai21` is excluded from Docker CI (`!test(lim_it)`) and skips when no live token is available.
+- **Note:** The "at least three, one per endpoint, each showing URL and HTTP status" claim is verified only by the live test `lim_it_ai21` (which counts `>= 3` lines containing ` · `, without checking each shows a URL/HTTP-status pair specifically); the offline `ai13` only checks for a single generic trace-format line plus the word "status". `lim_it_ai21` runs in-container against the live API (`~/.claude` is plugin-mounted); nextest puts it in the `live-api-serial` test group with exponential retries, and it fails loudly rather than skipping when the token is missing or the API is unreachable.
 - **Source fn:** `ai13_trace_emits_lines_to_stderr`, `lim_it_ai21_trace_endpoint_lines_on_live_account`
 - **Source:** [031_account_inspect.md AC-14](../../../docs/feature/031_account_inspect.md)
 
@@ -390,7 +390,7 @@ Feature behavioral requirement test cases for `docs/feature/031_account_inspect.
 - **Then (`ai34`):** Output contains exactly `Robert Smith (Bob)`.
 - **Exit:** 0
 - **Live:** partial (`lim_it_ai22` only)
-- **Note:** This FT case originally described a single live-endpoint-002-success scenario with one fixed set of values (`Alice Smith`/`Alice`/`alice@acme.com`) verified by all three cited functions together. In fact `ai33` and `ai34` exercise the offline **snapshot fallback** path (endpoint 002 unreachable, no token) — the opposite premise — and `ai34` uses different literal values (`Robert Smith`/`Bob`/`bob@test.com`) to isolate the `"FullName (DisplayName)"` format specifically. `lim_it_ai22` is the only citation that actually reaches live endpoint 002, and it only checks label presence and absence of `(snapshot)`, not the specific `Alice Smith (Alice)` value. Excluded from Docker CI (`!test(lim_it)`) for `lim_it_ai22`; skips when no live token is available.
+- **Note:** This FT case originally described a single live-endpoint-002-success scenario with one fixed set of values (`Alice Smith`/`Alice`/`alice@acme.com`) verified by all three cited functions together. In fact `ai33` and `ai34` exercise the offline **snapshot fallback** path (endpoint 002 unreachable, no token) — the opposite premise — and `ai34` uses different literal values (`Robert Smith`/`Bob`/`bob@test.com`) to isolate the `"FullName (DisplayName)"` format specifically. `lim_it_ai22` is the only citation that actually reaches live endpoint 002, and it only checks label presence and absence of `(snapshot)`, not the specific `Alice Smith (Alice)` value. `lim_it_ai22` runs in-container against the live API (`~/.claude` is plugin-mounted); nextest puts it in the `live-api-serial` test group with exponential retries, and it fails loudly rather than skipping when the token is missing or the API is unreachable.
 - **Source fn:** `lim_it_ai22_name_and_email_from_endpoint_002`, `ai33_name_email_from_snapshot`, `ai34_name_shows_display_name_when_different`
 - **Source:** [031_account_inspect.md AC-20](../../../docs/feature/031_account_inspect.md)
 
@@ -414,7 +414,7 @@ Feature behavioral requirement test cases for `docs/feature/031_account_inspect.
 - **Then:** Output contains `Capabilities:` with a `[`-bracketed value, and the `Tier:` label.
 - **Exit:** 0
 - **Live:** yes
-- **Note:** The cited test cannot control the live account's real capabilities/tier, so it does not assert the specific `[claude_max, chat]` / `default_claude_max_20x` values this FT case originally claimed — only that `Capabilities:` uses array-bracket formatting and `Tier:` is present. Excluded from Docker CI (`!test(lim_it)`); skips when no live token is available.
+- **Note:** The cited test cannot control the live account's real capabilities/tier, so it does not assert the specific `[claude_max, chat]` / `default_claude_max_20x` values this FT case originally claimed — only that `Capabilities:` uses array-bracket formatting and `Tier:` is present. Runs in-container against the live API (`~/.claude` is plugin-mounted); nextest puts it in the `live-api-serial` test group with exponential retries, and it fails loudly rather than skipping when the token is missing or the API is unreachable.
 - **Source fn:** `lim_it_ai23_capabilities_and_tier_from_membership`
 - **Source:** [031_account_inspect.md AC-21](../../../docs/feature/031_account_inspect.md)
 
@@ -427,7 +427,7 @@ Feature behavioral requirement test cases for `docs/feature/031_account_inspect.
 - **Then:** Output contains a `Session (5h):` line containing at least one digit.
 - **Exit:** 0
 - **Live:** yes
-- **Note:** The cited test cannot control the live account's real usage figures, so it does not assert the specific `45%`/`33%`/`53%` values this FT case originally claimed, and only checks the `Session (5h):` line — it does not check `Weekly (7d):` or `Sonnet (7d):` at all. Excluded from Docker CI (`!test(lim_it)`); skips when no live token is available.
+- **Note:** The cited test cannot control the live account's real usage figures, so it does not assert the specific `45%`/`33%`/`53%` values this FT case originally claimed, and only checks the `Session (5h):` line — it does not check `Weekly (7d):` or `Sonnet (7d):` at all. Runs in-container against the live API (`~/.claude` is plugin-mounted); nextest puts it in the `live-api-serial` test group with exponential retries, and it fails loudly rather than skipping when the token is missing or the API is unreachable.
 - **Source fn:** `lim_it_ai24_usage_data_from_endpoint_001`
 - **Source:** [031_account_inspect.md AC-22](../../../docs/feature/031_account_inspect.md)
 
@@ -464,6 +464,6 @@ Feature behavioral requirement test cases for `docs/feature/031_account_inspect.
 - **Then:** `ai35` — `account_inspect.rs` does not contain the substring `"userinfo"` anywhere, i.e. the removed `/api/oauth/userinfo` endpoint cannot be referenced at all. `lim_it_ai14` — `Tagged ID:`/`UUID:` labels present and `Tagged ID:` is not `N/A` (endpoint 002 succeeded), but the test does not compare the displayed values against a separately-captured endpoint 002 response.
 - **Exit:** 0
 - **Live:** partial (`lim_it_ai14` only)
-- **Note:** The `ai35` structural check is a stronger guarantee than a runtime "no HTTP request was made" assertion — the code literally cannot reference the removed endpoint string. `lim_it_ai14`'s "values match endpoint 002 response" is not literally verified (there is no independent second capture of endpoint 002's response to compare against); it only confirms the fields are populated from *some* live source, not synthesized. `lim_it_ai14` is excluded from Docker CI (`!test(lim_it)`) and skips when no live token is available.
+- **Note:** The `ai35` structural check is a stronger guarantee than a runtime "no HTTP request was made" assertion — the code literally cannot reference the removed endpoint string. `lim_it_ai14`'s "values match endpoint 002 response" is not literally verified (there is no independent second capture of endpoint 002's response to compare against); it only confirms the fields are populated from *some* live source, not synthesized. `lim_it_ai14` runs in-container against the live API (`~/.claude` is plugin-mounted); nextest puts it in the `live-api-serial` test group with exponential retries, and it fails loudly rather than skipping when the token is missing or the API is unreachable.
 - **Source fn:** `ai35_no_userinfo_endpoint_reference`, `lim_it_ai14_identity_fields_from_endpoint_002`
 - **Source:** [031_account_inspect.md AC-25](../../../docs/feature/031_account_inspect.md)

@@ -36,10 +36,9 @@ use super::scope::{ validate_scope, resolve_scoped_projects };
 /// # Panics
 ///
 /// Does not panic — `min_entries` is validated non-negative before conversion.
-#[ allow( clippy::too_many_lines ) ]
 // CLI routine handler processes many parameters and filter branches — extraction
 // would obscure the command's logic without reducing complexity.
-#[ allow( clippy::needless_pass_by_value ) ]
+#[ allow( clippy::too_many_lines ) ]
 #[ inline ]
 pub fn list_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   -> core::result::Result< OutputData, ErrorData >

@@ -38,7 +38,7 @@ use tempfile::TempDir;
 fn ec_1_type_uuid_accepted()
 {
   let root = TempDir::new().unwrap();
-  let uuid = "8d795a1c-c81d-4010-8d29-b4e678272419";
+  let uuid = "feed0001-0000-4000-8000-000000000001";
   common::write_test_session( root.path(), uuid, "sess", 2 );
 
   let out = common::clg_cmd()
@@ -113,7 +113,7 @@ fn ec_2_type_path_accepted()
 fn ec_3_type_all_accepted()
 {
   let root = TempDir::new().unwrap();
-  let uuid = "8d795a1c-c81d-4010-8d29-b4e678272419";
+  let uuid = "feed0001-0000-4000-8000-000000000001";
   common::write_test_session( root.path(), uuid, "sess-uuid", 2 );
   common::write_path_project_session(
     root.path(),
@@ -224,7 +224,7 @@ fn ec_5_type_both_rejected()
 fn ec_6_type_omitted_defaults_to_all()
 {
   let root = TempDir::new().unwrap();
-  let uuid = "8d795a1c-c81d-4010-8d29-b4e678272419";
+  let uuid = "feed0001-0000-4000-8000-000000000001";
   common::write_test_session( root.path(), uuid, "sess-uuid", 2 );
   common::write_path_project_session(
     root.path(),
@@ -273,7 +273,7 @@ fn ec_6_type_omitted_defaults_to_all()
 fn ec_7_type_uuid_returns_only_uuid_projects()
 {
   let root = TempDir::new().unwrap();
-  let uuid = "8d795a1c-c81d-4010-8d29-b4e678272419";
+  let uuid = "feed0001-0000-4000-8000-000000000001";
   common::write_test_session( root.path(), uuid, "sess-uuid", 2 );
   let encoded = common::write_path_project_session(
     root.path(),

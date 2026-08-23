@@ -129,7 +129,11 @@ fn format_reset_countdown( resets_at : Option< &String > ) -> String
 // ── Text renderer ─────────────────────────────────────────────────────────────
 
 /// Render `.account.inspect` output as human-readable text.
+// One emit block per inspect section (identity, capabilities, quota, org) — the flat body is
+// the report layout.
 #[ allow( clippy::too_many_lines ) ]
+// Every line is a fixed-width `{:<17}` label plus value; write! would add an unwrap at each of
+// the ~30 call sites for a String write that cannot fail.
 #[ allow( clippy::format_push_string ) ]
 pub( crate ) fn format_inspect_text(
   name       : &str,
@@ -250,6 +254,8 @@ pub( crate ) fn format_inspect_text(
   {
     if let Some( ref p ) = u.five_hour
     {
+      // utilization is a 0.0..=1.0 fraction, so the rounded product is always 0..=100 — neither
+      // truncation nor sign loss is reachable.
       #[ allow( clippy::cast_possible_truncation, clippy::cast_sign_loss ) ]
       let pct = ( p.utilization * 100.0 ).round() as u64;
       let reset = format_reset_countdown( p.resets_at.as_ref() );
@@ -257,6 +263,8 @@ pub( crate ) fn format_inspect_text(
     }
     if let Some( ref p ) = u.seven_day
     {
+      // utilization is a 0.0..=1.0 fraction, so the rounded product is always 0..=100 — neither
+      // truncation nor sign loss is reachable.
       #[ allow( clippy::cast_possible_truncation, clippy::cast_sign_loss ) ]
       let pct = ( p.utilization * 100.0 ).round() as u64;
       let reset = format_reset_countdown( p.resets_at.as_ref() );
@@ -264,6 +272,8 @@ pub( crate ) fn format_inspect_text(
     }
     if let Some( ref p ) = u.seven_day_sonnet
     {
+      // utilization is a 0.0..=1.0 fraction, so the rounded product is always 0..=100 — neither
+      // truncation nor sign loss is reachable.
       #[ allow( clippy::cast_possible_truncation, clippy::cast_sign_loss ) ]
       let pct = ( p.utilization * 100.0 ).round() as u64;
       let reset = format_reset_countdown( p.resets_at.as_ref() );
@@ -303,6 +313,8 @@ pub( crate ) fn format_inspect_text(
 // ── JSON renderer ─────────────────────────────────────────────────────────────
 
 /// Render `.account.inspect` output as compact JSON.
+// Takes the three endpoint Results plus the snapshot fallback and emits one JSON key per field;
+// bundling the parameters into a struct would just move the same fan-in to the call site.
 #[ allow( clippy::too_many_arguments, clippy::too_many_lines ) ]
 pub( crate ) fn format_inspect_json(
   name       : &str,

@@ -26,7 +26,7 @@ Project identifier for scoping operations to a specific project.
 **Accepted formats:**
 - Absolute path: `project::/home/alice/projects/my-app`
 - Path-encoded ID: `project::-home-alice-projects-my-app`
-- UUID: `project::8d795a1c-c81d-4010-8d29-b4e678272419`
+- UUID: `project::feed0001-0000-4000-8000-000000000001`
 - `Path(...)` form from `.list` (deprecated): `project::Path("/home/alice/projects/my-app")`
 
 **Examples:**
@@ -34,7 +34,7 @@ Project identifier for scoping operations to a specific project.
 # All equivalent — identify the same project
 project::/home/alice/projects/my-app
 project::-home-alice-projects-my-app
-project::8d795a1c-c81d-4010-8d29-b4e678272419
+project::feed0001-0000-4000-8000-000000000001
 
 # Invalid
 project::               # Empty path error

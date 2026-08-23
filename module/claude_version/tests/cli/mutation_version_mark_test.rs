@@ -2,6 +2,12 @@
 //!
 //! Covers feature spec `010_custom_markers.md` and command spec `17_version_mark.md`.
 //!
+//! Also covers the runtime-file spec `tests/docs/runtime_file/004_version_markers.md`
+//! (RF-1 through RF-4) — `version-markers.json` path correctness, creation, and
+//! durability. RF cases live here rather than in a separate file because this is
+//! the module that owns every `.version.mark` write path and the `markers_path()`
+//! helper that locates the file under an isolated `HOME`.
+//!
 //! | TC    | Description                                            | P/N | Exit |
 //! |-------|--------------------------------------------------------|-----|------|
 //! | IT-1  | Create new marker → file written with entry            | P   | 0    |
@@ -29,6 +35,8 @@
 //! | IT-18 | Malformed `version-markers.json` → graceful, exit 0   | P   | 0    |
 //! | IT-19 | `name::` (empty) → exit 1                              | N   | 1    |
 //! | IT-20 | `name::` with 33-char value → length exceeded, exit 1  | N   | 1    |
+//! | RF-2  | Markers file created when absent, carries `markers` array | P | 0  |
+//! | RF-3  | Absent markers file → `.version.list` still exits 0    | P   | 0    |
 
 use tempfile::TempDir;
 
@@ -445,4 +453,92 @@ fn it20_mark_name_too_long_exits_1()
     &[],
   );
   assert_exit( &out, 1 );
+}
+
+// ─── RF-2: markers file created when absent, carrying a "markers" array ──────
+//
+// Spec: `tests/docs/runtime_file/004_version_markers.md` — RF-2.
+//
+// Distinct from IT-1 (`it01_mark_create_new`), which asserts only that the name
+// and value substrings landed somewhere in the file. RF-2 additionally pins the
+// on-disk container shape — a JSON object carrying a `"markers"` array — which is
+// the structure `load_custom_markers()` must be able to parse back out. A writer
+// that emitted a bare array, or a differently-named key, would satisfy IT-1 and
+// still break every reader.
+
+#[ test ]
+fn rf004_2_mark_creates_markers_file_with_markers_array()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  assert!(
+    !markers_path( dir.path() ).exists(),
+    "precondition: markers file must be absent before the first .version.mark call"
+  );
+
+  let out = run_clv_with_env(
+    &[ ".version.mark", "name::my-pin", "version::2.1.220" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+
+  assert!(
+    markers_path( dir.path() ).exists(),
+    "markers file must exist at $HOME/.claude/version-markers.json after the call"
+  );
+
+  let contents = std::fs::read_to_string( markers_path( dir.path() ) ).unwrap();
+  assert!(
+    contents.trim_start().starts_with( '{' ),
+    "markers file must be a JSON object, not a bare array: {contents}"
+  );
+  assert!(
+    contents.contains( "\"markers\"" ),
+    "markers file must carry a \"markers\" array: {contents}"
+  );
+  assert!(
+    contents.contains( "my-pin" ),
+    "markers array must contain the created marker name: {contents}"
+  );
+}
+
+// ─── RF-3: absent markers file is safe — .version.list still exits 0 ─────────
+//
+// Spec: `tests/docs/runtime_file/004_version_markers.md` — RF-3 (durability:
+// safe-to-lose). `load_custom_markers()` returns an empty vector for both a
+// missing and an unparseable file; this is the file-absent half of that contract,
+// IT-18 (`it18_mark_malformed_json_graceful`) is the malformed-content half.
+//
+// Unlike `ft010_2_remove_marker_absent_from_list`, which reaches an empty marker
+// set by writing a file and then unsetting its entry, no `version-markers.json`
+// ever exists here — the read path is exercised with the file genuinely missing.
+
+#[ test ]
+fn rf004_3_list_succeeds_when_markers_file_absent()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  assert!(
+    !markers_path( dir.path() ).exists(),
+    "precondition: no version-markers.json may exist for this case"
+  );
+
+  let out = run_clv_with_env( &[ ".version.list" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+
+  let text = stdout( &out );
+  for alias in [ "stable", "latest" ]
+  {
+    assert!(
+      text.contains( alias ),
+      ".version.list must show built-in alias {alias} with no markers file present: {text}"
+    );
+  }
+
+  assert!(
+    !markers_path( dir.path() ).exists(),
+    ".version.list must not create the markers file as a side effect"
+  );
 }

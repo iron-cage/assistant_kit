@@ -19,6 +19,9 @@
 #[ cfg( feature = "enabled" ) ]
 mod generated
 {
+  // Body is build.rs output included verbatim — it carries no docs and emits long unseparated
+  // PHF hash literals. Scoped to this module so the file-wide attrs the workspace forbids
+  // (dep/l1_imp.rulebook.md § Strict Workspace Lint Inheritance) are not needed.
   #![ allow( missing_docs ) ]
   #![ allow( clippy::unreadable_literal ) ]
   include!( concat!( env!( "OUT_DIR" ), "/static_commands.rs" ) );
@@ -56,6 +59,7 @@ mod cli
   }
 
   /// Stub for `.claude` and `.claude.help` — subprocess routing is out of scope for `ast`.
+  // Always-Ok stub, but the Result return is fixed by unilang's CommandRoutine signature.
   #[ allow( clippy::unnecessary_wraps ) ]
   fn claude_stub_routine( _cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
   {

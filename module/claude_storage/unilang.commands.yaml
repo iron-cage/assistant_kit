@@ -930,7 +930,7 @@
     - ".session.path"
     - ".session.path latest::1"
     - ".session.path path::/home/user/project"
-    - ".session.path path::/home/user/project session::e36d752a-341e-5db1-94c5-c8b91cccbfff"
+    - ".session.path path::/home/user/project session::f3b6d066-be8c-5b43-8795-e0266def2440"
     - ".session.path path::/home/user/project topic::review"
   auto_help_enabled: true
 
@@ -1216,7 +1216,7 @@
 
   examples:
     - ".cost"
-    - ".cost session_ids::3cf8fab1"
+    - ".cost session_ids::feed0011"
     - ".cost session_ids::aaaa1111,bbbb2222 agents::0"
     - ".cost path::/data/repos/myproject"
   auto_help_enabled: true

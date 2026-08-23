@@ -5,9 +5,11 @@
 The claude_storage_core test suite covers the core storage library: JSON parsing, path
 encoding/decoding, session filtering, content search, export, token-usage rollup, session-family
 discovery, per-conversation cost accounting, topic→UUIDv5 session-ID derivation, and canonical
-path resolution. The suite
-is split between integration tests that exercise real `~/.claude/` storage and unit tests that
-run fully in-process. Fourteen of the twenty-seven files are bug reproducers — each documents a parse,
+path resolution. Every test is
+hermetic: storage-facing tests build their own `TempDir` tree — shared builders live in
+`storage_fixture/` — and environment-facing tests override `HOME`/`CLAUDE_HOME` to a temp
+directory, so no test reads the developer's real `~/.claude/`.
+Fourteen of the twenty-seven files are bug reproducers — each documents a parse,
 encoding, or storage defect found in production data with 5-section root-cause documentation.
 `status_global_stats_fast_bug.rs` covers both issue-015 (performance) and issue-018 (agent
 session discovery for Claude Code v2.x format) with corner case tests for subagents/ traversal.
@@ -47,6 +49,9 @@ tests/
 ├── stats_cwd_field_test.rs                # Feature tests (Task 510): SessionStats.cwd populated first-entry-wins
 ├── stats_malformed_line_bug.rs            # Bug Reproducer (BUG-489): stats() hard-fail on malformed line
 ├── status_global_stats_fast_bug.rs        # Bug Reproducer (issue-015): global_stats() performance
+├── storage_fixture/                       # Shared TempDir storage builders for export/search/filtering
+│   ├── readme.md                          # Module responsibility table
+│   └── mod.rs                             # Temp storage trees + JSONL entry line builders
 ├── string_matcher.rs                      # StringMatcher unit tests (case-insensitive matching)
 └── underscore_encoding_compatibility.rs   # Bug reproducer: underscore vs hyphen encoding mismatch
 ```
@@ -80,6 +85,7 @@ tests/
 | `stats_cwd_field_test.rs` | Task 510: SessionStats.cwd populated first-entry-wins from JSONL cwd field |
 | `stats_malformed_line_bug.rs` | Reproduce and verify fix for stats() hard-fail on malformed JSONL line |
 | `status_global_stats_fast_bug.rs` | Reproduce and verify fix for global_stats() performance bug |
+| `storage_fixture/` | Shared temp storage trees and JSONL line builders for storage test binaries |
 | `string_matcher.rs` | Unit tests for StringMatcher case-insensitive substring matching |
 | `underscore_encoding_compatibility.rs` | Reproduce and verify fix for underscore/hyphen encoding |
 
@@ -153,32 +159,42 @@ fn test_{component}_{issue}()
 
 ## Integration Test Strategy
 
-Tests that depend on real `~/.claude/` storage state must skip gracefully at runtime
-(not via `#[ignore]`) when the storage is absent or empty:
+Storage-facing tests build their own storage tree in a `TempDir` and assert
+unconditionally. No test reads the developer's real `~/.claude/`, and no test may
+gate its assertions on whether data happened to be present:
 
 ```rust
-#[test]
-fn test_storage_real_data()
+mod storage_fixture;
+
+#[ test ]
+fn export_markdown_basic()
 {
-  let storage = Storage::new().expect( "open storage" );
-  let projects = storage.list_projects().unwrap_or_default();
-  if projects.is_empty()
-  {
-    println!( "SKIP: no projects in real storage" );
-    return;
-  }
-  // ... actual assertions ...
+  let temp = storage_fixture::storage_root();
+  let project = storage_fixture::project_dir( temp.path(), "-home-user-alpha" );
+  storage_fixture::write_conversation_session( &project, SESSION, 2 );
+  // ... unconditional assertions on exact output ...
 }
 ```
 
 **Why**:
-- `#[ignore]` disables tests permanently — graceful skip runs the test in all environments
-- Machines with real storage get meaningful coverage; machines without get a transparent skip
-- Avoids "garbage parameter" anti-pattern (test accepted but never runs)
+- A fixture the test builds itself has a known shape, so assertions can check exact
+  values rather than "contains something plausible"
+- The same result on every machine and in CI — no dependence on the developer's own
+  Claude Code history
+- A test that can skip itself at runtime is a test that can silently stop covering
+  anything (see `claude_storage/docs/cli/pitfall/04_vacuous_assertions_mask_stubs.md`)
+
+**Rules**:
+- Never `Storage::new()` in a test — use `Storage::with_root( temp.path() )`
+- Never `if projects.is_empty() { return; }` or any other skip guard
+- Never `println!( "SKIP: ..." )` — a skipped test reports as passing
+- Never `#[ignore]` — that disables the test permanently
 
 **Examples**:
-- `tests/export.rs::export_markdown_basic` — skips gracefully when no projects found
-- `tests/filtering.rs::session_filter_agent_only` — skips gracefully when no sessions found
+- `tests/export.rs::export_markdown_basic` — asserts the full markdown document byte-for-byte
+- `tests/filtering.rs::session_filter_agent_only` — asserts the exact set of matching session IDs
+- Tests needing `HOME`/`CLAUDE_HOME` (`scope_test.rs`, `continuation_tests.rs`) point the
+  environment variable at a `TempDir` instead of reading the real home directory
 
 ## Test Naming Conventions
 
@@ -226,19 +242,21 @@ Test documentation must be:
 
 ### No Silent Failures
 
-Integration tests that depend on real storage must skip gracefully:
-- Print a clear message when data is absent (`println!("SKIP: ...")`)
-- Return immediately without failing the test
-- Never use `#[ignore]` — that disables the test permanently
+Every test must reach its assertions on every run:
+- No early `return` that skips the assertions when data is absent
+- No `println!("SKIP: ...")` — a skipped test still reports as passing
+- No `#[ignore]` — that disables the test permanently
 
-Never silently pass — that masks missing test coverage.
+A test that can decline to assert is indistinguishable from a passing one, so it masks
+missing coverage instead of reporting it. Build the data the test needs.
 
 ### No Mocking
 
-Tests must use real implementations:
-- ✅ `Storage::new()` for real `~/.claude/` storage
-- ✅ Graceful skip at runtime when data is absent (not `#[ignore]`)
+Tests must use real implementations against real files:
+- ✅ `Storage::with_root( temp.path() )` over a `TempDir` tree the test builds itself
+- ✅ Real JSONL written to disk and parsed by the real parser
 - ❌ Don't mock Storage, Session, or JSON parsing
+- ❌ Don't read the developer's real `~/.claude/` — the result would vary per machine
 
 ## Test Verification Commands
 

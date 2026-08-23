@@ -27,7 +27,7 @@ use claude_runner_core::{ ClaudeCommand, ControlSession, InputFormat, OutputForm
 /// spawned (missing from `PATH`, or the flag-precondition check in `spawn_control_session()`
 /// fails) — a hard requirement for these tests, not a soft skip, per this crate's "Complete
 /// Integration Tests" testing principle.
-// BUG-002 task/claude_runner_core/bug/002_ac_claims_unreachable_zero_failures.md — this hard
+// BUG-002 — this hard
 // requirement is correct-by-design; the shared `runbox` container intentionally never
 // provisions `claude`, so tests calling this helper cannot pass Container-Only Testing as-is.
 #[ must_use ]

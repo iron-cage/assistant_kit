@@ -102,7 +102,7 @@ fn ec_2_project_encoded_id_resolves()
 fn ec_3_project_uuid_format_resolves()
 {
   let root = TempDir::new().unwrap();
-  let uuid = "8d795a1c-c81d-4010-8d29-b4e678272419";
+  let uuid = "feed0001-0000-4000-8000-000000000001";
   common::write_test_session( root.path(), uuid, "sess-uuid", 2 );
 
   let out = common::clg_cmd()

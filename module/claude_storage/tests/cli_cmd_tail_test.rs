@@ -358,7 +358,7 @@ fn int_9_no_args_falls_back_to_most_recent_session_when_no_default_topic()
   let root = tempfile::TempDir::new().unwrap();
   let cwd  = tempfile::TempDir::new().unwrap();
 
-  common::write_path_project_session( root.path(), cwd.path(), "7380351c-fde9-482a-afc7-ad738781488f", 6 );
+  common::write_path_project_session( root.path(), cwd.path(), "feed0010-0000-4000-8000-000000000010", 6 );
 
   let out = common::clg_cmd()
     .env( "CLAUDE_STORAGE_ROOT", root.path() )

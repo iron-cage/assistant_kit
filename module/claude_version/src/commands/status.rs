@@ -232,6 +232,8 @@ fn render_lock_json( rows : &[ LockRow ] ) -> String
 /// # Errors
 ///
 /// Returns `Err` only when `format::` has an unrecognised value.
+// Registered as a boxed unilang CommandRoutine (Box< dyn Fn >) — every call goes through
+// dynamic dispatch, so #[ inline ] could never apply at the call site.
 #[ allow( clippy::missing_inline_in_public_items ) ]
 pub fn status_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {

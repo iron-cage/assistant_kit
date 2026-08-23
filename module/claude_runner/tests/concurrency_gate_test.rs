@@ -501,7 +501,7 @@ fn sync_children_into_proc_dir( clr_pids : &[ u32 ], proc_dir : &std::path::Path
   }
 }
 
-// BUG-480 task/claude_runner/bug/480_gate_diagnostic_hides_slot_occupancy.md — fixed: this helper
+// BUG-480 — fixed: this helper
 // computes the same occupancy quantity the production sweep now tallies as
 // `denied_slots` and renders as `slots=H/M`; the display assertion lives in T38
 // (census/occupancy-divergence fixture), while T15-family fixtures keep
@@ -571,7 +571,7 @@ fn t08_concurrent_clr_invocations_never_exceed_max_sessions()
     sync_children_into_proc_dir( &sync_pids, &sync_proc_dir, core::time::Duration::from_secs( 8 ) );
   } );
 
-  // BUG-479 task/claude_runner/bug/479_zombie_blind_pid_liveness.md — fixed: the zombie-reads-alive
+  // BUG-479 — fixed: the zombie-reads-alive
   // semantics this harness note documents manifested in production; the
   // zombie-owner reclaim regression test is T37 below.
   // Fix(BUG-387 test): reap every racer via non-blocking, order-independent

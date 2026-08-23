@@ -18,6 +18,7 @@ fn cache_json_fields( cached : bool, age : Option< u64 > ) -> String
 /// Every row includes `expires_in_secs`. Successful accounts include quota
 /// fields using `_left_pct` naming (remaining, not consumed); failed accounts
 /// include `error`.
+// One emit block per JSON field of the account object — the flat body is the schema.
 #[ allow( clippy::too_many_lines ) ]
 pub fn render_json( accounts : &[ AccountQuota ] ) -> String
 {

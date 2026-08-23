@@ -46,7 +46,7 @@ Prefix resolution applies AFTER positional rewriting: `clp .account.use car` →
 - **AC-08**: Existing `name::EMAIL` explicit form continues to work unchanged on all four commands.
 - **AC-09**: `clp .account.use alice@home.com dry::1` works — positional and `dry::` can be combined (bare name before key::value).
 - **AC-10**: The `print_usage()` Examples section shows `clp .account.use alice@acme.com` (without `name::` prefix).
-- **AC-11**: `clp .account.use i1` where `i1@wbox.pro`, `i11@wbox.pro`, and `i12@wbox.pro` all exist → exits 0 and switches to `i1@wbox.pro` (exact local-part match wins over longer prefix matches).
+- **AC-11**: `clp .account.use i1` where `i1@example.com`, `i11@example.com`, and `i12@example.com` all exist → exits 0 and switches to `i1@example.com` (exact local-part match wins over longer prefix matches).
 - **AC-12**: `clp .account.renewal name::alice at::2026-07-01T00:00:00Z` (where `alice@acme.com` is the only saved account whose local part is `alice`) → resolves to `alice@acme.com`, writes `_renewal_at`, exits 0.
 - **AC-13**: `clp .account.renewal name::alice,bob at::2026-07-01T00:00:00Z` → resolves each comma token independently via prefix resolution; `alice@acme.com` and `bob@acme.com` both updated; exits 0.
 - **AC-14**: `clp .account.use dry::1 alice@home.com` works — bare positional name after `key::value` parameter produces the same result as AC-09 (`alice@home.com dry::1`). Argument order does not affect positional rewrite.

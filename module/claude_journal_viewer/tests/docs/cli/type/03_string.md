@@ -46,12 +46,13 @@ parameters layer additional constraints.
 
 ---
 
-### TC-3: `bind` rejects invalid IP address
+### TC-3: `bind` rejects invalid IP address — ⏳ Phase 2
 
 - **Given:** clean environment
 - **When:** `clj .serve bind::"999.999.999.999"`
 - **Then:** exit 1; stderr indicates the address is not a valid IPv4/IPv6 address
 - **Exit:** 1
+- **Blocked on:** `bind::` being wired at all. `cmd_serve()` never reads a `bind` key (`src/cli_main.rs:168` hardcodes `127.0.0.1`), so today this invocation exits 0 on clean shutdown — the "constraint" this case asserts has no code to enforce it, and writing the test now would encode the wrong expectation
 - **Source:** [type/03_string.md](../../../../docs/cli/type/03_string.md), [param/16_bind.md](../../../../docs/cli/param/16_bind.md)
 
 ---

@@ -25,7 +25,7 @@ whose basename is exactly `"claude"`, excluding the calling process, **counting 
 non-interactive (print-mode) processes**. The count reflects all running non-interactive
 Claude Code processes system-wide, not per-project.
 
-<!-- BUG-480 task/claude_runner/bug/480_gate_diagnostic_hides_slot_occupancy.md — fixed: verbatim gate-wait format below carries the conditional slots={held}/{max} field (slot-side causes only); exhaustion messages carry slots={held}/{max} held -->
+<!-- BUG-480 — fixed: verbatim gate-wait format below carries the conditional slots={held}/{max} field (slot-side causes only); exhaustion messages carry slots={held}/{max} held -->
 **Note:** When the gate waits, `clr` emits a structured timestamp-prefixed message to stderr each
 polling cycle (unless `--quiet`) in the form:
 `"{ts}gate-wait  active={count}/{max}[ slots={held}/{max}] attempt={n}/{effective_max} wait={poll_secs}s (reason: {cause})"`,

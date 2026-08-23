@@ -7,7 +7,7 @@
 
 ### Acceptance Criteria
 
-<!-- BUG-480 task/claude_runner/bug/480_gate_diagnostic_hides_slot_occupancy.md — fixed: AC-001 now states the full conjunction (census AND slot claim); census-only "proceeds immediately" had been false since BUG-387's slot-CAS second condition -->
+<!-- BUG-480 — fixed: AC-001 now states the full conjunction (census AND slot claim); census-only "proceeds immediately" had been false since BUG-387's slot-CAS second condition -->
 - AC-001: Admission is a conjunction: when active non-interactive Claude processes < `--max-sessions` AND `clr` atomically claims a gate slot file, it proceeds immediately with no gate messages to stderr. A census below the limit alone is not sufficient — if every slot file is held by a live owner, `clr` waits with a `slot held by another session` diagnostic naming the measured occupancy (`slots=H/M`; see [invariant/013](../../invariant/013_slot_wait_message_differentiation.md))
 - AC-002: When active non-interactive Claude processes >= `--max-sessions`, `clr` emits a waiting message to stderr (unless `--quiet`) and polls every 30 seconds
 - AC-003: When 1000 attempts are exhausted without a slot opening, `clr` emits an error message to stderr and exits with code 1

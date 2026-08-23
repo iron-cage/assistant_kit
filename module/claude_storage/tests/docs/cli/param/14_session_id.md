@@ -47,8 +47,8 @@ Edge case tests for the `session_id::` parameter (direct identifier, not filter)
 
 - **Commands:** `.show`
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture`
-- **When:** `clg .show session_id::8d795a1c-c81d-4010-8d29-b4e678272419`
-- **Then:** Session content for the session stored as `8d795a1c-c81d-4010-8d29-b4e678272419.jsonl`.; + content from UUID session displayed
+- **When:** `clg .show session_id::feed0001-0000-4000-8000-000000000001`
+- **Then:** Session content for the session stored as `feed0001-0000-4000-8000-000000000001.jsonl`.; + content from UUID session displayed
 - **Exit:** 0
 - **Source:** [param/14_session_id.md](../../../../docs/cli/param/14_session_id.md)
 

@@ -212,8 +212,7 @@ pub fn build_rollup( entries : &[ RollupInput ], params : &RollupParams ) -> Vec
       }
       else
       {
-        #[ allow( clippy::cast_precision_loss ) ]
-        { 100.0 * row.total() as f64 / grand_total as f64 }
+        100.0 * row.total() as f64 / grand_total as f64
       };
       row
     })

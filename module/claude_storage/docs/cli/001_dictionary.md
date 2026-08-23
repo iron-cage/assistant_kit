@@ -135,7 +135,7 @@ The resume/fresh decision for `.session.ensure`. `resume` means an existing conv
 
 ### Session
 
-The storage-layer artifact for one Claude Code interaction: a single `.jsonl` file containing all entries for that interaction. Session IDs are either UUID v4 strings (e.g., `8d795a1c-c81d-4010-8d29-b4e678272419`) or human-readable topic names (e.g., `-default_topic`, `-commit`). The session ID is the filename stem without the `.jsonl` extension.
+The storage-layer artifact for one Claude Code interaction: a single `.jsonl` file containing all entries for that interaction. Session IDs are either UUID v4 strings (e.g., `feed0001-0000-4000-8000-000000000001`) or human-readable topic names (e.g., `-default_topic`, `-commit`). The session ID is the filename stem without the `.jsonl` extension.
 
 **Session vs Conversation**: Session is the implementation detail (JSONL file on disk); Conversation is the user-facing concept. In the current implementation one session = one conversation, but the conversation chain detection algorithm (task 021) will allow one conversation to span multiple sessions.
 

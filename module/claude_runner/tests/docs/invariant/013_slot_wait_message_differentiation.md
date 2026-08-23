@@ -43,8 +43,8 @@ All 8 cases are integration tests, split across `tests/concurrency_gate_ext_test
 | IN-7 | `t38_slot_side_denial_names_measured_occupancy` | `tests/concurrency_gate_test.rs` | ✅ |
 | IN-8 | `t23_slot_wait_message_names_lost_reclaim_race_without_a_race` | `tests/concurrency_gate_ext_test.rs` | ✅ |
 
-<!-- BUG-480 task/claude_runner/bug/480_gate_diagnostic_hides_slot_occupancy.md — fixed: IN-7 registered below (census/occupancy-divergence fixture asserting the slots=H/M token and the slots=H/M held exhaustion suffix); implemented by T38 -->
-<!-- BUG-530 task/claude_runner/bug/verified/530_t16_first_poll_assertion_depends_on_unenforced_spawn_skew.md — fixed: IN-3 narrowed to "one of the two legitimate causes" (its exact-cause assertion depended on an unenforceable spawn-skew bound), and IN-8 registered below to carry that assertion deterministically; implemented by T23 -->
+<!-- BUG-480 — fixed: IN-7 registered below (census/occupancy-divergence fixture asserting the slots=H/M token and the slots=H/M held exhaustion suffix); implemented by T38 -->
+<!-- BUG-530 — fixed: IN-3 narrowed to "one of the two legitimate causes" (its exact-cause assertion depended on an unenforceable spawn-skew bound), and IN-8 registered below to carry that assertion deterministically; implemented by T23 -->
 
 ---
 

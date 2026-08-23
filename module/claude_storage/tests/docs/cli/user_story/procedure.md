@@ -27,7 +27,7 @@ Standard test fixture layout (minimal):
   projects/
     -home-user-project-a/      ← path-encoded project
       -default_topic.jsonl     ← session file with entries
-    8d795a1c-c81d-4010-8d29/   ← UUID-named project
+    feed0001-0000-4000-8000/   ← UUID-named project
       -default_topic.jsonl
 ```
 

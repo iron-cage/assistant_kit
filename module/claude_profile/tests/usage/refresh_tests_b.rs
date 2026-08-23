@@ -578,7 +578,7 @@ fn mre_bug298_apply_refresh_trace_reason_cached_expired()
   {
     fallback_reason : None,
     touched_at_secs : None,
-    name                  : "cached-owned@box.pro".to_string(),
+    name                  : "cached-owned@example.com".to_string(),
     is_current            : false,
     is_active             : false,
     is_occupied_elsewhere : false,

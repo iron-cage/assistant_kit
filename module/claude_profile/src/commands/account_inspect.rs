@@ -121,6 +121,8 @@ fn inspect_call_roles(
 /// - Exit 1: invalid `format::` value; target account uses `backend: redirect` (Feature 071).
 /// - Exit 2: credential store absent; account not found; credential file absent.
 #[ inline ]
+// Three independent endpoint calls, each with its own local-snapshot fallback, then section
+// assembly — the per-endpoint degradation rules only read correctly side by side.
 #[ allow( clippy::too_many_lines ) ]
 pub fn account_inspect_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {

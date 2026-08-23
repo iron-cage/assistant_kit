@@ -130,6 +130,8 @@ fn fallback_releases() -> Vec< ReleaseInfo >
 /// # Errors
 ///
 /// Returns `Err(InternalError)` when HOME is missing.
+// Reached only through version_list_routine's boxed CommandRoutine, so #[ inline ] buys nothing;
+// the body is one emit branch per (format, verbosity) pair over a three-tier fetch fallback.
 #[ allow( clippy::missing_inline_in_public_items, clippy::too_many_lines ) ]
 pub( super ) fn render_history_mode( count : usize, opts : &OutputOptions ) -> Result< OutputData, ErrorData >
 {

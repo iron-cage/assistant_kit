@@ -16,10 +16,9 @@ type SearchHit = ( claude_storage_core::ProjectId, String, claude_storage_core::
 ///
 /// Returns error if query is missing, entry type is invalid, storage creation
 /// fails, project loading fails, or search fails.
-#[ allow( clippy::too_many_lines ) ]
 // CLI routine handler processes multiple scope branches —
 // extraction would obscure the command's logic without reducing complexity.
-#[ allow( clippy::needless_pass_by_value ) ]
+#[ allow( clippy::too_many_lines ) ]
 #[ inline ]
 pub fn search_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   -> core::result::Result< OutputData, ErrorData >
@@ -247,8 +246,8 @@ pub fn search_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
 /// Fix(issue-020): Use prefix matching for partial UUID, consistent with `show_routine`
 /// and `export_routine` (issue-011 fix).
 ///
-/// Root cause: `search_routine` used exact equality only, so ".search `session::79f86582`"
-/// failed even though ".show `session_id::79f86582`" succeeds via `starts_with`.
+/// Root cause: `search_routine` used exact equality only, so ".search `session::feed0002`"
+/// failed even though ".show `session_id::feed0002`" succeeds via `starts_with`.
 ///
 /// Pitfall: Partial-UUID support must be applied uniformly. Any session `find()`
 /// predicate that uses only == will silently reject valid prefix IDs.

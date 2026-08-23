@@ -28,8 +28,8 @@
 **UUID projects** (web/IDE sessions): Named by UUID. Created when Claude Code is launched from a web browser or IDE integration rather than the CLI.
 
 ```
-projects/26dd749d-5b4b-bfee-f4f3-9e03803b8cad/
-├── 8d795a1c-c81d-4010-8d29-b4e678272419.jsonl
+projects/feed0012-0000-4000-8000-000000000012/
+├── feed0001-0000-4000-8000-000000000001.jsonl
 └── agent-f3e2d1c4.jsonl
 ```
 

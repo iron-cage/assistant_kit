@@ -32,6 +32,8 @@ use crate::commands::
 /// # Panics
 ///
 /// Panics if a command fails to register (duplicate name = programming error).
+// Declarative registration table: 18 commands with their full parameter sets, grouped in one
+// place so the CLI surface is reviewable as a single list.
 #[ allow( clippy::too_many_lines ) ]
 #[ inline ]
 pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )

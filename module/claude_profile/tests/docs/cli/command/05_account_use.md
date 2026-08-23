@@ -218,9 +218,9 @@ Integration test planning for the `.account.use` command. See [command/namespace
 
 ### IT-16: Exact local-part wins over longer ambiguous prefix
 
-- **Given:** Three accounts saved: `i1@wbox.pro`, `i11@wbox.pro`, `i12@wbox.pro`. `i1@wbox.pro` is active.
+- **Given:** Three accounts saved: `i1@example.com`, `i11@example.com`, `i12@example.com`. `i1@example.com` is active.
 - **When:** `clp .account.use i1`
-- **Then:** Exits 0; `switched to 'i1@wbox.pro'` on stdout; active marker set to `i1@wbox.pro` (exact local-part match wins — no ambiguous-prefix error).
+- **Then:** Exits 0; `switched to 'i1@example.com'` on stdout; active marker set to `i1@example.com` (exact local-part match wins — no ambiguous-prefix error).
 - **Exit:** 0
 - **Source:** [015_name_shortcut_syntax.md AC-11](../../../../docs/feature/015_name_shortcut_syntax.md)
 - **Source fn:** `aw16_exact_local_part_wins_over_ambiguous_prefix`

@@ -22,7 +22,7 @@
 ```
 Validate non-empty string, then resolve:
   Input: "-default_topic"                       → SessionId("-default_topic")
-  Input: "8d795a1c-c81d-4010-8d29-b4e678272419" → SessionId("8d795a1c-...")
+  Input: "feed0001-0000-4000-8000-000000000001" → SessionId("feed0001-...")
   Input: ""                                     → Error("session_id must be non-empty")
   Resolve → Error("session not found: " + input) if file not in storage
 ```

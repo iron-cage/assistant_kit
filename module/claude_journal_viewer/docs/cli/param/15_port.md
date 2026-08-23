@@ -3,14 +3,20 @@
 HTTP server port for the embedded web viewer. The server
 listens on this port after successful bind. Exit 1 on bind failure.
 
+Resolution order is `port::` → `CLJ_PORT` → `0`. There is no fixed
+default port: absent both, the OS assigns an ephemeral one, and the
+actual port is reported on the startup line
+(`Listening on http://localhost:{port}`) — read it there rather than
+assuming a well-known number.
+
 - **Type:** [`Port`](../type/10_port.md)
-- **Default:** 8411
+- **Default:** `0` (OS-assigned)
 - **Required:** No
 
 ```bash
-clj .serve                            # Default port 8411
+clj .serve                            # OS-assigned port; read it from the startup line
 clj .serve port::9090                 # Custom port
-clj .serve port::0                    # OS-assigned port
+clj .serve port::0                    # OS-assigned port (explicit)
 ```
 
 ### Referenced Type
@@ -29,7 +35,7 @@ clj .serve port::0                    # OS-assigned port
 
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
-| 5 | [`.serve`](../command/05_serve.md) | 8411 | Default viewer port |
+| 5 | [`.serve`](../command/05_serve.md) | `0` | OS-assigned unless `port::`/`CLJ_PORT` is set |
 
 ### Referenced User Stories
 

@@ -510,15 +510,15 @@ fn mre_bug_212_account_save_stale_marker_uses_oauth_email()
   // _active marker is NOT updated by external login — only clp ops (.account.use/.account.save) write it.
   std::fs::write(
     dir.path().join( ".claude.json" ),
-    r#"{"oauthAccount":{"emailAddress":"i5@wbox.pro"}}"#,
+    r#"{"oauthAccount":{"emailAddress":"i5@example.com"}}"#,
   ).unwrap();
 
-  // Stale _active marker = "i2@wbox.pro" — set by prior .account.use i2; not updated by external login.
+  // Stale _active marker = "i2@example.com" — set by prior .account.use i2; not updated by external login.
   let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
   std::fs::create_dir_all( &store ).unwrap();
   std::fs::write(
     store.join( claude_profile::account::active_marker_filename() ),
-    "i2@wbox.pro",
+    "i2@example.com",
   ).unwrap();
 
   // .account.save with no name:: — must use oauthAccount.emailAddress (i5), not _active (i2).
@@ -526,19 +526,19 @@ fn mre_bug_212_account_save_stale_marker_uses_oauth_email()
   assert_exit( &out, 0 );
   let stdout_text = stdout( &out );
   assert!(
-    stdout_text.contains( "i5@wbox.pro" ),
-    "must save as i5@wbox.pro (oauthAccount.emailAddress), got:\n{stdout_text}",
+    stdout_text.contains( "i5@example.com" ),
+    "must save as i5@example.com (oauthAccount.emailAddress), got:\n{stdout_text}",
   );
   assert!(
-    !stdout_text.contains( "i2@wbox.pro" ),
-    "must NOT save as i2@wbox.pro (stale _active marker), got:\n{stdout_text}",
+    !stdout_text.contains( "i2@example.com" ),
+    "must NOT save as i2@example.com (stale _active marker), got:\n{stdout_text}",
   );
 
   // BUG-212: before fix, i2's file is created instead of i5's.
-  let i5_file = store.join( "i5@wbox.pro.credentials.json" );
-  let i2_file = store.join( "i2@wbox.pro.credentials.json" );
-  assert!( i5_file.exists(), "i5@wbox.pro.credentials.json must be created" );
-  assert!( !i2_file.exists(), "i2@wbox.pro.credentials.json must NOT be created (stale marker must not win)" );
+  let i5_file = store.join( "i5@example.com.credentials.json" );
+  let i2_file = store.join( "i2@example.com.credentials.json" );
+  assert!( i5_file.exists(), "i5@example.com.credentials.json must be created" );
+  assert!( !i2_file.exists(), "i2@example.com.credentials.json must NOT be created (stale marker must not win)" );
 }
 
 // ── mre_bug213_account_use_refuses_expired_token_on_fetch_error ───────────────
@@ -879,41 +879,41 @@ fn mre_bug_217_switch_account_enforces_emailaddress()
   write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
 
   // Target account: credentials in the credential store (no accessToken required — touch::0).
-  write_account( dir.path(), "i7@wbox.pro", "pro", "standard", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "i7@example.com", "pro", "standard", FAR_FUTURE_MS, false );
 
-  // Stale snapshot: emailAddress is "i1@wbox.pro" — should be "i7@wbox.pro".
+  // Stale snapshot: emailAddress is "i1@example.com" — should be "i7@example.com".
   // BUG-217: switch_account() reads this and installs it verbatim into ~/.claude.json.
   let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
   std::fs::write(
-    store.join( "i7@wbox.pro.json" ),
-    r#"{"oauthAccount":{"emailAddress":"i1@wbox.pro","id":"uuid-placeholder"}}"#,
+    store.join( "i7@example.com.json" ),
+    r#"{"oauthAccount":{"emailAddress":"i1@example.com","id":"uuid-placeholder"}}"#,
   ).unwrap();
 
   // Initial ~/.claude.json — switch_account() patches oauthAccount in-place.
   let claude_json_path = dir.path().join( ".claude.json" );
   std::fs::write(
     &claude_json_path,
-    r#"{"someGlobalKey":true,"oauthAccount":{"emailAddress":"i9@wbox.pro"}}"#,
+    r#"{"someGlobalKey":true,"oauthAccount":{"emailAddress":"i9@example.com"}}"#,
   ).unwrap();
 
   // touch::0 disables pre-fetch HTTP calls and the expiry guard — tests the pure file switch.
   let out = run_cs_with_env(
-    &[ ".account.use", "name::i7@wbox.pro", "touch::0" ],
+    &[ ".account.use", "name::i7@example.com", "touch::0" ],
     &[ ( "HOME", home ) ],
   );
   assert_exit( &out, 0 );
 
   // After switch: oauthAccount.emailAddress must equal the target account name — not the
   // stale value from the snapshot.
-  // BUG-217: before fix, actual = "i1@wbox.pro" (verbatim from snapshot).
+  // BUG-217: before fix, actual = "i1@example.com" (verbatim from snapshot).
   let claude_json = std::fs::read_to_string( &claude_json_path ).unwrap();
   assert!(
-    claude_json.contains( r#""emailAddress": "i7@wbox.pro""# ),
-    "BUG-217: expected emailAddress='i7@wbox.pro' in ~/.claude.json after switch, got:\n{claude_json}",
+    claude_json.contains( r#""emailAddress": "i7@example.com""# ),
+    "BUG-217: expected emailAddress='i7@example.com' in ~/.claude.json after switch, got:\n{claude_json}",
   );
   assert!(
-    !claude_json.contains( r#""emailAddress": "i1@wbox.pro""# ),
-    "BUG-217: stale emailAddress 'i1@wbox.pro' must not appear in ~/.claude.json, got:\n{claude_json}",
+    !claude_json.contains( r#""emailAddress": "i1@example.com""# ),
+    "BUG-217: stale emailAddress 'i1@example.com' must not appear in ~/.claude.json, got:\n{claude_json}",
   );
 
   // Global keys must be preserved — switch must not wholesale overwrite ~/.claude.json.

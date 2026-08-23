@@ -19,7 +19,7 @@ Select the tree layout — what is nested depends on [`detail::`](30_detail.md).
 
 **Purpose:** `show_tree::1` nests the output; what gets nested is whatever the active `detail::` level lists.
 
-Under `detail::projects` (the default), it nests **projects by directory** — shared ancestors become tree nodes drawn with `├─`/`└─` connectors, and single-child runs collapse into one segment (`~/pro/lib/yrd_core/assistant_kit` renders as a single node, not four). This is what makes the cwd-bucket nature of a "project" visible: one repository entered from five subdirectories is five sibling leaves under a common node. Default (`0`) is the flat recency table, where every row carries its full path.
+Under `detail::projects` (the default), it nests **projects by directory** — shared ancestors become tree nodes drawn with `├─`/`└─` connectors, and single-child runs collapse into one segment (`~/work/src/shared/assistant_kit` renders as a single node, not four). This is what makes the cwd-bucket nature of a "project" visible: one repository entered from five subdirectories is five sibling leaves under a common node. Default (`0`) is the flat recency table, where every row carries its full path.
 
 Under `detail::sessions`, it nests **agent sessions under their root session** (the v2 format) — each agent indented beneath its root with full UUID and per-session entry count, replacing the former `verbosity::2` behavior. Default (`0`) is the compact family summary: root session with short UUID, mtime, entry count, and an inline `[N agents: breakdown]`.
 

@@ -1,14 +1,16 @@
 #!/usr/bin/env bash
 # test — run the full workspace test suite inside the runbox container.
-# The engine is the globally-installed `runbox` (shipped by family_dev); it
+# The engine is the globally-installed `runbox` (installed separately; not vendored in this repo); it
 # discovers the owning config (runbox/runbox.yml) and runs its script:
 # verb/test.d/l1 — the workspace-wide gate.
+# Usage: ./verb/test [will-arg...]  (e.g. scope::subtree, level::N — forwarded
+#   verbatim to `will .test`; see `will .test ?` for the full parameter list.)
 set -euo pipefail
 if [[ -n "${VERB_LAYER:-}" ]]; then
   echo "ERROR: VERB_LAYER is not valid on the host side." >&2
   echo "Standard invocation: ./verb/test" >&2
   exit 1
 fi
-if [[ "${1:-}" == "--dry-run" ]]; then echo "runbox .live"; exit 0; fi
+if [[ "${1:-}" == "--dry-run" ]]; then echo "runbox .live -- ./verb/test.d/l1"; exit 0; fi
 ROOT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
-cd "$ROOT_DIR" && exec runbox .live
+cd "$ROOT_DIR" && exec runbox .live -- ./verb/test.d/l1 "$@"

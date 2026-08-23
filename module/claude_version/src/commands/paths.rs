@@ -93,6 +93,8 @@ impl PathKey
 ///
 /// Returns `Err(ArgumentTypeMismatch)` for an unrecognised or empty `key::` value (exit 1).
 /// Returns `Err(InternalError)` when `HOME` is unset or empty (exit 2).
+// Registered as a boxed unilang CommandRoutine (Box< dyn Fn >) — every call goes through
+// dynamic dispatch, so #[ inline ] could never apply at the call site.
 #[ allow( clippy::missing_inline_in_public_items ) ]
 pub fn paths_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {

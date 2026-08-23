@@ -12,6 +12,8 @@ use claude_core::settings_io::{ StoredAs, get_setting, infer_type, read_all_sett
 /// # Errors
 ///
 /// Returns `Err(InternalError)` when HOME is missing or settings unreadable.
+// Registered as a boxed unilang CommandRoutine (Box< dyn Fn >) — every call goes through
+// dynamic dispatch, so #[ inline ] could never apply at the call site.
 #[ allow( clippy::missing_inline_in_public_items ) ]
 pub fn settings_show_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
@@ -68,6 +70,8 @@ pub fn settings_show_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -
 ///
 /// Returns `Err(ArgumentMissing)` when `key::` is missing.
 /// Returns `Err(InternalError)` when HOME is missing or key not found.
+// Registered as a boxed unilang CommandRoutine (Box< dyn Fn >) — every call goes through
+// dynamic dispatch, so #[ inline ] could never apply at the call site.
 #[ allow( clippy::missing_inline_in_public_items ) ]
 pub fn settings_get_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
@@ -115,6 +119,8 @@ pub fn settings_get_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) ->
 ///   for the `value::` parameter, silently bypassing the FR-04 empty-value rejection.
 /// Pitfall: `cm .settings.set key::k value::` appeared to succeed but wrote a meaningless
 ///   empty-string entry — indistinguishable from "key not set" when read back via `.settings.get`.
+// Registered as a boxed unilang CommandRoutine (Box< dyn Fn >) — every call goes through
+// dynamic dispatch, so #[ inline ] could never apply at the call site.
 #[ allow( clippy::missing_inline_in_public_items ) ]
 pub fn settings_set_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {

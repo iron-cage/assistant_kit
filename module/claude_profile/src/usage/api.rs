@@ -41,6 +41,8 @@ pub use super::api_switch::{
 ///
 /// Returns `ErrorData` (exit 2) if HOME/PRO is unset or the credential store
 /// exists but cannot be read. Per-account API errors are displayed inline.
+// Sequential command pipeline — parse params, live-mode guards, dispatch sub-params, fetch,
+// then pick a renderer; each stage feeds the next, so extraction would just thread locals.
 #[ allow( clippy::too_many_lines ) ]
 #[ inline ]
 pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >

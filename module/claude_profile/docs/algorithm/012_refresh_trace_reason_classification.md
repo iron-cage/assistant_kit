@@ -50,9 +50,9 @@ Per `feature/036_account_ownership.md` G1b, `fetch_quota_for_list()` uncondition
 These are two unrelated data sources evaluated in the same call. Consequently, **any occupied-elsewhere account with a prior cache entry — the common case after its first fetch — has both `cached = true` and `is_occupied_elsewhere = true` when `reason_label()` runs.** Prior to BUG-333's fix, `cached` (then Priority 2) was checked before `is_occupied_elsewhere` (then Priority 3), so the function returned `"cached"` or `"cached-expired"` and the occupancy information was silently dropped — even though `fetch`/`touch` trace lines for the same account in the same invocation correctly reported `"occupied elsewhere"` (BUG-333 Symptom, verbatim transcript captured pre-fix):
 
 ```
-2026-07-06 · 17:23:20 · fetch     i13@wbox.pro  skipped (reason: occupied elsewhere)
-2026-07-06 · 17:23:24 · refresh   i13@wbox.pro  should_retry=false (reason: cached)
-2026-07-06 · 17:23:26 · touch     i13@wbox.pro  skipped (reason: occupied elsewhere)
+2026-07-06 · 17:23:20 · fetch     i13@example.com  skipped (reason: occupied elsewhere)
+2026-07-06 · 17:23:24 · refresh   i13@example.com  should_retry=false (reason: cached)
+2026-07-06 · 17:23:26 · touch     i13@example.com  skipped (reason: occupied elsewhere)
 ```
 
 BUG-333's fix reordered the two branches so `is_occupied_elsewhere` (now Priority 2) is checked before `cached` (now Priority 3), and the function now correctly returns `"occupied elsewhere"` for this co-occurring case. This was purely a diagnostic/trace-string defect (BUG-333 Severity: Low) — `should_refresh()`'s own occupancy gate (feature/036 G2: `!is_owned || is_occupied_elsewhere`) already independently returned `false` for this account regardless of what `reason_label()` reported, so no quota value, credential mutation, or renewal date was ever affected. See `invariant/012_label_selection_requires_cooccurrence_coverage.md` for the formal invariant this hazard violates, and `pitfall/007_label_selection_branch_priority_pitfalls.md` for the four-bug recurrence history of this same function/seam.

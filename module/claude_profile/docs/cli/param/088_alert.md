@@ -10,7 +10,7 @@
 After the quota table renders, each account's measurement ring (Feature 040) is checked for an in-window burn trend. An account whose extrapolated time-to-exhaustion falls under the horizon produces one warning line:
 
 ```
-⚠ 5h burn · mykola.nn@wbox.pro · ~13m to exhaustion (≈3.2%/min)
+⚠ 5h burn · alice@example.com · ~13m to exhaustion (≈3.2%/min)
 ```
 
 Every number is labeled as an estimate (`~` duration, `≈` rate). Lines appear on `format::text` and `format::plain` only (`no_color::1` strips `⚠` to `!`); `json`/`tsv`/`value` output is never modified, so scripted consumers stay byte-stable.

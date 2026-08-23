@@ -105,7 +105,6 @@ struct RenderOptions
 ///
 /// Does not panic — the `last_count` conversion below is only reached after the
 /// negative-value branch already returned, so the value is always non-negative.
-#[ allow( clippy::needless_pass_by_value ) ]
 #[ inline ]
 pub fn tail_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   -> core::result::Result< OutputData, ErrorData >
@@ -338,7 +337,7 @@ fn render
   out
 }
 
-/// `claude_storage · bff63952 · turns 249-252 of 252 · last 3h ago`
+/// `claude_storage · feed0009 · turns 249-252 of 252 · last 3h ago`
 fn session_header
 (
   project_label : &str,
@@ -457,7 +456,7 @@ mod tests
   #[test]
   fn test_short_session_id_truncates_to_eight()
   {
-    assert_eq!( short_session_id( "bff63952-8a23-4794-ad56-3a8e4fc4e9a9" ), "bff63952" );
+    assert_eq!( short_session_id( "feed0009-0000-4000-8000-000000000009" ), "feed0009" );
     assert_eq!( short_session_id( "abc" ), "abc" );
   }
 }

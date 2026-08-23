@@ -15,6 +15,6 @@ Per-group test case indices for `claude_journal_viewer`. See [param_group/readme
 |------|---------|--------|
 | `01_filtering.md` | CC- tests for time-window construction and AND-combination | ✅ |
 | `02_display.md` | CC- tests for sort/reverse, wide/columns, and limit ordering | ✅ |
-| `03_aggregation.md` | CC- tests for `.stats`/`.prune` scoping and dry_run/confirm precedence | ✅ |
+| `03_aggregation.md` | CC- tests for `.stats`/`.prune` scoping and `dry_run` preview precedence | ✅ |
 | `04_search.md` | CC- tests for required `pattern` and stdout search scope | ✅ |
 | `05_global.md` | CC- tests for journal_dir/NO_COLOR resolution order | ✅ |

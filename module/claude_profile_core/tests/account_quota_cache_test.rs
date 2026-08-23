@@ -152,6 +152,61 @@ fn parse_iso_utc_secs_known_values()
   assert!( claude_profile_core::account::parse_iso_utc_secs( "not-a-date-at-all!" ).is_none() );
 }
 
+/// `parse_iso_utc_secs` rejects pre-epoch dates instead of wrapping them.
+///
+/// **Root Cause:** the Hinnant days-from-civil expression
+/// `era * 146_097 + doe - 719_468` is genuinely negative for any date before
+/// 1970-01-01. It was cast with `as u64`, which wraps rather than rejects, so a
+/// pre-epoch input produced a days count near `u64::MAX`; the following
+/// `days * 86400` then overflowed — a panic under the debug-assertions profile
+/// the test suite runs, and silent garbage in release.
+///
+/// **Why Not Caught:** the only prior coverage
+/// (`parse_iso_utc_secs_known_values`) exercised a 2026 timestamp and two
+/// structurally-malformed strings. A pre-epoch date is *structurally valid* —
+/// right length, right separators, `Z` suffix, all six numeric fields parse —
+/// so it slipped through both categories. Round-trip coverage
+/// (`chrono_now_utc`) can never reach it either, since that only ever emits
+/// present-day stamps.
+///
+/// **Fix Applied:** replaced the `as u64` cast (and its
+/// `#[ allow( clippy::cast_sign_loss ) ]`) with `u64::try_from( .. ).ok()?`,
+/// which returns `None` on a negative value. This also removes the suppression
+/// rather than re-justifying it.
+///
+/// **Prevention:** assert the documented contract on a structurally-valid input
+/// that lies outside the representable range, not only on malformed strings.
+///
+/// **Pitfall:** a `cast_sign_loss` allow is an assertion that the value can
+/// never be negative. Here nothing enforced that — the year came from
+/// `s[ 0..4 ]` with no lower bound — so the allow silenced the lint that was
+/// pointing at a live defect. Treat every sign-loss suppression as owing a
+/// guard, not a comment.
+#[ test ]
+fn parse_iso_utc_secs_rejects_pre_epoch()
+{
+  // Structurally valid, semantically unrepresentable in a u64 epoch offset.
+  assert!(
+    claude_profile_core::account::parse_iso_utc_secs( "1969-12-31T23:59:59Z" ).is_none(),
+    "the day before the epoch must be rejected, not wrapped"
+  );
+  assert!(
+    claude_profile_core::account::parse_iso_utc_secs( "1900-01-01T00:00:00Z" ).is_none(),
+    "a far pre-epoch date must be rejected, not wrapped"
+  );
+  assert!(
+    claude_profile_core::account::parse_iso_utc_secs( "0001-01-01T00:00:00Z" ).is_none(),
+    "year 1 must be rejected, not wrapped"
+  );
+
+  // Boundary: the epoch itself is representable and must still parse to 0.
+  assert_eq!(
+    claude_profile_core::account::parse_iso_utc_secs( "1970-01-01T00:00:00Z" ),
+    Some( 0 ),
+    "the epoch instant itself must remain valid"
+  );
+}
+
 /// AC-05: `write_cache_string` persists a field in the cache sub-object.
 #[ test ]
 fn cache_field_string_persisted()

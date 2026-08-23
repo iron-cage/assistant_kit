@@ -146,6 +146,7 @@ pub fn write_owner(
 ///
 /// Returns `std::io::Error` if the JSON file cannot be written.
 #[ inline ]
+// core::io::ErrorKind requires the unstable `core_io` feature (rust-lang/rust#154046) — not usable on stable.
 #[ allow( clippy::std_instead_of_core ) ]
 pub fn write_claim_lock(
   name             : &str,
@@ -176,6 +177,7 @@ pub fn write_claim_lock(
 ///
 /// Returns `std::io::Error` if the JSON file cannot be written.
 #[ inline ]
+// core::io::ErrorKind requires the unstable `core_io` feature (rust-lang/rust#154046) — not usable on stable.
 #[ allow( clippy::std_instead_of_core ) ]
 pub fn write_reserve(
   name             : &str,

@@ -1,4 +1,5 @@
 //! CLR Journal Viewer CLI — dispatches `.command key::value` arguments to journal handlers.
+// Root of the `clj` binary target — every item below is private to it, never a published API.
 #![allow(missing_docs)]
 // `clj` binary — CLR Journal Viewer CLI.
 //

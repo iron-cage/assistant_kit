@@ -444,7 +444,8 @@ fn validate_detail_level( detail_raw : Option< &str > ) -> core::result::Result<
 ///
 /// Does not panic — `min_entries`, `limit`, and `since_days` are validated
 /// non-negative before conversion.
-#[ allow( clippy::needless_pass_by_value ) ]
+// Two dispatch branches (ids:: scripting mode and scope-based listing) plus their shared
+// filter/sort/limit chain — splitting them would duplicate the filter chain per branch.
 #[ allow( clippy::too_many_lines ) ]
 #[ inline ]
 pub fn projects_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )

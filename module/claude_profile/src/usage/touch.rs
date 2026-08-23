@@ -1,4 +1,4 @@
-// BUG-289 task/claude_profile/bug/289_son_running_false_haiku_touch_infinite_loop.md — son_running=false guard and re-fetch loop; Auto→Haiku cannot open Sonnet 7d window
+// BUG-289 — son_running=false guard and re-fetch loop; Auto→Haiku cannot open Sonnet 7d window
 // Items are pub for test_bridge re-export; lints suppressed — internal API.
 #![ allow( clippy::missing_inline_in_public_items, clippy::must_use_candidate ) ]
 

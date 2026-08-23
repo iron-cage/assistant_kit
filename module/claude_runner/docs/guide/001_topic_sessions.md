@@ -181,5 +181,5 @@ Point 3 is the one that actually proves isolation worked: a transplant line reap
 | command | [`../cli/command/12_topics.md`](../cli/command/12_topics.md) | `topics` specification — listing and path resolution |
 | command | [`../cli/command/09_scope.md`](../cli/command/09_scope.md) | `scope` — the six `CLAUDE_*` storage paths for a directory |
 | param | [`../cli/param/028_topic.md`](../cli/param/028_topic.md) | `--topic` — the named topic directory this guide is built on |
-| param | [`../cli/param/077_global.md`](../cli/param/077_global.md) | `--global` — resolves the base to `$CLR_TOPIC_HOME` |
+| param | [`../cli/param/087_global.md`](../cli/param/087_global.md) | `--global` — resolves the base to `$CLR_TOPIC_HOME` |
 | user story | [`../cli/user_story/030_topic_creation.md`](../cli/user_story/030_topic_creation.md) | Acceptance criteria for topic creation |

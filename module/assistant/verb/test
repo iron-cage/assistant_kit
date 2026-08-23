@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 # test — run the module test suite inside the runbox container.
-# The engine is the globally-installed `runbox` (shipped by family_dev); it
+# The engine is the globally-installed `runbox` (installed separately; not vendored in this repo); it
 # discovers the workspace's owning config (runbox/runbox.yml) by walking up
 # from this module directory, and runs this module's l1 as the payload.
+# Usage: ./verb/test [will-arg...]  (e.g. scope::subtree, level::N — forwarded
+#   verbatim to `will .test`; see `will .test ?` for the full parameter list.)
 set -euo pipefail
 MODULE_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
 if [[ -n "${VERB_LAYER:-}" ]]; then
@@ -11,4 +13,4 @@ if [[ -n "${VERB_LAYER:-}" ]]; then
   exit 1
 fi
 if [[ "${1:-}" == "--dry-run" ]]; then echo "runbox .live -- ./module/assistant/verb/test.d/l1"; exit 0; fi
-cd "$MODULE_DIR" && exec runbox .live -- "./module/assistant/verb/test.d/l1"
+cd "$MODULE_DIR" && exec runbox .live -- "./module/assistant/verb/test.d/l1" "$@"

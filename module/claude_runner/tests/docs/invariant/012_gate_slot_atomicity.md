@@ -120,7 +120,7 @@ All cases except IN-12 and IN-14 are integration tests split across `tests/concu
 
 ---
 
-<!-- BUG-479 task/claude_runner/bug/479_zombie_blind_pid_liveness.md — fixed: zombie-owner reclaim and zombie-waiter non-render covered by IN-11/IN-12 below -->
+<!-- BUG-479 — fixed: zombie-owner reclaim and zombie-waiter non-render covered by IN-11/IN-12 below -->
 ### IN-7: Live owner with decades-old `since` → unreclaimable by default; reclaimable once `CLR_GATE_STALE_SECS` is set below the elapsed age
 
 - **Given:** a slot owned by a genuinely alive real child process (a real `/bin/sleep` child, not a `claude`/`clr` process — `pid_alive()` reads process state from `/proc/{pid}/stat`, so only aliveness matters, never the cmdline) with `since: 0` recorded (an elapsed age of decades); `--max-sessions 1`; each sub-case uses its own `gate_dir` and its own owner process

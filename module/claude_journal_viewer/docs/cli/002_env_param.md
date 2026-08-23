@@ -21,7 +21,7 @@ CLI parameters always override environment variables. Resolution order:
 |---|-------------|----------------|---------|----------|
 | 1 | `CLR_JOURNAL_DIR` | `journal_dir::` | `~/.clr/journal/` | .list, .tail, .search, .stats, .status |
 | 2 | `NO_COLOR` | `no_color::1` | -- (colors enabled) | .list, .tail, .stats |
-| 3 | `CLJ_PORT` | `port::` | `8411` | .serve |
+| 3 | `CLJ_PORT` | `port::` | `0` (OS-assigned) | .serve |
 
 ### Details
 
@@ -55,17 +55,15 @@ NO_COLOR=1 clj .stats since::7d      # No colors in stats table
 #### CLJ_PORT
 
 Default port for the embedded web viewer. Overridden by `port::` CLI param.
+When neither is set the port resolves to `0` and the OS assigns an ephemeral
+one — there is no fixed fallback port; read the actual value from the
+`Listening on http://localhost:{port}` startup line.
 
 ```bash
 export CLJ_PORT=9090
 clj .serve                            # Binds to port 9090
 clj .serve port::8080                 # CLI override to 8080
+unset CLJ_PORT; clj .serve            # OS-assigned port
 ```
 
 **Consumed by:** `.serve`
-
-### Provenance
-
-| File | Notes |
-|------|-------|
-| [../env_param.md](env_param.md) | Original un-migrated source; retained as reference |

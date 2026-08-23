@@ -5,7 +5,7 @@
 //! eligibility, and `ps.rs`'s `build_queued_table` for its display self-heal
 //! (BUG-479/BUG-488).
 
-// BUG-479 task/claude_runner/bug/479_zombie_blind_pid_liveness.md — fixed: bare /proc/{pid}
+// BUG-479 — fixed: bare /proc/{pid}
 // existence read unreaped zombies as live, blocking acquire_slot()'s
 // owner-reclaim and reclaim-ticket claimant checks indefinitely; details below.
 // Fix(BUG-479): liveness now reads the /proc/{pid}/stat state field instead of

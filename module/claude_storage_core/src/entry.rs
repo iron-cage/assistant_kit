@@ -595,15 +595,16 @@ mod tests
   #[test]
   fn test_parse_minimal_user_entry()
   {
-    let json = r#"{"uuid":"a6f3bd8c-5575-4eab-82b0-b856f7a02833","parentUuid":null,"timestamp":"2025-11-08T23:30:10.039Z","type":"user","cwd":"/home/user","sessionId":"8d795a1c-c81d-4010-8d29-b4e678272419","version":"2.0.31","gitBranch":null,"userType":"external","isSidechain":false,"message":{"role":"user","content":"Hello"},"thinkingMetadata":{"level":"low","disabled":true,"triggers":[]}}"#;
+    let json = r#"{"uuid":"feed0003-0000-4000-8000-000000000003","parentUuid":null,"timestamp":"2025-11-08T23:30:10.039Z","type":"user","cwd":"/home/user","sessionId":"feed0001-0000-4000-8000-000000000001","version":"2.0.31","gitBranch":null,"userType":"external","isSidechain":false,"message":{"role":"user","content":"Hello"},"thinkingMetadata":{"level":"low","disabled":true,"triggers":[]}}"#;
 
     let entry = Entry::from_json_line( json ).unwrap();
 
-    assert_eq!( entry.uuid, "a6f3bd8c-5575-4eab-82b0-b856f7a02833" );
+    assert_eq!( entry.uuid, "feed0003-0000-4000-8000-000000000003" );
     assert!( entry.parent_uuid.is_none() );
     assert_eq!( entry.entry_type, EntryType::User );
-    assert_eq!( entry.session_id, "8d795a1c-c81d-4010-8d29-b4e678272419" );
+    assert_eq!( entry.session_id, "feed0001-0000-4000-8000-000000000001" );
 
+    // Assertion match: the wildcard is this test's failure branch, not an unhandled variant.
     #[ allow( clippy::match_wildcard_for_single_variants ) ]
     match entry.message
     {
@@ -660,14 +661,15 @@ mod tests
   #[test]
   fn test_parse_minimal_assistant_entry()
   {
-    let json = r#"{"uuid":"56a226b5-0ec6-4214-af16-b13cc326f8dc","parentUuid":"a6f3bd8c-5575-4eab-82b0-b856f7a02833","timestamp":"2025-11-08T23:30:21.913Z","type":"assistant","cwd":"/home/user","sessionId":"8d795a1c-c81d-4010-8d29-b4e678272419","version":"2.0.31","gitBranch":null,"userType":"external","isSidechain":false,"message":{"model":"claude-sonnet-4-5-20250929","id":"msg_01ABC","type":"message","role":"assistant","content":[{"type":"text","text":"Hi there!"}],"stop_reason":"end_turn","stop_sequence":null,"usage":{"input_tokens":5,"output_tokens":3}},"requestId":"req_01ABC"}"#;
+    let json = r#"{"uuid":"feed0004-0000-4000-8000-000000000004","parentUuid":"feed0003-0000-4000-8000-000000000003","timestamp":"2025-11-08T23:30:21.913Z","type":"assistant","cwd":"/home/user","sessionId":"feed0001-0000-4000-8000-000000000001","version":"2.0.31","gitBranch":null,"userType":"external","isSidechain":false,"message":{"model":"claude-sonnet-4-5-20250929","id":"msg_01ABC","type":"message","role":"assistant","content":[{"type":"text","text":"Hi there!"}],"stop_reason":"end_turn","stop_sequence":null,"usage":{"input_tokens":5,"output_tokens":3}},"requestId":"req_01ABC"}"#;
 
     let entry = Entry::from_json_line( json ).unwrap();
 
-    assert_eq!( entry.uuid, "56a226b5-0ec6-4214-af16-b13cc326f8dc" );
-    assert_eq!( entry.parent_uuid, Some( "a6f3bd8c-5575-4eab-82b0-b856f7a02833".to_string() ) );
+    assert_eq!( entry.uuid, "feed0004-0000-4000-8000-000000000004" );
+    assert_eq!( entry.parent_uuid, Some( "feed0003-0000-4000-8000-000000000003".to_string() ) );
     assert_eq!( entry.entry_type, EntryType::Assistant );
 
+    // Assertion match: the wildcard is this test's failure branch, not an unhandled variant.
     #[ allow( clippy::match_wildcard_for_single_variants ) ]
     match entry.message
     {
@@ -676,6 +678,7 @@ mod tests
         assert_eq!( asst_msg.model, "claude-sonnet-4-5-20250929" );
         assert_eq!( asst_msg.content.len(), 1 );
 
+        // Assertion match: the wildcard is this test's failure branch, not an unhandled variant.
         #[ allow( clippy::match_wildcard_for_single_variants ) ]
         match &asst_msg.content[ 0 ]
         {
@@ -694,6 +697,7 @@ mod tests
 
     let entry = Entry::from_json_line( json ).unwrap();
 
+    // Assertion match: the wildcard is this test's failure branch, not an unhandled variant.
     #[ allow( clippy::match_wildcard_for_single_variants ) ]
     match entry.message
     {
@@ -701,6 +705,7 @@ mod tests
       {
         assert_eq!( asst_msg.content.len(), 2 );
 
+        // Assertion match: the wildcard is this test's failure branch, not an unhandled variant.
         #[ allow( clippy::match_wildcard_for_single_variants ) ]
         match &asst_msg.content[ 0 ]
         {
@@ -712,6 +717,7 @@ mod tests
           _ => panic!( "expected thinking block" ),
         }
 
+        // Assertion match: the wildcard is this test's failure branch, not an unhandled variant.
         #[ allow( clippy::match_wildcard_for_single_variants ) ]
         match &asst_msg.content[ 1 ]
         {

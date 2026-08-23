@@ -27,6 +27,8 @@ use super::types::{ UsageParams, SortStrategy, PreferStrategy, ColsVisibility, S
 ///   truthy and were accepted as valid booleans, masking user typos.
 /// Pitfall: bool-typed params (e.g. `touch::`) use `Kind::String` registration so
 /// `"true"`/`"false"` pass through; `crate::output::parse_int_flag` is the sole normalisation point.
+// One parse-and-validate block per `.usage` CLI parameter — grows with the parameter set, and
+// keeping them in one place is what makes the defaults above auditable at a glance.
 #[ allow( clippy::too_many_lines ) ]
 #[ inline ]
 pub fn parse_usage_params( cmd : &VerifiedCommand ) -> Result< UsageParams, ErrorData >

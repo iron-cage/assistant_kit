@@ -37,6 +37,7 @@ impl core::str::FromStr for ExpectStrategy
 }
 
 /// Parsed CLI arguments.
+// Flat CLI argument record — one bool field per boolean flag the token parser accepts.
 #[ allow( clippy::struct_excessive_bools ) ]
 #[ derive( Default ) ]
 pub( crate ) struct CliArgs

@@ -114,6 +114,7 @@ fn emit_credential_trace
 /// - **Other errors:** exits 1 with an error message.
 ///
 /// This function never returns; it always calls `std::process::exit`.
+// Single subprocess entry point — each parameter is one isolated/refresh CLI flag, documented per-param below.
 #[ allow( clippy::too_many_arguments, clippy::fn_params_excessive_bools, clippy::too_many_lines ) ]
 pub( super ) fn run_isolated_command
 (

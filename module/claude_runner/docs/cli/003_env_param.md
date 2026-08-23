@@ -225,7 +225,7 @@ clr --max-tokens 50000 --dry-run "test"      # shows: CLAUDE_CODE_MAX_OUTPUT_TOK
 
 ### Env Param 5: Gate Runtime Configuration
 
-<!-- BUG-481 task/claude_runner/bug/481_silent_off_env_protection_boundary.md — fixed: CLR_REMAINING_TIMEOUT_SECS row added to the table below (env-var-only, 1-tier), restoring the discovery path param/085 cross-references -->
+<!-- BUG-481 — fixed: CLR_REMAINING_TIMEOUT_SECS row added to the table below (env-var-only, 1-tier), restoring the discovery path param/085 cross-references -->
 Runtime configuration overrides for the `--max-sessions` concurrency gate (`gate.rs`), which gates
 `run`, `ask`, **and** `isolated` (previously `run`/`ask` only — `isolated` was fixed to route
 through the same mechanism; see [user_story/025_concurrency_gate.md](user_story/025_concurrency_gate.md)).

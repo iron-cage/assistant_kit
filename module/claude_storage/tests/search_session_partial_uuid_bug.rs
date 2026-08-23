@@ -77,13 +77,13 @@ use tempfile::TempDir;
 fn test_search_session_partial_uuid_match()
 {
   let storage = TempDir::new().unwrap();
-  let session_uuid = "79f86582-1435-442c-935a-13f8d874918a";
-  let session_prefix = "79f86582";
+  let session_uuid = "feed0002-0000-4000-8000-000000000002";
+  let session_prefix = "feed0002";
 
   // Write 2 entries so the search has something to find
   common::write_test_session( storage.path(), "search-partial-proj", session_uuid, 2 );
 
-  // Bug: partial prefix returns "Session not found: 79f86582"
+  // Bug: partial prefix returns "Session not found: feed0002"
   // Fixed: partial prefix matches the full UUID and returns search results
   let output = common::clg_cmd()
     .args( [
@@ -139,7 +139,7 @@ fn test_search_session_partial_uuid_match()
 fn test_search_session_full_uuid_still_works()
 {
   let storage = TempDir::new().unwrap();
-  let session_uuid = "79f86582-1435-442c-935a-13f8d874918a";
+  let session_uuid = "feed0002-0000-4000-8000-000000000002";
 
   common::write_test_session( storage.path(), "search-full-uuid-proj", session_uuid, 2 );
 

@@ -54,8 +54,8 @@ pub( crate ) fn io_err_to_error_data( e : &std::io::Error, context : &str ) -> E
 // Pitfall: Prefix resolution must occur BEFORE validate_name(); calling validate_name() on a
 //   bare prefix always returns exit 1, preventing the resolver from running at all.
 // Fix(BUG-264):
-// Root cause: `starts_with("i1")` matched `i1@wbox.pro`, `i11@wbox.pro`, `i12@wbox.pro`, all
-//   reported as ambiguous even though `i1` is an exact local-part match for `i1@wbox.pro`.
+// Root cause: `starts_with("i1")` matched `i1@example.com`, `i11@example.com`, `i12@example.com`, all
+//   reported as ambiguous even though `i1` is an exact local-part match for `i1@example.com`.
 // Pitfall: Always check exact-local-part match before prefix scanning; prefix scanning is
 //   only meaningful when no account's local part equals the input exactly.
 pub( crate ) fn resolve_account_name( raw : &str, store : &std::path::Path ) -> Result< String, ErrorData >

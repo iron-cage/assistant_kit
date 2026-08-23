@@ -189,8 +189,8 @@ cd /home/user/project
 
 **Content Format**:
 ```text
-Session: 79f86582... (2893 entries)
-Path: /home/user/.claude/projects/-home-user-project/79f86582-....jsonl
+Session: feed0002... (2893 entries)
+Path: /home/user/.claude/projects/-home-user-project/feed0002-....jsonl
 Agent Session: false
 Total Entries: 2893
 User Entries: 1447

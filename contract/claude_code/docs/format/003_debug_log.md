@@ -23,7 +23,7 @@
 [DEBUG] Found 0 plugins (0 enabled, 0 disabled)
 [DEBUG] Total LSP servers loaded: 0
 [DEBUG] Creating shell snapshot at /home/alice/.claude/shell-snapshots/...
-[DEBUG] Starting session 8d795a1c-c81d-4010-8d29-b4e678272419
+[DEBUG] Starting session feed0001-0000-4000-8000-000000000001
 ```
 
 ### Content Types

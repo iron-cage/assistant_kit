@@ -24,7 +24,7 @@
 | topics | List the topics under a base (both modes), or resolve one topic name to its dir-mode directory (`--path`) or fork-mode session file (`--file`); read-only, spawns nothing; canonical form `clr topics`, `clr topics --path <NAME>`, or `clr topics --file <NAME>` |
 | help | Display usage information and exit; canonical form `clr help`; `--help`/`-h` are parameter aliases |
 
-<!-- BUG-480 task/claude_runner/bug/480_gate_diagnostic_hides_slot_occupancy.md — fixed: the three per-surface "active" senses and "slot occupancy" are defined in § Architecture below -->
+<!-- BUG-480 — fixed: the three per-surface "active" senses and "slot occupancy" are defined in § Architecture below -->
 ### Modes
 
 | Term | Definition |

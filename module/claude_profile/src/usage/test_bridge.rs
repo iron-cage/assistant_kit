@@ -2,6 +2,7 @@
 //! so that integration tests in `tests/usage/` can access them without widening
 //! visibility in production builds. Requires `enabled` feature (`claude_quota` types).
 
+// Pure re-export surface — every item's documentation lives on its original definition.
 #![ allow( missing_docs ) ]
 
 // ── Types sub-module ──────────────────────────────────────────────────────

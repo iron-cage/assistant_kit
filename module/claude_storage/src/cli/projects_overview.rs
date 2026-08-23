@@ -351,7 +351,7 @@ impl TreeNode
 
 /// Fold single-child structural nodes into their child.
 ///
-/// Without this, `~/pro/lib/yrd_core/assistant_kit` would render as four nested
+/// Without this, `~/work/src/shared/assistant_kit` would render as four nested
 /// levels of which three carry no project. Collapsing yields one node labelled
 /// with the whole run.
 fn collapse( node : &mut TreeNode )

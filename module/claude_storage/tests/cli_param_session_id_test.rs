@@ -75,7 +75,7 @@ fn ec_1_session_id_named_accepted()
 fn ec_2_session_id_uuid_accepted()
 {
   let root = TempDir::new().unwrap();
-  let uuid = "8d795a1c-c81d-4010-8d29-b4e678272419";
+  let uuid = "feed0001-0000-4000-8000-000000000001";
   common::write_test_session( root.path(), "proj-sid2", uuid, 4 );
 
   let out = common::clg_cmd()

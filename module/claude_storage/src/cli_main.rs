@@ -406,7 +406,6 @@ fn extract_user_message( error : &str ) -> String
 /// A single `<command>.help` argument is intercepted before the pipeline is
 /// built, rendering via `cli_fmt` instead of unilang's auto-generated
 /// `<command>.help` routine — see `try_command_help`.
-#[ allow( clippy::needless_pass_by_value ) ]
 fn execute_oneshot( registry : CommandRegistry, args : Vec< String >, binary : &str ) -> !
 {
   if args.len() == 2
