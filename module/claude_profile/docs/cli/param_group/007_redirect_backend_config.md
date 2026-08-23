@@ -7,7 +7,7 @@
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | [`backend::`](../param/069_backend.md) | [`AccountBackend`](../type/005_account_backend.md) (`enum`) | `anthropic` | Selects `anthropic` (existing OAuth flow) or `redirect` (foreign endpoint) |
-| [`preset::`](../param/074_preset.md) | `string` | *(omit)* | Named provider preset pre-filling `backend::`/`base_url::`/`inference_provider::`; only `kimi` recognized today |
+| [`preset::`](../param/074_preset.md) | `string` | *(omit)* | Named provider preset pre-filling `backend::`/`base_url::`/`inference_provider::`; `kimi` and `deepseek` recognized today |
 | [`base_url::`](../param/070_base_url.md) | `string` | *(omit; required when `backend::redirect`)* | Redirect target's API base URL |
 | [`api_key::`](../param/071_api_key.md) | `string` | *(omit; required when `backend::redirect`)* | Redirect target's static API key |
 | [`redirect_model::`](../param/072_redirect_model.md) | `string` | *(omit; required when `backend::redirect`)* | Redirect target's own model identifier |
@@ -27,22 +27,26 @@ clp .account.save name::kimi backend::redirect base_url::https://api.moonshot.ai
 # Same account, via the kimi preset — backend:: and base_url:: filled automatically
 clp .account.save name::kimi preset::kimi api_key::"$KIMI_API_KEY" redirect_model::kimi-k3
 
+# A DeepSeek redirect-backend account, via the deepseek preset
+clp .account.save name::deepseek preset::deepseek api_key::"$DEEPSEEK_API_KEY" redirect_model::deepseek-v4-pro
+
 # Anthropic accounts are unaffected — backend:: defaults to anthropic
 clp .account.save name::alice@acme.com
 ```
 
-**Membership rule:** `base_url::`, `api_key::`, `redirect_model::` are accepted only alongside `backend::redirect` — any of the three present with `backend::anthropic` (or `backend::` omitted) exits 1. Conversely, `backend::redirect` without all three present exits 1 naming the missing parameter(s). `backend::` alone (defaulting to `anthropic`, or explicitly `backend::anthropic`) never requires the other three. `preset::` is the odd member out: it never itself requires or is required by any other member — it only pre-fills `backend::`'s and `base_url::`'s values (plus `inference_provider::`, outside this group) when the caller omitted them, and its one recognized value (`kimi`) happens to resolve to `backend::redirect`, so in practice `preset::kimi` is almost always seen alongside `api_key::`/`redirect_model::` even though nothing enforces that pairing directly. See [param/074_preset.md](../param/074_preset.md) for the full precedence/gating rule.
+**Membership rule:** `base_url::`, `api_key::`, `redirect_model::` are accepted only alongside `backend::redirect` — any of the three present with `backend::anthropic` (or `backend::` omitted) exits 1. Conversely, `backend::redirect` without all three present exits 1 naming the missing parameter(s). `backend::` alone (defaulting to `anthropic`, or explicitly `backend::anthropic`) never requires the other three. `preset::` is the odd member out: it never itself requires or is required by any other member — it only pre-fills `backend::`'s and `base_url::`'s values (plus `inference_provider::`, outside this group) when the caller omitted them, and both its recognized values (`kimi`, `deepseek`) happen to resolve to `backend::redirect`, so in practice `preset::kimi`/`preset::deepseek` is almost always seen alongside `api_key::`/`redirect_model::` even though nothing enforces that pairing directly. See [param/074_preset.md](../param/074_preset.md) for the full precedence/gating rule.
 
 **Semantic Coherence Test**
 
 > "Does parameter X only make sense in the context of creating or describing a redirect-backend account?"
 
-`backend::` passes: it is the discriminator the other members depend on. `preset::` passes: its only recognized value (`kimi`) exists solely to pre-fill redirect-backend fields — it has no effect at all on an `anthropic`-backend save. `base_url::`, `api_key::`, `redirect_model::` each pass: none has any meaning for an `anthropic` account. This is the inverse membership rule from [Account Targeting](006_account_targeting.md), whose Semantic Coherence Test explicitly excludes authentication data — these five parameters are exactly that authentication/backend-selection data.
+`backend::` passes: it is the discriminator the other members depend on. `preset::` passes: both its recognized values (`kimi`, `deepseek`) exist solely to pre-fill redirect-backend fields — it has no effect at all on an `anthropic`-backend save. `base_url::`, `api_key::`, `redirect_model::` each pass: none has any meaning for an `anthropic` account. This is the inverse membership rule from [Account Targeting](006_account_targeting.md), whose Semantic Coherence Test explicitly excludes authentication data — these five parameters are exactly that authentication/backend-selection data.
 
 **Cross-References**
 
 - [../../feature/071_redirect_backend_accounts.md](../../feature/071_redirect_backend_accounts.md) — feature spec for redirect-backend accounts
 - [../../feature/073_kimi_provider_preset.md](../../feature/073_kimi_provider_preset.md) — feature spec for `preset::kimi` and the Kimi-tier `settings.json` env vars it indirectly enables
+- [../../feature/078_deepseek_provider_preset.md](../../feature/078_deepseek_provider_preset.md) — feature spec for `preset::deepseek` and the DeepSeek-tier `settings.json` env vars it indirectly enables
 - [../../schema/002_account_json.md](../../schema/002_account_json.md) — `backend`, `base_url`, `redirect_model` fields in `{name}.json`
 - [../../schema/001_credentials_json.md](../../schema/001_credentials_json.md) — `accessToken`-only credential shape for redirect accounts
 - [../type/005_account_backend.md](../type/005_account_backend.md) — `AccountBackend` type specification

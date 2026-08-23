@@ -4,7 +4,7 @@
 
 - **Purpose**: Test cases for the `backend`/`base_url`/`redirect_model` account fields, the `.account.save backend::redirect` static-credential write path, `.account.use`'s `settings.json` `env.*` write/clear responsibility, the `static` token classification, and the Anthropic-only operation guards.
 - **Source**: `docs/feature/071_redirect_backend_accounts.md`
-- **Covers**: AC-01 through AC-17 (AC-08 superseded by AC-14 — see FT-08)
+- **Covers**: AC-01 through AC-21 (AC-08 superseded by AC-14 — see FT-08)
 
 ### Test Cases
 
@@ -27,10 +27,14 @@
 | FT-15 | AC-15 | Re-save same name with different `backend::` rewrites from scratch | `t13_save_resave_different_backend_rewrites_from_scratch` |
 | FT-16 | AC-16 | `.account.use` to redirect skips quota-fetch/touch unconditionally | `t06_use_redirect_account_writes_env_vars_and_skips_touch` (AC-16 assertions) |
 | FT-17 | AC-17 | `.usage`/`.accounts` render redirect row as placeholder, no HTTP; compact `(redirect)` + `—` renews in text, full reason in TSV (BUG-538); `—` Sub cell and `—` from `get::sub`/`get::renews` (BUG-540) | `ft14_071_redirect_backend_produces_placeholder_no_http`, `ft14b_071_redirect_checked_before_not_owned_gate`, `t21_usage_tsv_active_redirect_row_current_static`, `t22_usage_text_redirect_row_compact_note_no_question_mark`, `t23_usage_sub_and_get_fields_redirect_known_absence` |
+| FT-18 | AC-19 | Save carrying no mutation on a stored-redirect target skips — exit 0, neither store file touched, loud notice (BUG-549) | `mre_bug549_bare_save_preserves_redirect_account` |
+| FT-19 | AC-20 | Save carrying a mutation on the same target exits 1, never the skip; store byte-identical; bare save still skips (BUG-554) | `mre_bug554_mutating_save_on_redirect_target_is_not_swallowed` |
+| FT-20 | AC-21 | `.account.relogin` on a redirect target exits 1 before `switch_account`; active marker and record intact; `dry::1` refuses too (BUG-556) | `mre_bug556_relogin_refuses_redirect_account_before_switch` |
 
 ### Notes
 
-- ✅ Implemented — CLI-surface cases (FT-01–FT-07, FT-11–FT-16) live in `tests/cli/account_redirect_backend_test.rs`; FT-09 in `claude_profile_core/tests/account_refresh_test.rs`; FT-10 in `tests/usage/api_tests_a.rs`; FT-17 in `tests/usage/fetch_tests.rs`.
+- ✅ Implemented — CLI-surface cases (FT-01–FT-07, FT-11–FT-16, FT-18, FT-19) live in `tests/cli/account_redirect_backend_test.rs`; FT-09 in `claude_profile_core/tests/account_refresh_test.rs`; FT-10 in `tests/usage/api_tests_a.rs`; FT-17 in `tests/usage/fetch_tests.rs`; FT-20 in `tests/cli/account_relogin_test_b.rs`.
+- FT-18/FT-19 are the two sides of one gate and must stay paired: FT-18 pins that an inert call still skips, FT-19 that a mutation-bearing one never does. BUG-554 existed precisely because only the FT-18 side had a test.
 - Domain-level supplements in `claude_profile_core/tests/account_backend_test.rs` (`ft01`–`ft12_071`): `AccountBackend` parsing (`redirect` variant, absent/unrecognized/corrupt → `anthropic`), redirect save writes minimal credentials without touching the live `~/.claude/.credentials.json`, switch-path `env.*` write/clear/empty-`env`-prune/unrelated-subkey-preserve.
 - All FT cases use a temporary isolated credential store and `$HOME`; no real user environment.
 - Redirect account names are bare labels (e.g. `kimi`) — `validate_redirect_name()` drops the email-shape requirement; FT-01/FT-02 rely on this.
@@ -221,3 +225,36 @@
 - **Exit:** 0
 - **Source fn:** `ft14_071_redirect_backend_produces_placeholder_no_http`, `ft14b_071_redirect_checked_before_not_owned_gate` (`tests/usage/fetch_tests.rs`); `t21_usage_tsv_active_redirect_row_current_static`, `t22_usage_text_redirect_row_compact_note_no_question_mark`, `t23_usage_sub_and_get_fields_redirect_known_absence` (`tests/cli/account_redirect_backend_test.rs` — T22 is the `bug_reproducer(BUG-538)`, T23 the `bug_reproducer(BUG-540)`)
 - **Source:** [071_redirect_backend_accounts.md AC-17](../../../docs/feature/071_redirect_backend_accounts.md)
+
+---
+
+### FT-18: Save carrying no mutation on a redirect target skips
+
+- **Given:** `kimi.json` holds `backend: redirect`; live `~/.claude/.credentials.json` present (the anthropic capture source a destructive rewrite would snapshot); `kimi` marked active.
+- **When:** `clp .account.save name::kimi` — no `backend::`, no `preset::`, and no other mutation-bearing parameter (the watchdog's per-tick shape).
+- **Then:** Exits 0 touching neither store file. `backend`/`base_url`/`redirect_model` survive; the stored static key is not replaced by the live OAuth session; stdout names the account and reports the skip.
+- **Exit:** 0
+- **Source fn:** `mre_bug549_bare_save_preserves_redirect_account` (`bug_reproducer(BUG-549)`)
+- **Source:** [071_redirect_backend_accounts.md AC-19](../../../docs/feature/071_redirect_backend_accounts.md)
+
+---
+
+### FT-19: Save carrying a mutation on a redirect target is rejected, not skipped
+
+- **Given:** Same stored-redirect `kimi` as FT-18.
+- **When:** `clp .account.save name::kimi api_key::sk-rotated-key`, then `clp .account.save name::kimi tags::work` — both with `backend::` omitted.
+- **Then:** Both exit 1 and neither output mentions a skip. `api_key::` gets the pre-existing redirect-only rejection; `tags::` gets the gate's own refusal naming the parameter and the missing `backend::`. Both store files stay byte-identical — the record is intact and the static key is still the original, not the rotated one. A subsequent bare `clp .account.save name::kimi` still takes the AC-19 skip, confirming the narrowing did not close it.
+- **Exit:** 1 (both), then 0 (bare save)
+- **Source fn:** `mre_bug554_mutating_save_on_redirect_target_is_not_swallowed` (`bug_reproducer(BUG-554)`)
+- **Source:** [071_redirect_backend_accounts.md AC-20](../../../docs/feature/071_redirect_backend_accounts.md)
+
+---
+
+### FT-20: `.account.relogin` refuses a redirect target before switching
+
+- **Given:** Stored-redirect `kimi` plus a separate anthropic account holding the active marker. `PATH` is emptied for the call so that a regression reaching the spawn cannot block on an interactive browser login.
+- **When:** `clp .account.relogin name::kimi`, then the same with `dry::1`.
+- **Then:** Both exit 1, naming the account and the redirect backend. The active marker is unchanged — proving the refusal ran ahead of `switch_account()`, which is what distinguishes this fix from one that merely guards the trailing save. The redirect record is intact and its static key un-replaced — both halves matter, since the unfixed path read-merges rather than deleting, so `base_url`/`redirect_model` would survive it as stale fields on an anthropic-labelled record; asserting them alongside `backend` and the key pins that self-inconsistent state as forbidden. The `dry::1` form reports the refusal rather than `[dry-run] would re-authenticate`.
+- **Exit:** 1 (both)
+- **Source fn:** `mre_bug556_relogin_refuses_redirect_account_before_switch` (`bug_reproducer(BUG-556)`)
+- **Source:** [071_redirect_backend_accounts.md AC-21](../../../docs/feature/071_redirect_backend_accounts.md)

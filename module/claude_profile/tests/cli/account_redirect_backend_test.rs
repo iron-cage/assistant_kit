@@ -17,7 +17,7 @@
 //! | T13 | `t13_save_resave_different_backend_rewrites_from_scratch`  | re-save redirect→anthropic → stale fields cleared  | P   |
 //! | T14 | `t14_save_preset_kimi_fills_backend_base_url_and_inference_provider` | Feature 073: `preset::kimi` defaults backend/base_url/inference_provider | P |
 //! | T15 | `t15_save_preset_kimi_explicit_base_url_overrides_default`  | Feature 073: explicit `base_url::` wins over `preset::kimi`'s default | P |
-//! | T16 | `t16_save_preset_unrecognized_value_exits_1`                | Feature 073: `preset::` value other than `kimi` → exit 1 | N |
+//! | T16 | `t16_save_preset_unrecognized_value_exits_1`                | Feature 073/078: `preset::` value other than `kimi`/`deepseek` → exit 1, stderr names both | N |
 //! | T17 | `t17_use_preset_kimi_account_writes_kimi_tier_env_vars`     | Feature 073: `.account.use` on a `preset::kimi` account writes all 7 Kimi-tier env vars | P |
 //! | T18 | `t18_save_preset_kimi_with_explicit_backend_anthropic_does_not_force_redirect_fields` | Feature 073: explicit `backend::anthropic` wins — preset does not force base_url/inference_provider | P |
 //! | T19 | `t19_use_redirect_removes_stale_top_level_model_pin`        | redirect save never snapshots `model`; redirect switch removes a stale top-level pin | P |
@@ -26,6 +26,11 @@
 //! | T22 | `t22_usage_text_redirect_row_compact_note_no_question_mark`  | BUG-538: text table shows compact `(redirect)` + `—` renews (no 40-char note, no `?`); TSV keeps full reason | P |
 //! | T23 | `t23_usage_sub_and_get_fields_redirect_known_absence`        | BUG-540: `cols::+sub` cell (text+TSV) and `get::sub`/`get::renews` emit `—`, never `?`, on a redirect row | P |
 //! | MRE | `mre_bug549_bare_save_preserves_redirect_account`            | BUG-549 / 071 AC-19: bare save (no `backend::`/`preset::`) on a stored-redirect target skips — record intact, static key intact, loud notice | P |
+//! | MRE | `mre_bug554_mutating_save_on_redirect_target_is_not_swallowed` | BUG-554 / 071 AC-19: a save carrying a mutation (`api_key::`, `tags::`) on a stored-redirect target is rejected, never skipped; bare save still skips | N |
+//! | T24 | `t24_save_preset_deepseek_fills_backend_base_url_and_inference_provider` | Feature 078/AC-06: `preset::deepseek` defaults backend/base_url/inference_provider | P |
+//! | T25 | `t25_save_preset_deepseek_explicit_base_url_overrides_default` | Feature 078/AC-07: explicit `base_url::` wins over `preset::deepseek`'s default | P |
+//! | T26 | `t26_save_preset_deepseek_with_explicit_backend_anthropic_does_not_force_redirect_fields` | Feature 078/AC-08: explicit `backend::anthropic` wins — preset does not force base_url/inference_provider | P |
+//! | T27 | `t27_use_preset_deepseek_account_writes_deepseek_tier_env_vars` | Feature 078/AC-10: `.account.use` on a `preset::deepseek` account writes all 6 DeepSeek-tier env vars | P |
 
 use crate::cli_runner::{
   run_cs_with_env,
@@ -521,8 +526,8 @@ fn t16_save_preset_unrecognized_value_exits_1()
   );
   assert_exit( &out, 1 );
   assert!(
-    stderr( &out ).contains( "preset::" ) && stderr( &out ).contains( "kimi" ),
-    "T16: stderr must name preset:: and the one valid value (kimi), got:\n{}", stderr( &out ),
+    stderr( &out ).contains( "preset::" ) && stderr( &out ).contains( "kimi" ) && stderr( &out ).contains( "deepseek" ),
+    "T16: stderr must name preset:: and both valid values (kimi, deepseek), got:\n{}", stderr( &out ),
   );
   assert!( !account_exists( dir.path(), "kimi" ), "T16: rejected save must not write files" );
 }
@@ -1005,5 +1010,238 @@ fn mre_bug549_bare_save_preserves_redirect_account()
   assert!(
     text.contains( "kimi" ) && text.contains( "skip" ),
     "BUG-549: bare save on a redirect target must report the skip (name + 'skip'), got:\n{text}",
+  );
+}
+
+/// MRE for BUG-554: the AC-19 redirect skip must cover only a *genuinely bare* save.
+/// A save carrying an actual mutation must never exit 0 with "save skipped".
+///
+/// ## Root Cause
+/// BUG-549's gate tested `backend::`/`preset::` alone — AC-19's literal two-condition text —
+/// and sat upstream of every other parameter's parsing and validation. Any mutation-bearing
+/// save whose target held `backend: redirect` therefore hit the skip and returned exit 0
+/// having written nothing: `api_key::` rotations, `tags::` writes, `host::` and
+/// `inference_provider::` updates all vanished under a success exit code. The gate encoded
+/// "which flags the acceptance criterion happened to name" rather than "does this call
+/// actually carry a mutation", so every parameter added after BUG-549 inherited the swallow.
+///
+/// ## Why Not Caught
+/// BUG-549's own MRE asserts exactly one input shape — the watchdog's bare per-tick save —
+/// because that was the incident. Nothing exercised the gate's *other* side: a save that
+/// reaches it while carrying a parameter the operator explicitly supplied. A gate is a
+/// two-sided contract and only one side had a test.
+///
+/// ## Fix Applied
+/// The gate now splits the carried mutators by whether one already has a rejection of its
+/// own further down. `base_url::`/`api_key::`/`redirect_model::` fall through to the
+/// redirect-only check and `role::` to the Feature 075 removal notice, so each still gets
+/// its precise message. `host::`/`tags::`/`inference_provider::` are legal on an anthropic
+/// save and have no such guard, so the gate rejects them itself, naming the conflict. Only a
+/// save carrying none of them still takes the AC-19 skip.
+///
+/// ## Prevention
+/// An early-return gate placed above a command's validation block inherits every parameter
+/// added afterwards. Either put the gate below validation, or enumerate what makes a call
+/// inert and assert that enumeration stays exhaustive — never enumerate what makes it act.
+///
+/// ## Pitfall
+/// Do not resolve the fall-through case by defaulting the absent `backend::` to the *stored*
+/// `redirect` and letting the write proceed: `save()`'s redirect branch writes `accessToken`
+/// from the (absent) `api_key::` bytes, clobbering the stored static key with an empty
+/// string. A mutation-bearing save with no explicit `backend::` is genuinely ambiguous, so
+/// it is rejected rather than guessed.
+#[ test ]
+#[ doc = "bug_reproducer(BUG-554)" ]
+fn mre_bug554_mutating_save_on_redirect_target_is_not_swallowed()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  let made = run_cs_with_env(
+    &[
+      ".account.save", "name::kimi", "backend::redirect",
+      "base_url::https://api.moonshot.ai/anthropic", "api_key::sk-static-redirect-key",
+      "redirect_model::kimi-k3",
+    ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &made, 0 );
+  write_credentials( dir.path(), "max", "default_claude_max_20x", FAR_FUTURE_MS );
+
+  // 1. A redirect-only param with no backend:: — the operator's key rotation. Must reach
+  //    its own documented rejection, not the skip.
+  let rotate = run_cs_with_env(
+    &[ ".account.save", "name::kimi", "api_key::sk-rotated-key" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &rotate, 1 );
+  let rotate_msg = format!( "{}{}", stdout( &rotate ), stderr( &rotate ) );
+  assert!(
+    !rotate_msg.contains( "skip" ),
+    "BUG-554: an api_key:: rotation must not be swallowed by the AC-19 skip, got:\n{rotate_msg}",
+  );
+  assert!(
+    rotate_msg.contains( "redirect-only" ),
+    "BUG-554: api_key:: without backend:: must give the redirect-only rejection, got:\n{rotate_msg}",
+  );
+
+  // 2. A mutator that is legal on an anthropic save and so has no rejection of its own —
+  //    the gate must stop it here rather than let it default to anthropic and ride AC-15's
+  //    delete-and-rewrite (which is BUG-549's destruction, reached by another door).
+  let tagged = run_cs_with_env(
+    &[ ".account.save", "name::kimi", "tags::work" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &tagged, 1 );
+  let tagged_msg = format!( "{}{}", stdout( &tagged ), stderr( &tagged ) );
+  assert!(
+    !tagged_msg.contains( "skip" ),
+    "BUG-554: a tags:: write must not be swallowed by the AC-19 skip, got:\n{tagged_msg}",
+  );
+  assert!(
+    tagged_msg.contains( "tags::" ) && tagged_msg.contains( "backend::" ),
+    "BUG-554: the refusal must name the offending param and the missing backend::, got:\n{tagged_msg}",
+  );
+
+  // 3. Neither rejection may have written anything — the redirect record is intact and the
+  //    static key is still the original.
+  let meta = read_account_meta( dir.path(), "kimi" );
+  assert_eq!(
+    meta[ "backend" ], serde_json::json!( "redirect" ),
+    "BUG-554: a rejected save must not re-backend the account, got:\n{meta}",
+  );
+  assert_eq!(
+    meta[ "base_url" ], serde_json::json!( "https://api.moonshot.ai/anthropic" ),
+    "BUG-554: a rejected save must not destroy base_url, got:\n{meta}",
+  );
+  assert_eq!(
+    meta[ "redirect_model" ], serde_json::json!( "kimi-k3" ),
+    "BUG-554: a rejected save must not destroy redirect_model, got:\n{meta}",
+  );
+  let creds_text = std::fs::read_to_string( credentials_path( dir.path(), "kimi" ) ).unwrap();
+  assert!(
+    creds_text.contains( "sk-static-redirect-key" ) && !creds_text.contains( "sk-rotated-key" ),
+    "BUG-554: a rejected save must leave the stored static key byte-identical, got:\n{creds_text}",
+  );
+
+  // 4. The AC-19 skip itself still works — narrowing the gate must not have closed it.
+  let bare = run_cs_with_env( &[ ".account.save", "name::kimi" ], &[ ( "HOME", home ) ] );
+  assert_exit( &bare, 0 );
+  assert!(
+    stdout( &bare ).contains( "skip" ),
+    "BUG-554: a genuinely bare save must still take the AC-19 skip, got:\n{}", stdout( &bare ),
+  );
+}
+
+// ── Feature 078 — DeepSeek provider preset (`preset::deepseek`) ─────────────────
+
+#[ test ]
+fn t24_save_preset_deepseek_fills_backend_base_url_and_inference_provider()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  let out = run_cs_with_env(
+    &[
+      ".account.save", "name::deepseek", "preset::deepseek",
+      "api_key::sk-test", "redirect_model::deepseek-v4-pro",
+    ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let meta = read_account_meta( dir.path(), "deepseek" );
+  assert_eq!( meta[ "backend" ], serde_json::json!( "redirect" ), "T24: preset::deepseek must default backend to redirect, got:\n{meta}" );
+  assert_eq!(
+    meta[ "base_url" ], serde_json::json!( "https://api.deepseek.com/anthropic" ),
+    "T24: preset::deepseek must default base_url to DeepSeek's endpoint, got:\n{meta}",
+  );
+  assert_eq!( meta[ "inference_provider" ], serde_json::json!( "deepseek" ), "T24: preset::deepseek must default inference_provider to deepseek, got:\n{meta}" );
+  assert_eq!( meta[ "redirect_model" ], serde_json::json!( "deepseek-v4-pro" ), "T24: redirect_model must still come from the explicit param, got:\n{meta}" );
+
+  let creds_text = std::fs::read_to_string( credentials_path( dir.path(), "deepseek" ) ).unwrap();
+  let creds : serde_json::Value = serde_json::from_str( &creds_text ).unwrap();
+  assert_eq!( creds[ "accessToken" ], serde_json::json!( "sk-test" ), "T24: accessToken mismatch, got:\n{creds_text}" );
+}
+
+#[ test ]
+fn t25_save_preset_deepseek_explicit_base_url_overrides_default()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  let out = run_cs_with_env(
+    &[
+      ".account.save", "name::deepseek", "preset::deepseek",
+      "base_url::https://custom.mirror.example/anthropic",
+      "api_key::sk-test", "redirect_model::deepseek-v4-pro",
+    ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let meta = read_account_meta( dir.path(), "deepseek" );
+  assert_eq!(
+    meta[ "base_url" ], serde_json::json!( "https://custom.mirror.example/anthropic" ),
+    "T25: an explicit base_url:: must override preset::deepseek's default, got:\n{meta}",
+  );
+}
+
+#[ test ]
+fn t26_save_preset_deepseek_with_explicit_backend_anthropic_does_not_force_redirect_fields()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
+
+  let out = run_cs_with_env(
+    &[ ".account.save", "name::bob@acme.com", "preset::deepseek", "backend::anthropic" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let meta = read_account_meta( dir.path(), "bob@acme.com" );
+  assert_eq!( meta[ "backend" ], serde_json::json!( "anthropic" ), "T26: explicit backend::anthropic must win over preset::deepseek, got:\n{meta}" );
+  assert!( meta.get( "base_url" ).is_none(), "T26: preset::deepseek must not force base_url onto an anthropic-backend save, got:\n{meta}" );
+  assert!( meta.get( "inference_provider" ).is_none(), "T26: preset::deepseek must not force inference_provider onto an anthropic-backend save, got:\n{meta}" );
+}
+
+#[ test ]
+fn t27_use_preset_deepseek_account_writes_deepseek_tier_env_vars()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  let save_out = run_cs_with_env(
+    &[
+      ".account.save", "name::deepseek", "preset::deepseek",
+      "api_key::sk-test", "redirect_model::deepseek-v4-pro",
+    ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &save_out, 0 );
+
+  let use_out = run_cs_with_env( &[ ".account.use", "name::deepseek" ], &[ ( "HOME", home ) ] );
+  assert_exit( &use_out, 0 );
+
+  let settings_text = std::fs::read_to_string( dir.path().join( ".claude" ).join( "settings.json" ) ).unwrap();
+  let settings : serde_json::Value = serde_json::from_str( &settings_text ).unwrap();
+  let env = settings.get( "env" ).expect( "T27: settings.json must gain an env object" );
+  for key in [ "ANTHROPIC_DEFAULT_OPUS_MODEL", "ANTHROPIC_DEFAULT_SONNET_MODEL" ]
+  {
+    assert_eq!( env[ key ], serde_json::json!( "deepseek-v4-pro" ), "T27: env.{key} must mirror redirect_model, got:\n{settings_text}" );
+  }
+  for key in [ "ANTHROPIC_DEFAULT_HAIKU_MODEL", "CLAUDE_CODE_SUBAGENT_MODEL" ]
+  {
+    assert_eq!( env[ key ], serde_json::json!( "deepseek-v4-flash" ), "T27: env.{key} must be fixed to deepseek-v4-flash regardless of redirect_model, got:\n{settings_text}" );
+  }
+  assert_eq!( env[ "CLAUDE_CODE_EFFORT_LEVEL" ], serde_json::json!( "max" ), "T27: env.CLAUDE_CODE_EFFORT_LEVEL mismatch, got:\n{settings_text}" );
+  assert_eq!(
+    env[ "CLAUDE_CODE_AUTO_COMPACT_WINDOW" ], serde_json::json!( "786432" ),
+    "T27: deepseek preset must get the flat 786432 auto-compact window, got:\n{settings_text}",
+  );
+  assert!(
+    env.get( "ANTHROPIC_DEFAULT_FABLE_MODEL" ).is_none(),
+    "T27: DeepSeek has no Fable-tier substitution — env.ANTHROPIC_DEFAULT_FABLE_MODEL must not be written, got:\n{settings_text}",
   );
 }

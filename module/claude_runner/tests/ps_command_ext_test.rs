@@ -273,7 +273,7 @@ fn it_25_columns_bogus_exits_1()
 
 // ── IT-26: `--wide` shows all 11 columns ─────────────────────────────────────
 
-/// IT-26: `clr ps --wide` shows all 11 columns including Mode, Command, Binary.
+/// IT-26: `clr ps --wide` shows all 11 columns including State, Mode, Command, Binary.
 #[ cfg( unix ) ]
 #[ test ]
 fn it_26_wide_shows_all_columns()
@@ -295,6 +295,7 @@ fn it_26_wide_shows_all_columns()
 
   let stdout = stdout_str( &out );
   assert!( out.status.success(), "IT-26: exit 0 expected, got {:?}", out.status.code() );
+  assert!( stdout.contains( "State" ),   "IT-26: State header must be present: {stdout}" );
   assert!( stdout.contains( "Mode" ),    "IT-26: Mode header must be present: {stdout}" );
   assert!( stdout.contains( "Command" ), "IT-26: Command header must be present: {stdout}" );
   assert!( stdout.contains( "Binary" ),  "IT-26: Binary header must be present: {stdout}" );
@@ -646,7 +647,10 @@ fn it_38_mode_query_filter_and_caption()
   let stdout = stdout_str( &out );
   assert!( out.status.success(), "IT-38: exit 0 expected, got {:?}", out.status.code() );
   assert_eq!( parse_running_count( &stdout ), 1, "IT-38: expected exactly 1 running. Got:\n{stdout}" );
-  assert!( stdout.contains( "query" ), "IT-38: Mode column must show 'query'. Got:\n{stdout}" );
+  // Query mode is reported by the 🔌 flag, not a Mode column — `mode` left DEFAULT_COLUMNS
+  // once the Flags column took over its signal. The legend entry proves the flag fired.
+  assert!( stdout.contains( '🔌' ),        "IT-38: 🔌 flag must mark the query session. Got:\n{stdout}" );
+  assert!( stdout.contains( "Query mode" ), "IT-38: legend must name the 🔌 flag. Got:\n{stdout}" );
   let caption = caption_line( &stdout );
   assert!( !caption.contains( '(' ), "IT-38: caption must NOT contain a breakdown. Got: {caption}" );
 }

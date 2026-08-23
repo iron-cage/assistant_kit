@@ -9,7 +9,7 @@
 //! | EC-1 | `clr ps --wide` shows all 11 columns including Mode, Command, Binary | Behavioral |
 //! | EC-2 | `clr ps -w` short form shows Mode, Command, Binary                | Behavioral    |
 //! | EC-3 | `clr ps --wide --columns pid,task` → `--columns` wins             | Precedence    |
-//! | EC-4 | `clr ps` without `--wide` hides Command, Binary (Mode is default) | Default       |
+//! | EC-4 | `clr ps` without `--wide` hides State, Mode, Command, Binary      | Default       |
 //! | EC-5 | `clr ps --help` output contains `--wide` and `-w`                 | Documentation |
 
 mod cli_binary_test_helpers;
@@ -118,7 +118,7 @@ fn ec3_columns_overrides_wide()
 
 // ── EC-4: Default hides optional columns ────────────────────────────────────
 
-/// EC-4: `clr ps` without `--wide` shows Mode (default column) but hides Command, Binary.
+/// EC-4: `clr ps` without `--wide` hides all four wide-only columns: State, Mode, Command, Binary.
 #[ cfg( unix ) ]
 #[ test ]
 fn ec4_default_hides_wide_columns()
@@ -142,8 +142,10 @@ fn ec4_default_hides_wide_columns()
   let stdout = stdout_str( &out );
   assert!( out.status.success(), "EC-4: exit 0 expected, got {:?}", out.status.code() );
   let header = stdout.lines().find( | l | l.contains( "PID" ) ).unwrap_or( "" );
-  // Mode is a default column (added in TSK-224) — must appear even without --wide.
-  assert!( header.contains( "Mode" ),     "EC-4: Mode must appear in default header. Got:\n{stdout}" );
+  // State and Mode left the default set — their signal is now carried by the 🧟 and
+  // 🔌/🖨 flags, which cost nothing when nothing is abnormal.
+  assert!( !header.contains( "State" ),   "EC-4: State must NOT appear in header without --wide. Got:\n{stdout}" );
+  assert!( !header.contains( "Mode" ),    "EC-4: Mode must NOT appear in header without --wide. Got:\n{stdout}" );
   assert!( !header.contains( "Command" ), "EC-4: Command must NOT appear in header without --wide. Got:\n{stdout}" );
   assert!( !header.contains( "Binary" ),  "EC-4: Binary must NOT appear in header without --wide. Got:\n{stdout}" );
 }

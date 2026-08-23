@@ -171,7 +171,7 @@ Test case spec for [026_session_listing.md](../../../../docs/cli/user_story/026_
 
 - **Given:** ≥1 fake `claude` process running
 - **When:** `clr ps --wide`
-- **Then:** Exit 0; stdout contains `Mode`, `Command`, `Binary` (plus 9 defaults including Mode)
+- **Then:** Exit 0; stdout contains `State`, `Mode`, `Command`, `Binary` (plus the 7 defaults)
 - **Exit:** 0
 - **Verifies:** AC-017
 

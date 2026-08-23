@@ -5,7 +5,7 @@
 use crate::cli_runner::{
   run_cs, run_cs_with_env,
   stdout, stderr, assert_exit,
-  write_credentials, write_account,
+  write_credentials, write_account, read_account_meta,
   write_account_with_token, live_active_token, require_live_api,
   FAR_FUTURE_MS,
 };
@@ -923,3 +923,132 @@ fn mre_bug_217_switch_account_enforces_emailaddress()
   );
 }
 
+
+/// MRE for BUG-556: `.account.relogin` on a stored `backend: redirect` account must be
+/// refused *before* the live session is switched — never re-authenticated and re-saved
+/// as an anthropic account.
+///
+/// ## Root Cause
+/// The post-login persist at the bottom of `account_relogin_routine()` passed a hardcoded
+/// `AccountBackend::Anthropic` to `account::save()`, and `save()` branches on the *passed*
+/// backend without ever consulting the stored record. A relogin aimed at a redirect account
+/// therefore stamped `backend: "anthropic"` over the stored record and replaced the static
+/// API key with whatever live OAuth session the browser login produced. Same defective
+/// primitive as BUG-549 and BUG-554, reached from a third call site.
+///
+/// Note the damage is *not* AC-15's delete-and-rewrite, despite the shared root cause: that
+/// deletion lives in the command layer, which relogin never executes, while `save()` itself
+/// read-merges `{name}.json`. `base_url`/`redirect_model`/`inference_provider`/`claim_lock`
+/// therefore survive — leaving an account labelled `anthropic` that still carries redirect
+/// routing fields and now holds a foreign OAuth session. Self-inconsistent rather than
+/// cleanly destroyed, and correspondingly harder to notice: nothing looks missing.
+///
+/// ## Why Not Caught
+/// Feature 071 specified redirect behavior for `.account.save`, `.account.use`,
+/// `.account.limits` and `.account.inspect`, but never for `.account.relogin`. Compounding
+/// that, every pre-existing relogin test passes `dry::1` to avoid spawning a browser login,
+/// and the dry-run branch returns upstream of the save — so no test in the suite could
+/// reach the corrupting line even by accident.
+///
+/// ## Fix Applied
+/// `account_relogin_routine()` reads the stored `backend` field and returns exit 1 when it
+/// is `redirect`, positioned above both `switch_account()` and the `dry::1` check.
+///
+/// ## Prevention
+/// When a command's terminal step writes through a primitive that takes the discriminator
+/// as a plain parameter, the guard belongs at the command's entry, not at the write — by
+/// the time the write is reached the irreversible costs (session switched, the operator's
+/// browser login spent) have already been paid.
+///
+/// ## Pitfall
+/// Exit code alone is not sufficient evidence of this fix: guarding only the `save()` call
+/// would also exit non-zero, having already switched the live session and made the operator
+/// sit through a login. The active-marker assertion below is what distinguishes "refused
+/// before the switch" from "refused after it" — do not drop it as redundant.
+#[ test ]
+#[ doc = "bug_reproducer(BUG-556)" ]
+fn mre_bug556_relogin_refuses_redirect_account_before_switch()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  // 1. A redirect account, plus a separate anthropic account holding the active marker.
+  let made = run_cs_with_env(
+    &[
+      ".account.save", "name::kimi", "backend::redirect",
+      "base_url::https://api.moonshot.ai/anthropic", "api_key::sk-static-redirect-key",
+      "redirect_model::kimi-k3",
+    ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &made, 0 );
+  write_account( dir.path(), "work@acme.com", "max", "default_claude_max_20x", FAR_FUTURE_MS, true );
+  write_credentials( dir.path(), "max", "default_claude_max_20x", FAR_FUTURE_MS );
+
+  let marker_path = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" )
+    .join( claude_profile::account::active_marker_filename() );
+  let marker_before = std::fs::read_to_string( &marker_path ).unwrap();
+
+  // 2. Real (non-dry) relogin. PATH is emptied so that a REGRESSION — which would fall
+  //    through to execute_interactive() — cannot find `claude` and fails fast instead of
+  //    blocking the suite on an interactive browser-login prompt. With the guard in place
+  //    PATH is never consulted: the refusal happens well before any spawn.
+  let out = run_cs_with_env(
+    &[ ".account.relogin", "name::kimi" ],
+    &[ ( "HOME", home ), ( "PATH", "/nonexistent" ) ],
+  );
+  assert_exit( &out, 1 );
+  let msg = format!( "{}{}", stdout( &out ), stderr( &out ) );
+  assert!(
+    msg.contains( "kimi" ) && msg.contains( "redirect" ),
+    "BUG-556: refusal must name the account and the redirect backend, got:\n{msg}",
+  );
+
+  // 3. The guard ran BEFORE switch_account — the active marker is untouched.
+  let marker_after = std::fs::read_to_string( &marker_path ).unwrap();
+  assert_eq!(
+    marker_before, marker_after,
+    "BUG-556: relogin on a redirect account must not switch the live session first",
+  );
+
+  // 4. The redirect record survives coherent. `backend` and the static key are the two
+  //    fields the unfixed path actually rewrites — `save()` read-merges, so base_url and
+  //    redirect_model would survive it too, as stale leftovers on an anthropic-labelled
+  //    record. They are asserted here to pin that self-inconsistent state as forbidden,
+  //    not just the flipped discriminator.
+  let meta = read_account_meta( dir.path(), "kimi" );
+  assert_eq!(
+    meta[ "backend" ], serde_json::json!( "redirect" ),
+    "BUG-556: relogin re-backended the redirect account to anthropic, got:\n{meta}",
+  );
+  assert_eq!(
+    meta[ "base_url" ], serde_json::json!( "https://api.moonshot.ai/anthropic" ),
+    "BUG-556: base_url must survive relogin unchanged, got:\n{meta}",
+  );
+  assert_eq!(
+    meta[ "redirect_model" ], serde_json::json!( "kimi-k3" ),
+    "BUG-556: redirect_model must survive relogin unchanged, got:\n{meta}",
+  );
+  let creds = std::fs::read_to_string(
+    dir.path().join( ".persistent" ).join( "claude" ).join( "credential" )
+      .join( "kimi.credentials.json" ),
+  )
+    .unwrap();
+  assert!(
+    creds.contains( "sk-static-redirect-key" ),
+    "BUG-556: the static redirect key must not be replaced by an OAuth session, got:\n{creds}",
+  );
+
+  // 5. dry::1 reports the same refusal — never "[dry-run] would re-authenticate", which
+  //    would advertise an operation the real run refuses.
+  let dry = run_cs_with_env(
+    &[ ".account.relogin", "name::kimi", "dry::1" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &dry, 1 );
+  let dry_text = stdout( &dry );
+  assert!(
+    !dry_text.contains( "would re-authenticate" ),
+    "BUG-556: dry-run must refuse, not promise a re-authentication, got:\n{dry_text}",
+  );
+}

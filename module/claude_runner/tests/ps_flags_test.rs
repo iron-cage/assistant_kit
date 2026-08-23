@@ -1,6 +1,7 @@
 //! Session-flags tests for `clr ps`.
 //!
-//! Test spec: [`tests/docs/cli/command/06_ps.md`](docs/cli/command/06_ps.md) IT-30–IT-40
+//! Test spec: [`tests/docs/cli/command/06_ps.md`](docs/cli/command/06_ps.md) IT-30–IT-40,
+//! IT-48–IT-49
 //! and [`tests/docs/cli/user_story/26_session_listing.md`](docs/cli/user_story/26_session_listing.md)
 //! US-18–US-20.
 //!
@@ -14,11 +15,13 @@
 //! | IT-31  | 🐳 flag for session cwd outside `$HOME`                             | Behavioral   |
 //! | IT-32  | 🕰 flag when elapsed exceeds `CLR_PS_ANCIENT_SECS` threshold        | Behavioral   |
 //! | IT-33  | 🐘 flag when RAM exceeds `CLR_PS_HIGH_RAM_MB` threshold             | Behavioral   |
-//! | IT-34  | ⚠ flag for TOCTOU-dead session (no `/proc/{pid}/stat`)             | Behavioral   |
+//! | IT-34  | ⚠ flag for TOCTOU-dead session (no `/proc/{pid}` entry at all)      | Behavioral   |
 //! | IT-35  | 🖨 flag for print-mode session                                       | Behavioral   |
 //! | IT-36  | Legend printed below active table when ≥1 flag present              | Behavioral   |
 //! | IT-37  | Legend absent when no flags present                                 | Behavioral   |
 //! | IT-38  | `CLR_PS_ANCIENT_SECS`/`CLR_PS_HIGH_RAM_MB` override thresholds     | Behavioral   |
+//! | IT-48  | 🧟 flag for a `SIGSTOP`-suspended session (state `T`, not ⚠)        | Behavioral   |
+//! | IT-49  | `ps --help` lists every session flag, symbol and name              | Documentation |
 //! | US-18  | `Flags` column absent when no flags apply                           | User Story   |
 //! | US-19  | 🐳 Container flag for session cwd outside `$HOME`                   | User Story   |
 //! | US-20  | 🕰 Ancient flag with `CLR_PS_ANCIENT_SECS=0` threshold              | User Story   |
@@ -636,3 +639,124 @@ fn us20_ancient_flag_with_zero_threshold()
   );
 }
 
+
+// ── IT-48: 🧟 Odd state flag for a non-R/S kernel state ────────────────────
+
+/// IT-48: 🧟 fires when `/proc/{pid}/stat` field 3 is neither `R` nor `S`.
+///
+/// Fixture is a session suspended with `SIGSTOP` — kernel state `T` — which is
+/// what a user actually produces by suspending a session with Ctrl-Z.  Its `/proc` entries
+/// stay fully readable, so `read_process_metrics()` returns `Some` and the ⚠
+/// branch (metrics read failed outright) is never reached: 🧟 and ⚠ are disjoint.
+///
+/// A zombie (`Z`) deliberately is NOT the fixture here even though the flag
+/// condition would match it: the kernel clears `cmdline` on exit, so
+/// `find_claude_processes()` — which requires argv[0]'s basename to be `claude` —
+/// drops a zombie before flags are ever computed.  `Z` is unreachable in practice;
+/// `D`, `T`, and `t` are the states this flag actually surfaces.
+#[ cfg( target_os = "linux" ) ]
+#[ test ]
+fn it48_odd_state_flag_for_stopped_session()
+{
+  use cli_binary_test_helpers::{ fake_claude_binary_dir, spawn_fake_claude };
+
+  let ( _bin_dir, path_val ) = fake_claude_binary_dir();
+  let mut bg = spawn_fake_claude( &path_val );
+  let pid    = bg.id();
+  let proc   = make_proc_dir( &[ pid ] );
+
+  let stop = std::process::Command::new( "sh" )
+    .args( [ "-c", &format!( "kill -STOP {pid}" ) ] )
+    .status()
+    .expect( "send SIGSTOP" );
+  assert!( stop.success(), "IT-48: SIGSTOP delivery failed for pid {pid}" );
+  std::thread::sleep( core::time::Duration::from_millis( 300 ) );
+
+  // Precondition: confirm the kernel really reports a stopped state before
+  // asserting on clr's rendering, so a failure points at the flag logic rather
+  // than at the fixture.
+  let stat  = std::fs::read_to_string( format!( "/proc/{pid}/stat" ) ).expect( "read stopped stat" );
+  let state = stat
+    .rfind( ')' )
+    .and_then( | i | stat[ i + 1 .. ].split_whitespace().next() )
+    .unwrap_or( "" );
+  assert!(
+    matches!( state, "T" | "t" ),
+    "IT-48: precondition — pid {pid} must be stopped (T/t). Got stat: {stat}"
+  );
+
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = std::process::Command::new( bin )
+    .args( [ "ps" ] )
+    .env( "PATH", &path_val )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
+    .env( "CLR_PS_ANCIENT_SECS", "999999" )
+    .env( "CLR_PS_HIGH_RAM_MB", "999999" )
+    .output()
+    .expect( "run clr ps" );
+
+  // SIGCONT first — a SIGSTOPped process ignores SIGKILL delivery scheduling
+  // until it is resumed, so reaping without it can hang the test.
+  let _ = std::process::Command::new( "sh" )
+    .args( [ "-c", &format!( "kill -CONT {pid}" ) ] )
+    .status();
+  let _ = bg.kill();
+  let _ = bg.wait();
+
+  let stdout = stdout_str( &out );
+  assert!( out.status.success(), "IT-48: exit 0 expected, got {:?}", out.status.code() );
+  assert!(
+    stdout.contains( "🧟" ),
+    "IT-48: 🧟 must fire for a stopped session. Got:\n{stdout}"
+  );
+  assert!(
+    stdout.contains( "Odd state" ),
+    "IT-48: legend must contain 'Odd state'. Got:\n{stdout}"
+  );
+  assert!(
+    !stdout.contains( "⚠" ),
+    "IT-48: ⚠ must NOT fire — a stopped process's /proc entries still parse. Got:\n{stdout}"
+  );
+}
+
+// ── IT-49: `ps --help` lists every session flag ────────────────────────────
+
+/// IT-49: `clr ps --help` documents all 9 session flags, symbol and name.
+///
+/// Guards the drift that let 🔌 Query mode ship in `FLAG_LEGEND` while `--help`
+/// listed only 7 flags: the legend a user sees under the table and the legend
+/// `--help` promises must name the same set.
+#[ test ]
+fn it49_help_lists_every_session_flag()
+{
+  use cli_binary_test_helpers::run_cli;
+
+  let out    = run_cli( &[ "ps", "--help" ] );
+  let stdout = stdout_str( &out );
+  assert!( out.status.success(), "IT-49: exit 0 expected, got {:?}", out.status.code() );
+
+  // Canonical display order, matching `FLAG_LEGEND` in `claude_runner_core::ps_table`.
+  let expected : &[ ( &str, &str ) ] = &[
+    ( "👈", "This session" ),
+    ( "🖨",  "Print mode"   ),
+    ( "🔌", "Query mode"   ),
+    ( "⚡", "Active"       ),
+    ( "🕰",  "Ancient"      ),
+    ( "🐘", "High RAM"     ),
+    ( "🧟", "Odd state"    ),
+    ( "⚠",  "Dead metrics" ),
+    ( "🐳", "Container"    ),
+  ];
+
+  for ( symbol, name ) in expected
+  {
+    assert!(
+      stdout.contains( symbol ),
+      "IT-49: --help must list the {symbol} symbol ({name}). Got:\n{stdout}"
+    );
+    assert!(
+      stdout.contains( name ),
+      "IT-49: --help must name the {symbol} flag as '{name}'. Got:\n{stdout}"
+    );
+  }
+}

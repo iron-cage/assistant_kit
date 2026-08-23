@@ -23,12 +23,12 @@
 - AC-014: `clr ps --mode bogus` exits 1 with an error message listing valid mode values on stderr
 - AC-015: `clr ps --columns pid,path,task` shows exactly the specified columns in the specified order; column headers match the requested keys
 - AC-016: `clr ps --columns bogus` exits 1 with an error message listing valid column keys on stderr
-- AC-017: `clr ps --wide` shows all 11 columns including `Mode`, `Command`, and `Binary`
+- AC-017: `clr ps --wide` shows all 11 columns including `State`, `Mode`, `Command`, and `Binary`
 - AC-018: When both `--columns` and `--wide` are specified, `--columns` wins (explicit selection overrides the convenience flag)
 - AC-019: `CLR_PS_MODE=print clr ps` filters to print-mode sessions (env var fallback); `clr ps --mode interactive` with `CLR_PS_MODE=print` shows interactive sessions only (CLI wins)
 - AC-020: `CLR_PS_COLUMNS=pid,elapsed clr ps` shows only PID and Elapsed columns (env var fallback); `clr ps --columns pid,path` with `CLR_PS_COLUMNS=pid,elapsed` shows PID and Path (CLI wins)
 - AC-021: When no active session has any flag, the `Flags` column is absent from the active sessions table output
-- AC-022: When ≥1 active session has at least one flag, the `Flags` column appears in the active sessions table between `State` and `Mode`; the column header is `Flags`
+- AC-022: When ≥1 active session has at least one flag, the `Flags` column appears in the active sessions table immediately after the first of `state`, `ram`, `cpu`, `elapsed`, `pid`, `idx` present in the selected column set (`State` under `--wide`/explicit `--columns`; `RAM` in the default view), leftmost when none is present; the column header is `Flags`
 - AC-023: 🐳 (Container) flag appears for sessions whose working directory does not start with `$HOME`; sessions within `$HOME` do not show the flag
 - AC-024: 🕰 (Ancient) flag appears for sessions whose elapsed time exceeds `CLR_PS_ANCIENT_SECS` seconds (default: 28800 = 8 h); `CLR_PS_ANCIENT_SECS` env var overrides the threshold
 - AC-025: 🐘 (High RAM) flag appears for sessions whose RSS memory exceeds `CLR_PS_HIGH_RAM_MB` MB (default: 400 MB); `CLR_PS_HIGH_RAM_MB` env var overrides the threshold
@@ -37,6 +37,9 @@
 - AC-028: 🖨 (Print mode) flag appears for sessions classified as print mode (cmdline contains `--print` or `-p`)
 - AC-029: 👈 (This session) flag appears when `clr ps` is invoked as a direct subprocess of a `claude` process (i.e., `getppid()` resolves to a PID whose cmdline basename is `claude`)
 - AC-030: When ≥1 flag is present in any row, a legend is printed below the active sessions table listing only the flag symbols and their names that appear in the current output; the legend is omitted when no flags are present
+- AC-031: 🔌 (Query mode) flag appears for sessions classified as query mode (adjacent `--input-format stream-json` and `--output-format stream-json` pairs plus a bare `--verbose`), and `clr ps --help` lists it among the session flags
+- AC-032: 🧟 (Odd state) flag appears for sessions whose `/proc/{pid}/stat` field 3 is neither `R` nor `S` — in practice `D` (uninterruptible) or `T`/`t` (stopped/traced); 🧟 and ⚠ are disjoint, since ⚠ means the `/proc` read failed and left no state letter to report. A zombie (`Z`) matches the condition but is unreachable: the kernel clears its `cmdline`, so process discovery drops it before flags are computed
+- AC-033: `clr ps` with no `--columns`/`--wide` shows exactly `#`, `PID`, `Elapsed`, `CPU%`, `RAM`, `Absolute Path`, `Task` — `State` and `Mode` are absent, their signal carried by the 🧟 and 🔌/🖨 flags, and both return under `--columns state,mode` or `--wide`
 
 ### Referenced Commands
 
@@ -67,7 +70,7 @@
 1. `clr ps` — list all active Claude Code sessions and queued waiters
 2. `clr ps --mode print` — show only print-mode sessions
 3. `clr ps --columns pid,path,task` — display only the specified columns in order
-4. `clr ps --wide` — show all 11 columns including Mode, Command, and Binary
+4. `clr ps --wide` — show all 11 columns including State, Mode, Command, and Binary
 5. `clr ps --mode print --columns pid,elapsed,task` — filter by mode and select columns together
 
 ### Related User Stories

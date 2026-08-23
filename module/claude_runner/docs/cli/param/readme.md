@@ -159,7 +159,7 @@ These parameter IDs exist in the sequence but have no corresponding file. The ID
 | 56 | `--retry-default` | u8 | `2` | 0–255 | Tier 3: fallback retry count for all unset classes | 2 cmds |
 | 57 | `--retry-default-delay` | u32 | `30` | 0 to 4294967295 | Tier 3: fallback delay for all unset classes | 2 cmds |
 | 58 | `--mode` | enum | `all` | `all`/`interactive`/`print` | Filter `clr ps` by session execution mode | 1 cmd |
-| 59 | `--columns` | string | 9 default cols | Comma-separated column keys | Select which columns to display in `clr ps` | 1 cmd |
+| 59 | `--columns` | string | 7 default cols | Comma-separated column keys | Select which columns to display in `clr ps` | 1 cmd |
 | 60 | `--wide` | bool | false | present/absent | Show all 11 columns in `clr ps` | 1 cmd |
 | 61 | `--output-format` | enum | — | `text`/`json`/`stream-json` | Output format for Claude Code response | 2 cmds |
 | 62 | `--max-turns` | u32 | — | 0 to 4294967295 | Max agentic turns before stopping; unset = unlimited | 2 cmds |
