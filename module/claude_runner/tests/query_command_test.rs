@@ -227,3 +227,83 @@ fn qt9_through_qt32_all_remaining_methods_dispatch_successfully()
 
   cleanup( &pid );
 }
+
+// QT-33: two sessions started concurrently each report their *own* claude PID.
+//
+// # Root Cause
+//
+// `run_query_daemon()` discovered its PID by snapshotting a *system-wide*
+// `find_claude_processes()` scan before `spawn_control_session()` and polling afterwards for
+// the first PID absent from that snapshot. The scan sees every `claude`-basename process on
+// the host, not just the daemon's own child, so with two sessions starting concurrently both
+// children are absent from either daemon's "before" set and `.find()` returns whichever
+// `/proc` readdir order yields first. A daemon could therefore adopt and publish a PID
+// belonging to a different session.
+//
+// # Why Not Caught
+//
+// Every PID the old code returned was a real, live `claude` process, so no self-check inside
+// the daemon could distinguish a stolen PID from the right one. QT-1..QT-32 each start exactly
+// one session, so the set difference was unambiguous whenever a test ran alone — the defect
+// only surfaced as *another* test's failure, and only under parallel execution.
+//
+// # Fix Applied
+//
+// The daemon reads `ControlSession::pid()` — its owned `Child`'s own id — instead of inferring
+// identity from a global scan. See that method's `Fix(query-pid-crosstalk)` note.
+//
+// # Prevention
+//
+// This test overlaps two session starts on a `Barrier` and asserts both observable
+// consequences of a mis-assigned PID: duplicate PIDs (both daemons picked the same child) and
+// swapped PIDs (each picked the other's, which stays undetected until one session's `clr kill`
+// terminates the other's subprocess).
+//
+// # Pitfall
+//
+// Deriving a child's identity from a system-wide process scan is unsound whenever more than one
+// such child can exist at once — prefer the handle already held over re-discovering it.
+#[ test ]
+fn qt33_concurrent_sessions_report_distinct_own_pids()
+{
+  // Overlap the two spawns as tightly as possible — the defect needs both daemons' scan
+  // windows to intersect, so a barrier is what makes this a reproducer rather than a
+  // coin flip on thread scheduling.
+  let barrier = std::sync::Arc::new( std::sync::Barrier::new( 2 ) );
+  let handles : Vec< _ > = ( 0..2 ).map( | _ |
+  {
+    let barrier = std::sync::Arc::clone( &barrier );
+    std::thread::spawn( move ||
+    {
+      barrier.wait();
+      start_query_session()
+    } )
+  } ).collect();
+
+  let mut sessions : Vec< _ > = handles.into_iter()
+    .map( | h | h.join().expect( "session thread panicked" ) )
+    .collect();
+
+  let ( _b_claude, b_query, b_pid ) = sessions.pop().expect( "session B" );
+  let ( _a_claude, _a_query, a_pid ) = sessions.pop().expect( "session A" );
+
+  // Shape 1 — both daemons adopted the same child.
+  assert_ne!(
+    a_pid, b_pid,
+    "two concurrent sessions reported the same PID ({a_pid}) — a daemon adopted another \
+     session's claude subprocess instead of its own"
+  );
+
+  // Shape 2 — the daemons swapped children. PIDs look distinct, but A's PID actually
+  // addresses B's subprocess, so killing A takes B down with it.
+  cleanup( &a_pid );
+  let b_query_val = b_query.path().to_str().expect( "utf8" ).to_owned();
+  let out = call( &b_pid, &b_query_val, "setModel", &[ "sonnet" ] );
+  assert_eq!(
+    exit_code( &out ), 0,
+    "session B stopped responding after session A was killed — A's PID {a_pid} addressed \
+     B's subprocess: stdout={} stderr={}", stdout_str( &out ), stderr_str( &out )
+  );
+
+  cleanup( &b_pid );
+}

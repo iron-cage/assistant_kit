@@ -453,18 +453,42 @@ fn read_directory_content( dir : &str ) -> String
   content
 }
 
+/// Whether a source line is a whole-line comment (`//`, `///`, `//!`).
+///
+/// Fix(ps-table-comment-noise): both counters scanned comment text as if it were code.
+/// Root cause: `count_function_definitions` matched the literal `"fn "` anywhere in the
+///   file, so prose mentioning a function (e.g. `// Was a private fn in clr's cli::ps ...`)
+///   counted toward `function_count`, while `count_unique_function_names` parsed the words
+///   following `fn ` as a name — collapsing every copy of the same sentence to one entry.
+///   Four identical comment lines therefore contributed +4 occurrences but only +1 unique
+///   name, manufacturing 3 phantom "duplicates" with no duplicated code behind them.
+/// Pitfall: raising `duplication_threshold` to absorb this would have permanently lowered
+///   the guard's sensitivity to real duplication; the noise belongs in the scanner, not the
+///   threshold. Block comments (`/* … */`) are still scanned — no occurrence exists today,
+///   and line comments are the form this codebase actually uses for such prose.
+fn is_comment_line( line : &str ) -> bool
+{
+  line.trim_start().starts_with( "//" )
+}
+
 /// Extract every parseable function name in `content`, in source order.
 ///
 /// A name is recognized only when `fn ` is followed, on the same line, by an
-/// identifier terminated by `(` or `<`. Both counters below derive from this
-/// single list so they always describe the same population — see
-/// `count_function_definitions` for why that symmetry matters.
+/// identifier terminated by `(` or `<`, and the line is not itself a whole-line
+/// comment (`is_comment_line`). Both counters below derive from this single list
+/// so they always describe the same population — see `count_function_definitions`
+/// for why that symmetry matters.
 fn parsed_function_names( content : &str ) -> Vec< String >
 {
   let mut names = Vec::new();
 
   for line in content.lines()
   {
+    if is_comment_line( line )
+    {
+      continue;
+    }
+
     // Extract function name (simple regex-free approach)
     if let Some( start ) = line.find( "fn " )
     {
@@ -500,7 +524,7 @@ fn count_function_definitions( content : &str ) -> usize
   parsed_function_names( content ).len()
 }
 
-/// Count unique function names in content (simple heuristic)
+/// Count unique function names in content (simple heuristic; comment lines excluded)
 fn count_unique_function_names( content : &str ) -> usize
 {
   let unique : std::collections::HashSet< String > =

@@ -197,6 +197,29 @@ impl ControlSession
     lock_or_recover( &self.stderr_tail_buf ).iter().cloned().collect()
   }
 
+  /// PID of the `claude` subprocess this session owns.
+  ///
+  /// Exact by construction: [`crate::ClaudeCommand::spawn_control_session`] builds the child
+  /// with `Command::new( "claude" )` directly (no shell wrapper), so the `Child`'s own id *is*
+  /// the `claude` PID that `clr ps` / `clr kill` address — no `/proc` scan needed to recover it.
+  ///
+  /// Fix(query-pid-crosstalk): added because callers had no way to learn their own session's
+  ///   PID and resorted to inferring it.
+  /// Root cause: `clr query`'s daemon (`claude_runner/src/cli/query.rs`) discovered the PID by
+  ///   diffing a *system-wide* `find_claude_processes()` scan before/after spawning, then taking
+  ///   the first PID absent from the "before" set. With two sessions starting concurrently, that
+  ///   set difference holds both children, and the winner is whichever `/proc` readdir order
+  ///   yields — so a daemon could adopt, publish, and `clr kill` a PID belonging to a *different*
+  ///   session, breaking that session with "subprocess stdout closed (process likely exited)".
+  /// Pitfall: the value is only trustworthy while the child is alive — after it exits the PID may
+  ///   be reused by an unrelated process, so pair it with a liveness check before signalling.
+  #[ inline ]
+  #[ must_use ]
+  pub fn pid( &self ) -> u32
+  {
+    self.child.id()
+  }
+
   /// Override the per-request timeout (default: 30s). Primarily for tests that need a
   /// shorter bound (e.g. confirming a malformed-response scenario surfaces quickly).
   #[ inline ]
