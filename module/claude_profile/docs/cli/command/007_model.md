@@ -58,24 +58,24 @@ clp .model model::opus reset_effort_level::1               # combine: set model 
 
 ```bash
 clp .model
-# scope: session (/home/user1/.claude/settings.json)
+# scope: session (/home/alice/.claude/settings.json)
 # model: sonnet
 # effort_level: high
 
 clp .model scope::subprocess
-# scope: subprocess (/home/user1/.clr/config.toml)
+# scope: subprocess (/home/alice/.clr/config.toml)
 # model: claude-sonnet-5
 # effort_level: (unset)
 
 clp .model model::opus
-# model: opus  →  /home/user1/.claude/settings.json (session)
+# model: opus  →  /home/alice/.claude/settings.json (session)
 
 clp .model scope::subprocess model::claude-opus-4-8 effort_level::max
-# model: claude-opus-4-8  →  /home/user1/.clr/config.toml (subprocess)
-# effort_level: max  →  /home/user1/.clr/config.toml (subprocess)
+# model: claude-opus-4-8  →  /home/alice/.clr/config.toml (subprocess)
+# effort_level: max  →  /home/alice/.clr/config.toml (subprocess)
 
 clp .model format::json
-# {"scope":"session","path":"/home/user1/.claude/settings.json","model":"sonnet","effort_level":"high"}
+# {"scope":"session","path":"/home/alice/.claude/settings.json","model":"sonnet","effort_level":"high"}
 
 clp .model model::bad
 # exit 1: model:: must be one of: opus, sonnet, haiku, default; got "bad"

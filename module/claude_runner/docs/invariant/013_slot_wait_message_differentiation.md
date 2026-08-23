@@ -27,7 +27,7 @@ When `wait_for_session_slot()` does not admit a candidate on a given poll attemp
 
 This invariant is deliberately narrow: it governs **what the message says**, not **whether admission is correct**. `012_gate_slot_atomicity.md`'s own Condition table already documents these non-admission outcomes as legitimate, correctly-arbitrated results ("falls to wait-and-retry exactly as the `>= max` case does") — that document is authoritative for *why* each outcome is correct admission behavior. This invariant does not restate or challenge that; it adds the orthogonal requirement that all three already-correct outcomes must be distinguishable in the operator-facing text describing them.
 
-<!-- BUG-480 task/claude_runner/bug/480_gate_diagnostic_hides_slot_occupancy.md — fixed: slot-side denial diagnostics now carry the measured occupancy (slots=H/M on the poll line, slots=H/M held on both exhaustion messages), at-capacity lines exempt; see Invariant Statement : Measured occupancy and Provenance : BUG-480 -->
+<!-- BUG-480 — fixed: slot-side denial diagnostics now carry the measured occupancy (slots=H/M on the poll line, slots=H/M held on both exhaustion messages), at-capacity lines exempt; see Invariant Statement : Measured occupancy and Provenance : BUG-480 -->
 ### Enforcement Mechanism
 
 `acquire_slot()` (`src/cli/gate_slot.rs`) returns a typed cause and `wait_for_session_slot()` (`src/cli/gate.rs`) applies the differentiation as follows:

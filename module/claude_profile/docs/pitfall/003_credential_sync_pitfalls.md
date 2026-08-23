@@ -67,9 +67,9 @@ When multiple machines share the same credential set (same email / AT+RT pair), 
 3. Check Claude Code process lists on all machines during the window
 4. Matching AT fingerprint changes on machine B with no store push = H6 mechanism confirmed
 
-<!-- BUG-509 task/watchdog/bug/completed/509_cross_machine_rt_rotation_kills_credentials.md — H6 confirmed live 2026-08-15 on 9 accounts via this exact runbook; filed as BUG-487 with repo_identity: watchdog, relocated to the watchdog registry and renumbered 2026-08-18; detection fix landed there (watchdog.sh dead_rt_watch — DEAD_RT line + alert hook on the SKIPPED signature), closing this pitfall's own "Detection gap" -->
+<!-- BUG-509 — H6 confirmed live 2026-08-15 on 9 accounts via this exact runbook; filed as BUG-487 with repo_identity: watchdog, relocated to the watchdog registry and renumbered 2026-08-18; detection fix landed there (watchdog.sh dead_rt_watch — DEAD_RT line + alert hook on the SKIPPED signature), closing this pitfall's own "Detection gap" -->
 
-Since 2026-08-18 the detection gap is closed on the watchdog side: `watchdog.sh` scans each tick's stale-refresh output for the `write credentials: SKIPPED (blank payload` signature and emits a `DEAD_RT accounts=N (names)` line plus a `dead_refresh_token:<names>` alert-hook call once per distinct dead-account set (BUG-509). Verify on any host: `grep "DEAD_RT accounts=" /home/user1/pro/watchdog/log/user1@*/$(date +%Y-%m-%d).log`.
+Since 2026-08-18 the detection gap is closed on the watchdog side: `watchdog.sh` scans each tick's stale-refresh output for the `write credentials: SKIPPED (blank payload` signature and emits a `DEAD_RT accounts=N (names)` line plus a `dead_refresh_token:<names>` alert-hook call once per distinct dead-account set (BUG-509). Verify on any host: `grep "DEAD_RT accounts=" /home/alice/watchdog/log/alice@*/$(date +%Y-%m-%d).log`.
 
 ### Pitfall 7 — Unconditional live-session identity merge contaminates non-active targets (BUG-343)
 

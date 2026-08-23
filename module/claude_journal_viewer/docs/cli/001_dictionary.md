@@ -30,10 +30,4 @@
 | Error Class | CLR error classification from exit code | `RateLimit`, `Auth`, `Timeout` |
 | Super-app | The `ast` aggregator binary | `ast .journal.list since::1d` |
 | Pruning | Deleting journal files older than an age window (filename date) | `clj .prune keep::30d` |
-| Web Viewer | Embedded HTTP dashboard for journal browsing | `clj .serve` on port 8411 |
-
-### Provenance
-
-| File | Notes |
-|------|-------|
-| [../dictionary.md](dictionary.md) | Original un-migrated source; retained as reference |
+| Web Viewer | Embedded HTTP dashboard for journal browsing | `clj .serve` on an OS-assigned port |

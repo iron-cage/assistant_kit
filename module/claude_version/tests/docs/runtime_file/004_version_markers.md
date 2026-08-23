@@ -20,19 +20,19 @@ Two `.version.mark` invocations that produce different file-system outcomes:
 
 | RF | Scenario | Source fn |
 |----|----------|-----------|
-| RF-1 | Path matches `$HOME/.claude/version-markers.json` exactly | ⏳ |
-| RF-2 | `.version.mark name::N version::V` creates markers file on first invocation when absent | ⏳ |
-| RF-3 | `.version.list` succeeds after markers file is manually deleted (durability: absence is safe) | ⏳ |
-| RF-4 | `.version.list` succeeds when markers file contains invalid JSON (graceful degradation) | ⏳ |
+| RF-1 | Path matches `$HOME/.claude/version-markers.json` exactly | ✅ `it01_mark_create_new` |
+| RF-2 | `.version.mark name::N version::V` creates markers file on first invocation when absent | ✅ `rf004_2_mark_creates_markers_file_with_markers_array` |
+| RF-3 | `.version.list` succeeds after markers file is manually deleted (durability: absence is safe) | ✅ `rf004_3_list_succeeds_when_markers_file_absent` |
+| RF-4 | `.version.list` succeeds when markers file contains invalid JSON (graceful degradation) | ✅ `it18_mark_malformed_json_graceful` |
 
 ## Test Coverage Summary
 
-- Path correctness: 1 test (RF-1)
-- Lifecycle creation: 1 test (RF-2)
-- Durability / absent: 1 test (RF-3)
-- Graceful degradation: 1 test (RF-4)
+- Path correctness: 1 case (RF-1) — ✅ implemented
+- Lifecycle creation: 1 case (RF-2) — ✅ implemented
+- Durability / absent: 1 case (RF-3) — ✅ implemented
+- Graceful degradation: 1 case (RF-4) — ✅ implemented
 
-**Total:** 4 tests
+**Total:** 4 cases — 4 ✅ implemented, 0 ⏳ blocked
 
 ---
 
@@ -80,5 +80,7 @@ Two `.version.mark` invocations that produce different file-system outcomes:
 
 | Function | File | Test Cases |
 |----------|------|------------|
+| `it01_mark_create_new` | `tests/cli/mutation_version_mark_test.rs` | RF-1 |
+| `rf004_2_mark_creates_markers_file_with_markers_array` | `tests/cli/mutation_version_mark_test.rs` | RF-2 |
+| `rf004_3_list_succeeds_when_markers_file_absent` | `tests/cli/mutation_version_mark_test.rs` | RF-3 |
 | `it18_mark_malformed_json_graceful` | `tests/cli/mutation_version_mark_test.rs` | RF-4 |
-| *(not yet implemented)* | `tests/cli/mutation_version_mark_test.rs` | RF-1, RF-2, RF-3 |

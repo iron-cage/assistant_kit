@@ -369,7 +369,9 @@ fn read_period( cache : &serde_json::Map< String, serde_json::Value >, key : &st
 /// Parse an ISO-8601 UTC timestamp to seconds since epoch.
 ///
 /// Accepts the format `YYYY-MM-DDTHH:MM:SSZ` as produced by `chrono_now_utc`.
-/// Returns `None` on any parse failure.
+/// Returns `None` on any parse failure, and on any date before the Unix epoch —
+/// the result type is `u64`, so a pre-1970 instant is not representable and is
+/// rejected rather than wrapped.
 #[ must_use ]
 #[ inline ]
 pub fn parse_iso_utc_secs( s : &str ) -> Option< u64 >
@@ -388,7 +390,16 @@ pub fn parse_iso_utc_secs( s : &str ) -> Option< u64 >
   let m2  = if m > 2 { m - 3 } else { m + 9 };
   let doy = ( 153 * m2 + 2 ) / 5 + d - 1;
   let doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
-  #[ allow( clippy::cast_sign_loss ) ]
-  let days = ( era * 146_097 + doe - 719_468 ) as u64;
+  // Root cause: the Hinnant days-from-civil result is genuinely negative for any
+  //   pre-1970 date, and the previous `as u64` wrapped it to ~1.8e19 instead of
+  //   rejecting it — `days * 86400` then overflowed (panic in debug, silent
+  //   garbage in release), contradicting this function's own "None on any parse
+  //   failure" contract.
+  // Pitfall: `#[ allow( clippy::cast_sign_loss ) ]` asserted a precondition —
+  //   "year is always >= 1970" — that nothing in the function enforced; the year
+  //   is parsed from `s[ 0..4 ]` with no lower bound. A sign-loss allow is a
+  //   claim about reachability, so it needs a guard, not a comment.
+  let days = era * 146_097 + doe - 719_468;
+  let days = u64::try_from( days ).ok()?;
   Some( days * 86400 + hh * 3600 + mm * 60 + ss )
 }

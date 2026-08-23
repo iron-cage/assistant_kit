@@ -1,4 +1,4 @@
-// BUG-289 task/claude_profile/bug/289_son_running_false_haiku_touch_infinite_loop.md — resolve_model Auto gate simplified to son_idle only (Fix: BUG-289, BUG-290)
+// BUG-289 — resolve_model Auto gate simplified to son_idle only (Fix: BUG-289, BUG-290)
 
 //! Subprocess model and effort resolution for the `apply_touch` pipeline.
 //!

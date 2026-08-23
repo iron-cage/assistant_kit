@@ -52,5 +52,5 @@
 - **When:** `clr --from /tmp/mre214_empty`
 - **Then:** Assembled command (dry-run) does NOT contain `-c`; `session_exists()` guard detected empty source directory and suppressed injection; REPL opens without "No conversation found" error
 - **Exit:** 0
-- **Source:** [invariant/001_default_flags.md § Fixed Defects](../../../../docs/invariant/001_default_flags.md), [bug/214_bare_clr_exits_no_session.md](../../../../../../../task/claude_runner/completed/214_bare_clr_exits_no_session.md)
+- **Source:** [invariant/001_default_flags.md § Fixed Defects](../../../../docs/invariant/001_default_flags.md), [bug/214_bare_clr_exits_no_session.md](../../../../../../../task/claude_runner/bug/completed/214_bare_clr_exits_no_session.md)
 - **Implementation:** `tests/param_edge_cases_test.rs:562` — `bug_214_empty_session_source_suppresses_continue_flag` (located in param edge-case suite, not user_story_test.rs)

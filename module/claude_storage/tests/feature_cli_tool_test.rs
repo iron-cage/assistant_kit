@@ -150,7 +150,7 @@ fn ft_4_uuid_named_project_returned_in_project_list()
   let project = root.path().join( "myproject" );
   common::write_path_project_session( root.path(), &project, "session-ft4-path", 2 );
 
-  let uuid = "8d795a1c-c81d-4010-8d29-b4e678272419";
+  let uuid = "feed0001-0000-4000-8000-000000000001";
   common::write_test_session( root.path(), uuid, "session-ft4-uuid", 2 );
 
   let out = common::clg_cmd()
@@ -162,7 +162,7 @@ fn ft_4_uuid_named_project_returned_in_project_list()
   common::assert_exit( &out, 0 );
   let s = common::stdout( &out );
   assert!(
-    s.contains( uuid ) || s.contains( "8d795a1c" ),
+    s.contains( uuid ) || s.contains( "feed0001" ),
     "FT-4: UUID project must appear in .list output; got:\n{s}"
   );
   assert!(

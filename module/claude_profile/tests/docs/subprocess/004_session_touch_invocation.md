@@ -158,7 +158,7 @@ post-touch cache write, refresh-before-touch ordering, and Sonnet model requirem
 ### AC-10: 5h-exhaustion skip guard fires only at full exhaustion (`five_hour_left ≤ 0.0%`)
 
 - **Given:** Two accounts, both idle. Account A: `five_hour.utilization = 89.0` (11% remaining,
-  matching the real-world i16@wbox.pro scenario). Account B: `five_hour.utilization = 100.0`
+  matching the real-world i16@example.com scenario). Account B: `five_hour.utilization = 100.0`
   (0% remaining, fully exhausted).
 - **When:** `apply_touch()` evaluates the 5h-exhaustion skip guard for each account.
 - **Then:** Account A (11% remaining) is NOT skipped — touch fires. Account B (0% remaining)

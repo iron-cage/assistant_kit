@@ -25,6 +25,8 @@ use unilang::semantic::VerifiedCommand;
 /// # Errors
 ///
 /// Returns `Err` with `InternalError` (exit 2) when `HOME` is unset or empty.
+// Registered as a boxed unilang CommandRoutine (Box< dyn Fn >) — every call goes through
+// dynamic dispatch, so #[ inline ] could never apply at the call site.
 #[ allow( clippy::missing_inline_in_public_items ) ]
 pub fn runtime_files_routine( _cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {

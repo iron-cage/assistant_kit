@@ -302,7 +302,7 @@ fn mre_bug235_locally_expired_triggers_should_refresh()
   {
     fallback_reason : None,
     touched_at_secs : None,
-    name          : "i11@wbox.pro".to_string(),
+    name          : "i11@example.com".to_string(),
     is_current    : false,
     is_active             : false,
     is_occupied_elsewhere : false,

@@ -136,6 +136,8 @@ impl std::error::Error for QuotaError {}
 /// Returns [`QuotaError::MissingHeader`] if a required header is absent, or
 /// [`QuotaError::MalformedHeader`] if a present header cannot be parsed.
 #[ inline ]
+// The rate-limit locals mirror their header names and differ only by window suffix
+// (utilization_5h / utilization_7d); renaming them apart would break that correspondence.
 #[ allow( clippy::similar_names ) ]
 pub fn parse_headers< F >( get : F ) -> Result< RateLimitData, QuotaError >
 where

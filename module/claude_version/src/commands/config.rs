@@ -32,6 +32,10 @@ use claude_core::settings_io::{ StoredAs, infer_type, remove_setting, set_settin
 ///
 /// Panics only on internal invariant violations (unreachable code paths that
 /// indicate a programming error, not user input error).
+// Registered as a boxed unilang CommandRoutine (Box< dyn Fn >) — every call goes through
+// dynamic dispatch, so #[ inline ] could never apply at the call site.
+// too_many_lines: one branch per show/get/set/unset action across the 4-layer scope
+// resolution — the layer precedence only reads correctly with all branches side by side.
 #[ allow(
   clippy::missing_inline_in_public_items,
   clippy::too_many_lines,

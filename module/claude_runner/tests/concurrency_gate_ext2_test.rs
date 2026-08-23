@@ -53,7 +53,7 @@ use tempfile::NamedTempFile;
 /// threshold is "below elapsed duration".
 ///
 /// Bug file: `task/claude_runner/bug/400_gate_reclaim_no_staleness_check.md`.
-// BUG-479 task/claude_runner/bug/479_zombie_blind_pid_liveness.md — T21 sub-case a pins
+// BUG-479 — T21 sub-case a pins
 // CLR_GATE_STALE_SECS default-off, the permanence enabler for zombie-held slots
 // (contract unchanged by the fix).
 // test_kind: bug_reproducer(BUG-400)
@@ -745,7 +745,7 @@ fn t29_gate_cli_flags_change_real_poll_timing()
     exited.and_then( |s| s.code() ), Some( 1 ),
     "T29: exit must be 1 once the gate exhausts. stderr: {stderr}"
   );
-  // BUG-480 task/claude_runner/bug/480_gate_diagnostic_hides_slot_occupancy.md — fixed with NO change
+  // BUG-480 — fixed with NO change
   // here: this full-line guard (and T31's) pins an AT-CAPACITY exhaustion (census
   // 1/1, sweep never ran), and the fix emits `slots=` only for measured sweeps —
   // these lines stay byte-identical and now double as the exemption's pin.

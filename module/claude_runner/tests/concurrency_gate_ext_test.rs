@@ -936,8 +936,7 @@ fn t20_gate_reclaims_stale_live_owner_when_threshold_set()
   );
 
   let still_owned_by_occupier = std::fs::read_to_string( gate_dir.path().join( "slot_0.json" ) )
-    .ok()
-    .is_some_and( |c| c.contains( &occupier_pid.to_string() ) );
+    .is_ok_and( |c| c.contains( &occupier_pid.to_string() ) );
   assert!(
     still_owned_by_occupier,
     "T20 (BUG-400): phase A (a pure denial, no reclaim attempted) must not mutate \

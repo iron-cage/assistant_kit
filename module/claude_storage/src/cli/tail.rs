@@ -105,7 +105,6 @@ struct RenderOptions
 ///
 /// Does not panic — the `last_count` conversion below is only reached after the
 /// negative-value branch already returned, so the value is always non-negative.
-#[ allow( clippy::needless_pass_by_value ) ]
 #[ inline ]
 pub fn tail_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   -> core::result::Result< OutputData, ErrorData >
@@ -338,7 +337,7 @@ fn render
   out
 }
 
-/// `claude_storage · bff63952 · turns 249-252 of 252 · last 3h ago`
+/// `claude_storage · feed0009 · turns 249-252 of 252 · last 3h ago`
 fn session_header
 (
   project_label : &str,
@@ -370,7 +369,9 @@ fn session_header
 }
 
 /// Git-style short form of a session UUID, matching `.show`'s prefix lookup.
-fn short_session_id( session_id : &str ) -> String
+#[ inline ]
+#[ must_use ]
+pub fn short_session_id( session_id : &str ) -> String
 {
   session_id.chars().take( 8 ).collect()
 }
@@ -447,17 +448,4 @@ fn compact_line( ordinal : usize, turn : &Turn< '_ >, results : &ToolResults, no
   let room = RULE_WIDTH.saturating_sub( prefix.chars().count() ).max( 16 );
 
   format!( "{}{}", color::muted( &prefix ), ellipsize( &one_line, room ) )
-}
-
-#[ cfg( test ) ]
-mod tests
-{
-  use super::short_session_id;
-
-  #[test]
-  fn test_short_session_id_truncates_to_eight()
-  {
-    assert_eq!( short_session_id( "bff63952-8a23-4794-ad56-3a8e4fc4e9a9" ), "bff63952" );
-    assert_eq!( short_session_id( "abc" ), "abc" );
-  }
 }

@@ -41,6 +41,8 @@ use std::collections::HashMap;
 /// assert_eq!( render_ps_table( &[], OutputFormat::Text, 1 ), "no active processes" );
 /// assert_eq!( render_ps_table( &[], OutputFormat::Json, 1 ), "[]" );
 /// ```
+// pub only because the ps_table extraction moved this out of clr's private cli::ps module —
+// a once-per-invocation CLI table renderer, not an inlining-sensitive API.
 #[ allow( clippy::missing_inline_in_public_items ) ]
 #[ must_use ]
 pub fn render_ps_table( processes : &[ ProcessInfo ], format : OutputFormat, verbosity : u8 ) -> String
@@ -180,6 +182,8 @@ pub const DEFAULT_COLUMNS : &[ &str ] = &[
 /// Shared by `clr ps` (mode filter, 🖨/🔌 flags, inspect blocks) and `clr`'s gate
 /// (print-mode session counting) — the single definition both rely on.
 #[ must_use ]
+// Was pub( super ) in clr's cli::ps before the ps_table extraction — pub purely to cross the
+// crate boundary for claude_version's .ps, so cross-crate inlining is not a design concern.
 #[ allow( clippy::missing_inline_in_public_items ) ]
 pub fn classify_mode( args : &[ String ] ) -> &str
 {
@@ -211,6 +215,8 @@ fn has_flag_pair( args : &[ String ], flag : &str, value : &str ) -> bool
 /// Shared by `clr ps`'s queued-waiters table and `clr`'s gate (slot/ticket file
 /// staleness checks) — the single definition both rely on.
 #[ must_use ]
+// Was pub( super ) in clr's cli::ps before the ps_table extraction — pub purely to cross the
+// crate boundary for the gate's staleness checks, not an inlining-sensitive API.
 #[ allow( clippy::missing_inline_in_public_items ) ]
 pub fn parse_json_u64( content : &str, key : &str ) -> Option< u64 >
 {
@@ -241,6 +247,8 @@ fn unix_now() -> u64
 /// [`render_active_sessions_table`] — the single definition every plain-style
 /// `clr ps`-family table renders through.
 #[ must_use ]
+// pub only because the ps_table extraction moved this out of clr's private cli::ps module —
+// a once-per-table CLI formatter, not an inlining-sensitive API.
 #[ allow( clippy::missing_inline_in_public_items ) ]
 pub fn render_headed_table( builder : RowBuilder, heading : Heading ) -> String
 {
@@ -304,15 +312,28 @@ fn push_flag( flags : &mut String, c : char )
   flags.push( c );
 }
 
+// Loop-invariant inputs to compute_flags, computed once per table render and shared
+// across every row — bundled so the function stays under clippy's 7-argument limit.
+#[ cfg( target_os = "linux" ) ]
+#[ derive( Debug ) ]
+struct FlagContext< 'a >
+{
+  // $HOME, for the 🐳 outside-home test. Empty when unset — 🐳 never fires then.
+  home         : &'a str,
+  // Elapsed-seconds threshold above which 🕰 fires.
+  ancient_secs : u64,
+  // RSS threshold in MB above which 🐘 fires.
+  high_ram_mb  : u64,
+  // This process's own parent PID, for the 👈 this-session test.
+  my_ppid      : u32,
+}
+
 #[ cfg( target_os = "linux" ) ]
 #[ allow( clippy::too_many_arguments ) ] // 8th param `is_new` added by the session-snapshot feature (🆕 flag) — all args are independent per-row inputs the single caller already holds separately.
 fn compute_flags(
   proc            : &ProcessInfo,
   metrics         : Option< &ProcessMetrics >,
-  home            : &str,
-  ancient_secs    : u64,
-  high_ram_mb     : u64,
-  my_ppid         : u32,
+  ctx             : &FlagContext< '_ >,
   cpu_delta_ticks : u64,
   is_new          : bool,
 ) -> String
@@ -320,10 +341,10 @@ fn compute_flags(
   let mut flags = String::new();
 
   // 👈 This session: caller is a direct child of this claude process.
-  if proc.pid == my_ppid
+  if proc.pid == ctx.my_ppid
   {
     // Verify the parent's cmdline arg[0] basename == "claude".
-    let is_claude = std::fs::read( format!( "/proc/{my_ppid}/cmdline" ) )
+    let is_claude = std::fs::read( format!( "/proc/{}/cmdline", ctx.my_ppid ) )
       .ok()
       .and_then( | b |
       {
@@ -362,11 +383,11 @@ fn compute_flags(
   {
     // 🕰 Ancient: elapsed seconds exceed the configured threshold.
     let elapsed = unix_now().saturating_sub( m.started_at );
-    if elapsed > ancient_secs { push_flag( &mut flags, '🕰' ); }
+    if elapsed > ctx.ancient_secs { push_flag( &mut flags, '🕰' ); }
 
     // 🐘 High RAM: RSS exceeds threshold. Comparison in KB to avoid integer-division
     //   truncation (e.g. 512 KB / 1024 = 0 MB, which would never exceed a 0 MB threshold).
-    if m.ram_kb > high_ram_mb.saturating_mul( 1_024 ) { push_flag( &mut flags, '🐘' ); }
+    if m.ram_kb > ctx.high_ram_mb.saturating_mul( 1_024 ) { push_flag( &mut flags, '🐘' ); }
 
     // 🧟 Odd state: kernel state is neither R (running) nor S (interruptible sleep) —
     //   D uninterruptible, T/t stopped/traced, and anything else /proc reports.
@@ -397,11 +418,11 @@ fn compute_flags(
   // Pitfall: never use raw `str::starts_with` to test path descendance — always
   // verify a `/` boundary (or exact equality) after the shared prefix.
   let cwd_str = proc.cwd.to_str().unwrap_or( "" );
-  let is_inside_home = !home.is_empty() && (
-    cwd_str == home
-    || cwd_str.strip_prefix( home ).is_some_and( | rest | rest.starts_with( '/' ) )
+  let is_inside_home = !ctx.home.is_empty() && (
+    cwd_str == ctx.home
+    || cwd_str.strip_prefix( ctx.home ).is_some_and( | rest | rest.starts_with( '/' ) )
   );
-  if !home.is_empty() && !is_inside_home
+  if !ctx.home.is_empty() && !is_inside_home
   {
     push_flag( &mut flags, '🐳' );
   }
@@ -439,6 +460,9 @@ fn build_legend( flags_per_row : &[ String ] ) -> String
 /// sessions."). Returns `Some((table, legend))` where `legend` is `Some(line)` when
 /// ≥1 flag fired across all displayed rows, or `None` when all rows are flag-free.
 #[ must_use ]
+// pub only because the ps_table extraction moved this out of clr's private cli::ps module.
+// Single-pass renderer: every column and session flag is derived from one /proc sampling
+// window, so splitting it would either re-sample or scatter the row contract across helpers.
 #[ allow( clippy::missing_inline_in_public_items, clippy::too_many_lines ) ]
 pub fn render_active_sessions_table(
   procs : &[ ProcessInfo ],
@@ -511,12 +535,19 @@ pub fn render_active_sessions_table(
     use crate::process::read_process_metrics;
     let home    = std::env::var( "HOME" ).unwrap_or_default();
     let my_ppid : u32 = std::os::unix::process::parent_id();
+    let ctx = FlagContext
+    {
+      home         : &home,
+      ancient_secs : opts.ancient_secs,
+      high_ram_mb  : opts.high_ram_mb,
+      my_ppid,
+    };
     sorted.iter().map( | proc |
     {
       let m = read_process_metrics( proc.pid );
       let cpu_delta = deltas.get( &proc.pid ).copied().unwrap_or( 0 );
       let is_new = opts.prior_pids.as_ref().is_some_and( | known | !known.contains( &proc.pid ) );
-      compute_flags( proc, m.as_ref(), &home, opts.ancient_secs, opts.high_ram_mb, my_ppid, cpu_delta, is_new )
+      compute_flags( proc, m.as_ref(), &ctx, cpu_delta, is_new )
     } ).collect()
   };
   #[ cfg( not( target_os = "linux" ) ) ]
@@ -644,6 +675,8 @@ fn build_row( idx : usize, proc : &ProcessInfo, cols : &[ &str ] ) -> Vec< Strin
 /// Keeps path strings short in the table without information loss: the user already knows
 /// what $PRO expands to. Falls back to the full path when PRO is unset or empty.
 #[ must_use ]
+// Was a private fn in clr's cli::ps before the ps_table extraction — pub purely to cross the
+// crate boundary, not an inlining-sensitive API.
 #[ allow( clippy::missing_inline_in_public_items ) ]
 pub fn shorten_path( path : &str ) -> String
 {
@@ -670,6 +703,8 @@ pub fn shorten_path( path : &str ) -> String
 
 /// Format elapsed seconds since `started_at` as a human-readable duration.
 #[ must_use ]
+// Was a private fn in clr's cli::ps before the ps_table extraction — pub purely to cross the
+// crate boundary, not an inlining-sensitive API.
 #[ allow( clippy::missing_inline_in_public_items ) ]
 pub fn elapsed_label( started_at : u64 ) -> String
 {
@@ -684,6 +719,8 @@ pub fn elapsed_label( started_at : u64 ) -> String
 /// itself always measures against the live clock, which is wrong for a PID that
 /// no longer exists to re-measure.
 #[ must_use ]
+// Extracted from elapsed_label during the ps_table move; pub purely to cross the crate
+// boundary for the Ended-Since-Last-Check table, not an inlining-sensitive API.
 #[ allow( clippy::missing_inline_in_public_items ) ]
 pub fn duration_label( secs : u64 ) -> String
 {
@@ -708,6 +745,8 @@ pub fn duration_label( secs : u64 ) -> String
 /// Format RAM in kilobytes as a human-readable label (K or M suffix).
 #[ cfg( target_os = "linux" ) ]
 #[ must_use ]
+// Was a private fn in clr's cli::ps before the ps_table extraction — pub purely to cross the
+// crate boundary, not an inlining-sensitive API.
 #[ allow( clippy::missing_inline_in_public_items ) ]
 pub fn ram_label( kb : u64 ) -> String
 {
@@ -717,6 +756,8 @@ pub fn ram_label( kb : u64 ) -> String
 
 /// Resolve the Task column value for a process, falling back to "interactive".
 #[ must_use ]
+// Was a private fn in clr's cli::ps before the ps_table extraction — pub purely to cross the
+// crate boundary, and it reads a JSONL log, so inlining the wrapper buys nothing.
 #[ allow( clippy::missing_inline_in_public_items ) ]
 pub fn resolve_task( proc : &ProcessInfo ) -> String
 {

@@ -14,3 +14,4 @@ Direct contract verification for the behaviors documented in `docs/algorithm/`.
 | Name | Purpose | Status |
 |------|---------|--------|
 | `001_agent_session_tracking.md` | AL- test cases for agent session tracking algorithm (`docs/algorithm/001_agent_session_tracking.md`) | ✅ |
+| `002_session_liveness.md` | AL- test cases for session liveness algorithm (`docs/algorithm/002_session_liveness.md`) | ✅ |

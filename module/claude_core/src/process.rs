@@ -159,6 +159,8 @@ pub struct ProcessMetrics
 #[ cfg( target_os = "linux" ) ]
 #[ inline ]
 #[ must_use ]
+// /proc/uptime is a non-negative seconds float whose fractional part is deliberately dropped to
+// reach a whole-second boot epoch, and cpu_pct is a display percentage narrowed to f32 on purpose.
 #[ allow( clippy::cast_possible_truncation, clippy::cast_sign_loss ) ]
 pub fn read_process_metrics( pid : u32 ) -> Option< ProcessMetrics >
 {

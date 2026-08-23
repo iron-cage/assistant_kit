@@ -577,8 +577,8 @@ fn aw15_use_prefix_ambiguous_exits_1()
 /// aw16 (AC-11 / BUG-264 / `015_name_shortcut_syntax.md`): exact local-part match wins over ambiguous prefix.
 ///
 /// ## Root Cause
-/// `starts_with("i1")` matched `i1@wbox.pro`, `i11@wbox.pro`, and `i12@wbox.pro` — all three
-/// reported as ambiguous even though `i1` is the exact local part of `i1@wbox.pro`. The prefix
+/// `starts_with("i1")` matched `i1@example.com`, `i11@example.com`, and `i12@example.com` — all three
+/// reported as ambiguous even though `i1` is the exact local part of `i1@example.com`. The prefix
 /// scan ran first without checking exact-local-part identity.
 ///
 /// ## Why Not Caught
@@ -604,9 +604,9 @@ fn aw16_exact_local_part_wins_over_ambiguous_prefix()
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
-  write_account( dir.path(), "i1@wbox.pro",  "pro", "standard", FAR_FUTURE_MS, true  );
-  write_account( dir.path(), "i11@wbox.pro", "pro", "standard", FAR_FUTURE_MS, false );
-  write_account( dir.path(), "i12@wbox.pro", "pro", "standard", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "i1@example.com",  "pro", "standard", FAR_FUTURE_MS, true  );
+  write_account( dir.path(), "i11@example.com", "pro", "standard", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "i12@example.com", "pro", "standard", FAR_FUTURE_MS, false );
 
   let out = run_cs_with_env( &[ ".account.use", "i1" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
@@ -614,15 +614,15 @@ fn aw16_exact_local_part_wins_over_ambiguous_prefix()
   let active = std::fs::read_to_string( store.join( claude_profile::account::active_marker_filename() ) )
     .expect( "active marker must exist after use" );
   assert_eq!(
-    active.trim(), "i1@wbox.pro",
-    "exact local-part match must resolve to i1@wbox.pro, not be reported as ambiguous",
+    active.trim(), "i1@example.com",
+    "exact local-part match must resolve to i1@example.com, not be reported as ambiguous",
   );
 }
 
 // ── aw17 ──────────────────────────────────────────────────────────────────────
 
 /// aw17 (AC-06, AC-11 / `015_name_shortcut_syntax.md` FT-08): prefix `i1` is ambiguous
-/// when only `i11@wbox.pro` and `i12@wbox.pro` exist — no `i1@wbox.pro` account.
+/// when only `i11@example.com` and `i12@example.com` exist — no `i1@example.com` account.
 ///
 /// The exact-local-part check (AC-11) finds no account with local part exactly `i1`.
 /// Falling through to prefix scan, both `i11@` and `i12@` match — ambiguity reported
@@ -633,9 +633,9 @@ fn aw17_use_prefix_ambiguous_no_exact_local_part_exits_1()
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
-  // Only i11 and i12 exist — no i1@wbox.pro. Prefix i1 matches both via starts_with.
-  write_account( dir.path(), "i11@wbox.pro", "pro", "standard", FAR_FUTURE_MS, true  );
-  write_account( dir.path(), "i12@wbox.pro", "pro", "standard", FAR_FUTURE_MS, false );
+  // Only i11 and i12 exist — no i1@example.com. Prefix i1 matches both via starts_with.
+  write_account( dir.path(), "i11@example.com", "pro", "standard", FAR_FUTURE_MS, true  );
+  write_account( dir.path(), "i12@example.com", "pro", "standard", FAR_FUTURE_MS, false );
 
   let out = run_cs_with_env( &[ ".account.use", "i1" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 1 );

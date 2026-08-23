@@ -281,6 +281,8 @@ fn create_isolated_home() -> io::Result< tempfile::TempDir >
 /// Do NOT call this directly for credential refresh. See [`run_isolated`] warning.
 #[ cfg( feature = "enabled" ) ]
 #[ inline ]
+// Sequential subprocess lifecycle — isolated HOME setup, spawn, drain, timeout kill, and
+// credential readback share mutable state across steps; splitting them would leak it into helpers.
 #[ allow( clippy::too_many_lines ) ]
 // core::io::ErrorKind requires the unstable `core_io` feature (rust-lang/rust#154046) — not usable on stable.
 #[ allow( clippy::std_instead_of_core ) ]

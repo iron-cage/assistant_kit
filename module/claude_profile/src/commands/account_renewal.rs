@@ -18,6 +18,8 @@ use claude_profile_core::account::trace_ts;
 /// - Exit 1: conflicting params, no operation param provided, `from_now::` parse error.
 /// - Exit 2 (via `process::exit`): named account not found.
 #[ inline ]
+// The at::/from_now::/clear:: exclusivity rules are resolved in one place so the conflicting-param
+// exit-1 cases stay checkable against each other.
 #[ allow( clippy::too_many_lines ) ]
 // core::io::ErrorKind requires the unstable `core_io` feature (rust-lang/rust#154046) — not usable on stable.
 #[ allow( clippy::std_instead_of_core ) ]

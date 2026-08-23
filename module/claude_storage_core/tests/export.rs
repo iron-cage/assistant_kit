@@ -1,161 +1,213 @@
 //! Export functionality integration tests
 //!
 //! Tests for exporting sessions to markdown, JSON, and text formats.
+//!
+//! Every test builds its own deterministic storage tree in a temp directory via
+//! `storage_fixture` and asserts against the exact bytes each format produces. No
+//! test reads the developer's real `~/.claude/` directory, so none of them can be
+//! skipped by an empty-storage guard.
 #![ cfg( unix ) ]
 // `core` has no `io` module — `Cursor`'s std::io::{Read,Write} impls require std; no core equivalent exists.
 #![ allow( clippy::std_instead_of_core ) ]
 
-use claude_storage_core::{ Storage, ExportFormat, export_session };
+mod storage_fixture;
+
+use claude_storage_core::{ ExportFormat, export_session, export_session_to_file };
 use std::io::Cursor;
+use std::path::PathBuf;
+use tempfile::TempDir;
+
+/// Session id every fixture in this file writes.
+const SESSION : &str = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee";
+
+/// Build a one-project, one-session storage tree holding `lines`.
+///
+/// Returns the temp root — which must stay alive for the whole test — and the
+/// session file's path, so expectations can name the exact path export embeds.
+fn fixture( lines : &[ String ] ) -> ( TempDir, PathBuf )
+{
+  let temp = storage_fixture::storage_root();
+  let project = storage_fixture::project_dir( temp.path(), "-home-user-alpha" );
+  let path = storage_fixture::write_session( &project, SESSION, lines );
+  ( temp, path )
+}
 
 /// Test markdown export format
-#[test]
+///
+/// ## Purpose
+///
+/// Verifies markdown export emits the exact document shape `.export format::md`
+/// depends on: a session header carrying path, entry count and both timestamps,
+/// then one `## Entry N - Role` section per conversation entry, each closed by a
+/// horizontal rule.
+///
+/// ## Coverage
+///
+/// A two-entry conversation — one user entry, one assistant entry — exported to an
+/// in-memory writer.
+///
+/// ## Validation Strategy
+///
+/// Builds a temp storage tree holding exactly one project and one session with
+/// known text and known timestamps, then asserts byte-for-byte equality against the
+/// full expected markdown document: every header field, both entry sections, and
+/// every separator. Nothing is conditional — a missing header field, a reordered
+/// section or a dropped entry all fail the test.
+///
+/// ## Related Requirements
+///
+/// `docs/feature/003_export_formats.md` § Design — markdown format contract
+#[ test ]
 fn export_markdown_basic()
 {
-  let storage = Storage::with_root( "/tmp/claude_tests_empty" );
-  let projects = storage.list_projects().expect( "Failed to list projects" );
+  let session_id = SESSION;
+  let lines =
+  [
+    storage_fixture::user_line( session_id, 1, "Hello from the user" ),
+    storage_fixture::assistant_line( session_id, 2, "Hello from the assistant" ),
+  ];
+  let ( temp, path ) = fixture( &lines );
+  let mut session = storage_fixture::single_session( temp.path() );
 
-  if projects.is_empty()
-  {
-    println!( "Skipping test: no projects found" );
-    return;
-  }
+  let mut output = Cursor::new( Vec::new() );
+  export_session( &mut session, ExportFormat::Markdown, &mut output )
+    .expect( "markdown export must succeed" );
+  let result = String::from_utf8( output.into_inner() ).expect( "export output must be UTF-8" );
 
-  let project = projects.into_iter().next().unwrap();
-  let mut sessions = project.sessions().expect( "Failed to get sessions" );
+  let expected = format!
+  (
+    "# Session: {session_id}\n\n\
+     **Path**: `{path}`\n\
+     **Entries**: 2\n\
+     **Created**: 2026-01-01T00:00:01Z\n\
+     **Last Updated**: 2026-01-01T00:00:02Z\n\
+     \n---\n\n\
+     ## Entry 1 - User\n\
+     *2026-01-01T00:00:01Z*\n\n\
+     Hello from the user\n\n\
+     ---\n\n\
+     ## Entry 2 - Assistant\n\
+     *2026-01-01T00:00:02Z*\n\n\
+     Hello from the assistant\n\n\
+     ---\n\n",
+    path = path.display(),
+  );
 
-  if sessions.is_empty()
-  {
-    println!( "Skipping test: no sessions found" );
-    return;
-  }
-
-  // Try to export the first valid session (skip sessions with parse errors)
-  let mut found_valid = false;
-
-  for session in &mut sessions
-  {
-    let mut output = Cursor::new( Vec::new() );
-
-    if export_session( session, ExportFormat::Markdown, &mut output ).is_err()
-    {
-      continue; // Skip sessions with parse errors
-    }
-
-    let result = String::from_utf8( output.into_inner() ).expect( "Invalid UTF-8" );
-
-    // Check for expected markdown elements
-    if result.contains( "# Session:" ) && result.contains( "## Entry" )
-    {
-      found_valid = true;
-      assert!( result.contains( "**Path**:" ), "Missing path" );
-      assert!( result.contains( "**Entries**:" ), "Missing entry count" );
-      assert!( result.contains( "---" ), "Missing separator" );
-      break;
-    }
-  }
-
-  if !found_valid
-  {
-    println!( "Skipping test: no valid sessions found for markdown export" );
-  }
+  assert_eq!( result, expected, "markdown export must match the full expected document" );
 }
 
 /// Test JSON export format
-#[test]
+///
+/// ## Purpose
+///
+/// Verifies JSON export wraps the session's raw JSONL lines verbatim in a single
+/// object carrying `session_id`, `storage_path` and an `entries` array.
+///
+/// ## Coverage
+///
+/// A two-entry conversation exported to an in-memory writer.
+///
+/// ## Validation Strategy
+///
+/// Builds a temp storage tree with known JSONL lines and asserts the export equals
+/// the exact expected object — the two source lines joined by a comma inside
+/// `entries`, the fixture's session id, and the real on-disk session path. Because
+/// the fixture owns the input lines, the expectation is derived from them rather
+/// than restated, so a mangled or re-encoded entry fails the comparison.
+///
+/// ## Related Requirements
+///
+/// `docs/feature/003_export_formats.md` § Design — JSON format contract
+#[ test ]
 fn export_json_basic()
 {
-  let storage = Storage::with_root( "/tmp/claude_tests_empty" );
-  let projects = storage.list_projects().expect( "Failed to list projects" );
+  let session_id = SESSION;
+  let lines =
+  [
+    storage_fixture::user_line( session_id, 1, "Hello from the user" ),
+    storage_fixture::assistant_line( session_id, 2, "Hello from the assistant" ),
+  ];
+  let ( temp, path ) = fixture( &lines );
+  let mut session = storage_fixture::single_session( temp.path() );
 
-  if projects.is_empty()
-  {
-    println!( "Skipping test: no projects found" );
-    return;
-  }
-
-  let project = projects.into_iter().next().unwrap();
-  let mut sessions = project.sessions().expect( "Failed to get sessions" );
-
-  if sessions.is_empty()
-  {
-    println!( "Skipping test: no sessions found" );
-    return;
-  }
-
-  let session = sessions.first_mut().unwrap();
-
-  // Export to JSON
   let mut output = Cursor::new( Vec::new() );
-  export_session( session, ExportFormat::Json, &mut output )
-    .expect( "Failed to export session" );
+  export_session( &mut session, ExportFormat::Json, &mut output )
+    .expect( "JSON export must succeed" );
+  let result = String::from_utf8( output.into_inner() ).expect( "export output must be UTF-8" );
 
-  // Verify output
-  let result = String::from_utf8( output.into_inner() ).expect( "Invalid UTF-8" );
+  let expected = format!
+  (
+    "{{\"session_id\":\"{session_id}\",\"storage_path\":\"{path}\",\"entries\":[{entries}]}}\n",
+    path = path.display(),
+    entries = lines.join( "," ),
+  );
 
-  // Check for expected JSON elements
-  assert!( result.contains( "\"session_id\":" ), "Missing session_id" );
-  assert!( result.contains( "\"storage_path\":" ), "Missing storage_path" );
-  assert!( result.contains( "\"entries\":" ), "Missing entries array" );
-  assert!( result.starts_with( '{' ), "Should start with open brace" );
-  assert!( result.trim().ends_with( '}' ), "Should end with close brace" );
+  assert_eq!( result, expected, "JSON export must wrap the raw JSONL lines verbatim" );
+  assert!( result.starts_with( '{' ), "JSON export must start with an open brace" );
+  assert!( result.trim_end().ends_with( '}' ), "JSON export must end with a close brace" );
 }
 
 /// Test text export format
-#[test]
+///
+/// ## Purpose
+///
+/// Verifies plain-text export emits the exact document `.export format::txt`
+/// depends on: an unadorned header, then one `[Role] timestamp` block per
+/// conversation entry separated by horizontal rules.
+///
+/// ## Coverage
+///
+/// A two-entry conversation — one user entry, one assistant entry — exported to an
+/// in-memory writer.
+///
+/// ## Validation Strategy
+///
+/// Builds a temp storage tree with known text and known timestamps, then asserts
+/// byte-for-byte equality against the full expected text document, including the
+/// absence of any markdown decoration. Nothing is conditional.
+///
+/// ## Related Requirements
+///
+/// `docs/feature/003_export_formats.md` § Design — text format contract
+#[ test ]
 fn export_text_basic()
 {
-  let storage = Storage::with_root( "/tmp/claude_tests_empty" );
-  let projects = storage.list_projects().expect( "Failed to list projects" );
+  let session_id = SESSION;
+  let lines =
+  [
+    storage_fixture::user_line( session_id, 1, "Hello from the user" ),
+    storage_fixture::assistant_line( session_id, 2, "Hello from the assistant" ),
+  ];
+  let ( temp, path ) = fixture( &lines );
+  let mut session = storage_fixture::single_session( temp.path() );
 
-  if projects.is_empty()
-  {
-    println!( "Skipping test: no projects found" );
-    return;
-  }
+  let mut output = Cursor::new( Vec::new() );
+  export_session( &mut session, ExportFormat::Text, &mut output )
+    .expect( "text export must succeed" );
+  let result = String::from_utf8( output.into_inner() ).expect( "export output must be UTF-8" );
 
-  let project = projects.into_iter().next().unwrap();
-  let mut sessions = project.sessions().expect( "Failed to get sessions" );
+  let expected = format!
+  (
+    "Session: {session_id}\n\
+     Path: {path}\n\
+     Entries: 2\n\
+     \n---\n\n\
+     [User] 2026-01-01T00:00:01Z\n\
+     Hello from the user\n\n\
+     ---\n\n\
+     [Assistant] 2026-01-01T00:00:02Z\n\
+     Hello from the assistant\n\n\
+     ---\n\n",
+    path = path.display(),
+  );
 
-  if sessions.is_empty()
-  {
-    println!( "Skipping test: no sessions found" );
-    return;
-  }
-
-  // Try to export the first valid session (skip sessions with parse errors)
-  let mut found_valid = false;
-
-  for session in &mut sessions
-  {
-    let mut output = Cursor::new( Vec::new() );
-
-    if export_session( session, ExportFormat::Text, &mut output ).is_err()
-    {
-      continue; // Skip sessions with parse errors
-    }
-
-    let result = String::from_utf8( output.into_inner() ).expect( "Invalid UTF-8" );
-
-    // Check for expected text elements
-    if result.contains( "Session:" ) && ( result.contains( "[User]" ) || result.contains( "[Assistant]" ) )
-    {
-      found_valid = true;
-      assert!( result.contains( "Path:" ), "Missing path" );
-      assert!( result.contains( "Entries:" ), "Missing entry count" );
-      assert!( result.contains( "---" ), "Missing separator" );
-      break;
-    }
-  }
-
-  if !found_valid
-  {
-    println!( "Skipping test: no valid sessions found for text export" );
-  }
+  assert_eq!( result, expected, "text export must match the full expected document" );
+  assert!( !result.contains( "# Session:" ), "text export must not emit markdown headings" );
+  assert!( !result.contains( "**Path**" ), "text export must not emit markdown emphasis" );
 }
 
 /// Test `ExportFormat::from_str`
-#[test]
+#[ test ]
 fn export_format_from_str()
 {
   // Test valid formats
@@ -201,7 +253,7 @@ fn export_format_from_str()
 }
 
 /// Test `ExportFormat::extension`
-#[test]
+#[ test ]
 fn export_format_extension()
 {
   assert_eq!( ExportFormat::Markdown.extension(), "md" );
@@ -210,190 +262,197 @@ fn export_format_extension()
 }
 
 /// Test export to file
-#[test]
+///
+/// ## Purpose
+///
+/// Verifies `export_session_to_file` writes to disk exactly what
+/// `export_session` writes to a writer — the file path must be the only
+/// difference between the two entry points.
+///
+/// ## Coverage
+///
+/// The same two-entry conversation exported twice: once to an in-memory writer,
+/// once to a file named with `ExportFormat::extension()`.
+///
+/// ## Validation Strategy
+///
+/// Builds a temp storage tree, exports the session both ways, and asserts the
+/// file's contents equal the writer's bytes character for character, then spot
+/// checks the header and both entries so a mutually-empty result cannot pass.
+///
+/// ## Related Requirements
+///
+/// `docs/feature/003_export_formats.md` § Design — file output and extension
+#[ test ]
 fn export_to_file()
 {
-  let storage = Storage::with_root( "/tmp/claude_tests_empty" );
-  let projects = storage.list_projects().expect( "Failed to list projects" );
+  let session_id = SESSION;
+  let lines =
+  [
+    storage_fixture::user_line( session_id, 1, "Hello from the user" ),
+    storage_fixture::assistant_line( session_id, 2, "Hello from the assistant" ),
+  ];
+  let ( temp, _path ) = fixture( &lines );
+  let mut session = storage_fixture::single_session( temp.path() );
 
-  if projects.is_empty()
-  {
-    println!( "Skipping test: no projects found" );
-    return;
-  }
+  let mut buffer = Cursor::new( Vec::new() );
+  export_session( &mut session, ExportFormat::Markdown, &mut buffer )
+    .expect( "writer export must succeed" );
+  let via_writer = String::from_utf8( buffer.into_inner() ).expect( "export output must be UTF-8" );
 
-  let project = projects.into_iter().next().unwrap();
-  let mut sessions = project.sessions().expect( "Failed to get sessions" );
+  let output_path = temp.path().join( format!( "export.{}", ExportFormat::Markdown.extension() ) );
+  export_session_to_file( &mut session, ExportFormat::Markdown, &output_path )
+    .expect( "file export must succeed" );
 
-  if sessions.is_empty()
-  {
-    println!( "Skipping test: no sessions found" );
-    return;
-  }
+  assert!( output_path.exists(), "file export must create the output file" );
 
-  let session = sessions.first_mut().unwrap();
+  let written = std::fs::read_to_string( &output_path ).expect( "exported file must be readable" );
 
-  // Create output file path in /tmp
-  let output_path = std::path::PathBuf::from( "/tmp/test_export.md" );
-
-  // Export to file
-  claude_storage_core::export_session_to_file
-  (
-    session,
-    ExportFormat::Markdown,
-    &output_path
-  ).expect( "Failed to export to file" );
-
-  // Verify file exists and has content
-  assert!( output_path.exists(), "Output file not created" );
-
-  let content = std::fs::read_to_string( &output_path )
-    .expect( "Failed to read output file" );
-
-  assert!( !content.is_empty(), "Output file is empty" );
-  assert!( content.contains( "# Session:" ), "Missing session header" );
+  assert_eq!( written, via_writer, "file export must produce the same bytes as the writer export" );
+  assert!( written.contains( &format!( "# Session: {session_id}" ) ), "exported file must carry the session header" );
+  assert!( written.contains( "## Entry 1 - User" ), "exported file must carry the user entry" );
+  assert!( written.contains( "Hello from the assistant" ), "exported file must carry the assistant text" );
 }
 
 /// Test markdown with thinking blocks
-#[test]
+///
+/// ## Purpose
+///
+/// Verifies an assistant entry carrying a thinking block renders as a collapsible
+/// `<details>` section whose summary reports the thinking block's token count, with
+/// the assistant's visible text following outside the collapsed region.
+///
+/// ## Coverage
+///
+/// A two-entry conversation whose assistant entry holds a thinking block followed
+/// by a text block.
+///
+/// ## Validation Strategy
+///
+/// Builds a temp storage tree containing a thinking block of known length — four
+/// whitespace-separated words, so the reported token count is deterministic — and
+/// asserts byte-for-byte equality against the full expected markdown document,
+/// including the exact `<summary>Thinking (4 tokens)</summary>` line and the
+/// `</details>` close. A count of one `<details>` open proves the block is not
+/// duplicated across the two entries.
+///
+/// ## Related Requirements
+///
+/// `docs/feature/003_export_formats.md` § Design — thinking block rendering
+#[ test ]
 fn export_markdown_with_thinking()
 {
-  let storage = Storage::with_root( "/tmp/claude_tests_empty" );
-  let projects = storage.list_projects().expect( "Failed to list projects" );
+  let session_id = SESSION;
+  let lines =
+  [
+    storage_fixture::user_line( session_id, 1, "Please think about it" ),
+    storage_fixture::assistant_thinking_line( session_id, 2, "Let me reason carefully", "Here is the answer" ),
+  ];
+  let ( temp, path ) = fixture( &lines );
+  let mut session = storage_fixture::single_session( temp.path() );
 
-  if projects.is_empty()
-  {
-    println!( "Skipping test: no projects found" );
-    return;
-  }
+  let mut output = Cursor::new( Vec::new() );
+  export_session( &mut session, ExportFormat::Markdown, &mut output )
+    .expect( "markdown export must succeed" );
+  let result = String::from_utf8( output.into_inner() ).expect( "export output must be UTF-8" );
 
-  let project = projects.into_iter().next().unwrap();
-  let mut sessions = project.sessions().expect( "Failed to get sessions" );
+  let expected = format!
+  (
+    "# Session: {session_id}\n\n\
+     **Path**: `{path}`\n\
+     **Entries**: 2\n\
+     **Created**: 2026-01-01T00:00:01Z\n\
+     **Last Updated**: 2026-01-01T00:00:02Z\n\
+     \n---\n\n\
+     ## Entry 1 - User\n\
+     *2026-01-01T00:00:01Z*\n\n\
+     Please think about it\n\n\
+     ---\n\n\
+     ## Entry 2 - Assistant\n\
+     *2026-01-01T00:00:02Z*\n\n\
+     <details>\n\
+     <summary>Thinking (4 tokens)</summary>\n\n\
+     Let me reason carefully\n\
+     </details>\n\n\
+     Here is the answer\n\n\
+     ---\n\n",
+    path = path.display(),
+  );
 
-  if sessions.is_empty()
-  {
-    println!( "Skipping test: no sessions found" );
-    return;
-  }
-
-  // Find a session with thinking blocks (try all sessions)
-  let mut found_thinking = false;
-
-  for session in &mut sessions
-  {
-    let mut output = Cursor::new( Vec::new() );
-
-    // Skip sessions that fail to export (e.g., parse errors)
-    if export_session( session, ExportFormat::Markdown, &mut output ).is_err()
-    {
-      continue;
-    }
-
-    let result = String::from_utf8( output.into_inner() ).expect( "Invalid UTF-8" );
-
-    if result.contains( "<details>" ) && result.contains( "Thinking" )
-    {
-      found_thinking = true;
-
-      // Verify thinking block structure
-      assert!( result.contains( "<summary>Thinking" ), "Missing thinking summary" );
-      assert!( result.contains( "</details>" ), "Missing details close tag" );
-      break;
-    }
-  }
-
-  // Note: Not all sessions have thinking blocks, so we dont assert found_thinking
-  // This test just verifies the format when thinking blocks are present
-  if !found_thinking
-  {
-    println!( "No sessions with thinking blocks found (this is ok)" );
-  }
+  assert_eq!( result, expected, "markdown export must render the thinking block as a details section" );
+  assert_eq!( result.matches( "<details>" ).count(), 1, "exactly one collapsible thinking block" );
+  assert_eq!( result.matches( "</details>" ).count(), 1, "the thinking block must be closed exactly once" );
 }
 
 /// Test export of sessions containing non-conversation metadata entries
 ///
-/// Real Claude Code sessions may contain metadata entries like:
-/// - queue-operation: Commands queued for execution
-/// - summary: Session summaries
-/// - file-history-snapshot: File state snapshots
+/// ## Purpose
 ///
-/// These entries should be gracefully skipped during export, allowing
-/// export to succeed and showing only conversation entries.
-#[test]
+/// Real Claude Code sessions interleave non-conversation metadata entries —
+/// `queue-operation`, `summary`, `file-history-snapshot` — with the conversation.
+/// Export must skip them silently rather than fail, and must not leak their
+/// contents into the rendered document.
+///
+/// ## Coverage
+///
+/// A five-line session: three metadata entries surrounding one user and one
+/// assistant conversation entry.
+///
+/// ## Validation Strategy
+///
+/// Builds a temp storage tree with the metadata entries placed first, in the
+/// middle, and last, then asserts byte-for-byte equality against the expected
+/// markdown — which contains exactly the two conversation entries and reports
+/// `**Entries**: 2`. Explicit negative assertions prove no metadata type name or
+/// payload reached the output.
+///
+/// ## Related Requirements
+///
+/// `docs/feature/003_export_formats.md` § Design — metadata entries are skipped
+#[ test ]
 fn export_with_metadata_entries()
 {
-  use std::io::Cursor;
+  let session_id = SESSION;
+  let lines =
+  [
+    storage_fixture::metadata_line( "queue-operation", 1 ),
+    storage_fixture::user_line( session_id, 2, "Hello from the user" ),
+    storage_fixture::metadata_line( "summary", 3 ),
+    storage_fixture::assistant_line( session_id, 4, "Hello from the assistant" ),
+    storage_fixture::metadata_line( "file-history-snapshot", 5 ),
+  ];
+  let ( temp, path ) = fixture( &lines );
+  let mut session = storage_fixture::single_session( temp.path() );
 
-  let storage = Storage::with_root( "/tmp/claude_tests_empty" );
-  let projects = storage.list_projects().expect( "Failed to list projects" );
+  let mut output = Cursor::new( Vec::new() );
+  export_session( &mut session, ExportFormat::Markdown, &mut output )
+    .expect( "export must succeed despite metadata entries" );
+  let result = String::from_utf8( output.into_inner() ).expect( "export output must be UTF-8" );
 
-  if projects.is_empty()
-  {
-    println!( "Skipping test: no projects found" );
-    return;
-  }
+  let expected = format!
+  (
+    "# Session: {session_id}\n\n\
+     **Path**: `{path}`\n\
+     **Entries**: 2\n\
+     **Created**: 2026-01-01T00:00:02Z\n\
+     **Last Updated**: 2026-01-01T00:00:04Z\n\
+     \n---\n\n\
+     ## Entry 1 - User\n\
+     *2026-01-01T00:00:02Z*\n\n\
+     Hello from the user\n\n\
+     ---\n\n\
+     ## Entry 2 - Assistant\n\
+     *2026-01-01T00:00:04Z*\n\n\
+     Hello from the assistant\n\n\
+     ---\n\n",
+    path = path.display(),
+  );
 
-  // Find a session that contains metadata entries
-  // In real storage, many sessions have queue-operation or summary entries
-  let mut found_session_with_metadata = false;
-
-  for project in projects
-  {
-    let Ok( mut sessions ) = project.sessions() else { continue };
-
-    for session in &mut sessions
-    {
-      // Try to read the raw JSONL to check for metadata entries
-      let path = session.storage_path();
-      let Ok( content ) = std::fs::read_to_string( path ) else { continue };
-
-      // Check if this session has metadata entries (queue-operation or summary)
-      let has_metadata = content.lines().any( | line |
-      {
-        line.contains( r#""type":"queue-operation"# )
-          || line.contains( r#""type":"summary"# )
-          || line.contains( r#""type":"file-history-snapshot"# )
-      });
-
-      if !has_metadata
-      {
-        continue;
-      }
-
-      // Found a session with metadata entries - test export
-      found_session_with_metadata = true;
-
-      let mut output = Cursor::new( Vec::new() );
-
-      // Export should succeed even with metadata entries
-      export_session( session, ExportFormat::Markdown, &mut output )
-        .expect( "Export failed for session with metadata entries" );
-
-      let result = String::from_utf8( output.into_inner() ).expect( "Invalid UTF-8" );
-
-      // Verify export contains session header
-      assert!( result.contains( "# Session:" ), "Missing session header" );
-      assert!( result.contains( "**Path**:" ), "Missing path" );
-
-      // Note: Entry count may be 0 if session only has metadata entries
-      // (e.g., queue-operation only), which is valid
-
-      let sid = session.id();
-      println!( "Successfully exported session with metadata entries: {sid}" );
-      break;
-    }
-
-    if found_session_with_metadata
-    {
-      break;
-    }
-  }
-
-  if !found_session_with_metadata
-  {
-    println!( "Skipping test: no sessions with metadata entries found" );
-    println!( "This is expected if testing on a minimal storage instance" );
-  }
+  assert_eq!( result, expected, "only the two conversation entries may be rendered" );
+  assert_eq!( result.matches( "## Entry " ).count(), 2, "metadata entries must not become entry sections" );
+  assert!( !result.contains( "queue-operation" ), "queue-operation entry must not leak into the export" );
+  assert!( !result.contains( "file-history-snapshot" ), "file-history-snapshot entry must not leak into the export" );
+  assert!( !result.contains( "non-conversation metadata" ), "metadata payload must not leak into the export" );
 }
 
 /// Bug Reproducer (issue-019): `ExportFormat::from_str()` returned `std::io::Error`, producing

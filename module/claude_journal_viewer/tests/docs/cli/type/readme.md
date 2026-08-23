@@ -23,4 +23,4 @@ Per-type validation test case indices for `claude_journal_viewer`. See [type/rea
 | `08_boolean.md` | TC- tests for the 0/1 convention and invalid-value rejection | ✅ |
 | `09_group_by.md` | TC- tests for all 7 grouping dimensions | ✅ |
 | `10_port.md` | TC- tests for ephemeral port, range limits, and bind failure | ✅ |
-| `11_retention_spec.md` | TC- tests for age-based and size-based retention formats | ✅ |
+| `11_retention_spec.md` | TC- tests for age-based duration parsing and the floor-to-days rule | ✅ |

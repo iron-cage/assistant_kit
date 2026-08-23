@@ -39,7 +39,7 @@
 //! ```sh
 //! uuidgen --sha1 --namespace @dns --name clr.topic
 //! python3 -c 'import uuid; ns = uuid.uuid5( uuid.NAMESPACE_DNS, "clr.topic" ); \
-//!   print( uuid.uuid5( ns, "/home/user1/pro\0review" ) )'
+//!   print( uuid.uuid5( ns, "/home/alice/pro\0review" ) )'
 //! ```
 
 use std::path::{ Path, PathBuf };
@@ -75,8 +75,8 @@ const TOPIC_NAMESPACE : [ u8; 16 ] =
 /// use claude_storage_core::topic_session_id;
 /// use std::path::Path;
 ///
-/// let id = topic_session_id( Path::new( "/home/user1/pro" ), "review" )?;
-/// assert_eq!( id.as_str(), "e36d752a-341e-5db1-94c5-c8b91cccbfff" );
+/// let id = topic_session_id( Path::new( "/home/alice/pro" ), "review" )?;
+/// assert_eq!( id.as_str(), "f3b6d066-be8c-5b43-8795-e0266def2440" );
 /// # Ok::<(), claude_storage_core::Error>(())
 /// ```
 #[ inline ]
@@ -113,8 +113,8 @@ pub fn topic_session_id( canonical_base : &Path, topic : &str ) -> Result< Sessi
 /// use claude_storage_core::topic_session_file;
 /// use std::path::Path;
 ///
-/// let file = topic_session_file( Path::new( "/home/user1/pro" ), "review" ).unwrap();
-/// assert!( file.to_str().unwrap().ends_with( "e36d752a-341e-5db1-94c5-c8b91cccbfff.jsonl" ) );
+/// let file = topic_session_file( Path::new( "/home/alice/pro" ), "review" ).unwrap();
+/// assert!( file.to_str().unwrap().ends_with( "f3b6d066-be8c-5b43-8795-e0266def2440.jsonl" ) );
 /// ```
 #[ inline ]
 #[ must_use ]

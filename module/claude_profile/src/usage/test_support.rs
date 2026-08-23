@@ -3,6 +3,8 @@
 //! All helpers live here so submodule test blocks can do
 //! `use crate::usage::test_support::*` without duplicating factory code.
 
+// Test-only factory helpers: pub solely so submodule test blocks can reach them, never shipped
+// to consumers — public-API polish lints (inline, must_use, docs) buy nothing here.
 #![ allow( clippy::missing_inline_in_public_items, clippy::must_use_candidate, missing_docs ) ]
 
 use super::types::AccountQuota;

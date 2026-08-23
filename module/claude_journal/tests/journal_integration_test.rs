@@ -647,14 +647,14 @@ fn it19_attribution_fields_serialize_when_present()
 {
   let fields = EventFields
   {
-    account  : Some( "mykola.nn@wbox.pro".to_owned() ),
-    agent_id : Some( "user1@w003/a/b/".to_owned() ),
+    account  : Some( "alice@example.com".to_owned() ),
+    agent_id : Some( "alice@w003/a/b/".to_owned() ),
     ..EventFields::default()
   };
   let json = serde_json::to_value( &fields ).expect( "serialize" );
 
-  assert_eq!( json[ "account" ], "mykola.nn@wbox.pro", "account key must be present with correct value" );
-  assert_eq!( json[ "agent_id" ], "user1@w003/a/b/", "agent_id key must be present with correct value" );
+  assert_eq!( json[ "account" ], "alice@example.com", "account key must be present with correct value" );
+  assert_eq!( json[ "agent_id" ], "alice@w003/a/b/", "agent_id key must be present with correct value" );
 }
 
 // ── IT-20: account/agent_id omitted when None ─────────────────────────────────
@@ -700,11 +700,11 @@ fn it21_legacy_line_without_attribution_fields_parses()
 #[ test ]
 fn it22_compose_agent_id_exact_format()
 {
-  assert_eq!( compose_agent_id( "user1", "w003", "/a/b" ), "user1@w003/a/b/" );
+  assert_eq!( compose_agent_id( "alice", "w003", "/a/b" ), "alice@w003/a/b/" );
   assert_eq!
   (
-    compose_agent_id( "user1", "w003", "/home/user1/pro/lib/yrd_core/assistant_kit/claude_runner/module/claude_runner" ),
-    "user1@w003/home/user1/pro/lib/yrd_core/assistant_kit/claude_runner/module/claude_runner/",
+    compose_agent_id( "alice", "w003", "/home/alice/assistant/module/claude_runner" ),
+    "alice@w003/home/alice/assistant/module/claude_runner/",
     "format must match the canonical AGENT_ID shape"
   );
 }
@@ -718,6 +718,6 @@ fn it22_compose_agent_id_exact_format()
 #[ test ]
 fn it23_compose_agent_id_never_double_slashes()
 {
-  assert_eq!( compose_agent_id( "user1", "w003", "/a/b/" ), "user1@w003/a/b/" );
-  assert_eq!( compose_agent_id( "user1", "w003", "/a/b//" ), "user1@w003/a/b/" );
+  assert_eq!( compose_agent_id( "alice", "w003", "/a/b/" ), "alice@w003/a/b/" );
+  assert_eq!( compose_agent_id( "alice", "w003", "/a/b//" ), "alice@w003/a/b/" );
 }

@@ -21,7 +21,7 @@ Each Bash tool call spawns a distinct, short-lived `rtk` proxy process. The proc
 - `$$` and `$PPID` shell variables are unreliable inside tool calls. rtk intercepts command strings before shell expansion in some contexts, causing `$$` to expand to an empty string. Use `cat /proc/self/status | grep ^Pid` to obtain the current process PID reliably.
 - `cat /proc/self/cmdline` is rewritten by rtk to `rtk read /proc/self/cmdline`, reflecting the proxy interception layer.
 
-The `cwd` of spawned processes is the session working directory (`/home/user1/pro` in the observed session). The cgroup matches the parent terminal session scope — no isolation boundary.
+The `cwd` of spawned processes is the session working directory (`/home/alice/pro` in the observed session). The cgroup matches the parent terminal session scope — no isolation boundary.
 
 **Platform note**: Observed on Linux 6.8.0-124-generic with rtk installed. On systems without rtk, the process name would differ (likely `bash`). The transient-lifetime and per-call-PID properties hold regardless of the wrapper binary name.
 

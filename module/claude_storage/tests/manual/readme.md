@@ -425,7 +425,7 @@ All PASS unless noted:
 
 ## `.tail` turn-grouped renderer — manual session (2026-08-21)
 
-Ran against the real local store (`~/.claude/projects/`), inside the runbox container, on session `bff63952` (357 entries → 229 turns) plus two other real projects. 24 cases; the two failures found were fixed and covered by regression tests before this record was written.
+Ran against the real local store (`~/.claude/projects/`), inside the runbox container, on session `feed0009` (357 entries → 229 turns) plus two other real projects. 24 cases; the two failures found were fixed and covered by regression tests before this record was written.
 
 ### Why manual testing was needed here
 
@@ -451,7 +451,7 @@ Integration tests assert on synthetic fixtures, which is exactly what makes them
 | M14 | Nonexistent `topic::` | ✅ exit 1, `Session not found for topic: …` |
 | M15 | `path::/etc` (no project) | ✅ exit 2, `No project found for path: /etc` |
 | M16 | `path::` to another real project | ✅ resolves and renders; project label switches to `kit` |
-| M17 | Fold-hint round trip | ✅ the emitted `clg .show session_id::bff63952 index::616` runs and lands on the folded entry |
+| M17 | Fold-hint round trip | ✅ the emitted `clg .show session_id::feed0009 index::616` runs and lands on the folded entry |
 | M18 | `.show` regression | ⚠️ **defect found** — see below; ✅ after fix |
 | M19 | Tool-line integrity | ⚠️ **defect found** — see below; ✅ 0/212 bare after fix |
 | M20 | Result annotations | ✅ `↳ 1 line` ×97, `↳ 56 lines`, `↳ error` ×6 — plural/singular both correct |

@@ -6,7 +6,7 @@
 //
 // | id   | scenario                                        | expected                                             |
 // |------|-------------------------------------------------|------------------------------------------------------|
-// | FC-01 | mykola.nn 2026-08-20 ring replay (0→100 in ~31m) | estimate < 15m threshold at intermediate samples → alert fires mid-burn |
+// | FC-01 | alice 2026-08-20 ring replay (0→100 in ~31m)     | estimate < 15m threshold at intermediate samples → alert fires mid-burn |
 // | FC-02 | flat ring (idle account)                         | no estimate, no alert                                |
 // | FC-03 | ring spanning a `resets_at` rollover             | cross-rollover sample discarded; in-window slope only |
 // | FC-04 | <3 in-window samples                             | suppressed (no estimate)                             |
@@ -19,7 +19,7 @@
 use claude_profile::usage::test_bridge::{ h5_in_window_samples, time_to_exhaustion, burn_warnings, mk_named_aq, reset_iso_at };
 use claude_profile_core::account::HistoryEntry;
 
-/// Captured 2026-08-20 mykola.nn burn (5h window resetting 12:00:00Z):
+/// Captured 2026-08-20 alice burn (5h window resetting 12:00:00Z):
 /// utilization 0.0 at 09:06:31Z (t=1787216791) → 100.0 at 09:37:36Z (t=1787218656).
 const RESET_UNIX : u64 = 1_787_227_200; // 2026-08-20T12:00:00Z
 const BURN_T0    : u64 = 1_787_216_791; // 09:06:31Z, utilization 0.0
@@ -51,7 +51,7 @@ fn burn_util_at( t : u64 ) -> f64
 /// whole-window least-squares slope would average them in and stay above the
 /// horizon at 09:24:31Z — this test discriminates recent-slope from whole-window-LS.
 #[ test ]
-fn forecast_mykola_replay_alerts_mid_burn()
+fn forecast_alice_replay_alerts_mid_burn()
 {
   let reset = reset_iso_at( RESET_UNIX, 0 );
   let mut ring = vec!

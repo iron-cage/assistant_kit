@@ -101,7 +101,7 @@ fn check_continuation_returns_true_with_jsonl_conversation_file()
   let claude_storage = make_claude_storage( &session_dir, home_dir.path() );
   std::fs::create_dir_all( &claude_storage ).unwrap();
   std::fs::write(
-    claude_storage.join( "ce2efe82-3c31-40d9-a6b1-33c22c13aea5.jsonl" ),
+    claude_storage.join( "feed0006-0000-4000-8000-000000000006.jsonl" ),
     r#"{"message":"test"}"#,
   ).unwrap();
 

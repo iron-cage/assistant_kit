@@ -57,7 +57,7 @@ Consequences worth knowing: `.tail last::4` and `.show last::4` do not select th
 Default layout — a session header line, then one block per turn:
 
 ```text
-claude_storage · bff63952 · turns 249-252 of 252 · last 3h ago
+claude_storage · feed0009 · turns 249-252 of 252 · last 3h ago
 
 ── Claude ─────────────────────────────────────────── 17h ago · 16:40 ──
 ⚙ Bash · git status --short                                  ↳ 3 lines
@@ -77,7 +77,7 @@ ultrathink
 Compact layout (`compact::1`) — one row per turn, oldest-first:
 
 ```text
-claude_storage · bff63952 · turns 249-252 of 252 · last 3h ago
+claude_storage · feed0009 · turns 249-252 of 252 · last 3h ago
 
  249   17h  Claude  ⚙ Bash · git status --short ↳ 3 lines
  250   17h  Claude  Confirmed stable and complete: - Zero conflict markers …

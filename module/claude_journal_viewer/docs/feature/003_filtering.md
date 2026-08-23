@@ -43,5 +43,5 @@ Duration parsing accepts: `Ns` (seconds), `Nm` (minutes), `Nh` (hours), `Nd` (da
 
 ## Sources
 
-- `src/cli/mod.rs` — filter construction from CLI args
+- `src/output.rs` `build_filter()` — filter construction from CLI args
 - `claude_journal/src/reader.rs` — JournalFilter application

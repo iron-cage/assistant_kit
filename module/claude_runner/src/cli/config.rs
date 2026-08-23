@@ -19,6 +19,7 @@ use std::path::PathBuf;
 /// `clp .provider.select` for clp's own rotation scoping) — it is ignored here
 /// like any unknown key; the model-key gate in `apply_config_defaults` reads the
 /// live seat state (`seat_env_model`) instead.
+// Mirrors CliArgs field-for-field per the doc above — one bool per boolean CLI flag.
 #[ allow( clippy::struct_excessive_bools ) ]
 #[ derive( Default, serde::Deserialize ) ]
 #[ serde( default ) ]

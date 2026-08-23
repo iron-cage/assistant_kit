@@ -22,14 +22,14 @@ Project naming scheme filter for `.projects`. Absorbed from `.list` (see [`../co
 
 **Commands:** [`.projects`](../command/07_projects.md)
 
-**Purpose:** Filters projects by how their directory is named in `~/.claude/projects/`. Path-encoded projects (e.g., `-home-alice-projects`) are opened by filesystem path. UUID projects (`8d795a1c-...`) are created by other means. Composes with `scope::` (discovery boundary) and `filter::` (substring narrowing) — all three narrow the same resolved project set independently.
+**Purpose:** Filters projects by how their directory is named in `~/.claude/projects/`. Path-encoded projects (e.g., `-home-alice-projects`) are opened by filesystem path. UUID projects (`feed0001-...`) are created by other means. Composes with `scope::` (discovery boundary) and `filter::` (substring narrowing) — all three narrow the same resolved project set independently.
 
 **Examples:**
 ```bash
 # Valid values
 type::all    # No filter (default)
 type::path   # Path-encoded projects only (e.g., -home-alice-projects)
-type::uuid   # UUID-named projects only (e.g., 8d795a1c-...)
+type::uuid   # UUID-named projects only (e.g., feed0001-...)
 
 # Invalid values
 type::both   # "type must be uuid|path|all, got both"

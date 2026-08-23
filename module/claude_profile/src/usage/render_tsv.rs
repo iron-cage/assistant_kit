@@ -14,6 +14,7 @@ use super::sort::sort_indices;
 /// Status column uses plain-text labels (`ok`/`warn`/`err`). Percentage cells in
 /// `5h Left` and `7d Left` are rendered without the emoji prefix. No tier grouping
 /// or footer; rows are in sort strategy order. First row is a header.
+// One header cell and one row cell per optional column — the flat body is the column contract.
 #[ allow( clippy::too_many_lines ) ]
 pub fn render_tsv(
   accounts : &[ AccountQuota ],

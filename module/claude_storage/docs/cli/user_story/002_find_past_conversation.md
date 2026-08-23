@@ -69,7 +69,7 @@ cls .projects detail::projects
 # /home/user/projects/my_app (14)
 # /home/user/projects/web_service (8)
 # /home/user/projects/data_pipeline (3)
-# c8f7e421-4d3b-4a0e-9fa1-2e5b8c3d7f91 (2)
+# feed0007-0000-4000-8000-000000000007 (2)
 ```
 
 **Step 2: Search by content keyword**

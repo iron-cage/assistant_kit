@@ -8,8 +8,8 @@ use super::parse::{ CliArgs, ExpectStrategy, parse_u8_bounded };
 /// Any other value — including `"yes"`, `"0"`, `"false"`, empty, or absent — returns `false`.
 pub( super ) fn env_bool( var : &str ) -> bool
 {
-  std::env::var( var ).ok()
-    .is_some_and( | v | matches!( v.to_lowercase().as_str(), "1" | "true" ) )
+  std::env::var( var )
+    .is_ok_and( | v | matches!( v.to_lowercase().as_str(), "1" | "true" ) )
 }
 
 /// Returns `Some(value)` if `var` is set to a non-empty string; `None` otherwise.

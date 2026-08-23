@@ -234,9 +234,9 @@ Integration test planning for the `.account.save` command. See [command/namespac
 
 ### IT-19: Stale `_active` marker — `oauthAccount.emailAddress` wins (BUG-212 regression)
 
-- **Given:** `~/.claude/.credentials.json` exists with live credentials. `~/.claude.json` contains `oauthAccount.emailAddress = "i5@wbox.pro"` (fresh — written by external OAuth login). Per-machine active marker `{credential_store}/_active_{hostname}_{user}` contains `"i2@wbox.pro"` (stale — from prior clp session). No `name::` passed.
+- **Given:** `~/.claude/.credentials.json` exists with live credentials. `~/.claude.json` contains `oauthAccount.emailAddress = "i5@example.com"` (fresh — written by external OAuth login). Per-machine active marker `{credential_store}/_active_{hostname}_{user}` contains `"i2@example.com"` (stale — from prior clp session). No `name::` passed.
 - **When:** `clp .account.save`
-- **Then:** Exit 0. stdout: `saved current credentials as 'i5@wbox.pro'`. `{credential_store}/i5@wbox.pro.credentials.json` created. `{credential_store}/i2@wbox.pro.credentials.json` NOT created or modified — stale marker ignored when `oauthAccount.emailAddress` is available.
+- **Then:** Exit 0. stdout: `saved current credentials as 'i5@example.com'`. `{credential_store}/i5@example.com.credentials.json` created. `{credential_store}/i2@example.com.credentials.json` NOT created or modified — stale marker ignored when `oauthAccount.emailAddress` is available.
 - **Exit:** 0
 - **Source fn:** `mre_bug_212_account_save_stale_marker_uses_oauth_email` (in `account_relogin_test_b.rs`)
 - **Source:** [002_account_save.md AC-16](../../../../docs/feature/002_account_save.md)

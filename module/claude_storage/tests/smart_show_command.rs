@@ -60,8 +60,14 @@ fn test_show_parser_accepts_no_args()
   // This is a smoke test - the detailed "current directory" behavior
   // is tested via unit tests in src/cli/mod.rs
 
+  // Empty root, not the developer's real `~/.claude/`: bare `.show` resolves the
+  // cwd project out of storage, so without this the parser assertion below would
+  // be evaluated against whatever sessions happen to exist on the machine.
+  let root = TempDir::new().unwrap();
+
   // Execute .show with no arguments (parser should not reject)
   let output = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
     .args( [ ".show" ] )
     .output()
     .unwrap();
@@ -254,7 +260,12 @@ fn test_show_project_parser_accepts_no_args()
   // Test: .show.project (parser should accept no arguments)
   // This verifies backward compatibility for the deprecated command
 
+  // Empty root, not the developer's real `~/.claude/` — same reason as
+  // `test_show_parser_accepts_no_args` above.
+  let root = TempDir::new().unwrap();
+
   let output = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
     .args( [ ".show.project" ] )
     .output()
     .unwrap();
@@ -275,7 +286,7 @@ fn test_show_project_parser_accepts_no_args()
 ///
 /// The .show command's session lookup doesn't support partial UUID matching
 /// (first 8 characters) despite the spec explicitly documenting this feature.
-/// When users provide `session_id::79f86582` for session `79f86582-1435-442c-935a-13f8d874918a`,
+/// When users provide `session_id::feed0002` for session `feed0002-0000-4000-8000-000000000002`,
 /// the command fails with "Session not found" error.
 ///
 /// The implementation only does exact string matching against full session IDs,
@@ -322,8 +333,8 @@ fn test_show_partial_uuid_matching()
   fs::create_dir_all( &project_dir ).unwrap();
 
   // Create session with actual UUID format
-  let full_uuid = "79f86582-1435-442c-935a-13f8d874918a";
-  let partial_uuid = "79f86582"; // First 8 chars
+  let full_uuid = "feed0002-0000-4000-8000-000000000002";
+  let partial_uuid = "feed0002"; // First 8 chars
   let file = project_dir.join( format!( "{full_uuid}.jsonl" ) );
   fs::write( &file, r#"{"type":"user","uuid":"uuid-001","parentUuid":null,"timestamp":"2025-11-29T10:00:00Z","cwd":"/tmp/test","sessionId":"test-session","version":"2.0.0","gitBranch":"master","userType":"external","isSidechain":false,"message":{"role":"user","content":"test partial uuid matching"}}
 {"type":"assistant","uuid":"uuid-002","parentUuid":"uuid-001","timestamp":"2025-11-29T10:00:01Z","cwd":"/tmp/test","sessionId":"test-session","version":"2.0.0","gitBranch":"master","userType":"external","isSidechain":false,"message":{"role":"assistant","content":[{"type":"text","text":"this should be findable with partial ID"}]}}"# ).unwrap();

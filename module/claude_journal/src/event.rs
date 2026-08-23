@@ -248,8 +248,8 @@ pub struct EventFields
 ///
 /// ```rust
 /// use claude_journal::compose_agent_id;
-/// assert_eq!( compose_agent_id( "user1", "w003", "/a/b" ),  "user1@w003/a/b/" );
-/// assert_eq!( compose_agent_id( "user1", "w003", "/a/b/" ), "user1@w003/a/b/" );
+/// assert_eq!( compose_agent_id( "alice", "w003", "/a/b" ),  "alice@w003/a/b/" );
+/// assert_eq!( compose_agent_id( "alice", "w003", "/a/b/" ), "alice@w003/a/b/" );
 /// ```
 #[ inline ]
 #[ must_use ]

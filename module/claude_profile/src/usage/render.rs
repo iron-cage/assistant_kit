@@ -46,6 +46,8 @@ pub( crate ) fn resolve_selected_provider() -> String
 /// columns are always shown). Footer: single-strategy recommendation line when
 /// ≥2 accounts have valid quota — shows the winner for the active `sort::`.
 /// Footer is omitted when < 2 accounts have valid quota data.
+// Every parameter is one render input (sort/filter/column state, session context, footer gating);
+// the body emits the table row-by-row inline so column order stays readable as one unit.
 #[ allow( clippy::too_many_lines, clippy::too_many_arguments ) ]
 pub fn render_text(
   accounts       : &[ AccountQuota ],
@@ -371,6 +373,8 @@ fn cache_age_label( secs : u64 ) -> String
 /// Render quota results as plain text (same as `render_text` with emoji replaced).
 ///
 /// `🟢`→`ok`, `🟡`→`warn`, `🔴`→`err`, `→`→`->`, `✓`→`*`.
+// Signature deliberately mirrors render_text so the two stay swappable at the call site;
+// diverging the parameter list would be the actual defect.
 #[ allow( clippy::too_many_arguments ) ]
 pub( crate ) fn render_plain(
   accounts       : &[ AccountQuota ],

@@ -20,10 +20,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - 16 tests covering EC-1..EC-8 edge cases + behavioural and validation tests
 
 - **`clg` alias binary** (2026-03-28)
-  - Added `[[bin]] name = "clg"` in `Cargo.toml` pointing to `src/main.rs`
+  - Added `[[bin]] name = "clg"` in `Cargo.toml` pointing to `src/bin/clg.rs` — a separate compilation unit from `src/main.rs`, which avoids Cargo's "same file in multiple targets" warning; both entry points delegate to `cli_main::run()`
   - `clg` and `claude_storage` are identical binaries; `clg` is a short-name alias for interactive shell use
   - `tests/common/mod.rs`: added `clg_cmd()` helper + Binary Name Coupling doc comment
-  - `tests/cli_sanity.rs`: added `clg_alias_is_present` and `clg_alias_matches_claude_storage` smoke tests
+  - `tests/cli_sanity.rs`: added `binary_is_present` smoke test verifying the `clg` binary builds and runs
 
 - **REQ-012: Search Command Specification** (2025-12-06)
   - Full-text search across conversation content
@@ -70,6 +70,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - New test file covering `.list` parameter bounds and combinations (22 tests)
   - Covers: `agent::`, `session::`, `type::`, `verbosity::` bounds (Finding #015), `path::`, `sessions::`, `min_entries::`, pairwise combinations
 
+### Removed
+
+- **`.sessions` command** — removed as a standalone command from `unilang.commands.yaml`. Its scope-resolution logic (`decode_project_display`, `is_relevant_encoded`, `decode_path_via_fs`, now in `src/cli/scope.rs`) was retained and is shared by `.show`, `.projects`, and the `.tail` liveness feature instead of being exposed as its own command. The issue-030/031/032 fixes below were made to this logic while it still lived behind `.sessions`; they remain accurate for the code as it existed at the time, though the `sessions_command_test.rs` / `sessions_output_format_test.rs` files they cite no longer exist under those names — the underlying regression coverage now lives with the commands that absorbed the logic.
+
 ### Fixed
 
 - **Finding #015: list_routine missing verbosity range validation** (hygiene sprint)
@@ -99,7 +103,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Finding #011: Partial UUID matching for .show session_id parameter** (2025-12-06)
   - Session lookup in .show and .export commands only supported exact UUID matching, not prefix matching
-  - Users had to type full 36-character UUID instead of convenient 8-character prefix (e.g., "79f86582" vs "79f86582-1435-442c-935a-13f8d874918a")
+  - Users had to type full 36-character UUID instead of convenient 8-character prefix (e.g., "feed0002" vs "feed0002-0000-4000-8000-000000000002")
   - Root cause: Implementation only checked `s.id() == session_id` without checking `s.id().starts_with(session_id)`
   - Fix applied to both format_session_output (line 892) and export routine (line 1448) with Fix(issue-011) comments
   - Added comprehensive test test_show_partial_uuid_matching with 5-section bug documentation
@@ -189,7 +193,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ✅ Plan updated with accurate numbers and verification report
 - ✅ Manual testing completed (Finding #011 and #012 discovered and fixed with TDD)
 - ✅ Full TDD cycle completed: RED → GREEN → VERIFY for all findings
-- ✅ All tests pass with `w3 .test l::3` (100% success rate, zero warnings)
+- ✅ All tests pass via `cargo nextest run --all-features`, `cargo test --doc --all-features`, and `cargo clippy --all-targets --all-features -- -D warnings` (100% success rate, zero warnings)
 
 ## [1.3.0] - 2025-12-05
 

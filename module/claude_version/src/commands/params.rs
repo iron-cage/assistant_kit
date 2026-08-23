@@ -28,6 +28,8 @@ use claude_core::settings_io::get_setting;
 ///
 /// Returns `Err(ArgumentTypeMismatch)` for an unrecognised `kind::` or `format::` value (exit 1).
 /// Returns `Err(InternalError)` when `key::` is specified but not in the catalog (exit 2).
+// Registered as a boxed unilang CommandRoutine (Box< dyn Fn >) — every call goes through
+// dynamic dispatch, so #[ inline ] could never apply at the call site.
 #[ allow(
   clippy::missing_inline_in_public_items,
 ) ]

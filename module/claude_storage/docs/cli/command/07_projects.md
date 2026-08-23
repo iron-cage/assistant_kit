@@ -139,11 +139,11 @@ claude_storage .projects project::abc123 ids::1 count::1
 5 projects · 6 conversations · 19 agents · 2 live (1 working, 1 waiting)
 
   LAST      CONV  AGENTS  STATUS             PROJECT
-▸ 2h ago  2 conv   12 ag  ● working          ~/pro/lib/assistant_kit/claude_storage
-  5h ago  1 conv    3 ag  ○ waiting          ~/pro/lib/assistant_kit
-  1d ago  1 conv       ·                     ~/pro/lib/assistant_kit/module/claude_storage/docs
-  3d ago  1 conv    4 ag                     ~/pro/lib/wtools
-  6d ago  1 conv       ·             ⚠ gone  ~/pro/lib/assistant/kit/-commit
+▸ 2h ago  2 conv   12 ag  ● working          ~/work/src/assistant_kit/claude_storage
+  5h ago  1 conv    3 ag  ○ waiting          ~/work/src/assistant_kit
+  1d ago  1 conv       ·                     ~/work/src/assistant_kit/module/claude_storage/docs
+  3d ago  1 conv    4 ag                     ~/work/src/wtools
+  6d ago  1 conv       ·             ⚠ gone  ~/work/src/assistant/kit/-commit
 ```
 
 Column widths adapt to content, and the `STATUS` and `⚠ gone` columns are each reserved only when at least one row needs it.
@@ -184,7 +184,7 @@ With `show_tree::1`, the same rows nest by directory. Shared ancestors become no
 ```
 5 projects · 6 conversations · 19 agents · 2 live (1 working, 1 waiting)
 
-  ~/pro/lib
+  ~/work/lib
   ├─ assistant_kit                 ○ waiting            1 conv   3 ag  5h ago
 ▸ │  ├─ claude_storage             ● working            2 conv  12 ag  2h ago
   │  └─ module/claude_storage/docs                      1 conv      ·  1d ago
@@ -192,7 +192,7 @@ With `show_tree::1`, the same rows nest by directory. Shared ancestors become no
   └─ assistant/kit/-commit                    ⚠ gone    1 conv      ·  6d ago
 ```
 
-Structural nodes — directories that are ancestors of several projects but hold no sessions of their own — render as a label with empty count columns; `~/pro/lib` above is one. Their `STATUS` cell stays blank too: a structural node owns no session, so it never inherits a child's attachment. Sibling leaves under one node are the common case: a repository entered from several subdirectories becomes several projects, and the tree is what makes that visible. Single-child runs collapse into one segment, so `module/claude_storage/docs` is one node rather than three.
+Structural nodes — directories that are ancestors of several projects but hold no sessions of their own — render as a label with empty count columns; `~/work/lib` above is one. Their `STATUS` cell stays blank too: a structural node owns no session, so it never inherits a child's attachment. Sibling leaves under one node are the common case: a repository entered from several subdirectories becomes several projects, and the tree is what makes that visible. Single-child runs collapse into one segment, so `module/claude_storage/docs` is one node rather than three.
 
 The last row shows what a lossy decode looks like once the directory is gone: `assistant_kit/-commit` was recorded, but with the directory deleted the `_` could no longer be distinguished from a `/`, so it renders as `assistant/kit/-commit` — hence its position as a sibling of `assistant_kit` rather than a child, and hence the marker. Ordering is by recency descending at every level, including among structural nodes (a node sorts by the most recent session anywhere beneath it).
 

@@ -58,7 +58,6 @@ struct UsageRow
 ///
 /// Does not panic — both `usize` conversions below are only reached after the
 /// negative-value branches already returned.
-#[ allow( clippy::needless_pass_by_value ) ]
 #[ inline ]
 pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   -> core::result::Result< OutputData, ErrorData >

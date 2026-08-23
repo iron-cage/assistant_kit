@@ -13,7 +13,7 @@
 
 In agent JSONL entries, the `sessionId` field does **not** refer to the agent's own session. Instead it contains the UUID of the parent (root) session. This is the primary programmatic link between a sub-agent and the conversation that spawned it.
 
-For example, an agent stored at `43860c56-…/subagents/agent-a6061d6e….jsonl` has `"sessionId": "43860c56-f828-44bd-953a-432920676b63"` — the parent directory UUID.
+For example, an agent stored at `feed0005-…/subagents/agent-a6061d6e….jsonl` has `"sessionId": "feed0005-0000-4000-8000-000000000005"` — the parent directory UUID.
 
 This `sessionId` field is what enables the `claude_storage` library to group agent sessions with their parent root session into a **Session Family**.
 

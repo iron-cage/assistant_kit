@@ -164,9 +164,9 @@ Feature behavioral requirement test cases for `docs/feature/015_name_shortcut_sy
 
 ### FT-11: Exact local-part match wins over ambiguous prefix
 
-- **Given:** Three accounts: `i1@wbox.pro`, `i11@wbox.pro`, `i12@wbox.pro`.
+- **Given:** Three accounts: `i1@example.com`, `i11@example.com`, `i12@example.com`.
 - **When:** `clp .account.use i1`
-- **Then:** Resolves to `i1@wbox.pro` (exact local-part match). Does NOT exit 1 with ambiguous-prefix error. Exit 0.
+- **Then:** Resolves to `i1@example.com` (exact local-part match). Does NOT exit 1 with ambiguous-prefix error. Exit 0.
 - **Exit:** 0
 - **Source fn:** `aw16_exact_local_part_wins_over_ambiguous_prefix`
 - **Source:** [015_name_shortcut_syntax.md AC-11](../../../docs/feature/015_name_shortcut_syntax.md)

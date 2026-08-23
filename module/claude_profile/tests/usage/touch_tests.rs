@@ -290,7 +290,7 @@ fn test_mre_bug288_apply_touch_skips_touch_idle_false()
 /// 5% to 15% one day earlier, for the unrelated purpose of giving humans early warning in
 /// display/sort classification. `touch_skip_reason()` borrowed this same 15% cutoff, so
 /// accounts with 1%-15% of their 5h quota remaining (e.g. utilization=89.0, the real-world
-/// i16@wbox.pro case) were skipped even though a touch subprocess still succeeds and extends
+/// i16@example.com case) were skipped even though a touch subprocess still succeeds and extends
 /// the account's usable window at any nonzero remaining quota.
 ///
 /// # Why Not Caught
@@ -321,7 +321,7 @@ fn test_tsk418_apply_touch_fires_at_partial_exhaustion_skips_at_full_exhaustion(
 {
   let store = tempfile::TempDir::new().unwrap();
 
-  // T01: 11% remaining (utilization=89.0, the real-world i16@wbox.pro case).
+  // T01: 11% remaining (utilization=89.0, the real-world i16@example.com case).
   // Old threshold (15.0) would have skipped this — new threshold (0.0) must NOT.
   {
     let mut aq = mk_aq_with_resets_at( None );

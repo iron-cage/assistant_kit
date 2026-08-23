@@ -30,7 +30,7 @@ session_id::-default_topic
 session_id::-commit
 
 # UUID sessions
-session_id::8d795a1c-c81d-4010-8d29-b4e678272419
+session_id::feed0001-0000-4000-8000-000000000001
 ```
 
 **Group:** [Session Identification](../param_group/03_session_identification.md)

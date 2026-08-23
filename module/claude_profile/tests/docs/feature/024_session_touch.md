@@ -349,7 +349,7 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 
 ### FT-24: 5h-exhaustion skip guard fires only at full exhaustion (`five_hour_left <= 0.0%`), not partial exhaustion
 
-- **Given:** Two accounts, both idle (`five_hour.resets_at = None` — qualifies for touch by timer state). Account A: `five_hour.utilization = 89.0` (`five_hour_left = 11.0`, matching the real-world i16@wbox.pro scenario). Account B: `five_hour.utilization = 100.0` (`five_hour_left = 0.0`, fully exhausted).
+- **Given:** Two accounts, both idle (`five_hour.resets_at = None` — qualifies for touch by timer state). Account A: `five_hour.utilization = 89.0` (`five_hour_left = 11.0`, matching the real-world i16@example.com scenario). Account B: `five_hour.utilization = 100.0` (`five_hour_left = 0.0`, fully exhausted).
 - **When:** `touch_skip_reason(&aq, store.path(), false)` is evaluated for each account.
 - **Then:** Account A (11% remaining) returns `None` — touch fires; a partially-exhausted account still benefits from a touch subprocess and is not skipped. Account B (0% remaining) returns `Some("skipped (reason: h-exhausted)")` — a fully-exhausted account gains nothing from a subprocess spawn and is skipped. `H_EXHAUSTED_THRESHOLD = 15.0` (the human-facing display/sort classification constant, TSK-190) is NOT referenced by this guard.
 - **Exit:** N/A (unit test — no exit code)

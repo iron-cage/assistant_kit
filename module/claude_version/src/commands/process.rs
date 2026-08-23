@@ -16,6 +16,8 @@ use claude_runner_core::OutputFormat as CoreOutputFormat;
 ///
 /// Returns `Err` if `format::` has an unrecognised value, or if `v::` is
 /// outside the valid `0..=2` range.
+// Registered as a boxed unilang CommandRoutine (Box< dyn Fn >) — every call goes through
+// dynamic dispatch, so #[ inline ] could never apply at the call site.
 #[ allow( clippy::missing_inline_in_public_items ) ]
 pub fn ps_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
@@ -166,6 +168,8 @@ fn parse_pid_filter( cmd : &VerifiedCommand ) -> Result< Option< u32 >, ErrorDat
 ///   that does not manifest as a surviving process in the follow-up scan.
 /// Pitfall: ESRCH ("no such process") is a benign race — the process already
 ///   exited — so collect all signal errors but filter ESRCH from final report.
+// Registered as a boxed unilang CommandRoutine (Box< dyn Fn >) — every call goes through
+// dynamic dispatch, so #[ inline ] could never apply at the call site.
 #[ allow( clippy::missing_inline_in_public_items ) ]
 pub fn ps_kill_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {

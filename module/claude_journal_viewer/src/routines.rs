@@ -46,7 +46,6 @@ fn err( msg : impl Into< String > ) -> ErrorData
 /// # Errors
 ///
 /// Returns `Err` when journal reading or event filtering fails.
-#[ allow( clippy::needless_pass_by_value ) ]
 #[ inline ]
 pub fn list_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   -> core::result::Result< OutputData, ErrorData >
@@ -63,7 +62,6 @@ pub fn list_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
 /// # Errors
 ///
 /// Returns `Err` when journal reading or aggregation fails.
-#[ allow( clippy::needless_pass_by_value ) ]
 #[ inline ]
 pub fn stats_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   -> core::result::Result< OutputData, ErrorData >
@@ -80,7 +78,6 @@ pub fn stats_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
 /// # Errors
 ///
 /// Returns `Err` when journal reading or pattern matching fails.
-#[ allow( clippy::needless_pass_by_value ) ]
 #[ inline ]
 pub fn search_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   -> core::result::Result< OutputData, ErrorData >
@@ -97,7 +94,6 @@ pub fn search_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
 /// # Errors
 ///
 /// Infallible in practice; signature satisfies the unilang routine trait.
-#[ allow( clippy::needless_pass_by_value ) ]
 #[ inline ]
 pub fn status_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   -> core::result::Result< OutputData, ErrorData >
@@ -112,7 +108,6 @@ pub fn status_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
 /// # Errors
 ///
 /// Returns `Err` when journal reading or file export fails.
-#[ allow( clippy::needless_pass_by_value ) ]
 #[ inline ]
 pub fn export_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   -> core::result::Result< OutputData, ErrorData >
@@ -129,7 +124,6 @@ pub fn export_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
 /// # Errors
 ///
 /// Returns `Err` when journal pruning fails.
-#[ allow( clippy::needless_pass_by_value ) ]
 #[ inline ]
 pub fn prune_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   -> core::result::Result< OutputData, ErrorData >
@@ -148,7 +142,6 @@ pub fn prune_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
 /// # Errors
 ///
 /// Infallible in practice; signature satisfies the unilang routine trait.
-#[ allow( clippy::needless_pass_by_value ) ]
 #[ inline ]
 pub fn tail_routine( _cmd : VerifiedCommand, _ctx : ExecutionContext )
   -> core::result::Result< OutputData, ErrorData >
@@ -166,7 +159,6 @@ pub fn tail_routine( _cmd : VerifiedCommand, _ctx : ExecutionContext )
 /// # Errors
 ///
 /// Infallible in practice; signature satisfies the unilang routine trait.
-#[ allow( clippy::needless_pass_by_value ) ]
 #[ inline ]
 pub fn serve_routine( _cmd : VerifiedCommand, _ctx : ExecutionContext )
   -> core::result::Result< OutputData, ErrorData >

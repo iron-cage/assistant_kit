@@ -58,7 +58,7 @@ Edge case tests for the `project::` parameter. Tests validate multi-format ident
 
 - **Commands:** `.show`
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture`
-- **When:** `clg .show project::8d795a1c-c81d-4010-8d29-b4e678272419`
+- **When:** `clg .show project::feed0001-0000-4000-8000-000000000001`
 - **Then:** Project view for the UUID-named project (must exist in fixture as a UUID directory).; + UUID project correctly identified and displayed
 - **Exit:** 0
 - **Source:** [param/10_project.md](../../../../docs/cli/param/10_project.md)

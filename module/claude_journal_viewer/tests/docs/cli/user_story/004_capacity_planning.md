@@ -4,7 +4,7 @@
 
 - **Purpose**: US- acceptance tests verifying developers can understand usage volume and manage journal storage retention.
 - **Responsibility**: Acceptance criteria coverage for the capacity planning workflow.
-- **In Scope**: Journal health/size status, per-file size breakdown, volume trend and peak detection, prune preview and execution, size-based retention.
+- **In Scope**: Journal health/size status, per-file size breakdown, volume trend and peak detection, prune preview and execution, age-based retention.
 - **Out of Scope**: Cost analysis (-> `001_cost_tracking.md`), team-wide reporting (-> `005_team_reporting.md`).
 
 Test case planning for [user_story/004_capacity_planning.md](../../../../docs/cli/user_story/004_capacity_planning.md).
@@ -18,8 +18,8 @@ Test case planning for [user_story/004_capacity_planning.md](../../../../docs/cl
 | US-3 | `.stats by::day since::30d` shows daily invocation volume trend | Volume Trend |
 | US-4 | `.stats by::hour since::1d` shows hourly distribution (peak detection) | Volume Trend |
 | US-5 | `.prune keep::30d dry_run::1` previews what would be pruned | Retention |
-| US-6 | `.prune keep::100mb` maintains journal under 100MB | Retention |
-| US-7 | `.prune keep::7d confirm::1` prunes without confirmation | Retention |
+| US-6 | `.prune keep::7d` deletes files dated older than 7 days | Retention |
+| US-7 | `.status` size monitoring paired with an age window bounds disk growth | Retention |
 
 ## Test Coverage Summary
 
@@ -81,20 +81,20 @@ Test case planning for [user_story/004_capacity_planning.md](../../../../docs/cl
 
 ---
 
-### US-6: `.prune keep::100mb` maintains journal under 100MB
+### US-6: `.prune keep::7d` deletes files dated older than 7 days
 
-- **Given:** journal dir whose total size exceeds 100MB
-- **When:** `clj .prune keep::100mb`
-- **Then:** exit 0; oldest files are removed until total journal size is at or under 100MB
+- **Given:** journal dir with `YYYY-MM-DD.jsonl` files both older and newer than 7 days
+- **When:** `clj .prune keep::7d`
+- **Then:** exit 0; files whose filename date is older than 7 days are deleted immediately — there is no confirmation prompt, `dry_run::1` (US-5) being the preview mechanism; newer files remain
 - **Exit:** 0
 - **Source:** [user_story/004_capacity_planning.md](../../../../docs/cli/user_story/004_capacity_planning.md) AC-06
 
 ---
 
-### US-7: `.prune keep::7d confirm::1` prunes without confirmation
+### US-7: `.status` size monitoring paired with an age window bounds disk growth
 
-- **Given:** journal dir with files older than 7 days
-- **When:** `clj .prune keep::7d confirm::1`
-- **Then:** exit 0; files older than 7 days are deleted immediately, with no interactive confirmation prompt
+- **Given:** journal dir grown past the operator's comfort threshold
+- **When:** `clj .status` to read total size, then `clj .prune keep::<window>` with a window narrow enough to bring it down
+- **Then:** exit 0 from both; size is bounded by choosing the age window, not by a size target — size-based pruning was dropped, so `keep::100mb` exits 1 rather than trimming to a byte budget
 - **Exit:** 0
 - **Source:** [user_story/004_capacity_planning.md](../../../../docs/cli/user_story/004_capacity_planning.md) AC-07

@@ -212,6 +212,7 @@ pub( crate ) fn handle_mutation_dispatch(
 
 // ── assignee:: dispatch (Feature 065) ────────────────────────────────────────
 
+// Dispatch table over the assignee:: argument forms — one branch each, flat by design.
 #[ allow( clippy::too_many_lines ) ]
 fn dispatch_assignee(
   cmd              : &VerifiedCommand,

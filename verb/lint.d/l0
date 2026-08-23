@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# l0 — host-native clippy is disabled.
+# Clippy is a compilation and must run inside the runbox container.
+# Standard invocation: ./verb/lint
+set -euo pipefail
+echo "ERROR: host-native clippy (l0) is disabled." >&2
+echo "Standard invocation: ./verb/lint" >&2
+exit 1

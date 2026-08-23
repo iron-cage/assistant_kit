@@ -33,7 +33,7 @@ Reference documentation for the `claude_storage` CLI binary — a tool for explo
 | `command/readme.md` | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
 | `command/*.md` (16 files) | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
 | `param/readme.md` | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
-| `param/*.md` (43 files) | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
+| `param/*.md` (44 files) | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
 | `001_dictionary.md` | ➖ | ✅ | ✅ | ✅ | ✅ | L5 |
 | `type/readme.md` | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
 | `type/*.md` (15 files) | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
@@ -47,7 +47,7 @@ Reference documentation for the `claude_storage` CLI binary — a tool for explo
 | `user_story/readme.md` | ✅ | ✅ | ✅ | ✅ | ✅ | L5 |
 | `user_story/*.md` (6 files) | ✅ | ✅ | ✅ | ✅ | ✅ | L5 |
 | `pitfall/readme.md` | ➖ | ✅ | ✅ | ➖ | ➖ | L3 |
-| `pitfall/*.md` (3 files) | ➖ | ➖ | ✅ | ➖ | ➖ | L3 |
+| `pitfall/*.md` (4 files) | ➖ | ➖ | ✅ | ➖ | ➖ | L3 |
 **Current Level:** L5 (Test Detail Complete)
 **Design Completeness:** 100%
 **Implementation Status:** 100% (16/16 commands implemented)

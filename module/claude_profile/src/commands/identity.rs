@@ -295,6 +295,8 @@ fn empty_identities_output( fmt : IdentityFormat ) -> OutputData
 /// Returns `ErrorData` if `format::` is not `text`/`json` (exit 1) or the store
 /// directory is unreadable (exit 2).
 #[ inline ]
+// Single directory pass unions three identity sources (_active_ markers, _filter_ files, account
+// owners) into one row map — splitting it would mean re-walking the store per source.
 #[ allow( clippy::too_many_lines ) ]
 pub fn identities_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {

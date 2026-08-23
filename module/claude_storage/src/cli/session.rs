@@ -65,7 +65,6 @@ fn validate_topic( topic : &str ) -> core::result::Result< (), ErrorData >
 /// # Errors
 ///
 /// Returns error if path resolution fails or HOME is not set.
-#[ allow( clippy::needless_pass_by_value ) ]
 #[ inline ]
 pub fn project_path_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   -> core::result::Result< OutputData, ErrorData >
@@ -101,7 +100,6 @@ pub fn project_path_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
 /// # Errors
 ///
 /// Returns error if path resolution fails, topic is invalid, or no history exists.
-#[ allow( clippy::needless_pass_by_value ) ]
 #[ inline ]
 pub fn project_exists_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   -> core::result::Result< OutputData, ErrorData >
@@ -172,7 +170,6 @@ fn resolve_session_dir(
 /// # Errors
 ///
 /// Returns error if path resolution fails or topic is invalid.
-#[ allow( clippy::needless_pass_by_value ) ]
 #[ inline ]
 pub fn session_dir_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   -> core::result::Result< OutputData, ErrorData >
@@ -198,7 +195,6 @@ pub fn session_dir_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
 ///
 /// Returns error if path resolution fails, topic invalid, strategy invalid,
 /// or directory creation fails.
-#[ allow( clippy::needless_pass_by_value ) ]
 #[ inline ]
 pub fn session_ensure_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   -> core::result::Result< OutputData, ErrorData >
@@ -286,7 +282,6 @@ fn resolve_storage_for_cmd(
 ///
 /// Returns error when more than one selector is given, path resolution fails,
 /// `session::`/`topic::` is malformed, or the storage dir cannot be computed.
-#[ allow( clippy::needless_pass_by_value ) ]
 #[ inline ]
 pub fn session_path_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   -> core::result::Result< OutputData, ErrorData >

@@ -214,10 +214,10 @@ fn global_stats_fast_finds_new_format_agent_sessions()
   fs::create_dir_all( &p1 ).expect( "create p1" );
 
   // Main session file at top level
-  create_session_file( &p1, "43860c56-f828-44bd-953a-432920676b63" );
+  create_session_file( &p1, "feed0005-0000-4000-8000-000000000005" );
 
   // New-format agent sessions inside {main_uuid}/subagents/
-  let subagents_dir = p1.join( "43860c56-f828-44bd-953a-432920676b63" ).join( "subagents" );
+  let subagents_dir = p1.join( "feed0005-0000-4000-8000-000000000005" ).join( "subagents" );
   fs::create_dir_all( &subagents_dir ).expect( "create subagents dir" );
   create_session_file( &subagents_dir, "agent-a60f26fee00bf6e3e" );
   create_session_file( &subagents_dir, "agent-b288d40921ed01252" );

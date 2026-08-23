@@ -45,7 +45,7 @@ Type constraint tests for `ProjectId` — multi-format project identifier.
 
 ### TC-3: UUID format accepted
 
-- **Given:** Input string `"8d795a1c-c81d-4010-8d29-b4e678272419"` and project exists
+- **Given:** Input string `"feed0001-0000-4000-8000-000000000001"` and project exists
 - **When:** `ProjectId` is parsed and resolved
 - **Then:** Accepted; `is_uuid()` returns true
 

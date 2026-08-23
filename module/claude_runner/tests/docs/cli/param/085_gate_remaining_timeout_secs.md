@@ -29,7 +29,7 @@ polling does not outlive a wrapping job-runner deadline.
 
 ## Implementation Notes
 
-<!-- BUG-481 task/claude_runner/bug/481_silent_off_env_protection_boundary.md — fixed: File column corrected to concurrency_gate_ext3_test.rs (all rows; previously routed to concurrency_gate_test.rs, where none of the implementations live) and EC-5/6/7 registered for the resolution-announcement contract. All 7 rows later moved again, unchanged, to concurrency_gate_deadline_test.rs when ext3 was split at the 1500-line threshold -->
+<!-- BUG-481 — fixed: File column corrected to concurrency_gate_ext3_test.rs (all rows; previously routed to concurrency_gate_test.rs, where none of the implementations live) and EC-5/6/7 registered for the resolution-announcement contract. All 7 rows later moved again, unchanged, to concurrency_gate_deadline_test.rs when ext3 was split at the 1500-line threshold -->
 | EC | Test Function | File |
 |----|---------------|------|
 | EC-1 | `t35_remaining_timeout_budget_clamps_gate_attempts` | `concurrency_gate_deadline_test.rs` |

@@ -18,7 +18,7 @@
 use error_tools::{ Result, Error };
 use std::collections::{ HashMap, VecDeque };
 use std::io::{ BufRead, Write };
-use std::sync::{ Arc, Mutex };
+use std::sync::{ Arc, Mutex, MutexGuard, PoisonError };
 use core::sync::atomic::{ AtomicBool, AtomicU64, Ordering };
 use std::sync::mpsc;
 use core::time::Duration;
@@ -41,6 +41,26 @@ const STDERR_TAIL_LINES : usize = 64;
 
 /// Maximum bytes retained per stderr line (longer lines are truncated at a char boundary).
 const STDERR_LINE_MAX : usize = 1024;
+
+/// Lock a session mutex, recovering the guard when a previous holder panicked.
+///
+/// Every mutex in this module protects a single self-contained value — `Option<ChildStdin>`,
+/// a `request_id` map, a cached payload, a bounded stderr tail — with no invariant spanning
+/// two of them and none held across an await or a call that can unwind mid-update. A panic
+/// while one is held therefore leaves the data structurally valid, merely possibly missing
+/// the write that was in flight, so `PoisonError::into_inner` is the correct recovery.
+///
+/// Pitfall: `lock().unwrap()` converts one panicked background thread into a session-wide
+///   cascade — every subsequent lock on that mutex panics too, including the `broken.lock()`
+///   in [`ControlSession::is_broken`] whose entire purpose is to *report* that failure. The
+///   session already models failure explicitly through `broken`; poisoning must route into
+///   that path, never around it. A panicking reader thread also drops the subprocess stdout
+///   pipe, so the existing "stdout closed" branch still sets `broken` on its own.
+#[ inline ]
+fn lock_or_recover< T >( m : &Mutex< T > ) -> MutexGuard< '_, T >
+{
+  m.lock().unwrap_or_else( PoisonError::into_inner )
+}
 
 /// Outcome of a single dispatched `control_request`, routed to its waiter by `request_id`.
 enum WireOutcome
@@ -123,8 +143,8 @@ impl ControlSession
       read_loop( stdout, &reader_pending, &reader_cache, &message_tx );
       // Stdout closed (subprocess exited or pipe broken) — fail every still-pending waiter
       // immediately rather than letting each one wait out its own timeout (Test Matrix IT-9).
-      *reader_broken.lock().unwrap() = Some( "subprocess stdout closed (process likely exited)".to_string() );
-      let mut pending_map = reader_pending.lock().unwrap();
+      *lock_or_recover( &reader_broken ) = Some( "subprocess stdout closed (process likely exited)".to_string() );
+      let mut pending_map = lock_or_recover( &reader_pending );
       for ( _, sender ) in pending_map.drain()
       {
         let _ = sender.send( WireOutcome::Error( "subprocess exited before responding".to_string() ) );
@@ -174,7 +194,7 @@ impl ControlSession
   #[ must_use ]
   pub fn stderr_tail( &self ) -> Vec< String >
   {
-    self.stderr_tail_buf.lock().unwrap().iter().cloned().collect()
+    lock_or_recover( &self.stderr_tail_buf ).iter().cloned().collect()
   }
 
   /// Override the per-request timeout (default: 30s). Primarily for tests that need a
@@ -199,7 +219,7 @@ impl ControlSession
   #[ must_use ]
   pub fn recv_message( &self, timeout : Duration ) -> Option< serde_json::Value >
   {
-    self.messages.lock().unwrap().recv_timeout( timeout ).ok()
+    lock_or_recover( &self.messages ).recv_timeout( timeout ).ok()
   }
 
   /// Non-blocking variant of [`recv_message`](Self::recv_message).
@@ -212,7 +232,7 @@ impl ControlSession
   #[ must_use ]
   pub fn try_recv_message( &self ) -> Option< serde_json::Value >
   {
-    self.messages.lock().unwrap().try_recv().ok()
+    lock_or_recover( &self.messages ).try_recv().ok()
   }
 
   fn next_request_id( &self ) -> String
@@ -227,7 +247,7 @@ impl ControlSession
   /// wire response omitted it, e.g. `seed_read_state`).
   fn send_request< Req : serde::Serialize > ( &self, subtype : &str, params : &Req ) -> Result< serde_json::Value >
   {
-    if let Some( reason ) = self.broken.lock().unwrap().clone()
+    if let Some( reason ) = lock_or_recover( &self.broken ).clone()
     {
       return Err( Error::msg( format!( "control session broken: {reason}" ) ) );
     }
@@ -251,10 +271,10 @@ impl ControlSession
     line.push( '\n' );
 
     let ( tx, rx ) = mpsc::channel();
-    self.pending.lock().unwrap().insert( request_id.clone(), tx );
+    lock_or_recover( &self.pending ).insert( request_id.clone(), tx );
 
     {
-      let mut guard = self.stdin.lock().unwrap();
+      let mut guard = lock_or_recover( &self.stdin );
       let stdin = guard.as_mut()
         .ok_or_else( || Error::msg( "control session already closed" ) )?;
       stdin.write_all( line.as_bytes() )
@@ -269,7 +289,7 @@ impl ControlSession
       Ok( WireOutcome::Error( message ) ) => Err( Error::msg( format!( "control request '{subtype}' failed: {message}" ) ) ),
       Err( _ ) =>
       {
-        self.pending.lock().unwrap().remove( &request_id );
+        lock_or_recover( &self.pending ).remove( &request_id );
         Err( Error::msg( format!( "control request '{subtype}' timed out after {:?}", self.timeout ) ) )
       }
     }
@@ -286,12 +306,12 @@ impl ControlSession
   /// Refresh the `initialize`-shaped cache backing the 5 cached-accessor methods.
   fn set_cache( &self, value : serde_json::Value )
   {
-    *self.cache.lock().unwrap() = Some( value );
+    *lock_or_recover( &self.cache ) = Some( value );
   }
 
   fn cached_field( &self, field : &str ) -> Result< serde_json::Value >
   {
-    let guard = self.cache.lock().unwrap();
+    let guard = lock_or_recover( &self.cache );
     let cached = guard.as_ref()
       .ok_or_else( || Error::msg( "no cached initialize response yet — call reinitialize() or wait for session startup" ) )?;
     cached.get( field )
@@ -450,7 +470,7 @@ impl ControlSession
   #[ inline ]
   pub fn initialization_result( &self ) -> Result< InitializeResult >
   {
-    let guard = self.cache.lock().unwrap();
+    let guard = lock_or_recover( &self.cache );
     let cached = guard.as_ref()
       .ok_or_else( || Error::msg( "no cached initialize response yet — call reinitialize() or wait for session startup" ) )?
       .clone();
@@ -733,7 +753,7 @@ impl ControlSession
   #[ inline ]
   pub fn stream_input( &self, content : &str ) -> Result< () >
   {
-    if let Some( reason ) = self.broken.lock().unwrap().clone()
+    if let Some( reason ) = lock_or_recover( &self.broken ).clone()
     {
       return Err( Error::msg( format!( "control session broken: {reason}" ) ) );
     }
@@ -748,7 +768,7 @@ impl ControlSession
       .map_err( | e | Error::msg( format!( "failed to serialize user message: {e}" ) ) )?;
     line.push( '\n' );
 
-    let mut guard = self.stdin.lock().unwrap();
+    let mut guard = lock_or_recover( &self.stdin );
     let stdin = guard.as_mut()
       .ok_or_else( || Error::msg( "control session already closed" ) )?;
     stdin.write_all( line.as_bytes() )
@@ -826,7 +846,7 @@ impl ControlSession
     }
 
     // Dropping stdin closes the pipe, signaling EOF to the subprocess.
-    drop( self.stdin.lock().unwrap().take() );
+    drop( lock_or_recover( &self.stdin ).take() );
 
     if matches!( self.child.try_wait(), Ok( None ) | Err( _ ) )
     {
@@ -896,7 +916,7 @@ fn read_loop(
         let payload = response.get( "response" ).cloned().unwrap_or( serde_json::Value::Null );
         if is_initialize_shaped( &payload )
         {
-          *cache.lock().unwrap() = Some( payload.clone() );
+          *lock_or_recover( cache ) = Some( payload.clone() );
         }
         WireOutcome::Success( payload )
       }
@@ -909,7 +929,7 @@ fn read_loop(
       _ => WireOutcome::Error( format!( "unrecognized control_response subtype in: {response}" ) ),
     };
 
-    if let Some( sender ) = pending.lock().unwrap().remove( request_id )
+    if let Some( sender ) = lock_or_recover( pending ).remove( request_id )
     {
       let _ = sender.send( outcome );
     }
@@ -945,7 +965,7 @@ fn drain_stderr(
       }
       line.truncate( end );
     }
-    let mut buf = tail.lock().unwrap();
+    let mut buf = lock_or_recover( tail );
     if buf.len() == STDERR_TAIL_LINES
     {
       buf.pop_front();

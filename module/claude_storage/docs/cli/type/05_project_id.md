@@ -17,7 +17,7 @@
 **Accepted Formats:**
 - Absolute path: `/home/alice/projects/my-app`
 - Path-encoded ID: `-home-alice-projects-my-app`
-- UUID: `8d795a1c-c81d-4010-8d29-b4e678272419`
+- UUID: `feed0001-0000-4000-8000-000000000001`
 - `Path(...)` form from `.list` (deprecated): `Path("/home/alice/projects/my-app")`
 
 **Constraints:**

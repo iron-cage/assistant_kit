@@ -49,9 +49,9 @@ claude auth logout                   Log out from current account
   "loggedIn": true,
   "authMethod": "claude.ai",
   "apiProvider": "firstParty",
-  "email": "i1@wbox.pro",
-  "orgId": "c6b06228-c923-4834-9b7d-13002bea4dc1",
-  "orgName": "i1@wbox.pro's Organization",
+  "email": "i1@example.com",
+  "orgId": "feed0008-0000-4000-8000-000000000008",
+  "orgName": "i1@example.com's Organization",
   "subscriptionType": "max"
 }
 ```

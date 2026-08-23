@@ -227,7 +227,7 @@ fn t_gate_remaining_timeout_absent_uses_normal_max_attempts()
   );
 }
 
-// BUG-481 task/claude_runner/bug/481_silent_off_env_protection_boundary.md — fixed: the off-state
+// BUG-481 — fixed: the off-state
 // now announces itself (gate-deadline line, "budget"-free wording preserves the
 // assertions below); the added ECs live in T39 (states distinguishable), T40
 // (empty/"0"/negative), and T41 (poll_secs=0 divide-by-zero) at end of file.

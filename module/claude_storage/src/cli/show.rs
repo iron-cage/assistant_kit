@@ -9,6 +9,8 @@ use super::field_selector::FieldSelector;
 use super::color;
 
 /// Display control flags for session output.
+// One bool per independent `.show` display toggle — they combine freely, so an enum would
+// have to enumerate the product.
 #[ allow( clippy::struct_excessive_bools ) ]
 struct SessionDisplayOptions
 {
@@ -36,7 +38,6 @@ struct SessionDisplayOptions
 ///
 /// Does not panic — the `tail_count` conversion below is only reached after the
 /// negative-value branch already returned, so the value is always non-negative.
-#[ allow( clippy::needless_pass_by_value ) ]
 #[ inline ]
 pub fn show_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   -> core::result::Result< OutputData, ErrorData >
@@ -309,7 +310,7 @@ fn format_session_output(
   //
   // Root cause: Session lookup only did exact string matching without checking
   // if provided ID is a prefix of existing session IDs. Users expect Git-style
-  // prefix matching for UUIDs (e.g., "79f86582" matches "79f86582-1435-442c-935a-13f8d874918a").
+  // prefix matching for UUIDs (e.g., "feed0002" matches "feed0002-0000-4000-8000-000000000002").
   //
   // Pitfall: ID lookups should always support prefix matching for UUIDs. Test with
   // both exact and partial IDs to ensure both work. Use production-format test data

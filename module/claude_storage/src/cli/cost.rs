@@ -94,7 +94,6 @@ struct SelectedConversation
 /// current directory (or `path::`) has no project or the project has no
 /// session — matches the `.usage`/`.rollup` "not found = usage error"
 /// convention.
-#[ allow( clippy::needless_pass_by_value ) ]
 #[ inline ]
 pub fn cost_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   -> core::result::Result< OutputData, ErrorData >
@@ -316,7 +315,6 @@ fn cost_of( usage : &ConversationUsage, unpriced : &mut BTreeSet< String > ) -> 
     // Unknown-TTL cache writes price at the 5m rate: 5 minutes is the API
     // default TTL, so a write recorded before the TTL breakdown existed
     // was a 5m write.
-    #[ allow( clippy::cast_precision_loss ) ]
     {
       total += ( model.input_tokens as f64 ).mul_add( rates.input,
         ( model.output_tokens as f64 ).mul_add( rates.output,

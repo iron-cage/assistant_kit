@@ -15,6 +15,8 @@ use claude_profile_core::account::trace_ts;
 /// Returns `ErrorData` if name is missing/empty, HOME is unset,
 /// or the target account does not exist.
 #[ inline ]
+// Validate-everything-then-mutate ordering is load-bearing (see BUG-265 note below); extracting
+// steps into helpers would make that ordering easy to break silently.
 #[ allow( clippy::too_many_lines ) ]
 pub fn account_use_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
@@ -249,6 +251,8 @@ fn check_expiry_and_refresh(
 /// `_active` marker absent from the credential store), HOME is unset,
 /// or the credential copy fails.
 #[ inline ]
+// Sequential handler — name resolution (explicit vs _active marker), then the credential copy;
+// each step consumes the previous step's locals.
 #[ allow( clippy::too_many_lines ) ]
 pub fn account_save_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {

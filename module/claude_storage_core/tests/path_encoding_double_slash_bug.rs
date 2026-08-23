@@ -198,7 +198,7 @@ fn roundtrip_preserves_hyphen_prefixed_dirs()
 fn multiple_hyphen_prefixed_components()
 {
   // Path with multiple hyphen-prefixed directories
-  let original = Path::new( "/pro/lib/-default_topic/-commit/-plan" );
+  let original = Path::new( "/work/lib/-default_topic/-commit/-plan" );
 
   let encoded = encode_path( original ).expect( "Failed to encode" );
   let decoded = decode_path( &encoded ).expect( "Failed to decode" );

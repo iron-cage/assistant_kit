@@ -4,7 +4,7 @@
 
 - **Purpose**: Test case planning for CLI parameter doc instances in `docs/cli/param/`.
 - **Responsibility**: Index of per-parameter edge case spec files covering default/absence behavior and single-parameter parsing.
-- **In Scope**: All 28 `docs/cli/param/` doc instances.
+- **In Scope**: All 27 `docs/cli/param/` doc instances (numbering runs 01-28 with a gap at `20` — the `confirm` param was dropped; see [param/readme.md](../../../../docs/cli/param/readme.md)).
 - **Out of Scope**: Group interaction rules (-> `../param_group/`), type-level validation (-> `../type/`).
 
 Per-parameter edge case test indices for `claude_journal_viewer`. See [param/readme.md](../../../../docs/cli/param/readme.md) for the source doc instances.
@@ -28,11 +28,10 @@ Per-parameter edge case test indices for `claude_journal_viewer`. See [param/rea
 | `13_by.md` | EC- tests for the default grouping and combination with a time filter | ✅ |
 | `14_pattern.md` | EC- tests for the required-parameter constraint and regex matching | ✅ |
 | `15_port.md` | EC- tests for the default port and the ephemeral shortcut | ✅ |
-| `16_bind.md` | EC- tests for localhost-only default and network-accessible binding | ✅ |
+| `16_bind.md` | EC- tests for the hardcoded localhost bind and the unwired `bind::` override | ⏳ |
 | `17_open.md` | EC- tests for default (no auto-open) and the auto-open shortcut | ✅ |
-| `18_keep.md` | EC- tests for the required-parameter constraint and both retention modes | ✅ |
+| `18_keep.md` | EC- tests for the `30d` default and age-based duration parsing | ✅ |
 | `19_dry_run.md` | EC- tests for default (live deletion) and the preview mode | ✅ |
-| `20_confirm.md` | EC- tests for default interactive prompt and the skip-prompt shortcut | ✅ |
 | `21_journal_dir.md` | EC- tests for the 3-level resolution order | ✅ |
 | `22_verbosity.md` | EC- tests for the default level and per-command meaning | ✅ |
 | `23_output.md` | EC- tests for default (stdout) and writing to a file | ✅ |

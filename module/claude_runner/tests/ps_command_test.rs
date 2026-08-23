@@ -264,7 +264,7 @@ fn it_09_pro_prefix_shortened_in_path_column()
   );
 }
 
-// BUG-479 task/claude_runner/bug/479_zombie_blind_pid_liveness.md — fixed: IT-10's any-live-PID
+// BUG-479 — fixed: IT-10's any-live-PID
 // fixture enshrined zombie-blind rendering; the zombie-waiter
 // must-not-render/self-heal case is IT-46 below.
 // ── IT-10: gate file present → queued table ───────────────────────────────────

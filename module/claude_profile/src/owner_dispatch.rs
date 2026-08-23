@@ -19,6 +19,7 @@ use crate::commands::cmd_args::{ io_err_to_error_data, resolve_account_name };
 /// Accounts unowned or owned by another identity are skipped with a `"skip"` line (AC-09).
 /// The caller is responsible for validating that `is_sentinel` is true before calling
 /// (non-sentinel with no `name::` is an argument error — not this function's concern).
+// trace/force/is_dry_run are independent CLI flags forwarded verbatim from the command handler.
 #[ allow( clippy::fn_params_excessive_bools ) ]
 pub( crate ) fn owner_batch_clear(
   trace            : bool,
@@ -67,7 +68,10 @@ pub( crate ) fn owner_batch_clear(
 /// `raw_name` may be a comma-list; each component is resolved independently.
 /// `is_sentinel` true means clear ownership (`owner::0`); false means set to `ov`.
 /// The G8 ownership gate is evaluated per account before any write (AC-16/AC-17).
+// Shared by the .accounts and .usage handlers — every parameter is a forwarded CLI flag,
+// the store path, or the caller label that distinguishes the two in trace/error text.
 #[ allow( clippy::too_many_arguments ) ]
+// trace/force/is_dry_run/is_sentinel are independent CLI flags, not a mode enum.
 #[ allow( clippy::fn_params_excessive_bools ) ]
 pub( crate ) fn owner_named_dispatch(
   trace            : bool,
@@ -153,6 +157,8 @@ pub( crate ) fn owner_named_dispatch(
 /// Unlike ownership, these fields are ungated — no ownership check (Feature 070 AC-02).
 /// Batch-mode supports both boolean directions (Test Matrix T04) — a deliberate divergence
 /// from `owner_batch_clear`, which only supports the sentinel-clear case.
+// Parameterized over field_name + writer so claim_lock and reserve share one implementation
+// instead of four near-duplicates (see module doc) — the extra params are that generalization.
 #[ allow( clippy::too_many_arguments ) ]
 pub( crate ) fn bool_field_batch_set(
   trace            : bool,
@@ -185,6 +191,8 @@ pub( crate ) fn bool_field_batch_set(
 ///
 /// `raw_name` may be a comma-list; each component is resolved independently.
 /// Ungated — no ownership check (Feature 070 AC-02; Out of Scope excludes ownership-gating).
+// Parameterized over field_name + writer so claim_lock and reserve share one implementation
+// instead of four near-duplicates (see module doc) — the extra params are that generalization.
 #[ allow( clippy::too_many_arguments ) ]
 pub( crate ) fn bool_field_named_dispatch(
   trace            : bool,

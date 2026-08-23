@@ -27,7 +27,7 @@ Reads both `model` and `effort_level` for the selected scope and prints them tog
 Text output, `scope::session` (default):
 ```
 $ clp .model
-scope: session (/home/user1/.claude/settings.json)
+scope: session (/home/alice/.claude/settings.json)
 model: sonnet
 effort_level: high
 ```
@@ -35,14 +35,14 @@ effort_level: high
 Text output, `scope::subprocess`:
 ```
 $ clp .model scope::subprocess
-scope: subprocess (/home/user1/.clr/config.toml)
+scope: subprocess (/home/alice/.clr/config.toml)
 model: claude-sonnet-5
 effort_level: (unset)
 ```
 
 JSON output (`format::json`):
 ```json
-{"scope":"session","path":"/home/user1/.claude/settings.json","model":"sonnet","effort_level":"high"}
+{"scope":"session","path":"/home/alice/.claude/settings.json","model":"sonnet","effort_level":"high"}
 ```
 Absent values serialize as `null`, not the string `"(unset)"`.
 
@@ -58,14 +58,14 @@ Absent values serialize as `null`, not the string `"(unset)"`.
 Text output, write mode:
 ```
 $ clp .model model::opus
-model: opus  →  /home/user1/.claude/settings.json (session)
+model: opus  →  /home/alice/.claude/settings.json (session)
 
 $ clp .model scope::subprocess model::claude-opus-4-8 effort_level::max
-model: claude-opus-4-8  →  /home/user1/.clr/config.toml (subprocess)
-effort_level: max  →  /home/user1/.clr/config.toml (subprocess)
+model: claude-opus-4-8  →  /home/alice/.clr/config.toml (subprocess)
+effort_level: max  →  /home/alice/.clr/config.toml (subprocess)
 
 $ clp .model reset_effort_level::1
-effort_level: (reset)  →  /home/user1/.claude/settings.json (session)
+effort_level: (reset)  →  /home/alice/.claude/settings.json (session)
 ```
 
 **Mutual exclusion:** `model::` + `reset_model::1` together → exit 1, stderr `model:: and reset_model::1 are mutually exclusive`. `effort_level::` + `reset_effort_level::1` together → exit 1, stderr `effort_level:: and reset_effort_level::1 are mutually exclusive`. The two *concepts* (model vs. effort) are never mutually exclusive with each other — `model::opus reset_effort_level::1` is valid and applies both actions in the same call, satisfying the "flexible set of parameters" requirement this feature was built to meet.

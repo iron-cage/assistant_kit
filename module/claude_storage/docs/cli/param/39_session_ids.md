@@ -30,13 +30,13 @@ Comma-separated conversation selector for [`.cost`](../command/15_cost.md): full
 **Examples:**
 ```bash
 # One conversation by unique 8-char prefix
-.cost session_ids::3cf8fab1
+.cost session_ids::feed0011
 
 # Compare two conversations — adds a TOTAL row
 .cost session_ids::aaaa1111,bbbb2222
 
 # Full IDs work anywhere prefixes do
-.cost session_ids::3cf8fab1-0c1f-418b-81cf-6c109ba0d674
+.cost session_ids::feed0011-0000-4000-8000-000000000011
 ```
 
 ### Referenced Type

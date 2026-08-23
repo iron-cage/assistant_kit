@@ -39,7 +39,7 @@ Edge case tests for the `type::` parameter. Tests validate enum parsing and proj
 - **Commands:** `.list`
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture`
 - **When:** `clg .list type::uuid`
-- **Then:** stdout lists only projects whose directory name matches a UUID pattern (e.g., `8d795a1c-c81d-4010-8d29-b4e678272419`); no path-encoded entries like `-home-alice-projects`.; output contains only UUID-named projects (or empty if none exist)
+- **Then:** stdout lists only projects whose directory name matches a UUID pattern (e.g., `feed0001-0000-4000-8000-000000000001`); no path-encoded entries like `-home-alice-projects`.; output contains only UUID-named projects (or empty if none exist)
 - **Exit:** 0
 - **Source:** [param/18_type.md](../../../../docs/cli/param/18_type.md)
 

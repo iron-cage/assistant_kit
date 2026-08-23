@@ -106,9 +106,9 @@ Feature behavioral requirement test cases for `docs/feature/025_per_machine_acti
 
 ### FT-06: `clp .account.use i1` resolves exact local-part match unambiguously
 
-- **Given:** Three saved accounts: `i1@wbox.pro`, `i11@wbox.pro`, `i12@wbox.pro`. Prefix `i1` matches all three via `starts_with`, but `i1@wbox.pro` has local part equal to `i1` exactly.
+- **Given:** Three saved accounts: `i1@example.com`, `i11@example.com`, `i12@example.com`. Prefix `i1` matches all three via `starts_with`, but `i1@example.com` has local part equal to `i1` exactly.
 - **When:** `clp .account.use i1`
-- **Then:** Exits 0. Active marker contains `i1@wbox.pro`. The exact-local-part check resolves `i1@wbox.pro` before reaching the prefix scan — no ambiguity error.
+- **Then:** Exits 0. Active marker contains `i1@example.com`. The exact-local-part check resolves `i1@example.com` before reaching the prefix scan — no ambiguity error.
 - **Exit:** 0
 - **Source fn:** `aw16_exact_local_part_wins_over_ambiguous_prefix` (in `account_mutations_test_b.rs`)
 - **Source:** [feature/015_name_shortcut_syntax.md AC-11](../../../docs/feature/015_name_shortcut_syntax.md)
@@ -128,7 +128,7 @@ Feature behavioral requirement test cases for `docs/feature/025_per_machine_acti
 
 ### FT-08: `clp .account.use i1` exits 1 when only `i11@`/`i12@` exist (no exact match)
 
-- **Given:** Two saved accounts: `i11@wbox.pro` and `i12@wbox.pro`. No `i1@wbox.pro` account exists. Prefix `i1` matches both via `starts_with`; neither has local part exactly `i1`.
+- **Given:** Two saved accounts: `i11@example.com` and `i12@example.com`. No `i1@example.com` account exists. Prefix `i1` matches both via `starts_with`; neither has local part exactly `i1`.
 - **When:** `clp .account.use i1`
 - **Then:** Exits 1. Stderr contains "ambiguous". The exact-local-part check finds no match (no account with local part `i1`), falls through to prefix scan, which finds two matches and reports ambiguity.
 - **Exit:** 1
@@ -151,9 +151,9 @@ Feature behavioral requirement test cases for `docs/feature/025_per_machine_acti
 
 ### FT-10: `.account.save` (no `name::`) — `oauthAccount.emailAddress` overrides stale `_active` marker (BUG-212)
 
-- **Given:** `~/.claude/.credentials.json` exists with live credentials. `~/.claude.json` contains `{"oauthAccount":{"emailAddress":"i5@wbox.pro"}}` (fresh — written by external OAuth login). The per-machine active marker (`_active_{hostname}_{user}`) contains `"i2@wbox.pro"` (stale — last written by a prior clp session). No `name::` argument is passed.
+- **Given:** `~/.claude/.credentials.json` exists with live credentials. `~/.claude.json` contains `{"oauthAccount":{"emailAddress":"i5@example.com"}}` (fresh — written by external OAuth login). The per-machine active marker (`_active_{hostname}_{user}`) contains `"i2@example.com"` (stale — last written by a prior clp session). No `name::` argument is passed.
 - **When:** `clp .account.save` (no `name::` argument)
-- **Then:** Exits 0. Output reads `saved current credentials as 'i5@wbox.pro'`. `{credential_store}/i5@wbox.pro.credentials.json` created. `{credential_store}/i2@wbox.pro.credentials.json` NOT created. The `_active` marker is not consulted when `oauthAccount.emailAddress` provides a non-empty value.
+- **Then:** Exits 0. Output reads `saved current credentials as 'i5@example.com'`. `{credential_store}/i5@example.com.credentials.json` created. `{credential_store}/i2@example.com.credentials.json` NOT created. The `_active` marker is not consulted when `oauthAccount.emailAddress` provides a non-empty value.
 - **Exit:** 0
 - **Source fn:** `mre_bug_212_account_save_stale_marker_uses_oauth_email` (in `account_relogin_test_b.rs`)
 - **Note:** BUG-212 regression guard. `oauthAccount.emailAddress` is written by both clp ops and external OAuth login; `_active` is written only by clp ops — external login leaves it stale. Primary over fallback precedence is the two-level inference introduced by TSK-215.

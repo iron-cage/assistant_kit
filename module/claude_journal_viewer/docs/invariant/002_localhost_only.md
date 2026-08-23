@@ -15,10 +15,10 @@ The `.serve` web server binds to `127.0.0.1` by default. Journal data may contai
 
 ## Measurement
 
-- **Threshold**: Default bind address is `127.0.0.1` (measured by unit test asserting default and by code review of the `.serve` command)
-- **Method**: Test in `serve_test.rs` asserts that `.serve` without `bind::` param uses `127.0.0.1:8411`
+- **Threshold**: Bind address is `127.0.0.1` for every `.serve` invocation (measured by code review of `cmd_serve()`; there is no configurable path to widen it yet)
+- **Method**: Grep assertion over `src/cli_main.rs` — the only argument reaching `tiny_http::Server::http()` is `format!( "127.0.0.1:{port}" )`, and the parameter map is never queried for a `bind` key. No dedicated test file exists yet; `serve_test.rs` is a Phase 2 deliverable alongside `bind::` itself, and the invariant stays `Status: Planned` until both land
 
 ## Sources
 
-- `src/cli/serve.rs` — default bind address constant
-- `docs/cli/param/16_bind.md` — parameter documentation (Phase 2 deliverable; created alongside `src/cli/serve.rs`)
+- `src/cli_main.rs` `cmd_serve()` — builds the bind address (`format!( "127.0.0.1:{port}" )`, line 168) and hands it to `tiny_http::Server::http()`
+- `docs/cli/param/16_bind.md` — parameter documentation (Phase 2 deliverable; `bind::` is not yet wired into `cmd_serve()`, which still hardcodes the `127.0.0.1` loopback host)

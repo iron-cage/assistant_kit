@@ -884,8 +884,8 @@ clp .account.inspect
 # Status:      🟢 valid (expires in 3h 52m)
 # ...
 
-clp .account.inspect name::i5@wbox.pro
-# Account:     i5@wbox.pro
+clp .account.inspect name::i5@example.com
+# Account:     i5@example.com
 # Memberships: 2
 #   [0]  billing_type=none              has_max=false  ...
 #   [1]  billing_type=stripe_subscription  has_max=true  ...  ← selected

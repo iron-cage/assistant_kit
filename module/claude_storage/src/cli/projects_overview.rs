@@ -54,7 +54,7 @@ const GAP : &str = "  ";
 /// Built by `super::projects` from the same aggregation that feeds the
 /// `detail::sessions` view — no additional filesystem traversal.
 #[ derive( Debug ) ]
-pub( super ) struct OverviewRow
+pub struct OverviewRow
 {
   /// Decoded project path as displayed (`~/…` form, or absolute when the
   /// decode did not land under `$HOME`).
@@ -162,7 +162,9 @@ fn count_cell( value : usize, unit : &str ) -> String
 /// name — `3 live (waiting)` — rather than spelling out a zero half. Same reason
 /// the `agents` clause disappears at zero: a segment that only ever reads `0` is
 /// width the terse overview spends for nothing.
-fn summary_line( rows : &[ OverviewRow ], states : &[ Option< Liveness > ] ) -> String
+#[ inline ]
+#[ must_use ]
+pub fn summary_line( rows : &[ OverviewRow ], states : &[ Option< Liveness > ] ) -> String
 {
   let projects : usize = rows.len();
   let conversations : usize = rows.iter().map( | r | r.conversations ).sum();
@@ -351,7 +353,7 @@ impl TreeNode
 
 /// Fold single-child structural nodes into their child.
 ///
-/// Without this, `~/pro/lib/yrd_core/assistant_kit` would render as four nested
+/// Without this, `~/work/src/shared/assistant_kit` would render as four nested
 /// levels of which three carry no project. Collapsing yields one node labelled
 /// with the whole run.
 fn collapse( node : &mut TreeNode )
@@ -508,62 +510,4 @@ pub( super ) fn render_tree( rows : &[ OverviewRow ], liveness : &LivenessMap ) 
   }
 
   out
-}
-
-// ─── tests ─────────────────────────────────────────────────────────────────
-
-#[ cfg( test ) ]
-mod overview_tests
-{
-  use super::*;
-
-  /// A row carrying only the fields the totals line reads.
-  fn row( conversations : usize, agents : usize ) -> OverviewRow
-  {
-    OverviewRow
-    {
-      display_path : "~/p".to_string(),
-      conversations,
-      agents,
-      last_mtime   : SystemTime::UNIX_EPOCH,
-    }
-  }
-
-  /// The live clause spells out both halves only when both are non-empty.
-  ///
-  /// A totals line exists to be read at a glance, and `1 live (1 working, 0
-  /// waiting)` spends a third of its width restating the count it just gave and
-  /// naming a state nothing is in — the same waste the `agents` clause already
-  /// avoids by disappearing at zero.
-  #[ test ]
-  fn test_live_clause_collapses_a_zero_half()
-  {
-    let rows = [ row( 1, 0 ), row( 1, 0 ), row( 1, 0 ) ];
-
-    let mixed = [ Some( Liveness::Working ), Some( Liveness::Waiting ), Some( Liveness::Waiting ) ];
-    assert!( summary_line( &rows, &mixed ).ends_with( "· 3 live (1 working, 2 waiting)" ),
-      "both halves present: {}", summary_line( &rows, &mixed ) );
-
-    let working_only = [ Some( Liveness::Working ), Some( Liveness::Working ), None ];
-    assert!( summary_line( &rows, &working_only ).ends_with( "· 2 live (working)" ),
-      "all working: {}", summary_line( &rows, &working_only ) );
-
-    let waiting_only = [ Some( Liveness::Waiting ), None, None ];
-    assert!( summary_line( &rows, &waiting_only ).ends_with( "· 1 live (waiting)" ),
-      "all waiting: {}", summary_line( &rows, &waiting_only ) );
-  }
-
-  /// No attachment found means no clause at all — never `0 live`.
-  ///
-  /// Detection reports only positives, so an empty result is "nothing seen",
-  /// which a rendered zero would misstate as "nothing running".
-  #[ test ]
-  fn test_live_clause_absent_when_nothing_is_attached()
-  {
-    let rows = [ row( 2, 5 ) ];
-    let line = summary_line( &rows, &[ None ] );
-
-    assert!( !line.contains( "live" ), "no live clause without an attachment: {line}" );
-    assert!( line.contains( "5 agents" ), "the rest of the line is unaffected: {line}" );
-  }
 }

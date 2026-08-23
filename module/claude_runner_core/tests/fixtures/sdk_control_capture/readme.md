@@ -23,8 +23,27 @@ see task 415 History) that: (1) tees real stdin/stdout traffic between the SDK a
 each of the 25 in-scope `Query` control methods in sequence, (4) dumps argv + wire NDJSON +
 per-method results.
 
-Personal account identifiers (`accountInfo()`'s real email/organization) were redacted after
-capture; all other content is the genuine, unmodified wire traffic and result shapes.
+## Redaction
+
+This capture came from a real machine and real user settings, so identifying content was
+replaced after capture. Everything below is substituted; all other content is the genuine,
+unmodified wire traffic and result shapes.
+
+| Redacted | Replacement |
+|----------|-------------|
+| `accountInfo()` email and organization | `redacted-user@example.invalid`, `redacted-user's Organization` |
+| Absolute home paths (`argv0`, `memoryFiles[].path`, `memory_paths.auto`) | `/home/alice/…` |
+| All 28 distinct session / message / request UUIDs (`session_id`, `uuid`, `request_id`, `user_message_id`, `firstUserMessageId`) | Synthetic `cafe00NN-0000-4000-8000-0000000000NN` |
+| All 110 user-defined command and skill **names** | `my-skill-001`…`my-skill-098`, `my-plugin:*`, `my-templates:*` |
+| Their **descriptions** | `Placeholder description for user-defined entry <name>. (user)` |
+| Their non-empty **argumentHints** | `[arg::<value>]` |
+
+Redaction was substitution-only — no field was added, removed, or reordered. JSON/JSONL
+structure, key sets, and array lengths are byte-for-byte equivalent to the capture: 25 method
+results, 139 commands, 119 skills, 119 skill-frontmatter entries, 47 stdout lines, 24 stdin
+lines. Built-in Claude Code command/skill names and descriptions are public and were left
+untouched, as were the `(user)` description suffix and `source: "userSettings"` markers — both
+are genuine wire behavior that Phase 2 parsing may depend on.
 
 ## Key findings evidenced here
 

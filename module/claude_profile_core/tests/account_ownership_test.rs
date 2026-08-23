@@ -31,7 +31,7 @@ use tempfile::TempDir;
 use claude_profile_core::account;
 use claude_core::ClaudePaths;
 
-// BUG-347 task/bug/347_orphaned_marker_after_cross_machine_delete.md — this test's dual-HOSTNAME
+// BUG-347 — this test's dual-HOSTNAME
 // simulation pattern is the prior art a cross-machine `delete()` regression test should follow.
 /// FT-11/025 — `other_machines_active()` returns other machines' account names,
 /// excludes own marker.
@@ -123,7 +123,7 @@ fn test_ft14_025_delete_clears_foreign_machine_marker()
   let tmp   = TempDir::new().unwrap();
   let store = tmp.path();
 
-  let name           = "ghost@obox.systems";
+  let name           = "ghost@example.com";
   let foreign_marker = "_active_machine2_user1";
 
   // Sanity guard: foreign_marker must differ from this machine's own marker name

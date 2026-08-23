@@ -153,6 +153,20 @@ tests/
 | `cli_user_story_resume_claude_session_test.rs` | Acceptance tests for Resume Claude Session user story |
 | `invariant_contracts_test.rs` | Contract tests for IN-/PF-/AL- behavioral invariant, pitfall, and algorithm cases |
 | `cli_param_validation_test.rs` | Contract tests for PF-1..4 parameter validation pitfall cases |
+| `cli_liveness_unit_test.rs` | Unit tests for `src/cli/liveness.rs` attachment-state detection |
+| `cli_field_selector_unit_test.rs` | Unit tests for `src/cli/field_selector.rs` `fields::` selector (TC-1..TC-9) |
+| `cli_format_unit_test.rs` | Unit tests for `src/cli/format.rs` timestamp rendering |
+| `cli_projects_overview_unit_test.rs` | Unit tests for `src/cli/projects_overview.rs` totals line |
+| `cli_tail_unit_test.rs` | Unit tests for `src/cli/tail.rs` session-id shortening |
+
+### Unit tests reach internals through `#[ doc( hidden ) ] pub`
+
+The five `*_unit_test.rs` files above exercise units that are otherwise
+internal to `src/cli/`. Because every test in this crate lives here — and an
+integration test links the library as an *external* consumer — those modules
+are declared `#[ doc( hidden ) ] pub` in `src/cli/mod.rs` rather than private.
+`doc( hidden )` is the distinction: reachable, not supported. Nothing outside
+`tests/` should import them, and they stay out of the rendered rustdoc.
 
 ## Test Documentation Standards
 
@@ -223,8 +237,17 @@ fn test_{command}_{parameter}_{issue}()
 
 ## Integration Test Isolation
 
-All integration tests use `CLAUDE_STORAGE_ROOT` + `TempDir` for full isolation.
-No tests depend on real `~/.claude/` state; none are marked `#[ignore]`.
+Every test that spawns the binary must redirect its storage to a `TempDir` — via
+`CLAUDE_STORAGE_ROOT` when the test writes fixture data directly, or via `HOME`
+when it needs the whole `~/.claude/` layout resolved from scratch. Without one of
+those, the subprocess inherits the developer's real `~/.claude/` and the test's
+result becomes a function of machine state.
+
+Five files — `cli_commands.rs`, `command_version_consistency_test.rs`,
+`lib_test.rs`, `path_resolution_test.rs`, `truncate_utf8_bug.rs` — call library
+functions in-process and never spawn the binary, so they need no env redirection.
+
+No test is marked `#[ignore]`.
 
 See "Test Isolation with `CLAUDE_STORAGE_ROOT`" below for the pattern.
 
@@ -281,24 +304,29 @@ All parameters must have validation tests:
 
 ### No Mocking
 
-Tests must use real implementations or be marked `#[ignore]`:
+Tests must use real implementations, never mocks, and never `#[ignore]`:
 - ✅ Use `TempDir` for real filesystem operations
-- ✅ Mark tests requiring real storage as `#[ignore]`
+- ✅ Redirect storage with `CLAUDE_STORAGE_ROOT` (or `HOME`) so a test needing
+  real storage layout gets a real — but disposable — one
 - ❌ Don't mock Storage, Command, or core functionality
+- ❌ Don't mark tests `#[ignore]` — a skipped test is not a passing test; give it
+  an isolated fixture instead
 
 ## Test Execution Architecture
 
-Integration tests use a pre-compiled binary helper (`common::claude_storage_cmd()`)
+Integration tests use a pre-compiled binary helper (`common::clg_cmd()`)
 instead of `cargo run` to avoid compilation during test execution.
 
 **Why**: Each `cargo run` inside a test triggers a full cargo compilation cycle
 (300s+). Under workspace-wide nextest runs, this exceeds the 300s timeout.
 
-**Fix**: `assert_cmd::cargo::cargo_bin!("claude_storage")` resolves to the binary
+**Fix**: `assert_cmd::cargo::cargo_bin!("clg")` resolves to the binary
 path built by nextest BEFORE test execution. No recompilation at test time.
 
-**Pattern**: All test files declare `mod common;` and use `common::claude_storage_cmd()`
-instead of `Command::new("cargo").args(["run", ...])`.
+**Pattern**: All test files declare `mod common;` and use `common::clg_cmd()`
+instead of `Command::new("cargo").args(["run", ...])`. `clg_cmd()` also calls
+`assert_container()`, so tests fail loudly when run outside the container
+rather than silently exercising the host.
 
 **Test Isolation with `CLAUDE_STORAGE_ROOT`**:
 
@@ -308,7 +336,7 @@ to a `TempDir`, so they never touch real `~/.claude/` state and run safely in pa
 ```rust
 let dir = tempfile::TempDir::new().unwrap();
 // write fixture data under dir.path()...
-let output = common::claude_storage_cmd()
+let output = common::clg_cmd()
   .env("CLAUDE_STORAGE_ROOT", dir.path())
   .args([".list"])
   .output()
@@ -320,26 +348,25 @@ which is process-wide and causes nextest parallel-test race conditions.
 
 ## Test Verification Commands
 
-```bash
-# Run all effective tests (excludes ignored tests)
-w3 .test l::3           # Default (recommended)
-ctest3                  # Alias for w3 .test l::3
+Run these inside the container — `clg_cmd()` aborts on the host.
 
-# Run specific test file
+```bash
+# Full verification — all three must pass
+cargo nextest run --all-features
+cargo test --doc --all-features
+cargo clippy --all-targets --all-features -- -D warnings
+
+# Run a single test file
 cargo nextest run --test search_command_test --all-features
 
-# Run ignored tests only
-cargo nextest run --all-features -- --ignored
-
-# Run all tests including ignored
-cargo nextest run --all-features -- --include-ignored
+# Run a single test by name
+cargo nextest run --all-features -E 'test(test_search_query_required)'
 ```
 
 ## Test Count Tracking
 
-**Current Status**: 0 ignored
-- All tests run fully (none marked `#[ignore]`)
-- All tests use `CLAUDE_STORAGE_ROOT` + `TempDir` isolation
+**Current Status**: 0 ignored — every test runs on every invocation, so the
+nextest summary count is the real coverage count, not a filtered subset.
 
 ## Known Findings
 

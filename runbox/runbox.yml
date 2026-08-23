@@ -1,7 +1,7 @@
 # docker image tag — used for -t at build and image lookup at run.
 # Shared workspace image: owned and built by THIS config; all module configs consume it.
 # Tag is unique to this checkout (assistant_kit_claude_profile_test): sibling
-# checkouts under yrd_core/ each mint their own <family>_<checkout>_test tag, so
+# checkouts under the same parent each mint their own <family>_<checkout>_test tag, so
 # a rebake here never swaps the image out from under an unrelated checkout.
 image: assistant_kit_claude_profile_test
 
@@ -39,7 +39,7 @@ plugins:
     working_volume_path: /tmp/claude_profile_targets
     commands: [run, live, shell]
   # The test gate (verb/test.d/l1 → `will .test level::3`) delegates to will —
-  # on host PATH the knob-aware bin/will wrapper (family_dev) is unwrapped by
+  # on host PATH the knob-aware bin/will wrapper is unwrapped by
   # the engine to the fresh managed ELF it fronts, so the container always gets
   # a freshly rebuilt binary. No working volume of its own: the claude entry
   # above already supplies CARGO_TARGET_DIR.

@@ -12,7 +12,6 @@ use super::scope::{ validate_scope, resolve_scoped_projects };
 ///
 /// Returns error if `session_id` or output are missing, format is invalid,
 /// storage creation fails, project or session loading fails, or export fails.
-#[ allow( clippy::needless_pass_by_value ) ]
 #[ inline ]
 pub fn export_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   -> core::result::Result< OutputData, ErrorData >
@@ -87,7 +86,7 @@ fn export_from_project(
   //
   // Root cause: Session lookup only did exact string matching without checking
   // if provided ID is a prefix of existing session IDs. Users expect Git-style
-  // prefix matching for UUIDs (e.g., "79f86582" matches "79f86582-1435-442c-935a-13f8d874918a").
+  // prefix matching for UUIDs (e.g., "feed0002" matches "feed0002-0000-4000-8000-000000000002").
   //
   // Pitfall: ID lookups should always support prefix matching for UUIDs. Test with
   // both exact and partial IDs to ensure both work. Use production-format test data

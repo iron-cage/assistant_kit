@@ -38,7 +38,7 @@ This matches the G8 pattern used by `owner::0` (Feature 064).
 
 ### Acceptance Criteria
 
-- **AC-01**: `clp .accounts owner::user1@w003 name::illia` writes `"owner": "user1@w003"` to `{illia}.json` via `write_owner()`; exits 0; stdout contains `owned {name} by user1@w003`.
+- **AC-01**: `clp .accounts owner::user1@w003 name::bob` writes `"owner": "user1@w003"` to `{bob}.json` via `write_owner()`; exits 0; stdout contains `owned {name} by user1@w003`.
 - **AC-02**: `name::` is required — `clp .accounts owner::user1@w003` without `name::` exits 1 with an error message.
 - **AC-03**: G8 gate: when `{name}.json` has `owner: "other@host"` and caller is not `other@host`, `clp .accounts owner::me@here name::X` exits 1 with `"ownership violation: this account is owned by other@host"`.
 - **AC-04**: Unowned account (owner="" or absent): gate passes — `owner::VALUE` writes successfully.

@@ -23,6 +23,10 @@ use generated::AGGREGATED_COMMANDS;
 /// Build a `CommandRegistry` wired to all `claude_storage` routines.
 fn build_command_registry() -> CommandRegistry
 {
+  // Every `<command>_routine` fn across `src/cli/` must share this exact signature to be
+  // assignable to the `phf::Map` below — that's why each one carries
+  // `#[allow(clippy::needless_pass_by_value)]` even when its body only borrows `cmd`/`_ctx`:
+  // the by-value params are this dispatch table's contract, not a per-routine choice.
   type RoutineFn = fn( VerifiedCommand, ExecutionContext ) -> Result< OutputData, ErrorData >;
 
   let routines : phf::Map< &'static str, RoutineFn > = phf::phf_map!
@@ -284,7 +288,11 @@ fn run_repl( registry : CommandRegistry, binary : &str )
   loop
   {
     print!( "> " );
-    io::stdout().flush().unwrap();
+    if let Err( e ) = io::stdout().flush()
+    {
+      eprintln!( "Error writing to stdout: {e}" );
+      break;
+    }
 
     command_buffer.clear();
     // Fix(task-482)
@@ -406,7 +414,6 @@ fn extract_user_message( error : &str ) -> String
 /// A single `<command>.help` argument is intercepted before the pipeline is
 /// built, rendering via `cli_fmt` instead of unilang's auto-generated
 /// `<command>.help` routine — see `try_command_help`.
-#[ allow( clippy::needless_pass_by_value ) ]
 fn execute_oneshot( registry : CommandRegistry, args : Vec< String >, binary : &str ) -> !
 {
   if args.len() == 2

@@ -11,11 +11,11 @@
 
 ```json
 {
-  "parentUuid": "a6f3bd8c-5575-4eab-82b0-b856f7a02833",
+  "parentUuid": "feed0003-0000-4000-8000-000000000003",
   "isSidechain": false,
   "userType": "external",
   "cwd": "/home/alice/pro",
-  "sessionId": "8d795a1c-c81d-4010-8d29-b4e678272419",
+  "sessionId": "feed0001-0000-4000-8000-000000000001",
   "version": "2.0.31",
   "gitBranch": "master",
   "message": {
@@ -34,7 +34,7 @@
   },
   "requestId": "req_011CUwHuh7iPfwQNAXEeEYrP",
   "type": "assistant",
-  "uuid": "56a226b5-0ec6-4214-af16-b13cc326f8dc",
+  "uuid": "feed0004-0000-4000-8000-000000000004",
   "timestamp": "2025-11-08T23:30:21.913Z"
 }
 ```

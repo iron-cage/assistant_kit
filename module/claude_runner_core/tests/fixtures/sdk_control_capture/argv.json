@@ -1,5 +1,5 @@
 {
-  "argv0": "/home/user1/.local/bin/claude",
+  "argv0": "/home/alice/.local/bin/claude",
   "args": [
     "--output-format",
     "stream-json",

@@ -68,7 +68,7 @@ blocks** — `requestId` is top-level (sibling of `message`, like
 `thinkingMetadata` above); `message.model`/`message.id` are required:
 
 ```json
-{"type": "assistant", "uuid": "56a226b5-0ec6-4214-af16-b13cc326f8dc",
+{"type": "assistant", "uuid": "feed0004-0000-4000-8000-000000000004",
  "parentUuid": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
  "timestamp": "2025-11-24T10:00:05.000Z", "cwd": "/tmp",
  "sessionId": "f0e1d2c3-b4a5-6789-0123-456789abcdef", "version": "2.0.31",

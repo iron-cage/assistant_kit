@@ -45,6 +45,8 @@ impl AccountBackend
 
 /// Metadata for a saved Claude Code account credential snapshot.
 #[ derive( Debug, Clone ) ]
+// is_active/is_owned/claim_lock/reserve are orthogonal persisted account states that can hold
+// in any combination — an enum would have to enumerate their product.
 #[ allow( clippy::struct_excessive_bools ) ]
 pub struct Account
 {

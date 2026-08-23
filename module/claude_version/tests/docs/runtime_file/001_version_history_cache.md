@@ -20,17 +20,17 @@ Two `.version.list mode::history` invocations that produce different file system
 
 | RF | Scenario | Source fn |
 |----|----------|-----------|
-| RF-1 | Path matches `$HOME/.claude/.transient/version_history_cache.json` exactly | ⏳ |
-| RF-2 | `.version.list mode::history` creates cache file on first invocation when absent | ⏳ |
-| RF-3 | `.version.list mode::history` succeeds after cache file is manually deleted (durability classification) | ⏳ |
+| RF-1 | Path matches `$HOME/.claude/.transient/version_history_cache.json` exactly | ✅ `it1_runtime_files_exits_0_with_cache_path`, `it5_custom_home_prefix`, `ft1_show_all_exits_0_with_cache_path`, `ft4_path_absolute_and_uses_home_expansion` |
+| RF-2 | `.version.list mode::history` creates cache file on first invocation when absent | ⏳ blocked — requires network |
+| RF-3 | `.version.list mode::history` succeeds after cache file is manually deleted (durability classification) | ⏳ blocked — requires network |
 
 ## Test Coverage Summary
 
-- Path correctness: 1 test (RF-1)
-- Lifecycle creation: 1 test (RF-2)
-- Durability: 1 test (RF-3)
+- Path correctness: 1 case (RF-1) — ✅ implemented
+- Lifecycle creation: 1 case (RF-2) — ⏳ blocked (network)
+- Durability: 1 case (RF-3) — ⏳ blocked (network)
 
-**Total:** 3 tests
+**Total:** 3 cases — 1 ✅ implemented, 2 ⏳ blocked
 
 ---
 
@@ -51,6 +51,7 @@ Two `.version.list mode::history` invocations that produce different file system
 - **Then:** exit 0; `$HOME/.claude/.transient/version_history_cache.json` exists on disk after the call; file contains a JSON array
 - **Exit:** 0
 - **Source:** [runtime_file/001_version_history_cache.md — Lifecycle: Created](../../../docs/runtime_file/001_version_history_cache.md)
+- **Blocked (⏳):** requires network — `fetch_releases_json()` (`src/commands/history.rs`) writes the cache only after a successful `curl` fetch of the GitHub Releases API; offline the command falls back to the compiled-in `VERSION_HISTORY` snapshot and writes no file, so the "cache file exists after the call" assertion cannot hold.
 
 ---
 
@@ -61,6 +62,7 @@ Two `.version.list mode::history` invocations that produce different file system
 - **Then:** exit 0; command succeeds despite missing cache; cache file is re-created at expected path after the call
 - **Exit:** 0
 - **Source:** [runtime_file/001_version_history_cache.md — Durability](../../../docs/runtime_file/001_version_history_cache.md)
+- **Blocked (⏳):** requires network — the "command succeeds despite missing cache" half is already implied by `list_mode_tc2_history_shows_entries`, but the "cache file is re-created after the call" half needs the same successful GitHub Releases API fetch as RF-2.
 
 ---
 
@@ -68,4 +70,8 @@ Two `.version.list mode::history` invocations that produce different file system
 
 | Function | File | Test Cases |
 |----------|------|------------|
-| *(not yet implemented)* | `tests/cli/runtime_files_test.rs` | RF-1 through RF-3 |
+| `it1_runtime_files_exits_0_with_cache_path` | `tests/cli/runtime_files_test.rs` | RF-1 |
+| `it5_custom_home_prefix` | `tests/cli/runtime_files_test.rs` | RF-1 |
+| `ft1_show_all_exits_0_with_cache_path` | `tests/cli/runtime_files_test.rs` | RF-1 |
+| `ft4_path_absolute_and_uses_home_expansion` | `tests/cli/runtime_files_test.rs` | RF-1 |
+| *(blocked — requires network)* | — | RF-2, RF-3 |

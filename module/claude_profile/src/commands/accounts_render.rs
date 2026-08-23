@@ -140,6 +140,7 @@ impl IdentityCols
 /// field lines and separated from the next account by a blank line.
 /// `owners` must be parallel to `accounts` (one owner string per account);
 /// pass an empty slice when `cols.owner` is false.
+// One emit block per optional IdentityCols field — the flat body is the field-order contract.
 #[ allow( clippy::too_many_lines ) ]
 #[ inline ]
 pub( crate ) fn render_accounts_text(

@@ -40,7 +40,7 @@ Edge case tests for the `session_ids::` parameter. Tests validate `.cost`'s comm
 
 - **Commands:** `.cost`
 - **Given:** a storage whose sessions have distinct 8-character ID prefixes
-- **When:** `clg .cost session_ids::3cf8fab1`
+- **When:** `clg .cost session_ids::feed0011`
 - **Then:** the prefix resolves to the one matching session; its row is reported
 - **Exit:** 0
 - **Covered by:** `cli_cmd_cost_test.rs` — `cost_int_3_unique_prefix_resolves`
