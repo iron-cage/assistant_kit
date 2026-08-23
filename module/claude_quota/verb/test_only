@@ -11,14 +11,13 @@ if [[ -n "${VERB_LAYER:-}" ]]; then
   exit 1
 fi
 if [[ "${1:-}" == "--dry-run" ]]; then
-  DRY_FILTER="${2:-<filter>}"
-  echo "runbox .live -- ./module/claude_quota/verb/test_only.d/l1 '$DRY_FILTER'"
+  shift
+  echo "runbox .live -- ./module/claude_quota/verb/test_only.d/l1${*:+ $*}"
   exit 0
 fi
-FILTER="${1:-}"
-if [[ -z "$FILTER" ]]; then
+if [[ $# -eq 0 ]]; then
   echo "ERROR: test_only requires a test name filter." >&2
   echo "Usage: ./verb/test_only <nextest-filter-expression>" >&2
   exit 1
 fi
-cd "$MODULE_DIR" && exec runbox .live -- "./module/claude_quota/verb/test_only.d/l1" "$FILTER"
+cd "$MODULE_DIR" && exec runbox .live -- "./module/claude_quota/verb/test_only.d/l1" "$@"

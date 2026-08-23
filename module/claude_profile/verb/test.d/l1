@@ -7,7 +7,7 @@
 set -euo pipefail
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd "$SCRIPT_DIR/../.."
-if [[ "${1:-}" == "--dry-run" ]]; then echo "will .test level::3 show_build::1 (module-scoped)"; exit 0; fi
+if [[ "${1:-}" == "--dry-run" ]]; then shift; echo "will .test level::3 show_build::1${*:+ $*} (module-scoped)"; exit 0; fi
 # Cargo deps resolve from the engine-owned runbox_cargo_home volume at /cargo
 # (runbox TSK-1446), warmed by the engine's probe/fetch flow — keyed on the
 # yml's own CARGO_NET_OFFLINE declaration. The container deliberately keeps

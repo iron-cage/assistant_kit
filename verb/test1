@@ -16,6 +16,6 @@ if [[ -z "$FILTER" ]]; then
   echo "  example: ./verb/test1 test_config_get" >&2
   exit 1
 fi
-if [[ "$FILTER" == "--dry-run" ]]; then echo "runbox .live -- ./verb/test1.d/l1 '<filter>'"; exit 0; fi
+if [[ "$FILTER" == "--dry-run" ]]; then shift; echo "runbox .live -- ./verb/test1.d/l1${*:+ $*}"; exit 0; fi
 ROOT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
-cd "$ROOT_DIR" && exec runbox .live -- ./verb/test1.d/l1 "$FILTER"
+cd "$ROOT_DIR" && exec runbox .live -- ./verb/test1.d/l1 "$@"

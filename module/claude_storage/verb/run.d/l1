@@ -5,5 +5,5 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd "$SCRIPT_DIR/../.."
 # Container signal, mirroring test.d/l1's established marker convention.
 export RUNBOX_CONTAINER=1
-if [[ "${1:-}" == "--dry-run" ]]; then echo "cargo run -p claude_storage --bin clg"; exit 0; fi
+if [[ "${1:-}" == "--dry-run" ]]; then shift; echo "cargo run -p claude_storage --bin clg --${*:+ $*}"; exit 0; fi
 exec cargo run -p claude_storage --bin clg -- "$@"

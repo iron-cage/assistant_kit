@@ -329,6 +329,7 @@ struct FlagContext< 'a >
 }
 
 #[ cfg( target_os = "linux" ) ]
+#[ allow( clippy::too_many_arguments ) ] // 8th param `is_new` added by the session-snapshot feature (🆕 flag) — all args are independent per-row inputs the single caller already holds separately.
 fn compute_flags(
   proc            : &ProcessInfo,
   metrics         : Option< &ProcessMetrics >,
