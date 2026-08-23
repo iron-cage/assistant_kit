@@ -200,7 +200,7 @@ pub( crate ) fn dispatch_ps( tokens : &[ String ] ) -> !
   }
 
   let resolved_columns = resolve_columns( &config );
-  let prior_pids = prior_snapshot.as_ref().map( | snap | snap.pid_set() );
+  let prior_pids = prior_snapshot.as_ref().map( super::ps_snapshot::PsSnapshot::pid_set );
   let opts = PsTableOptions
   {
     mode         : config.mode,

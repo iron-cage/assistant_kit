@@ -10,5 +10,5 @@ if [[ -n "${VERB_LAYER:-}" ]]; then
   echo "Standard invocation: cd module/claude_version_core && ./verb/test" >&2
   exit 1
 fi
-if [[ "${1:-}" == "--dry-run" ]]; then echo "runbox .live -- ./module/claude_version_core/verb/test.d/l1"; exit 0; fi
-cd "$MODULE_DIR" && exec runbox .live -- "./module/claude_version_core/verb/test.d/l1"
+if [[ "${1:-}" == "--dry-run" ]]; then shift; echo "runbox .live -- ./module/claude_version_core/verb/test.d/l1${*:+ $*}"; exit 0; fi
+cd "$MODULE_DIR" && exec runbox .live -- "./module/claude_version_core/verb/test.d/l1" "$@"

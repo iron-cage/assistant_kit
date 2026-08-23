@@ -654,6 +654,17 @@ pub enum PctStyle
 ///   cache staleness or the touch projection. Never call it from a render surface that has
 ///   an `aq` in scope; call `quota_cells_for` there (BUG-553), exactly as `expires_cell_for`
 ///   supersedes `compute_expires_cell` at such call sites.
+///
+/// Fix(audit-quota-text-cells-dead-code): gated behind `testing`, matching its sole
+///   re-export path (`usage::test_bridge`, itself `cfg( feature = "testing" )`).
+/// Root cause: BUG-553 moved every render surface onto `quota_cells_for`, leaving this
+///   wrapper with no production caller. Ungated, it tripped `dead_code` whenever
+///   `claude_profile` was built as a dependency without `testing` — and the test gate's
+///   `RUSTFLAGS="-D warnings"` promoted that warning to a hard error, breaking `assistant`
+///   and `assistant_kit` while `claude_profile`'s own suite (which enables `testing`) passed.
+/// Pitfall: `cargo check` shows this only as a warning; it surfaces as an error solely under
+///   `-D warnings`, so a clean `cargo check` is not evidence the dependents build.
+#[ cfg( feature = "testing" ) ]
 pub fn quota_text_cells( data : &claude_quota::OauthUsageData, now_secs : u64 ) -> [ String; 5 ]
 {
   quota_data_cells( data, now_secs, PctStyle::Emoji )

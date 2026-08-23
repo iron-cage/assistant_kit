@@ -233,7 +233,7 @@ fn unix_now() -> u64
 
 /// Render a completed [`RowBuilder`] as a headed plain-style table string.
 ///
-/// data_fmt ≥0.5.1 fills the heading rule to the rendered table body width
+/// `data_fmt` ≥0.5.1 fills the heading rule to the rendered table body width
 /// automatically (TSK-008), so no two-pass probe is required.
 /// `auto_wrap: false` — prevents word-wrapping long paths across continuation rows.
 ///
@@ -305,6 +305,7 @@ fn push_flag( flags : &mut String, c : char )
 }
 
 #[ cfg( target_os = "linux" ) ]
+#[ allow( clippy::too_many_arguments ) ] // 8th param `is_new` added by the session-snapshot feature (🆕 flag) — all args are independent per-row inputs the single caller already holds separately.
 fn compute_flags(
   proc            : &ProcessInfo,
   metrics         : Option< &ProcessMetrics >,

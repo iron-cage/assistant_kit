@@ -9,6 +9,6 @@ if [[ -n "${VERB_LAYER:-}" ]]; then
   echo "Standard invocation: ./verb/test" >&2
   exit 1
 fi
-if [[ "${1:-}" == "--dry-run" ]]; then echo "runbox .live"; exit 0; fi
+if [[ "${1:-}" == "--dry-run" ]]; then shift; echo "runbox .live -- ./verb/test.d/l1${*:+ $*}"; exit 0; fi
 ROOT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
-cd "$ROOT_DIR" && exec runbox .live
+cd "$ROOT_DIR" && exec runbox .live -- ./verb/test.d/l1 "$@"
