@@ -1,7 +1,7 @@
 //! Session-flags tests for `clr ps`.
 //!
 //! Test spec: [`tests/docs/cli/command/06_ps.md`](docs/cli/command/06_ps.md) IT-30–IT-40,
-//! IT-48–IT-49
+//! IT-48–IT-54
 //! and [`tests/docs/cli/user_story/26_session_listing.md`](docs/cli/user_story/26_session_listing.md)
 //! US-18–US-20.
 //!
@@ -22,6 +22,11 @@
 //! | IT-38  | `CLR_PS_ANCIENT_SECS`/`CLR_PS_HIGH_RAM_MB` override thresholds     | Behavioral   |
 //! | IT-48  | 🧟 flag for a `SIGSTOP`-suspended session (state `T`, not ⚠)        | Behavioral   |
 //! | IT-49  | `ps --help` lists every session flag, symbol and name              | Documentation |
+//! | IT-50  | 🆕 flag for a PID absent from the previous snapshot                | Behavioral   |
+//! | IT-51  | 🆕 absent when no prior snapshot exists (first invocation)         | Behavioral   |
+//! | IT-52  | Ended Since Last Check table for a session no longer running       | Behavioral   |
+//! | IT-53  | Ended Since Last Check table absent on first invocation            | Behavioral   |
+//! | IT-54  | `CLR_PS_STATE_DIR` override is honored                             | Behavioral   |
 //! | US-18  | `Flags` column absent when no flags apply                           | User Story   |
 //! | US-19  | 🐳 Container flag for session cwd outside `$HOME`                   | User Story   |
 //! | US-20  | 🕰 Ancient flag with `CLR_PS_ANCIENT_SECS=0` threshold              | User Story   |
@@ -721,7 +726,7 @@ fn it48_odd_state_flag_for_stopped_session()
 
 // ── IT-49: `ps --help` lists every session flag ────────────────────────────
 
-/// IT-49: `clr ps --help` documents all 9 session flags, symbol and name.
+/// IT-49: `clr ps --help` documents all 10 session flags, symbol and name.
 ///
 /// Guards the drift that let 🔌 Query mode ship in `FLAG_LEGEND` while `--help`
 /// listed only 7 flags: the legend a user sees under the table and the legend
@@ -738,6 +743,7 @@ fn it49_help_lists_every_session_flag()
   // Canonical display order, matching `FLAG_LEGEND` in `claude_runner_core::ps_table`.
   let expected : &[ ( &str, &str ) ] = &[
     ( "👈", "This session" ),
+    ( "🆕", "New since last check" ),
     ( "🖨",  "Print mode"   ),
     ( "🔌", "Query mode"   ),
     ( "⚡", "Active"       ),
@@ -759,4 +765,215 @@ fn it49_help_lists_every_session_flag()
       "IT-49: --help must name the {symbol} flag as '{name}'. Got:\n{stdout}"
     );
   }
+}
+
+// ── IT-50: 🆕 flag for a PID absent from the previous snapshot ─────────────
+
+/// IT-50: 🆕 fires for a session whose PID was absent from the previous
+/// `clr ps` snapshot.
+///
+/// Two `clr ps` invocations against the same isolated `CLR_PS_STATE_DIR`:
+/// the first (zero live sessions) establishes an empty prior snapshot; the
+/// second spawns a fake session and observes 🆕 fire for its PID, which was
+/// never present in that empty snapshot.
+#[ cfg( target_os = "linux" ) ]
+#[ test ]
+fn it50_new_flag_fires_for_pid_absent_from_prior_snapshot()
+{
+  use cli_binary_test_helpers::{ fake_claude_binary_dir, spawn_fake_claude };
+
+  let state_dir = tempfile::TempDir::new().expect( "state dir" );
+  let state_str = state_dir.path().to_str().expect( "state dir UTF-8" );
+  let bin       = env!( "CARGO_BIN_EXE_clr" );
+
+  // Run 1: zero live sessions — establishes an empty prior snapshot.
+  let empty_proc = make_proc_dir( &[] );
+  let out1 = std::process::Command::new( bin )
+    .args( [ "ps" ] )
+    .env( "CLR_PROC_DIR", empty_proc.path().to_str().expect( "proc dir UTF-8" ) )
+    .env( "CLR_PS_STATE_DIR", state_str )
+    .output()
+    .expect( "run clr ps (first)" );
+  assert!( out1.status.success(), "IT-50: first run exit 0 expected, got {:?}", out1.status.code() );
+
+  // Run 2: a freshly spawned session, absent from run 1's (empty) snapshot.
+  let ( _bin_dir, path_val ) = fake_claude_binary_dir();
+  let mut bg = spawn_fake_claude( &path_val );
+  let proc   = make_proc_dir( &[ bg.id() ] );
+  let out2 = std::process::Command::new( bin )
+    .args( [ "ps" ] )
+    .env( "PATH", &path_val )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
+    .env( "CLR_PS_STATE_DIR", state_str )
+    .env( "CLR_PS_ANCIENT_SECS", "999999" )
+    .env( "CLR_PS_HIGH_RAM_MB", "999999" )
+    .output()
+    .expect( "run clr ps (second)" );
+
+  let _ = bg.kill();
+  let _ = bg.wait();
+
+  let stdout = stdout_str( &out2 );
+  assert!( out2.status.success(), "IT-50: second run exit 0 expected, got {:?}", out2.status.code() );
+  assert!(
+    stdout.contains( "🆕" ),
+    "IT-50: 🆕 must fire for a PID absent from the prior snapshot. Got:\n{stdout}"
+  );
+  assert!(
+    stdout.contains( "New since last check" ),
+    "IT-50: legend must contain 'New since last check'. Got:\n{stdout}"
+  );
+}
+
+// ── IT-51: 🆕 absent when no prior snapshot exists ──────────────────────────
+
+/// IT-51: 🆕 never fires on `clr ps`'s very first invocation against a given
+/// `CLR_PS_STATE_DIR` — there is no prior snapshot to compare against yet.
+#[ cfg( target_os = "linux" ) ]
+#[ test ]
+fn it51_new_flag_absent_on_first_invocation()
+{
+  use cli_binary_test_helpers::{ fake_claude_binary_dir, spawn_fake_claude };
+
+  let state_dir = tempfile::TempDir::new().expect( "state dir" );
+  let ( _bin_dir, path_val ) = fake_claude_binary_dir();
+  let mut bg = spawn_fake_claude( &path_val );
+  let proc   = make_proc_dir( &[ bg.id() ] );
+
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = std::process::Command::new( bin )
+    .args( [ "ps" ] )
+    .env( "PATH", &path_val )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
+    .env( "CLR_PS_STATE_DIR", state_dir.path().to_str().expect( "state dir UTF-8" ) )
+    .env( "CLR_PS_ANCIENT_SECS", "999999" )
+    .env( "CLR_PS_HIGH_RAM_MB", "999999" )
+    .output()
+    .expect( "run clr ps" );
+
+  let _ = bg.kill();
+  let _ = bg.wait();
+
+  let stdout = stdout_str( &out );
+  assert!( out.status.success(), "IT-51: exit 0 expected, got {:?}", out.status.code() );
+  assert!(
+    !stdout.contains( "🆕" ),
+    "IT-51: 🆕 must NOT fire on the first-ever invocation (no prior snapshot). Got:\n{stdout}"
+  );
+}
+
+// ── IT-52: Ended Since Last Check table for a session that stopped running ─
+
+/// IT-52: the "Ended Since Last Check" table appears when a PID tracked in
+/// the previous snapshot is no longer running.
+///
+/// Run 1 captures a live session in the snapshot; the session is then killed
+/// and reaped before run 2, which observes it listed as ended.
+#[ cfg( target_os = "linux" ) ]
+#[ test ]
+fn it52_ended_table_for_session_no_longer_running()
+{
+  use cli_binary_test_helpers::{ fake_claude_binary_dir, spawn_fake_claude };
+
+  let state_dir = tempfile::TempDir::new().expect( "state dir" );
+  let state_str = state_dir.path().to_str().expect( "state dir UTF-8" );
+  let bin       = env!( "CARGO_BIN_EXE_clr" );
+
+  let ( _bin_dir, path_val ) = fake_claude_binary_dir();
+  let mut bg = spawn_fake_claude( &path_val );
+  let pid    = bg.id();
+  let proc   = make_proc_dir( &[ pid ] );
+
+  let out1 = std::process::Command::new( bin )
+    .args( [ "ps" ] )
+    .env( "PATH", &path_val )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
+    .env( "CLR_PS_STATE_DIR", state_str )
+    .output()
+    .expect( "run clr ps (first)" );
+  assert!( out1.status.success(), "IT-52: first run exit 0 expected, got {:?}", out1.status.code() );
+
+  // Kill and fully reap the session before run 2 — it must be genuinely gone,
+  // not merely a zombie still occupying its PID slot.
+  let _ = bg.kill();
+  let _ = bg.wait();
+
+  let empty_proc = make_proc_dir( &[] );
+  let out2 = std::process::Command::new( bin )
+    .args( [ "ps" ] )
+    .env( "CLR_PROC_DIR", empty_proc.path().to_str().expect( "proc dir UTF-8" ) )
+    .env( "CLR_PS_STATE_DIR", state_str )
+    .output()
+    .expect( "run clr ps (second)" );
+
+  let stdout = stdout_str( &out2 );
+  assert!( out2.status.success(), "IT-52: second run exit 0 expected, got {:?}", out2.status.code() );
+  assert!(
+    stdout.contains( "Ended Since Last Check" ),
+    "IT-52: Ended table must appear once the tracked session is gone. Got:\n{stdout}"
+  );
+  assert!(
+    stdout.contains( &pid.to_string() ),
+    "IT-52: Ended table must list the ended session's PID {pid}. Got:\n{stdout}"
+  );
+}
+
+// ── IT-53: Ended Since Last Check table absent on first invocation ─────────
+
+/// IT-53: the "Ended Since Last Check" table never appears on `clr ps`'s
+/// very first invocation against a given `CLR_PS_STATE_DIR` — there is no
+/// prior snapshot to diff against.
+#[ cfg( target_os = "linux" ) ]
+#[ test ]
+fn it53_ended_table_absent_on_first_invocation()
+{
+  let state_dir  = tempfile::TempDir::new().expect( "state dir" );
+  let empty_proc = make_proc_dir( &[] );
+  let bin        = env!( "CARGO_BIN_EXE_clr" );
+
+  let out = std::process::Command::new( bin )
+    .args( [ "ps" ] )
+    .env( "CLR_PROC_DIR", empty_proc.path().to_str().expect( "proc dir UTF-8" ) )
+    .env( "CLR_PS_STATE_DIR", state_dir.path().to_str().expect( "state dir UTF-8" ) )
+    .output()
+    .expect( "run clr ps" );
+
+  let stdout = stdout_str( &out );
+  assert!( out.status.success(), "IT-53: exit 0 expected, got {:?}", out.status.code() );
+  assert!(
+    !stdout.contains( "Ended Since Last Check" ),
+    "IT-53: Ended table must NOT appear on the first-ever invocation. Got:\n{stdout}"
+  );
+}
+
+// ── IT-54: CLR_PS_STATE_DIR override is honored ────────────────────────────
+
+/// IT-54: `CLR_PS_STATE_DIR` controls exactly where the snapshot file is
+/// written — the override directory receives `last_snapshot.json`; an
+/// unrelated sibling directory is left untouched.
+#[ cfg( target_os = "linux" ) ]
+#[ test ]
+fn it54_state_dir_override_is_honored()
+{
+  let target_dir  = tempfile::TempDir::new().expect( "target state dir" );
+  let sibling_dir = tempfile::TempDir::new().expect( "sibling dir" );
+  let empty_proc  = make_proc_dir( &[] );
+  let bin         = env!( "CARGO_BIN_EXE_clr" );
+
+  let out = std::process::Command::new( bin )
+    .args( [ "ps" ] )
+    .env( "CLR_PROC_DIR", empty_proc.path().to_str().expect( "proc dir UTF-8" ) )
+    .env( "CLR_PS_STATE_DIR", target_dir.path().to_str().expect( "target dir UTF-8" ) )
+    .output()
+    .expect( "run clr ps" );
+  assert!( out.status.success(), "IT-54: exit 0 expected, got {:?}", out.status.code() );
+
+  assert!(
+    target_dir.path().join( "last_snapshot.json" ).is_file(),
+    "IT-54: CLR_PS_STATE_DIR override must receive last_snapshot.json"
+  );
+  assert!(
+    !sibling_dir.path().join( "last_snapshot.json" ).is_file(),
+    "IT-54: an unrelated sibling directory must NOT receive a snapshot file"
+  );
 }

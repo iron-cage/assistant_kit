@@ -40,6 +40,8 @@
 - AC-031: 🔌 (Query mode) flag appears for sessions classified as query mode (adjacent `--input-format stream-json` and `--output-format stream-json` pairs plus a bare `--verbose`), and `clr ps --help` lists it among the session flags
 - AC-032: 🧟 (Odd state) flag appears for sessions whose `/proc/{pid}/stat` field 3 is neither `R` nor `S` — in practice `D` (uninterruptible) or `T`/`t` (stopped/traced); 🧟 and ⚠ are disjoint, since ⚠ means the `/proc` read failed and left no state letter to report. A zombie (`Z`) matches the condition but is unreachable: the kernel clears its `cmdline`, so process discovery drops it before flags are computed
 - AC-033: `clr ps` with no `--columns`/`--wide` shows exactly `#`, `PID`, `Elapsed`, `CPU%`, `RAM`, `Absolute Path`, `Task` — `State` and `Mode` are absent, their signal carried by the 🧟 and 🔌/🖨 flags, and both return under `--columns state,mode` or `--wide`
+- AC-034: 🆕 (New since last check) flag appears for sessions whose PID was absent from the previous `clr ps` invocation's snapshot; on the very first `clr ps` invocation (no snapshot file exists yet), no row shows 🆕, since there is nothing to compare against
+- AC-035: `clr ps` prints an "Ended Since Last Check" table (columns `#`, `PID`, `Ran for`, `Absolute Path`, `Task`) when ≥1 PID present in the previous snapshot is no longer running; the table is omitted when no prior snapshot exists or no tracked session has ended; `CLR_PS_STATE_DIR` overrides the snapshot directory (default `~/.clr/ps`)
 
 ### Referenced Commands
 
@@ -64,6 +66,7 @@
 | 69 | [`--inspect`](../param/069_inspect.md) | — |
 | — | `CLR_PS_ANCIENT_SECS` | AC-024 |
 | — | `CLR_PS_HIGH_RAM_MB` | AC-025 |
+| — | `CLR_PS_STATE_DIR` | AC-035 |
 
 ### Workflow Steps
 

@@ -32,6 +32,8 @@ Test case spec for [026_session_listing.md](../../../../docs/cli/user_story/026_
 | US-24 | 🖨 Print-mode flag for print-mode session | AC-028 | ✅ |
 | US-25 | Legend appears below active table when flags present | AC-030 | ✅ |
 | US-26 | Legend absent when no flags present | AC-030 | ✅ |
+| US-27 | 🆕 New-since-last-check flag for a session absent from the previous snapshot | AC-034 | ✅ |
+| US-28 | Ended Since Last Check table appears for a session no longer running | AC-035 | ✅ |
 
 ---
 
@@ -295,3 +297,23 @@ Test case spec for [026_session_listing.md](../../../../docs/cli/user_story/026_
 - **Then:** Exit 0; stdout does NOT contain any flag emoji (`👈`, `🖨`, `⚡`, `🕰`, `🐘`, `⚠`, `🐳`)
 - **Exit:** 0
 - **Verifies:** AC-030
+
+---
+
+### US-27: 🆕 New-since-last-check flag for a session absent from the previous snapshot
+
+- **Given:** Developer runs `clr ps` twice against the same snapshot state dir — the first run tracks no sessions, the second sees a freshly spawned fake `claude` ELF
+- **When:** `clr ps` (first, empty) then `clr ps` (second, one live session)
+- **Then:** Second run exits 0; stdout contains `🆕`; legend lists `New since last check`
+- **Exit:** 0
+- **Verifies:** AC-034
+
+---
+
+### US-28: Ended Since Last Check table appears for a session no longer running
+
+- **Given:** Developer runs `clr ps` while a session is alive, then kills it and runs `clr ps` again against the same snapshot state dir
+- **When:** `clr ps` (session alive) then `clr ps` (session killed and reaped)
+- **Then:** Second run exits 0; stdout contains `Ended Since Last Check` and the ended session's PID
+- **Exit:** 0
+- **Verifies:** AC-035
