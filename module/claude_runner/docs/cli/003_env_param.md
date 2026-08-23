@@ -184,7 +184,7 @@ CLI flag always wins when both are present.
 
 1. CLI flag (wins unconditionally when provided)
 2. `CLR_PS_*` env var (applied when CLI field absent)
-3. Built-in default (`all` for mode, 9 default columns for columns, no PID filter, 28800 for ancient threshold, 400 for high-RAM threshold)
+3. Built-in default (`all` for mode, 7 default columns for columns, no PID filter, 28800 for ancient threshold, 400 for high-RAM threshold)
 
 **Note:** `--wide` has no env var equivalent — it is a convenience shorthand only.
 When both `CLR_PS_COLUMNS` and `--wide` are active, `CLR_PS_COLUMNS` wins (explicit

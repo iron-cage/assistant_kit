@@ -6,10 +6,10 @@ Edge case coverage for the `--wide` parameter. See [060_wide.md](../../../../doc
 
 | ID | Test Name | Category |
 |----|-----------|----------|
-| EC-1 | `clr ps --wide` shows all 11 columns including Mode, Command, Binary | Behavioral |
+| EC-1 | `clr ps --wide` shows all 11 columns including State, Mode, Command, Binary | Behavioral |
 | EC-2 | `clr ps -w` short form shows all 11 columns | Behavioral |
 | EC-3 | `clr ps --wide` with `--columns pid,task` → `--columns` wins | Precedence |
-| EC-4 | `clr ps` without `--wide` shows Mode (default), hides Command/Binary | Default |
+| EC-4 | `clr ps` without `--wide` hides State, Mode, Command, Binary | Default |
 | EC-5 | `clr ps --help` output contains `--wide` / `-w` | Documentation |
 
 ## Test Coverage Summary
@@ -57,7 +57,7 @@ Edge case coverage for the `--wide` parameter. See [060_wide.md](../../../../doc
 
 - **Setup:** ≥1 fake `claude` process running
 - **Command:** `clr ps` (no `--wide`)
-- **Expected behavior:** Exit 0; stdout contains `Mode` (default column since TSK-224); stdout does NOT contain `Command`, `Binary`
+- **Expected behavior:** Exit 0; the header row contains none of `State`, `Mode`, `Command`, `Binary` — `State` and `Mode` left the default set, their signal now carried by the 🧟 and 🔌/🖨 flags
 - **Exit:** 0
 - **Source:** [060_wide.md](../../../../docs/cli/param/060_wide.md)
 

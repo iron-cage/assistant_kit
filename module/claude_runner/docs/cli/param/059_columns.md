@@ -6,7 +6,7 @@ Columns are rendered in the order specified. Available keys and defaults are
 command-specific — see the two Variant Tables below.
 
 - **Type:** comma-separated string
-- **Default:** `idx,pid,elapsed,cpu,ram,state,mode,path,task` (`ps`); `idx,name,category,desc` (`tools`)
+- **Default:** `idx,pid,elapsed,cpu,ram,path,task` (`ps`); `idx,name,category,desc` (`tools`)
 - **Command:** [`ps`](../command/06_ps.md), [`tools`](../command/08_tools.md)
 - **JSON Key:** — (ps/tools subcommand; not supported by `--args-file`)
 
@@ -27,10 +27,10 @@ clr tools --columns name              # tools: single column (still table-format
 | `elapsed` | Elapsed | `/proc/{pid}/stat` field 22 | yes |
 | `cpu` | CPU% | `/proc/{pid}/stat` utime+stime | yes |
 | `ram` | RAM | `/proc/{pid}/status` VmRSS | yes |
-| `state` | State | `/proc/{pid}/stat` field 3 | yes |
+| `state` | State | `/proc/{pid}/stat` field 3 | no — carried by the 🧟 flag |
 | `path` | Path | `/proc/{pid}/cwd` ($PRO shortened) | yes |
 | `task` | Task | Session JSONL last user message | yes |
-| `mode` | Mode | cmdline: `--print`/`-p` present → `print`, else `interactive` | yes |
+| `mode` | Mode | cmdline: control-session signature → `query`, else `--print`/`-p` present → `print`, else `interactive` | no — carried by the 🔌/🖨 flags |
 | `cmd` | Command | cmdline args[1..] joined | no |
 | `binary` | Binary | cmdline args[0] (executable path) | no |
 
@@ -69,7 +69,7 @@ active (both switch to a non-table output mode).
 
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
-| 6 | [`ps`](../command/06_ps.md) | 9 default columns | Controls active sessions table columns; queued table columns are fixed |
+| 6 | [`ps`](../command/06_ps.md) | 7 default columns | Controls active sessions table columns; queued table columns are fixed |
 | 8 | [`tools`](../command/08_tools.md) | 4 default columns (all) | Controls tool listing table columns; ignored when `--value`/`--inspect` active |
 
 ### Referenced User Stories

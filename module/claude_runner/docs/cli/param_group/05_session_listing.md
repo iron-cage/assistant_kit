@@ -42,7 +42,7 @@ clr ps --pid 1234567 --inspect
 | Parameter | Type | Default | Role in Group | Description |
 |-----------|------|---------|---------------|-------------|
 | [`--mode`](../param/058_mode.md) | enum | `all` | Row filter | Filter sessions by execution mode (interactive/print) |
-| [`--columns`](../param/059_columns.md) | string | 9 default cols | Column selector | Comma-separated list of column keys to display |
+| [`--columns`](../param/059_columns.md) | string | 7 default cols | Column selector | Comma-separated list of column keys to display |
 | [`--wide`](../param/060_wide.md) | bool | false | Column expander | Show all 11 columns (convenience shorthand) |
 | [`--pid`](../param/068_pid.md) | string | — | PID filter | Restrict output to comma-separated list of process IDs |
 | [`--inspect`](../param/069_inspect.md) | bool | false | Output mode | Switch to key:value record format showing all 12 attributes |

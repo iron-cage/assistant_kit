@@ -1,8 +1,9 @@
 # CLI Parameter: --wide
 
 Show all available columns in the `clr ps` active sessions table, including the
-`cmd` and `binary` columns that are hidden by default. (`mode` is a default column
-since TSK-224 and appears without `--wide`.)
+`state`, `mode`, `cmd`, and `binary` columns that are hidden by default. (`state`
+and `mode` are carried in the default view by the 🧟 and 🔌/🖨 session flags, which
+cost table width only when there is something abnormal to report.)
 
 - **Type:** bool
 - **Default:** false

@@ -12,7 +12,7 @@ Edge case coverage for the `--columns` parameter. See [059_columns.md](../../../
 | EC-4 | `clr ps --columns pid,path` with `CLR_PS_COLUMNS=pid,elapsed` → CLI wins | CLI-wins |
 | EC-5 | `clr ps --columns` with `--wide` → `--columns` wins | Precedence |
 | EC-6 | `clr ps --columns idx,pid,mode,cmd,binary` shows optional columns | Behavioral |
-| EC-7 | `clr ps` with no `--columns` shows 9 default columns (including Mode) | Default |
+| EC-7 | `clr ps` with no `--columns` shows 7 default columns (State/Mode excluded) | Default |
 | EC-8 | `clr ps --help` output contains `--columns` | Documentation |
 | EC-9 | `idx` column counter reflects visible row number (1-based) after `--mode` filtering | Interaction |
 | EC-10 | `clr ps --help` lists `idx` and `cmd` as column keys, not `num` or `command` (BUG-303 regression) | Documentation |
@@ -98,7 +98,7 @@ Edge case coverage for the `--columns` parameter. See [059_columns.md](../../../
 
 - **Setup:** ≥1 fake `claude` process running
 - **Command:** `clr ps` (no `--columns` flag)
-- **Expected behavior:** Exit 0; stdout contains `PID`, `Elapsed`, `CPU%`, `RAM`, `State`, `Mode`, `Absolute Path`, `Task`; stdout does NOT contain `Command`, `Binary` headers
+- **Expected behavior:** Exit 0; stdout contains `PID`, `Elapsed`, `CPU%`, `RAM`, `Absolute Path`, `Task`; the header row contains none of `State`, `Mode`, `Command`, `Binary` — `State` and `Mode` are carried by the 🧟 and 🔌/🖨 flags instead of a permanent column
 - **Exit:** 0
 - **Source:** [059_columns.md](../../../../docs/cli/param/059_columns.md)
 

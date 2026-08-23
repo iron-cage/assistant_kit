@@ -7,7 +7,7 @@
 //! - [`render_ps_table`]: bare PID + cwd + state (3 columns). No `/proc` scanning
 //!   beyond what the caller already gathered into [`ProcessInfo`].
 //! - [`render_active_sessions_table`]: the full "Active Sessions" table — elapsed,
-//!   CPU%, RAM, state, session flags (👈🖨🔌⚡🕰🐘⚠🐳), and the Task column (last
+//!   CPU%, RAM, session flags (👈🖨🔌⚡🕰🐘🧟⚠🐳), and the Task column (last
 //!   human message from the session's JSONL log) — shared by `clr ps` and
 //!   `claude_version`'s `.ps` so both CLIs render sessions identically. Linux-only
 //!   per-process metrics come from `/proc`; on other platforms those columns render
@@ -146,10 +146,17 @@ pub const COLUMN_KEYS : &[ ( &str, &str ) ] = &[
   ( "binary",  "Binary" ),
 ];
 
-/// Default column set (9 columns) shown when neither `--wide` nor `--columns` is given.
-/// `mode` is inserted after `state` so session type is visible in the default view.
+/// Default column set (7 columns) shown when neither `--wide` nor `--columns` is given.
+///
+/// `state` and `mode` are deliberately absent: both are now carried by the conditional
+/// `Flags` column, which spends characters only when there is something to report.
+/// `mode` was pure duplication — [`compute_flags`] derives 🖨/🔌 from the very same
+/// [`classify_mode`] call, so a `Mode` cell could only ever restate a flag or say
+/// "interactive" (the silent default), and the caption already prints the mode census.
+/// `state` is `S` for every idle session; only the abnormal letters carry signal, and
+/// those now raise 🧟. Both remain selectable via `--columns` / `--wide`.
 pub const DEFAULT_COLUMNS : &[ &str ] = &[
-  "idx", "pid", "elapsed", "cpu", "ram", "state", "mode", "path", "task",
+  "idx", "pid", "elapsed", "cpu", "ram", "path", "task",
 ];
 
 /// Classify a process's execution mode from its cmdline args.
@@ -234,7 +241,7 @@ fn render_headed_table( builder : RowBuilder, heading : Heading ) -> String
   ).unwrap_or_default()
 }
 
-// Per-flag metadata in canonical display order (👈🖨⚡🕰🐘⚠🐳).
+// Per-flag metadata in canonical display order (👈🖨🔌⚡🕰🐘🧟⚠🐳).
 // Only used on Linux because compute_flags is Linux-only.
 #[ cfg( target_os = "linux" ) ]
 const FLAG_LEGEND : &[ ( &str, &str ) ] = &[
@@ -244,6 +251,7 @@ const FLAG_LEGEND : &[ ( &str, &str ) ] = &[
   ( "⚡", "Active"       ),
   ( "🕰",  "Ancient"      ),
   ( "🐘", "High RAM"     ),
+  ( "🧟", "Odd state"    ),
   ( "⚠",  "Dead metrics" ),
   ( "🐳", "Container"    ),
 ];
@@ -339,10 +347,24 @@ fn compute_flags(
     // 🐘 High RAM: RSS exceeds threshold. Comparison in KB to avoid integer-division
     //   truncation (e.g. 512 KB / 1024 = 0 MB, which would never exceed a 0 MB threshold).
     if m.ram_kb > high_ram_mb.saturating_mul( 1_024 ) { push_flag( &mut flags, '🐘' ); }
+
+    // 🧟 Odd state: kernel state is neither R (running) nor S (interruptible sleep) —
+    //   D uninterruptible, T/t stopped/traced, and anything else /proc reports.
+    //   R and S are the entire boring case: every idle session sits in S, and sustained R
+    //   is already reported by ⚡, which uses a 1 s tick delta precisely because state R is
+    //   a microsecond snapshot (see read_cpu_ticks).  This is the flag that replaced the
+    //   State default column, so the abnormal letters stay visible without one cell per row
+    //   restating "S"; `--columns state` still shows the letter itself.
+    //   NOTE: Z (zombie) matches this condition but is unreachable in practice — the kernel
+    //   clears cmdline on exit, and find_claude_processes requires argv[0]'s basename to be
+    //   "claude", so a zombie is dropped at discovery and never reaches any flag at all.
+    //   It is not routed to ⚠ either: ⚠ means the /proc read failed, a different case.
+    if !matches!( m.state, 'R' | 'S' ) { push_flag( &mut flags, '🧟' ); }
   }
   else
   {
-    // ⚠ Dead metrics: read_process_metrics returned None (TOCTOU race or zombie).
+    // ⚠ Dead metrics: read_process_metrics returned None — the process exited between the
+    //   /proc scan and this read (TOCTOU race), leaving no readable /proc/{pid}/stat.
     push_flag( &mut flags, '⚠' );
   }
 
@@ -483,17 +505,28 @@ pub fn render_active_sessions_table(
 
   let cols : Vec< &'static str > = opts.columns.clone().unwrap_or_else( || DEFAULT_COLUMNS.to_vec() );
 
-  // Find insertion position for the Flags column — immediately after "state".
+  // Find insertion position for the Flags column: immediately after the first anchor
+  // present in `cols`.  "state" preserves the historical placement whenever a State
+  // column was explicitly requested (--wide / --columns); "ram" is the default view's
+  // anchor now that `state` has left DEFAULT_COLUMNS.  The rest cover narrow custom
+  // selections, and with none of them present the column goes leftmost rather than
+  // vanishing — the previous single "state" lookup yielded None for any selection
+  // lacking that key, silently dropping both the flags and their legend.
+  const FLAGS_ANCHORS : &[ &str ] = &[ "state", "ram", "cpu", "elapsed", "pid", "idx" ];
   let flags_insert_pos : Option< usize > = if any_flags
   {
-    cols.iter().position( | &k | k == "state" ).map( | p | p + 1 )
+    Some(
+      FLAGS_ANCHORS.iter()
+        .find_map( | anchor | cols.iter().position( | &k | k == *anchor ) )
+        .map_or( 0, | p | p + 1 ),
+    )
   }
   else
   {
     None
   };
 
-  // Build headers, inserting "Flags" after "State" when any flag fired.
+  // Build headers, inserting "Flags" at the anchored position when any flag fired.
   let mut headers : Vec< String > = cols.iter().map( |k|
   {
     COLUMN_KEYS.iter()

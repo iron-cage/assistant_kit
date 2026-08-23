@@ -19,7 +19,7 @@
 //! | US-11 | `--mode bogus` exits 1 with error message | AC-014 |
 //! | US-12 | `--columns pid,path,task` shows PID, Absolute Path, Task | AC-015 |
 //! | US-13 | `--columns bogus` exits 1 with error listing valid keys | AC-016 |
-//! | US-14 | `--wide` shows all 11 columns including Mode, Command, Binary | AC-017 |
+//! | US-14 | `--wide` shows all 11 columns including State, Mode, Command, Binary | AC-017 |
 //! | US-15 | `--wide --columns pid,task` → only PID and Task visible | AC-018 |
 //! | US-16 | `CLR_PS_MODE=print` env var shows only print-mode sessions | AC-019 |
 //! | US-17 | `CLR_PS_COLUMNS=pid,elapsed` env var shows PID and Elapsed only | AC-020 |
@@ -431,7 +431,7 @@ fn us_13_columns_bogus_exits_1()
 
 // ── US-14: `--wide` shows all 11 columns ─────────────────────────────────────
 
-/// US-14 (AC-017): `clr ps --wide` shows all 11 columns including Mode, Command, Binary.
+/// US-14 (AC-017): `clr ps --wide` shows all 11 columns including State, Mode, Command, Binary.
 #[ cfg( unix ) ]
 #[ test ]
 fn us_14_wide_shows_all_columns()
@@ -453,6 +453,7 @@ fn us_14_wide_shows_all_columns()
 
   let stdout = stdout_str( &out );
   assert!( out.status.success(), "US-14 (AC-017): exit 0 expected, got {:?}", out.status.code() );
+  assert!( stdout.contains( "State" ),   "US-14: State must be present: {stdout}" );
   assert!( stdout.contains( "Mode" ),    "US-14: Mode must be present: {stdout}" );
   assert!( stdout.contains( "Command" ), "US-14: Command must be present: {stdout}" );
   assert!( stdout.contains( "Binary" ),  "US-14: Binary must be present: {stdout}" );
