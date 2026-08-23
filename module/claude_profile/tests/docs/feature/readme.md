@@ -6,7 +6,7 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 
 - **Purpose**: Document FT-N test cases for each feature behavioral requirement.
 - **Responsibility**: Index of per-feature test case planning files covering AC coverage.
-- **In Scope**: All 55 specs enumerated in the Responsibility Table below — the collection-level `000_doc_structure.md` (DT cases) plus per-feature FT specs for Features 001–040, 061–069, 071–073, and 075–076 (Feature 023 deprecated, absorbed into Feature 020; Feature 070 does not yet have an FT spec — pending). The Responsibility Table is the authoritative enumeration of covered elements; the Coverage Summary table below cross-references each entry to its source feature doc and case range.
+- **In Scope**: All 56 specs enumerated in the Responsibility Table below — the collection-level `000_doc_structure.md` (DT cases) plus per-feature FT specs for Features 001–040, 061–069, 071–073, 075–076, and 078 (Feature 023 deprecated, absorbed into Feature 020; Features 070, 074, 077 do not yet have an FT spec — pending). The Responsibility Table is the authoritative enumeration of covered elements; the Coverage Summary table below cross-references each entry to its source feature doc and case range.
 - **Out of Scope**: CLI command tests (→ `cli/command/`), parameter edge cases (→ `cli/param/`), automated test implementations (→ `tests/cli/`).
 
 ### Responsibility Table
@@ -68,6 +68,7 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | 073_kimi_provider_preset.md | FT cases for Feature 073 — Kimi Provider Preset |
 | 075_account_tags.md | FT cases for Feature 075 — Account Tags |
 | 076_identity_tag_filter.md | FT cases for Feature 076 — Identity Tag Filter |
+| 078_deepseek_provider_preset.md | FT cases for Feature 078 — DeepSeek Provider Preset |
 
 ### Coverage Summary
 
@@ -128,8 +129,9 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | 073_kimi_provider_preset | [073_kimi_provider_preset.md](073_kimi_provider_preset.md) | FT-01 … FT-10 | ✅ |
 | 075_account_tags | [075_account_tags.md](075_account_tags.md) | FT-01 … FT-16 | ✅ |
 | 076_identity_tag_filter | [076_identity_tag_filter.md](076_identity_tag_filter.md) | FT-01 … FT-16 | ✅ |
+| 078_deepseek_provider_preset | [078_deepseek_provider_preset.md](078_deepseek_provider_preset.md) | FT-01 … FT-12 | ✅ |
 
-**Total:** 55 specs — 54 per-feature FT specs (behavioral) + 1 collection-level DT spec (doc structure compliance). Feature 070 has a `docs/feature/` instance but no FT spec yet (pre-existing gap).
+**Total:** 56 specs — 55 per-feature FT specs (behavioral) + 1 collection-level DT spec (doc structure compliance). Features 070, 074, 077 each have a `docs/feature/` instance but no FT spec yet (pre-existing gap).
 
 ### Cross-Reference Depth
 

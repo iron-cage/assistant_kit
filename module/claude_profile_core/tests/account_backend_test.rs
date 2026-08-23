@@ -1,6 +1,6 @@
 //! Backend tests: redirect/anthropic backend (Feature 071), inference provider
-//! (Feature 072), Kimi tier env vars (Feature 073), and flat-JSON field parsing
-//! (BUG-002, FT-08/021).
+//! (Feature 072), Kimi tier env vars (Feature 073), `DeepSeek` tier env vars
+//! (Feature 078), and flat-JSON field parsing (BUG-002, FT-08/021).
 //!
 //! ## Fix Documentation — BUG-002
 //!
@@ -53,6 +53,13 @@
 //! | `ft03_073_switch_to_redirect_non_kimi_provider_omits_tier_env_vars` | Feature 073/AC-08: a redirect account not tagged inference_provider:"kimi" gets only the original 3 env vars, none of the 7 Kimi-tier additions |
 //! | `ft04_073_switch_from_kimi_to_anthropic_clears_all_tier_env_vars` | Feature 073/AC-07: switching from a kimi redirect account to an anthropic account removes all 10 env vars, not just the original 3 |
 //! | `ft05_073_switch_from_kimi_to_other_redirect_clears_stale_tier_env_vars` | Feature 073/AC-07: switching from a kimi redirect account to a different, non-kimi redirect account also clears the 7 stale Kimi-tier vars |
+//! | `ft06_078_switch_to_deepseek_redirect_writes_tier_env_vars` | Feature 078/AC-01: switch_account() to a redirect+deepseek account writes the 2 Pro vars (mirror redirect_model), 2 Flash vars (fixed deepseek-v4-flash), CLAUDE_CODE_EFFORT_LEVEL, and the flat 786432 CLAUDE_CODE_AUTO_COMPACT_WINDOW |
+//! | `ft07_078_switch_to_deepseek_redirect_uses_flat_compact_window_regardless_of_model` | Feature 078/AC-02: CLAUDE_CODE_AUTO_COMPACT_WINDOW stays 786432 regardless of redirect_model — no Kimi-style k3/non-k3 branch |
+//! | `ft08_078_switch_to_redirect_non_deepseek_provider_omits_tier_env_vars` | Feature 078/AC-03: a redirect account not tagged inference_provider:"deepseek" gets only the original 3 env vars, none of the 6 DeepSeek-tier additions |
+//! | `ft09_078_switch_from_deepseek_to_anthropic_clears_tier_env_vars` | Feature 078/AC-04: switching from a deepseek redirect account to an anthropic account removes all 9 env vars, not just the original 3 |
+//! | `ft10_078_switch_from_deepseek_to_other_redirect_clears_stale_tier_env_vars` | Feature 078/AC-05: switching from a deepseek redirect account to a different, non-deepseek redirect account also clears the 6 stale DeepSeek-tier vars |
+//! | `ft11_078_switch_from_kimi_to_deepseek_clears_kimi_writes_deepseek` | Feature 078/AC-11: switching directly from a kimi-tagged to a deepseek-tagged redirect account clears the 7 stale Kimi-tier vars and writes the 6 DeepSeek-tier vars in the same call |
+//! | `ft12_078_switch_from_deepseek_to_kimi_clears_deepseek_writes_kimi` | Feature 078/AC-11: mirror direction — switching from a deepseek-tagged to a kimi-tagged redirect account clears the 6 stale DeepSeek-tier vars and writes the 7 Kimi-tier vars |
 //! | `bug002_extract_object_block_bounds_multi_entry_roles_json` | BUG-002: extract_object_block() bounds parse_string_field() to one membership entry in multi-entry roles_json |
 
 use tempfile::TempDir;
@@ -757,6 +764,313 @@ fn ft05_073_switch_from_kimi_to_other_redirect_clears_stale_tier_env_vars()
   assert_eq!(
     live_json[ "env" ][ "ANTHROPIC_MODEL" ].as_str(), Some( "other-model-1" ),
     "sanity: the new account's own ANTHROPIC_MODEL must still be written; got: {live}",
+  );
+}
+
+// ── Feature 078 — DeepSeek provider preset env vars ────────────────────────────
+
+/// AC-01: `switch_account()` to a `backend: redirect`, `inference_provider: "deepseek"`
+/// account writes the 2 Pro-tier vars (mirroring `redirect_model`), the 2 Flash-tier vars
+/// (fixed to "deepseek-v4-flash"), `CLAUDE_CODE_EFFORT_LEVEL`, and the flat
+/// `CLAUDE_CODE_AUTO_COMPACT_WINDOW`, alongside the pre-existing 3 `ANTHROPIC_*` vars.
+#[ test ]
+fn ft06_078_switch_to_deepseek_redirect_writes_tier_env_vars()
+{
+  let tmp        = TempDir::new().unwrap();
+  let store      = tmp.path().join( "store" );
+  let dot_claude = tmp.path().join( ".claude" );
+  std::fs::create_dir_all( &store ).unwrap();
+  std::fs::create_dir_all( &dot_claude ).unwrap();
+
+  std::fs::write(
+    store.join( "deepseek.credentials.json" ),
+    r#"{"accessToken":"sk-deepseek-abc123"}"#,
+  ).unwrap();
+  std::fs::write(
+    store.join( "deepseek.json" ),
+    r#"{"backend":"redirect","base_url":"https://api.deepseek.com/anthropic","redirect_model":"deepseek-v4-pro","inference_provider":"deepseek"}"#,
+  ).unwrap();
+
+  let paths = ClaudePaths::with_home( tmp.path() );
+  account::switch_account( "deepseek", &store, &paths ).unwrap();
+
+  let live = std::fs::read_to_string( dot_claude.join( "settings.json" ) )
+    .expect( "~/.claude/settings.json must exist after switch_account" );
+  let live_json : serde_json::Value = serde_json::from_str( &live ).expect( "settings.json must be valid JSON" );
+  for key in [ "ANTHROPIC_DEFAULT_OPUS_MODEL", "ANTHROPIC_DEFAULT_SONNET_MODEL" ]
+  {
+    assert_eq!(
+      live_json[ "env" ][ key ].as_str(), Some( "deepseek-v4-pro" ),
+      "AC-01: switch to a deepseek redirect account must write env.{key} = redirect_model; got: {live}",
+    );
+  }
+  for key in [ "ANTHROPIC_DEFAULT_HAIKU_MODEL", "CLAUDE_CODE_SUBAGENT_MODEL" ]
+  {
+    assert_eq!(
+      live_json[ "env" ][ key ].as_str(), Some( "deepseek-v4-flash" ),
+      "AC-01: switch to a deepseek redirect account must fix env.{key} = \"deepseek-v4-flash\" regardless of redirect_model; got: {live}",
+    );
+  }
+  assert_eq!(
+    live_json[ "env" ][ "CLAUDE_CODE_EFFORT_LEVEL" ].as_str(), Some( "max" ),
+    "AC-01: switch to a deepseek redirect account must write env.CLAUDE_CODE_EFFORT_LEVEL = \"max\"; got: {live}",
+  );
+  assert_eq!(
+    live_json[ "env" ][ "CLAUDE_CODE_AUTO_COMPACT_WINDOW" ].as_str(), Some( "786432" ),
+    "AC-01: switch to a deepseek redirect account must write the flat 768K auto-compact window; got: {live}",
+  );
+  assert!(
+    live_json[ "env" ].get( "ANTHROPIC_DEFAULT_FABLE_MODEL" ).is_none(),
+    "AC-01: DeepSeek has no Fable-tier substitution — env.ANTHROPIC_DEFAULT_FABLE_MODEL must not be written; got: {live}",
+  );
+}
+
+/// AC-02: a different `redirect_model` value (`deepseek-v4-flash` itself, standing in
+/// for any non-"-pro" model string) still writes the same flat `786432`
+/// `CLAUDE_CODE_AUTO_COMPACT_WINDOW` — unlike Kimi's tier, `DeepSeek`'s window never
+/// branches on the model string.
+#[ test ]
+fn ft07_078_switch_to_deepseek_redirect_uses_flat_compact_window_regardless_of_model()
+{
+  let tmp        = TempDir::new().unwrap();
+  let store      = tmp.path().join( "store" );
+  let dot_claude = tmp.path().join( ".claude" );
+  std::fs::create_dir_all( &store ).unwrap();
+  std::fs::create_dir_all( &dot_claude ).unwrap();
+
+  std::fs::write(
+    store.join( "deepseek-alt.credentials.json" ),
+    r#"{"accessToken":"sk-deepseek-alt-abc123"}"#,
+  ).unwrap();
+  std::fs::write(
+    store.join( "deepseek-alt.json" ),
+    r#"{"backend":"redirect","base_url":"https://api.deepseek.com/anthropic","redirect_model":"deepseek-v4-flash","inference_provider":"deepseek"}"#,
+  ).unwrap();
+
+  let paths = ClaudePaths::with_home( tmp.path() );
+  account::switch_account( "deepseek-alt", &store, &paths ).unwrap();
+
+  let live = std::fs::read_to_string( dot_claude.join( "settings.json" ) ).unwrap();
+  let live_json : serde_json::Value = serde_json::from_str( &live ).unwrap();
+  assert_eq!(
+    live_json[ "env" ][ "CLAUDE_CODE_AUTO_COMPACT_WINDOW" ].as_str(), Some( "786432" ),
+    "AC-02: CLAUDE_CODE_AUTO_COMPACT_WINDOW must stay flat at 786432 regardless of redirect_model, unlike Kimi's k3/non-k3 branch; got: {live}",
+  );
+}
+
+/// AC-03: a `backend: redirect` account whose `inference_provider` is not `"deepseek"`
+/// (here: absent) gets only the pre-existing 3 `ANTHROPIC_*` vars — none of the 6
+/// DeepSeek-tier additions.
+#[ test ]
+fn ft08_078_switch_to_redirect_non_deepseek_provider_omits_tier_env_vars()
+{
+  let tmp        = TempDir::new().unwrap();
+  let store      = tmp.path().join( "store" );
+  let dot_claude = tmp.path().join( ".claude" );
+  std::fs::create_dir_all( &store ).unwrap();
+  std::fs::create_dir_all( &dot_claude ).unwrap();
+
+  std::fs::write(
+    store.join( "other2@foreign.ai.credentials.json" ),
+    r#"{"accessToken":"sk-other2-abc123"}"#,
+  ).unwrap();
+  std::fs::write(
+    store.join( "other2@foreign.ai.json" ),
+    r#"{"backend":"redirect","base_url":"https://api.other2.ai/anthropic","redirect_model":"other2-model-1"}"#,
+  ).unwrap();
+
+  let paths = ClaudePaths::with_home( tmp.path() );
+  account::switch_account( "other2@foreign.ai", &store, &paths ).unwrap();
+
+  let live = std::fs::read_to_string( dot_claude.join( "settings.json" ) ).unwrap();
+  let live_json : serde_json::Value = serde_json::from_str( &live ).unwrap();
+  assert_eq!(
+    live_json[ "env" ][ "ANTHROPIC_MODEL" ].as_str(), Some( "other2-model-1" ),
+    "sanity: the pre-existing 3 vars must still be written; got: {live}",
+  );
+  for key in [ "ANTHROPIC_DEFAULT_OPUS_MODEL", "ANTHROPIC_DEFAULT_SONNET_MODEL", "ANTHROPIC_DEFAULT_HAIKU_MODEL", "CLAUDE_CODE_SUBAGENT_MODEL", "CLAUDE_CODE_EFFORT_LEVEL", "CLAUDE_CODE_AUTO_COMPACT_WINDOW" ]
+  {
+    assert!(
+      live_json[ "env" ].get( key ).is_none(),
+      "AC-03: a non-deepseek redirect account must not get the DeepSeek-tier env.{key}; got: {live}",
+    );
+  }
+}
+
+/// AC-04: switching from a `deepseek` redirect account to a `backend: anthropic`
+/// account clears all 9 env vars (the 3 pre-existing `ANTHROPIC_*` plus the 6
+/// DeepSeek-tier additions) — not just the original 3.
+#[ test ]
+fn ft09_078_switch_from_deepseek_to_anthropic_clears_tier_env_vars()
+{
+  let tmp        = TempDir::new().unwrap();
+  let store      = tmp.path().join( "store" );
+  let dot_claude = tmp.path().join( ".claude" );
+  std::fs::create_dir_all( &store ).unwrap();
+  std::fs::create_dir_all( &dot_claude ).unwrap();
+
+  std::fs::write(
+    store.join( "alice2@test.com.credentials.json" ),
+    r#"{"accessToken":"tok","expiresAt":9999999999999}"#,
+  ).unwrap();
+  // Live settings.json already carries a full DeepSeek-tier env block from a prior switch.
+  std::fs::write(
+    dot_claude.join( "settings.json" ),
+    r#"{"env":{"ANTHROPIC_BASE_URL":"https://api.deepseek.com/anthropic","ANTHROPIC_AUTH_TOKEN":"sk-deepseek","ANTHROPIC_MODEL":"deepseek-v4-pro","ANTHROPIC_DEFAULT_OPUS_MODEL":"deepseek-v4-pro","ANTHROPIC_DEFAULT_SONNET_MODEL":"deepseek-v4-pro","ANTHROPIC_DEFAULT_HAIKU_MODEL":"deepseek-v4-flash","CLAUDE_CODE_SUBAGENT_MODEL":"deepseek-v4-flash","CLAUDE_CODE_EFFORT_LEVEL":"max","CLAUDE_CODE_AUTO_COMPACT_WINDOW":"786432"}}"#,
+  ).unwrap();
+
+  let paths = ClaudePaths::with_home( tmp.path() );
+  account::switch_account( "alice2@test.com", &store, &paths ).unwrap();
+
+  let live = std::fs::read_to_string( dot_claude.join( "settings.json" ) ).unwrap();
+  let live_json : serde_json::Value = serde_json::from_str( &live ).unwrap();
+  assert!(
+    live_json.get( "env" ).is_none(),
+    "AC-04: env must be removed entirely once every ANTHROPIC_*/CLAUDE_CODE_* sub-key is cleared; got: {live}",
+  );
+}
+
+/// AC-05: switching from a `deepseek` redirect account to a *different*, non-deepseek
+/// redirect account also clears the 6 stale DeepSeek-tier vars — this exercises the
+/// redirect-branch's own non-deepseek cleanup path, distinct from the anthropic-branch
+/// cleanup `ft09_078` covers.
+#[ test ]
+fn ft10_078_switch_from_deepseek_to_other_redirect_clears_stale_tier_env_vars()
+{
+  let tmp        = TempDir::new().unwrap();
+  let store      = tmp.path().join( "store" );
+  let dot_claude = tmp.path().join( ".claude" );
+  std::fs::create_dir_all( &store ).unwrap();
+  std::fs::create_dir_all( &dot_claude ).unwrap();
+
+  std::fs::write(
+    store.join( "other3@foreign.ai.credentials.json" ),
+    r#"{"accessToken":"sk-other3-abc123"}"#,
+  ).unwrap();
+  std::fs::write(
+    store.join( "other3@foreign.ai.json" ),
+    r#"{"backend":"redirect","base_url":"https://api.other3.ai/anthropic","redirect_model":"other3-model-1"}"#,
+  ).unwrap();
+  std::fs::write(
+    dot_claude.join( "settings.json" ),
+    r#"{"env":{"ANTHROPIC_BASE_URL":"https://api.deepseek.com/anthropic","ANTHROPIC_AUTH_TOKEN":"sk-deepseek","ANTHROPIC_MODEL":"deepseek-v4-pro","ANTHROPIC_DEFAULT_OPUS_MODEL":"deepseek-v4-pro","CLAUDE_CODE_EFFORT_LEVEL":"max","CLAUDE_CODE_AUTO_COMPACT_WINDOW":"786432"}}"#,
+  ).unwrap();
+
+  let paths = ClaudePaths::with_home( tmp.path() );
+  account::switch_account( "other3@foreign.ai", &store, &paths ).unwrap();
+
+  let live = std::fs::read_to_string( dot_claude.join( "settings.json" ) ).unwrap();
+  let live_json : serde_json::Value = serde_json::from_str( &live ).unwrap();
+  for key in [ "ANTHROPIC_DEFAULT_OPUS_MODEL", "CLAUDE_CODE_EFFORT_LEVEL", "CLAUDE_CODE_AUTO_COMPACT_WINDOW" ]
+  {
+    assert!(
+      live_json[ "env" ].get( key ).is_none(),
+      "AC-05: switching to a non-deepseek redirect account must clear stale DeepSeek-tier env.{key}; got: {live}",
+    );
+  }
+  assert_eq!(
+    live_json[ "env" ][ "ANTHROPIC_MODEL" ].as_str(), Some( "other3-model-1" ),
+    "sanity: the new account's own ANTHROPIC_MODEL must still be written; got: {live}",
+  );
+}
+
+/// AC-11 (direction 1): switching from a live state populated by a `kimi` redirect
+/// account directly to a `deepseek` redirect account clears the 7 stale Kimi-tier vars
+/// AND writes the 6 DeepSeek-tier vars in the same call — the two provider bundles must
+/// never coexist in `env` (docs/feature/078's "cross-provider clearing" design note).
+#[ test ]
+fn ft11_078_switch_from_kimi_to_deepseek_clears_kimi_writes_deepseek()
+{
+  let tmp        = TempDir::new().unwrap();
+  let store      = tmp.path().join( "store" );
+  let dot_claude = tmp.path().join( ".claude" );
+  std::fs::create_dir_all( &store ).unwrap();
+  std::fs::create_dir_all( &dot_claude ).unwrap();
+
+  std::fs::write(
+    store.join( "deepseek2.credentials.json" ),
+    r#"{"accessToken":"sk-deepseek2-abc123"}"#,
+  ).unwrap();
+  std::fs::write(
+    store.join( "deepseek2.json" ),
+    r#"{"backend":"redirect","base_url":"https://api.deepseek.com/anthropic","redirect_model":"deepseek-v4-pro","inference_provider":"deepseek"}"#,
+  ).unwrap();
+  // Live settings.json already carries a full Kimi-tier env block from a prior switch.
+  std::fs::write(
+    dot_claude.join( "settings.json" ),
+    r#"{"env":{"ANTHROPIC_BASE_URL":"https://api.moonshot.ai/anthropic","ANTHROPIC_AUTH_TOKEN":"sk-foreign","ANTHROPIC_MODEL":"kimi-k3","ANTHROPIC_DEFAULT_OPUS_MODEL":"kimi-k3","ANTHROPIC_DEFAULT_SONNET_MODEL":"kimi-k3","ANTHROPIC_DEFAULT_HAIKU_MODEL":"kimi-k3","ANTHROPIC_DEFAULT_FABLE_MODEL":"kimi-k3","CLAUDE_CODE_SUBAGENT_MODEL":"kimi-k3","CLAUDE_CODE_EFFORT_LEVEL":"max","CLAUDE_CODE_AUTO_COMPACT_WINDOW":"1048576"}}"#,
+  ).unwrap();
+
+  let paths = ClaudePaths::with_home( tmp.path() );
+  account::switch_account( "deepseek2", &store, &paths ).unwrap();
+
+  let live = std::fs::read_to_string( dot_claude.join( "settings.json" ) ).unwrap();
+  let live_json : serde_json::Value = serde_json::from_str( &live ).unwrap();
+  assert!(
+    live_json[ "env" ].get( "ANTHROPIC_DEFAULT_FABLE_MODEL" ).is_none(),
+    "AC-11: switching kimi→deepseek must clear the Kimi-only Fable var; got: {live}",
+  );
+  for key in [ "ANTHROPIC_DEFAULT_OPUS_MODEL", "ANTHROPIC_DEFAULT_SONNET_MODEL" ]
+  {
+    assert_eq!(
+      live_json[ "env" ][ key ].as_str(), Some( "deepseek-v4-pro" ),
+      "AC-11: switching kimi→deepseek must overwrite env.{key} with the DeepSeek account's redirect_model; got: {live}",
+    );
+  }
+  for key in [ "ANTHROPIC_DEFAULT_HAIKU_MODEL", "CLAUDE_CODE_SUBAGENT_MODEL" ]
+  {
+    assert_eq!(
+      live_json[ "env" ][ key ].as_str(), Some( "deepseek-v4-flash" ),
+      "AC-11: switching kimi→deepseek must fix env.{key} = \"deepseek-v4-flash\"; got: {live}",
+    );
+  }
+  assert_eq!(
+    live_json[ "env" ][ "CLAUDE_CODE_AUTO_COMPACT_WINDOW" ].as_str(), Some( "786432" ),
+    "AC-11: switching kimi→deepseek must overwrite the stale 1M Kimi window with DeepSeek's flat 786432; got: {live}",
+  );
+}
+
+/// AC-11 (direction 2): switching from a live state populated by a `deepseek` redirect
+/// account directly to a `kimi` redirect account clears the 6 stale DeepSeek-tier vars
+/// AND writes the 7 Kimi-tier vars in the same call — the mirror direction of `ft11_078`.
+#[ test ]
+fn ft12_078_switch_from_deepseek_to_kimi_clears_deepseek_writes_kimi()
+{
+  let tmp        = TempDir::new().unwrap();
+  let store      = tmp.path().join( "store" );
+  let dot_claude = tmp.path().join( ".claude" );
+  std::fs::create_dir_all( &store ).unwrap();
+  std::fs::create_dir_all( &dot_claude ).unwrap();
+
+  std::fs::write(
+    store.join( "kimi2.credentials.json" ),
+    r#"{"accessToken":"sk-kimi2-abc123"}"#,
+  ).unwrap();
+  std::fs::write(
+    store.join( "kimi2.json" ),
+    r#"{"backend":"redirect","base_url":"https://api.moonshot.ai/anthropic","redirect_model":"kimi-k3","inference_provider":"kimi"}"#,
+  ).unwrap();
+  // Live settings.json already carries a full DeepSeek-tier env block from a prior switch.
+  std::fs::write(
+    dot_claude.join( "settings.json" ),
+    r#"{"env":{"ANTHROPIC_BASE_URL":"https://api.deepseek.com/anthropic","ANTHROPIC_AUTH_TOKEN":"sk-deepseek","ANTHROPIC_MODEL":"deepseek-v4-pro","ANTHROPIC_DEFAULT_OPUS_MODEL":"deepseek-v4-pro","ANTHROPIC_DEFAULT_SONNET_MODEL":"deepseek-v4-pro","ANTHROPIC_DEFAULT_HAIKU_MODEL":"deepseek-v4-flash","CLAUDE_CODE_SUBAGENT_MODEL":"deepseek-v4-flash","CLAUDE_CODE_EFFORT_LEVEL":"max","CLAUDE_CODE_AUTO_COMPACT_WINDOW":"786432"}}"#,
+  ).unwrap();
+
+  let paths = ClaudePaths::with_home( tmp.path() );
+  account::switch_account( "kimi2", &store, &paths ).unwrap();
+
+  let live = std::fs::read_to_string( dot_claude.join( "settings.json" ) ).unwrap();
+  let live_json : serde_json::Value = serde_json::from_str( &live ).unwrap();
+  for key in [ "ANTHROPIC_DEFAULT_OPUS_MODEL", "ANTHROPIC_DEFAULT_SONNET_MODEL", "ANTHROPIC_DEFAULT_HAIKU_MODEL", "ANTHROPIC_DEFAULT_FABLE_MODEL", "CLAUDE_CODE_SUBAGENT_MODEL" ]
+  {
+    assert_eq!(
+      live_json[ "env" ][ key ].as_str(), Some( "kimi-k3" ),
+      "AC-11: switching deepseek→kimi must overwrite env.{key} with the Kimi account's redirect_model; got: {live}",
+    );
+  }
+  assert_eq!(
+    live_json[ "env" ][ "CLAUDE_CODE_AUTO_COMPACT_WINDOW" ].as_str(), Some( "1048576" ),
+    "AC-11: switching deepseek→kimi must overwrite the stale flat DeepSeek window with Kimi's 1M kimi-k3 window; got: {live}",
   );
 }
 

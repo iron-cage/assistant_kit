@@ -941,3 +941,74 @@ fn test_bug552_both_consumers_share_the_corroboration_predicate()
     "BUG-552: the un-refutable bare grace check must not survive at any consumer",
   );
 }
+
+/// MRE for BUG-552 (residual): `apply_post_switch_touch` must gate `mark_touched` on its
+/// `refreshed` result, exactly as `apply_touch` gates on `new_creds`.
+///
+/// ## Root Cause
+/// The two touch entry points diverged. `apply_touch` has gated `mark_touched` on
+/// `refresh_account_token`'s `Some` since BUG-488; `apply_post_switch_touch` was written
+/// earlier, never picked the gate up, and stamped the touch flags unconditionally —
+/// merely logging under `trace::1` when the refresh had returned `None`. A subprocess that
+/// died outright therefore still recorded a successful touch. This is the strictly worse
+/// form of the defect BUG-552 reports against `apply_touch`: there, the stamp at least
+/// proves an OAuth token refresh occurred; here it proves nothing at all.
+///
+/// ## Why Not Caught
+/// `test_bug488_apply_touch_success_block_marks_touched` pins the gate in `touch.rs` and
+/// stops at that file's boundary. Nothing asserted that the *other* writer of the same
+/// cache flags obeyed the same rule, so the sibling call site drifted silently. BUG-552's
+/// hypothesis table recorded it as evidence E4 while the first half of the fix addressed
+/// only the consumption side.
+///
+/// ## Fix Applied
+/// Wrapped the `mark_touched` call in `if refreshed.is_some()`. Structural assertion here
+/// rather than behavioural: `apply_post_switch_touch` spawns a real `claude` subprocess and
+/// performs live quota fetches, neither of which is reproducible hermetically — and the
+/// project forbids mocking either away. The source-shape assertion is the same technique
+/// `test_bug488_apply_touch_success_block_marks_touched` uses for its sibling gate.
+///
+/// ## Prevention
+/// When two functions write the same persisted state, a gate added to one is a change to
+/// the state's invariant, not to that function — it belongs on every writer. Pin the
+/// invariant across all of them in one test, so the next writer added cannot quietly omit it.
+///
+/// ## Pitfall
+/// Do not "strengthen" this further by gating on the post-touch re-fetch reporting a 5h
+/// window. That re-fetch runs seconds after the subprocess, well inside
+/// `TOUCH_PROPAGATION_SECS`, and BUG-488 exists precisely because it still reports idle
+/// then — such a gate would stop the flags being written in exactly the case they exist
+/// for. Refutation of a stamped touch belongs downstream in `corroborated_touch_at`, which
+/// requires a *later* fetch; this gate only ensures a claim has some basis when written.
+#[ test ]
+#[ doc = "bug_reproducer(BUG-552)" ]
+fn mre_bug552_post_switch_touch_gates_mark_touched_on_refresh()
+{
+  let src      = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/usage/api_switch.rs" ) );
+  let fn_start = src.find( "fn apply_post_switch_touch" ).expect( "apply_post_switch_touch not found" );
+  let body     = &src[ fn_start.. ];
+
+  let gate_pos = body
+    .find( "if refreshed.is_some()" )
+    .expect( "BUG-552: apply_post_switch_touch must gate the touch stamp on `refreshed`" );
+  let mark_pos = body
+    .find( "super::touch::mark_touched( credential_store, name );" )
+    .expect( "BUG-552: mark_touched call not found in apply_post_switch_touch" );
+
+  assert!(
+    gate_pos < mark_pos,
+    "BUG-552: mark_touched must sit inside the `refreshed.is_some()` guard — an ungated \
+     stamp records a successful touch for a subprocess that never ran",
+  );
+  // The guard must actually enclose the call, not merely precede it somewhere earlier.
+  let between = &body[ gate_pos..mark_pos ];
+  assert!(
+    !between.contains( '}' ),
+    "BUG-552: the `refreshed.is_some()` block closes before mark_touched — the call is \
+     outside the guard despite appearing after it, got:\n{between}",
+  );
+  assert_eq!(
+    body.matches( "touch::mark_touched(" ).count(), 1,
+    "BUG-552: apply_post_switch_touch must call mark_touched exactly once (gated)",
+  );
+}

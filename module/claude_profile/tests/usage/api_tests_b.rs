@@ -223,18 +223,23 @@ fn mre_bug288_post_switch_touch_refetch_updates_quota()
   // Must not panic: run_isolated fails silently (let _ = ...); re-fetch skipped.
   apply_post_switch_touch( name, ctx, "auto", "auto", false, &paths, paths.base() );
 
-  // Observable 1: pre-re-fetch cache writes (last_touch_at, touch_idle) must succeed
-  // even when the re-fetch block is skipped — they are written unconditionally before it.
+  // Observable 1: no touch flags.
+  // Fix(BUG-552): this block previously asserted `last_touch_at`/`touch_idle` were written
+  //   "unconditionally" — encoding the very defect BUG-552 reports. `mark_touched` is now
+  //   gated on `refresh_account_token` succeeding, which it cannot in this fixture (no live
+  //   subprocess), so the correct expectation is the absence of both flags.
+  // Root cause of the stale expectation: the flags happened to be observable here, so the
+  //   test pinned them as the invariant — but this test's actual subject is the re-fetch
+  //   guard chain (Observable 2), and the stamp was only ever incidental to it.
+  // Pitfall: read the cache defensively — with neither the stamp nor the re-fetch writing
+  //   anything, `{name}.json` legitimately does not exist at all, so `expect` on the read
+  //   would fail for the right behaviour.
   let cache_path = paths.base().join( format!( "{name}.json" ) );
-  let cache = std::fs::read_to_string( &cache_path )
-    .expect( "BUG-288: cache file must exist after apply_post_switch_touch" );
+  let cache      = std::fs::read_to_string( &cache_path ).unwrap_or_default();
   assert!(
-    cache.contains( "last_touch_at" ),
-    "BUG-288: last_touch_at must be written to cache even when re-fetch is skipped, got: {cache}",
-  );
-  assert!(
-    cache.contains( "touch_idle" ),
-    "BUG-288: touch_idle must be written to cache even when re-fetch is skipped, got: {cache}",
+    !cache.contains( "last_touch_at" ) && !cache.contains( "touch_idle" ),
+    "BUG-552: a refresh that failed must write no touch flags — a stamp here claims a touch \
+     that never happened and suppresses the corrective retry for TOUCH_GRACE_SECS, got: {cache}",
   );
 
   // Observable 2: quota re-fetch must have been skipped — `resets_at` must not appear.
@@ -248,7 +253,8 @@ fn mre_bug288_post_switch_touch_refetch_updates_quota()
 }
 
 /// Corner case: credentials file absent → outer `read_to_string` guard fails →
-/// entire re-fetch block skipped; `last_touch_at` and `touch_idle` still written; no panic.
+/// entire re-fetch block skipped; no panic. Since BUG-552 gated the touch stamp on the
+/// refresh succeeding, this fixture also writes no `last_touch_at`/`touch_idle`.
 ///
 /// # Root Cause
 /// The AC-21 re-fetch block uses three nested `if let` guards:
@@ -273,9 +279,10 @@ fn mre_bug288_post_switch_touch_refetch_updates_quota()
 /// guard and inner parse guard are independent failure modes requiring separate coverage.
 ///
 /// # Pitfall
-/// File-absent and file-present-no-token produce identical observables (`last_touch_at`
-/// written, no `resets_at`) but exercise different branches. Both must be tested to
-/// confirm the non-aborting invariant holds at each layer of the nested guard chain.
+/// File-absent and file-present-no-token produce identical observables (no touch flags, no
+/// `resets_at`) but exercise different branches. Both must be tested to confirm the
+/// non-aborting invariant holds at each layer of the nested guard chain — identical
+/// observables are exactly why one of them silently going stale would not be noticed.
 #[ test ]
 fn it_apply_post_switch_touch_cred_file_absent_skips_refetch()
 {
@@ -296,17 +303,13 @@ fn it_apply_post_switch_touch_cred_file_absent_skips_refetch()
   // Must not panic: run_isolated discards result; outer re-fetch guard skips silently.
   apply_post_switch_touch( name, ctx, "auto", "auto", false, &paths, paths.base() );
 
-  // Observable 1: last_touch_at and touch_idle written unconditionally (before re-fetch block).
+  // Observable 1: no touch flags (Fix(BUG-552) — see the sibling test above for the full
+  // rationale; `mark_touched` is gated on the refresh succeeding, which it cannot here).
   let cache_path = paths.base().join( format!( "{name}.json" ) );
-  let cache = std::fs::read_to_string( &cache_path )
-    .expect( "cache file must exist even when credential file is absent" );
+  let cache      = std::fs::read_to_string( &cache_path ).unwrap_or_default();
   assert!(
-    cache.contains( "last_touch_at" ),
-    "last_touch_at must be written even when credential file is absent; got: {cache}",
-  );
-  assert!(
-    cache.contains( "touch_idle" ),
-    "touch_idle must be written even when credential file is absent; got: {cache}",
+    !cache.contains( "last_touch_at" ) && !cache.contains( "touch_idle" ),
+    "BUG-552: a refresh that failed must write no touch flags; got: {cache}",
   );
 
   // Observable 2: re-fetch outer guard fired → no resets_at in cache.
