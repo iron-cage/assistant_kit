@@ -1,13 +1,31 @@
 #!/usr/bin/env bash
 # l1 — bare test execution (VERB_LAYER=l1); module-scoped full gate, in-container.
-# Invoked as the runbox .live payload; delegates to `will .test level::3`
-# (nextest + doc tests + clippy); cwd-scoping (this module directory) is
+# Invoked as the runbox .live payload; delegates to `will .test` at level::3 by
+# default (nextest + doc tests + clippy); cwd-scoping (this module directory) is
 # what limits cargo to this package — no -p flags needed. will is the
 # plugin-mounted ELF at /usr/local/bin/will (see runbox/runbox.yml).
 set -euo pipefail
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd "$SCRIPT_DIR/../.."
-if [[ "${1:-}" == "--dry-run" ]]; then echo "will .test level::3 show_build::1 (module-scoped)"; exit 0; fi
+DRY_RUN=0
+if [[ "${1:-}" == "--dry-run" ]]; then DRY_RUN=1; shift; fi
+# Fix(issue-will-param-collision): emit a wrapper default only when the caller has not
+# already supplied that key.
+# Root cause: will silently discards BOTH occurrences of a duplicated parameter and falls
+# back to that parameter's own default — `will .test level::1 level::2` runs level 3, with
+# no error and no diagnostic. Hardcoding `level::3 show_build::1` ahead of "$@" therefore
+# turned every caller-supplied level::/show_build:: into a silent no-op.
+# Pitfall: the collision is invisible in will's own output — the plan just reports the
+# default, which reads as "the argument never reached will" rather than "it collided with
+# the wrapper's". Any future hardcoded default must be added to this guard list, not to
+# the exec line.
+WILL_ARGS=()
+for kv in level::3 show_build::1; do
+  for a in "$@"; do [[ "$a" == "${kv%%::*}::"* ]] && continue 2; done
+  WILL_ARGS+=( "$kv" )
+done
+WILL_ARGS+=( "$@" )
+if (( DRY_RUN )); then echo "will .test ${WILL_ARGS[*]} (module-scoped)"; exit 0; fi
 # Registry is pre-fetched at bake time and mounted read-only — never hit the network.
 export CARGO_NET_OFFLINE=true
 # Fix(issue-nextest-pty-output): Disable nextest's interactive PTY progress bar.
@@ -22,8 +40,8 @@ export CARGO_NET_OFFLINE=true
 export NO_COLOR=1
 # Container signal for the container-only test invariant (nextest setup script + Rust guards).
 export RUNBOX_CONTAINER=1
-# will .test level::3 runs nextest + doc tests + clippy, all warnings-as-errors —
-# will owns the RUSTFLAGS policy, so no export here. show_build::1 pins full
-# per-job streaming: will's current default (show_build::0, quiet_on_success)
-# prints nothing at all on a clean pass, which reads as a broken gate.
-exec will .test level::3 show_build::1 "$@"
+# level::3 runs nextest + doc tests + clippy, all warnings-as-errors — will owns the
+# RUSTFLAGS policy, so no export here. show_build::1 pins full per-job streaming:
+# will's current default (show_build::0, quiet_on_success) prints nothing at all on a
+# clean pass, which reads as a broken gate. Both are defaults a caller may override.
+exec will .test "${WILL_ARGS[@]}"
