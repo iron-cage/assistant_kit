@@ -47,6 +47,7 @@ mod common;
 
 use tempfile::TempDir;
 
+// test_kind: bug_reproducer(issue-012)
 #[ test ]
 fn test_count_with_path_project()
 {

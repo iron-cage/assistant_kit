@@ -369,7 +369,13 @@ fn t07_list_helpme_content_near_miss_unchanged()
 // bug_reproducer(BUG-005)
 fn t08_repl_irregular_whitespace_intercepted()
 {
+  // Empty root: if the space-form interception regresses, `.list` falls through
+  // and enumerates real storage. Isolating means that regression surfaces as the
+  // assertion below failing, not as output that varies per machine.
+  let root = tempfile::TempDir::new().unwrap();
+
   let mut cmd = common::clg_cmd();
+  cmd.env( "CLAUDE_STORAGE_ROOT", root.path() );
   let out = repl_run( &mut cmd, ".list  help\nexit\n" );
 
   assert!(

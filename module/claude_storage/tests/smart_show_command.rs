@@ -60,8 +60,14 @@ fn test_show_parser_accepts_no_args()
   // This is a smoke test - the detailed "current directory" behavior
   // is tested via unit tests in src/cli/mod.rs
 
+  // Empty root, not the developer's real `~/.claude/`: bare `.show` resolves the
+  // cwd project out of storage, so without this the parser assertion below would
+  // be evaluated against whatever sessions happen to exist on the machine.
+  let root = TempDir::new().unwrap();
+
   // Execute .show with no arguments (parser should not reject)
   let output = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
     .args( [ ".show" ] )
     .output()
     .unwrap();
@@ -254,7 +260,12 @@ fn test_show_project_parser_accepts_no_args()
   // Test: .show.project (parser should accept no arguments)
   // This verifies backward compatibility for the deprecated command
 
+  // Empty root, not the developer's real `~/.claude/` — same reason as
+  // `test_show_parser_accepts_no_args` above.
+  let root = TempDir::new().unwrap();
+
   let output = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
     .args( [ ".show.project" ] )
     .output()
     .unwrap();

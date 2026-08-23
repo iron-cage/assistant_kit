@@ -100,23 +100,7 @@ fn generate_static_commands()
       }
 
       // Generate source code
-      let mut registry_source = aggregator.generate_static_registry_source();
-
-      // Fix(issue-unilang-show-version): Inject missing show_version_in_help field.
-      // Root cause: unilang v0.45+ requires this field but MultiYamlAggregator doesn't generate it.
-      // Pitfall: Build scripts must inject new required fields until generator is updated.
-      // Also must check if field already exists to avoid duplicates with newer unilang versions.
-      if !registry_source.contains( "show_version_in_help:" )
-      {
-        registry_source = registry_source.replace(
-          "  auto_help_enabled: true,\n",
-          "  auto_help_enabled: true,\n  show_version_in_help: true,\n"
-        );
-        registry_source = registry_source.replace(
-          "  auto_help_enabled: false,\n",
-          "  auto_help_enabled: false,\n  show_version_in_help: true,\n"
-        );
-      }
+      let registry_source = aggregator.generate_static_registry_source();
 
       // Write to output file
       let output_path = PathBuf::from( &out_dir ).join( "static_commands.rs" );

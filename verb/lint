@@ -1,7 +1,18 @@
 #!/usr/bin/env bash
-# do lint — static analysis across all workspace crates
+# lint — static analysis across all workspace crates, inside the runbox container.
+# The engine is the globally-installed `runbox` (shipped by family_dev); it
+# discovers the owning config (runbox/runbox.yml) and runs verb/lint.d/l1 as
+# the payload.
+#
+# Clippy is a compilation, not a read: running it on the host writes to the
+# host Cargo cache and links against host native libraries, which is exactly
+# what `rulebook.md § Test Execution : Container-Only Testing` forbids.
 set -euo pipefail
-SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-cd "$SCRIPT_DIR/.."
-if [[ "${1:-}" == "--dry-run" ]]; then echo "cargo clippy --workspace --all-targets --all-features -- -D warnings"; exit 0; fi
-exec cargo clippy --workspace --all-targets --all-features -- -D warnings
+ROOT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
+if [[ -v VERB_LAYER ]]; then
+  echo "ERROR: VERB_LAYER is not valid on the host side." >&2
+  echo "Standard invocation: ./verb/lint" >&2
+  exit 1
+fi
+if [[ "${1:-}" == "--dry-run" ]]; then echo "runbox .live -- ./verb/lint.d/l1"; exit 0; fi
+cd "$ROOT_DIR" && exec runbox .live -- "./verb/lint.d/l1"

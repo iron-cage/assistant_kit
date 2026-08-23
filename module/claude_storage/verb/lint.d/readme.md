@@ -4,4 +4,5 @@ Layer scripts for the `lint` verb dispatcher.
 
 | File | Responsibility |
 |------|----------------|
-| `l1` | Direct execution: `cargo clippy -p <module> --all-features -- -D warnings`; default when no `VERB_LAYER` set. |
+| `l0` | Disabled: blocks host-native clippy; prints error and exits 1; entered via `VERB_LAYER=l0`. |
+| `l1` | Container-internal: `cargo clippy -p claude_storage --all-targets --all-features -- -D warnings`; payload of `runbox .live`. |

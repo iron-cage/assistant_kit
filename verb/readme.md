@@ -11,7 +11,8 @@ Universal Action Protocol implementation at workspace scope.
 | `test.d/` | Layer directory: `l0` (disabled hard-error stub), `l1` (container-internal) |
 | `test1.d/` | Layer directory: `l1` (container-internal targeted run) |
 | `clean` | Remove generated artifacts for entire workspace |
-| `lint` | Static analysis across all workspace crates |
+| `lint` | Run workspace clippy in container: `runbox .live` with `lint.d/l1` as payload |
+| `lint.d/` | Layer directory: `l0` (disabled hard-error stub), `l1` (container-internal) |
 | `run` | Unavailable at workspace scope (exit 3) |
 | `verify` | Full checks: container test suite + udeps + audit |
 | `verbs` | List available workspace-level verbs |

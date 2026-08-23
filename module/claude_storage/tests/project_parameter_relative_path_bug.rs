@@ -39,6 +39,8 @@
 
 mod common;
 
+use tempfile::TempDir;
+
 /// Test `.show ``project::``.` resolves "." to current working directory (Finding #013)
 ///
 /// ## Purpose
@@ -54,13 +56,16 @@ mod common;
 ///
 /// ## Related Requirements
 /// Smart path resolution for all filesystem conventions.
+// test_kind: bug_reproducer(issue-013)
 #[ test ]
 fn test_show_project_dot_resolves_to_cwd()
 {
   // Execute from claude_storage directory which has associated project
   let manifest_dir = env!( "CARGO_MANIFEST_DIR" );
+  let root = TempDir::new().unwrap();
 
   let output = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
     .args( [ ".show", "project::." ] )
     .current_dir( manifest_dir )
     .output()
@@ -114,8 +119,10 @@ fn test_show_project_dot_resolves_to_cwd()
 fn test_show_project_dotdot_resolves_to_parent()
 {
   let manifest_dir = env!( "CARGO_MANIFEST_DIR" );
+  let root = TempDir::new().unwrap();
 
   let output = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
     .args( [ ".show", "project::.." ] )
     .current_dir( manifest_dir )
     .output()
@@ -151,8 +158,10 @@ fn test_show_project_dotdot_resolves_to_parent()
 fn test_show_project_tilde_resolves_to_home()
 {
   let manifest_dir = env!( "CARGO_MANIFEST_DIR" );
+  let root = TempDir::new().unwrap();
 
   let output = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
     .args( [ ".show", "project::~" ] )
     .current_dir( manifest_dir )
     .output()

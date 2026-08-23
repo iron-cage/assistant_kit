@@ -43,6 +43,7 @@ use std::path::PathBuf;
 // For now, we'll test through integration tests or make the function pub(crate)
 
 /// Test: "." resolves to current working directory
+// test_kind: bug_reproducer(issue-002)
 #[ test ]
 fn test_dot_resolves_to_current_dir()
 {

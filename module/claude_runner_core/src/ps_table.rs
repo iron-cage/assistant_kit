@@ -233,7 +233,7 @@ fn unix_now() -> u64
 
 /// Render a completed [`RowBuilder`] as a headed plain-style table string.
 ///
-/// data_fmt ≥0.5.1 fills the heading rule to the rendered table body width
+/// `data_fmt` ≥0.5.1 fills the heading rule to the rendered table body width
 /// automatically (TSK-008), so no two-pass probe is required.
 /// `auto_wrap: false` — prevents word-wrapping long paths across continuation rows.
 ///
@@ -304,19 +304,35 @@ fn push_flag( flags : &mut String, c : char )
   flags.push( c );
 }
 
+// Table-wide inputs to flag computation: identical for every row, so the caller reads
+// them once per table rather than once per process. Keeping them out of `compute_flags`'
+// own signature is what separates "what varies per row" from "what the whole table shares".
+#[ cfg( target_os = "linux" ) ]
+#[ derive( Debug ) ]
+struct FlagContext< 'a >
+{
+  // $HOME, for the 🐳 outside-home test. Empty when unset — 🐳 never fires then.
+  home         : &'a str,
+  // Elapsed-seconds threshold above which 🕰 fires.
+  ancient_secs : u64,
+  // RSS threshold in MB above which 🐘 fires.
+  high_ram_mb  : u64,
+  // This process's own parent PID, for the 👈 this-session test.
+  my_ppid      : u32,
+}
+
 #[ cfg( target_os = "linux" ) ]
 fn compute_flags(
   proc            : &ProcessInfo,
   metrics         : Option< &ProcessMetrics >,
-  home            : &str,
-  ancient_secs    : u64,
-  high_ram_mb     : u64,
-  my_ppid         : u32,
   cpu_delta_ticks : u64,
   is_new          : bool,
+  ctx             : &FlagContext< '_ >,
 ) -> String
 {
   let mut flags = String::new();
+  let my_ppid = ctx.my_ppid;
+  let home = ctx.home;
 
   // 👈 This session: caller is a direct child of this claude process.
   if proc.pid == my_ppid
@@ -361,11 +377,11 @@ fn compute_flags(
   {
     // 🕰 Ancient: elapsed seconds exceed the configured threshold.
     let elapsed = unix_now().saturating_sub( m.started_at );
-    if elapsed > ancient_secs { push_flag( &mut flags, '🕰' ); }
+    if elapsed > ctx.ancient_secs { push_flag( &mut flags, '🕰' ); }
 
     // 🐘 High RAM: RSS exceeds threshold. Comparison in KB to avoid integer-division
     //   truncation (e.g. 512 KB / 1024 = 0 MB, which would never exceed a 0 MB threshold).
-    if m.ram_kb > high_ram_mb.saturating_mul( 1_024 ) { push_flag( &mut flags, '🐘' ); }
+    if m.ram_kb > ctx.high_ram_mb.saturating_mul( 1_024 ) { push_flag( &mut flags, '🐘' ); }
 
     // 🧟 Odd state: kernel state is neither R (running) nor S (interruptible sleep) —
     //   D uninterruptible, T/t stopped/traced, and anything else /proc reports.
@@ -510,12 +526,19 @@ pub fn render_active_sessions_table(
     use crate::process::read_process_metrics;
     let home    = std::env::var( "HOME" ).unwrap_or_default();
     let my_ppid : u32 = std::os::unix::process::parent_id();
+    let ctx = FlagContext
+    {
+      home         : &home,
+      ancient_secs : opts.ancient_secs,
+      high_ram_mb  : opts.high_ram_mb,
+      my_ppid,
+    };
     sorted.iter().map( | proc |
     {
       let m = read_process_metrics( proc.pid );
       let cpu_delta = deltas.get( &proc.pid ).copied().unwrap_or( 0 );
       let is_new = opts.prior_pids.as_ref().is_some_and( | known | !known.contains( &proc.pid ) );
-      compute_flags( proc, m.as_ref(), &home, opts.ancient_secs, opts.high_ram_mb, my_ppid, cpu_delta, is_new )
+      compute_flags( proc, m.as_ref(), cpu_delta, is_new, &ctx )
     } ).collect()
   };
   #[ cfg( not( target_os = "linux" ) ) ]

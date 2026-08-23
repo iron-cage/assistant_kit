@@ -15,13 +15,12 @@ CLI tool for exploring and analyzing Claude Code's filesystem-based conversation
 | `examples/` | Usage examples for storage API |
 | `changelog.md` | Notable changes by version |
 | `verb/` | Shell scripts for each `do` protocol verb. |
-| `rulebook.md` | Project-level convention overrides for this crate |
 
 ## overview
 
 This crate provides a command-line interface for querying Claude Code's conversation storage at `~/.claude/`. It wraps the `claude_storage_core` library with an interactive REPL and one-shot command interface.
 
-**v1.0 Status**: Core library (`claude_storage_core`) is production-ready with comprehensive validation (122 tests, production session parsing). CLI wrapper commands `.status`, `.list`, and `.count` are fully validated. For programmatic access or advanced usage, we recommend using the `claude_storage_core` library API directly (see "library api" section below).
+**v1.0 Status**: Core library (`claude_storage_core`) is production-ready with comprehensive validation (188 tests, production session parsing). CLI wrapper commands `.status`, `.list`, and `.count` are fully validated. For programmatic access or advanced usage, we recommend using the `claude_storage_core` library API directly (see "library api" section below).
 
 **Extraction context**: This is the CLI-focused crate after extracting core library functionality to `claude_storage_core` (2025-11-29).
 
@@ -84,25 +83,30 @@ cargo run --features cli -- .show session_id::abc123
 Show storage statistics (projects, sessions, entries, tokens).
 
 **Parameters**:
-- `verbosity::N` (0-5, default 1) - Detail level
+- `path::{value}` (optional, default: `~/.claude/`) - Custom storage path
+- `show_tokens::1` (optional, default: 0) - Show token usage statistics (triggers full JSONL parse — slow for large storage)
 
 **Example**:
 ```bash
-.status verbosity::2
+.status show_tokens::1
 ```
 
 ### .list
 
 List projects or sessions with optional filtering.
 
+**Deprecated**: use `.projects` instead — `detail::projects` (project-only view), `filter::` (path substring), and `ids::`/`count::` (conversation-ID scripting) cover `.list`'s former capabilities.
+
 **Parameters**:
 - `type::{uuid|path|all}` (optional, default: all) - Filter by project type
-- `verbosity::N` (0-5, default: 1) - Output detail level
-- `sessions::{0|1}` (optional, auto-detected) - Show sessions (auto-enabled when session filters provided)
+- `show_sessions::{0|1}` (optional, default: 0) - Show sessions for each project (auto-enabled when session filters provided, explicit 0/1 overrides)
 - `path::{value}` (optional) - Filter projects by path (supports smart resolution, see below)
 - `agent::{0|1}` (optional) - Filter sessions by type (auto-enables session display)
 - `min_entries::N` (optional) - Filter sessions by minimum entry count (auto-enables session display)
 - `session::{substring}` (optional) - Filter sessions by ID substring (auto-enables session display)
+- `project::{id}` (optional) - Project ID (required for `type::conversation`)
+- `count::1` (optional, default: 0) - Output only the count as a bare integer instead of the full list
+- `scope::{value}` (optional, default: global) - Discovery boundary for project listing when `type::` is `all`
 
 **Path Parameter - Smart Resolution**:
 
@@ -164,6 +168,12 @@ Display session or project details with **conversation content by default** (REQ
 - `show_metadata::1` (optional) - Show metadata only (old behavior, no conversation content)
 - `show_stat::1` (optional) - Accepted for backward compatibility; has no effect (content mode already shows entry counts and timestamps unconditionally)
 - `show_tokens::1` (optional) - Show token usage section
+- `detail::{value}` (optional) - Project-overview verbosity: summary only, or also list every session
+- `last::{n}` (optional) - Trailing messages from the most-recently-active session (0 = all)
+- `index::{n}` (optional) - 1-based position narrowing the in-scope message set to exactly one message
+- `fields::{list}` (optional) - Attribute projection: comma-separated names from the 18 canonical fields, or `all`; switches per-entry rendering to an explicit field block
+- `scope::{value}` (optional, default: local) - Project search boundary when `session_id::` is given without `project::`
+- `path::{value}` (optional, default: current directory) - Base path for scope resolution when `session_id::` is given without `project::`
 
 **Default Behavior** (NEW):
 Shows actual conversation content in readable chat-log format. No parameters needed to read messages.
@@ -218,6 +228,8 @@ Fast counting operations (projects, sessions, entries).
 - `target::projects|sessions|entries` (required)
 - `project::{id}` (for sessions/entries)
 - `session::{id}` (for entries)
+- `scope::{value}` (optional, default: global) - Boundary for what gets counted under `target::projects` or `target::sessions` without `project::`
+- `path::{value}` (optional, default: `~/.claude/`) - Custom storage root path
 
 **Examples**:
 ```bash
@@ -236,7 +248,8 @@ Search session content for query string.
 - `session::{id}` (optional) - Limit search to specific session
 - `case_sensitive::1` (optional) - Enable case-sensitive matching
 - `entry_type::user|assistant` (optional) - Filter by entry type
-- `verbosity::N` (0-5, default 1) - Detail level
+- `scope::{value}` (optional, default: global) - Project search boundary when `project::` is not given
+- `path::{value}` (optional, default: current directory) - Base path for scope resolution when `project::` is not given
 
 **Examples**:
 ```bash
@@ -254,6 +267,8 @@ Export session to file (markdown, JSON, or text).
 - `output::{path}` (required) - Output file path
 - `format::markdown|json|text` (optional, default: markdown) - Export format
 - `project::{id}` (optional) - Project ID if not in current directory
+- `scope::{value}` (optional, default: local) - Project search boundary for source session lookup when `project::` is not given
+- `path::{value}` (optional, default: current directory) - Base path for scope resolution when `project::` is not given
 
 **Formats**:
 - **markdown** (.md) - Human-readable with metadata and formatted entries
@@ -269,71 +284,203 @@ Export session to file (markdown, JSON, or text).
 
 **Note**: Sessions may contain non-conversation metadata entries (queue-operation, summary) which are automatically skipped during export. Only conversation entries (user/assistant messages) are included in the exported output.
 
-### .session
+### .projects
 
-Check if a directory has Claude Code conversation history.
+Scoped project list with per-project session aggregation.
 
 **Parameters**:
-- `path::{value}` (optional, default: current directory) - Directory to check
+- `scope::local|relevant|under|global|around` (optional, default: around) - Project discovery scope
+- `path::{value}` (optional, default: current directory) - Base path for scope resolution
+- `filter::{text}` (optional) - Filter resolved projects by decoded path substring (case-insensitive)
+- `type::uuid|path|all` (optional) - Project naming filter
+- `detail::projects|sessions` (optional, default: projects) - One line per project, or every session listed
+- `session::{id}` (optional) - Filter sessions by ID substring (case-insensitive)
+- `agent::0|1` (optional) - Session type filter (0 = main only, 1 = agent only, unset = all)
+- `min_entries::{n}` (optional) - Filter by minimum entry count
+- `since_days::{n}` (optional) - Only sessions modified within the last N days (0 = last 24 hours)
+- `limit::{n}` (optional, default: 0) - Max main sessions per project (0 = unlimited)
+- `show_tree::1` (optional) - Nest projects by directory, or agents under their root session
+- `show_topic::1` (optional) - Append each conversation's first user message to its line
+- `live::0|1` (optional) - Filter by attached Claude Code process (unset = all)
+- `ids::1` (optional) - Output raw conversation IDs for `project::` (scripting mode)
+- `project::{id}` (optional) - Project ID; scopes `ids::` output (required with `ids::1`)
+- `count::1` (optional) - With `ids::1`, output only the count as a bare integer
 
 **Examples**:
 ```bash
-# Check current directory
-.session
-
-# Check specific directory
-.session path::/home/user/project
+.projects                                   # Around the current directory
+.projects scope::global show_tree::1        # Every project, nested by directory
+.projects detail::sessions since_days::7    # Sessions touched in the last week
+.projects scope::global live::1             # Only projects with a process attached
+.projects ids::1 project::-home-user-pro    # Conversation IDs, one per line
 ```
 
-### .sessions
+**Note**: `live::` infers attachment from the process table and `history.jsonl` — it
+can only report positives. A blank `STATUS` column means nothing was detected, which
+is not the same as nothing running. See `docs/algorithm/002_session_liveness.md`.
 
-Show active-session summary by default, or list sessions with scope control when any explicit parameter is given (session-first view).
+### .project.path
 
-**Scope semantics**:
-
-| Scope | Project qualifies when |
-|-------|----------------------|
-| `local` | project path == base path |
-| `relevant` | base path is under the project path (ancestor) |
-| `under` | project path is under the base path (subtree) (default) |
-| `global` | all projects regardless of path |
+Compute the Claude storage path for a project directory. Pure computation — the
+path need not exist.
 
 **Parameters**:
-- `scope::{local|relevant|under|global}` (optional, default: `under`) - Discovery scope
-- `path::{value}` (optional, default: cwd) - Base path for scope resolution
-- `session::{substring}` (optional) - Filter by session ID substring
-- `agent::{0|1}` (optional) - Filter by type (0=main only, 1=agent only)
-- `min_entries::N` (optional) - Minimum entry count threshold
-- `verbosity::N` (0-5, default: 1) - Output detail level
-
-**Default output (summary mode)**:
-```text
-Active session  {8-char-id}  {age}  {N} entries
-Project  {rel-path}
-
-Last message:
-  {text or first30...last30 if > 50 chars}
-```
-`No active session found.` when scope has no sessions.
-
-**List output (any explicit parameter given)**:
-- verbosity 0: raw session IDs (one per line)
-- verbosity 1: family-grouped list with path headers (default); agents shown as `[N agents: N×Type]` per root
-- verbosity 2+: full UUIDs, agents tree-indented under their parent session
+- `path::{dir}` (optional, default: current directory) - Directory to compute the storage path for
+- `topic::{name}` (optional) - Session topic name, appended as `-{topic}`
 
 **Examples**:
 ```bash
-# Active session summary (default — no args)
-.sessions
+.project.path
+.project.path path::/home/user/pro/app
+.project.path topic::review
+```
 
-# Sessions for all projects under ~/pro
-.sessions scope::under path::~/pro
+### .project.exists
 
-# All sessions across entire storage
-.sessions scope::global
+Check whether a project directory has existing conversation history.
 
-# All agent sessions with 50+ entries
-.sessions scope::global agent::1 min_entries::50
+**Parameters**:
+- `path::{dir}` (optional, default: current directory) - Directory to check
+- `topic::{name}` (optional) - Session topic name, appended as `-{topic}`
+
+**Exit codes**: `0` = history exists, `1` = it does not.
+
+**Examples**:
+```bash
+.project.exists
+if clg .project.exists path::/home/user/pro/app; then echo "has history"; fi
+```
+
+### .session.dir
+
+Compute the session working directory path. Does not create it.
+
+**Parameters**:
+- `path::{dir}` (optional, default: current directory) - Project directory
+- `topic::{name}` (optional, default: default_topic) - Session topic name
+
+**Examples**:
+```bash
+.session.dir
+.session.dir path::/home/user/pro/app topic::review
+```
+
+### .session.ensure
+
+Ensure the session directory exists and report whether to resume or start fresh.
+
+**Parameters**:
+- `path::{dir}` (optional, default: current directory) - Project directory
+- `topic::{name}` (optional, default: default_topic) - Session topic name
+- `strategy::resume|fresh` (optional) - Force a strategy instead of inferring one
+
+**Examples**:
+```bash
+.session.ensure
+.session.ensure topic::review strategy::fresh
+```
+
+### .session.path
+
+Print the absolute session `.jsonl` file path for a directory.
+
+**Parameters**:
+- `path::{dir}` (optional, default: current directory) - Project directory the session belongs to
+- `latest::1` (optional) - Most recent qualifying session — the default selector
+- `session::{uuid}` (optional) - Explicit session UUID; pure computation, the file need not exist
+- `topic::{name}` (optional) - Fork-mode topic name resolved via the shared UUIDv5 rule
+
+`latest::`, `session::`, and `topic::` are mutually exclusive.
+
+**Exit codes**: `2` when `latest::` is selected and the storage has no qualifying session.
+
+**Note**: `topic::` here means something different from every other command's
+`topic::`. Elsewhere it is the `-{topic}` directory suffix; here it is a fork-mode
+name hashed through UUIDv5 against the canonical physical directory, byte-identical
+to `clr topics --file NAME`.
+
+**Examples**:
+```bash
+.session.path
+.session.path session::bff63952-8a23-4794-ad56-3a8e4fc4e9a9
+.session.path topic::review
+```
+
+### .tail
+
+Print the last N conversation turns of the current directory's session.
+
+**Parameters**:
+- `last::{n}` (optional, default: 4) - Number of trailing turns (0 = all)
+- `full::1` (optional) - Print every body line instead of folding long turns after 8 lines
+- `compact::1` (optional) - One line per turn: ordinal, age, speaker, elided first line
+- `path::{dir}` (optional, default: current directory) - Directory to resolve the project from
+- `topic::{name}` (optional) - Session topic name; unset falls back to the most recently modified session
+
+**Examples**:
+```bash
+.tail
+.tail last::20 full::1
+.tail compact::1 last::0
+```
+
+### .usage
+
+Per-session usage table: turns, token totals, wall-clock duration, and working
+directory, most recent first.
+
+**Parameters**:
+- `scope::local|relevant|under|global|around` (optional, default: local) - Project selection scope
+- `path::{dir}` (optional, default: current directory) - Anchor directory for scope resolution
+- `depth::{n}` (optional, default: 3) - Component-distance cap for under/relevant/around (0 = unbounded)
+- `limit::{n}` (optional, default: 0) - Max rows across the whole result set (0 = all)
+
+**Examples**:
+```bash
+.usage
+.usage scope::global limit::20
+.usage scope::under depth::0
+```
+
+### .rollup
+
+Token-usage rollup: group by session, project, model, or day; filter by model;
+sort by any column; project only the columns you want.
+
+**Parameters**:
+- `group::session|project|model|day` (optional, default: session) - Grouping dimension
+- `sort::total|input|output|cache|max_context|calls|sessions|group` (optional, default: total) - Sort column
+- `order::asc|desc` (optional, default: desc) - Sort direction
+- `model::{text}` (optional) - Model substring filter, applied before grouping
+- `columns::{list}` (optional) - Comma-separated projection from `group,sessions,calls,input,output,cache,max_context,total,percent,first,last`
+- `scope::local|relevant|under|global|around` (optional, default: local) - Project selection scope
+- `path::{dir}` (optional, default: current directory) - Anchor directory for scope resolution
+- `depth::{n}` (optional, default: 3) - Component-distance cap for under/relevant/around (0 = unbounded)
+- `limit::{n}` (optional, default: 0) - Max rows after sorting (0 = all)
+
+**Examples**:
+```bash
+.rollup
+.rollup group::model sort::total order::desc
+.rollup group::day scope::global limit::30
+.rollup group::project columns::group,sessions,total,percent
+```
+
+### .cost
+
+Per-conversation cost table: exact token counts, cache read/write split,
+compactions, max context, and estimated USD cost.
+
+**Parameters**:
+- `session_ids::{list}` (optional) - Comma-separated session IDs or unique ID prefixes, searched across all projects; defaults to the most recent session of the current directory's project
+- `path::{dir}` (optional, default: current directory) - Directory whose project anchors default session resolution
+- `agents::0|1` (optional, default: 1) - Fold agent (subagent) sessions into each conversation's row
+
+**Examples**:
+```bash
+.cost
+.cost session_ids::bff63952,98da5af5
+.cost agents::0
 ```
 
 ## scripting integration
@@ -345,15 +492,21 @@ Last message:
 **Examples**:
 ```bash
 # Get project count
-PROJECT_COUNT=$(cargo run --features cli -- .count target::projects | grep -oP '\d+')
+PROJECT_COUNT=$(clg .count target::projects | grep -oP '\d+')
 
 # Check if session exists
-if cargo run --features cli -- .show session::abc123 &>/dev/null; then
+if clg .show session_id::abc123 &>/dev/null; then
   echo "Session exists"
 fi
 
 # Export statistics
-cargo run --features cli -- .status verbosity::3 > storage_stats.txt
+clg .status show_tokens::1 > storage_stats.txt
+
+# Conversation IDs for a project, one per line
+clg .projects ids::1 project::-home-user-pro
+
+# Absolute path of the latest session file
+SESSION_FILE=$(clg .session.path)
 ```
 
 ## library api
@@ -393,28 +546,34 @@ fn main() -> claude_storage_core::Result< () >
 - `unilang.commands.yaml` - Command definitions (16 commands)
 - Generated code: Static command map with O(1) lookup
 
-**Command routines** (`src/cli/mod.rs`):
+**Command routines** (`src/cli/`):
 - `status_routine` - Global statistics aggregation
 - `list_routine` - Filtered listing
 - `show_routine` - Session detail display
 - `count_routine` - Fast counting
 - `search_routine` - Content search
 - `export_routine` - Session export
-- `session_routine` - Directory session check
-- `sessions_routine` - Scoped session listing
+- `projects_routine` - Project discovery and listing
+- `project_path_routine` - Resolve project ID to filesystem path
+- `project_exists_routine` - Check project existence
+- `session_dir_routine` - Resolve session working directory
+- `session_ensure_routine` - Create session working directory
+- `session_path_routine` - Resolve session ID to filesystem path
+- `tail_routine` - Live-tail session content
+- `usage_routine` - Token usage aggregation
+- `rollup_routine` - Cross-session rollup summary
+- `cost_routine` - Cost estimation from token usage
 
 ## documentation
 
 - **Documentation**: `docs/` - Behavioral requirements, CLI reference, feature docs
-- **Migration guide**: `docs/MIGRATION.md` - Migration from monolithic crate
 - **Format docs**: `docs/` - Storage organization, file formats, advanced topics
-- **Integration guide**: `docs/integration_guide.md` - Library integration examples
 
 ## testing
 
 **Container tests**: Run via `./verb/test` from the crate directory.
 
-**Core library tests**: 105 tests in `claude_storage_core` crate
+**Core library tests**: 188 tests in `claude_storage_core` crate
 - Entry parsing and validation
 - Path encoding/decoding
 - JSON parser
@@ -424,7 +583,7 @@ fn main() -> claude_storage_core::Result< () >
 - Statistics aggregation
 - Bug reproducers with comprehensive documentation
 
-**CLI tests**: 17 integration tests
+**CLI tests**: 999 tests across 94 integration test files
 - Storage operations tests (global stats, project listing)
 - Session operations tests (show, stats, entry counts)
 - Counting operations tests (projects, sessions, entries)

@@ -15,6 +15,9 @@ use super::storage::{ create_storage, resolve_path_parameter };
 /// statistics retrieval fails.
 #[ allow( clippy::needless_pass_by_value ) ]
 #[ allow( clippy::too_many_lines ) ]
+// CLI routine handler builds two distinct output formats (fast default vs. full
+// show_tokens breakdown) alongside path resolution and error handling — extraction
+// would obscure the command's logic without reducing complexity.
 #[ inline ]
 pub fn status_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   -> core::result::Result< OutputData, ErrorData >

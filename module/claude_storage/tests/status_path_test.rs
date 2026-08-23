@@ -229,6 +229,7 @@ fn test_status_empty_path()
 /// ## Pitfall
 /// Adding new commands by copying existing code without understanding shared
 /// utilities leads to inconsistent behavior between commands.
+// test_kind: bug_reproducer(issue-014)
 #[ test ]
 fn test_status_path_dot_resolves_to_cwd()
 {
@@ -266,7 +267,14 @@ fn test_status_path_tilde_resolves_to_home()
 {
   let manifest_dir = env!( "CARGO_MANIFEST_DIR" );
 
+  // Pin HOME to a temp dir so `~` expands to a known location instead of the
+  // developer's real home — the assertion is that `~` was expanded at all, and
+  // that holds for any target, so pinning costs nothing and removes the
+  // dependency on machine state.
+  let home = TempDir::new().unwrap();
+
   let output = common::clg_cmd()
+    .env( "HOME", home.path() )
     .args( [ ".status", "path::~" ] )
     .current_dir( manifest_dir )
     .output()

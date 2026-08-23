@@ -446,6 +446,9 @@ fn validate_detail_level( detail_raw : Option< &str > ) -> core::result::Result<
 /// non-negative before conversion.
 #[ allow( clippy::needless_pass_by_value ) ]
 #[ allow( clippy::too_many_lines ) ]
+// CLI routine handler processes multiple dispatch modes (ids:: scripting bypass,
+// scope-based listing, liveness filtering) and several independent parameters —
+// extraction would obscure the command's logic without reducing complexity.
 #[ inline ]
 pub fn projects_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   -> core::result::Result< OutputData, ErrorData >
