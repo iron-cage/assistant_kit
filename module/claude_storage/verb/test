@@ -12,5 +12,7 @@ if [[ -v VERB_LAYER ]]; then
   echo "Standard invocation: cd module/claude_storage && ./verb/test" >&2
   exit 1
 fi
-if [[ "${1:-}" == "--dry-run" ]]; then shift; echo "runbox .live -- ./module/claude_storage/verb/test.d/l1${*:+ $*}"; exit 0; fi
+# The forwarded args belong in the dry-run line too — printing the bare payload path while
+# silently carrying scope::/level:: into the real run is what made forwarding look broken.
+if [[ "${1:-}" == "--dry-run" ]]; then shift; printf 'runbox .live -- ./module/claude_storage/verb/test.d/l1%s\n' "${*:+ $*}"; exit 0; fi
 cd "$MODULE_DIR" && exec runbox .live -- "./module/claude_storage/verb/test.d/l1" "$@"
