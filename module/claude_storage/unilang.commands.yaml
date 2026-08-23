@@ -1139,7 +1139,7 @@
 
     - name: "order"
       kind: "String"
-      description: "Sort direction: asc|desc (default: desc)"
+      description: "Sort direction (asc, desc; default: desc)"
       hint: "Sort direction"
       optional: true
       default: "desc"
