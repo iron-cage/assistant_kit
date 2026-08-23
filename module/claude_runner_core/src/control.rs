@@ -916,7 +916,7 @@ fn read_loop(
         let payload = response.get( "response" ).cloned().unwrap_or( serde_json::Value::Null );
         if is_initialize_shaped( &payload )
         {
-          *lock_or_recover( &cache ) = Some( payload.clone() );
+          *lock_or_recover( cache ) = Some( payload.clone() );
         }
         WireOutcome::Success( payload )
       }
@@ -929,7 +929,7 @@ fn read_loop(
       _ => WireOutcome::Error( format!( "unrecognized control_response subtype in: {response}" ) ),
     };
 
-    if let Some( sender ) = lock_or_recover( &pending ).remove( request_id )
+    if let Some( sender ) = lock_or_recover( pending ).remove( request_id )
     {
       let _ = sender.send( outcome );
     }
@@ -965,7 +965,7 @@ fn drain_stderr(
       }
       line.truncate( end );
     }
-    let mut buf = lock_or_recover( &tail );
+    let mut buf = lock_or_recover( tail );
     if buf.len() == STDERR_TAIL_LINES
     {
       buf.pop_front();

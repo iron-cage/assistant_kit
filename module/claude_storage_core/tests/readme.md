@@ -182,7 +182,7 @@ fn export_markdown_basic()
 - The same result on every machine and in CI — no dependence on the developer's own
   Claude Code history
 - A test that can skip itself at runtime is a test that can silently stop covering
-  anything (see `claude_storage/docs/cli/pitfall/04_vacuous_assertions_mask_stubs.md`)
+  anything (see `../../claude_storage/docs/cli/pitfall/04_vacuous_assertions_mask_stubs.md`)
 
 **Rules**:
 - Never `Storage::new()` in a test — use `Storage::with_root( temp.path() )`
