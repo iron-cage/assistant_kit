@@ -23,8 +23,9 @@ fn cli_feature_enabled()
   assert!( !version.is_empty(), "Package version should not be empty" );
 }
 
-// `claude_storage` (invocable as `clg`) is the canonical binary built from `src/main.rs`.
-// These tests verify the binary is present and functional.
+// `claude_storage` (from `src/main.rs`) and `clg` (from `src/bin/clg.rs`) are two
+// `[[bin]]` targets that both delegate to `cli_main::run()` — identical behaviour,
+// separate compilation units. These tests verify the `clg` binary is present and functional.
 
 #[ test ]
 #[ cfg( feature = "cli" ) ]

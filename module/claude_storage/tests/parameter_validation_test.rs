@@ -73,6 +73,8 @@
 
 mod common;
 
+use tempfile::TempDir;
+
 /// Test that .list rejects invalid `type::` values
 #[ test ]
 fn test_list_type_parameter_validation()
@@ -189,12 +191,18 @@ fn test_list_min_entries_negative_validation()
 /// ## Pitfall
 /// Over-correcting a "garbage parameter" issue by rejecting spec-valid combinations.
 /// A no-op is always preferable to an error when the spec documents the combination.
+// test_kind: bug_reproducer(issue-022)
 #[ test ]
 fn test_show_entries_accepted_in_content_mode()
 {
   // session_id::test-session-id won't exist, so we get a project-not-found error,
-  // but the key assertion is that the error is NOT about entries/metadata mode
+  // but the key assertion is that the error is NOT about entries/metadata mode.
+  // The empty root is what *guarantees* it won't exist — against the developer's
+  // real `~/.claude/` that premise would only be probable.
+  let root = TempDir::new().unwrap();
+
   let output = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
     .args( [ ".show", "session_id::test-session-id", "show_entries::1" ] )
     .current_dir( env!( "CARGO_MANIFEST_DIR" ) )
     .output()
@@ -218,9 +226,13 @@ fn test_show_entries_works_in_metadata_mode()
 {
   // This test verifies that entries::1 IS accepted when in metadata mode
   // We expect this to fail for a different reason (session not found),
-  // NOT because of parameter validation
+  // NOT because of parameter validation. The empty root is what makes
+  // "session not found" a guarantee rather than an assumption about the machine.
+
+  let root = TempDir::new().unwrap();
 
   let output = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
     .args( [ ".show", "session_id::test-session-id", "show_metadata::1", "show_entries::1" ] )
     .current_dir( env!( "CARGO_MANIFEST_DIR" ) )
     .output()
@@ -273,6 +285,7 @@ fn test_show_entries_works_in_metadata_mode()
 /// Don't assume unilang parser validates enum value constraints. Parser only
 /// validates type (String), not value constraints. Application code must
 /// validate enumerated parameter values explicitly.
+// test_kind: bug_reproducer(issue-009)
 #[ test ]
 fn test_count_target_invalid_value()
 {

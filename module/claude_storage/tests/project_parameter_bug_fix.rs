@@ -53,6 +53,7 @@ mod common;
 use std::fs;
 use tempfile::TempDir;
 
+// test_kind: bug_reproducer(issue-008)
 #[ test ]
 fn test_show_with_path_project()
 {

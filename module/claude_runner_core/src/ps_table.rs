@@ -315,11 +315,16 @@ fn push_flag( flags : &mut String, c : char )
 // Loop-invariant inputs to compute_flags, computed once per table render and shared
 // across every row — bundled so the function stays under clippy's 7-argument limit.
 #[ cfg( target_os = "linux" ) ]
+#[ derive( Debug ) ]
 struct FlagContext< 'a >
 {
+  // $HOME, for the 🐳 outside-home test. Empty when unset — 🐳 never fires then.
   home         : &'a str,
+  // Elapsed-seconds threshold above which 🕰 fires.
   ancient_secs : u64,
+  // RSS threshold in MB above which 🐘 fires.
   high_ram_mb  : u64,
+  // This process's own parent PID, for the 👈 this-session test.
   my_ppid      : u32,
 }
 

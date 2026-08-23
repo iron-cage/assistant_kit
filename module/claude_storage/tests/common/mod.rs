@@ -16,16 +16,19 @@
 //! The helper below and the `[[bin]]` entries in `Cargo.toml` are tightly
 //! coupled:
 //!
-//! | Binary           | `[[bin]] name`   | helper fn  | location        |
-//! |------------------|-----------------|------------|-----------------|
-//! | `claude_storage` | `claude_storage` | `clg_cmd`  | `common/mod.rs` |
-//! | `clg`            | `clg`            | `clg_cmd`  | `common/mod.rs` |
+//! | Binary           | `[[bin]] name`   | source file       | helper fn |
+//! |------------------|------------------|-------------------|-----------|
+//! | `claude_storage` | `claude_storage` | `src/main.rs`     | none      |
+//! | `clg`            | `clg`            | `src/bin/clg.rs`  | `clg_cmd` |
 //!
-//! Both binaries have separate source files (`src/main.rs` and `src/bin/clg.rs`)
-//! but both delegate to `cli_main::run()`. Tests use `clg_cmd()`
-//! which resolves the `clg` alias — exercising the alias path through Cargo.
+//! Both are separate compilation units that delegate to the same
+//! `cli_main::run()`, so their behaviour is identical. Every integration test
+//! goes through `clg_cmd()` — i.e. through `clg` — which is what keeps the
+//! short-name entry point exercised rather than merely declared.
+//! `claude_storage` has no helper because nothing needs to spawn it
+//! separately; `tests/cli_sanity.rs` covers its presence.
 //!
-//! If the binary is renamed, three things must change atomically:
+//! If `clg` is renamed, three things must change atomically:
 //! 1. `Cargo.toml` — `[[bin]] name`
 //! 2. The `cargo_bin!("<name>")` call in the helper
 //! 3. The helper function name itself

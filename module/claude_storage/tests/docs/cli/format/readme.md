@@ -8,7 +8,7 @@ Mirror of [format/](../../../../docs/cli/format/readme.md).
 - **Purpose**: Verify that `.export` output conforms to each format's structural and content specification.
 - **Responsibility**: FM-N format verification test plans per export format.
 - **In Scope**: All 3 export formats (markdown, json, text), output structure, content block handling.
-- **Out of Scope**: Export parameter edge cases (→ `param/06_format.md` wait — actually `param/05_format.md`), command integration (→ `command/06_export.md`).
+- **Out of Scope**: Export parameter edge cases (→ `param/05_format.md`), command integration (→ `command/06_export.md`).
 
 ### Responsibility Table
 

@@ -113,7 +113,13 @@ fn ec_2_entries_1_shows_all_records()
 #[ test ]
 fn ec_3_entries_yes_accepted()
 {
+  // Empty root, not the developer's real `~/.claude/`: the assertion is about
+  // type validation, which happens before storage is consulted, so the lookup
+  // may fail — but it must fail against a fixture, never against machine state.
+  let root = TempDir::new().unwrap();
+
   let out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
     .arg( ".show" )
     .arg( "session_id::-default_topic" )
     .arg( "show_entries::yes" )

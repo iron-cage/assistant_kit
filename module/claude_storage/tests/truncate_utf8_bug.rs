@@ -28,6 +28,7 @@
 
 /// Before fix, this would panic with "byte index 7 is not a char boundary".
 /// After fix, it must truncate gracefully to the nearest char boundary.
+// test_kind: bug_reproducer(issue-018)
 #[ test ]
 fn tc001_truncate_mid_emoji_graceful()
 {

@@ -447,6 +447,9 @@ fn validate_detail_level( detail_raw : Option< &str > ) -> core::result::Result<
 // Two dispatch branches (ids:: scripting mode and scope-based listing) plus their shared
 // filter/sort/limit chain — splitting them would duplicate the filter chain per branch.
 #[ allow( clippy::too_many_lines ) ]
+// CLI routine handler processes multiple dispatch modes (ids:: scripting bypass,
+// scope-based listing, liveness filtering) and several independent parameters —
+// extraction would obscure the command's logic without reducing complexity.
 #[ inline ]
 pub fn projects_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   -> core::result::Result< OutputData, ErrorData >

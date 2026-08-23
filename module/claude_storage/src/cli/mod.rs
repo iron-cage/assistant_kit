@@ -22,9 +22,6 @@
 mod storage;
 mod scope;
 mod color;
-mod format;
-mod liveness;
-mod field_selector;
 mod status;
 mod list;
 mod show;
@@ -32,12 +29,32 @@ mod count;
 mod search;
 mod export;
 mod projects;
-mod projects_overview;
 mod session;
-mod tail;
 mod usage;
 mod rollup;
 mod cost;
+
+// The five modules below are `#[ doc( hidden ) ] pub` rather than private
+// because their units are exercised by integration tests, and every test in
+// this crate lives under `tests/` — which links the library as an external
+// consumer and therefore cannot see a private module. `doc( hidden )` is the
+// distinction that matters: these are reachable, not supported. Nothing
+// outside `tests/` should import them, and the real public surface stays the
+// `pub use` list below.
+//
+// Do not "clean up" these back to private without first moving the
+// corresponding tests, or the test files stop compiling.
+
+#[ doc( hidden ) ]
+pub mod format;
+#[ doc( hidden ) ]
+pub mod liveness;
+#[ doc( hidden ) ]
+pub mod field_selector;
+#[ doc( hidden ) ]
+pub mod projects_overview;
+#[ doc( hidden ) ]
+pub mod tail;
 
 pub use storage::parse_project_parameter;
 pub use format::truncate_if_needed;

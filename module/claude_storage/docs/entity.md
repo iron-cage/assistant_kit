@@ -5,18 +5,20 @@
 | Type | Purpose | Master File | Instances |
 |------|---------|-------------|----------:|
 | `cli/command/` | Per-command detail pages with full parameter tables and cross-refs | [cli/command/readme.md](cli/command/readme.md) | 16 |
+| `cli/command_group/` | Command partition under the Representation Absorption Test; index-only while every group is a singleton | [cli/command_group/readme.md](cli/command_group/readme.md) | 0 |
 | `cli/format/` | Index of format doc instances covering all export rendering modes | [cli/format/readme.md](cli/format/readme.md) | 3 |
-| `cli/param/` | Per-parameter detail pages with type, defaults, and command cross-refs | [cli/param/readme.md](cli/param/readme.md) | 43 |
+| `cli/param/` | Per-parameter detail pages with type, defaults, and command cross-refs | [cli/param/readme.md](cli/param/readme.md) | 44 |
 | `cli/param_group/` | Per-group detail pages with membership, examples, and cross-refs | [cli/param_group/readme.md](cli/param_group/readme.md) | 5 |
 | `cli/type/` | Per-type constraint and parsing reference | [cli/type/readme.md](cli/type/readme.md) | 15 |
 | `cli/user_story/` | Index of user story instances capturing persona intent and acceptance criteria | [cli/user_story/readme.md](cli/user_story/readme.md) | 6 |
 | `feature/` | Index of feature doc instances covering CLI tool scope and design decisions | [feature/readme.md](feature/readme.md) | 1 |
 | `operation/` | Index of operation doc instances covering upgrade and migration procedures | [operation/readme.md](operation/readme.md) | 1 |
-| `algorithm/` | Index of algorithm doc instances covering procedure design and correctness guarantees | [algorithm/readme.md](algorithm/readme.md) | 1 |
+| `algorithm/` | Index of algorithm doc instances covering procedure design and correctness guarantees | [algorithm/readme.md](algorithm/readme.md) | 2 |
 | `invariant/` | System behavioral invariants | [invariant/readme.md](invariant/readme.md) | 3 |
 | `cli/pitfall/` | CLI implementation pitfall documentation | [cli/pitfall/readme.md](cli/pitfall/readme.md) | 4 |
 | `tests/docs/cli/command/` | Index of per-command integration test case files covering command-level behavior | [../../tests/docs/cli/command/readme.md](../tests/docs/cli/command/readme.md) | 16 |
-| `tests/docs/cli/param/` | Index of per-parameter edge case test files covering parameter-level behavior | [../../tests/docs/cli/param/readme.md](../tests/docs/cli/param/readme.md) | 43 |
+| `tests/docs/cli/command_group/` | Evidentiary basis for the zero-group verdict; no per-group spec files while every group is a singleton | [../../tests/docs/cli/command_group/readme.md](../tests/docs/cli/command_group/readme.md) | 0 |
+| `tests/docs/cli/param/` | Index of per-parameter edge case test files covering parameter-level behavior | [../../tests/docs/cli/param/readme.md](../tests/docs/cli/param/readme.md) | 44 |
 | `tests/docs/cli/param_group/` | Index of per-group interaction test files covering parameter group behavior | [../../tests/docs/cli/param_group/readme.md](../tests/docs/cli/param_group/readme.md) | 5 |
 | `tests/docs/cli/type/` | Index of per-type constraint test case files covering type parsing and validation | [../../tests/docs/cli/type/readme.md](../tests/docs/cli/type/readme.md) | 15 |
 | `tests/docs/cli/format/` | Index of per-format output verification test case files covering export format structure | [../../tests/docs/cli/format/readme.md](../tests/docs/cli/format/readme.md) | 3 |
@@ -24,7 +26,7 @@
 | `tests/docs/feature/` | FT-prefixed test spec files mirroring each `docs/feature/` instance | [../../tests/docs/feature/readme.md](../tests/docs/feature/readme.md) | 1 |
 | `tests/docs/operation/` | OP-prefixed test spec files mirroring each `docs/operation/` instance | [../../tests/docs/operation/readme.md](../tests/docs/operation/readme.md) | 1 |
 | `tests/docs/invariant/` | IN-prefixed contract test spec files mirroring each `docs/invariant/` instance | [../../tests/docs/invariant/readme.md](../tests/docs/invariant/readme.md) | 3 |
-| `tests/docs/algorithm/` | AL-prefixed contract test spec files mirroring each `docs/algorithm/` instance | [../../tests/docs/algorithm/readme.md](../tests/docs/algorithm/readme.md) | 1 |
+| `tests/docs/algorithm/` | AL-prefixed contract test spec files mirroring each `docs/algorithm/` instance | [../../tests/docs/algorithm/readme.md](../tests/docs/algorithm/readme.md) | 2 |
 | `tests/docs/cli/pitfall/` | PF-prefixed contract test spec files mirroring each `docs/cli/pitfall/` instance | [../../tests/docs/cli/pitfall/readme.md](../tests/docs/cli/pitfall/readme.md) | 4 |
 
 ## Master Doc Instances Table
@@ -101,6 +103,7 @@
 | cli/param | 41 | Latest | [cli/param/41_latest.md](cli/param/41_latest.md) |
 | cli/param | 42 | Full | [cli/param/42_full.md](cli/param/42_full.md) |
 | cli/param | 43 | Compact | [cli/param/43_compact.md](cli/param/43_compact.md) |
+| cli/param | 44 | Live | [cli/param/44_live.md](cli/param/44_live.md) |
 | cli/param_group | 01 | Output Control | [cli/param_group/01_output_control.md](cli/param_group/01_output_control.md) |
 | cli/param_group | 02 | Project Scope | [cli/param_group/02_project_scope.md](cli/param_group/02_project_scope.md) |
 | cli/param_group | 03 | Session Identification | [cli/param_group/03_session_identification.md](cli/param_group/03_session_identification.md) |
@@ -122,6 +125,7 @@
 | cli/type | 14 | Detail Level | [cli/type/14_detail_level.md](cli/type/14_detail_level.md) |
 | cli/type | 15 | Field Selector | [cli/type/15_field_selector.md](cli/type/15_field_selector.md) |
 | algorithm | 001 | Agent Session Tracking | [algorithm/001_agent_session_tracking.md](algorithm/001_agent_session_tracking.md) |
+| algorithm | 002 | Session Liveness | [algorithm/002_session_liveness.md](algorithm/002_session_liveness.md) |
 | invariant | 001 | Path Encoding | [invariant/001_path_encoding.md](invariant/001_path_encoding.md) |
 | invariant | 002 | Session Family | [invariant/002_session_family.md](invariant/002_session_family.md) |
 | invariant | 003 | Entry Type Format | [invariant/003_entry_type_format.md](invariant/003_entry_type_format.md) |

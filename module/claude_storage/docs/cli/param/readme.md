@@ -4,7 +4,7 @@
 
 - **Purpose**: Document individual parameter specifications for the `claude_storage` CLI.
 - **Responsibility**: Per-parameter detail pages with type, defaults, and command cross-refs.
-- **In Scope**: All 43 CLI parameters with type constraints, defaults, valid values, and command usage.
+- **In Scope**: All 44 CLI parameters with type constraints, defaults, valid values, and command usage.
 - **Out of Scope**: Type definitions (→ `type/`), parameter group semantics (→ `param_group/`), command-level behavior (→ `command/`).
 
 All parameters for the `claude_storage` CLI. Parameters use `param::value` syntax.
@@ -58,6 +58,7 @@ See [type/readme.md](../type/readme.md) for type definitions and [param_group/re
 | `41_latest.md` | latest:: — most-recent session selector for .session.path |
 | `42_full.md` | full:: — unfold long turns for .tail |
 | `43_compact.md` | compact:: — one line per turn for .tail |
+| `44_live.md` | live:: — attached-process filter for .projects |
 
 ### Parameters Table
 

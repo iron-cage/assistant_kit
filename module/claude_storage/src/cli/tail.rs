@@ -369,7 +369,9 @@ fn session_header
 }
 
 /// Git-style short form of a session UUID, matching `.show`'s prefix lookup.
-fn short_session_id( session_id : &str ) -> String
+#[ inline ]
+#[ must_use ]
+pub fn short_session_id( session_id : &str ) -> String
 {
   session_id.chars().take( 8 ).collect()
 }
@@ -446,17 +448,4 @@ fn compact_line( ordinal : usize, turn : &Turn< '_ >, results : &ToolResults, no
   let room = RULE_WIDTH.saturating_sub( prefix.chars().count() ).max( 16 );
 
   format!( "{}{}", color::muted( &prefix ), ellipsize( &one_line, room ) )
-}
-
-#[ cfg( test ) ]
-mod tests
-{
-  use super::short_session_id;
-
-  #[test]
-  fn test_short_session_id_truncates_to_eight()
-  {
-    assert_eq!( short_session_id( "feed0009-0000-4000-8000-000000000009" ), "feed0009" );
-    assert_eq!( short_session_id( "abc" ), "abc" );
-  }
 }
