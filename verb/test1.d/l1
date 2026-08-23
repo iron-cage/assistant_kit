@@ -5,8 +5,7 @@
 set -euo pipefail
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd "$SCRIPT_DIR/../.."
-FILTER="${1:-}"
-if [[ -z "$FILTER" ]]; then
+if [[ $# -eq 0 ]]; then
   echo "error: filter argument required — invoke via './verb/test1 <filter>' on the host." >&2
   exit 1
 fi
@@ -14,4 +13,5 @@ export CARGO_NET_OFFLINE=true
 export NO_COLOR=1
 export RUNBOX_CONTAINER=1
 export RUSTFLAGS="-D warnings"
-exec cargo nextest run --workspace --all-features --no-fail-fast -E "$FILTER"
+FILTER="$1"; shift
+exec cargo nextest run --workspace --all-features --no-fail-fast -E "$FILTER" "$@"

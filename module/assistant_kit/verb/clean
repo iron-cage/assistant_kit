@@ -3,5 +3,5 @@
 set -euo pipefail
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd "$SCRIPT_DIR/.."
-if [[ "${1:-}" == "--dry-run" ]]; then echo "cargo clean -p assistant_kit"; exit 0; fi
-exec cargo clean -p assistant_kit
+if [[ "${1:-}" == "--dry-run" ]]; then shift; echo "cargo clean -p assistant_kit${*:+ $*}"; exit 0; fi
+exec cargo clean -p assistant_kit "$@"
