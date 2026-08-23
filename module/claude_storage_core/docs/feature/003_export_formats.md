@@ -12,7 +12,7 @@
 Export converts a `Session` into a writer-based stream in one of three formats:
 
 - **Markdown**: Human-readable conversation with message structure, timestamps, token counts, and collapsible thinking blocks. Suitable for archival and documentation.
-- **JSON**: Pretty-printed version of Claude Code's internal JSONL format. Suitable for programmatic processing — the structure is identical to the on-disk format.
+- **JSON**: A single compact line — no indentation, no interior newlines — wrapping the session's on-disk JSONL entries verbatim in a `{ "session_id", "storage_path", "entries" : [ ... ] }` envelope. Suitable for programmatic processing; each element of `entries` is byte-identical to its on-disk JSONL line. The compact single-line shape is deliberate and load-bearing, not a formatting oversight: it makes the output simultaneously valid JSON (one object spanning the whole stream) and valid JSONL (one object per line), which is what lets both consumer styles read the same export. Pretty-printing would satisfy the first and break the second.
 - **Plain text**: Minimal transcript (role: content lines only). No metadata. Suitable for quick review.
 
 **Streaming.** Export writes to any `Write` implementor. Memory usage is O(1) — entries are serialized incrementally without loading all of them simultaneously. The format is selected via `ExportFormat` enum.

@@ -489,7 +489,7 @@ fn parsed_function_names( content : &str ) -> Vec< String >
 /// Root cause: this counted every `"fn "` substring while `count_unique_function_names`
 ///   counted only the names it could parse, so `duplicates = total - unique` subtracted
 ///   two different populations. Four `ps_table.rs` comments reading "Was a private fn in
-///   clr's cli::ps ..." contributed +4 phantom duplicates, and two definitions whose `(`
+///   clr's `cli::ps` ..." contributed +4 phantom duplicates, and two definitions whose `(`
 ///   sits on the following line (`run_isolated`, `run_isolated_ext`) contributed +2 more —
 ///   6 of the 24 reported duplicates were counting artifacts, not duplication.
 /// Pitfall: a difference between two counts means nothing unless both count the same

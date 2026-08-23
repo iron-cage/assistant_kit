@@ -114,7 +114,6 @@ impl EventRecord
 ///
 /// All fields are `Option`; absent fields are omitted from JSON serialization.
 /// Use [`EventFields::default()`] to start with all fields absent.
-#[ allow( clippy::struct_excessive_bools ) ]
 #[ derive( Debug, Clone, Default, Serialize, Deserialize ) ]
 pub struct EventFields
 {
