@@ -78,10 +78,30 @@
 //! | phd02 | `phd02_mre_bug203_account_use_help_has_dry_description` | `.account.use.help` → `dry` has description | P |
 //! | phd03 | `phd03_mre_bug203_credentials_status_help_has_format_description` | `.credentials.status.help` → `format` has description | P |
 //! | phd04 | `phd04_mre_bug203_credentials_status_help_has_threshold_description` | `.credentials.status.help` → `threshold` has description | P |
-//! | pho01 | `pho01_mre_bug204_account_use_help_name_required` | `.account.use.help` → `name` shows `required` | P |
-//! | pho02 | `pho02_mre_bug204_account_delete_help_name_required` | `.account.delete.help` → `name` shows `required` | P |
-//! | pho03 | `pho03_bug204_account_relogin_help_name_optional` | `.account.relogin.help` → `name` still `optional` | P |
-//! | pho04 | `pho04_bug204_accounts_help_name_optional` | `.accounts.help` → `name` still `optional` | P |
+//! | pho01 | `pho01_mre_bug204_account_use_help_name_required` | `.account.use.help param::name` → Required = yes | P |
+//! | pho02 | `pho02_mre_bug204_account_delete_help_name_required` | `.account.delete.help param::name` → Required = yes | P |
+//! | pho03 | `pho03_bug204_account_relogin_help_name_optional` | `.account.relogin.help param::name` → Required = no | P |
+//! | pho04 | `pho04_bug204_accounts_help_name_optional` | `.accounts.help` → `name` line shows `optional` | P |
+//!
+//! ## unilang 0.58 → 0.60 migration (pho01-pho04)
+//!
+//! unilang 0.60 moved help rendering into the separate `unilang_help` crate. The
+//! command-level page never labelled required params in either version — required
+//! args simply lack the `- Optional` suffix that optional ones carry. The old pho01/
+//! pho02 assertions (`text.contains("required")`) matched some incidental occurrence
+//! of the substring elsewhere in 0.58's output, and broke when 0.60's rewrite removed
+//! it. pho03 was worse: its `!text.contains("required")` disjunct made the whole
+//! assertion vacuously true, so it could never fail.
+//!
+//! 0.60 adds a per-parameter detail page (`.cmd.help param::<name>`) carrying an
+//! explicit `Required  yes|no` row. pho01-pho03 now assert against that — a directly
+//! falsifiable semantic check rather than a substring match that passed by accident.
+//! `.accounts` is the exception (see pho04): it uses the repo's own grouped renderer,
+//! which ignores `param::`, so it keeps the line-scoped `(optional)` assertion.
+//!
+//! Pitfall: this CLI rejects bare positional args for the help param — it must be
+//! passed as `param::name`, not `name`, or the command exits 1 with
+//! "expected `param::value` syntax".
 
 use crate::cli_runner::{ run_cs, stdout, assert_exit };
 
@@ -143,62 +163,58 @@ fn phd04_mre_bug203_credentials_status_help_has_threshold_description()
 
 // ── BUG-204 reproducers ─────────────────────────────────────────────────────
 
-/// pho01: bug_reproducer(BUG-204) — `.account.use.help` shows `name` as `required`.
+/// pho01: bug_reproducer(BUG-204) — `.account.use.help name` reports `name` as required.
 #[ test ]
 fn pho01_mre_bug204_account_use_help_name_required()
 {
-  let out = run_cs( &[ ".account.use.help" ] );
+  let out = run_cs( &[ ".account.use.help", "param::name" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!(
-    text.contains( "name" ) && text.contains( "required" ),
-    "`.account.use.help` must show `name` as required, got:\n{text}"
+    text.lines().any( | l | l.contains( "Required" ) && l.contains( "yes" ) ),
+    "`.account.use.help param::name` must report Required = yes, got:\n{text}"
   );
 }
 
-/// pho02: bug_reproducer(BUG-204) — `.account.delete.help` shows `name` as `required`.
+/// pho02: bug_reproducer(BUG-204) — `.account.delete.help name` reports `name` as required.
 #[ test ]
 fn pho02_mre_bug204_account_delete_help_name_required()
 {
-  let out = run_cs( &[ ".account.delete.help" ] );
+  let out = run_cs( &[ ".account.delete.help", "param::name" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!(
-    text.contains( "name" ) && text.contains( "required" ),
-    "`.account.delete.help` must show `name` as required, got:\n{text}"
+    text.lines().any( | l | l.contains( "Required" ) && l.contains( "yes" ) ),
+    "`.account.delete.help param::name` must report Required = yes, got:\n{text}"
   );
 }
 
-/// pho03: regression guard — `.account.relogin.help` shows `name` as `optional`.
+/// pho03: regression guard — `.account.relogin.help name` reports `name` as optional.
 #[ test ]
 fn pho03_bug204_account_relogin_help_name_optional()
 {
-  let out = run_cs( &[ ".account.relogin.help" ] );
+  // name is genuinely optional on .account.relogin (defaults to active account)
+  let out = run_cs( &[ ".account.relogin.help", "param::name" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!(
-    text.contains( "name" ),
-    "`.account.relogin.help` must list `name` param, got:\n{text}"
-  );
-  // name is genuinely optional on .account.relogin (defaults to active account)
-  assert!(
-    !text.contains( "name" ) || !text.contains( "required" )
-      || text.lines().any( | l | l.contains( "name" ) && l.contains( "optional" ) ),
-    "`.account.relogin.help` `name` must NOT show as required, got:\n{text}"
+    text.lines().any( | l | l.contains( "Required" ) && l.contains( "no" ) ),
+    "`.account.relogin.help param::name` must report Required = no, got:\n{text}"
   );
 }
 
-/// pho04: regression guard — `.accounts.help` shows `name` as `optional`.
+/// pho04: regression guard — `.accounts.help` shows `name` as optional.
+///
+/// Unlike pho01-pho03, `.accounts` uses the repo's own grouped help renderer (param
+/// groups: "Core:", "Account Ownership:", ...), which ignores unilang's `param::`
+/// argument — so no parameter detail page exists here. The grouped listing's own
+/// `(optional)` suffix is the only available surface.
 #[ test ]
 fn pho04_bug204_accounts_help_name_optional()
 {
   let out = run_cs( &[ ".accounts.help" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
-  assert!(
-    text.contains( "name" ),
-    "`.accounts.help` must list `name` param, got:\n{text}"
-  );
   assert!(
     text.lines().any( | l | l.contains( "name" ) && l.contains( "optional" ) ),
     "`.accounts.help` `name` must show as optional, got:\n{text}"
