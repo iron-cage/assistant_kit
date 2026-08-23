@@ -22,12 +22,19 @@
 //! the session for its entire lifetime and relays method calls over a Unix socket keyed by
 //! the underlying `claude` subprocess's PID — the same PID `clr ps`/`clr kill` already use.
 //!
-//! # Why PID-diffing, not a direct accessor
+//! # Why a direct accessor, not PID-diffing
 //!
-//! `ControlSession` deliberately exposes no public PID accessor (its `child` field is
-//! private). The daemon instead snapshots `find_claude_processes()` immediately before and
-//! after `spawn_control_session()` and takes the new PID that appears — the same
-//! "claude"-basename process discovery `clr ps`/`clr kill` already rely on.
+//! The daemon reads its session's PID straight off `ControlSession::pid()`, which returns the
+//! owned `Child`'s own id. Since `spawn_control_session()` builds that child with
+//! `Command::new( "claude" )` directly (no shell wrapper), the id *is* the "claude"-basename
+//! PID that `clr ps`/`clr kill` address — the two agree by construction, not by inference.
+//!
+//! This deliberately replaces an earlier approach that diffed a system-wide
+//! `find_claude_processes()` snapshot taken before and after the spawn and took the first PID
+//! absent from the "before" set. That is unsound whenever two sessions start concurrently:
+//! both children are missing from either snapshot, so the winner is decided by `/proc` readdir
+//! order and a daemon can adopt another session's PID. See `ControlSession::pid()`'s own
+//! `Fix(query-pid-crosstalk)` note for the full failure mode.
 
 use claude_core::process::find_claude_processes;
 use claude_runner_core::
@@ -298,10 +305,9 @@ fn dispatch_call( pid : u32, method : &str, args : &[ String ] ) -> !
 /// Hidden daemon entry point (`__query_daemon <message> [--dir <path>]`), dispatched from
 /// `lib.rs::run_cli()` before subcommand validation — never invoked directly by a user.
 ///
-/// Spawns the real control session, discovers its PID by diffing `find_claude_processes()`
-/// before/after (see module doc comment), prints exactly that PID as its one stdout line,
-/// then serves method requests over a PID-keyed Unix socket until the session's claude
-/// subprocess exits.
+/// Spawns the real control session, takes its PID straight from `ControlSession::pid()`
+/// (see module doc comment), prints exactly that PID as its one stdout line, then serves
+/// method requests over a PID-keyed Unix socket until the session's claude subprocess exits.
 pub( crate ) fn run_query_daemon( tokens : &[ String ] ) -> !
 {
   let message = tokens.get( 1 ).cloned().unwrap_or_default();
@@ -336,9 +342,6 @@ pub( crate ) fn run_query_daemon( tokens : &[ String ] ) -> !
     builder = builder.with_working_directory( d );
   }
 
-  let before : std::collections::HashSet< u32 > =
-    find_claude_processes().into_iter().map( | p | p.pid ).collect();
-
   let session = match builder.spawn_control_session()
   {
     Ok( s ) => s,
@@ -349,25 +352,18 @@ pub( crate ) fn run_query_daemon( tokens : &[ String ] ) -> !
     }
   };
 
-  // The child PID exists as soon as spawn returns, but its /proc cmdline shows
-  // the parent's argv until exec completes — under load that window is wide
-  // enough for an immediate single scan to miss the new `claude` entry. Poll
-  // briefly instead of scanning once; still fail loudly if nothing appears.
-  let mut found : Option< u32 > = None;
-  for _ in 0..100
-  {
-    found = find_claude_processes()
-      .into_iter()
-      .map( | p | p.pid )
-      .find( | pid | !before.contains( pid ) );
-    if found.is_some() { break; }
-    std::thread::sleep( core::time::Duration::from_millis( 20 ) );
-  }
-  let Some( claude_pid ) = found else
-  {
-    eprintln!( "Error: spawned control session but could not determine its PID" );
-    std::process::exit( 1 );
-  };
+  // Fix(query-pid-crosstalk): read the PID off the session we just spawned instead of
+  //   inferring it from a /proc scan.
+  // Root cause: this block used to snapshot `find_claude_processes()` before the spawn and
+  //   poll for the first PID absent from that set. The scan is system-wide, so with two
+  //   sessions starting concurrently both children are absent from either snapshot's "before"
+  //   and the winner is decided by /proc readdir order — a daemon could adopt another
+  //   session's PID, bind that PID's socket, and have its caller `clr kill` a session it did
+  //   not own. The victim then failed with "subprocess stdout closed (process likely exited)".
+  // Pitfall: the old code could not detect this. Every PID it returned was a real, live
+  //   `claude` process, so no assertion or liveness check could tell a stolen PID from the
+  //   right one — only cross-test interference under parallel execution ever revealed it.
+  let claude_pid = session.pid();
 
   // Populate the initialize cache so cached accessors (initializationResult,
   // supportedCommands/Models/Agents, accountInfo) work immediately without requiring
