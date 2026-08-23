@@ -1020,7 +1020,7 @@
   arguments:
     - name: "scope"
       kind: "String"
-      description: "Project selection scope: relevant|local|under|global|around (default: local)"
+      description: "Project selection scope (relevant, local, under, global, around; default: local)"
       hint: "Scope"
       optional: true
       default: "local"
@@ -1080,7 +1080,7 @@
   arguments:
     - name: "scope"
       kind: "String"
-      description: "Project selection scope: relevant|local|under|global|around (default: local)"
+      description: "Project selection scope (relevant, local, under, global, around; default: local)"
       hint: "Scope"
       optional: true
       default: "local"
@@ -1119,7 +1119,7 @@
 
     - name: "group"
       kind: "String"
-      description: "Grouping dimension: session|project|model|day (default: session)"
+      description: "Grouping dimension (session, project, model, day; default: session)"
       hint: "Group by"
       optional: true
       default: "session"
@@ -1129,7 +1129,7 @@
 
     - name: "sort"
       kind: "String"
-      description: "Sort column: total|input|output|cache|max_context|calls|sessions|group (default: total)"
+      description: "Sort column (total, input, output, cache, max_context, calls, sessions, group; default: total)"
       hint: "Sort by"
       optional: true
       default: "total"
@@ -1139,7 +1139,7 @@
 
     - name: "order"
       kind: "String"
-      description: "Sort direction: asc|desc (default: desc)"
+      description: "Sort direction (asc, desc; default: desc)"
       hint: "Sort direction"
       optional: true
       default: "desc"

@@ -323,6 +323,16 @@ fn test_no_code_duplication()
   //   in `types.rs` that the heuristic already tolerates
   // Pitfall: this threshold must be updated each time a new struct gains a standard trait impl
   //   (Default, Display, FromStr, etc.) whose method name is already shared by an existing type
+  //
+  // Fix(fn-count-asymmetry): threshold held at 20; the *metric* was corrected instead
+  // Root cause: `count_function_definitions` counted raw `"fn "` substrings while
+  //   `count_unique_function_names` counted parsed names, so the subtraction mixed two
+  //   populations and reported 24 where genuine duplication was 18 (as_str ×9, default ×7,
+  //   fmt ×3, write_creds_restricted ×2, from_str ×2). Raising the threshold to 24 would
+  //   have bought headroom by blinding the check to 6 real future duplicates.
+  // Pitfall: when this assertion trips, first confirm the reported number reflects actual
+  //   duplicate *names* — the four entries above were all genuine, this one was not; raising
+  //   the ceiling to silence a measurement bug permanently weakens the check it protects
   let duplication_threshold = 20;
   let duplicates = function_count.saturating_sub( unique_count );
 
@@ -443,38 +453,59 @@ fn read_directory_content( dir : &str ) -> String
   content
 }
 
-/// Count total function definitions in content
-fn count_function_definitions( content : &str ) -> usize
+/// Extract every parseable function name in `content`, in source order.
+///
+/// A name is recognized only when `fn ` is followed, on the same line, by an
+/// identifier terminated by `(` or `<`. Both counters below derive from this
+/// single list so they always describe the same population — see
+/// `count_function_definitions` for why that symmetry matters.
+fn parsed_function_names( content : &str ) -> Vec< String >
 {
-  content.matches( "fn " ).count()
-}
-
-/// Count unique function names in content (simple heuristic)
-fn count_unique_function_names( content : &str ) -> usize
-{
-  let mut names = std::collections::HashSet::new();
+  let mut names = Vec::new();
 
   for line in content.lines()
   {
-    if line.contains( "fn " )
+    // Extract function name (simple regex-free approach)
+    if let Some( start ) = line.find( "fn " )
     {
-      // Extract function name (simple regex-free approach)
-      if let Some( start ) = line.find( "fn " )
+      let after_fn = &line[ start + 3.. ];
+      if let Some( end ) = after_fn.find( [ '(', '<' ] )
       {
-        let after_fn = &line[ start + 3.. ];
-        if let Some( end ) = after_fn.find( ['(', '<'] )
+        let name = after_fn[ ..end ].trim();
+        if !name.is_empty()
         {
-          let name = after_fn[ ..end ].trim();
-          if !name.is_empty()
-          {
-            names.insert( name.to_string() );
-          }
+          names.push( name.to_string() );
         }
       }
     }
   }
 
-  names.len()
+  names
+}
+
+/// Count total function definitions in content
+///
+/// Fix(fn-count-asymmetry): count parsed definitions, not raw `"fn "` substrings
+/// Root cause: this counted every `"fn "` substring while `count_unique_function_names`
+///   counted only the names it could parse, so `duplicates = total - unique` subtracted
+///   two different populations. Four `ps_table.rs` comments reading "Was a private fn in
+///   clr's cli::ps ..." contributed +4 phantom duplicates, and two definitions whose `(`
+///   sits on the following line (`run_isolated`, `run_isolated_ext`) contributed +2 more —
+///   6 of the 24 reported duplicates were counting artifacts, not duplication.
+/// Pitfall: a difference between two counts means nothing unless both count the same
+///   population; routing both through `parsed_function_names` is what keeps them aligned,
+///   and prose that merely contains the word `fn` must never move a duplication metric.
+fn count_function_definitions( content : &str ) -> usize
+{
+  parsed_function_names( content ).len()
+}
+
+/// Count unique function names in content (simple heuristic)
+fn count_unique_function_names( content : &str ) -> usize
+{
+  let unique : std::collections::HashSet< String > =
+    parsed_function_names( content ).into_iter().collect();
+  unique.len()
 }
 
 /// Count total struct definitions in content
