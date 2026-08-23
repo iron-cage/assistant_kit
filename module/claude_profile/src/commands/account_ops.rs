@@ -310,24 +310,26 @@ pub fn account_save_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) ->
     _                          => String::new(),
   };
 
-  // Feature 073: preset:: is sugar for known-provider redirect accounts — pre-fills
+  // Feature 073/078: preset:: is sugar for known-provider redirect accounts — pre-fills
   // backend::/base_url::/inference_provider:: for anything the caller didn't already
-  // specify explicitly. Only "kimi" is a recognized value today (the user's own scope:
-  // a single supported provider, not a general multi-provider abstraction).
+  // specify explicitly. "kimi" (Feature 073) and "deepseek" (Feature 078) are the two
+  // recognized values today — each new preset is an explicit design addition, not a
+  // data-driven provider registry (see docs/type/007_preset.md).
   let preset_raw = match cmd.arguments.get( "preset" )
   {
     Some( Value::String( s ) ) => s.clone(),
     _                          => String::new(),
   };
-  if !preset_raw.is_empty() && !preset_raw.eq_ignore_ascii_case( "kimi" )
+  if !preset_raw.is_empty() && !preset_raw.eq_ignore_ascii_case( "kimi" ) && !preset_raw.eq_ignore_ascii_case( "deepseek" )
   {
     return Err( ErrorData::new(
       ErrorCode::ArgumentTypeMismatch,
-      format!( "preset:: invalid value '{preset_raw}' — valid values: kimi" ),
+      format!( "preset:: invalid value '{preset_raw}' — valid values: kimi, deepseek" ),
     ) );
   }
-  let preset_is_kimi = preset_raw.eq_ignore_ascii_case( "kimi" );
-  let backend_raw    = if backend_raw.is_empty() && preset_is_kimi { "redirect".to_string() } else { backend_raw };
+  let preset_is_kimi     = preset_raw.eq_ignore_ascii_case( "kimi" );
+  let preset_is_deepseek = preset_raw.eq_ignore_ascii_case( "deepseek" );
+  let backend_raw        = if backend_raw.is_empty() && ( preset_is_kimi || preset_is_deepseek ) { "redirect".to_string() } else { backend_raw };
 
   if !backend_raw.is_empty()
     && !backend_raw.eq_ignore_ascii_case( "anthropic" )
@@ -353,17 +355,57 @@ pub fn account_save_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) ->
   //   to snapshot; skip is the only non-destructive meaning for a snapshot-style bare call.
   //   Explicit backend::redirect re-saves and explicit backend::anthropic re-backends (AC-15)
   //   are deliberate acts and stay untouched.
-  if backend_raw.is_empty() && !preset_is_kimi
+  // Fix(BUG-554): the skip covers only a *genuinely bare* save — one carrying no mutation at
+  //   all. BUG-549's gate tested backend::/preset:: alone (AC-19's literal two-condition text)
+  //   and sat upstream of every other parameter's validation, so any mutation-bearing save on
+  //   a stored-redirect target — `api_key::NEW`, `tags::work`, … — exited 0 with "save skipped"
+  //   and wrote nothing: a deliberate operator mutation discarded under a success exit code.
+  // Root cause: the gate encoded "which flags the AC happened to name" rather than "does this
+  //   call actually carry a mutation", so every parameter added after BUG-549 inherited the
+  //   swallow by default.
+  // Pitfall: do NOT fix this by defaulting the absent backend:: to the stored `redirect` and
+  //   letting the write proceed — save()'s redirect branch writes accessToken from the (absent)
+  //   api_key:: bytes, clobbering the stored static key with an empty string. Intent is
+  //   ambiguous here, so it is rejected rather than guessed.
+  if backend_raw.is_empty() && !preset_is_kimi && !preset_is_deepseek
   {
     let meta_text      = std::fs::read_to_string( credential_store.join( format!( "{name}.json" ) ) ).unwrap_or_default();
     let stored_backend = crate::account::parse_string_field( &meta_text, "backend" ).unwrap_or_default();
     if stored_backend == "redirect"
     {
-      if trace { eprintln!( "{}account.save  skipped (reason: redirect backend — static credentials, nothing to snapshot)", trace_ts() ) }
-      return Ok( OutputData::new(
-        format!( "'{name}' is a redirect account (static credentials) — nothing to snapshot; save skipped\n" ),
-        "text",
-      ) );
+      // Split the carried mutators by whether one already has a rejection of its own further
+      // down. base_url::/api_key::/redirect_model:: hit the redirect-only check and role:: hits
+      // the Feature 075 removal notice, so those fall through to the precise message the
+      // operator expects. host::/tags::/inference_provider:: are legal on an anthropic-backend
+      // save and have no such guard — falling through would default backend:: to anthropic and
+      // ride AC-15's delete-and-rewrite straight back into BUG-549's destruction.
+      let unguarded : Vec< String > = [ "host", "tags", "inference_provider" ].iter()
+        .filter( | p | matches!( cmd.arguments.get( **p ), Some( Value::String( s ) ) if !s.is_empty() ) )
+        .map( | p | format!( "{p}::" ) )
+        .collect();
+      if !unguarded.is_empty()
+      {
+        return Err( ErrorData::new(
+          ErrorCode::ArgumentMissing,
+          format!(
+            "'{name}' is a redirect account — {} needs an explicit backend:: to apply; pass \
+             backend::redirect to modify the redirect record (api_key:: required) or \
+             backend::anthropic to convert it to an OAuth account",
+            unguarded.join( ", " ),
+          ),
+        ) );
+      }
+      let guarded_elsewhere = cmd.arguments.contains_key( "role" )
+        || [ "base_url", "api_key", "redirect_model" ].iter()
+          .any( | p | matches!( cmd.arguments.get( *p ), Some( Value::String( s ) ) if !s.is_empty() ) );
+      if !guarded_elsewhere
+      {
+        if trace { eprintln!( "{}account.save  skipped (reason: redirect backend — static credentials, nothing to snapshot)", trace_ts() ) }
+        return Ok( OutputData::new(
+          format!( "'{name}' is a redirect account (static credentials) — nothing to snapshot; save skipped\n" ),
+          "text",
+        ) );
+      }
     }
   }
 
@@ -381,13 +423,16 @@ pub fn account_save_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) ->
     Some( Value::String( s ) ) if !s.is_empty() => Some( s.clone() ),
     _                                           => None,
   };
-  // Feature 073: preset::kimi fills base_url:: with Moonshot's fixed Anthropic-compatible
-  // endpoint when the caller didn't pass one explicitly. Gated on the resolved `backend`
-  // (not bare preset_is_kimi) so an explicit backend::anthropic paired with preset::kimi
-  // never forces a redirect-only field onto an anthropic-backend save.
-  let base_url_val = if base_url_val.is_none() && preset_is_kimi && backend == crate::account::AccountBackend::Redirect
+  // Feature 073/078: preset::kimi/preset::deepseek fill base_url:: with that provider's
+  // fixed Anthropic-compatible endpoint when the caller didn't pass one explicitly. Gated
+  // on the resolved `backend` (not bare preset_is_kimi/preset_is_deepseek) so an explicit
+  // backend::anthropic paired with either preset never forces a redirect-only field onto
+  // an anthropic-backend save.
+  let base_url_val = if base_url_val.is_none() && backend == crate::account::AccountBackend::Redirect
   {
-    Some( "https://api.moonshot.ai/anthropic".to_string() )
+    if preset_is_kimi { Some( "https://api.moonshot.ai/anthropic".to_string() ) }
+    else if preset_is_deepseek { Some( "https://api.deepseek.com/anthropic".to_string() ) }
+    else { None }
   }
   else
   {
@@ -498,13 +543,16 @@ pub fn account_save_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) ->
     ) ),
     _ => None,
   };
-  // Feature 073: preset::kimi fills inference_provider:: with "kimi" when the caller
-  // didn't pass one explicitly — this is what makes switch_account() write the
-  // Kimi-tier env vars (claude_profile_core::account::write_kimi_tier_env_vars()).
+  // Feature 073/078: preset::kimi/preset::deepseek fill inference_provider:: with that
+  // provider's own tag when the caller didn't pass one explicitly — this is what makes
+  // switch_account() write the matching tier env vars
+  // (claude_profile_core::account::write_kimi_tier_env_vars()/write_deepseek_tier_env_vars()).
   // Same resolved-backend gating as base_url_val above.
-  let inference_provider_val = if inference_provider_val.is_none() && preset_is_kimi && backend == crate::account::AccountBackend::Redirect
+  let inference_provider_val = if inference_provider_val.is_none() && backend == crate::account::AccountBackend::Redirect
   {
-    Some( "kimi".to_string() )
+    if preset_is_kimi { Some( "kimi".to_string() ) }
+    else if preset_is_deepseek { Some( "deepseek".to_string() ) }
+    else { None }
   }
   else
   {

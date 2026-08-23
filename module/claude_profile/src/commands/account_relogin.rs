@@ -14,9 +14,14 @@ use claude_profile_core::account::trace_ts;
 /// complete browser login, then saves the refreshed credentials back into the account store
 /// and restores the original active account.
 ///
+/// A `backend: redirect` account is refused up front (BUG-556): its credential is a static
+/// API key, so there is no OAuth session to re-authenticate — rotate the key via
+/// `.account.save backend::redirect api_key::<new-key>` instead.
+///
 /// # Errors
 ///
-/// - Exit 1: `name::` value is empty or contains invalid characters.
+/// - Exit 1: `name::` value is empty or contains invalid characters; ownership violation;
+///   or the named account has `backend: redirect`.
 /// - Exit 2: `name::` omitted and no active account; account not found; HOME unset;
 ///   `claude` binary cannot be spawned; or save fails.
 /// - Exit 3 (via `process::exit`): `claude` exited without updating `~/.claude/.credentials.json`
@@ -62,6 +67,9 @@ pub fn account_relogin_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
       format!( "ownership violation: this account is owned by {owner}" ),
     ) );
   }
+
+  // Must precede both switch_account() and the dry::1 check below — see refuse_if_redirect.
+  refuse_if_redirect( &name, &credential_store, trace )?;
 
   // Snapshot original active — best-effort; None when marker absent.
   let original_active = std::fs::read_to_string( credential_store.join( crate::account::active_marker_filename() ) )
@@ -141,4 +149,44 @@ pub fn account_relogin_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   }
 
   Ok( OutputData::new( format!( "re-authenticated '{name}' — credentials saved\n" ), "text" ) )
+}
+
+// Refuse a relogin aimed at a stored `backend: redirect` account.
+//
+// Fix(BUG-556): a redirect account has no Anthropic OAuth session to re-authenticate —
+//   refuse before switching, never after.
+// Root cause: the post-login save in account_relogin_routine hardcodes
+//   AccountBackend::Anthropic, and account::save() branches on the *passed* backend without
+//   ever consulting the stored record — so it stamps `backend: "anthropic"` (store.rs:317)
+//   and overwrites {name}.credentials.json with the live OAuth session, replacing the
+//   static key.
+// Pitfall: the damage here is NOT AC-15's delete-and-rewrite, despite sharing a root cause
+//   with BUG-549. That deletion lives in the command layer (account_ops.rs's remove_file),
+//   which relogin never executes; save() itself read-merges {name}.json (store.rs:308-312).
+//   base_url/redirect_model/inference_provider/claim_lock therefore SURVIVE — leaving an
+//   account labelled `anthropic` that still carries redirect routing fields and now holds a
+//   foreign OAuth session. A self-inconsistent record, not a cleanly destroyed one, which is
+//   the harder failure to spot: nothing looks missing.
+// Pitfall: guarding the save() call alone is too late — switch_account() has already made the
+//   redirect account live and the operator has already sat through a browser login for
+//   nothing. The refusal has to precede the switch, and precede dry::1 too (same ordering
+//   rationale as the ownership guard), so a dry-run reports the refusal instead of
+//   "would re-authenticate". Callers must keep this call above both.
+fn refuse_if_redirect( name : &str, credential_store : &std::path::Path, trace : bool ) -> Result< (), ErrorData >
+{
+  let stored_backend = crate::account::parse_string_field(
+    &std::fs::read_to_string( credential_store.join( format!( "{name}.json" ) ) ).unwrap_or_default(),
+    "backend",
+  )
+    .unwrap_or_default();
+  if stored_backend != "redirect" { return Ok( () ) }
+  if trace { eprintln!( "{}account.relogin  refused (reason: redirect backend — static credentials, no OAuth session)", trace_ts() ) }
+  Err( ErrorData::new(
+    ErrorCode::ArgumentTypeMismatch,
+    format!(
+      "'{name}' is a redirect account (static credentials) — there is no OAuth session to \
+       re-authenticate; rotate its key with `.account.save name::{name} backend::redirect \
+       api_key::<new-key>`"
+    ),
+  ) )
 }

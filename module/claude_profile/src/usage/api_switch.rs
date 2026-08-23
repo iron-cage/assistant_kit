@@ -440,7 +440,23 @@ pub fn apply_post_switch_touch(
   //   documents for BUG-207/BUG-318 — these two cache writes were simply never migrated.
   // Pitfall: write and read must share one file; route every touch-flag write through
   //   touch::mark_touched, never call write_cache_* here directly.
-  super::touch::mark_touched( credential_store, name );
+  // Fix(BUG-552): gate the stamp on `refreshed` — this call site previously wrote the touch
+  //   flags unconditionally, merely logging above when refresh_account_token returned None.
+  // Root cause: the two touch entry points diverged. apply_touch has gated mark_touched on
+  //   its own `new_creds` since BUG-488; this one was written earlier and never picked the
+  //   gate up, so a subprocess that died outright still stamped "touched" — the strictly
+  //   worse form of the defect BUG-552 reports against apply_touch, since here not even the
+  //   token refresh is known to have happened.
+  // Pitfall: flags written for a failed touch suppress the corrective retry for
+  //   TOUCH_GRACE_SECS via touch_skip_reason's touch_idle guard, so the account cannot
+  //   recover on its own — a wrong stamp is not merely cosmetic, it is self-perpetuating.
+  //   The `corroborated_touch_at` refutation added by BUG-552's first half only fires once a
+  //   *later* fetch refutes the claim; it is a backstop for a claim that had some basis, not
+  //   a licence to write one that never did.
+  if refreshed.is_some()
+  {
+    super::touch::mark_touched( credential_store, name );
+  }
   if trace { eprintln!( "{}account.use  {name}  subprocess: spawned", trace_ts() ) }
   // AC-21: post-subprocess quota re-fetch (best-effort, non-aborting on failure).
   // Persists updated resets_at to cache so subsequent .usage sees the newly-activated

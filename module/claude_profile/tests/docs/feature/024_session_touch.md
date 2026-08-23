@@ -4,7 +4,7 @@
 
 - **Purpose**: Test cases for session touch via isolated subprocess.
 - **Source**: `docs/feature/024_session_touch.md`
-- **Covers**: AC-01 through AC-21
+- **Covers**: AC-01 through AC-22
 
 Feature behavioral requirement test cases for `docs/feature/024_session_touch.md`. Each FT case maps to one acceptance criterion. Parameter edge cases are in [cli/param/034_touch.md](../cli/param/34_touch.md). Command-level tests (IT-N) are in [cli/command/009_usage.md](../cli/command/09_usage.md).
 
@@ -69,6 +69,7 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 | FT-26 | Projected window end floors the touch instant to a 10-minute boundary before adding 5h | AC-20 | BUG-551 Arithmetic |
 | FT-27 | Touch refuted by a later window-less fetch yields no corroboration (`None`) | AC-21 | BUG-552 MRE |
 | FT-28 | Display and re-touch skip guard both call `corroborated_touch_at` (single predicate) | AC-21 | BUG-552 Structural |
+| FT-29 | `apply_post_switch_touch` gates `mark_touched` on its own refresh result | AC-22 | BUG-552 MRE |
 | — | AC-20's projection reaches `format::tsv` and `format::json`, not only the text table and `get::5h_reset` | AC-20 | Cross-feature: Feature 033 FT-19 (BUG-553) |
 
 **Total:** 24 FT cases
@@ -404,3 +405,15 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 - **Source fn:** `test_bug552_both_consumers_share_the_corroboration_predicate` (in `touch_tests_b.rs`)
 - **Note:** BUG-552 structural guard. The bug's severity came from the two consumers agreeing on a *wrong* answer: the same unverified flag both fabricated a window on screen and suppressed the re-touch that would have corrected it. Keeping them on one predicate is what makes AC-21 hold; a refactor that reintroduces a second, laxer check would restore the self-sustaining failure, so the count is asserted rather than the mere presence of a call.
 - **Source:** [feature/024_session_touch.md AC-21](../../../docs/feature/024_session_touch.md)
+
+---
+
+### FT-29: The post-switch touch writer gates its stamp on the refresh result
+
+- **Given:** `src/usage/api_switch.rs` source.
+- **When:** `apply_post_switch_touch` is scanned for its `mark_touched` call site.
+- **Then:** The call sits inside an `if refreshed.is_some()` block — the guard both precedes it and has not closed before it — and appears exactly once.
+- **Exit:** N/A (structural source-inspection test — no exit code)
+- **Source fn:** `mre_bug552_post_switch_touch_gates_mark_touched_on_refresh` (in `touch_tests_b.rs`), `bug_reproducer(BUG-552)`
+- **Note:** Structural rather than behavioural by necessity: `apply_post_switch_touch` spawns a real `claude` subprocess and performs live quota fetches, and the project forbids mocking either away — the same constraint that makes FT-28 structural. Two sibling tests cover the observable consequence from the other side: `mre_bug288_post_switch_touch_refetch_updates_quota` and `it_apply_post_switch_touch_cred_file_absent_skips_refetch` (in `api_tests_b.rs`) both run the real function with a refresh that cannot succeed and assert no touch flags are written. Both previously asserted the opposite — that the flags were written *unconditionally* — which is how the ungated stamp survived: the tests had pinned the defect as the design.
+- **Source:** [feature/024_session_touch.md AC-22](../../../docs/feature/024_session_touch.md)

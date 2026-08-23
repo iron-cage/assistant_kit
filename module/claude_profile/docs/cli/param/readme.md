@@ -77,7 +77,7 @@ All `clp` CLI parameters with type, default, and command coverage.
 | [071_api_key.md](071_api_key.md) | `api_key::` — redirect target's static API key; redirect-only |
 | [072_redirect_model.md](072_redirect_model.md) | `redirect_model::` — redirect target's own model identifier; redirect-only |
 | [073_inference_provider.md](073_inference_provider.md) | `inference_provider::` — inference provider label written to `{name}.json` at account save; governs Gate 10 rotation grouping |
-| [074_preset.md](074_preset.md) | `preset::` — named provider preset pre-filling `backend::`/`base_url::`/`inference_provider::`; only `kimi` recognized today |
+| [074_preset.md](074_preset.md) | `preset::` — named provider preset pre-filling `backend::`/`base_url::`/`inference_provider::`; `kimi` and `deepseek` recognized today |
 | [075_scope.md](075_scope.md) | `scope::` — backing-store router on `.model`: `session` (`~/.claude/settings.json`) or `subprocess` (`~/.clr/config.toml`) |
 | [076_model_value.md](076_model_value.md) | `model::` — model to write for the selected `scope::` on `.model`; replaces retired `set::` and `.model.select`'s `id::` |
 | [077_effort_level.md](077_effort_level.md) | `effort_level::` — effort to write for the selected `scope::` on `.model`; new direct control, deliberately distinct from the unrelated ephemeral `effort::` (036) |
@@ -172,7 +172,7 @@ All `clp` CLI parameters with type, default, and command coverage.
 | 71 | `api_key::` | `string` | *(omit; required when `backend::redirect`)* | Non-empty string | Redirect target's static API key | `.account.save` |
 | 72 | `redirect_model::` | `string` | *(omit; required when `backend::redirect`)* | Non-empty string | Redirect target's own model identifier | `.account.save` |
 | 73 | `inference_provider::` | `string` | *(omit; field absent — reads as `"anthropic"`)* | Any non-empty string | Inference provider label at account save; governs Gate 10 rotation grouping | `.account.save` |
-| 74 | `preset::` | `string` | *(omit)* | `kimi` (only recognized value) | Named provider preset pre-filling `backend::`/`base_url::`/`inference_provider::` | `.account.save` |
+| 74 | `preset::` | `string` | *(omit)* | `kimi`, `deepseek` | Named provider preset pre-filling `backend::`/`base_url::`/`inference_provider::` | `.account.save` |
 | 75 | `scope::` | `enum` | `session` | `session`, `subprocess` | Backing-store router — every other parameter on the same `.model` call applies to this store | `.model` |
 | 76 | `model::` | `string` | *(omit)* | Scope-dependent — see [076_model_value.md](076_model_value.md) | Write the model key for the selected `scope::` | `.model` |
 | 77 | `effort_level::` | `string` | *(omit)* | Scope-dependent — see [077_effort_level.md](077_effort_level.md) | Write the effort key for the selected `scope::` | `.model` |

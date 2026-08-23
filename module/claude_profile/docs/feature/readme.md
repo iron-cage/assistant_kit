@@ -4,7 +4,7 @@
 
 - **Purpose**: Defines the functional capabilities of `claude_profile` — account credential management and the `clp` CLI.
 - **Responsibility**: Documents all functional requirements with their design, acceptance criteria, and test references.
-- **In Scope**: feature/001 through feature/040, feature/061 through feature/076 — full functional capability set for claude_profile and the clp CLI.
+- **In Scope**: feature/001 through feature/040, feature/061 through feature/078 — full functional capability set for claude_profile and the clp CLI.
 - **Out of Scope**: Quality constraints (→ invariant/), CLI design (→ cli/).
 
 ### Overview Table
@@ -69,6 +69,7 @@
 | 075 | [Account Tags](075_account_tags.md) | `tags` set in `{name}.json`; `.account.save tags::`, `.account.tag` mutation command, `.tags` listing, `.accounts tags::` filter, `cols::+tags`; supersedes `role::` with lazy migration | ✅ |
 | 076 | [Identity Tag Filter](076_identity_tag_filter.md) | Per-Identity `_filter_{machine}_{user}` include/exclude tag sets; `.identity.filter` get/set/clear; `.identities` listing; Gate 11 unconditional rotation exclusion; loud exclusion reporting | ✅ |
 | 077 | [Burn-Rate Alert (Time-to-Exhaustion)](077_burn_rate_alert.md) | Forecast 5h-window exhaustion from the measurement ring (Feature 040); `⚠ 5h burn` footer warning on `.usage` text/plain when predicted within `alert::` minutes (default 15; 0 = off) | ✅ |
+| 078 | [DeepSeek Provider Preset](078_deepseek_provider_preset.md) | `preset::deepseek` convenience param on `.account.save` (pre-fills `backend::`/`base_url::`/`inference_provider::`); 6 additional DeepSeek-tier `settings.json` env vars written by `switch_account()` when `inference_provider == "deepseek"`; cross-provider clearing against the Kimi-tier bundle (Feature 073) | ✅ |
 
 ### Organization
 

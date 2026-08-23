@@ -28,7 +28,8 @@ clp .account.save name::kimi backend::redirect base_url::https://api.moonshot.ai
 
 **Notes:**
 - Pre-existing accounts (saved before Feature 071) have no `backend` field on disk; they are treated as `anthropic` (see [schema/002](../../schema/002_account_json.md)'s Preserved-Only Fields).
-- `backend::anthropic` explicitly is accepted but has no effect beyond the existing default behavior — provided for symmetry/scriptability, not required in normal use.
+- `backend::anthropic` explicitly is accepted and, for a target that is *not* a stored redirect account, has no effect beyond the existing default behavior — provided for symmetry/scriptability, not required in normal use.
+- For a target whose stored `backend` is `redirect`, explicit `backend::anthropic` and an omitted `backend::` are **not** interchangeable (BUG-549/BUG-554, feature 071 AC-19). Explicit `backend::anthropic` is a deliberate re-backend and rides AC-15's delete-and-rewrite, discarding `base_url`/`redirect_model`/`inference_provider`/`claim_lock`. An omitted `backend::` never does: a save carrying no mutation is skipped (exit 0, `save skipped`), and a save carrying one is rejected (exit 1) rather than silently re-backended. Do not add explicit `backend::anthropic` to a redirect-account save as a clarity improvement — on that one target it converts a safe call into a destructive one.
 
 ### Referenced Type
 
