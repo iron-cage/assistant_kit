@@ -13,6 +13,7 @@
 | `gate_slot.rs` | Atomic slot reservation, dead-owner reclaim, and denial causes. |
 | `gate_liveness.rs` | PID liveness and start-time incarnation checks via `/proc`. |
 | `ps.rs` | `clr ps` dispatch — active sessions and queued waiters in two plain-style tables. |
+| `ps_snapshot.rs` | `clr ps` temporal-diff state: read/write `~/.clr/ps` snapshot, build the "Ended Since Last Check" table. |
 | `help.rs` | Help text printing for all subcommands (clr, ask, isolated, refresh, scope). |
 | `execution.rs` | `run_print_mode`, `run_interactive`, timeout watchdog, expect validation, 3-tier retry resolution. |
 | `retry_classify.rs` | `ErrorClass`, `ClassAttempts` — error-class taxonomy and 3-tier retry count/delay resolution used by `execution.rs`. |

@@ -278,6 +278,7 @@ pub( crate ) fn print_ps_help() -> !
   println!();
   println!( "SESSION FLAGS (auto-inserted Flags column when ≥1 flag fires):" );
   println!( "  👈  This session    Parent of clr ps is a claude process" );
+  println!( "  🆕  New since last check  PID absent from the previous clr ps snapshot" );
   println!( "  🖨   Print mode      Session cmdline contains --print or -p" );
   println!( "  🔌  Query mode      Control-session signature: --input-format/--output-format stream-json + --verbose" );
   println!( "  ⚡  Active          CPU delta >= 3 ticks in 1-second sample window" );
@@ -297,6 +298,7 @@ pub( crate ) fn print_ps_help() -> !
   println!( "  CLR_PS_PID                         Default value for --pid (comma-separated PIDs)" );
   println!( "  CLR_PS_ANCIENT_SECS                Seconds threshold for 🕰 Ancient flag (default: 28800)" );
   println!( "  CLR_PS_HIGH_RAM_MB                 RAM-MB threshold for 🐘 High RAM flag (default: 400)" );
+  println!( "  CLR_PS_STATE_DIR                   Snapshot state dir for 🆕/Ended tracking (default: ~/.clr/ps)" );
   println!( "  CLR_GATE_DIR                       Directory for CLR gate state files (default: /tmp/clr-gate)" );
   std::process::exit( 0 );
 }

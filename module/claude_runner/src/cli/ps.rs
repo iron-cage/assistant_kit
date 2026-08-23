@@ -8,11 +8,12 @@ use claude_core::process::{ find_claude_processes, ProcessInfo };
 use claude_runner_core::ps_table::
 {
   classify_mode, elapsed_label, parse_json_u64, render_active_sessions_table,
-  resolve_task, shorten_path, PsTableOptions, COLUMN_KEYS, DEFAULT_COLUMNS,
+  render_headed_table, resolve_task, shorten_path, PsTableOptions, COLUMN_KEYS,
+  DEFAULT_COLUMNS,
 };
 #[ cfg( target_os = "linux" ) ]
 use claude_runner_core::ps_table::ram_label;
-use data_fmt::{ RowBuilder, TableFormatter, TableConfig, Heading, Format };
+use data_fmt::{ RowBuilder, Heading };
 
 // Runtime configuration for `clr ps`, assembled from env-var defaults (applied
 // first) then CLI tokens (which overwrite env values — CLI-wins).
@@ -155,7 +156,17 @@ pub( crate ) fn dispatch_ps( tokens : &[ String ] ) -> !
 
   let procs = find_claude_processes();
 
+  // Snapshot comparison: read the PRIOR state before it's overwritten below.
+  // Always built from the unfiltered `procs` list — a `--pid`/`--mode`-filtered
+  // snapshot write would make every untracked session look "ended" on the next
+  // unfiltered call.
+  let prior_snapshot = super::ps_snapshot::read_snapshot();
+
   // Inspect mode: emit key:value blocks instead of tables; suppress queued output.
+  // Still refreshes the snapshot (silently) so a later non-inspect call has
+  // accurate 🆕/Ended data — inspect mode already suppresses the Queued table
+  // for the same "different, denser format" reason, so suppressing 🆕/Ended
+  // display here (while still tracking state) is consistent, not a new carve-out.
   if config.inspect
   {
     let mode_str = config.mode.as_deref().unwrap_or( "all" );
@@ -184,10 +195,12 @@ pub( crate ) fn dispatch_ps( tokens : &[ String ] ) -> !
     {
       println!( "{output}" );
     }
+    super::ps_snapshot::write_snapshot( &procs );
     std::process::exit( 0 );
   }
 
   let resolved_columns = resolve_columns( &config );
+  let prior_pids = prior_snapshot.as_ref().map( | snap | snap.pid_set() );
   let opts = PsTableOptions
   {
     mode         : config.mode,
@@ -195,9 +208,12 @@ pub( crate ) fn dispatch_ps( tokens : &[ String ] ) -> !
     pids         : config.pids,
     ancient_secs : config.ancient_secs,
     high_ram_mb  : config.high_ram_mb,
+    prior_pids,
   };
   let active_result = render_active_sessions_table( &procs, &opts );
   let queued_table   = build_queued_table();
+  let ended_table    = super::ps_snapshot::build_ended_table( &procs, prior_snapshot.as_ref() );
+  super::ps_snapshot::write_snapshot( &procs );
 
   match ( active_result, queued_table )
   {
@@ -235,23 +251,12 @@ pub( crate ) fn dispatch_ps( tokens : &[ String ] ) -> !
       println!( "{qt}" );
     }
   }
+  if let Some( et ) = ended_table
+  {
+    println!();
+    println!( "{et}" );
+  }
   std::process::exit( 0 );
-}
-
-// Render a completed RowBuilder as a headed plain-style table string.
-//
-// data_fmt ≥0.5.1 fills the heading rule to the rendered table body width
-// automatically (TSK-008), so no two-pass probe is required.
-// auto_wrap: false — prevents word-wrapping long paths across continuation rows.
-fn render_plain_table( builder : RowBuilder, heading : Heading ) -> String
-{
-  Format::format(
-    &TableFormatter::with_config(
-      TableConfig::plain()
-        .with_heading( heading ),
-    ),
-    &builder.build_view(),
-  ).unwrap_or_default()
 }
 
 // Resolve the ordered list of column keys from PsConfig.
@@ -484,5 +489,5 @@ fn build_queued_table() -> Option< String >
 
   let heading = Heading::new( "Queued" )
     .with_field( format!( "{count} waiting" ) );
-  Some( render_plain_table( builder, heading ) )
+  Some( render_headed_table( builder, heading ) )
 }

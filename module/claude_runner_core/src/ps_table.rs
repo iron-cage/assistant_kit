@@ -7,7 +7,7 @@
 //! - [`render_ps_table`]: bare PID + cwd + state (3 columns). No `/proc` scanning
 //!   beyond what the caller already gathered into [`ProcessInfo`].
 //! - [`render_active_sessions_table`]: the full "Active Sessions" table — elapsed,
-//!   CPU%, RAM, session flags (👈🖨🔌⚡🕰🐘🧟⚠🐳), and the Task column (last
+//!   CPU%, RAM, session flags (👈🆕🖨🔌⚡🕰🐘🧟⚠🐳), and the Task column (last
 //!   human message from the session's JSONL log) — shared by `clr ps` and
 //!   `claude_version`'s `.ps` so both CLIs render sessions identically. Linux-only
 //!   per-process metrics come from `/proc`; on other platforms those columns render
@@ -113,6 +113,11 @@ pub struct PsTableOptions
   pub ancient_secs : u64,
   /// RAM megabytes threshold above which the 🐘 (High RAM) flag fires. Default: 400 MB.
   pub high_ram_mb  : u64,
+  /// PIDs present in the previous `clr ps` snapshot, for computing the 🆕 flag.
+  /// `None` = no snapshot comparison (default; `claude_version`'s `.ps` never sets
+  /// this, and `clr ps`'s very first invocation has no snapshot yet). `Some(set)`
+  /// — even if empty — enables 🆕 for any current PID absent from `set`.
+  pub prior_pids   : Option< std::collections::HashSet< u32 > >,
 }
 
 impl Default for PsTableOptions
@@ -127,6 +132,7 @@ impl Default for PsTableOptions
       pids         : Vec::new(),
       ancient_secs : 28_800,
       high_ram_mb  : 400,
+      prior_pids   : None,
     }
   }
 }
@@ -225,12 +231,18 @@ fn unix_now() -> u64
     .map_or( 0, |d| d.as_secs() )
 }
 
-// Render a completed RowBuilder as a headed plain-style table string.
-//
-// data_fmt ≥0.5.1 fills the heading rule to the rendered table body width
-// automatically (TSK-008), so no two-pass probe is required.
-// auto_wrap: false — prevents word-wrapping long paths across continuation rows.
-fn render_headed_table( builder : RowBuilder, heading : Heading ) -> String
+/// Render a completed [`RowBuilder`] as a headed plain-style table string.
+///
+/// data_fmt ≥0.5.1 fills the heading rule to the rendered table body width
+/// automatically (TSK-008), so no two-pass probe is required.
+/// `auto_wrap: false` — prevents word-wrapping long paths across continuation rows.
+///
+/// Shared by `clr ps` (active/queued/ended tables) and this module's own
+/// [`render_active_sessions_table`] — the single definition every plain-style
+/// `clr ps`-family table renders through.
+#[ must_use ]
+#[ allow( clippy::missing_inline_in_public_items ) ]
+pub fn render_headed_table( builder : RowBuilder, heading : Heading ) -> String
 {
   Format::format(
     &TableFormatter::with_config(
@@ -246,6 +258,7 @@ fn render_headed_table( builder : RowBuilder, heading : Heading ) -> String
 #[ cfg( target_os = "linux" ) ]
 const FLAG_LEGEND : &[ ( &str, &str ) ] = &[
   ( "👈", "This session" ),
+  ( "🆕", "New since last check" ),
   ( "🖨",  "Print mode"   ),
   ( "🔌", "Query mode"   ),
   ( "⚡", "Active"       ),
@@ -280,7 +293,7 @@ fn read_cpu_ticks( pid : u32 ) -> Option< u64 >
 
 // Compute session-flag emoji string for a single process row.
 //
-// Flags in canonical order 👈🖨⚡🕰🐘⚠🐳 (only symbols that fire are included).
+// Flags in canonical order 👈🆕🖨🔌⚡🕰🐘🧟⚠🐳 (only symbols that fire are included).
 // Pure computation — no filesystem I/O beyond what the caller already has in `metrics` and
 // `cpu_delta_ticks` (both pre-computed by the caller).
 // The `/proc/{my_ppid}/cmdline` read for 👈 is inexpensive and done once per call.
@@ -300,6 +313,7 @@ fn compute_flags(
   high_ram_mb     : u64,
   my_ppid         : u32,
   cpu_delta_ticks : u64,
+  is_new          : bool,
 ) -> String
 {
   let mut flags = String::new();
@@ -327,6 +341,11 @@ fn compute_flags(
       } );
     if is_claude { push_flag( &mut flags, '👈' ); }
   }
+
+  // 🆕 New since last check: this PID was absent from the previous `clr ps`
+  // snapshot. `is_new` is precomputed by the caller from `opts.prior_pids` —
+  // see PsTableOptions::prior_pids doc for the None-vs-Some(empty) contract.
+  if is_new { push_flag( &mut flags, '🆕' ); }
 
   // 🖨 Print mode: cmdline contains --print or -p.
   if classify_mode( &proc.args ) == "print" { push_flag( &mut flags, '🖨' ); }
@@ -495,7 +514,8 @@ pub fn render_active_sessions_table(
     {
       let m = read_process_metrics( proc.pid );
       let cpu_delta = deltas.get( &proc.pid ).copied().unwrap_or( 0 );
-      compute_flags( proc, m.as_ref(), &home, opts.ancient_secs, opts.high_ram_mb, my_ppid, cpu_delta )
+      let is_new = opts.prior_pids.as_ref().is_some_and( | known | !known.contains( &proc.pid ) );
+      compute_flags( proc, m.as_ref(), &home, opts.ancient_secs, opts.high_ram_mb, my_ppid, cpu_delta, is_new )
     } ).collect()
   };
   #[ cfg( not( target_os = "linux" ) ) ]
@@ -652,21 +672,34 @@ pub fn shorten_path( path : &str ) -> String
 #[ allow( clippy::missing_inline_in_public_items ) ]
 pub fn elapsed_label( started_at : u64 ) -> String
 {
-  let elapsed = unix_now().saturating_sub( started_at );
-  if elapsed < 60
+  duration_label( unix_now().saturating_sub( started_at ) )
+}
+
+/// Format a raw duration in seconds as a human-readable label (s / m s / h m).
+///
+/// Extracted from [`elapsed_label`] so a *fixed* duration (e.g. a dead session's
+/// lifetime as of when it was last seen, in the "Ended Since Last Check" table)
+/// can reuse the same s/m/h formatting without re-deriving "now" — `elapsed_label`
+/// itself always measures against the live clock, which is wrong for a PID that
+/// no longer exists to re-measure.
+#[ must_use ]
+#[ allow( clippy::missing_inline_in_public_items ) ]
+pub fn duration_label( secs : u64 ) -> String
+{
+  if secs < 60
   {
-    format!( "{elapsed}s" )
+    format!( "{secs}s" )
   }
-  else if elapsed < 3_600
+  else if secs < 3_600
   {
-    let m = elapsed / 60;
-    let s = elapsed % 60;
+    let m = secs / 60;
+    let s = secs % 60;
     format!( "{m}m {s}s" )
   }
   else
   {
-    let h = elapsed / 3_600;
-    let m = ( elapsed % 3_600 ) / 60;
+    let h = secs / 3_600;
+    let m = ( secs % 3_600 ) / 60;
     format!( "{h}h {m}m" )
   }
 }

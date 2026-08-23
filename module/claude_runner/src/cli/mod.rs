@@ -13,6 +13,7 @@ mod gate_liveness;
 mod gate_slot;
 mod column_validate;
 mod ps;
+mod ps_snapshot;
 mod kill;
 mod tools;
 mod scope;
