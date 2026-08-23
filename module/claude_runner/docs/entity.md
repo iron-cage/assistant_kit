@@ -8,7 +8,7 @@
 | `api/` | Public API contract for the runner crate | [api/readme.md](api/readme.md) | 1 |
 | `cli/command/` | CLI command specifications | [cli/command/readme.md](cli/command/readme.md) | 12 |
 | `cli/command_group/` | Command group specifications | [cli/command_group/readme.md](cli/command_group/readme.md) | 1 |
-| `cli/param/` | CLI parameter specifications | [cli/param/readme.md](cli/param/readme.md) | 83 |
+| `cli/param/` | CLI parameter specifications | [cli/param/readme.md](cli/param/readme.md) | 85 |
 | `cli/param_group/` | CLI parameter group definitions | [cli/param_group/readme.md](cli/param_group/readme.md) | 7 |
 | `cli/parity/` | Cross-command behavioral parity comparison docs | [cli/parity/readme.md](cli/parity/readme.md) | 2 |
 | `cli/type/` | CLI type definitions | [cli/type/readme.md](cli/type/readme.md) | 14 |
@@ -21,7 +21,7 @@
 | `tests/docs/cli/command/` | Per-command integration test case specifications | [../tests/docs/cli/command/readme.md](../tests/docs/cli/command/readme.md) | 12 |
 | `tests/docs/cli/command_group/` | Per-command-group structural-equivalence test specifications | [../tests/docs/cli/command_group/readme.md](../tests/docs/cli/command_group/readme.md) | 1 |
 | `tests/docs/cli/env_param/` | Per-env-parameter edge case test specifications | [../tests/docs/cli/env_param/readme.md](../tests/docs/cli/env_param/readme.md) | 3 |
-| `tests/docs/cli/param/` | Per-parameter edge case test specifications | [../tests/docs/cli/param/readme.md](../tests/docs/cli/param/readme.md) | 83 |
+| `tests/docs/cli/param/` | Per-parameter edge case test specifications | [../tests/docs/cli/param/readme.md](../tests/docs/cli/param/readme.md) | 85 |
 | `tests/docs/cli/param_group/` | Per-parameter-group interaction test specifications | [../tests/docs/cli/param_group/readme.md](../tests/docs/cli/param_group/readme.md) | 7 |
 | `tests/docs/cli/parity/` | Per-parity-matrix cross-command test specifications | [../tests/docs/cli/parity/readme.md](../tests/docs/cli/parity/readme.md) | 2 |
 | `tests/docs/cli/type/` | Per-type validation edge case test specifications | [../tests/docs/cli/type/readme.md](../tests/docs/cli/type/readme.md) | 14 |
