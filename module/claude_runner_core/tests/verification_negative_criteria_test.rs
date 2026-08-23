@@ -443,20 +443,41 @@ fn read_directory_content( dir : &str ) -> String
   content
 }
 
-/// Count total function definitions in content
-fn count_function_definitions( content : &str ) -> usize
+/// Whether a source line is a whole-line comment (`//`, `///`, `//!`).
+///
+/// Fix(ps-table-comment-noise): both counters scanned comment text as if it were code.
+/// Root cause: `count_function_definitions` matched the literal `"fn "` anywhere in the
+///   file, so prose mentioning a function (e.g. `// Was a private fn in clr's cli::ps ...`)
+///   counted toward `function_count`, while `count_unique_function_names` parsed the words
+///   following `fn ` as a name — collapsing every copy of the same sentence to one entry.
+///   Four identical comment lines therefore contributed +4 occurrences but only +1 unique
+///   name, manufacturing 3 phantom "duplicates" with no duplicated code behind them.
+/// Pitfall: raising `duplication_threshold` to absorb this would have permanently lowered
+///   the guard's sensitivity to real duplication; the noise belongs in the scanner, not the
+///   threshold. Block comments (`/* … */`) are still scanned — no occurrence exists today,
+///   and line comments are the form this codebase actually uses for such prose.
+fn is_comment_line( line : &str ) -> bool
 {
-  content.matches( "fn " ).count()
+  line.trim_start().starts_with( "//" )
 }
 
-/// Count unique function names in content (simple heuristic)
+/// Count total function definitions in content (comment lines excluded)
+fn count_function_definitions( content : &str ) -> usize
+{
+  content.lines()
+    .filter( | l | !is_comment_line( l ) )
+    .map( | l | l.matches( "fn " ).count() )
+    .sum()
+}
+
+/// Count unique function names in content (simple heuristic; comment lines excluded)
 fn count_unique_function_names( content : &str ) -> usize
 {
   let mut names = std::collections::HashSet::new();
 
   for line in content.lines()
   {
-    if line.contains( "fn " )
+    if !is_comment_line( line ) && line.contains( "fn " )
     {
       // Extract function name (simple regex-free approach)
       if let Some( start ) = line.find( "fn " )
