@@ -205,20 +205,20 @@ version = "^0.3"
 default-features = false
 
 [workspace.dependencies.error_tools]
-version = "^0.41"
+version = "^0.42"
 default-features = false
 
 [workspace.dependencies.unilang]
-version = "^0.58"
+version = "^0.60"
 default-features = false
 
 [workspace.dependencies.cli_fmt]
-# Published companion crate (crates.io: cli_fmt ^0.13). Path removed — use registry version.
-version = "^0.13"
+# Published companion crate (crates.io: cli_fmt ^0.14). Path removed — use registry version.
+version = "^0.14"
 default-features = false
 
 [workspace.dependencies.data_fmt]
-version = "^0.7"
+version = "^0.13"
 default-features = false
 
 [workspace.dependencies.ureq]
@@ -243,7 +243,7 @@ version = "^1"
 version = "^3"
 
 [workspace.dependencies.test_tools]
-version = "^0.18"
+version = "^0.19"
 default-features = false
 
 [workspace.dependencies.assert_cmd]
