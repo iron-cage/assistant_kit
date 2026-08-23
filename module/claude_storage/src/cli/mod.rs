@@ -23,6 +23,7 @@ mod storage;
 mod scope;
 mod color;
 mod format;
+mod liveness;
 mod field_selector;
 mod status;
 mod list;

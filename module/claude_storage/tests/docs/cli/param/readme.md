@@ -4,7 +4,7 @@
 
 - **Purpose**: Document edge case coverage for individual clg parameters.
 - **Responsibility**: Index of per-parameter edge case test files covering parameter-level behavior.
-- **In Scope**: All 43 clg parameter test files.
+- **In Scope**: All 44 clg parameter test files.
 - **Out of Scope**: Command-level tests (→ `command/`), parameter group interactions (→ `param_group/`).
 
 Every parameter documented in [`docs/cli/param/`](../../../../docs/cli/param/readme.md) has a mirror here — the directory is a complete 1:1 mirror, with no numbering gaps.
@@ -56,3 +56,4 @@ Every parameter documented in [`docs/cli/param/`](../../../../docs/cli/param/rea
 | 41_latest.md | Edge case tests for `latest::` parameter | ✅ |
 | 42_full.md | Edge case tests for `full::` parameter | ✅ |
 | 43_compact.md | Edge case tests for `compact::` parameter | ✅ |
+| 44_live.md | Edge case tests for `live::` parameter | ✅ |

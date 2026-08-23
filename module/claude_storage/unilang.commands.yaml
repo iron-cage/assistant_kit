@@ -686,6 +686,15 @@
       aliases: []
       tags: ["output"]
 
+    - name: "live"
+      kind: "Boolean"
+      description: "Filter by attached Claude Code process (1=live only, 0=not live only, unset=all)"
+      hint: "Attached-process filter"
+      optional: true
+      validation_rules: []
+      aliases: []
+      tags: ["filter"]
+
   examples:
     - ".projects"
     - ".projects scope::around"
@@ -701,6 +710,8 @@
     - ".projects scope::global type::uuid detail::projects"
     - ".projects project::abc123 ids::1"
     - ".projects project::abc123 ids::1 count::1"
+    - ".projects scope::global live::1"
+    - ".projects scope::global live::1 detail::sessions"
   auto_help_enabled: true
 
 - name: ".project.path"

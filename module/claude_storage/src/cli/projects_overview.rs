@@ -28,6 +28,7 @@ use std::path::PathBuf;
 use std::time::SystemTime;
 
 use super::projects::format_relative_time;
+use super::liveness::{ Liveness, LivenessMap };
 
 // ─── constants ─────────────────────────────────────────────────────────────
 
@@ -36,6 +37,9 @@ const ZERO_CELL : &str = "·";
 
 /// Marker for a project whose decoded path is absent from disk.
 const GONE_MARKER : &str = "⚠ gone";
+
+/// Header of the attachment-state column.
+const STATUS_HEADER : &str = "STATUS";
 
 /// Gutter marker on the project matching the current working directory.
 const CWD_MARKER : &str = "▸";
@@ -148,8 +152,17 @@ fn count_cell( value : usize, unit : &str ) -> String
   }
 }
 
-/// Totals line: `10 projects · 76 conversations · 103 agents`.
-fn summary_line( rows : &[ OverviewRow ] ) -> String
+/// Totals line: `10 projects · 76 conversations · 103 agents · 3 live (1 working, 2 waiting)`.
+///
+/// The live clause is appended only when at least one attached process was
+/// found; its absence carries no claim that nothing is running (see
+/// `super::liveness`'s "Detection never claims a negative" pitfall).
+///
+/// When every live row shares one state the breakdown collapses to that state's
+/// name — `3 live (waiting)` — rather than spelling out a zero half. Same reason
+/// the `agents` clause disappears at zero: a segment that only ever reads `0` is
+/// width the terse overview spends for nothing.
+fn summary_line( rows : &[ OverviewRow ], states : &[ Option< Liveness > ] ) -> String
 {
   let projects : usize = rows.len();
   let conversations : usize = rows.iter().map( | r | r.conversations ).sum();
@@ -163,7 +176,39 @@ fn summary_line( rows : &[ OverviewRow ] ) -> String
     let a_noun = if agents == 1 { "agent" } else { "agents" };
     write!( line, " · {agents} {a_noun}" ).expect( "writing to String cannot fail" );
   }
+
+  let working = states.iter().filter( | s | **s == Some( Liveness::Working ) ).count();
+  let waiting = states.iter().filter( | s | **s == Some( Liveness::Waiting ) ).count();
+  if working + waiting > 0
+  {
+    let breakdown = match ( working, waiting )
+    {
+      ( 0, _ ) => "waiting".to_string(),
+      ( _, 0 ) => "working".to_string(),
+      _        => format!( "{working} working, {waiting} waiting" ),
+    };
+    write!( line, " · {} live ({breakdown})", working + waiting )
+      .expect( "writing to String cannot fail" );
+  }
   line
+}
+
+/// Per-row attachment state, in row order.
+///
+/// Returns all-`None` when detection found nothing, which collapses every
+/// downstream `any_live` check and suppresses the column entirely.
+fn project_states( rows : &[ OverviewRow ], liveness : &LivenessMap ) -> Vec< Option< Liveness > >
+{
+  rows
+    .iter()
+    .map( | r | liveness.project_state( &r.display_path, r.last_mtime ) )
+    .collect()
+}
+
+/// Cell text for an attachment state — empty for an unattached row.
+fn state_cell( state : Option< Liveness > ) -> &'static str
+{
+  state.map_or( "", Liveness::label )
 }
 
 /// Gutter marker for the row matching the current working directory.
@@ -184,10 +229,12 @@ fn gutter( display : &str, cwd : Option< &std::path::Path > ) -> &'static str
 /// a project path is the command's primary output and must stay directly
 /// copyable and greppable. Prefix factoring is what `show_tree::1` is for —
 /// there the nesting carries the shared prefix without truncating any row.
-pub( super ) fn render_flat( rows : &[ OverviewRow ] ) -> String
+pub( super ) fn render_flat( rows : &[ OverviewRow ], liveness : &LivenessMap ) -> String
 {
+  let states = project_states( rows, liveness );
+
   let mut out = String::new();
-  writeln!( out, "{}", summary_line( rows ) ).expect( "writing to String cannot fail" );
+  writeln!( out, "{}", summary_line( rows, &states ) ).expect( "writing to String cannot fail" );
 
   if rows.is_empty()
   {
@@ -197,6 +244,7 @@ pub( super ) fn render_flat( rows : &[ OverviewRow ] ) -> String
 
   let cwd = std::env::current_dir().ok();
   let any_gone = rows.iter().any( | r | !path_is_present( &r.display_path ) );
+  let any_live = states.iter().any( Option::is_some );
 
   let cells : Vec< ( &'static str, String, String, String, String, String ) > = rows
     .iter()
@@ -218,6 +266,7 @@ pub( super ) fn render_flat( rows : &[ OverviewRow ] ) -> String
   let last_w = core::cmp::max( 4, column_width( cells.iter().map( | c | c.1.as_str() ) ) );
   let conv_w = core::cmp::max( 4, column_width( cells.iter().map( | c | c.2.as_str() ) ) );
   let ag_w   = core::cmp::max( 6, column_width( cells.iter().map( | c | c.3.as_str() ) ) );
+  let live_w = if any_live { core::cmp::max( STATUS_HEADER.chars().count(), Liveness::column_width() ) } else { 0 };
   let gone_w = if any_gone { GONE_MARKER.chars().count() } else { 0 };
 
   // Header — column names occupy the same widths as their cells.
@@ -227,6 +276,11 @@ pub( super ) fn render_flat( rows : &[ OverviewRow ] ) -> String
     pad_left( "CONV", conv_w ),
     pad_left( "AGENTS", ag_w ),
   );
+  if any_live
+  {
+    header.push_str( GAP );
+    header.push_str( &pad_right( STATUS_HEADER, live_w ) );
+  }
   if any_gone
   {
     header.push_str( GAP );
@@ -236,7 +290,7 @@ pub( super ) fn render_flat( rows : &[ OverviewRow ] ) -> String
   header.push_str( "PROJECT" );
   writeln!( out, "{}", header.trim_end() ).expect( "writing to String cannot fail" );
 
-  for ( marker, last, conv, ag, gone, label ) in &cells
+  for ( index, ( marker, last, conv, ag, gone, label ) ) in cells.iter().enumerate()
   {
     let mut line = format!(
       "{marker} {}{GAP}{}{GAP}{}",
@@ -244,6 +298,11 @@ pub( super ) fn render_flat( rows : &[ OverviewRow ] ) -> String
       pad_left( conv, conv_w ),
       pad_left( ag, ag_w ),
     );
+    if any_live
+    {
+      line.push_str( GAP );
+      line.push_str( &pad_right( state_cell( states[ index ] ), live_w ) );
+    }
     if any_gone
     {
       line.push_str( GAP );
@@ -379,10 +438,12 @@ fn flatten_tree( node : &TreeNode, prefix : &str, last : Option< bool >,
 ///
 /// Structural nodes (directories that are ancestors of several projects but
 /// hold no sessions themselves) render as a label with empty columns.
-pub( super ) fn render_tree( rows : &[ OverviewRow ] ) -> String
+pub( super ) fn render_tree( rows : &[ OverviewRow ], liveness : &LivenessMap ) -> String
 {
+  let states = project_states( rows, liveness );
+
   let mut out = String::new();
-  writeln!( out, "{}", summary_line( rows ) ).expect( "writing to String cannot fail" );
+  writeln!( out, "{}", summary_line( rows, &states ) ).expect( "writing to String cannot fail" );
 
   if rows.is_empty()
   {
@@ -398,6 +459,7 @@ pub( super ) fn render_tree( rows : &[ OverviewRow ] ) -> String
 
   let cwd = std::env::current_dir().ok();
   let any_gone = rows.iter().any( | r | !path_is_present( &r.display_path ) );
+  let any_live = states.iter().any( Option::is_some );
 
   let label_w = column_width( lines.iter().map( | ( l, _ ) | l.as_str() ) );
   let conv_cells : Vec< String > = lines
@@ -410,6 +472,7 @@ pub( super ) fn render_tree( rows : &[ OverviewRow ] ) -> String
     .collect();
   let conv_w = column_width( conv_cells.iter().map( String::as_str ) );
   let ag_w   = column_width( ag_cells.iter().map( String::as_str ) );
+  let live_w = if any_live { Liveness::column_width() } else { 0 };
   let gone_w = if any_gone { GONE_MARKER.chars().count() } else { 0 };
 
   for ( index, ( label, row ) ) in lines.iter().enumerate()
@@ -423,6 +486,13 @@ pub( super ) fn render_tree( rows : &[ OverviewRow ] ) -> String
     let time = row.map_or_else( String::new, | i | format_relative_time( rows[ i ].last_mtime ) );
 
     let mut line = format!( "{marker} {}", pad_right( label, label_w ) );
+    if any_live
+    {
+      // Structural nodes hold no row and therefore no state — the cell stays
+      // blank rather than inheriting a child's attachment.
+      line.push_str( GAP );
+      line.push_str( &pad_right( state_cell( row.and_then( | i | states[ i ] ) ), live_w ) );
+    }
     if any_gone
     {
       line.push_str( GAP );
@@ -438,4 +508,62 @@ pub( super ) fn render_tree( rows : &[ OverviewRow ] ) -> String
   }
 
   out
+}
+
+// ─── tests ─────────────────────────────────────────────────────────────────
+
+#[ cfg( test ) ]
+mod overview_tests
+{
+  use super::*;
+
+  /// A row carrying only the fields the totals line reads.
+  fn row( conversations : usize, agents : usize ) -> OverviewRow
+  {
+    OverviewRow
+    {
+      display_path : "~/p".to_string(),
+      conversations,
+      agents,
+      last_mtime   : SystemTime::UNIX_EPOCH,
+    }
+  }
+
+  /// The live clause spells out both halves only when both are non-empty.
+  ///
+  /// A totals line exists to be read at a glance, and `1 live (1 working, 0
+  /// waiting)` spends a third of its width restating the count it just gave and
+  /// naming a state nothing is in — the same waste the `agents` clause already
+  /// avoids by disappearing at zero.
+  #[ test ]
+  fn test_live_clause_collapses_a_zero_half()
+  {
+    let rows = [ row( 1, 0 ), row( 1, 0 ), row( 1, 0 ) ];
+
+    let mixed = [ Some( Liveness::Working ), Some( Liveness::Waiting ), Some( Liveness::Waiting ) ];
+    assert!( summary_line( &rows, &mixed ).ends_with( "· 3 live (1 working, 2 waiting)" ),
+      "both halves present: {}", summary_line( &rows, &mixed ) );
+
+    let working_only = [ Some( Liveness::Working ), Some( Liveness::Working ), None ];
+    assert!( summary_line( &rows, &working_only ).ends_with( "· 2 live (working)" ),
+      "all working: {}", summary_line( &rows, &working_only ) );
+
+    let waiting_only = [ Some( Liveness::Waiting ), None, None ];
+    assert!( summary_line( &rows, &waiting_only ).ends_with( "· 1 live (waiting)" ),
+      "all waiting: {}", summary_line( &rows, &waiting_only ) );
+  }
+
+  /// No attachment found means no clause at all — never `0 live`.
+  ///
+  /// Detection reports only positives, so an empty result is "nothing seen",
+  /// which a rendered zero would misstate as "nothing running".
+  #[ test ]
+  fn test_live_clause_absent_when_nothing_is_attached()
+  {
+    let rows = [ row( 2, 5 ) ];
+    let line = summary_line( &rows, &[ None ] );
+
+    assert!( !line.contains( "live" ), "no live clause without an attachment: {line}" );
+    assert!( line.contains( "5 agents" ), "the rest of the line is unaffected: {line}" );
+  }
 }

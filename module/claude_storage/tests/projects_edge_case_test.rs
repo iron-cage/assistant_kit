@@ -117,7 +117,8 @@ fn ec5_scope_case_insensitive()
   common::assert_exit( &lower, 0 );
   common::assert_exit( &upper, 0 );
   assert_eq!(
-    lower.stdout, upper.stdout,
+    common::normalize_relative_time( &common::stdout( &lower ) ),
+    common::normalize_relative_time( &common::stdout( &upper ) ),
     "scope::relevant and scope::RELEVANT must produce identical stdout"
   );
 }
@@ -188,7 +189,8 @@ fn ec7_omitted_scope_defaults_to_around()
     "default scope must include descendant sessions (around behavior); got:\n{s}"
   );
   assert_eq!(
-    implicit.stdout, explicit.stdout,
+    common::normalize_relative_time( &common::stdout( &implicit ) ),
+    common::normalize_relative_time( &common::stdout( &explicit ) ),
     "omitting scope:: must produce same output as scope::around"
   );
 }
@@ -215,7 +217,8 @@ fn ec8_global_ignores_path()
   common::assert_exit( &without_path, 0 );
   common::assert_exit( &with_path, 0 );
   assert_eq!(
-    without_path.stdout, with_path.stdout,
+    common::normalize_relative_time( &common::stdout( &without_path ) ),
+    common::normalize_relative_time( &common::stdout( &with_path ) ),
     "scope::global must produce identical output regardless of path::"
   );
 }

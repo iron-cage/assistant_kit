@@ -1,9 +1,9 @@
 meta:
   description: Cross-reference graph for all NNN-identified doc instances in claude_storage
-  node_count: 98
-  edge_count: 121
+  node_count: 100
+  edge_count: 126
   component_count: 25
-  generated: 2026-08-22
+  generated: 2026-08-23
   derivation: "Nodes are every NNN-identified instance under feature/, operation/, algorithm/,
     invariant/ and cli/*/ (readme.md and procedure.md excluded). An edge a->b exists when a's
     text references b's file by a resolvable relative path AND at least one endpoint is a
@@ -22,10 +22,14 @@ nodes:
     file: operation/001_migration_guide.md
     label: Migration Guide
     entity: operation
-  # algorithm/ entity (1)
+  # algorithm/ entity (2)
   - id: algorithm/001
     file: algorithm/001_agent_session_tracking.md
     label: Agent Session Tracking
+    entity: algorithm
+  - id: algorithm/002
+    file: algorithm/002_session_liveness.md
+    label: Session Liveness
     entity: algorithm
   # invariant/ entity (3)
   - id: invariant/001
@@ -143,7 +147,7 @@ nodes:
     file: cli/format/03_text.md
     label: Text
     entity: format
-  # cli/param/ entity (43)
+  # cli/param/ entity (44)
   - id: param/01
     file: cli/param/01_agent.md
     label: Agent
@@ -316,6 +320,10 @@ nodes:
     file: cli/param/43_compact.md
     label: Compact
     entity: param
+  - id: param/44
+    file: cli/param/44_live.md
+    label: Live
+    entity: param
   # cli/param_group/ entity (5)
   - id: param_group/01
     file: cli/param_group/01_output_control.md
@@ -433,6 +441,15 @@ edges:
     via: cross_references
   - from: algorithm/001
     to: command/07
+    via: cross_references
+  - from: algorithm/002
+    to: invariant/001
+    via: cross_references
+  - from: algorithm/002
+    to: command/07
+    via: cross_references
+  - from: algorithm/002
+    to: param/44
     via: cross_references
   # from invariant/
   - from: invariant/001
@@ -749,6 +766,9 @@ edges:
   - from: command/07
     to: algorithm/001
     via: cross_references
+  - from: command/07
+    to: algorithm/002
+    via: cross_references
   - from: command/13
     to: invariant/001
     via: cross_references
@@ -758,6 +778,9 @@ edges:
   # from cli/param/
   - from: param/40
     to: invariant/002
+    via: cross_references
+  - from: param/44
+    to: algorithm/002
     via: cross_references
   # from cli/pitfall/
   - from: pitfall/03
@@ -791,12 +814,13 @@ edges:
 components:
   - id: 1
     label: Feature + Operation + Algorithm + Invariant + User Story + Command + Format + Param + Param Group + Type + Pitfall
-    size: 74
+    size: 76
     isolated: false
     nodes:
       - feature/001
       - operation/001
       - algorithm/001
+      - algorithm/002
       - invariant/001
       - invariant/002
       - invariant/003
@@ -858,6 +882,7 @@ components:
       - param/41
       - param/42
       - param/43
+      - param/44
       - param_group/01
       - param_group/02
       - param_group/03

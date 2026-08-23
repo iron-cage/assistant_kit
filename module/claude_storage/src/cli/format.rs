@@ -362,7 +362,7 @@ pub( super ) fn format_timestamp( timestamp : &str ) -> String
 /// Falls back to the whole timestamp when it does not parse, so a malformed
 /// value stays visible rather than silently rendering blank.
 ///
-/// Fix(BUG — time-not-local): previously sliced `HH:MM` straight out of the
+/// Fix(issue-time-not-local): previously sliced `HH:MM` straight out of the
 /// raw UTC string, so the displayed clock was silently mislabeled as local
 /// time while actually being UTC — correct only for readers in UTC+0.
 /// Root cause: no timezone conversion was ever applied; the value looked

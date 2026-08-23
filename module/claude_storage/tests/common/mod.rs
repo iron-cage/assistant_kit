@@ -417,6 +417,56 @@ pub fn write_path_project_session_with_last_message(
   encoded
 }
 
+/// Pin the clock-dependent parts of a listing so two spawns can be compared.
+///
+/// A test that runs the binary twice and compares stdout is asserting that two
+/// invocations are equivalent — never that the wall clock stood still between
+/// them. `format_relative_time` (`src/cli/projects.rs`) recomputes elapsed time
+/// from `SystemTime::now()` on every call, so two spawns straddling a second
+/// boundary legitimately render `0s ago` and `1s ago` for the same session.
+/// Under a loaded parallel run that is routine rather than rare, which makes a
+/// raw byte comparison a latent flake instead of a stronger assertion.
+///
+/// Two things are normalized, because the second is derived from the first:
+/// every `<digits><unit> ago` token collapses to a fixed placeholder, and runs
+/// of whitespace collapse to one space — the column holding the age is sized
+/// from the widest age rendered, so `9s ago` → `10s ago` shifts the padding of
+/// every row on the line. Column layout is asserted on a single spawn by
+/// `projects_overview_test.rs`, where it can be, so nothing is lost here.
+#[ allow( dead_code ) ]
+pub fn normalize_relative_time( s : &str ) -> String
+{
+  let mut out = String::with_capacity( s.len() );
+  let mut rest = s;
+  while let Some( digit_pos ) = rest.find( | c : char | c.is_ascii_digit() )
+  {
+    out.push_str( &rest[ ..digit_pos ] );
+    let tail = &rest[ digit_pos.. ];
+    let digits_len = tail.find( | c : char | !c.is_ascii_digit() ).unwrap_or( tail.len() );
+    let after_digits = &tail[ digits_len.. ];
+    let unit_len = after_digits.find( | c : char | !c.is_ascii_alphabetic() ).unwrap_or( after_digits.len() );
+    let unit = &after_digits[ ..unit_len ];
+    let after_unit = &after_digits[ unit_len.. ];
+    if matches!( unit, "s" | "m" | "h" | "d" | "mo" ) && after_unit.starts_with( " ago" )
+    {
+      out.push_str( "<AGE> ago" );
+      rest = &after_unit[ " ago".len().. ];
+    }
+    else
+    {
+      out.push_str( &tail[ ..digits_len + unit_len ] );
+      rest = after_unit;
+    }
+  }
+  out.push_str( rest );
+
+  out
+    .lines()
+    .map( | line | line.split_whitespace().collect::< Vec< _ > >().join( " " ) )
+    .collect::< Vec< _ > >()
+    .join( "\n" )
+}
+
 /// Decode a finished process's stdout as UTF-8, replacing invalid sequences.
 #[ allow( dead_code ) ]
 pub fn stdout( out : &std::process::Output ) -> String

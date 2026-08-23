@@ -8,6 +8,7 @@ use unilang::{ VerifiedCommand, ExecutionContext, OutputData, ErrorData, ErrorCo
 use super::storage::{ create_storage, load_project_for_param };
 use super::scope::{ validate_scope, resolve_scoped_projects, decode_project_display };
 use super::projects_overview::{ OverviewRow, render_flat, render_tree };
+use super::liveness::{ Liveness, LivenessMap };
 
 // ─── constants ─────────────────────────────────────────────────────────────
 
@@ -465,9 +466,51 @@ pub fn projects_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
     let project = load_project_for_param( &storage, proj_id )?;
     let sessions = project.all_sessions()
       .map_err( | e | ErrorData::new( ErrorCode::InternalError, format!( "Failed to load sessions: {e}" ) ) )?;
+
+    // `live::` narrows this branch to the same yes/no it applies to a listing —
+    // "these ids, but only if the project is running" — instead of being
+    // silently dropped because this branch answers before the listing path
+    // reaches its filter. Probed only when asked: `ids::` is the hot scripting
+    // path and an unconditional process-table walk would tax every caller.
+    let ids_suppressed = match cmd.get_boolean( "live" )
+    {
+      None => false,
+      Some( want_live ) =>
+      {
+        let liveness = LivenessMap::detect();
+        // Detection reports only positives, so an empty `live::1` result cannot
+        // be distinguished from an unreadable process table. A listing says so
+        // in prose; a scripting mode must fail loudly instead, or the caller
+        // consumes "nothing is running" as fact.
+        if want_live && !liveness.any_attached()
+        {
+          return Err( ErrorData::new(
+            ErrorCode::InternalError,
+            "live::1 requires a readable /proc on the same host as the sessions; \
+             no attached Claude Code processes are visible".to_string(),
+          ) );
+        }
+        let display_path = project
+          .storage_dir()
+          .file_name()
+          .and_then( | n | n.to_str() )
+          .map( decode_project_display )
+          .unwrap_or_default();
+        let live_now = sessions
+          .iter()
+          .filter( | s | !is_zero_byte_session( s ) )
+          .filter_map( session_mtime )
+          .max()
+          .and_then( | last | liveness.project_state( &display_path, last ) )
+          .is_some();
+        live_now != want_live
+      }
+    };
+
     let families = build_families( sessions );
     let conversations = group_into_conversations( families );
     let count_mode = cmd.get_boolean( "count" ).unwrap_or( false );
+    let conversations = if ids_suppressed { Vec::new() } else { conversations };
     if count_mode
     {
       return Ok( OutputData::new( format!( "{}", conversations.len() ), "text" ) );
@@ -537,6 +580,11 @@ pub fn projects_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   else { None };
 
   let show_topic = cmd.get_boolean( "show_topic" ).unwrap_or( false );
+
+  // Probed once per invocation: every row consults the same process-table and
+  // history snapshot, so no row can disagree with another about what is running.
+  let liveness = LivenessMap::detect();
+  let live_filter = cmd.get_boolean( "live" );
 
   let agent_filter = cmd.get_boolean( "agent" );
   let session_id_filter = cmd.get_string( "session" );
@@ -623,7 +671,33 @@ pub fn projects_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   // Aggregate into time-sorted project summaries (P5: never iterate groups directly).
   // aggregate_projects borrows groups mutably then releases; groups used below for
   // session lookup by display_path key.
-  let summaries = aggregate_projects( &mut groups );
+  let mut summaries = aggregate_projects( &mut groups );
+
+  // `live::` narrows to projects with (or without) an attached Claude Code
+  // process. Deliberately project-scoped rather than session-scoped: filtering
+  // sessions here would desynchronize every per-project count computed below
+  // from what actually renders (the issue-034 class of defect). Which
+  // conversation is being driven is answered by marking it, not by hiding
+  // its siblings.
+  if let Some( want_live ) = live_filter
+  {
+    summaries.retain( | s | liveness.project_state( &s.display_path, s.last_mtime ).is_some() == want_live );
+  }
+
+  // Detection reports only positives (`super::liveness`, "Detection never claims
+  // a negative"), so an empty `live::1` result is ambiguous between "nothing is
+  // running" and "this host cannot see the processes" — say so instead of
+  // presenting an empty list as an answer.
+  if live_filter == Some( true ) && !liveness.any_attached()
+  {
+    return Ok( OutputData::new(
+      "No attached Claude Code processes found.\n\
+       Liveness is read from the process table and requires a readable /proc on the same host \
+       as the sessions — inside a container, or on a platform without /proc, nothing is visible \
+       even while sessions are running.\n".to_string(),
+      "text",
+    ) );
+  }
 
   let total_projects = summaries.len();
   let mut output = String::new();
@@ -705,11 +779,11 @@ pub fn projects_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
       {
         if show_tree
         {
-          render_families_v2( &mut output, &families );
+          render_families_v2( &mut output, &families, display_path, &liveness );
         }
         else
         {
-          render_families_v1( &mut output, &families, limit_cap, show_topic );
+          render_families_v1( &mut output, &families, limit_cap, show_topic, display_path, &liveness );
         }
       }
     }
@@ -755,7 +829,8 @@ pub fn projects_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
         for ( i, &session ) in displayable[ ..show_count ].iter().enumerate()
         {
           let marker = if i == 0 { '*' } else { '-' };
-          let line = format_session_line( session, marker, show_topic );
+          let state = session_liveness( session, i, display_path, &liveness );
+          let line = format_session_line( session, marker, show_topic, state );
           writeln!( output, "{line}" ).unwrap();
         }
         if displayable.len() > limit_cap
@@ -781,8 +856,8 @@ pub fn projects_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
 
   if terse
   {
-    output = if show_tree { render_tree( &overview_rows ) }
-             else { render_flat( &overview_rows ) };
+    output = if show_tree { render_tree( &overview_rows, &liveness ) }
+             else { render_flat( &overview_rows, &liveness ) };
   }
 
   Ok( OutputData::new( output, "text" ) )
@@ -857,11 +932,30 @@ fn format_agent_bracket( agents : &[ AgentInfo ] ) -> String
   format!( "  [{n} {noun}: {breakdown}]" )
 }
 
-/// Format a single session line: `{marker} {id}  {age}  ({n} entries)[  topic]`.
+/// Attachment state of one session, or `None` when nothing is driving it.
+///
+/// Agent sidecars are never marked: liveness is tracked per conversation, and
+/// `history.jsonl` only ever names root session ids — so an agent could only be
+/// marked through the mtime-rank fallback, where it would be a coincidence of
+/// ordering rather than evidence.
+fn session_liveness(
+  session      : &claude_storage_core::Session,
+  rank         : usize,
+  display_path : &str,
+  liveness     : &LivenessMap,
+) -> Option< Liveness >
+{
+  if session.is_agent_session() { return None; }
+  let mtime = session_mtime( session )?;
+  liveness.session_state( display_path, session.id(), rank, mtime )
+}
+
+/// Format a single session line: `{marker} {id}  {age}  ({n} entries)[  state][  topic]`.
 fn format_session_line(
   session    : &claude_storage_core::Session,
   marker     : char,
   with_topic : bool,
+  state      : Option< Liveness >,
 ) -> String
 {
   let id_str = short_id( session.id() );
@@ -883,15 +977,20 @@ fn format_session_line(
       .unwrap_or_default()
   }
   else { String::new() };
-  format!( "  {marker} {id_str}{time_str}{count_str}{topic_str}" )
+  // Ahead of the topic, which is free text long enough to push a trailing tag
+  // off the edge of a terminal.
+  let state_str = state.map( | s | format!( "  {}", s.label() ) ).unwrap_or_default();
+  format!( "  {marker} {id_str}{time_str}{count_str}{state_str}{topic_str}" )
 }
 
 /// Render family-grouped display at v1: root lines with `[N agents: breakdown]`.
 fn render_families_v1(
-  output     : &mut String,
-  families   : &[ SessionFamily ],
-  limit_cap  : usize,
-  with_topic : bool,
+  output       : &mut String,
+  families     : &[ SessionFamily ],
+  limit_cap    : usize,
+  with_topic   : bool,
+  display_path : &str,
+  liveness     : &LivenessMap,
 )
 {
   let displayable : Vec< &SessionFamily > = families.iter()
@@ -904,7 +1003,10 @@ fn render_families_v1(
     if let Some( root ) = &family.root
     {
       let marker = if i == 0 { '*' } else { '-' };
-      let line = format_session_line( root, marker, with_topic );
+      // `i` is the root's rank in this project's mtime-descending order, which
+      // is the ordering `LivenessMap`'s headless fallback is defined against.
+      let state = session_liveness( root, i, display_path, liveness );
+      let line = format_session_line( root, marker, with_topic, state );
       let bracket = format_agent_bracket( &family.agents );
       writeln!( output, "{line}{bracket}" ).unwrap();
     }
@@ -926,11 +1028,13 @@ fn render_families_v1(
 
 /// Render family-grouped display at v2+: tree-indented agents under each root.
 fn render_families_v2(
-  output   : &mut String,
-  families : &[ SessionFamily ],
+  output       : &mut String,
+  families     : &[ SessionFamily ],
+  display_path : &str,
+  liveness     : &LivenessMap,
 )
 {
-  for family in families
+  for ( i, family ) in families.iter().enumerate()
   {
     if let Some( root ) = &family.root
     {
@@ -942,7 +1046,12 @@ fn render_families_v2(
           format!( "  ({n} {noun})" )
         } )
         .unwrap_or_default();
-      writeln!( output, "  - {id}{count_str}" ).unwrap();
+      // Same tag the flat family view carries: the layout chosen to inspect a
+      // conversation must not decide whether "is this one running" is answered.
+      let state_str = session_liveness( root, i, display_path, liveness )
+        .map( | s | format!( "  {}", s.label() ) )
+        .unwrap_or_default();
+      writeln!( output, "  - {id}{count_str}{state_str}" ).unwrap();
     }
     else
     {

@@ -121,6 +121,7 @@ tests/
 | `cli_param_entry_type_test.rs` | Edge case tests for `entry_type::` parameter |
 | `cli_param_format_test.rs` | Edge case tests for `format::` parameter |
 | `cli_param_limit_test.rs` | Edge case tests for `limit::` parameter |
+| `cli_param_live_test.rs` | Edge case tests for `live::` parameter and the liveness-derived rendering |
 | `cli_param_metadata_test.rs` | Edge case tests for `metadata::` parameter |
 | `cli_param_min_entries_test.rs` | Edge case tests for `min_entries::` parameter |
 | `cli_param_output_test.rs` | Edge case tests for `output::` parameter |

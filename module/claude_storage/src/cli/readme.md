@@ -13,6 +13,7 @@ navigable.
 | `scope.rs` | Shared `scope::`/`path::` validation and project resolution |
 | `color.rs` | Hand-rolled ANSI color helpers for `.show`/`.tail` output |
 | `format.rs` | Content-block rendering, relative/absolute time formatting, width-aware eliding |
+| `liveness.rs` | Attached-process detection — which sessions have a Claude Code process running |
 | `field_selector.rs` | `FieldSelector` type — `.show`'s `fields::` attribute-projection parsing/validation |
 | `status.rs` | `.status` command — project stats for a path |
 | `list.rs` | `.list` command — session/conversation listing with filters |

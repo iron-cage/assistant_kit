@@ -1276,6 +1276,12 @@ became `.projects`' primary answer. Implemented in `tests/projects_overview_test
 against `src/cli/projects_overview.rs`. OV-9 is the only case here that exercises
 `detail::sessions`, as a guard that the terse renderer did not leak into that path.
 
+The conditional `STATUS` column and the `detail::sessions` state tag are the one
+part of this rendering not covered here: they depend on the real process table,
+so their cases live with the parameter that shares that dependency — see
+[`param/44_live.md`](../param/44_live.md) (EC-6, EC-7) for the absent-affordance
+contract, and `src/cli/liveness.rs`'s unit tests for the positive side.
+
 ---
 
 ### OV-1: Bare .projects renders the terse overview, not session listings
