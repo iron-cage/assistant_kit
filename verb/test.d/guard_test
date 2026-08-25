@@ -33,12 +33,27 @@ bad()
   fail=$(( fail + 1 ))
 }
 
-# How many tokens of "$2" carry the key "$1".
+# Every alias that binds to the same `will .test` parameter as key "$1", per
+# will_test_commands.yaml. unilang folds an alias into the same argument vector as its
+# canonical name, so `level::3 l::1` collides exactly as `level::3 level::1` does — a
+# guard checking only the canonical name still emits a duplicate for a caller who used
+# the short form, and a test blind to aliases reports that as a pass.
+aliases_of()
+{
+  case "$1" in
+    ( level ) echo "level l" ;;
+    ( * )     echo "$1" ;;
+  esac
+}
+
+# How many tokens of "$2" carry key "$1" or any of its aliases.
 key_count()
 {
-  local key="$1" line="$2" token count=0
+  local key="$1" line="$2" token alias count=0
   for token in $line; do
-    [[ "$token" == "$key::"* ]] && count=$(( count + 1 ))
+    for alias in $( aliases_of "$key" ); do
+      [[ "$token" == "$alias::"* ]] && { count=$(( count + 1 )); break; }
+    done
   done
   echo "$count"
 }
@@ -81,17 +96,20 @@ for wrapper in "${wrappers[@]}"; do
     fi
   done
 
-  # Override: a caller value replaces the wrapper's default rather than joining it.
+  # Override, canonical name and every alias: a caller value replaces the wrapper's default
+  # rather than joining it.
   for kv in "${defaults[@]}"; do
     key="${kv%%::*}"
-    resolved="$( "$wrapper" --dry-run "$key::7" )"
-    if [[ "$( key_count "$key" "$resolved" )" != 1 ]]; then
-      bad "$wrapper: '$key::7' must leave exactly one '$key::' token — got: $resolved"
-    elif [[ "$resolved" != *"$key::7"* ]]; then
-      bad "$wrapper: '$key::7' must survive as the caller gave it — got: $resolved"
-    else
-      ok
-    fi
+    for alias in $( aliases_of "$key" ); do
+      resolved="$( "$wrapper" --dry-run "$alias::7" )"
+      if [[ "$( key_count "$key" "$resolved" )" != 1 ]]; then
+        bad "$wrapper: '$alias::7' must leave exactly one '$key::' token — got: $resolved"
+      elif [[ "$resolved" != *"$alias::7"* ]]; then
+        bad "$wrapper: '$alias::7' must survive as the caller gave it — got: $resolved"
+      else
+        ok
+      fi
+    done
   done
 
   # Every default overridden at once — the case where an off-by-one guard shows up.
