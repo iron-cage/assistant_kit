@@ -5,9 +5,13 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd "$SCRIPT_DIR/.."
 if [[ "${1:-}" == "--dry-run" ]]; then
   shift
-  echo "./verb/test${*:+ $*} && cargo +nightly udeps --workspace --all-targets --all-features && cargo +nightly audit"
+  echo "./verb/test.d/guard_test && ./verb/test${*:+ $*} && cargo +nightly udeps --workspace --all-targets --all-features && cargo +nightly audit"
   exit 0
 fi
+# Host-side and seconds-long, so it runs first: a broken wrapper-default guard otherwise
+# surfaces only after the full container suite, and a guard that silently stops guarding
+# (Fix(BUG-1588)) produces no failure at all — just a caller's argument going missing.
+"$SCRIPT_DIR/test.d/guard_test"
 "$SCRIPT_DIR/test" "$@"
 cargo +nightly udeps --workspace --all-targets --all-features
 if [ -f Cargo.lock ]; then

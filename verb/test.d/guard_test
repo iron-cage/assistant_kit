@@ -1,0 +1,126 @@
+#!/usr/bin/env bash
+# guard_test — self-check for the wrapper-default guard in every `test.d/l1`.
+#
+# Each l1 emits a set of hardcoded `will .test` defaults, but only for keys the caller
+# has not already supplied. Fix(BUG-1588): emitting one unconditionally produces a
+# duplicated parameter — older `will` builds silently resolve a duplicate to that
+# parameter's own default, current builds reject it by name, and either way the
+# caller's value is lost. This asserts the invariant directly rather than restating the
+# implementation: a resolved command line never carries the same key twice, and a
+# caller-supplied value always survives.
+#
+# The guard list is read out of each wrapper instead of being hardcoded here, so a
+# newly-added default is covered automatically — and a default added to the `exec` line
+# instead of the guard list is caught rather than silently untested.
+#
+# Host-side and container-free: every check is a `--dry-run`, which resolves argv and
+# exits before any container work. Run directly, or via `./verb/verify`.
+set -euo pipefail
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+cd "$SCRIPT_DIR/../.."
+
+pass=0
+fail=0
+
+ok()
+{
+  pass=$(( pass + 1 ))
+}
+
+bad()
+{
+  echo "  FAIL: $*" >&2
+  fail=$(( fail + 1 ))
+}
+
+# How many tokens of "$2" carry the key "$1".
+key_count()
+{
+  local key="$1" line="$2" token count=0
+  for token in $line; do
+    [[ "$token" == "$key::"* ]] && count=$(( count + 1 ))
+  done
+  echo "$count"
+}
+
+mapfile -t wrappers < <( find . -path ./target -prune -o -path '*/verb/test.d/l1' -print | sort )
+
+if (( ${#wrappers[@]} == 0 )); then
+  echo "ERROR: no verb/test.d/l1 wrappers found — run from the workspace root." >&2
+  exit 1
+fi
+
+for wrapper in "${wrappers[@]}"; do
+  # The guard list drives the whole check: `for kv in level::3 show_build::1; do`.
+  guard_line="$( sed -n 's/^for kv in \(.*\); do$/\1/p' "$wrapper" )"
+  if [[ -z "$guard_line" ]]; then
+    bad "$wrapper: no guard list found (expected a 'for kv in …; do' line)"
+    continue
+  fi
+  read -r -a defaults <<< "$guard_line"
+
+  # A default belongs in the guard list, never appended to the exec line — that is the
+  # exact regression this guards against, and it is invisible from behaviour alone when
+  # the caller happens not to supply that key.
+  exec_line="$( grep -n '^exec will .test' "$wrapper" | head -1 )"
+  if [[ "$exec_line" != *'"${WILL_ARGS[@]}"'* ]]; then
+    bad "$wrapper: exec line does not pass \"\${WILL_ARGS[@]}\" — got: ${exec_line:-<none>}"
+  elif [[ "$exec_line" == *"::"* ]]; then
+    bad "$wrapper: exec line carries a hardcoded default — it belongs in the guard list: $exec_line"
+  else
+    ok
+  fi
+
+  # Baseline: with no caller args every default is emitted, exactly once each.
+  baseline="$( "$wrapper" --dry-run )"
+  for kv in "${defaults[@]}"; do
+    if [[ "$baseline" == *"$kv"* ]] && [[ "$( key_count "${kv%%::*}" "$baseline" )" == 1 ]]; then
+      ok
+    else
+      bad "$wrapper: bare invocation must emit '$kv' exactly once — got: $baseline"
+    fi
+  done
+
+  # Override: a caller value replaces the wrapper's default rather than joining it.
+  for kv in "${defaults[@]}"; do
+    key="${kv%%::*}"
+    resolved="$( "$wrapper" --dry-run "$key::7" )"
+    if [[ "$( key_count "$key" "$resolved" )" != 1 ]]; then
+      bad "$wrapper: '$key::7' must leave exactly one '$key::' token — got: $resolved"
+    elif [[ "$resolved" != *"$key::7"* ]]; then
+      bad "$wrapper: '$key::7' must survive as the caller gave it — got: $resolved"
+    else
+      ok
+    fi
+  done
+
+  # Every default overridden at once — the case where an off-by-one guard shows up.
+  all_overrides=()
+  for kv in "${defaults[@]}"; do all_overrides+=( "${kv%%::*}::7" ); done
+  resolved="$( "$wrapper" --dry-run "${all_overrides[@]}" )"
+  duplicated=""
+  for kv in "${defaults[@]}"; do
+    key="${kv%%::*}"
+    [[ "$( key_count "$key" "$resolved" )" == 1 ]] || duplicated+=" $key"
+  done
+  if [[ -n "$duplicated" ]]; then
+    bad "$wrapper: keys duplicated when all defaults are overridden —$duplicated: $resolved"
+  else
+    ok
+  fi
+
+  # An unrelated caller argument must pass through without disturbing the defaults.
+  resolved="$( "$wrapper" --dry-run scope::subtree )"
+  if [[ "$resolved" == *"scope::subtree"* ]] && [[ "$( key_count scope "$resolved" )" == 1 ]]; then
+    ok
+  else
+    bad "$wrapper: unrelated arg 'scope::subtree' must pass through once — got: $resolved"
+  fi
+done
+
+echo "wrappers: ${#wrappers[@]}   assertions passed: $pass   failed: $fail"
+if (( fail > 0 )); then
+  echo "guard_test: FAILED" >&2
+  exit 1
+fi
+echo "guard_test: OK"
