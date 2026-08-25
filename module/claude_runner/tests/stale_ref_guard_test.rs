@@ -94,7 +94,17 @@ fn md_files_in_dir( dir : &Path, skip_names : &[ &str ] ) -> Vec< PathBuf >
     {
       continue;
     }
-    if path.is_dir()
+    // `entry.file_type()` reports on the entry itself; `path.is_dir()` would follow a symlink.
+    // A symlink pointing at any ancestor makes this recursion unbounded, and the walk now
+    // spans the whole workspace rather than a single crate's `docs/`, so the opportunity for
+    // one is real. Skipping symlinks outright costs nothing: a symlinked `.md` whose target
+    // lives in the tree is already scanned at that target's own path.
+    let Ok( file_type ) = entry.file_type() else { continue };
+    if file_type.is_symlink()
+    {
+      continue;
+    }
+    if file_type.is_dir()
     {
       if name == "target" || name == ".git"
       {
@@ -478,11 +488,12 @@ fn manual_doc_has_no_cd_then_cargo_run_pattern()
 /// prohibition the convention does not actually state.
 ///
 /// # Pitfall
-/// The predicate is intentionally shape-based, not exhaustive. A pointer worded differently
-/// (`refer to \`-notes.md\``, or a bare `-plan.md` on its own line) slips through. That is the
-/// accepted trade: a broader pattern collides with legitimate CLI-flag prose — `` see
-/// `--quiet` `` and four siblings under `docs/claude_params/` are why the `--`-rejection and
-/// the required `.` both exist. Widen the predicate only alongside a re-check of those.
+/// The predicate is intentionally shape-based, not exhaustive. A pointer worded differently —
+/// "refer to" in place of "see", or a bare `-plan.md` sitting on its own line — slips through.
+/// That is the accepted trade: a broader pattern collides with legitimate CLI-flag prose. Five
+/// lines under `docs/claude_params/` mention flags in precisely the shape this predicate scans
+/// for, which is why both the `--` rejection and the required `.` exist. Widen the predicate
+/// only alongside a re-check of those five.
 #[ test ]
 fn no_temp_file_pointers_in_committed_docs()
 {
@@ -533,9 +544,10 @@ fn no_temp_file_pointers_in_committed_docs()
 ///
 /// # Pitfall
 /// The negative cases are not hypothetical. `--quiet`, `--agents`, `--tools`,
-/// `--replay-user-messages`, and `--setting-sources` all appear in committed docs in exactly
-/// the `` see `--flag` `` shape, and a predicate keying on `` see `- `` alone flags every one
-/// of them. Any widening of the predicate must keep these five negatives passing.
+/// `--replay-user-messages`, and `--setting-sources` all appear in committed docs introduced
+/// by the word "see" and wrapped in inline code — the same shape a temp-file pointer takes.
+/// A predicate keying on that shape alone flags every one of them. Any widening of the
+/// predicate must keep these five negatives passing.
 #[ test ]
 fn temp_file_pointer_predicate_discriminates()
 {
