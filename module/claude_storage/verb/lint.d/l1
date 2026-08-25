@@ -14,7 +14,8 @@ export RUNBOX_CONTAINER=1
 # CARGO_TARGET_DIR is exported by the engine (persistent working volume) — it
 # overrides the host .cargo/config.toml target-dir redirect inside the container.
 #
-# `--all-targets` rather than the default: without it clippy skips tests/,
-# benches/, and examples/, so a lint error in an integration test passes here
-# and fails the level-3 gate instead.
+# `--all-targets` rather than the default: without it clippy skips tests/, benches/,
+# and examples/, so a lint error in an integration test would pass here and fail the
+# level-3 gate instead. This is the same flag set will's level-3 clippy phase uses, so
+# `./verb/lint` and the gate can never disagree about what counts as clean.
 exec cargo clippy -p claude_storage --all-targets --all-features "$@" -- -D warnings

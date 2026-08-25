@@ -6,7 +6,7 @@ printf '%-13s %-11s %s\n' test        available   "runbox .live (container, full
 printf '%-13s %-11s %s\n' test1       available   "runbox .live -- ./verb/test1.d/l1 <filter> (container, targeted)"
 printf '%-13s %-11s %s\n' clean       available   "cargo clean"
 printf '%-13s %-11s %s\n' run         unavailable "(multiple binaries — use module/*/verb/run)"
-printf '%-13s %-11s %s\n' lint        available   "cargo clippy --workspace --all-features -- -D warnings"
+printf '%-13s %-11s %s\n' lint        available   "runbox .live (container, workspace clippy)"
 printf '%-13s %-11s %s\n' verify      available   "./verb/test + udeps + audit"
 printf '%-13s %-11s %s\n' verbs       built-in    "-"
 printf '%-13s %-11s %s\n' package_info built-in   "-"

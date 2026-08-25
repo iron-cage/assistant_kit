@@ -1,7 +1,20 @@
 #!/usr/bin/env bash
-# lint — run linter; dispatches by VERB_LAYER to lint.d/ layer.
+# lint — run clippy for this module inside the runbox container.
+# The engine is the globally-installed `runbox` (shipped by family_dev); it
+# discovers the workspace's owning config (runbox/runbox.yml) by walking up
+# from this module directory, and runs this module's l1 as the payload.
+#
+# Clippy is a compilation, not a read: running it on the host writes to the
+# host Cargo cache and links against host native libraries, which is exactly
+# what `rulebook.md § Test Execution : Container-Only Testing` forbids.
+# Usage: ./verb/lint [clippy-arg...]  (forwarded to cargo clippy ahead of the
+#   `-- -D warnings` separator.)
 set -euo pipefail
-DIR="$(dirname "${BASH_SOURCE[0]}")/lint.d"
-LAYER="${VERB_LAYER:-}"
-[[ -n "$LAYER" && -f "$DIR/$LAYER" ]] && exec "$DIR/$LAYER" "$@"
-exec "$DIR/l1" "$@"
+MODULE_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
+if [[ -n "${VERB_LAYER:-}" ]]; then
+  echo "ERROR: VERB_LAYER is not valid on the host side." >&2
+  echo "Standard invocation: cd module/assistant && ./verb/lint" >&2
+  exit 1
+fi
+if [[ "${1:-}" == "--dry-run" ]]; then shift; echo "runbox .live -- ./module/assistant/verb/lint.d/l1${*:+ $*}"; exit 0; fi
+cd "$MODULE_DIR" && exec runbox .live -- "./module/assistant/verb/lint.d/l1" "$@"

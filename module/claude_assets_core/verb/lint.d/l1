@@ -1,7 +1,21 @@
 #!/usr/bin/env bash
-# l1 — run cargo clippy directly (cargo ecosystem).
+# l1 — clippy for this module (VERB_LAYER=l1), in-container.
+# Invoked as the runbox .live payload by ./verb/lint. cwd-scoping (this module
+# directory) plus `-p claude_assets_core` limits the check to this crate.
 set -euo pipefail
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd "$SCRIPT_DIR/../.."
-if [[ "${1:-}" == "--dry-run" ]]; then shift; echo "cargo clippy -p claude_assets_core --all-features${*:+ $*} -- -D warnings"; exit 0; fi
-exec cargo clippy -p claude_assets_core --all-features "$@" -- -D warnings
+if [[ "${1:-}" == "--dry-run" ]]; then shift; echo "cargo clippy -p claude_assets_core --all-targets --all-features${*:+ $*} -- -D warnings"; exit 0; fi
+# Registry is pre-fetched at bake time and mounted read-only — never hit the network.
+export CARGO_NET_OFFLINE=true
+export NO_COLOR=1
+# Container signal for the container-only test invariant (nextest setup script + Rust guards).
+export RUNBOX_CONTAINER=1
+# CARGO_TARGET_DIR is exported by the engine (persistent working volume) — it
+# overrides the host .cargo/config.toml target-dir redirect inside the container.
+#
+# `--all-targets` rather than the default: without it clippy skips tests/, benches/,
+# and examples/, so a lint error in an integration test would pass here and fail the
+# level-3 gate instead. This is the same flag set will's level-3 clippy phase uses, so
+# `./verb/lint` and the gate can never disagree about what counts as clean.
+exec cargo clippy -p claude_assets_core --all-targets --all-features "$@" -- -D warnings

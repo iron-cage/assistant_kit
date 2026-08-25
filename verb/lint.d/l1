@@ -5,7 +5,7 @@
 set -euo pipefail
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd "$SCRIPT_DIR/../.."
-if [[ "${1:-}" == "--dry-run" ]]; then echo "cargo clippy --workspace --all-targets --all-features -- -D warnings"; exit 0; fi
+if [[ "${1:-}" == "--dry-run" ]]; then shift; echo "cargo clippy --workspace --all-targets --all-features${*:+ $*} -- -D warnings"; exit 0; fi
 # Registry is pre-fetched at bake time and mounted read-only — never hit the network.
 export CARGO_NET_OFFLINE=true
 export NO_COLOR=1
@@ -13,4 +13,4 @@ export NO_COLOR=1
 export RUNBOX_CONTAINER=1
 # CARGO_TARGET_DIR is exported by the engine (persistent working volume) — it
 # overrides the host .cargo/config.toml target-dir redirect inside the container.
-exec cargo clippy --workspace --all-targets --all-features -- -D warnings
+exec cargo clippy --workspace --all-targets --all-features "$@" -- -D warnings

@@ -3,10 +3,10 @@
 set -euo pipefail
 printf '%-13s %-11s %s\n' build   available   "cargo build -p json_redact"
 printf '%-13s %-11s %s\n' test    available   "runbox .live (container, module-scoped)"
-printf '%-13s %-11s %s\n' test_only available "cargo nextest run --all-features <filter>"
+printf '%-13s %-11s %s\n' test_only available "runbox .live (container, targeted) <filter>"
 printf '%-13s %-11s %s\n' clean   available   "cargo clean -p json_redact"
 printf '%-13s %-11s %s\n' run     unavailable "-"
-printf '%-13s %-11s %s\n' lint    available   "cargo clippy -p json_redact --all-features -- -D warnings"
+printf '%-13s %-11s %s\n' lint    available   "runbox .live (container, module-scoped clippy)"
 printf '%-13s %-11s %s\n' verify  available   "will .test level::4"
 printf '%-13s %-11s %s\n' install  unavailable  "-"
 printf '%-13s %-11s %s\n' verbs   built-in    "-"
