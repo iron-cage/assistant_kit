@@ -8,12 +8,12 @@ and bind-failure handling.
 
 ## Test Case Index
 
-| ID | Test Name | Category |
-|----|-----------|----------|
-| TC-1 | `0` -> OS assigns an ephemeral port | Special Value |
-| TC-2 | Value in 1024-65535 -> accepted, unprivileged | Parsing |
-| TC-3 | Value > 65535 -> exit 1 | Error Handling |
-| TC-4 | Port already in use -> exit 1, bind failure | Error Handling |
+| ID | Test Name | Category | Status | Implemented as |
+|----|-----------|----------|--------|----------------|
+| TC-1 | `0` -> OS assigns an ephemeral port | Special Value | ✅ | `ft1_in1_serve_starts_on_loopback_and_prints_url` |
+| TC-2 | Value in 1024-65535 -> accepted, unprivileged | Parsing | ✅ | `ft5_port_override_binds_requested_port` |
+| TC-3 | Value > 65535 -> exit 1 | Error Handling | ✅ | `ft14_serve_validates_port_and_open_before_binding` |
+| TC-4 | Port already in use -> exit 1, bind failure | Error Handling | ✅ | `it4_busy_pinned_port_exits_1` |
 
 ## Test Coverage Summary
 
@@ -22,6 +22,12 @@ and bind-failure handling.
 - Error Handling: 2 tests (TC-3, TC-4)
 
 **Total:** 4 test cases
+
+TC-3 and TC-4 are both "exit 1" and are deliberately checked by different
+assertions. A bind failure and a rejected value produce different messages,
+and until FT-14 landed only TC-4's was reachable: `port::` resolved through
+`.unwrap_or( 0 )`, so an out-of-range value never failed at all — it bound an
+OS-assigned port and reported success.
 
 ## Test Cases
 
@@ -51,7 +57,7 @@ and bind-failure handling.
 
 - **Given:** clean environment
 - **When:** `clj .serve port::70000`
-- **Then:** exit 1; stderr indicates the port value is out of range
+- **Then:** exit 1 before anything binds; stderr contains `invalid integer '70000' for parameter 'port'`. `CLJ_PORT` resolves into the same value and fails identically
 - **Exit:** 1
 - **Source:** [type/10_port.md](../../../../docs/cli/type/10_port.md)
 

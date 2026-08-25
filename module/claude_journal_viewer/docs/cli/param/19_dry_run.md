@@ -1,8 +1,16 @@
 # CLI Parameter: dry_run
 
-When set to `1` (or `true`), `.prune` shows which files would be
-deleted without actually deleting them. The output lists each
-candidate as a `Would delete: <path>` line, followed by a count.
+When set to `1`, `.prune` shows which files would be deleted without
+actually deleting them. The output lists each candidate as a
+`Would delete: <path>` line, followed by a count.
+
+`true` and `false` were once accepted here and are not any more — this is
+the one `Boolean` that ever took them, and the exception cost more than it
+bought: `dry_run::treu` is a typo that deletes files, so the parameter that
+guards a destructive command is the last one that should carry a second
+spelling. `0` and `1` are the whole grammar
+([`Boolean`](../type/08_boolean.md)), and anything else exits 1 without
+deleting.
 
 - **Type:** [`Boolean`](../type/08_boolean.md)
 - **Default:** 0

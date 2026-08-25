@@ -34,6 +34,7 @@ clj .search pattern::"timeout" command::ask  # Timeouts in ask mode
 |---|---------|---------|-------|
 | 1 | [`.list`](../command/01_list.md) | -- | All commands |
 | 2 | [`.tail`](../command/02_tail.md) | -- | All commands |
+| 3 | [`.stats`](../command/03_stats.md) | -- | All commands |
 | 4 | [`.search`](../command/04_search.md) | -- | All commands |
 | 8 | [`.export`](../command/08_export.md) | -- | All commands |
 

@@ -1,32 +1,33 @@
 # Parameter Group :: Display
 
 Interaction tests for the Display group: `limit`, `format`, `sort`, `reverse`,
-`verbosity`, `output`, `wide`, `columns`. Tests validate co-dependency,
-mutual exclusivity, and precedence rules between display parameters.
+`verbosity`, `output`. Tests validate co-dependency, command scoping, ordering,
+and boundary handling between display parameters.
 
 **Source:** [param_group/02_display.md](../../../../docs/cli/param_group/02_display.md)
 
 ## Test Case Index
 
-| ID | Test Name | Category |
-|----|-----------|----------|
-| CC-1 | `sort::cost reverse::1` -> reverse affects only the sort field | Co-Dependency |
-| CC-2 | `wide::1 columns::"time,cost"` -> `columns` takes precedence over `wide` | Mutual Exclusivity |
-| CC-3 | `format::json wide::1` -> `wide` has no effect on non-table format | Format Scoping |
-| CC-4 | `sort::cost limit::5` -> limit applied after sort | Ordering |
-| CC-5 | `output` only takes effect on `.export`, ignored elsewhere | Command Scoping |
-| CC-6 | `verbosity::5` -> clamped to 2 | Boundary |
+| ID | Test Name | Category | Status | Implemented as |
+|----|-----------|----------|--------|----------------|
+| CC-1 | `sort::cost reverse::1` -> reverse affects only the sort field | Co-Dependency | ✅ | `viewer_integration_test.rs::ec30_sort_orders_by_every_documented_field` |
+| CC-4 | `sort::cost limit::5` -> limit applied after sort | Ordering | ✅ | `viewer_integration_test.rs::ec33_limit_applies_after_sort_and_zero_means_unlimited` |
+| CC-5 | `output` belongs to `.export`; `.list output::` exits 1 | Command Scoping | ✅ | `viewer_integration_test.rs::ec28_unknown_param_exits_1` |
+| CC-6 | `verbosity::9` -> clamped to 2 | Boundary | ✅ | `viewer_integration_test.rs::ec35_status_verbosity_levels_and_clamping` |
 
 ## Test Coverage Summary
 
 - Co-Dependency: 1 test (CC-1)
-- Mutual Exclusivity: 1 test (CC-2)
-- Format Scoping: 1 test (CC-3)
 - Ordering: 1 test (CC-4)
 - Command Scoping: 1 test (CC-5)
 - Boundary: 1 test (CC-6)
 
-**Total:** 6 corner cases
+**Total:** 4 corner cases (4 executable)
+
+IDs keep their historical numbers rather than being renumbered. CC-2 and CC-3
+covered `wide`/`columns` precedence and format scoping; both parameters were
+retracted rather than built, so the interactions they tested no longer exist —
+see [param_group/02_display.md](../../../../docs/cli/param_group/02_display.md).
 
 ## Test Cases
 ---
@@ -40,24 +41,6 @@ mutual exclusivity, and precedence rules between display parameters.
 - **Source:** [param_group/02_display.md](../../../../docs/cli/param_group/02_display.md)
 ---
 
-### CC-2: `wide::1 columns::"time,cost"` -> `columns` takes precedence over `wide`
-
-- **Given:** journal with events containing many fields
-- **When:** `clj .list wide::1 columns::"time,cost"`
-- **Then:** only the `time` and `cost` columns are shown; `wide` is overridden
-- **Exit:** 0
-- **Source:** [param_group/02_display.md](../../../../docs/cli/param_group/02_display.md)
----
-
-### CC-3: `format::json wide::1` -> `wide` has no effect on non-table format
-
-- **Given:** journal with events containing many fields
-- **When:** `clj .list format::json wide::1`
-- **Then:** output is standard JSON, unaffected by `wide` (which only applies to `format::table`)
-- **Exit:** 0
-- **Source:** [param_group/02_display.md](../../../../docs/cli/param_group/02_display.md)
----
-
 ### CC-4: `sort::cost limit::5` -> limit applied after sort
 
 - **Given:** journal with more than 5 events of varying cost
@@ -67,19 +50,23 @@ mutual exclusivity, and precedence rules between display parameters.
 - **Source:** [param_group/02_display.md](../../../../docs/cli/param_group/02_display.md)
 ---
 
-### CC-5: `output` only takes effect on `.export`, ignored elsewhere
+### CC-5: `output` belongs to `.export`; `.list output::` exits 1
 
 - **Given:** clean environment
 - **When:** `clj .list output::/tmp/should_not_be_used.txt`
-- **Then:** `.list` writes to stdout as normal; `/tmp/should_not_be_used.txt` is not created (`output` is not a recognized `.list` member)
-- **Exit:** 0
-- **Source:** [param_group/02_display.md](../../../../docs/cli/param_group/02_display.md)
+- **Then:** exit 1 naming `output` as unrecognized for `.list`; the file is not created
+- **Exit:** 1
+- **Source:** [param_group/02_display.md](../../../../docs/cli/param_group/02_display.md), [param_group/05_global.md](../../../../docs/cli/param_group/05_global.md)
+
+Silent acceptance would be the worse failure here: a caller who passed `output::`
+would see exit 0 and reasonably conclude the file was written, while `.list`
+printed to stdout and created nothing.
 ---
 
-### CC-6: `verbosity::5` -> clamped to 2
+### CC-6: `verbosity::9` -> clamped to 2
 
 - **Given:** journal directory with multiple files
-- **When:** `clj .status verbosity::5`
+- **When:** `clj .status verbosity::9`
 - **Then:** output matches the per-file breakdown produced at `verbosity::2`, not an error
 - **Exit:** 0
-- **Source:** [param_group/02_display.md](../../../../docs/cli/param_group/02_display.md)
+- **Source:** [param_group/02_display.md](../../../../docs/cli/param_group/02_display.md), [param/22_verbosity.md](../../../../docs/cli/param/22_verbosity.md)

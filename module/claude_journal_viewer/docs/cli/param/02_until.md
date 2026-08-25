@@ -32,6 +32,7 @@ clj .export until::90d               # Export all events older than 90 days
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
 | 1 | [`.list`](../command/01_list.md) | -- | No upper bound |
+| 2 | [`.tail`](../command/02_tail.md) | -- | Past the bound the follow goes quiet; it does not exit |
 | 3 | [`.stats`](../command/03_stats.md) | -- | No upper bound |
 | 4 | [`.search`](../command/04_search.md) | -- | No upper bound |
 | 8 | [`.export`](../command/08_export.md) | -- | No upper bound |

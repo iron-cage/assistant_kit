@@ -30,6 +30,10 @@ clj .list creds::staging.json          # Staging credential usage
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
 | 1 | [`.list`](../command/01_list.md) | -- | All credentials |
+| 2 | [`.tail`](../command/02_tail.md) | -- | All credentials |
+| 3 | [`.stats`](../command/03_stats.md) | -- | All credentials |
+| 4 | [`.search`](../command/04_search.md) | -- | All credentials |
+| 8 | [`.export`](../command/08_export.md) | -- | All credentials |
 
 ### Referenced User Stories
 

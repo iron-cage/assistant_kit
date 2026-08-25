@@ -3,8 +3,8 @@
 ### Scope
 
 - **Purpose**: Verify `.tail` follows journal events in real-time with correct filtering and formatting.
-- **Responsibility**: Test case coverage for all 5 `.tail` parameters.
-- **In Scope**: Type/command filter, format selection, color toggle, journal_dir override, polling behavior.
+- **Responsibility**: Test case coverage for all 10 `.tail` parameters — seven filters, `format`, and the two global parameters.
+- **In Scope**: Type/command filter, format selection, color toggle, journal_dir override, polling behavior, and the two filters `.tail` deliberately does **not** take.
 - **Out of Scope**: One-shot listing (-> `01_list.md`), aggregate stats (-> `03_stats.md`).
 
 Test case planning for [command/02_tail.md](../../../../docs/cli/command/02_tail.md).
@@ -19,6 +19,7 @@ Test case planning for [command/02_tail.md](../../../../docs/cli/command/02_tail
 | IT-4 | `no_color::1` -> output has no ANSI escape codes | Display | ⏳ | — |
 | IT-5 | `journal_dir::PATH` -> follows events from custom directory | Directory Override | ✅ | `viewer_integration_test.rs::ec13_tail_starts_and_can_be_killed` |
 | IT-6 | `format::` renders each variant; a bad one exits 1 before blocking | Format | ✅ | `viewer_integration_test.rs::ec34_tail_format_renders_and_rejects_before_blocking` |
+| IT-7 | `since::` and `limit::` exit 1 rather than being accepted and ignored | Retraction | ✅ | `viewer_integration_test.rs::ec28_unknown_param_exits_1` |
 
 ## Test Coverage Summary
 
@@ -28,8 +29,9 @@ Test case planning for [command/02_tail.md](../../../../docs/cli/command/02_tail
 - Display: 1 test (IT-4)
 - Directory Override: 1 test (IT-5)
 - Format: 1 test (IT-6)
+- Retraction: 1 test (IT-7)
 
-**Total:** 6 tests (3 executable)
+**Total:** 7 tests (4 executable)
 
 Every `.tail` case is bounded in wall-clock time in its implementation. `.tail`
 blocks forever by design, so the failure mode of any regression here is a hang —
@@ -100,3 +102,16 @@ runner's own timeout kills it, naming nothing.
   indefinite wait for an event that may never arrive
 - **Exit:** killed by the caller for the valid formats; 1 for `format::bogus`
 - **Source:** [command/02_tail.md](../../../../docs/cli/command/02_tail.md), [param/10_format.md](../../../../docs/cli/param/10_format.md), [type/06_output_format.md](../../../../docs/cli/type/06_output_format.md)
+
+---
+
+### IT-7: `since::` and `limit::` exit 1 rather than being accepted and ignored
+
+- **Given:** any journal directory
+- **When:** `clj .tail since::1h`, then `clj .tail limit::5`
+- **Then:** each exits **1** with `unknown parameter`, naming the offending key and listing `.tail`'s accepted set
+- **Exit:** 1
+- **Note:** `.tail` took the whole filter vocabulary until this case. `TailIter` calls `event_matches` with `since_cutoff : None` and never reads `filter.limit`, so both parsed cleanly, applied to nothing, and exited 0 — a filter that silently does not filter is worse than one that is refused
+- **Note:** bounded on wall-clock time like every other `.tail` case, and for a sharper reason: if the rejection regresses, the parameter is accepted, `.tail` starts following, and the run never returns. The regression would present as a hung suite naming nothing rather than as this failure
+- **And:** run it by hand with `clj .tail since::1h; echo "exit=$?"` — it returns immediately
+- **Source:** [command/02_tail.md](../../../../docs/cli/command/02_tail.md), [param/01_since.md](../../../../docs/cli/param/01_since.md), [param/09_limit.md](../../../../docs/cli/param/09_limit.md), [invariant/003_cli_surface_consistency.md](../../invariant/003_cli_surface_consistency.md)

@@ -39,9 +39,11 @@ Accepted values are `1` and `true`; anything else leaves color on.
 | 2 | [`.tail`](../command/02_tail.md) | 0 | ANSI colors enabled |
 | 3 | [`.stats`](../command/03_stats.md) | 0 | ANSI colors enabled |
 | 4 | [`.search`](../command/04_search.md) | 0 | ANSI colors enabled |
+| 5 | [`.serve`](../command/05_serve.md) | 0 | Startup line only; the dashboard HTML is unaffected |
 | 6 | [`.prune`](../command/06_prune.md) | 0 | ANSI colors enabled |
 | 7 | [`.status`](../command/07_status.md) | 0 | ANSI colors enabled |
 | 8 | [`.export`](../command/08_export.md) | 0 | Applies to `format::table` only |
+| 9 | [`.chart`](../command/09_chart.md) | 0 | Confirmation message only; the SVG is unaffected |
 
 ### Referenced User Stories
 

@@ -480,7 +480,91 @@ fn ft11_invalid_refresh_exits_1()
 
   assert_eq!( out.status.code(), Some( 1 ), "invalid refresh should exit 1" );
   let stderr = String::from_utf8_lossy( &out.stderr );
-  assert!( stderr.contains( "invalid refresh" ), "stderr should explain the rejection: {stderr}" );
+  // The full documented message, not a substring of the parameter name: the
+  // wording is `docs/cli/type/04_integer.md`'s, and a looser assertion would
+  // have stayed green through the ad-hoc `invalid refresh '…' (expected …)`
+  // this replaced.
+  assert!(
+    stderr.contains( "Error: invalid integer 'soon' for parameter 'refresh'" ),
+    "stderr should carry the documented Integer message: {stderr}",
+  );
+}
+
+// ── FT-14 : .serve rejects out-of-contract port:: and open:: ─────────────────
+
+/// Run `.serve` to completion with `extra` args, returning exit code and stderr.
+///
+/// Every case here is expected to fail during parameter resolution, so this
+/// waits for the process rather than polling for a startup line — anything that
+/// actually binds would hang, which is itself the failure being tested for.
+fn serve_rejects( extra : &[ &str ], dir : &Path ) -> ( Option< i32 >, String )
+{
+  assert_container();
+  let mut args = vec![ ".serve".to_owned(), format!( "journal_dir::{}", dir.display() ) ];
+  args.extend( extra.iter().map( | s | ( *s ).to_owned() ) );
+
+  let out = Command::new( CLJ )
+    .args( &args )
+    .env_remove( "CLR_JOURNAL_DIR" )
+    .env_remove( "CLJ_PORT" )
+    .output()
+    .expect( "failed to run clj .serve" );
+
+  ( out.status.code(), String::from_utf8_lossy( &out.stderr ).to_string() )
+}
+
+/// FT-14 — `port::` and `open::` are validated before the socket is bound.
+///
+/// ## Root Cause
+/// `port_str.parse().unwrap_or( 0 )` turned any unparseable or out-of-range
+/// port into an OS-assigned one. `clj .serve port::99999` started a server, on
+/// a port nobody asked for, and reported it on a startup line most callers do
+/// not re-read — a request for a specific port silently became a request for
+/// any port. `open::` on the same command matched `"1" | "true"` and ignored
+/// everything else.
+///
+/// ## Why Not Caught
+/// FT-1 and IT-4 covered the two ends — an OS-assigned port and a *valid* port
+/// already in use. Neither passed a value that could not be a port at all, so
+/// the `unwrap_or` was never reached under test.
+///
+/// ## Prevention
+/// The rejection is asserted with its documented message, and the exit status
+/// carries the proof that nothing bound: a server that came up would still be
+/// running when this returned.
+#[ test ]
+fn ft14_serve_validates_port_and_open_before_binding()
+{
+  let dir = tempfile::TempDir::new().unwrap();
+
+  for bad in [ "99999", "abc", "-1", "65536" ]
+  {
+    let ( code, stderr ) = serve_rejects( &[ &format!( "port::{bad}" ) ], dir.path() );
+    assert_eq!( code, Some( 1 ), "`port::{bad}` must exit 1, got {code:?}" );
+    let want = format!( "Error: invalid integer '{bad}' for parameter 'port'" );
+    assert!( stderr.contains( &want ), "want: {want}\ngot:  {}", stderr.trim() );
+  }
+
+  // 65535 is the documented ceiling and must still be accepted as a *value*.
+  // Pairing it with an unresolvable `bind::` is what makes this checkable
+  // without a socket: the run fails at bind rather than at validation, so the
+  // port got through, and nothing is left listening. Handing 65535 to a real
+  // bind instead would start a server and hang this test on its own success.
+  let ( code, stderr ) = serve_rejects( &[ "port::65535", "bind::not-an-address" ], dir.path() );
+  assert_eq!( code, Some( 1 ), "an unresolvable bind address still exits 1" );
+  assert!(
+    stderr.contains( "could not start server on not-an-address:65535" ),
+    "65535 must reach the bind attempt intact rather than being rejected as a value: {}",
+    stderr.trim(),
+  );
+
+  for bad in [ "true", "banana", "2" ]
+  {
+    let ( code, stderr ) = serve_rejects( &[ "port::0", &format!( "open::{bad}" ) ], dir.path() );
+    assert_eq!( code, Some( 1 ), "`open::{bad}` must exit 1, got {code:?}" );
+    let want = format!( "Error: invalid boolean '{bad}' for parameter 'open' — expected 0 or 1" );
+    assert!( stderr.contains( &want ), "want: {want}\ngot:  {}", stderr.trim() );
+  }
 }
 
 // ── IT-4 : a pinned port already in use exits 1 ──────────────────────────────
@@ -572,6 +656,59 @@ fn ft8_sigterm_terminates_server()
     std::thread::sleep( core::time::Duration::from_millis( 100 ) );
   }
   assert!( exited, "server should terminate within 5s of SIGTERM" );
+}
+
+// ── FT-13 : SIGTERM/SIGINT shut the server down gracefully ───────────────────
+
+/// Send `sig` to an idle server; return its exit status and everything it
+/// wrote to stderr.
+///
+/// The server is deliberately never issued a request first. A `recv`-based
+/// accept loop blocks inside the syscall until the next connection arrives, so
+/// an idle server is precisely the case that needs a polling loop — sending a
+/// request first would unstick a broken implementation and hide the difference.
+fn shutdown_with( sig : &str, dir : &Path ) -> ( std::process::ExitStatus, String )
+{
+  let mut s  = serve( &[ "port::0" ], dir );
+  let pid    = s.child.id().to_string();
+  let killed = Command::new( "kill" ).args( [ sig, &pid ] ).status().expect( "run kill" );
+  assert!( killed.success(), "kill {sig} {pid} should succeed" );
+
+  // Poll rather than block: a server that never notices the signal is one of
+  // the failures this case exists to catch, and `wait()` would hang on it.
+  let mut status = None;
+  for _ in 0..50
+  {
+    if let Ok( Some( st ) ) = s.child.try_wait() { status = Some( st ); break; }
+    std::thread::sleep( core::time::Duration::from_millis( 100 ) );
+  }
+  let status = status.unwrap_or_else( || panic!( "server did not exit within 5s of kill {sig}" ) );
+  ( status, s.stderr() )
+}
+
+/// FT-13 — AC-009: each signal ends the accept loop instead of killing the process.
+#[ test ]
+fn ft13_signals_shut_down_gracefully()
+{
+  for sig in [ "-TERM", "-INT" ]
+  {
+    let dir = tempfile::TempDir::new().unwrap();
+    let ( status, stderr ) = shutdown_with( sig, dir.path() );
+
+    // This is the whole discriminator between graceful shutdown and the default
+    // signal disposition FT-8 accepts. A signal-killed process carries no exit
+    // code at all — `code()` is None — so reaching `Some( 0 )` can only happen
+    // if the loop condition ended it and `main` returned normally.
+    assert_eq!(
+      status.code(),
+      Some( 0 ),
+      "kill {sig} must end the accept loop, not kill the process (status: {status:?})",
+    );
+    assert!(
+      stderr.contains( "Shutting down" ),
+      "kill {sig} must announce shutdown on stderr; stderr was:\n{stderr}",
+    );
+  }
 }
 
 // ── IN-2 : bind::0.0.0.0 is honored and warns ────────────────────────────────

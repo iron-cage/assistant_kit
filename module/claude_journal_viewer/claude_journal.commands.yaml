@@ -238,8 +238,21 @@
       validation_rules: []
       aliases: []
       tags: []
+    # Declared String, not Integer, for the same reason `reverse` is: the routine
+    # parses the literal the caller typed, so `verbosity::abc` produces this
+    # crate's own documented `invalid integer` message rather than unilang's.
+    - name: "verbosity"
+      kind: "String"
+      description: "Detail level: 0 one-line, 1 standard report (default), 2 per-file breakdown"
+      hint: "Detail level"
+      optional: true
+      default: ""
+      validation_rules: []
+      aliases: []
+      tags: []
   examples:
   - .journal.status
+  - .journal.status verbosity::2
   auto_help_enabled: true
 
 - name: ".journal.prune"

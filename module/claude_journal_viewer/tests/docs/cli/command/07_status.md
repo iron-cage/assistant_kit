@@ -3,20 +3,20 @@
 ### Scope
 
 - **Purpose**: Verify `.status` reports journal health, size, and configuration at each verbosity level.
-- **Responsibility**: Test case coverage for both `.status` parameters.
+- **Responsibility**: Test case coverage for all three `.status` parameters.
 - **In Scope**: Default (verbosity 1) report, compact (0) and per-file (2) verbosity, journal_dir override.
-- **Out of Scope**: Retention/pruning (-> `06_prune.md`), aggregate cost/token stats (-> `03_stats.md`).
+- **Out of Scope**: Retention/pruning (-> `06_prune.md`), aggregate cost/token stats (-> `03_stats.md`), `verbosity::` clamping and rejection (-> `../param/22_verbosity.md`).
 
 Test case planning for [command/07_status.md](../../../../docs/cli/command/07_status.md).
 
 ## Test Case Index
 
-| ID | Test Name | Category |
-|----|-----------|----------|
-| IT-1 | No args -> standard health report | Default |
-| IT-2 | `verbosity::0` -> compact one-line summary | Verbosity |
-| IT-3 | `verbosity::2` -> per-file breakdown | Verbosity |
-| IT-4 | `journal_dir::PATH` -> reports on custom directory | Directory Override |
+| ID | Test Name | Category | Status | Implemented as |
+|----|-----------|----------|--------|----------------|
+| IT-1 | No args -> standard health report | Default | ✅ | `viewer_integration_test.rs::ec7_status_shows_health_report` |
+| IT-2 | `verbosity::0` -> compact one-line summary | Verbosity | ✅ | `viewer_integration_test.rs::ec35_status_verbosity_levels_and_clamping` |
+| IT-3 | `verbosity::2` -> per-file breakdown | Verbosity | ✅ | `viewer_integration_test.rs::ec35_status_verbosity_levels_and_clamping` |
+| IT-4 | `journal_dir::PATH` -> reports on custom directory | Directory Override | ✅ | `viewer_integration_test.rs::ec7_status_shows_health_report` |
 
 ## Test Coverage Summary
 
@@ -24,7 +24,12 @@ Test case planning for [command/07_status.md](../../../../docs/cli/command/07_st
 - Verbosity: 2 tests (IT-2, IT-3)
 - Directory Override: 1 test (IT-4)
 
-**Total:** 4 tests
+**Total:** 4 tests (4 executable)
+
+IT-4 has no test of its own because every case here already exercises it:
+`run_clj` appends `journal_dir::<tempdir>` to every invocation, so a `.status`
+that ignored the override would report an empty or unrelated directory and fail
+IT-1's own file-count assertion.
 
 ---
 
@@ -32,7 +37,7 @@ Test case planning for [command/07_status.md](../../../../docs/cli/command/07_st
 
 - **Given:** journal directory with a known number of files and total size
 - **When:** `clj .status`
-- **Then:** exit 0; output shows journal directory path, file count, total size, and date range
+- **Then:** exit 0; output shows journal directory path, file count, total size, date range, and journal level
 - **Exit:** 0
 - **Source:** [command/07_status.md](../../../../docs/cli/command/07_status.md)
 

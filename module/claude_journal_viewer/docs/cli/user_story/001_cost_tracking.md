@@ -38,7 +38,7 @@ clj .list since::1d sort::cost reverse::1
 clj .stats by::model since::7d
 
 # Monthly: full cost report
-clj .stats by::day since::30d verbosity::2
+clj .stats by::day since::30d
 
 # Visual: open dashboard
 clj .serve open::1

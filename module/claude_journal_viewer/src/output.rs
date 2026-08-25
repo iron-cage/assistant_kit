@@ -6,7 +6,7 @@
 //! (`routines.rs`).
 
 use claude_journal::rotation::{ prune_by_age, today_ymd, PruneAction };
-use claude_journal::{ EventRecord, EventType, JournalFilter, JournalReader };
+use claude_journal::{ EventRecord, EventType, JournalFileInfo, JournalFilter, JournalReader };
 use core::{ fmt::Write as _, time::Duration };
 use std::{ collections::HashMap, path::PathBuf, time::SystemTime };
 
@@ -128,18 +128,18 @@ pub fn build_filter< S : ::core::hash::BuildHasher >( params : &HashMap< String,
   if let Some( s ) = params.get( "command" ) { f.command = Some( s.clone() ); }
   if let Some( s ) = params.get( "exit" )
   {
-    f.exit_code = Some(
-      s.parse::< i32 >()
-        .map_err( | _ | format!( "invalid exit '{s}' (expected integer)" ) )?
-    );
+    // 255 is the documented ceiling (`docs/cli/param/05_exit.md`) and also the
+    // real one — a Unix wait status carries a single byte. A negative value
+    // used to parse cleanly here and then match nothing, which read as "no
+    // failures" rather than "that is not an exit code".
+    f.exit_code = Some( parse_int_param::< i32 >( s, "exit", 255 )? );
   }
   if let Some( s ) = params.get( "model" )   { f.model = Some( s.clone() ); }
   if let Some( s ) = params.get( "dir" )     { f.dir = Some( s.clone() ); }
   if let Some( s ) = params.get( "creds" )   { f.creds = Some( s.clone() ); }
   if let Some( s ) = params.get( "limit" )
   {
-    let n : usize = s.parse()
-      .map_err( | _ | format!( "invalid limit '{s}' (expected non-negative integer)" ) )?;
+    let n : usize = parse_int_param( s, "limit", u64::MAX )?;
     // `limit::0` means unlimited (`docs/cli/param/09_limit.md`), and `query()`
     // stops once `limit` matches are collected — so handing it `Some( 0 )` would
     // return nothing at all, the exact opposite of what was asked for.
@@ -168,6 +168,56 @@ pub fn parse_bool_param( value : Option< &str >, name : &str ) -> Result< bool, 
       format!( "invalid boolean '{other}' for parameter '{name}' — expected 0 or 1" )
     ),
   }
+}
+
+/// Parse a documented `Integer` param — non-negative and at most `max`.
+///
+/// `max` is the parameter's own documented ceiling (`exit` is 0-255, `port` is
+/// 0-65535), so the range lives at the call site next to the parameter it
+/// belongs to rather than being restated here.
+///
+/// Negative, non-numeric, and out-of-range values all land on the single
+/// message `docs/cli/type/04_integer.md` specifies. That is deliberate: each is
+/// the parameter refusing a value it cannot represent, and the type page
+/// documents one wording for the lot rather than three.
+///
+/// The final `T::try_from` cannot fail for any `max` a caller here passes — it
+/// is a total conversion rather than a second range check, which is why it
+/// returns the same message instead of a distinct one.
+///
+/// # Errors
+///
+/// Returns `Err` when `value` is not a non-negative integer, exceeds `max`, or
+/// does not fit `T`.
+#[ inline ]
+pub fn parse_int_param< T >( value : &str, name : &str, max : u64 ) -> Result< T, String >
+where
+  T : TryFrom< u64 >,
+{
+  let invalid = || format!( "invalid integer '{value}' for parameter '{name}'" );
+  let n : u64 = value.parse().map_err( | _ | invalid() )?;
+  if n > max { return Err( invalid() ); }
+  T::try_from( n ).map_err( | _ | invalid() )
+}
+
+/// Parse the documented `verbosity::` param — an `Integer` clamped to 0-2.
+///
+/// An absent value yields `1`, the documented default. Values above `2` clamp
+/// rather than error, per `docs/cli/param_group/02_display.md`: asking for more
+/// detail than exists is a coherent request that the highest level already
+/// answers in full. Negative and non-numeric input still errors — those are
+/// typos, not requests, and `docs/cli/type/04_integer.md` makes both exit 1
+/// with the message this returns.
+///
+/// # Errors
+///
+/// Returns `Err` when `value` is not a non-negative integer.
+#[ inline ]
+pub fn parse_verbosity( value : Option< &str > ) -> Result< u8, String >
+{
+  let Some( s ) = value else { return Ok( 1 ) };
+  let n : u64 = parse_int_param( s, "verbosity", u64::MAX )?;
+  Ok( match n { 0 => 0, 1 => 1, _ => 2 } )
 }
 
 /// Percent-decode one query-string component, treating `+` as a space.
@@ -270,6 +320,25 @@ pub fn format_ms( ms : u64 ) -> String
   if ms < 1_000 { format!( "{ms}ms" ) }
   else if ms < 60_000 { format!( "{:.1}s", ms as f64 / 1_000.0 ) }
   else { format!( "{:.1}m", ms as f64 / 60_000.0 ) }
+}
+
+/// Format a byte count as a human-readable size.
+///
+/// Binary steps with the conventional short labels, the same convention `du -h`
+/// prints. One decimal above `B`, which keeps a size scannable without implying
+/// precision the rounding does not have — `/api/health` reports the exact byte
+/// count instead, so nothing that needs the true figure has to parse this.
+#[ must_use ]
+#[ inline ]
+pub fn format_bytes( bytes : u64 ) -> String
+{
+  const KB : u64 = 1024;
+  const MB : u64 = KB * 1024;
+  const GB : u64 = MB * 1024;
+  if bytes < KB      { format!( "{bytes} B" ) }
+  else if bytes < MB { format!( "{:.1} KB", bytes as f64 / KB as f64 ) }
+  else if bytes < GB { format!( "{:.1} MB", bytes as f64 / MB as f64 ) }
+  else               { format!( "{:.1} GB", bytes as f64 / GB as f64 ) }
 }
 
 /// Return the event table header line.
@@ -673,6 +742,10 @@ fn format_stats_table( data : &StatsData ) -> String
 
 /// `.search` — return events matching the pattern.
 ///
+/// `pattern` is a literal substring, matched case-sensitively against six
+/// fields: `message`, `stdout`, `stderr`, `error_message`, `model`, `command`.
+/// The set is fixed — no parameter widens or narrows it.
+///
 /// # Errors
 ///
 /// Returns `Err` when any filter param is invalid or the required `pattern::`
@@ -688,7 +761,19 @@ pub fn search_output< S : ::core::hash::BuildHasher >( params : &HashMap< String
   let pat     = pattern.as_str();
   let matches : Vec< &EventRecord > = events.iter().filter( | ev |
   {
-    ev.fields.stdout.as_deref().unwrap_or( "" ).contains( pat )
+    // Fix(search-skips-message): `message` leads the set because it is the one
+    //   field the caller wrote themselves, and so the one they are most likely
+    //   to search for.
+    // Root cause: the field list was assembled from what the *runner* captures
+    //   (stdout/stderr/error_message) plus two identifiers, and the prompt — a
+    //   field of `EventFields` since the schema was written, and the subject of
+    //   `feature/001_cli_viewing.md` AC-006 — was never added.
+    // Pitfall: the omission is invisible from the outside. A missing field does
+    //   not narrow the result set in any way a caller can see; it returns exit 0
+    //   and `No events matching '<pattern>'`, which reads as a definitive "not
+    //   in the journal" rather than "not in the part of it that is searched".
+    ev.fields.message.as_deref().unwrap_or( "" ).contains( pat )
+      || ev.fields.stdout.as_deref().unwrap_or( "" ).contains( pat )
       || ev.fields.stderr.as_deref().unwrap_or( "" ).contains( pat )
       || ev.fields.error_message.as_deref().unwrap_or( "" ).contains( pat )
       || ev.fields.model.as_deref().unwrap_or( "" ).contains( pat )
@@ -734,6 +819,46 @@ pub struct HealthData
   pub newest : Option< String >,
 }
 
+impl HealthData
+{
+  /// Derive a snapshot from an already-collected file listing.
+  ///
+  /// Split out from [`health_data`] so `.status verbosity::2` — which needs the
+  /// per-file rows *and* the totals — can derive both from one directory scan
+  /// instead of scanning once for each and reporting two views of a directory
+  /// that a rotation or prune may have changed in between.
+  #[ must_use ]
+  #[ inline ]
+  pub fn from_files( dir : PathBuf, files : &[ JournalFileInfo ] ) -> Self
+  {
+    Self
+    {
+      files  : files.len(),
+      bytes  : files.iter().map( | f | f.bytes ).sum(),
+      oldest : files.first().map( | f | f.date.clone() ),
+      newest : files.last().map( | f | f.date.clone() ),
+      dir,
+    }
+  }
+
+  /// Render the date span as `docs/cli/command/07_status.md`'s `Date range:` value.
+  ///
+  /// A journal holding one day's file reports that date alone rather than
+  /// `X to X`, and an empty one says so outright — printing a `(none)`
+  /// placeholder twice invites a reader to parse it as a real range.
+  #[ must_use ]
+  #[ inline ]
+  pub fn date_range( &self ) -> String
+  {
+    match ( &self.oldest, &self.newest )
+    {
+      ( Some( o ), Some( n ) ) if o == n => o.clone(),
+      ( Some( o ), Some( n ) )           => format!( "{o} to {n}" ),
+      _                                  => "no events".to_owned(),
+    }
+  }
+}
+
 /// `.status` — collect journal health without rendering it.
 ///
 /// Derives all four figures from one [`JournalReader::files`] listing rather
@@ -746,31 +871,75 @@ pub struct HealthData
 pub fn health_data( dir : PathBuf ) -> HealthData
 {
   let files = JournalReader::open( dir.clone() ).files();
-  HealthData
+  HealthData::from_files( dir, &files )
+}
+
+/// Report the configured journal level and where that value came from.
+///
+/// `CLR_JOURNAL` is `clr`'s own switch (`full`, `meta`, `off`). `.status`
+/// reports it verbatim rather than validating it: `clr` is the component that
+/// rejects a bad level, and normalizing it here would hide the very value a
+/// user came to `.status` to check.
+#[ must_use ]
+#[ inline ]
+pub fn journal_level() -> String
+{
+  match std::env::var( "CLR_JOURNAL" )
   {
-    files  : files.len(),
-    bytes  : files.iter().map( | f | f.bytes ).sum(),
-    oldest : files.first().map( | f | f.date.clone() ),
-    newest : files.last().map( | f | f.date.clone() ),
-    dir,
+    Ok( v ) if !v.is_empty() => format!( "{v} (CLR_JOURNAL={v})" ),
+    _                        => "full (default)".to_owned(),
   }
 }
 
-/// `.status` — return a journal health string.
-#[ must_use ]
+/// `.status` — render the journal health report at the requested verbosity.
+///
+/// Three levels, per `docs/cli/param/22_verbosity.md`: `0` collapses the report
+/// to a single line, `1` is the standard report, `2` appends a per-file
+/// breakdown. All three are derived from one directory scan, so no two lines of
+/// the report can describe different moments.
+///
+/// # Errors
+///
+/// Returns `Err` when `verbosity::` is not a non-negative integer.
 #[ inline ]
-pub fn status_output( dir : PathBuf ) -> String
+pub fn status_output< S : ::core::hash::BuildHasher >( params : &HashMap< String, String, S >, dir : PathBuf ) -> Result< String, String >
 {
-  let h      = health_data( dir );
-  let count  = h.files;
-  let bytes  = h.bytes;
-  let oldest = h.oldest.unwrap_or_else( || "(none)".to_owned() );
-  let newest = h.newest.unwrap_or_else( || "(none)".to_owned() );
-  format!(
-    "{}\ndir:    {}\nfiles:  {count}\nsize:   {bytes} bytes\noldest: {oldest}\nnewest: {newest}",
-    bold( "Journal Status" ),
+  let level = parse_verbosity( params.get( "verbosity" ).map( String::as_str ) )?;
+  let files = JournalReader::open( dir.clone() ).files();
+  let h     = HealthData::from_files( dir, &files );
+  let size  = format_bytes( h.bytes );
+  let range = h.date_range();
+
+  if level == 0
+  {
+    return Ok( format!( "{} files, {size}, {range}", h.files ) );
+  }
+
+  let mut out = format!(
+    "Journal directory: {}\nFiles: {}\nTotal size: {size}\nDate range: {range}\nJournal level: {}",
     h.dir.display(),
-  )
+    h.files,
+    journal_level(),
+  );
+  if level >= 2
+  {
+    out.push_str( "\n\n" );
+    // No column header on an empty journal — a `DATE`/`SIZE` heading above zero
+    // rows announces a table that is not there.
+    if files.is_empty()
+    {
+      out.push_str( "(no journal files)" );
+    }
+    else
+    {
+      out.push_str( &bold( &format!( "{:<12}  SIZE", "DATE" ) ) );
+      for f in &files
+      {
+        let _ = write!( out, "\n{:<12}  {}", f.date, format_bytes( f.bytes ) );
+      }
+    }
+  }
+  Ok( out )
 }
 
 /// `.prune` — delete old journal files; return a description of what was done.
@@ -791,15 +960,7 @@ pub fn prune_output< S : ::core::hash::BuildHasher >( params : &HashMap< String,
 {
   let keep_str = params.get( "keep" ).map_or( "30d", String::as_str );
   let keep_dur = parse_duration( keep_str )?;
-  let dry_raw  = params.get( "dry_run" ).map_or( "0", String::as_str );
-  let dry_run  = match dry_raw
-  {
-    "0" | "false" => false,
-    "1" | "true"  => true,
-    other => return Err(
-      format!( "invalid dry_run '{other}' (valid: 0, 1, true, false)" )
-    ),
-  };
+  let dry_run  = parse_bool_param( params.get( "dry_run" ).map( String::as_str ), "dry_run" )?;
   if !dir.is_dir()
   {
     return Ok( format!( "Journal dir {} not found or empty.", dir.display() ) );
@@ -907,18 +1068,22 @@ pub fn export_output< S : ::core::hash::BuildHasher >( params : &HashMap< String
 ///
 /// # Errors
 ///
-/// Returns `Err` when the chart cannot be rendered or written to disk. A
-/// failure to open the resulting file in a browser is non-fatal — it is
-/// appended as a warning to the success message rather than failing the
-/// command.
+/// Returns `Err` when `open::` is not a documented boolean, or when the chart
+/// cannot be rendered or written to disk. A failure to *open* the resulting
+/// file in a browser is non-fatal — it is appended as a warning to the success
+/// message rather than failing the command.
 #[ inline ]
 pub fn chart_output< S : ::core::hash::BuildHasher >( params : &HashMap< String, String, S >, dir : PathBuf ) -> Result< String, String >
 {
+  // Validated before the chart is rendered, not after: a rejected `open::`
+  // should not leave a written SVG behind on the way to exit 1, or the command
+  // both fails and has an effect.
+  let open_requested = parse_bool_param( params.get( "open" ).map( String::as_str ), "open" )?;
+
   let out_path = params.get( "out" ).map_or_else( || PathBuf::from( "usage.svg" ), PathBuf::from );
   claude_journal_charts::generate_usage_chart( &dir, &out_path ).map_err( | e | e.to_string() )?;
 
   let mut msg = format!( "Chart written to {}", out_path.display() );
-  let open_requested = matches!( params.get( "open" ).map( String::as_str ), Some( "1" | "true" ) );
   if open_requested
   {
     if let Err( e ) = open::that( &out_path )

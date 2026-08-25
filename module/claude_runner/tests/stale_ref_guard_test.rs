@@ -479,7 +479,7 @@ fn manual_doc_has_no_cd_then_cargo_run_pattern()
 ///
 /// # Pitfall
 /// The predicate is intentionally shape-based, not exhaustive. A pointer worded differently
-/// (`refer to \`-notes.md\``, or a bare `-plan.md` on its own line) slips through. That is the
+/// (`` refer to `-notes.md` ``, or a bare `-plan.md` on its own line) slips through. That is the
 /// accepted trade: a broader pattern collides with legitimate CLI-flag prose — `` see
 /// `--quiet` `` and four siblings under `docs/claude_params/` are why the `--`-rejection and
 /// the required `.` both exist. Widen the predicate only alongside a re-check of those.

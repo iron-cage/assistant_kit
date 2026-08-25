@@ -2,7 +2,9 @@
 
 ## Master Doc Entities Table
 
-**Instances convention:** this column counts the rows for that type in the Master Doc Instances Table below. Three lifecycle conventions apply depending on type: (a) generic ❌-deprecated instances (e.g. `feature/008`, `feature/023`, `feature/069`) are excluded from both tables entirely — the Instances figure omits them; (b) CLI-specific REMOVED instances (e.g. `cli/param/` 013/032/053/056/057, `cli/command_verb/` 009/011) are kept as annotated rows in both tables — the Instances figure includes them; (c) CLI-specific DEPRECATED-but-not-REMOVED instances (e.g. `cli/command_verb/` 006 rotate, Feature 038 — a callable hidden-redirector stub that always exits 1, distinct from REMOVED's zero runtime presence) are also kept as annotated rows — the Instances figure includes them identically to (b). See each type's own readme.md for active-vs-total breakdowns.
+**Instances convention:** this column counts the instance files present in that type's directory, and the Master Doc Instances Table carries one row per file. Retired instances are never omitted — they are kept as rows carrying a REMOVED / DEPRECATED / SUPERSEDED annotation, so the registry stays a description of the directory rather than a filtered view of it. That covers CLI-specific REMOVED instances (`cli/param/` 013/032/053/056/057, `cli/command_verb/` 009/011), CLI-specific DEPRECATED-but-not-REMOVED instances (`cli/command_verb/` 006 rotate, Feature 038 — a callable hidden-redirector stub that always exits 1, distinct from REMOVED's zero runtime presence), and generic retirements (`feature/008`, `feature/023`, `feature/069`, `schema/008`) alike. See each type's own readme.md for active-vs-total breakdowns.
+
+Those generic retirements were previously excluded from both tables, which made the Instances figure mean "live instances" for some types and "files on disk" for others, and left the drift undetectable — `dei1_entity_index_counts_match_files` compares the figure against the directory, and this registry was outside its discovery pattern until that was widened to `docs/entity/readme.md`. Annotating rather than omitting is what conventions (b) and (c) already did; extending it to the generic case gives the column one meaning everywhere and puts the count back under test.
 
 | Type | Purpose | Master File | Instances |
 |------|---------|-------------|----------:|
@@ -18,16 +20,16 @@
 | `cli/type/` | CLI type definitions | [cli/type/readme.md](../cli/type/readme.md) | 5 |
 | `cli/user_story/` | Canonical user stories mapping personas and goals to commands | [cli/user_story/readme.md](../cli/user_story/readme.md) | 5 |
 | `cli/workflow_scenario/` | **ELIMINATED** (`cli_doc.rulebook` v1.7) — all instances migrated to `cli/user_story/`; directory retained only as an archived migration map | [cli/workflow_scenario/readme.md](../cli/workflow_scenario/readme.md) | 0 |
-| `feature/` | Functional requirements for claude_profile capabilities | [readme.md](../feature/readme.md) | 54 |
+| `feature/` | Functional requirements for claude_profile capabilities | [readme.md](../feature/readme.md) | 58 |
 | `invariant/` | Measurable constraints and architectural guarantees | [invariant/readme.md](../invariant/readme.md) | 12 |
 | `pattern/` | Reusable design solutions applied at more than one call site | [pattern/readme.md](../pattern/readme.md) | 1 |
 | `pitfall/` | Systemic pitfall catalog — recurring design traps revealed by bug history | [pitfall/readme.md](../pitfall/readme.md) | 7 |
 | `research_interactive/` | Investigation findings on Claude binary behavior | [research_interactive/readme.md](../research_interactive/readme.md) | 1 |
-| `schema/` | On-disk file format definitions (credentials, metadata, paths, settings) | [schema/readme.md](../schema/readme.md) | 8 |
+| `schema/` | On-disk file format definitions (credentials, metadata, paths, settings) | [schema/readme.md](../schema/readme.md) | 9 |
 | `state_machine/` | Domain lifecycle state machines (account, token, session window, ownership, quota measurement) | [state_machine/readme.md](../state_machine/readme.md) | 5 |
 | `subprocess/` | Isolated subprocess contract, credential write-back protocol, and invocation sites | [subprocess/readme.md](../subprocess/readme.md) | 5 |
 | `type/` | Domain Type definitions (account aggregate, identity, tag, provider, backend, quota, token, session) with `domain`/`ddd` classification | [type/readme.md](../type/readme.md) | 10 |
-| `tests/docs/algorithm/` | Per-algorithm AC-N correctness test documentation | [tests/docs/algorithm/readme.md](../../tests/docs/algorithm/readme.md) | 10 |
+| `tests/docs/algorithm/` | Per-algorithm AC-N correctness test documentation | [tests/docs/algorithm/readme.md](../../tests/docs/algorithm/readme.md) | 12 |
 | `tests/docs/cli/command/` | Per-command integration test case documentation | [tests/docs/cli/command/readme.md](../../tests/docs/cli/command/readme.md) | 26 |
 | `tests/docs/cli/command_group/` | Structural-equivalence test index for command_group entities | [tests/docs/cli/command_group/readme.md](../../tests/docs/cli/command_group/readme.md) | 0 |
 | `tests/docs/cli/command_noun/` | Per-noun test case documentation | [tests/docs/cli/command_noun/readme.md](../../tests/docs/cli/command_noun/readme.md) | 3 |
@@ -37,11 +39,11 @@
 | `tests/docs/cli/param_group/` | Per-group interaction test documentation | [tests/docs/cli/param_group/readme.md](../../tests/docs/cli/param_group/readme.md) | 6 |
 | `tests/docs/cli/type/` | Per-type test case documentation | [tests/docs/cli/type/readme.md](../../tests/docs/cli/type/readme.md) | 4 |
 | `tests/docs/cli/user_story/` | Per-story acceptance test documentation | [tests/docs/cli/user_story/readme.md](../../tests/docs/cli/user_story/readme.md) | 5 |
-| `tests/docs/feature/` | Per-feature behavioral test documentation | [tests/docs/feature/readme.md](../../tests/docs/feature/readme.md) | 53 |
-| `tests/docs/invariant/` | Per-invariant constraint test documentation | [tests/docs/invariant/readme.md](../../tests/docs/invariant/readme.md) | 9 |
-| `tests/docs/pitfall/` | Per-pitfall guard verification test documentation | [tests/docs/pitfall/readme.md](../../tests/docs/pitfall/readme.md) | 6 |
+| `tests/docs/feature/` | Per-feature behavioral test documentation | [tests/docs/feature/readme.md](../../tests/docs/feature/readme.md) | 56 |
+| `tests/docs/invariant/` | Per-invariant constraint test documentation | [tests/docs/invariant/readme.md](../../tests/docs/invariant/readme.md) | 12 |
+| `tests/docs/pitfall/` | Per-pitfall guard verification test documentation | [tests/docs/pitfall/readme.md](../../tests/docs/pitfall/readme.md) | 7 |
 | `tests/docs/research_interactive/` | Per-investigation RC-N research constraint test documentation | [tests/docs/research_interactive/readme.md](../../tests/docs/research_interactive/readme.md) | 1 |
-| `tests/docs/schema/` | Per-schema SC-N constraint test documentation | [tests/docs/schema/readme.md](../../tests/docs/schema/readme.md) | 7 |
+| `tests/docs/schema/` | Per-schema SC-N constraint test documentation | [tests/docs/schema/readme.md](../../tests/docs/schema/readme.md) | 8 |
 | `tests/docs/state_machine/` | Per-state-machine AC-N lifecycle test documentation | [tests/docs/state_machine/readme.md](../../tests/docs/state_machine/readme.md) | 5 |
 | `tests/docs/subprocess/` | Per-subprocess AC-N invocation test documentation | [tests/docs/subprocess/readme.md](../../tests/docs/subprocess/readme.md) | 5 |
 
@@ -56,6 +58,7 @@
 | feature | 005 | Delete Account | [feature/005_account_delete.md](../feature/005_account_delete.md) |
 | feature | 006 | Token Status | [feature/006_token_status.md](../feature/006_token_status.md) |
 | feature | 007 | File Topology | [feature/007_file_topology.md](../feature/007_file_topology.md) |
+| feature | 008 | Auto Rotate — **DEPRECATED**, superseded by 038 | [feature/008_auto_rotate.md](../feature/008_auto_rotate.md) |
 | feature | 009 | Token Usage Reporting | [feature/009_token_usage.md](../feature/009_token_usage.md) |
 | feature | 010 | Persistent Storage Path | [feature/010_persistent_storage.md](../feature/010_persistent_storage.md) |
 | feature | 011 | Account Status by Name | [feature/011_account_status_by_name.md](../feature/011_account_status_by_name.md) |
@@ -70,6 +73,7 @@
 | feature | 020 | Usage Sort Strategies | [feature/020_usage_sort_strategies.md](../feature/020_usage_sort_strategies.md) |
 | feature | 021 | Extended Snapshot Fields | [feature/021_extended_snapshot_fields.md](../feature/021_extended_snapshot_fields.md) |
 | feature | 022 | Org Identity Snapshot | [feature/022_org_identity_snapshot.md](../feature/022_org_identity_snapshot.md) |
+| feature | 023 | Next Account Recommendation Strategies — **SUPERSEDED** by 020 | [feature/023_next_account_strategies.md](../feature/023_next_account_strategies.md) |
 | feature | 024 | Session Touch via Isolated Subprocess | [feature/024_session_touch.md](../feature/024_session_touch.md) |
 | feature | 025 | Per-Machine Active Marker | [feature/025_per_machine_active_marker.md](../feature/025_per_machine_active_marker.md) |
 | feature | 026 | Subprocess Model and Effort Control | [feature/026_subprocess_model_effort.md](../feature/026_subprocess_model_effort.md) |
@@ -95,6 +99,7 @@
 | feature | 066 | Dual-Source OAuth Quota Parsing | [feature/066_dual_source_quota_parsing.md](../feature/066_dual_source_quota_parsing.md) |
 | feature | 067 | Trace Timestamp Prefix | [feature/067_trace_timestamps.md](../feature/067_trace_timestamps.md) |
 | feature | 068 | Models List Command | [feature/068_models_list_command.md](../feature/068_models_list_command.md) |
+| feature | 069 | Model Select Command — **SUPERSEDED** by 035; CLI stub prints a migration message | [feature/069_model_select_command.md](../feature/069_model_select_command.md) |
 | feature | 070 | Account Claim and Reservation Control | [feature/070_account_claim_and_reservation_control.md](../feature/070_account_claim_and_reservation_control.md) |
 | feature | 071 | Redirect Backend Accounts | [feature/071_redirect_backend_accounts.md](../feature/071_redirect_backend_accounts.md) |
 | feature | 072 | Inference Provider Selection | [feature/072_inference_provider_selection.md](../feature/072_inference_provider_selection.md) |
@@ -103,6 +108,7 @@
 | feature | 075 | Account Tags | [feature/075_account_tags.md](../feature/075_account_tags.md) |
 | feature | 076 | Identity Tag Filter | [feature/076_identity_tag_filter.md](../feature/076_identity_tag_filter.md) |
 | feature | 077 | Burn-Rate Alert (Time-to-Exhaustion) | [feature/077_burn_rate_alert.md](../feature/077_burn_rate_alert.md) |
+| feature | 078 | DeepSeek Provider Preset | [feature/078_deepseek_provider_preset.md](../feature/078_deepseek_provider_preset.md) |
 | cli | 001 | Config Parameters | [cli/001_config_param.md](../cli/001_config_param.md) |
 | cli | 002 | Dictionary | [cli/002_dictionary.md](../cli/002_dictionary.md) |
 | cli | 003 | Environment Parameters | [cli/003_env_param.md](../cli/003_env_param.md) |
@@ -260,6 +266,7 @@
 | schema | 005 | Active Marker (`_active_{host}_{user}`) | [schema/005_active_marker.md](../schema/005_active_marker.md) |
 | schema | 006 | Session Settings (`~/.claude/settings.json`) | [schema/006_settings_json.md](../schema/006_settings_json.md) |
 | schema | 007 | Claude State (`~/.claude.json`) | [schema/007_claude_json.md](../schema/007_claude_json.md) |
+| schema | 008 | CLR Prefs (`~/.clr/prefs.json`) — **DEPRECATED**, retired by task 410 in favour of `~/.clr/config.toml` | [schema/008_clr_prefs_json.md](../schema/008_clr_prefs_json.md) |
 | schema | 009 | Identity Filter (`_filter_{machine}_{user}`) | [schema/009_identity_filter_json.md](../schema/009_identity_filter_json.md) |
 | algorithm | 001 | Touch Model Selection | [algorithm/001_touch_model_selection.md](../algorithm/001_touch_model_selection.md) |
 | algorithm | 002 | Session Model Override | [algorithm/002_session_model_override.md](../algorithm/002_session_model_override.md) |

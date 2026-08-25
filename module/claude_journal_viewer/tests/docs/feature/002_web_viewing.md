@@ -38,6 +38,8 @@ with the dashboard page.
 | FT-11 | `refresh::` drives both the poll interval and the status-line label | Refresh | ✅ |
 | FT-11b | A non-integer `refresh::` exits 1 with an explanatory stderr message | Refresh | ✅ |
 | FT-12 | `open::1` warns but does not abort when no browser is available | Browser Open | ✅ |
+| FT-13 | SIGTERM and SIGINT each exit 0 with `Shutting down`, from an idle server | Shutdown | ✅ |
+| FT-14 | `port::` and `open::` are validated before the socket is bound | Param Validation | ✅ |
 
 ## Test Coverage Summary
 
@@ -48,18 +50,27 @@ with the dashboard page.
 - Port Override: 1 test (FT-5)
 - Self-Contained: 1 test (FT-6)
 - Events Filtering: 3 tests (FT-7, FT-7b, FT-7c)
-- Shutdown: 1 test (FT-8)
+- Shutdown: 2 tests (FT-8, FT-13)
 - Stats API: 2 tests (FT-9, FT-9b)
 - Routing: 1 test (FT-10)
 - Refresh: 2 tests (FT-11, FT-11b)
+- Param Validation: 1 test (FT-14)
 - Browser Open: 1 test (FT-12)
 
-**Total:** 17 tests (all executable)
+**Total:** 19 tests (all executable)
 
-AC-009 (graceful SIGTERM/SIGINT shutdown) has no dedicated case beyond FT-8's
-termination check — see the AC-009 blocker note in the feature doc. FT-8
-asserts the process exits, not that it exits gracefully; that distinction is
-deliberate and must not be papered over by relabelling the case.
+FT-8 and FT-13 are deliberately separate and must stay that way. FT-8 asserts
+only that the process *terminates* — it would pass against a `kill -9` and
+against the default signal disposition. FT-13 asserts it terminates *cleanly*,
+and the two claims fail differently: collapsing them into one case would lose
+the ability to tell "the server hung" from "the server died without running its
+exit path".
+
+FT-13 kills an idle server on purpose. A `recv`-based accept loop blocks inside
+the syscall until the next connection arrives, so issuing a request first would
+unstick that broken implementation and the case would pass against code that
+ignores the signal on a quiet server — which is every real deployment waiting
+for its first visitor.
 
 ## Architectural Constraint
 
@@ -188,12 +199,23 @@ case asserts on a specific key name rather than merely on the status code.
 
 ---
 
-### FT-8: Server shuts down cleanly on SIGTERM
+### FT-8: Server terminates on SIGTERM
 
 - **Given:** `.serve` running as a background subprocess; PID known
 - **When:** `kill -TERM <pid>`
-- **Then:** process exits within 5s; no zombie process remains; exit status is signal-terminated, not hung
-- **Note:** `cmd_serve()` runs an unconditional `loop` with no signal handler, so this passes via the default SIGTERM disposition rather than via graceful shutdown logic. AC-009's "cleanly" is therefore only satisfied in the weak sense of "does not hang" — assert termination, not a zero exit status. See the AC-009 blocker note in the feature doc
+- **Then:** process exits within 5s; no zombie process remains
+- **Note:** this case asserts termination only — deliberately weaker than FT-13, and kept that way so a hang and an ungraceful death remain distinguishable failures. Do not add an exit-status assertion here; that is FT-13's job
+- **Source:** [feature/002_web_viewing.md](../../../docs/feature/002_web_viewing.md) AC-009
+
+---
+
+### FT-13: SIGTERM and SIGINT shut the server down gracefully
+
+- **Given:** `.serve` running as a background subprocess, idle — no request has ever been issued to it
+- **When:** `kill -TERM <pid>`, and separately `kill -INT <pid>`, against a fresh server each time
+- **Then:** each exits within 5s with exit status exactly `0`, having written `Shutting down` to stderr
+- **Note:** `Some( 0 )` is the discriminator. A signal-killed process carries no exit code at all, so `ExitStatus::code()` is `None` — this assertion cannot pass under the default disposition FT-8 tolerates. Verified against `kill -KILL`, which no handler can intercept and which yields 137 with no message
+- **Note:** the server is idle by design; see the reasoning under Test Coverage Summary
 - **Source:** [feature/002_web_viewing.md](../../../docs/feature/002_web_viewing.md) AC-009
 
 ---
@@ -240,7 +262,7 @@ case asserts on a specific key name rather than merely on the status code.
 
 - **Given:** temp journal dir
 - **When:** `clj .serve refresh::soon journal_dir::<dir> port::0` run to completion
-- **Then:** exit code 1; stderr contains `invalid refresh`. The server never binds — a typo'd interval fails at startup rather than silently reverting to the default
+- **Then:** exit code 1; stderr contains `Error: invalid integer 'soon' for parameter 'refresh'`. The server never binds — a typo'd interval fails at startup rather than silently reverting to the default
 - **Source:** [feature/002_web_viewing.md](../../../docs/feature/002_web_viewing.md) AC-008
 
 ---
@@ -252,3 +274,15 @@ case asserts on a specific key name rather than merely on the status code.
 - **Then:** the server still starts and answers 200 — the failed launch degrades to a stderr warning, matching how `.chart open::1` treats the same failure
 - **Note:** the successful-launch path cannot be asserted headlessly. This case covers the failure path, which is the one that could take the server down
 - **Source:** [feature/002_web_viewing.md](../../../docs/feature/002_web_viewing.md) AC-010
+
+---
+
+### FT-14: `port::` and `open::` are validated before the socket is bound
+
+- **Given:** temp journal dir; `CLJ_PORT` cleared from the environment so it cannot supply a competing value
+- **When:** `clj .serve` is run once per bad value — `port::` in `99999`, `abc`, `-1`, `65536`, and `open::` in `true`, `banana`, `2`
+- **Then:** every run exits 1 with the documented message for its type — `Error: invalid integer '<v>' for parameter 'port'` and `invalid boolean '<v>' for parameter 'open' — expected 0 or 1` — and nothing binds
+- **And:** `port::65535 bind::not-an-address` exits 1 at the *bind* with `could not start server on not-an-address:65535`, which is what proves the ceiling passed validation rather than being rejected as a value
+- **Note:** the positive control pairs the ceiling with an unresolvable `bind::` deliberately. Handing `port::65535` to a real bind would start a server, and the case would then hang on its own success — `Command::output()` waits for a process that is doing exactly what it was asked to do. This is not hypothetical; it is the shape the case had first, and it stalled the suite for seven minutes before the pairing replaced it
+- **Note:** before this case, `port::` resolved through `.unwrap_or( 0 )`. `port::99999` did not fail — it bound an OS-assigned port and reported that port on the startup line, so the server came up on the wrong port and said so in a line most callers do not re-read
+- **Source:** [feature/002_web_viewing.md](../../../docs/feature/002_web_viewing.md) AC-008, AC-010; [param/15_port.md](../../../docs/cli/param/15_port.md), [type/08_boolean.md](../../../docs/cli/type/08_boolean.md)

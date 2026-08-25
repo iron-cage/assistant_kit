@@ -5,14 +5,18 @@
 | Type | Purpose | Master File | Instances |
 |------|---------|-------------|----------:|
 | `feature/` | Behavioral requirements for the journal viewer | [feature/readme.md](../feature/readme.md) | 3 |
-| `invariant/` | Measurable constraints for the viewer | [invariant/readme.md](../invariant/readme.md) | 2 |
-| `cli/command/` | CLI command specifications for the journal viewer | [cli/command/readme.md](../cli/command/readme.md) | 8 |
-| `cli/param/` | CLI parameter specifications for the journal viewer | [cli/param/readme.md](../cli/param/readme.md) | 27 |
+| `invariant/` | Measurable constraints for the viewer | [invariant/readme.md](../invariant/readme.md) | 3 |
+| `cli/command/` | CLI command specifications for the journal viewer | [cli/command/readme.md](../cli/command/readme.md) | 9 |
+| `cli/param/` | CLI parameter specifications for the journal viewer | [cli/param/readme.md](../cli/param/readme.md) | 26 |
 | `cli/type/` | CLI type definitions | [cli/type/readme.md](../cli/type/readme.md) | 11 |
 | `cli/param_group/` | CLI parameter group definitions | [cli/param_group/readme.md](../cli/param_group/readme.md) | 5 |
 | `cli/user_story/` | User story catalog for journal viewing use cases | [cli/user_story/readme.md](../cli/user_story/readme.md) | 5 |
 
-**Total:** 7 types, 61 instances
+**Total:** 7 types, 62 instances
+
+`cli/param/` counts 26 files but [cli/param/readme.md](../cli/param/readme.md)
+lists 25 parameters: `28_include_stdout.md` is a tombstone for a superseded flag,
+so it is a doc instance on disk without being a parameter of the CLI.
 
 ## Master Doc Instances Table
 
@@ -23,6 +27,7 @@
 | feature | 003 | Filtering | [feature/003_filtering.md](../feature/003_filtering.md) |
 | invariant | 001 | Read Only | [invariant/001_read_only.md](../invariant/001_read_only.md) |
 | invariant | 002 | Localhost Only | [invariant/002_localhost_only.md](../invariant/002_localhost_only.md) |
+| invariant | 003 | CLI Surface Consistency | [invariant/003_cli_surface_consistency.md](../invariant/003_cli_surface_consistency.md) |
 | cli/command | 01 | .list | [cli/command/01_list.md](../cli/command/01_list.md) |
 | cli/command | 02 | .tail | [cli/command/02_tail.md](../cli/command/02_tail.md) |
 | cli/command | 03 | .stats | [cli/command/03_stats.md](../cli/command/03_stats.md) |
@@ -31,6 +36,7 @@
 | cli/command | 06 | .prune | [cli/command/06_prune.md](../cli/command/06_prune.md) |
 | cli/command | 07 | .status | [cli/command/07_status.md](../cli/command/07_status.md) |
 | cli/command | 08 | .export | [cli/command/08_export.md](../cli/command/08_export.md) |
+| cli/command | 09 | .chart | [cli/command/09_chart.md](../cli/command/09_chart.md) |
 | cli/param | 01 | since | [cli/param/01_since.md](../cli/param/01_since.md) |
 | cli/param | 02 | until | [cli/param/02_until.md](../cli/param/02_until.md) |
 | cli/param | 03 | type | [cli/param/03_type.md](../cli/param/03_type.md) |
@@ -54,10 +60,9 @@
 | cli/param | 22 | verbosity | [cli/param/22_verbosity.md](../cli/param/22_verbosity.md) |
 | cli/param | 23 | output | [cli/param/23_output.md](../cli/param/23_output.md) |
 | cli/param | 24 | no_color | [cli/param/24_no_color.md](../cli/param/24_no_color.md) |
-| cli/param | 25 | wide | [cli/param/25_wide.md](../cli/param/25_wide.md) |
-| cli/param | 26 | columns | [cli/param/26_columns.md](../cli/param/26_columns.md) |
 | cli/param | 27 | refresh | [cli/param/27_refresh.md](../cli/param/27_refresh.md) |
 | cli/param | 28 | include_stdout | [cli/param/28_include_stdout.md](../cli/param/28_include_stdout.md) |
+| cli/param | 29 | out | [cli/param/29_out.md](../cli/param/29_out.md) |
 | cli/type | 01 | Duration | [cli/type/01_duration.md](../cli/type/01_duration.md) |
 | cli/type | 02 | EventType | [cli/type/02_event_type.md](../cli/type/02_event_type.md) |
 | cli/type | 03 | String | [cli/type/03_string.md](../cli/type/03_string.md) |

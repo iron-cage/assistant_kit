@@ -6,7 +6,7 @@
 |------|---------|-------------|----------:|
 | `feature/` | Event journaling design: append-only logging, schema, rotation | [feature/readme.md](../feature/readme.md) | 3 |
 | `invariant/` | Structural constraints: append-only, crash safety, schema versioning | [invariant/readme.md](../invariant/readme.md) | 3 |
-| `api/` | Public library API contracts: JournalWriter, JournalReader, EventType | [api/readme.md](../api/readme.md) | 3 |
+| `api/` | Public library API contracts: JournalWriter, JournalReader, EventType, Rotation | [api/readme.md](../api/readme.md) | 4 |
 | `tests/docs/feature/` | Per-feature test case specifications | [tests/docs/feature/readme.md](../../tests/docs/feature/readme.md) | 3 |
 | `tests/docs/invariant/` | Per-invariant test case specifications | [tests/docs/invariant/readme.md](../../tests/docs/invariant/readme.md) | 3 |
 | `tests/docs/api/` | Per-API test case specifications | [tests/docs/api/readme.md](../../tests/docs/api/readme.md) | 3 |
@@ -24,3 +24,4 @@
 | api | 001 | JournalWriter | [api/001_journal_writer.md](../api/001_journal_writer.md) |
 | api | 002 | JournalReader | [api/002_journal_reader.md](../api/002_journal_reader.md) |
 | api | 003 | EventType | [api/003_event_type.md](../api/003_event_type.md) |
+| api | 004 | Rotation | [api/004_rotation.md](../api/004_rotation.md) |
