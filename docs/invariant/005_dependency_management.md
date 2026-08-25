@@ -3,8 +3,8 @@
 ### Scope
 
 - **Purpose**: Document the workspace dependency management policy governing external dep declaration, centralization, and publish readiness.
-- **Responsibility**: State the workspace-centralization rule, the `workspace = true` enforcement, the out-of-workspace path dep version requirement, and publish metadata requirements.
-- **In Scope**: Workspace dep centralization, `workspace = true` usage, out-of-workspace path dep version field, publish metadata for crates.io.
+- **Responsibility**: State the workspace-centralization rule, the `workspace = true` enforcement, the out-of-workspace path dep version requirement, publish metadata requirements, and the error-handling dependency exclusivity rule.
+- **In Scope**: Workspace dep centralization, `workspace = true` usage, out-of-workspace path dep version field, publish metadata for crates.io, error-handling dependency exclusivity (`error_tools` only).
 - **Out of Scope**: Privacy invariant (→ `invariant/001_privacy_invariant.md`), versioning strategy (→ `invariant/002_versioning_strategy.md`).
 
 ### Invariant Statement
@@ -36,6 +36,12 @@ Cargo uses `path` for local builds and `version` for publishing. A `path`-only d
 - `rust-version`
 - `keywords` and `categories` (recommended; required for discoverability)
 
+**Rule 5 — Error handling depends on `error_tools` alone:** No workspace member declares `thiserror` or `anyhow` as a direct dependency. `error_tools` is the single error-handling dependency; it is a facade over both (`error_tools::typed` for typed errors, `error_tools::untyped` for untyped).
+
+Crates that need a typed error define it by hand — a plain `enum` with manual `Display` and `Error` impls — rather than deriving it. This is deliberate, not an oversight:
+
+> **Decision (2026-08-25):** routing the hand-rolled error enums through `error_tools::typed`'s `#[ derive( Error ) ]` was considered and rejected. `thiserror` 2's derive macros expand to absolute `::thiserror` paths, so every crate deriving `Error` would need `thiserror` as its own direct dependency — `error_tools`' `src/error/typed.rs` states plainly that a `use error_tools::dependency::thiserror;` alias "is no longer sufficient". Ten hand-rolled enums across nine crates keep their manual impls so that this rule stays true. The cost is some boilerplate; the benefit is that the workspace has exactly one error-handling dependency rather than two idioms in the same tree.
+
 ### Enforcement Mechanism
 
 **Centralization check:** Search for bare version declarations in crate `Cargo.toml` files:
@@ -54,6 +60,12 @@ grep -rn 'version = "' module/*/Cargo.toml | grep -v 'workspace.package'
 grep -A3 'path = "\.\.' Cargo.toml | grep -v 'version'
 ```
 
+**Error-handling exclusivity check:** No crate may name `thiserror` or `anyhow` directly:
+```bash
+grep -lE '^\s*(thiserror|anyhow)\b|^\s*\[[^]]*dependencies\.(thiserror|anyhow)\]' module/*/Cargo.toml
+```
+Both declaration forms must be covered — the inline `thiserror = { ... }` / `thiserror.workspace = true` shape and the `[dependencies.thiserror]` section header shape. A pattern matching only the first silently passes a manifest using the second. Empty output means the invariant holds. Any listed file is a violation — the fix is to consume the dependency through `error_tools`, not to add the direct dep.
+
 **Version freshness:** External dep versions in `[workspace.dependencies]` must track latest stable published releases. Companion crates (`error_tools`, `unilang`, `data_fmt`, `cli_fmt`, `test_tools`) share an author with this workspace — update promptly when new minor versions are published. Third-party crates (`ureq`, `tempfile`, etc.) follow semver: major bumps require API migration assessment; minor/patch bumps are routine.
 
 ### Violation Consequences
@@ -62,6 +74,7 @@ grep -A3 'path = "\.\.' Cargo.toml | grep -v 'version'
 - A path-only dep without `version` causes `cargo publish` to fail with "dependency … must be specified using a version" for every crate that depends on it
 - Missing publish metadata causes crates.io to reject the publish with "field … is required"
 - Stale dep versions expose the workspace to resolved security vulnerabilities and miss upstream bug fixes
+- A direct `thiserror` or `anyhow` dep splits error handling across two idioms and forfeits the single-facade guarantee `error_tools` exists to provide
 
 ### Invariants
 
