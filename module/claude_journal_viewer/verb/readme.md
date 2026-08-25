@@ -12,8 +12,8 @@
 |------|---------------|
 | `build` | Compile the crate: `cargo build -p claude_journal_viewer`. |
 | `clean` | Remove build artifacts: `cargo clean -p claude_journal_viewer`. |
-| `lint` | Run clippy via layer dispatcher (`lint.d/`). |
-| `lint.d/` | Layer directory: `l1` (direct clippy). |
+| `lint` | Run module clippy in container: `runbox .live` with `lint.d/l1` as payload. |
+| `lint.d/` | Layer directory: `l0` (disabled hard-error stub), `l1` (container-internal). |
 | `verify` | Full checks: `will .test level::4`. |
 | `run` | Run the `clj` binary via layer dispatcher (`run.d/`). |
 | `run.d/` | Layer directory: `l1` (direct `cargo run`). |

@@ -12,8 +12,8 @@
 |------|---------------|
 | `build` | Compile the crate: `cargo build -p claude_journal_charts`. |
 | `clean` | Remove build artifacts: `cargo clean -p claude_journal_charts`. |
-| `lint` | Run clippy via layer dispatcher (`lint.d/`). |
-| `lint.d/` | Layer directory: `l1` (direct clippy). |
+| `lint` | Run module clippy in container: `runbox .live` with `lint.d/l1` as payload. |
+| `lint.d/` | Layer directory: `l0` (disabled hard-error stub), `l1` (container-internal). |
 | `verify` | Full checks: `will .test level::4`. |
 | `run` | Run crate binary — unavailable for this library crate. |
 | `package_info` | Report package metadata as JSON (meta). |

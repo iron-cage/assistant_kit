@@ -9,16 +9,19 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd "$SCRIPT_DIR/../.."
 DRY_RUN=0
 if [[ "${1:-}" == "--dry-run" ]]; then DRY_RUN=1; shift; fi
-# Fix(issue-will-param-collision): emit a wrapper default only when the caller has not
-# already supplied that key.
-# Root cause: will silently discards BOTH occurrences of a duplicated parameter and falls
-# back to that parameter's own default — `will .test level::1 level::2` runs level 3, with
-# no error and no diagnostic. Hardcoding `level::3 show_build::1` ahead of "$@" therefore
-# turned every caller-supplied level::/show_build:: into a silent no-op.
-# Pitfall: the collision is invisible in will's own output — the plan just reports the
-# default, which reads as "the argument never reached will" rather than "it collided with
-# the wrapper's". Any future hardcoded default must be added to this guard list, not to
-# the exec line.
+# Fix(BUG-1588): emit a wrapper default only when the caller has not already supplied
+# that key.
+# Root cause: unilang collects a repeated named parameter into a single Value::List, and
+# will_test's accessors matched only the scalar kind each expected — so `will .test
+# level::1 level::2` ran at the default level 3, exit 0, no diagnostic. Hardcoding
+# `level::3 show_build::1` ahead of "$@" therefore turned every caller-supplied
+# level::/show_build:: into a silent no-op.
+# Pitfall: upstream (yrd_core/family_will/will, BUG-1588) now rejects a duplicate by name
+# instead of defaulting, so on a current will the same collision hard-fails rather than
+# misbehaving quietly. The guard is what keeps a caller override working at all, and is
+# still required against older deployed builds that predate that fix. Any future
+# hardcoded default must be added to this guard list, not to the exec line — appending it
+# there reintroduces the collision for that key alone.
 WILL_ARGS=()
 for kv in level::3 show_build::1; do
   for a in "$@"; do [[ "$a" == "${kv%%::*}::"* ]] && continue 2; done
