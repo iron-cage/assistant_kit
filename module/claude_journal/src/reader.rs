@@ -33,6 +33,16 @@ pub struct JournalFilter
   pub limit      : Option< usize >,
 }
 
+/// One journal file's identity and size, as reported by [`JournalReader::files`].
+#[ derive( Debug, Clone, PartialEq, Eq ) ]
+pub struct JournalFileInfo
+{
+  /// Filename stem — for a rotated file, its date as `"YYYY-MM-DD"`.
+  pub date  : String,
+  /// File size in bytes.
+  pub bytes : u64,
+}
+
 /// Read-side API for querying and tailing journal events.
 ///
 /// Opens a journal directory and iterates over daily JSONL files in
@@ -128,12 +138,38 @@ impl JournalReader
     }
   }
 
+  /// Every `.jsonl` file in the journal directory, oldest first.
+  ///
+  /// Ordering is by filename stem, which for rotated files is the date — the
+  /// same ordering whose endpoints [`JournalReader::oldest_date`] and
+  /// [`JournalReader::newest_date`] report. A file whose size cannot be read
+  /// (removed between the directory scan and the `stat`) is reported with
+  /// `bytes : 0` rather than dropped, so the listing and
+  /// [`JournalReader::file_count`] can never disagree.
+  ///
+  /// Returns an empty vector if the directory is absent or holds no `.jsonl` files.
+  #[ inline ]
+  #[ must_use ]
+  pub fn files( &self ) -> Vec< JournalFileInfo >
+  {
+    let mut paths = collect_jsonl_files( &self.dir ).unwrap_or_default();
+    paths.sort();
+    paths
+      .iter()
+      .map( | p | JournalFileInfo
+      {
+        date  : file_stem( p ),
+        bytes : fs::metadata( p ).map_or( 0, | m | m.len() ),
+      } )
+      .collect()
+  }
+
   /// Count of `.jsonl` files in the journal directory.
   #[ inline ]
   #[ must_use ]
   pub fn file_count( &self ) -> usize
   {
-    collect_jsonl_files( &self.dir ).map_or( 0, | f | f.len() )
+    self.files().len()
   }
 
   /// Total bytes across all `.jsonl` files.
@@ -141,12 +177,7 @@ impl JournalReader
   #[ must_use ]
   pub fn total_bytes( &self ) -> u64
   {
-    collect_jsonl_files( &self.dir )
-      .unwrap_or_default()
-      .iter()
-      .filter_map( | p | fs::metadata( p ).ok() )
-      .map( | m | m.len() )
-      .sum()
+    self.files().iter().map( | f | f.bytes ).sum()
   }
 
   /// Date string of the oldest journal file (from filename, not content).
@@ -156,9 +187,7 @@ impl JournalReader
   #[ must_use ]
   pub fn oldest_date( &self ) -> Option< String >
   {
-    let mut files = collect_jsonl_files( &self.dir ).ok()?;
-    files.sort();
-    files.first().map( | p | file_stem( p ) )
+    self.files().first().map( | f | f.date.clone() )
   }
 
   /// Date string of the newest journal file (from filename, not content).
@@ -168,9 +197,7 @@ impl JournalReader
   #[ must_use ]
   pub fn newest_date( &self ) -> Option< String >
   {
-    let mut files = collect_jsonl_files( &self.dir ).ok()?;
-    files.sort();
-    files.last().map( | p | file_stem( p ) )
+    self.files().last().map( | f | f.date.clone() )
   }
 }
 

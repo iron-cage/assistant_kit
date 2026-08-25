@@ -48,7 +48,7 @@
       validation_rules: []
       aliases: []
       tags: []
-    - name: "exit_code"
+    - name: "exit"
       kind: "String"
       description: "Filter by exit code"
       hint: "Exit code filter"
@@ -77,14 +77,36 @@
       tags: []
     - name: "format"
       kind: "String"
-      description: "Output format: table (default) or json"
+      description: "Output format: table (default), json, jsonl, or csv"
       hint: "Output format"
       optional: true
       default: "table"
       validation_rules: []
       aliases: []
       tags: []
-    - name: "dir"
+    - name: "sort"
+      kind: "String"
+      description: "Sort key: time (default), cost, duration, exit, model, or command"
+      hint: "Sort field"
+      optional: true
+      default: "time"
+      validation_rules: []
+      aliases: []
+      tags: []
+    # Declared String, not Boolean, on purpose: a Boolean-kind argument reaches
+    # the routine as "true"/"false" (see `extract_params`), and the documented
+    # Boolean type accepts only 0 and 1 (docs/cli/type/08_boolean.md). String
+    # keeps the literal the caller typed intact all the way to the parser.
+    - name: "reverse"
+      kind: "String"
+      description: "Reverse the sort into descending order (0 or 1)"
+      hint: "Descending"
+      optional: true
+      default: ""
+      validation_rules: []
+      aliases: []
+      tags: []
+    - name: "journal_dir"
       kind: "String"
       description: "Journal directory override (default: ~/.clr/journal/)"
       hint: "Journal dir"
@@ -97,7 +119,8 @@
   - .journal.list
   - .journal.list since::1d
   - .journal.list since::1h format::json
-  - .journal.list type::execution exit_code::0
+  - .journal.list type::execution exit::0
+  - .journal.list sort::cost reverse::1 limit::10
   auto_help_enabled: true
 
 - name: ".journal.stats"
@@ -132,9 +155,9 @@
       validation_rules: []
       aliases: []
       tags: []
-    - name: "dir"
+    - name: "journal_dir"
       kind: "String"
-      description: "Journal directory override"
+      description: "Journal directory override (default: ~/.clr/journal/)"
       hint: "Journal dir"
       optional: true
       default: ""
@@ -178,9 +201,9 @@
       validation_rules: []
       aliases: []
       tags: []
-    - name: "dir"
+    - name: "journal_dir"
       kind: "String"
-      description: "Journal directory override"
+      description: "Journal directory override (default: ~/.clr/journal/)"
       hint: "Journal dir"
       optional: true
       default: ""
@@ -206,9 +229,9 @@
   deprecation_message: ""
   http_method_hint: "GET"
   arguments:
-    - name: "dir"
+    - name: "journal_dir"
       kind: "String"
-      description: "Journal directory override"
+      description: "Journal directory override (default: ~/.clr/journal/)"
       hint: "Journal dir"
       optional: true
       default: ""
@@ -251,9 +274,9 @@
       validation_rules: []
       aliases: []
       tags: []
-    - name: "dir"
+    - name: "journal_dir"
       kind: "String"
-      description: "Journal directory override"
+      description: "Journal directory override (default: ~/.clr/journal/)"
       hint: "Journal dir"
       optional: true
       default: ""
@@ -306,9 +329,9 @@
       validation_rules: []
       aliases: []
       tags: []
-    - name: "dir"
+    - name: "journal_dir"
       kind: "String"
-      description: "Journal directory override"
+      description: "Journal directory override (default: ~/.clr/journal/)"
       hint: "Journal dir"
       optional: true
       default: ""
@@ -343,9 +366,18 @@
       validation_rules: []
       aliases: []
       tags: []
-    - name: "dir"
+    - name: "format"
       kind: "String"
-      description: "Journal directory override"
+      description: "Output format: table (default), json, jsonl, or csv (json == jsonl for a stream)"
+      hint: "Output format"
+      optional: true
+      default: "table"
+      validation_rules: []
+      aliases: []
+      tags: []
+    - name: "journal_dir"
+      kind: "String"
+      description: "Journal directory override (default: ~/.clr/journal/)"
       hint: "Journal dir"
       optional: true
       default: ""
@@ -380,9 +412,9 @@
       validation_rules: []
       aliases: []
       tags: []
-    - name: "dir"
+    - name: "journal_dir"
       kind: "String"
-      description: "Journal directory override"
+      description: "Journal directory override (default: ~/.clr/journal/)"
       hint: "Journal dir"
       optional: true
       default: ""

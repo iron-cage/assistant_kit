@@ -1,4 +1,4 @@
-//! Integration tests for `claude_journal` — IT-1 through IT-23.
+//! Integration tests for `claude_journal` — IT-1 through IT-25.
 //!
 //! Tests cover:
 //! - IT-1: `JournalWriter::append()` creates the daily JSONL file on first call
@@ -24,6 +24,8 @@
 //! - IT-21: Legacy JSONL line without `account`/`agent_id` still deserializes
 //! - IT-22: `compose_agent_id()` produces the exact `{user}@{host}{abs_dir}/` format
 //! - IT-23: `compose_agent_id()` never double-slashes an already-slashed dir
+//! - IT-24: Metadata accessors reflect real journal state (AP-6)
+//! - IT-25: `files()` is oldest-first and the scalar accessors agree with it (AP-7)
 
 use claude_journal::{
   compose_agent_id,
@@ -720,4 +722,100 @@ fn it23_compose_agent_id_never_double_slashes()
 {
   assert_eq!( compose_agent_id( "alice", "devbox", "/a/b/" ), "alice@devbox/a/b/" );
   assert_eq!( compose_agent_id( "alice", "devbox", "/a/b//" ), "alice@devbox/a/b/" );
+}
+
+/// Write `dates` as `.jsonl` files in `dir`, each holding one line of `filler`
+/// per index so the files differ in size. Returns the directory.
+///
+/// Creation order is the caller's, deliberately — IT-25 relies on being able to
+/// create files in an order that is *not* their date order.
+fn write_dated_files( dir : &std::path::Path, dates : &[ &str ] )
+{
+  std::fs::create_dir_all( dir ).expect( "create journal dir" );
+  for ( i, date ) in dates.iter().enumerate()
+  {
+    let body = format!( "{{\"v\":1,\"ts\":\"{date}T00:00:00.000Z\",\"type\":\"execution\"}}\n" ).repeat( i + 1 );
+    std::fs::write( dir.join( format!( "{date}.jsonl" ) ), body ).expect( "write dated file" );
+  }
+}
+
+// ── IT-24: metadata accessors reflect real journal state ──────────────────────
+
+/// IT-24 (AP-6): `file_count`/`total_bytes`/`oldest_date`/`newest_date` report
+/// the directory's actual contents, and an absent directory degrades to
+/// empty/`None`/`0` rather than erroring.
+///
+/// **Root Cause Coverage:** AP-6 was specified in `tests/docs/api/002_journal_reader.md`
+/// but had no implementing test — all four accessors backing `clj .status` were
+/// uncovered. Added alongside AP-7 so the shared-`files()` refactor of these
+/// four is guarded against behavior drift.
+#[ test ]
+fn it24_metadata_accessors_reflect_journal_state()
+{
+  let tmp = TempDir::new().expect( "tempdir" );
+  let dir = tmp.path().join( "journal" );
+
+  // Absent directory: every accessor degrades, none panics.
+  let empty = JournalReader::open( dir.clone() );
+  assert_eq!( empty.file_count(), 0, "absent dir must count 0 files" );
+  assert_eq!( empty.total_bytes(), 0, "absent dir must total 0 bytes" );
+  assert_eq!( empty.oldest_date(), None, "absent dir has no oldest date" );
+  assert_eq!( empty.newest_date(), None, "absent dir has no newest date" );
+
+  write_dated_files( &dir, &[ "2023-01-01", "2026-06-27" ] );
+  let reader = JournalReader::open( dir );
+
+  assert_eq!( reader.file_count(), 2, "must count both .jsonl files" );
+  assert_eq!( reader.oldest_date(), Some( "2023-01-01".to_owned() ), "oldest is the earliest filename" );
+  assert_eq!( reader.newest_date(), Some( "2026-06-27".to_owned() ), "newest is the latest filename" );
+  assert!( reader.total_bytes() > 0, "non-empty files must total more than zero bytes" );
+}
+
+// ── IT-25: files() ordering and cross-accessor agreement ──────────────────────
+
+/// IT-25 (AP-7): `files()` orders by date regardless of filesystem creation
+/// order, and the four scalar accessors are all derivable from it.
+///
+/// **Root Cause Coverage:** `files()` backs `clj .status verbosity::2`. Ordering
+/// cannot be left to `read_dir`, which returns entries in an arbitrary,
+/// filesystem-dependent order — so the fixture creates files in an order that is
+/// deliberately *not* chronological. A test that created them in date order
+/// would pass even with the sort removed.
+#[ test ]
+fn it25_files_is_oldest_first_and_agrees_with_scalar_accessors()
+{
+  let tmp = TempDir::new().expect( "tempdir" );
+  let dir = tmp.path().join( "journal" );
+
+  assert!(
+    JournalReader::open( dir.clone() ).files().is_empty(),
+    "absent dir must list no files rather than erroring"
+  );
+
+  // Deliberately non-chronological creation order.
+  write_dated_files( &dir, &[ "2026-06-27", "2023-01-01", "2024-03-15" ] );
+  let reader = JournalReader::open( dir.clone() );
+  let files  = reader.files();
+
+  let dates : Vec< &str > = files.iter().map( | f | f.date.as_str() ).collect();
+  assert_eq!(
+    dates, [ "2023-01-01", "2024-03-15", "2026-06-27" ],
+    "files() must sort by date, not by filesystem creation order"
+  );
+
+  // Every scalar accessor must be derivable from the same listing.
+  assert_eq!( files.len(), reader.file_count(), "files().len() must equal file_count()" );
+  assert_eq!(
+    files.iter().map( | f | f.bytes ).sum::< u64 >(), reader.total_bytes(),
+    "summed per-file bytes must equal total_bytes()"
+  );
+  assert_eq!( files.first().map( | f | f.date.clone() ), reader.oldest_date(), "first entry must be oldest_date()" );
+  assert_eq!( files.last().map( | f | f.date.clone() ), reader.newest_date(), "last entry must be newest_date()" );
+
+  // Reported sizes must be the real ones, not a placeholder.
+  for f in &files
+  {
+    let actual = std::fs::metadata( dir.join( format!( "{}.jsonl", f.date ) ) ).expect( "stat" ).len();
+    assert_eq!( f.bytes, actual, "{}: reported size must match the real file size", f.date );
+  }
 }

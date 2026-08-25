@@ -1,7 +1,14 @@
-//! Integration tests for the `clj` binary — EC-1 through EC-29.
+//! Integration tests for the `clj` binary — EC-1 through EC-34.
 //!
 //! Each test writes fixture events via `JournalWriter`, runs the `clj` binary
 //! against the temporary journal directory, and asserts on stdout/stderr/exit.
+//!
+//! EC-30 through EC-34 cover `.list sort::`/`reverse::` and `.tail format::`,
+//! which were documented parameters with no implementation until they landed.
+//! They share `write_sortable_events`, a fixture deliberately built so that no
+//! sort field reproduces the order its events were appended in — against a
+//! date-ordered fixture, a `sort::` that ignored its argument entirely would
+//! satisfy every assertion.
 
 #![ allow( missing_docs ) ]
 #![ cfg( unix ) ]
@@ -859,7 +866,7 @@ fn ec28_unknown_param_exits_1()
   // A param the docs declare but no code reads gets its own diagnostic: the user
   // followed the documentation, so "unknown" would be a lie about the parameter
   // rather than the truth about the feature.
-  let out = run_clj( &[ ".list", "sort::time" ], dir.path() );
+  let out = run_clj( &[ ".list", "wide::1" ], dir.path() );
   assert!( !out.status.success(), "an unimplemented param must exit non-zero" );
   let stderr = stderr_str( &out );
   assert!( stderr.contains( "not implemented" ), "wrong diagnostic class: {stderr}" );
@@ -915,4 +922,338 @@ fn ec29_no_color_param_suppresses_ansi()
     "control failed — ANSI absent even without no_color::: {}",
     stdout_str( &colored ),
   );
+}
+
+// ── Sort / format fixtures and helpers ────────────────────────────────────────
+
+/// Write three events whose every sortable field orders them differently from
+/// the order they are appended in.
+///
+/// Deliberate: a fixture already in the target order lets a sort that does
+/// nothing at all pass every assertion. Insertion order here is `run`, `ask`,
+/// `build`, and no documented sort key (`cost`, `duration`, `exit`, `model`,
+/// `command`) reproduces that order or its exact reverse.
+fn write_sortable_events( dir : &Path )
+{
+  let writer = JournalWriter::new( dir.to_path_buf() );
+
+  let mut first = EventRecord::new( EventType::Execution );
+  first.fields.command     = Some( "run".to_owned() );
+  first.fields.model       = Some( "sonnet".to_owned() );
+  first.fields.exit_code   = Some( 0 );
+  first.fields.duration_ms = Some( 1_500 );
+  first.fields.cost_usd    = Some( 0.05 );
+  writer.append( &first ).expect( "append first" );
+
+  let mut second = EventRecord::new( EventType::Execution );
+  second.fields.command     = Some( "ask".to_owned() );
+  second.fields.model       = Some( "opus".to_owned() );
+  second.fields.exit_code   = Some( 2 );
+  second.fields.duration_ms = Some( 300 );
+  second.fields.cost_usd    = Some( 0.90 );
+  writer.append( &second ).expect( "append second" );
+
+  let mut third = EventRecord::new( EventType::Execution );
+  third.fields.command     = Some( "build".to_owned() );
+  third.fields.model       = Some( "haiku".to_owned() );
+  third.fields.exit_code   = Some( 1 );
+  third.fields.duration_ms = Some( 9_000 );
+  third.fields.cost_usd    = Some( 0.01 );
+  writer.append( &third ).expect( "append third" );
+}
+
+/// Run `.list format::json` with `extra` args and return the parsed event array.
+///
+/// Panics with the command's own stderr on a non-zero exit, so a failing
+/// assertion names the CLI's diagnostic rather than a JSON parse error.
+fn list_json( extra : &[ &str ], dir : &Path ) -> Vec< serde_json::Value >
+{
+  let mut args = vec![ ".list", "format::json" ];
+  args.extend_from_slice( extra );
+  let out = run_clj( &args, dir );
+  assert!( out.status.success(), "`.list {}` exited non-zero: {}", extra.join( " " ), stderr_str( &out ) );
+  serde_json::from_str::< serde_json::Value >( stdout_str( &out ).trim() )
+    .expect( "stdout is not valid JSON" )
+    .as_array()
+    .expect( "format::json must produce an array" )
+    .clone()
+}
+
+/// Pull one field out of every event, as a string, for order comparison.
+///
+/// A missing field becomes `"-"` rather than being skipped: dropping it would
+/// shorten the sequence and hide a mis-ordered event instead of surfacing it.
+fn field_seq( events : &[ serde_json::Value ], field : &str ) -> Vec< String >
+{
+  events
+    .iter()
+    .map( | e | e.get( field ).map_or_else( || "-".to_owned(), ToString::to_string ) )
+    .collect()
+}
+
+/// EC-30 — `sort::` orders by each documented `SortField`, `reverse::1` inverts it.
+///
+/// Covers the `.list` test plan's IT-4 and the `SortField` plan's TC-1 through TC-5,
+/// none of which had an implementing test: `sort::` and `reverse::` were documented
+/// parameters that exited 1 as unimplemented.
+#[ test ]
+fn ec30_sort_orders_by_every_documented_field()
+{
+  assert_container();
+  let dir = tempfile::TempDir::new().unwrap();
+  write_sortable_events( dir.path() );
+
+  // ( sort key, json field, ascending order of that field's values )
+  let cases : &[ ( &str, &str, [ &str; 3 ] ) ] =
+  &[
+    ( "cost",     "cost_usd",    [ "0.01", "0.05", "0.9" ] ),
+    ( "duration", "duration_ms", [ "300", "1500", "9000" ] ),
+    ( "exit",     "exit_code",   [ "0", "1", "2" ] ),
+    ( "model",    "model",       [ "\"haiku\"", "\"opus\"", "\"sonnet\"" ] ),
+    ( "command",  "command",     [ "\"ask\"", "\"build\"", "\"run\"" ] ),
+  ];
+
+  for ( key, field, ascending ) in cases
+  {
+    let sort_arg = format!( "sort::{key}" );
+
+    let asc = field_seq( &list_json( &[ sort_arg.as_str() ], dir.path() ), field );
+    assert_eq!( asc, ascending.to_vec(), "sort::{key} is not ascending by {field}" );
+
+    let desc = field_seq( &list_json( &[ sort_arg.as_str(), "reverse::1" ], dir.path() ), field );
+    let mut expected = ascending.to_vec();
+    expected.reverse();
+    assert_eq!( desc, expected, "sort::{key} reverse::1 is not descending by {field}" );
+  }
+
+  // `time` is the default, so an explicit `sort::time` and no sort at all agree —
+  // and both differ from every ordering above, which is what makes those non-vacuous.
+  let default_order  = field_seq( &list_json( &[], dir.path() ), "command" );
+  let explicit_order = field_seq( &list_json( &[ "sort::time" ], dir.path() ), "command" );
+  assert_eq!( default_order, explicit_order, "sort::time must match the default ordering" );
+  assert_eq!(
+    default_order,
+    vec![ "\"run\"", "\"ask\"", "\"build\"" ],
+    "default order must be append order, not any sorted order",
+  );
+}
+
+/// EC-31 — `sort::` matches case-insensitively; bad `sort::`/`reverse::` values exit 1.
+///
+/// Covers the `SortField` plan's TC-6 and TC-7, and the `Boolean` type's documented
+/// rejection message for `reverse::`.
+#[ test ]
+fn ec31_sort_case_insensitive_and_invalid_values_exit_1()
+{
+  assert_container();
+  let dir = tempfile::TempDir::new().unwrap();
+  write_sortable_events( dir.path() );
+
+  // TC-6 — `COST` and `cost` are the same field.
+  let upper = field_seq( &list_json( &[ "sort::COST" ], dir.path() ), "cost_usd" );
+  let lower = field_seq( &list_json( &[ "sort::cost" ], dir.path() ), "cost_usd" );
+  assert_eq!( upper, lower, "sort:: must match case-insensitively" );
+
+  // TC-7 — an unknown field names all six valid ones rather than silently
+  // falling back to the default, which would look like a sort that worked.
+  let out = run_clj( &[ ".list", "sort::popularity" ], dir.path() );
+  assert!( !out.status.success(), "sort::popularity must exit non-zero" );
+  let stderr = stderr_str( &out );
+  for valid in [ "time", "cost", "duration", "exit", "model", "command" ]
+  {
+    assert!( stderr.contains( valid ), "diagnostic must list '{valid}': {stderr}" );
+  }
+
+  // `reverse::` is a documented Boolean — only 0 and 1.
+  let out = run_clj( &[ ".list", "reverse::2" ], dir.path() );
+  assert!( !out.status.success(), "reverse::2 must exit non-zero" );
+  let stderr = stderr_str( &out );
+  assert!( stderr.contains( "reverse" ),  "diagnostic must name the parameter: {stderr}" );
+  assert!( stderr.contains( "0 or 1" ),   "diagnostic must state the accepted values: {stderr}" );
+}
+
+/// EC-32 — `.list` non-table formats are byte-identical to `.export`'s.
+///
+/// `.list` renders `table` itself and hands every other format to the same
+/// `build_export_content` `.export` uses. Asserting equality is what keeps that
+/// delegation real: two independent implementations of `csv` would drift, and the
+/// drift would only ever show up in whichever surface the reader was not using.
+#[ test ]
+fn ec32_list_non_table_formats_match_export()
+{
+  assert_container();
+  let dir = tempfile::TempDir::new().unwrap();
+  write_sortable_events( dir.path() );
+  // Exports land outside the journal dir on purpose: an `-export.jsonl` written
+  // *into* it would be picked up as a journal file by the next iteration's read.
+  let out_dir = tempfile::TempDir::new().unwrap();
+
+  for format in [ "json", "jsonl", "csv" ]
+  {
+    let format_arg = format!( "format::{format}" );
+
+    let listed = run_clj( &[ ".list", format_arg.as_str() ], dir.path() );
+    assert!( listed.status.success(), "`.list format::{format}` failed: {}", stderr_str( &listed ) );
+
+    let exported_path = out_dir.path().join( format!( "export.{format}" ) );
+    let output_arg    = format!( "output::{}", exported_path.display() );
+    let exported = run_clj( &[ ".export", format_arg.as_str(), output_arg.as_str() ], dir.path() );
+    assert!( exported.status.success(), "`.export format::{format}` failed: {}", stderr_str( &exported ) );
+
+    let from_file = std::fs::read_to_string( &exported_path ).expect( "read exported file" );
+    assert_eq!(
+      stdout_str( &listed ).trim_end(),
+      from_file.trim_end(),
+      "`.list format::{format}` and `.export format::{format}` disagree",
+    );
+  }
+}
+
+/// EC-33 — `limit::` caps after sorting, and `limit::0` means unlimited.
+///
+/// # Root Cause
+/// `limit` was handed to `JournalReader::query()`, which caps by *stopping early*.
+/// The sort then only ever saw the oldest N events, so `sort::cost reverse::1
+/// limit::1` reported the priciest of the first N — not of the journal.
+/// Separately, `limit::0` reached `query()` as `Some( 0 )`, which stops before
+/// collecting anything, so the documented "unlimited" returned nothing at all.
+///
+/// # Why Not Caught
+/// `sort::` was unimplemented, so no test could combine it with `limit::`, and no
+/// test passed `limit::0` at all.
+///
+/// # Fix Applied
+/// `list_output` queries uncapped, sorts, then truncates; `build_filter` maps
+/// `limit::0` to `None`.
+///
+/// # Prevention
+/// The cheapest event is also the *last* appended, so a cap applied before the
+/// sort keeps it out of a `limit::1` result and the assertion fails.
+///
+/// # Pitfall
+/// "Cap" and "stop early" are the same thing only when the output order is the
+/// order the source is read in. Any sort between the two breaks that equivalence.
+#[ test ]
+fn ec33_limit_applies_after_sort_and_zero_means_unlimited()
+{
+  assert_container();
+  let dir = tempfile::TempDir::new().unwrap();
+  write_sortable_events( dir.path() );
+
+  // The single most expensive event across the whole journal — 0.90, appended
+  // second. A cap applied inside the query would yield 0.05, the first appended.
+  let top = list_json( &[ "sort::cost", "reverse::1", "limit::1" ], dir.path() );
+  assert_eq!( top.len(), 1, "limit::1 must return exactly one event" );
+  assert_eq!( field_seq( &top, "cost_usd" ), vec![ "0.9" ], "limit::1 must keep the sort's first event" );
+
+  // The cheapest is the last appended, so the same check in the other direction
+  // fails too if the cap runs first.
+  let bottom = list_json( &[ "sort::cost", "limit::1" ], dir.path() );
+  assert_eq!( field_seq( &bottom, "cost_usd" ), vec![ "0.01" ], "ascending limit::1 must keep the cheapest" );
+
+  // `limit::0` is documented as unlimited, not as an empty result.
+  assert_eq!( list_json( &[ "limit::0" ], dir.path() ).len(), 3, "limit::0 must return every event" );
+}
+
+/// Spawn `clj .tail <extra…>` against `dir`, with stdout piped.
+///
+/// The caller is responsible for killing the child — `.tail` never exits on its
+/// own. Both helpers below do so via [`kill_child`].
+fn spawn_tail( extra : &[ &str ], dir : &Path ) -> std::process::Child
+{
+  assert_container();
+  Command::new( CLJ )
+    .arg( ".tail" )
+    .arg( format!( "journal_dir::{}", dir.display() ) )
+    .args( extra )
+    .env_remove( "CLR_JOURNAL_DIR" )
+    .env_remove( "NO_COLOR" )
+    .stdout( Stdio::piped() )
+    .stderr( Stdio::piped() )
+    .spawn()
+    .expect( "failed to spawn clj .tail" )
+}
+
+/// Kill `child` and reap it, ignoring an already-exited process.
+fn kill_child( child : &mut std::process::Child )
+{
+  child.kill().ok();
+  child.wait().ok();
+}
+
+/// EC-34 — `.tail format::` renders each format, and rejects a bad one before blocking.
+///
+/// Both halves are bounded in wall-clock time on purpose. `.tail` blocks forever
+/// by design, so the failure mode of every regression here is a hang, and a hung
+/// test reports nothing at all — it just stalls the suite until the runner's own
+/// timeout kills it, with no message naming what broke.
+#[ test ]
+fn ec34_tail_format_renders_and_rejects_before_blocking()
+{
+  assert_container();
+  let dir = tempfile::TempDir::new().unwrap();
+  write_sortable_events( dir.path() );
+
+  // An invalid format must be caught *before* the follow loop starts. If it were
+  // only caught when rendering the first event, a journal that never gets another
+  // write would leave the user waiting on an error that was already knowable.
+  let mut child   = spawn_tail( &[ "format::bogus" ], dir.path() );
+  let mut exited  = None;
+  for _ in 0..50
+  {
+    if let Some( status ) = child.try_wait().expect( "try_wait failed" ) { exited = Some( status ); break; }
+    std::thread::sleep( core::time::Duration::from_millis( 100 ) );
+  }
+  let status = exited.unwrap_or_else( ||
+  {
+    kill_child( &mut child );
+    panic!( "`.tail format::bogus` did not exit within 5s — the format is being validated too late, or not at all" );
+  } );
+  assert!( !status.success(), "`.tail format::bogus` must exit non-zero" );
+  let mut stderr = String::new();
+  std::io::Read::read_to_string( child.stderr.as_mut().expect( "no stderr pipe" ), &mut stderr ).ok();
+  assert!( stderr.contains( "invalid format" ), "diagnostic must name the problem: {stderr}" );
+  assert!( stderr.contains( "bogus" ),          "diagnostic must name the offending value: {stderr}" );
+
+  // `tail()` replays the current day's file from its start, so the fixture events
+  // arrive without anything being appended after the spawn.
+  for format in [ "jsonl", "json", "csv" ]
+  {
+    let format_arg = format!( "format::{format}" );
+    let mut child  = spawn_tail( &[ format_arg.as_str() ], dir.path() );
+    let stdout     = child.stdout.take().expect( "no stdout pipe" );
+
+    // Read on a worker thread: `read_line` on a pipe blocks, and the whole point
+    // of this test is that a broken build must fail rather than block the suite.
+    let ( tx, rx ) = std::sync::mpsc::channel();
+    std::thread::spawn( move ||
+    {
+      let mut line = String::new();
+      let read = std::io::BufRead::read_line( &mut std::io::BufReader::new( stdout ), &mut line );
+      tx.send( read.map( | _ | line ) ).ok();
+    } );
+
+    let first = rx.recv_timeout( core::time::Duration::from_secs( 10 ) );
+    kill_child( &mut child );
+    let line = first
+      .unwrap_or_else( | _ | panic!( "`.tail format::{format}` produced no line within 10s" ) )
+      .expect( "reading .tail stdout failed" );
+
+    if format == "csv"
+    {
+      assert!(
+        line.starts_with( "ts,type,command" ),
+        "`.tail format::csv` must lead with its header row, got: {line}",
+      );
+      continue;
+    }
+
+    // The claim under test for `json`: on a stream it is jsonl, so the first line
+    // is a complete standalone object — not `[` opening an array that would never
+    // be closed.
+    let value : serde_json::Value = serde_json::from_str( line.trim() )
+      .unwrap_or_else( | e | panic!( "`.tail format::{format}` line is not standalone JSON ({e}): {line}" ) );
+    assert!( value.is_object(), "`.tail format::{format}` must emit one object per line, got: {value}" );
+    assert!( value.get( "type" ).is_some(), "`.tail format::{format}` object missing 'type': {value}" );
+  }
 }

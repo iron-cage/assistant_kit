@@ -13,7 +13,7 @@
 
 use claude_journal_viewer::output::
 {
-  bold, build_filter, format_event_row, health_data, parse_query_string, resolve_journal_dir, stats_data,
+  bold, build_filter, health_data, parse_query_string, resolve_journal_dir, stats_data, StreamFormat,
 };
 use claude_journal::JournalReader;
 use std::{ collections::HashMap, path::{ Path, PathBuf } };
@@ -126,8 +126,8 @@ fn known_params( command : &str ) -> Vec< &'static str >
 {
   let ( takes_filters, own ) : ( bool, &[ &'static str ] ) = match command
   {
-    ".list"   => ( true,  &[ "format" ] ),
-    ".tail"   => ( true,  &[] ),
+    ".list"   => ( true,  &[ "format", "reverse", "sort" ] ),
+    ".tail"   => ( true,  &[ "format" ] ),
     ".stats"  => ( true,  &[ "by" ] ),
     ".search" => ( true,  &[ "pattern" ] ),
     ".export" => ( true,  &[ "output", "format" ] ),
@@ -152,8 +152,7 @@ fn unimplemented_params( command : &str ) -> &'static [ &'static str ]
 {
   match command
   {
-    ".list"   => &[ "columns", "reverse", "sort", "wide" ],
-    ".tail"   => &[ "format" ],
+    ".list"   => &[ "columns", "wide" ],
     ".stats"  => &[ "verbosity", "wide" ],
     ".status" => &[ "verbosity" ],
     _         => &[],
@@ -229,11 +228,27 @@ fn cmd_tail( params : &HashMap< String, String >, dir : PathBuf )
     Ok( f )  => f,
     Err( e ) => { eprintln!( "Error: {e}" ); std::process::exit( 1 ); }
   };
+  // Parsed before the follow loop: `.tail` blocks indefinitely, so a bad format
+  // name has to be rejected now rather than when the first event arrives, which
+  // on a quiet journal could be never.
+  let format = match StreamFormat::parse( params.get( "format" ).map_or( "table", String::as_str ) )
+  {
+    Ok( f )  => f,
+    Err( e ) => { eprintln!( "Error: {e}" ); std::process::exit( 1 ); }
+  };
   let reader = JournalReader::open( dir );
   eprintln!( "Tailing journal — press Ctrl+C to stop" );
+  if let Some( header ) = format.header() { println!( "{header}" ); }
   for ev in reader.tail( &filter )
   {
-    println!( "{}", format_event_row( &ev ) );
+    match format.render( &ev )
+    {
+      Ok( line ) => println!( "{line}" ),
+      // Unreachable in practice — only JSON serialization can fail here, and
+      // this record was just parsed out of a JSON line. Skip the one event
+      // rather than abort a follow session that may have been running for hours.
+      Err( e )   => eprintln!( "Warning: could not render event: {e}" ),
+    }
   }
 }
 
@@ -528,7 +543,9 @@ fn print_help()
   println!( "  no_color::0|1       Suppress ANSI color codes (same as NO_COLOR=1)" );
   println!();
   println!( "{}", bold( "Command-specific params:" ) );
-  println!( "  .list    format::table|json" );
+  println!( "  .list    format::table|json|jsonl|csv" );
+  println!( "           sort::time|cost|duration|exit|model|command  reverse::0|1" );
+  println!( "  .tail    format::table|json|jsonl|csv  (json == jsonl: a stream has no closing bracket)" );
   println!( "  .stats   by::day|model|dir|agent" );
   println!( "  .search  pattern::<str>               (required)" );
   println!( "  .prune   keep::<dur>  dry_run::0|1" );

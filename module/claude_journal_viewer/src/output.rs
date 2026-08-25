@@ -138,12 +138,36 @@ pub fn build_filter< S : ::core::hash::BuildHasher >( params : &HashMap< String,
   if let Some( s ) = params.get( "creds" )   { f.creds = Some( s.clone() ); }
   if let Some( s ) = params.get( "limit" )
   {
-    f.limit = Some(
-      s.parse::< usize >()
-        .map_err( | _ | format!( "invalid limit '{s}' (expected non-negative integer)" ) )?
-    );
+    let n : usize = s.parse()
+      .map_err( | _ | format!( "invalid limit '{s}' (expected non-negative integer)" ) )?;
+    // `limit::0` means unlimited (`docs/cli/param/09_limit.md`), and `query()`
+    // stops once `limit` matches are collected — so handing it `Some( 0 )` would
+    // return nothing at all, the exact opposite of what was asked for.
+    f.limit = if n == 0 { None } else { Some( n ) };
   }
   Ok( f )
+}
+
+/// Parse a documented `Boolean` param — strictly `0` or `1`.
+///
+/// An absent value yields `false`, matching the `0` default these params
+/// document. `name` is interpolated into the error so callers do not restate
+/// it; the wording is the one `docs/cli/type/08_boolean.md` specifies.
+///
+/// # Errors
+///
+/// Returns `Err` when the value is anything other than `"0"` or `"1"`.
+#[ inline ]
+pub fn parse_bool_param( value : Option< &str >, name : &str ) -> Result< bool, String >
+{
+  match value
+  {
+    None | Some( "0" ) => Ok( false ),
+    Some( "1" )        => Ok( true ),
+    Some( other )      => Err(
+      format!( "invalid boolean '{other}' for parameter '{name}' — expected 0 or 1" )
+    ),
+  }
 }
 
 /// Percent-decode one query-string component, treating `+` as a space.
@@ -276,45 +300,213 @@ pub fn format_event_row( ev : &EventRecord ) -> String
   format!( "{ts}  {etype:<18}  {cmd:<10}  {model:<22}  {exit:<4}  {cost:<10}  {intok:<8}  {outtok:<8}  {dur}" )
 }
 
-// ── Command output functions ──────────────────────────────────────────────────
+/// Header row for CSV output, naming the columns [`format_csv_row`] emits.
+#[ must_use ]
+#[ inline ]
+pub fn csv_header() -> &'static str
+{
+  "ts,type,command,model,exit_code,cost_usd,duration_ms"
+}
 
-/// `.list` — return a formatted event table or JSON array.
+/// Format one event as a CSV row matching [`csv_header`]'s columns.
+///
+/// A field the event does not carry renders as an empty cell, so column
+/// positions stay aligned with the header for every row.
+#[ must_use ]
+#[ inline ]
+pub fn format_csv_row( ev : &EventRecord ) -> String
+{
+  format!(
+    "{},{},{},{},{},{},{}",
+    ev.ts,
+    ev.event_type.as_str(),
+    ev.fields.command.as_deref().unwrap_or( "" ),
+    ev.fields.model.as_deref().unwrap_or( "" ),
+    ev.fields.exit_code.map_or_else( String::new, | c | c.to_string() ),
+    ev.fields.cost_usd.map_or_else( String::new, | c | format!( "{c:.6}" ) ),
+    ev.fields.duration_ms.map_or_else( String::new, | d | d.to_string() ),
+  )
+}
+
+/// A `format::` value for `.tail`, parsed once before the follow loop begins.
+///
+/// Parsing up front is the point of the type: `.tail` blocks indefinitely, so a
+/// bad format name must be rejected before the wait starts rather than when the
+/// first event happens to arrive — which on a quiet journal could be never.
+#[ derive( Debug, Clone, Copy, PartialEq, Eq ) ]
+pub enum StreamFormat
+{
+  /// Aligned columns, one line per event — the default.
+  Table,
+  /// One complete JSON object per line.
+  ///
+  /// Both `json` and `jsonl` parse to this variant. A JSON *array* has no valid
+  /// streaming form: `.tail` does not end, so the closing bracket would never be
+  /// written and a consumer piping to `jq` would block forever waiting for it.
+  /// `docs/cli/param/10_format.md` documents `.tail format::json` as "follow
+  /// events as JSON lines", which is what this emits.
+  Jsonl,
+  /// Comma-separated values, preceded once by [`csv_header`].
+  Csv,
+}
+
+impl StreamFormat
+{
+  /// Parse a `format::` value.
+  ///
+  /// # Errors
+  ///
+  /// Returns `Err` naming the valid formats when `name` is unrecognized.
+  #[ inline ]
+  pub fn parse( name : &str ) -> Result< Self, String >
+  {
+    match name
+    {
+      "table"          => Ok( Self::Table ),
+      "json" | "jsonl" => Ok( Self::Jsonl ),
+      "csv"            => Ok( Self::Csv ),
+      other => Err( format!( "invalid format '{other}' (valid: table, json, jsonl, csv)" ) ),
+    }
+  }
+
+  /// Header line to print once before any rows, when this format has one.
+  ///
+  /// Only `csv` does — a CSV stream missing its header row is not the format
+  /// `docs/cli/type/06_output_format.md` describes. `table` deliberately has
+  /// none: `.tail` output is open-ended, so a header printed once scrolls away
+  /// and then misleads for the rest of the session.
+  #[ must_use ]
+  #[ inline ]
+  pub fn header( self ) -> Option< &'static str >
+  {
+    match self
+    {
+      Self::Csv                 => Some( csv_header() ),
+      Self::Table | Self::Jsonl => None,
+    }
+  }
+
+  /// Render one event as a single output line.
+  ///
+  /// # Errors
+  ///
+  /// Returns `Err` only when the event cannot be serialized to JSON, which a
+  /// record parsed *out of* a JSON journal line cannot be.
+  #[ inline ]
+  pub fn render( self, ev : &EventRecord ) -> Result< String, String >
+  {
+    match self
+    {
+      Self::Table => Ok( format_event_row( ev ) ),
+      Self::Jsonl => serde_json::to_string( ev ).map_err( | e | e.to_string() ),
+      Self::Csv   => Ok( format_csv_row( ev ) ),
+    }
+  }
+}
+
+// ── Sorting ───────────────────────────────────────────────────────────────────
+
+/// Valid `sort::` field names, in the order `docs/cli/type/07_sort_field.md` lists them.
+const SORT_FIELDS : &str = "time, cost, duration, exit, model, command";
+
+/// Compare two optional costs, ordering a missing cost below every real one.
+///
+/// `f64::total_cmp` rather than `partial_cmp` so a `NaN` cost — which a
+/// hand-edited or truncated journal line can carry — still sorts
+/// deterministically, instead of leaving the result dependent on which pairs the
+/// sort happened to compare.
+fn cmp_cost( a : Option< f64 >, b : Option< f64 > ) -> core::cmp::Ordering
+{
+  match ( a, b )
+  {
+    ( None, None )           => core::cmp::Ordering::Equal,
+    ( None, Some( _ ) )      => core::cmp::Ordering::Less,
+    ( Some( _ ), None )      => core::cmp::Ordering::Greater,
+    ( Some( x ), Some( y ) ) => x.total_cmp( &y ),
+  }
+}
+
+/// Sort `events` by `field` ascending, or descending when `reverse` is set.
+///
+/// Field names match case-insensitively per `docs/cli/type/07_sort_field.md`.
+/// Events missing the chosen field sort *below* those that have it, so
+/// `reverse::1` — the "largest first" direction — leads with real values and
+/// leaves the unknowns at the bottom rather than opening on a block of `-`.
+///
+/// The sort is stable and `reverse` is applied inside the comparator rather than
+/// by reversing the slice afterwards, so events tied on the key keep journal
+/// order in both directions.
 ///
 /// # Errors
 ///
-/// Returns `Err` when any filter param is invalid or when the format is not
-/// `"table"` or `"json"`.
+/// Returns `Err` listing the valid fields when `field` is not one of them.
+#[ inline ]
+pub fn sort_events( events : &mut [ EventRecord ], field : &str, reverse : bool ) -> Result< (), String >
+{
+  let dir = | o : core::cmp::Ordering | if reverse { o.reverse() } else { o };
+  let key = field.to_lowercase();
+  match key.as_str()
+  {
+    "time"     => events.sort_by( | a, b | dir( a.ts.cmp( &b.ts ) ) ),
+    "cost"     => events.sort_by( | a, b | dir( cmp_cost( a.fields.cost_usd, b.fields.cost_usd ) ) ),
+    "duration" => events.sort_by( | a, b | dir( a.fields.duration_ms.cmp( &b.fields.duration_ms ) ) ),
+    "exit"     => events.sort_by( | a, b | dir( a.fields.exit_code.cmp( &b.fields.exit_code ) ) ),
+    "model"    => events.sort_by( | a, b | dir( a.fields.model.cmp( &b.fields.model ) ) ),
+    "command"  => events.sort_by( | a, b | dir( a.fields.command.cmp( &b.fields.command ) ) ),
+    _ => return Err( format!( "invalid sort '{field}' (valid: {SORT_FIELDS})" ) ),
+  }
+  Ok( () )
+}
+
+// ── Command output functions ──────────────────────────────────────────────────
+
+/// `.list` — return filtered events rendered in the requested format.
+///
+/// Follows `docs/cli/command/01_list.md`'s three-step algorithm: query, apply
+/// `sort`/`reverse`, then cap at `limit`. The cap is applied *after* the sort,
+/// not passed to `query()`, because `query()` caps by stopping early — which
+/// would hand the sort the oldest N events and let `sort::cost reverse::1
+/// limit::10` report them as the ten most expensive.
+///
+/// Only `table` is rendered here; `json`/`jsonl`/`csv` delegate to
+/// [`build_export_content`] so `.list format::csv` and `.export format::csv`
+/// cannot drift apart.
+///
+/// # Errors
+///
+/// Returns `Err` when any filter param is invalid, `sort`/`reverse` are not
+/// valid values, or the format is not `table`, `json`, `jsonl`, or `csv`.
 #[ inline ]
 pub fn list_output< S : ::core::hash::BuildHasher >( params : &HashMap< String, String, S >, dir : PathBuf ) -> Result< String, String >
 {
   let mut filter = build_filter( params )?;
-  if filter.limit.is_none() { filter.limit = Some( 50 ); }
+  // `build_filter` maps `limit::0` to `None` (unlimited), so an absent key and
+  // an explicit `0` are indistinguishable in `filter.limit` — the documented
+  // default of 50 applies only to the absent case.
+  let cap = if params.contains_key( "limit" ) { filter.limit } else { Some( 50 ) };
+  filter.limit = None;
 
-  let events = JournalReader::open( dir ).query( &filter );
+  let mut events = JournalReader::open( dir ).query( &filter );
+  let sort_field = params.get( "sort" ).map_or( "time", String::as_str );
+  let reverse    = parse_bool_param( params.get( "reverse" ).map( String::as_str ), "reverse" )?;
+  sort_events( &mut events, sort_field, reverse )?;
+  if let Some( n ) = cap { events.truncate( n ); }
+
   let format = params.get( "format" ).map_or( "table", String::as_str );
-  match format
+  if format != "table" { return build_export_content( &events, format ); }
+
+  if events.is_empty() { return Ok( "No events found.".to_owned() ); }
+  let mut out = String::new();
+  out.push_str( &bold( &event_header() ) );
+  out.push( '\n' );
+  for ev in &events
   {
-    "json" => Ok(
-      serde_json::to_string_pretty( &events )
-        .map_err( | e | e.to_string() )?
-    ),
-    "table" =>
-    {
-      if events.is_empty() { return Ok( "No events found.".to_owned() ); }
-      let mut out = String::new();
-      out.push_str( &bold( &event_header() ) );
-      out.push( '\n' );
-      for ev in &events
-      {
-        out.push_str( &format_event_row( ev ) );
-        out.push( '\n' );
-      }
-      out.push( '\n' );
-      let _ = write!( out, "{} event(s)", events.len() );
-      Ok( out )
-    }
-    other => Err( format!( "invalid format '{other}' (valid: table, json)" ) ),
+    out.push_str( &format_event_row( ev ) );
+    out.push( '\n' );
   }
+  out.push( '\n' );
+  let _ = write!( out, "{} event(s)", events.len() );
+  Ok( out )
 }
 
 /// `.stats` — return a stats table aggregated by `by` (day, model, dir, or agent).
@@ -543,17 +735,23 @@ pub struct HealthData
 }
 
 /// `.status` — collect journal health without rendering it.
+///
+/// Derives all four figures from one [`JournalReader::files`] listing rather
+/// than four separate accessor calls: each accessor rescans the directory, so
+/// the four-call form could report a count, a size, and a date range observed at
+/// four different instants — mutually inconsistent whenever a rotation or prune
+/// lands mid-call.
 #[ must_use ]
 #[ inline ]
 pub fn health_data( dir : PathBuf ) -> HealthData
 {
-  let reader = JournalReader::open( dir.clone() );
+  let files = JournalReader::open( dir.clone() ).files();
   HealthData
   {
-    files  : reader.file_count(),
-    bytes  : reader.total_bytes(),
-    oldest : reader.oldest_date(),
-    newest : reader.newest_date(),
+    files  : files.len(),
+    bytes  : files.iter().map( | f | f.bytes ).sum(),
+    oldest : files.first().map( | f | f.date.clone() ),
+    newest : files.last().map( | f | f.date.clone() ),
     dir,
   }
 }
@@ -656,20 +854,8 @@ pub fn build_export_content( events : &[ EventRecord ], format : &str ) -> Resul
     ),
     "csv" =>
     {
-      let mut rows = vec![ "ts,type,command,model,exit_code,cost_usd,duration_ms".to_owned() ];
-      for ev in events
-      {
-        rows.push( format!(
-          "{},{},{},{},{},{},{}",
-          ev.ts,
-          ev.event_type.as_str(),
-          ev.fields.command.as_deref().unwrap_or( "" ),
-          ev.fields.model.as_deref().unwrap_or( "" ),
-          ev.fields.exit_code.map_or_else( String::new, | c | c.to_string() ),
-          ev.fields.cost_usd.map_or_else( String::new, | c | format!( "{c:.6}" ) ),
-          ev.fields.duration_ms.map_or_else( String::new, | d | d.to_string() ),
-        ) );
-      }
+      let mut rows = vec![ csv_header().to_owned() ];
+      rows.extend( events.iter().map( format_csv_row ) );
       Ok( rows.join( "\n" ) )
     }
     "table" =>

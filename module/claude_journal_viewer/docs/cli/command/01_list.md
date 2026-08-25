@@ -2,7 +2,7 @@
 
 List journal events with filtering and sort.
 
--- **Parameters:** since::, until::, type::, command::, exit::, model::, dir::, creds::, limit::, format::, journal_dir::, no_color::
+-- **Parameters:** since::, until::, type::, command::, exit::, model::, dir::, creds::, limit::, format::, sort::, reverse::, journal_dir::, no_color::
 -- **Exit Codes:** 0 (success), 1 (invalid, unknown, or unimplemented param)
 
 ### Syntax
@@ -10,7 +10,8 @@ List journal events with filtering and sort.
 ```
 clj .list [since::DURATION] [until::DURATION] [type::EVENT_TYPE] [command::CMD]
           [exit::CODE] [model::NAME] [dir::SUBSTR] [creds::NAME] [limit::N]
-          [format::FORMAT] [journal_dir::PATH] [no_color::BOOL]
+          [format::FORMAT] [sort::FIELD] [reverse::BOOL]
+          [journal_dir::PATH] [no_color::BOOL]
 ```
 
 ### Parameters
@@ -25,14 +26,24 @@ clj .list [since::DURATION] [until::DURATION] [type::EVENT_TYPE] [command::CMD]
 | `model` | String | -- | No | Filter by model name (substring) |
 | `dir` | Path | -- | No | Filter by the event's own working directory (substring) |
 | `creds` | String | -- | No | Filter by credential name |
-| `limit` | Integer | 50 | No | Max events to display |
+| `limit` | Integer | 50 | No | Max events to display; `0` = unlimited |
 | `format` | OutputFormat | table | No | Output format |
+| `sort` | SortField | time | No | Sort key |
+| `reverse` | Boolean | 0 | No | Sort descending instead of ascending |
 | `journal_dir` | Path | ~/.clr/journal/ | No | Journal directory override |
 | `no_color` | Boolean | 0 | No | Disable ANSI colors |
 
-**Not yet implemented:** `sort::`, `reverse::`, `wide::`, `columns::`. These
-have parameter pages under `docs/cli/param/` but no implementation; passing one
-exits 1 with a "not implemented" message rather than being silently ignored.
+`limit` caps the result *after* sorting, so `sort::cost reverse::1 limit::10`
+returns the ten most expensive events across the whole matching window — not the
+ten oldest re-ordered by cost.
+
+Events missing the sort field sort below those that have it, so `reverse::1`
+leads with real values and leaves the unknowns at the bottom. Ties keep journal
+order in both directions.
+
+**Not yet implemented:** `wide::`, `columns::`. These have parameter pages under
+`docs/cli/param/` but no implementation; passing one exits 1 with a "not
+implemented" message rather than being silently ignored.
 
 ### Unknown parameters
 

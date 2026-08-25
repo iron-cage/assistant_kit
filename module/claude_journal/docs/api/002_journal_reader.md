@@ -5,7 +5,7 @@
 ### Scope
 
 - **Purpose**: Provide a read-side API for querying and tailing journal events across daily JSONL files.
-- **Responsibility**: Documents the `JournalReader`/`JournalFilter` types, their `open()`/`query()`/`tail()` and metadata operations, and their behavioral contract.
+- **Responsibility**: Documents the `JournalReader`/`JournalFilter`/`JournalFileInfo` types, their `open()`/`query()`/`tail()` and metadata operations, and their behavioral contract.
 - **In Scope**: Chronological file iteration, AND-combined filter matching, blocking tail semantics, and parse-failure tolerance.
 - **Out of Scope**: Event schema definition (→ `docs/api/003_event_type.md`), writing journal events (→ `docs/api/001_journal_writer.md`).
 
@@ -34,6 +34,12 @@ pub struct JournalFilter
   pub limit : Option< usize >,
 }
 
+pub struct JournalFileInfo
+{
+  pub date : String,
+  pub bytes : u64,
+}
+
 impl JournalReader
 {
   /// Open a journal directory for reading.
@@ -53,6 +59,9 @@ impl JournalReader
   /// Rolls over to the next day's file at UTC midnight.
   /// Skips lines that fail JSON parse.
   pub fn tail( &self, filter : &JournalFilter ) -> impl Iterator< Item = EventRecord >;
+
+  /// Every `.jsonl` file in the journal directory, oldest first.
+  pub fn files( &self ) -> Vec< JournalFileInfo >;
 
   /// Count of `.jsonl` files in the journal directory.
   pub fn file_count( &self ) -> usize;
@@ -77,6 +86,9 @@ impl JournalReader
 - `model` and `dir` filters use substring matching (case-sensitive)
 - `command` and `event_type` filters use exact matching
 - Lines that fail JSON parse are silently skipped (crash-safety tolerance per `docs/invariant/002_crash_safety.md`)
+- `files()` orders by filename stem, which for rotated files is the date; `oldest_date()`/`newest_date()` report that ordering's endpoints and `file_count()`/`total_bytes()` its length and sum, so the five can never disagree with each other
+- `files()` reports a file whose `stat` fails as `bytes : 0` rather than omitting it — a file removed between the directory scan and the size read still appears, keeping `files().len()` equal to `file_count()`
+- All five metadata operations return empty/`None`/`0` for an absent directory rather than erroring
 
 ## Sources
 

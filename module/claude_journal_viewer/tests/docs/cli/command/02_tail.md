@@ -11,13 +11,14 @@ Test case planning for [command/02_tail.md](../../../../docs/cli/command/02_tail
 
 ## Test Case Index
 
-| ID | Test Name | Category |
-|----|-----------|----------|
-| IT-1 | No args -> follows all events | Default |
-| IT-2 | `type::execution` -> follows execution events only | Type Filter |
-| IT-3 | `command::ask format::json` -> follows filtered events as JSON | Combined Filter |
-| IT-4 | `no_color::1` -> output has no ANSI escape codes | Display |
-| IT-5 | `journal_dir::PATH` -> follows events from custom directory | Directory Override |
+| ID | Test Name | Category | Status | Implemented as |
+|----|-----------|----------|--------|----------------|
+| IT-1 | No args -> follows all events | Default | ✅ | `viewer_integration_test.rs::ec13_tail_starts_and_can_be_killed` |
+| IT-2 | `type::execution` -> follows execution events only | Type Filter | ⏳ | — |
+| IT-3 | `command::ask format::json` -> follows filtered events as JSON | Combined Filter | ⏳ | `ec34_tail_format_renders_and_rejects_before_blocking` covers `format::` only |
+| IT-4 | `no_color::1` -> output has no ANSI escape codes | Display | ⏳ | — |
+| IT-5 | `journal_dir::PATH` -> follows events from custom directory | Directory Override | ✅ | `viewer_integration_test.rs::ec13_tail_starts_and_can_be_killed` |
+| IT-6 | `format::` renders each variant; a bad one exits 1 before blocking | Format | ✅ | `viewer_integration_test.rs::ec34_tail_format_renders_and_rejects_before_blocking` |
 
 ## Test Coverage Summary
 
@@ -26,8 +27,14 @@ Test case planning for [command/02_tail.md](../../../../docs/cli/command/02_tail
 - Combined Filter: 1 test (IT-3)
 - Display: 1 test (IT-4)
 - Directory Override: 1 test (IT-5)
+- Format: 1 test (IT-6)
 
-**Total:** 5 tests
+**Total:** 6 tests (3 executable)
+
+Every `.tail` case is bounded in wall-clock time in its implementation. `.tail`
+blocks forever by design, so the failure mode of any regression here is a hang —
+and a hung test reports nothing at all, it just stalls the suite until the
+runner's own timeout kills it, naming nothing.
 
 ---
 
@@ -78,3 +85,18 @@ Test case planning for [command/02_tail.md](../../../../docs/cli/command/02_tail
 - **Then:** events are read and followed from the specified directory instead of the default
 - **Exit:** 0 (on interrupt)
 - **Source:** [command/02_tail.md](../../../../docs/cli/command/02_tail.md), [param/21_journal_dir.md](../../../../docs/cli/param/21_journal_dir.md)
+
+---
+
+### IT-6: `format::` renders each variant; a bad one exits 1 before blocking
+
+- **Given:** journal with events already written — `tail()` replays the current
+  day's file from its start, so nothing needs appending after the spawn
+- **When:** `clj .tail format::X` for X in jsonl, json, csv
+- **Then:** `jsonl` and `json` each print one complete standalone JSON object per
+  line (never `[`, which opens an array a never-ending stream cannot close);
+  `csv` prints its header row first
+- **And:** `clj .tail format::bogus` exits 1 promptly rather than after an
+  indefinite wait for an event that may never arrive
+- **Exit:** killed by the caller for the valid formats; 1 for `format::bogus`
+- **Source:** [command/02_tail.md](../../../../docs/cli/command/02_tail.md), [param/10_format.md](../../../../docs/cli/param/10_format.md), [type/06_output_format.md](../../../../docs/cli/type/06_output_format.md)

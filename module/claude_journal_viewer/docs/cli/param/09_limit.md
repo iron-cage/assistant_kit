@@ -30,7 +30,7 @@ clj .search pattern::"error" limit::10  # First 10 matches
 
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
-| 1 | [`.list`](../command/01_list.md) | 50 | Default cap |
+| 1 | [`.list`](../command/01_list.md) | 50 | Applied after `sort`/`reverse` |
 | 4 | [`.search`](../command/04_search.md) | 50 | Default cap |
 
 ### Referenced User Stories

@@ -11,15 +11,15 @@ Test case planning for [command/01_list.md](../../../../docs/cli/command/01_list
 
 ## Test Case Index
 
-| ID | Test Name | Category |
-|----|-----------|----------|
-| IT-1 | No args -> last 50 events, table format | Default |
-| IT-2 | `since::1h` -> only events from last hour | Time Filter |
-| IT-3 | `type::execution command::ask` -> combined filter | Combined Filter |
-| IT-4 | `sort::cost reverse::1 since::7d` -> most expensive first | Sort |
-| IT-5 | `format::json limit::100` -> JSON output, capped at 100 | Format + Limit |
-| IT-6 | `exit::2 model::opus` -> filter by exit code and model substring | Combined Filter |
-| IT-7 | `format::badvalue` -> exit 1, error message | Error Handling |
+| ID | Test Name | Category | Status | Implemented as |
+|----|-----------|----------|--------|----------------|
+| IT-1 | No args -> last 50 events, table format | Default | ✅ | `viewer_integration_test.rs::ec1_list_prints_table` |
+| IT-2 | `since::1h` -> only events from last hour | Time Filter | ⏳ | — |
+| IT-3 | `type::execution command::ask` -> combined filter | Combined Filter | ⏳ | — |
+| IT-4 | `sort::cost reverse::1 since::7d` -> most expensive first | Sort | ✅ | `viewer_integration_test.rs::ec30_sort_orders_by_every_documented_field` |
+| IT-5 | `format::json limit::100` -> JSON output, capped at 100 | Format + Limit | ✅ | `viewer_integration_test.rs::ec2_list_format_json_outputs_array`, `ec33_limit_applies_after_sort_and_zero_means_unlimited` |
+| IT-6 | `exit::2 model::opus` -> filter by exit code and model substring | Combined Filter | ⏳ | `ec26_exit_param_filters_by_exit_code` covers `exit::` only |
+| IT-7 | `format::badvalue` -> exit 1, error message | Error Handling | ✅ | `viewer_integration_test.rs::ec10_type_validation_at_parse_time` |
 
 ## Test Coverage Summary
 
@@ -30,7 +30,12 @@ Test case planning for [command/01_list.md](../../../../docs/cli/command/01_list
 - Format + Limit: 1 test (IT-5)
 - Error Handling: 1 test (IT-7)
 
-**Total:** 7 tests
+**Total:** 7 tests (4 executable)
+
+IT-4 and IT-5 became executable together: `limit` is applied after `sort`, so
+neither can be tested in isolation from the other. `ec33` is the pair's
+load-bearing case — its fixture places the priciest event second and the
+cheapest last, so a cap applied before the sort fails in both directions.
 
 ---
 

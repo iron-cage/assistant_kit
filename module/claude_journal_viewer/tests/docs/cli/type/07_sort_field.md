@@ -8,15 +8,15 @@ invalid-variant error handling.
 
 ## Test Case Index
 
-| ID | Test Name | Category |
-|----|-----------|----------|
-| TC-1 | `time` -> sorted by timestamp, oldest first by default | Parsing |
-| TC-2 | `cost` -> sorted by cost, cheapest first by default | Parsing |
-| TC-3 | `duration` -> sorted by execution duration | Parsing |
-| TC-4 | `exit` -> sorted by exit code, 0 first by default | Parsing |
-| TC-5 | `model`, `command` -> sorted alphabetically | Parsing |
-| TC-6 | Case-insensitive matching (`COST` = `cost`) | Case Insensitivity |
-| TC-7 | Invalid variant -> exit 1 listing valid options | Error Handling |
+| ID | Test Name | Category | Status | Implemented as |
+|----|-----------|----------|--------|----------------|
+| TC-1 | `time` -> sorted by timestamp, oldest first by default | Parsing | ✅ | `viewer_integration_test.rs::ec30_sort_orders_by_every_documented_field` |
+| TC-2 | `cost` -> sorted by cost, cheapest first by default | Parsing | ✅ | `viewer_integration_test.rs::ec30_sort_orders_by_every_documented_field` |
+| TC-3 | `duration` -> sorted by execution duration | Parsing | ✅ | `viewer_integration_test.rs::ec30_sort_orders_by_every_documented_field` |
+| TC-4 | `exit` -> sorted by exit code, 0 first by default | Parsing | ✅ | `viewer_integration_test.rs::ec30_sort_orders_by_every_documented_field` |
+| TC-5 | `model`, `command` -> sorted alphabetically | Parsing | ✅ | `viewer_integration_test.rs::ec30_sort_orders_by_every_documented_field` |
+| TC-6 | Case-insensitive matching (`COST` = `cost`) | Case Insensitivity | ✅ | `viewer_integration_test.rs::ec31_sort_case_insensitive_and_invalid_values_exit_1` |
+| TC-7 | Invalid variant -> exit 1 listing valid options | Error Handling | ✅ | `viewer_integration_test.rs::ec31_sort_case_insensitive_and_invalid_values_exit_1` |
 
 ## Test Coverage Summary
 
@@ -24,7 +24,16 @@ invalid-variant error handling.
 - Case Insensitivity: 1 test (TC-6)
 - Error Handling: 1 test (TC-7)
 
-**Total:** 7 test cases
+**Total:** 7 test cases (7 executable)
+
+All five Parsing cases share one fixture, built so that no sort field reproduces
+the order the events were appended in. Without that, a `sort::` that ignored its
+argument entirely would satisfy every one of them.
+
+An event missing the sort field sorts below one that has it, so `reverse::1`
+leads with real values rather than a block of `-`. Ties keep journal order in
+both directions, because the direction is applied inside the comparator rather
+than by reversing the sorted slice.
 
 ## Test Cases
 

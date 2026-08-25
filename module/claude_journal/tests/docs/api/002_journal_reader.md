@@ -14,6 +14,7 @@ Test case planning for [api/002_journal_reader.md](../../../docs/api/002_journal
 | AP-4 | `JournalFilter::limit = Some(N)` caps results to N events | Filter Limit |
 | AP-5 | Corrupt lines in JSONL are skipped; surrounding valid events returned | Corrupt Skip |
 | AP-6 | `file_count()`, `total_bytes()`, `oldest_date()`, `newest_date()` reflect journal state | Accessors |
+| AP-7 | `files()` lists every file oldest-first, and the four scalar accessors agree with it | Accessors |
 
 ## Test Coverage Summary
 
@@ -22,9 +23,9 @@ Test case planning for [api/002_journal_reader.md](../../../docs/api/002_journal
 - Filter Since: 1 test (AP-3)
 - Filter Limit: 1 test (AP-4)
 - Corrupt Skip: 1 test (AP-5)
-- Accessors: 1 test (AP-6)
+- Accessors: 2 tests (AP-6, AP-7)
 
-**Total:** 6 tests
+**Total:** 7 tests
 
 ---
 
@@ -79,3 +80,13 @@ Test case planning for [api/002_journal_reader.md](../../../docs/api/002_journal
 - **When:** `reader.file_count()`, `reader.oldest_date()`, `reader.newest_date()`, `reader.total_bytes()`
 - **Then:** `file_count() == 2`; `oldest_date() == Some("2023-01-01")`; `newest_date() == Some("2026-06-27")`; `total_bytes() > 0`
 - **Source:** [api/002_journal_reader.md](../../../docs/api/002_journal_reader.md) Interface: `file_count()`, `total_bytes()`, `oldest_date()`, `newest_date()`
+
+---
+
+### AP-7: `files()` lists oldest-first and the scalar accessors agree with it
+
+- **Given:** journal dir with three files created in non-chronological filesystem order: `2026-06-27.jsonl`, `2023-01-01.jsonl`, `2024-03-15.jsonl`
+- **When:** `reader.files()` alongside all four scalar accessors
+- **Then:** dates are `["2023-01-01", "2024-03-15", "2026-06-27"]` regardless of creation order; `files().len() == file_count()`; summed `bytes == total_bytes()`; first/last dates equal `oldest_date()`/`newest_date()`; every entry's `bytes` matches its real file size
+- **And:** on a non-existent directory `files()` returns empty rather than erroring, consistent with AP-1
+- **Source:** [api/002_journal_reader.md](../../../docs/api/002_journal_reader.md) Behavioral Contract: `files()` ordering and cross-accessor agreement

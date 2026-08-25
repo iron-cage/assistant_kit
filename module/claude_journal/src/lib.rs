@@ -41,5 +41,5 @@ pub mod reader;
 pub mod writer;
 
 pub use event::{ compose_agent_id, EventFields, EventRecord, EventType };
-pub use reader::{ JournalFilter, JournalReader };
+pub use reader::{ JournalFileInfo, JournalFilter, JournalReader };
 pub use writer::JournalWriter;
