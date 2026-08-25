@@ -24,14 +24,16 @@ setup = ["require-container"]
 # in container environments where ~/.claude is mounted via plugin_mount.
 #
 [profile.default]
-# control_session_*_test binaries (28 tests, TSK-415 Phase 2) each spawn a real
+# control_session_*_test binaries (29 tests, TSK-415 Phase 2) each spawn a real
 # authenticated `claude` subprocess via control_session_common's spawn_session().
 # The shared runbox image intentionally ships no `claude` binary ("Offline tests
 # by default", runbox.dockerfile:316), so a default containerized sweep would fail
 # all of them at the spawn site (BUG-002). Excluded here per TSK-419 (Option A —
 # routing, not #[ignore], which test_no_ignored_tests forbids). The binaries still
-# compile in every run. Opt in explicitly where `claude` is on PATH + authenticated:
-#   cargo nextest run --all-features -E 'binary(/^control_session_/)' --ignore-default-filter
+# compile in every run. Opt in explicitly where `claude` is on PATH + authenticated —
+# VERB_LAYER=l0 is required, since require-container above would otherwise abort the
+# run before any test executes, and these tests need the host's `claude` by design:
+#   VERB_LAYER=l0 cargo nextest run --all-features -E 'binary(/^control_session_/)' --ignore-default-filter
 default-filter = 'not (binary(control_session_cached_accessors_test) | binary(control_session_file_task_test) | binary(control_session_lifecycle_test) | binary(control_session_mcp_test) | binary(control_session_settings_test))'
 
 [[profile.default.overrides]]

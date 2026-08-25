@@ -100,6 +100,16 @@ Manual testing follows this workflow:
 
 See `-corner_cases_exhaustive.md` for complete corner case analysis.
 
+### Control-Session Integration Tests (live)
+
+**Date:** 2026-08-25
+**Status:** ✅ ALL TESTS PASS
+**Issues Found:** 0
+**Pass Rate:** 29/29 (100%)
+
+First recorded live authenticated pass of the `control_session_*_test.rs` binaries (opt-in
+command under "Control-Session Integration Tests" below), against `claude` 2.1.220 on the host.
+
 ## Corner Case Coverage
 
 ### Tested ✅
@@ -134,32 +144,33 @@ See `-corner_cases_exhaustive.md` for complete corner case analysis.
 ### Not Yet Tested ⚠️
 - execute_interactive() TTY mode (requires real terminal)
 - Claude binary not in PATH (requires PATH manipulation)
-
-- Live end-to-end pass of the control-session integration tests (`control_session_*_test.rs`) —
-  excluded from the default automated sweep and run via the explicit opt-in command below
-  (TSK-419); a live authenticated pass has not been recorded in this environment
 - Continuation flag with missing/corrupted session
 - API key with invalid values (security sensitive)
 - Very large output (>1GB) - impractical
 
 ### Control-Session Integration Tests (manual opt-in — TSK-419, fixes BUG-002)
 
-The 5 `control_session_*_test.rs` binaries (28 tests, TSK-415 Phase 2) each spawn a real,
+The 5 `control_session_*_test.rs` binaries (29 tests, TSK-415 Phase 2) each spawn a real,
 authenticated `claude` subprocess via `control_session_common`'s `spawn_session()`. The shared
 runbox image intentionally ships no `claude` binary ("Offline tests by default"), so these
-binaries are excluded from the default automated sweep via `claude_runner/.config/nextest.toml`'s
+binaries are excluded from the default automated sweep via the repo-root `.config/nextest.toml`'s
 `default-filter` — they still compile in every run, and remain real, no-mock Rust. Run them
 explicitly in an environment satisfying this directory's stated prerequisite ("Claude Code
 binary must be in PATH", authenticated):
 
 ```bash
 cd module/claude_runner_core
-cargo nextest run --all-features -E 'binary(/^control_session_/)' --ignore-default-filter
+VERB_LAYER=l0 cargo nextest run --all-features -E 'binary(/^control_session_/)' --ignore-default-filter
 ```
 
 `--ignore-default-filter` lifts the exclusion; the `-E` filterset then selects exactly the 5
-control-session binaries. Without a `claude` binary the only runtime failure is the documented
-spawn-site panic (`control_session_common/mod.rs:44`) — a precondition failure, not a build error.
+control-session binaries. `VERB_LAYER=l0` is required, not optional: `.config/setup-require-container`
+is a nextest setup script that aborts any bare-host run before a single test executes, and these
+tests specifically need the host's authenticated `claude` — the one binary the container omits by
+design. Omitting it fails the run as `SETUP FAIL [require-container]` with `0/29 tests run`, which
+is a routing failure, not a test failure. Without a `claude` binary on PATH the only runtime failure
+is the documented spawn-site panic (`control_session_common/mod.rs:44`) — a precondition failure,
+not a build error.
 
 ## Security Testing
 
